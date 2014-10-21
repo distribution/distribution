@@ -1,6 +1,6 @@
 # Roadmap
 
-## 24/11/2014: alpha
+## 11/24/2014: alpha
 
 Design and code:
 
