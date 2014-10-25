@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"reflect"
 
 	"github.com/docker/libchan"
@@ -23,8 +24,14 @@ func (r noWriteReadWriteCloser) Write(p []byte) (n int, err error) {
 	return 0, errors.New("Write unsupported")
 }
 
-func WrapReadCloser(readCloser io.ReadCloser) io.ReadWriteCloser {
-	return noWriteReadWriteCloser{readCloser}
+func WrapReader(reader io.Reader) io.ReadWriteCloser {
+	if readWriteCloser, ok := reader.(io.ReadWriteCloser); ok {
+		return readWriteCloser
+	} else if readCloser, ok := reader.(io.ReadCloser); ok {
+		return noWriteReadWriteCloser{readCloser}
+	} else {
+		return noWriteReadWriteCloser{ioutil.NopCloser(reader)}
+	}
 }
 
 type responseError struct {
@@ -44,15 +51,6 @@ func ResponseError(err error) *responseError {
 
 func (err *responseError) Error() string {
 	return fmt.Sprintf("%s: %s", err.Type, err.Message)
-}
-
-type GetContentResponse struct {
-	Content []byte
-	Error   *responseError
-}
-
-type PutContentResponse struct {
-	Error *responseError
 }
 
 type ReadStreamResponse struct {

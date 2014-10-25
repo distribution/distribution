@@ -1,8 +1,10 @@
 package ipc
 
 import (
+	"bytes"
 	"encoding/json"
 	"io"
+	"io/ioutil"
 	"net"
 	"os"
 	"os/exec"
@@ -116,7 +118,7 @@ func (driver *StorageDriverClient) GetContent(path string) ([]byte, error) {
 		return nil, err
 	}
 
-	var response GetContentResponse
+	var response ReadStreamResponse
 	err = receiver.Receive(&response)
 	if err != nil {
 		return nil, err
@@ -126,22 +128,26 @@ func (driver *StorageDriverClient) GetContent(path string) ([]byte, error) {
 		return nil, response.Error
 	}
 
-	return response.Content, nil
+	defer response.Reader.Close()
+	contents, err := ioutil.ReadAll(response.Reader)
+	if err != nil {
+		return nil, err
+	}
+	return contents, nil
 }
 
 func (driver *StorageDriverClient) PutContent(path string, contents []byte) error {
 	receiver, remoteSender := libchan.Pipe()
 
-	params := map[string]interface{}{"Path": path, "Contents": contents}
+	params := map[string]interface{}{"Path": path, "Reader": WrapReader(bytes.NewReader(contents))}
 	err := driver.sender.Send(&Request{Type: "PutContent", Parameters: params, ResponseChannel: remoteSender})
 	if err != nil {
 		return err
 	}
 
-	var response PutContentResponse
+	var response WriteStreamResponse
 	err = receiver.Receive(&response)
 	if err != nil {
-		panic(err)
 		return err
 	}
 
@@ -177,7 +183,7 @@ func (driver *StorageDriverClient) ReadStream(path string, offset uint64) (io.Re
 func (driver *StorageDriverClient) WriteStream(path string, offset, size uint64, reader io.ReadCloser) error {
 	receiver, remoteSender := libchan.Pipe()
 
-	params := map[string]interface{}{"Path": path, "Offset": offset, "Size": size, "Reader": WrapReadCloser(reader)}
+	params := map[string]interface{}{"Path": path, "Offset": offset, "Size": size, "Reader": WrapReader(reader)}
 	err := driver.sender.Send(&Request{Type: "WriteStream", Parameters: params, ResponseChannel: remoteSender})
 	if err != nil {
 		return err

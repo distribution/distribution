@@ -128,7 +128,7 @@ func (suite *DriverSuite) TestWriteReadStreams4(c *C) {
 func (suite *DriverSuite) TestContinueStreamAppend(c *C) {
 	filename := randomString(32)
 
-	chunkSize := uint64(32)
+	chunkSize := uint64(5 * 1024 * 1024)
 
 	contentsChunk1 := []byte(randomString(chunkSize))
 	contentsChunk2 := []byte(randomString(chunkSize))

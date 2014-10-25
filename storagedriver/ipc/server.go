@@ -1,7 +1,9 @@
 package ipc
 
 import (
+	"bytes"
 	"io"
+	"io/ioutil"
 	"net"
 	"os"
 
@@ -44,14 +46,15 @@ func receive(driver storagedriver.StorageDriver, receiver libchan.Receiver) {
 }
 
 func handleRequest(driver storagedriver.StorageDriver, request Request) {
-
 	switch request.Type {
 	case "GetContent":
 		path, _ := request.Parameters["Path"].(string)
 		content, err := driver.GetContent(path)
-		response := GetContentResponse{
-			Content: content,
-			Error:   ResponseError(err),
+		var response ReadStreamResponse
+		if err != nil {
+			response = ReadStreamResponse{Error: ResponseError(err)}
+		} else {
+			response = ReadStreamResponse{Reader: WrapReader(bytes.NewReader(content))}
 		}
 		err = request.ResponseChannel.Send(&response)
 		if err != nil {
@@ -59,9 +62,13 @@ func handleRequest(driver storagedriver.StorageDriver, request Request) {
 		}
 	case "PutContent":
 		path, _ := request.Parameters["Path"].(string)
-		contents, _ := request.Parameters["Contents"].([]byte)
-		err := driver.PutContent(path, contents)
-		response := PutContentResponse{
+		reader, _ := request.Parameters["Reader"].(io.ReadCloser)
+		contents, err := ioutil.ReadAll(reader)
+		defer reader.Close()
+		if err == nil {
+			err = driver.PutContent(path, contents)
+		}
+		response := WriteStreamResponse{
 			Error: ResponseError(err),
 		}
 		err = request.ResponseChannel.Send(&response)
@@ -82,7 +89,7 @@ func handleRequest(driver storagedriver.StorageDriver, request Request) {
 		if err != nil {
 			response = ReadStreamResponse{Error: ResponseError(err)}
 		} else {
-			response = ReadStreamResponse{Reader: WrapReadCloser(reader)}
+			response = ReadStreamResponse{Reader: WrapReader(reader)}
 		}
 		err = request.ResponseChannel.Send(&response)
 		if err != nil {
