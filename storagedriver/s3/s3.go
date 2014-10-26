@@ -28,7 +28,7 @@ func NewDriver(accessKey string, secretKey string, region aws.Region, encrypt bo
 	s3obj := s3.New(auth, region)
 	bucket := s3obj.Bucket(bucketName)
 
-	if err := bucket.PutBucket(s3.PublicRead); err != nil {
+	if err := bucket.PutBucket(getPermissions()); err != nil {
 		s3Err, ok := err.(*s3.Error)
 		if !(ok && s3Err.Code == "BucketAlreadyOwnedByYou") {
 			return nil, err
@@ -43,7 +43,7 @@ func (d *S3Driver) GetContent(path string) ([]byte, error) {
 }
 
 func (d *S3Driver) PutContent(path string, contents []byte) error {
-	return d.Bucket.Put(path, contents, d.getContentType(), d.getPermissions(), d.getOptions())
+	return d.Bucket.Put(path, contents, d.getContentType(), getPermissions(), d.getOptions())
 }
 
 func (d *S3Driver) ReadStream(path string, offset uint64) (io.ReadCloser, error) {
@@ -172,7 +172,7 @@ func (d *S3Driver) List(prefix string) ([]string, error) {
 
 func (d *S3Driver) Move(sourcePath string, destPath string) error {
 	/* This is terrible, but aws doesn't have an actual move. */
-	_, err := d.Bucket.PutCopy(destPath, d.getPermissions(), s3.CopyOptions{d.getOptions(), "", d.getContentType()}, d.Bucket.Name+"/"+sourcePath)
+	_, err := d.Bucket.PutCopy(destPath, getPermissions(), s3.CopyOptions{d.getOptions(), "", d.getContentType()}, d.Bucket.Name+"/"+sourcePath)
 	if err != nil {
 		return err
 	}
@@ -224,7 +224,7 @@ func (d *S3Driver) getHighestIdMulti(path string) (multi *s3.Multi, err error) {
 		}
 		return multi, nil
 	} else {
-		multi, err := d.Bucket.InitMulti(path, d.getContentType(), d.getPermissions(), d.getOptions())
+		multi, err := d.Bucket.InitMulti(path, d.getContentType(), getPermissions(), d.getOptions())
 		return multi, err
 	}
 }
@@ -248,7 +248,7 @@ func (d *S3Driver) getOptions() s3.Options {
 	return s3.Options{SSE: d.Encrypt}
 }
 
-func (d *S3Driver) getPermissions() s3.ACL {
+func getPermissions() s3.ACL {
 	return s3.Private
 }
 
