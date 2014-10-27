@@ -24,6 +24,13 @@ func init() {
 		return NewDriver(accessKey, secretKey, aws.GetRegion(region), true, bucket)
 	}
 
-	testsuites.RegisterInProcessSuite(s3DriverConstructor)
-	testsuites.RegisterIPCSuite("s3", map[string]string{"accessKey": accessKey, "secretKey": secretKey, "region": region, "bucket": bucket, "encrypt": encrypt})
+	skipCheck := func() string {
+		if accessKey == "" || secretKey == "" || region == "" || bucket == "" || encrypt == "" {
+			return "Must set ACCESS_KEY, SECRET_KEY, AWS_REGION, S3_BUCKET, and S3_ENCRYPT to run S3 tests"
+		}
+		return ""
+	}
+
+	testsuites.RegisterInProcessSuite(s3DriverConstructor, skipCheck)
+	testsuites.RegisterIPCSuite("s3", map[string]string{"accessKey": accessKey, "secretKey": secretKey, "region": region, "bucket": bucket, "encrypt": encrypt}, skipCheck)
 }

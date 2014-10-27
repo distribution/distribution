@@ -17,13 +17,14 @@ import (
 // Hook up gocheck into the "go test" runner
 func Test(t *testing.T) { TestingT(t) }
 
-func RegisterInProcessSuite(driverConstructor DriverConstructor) {
+func RegisterInProcessSuite(driverConstructor DriverConstructor, skipCheck SkipCheck) {
 	Suite(&DriverSuite{
 		Constructor: driverConstructor,
+		SkipCheck:   skipCheck,
 	})
 }
 
-func RegisterIPCSuite(driverName string, ipcParams map[string]string) {
+func RegisterIPCSuite(driverName string, ipcParams map[string]string, skipCheck SkipCheck) {
 	suite := &DriverSuite{
 		Constructor: func() (storagedriver.StorageDriver, error) {
 			d, err := ipc.NewDriverClient(driverName, ipcParams)
@@ -36,13 +37,22 @@ func RegisterIPCSuite(driverName string, ipcParams map[string]string) {
 			}
 			return d, nil
 		},
+		SkipCheck: skipCheck,
 	}
 	suite.Teardown = func() error {
+		if suite.StorageDriver == nil {
+			return nil
+		}
+
 		driverClient := suite.StorageDriver.(*ipc.StorageDriverClient)
 		return driverClient.Stop()
 	}
 	Suite(suite)
 }
+
+type SkipCheck func() (reason string)
+
+var NeverSkip = func() string { return "" }
 
 type DriverConstructor func() (storagedriver.StorageDriver, error)
 type DriverTeardown func() error
@@ -50,6 +60,7 @@ type DriverTeardown func() error
 type DriverSuite struct {
 	Constructor DriverConstructor
 	Teardown    DriverTeardown
+	SkipCheck
 	storagedriver.StorageDriver
 }
 
@@ -59,6 +70,9 @@ type TestDriverConfig struct {
 }
 
 func (suite *DriverSuite) SetUpSuite(c *C) {
+	if reason := suite.SkipCheck(); reason != "" {
+		c.Skip(reason)
+	}
 	d, err := suite.Constructor()
 	c.Assert(err, IsNil)
 	suite.StorageDriver = d
@@ -129,7 +143,7 @@ func (suite *DriverSuite) TestContinueStreamAppend(c *C) {
 	filename := randomString(32)
 	defer suite.StorageDriver.Delete(filename)
 
-	chunkSize := uint64(5 * 1024 * 1024)
+	chunkSize := uint64(10 * 1024 * 1024)
 
 	contentsChunk1 := []byte(randomString(chunkSize))
 	contentsChunk2 := []byte(randomString(chunkSize))

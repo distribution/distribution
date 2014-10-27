@@ -19,6 +19,6 @@ func init() {
 	filesystemDriverConstructor := func() (storagedriver.StorageDriver, error) {
 		return NewDriver(rootDirectory), nil
 	}
-	testsuites.RegisterInProcessSuite(filesystemDriverConstructor)
-	testsuites.RegisterIPCSuite("filesystem", map[string]string{"RootDirectory": rootDirectory})
+	testsuites.RegisterInProcessSuite(filesystemDriverConstructor, testsuites.NeverSkip)
+	testsuites.RegisterIPCSuite("filesystem", map[string]string{"RootDirectory": rootDirectory}, testsuites.NeverSkip)
 }

@@ -15,6 +15,6 @@ func init() {
 	inmemoryDriverConstructor := func() (storagedriver.StorageDriver, error) {
 		return NewDriver(), nil
 	}
-	testsuites.RegisterInProcessSuite(inmemoryDriverConstructor)
-	testsuites.RegisterIPCSuite("inmemory", nil)
+	testsuites.RegisterInProcessSuite(inmemoryDriverConstructor, testsuites.NeverSkip)
+	testsuites.RegisterIPCSuite("inmemory", nil, testsuites.NeverSkip)
 }
