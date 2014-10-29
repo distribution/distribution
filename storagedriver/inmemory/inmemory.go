@@ -10,14 +10,31 @@ import (
 	"sync"
 
 	"github.com/docker/docker-registry/storagedriver"
+	"github.com/docker/docker-registry/storagedriver/factory"
 )
 
+const DriverName = "inmemory"
+
+func init() {
+	factory.Register(DriverName, &inMemoryDriverFactory{})
+}
+
+// Implements the factory.StorageDriverFactory interface
+type inMemoryDriverFactory struct{}
+
+func (factory *inMemoryDriverFactory) Create(parameters map[string]string) (storagedriver.StorageDriver, error) {
+	return New(), nil
+}
+
+// InMemory Storage Driver backed by a map
+// Intended solely for example and testing purposes
 type InMemoryDriver struct {
 	storage map[string][]byte
 	mutex   sync.RWMutex
 }
 
-func NewDriver() *InMemoryDriver {
+// Constructs a new InMemoryDriver
+func New() *InMemoryDriver {
 	return &InMemoryDriver{storage: make(map[string][]byte)}
 }
 

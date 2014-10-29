@@ -3,55 +3,24 @@ package main
 import (
 	"encoding/json"
 	"os"
-	"strconv"
 
-	"github.com/crowdmob/goamz/aws"
 	"github.com/docker/docker-registry/storagedriver/ipc"
 	"github.com/docker/docker-registry/storagedriver/s3"
 )
 
+// An out-of-process S3 driver, intended to be run by ipc.NewDriverClient
 func main() {
 	parametersBytes := []byte(os.Args[1])
-	var parameters map[string]interface{}
+	var parameters map[string]string
 	err := json.Unmarshal(parametersBytes, &parameters)
 	if err != nil {
 		panic(err)
 	}
 
-	accessKey, ok := parameters["accessKey"].(string)
-	if !ok || accessKey == "" {
-		panic("No accessKey parameter")
-	}
-
-	secretKey, ok := parameters["secretKey"].(string)
-	if !ok || secretKey == "" {
-		panic("No secretKey parameter")
-	}
-
-	region, ok := parameters["region"].(string)
-	if !ok || region == "" {
-		panic("No region parameter")
-	}
-
-	bucket, ok := parameters["bucket"].(string)
-	if !ok || bucket == "" {
-		panic("No bucket parameter")
-	}
-
-	encrypt, ok := parameters["encrypt"].(string)
-	if !ok {
-		panic("No encrypt parameter")
-	}
-
-	encryptBool, err := strconv.ParseBool(encrypt)
+	driver, err := s3.FromParameters(parameters)
 	if err != nil {
 		panic(err)
 	}
 
-	driver, err := s3.NewDriver(accessKey, secretKey, aws.GetRegion(region), encryptBool, bucket)
-	if err != nil {
-		panic(err)
-	}
-
-	ipc.Server(driver)
+	ipc.StorageDriverServer(driver)
 }

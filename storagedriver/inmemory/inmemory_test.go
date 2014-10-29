@@ -13,8 +13,8 @@ func Test(t *testing.T) { TestingT(t) }
 
 func init() {
 	inmemoryDriverConstructor := func() (storagedriver.StorageDriver, error) {
-		return NewDriver(), nil
+		return New(), nil
 	}
 	testsuites.RegisterInProcessSuite(inmemoryDriverConstructor, testsuites.NeverSkip)
-	testsuites.RegisterIPCSuite("inmemory", nil, testsuites.NeverSkip)
+	testsuites.RegisterIPCSuite(DriverName, nil, testsuites.NeverSkip)
 }

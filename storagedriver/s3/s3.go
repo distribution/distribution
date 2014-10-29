@@ -2,6 +2,7 @@ package s3
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -9,21 +10,82 @@ import (
 	"github.com/crowdmob/goamz/aws"
 	"github.com/crowdmob/goamz/s3"
 	"github.com/docker/docker-registry/storagedriver"
+	"github.com/docker/docker-registry/storagedriver/factory"
 )
 
-/* Chunks need to be at least 5MB to store with a multipart upload on S3 */
+const DriverName = "s3"
+
+// Chunks need to be at least 5MB to store with a multipart upload on S3
 const minChunkSize = uint64(5 * 1024 * 1024)
 
-/* The largest amount of parts you can request from S3 */
+// The largest amount of parts you can request from S3
 const listPartsMax = 1000
 
+func init() {
+	factory.Register(DriverName, &s3DriverFactory{})
+}
+
+// Implements the factory.StorageDriverFactory interface
+type s3DriverFactory struct{}
+
+func (factory *s3DriverFactory) Create(parameters map[string]string) (storagedriver.StorageDriver, error) {
+	return FromParameters(parameters)
+}
+
+// Storage Driver backed by Amazon S3
+// Objects are stored at absolute keys in the provided bucket
 type S3Driver struct {
 	S3      *s3.S3
 	Bucket  *s3.Bucket
 	Encrypt bool
 }
 
-func NewDriver(accessKey string, secretKey string, region aws.Region, encrypt bool, bucketName string) (*S3Driver, error) {
+// Constructs a new S3Driver with a given parameters map
+// Required parameters:
+// - accesskey
+// - secretkey
+// - region
+// - bucket
+// - encrypt
+func FromParameters(parameters map[string]string) (*S3Driver, error) {
+	accessKey, ok := parameters["accesskey"]
+	if !ok || accessKey == "" {
+		return nil, fmt.Errorf("No accesskey parameter provided")
+	}
+
+	secretKey, ok := parameters["secretkey"]
+	if !ok || secretKey == "" {
+		return nil, fmt.Errorf("No secretkey parameter provided")
+	}
+
+	regionName, ok := parameters["region"]
+	if !ok || regionName == "" {
+		return nil, fmt.Errorf("No region parameter provided")
+	}
+	region := aws.GetRegion(regionName)
+	if region.Name == "" {
+		return nil, fmt.Errorf("Invalid region provided: %s", region)
+	}
+
+	bucket, ok := parameters["bucket"]
+	if !ok || bucket == "" {
+		return nil, fmt.Errorf("No bucket parameter provided")
+	}
+
+	encrypt, ok := parameters["encrypt"]
+	if !ok {
+		return nil, fmt.Errorf("No encrypt parameter provided")
+	}
+
+	encryptBool, err := strconv.ParseBool(encrypt)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to parse the encrypt parameter: %v", err)
+	}
+	return New(accessKey, secretKey, region, encryptBool, bucket)
+}
+
+// Constructs a new S3Driver with the given AWS credentials, region, encryption flag, and bucketName
+func New(accessKey string, secretKey string, region aws.Region, encrypt bool, bucketName string) (*S3Driver, error) {
 	auth := aws.Auth{AccessKey: accessKey, SecretKey: secretKey}
 	s3obj := s3.New(auth, region)
 	bucket := s3obj.Bucket(bucketName)

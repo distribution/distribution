@@ -6,13 +6,18 @@ import (
 	"io/ioutil"
 	"net"
 	"os"
+	"reflect"
 
 	"github.com/docker/docker-registry/storagedriver"
 	"github.com/docker/libchan"
 	"github.com/docker/libchan/spdy"
 )
 
-func Server(driver storagedriver.StorageDriver) error {
+// Construct a new IPC server handling requests for the given storagedriver.StorageDriver
+// This explicitly uses file descriptor 3 for IPC communication, as storage drivers are spawned in client.go
+//
+// To create a new out-of-process driver, create a main package which calls StorageDriverServer with a storagedriver.StorageDriver
+func StorageDriverServer(driver storagedriver.StorageDriver) error {
 	childSocket := os.NewFile(3, "childSocket")
 	defer childSocket.Close()
 	conn, err := net.FileConn(childSocket)
@@ -34,6 +39,9 @@ func Server(driver storagedriver.StorageDriver) error {
 	}
 }
 
+// Receives new storagedriver.StorageDriver method requests and creates a new goroutine to handle each request
+//
+// Requests are expected to be of type ipc.Request as the parameters are unknown until the request type is deserialized
 func receive(driver storagedriver.StorageDriver, receiver libchan.Receiver) {
 	for {
 		var request Request
@@ -45,6 +53,8 @@ func receive(driver storagedriver.StorageDriver, receiver libchan.Receiver) {
 	}
 }
 
+// Handles storagedriver.StorageDriver method requests as defined in client.go
+// Responds to requests using the Request.ResponseChannel
 func handleRequest(driver storagedriver.StorageDriver, request Request) {
 	switch request.Type {
 	case "GetContent":
@@ -76,14 +86,9 @@ func handleRequest(driver storagedriver.StorageDriver, request Request) {
 			panic(err)
 		}
 	case "ReadStream":
-		var offset uint64
-
 		path, _ := request.Parameters["Path"].(string)
-		offset, ok := request.Parameters["Offset"].(uint64)
-		if !ok {
-			offsetSigned, _ := request.Parameters["Offset"].(int64)
-			offset = uint64(offsetSigned)
-		}
+		// Depending on serialization method, Offset may be convereted to any int/uint type
+		offset := reflect.ValueOf(request.Parameters["Offset"]).Convert(reflect.TypeOf(uint64(0))).Uint()
 		reader, err := driver.ReadStream(path, offset)
 		var response ReadStreamResponse
 		if err != nil {
@@ -96,19 +101,11 @@ func handleRequest(driver storagedriver.StorageDriver, request Request) {
 			panic(err)
 		}
 	case "WriteStream":
-		var offset uint64
-
 		path, _ := request.Parameters["Path"].(string)
-		offset, ok := request.Parameters["Offset"].(uint64)
-		if !ok {
-			offsetSigned, _ := request.Parameters["Offset"].(int64)
-			offset = uint64(offsetSigned)
-		}
-		size, ok := request.Parameters["Size"].(uint64)
-		if !ok {
-			sizeSigned, _ := request.Parameters["Size"].(int64)
-			size = uint64(sizeSigned)
-		}
+		// Depending on serialization method, Offset may be convereted to any int/uint type
+		offset := reflect.ValueOf(request.Parameters["Offset"]).Convert(reflect.TypeOf(uint64(0))).Uint()
+		// Depending on serialization method, Size may be convereted to any int/uint type
+		size := reflect.ValueOf(request.Parameters["Size"]).Convert(reflect.TypeOf(uint64(0))).Uint()
 		reader, _ := request.Parameters["Reader"].(io.ReadCloser)
 		err := driver.WriteStream(path, offset, size, reader)
 		response := WriteStreamResponse{

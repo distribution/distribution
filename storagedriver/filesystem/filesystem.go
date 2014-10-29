@@ -8,19 +8,53 @@ import (
 	"strings"
 
 	"github.com/docker/docker-registry/storagedriver"
+	"github.com/docker/docker-registry/storagedriver/factory"
 )
 
+const DriverName = "filesystem"
+const DefaultRootDirectory = "/tmp/registry/storage"
+
+func init() {
+	factory.Register(DriverName, &filesystemDriverFactory{})
+}
+
+// Implements the factory.StorageDriverFactory interface
+type filesystemDriverFactory struct{}
+
+func (factory *filesystemDriverFactory) Create(parameters map[string]string) (storagedriver.StorageDriver, error) {
+	return FromParameters(parameters), nil
+}
+
+// Storage Driver backed by a local filesystem
+// All provided paths will be subpaths of the RootDirectory
 type FilesystemDriver struct {
 	rootDirectory string
 }
 
-func NewDriver(rootDirectory string) *FilesystemDriver {
+// Constructs a new FilesystemDriver with a given parameters map
+// Optional Parameters:
+// - rootdirectory
+func FromParameters(parameters map[string]string) *FilesystemDriver {
+	var rootDirectory = DefaultRootDirectory
+	if parameters != nil {
+		rootDir, ok := parameters["rootdirectory"]
+		if ok {
+			rootDirectory = rootDir
+		}
+	}
+	return New(rootDirectory)
+}
+
+// Constructs a new FilesystemDriver with a given rootDirectory
+func New(rootDirectory string) *FilesystemDriver {
 	return &FilesystemDriver{rootDirectory}
 }
 
 func (d *FilesystemDriver) subPath(subPath string) string {
 	return path.Join(d.rootDirectory, subPath)
 }
+
+// Implement the storagedriver.StorageDriver interface
 
 func (d *FilesystemDriver) GetContent(path string) ([]byte, error) {
 	contents, err := ioutil.ReadFile(d.subPath(path))

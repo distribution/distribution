@@ -17,6 +17,9 @@ import (
 // Hook up gocheck into the "go test" runner
 func Test(t *testing.T) { TestingT(t) }
 
+// Registers an in-process storage driver test suite with the go test runner
+//
+// If skipCheck returns a non-empty skip reason, the suite is skipped with the given reason
 func RegisterInProcessSuite(driverConstructor DriverConstructor, skipCheck SkipCheck) {
 	Suite(&DriverSuite{
 		Constructor: driverConstructor,
@@ -24,6 +27,9 @@ func RegisterInProcessSuite(driverConstructor DriverConstructor, skipCheck SkipC
 	})
 }
 
+// Registers a storage driver test suite which runs the named driver as a child process with the given parameters
+//
+// If skipCheck returns a non-empty skip reason, the suite is skipped with the given reason
 func RegisterIPCSuite(driverName string, ipcParams map[string]string, skipCheck SkipCheck) {
 	suite := &DriverSuite{
 		Constructor: func() (storagedriver.StorageDriver, error) {
