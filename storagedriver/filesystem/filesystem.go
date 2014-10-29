@@ -18,20 +18,20 @@ func init() {
 	factory.Register(DriverName, &filesystemDriverFactory{})
 }
 
-// Implements the factory.StorageDriverFactory interface
+// filesystemDriverFactory implements the factory.StorageDriverFactory interface
 type filesystemDriverFactory struct{}
 
 func (factory *filesystemDriverFactory) Create(parameters map[string]string) (storagedriver.StorageDriver, error) {
 	return FromParameters(parameters), nil
 }
 
-// Storage Driver backed by a local filesystem
+// FilesystemDriver is a storagedriver.StorageDriver implementation backed by a local filesystem
 // All provided paths will be subpaths of the RootDirectory
 type FilesystemDriver struct {
 	rootDirectory string
 }
 
-// Constructs a new FilesystemDriver with a given parameters map
+// FromParameters constructs a new FilesystemDriver with a given parameters map
 // Optional Parameters:
 // - rootdirectory
 func FromParameters(parameters map[string]string) *FilesystemDriver {
@@ -45,11 +45,12 @@ func FromParameters(parameters map[string]string) *FilesystemDriver {
 	return New(rootDirectory)
 }
 
-// Constructs a new FilesystemDriver with a given rootDirectory
+// New constructs a new FilesystemDriver with a given rootDirectory
 func New(rootDirectory string) *FilesystemDriver {
 	return &FilesystemDriver{rootDirectory}
 }
 
+// subPath returns the absolute path of a key within the FilesystemDriver's storage
 func (d *FilesystemDriver) subPath(subPath string) string {
 	return path.Join(d.rootDirectory, subPath)
 }

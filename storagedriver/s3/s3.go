@@ -15,24 +15,25 @@ import (
 
 const DriverName = "s3"
 
-// Chunks need to be at least 5MB to store with a multipart upload on S3
+// minChunkSize defines the minimum multipart upload chunk size
+// S3 API requires multipart upload chunks to be at least 5MB
 const minChunkSize = uint64(5 * 1024 * 1024)
 
-// The largest amount of parts you can request from S3
+// listPartsMax is the largest amount of parts you can request from S3
 const listPartsMax = 1000
 
 func init() {
 	factory.Register(DriverName, &s3DriverFactory{})
 }
 
-// Implements the factory.StorageDriverFactory interface
+// s3DriverFactory implements the factory.StorageDriverFactory interface
 type s3DriverFactory struct{}
 
 func (factory *s3DriverFactory) Create(parameters map[string]string) (storagedriver.StorageDriver, error) {
 	return FromParameters(parameters)
 }
 
-// Storage Driver backed by Amazon S3
+// S3Driver is a storagedriver.StorageDriver implementation backed by Amazon S3
 // Objects are stored at absolute keys in the provided bucket
 type S3Driver struct {
 	S3      *s3.S3
@@ -40,7 +41,7 @@ type S3Driver struct {
 	Encrypt bool
 }
 
-// Constructs a new S3Driver with a given parameters map
+// FromParameters constructs a new S3Driver with a given parameters map
 // Required parameters:
 // - accesskey
 // - secretkey
@@ -84,7 +85,8 @@ func FromParameters(parameters map[string]string) (*S3Driver, error) {
 	return New(accessKey, secretKey, region, encryptBool, bucket)
 }
 
-// Constructs a new S3Driver with the given AWS credentials, region, encryption flag, and bucketName
+// New constructs a new S3Driver with the given AWS credentials, region, encryption flag, and
+// bucketName
 func New(accessKey string, secretKey string, region aws.Region, encrypt bool, bucketName string) (*S3Driver, error) {
 	auth := aws.Auth{AccessKey: accessKey, SecretKey: secretKey}
 	s3obj := s3.New(auth, region)
@@ -99,6 +101,8 @@ func New(accessKey string, secretKey string, region aws.Region, encrypt bool, bu
 
 	return &S3Driver{s3obj, bucket, encrypt}, nil
 }
+
+// Implement the storagedriver.StorageDriver interface
 
 func (d *S3Driver) GetContent(path string) ([]byte, error) {
 	return d.Bucket.Get(path)

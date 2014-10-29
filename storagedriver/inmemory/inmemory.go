@@ -19,24 +19,26 @@ func init() {
 	factory.Register(DriverName, &inMemoryDriverFactory{})
 }
 
-// Implements the factory.StorageDriverFactory interface
+// inMemoryDriverFacotry implements the factory.StorageDriverFactory interface
 type inMemoryDriverFactory struct{}
 
 func (factory *inMemoryDriverFactory) Create(parameters map[string]string) (storagedriver.StorageDriver, error) {
 	return New(), nil
 }
 
-// InMemory Storage Driver backed by a map
+// InMemoryDriver is a storagedriver.StorageDriver implementation backed by a local map
 // Intended solely for example and testing purposes
 type InMemoryDriver struct {
 	storage map[string][]byte
 	mutex   sync.RWMutex
 }
 
-// Constructs a new InMemoryDriver
+// New constructs a new InMemoryDriver
 func New() *InMemoryDriver {
 	return &InMemoryDriver{storage: make(map[string][]byte)}
 }
+
+// Implement the storagedriver.StorageDriver interface
 
 func (d *InMemoryDriver) GetContent(path string) ([]byte, error) {
 	d.mutex.RLock()

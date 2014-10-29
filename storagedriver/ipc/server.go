@@ -13,10 +13,13 @@ import (
 	"github.com/docker/libchan/spdy"
 )
 
-// Construct a new IPC server handling requests for the given storagedriver.StorageDriver
-// This explicitly uses file descriptor 3 for IPC communication, as storage drivers are spawned in client.go
+// StorageDriverServer runs a new IPC server handling requests for the given
+// storagedriver.StorageDriver
+// This explicitly uses file descriptor 3 for IPC communication, as storage drivers are spawned in
+// client.go
 //
-// To create a new out-of-process driver, create a main package which calls StorageDriverServer with a storagedriver.StorageDriver
+// To create a new out-of-process driver, create a main package which calls StorageDriverServer with
+// a storagedriver.StorageDriver
 func StorageDriverServer(driver storagedriver.StorageDriver) error {
 	childSocket := os.NewFile(3, "childSocket")
 	defer childSocket.Close()
@@ -39,9 +42,10 @@ func StorageDriverServer(driver storagedriver.StorageDriver) error {
 	}
 }
 
-// Receives new storagedriver.StorageDriver method requests and creates a new goroutine to handle each request
-//
-// Requests are expected to be of type ipc.Request as the parameters are unknown until the request type is deserialized
+// receive receives new storagedriver.StorageDriver method requests and creates a new goroutine to
+// handle each request
+// Requests are expected to be of type ipc.Request as the parameters are unknown until the request
+// type is deserialized
 func receive(driver storagedriver.StorageDriver, receiver libchan.Receiver) {
 	for {
 		var request Request
@@ -53,7 +57,7 @@ func receive(driver storagedriver.StorageDriver, receiver libchan.Receiver) {
 	}
 }
 
-// Handles storagedriver.StorageDriver method requests as defined in client.go
+// handleRequest handles storagedriver.StorageDriver method requests as defined in client.go
 // Responds to requests using the Request.ResponseChannel
 func handleRequest(driver storagedriver.StorageDriver, request Request) {
 	switch request.Type {

@@ -17,9 +17,7 @@ import (
 // Hook up gocheck into the "go test" runner
 func Test(t *testing.T) { TestingT(t) }
 
-// Registers an in-process storage driver test suite with the go test runner
-//
-// If skipCheck returns a non-empty skip reason, the suite is skipped with the given reason
+// RegisterInProcessSuite registers an in-process storage driver test suite with the go test runner
 func RegisterInProcessSuite(driverConstructor DriverConstructor, skipCheck SkipCheck) {
 	Suite(&DriverSuite{
 		Constructor: driverConstructor,
@@ -27,9 +25,8 @@ func RegisterInProcessSuite(driverConstructor DriverConstructor, skipCheck SkipC
 	})
 }
 
-// Registers a storage driver test suite which runs the named driver as a child process with the given parameters
-//
-// If skipCheck returns a non-empty skip reason, the suite is skipped with the given reason
+// RegisterIPCSuite registers a storage driver test suite which runs the named driver as a child
+// process with the given parameters
 func RegisterIPCSuite(driverName string, ipcParams map[string]string, skipCheck SkipCheck) {
 	suite := &DriverSuite{
 		Constructor: func() (storagedriver.StorageDriver, error) {
@@ -56,23 +53,26 @@ func RegisterIPCSuite(driverName string, ipcParams map[string]string, skipCheck 
 	Suite(suite)
 }
 
+// SkipCheck is a function used to determine if a test suite should be skipped
+// If a SkipCheck returns a non-empty skip reason, the suite is skipped with the given reason
 type SkipCheck func() (reason string)
 
-var NeverSkip = func() string { return "" }
+// NeverSkip is a default SkipCheck which never skips the suite
+var NeverSkip SkipCheck = func() string { return "" }
 
+// DriverConstructor is a function which returns a new storagedriver.StorageDriver
 type DriverConstructor func() (storagedriver.StorageDriver, error)
+
+// DriverTeardown is a function which cleans up a suite's storagedriver.StorageDriver
 type DriverTeardown func() error
 
+// DriverSuite is a gocheck test suite designed to test a storagedriver.StorageDriver
+// The intended way to create a DriverSuite is with RegisterInProcessSuite or RegisterIPCSuite
 type DriverSuite struct {
 	Constructor DriverConstructor
 	Teardown    DriverTeardown
 	SkipCheck
 	storagedriver.StorageDriver
-}
-
-type TestDriverConfig struct {
-	name   string
-	params map[string]string
 }
 
 func (suite *DriverSuite) SetUpSuite(c *C) {

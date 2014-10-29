@@ -7,13 +7,14 @@ import (
 	"github.com/docker/docker-registry/storagedriver/ipc"
 )
 
-// Internal mapping between storage driver names and their respective factories
+// driverFactories stores an internal mapping between storage driver names and their respective
+// factories
 var driverFactories = make(map[string]StorageDriverFactory)
 
-// Factory interface for the storagedriver.StorageDriver interface
+// StorageDriverFactory is a factory interface for creating storagedriver.StorageDriver interfaces
 // Storage drivers should call Register() with a factory to make the driver available by name
 type StorageDriverFactory interface {
-	// Creates and returns a new storagedriver.StorageDriver with the given parameters
+	// Create returns a new storagedriver.StorageDriver with the given parameters
 	// Parameters will vary by driver and may be ignored
 	// Each parameter key must only consist of lowercase letters and numbers
 	Create(parameters map[string]string) (storagedriver.StorageDriver, error)
@@ -54,7 +55,7 @@ func Create(name string, parameters map[string]string) (storagedriver.StorageDri
 	return driverFactory.Create(parameters)
 }
 
-// Error returned when attempting to construct an unregistered storage driver
+// InvalidStorageDriverError records an attempt to construct an unregistered storage driver
 type InvalidStorageDriverError struct {
 	Name string
 }

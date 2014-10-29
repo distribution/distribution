@@ -15,7 +15,8 @@ import (
 	"github.com/docker/libchan/spdy"
 )
 
-// Storage Driver implementation using a managed child process communicating over IPC
+// StorageDriverClient is a storagedriver.StorageDriver implementation using a managed child process
+// communicating over IPC using libchan with a unix domain socket
 type StorageDriverClient struct {
 	subprocess *exec.Cmd
 	socket     *os.File
@@ -23,8 +24,9 @@ type StorageDriverClient struct {
 	sender     libchan.Sender
 }
 
-// Constructs a new out-of-process storage driver using the driver name and configuration parameters
-// Must call Start() on this driver client before remote method calls can be made
+// NewDriverClient constructs a new out-of-process storage driver using the driver name and
+// configuration parameters
+// A user must call Start on this driver client before remote method calls can be made
 //
 // Looks for drivers in the following locations in order:
 // - Storage drivers directory (to be determined, yet not implemented)
@@ -54,7 +56,8 @@ func NewDriverClient(name string, parameters map[string]string) (*StorageDriverC
 	}, nil
 }
 
-// Starts the designated child process storage driver and binds a socket to this process for IPC
+// Start starts the designated child process storage driver and binds a socket to this process for
+// IPC method calls
 func (driver *StorageDriverClient) Start() error {
 	fileDescriptors, err := syscall.Socketpair(syscall.AF_LOCAL, syscall.SOCK_STREAM, 0)
 	if err != nil {
@@ -102,8 +105,8 @@ func (driver *StorageDriverClient) Start() error {
 	return nil
 }
 
-// Stops the child process storage driver
-// storagedriver.StorageDriver methods called after Stop() will fail
+// Stop stops the child process storage driver
+// storagedriver.StorageDriver methods called after Stop will fail
 func (driver *StorageDriverClient) Stop() error {
 	closeSenderErr := driver.sender.Close()
 	closeTransportErr := driver.transport.Close()
