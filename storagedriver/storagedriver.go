@@ -25,7 +25,7 @@ type StorageDriver interface {
 	// the given path
 	// The driver will know it has received the full contents when it has read "size" bytes
 	// May be used to resume writing a stream by providing a nonzero offset
-	// The offset must be no larger than the number of bytes already written to this path
+	// The offset must be no larger than the ResumeWritePosition for this path
 	WriteStream(path string, offset, size uint64, readCloser io.ReadCloser) error
 
 	// ResumeWritePosition retrieves the byte offset at which it is safe to continue writing at the
