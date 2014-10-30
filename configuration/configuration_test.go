@@ -12,6 +12,7 @@ import (
 // Hook up gocheck into the "go test" runner
 func Test(t *testing.T) { TestingT(t) }
 
+// configStruct is a canonical example configuration, which should map to configYamlV_0_1
 var configStruct = Configuration{
 	Version: Version{
 		Major: 0,
@@ -36,6 +37,7 @@ var configStruct = Configuration{
 	},
 }
 
+// configYamlV_0_1 is a Version{0, 1} yaml document representing configStruct
 var configYamlV_0_1 = `
 version: 0.1
 
@@ -65,6 +67,8 @@ func (suite *ConfigSuite) SetUpTest(c *C) {
 	suite.expectedConfig = copyConfig(configStruct)
 }
 
+// TestMarshalRoundtrip validates that configStruct can be marshaled and unmarshaled without
+// changing any parameters
 func (suite *ConfigSuite) TestMarshalRoundtrip(c *C) {
 	configBytes, err := yaml.Marshal(suite.expectedConfig)
 	c.Assert(err, IsNil)
@@ -73,12 +77,15 @@ func (suite *ConfigSuite) TestMarshalRoundtrip(c *C) {
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
 
+// TestParseSimple validates that configYamlV_0_1 can be parsed into a struct matching configStruct
 func (suite *ConfigSuite) TestParseSimple(c *C) {
 	config, err := Parse([]byte(configYamlV_0_1))
 	c.Assert(err, IsNil)
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
 
+// TestParseWithSameEnvStorage validates that providing environment variables that match the given
+// storage type and parameters will not alter the parsed Configuration struct
 func (suite *ConfigSuite) TestParseWithSameEnvStorage(c *C) {
 	os.Setenv("REGISTRY_STORAGE", "s3")
 	os.Setenv("REGISTRY_STORAGE_S3_REGION", "us-east-1")
@@ -88,6 +95,9 @@ func (suite *ConfigSuite) TestParseWithSameEnvStorage(c *C) {
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
 
+// TestParseWithDifferentEnvStorageParams validates that providing environment variables that change
+// and add to the given storage parameters will change and add parameters to the parsed
+// Configuration struct
 func (suite *ConfigSuite) TestParseWithDifferentEnvStorageParams(c *C) {
 	suite.expectedConfig.Registry.Storage.Parameters["region"] = "us-west-1"
 	suite.expectedConfig.Registry.Storage.Parameters["secure"] = "true"
@@ -102,6 +112,8 @@ func (suite *ConfigSuite) TestParseWithDifferentEnvStorageParams(c *C) {
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
 
+// TestParseWithDifferentEnvStorageType validates that providing an environment variable that
+// changes the storage type will be reflected in the parsed Configuration struct
 func (suite *ConfigSuite) TestParseWithDifferentEnvStorageType(c *C) {
 	suite.expectedConfig.Registry.Storage = Storage{Type: "inmemory", Parameters: map[string]string{}}
 
@@ -112,6 +124,9 @@ func (suite *ConfigSuite) TestParseWithDifferentEnvStorageType(c *C) {
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
 
+// TestParseWithDifferentEnvStorageTypeAndParams validates that providing an environment variable
+// that changes the storage type will be reflected in the parsed Configuration struct and that
+// environment storage parameters will also be included
 func (suite *ConfigSuite) TestParseWithDifferentEnvStorageTypeAndParams(c *C) {
 	suite.expectedConfig.Registry.Storage = Storage{Type: "filesystem", Parameters: map[string]string{}}
 	suite.expectedConfig.Registry.Storage.Parameters["rootdirectory"] = "/tmp/testroot"
@@ -124,6 +139,8 @@ func (suite *ConfigSuite) TestParseWithDifferentEnvStorageTypeAndParams(c *C) {
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
 
+// TestParseWithSameEnvLoglevel validates that providing an environment variable defining the log
+// level to the same as the one provided in the yaml will not change the parsed Configuration struct
 func (suite *ConfigSuite) TestParseWithSameEnvLoglevel(c *C) {
 	os.Setenv("REGISTRY_LOGLEVEL", "info")
 
@@ -132,6 +149,8 @@ func (suite *ConfigSuite) TestParseWithSameEnvLoglevel(c *C) {
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
 
+// TestParseWithDifferentEnvLoglevel validates that providing an environment variable defining the
+// log level will override the value provided in the yaml document
 func (suite *ConfigSuite) TestParseWithDifferentEnvLoglevel(c *C) {
 	suite.expectedConfig.Registry.LogLevel = "error"
 
@@ -142,6 +161,8 @@ func (suite *ConfigSuite) TestParseWithDifferentEnvLoglevel(c *C) {
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
 
+// TestParseInvalidVersion validates that the parser will fail to parse a newer configuration
+// version than the CurrentVersion
 func (suite *ConfigSuite) TestParseInvalidVersion(c *C) {
 	suite.expectedConfig.Version = Version{Major: CurrentVersion.Major, Minor: CurrentVersion.Minor + 1}
 	configBytes, err := yaml.Marshal(suite.expectedConfig)
