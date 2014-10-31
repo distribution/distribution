@@ -1,10 +1,8 @@
 package ipc
 
 import (
-	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"reflect"
 
 	"github.com/docker/libchan"
@@ -16,29 +14,6 @@ type Request struct {
 	Type            string
 	Parameters      map[string]interface{}
 	ResponseChannel libchan.Sender
-}
-
-// noWriteReadWriteCloser is a simple wrapper around an io.ReadCloser that implements the
-// io.ReadWriteCloser interface
-// Calls to Write are disallowed and will return an error
-type noWriteReadWriteCloser struct {
-	io.ReadCloser
-}
-
-func (r noWriteReadWriteCloser) Write(p []byte) (n int, err error) {
-	return 0, errors.New("Write unsupported")
-}
-
-// WrapReader wraps an io.Reader as an io.ReadWriteCloser with a nop Close and unsupported Write
-// Has no effect when an io.ReadWriteCloser is passed in
-func WrapReader(reader io.Reader) io.ReadWriteCloser {
-	if readWriteCloser, ok := reader.(io.ReadWriteCloser); ok {
-		return readWriteCloser
-	} else if readCloser, ok := reader.(io.ReadCloser); ok {
-		return noWriteReadWriteCloser{readCloser}
-	} else {
-		return noWriteReadWriteCloser{ioutil.NopCloser(reader)}
-	}
 }
 
 type responseError struct {
@@ -65,7 +40,7 @@ func (err *responseError) Error() string {
 
 // ReadStreamResponse is a response for a ReadStream request
 type ReadStreamResponse struct {
-	Reader io.ReadWriteCloser
+	Reader io.ReadCloser
 	Error  *responseError
 }
 

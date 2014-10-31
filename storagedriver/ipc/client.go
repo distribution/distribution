@@ -155,7 +155,7 @@ func (driver *StorageDriverClient) GetContent(path string) ([]byte, error) {
 func (driver *StorageDriverClient) PutContent(path string, contents []byte) error {
 	receiver, remoteSender := libchan.Pipe()
 
-	params := map[string]interface{}{"Path": path, "Reader": WrapReader(bytes.NewReader(contents))}
+	params := map[string]interface{}{"Path": path, "Reader": ioutil.NopCloser(bytes.NewReader(contents))}
 	err := driver.sender.Send(&Request{Type: "PutContent", Parameters: params, ResponseChannel: remoteSender})
 	if err != nil {
 		return err
@@ -199,7 +199,7 @@ func (driver *StorageDriverClient) ReadStream(path string, offset uint64) (io.Re
 func (driver *StorageDriverClient) WriteStream(path string, offset, size uint64, reader io.ReadCloser) error {
 	receiver, remoteSender := libchan.Pipe()
 
-	params := map[string]interface{}{"Path": path, "Offset": offset, "Size": size, "Reader": WrapReader(reader)}
+	params := map[string]interface{}{"Path": path, "Offset": offset, "Size": size, "Reader": ioutil.NopCloser(reader)}
 	err := driver.sender.Send(&Request{Type: "WriteStream", Parameters: params, ResponseChannel: remoteSender})
 	if err != nil {
 		return err
