@@ -110,8 +110,8 @@ func (d *InMemoryDriver) ResumeWritePosition(path string) (uint64, error) {
 	return uint64(len(contents)), nil
 }
 
-func (d *InMemoryDriver) List(prefix string) ([]string, error) {
-	subPathMatcher, err := regexp.Compile(fmt.Sprintf("^%s/[^/]+", prefix))
+func (d *InMemoryDriver) List(path string) ([]string, error) {
+	subPathMatcher, err := regexp.Compile(fmt.Sprintf("^%s/[^/]+", path))
 	if err != nil {
 		return nil, err
 	}

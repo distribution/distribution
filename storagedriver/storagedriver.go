@@ -32,8 +32,8 @@ type StorageDriver interface {
 	// given path
 	ResumeWritePosition(path string) (uint64, error)
 
-	// List recursively lists the objects stored at a subpath of the given prefix
-	List(prefix string) ([]string, error)
+	// List returns a list of the objects that are direct descendants of the given path
+	List(path string) ([]string, error)
 
 	// Move moves an object stored at sourcePath to destPath, removing the original object
 	// Note: This may be no more efficient than a copy followed by a delete for many implementations

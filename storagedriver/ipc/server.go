@@ -131,8 +131,8 @@ func handleRequest(driver storagedriver.StorageDriver, request Request) {
 			panic(err)
 		}
 	case "List":
-		prefix, _ := request.Parameters["Prefix"].(string)
-		keys, err := driver.List(prefix)
+		path, _ := request.Parameters["Path"].(string)
+		keys, err := driver.List(path)
 		response := ListResponse{
 			Keys:  keys,
 			Error: ResponseError(err),

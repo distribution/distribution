@@ -240,10 +240,10 @@ func (driver *StorageDriverClient) ResumeWritePosition(path string) (uint64, err
 	return response.Position, nil
 }
 
-func (driver *StorageDriverClient) List(prefix string) ([]string, error) {
+func (driver *StorageDriverClient) List(path string) ([]string, error) {
 	receiver, remoteSender := libchan.Pipe()
 
-	params := map[string]interface{}{"Prefix": prefix}
+	params := map[string]interface{}{"Path": path}
 	err := driver.sender.Send(&Request{Type: "List", Parameters: params, ResponseChannel: remoteSender})
 	if err != nil {
 		return nil, err

@@ -166,9 +166,9 @@ func (d *FilesystemDriver) ResumeWritePosition(subPath string) (uint64, error) {
 	return uint64(fileInfo.Size()), nil
 }
 
-func (d *FilesystemDriver) List(prefix string) ([]string, error) {
-	prefix = strings.TrimRight(prefix, "/")
-	fullPath := d.subPath(prefix)
+func (d *FilesystemDriver) List(subPath string) ([]string, error) {
+	subPath = strings.TrimRight(subPath, "/")
+	fullPath := d.subPath(subPath)
 
 	dir, err := os.Open(fullPath)
 	if err != nil {
@@ -182,7 +182,7 @@ func (d *FilesystemDriver) List(prefix string) ([]string, error) {
 
 	keys := make([]string, 0, len(fileNames))
 	for _, fileName := range fileNames {
-		keys = append(keys, path.Join(prefix, fileName))
+		keys = append(keys, path.Join(subPath, fileName))
 	}
 
 	return keys, nil
