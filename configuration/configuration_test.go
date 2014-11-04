@@ -14,46 +14,46 @@ func Test(t *testing.T) { TestingT(t) }
 
 // configStruct is a canonical example configuration, which should map to configYamlV_0_1
 var configStruct = Configuration{
-	Version: Version{
-		Major: 0,
-		Minor: 1,
-	},
-	Registry: Registry{
-		LogLevel: "info",
-		Storage: Storage{
-			Type: "s3",
-			Parameters: map[string]string{
-				"region":    "us-east-1",
-				"bucket":    "my-bucket",
-				"rootpath":  "/registry",
-				"encrypt":   "true",
-				"secure":    "false",
-				"accesskey": "SAMPLEACCESSKEY",
-				"secretkey": "SUPERSECRET",
-				"host":      "",
-				"port":      "",
-			},
+	Version:  "0.1",
+	Loglevel: "info",
+	Storage: Storage{
+		"s3": Parameters{
+			"region":    "us-east-1",
+			"bucket":    "my-bucket",
+			"rootpath":  "/registry",
+			"encrypt":   "true",
+			"secure":    "false",
+			"accesskey": "SAMPLEACCESSKEY",
+			"secretkey": "SUPERSECRET",
+			"host":      "",
+			"port":      "",
 		},
 	},
 }
 
-// configYamlV_0_1 is a Version{0, 1} yaml document representing configStruct
+// configYamlV_0_1 is a Version 0.1 yaml document representing configStruct
 var configYamlV_0_1 = `
 version: 0.1
+loglevel: info
+storage:
+  s3:
+    region: us-east-1
+    bucket: my-bucket
+    rootpath: /registry
+    encrypt: true
+    secure: false
+    accesskey: SAMPLEACCESSKEY
+    secretkey: SUPERSECRET
+    host: ~
+    port: ~
+`
 
-registry:
-  loglevel: info
-  storage:
-    s3:
-      region: us-east-1
-      bucket: my-bucket
-      rootpath: /registry
-      encrypt: true
-      secure: false
-      accesskey: SAMPLEACCESSKEY
-      secretkey: SUPERSECRET
-      host: ~
-      port: ~
+// inmemoryConfigYamlV_0_1 is a Version 0.1 yaml document specifying an inmemory storage driver with
+// no parameters
+var inmemoryConfigYamlV_0_1 = `
+version: 0.1
+loglevel: info
+storage: inmemory
 `
 
 type ConfigSuite struct {
@@ -84,6 +84,16 @@ func (suite *ConfigSuite) TestParseSimple(c *C) {
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
 
+// TestParseInmemory validates that configuration yaml with storage provided as a string can be
+// parsed into a Configuration struct with no storage parameters
+func (suite *ConfigSuite) TestParseInmemory(c *C) {
+	suite.expectedConfig.Storage = Storage{"inmemory": Parameters{}}
+
+	config, err := Parse([]byte(inmemoryConfigYamlV_0_1))
+	c.Assert(err, IsNil)
+	c.Assert(config, DeepEquals, suite.expectedConfig)
+}
+
 // TestParseWithSameEnvStorage validates that providing environment variables that match the given
 // storage type and parameters will not alter the parsed Configuration struct
 func (suite *ConfigSuite) TestParseWithSameEnvStorage(c *C) {
@@ -99,9 +109,9 @@ func (suite *ConfigSuite) TestParseWithSameEnvStorage(c *C) {
 // and add to the given storage parameters will change and add parameters to the parsed
 // Configuration struct
 func (suite *ConfigSuite) TestParseWithDifferentEnvStorageParams(c *C) {
-	suite.expectedConfig.Registry.Storage.Parameters["region"] = "us-west-1"
-	suite.expectedConfig.Registry.Storage.Parameters["secure"] = "true"
-	suite.expectedConfig.Registry.Storage.Parameters["newparam"] = "some Value"
+	suite.expectedConfig.Storage.setParameter("region", "us-west-1")
+	suite.expectedConfig.Storage.setParameter("secure", "true")
+	suite.expectedConfig.Storage.setParameter("newparam", "some Value")
 
 	os.Setenv("REGISTRY_STORAGE_S3_REGION", "us-west-1")
 	os.Setenv("REGISTRY_STORAGE_S3_SECURE", "true")
@@ -115,7 +125,7 @@ func (suite *ConfigSuite) TestParseWithDifferentEnvStorageParams(c *C) {
 // TestParseWithDifferentEnvStorageType validates that providing an environment variable that
 // changes the storage type will be reflected in the parsed Configuration struct
 func (suite *ConfigSuite) TestParseWithDifferentEnvStorageType(c *C) {
-	suite.expectedConfig.Registry.Storage = Storage{Type: "inmemory", Parameters: map[string]string{}}
+	suite.expectedConfig.Storage = Storage{"inmemory": Parameters{}}
 
 	os.Setenv("REGISTRY_STORAGE", "inmemory")
 
@@ -128,8 +138,8 @@ func (suite *ConfigSuite) TestParseWithDifferentEnvStorageType(c *C) {
 // that changes the storage type will be reflected in the parsed Configuration struct and that
 // environment storage parameters will also be included
 func (suite *ConfigSuite) TestParseWithDifferentEnvStorageTypeAndParams(c *C) {
-	suite.expectedConfig.Registry.Storage = Storage{Type: "filesystem", Parameters: map[string]string{}}
-	suite.expectedConfig.Registry.Storage.Parameters["rootdirectory"] = "/tmp/testroot"
+	suite.expectedConfig.Storage = Storage{"filesystem": Parameters{}}
+	suite.expectedConfig.Storage.setParameter("rootdirectory", "/tmp/testroot")
 
 	os.Setenv("REGISTRY_STORAGE", "filesystem")
 	os.Setenv("REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY", "/tmp/testroot")
@@ -152,7 +162,7 @@ func (suite *ConfigSuite) TestParseWithSameEnvLoglevel(c *C) {
 // TestParseWithDifferentEnvLoglevel validates that providing an environment variable defining the
 // log level will override the value provided in the yaml document
 func (suite *ConfigSuite) TestParseWithDifferentEnvLoglevel(c *C) {
-	suite.expectedConfig.Registry.LogLevel = "error"
+	suite.expectedConfig.Loglevel = "error"
 
 	os.Setenv("REGISTRY_LOGLEVEL", "error")
 
@@ -164,7 +174,7 @@ func (suite *ConfigSuite) TestParseWithDifferentEnvLoglevel(c *C) {
 // TestParseInvalidVersion validates that the parser will fail to parse a newer configuration
 // version than the CurrentVersion
 func (suite *ConfigSuite) TestParseInvalidVersion(c *C) {
-	suite.expectedConfig.Version = Version{Major: CurrentVersion.Major, Minor: CurrentVersion.Minor + 1}
+	suite.expectedConfig.Version = MajorMinorVersion(CurrentVersion.Major(), CurrentVersion.Minor()+1)
 	configBytes, err := yaml.Marshal(suite.expectedConfig)
 	c.Assert(err, IsNil)
 	_, err = Parse(configBytes)
@@ -174,18 +184,11 @@ func (suite *ConfigSuite) TestParseInvalidVersion(c *C) {
 func copyConfig(config Configuration) *Configuration {
 	configCopy := new(Configuration)
 
-	configCopy.Version = *new(Version)
-	configCopy.Version.Major = config.Version.Major
-	configCopy.Version.Minor = config.Version.Minor
-
-	configCopy.Registry = *new(Registry)
-	configCopy.Registry.LogLevel = config.Registry.LogLevel
-
-	configCopy.Registry.Storage = *new(Storage)
-	configCopy.Registry.Storage.Type = config.Registry.Storage.Type
-	configCopy.Registry.Storage.Parameters = make(map[string]string)
-	for k, v := range config.Registry.Storage.Parameters {
-		configCopy.Registry.Storage.Parameters[k] = v
+	configCopy.Version = MajorMinorVersion(config.Version.Major(), config.Version.Minor())
+	configCopy.Loglevel = config.Loglevel
+	configCopy.Storage = Storage{config.Storage.Type(): Parameters{}}
+	for k, v := range config.Storage.Parameters() {
+		configCopy.Storage.setParameter(k, v)
 	}
 
 	return configCopy

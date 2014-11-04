@@ -7,99 +7,182 @@ import (
 	"strconv"
 	"strings"
 
-	"gopkg.in/yaml.v2"
+	"gopkg.in/BrianBland/yaml.v2"
 )
 
-// CurrentVersion is the most recent Version that can be parsed
-var CurrentVersion = Version{Major: 0, Minor: 1}
-
-// Configuration is a versioned system configuration
-// When marshaled into yaml, this produces a document matching the current version's format
+// Configuration is a versioned registry configuration, intended to be provided by a yaml file, and
+// optionally modified by environment variables
 type Configuration struct {
+	// Version is the version which defines the format of the rest of the configuration
 	Version  Version  `yaml:"version"`
-	Registry Registry `yaml:"registry"`
+
+	// Loglevel is the level at which registry operations are logged
+	Loglevel Loglevel `yaml:"loglevel"`
+
+	// Storage is the configuration for the registry's storage driver
+	Storage  Storage  `yaml:"storage"`
 }
 
-// Version is a major/minor version pair
-// Minor version upgrades should be strictly additive
+// v_0_1_Configuration is a Version 0.1 Configuration struct
+// This is currently aliased to Configuration, as it is the current version
+type v_0_1_Configuration Configuration
+
+// Version is a major/minor version pair of the form Major.Minor
 // Major version upgrades indicate structure or type changes
-type Version struct {
-	Major uint
-	Minor uint
+// Minor version upgrades should be strictly additive
+type Version string
+
+// MajorMinorVersion constructs a Version from its Major and Minor components
+func MajorMinorVersion(major, minor uint) Version {
+	return Version(fmt.Sprintf("%d.%d", major, minor))
 }
 
-func (version Version) String() string {
-	return fmt.Sprintf("%d.%d", version.Major, version.Minor)
+func (version Version) major() (uint, error) {
+	majorPart := strings.Split(string(version), ".")[0]
+	major, err := strconv.ParseUint(majorPart, 10, 0)
+	return uint(major), err
 }
 
-// MarshalYAML is implemented to serialize the Version into a string format
-func (version Version) MarshalYAML() (interface{}, error) {
-	return version.String(), nil
+// Major returns the major version portion of a Version
+func (version Version) Major() uint {
+	major, _ := version.major()
+	return major
 }
 
-// Registry defines the configuration for a registry
-type Registry struct {
-	// LogLevel specifies the level at which the registry will be logged
-	LogLevel string
+func (version Version) minor() (uint, error) {
+	minorPart := strings.Split(string(version), ".")[1]
+	minor, err := strconv.ParseUint(minorPart, 10, 0)
+	return uint(minor), err
+}
 
-	// Storage specifies the configuration of the registry's object storage
-	Storage Storage
+// Minor returns the minor version portion of a Version
+func (version Version) Minor() uint {
+	minor, _ := version.minor()
+	return minor
+}
+
+// UnmarshalYAML implements the yaml.Unmarshaler interface
+// Unmarshals a string of the form X.Y into a Version, validating that X and Y can represent uints
+func (version *Version) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var versionString string
+	err := unmarshal(&versionString)
+	if err != nil {
+		return err
+	}
+
+	newVersion := Version(versionString)
+	if _, err := newVersion.major(); err != nil {
+		return err
+	}
+
+	if _, err := newVersion.minor(); err != nil {
+		return err
+	}
+
+	*version = newVersion
+	return nil
+}
+
+// CurrentVersion is the most recent Version that can be parsed
+var CurrentVersion = MajorMinorVersion(0, 1)
+
+// Loglevel is the level at which operations are logged
+// This can be error, warn, info, or debug
+type Loglevel string
+
+// UnmarshalYAML implements the yaml.Umarshaler interface
+// Unmarshals a string into a Loglevel, lowercasing the string and validating that it represents a
+// valid loglevel
+func (loglevel *Loglevel) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var loglevelString string
+	err := unmarshal(&loglevelString)
+	if err != nil {
+		return err
+	}
+
+	loglevelString = strings.ToLower(loglevelString)
+	switch loglevelString {
+	case "error", "warn", "info", "debug":
+	default:
+		return fmt.Errorf("Invalid loglevel %s Must be one of [error, warn, info, debug]", loglevelString)
+	}
+
+	*loglevel = Loglevel(loglevelString)
+	return nil
 }
 
 // Storage defines the configuration for registry object storage
-type Storage struct {
-	// Type specifies the storage driver type (examples: inmemory, filesystem, s3, ...)
-	Type string
+type Storage map[string]Parameters
 
-	// Parameters specifies the key/value parameters map passed to the storage driver constructor
-	Parameters map[string]string
+// Type returns the storage driver type, such as filesystem or s3
+func (storage Storage) Type() string {
+	// Return only key in this map
+	for k := range storage {
+		return k
+	}
+	return ""
 }
 
+// Parameters returns the Parameters map for a Storage configuration
+func (storage Storage) Parameters() Parameters {
+	return storage[storage.Type()]
+}
+
+// setParameter changes the parameter at the provided key to the new value
+func (storage Storage) setParameter(key, value string) {
+	storage[storage.Type()][key] = value
+}
+
+// UnmarshalYAML implements the yaml.Unmarshaler interface
+// Unmarshals a single item map into a Storage or a string into a Storage type with no parameters
+func (storage *Storage) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var storageMap map[string]Parameters
+	err := unmarshal(&storageMap)
+	if err == nil {
+		if len(storageMap) > 1 {
+			types := make([]string, 0, len(storageMap))
+			for k := range storageMap {
+				types = append(types, k)
+			}
+			return fmt.Errorf("Must provide exactly one storage type. Provided: %v", types)
+		}
+		*storage = storageMap
+		return nil
+	}
+
+	var storageType string
+	err = unmarshal(&storageType)
+	if err == nil {
+		*storage = Storage{storageType: Parameters{}}
+		return nil
+	}
+
+	return err
+}
+
+// MarshalYAML implements the yaml.Marshaler interface
 func (storage Storage) MarshalYAML() (interface{}, error) {
-	return yaml.MapSlice{yaml.MapItem{storage.Type, storage.Parameters}}, nil
+	if storage.Parameters == nil {
+		return storage.Type, nil
+	}
+	return map[string]Parameters(storage), nil
 }
 
-// untypedConfiguration is the unmarshalable configuration struct that only assumes the existence of
-// a version string parameter
-// This is done to parse the configuration version, then parse the remainder with a version-specific
-// parser
-type untypedConfiguration struct {
-	// Version is the version string defined in a configuration yaml
-	// This can safely parse versions defined as float types in yaml
-	Version string `yaml:"version"`
-
-	// Registry is an untyped placeholder for the Registry configuration, which can later be parsed
-	// into a current Registry struct
-	Registry interface{} `yaml:"registry"`
-}
-
-// V_0_1_RegistryConfiguration is the unmarshalable Registry configuration struct specific to
-// Version{0, 1}
-type V_0_1_RegistryConfiguration struct {
-	// LogLevel is the level at which the registry will log
-	// The loglevel can be overridden with the environment variable REGISTRY_LOGLEVEL, for example:
-	// REGISTRY_LOGLEVEL=info
-	LogLevel string `yaml:"loglevel"`
-
-	// Storage is an untyped placeholder for the Storage configuration, which can later be parsed as
-	// a Storage struct
-	// The storage type can be overridden with the environment variable REGISTRY_STORAGE, for
-	// example: REGISTRY_STORAGE=s3
-	// Note: If REGISTRY_STORAGE changes the storage type, all included parameters will be ignored
-	// The storage parameters can be overridden with any environment variable of the format:
-	// REGISTRY_STORAGE_<storage driver type>_<parameter name>, for example:
-	// REGISTRY_STORAGE_S3_BUCKET=my-bucket
-	Storage interface{} `yaml:"storage"`
-}
+// Parameters defines a key-value parameters mapping
+type Parameters map[string]string
 
 // Parse parses an input configuration yaml document into a Configuration struct
-// This should be capable of handling old configuration format versions
+// This should generally be capable of handling old configuration format versions
 //
-// Environment variables may be used to override configuration parameters other than version, which
-// may be defined on a per-version basis. See V_0_1_RegistryConfiguration for more details
+// Environment variables may be used to override configuration parameters other than version,
+// following the scheme below:
+// Configuration.Abc may be replaced by the value of REGISTRY_ABC,
+// Configuration.Abc.Xyz may be replaced by the value of REGISTRY_ABC_XYZ, and so forth
 func Parse(in []byte) (*Configuration, error) {
-	var untypedConfig untypedConfiguration
-	var config Configuration
+	var untypedConfig struct {
+		Version Version
+	}
+	var config *Configuration
 
 	err := yaml.Unmarshal(in, &untypedConfig)
 	if err != nil {
@@ -109,128 +192,70 @@ func Parse(in []byte) (*Configuration, error) {
 		return nil, fmt.Errorf("Please specify a configuration version. Current version is %s", CurrentVersion)
 	}
 
-	// Convert the version string from X.Y to Version{X, Y}
-	versionParts := strings.Split(untypedConfig.Version, ".")
-	if len(versionParts) != 2 {
-		return nil, fmt.Errorf("Invalid version: %s Expected format: X.Y", untypedConfig.Version)
-	}
-	majorVersion, err := strconv.ParseUint(versionParts[0], 10, 0)
-	if err != nil {
-		return nil, fmt.Errorf("Major version must be of type uint, received %v", versionParts[0])
-	}
-	minorVersion, err := strconv.ParseUint(versionParts[1], 10, 0)
-	if err != nil {
-		return nil, fmt.Errorf("Minor version must be of type uint, received %v", versionParts[1])
-	}
-	config.Version = Version{Major: uint(majorVersion), Minor: uint(minorVersion)}
-
 	// Parse the remainder of the configuration depending on the provided version
-	switch config.Version {
-	case Version{0, 1}:
-		registry, err := parseV_0_1_Registry(untypedConfig.Registry)
+	switch untypedConfig.Version {
+	case "0.1":
+		config, err = parseV_0_1_Registry(in)
 		if err != nil {
 			return nil, err
 		}
-
-		config.Registry = *registry
 	default:
-		return nil, fmt.Errorf("Unsupported configuration version %s Current version is %s", config.Version, CurrentVersion)
+		return nil, fmt.Errorf("Unsupported configuration version %s Current version is %s", untypedConfig.Version, CurrentVersion)
 	}
 
-	switch config.Registry.LogLevel {
-	case "error", "warn", "info", "debug":
-	default:
-		return nil, fmt.Errorf("Invalid loglevel %s Must be one of [error, warn, info, debug]", config.Registry.LogLevel)
-	}
-
-	return &config, nil
+	return config, nil
 }
 
-// parseV_0_1_Registry parses a Registry configuration for Version{0, 1}
-func parseV_0_1_Registry(registry interface{}) (*Registry, error) {
+// parseV_0_1_Registry parses a registry Configuration for Version 0.1
+func parseV_0_1_Registry(in []byte) (*Configuration, error) {
 	envMap := getEnvMap()
 
-	registryBytes, err := yaml.Marshal(registry)
-	if err != nil {
-		return nil, err
-	}
-	var v_0_1 V_0_1_RegistryConfiguration
-	err = yaml.Unmarshal(registryBytes, &v_0_1)
+	var config v_0_1_Configuration
+	err := yaml.Unmarshal(in, &config)
 	if err != nil {
 		return nil, err
 	}
 
-	if logLevel, ok := envMap["REGISTRY_LOGLEVEL"]; ok {
-		v_0_1.LogLevel = logLevel
-	}
-	v_0_1.LogLevel = strings.ToLower(v_0_1.LogLevel)
-
-	var storage Storage
-	storage.Parameters = make(map[string]string)
-
-	switch v_0_1.Storage.(type) {
-	case string:
-		// Storage is provided only by type
-		storage.Type = v_0_1.Storage.(string)
-	case map[interface{}]interface{}:
-		// Storage is provided as a {type: parameters} map
-		storageMap := v_0_1.Storage.(map[interface{}]interface{})
-		if len(storageMap) > 1 {
-			keys := make([]string, 0, len(storageMap))
-			for key := range storageMap {
-				keys = append(keys, toString(key))
-			}
-			return nil, fmt.Errorf("Must provide exactly one storage type. Provided: %v", keys)
+	// Override config.Loglevel if environment variable is provided
+	if loglevel, ok := envMap["REGISTRY_LOGLEVEL"]; ok {
+		var newLoglevel Loglevel
+		err := yaml.Unmarshal([]byte(loglevel), &newLoglevel)
+		if err != nil {
+			return nil, err
 		}
-		var params map[interface{}]interface{}
-		// There will only be one key-value pair at this point
-		for k, v := range storageMap {
-			// Parameters may be parsed as numerical or boolean values, so just convert these to
-			// strings
-			storage.Type = toString(k)
-			paramsMap, ok := v.(map[interface{}]interface{})
-			if !ok {
-				return nil, fmt.Errorf("Must provide parameters as a map[string]string. Provided: %#v", v)
-			}
-			params = paramsMap
-		}
-		for k, v := range params {
-			storage.Parameters[toString(k)] = toString(v)
-		}
-
-	case interface{}:
-		// Bad type for storage
-		return nil, fmt.Errorf("Registry storage must be provided by name, optionally with parameters. Provided: %v", v_0_1.Storage)
+		config.Loglevel = newLoglevel
 	}
 
+	// Override config.Storage if environment variable is provided
 	if storageType, ok := envMap["REGISTRY_STORAGE"]; ok {
-		if storageType != storage.Type {
-			storage.Type = storageType
+		if storageType != config.Storage.Type() {
 			// Reset the storage parameters because we're using a different storage type
-			storage.Parameters = make(map[string]string)
+			config.Storage = Storage{storageType: Parameters{}}
 		}
 	}
 
-	if storage.Type == "" {
-		return nil, fmt.Errorf("Must provide exactly one storage type, optionally with parameters. Provided: %v", v_0_1.Storage)
+	if config.Storage.Type() == "" {
+		return nil, fmt.Errorf("Must provide exactly one storage type, optionally with parameters. Provided: %v", config.Storage)
 	}
 
-	// Find all environment variables of the format:
+	// Override storage parameters with all environment variables of the format:
 	// REGISTRY_STORAGE_<storage driver type>_<parameter name>
-	storageParamsRegexp, err := regexp.Compile(fmt.Sprintf("^REGISTRY_STORAGE_%s_([A-Z0-9]+)$", strings.ToUpper(storage.Type)))
+	storageParamsRegexp, err := regexp.Compile(fmt.Sprintf("^REGISTRY_STORAGE_%s_([A-Z0-9]+)$", strings.ToUpper(config.Storage.Type())))
 	if err != nil {
 		return nil, err
 	}
 	for k, v := range envMap {
 		if submatches := storageParamsRegexp.FindStringSubmatch(k); submatches != nil {
-			storage.Parameters[strings.ToLower(submatches[1])] = v
+			config.Storage.setParameter(strings.ToLower(submatches[1]), v)
 		}
 	}
 
-	return &Registry{LogLevel: v_0_1.LogLevel, Storage: storage}, nil
+	return (*Configuration)(&config), nil
 }
 
 // getEnvMap reads the current environment variables and converts these into a key/value map
+// This is used to distinguish between empty strings returned by os.GetEnv(key) because of undefined
+// environment variables and explicitly empty ones
 func getEnvMap() map[string]string {
 	envMap := make(map[string]string)
 	for _, env := range os.Environ() {
@@ -238,12 +263,4 @@ func getEnvMap() map[string]string {
 		envMap[envParts[0]] = envParts[1]
 	}
 	return envMap
-}
-
-// toString converts reasonable objects into strings that may be used for configuration parameters
-func toString(v interface{}) string {
-	if v == nil {
-		return ""
-	}
-	return fmt.Sprint(v)
 }

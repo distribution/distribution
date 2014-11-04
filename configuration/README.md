@@ -13,41 +13,34 @@ The version is specified as a string of the form `MajorVersion.MinorVersion`, wh
 File Structure (as of Version 0.1)
 ------------------------------------
 
-The configuration structure is defined in `configuration.go`, and is best described by the following two examples:
+The configuration structure is defined by the `Configuration` struct in `configuration.go`, and is best described by the following two examples:
 
 ```yaml
 version: 0.1
-
-registry:
-  loglevel: info
-  storage:
-    s3:
-      region: us-east-1
-      bucket: my-bucket
-      rootpath: /registry
-      encrypt: true
-      secure: false
-      accesskey: SAMPLEACCESSKEY
-      secretkey: SUPERSECRET
-      host: ~
-      port: ~
+loglevel: info
+storage:
+  s3:
+    region: us-east-1
+    bucket: my-bucket
+    rootpath: /registry
+    encrypt: true
+    secure: false
+    accesskey: SAMPLEACCESSKEY
+    secretkey: SUPERSECRET
+    host: ~
+    port: ~
 ```
 
 ```yaml
 version: 0.1
-
-registry:
-  loglevel: debug
-  storage: inmemory
+loglevel: debug
+storage: inmemory
 ```
 
 ### version
 The version is expected to remain a top-level field, as to allow for a consistent version check before parsing the remainder of the configuration file.
 
-### registry
-The registry configuration consists of two fields: `loglevel` and `storage`
-
-#### loglevel
+### loglevel
 This specifies the log level of the registry.
 
 Supported values:
@@ -56,7 +49,7 @@ Supported values:
 * `info`
 * `debug`
 
-#### storage
+### storage
 This specifies the storage driver, and may be provided either as a string (only the driver type) or as a driver name with a parameters map, as seen in the first example above.
 
 The parameters map will be passed into the factory constructor of the given storage driver type.
@@ -70,7 +63,7 @@ Environment Variables
 
 To support the workflow of running a docker registry from a standard container without having to modify configuration files, the registry configuration also supports environment variables for overriding fields.
 
-Any field that is a descendent of `registry` can be replaced by providing an environment variable of the following form: `REGISTRY_<uppercase key>[_<uppercase key>]...`.
+Any configuration field other than version can be replaced by providing an environment variable of the following form: `REGISTRY_<uppercase key>[_<uppercase key>]...`.
 
 For example, to change the loglevel to `error`, one can provide `REGISTRY_LOGLEVEL=error`, and to change the s3 storage driver's region parameter to `us-west-1`, one can provide `REGISTRY_STORAGE_S3_LOGLEVEL=us-west-1`.
 
