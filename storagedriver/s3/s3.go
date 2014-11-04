@@ -161,7 +161,6 @@ func (d *S3Driver) WriteStream(path string, offset, size uint64, reader io.ReadC
 		} else {
 			part, err := multi.PutPart(int(partNumber), bytes.NewReader(buf[0:bytesRead]))
 			if err != nil {
-
 				return err
 			}
 
@@ -192,7 +191,10 @@ func (d *S3Driver) ResumeWritePosition(path string) (uint64, error) {
 }
 
 func (d *S3Driver) List(prefix string) ([]string, error) {
-	listResponse, err := d.Bucket.List(prefix+"/", "/", "", listPartsMax)
+	if prefix[len(prefix)-1] != '/' {
+		prefix = prefix + "/"
+	}
+	listResponse, err := d.Bucket.List(prefix, "/", "", listPartsMax)
 	if err != nil {
 		return nil, err
 	}
@@ -200,7 +202,7 @@ func (d *S3Driver) List(prefix string) ([]string, error) {
 	files := []string{}
 	directories := []string{}
 
-	for len(listResponse.Contents) > 0 || len(listResponse.CommonPrefixes) > 0 {
+	for {
 		for _, key := range listResponse.Contents {
 			files = append(files, key.Key)
 		}
@@ -209,27 +211,13 @@ func (d *S3Driver) List(prefix string) ([]string, error) {
 			directories = append(directories, commonPrefix[0:len(commonPrefix)-1])
 		}
 
-		lastFile := ""
-		lastDirectory := ""
-		lastMarker := ""
-
-		if len(files) > 0 {
-			lastFile = files[len(files)-1]
-		}
-
-		if len(directories) > 0 {
-			lastDirectory = directories[len(directories)-1] + "/"
-		}
-
-		if lastDirectory > lastFile {
-			lastMarker = lastDirectory
+		if listResponse.IsTruncated {
+			listResponse, err = d.Bucket.List(prefix, "/", listResponse.NextMarker, listPartsMax)
+			if err != nil {
+				return nil, err
+			}
 		} else {
-			lastMarker = lastFile
-		}
-
-		listResponse, err = d.Bucket.List(prefix+"/", "/", lastMarker, listPartsMax)
-		if err != nil {
-			return nil, err
+			break
 		}
 	}
 
