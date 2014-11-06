@@ -3,7 +3,31 @@ package storagedriver
 import (
 	"fmt"
 	"io"
+	"strconv"
+	"strings"
 )
+
+// Version is a string representing the storage driver version, of the form Major.Minor.
+// The registry must accept storage drivers with equal major version and greater minor version,
+// but may not be compatible with older storage driver versions.
+type Version string
+
+// Major returns the major (primary) component of a version
+func (version Version) Major() uint {
+	majorPart := strings.Split(string(version), ".")[0]
+	major, _ := strconv.ParseUint(majorPart, 10, 0)
+	return uint(major)
+}
+
+// Minor returns the minor (secondary) component of a version
+func (version Version) Minor() uint {
+	minorPart := strings.Split(string(version), ".")[1]
+	minor, _ := strconv.ParseUint(minorPart, 10, 0)
+	return uint(minor)
+}
+
+// CurrentVersion is the current storage driver Version
+const CurrentVersion Version = "0.1"
 
 // StorageDriver defines methods that a Storage Driver must implement for a filesystem-like
 // key/value object storage

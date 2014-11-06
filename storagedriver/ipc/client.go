@@ -11,6 +11,7 @@ import (
 	"path"
 	"syscall"
 
+	"github.com/docker/docker-registry/storagedriver"
 	"github.com/docker/libchan"
 	"github.com/docker/libchan/spdy"
 )
@@ -22,6 +23,7 @@ type StorageDriverClient struct {
 	socket     *os.File
 	transport  *spdy.Transport
 	sender     libchan.Sender
+	version    storagedriver.Version
 }
 
 // NewDriverClient constructs a new out-of-process storage driver using the driver name and
@@ -65,42 +67,62 @@ func (driver *StorageDriverClient) Start() error {
 	}
 
 	childSocket := os.NewFile(uintptr(fileDescriptors[0]), "childSocket")
-	parentSocket := os.NewFile(uintptr(fileDescriptors[1]), "parentSocket")
+	driver.socket = os.NewFile(uintptr(fileDescriptors[1]), "parentSocket")
 
 	driver.subprocess.Stdout = os.Stdout
 	driver.subprocess.Stderr = os.Stderr
 	driver.subprocess.ExtraFiles = []*os.File{childSocket}
 
 	if err = driver.subprocess.Start(); err != nil {
-		parentSocket.Close()
+		driver.Stop()
 		return err
 	}
 
 	if err = childSocket.Close(); err != nil {
-		parentSocket.Close()
+		driver.Stop()
 		return err
 	}
 
-	connection, err := net.FileConn(parentSocket)
+	connection, err := net.FileConn(driver.socket)
 	if err != nil {
-		parentSocket.Close()
+		driver.Stop()
 		return err
 	}
-	transport, err := spdy.NewClientTransport(connection)
+	driver.transport, err = spdy.NewClientTransport(connection)
 	if err != nil {
-		parentSocket.Close()
+		driver.Stop()
 		return err
 	}
-	sender, err := transport.NewSendChannel()
+	driver.sender, err = driver.transport.NewSendChannel()
 	if err != nil {
-		transport.Close()
-		parentSocket.Close()
+		driver.Stop()
 		return err
 	}
 
-	driver.socket = parentSocket
-	driver.transport = transport
-	driver.sender = sender
+	// Check the driver's version to determine compatibility
+	receiver, remoteSender := libchan.Pipe()
+	err = driver.sender.Send(&Request{Type: "Version", ResponseChannel: remoteSender})
+	if err != nil {
+		driver.Stop()
+		return err
+	}
+
+	var response VersionResponse
+	err = receiver.Receive(&response)
+	if err != nil {
+		driver.Stop()
+		return err
+	}
+
+	if response.Error != nil {
+		return response.Error
+	}
+
+	driver.version = response.Version
+
+	if driver.version.Major() != storagedriver.CurrentVersion.Major() || driver.version.Minor() > storagedriver.CurrentVersion.Minor() {
+		return IncompatibleVersionError{driver.version}
+	}
 
 	return nil
 }
@@ -108,10 +130,20 @@ func (driver *StorageDriverClient) Start() error {
 // Stop stops the child process storage driver
 // storagedriver.StorageDriver methods called after Stop will fail
 func (driver *StorageDriverClient) Stop() error {
-	closeSenderErr := driver.sender.Close()
-	closeTransportErr := driver.transport.Close()
-	closeSocketErr := driver.socket.Close()
-	killErr := driver.subprocess.Process.Kill()
+	var closeSenderErr, closeTransportErr, closeSocketErr, killErr error
+
+	if driver.sender != nil {
+		closeSenderErr = driver.sender.Close()
+	}
+	if driver.transport != nil {
+		closeTransportErr = driver.transport.Close()
+	}
+	if driver.socket != nil {
+		closeSocketErr = driver.socket.Close()
+	}
+	if driver.subprocess != nil {
+		killErr = driver.subprocess.Process.Kill()
+	}
 
 	if closeSenderErr != nil {
 		return closeSenderErr

@@ -5,8 +5,28 @@ import (
 	"io"
 	"reflect"
 
+	"github.com/docker/docker-registry/storagedriver"
 	"github.com/docker/libchan"
 )
+
+// IPCStorageDriver is the interface which IPC storage drivers must implement. As external storage
+// drivers may be defined to use a different version of the storagedriver.StorageDriver interface,
+// we use an additional version check to determine compatiblity.
+type IPCStorageDriver interface {
+	// Version returns the storagedriver.StorageDriver interface version which this storage driver
+	// implements, which is used to determine driver compatibility
+	Version() (storagedriver.Version, error)
+}
+
+// IncompatibleVersionError is returned when a storage driver is using an incompatible version of
+// the storagedriver.StorageDriver api
+type IncompatibleVersionError struct {
+	version storagedriver.Version
+}
+
+func (e IncompatibleVersionError) Error() string {
+	return fmt.Sprintf("Incompatible storage driver version: %s", e.version)
+}
 
 // Request defines a remote method call request
 // A return value struct is to be sent over the ResponseChannel
@@ -37,6 +57,12 @@ func (err *responseError) Error() string {
 }
 
 // IPC method call response object definitions
+
+// VersionResponse is a response for a Version request
+type VersionResponse struct {
+	Version storagedriver.Version
+	Error   *responseError
+}
 
 // ReadStreamResponse is a response for a ReadStream request
 type ReadStreamResponse struct {

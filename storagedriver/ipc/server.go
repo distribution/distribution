@@ -61,6 +61,11 @@ func receive(driver storagedriver.StorageDriver, receiver libchan.Receiver) {
 // Responds to requests using the Request.ResponseChannel
 func handleRequest(driver storagedriver.StorageDriver, request Request) {
 	switch request.Type {
+	case "Version":
+		err := request.ResponseChannel.Send(&VersionResponse{Version: storagedriver.CurrentVersion})
+		if err != nil {
+			panic(err)
+		}
 	case "GetContent":
 		path, _ := request.Parameters["Path"].(string)
 		content, err := driver.GetContent(path)
