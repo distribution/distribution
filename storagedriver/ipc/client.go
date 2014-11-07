@@ -8,12 +8,15 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"path"
 	"syscall"
 
 	"github.com/docker/libchan"
 	"github.com/docker/libchan/spdy"
 )
+
+// StorageDriverExecutablePrefix is the prefix which the IPC storage driver loader expects driver
+// executables to begin with. For example, the s3 driver should be named "registry-storage-s3".
+const StorageDriverExecutablePrefix = "registry-storagedriver-"
 
 // StorageDriverClient is a storagedriver.StorageDriver implementation using a managed child process
 // communicating over IPC using libchan with a unix domain socket
@@ -38,15 +41,10 @@ func NewDriverClient(name string, parameters map[string]string) (*StorageDriverC
 		return nil, err
 	}
 
-	driverPath := os.ExpandEnv(path.Join("$GOPATH", "bin", name))
-	if _, err := os.Stat(driverPath); os.IsNotExist(err) {
-		driverPath = path.Join(path.Dir(os.Args[0]), name)
-	}
-	if _, err := os.Stat(driverPath); os.IsNotExist(err) {
-		driverPath, err = exec.LookPath(name)
-		if err != nil {
-			return nil, err
-		}
+	driverExecName := StorageDriverExecutablePrefix + name
+	driverPath, err := exec.LookPath(driverExecName)
+	if err != nil {
+		return nil, err
 	}
 
 	command := exec.Command(driverPath, string(paramsBytes))
