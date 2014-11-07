@@ -78,7 +78,7 @@ func (d *InMemoryDriver) WriteStream(path string, offset, size uint64, reader io
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
-	resumableOffset, err := d.ResumeWritePosition(path)
+	resumableOffset, err := d.CurrentSize(path)
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func (d *InMemoryDriver) WriteStream(path string, offset, size uint64, reader io
 	return nil
 }
 
-func (d *InMemoryDriver) ResumeWritePosition(path string) (uint64, error) {
+func (d *InMemoryDriver) CurrentSize(path string) (uint64, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 	contents, ok := d.storage[path]

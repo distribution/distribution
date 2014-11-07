@@ -25,12 +25,12 @@ type StorageDriver interface {
 	// the given path
 	// The driver will know it has received the full contents when it has read "size" bytes
 	// May be used to resume writing a stream by providing a nonzero offset
-	// The offset must be no larger than the ResumeWritePosition for this path
+	// The offset must be no larger than the CurrentSize for this path
 	WriteStream(path string, offset, size uint64, readCloser io.ReadCloser) error
 
-	// ResumeWritePosition retrieves the byte offset at which it is safe to continue writing at the
-	// given path
-	ResumeWritePosition(path string) (uint64, error)
+	// CurrentSize retrieves the curernt size in bytes of the object at the given path
+	// It should be safe to read or write anywhere up to this point
+	CurrentSize(path string) (uint64, error)
 
 	// List returns a list of the objects that are direct descendants of the given path
 	List(path string) ([]string, error)

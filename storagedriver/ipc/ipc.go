@@ -49,8 +49,8 @@ type WriteStreamResponse struct {
 	Error *responseError
 }
 
-// ResumeWritePositionResponse is a response for a ResumeWritePosition request
-type ResumeWritePositionResponse struct {
+// CurrentSizeResponse is a response for a CurrentSize request
+type CurrentSizeResponse struct {
 	Position uint64
 	Error    *responseError
 }

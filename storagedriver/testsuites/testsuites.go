@@ -160,7 +160,7 @@ func (suite *DriverSuite) TestContinueStreamAppend(c *C) {
 	err := suite.StorageDriver.WriteStream(filename, 0, 3*chunkSize, ioutil.NopCloser(bytes.NewReader(contentsChunk1)))
 	c.Assert(err, IsNil)
 
-	offset, err := suite.StorageDriver.ResumeWritePosition(filename)
+	offset, err := suite.StorageDriver.CurrentSize(filename)
 	c.Assert(err, IsNil)
 	if offset > chunkSize {
 		c.Fatalf("Offset too large, %d > %d", offset, chunkSize)
@@ -168,7 +168,7 @@ func (suite *DriverSuite) TestContinueStreamAppend(c *C) {
 	err = suite.StorageDriver.WriteStream(filename, offset, 3*chunkSize, ioutil.NopCloser(bytes.NewReader(fullContents[offset:2*chunkSize])))
 	c.Assert(err, IsNil)
 
-	offset, err = suite.StorageDriver.ResumeWritePosition(filename)
+	offset, err = suite.StorageDriver.CurrentSize(filename)
 	c.Assert(err, IsNil)
 	if offset > 2*chunkSize {
 		c.Fatalf("Offset too large, %d > %d", offset, 2*chunkSize)
