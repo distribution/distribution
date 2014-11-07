@@ -177,7 +177,7 @@ func (d *S3Driver) WriteStream(path string, offset, size uint64, reader io.ReadC
 	return nil
 }
 
-func (d *S3Driver) ResumeWritePosition(path string) (uint64, error) {
+func (d *S3Driver) CurrentSize(path string) (uint64, error) {
 	_, parts, err := d.getAllParts(path)
 	if err != nil {
 		return 0, err
@@ -190,11 +190,11 @@ func (d *S3Driver) ResumeWritePosition(path string) (uint64, error) {
 	return (((uint64(len(parts)) - 1) * uint64(parts[0].Size)) + uint64(parts[len(parts)-1].Size)), nil
 }
 
-func (d *S3Driver) List(prefix string) ([]string, error) {
-	if prefix[len(prefix)-1] != '/' {
-		prefix = prefix + "/"
+func (d *S3Driver) List(path string) ([]string, error) {
+	if path[len(path)-1] != '/' {
+		path = path + "/"
 	}
-	listResponse, err := d.Bucket.List(prefix, "/", "", listPartsMax)
+	listResponse, err := d.Bucket.List(path, "/", "", listPartsMax)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +212,7 @@ func (d *S3Driver) List(prefix string) ([]string, error) {
 		}
 
 		if listResponse.IsTruncated {
-			listResponse, err = d.Bucket.List(prefix, "/", listResponse.NextMarker, listPartsMax)
+			listResponse, err = d.Bucket.List(path, "/", listResponse.NextMarker, listPartsMax)
 			if err != nil {
 				return nil, err
 			}

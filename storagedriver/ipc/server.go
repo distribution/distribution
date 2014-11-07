@@ -119,10 +119,10 @@ func handleRequest(driver storagedriver.StorageDriver, request Request) {
 		if err != nil {
 			panic(err)
 		}
-	case "ResumeWritePosition":
+	case "CurrentSize":
 		path, _ := request.Parameters["Path"].(string)
-		position, err := driver.ResumeWritePosition(path)
-		response := ResumeWritePositionResponse{
+		position, err := driver.CurrentSize(path)
+		response := CurrentSizeResponse{
 			Position: position,
 			Error:    ResponseError(err),
 		}

@@ -98,7 +98,7 @@ func (d *FilesystemDriver) ReadStream(path string, offset uint64) (io.ReadCloser
 func (d *FilesystemDriver) WriteStream(subPath string, offset, size uint64, reader io.ReadCloser) error {
 	defer reader.Close()
 
-	resumableOffset, err := d.ResumeWritePosition(subPath)
+	resumableOffset, err := d.CurrentSize(subPath)
 	if _, pathNotFound := err.(storagedriver.PathNotFoundError); err != nil && !pathNotFound {
 		return err
 	}
@@ -154,7 +154,7 @@ func (d *FilesystemDriver) WriteStream(subPath string, offset, size uint64, read
 	return err
 }
 
-func (d *FilesystemDriver) ResumeWritePosition(subPath string) (uint64, error) {
+func (d *FilesystemDriver) CurrentSize(subPath string) (uint64, error) {
 	fullPath := d.subPath(subPath)
 
 	fileInfo, err := os.Stat(fullPath)

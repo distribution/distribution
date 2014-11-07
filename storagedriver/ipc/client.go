@@ -216,16 +216,16 @@ func (driver *StorageDriverClient) WriteStream(path string, offset, size uint64,
 	return nil
 }
 
-func (driver *StorageDriverClient) ResumeWritePosition(path string) (uint64, error) {
+func (driver *StorageDriverClient) CurrentSize(path string) (uint64, error) {
 	receiver, remoteSender := libchan.Pipe()
 
 	params := map[string]interface{}{"Path": path}
-	err := driver.sender.Send(&Request{Type: "ResumeWritePosition", Parameters: params, ResponseChannel: remoteSender})
+	err := driver.sender.Send(&Request{Type: "CurrentSize", Parameters: params, ResponseChannel: remoteSender})
 	if err != nil {
 		return 0, err
 	}
 
-	var response ResumeWritePositionResponse
+	var response CurrentSizeResponse
 	err = receiver.Receive(&response)
 	if err != nil {
 		return 0, err
