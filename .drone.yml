@@ -1,0 +1,35 @@
+image: bradrydzewski/go:1.3
+
+env:
+  - GOROOT=/usr/local/go
+  - PATH=$PATH:$GOROOT/bin:$GOPATH/bin
+
+script:
+  - go get code.google.com/p/go.tools/cmd/vet
+  - go get code.google.com/p/go.tools/cmd/godoc
+  - go get code.google.com/p/go.tools/cmd/cover
+  - go get github.com/axw/gocov/gocov
+  - go get github.com/mattn/goveralls
+  - go get github.com/golang/lint/golint
+
+  - go get -d -t ./...
+
+  - hack/validate_gofmt.sh
+  - goveralls -v -service drone.io -repotoken $COVERALLS_TOKEN
+  - go vet ./...
+  - golint ./...
+  - go test -v ./...
+  # - go build --tags SOMETAG
+
+notify:
+    email:
+        recipients:
+            - distribution@docker.com
+    slack:
+        team: docker
+        channel: "#distribution"
+        username: mom
+        token: cwX6NE0KKYYQnZJVRaYWGxxJ
+        on_success: true
+        on_failure: true
+
