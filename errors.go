@@ -119,7 +119,7 @@ func (e Error) Error() string {
 // Errors provides the envelope for multiple errors and a few sugar methods
 // for use within the application.
 type Errors struct {
-	Errors []Error `json:"errors,omitempty"`
+	Errors []error `json:"errors,omitempty"`
 }
 
 // Push pushes an error on to the error stack, with the optional detail
@@ -135,11 +135,31 @@ func (errs *Errors) Push(code ErrorCode, details ...interface{}) {
 		detail = details[0]
 	}
 
-	errs.Errors = append(errs.Errors, Error{
+	errs.PushErr(Error{
 		Code:    code,
 		Message: code.Message(),
 		Detail:  detail,
 	})
+}
+
+// PushErr pushes an error interface onto the error stack.
+func (errs *Errors) PushErr(err error) {
+	errs.Errors = append(errs.Errors, err)
+}
+
+func (errs *Errors) Error() string {
+	switch len(errs.Errors) {
+	case 0:
+		return "<nil>"
+	case 1:
+		return errs.Errors[0].Error()
+	default:
+		msg := "errors:\n"
+		for _, err := range errs.Errors {
+			msg += err.Error() + "\n"
+		}
+		return msg
+	}
 }
 
 // detailUnknownLayer provides detail for unknown layer errors, returned by
