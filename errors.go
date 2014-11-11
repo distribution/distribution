@@ -162,16 +162,97 @@ func (errs *Errors) Error() string {
 	}
 }
 
-// detailUnknownLayer provides detail for unknown layer errors, returned by
+// DetailUnknownLayer provides detail for unknown layer errors, returned by
 // image manifest push for layers that are not yet transferred. This intended
 // to only be used on the backend to return detail for this specific error.
 type DetailUnknownLayer struct {
 
 	// Unknown should contain the contents of a layer descriptor, which is a
-	// single json object with the key "blobSum" currently.
-	Unknown struct {
+	// single FSLayer currently.
+	Unknown FSLayer `json:"unknown"`
+}
 
-		// BlobSum contains the uniquely identifying tarsum of the layer.
-		BlobSum string `json:"blobSum"`
-	} `json:"unknown"`
+// RepositoryNotFoundError is returned when making an operation against a
+// repository that does not exist in the registry
+type RepositoryNotFoundError struct {
+	Name string
+}
+
+func (e *RepositoryNotFoundError) Error() string {
+	return fmt.Sprintf("No repository found with Name: %s", e.Name)
+}
+
+// ImageManifestNotFoundError is returned when making an operation against a
+// given image manifest that does not exist in the registry
+type ImageManifestNotFoundError struct {
+	Name string
+	Tag  string
+}
+
+func (e *ImageManifestNotFoundError) Error() string {
+	return fmt.Sprintf("No manifest found with Name: %s, Tag: %s",
+		e.Name, e.Tag)
+}
+
+// LayerAlreadyExistsError is returned when attempting to create a new layer
+// that already exists in the registry
+type LayerAlreadyExistsError struct {
+	Name   string
+	TarSum string
+}
+
+func (e *LayerAlreadyExistsError) Error() string {
+	return fmt.Sprintf("Layer already found with Name: %s, TarSum: %s",
+		e.Name, e.TarSum)
+}
+
+// LayerNotFoundError is returned when making an operation against a given image
+// layer that does not exist in the registry
+type LayerNotFoundError struct {
+	Name   string
+	TarSum string
+}
+
+func (e *LayerNotFoundError) Error() string {
+	return fmt.Sprintf("No layer found with Name: %s, TarSum: %s",
+		e.Name, e.TarSum)
+}
+
+// LayerUploadNotFoundError is returned when making a layer upload operation
+// against an invalid layer upload location url
+// This may be the result of using a cancelled, completed, or stale upload
+// locationn
+type LayerUploadNotFoundError struct {
+	Location string
+}
+
+func (e *LayerUploadNotFoundError) Error() string {
+	return fmt.Sprintf("No layer found upload found at Location: %s",
+		e.Location)
+}
+
+// LayerUploadInvalidRangeError is returned when attempting to upload an image
+// layer chunk that is out of order
+// This provides the known LayerSize and LastValidRange which can be used to
+// resume the upload
+type LayerUploadInvalidRangeError struct {
+	Location       string
+	LastValidRange int
+	LayerSize      int
+}
+
+func (e *LayerUploadInvalidRangeError) Error() string {
+	return fmt.Sprintf(
+		"Invalid range provided for upload at Location: %s. Last Valid Range: %d, Layer Size: %d",
+		e.Location, e.LastValidRange, e.LayerSize)
+}
+
+// UnexpectedHttpStatusError is returned when an unexpected http status is
+// returned when making a registry api call
+type UnexpectedHttpStatusError struct {
+	Status string
+}
+
+func (e *UnexpectedHttpStatusError) Error() string {
+	return fmt.Sprintf("Received unexpected http status: %s", e.Status)
 }

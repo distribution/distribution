@@ -6,6 +6,53 @@ import (
 	"github.com/gorilla/handlers"
 )
 
+// ImageManifest defines the structure of an image manifest
+type ImageManifest struct {
+	// Name is the name of the image's repository
+	Name string `json:"name"`
+
+	// Tag is the tag of the image specified by this manifest
+	Tag string `json:"tag"`
+
+	// Architecture is the host architecture on which this image is intended to
+	// run
+	Architecture string `json:"architecture"`
+
+	// FSLayers is a list of filesystem layer blobSums contained in this image
+	FSLayers []FSLayer `json:"fsLayers"`
+
+	// History is a list of unstructured historical data for v1 compatibility
+	History []ManifestHistory `json:"history"`
+
+	// Signature is the JWT with which the image is signed
+	Signature string `json:"signature,omitempty"`
+
+	// SchemaVersion is the image manifest schema that this image follows
+	SchemaVersion int `json:"schemaVersion"`
+}
+
+// FSLayer is a container struct for BlobSums defined in an image manifest
+type FSLayer struct {
+	// BlobSum is the tarsum of the referenced filesystem image layer
+	BlobSum string `json:"blobSum"`
+}
+
+// ManifestHistory stores unstructured v1 compatibility information
+type ManifestHistory struct {
+	// V1Compatibility is the raw v1 compatibility information
+	V1Compatibility string `json:"v1Compatibility"`
+}
+
+// Checksum is a container struct for an image checksum
+type Checksum struct {
+	// HashAlgorithm is the algorithm used to compute the checksum
+	// Supported values: md5, sha1, sha256, sha512
+	HashAlgorithm string
+
+	// Sum is the actual checksum value for the given HashAlgorithm
+	Sum string
+}
+
 // imageManifestDispatcher takes the request context and builds the
 // appropriate handler for handling image manifest requests.
 func imageManifestDispatcher(ctx *Context, r *http.Request) http.Handler {
