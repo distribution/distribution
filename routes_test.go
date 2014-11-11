@@ -76,7 +76,7 @@ func TestRouter(t *testing.T) {
 			},
 		},
 		{
-			routeName: routeNameStartLayerUpload,
+			routeName: routeNameLayerUpload,
 			expectedRouteInfo: routeInfo{
 				RequestURI: "/v2/foo/bar/layer/tarsum/upload/",
 				Vars: map[string]string{
@@ -86,7 +86,7 @@ func TestRouter(t *testing.T) {
 			},
 		},
 		{
-			routeName: routeNameLayerUpload,
+			routeName: routeNameLayerUploadResume,
 			expectedRouteInfo: routeInfo{
 				RequestURI: "/v2/foo/bar/layer/tarsum/upload/uuid",
 				Vars: map[string]string{
