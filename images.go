@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"encoding/json"
 	"net/http"
 
 	"github.com/gorilla/handlers"
@@ -24,11 +25,27 @@ type ImageManifest struct {
 	// History is a list of unstructured historical data for v1 compatibility
 	History []ManifestHistory `json:"history"`
 
-	// Signature is the JWT with which the image is signed
-	Signature string `json:"signature,omitempty"`
-
 	// SchemaVersion is the image manifest schema that this image follows
 	SchemaVersion int `json:"schemaVersion"`
+
+	// Raw is the byte representation of the ImageManifest, used for signature
+	// verification
+	Raw []byte `json:"-"`
+}
+
+// imageManifest is used to avoid recursion in unmarshaling
+type imageManifest ImageManifest
+
+func (m *ImageManifest) UnmarshalJSON(b []byte) error {
+	var manifest imageManifest
+	err := json.Unmarshal(b, &manifest)
+	if err != nil {
+		return err
+	}
+
+	*m = ImageManifest(manifest)
+	m.Raw = b
+	return nil
 }
 
 // FSLayer is a container struct for BlobSums defined in an image manifest
