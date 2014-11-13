@@ -60,7 +60,7 @@ func (d *FilesystemDriver) subPath(subPath string) string {
 func (d *FilesystemDriver) GetContent(path string) ([]byte, error) {
 	contents, err := ioutil.ReadFile(d.subPath(path))
 	if err != nil {
-		return nil, storagedriver.PathNotFoundError{path}
+		return nil, storagedriver.PathNotFoundError{Path: path}
 	}
 	return contents, nil
 }
@@ -89,7 +89,7 @@ func (d *FilesystemDriver) ReadStream(path string, offset uint64) (io.ReadCloser
 		return nil, err
 	} else if seekPos < int64(offset) {
 		file.Close()
-		return nil, storagedriver.InvalidOffsetError{path, offset}
+		return nil, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
 	}
 
 	return file, nil
@@ -104,7 +104,7 @@ func (d *FilesystemDriver) WriteStream(subPath string, offset, size uint64, read
 	}
 
 	if offset > resumableOffset {
-		return storagedriver.InvalidOffsetError{subPath, offset}
+		return storagedriver.InvalidOffsetError{Path: subPath, Offset: offset}
 	}
 
 	fullPath := d.subPath(subPath)
@@ -161,7 +161,7 @@ func (d *FilesystemDriver) CurrentSize(subPath string) (uint64, error) {
 	if err != nil && !os.IsNotExist(err) {
 		return 0, err
 	} else if err != nil {
-		return 0, storagedriver.PathNotFoundError{subPath}
+		return 0, storagedriver.PathNotFoundError{Path: subPath}
 	}
 	return uint64(fileInfo.Size()), nil
 }
@@ -200,7 +200,7 @@ func (d *FilesystemDriver) Delete(subPath string) error {
 	if err != nil && !os.IsNotExist(err) {
 		return err
 	} else if err != nil {
-		return storagedriver.PathNotFoundError{subPath}
+		return storagedriver.PathNotFoundError{Path: subPath}
 	}
 
 	err = os.RemoveAll(fullPath)
