@@ -9,13 +9,13 @@ script:
   - go get github.com/mattn/goveralls
   - go get github.com/golang/lint/golint
 
-  - go get -d -t ./...
+  - go get -t ./...
 
-  - hack/validate_gofmt.sh
-  - goveralls -v -service drone.io -repotoken {{COVERALLS_TOKEN}}
+  - FAIL=$(find ./ -iname "*.go" -exec gofmt -s -l {} \;) && echo "$FAIL" && test -z "$FAIL"
   - go vet ./...
-  - golint ./...
+  - FAIL=$(golint ./...) && echo "$FAIL" && test -z "$FAIL"
   - go test -v ./...
+  - goveralls -v -service drone.io -repotoken {{COVERALLS_TOKEN}}
   # - go build --tags SOMETAG
 
 notify:
@@ -27,6 +27,6 @@ notify:
         team: docker
         channel: "#distribution"
         username: mom
-        token: cwX6NE0KKYYQnZJVRaYWGxxJ
+        token: {{SLACK_TOKEN}}
         on_success: true
         on_failure: true
