@@ -7,7 +7,7 @@ import (
 // RepositoryNameComponentRegexp restricts registtry path components names to
 // start with at least two letters or numbers, with following parts able to
 // separated by one period, dash or underscore.
-var RepositoryNameComponentRegexp = regexp.MustCompile(`[a-z0-9](?:[a-z0-9]+[._-]?)*[a-z0-9]`)
+var RepositoryNameComponentRegexp = regexp.MustCompile(`[a-z0-9]{2,}(?:[._-][a-z0-9]+)*`)
 
 // RepositoryNameRegexp builds on RepositoryNameComponentRegexp to allow 2 to
 // 5 path components, separated by a forward slash.
