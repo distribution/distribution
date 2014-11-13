@@ -10,9 +10,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type routeInfo struct {
+type routeTestCase struct {
 	RequestURI string
 	Vars       map[string]string
+	RouteName  string
 }
 
 // TestRouter registers a test handler with all the routes and ensures that
@@ -26,14 +27,15 @@ func TestRouter(t *testing.T) {
 	router := v2APIRouter()
 
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		routeInfo := routeInfo{
+		testCase := routeTestCase{
 			RequestURI: r.RequestURI,
 			Vars:       mux.Vars(r),
+			RouteName:  mux.CurrentRoute(r).GetName(),
 		}
 
 		enc := json.NewEncoder(w)
 
-		if err := enc.Encode(routeInfo); err != nil {
+		if err := enc.Encode(testCase); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -42,64 +44,81 @@ func TestRouter(t *testing.T) {
 	// Startup test server
 	server := httptest.NewServer(router)
 
-	for _, testcase := range []struct {
-		routeName         string
-		expectedRouteInfo routeInfo
-	}{
+	for _, testcase := range []routeTestCase{
 		{
-			routeName: routeNameImageManifest,
-			expectedRouteInfo: routeInfo{
-				RequestURI: "/v2/foo/bar/image/tag",
-				Vars: map[string]string{
-					"name": "foo/bar",
-					"tag":  "tag",
-				},
+			RouteName:  routeNameImageManifest,
+			RequestURI: "/v2/foo/bar/image/tag",
+			Vars: map[string]string{
+				"name": "foo/bar",
+				"tag":  "tag",
 			},
 		},
 		{
-			routeName: routeNameTags,
-			expectedRouteInfo: routeInfo{
-				RequestURI: "/v2/foo/bar/tags",
-				Vars: map[string]string{
-					"name": "foo/bar",
-				},
+			RouteName:  routeNameTags,
+			RequestURI: "/v2/foo/bar/tags/list",
+			Vars: map[string]string{
+				"name": "foo/bar",
 			},
 		},
 		{
-			routeName: routeNameLayer,
-			expectedRouteInfo: routeInfo{
-				RequestURI: "/v2/foo/bar/layer/tarsum",
-				Vars: map[string]string{
-					"name":   "foo/bar",
-					"tarsum": "tarsum",
-				},
+			RouteName:  routeNameLayer,
+			RequestURI: "/v2/foo/bar/layer/tarsum.dev+foo:abcdef0919234",
+			Vars: map[string]string{
+				"name":   "foo/bar",
+				"tarsum": "tarsum.dev+foo:abcdef0919234",
 			},
 		},
 		{
-			routeName: routeNameLayerUpload,
-			expectedRouteInfo: routeInfo{
-				RequestURI: "/v2/foo/bar/layer/tarsum/upload/",
-				Vars: map[string]string{
-					"name":   "foo/bar",
-					"tarsum": "tarsum",
-				},
+			RouteName:  routeNameLayerUpload,
+			RequestURI: "/v2/foo/bar/layer/tarsum.dev+foo:abcdef0919234/upload/",
+			Vars: map[string]string{
+				"name":   "foo/bar",
+				"tarsum": "tarsum.dev+foo:abcdef0919234",
 			},
 		},
 		{
-			routeName: routeNameLayerUploadResume,
-			expectedRouteInfo: routeInfo{
-				RequestURI: "/v2/foo/bar/layer/tarsum/upload/uuid",
-				Vars: map[string]string{
-					"name":   "foo/bar",
-					"tarsum": "tarsum",
-					"uuid":   "uuid",
-				},
+			RouteName:  routeNameLayerUploadResume,
+			RequestURI: "/v2/foo/bar/layer/tarsum.dev+foo:abcdef0919234/upload/uuid",
+			Vars: map[string]string{
+				"name":   "foo/bar",
+				"tarsum": "tarsum.dev+foo:abcdef0919234",
+				"uuid":   "uuid",
+			},
+		},
+		{
+			RouteName:  routeNameLayerUploadResume,
+			RequestURI: "/v2/foo/bar/layer/tarsum.dev+foo:abcdef0919234/upload/D95306FA-FAD3-4E36-8D41-CF1C93EF8286",
+			Vars: map[string]string{
+				"name":   "foo/bar",
+				"tarsum": "tarsum.dev+foo:abcdef0919234",
+				"uuid":   "D95306FA-FAD3-4E36-8D41-CF1C93EF8286",
+			},
+		},
+
+		{
+			// Check ambiguity: ensure we can distinguish between tags for
+			// "foo/bar/image/image" and image for "foo/bar/image" with tag
+			// "tags"
+			RouteName:  routeNameImageManifest,
+			RequestURI: "/v2/foo/bar/image/image/tags",
+			Vars: map[string]string{
+				"name": "foo/bar/image",
+				"tag":  "tags",
+			},
+		},
+		{
+			// This case presents an ambiguity between foo/bar with tag="tags"
+			// and list tags for "foo/bar/image"
+			RouteName:  routeNameTags,
+			RequestURI: "/v2/foo/bar/image/tags/list",
+			Vars: map[string]string{
+				"name": "foo/bar/image",
 			},
 		},
 	} {
 		// Register the endpoint
-		router.GetRoute(testcase.routeName).Handler(testHandler)
-		u := server.URL + testcase.expectedRouteInfo.RequestURI
+		router.GetRoute(testcase.RouteName).Handler(testHandler)
+		u := server.URL + testcase.RequestURI
 
 		resp, err := http.Get(u)
 
@@ -107,15 +126,23 @@ func TestRouter(t *testing.T) {
 			t.Fatalf("error issuing get request: %v", err)
 		}
 
+		if resp.StatusCode != http.StatusOK {
+			t.Fatalf("unexpected status for %s: %v %v", u, resp.Status, resp.StatusCode)
+		}
+
 		dec := json.NewDecoder(resp.Body)
 
-		var actualRouteInfo routeInfo
+		var actualRouteInfo routeTestCase
 		if err := dec.Decode(&actualRouteInfo); err != nil {
 			t.Fatalf("error reading json response: %v", err)
 		}
 
-		if !reflect.DeepEqual(actualRouteInfo, testcase.expectedRouteInfo) {
-			t.Fatalf("actual does not equal expected: %v != %v", actualRouteInfo, testcase.expectedRouteInfo)
+		if actualRouteInfo.RouteName != testcase.RouteName {
+			t.Fatalf("incorrect route %q matched, expected %q", actualRouteInfo.RouteName, testcase.RouteName)
+		}
+
+		if !reflect.DeepEqual(actualRouteInfo, testcase) {
+			t.Fatalf("actual does not equal expected: %#v != %#v", actualRouteInfo, testcase)
 		}
 	}
 
