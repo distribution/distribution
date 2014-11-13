@@ -14,6 +14,7 @@ type routeTestCase struct {
 	RequestURI string
 	Vars       map[string]string
 	RouteName  string
+	StatusCode int
 }
 
 // TestRouter registers a test handler with all the routes and ensures that
@@ -115,6 +116,16 @@ func TestRouter(t *testing.T) {
 				"name": "foo/bar/image",
 			},
 		},
+		{
+			RouteName:  routeNameLayerUploadResume,
+			RequestURI: "/v2/foo/../../layer/tarsum.dev+foo:abcdef0919234/upload/D95306FA-FAD3-4E36-8D41-CF1C93EF8286",
+			Vars: map[string]string{
+				"name":   "foo/bar",
+				"tarsum": "tarsum.dev+foo:abcdef0919234",
+				"uuid":   "D95306FA-FAD3-4E36-8D41-CF1C93EF8286",
+			},
+			StatusCode: http.StatusNotFound,
+		},
 	} {
 		// Register the endpoint
 		router.GetRoute(testcase.RouteName).Handler(testHandler)
@@ -126,8 +137,18 @@ func TestRouter(t *testing.T) {
 			t.Fatalf("error issuing get request: %v", err)
 		}
 
-		if resp.StatusCode != http.StatusOK {
+		if testcase.StatusCode == 0 {
+			// Override default, zero-value
+			testcase.StatusCode = http.StatusOK
+		}
+
+		if resp.StatusCode != testcase.StatusCode {
 			t.Fatalf("unexpected status for %s: %v %v", u, resp.Status, resp.StatusCode)
+		}
+
+		if testcase.StatusCode != http.StatusOK {
+			// We don't care about json response.
+			continue
 		}
 
 		dec := json.NewDecoder(resp.Body)
@@ -136,6 +157,8 @@ func TestRouter(t *testing.T) {
 		if err := dec.Decode(&actualRouteInfo); err != nil {
 			t.Fatalf("error reading json response: %v", err)
 		}
+		// Needs to be set out of band
+		actualRouteInfo.StatusCode = resp.StatusCode
 
 		if actualRouteInfo.RouteName != testcase.RouteName {
 			t.Fatalf("incorrect route %q matched, expected %q", actualRouteInfo.RouteName, testcase.RouteName)
