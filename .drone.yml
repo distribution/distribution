@@ -25,6 +25,7 @@ notify:
     email:
         recipients:
             - distribution@docker.com
+
     slack:
         team: docker
         channel: "#distribution"
@@ -32,4 +33,3 @@ notify:
         token: cwX6NE0KKYYQnZJVRaYWGxxJ
         on_success: true
         on_failure: true
-
