@@ -65,7 +65,7 @@ func FromParameters(parameters map[string]string) (*S3Driver, error) {
 	}
 	region := aws.GetRegion(regionName)
 	if region.Name == "" {
-		return nil, fmt.Errorf("Invalid region provided: %s", region)
+		return nil, fmt.Errorf("Invalid region provided: %v", region)
 	}
 
 	bucket, ok := parameters["bucket"]
@@ -140,7 +140,7 @@ func (d *S3Driver) WriteStream(path string, offset, size uint64, reader io.ReadC
 	}
 
 	if (offset) > uint64(len(parts))*chunkSize || (offset < size && offset%chunkSize != 0) {
-		return storagedriver.InvalidOffsetError{path, offset}
+		return storagedriver.InvalidOffsetError{Path: path, Offset: offset}
 	}
 
 	if len(parts) > 0 {
@@ -226,7 +226,9 @@ func (d *S3Driver) List(path string) ([]string, error) {
 
 func (d *S3Driver) Move(sourcePath string, destPath string) error {
 	/* This is terrible, but aws doesn't have an actual move. */
-	_, err := d.Bucket.PutCopy(destPath, getPermissions(), s3.CopyOptions{d.getOptions(), "", d.getContentType()}, d.Bucket.Name+"/"+sourcePath)
+	_, err := d.Bucket.PutCopy(destPath, getPermissions(),
+		s3.CopyOptions{Options: d.getOptions(), MetadataDirective: "", ContentType: d.getContentType()},
+		d.Bucket.Name+"/"+sourcePath)
 	if err != nil {
 		return err
 	}
@@ -237,7 +239,7 @@ func (d *S3Driver) Move(sourcePath string, destPath string) error {
 func (d *S3Driver) Delete(path string) error {
 	listResponse, err := d.Bucket.List(path, "", "", listPartsMax)
 	if err != nil || len(listResponse.Contents) == 0 {
-		return storagedriver.PathNotFoundError{path}
+		return storagedriver.PathNotFoundError{Path: path}
 	}
 
 	s3Objects := make([]s3.Object, listPartsMax)
@@ -247,7 +249,7 @@ func (d *S3Driver) Delete(path string) error {
 			s3Objects[index].Key = key.Key
 		}
 
-		err := d.Bucket.DelMulti(s3.Delete{false, s3Objects[0:len(listResponse.Contents)]})
+		err := d.Bucket.DelMulti(s3.Delete{Quiet: false, Objects: s3Objects[0:len(listResponse.Contents)]})
 		if err != nil {
 			return nil
 		}

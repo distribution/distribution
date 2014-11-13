@@ -38,7 +38,6 @@ func StorageDriverServer(driver storagedriver.StorageDriver) error {
 			}
 			go receive(driver, receiver)
 		}
-		return nil
 	}
 }
 

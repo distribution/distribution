@@ -45,7 +45,7 @@ func (d *InMemoryDriver) GetContent(path string) ([]byte, error) {
 	defer d.mutex.RUnlock()
 	contents, ok := d.storage[path]
 	if !ok {
-		return nil, storagedriver.PathNotFoundError{path}
+		return nil, storagedriver.PathNotFoundError{Path: path}
 	}
 	return contents, nil
 }
@@ -64,7 +64,7 @@ func (d *InMemoryDriver) ReadStream(path string, offset uint64) (io.ReadCloser, 
 	if err != nil {
 		return nil, err
 	} else if len(contents) < int(offset) {
-		return nil, storagedriver.InvalidOffsetError{path, offset}
+		return nil, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
 	}
 
 	src := contents[offset:]
@@ -84,7 +84,7 @@ func (d *InMemoryDriver) WriteStream(path string, offset, size uint64, reader io
 	}
 
 	if offset > resumableOffset {
-		return storagedriver.InvalidOffsetError{path, offset}
+		return storagedriver.InvalidOffsetError{Path: path, Offset: offset}
 	}
 
 	contents, err := ioutil.ReadAll(reader)
@@ -138,7 +138,7 @@ func (d *InMemoryDriver) Move(sourcePath string, destPath string) error {
 	defer d.mutex.Unlock()
 	contents, ok := d.storage[sourcePath]
 	if !ok {
-		return storagedriver.PathNotFoundError{sourcePath}
+		return storagedriver.PathNotFoundError{Path: sourcePath}
 	}
 	d.storage[destPath] = contents
 	delete(d.storage, sourcePath)
@@ -156,7 +156,7 @@ func (d *InMemoryDriver) Delete(path string) error {
 	}
 
 	if len(subPaths) == 0 {
-		return storagedriver.PathNotFoundError{path}
+		return storagedriver.PathNotFoundError{Path: path}
 	}
 
 	for _, subPath := range subPaths {

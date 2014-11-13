@@ -14,7 +14,7 @@ func TestErrorCodes(t *testing.T) {
 		}
 
 		if ec.Message() != errorCodesMessages[ec] {
-			t.Fatalf("incorrect message for error code %v: %q != !q", ec, ec.Message(), errorCodesMessages[ec])
+			t.Fatalf("incorrect message for error code %v: %q != %q", ec, ec.Message(), errorCodesMessages[ec])
 		}
 
 		// Serialize the error code using the json library to ensure that we
@@ -26,7 +26,7 @@ func TestErrorCodes(t *testing.T) {
 		}
 
 		if len(p) <= 0 {
-			t.Fatalf("expected content in marshaled before for error code %v: %v", ec)
+			t.Fatalf("expected content in marshaled before for error code %v", ec)
 		}
 
 		// First, unmarshal to interface and ensure we have a string.

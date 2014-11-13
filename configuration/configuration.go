@@ -14,13 +14,13 @@ import (
 // optionally modified by environment variables
 type Configuration struct {
 	// Version is the version which defines the format of the rest of the configuration
-	Version  Version  `yaml:"version"`
+	Version Version `yaml:"version"`
 
 	// Loglevel is the level at which registry operations are logged
 	Loglevel Loglevel `yaml:"loglevel"`
 
 	// Storage is the configuration for the registry's storage driver
-	Storage  Storage  `yaml:"storage"`
+	Storage Storage `yaml:"storage"`
 }
 
 // v_0_1_Configuration is a Version 0.1 Configuration struct
@@ -162,7 +162,7 @@ func (storage *Storage) UnmarshalYAML(unmarshal func(interface{}) error) error {
 
 // MarshalYAML implements the yaml.Marshaler interface
 func (storage Storage) MarshalYAML() (interface{}, error) {
-	if storage.Parameters == nil {
+	if storage.Parameters() == nil {
 		return storage.Type, nil
 	}
 	return map[string]Parameters(storage), nil
