@@ -183,7 +183,7 @@ func (r *clientImpl) DeleteImage(name, tag string) error {
 }
 
 func (r *clientImpl) ListImageTags(name string) ([]string, error) {
-	response, err := http.Get(fmt.Sprintf("%s/v2/%s/tags", r.Endpoint, name))
+	response, err := http.Get(fmt.Sprintf("%s/v2/%s/tags/list", r.Endpoint, name))
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +264,7 @@ func (r *clientImpl) GetImageLayer(name, tarsum string, byteOffset int) (io.Read
 
 func (r *clientImpl) InitiateLayerUpload(name, tarsum string) (string, error) {
 	postRequest, err := http.NewRequest("POST",
-		fmt.Sprintf("%s/v2/%s/layer/%s/upload", r.Endpoint, name, tarsum), nil)
+		fmt.Sprintf("%s/v2/%s/layer/%s/upload/", r.Endpoint, name, tarsum), nil)
 	if err != nil {
 		return "", err
 	}
@@ -329,7 +329,7 @@ func (r *clientImpl) UploadLayer(location string, layer io.ReadCloser, length in
 		return err
 	}
 
-	queryValues := new(url.Values)
+	queryValues := url.Values{}
 	queryValues.Set("length", fmt.Sprint(length))
 	queryValues.Set(checksum.HashAlgorithm, checksum.Sum)
 	putRequest.URL.RawQuery = queryValues.Encode()
