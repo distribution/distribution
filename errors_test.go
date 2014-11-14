@@ -8,7 +8,7 @@ import (
 // TestErrorCodes ensures that error code format, mappings and
 // marshaling/unmarshaling. round trips are stable.
 func TestErrorCodes(t *testing.T) {
-	for ec, _ := range errorCodeStrings {
+	for ec := range errorCodeStrings {
 		if ec.String() != errorCodeStrings[ec] {
 			t.Fatalf("error code string incorrect: %q != %q", ec.String(), errorCodeStrings[ec])
 		}
