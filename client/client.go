@@ -90,7 +90,7 @@ func (r *clientImpl) GetImageManifest(name, tag string) (*registry.ImageManifest
 	case response.StatusCode == http.StatusOK:
 		break
 	case response.StatusCode == http.StatusNotFound:
-		return nil, &registry.ImageManifestNotFoundError{name, tag}
+		return nil, &registry.ImageManifestNotFoundError{Name: name, Tag: tag}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
 		errors := new(registry.Errors)
 		decoder := json.NewDecoder(response.Body)
@@ -100,7 +100,7 @@ func (r *clientImpl) GetImageManifest(name, tag string) (*registry.ImageManifest
 		}
 		return nil, errors
 	default:
-		return nil, &registry.UnexpectedHttpStatusError{response.Status}
+		return nil, &registry.UnexpectedHttpStatusError{Status: response.Status}
 	}
 
 	decoder := json.NewDecoder(response.Body)
@@ -144,7 +144,7 @@ func (r *clientImpl) PutImageManifest(name, tag string, manifest *registry.Image
 		}
 		return errors
 	default:
-		return &registry.UnexpectedHttpStatusError{response.Status}
+		return &registry.UnexpectedHttpStatusError{Status: response.Status}
 	}
 }
 
@@ -166,7 +166,7 @@ func (r *clientImpl) DeleteImage(name, tag string) error {
 	case response.StatusCode == http.StatusNoContent:
 		break
 	case response.StatusCode == http.StatusNotFound:
-		return &registry.ImageManifestNotFoundError{name, tag}
+		return &registry.ImageManifestNotFoundError{Name: name, Tag: tag}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
 		errors := new(registry.Errors)
 		decoder := json.NewDecoder(response.Body)
@@ -176,7 +176,7 @@ func (r *clientImpl) DeleteImage(name, tag string) error {
 		}
 		return errors
 	default:
-		return &registry.UnexpectedHttpStatusError{response.Status}
+		return &registry.UnexpectedHttpStatusError{Status: response.Status}
 	}
 
 	return nil
@@ -194,7 +194,7 @@ func (r *clientImpl) ListImageTags(name string) ([]string, error) {
 	case response.StatusCode == http.StatusOK:
 		break
 	case response.StatusCode == http.StatusNotFound:
-		return nil, &registry.RepositoryNotFoundError{name}
+		return nil, &registry.RepositoryNotFoundError{Name: name}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
 		errors := new(registry.Errors)
 		decoder := json.NewDecoder(response.Body)
@@ -204,7 +204,7 @@ func (r *clientImpl) ListImageTags(name string) ([]string, error) {
 		}
 		return nil, errors
 	default:
-		return nil, &registry.UnexpectedHttpStatusError{response.Status}
+		return nil, &registry.UnexpectedHttpStatusError{Status: response.Status}
 	}
 
 	tags := struct {
@@ -234,7 +234,7 @@ func (r *clientImpl) GetImageLayer(name, tarsum string, byteOffset int) (io.Read
 	}
 
 	if response.StatusCode == http.StatusNotFound {
-		return nil, 0, &registry.LayerNotFoundError{name, tarsum}
+		return nil, 0, &registry.LayerNotFoundError{Name: name, TarSum: tarsum}
 	}
 	// TODO(bbland): handle other status codes, like 5xx errors
 	switch {
@@ -247,7 +247,7 @@ func (r *clientImpl) GetImageLayer(name, tarsum string, byteOffset int) (io.Read
 		return response.Body, int(length), nil
 	case response.StatusCode == http.StatusNotFound:
 		response.Body.Close()
-		return nil, 0, &registry.LayerNotFoundError{name, tarsum}
+		return nil, 0, &registry.LayerNotFoundError{Name: name, TarSum: tarsum}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
 		errors := new(registry.Errors)
 		decoder := json.NewDecoder(response.Body)
@@ -258,7 +258,7 @@ func (r *clientImpl) GetImageLayer(name, tarsum string, byteOffset int) (io.Read
 		return nil, 0, errors
 	default:
 		response.Body.Close()
-		return nil, 0, &registry.UnexpectedHttpStatusError{response.Status}
+		return nil, 0, &registry.UnexpectedHttpStatusError{Status: response.Status}
 	}
 }
 
@@ -280,7 +280,7 @@ func (r *clientImpl) InitiateLayerUpload(name, tarsum string) (string, error) {
 	case response.StatusCode == http.StatusAccepted:
 		return response.Header.Get("Location"), nil
 	case response.StatusCode == http.StatusNotModified:
-		return "", &registry.LayerAlreadyExistsError{name, tarsum}
+		return "", &registry.LayerAlreadyExistsError{Name: name, TarSum: tarsum}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
 		errors := new(registry.Errors)
 		decoder := json.NewDecoder(response.Body)
@@ -290,7 +290,7 @@ func (r *clientImpl) InitiateLayerUpload(name, tarsum string) (string, error) {
 		}
 		return "", errors
 	default:
-		return "", &registry.UnexpectedHttpStatusError{response.Status}
+		return "", &registry.UnexpectedHttpStatusError{Status: response.Status}
 	}
 }
 
@@ -306,7 +306,7 @@ func (r *clientImpl) GetLayerUploadStatus(location string) (int, int, error) {
 	case response.StatusCode == http.StatusNoContent:
 		return parseRangeHeader(response.Header.Get("Range"))
 	case response.StatusCode == http.StatusNotFound:
-		return 0, 0, &registry.LayerUploadNotFoundError{location}
+		return 0, 0, &registry.LayerUploadNotFoundError{Location: location}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
 		errors := new(registry.Errors)
 		decoder := json.NewDecoder(response.Body)
@@ -316,7 +316,7 @@ func (r *clientImpl) GetLayerUploadStatus(location string) (int, int, error) {
 		}
 		return 0, 0, errors
 	default:
-		return 0, 0, &registry.UnexpectedHttpStatusError{response.Status}
+		return 0, 0, &registry.UnexpectedHttpStatusError{Status: response.Status}
 	}
 }
 
@@ -348,7 +348,7 @@ func (r *clientImpl) UploadLayer(location string, layer io.ReadCloser, length in
 	case response.StatusCode == http.StatusCreated:
 		return nil
 	case response.StatusCode == http.StatusNotFound:
-		return &registry.LayerUploadNotFoundError{location}
+		return &registry.LayerUploadNotFoundError{Location: location}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
 		errors := new(registry.Errors)
 		decoder := json.NewDecoder(response.Body)
@@ -358,7 +358,7 @@ func (r *clientImpl) UploadLayer(location string, layer io.ReadCloser, length in
 		}
 		return errors
 	default:
-		return &registry.UnexpectedHttpStatusError{response.Status}
+		return &registry.UnexpectedHttpStatusError{Status: response.Status}
 	}
 }
 
@@ -393,9 +393,13 @@ func (r *clientImpl) UploadLayerChunk(location string, layerChunk io.ReadCloser,
 		if err != nil {
 			return err
 		}
-		return &registry.LayerUploadInvalidRangeError{location, lastValidRange, layerSize}
+		return &registry.LayerUploadInvalidRangeError{
+			Location:       location,
+			LastValidRange: lastValidRange,
+			LayerSize:      layerSize,
+		}
 	case response.StatusCode == http.StatusNotFound:
-		return &registry.LayerUploadNotFoundError{location}
+		return &registry.LayerUploadNotFoundError{Location: location}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
 		errors := new(registry.Errors)
 		decoder := json.NewDecoder(response.Body)
@@ -405,7 +409,7 @@ func (r *clientImpl) UploadLayerChunk(location string, layerChunk io.ReadCloser,
 		}
 		return errors
 	default:
-		return &registry.UnexpectedHttpStatusError{response.Status}
+		return &registry.UnexpectedHttpStatusError{Status: response.Status}
 	}
 }
 
@@ -437,7 +441,7 @@ func (r *clientImpl) FinishChunkedLayerUpload(location string, length int, check
 	case response.StatusCode == http.StatusCreated:
 		return nil
 	case response.StatusCode == http.StatusNotFound:
-		return &registry.LayerUploadNotFoundError{location}
+		return &registry.LayerUploadNotFoundError{Location: location}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
 		errors := new(registry.Errors)
 		decoder := json.NewDecoder(response.Body)
@@ -447,7 +451,7 @@ func (r *clientImpl) FinishChunkedLayerUpload(location string, length int, check
 		}
 		return errors
 	default:
-		return &registry.UnexpectedHttpStatusError{response.Status}
+		return &registry.UnexpectedHttpStatusError{Status: response.Status}
 	}
 }
 
@@ -469,7 +473,7 @@ func (r *clientImpl) CancelLayerUpload(location string) error {
 	case response.StatusCode == http.StatusNoContent:
 		return nil
 	case response.StatusCode == http.StatusNotFound:
-		return &registry.LayerUploadNotFoundError{location}
+		return &registry.LayerUploadNotFoundError{Location: location}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
 		errors := new(registry.Errors)
 		decoder := json.NewDecoder(response.Body)
@@ -479,7 +483,7 @@ func (r *clientImpl) CancelLayerUpload(location string) error {
 		}
 		return errors
 	default:
-		return &registry.UnexpectedHttpStatusError{response.Status}
+		return &registry.UnexpectedHttpStatusError{Status: response.Status}
 	}
 }
 
