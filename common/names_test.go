@@ -7,56 +7,85 @@ import (
 func TestRepositoryNameRegexp(t *testing.T) {
 	for _, testcase := range []struct {
 		input string
-		valid bool
+		err   error
 	}{
 		{
 			input: "simple/name",
-			valid: true,
 		},
 		{
 			input: "library/ubuntu",
-			valid: true,
 		},
 		{
 			input: "docker/stevvooe/app",
-			valid: true,
 		},
 		{
 			input: "aa/aa/aa/aa/aa/aa/aa/aa/aa/bb/bb/bb/bb/bb/bb",
-			valid: true,
+			err:   ErrRepositoryNameTooManyComponents,
 		},
 		{
-			input: "a/a/a/a/a/a/b/b/b/b",
-			valid: false,
+			input: "aa/aa/bb/bb/bb",
+		},
+		{
+			input: "a/a/a/b/b",
+			err:   ErrRepositoryNameComponentShort,
 		},
 		{
 			input: "a/a/a/a/",
-			valid: false,
+			err:   ErrRepositoryNameComponentShort,
 		},
 		{
 			input: "foo.com/bar/baz",
-			valid: true,
 		},
 		{
 			input: "blog.foo.com/bar/baz",
-			valid: true,
 		},
 		{
 			input: "asdf",
-			valid: false,
+			err:   ErrRepositoryNameMissingComponents,
 		},
 		{
-			input: "asdf$$^/",
-			valid: false,
+			input: "asdf$$^/aa",
+			err:   ErrRepositoryNameComponentInvalid,
+		},
+		{
+			input: "aa-a/aa",
+		},
+		{
+			input: "aa/aa",
+		},
+		{
+			input: "a-a/a-a",
+		},
+		{
+			input: "a",
+			err:   ErrRepositoryNameMissingComponents,
+		},
+		{
+			input: "a-/a/a/a",
+			err:   ErrRepositoryNameComponentInvalid,
 		},
 	} {
-		if RepositoryNameRegexp.MatchString(testcase.input) != testcase.valid {
-			status := "invalid"
-			if testcase.valid {
-				status = "valid"
-			}
 
-			t.Fatalf("expected %q to be %s repository name", testcase.input, status)
+		failf := func(format string, v ...interface{}) {
+			t.Logf(testcase.input+": "+format, v...)
+			t.Fail()
+		}
+
+		if err := ValidateRespositoryName(testcase.input); err != testcase.err {
+			if testcase.err != nil {
+				if err != nil {
+					failf("unexpected error for invalid repository: got %v, expected %v", err, testcase.err)
+				} else {
+					failf("expected invalid repository: %v", testcase.err)
+				}
+			} else {
+				if err != nil {
+					// Wrong error returned.
+					failf("unexpected error validating repository name: %v, expected %v", err, testcase.err)
+				} else {
+					failf("unexpected error validating repository name: %v", err)
+				}
+			}
 		}
 	}
 }
