@@ -5,9 +5,6 @@ env:
   - PATH=$PATH:$GOROOT/bin:$GOPATH/bin
 
 script:
-  - go get code.google.com/p/go.tools/cmd/vet
-  - go get code.google.com/p/go.tools/cmd/godoc
-  - go get code.google.com/p/go.tools/cmd/cover
   - go get github.com/axw/gocov/gocov
   - go get github.com/mattn/goveralls
   - go get github.com/golang/lint/golint
@@ -15,7 +12,7 @@ script:
   - go get -d -t ./...
 
   - hack/validate_gofmt.sh
-  - goveralls -v -service drone.io -repotoken $COVERALLS_TOKEN
+  - goveralls -v -service drone.io -repotoken {{COVERALLS_TOKEN}}
   - go vet ./...
   - golint ./...
   - go test -v ./...
