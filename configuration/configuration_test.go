@@ -12,7 +12,7 @@ import (
 // Hook up gocheck into the "go test" runner
 func Test(t *testing.T) { TestingT(t) }
 
-// configStruct is a canonical example configuration, which should map to configYamlV_0_1
+// configStruct is a canonical example configuration, which should map to configYamlV0_1
 var configStruct = Configuration{
 	Version:  "0.1",
 	Loglevel: "info",
@@ -31,8 +31,8 @@ var configStruct = Configuration{
 	},
 }
 
-// configYamlV_0_1 is a Version 0.1 yaml document representing configStruct
-var configYamlV_0_1 = `
+// configYamlV0_1 is a Version 0.1 yaml document representing configStruct
+var configYamlV0_1 = `
 version: 0.1
 loglevel: info
 storage:
@@ -48,9 +48,9 @@ storage:
     port: ~
 `
 
-// inmemoryConfigYamlV_0_1 is a Version 0.1 yaml document specifying an inmemory storage driver with
+// inmemoryConfigYamlV0_1 is a Version 0.1 yaml document specifying an inmemory storage driver with
 // no parameters
-var inmemoryConfigYamlV_0_1 = `
+var inmemoryConfigYamlV0_1 = `
 version: 0.1
 loglevel: info
 storage: inmemory
@@ -77,9 +77,9 @@ func (suite *ConfigSuite) TestMarshalRoundtrip(c *C) {
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
 
-// TestParseSimple validates that configYamlV_0_1 can be parsed into a struct matching configStruct
+// TestParseSimple validates that configYamlV0_1 can be parsed into a struct matching configStruct
 func (suite *ConfigSuite) TestParseSimple(c *C) {
-	config, err := Parse([]byte(configYamlV_0_1))
+	config, err := Parse([]byte(configYamlV0_1))
 	c.Assert(err, IsNil)
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
@@ -89,7 +89,7 @@ func (suite *ConfigSuite) TestParseSimple(c *C) {
 func (suite *ConfigSuite) TestParseInmemory(c *C) {
 	suite.expectedConfig.Storage = Storage{"inmemory": Parameters{}}
 
-	config, err := Parse([]byte(inmemoryConfigYamlV_0_1))
+	config, err := Parse([]byte(inmemoryConfigYamlV0_1))
 	c.Assert(err, IsNil)
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
@@ -100,7 +100,7 @@ func (suite *ConfigSuite) TestParseWithSameEnvStorage(c *C) {
 	os.Setenv("REGISTRY_STORAGE", "s3")
 	os.Setenv("REGISTRY_STORAGE_S3_REGION", "us-east-1")
 
-	config, err := Parse([]byte(configYamlV_0_1))
+	config, err := Parse([]byte(configYamlV0_1))
 	c.Assert(err, IsNil)
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
@@ -117,7 +117,7 @@ func (suite *ConfigSuite) TestParseWithDifferentEnvStorageParams(c *C) {
 	os.Setenv("REGISTRY_STORAGE_S3_SECURE", "true")
 	os.Setenv("REGISTRY_STORAGE_S3_NEWPARAM", "some Value")
 
-	config, err := Parse([]byte(configYamlV_0_1))
+	config, err := Parse([]byte(configYamlV0_1))
 	c.Assert(err, IsNil)
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
@@ -129,7 +129,7 @@ func (suite *ConfigSuite) TestParseWithDifferentEnvStorageType(c *C) {
 
 	os.Setenv("REGISTRY_STORAGE", "inmemory")
 
-	config, err := Parse([]byte(configYamlV_0_1))
+	config, err := Parse([]byte(configYamlV0_1))
 	c.Assert(err, IsNil)
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
@@ -144,7 +144,7 @@ func (suite *ConfigSuite) TestParseWithDifferentEnvStorageTypeAndParams(c *C) {
 	os.Setenv("REGISTRY_STORAGE", "filesystem")
 	os.Setenv("REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY", "/tmp/testroot")
 
-	config, err := Parse([]byte(configYamlV_0_1))
+	config, err := Parse([]byte(configYamlV0_1))
 	c.Assert(err, IsNil)
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
@@ -154,7 +154,7 @@ func (suite *ConfigSuite) TestParseWithDifferentEnvStorageTypeAndParams(c *C) {
 func (suite *ConfigSuite) TestParseWithSameEnvLoglevel(c *C) {
 	os.Setenv("REGISTRY_LOGLEVEL", "info")
 
-	config, err := Parse([]byte(configYamlV_0_1))
+	config, err := Parse([]byte(configYamlV0_1))
 	c.Assert(err, IsNil)
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
@@ -166,7 +166,7 @@ func (suite *ConfigSuite) TestParseWithDifferentEnvLoglevel(c *C) {
 
 	os.Setenv("REGISTRY_LOGLEVEL", "error")
 
-	config, err := Parse([]byte(configYamlV_0_1))
+	config, err := Parse([]byte(configYamlV0_1))
 	c.Assert(err, IsNil)
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }

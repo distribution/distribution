@@ -20,5 +20,5 @@ func init() {
 		return New(rootDirectory), nil
 	}
 	testsuites.RegisterInProcessSuite(filesystemDriverConstructor, testsuites.NeverSkip)
-	testsuites.RegisterIPCSuite(DriverName, map[string]string{"rootdirectory": rootDirectory}, testsuites.NeverSkip)
+	testsuites.RegisterIPCSuite(driverName, map[string]string{"rootdirectory": rootDirectory}, testsuites.NeverSkip)
 }

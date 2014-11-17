@@ -33,7 +33,9 @@ func StorageDriverServer(driver storagedriver.StorageDriver) error {
 	} else {
 		for {
 			receiver, err := transport.WaitReceiveChannel()
-			if err != nil {
+			if err == io.EOF {
+				return nil
+			} else if err != nil {
 				panic(err)
 			}
 			go receive(driver, receiver)
@@ -49,7 +51,9 @@ func receive(driver storagedriver.StorageDriver, receiver libchan.Receiver) {
 	for {
 		var request Request
 		err := receiver.Receive(&request)
-		if err != nil {
+		if err == io.EOF {
+			return
+		} else if err != nil {
 			panic(err)
 		}
 		go handleRequest(driver, request)
@@ -70,7 +74,7 @@ func handleRequest(driver storagedriver.StorageDriver, request Request) {
 		content, err := driver.GetContent(path)
 		var response ReadStreamResponse
 		if err != nil {
-			response = ReadStreamResponse{Error: ResponseError(err)}
+			response = ReadStreamResponse{Error: WrapError(err)}
 		} else {
 			response = ReadStreamResponse{Reader: ioutil.NopCloser(bytes.NewReader(content))}
 		}
@@ -87,7 +91,7 @@ func handleRequest(driver storagedriver.StorageDriver, request Request) {
 			err = driver.PutContent(path, contents)
 		}
 		response := WriteStreamResponse{
-			Error: ResponseError(err),
+			Error: WrapError(err),
 		}
 		err = request.ResponseChannel.Send(&response)
 		if err != nil {
@@ -100,7 +104,7 @@ func handleRequest(driver storagedriver.StorageDriver, request Request) {
 		reader, err := driver.ReadStream(path, offset)
 		var response ReadStreamResponse
 		if err != nil {
-			response = ReadStreamResponse{Error: ResponseError(err)}
+			response = ReadStreamResponse{Error: WrapError(err)}
 		} else {
 			response = ReadStreamResponse{Reader: ioutil.NopCloser(reader)}
 		}
@@ -117,7 +121,7 @@ func handleRequest(driver storagedriver.StorageDriver, request Request) {
 		reader, _ := request.Parameters["Reader"].(io.ReadCloser)
 		err := driver.WriteStream(path, offset, size, reader)
 		response := WriteStreamResponse{
-			Error: ResponseError(err),
+			Error: WrapError(err),
 		}
 		err = request.ResponseChannel.Send(&response)
 		if err != nil {
@@ -128,7 +132,7 @@ func handleRequest(driver storagedriver.StorageDriver, request Request) {
 		position, err := driver.CurrentSize(path)
 		response := CurrentSizeResponse{
 			Position: position,
-			Error:    ResponseError(err),
+			Error:    WrapError(err),
 		}
 		err = request.ResponseChannel.Send(&response)
 		if err != nil {
@@ -139,7 +143,7 @@ func handleRequest(driver storagedriver.StorageDriver, request Request) {
 		keys, err := driver.List(path)
 		response := ListResponse{
 			Keys:  keys,
-			Error: ResponseError(err),
+			Error: WrapError(err),
 		}
 		err = request.ResponseChannel.Send(&response)
 		if err != nil {
@@ -150,7 +154,7 @@ func handleRequest(driver storagedriver.StorageDriver, request Request) {
 		destPath, _ := request.Parameters["DestPath"].(string)
 		err := driver.Move(sourcePath, destPath)
 		response := MoveResponse{
-			Error: ResponseError(err),
+			Error: WrapError(err),
 		}
 		err = request.ResponseChannel.Send(&response)
 		if err != nil {
@@ -160,7 +164,7 @@ func handleRequest(driver storagedriver.StorageDriver, request Request) {
 		path, _ := request.Parameters["Path"].(string)
 		err := driver.Delete(path)
 		response := DeleteResponse{
-			Error: ResponseError(err),
+			Error: WrapError(err),
 		}
 		err = request.ResponseChannel.Send(&response)
 		if err != nil {

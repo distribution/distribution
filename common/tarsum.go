@@ -25,6 +25,8 @@ type TarSumInfo struct {
 	Digest string
 }
 
+// InvalidTarSumError provides informations about a TarSum that cannot be parsed
+// by ParseTarSum.
 type InvalidTarSumError struct {
 	TarSum string
 }

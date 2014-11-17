@@ -79,7 +79,7 @@ type clientImpl struct {
 // TODO(bbland): use consistent route generation between server and client
 
 func (r *clientImpl) GetImageManifest(name, tag string) (*registry.ImageManifest, error) {
-	response, err := http.Get(r.imageManifestUrl(name, tag))
+	response, err := http.Get(r.imageManifestURL(name, tag))
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func (r *clientImpl) GetImageManifest(name, tag string) (*registry.ImageManifest
 		}
 		return nil, errors
 	default:
-		return nil, &registry.UnexpectedHttpStatusError{Status: response.Status}
+		return nil, &registry.UnexpectedHTTPStatusError{Status: response.Status}
 	}
 
 	decoder := json.NewDecoder(response.Body)
@@ -120,7 +120,7 @@ func (r *clientImpl) PutImageManifest(name, tag string, manifest *registry.Image
 	}
 
 	putRequest, err := http.NewRequest("PUT",
-		r.imageManifestUrl(name, tag), bytes.NewReader(manifestBytes))
+		r.imageManifestURL(name, tag), bytes.NewReader(manifestBytes))
 	if err != nil {
 		return err
 	}
@@ -144,13 +144,13 @@ func (r *clientImpl) PutImageManifest(name, tag string, manifest *registry.Image
 		}
 		return errors
 	default:
-		return &registry.UnexpectedHttpStatusError{Status: response.Status}
+		return &registry.UnexpectedHTTPStatusError{Status: response.Status}
 	}
 }
 
 func (r *clientImpl) DeleteImage(name, tag string) error {
 	deleteRequest, err := http.NewRequest("DELETE",
-		r.imageManifestUrl(name, tag), nil)
+		r.imageManifestURL(name, tag), nil)
 	if err != nil {
 		return err
 	}
@@ -176,7 +176,7 @@ func (r *clientImpl) DeleteImage(name, tag string) error {
 		}
 		return errors
 	default:
-		return &registry.UnexpectedHttpStatusError{Status: response.Status}
+		return &registry.UnexpectedHTTPStatusError{Status: response.Status}
 	}
 
 	return nil
@@ -204,7 +204,7 @@ func (r *clientImpl) ListImageTags(name string) ([]string, error) {
 		}
 		return nil, errors
 	default:
-		return nil, &registry.UnexpectedHttpStatusError{Status: response.Status}
+		return nil, &registry.UnexpectedHTTPStatusError{Status: response.Status}
 	}
 
 	tags := struct {
@@ -258,7 +258,7 @@ func (r *clientImpl) GetImageLayer(name, tarsum string, byteOffset int) (io.Read
 		return nil, 0, errors
 	default:
 		response.Body.Close()
-		return nil, 0, &registry.UnexpectedHttpStatusError{Status: response.Status}
+		return nil, 0, &registry.UnexpectedHTTPStatusError{Status: response.Status}
 	}
 }
 
@@ -290,7 +290,7 @@ func (r *clientImpl) InitiateLayerUpload(name, tarsum string) (string, error) {
 		}
 		return "", errors
 	default:
-		return "", &registry.UnexpectedHttpStatusError{Status: response.Status}
+		return "", &registry.UnexpectedHTTPStatusError{Status: response.Status}
 	}
 }
 
@@ -316,7 +316,7 @@ func (r *clientImpl) GetLayerUploadStatus(location string) (int, int, error) {
 		}
 		return 0, 0, errors
 	default:
-		return 0, 0, &registry.UnexpectedHttpStatusError{Status: response.Status}
+		return 0, 0, &registry.UnexpectedHTTPStatusError{Status: response.Status}
 	}
 }
 
@@ -358,7 +358,7 @@ func (r *clientImpl) UploadLayer(location string, layer io.ReadCloser, length in
 		}
 		return errors
 	default:
-		return &registry.UnexpectedHttpStatusError{Status: response.Status}
+		return &registry.UnexpectedHTTPStatusError{Status: response.Status}
 	}
 }
 
@@ -409,7 +409,7 @@ func (r *clientImpl) UploadLayerChunk(location string, layerChunk io.ReadCloser,
 		}
 		return errors
 	default:
-		return &registry.UnexpectedHttpStatusError{Status: response.Status}
+		return &registry.UnexpectedHTTPStatusError{Status: response.Status}
 	}
 }
 
@@ -451,7 +451,7 @@ func (r *clientImpl) FinishChunkedLayerUpload(location string, length int, check
 		}
 		return errors
 	default:
-		return &registry.UnexpectedHttpStatusError{Status: response.Status}
+		return &registry.UnexpectedHTTPStatusError{Status: response.Status}
 	}
 }
 
@@ -483,13 +483,13 @@ func (r *clientImpl) CancelLayerUpload(location string) error {
 		}
 		return errors
 	default:
-		return &registry.UnexpectedHttpStatusError{Status: response.Status}
+		return &registry.UnexpectedHTTPStatusError{Status: response.Status}
 	}
 }
 
-// imageManifestUrl is a helper method for returning the full url to an image
+// imageManifestURL is a helper method for returning the full url to an image
 // manifest
-func (r *clientImpl) imageManifestUrl(name, tag string) string {
+func (r *clientImpl) imageManifestURL(name, tag string) string {
 	return fmt.Sprintf("%s/v2/%s/image/%s", r.Endpoint, name, tag)
 }
 
