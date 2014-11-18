@@ -1,9 +1,7 @@
 package client
 
 import (
-	"bytes"
-	"io"
-	"io/ioutil"
+	"errors"
 
 	"github.com/docker/docker-registry"
 
@@ -96,14 +94,13 @@ func pushLayer(c Client, objectStore ObjectStore, name string, fsLayer registry.
 	}
 	defer layerReader.Close()
 
-	layerBuffer := new(bytes.Buffer)
-	layerSize, err := io.Copy(layerBuffer, layerReader)
-	if err != nil {
+	if layerReader.CurrentSize() != layerReader.Size() {
 		log.WithFields(log.Fields{
-			"error": err,
-			"layer": fsLayer,
-		}).Warn("Unable to read local layer")
-		return err
+			"layer":       fsLayer,
+			"currentSize": layerReader.CurrentSize(),
+			"size":        layerReader.Size(),
+		}).Warn("Local layer incomplete")
+		return errors.New("Local layer incomplete")
 	}
 
 	length, err := c.BlobLength(name, fsLayer.BlobSum)
@@ -128,7 +125,7 @@ func pushLayer(c Client, objectStore ObjectStore, name string, fsLayer registry.
 		return err
 	}
 
-	err = c.UploadBlob(location, ioutil.NopCloser(layerBuffer), int(layerSize), fsLayer.BlobSum)
+	err = c.UploadBlob(location, layerReader, int(layerReader.CurrentSize()), fsLayer.BlobSum)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
