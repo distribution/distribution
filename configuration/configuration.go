@@ -23,9 +23,9 @@ type Configuration struct {
 	Storage Storage `yaml:"storage"`
 }
 
-// v_0_1_Configuration is a Version 0.1 Configuration struct
+// v0_1Configuration is a Version 0.1 Configuration struct
 // This is currently aliased to Configuration, as it is the current version
-type v_0_1_Configuration Configuration
+type v0_1Configuration Configuration
 
 // Version is a major/minor version pair of the form Major.Minor
 // Major version upgrades indicate structure or type changes
@@ -195,7 +195,7 @@ func Parse(in []byte) (*Configuration, error) {
 	// Parse the remainder of the configuration depending on the provided version
 	switch untypedConfig.Version {
 	case "0.1":
-		config, err = parseV_0_1_Registry(in)
+		config, err = parseV0_1Registry(in)
 		if err != nil {
 			return nil, err
 		}
@@ -206,11 +206,11 @@ func Parse(in []byte) (*Configuration, error) {
 	return config, nil
 }
 
-// parseV_0_1_Registry parses a registry Configuration for Version 0.1
-func parseV_0_1_Registry(in []byte) (*Configuration, error) {
+// parseV0_1Registry parses a registry Configuration for Version 0.1
+func parseV0_1Registry(in []byte) (*Configuration, error) {
 	envMap := getEnvMap()
 
-	var config v_0_1_Configuration
+	var config v0_1Configuration
 	err := yaml.Unmarshal(in, &config)
 	if err != nil {
 		return nil, err

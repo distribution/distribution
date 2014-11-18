@@ -36,6 +36,7 @@ type ImageManifest struct {
 // imageManifest is used to avoid recursion in unmarshaling
 type imageManifest ImageManifest
 
+// UnmarshalJSON populates a new ImageManifest struct from JSON data.
 func (m *ImageManifest) UnmarshalJSON(b []byte) error {
 	var manifest imageManifest
 	err := json.Unmarshal(b, &manifest)

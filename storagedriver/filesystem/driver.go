@@ -11,11 +11,11 @@ import (
 	"github.com/docker/docker-registry/storagedriver/factory"
 )
 
-const DriverName = "filesystem"
-const DefaultRootDirectory = "/tmp/registry/storage"
+const driverName = "filesystem"
+const defaultRootDirectory = "/tmp/registry/storage"
 
 func init() {
-	factory.Register(DriverName, &filesystemDriverFactory{})
+	factory.Register(driverName, &filesystemDriverFactory{})
 }
 
 // filesystemDriverFactory implements the factory.StorageDriverFactory interface
@@ -25,17 +25,17 @@ func (factory *filesystemDriverFactory) Create(parameters map[string]string) (st
 	return FromParameters(parameters), nil
 }
 
-// FilesystemDriver is a storagedriver.StorageDriver implementation backed by a local filesystem
-// All provided paths will be subpaths of the RootDirectory
-type FilesystemDriver struct {
+// Driver is a storagedriver.StorageDriver implementation backed by a local
+// filesystem. All provided paths will be subpaths of the RootDirectory
+type Driver struct {
 	rootDirectory string
 }
 
-// FromParameters constructs a new FilesystemDriver with a given parameters map
+// FromParameters constructs a new Driver with a given parameters map
 // Optional Parameters:
 // - rootdirectory
-func FromParameters(parameters map[string]string) *FilesystemDriver {
-	var rootDirectory = DefaultRootDirectory
+func FromParameters(parameters map[string]string) *Driver {
+	var rootDirectory = defaultRootDirectory
 	if parameters != nil {
 		rootDir, ok := parameters["rootdirectory"]
 		if ok {
@@ -45,19 +45,20 @@ func FromParameters(parameters map[string]string) *FilesystemDriver {
 	return New(rootDirectory)
 }
 
-// New constructs a new FilesystemDriver with a given rootDirectory
-func New(rootDirectory string) *FilesystemDriver {
-	return &FilesystemDriver{rootDirectory}
+// New constructs a new Driver with a given rootDirectory
+func New(rootDirectory string) *Driver {
+	return &Driver{rootDirectory}
 }
 
-// subPath returns the absolute path of a key within the FilesystemDriver's storage
-func (d *FilesystemDriver) subPath(subPath string) string {
+// subPath returns the absolute path of a key within the Driver's storage
+func (d *Driver) subPath(subPath string) string {
 	return path.Join(d.rootDirectory, subPath)
 }
 
 // Implement the storagedriver.StorageDriver interface
 
-func (d *FilesystemDriver) GetContent(path string) ([]byte, error) {
+// GetContent retrieves the content stored at "path" as a []byte.
+func (d *Driver) GetContent(path string) ([]byte, error) {
 	contents, err := ioutil.ReadFile(d.subPath(path))
 	if err != nil {
 		return nil, storagedriver.PathNotFoundError{Path: path}
@@ -65,7 +66,8 @@ func (d *FilesystemDriver) GetContent(path string) ([]byte, error) {
 	return contents, nil
 }
 
-func (d *FilesystemDriver) PutContent(subPath string, contents []byte) error {
+// PutContent stores the []byte content at a location designated by "path".
+func (d *Driver) PutContent(subPath string, contents []byte) error {
 	fullPath := d.subPath(subPath)
 	parentDir := path.Dir(fullPath)
 	err := os.MkdirAll(parentDir, 0755)
@@ -77,7 +79,9 @@ func (d *FilesystemDriver) PutContent(subPath string, contents []byte) error {
 	return err
 }
 
-func (d *FilesystemDriver) ReadStream(path string, offset uint64) (io.ReadCloser, error) {
+// ReadStream retrieves an io.ReadCloser for the content stored at "path" with a
+// given byte offset.
+func (d *Driver) ReadStream(path string, offset uint64) (io.ReadCloser, error) {
 	file, err := os.OpenFile(d.subPath(path), os.O_RDONLY, 0644)
 	if err != nil {
 		return nil, err
@@ -95,7 +99,9 @@ func (d *FilesystemDriver) ReadStream(path string, offset uint64) (io.ReadCloser
 	return file, nil
 }
 
-func (d *FilesystemDriver) WriteStream(subPath string, offset, size uint64, reader io.ReadCloser) error {
+// WriteStream stores the contents of the provided io.ReadCloser at a location
+// designated by the given path.
+func (d *Driver) WriteStream(subPath string, offset, size uint64, reader io.ReadCloser) error {
 	defer reader.Close()
 
 	resumableOffset, err := d.CurrentSize(subPath)
@@ -154,7 +160,9 @@ func (d *FilesystemDriver) WriteStream(subPath string, offset, size uint64, read
 	return err
 }
 
-func (d *FilesystemDriver) CurrentSize(subPath string) (uint64, error) {
+// CurrentSize retrieves the curernt size in bytes of the object at the given
+// path.
+func (d *Driver) CurrentSize(subPath string) (uint64, error) {
 	fullPath := d.subPath(subPath)
 
 	fileInfo, err := os.Stat(fullPath)
@@ -166,7 +174,9 @@ func (d *FilesystemDriver) CurrentSize(subPath string) (uint64, error) {
 	return uint64(fileInfo.Size()), nil
 }
 
-func (d *FilesystemDriver) List(subPath string) ([]string, error) {
+// List returns a list of the objects that are direct descendants of the given
+// path.
+func (d *Driver) List(subPath string) ([]string, error) {
 	subPath = strings.TrimRight(subPath, "/")
 	fullPath := d.subPath(subPath)
 
@@ -188,12 +198,15 @@ func (d *FilesystemDriver) List(subPath string) ([]string, error) {
 	return keys, nil
 }
 
-func (d *FilesystemDriver) Move(sourcePath string, destPath string) error {
+// Move moves an object stored at sourcePath to destPath, removing the original
+// object.
+func (d *Driver) Move(sourcePath string, destPath string) error {
 	err := os.Rename(d.subPath(sourcePath), d.subPath(destPath))
 	return err
 }
 
-func (d *FilesystemDriver) Delete(subPath string) error {
+// Delete recursively deletes all objects stored at "path" and its subpaths.
+func (d *Driver) Delete(subPath string) error {
 	fullPath := d.subPath(subPath)
 
 	_, err := os.Stat(fullPath)

@@ -173,6 +173,7 @@ func (driver *StorageDriverClient) Stop() error {
 
 // Implement the storagedriver.StorageDriver interface over IPC
 
+// GetContent retrieves the content stored at "path" as a []byte.
 func (driver *StorageDriverClient) GetContent(path string) ([]byte, error) {
 	if err := driver.exited(); err != nil {
 		return nil, err
@@ -204,6 +205,7 @@ func (driver *StorageDriverClient) GetContent(path string) ([]byte, error) {
 	return contents, nil
 }
 
+// PutContent stores the []byte content at a location designated by "path".
 func (driver *StorageDriverClient) PutContent(path string, contents []byte) error {
 	if err := driver.exited(); err != nil {
 		return err
@@ -230,6 +232,8 @@ func (driver *StorageDriverClient) PutContent(path string, contents []byte) erro
 	return nil
 }
 
+// ReadStream retrieves an io.ReadCloser for the content stored at "path" with a
+// given byte offset.
 func (driver *StorageDriverClient) ReadStream(path string, offset uint64) (io.ReadCloser, error) {
 	if err := driver.exited(); err != nil {
 		return nil, err
@@ -255,6 +259,8 @@ func (driver *StorageDriverClient) ReadStream(path string, offset uint64) (io.Re
 	return response.Reader, nil
 }
 
+// WriteStream stores the contents of the provided io.ReadCloser at a location
+// designated by the given path.
 func (driver *StorageDriverClient) WriteStream(path string, offset, size uint64, reader io.ReadCloser) error {
 	if err := driver.exited(); err != nil {
 		return err
@@ -280,6 +286,8 @@ func (driver *StorageDriverClient) WriteStream(path string, offset, size uint64,
 	return nil
 }
 
+// CurrentSize retrieves the curernt size in bytes of the object at the given
+// path.
 func (driver *StorageDriverClient) CurrentSize(path string) (uint64, error) {
 	if err := driver.exited(); err != nil {
 		return 0, err
@@ -305,6 +313,8 @@ func (driver *StorageDriverClient) CurrentSize(path string) (uint64, error) {
 	return response.Position, nil
 }
 
+// List returns a list of the objects that are direct descendants of the given
+// path.
 func (driver *StorageDriverClient) List(path string) ([]string, error) {
 	if err := driver.exited(); err != nil {
 		return nil, err
@@ -330,6 +340,8 @@ func (driver *StorageDriverClient) List(path string) ([]string, error) {
 	return response.Keys, nil
 }
 
+// Move moves an object stored at sourcePath to destPath, removing the original
+// object.
 func (driver *StorageDriverClient) Move(sourcePath string, destPath string) error {
 	if err := driver.exited(); err != nil {
 		return err
@@ -355,6 +367,7 @@ func (driver *StorageDriverClient) Move(sourcePath string, destPath string) erro
 	return nil
 }
 
+// Delete recursively deletes all objects stored at "path" and its subpaths.
 func (driver *StorageDriverClient) Delete(path string) error {
 	if err := driver.exited(); err != nil {
 		return err

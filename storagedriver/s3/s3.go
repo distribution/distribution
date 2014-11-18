@@ -13,7 +13,7 @@ import (
 	"github.com/docker/docker-registry/storagedriver/factory"
 )
 
-const DriverName = "s3"
+const driverName = "s3"
 
 // minChunkSize defines the minimum multipart upload chunk size
 // S3 API requires multipart upload chunks to be at least 5MB
@@ -23,7 +23,7 @@ const minChunkSize = uint64(5 * 1024 * 1024)
 const listPartsMax = 1000
 
 func init() {
-	factory.Register(DriverName, &s3DriverFactory{})
+	factory.Register(driverName, &s3DriverFactory{})
 }
 
 // s3DriverFactory implements the factory.StorageDriverFactory interface
@@ -33,22 +33,22 @@ func (factory *s3DriverFactory) Create(parameters map[string]string) (storagedri
 	return FromParameters(parameters)
 }
 
-// S3Driver is a storagedriver.StorageDriver implementation backed by Amazon S3
+// Driver is a storagedriver.StorageDriver implementation backed by Amazon S3
 // Objects are stored at absolute keys in the provided bucket
-type S3Driver struct {
+type Driver struct {
 	S3      *s3.S3
 	Bucket  *s3.Bucket
 	Encrypt bool
 }
 
-// FromParameters constructs a new S3Driver with a given parameters map
+// FromParameters constructs a new Driver with a given parameters map
 // Required parameters:
 // - accesskey
 // - secretkey
 // - region
 // - bucket
 // - encrypt
-func FromParameters(parameters map[string]string) (*S3Driver, error) {
+func FromParameters(parameters map[string]string) (*Driver, error) {
 	accessKey, ok := parameters["accesskey"]
 	if !ok || accessKey == "" {
 		return nil, fmt.Errorf("No accesskey parameter provided")
@@ -85,9 +85,9 @@ func FromParameters(parameters map[string]string) (*S3Driver, error) {
 	return New(accessKey, secretKey, region, encryptBool, bucket)
 }
 
-// New constructs a new S3Driver with the given AWS credentials, region, encryption flag, and
+// New constructs a new Driver with the given AWS credentials, region, encryption flag, and
 // bucketName
-func New(accessKey string, secretKey string, region aws.Region, encrypt bool, bucketName string) (*S3Driver, error) {
+func New(accessKey string, secretKey string, region aws.Region, encrypt bool, bucketName string) (*Driver, error) {
 	auth := aws.Auth{AccessKey: accessKey, SecretKey: secretKey}
 	s3obj := s3.New(auth, region)
 	bucket := s3obj.Bucket(bucketName)
@@ -99,20 +99,24 @@ func New(accessKey string, secretKey string, region aws.Region, encrypt bool, bu
 		}
 	}
 
-	return &S3Driver{s3obj, bucket, encrypt}, nil
+	return &Driver{s3obj, bucket, encrypt}, nil
 }
 
 // Implement the storagedriver.StorageDriver interface
 
-func (d *S3Driver) GetContent(path string) ([]byte, error) {
+// GetContent retrieves the content stored at "path" as a []byte.
+func (d *Driver) GetContent(path string) ([]byte, error) {
 	return d.Bucket.Get(path)
 }
 
-func (d *S3Driver) PutContent(path string, contents []byte) error {
+// PutContent stores the []byte content at a location designated by "path".
+func (d *Driver) PutContent(path string, contents []byte) error {
 	return d.Bucket.Put(path, contents, d.getContentType(), getPermissions(), d.getOptions())
 }
 
-func (d *S3Driver) ReadStream(path string, offset uint64) (io.ReadCloser, error) {
+// ReadStream retrieves an io.ReadCloser for the content stored at "path" with a
+// given byte offset.
+func (d *Driver) ReadStream(path string, offset uint64) (io.ReadCloser, error) {
 	headers := make(http.Header)
 	headers.Add("Range", "bytes="+strconv.FormatUint(offset, 10)+"-")
 
@@ -124,7 +128,9 @@ func (d *S3Driver) ReadStream(path string, offset uint64) (io.ReadCloser, error)
 	return nil, err
 }
 
-func (d *S3Driver) WriteStream(path string, offset, size uint64, reader io.ReadCloser) error {
+// WriteStream stores the contents of the provided io.ReadCloser at a location
+// designated by the given path.
+func (d *Driver) WriteStream(path string, offset, size uint64, reader io.ReadCloser) error {
 	defer reader.Close()
 
 	chunkSize := minChunkSize
@@ -177,7 +183,9 @@ func (d *S3Driver) WriteStream(path string, offset, size uint64, reader io.ReadC
 	return nil
 }
 
-func (d *S3Driver) CurrentSize(path string) (uint64, error) {
+// CurrentSize retrieves the curernt size in bytes of the object at the given
+// path.
+func (d *Driver) CurrentSize(path string) (uint64, error) {
 	_, parts, err := d.getAllParts(path)
 	if err != nil {
 		return 0, err
@@ -190,7 +198,9 @@ func (d *S3Driver) CurrentSize(path string) (uint64, error) {
 	return (((uint64(len(parts)) - 1) * uint64(parts[0].Size)) + uint64(parts[len(parts)-1].Size)), nil
 }
 
-func (d *S3Driver) List(path string) ([]string, error) {
+// List returns a list of the objects that are direct descendants of the given
+// path.
+func (d *Driver) List(path string) ([]string, error) {
 	if path[len(path)-1] != '/' {
 		path = path + "/"
 	}
@@ -224,7 +234,9 @@ func (d *S3Driver) List(path string) ([]string, error) {
 	return append(files, directories...), nil
 }
 
-func (d *S3Driver) Move(sourcePath string, destPath string) error {
+// Move moves an object stored at sourcePath to destPath, removing the original
+// object.
+func (d *Driver) Move(sourcePath string, destPath string) error {
 	/* This is terrible, but aws doesn't have an actual move. */
 	_, err := d.Bucket.PutCopy(destPath, getPermissions(),
 		s3.CopyOptions{Options: d.getOptions(), MetadataDirective: "", ContentType: d.getContentType()},
@@ -236,7 +248,8 @@ func (d *S3Driver) Move(sourcePath string, destPath string) error {
 	return d.Delete(sourcePath)
 }
 
-func (d *S3Driver) Delete(path string) error {
+// Delete recursively deletes all objects stored at "path" and its subpaths.
+func (d *Driver) Delete(path string) error {
 	listResponse, err := d.Bucket.List(path, "", "", listPartsMax)
 	if err != nil || len(listResponse.Contents) == 0 {
 		return storagedriver.PathNotFoundError{Path: path}
@@ -263,30 +276,29 @@ func (d *S3Driver) Delete(path string) error {
 	return nil
 }
 
-func (d *S3Driver) getHighestIdMulti(path string) (multi *s3.Multi, err error) {
+func (d *Driver) getHighestIDMulti(path string) (multi *s3.Multi, err error) {
 	multis, _, err := d.Bucket.ListMulti(path, "")
 	if err != nil && !hasCode(err, "NoSuchUpload") {
 		return nil, err
 	}
 
-	uploadId := ""
+	uploadID := ""
 
 	if len(multis) > 0 {
 		for _, m := range multis {
-			if m.Key == path && m.UploadId >= uploadId {
-				uploadId = m.UploadId
+			if m.Key == path && m.UploadId >= uploadID {
+				uploadID = m.UploadId
 				multi = m
 			}
 		}
 		return multi, nil
-	} else {
-		multi, err := d.Bucket.InitMulti(path, d.getContentType(), getPermissions(), d.getOptions())
-		return multi, err
 	}
+	multi, err = d.Bucket.InitMulti(path, d.getContentType(), getPermissions(), d.getOptions())
+	return multi, err
 }
 
-func (d *S3Driver) getAllParts(path string) (*s3.Multi, []s3.Part, error) {
-	multi, err := d.getHighestIdMulti(path)
+func (d *Driver) getAllParts(path string) (*s3.Multi, []s3.Part, error) {
+	multi, err := d.getHighestIDMulti(path)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -300,7 +312,7 @@ func hasCode(err error, code string) bool {
 	return ok && s3err.Code == code
 }
 
-func (d *S3Driver) getOptions() s3.Options {
+func (d *Driver) getOptions() s3.Options {
 	return s3.Options{SSE: d.Encrypt}
 }
 
@@ -308,6 +320,6 @@ func getPermissions() s3.ACL {
 	return s3.Private
 }
 
-func (d *S3Driver) getContentType() string {
+func (d *Driver) getContentType() string {
 	return "application/octet-stream"
 }

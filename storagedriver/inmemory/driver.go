@@ -13,34 +13,35 @@ import (
 	"github.com/docker/docker-registry/storagedriver/factory"
 )
 
-const DriverName = "inmemory"
+const driverName = "inmemory"
 
 func init() {
-	factory.Register(DriverName, &inMemoryDriverFactory{})
+	factory.Register(driverName, &inMemoryDriverFactory{})
 }
 
-// inMemoryDriverFacotry implements the factory.StorageDriverFactory interface
+// inMemoryDriverFacotry implements the factory.StorageDriverFactory interface.
 type inMemoryDriverFactory struct{}
 
 func (factory *inMemoryDriverFactory) Create(parameters map[string]string) (storagedriver.StorageDriver, error) {
 	return New(), nil
 }
 
-// InMemoryDriver is a storagedriver.StorageDriver implementation backed by a local map
-// Intended solely for example and testing purposes
-type InMemoryDriver struct {
+// Driver is a storagedriver.StorageDriver implementation backed by a local map.
+// Intended solely for example and testing purposes.
+type Driver struct {
 	storage map[string][]byte
 	mutex   sync.RWMutex
 }
 
-// New constructs a new InMemoryDriver
-func New() *InMemoryDriver {
-	return &InMemoryDriver{storage: make(map[string][]byte)}
+// New constructs a new Driver.
+func New() *Driver {
+	return &Driver{storage: make(map[string][]byte)}
 }
 
-// Implement the storagedriver.StorageDriver interface
+// Implement the storagedriver.StorageDriver interface.
 
-func (d *InMemoryDriver) GetContent(path string) ([]byte, error) {
+// GetContent retrieves the content stored at "path" as a []byte.
+func (d *Driver) GetContent(path string) ([]byte, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 	contents, ok := d.storage[path]
@@ -50,14 +51,17 @@ func (d *InMemoryDriver) GetContent(path string) ([]byte, error) {
 	return contents, nil
 }
 
-func (d *InMemoryDriver) PutContent(path string, contents []byte) error {
+// PutContent stores the []byte content at a location designated by "path".
+func (d *Driver) PutContent(path string, contents []byte) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 	d.storage[path] = contents
 	return nil
 }
 
-func (d *InMemoryDriver) ReadStream(path string, offset uint64) (io.ReadCloser, error) {
+// ReadStream retrieves an io.ReadCloser for the content stored at "path" with a
+// given byte offset.
+func (d *Driver) ReadStream(path string, offset uint64) (io.ReadCloser, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 	contents, err := d.GetContent(path)
@@ -73,7 +77,9 @@ func (d *InMemoryDriver) ReadStream(path string, offset uint64) (io.ReadCloser, 
 	return ioutil.NopCloser(bytes.NewReader(buf)), nil
 }
 
-func (d *InMemoryDriver) WriteStream(path string, offset, size uint64, reader io.ReadCloser) error {
+// WriteStream stores the contents of the provided io.ReadCloser at a location
+// designated by the given path.
+func (d *Driver) WriteStream(path string, offset, size uint64, reader io.ReadCloser) error {
 	defer reader.Close()
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
@@ -100,7 +106,9 @@ func (d *InMemoryDriver) WriteStream(path string, offset, size uint64, reader io
 	return nil
 }
 
-func (d *InMemoryDriver) CurrentSize(path string) (uint64, error) {
+// CurrentSize retrieves the curernt size in bytes of the object at the given
+// path.
+func (d *Driver) CurrentSize(path string) (uint64, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 	contents, ok := d.storage[path]
@@ -110,7 +118,9 @@ func (d *InMemoryDriver) CurrentSize(path string) (uint64, error) {
 	return uint64(len(contents)), nil
 }
 
-func (d *InMemoryDriver) List(path string) ([]string, error) {
+// List returns a list of the objects that are direct descendants of the given
+// path.
+func (d *Driver) List(path string) ([]string, error) {
 	subPathMatcher, err := regexp.Compile(fmt.Sprintf("^%s/[^/]+", path))
 	if err != nil {
 		return nil, err
@@ -133,7 +143,9 @@ func (d *InMemoryDriver) List(path string) ([]string, error) {
 	return keys, nil
 }
 
-func (d *InMemoryDriver) Move(sourcePath string, destPath string) error {
+// Move moves an object stored at sourcePath to destPath, removing the original
+// object.
+func (d *Driver) Move(sourcePath string, destPath string) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 	contents, ok := d.storage[sourcePath]
@@ -145,10 +157,11 @@ func (d *InMemoryDriver) Move(sourcePath string, destPath string) error {
 	return nil
 }
 
-func (d *InMemoryDriver) Delete(path string) error {
+// Delete recursively deletes all objects stored at "path" and its subpaths.
+func (d *Driver) Delete(path string) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
-	subPaths := make([]string, 0)
+	var subPaths []string
 	for k := range d.storage {
 		if strings.HasPrefix(k, path) {
 			subPaths = append(subPaths, k)

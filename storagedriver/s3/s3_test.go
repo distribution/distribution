@@ -8,11 +8,12 @@ import (
 	"github.com/crowdmob/goamz/aws"
 	"github.com/docker/docker-registry/storagedriver"
 	"github.com/docker/docker-registry/storagedriver/testsuites"
-	. "gopkg.in/check.v1"
+
+	"gopkg.in/check.v1"
 )
 
 // Hook up gocheck into the "go test" runner.
-func Test(t *testing.T) { TestingT(t) }
+func Test(t *testing.T) { check.TestingT(t) }
 
 func init() {
 	accessKey := os.Getenv("AWS_ACCESS_KEY")
@@ -38,7 +39,7 @@ func init() {
 	}
 
 	testsuites.RegisterInProcessSuite(s3DriverConstructor, skipCheck)
-	testsuites.RegisterIPCSuite(DriverName, map[string]string{
+	testsuites.RegisterIPCSuite(driverName, map[string]string{
 		"accesskey": accessKey,
 		"secretkey": secretKey,
 		"region":    region,
