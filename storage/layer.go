@@ -4,24 +4,25 @@ import (
 	"fmt"
 	"io"
 	"time"
+
+	"github.com/docker/docker-registry/digest"
 )
 
 // LayerService provides operations on layer files in a backend storage.
 type LayerService interface {
 	// Exists returns true if the layer exists.
-	Exists(tarSum string) (bool, error)
+	Exists(name string, digest digest.Digest) (bool, error)
 
 	// Fetch the layer identifed by TarSum.
-	Fetch(tarSum string) (Layer, error)
+	Fetch(name string, digest digest.Digest) (Layer, error)
 
-	// Upload begins a layer upload, returning a handle. If the layer upload
-	// is already in progress or the layer has already been uploaded, this
-	// will return an error.
-	Upload(name, tarSum string) (LayerUpload, error)
+	// Upload begins a layer upload to repository identified by name,
+	// returning a handle.
+	Upload(name string) (LayerUpload, error)
 
 	// Resume continues an in progress layer upload, returning the current
 	// state of the upload.
-	Resume(name, tarSum, uuid string) (LayerUpload, error)
+	Resume(uuid string) (LayerUpload, error)
 }
 
 // Layer provides a readable and seekable layer object. Typically,
@@ -35,8 +36,9 @@ type Layer interface {
 	// Name returns the repository under which this layer is linked.
 	Name() string // TODO(stevvooe): struggling with nomenclature: should this be "repo" or "name"?
 
-	// TarSum returns the unique tarsum of the layer.
-	TarSum() string
+	// Digest returns the unique digest of the blob, which is the tarsum for
+	// layers.
+	Digest() digest.Digest
 
 	// CreatedAt returns the time this layer was created. Until we implement
 	// Stat call on storagedriver, this just returns the zero time.
@@ -55,18 +57,13 @@ type LayerUpload interface {
 	// Name of the repository under which the layer will be linked.
 	Name() string
 
-	// TarSum identifier of the proposed layer. Resulting data must match this
-	// tarsum.
-	TarSum() string
-
 	// Offset returns the position of the last byte written to this layer.
 	Offset() int64
 
 	// Finish marks the upload as completed, returning a valid handle to the
-	// uploaded layer. The final size and checksum are validated against the
-	// contents of the uploaded layer. The checksum should be provided in the
-	// format <algorithm>:<hex digest>.
-	Finish(size int64, digest string) (Layer, error)
+	// uploaded layer. The final size and digest are validated against the
+	// contents of the uploaded layer.
+	Finish(size int64, digest digest.Digest) (Layer, error)
 
 	// Cancel the layer upload process.
 	Cancel() error
@@ -85,11 +82,8 @@ var (
 	// ErrLayerUploadUnknown returned when upload is not found.
 	ErrLayerUploadUnknown = fmt.Errorf("layer upload unknown")
 
-	// ErrLayerInvalidChecksum returned when checksum/digest check fails.
-	ErrLayerInvalidChecksum = fmt.Errorf("invalid layer checksum")
-
-	// ErrLayerInvalidTarsum returned when tarsum check fails.
-	ErrLayerInvalidTarsum = fmt.Errorf("invalid layer tarsum")
+	// ErrLayerInvalidDigest returned when tarsum check fails.
+	ErrLayerInvalidDigest = fmt.Errorf("invalid layer digest")
 
 	// ErrLayerInvalidLength returned when length check fails.
 	ErrLayerInvalidLength = fmt.Errorf("invalid layer length")

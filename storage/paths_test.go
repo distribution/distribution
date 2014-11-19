@@ -1,6 +1,10 @@
 package storage
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/docker/docker-registry/digest"
+)
 
 func TestPathMapper(t *testing.T) {
 	pm := &pathMapper{
@@ -15,13 +19,13 @@ func TestPathMapper(t *testing.T) {
 		{
 			spec: layerLinkPathSpec{
 				name:   "foo/bar",
-				tarSum: "tarsum.v1+test:abcdef",
+				digest: digest.Digest("tarsum.v1+test:abcdef"),
 			},
 			expected: "/pathmapper-test/repositories/foo/bar/layers/tarsum/v1/test/abcdef",
 		},
 		{
 			spec: layerIndexLinkPathSpec{
-				tarSum: "tarsum.v1+test:abcdef",
+				digest: digest.Digest("tarsum.v1+test:abcdef"),
 			},
 			expected: "/pathmapper-test/layerindex/tarsum/v1/test/abcdef",
 		},

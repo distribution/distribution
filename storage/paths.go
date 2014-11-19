@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"strings"
+	"github.com/docker/docker-registry/digest"
 	"fmt"
 	"path"
 
@@ -8,6 +10,11 @@ import (
 )
 
 const storagePathVersion = "v2"
+
+// TODO(sday): This needs to be changed: all layers for an image will be
+// linked under the repository. Lookup from tarsum to name is not necessary,
+// so we can remove the layer index. For this to properly work, image push
+// must link the images layers under the repo.
 
 // pathMapper maps paths based on "object names" and their ids. The "object
 // names" mapped by pathMapper are internal to the storage system.
@@ -79,7 +86,12 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 
 	switch v := spec.(type) {
 	case layerLinkPathSpec:
-		tsi, err := common.ParseTarSum(v.tarSum)
+		if !strings.HasPrefix(v.digest.Algorithm(), "tarsum") {
+			// Only tarsum is supported, for now
+			return "", fmt.Errorf("unsupport content digest: %v", v.digest)
+		}
+
+		tsi, err := common.ParseTarSum(v.digest.String())
 
 		if err != nil {
 			// TODO(sday): This will return an InvalidTarSumError from
@@ -93,7 +105,12 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 
 		return p, nil
 	case layerIndexLinkPathSpec:
-		tsi, err := common.ParseTarSum(v.tarSum)
+		if !strings.HasPrefix(v.digest.Algorithm(), "tarsum") {
+			// Only tarsum is supported, for now
+			return "", fmt.Errorf("unsupport content digest: %v", v.digest)
+		}
+
+		tsi, err := common.ParseTarSum(v.digest.String())
 
 		if err != nil {
 			// TODO(sday): This will return an InvalidTarSumError from
@@ -136,7 +153,7 @@ type pathSpec interface {
 // sha256 that can be fetched from the blob store.
 type layerLinkPathSpec struct {
 	name   string
-	tarSum string
+	digest digest.Digest
 }
 
 func (layerLinkPathSpec) pathSpec() {}
@@ -152,7 +169,7 @@ func (layerLinkPathSpec) pathSpec() {}
 // library/ubuntu repository. The storage layer should access the tarsum from
 // the first repository to which the client has access.
 type layerIndexLinkPathSpec struct {
-	tarSum string
+	digest digest.Digest
 }
 
 func (layerIndexLinkPathSpec) pathSpec() {}
@@ -160,6 +177,7 @@ func (layerIndexLinkPathSpec) pathSpec() {}
 // blobPath contains the path for the registry global blob store. For now,
 // this contains layer data, exclusively.
 type blobPathSpec struct {
+	// TODO(stevvooe): Port this to make better use of Digest type.
 	alg    string
 	digest string
 }

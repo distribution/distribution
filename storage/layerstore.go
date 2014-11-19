@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/docker/docker-registry/digest"
 	"github.com/docker/docker-registry/storagedriver"
 )
 
@@ -15,10 +16,10 @@ type layerStore struct {
 	uploadStore layerUploadStore
 }
 
-func (ls *layerStore) Exists(tarSum string) (bool, error) {
+func (ls *layerStore) Exists(name string, digest digest.Digest) (bool, error) {
 	// Because this implementation just follows blob links, an existence check
 	// is pretty cheap by starting and closing a fetch.
-	_, err := ls.Fetch(tarSum)
+	_, err := ls.Fetch(name, digest)
 
 	if err != nil {
 		if err == ErrLayerUnknown {
@@ -31,8 +32,8 @@ func (ls *layerStore) Exists(tarSum string) (bool, error) {
 	return true, nil
 }
 
-func (ls *layerStore) Fetch(tarSum string) (Layer, error) {
-	repos, err := ls.resolveContainingRepositories(tarSum)
+func (ls *layerStore) Fetch(name string, digest digest.Digest) (Layer, error) {
+	repos, err := ls.resolveContainingRepositories(digest)
 
 	if err != nil {
 		// TODO(stevvooe): Unknown tarsum error: need to wrap.
@@ -44,7 +45,7 @@ func (ls *layerStore) Fetch(tarSum string) (Layer, error) {
 	// against the list of repos to which we have pull access. The argument
 	// repos needs to be filtered against that access list.
 
-	name, blobPath, err := ls.resolveBlobPath(repos, tarSum)
+	_, blobPath, err := ls.resolveBlobPath(repos, digest)
 
 	if err != nil {
 		// TODO(stevvooe): Map this error correctly, perhaps in the callee.
@@ -72,7 +73,7 @@ func (ls *layerStore) Fetch(tarSum string) (Layer, error) {
 		layerStore: ls,
 		path:       p,
 		name:       name,
-		tarSum:     tarSum,
+		digest:     digest,
 
 		// TODO(stevvooe): Storage backend does not support modification time
 		// queries yet. Layers "never" change, so just return the zero value.
@@ -88,25 +89,13 @@ func (ls *layerStore) Fetch(tarSum string) (Layer, error) {
 // Upload begins a layer upload, returning a handle. If the layer upload
 // is already in progress or the layer has already been uploaded, this
 // will return an error.
-func (ls *layerStore) Upload(name, tarSum string) (LayerUpload, error) {
-	exists, err := ls.Exists(tarSum)
-	if err != nil {
-		return nil, err
-	}
-
-	if exists {
-		// TODO(stevvoe): This looks simple now, but we really should only
-		// return the layer exists error when the layer exists AND the current
-		// client has access to the layer. If the client doesn't have access
-		// to the layer, the upload should proceed.
-		return nil, ErrLayerExists
-	}
+func (ls *layerStore) Upload(name string) (LayerUpload, error) {
 
 	// NOTE(stevvooe): Consider the issues with allowing concurrent upload of
 	// the same two layers. Should it be disallowed? For now, we allow both
 	// parties to proceed and the the first one uploads the layer.
 
-	lus, err := ls.uploadStore.New(name, tarSum)
+	lus, err := ls.uploadStore.New(name)
 	if err != nil {
 		return nil, err
 	}
@@ -116,7 +105,7 @@ func (ls *layerStore) Upload(name, tarSum string) (LayerUpload, error) {
 
 // Resume continues an in progress layer upload, returning the current
 // state of the upload.
-func (ls *layerStore) Resume(name, tarSum, uuid string) (LayerUpload, error) {
+func (ls *layerStore) Resume(uuid string) (LayerUpload, error) {
 	lus, err := ls.uploadStore.GetState(uuid)
 
 	if err != nil {
@@ -135,9 +124,9 @@ func (ls *layerStore) newLayerUpload(lus LayerUploadState) LayerUpload {
 	}
 }
 
-func (ls *layerStore) resolveContainingRepositories(tarSum string) ([]string, error) {
+func (ls *layerStore) resolveContainingRepositories(digest digest.Digest) ([]string, error) {
 	// Lookup the layer link in the index by tarsum id.
-	layerIndexLinkPath, err := ls.pathMapper.path(layerIndexLinkPathSpec{tarSum: tarSum})
+	layerIndexLinkPath, err := ls.pathMapper.path(layerIndexLinkPathSpec{digest: digest})
 	if err != nil {
 		return nil, err
 	}
@@ -164,10 +153,10 @@ func (ls *layerStore) resolveContainingRepositories(tarSum string) ([]string, er
 
 // resolveBlobId lookups up the tarSum in the various repos to find the blob
 // link, returning the repo name and blob path spec or an error on failure.
-func (ls *layerStore) resolveBlobPath(repos []string, tarSum string) (name string, bps blobPathSpec, err error) {
+func (ls *layerStore) resolveBlobPath(repos []string, digest digest.Digest) (name string, bps blobPathSpec, err error) {
 
 	for _, repo := range repos {
-		pathSpec := layerLinkPathSpec{name: repo, tarSum: tarSum}
+		pathSpec := layerLinkPathSpec{name: repo, digest: digest}
 		layerLinkPath, err := ls.pathMapper.path(pathSpec)
 
 		if err != nil {
@@ -199,5 +188,5 @@ func (ls *layerStore) resolveBlobPath(repos []string, tarSum string) (name strin
 
 	// TODO(stevvooe): Map this error to repo not found, but it basically
 	// means we exited the loop above without finding a blob link.
-	return "", bps, fmt.Errorf("unable to resolve blog id for repos=%v and tarSum=%q", repos, tarSum)
+	return "", bps, fmt.Errorf("unable to resolve blog id for repos=%v and digest=%v", repos, digest)
 }

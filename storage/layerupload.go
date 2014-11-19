@@ -1,7 +1,6 @@
 package storage
 
 import (
-	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -12,6 +11,7 @@ import (
 
 	"code.google.com/p/go-uuid/uuid"
 
+	"github.com/docker/docker-registry/digest"
 	"github.com/docker/docker-registry/storagedriver"
 	"github.com/docker/docker/pkg/tarsum"
 
@@ -22,11 +22,6 @@ import (
 type LayerUploadState struct {
 	// name is the primary repository under which the layer will be linked.
 	Name string
-
-	// tarSum identifies the target layer. Provided by the client. If the
-	// resulting tarSum does not match this value, an error should be
-	// returned.
-	TarSum string
 
 	// UUID identifies the upload.
 	UUID string
@@ -64,7 +59,7 @@ type layerFile interface {
 // uploads. This interface will definitely change and will most likely end up
 // being exported to the app layer. Move the layer.go when it's ready to go.
 type layerUploadStore interface {
-	New(name, tarSum string) (LayerUploadState, error)
+	New(name string) (LayerUploadState, error)
 	Open(uuid string) (layerFile, error)
 	GetState(uuid string) (LayerUploadState, error)
 	SaveState(lus LayerUploadState) error
@@ -76,12 +71,6 @@ var _ LayerUpload = &layerUploadController{}
 // Name of the repository under which the layer will be linked.
 func (luc *layerUploadController) Name() string {
 	return luc.LayerUploadState.Name
-}
-
-// TarSum identifier of the proposed layer. Resulting data must match this
-// tarsum.
-func (luc *layerUploadController) TarSum() string {
-	return luc.LayerUploadState.TarSum
 }
 
 // UUID returns the identifier for this upload.
@@ -98,7 +87,7 @@ func (luc *layerUploadController) Offset() int64 {
 // uploaded layer. The final size and checksum are validated against the
 // contents of the uploaded layer. The checksum should be provided in the
 // format <algorithm>:<hex digest>.
-func (luc *layerUploadController) Finish(size int64, digestStr string) (Layer, error) {
+func (luc *layerUploadController) Finish(size int64, digest digest.Digest) (Layer, error) {
 
 	// This section is going to be pretty ugly now. We will have to read the
 	// file twice. First, to get the tarsum and checksum. When those are
@@ -115,13 +104,8 @@ func (luc *layerUploadController) Finish(size int64, digestStr string) (Layer, e
 		return nil, err
 	}
 
-	digest, err := ParseDigest(digestStr)
+	digest, err = luc.validateLayer(fp, size, digest)
 	if err != nil {
-		return nil, err
-	}
-
-	if err := luc.validateLayer(fp, size, digest); err != nil {
-		// Cleanup?
 		return nil, err
 	}
 
@@ -142,7 +126,7 @@ func (luc *layerUploadController) Finish(size int64, digestStr string) (Layer, e
 		return nil, err
 	}
 
-	return luc.layerStore.Fetch(luc.TarSum())
+	return luc.layerStore.Fetch(luc.Name(), digest)
 }
 
 // Cancel the layer upload process.
@@ -239,69 +223,69 @@ func (luc *layerUploadController) reset() {
 }
 
 // validateLayer runs several checks on the layer file to ensure its validity.
-// This is currently very expensive and relies on fast io and fast seek.
-func (luc *layerUploadController) validateLayer(fp layerFile, size int64, digest Digest) error {
+// This is currently very expensive and relies on fast io and fast seek on the
+// local host. If successful, the latest digest is returned, which should be
+// used over the passed in value.
+func (luc *layerUploadController) validateLayer(fp layerFile, size int64, dgst digest.Digest) (digest.Digest, error) {
+	// First, check the incoming tarsum version of the digest.
+	version, err := tarsum.GetVersionFromTarsum(dgst.String())
+	if err != nil {
+		return "", err
+	}
+
+	// TODO(stevvooe): Should we push this down into the digest type?
+	switch version {
+	case tarsum.Version1:
+	default:
+		// version 0 and dev, for now.
+		return "", ErrLayerTarSumVersionUnsupported
+	}
+
+	digestVerifier := digest.DigestVerifier(dgst)
+	lengthVerifier := digest.LengthVerifier(size)
+
 	// First, seek to the end of the file, checking the size is as expected.
 	end, err := fp.Seek(0, os.SEEK_END)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if end != size {
-		return ErrLayerInvalidLength
+		// Fast path length check.
+		return "", ErrLayerInvalidLength
 	}
 
-	// Now seek back to start and take care of tarsum and checksum.
+	// Now seek back to start and take care of the digest.
 	if _, err := fp.Seek(0, os.SEEK_SET); err != nil {
-		return err
+		return "", err
 	}
 
-	version, err := tarsum.GetVersionFromTarsum(luc.TarSum())
+	tr := io.TeeReader(fp, lengthVerifier)
+	tr = io.TeeReader(tr, digestVerifier)
+
+	// TODO(stevvooe): This is one of the places we need a Digester write
+	// sink. Instead, its read driven. This migth be okay.
+
+	// Calculate an updated digest with the latest version.
+	dgst, err = digest.DigestReader(tr)
 	if err != nil {
-		return ErrLayerTarSumVersionUnsupported
+		return "", err
 	}
 
-	// // We only support tarsum version 1 for now.
-	if version != tarsum.Version1 {
-		return ErrLayerTarSumVersionUnsupported
+	if !lengthVerifier.Verified() {
+		return "", ErrLayerInvalidLength
 	}
 
-	ts, err := tarsum.NewTarSum(fp, true, tarsum.Version1)
-	if err != nil {
-		return err
+	if !digestVerifier.Verified() {
+		return "", ErrLayerInvalidDigest
 	}
 
-	h := sha256.New()
-
-	// Pull the layer file through by writing it to a checksum.
-	nn, err := io.Copy(h, ts)
-
-	if nn != int64(size) {
-		return fmt.Errorf("bad read while finishing upload(%s) %v: %v != %v, err=%v", luc.UUID(), fp, nn, size, err)
-	}
-
-	if err != nil && err != io.EOF {
-		return err
-	}
-
-	calculatedDigest := NewDigest("sha256", h)
-
-	// Compare the digests!
-	if digest != calculatedDigest {
-		return ErrLayerInvalidChecksum
-	}
-
-	// Compare the tarsums!
-	if ts.Sum(nil) != luc.TarSum() {
-		return ErrLayerInvalidTarsum
-	}
-
-	return nil
+	return dgst, nil
 }
 
 // writeLayer actually writes the the layer file into its final destination.
 // The layer should be validated before commencing the write.
-func (luc *layerUploadController) writeLayer(fp layerFile, size int64, digest Digest) error {
+func (luc *layerUploadController) writeLayer(fp layerFile, size int64, digest digest.Digest) error {
 	blobPath, err := luc.layerStore.pathMapper.path(blobPathSpec{
 		alg:    digest.Algorithm(),
 		digest: digest.Hex(),
@@ -342,10 +326,10 @@ func (luc *layerUploadController) writeLayer(fp layerFile, size int64, digest Di
 
 // linkLayer links a valid, written layer blog into the registry, first
 // linking the repository namespace, then adding it to the layerindex.
-func (luc *layerUploadController) linkLayer(digest Digest) error {
+func (luc *layerUploadController) linkLayer(digest digest.Digest) error {
 	layerLinkPath, err := luc.layerStore.pathMapper.path(layerLinkPathSpec{
 		name:   luc.Name(),
-		tarSum: luc.TarSum(),
+		digest: digest,
 	})
 
 	if err != nil {
@@ -358,7 +342,7 @@ func (luc *layerUploadController) linkLayer(digest Digest) error {
 
 	// Link the layer into the name index.
 	layerIndexLinkPath, err := luc.layerStore.pathMapper.path(layerIndexLinkPathSpec{
-		tarSum: luc.TarSum(),
+		digest: digest,
 	})
 
 	if err != nil {
@@ -435,11 +419,10 @@ func newTemporaryLocalFSLayerUploadStore() (layerUploadStore, error) {
 	}, nil
 }
 
-func (llufs *localFSLayerUploadStore) New(name, tarSum string) (LayerUploadState, error) {
+func (llufs *localFSLayerUploadStore) New(name string) (LayerUploadState, error) {
 	lus := LayerUploadState{
-		Name:   name,
-		TarSum: tarSum,
-		UUID:   uuid.New(),
+		Name: name,
+		UUID: uuid.New(),
 	}
 
 	if err := os.Mkdir(llufs.path(lus.UUID, ""), 0755); err != nil {
