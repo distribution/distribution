@@ -24,6 +24,7 @@ func layerUploadDispatcher(ctx *Context, r *http.Request) http.Handler {
 	return handlers.MethodHandler{
 		"POST":   http.HandlerFunc(layerUploadHandler.StartLayerUpload),
 		"GET":    http.HandlerFunc(layerUploadHandler.GetUploadStatus),
+		"HEAD":   http.HandlerFunc(layerUploadHandler.GetUploadStatus),
 		"PUT":    http.HandlerFunc(layerUploadHandler.PutLayerChunk),
 		"DELETE": http.HandlerFunc(layerUploadHandler.CancelLayerUpload),
 	}

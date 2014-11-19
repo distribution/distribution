@@ -84,24 +84,22 @@ func TestAppDispatcher(t *testing.T) {
 			},
 		},
 		{
-			endpoint: routeNameLayer,
+			endpoint: routeNameBlob,
 			vars: []string{
 				"name", "foo/bar",
-				"tarsum", "tarsum.v1+bogus:abcdef0123456789",
+				"digest", "tarsum.v1+bogus:abcdef0123456789",
 			},
 		},
 		{
-			endpoint: routeNameLayerUpload,
+			endpoint: routeNameBlobUpload,
 			vars: []string{
 				"name", "foo/bar",
-				"tarsum", "tarsum.v1+bogus:abcdef0123456789",
 			},
 		},
 		{
-			endpoint: routeNameLayerUploadResume,
+			endpoint: routeNameBlobUploadResume,
 			vars: []string{
 				"name", "foo/bar",
-				"tarsum", "tarsum.v1+bogus:abcdef0123456789",
 				"uuid", "theuuid",
 			},
 		},

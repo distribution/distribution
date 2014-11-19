@@ -48,7 +48,7 @@ func TestRouter(t *testing.T) {
 	for _, testcase := range []routeTestCase{
 		{
 			RouteName:  routeNameImageManifest,
-			RequestURI: "/v2/foo/bar/image/tag",
+			RequestURI: "/v2/foo/bar/manifest/tag",
 			Vars: map[string]string{
 				"name": "foo/bar",
 				"tag":  "tag",
@@ -62,68 +62,75 @@ func TestRouter(t *testing.T) {
 			},
 		},
 		{
-			RouteName:  routeNameLayer,
-			RequestURI: "/v2/foo/bar/layer/tarsum.dev+foo:abcdef0919234",
+			RouteName:  routeNameBlob,
+			RequestURI: "/v2/foo/bar/blob/tarsum.dev+foo:abcdef0919234",
 			Vars: map[string]string{
 				"name":   "foo/bar",
-				"tarsum": "tarsum.dev+foo:abcdef0919234",
+				"digest": "tarsum.dev+foo:abcdef0919234",
 			},
 		},
 		{
-			RouteName:  routeNameLayerUpload,
-			RequestURI: "/v2/foo/bar/layer/tarsum.dev+foo:abcdef0919234/upload/",
+			RouteName:  routeNameBlob,
+			RequestURI: "/v2/foo/bar/blob/sha256:abcdef0919234",
 			Vars: map[string]string{
 				"name":   "foo/bar",
-				"tarsum": "tarsum.dev+foo:abcdef0919234",
+				"digest": "sha256:abcdef0919234",
 			},
 		},
 		{
-			RouteName:  routeNameLayerUploadResume,
-			RequestURI: "/v2/foo/bar/layer/tarsum.dev+foo:abcdef0919234/upload/uuid",
+			RouteName:  routeNameBlobUpload,
+			RequestURI: "/v2/foo/bar/blob/upload/",
 			Vars: map[string]string{
-				"name":   "foo/bar",
-				"tarsum": "tarsum.dev+foo:abcdef0919234",
-				"uuid":   "uuid",
+				"name": "foo/bar",
 			},
 		},
 		{
-			RouteName:  routeNameLayerUploadResume,
-			RequestURI: "/v2/foo/bar/layer/tarsum.dev+foo:abcdef0919234/upload/D95306FA-FAD3-4E36-8D41-CF1C93EF8286",
+			RouteName:  routeNameBlobUploadResume,
+			RequestURI: "/v2/foo/bar/blob/upload/uuid",
 			Vars: map[string]string{
-				"name":   "foo/bar",
-				"tarsum": "tarsum.dev+foo:abcdef0919234",
-				"uuid":   "D95306FA-FAD3-4E36-8D41-CF1C93EF8286",
+				"name": "foo/bar",
+				"uuid": "uuid",
 			},
 		},
-
+		{
+			RouteName:  routeNameBlobUploadResume,
+			RequestURI: "/v2/foo/bar/blob/upload/D95306FA-FAD3-4E36-8D41-CF1C93EF8286",
+			Vars: map[string]string{
+				"name": "foo/bar",
+				"uuid": "D95306FA-FAD3-4E36-8D41-CF1C93EF8286",
+			},
+		},
+		{
+			RouteName:  routeNameBlobUploadResume,
+			RequestURI: "/v2/foo/bar/blob/upload/RDk1MzA2RkEtRkFEMy00RTM2LThENDEtQ0YxQzkzRUY4Mjg2IA==",
+			Vars: map[string]string{
+				"name": "foo/bar",
+				"uuid": "RDk1MzA2RkEtRkFEMy00RTM2LThENDEtQ0YxQzkzRUY4Mjg2IA==",
+			},
+		},
 		{
 			// Check ambiguity: ensure we can distinguish between tags for
 			// "foo/bar/image/image" and image for "foo/bar/image" with tag
 			// "tags"
 			RouteName:  routeNameImageManifest,
-			RequestURI: "/v2/foo/bar/image/image/tags",
+			RequestURI: "/v2/foo/bar/manifest/manifest/tags",
 			Vars: map[string]string{
-				"name": "foo/bar/image",
+				"name": "foo/bar/manifest",
 				"tag":  "tags",
 			},
 		},
 		{
 			// This case presents an ambiguity between foo/bar with tag="tags"
-			// and list tags for "foo/bar/image"
+			// and list tags for "foo/bar/manifest"
 			RouteName:  routeNameTags,
-			RequestURI: "/v2/foo/bar/image/tags/list",
+			RequestURI: "/v2/foo/bar/manifest/tags/list",
 			Vars: map[string]string{
-				"name": "foo/bar/image",
+				"name": "foo/bar/manifest",
 			},
 		},
 		{
-			RouteName:  routeNameLayerUploadResume,
-			RequestURI: "/v2/foo/../../layer/tarsum.dev+foo:abcdef0919234/upload/D95306FA-FAD3-4E36-8D41-CF1C93EF8286",
-			Vars: map[string]string{
-				"name":   "foo/bar",
-				"tarsum": "tarsum.dev+foo:abcdef0919234",
-				"uuid":   "D95306FA-FAD3-4E36-8D41-CF1C93EF8286",
-			},
+			RouteName:  routeNameBlobUploadResume,
+			RequestURI: "/v2/foo/../../layer/upload/D95306FA-FAD3-4E36-8D41-CF1C93EF8286",
 			StatusCode: http.StatusNotFound,
 		},
 	} {

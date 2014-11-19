@@ -16,7 +16,8 @@ func layerDispatcher(ctx *Context, r *http.Request) http.Handler {
 	layerHandler.log = layerHandler.log.WithField("tarsum", layerHandler.TarSum)
 
 	return handlers.MethodHandler{
-		"GET": http.HandlerFunc(layerHandler.GetLayer),
+		"GET":  http.HandlerFunc(layerHandler.GetLayer),
+		"HEAD": http.HandlerFunc(layerHandler.GetLayer),
 	}
 }
 

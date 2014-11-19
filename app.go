@@ -29,10 +29,10 @@ func NewApp(configuration configuration.Configuration) *App {
 
 	// Register the handler dispatchers.
 	app.register(routeNameImageManifest, imageManifestDispatcher)
-	app.register(routeNameLayer, layerDispatcher)
+	app.register(routeNameBlob, layerDispatcher)
 	app.register(routeNameTags, tagsDispatcher)
-	app.register(routeNameLayerUpload, layerUploadDispatcher)
-	app.register(routeNameLayerUploadResume, layerUploadDispatcher)
+	app.register(routeNameBlobUpload, layerUploadDispatcher)
+	app.register(routeNameBlobUploadResume, layerUploadDispatcher)
 
 	return app
 }
