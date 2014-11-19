@@ -106,7 +106,11 @@ func New(accessKey string, secretKey string, region aws.Region, encrypt bool, bu
 
 // GetContent retrieves the content stored at "path" as a []byte.
 func (d *Driver) GetContent(path string) ([]byte, error) {
-	return d.Bucket.Get(path)
+	content, err := d.Bucket.Get(path)
+	if err != nil {
+		return nil, storagedriver.PathNotFoundError{Path: path}
+	}
+	return content, nil
 }
 
 // PutContent stores the []byte content at a location designated by "path".
@@ -121,11 +125,10 @@ func (d *Driver) ReadStream(path string, offset uint64) (io.ReadCloser, error) {
 	headers.Add("Range", "bytes="+strconv.FormatUint(offset, 10)+"-")
 
 	resp, err := d.Bucket.GetResponseWithHeaders(path, headers)
-	if resp != nil {
-		return resp.Body, err
+	if err != nil {
+		return nil, storagedriver.PathNotFoundError{Path: path}
 	}
-
-	return nil, err
+	return resp.Body, nil
 }
 
 // WriteStream stores the contents of the provided io.ReadCloser at a location
@@ -242,7 +245,7 @@ func (d *Driver) Move(sourcePath string, destPath string) error {
 		s3.CopyOptions{Options: d.getOptions(), MetadataDirective: "", ContentType: d.getContentType()},
 		d.Bucket.Name+"/"+sourcePath)
 	if err != nil {
-		return err
+		return storagedriver.PathNotFoundError{Path: sourcePath}
 	}
 
 	return d.Delete(sourcePath)

@@ -126,7 +126,7 @@ func (driver *StorageDriverClient) Start() error {
 	}
 
 	if response.Error != nil {
-		return response.Error
+		return response.Error.Unwrap()
 	}
 
 	driver.version = response.Version
@@ -194,7 +194,7 @@ func (driver *StorageDriverClient) GetContent(path string) ([]byte, error) {
 	}
 
 	if response.Error != nil {
-		return nil, response.Error
+		return nil, response.Error.Unwrap()
 	}
 
 	defer response.Reader.Close()
@@ -226,7 +226,7 @@ func (driver *StorageDriverClient) PutContent(path string, contents []byte) erro
 	}
 
 	if response.Error != nil {
-		return response.Error
+		return response.Error.Unwrap()
 	}
 
 	return nil
@@ -253,7 +253,7 @@ func (driver *StorageDriverClient) ReadStream(path string, offset uint64) (io.Re
 	}
 
 	if response.Error != nil {
-		return nil, response.Error
+		return nil, response.Error.Unwrap()
 	}
 
 	return response.Reader, nil
@@ -280,7 +280,7 @@ func (driver *StorageDriverClient) WriteStream(path string, offset, size uint64,
 	}
 
 	if response.Error != nil {
-		return response.Error
+		return response.Error.Unwrap()
 	}
 
 	return nil
@@ -307,7 +307,7 @@ func (driver *StorageDriverClient) CurrentSize(path string) (uint64, error) {
 	}
 
 	if response.Error != nil {
-		return 0, response.Error
+		return 0, response.Error.Unwrap()
 	}
 
 	return response.Position, nil
@@ -334,7 +334,7 @@ func (driver *StorageDriverClient) List(path string) ([]string, error) {
 	}
 
 	if response.Error != nil {
-		return nil, response.Error
+		return nil, response.Error.Unwrap()
 	}
 
 	return response.Keys, nil
@@ -361,7 +361,7 @@ func (driver *StorageDriverClient) Move(sourcePath string, destPath string) erro
 	}
 
 	if response.Error != nil {
-		return response.Error
+		return response.Error.Unwrap()
 	}
 
 	return nil
@@ -387,7 +387,7 @@ func (driver *StorageDriverClient) Delete(path string) error {
 	}
 
 	if response.Error != nil {
-		return response.Error
+		return response.Error.Unwrap()
 	}
 
 	return nil
