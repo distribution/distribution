@@ -37,9 +37,13 @@ type Request struct {
 }
 
 // ResponseError is a serializable error type.
+// The Type and Parameters may be used to reconstruct the same error on the
+// client side, falling back to using the Type and Message if this cannot be
+// done.
 type ResponseError struct {
-	Type    string
-	Message string
+	Type       string
+	Message    string
+	Parameters map[string]interface{}
 }
 
 // WrapError wraps an error in a serializable struct containing the error's type
@@ -48,10 +52,52 @@ func WrapError(err error) *ResponseError {
 	if err == nil {
 		return nil
 	}
-	return &ResponseError{
-		Type:    reflect.TypeOf(err).String(),
+	v := reflect.ValueOf(err)
+	re := ResponseError{
+		Type:    v.Type().String(),
 		Message: err.Error(),
 	}
+
+	if v.Kind() == reflect.Struct {
+		re.Parameters = make(map[string]interface{})
+		for i := 0; i < v.NumField(); i++ {
+			field := v.Type().Field(i)
+			re.Parameters[field.Name] = v.Field(i).Interface()
+		}
+	}
+	return &re
+}
+
+// Unwrap returns the underlying error if it can be reconstructed, or the
+// original ResponseError otherwise.
+func (err *ResponseError) Unwrap() error {
+	var errVal reflect.Value
+	var zeroVal reflect.Value
+
+	switch err.Type {
+	case "storagedriver.PathNotFoundError":
+		errVal = reflect.ValueOf(&storagedriver.PathNotFoundError{})
+	case "storagedriver.InvalidOffsetError":
+		errVal = reflect.ValueOf(&storagedriver.InvalidOffsetError{})
+	}
+	if errVal == zeroVal {
+		return err
+	}
+
+	for k, v := range err.Parameters {
+		fieldVal := errVal.Elem().FieldByName(k)
+		if fieldVal == zeroVal {
+			return err
+		}
+		fieldVal.Set(reflect.ValueOf(v))
+	}
+
+	if unwrapped, ok := errVal.Elem().Interface().(error); ok {
+		return unwrapped
+	}
+
+	return err
+
 }
 
 func (err *ResponseError) Error() string {

@@ -84,7 +84,7 @@ func (d *Driver) PutContent(subPath string, contents []byte) error {
 func (d *Driver) ReadStream(path string, offset uint64) (io.ReadCloser, error) {
 	file, err := os.OpenFile(d.subPath(path), os.O_RDONLY, 0644)
 	if err != nil {
-		return nil, err
+		return nil, storagedriver.PathNotFoundError{Path: path}
 	}
 
 	seekPos, err := file.Seek(int64(offset), os.SEEK_SET)
@@ -201,7 +201,14 @@ func (d *Driver) List(subPath string) ([]string, error) {
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
 func (d *Driver) Move(sourcePath string, destPath string) error {
-	err := os.Rename(d.subPath(sourcePath), d.subPath(destPath))
+	source := d.subPath(sourcePath)
+	dest := d.subPath(destPath)
+
+	if _, err := os.Stat(source); os.IsNotExist(err) {
+		return storagedriver.PathNotFoundError{Path: sourcePath}
+	}
+
+	err := os.Rename(source, dest)
 	return err
 }
 
