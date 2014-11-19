@@ -241,8 +241,8 @@ func (luc *layerUploadController) validateLayer(fp layerFile, size int64, dgst d
 		return "", ErrLayerTarSumVersionUnsupported
 	}
 
-	digestVerifier := digest.DigestVerifier(dgst)
-	lengthVerifier := digest.LengthVerifier(size)
+	digestVerifier := digest.NewDigestVerifier(dgst)
+	lengthVerifier := digest.NewLengthVerifier(size)
 
 	// First, seek to the end of the file, checking the size is as expected.
 	end, err := fp.Seek(0, os.SEEK_END)
@@ -267,7 +267,7 @@ func (luc *layerUploadController) validateLayer(fp layerFile, size int64, dgst d
 	// sink. Instead, its read driven. This migth be okay.
 
 	// Calculate an updated digest with the latest version.
-	dgst, err = digest.DigestReader(tr)
+	dgst, err = digest.FromReader(tr)
 	if err != nil {
 		return "", err
 	}

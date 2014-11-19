@@ -1,12 +1,12 @@
 package storage
 
 import (
-	"strings"
-	"github.com/docker/docker-registry/digest"
 	"fmt"
 	"path"
+	"strings"
 
 	"github.com/docker/docker-registry/common"
+	"github.com/docker/docker-registry/digest"
 )
 
 const storagePathVersion = "v2"

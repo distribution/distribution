@@ -75,8 +75,8 @@ func ParseDigest(s string) (Digest, error) {
 	return Digest(s), nil
 }
 
-// DigestReader returns the most valid digest for the underlying content.
-func DigestReader(rd io.Reader) (Digest, error) {
+// FromReader returns the most valid digest for the underlying content.
+func FromReader(rd io.Reader) (Digest, error) {
 
 	// TODO(stevvooe): This is pretty inefficient to always be calculating a
 	// sha256 hash to provide fallback, but it provides some nice semantics in
@@ -114,8 +114,9 @@ func DigestReader(rd io.Reader) (Digest, error) {
 	return d, nil
 }
 
-func DigestBytes(p []byte) (Digest, error) {
-	return DigestReader(bytes.NewReader(p))
+// FromBytes digests the input and returns a Digest.
+func FromBytes(p []byte) (Digest, error) {
+	return FromReader(bytes.NewReader(p))
 }
 
 // Algorithm returns the algorithm portion of the digest. This will panic if

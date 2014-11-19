@@ -11,6 +11,10 @@ import (
 	"github.com/docker/docker/pkg/tarsum"
 )
 
+// Verifier presents a general verification interface to be used with message
+// digests and other byte stream verifications. Users instantiate a Verifier
+// from one of the various methods, write the data under test to it then check
+// the result with the Verified method.
 type Verifier interface {
 	io.Writer
 
@@ -23,7 +27,9 @@ type Verifier interface {
 	// Reset()
 }
 
-func DigestVerifier(d Digest) Verifier {
+// NewDigestVerifier returns a verifier that compares the written bytes
+// against a passed in digest.
+func NewDigestVerifier(d Digest) Verifier {
 	alg := d.Algorithm()
 	switch alg {
 	case "md5", "sha1", "sha256":
@@ -62,13 +68,11 @@ func DigestVerifier(d Digest) Verifier {
 			pw:     pw,
 		}
 	}
-
-	panic("unsupported digest: " + d)
 }
 
-// LengthVerifier returns a verifier that returns true when the number of read
-// bytes equals the expected parameter.
-func LengthVerifier(expected int64) Verifier {
+// NewLengthVerifier returns a verifier that returns true when the number of
+// read bytes equals the expected parameter.
+func NewLengthVerifier(expected int64) Verifier {
 	return &lengthVerifier{
 		expected: expected,
 	}

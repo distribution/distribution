@@ -1,4 +1,4 @@
-// This package provides a generalized type to opaquely represent message
+// Package digest provides a generalized type to opaquely represent message
 // digests and their operations within the registry. The Digest type is
 // designed to serve as a flexible identifier in a content-addressable system.
 // More importantly, it provides tools and wrappers to work with tarsums and
