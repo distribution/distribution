@@ -2,7 +2,6 @@ package client
 
 import (
 	"bytes"
-	"crypto/sha1"
 	"io"
 	"io/ioutil"
 
@@ -89,25 +88,10 @@ func pushLayer(c Client, objectStore ObjectStore, name string, fsLayer registry.
 		}).Warn("Unable to read local layer")
 		return err
 	}
-
-	location, err := c.InitiateLayerUpload(name, fsLayer.BlobSum)
-	if _, ok := err.(*registry.LayerAlreadyExistsError); ok {
-		log.WithField("layer", fsLayer).Info("Layer already exists")
-		return nil
-	}
-	if err != nil {
-		log.WithFields(log.Fields{
-			"error": err,
-			"layer": fsLayer,
-		}).Warn("Unable to upload layer")
-		return err
-	}
+	defer layerReader.Close()
 
 	layerBuffer := new(bytes.Buffer)
-	checksum := sha1.New()
-	teeReader := io.TeeReader(layerReader, checksum)
-
-	_, err = io.Copy(layerBuffer, teeReader)
+	layerSize, err := io.Copy(layerBuffer, layerReader)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -116,9 +100,29 @@ func pushLayer(c Client, objectStore ObjectStore, name string, fsLayer registry.
 		return err
 	}
 
-	err = c.UploadLayer(location, ioutil.NopCloser(layerBuffer), layerBuffer.Len(),
-		&registry.Checksum{HashAlgorithm: "sha1", Sum: string(checksum.Sum(nil))},
-	)
+	length, err := c.BlobLength(name, fsLayer.BlobSum)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+			"layer": fsLayer,
+		}).Warn("Unable to check existence of remote layer")
+		return err
+	}
+	if length >= 0 {
+		log.WithField("layer", fsLayer).Info("Layer already exists")
+		return nil
+	}
+
+	location, err := c.InitiateBlobUpload(name)
+	if err != nil {
+		log.WithFields(log.Fields{
+			"error": err,
+			"layer": fsLayer,
+		}).Warn("Unable to upload layer")
+		return err
+	}
+
+	err = c.UploadBlob(location, ioutil.NopCloser(layerBuffer), int(layerSize), fsLayer.BlobSum)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
