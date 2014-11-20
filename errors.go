@@ -3,6 +3,8 @@ package registry
 import (
 	"fmt"
 	"strings"
+
+	"github.com/docker/docker-registry/digest"
 )
 
 // ErrorCode represents the error type. The errors are serialized via strings
@@ -228,7 +230,7 @@ func (e *ImageManifestNotFoundError) Error() string {
 // layer that does not exist in the registry.
 type BlobNotFoundError struct {
 	Name   string
-	Digest string
+	Digest digest.Digest
 }
 
 func (e *BlobNotFoundError) Error() string {

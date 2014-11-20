@@ -11,6 +11,7 @@ import (
 	"strconv"
 
 	"github.com/docker/docker-registry"
+	"github.com/docker/docker-registry/digest"
 )
 
 // Client implements the client interface to the registry http api
@@ -33,13 +34,13 @@ type Client interface {
 	// BlobLength returns the length of the blob stored at the given name,
 	// digest pair.
 	// Returns a length value of -1 on error or if the blob does not exist.
-	BlobLength(name, digest string) (int, error)
+	BlobLength(name string, dgst digest.Digest) (int, error)
 
 	// GetBlob returns the blob stored at the given name, digest pair in the
 	// form of an io.ReadCloser with the length of this blob.
 	// A nonzero byteOffset can be provided to receive a partial blob beginning
 	// at the given offset.
-	GetBlob(name, digest string, byteOffset int) (io.ReadCloser, int, error)
+	GetBlob(name string, dgst digest.Digest, byteOffset int) (io.ReadCloser, int, error)
 
 	// InitiateBlobUpload starts a blob upload in the given repository namespace
 	// and returns a unique location url to use for other blob upload methods.
@@ -50,7 +51,7 @@ type Client interface {
 	GetBlobUploadStatus(location string) (int, int, error)
 
 	// UploadBlob uploads a full blob to the registry.
-	UploadBlob(location string, blob io.ReadCloser, length int, digest string) error
+	UploadBlob(location string, blob io.ReadCloser, length int, dgst digest.Digest) error
 
 	// UploadBlobChunk uploads a blob chunk with a given length and startByte to
 	// the registry.
@@ -59,7 +60,7 @@ type Client interface {
 
 	// FinishChunkedBlobUpload completes a chunked blob upload at a given
 	// location.
-	FinishChunkedBlobUpload(location string, length int, digest string) error
+	FinishChunkedBlobUpload(location string, length int, dgst digest.Digest) error
 
 	// CancelBlobUpload deletes all content at the unfinished blob upload
 	// location and invalidates any future calls to this blob upload.
@@ -222,8 +223,8 @@ func (r *clientImpl) ListImageTags(name string) ([]string, error) {
 	return tags.Tags, nil
 }
 
-func (r *clientImpl) BlobLength(name, digest string) (int, error) {
-	response, err := http.Head(fmt.Sprintf("%s/v2/%s/blob/%s", r.Endpoint, name, digest))
+func (r *clientImpl) BlobLength(name string, dgst digest.Digest) (int, error) {
+	response, err := http.Head(fmt.Sprintf("%s/v2/%s/blob/%s", r.Endpoint, name, dgst))
 	if err != nil {
 		return -1, err
 	}
@@ -254,9 +255,9 @@ func (r *clientImpl) BlobLength(name, digest string) (int, error) {
 	}
 }
 
-func (r *clientImpl) GetBlob(name, digest string, byteOffset int) (io.ReadCloser, int, error) {
+func (r *clientImpl) GetBlob(name string, dgst digest.Digest, byteOffset int) (io.ReadCloser, int, error) {
 	getRequest, err := http.NewRequest("GET",
-		fmt.Sprintf("%s/v2/%s/blob/%s", r.Endpoint, name, digest), nil)
+		fmt.Sprintf("%s/v2/%s/blob/%s", r.Endpoint, name, dgst), nil)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -278,7 +279,7 @@ func (r *clientImpl) GetBlob(name, digest string, byteOffset int) (io.ReadCloser
 		return response.Body, int(length), nil
 	case response.StatusCode == http.StatusNotFound:
 		response.Body.Close()
-		return nil, 0, &registry.BlobNotFoundError{Name: name, Digest: digest}
+		return nil, 0, &registry.BlobNotFoundError{Name: name, Digest: dgst}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
 		errors := new(registry.Errors)
 		decoder := json.NewDecoder(response.Body)
@@ -351,7 +352,7 @@ func (r *clientImpl) GetBlobUploadStatus(location string) (int, int, error) {
 	}
 }
 
-func (r *clientImpl) UploadBlob(location string, blob io.ReadCloser, length int, digest string) error {
+func (r *clientImpl) UploadBlob(location string, blob io.ReadCloser, length int, dgst digest.Digest) error {
 	defer blob.Close()
 
 	putRequest, err := http.NewRequest("PUT",
@@ -362,7 +363,7 @@ func (r *clientImpl) UploadBlob(location string, blob io.ReadCloser, length int,
 
 	queryValues := url.Values{}
 	queryValues.Set("length", fmt.Sprint(length))
-	queryValues.Set("digest", digest)
+	queryValues.Set("digest", dgst.String())
 	putRequest.URL.RawQuery = queryValues.Encode()
 
 	putRequest.Header.Set("Content-Type", "application/octet-stream")
@@ -444,7 +445,7 @@ func (r *clientImpl) UploadBlobChunk(location string, blobChunk io.ReadCloser, l
 	}
 }
 
-func (r *clientImpl) FinishChunkedBlobUpload(location string, length int, digest string) error {
+func (r *clientImpl) FinishChunkedBlobUpload(location string, length int, dgst digest.Digest) error {
 	putRequest, err := http.NewRequest("PUT",
 		fmt.Sprintf("%s%s", r.Endpoint, location), nil)
 	if err != nil {
@@ -453,7 +454,7 @@ func (r *clientImpl) FinishChunkedBlobUpload(location string, length int, digest
 
 	queryValues := new(url.Values)
 	queryValues.Set("length", fmt.Sprint(length))
-	queryValues.Set("digest", digest)
+	queryValues.Set("digest", dgst.String())
 	putRequest.URL.RawQuery = queryValues.Encode()
 
 	putRequest.Header.Set("Content-Type", "application/octet-stream")

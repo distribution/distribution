@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/docker/docker-registry/digest"
 	"github.com/gorilla/handlers"
 )
 
@@ -52,7 +53,7 @@ func (m *ImageManifest) UnmarshalJSON(b []byte) error {
 // FSLayer is a container struct for BlobSums defined in an image manifest
 type FSLayer struct {
 	// BlobSum is the tarsum of the referenced filesystem image layer
-	BlobSum string `json:"blobSum"`
+	BlobSum digest.Digest `json:"blobSum"`
 }
 
 // ManifestHistory stores unstructured v1 compatibility information

@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/docker/docker-registry"
+	"github.com/docker/docker-registry/digest"
 )
 
 var (
@@ -34,7 +35,7 @@ type ObjectStore interface {
 	WriteManifest(name, tag string, manifest *registry.ImageManifest) error
 
 	// Layer returns a handle to a layer for reading and writing
-	Layer(blobSum string) (Layer, error)
+	Layer(dgst digest.Digest) (Layer, error)
 }
 
 // Layer is a generic image layer interface.
@@ -56,7 +57,7 @@ type Layer interface {
 type memoryObjectStore struct {
 	mutex           *sync.Mutex
 	manifestStorage map[string]*registry.ImageManifest
-	layerStorage    map[string]Layer
+	layerStorage    map[digest.Digest]Layer
 }
 
 func (objStore *memoryObjectStore) Manifest(name, tag string) (*registry.ImageManifest, error) {
@@ -78,14 +79,14 @@ func (objStore *memoryObjectStore) WriteManifest(name, tag string, manifest *reg
 	return nil
 }
 
-func (objStore *memoryObjectStore) Layer(blobSum string) (Layer, error) {
+func (objStore *memoryObjectStore) Layer(dgst digest.Digest) (Layer, error) {
 	objStore.mutex.Lock()
 	defer objStore.mutex.Unlock()
 
-	layer, ok := objStore.layerStorage[blobSum]
+	layer, ok := objStore.layerStorage[dgst]
 	if !ok {
 		layer = &memoryLayer{cond: sync.NewCond(new(sync.Mutex))}
-		objStore.layerStorage[blobSum] = layer
+		objStore.layerStorage[dgst] = layer
 	}
 
 	return layer, nil

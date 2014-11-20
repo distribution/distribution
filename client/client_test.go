@@ -10,11 +10,12 @@ import (
 	"testing"
 
 	"github.com/docker/docker-registry"
-	"github.com/docker/docker-registry/test"
+	"github.com/docker/docker-registry/common/testutil"
+	"github.com/docker/docker-registry/digest"
 )
 
 type testBlob struct {
-	digest   string
+	digest   digest.Digest
 	contents []byte
 }
 
@@ -42,7 +43,7 @@ func TestPush(t *testing.T) {
 		// to change at some point.
 		uploadLocations[i] = fmt.Sprintf("/v2/%s/blob/test-uuid", name)
 		blobs[i] = registry.FSLayer{BlobSum: blob.digest}
-		history[i] = registry.ManifestHistory{V1Compatibility: blob.digest}
+		history[i] = registry.ManifestHistory{V1Compatibility: blob.digest.String()}
 	}
 
 	manifest := &registry.ImageManifest{
@@ -55,44 +56,44 @@ func TestPush(t *testing.T) {
 	}
 	manifestBytes, err := json.Marshal(manifest)
 
-	blobRequestResponseMappings := make([]test.RequestResponseMapping, 2*len(testBlobs))
+	blobRequestResponseMappings := make([]testutil.RequestResponseMapping, 2*len(testBlobs))
 	for i, blob := range testBlobs {
-		blobRequestResponseMappings[2*i] = test.RequestResponseMapping{
-			Request: test.Request{
+		blobRequestResponseMappings[2*i] = testutil.RequestResponseMapping{
+			Request: testutil.Request{
 				Method: "POST",
 				Route:  "/v2/" + name + "/blob/upload/",
 			},
-			Response: test.Response{
+			Response: testutil.Response{
 				StatusCode: http.StatusAccepted,
 				Headers: http.Header(map[string][]string{
 					"Location": {uploadLocations[i]},
 				}),
 			},
 		}
-		blobRequestResponseMappings[2*i+1] = test.RequestResponseMapping{
-			Request: test.Request{
+		blobRequestResponseMappings[2*i+1] = testutil.RequestResponseMapping{
+			Request: testutil.Request{
 				Method: "PUT",
 				Route:  uploadLocations[i],
 				QueryParams: map[string][]string{
 					"length": {fmt.Sprint(len(blob.contents))},
-					"digest": {blob.digest},
+					"digest": {blob.digest.String()},
 				},
 				Body: blob.contents,
 			},
-			Response: test.Response{
+			Response: testutil.Response{
 				StatusCode: http.StatusCreated,
 			},
 		}
 	}
 
-	handler := test.NewHandler(append(blobRequestResponseMappings, test.RequestResponseMap{
-		test.RequestResponseMapping{
-			Request: test.Request{
+	handler := testutil.NewHandler(append(blobRequestResponseMappings, testutil.RequestResponseMap{
+		testutil.RequestResponseMapping{
+			Request: testutil.Request{
 				Method: "PUT",
 				Route:  "/v2/" + name + "/manifest/" + tag,
 				Body:   manifestBytes,
 			},
-			Response: test.Response{
+			Response: testutil.Response{
 				StatusCode: http.StatusOK,
 			},
 		},
@@ -102,7 +103,7 @@ func TestPush(t *testing.T) {
 	objectStore := &memoryObjectStore{
 		mutex:           new(sync.Mutex),
 		manifestStorage: make(map[string]*registry.ImageManifest),
-		layerStorage:    make(map[string]Layer),
+		layerStorage:    make(map[digest.Digest]Layer),
 	}
 
 	for _, blob := range testBlobs {
@@ -146,7 +147,7 @@ func TestPull(t *testing.T) {
 
 	for i, blob := range testBlobs {
 		blobs[i] = registry.FSLayer{BlobSum: blob.digest}
-		history[i] = registry.ManifestHistory{V1Compatibility: blob.digest}
+		history[i] = registry.ManifestHistory{V1Compatibility: blob.digest.String()}
 	}
 
 	manifest := &registry.ImageManifest{
@@ -159,27 +160,27 @@ func TestPull(t *testing.T) {
 	}
 	manifestBytes, err := json.Marshal(manifest)
 
-	blobRequestResponseMappings := make([]test.RequestResponseMapping, len(testBlobs))
+	blobRequestResponseMappings := make([]testutil.RequestResponseMapping, len(testBlobs))
 	for i, blob := range testBlobs {
-		blobRequestResponseMappings[i] = test.RequestResponseMapping{
-			Request: test.Request{
+		blobRequestResponseMappings[i] = testutil.RequestResponseMapping{
+			Request: testutil.Request{
 				Method: "GET",
-				Route:  "/v2/" + name + "/blob/" + blob.digest,
+				Route:  "/v2/" + name + "/blob/" + blob.digest.String(),
 			},
-			Response: test.Response{
+			Response: testutil.Response{
 				StatusCode: http.StatusOK,
 				Body:       blob.contents,
 			},
 		}
 	}
 
-	handler := test.NewHandler(append(blobRequestResponseMappings, test.RequestResponseMap{
-		test.RequestResponseMapping{
-			Request: test.Request{
+	handler := testutil.NewHandler(append(blobRequestResponseMappings, testutil.RequestResponseMap{
+		testutil.RequestResponseMapping{
+			Request: testutil.Request{
 				Method: "GET",
 				Route:  "/v2/" + name + "/manifest/" + tag,
 			},
-			Response: test.Response{
+			Response: testutil.Response{
 				StatusCode: http.StatusOK,
 				Body:       manifestBytes,
 			},
@@ -190,7 +191,7 @@ func TestPull(t *testing.T) {
 	objectStore := &memoryObjectStore{
 		mutex:           new(sync.Mutex),
 		manifestStorage: make(map[string]*registry.ImageManifest),
-		layerStorage:    make(map[string]Layer),
+		layerStorage:    make(map[digest.Digest]Layer),
 	}
 
 	err = Pull(client, objectStore, name, tag)
