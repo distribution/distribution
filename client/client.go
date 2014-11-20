@@ -11,62 +11,65 @@ import (
 	"strconv"
 
 	"github.com/docker/docker-registry"
+	"github.com/docker/docker-registry/digest"
 )
 
 // Client implements the client interface to the registry http api
 type Client interface {
 	// GetImageManifest returns an image manifest for the image at the given
-	// name, tag pair
+	// name, tag pair.
 	GetImageManifest(name, tag string) (*registry.ImageManifest, error)
 
 	// PutImageManifest uploads an image manifest for the image at the given
-	// name, tag pair
+	// name, tag pair.
 	PutImageManifest(name, tag string, imageManifest *registry.ImageManifest) error
 
-	// DeleteImage removes the image at the given name, tag pair
+	// DeleteImage removes the image at the given name, tag pair.
 	DeleteImage(name, tag string) error
 
 	// ListImageTags returns a list of all image tags with the given repository
-	// name
+	// name.
 	ListImageTags(name string) ([]string, error)
 
-	// GetImageLayer returns the image layer at the given name, tarsum pair in
-	// the form of an io.ReadCloser with the length of this layer
-	// A nonzero byteOffset can be provided to receive a partial layer beginning
-	// at the given offset
-	GetImageLayer(name, tarsum string, byteOffset int) (io.ReadCloser, int, error)
+	// BlobLength returns the length of the blob stored at the given name,
+	// digest pair.
+	// Returns a length value of -1 on error or if the blob does not exist.
+	BlobLength(name string, dgst digest.Digest) (int, error)
 
-	// InitiateLayerUpload starts an image upload for the given name, tarsum
-	// pair and returns a unique location url to use for other layer upload
-	// methods
-	// Returns a *registry.LayerAlreadyExistsError if the layer already exists
-	// on the registry
-	InitiateLayerUpload(name, tarsum string) (string, error)
+	// GetBlob returns the blob stored at the given name, digest pair in the
+	// form of an io.ReadCloser with the length of this blob.
+	// A nonzero byteOffset can be provided to receive a partial blob beginning
+	// at the given offset.
+	GetBlob(name string, dgst digest.Digest, byteOffset int) (io.ReadCloser, int, error)
 
-	// GetLayerUploadStatus returns the byte offset and length of the layer at
-	// the given upload location
-	GetLayerUploadStatus(location string) (int, int, error)
+	// InitiateBlobUpload starts a blob upload in the given repository namespace
+	// and returns a unique location url to use for other blob upload methods.
+	InitiateBlobUpload(name string) (string, error)
 
-	// UploadLayer uploads a full image layer to the registry
-	UploadLayer(location string, layer io.ReadCloser, length int, checksum *registry.Checksum) error
+	// GetBlobUploadStatus returns the byte offset and length of the blob at the
+	// given upload location.
+	GetBlobUploadStatus(location string) (int, int, error)
 
-	// UploadLayerChunk uploads a layer chunk with a given length and startByte
-	// to the registry
-	// FinishChunkedLayerUpload must be called to finalize this upload
-	UploadLayerChunk(location string, layerChunk io.ReadCloser, length, startByte int) error
+	// UploadBlob uploads a full blob to the registry.
+	UploadBlob(location string, blob io.ReadCloser, length int, dgst digest.Digest) error
 
-	// FinishChunkedLayerUpload completes a chunked layer upload at a given
-	// location
-	FinishChunkedLayerUpload(location string, length int, checksum *registry.Checksum) error
+	// UploadBlobChunk uploads a blob chunk with a given length and startByte to
+	// the registry.
+	// FinishChunkedBlobUpload must be called to finalize this upload.
+	UploadBlobChunk(location string, blobChunk io.ReadCloser, length, startByte int) error
 
-	// CancelLayerUpload deletes all content at the unfinished layer upload
-	// location and invalidates any future calls to this layer upload
-	CancelLayerUpload(location string) error
+	// FinishChunkedBlobUpload completes a chunked blob upload at a given
+	// location.
+	FinishChunkedBlobUpload(location string, length int, dgst digest.Digest) error
+
+	// CancelBlobUpload deletes all content at the unfinished blob upload
+	// location and invalidates any future calls to this blob upload.
+	CancelBlobUpload(location string) error
 }
 
 // New returns a new Client which operates against a registry with the
 // given base endpoint
-// This endpoint should not include /v2/ or any part of the url after this
+// This endpoint should not include /v2/ or any part of the url after this.
 func New(endpoint string) Client {
 	return &clientImpl{endpoint}
 }
@@ -220,9 +223,41 @@ func (r *clientImpl) ListImageTags(name string) ([]string, error) {
 	return tags.Tags, nil
 }
 
-func (r *clientImpl) GetImageLayer(name, tarsum string, byteOffset int) (io.ReadCloser, int, error) {
+func (r *clientImpl) BlobLength(name string, dgst digest.Digest) (int, error) {
+	response, err := http.Head(fmt.Sprintf("%s/v2/%s/blob/%s", r.Endpoint, name, dgst))
+	if err != nil {
+		return -1, err
+	}
+	defer response.Body.Close()
+
+	// TODO(bbland): handle other status codes, like 5xx errors
+	switch {
+	case response.StatusCode == http.StatusOK:
+		lengthHeader := response.Header.Get("Content-Length")
+		length, err := strconv.ParseInt(lengthHeader, 10, 0)
+		if err != nil {
+			return -1, err
+		}
+		return int(length), nil
+	case response.StatusCode == http.StatusNotFound:
+		return -1, nil
+	case response.StatusCode >= 400 && response.StatusCode < 500:
+		errors := new(registry.Errors)
+		decoder := json.NewDecoder(response.Body)
+		err = decoder.Decode(&errors)
+		if err != nil {
+			return -1, err
+		}
+		return -1, errors
+	default:
+		response.Body.Close()
+		return -1, &registry.UnexpectedHTTPStatusError{Status: response.Status}
+	}
+}
+
+func (r *clientImpl) GetBlob(name string, dgst digest.Digest, byteOffset int) (io.ReadCloser, int, error) {
 	getRequest, err := http.NewRequest("GET",
-		fmt.Sprintf("%s/v2/%s/layer/%s", r.Endpoint, name, tarsum), nil)
+		fmt.Sprintf("%s/v2/%s/blob/%s", r.Endpoint, name, dgst), nil)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -233,9 +268,6 @@ func (r *clientImpl) GetImageLayer(name, tarsum string, byteOffset int) (io.Read
 		return nil, 0, err
 	}
 
-	if response.StatusCode == http.StatusNotFound {
-		return nil, 0, &registry.LayerNotFoundError{Name: name, TarSum: tarsum}
-	}
 	// TODO(bbland): handle other status codes, like 5xx errors
 	switch {
 	case response.StatusCode == http.StatusOK:
@@ -247,7 +279,7 @@ func (r *clientImpl) GetImageLayer(name, tarsum string, byteOffset int) (io.Read
 		return response.Body, int(length), nil
 	case response.StatusCode == http.StatusNotFound:
 		response.Body.Close()
-		return nil, 0, &registry.LayerNotFoundError{Name: name, TarSum: tarsum}
+		return nil, 0, &registry.BlobNotFoundError{Name: name, Digest: dgst}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
 		errors := new(registry.Errors)
 		decoder := json.NewDecoder(response.Body)
@@ -262,9 +294,9 @@ func (r *clientImpl) GetImageLayer(name, tarsum string, byteOffset int) (io.Read
 	}
 }
 
-func (r *clientImpl) InitiateLayerUpload(name, tarsum string) (string, error) {
+func (r *clientImpl) InitiateBlobUpload(name string) (string, error) {
 	postRequest, err := http.NewRequest("POST",
-		fmt.Sprintf("%s/v2/%s/layer/%s/upload/", r.Endpoint, name, tarsum), nil)
+		fmt.Sprintf("%s/v2/%s/blob/upload/", r.Endpoint, name), nil)
 	if err != nil {
 		return "", err
 	}
@@ -279,8 +311,8 @@ func (r *clientImpl) InitiateLayerUpload(name, tarsum string) (string, error) {
 	switch {
 	case response.StatusCode == http.StatusAccepted:
 		return response.Header.Get("Location"), nil
-	case response.StatusCode == http.StatusNotModified:
-		return "", &registry.LayerAlreadyExistsError{Name: name, TarSum: tarsum}
+	// case response.StatusCode == http.StatusNotFound:
+	// return
 	case response.StatusCode >= 400 && response.StatusCode < 500:
 		errors := new(registry.Errors)
 		decoder := json.NewDecoder(response.Body)
@@ -294,7 +326,7 @@ func (r *clientImpl) InitiateLayerUpload(name, tarsum string) (string, error) {
 	}
 }
 
-func (r *clientImpl) GetLayerUploadStatus(location string) (int, int, error) {
+func (r *clientImpl) GetBlobUploadStatus(location string) (int, int, error) {
 	response, err := http.Get(fmt.Sprintf("%s%s", r.Endpoint, location))
 	if err != nil {
 		return 0, 0, err
@@ -306,7 +338,7 @@ func (r *clientImpl) GetLayerUploadStatus(location string) (int, int, error) {
 	case response.StatusCode == http.StatusNoContent:
 		return parseRangeHeader(response.Header.Get("Range"))
 	case response.StatusCode == http.StatusNotFound:
-		return 0, 0, &registry.LayerUploadNotFoundError{Location: location}
+		return 0, 0, &registry.BlobUploadNotFoundError{Location: location}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
 		errors := new(registry.Errors)
 		decoder := json.NewDecoder(response.Body)
@@ -320,18 +352,18 @@ func (r *clientImpl) GetLayerUploadStatus(location string) (int, int, error) {
 	}
 }
 
-func (r *clientImpl) UploadLayer(location string, layer io.ReadCloser, length int, checksum *registry.Checksum) error {
-	defer layer.Close()
+func (r *clientImpl) UploadBlob(location string, blob io.ReadCloser, length int, dgst digest.Digest) error {
+	defer blob.Close()
 
 	putRequest, err := http.NewRequest("PUT",
-		fmt.Sprintf("%s%s", r.Endpoint, location), layer)
+		fmt.Sprintf("%s%s", r.Endpoint, location), blob)
 	if err != nil {
 		return err
 	}
 
 	queryValues := url.Values{}
 	queryValues.Set("length", fmt.Sprint(length))
-	queryValues.Set(checksum.HashAlgorithm, checksum.Sum)
+	queryValues.Set("digest", dgst.String())
 	putRequest.URL.RawQuery = queryValues.Encode()
 
 	putRequest.Header.Set("Content-Type", "application/octet-stream")
@@ -348,7 +380,7 @@ func (r *clientImpl) UploadLayer(location string, layer io.ReadCloser, length in
 	case response.StatusCode == http.StatusCreated:
 		return nil
 	case response.StatusCode == http.StatusNotFound:
-		return &registry.LayerUploadNotFoundError{Location: location}
+		return &registry.BlobUploadNotFoundError{Location: location}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
 		errors := new(registry.Errors)
 		decoder := json.NewDecoder(response.Body)
@@ -362,11 +394,11 @@ func (r *clientImpl) UploadLayer(location string, layer io.ReadCloser, length in
 	}
 }
 
-func (r *clientImpl) UploadLayerChunk(location string, layerChunk io.ReadCloser, length, startByte int) error {
-	defer layerChunk.Close()
+func (r *clientImpl) UploadBlobChunk(location string, blobChunk io.ReadCloser, length, startByte int) error {
+	defer blobChunk.Close()
 
 	putRequest, err := http.NewRequest("PUT",
-		fmt.Sprintf("%s%s", r.Endpoint, location), layerChunk)
+		fmt.Sprintf("%s%s", r.Endpoint, location), blobChunk)
 	if err != nil {
 		return err
 	}
@@ -389,17 +421,17 @@ func (r *clientImpl) UploadLayerChunk(location string, layerChunk io.ReadCloser,
 	case response.StatusCode == http.StatusAccepted:
 		return nil
 	case response.StatusCode == http.StatusRequestedRangeNotSatisfiable:
-		lastValidRange, layerSize, err := parseRangeHeader(response.Header.Get("Range"))
+		lastValidRange, blobSize, err := parseRangeHeader(response.Header.Get("Range"))
 		if err != nil {
 			return err
 		}
-		return &registry.LayerUploadInvalidRangeError{
+		return &registry.BlobUploadInvalidRangeError{
 			Location:       location,
 			LastValidRange: lastValidRange,
-			LayerSize:      layerSize,
+			BlobSize:       blobSize,
 		}
 	case response.StatusCode == http.StatusNotFound:
-		return &registry.LayerUploadNotFoundError{Location: location}
+		return &registry.BlobUploadNotFoundError{Location: location}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
 		errors := new(registry.Errors)
 		decoder := json.NewDecoder(response.Body)
@@ -413,7 +445,7 @@ func (r *clientImpl) UploadLayerChunk(location string, layerChunk io.ReadCloser,
 	}
 }
 
-func (r *clientImpl) FinishChunkedLayerUpload(location string, length int, checksum *registry.Checksum) error {
+func (r *clientImpl) FinishChunkedBlobUpload(location string, length int, dgst digest.Digest) error {
 	putRequest, err := http.NewRequest("PUT",
 		fmt.Sprintf("%s%s", r.Endpoint, location), nil)
 	if err != nil {
@@ -422,7 +454,7 @@ func (r *clientImpl) FinishChunkedLayerUpload(location string, length int, check
 
 	queryValues := new(url.Values)
 	queryValues.Set("length", fmt.Sprint(length))
-	queryValues.Set(checksum.HashAlgorithm, checksum.Sum)
+	queryValues.Set("digest", dgst.String())
 	putRequest.URL.RawQuery = queryValues.Encode()
 
 	putRequest.Header.Set("Content-Type", "application/octet-stream")
@@ -441,7 +473,7 @@ func (r *clientImpl) FinishChunkedLayerUpload(location string, length int, check
 	case response.StatusCode == http.StatusCreated:
 		return nil
 	case response.StatusCode == http.StatusNotFound:
-		return &registry.LayerUploadNotFoundError{Location: location}
+		return &registry.BlobUploadNotFoundError{Location: location}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
 		errors := new(registry.Errors)
 		decoder := json.NewDecoder(response.Body)
@@ -455,7 +487,7 @@ func (r *clientImpl) FinishChunkedLayerUpload(location string, length int, check
 	}
 }
 
-func (r *clientImpl) CancelLayerUpload(location string) error {
+func (r *clientImpl) CancelBlobUpload(location string) error {
 	deleteRequest, err := http.NewRequest("DELETE",
 		fmt.Sprintf("%s%s", r.Endpoint, location), nil)
 	if err != nil {
@@ -473,7 +505,7 @@ func (r *clientImpl) CancelLayerUpload(location string) error {
 	case response.StatusCode == http.StatusNoContent:
 		return nil
 	case response.StatusCode == http.StatusNotFound:
-		return &registry.LayerUploadNotFoundError{Location: location}
+		return &registry.BlobUploadNotFoundError{Location: location}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
 		errors := new(registry.Errors)
 		decoder := json.NewDecoder(response.Body)
@@ -490,7 +522,7 @@ func (r *clientImpl) CancelLayerUpload(location string) error {
 // imageManifestURL is a helper method for returning the full url to an image
 // manifest
 func (r *clientImpl) imageManifestURL(name, tag string) string {
-	return fmt.Sprintf("%s/v2/%s/image/%s", r.Endpoint, name, tag)
+	return fmt.Sprintf("%s/v2/%s/manifest/%s", r.Endpoint, name, tag)
 }
 
 // parseRangeHeader parses out the offset and length from a returned Range

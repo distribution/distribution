@@ -3,6 +3,8 @@ package registry
 import (
 	"fmt"
 	"strings"
+
+	"github.com/docker/docker-registry/digest"
 )
 
 // ErrorCode represents the error type. The errors are serialized via strings
@@ -224,57 +226,44 @@ func (e *ImageManifestNotFoundError) Error() string {
 		e.Name, e.Tag)
 }
 
-// LayerAlreadyExistsError is returned when attempting to create a new layer
-// that already exists in the registry.
-type LayerAlreadyExistsError struct {
-	Name   string
-	TarSum string
-}
-
-func (e *LayerAlreadyExistsError) Error() string {
-	return fmt.Sprintf("Layer already found with Name: %s, TarSum: %s",
-		e.Name, e.TarSum)
-}
-
-// LayerNotFoundError is returned when making an operation against a given image
+// BlobNotFoundError is returned when making an operation against a given image
 // layer that does not exist in the registry.
-type LayerNotFoundError struct {
+type BlobNotFoundError struct {
 	Name   string
-	TarSum string
+	Digest digest.Digest
 }
 
-func (e *LayerNotFoundError) Error() string {
-	return fmt.Sprintf("No layer found with Name: %s, TarSum: %s",
-		e.Name, e.TarSum)
+func (e *BlobNotFoundError) Error() string {
+	return fmt.Sprintf("No blob found with Name: %s, Digest: %s",
+		e.Name, e.Digest)
 }
 
-// LayerUploadNotFoundError is returned when making a layer upload operation
-// against an invalid layer upload location url
+// BlobUploadNotFoundError is returned when making a blob upload operation against an
+// invalid blob upload location url.
 // This may be the result of using a cancelled, completed, or stale upload
 // location.
-type LayerUploadNotFoundError struct {
+type BlobUploadNotFoundError struct {
 	Location string
 }
 
-func (e *LayerUploadNotFoundError) Error() string {
-	return fmt.Sprintf("No layer found upload found at Location: %s",
-		e.Location)
+func (e *BlobUploadNotFoundError) Error() string {
+	return fmt.Sprintf("No blob upload found at Location: %s", e.Location)
 }
 
-// LayerUploadInvalidRangeError is returned when attempting to upload an image
-// layer chunk that is out of order.
-// This provides the known LayerSize and LastValidRange which can be used to
+// BlobUploadInvalidRangeError is returned when attempting to upload an image
+// blob chunk that is out of order.
+// This provides the known BlobSize and LastValidRange which can be used to
 // resume the upload.
-type LayerUploadInvalidRangeError struct {
+type BlobUploadInvalidRangeError struct {
 	Location       string
 	LastValidRange int
-	LayerSize      int
+	BlobSize       int
 }
 
-func (e *LayerUploadInvalidRangeError) Error() string {
+func (e *BlobUploadInvalidRangeError) Error() string {
 	return fmt.Sprintf(
-		"Invalid range provided for upload at Location: %s. Last Valid Range: %d, Layer Size: %d",
-		e.Location, e.LastValidRange, e.LayerSize)
+		"Invalid range provided for upload at Location: %s. Last Valid Range: %d, Blob Size: %d",
+		e.Location, e.LastValidRange, e.BlobSize)
 }
 
 // UnexpectedHTTPStatusError is returned when an unexpected HTTP status is

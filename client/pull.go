@@ -99,7 +99,7 @@ func pullLayer(c Client, objectStore ObjectStore, name string, fsLayer registry.
 	}
 	defer writer.Close()
 
-	layerReader, length, err := c.GetImageLayer(name, fsLayer.BlobSum, 0)
+	layerReader, length, err := c.GetBlob(name, fsLayer.BlobSum, 0)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,

@@ -10,88 +10,91 @@ import (
 	"testing"
 
 	"github.com/docker/docker-registry"
-	"github.com/docker/docker-registry/test"
+	"github.com/docker/docker-registry/common/testutil"
+	"github.com/docker/docker-registry/digest"
 )
 
-type testLayer struct {
-	tarSum   string
+type testBlob struct {
+	digest   digest.Digest
 	contents []byte
 }
 
 func TestPush(t *testing.T) {
 	name := "hello/world"
 	tag := "sometag"
-	testLayers := []testLayer{
+	testBlobs := []testBlob{
 		{
-			tarSum:   "12345",
+			digest:   "12345",
 			contents: []byte("some contents"),
 		},
 		{
-			tarSum:   "98765",
+			digest:   "98765",
 			contents: []byte("some other contents"),
 		},
 	}
-	uploadLocations := make([]string, len(testLayers))
-	layers := make([]registry.FSLayer, len(testLayers))
-	history := make([]registry.ManifestHistory, len(testLayers))
+	uploadLocations := make([]string, len(testBlobs))
+	blobs := make([]registry.FSLayer, len(testBlobs))
+	history := make([]registry.ManifestHistory, len(testBlobs))
 
-	for i, layer := range testLayers {
-		uploadLocations[i] = fmt.Sprintf("/v2/%s/layer/%s/upload-location-%d", name, layer.tarSum, i)
-		layers[i] = registry.FSLayer{BlobSum: layer.tarSum}
-		history[i] = registry.ManifestHistory{V1Compatibility: layer.tarSum}
+	for i, blob := range testBlobs {
+		// TODO(bbland): this is returning the same location for all uploads,
+		// because we can't know which blob will get which location.
+		// It's sort of okay because we're using unique digests, but this needs
+		// to change at some point.
+		uploadLocations[i] = fmt.Sprintf("/v2/%s/blob/test-uuid", name)
+		blobs[i] = registry.FSLayer{BlobSum: blob.digest}
+		history[i] = registry.ManifestHistory{V1Compatibility: blob.digest.String()}
 	}
 
 	manifest := &registry.ImageManifest{
 		Name:          name,
 		Tag:           tag,
 		Architecture:  "x86",
-		FSLayers:      layers,
+		FSLayers:      blobs,
 		History:       history,
 		SchemaVersion: 1,
 	}
 	manifestBytes, err := json.Marshal(manifest)
 
-	layerRequestResponseMappings := make([]test.RequestResponseMapping, 2*len(testLayers))
-	for i, layer := range testLayers {
-		layerRequestResponseMappings[2*i] = test.RequestResponseMapping{
-			Request: test.Request{
+	blobRequestResponseMappings := make([]testutil.RequestResponseMapping, 2*len(testBlobs))
+	for i, blob := range testBlobs {
+		blobRequestResponseMappings[2*i] = testutil.RequestResponseMapping{
+			Request: testutil.Request{
 				Method: "POST",
-				Route:  "/v2/" + name + "/layer/" + layer.tarSum + "/upload/",
+				Route:  "/v2/" + name + "/blob/upload/",
 			},
-			Responses: []test.Response{
-				{
-					StatusCode: http.StatusAccepted,
-					Headers: http.Header(map[string][]string{
-						"Location": {uploadLocations[i]},
-					}),
-				},
+			Response: testutil.Response{
+				StatusCode: http.StatusAccepted,
+				Headers: http.Header(map[string][]string{
+					"Location": {uploadLocations[i]},
+				}),
 			},
 		}
-		layerRequestResponseMappings[2*i+1] = test.RequestResponseMapping{
-			Request: test.Request{
+		blobRequestResponseMappings[2*i+1] = testutil.RequestResponseMapping{
+			Request: testutil.Request{
 				Method: "PUT",
 				Route:  uploadLocations[i],
-				Body:   layer.contents,
-			},
-			Responses: []test.Response{
-				{
-					StatusCode: http.StatusCreated,
+				QueryParams: map[string][]string{
+					"length": {fmt.Sprint(len(blob.contents))},
+					"digest": {blob.digest.String()},
 				},
+				Body: blob.contents,
+			},
+			Response: testutil.Response{
+				StatusCode: http.StatusCreated,
 			},
 		}
 	}
 
-	handler := test.NewHandler(append(layerRequestResponseMappings, test.RequestResponseMap{
-		test.RequestResponseMapping{
-			Request: test.Request{
+	handler := testutil.NewHandler(append(blobRequestResponseMappings, testutil.RequestResponseMap{
+		testutil.RequestResponseMapping{
+			Request: testutil.Request{
 				Method: "PUT",
-				Route:  "/v2/" + name + "/image/" + tag,
+				Route:  "/v2/" + name + "/manifest/" + tag,
 				Body:   manifestBytes,
 			},
-			Responses: []test.Response{
-				{
-					StatusCode: http.StatusOK,
-				},
+			Response: testutil.Response{
+				StatusCode: http.StatusOK,
 			},
 		},
 	}...))
@@ -100,11 +103,11 @@ func TestPush(t *testing.T) {
 	objectStore := &memoryObjectStore{
 		mutex:           new(sync.Mutex),
 		manifestStorage: make(map[string]*registry.ImageManifest),
-		layerStorage:    make(map[string]Layer),
+		layerStorage:    make(map[digest.Digest]Layer),
 	}
 
-	for _, layer := range testLayers {
-		l, err := objectStore.Layer(layer.tarSum)
+	for _, blob := range testBlobs {
+		l, err := objectStore.Layer(blob.digest)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -114,7 +117,7 @@ func TestPush(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		writer.Write(layer.contents)
+		writer.Write(blob.contents)
 		writer.Close()
 	}
 
@@ -129,61 +132,57 @@ func TestPush(t *testing.T) {
 func TestPull(t *testing.T) {
 	name := "hello/world"
 	tag := "sometag"
-	testLayers := []testLayer{
+	testBlobs := []testBlob{
 		{
-			tarSum:   "12345",
+			digest:   "12345",
 			contents: []byte("some contents"),
 		},
 		{
-			tarSum:   "98765",
+			digest:   "98765",
 			contents: []byte("some other contents"),
 		},
 	}
-	layers := make([]registry.FSLayer, len(testLayers))
-	history := make([]registry.ManifestHistory, len(testLayers))
+	blobs := make([]registry.FSLayer, len(testBlobs))
+	history := make([]registry.ManifestHistory, len(testBlobs))
 
-	for i, layer := range testLayers {
-		layers[i] = registry.FSLayer{BlobSum: layer.tarSum}
-		history[i] = registry.ManifestHistory{V1Compatibility: layer.tarSum}
+	for i, blob := range testBlobs {
+		blobs[i] = registry.FSLayer{BlobSum: blob.digest}
+		history[i] = registry.ManifestHistory{V1Compatibility: blob.digest.String()}
 	}
 
 	manifest := &registry.ImageManifest{
 		Name:          name,
 		Tag:           tag,
 		Architecture:  "x86",
-		FSLayers:      layers,
+		FSLayers:      blobs,
 		History:       history,
 		SchemaVersion: 1,
 	}
 	manifestBytes, err := json.Marshal(manifest)
 
-	layerRequestResponseMappings := make([]test.RequestResponseMapping, len(testLayers))
-	for i, layer := range testLayers {
-		layerRequestResponseMappings[i] = test.RequestResponseMapping{
-			Request: test.Request{
+	blobRequestResponseMappings := make([]testutil.RequestResponseMapping, len(testBlobs))
+	for i, blob := range testBlobs {
+		blobRequestResponseMappings[i] = testutil.RequestResponseMapping{
+			Request: testutil.Request{
 				Method: "GET",
-				Route:  "/v2/" + name + "/layer/" + layer.tarSum,
+				Route:  "/v2/" + name + "/blob/" + blob.digest.String(),
 			},
-			Responses: []test.Response{
-				{
-					StatusCode: http.StatusOK,
-					Body:       layer.contents,
-				},
+			Response: testutil.Response{
+				StatusCode: http.StatusOK,
+				Body:       blob.contents,
 			},
 		}
 	}
 
-	handler := test.NewHandler(append(layerRequestResponseMappings, test.RequestResponseMap{
-		test.RequestResponseMapping{
-			Request: test.Request{
+	handler := testutil.NewHandler(append(blobRequestResponseMappings, testutil.RequestResponseMap{
+		testutil.RequestResponseMapping{
+			Request: testutil.Request{
 				Method: "GET",
-				Route:  "/v2/" + name + "/image/" + tag,
+				Route:  "/v2/" + name + "/manifest/" + tag,
 			},
-			Responses: []test.Response{
-				{
-					StatusCode: http.StatusOK,
-					Body:       manifestBytes,
-				},
+			Response: testutil.Response{
+				StatusCode: http.StatusOK,
+				Body:       manifestBytes,
 			},
 		},
 	}...))
@@ -192,7 +191,7 @@ func TestPull(t *testing.T) {
 	objectStore := &memoryObjectStore{
 		mutex:           new(sync.Mutex),
 		manifestStorage: make(map[string]*registry.ImageManifest),
-		layerStorage:    make(map[string]Layer),
+		layerStorage:    make(map[digest.Digest]Layer),
 	}
 
 	err = Pull(client, objectStore, name, tag)
@@ -214,8 +213,8 @@ func TestPull(t *testing.T) {
 		t.Fatal("Incorrect manifest")
 	}
 
-	for _, layer := range testLayers {
-		l, err := objectStore.Layer(layer.tarSum)
+	for _, blob := range testBlobs {
+		l, err := objectStore.Layer(blob.digest)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -226,13 +225,13 @@ func TestPull(t *testing.T) {
 		}
 		defer reader.Close()
 
-		layerBytes, err := ioutil.ReadAll(reader)
+		blobBytes, err := ioutil.ReadAll(reader)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		if string(layerBytes) != string(layer.contents) {
-			t.Fatal("Incorrect layer")
+		if string(blobBytes) != string(blob.contents) {
+			t.Fatal("Incorrect blob")
 		}
 	}
 }

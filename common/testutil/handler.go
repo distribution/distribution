@@ -1,4 +1,4 @@
-package test
+package testutil
 
 import (
 	"bytes"
@@ -6,16 +6,18 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"sort"
+	"strings"
 )
 
-// RequestResponseMap is a mapping from Requests to Responses
+// RequestResponseMap is an ordered mapping from Requests to Responses
 type RequestResponseMap []RequestResponseMapping
 
-// RequestResponseMapping defines an ordered list of Responses to be sent in
-// response to a given Request
+// RequestResponseMapping defines a Response to be sent in response to a given
+// Request
 type RequestResponseMapping struct {
-	Request   Request
-	Responses []Response
+	Request  Request
+	Response Response
 }
 
 // TODO(bbland): add support for request headers
@@ -28,12 +30,28 @@ type Request struct {
 	// Route is the http route of this request
 	Route string
 
+	// QueryParams are the query parameters of this request
+	QueryParams map[string][]string
+
 	// Body is the byte contents of the http request
 	Body []byte
 }
 
 func (r Request) String() string {
-	return fmt.Sprintf("%s %s\n%s", r.Method, r.Route, r.Body)
+	queryString := ""
+	if len(r.QueryParams) > 0 {
+		queryString = "?"
+		keys := make([]string, 0, len(r.QueryParams))
+		for k := range r.QueryParams {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		for _, k := range keys {
+			queryString += strings.Join(r.QueryParams[k], "&") + "&"
+		}
+		queryString = queryString[:len(queryString)-1]
+	}
+	return fmt.Sprintf("%s %s%s\n%s", r.Method, r.Route, queryString, r.Body)
 }
 
 // Response is a simplified http.Response object
@@ -61,7 +79,12 @@ type testHandler struct {
 func NewHandler(requestResponseMap RequestResponseMap) http.Handler {
 	responseMap := make(map[string][]Response)
 	for _, mapping := range requestResponseMap {
-		responseMap[mapping.Request.String()] = mapping.Responses
+		responses, ok := responseMap[mapping.Request.String()]
+		if ok {
+			responseMap[mapping.Request.String()] = append(responses, mapping.Response)
+		} else {
+			responseMap[mapping.Request.String()] = []Response{mapping.Response}
+		}
 	}
 	return &testHandler{responseMap: responseMap}
 }
@@ -71,9 +94,10 @@ func (app *testHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	requestBody, _ := ioutil.ReadAll(r.Body)
 	request := Request{
-		Method: r.Method,
-		Route:  r.URL.Path,
-		Body:   requestBody,
+		Method:      r.Method,
+		Route:       r.URL.Path,
+		QueryParams: r.URL.Query(),
+		Body:        requestBody,
 	}
 
 	responses, ok := app.responseMap[request.String()]
