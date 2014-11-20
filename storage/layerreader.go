@@ -6,6 +6,8 @@ import (
 	"io"
 	"os"
 	"time"
+
+	"github.com/docker/docker-registry/digest"
 )
 
 // layerReadSeeker implements Layer and provides facilities for reading and
@@ -16,7 +18,7 @@ type layerReader struct {
 	brd        *bufio.Reader
 
 	name      string // repo name of this layer
-	tarSum    string
+	digest    digest.Digest
 	path      string
 	createdAt time.Time
 
@@ -35,8 +37,8 @@ func (lrs *layerReader) Name() string {
 	return lrs.name
 }
 
-func (lrs *layerReader) TarSum() string {
-	return lrs.tarSum
+func (lrs *layerReader) Digest() digest.Digest {
+	return lrs.digest
 }
 
 func (lrs *layerReader) CreatedAt() time.Time {

@@ -1,20 +1,16 @@
 package storage
 
 import (
-	"archive/tar"
 	"bytes"
-	"crypto/rand"
 	"crypto/sha256"
 	"fmt"
 	"io"
 	"io/ioutil"
-	mrand "math/rand"
 	"os"
 	"testing"
-	"time"
 
-	"github.com/docker/docker/pkg/tarsum"
-
+	"github.com/docker/docker-registry/common/testutil"
+	"github.com/docker/docker-registry/digest"
 	"github.com/docker/docker-registry/storagedriver"
 	"github.com/docker/docker-registry/storagedriver/inmemory"
 )
@@ -22,11 +18,13 @@ import (
 // TestSimpleLayerUpload covers the layer upload process, exercising common
 // error paths that might be seen during an upload.
 func TestSimpleLayerUpload(t *testing.T) {
-	randomDataReader, tarSum, err := createRandomReader()
+	randomDataReader, tarSumStr, err := testutil.CreateRandomTarFile()
 
 	if err != nil {
 		t.Fatalf("error creating random reader: %v", err)
 	}
+
+	dgst := digest.Digest(tarSumStr)
 
 	uploadStore, err := newTemporaryLocalFSLayerUploadStore()
 	if err != nil {
@@ -48,7 +46,7 @@ func TestSimpleLayerUpload(t *testing.T) {
 	h := sha256.New()
 	rd := io.TeeReader(randomDataReader, h)
 
-	layerUpload, err := ls.Upload(imageName, tarSum)
+	layerUpload, err := ls.Upload(imageName)
 
 	if err != nil {
 		t.Fatalf("unexpected error starting layer upload: %s", err)
@@ -60,13 +58,13 @@ func TestSimpleLayerUpload(t *testing.T) {
 	}
 
 	// Do a resume, get unknown upload
-	layerUpload, err = ls.Resume(imageName, tarSum, layerUpload.UUID())
+	layerUpload, err = ls.Resume(layerUpload.UUID())
 	if err != ErrLayerUploadUnknown {
 		t.Fatalf("unexpected error resuming upload, should be unkown: %v", err)
 	}
 
 	// Restart!
-	layerUpload, err = ls.Upload(imageName, tarSum)
+	layerUpload, err = ls.Upload(imageName)
 	if err != nil {
 		t.Fatalf("unexpected error starting layer upload: %s", err)
 	}
@@ -92,25 +90,25 @@ func TestSimpleLayerUpload(t *testing.T) {
 	layerUpload.Close()
 
 	// Do a resume, for good fun
-	layerUpload, err = ls.Resume(imageName, tarSum, layerUpload.UUID())
+	layerUpload, err = ls.Resume(layerUpload.UUID())
 	if err != nil {
 		t.Fatalf("unexpected error resuming upload: %v", err)
 	}
 
-	digest := NewDigest("sha256", h)
-	layer, err := layerUpload.Finish(randomDataSize, string(digest))
+	sha256Digest := digest.NewDigest("sha256", h)
+	layer, err := layerUpload.Finish(randomDataSize, dgst)
 
 	if err != nil {
 		t.Fatalf("unexpected error finishing layer upload: %v", err)
 	}
 
 	// After finishing an upload, it should no longer exist.
-	if _, err := ls.Resume(imageName, tarSum, layerUpload.UUID()); err != ErrLayerUploadUnknown {
+	if _, err := ls.Resume(layerUpload.UUID()); err != ErrLayerUploadUnknown {
 		t.Fatalf("expected layer upload to be unknown, got %v", err)
 	}
 
 	// Test for existence.
-	exists, err := ls.Exists(layer.TarSum())
+	exists, err := ls.Exists(layer.Name(), layer.Digest())
 	if err != nil {
 		t.Fatalf("unexpected error checking for existence: %v", err)
 	}
@@ -129,8 +127,8 @@ func TestSimpleLayerUpload(t *testing.T) {
 		t.Fatalf("incorrect read length")
 	}
 
-	if NewDigest("sha256", h) != digest {
-		t.Fatalf("unexpected digest from uploaded layer: %q != %q", NewDigest("sha256", h), digest)
+	if digest.NewDigest("sha256", h) != sha256Digest {
+		t.Fatalf("unexpected digest from uploaded layer: %q != %q", digest.NewDigest("sha256", h), sha256Digest)
 	}
 }
 
@@ -148,13 +146,15 @@ func TestSimpleLayerRead(t *testing.T) {
 		},
 	}
 
-	randomLayerReader, tarSum, err := createRandomReader()
+	randomLayerReader, tarSumStr, err := testutil.CreateRandomTarFile()
 	if err != nil {
 		t.Fatalf("error creating random data: %v", err)
 	}
 
+	dgst := digest.Digest(tarSumStr)
+
 	// Test for existence.
-	exists, err := ls.Exists(tarSum)
+	exists, err := ls.Exists(imageName, dgst)
 	if err != nil {
 		t.Fatalf("unexpected error checking for existence: %v", err)
 	}
@@ -164,7 +164,7 @@ func TestSimpleLayerRead(t *testing.T) {
 	}
 
 	// Try to get the layer and make sure we get a not found error
-	layer, err := ls.Fetch(tarSum)
+	layer, err := ls.Fetch(imageName, dgst)
 	if err == nil {
 		t.Fatalf("error expected fetching unknown layer")
 	}
@@ -174,8 +174,7 @@ func TestSimpleLayerRead(t *testing.T) {
 	} else {
 		err = nil
 	}
-
-	randomLayerDigest, err := writeTestLayer(driver, ls.pathMapper, imageName, tarSum, randomLayerReader)
+	randomLayerDigest, err := writeTestLayer(driver, ls.pathMapper, imageName, dgst, randomLayerReader)
 	if err != nil {
 		t.Fatalf("unexpected error writing test layer: %v", err)
 	}
@@ -185,7 +184,7 @@ func TestSimpleLayerRead(t *testing.T) {
 		t.Fatalf("error getting seeker size for random layer: %v", err)
 	}
 
-	layer, err = ls.Fetch(tarSum)
+	layer, err = ls.Fetch(imageName, dgst)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -202,9 +201,9 @@ func TestSimpleLayerRead(t *testing.T) {
 		t.Fatalf("stored incorrect number of bytes in layer: %d != %d", nn, randomLayerSize)
 	}
 
-	digest := NewDigest("sha256", h)
-	if digest != randomLayerDigest {
-		t.Fatalf("fetched digest does not match: %q != %q", digest, randomLayerDigest)
+	sha256Digest := digest.NewDigest("sha256", h)
+	if sha256Digest != randomLayerDigest {
+		t.Fatalf("fetched digest does not match: %q != %q", sha256Digest, randomLayerDigest)
 	}
 
 	// Now seek back the layer, read the whole thing and check against randomLayerData
@@ -270,11 +269,13 @@ func TestLayerReadErrors(t *testing.T) {
 // writeRandomLayer creates a random layer under name and tarSum using driver
 // and pathMapper. An io.ReadSeeker with the data is returned, along with the
 // sha256 hex digest.
-func writeRandomLayer(driver storagedriver.StorageDriver, pathMapper *pathMapper, name string) (rs io.ReadSeeker, tarSum string, digest Digest, err error) {
-	reader, tarSum, err := createRandomReader()
+func writeRandomLayer(driver storagedriver.StorageDriver, pathMapper *pathMapper, name string) (rs io.ReadSeeker, tarSum digest.Digest, sha256digest digest.Digest, err error) {
+	reader, tarSumStr, err := testutil.CreateRandomTarFile()
 	if err != nil {
 		return nil, "", "", err
 	}
+
+	tarSum = digest.Digest(tarSumStr)
 
 	// Now, actually create the layer.
 	randomLayerDigest, err := writeTestLayer(driver, pathMapper, name, tarSum, ioutil.NopCloser(reader))
@@ -312,91 +313,10 @@ func seekerSize(seeker io.ReadSeeker) (int64, error) {
 	return end, nil
 }
 
-// createRandomReader returns a random read seeker and its tarsum. The
-// returned content will be a valid tar file with a random number of files and
-// content.
-func createRandomReader() (rs io.ReadSeeker, tarSum string, err error) {
-	nFiles := mrand.Intn(10) + 10
-	target := &bytes.Buffer{}
-	wr := tar.NewWriter(target)
-
-	// Perturb this on each iteration of the loop below.
-	header := &tar.Header{
-		Mode:       0644,
-		ModTime:    time.Now(),
-		Typeflag:   tar.TypeReg,
-		Uname:      "randocalrissian",
-		Gname:      "cloudcity",
-		AccessTime: time.Now(),
-		ChangeTime: time.Now(),
-	}
-
-	for fileNumber := 0; fileNumber < nFiles; fileNumber++ {
-		fileSize := mrand.Int63n(1<<20) + 1<<20
-
-		header.Name = fmt.Sprint(fileNumber)
-		header.Size = fileSize
-
-		if err := wr.WriteHeader(header); err != nil {
-			return nil, "", err
-		}
-
-		randomData := make([]byte, fileSize)
-
-		// Fill up the buffer with some random data.
-		n, err := rand.Read(randomData)
-
-		if n != len(randomData) {
-			return nil, "", fmt.Errorf("short read creating random reader: %v bytes != %v bytes", n, len(randomData))
-		}
-
-		if err != nil {
-			return nil, "", err
-		}
-
-		nn, err := io.Copy(wr, bytes.NewReader(randomData))
-		if nn != fileSize {
-			return nil, "", fmt.Errorf("short copy writing random file to tar")
-		}
-
-		if err != nil {
-			return nil, "", err
-		}
-
-		if err := wr.Flush(); err != nil {
-			return nil, "", err
-		}
-	}
-
-	if err := wr.Close(); err != nil {
-		return nil, "", err
-	}
-
-	reader := bytes.NewReader(target.Bytes())
-
-	// A tar builder that supports tarsum inline calculation would be awesome
-	// here.
-	ts, err := tarsum.NewTarSum(reader, true, tarsum.Version1)
-	if err != nil {
-		return nil, "", err
-	}
-
-	nn, err := io.Copy(ioutil.Discard, ts)
-	if nn != int64(len(target.Bytes())) {
-		return nil, "", fmt.Errorf("short copy when getting tarsum of random layer: %v != %v", nn, len(target.Bytes()))
-	}
-
-	if err != nil {
-		return nil, "", err
-	}
-
-	return bytes.NewReader(target.Bytes()), ts.Sum(nil), nil
-}
-
 // createTestLayer creates a simple test layer in the provided driver under
-// tarsum, returning the string digest. This is implemented peicemeal and
-// should probably be replaced by the uploader when it's ready.
-func writeTestLayer(driver storagedriver.StorageDriver, pathMapper *pathMapper, name, tarSum string, content io.Reader) (Digest, error) {
+// tarsum dgst, returning the sha256 digest location. This is implemented
+// peicemeal and should probably be replaced by the uploader when it's ready.
+func writeTestLayer(driver storagedriver.StorageDriver, pathMapper *pathMapper, name string, dgst digest.Digest, content io.Reader) (digest.Digest, error) {
 	h := sha256.New()
 	rd := io.TeeReader(content, h)
 
@@ -406,11 +326,11 @@ func writeTestLayer(driver storagedriver.StorageDriver, pathMapper *pathMapper, 
 		return "", nil
 	}
 
-	digest := NewDigest("sha256", h)
+	blobDigestSHA := digest.NewDigest("sha256", h)
 
 	blobPath, err := pathMapper.path(blobPathSpec{
-		alg:    digest.Algorithm(),
-		digest: digest.Hex(),
+		alg:    blobDigestSHA.Algorithm(),
+		digest: blobDigestSHA.Hex(),
 	})
 
 	if err := driver.PutContent(blobPath, p); err != nil {
@@ -418,7 +338,7 @@ func writeTestLayer(driver storagedriver.StorageDriver, pathMapper *pathMapper, 
 	}
 
 	layerIndexLinkPath, err := pathMapper.path(layerIndexLinkPathSpec{
-		tarSum: tarSum,
+		digest: dgst,
 	})
 
 	if err != nil {
@@ -427,18 +347,14 @@ func writeTestLayer(driver storagedriver.StorageDriver, pathMapper *pathMapper, 
 
 	layerLinkPath, err := pathMapper.path(layerLinkPathSpec{
 		name:   name,
-		tarSum: tarSum,
+		digest: dgst,
 	})
 
 	if err != nil {
 		return "", err
 	}
 
-	if err != nil {
-		return "", err
-	}
-
-	if err := driver.PutContent(layerLinkPath, []byte(string(NewDigest("sha256", h)))); err != nil {
+	if err := driver.PutContent(layerLinkPath, []byte(blobDigestSHA.String())); err != nil {
 		return "", nil
 	}
 
@@ -446,5 +362,5 @@ func writeTestLayer(driver storagedriver.StorageDriver, pathMapper *pathMapper, 
 		return "", nil
 	}
 
-	return NewDigest("sha256", h), err
+	return blobDigestSHA, err
 }
