@@ -422,10 +422,10 @@ func (driver *StorageDriverClient) handleSubprocessExit() {
 // stopped
 func (driver *StorageDriverClient) receiveResponse(receiver libchan.Receiver, response interface{}) error {
 	receiveChan := make(chan error, 1)
-	go func(receiveChan chan<- error) {
+	go func(receiver libchan.Receiver, receiveChan chan<- error) {
 		defer close(receiveChan)
 		receiveChan <- receiver.Receive(response)
-	}(receiveChan)
+	}(receiver, receiveChan)
 
 	var err error
 	var ok bool
