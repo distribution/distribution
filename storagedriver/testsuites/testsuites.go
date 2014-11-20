@@ -253,7 +253,7 @@ func (suite *DriverSuite) TestReadNonexistentStream(c *check.C) {
 
 // TestList checks the returned list of keys after populating a directory tree
 func (suite *DriverSuite) TestList(c *check.C) {
-	rootDirectory := randomString(uint64(8 + rand.Intn(8)))
+	rootDirectory := "/" + randomString(uint64(8+rand.Intn(8)))
 	defer suite.StorageDriver.Delete(rootDirectory)
 
 	parentDirectory := rootDirectory + "/" + randomString(uint64(8+rand.Intn(8)))
@@ -266,7 +266,11 @@ func (suite *DriverSuite) TestList(c *check.C) {
 	}
 	sort.Strings(childFiles)
 
-	keys, err := suite.StorageDriver.List(rootDirectory)
+	keys, err := suite.StorageDriver.List("/")
+	c.Assert(err, check.IsNil)
+	c.Assert(keys, check.DeepEquals, []string{rootDirectory})
+
+	keys, err = suite.StorageDriver.List(rootDirectory)
 	c.Assert(err, check.IsNil)
 	c.Assert(keys, check.DeepEquals, []string{parentDirectory})
 

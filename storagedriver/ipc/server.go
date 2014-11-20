@@ -106,7 +106,7 @@ func handleRequest(driver storagedriver.StorageDriver, request Request) {
 		if err != nil {
 			response = ReadStreamResponse{Error: WrapError(err)}
 		} else {
-			response = ReadStreamResponse{Reader: ioutil.NopCloser(reader)}
+			response = ReadStreamResponse{Reader: reader}
 		}
 		err = request.ResponseChannel.Send(&response)
 		if err != nil {
