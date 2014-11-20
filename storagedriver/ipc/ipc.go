@@ -31,9 +31,9 @@ func (e IncompatibleVersionError) Error() string {
 // Request defines a remote method call request
 // A return value struct is to be sent over the ResponseChannel
 type Request struct {
-	Type            string
-	Parameters      map[string]interface{}
-	ResponseChannel libchan.Sender
+	Type            string                 `codec:",omitempty"`
+	Parameters      map[string]interface{} `codec:",omitempty"`
+	ResponseChannel libchan.Sender         `codec:",omitempty"`
 }
 
 // ResponseError is a serializable error type.
@@ -41,9 +41,9 @@ type Request struct {
 // client side, falling back to using the Type and Message if this cannot be
 // done.
 type ResponseError struct {
-	Type       string
-	Message    string
-	Parameters map[string]interface{}
+	Type       string                 `codec:",omitempty"`
+	Message    string                 `codec:",omitempty"`
+	Parameters map[string]interface{} `codec:",omitempty"`
 }
 
 // WrapError wraps an error in a serializable struct containing the error's type
@@ -108,39 +108,39 @@ func (err *ResponseError) Error() string {
 
 // VersionResponse is a response for a Version request
 type VersionResponse struct {
-	Version storagedriver.Version
-	Error   *ResponseError
+	Version storagedriver.Version `codec:",omitempty"`
+	Error   *ResponseError        `codec:",omitempty"`
 }
 
 // ReadStreamResponse is a response for a ReadStream request
 type ReadStreamResponse struct {
-	Reader io.ReadCloser
-	Error  *ResponseError
+	Reader io.ReadCloser  `codec:",omitempty"`
+	Error  *ResponseError `codec:",omitempty"`
 }
 
 // WriteStreamResponse is a response for a WriteStream request
 type WriteStreamResponse struct {
-	Error *ResponseError
+	Error *ResponseError `codec:",omitempty"`
 }
 
 // CurrentSizeResponse is a response for a CurrentSize request
 type CurrentSizeResponse struct {
-	Position uint64
-	Error    *ResponseError
+	Position uint64         `codec:",omitempty"`
+	Error    *ResponseError `codec:",omitempty"`
 }
 
 // ListResponse is a response for a List request
 type ListResponse struct {
-	Keys  []string
-	Error *ResponseError
+	Keys  []string       `codec:",omitempty"`
+	Error *ResponseError `codec:",omitempty"`
 }
 
 // MoveResponse is a response for a Move request
 type MoveResponse struct {
-	Error *ResponseError
+	Error *ResponseError `codec:",omitempty"`
 }
 
 // DeleteResponse is a response for a Delete request
 type DeleteResponse struct {
-	Error *ResponseError
+	Error *ResponseError `codec:",omitempty"`
 }

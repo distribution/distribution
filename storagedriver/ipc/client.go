@@ -267,7 +267,7 @@ func (driver *StorageDriverClient) WriteStream(path string, offset, size uint64,
 	}
 
 	receiver, remoteSender := libchan.Pipe()
-	params := map[string]interface{}{"Path": path, "Offset": offset, "Size": size, "Reader": ioutil.NopCloser(reader)}
+	params := map[string]interface{}{"Path": path, "Offset": offset, "Size": size, "Reader": reader}
 	err := driver.sender.Send(&Request{Type: "WriteStream", Parameters: params, ResponseChannel: remoteSender})
 	if err != nil {
 		return err

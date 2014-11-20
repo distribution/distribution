@@ -121,14 +121,17 @@ func (d *Driver) CurrentSize(path string) (uint64, error) {
 // List returns a list of the objects that are direct descendants of the given
 // path.
 func (d *Driver) List(path string) ([]string, error) {
-	subPathMatcher, err := regexp.Compile(fmt.Sprintf("^%s/[^/]+", path))
+	if path[len(path)-1] != '/' {
+		path += "/"
+	}
+	subPathMatcher, err := regexp.Compile(fmt.Sprintf("^%s[^/]+", path))
 	if err != nil {
 		return nil, err
 	}
 
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
-	// we use map to collect uniq keys
+	// we use map to collect unique keys
 	keySet := make(map[string]struct{})
 	for k := range d.storage {
 		if key := subPathMatcher.FindString(k); key != "" {

@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"strings"
 
 	"github.com/docker/docker-registry/storagedriver"
 	"github.com/docker/docker-registry/storagedriver/factory"
@@ -177,7 +176,9 @@ func (d *Driver) CurrentSize(subPath string) (uint64, error) {
 // List returns a list of the objects that are direct descendants of the given
 // path.
 func (d *Driver) List(subPath string) ([]string, error) {
-	subPath = strings.TrimRight(subPath, "/")
+	if subPath[len(subPath)-1] != '/' {
+		subPath += "/"
+	}
 	fullPath := d.subPath(subPath)
 
 	dir, err := os.Open(fullPath)
