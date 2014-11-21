@@ -15,7 +15,6 @@ type Services struct {
 // NewServices creates a new Services object to access docker objects stored
 // in the underlying driver.
 func NewServices(driver storagedriver.StorageDriver) *Services {
-
 	layerUploadStore, err := newTemporaryLocalFSLayerUploadStore()
 
 	if err != nil {
@@ -40,5 +39,5 @@ func NewServices(driver storagedriver.StorageDriver) *Services {
 // may be context sensitive in the future. The instance should be used similar
 // to a request local.
 func (ss *Services) Layers() LayerService {
-	return &layerStore{driver: ss.driver, pathMapper: ss.pathMapper}
+	return &layerStore{driver: ss.driver, pathMapper: ss.pathMapper, uploadStore: ss.layerUploadStore}
 }

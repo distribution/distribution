@@ -57,33 +57,26 @@ func (ls *layerStore) Fetch(name string, digest digest.Digest) (Layer, error) {
 		return nil, err
 	}
 
-	// Grab the size of the layer file, ensuring that it exists, among other
-	// things.
-	size, err := ls.driver.CurrentSize(p)
-
+	fr, err := newFileReader(ls.driver, p)
 	if err != nil {
-		// TODO(stevvooe): Handle blob/path does not exist here.
-		// TODO(stevvooe): Get a better understanding of the error cases here
-		// that don't stem from unknown path.
-		return nil, err
+		switch err := err.(type) {
+		case storagedriver.PathNotFoundError, *storagedriver.PathNotFoundError:
+			return nil, ErrLayerUnknown
+		default:
+			return nil, err
+		}
 	}
 
-	// Build the layer reader and return to the client.
-	layer := &layerReader{
-		layerStore: ls,
-		path:       p,
+	return &layerReader{
+		fileReader: *fr,
 		name:       name,
 		digest:     digest,
 
 		// TODO(stevvooe): Storage backend does not support modification time
-		// queries yet. Layers "never" change, so just return the zero value.
-		createdAt: time.Time{},
-
-		offset: 0,
-		size:   int64(size),
-	}
-
-	return layer, nil
+		// queries yet. Layers "never" change, so just return the zero value
+		// plus a nano-second.
+		createdAt: (time.Time{}).Add(time.Nanosecond),
+	}, nil
 }
 
 // Upload begins a layer upload, returning a handle. If the layer upload
