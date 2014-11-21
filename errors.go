@@ -17,19 +17,13 @@ const (
 
 	// The following errors can happen during a layer upload.
 
-	// ErrorCodeInvalidChecksum is returned when uploading a layer if the
-	// provided checksum does not match the layer contents.
-	ErrorCodeInvalidChecksum
+	// ErrorCodeInvalidDigest is returned when uploading a layer if the
+	// provided digest does not match the layer contents.
+	ErrorCodeInvalidDigest
 
 	// ErrorCodeInvalidLength is returned when uploading a layer if the provided
 	// length does not match the content length.
 	ErrorCodeInvalidLength
-
-	// ErrorCodeInvalidTarsum is returned when the provided tarsum does not
-	// match the computed tarsum of the contents.
-	ErrorCodeInvalidTarsum
-
-	// The following errors can happen during manifest upload.
 
 	// ErrorCodeInvalidName is returned when the name in the manifest does not
 	// match the provided name.
@@ -47,6 +41,9 @@ const (
 	// nonexistent layer.
 	ErrorCodeUnknownLayer
 
+	// ErrorCodeUnknownLayerUpload is returned when an upload is accessed.
+	ErrorCodeUnknownLayerUpload
+
 	// ErrorCodeUntrustedSignature is returned when the manifest is signed by an
 	// untrusted source.
 	ErrorCodeUntrustedSignature
@@ -54,25 +51,25 @@ const (
 
 var errorCodeStrings = map[ErrorCode]string{
 	ErrorCodeUnknown:            "UNKNOWN",
-	ErrorCodeInvalidChecksum:    "INVALID_CHECKSUM",
+	ErrorCodeInvalidDigest:      "INVALID_DIGEST",
 	ErrorCodeInvalidLength:      "INVALID_LENGTH",
-	ErrorCodeInvalidTarsum:      "INVALID_TARSUM",
 	ErrorCodeInvalidName:        "INVALID_NAME",
 	ErrorCodeInvalidTag:         "INVALID_TAG",
 	ErrorCodeUnverifiedManifest: "UNVERIFIED_MANIFEST",
 	ErrorCodeUnknownLayer:       "UNKNOWN_LAYER",
+	ErrorCodeUnknownLayerUpload: "UNKNOWN_LAYER_UPLOAD",
 	ErrorCodeUntrustedSignature: "UNTRUSTED_SIGNATURE",
 }
 
 var errorCodesMessages = map[ErrorCode]string{
 	ErrorCodeUnknown:            "unknown error",
-	ErrorCodeInvalidChecksum:    "provided checksum did not match uploaded content",
+	ErrorCodeInvalidDigest:      "provided digest did not match uploaded content",
 	ErrorCodeInvalidLength:      "provided length did not match content length",
-	ErrorCodeInvalidTarsum:      "provided tarsum did not match binary content",
 	ErrorCodeInvalidName:        "Manifest name did not match URI",
 	ErrorCodeInvalidTag:         "Manifest tag did not match URI",
 	ErrorCodeUnverifiedManifest: "Manifest failed signature validation",
 	ErrorCodeUnknownLayer:       "Referenced layer not available",
+	ErrorCodeUnknownLayerUpload: "cannot resume unknown layer upload",
 	ErrorCodeUntrustedSignature: "Manifest signed by untrusted source",
 }
 
@@ -136,7 +133,7 @@ func (ec *ErrorCode) UnmarshalText(text []byte) error {
 
 // Error provides a wrapper around ErrorCode with extra Details provided.
 type Error struct {
-	Code    ErrorCode   `json:"code,omitempty"`
+	Code    ErrorCode   `json:"code"`
 	Message string      `json:"message,omitempty"`
 	Detail  interface{} `json:"detail,omitempty"`
 }
@@ -144,7 +141,7 @@ type Error struct {
 // Error returns a human readable representation of the error.
 func (e Error) Error() string {
 	return fmt.Sprintf("%s: %s",
-		strings.Title(strings.Replace(e.Code.String(), "_", " ", -1)),
+		strings.ToLower(strings.Replace(e.Code.String(), "_", " ", -1)),
 		e.Message)
 }
 
@@ -167,6 +164,10 @@ func (errs *Errors) Push(code ErrorCode, details ...interface{}) {
 		detail = details[0]
 	}
 
+	if err, ok := detail.(error); ok {
+		detail = err.Error()
+	}
+
 	errs.PushErr(Error{
 		Code:    code,
 		Message: code.Message(),
@@ -180,7 +181,7 @@ func (errs *Errors) PushErr(err error) {
 }
 
 func (errs *Errors) Error() string {
-	switch len(errs.Errors) {
+	switch errs.Len() {
 	case 0:
 		return "<nil>"
 	case 1:
@@ -192,6 +193,16 @@ func (errs *Errors) Error() string {
 		}
 		return msg
 	}
+}
+
+// Clear clears the errors.
+func (errs *Errors) Clear() {
+	errs.Errors = errs.Errors[:0]
+}
+
+// Len returns the current number of errors.
+func (errs *Errors) Len() int {
+	return len(errs.Errors)
 }
 
 // DetailUnknownLayer provides detail for unknown layer errors, returned by

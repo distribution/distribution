@@ -56,7 +56,7 @@ func TestErrorCodes(t *testing.T) {
 func TestErrorsManagement(t *testing.T) {
 	var errs Errors
 
-	errs.Push(ErrorCodeInvalidChecksum)
+	errs.Push(ErrorCodeInvalidDigest)
 
 	var detail DetailUnknownLayer
 	detail.Unknown.BlobSum = "sometestblobsumdoesntmatter"
@@ -69,7 +69,20 @@ func TestErrorsManagement(t *testing.T) {
 		t.Fatalf("error marashaling errors: %v", err)
 	}
 
-	expectedJSON := "{\"errors\":[{\"code\":\"INVALID_CHECKSUM\",\"message\":\"provided checksum did not match uploaded content\"},{\"code\":\"UNKNOWN_LAYER\",\"message\":\"Referenced layer not available\",\"detail\":{\"unknown\":{\"blobSum\":\"sometestblobsumdoesntmatter\"}}}]}"
+	expectedJSON := "{\"errors\":[{\"code\":\"INVALID_DIGEST\",\"message\":\"provided digest did not match uploaded content\"},{\"code\":\"UNKNOWN_LAYER\",\"message\":\"Referenced layer not available\",\"detail\":{\"unknown\":{\"blobSum\":\"sometestblobsumdoesntmatter\"}}}]}"
+
+	if string(p) != expectedJSON {
+		t.Fatalf("unexpected json: %q != %q", string(p), expectedJSON)
+	}
+
+	errs.Clear()
+	errs.Push(ErrorCodeUnknown)
+	expectedJSON = "{\"errors\":[{\"code\":\"UNKNOWN\",\"message\":\"unknown error\"}]}"
+	p, err = json.Marshal(errs)
+
+	if err != nil {
+		t.Fatalf("error marashaling errors: %v", err)
+	}
 
 	if string(p) != expectedJSON {
 		t.Fatalf("unexpected json: %q != %q", string(p), expectedJSON)
