@@ -36,6 +36,11 @@ func Pull(c Client, objectStore ObjectStore, name, tag string) error {
 		errChans[i] = make(chan error)
 	}
 
+	// To avoid leak goroutine we must notify
+	// pullLayer goroutines about a cancelation,
+	// otherwise they will lock forever.
+	cancelCh := make(chan struct{})
+
 	// Iterate over each layer in the manifest, simultaneously pulling no more
 	// than simultaneousLayerPullWindow layers at a time. If an error is
 	// received from a layer pull, we abort the push.
@@ -45,13 +50,17 @@ func Pull(c Client, objectStore ObjectStore, name, tag string) error {
 			err := <-errChans[dependentLayer]
 			if err != nil {
 				log.WithField("error", err).Warn("Pull aborted")
+				close(cancelCh)
 				return err
 			}
 		}
 
 		if i < len(manifest.FSLayers) {
 			go func(i int) {
-				errChans[i] <- pullLayer(c, objectStore, name, manifest.FSLayers[i])
+				select {
+				case errChans[i] <- pullLayer(c, objectStore, name, manifest.FSLayers[i]):
+				case <-cancelCh: // no chance to recv until cancelCh's closed
+				}
 			}(i)
 		}
 	}
