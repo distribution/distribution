@@ -17,7 +17,7 @@ notify:
 
     slack:
         team: docker
-        channel: "#distribution"
+        channel: "#dt"
         username: mom
         token: {{SLACK_TOKEN}}
         on_success: true
