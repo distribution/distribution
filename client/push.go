@@ -36,6 +36,8 @@ func Push(c Client, objectStore ObjectStore, name, tag string) error {
 		errChans[i] = make(chan error)
 	}
 
+	cancelCh := make(chan struct{})
+
 	// Iterate over each layer in the manifest, simultaneously pushing no more
 	// than simultaneousLayerPushWindow layers at a time. If an error is
 	// received from a layer push, we abort the push.
@@ -45,13 +47,17 @@ func Push(c Client, objectStore ObjectStore, name, tag string) error {
 			err := <-errChans[dependentLayer]
 			if err != nil {
 				log.WithField("error", err).Warn("Push aborted")
+				close(cancelCh)
 				return err
 			}
 		}
 
 		if i < len(manifest.FSLayers) {
 			go func(i int) {
-				errChans[i] <- pushLayer(c, objectStore, name, manifest.FSLayers[i])
+				select {
+				case errChans[i] <- pushLayer(c, objectStore, name, manifest.FSLayers[i]):
+				case <-cancelCh: // recv broadcast notification about cancelation
+				}
 			}(i)
 		}
 	}
