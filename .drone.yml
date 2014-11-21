@@ -1,14 +1,6 @@
-image: bradrydzewski/go:1.3
-
-env:
-  - GOROOT=/usr/local/go
-  - PATH=$PATH:$GOROOT/bin:$GOPATH/bin
+image: dmp42/go:stable
 
 script:
-  - go get github.com/axw/gocov/gocov
-  - go get github.com/mattn/goveralls
-  - go get github.com/golang/lint/golint
-
   - go get -t ./...
 
   - FAIL=$(find ./ -iname "*.go" -exec gofmt -s -l {} \;) && echo "$FAIL" && test -z "$FAIL"
