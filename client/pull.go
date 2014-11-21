@@ -36,7 +36,7 @@ func Pull(c Client, objectStore ObjectStore, name, tag string) error {
 		errChans[i] = make(chan error)
 	}
 
-	// To avoid leak goroutine we must notify
+	// To avoid leak of goroutines we must notify
 	// pullLayer goroutines about a cancelation,
 	// otherwise they will lock forever.
 	cancelCh := make(chan struct{})
