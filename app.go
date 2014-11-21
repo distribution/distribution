@@ -3,7 +3,11 @@ package registry
 import (
 	"net/http"
 
+	"github.com/docker/docker-registry/storagedriver"
+	"github.com/docker/docker-registry/storagedriver/factory"
+
 	"github.com/docker/docker-registry/configuration"
+	"github.com/docker/docker-registry/storage"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
@@ -16,6 +20,12 @@ type App struct {
 	Config configuration.Configuration
 
 	router *mux.Router
+
+	// driver maintains the app global storage driver instance.
+	driver storagedriver.StorageDriver
+
+	// services contains the main services instance for the application.
+	services *storage.Services
 }
 
 // NewApp takes a configuration and returns a configured app, ready to serve
@@ -29,10 +39,22 @@ func NewApp(configuration configuration.Configuration) *App {
 
 	// Register the handler dispatchers.
 	app.register(routeNameImageManifest, imageManifestDispatcher)
-	app.register(routeNameBlob, layerDispatcher)
 	app.register(routeNameTags, tagsDispatcher)
+	app.register(routeNameBlob, layerDispatcher)
 	app.register(routeNameBlobUpload, layerUploadDispatcher)
 	app.register(routeNameBlobUploadResume, layerUploadDispatcher)
+
+	driver, err := factory.Create(configuration.Storage.Type(), configuration.Storage.Parameters())
+
+	if err != nil {
+		// TODO(stevvooe): Move the creation of a service into a protected
+		// method, where this is created lazily. Its status can be queried via
+		// a health check.
+		panic(err)
+	}
+
+	app.driver = driver
+	app.services = storage.NewServices(app.driver)
 
 	return app
 }
@@ -64,6 +86,22 @@ type dispatchFunc func(ctx *Context, r *http.Request) http.Handler
 // TODO(stevvooe): dispatchers should probably have some validation error
 // chain with proper error reporting.
 
+// singleStatusResponseWriter only allows the first status to be written to be
+// the valid request status. The current use case of this class should be
+// factored out.
+type singleStatusResponseWriter struct {
+	http.ResponseWriter
+	status int
+}
+
+func (ssrw *singleStatusResponseWriter) WriteHeader(status int) {
+	if ssrw.status != 0 {
+		return
+	}
+	ssrw.status = status
+	ssrw.ResponseWriter.WriteHeader(status)
+}
+
 // dispatcher returns a handler that constructs a request specific context and
 // handler, using the dispatch factory function.
 func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
@@ -80,14 +118,17 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 		context.log = log.WithField("name", context.Name)
 		handler := dispatch(context, r)
 
+		ssrw := &singleStatusResponseWriter{ResponseWriter: w}
 		context.log.Infoln("handler", resolveHandlerName(r.Method, handler))
-		handler.ServeHTTP(w, r)
+		handler.ServeHTTP(ssrw, r)
 
 		// Automated error response handling here. Handlers may return their
 		// own errors if they need different behavior (such as range errors
 		// for layer upload).
-		if len(context.Errors.Errors) > 0 {
-			w.WriteHeader(http.StatusBadRequest)
+		if context.Errors.Len() > 0 {
+			if ssrw.status == 0 {
+				w.WriteHeader(http.StatusBadRequest)
+			}
 			serveJSON(w, context.Errors)
 		}
 	})
