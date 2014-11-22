@@ -1,11 +1,8 @@
 package registry
 
 import (
-	"encoding/json"
-	"fmt"
 	"net/http"
 
-	"github.com/docker/docker-registry/storage"
 	"github.com/gorilla/handlers"
 )
 

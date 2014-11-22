@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/docker/docker-registry/digest"
+	"github.com/docker/docker-registry/storage"
 )
 
 // ErrorCode represents the error type. The errors are serialized via strings
