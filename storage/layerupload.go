@@ -429,6 +429,10 @@ func (llufs *localFSLayerUploadStore) New(name string) (LayerUploadState, error)
 		return lus, err
 	}
 
+	if err := llufs.SaveState(lus); err != nil {
+		return lus, err
+	}
+
 	return lus, nil
 }
 

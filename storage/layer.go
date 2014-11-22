@@ -87,4 +87,8 @@ var (
 
 	// ErrLayerInvalidLength returned when length check fails.
 	ErrLayerInvalidLength = fmt.Errorf("invalid layer length")
+
+	// ErrLayerClosed returned when an operation is attempted on a closed
+	// Layer or LayerUpload.
+	ErrLayerClosed = fmt.Errorf("layer closed")
 )

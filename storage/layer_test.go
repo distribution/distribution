@@ -241,31 +241,6 @@ func TestSimpleLayerRead(t *testing.T) {
 	}
 }
 
-func TestLayerReaderSeek(t *testing.T) {
-	// TODO(stevvooe): Ensure that all relative seeks work as advertised.
-	// Readers must close and re-open on command. This is important to support
-	// resumable and concurrent downloads via HTTP range requests.
-}
-
-// TestLayerReadErrors covers the various error return type for different
-// conditions that can arise when reading a layer.
-func TestLayerReadErrors(t *testing.T) {
-	// TODO(stevvooe): We need to cover error return types, driven by the
-	// errors returned via the HTTP API. For now, here is a incomplete list:
-	//
-	// 	1. Layer Not Found: returned when layer is not found or access is
-	//        denied.
-	//	2. Layer Unavailable: returned when link references are unresolved,
-	//     but layer is known to the registry.
-	//  3. Layer Invalid: This may more split into more errors, but should be
-	//     returned when name or tarsum does not reference a valid error. We
-	//     may also need something to communication layer verification errors
-	//     for the inline tarsum check.
-	//	4. Timeout: timeouts to backend. Need to better understand these
-	//     failure cases and how the storage driver propagates these errors
-	//     up the stack.
-}
-
 // writeRandomLayer creates a random layer under name and tarSum using driver
 // and pathMapper. An io.ReadSeeker with the data is returned, along with the
 // sha256 hex digest.
