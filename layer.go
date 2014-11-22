@@ -52,7 +52,7 @@ func (lh *layerHandler) GetLayer(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNotFound)
 			lh.Errors.Push(ErrorCodeUnknownLayer,
 				map[string]interface{}{
-					"unknown": FSLayer{BlobSum: lh.Digest},
+					"unknown": storage.FSLayer{BlobSum: lh.Digest},
 				})
 			return
 		default:

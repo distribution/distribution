@@ -2,75 +2,12 @@ package registry
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
-	"github.com/docker/docker-registry/digest"
+	"github.com/docker/docker-registry/storage"
 	"github.com/gorilla/handlers"
 )
-
-// ImageManifest defines the structure of an image manifest
-type ImageManifest struct {
-	// Name is the name of the image's repository
-	Name string `json:"name"`
-
-	// Tag is the tag of the image specified by this manifest
-	Tag string `json:"tag"`
-
-	// Architecture is the host architecture on which this image is intended to
-	// run
-	Architecture string `json:"architecture"`
-
-	// FSLayers is a list of filesystem layer blobSums contained in this image
-	FSLayers []FSLayer `json:"fsLayers"`
-
-	// History is a list of unstructured historical data for v1 compatibility
-	History []ManifestHistory `json:"history"`
-
-	// SchemaVersion is the image manifest schema that this image follows
-	SchemaVersion int `json:"schemaVersion"`
-
-	// Raw is the byte representation of the ImageManifest, used for signature
-	// verification
-	Raw []byte `json:"-"`
-}
-
-// imageManifest is used to avoid recursion in unmarshaling
-type imageManifest ImageManifest
-
-// UnmarshalJSON populates a new ImageManifest struct from JSON data.
-func (m *ImageManifest) UnmarshalJSON(b []byte) error {
-	var manifest imageManifest
-	err := json.Unmarshal(b, &manifest)
-	if err != nil {
-		return err
-	}
-
-	*m = ImageManifest(manifest)
-	m.Raw = b
-	return nil
-}
-
-// FSLayer is a container struct for BlobSums defined in an image manifest
-type FSLayer struct {
-	// BlobSum is the tarsum of the referenced filesystem image layer
-	BlobSum digest.Digest `json:"blobSum"`
-}
-
-// ManifestHistory stores unstructured v1 compatibility information
-type ManifestHistory struct {
-	// V1Compatibility is the raw v1 compatibility information
-	V1Compatibility string `json:"v1Compatibility"`
-}
-
-// Checksum is a container struct for an image checksum
-type Checksum struct {
-	// HashAlgorithm is the algorithm used to compute the checksum
-	// Supported values: md5, sha1, sha256, sha512
-	HashAlgorithm string
-
-	// Sum is the actual checksum value for the given HashAlgorithm
-	Sum string
-}
 
 // imageManifestDispatcher takes the request context and builds the
 // appropriate handler for handling image manifest requests.

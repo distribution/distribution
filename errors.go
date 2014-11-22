@@ -212,7 +212,7 @@ type DetailUnknownLayer struct {
 
 	// Unknown should contain the contents of a layer descriptor, which is a
 	// single FSLayer currently.
-	Unknown FSLayer `json:"unknown"`
+	Unknown storage.FSLayer `json:"unknown"`
 }
 
 // RepositoryNotFoundError is returned when making an operation against a

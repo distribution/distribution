@@ -8,8 +8,8 @@ import (
 	"io/ioutil"
 	"sync"
 
-	"github.com/docker/docker-registry"
 	"github.com/docker/docker-registry/digest"
+	"github.com/docker/docker-registry/storage"
 )
 
 var (
@@ -28,11 +28,11 @@ var (
 type ObjectStore interface {
 	// Manifest retrieves the image manifest stored at the given repository name
 	// and tag
-	Manifest(name, tag string) (*registry.ImageManifest, error)
+	Manifest(name, tag string) (*storage.SignedManifest, error)
 
 	// WriteManifest stores an image manifest at the given repository name and
 	// tag
-	WriteManifest(name, tag string, manifest *registry.ImageManifest) error
+	WriteManifest(name, tag string, manifest *storage.SignedManifest) error
 
 	// Layer returns a handle to a layer for reading and writing
 	Layer(dgst digest.Digest) (Layer, error)
@@ -56,11 +56,11 @@ type Layer interface {
 // memoryObjectStore is an in-memory implementation of the ObjectStore interface
 type memoryObjectStore struct {
 	mutex           *sync.Mutex
-	manifestStorage map[string]*registry.ImageManifest
+	manifestStorage map[string]*storage.SignedManifest
 	layerStorage    map[digest.Digest]Layer
 }
 
-func (objStore *memoryObjectStore) Manifest(name, tag string) (*registry.ImageManifest, error) {
+func (objStore *memoryObjectStore) Manifest(name, tag string) (*storage.SignedManifest, error) {
 	objStore.mutex.Lock()
 	defer objStore.mutex.Unlock()
 
@@ -71,7 +71,7 @@ func (objStore *memoryObjectStore) Manifest(name, tag string) (*registry.ImageMa
 	return manifest, nil
 }
 
-func (objStore *memoryObjectStore) WriteManifest(name, tag string, manifest *registry.ImageManifest) error {
+func (objStore *memoryObjectStore) WriteManifest(name, tag string, manifest *storage.SignedManifest) error {
 	objStore.mutex.Lock()
 	defer objStore.mutex.Unlock()
 

@@ -12,17 +12,18 @@ import (
 
 	"github.com/docker/docker-registry"
 	"github.com/docker/docker-registry/digest"
+	"github.com/docker/docker-registry/storage"
 )
 
 // Client implements the client interface to the registry http api
 type Client interface {
 	// GetImageManifest returns an image manifest for the image at the given
 	// name, tag pair.
-	GetImageManifest(name, tag string) (*registry.ImageManifest, error)
+	GetImageManifest(name, tag string) (*storage.SignedManifest, error)
 
 	// PutImageManifest uploads an image manifest for the image at the given
 	// name, tag pair.
-	PutImageManifest(name, tag string, imageManifest *registry.ImageManifest) error
+	PutImageManifest(name, tag string, imageManifest *storage.SignedManifest) error
 
 	// DeleteImage removes the image at the given name, tag pair.
 	DeleteImage(name, tag string) error
@@ -81,7 +82,7 @@ type clientImpl struct {
 
 // TODO(bbland): use consistent route generation between server and client
 
-func (r *clientImpl) GetImageManifest(name, tag string) (*registry.ImageManifest, error) {
+func (r *clientImpl) GetImageManifest(name, tag string) (*storage.SignedManifest, error) {
 	response, err := http.Get(r.imageManifestURL(name, tag))
 	if err != nil {
 		return nil, err
@@ -108,7 +109,7 @@ func (r *clientImpl) GetImageManifest(name, tag string) (*registry.ImageManifest
 
 	decoder := json.NewDecoder(response.Body)
 
-	manifest := new(registry.ImageManifest)
+	manifest := new(storage.SignedManifest)
 	err = decoder.Decode(manifest)
 	if err != nil {
 		return nil, err
@@ -116,7 +117,7 @@ func (r *clientImpl) GetImageManifest(name, tag string) (*registry.ImageManifest
 	return manifest, nil
 }
 
-func (r *clientImpl) PutImageManifest(name, tag string, manifest *registry.ImageManifest) error {
+func (r *clientImpl) PutImageManifest(name, tag string, manifest *storage.SignedManifest) error {
 	manifestBytes, err := json.Marshal(manifest)
 	if err != nil {
 		return err
