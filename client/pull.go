@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/docker/docker-registry"
+	"github.com/docker/docker-registry/storage"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -77,7 +77,7 @@ func Pull(c Client, objectStore ObjectStore, name, tag string) error {
 	return nil
 }
 
-func pullLayer(c Client, objectStore ObjectStore, name string, fsLayer registry.FSLayer) error {
+func pullLayer(c Client, objectStore ObjectStore, name string, fsLayer storage.FSLayer) error {
 	log.WithField("layer", fsLayer).Info("Pulling layer")
 
 	layer, err := objectStore.Layer(fsLayer.BlobSum)

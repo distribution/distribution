@@ -3,7 +3,7 @@ package client
 import (
 	"errors"
 
-	"github.com/docker/docker-registry"
+	"github.com/docker/docker-registry/storage"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -13,7 +13,7 @@ import (
 // push window has been successfully pushed.
 const simultaneousLayerPushWindow = 4
 
-type pushFunction func(fsLayer registry.FSLayer) error
+type pushFunction func(fsLayer storage.FSLayer) error
 
 // Push implements a client push workflow for the image defined by the given
 // name and tag pair, using the given ObjectStore for local manifest and layer
@@ -72,7 +72,7 @@ func Push(c Client, objectStore ObjectStore, name, tag string) error {
 	return nil
 }
 
-func pushLayer(c Client, objectStore ObjectStore, name string, fsLayer registry.FSLayer) error {
+func pushLayer(c Client, objectStore ObjectStore, name string, fsLayer storage.FSLayer) error {
 	log.WithField("layer", fsLayer).Info("Pushing layer")
 
 	layer, err := objectStore.Layer(fsLayer.BlobSum)

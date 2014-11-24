@@ -17,6 +17,13 @@ func TestPathMapper(t *testing.T) {
 		err      error
 	}{
 		{
+			spec: manifestPathSpec{
+				name: "foo/bar",
+				tag:  "thetag",
+			},
+			expected: "/pathmapper-test/repositories/foo/bar/manifests/thetag",
+		},
+		{
 			spec: layerLinkPathSpec{
 				name:   "foo/bar",
 				digest: digest.Digest("tarsum.v1+test:abcdef"),

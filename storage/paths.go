@@ -24,7 +24,7 @@ const storagePathVersion = "v2"
 //		<root>/v2
 //			-> repositories/
 // 				-><name>/
-// 					-> images/
+// 					-> manifests/
 // 						<manifests by tag name>
 // 					-> layers/
 // 						-> tarsum/
@@ -48,6 +48,7 @@ const storagePathVersion = "v2"
 //
 // We cover the path formats implemented by this path mapper below.
 //
+// 	manifestPathSpec: <root>/v2/repositories/<name>/manifests/<tag>
 // 	layerLinkPathSpec: <root>/v2/repositories/<name>/layers/tarsum/<tarsum version>/<tarsum hash alg>/<tarsum hash>
 //	layerIndexLinkPathSpec: <root>/v2/layerindex/tarsum/<tarsum version>/<tarsum hash alg>/<tarsum hash>
 // 	blobPathSpec: <root>/v2/blob/sha256/<first two hex bytes of digest>/<hex digest>
@@ -84,7 +85,13 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 	// to an intermediate path object, than can be consumed and mapped by the
 	// other version.
 
+	rootPrefix := []string{pm.root, pm.version}
+	repoPrefix := append(rootPrefix, "repositories")
+
 	switch v := spec.(type) {
+	case manifestPathSpec:
+		// TODO(sday): May need to store manifest by architecture.
+		return path.Join(append(repoPrefix, v.name, "manifests", v.tag)...), nil
 	case layerLinkPathSpec:
 		if !strings.HasPrefix(v.digest.Algorithm(), "tarsum") {
 			// Only tarsum is supported, for now
@@ -101,9 +108,8 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 			return "", err
 		}
 
-		p := path.Join(append([]string{pm.root, pm.version, "repositories", v.name, "layers"}, tarSumInfoPathComponents(tsi)...)...)
-
-		return p, nil
+		return path.Join(append(append(repoPrefix, v.name, "layers"),
+			tarSumInfoPathComponents(tsi)...)...), nil
 	case layerIndexLinkPathSpec:
 		if !strings.HasPrefix(v.digest.Algorithm(), "tarsum") {
 			// Only tarsum is supported, for now
@@ -120,9 +126,8 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 			return "", err
 		}
 
-		p := path.Join(append([]string{pm.root, pm.version, "layerindex"}, tarSumInfoPathComponents(tsi)...)...)
-
-		return p, nil
+		return path.Join(append(append(rootPrefix, "layerindex"),
+			tarSumInfoPathComponents(tsi)...)...), nil
 	case blobPathSpec:
 		p := path.Join([]string{pm.root, pm.version, "blob", v.alg, v.digest[:2], v.digest}...)
 		return p, nil
@@ -138,6 +143,15 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 type pathSpec interface {
 	pathSpec()
 }
+
+// manifestPathSpec describes the path elements used to build a manifest path.
+// The contents should be a signed manifest json file.
+type manifestPathSpec struct {
+	name string
+	tag  string
+}
+
+func (manifestPathSpec) pathSpec() {}
 
 // layerLink specifies a path for a layer link, which is a file with a blob
 // id. The layer link will contain a content addressable blob id reference

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/docker/docker-registry/digest"
+	"github.com/docker/docker-registry/storage"
 )
 
 // ErrorCode represents the error type. The errors are serialized via strings
@@ -212,7 +213,7 @@ type DetailUnknownLayer struct {
 
 	// Unknown should contain the contents of a layer descriptor, which is a
 	// single FSLayer currently.
-	Unknown FSLayer `json:"unknown"`
+	Unknown storage.FSLayer `json:"unknown"`
 }
 
 // RepositoryNotFoundError is returned when making an operation against a

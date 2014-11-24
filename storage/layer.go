@@ -8,23 +8,6 @@ import (
 	"github.com/docker/docker-registry/digest"
 )
 
-// LayerService provides operations on layer files in a backend storage.
-type LayerService interface {
-	// Exists returns true if the layer exists.
-	Exists(name string, digest digest.Digest) (bool, error)
-
-	// Fetch the layer identifed by TarSum.
-	Fetch(name string, digest digest.Digest) (Layer, error)
-
-	// Upload begins a layer upload to repository identified by name,
-	// returning a handle.
-	Upload(name string) (LayerUpload, error)
-
-	// Resume continues an in progress layer upload, returning the current
-	// state of the upload.
-	Resume(uuid string) (LayerUpload, error)
-}
-
 // Layer provides a readable and seekable layer object. Typically,
 // implementations are *not* goroutine safe.
 type Layer interface {
