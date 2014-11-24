@@ -89,7 +89,7 @@ func pullLayer(c Client, objectStore ObjectStore, name string, fsLayer registry.
 		return err
 	}
 
-	writer, err := layer.Writer()
+	layerWriter, err := layer.Writer()
 	if err == ErrLayerAlreadyExists {
 		log.WithField("layer", fsLayer).Info("Layer already exists")
 		return nil
@@ -106,9 +106,17 @@ func pullLayer(c Client, objectStore ObjectStore, name string, fsLayer registry.
 		}).Warn("Unable to write local layer")
 		return err
 	}
-	defer writer.Close()
+	defer layerWriter.Close()
 
-	layerReader, length, err := c.GetBlob(name, fsLayer.BlobSum, 0)
+	if layerWriter.CurrentSize() > 0 {
+		log.WithFields(log.Fields{
+			"layer":       fsLayer,
+			"currentSize": layerWriter.CurrentSize(),
+			"size":        layerWriter.Size(),
+		}).Info("Layer partially downloaded, resuming")
+	}
+
+	layerReader, length, err := c.GetBlob(name, fsLayer.BlobSum, layerWriter.CurrentSize())
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -118,7 +126,9 @@ func pullLayer(c Client, objectStore ObjectStore, name string, fsLayer registry.
 	}
 	defer layerReader.Close()
 
-	copied, err := io.Copy(writer, layerReader)
+	layerWriter.SetSize(layerWriter.CurrentSize() + length)
+
+	_, err = io.Copy(layerWriter, layerReader)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"error": err,
@@ -126,15 +136,15 @@ func pullLayer(c Client, objectStore ObjectStore, name string, fsLayer registry.
 		}).Warn("Unable to download layer")
 		return err
 	}
-	if copied != int64(length) {
+	if layerWriter.CurrentSize() != layerWriter.Size() {
 		log.WithFields(log.Fields{
-			"expected": length,
-			"written":  copied,
-			"layer":    fsLayer,
-		}).Warn("Wrote incorrect number of bytes for layer")
+			"size":        layerWriter.Size(),
+			"currentSize": layerWriter.CurrentSize(),
+			"layer":       fsLayer,
+		}).Warn("Layer invalid size")
 		return fmt.Errorf(
 			"Wrote incorrect number of bytes for layer %v. Expected %d, Wrote %d",
-			fsLayer, length, copied,
+			fsLayer, layerWriter.Size(), layerWriter.CurrentSize(),
 		)
 	}
 	return nil
