@@ -1,14 +1,28 @@
 image: dmp42/go:stable
 
 script:
+  # To be spoofed back into the test image
+  - go get github.com/modocache/gover
+
   - go get -t ./...
 
-  - FAIL=$(find ./ -iname "*.go" -exec gofmt -s -l {} \;) && echo "$FAIL" && test -z "$FAIL"
+  # Go fmt
+  - test -z "$(gofmt -s -l -w .     | tee /dev/stderr)"
+  # Go lint
+  - test -z "$(golint ./...          | tee /dev/stderr)"
+  # Go vet
   - go vet ./...
-  - FAIL=$(golint ./...) && echo "$FAIL" && test -z "$FAIL"
-  - go test -v ./...
-  - goveralls -v -service drone.io -repotoken {{COVERALLS_TOKEN}}
-  # - go build --tags SOMETAG
+  # Go test
+  - go test -v -race -cover ./...
+  # Helper to concatenate reports
+  - gover
+  # Send to coverall
+  - goveralls -service drone.io -coverprofile=gover.coverprofile -repotoken {{COVERALLS_TOKEN}}
+
+  # Do we want these as well?
+  # - go get code.google.com/p/go.tools/cmd/goimports
+  # - test -z "$(goimports -l -w ./... | tee /dev/stderr)"
+  # http://labix.org/gocheck
 
 notify:
     email:
