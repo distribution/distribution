@@ -47,32 +47,9 @@ var (
 // ParseDigest parses s and returns the validated digest object. An error will
 // be returned if the format is invalid.
 func ParseDigest(s string) (Digest, error) {
-	// Common case will be tarsum
-	_, err := common.ParseTarSum(s)
-	if err == nil {
-		return Digest(s), nil
-	}
+	d := Digest(s)
 
-	// Continue on for general parser
-
-	i := strings.Index(s, ":")
-	if i < 0 {
-		return "", ErrDigestInvalidFormat
-	}
-
-	// case: "sha256:" with no hex.
-	if i+1 == len(s) {
-		return "", ErrDigestInvalidFormat
-	}
-
-	switch s[:i] {
-	case "md5", "sha1", "sha256":
-		break
-	default:
-		return "", ErrDigestUnsupported
-	}
-
-	return Digest(s), nil
+	return d, d.Validate()
 }
 
 // FromReader returns the most valid digest for the underlying content.
@@ -117,6 +94,38 @@ func FromReader(rd io.Reader) (Digest, error) {
 // FromBytes digests the input and returns a Digest.
 func FromBytes(p []byte) (Digest, error) {
 	return FromReader(bytes.NewReader(p))
+}
+
+// Validate checks that the contents of d is a valid digest, returning an
+// error if not.
+func (d Digest) Validate() error {
+	s := string(d)
+	// Common case will be tarsum
+	_, err := common.ParseTarSum(s)
+	if err == nil {
+		return nil
+	}
+
+	// Continue on for general parser
+
+	i := strings.Index(s, ":")
+	if i < 0 {
+		return ErrDigestInvalidFormat
+	}
+
+	// case: "sha256:" with no hex.
+	if i+1 == len(s) {
+		return ErrDigestInvalidFormat
+	}
+
+	switch s[:i] {
+	case "md5", "sha1", "sha256":
+		break
+	default:
+		return ErrDigestUnsupported
+	}
+
+	return nil
 }
 
 // Algorithm returns the algorithm portion of the digest. This will panic if

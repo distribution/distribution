@@ -6,8 +6,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"sort"
-	"strings"
 
 	"code.google.com/p/go-uuid/uuid"
 
@@ -285,10 +283,9 @@ func (luc *layerUploadController) validateLayer(fp layerFile, size int64, dgst d
 
 // writeLayer actually writes the the layer file into its final destination.
 // The layer should be validated before commencing the write.
-func (luc *layerUploadController) writeLayer(fp layerFile, size int64, digest digest.Digest) error {
+func (luc *layerUploadController) writeLayer(fp layerFile, size int64, dgst digest.Digest) error {
 	blobPath, err := luc.layerStore.pathMapper.path(blobPathSpec{
-		alg:    digest.Algorithm(),
-		digest: digest.Hex(),
+		digest: dgst,
 	})
 
 	if err != nil {
@@ -324,8 +321,8 @@ func (luc *layerUploadController) writeLayer(fp layerFile, size int64, digest di
 	return nil
 }
 
-// linkLayer links a valid, written layer blog into the registry, first
-// linking the repository namespace, then adding it to the layerindex.
+// linkLayer links a valid, written layer blob into the registry under the
+// named repository for the upload controller.
 func (luc *layerUploadController) linkLayer(digest digest.Digest) error {
 	layerLinkPath, err := luc.layerStore.pathMapper.path(layerLinkPathSpec{
 		name:   luc.Name(),
@@ -336,56 +333,7 @@ func (luc *layerUploadController) linkLayer(digest digest.Digest) error {
 		return err
 	}
 
-	if err := luc.layerStore.driver.PutContent(layerLinkPath, []byte(digest)); err != nil {
-		return nil
-	}
-
-	// Link the layer into the name index.
-	layerIndexLinkPath, err := luc.layerStore.pathMapper.path(layerIndexLinkPathSpec{
-		digest: digest,
-	})
-
-	if err != nil {
-		return err
-	}
-
-	// Read back the name index file. If it exists, create it. If not, add the
-	// new repo to the name list.
-
-	// TODO(stevvooe): This is very racy, as well. Reconsider using list for
-	// this operation?
-	layerIndexLinkContent, err := luc.layerStore.driver.GetContent(layerIndexLinkPath)
-	if err != nil {
-		switch err := err.(type) {
-		case storagedriver.PathNotFoundError:
-			layerIndexLinkContent = []byte(luc.Name())
-		default:
-			return err
-		}
-	}
-	layerIndexLinkContent = luc.maybeAddNameToLayerIndexLinkContent(layerIndexLinkContent)
-
-	// Write the index content back to the index.
-	return luc.layerStore.driver.PutContent(layerIndexLinkPath, layerIndexLinkContent)
-}
-
-func (luc *layerUploadController) maybeAddNameToLayerIndexLinkContent(content []byte) []byte {
-	names := strings.Split(string(content), "\n")
-	var found bool
-	// Search the names and find ours
-	for _, name := range names {
-		if name == luc.Name() {
-			found = true
-		}
-	}
-
-	if !found {
-		names = append(names, luc.Name())
-	}
-
-	sort.Strings(names)
-
-	return []byte(strings.Join(names, "\n"))
+	return luc.layerStore.driver.PutContent(layerLinkPath, []byte(digest))
 }
 
 // localFSLayerUploadStore implements a local layerUploadStore. There are some

@@ -304,17 +304,12 @@ func writeTestLayer(driver storagedriver.StorageDriver, pathMapper *pathMapper, 
 	blobDigestSHA := digest.NewDigest("sha256", h)
 
 	blobPath, err := pathMapper.path(blobPathSpec{
-		alg:    blobDigestSHA.Algorithm(),
-		digest: blobDigestSHA.Hex(),
+		digest: dgst,
 	})
 
 	if err := driver.PutContent(blobPath, p); err != nil {
 		return "", err
 	}
-
-	layerIndexLinkPath, err := pathMapper.path(layerIndexLinkPathSpec{
-		digest: dgst,
-	})
 
 	if err != nil {
 		return "", err
@@ -329,11 +324,7 @@ func writeTestLayer(driver storagedriver.StorageDriver, pathMapper *pathMapper, 
 		return "", err
 	}
 
-	if err := driver.PutContent(layerLinkPath, []byte(blobDigestSHA.String())); err != nil {
-		return "", nil
-	}
-
-	if err = driver.PutContent(layerIndexLinkPath, []byte(name)); err != nil {
+	if err := driver.PutContent(layerLinkPath, []byte(dgst)); err != nil {
 		return "", nil
 	}
 
