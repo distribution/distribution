@@ -258,21 +258,23 @@ func TestPullResume(t *testing.T) {
 			contents: []byte("some other contents"),
 		},
 	}
-	layers := make([]registry.FSLayer, len(testBlobs))
-	history := make([]registry.ManifestHistory, len(testBlobs))
+	layers := make([]storage.FSLayer, len(testBlobs))
+	history := make([]storage.ManifestHistory, len(testBlobs))
 
 	for i, layer := range testBlobs {
-		layers[i] = registry.FSLayer{BlobSum: layer.digest}
-		history[i] = registry.ManifestHistory{V1Compatibility: layer.digest.String()}
+		layers[i] = storage.FSLayer{BlobSum: layer.digest}
+		history[i] = storage.ManifestHistory{V1Compatibility: layer.digest.String()}
 	}
 
-	manifest := &registry.ImageManifest{
-		Name:          name,
-		Tag:           tag,
-		Architecture:  "x86",
-		FSLayers:      layers,
-		History:       history,
-		SchemaVersion: 1,
+	manifest := &storage.Manifest{
+		Name:         name,
+		Tag:          tag,
+		Architecture: "x86",
+		FSLayers:     layers,
+		History:      history,
+		Versioned: storage.Versioned{
+			SchemaVersion: 1,
+		},
 	}
 	manifestBytes, err := json.Marshal(manifest)
 
@@ -323,7 +325,7 @@ func TestPullResume(t *testing.T) {
 	client := New(server.URL)
 	objectStore := &memoryObjectStore{
 		mutex:           new(sync.Mutex),
-		manifestStorage: make(map[string]*registry.ImageManifest),
+		manifestStorage: make(map[string]*storage.SignedManifest),
 		layerStorage:    make(map[digest.Digest]Layer),
 	}
 
