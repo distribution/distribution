@@ -11,11 +11,6 @@ import (
 
 const storagePathVersion = "v2"
 
-// TODO(sday): This needs to be changed: all layers for an image will be
-// linked under the repository. Lookup from tarsum to name is not necessary,
-// so we can remove the layer index. For this to properly work, image push
-// must link the images layers under the repo.
-
 // pathMapper maps paths based on "object names" and their ids. The "object
 // names" mapped by pathMapper are internal to the storage system.
 //
@@ -27,31 +22,21 @@ const storagePathVersion = "v2"
 // 					-> manifests/
 // 						<manifests by tag name>
 // 					-> layers/
-// 						-> tarsum/
-// 							-> <tarsum version>/
-// 								-> <tarsum hash alg>/
-// 									<layer links to blob store>
-//			-> layerindex/
-//				-> tarsum/
-// 					-> 	<tarsum version>/
-// 						-> <tarsum hash alg>/
-// 							<repo name links>
-//			-> blob/sha256
-//				<split directory sha256 content addressable storage>
+// 						<layer links to blob store>
+//			-> blob/<algorithm>
+//				<split directory content addressable storage>
 //
 // There are few important components to this path layout. First, we have the
 // repository store identified by name. This contains the image manifests and
 // a layer store with links to CAS blob ids. Outside of the named repo area,
-// we have the layerindex, which provides lookup from tarsum id to repo
-// storage. The blob store contains the actual layer data and any other data
-// that can be referenced by a CAS id.
+// we have the the blob store. It contains the actual layer data and any other
+// data that can be referenced by a CAS id.
 //
 // We cover the path formats implemented by this path mapper below.
 //
 // 	manifestPathSpec: <root>/v2/repositories/<name>/manifests/<tag>
 // 	layerLinkPathSpec: <root>/v2/repositories/<name>/layers/tarsum/<tarsum version>/<tarsum hash alg>/<tarsum hash>
-//	layerIndexLinkPathSpec: <root>/v2/layerindex/tarsum/<tarsum version>/<tarsum hash alg>/<tarsum hash>
-// 	blobPathSpec: <root>/v2/blob/sha256/<first two hex bytes of digest>/<hex digest>
+// 	blobPathSpec: <root>/v2/blob/<algorithm>/<first two hex bytes of digest>/<hex digest>
 //
 // For more information on the semantic meaning of each path and their
 // contents, please see the path spec documentation.
@@ -59,16 +44,6 @@ type pathMapper struct {
 	root    string
 	version string // should be a constant?
 }
-
-// TODO(stevvooe): This storage layout currently allows lookup to layer stores
-// by repo name via the tarsum. The layer index lookup could come with an
-// access control check against the link contents before proceeding. The main
-// problem with this comes with a collision in the tarsum algorithm: if party
-// A uploads a layer before party B, with an identical tarsum, party B may
-// never be able to get access to the tarsum stored under party A. We'll need
-// a way for party B to associate with a "unique" version of their image. This
-// may be as simple as forcing the client to re-upload images to which they
-// don't have access.
 
 // path returns the path identified by spec.
 func (pm *pathMapper) path(spec pathSpec) (string, error) {
@@ -93,44 +68,34 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 		// TODO(sday): May need to store manifest by architecture.
 		return path.Join(append(repoPrefix, v.name, "manifests", v.tag)...), nil
 	case layerLinkPathSpec:
-		if !strings.HasPrefix(v.digest.Algorithm(), "tarsum") {
-			// Only tarsum is supported, for now
-			return "", fmt.Errorf("unsupport content digest: %v", v.digest)
-		}
-
-		tsi, err := common.ParseTarSum(v.digest.String())
-
+		components, err := digestPathComoponents(v.digest)
 		if err != nil {
-			// TODO(sday): This will return an InvalidTarSumError from
-			// ParseTarSum but we may want to wrap this. This error should
-			// never be encountered in production, since the tarsum should be
-			// validated by this point.
 			return "", err
 		}
 
-		return path.Join(append(append(repoPrefix, v.name, "layers"),
-			tarSumInfoPathComponents(tsi)...)...), nil
-	case layerIndexLinkPathSpec:
-		if !strings.HasPrefix(v.digest.Algorithm(), "tarsum") {
+		// For now, only map tarsum paths.
+		if components[0] != "tarsum" {
 			// Only tarsum is supported, for now
-			return "", fmt.Errorf("unsupport content digest: %v", v.digest)
+			return "", fmt.Errorf("unsupported content digest: %v", v.digest)
 		}
 
-		tsi, err := common.ParseTarSum(v.digest.String())
+		layerLinkPathComponents := append(repoPrefix, v.name, "layers")
 
-		if err != nil {
-			// TODO(sday): This will return an InvalidTarSumError from
-			// ParseTarSum but we may want to wrap this. This error should
-			// never be encountered in production, since the tarsum should be
-			// validated by this point.
-			return "", err
-		}
-
-		return path.Join(append(append(rootPrefix, "layerindex"),
-			tarSumInfoPathComponents(tsi)...)...), nil
+		return path.Join(append(layerLinkPathComponents, components...)...), nil
 	case blobPathSpec:
-		p := path.Join([]string{pm.root, pm.version, "blob", v.alg, v.digest[:2], v.digest}...)
-		return p, nil
+		components, err := digestPathComoponents(v.digest)
+		if err != nil {
+			return "", err
+		}
+
+		// For now, only map tarsum paths.
+		if components[0] != "tarsum" {
+			// Only tarsum is supported, for now
+			return "", fmt.Errorf("unsupported content digest: %v", v.digest)
+		}
+
+		blobPathPrefix := append(rootPrefix, "blob")
+		return path.Join(append(blobPathPrefix, components...)...), nil
 	default:
 		// TODO(sday): This is an internal error. Ensure it doesn't escape (panic?).
 		return "", fmt.Errorf("unknown path spec: %#v", v)
@@ -172,40 +137,61 @@ type layerLinkPathSpec struct {
 
 func (layerLinkPathSpec) pathSpec() {}
 
-// layerIndexLinkPath provides a path to a registry global layer store,
-// indexed by tarsum. The target file will contain the repo name of the
-// "owner" of the layer. An example name link file follows:
-//
-// 	library/ubuntu
-// 	foo/bar
-//
-// The above file has the tarsum stored under the foo/bar repository and the
-// library/ubuntu repository. The storage layer should access the tarsum from
-// the first repository to which the client has access.
-type layerIndexLinkPathSpec struct {
-	digest digest.Digest
-}
-
-func (layerIndexLinkPathSpec) pathSpec() {}
+// blobAlgorithmReplacer does some very simple path sanitization for user
+// input. Mostly, this is to provide some heirachry for tarsum digests. Paths
+// should be "safe" before getting this far due to strict digest requirements
+// but we can add further path conversion here, if needed.
+var blobAlgorithmReplacer = strings.NewReplacer(
+	"+", "/",
+	".", "/",
+	";", "/",
+)
 
 // blobPath contains the path for the registry global blob store. For now,
 // this contains layer data, exclusively.
 type blobPathSpec struct {
-	// TODO(stevvooe): Port this to make better use of Digest type.
-	alg    string
-	digest string
+	digest digest.Digest
 }
 
 func (blobPathSpec) pathSpec() {}
 
-// tarSumInfoPath generates storage path components for the provided
-// TarSumInfo.
-func tarSumInfoPathComponents(tsi common.TarSumInfo) []string {
-	version := tsi.Version
-
-	if version == "" {
-		version = "v0"
+// digestPathComoponents provides a consistent path breakdown for a given
+// digest. For a generic digest, it will be as follows:
+//
+// 	<algorithm>/<first two bytes of digest>/<full digest>
+//
+// Most importantly, for tarsum, the layout looks like this:
+//
+// 	tarsum/<version>/<digest algorithm>/<first two bytes of digest>/<full digest>
+//
+// This is slightly specialized to store an extra version path for version 0
+// tarsums.
+func digestPathComoponents(dgst digest.Digest) ([]string, error) {
+	if err := dgst.Validate(); err != nil {
+		return nil, err
 	}
 
-	return []string{"tarsum", version, tsi.Algorithm, tsi.Digest}
+	algorithm := blobAlgorithmReplacer.Replace(dgst.Algorithm())
+	hex := dgst.Hex()
+	prefix := []string{algorithm}
+	suffix := []string{
+		hex[:2], // Breaks heirarchy up.
+		hex,
+	}
+
+	if tsi, err := common.ParseTarSum(dgst.String()); err == nil {
+		// We have a tarsum!
+		version := tsi.Version
+		if version == "" {
+			version = "v0"
+		}
+
+		prefix = []string{
+			"tarsum",
+			version,
+			tsi.Algorithm,
+		}
+	}
+
+	return append(prefix, suffix...), nil
 }

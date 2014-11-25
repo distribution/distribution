@@ -28,20 +28,25 @@ func TestPathMapper(t *testing.T) {
 				name:   "foo/bar",
 				digest: digest.Digest("tarsum.v1+test:abcdef"),
 			},
-			expected: "/pathmapper-test/repositories/foo/bar/layers/tarsum/v1/test/abcdef",
-		},
-		{
-			spec: layerIndexLinkPathSpec{
-				digest: digest.Digest("tarsum.v1+test:abcdef"),
-			},
-			expected: "/pathmapper-test/layerindex/tarsum/v1/test/abcdef",
+			expected: "/pathmapper-test/repositories/foo/bar/layers/tarsum/v1/test/ab/abcdef",
 		},
 		{
 			spec: blobPathSpec{
-				alg:    "sha512",
-				digest: "abcdefabcdefabcdef908909909",
+				digest: digest.Digest("tarsum.dev+sha512:abcdefabcdefabcdef908909909"),
 			},
-			expected: "/pathmapper-test/blob/sha512/ab/abcdefabcdefabcdef908909909",
+			expected: "/pathmapper-test/blob/tarsum/dev/sha512/ab/abcdefabcdefabcdef908909909",
+		},
+		{
+			spec: blobPathSpec{
+				digest: digest.Digest("tarsum.v1+sha256:abcdefabcdefabcdef908909909"),
+			},
+			expected: "/pathmapper-test/blob/tarsum/v1/sha256/ab/abcdefabcdefabcdef908909909",
+		},
+		{
+			spec: blobPathSpec{
+				digest: digest.Digest("tarsum+sha256:abcdefabcdefabcdef908909909"),
+			},
+			expected: "/pathmapper-test/blob/tarsum/v0/sha256/ab/abcdefabcdefabcdef908909909",
 		},
 	} {
 		p, err := pm.path(testcase.spec)

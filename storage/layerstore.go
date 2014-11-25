@@ -1,11 +1,8 @@
 package storage
 
 import (
-	"fmt"
-	"strings"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker-registry/digest"
 	"github.com/docker/docker-registry/storagedriver"
 )
@@ -33,31 +30,17 @@ func (ls *layerStore) Exists(name string, digest digest.Digest) (bool, error) {
 }
 
 func (ls *layerStore) Fetch(name string, digest digest.Digest) (Layer, error) {
-	repos, err := ls.resolveContainingRepositories(digest)
-
+	blobPath, err := ls.resolveBlobPath(name, digest)
 	if err != nil {
-		// TODO(stevvooe): Unknown tarsum error: need to wrap.
-		return nil, err
+		switch err := err.(type) {
+		case storagedriver.PathNotFoundError, *storagedriver.PathNotFoundError:
+			return nil, ErrLayerUnknown
+		default:
+			return nil, err
+		}
 	}
 
-	// TODO(stevvooe): Access control for layer pulls need to happen here: we
-	// have a list of repos that "own" the tarsum that need to be checked
-	// against the list of repos to which we have pull access. The argument
-	// repos needs to be filtered against that access list.
-
-	_, blobPath, err := ls.resolveBlobPath(repos, digest)
-
-	if err != nil {
-		// TODO(stevvooe): Map this error correctly, perhaps in the callee.
-		return nil, err
-	}
-
-	p, err := ls.pathMapper.path(blobPath)
-	if err != nil {
-		return nil, err
-	}
-
-	fr, err := newFileReader(ls.driver, p)
+	fr, err := newFileReader(ls.driver, blobPath)
 	if err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError, *storagedriver.PathNotFoundError:
@@ -117,69 +100,30 @@ func (ls *layerStore) newLayerUpload(lus LayerUploadState) LayerUpload {
 	}
 }
 
-func (ls *layerStore) resolveContainingRepositories(digest digest.Digest) ([]string, error) {
-	// Lookup the layer link in the index by tarsum id.
-	layerIndexLinkPath, err := ls.pathMapper.path(layerIndexLinkPathSpec{digest: digest})
+// resolveBlobId looks up the blob location in the repositories from a
+// layer/blob link file, returning blob path or an error on failure.
+func (ls *layerStore) resolveBlobPath(name string, dgst digest.Digest) (string, error) {
+	pathSpec := layerLinkPathSpec{name: name, digest: dgst}
+	layerLinkPath, err := ls.pathMapper.path(pathSpec)
+
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	layerIndexLinkContent, err := ls.driver.GetContent(layerIndexLinkPath)
+	layerLinkContent, err := ls.driver.GetContent(layerLinkPath)
 	if err != nil {
-		switch err := err.(type) {
-		case storagedriver.PathNotFoundError:
-			return nil, ErrLayerUnknown
-		default:
-			return nil, err
-		}
+		return "", err
 	}
 
-	results := strings.Split(string(layerIndexLinkContent), "\n")
+	// NOTE(stevvooe): The content of the layer link should match the digest.
+	// This layer of indirection is for name-based content protection.
 
-	// clean these up
-	for i, result := range results {
-		results[i] = strings.TrimSpace(result)
+	linked, err := digest.ParseDigest(string(layerLinkContent))
+	if err != nil {
+		return "", err
 	}
 
-	return results, nil
-}
+	bp := blobPathSpec{digest: linked}
 
-// resolveBlobId lookups up the tarSum in the various repos to find the blob
-// link, returning the repo name and blob path spec or an error on failure.
-func (ls *layerStore) resolveBlobPath(repos []string, digest digest.Digest) (name string, bps blobPathSpec, err error) {
-
-	for _, repo := range repos {
-		pathSpec := layerLinkPathSpec{name: repo, digest: digest}
-		layerLinkPath, err := ls.pathMapper.path(pathSpec)
-
-		if err != nil {
-			// TODO(stevvooe): This looks very lazy, may want to collect these
-			// errors and report them if we exit this for loop without
-			// resolving the blob id.
-			logrus.Debugf("error building linkLayerPath (%V): %v", pathSpec, err)
-			continue
-		}
-
-		layerLinkContent, err := ls.driver.GetContent(layerLinkPath)
-		if err != nil {
-			logrus.Debugf("error getting layerLink content (%V): %v", pathSpec, err)
-			continue
-		}
-
-		// Yay! We've resolved our blob id and we're ready to go.
-		parts := strings.SplitN(strings.TrimSpace(string(layerLinkContent)), ":", 2)
-
-		if len(parts) != 2 {
-			return "", bps, fmt.Errorf("invalid blob reference: %q", string(layerLinkContent))
-		}
-
-		name = repo
-		bp := blobPathSpec{alg: parts[0], digest: parts[1]}
-
-		return repo, bp, nil
-	}
-
-	// TODO(stevvooe): Map this error to repo not found, but it basically
-	// means we exited the loop above without finding a blob link.
-	return "", bps, fmt.Errorf("unable to resolve blog id for repos=%v and digest=%v", repos, digest)
+	return ls.pathMapper.path(bp)
 }
