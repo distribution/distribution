@@ -211,6 +211,13 @@ func (mlw *memoryLayerWriter) Write(p []byte) (int, error) {
 }
 
 func (mlw *memoryLayerWriter) Close() error {
+	mlw.ml.cond.L.Lock()
+	defer mlw.ml.cond.L.Unlock()
+
+	return mlw.close()
+}
+
+func (mlw *memoryLayerWriter) close() error {
 	mlw.ml.writing = false
 	mlw.ml.cond.Broadcast()
 	return nil
