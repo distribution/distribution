@@ -6,7 +6,7 @@ ENV GOROOT /usr/local/go
 ENV PATH $PATH:$GOROOT/bin:$GOPATH/bin
 
 ENV LANG C
-ENG LC_ALL C
+ENV LC_ALL C
 
 RUN apt-get update && apt-get install -y \
   wget ca-certificates git mercurial bzr \
