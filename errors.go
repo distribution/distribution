@@ -34,6 +34,14 @@ const (
 	// match the provided tag.
 	ErrorCodeInvalidTag
 
+	// ErrorCodeUnknownManifest returned when image manifest name and tag is
+	// unknown, accompanied by a 404 status.
+	ErrorCodeUnknownManifest
+
+	// ErrorCodeInvalidManifest returned when an image manifest is invalid,
+	// typically during a PUT operation.
+	ErrorCodeInvalidManifest
+
 	// ErrorCodeUnverifiedManifest is returned when the manifest fails signature
 	// validation.
 	ErrorCodeUnverifiedManifest
@@ -56,6 +64,8 @@ var errorCodeStrings = map[ErrorCode]string{
 	ErrorCodeInvalidLength:      "INVALID_LENGTH",
 	ErrorCodeInvalidName:        "INVALID_NAME",
 	ErrorCodeInvalidTag:         "INVALID_TAG",
+	ErrorCodeUnknownManifest:    "UNKNOWN_MANIFEST",
+	ErrorCodeInvalidManifest:    "INVALID_MANIFEST",
 	ErrorCodeUnverifiedManifest: "UNVERIFIED_MANIFEST",
 	ErrorCodeUnknownLayer:       "UNKNOWN_LAYER",
 	ErrorCodeUnknownLayerUpload: "UNKNOWN_LAYER_UPLOAD",
@@ -66,12 +76,14 @@ var errorCodesMessages = map[ErrorCode]string{
 	ErrorCodeUnknown:            "unknown error",
 	ErrorCodeInvalidDigest:      "provided digest did not match uploaded content",
 	ErrorCodeInvalidLength:      "provided length did not match content length",
-	ErrorCodeInvalidName:        "Manifest name did not match URI",
-	ErrorCodeInvalidTag:         "Manifest tag did not match URI",
-	ErrorCodeUnverifiedManifest: "Manifest failed signature validation",
-	ErrorCodeUnknownLayer:       "Referenced layer not available",
+	ErrorCodeInvalidName:        "manifest name did not match URI",
+	ErrorCodeInvalidTag:         "manifest tag did not match URI",
+	ErrorCodeUnknownManifest:    "manifest not known",
+	ErrorCodeInvalidManifest:    "manifest is invalid",
+	ErrorCodeUnverifiedManifest: "manifest failed signature validation",
+	ErrorCodeUnknownLayer:       "referenced layer not available",
 	ErrorCodeUnknownLayerUpload: "cannot resume unknown layer upload",
-	ErrorCodeUntrustedSignature: "Manifest signed by untrusted source",
+	ErrorCodeUntrustedSignature: "manifest signed by untrusted source",
 }
 
 var stringToErrorCode map[string]ErrorCode
@@ -178,7 +190,12 @@ func (errs *Errors) Push(code ErrorCode, details ...interface{}) {
 
 // PushErr pushes an error interface onto the error stack.
 func (errs *Errors) PushErr(err error) {
-	errs.Errors = append(errs.Errors, err)
+	switch err.(type) {
+	case Error:
+		errs.Errors = append(errs.Errors, err)
+	default:
+		errs.Errors = append(errs.Errors, Error{Message: err.Error()})
+	}
 }
 
 func (errs *Errors) Error() string {

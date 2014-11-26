@@ -108,8 +108,9 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		vars := mux.Vars(r)
 		context := &Context{
-			App:  app,
-			Name: vars["name"],
+			App:        app,
+			Name:       vars["name"],
+			urlBuilder: newURLBuilderFromRequest(r),
 		}
 
 		// Store vars for underlying handlers.

@@ -1,8 +1,13 @@
 package registry
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 
+	"github.com/docker/docker-registry/digest"
+
+	"github.com/docker/docker-registry/storage"
 	"github.com/gorilla/handlers"
 )
 
@@ -32,15 +37,77 @@ type imageManifestHandler struct {
 
 // GetImageManifest fetches the image manifest from the storage backend, if it exists.
 func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http.Request) {
+	manifests := imh.services.Manifests()
+	manifest, err := manifests.Get(imh.Name, imh.Tag)
 
+	if err != nil {
+		imh.Errors.Push(ErrorCodeUnknownManifest, err)
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Length", fmt.Sprint(len(manifest.Raw)))
+	w.Write(manifest.Raw)
 }
 
 // PutImageManifest validates and stores and image in the registry.
 func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http.Request) {
+	manifests := imh.services.Manifests()
+	dec := json.NewDecoder(r.Body)
 
+	var manifest storage.SignedManifest
+	if err := dec.Decode(&manifest); err != nil {
+		imh.Errors.Push(ErrorCodeInvalidManifest, err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if err := manifests.Put(imh.Name, imh.Tag, &manifest); err != nil {
+		// TODO(stevvooe): These error handling switches really need to be
+		// handled by an app global mapper.
+		switch err := err.(type) {
+		case storage.ErrManifestVerification:
+			for _, verificationError := range err {
+				switch verificationError := verificationError.(type) {
+				case storage.ErrUnknownLayer:
+					imh.Errors.Push(ErrorCodeUnknownLayer, verificationError.FSLayer)
+				case storage.ErrManifestUnverified:
+					imh.Errors.Push(ErrorCodeUnverifiedManifest)
+				default:
+					if verificationError == digest.ErrDigestInvalidFormat {
+						// TODO(stevvooe): We need to really need to move all
+						// errors to types. Its much more straightforward.
+						imh.Errors.Push(ErrorCodeInvalidDigest)
+					} else {
+						imh.Errors.PushErr(verificationError)
+					}
+				}
+			}
+		default:
+			imh.Errors.PushErr(err)
+		}
+
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
 }
 
 // DeleteImageManifest removes the image with the given tag from the registry.
 func (imh *imageManifestHandler) DeleteImageManifest(w http.ResponseWriter, r *http.Request) {
+	manifests := imh.services.Manifests()
+	if err := manifests.Delete(imh.Name, imh.Tag); err != nil {
+		switch err := err.(type) {
+		case storage.ErrUnknownManifest:
+			imh.Errors.Push(ErrorCodeUnknownManifest, err)
+			w.WriteHeader(http.StatusNotFound)
+		default:
+			imh.Errors.Push(ErrorCodeUnknown, err)
+			w.WriteHeader(http.StatusBadRequest)
+		}
+		return
+	}
 
+	w.Header().Set("Content-Length", "0")
+	w.WriteHeader(http.StatusAccepted)
 }

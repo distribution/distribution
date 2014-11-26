@@ -6,7 +6,6 @@ import (
 	"github.com/docker/docker-registry/digest"
 	"github.com/docker/docker-registry/storage"
 	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
 )
 
 // layerDispatcher uses the request context to build a layerHandler.
@@ -47,33 +46,16 @@ func (lh *layerHandler) GetLayer(w http.ResponseWriter, r *http.Request) {
 	layer, err := layers.Fetch(lh.Name, lh.Digest)
 
 	if err != nil {
-		switch err {
-		case storage.ErrLayerUnknown:
+		switch err := err.(type) {
+		case storage.ErrUnknownLayer:
 			w.WriteHeader(http.StatusNotFound)
-			lh.Errors.Push(ErrorCodeUnknownLayer,
-				map[string]interface{}{
-					"unknown": storage.FSLayer{BlobSum: lh.Digest},
-				})
-			return
+			lh.Errors.Push(ErrorCodeUnknownLayer, err.FSLayer)
 		default:
 			lh.Errors.Push(ErrorCodeUnknown, err)
-			return
 		}
+		return
 	}
 	defer layer.Close()
 
 	http.ServeContent(w, r, layer.Digest().String(), layer.CreatedAt(), layer)
-}
-
-func buildLayerURL(router *mux.Router, r *http.Request, layer storage.Layer) (string, error) {
-	route := clonedRoute(router, routeNameBlob)
-
-	layerURL, err := route.Schemes(r.URL.Scheme).Host(r.Host).
-		URL("name", layer.Name(),
-		"digest", layer.Digest().String())
-	if err != nil {
-		return "", err
-	}
-
-	return layerURL.String(), nil
 }
