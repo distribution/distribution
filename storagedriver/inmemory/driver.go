@@ -67,7 +67,7 @@ func (d *Driver) ReadStream(path string, offset uint64) (io.ReadCloser, error) {
 	contents, err := d.GetContent(path)
 	if err != nil {
 		return nil, err
-	} else if len(contents) < int(offset) {
+	} else if len(contents) <= int(offset) {
 		return nil, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
 	}
 
