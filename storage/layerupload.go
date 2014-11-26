@@ -275,7 +275,7 @@ func (luc *layerUploadController) validateLayer(fp layerFile, size int64, dgst d
 	}
 
 	if !digestVerifier.Verified() {
-		return "", ErrLayerInvalidDigest
+		return "", ErrLayerInvalidDigest{FSLayer{BlobSum: dgst}}
 	}
 
 	return dgst, nil

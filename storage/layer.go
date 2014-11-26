@@ -53,9 +53,6 @@ type LayerUpload interface {
 }
 
 var (
-	// ErrLayerUnknown returned when layer cannot be found.
-	ErrLayerUnknown = fmt.Errorf("unknown layer")
-
 	// ErrLayerExists returned when layer already exists
 	ErrLayerExists = fmt.Errorf("layer exists")
 
@@ -65,9 +62,6 @@ var (
 	// ErrLayerUploadUnknown returned when upload is not found.
 	ErrLayerUploadUnknown = fmt.Errorf("layer upload unknown")
 
-	// ErrLayerInvalidDigest returned when tarsum check fails.
-	ErrLayerInvalidDigest = fmt.Errorf("invalid layer digest")
-
 	// ErrLayerInvalidLength returned when length check fails.
 	ErrLayerInvalidLength = fmt.Errorf("invalid layer length")
 
@@ -75,3 +69,21 @@ var (
 	// Layer or LayerUpload.
 	ErrLayerClosed = fmt.Errorf("layer closed")
 )
+
+// ErrUnknownLayer returned when layer cannot be found.
+type ErrUnknownLayer struct {
+	FSLayer FSLayer
+}
+
+func (err ErrUnknownLayer) Error() string {
+	return fmt.Sprintf("unknown layer %v", err.FSLayer.BlobSum)
+}
+
+// ErrLayerInvalidDigest returned when tarsum check fails.
+type ErrLayerInvalidDigest struct {
+	FSLayer FSLayer
+}
+
+func (err ErrLayerInvalidDigest) Error() string {
+	return fmt.Sprintf("invalid digest for referenced layer: %v", err.FSLayer.BlobSum)
+}

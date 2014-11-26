@@ -169,11 +169,13 @@ func TestSimpleLayerRead(t *testing.T) {
 		t.Fatalf("error expected fetching unknown layer")
 	}
 
-	if err != ErrLayerUnknown {
-		t.Fatalf("unexpected error fetching non-existent layer: %v", err)
-	} else {
+	switch err.(type) {
+	case ErrUnknownLayer:
 		err = nil
+	default:
+		t.Fatalf("unexpected error fetching non-existent layer: %v", err)
 	}
+
 	randomLayerDigest, err := writeTestLayer(driver, ls.pathMapper, imageName, dgst, randomLayerReader)
 	if err != nil {
 		t.Fatalf("unexpected error writing test layer: %v", err)

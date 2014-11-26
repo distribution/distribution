@@ -19,7 +19,8 @@ func (ls *layerStore) Exists(name string, digest digest.Digest) (bool, error) {
 	_, err := ls.Fetch(name, digest)
 
 	if err != nil {
-		if err == ErrLayerUnknown {
+		switch err.(type) {
+		case ErrUnknownLayer:
 			return false, nil
 		}
 
@@ -34,7 +35,7 @@ func (ls *layerStore) Fetch(name string, digest digest.Digest) (Layer, error) {
 	if err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError, *storagedriver.PathNotFoundError:
-			return nil, ErrLayerUnknown
+			return nil, ErrUnknownLayer{FSLayer{BlobSum: digest}}
 		default:
 			return nil, err
 		}
@@ -44,7 +45,7 @@ func (ls *layerStore) Fetch(name string, digest digest.Digest) (Layer, error) {
 	if err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError, *storagedriver.PathNotFoundError:
-			return nil, ErrLayerUnknown
+			return nil, ErrUnknownLayer{FSLayer{BlobSum: digest}}
 		default:
 			return nil, err
 		}
