@@ -10,7 +10,6 @@ import (
 	"github.com/docker/docker-registry/digest"
 	"github.com/docker/docker-registry/storage"
 	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
 )
 
 // layerUploadDispatcher constructs and returns the layer upload handler for
@@ -151,7 +150,7 @@ func (luh *layerUploadHandler) CancelLayerUpload(w http.ResponseWriter, r *http.
 // chunk responses. This sets the correct headers but the response status is
 // left to the caller.
 func (luh *layerUploadHandler) layerUploadResponse(w http.ResponseWriter, r *http.Request) error {
-	uploadURL, err := buildLayerUploadURL(luh.router, r, luh.Upload)
+	uploadURL, err := luh.urlBuilder.forLayerUpload(luh.Upload)
 	if err != nil {
 		logrus.Infof("error building upload url: %s", err)
 		return err
@@ -171,7 +170,7 @@ var errNotReadyToComplete = fmt.Errorf("not ready to complete upload")
 func (luh *layerUploadHandler) maybeCompleteUpload(w http.ResponseWriter, r *http.Request) error {
 	// If we get a digest and length, we can finish the upload.
 	dgstStr := r.FormValue("digest") // TODO(stevvooe): Support multiple digest parameters!
-	sizeStr := r.FormValue("length")
+	sizeStr := r.FormValue("size")
 
 	if dgstStr == "" || sizeStr == "" {
 		return errNotReadyToComplete
@@ -200,7 +199,7 @@ func (luh *layerUploadHandler) completeUpload(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	layerURL, err := buildLayerURL(luh.router, r, layer)
+	layerURL, err := luh.urlBuilder.forLayer(layer)
 	if err != nil {
 		luh.Errors.Push(ErrorCodeUnknown, err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -210,16 +209,4 @@ func (luh *layerUploadHandler) completeUpload(w http.ResponseWriter, r *http.Req
 	w.Header().Set("Location", layerURL)
 	w.Header().Set("Content-Length", "0")
 	w.WriteHeader(http.StatusCreated)
-}
-
-func buildLayerUploadURL(router *mux.Router, r *http.Request, upload storage.LayerUpload) (string, error) {
-	route := clonedRoute(router, routeNameBlobUploadResume)
-
-	uploadURL, err := route.Schemes(r.URL.Scheme).Host(r.Host).
-		URL("name", upload.Name(), "uuid", upload.UUID())
-	if err != nil {
-		return "", err
-	}
-
-	return uploadURL.String(), nil
 }

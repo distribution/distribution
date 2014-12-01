@@ -69,7 +69,7 @@ func TestErrorsManagement(t *testing.T) {
 		t.Fatalf("error marashaling errors: %v", err)
 	}
 
-	expectedJSON := "{\"errors\":[{\"code\":\"INVALID_DIGEST\",\"message\":\"provided digest did not match uploaded content\"},{\"code\":\"UNKNOWN_LAYER\",\"message\":\"Referenced layer not available\",\"detail\":{\"unknown\":{\"blobSum\":\"sometestblobsumdoesntmatter\"}}}]}"
+	expectedJSON := "{\"errors\":[{\"code\":\"INVALID_DIGEST\",\"message\":\"provided digest did not match uploaded content\"},{\"code\":\"UNKNOWN_LAYER\",\"message\":\"referenced layer not available\",\"detail\":{\"unknown\":{\"blobSum\":\"sometestblobsumdoesntmatter\"}}}]}"
 
 	if string(p) != expectedJSON {
 		t.Fatalf("unexpected json: %q != %q", string(p), expectedJSON)

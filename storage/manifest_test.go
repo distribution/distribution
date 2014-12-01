@@ -33,8 +33,13 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("manifest should not exist")
 	}
 
-	if _, err := ms.Get(name, tag); err != ErrManifestUnknown {
-		t.Fatalf("expected manifest unknown error: %v != %v", err, ErrManifestUnknown)
+	if _, err := ms.Get(name, tag); true {
+		switch err.(type) {
+		case ErrUnknownManifest:
+			break
+		default:
+			t.Fatalf("expected manifest unknown error: %#v", err)
+		}
 	}
 
 	manifest := Manifest{

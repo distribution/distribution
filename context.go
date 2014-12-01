@@ -24,4 +24,6 @@ type Context struct {
 
 	// log provides a context specific logger.
 	log *logrus.Entry
+
+	urlBuilder *urlBuilder
 }

@@ -1,23 +1,48 @@
 package storage
 
 import (
+	"crypto/x509"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/docker/libtrust"
 
 	"github.com/docker/docker-registry/digest"
 )
 
-var (
-	// ErrManifestUnknown is returned if the manifest is not known by the
-	// registry.
-	ErrManifestUnknown = fmt.Errorf("unknown manifest")
+// ErrUnknownManifest is returned if the manifest is not known by the
+// registry.
+type ErrUnknownManifest struct {
+	Name string
+	Tag  string
+}
 
-	// ErrManifestUnverified is returned when the registry is unable to verify
-	// the manifest.
-	ErrManifestUnverified = fmt.Errorf("unverified manifest")
-)
+func (err ErrUnknownManifest) Error() string {
+	return fmt.Sprintf("unknown manifest name=%s tag=%s", err.Name, err.Tag)
+}
+
+// ErrManifestUnverified is returned when the registry is unable to verify
+// the manifest.
+type ErrManifestUnverified struct{}
+
+func (ErrManifestUnverified) Error() string {
+	return fmt.Sprintf("unverified manifest")
+}
+
+// ErrManifestVerification provides a type to collect errors encountered
+// during manifest verification. Currently, it accepts errors of all types,
+// but it may be narrowed to those involving manifest verification.
+type ErrManifestVerification []error
+
+func (errs ErrManifestVerification) Error() string {
+	var parts []string
+	for _, err := range errs {
+		parts = append(parts, err.Error())
+	}
+
+	return fmt.Sprintf("errors verifying manifest: %v", strings.Join(parts, ","))
+}
 
 // Versioned provides a struct with just the manifest schemaVersion. Incoming
 // content with unknown schema version can be decoded against this struct to
@@ -78,7 +103,37 @@ func (m *Manifest) Sign(pk libtrust.PrivateKey) (*SignedManifest, error) {
 	}, nil
 }
 
-// SignedManifest provides an envelope for
+// SignWithChain signs the manifest with the given private key and x509 chain.
+// The public key of the first element in the chain must be the public key
+// corresponding with the sign key.
+func (m *Manifest) SignWithChain(key libtrust.PrivateKey, chain []*x509.Certificate) (*SignedManifest, error) {
+	p, err := json.Marshal(m)
+	if err != nil {
+		return nil, err
+	}
+
+	js, err := libtrust.NewJSONSignature(p)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := js.SignWithChain(key, chain); err != nil {
+		return nil, err
+	}
+
+	pretty, err := js.PrettySignature("signatures")
+	if err != nil {
+		return nil, err
+	}
+
+	return &SignedManifest{
+		Manifest: *m,
+		Raw:      pretty,
+	}, nil
+}
+
+// SignedManifest provides an envelope for a signed image manifest, including
+// the format sensitive raw bytes. It contains fields to
 type SignedManifest struct {
 	Manifest
 
@@ -88,28 +143,51 @@ type SignedManifest struct {
 	Raw []byte `json:"-"`
 }
 
+// Verify verifies the signature of the signed manifest returning the public
+// keys used during signing.
+func (sm *SignedManifest) Verify() ([]libtrust.PublicKey, error) {
+	js, err := libtrust.ParsePrettySignature(sm.Raw, "signatures")
+	if err != nil {
+		return nil, err
+	}
+
+	return js.Verify()
+}
+
+// VerifyChains verifies the signature of the signed manifest against the
+// certificate pool returning the list of verified chains. Signatures without
+// an x509 chain are not checked.
+func (sm *SignedManifest) VerifyChains(ca *x509.CertPool) ([][]*x509.Certificate, error) {
+	js, err := libtrust.ParsePrettySignature(sm.Raw, "signatures")
+	if err != nil {
+		return nil, err
+	}
+
+	return js.VerifyChains(ca)
+}
+
 // UnmarshalJSON populates a new ImageManifest struct from JSON data.
-func (m *SignedManifest) UnmarshalJSON(b []byte) error {
+func (sm *SignedManifest) UnmarshalJSON(b []byte) error {
 	var manifest Manifest
 	if err := json.Unmarshal(b, &manifest); err != nil {
 		return err
 	}
 
-	m.Manifest = manifest
-	m.Raw = b
+	sm.Manifest = manifest
+	sm.Raw = b
 
 	return nil
 }
 
 // MarshalJSON returns the contents of raw. If Raw is nil, marshals the inner
 // contents.
-func (m *SignedManifest) MarshalJSON() ([]byte, error) {
-	if len(m.Raw) > 0 {
-		return m.Raw, nil
+func (sm *SignedManifest) MarshalJSON() ([]byte, error) {
+	if len(sm.Raw) > 0 {
+		return sm.Raw, nil
 	}
 
 	// If the raw data is not available, just dump the inner content.
-	return json.Marshal(&m.Manifest)
+	return json.Marshal(&sm.Manifest)
 }
 
 // FSLayer is a container struct for BlobSums defined in an image manifest

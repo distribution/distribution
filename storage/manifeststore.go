@@ -4,9 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/docker/libtrust"
-
 	"github.com/docker/docker-registry/storagedriver"
+	"github.com/docker/libtrust"
 )
 
 type manifestStore struct {
@@ -45,7 +44,7 @@ func (ms *manifestStore) Get(name, tag string) (*SignedManifest, error) {
 	if err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError, *storagedriver.PathNotFoundError:
-			return nil, ErrManifestUnknown
+			return nil, ErrUnknownManifest{Name: name, Tag: tag}
 		default:
 			return nil, err
 		}
@@ -73,13 +72,28 @@ func (ms *manifestStore) Put(name, tag string, manifest *SignedManifest) error {
 		return err
 	}
 
-	// TODO(stevvooe): Should we get manifest first?
+	// TODO(stevvooe): Should we get old manifest first? Perhaps, write, then
+	// move to ensure a valid manifest?
 
 	return ms.driver.PutContent(p, manifest.Raw)
 }
 
 func (ms *manifestStore) Delete(name, tag string) error {
-	panic("not implemented")
+	p, err := ms.path(name, tag)
+	if err != nil {
+		return err
+	}
+
+	if err := ms.driver.Delete(p); err != nil {
+		switch err := err.(type) {
+		case storagedriver.PathNotFoundError, *storagedriver.PathNotFoundError:
+			return ErrUnknownManifest{Name: name, Tag: tag}
+		default:
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (ms *manifestStore) path(name, tag string) (string, error) {
@@ -90,6 +104,12 @@ func (ms *manifestStore) path(name, tag string) (string, error) {
 }
 
 func (ms *manifestStore) verifyManifest(name, tag string, manifest *SignedManifest) error {
+	// TODO(stevvooe): This verification is present here, but this needs to be
+	// lifted out of the storage infrastructure and moved into a package
+	// oriented towards defining verifiers and reporting them with
+	// granularity.
+
+	var errs ErrManifestVerification
 	if manifest.Name != name {
 		return fmt.Errorf("name does not match manifest name")
 	}
@@ -98,37 +118,34 @@ func (ms *manifestStore) verifyManifest(name, tag string, manifest *SignedManife
 		return fmt.Errorf("tag does not match manifest tag")
 	}
 
-	var errs []error
+	// TODO(stevvooe): These pubkeys need to be checked with either Verify or
+	// VerifyWithChains. We need to define the exact source of the CA.
+	// Perhaps, its a configuration value injected into manifest store.
+
+	if _, err := manifest.Verify(); err != nil {
+		switch err {
+		case libtrust.ErrMissingSignatureKey, libtrust.ErrInvalidJSONContent, libtrust.ErrMissingSignatureKey:
+			errs = append(errs, ErrManifestUnverified{})
+		default:
+			errs = append(errs, err)
+		}
+	}
 
 	for _, fsLayer := range manifest.FSLayers {
 		exists, err := ms.layerService.Exists(name, fsLayer.BlobSum)
 		if err != nil {
-			// TODO(stevvooe): Need to store information about missing blob.
 			errs = append(errs, err)
 		}
 
 		if !exists {
-			errs = append(errs, fmt.Errorf("missing layer %v", fsLayer.BlobSum))
+			errs = append(errs, ErrUnknownLayer{FSLayer: fsLayer})
 		}
 	}
 
 	if len(errs) != 0 {
 		// TODO(stevvooe): These need to be recoverable by a caller.
-		return fmt.Errorf("missing layers: %v", errs)
+		return errs
 	}
-
-	js, err := libtrust.ParsePrettySignature(manifest.Raw, "signatures")
-	if err != nil {
-		return err
-	}
-
-	_, err = js.Verify() // These pubkeys need to be checked.
-	if err != nil {
-		return err
-	}
-
-	// TODO(sday): Pubkey checks need to go here. This where things get fancy.
-	// Perhaps, an injected service would reduce coupling here.
 
 	return nil
 }

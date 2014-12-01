@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-
-	"github.com/gorilla/mux"
 )
 
 // serveJSON marshals v and sets the content-type header to
@@ -31,11 +29,4 @@ func closeResources(handler http.Handler, closers ...io.Closer) http.Handler {
 		}
 		handler.ServeHTTP(w, r)
 	})
-}
-
-// clondedRoute returns a clone of the named route from the router.
-func clonedRoute(router *mux.Router, name string) *mux.Route {
-	route := new(mux.Route)
-	*route = *router.GetRoute(name) // clone the route
-	return route
 }
