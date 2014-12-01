@@ -174,7 +174,8 @@ func (sm *SignedManifest) UnmarshalJSON(b []byte) error {
 	}
 
 	sm.Manifest = manifest
-	sm.Raw = b
+	sm.Raw = make([]byte, len(b), len(b))
+	copy(sm.Raw, b)
 
 	return nil
 }
