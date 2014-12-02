@@ -2,6 +2,8 @@ package configuration
 
 import (
 	"fmt"
+	"io"
+	"io/ioutil"
 	"os"
 	"regexp"
 	"strconv"
@@ -21,6 +23,13 @@ type Configuration struct {
 
 	// Storage is the configuration for the registry's storage driver
 	Storage Storage `yaml:"storage"`
+
+	// HTTP contains configuration parameters for the registry's http
+	// interface.
+	HTTP struct {
+		// Addr specifies the bind address for the registry instance.
+		Addr string `yaml:"addr"`
+	} `yaml:"http"`
 }
 
 // v0_1Configuration is a Version 0.1 Configuration struct
@@ -178,16 +187,21 @@ type Parameters map[string]string
 // following the scheme below:
 // Configuration.Abc may be replaced by the value of REGISTRY_ABC,
 // Configuration.Abc.Xyz may be replaced by the value of REGISTRY_ABC_XYZ, and so forth
-func Parse(in []byte) (*Configuration, error) {
+func Parse(rd io.Reader) (*Configuration, error) {
+	in, err := ioutil.ReadAll(rd)
+	if err != nil {
+		return nil, err
+	}
+
 	var untypedConfig struct {
 		Version Version
 	}
 	var config *Configuration
 
-	err := yaml.Unmarshal(in, &untypedConfig)
-	if err != nil {
+	if err := yaml.Unmarshal(in, &untypedConfig); err != nil {
 		return nil, err
 	}
+
 	if untypedConfig.Version == "" {
 		return nil, fmt.Errorf("Please specify a configuration version. Current version is %s", CurrentVersion)
 	}
