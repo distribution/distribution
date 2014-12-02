@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"os"
 
+	"github.com/Sirupsen/logrus"
+
 	"github.com/docker/docker-registry/storagedriver/filesystem"
 	"github.com/docker/docker-registry/storagedriver/ipc"
 )
@@ -17,5 +19,7 @@ func main() {
 		panic(err)
 	}
 
-	ipc.StorageDriverServer(filesystem.FromParameters(parameters))
+	if err := ipc.StorageDriverServer(filesystem.FromParameters(parameters)); err != nil {
+		logrus.Fatalln(err)
+	}
 }
