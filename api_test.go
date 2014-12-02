@@ -250,6 +250,10 @@ func TestManifestAPI(t *testing.T) {
 		t.Fatalf("should have received two invalid digest errors: %v", respErrs)
 	}
 
+	// TODO(stevvooe): Add a test case where we take a mostly valid registry,
+	// tamper with the content and ensure that we get a unverified manifest
+	// error.
+
 	// Push 2 random layers
 	expectedLayers := make(map[digest.Digest]io.ReadSeeker)
 
