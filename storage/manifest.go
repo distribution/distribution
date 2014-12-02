@@ -140,8 +140,9 @@ type SignedManifest struct {
 	Manifest
 
 	// Raw is the byte representation of the ImageManifest, used for signature
-	// verification. The manifest byte representation cannot change or it will
-	// have to be re-signed.
+	// verification. The value of Raw must be used directly during
+	// serialization, or the signature check will fail. The manifest byte
+	// representation cannot change or it will have to be re-signed.
 	Raw []byte `json:"-"`
 }
 
@@ -184,7 +185,9 @@ func (sm *SignedManifest) UnmarshalJSON(b []byte) error {
 }
 
 // MarshalJSON returns the contents of raw. If Raw is nil, marshals the inner
-// contents.
+// contents. Applications requiring a marshaled signed manifest should simply
+// use Raw directly, since the the content produced by json.Marshal will
+// compacted and will fail signature checks.
 func (sm *SignedManifest) MarshalJSON() ([]byte, error) {
 	if len(sm.Raw) > 0 {
 		return sm.Raw, nil
