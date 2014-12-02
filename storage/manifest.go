@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Sirupsen/logrus"
+
 	"github.com/docker/libtrust"
 
 	"github.com/docker/docker-registry/digest"
@@ -78,7 +80,7 @@ type Manifest struct {
 // SignedManifest. This typically won't be used within the registry, except
 // for testing.
 func (m *Manifest) Sign(pk libtrust.PrivateKey) (*SignedManifest, error) {
-	p, err := json.Marshal(m)
+	p, err := json.MarshalIndent(m, "", "   ")
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +109,7 @@ func (m *Manifest) Sign(pk libtrust.PrivateKey) (*SignedManifest, error) {
 // The public key of the first element in the chain must be the public key
 // corresponding with the sign key.
 func (m *Manifest) SignWithChain(key libtrust.PrivateKey, chain []*x509.Certificate) (*SignedManifest, error) {
-	p, err := json.Marshal(m)
+	p, err := json.MarshalIndent(m, "", "   ")
 	if err != nil {
 		return nil, err
 	}
@@ -138,8 +140,9 @@ type SignedManifest struct {
 	Manifest
 
 	// Raw is the byte representation of the ImageManifest, used for signature
-	// verification. The manifest byte representation cannot change or it will
-	// have to be re-signed.
+	// verification. The value of Raw must be used directly during
+	// serialization, or the signature check will fail. The manifest byte
+	// representation cannot change or it will have to be re-signed.
 	Raw []byte `json:"-"`
 }
 
@@ -148,6 +151,7 @@ type SignedManifest struct {
 func (sm *SignedManifest) Verify() ([]libtrust.PublicKey, error) {
 	js, err := libtrust.ParsePrettySignature(sm.Raw, "signatures")
 	if err != nil {
+		logrus.WithField("err", err).Debugf("(*SignedManifest).Verify")
 		return nil, err
 	}
 
@@ -174,13 +178,16 @@ func (sm *SignedManifest) UnmarshalJSON(b []byte) error {
 	}
 
 	sm.Manifest = manifest
-	sm.Raw = b
+	sm.Raw = make([]byte, len(b), len(b))
+	copy(sm.Raw, b)
 
 	return nil
 }
 
 // MarshalJSON returns the contents of raw. If Raw is nil, marshals the inner
-// contents.
+// contents. Applications requiring a marshaled signed manifest should simply
+// use Raw directly, since the the content produced by json.Marshal will
+// compacted and will fail signature checks.
 func (sm *SignedManifest) MarshalJSON() ([]byte, error) {
 	if len(sm.Raw) > 0 {
 		return sm.Raw, nil

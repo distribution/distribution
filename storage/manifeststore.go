@@ -111,11 +111,13 @@ func (ms *manifestStore) verifyManifest(name, tag string, manifest *SignedManife
 
 	var errs ErrManifestVerification
 	if manifest.Name != name {
-		return fmt.Errorf("name does not match manifest name")
+		// TODO(stevvooe): This needs to be an exported error
+		errs = append(errs, fmt.Errorf("name does not match manifest name"))
 	}
 
 	if manifest.Tag != tag {
-		return fmt.Errorf("tag does not match manifest tag")
+		// TODO(stevvooe): This needs to be an exported error.
+		errs = append(errs, fmt.Errorf("tag does not match manifest tag"))
 	}
 
 	// TODO(stevvooe): These pubkeys need to be checked with either Verify or
@@ -127,7 +129,11 @@ func (ms *manifestStore) verifyManifest(name, tag string, manifest *SignedManife
 		case libtrust.ErrMissingSignatureKey, libtrust.ErrInvalidJSONContent, libtrust.ErrMissingSignatureKey:
 			errs = append(errs, ErrManifestUnverified{})
 		default:
-			errs = append(errs, err)
+			if err.Error() == "invalid signature" { // TODO(stevvooe): This should be exported by libtrust
+				errs = append(errs, ErrManifestUnverified{})
+			} else {
+				errs = append(errs, err)
+			}
 		}
 	}
 

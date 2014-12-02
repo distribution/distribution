@@ -250,6 +250,10 @@ func TestManifestAPI(t *testing.T) {
 		t.Fatalf("should have received two invalid digest errors: %v", respErrs)
 	}
 
+	// TODO(stevvooe): Add a test case where we take a mostly valid registry,
+	// tamper with the content and ensure that we get a unverified manifest
+	// error.
+
 	// Push 2 random layers
 	expectedLayers := make(map[digest.Digest]io.ReadSeeker)
 
@@ -277,7 +281,7 @@ func TestManifestAPI(t *testing.T) {
 
 	resp = putManifest(t, "putting signed manifest", manifestURL, signedManifest)
 
-	checkResponse(t, "putting manifest", resp, http.StatusOK)
+	checkResponse(t, "putting signed manifest", resp, http.StatusOK)
 
 	resp, err = http.Get(manifestURL)
 	if err != nil {
@@ -299,9 +303,15 @@ func TestManifestAPI(t *testing.T) {
 }
 
 func putManifest(t *testing.T, msg, url string, v interface{}) *http.Response {
-	body, err := json.Marshal(v)
-	if err != nil {
-		t.Fatalf("unexpected error marshaling %v: %v", v, err)
+	var body []byte
+	if sm, ok := v.(*storage.SignedManifest); ok {
+		body = sm.Raw
+	} else {
+		var err error
+		body, err = json.MarshalIndent(v, "", "   ")
+		if err != nil {
+			t.Fatalf("unexpected error marshaling %v: %v", v, err)
+		}
 	}
 
 	req, err := http.NewRequest("PUT", url, bytes.NewReader(body))
