@@ -1,12 +1,12 @@
 package configuration
 
 import (
+	"bytes"
 	"os"
 	"testing"
 
-	"gopkg.in/yaml.v2"
-
 	. "gopkg.in/check.v1"
+	"gopkg.in/yaml.v2"
 )
 
 // Hook up gocheck into the "go test" runner
@@ -72,14 +72,14 @@ func (suite *ConfigSuite) SetUpTest(c *C) {
 func (suite *ConfigSuite) TestMarshalRoundtrip(c *C) {
 	configBytes, err := yaml.Marshal(suite.expectedConfig)
 	c.Assert(err, IsNil)
-	config, err := Parse(configBytes)
+	config, err := Parse(bytes.NewReader(configBytes))
 	c.Assert(err, IsNil)
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
 
 // TestParseSimple validates that configYamlV0_1 can be parsed into a struct matching configStruct
 func (suite *ConfigSuite) TestParseSimple(c *C) {
-	config, err := Parse([]byte(configYamlV0_1))
+	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
 	c.Assert(err, IsNil)
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
@@ -89,7 +89,7 @@ func (suite *ConfigSuite) TestParseSimple(c *C) {
 func (suite *ConfigSuite) TestParseInmemory(c *C) {
 	suite.expectedConfig.Storage = Storage{"inmemory": Parameters{}}
 
-	config, err := Parse([]byte(inmemoryConfigYamlV0_1))
+	config, err := Parse(bytes.NewReader([]byte(inmemoryConfigYamlV0_1)))
 	c.Assert(err, IsNil)
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
@@ -100,7 +100,7 @@ func (suite *ConfigSuite) TestParseWithSameEnvStorage(c *C) {
 	os.Setenv("REGISTRY_STORAGE", "s3")
 	os.Setenv("REGISTRY_STORAGE_S3_REGION", "us-east-1")
 
-	config, err := Parse([]byte(configYamlV0_1))
+	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
 	c.Assert(err, IsNil)
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
@@ -117,7 +117,7 @@ func (suite *ConfigSuite) TestParseWithDifferentEnvStorageParams(c *C) {
 	os.Setenv("REGISTRY_STORAGE_S3_SECURE", "true")
 	os.Setenv("REGISTRY_STORAGE_S3_NEWPARAM", "some Value")
 
-	config, err := Parse([]byte(configYamlV0_1))
+	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
 	c.Assert(err, IsNil)
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
@@ -129,7 +129,7 @@ func (suite *ConfigSuite) TestParseWithDifferentEnvStorageType(c *C) {
 
 	os.Setenv("REGISTRY_STORAGE", "inmemory")
 
-	config, err := Parse([]byte(configYamlV0_1))
+	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
 	c.Assert(err, IsNil)
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
@@ -144,7 +144,7 @@ func (suite *ConfigSuite) TestParseWithDifferentEnvStorageTypeAndParams(c *C) {
 	os.Setenv("REGISTRY_STORAGE", "filesystem")
 	os.Setenv("REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY", "/tmp/testroot")
 
-	config, err := Parse([]byte(configYamlV0_1))
+	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
 	c.Assert(err, IsNil)
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
@@ -154,7 +154,7 @@ func (suite *ConfigSuite) TestParseWithDifferentEnvStorageTypeAndParams(c *C) {
 func (suite *ConfigSuite) TestParseWithSameEnvLoglevel(c *C) {
 	os.Setenv("REGISTRY_LOGLEVEL", "info")
 
-	config, err := Parse([]byte(configYamlV0_1))
+	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
 	c.Assert(err, IsNil)
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
@@ -166,7 +166,7 @@ func (suite *ConfigSuite) TestParseWithDifferentEnvLoglevel(c *C) {
 
 	os.Setenv("REGISTRY_LOGLEVEL", "error")
 
-	config, err := Parse([]byte(configYamlV0_1))
+	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
 	c.Assert(err, IsNil)
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
@@ -177,7 +177,7 @@ func (suite *ConfigSuite) TestParseInvalidVersion(c *C) {
 	suite.expectedConfig.Version = MajorMinorVersion(CurrentVersion.Major(), CurrentVersion.Minor()+1)
 	configBytes, err := yaml.Marshal(suite.expectedConfig)
 	c.Assert(err, IsNil)
-	_, err = Parse(configBytes)
+	_, err = Parse(bytes.NewReader(configBytes))
 	c.Assert(err, NotNil)
 }
 
