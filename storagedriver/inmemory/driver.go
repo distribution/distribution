@@ -61,7 +61,7 @@ func (d *Driver) PutContent(path string, contents []byte) error {
 
 // ReadStream retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
-func (d *Driver) ReadStream(path string, offset uint64) (io.ReadCloser, error) {
+func (d *Driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 	contents, err := d.GetContent(path)
@@ -79,7 +79,7 @@ func (d *Driver) ReadStream(path string, offset uint64) (io.ReadCloser, error) {
 
 // WriteStream stores the contents of the provided io.ReadCloser at a location
 // designated by the given path.
-func (d *Driver) WriteStream(path string, offset, size uint64, reader io.ReadCloser) error {
+func (d *Driver) WriteStream(path string, offset, size int64, reader io.ReadCloser) error {
 	defer reader.Close()
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
@@ -89,7 +89,7 @@ func (d *Driver) WriteStream(path string, offset, size uint64, reader io.ReadClo
 		return err
 	}
 
-	if offset > resumableOffset {
+	if offset > int64(resumableOffset) {
 		return storagedriver.InvalidOffsetError{Path: path, Offset: offset}
 	}
 

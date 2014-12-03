@@ -103,7 +103,7 @@ func (d *Driver) PutContent(path string, contents []byte) error {
 
 // ReadStream retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
-func (d *Driver) ReadStream(path string, offset uint64) (io.ReadCloser, error) {
+func (d *Driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
 	if ok, err := d.client.BlobExists(d.container, path); err != nil {
 		return nil, err
 	} else if !ok {
@@ -115,7 +115,7 @@ func (d *Driver) ReadStream(path string, offset uint64) (io.ReadCloser, error) {
 		return nil, err
 	}
 
-	if offset >= size {
+	if offset >= int64(size) {
 		return nil, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
 	}
 
@@ -129,10 +129,10 @@ func (d *Driver) ReadStream(path string, offset uint64) (io.ReadCloser, error) {
 
 // WriteStream stores the contents of the provided io.ReadCloser at a location
 // designated by the given path.
-func (d *Driver) WriteStream(path string, offset, size uint64, reader io.ReadCloser) error {
+func (d *Driver) WriteStream(path string, offset, size int64, reader io.ReadCloser) error {
 	var (
 		lastBlockNum    int
-		resumableOffset uint64
+		resumableOffset int64
 		blocks          []azure.Block
 	)
 
@@ -153,12 +153,12 @@ func (d *Driver) WriteStream(path string, offset, size uint64, reader io.ReadClo
 				return fmt.Errorf("Cannot parse block name as number '%s': %s", lastBlock.Name, err.Error())
 			}
 
-			var totalSize uint64
+			var totalSize int64
 			for _, v := range parts.CommittedBlocks {
 				blocks = append(blocks, azure.Block{
 					Id:     v.Name,
 					Status: azure.BlockStatusCommitted})
-				totalSize += uint64(v.Size)
+				totalSize += int64(v.Size)
 			}
 
 			// NOTE: Azure driver currently supports only append mode (resumable

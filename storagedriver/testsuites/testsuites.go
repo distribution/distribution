@@ -173,7 +173,7 @@ func (suite *DriverSuite) TestContinueStreamAppend(c *check.C) {
 	filename := randomString(32)
 	defer suite.StorageDriver.Delete(filename)
 
-	chunkSize := uint64(10 * 1024 * 1024)
+	chunkSize := int64(10 * 1024 * 1024)
 
 	contentsChunk1 := []byte(randomString(chunkSize))
 	contentsChunk2 := []byte(randomString(chunkSize))
@@ -186,19 +186,19 @@ func (suite *DriverSuite) TestContinueStreamAppend(c *check.C) {
 
 	offset, err := suite.StorageDriver.CurrentSize(filename)
 	c.Assert(err, check.IsNil)
-	if offset > chunkSize {
+	if int64(offset) > chunkSize {
 		c.Fatalf("Offset too large, %d > %d", offset, chunkSize)
 	}
-	err = suite.StorageDriver.WriteStream(filename, offset, 3*chunkSize, ioutil.NopCloser(bytes.NewReader(fullContents[offset:2*chunkSize])))
+	err = suite.StorageDriver.WriteStream(filename, int64(offset), 3*chunkSize, ioutil.NopCloser(bytes.NewReader(fullContents[offset:2*chunkSize])))
 	c.Assert(err, check.IsNil)
 
 	offset, err = suite.StorageDriver.CurrentSize(filename)
 	c.Assert(err, check.IsNil)
-	if offset > 2*chunkSize {
+	if int64(offset) > 2*chunkSize {
 		c.Fatalf("Offset too large, %d > %d", offset, 2*chunkSize)
 	}
 
-	err = suite.StorageDriver.WriteStream(filename, offset, 3*chunkSize, ioutil.NopCloser(bytes.NewReader(fullContents[offset:])))
+	err = suite.StorageDriver.WriteStream(filename, int64(offset), 3*chunkSize, ioutil.NopCloser(bytes.NewReader(fullContents[offset:])))
 	c.Assert(err, check.IsNil)
 
 	received, err := suite.StorageDriver.GetContent(filename)
@@ -212,7 +212,7 @@ func (suite *DriverSuite) TestReadStreamWithOffset(c *check.C) {
 	filename := randomString(32)
 	defer suite.StorageDriver.Delete(filename)
 
-	chunkSize := uint64(32)
+	chunkSize := int64(32)
 
 	contentsChunk1 := []byte(randomString(chunkSize))
 	contentsChunk2 := []byte(randomString(chunkSize))
@@ -260,13 +260,13 @@ func (suite *DriverSuite) TestReadNonexistentStream(c *check.C) {
 
 // TestList checks the returned list of keys after populating a directory tree.
 func (suite *DriverSuite) TestList(c *check.C) {
-	rootDirectory := "/" + randomString(uint64(8+rand.Intn(8)))
+	rootDirectory := "/" + randomString(int64(8+rand.Intn(8)))
 	defer suite.StorageDriver.Delete(rootDirectory)
 
-	parentDirectory := rootDirectory + "/" + randomString(uint64(8+rand.Intn(8)))
+	parentDirectory := rootDirectory + "/" + randomString(int64(8+rand.Intn(8)))
 	childFiles := make([]string, 50)
 	for i := 0; i < len(childFiles); i++ {
-		childFile := parentDirectory + "/" + randomString(uint64(8+rand.Intn(8)))
+		childFile := parentDirectory + "/" + randomString(int64(8+rand.Intn(8)))
 		childFiles[i] = childFile
 		err := suite.StorageDriver.PutContent(childFile, []byte(randomString(32)))
 		c.Assert(err, check.IsNil)
@@ -388,7 +388,7 @@ func (suite *DriverSuite) TestConcurrentFileStreams(c *check.C) {
 
 	doneChan := make(chan struct{})
 
-	testStream := func(size int) {
+	testStream := func(size int64) {
 		suite.testFileStreams(c, size)
 		doneChan <- struct{}{}
 	}
@@ -406,7 +406,7 @@ func (suite *DriverSuite) TestConcurrentFileStreams(c *check.C) {
 
 }
 
-func (suite *DriverSuite) testFileStreams(c *check.C, size int) {
+func (suite *DriverSuite) testFileStreams(c *check.C, size int64) {
 	tf, err := ioutil.TempFile("", "tf")
 	c.Assert(err, check.IsNil)
 	defer os.Remove(tf.Name())
@@ -414,7 +414,7 @@ func (suite *DriverSuite) testFileStreams(c *check.C, size int) {
 	tfName := path.Base(tf.Name())
 	defer suite.StorageDriver.Delete(tfName)
 
-	contents := []byte(randomString(uint64(size)))
+	contents := []byte(randomString(size))
 
 	_, err = tf.Write(contents)
 	c.Assert(err, check.IsNil)
@@ -422,7 +422,7 @@ func (suite *DriverSuite) testFileStreams(c *check.C, size int) {
 	tf.Sync()
 	tf.Seek(0, os.SEEK_SET)
 
-	err = suite.StorageDriver.WriteStream(tfName, 0, uint64(size), tf)
+	err = suite.StorageDriver.WriteStream(tfName, 0, size, tf)
 	c.Assert(err, check.IsNil)
 
 	reader, err := suite.StorageDriver.ReadStream(tfName, 0)
@@ -450,7 +450,7 @@ func (suite *DriverSuite) writeReadCompare(c *check.C, filename string, contents
 func (suite *DriverSuite) writeReadCompareStreams(c *check.C, filename string, contents []byte) {
 	defer suite.StorageDriver.Delete(filename)
 
-	err := suite.StorageDriver.WriteStream(filename, 0, uint64(len(contents)), ioutil.NopCloser(bytes.NewReader(contents)))
+	err := suite.StorageDriver.WriteStream(filename, 0, int64(len(contents)), ioutil.NopCloser(bytes.NewReader(contents)))
 	c.Assert(err, check.IsNil)
 
 	reader, err := suite.StorageDriver.ReadStream(filename, 0)
@@ -465,7 +465,7 @@ func (suite *DriverSuite) writeReadCompareStreams(c *check.C, filename string, c
 
 var pathChars = []byte("abcdefghijklmnopqrstuvwxyz")
 
-func randomString(length uint64) string {
+func randomString(length int64) string {
 	b := make([]byte, length)
 	for i := range b {
 		b[i] = pathChars[rand.Intn(len(pathChars))]

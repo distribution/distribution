@@ -80,7 +80,7 @@ func (d *Driver) PutContent(subPath string, contents []byte) error {
 
 // ReadStream retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
-func (d *Driver) ReadStream(path string, offset uint64) (io.ReadCloser, error) {
+func (d *Driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
 	file, err := os.OpenFile(d.subPath(path), os.O_RDONLY, 0644)
 	if err != nil {
 		return nil, storagedriver.PathNotFoundError{Path: path}
@@ -100,7 +100,7 @@ func (d *Driver) ReadStream(path string, offset uint64) (io.ReadCloser, error) {
 
 // WriteStream stores the contents of the provided io.ReadCloser at a location
 // designated by the given path.
-func (d *Driver) WriteStream(subPath string, offset, size uint64, reader io.ReadCloser) error {
+func (d *Driver) WriteStream(subPath string, offset, size int64, reader io.ReadCloser) error {
 	defer reader.Close()
 
 	resumableOffset, err := d.CurrentSize(subPath)
@@ -108,7 +108,7 @@ func (d *Driver) WriteStream(subPath string, offset, size uint64, reader io.Read
 		return err
 	}
 
-	if offset > resumableOffset {
+	if offset > int64(resumableOffset) {
 		return storagedriver.InvalidOffsetError{Path: subPath, Offset: offset}
 	}
 
@@ -131,13 +131,15 @@ func (d *Driver) WriteStream(subPath string, offset, size uint64, reader io.Read
 	}
 	defer file.Close()
 
+	// TODO(sday): Use Seek + Copy here.
+
 	buf := make([]byte, 32*1024)
 	for {
 		bytesRead, er := reader.Read(buf)
 		if bytesRead > 0 {
 			bytesWritten, ew := file.WriteAt(buf[0:bytesRead], int64(offset))
 			if bytesWritten > 0 {
-				offset += uint64(bytesWritten)
+				offset += int64(bytesWritten)
 			}
 			if ew != nil {
 				err = ew

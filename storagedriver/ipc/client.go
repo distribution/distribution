@@ -234,7 +234,7 @@ func (driver *StorageDriverClient) PutContent(path string, contents []byte) erro
 
 // ReadStream retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
-func (driver *StorageDriverClient) ReadStream(path string, offset uint64) (io.ReadCloser, error) {
+func (driver *StorageDriverClient) ReadStream(path string, offset int64) (io.ReadCloser, error) {
 	if err := driver.exited(); err != nil {
 		return nil, err
 	}
@@ -261,7 +261,7 @@ func (driver *StorageDriverClient) ReadStream(path string, offset uint64) (io.Re
 
 // WriteStream stores the contents of the provided io.ReadCloser at a location
 // designated by the given path.
-func (driver *StorageDriverClient) WriteStream(path string, offset, size uint64, reader io.ReadCloser) error {
+func (driver *StorageDriverClient) WriteStream(path string, offset, size int64, reader io.ReadCloser) error {
 	if err := driver.exited(); err != nil {
 		return err
 	}
