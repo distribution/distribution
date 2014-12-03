@@ -52,7 +52,7 @@ type StorageDriver interface {
 	// "size" bytes.
 	// May be used to resume writing a stream by providing a nonzero offset.
 	// The offset must be no larger than the CurrentSize for this path.
-	WriteStream(path string, offset, size int64, readCloser io.ReadCloser) error
+	WriteStream(path string, offset int64, reader io.Reader) (nn int64, err error)
 
 	// Stat retrieves the FileInfo for the given path, including the current
 	// size in bytes and the creation time.
