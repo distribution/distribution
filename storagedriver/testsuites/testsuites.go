@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"sort"
+	"sync"
 	"testing"
 
 	"github.com/docker/docker-registry/storagedriver"
@@ -386,13 +387,14 @@ func (suite *DriverSuite) TestConcurrentFileStreams(c *check.C) {
 		c.Skip("Need to fix out-of-process concurrency")
 	}
 
-	doneChan := make(chan struct{})
+	var wg sync.WaitGroup
 
 	testStream := func(size int64) {
+		defer wg.Done()
 		suite.testFileStreams(c, size)
-		doneChan <- struct{}{}
 	}
 
+	wg.Add(6)
 	go testStream(8 * 1024 * 1024)
 	go testStream(4 * 1024 * 1024)
 	go testStream(2 * 1024 * 1024)
@@ -400,10 +402,7 @@ func (suite *DriverSuite) TestConcurrentFileStreams(c *check.C) {
 	go testStream(1024)
 	go testStream(64)
 
-	for i := 0; i < 6; i++ {
-		<-doneChan
-	}
-
+	wg.Wait()
 }
 
 func (suite *DriverSuite) testFileStreams(c *check.C, size int64) {
