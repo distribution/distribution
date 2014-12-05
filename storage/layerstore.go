@@ -1,8 +1,6 @@
 package storage
 
 import (
-	"time"
-
 	"github.com/docker/docker-registry/digest"
 	"github.com/docker/docker-registry/storagedriver"
 )
@@ -55,11 +53,6 @@ func (ls *layerStore) Fetch(name string, digest digest.Digest) (Layer, error) {
 		fileReader: *fr,
 		name:       name,
 		digest:     digest,
-
-		// TODO(stevvooe): Storage backend does not support modification time
-		// queries yet. Layers "never" change, so just return the zero value
-		// plus a nano-second.
-		createdAt: (time.Time{}).Add(time.Nanosecond),
 	}, nil
 }
 

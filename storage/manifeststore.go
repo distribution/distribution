@@ -22,12 +22,16 @@ func (ms *manifestStore) Exists(name, tag string) (bool, error) {
 		return false, err
 	}
 
-	size, err := ms.driver.CurrentSize(p)
+	fi, err := ms.driver.Stat(p)
 	if err != nil {
 		return false, err
 	}
 
-	if size == 0 {
+	if fi.IsDir() {
+		return false, fmt.Errorf("unexpected directory at path: %v, name=%s tag=%s", p, name, tag)
+	}
+
+	if fi.Size() == 0 {
 		return false, nil
 	}
 
