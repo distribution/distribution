@@ -17,5 +17,8 @@ func init() {
 		return New(), nil
 	}
 	testsuites.RegisterInProcessSuite(inmemoryDriverConstructor, testsuites.NeverSkip)
-	testsuites.RegisterIPCSuite(driverName, nil, testsuites.NeverSkip)
+
+	// BUG(stevvooe): Disable flaky IPC tests for now when we can troubleshoot
+	// the problems with libchan.
+	// testsuites.RegisterIPCSuite(driverName, nil, testsuites.NeverSkip)
 }
