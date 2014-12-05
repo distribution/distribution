@@ -24,7 +24,12 @@ func (ms *manifestStore) Exists(name, tag string) (bool, error) {
 
 	fi, err := ms.driver.Stat(p)
 	if err != nil {
-		return false, err
+		switch err.(type) {
+		case storagedriver.PathNotFoundError:
+			return false, nil
+		default:
+			return false, err
+		}
 	}
 
 	if fi.IsDir() {
