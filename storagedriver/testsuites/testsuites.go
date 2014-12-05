@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/docker/docker-registry/storagedriver"
-	"github.com/docker/docker-registry/storagedriver/ipc"
 
 	"gopkg.in/check.v1"
 )
@@ -33,29 +32,34 @@ func RegisterInProcessSuite(driverConstructor DriverConstructor, skipCheck SkipC
 // RegisterIPCSuite registers a storage driver test suite which runs the named
 // driver as a child process with the given parameters.
 func RegisterIPCSuite(driverName string, ipcParams map[string]string, skipCheck SkipCheck) {
-	suite := &DriverSuite{
-		Constructor: func() (storagedriver.StorageDriver, error) {
-			d, err := ipc.NewDriverClient(driverName, ipcParams)
-			if err != nil {
-				return nil, err
-			}
-			err = d.Start()
-			if err != nil {
-				return nil, err
-			}
-			return d, nil
-		},
-		SkipCheck: skipCheck,
-	}
-	suite.Teardown = func() error {
-		if suite.StorageDriver == nil {
-			return nil
-		}
+	panic("ipc testing is disabled for now")
 
-		driverClient := suite.StorageDriver.(*ipc.StorageDriverClient)
-		return driverClient.Stop()
-	}
-	check.Suite(suite)
+	// NOTE(stevvooe): IPC testing is disabled for now. Uncomment the code
+	// block before and remove the panic when we phase it back in.
+
+	// suite := &DriverSuite{
+	// 	Constructor: func() (storagedriver.StorageDriver, error) {
+	// 		d, err := ipc.NewDriverClient(driverName, ipcParams)
+	// 		if err != nil {
+	// 			return nil, err
+	// 		}
+	// 		err = d.Start()
+	// 		if err != nil {
+	// 			return nil, err
+	// 		}
+	// 		return d, nil
+	// 	},
+	// 	SkipCheck: skipCheck,
+	// }
+	// suite.Teardown = func() error {
+	// 	if suite.StorageDriver == nil {
+	// 		return nil
+	// 	}
+
+	// 	driverClient := suite.StorageDriver.(*ipc.StorageDriverClient)
+	// 	return driverClient.Stop()
+	// }
+	// check.Suite(suite)
 }
 
 // SkipCheck is a function used to determine if a test suite should be skipped.
@@ -520,9 +524,9 @@ func (suite *DriverSuite) TestStatCall(c *check.C) {
 // in to WriteStream concurrently without hanging.
 // TODO(bbland): fix this test...
 func (suite *DriverSuite) TestConcurrentFileStreams(c *check.C) {
-	if _, isIPC := suite.StorageDriver.(*ipc.StorageDriverClient); isIPC {
-		c.Skip("Need to fix out-of-process concurrency")
-	}
+	// if _, isIPC := suite.StorageDriver.(*ipc.StorageDriverClient); isIPC {
+	// 	c.Skip("Need to fix out-of-process concurrency")
+	// }
 
 	var wg sync.WaitGroup
 

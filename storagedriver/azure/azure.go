@@ -1,3 +1,5 @@
+// +build ignore
+
 // Package azure provides a storagedriver.StorageDriver implementation to
 // store blobs in Microsoft Azure Blob Storage Service.
 package azure
