@@ -83,6 +83,10 @@ func (d *Driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
+	if offset < 0 {
+		return nil, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
+	}
+
 	path = d.normalize(path)
 	found := d.root.find(path)
 

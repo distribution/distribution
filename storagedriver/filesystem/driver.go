@@ -82,6 +82,10 @@ func (d *Driver) PutContent(subPath string, contents []byte) error {
 // ReadStream retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
 func (d *Driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
+	if offset < 0 {
+		return nil, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
+	}
+
 	file, err := os.OpenFile(d.fullPath(path), os.O_RDONLY, 0644)
 	if err != nil {
 		if os.IsNotExist(err) {

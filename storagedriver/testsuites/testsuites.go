@@ -2,6 +2,7 @@ package testsuites
 
 import (
 	"bytes"
+	"io"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -209,6 +210,43 @@ func (suite *DriverSuite) TestReadStreamWithOffset(c *check.C) {
 	readContents, err = ioutil.ReadAll(reader)
 	c.Assert(err, check.IsNil)
 	c.Assert(readContents, check.DeepEquals, contentsChunk3)
+
+	// Ensure we get invalid offest for negative offsets.
+	reader, err = suite.StorageDriver.ReadStream(filename, -1)
+	c.Assert(err, check.FitsTypeOf, storagedriver.InvalidOffsetError{})
+	c.Assert(err.(storagedriver.InvalidOffsetError).Offset, check.Equals, int64(-1))
+	c.Assert(err.(storagedriver.InvalidOffsetError).Path, check.Equals, filename)
+	c.Assert(reader, check.IsNil)
+
+	// Read past the end of the content and make sure we get a reader that
+	// returns 0 bytes and io.EOF
+	reader, err = suite.StorageDriver.ReadStream(filename, chunkSize*3)
+	c.Assert(err, check.IsNil)
+	defer reader.Close()
+
+	buf := make([]byte, chunkSize)
+	n, err := reader.Read(buf)
+	c.Assert(err, check.Equals, io.EOF)
+	c.Assert(n, check.Equals, 0)
+
+	// Check the N-1 boundary condition, ensuring we get 1 byte then io.EOF.
+	reader, err = suite.StorageDriver.ReadStream(filename, chunkSize*3-1)
+	c.Assert(err, check.IsNil)
+	defer reader.Close()
+
+	n, err = reader.Read(buf)
+	c.Assert(n, check.Equals, 1)
+
+	// We don't care whether the io.EOF comes on the this read or the first
+	// zero read, but the only error acceptable here is io.EOF.
+	if err != nil {
+		c.Assert(err, check.Equals, io.EOF)
+	}
+
+	// Any more reads should result in zero bytes and io.EOF
+	n, err = reader.Read(buf)
+	c.Assert(n, check.Equals, 0)
+	c.Assert(err, check.Equals, io.EOF)
 }
 
 // TestContinueStreamAppend tests that a stream write can be appended to without
@@ -329,6 +367,11 @@ func (suite *DriverSuite) TestList(c *check.C) {
 
 	sort.Strings(keys)
 	c.Assert(keys, check.DeepEquals, childFiles)
+
+	// A few checks to add here (check out #819 for more discussion on this):
+	// 1. Ensure that all paths are absolute.
+	// 2. Ensure that listings only include direct children.
+	// 3. Ensure that we only respond to directory listings that end with a slash (maybe?).
 }
 
 // TestMove checks that a moved object no longer exists at the source path and
