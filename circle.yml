@@ -21,8 +21,11 @@ test:
     - test -z $(gofmt -s -l . | tee /dev/stderr)
     - go vet ./...
     - test -z $(golint ./...          | tee /dev/stderr)
-    - go test -race -test.v ./...:
-        timeout: 600
+    - go test -test.v ./...
+
+    # Disabling the race detector due to massive memory usage.
+    # - go test -race -test.v ./...:
+    #     timeout: 600
 
     # TODO(stevvooe): The following is an attempt at using goveralls but it
     # just doesn't work. goveralls requires a single profile file to be
