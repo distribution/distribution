@@ -468,6 +468,7 @@ func (suite *DriverSuite) TestDeleteFolder(c *check.C) {
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
 }
 
+// TestStatCall runs verifies the implementation of the storagedriver's Stat call.
 func (suite *DriverSuite) TestStatCall(c *check.C) {
 	content := randomString(4096)
 	dirPath := randomString(32)
