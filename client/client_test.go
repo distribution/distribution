@@ -91,7 +91,7 @@ func TestPush(t *testing.T) {
 	}
 
 	handler := testutil.NewHandler(append(blobRequestResponseMappings, testutil.RequestResponseMap{
-		testutil.RequestResponseMapping{
+		{
 			Request: testutil.Request{
 				Method: "PUT",
 				Route:  "/v2/" + name + "/manifest/" + tag,
@@ -184,7 +184,7 @@ func TestPull(t *testing.T) {
 	}
 
 	handler := testutil.NewHandler(append(blobRequestResponseMappings, testutil.RequestResponseMap{
-		testutil.RequestResponseMapping{
+		{
 			Request: testutil.Request{
 				Method: "GET",
 				Route:  "/v2/" + name + "/manifest/" + tag,
@@ -307,7 +307,7 @@ func TestPullResume(t *testing.T) {
 
 	for i := 0; i < 3; i++ {
 		layerRequestResponseMappings = append(layerRequestResponseMappings, testutil.RequestResponseMap{
-			testutil.RequestResponseMapping{
+			{
 				Request: testutil.Request{
 					Method: "GET",
 					Route:  "/v2/" + name + "/manifest/" + tag,
