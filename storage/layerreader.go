@@ -11,9 +11,8 @@ import (
 type layerReader struct {
 	fileReader
 
-	name      string // repo name of this layer
-	digest    digest.Digest
-	createdAt time.Time
+	name   string // repo name of this layer
+	digest digest.Digest
 }
 
 var _ Layer = &layerReader{}
@@ -27,5 +26,5 @@ func (lrs *layerReader) Digest() digest.Digest {
 }
 
 func (lrs *layerReader) CreatedAt() time.Time {
-	return lrs.createdAt
+	return lrs.modtime
 }

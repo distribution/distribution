@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/docker/docker-registry/storagedriver"
 )
@@ -16,8 +17,9 @@ type fileReader struct {
 	driver storagedriver.StorageDriver
 
 	// identifying fields
-	path string
-	size int64 // size is the total layer size, must be set.
+	path    string
+	size    int64 // size is the total layer size, must be set.
+	modtime time.Time
 
 	// mutable fields
 	rc     io.ReadCloser // remote read closer
@@ -28,16 +30,21 @@ type fileReader struct {
 
 func newFileReader(driver storagedriver.StorageDriver, path string) (*fileReader, error) {
 	// Grab the size of the layer file, ensuring existence.
-	size, err := driver.CurrentSize(path)
+	fi, err := driver.Stat(path)
 
 	if err != nil {
 		return nil, err
 	}
 
+	if fi.IsDir() {
+		return nil, fmt.Errorf("cannot read a directory")
+	}
+
 	return &fileReader{
-		driver: driver,
-		path:   path,
-		size:   int64(size),
+		driver:  driver,
+		path:    path,
+		size:    fi.Size(),
+		modtime: fi.ModTime(),
 	}, nil
 }
 
@@ -126,7 +133,7 @@ func (fr *fileReader) reader() (io.Reader, error) {
 	}
 
 	// If we don't have a reader, open one up.
-	rc, err := fr.driver.ReadStream(fr.path, uint64(fr.offset))
+	rc, err := fr.driver.ReadStream(fr.path, fr.offset)
 
 	if err != nil {
 		return nil, err

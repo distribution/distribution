@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/docker/docker-registry/storagedriver"
-	"github.com/docker/docker-registry/storagedriver/ipc"
 )
 
 // driverFactories stores an internal mapping between storage driver names and their respective
@@ -41,16 +40,23 @@ func Register(name string, factory StorageDriverFactory) {
 func Create(name string, parameters map[string]string) (storagedriver.StorageDriver, error) {
 	driverFactory, ok := driverFactories[name]
 	if !ok {
+		return nil, InvalidStorageDriverError{name}
+
+		// NOTE(stevvooe): We are disabling storagedriver ipc for now, as the
+		// server and client need to be updated for the changed API calls and
+		// there were some problems libchan hanging. We'll phase this
+		// functionality back in over the next few weeks.
+
 		// No registered StorageDriverFactory found, try ipc
-		driverClient, err := ipc.NewDriverClient(name, parameters)
-		if err != nil {
-			return nil, InvalidStorageDriverError{name}
-		}
-		err = driverClient.Start()
-		if err != nil {
-			return nil, err
-		}
-		return driverClient, nil
+		// driverClient, err := ipc.NewDriverClient(name, parameters)
+		// if err != nil {
+		// 	return nil, InvalidStorageDriverError{name}
+		// }
+		// err = driverClient.Start()
+		// if err != nil {
+		// 	return nil, err
+		// }
+		// return driverClient, nil
 	}
 	return driverFactory.Create(parameters)
 }

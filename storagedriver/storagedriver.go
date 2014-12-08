@@ -44,7 +44,7 @@ type StorageDriver interface {
 	// ReadStream retrieves an io.ReadCloser for the content stored at "path"
 	// with a given byte offset.
 	// May be used to resume reading a stream by providing a nonzero offset.
-	ReadStream(path string, offset uint64) (io.ReadCloser, error)
+	ReadStream(path string, offset int64) (io.ReadCloser, error)
 
 	// WriteStream stores the contents of the provided io.ReadCloser at a
 	// location designated by the given path.
@@ -52,12 +52,11 @@ type StorageDriver interface {
 	// "size" bytes.
 	// May be used to resume writing a stream by providing a nonzero offset.
 	// The offset must be no larger than the CurrentSize for this path.
-	WriteStream(path string, offset, size uint64, readCloser io.ReadCloser) error
+	WriteStream(path string, offset int64, reader io.Reader) (nn int64, err error)
 
-	// CurrentSize retrieves the curernt size in bytes of the object at the
-	// given path.
-	// It should be safe to read or write anywhere up to this point.
-	CurrentSize(path string) (uint64, error)
+	// Stat retrieves the FileInfo for the given path, including the current
+	// size in bytes and the creation time.
+	Stat(path string) (FileInfo, error)
 
 	// List returns a list of the objects that are direct descendants of the
 	//given path.
@@ -86,7 +85,7 @@ func (err PathNotFoundError) Error() string {
 // invalid offset.
 type InvalidOffsetError struct {
 	Path   string
-	Offset uint64
+	Offset int64
 }
 
 func (err InvalidOffsetError) Error() string {

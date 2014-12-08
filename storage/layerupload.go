@@ -107,9 +107,13 @@ func (luc *layerUploadController) Finish(size int64, digest digest.Digest) (Laye
 		return nil, err
 	}
 
-	if err := luc.writeLayer(fp, size, digest); err != nil {
+	if nn, err := luc.writeLayer(fp, digest); err != nil {
 		// Cleanup?
 		return nil, err
+	} else if nn != size {
+		// TODO(stevvooe): Short write. Will have to delete the location and
+		// report an error. This error needs to be reported to the client.
+		return nil, fmt.Errorf("short write writing layer")
 	}
 
 	// Yes! We have written some layer data. Let's make it visible. Link the
@@ -281,19 +285,20 @@ func (luc *layerUploadController) validateLayer(fp layerFile, size int64, dgst d
 	return dgst, nil
 }
 
-// writeLayer actually writes the the layer file into its final destination.
-// The layer should be validated before commencing the write.
-func (luc *layerUploadController) writeLayer(fp layerFile, size int64, dgst digest.Digest) error {
+// writeLayer actually writes the the layer file into its final destination,
+// identified by dgst. The layer should be validated before commencing the
+// write.
+func (luc *layerUploadController) writeLayer(fp layerFile, dgst digest.Digest) (nn int64, err error) {
 	blobPath, err := luc.layerStore.pathMapper.path(blobPathSpec{
 		digest: dgst,
 	})
 
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// Check for existence
-	if _, err := luc.layerStore.driver.CurrentSize(blobPath); err != nil {
+	if _, err := luc.layerStore.driver.Stat(blobPath); err != nil {
 		// TODO(stevvooe): This check is kind of problematic and very racy.
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
@@ -303,22 +308,18 @@ func (luc *layerUploadController) writeLayer(fp layerFile, size int64, dgst dige
 			// content addressable and we should just use this to ensure we
 			// have it written. Although, we do need to verify that the
 			// content that is there is the correct length.
-			return err
+			return 0, err
 		}
 	}
 
 	// Seek our local layer file back now.
 	if _, err := fp.Seek(0, os.SEEK_SET); err != nil {
 		// Cleanup?
-		return err
+		return 0, err
 	}
 
 	// Okay: we can write the file to the blob store.
-	if err := luc.layerStore.driver.WriteStream(blobPath, 0, uint64(size), fp); err != nil {
-		return err
-	}
-
-	return nil
+	return luc.layerStore.driver.WriteStream(blobPath, 0, fp)
 }
 
 // linkLayer links a valid, written layer blob into the registry under the

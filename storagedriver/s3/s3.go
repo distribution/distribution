@@ -1,3 +1,5 @@
+// +build ignore
+
 package s3
 
 import (
@@ -17,7 +19,7 @@ const driverName = "s3"
 
 // minChunkSize defines the minimum multipart upload chunk size
 // S3 API requires multipart upload chunks to be at least 5MB
-const minChunkSize = uint64(5 * 1024 * 1024)
+const minChunkSize = 5 * 1024 * 1024
 
 // listPartsMax is the largest amount of parts you can request from S3
 const listPartsMax = 1000
@@ -120,9 +122,9 @@ func (d *Driver) PutContent(path string, contents []byte) error {
 
 // ReadStream retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
-func (d *Driver) ReadStream(path string, offset uint64) (io.ReadCloser, error) {
+func (d *Driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
 	headers := make(http.Header)
-	headers.Add("Range", "bytes="+strconv.FormatUint(offset, 10)+"-")
+	headers.Add("Range", "bytes="+strconv.FormatInt(offset, 10)+"-")
 
 	resp, err := d.Bucket.GetResponseWithHeaders(path, headers)
 	if err != nil {
@@ -133,22 +135,22 @@ func (d *Driver) ReadStream(path string, offset uint64) (io.ReadCloser, error) {
 
 // WriteStream stores the contents of the provided io.ReadCloser at a location
 // designated by the given path.
-func (d *Driver) WriteStream(path string, offset, size uint64, reader io.ReadCloser) error {
+func (d *Driver) WriteStream(path string, offset, size int64, reader io.ReadCloser) error {
 	defer reader.Close()
 
-	chunkSize := minChunkSize
+	chunkSize := int64(minChunkSize)
 	for size/chunkSize >= listPartsMax {
 		chunkSize *= 2
 	}
 
 	partNumber := 1
-	totalRead := uint64(0)
+	var totalRead int64
 	multi, parts, err := d.getAllParts(path)
 	if err != nil {
 		return err
 	}
 
-	if (offset) > uint64(len(parts))*chunkSize || (offset < size && offset%chunkSize != 0) {
+	if (offset) > int64(len(parts))*chunkSize || (offset < size && offset%chunkSize != 0) {
 		return storagedriver.InvalidOffsetError{Path: path, Offset: offset}
 	}
 
@@ -161,11 +163,11 @@ func (d *Driver) WriteStream(path string, offset, size uint64, reader io.ReadClo
 	buf := make([]byte, chunkSize)
 	for {
 		bytesRead, err := io.ReadFull(reader, buf)
-		totalRead += uint64(bytesRead)
+		totalRead += int64(bytesRead)
 
 		if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
 			return err
-		} else if (uint64(bytesRead) < chunkSize) && totalRead != size {
+		} else if (int64(bytesRead) < chunkSize) && totalRead != size {
 			break
 		} else {
 			part, err := multi.PutPart(int(partNumber), bytes.NewReader(buf[0:bytesRead]))

@@ -1,3 +1,5 @@
+// +build ignore
+
 package s3
 
 import (
