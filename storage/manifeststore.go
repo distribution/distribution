@@ -72,7 +72,6 @@ func (ms *manifestStore) Tags(name string) ([]string, error) {
 	var tags []string
 	entries, err := ms.driver.List(p)
 	if err != nil {
-		logrus.Infof("%#v", err)
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
 			return nil, ErrUnknownRepository{Name: name}
