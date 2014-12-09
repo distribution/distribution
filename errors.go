@@ -34,6 +34,9 @@ const (
 	// match the provided tag.
 	ErrorCodeInvalidTag
 
+	// ErrorCodeUnknownRepository when the repository name is not known.
+	ErrorCodeUnknownRepository
+
 	// ErrorCodeUnknownManifest returned when image manifest name and tag is
 	// unknown, accompanied by a 404 status.
 	ErrorCodeUnknownManifest
@@ -64,6 +67,7 @@ var errorCodeStrings = map[ErrorCode]string{
 	ErrorCodeInvalidLength:      "INVALID_LENGTH",
 	ErrorCodeInvalidName:        "INVALID_NAME",
 	ErrorCodeInvalidTag:         "INVALID_TAG",
+	ErrorCodeUnknownRepository:  "UNKNOWN_REPOSITORY",
 	ErrorCodeUnknownManifest:    "UNKNOWN_MANIFEST",
 	ErrorCodeInvalidManifest:    "INVALID_MANIFEST",
 	ErrorCodeUnverifiedManifest: "UNVERIFIED_MANIFEST",
@@ -78,6 +82,7 @@ var errorCodesMessages = map[ErrorCode]string{
 	ErrorCodeInvalidLength:      "provided length did not match content length",
 	ErrorCodeInvalidName:        "manifest name did not match URI",
 	ErrorCodeInvalidTag:         "manifest tag did not match URI",
+	ErrorCodeUnknownRepository:  "repository not known to registry",
 	ErrorCodeUnknownManifest:    "manifest not known",
 	ErrorCodeInvalidManifest:    "manifest is invalid",
 	ErrorCodeUnverifiedManifest: "manifest failed signature validation",
