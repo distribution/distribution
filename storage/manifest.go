@@ -13,6 +13,16 @@ import (
 	"github.com/docker/docker-registry/digest"
 )
 
+// ErrUnknownRepository is returned if the named repository is not known by
+// the registry.
+type ErrUnknownRepository struct {
+	Name string
+}
+
+func (err ErrUnknownRepository) Error() string {
+	return fmt.Sprintf("unknown respository name=%s", err.Name)
+}
+
 // ErrUnknownManifest is returned if the manifest is not known by the
 // registry.
 type ErrUnknownManifest struct {

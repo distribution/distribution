@@ -99,6 +99,20 @@ func TestManifestStorage(t *testing.T) {
 	if !reflect.DeepEqual(fetchedManifest, sm) {
 		t.Fatalf("fetched manifest not equal: %#v != %#v", fetchedManifest, sm)
 	}
+
+	// Grabs the tags and check that this tagged manifest is present
+	tags, err := ms.Tags(name)
+	if err != nil {
+		t.Fatalf("unexpected error fetching tags: %v", err)
+	}
+
+	if len(tags) != 1 {
+		t.Fatalf("unexpected tags returned: %v", tags)
+	}
+
+	if tags[0] != tag {
+		t.Fatalf("unexpected tag found in tags: %v != %v", tags, []string{tag})
+	}
 }
 
 type layerKey struct {

@@ -3,6 +3,7 @@ package storage
 import (
 	"encoding/json"
 	"fmt"
+	"path"
 
 	"github.com/docker/docker-registry/storagedriver"
 	"github.com/docker/libtrust"
@@ -15,6 +16,35 @@ type manifestStore struct {
 }
 
 var _ ManifestService = &manifestStore{}
+
+func (ms *manifestStore) Tags(name string) ([]string, error) {
+	p, err := ms.pathMapper.path(manifestTagsPath{
+		name: name,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var tags []string
+	entries, err := ms.driver.List(p)
+	if err != nil {
+		logrus.Infof("%#v", err)
+		switch err := err.(type) {
+		case storagedriver.PathNotFoundError:
+			return nil, ErrUnknownRepository{Name: name}
+		default:
+			return nil, err
+		}
+	}
+
+	for _, entry := range entries {
+		_, filename := path.Split(entry)
+
+		tags = append(tags, filename)
+	}
+
+	return tags, nil
+}
 
 func (ms *manifestStore) Exists(name, tag string) (bool, error) {
 	p, err := ms.path(name, tag)
