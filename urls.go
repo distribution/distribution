@@ -39,6 +39,20 @@ func newURLBuilderFromString(root string) (*urlBuilder, error) {
 	return newURLBuilder(u), nil
 }
 
+func (ub *urlBuilder) buildTagsURL(name string) (string, error) {
+	route := clonedRoute(ub.router, routeNameTags)
+
+	tagsURL, err := route.
+		Schemes(ub.url.Scheme).
+		Host(ub.url.Host).
+		URL("name", name)
+	if err != nil {
+		return "", err
+	}
+
+	return tagsURL.String(), nil
+}
+
 func (ub *urlBuilder) forManifest(m *storage.Manifest) (string, error) {
 	return ub.buildManifestURL(m.Name, m.Tag)
 }
