@@ -1,8 +1,10 @@
 package registry
 
 import (
+	"encoding/json"
 	"net/http"
 
+	"github.com/docker/docker-registry/storage"
 	"github.com/gorilla/handlers"
 )
 
@@ -22,7 +24,34 @@ type tagsHandler struct {
 	*Context
 }
 
+type tagsAPIResponse struct {
+	Name string   `json:"name"`
+	Tags []string `json:"tags"`
+}
+
 // GetTags returns a json list of tags for a specific image name.
 func (th *tagsHandler) GetTags(w http.ResponseWriter, r *http.Request) {
-	// TODO(stevvooe): Implement this method.
+	defer r.Body.Close()
+	manifests := th.services.Manifests()
+
+	tags, err := manifests.Tags(th.Name)
+	if err != nil {
+		switch err := err.(type) {
+		case storage.ErrUnknownRepository:
+			w.WriteHeader(404)
+			th.Errors.Push(ErrorCodeUnknownRepository, map[string]string{"name": th.Name})
+		default:
+			th.Errors.PushErr(err)
+		}
+		return
+	}
+
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(tagsAPIResponse{
+		Name: th.Name,
+		Tags: tags,
+	}); err != nil {
+		th.Errors.PushErr(err)
+		return
+	}
 }
