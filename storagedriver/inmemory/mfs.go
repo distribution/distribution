@@ -294,15 +294,16 @@ func (f *file) ReadAt(p []byte, offset int64) (n int, err error) {
 }
 
 func (f *file) WriteAt(p []byte, offset int64) (n int, err error) {
-	if len(f.data) > 0 && offset >= int64(len(f.data)) {
-		// Extend missing region with a zero pad, while also preallocating out to size of p.
-		pad := offset - int64(len(f.data))
-		size := len(p) + int(pad)
-		f.data = append(f.data, make([]byte, pad, size)...)
+	off := int(offset)
+	if cap(f.data) < off+len(p) {
+		data := make([]byte, len(f.data), off+len(p))
+		copy(data, f.data)
+		f.data = data
 	}
 
-	f.data = append(f.data, p...)
-	return len(p), nil
+	f.data = f.data[:off+len(p)]
+
+	return copy(f.data[off:off+len(p)], p), nil
 }
 
 func (f *file) String() string {
