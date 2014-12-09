@@ -210,7 +210,7 @@ func (d *dir) move(src, dst string) error {
 	srcDirname, srcFilename := path.Split(src)
 	sp := d.find(srcDirname)
 
-	if sp.path() != srcDirname {
+	if srcDirname != strings.TrimSuffix(sp.path(), "/")+"/" {
 		return errNotExists
 	}
 
@@ -237,7 +237,7 @@ func (d *dir) delete(p string) error {
 	dirname, filename := path.Split(p)
 	parent := d.find(dirname)
 
-	if dirname != parent.path() {
+	if dirname != strings.TrimSuffix(parent.path(), "/")+"/" {
 		return errNotExists
 	}
 

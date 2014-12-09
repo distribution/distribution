@@ -203,6 +203,10 @@ func (d *Driver) Move(sourcePath string, destPath string) error {
 		return storagedriver.PathNotFoundError{Path: sourcePath}
 	}
 
+	if err := os.MkdirAll(path.Dir(dest), 0755); err != nil {
+		return err
+	}
+
 	err := os.Rename(source, dest)
 	return err
 }
