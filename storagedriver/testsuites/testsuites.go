@@ -396,7 +396,12 @@ func (suite *DriverSuite) TestContinueStreamAppend(c *check.C) {
 // fails.
 func (suite *DriverSuite) TestReadNonexistentStream(c *check.C) {
 	filename := randomPath(32)
+
 	_, err := suite.StorageDriver.ReadStream(filename, 0)
+	c.Assert(err, check.NotNil)
+	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+
+	_, err = suite.StorageDriver.ReadStream(filename, 64)
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
 }
