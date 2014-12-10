@@ -466,14 +466,54 @@ func (suite *DriverSuite) TestMove(c *check.C) {
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
 }
 
-// TestMoveNonexistent checks that moving a nonexistent key fails
+// TestMoveOverwrite checks that a moved object no longer exists at the source
+// path and overwrites the contents at the destination.
+func (suite *DriverSuite) TestMoveOverwrite(c *check.C) {
+	sourcePath := randomPath(32)
+	destPath := randomPath(32)
+	sourceContents := randomContents(32)
+	destContents := randomContents(64)
+
+	defer suite.StorageDriver.Delete(firstPart(sourcePath))
+	defer suite.StorageDriver.Delete(firstPart(destPath))
+
+	err := suite.StorageDriver.PutContent(sourcePath, sourceContents)
+	c.Assert(err, check.IsNil)
+
+	err = suite.StorageDriver.PutContent(destPath, destContents)
+	c.Assert(err, check.IsNil)
+
+	err = suite.StorageDriver.Move(sourcePath, destPath)
+	c.Assert(err, check.IsNil)
+
+	received, err := suite.StorageDriver.GetContent(destPath)
+	c.Assert(err, check.IsNil)
+	c.Assert(received, check.DeepEquals, sourceContents)
+
+	_, err = suite.StorageDriver.GetContent(sourcePath)
+	c.Assert(err, check.NotNil)
+	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+}
+
+// TestMoveNonexistent checks that moving a nonexistent key fails and does not
+// delete the data at the destination path.
 func (suite *DriverSuite) TestMoveNonexistent(c *check.C) {
+	contents := randomContents(32)
 	sourcePath := randomPath(32)
 	destPath := randomPath(32)
 
-	err := suite.StorageDriver.Move(sourcePath, destPath)
+	defer suite.StorageDriver.Delete(firstPart(destPath))
+
+	err := suite.StorageDriver.PutContent(destPath, contents)
+	c.Assert(err, check.IsNil)
+
+	err = suite.StorageDriver.Move(sourcePath, destPath)
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+
+	received, err := suite.StorageDriver.GetContent(destPath)
+	c.Assert(err, check.IsNil)
+	c.Assert(received, check.DeepEquals, contents)
 }
 
 // TestDelete checks that the delete operation removes data from the storage
