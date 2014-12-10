@@ -3,10 +3,55 @@ package storage
 import (
 	"encoding/json"
 	"fmt"
+	"path"
+	"strings"
 
 	"github.com/docker/docker-registry/storagedriver"
 	"github.com/docker/libtrust"
 )
+
+// ErrUnknownRepository is returned if the named repository is not known by
+// the registry.
+type ErrUnknownRepository struct {
+	Name string
+}
+
+func (err ErrUnknownRepository) Error() string {
+	return fmt.Sprintf("unknown respository name=%s", err.Name)
+}
+
+// ErrUnknownManifest is returned if the manifest is not known by the
+// registry.
+type ErrUnknownManifest struct {
+	Name string
+	Tag  string
+}
+
+func (err ErrUnknownManifest) Error() string {
+	return fmt.Sprintf("unknown manifest name=%s tag=%s", err.Name, err.Tag)
+}
+
+// ErrManifestUnverified is returned when the registry is unable to verify
+// the manifest.
+type ErrManifestUnverified struct{}
+
+func (ErrManifestUnverified) Error() string {
+	return fmt.Sprintf("unverified manifest")
+}
+
+// ErrManifestVerification provides a type to collect errors encountered
+// during manifest verification. Currently, it accepts errors of all types,
+// but it may be narrowed to those involving manifest verification.
+type ErrManifestVerification []error
+
+func (errs ErrManifestVerification) Error() string {
+	var parts []string
+	for _, err := range errs {
+		parts = append(parts, err.Error())
+	}
+
+	return fmt.Sprintf("errors verifying manifest: %v", strings.Join(parts, ","))
+}
 
 type manifestStore struct {
 	driver       storagedriver.StorageDriver
@@ -15,6 +60,34 @@ type manifestStore struct {
 }
 
 var _ ManifestService = &manifestStore{}
+
+func (ms *manifestStore) Tags(name string) ([]string, error) {
+	p, err := ms.pathMapper.path(manifestTagsPath{
+		name: name,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var tags []string
+	entries, err := ms.driver.List(p)
+	if err != nil {
+		switch err := err.(type) {
+		case storagedriver.PathNotFoundError:
+			return nil, ErrUnknownRepository{Name: name}
+		default:
+			return nil, err
+		}
+	}
+
+	for _, entry := range entries {
+		_, filename := path.Split(entry)
+
+		tags = append(tags, filename)
+	}
+
+	return tags, nil
+}
 
 func (ms *manifestStore) Exists(name, tag string) (bool, error) {
 	p, err := ms.path(name, tag)

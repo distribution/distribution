@@ -64,6 +64,8 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 	repoPrefix := append(rootPrefix, "repositories")
 
 	switch v := spec.(type) {
+	case manifestTagsPath:
+		return path.Join(append(repoPrefix, v.name, "manifests")...), nil
 	case manifestPathSpec:
 		// TODO(sday): May need to store manifest by architecture.
 		return path.Join(append(repoPrefix, v.name, "manifests", v.tag)...), nil
@@ -108,6 +110,14 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 type pathSpec interface {
 	pathSpec()
 }
+
+// manifestTagsPath describes the path elements required to point to the
+// directory with all manifest tags under the repository.
+type manifestTagsPath struct {
+	name string
+}
+
+func (manifestTagsPath) pathSpec() {}
 
 // manifestPathSpec describes the path elements used to build a manifest path.
 // The contents should be a signed manifest json file.

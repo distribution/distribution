@@ -195,6 +195,32 @@ func TestManifestAPI(t *testing.T) {
 		t.Fatalf("expected manifest unknown error: got %v", respErrs)
 	}
 
+	tagsURL, err := builder.buildTagsURL(imageName)
+	if err != nil {
+		t.Fatalf("unexpected error building tags url: %v", err)
+	}
+
+	resp, err = http.Get(tagsURL)
+	if err != nil {
+		t.Fatalf("unexpected error getting unknown tags: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check that we get an unknown repository error when asking for tags
+	checkResponse(t, "getting unknown manifest tags", resp, http.StatusNotFound)
+	dec = json.NewDecoder(resp.Body)
+	if err := dec.Decode(&respErrs); err != nil {
+		t.Fatalf("unexpected error decoding error response: %v", err)
+	}
+
+	if len(respErrs.Errors) == 0 {
+		t.Fatalf("expected errors in response")
+	}
+
+	if respErrs.Errors[0].Code != ErrorCodeUnknownRepository {
+		t.Fatalf("expected respository unknown error: got %v", respErrs)
+	}
+
 	// --------------------------------
 	// Attempt to push unsigned manifest with missing layers
 	unsignedManifest := &storage.Manifest{
@@ -299,6 +325,35 @@ func TestManifestAPI(t *testing.T) {
 
 	if !bytes.Equal(fetchedManifest.Raw, signedManifest.Raw) {
 		t.Fatalf("manifests do not match")
+	}
+
+	// Ensure that the tag is listed.
+	resp, err = http.Get(tagsURL)
+	if err != nil {
+		t.Fatalf("unexpected error getting unknown tags: %v", err)
+	}
+	defer resp.Body.Close()
+
+	// Check that we get an unknown repository error when asking for tags
+	checkResponse(t, "getting unknown manifest tags", resp, http.StatusOK)
+	dec = json.NewDecoder(resp.Body)
+
+	var tagsResponse tagsAPIResponse
+
+	if err := dec.Decode(&tagsResponse); err != nil {
+		t.Fatalf("unexpected error decoding error response: %v", err)
+	}
+
+	if tagsResponse.Name != imageName {
+		t.Fatalf("tags name should match image name: %v != %v", tagsResponse.Name, imageName)
+	}
+
+	if len(tagsResponse.Tags) != 1 {
+		t.Fatalf("expected some tags in response: %v", tagsResponse.Tags)
+	}
+
+	if tagsResponse.Tags[0] != tag {
+		t.Fatalf("tag not as expected: %q != %q", tagsResponse.Tags[0], tag)
 	}
 }
 

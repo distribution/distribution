@@ -52,6 +52,9 @@ func (ss *Services) Manifests() ManifestService {
 
 // ManifestService provides operations on image manifests.
 type ManifestService interface {
+	// Tags lists the tags under the named repository.
+	Tags(name string) ([]string, error)
+
 	// Exists returns true if the layer exists.
 	Exists(name, tag string) (bool, error)
 

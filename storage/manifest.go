@@ -3,48 +3,11 @@ package storage
 import (
 	"crypto/x509"
 	"encoding/json"
-	"fmt"
-	"strings"
 
 	"github.com/Sirupsen/logrus"
-
-	"github.com/docker/libtrust"
-
 	"github.com/docker/docker-registry/digest"
+	"github.com/docker/libtrust"
 )
-
-// ErrUnknownManifest is returned if the manifest is not known by the
-// registry.
-type ErrUnknownManifest struct {
-	Name string
-	Tag  string
-}
-
-func (err ErrUnknownManifest) Error() string {
-	return fmt.Sprintf("unknown manifest name=%s tag=%s", err.Name, err.Tag)
-}
-
-// ErrManifestUnverified is returned when the registry is unable to verify
-// the manifest.
-type ErrManifestUnverified struct{}
-
-func (ErrManifestUnverified) Error() string {
-	return fmt.Sprintf("unverified manifest")
-}
-
-// ErrManifestVerification provides a type to collect errors encountered
-// during manifest verification. Currently, it accepts errors of all types,
-// but it may be narrowed to those involving manifest verification.
-type ErrManifestVerification []error
-
-func (errs ErrManifestVerification) Error() string {
-	var parts []string
-	for _, err := range errs {
-		parts = append(parts, err.Error())
-	}
-
-	return fmt.Sprintf("errors verifying manifest: %v", strings.Join(parts, ","))
-}
 
 // Versioned provides a struct with just the manifest schemaVersion. Incoming
 // content with unknown schema version can be decoded against this struct to
