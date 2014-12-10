@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/docker/docker-registry/api/errors"
 	"github.com/docker/docker-registry/storage"
 	"github.com/gorilla/handlers"
 )
@@ -39,7 +40,7 @@ func (th *tagsHandler) GetTags(w http.ResponseWriter, r *http.Request) {
 		switch err := err.(type) {
 		case storage.ErrUnknownRepository:
 			w.WriteHeader(404)
-			th.Errors.Push(ErrorCodeUnknownRepository, map[string]string{"name": th.Name})
+			th.Errors.Push(errors.ErrorCodeNameUnknown, map[string]string{"name": th.Name})
 		default:
 			th.Errors.PushErr(err)
 		}

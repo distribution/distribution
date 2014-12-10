@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/docker/docker-registry"
+	"github.com/docker/docker-registry/api/errors"
 	"github.com/docker/docker-registry/digest"
 	"github.com/docker/docker-registry/storage"
 )
@@ -94,17 +94,18 @@ func (r *clientImpl) GetImageManifest(name, tag string) (*storage.SignedManifest
 	case response.StatusCode == http.StatusOK:
 		break
 	case response.StatusCode == http.StatusNotFound:
-		return nil, &registry.ImageManifestNotFoundError{Name: name, Tag: tag}
+		return nil, &ImageManifestNotFoundError{Name: name, Tag: tag}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
-		errors := new(registry.Errors)
+		var errs errors.Errors
+
 		decoder := json.NewDecoder(response.Body)
-		err = decoder.Decode(&errors)
+		err = decoder.Decode(&errs)
 		if err != nil {
 			return nil, err
 		}
-		return nil, errors
+		return nil, &errs
 	default:
-		return nil, &registry.UnexpectedHTTPStatusError{Status: response.Status}
+		return nil, &UnexpectedHTTPStatusError{Status: response.Status}
 	}
 
 	decoder := json.NewDecoder(response.Body)
@@ -118,13 +119,8 @@ func (r *clientImpl) GetImageManifest(name, tag string) (*storage.SignedManifest
 }
 
 func (r *clientImpl) PutImageManifest(name, tag string, manifest *storage.SignedManifest) error {
-	manifestBytes, err := json.Marshal(manifest)
-	if err != nil {
-		return err
-	}
-
 	putRequest, err := http.NewRequest("PUT",
-		r.imageManifestURL(name, tag), bytes.NewReader(manifestBytes))
+		r.imageManifestURL(name, tag), bytes.NewReader(manifest.Raw))
 	if err != nil {
 		return err
 	}
@@ -140,15 +136,16 @@ func (r *clientImpl) PutImageManifest(name, tag string, manifest *storage.Signed
 	case response.StatusCode == http.StatusOK:
 		return nil
 	case response.StatusCode >= 400 && response.StatusCode < 500:
-		errors := new(registry.Errors)
+		var errors errors.Errors
 		decoder := json.NewDecoder(response.Body)
 		err = decoder.Decode(&errors)
 		if err != nil {
 			return err
 		}
-		return errors
+
+		return &errors
 	default:
-		return &registry.UnexpectedHTTPStatusError{Status: response.Status}
+		return &UnexpectedHTTPStatusError{Status: response.Status}
 	}
 }
 
@@ -170,17 +167,17 @@ func (r *clientImpl) DeleteImage(name, tag string) error {
 	case response.StatusCode == http.StatusNoContent:
 		break
 	case response.StatusCode == http.StatusNotFound:
-		return &registry.ImageManifestNotFoundError{Name: name, Tag: tag}
+		return &ImageManifestNotFoundError{Name: name, Tag: tag}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
-		errors := new(registry.Errors)
+		var errs errors.Errors
 		decoder := json.NewDecoder(response.Body)
-		err = decoder.Decode(&errors)
+		err = decoder.Decode(&errs)
 		if err != nil {
 			return err
 		}
-		return errors
+		return &errs
 	default:
-		return &registry.UnexpectedHTTPStatusError{Status: response.Status}
+		return &UnexpectedHTTPStatusError{Status: response.Status}
 	}
 
 	return nil
@@ -198,17 +195,17 @@ func (r *clientImpl) ListImageTags(name string) ([]string, error) {
 	case response.StatusCode == http.StatusOK:
 		break
 	case response.StatusCode == http.StatusNotFound:
-		return nil, &registry.RepositoryNotFoundError{Name: name}
+		return nil, &RepositoryNotFoundError{Name: name}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
-		errors := new(registry.Errors)
+		var errs errors.Errors
 		decoder := json.NewDecoder(response.Body)
-		err = decoder.Decode(&errors)
+		err = decoder.Decode(&errs)
 		if err != nil {
 			return nil, err
 		}
-		return nil, errors
+		return nil, &errs
 	default:
-		return nil, &registry.UnexpectedHTTPStatusError{Status: response.Status}
+		return nil, &UnexpectedHTTPStatusError{Status: response.Status}
 	}
 
 	tags := struct {
@@ -235,7 +232,7 @@ func (r *clientImpl) BlobLength(name string, dgst digest.Digest) (int, error) {
 	switch {
 	case response.StatusCode == http.StatusOK:
 		lengthHeader := response.Header.Get("Content-Length")
-		length, err := strconv.ParseInt(lengthHeader, 10, 0)
+		length, err := strconv.ParseInt(lengthHeader, 10, 64)
 		if err != nil {
 			return -1, err
 		}
@@ -243,16 +240,16 @@ func (r *clientImpl) BlobLength(name string, dgst digest.Digest) (int, error) {
 	case response.StatusCode == http.StatusNotFound:
 		return -1, nil
 	case response.StatusCode >= 400 && response.StatusCode < 500:
-		errors := new(registry.Errors)
+		var errs errors.Errors
 		decoder := json.NewDecoder(response.Body)
-		err = decoder.Decode(&errors)
+		err = decoder.Decode(&errs)
 		if err != nil {
 			return -1, err
 		}
-		return -1, errors
+		return -1, &errs
 	default:
 		response.Body.Close()
-		return -1, &registry.UnexpectedHTTPStatusError{Status: response.Status}
+		return -1, &UnexpectedHTTPStatusError{Status: response.Status}
 	}
 }
 
@@ -280,18 +277,18 @@ func (r *clientImpl) GetBlob(name string, dgst digest.Digest, byteOffset int) (i
 		return response.Body, int(length), nil
 	case response.StatusCode == http.StatusNotFound:
 		response.Body.Close()
-		return nil, 0, &registry.BlobNotFoundError{Name: name, Digest: dgst}
+		return nil, 0, &BlobNotFoundError{Name: name, Digest: dgst}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
-		errors := new(registry.Errors)
+		var errs errors.Errors
 		decoder := json.NewDecoder(response.Body)
-		err = decoder.Decode(&errors)
+		err = decoder.Decode(&errs)
 		if err != nil {
 			return nil, 0, err
 		}
-		return nil, 0, errors
+		return nil, 0, &errs
 	default:
 		response.Body.Close()
-		return nil, 0, &registry.UnexpectedHTTPStatusError{Status: response.Status}
+		return nil, 0, &UnexpectedHTTPStatusError{Status: response.Status}
 	}
 }
 
@@ -315,20 +312,20 @@ func (r *clientImpl) InitiateBlobUpload(name string) (string, error) {
 	// case response.StatusCode == http.StatusNotFound:
 	// return
 	case response.StatusCode >= 400 && response.StatusCode < 500:
-		errors := new(registry.Errors)
+		var errs errors.Errors
 		decoder := json.NewDecoder(response.Body)
-		err = decoder.Decode(&errors)
+		err = decoder.Decode(&errs)
 		if err != nil {
 			return "", err
 		}
-		return "", errors
+		return "", &errs
 	default:
-		return "", &registry.UnexpectedHTTPStatusError{Status: response.Status}
+		return "", &UnexpectedHTTPStatusError{Status: response.Status}
 	}
 }
 
 func (r *clientImpl) GetBlobUploadStatus(location string) (int, int, error) {
-	response, err := http.Get(fmt.Sprintf("%s%s", r.Endpoint, location))
+	response, err := http.Get(location)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -339,31 +336,30 @@ func (r *clientImpl) GetBlobUploadStatus(location string) (int, int, error) {
 	case response.StatusCode == http.StatusNoContent:
 		return parseRangeHeader(response.Header.Get("Range"))
 	case response.StatusCode == http.StatusNotFound:
-		return 0, 0, &registry.BlobUploadNotFoundError{Location: location}
+		return 0, 0, &BlobUploadNotFoundError{Location: location}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
-		errors := new(registry.Errors)
+		var errs errors.Errors
 		decoder := json.NewDecoder(response.Body)
-		err = decoder.Decode(&errors)
+		err = decoder.Decode(&errs)
 		if err != nil {
 			return 0, 0, err
 		}
-		return 0, 0, errors
+		return 0, 0, &errs
 	default:
-		return 0, 0, &registry.UnexpectedHTTPStatusError{Status: response.Status}
+		return 0, 0, &UnexpectedHTTPStatusError{Status: response.Status}
 	}
 }
 
 func (r *clientImpl) UploadBlob(location string, blob io.ReadCloser, length int, dgst digest.Digest) error {
 	defer blob.Close()
 
-	putRequest, err := http.NewRequest("PUT",
-		fmt.Sprintf("%s%s", r.Endpoint, location), blob)
+	putRequest, err := http.NewRequest("PUT", location, blob)
 	if err != nil {
 		return err
 	}
 
 	queryValues := url.Values{}
-	queryValues.Set("length", fmt.Sprint(length))
+	queryValues.Set("size", fmt.Sprint(length))
 	queryValues.Set("digest", dgst.String())
 	putRequest.URL.RawQuery = queryValues.Encode()
 
@@ -381,17 +377,17 @@ func (r *clientImpl) UploadBlob(location string, blob io.ReadCloser, length int,
 	case response.StatusCode == http.StatusCreated:
 		return nil
 	case response.StatusCode == http.StatusNotFound:
-		return &registry.BlobUploadNotFoundError{Location: location}
+		return &BlobUploadNotFoundError{Location: location}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
-		errors := new(registry.Errors)
+		var errs errors.Errors
 		decoder := json.NewDecoder(response.Body)
-		err = decoder.Decode(&errors)
+		err = decoder.Decode(&errs)
 		if err != nil {
 			return err
 		}
-		return errors
+		return &errs
 	default:
-		return &registry.UnexpectedHTTPStatusError{Status: response.Status}
+		return &UnexpectedHTTPStatusError{Status: response.Status}
 	}
 }
 
@@ -426,23 +422,23 @@ func (r *clientImpl) UploadBlobChunk(location string, blobChunk io.ReadCloser, l
 		if err != nil {
 			return err
 		}
-		return &registry.BlobUploadInvalidRangeError{
+		return &BlobUploadInvalidRangeError{
 			Location:       location,
 			LastValidRange: lastValidRange,
 			BlobSize:       blobSize,
 		}
 	case response.StatusCode == http.StatusNotFound:
-		return &registry.BlobUploadNotFoundError{Location: location}
+		return &BlobUploadNotFoundError{Location: location}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
-		errors := new(registry.Errors)
+		var errs errors.Errors
 		decoder := json.NewDecoder(response.Body)
-		err = decoder.Decode(&errors)
+		err = decoder.Decode(&errs)
 		if err != nil {
 			return err
 		}
-		return errors
+		return &errs
 	default:
-		return &registry.UnexpectedHTTPStatusError{Status: response.Status}
+		return &UnexpectedHTTPStatusError{Status: response.Status}
 	}
 }
 
@@ -454,7 +450,7 @@ func (r *clientImpl) FinishChunkedBlobUpload(location string, length int, dgst d
 	}
 
 	queryValues := new(url.Values)
-	queryValues.Set("length", fmt.Sprint(length))
+	queryValues.Set("size", fmt.Sprint(length))
 	queryValues.Set("digest", dgst.String())
 	putRequest.URL.RawQuery = queryValues.Encode()
 
@@ -474,17 +470,17 @@ func (r *clientImpl) FinishChunkedBlobUpload(location string, length int, dgst d
 	case response.StatusCode == http.StatusCreated:
 		return nil
 	case response.StatusCode == http.StatusNotFound:
-		return &registry.BlobUploadNotFoundError{Location: location}
+		return &BlobUploadNotFoundError{Location: location}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
-		errors := new(registry.Errors)
+		var errs errors.Errors
 		decoder := json.NewDecoder(response.Body)
-		err = decoder.Decode(&errors)
+		err = decoder.Decode(&errs)
 		if err != nil {
 			return err
 		}
-		return errors
+		return &errs
 	default:
-		return &registry.UnexpectedHTTPStatusError{Status: response.Status}
+		return &UnexpectedHTTPStatusError{Status: response.Status}
 	}
 }
 
@@ -506,17 +502,17 @@ func (r *clientImpl) CancelBlobUpload(location string) error {
 	case response.StatusCode == http.StatusNoContent:
 		return nil
 	case response.StatusCode == http.StatusNotFound:
-		return &registry.BlobUploadNotFoundError{Location: location}
+		return &BlobUploadNotFoundError{Location: location}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
-		errors := new(registry.Errors)
+		var errs errors.Errors
 		decoder := json.NewDecoder(response.Body)
-		err = decoder.Decode(&errors)
+		err = decoder.Decode(&errs)
 		if err != nil {
 			return err
 		}
-		return errors
+		return &errs
 	default:
-		return &registry.UnexpectedHTTPStatusError{Status: response.Status}
+		return &UnexpectedHTTPStatusError{Status: response.Status}
 	}
 }
 

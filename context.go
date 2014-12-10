@@ -1,6 +1,9 @@
 package registry
 
-import "github.com/Sirupsen/logrus"
+import (
+	"github.com/Sirupsen/logrus"
+	"github.com/docker/docker-registry/api/errors"
+)
 
 // Context should contain the request specific context for use in across
 // handlers. Resources that don't need to be shared across handlers should not
@@ -16,7 +19,7 @@ type Context struct {
 	// Errors is a collection of errors encountered during the request to be
 	// returned to the client API. If errors are added to the collection, the
 	// handler *must not* start the response via http.ResponseWriter.
-	Errors Errors
+	Errors errors.Errors
 
 	// vars contains the extracted gorilla/mux variables that can be used for
 	// assignment.
