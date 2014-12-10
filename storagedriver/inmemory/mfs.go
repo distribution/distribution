@@ -11,7 +11,7 @@ import (
 
 var (
 	errExists    = fmt.Errorf("exists")
-	errNotExists = fmt.Errorf("exists")
+	errNotExists = fmt.Errorf("notexists")
 	errIsNotDir  = fmt.Errorf("notdir")
 	errIsDir     = fmt.Errorf("isdir")
 )
@@ -139,9 +139,7 @@ func (d *dir) mkfile(p string) (*file, error) {
 
 // mkdirs creates any missing directory entries in p and returns the result.
 func (d *dir) mkdirs(p string) (*dir, error) {
-	if p == "" {
-		p = "/"
-	}
+	p = normalize(p)
 
 	n := d.find(p)
 
@@ -210,7 +208,7 @@ func (d *dir) move(src, dst string) error {
 	srcDirname, srcFilename := path.Split(src)
 	sp := d.find(srcDirname)
 
-	if sp.path() != srcDirname {
+	if normalize(srcDirname) != normalize(sp.path()) {
 		return errNotExists
 	}
 
@@ -237,7 +235,7 @@ func (d *dir) delete(p string) error {
 	dirname, filename := path.Split(p)
 	parent := d.find(dirname)
 
-	if dirname != parent.path() {
+	if normalize(dirname) != normalize(parent.path()) {
 		return errNotExists
 	}
 
@@ -327,4 +325,8 @@ func (c *common) path() string {
 
 func (c *common) modtime() time.Time {
 	return c.mod
+}
+
+func normalize(p string) string {
+	return "/" + strings.Trim(p, "/")
 }

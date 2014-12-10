@@ -2,6 +2,7 @@ package testsuites
 
 import (
 	"bytes"
+	"crypto/sha1"
 	"io"
 	"io/ioutil"
 	"math/rand"
@@ -109,35 +110,54 @@ func (suite *DriverSuite) TearDownSuite(c *check.C) {
 
 // TestWriteRead1 tests a simple write-read workflow.
 func (suite *DriverSuite) TestWriteRead1(c *check.C) {
-	filename := randomString(32)
+	filename := randomPath(32)
 	contents := []byte("a")
 	suite.writeReadCompare(c, filename, contents)
 }
 
 // TestWriteRead2 tests a simple write-read workflow with unicode data.
 func (suite *DriverSuite) TestWriteRead2(c *check.C) {
-	filename := randomString(32)
+	filename := randomPath(32)
 	contents := []byte("\xc3\x9f")
 	suite.writeReadCompare(c, filename, contents)
 }
 
 // TestWriteRead3 tests a simple write-read workflow with a small string.
 func (suite *DriverSuite) TestWriteRead3(c *check.C) {
-	filename := randomString(32)
-	contents := []byte(randomString(32))
+	filename := randomPath(32)
+	contents := randomContents(32)
 	suite.writeReadCompare(c, filename, contents)
 }
 
 // TestWriteRead4 tests a simple write-read workflow with 1MB of data.
 func (suite *DriverSuite) TestWriteRead4(c *check.C) {
-	filename := randomString(32)
-	contents := []byte(randomString(1024 * 1024))
+	filename := randomPath(32)
+	contents := randomContents(1024 * 1024)
+	suite.writeReadCompare(c, filename, contents)
+}
+
+// TestWriteReadNonUTF8 tests that non-utf8 data may be written to the storage
+// driver safely.
+func (suite *DriverSuite) TestWriteReadNonUTF8(c *check.C) {
+	filename := randomPath(32)
+	contents := []byte{0x80, 0x80, 0x80, 0x80}
+	suite.writeReadCompare(c, filename, contents)
+}
+
+// TestTruncate tests that putting smaller contents than an original file does
+// remove the excess contents.
+func (suite *DriverSuite) TestTruncate(c *check.C) {
+	filename := randomPath(32)
+	contents := randomContents(1024 * 1024)
+	suite.writeReadCompare(c, filename, contents)
+
+	contents = randomContents(1024)
 	suite.writeReadCompare(c, filename, contents)
 }
 
 // TestReadNonexistent tests reading content from an empty path.
 func (suite *DriverSuite) TestReadNonexistent(c *check.C) {
-	filename := randomString(32)
+	filename := randomPath(32)
 	_, err := suite.StorageDriver.GetContent(filename)
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
@@ -145,7 +165,7 @@ func (suite *DriverSuite) TestReadNonexistent(c *check.C) {
 
 // TestWriteReadStreams1 tests a simple write-read streaming workflow.
 func (suite *DriverSuite) TestWriteReadStreams1(c *check.C) {
-	filename := randomString(32)
+	filename := randomPath(32)
 	contents := []byte("a")
 	suite.writeReadCompareStreams(c, filename, contents)
 }
@@ -153,7 +173,7 @@ func (suite *DriverSuite) TestWriteReadStreams1(c *check.C) {
 // TestWriteReadStreams2 tests a simple write-read streaming workflow with
 // unicode data.
 func (suite *DriverSuite) TestWriteReadStreams2(c *check.C) {
-	filename := randomString(32)
+	filename := randomPath(32)
 	contents := []byte("\xc3\x9f")
 	suite.writeReadCompareStreams(c, filename, contents)
 }
@@ -161,30 +181,68 @@ func (suite *DriverSuite) TestWriteReadStreams2(c *check.C) {
 // TestWriteReadStreams3 tests a simple write-read streaming workflow with a
 // small amount of data.
 func (suite *DriverSuite) TestWriteReadStreams3(c *check.C) {
-	filename := randomString(32)
-	contents := []byte(randomString(32))
+	filename := randomPath(32)
+	contents := randomContents(32)
 	suite.writeReadCompareStreams(c, filename, contents)
 }
 
 // TestWriteReadStreams4 tests a simple write-read streaming workflow with 1MB
 // of data.
 func (suite *DriverSuite) TestWriteReadStreams4(c *check.C) {
-	filename := randomString(32)
-	contents := []byte(randomString(1024 * 1024))
+	filename := randomPath(32)
+	contents := randomContents(1024 * 1024)
 	suite.writeReadCompareStreams(c, filename, contents)
+}
+
+// TestWriteReadStreamsNonUTF8 tests that non-utf8 data may be written to the
+// storage driver safely.
+func (suite *DriverSuite) TestWriteReadStreamsNonUTF8(c *check.C) {
+	filename := randomPath(32)
+	contents := []byte{0x80, 0x80, 0x80, 0x80}
+	suite.writeReadCompareStreams(c, filename, contents)
+}
+
+// TestWriteReadLargeStreams tests that a 5GB file may be written to the storage
+// driver safely.
+func (suite *DriverSuite) TestWriteReadLargeStreams(c *check.C) {
+	if testing.Short() {
+		c.Skip("Skipping test in short mode")
+	}
+
+	filename := randomPath(32)
+	defer suite.StorageDriver.Delete(firstPart(filename))
+
+	checksum := sha1.New()
+	var offset int64
+	var chunkSize int64 = 1024 * 1024
+
+	for i := 0; i < 5*1024; i++ {
+		contents := randomContents(chunkSize)
+		written, err := suite.StorageDriver.WriteStream(filename, offset, io.TeeReader(bytes.NewReader(contents), checksum))
+		c.Assert(err, check.IsNil)
+		c.Assert(written, check.Equals, chunkSize)
+		offset += chunkSize
+	}
+	reader, err := suite.StorageDriver.ReadStream(filename, 0)
+	c.Assert(err, check.IsNil)
+
+	writtenChecksum := sha1.New()
+	io.Copy(writtenChecksum, reader)
+
+	c.Assert(writtenChecksum.Sum(nil), check.DeepEquals, checksum.Sum(nil))
 }
 
 // TestReadStreamWithOffset tests that the appropriate data is streamed when
 // reading with a given offset.
 func (suite *DriverSuite) TestReadStreamWithOffset(c *check.C) {
-	filename := randomString(32)
-	defer suite.StorageDriver.Delete(filename)
+	filename := randomPath(32)
+	defer suite.StorageDriver.Delete(firstPart(filename))
 
 	chunkSize := int64(32)
 
-	contentsChunk1 := []byte(randomString(chunkSize))
-	contentsChunk2 := []byte(randomString(chunkSize))
-	contentsChunk3 := []byte(randomString(chunkSize))
+	contentsChunk1 := randomContents(chunkSize)
+	contentsChunk2 := randomContents(chunkSize)
+	contentsChunk3 := randomContents(chunkSize)
 
 	err := suite.StorageDriver.PutContent(filename, append(append(contentsChunk1, contentsChunk2...), contentsChunk3...))
 	c.Assert(err, check.IsNil)
@@ -256,15 +314,15 @@ func (suite *DriverSuite) TestReadStreamWithOffset(c *check.C) {
 // TestContinueStreamAppend tests that a stream write can be appended to without
 // corrupting the data.
 func (suite *DriverSuite) TestContinueStreamAppend(c *check.C) {
-	filename := randomString(32)
-	defer suite.StorageDriver.Delete(filename)
+	filename := randomPath(32)
+	defer suite.StorageDriver.Delete(firstPart(filename))
 
 	chunkSize := int64(10 * 1024 * 1024)
 
-	contentsChunk1 := []byte(randomString(chunkSize))
-	contentsChunk2 := []byte(randomString(chunkSize))
-	contentsChunk3 := []byte(randomString(chunkSize))
-	contentsChunk4 := []byte(randomString(chunkSize))
+	contentsChunk1 := randomContents(chunkSize)
+	contentsChunk2 := randomContents(chunkSize)
+	contentsChunk3 := randomContents(chunkSize)
+	contentsChunk4 := randomContents(chunkSize)
 	zeroChunk := make([]byte, int64(chunkSize))
 
 	fullContents := append(append(contentsChunk1, contentsChunk2...), contentsChunk3...)
@@ -337,7 +395,7 @@ func (suite *DriverSuite) TestContinueStreamAppend(c *check.C) {
 // TestReadNonexistentStream tests that reading a stream for a nonexistent path
 // fails.
 func (suite *DriverSuite) TestReadNonexistentStream(c *check.C) {
-	filename := randomString(32)
+	filename := randomPath(32)
 	_, err := suite.StorageDriver.ReadStream(filename, 0)
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
@@ -345,15 +403,15 @@ func (suite *DriverSuite) TestReadNonexistentStream(c *check.C) {
 
 // TestList checks the returned list of keys after populating a directory tree.
 func (suite *DriverSuite) TestList(c *check.C) {
-	rootDirectory := "/" + randomString(int64(8+rand.Intn(8)))
-	defer suite.StorageDriver.Delete(rootDirectory)
+	rootDirectory := "/" + randomFilename(int64(8+rand.Intn(8)))
+	defer suite.StorageDriver.Delete("/")
 
-	parentDirectory := rootDirectory + "/" + randomString(int64(8+rand.Intn(8)))
+	parentDirectory := rootDirectory + "/" + randomFilename(int64(8+rand.Intn(8)))
 	childFiles := make([]string, 50)
 	for i := 0; i < len(childFiles); i++ {
-		childFile := parentDirectory + "/" + randomString(int64(8+rand.Intn(8)))
+		childFile := parentDirectory + "/" + randomFilename(int64(8+rand.Intn(8)))
 		childFiles[i] = childFile
-		err := suite.StorageDriver.PutContent(childFile, []byte(randomString(32)))
+		err := suite.StorageDriver.PutContent(childFile, randomContents(32))
 		c.Assert(err, check.IsNil)
 	}
 	sort.Strings(childFiles)
@@ -381,12 +439,12 @@ func (suite *DriverSuite) TestList(c *check.C) {
 // TestMove checks that a moved object no longer exists at the source path and
 // does exist at the destination.
 func (suite *DriverSuite) TestMove(c *check.C) {
-	contents := []byte(randomString(32))
-	sourcePath := randomString(32)
-	destPath := randomString(32)
+	contents := randomContents(32)
+	sourcePath := randomPath(32)
+	destPath := randomPath(32)
 
-	defer suite.StorageDriver.Delete(sourcePath)
-	defer suite.StorageDriver.Delete(destPath)
+	defer suite.StorageDriver.Delete(firstPart(sourcePath))
+	defer suite.StorageDriver.Delete(firstPart(destPath))
 
 	err := suite.StorageDriver.PutContent(sourcePath, contents)
 	c.Assert(err, check.IsNil)
@@ -405,8 +463,8 @@ func (suite *DriverSuite) TestMove(c *check.C) {
 
 // TestMoveNonexistent checks that moving a nonexistent key fails
 func (suite *DriverSuite) TestMoveNonexistent(c *check.C) {
-	sourcePath := randomString(32)
-	destPath := randomString(32)
+	sourcePath := randomPath(32)
+	destPath := randomPath(32)
 
 	err := suite.StorageDriver.Move(sourcePath, destPath)
 	c.Assert(err, check.NotNil)
@@ -416,10 +474,10 @@ func (suite *DriverSuite) TestMoveNonexistent(c *check.C) {
 // TestDelete checks that the delete operation removes data from the storage
 // driver
 func (suite *DriverSuite) TestDelete(c *check.C) {
-	filename := randomString(32)
-	contents := []byte(randomString(32))
+	filename := randomPath(32)
+	contents := randomContents(32)
 
-	defer suite.StorageDriver.Delete(filename)
+	defer suite.StorageDriver.Delete(firstPart(filename))
 
 	err := suite.StorageDriver.PutContent(filename, contents)
 	c.Assert(err, check.IsNil)
@@ -434,7 +492,7 @@ func (suite *DriverSuite) TestDelete(c *check.C) {
 
 // TestDeleteNonexistent checks that removing a nonexistent key fails.
 func (suite *DriverSuite) TestDeleteNonexistent(c *check.C) {
-	filename := randomString(32)
+	filename := randomPath(32)
 	err := suite.StorageDriver.Delete(filename)
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
@@ -442,18 +500,34 @@ func (suite *DriverSuite) TestDeleteNonexistent(c *check.C) {
 
 // TestDeleteFolder checks that deleting a folder removes all child elements.
 func (suite *DriverSuite) TestDeleteFolder(c *check.C) {
-	dirname := randomString(32)
-	filename1 := randomString(32)
-	filename2 := randomString(32)
-	contents := []byte(randomString(32))
+	dirname := randomPath(32)
+	filename1 := randomPath(32)
+	filename2 := randomPath(32)
+	filename3 := randomPath(32)
+	contents := randomContents(32)
 
-	defer suite.StorageDriver.Delete(path.Join(dirname, filename1))
-	defer suite.StorageDriver.Delete(path.Join(dirname, filename2))
+	defer suite.StorageDriver.Delete(firstPart(dirname))
 
 	err := suite.StorageDriver.PutContent(path.Join(dirname, filename1), contents)
 	c.Assert(err, check.IsNil)
 
 	err = suite.StorageDriver.PutContent(path.Join(dirname, filename2), contents)
+	c.Assert(err, check.IsNil)
+
+	err = suite.StorageDriver.PutContent(path.Join(dirname, filename3), contents)
+	c.Assert(err, check.IsNil)
+
+	err = suite.StorageDriver.Delete(path.Join(dirname, filename1))
+	c.Assert(err, check.IsNil)
+
+	_, err = suite.StorageDriver.GetContent(path.Join(dirname, filename1))
+	c.Assert(err, check.NotNil)
+	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+
+	_, err = suite.StorageDriver.GetContent(path.Join(dirname, filename2))
+	c.Assert(err, check.IsNil)
+
+	_, err = suite.StorageDriver.GetContent(path.Join(dirname, filename3))
 	c.Assert(err, check.IsNil)
 
 	err = suite.StorageDriver.Delete(dirname)
@@ -466,14 +540,20 @@ func (suite *DriverSuite) TestDeleteFolder(c *check.C) {
 	_, err = suite.StorageDriver.GetContent(path.Join(dirname, filename2))
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+
+	_, err = suite.StorageDriver.GetContent(path.Join(dirname, filename3))
+	c.Assert(err, check.NotNil)
+	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
 }
 
 // TestStatCall runs verifies the implementation of the storagedriver's Stat call.
 func (suite *DriverSuite) TestStatCall(c *check.C) {
-	content := randomString(4096)
-	dirPath := randomString(32)
-	fileName := randomString(32)
+	content := randomContents(4096)
+	dirPath := randomPath(32)
+	fileName := randomFilename(32)
 	filePath := path.Join(dirPath, fileName)
+
+	defer suite.StorageDriver.Delete(dirPath)
 
 	// Call on non-existent file/dir, check error.
 	fi, err := suite.StorageDriver.Stat(filePath)
@@ -481,7 +561,7 @@ func (suite *DriverSuite) TestStatCall(c *check.C) {
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
 	c.Assert(fi, check.IsNil)
 
-	err = suite.StorageDriver.PutContent(filePath, []byte(content))
+	err = suite.StorageDriver.PutContent(filePath, content)
 	c.Assert(err, check.IsNil)
 
 	// Call on regular file, check results
@@ -555,7 +635,7 @@ func (suite *DriverSuite) testFileStreams(c *check.C, size int64) {
 	tfName := path.Base(tf.Name())
 	defer suite.StorageDriver.Delete(tfName)
 
-	contents := []byte(randomString(size))
+	contents := randomContents(size)
 
 	_, err = tf.Write(contents)
 	c.Assert(err, check.IsNil)
@@ -578,7 +658,7 @@ func (suite *DriverSuite) testFileStreams(c *check.C, size int64) {
 }
 
 func (suite *DriverSuite) writeReadCompare(c *check.C, filename string, contents []byte) {
-	defer suite.StorageDriver.Delete(filename)
+	defer suite.StorageDriver.Delete(firstPart(filename))
 
 	err := suite.StorageDriver.PutContent(filename, contents)
 	c.Assert(err, check.IsNil)
@@ -590,7 +670,7 @@ func (suite *DriverSuite) writeReadCompare(c *check.C, filename string, contents
 }
 
 func (suite *DriverSuite) writeReadCompareStreams(c *check.C, filename string, contents []byte) {
-	defer suite.StorageDriver.Delete(filename)
+	defer suite.StorageDriver.Delete(firstPart(filename))
 
 	nn, err := suite.StorageDriver.WriteStream(filename, 0, bytes.NewReader(contents))
 	c.Assert(err, check.IsNil)
@@ -606,12 +686,55 @@ func (suite *DriverSuite) writeReadCompareStreams(c *check.C, filename string, c
 	c.Assert(readContents, check.DeepEquals, contents)
 }
 
-var pathChars = []byte("abcdefghijklmnopqrstuvwxyz")
+var filenameChars = []byte("abcdefghijklmnopqrstuvwxyz0123456789")
 
-func randomString(length int64) string {
+func randomPath(length int64) string {
+	path := ""
+	for int64(len(path)) < length {
+		chunkLength := rand.Int63n(length-int64(len(path))) + 1
+		chunk := randomFilename(chunkLength)
+		path += chunk
+		if length-int64(len(path)) == 1 {
+			path += randomFilename(1)
+		} else if length-int64(len(path)) > 1 {
+			path += "/"
+		}
+	}
+	return path
+}
+
+func randomFilename(length int64) string {
 	b := make([]byte, length)
 	for i := range b {
-		b[i] = pathChars[rand.Intn(len(pathChars))]
+		b[i] = filenameChars[rand.Intn(len(filenameChars))]
 	}
 	return string(b)
+}
+
+func randomContents(length int64) []byte {
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = byte(rand.Intn(2 << 8))
+	}
+	return b
+}
+
+func firstPart(filePath string) string {
+	for {
+		if filePath[len(filePath)-1] == '/' {
+			filePath = filePath[:len(filePath)-1]
+		}
+
+		dir, file := path.Split(filePath)
+		if dir == "" && file == "" {
+			return "/"
+		}
+		if dir == "" {
+			return file
+		}
+		if file == "" {
+			return dir
+		}
+		filePath = dir
+	}
 }
