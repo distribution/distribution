@@ -213,7 +213,7 @@ func (suite *DriverSuite) TestWriteReadLargeStreams(c *check.C) {
 	defer suite.StorageDriver.Delete(firstPart(filename))
 
 	checksum := sha1.New()
-	var offset int64 = 0
+	var offset int64
 	var chunkSize int64 = 1024 * 1024
 
 	for i := 0; i < 5*1024; i++ {
