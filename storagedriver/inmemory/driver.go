@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"strings"
 	"sync"
 	"time"
 
@@ -87,7 +86,7 @@ func (d *Driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
 		return nil, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
 	}
 
-	path = d.normalize(path)
+	path = normalize(path)
 	found := d.root.find(path)
 
 	if found.path() != path {
@@ -111,7 +110,7 @@ func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (nn in
 		return 0, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
 	}
 
-	normalized := d.normalize(path)
+	normalized := normalize(path)
 
 	f, err := d.root.mkfile(normalized)
 	if err != nil {
@@ -139,7 +138,7 @@ func (d *Driver) Stat(path string) (storagedriver.FileInfo, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
-	normalized := d.normalize(path)
+	normalized := normalize(path)
 	found := d.root.find(path)
 
 	if found.path() != normalized {
@@ -162,7 +161,7 @@ func (d *Driver) Stat(path string) (storagedriver.FileInfo, error) {
 // List returns a list of the objects that are direct descendants of the given
 // path.
 func (d *Driver) List(path string) ([]string, error) {
-	normalized := d.normalize(path)
+	normalized := normalize(path)
 
 	found := d.root.find(normalized)
 
@@ -192,7 +191,7 @@ func (d *Driver) Move(sourcePath string, destPath string) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
-	normalizedSrc, normalizedDst := d.normalize(sourcePath), d.normalize(destPath)
+	normalizedSrc, normalizedDst := normalize(sourcePath), normalize(destPath)
 
 	err := d.root.move(normalizedSrc, normalizedDst)
 	switch err {
@@ -208,7 +207,7 @@ func (d *Driver) Delete(path string) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
-	normalized := d.normalize(path)
+	normalized := normalize(path)
 
 	err := d.root.delete(normalized)
 	switch err {
@@ -217,11 +216,4 @@ func (d *Driver) Delete(path string) error {
 	default:
 		return err
 	}
-}
-
-func (d *Driver) normalize(p string) string {
-	if !strings.HasPrefix(p, "/") {
-		p = "/" + p // Ghetto path absolution.
-	}
-	return p
 }
