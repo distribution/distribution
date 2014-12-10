@@ -90,18 +90,16 @@ func TestPush(t *testing.T) {
 		}
 	}
 
-	handler := testutil.NewHandler(append(blobRequestResponseMappings, testutil.RequestResponseMap{
-		{
-			Request: testutil.Request{
-				Method: "PUT",
-				Route:  "/v2/" + name + "/manifest/" + tag,
-				Body:   manifestBytes,
-			},
-			Response: testutil.Response{
-				StatusCode: http.StatusOK,
-			},
+	handler := testutil.NewHandler(append(blobRequestResponseMappings, testutil.RequestResponseMapping{
+		Request: testutil.Request{
+			Method: "PUT",
+			Route:  "/v2/" + name + "/manifest/" + tag,
+			Body:   manifestBytes,
 		},
-	}...))
+		Response: testutil.Response{
+			StatusCode: http.StatusOK,
+		},
+	}))
 	server := httptest.NewServer(handler)
 	client := New(server.URL)
 	objectStore := &memoryObjectStore{
@@ -183,18 +181,16 @@ func TestPull(t *testing.T) {
 		}
 	}
 
-	handler := testutil.NewHandler(append(blobRequestResponseMappings, testutil.RequestResponseMap{
-		{
-			Request: testutil.Request{
-				Method: "GET",
-				Route:  "/v2/" + name + "/manifest/" + tag,
-			},
-			Response: testutil.Response{
-				StatusCode: http.StatusOK,
-				Body:       manifestBytes,
-			},
+	handler := testutil.NewHandler(append(blobRequestResponseMappings, testutil.RequestResponseMapping{
+		Request: testutil.Request{
+			Method: "GET",
+			Route:  "/v2/" + name + "/manifest/" + tag,
 		},
-	}...))
+		Response: testutil.Response{
+			StatusCode: http.StatusOK,
+			Body:       manifestBytes,
+		},
+	}))
 	server := httptest.NewServer(handler)
 	client := New(server.URL)
 	objectStore := &memoryObjectStore{
@@ -306,18 +302,16 @@ func TestPullResume(t *testing.T) {
 	}
 
 	for i := 0; i < 3; i++ {
-		layerRequestResponseMappings = append(layerRequestResponseMappings, testutil.RequestResponseMap{
-			{
-				Request: testutil.Request{
-					Method: "GET",
-					Route:  "/v2/" + name + "/manifest/" + tag,
-				},
-				Response: testutil.Response{
-					StatusCode: http.StatusOK,
-					Body:       manifestBytes,
-				},
+		layerRequestResponseMappings = append(layerRequestResponseMappings, testutil.RequestResponseMapping{
+			Request: testutil.Request{
+				Method: "GET",
+				Route:  "/v2/" + name + "/manifest/" + tag,
 			},
-		}...)
+			Response: testutil.Response{
+				StatusCode: http.StatusOK,
+				Body:       manifestBytes,
+			},
+		})
 	}
 
 	handler := testutil.NewHandler(layerRequestResponseMappings)
