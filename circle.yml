@@ -19,13 +19,8 @@ test:
     - go version
   override:
     - test -z $(gofmt -s -l . | tee /dev/stderr)
-
-    # TODO(stevvooe): go vet is complaining about something that can't be
-    # reproduced locally and doesn't make sense based on the existing code.
-    # Turning it off for now.
-    # - go vet ./...
-
-    - test -z $(golint ./...          | tee /dev/stderr)
+    - go vet ./...
+    - test -z $(golint ./... | tee /dev/stderr)
     - go test -test.v -test.short ./...
 
     # Disabling the race detector due to massive memory usage.
