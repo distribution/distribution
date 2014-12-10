@@ -598,10 +598,15 @@ func (suite *DriverSuite) TestStatCall(c *check.C) {
 	fileName := randomFilename(32)
 	filePath := path.Join(dirPath, fileName)
 
-	defer suite.StorageDriver.Delete(dirPath)
+	defer suite.StorageDriver.Delete(firstPart(dirPath))
 
 	// Call on non-existent file/dir, check error.
-	fi, err := suite.StorageDriver.Stat(filePath)
+	fi, err := suite.StorageDriver.Stat(dirPath)
+	c.Assert(err, check.NotNil)
+	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+	c.Assert(fi, check.IsNil)
+
+	fi, err = suite.StorageDriver.Stat(filePath)
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
 	c.Assert(fi, check.IsNil)
