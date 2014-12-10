@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/docker/docker-registry/api/errors"
 	"github.com/docker/docker-registry/digest"
-
 	"github.com/docker/docker-registry/storage"
 	"github.com/gorilla/handlers"
 )
@@ -41,7 +41,7 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 	manifest, err := manifests.Get(imh.Name, imh.Tag)
 
 	if err != nil {
-		imh.Errors.Push(ErrorCodeUnknownManifest, err)
+		imh.Errors.Push(errors.ErrorCodeManifestUnknown, err)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -58,7 +58,7 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 
 	var manifest storage.SignedManifest
 	if err := dec.Decode(&manifest); err != nil {
-		imh.Errors.Push(ErrorCodeInvalidManifest, err)
+		imh.Errors.Push(errors.ErrorCodeManifestInvalid, err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -71,14 +71,14 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 			for _, verificationError := range err {
 				switch verificationError := verificationError.(type) {
 				case storage.ErrUnknownLayer:
-					imh.Errors.Push(ErrorCodeUnknownLayer, verificationError.FSLayer)
+					imh.Errors.Push(errors.ErrorCodeBlobUnknown, verificationError.FSLayer)
 				case storage.ErrManifestUnverified:
-					imh.Errors.Push(ErrorCodeUnverifiedManifest)
+					imh.Errors.Push(errors.ErrorCodeManifestUnverified)
 				default:
 					if verificationError == digest.ErrDigestInvalidFormat {
 						// TODO(stevvooe): We need to really need to move all
 						// errors to types. Its much more straightforward.
-						imh.Errors.Push(ErrorCodeInvalidDigest)
+						imh.Errors.Push(errors.ErrorCodeDigestInvalid)
 					} else {
 						imh.Errors.PushErr(verificationError)
 					}
@@ -99,10 +99,10 @@ func (imh *imageManifestHandler) DeleteImageManifest(w http.ResponseWriter, r *h
 	if err := manifests.Delete(imh.Name, imh.Tag); err != nil {
 		switch err := err.(type) {
 		case storage.ErrUnknownManifest:
-			imh.Errors.Push(ErrorCodeUnknownManifest, err)
+			imh.Errors.Push(errors.ErrorCodeManifestUnknown, err)
 			w.WriteHeader(http.StatusNotFound)
 		default:
-			imh.Errors.Push(ErrorCodeUnknown, err)
+			imh.Errors.Push(errors.ErrorCodeUnknown, err)
 			w.WriteHeader(http.StatusBadRequest)
 		}
 		return

@@ -58,7 +58,8 @@ func TestPush(t *testing.T) {
 			},
 		},
 	}
-	manifestBytes, err := json.Marshal(manifest)
+	var err error
+	manifest.Raw, err = json.Marshal(manifest)
 
 	blobRequestResponseMappings := make([]testutil.RequestResponseMapping, 2*len(testBlobs))
 	for i, blob := range testBlobs {
@@ -94,13 +95,25 @@ func TestPush(t *testing.T) {
 		Request: testutil.Request{
 			Method: "PUT",
 			Route:  "/v2/" + name + "/manifest/" + tag,
-			Body:   manifestBytes,
+			Body:   manifest.Raw,
 		},
 		Response: testutil.Response{
 			StatusCode: http.StatusOK,
 		},
 	}))
-	server := httptest.NewServer(handler)
+	var server *httptest.Server
+
+	// HACK(stevvooe): Super hack to follow: the request response map approach
+	// above does not let us correctly format the location header to the
+	// server url. This handler intercepts and re-writes the location header
+	// to the server url.
+
+	hack := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w = &headerInterceptingResponseWriter{ResponseWriter: w, serverURL: server.URL}
+		handler.ServeHTTP(w, r)
+	})
+
+	server = httptest.NewServer(hack)
 	client := New(server.URL)
 	objectStore := &memoryObjectStore{
 		mutex:           new(sync.Mutex),
@@ -369,4 +382,20 @@ func TestPullResume(t *testing.T) {
 			t.Fatal("Incorrect blob")
 		}
 	}
+}
+
+// headerInterceptingResponseWriter is a hacky workaround to re-write the
+// location header to have the server url.
+type headerInterceptingResponseWriter struct {
+	http.ResponseWriter
+	serverURL string
+}
+
+func (hirw *headerInterceptingResponseWriter) WriteHeader(status int) {
+	location := hirw.Header().Get("Location")
+	if location != "" {
+		hirw.Header().Set("Location", hirw.serverURL+location)
+	}
+
+	hirw.ResponseWriter.WriteHeader(status)
 }

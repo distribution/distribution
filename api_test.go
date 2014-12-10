@@ -12,16 +12,14 @@ import (
 	"os"
 	"testing"
 
-	"github.com/docker/libtrust"
-
-	"github.com/docker/docker-registry/storage"
-	_ "github.com/docker/docker-registry/storagedriver/inmemory"
-
-	"github.com/gorilla/handlers"
-
+	"github.com/docker/docker-registry/api/errors"
 	"github.com/docker/docker-registry/common/testutil"
 	"github.com/docker/docker-registry/configuration"
 	"github.com/docker/docker-registry/digest"
+	"github.com/docker/docker-registry/storage"
+	_ "github.com/docker/docker-registry/storagedriver/inmemory"
+	"github.com/docker/libtrust"
+	"github.com/gorilla/handlers"
 )
 
 // TestLayerAPI conducts a full of the of the layer api.
@@ -133,6 +131,10 @@ func TestLayerAPI(t *testing.T) {
 	if !verifier.Verified() {
 		t.Fatalf("response body did not pass verification")
 	}
+
+	// Missing tests:
+	// 	- Upload the same tarsum file under and different repository and
+	//       ensure the content remains uncorrupted.
 }
 
 func TestManifestAPI(t *testing.T) {
@@ -180,9 +182,7 @@ func TestManifestAPI(t *testing.T) {
 	// }
 	dec := json.NewDecoder(resp.Body)
 
-	var respErrs struct {
-		Errors []Error
-	}
+	var respErrs errors.Errors
 	if err := dec.Decode(&respErrs); err != nil {
 		t.Fatalf("unexpected error decoding error response: %v", err)
 	}
@@ -191,7 +191,7 @@ func TestManifestAPI(t *testing.T) {
 		t.Fatalf("expected errors in response")
 	}
 
-	if respErrs.Errors[0].Code != ErrorCodeUnknownManifest {
+	if respErrs.Errors[0].Code != errors.ErrorCodeManifestUnknown {
 		t.Fatalf("expected manifest unknown error: got %v", respErrs)
 	}
 
@@ -217,7 +217,7 @@ func TestManifestAPI(t *testing.T) {
 		t.Fatalf("expected errors in response")
 	}
 
-	if respErrs.Errors[0].Code != ErrorCodeUnknownRepository {
+	if respErrs.Errors[0].Code != errors.ErrorCodeNameUnknown {
 		t.Fatalf("expected respository unknown error: got %v", respErrs)
 	}
 
@@ -251,11 +251,11 @@ func TestManifestAPI(t *testing.T) {
 
 	for _, err := range respErrs.Errors {
 		switch err.Code {
-		case ErrorCodeUnverifiedManifest:
+		case errors.ErrorCodeManifestUnverified:
 			unverified++
-		case ErrorCodeUnknownLayer:
+		case errors.ErrorCodeBlobUnknown:
 			missingLayers++
-		case ErrorCodeInvalidDigest:
+		case errors.ErrorCodeDigestInvalid:
 			// TODO(stevvooe): This error isn't quite descriptive enough --
 			// the layer with an invalid digest isn't identified.
 			invalidDigests++
