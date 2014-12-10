@@ -396,7 +396,12 @@ func (suite *DriverSuite) TestContinueStreamAppend(c *check.C) {
 // fails.
 func (suite *DriverSuite) TestReadNonexistentStream(c *check.C) {
 	filename := randomPath(32)
+
 	_, err := suite.StorageDriver.ReadStream(filename, 0)
+	c.Assert(err, check.NotNil)
+	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+
+	_, err = suite.StorageDriver.ReadStream(filename, 64)
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
 }
@@ -461,14 +466,54 @@ func (suite *DriverSuite) TestMove(c *check.C) {
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
 }
 
-// TestMoveNonexistent checks that moving a nonexistent key fails
+// TestMoveOverwrite checks that a moved object no longer exists at the source
+// path and overwrites the contents at the destination.
+func (suite *DriverSuite) TestMoveOverwrite(c *check.C) {
+	sourcePath := randomPath(32)
+	destPath := randomPath(32)
+	sourceContents := randomContents(32)
+	destContents := randomContents(64)
+
+	defer suite.StorageDriver.Delete(firstPart(sourcePath))
+	defer suite.StorageDriver.Delete(firstPart(destPath))
+
+	err := suite.StorageDriver.PutContent(sourcePath, sourceContents)
+	c.Assert(err, check.IsNil)
+
+	err = suite.StorageDriver.PutContent(destPath, destContents)
+	c.Assert(err, check.IsNil)
+
+	err = suite.StorageDriver.Move(sourcePath, destPath)
+	c.Assert(err, check.IsNil)
+
+	received, err := suite.StorageDriver.GetContent(destPath)
+	c.Assert(err, check.IsNil)
+	c.Assert(received, check.DeepEquals, sourceContents)
+
+	_, err = suite.StorageDriver.GetContent(sourcePath)
+	c.Assert(err, check.NotNil)
+	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+}
+
+// TestMoveNonexistent checks that moving a nonexistent key fails and does not
+// delete the data at the destination path.
 func (suite *DriverSuite) TestMoveNonexistent(c *check.C) {
+	contents := randomContents(32)
 	sourcePath := randomPath(32)
 	destPath := randomPath(32)
 
-	err := suite.StorageDriver.Move(sourcePath, destPath)
+	defer suite.StorageDriver.Delete(firstPart(destPath))
+
+	err := suite.StorageDriver.PutContent(destPath, contents)
+	c.Assert(err, check.IsNil)
+
+	err = suite.StorageDriver.Move(sourcePath, destPath)
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+
+	received, err := suite.StorageDriver.GetContent(destPath)
+	c.Assert(err, check.IsNil)
+	c.Assert(received, check.DeepEquals, contents)
 }
 
 // TestDelete checks that the delete operation removes data from the storage
@@ -553,10 +598,15 @@ func (suite *DriverSuite) TestStatCall(c *check.C) {
 	fileName := randomFilename(32)
 	filePath := path.Join(dirPath, fileName)
 
-	defer suite.StorageDriver.Delete(dirPath)
+	defer suite.StorageDriver.Delete(firstPart(dirPath))
 
 	// Call on non-existent file/dir, check error.
-	fi, err := suite.StorageDriver.Stat(filePath)
+	fi, err := suite.StorageDriver.Stat(dirPath)
+	c.Assert(err, check.NotNil)
+	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+	c.Assert(fi, check.IsNil)
+
+	fi, err = suite.StorageDriver.Stat(filePath)
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
 	c.Assert(fi, check.IsNil)
@@ -601,9 +651,46 @@ func (suite *DriverSuite) TestStatCall(c *check.C) {
 	}
 }
 
+// TestConcurrentStreamReads checks that multiple clients can safely read from
+// the same file simultaneously with various offsets.
+func (suite *DriverSuite) TestConcurrentStreamReads(c *check.C) {
+	var filesize int64 = 128 * 1024 * 1024
+
+	if testing.Short() {
+		filesize = 10 * 1024 * 1024
+		c.Log("Reducing file size to 10MB for short mode")
+	}
+
+	filename := randomPath(32)
+	contents := randomContents(filesize)
+
+	defer suite.StorageDriver.Delete(firstPart(filename))
+
+	err := suite.StorageDriver.PutContent(filename, contents)
+	c.Assert(err, check.IsNil)
+
+	var wg sync.WaitGroup
+
+	readContents := func() {
+		defer wg.Done()
+		offset := rand.Int63n(int64(len(contents)))
+		reader, err := suite.StorageDriver.ReadStream(filename, offset)
+		c.Assert(err, check.IsNil)
+
+		readContents, err := ioutil.ReadAll(reader)
+		c.Assert(err, check.IsNil)
+		c.Assert(readContents, check.DeepEquals, contents[offset:])
+	}
+
+	wg.Add(10)
+	for i := 0; i < 10; i++ {
+		go readContents()
+	}
+	wg.Wait()
+}
+
 // TestConcurrentFileStreams checks that multiple *os.File objects can be passed
 // in to WriteStream concurrently without hanging.
-// TODO(bbland): fix this test...
 func (suite *DriverSuite) TestConcurrentFileStreams(c *check.C) {
 	// if _, isIPC := suite.StorageDriver.(*ipc.StorageDriverClient); isIPC {
 	// 	c.Skip("Need to fix out-of-process concurrency")
@@ -632,8 +719,8 @@ func (suite *DriverSuite) testFileStreams(c *check.C, size int64) {
 	c.Assert(err, check.IsNil)
 	defer os.Remove(tf.Name())
 
-	tfName := path.Base(tf.Name())
-	defer suite.StorageDriver.Delete(tfName)
+	filename := randomPath(32)
+	defer suite.StorageDriver.Delete(firstPart(filename))
 
 	contents := randomContents(size)
 
@@ -643,11 +730,11 @@ func (suite *DriverSuite) testFileStreams(c *check.C, size int64) {
 	tf.Sync()
 	tf.Seek(0, os.SEEK_SET)
 
-	nn, err := suite.StorageDriver.WriteStream(tfName, 0, tf)
+	nn, err := suite.StorageDriver.WriteStream(filename, 0, tf)
 	c.Assert(err, check.IsNil)
 	c.Assert(nn, check.Equals, size)
 
-	reader, err := suite.StorageDriver.ReadStream(tfName, 0)
+	reader, err := suite.StorageDriver.ReadStream(filename, 0)
 	c.Assert(err, check.IsNil)
 	defer reader.Close()
 
