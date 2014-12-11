@@ -48,7 +48,7 @@ func TestRouter(t *testing.T) {
 	for _, testcase := range []routeTestCase{
 		{
 			RouteName:  routeNameImageManifest,
-			RequestURI: "/v2/foo/bar/manifest/tag",
+			RequestURI: "/v2/foo/bar/manifests/tag",
 			Vars: map[string]string{
 				"name": "foo/bar",
 				"tag":  "tag",
@@ -63,7 +63,7 @@ func TestRouter(t *testing.T) {
 		},
 		{
 			RouteName:  routeNameBlob,
-			RequestURI: "/v2/foo/bar/blob/tarsum.dev+foo:abcdef0919234",
+			RequestURI: "/v2/foo/bar/blobs/tarsum.dev+foo:abcdef0919234",
 			Vars: map[string]string{
 				"name":   "foo/bar",
 				"digest": "tarsum.dev+foo:abcdef0919234",
@@ -71,7 +71,7 @@ func TestRouter(t *testing.T) {
 		},
 		{
 			RouteName:  routeNameBlob,
-			RequestURI: "/v2/foo/bar/blob/sha256:abcdef0919234",
+			RequestURI: "/v2/foo/bar/blobs/sha256:abcdef0919234",
 			Vars: map[string]string{
 				"name":   "foo/bar",
 				"digest": "sha256:abcdef0919234",
@@ -79,14 +79,14 @@ func TestRouter(t *testing.T) {
 		},
 		{
 			RouteName:  routeNameBlobUpload,
-			RequestURI: "/v2/foo/bar/blob/upload/",
+			RequestURI: "/v2/foo/bar/blobs/uploads/",
 			Vars: map[string]string{
 				"name": "foo/bar",
 			},
 		},
 		{
 			RouteName:  routeNameBlobUploadResume,
-			RequestURI: "/v2/foo/bar/blob/upload/uuid",
+			RequestURI: "/v2/foo/bar/blobs/uploads/uuid",
 			Vars: map[string]string{
 				"name": "foo/bar",
 				"uuid": "uuid",
@@ -94,7 +94,7 @@ func TestRouter(t *testing.T) {
 		},
 		{
 			RouteName:  routeNameBlobUploadResume,
-			RequestURI: "/v2/foo/bar/blob/upload/D95306FA-FAD3-4E36-8D41-CF1C93EF8286",
+			RequestURI: "/v2/foo/bar/blobs/uploads/D95306FA-FAD3-4E36-8D41-CF1C93EF8286",
 			Vars: map[string]string{
 				"name": "foo/bar",
 				"uuid": "D95306FA-FAD3-4E36-8D41-CF1C93EF8286",
@@ -102,7 +102,7 @@ func TestRouter(t *testing.T) {
 		},
 		{
 			RouteName:  routeNameBlobUploadResume,
-			RequestURI: "/v2/foo/bar/blob/upload/RDk1MzA2RkEtRkFEMy00RTM2LThENDEtQ0YxQzkzRUY4Mjg2IA==",
+			RequestURI: "/v2/foo/bar/blobs/uploads/RDk1MzA2RkEtRkFEMy00RTM2LThENDEtQ0YxQzkzRUY4Mjg2IA==",
 			Vars: map[string]string{
 				"name": "foo/bar",
 				"uuid": "RDk1MzA2RkEtRkFEMy00RTM2LThENDEtQ0YxQzkzRUY4Mjg2IA==",
@@ -113,9 +113,9 @@ func TestRouter(t *testing.T) {
 			// "foo/bar/image/image" and image for "foo/bar/image" with tag
 			// "tags"
 			RouteName:  routeNameImageManifest,
-			RequestURI: "/v2/foo/bar/manifest/manifest/tags",
+			RequestURI: "/v2/foo/bar/manifests/manifests/tags",
 			Vars: map[string]string{
-				"name": "foo/bar/manifest",
+				"name": "foo/bar/manifests",
 				"tag":  "tags",
 			},
 		},
@@ -123,14 +123,14 @@ func TestRouter(t *testing.T) {
 			// This case presents an ambiguity between foo/bar with tag="tags"
 			// and list tags for "foo/bar/manifest"
 			RouteName:  routeNameTags,
-			RequestURI: "/v2/foo/bar/manifest/tags/list",
+			RequestURI: "/v2/foo/bar/manifests/tags/list",
 			Vars: map[string]string{
-				"name": "foo/bar/manifest",
+				"name": "foo/bar/manifests",
 			},
 		},
 		{
 			RouteName:  routeNameBlobUploadResume,
-			RequestURI: "/v2/foo/../../layer/upload/D95306FA-FAD3-4E36-8D41-CF1C93EF8286",
+			RequestURI: "/v2/foo/../../blob/uploads/D95306FA-FAD3-4E36-8D41-CF1C93EF8286",
 			StatusCode: http.StatusNotFound,
 		},
 	} {
