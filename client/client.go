@@ -222,7 +222,7 @@ func (r *clientImpl) ListImageTags(name string) ([]string, error) {
 }
 
 func (r *clientImpl) BlobLength(name string, dgst digest.Digest) (int, error) {
-	response, err := http.Head(fmt.Sprintf("%s/v2/%s/blob/%s", r.Endpoint, name, dgst))
+	response, err := http.Head(fmt.Sprintf("%s/v2/%s/blobs/%s", r.Endpoint, name, dgst))
 	if err != nil {
 		return -1, err
 	}
@@ -255,7 +255,7 @@ func (r *clientImpl) BlobLength(name string, dgst digest.Digest) (int, error) {
 
 func (r *clientImpl) GetBlob(name string, dgst digest.Digest, byteOffset int) (io.ReadCloser, int, error) {
 	getRequest, err := http.NewRequest("GET",
-		fmt.Sprintf("%s/v2/%s/blob/%s", r.Endpoint, name, dgst), nil)
+		fmt.Sprintf("%s/v2/%s/blobs/%s", r.Endpoint, name, dgst), nil)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -294,7 +294,7 @@ func (r *clientImpl) GetBlob(name string, dgst digest.Digest, byteOffset int) (i
 
 func (r *clientImpl) InitiateBlobUpload(name string) (string, error) {
 	postRequest, err := http.NewRequest("POST",
-		fmt.Sprintf("%s/v2/%s/blob/upload/", r.Endpoint, name), nil)
+		fmt.Sprintf("%s/v2/%s/blobs/uploads/", r.Endpoint, name), nil)
 	if err != nil {
 		return "", err
 	}
@@ -519,7 +519,7 @@ func (r *clientImpl) CancelBlobUpload(location string) error {
 // imageManifestURL is a helper method for returning the full url to an image
 // manifest
 func (r *clientImpl) imageManifestURL(name, tag string) string {
-	return fmt.Sprintf("%s/v2/%s/manifest/%s", r.Endpoint, name, tag)
+	return fmt.Sprintf("%s/v2/%s/manifests/%s", r.Endpoint, name, tag)
 }
 
 // parseRangeHeader parses out the offset and length from a returned Range

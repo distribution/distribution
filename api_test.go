@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -21,6 +22,50 @@ import (
 	"github.com/docker/libtrust"
 	"github.com/gorilla/handlers"
 )
+
+// TestCheckAPI hits the base endpoint (/v2/) ensures we return the specified
+// 200 OK response.
+func TestCheckAPI(t *testing.T) {
+	config := configuration.Configuration{
+		Storage: configuration.Storage{
+			"inmemory": configuration.Parameters{},
+		},
+	}
+
+	app := NewApp(config)
+	server := httptest.NewServer(handlers.CombinedLoggingHandler(os.Stderr, app))
+	builder, err := newURLBuilderFromString(server.URL)
+
+	if err != nil {
+		t.Fatalf("error creating url builder: %v", err)
+	}
+
+	baseURL, err := builder.buildBaseURL()
+	if err != nil {
+		t.Fatalf("unexpected error building base url: %v", err)
+	}
+
+	resp, err := http.Get(baseURL)
+	if err != nil {
+		t.Fatalf("unexpected error issuing request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	checkResponse(t, "issuing api base check", resp, http.StatusOK)
+	checkHeaders(t, resp, http.Header{
+		"Content-Type":   []string{"application/json"},
+		"Content-Length": []string{"2"},
+	})
+
+	p, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("unexpected error reading response body: %v", err)
+	}
+
+	if string(p) != "{}" {
+		t.Fatalf("unexpected response body: %v", string(p))
+	}
+}
 
 // TestLayerAPI conducts a full of the of the layer api.
 func TestLayerAPI(t *testing.T) {

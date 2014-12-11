@@ -41,7 +41,7 @@ func TestPush(t *testing.T) {
 		// because we can't know which blob will get which location.
 		// It's sort of okay because we're using unique digests, but this needs
 		// to change at some point.
-		uploadLocations[i] = fmt.Sprintf("/v2/%s/blob/test-uuid", name)
+		uploadLocations[i] = fmt.Sprintf("/v2/%s/blobs/test-uuid", name)
 		blobs[i] = storage.FSLayer{BlobSum: blob.digest}
 		history[i] = storage.ManifestHistory{V1Compatibility: blob.digest.String()}
 	}
@@ -66,7 +66,7 @@ func TestPush(t *testing.T) {
 		blobRequestResponseMappings[2*i] = testutil.RequestResponseMapping{
 			Request: testutil.Request{
 				Method: "POST",
-				Route:  "/v2/" + name + "/blob/upload/",
+				Route:  "/v2/" + name + "/blobs/uploads/",
 			},
 			Response: testutil.Response{
 				StatusCode: http.StatusAccepted,
@@ -94,7 +94,7 @@ func TestPush(t *testing.T) {
 	handler := testutil.NewHandler(append(blobRequestResponseMappings, testutil.RequestResponseMapping{
 		Request: testutil.Request{
 			Method: "PUT",
-			Route:  "/v2/" + name + "/manifest/" + tag,
+			Route:  "/v2/" + name + "/manifests/" + tag,
 			Body:   manifest.Raw,
 		},
 		Response: testutil.Response{
@@ -185,7 +185,7 @@ func TestPull(t *testing.T) {
 		blobRequestResponseMappings[i] = testutil.RequestResponseMapping{
 			Request: testutil.Request{
 				Method: "GET",
-				Route:  "/v2/" + name + "/blob/" + blob.digest.String(),
+				Route:  "/v2/" + name + "/blobs/" + blob.digest.String(),
 			},
 			Response: testutil.Response{
 				StatusCode: http.StatusOK,
@@ -197,7 +197,7 @@ func TestPull(t *testing.T) {
 	handler := testutil.NewHandler(append(blobRequestResponseMappings, testutil.RequestResponseMapping{
 		Request: testutil.Request{
 			Method: "GET",
-			Route:  "/v2/" + name + "/manifest/" + tag,
+			Route:  "/v2/" + name + "/manifests/" + tag,
 		},
 		Response: testutil.Response{
 			StatusCode: http.StatusOK,
@@ -292,7 +292,7 @@ func TestPullResume(t *testing.T) {
 		layerRequestResponseMappings[2*i] = testutil.RequestResponseMapping{
 			Request: testutil.Request{
 				Method: "GET",
-				Route:  "/v2/" + name + "/blob/" + blob.digest.String(),
+				Route:  "/v2/" + name + "/blobs/" + blob.digest.String(),
 			},
 			Response: testutil.Response{
 				StatusCode: http.StatusOK,
@@ -305,7 +305,7 @@ func TestPullResume(t *testing.T) {
 		layerRequestResponseMappings[2*i+1] = testutil.RequestResponseMapping{
 			Request: testutil.Request{
 				Method: "GET",
-				Route:  "/v2/" + name + "/blob/" + blob.digest.String(),
+				Route:  "/v2/" + name + "/blobs/" + blob.digest.String(),
 			},
 			Response: testutil.Response{
 				StatusCode: http.StatusOK,
@@ -318,7 +318,7 @@ func TestPullResume(t *testing.T) {
 		layerRequestResponseMappings = append(layerRequestResponseMappings, testutil.RequestResponseMapping{
 			Request: testutil.Request{
 				Method: "GET",
-				Route:  "/v2/" + name + "/manifest/" + tag,
+				Route:  "/v2/" + name + "/manifests/" + tag,
 			},
 			Response: testutil.Response{
 				StatusCode: http.StatusOK,

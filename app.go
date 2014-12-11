@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/docker/docker-registry/storagedriver"
@@ -38,6 +39,9 @@ func NewApp(configuration configuration.Configuration) *App {
 	}
 
 	// Register the handler dispatchers.
+	app.register(routeNameBase, func(ctx *Context, r *http.Request) http.Handler {
+		return http.HandlerFunc(apiBase)
+	})
 	app.register(routeNameImageManifest, imageManifestDispatcher)
 	app.register(routeNameTags, tagsDispatcher)
 	app.register(routeNameBlob, layerDispatcher)
@@ -133,4 +137,15 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 			serveJSON(w, context.Errors)
 		}
 	})
+}
+
+// apiBase implements a simple yes-man for doing overall checks against the
+// api. This can support auth roundtrips to support docker login.
+func apiBase(w http.ResponseWriter, r *http.Request) {
+	const emptyJSON = "{}"
+	// Provide a simple /v2/ 200 OK response with empty json response.
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Length", fmt.Sprint(len(emptyJSON)))
+
+	fmt.Fprint(w, emptyJSON)
 }
