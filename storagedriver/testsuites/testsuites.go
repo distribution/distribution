@@ -118,6 +118,41 @@ func (suite *DriverSuite) TearDownTest(c *check.C) {
 	}
 }
 
+// TestValidPaths checks that various valid file paths are accepted by the
+// storage driver.
+func (suite *DriverSuite) TestValidPaths(c *check.C) {
+	contents := randomContents(64)
+	validFiles := []string{"/aa", "/a.a", "/0-9/abcdefg", "/abcdefg/z.75", "/abc/1.2.3.4.5-6_zyx/123.z", "/docker/docker-registry"}
+
+	for _, filename := range validFiles {
+		err := suite.StorageDriver.PutContent(filename, contents)
+		defer suite.StorageDriver.Delete(firstPart(filename))
+		c.Assert(err, check.IsNil)
+
+		received, err := suite.StorageDriver.GetContent(filename)
+		c.Assert(err, check.IsNil)
+		c.Assert(received, check.DeepEquals, contents)
+	}
+}
+
+// TestInvalidPaths checks that various invalid file paths are rejected by the
+// storage driver.
+func (suite *DriverSuite) TestInvalidPaths(c *check.C) {
+	contents := randomContents(64)
+	invalidFiles := []string{"/", "abc", "/abc./abc", "/.abc", "/a--b", "/a-.b", "/_.abc", "/a/bcd", "/abc_123/d", "/Docker/docker-registry"}
+
+	for _, filename := range invalidFiles {
+		err := suite.StorageDriver.PutContent(filename, contents)
+		defer suite.StorageDriver.Delete(firstPart(filename))
+		c.Assert(err, check.NotNil)
+		c.Assert(err, check.FitsTypeOf, storagedriver.InvalidPathError{})
+
+		_, err = suite.StorageDriver.GetContent(filename)
+		c.Assert(err, check.NotNil)
+		c.Assert(err, check.FitsTypeOf, storagedriver.InvalidPathError{})
+	}
+}
+
 // TestWriteRead1 tests a simple write-read workflow.
 func (suite *DriverSuite) TestWriteRead1(c *check.C) {
 	filename := randomPath(32)
