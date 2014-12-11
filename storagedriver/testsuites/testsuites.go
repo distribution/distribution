@@ -108,6 +108,16 @@ func (suite *DriverSuite) TearDownSuite(c *check.C) {
 	}
 }
 
+// TearDownTest tears down the gocheck test.
+// This causes the suite to abort if any files are left around in the storage
+// driver.
+func (suite *DriverSuite) TearDownTest(c *check.C) {
+	files, _ := suite.StorageDriver.List("/")
+	if len(files) > 0 {
+		c.Fatalf("Storage driver did not clean up properly. Offending files: %#v", files)
+	}
+}
+
 // TestWriteRead1 tests a simple write-read workflow.
 func (suite *DriverSuite) TestWriteRead1(c *check.C) {
 	filename := randomPath(32)
@@ -337,7 +347,7 @@ func (suite *DriverSuite) TestContinueStreamAppend(c *check.C) {
 	c.Assert(fi.Size(), check.Equals, int64(len(contentsChunk1)))
 
 	if fi.Size() > chunkSize {
-		c.Fatalf("Offset too large, %d > %d", fi.Size(), chunkSize)
+		c.Errorf("Offset too large, %d > %d", fi.Size(), chunkSize)
 	}
 	nn, err = suite.StorageDriver.WriteStream(filename, fi.Size(), bytes.NewReader(contentsChunk2))
 	c.Assert(err, check.IsNil)
@@ -349,7 +359,7 @@ func (suite *DriverSuite) TestContinueStreamAppend(c *check.C) {
 	c.Assert(fi.Size(), check.Equals, 2*chunkSize)
 
 	if fi.Size() > 2*chunkSize {
-		c.Fatalf("Offset too large, %d > %d", fi.Size(), 2*chunkSize)
+		c.Errorf("Offset too large, %d > %d", fi.Size(), 2*chunkSize)
 	}
 
 	nn, err = suite.StorageDriver.WriteStream(filename, fi.Size(), bytes.NewReader(fullContents[fi.Size():]))
@@ -409,7 +419,7 @@ func (suite *DriverSuite) TestReadNonexistentStream(c *check.C) {
 // TestList checks the returned list of keys after populating a directory tree.
 func (suite *DriverSuite) TestList(c *check.C) {
 	rootDirectory := "/" + randomFilename(int64(8+rand.Intn(8)))
-	defer suite.StorageDriver.Delete("/")
+	defer suite.StorageDriver.Delete(rootDirectory)
 
 	parentDirectory := rootDirectory + "/" + randomFilename(int64(8+rand.Intn(8)))
 	childFiles := make([]string, 50)
@@ -625,11 +635,11 @@ func (suite *DriverSuite) TestStatCall(c *check.C) {
 	c.Assert(fi.IsDir(), check.Equals, false)
 
 	if start.After(fi.ModTime()) {
-		c.Fatalf("modtime %s before file created (%v)", fi.ModTime(), start)
+		c.Errorf("modtime %s before file created (%v)", fi.ModTime(), start)
 	}
 
 	if fi.ModTime().After(expectedModTime) {
-		c.Fatalf("modtime %s after file created (%v)", fi.ModTime(), expectedModTime)
+		c.Errorf("modtime %s after file created (%v)", fi.ModTime(), expectedModTime)
 	}
 
 	// Call on directory
@@ -643,11 +653,11 @@ func (suite *DriverSuite) TestStatCall(c *check.C) {
 	c.Assert(fi.IsDir(), check.Equals, true)
 
 	if start.After(fi.ModTime()) {
-		c.Fatalf("modtime %s before file created (%v)", fi.ModTime(), start)
+		c.Errorf("modtime %s before file created (%v)", fi.ModTime(), start)
 	}
 
 	if fi.ModTime().After(expectedModTime) {
-		c.Fatalf("modtime %s after file created (%v)", fi.ModTime(), expectedModTime)
+		c.Errorf("modtime %s after file created (%v)", fi.ModTime(), expectedModTime)
 	}
 }
 
@@ -779,16 +789,19 @@ func (suite *DriverSuite) writeReadCompareStreams(c *check.C, filename string, c
 }
 
 var filenameChars = []byte("abcdefghijklmnopqrstuvwxyz0123456789")
+var separatorChars = []byte("._-")
 
 func randomPath(length int64) string {
-	path := ""
+	path := "/"
 	for int64(len(path)) < length {
-		chunkLength := rand.Int63n(length-int64(len(path))) + 1
+		chunkLength := rand.Int63n(length-int64(len(path)+1)) + 2
 		chunk := randomFilename(chunkLength)
 		path += chunk
 		if length-int64(len(path)) == 1 {
 			path += randomFilename(1)
-		} else if length-int64(len(path)) > 1 {
+		} else if length-int64(len(path)) == 2 {
+			path += randomFilename(2)
+		} else if length-int64(len(path)) > 2 {
 			path += "/"
 		}
 	}
@@ -797,8 +810,15 @@ func randomPath(length int64) string {
 
 func randomFilename(length int64) string {
 	b := make([]byte, length)
+	wasSeparator := true
 	for i := range b {
-		b[i] = filenameChars[rand.Intn(len(filenameChars))]
+		if !wasSeparator && i < len(b)-1 && rand.Intn(4) == 0 {
+			b[i] = separatorChars[rand.Intn(len(separatorChars))]
+			wasSeparator = true
+		} else {
+			b[i] = filenameChars[rand.Intn(len(filenameChars))]
+			wasSeparator = false
+		}
 	}
 	return string(b)
 }
@@ -821,8 +841,8 @@ func firstPart(filePath string) string {
 		if dir == "" && file == "" {
 			return "/"
 		}
-		if dir == "" {
-			return file
+		if dir == "/" || dir == "" {
+			return "/" + file
 		}
 		if file == "" {
 			return dir

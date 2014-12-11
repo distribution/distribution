@@ -3,6 +3,7 @@ package storagedriver
 import (
 	"fmt"
 	"io"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -72,6 +73,17 @@ type StorageDriver interface {
 	Delete(path string) error
 }
 
+// PathComponentRegexp is the regular expression which each repository path
+// component must match.
+// A component of a repository path must be at least two characters, optionally
+// separated by periods, dashes or underscores.
+var PathComponentRegexp = regexp.MustCompile(`[a-z0-9]+([._-]?[a-z0-9])+`)
+
+// PathRegexp is the regular expression which each repository path must match.
+// A repository path is absolute, beginning with a slash and containing a
+// positive number of path components separated by slashes.
+var PathRegexp = regexp.MustCompile(`^(/[a-z0-9]+([._-]?[a-z0-9])+)+$`)
+
 // PathNotFoundError is returned when operating on a nonexistent path.
 type PathNotFoundError struct {
 	Path string
@@ -79,6 +91,15 @@ type PathNotFoundError struct {
 
 func (err PathNotFoundError) Error() string {
 	return fmt.Sprintf("Path not found: %s", err.Path)
+}
+
+// InvalidPathError is returned when the provided path is malformed.
+type InvalidPathError struct {
+	Path string
+}
+
+func (err InvalidPathError) Error() string {
+	return fmt.Sprintf("Invalid path: %s", err.Path)
 }
 
 // InvalidOffsetError is returned when attempting to read or write from an
