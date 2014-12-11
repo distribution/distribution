@@ -696,6 +696,13 @@ func (suite *DriverSuite) TestConcurrentFileStreams(c *check.C) {
 	// 	c.Skip("Need to fix out-of-process concurrency")
 	// }
 
+	numStreams := 32
+
+	if testing.Short() {
+		numStreams = 8
+		c.Log("Reducing number of streams to 8 for short mode")
+	}
+
 	var wg sync.WaitGroup
 
 	testStream := func(size int64) {
@@ -703,13 +710,10 @@ func (suite *DriverSuite) TestConcurrentFileStreams(c *check.C) {
 		suite.testFileStreams(c, size)
 	}
 
-	wg.Add(6)
-	go testStream(8 * 1024 * 1024)
-	go testStream(4 * 1024 * 1024)
-	go testStream(2 * 1024 * 1024)
-	go testStream(1024 * 1024)
-	go testStream(1024)
-	go testStream(64)
+	wg.Add(numStreams)
+	for i := numStreams; i > 0; i-- {
+		go testStream(int64(numStreams) * 1024 * 1024)
+	}
 
 	wg.Wait()
 }
@@ -718,6 +722,7 @@ func (suite *DriverSuite) testFileStreams(c *check.C, size int64) {
 	tf, err := ioutil.TempFile("", "tf")
 	c.Assert(err, check.IsNil)
 	defer os.Remove(tf.Name())
+	defer tf.Close()
 
 	filename := randomPath(32)
 	defer suite.StorageDriver.Delete(firstPart(filename))
