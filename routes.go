@@ -6,6 +6,7 @@ import (
 )
 
 const (
+	routeNameBase             = "base"
 	routeNameImageManifest    = "image-manifest"
 	routeNameTags             = "tags"
 	routeNameBlob             = "blob"
@@ -26,6 +27,11 @@ var allEndpoints = []string{
 func v2APIRouter() *mux.Router {
 	router := mux.NewRouter().
 		StrictSlash(true)
+
+	// GET /v2/	Check	Check that the registry implements API version 2(.1)
+	router.
+		Path("/v2/").
+		Name(routeNameBase)
 
 	// GET      /v2/<name>/manifest/<tag>	Image Manifest	Fetch the image manifest identified by name and tag.
 	// PUT      /v2/<name>/manifest/<tag>	Image Manifest	Upload the image manifest identified by name and tag.

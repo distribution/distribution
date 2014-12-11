@@ -47,6 +47,11 @@ func TestRouter(t *testing.T) {
 
 	for _, testcase := range []routeTestCase{
 		{
+			RouteName:  routeNameBase,
+			RequestURI: "/v2/",
+			Vars:       map[string]string{},
+		},
+		{
 			RouteName:  routeNameImageManifest,
 			RequestURI: "/v2/foo/bar/manifests/tag",
 			Vars: map[string]string{

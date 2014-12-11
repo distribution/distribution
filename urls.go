@@ -39,6 +39,20 @@ func newURLBuilderFromString(root string) (*urlBuilder, error) {
 	return newURLBuilder(u), nil
 }
 
+func (ub *urlBuilder) buildBaseURL() (string, error) {
+	route := clonedRoute(ub.router, routeNameBase)
+
+	baseURL, err := route.
+		Schemes(ub.url.Scheme).
+		Host(ub.url.Host).
+		URL()
+	if err != nil {
+		return "", err
+	}
+
+	return baseURL.String(), nil
+}
+
 func (ub *urlBuilder) buildTagsURL(name string) (string, error) {
 	route := clonedRoute(ub.router, routeNameTags)
 
