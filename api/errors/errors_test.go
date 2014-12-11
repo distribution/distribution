@@ -11,7 +11,7 @@ import (
 // TestErrorCodes ensures that error code format, mappings and
 // marshaling/unmarshaling. round trips are stable.
 func TestErrorCodes(t *testing.T) {
-	for _, desc := range descriptors {
+	for _, desc := range Descriptors {
 		if desc.Code.String() != desc.Value {
 			t.Fatalf("error code string incorrect: %q != %q", desc.Code.String(), desc.Value)
 		}

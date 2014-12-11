@@ -20,16 +20,21 @@ type ErrorDescriptor struct {
 	// for use in documentation.
 	Description string
 
-	// DefaultStatusCode should to be returned via the HTTP API. Some error
-	// may have different status codes depending on the situation.
-	DefaultStatusCode int
+	// HTTPStatusCodes provides a list of status under which this error
+	// condition may arise. If it is empty, the error condition may be seen
+	// for any status code.
+	HTTPStatusCodes []int
 }
 
-var descriptors = []ErrorDescriptor{
+// Descriptors provides a list of HTTP API Error codes that may be encountered
+// when interacting with the registry API.
+var Descriptors = []ErrorDescriptor{
 	{
 		Code:    ErrorCodeUnknown,
 		Value:   "UNKNOWN",
 		Message: "unknown error",
+		Description: `Generic error returned when the error does not have an
+		API classification.`,
 	},
 	{
 		Code:    ErrorCodeDigestInvalid,
@@ -40,7 +45,7 @@ var descriptors = []ErrorDescriptor{
 		include a detail structure with the key "digest", including the
 		invalid digest string. This error may also be returned when a manifest
 		includes an invalid layer digest.`,
-		DefaultStatusCode: http.StatusBadRequest,
+		HTTPStatusCodes: []int{http.StatusBadRequest, http.StatusNotFound},
 	},
 	{
 		Code:    ErrorCodeSizeInvalid,
@@ -49,7 +54,7 @@ var descriptors = []ErrorDescriptor{
 		Description: `When a layer is uploaded, the provided size will be
 		checked against the uploaded content. If they do not match, this error
 		will be returned.`,
-		DefaultStatusCode: http.StatusBadRequest,
+		HTTPStatusCodes: []int{http.StatusBadRequest},
 	},
 	{
 		Code:    ErrorCodeNameInvalid,
@@ -57,7 +62,7 @@ var descriptors = []ErrorDescriptor{
 		Message: "manifest name did not match URI",
 		Description: `During a manifest upload, if the name in the manifest
 		does not match the uri name, this error will be returned.`,
-		DefaultStatusCode: http.StatusBadRequest,
+		HTTPStatusCodes: []int{http.StatusBadRequest, http.StatusNotFound},
 	},
 	{
 		Code:    ErrorCodeTagInvalid,
@@ -65,7 +70,7 @@ var descriptors = []ErrorDescriptor{
 		Message: "manifest tag did not match URI",
 		Description: `During a manifest upload, if the tag in the manifest
 		does not match the uri tag, this error will be returned.`,
-		DefaultStatusCode: http.StatusBadRequest,
+		HTTPStatusCodes: []int{http.StatusBadRequest, http.StatusNotFound},
 	},
 	{
 		Code:    ErrorCodeNameUnknown,
@@ -73,7 +78,7 @@ var descriptors = []ErrorDescriptor{
 		Message: "repository name not known to registry",
 		Description: `This is returned if the name used during an operation is
 		unknown to the registry.`,
-		DefaultStatusCode: http.StatusNotFound,
+		HTTPStatusCodes: []int{http.StatusNotFound},
 	},
 	{
 		Code:    ErrorCodeManifestUnknown,
@@ -81,7 +86,7 @@ var descriptors = []ErrorDescriptor{
 		Message: "manifest unknown",
 		Description: `This error is returned when the manifest, identified by
 		name and tag is unknown to the repository.`,
-		DefaultStatusCode: http.StatusNotFound,
+		HTTPStatusCodes: []int{http.StatusNotFound},
 	},
 	{
 		Code:    ErrorCodeManifestInvalid,
@@ -89,8 +94,9 @@ var descriptors = []ErrorDescriptor{
 		Message: "manifest invalid",
 		Description: `During upload, manifests undergo several checks ensuring
 		validity. If those checks fail, this error may be returned, unless a
-		more specific error is included.`,
-		DefaultStatusCode: http.StatusBadRequest,
+		more specific error is included. The detail will contain information
+		the failed validation.`,
+		HTTPStatusCodes: []int{http.StatusBadRequest},
 	},
 	{
 		Code:    ErrorCodeManifestUnverified,
@@ -98,7 +104,7 @@ var descriptors = []ErrorDescriptor{
 		Message: "manifest failed signature verification",
 		Description: `During manifest upload, if the manifest fails signature
 		verification, this error will be returned.`,
-		DefaultStatusCode: http.StatusBadRequest,
+		HTTPStatusCodes: []int{http.StatusBadRequest},
 	},
 	{
 		Code:    ErrorCodeBlobUnknown,
@@ -108,7 +114,7 @@ var descriptors = []ErrorDescriptor{
 		registry in a specified repository. This can be returned with a
 		standard get or if a manifest references an unknown layer during
 		upload.`,
-		DefaultStatusCode: http.StatusNotFound,
+		HTTPStatusCodes: []int{http.StatusBadRequest, http.StatusNotFound},
 	},
 
 	{
@@ -117,7 +123,7 @@ var descriptors = []ErrorDescriptor{
 		Message: "blob upload unknown to registry",
 		Description: `If a blob upload has been cancelled or was never
 		started, this error code may be returned.`,
-		DefaultStatusCode: http.StatusNotFound,
+		HTTPStatusCodes: []int{http.StatusNotFound},
 	},
 }
 
@@ -125,10 +131,10 @@ var errorCodeToDescriptors map[ErrorCode]ErrorDescriptor
 var idToDescriptors map[string]ErrorDescriptor
 
 func init() {
-	errorCodeToDescriptors = make(map[ErrorCode]ErrorDescriptor, len(descriptors))
-	idToDescriptors = make(map[string]ErrorDescriptor, len(descriptors))
+	errorCodeToDescriptors = make(map[ErrorCode]ErrorDescriptor, len(Descriptors))
+	idToDescriptors = make(map[string]ErrorDescriptor, len(Descriptors))
 
-	for _, descriptor := range descriptors {
+	for _, descriptor := range Descriptors {
 		errorCodeToDescriptors[descriptor.Code] = descriptor
 		idToDescriptors[descriptor.Value] = descriptor
 	}
