@@ -1,11 +1,10 @@
 package client
 
 import (
-	"errors"
-
-	"github.com/docker/docker-registry/storage"
+	"fmt"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/docker/docker-registry/storage"
 )
 
 // simultaneousLayerPushWindow is the size of the parallel layer push window.
@@ -100,7 +99,7 @@ func pushLayer(c Client, objectStore ObjectStore, name string, fsLayer storage.F
 			"currentSize": layerReader.CurrentSize(),
 			"size":        layerReader.Size(),
 		}).Warn("Local layer incomplete")
-		return errors.New("Local layer incomplete")
+		return fmt.Errorf("Local layer incomplete")
 	}
 
 	length, err := c.BlobLength(name, fsLayer.BlobSum)

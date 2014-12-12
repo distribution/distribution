@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/docker/docker-registry/api/errors"
+	"github.com/docker/docker-registry/api/v2"
 	"github.com/docker/docker-registry/digest"
 	"github.com/docker/docker-registry/storage"
 	"github.com/gorilla/handlers"
@@ -41,7 +41,7 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 	manifest, err := manifests.Get(imh.Name, imh.Tag)
 
 	if err != nil {
-		imh.Errors.Push(errors.ErrorCodeManifestUnknown, err)
+		imh.Errors.Push(v2.ErrorCodeManifestUnknown, err)
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -58,7 +58,7 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 
 	var manifest storage.SignedManifest
 	if err := dec.Decode(&manifest); err != nil {
-		imh.Errors.Push(errors.ErrorCodeManifestInvalid, err)
+		imh.Errors.Push(v2.ErrorCodeManifestInvalid, err)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -71,14 +71,14 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 			for _, verificationError := range err {
 				switch verificationError := verificationError.(type) {
 				case storage.ErrUnknownLayer:
-					imh.Errors.Push(errors.ErrorCodeBlobUnknown, verificationError.FSLayer)
+					imh.Errors.Push(v2.ErrorCodeBlobUnknown, verificationError.FSLayer)
 				case storage.ErrManifestUnverified:
-					imh.Errors.Push(errors.ErrorCodeManifestUnverified)
+					imh.Errors.Push(v2.ErrorCodeManifestUnverified)
 				default:
 					if verificationError == digest.ErrDigestInvalidFormat {
 						// TODO(stevvooe): We need to really need to move all
 						// errors to types. Its much more straightforward.
-						imh.Errors.Push(errors.ErrorCodeDigestInvalid)
+						imh.Errors.Push(v2.ErrorCodeDigestInvalid)
 					} else {
 						imh.Errors.PushErr(verificationError)
 					}
@@ -99,10 +99,10 @@ func (imh *imageManifestHandler) DeleteImageManifest(w http.ResponseWriter, r *h
 	if err := manifests.Delete(imh.Name, imh.Tag); err != nil {
 		switch err := err.(type) {
 		case storage.ErrUnknownManifest:
-			imh.Errors.Push(errors.ErrorCodeManifestUnknown, err)
+			imh.Errors.Push(v2.ErrorCodeManifestUnknown, err)
 			w.WriteHeader(http.StatusNotFound)
 		default:
-			imh.Errors.Push(errors.ErrorCodeUnknown, err)
+			imh.Errors.Push(v2.ErrorCodeUnknown, err)
 			w.WriteHeader(http.StatusBadRequest)
 		}
 		return

@@ -2,6 +2,9 @@ package v2
 
 import "net/http"
 
+// TODO(stevvooe): Add route descriptors for each named route, along with
+// accepted methods, parameters, returned status codes and error codes.
+
 // ErrorDescriptor provides relevant information about a given error code.
 type ErrorDescriptor struct {
 	// Code is the error code that this descriptor describes.

@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/docker/docker-registry/api/errors"
+	"github.com/docker/docker-registry/api/v2"
 	"github.com/docker/docker-registry/digest"
 	"github.com/docker/docker-registry/storage"
 )
@@ -96,7 +96,7 @@ func (r *clientImpl) GetImageManifest(name, tag string) (*storage.SignedManifest
 	case response.StatusCode == http.StatusNotFound:
 		return nil, &ImageManifestNotFoundError{Name: name, Tag: tag}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
-		var errs errors.Errors
+		var errs v2.Errors
 
 		decoder := json.NewDecoder(response.Body)
 		err = decoder.Decode(&errs)
@@ -136,7 +136,7 @@ func (r *clientImpl) PutImageManifest(name, tag string, manifest *storage.Signed
 	case response.StatusCode == http.StatusOK:
 		return nil
 	case response.StatusCode >= 400 && response.StatusCode < 500:
-		var errors errors.Errors
+		var errors v2.Errors
 		decoder := json.NewDecoder(response.Body)
 		err = decoder.Decode(&errors)
 		if err != nil {
@@ -169,7 +169,7 @@ func (r *clientImpl) DeleteImage(name, tag string) error {
 	case response.StatusCode == http.StatusNotFound:
 		return &ImageManifestNotFoundError{Name: name, Tag: tag}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
-		var errs errors.Errors
+		var errs v2.Errors
 		decoder := json.NewDecoder(response.Body)
 		err = decoder.Decode(&errs)
 		if err != nil {
@@ -197,7 +197,7 @@ func (r *clientImpl) ListImageTags(name string) ([]string, error) {
 	case response.StatusCode == http.StatusNotFound:
 		return nil, &RepositoryNotFoundError{Name: name}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
-		var errs errors.Errors
+		var errs v2.Errors
 		decoder := json.NewDecoder(response.Body)
 		err = decoder.Decode(&errs)
 		if err != nil {
@@ -240,7 +240,7 @@ func (r *clientImpl) BlobLength(name string, dgst digest.Digest) (int, error) {
 	case response.StatusCode == http.StatusNotFound:
 		return -1, nil
 	case response.StatusCode >= 400 && response.StatusCode < 500:
-		var errs errors.Errors
+		var errs v2.Errors
 		decoder := json.NewDecoder(response.Body)
 		err = decoder.Decode(&errs)
 		if err != nil {
@@ -279,7 +279,7 @@ func (r *clientImpl) GetBlob(name string, dgst digest.Digest, byteOffset int) (i
 		response.Body.Close()
 		return nil, 0, &BlobNotFoundError{Name: name, Digest: dgst}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
-		var errs errors.Errors
+		var errs v2.Errors
 		decoder := json.NewDecoder(response.Body)
 		err = decoder.Decode(&errs)
 		if err != nil {
@@ -312,7 +312,7 @@ func (r *clientImpl) InitiateBlobUpload(name string) (string, error) {
 	// case response.StatusCode == http.StatusNotFound:
 	// return
 	case response.StatusCode >= 400 && response.StatusCode < 500:
-		var errs errors.Errors
+		var errs v2.Errors
 		decoder := json.NewDecoder(response.Body)
 		err = decoder.Decode(&errs)
 		if err != nil {
@@ -338,7 +338,7 @@ func (r *clientImpl) GetBlobUploadStatus(location string) (int, int, error) {
 	case response.StatusCode == http.StatusNotFound:
 		return 0, 0, &BlobUploadNotFoundError{Location: location}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
-		var errs errors.Errors
+		var errs v2.Errors
 		decoder := json.NewDecoder(response.Body)
 		err = decoder.Decode(&errs)
 		if err != nil {
@@ -379,7 +379,7 @@ func (r *clientImpl) UploadBlob(location string, blob io.ReadCloser, length int,
 	case response.StatusCode == http.StatusNotFound:
 		return &BlobUploadNotFoundError{Location: location}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
-		var errs errors.Errors
+		var errs v2.Errors
 		decoder := json.NewDecoder(response.Body)
 		err = decoder.Decode(&errs)
 		if err != nil {
@@ -430,7 +430,7 @@ func (r *clientImpl) UploadBlobChunk(location string, blobChunk io.ReadCloser, l
 	case response.StatusCode == http.StatusNotFound:
 		return &BlobUploadNotFoundError{Location: location}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
-		var errs errors.Errors
+		var errs v2.Errors
 		decoder := json.NewDecoder(response.Body)
 		err = decoder.Decode(&errs)
 		if err != nil {
@@ -472,7 +472,7 @@ func (r *clientImpl) FinishChunkedBlobUpload(location string, length int, dgst d
 	case response.StatusCode == http.StatusNotFound:
 		return &BlobUploadNotFoundError{Location: location}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
-		var errs errors.Errors
+		var errs v2.Errors
 		decoder := json.NewDecoder(response.Body)
 		err = decoder.Decode(&errs)
 		if err != nil {
@@ -504,7 +504,7 @@ func (r *clientImpl) CancelBlobUpload(location string) error {
 	case response.StatusCode == http.StatusNotFound:
 		return &BlobUploadNotFoundError{Location: location}
 	case response.StatusCode >= 400 && response.StatusCode < 500:
-		var errs errors.Errors
+		var errs v2.Errors
 		decoder := json.NewDecoder(response.Body)
 		err = decoder.Decode(&errs)
 		if err != nil {

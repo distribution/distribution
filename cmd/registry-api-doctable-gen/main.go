@@ -17,7 +17,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/docker/docker-registry/api/errors"
+	"github.com/docker/docker-registry/api/v2"
 )
 
 func main() {
@@ -40,7 +40,7 @@ func dumpErrors(wr io.Writer) {
 	defer writer.Flush()
 
 	fmt.Fprint(writer, "|")
-	dtype := reflect.TypeOf(errors.ErrorDescriptor{})
+	dtype := reflect.TypeOf(v2.ErrorDescriptor{})
 	var fieldsPrinted int
 	for i := 0; i < dtype.NumField(); i++ {
 		field := dtype.Field(i)
@@ -61,7 +61,7 @@ func dumpErrors(wr io.Writer) {
 
 	fmt.Fprintln(writer, "\n"+divider)
 
-	for _, descriptor := range errors.ErrorDescriptors {
+	for _, descriptor := range v2.ErrorDescriptors {
 		fmt.Fprint(writer, "|")
 
 		v := reflect.ValueOf(descriptor)

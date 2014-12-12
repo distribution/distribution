@@ -3,7 +3,7 @@ package registry
 import (
 	"net/http"
 
-	"github.com/docker/docker-registry/api/errors"
+	"github.com/docker/docker-registry/api/v2"
 	"github.com/docker/docker-registry/digest"
 	"github.com/docker/docker-registry/storage"
 	"github.com/gorilla/handlers"
@@ -15,7 +15,7 @@ func layerDispatcher(ctx *Context, r *http.Request) http.Handler {
 
 	if err != nil {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx.Errors.Push(errors.ErrorCodeDigestInvalid, err)
+			ctx.Errors.Push(v2.ErrorCodeDigestInvalid, err)
 		})
 	}
 
@@ -50,9 +50,9 @@ func (lh *layerHandler) GetLayer(w http.ResponseWriter, r *http.Request) {
 		switch err := err.(type) {
 		case storage.ErrUnknownLayer:
 			w.WriteHeader(http.StatusNotFound)
-			lh.Errors.Push(errors.ErrorCodeBlobUnknown, err.FSLayer)
+			lh.Errors.Push(v2.ErrorCodeBlobUnknown, err.FSLayer)
 		default:
-			lh.Errors.Push(errors.ErrorCodeUnknown, err)
+			lh.Errors.Push(v2.ErrorCodeUnknown, err)
 		}
 		return
 	}

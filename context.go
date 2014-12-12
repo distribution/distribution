@@ -2,8 +2,7 @@ package registry
 
 import (
 	"github.com/Sirupsen/logrus"
-	"github.com/docker/docker-registry/api/errors"
-	"github.com/docker/docker-registry/api/urls"
+	"github.com/docker/docker-registry/api/v2"
 )
 
 // Context should contain the request specific context for use in across
@@ -20,7 +19,7 @@ type Context struct {
 	// Errors is a collection of errors encountered during the request to be
 	// returned to the client API. If errors are added to the collection, the
 	// handler *must not* start the response via http.ResponseWriter.
-	Errors errors.Errors
+	Errors v2.Errors
 
 	// vars contains the extracted gorilla/mux variables that can be used for
 	// assignment.
@@ -29,5 +28,5 @@ type Context struct {
 	// log provides a context specific logger.
 	log *logrus.Entry
 
-	urlBuilder *urls.URLBuilder
+	urlBuilder *v2.URLBuilder
 }
