@@ -87,7 +87,7 @@ func (ub *URLBuilder) BuildManifestURL(name, tag string) (string, error) {
 	return manifestURL.String(), nil
 }
 
-// BuildLayerURL constructs the url for the blob identified by name and dgst.
+// BuildBlobURL constructs the url for the blob identified by name and dgst.
 func (ub *URLBuilder) BuildBlobURL(name string, dgst digest.Digest) (string, error) {
 	route := ub.cloneRoute(RouteNameBlob)
 
@@ -99,8 +99,8 @@ func (ub *URLBuilder) BuildBlobURL(name string, dgst digest.Digest) (string, err
 	return layerURL.String(), nil
 }
 
-// BuildBlobURL constructs a url to begin a blob upload in the repository
-// identified by name.
+// BuildBlobUploadURL constructs a url to begin a blob upload in the
+// repository identified by name.
 func (ub *URLBuilder) BuildBlobUploadURL(name string) (string, error) {
 	route := ub.cloneRoute(RouteNameBlobUpload)
 
