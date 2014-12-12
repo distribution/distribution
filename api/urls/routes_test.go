@@ -1,4 +1,4 @@
-package registry
+package urls
 
 import (
 	"encoding/json"
@@ -25,7 +25,7 @@ type routeTestCase struct {
 // This may go away as the application structure comes together.
 func TestRouter(t *testing.T) {
 
-	router := v2APIRouter()
+	router := Router()
 
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		testCase := routeTestCase{
@@ -47,12 +47,12 @@ func TestRouter(t *testing.T) {
 
 	for _, testcase := range []routeTestCase{
 		{
-			RouteName:  routeNameBase,
+			RouteName:  RouteNameBase,
 			RequestURI: "/v2/",
 			Vars:       map[string]string{},
 		},
 		{
-			RouteName:  routeNameImageManifest,
+			RouteName:  RouteNameManifest,
 			RequestURI: "/v2/foo/bar/manifests/tag",
 			Vars: map[string]string{
 				"name": "foo/bar",
@@ -60,14 +60,14 @@ func TestRouter(t *testing.T) {
 			},
 		},
 		{
-			RouteName:  routeNameTags,
+			RouteName:  RouteNameTags,
 			RequestURI: "/v2/foo/bar/tags/list",
 			Vars: map[string]string{
 				"name": "foo/bar",
 			},
 		},
 		{
-			RouteName:  routeNameBlob,
+			RouteName:  RouteNameBlob,
 			RequestURI: "/v2/foo/bar/blobs/tarsum.dev+foo:abcdef0919234",
 			Vars: map[string]string{
 				"name":   "foo/bar",
@@ -75,7 +75,7 @@ func TestRouter(t *testing.T) {
 			},
 		},
 		{
-			RouteName:  routeNameBlob,
+			RouteName:  RouteNameBlob,
 			RequestURI: "/v2/foo/bar/blobs/sha256:abcdef0919234",
 			Vars: map[string]string{
 				"name":   "foo/bar",
@@ -83,14 +83,14 @@ func TestRouter(t *testing.T) {
 			},
 		},
 		{
-			RouteName:  routeNameBlobUpload,
+			RouteName:  RouteNameBlobUpload,
 			RequestURI: "/v2/foo/bar/blobs/uploads/",
 			Vars: map[string]string{
 				"name": "foo/bar",
 			},
 		},
 		{
-			RouteName:  routeNameBlobUploadResume,
+			RouteName:  RouteNameBlobUploadChunk,
 			RequestURI: "/v2/foo/bar/blobs/uploads/uuid",
 			Vars: map[string]string{
 				"name": "foo/bar",
@@ -98,7 +98,7 @@ func TestRouter(t *testing.T) {
 			},
 		},
 		{
-			RouteName:  routeNameBlobUploadResume,
+			RouteName:  RouteNameBlobUploadChunk,
 			RequestURI: "/v2/foo/bar/blobs/uploads/D95306FA-FAD3-4E36-8D41-CF1C93EF8286",
 			Vars: map[string]string{
 				"name": "foo/bar",
@@ -106,7 +106,7 @@ func TestRouter(t *testing.T) {
 			},
 		},
 		{
-			RouteName:  routeNameBlobUploadResume,
+			RouteName:  RouteNameBlobUploadChunk,
 			RequestURI: "/v2/foo/bar/blobs/uploads/RDk1MzA2RkEtRkFEMy00RTM2LThENDEtQ0YxQzkzRUY4Mjg2IA==",
 			Vars: map[string]string{
 				"name": "foo/bar",
@@ -117,7 +117,7 @@ func TestRouter(t *testing.T) {
 			// Check ambiguity: ensure we can distinguish between tags for
 			// "foo/bar/image/image" and image for "foo/bar/image" with tag
 			// "tags"
-			RouteName:  routeNameImageManifest,
+			RouteName:  RouteNameManifest,
 			RequestURI: "/v2/foo/bar/manifests/manifests/tags",
 			Vars: map[string]string{
 				"name": "foo/bar/manifests",
@@ -127,14 +127,14 @@ func TestRouter(t *testing.T) {
 		{
 			// This case presents an ambiguity between foo/bar with tag="tags"
 			// and list tags for "foo/bar/manifest"
-			RouteName:  routeNameTags,
+			RouteName:  RouteNameTags,
 			RequestURI: "/v2/foo/bar/manifests/tags/list",
 			Vars: map[string]string{
 				"name": "foo/bar/manifests",
 			},
 		},
 		{
-			RouteName:  routeNameBlobUploadResume,
+			RouteName:  RouteNameBlobUploadChunk,
 			RequestURI: "/v2/foo/../../blob/uploads/D95306FA-FAD3-4E36-8D41-CF1C93EF8286",
 			StatusCode: http.StatusNotFound,
 		},
