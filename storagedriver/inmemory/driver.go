@@ -46,6 +46,10 @@ func New() *Driver {
 
 // GetContent retrieves the content stored at "path" as a []byte.
 func (d *Driver) GetContent(path string) ([]byte, error) {
+	if !storagedriver.PathRegexp.MatchString(path) {
+		return nil, storagedriver.InvalidPathError{Path: path}
+	}
+
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
@@ -60,6 +64,10 @@ func (d *Driver) GetContent(path string) ([]byte, error) {
 
 // PutContent stores the []byte content at a location designated by "path".
 func (d *Driver) PutContent(p string, contents []byte) error {
+	if !storagedriver.PathRegexp.MatchString(p) {
+		return storagedriver.InvalidPathError{Path: p}
+	}
+
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -79,6 +87,10 @@ func (d *Driver) PutContent(p string, contents []byte) error {
 // ReadStream retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
 func (d *Driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
+	if !storagedriver.PathRegexp.MatchString(path) {
+		return nil, storagedriver.InvalidPathError{Path: path}
+	}
+
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
@@ -103,6 +115,10 @@ func (d *Driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
 // WriteStream stores the contents of the provided io.ReadCloser at a location
 // designated by the given path.
 func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (nn int64, err error) {
+	if !storagedriver.PathRegexp.MatchString(path) {
+		return 0, storagedriver.InvalidPathError{Path: path}
+	}
+
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -135,6 +151,10 @@ func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (nn in
 
 // Stat returns info about the provided path.
 func (d *Driver) Stat(path string) (storagedriver.FileInfo, error) {
+	if !storagedriver.PathRegexp.MatchString(path) {
+		return nil, storagedriver.InvalidPathError{Path: path}
+	}
+
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
@@ -161,6 +181,10 @@ func (d *Driver) Stat(path string) (storagedriver.FileInfo, error) {
 // List returns a list of the objects that are direct descendants of the given
 // path.
 func (d *Driver) List(path string) ([]string, error) {
+	if !storagedriver.PathRegexp.MatchString(path) && path != "/" {
+		return nil, storagedriver.InvalidPathError{Path: path}
+	}
+
 	normalized := normalize(path)
 
 	found := d.root.find(normalized)
@@ -188,6 +212,12 @@ func (d *Driver) List(path string) ([]string, error) {
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
 func (d *Driver) Move(sourcePath string, destPath string) error {
+	if !storagedriver.PathRegexp.MatchString(sourcePath) {
+		return storagedriver.InvalidPathError{Path: sourcePath}
+	} else if !storagedriver.PathRegexp.MatchString(destPath) {
+		return storagedriver.InvalidPathError{Path: destPath}
+	}
+
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -204,6 +234,10 @@ func (d *Driver) Move(sourcePath string, destPath string) error {
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
 func (d *Driver) Delete(path string) error {
+	if !storagedriver.PathRegexp.MatchString(path) {
+		return storagedriver.InvalidPathError{Path: path}
+	}
+
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
