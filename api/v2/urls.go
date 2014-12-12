@@ -101,7 +101,7 @@ func (ub *URLBuilder) BuildBlobURL(name string, dgst digest.Digest) (string, err
 
 // BuildBlobUploadURL constructs a url to begin a blob upload in the
 // repository identified by name.
-func (ub *URLBuilder) BuildBlobUploadURL(name string) (string, error) {
+func (ub *URLBuilder) BuildBlobUploadURL(name string, values ...url.Values) (string, error) {
 	route := ub.cloneRoute(RouteNameBlobUpload)
 
 	uploadURL, err := route.URL("name", name)
@@ -109,7 +109,7 @@ func (ub *URLBuilder) BuildBlobUploadURL(name string) (string, error) {
 		return "", err
 	}
 
-	return uploadURL.String(), nil
+	return appendValuesURL(uploadURL, values...).String(), nil
 }
 
 // BuildBlobUploadChunkURL constructs a url for the upload identified by uuid,
