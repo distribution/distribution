@@ -1,4 +1,4 @@
-package urls
+package v2
 
 import (
 	"github.com/docker/docker-registry/common"

@@ -1,4 +1,4 @@
-package errors
+package v2
 
 import (
 	"encoding/json"
