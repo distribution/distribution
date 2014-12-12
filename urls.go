@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/docker/docker-registry/api/urls"
 	"github.com/docker/docker-registry/digest"
 	"github.com/docker/docker-registry/storage"
 	"github.com/gorilla/mux"
@@ -17,7 +18,7 @@ type urlBuilder struct {
 func newURLBuilder(root *url.URL) *urlBuilder {
 	return &urlBuilder{
 		url:    root,
-		router: v2APIRouter(),
+		router: urls.Router(),
 	}
 }
 
@@ -40,7 +41,7 @@ func newURLBuilderFromString(root string) (*urlBuilder, error) {
 }
 
 func (ub *urlBuilder) buildBaseURL() (string, error) {
-	route := clonedRoute(ub.router, routeNameBase)
+	route := clonedRoute(ub.router, urls.RouteNameBase)
 
 	baseURL, err := route.
 		Schemes(ub.url.Scheme).
@@ -54,7 +55,7 @@ func (ub *urlBuilder) buildBaseURL() (string, error) {
 }
 
 func (ub *urlBuilder) buildTagsURL(name string) (string, error) {
-	route := clonedRoute(ub.router, routeNameTags)
+	route := clonedRoute(ub.router, urls.RouteNameTags)
 
 	tagsURL, err := route.
 		Schemes(ub.url.Scheme).
@@ -72,7 +73,7 @@ func (ub *urlBuilder) forManifest(m *storage.Manifest) (string, error) {
 }
 
 func (ub *urlBuilder) buildManifestURL(name, tag string) (string, error) {
-	route := clonedRoute(ub.router, routeNameImageManifest)
+	route := clonedRoute(ub.router, urls.RouteNameManifest)
 
 	manifestURL, err := route.
 		Schemes(ub.url.Scheme).
@@ -90,7 +91,7 @@ func (ub *urlBuilder) forLayer(l storage.Layer) (string, error) {
 }
 
 func (ub *urlBuilder) buildLayerURL(name string, dgst digest.Digest) (string, error) {
-	route := clonedRoute(ub.router, routeNameBlob)
+	route := clonedRoute(ub.router, urls.RouteNameBlob)
 
 	layerURL, err := route.
 		Schemes(ub.url.Scheme).
@@ -104,7 +105,7 @@ func (ub *urlBuilder) buildLayerURL(name string, dgst digest.Digest) (string, er
 }
 
 func (ub *urlBuilder) buildLayerUploadURL(name string) (string, error) {
-	route := clonedRoute(ub.router, routeNameBlobUpload)
+	route := clonedRoute(ub.router, urls.RouteNameBlobUpload)
 
 	uploadURL, err := route.
 		Schemes(ub.url.Scheme).
@@ -122,7 +123,7 @@ func (ub *urlBuilder) forLayerUpload(layerUpload storage.LayerUpload) (string, e
 }
 
 func (ub *urlBuilder) buildLayerUploadResumeURL(name, uuid string, values ...url.Values) (string, error) {
-	route := clonedRoute(ub.router, routeNameBlobUploadResume)
+	route := clonedRoute(ub.router, urls.RouteNameBlobUploadChunk)
 
 	uploadURL, err := route.
 		Schemes(ub.url.Scheme).

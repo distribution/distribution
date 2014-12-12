@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/docker/docker-registry/api/urls"
 	"github.com/docker/docker-registry/storagedriver"
 	"github.com/docker/docker-registry/storagedriver/factory"
 
@@ -35,18 +36,18 @@ type App struct {
 func NewApp(configuration configuration.Configuration) *App {
 	app := &App{
 		Config: configuration,
-		router: v2APIRouter(),
+		router: urls.Router(),
 	}
 
 	// Register the handler dispatchers.
-	app.register(routeNameBase, func(ctx *Context, r *http.Request) http.Handler {
+	app.register(urls.RouteNameBase, func(ctx *Context, r *http.Request) http.Handler {
 		return http.HandlerFunc(apiBase)
 	})
-	app.register(routeNameImageManifest, imageManifestDispatcher)
-	app.register(routeNameTags, tagsDispatcher)
-	app.register(routeNameBlob, layerDispatcher)
-	app.register(routeNameBlobUpload, layerUploadDispatcher)
-	app.register(routeNameBlobUploadResume, layerUploadDispatcher)
+	app.register(urls.RouteNameManifest, imageManifestDispatcher)
+	app.register(urls.RouteNameTags, tagsDispatcher)
+	app.register(urls.RouteNameBlob, layerDispatcher)
+	app.register(urls.RouteNameBlobUpload, layerUploadDispatcher)
+	app.register(urls.RouteNameBlobUploadChunk, layerUploadDispatcher)
 
 	driver, err := factory.Create(configuration.Storage.Type(), configuration.Storage.Parameters())
 

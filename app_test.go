@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/docker/docker-registry/api/urls"
 	"github.com/docker/docker-registry/configuration"
 )
 
@@ -16,10 +17,10 @@ import (
 func TestAppDispatcher(t *testing.T) {
 	app := &App{
 		Config: configuration.Configuration{},
-		router: v2APIRouter(),
+		router: urls.Router(),
 	}
 	server := httptest.NewServer(app)
-	router := v2APIRouter()
+	router := urls.Router()
 
 	serverURL, err := url.Parse(server.URL)
 	if err != nil {
@@ -71,33 +72,33 @@ func TestAppDispatcher(t *testing.T) {
 		vars     []string
 	}{
 		{
-			endpoint: routeNameImageManifest,
+			endpoint: urls.RouteNameManifest,
 			vars: []string{
 				"name", "foo/bar",
 				"tag", "sometag",
 			},
 		},
 		{
-			endpoint: routeNameTags,
+			endpoint: urls.RouteNameTags,
 			vars: []string{
 				"name", "foo/bar",
 			},
 		},
 		{
-			endpoint: routeNameBlob,
+			endpoint: urls.RouteNameBlob,
 			vars: []string{
 				"name", "foo/bar",
 				"digest", "tarsum.v1+bogus:abcdef0123456789",
 			},
 		},
 		{
-			endpoint: routeNameBlobUpload,
+			endpoint: urls.RouteNameBlobUpload,
 			vars: []string{
 				"name", "foo/bar",
 			},
 		},
 		{
-			endpoint: routeNameBlobUploadResume,
+			endpoint: urls.RouteNameBlobUploadChunk,
 			vars: []string{
 				"name", "foo/bar",
 				"uuid", "theuuid",
