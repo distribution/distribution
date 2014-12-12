@@ -1,52 +1,61 @@
-package registry
+package urls
 
 import (
 	"net/http"
 	"net/url"
 
-	"github.com/docker/docker-registry/api/urls"
 	"github.com/docker/docker-registry/digest"
-	"github.com/docker/docker-registry/storage"
 	"github.com/gorilla/mux"
 )
 
-type urlBuilder struct {
-	url    *url.URL // url root (ie http://localhost/)
+// URLBuilder creates registry API urls from a single base endpoint. It can be
+// used to create urls for use in a registry client or server.
+//
+// All urls will be created from the given base, including the api version.
+// For example, if a root of "/foo/" is provided, urls generated will be fall
+// under "/foo/v2/...". Most application will only provide a schema, host and
+// port, such as "https://localhost:5000/".
+type URLBuilder struct {
+	root   *url.URL // url root (ie http://localhost/)
 	router *mux.Router
 }
 
-func newURLBuilder(root *url.URL) *urlBuilder {
-	return &urlBuilder{
-		url:    root,
-		router: urls.Router(),
+// NewURLBuilder creates a URLBuilder with provided root url object.
+func NewURLBuilder(root *url.URL) *URLBuilder {
+	return &URLBuilder{
+		root:   root,
+		router: Router(),
 	}
 }
 
-func newURLBuilderFromRequest(r *http.Request) *urlBuilder {
-	u := &url.URL{
-		Scheme: r.URL.Scheme,
-		Host:   r.Host,
-	}
-
-	return newURLBuilder(u)
-}
-
-func newURLBuilderFromString(root string) (*urlBuilder, error) {
+// NewURLBuilderFromString workes identically to NewURLBuilder except it takes
+// a string argument for the root, returning an error if it is not a valid
+// url.
+func NewURLBuilderFromString(root string) (*URLBuilder, error) {
 	u, err := url.Parse(root)
 	if err != nil {
 		return nil, err
 	}
 
-	return newURLBuilder(u), nil
+	return NewURLBuilder(u), nil
 }
 
-func (ub *urlBuilder) buildBaseURL() (string, error) {
-	route := clonedRoute(ub.router, urls.RouteNameBase)
+// NewURLBuilderFromRequest uses information from an *http.Request to
+// construct the root url.
+func NewURLBuilderFromRequest(r *http.Request) *URLBuilder {
+	u := &url.URL{
+		Scheme: r.URL.Scheme,
+		Host:   r.Host,
+	}
 
-	baseURL, err := route.
-		Schemes(ub.url.Scheme).
-		Host(ub.url.Host).
-		URL()
+	return NewURLBuilder(u)
+}
+
+// BuildBaseURL constructs a base url for the API, typically just "/v2/".
+func (ub *URLBuilder) BuildBaseURL() (string, error) {
+	route := ub.cloneRoute(RouteNameBase)
+
+	baseURL, err := route.URL()
 	if err != nil {
 		return "", err
 	}
@@ -54,13 +63,11 @@ func (ub *urlBuilder) buildBaseURL() (string, error) {
 	return baseURL.String(), nil
 }
 
-func (ub *urlBuilder) buildTagsURL(name string) (string, error) {
-	route := clonedRoute(ub.router, urls.RouteNameTags)
+// BuildTagsURL constructs a url to list the tags in the named repository.
+func (ub *URLBuilder) BuildTagsURL(name string) (string, error) {
+	route := ub.cloneRoute(RouteNameTags)
 
-	tagsURL, err := route.
-		Schemes(ub.url.Scheme).
-		Host(ub.url.Host).
-		URL("name", name)
+	tagsURL, err := route.URL("name", name)
 	if err != nil {
 		return "", err
 	}
@@ -68,17 +75,11 @@ func (ub *urlBuilder) buildTagsURL(name string) (string, error) {
 	return tagsURL.String(), nil
 }
 
-func (ub *urlBuilder) forManifest(m *storage.Manifest) (string, error) {
-	return ub.buildManifestURL(m.Name, m.Tag)
-}
+// BuildManifestURL constructs a url for the manifest identified by name and tag.
+func (ub *URLBuilder) BuildManifestURL(name, tag string) (string, error) {
+	route := ub.cloneRoute(RouteNameManifest)
 
-func (ub *urlBuilder) buildManifestURL(name, tag string) (string, error) {
-	route := clonedRoute(ub.router, urls.RouteNameManifest)
-
-	manifestURL, err := route.
-		Schemes(ub.url.Scheme).
-		Host(ub.url.Host).
-		URL("name", name, "tag", tag)
+	manifestURL, err := route.URL("name", name, "tag", tag)
 	if err != nil {
 		return "", err
 	}
@@ -86,17 +87,11 @@ func (ub *urlBuilder) buildManifestURL(name, tag string) (string, error) {
 	return manifestURL.String(), nil
 }
 
-func (ub *urlBuilder) forLayer(l storage.Layer) (string, error) {
-	return ub.buildLayerURL(l.Name(), l.Digest())
-}
+// BuildLayerURL constructs the url for the blob identified by name and dgst.
+func (ub *URLBuilder) BuildBlobURL(name string, dgst digest.Digest) (string, error) {
+	route := ub.cloneRoute(RouteNameBlob)
 
-func (ub *urlBuilder) buildLayerURL(name string, dgst digest.Digest) (string, error) {
-	route := clonedRoute(ub.router, urls.RouteNameBlob)
-
-	layerURL, err := route.
-		Schemes(ub.url.Scheme).
-		Host(ub.url.Host).
-		URL("name", name, "digest", dgst.String())
+	layerURL, err := route.URL("name", name, "digest", dgst.String())
 	if err != nil {
 		return "", err
 	}
@@ -104,13 +99,12 @@ func (ub *urlBuilder) buildLayerURL(name string, dgst digest.Digest) (string, er
 	return layerURL.String(), nil
 }
 
-func (ub *urlBuilder) buildLayerUploadURL(name string) (string, error) {
-	route := clonedRoute(ub.router, urls.RouteNameBlobUpload)
+// BuildBlobURL constructs a url to begin a blob upload in the repository
+// identified by name.
+func (ub *URLBuilder) BuildBlobUploadURL(name string) (string, error) {
+	route := ub.cloneRoute(RouteNameBlobUpload)
 
-	uploadURL, err := route.
-		Schemes(ub.url.Scheme).
-		Host(ub.url.Host).
-		URL("name", name)
+	uploadURL, err := route.URL("name", name)
 	if err != nil {
 		return "", err
 	}
@@ -118,22 +112,30 @@ func (ub *urlBuilder) buildLayerUploadURL(name string) (string, error) {
 	return uploadURL.String(), nil
 }
 
-func (ub *urlBuilder) forLayerUpload(layerUpload storage.LayerUpload) (string, error) {
-	return ub.buildLayerUploadResumeURL(layerUpload.Name(), layerUpload.UUID())
-}
+// BuildBlobUploadChunkURL constructs a url for the upload identified by uuid,
+// including any url values. This should generally not be used by clients, as
+// this url is provided by server implementations during the blob upload
+// process.
+func (ub *URLBuilder) BuildBlobUploadChunkURL(name, uuid string, values ...url.Values) (string, error) {
+	route := ub.cloneRoute(RouteNameBlobUploadChunk)
 
-func (ub *urlBuilder) buildLayerUploadResumeURL(name, uuid string, values ...url.Values) (string, error) {
-	route := clonedRoute(ub.router, urls.RouteNameBlobUploadChunk)
-
-	uploadURL, err := route.
-		Schemes(ub.url.Scheme).
-		Host(ub.url.Host).
-		URL("name", name, "uuid", uuid)
+	uploadURL, err := route.URL("name", name, "uuid", uuid)
 	if err != nil {
 		return "", err
 	}
 
 	return appendValuesURL(uploadURL, values...).String(), nil
+}
+
+// clondedRoute returns a clone of the named route from the router. Routes
+// must be cloned to avoid modifying them during url generation.
+func (ub *URLBuilder) cloneRoute(name string) *mux.Route {
+	route := new(mux.Route)
+	*route = *ub.router.GetRoute(name) // clone the route
+
+	return route.
+		Schemes(ub.root.Scheme).
+		Host(ub.root.Host)
 }
 
 // appendValuesURL appends the parameters to the url.
@@ -160,11 +162,4 @@ func appendValues(u string, values ...url.Values) string {
 	}
 
 	return appendValuesURL(up, values...).String()
-}
-
-// clondedRoute returns a clone of the named route from the router.
-func clonedRoute(router *mux.Router, name string) *mux.Route {
-	route := new(mux.Route)
-	*route = *router.GetRoute(name) // clone the route
-	return route
 }
