@@ -151,7 +151,7 @@ func (luh *layerUploadHandler) CancelLayerUpload(w http.ResponseWriter, r *http.
 // chunk responses. This sets the correct headers but the response status is
 // left to the caller.
 func (luh *layerUploadHandler) layerUploadResponse(w http.ResponseWriter, r *http.Request) error {
-	uploadURL, err := luh.urlBuilder.forLayerUpload(luh.Upload)
+	uploadURL, err := luh.urlBuilder.BuildBlobUploadChunkURL(luh.Upload.Name(), luh.Upload.UUID())
 	if err != nil {
 		logrus.Infof("error building upload url: %s", err)
 		return err
@@ -200,7 +200,7 @@ func (luh *layerUploadHandler) completeUpload(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	layerURL, err := luh.urlBuilder.forLayer(layer)
+	layerURL, err := luh.urlBuilder.BuildBlobURL(layer.Name(), layer.Digest())
 	if err != nil {
 		luh.Errors.Push(errors.ErrorCodeUnknown, err)
 		w.WriteHeader(http.StatusInternalServerError)

@@ -3,6 +3,7 @@ package registry
 import (
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker-registry/api/errors"
+	"github.com/docker/docker-registry/api/urls"
 )
 
 // Context should contain the request specific context for use in across
@@ -28,5 +29,5 @@ type Context struct {
 	// log provides a context specific logger.
 	log *logrus.Entry
 
-	urlBuilder *urlBuilder
+	urlBuilder *urls.URLBuilder
 }

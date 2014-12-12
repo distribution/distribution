@@ -115,7 +115,7 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 		context := &Context{
 			App:        app,
 			Name:       vars["name"],
-			urlBuilder: newURLBuilderFromRequest(r),
+			urlBuilder: urls.NewURLBuilderFromRequest(r),
 		}
 
 		// Store vars for underlying handlers.
