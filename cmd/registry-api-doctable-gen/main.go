@@ -61,7 +61,7 @@ func dumpErrors(wr io.Writer) {
 
 	fmt.Fprintln(writer, "\n"+divider)
 
-	for _, descriptor := range errors.Descriptors {
+	for _, descriptor := range errors.ErrorDescriptors {
 		fmt.Fprint(writer, "|")
 
 		v := reflect.ValueOf(descriptor)
