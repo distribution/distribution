@@ -186,22 +186,28 @@ type Parameters map[string]string
 // Reporting defines error reporting methods.
 type Reporting struct {
 	// Bugsnag configures error reporting for Bugsnag (bugsnag.com).
-	Bugsnag struct {
-		// APIKey is the Bugsnag api key.
-		APIKey string `yaml:"apikey"`
-		// ReleaseStage tracks where the registry is deployed.
-		// Examples: production, staging, development
-		ReleaseStage string `yaml:"releasestage"`
-		// Endpoint is used for specifying an enterprise Bugsnag endpoint.
-		Endpoint string `yaml:"endpoint"`
-	} `yaml:"bugsnag"`
+	Bugsnag BugsnagReporting `yaml:"bugsnag"`
 	// NewRelic configures error reporting for NewRelic (newrelic.com)
-	NewRelic struct {
-		// LicenseKey is the NewRelic user license key
-		LicenseKey string `yaml:"licensekey"`
-		// AppName is the component name of the registry in NewRelic
-		Name string `yaml:"name"`
-	} `yaml:"newrelic"`
+	NewRelic NewRelicReporting `yaml:"newrelic"`
+}
+
+// BugsnagReporting configures error reporting for Bugsnag (bugsnag.com).
+type BugsnagReporting struct {
+	// APIKey is the Bugsnag api key.
+	APIKey string `yaml:"apikey"`
+	// ReleaseStage tracks where the registry is deployed.
+	// Examples: production, staging, development
+	ReleaseStage string `yaml:"releasestage"`
+	// Endpoint is used for specifying an enterprise Bugsnag endpoint.
+	Endpoint string `yaml:"endpoint"`
+}
+
+// NewRelicReporting configures error reporting for NewRelic (newrelic.com)
+type NewRelicReporting struct {
+	// LicenseKey is the NewRelic user license key
+	LicenseKey string `yaml:"licensekey"`
+	// AppName is the component name of the registry in NewRelic
+	Name string `yaml:"name"`
 }
 
 // Parse parses an input configuration yaml document into a Configuration struct
