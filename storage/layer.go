@@ -43,9 +43,14 @@ type LayerUpload interface {
 	// Offset returns the position of the last byte written to this layer.
 	Offset() int64
 
+	// TODO(stevvooe): Consider completely removing the size check from this
+	// interface. The digest check may be adequate and we are making it
+	// optional in the HTTP API.
+
 	// Finish marks the upload as completed, returning a valid handle to the
 	// uploaded layer. The final size and digest are validated against the
-	// contents of the uploaded layer.
+	// contents of the uploaded layer. If the size is negative, only the
+	// digest will be checked.
 	Finish(size int64, digest digest.Digest) (Layer, error)
 
 	// Cancel the layer upload process.
@@ -61,9 +66,6 @@ var (
 
 	// ErrLayerUploadUnknown returned when upload is not found.
 	ErrLayerUploadUnknown = fmt.Errorf("layer upload unknown")
-
-	// ErrLayerInvalidLength returned when length check fails.
-	ErrLayerInvalidLength = fmt.Errorf("invalid layer length")
 
 	// ErrLayerClosed returned when an operation is attempted on a closed
 	// Layer or LayerUpload.
@@ -86,4 +88,13 @@ type ErrLayerInvalidDigest struct {
 
 func (err ErrLayerInvalidDigest) Error() string {
 	return fmt.Sprintf("invalid digest for referenced layer: %v", err.FSLayer.BlobSum)
+}
+
+// ErrLayerInvalidSize returned when length check fails.
+type ErrLayerInvalidSize struct {
+	Size int64
+}
+
+func (err ErrLayerInvalidSize) Error() string {
+	return fmt.Sprintf("invalid layer size: %d", err.Size)
 }

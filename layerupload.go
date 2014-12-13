@@ -119,9 +119,20 @@ func (luh *layerUploadHandler) PutLayerChunk(w http.ResponseWriter, r *http.Requ
 
 	if err := luh.maybeCompleteUpload(w, r); err != nil {
 		if err != errNotReadyToComplete {
-			w.WriteHeader(http.StatusInternalServerError)
-			luh.Errors.Push(v2.ErrorCodeUnknown, err)
-			return
+			switch err := err.(type) {
+			case storage.ErrLayerInvalidSize:
+				w.WriteHeader(http.StatusBadRequest)
+				luh.Errors.Push(v2.ErrorCodeSizeInvalid, err)
+				return
+			case storage.ErrLayerInvalidDigest:
+				w.WriteHeader(http.StatusBadRequest)
+				luh.Errors.Push(v2.ErrorCodeDigestInvalid, err)
+				return
+			default:
+				w.WriteHeader(http.StatusInternalServerError)
+				luh.Errors.Push(v2.ErrorCodeUnknown, err)
+				return
+			}
 		}
 	}
 
@@ -173,7 +184,7 @@ func (luh *layerUploadHandler) maybeCompleteUpload(w http.ResponseWriter, r *htt
 	dgstStr := r.FormValue("digest") // TODO(stevvooe): Support multiple digest parameters!
 	sizeStr := r.FormValue("size")
 
-	if dgstStr == "" || sizeStr == "" {
+	if dgstStr == "" {
 		return errNotReadyToComplete
 	}
 
@@ -182,9 +193,14 @@ func (luh *layerUploadHandler) maybeCompleteUpload(w http.ResponseWriter, r *htt
 		return err
 	}
 
-	size, err := strconv.ParseInt(sizeStr, 10, 64)
-	if err != nil {
-		return err
+	var size int64
+	if sizeStr != "" {
+		size, err = strconv.ParseInt(sizeStr, 10, 64)
+		if err != nil {
+			return err
+		}
+	} else {
+		size = -1
 	}
 
 	luh.completeUpload(w, r, size, dgst)
