@@ -29,6 +29,11 @@ var configStruct = Configuration{
 			"port":      "",
 		},
 	},
+	Reporting: Reporting{
+		Bugsnag: BugsnagReporting{
+			APIKey: "BugsnagApiKey",
+		},
+	},
 }
 
 // configYamlV0_1 is a Version 0.1 yaml document representing configStruct
@@ -46,6 +51,9 @@ storage:
     secretkey: SUPERSECRET
     host: ~
     port: ~
+reporting:
+  bugsnag:
+    apikey: BugsnagApiKey
 `
 
 // inmemoryConfigYamlV0_1 is a Version 0.1 yaml document specifying an inmemory storage driver with
@@ -88,6 +96,7 @@ func (suite *ConfigSuite) TestParseSimple(c *C) {
 // parsed into a Configuration struct with no storage parameters
 func (suite *ConfigSuite) TestParseInmemory(c *C) {
 	suite.expectedConfig.Storage = Storage{"inmemory": Parameters{}}
+	suite.expectedConfig.Reporting = Reporting{}
 
 	config, err := Parse(bytes.NewReader([]byte(inmemoryConfigYamlV0_1)))
 	c.Assert(err, IsNil)
@@ -171,6 +180,22 @@ func (suite *ConfigSuite) TestParseWithDifferentEnvLoglevel(c *C) {
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
 
+func (suite *ConfigSuite) TestParseWithDifferentEnvReporting(c *C) {
+	suite.expectedConfig.Reporting.Bugsnag.APIKey = "anotherBugsnagApiKey"
+	suite.expectedConfig.Reporting.Bugsnag.Endpoint = "localhost:8080"
+	suite.expectedConfig.Reporting.NewRelic.LicenseKey = "NewRelicLicenseKey"
+	suite.expectedConfig.Reporting.NewRelic.Name = "some NewRelic NAME"
+
+	os.Setenv("REGISTRY_REPORTING_BUGSNAG_APIKEY", "anotherBugsnagApiKey")
+	os.Setenv("REGISTRY_REPORTING_BUGSNAG_ENDPOINT", "localhost:8080")
+	os.Setenv("REGISTRY_REPORTING_NEWRELIC_LICENSEKEY", "NewRelicLicenseKey")
+	os.Setenv("REGISTRY_REPORTING_NEWRELIC_NAME", "some NewRelic NAME")
+
+	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
+	c.Assert(err, IsNil)
+	c.Assert(config, DeepEquals, suite.expectedConfig)
+}
+
 // TestParseInvalidVersion validates that the parser will fail to parse a newer configuration
 // version than the CurrentVersion
 func (suite *ConfigSuite) TestParseInvalidVersion(c *C) {
@@ -189,6 +214,10 @@ func copyConfig(config Configuration) *Configuration {
 	configCopy.Storage = Storage{config.Storage.Type(): Parameters{}}
 	for k, v := range config.Storage.Parameters() {
 		configCopy.Storage.setParameter(k, v)
+	}
+	configCopy.Reporting = Reporting{
+		Bugsnag:  BugsnagReporting{config.Reporting.Bugsnag.APIKey, config.Reporting.Bugsnag.ReleaseStage, config.Reporting.Bugsnag.Endpoint},
+		NewRelic: NewRelicReporting{config.Reporting.NewRelic.LicenseKey, config.Reporting.NewRelic.Name},
 	}
 
 	return configCopy

@@ -24,6 +24,9 @@ type Configuration struct {
 	// Storage is the configuration for the registry's storage driver
 	Storage Storage `yaml:"storage"`
 
+	// Reporting is the configuration for error reporting
+	Reporting Reporting `yaml:"reporting"`
+
 	// HTTP contains configuration parameters for the registry's http
 	// interface.
 	HTTP struct {
@@ -180,6 +183,33 @@ func (storage Storage) MarshalYAML() (interface{}, error) {
 // Parameters defines a key-value parameters mapping
 type Parameters map[string]string
 
+// Reporting defines error reporting methods.
+type Reporting struct {
+	// Bugsnag configures error reporting for Bugsnag (bugsnag.com).
+	Bugsnag BugsnagReporting `yaml:"bugsnag"`
+	// NewRelic configures error reporting for NewRelic (newrelic.com)
+	NewRelic NewRelicReporting `yaml:"newrelic"`
+}
+
+// BugsnagReporting configures error reporting for Bugsnag (bugsnag.com).
+type BugsnagReporting struct {
+	// APIKey is the Bugsnag api key.
+	APIKey string `yaml:"apikey"`
+	// ReleaseStage tracks where the registry is deployed.
+	// Examples: production, staging, development
+	ReleaseStage string `yaml:"releasestage"`
+	// Endpoint is used for specifying an enterprise Bugsnag endpoint.
+	Endpoint string `yaml:"endpoint"`
+}
+
+// NewRelicReporting configures error reporting for NewRelic (newrelic.com)
+type NewRelicReporting struct {
+	// LicenseKey is the NewRelic user license key
+	LicenseKey string `yaml:"licensekey"`
+	// AppName is the component name of the registry in NewRelic
+	Name string `yaml:"name"`
+}
+
 // Parse parses an input configuration yaml document into a Configuration struct
 // This should generally be capable of handling old configuration format versions
 //
@@ -262,6 +292,23 @@ func parseV0_1Registry(in []byte) (*Configuration, error) {
 		if submatches := storageParamsRegexp.FindStringSubmatch(k); submatches != nil {
 			config.Storage.setParameter(strings.ToLower(submatches[1]), v)
 		}
+	}
+
+	if bugsnagAPIKey, ok := envMap["REGISTRY_REPORTING_BUGSNAG_APIKEY"]; ok {
+		config.Reporting.Bugsnag.APIKey = bugsnagAPIKey
+	}
+	if bugsnagReleaseStage, ok := envMap["REGISTRY_REPORTING_BUGSNAG_RELEASESTAGE"]; ok {
+		config.Reporting.Bugsnag.ReleaseStage = bugsnagReleaseStage
+	}
+	if bugsnagEndpoint, ok := envMap["REGISTRY_REPORTING_BUGSNAG_ENDPOINT"]; ok {
+		config.Reporting.Bugsnag.Endpoint = bugsnagEndpoint
+	}
+
+	if newRelicLicenseKey, ok := envMap["REGISTRY_REPORTING_NEWRELIC_LICENSEKEY"]; ok {
+		config.Reporting.NewRelic.LicenseKey = newRelicLicenseKey
+	}
+	if newRelicName, ok := envMap["REGISTRY_REPORTING_NEWRELIC_NAME"]; ok {
+		config.Reporting.NewRelic.Name = newRelicName
 	}
 
 	return (*Configuration)(&config), nil

@@ -11,6 +11,9 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
+	"github.com/bugsnag/bugsnag-go"
+	"github.com/yvasiyarov/gorelic"
+
 	"github.com/docker/docker-registry"
 	"github.com/docker/docker-registry/configuration"
 	_ "github.com/docker/docker-registry/storagedriver/filesystem"
@@ -27,7 +30,8 @@ func main() {
 	}
 
 	app := registry.NewApp(*config)
-	handler := handlers.CombinedLoggingHandler(os.Stdout, app)
+	handler := configureReporting(app)
+	handler = handlers.CombinedLoggingHandler(os.Stdout, handler)
 	log.SetLevel(logLevel(config.Loglevel))
 
 	log.Infof("listening on %v", config.HTTP.Addr)
@@ -81,4 +85,40 @@ func logLevel(level configuration.Loglevel) log.Level {
 	}
 
 	return l
+}
+
+func configureReporting(app *registry.App) http.Handler {
+	var handler http.Handler = app
+
+	if app.Config.Reporting.Bugsnag.APIKey != "" {
+		bugsnagConfig := bugsnag.Configuration{
+			APIKey: app.Config.Reporting.Bugsnag.APIKey,
+			// TODO(brianbland): provide the registry version here
+			// AppVersion: "2.0",
+		}
+		if app.Config.Reporting.Bugsnag.ReleaseStage != "" {
+			bugsnagConfig.ReleaseStage = app.Config.Reporting.Bugsnag.ReleaseStage
+		}
+		if app.Config.Reporting.Bugsnag.Endpoint != "" {
+			bugsnagConfig.Endpoint = app.Config.Reporting.Bugsnag.Endpoint
+		}
+		bugsnag.Configure(bugsnagConfig)
+
+		handler = bugsnag.Handler(handler)
+	}
+
+	if app.Config.Reporting.NewRelic.LicenseKey != "" {
+		agent := gorelic.NewAgent()
+		agent.NewrelicLicense = app.Config.Reporting.NewRelic.LicenseKey
+		if app.Config.Reporting.NewRelic.Name != "" {
+			agent.NewrelicName = app.Config.Reporting.NewRelic.Name
+		}
+		agent.CollectHTTPStat = true
+		agent.Verbose = true
+		agent.Run()
+
+		handler = agent.WrapHTTPHandler(handler)
+	}
+
+	return handler
 }
