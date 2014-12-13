@@ -24,11 +24,11 @@ func TestPush(t *testing.T) {
 	tag := "sometag"
 	testBlobs := []testBlob{
 		{
-			digest:   "12345",
+			digest:   "tarsum.v2+sha256:12345",
 			contents: []byte("some contents"),
 		},
 		{
-			digest:   "98765",
+			digest:   "tarsum.v2+sha256:98765",
 			contents: []byte("some other contents"),
 		},
 	}
@@ -80,7 +80,6 @@ func TestPush(t *testing.T) {
 				Method: "PUT",
 				Route:  uploadLocations[i],
 				QueryParams: map[string][]string{
-					"length": {fmt.Sprint(len(blob.contents))},
 					"digest": {blob.digest.String()},
 				},
 				Body: blob.contents,
@@ -114,7 +113,10 @@ func TestPush(t *testing.T) {
 	})
 
 	server = httptest.NewServer(hack)
-	client := New(server.URL)
+	client, err := New(server.URL)
+	if err != nil {
+		t.Fatalf("error creating client: %v", err)
+	}
 	objectStore := &memoryObjectStore{
 		mutex:           new(sync.Mutex),
 		manifestStorage: make(map[string]*storage.SignedManifest),
@@ -150,11 +152,11 @@ func TestPull(t *testing.T) {
 	tag := "sometag"
 	testBlobs := []testBlob{
 		{
-			digest:   "12345",
+			digest:   "tarsum.v2+sha256:12345",
 			contents: []byte("some contents"),
 		},
 		{
-			digest:   "98765",
+			digest:   "tarsum.v2+sha256:98765",
 			contents: []byte("some other contents"),
 		},
 	}
@@ -205,7 +207,10 @@ func TestPull(t *testing.T) {
 		},
 	}))
 	server := httptest.NewServer(handler)
-	client := New(server.URL)
+	client, err := New(server.URL)
+	if err != nil {
+		t.Fatalf("error creating client: %v", err)
+	}
 	objectStore := &memoryObjectStore{
 		mutex:           new(sync.Mutex),
 		manifestStorage: make(map[string]*storage.SignedManifest),
@@ -259,11 +264,11 @@ func TestPullResume(t *testing.T) {
 	tag := "sometag"
 	testBlobs := []testBlob{
 		{
-			digest:   "12345",
+			digest:   "tarsum.v2+sha256:12345",
 			contents: []byte("some contents"),
 		},
 		{
-			digest:   "98765",
+			digest:   "tarsum.v2+sha256:98765",
 			contents: []byte("some other contents"),
 		},
 	}
@@ -329,7 +334,10 @@ func TestPullResume(t *testing.T) {
 
 	handler := testutil.NewHandler(layerRequestResponseMappings)
 	server := httptest.NewServer(handler)
-	client := New(server.URL)
+	client, err := New(server.URL)
+	if err != nil {
+		t.Fatalf("error creating client: %v", err)
+	}
 	objectStore := &memoryObjectStore{
 		mutex:           new(sync.Mutex),
 		manifestStorage: make(map[string]*storage.SignedManifest),

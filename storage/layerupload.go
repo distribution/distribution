@@ -110,7 +110,7 @@ func (luc *layerUploadController) Finish(size int64, digest digest.Digest) (Laye
 	if nn, err := luc.writeLayer(fp, digest); err != nil {
 		// Cleanup?
 		return nil, err
-	} else if nn != size {
+	} else if size >= 0 && nn != size {
 		// TODO(stevvooe): Short write. Will have to delete the location and
 		// report an error. This error needs to be reported to the client.
 		return nil, fmt.Errorf("short write writing layer")
@@ -252,9 +252,10 @@ func (luc *layerUploadController) validateLayer(fp layerFile, size int64, dgst d
 		return "", err
 	}
 
-	if end != size {
+	// Only check size if it is greater than
+	if size >= 0 && end != size {
 		// Fast path length check.
-		return "", ErrLayerInvalidLength
+		return "", ErrLayerInvalidSize{Size: size}
 	}
 
 	// Now seek back to start and take care of the digest.
@@ -262,8 +263,12 @@ func (luc *layerUploadController) validateLayer(fp layerFile, size int64, dgst d
 		return "", err
 	}
 
-	tr := io.TeeReader(fp, lengthVerifier)
-	tr = io.TeeReader(tr, digestVerifier)
+	tr := io.TeeReader(fp, digestVerifier)
+
+	// Only verify the size if a positive size argument has been passed.
+	if size >= 0 {
+		tr = io.TeeReader(tr, lengthVerifier)
+	}
 
 	// TODO(stevvooe): This is one of the places we need a Digester write
 	// sink. Instead, its read driven. This migth be okay.
@@ -274,8 +279,8 @@ func (luc *layerUploadController) validateLayer(fp layerFile, size int64, dgst d
 		return "", err
 	}
 
-	if !lengthVerifier.Verified() {
-		return "", ErrLayerInvalidLength
+	if size >= 0 && !lengthVerifier.Verified() {
+		return "", ErrLayerInvalidSize{Size: size}
 	}
 
 	if !digestVerifier.Verified() {

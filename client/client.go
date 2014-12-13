@@ -71,19 +71,33 @@ type Client interface {
 // New returns a new Client which operates against a registry with the
 // given base endpoint
 // This endpoint should not include /v2/ or any part of the url after this.
-func New(endpoint string) Client {
-	return &clientImpl{endpoint}
+func New(endpoint string) (Client, error) {
+	ub, err := v2.NewURLBuilderFromString(endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	return &clientImpl{
+		endpoint: endpoint,
+		ub:       ub,
+	}, nil
 }
 
 // clientImpl is the default implementation of the Client interface
 type clientImpl struct {
-	Endpoint string
+	endpoint string
+	ub       *v2.URLBuilder
 }
 
 // TODO(bbland): use consistent route generation between server and client
 
 func (r *clientImpl) GetImageManifest(name, tag string) (*storage.SignedManifest, error) {
-	response, err := http.Get(r.imageManifestURL(name, tag))
+	manifestURL, err := r.ub.BuildManifestURL(name, tag)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := http.Get(manifestURL)
 	if err != nil {
 		return nil, err
 	}
@@ -119,8 +133,12 @@ func (r *clientImpl) GetImageManifest(name, tag string) (*storage.SignedManifest
 }
 
 func (r *clientImpl) PutImageManifest(name, tag string, manifest *storage.SignedManifest) error {
-	putRequest, err := http.NewRequest("PUT",
-		r.imageManifestURL(name, tag), bytes.NewReader(manifest.Raw))
+	manifestURL, err := r.ub.BuildManifestURL(name, tag)
+	if err != nil {
+		return err
+	}
+
+	putRequest, err := http.NewRequest("PUT", manifestURL, bytes.NewReader(manifest.Raw))
 	if err != nil {
 		return err
 	}
@@ -150,8 +168,12 @@ func (r *clientImpl) PutImageManifest(name, tag string, manifest *storage.Signed
 }
 
 func (r *clientImpl) DeleteImage(name, tag string) error {
-	deleteRequest, err := http.NewRequest("DELETE",
-		r.imageManifestURL(name, tag), nil)
+	manifestURL, err := r.ub.BuildManifestURL(name, tag)
+	if err != nil {
+		return err
+	}
+
+	deleteRequest, err := http.NewRequest("DELETE", manifestURL, nil)
 	if err != nil {
 		return err
 	}
@@ -184,7 +206,12 @@ func (r *clientImpl) DeleteImage(name, tag string) error {
 }
 
 func (r *clientImpl) ListImageTags(name string) ([]string, error) {
-	response, err := http.Get(fmt.Sprintf("%s/v2/%s/tags/list", r.Endpoint, name))
+	tagsURL, err := r.ub.BuildTagsURL(name)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := http.Get(tagsURL)
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +249,12 @@ func (r *clientImpl) ListImageTags(name string) ([]string, error) {
 }
 
 func (r *clientImpl) BlobLength(name string, dgst digest.Digest) (int, error) {
-	response, err := http.Head(fmt.Sprintf("%s/v2/%s/blobs/%s", r.Endpoint, name, dgst))
+	blobURL, err := r.ub.BuildBlobURL(name, dgst)
+	if err != nil {
+		return -1, err
+	}
+
+	response, err := http.Head(blobURL)
 	if err != nil {
 		return -1, err
 	}
@@ -254,8 +286,12 @@ func (r *clientImpl) BlobLength(name string, dgst digest.Digest) (int, error) {
 }
 
 func (r *clientImpl) GetBlob(name string, dgst digest.Digest, byteOffset int) (io.ReadCloser, int, error) {
-	getRequest, err := http.NewRequest("GET",
-		fmt.Sprintf("%s/v2/%s/blobs/%s", r.Endpoint, name, dgst), nil)
+	blobURL, err := r.ub.BuildBlobURL(name, dgst)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	getRequest, err := http.NewRequest("GET", blobURL, nil)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -293,8 +329,12 @@ func (r *clientImpl) GetBlob(name string, dgst digest.Digest, byteOffset int) (i
 }
 
 func (r *clientImpl) InitiateBlobUpload(name string) (string, error) {
-	postRequest, err := http.NewRequest("POST",
-		fmt.Sprintf("%s/v2/%s/blobs/uploads/", r.Endpoint, name), nil)
+	uploadURL, err := r.ub.BuildBlobUploadURL(name)
+	if err != nil {
+		return "", err
+	}
+
+	postRequest, err := http.NewRequest("POST", uploadURL, nil)
 	if err != nil {
 		return "", err
 	}
@@ -359,7 +399,6 @@ func (r *clientImpl) UploadBlob(location string, blob io.ReadCloser, length int,
 	}
 
 	queryValues := url.Values{}
-	queryValues.Set("size", fmt.Sprint(length))
 	queryValues.Set("digest", dgst.String())
 	putRequest.URL.RawQuery = queryValues.Encode()
 
@@ -394,8 +433,7 @@ func (r *clientImpl) UploadBlob(location string, blob io.ReadCloser, length int,
 func (r *clientImpl) UploadBlobChunk(location string, blobChunk io.ReadCloser, length, startByte int) error {
 	defer blobChunk.Close()
 
-	putRequest, err := http.NewRequest("PUT",
-		fmt.Sprintf("%s%s", r.Endpoint, location), blobChunk)
+	putRequest, err := http.NewRequest("PUT", location, blobChunk)
 	if err != nil {
 		return err
 	}
@@ -443,14 +481,12 @@ func (r *clientImpl) UploadBlobChunk(location string, blobChunk io.ReadCloser, l
 }
 
 func (r *clientImpl) FinishChunkedBlobUpload(location string, length int, dgst digest.Digest) error {
-	putRequest, err := http.NewRequest("PUT",
-		fmt.Sprintf("%s%s", r.Endpoint, location), nil)
+	putRequest, err := http.NewRequest("PUT", location, nil)
 	if err != nil {
 		return err
 	}
 
 	queryValues := new(url.Values)
-	queryValues.Set("size", fmt.Sprint(length))
 	queryValues.Set("digest", dgst.String())
 	putRequest.URL.RawQuery = queryValues.Encode()
 
@@ -485,8 +521,7 @@ func (r *clientImpl) FinishChunkedBlobUpload(location string, length int, dgst d
 }
 
 func (r *clientImpl) CancelBlobUpload(location string) error {
-	deleteRequest, err := http.NewRequest("DELETE",
-		fmt.Sprintf("%s%s", r.Endpoint, location), nil)
+	deleteRequest, err := http.NewRequest("DELETE", location, nil)
 	if err != nil {
 		return err
 	}
@@ -514,12 +549,6 @@ func (r *clientImpl) CancelBlobUpload(location string) error {
 	default:
 		return &UnexpectedHTTPStatusError{Status: response.Status}
 	}
-}
-
-// imageManifestURL is a helper method for returning the full url to an image
-// manifest
-func (r *clientImpl) imageManifestURL(name, tag string) string {
-	return fmt.Sprintf("%s/v2/%s/manifests/%s", r.Endpoint, name, tag)
 }
 
 // parseRangeHeader parses out the offset and length from a returned Range
