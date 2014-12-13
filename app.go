@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/docker/docker-registry/api/v2"
 	"github.com/docker/docker-registry/storagedriver"
 	"github.com/docker/docker-registry/storagedriver/factory"
 
@@ -35,18 +36,18 @@ type App struct {
 func NewApp(configuration configuration.Configuration) *App {
 	app := &App{
 		Config: configuration,
-		router: v2APIRouter(),
+		router: v2.Router(),
 	}
 
 	// Register the handler dispatchers.
-	app.register(routeNameBase, func(ctx *Context, r *http.Request) http.Handler {
+	app.register(v2.RouteNameBase, func(ctx *Context, r *http.Request) http.Handler {
 		return http.HandlerFunc(apiBase)
 	})
-	app.register(routeNameImageManifest, imageManifestDispatcher)
-	app.register(routeNameTags, tagsDispatcher)
-	app.register(routeNameBlob, layerDispatcher)
-	app.register(routeNameBlobUpload, layerUploadDispatcher)
-	app.register(routeNameBlobUploadResume, layerUploadDispatcher)
+	app.register(v2.RouteNameManifest, imageManifestDispatcher)
+	app.register(v2.RouteNameTags, tagsDispatcher)
+	app.register(v2.RouteNameBlob, layerDispatcher)
+	app.register(v2.RouteNameBlobUpload, layerUploadDispatcher)
+	app.register(v2.RouteNameBlobUploadChunk, layerUploadDispatcher)
 
 	driver, err := factory.Create(configuration.Storage.Type(), configuration.Storage.Parameters())
 
@@ -114,7 +115,7 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 		context := &Context{
 			App:        app,
 			Name:       vars["name"],
-			urlBuilder: newURLBuilderFromRequest(r),
+			urlBuilder: v2.NewURLBuilderFromRequest(r),
 		}
 
 		// Store vars for underlying handlers.

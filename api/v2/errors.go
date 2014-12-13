@@ -1,12 +1,4 @@
-// Package errors describes the error codes that may be returned via the
-// Docker Registry JSON HTTP API V2. In addition to declaractions,
-// descriptions about the error codes and the conditions causing them are
-// avialable in detail.
-//
-// Error definitions here are considered to be locked down for the V2 registry
-// api. Any changes must be considered carefully and should not proceed
-// without a change proposal in docker core.
-package errors
+package v2
 
 import (
 	"fmt"

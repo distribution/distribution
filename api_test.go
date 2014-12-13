@@ -13,7 +13,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/docker/docker-registry/api/errors"
+	"github.com/docker/docker-registry/api/v2"
 	"github.com/docker/docker-registry/common/testutil"
 	"github.com/docker/docker-registry/configuration"
 	"github.com/docker/docker-registry/digest"
@@ -34,13 +34,13 @@ func TestCheckAPI(t *testing.T) {
 
 	app := NewApp(config)
 	server := httptest.NewServer(handlers.CombinedLoggingHandler(os.Stderr, app))
-	builder, err := newURLBuilderFromString(server.URL)
+	builder, err := v2.NewURLBuilderFromString(server.URL)
 
 	if err != nil {
 		t.Fatalf("error creating url builder: %v", err)
 	}
 
-	baseURL, err := builder.buildBaseURL()
+	baseURL, err := builder.BuildBaseURL()
 	if err != nil {
 		t.Fatalf("unexpected error building base url: %v", err)
 	}
@@ -81,7 +81,7 @@ func TestLayerAPI(t *testing.T) {
 
 	app := NewApp(config)
 	server := httptest.NewServer(handlers.CombinedLoggingHandler(os.Stderr, app))
-	builder, err := newURLBuilderFromString(server.URL)
+	builder, err := v2.NewURLBuilderFromString(server.URL)
 
 	if err != nil {
 		t.Fatalf("error creating url builder: %v", err)
@@ -98,7 +98,7 @@ func TestLayerAPI(t *testing.T) {
 
 	// -----------------------------------
 	// Test fetch for non-existent content
-	layerURL, err := builder.buildLayerURL(imageName, layerDigest)
+	layerURL, err := builder.BuildBlobURL(imageName, layerDigest)
 	if err != nil {
 		t.Fatalf("error building url: %v", err)
 	}
@@ -121,7 +121,7 @@ func TestLayerAPI(t *testing.T) {
 
 	// ------------------------------------------
 	// Upload a layer
-	layerUploadURL, err := builder.buildLayerUploadURL(imageName)
+	layerUploadURL, err := builder.BuildBlobUploadURL(imageName)
 	if err != nil {
 		t.Fatalf("error building upload url: %v", err)
 	}
@@ -196,7 +196,7 @@ func TestManifestAPI(t *testing.T) {
 
 	app := NewApp(config)
 	server := httptest.NewServer(handlers.CombinedLoggingHandler(os.Stderr, app))
-	builder, err := newURLBuilderFromString(server.URL)
+	builder, err := v2.NewURLBuilderFromString(server.URL)
 	if err != nil {
 		t.Fatalf("unexpected error creating url builder: %v", err)
 	}
@@ -204,7 +204,7 @@ func TestManifestAPI(t *testing.T) {
 	imageName := "foo/bar"
 	tag := "thetag"
 
-	manifestURL, err := builder.buildManifestURL(imageName, tag)
+	manifestURL, err := builder.BuildManifestURL(imageName, tag)
 	if err != nil {
 		t.Fatalf("unexpected error getting manifest url: %v", err)
 	}
@@ -227,7 +227,7 @@ func TestManifestAPI(t *testing.T) {
 	// }
 	dec := json.NewDecoder(resp.Body)
 
-	var respErrs errors.Errors
+	var respErrs v2.Errors
 	if err := dec.Decode(&respErrs); err != nil {
 		t.Fatalf("unexpected error decoding error response: %v", err)
 	}
@@ -236,11 +236,11 @@ func TestManifestAPI(t *testing.T) {
 		t.Fatalf("expected errors in response")
 	}
 
-	if respErrs.Errors[0].Code != errors.ErrorCodeManifestUnknown {
+	if respErrs.Errors[0].Code != v2.ErrorCodeManifestUnknown {
 		t.Fatalf("expected manifest unknown error: got %v", respErrs)
 	}
 
-	tagsURL, err := builder.buildTagsURL(imageName)
+	tagsURL, err := builder.BuildTagsURL(imageName)
 	if err != nil {
 		t.Fatalf("unexpected error building tags url: %v", err)
 	}
@@ -262,7 +262,7 @@ func TestManifestAPI(t *testing.T) {
 		t.Fatalf("expected errors in response")
 	}
 
-	if respErrs.Errors[0].Code != errors.ErrorCodeNameUnknown {
+	if respErrs.Errors[0].Code != v2.ErrorCodeNameUnknown {
 		t.Fatalf("expected respository unknown error: got %v", respErrs)
 	}
 
@@ -296,11 +296,11 @@ func TestManifestAPI(t *testing.T) {
 
 	for _, err := range respErrs.Errors {
 		switch err.Code {
-		case errors.ErrorCodeManifestUnverified:
+		case v2.ErrorCodeManifestUnverified:
 			unverified++
-		case errors.ErrorCodeBlobUnknown:
+		case v2.ErrorCodeBlobUnknown:
 			missingLayers++
-		case errors.ErrorCodeDigestInvalid:
+		case v2.ErrorCodeDigestInvalid:
 			// TODO(stevvooe): This error isn't quite descriptive enough --
 			// the layer with an invalid digest isn't identified.
 			invalidDigests++
@@ -427,8 +427,8 @@ func putManifest(t *testing.T, msg, url string, v interface{}) *http.Response {
 	return resp
 }
 
-func startPushLayer(t *testing.T, ub *urlBuilder, name string) string {
-	layerUploadURL, err := ub.buildLayerUploadURL(name)
+func startPushLayer(t *testing.T, ub *v2.URLBuilder, name string) string {
+	layerUploadURL, err := ub.BuildBlobUploadURL(name)
 	if err != nil {
 		t.Fatalf("unexpected error building layer upload url: %v", err)
 	}
@@ -449,14 +449,21 @@ func startPushLayer(t *testing.T, ub *urlBuilder, name string) string {
 }
 
 // pushLayer pushes the layer content returning the url on success.
-func pushLayer(t *testing.T, ub *urlBuilder, name string, dgst digest.Digest, uploadURLBase string, rs io.ReadSeeker) string {
+func pushLayer(t *testing.T, ub *v2.URLBuilder, name string, dgst digest.Digest, uploadURLBase string, rs io.ReadSeeker) string {
 	rsLength, _ := rs.Seek(0, os.SEEK_END)
 	rs.Seek(0, os.SEEK_SET)
 
-	uploadURL := appendValues(uploadURLBase, url.Values{
+	u, err := url.Parse(uploadURLBase)
+	if err != nil {
+		t.Fatalf("unexpected error parsing pushLayer url: %v", err)
+	}
+
+	u.RawQuery = url.Values{
 		"digest": []string{dgst.String()},
 		"size":   []string{fmt.Sprint(rsLength)},
-	})
+	}.Encode()
+
+	uploadURL := u.String()
 
 	// Just do a monolithic upload
 	req, err := http.NewRequest("PUT", uploadURL, rs)
@@ -472,7 +479,7 @@ func pushLayer(t *testing.T, ub *urlBuilder, name string, dgst digest.Digest, up
 
 	checkResponse(t, "putting monolithic chunk", resp, http.StatusCreated)
 
-	expectedLayerURL, err := ub.buildLayerURL(name, dgst)
+	expectedLayerURL, err := ub.BuildBlobURL(name, dgst)
 	if err != nil {
 		t.Fatalf("error building expected layer url: %v", err)
 	}

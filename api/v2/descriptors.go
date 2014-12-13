@@ -1,6 +1,9 @@
-package errors
+package v2
 
 import "net/http"
+
+// TODO(stevvooe): Add route descriptors for each named route, along with
+// accepted methods, parameters, returned status codes and error codes.
 
 // ErrorDescriptor provides relevant information about a given error code.
 type ErrorDescriptor struct {
@@ -26,9 +29,9 @@ type ErrorDescriptor struct {
 	HTTPStatusCodes []int
 }
 
-// Descriptors provides a list of HTTP API Error codes that may be encountered
-// when interacting with the registry API.
-var Descriptors = []ErrorDescriptor{
+// ErrorDescriptors provides a list of HTTP API Error codes that may be
+// encountered when interacting with the registry API.
+var ErrorDescriptors = []ErrorDescriptor{
 	{
 		Code:    ErrorCodeUnknown,
 		Value:   "UNKNOWN",
@@ -131,10 +134,10 @@ var errorCodeToDescriptors map[ErrorCode]ErrorDescriptor
 var idToDescriptors map[string]ErrorDescriptor
 
 func init() {
-	errorCodeToDescriptors = make(map[ErrorCode]ErrorDescriptor, len(Descriptors))
-	idToDescriptors = make(map[string]ErrorDescriptor, len(Descriptors))
+	errorCodeToDescriptors = make(map[ErrorCode]ErrorDescriptor, len(ErrorDescriptors))
+	idToDescriptors = make(map[string]ErrorDescriptor, len(ErrorDescriptors))
 
-	for _, descriptor := range Descriptors {
+	for _, descriptor := range ErrorDescriptors {
 		errorCodeToDescriptors[descriptor.Code] = descriptor
 		idToDescriptors[descriptor.Value] = descriptor
 	}

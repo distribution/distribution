@@ -7,7 +7,7 @@ import (
 	"strconv"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/docker/docker-registry/api/errors"
+	"github.com/docker/docker-registry/api/v2"
 	"github.com/docker/docker-registry/digest"
 	"github.com/docker/docker-registry/storage"
 	"github.com/gorilla/handlers"
@@ -39,7 +39,7 @@ func layerUploadDispatcher(ctx *Context, r *http.Request) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				logrus.Infof("error resolving upload: %v", err)
 				w.WriteHeader(http.StatusInternalServerError)
-				luh.Errors.Push(errors.ErrorCodeUnknown, err)
+				luh.Errors.Push(v2.ErrorCodeUnknown, err)
 			})
 		}
 
@@ -67,7 +67,7 @@ func (luh *layerUploadHandler) StartLayerUpload(w http.ResponseWriter, r *http.R
 	upload, err := layers.Upload(luh.Name)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError) // Error conditions here?
-		luh.Errors.Push(errors.ErrorCodeUnknown, err)
+		luh.Errors.Push(v2.ErrorCodeUnknown, err)
 		return
 	}
 
@@ -76,7 +76,7 @@ func (luh *layerUploadHandler) StartLayerUpload(w http.ResponseWriter, r *http.R
 
 	if err := luh.layerUploadResponse(w, r); err != nil {
 		w.WriteHeader(http.StatusInternalServerError) // Error conditions here?
-		luh.Errors.Push(errors.ErrorCodeUnknown, err)
+		luh.Errors.Push(v2.ErrorCodeUnknown, err)
 		return
 	}
 	w.WriteHeader(http.StatusAccepted)
@@ -86,12 +86,12 @@ func (luh *layerUploadHandler) StartLayerUpload(w http.ResponseWriter, r *http.R
 func (luh *layerUploadHandler) GetUploadStatus(w http.ResponseWriter, r *http.Request) {
 	if luh.Upload == nil {
 		w.WriteHeader(http.StatusNotFound)
-		luh.Errors.Push(errors.ErrorCodeBlobUploadUnknown)
+		luh.Errors.Push(v2.ErrorCodeBlobUploadUnknown)
 	}
 
 	if err := luh.layerUploadResponse(w, r); err != nil {
 		w.WriteHeader(http.StatusInternalServerError) // Error conditions here?
-		luh.Errors.Push(errors.ErrorCodeUnknown, err)
+		luh.Errors.Push(v2.ErrorCodeUnknown, err)
 		return
 	}
 
@@ -103,7 +103,7 @@ func (luh *layerUploadHandler) GetUploadStatus(w http.ResponseWriter, r *http.Re
 func (luh *layerUploadHandler) PutLayerChunk(w http.ResponseWriter, r *http.Request) {
 	if luh.Upload == nil {
 		w.WriteHeader(http.StatusNotFound)
-		luh.Errors.Push(errors.ErrorCodeBlobUploadUnknown)
+		luh.Errors.Push(v2.ErrorCodeBlobUploadUnknown)
 	}
 
 	var finished bool
@@ -120,14 +120,14 @@ func (luh *layerUploadHandler) PutLayerChunk(w http.ResponseWriter, r *http.Requ
 	if err := luh.maybeCompleteUpload(w, r); err != nil {
 		if err != errNotReadyToComplete {
 			w.WriteHeader(http.StatusInternalServerError)
-			luh.Errors.Push(errors.ErrorCodeUnknown, err)
+			luh.Errors.Push(v2.ErrorCodeUnknown, err)
 			return
 		}
 	}
 
 	if err := luh.layerUploadResponse(w, r); err != nil {
 		w.WriteHeader(http.StatusInternalServerError) // Error conditions here?
-		luh.Errors.Push(errors.ErrorCodeUnknown, err)
+		luh.Errors.Push(v2.ErrorCodeUnknown, err)
 		return
 	}
 
@@ -142,7 +142,7 @@ func (luh *layerUploadHandler) PutLayerChunk(w http.ResponseWriter, r *http.Requ
 func (luh *layerUploadHandler) CancelLayerUpload(w http.ResponseWriter, r *http.Request) {
 	if luh.Upload == nil {
 		w.WriteHeader(http.StatusNotFound)
-		luh.Errors.Push(errors.ErrorCodeBlobUploadUnknown)
+		luh.Errors.Push(v2.ErrorCodeBlobUploadUnknown)
 	}
 
 }
@@ -151,7 +151,7 @@ func (luh *layerUploadHandler) CancelLayerUpload(w http.ResponseWriter, r *http.
 // chunk responses. This sets the correct headers but the response status is
 // left to the caller.
 func (luh *layerUploadHandler) layerUploadResponse(w http.ResponseWriter, r *http.Request) error {
-	uploadURL, err := luh.urlBuilder.forLayerUpload(luh.Upload)
+	uploadURL, err := luh.urlBuilder.BuildBlobUploadChunkURL(luh.Upload.Name(), luh.Upload.UUID())
 	if err != nil {
 		logrus.Infof("error building upload url: %s", err)
 		return err
@@ -195,14 +195,14 @@ func (luh *layerUploadHandler) maybeCompleteUpload(w http.ResponseWriter, r *htt
 func (luh *layerUploadHandler) completeUpload(w http.ResponseWriter, r *http.Request, size int64, dgst digest.Digest) {
 	layer, err := luh.Upload.Finish(size, dgst)
 	if err != nil {
-		luh.Errors.Push(errors.ErrorCodeUnknown, err)
+		luh.Errors.Push(v2.ErrorCodeUnknown, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
-	layerURL, err := luh.urlBuilder.forLayer(layer)
+	layerURL, err := luh.urlBuilder.BuildBlobURL(layer.Name(), layer.Digest())
 	if err != nil {
-		luh.Errors.Push(errors.ErrorCodeUnknown, err)
+		luh.Errors.Push(v2.ErrorCodeUnknown, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

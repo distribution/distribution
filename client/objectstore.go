@@ -2,7 +2,6 @@ package client
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"sync"
@@ -14,11 +13,11 @@ import (
 var (
 	// ErrLayerAlreadyExists is returned when attempting to create a layer with
 	// a tarsum that is already in use.
-	ErrLayerAlreadyExists = errors.New("Layer already exists")
+	ErrLayerAlreadyExists = fmt.Errorf("Layer already exists")
 
 	// ErrLayerLocked is returned when attempting to write to a layer which is
 	// currently being written to.
-	ErrLayerLocked = errors.New("Layer locked")
+	ErrLayerLocked = fmt.Errorf("Layer locked")
 )
 
 // ObjectStore is an interface which is designed to approximate the docker
