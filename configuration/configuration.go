@@ -311,6 +311,10 @@ func parseV0_1Registry(in []byte) (*Configuration, error) {
 		config.Reporting.NewRelic.Name = newRelicName
 	}
 
+	if httpAddr, ok := envMap["REGISTRY_HTTP_ADDR"]; ok {
+		config.HTTP.Addr = httpAddr
+	}
+
 	return (*Configuration)(&config), nil
 }
 
