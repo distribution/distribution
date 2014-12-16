@@ -18,9 +18,9 @@ test:
   pre:
     - go version
   override:
-    - test -z $(gofmt -s -l . | tee /dev/stderr)
+    - test -z "$(gofmt -s -l . | tee /dev/stderr)"
     - go vet ./...
-    - test -z $(golint ./... | tee /dev/stderr)
+    - test -z "$(golint ./... | tee /dev/stderr)"
     - go test -test.v -test.short ./...
 
     # Disabling the race detector due to massive memory usage.
