@@ -1,40 +1,112 @@
 machine:
   pre:
-    - curl -o go.tar.gz -sL https://golang.org/dl/go1.4rc2.linux-amd64.tar.gz
-    - sudo rm -rf /usr/local/go
-    - sudo tar -C /usr/local -xzf go.tar.gz
-    - sudo chmod a+w /usr/local/go/src/
+  # Install gvm
+    - bash < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/1.0.22/binscripts/gvm-installer)
+
+  post:
+  # Install many go versions
+    - gvm install go1.3.3 -B --name=old
+    - gvm install go1.4 -B --name=stable
+    # - gvm install tip --name=bleed
+
+  environment:
+  # Convenient shortcuts to "common" locations
+    CHECKOUT: /home/ubuntu/$CIRCLE_PROJECT_REPONAME
+    BASE_DIR: src/github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME
+  # Trick circle brainflat "no absolute path" behavior
+    BASE_OLD: ../../../$HOME/.gvm/pkgsets/old/global/$BASE_DIR
+    BASE_STABLE: ../../../$HOME/.gvm/pkgsets/stable/global/$BASE_DIR
+  # BASE_BLEED: ../../../$HOME/.gvm/pkgsets/bleed/global/$BASE_DIR
+  # Workaround Circle parsing madness bugs
+    CIRCLE_PAIN: "mode: set"
 
   hosts:
+  # Not used yet
     fancy: 127.0.0.1
 
 dependencies:
+  pre:
+  # Copy the code to the gopath of all go versions
+    - >
+      gvm use old &&
+      mkdir -p "$(dirname $BASE_OLD)" &&
+      cp -R "$CHECKOUT" "$BASE_OLD"
+
+    - >
+      gvm use stable &&
+      mkdir -p "$(dirname $BASE_STABLE)" &&
+      cp -R "$CHECKOUT" "$BASE_STABLE"
+
+    # - >
+    #   gvm use bleed &&
+    #   mkdir -p "$(dirname $BASE_BLEED)" &&
+    #   cp -R "$CHECKOUT" "$BASE_BLEED"
+
+  override:
+  # Install dependencies for every copied clone/go version
+    - gvm use old && go get -t -d -v ./...:
+        pwd: $BASE_OLD
+
+    - gvm use stable && go get -t -d -v ./...:
+        pwd: $BASE_STABLE
+
+    # - gvm use bleed && go get -t -d -v ./...:
+    #   pwd: $BASE_BLEED
+
   post:
-    - go get github.com/axw/gocov/gocov
-    - go get github.com/mattn/goveralls
-    - go get github.com/golang/lint/golint
+  # For the stable go version, additionally install linting tools
+    - >
+      gvm use stable &&
+      go get github.com/axw/gocov/gocov github.com/mattn/goveralls github.com/golang/lint/golint
 
 test:
   pre:
-    - go version
+  # Output the go versions we are going to test
+    - gvm use old && go version
+    - gvm use stable && go version
+    # - gvm use bleed && go version
+
+  # Preset the goverall report file
+    - echo "$CIRCLE_PAIN" > ~/goverage.report
+
+  # FMT
+    - gvm use stable && test -z "$(gofmt -s -l . | tee /dev/stderr)":
+        pwd: $BASE_STABLE
+
+  # VET
+    - gvm use stable && go vet ./...:
+        pwd: $BASE_STABLE
+
+  # LINT
+    - gvm use stable && test -z "$(golint ./... | tee /dev/stderr)":
+        pwd: $BASE_STABLE
+
   override:
-    - test -z "$(gofmt -s -l . | tee /dev/stderr)"
-    - go vet ./...
-    - test -z "$(golint ./... | tee /dev/stderr)"
-    - go test -test.v -test.short ./...
+  # Test every version we have (but stable)
+    - gvm use old; go test -test.v -test.short ./...:
+        timeout: 600
+        pwd: $BASE_OLD
 
-    # Disabling the race detector due to massive memory usage.
-    # - go test -race -test.v ./...:
+    # - gvm use bleed; go test -test.v -test.short ./...:
     #     timeout: 600
+    #     pwd: $BASE_BLEED
 
-    # TODO(stevvooe): The following is an attempt at using goveralls but it
-    # just doesn't work. goveralls requires a single profile file to be
-    # submitted at once, but can't run all of the tests for all the packages
-    # at once. The command below attempts to fix this but fails because it
-    # creates a new "job" for run of coveralls, making it so that the coverage
-    # is partially reported a large number of times.
+  # Test stable, and report
+    - gvm use stable; go list ./... | go test -test.short -coverprofile=coverage.out && cat coverage.out | sed -n '1!p' >> ~/goverage.report:
+        timeout: 600
+        pwd: $BASE_STABLE
 
-    # - cd $HOME/.go_project/src/github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME && go list ./... | xargs -I{} goveralls -service circleci -repotoken $COVERALLS_TOKEN -race {}
+  post:
+  # Report to coveralls
+    - gvm use stable; goveralls -service circleci -coverprofile=/home/ubuntu/goverage.report -repotoken $COVERALLS_TOKEN:
+        pwd: $BASE_STABLE
+
+  ## Notes
+  # Disabled the -race detector due to massive memory usage.
+  # Do we want these as well?
+  # - go get code.google.com/p/go.tools/cmd/goimports
+  # - test -z "$(goimports -l -w ./... | tee /dev/stderr)"
+  # http://labix.org/gocheck
 
 general:
   branches:
@@ -44,23 +116,3 @@ general:
       - 0.8
       - 0.9
       - 1.0
-  # This doesn't work, but it would be nice if it did.
-  # build_dir: ../.go_project/src/github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME
-
-# notify:
-#     email:
-#         recipients:
-#             - distribution@docker.com
-
-#     slack:
-#         team: docker
-#         channel: "#dt"
-#         username: mom
-#         token: {{SLACK_TOKEN}}
-#         on_success: false
-#         on_failure: true
-
-  # Do we want these as well?
-  # - go get code.google.com/p/go.tools/cmd/goimports
-  # - test -z "$(goimports -l -w ./... | tee /dev/stderr)"
-  # http://labix.org/gocheck
