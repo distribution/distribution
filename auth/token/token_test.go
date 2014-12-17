@@ -197,7 +197,7 @@ func TestTokenVerify(t *testing.T) {
 
 	verifyOps := VerifyOptions{
 		TrustedIssuers:    common.NewStringSet(issuer),
-		AccpetedAudiences: common.NewStringSet(audience),
+		AcceptedAudiences: common.NewStringSet(audience),
 		Roots:             rootPool,
 		TrustedKeys:       trustedKeys,
 	}

@@ -86,7 +86,7 @@ type Token struct {
 // options when verifying a JSON Web Token.
 type VerifyOptions struct {
 	TrustedIssuers    common.StringSet
-	AccpetedAudiences common.StringSet
+	AcceptedAudiences common.StringSet
 	Roots             *x509.CertPool
 	TrustedKeys       map[string]libtrust.PublicKey
 }
@@ -156,7 +156,7 @@ func (t *Token) Verify(verifyOpts VerifyOptions) error {
 	}
 
 	// Verify that the Audience claim is allowed.
-	if !verifyOpts.AccpetedAudiences.Contains(t.Claims.Audience) {
+	if !verifyOpts.AcceptedAudiences.Contains(t.Claims.Audience) {
 		log.Errorf("token intended for another audience: %q", t.Claims.Audience)
 		return ErrInvalidToken
 	}

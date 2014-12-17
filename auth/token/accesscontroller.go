@@ -243,7 +243,7 @@ func (ac *accessController) Authorized(req *http.Request, accessItems ...auth.Ac
 
 	verifyOpts := VerifyOptions{
 		TrustedIssuers:    common.NewStringSet(ac.issuer),
-		AccpetedAudiences: common.NewStringSet(ac.service),
+		AcceptedAudiences: common.NewStringSet(ac.service),
 		Roots:             ac.rootCerts,
 		TrustedKeys:       ac.trustedKeys,
 	}
