@@ -204,6 +204,8 @@ func (d *Driver) List(subPath string) ([]string, error) {
 		return nil, err
 	}
 
+	defer dir.Close()
+
 	fileNames, err := dir.Readdirnames(0)
 	if err != nil {
 		return nil, err
