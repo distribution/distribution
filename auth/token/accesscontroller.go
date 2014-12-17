@@ -12,8 +12,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/docker/docker-registry/auth"
 	"github.com/docker/libtrust"
+
+	"github.com/docker/docker-registry/auth"
+	"github.com/docker/docker-registry/common"
 )
 
 // accessSet maps a typed, named resource to
@@ -31,13 +33,13 @@ func newAccessSet(accessItems ...auth.Access) accessSet {
 			Name: access.Name,
 		}
 
-		set := accessSet[resource]
-		if set == nil {
-			set = make(actionSet)
+		set, exists := accessSet[resource]
+		if !exists {
+			set = newActionSet()
 			accessSet[resource] = set
 		}
 
-		set[access.Action] = struct{}{}
+		set.Add(access.Action)
 	}
 
 	return accessSet
@@ -47,7 +49,7 @@ func newAccessSet(accessItems ...auth.Access) accessSet {
 func (s accessSet) contains(access auth.Access) bool {
 	actionSet, ok := s[access.Resource]
 	if ok {
-		return actionSet.contains(access.Action)
+		return actionSet.Contains(access.Action)
 	}
 
 	return false
@@ -60,7 +62,7 @@ func (s accessSet) scopeParam() string {
 	scopes := make([]string, 0, len(s))
 
 	for resource, actionSet := range s {
-		actions := strings.Join(actionSet.keys(), ",")
+		actions := strings.Join(actionSet.Keys(), ",")
 		scopes = append(scopes, fmt.Sprintf("%s:%s:%s", resource.Type, resource.Name, actions))
 	}
 
@@ -240,8 +242,8 @@ func (ac *accessController) Authorized(req *http.Request, accessItems ...auth.Ac
 	}
 
 	verifyOpts := VerifyOptions{
-		TrustedIssuers:    newStringSet(ac.issuer),
-		AccpetedAudiences: newStringSet(ac.service),
+		TrustedIssuers:    common.NewStringSet(ac.issuer),
+		AccpetedAudiences: common.NewStringSet(ac.service),
 		Roots:             ac.rootCerts,
 		TrustedKeys:       ac.trustedKeys,
 	}

@@ -14,6 +14,7 @@ import (
 	"github.com/docker/libtrust"
 
 	"github.com/docker/docker-registry/auth"
+	"github.com/docker/docker-registry/common"
 )
 
 const (
@@ -85,8 +86,8 @@ type Token struct {
 // VerifyOptions is used to specify
 // options when verifying a JSON Web Token.
 type VerifyOptions struct {
-	TrustedIssuers    stringSet
-	AccpetedAudiences stringSet
+	TrustedIssuers    common.StringSet
+	AccpetedAudiences common.StringSet
 	Roots             *x509.CertPool
 	TrustedKeys       map[string]libtrust.PublicKey
 }
@@ -155,13 +156,13 @@ func (t *Token) Verify(verifyOpts VerifyOptions) error {
 	}
 
 	// Verify that the Issuer claim is a trusted authority.
-	if !verifyOpts.TrustedIssuers.contains(t.Claims.Issuer) {
+	if !verifyOpts.TrustedIssuers.Contains(t.Claims.Issuer) {
 		log.Errorf("token from untrusted issuer: %q", t.Claims.Issuer)
 		return ErrInvalidToken
 	}
 
 	// Verify that the Audience claim is allowed.
-	if !verifyOpts.AccpetedAudiences.contains(t.Claims.Audience) {
+	if !verifyOpts.AccpetedAudiences.Contains(t.Claims.Audience) {
 		log.Errorf("token intended for another audience: %q", t.Claims.Audience)
 		return ErrInvalidToken
 	}
@@ -319,14 +320,14 @@ func (t *Token) accessSet() accessSet {
 			Name: resourceActions.Name,
 		}
 
-		set := accessSet[resource]
-		if set == nil {
-			set = make(actionSet)
+		set, exists := accessSet[resource]
+		if !exists {
+			set = newActionSet()
 			accessSet[resource] = set
 		}
 
 		for _, action := range resourceActions.Actions {
-			set[action] = struct{}{}
+			set.Add(action)
 		}
 	}
 

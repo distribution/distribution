@@ -15,8 +15,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker-registry/auth"
 	"github.com/docker/libtrust"
+
+	"github.com/docker/docker-registry/auth"
+	"github.com/docker/docker-registry/common"
 )
 
 func makeRootKeys(numKeys int) ([]libtrust.PrivateKey, error) {
@@ -194,8 +196,8 @@ func TestTokenVerify(t *testing.T) {
 	}
 
 	verifyOps := VerifyOptions{
-		TrustedIssuers:    newStringSet(issuer),
-		AccpetedAudiences: newStringSet(audience),
+		TrustedIssuers:    common.NewStringSet(issuer),
+		AccpetedAudiences: common.NewStringSet(audience),
 		Roots:             rootPool,
 		TrustedKeys:       trustedKeys,
 	}

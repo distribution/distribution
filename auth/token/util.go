@@ -4,6 +4,8 @@ import (
 	"encoding/base64"
 	"errors"
 	"strings"
+
+	"github.com/docker/docker-registry/common"
 )
 
 // joseBase64UrlEncode encodes the given data using the standard base64 url
@@ -31,47 +33,17 @@ func joseBase64UrlDecode(s string) ([]byte, error) {
 	return base64.URLEncoding.DecodeString(s)
 }
 
-// stringSet is a useful type for looking up strings.
-type stringSet map[string]struct{}
-
-func newStringSet(strs ...string) stringSet {
-	set := make(stringSet, len(strs))
-	for _, str := range strs {
-		set[str] = struct{}{}
-	}
-
-	return set
-}
-
-// contains returns whether the given key is in this StringSet.
-func (ss stringSet) contains(key string) bool {
-	_, ok := ss[key]
-	return ok
-}
-
-// keys returns a slice of all keys in this stringSet.
-func (ss stringSet) keys() []string {
-	keys := make([]string, 0, len(ss))
-
-	for key := range ss {
-		keys = append(keys, key)
-	}
-
-	return keys
-}
-
 // actionSet is a special type of stringSet.
-type actionSet stringSet
-
-// contains calls stringSet.contains() for
-// either "*" or the given action string.
-func (s actionSet) contains(action string) bool {
-	ss := stringSet(s)
-
-	return ss.contains("*") || ss.contains(action)
+type actionSet struct {
+	common.StringSet
 }
 
-// keys wraps stringSet.keys()
-func (s actionSet) keys() []string {
-	return stringSet(s).keys()
+func newActionSet(actions ...string) actionSet {
+	return actionSet{common.NewStringSet(actions...)}
+}
+
+// Contains calls StringSet.Contains() for
+// either "*" or the given action string.
+func (s actionSet) Contains(action string) bool {
+	return s.StringSet.Contains("*") || s.StringSet.Contains(action)
 }
