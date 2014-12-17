@@ -1,3 +1,4 @@
+# Pony-up!
 machine:
   pre:
   # Install gvm
@@ -17,7 +18,7 @@ machine:
     BASE_OLD: ../../../$HOME/.gvm/pkgsets/old/global/$BASE_DIR
     BASE_STABLE: ../../../$HOME/.gvm/pkgsets/stable/global/$BASE_DIR
   # BASE_BLEED: ../../../$HOME/.gvm/pkgsets/bleed/global/$BASE_DIR
-  # Workaround Circle parsing madness bugs
+  # Workaround Circle parsing dumb bugs and/or YAML wonkyness
     CIRCLE_PAIN: "mode: set"
 
   hosts:
@@ -66,9 +67,6 @@ test:
     - gvm use stable && go version
     # - gvm use bleed && go version
 
-  # Preset the goverall report file
-    - echo "$CIRCLE_PAIN" > ~/goverage.report
-
   # FMT
     - gvm use stable && test -z "$(gofmt -s -l . | tee /dev/stderr)":
         pwd: $BASE_STABLE
@@ -92,12 +90,19 @@ test:
     #     pwd: $BASE_BLEED
 
   # Test stable, and report
-    - gvm use stable; go list ./... | go test -test.short -coverprofile=coverage.out && cat coverage.out | sed -n '1!p' >> ~/goverage.report:
+  # Preset the goverall report file
+    - echo "$CIRCLE_PAIN" > ~/goverage.report
+    - gvm use stable; go list ./... | xargs -L 1 -I{} rm -f $GOPATH/src/{}/coverage.out:
+        pwd: $BASE_STABLE
+
+    - gvm use stable; go list ./... | xargs -L 1 -I{} go test -test.short -coverprofile=$GOPATH/src/{}/coverage.out {}:
         timeout: 600
         pwd: $BASE_STABLE
 
   post:
-  # Report to coveralls
+  # Aggregate and report to coveralls
+    - gvm use stable; go list ./... | xargs -L 1 -I{} cat "$GOPATH/src/{}/coverage.out" | grep -v "$CIRCLE_PAIN" >> ~/goverage.report:
+        pwd: $BASE_STABLE
     - gvm use stable; goveralls -service circleci -coverprofile=/home/ubuntu/goverage.report -repotoken $COVERALLS_TOKEN:
         pwd: $BASE_STABLE
 
