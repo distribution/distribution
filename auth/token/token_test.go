@@ -206,9 +206,6 @@ func TestTokenVerify(t *testing.T) {
 		if err := token.Verify(verifyOps); err != nil {
 			t.Fatal(err)
 		}
-		if !token.Valid {
-			t.Fatal("token not marked as Valid")
-		}
 	}
 }
 

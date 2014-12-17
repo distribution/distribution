@@ -114,7 +114,7 @@ func (ac *authChallenge) challengeParams() string {
 
 // SetHeader sets the WWW-Authenticate value for the given header.
 func (ac *authChallenge) SetHeader(header http.Header) {
-	header.Add(http.CanonicalHeaderKey("WWW-Authenticate"), ac.challengeParams())
+	header.Add("WWW-Authenticate", ac.challengeParams())
 }
 
 // ServeHttp handles writing the challenge response

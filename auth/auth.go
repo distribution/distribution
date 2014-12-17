@@ -1,3 +1,33 @@
+// Package auth defines a standard interface for request access controllers.
+//
+// An access controller has a simple interface with a single `Authorized`
+// method which checks that a given request is authorized to perform one or
+// more actions on one or more resources. This method should return a non-nil
+// error if the requset is not authorized.
+//
+// An implementation registers its access controller by name with a constructor
+// which accepts an options map for configuring the access controller.
+//
+//		options := map[string]interface{}{"sillySecret": "whysosilly?"}
+// 		accessController, _ := auth.GetAccessController("silly", options)
+//
+// This `accessController` can then be used in a request handler like so:
+//
+// 		func updateOrder(w http.ResponseWriter, r *http.Request) {
+//			orderNumber := r.FormValue("orderNumber")
+//			resource := auth.Resource{Type: "customerOrder", Name: orderNumber}
+// 			access := auth.Access{Resource: resource, Action: "update"}
+//
+// 			if err := accessController.Authorized(r, access); err != nil {
+//				if challenge, ok := err.(auth.Challenge) {
+//					// Let the challenge write the response.
+//					challenge.ServeHTTP(w, r)
+//				} else {
+//					// Some other error.
+//				}
+//			}
+// 		}
+//
 package auth
 
 import (
@@ -23,8 +53,11 @@ type Access struct {
 // header values based on the error.
 type Challenge interface {
 	error
-	Status() int
-	SetHeader(header http.Header)
+	// ServeHTTP prepares the request to conduct the appropriate challenge
+	// response. For most implementations, simply calling ServeHTTP should be
+	// sufficient. Because no body is written, users may write a custom body after
+	// calling ServeHTTP, but any headers must be written before the call and may
+	// be overwritten.
 	ServeHTTP(w http.ResponseWriter, r *http.Request)
 }
 
@@ -32,14 +65,12 @@ type Challenge interface {
 // and required access levels for a request. Implementations can support both
 // complete denial and http authorization challenges.
 type AccessController interface {
-	// Authorized returns non-nil if the request is granted the request
-	// access. If the error is non-nil, access should always be denied. The
-	// error may be of type Challenge, in which case the caller may have the
-	// Challenge handle the request or choose what action to take based on the
-	// Challenge header or response status.
-	//
-	// In the future, other error types, besides Challenge, may be added to
-	// support more complex authorization flows.
+	// Authorized returns non-nil if the request is granted access. If one or
+	// more Access structs are provided, the requested access will be compared
+	// with what is available to the request. If the error is non-nil, access
+	// should always be denied. The error may be of type Challenge, in which
+	// case the caller may have the Challenge handle the request or choose
+	// what action to take based on the Challenge header or response status.
 	Authorized(req *http.Request, access ...Access) error
 }
 

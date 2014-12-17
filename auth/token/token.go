@@ -80,7 +80,6 @@ type Token struct {
 	Header    *Header
 	Claims    *ClaimSet
 	Signature []byte
-	Valid     bool
 }
 
 // VerifyOptions is used to specify
@@ -150,11 +149,6 @@ func NewToken(rawToken string) (*Token, error) {
 // Verify attempts to verify this token using the given options.
 // Returns a nil error if the token is valid.
 func (t *Token) Verify(verifyOpts VerifyOptions) error {
-	if t.Valid {
-		// Token was already verified.
-		return nil
-	}
-
 	// Verify that the Issuer claim is a trusted authority.
 	if !verifyOpts.TrustedIssuers.Contains(t.Claims.Issuer) {
 		log.Errorf("token from untrusted issuer: %q", t.Claims.Issuer)
@@ -203,8 +197,8 @@ func (t *Token) Verify(verifyOpts VerifyOptions) error {
 
 	// Next, check if the signing key is one of the trusted keys.
 	if _, isTrustedKey := verifyOpts.TrustedKeys[signingKey.KeyID()]; isTrustedKey {
-		// We're done! The token was signed by a trusted key and has been verified!
-		t.Valid = true
+		// We're done! The token was signed by
+		// a trusted key and has been verified!
 		return nil
 	}
 
@@ -301,7 +295,6 @@ func (t *Token) verifyCertificateChain(leafKey libtrust.PublicKey, roots *x509.C
 	}
 
 	// The signing key's x509 chain is valid!
-	t.Valid = true
 	return nil
 }
 
