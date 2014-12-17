@@ -56,8 +56,8 @@ reporting:
     apikey: BugsnagApiKey
 `
 
-// inmemoryConfigYamlV0_1 is a Version 0.1 yaml document specifying an inmemory storage driver with
-// no parameters
+// inmemoryConfigYamlV0_1 is a Version 0.1 yaml document specifying an inmemory
+// storage driver with no parameters
 var inmemoryConfigYamlV0_1 = `
 version: 0.1
 loglevel: info
@@ -75,8 +75,8 @@ func (suite *ConfigSuite) SetUpTest(c *C) {
 	suite.expectedConfig = copyConfig(configStruct)
 }
 
-// TestMarshalRoundtrip validates that configStruct can be marshaled and unmarshaled without
-// changing any parameters
+// TestMarshalRoundtrip validates that configStruct can be marshaled and
+// unmarshaled without changing any parameters
 func (suite *ConfigSuite) TestMarshalRoundtrip(c *C) {
 	configBytes, err := yaml.Marshal(suite.expectedConfig)
 	c.Assert(err, IsNil)
@@ -85,15 +85,16 @@ func (suite *ConfigSuite) TestMarshalRoundtrip(c *C) {
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
 
-// TestParseSimple validates that configYamlV0_1 can be parsed into a struct matching configStruct
+// TestParseSimple validates that configYamlV0_1 can be parsed into a struct
+// matching configStruct
 func (suite *ConfigSuite) TestParseSimple(c *C) {
 	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
 	c.Assert(err, IsNil)
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
 
-// TestParseInmemory validates that configuration yaml with storage provided as a string can be
-// parsed into a Configuration struct with no storage parameters
+// TestParseInmemory validates that configuration yaml with storage provided as
+// a string can be parsed into a Configuration struct with no storage parameters
 func (suite *ConfigSuite) TestParseInmemory(c *C) {
 	suite.expectedConfig.Storage = Storage{"inmemory": Parameters{}}
 	suite.expectedConfig.Reporting = Reporting{}
@@ -103,9 +104,31 @@ func (suite *ConfigSuite) TestParseInmemory(c *C) {
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
 
-// TestParseWithSameEnvStorage validates that providing environment variables that match the given
-// storage type and parameters will not alter the parsed Configuration struct
+// TestParseIncomplete validates that an incomplete yaml configuration cannot
+// be parsed without providing environment variables to fill in the missing
+// components.
+func (suite *ConfigSuite) TestParseIncomplete(c *C) {
+	incompleteConfigYaml := "version: 0.1"
+	_, err := Parse(bytes.NewReader([]byte(incompleteConfigYaml)))
+	c.Assert(err, NotNil)
+
+	suite.expectedConfig.Storage = Storage{"filesystem": Parameters{"rootdirectory": "/tmp/testroot"}}
+	suite.expectedConfig.Reporting = Reporting{}
+
+	os.Setenv("REGISTRY_STORAGE", "filesystem")
+	os.Setenv("REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY", "/tmp/testroot")
+
+	config, err := Parse(bytes.NewReader([]byte(incompleteConfigYaml)))
+	c.Assert(err, IsNil)
+	c.Assert(config, DeepEquals, suite.expectedConfig)
+}
+
+// TestParseWithSameEnvStorage validates that providing environment variables
+// that match the given storage type will only include environment-defined
+// parameters and remove yaml-defined parameters
 func (suite *ConfigSuite) TestParseWithSameEnvStorage(c *C) {
+	suite.expectedConfig.Storage = Storage{"s3": Parameters{"region": "us-east-1"}}
+
 	os.Setenv("REGISTRY_STORAGE", "s3")
 	os.Setenv("REGISTRY_STORAGE_S3_REGION", "us-east-1")
 
@@ -180,6 +203,22 @@ func (suite *ConfigSuite) TestParseWithDifferentEnvLoglevel(c *C) {
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
 
+// TestParseInvalidLoglevel validates that the parser will fail to parse a
+// configuration if the loglevel is malformed
+func (suite *ConfigSuite) TestParseInvalidLoglevel(c *C) {
+	invalidConfigYaml := "version: 0.1\nloglevel: derp\nstorage: inmemory"
+	_, err := Parse(bytes.NewReader([]byte(invalidConfigYaml)))
+	c.Assert(err, NotNil)
+
+	os.Setenv("REGISTRY_LOGLEVEL", "derp")
+
+	_, err = Parse(bytes.NewReader([]byte(configYamlV0_1)))
+	c.Assert(err, NotNil)
+
+}
+
+// TestParseWithDifferentEnvReporting validates that environment variables
+// properly override reporting parameters
 func (suite *ConfigSuite) TestParseWithDifferentEnvReporting(c *C) {
 	suite.expectedConfig.Reporting.Bugsnag.APIKey = "anotherBugsnagApiKey"
 	suite.expectedConfig.Reporting.Bugsnag.Endpoint = "localhost:8080"
