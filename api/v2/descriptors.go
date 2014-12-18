@@ -40,6 +40,14 @@ var ErrorDescriptors = []ErrorDescriptor{
 		API classification.`,
 	},
 	{
+		Code:    ErrorCodeUnauthorized,
+		Value:   "UNAUTHORIZED",
+		Message: "access to the requested resource is not authorized",
+		Description: `The access controller denied access for the operation on
+		a resource. Often this will be accompanied by a 401 Unauthorized
+		response status.`,
+	},
+	{
 		Code:    ErrorCodeDigestInvalid,
 		Value:   "DIGEST_INVALID",
 		Message: "provided digest did not match uploaded content",

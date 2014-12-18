@@ -20,6 +20,10 @@ type Configuration struct {
 	// Storage is the configuration for the registry's storage driver
 	Storage Storage `yaml:"storage"`
 
+	// Auth allows configuration of various authorization methods that may be
+	// used to gate requests.
+	Auth Auth `yaml:"auth"`
+
 	// Reporting is the configuration for error reporting
 	Reporting Reporting `yaml:"reporting"`
 
@@ -85,6 +89,9 @@ func (loglevel *Loglevel) UnmarshalYAML(unmarshal func(interface{}) error) error
 	return nil
 }
 
+// Parameters defines a key-value parameters mapping
+type Parameters map[string]interface{}
+
 // Storage defines the configuration for registry object storage
 type Storage map[string]Parameters
 
@@ -137,13 +144,71 @@ func (storage *Storage) UnmarshalYAML(unmarshal func(interface{}) error) error {
 // MarshalYAML implements the yaml.Marshaler interface
 func (storage Storage) MarshalYAML() (interface{}, error) {
 	if storage.Parameters() == nil {
-		return storage.Type, nil
+		return storage.Type(), nil
 	}
 	return map[string]Parameters(storage), nil
 }
 
-// Parameters defines a key-value parameters mapping
-type Parameters map[string]interface{}
+// Auth defines the configuration for registry authorization.
+type Auth map[string]Parameters
+
+// Type returns the storage driver type, such as filesystem or s3
+func (auth Auth) Type() string {
+	// Return only key in this map
+	for k := range auth {
+		return k
+	}
+	return ""
+}
+
+// Parameters returns the Parameters map for an Auth configuration
+func (auth Auth) Parameters() Parameters {
+	return auth[auth.Type()]
+}
+
+// setParameter changes the parameter at the provided key to the new value
+func (auth Auth) setParameter(key string, value interface{}) {
+	auth[auth.Type()][key] = value
+}
+
+// UnmarshalYAML implements the yaml.Unmarshaler interface
+// Unmarshals a single item map into a Storage or a string into a Storage type with no parameters
+func (auth *Auth) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var m map[string]Parameters
+	err := unmarshal(&m)
+	if err == nil {
+		if len(m) > 1 {
+			types := make([]string, 0, len(m))
+			for k := range m {
+				types = append(types, k)
+			}
+
+			// TODO(stevvooe): May want to change this slightly for
+			// authorization to allow multiple challenges.
+			return fmt.Errorf("must provide exactly one type. Provided: %v", types)
+
+		}
+		*auth = m
+		return nil
+	}
+
+	var authType string
+	err = unmarshal(&authType)
+	if err == nil {
+		*auth = Auth{authType: Parameters{}}
+		return nil
+	}
+
+	return err
+}
+
+// MarshalYAML implements the yaml.Marshaler interface
+func (auth Auth) MarshalYAML() (interface{}, error) {
+	if auth.Parameters() == nil {
+		return auth.Type(), nil
+	}
+	return map[string]Parameters(auth), nil
+}
 
 // Reporting defines error reporting methods.
 type Reporting struct {

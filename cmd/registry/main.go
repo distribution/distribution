@@ -7,14 +7,14 @@ import (
 	_ "net/http/pprof"
 	"os"
 
-	"github.com/gorilla/handlers"
-
 	log "github.com/Sirupsen/logrus"
-
 	"github.com/bugsnag/bugsnag-go"
+	"github.com/gorilla/handlers"
 	"github.com/yvasiyarov/gorelic"
 
 	"github.com/docker/docker-registry"
+	_ "github.com/docker/docker-registry/auth/silly"
+	_ "github.com/docker/docker-registry/auth/token"
 	"github.com/docker/docker-registry/configuration"
 	_ "github.com/docker/docker-registry/storagedriver/filesystem"
 	_ "github.com/docker/docker-registry/storagedriver/inmemory"

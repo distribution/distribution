@@ -1,12 +1,14 @@
 package registry
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"testing"
 
 	"github.com/docker/docker-registry/api/v2"
+	_ "github.com/docker/docker-registry/auth/silly"
 	"github.com/docker/docker-registry/configuration"
 )
 
@@ -122,5 +124,66 @@ func TestAppDispatcher(t *testing.T) {
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("unexpected status code: %v != %v", resp.StatusCode, http.StatusOK)
 		}
+	}
+}
+
+// TestNewApp covers the creation of an application via NewApp with a
+// configuration.
+func TestNewApp(t *testing.T) {
+	config := configuration.Configuration{
+		Storage: configuration.Storage{
+			"inmemory": nil,
+		},
+		Auth: configuration.Auth{
+			// For now, we simply test that new auth results in a viable
+			// application.
+			"silly": {
+				"realm":   "realm-test",
+				"service": "service-test",
+			},
+		},
+	}
+
+	// Mostly, with this test, given a sane configuration, we are simply
+	// ensuring that NewApp doesn't panic. We might want to tweak this
+	// behavior.
+	app := NewApp(config)
+
+	server := httptest.NewServer(app)
+	builder, err := v2.NewURLBuilderFromString(server.URL)
+	if err != nil {
+		t.Fatalf("error creating urlbuilder: %v", err)
+	}
+
+	baseURL, err := builder.BuildBaseURL()
+	if err != nil {
+		t.Fatalf("error creating baseURL: %v", err)
+	}
+
+	// TODO(stevvooe): The rest of this test might belong in the API tests.
+
+	// Just hit the app and make sure we get a 401 Unauthorized error.
+	req, err := http.Get(baseURL)
+	if err != nil {
+		t.Fatalf("unexpected error during GET: %v", err)
+	}
+	defer req.Body.Close()
+
+	if req.StatusCode != http.StatusUnauthorized {
+		t.Fatalf("unexpected status code during request: %v", err)
+	}
+
+	if req.Header.Get("Content-Type") != "application/json" {
+		t.Fatalf("unexpected content-type: %v != %v", req.Header.Get("Content-Type"), "application/json")
+	}
+
+	var errs v2.Errors
+	dec := json.NewDecoder(req.Body)
+	if err := dec.Decode(&errs); err != nil {
+		t.Fatalf("error decoding error response: %v", err)
+	}
+
+	if errs.Errors[0].Code != v2.ErrorCodeUnauthorized {
+		t.Fatalf("unexpected error code: %v != %v", errs.Errors[0].Code, v2.ErrorCodeUnauthorized)
 	}
 }

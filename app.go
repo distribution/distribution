@@ -5,11 +5,11 @@ import (
 	"net/http"
 
 	"github.com/docker/docker-registry/api/v2"
-	"github.com/docker/docker-registry/storagedriver"
-	"github.com/docker/docker-registry/storagedriver/factory"
-
+	"github.com/docker/docker-registry/auth"
 	"github.com/docker/docker-registry/configuration"
 	"github.com/docker/docker-registry/storage"
+	"github.com/docker/docker-registry/storagedriver"
+	"github.com/docker/docker-registry/storagedriver/factory"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
@@ -28,6 +28,8 @@ type App struct {
 
 	// services contains the main services instance for the application.
 	services *storage.Services
+
+	accessController auth.AccessController
 }
 
 // NewApp takes a configuration and returns a configured app, ready to serve
@@ -60,6 +62,16 @@ func NewApp(configuration configuration.Configuration) *App {
 
 	app.driver = driver
 	app.services = storage.NewServices(app.driver)
+
+	authType := configuration.Auth.Type()
+
+	if authType != "" {
+		accessController, err := auth.GetAccessController(configuration.Auth.Type(), configuration.Auth.Parameters())
+		if err != nil {
+			panic(fmt.Sprintf("unable to configure authorization (%s): %v", authType, err))
+		}
+		app.accessController = accessController
+	}
 
 	return app
 }
@@ -111,15 +123,11 @@ func (ssrw *singleStatusResponseWriter) WriteHeader(status int) {
 // handler, using the dispatch factory function.
 func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		vars := mux.Vars(r)
-		context := &Context{
-			App:        app,
-			Name:       vars["name"],
-			urlBuilder: v2.NewURLBuilderFromRequest(r),
-		}
+		context := app.context(r)
 
-		// Store vars for underlying handlers.
-		context.vars = vars
+		if err := app.authorized(w, r, context); err != nil {
+			return
+		}
 
 		context.log = log.WithField("name", context.Name)
 		handler := dispatch(context, r)
@@ -138,6 +146,86 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 			serveJSON(w, context.Errors)
 		}
 	})
+}
+
+// context constructs the context object for the application. This only be
+// called once per request.
+func (app *App) context(r *http.Request) *Context {
+	vars := mux.Vars(r)
+	context := &Context{
+		App:        app,
+		Name:       vars["name"],
+		urlBuilder: v2.NewURLBuilderFromRequest(r),
+	}
+
+	// Store vars for underlying handlers.
+	context.vars = vars
+
+	return context
+}
+
+// authorized checks if the request can proceed with with request access-
+// level. If it cannot, the method will return an error.
+func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Context) error {
+	if app.accessController == nil {
+		return nil // access controller is not enabled.
+	}
+
+	var accessRecords []auth.Access
+	resource := auth.Resource{
+		Type: "repository",
+		Name: context.Name,
+	}
+
+	switch r.Method {
+	case "GET", "HEAD":
+		accessRecords = append(accessRecords,
+			auth.Access{
+				Resource: resource,
+				Action:   "pull",
+			})
+	case "POST", "PUT", "PATCH":
+		accessRecords = append(accessRecords,
+			auth.Access{
+				Resource: resource,
+				Action:   "pull",
+			},
+			auth.Access{
+				Resource: resource,
+				Action:   "push",
+			})
+	case "DELETE":
+		// DELETE access requires full admin rights, which is represented
+		// as "*". This may not be ideal.
+		accessRecords = append(accessRecords,
+			auth.Access{
+				Resource: resource,
+				Action:   "*",
+			})
+	}
+
+	if err := app.accessController.Authorized(r, accessRecords...); err != nil {
+		switch err := err.(type) {
+		case auth.Challenge:
+			w.Header().Set("Content-Type", "application/json")
+			err.ServeHTTP(w, r)
+
+			var errs v2.Errors
+			errs.Push(v2.ErrorCodeUnauthorized, accessRecords)
+			serveJSON(w, errs)
+		default:
+			// This condition is a potential security problem either in
+			// the configuration or whatever is backing the access
+			// controller. Just return a bad request with no information
+			// to avoid exposure. The request should not proceed.
+			context.log.Errorf("error checking authorization: %v", err)
+			w.WriteHeader(http.StatusBadRequest)
+		}
+
+		return err
+	}
+
+	return nil
 }
 
 // apiBase implements a simple yes-man for doing overall checks against the
