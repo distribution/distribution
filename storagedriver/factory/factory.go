@@ -16,7 +16,7 @@ type StorageDriverFactory interface {
 	// Create returns a new storagedriver.StorageDriver with the given parameters
 	// Parameters will vary by driver and may be ignored
 	// Each parameter key must only consist of lowercase letters and numbers
-	Create(parameters map[string]string) (storagedriver.StorageDriver, error)
+	Create(parameters map[string]interface{}) (storagedriver.StorageDriver, error)
 }
 
 // Register makes a storage driver available by the provided name.
@@ -37,7 +37,7 @@ func Register(name string, factory StorageDriverFactory) {
 // To run in-process, the StorageDriverFactory must first be registered with the given name
 // If no in-process drivers are found with the given name, this attempts to create an IPC driver
 // If no in-process or external drivers are found, an InvalidStorageDriverError is returned
-func Create(name string, parameters map[string]string) (storagedriver.StorageDriver, error) {
+func Create(name string, parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
 	driverFactory, ok := driverFactories[name]
 	if !ok {
 		return nil, InvalidStorageDriverError{name}

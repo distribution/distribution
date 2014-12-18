@@ -68,6 +68,6 @@ Any configuration field other than version can be replaced by providing an envir
 For example, to change the loglevel to `error`, one can provide `REGISTRY_LOGLEVEL=error`, and to change the s3 storage driver's region parameter to `us-west-1`, one can provide `REGISTRY_STORAGE_S3_LOGLEVEL=us-west-1`.
 
 ### Notes
-If an environment variable changes a map value into a string, such as replacing the storage driver type with `REGISTRY_STORAGE=filesystem`, then all sub-fields will be erased. As such, changing the storage type will remove all parameters related to the old storage type.
+If an environment variable changes a map value into a string, such as replacing the storage driver type with `REGISTRY_STORAGE=filesystem`, then all sub-fields will be erased. As such, specifying the storage type in the environment will remove all parameters related to the old storage configuration.
 
 By restricting all keys in the configuration file to lowercase letters and numbers, we can avoid any potential environment variable mapping ambiguity.
