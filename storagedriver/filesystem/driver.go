@@ -201,6 +201,9 @@ func (d *Driver) List(subPath string) ([]string, error) {
 
 	dir, err := os.Open(fullPath)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, storagedriver.PathNotFoundError{Path: subPath}
+		}
 		return nil, err
 	}
 
