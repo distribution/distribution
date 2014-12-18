@@ -29,6 +29,12 @@ var configStruct = Configuration{
 			"port":      42,
 		},
 	},
+	Auth: Auth{
+		"silly": Parameters{
+			"realm":   "silly",
+			"service": "silly",
+		},
+	},
 	Reporting: Reporting{
 		Bugsnag: BugsnagReporting{
 			APIKey: "BugsnagApiKey",
@@ -51,6 +57,10 @@ storage:
     secretkey: SUPERSECRET
     host: ~
     port: 42
+auth:
+  silly:
+    realm: silly
+    service: silly
 reporting:
   bugsnag:
     apikey: BugsnagApiKey
@@ -62,6 +72,10 @@ var inmemoryConfigYamlV0_1 = `
 version: 0.1
 loglevel: info
 storage: inmemory
+auth:
+  silly:
+    realm: silly
+    service: silly
 `
 
 type ConfigSuite struct {
@@ -113,10 +127,13 @@ func (suite *ConfigSuite) TestParseIncomplete(c *C) {
 	c.Assert(err, NotNil)
 
 	suite.expectedConfig.Storage = Storage{"filesystem": Parameters{"rootdirectory": "/tmp/testroot"}}
+	suite.expectedConfig.Auth = Auth{"silly": Parameters{"realm": "silly"}}
 	suite.expectedConfig.Reporting = Reporting{}
 
 	os.Setenv("REGISTRY_STORAGE", "filesystem")
 	os.Setenv("REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY", "/tmp/testroot")
+	os.Setenv("REGISTRY_AUTH", "silly")
+	os.Setenv("REGISTRY_AUTH_SILLY_REALM", "silly")
 
 	config, err := Parse(bytes.NewReader([]byte(incompleteConfigYaml)))
 	c.Assert(err, IsNil)
@@ -257,6 +274,11 @@ func copyConfig(config Configuration) *Configuration {
 	configCopy.Reporting = Reporting{
 		Bugsnag:  BugsnagReporting{config.Reporting.Bugsnag.APIKey, config.Reporting.Bugsnag.ReleaseStage, config.Reporting.Bugsnag.Endpoint},
 		NewRelic: NewRelicReporting{config.Reporting.NewRelic.LicenseKey, config.Reporting.NewRelic.Name},
+	}
+
+	configCopy.Auth = Auth{config.Auth.Type(): Parameters{}}
+	for k, v := range config.Auth.Parameters() {
+		configCopy.Auth.setParameter(k, v)
 	}
 
 	return configCopy
