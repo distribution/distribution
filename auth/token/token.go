@@ -53,25 +53,11 @@ type ClaimSet struct {
 
 // Header describes the header section of a JSON Web Token.
 type Header struct {
-	Type       string             `json:"typ"`
-	SigningAlg string             `json:"alg"`
-	KeyID      string             `json:"kid,omitempty"`
-	RawJWK     json.RawMessage    `json:"jwk"`
-	SigningKey libtrust.PublicKey `json:"-"`
-}
-
-// CheckSigningKey parses the `jwk` field of a JOSE header and sets the
-// SigningKey field if it is valid.
-func (h *Header) CheckSigningKey() (err error) {
-	if len(h.RawJWK) == 0 {
-		// No signing key was specified.
-		return
-	}
-
-	h.SigningKey, err = libtrust.UnmarshalPublicKeyJWK([]byte(h.RawJWK))
-	h.RawJWK = nil // Don't need this anymore!
-
-	return
+	Type       string          `json:"typ"`
+	SigningAlg string          `json:"alg"`
+	KeyID      string          `json:"kid,omitempty"`
+	X5c        []string        `json:"x5c,omitempty"`
+	RawJWK     json.RawMessage `json:"jwk,omitempty"`
 }
 
 // Token describes a JSON Web Token.
@@ -135,10 +121,6 @@ func NewToken(rawToken string) (*Token, error) {
 		return nil, ErrMalformedToken
 	}
 
-	if err = token.Header.CheckSigningKey(); err != nil {
-		return nil, ErrMalformedToken
-	}
-
 	if err = json.Unmarshal(claimsJSON, token.Claims); err != nil {
 		return nil, ErrMalformedToken
 	}
@@ -174,108 +156,86 @@ func (t *Token) Verify(verifyOpts VerifyOptions) error {
 		return ErrInvalidToken
 	}
 
-	// If the token header has a SigningKey field, verify the signature
-	// using that key and its included x509 certificate chain if necessary.
-	// If the Header's SigningKey field is nil, try using the KeyID field.
-	signingKey := t.Header.SigningKey
-
-	if signingKey == nil {
-		// Find the key in the given collection of trusted keys.
-		trustedKey, ok := verifyOpts.TrustedKeys[t.Header.KeyID]
-		if !ok {
-			log.Errorf("token signed by untrusted key with ID: %q", t.Header.KeyID)
-			return ErrInvalidToken
-		}
-		signingKey = trustedKey
+	// Verify that the signing key is trusted.
+	signingKey, err := t.VerifySigningKey(verifyOpts)
+	if err != nil {
+		log.Error(err)
+		return ErrInvalidToken
 	}
 
-	// First verify the signature of the token using the key which signed it.
+	// Finally, verify the signature of the token using the key which signed it.
 	if err := signingKey.Verify(strings.NewReader(t.Raw), t.Header.SigningAlg, t.Signature); err != nil {
 		log.Errorf("unable to verify token signature: %s", err)
 		return ErrInvalidToken
 	}
 
-	// Next, check if the signing key is one of the trusted keys.
-	if _, isTrustedKey := verifyOpts.TrustedKeys[signingKey.KeyID()]; isTrustedKey {
-		// We're done! The token was signed by
-		// a trusted key and has been verified!
-		return nil
-	}
-
-	// Otherwise, we need to check the sigining keys included certificate chain.
-	return t.verifyCertificateChain(signingKey, verifyOpts.Roots)
+	return nil
 }
 
-// verifyCertificateChain attempts to verify the token using the "x5c" field
-// of the given leafKey which was used to sign it. Returns a nil error if
-// the key's certificate chain is valid and rooted an one of the given roots.
-func (t *Token) verifyCertificateChain(leafKey libtrust.PublicKey, roots *x509.CertPool) error {
-	// In this case, the token signature is valid, but the key that signed it
-	// is not in our set of trusted keys. So, we'll need to check if the
-	// token's signing key included an x509 certificate chain that can be
-	// verified up to one of our trusted roots.
-	x5cVal, ok := leafKey.GetExtendedField("x5c").([]interface{})
-	if !ok || x5cVal == nil {
-		log.Error("unable to verify token signature: signed by untrusted key with no valid certificate chain")
-		return ErrInvalidToken
+// VerifySigningKey attempts to get the key which was used to sign this token.
+// The token header should contain either of these 3 fields:
+//      `x5c` - The x509 certificate chain for the signing key. Needs to be
+//              verified.
+//      `jwk` - The JSON Web Key representation of the signing key.
+//              May contain its own `x5c` field which needs to be verified.
+//      `kid` - The unique identifier for the key. This library interprets it
+//              as a libtrust fingerprint. The key itself can be looked up in
+//              the trustedKeys field of the given verify options.
+// Each of these methods are tried in that order of preference until the
+// signing key is found or an error is returned.
+func (t *Token) VerifySigningKey(verifyOpts VerifyOptions) (signingKey libtrust.PublicKey, err error) {
+	// First attempt to get an x509 certificate chain from the header.
+	var (
+		x5c    = t.Header.X5c
+		rawJWK = t.Header.RawJWK
+		keyID  = t.Header.KeyID
+	)
+
+	switch {
+	case len(x5c) > 0:
+		signingKey, err = parseAndVerifyCertChain(x5c, verifyOpts.Roots)
+	case len(rawJWK) > 0:
+		signingKey, err = parseAndVerifyRawJWK(rawJWK, verifyOpts)
+	case len(keyID) > 0:
+		signingKey = verifyOpts.TrustedKeys[keyID]
+		if signingKey == nil {
+			err = fmt.Errorf("token signed by untrusted key with ID: %q", keyID)
+		}
+	default:
+		err = errors.New("unable to get token signing key")
 	}
 
-	// Ensure each item is of the correct type.
-	x5c := make([]string, len(x5cVal))
-	for i, val := range x5cVal {
-		certString, ok := val.(string)
-		if !ok || len(certString) == 0 {
-			log.Error("unable to verify token signature: signed by untrusted key with malformed certificate chain")
-			return ErrInvalidToken
-		}
-		x5c[i] = certString
+	return
+}
+
+func parseAndVerifyCertChain(x5c []string, roots *x509.CertPool) (leafKey libtrust.PublicKey, err error) {
+	if len(x5c) == 0 {
+		return nil, errors.New("empty x509 certificate chain")
 	}
 
 	// Ensure the first element is encoded correctly.
 	leafCertDer, err := base64.StdEncoding.DecodeString(x5c[0])
 	if err != nil {
-		log.Errorf("unable to decode signing key leaf cert: %s", err)
-		return ErrInvalidToken
+		return nil, fmt.Errorf("unable to decode leaf certificate: %s", err)
 	}
 
 	// And that it is a valid x509 certificate.
 	leafCert, err := x509.ParseCertificate(leafCertDer)
 	if err != nil {
-		log.Errorf("unable to parse signing key leaf cert: %s", err)
-		return ErrInvalidToken
+		return nil, fmt.Errorf("unable to parse leaf certificate: %s", err)
 	}
 
-	// Verify that the public key in the leaf cert *is* the signing key.
-	leafCryptoKey, ok := leafCert.PublicKey.(crypto.PublicKey)
-	if !ok {
-		log.Error("unable to get signing key leaf cert public key value")
-		return ErrInvalidToken
-	}
-
-	leafPubKey, err := libtrust.FromCryptoPublicKey(leafCryptoKey)
-	if err != nil {
-		log.Errorf("unable to make libtrust public key from signing key leaf cert: %s", err)
-		return ErrInvalidToken
-	}
-
-	if leafPubKey.KeyID() != leafKey.KeyID() {
-		log.Error("token signing key ID and leaf certificate public key ID do not match")
-		return ErrInvalidToken
-	}
-
-	// The rest of the x5c array are intermediate certificates.
+	// The rest of the certificate chain are intermediate certificates.
 	intermediates := x509.NewCertPool()
 	for i := 1; i < len(x5c); i++ {
 		intermediateCertDer, err := base64.StdEncoding.DecodeString(x5c[i])
 		if err != nil {
-			log.Errorf("unable to decode signing key intermediate cert: %s", err)
-			return ErrInvalidToken
+			return nil, fmt.Errorf("unable to decode intermediate certificate: %s", err)
 		}
 
 		intermediateCert, err := x509.ParseCertificate(intermediateCertDer)
 		if err != nil {
-			log.Errorf("unable to parse signing key intermediate cert: %s", err)
-			return ErrInvalidToken
+			return nil, fmt.Errorf("unable to parse intermediate certificate: %s", err)
 		}
 
 		intermediates.AddCert(intermediateCert)
@@ -290,12 +250,64 @@ func (t *Token) verifyCertificateChain(leafKey libtrust.PublicKey, roots *x509.C
 	// TODO: this call returns certificate chains which we ignore for now, but
 	// we should check them for revocations if we have the ability later.
 	if _, err = leafCert.Verify(verifyOpts); err != nil {
-		log.Errorf("unable to verify signing key certificate: %s", err)
-		return ErrInvalidToken
+		return nil, fmt.Errorf("unable to verify certificate chain: %s", err)
 	}
 
-	// The signing key's x509 chain is valid!
-	return nil
+	// Get the public key from the leaf certificate.
+	leafCryptoKey, ok := leafCert.PublicKey.(crypto.PublicKey)
+	if !ok {
+		return nil, errors.New("unable to get leaf cert public key value")
+	}
+
+	leafKey, err = libtrust.FromCryptoPublicKey(leafCryptoKey)
+	if err != nil {
+		return nil, fmt.Errorf("unable to make libtrust public key from leaf certificate: %s", err)
+	}
+
+	return
+}
+
+func parseAndVerifyRawJWK(rawJWK json.RawMessage, verifyOpts VerifyOptions) (pubKey libtrust.PublicKey, err error) {
+	pubKey, err = libtrust.UnmarshalPublicKeyJWK([]byte(rawJWK))
+	if err != nil {
+		return nil, fmt.Errorf("unable to decode raw JWK value: %s", err)
+	}
+
+	// Check to see if the key includes a certificate chain.
+	x5cVal, ok := pubKey.GetExtendedField("x5c").([]interface{})
+	if !ok {
+		// The JWK should be one of the trusted root keys.
+		if _, trusted := verifyOpts.TrustedKeys[pubKey.KeyID()]; !trusted {
+			return nil, errors.New("untrusted JWK with no certificate chain")
+		}
+
+		// The JWK is one of the trusted keys.
+		return
+	}
+
+	// Ensure each item in the chain is of the correct type.
+	x5c := make([]string, len(x5cVal))
+	for i, val := range x5cVal {
+		certString, ok := val.(string)
+		if !ok || len(certString) == 0 {
+			return nil, errors.New("malformed certificate chain")
+		}
+		x5c[i] = certString
+	}
+
+	// Ensure that the x509 certificate chain can
+	// be verified up to one of our trusted roots.
+	leafKey, err := parseAndVerifyCertChain(x5c, verifyOpts.Roots)
+	if err != nil {
+		return nil, fmt.Errorf("could not verify JWK certificate chain: %s", err)
+	}
+
+	// Verify that the public key in the leaf cert *is* the signing key.
+	if pubKey.KeyID() != leafKey.KeyID() {
+		return nil, errors.New("leaf certificate public key ID does not match JWK key ID")
+	}
+
+	return
 }
 
 // accessSet returns a set of actions available for the resource
