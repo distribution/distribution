@@ -23,7 +23,7 @@ func init() {
 // filesystemDriverFactory implements the factory.StorageDriverFactory interface
 type filesystemDriverFactory struct{}
 
-func (factory *filesystemDriverFactory) Create(parameters map[string]string) (storagedriver.StorageDriver, error) {
+func (factory *filesystemDriverFactory) Create(parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
 	return FromParameters(parameters), nil
 }
 
@@ -36,12 +36,12 @@ type Driver struct {
 // FromParameters constructs a new Driver with a given parameters map
 // Optional Parameters:
 // - rootdirectory
-func FromParameters(parameters map[string]string) *Driver {
+func FromParameters(parameters map[string]interface{}) *Driver {
 	var rootDirectory = defaultRootDirectory
 	if parameters != nil {
 		rootDir, ok := parameters["rootdirectory"]
 		if ok {
-			rootDirectory = rootDir
+			rootDirectory = fmt.Sprint(rootDir)
 		}
 	}
 	return New(rootDirectory)

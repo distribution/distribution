@@ -21,12 +21,12 @@ var configStruct = Configuration{
 			"region":    "us-east-1",
 			"bucket":    "my-bucket",
 			"rootpath":  "/registry",
-			"encrypt":   "true",
-			"secure":    "false",
+			"encrypt":   true,
+			"secure":    false,
 			"accesskey": "SAMPLEACCESSKEY",
 			"secretkey": "SUPERSECRET",
-			"host":      "",
-			"port":      "",
+			"host":      nil,
+			"port":      42,
 		},
 	},
 	Reporting: Reporting{
@@ -50,7 +50,7 @@ storage:
     accesskey: SAMPLEACCESSKEY
     secretkey: SUPERSECRET
     host: ~
-    port: ~
+    port: 42
 reporting:
   bugsnag:
     apikey: BugsnagApiKey
@@ -142,7 +142,7 @@ func (suite *ConfigSuite) TestParseWithSameEnvStorage(c *C) {
 // Configuration struct
 func (suite *ConfigSuite) TestParseWithDifferentEnvStorageParams(c *C) {
 	suite.expectedConfig.Storage.setParameter("region", "us-west-1")
-	suite.expectedConfig.Storage.setParameter("secure", "true")
+	suite.expectedConfig.Storage.setParameter("secure", true)
 	suite.expectedConfig.Storage.setParameter("newparam", "some Value")
 
 	os.Setenv("REGISTRY_STORAGE_S3_REGION", "us-west-1")

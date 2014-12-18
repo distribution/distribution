@@ -103,7 +103,7 @@ func (storage Storage) Parameters() Parameters {
 }
 
 // setParameter changes the parameter at the provided key to the new value
-func (storage Storage) setParameter(key, value string) {
+func (storage Storage) setParameter(key string, value interface{}) {
 	storage[storage.Type()][key] = value
 }
 
@@ -143,7 +143,7 @@ func (storage Storage) MarshalYAML() (interface{}, error) {
 }
 
 // Parameters defines a key-value parameters mapping
-type Parameters map[string]string
+type Parameters map[string]interface{}
 
 // Reporting defines error reporting methods.
 type Reporting struct {
