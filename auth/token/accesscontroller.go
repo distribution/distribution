@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/docker/libtrust"
@@ -97,16 +96,16 @@ func (ac *authChallenge) Status() int {
 // the WWW-Authenticate response challenge header.
 // See https://tools.ietf.org/html/rfc6750#section-3
 func (ac *authChallenge) challengeParams() string {
-	str := fmt.Sprintf("Bearer realm=%s,service=%s", strconv.Quote(ac.realm), strconv.Quote(ac.service))
+	str := fmt.Sprintf("Bearer realm=%q,service=%q", ac.realm, ac.service)
 
 	if scope := ac.accessSet.scopeParam(); scope != "" {
-		str = fmt.Sprintf("%s,scope=%s", str, strconv.Quote(scope))
+		str = fmt.Sprintf("%s,scope=%q", str, scope)
 	}
 
 	if ac.err == ErrInvalidToken || ac.err == ErrMalformedToken {
-		str = fmt.Sprintf("%s,error=%s", str, strconv.Quote("invalid_token"))
+		str = fmt.Sprintf("%s,error=%q", str, "invalid_token")
 	} else if ac.err == ErrInsufficientScope {
-		str = fmt.Sprintf("%s,error=%s", str, strconv.Quote("insufficient_scope"))
+		str = fmt.Sprintf("%s,error=%q", str, "insufficient_scope")
 	}
 
 	return str
