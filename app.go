@@ -172,36 +172,56 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 	}
 
 	var accessRecords []auth.Access
-	resource := auth.Resource{
-		Type: "repository",
-		Name: context.Name,
-	}
 
-	switch r.Method {
-	case "GET", "HEAD":
-		accessRecords = append(accessRecords,
-			auth.Access{
-				Resource: resource,
-				Action:   "pull",
-			})
-	case "POST", "PUT", "PATCH":
-		accessRecords = append(accessRecords,
-			auth.Access{
-				Resource: resource,
-				Action:   "pull",
-			},
-			auth.Access{
-				Resource: resource,
-				Action:   "push",
-			})
-	case "DELETE":
-		// DELETE access requires full admin rights, which is represented
-		// as "*". This may not be ideal.
-		accessRecords = append(accessRecords,
-			auth.Access{
-				Resource: resource,
-				Action:   "*",
-			})
+	if context.Name != "" {
+		resource := auth.Resource{
+			Type: "repository",
+			Name: context.Name,
+		}
+
+		switch r.Method {
+		case "GET", "HEAD":
+			accessRecords = append(accessRecords,
+				auth.Access{
+					Resource: resource,
+					Action:   "pull",
+				})
+		case "POST", "PUT", "PATCH":
+			accessRecords = append(accessRecords,
+				auth.Access{
+					Resource: resource,
+					Action:   "pull",
+				},
+				auth.Access{
+					Resource: resource,
+					Action:   "push",
+				})
+		case "DELETE":
+			// DELETE access requires full admin rights, which is represented
+			// as "*". This may not be ideal.
+			accessRecords = append(accessRecords,
+				auth.Access{
+					Resource: resource,
+					Action:   "*",
+				})
+		}
+	} else {
+		// Only allow the name not to be set on the base route.
+		route := mux.CurrentRoute(r)
+
+		if route == nil || route.GetName() != v2.RouteNameBase {
+			// For this to be properly secured, context.Name must always be set
+			// for a resource that may make a modification. The only condition
+			// under which name is not set and we still allow access is when the
+			// base route is accessed. This section prevents us from making that
+			// mistake elsewhere in the code, allowing any operation to proceed.
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusForbidden)
+
+			var errs v2.Errors
+			errs.Push(v2.ErrorCodeUnauthorized)
+			serveJSON(w, errs)
+		}
 	}
 
 	if err := app.accessController.Authorized(r, accessRecords...); err != nil {

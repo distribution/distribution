@@ -177,6 +177,11 @@ func TestNewApp(t *testing.T) {
 		t.Fatalf("unexpected content-type: %v != %v", req.Header.Get("Content-Type"), "application/json")
 	}
 
+	expectedAuthHeader := "Bearer realm=\"realm-test\",service=\"service-test\""
+	if req.Header.Get("Authorization") != expectedAuthHeader {
+		t.Fatalf("unexpected authorization header: %q != %q", req.Header.Get("Authorization"), expectedAuthHeader)
+	}
+
 	var errs v2.Errors
 	dec := json.NewDecoder(req.Body)
 	if err := dec.Decode(&errs); err != nil {
