@@ -916,9 +916,13 @@ func (suite *DriverSuite) testFileStreams(c *check.C, size int64) {
 	tf.Sync()
 	tf.Seek(0, os.SEEK_SET)
 
-	nn, err := suite.StorageDriver.WriteStream(filename, 0, tf)
-	c.Assert(err, check.IsNil)
-	c.Assert(nn, check.Equals, size)
+	totalRead := int64(0)
+	for totalRead < size {
+		nn, err := suite.StorageDriver.WriteStream(filename, 0, tf)
+		c.Assert(err, check.IsNil)
+		totalRead += nn
+	}
+	c.Assert(totalRead, check.Equals, size)
 
 	reader, err := suite.StorageDriver.ReadStream(filename, 0)
 	c.Assert(err, check.IsNil)
