@@ -53,15 +53,8 @@ type Driver struct {
 // - bucket
 // - encrypt
 func FromParameters(parameters map[string]interface{}) (*Driver, error) {
-	accessKey, ok := parameters["accesskey"]
-	if !ok {
-		accessKey = ""
-	}
-
-	secretKey, ok := parameters["secretkey"]
-	if !ok {
-		secretKey = ""
-	}
+	accessKey, _ := parameters["accesskey"]
+	secretKey, _ := parameters["secretkey"]
 
 	regionName, ok := parameters["region"]
 	if !ok || fmt.Sprint(regionName) == "" {
