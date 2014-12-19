@@ -615,7 +615,7 @@ var routeDescriptors = []RouteDescriptor{
 							nameParameterDescriptor,
 						},
 						QueryParameters: []ParameterDescriptor{
-							ParameterDescriptor{
+							{
 								Name:        "digest",
 								Type:        "query",
 								Format:      "<tarsum>",
@@ -818,7 +818,7 @@ var routeDescriptors = []RouteDescriptor{
 							uuidParameterDescriptor,
 						},
 						QueryParameters: []ParameterDescriptor{
-							ParameterDescriptor{
+							{
 								Name:        "digest",
 								Type:        "string",
 								Format:      "<tarsum>",
