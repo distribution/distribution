@@ -2,20 +2,31 @@
 
 ## Abstract
 
-The docker registry is a service to manage information about docker images and enable their distribution. While the current registry is usable, there are several problems with the architecture that have led to this proposal. For relevant details, please see the following issues:
+The docker registry is a service to manage information about docker images and
+enable their distribution. While the current registry is usable, there are
+several problems with the architecture that have led to this proposal. For
+relevant details, please see the following issues:
 
 - docker/docker#8093
 - docker/docker-registry#612
 
-The main driver of this proposal are changes to the docker the image format, covered in docker/docker#8093. The new, self-contained image manifest simplifies the image definition and the underlying backend layout. To reduce bandwidth usage, the new registry will be architected to avoid uploading existing layers and will support resumable layer uploads.
+The main driver of this proposal are changes to the docker the image format,
+covered in docker/docker#8093. The new, self-contained image manifest
+simplifies the image definition and the underlying backend layout. To reduce
+bandwidth usage, the new registry will be architected to avoid uploading
+existing layers and will support resumable layer uploads.
 
-While out of scope for this specification, the URI layout of the new API will be structured to support a rich Authentication and Authorization model by leveraging namespaces.
+While out of scope for this specification, the URI layout of the new API will
+be structured to support a rich Authentication and Authorization model by
+leveraging namespaces.
 
 Furthermore, to bring docker registry in line with docker core, the registry is written in Go.
 
 ## Scope
 
-This proposal covers the URL layout and protocols of the Docker Registry V2 JSON API. This will affect the docker core registry API and the rewrite of docker-registry.
+This proposal covers the URL layout and protocols of the Docker Registry V2
+JSON API. This will affect the docker core registry API and the rewrite of
+docker-registry.
 
 This includes the following features:
 
@@ -24,53 +35,88 @@ This includes the following features:
 - Resumable layer PUSH support
 - V2 Client library implementation
 
-While authentication and authorization support will influence this specification, details of the protocol will be left to a future specification. Other features marked as next generation will be incorporated when the initial support is complete. Please see the road map for details.
+While authentication and authorization support will influence this
+specification, details of the protocol will be left to a future specification.
+Other features marked as next generation will be incorporated when the initial
+support is complete. Please see the road map for details.
 
 ## Use Cases
 
-For the most part, the use cases of the former registry API apply to the new version. Differentiating uses cases are covered below.
+For the most part, the use cases of the former registry API apply to the new
+version. Differentiating uses cases are covered below.
 
 ### Resumable Push
 
-Company X's build servers lose connectivity to docker registry before completing an image layer transfer. After connectivity returns, the build server attempts to re-upload the image. The registry notifies the build server that the upload has already been partially attempted. The build server responds by only sending the remaining data to complete the image file.
+Company X's build servers lose connectivity to docker registry before
+completing an image layer transfer. After connectivity returns, the build
+server attempts to re-upload the image. The registry notifies the build server
+that the upload has already been partially attempted. The build server
+responds by only sending the remaining data to complete the image file.
 
 ### Resumable Pull
 
-Company X is having more connectivity problems but this time in their deployment datacenter. When downloading an image, the connection is interrupted before completion. The client keeps the partial data and uses http `Range` requests to avoid downloading repeated data.
+Company X is having more connectivity problems but this time in their
+deployment datacenter. When downloading an image, the connection is
+interrupted before completion. The client keeps the partial data and uses http
+`Range` requests to avoid downloading repeated data.
 
 ### Layer Upload De-duplication
 
-Company Y's build system creates two identical docker layers from build processes A and B. Build process A completes uploading the layer before B. When process B attempts to upload the layer, the registry indicates that its not necessary because the layer is already known.
+Company Y's build system creates two identical docker layers from build
+processes A and B. Build process A completes uploading the layer before B.
+When process B attempts to upload the layer, the registry indicates that its
+not necessary because the layer is already known.
 
-If process A and B upload the same layer at the same time, both operations will proceed and the first to complete will be stored in the registry (Note: we may modify this to prevent dogpile with some locking mechanism).
+If process A and B upload the same layer at the same time, both operations
+will proceed and the first to complete will be stored in the registry (Note:
+we may modify this to prevent dogpile with some locking mechanism).
 
 ### Access Control
 
-Company X would like to control which developers can push to which repositories. By leveraging the URI format of the V2 registry, they can control who is able to access which repository, who can pull images and who can push layers.
+Company X would like to control which developers can push to which
+repositories. By leveraging the URI format of the V2 registry, they can
+control who is able to access which repository, who can pull images and who
+can push layers.
 
 ## Dependencies
 
-Initially, a V2 client will be developed in conjunction with the new registry service to facilitate rich testing and verification. Once this is ready, the new client will be used in docker to communicate with V2 registries.
+Initially, a V2 client will be developed in conjunction with the new registry
+service to facilitate rich testing and verification. Once this is ready, the
+new client will be used in docker to communicate with V2 registries.
 
 ## Proposal
 
-This section covers proposed client flows and details of the proposed API endpoints. All endpoints will be prefixed by the API version and the repository name:
+This section covers proposed client flows and details of the proposed API
+endpoints. All endpoints will be prefixed by the API version and the
+repository name:
 
     /v2/<name>/
 
-For example, an API endpoint that will work with the `library/ubuntu` repository, the URI prefix will be:
+For example, an API endpoint that will work with the `library/ubuntu`
+repository, the URI prefix will be:
 
     /v2/library/ubuntu/
 
-This scheme will provide rich access control over various operations and methods using the URI prefix and http methods that can be controlled in variety of ways.
+This scheme will provide rich access control over various operations and
+methods using the URI prefix and http methods that can be controlled in
+variety of ways.
 
-Classically, repository names have always been two path components where each path component is less than 30 characters. The V2 registry API does not enforce this. The rules for a repository name are as follows:
+Classically, repository names have always been two path components where each
+path component is less than 30 characters. The V2 registry API does not
+enforce this. The rules for a repository name are as follows:
 
-1. A repository name is broken up into _path components_. A component of a repository name must be at least two characters, optionally separated by periods, dashes or underscores. More strictly, it must match the regular expression `[a-z0-9]+(?:[._-][a-z0-9]+)*` and the matched result must be 2 or more characters in length.
-2. The name of a repository must have at least two path components, separated by a forward slash.
-3. The total length of a repository name, including slashes, must be less the 256 characters.
+1. A repository name is broken up into _path components_. A component of a
+   repository name must be at least two characters, optionally separated by
+   periods, dashes or underscores. More strictly, it must match the regular
+   expression `[a-z0-9]+(?:[._-][a-z0-9]+)*` and the matched result must be 2
+   or more characters in length.
+2. The name of a repository must have at least two path components, separated
+   by a forward slash.
+3. The total length of a repository name, including slashes, must be less the
+   256 characters.
 
-These name requirements _only_ apply to the registry API and should accept a superset of what is supported by other docker community components.
+These name requirements _only_ apply to the registry API and should accept a
+superset of what is supported by other docker community components.
 
 ## API Methods
 
@@ -92,13 +138,18 @@ A detailed list of methods and URIs are covered in the table below:
 | PUT | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Complete the upload specified by `uuid`, optionally appending the body as the final chunk. |
 | DELETE | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Cancel outstanding upload processes, releasing associated resources. If this is not called, the unfinished uploads will eventually timeout. |
 
-All endpoints should support aggressive http caching, compression and range headers, where appropriate. Details of each method are covered in the following sections.
+All endpoints should support aggressive http caching, compression and range
+headers, where appropriate. Details of each method are covered in the
+following sections.
 
-The new API will attempt to leverage HTTP semantics where possible but may break from standards to implement targeted features.
+The new API will attempt to leverage HTTP semantics where possible but may
+break from standards to implement targeted features.
 
 ### Errors
 
-Actionable failure conditions, covered in detail in their relevant sections, will be reported as part of 4xx responses, in a json response body. One or more errors will be returned in the following format:
+Actionable failure conditions, covered in detail in their relevant sections,
+will be reported as part of 4xx responses, in a json response body. One or
+more errors will be returned in the following format:
 
     {
         "errors:" [{
@@ -110,7 +161,10 @@ Actionable failure conditions, covered in detail in their relevant sections, wil
         ]
     }
 
-The `code` field will be a unique identifier, all caps with underscores by convention. The `message` field will be a human readable string. The optional `detail` field may contain arbitrary json data providing information the client can use to resolve the issue.
+The `code` field will be a unique identifier, all caps with underscores by
+convention. The `message` field will be a human readable string. The optional
+`detail` field may contain arbitrary json data providing information the
+client can use to resolve the issue.
 
 The error codes encountered via the API are enumerated in the following table:
 
@@ -129,25 +183,40 @@ The error codes encountered via the API are enumerated in the following table:
 |`BLOB_UPLOAD_UNKNOWN`|blob upload unknown to registry|If a blob upload has been cancelled or was never       started, this error code may be returned.|404|
 
 
-While the client can take action on certain error codes, the registry may add new error codes over time. All client implementations should treat unknown error codes as `UNKNOWN`, allowing future error codes to be added without breaking API compatibility. For the purposes of the specification error codes will only be added and never removed.
+While the client can take action on certain error codes, the registry may add
+new error codes over time. All client implementations should treat unknown
+error codes as `UNKNOWN`, allowing future error codes to be added without
+breaking API compatibility. For the purposes of the specification error codes
+will only be added and never removed.
 
 ### API Version Check
 
-A minimal endpoint, mounted at `/v2/` will provide version support information based on its response statuses. The request format is as follows:
+A minimal endpoint, mounted at `/v2/` will provide version support information
+based on its response statuses. The request format is as follows:
 
     GET /v2/
 
-If a `200 OK` response is returned, the registry implements the V2(.1) registry API and the client may proceed safely with other V2 operations. Optionally, the response may contain information about the supported paths in the response body. The client should be prepared to ignore this data.
+If a `200 OK` response is returned, the registry implements the V2(.1)
+registry API and the client may proceed safely with other V2 operations.
+Optionally, the response may contain information about the supported paths in
+the response body. The client should be prepared to ignore this data.
 
-If a `401 Unauthorized` response is returned, the client should take action based on the contents of the "WWW-Authenticate" header and try the endpoint again. Depending on access control setup, the client may still have to authenticate against different resources, even if this check succeeds.
+If a `401 Unauthorized` response is returned, the client should take action
+based on the contents of the "WWW-Authenticate" header and try the endpoint
+again. Depending on access control setup, the client may still have to
+authenticate against different resources, even if this check succeeds.
 
-If `404 Not Found` response status, or other unexpected status, is returned, the client should proceed with the assumption that the registry does not implement V2 of the API.
+If `404 Not Found` response status, or other unexpected status, is returned,
+the client should proceed with the assumption that the registry does not
+implement V2 of the API.
 
 ### Pulling An Image
 
-An "image" is a combination of a JSON manifest and individual layer files. The process of pulling an image centers around retrieving these two components.
+An "image" is a combination of a JSON manifest and individual layer files. The
+process of pulling an image centers around retrieving these two components.
 
-The first step in pulling an image is to retrieve the manifest. For reference, the relevant manifest fields for the registry are the following:
+The first step in pulling an image is to retrieve the manifest. For reference,
+the relevant manifest fields for the registry are the following:
 
  field    | description                                    |
 ----------|------------------------------------------------|
@@ -156,9 +225,13 @@ tag       | The tag for this version of the image.         |
 fsLayers  | A list of layer descriptors (including tarsum) |
 signature | A JWS used to verify the manifest content      |
 
-For more information about the manifest format, please see [docker/docker#8093](https://github.com/docker/docker/issues/8093).
+For more information about the manifest format, please see
+[docker/docker#8093](https://github.com/docker/docker/issues/8093).
 
-When the manifest is in hand, the client must verify the signature to ensure the names and layers are valid. Once confirmed, the client will then use the tarsums to download the individual layers. Layers are stored in as blobs in the V2 registry API, keyed by their tarsum digest.
+When the manifest is in hand, the client must verify the signature to ensure
+the names and layers are valid. Once confirmed, the client will then use the
+tarsums to download the individual layers. Layers are stored in as blobs in
+the V2 registry API, keyed by their tarsum digest.
 
 The API details follow.
 
@@ -172,7 +245,10 @@ GET /v2/<name>/manifests/<tag>
 
 The "name" and "tag" parameter identify the image and are required.
 
-A `404 Not Found` response will be returned if the image is unknown to the registry. If the image exists and the response is successful, the image manifest will be returned, with the following format (see docker/docker#8093 for details):
+A `404 Not Found` response will be returned if the image is unknown to the
+registry. If the image exists and the response is successful, the image
+manifest will be returned, with the following format (see docker/docker#8093
+for details):
 
     {
        "name": <name>,
@@ -188,32 +264,49 @@ A `404 Not Found` response will be returned if the image is unknown to the regis
        "signature": <JWS>
     }
 
-The client should verify the returned manifest signature for authenticity before fetching layers.
+The client should verify the returned manifest signature for authenticity
+before fetching layers.
 
 #### Pulling a Layer
 
-Layers are stored in the blob portion of the registry, keyed by tarsum digest. Pulling a layer is carried out by a standard http request. The URL is as follows:
+Layers are stored in the blob portion of the registry, keyed by tarsum digest.
+Pulling a layer is carried out by a standard http request. The URL is as
+follows:
 
     GET /v2/<name>/blobs/<tarsum>
 
-Access to a layer will be gated by the `name` of the repository but is identified uniquely in the registry by `tarsum`. The `tarsum` parameter is an opaque field, to be interpreted by the tarsum library.
+Access to a layer will be gated by the `name` of the repository but is
+identified uniquely in the registry by `tarsum`. The `tarsum` parameter is an
+opaque field, to be interpreted by the tarsum library.
 
-This endpoint may issue a 307 (302 for <HTTP 1.1) redirect to another service for downloading the layer and clients should be prepared to handle redirects.
+This endpoint may issue a 307 (302 for <HTTP 1.1) redirect to another service
+for downloading the layer and clients should be prepared to handle redirects.
 
-This endpoint should support aggressive HTTP caching for image layers. Support for Etags, modification dates and other cache control headers should be included. To allow for incremental downloads, `Range` requests should be supported, as well.
+This endpoint should support aggressive HTTP caching for image layers. Support
+for Etags, modification dates and other cache control headers should be
+included. To allow for incremental downloads, `Range` requests should be
+supported, as well.
 
 ### Pushing An Image
 
-Pushing an image works in the opposite order as a pull. After assembling the image manifest, the client must first push the individual layers. When the layers are fully pushed into the registry, the client should upload the signed manifest.
+Pushing an image works in the opposite order as a pull. After assembling the
+image manifest, the client must first push the individual layers. When the
+layers are fully pushed into the registry, the client should upload the signed
+manifest.
 
 The details of each step of the process are covered in the following sections.
 
 #### Pushing a Layer
 
-All layer uploads use two steps to manage the upload process. The first step starts the upload in the registry service, returning a url to carry out the second step. The second step uses the upload url to transfer the actual data. Uploads are started with a POST request which returns a url that can be used
+All layer uploads use two steps to manage the upload process. The first step
+starts the upload in the registry service, returning a url to carry out the
+second step. The second step uses the upload url to transfer the actual data.
+Uploads are started with a POST request which returns a url that can be used
 to push data and check upload status.
 
-The `Location` header will be used to communicate the upload location after each request. While it won't change in the this specification, clients should use the most recent value returned by the API.
+The `Location` header will be used to communicate the upload location after
+each request. While it won't change in the this specification, clients should
+use the most recent value returned by the API.
 
 ##### Starting An Upload
 
@@ -223,28 +316,36 @@ To begin the process, a POST request should be issued in the following format:
 POST /v2/<name>/blobs/uploads/
 ```
 
-The parameters of this request are the image namespace under which the layer will be linked. Responses to this request are covered below.
+The parameters of this request are the image namespace under which the layer
+will be linked. Responses to this request are covered below.
 
 ##### Existing Layers
 
-The existence of a layer can be checked via a `HEAD` request to the blob store API. The request should be formatted as follows:
+The existence of a layer can be checked via a `HEAD` request to the blob store
+API. The request should be formatted as follows:
 
 ```
 HEAD /v2/<name>/blobs/<digest>
 ```
 
-If the layer with the tarsum specified in `digest` is available, a 200 OK response will be received, with no actual body content (this is according to http specification). The response will look as follows:
+If the layer with the tarsum specified in `digest` is available, a 200 OK
+response will be received, with no actual body content (this is according to
+http specification). The response will look as follows:
 
 ```
 200 OK
 Content-Length: <length of blob>
 ```
 
-When this response is received, the client can assume that the layer is already available in the registry under the given name and should take no further action to upload the layer. Note that the binary digests may differ for the existing registry layer, but the tarsums will be guaranteed to match.
+When this response is received, the client can assume that the layer is
+already available in the registry under the given name and should take no
+further action to upload the layer. Note that the binary digests may differ
+for the existing registry layer, but the tarsums will be guaranteed to match.
 
 ##### Uploading the Layer
 
-If the POST request is successful, a `202 Accepted` response will be returned with the upload URL in the `Location` header:
+If the POST request is successful, a `202 Accepted` response will be returned
+with the upload URL in the `Location` header:
 
 ```
 202 Accepted
@@ -253,11 +354,23 @@ Range: bytes=0-<offset>
 Content-Length: 0
 ```
 
-The rest of the upload process can be carried out with the returned url, called the "Upload URL" from the `Location` header. All responses to the upload url, whether sending data or getting status, will be in this format. Though the URI format (`/v2/<name>/blobs/uploads/<uuid>`) for the `Location` header is specified, clients should treat it as an opaque url and should never try to assemble the it. While the `uuid` parameter may be an actual UUID, this proposal imposes no constraints on the format and clients should never impose any.
+The rest of the upload process can be carried out with the returned url,
+called the "Upload URL" from the `Location` header. All responses to the
+upload url, whether sending data or getting status, will be in this format.
+Though the URI format (`/v2/<name>/blobs/uploads/<uuid>`) for the `Location`
+header is specified, clients should treat it as an opaque url and should never
+try to assemble the it. While the `uuid` parameter may be an actual UUID, this
+proposal imposes no constraints on the format and clients should never impose
+any.
 
 ##### Upload Progress
 
-The progress and chunk coordination of the upload process will be coordinated through the `Range` header. While this is a non-standard use of the `Range` header, there are examples of [similar approaches](https://developers.google.com/youtube/v3/guides/using_resumable_upload_protocol) in APIs with heavy use. For an upload that just started, for an example with a 1000 byte layer file, the `Range` header would be as follows:
+The progress and chunk coordination of the upload process will be coordinated
+through the `Range` header. While this is a non-standard use of the `Range`
+header, there are examples of [similar approaches](https://developers.google.c
+om/youtube/v3/guides/using_resumable_upload_protocol) in APIs with heavy use.
+For an upload that just started, for an example with a 1000 byte layer file,
+the `Range` header would be as follows:
 
 ```
 Range: bytes=0-0
@@ -278,11 +391,15 @@ Location: /v2/<name>/blobs/uploads/<uuid>
 Range: bytes=0-<offset>
 ```
 
-Note that the HTTP `Range` header byte ranges are inclusive and that will be honored, even in non-standard use cases.
+Note that the HTTP `Range` header byte ranges are inclusive and that will be
+honored, even in non-standard use cases.
 
 ##### Monolithic Upload
 
-A monolithic upload is simply a chunked upload with a single chunk and may be favored by clients that would like to avoided the complexity of chunking. To carry out a "monolithic" upload, one can simply put the entire content blob to the provided URL:
+A monolithic upload is simply a chunked upload with a single chunk and may be
+favored by clients that would like to avoided the complexity of chunking. To
+carry out a "monolithic" upload, one can simply put the entire content blob to
+the provided URL:
 
 ```
 PUT /v2/<name>/blobs/uploads/<uuid>?digest=<tarsum>[&digest=sha256:<hex digest>]
@@ -292,9 +409,12 @@ Content-Type: application/octet-stream
 <Layer Binary Data>
 ```
 
-The "digest" parameter must be included with the PUT request. Please see the _Completed Upload_ section for details on the parameters and expected responses.
+The "digest" parameter must be included with the PUT request. Please see the
+_Completed Upload_ section for details on the parameters and expected
+responses.
 
-Additionally, the download can be completed with a single `POST` request to the uploads endpoint, including the "size" and "digest" parameters:
+Additionally, the download can be completed with a single `POST` request to
+the uploads endpoint, including the "size" and "digest" parameters:
 
 ```
 POST /v2/<name>/blobs/uploads/?digest=<tarsum>[&digest=sha256:<hex digest>]
@@ -304,13 +424,19 @@ Content-Type: application/octet-stream
 <Layer Binary Data>
 ```
 
-On the registry service, this should allocate a download, accept and verify the data and return the same  response as the final chunk of an upload. If the POST request fails collecting the data in any way, the registry should attempt to return an error response to the client with the `Location` header providing a place to continue the download.
+On the registry service, this should allocate a download, accept and verify
+the data and return the same  response as the final chunk of an upload. If the
+POST request fails collecting the data in any way, the registry should attempt
+to return an error response to the client with the `Location` header providing
+a place to continue the download.
 
-The single `POST` method is provided for convenience and most clients should implement `POST` + `PUT` to support reliable resume of uploads.
+The single `POST` method is provided for convenience and most clients should
+implement `POST` + `PUT` to support reliable resume of uploads.
   
 ##### Chunked Upload
 
-To carry out an upload of a chunk, the client can specify a range header and only include that part of the layer file:
+To carry out an upload of a chunk, the client can specify a range header and
+only include that part of the layer file:
 
 ```
 PATCH /v2/<name>/blobs/uploads/<uuid>
@@ -321,7 +447,11 @@ Content-Type: application/octet-stream
 <Layer Chunk Binary Data>
 ```
 
-There is no enforcement on layer chunk splits other than that the server must receive them in order. The server may enforce a minimum chunk size. If the server cannot accept the chunk, a `416 Requested Range Not Satisfiable` response will be returned and will include a `Range` header indicating the current status:
+There is no enforcement on layer chunk splits other than that the server must
+receive them in order. The server may enforce a minimum chunk size. If the
+server cannot accept the chunk, a `416 Requested Range Not Satisfiable`
+response will be returned and will include a `Range` header indicating the
+current status:
 
 ```
 416 Requested Range Not Satisfiable
@@ -330,12 +460,16 @@ Range: 0-<last valid range>
 Content-Length: 0
 ```
 
-If this response is received, the client should resume from the "last valid range" and upload the subsequent chunk. A 416 will be returned under the following conditions:
+If this response is received, the client should resume from the "last valid
+range" and upload the subsequent chunk. A 416 will be returned under the
+following conditions:
 
 - Invalid Content-Range header format
-- Out of order chunk: the range of the next chunk must start after the "last  valid range" from the last response.
+- Out of order chunk: the range of the next chunk must start after the "last
+  valid range" from the last response.
 
-When a chunk is accepted as part of the upload, a `202 Accepted` response will be returned, including a `Range` header with the current upload status:
+When a chunk is accepted as part of the upload, a `202 Accepted` response will
+be returned, including a `Range` header with the current upload status:
 
 ```
 202 Accepted
@@ -346,7 +480,10 @@ Content-Length: 0
 
 ##### Completed Upload
 
-For an upload to be considered complete, the client must submit a `PUT` request on the upload endpoint with a digest parameter. If it is not provided, the download will not be considered complete. The format for the final chunk will be as follows:
+For an upload to be considered complete, the client must submit a `PUT`
+request on the upload endpoint with a digest parameter. If it is not provided,
+the download will not be considered complete. The format for the final chunk
+will be as follows:
 
 ```
 PUT /v2/<name>/blob/uploads/<uuid>?digest=<tarsum>[&digest=sha256:<hex digest>]
@@ -357,9 +494,14 @@ Content-Type: application/octet-stream
 <Last Layer Chunk Binary Data>
 ```
 
-Optionally, if all chunks have already been uploaded, a `PUT` request with a `digest` parameter and zero-length body may be sent to complete and validated the upload. Multiple "digest" parameters may be provided with different digests. The server may verify none or all of them but _must_ notify the client if the content is rejected.
+Optionally, if all chunks have already been uploaded, a `PUT` request with a
+`digest` parameter and zero-length body may be sent to complete and validated
+the upload. Multiple "digest" parameters may be provided with different
+digests. The server may verify none or all of them but _must_ notify the
+client if the content is rejected.
 
-When the last chunk is received and the layer has been validated, the client will receive a `201 Created` response:
+When the last chunk is received and the layer has been validated, the client
+will receive a `201 Created` response:
 
 ```
 201 Created
@@ -367,54 +509,76 @@ Location: /v2/<name>/blobs/<tarsum>
 Content-Length: 0
 ```
 
-The `Location` header will contain the registry URL to access the accepted layer file.
+The `Location` header will contain the registry URL to access the accepted
+layer file.
 
 ###### Digest Parameter
 
-The "digest" parameter is designed as an opaque parameter to support verification of a successful transfer. The initial version of the registry API will support a tarsum digest, in the standard tarsum format. For example, a HTTP URI parameter might be as follows:
+The "digest" parameter is designed as an opaque parameter to support
+verification of a successful transfer. The initial version of the registry API
+will support a tarsum digest, in the standard tarsum format. For example, a
+HTTP URI parameter might be as follows:
 
 ```
 tarsum.v1+sha256:6c3c624b58dbbcd3c0dd82b4c53f04194d1247c6eebdaab7c610cf7d66709b3b
 ```
 
-Given this parameter, the registry will verify that the provided content does result in this tarsum. Optionally, the registry can support other other digest parameters for non-tarfile content stored as a layer. A regular hash digest might be specified as follows:
+Given this parameter, the registry will verify that the provided content does
+result in this tarsum. Optionally, the registry can support other other digest
+parameters for non-tarfile content stored as a layer. A regular hash digest
+might be specified as follows:
 
 ```
 sha256:6c3c624b58dbbcd3c0dd82b4c53f04194d1247c6eebdaab7c610cf7d66709b3b
 ```
 
-Such a parameter would be used to verify that the binary content (as opposed to the tar content) would be verified at the end of the upload process.
+Such a parameter would be used to verify that the binary content (as opposed
+to the tar content) would be verified at the end of the upload process.
 
-For the initial version, registry servers are only required to support the tarsum format.
+For the initial version, registry servers are only required to support the
+tarsum format.
 
 ##### Canceling an Upload
 
-An upload can be cancelled by issuing a DELETE request to the upload endpoint. The format will be as follows:
+An upload can be cancelled by issuing a DELETE request to the upload endpoint.
+The format will be as follows:
 
 ```
 DELETE /v2/<name>/blobs/uploads/<uuid>
 ```
 
-After this request is issued, the upload uuid will no longer be valid and the registry server will dump all intermediate data. While uploads will time out if not completed, clients should issue this request if they encounter a fatal error but still have the ability to issue an http request.
+After this request is issued, the upload uuid will no longer be valid and the
+registry server will dump all intermediate data. While uploads will time out
+if not completed, clients should issue this request if they encounter a fatal
+error but still have the ability to issue an http request.
 
 ##### Errors
 
-If an 502, 503 or 504 error is received, the client should assume that the download can proceed due to a temporary condition, honoring the appropriate retry mechanism. Other 5xx errors should be treated as terminal.
+If an 502, 503 or 504 error is received, the client should assume that the
+download can proceed due to a temporary condition, honoring the appropriate
+retry mechanism. Other 5xx errors should be treated as terminal.
 
-If there is a problem with the upload, a 4xx error will be returned indicating the problem. After receiving a 4xx response (except 416, as called out above), the upload will be considered failed and the client should take appropriate action.
+If there is a problem with the upload, a 4xx error will be returned indicating
+the problem. After receiving a 4xx response (except 416, as called out above),
+the upload will be considered failed and the client should take appropriate
+action.
 
-The following table covers the various error conditions that may be returned after completing a layer upload:
+The following table covers the various error conditions that may be returned
+after completing a layer upload:
 
  Code            | Message                                          |
 -----------------|--------------------------------------------------|
 DIGEST_INVALID | provided digest did not match uploaded content |
 SIZE_INVALID   | provided size did not match content size    |
 
-Note that the upload url will not be available forever. If the upload uuid is unknown to the registry, a `404 Not Found` response will be returned and the client must restart the upload process.
+Note that the upload url will not be available forever. If the upload uuid is
+unknown to the registry, a `404 Not Found` response will be returned and the
+client must restart the upload process.
 
 #### Pushing an Image Manifest
 
-Once all of the layers for an image are uploaded, the client can upload the image manifest. An image can be pushed using the following request formats:
+Once all of the layers for an image are uploaded, the client can upload the
+image manifest. An image can be pushed using the following request formats:
 
     PUT /v2/<name>/manifests/<tag>
 
@@ -433,9 +597,12 @@ Once all of the layers for an image are uploaded, the client can upload the imag
        ...
     }
 
-The `name` and `tag` fields of the response body must match those specified in the URL.
+The `name` and `tag` fields of the response body must match those specified in
+the URL.
 
-If there is a problem with pushing the manifest, a relevant 4xx response will be returned with a JSON error message. The following table covers the various error conditions and their corresponding codes:
+If there is a problem with pushing the manifest, a relevant 4xx response will
+be returned with a JSON error message. The following table covers the various
+error conditions and their corresponding codes:
 
  Code                | Message                                          |
 ---------------------|--------------------------------------------------|
@@ -445,7 +612,10 @@ MANIFEST_INVALID     | Returned when an invalid manifest is received    |
 MANIFEST_UNVERIFIED  | Manifest failed signature validation             |
 BLOB_UNKNOWN         | Referenced layer not available                   |
 
-For the `UNKNOWN_LAYER` error, the `detail` field of the error response will have an "unknown" field with information about the missing layer. For now, that will just be the tarsum. There will be an error returned for each unknown blob. The response format will be as follows:
+For the `UNKNOWN_LAYER` error, the `detail` field of the error response will
+have an "unknown" field with information about the missing layer. For now,
+that will just be the tarsum. There will be an error returned for each unknown
+blob. The response format will be as follows:
 
     {
         "errors:" [{
@@ -463,7 +633,8 @@ For the `UNKNOWN_LAYER` error, the `detail` field of the error response will hav
 
 #### Listing Image Tags
 
-It may be necessary to list all of the tags under a given repository. The tags for an image repository can be retrieved with the following request:
+It may be necessary to list all of the tags under a given repository. The tags
+for an image repository can be retrieved with the following request:
 
     GET /v2/<name>/tags/list
 
@@ -480,20 +651,25 @@ The response will be in the following format:
         ]
     }
 
-For repositories with a large number of tags, this response may be quite large, so care should be taken by the client when parsing the response to reduce copying.
+For repositories with a large number of tags, this response may be quite
+large, so care should be taken by the client when parsing the response to
+reduce copying.
 
 ### Deleting an Image
 
-An image may be deleted from the registry via its `name` and `tag`. A delete may be issued with the following request format:
+An image may be deleted from the registry via its `name` and `tag`. A delete
+may be issued with the following request format:
 
     DELETE /v2/<name>/manifests/<tag>
 
-If the image exists and has been successfully deleted, the following response will be issued:
+If the image exists and has been successfully deleted, the following response
+will be issued:
 
     202 Accepted
     Content-Length: None
 
-If the image had already been deleted or did not exist, a `404 Not Found` response will be issued instead.
+If the image had already been deleted or did not exist, a `404 Not Found`
+response will be issued instead.
 
 ## Roadmap
 
