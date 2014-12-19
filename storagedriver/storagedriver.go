@@ -49,8 +49,6 @@ type StorageDriver interface {
 
 	// WriteStream stores the contents of the provided io.ReadCloser at a
 	// location designated by the given path.
-	// The driver will know it has received the full contents when it has read
-	// "size" bytes.
 	// May be used to resume writing a stream by providing a nonzero offset.
 	// The offset must be no larger than the CurrentSize for this path.
 	WriteStream(path string, offset int64, reader io.Reader) (nn int64, err error)
