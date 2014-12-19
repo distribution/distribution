@@ -228,11 +228,12 @@ func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (total
 		for int64(bytesRead) < total {
 			//The loop should very rarely enter a second iteration
 			nn, err := io.ReadFull(current, buf[bytesRead:total])
-			if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
+			bytesRead += nn
+			if err != nil {
+				// If you can't read the total contents, this means you lack access to the current file
 				return err
 			}
 
-			bytesRead += nn
 		}
 		return nil
 	}
@@ -245,8 +246,12 @@ func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (total
 			totalRead += int64(nn)
 			bytesRead += nn
 
-			if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
-				return err
+			if err != nil {
+				if err != io.ErrUnexpectedEOF && err != io.EOF {
+					return err
+				}
+
+				break
 			}
 		}
 
@@ -304,8 +309,7 @@ func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (total
 				for from+int64(bytesRead) < to {
 					nn, err := io.ReadFull(bytes.NewReader(zeroBuf), buf[from+int64(bytesRead):to])
 					bytesRead += nn
-
-					if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
+					if err != nil {
 						return err
 					}
 				}
@@ -331,8 +335,7 @@ func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (total
 				for from+bytesRead64+int64(bytesRead) < to {
 					nn, err := io.ReadFull(bytes.NewReader(zeroBuf), buf[0+bytesRead:(to-from)%chunkSize])
 					bytesRead64 += int64(nn)
-
-					if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
+					if err != nil {
 						return err
 					}
 				}
