@@ -51,7 +51,7 @@ func (ac *accessController) Authorized(req *http.Request, accessRecords ...auth.
 		if len(accessRecords) > 0 {
 			var scopes []string
 			for _, access := range accessRecords {
-				scopes = append(scopes, fmt.Sprintf("%s:%s:%s", access.Type, access.Resource, access.Action))
+				scopes = append(scopes, fmt.Sprintf("%s:%s:%s", access.Type, access.Resource.Name, access.Action))
 			}
 			challenge.scope = strings.Join(scopes, " ")
 		}
