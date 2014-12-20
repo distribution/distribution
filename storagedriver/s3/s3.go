@@ -227,11 +227,14 @@ func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (total
 		bytesRead = 0
 		for int64(bytesRead) < total {
 			//The loop should very rarely enter a second iteration
-			nn, err := io.ReadFull(current, buf[bytesRead:total])
+			nn, err := current.Read(buf[bytesRead:total])
 			bytesRead += nn
 			if err != nil {
-				// If you can't read the total contents, this means you lack access to the current file
-				return err
+				if err != io.EOF {
+					return err
+				}
+
+				break
 			}
 
 		}
@@ -241,13 +244,13 @@ func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (total
 	// Fills from parameter to chunkSize from reader
 	fromReader := func(from int64) error {
 		bytesRead = 0
-		for int64(bytesRead) < chunkSize {
-			nn, err := io.ReadFull(reader, buf[from+int64(bytesRead):])
+		for from+int64(bytesRead) < chunkSize {
+			nn, err := reader.Read(buf[from+int64(bytesRead):])
 			totalRead += int64(nn)
 			bytesRead += nn
 
 			if err != nil {
-				if err != io.ErrUnexpectedEOF && err != io.EOF {
+				if err != io.EOF {
 					return err
 				}
 
@@ -255,9 +258,14 @@ func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (total
 			}
 		}
 
-		part, err = multi.PutPart(int(partNumber), bytes.NewReader(buf[0:int64(bytesRead)+from]))
-		if err != nil {
-			return err
+		if bytesRead > 0 {
+			part, err = multi.PutPart(int(partNumber), bytes.NewReader(buf[0:int64(bytesRead)+from]))
+			if err != nil {
+				return err
+			}
+
+			parts = append(parts, part)
+			partNumber++
 		}
 
 		return nil
@@ -286,6 +294,10 @@ func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (total
 				if err = fromReader(offset); err != nil {
 					return totalRead, err
 				}
+
+				if totalRead+offset < chunkSize {
+					return totalRead, nil
+				}
 			} else {
 				// currentLength >= offset >= chunkSize
 				_, part, err = multi.PutPartCopy(partNumber,
@@ -294,20 +306,16 @@ func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (total
 				if err != nil {
 					return 0, err
 				}
-			}
 
-			parts = append(parts, part)
-			partNumber++
-
-			if totalRead+offset < chunkSize {
-				return totalRead, nil
+				parts = append(parts, part)
+				partNumber++
 			}
 		} else {
 			// Fills between parameters with 0s but only when to - from <= chunkSize
 			fromZeroFillSmall := func(from, to int64) error {
 				bytesRead = 0
 				for from+int64(bytesRead) < to {
-					nn, err := io.ReadFull(bytes.NewReader(zeroBuf), buf[from+int64(bytesRead):to])
+					nn, err := bytes.NewReader(zeroBuf).Read(buf[from+int64(bytesRead) : to])
 					bytesRead += nn
 					if err != nil {
 						return err
@@ -331,16 +339,7 @@ func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (total
 					partNumber++
 				}
 
-				bytesRead = 0
-				for from+bytesRead64+int64(bytesRead) < to {
-					nn, err := io.ReadFull(bytes.NewReader(zeroBuf), buf[0+bytesRead:(to-from)%chunkSize])
-					bytesRead64 += int64(nn)
-					if err != nil {
-						return err
-					}
-				}
-
-				return nil
+				return fromZeroFillSmall(0, (to-from)%chunkSize)
 			}
 
 			// currentLength < offset
@@ -430,14 +429,6 @@ func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (total
 					return totalRead, err
 				}
 
-				part, err = multi.PutPart(int(partNumber), bytes.NewReader(buf))
-				if err != nil {
-					return totalRead, err
-				}
-
-				parts = append(parts, part)
-				partNumber++
-
 				if totalRead+((offset-currentLength)%chunkSize) < chunkSize {
 					return totalRead, nil
 				}
@@ -447,20 +438,9 @@ func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (total
 	}
 
 	for {
-		bytesRead, err := io.ReadFull(reader, buf)
-		totalRead += int64(bytesRead)
-
-		if err != nil && err != io.ErrUnexpectedEOF && err != io.EOF {
+		if err = fromReader(0); err != nil {
 			return totalRead, err
 		}
-
-		part, err := multi.PutPart(int(partNumber), bytes.NewReader(buf[0:bytesRead]))
-		if err != nil {
-			return totalRead, err
-		}
-
-		parts = append(parts, part)
-		partNumber++
 
 		if int64(bytesRead) < chunkSize {
 			break
