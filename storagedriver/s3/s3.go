@@ -99,27 +99,24 @@ func New(accessKey, secretKey, bucketName, rootDirectory string, region aws.Regi
 	s3obj := s3.New(auth, region)
 	bucket := s3obj.Bucket(bucketName)
 
-	if err := bucket.PutBucket(getPermissions()); err != nil {
-		s3Err, ok := err.(*s3.Error)
-		if !(ok && s3Err.Code == "BucketAlreadyOwnedByYou") {
-			return nil, err
-		}
-	}
-
-	// TODO What if they use this bucket for other things? I can't just clean out the multis
-	// TODO Add timestamp checking
-	multis, _, err := bucket.ListMulti("", "")
-	if err != nil {
+	if _, err := bucket.List("", "", "", 1); err != nil {
 		return nil, err
 	}
 
-	for _, multi := range multis {
-		err := multi.Abort()
-		//TODO appropriate to do this error checking?
-		if err != nil {
-			return nil, err
-		}
-	}
+	// TODO Currently multipart uploads have no timestamps, so this would be unwise
+	// if you initiated a new s3driver while another one is running on the same bucket.
+	// multis, _, err := bucket.ListMulti("", "")
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// for _, multi := range multis {
+	// 	err := multi.Abort()
+	// 	//TODO appropriate to do this error checking?
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
+	// }
 
 	return &Driver{s3obj, bucket, encrypt, rootDirectory}, nil
 }
