@@ -355,14 +355,6 @@ func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (total
 						return totalRead, err
 					}
 
-					part, err = multi.PutPart(int(partNumber), bytes.NewReader(buf))
-					if err != nil {
-						return totalRead, err
-					}
-
-					parts = append(parts, part)
-					partNumber++
-
 					if totalRead+offset < chunkSize {
 						return totalRead, nil
 					}
@@ -392,14 +384,6 @@ func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (total
 					if err = fromReader(offset % chunkSize); err != nil {
 						return totalRead, err
 					}
-
-					part, err = multi.PutPart(int(partNumber), bytes.NewReader(buf))
-					if err != nil {
-						return totalRead, err
-					}
-
-					parts = append(parts, part)
-					partNumber++
 
 					if totalRead+(offset%chunkSize) < chunkSize {
 						return totalRead, nil

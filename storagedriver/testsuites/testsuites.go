@@ -774,6 +774,7 @@ func (suite *DriverSuite) TestEventualConsistency(c *check.C) {
 	defer suite.StorageDriver.Delete(firstPart(filename))
 
 	var offset int64
+	var misswrites int
 	var chunkSize int64 = 32
 
 	for i := 0; i < 1024; i++ {
@@ -795,8 +796,12 @@ func (suite *DriverSuite) TestEventualConsistency(c *check.C) {
 
 			reader.Close()
 			offset += read
+		} else {
+			misswrites++
 		}
 	}
+
+	c.Assert(misswrites, check.Not(check.Equals), 1024)
 }
 
 // BenchmarkPutGetEmptyFiles benchmarks PutContent/GetContent for 0B files
