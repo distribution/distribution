@@ -763,6 +763,42 @@ func (suite *DriverSuite) TestConcurrentFileStreams(c *check.C) {
 	wg.Wait()
 }
 
+// TestEventualConsistency checks that if stat says that a file is a certain size, then
+// you can freely read from the file (this is the only guarantee that the driver needs to provide)
+func (suite *DriverSuite) TestEventualConsistency(c *check.C) {
+	if testing.Short() {
+		c.Skip("Skipping test in short mode")
+	}
+
+	filename := randomPath(32)
+	defer suite.StorageDriver.Delete(firstPart(filename))
+
+	var offset int64
+	var chunkSize int64 = 32
+
+	for i := 0; i < 1024; i++ {
+		contents := randomContents(chunkSize)
+		read, err := suite.StorageDriver.WriteStream(filename, offset, bytes.NewReader(contents))
+		c.Assert(err, check.IsNil)
+
+		fi, err := suite.StorageDriver.Stat(filename)
+		c.Assert(err, check.IsNil)
+
+		if fi.Size() == offset+chunkSize {
+			reader, err := suite.StorageDriver.ReadStream(filename, offset)
+			c.Assert(err, check.IsNil)
+
+			readContents, err := ioutil.ReadAll(reader)
+			c.Assert(err, check.IsNil)
+
+			c.Assert(readContents, check.DeepEquals, contents)
+
+			reader.Close()
+			offset += read
+		}
+	}
+}
+
 // BenchmarkPutGetEmptyFiles benchmarks PutContent/GetContent for 0B files
 func (suite *DriverSuite) BenchmarkPutGetEmptyFiles(c *check.C) {
 	suite.benchmarkPutGetFiles(c, 0)
