@@ -1,3 +1,17 @@
+// Package s3 provides a storagedriver.StorageDriver implementation to
+// store blobs in Amazon S3 cloud storage.
+//
+// This package leverages the crowdmob/goamz client library for interfacing with
+// s3.
+//
+// Because s3 is a key, value store the Stat call does not support last modification
+// time for directories (directories are an abstraction for key, value stores)
+//
+// Keep in mind that s3 guarantees only eventual consistency, so do not assume
+// that a successful write will mean immediate access to the data written (although
+// in most regions a new object put has guaranteed read after write). The only true
+// guarantee is that once you call Stat and receive a certain file size, that much of
+// the file is already accessible.
 package s3
 
 import (
@@ -53,6 +67,9 @@ type Driver struct {
 // - bucket
 // - encrypt
 func FromParameters(parameters map[string]interface{}) (*Driver, error) {
+	// Providing no values for these is valid in case the user is authenticating
+	// with an IAM on an ec2 instance (in which case the instance credentials will
+	// be summoned when GetAuth is called)
 	accessKey, _ := parameters["accesskey"]
 	secretKey, _ := parameters["secretkey"]
 
@@ -75,9 +92,9 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		return nil, fmt.Errorf("No encrypt parameter provided")
 	}
 
-	encryptBool, err := strconv.ParseBool(fmt.Sprint(encrypt))
-	if err != nil {
-		return nil, fmt.Errorf("Unable to parse the encrypt parameter: %v", err)
+	encryptBool, ok := encrypt.(bool)
+	if !ok {
+		return nil, fmt.Errorf("The encrypt parameter should be a boolean")
 	}
 
 	rootDirectory, ok := parameters["rootdirectory"]
@@ -170,8 +187,13 @@ func (d *Driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
 	return resp.Body, nil
 }
 
-// WriteStream stores the contents of the provided io.ReadCloser at a location
-// designated by the given path.
+// WriteStream stores the contents of the provided io.ReadCloser at a
+// location designated by the given path. The driver will know it has
+// received the full contents when the reader returns io.EOF. The number
+// of successfully written bytes will be returned, even if an error is
+// returned. May be used to resume writing a stream by providing a nonzero
+// offset. Offsets past the current size will write from the position
+// beyond the end of the file.
 func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (totalRead int64, err error) {
 	if !storagedriver.PathRegexp.MatchString(path) {
 		return 0, storagedriver.InvalidPathError{Path: path}
@@ -561,10 +583,6 @@ func (d *Driver) Delete(path string) error {
 
 func (d *Driver) s3Path(path string) string {
 	return strings.TrimLeft(d.rootDirectory+path, "/")
-}
-
-func (d *Driver) fullPath(path string) string {
-	return d.rootDirectory + path
 }
 
 func parseError(path string, err error) error {

@@ -687,6 +687,8 @@ func (suite *DriverSuite) TestStatCall(c *check.C) {
 	c.Assert(fi.Size(), check.Equals, int64(0))
 	c.Assert(fi.IsDir(), check.Equals, true)
 
+	// Directories do not need to support ModTime, since key-value stores
+	// cannot support it efficiently.
 	// if start.After(fi.ModTime()) {
 	// 	c.Errorf("modtime %s before file created (%v)", fi.ModTime(), start)
 	// }
@@ -785,6 +787,9 @@ func (suite *DriverSuite) TestEventualConsistency(c *check.C) {
 		fi, err := suite.StorageDriver.Stat(filename)
 		c.Assert(err, check.IsNil)
 
+		// We are most concerned with being able to read data as soon as Stat declares
+		// it is uploaded. This is the strongest guarantee that some drivers (that guarantee
+		// at best eventual consistency) absolutely need to provide.
 		if fi.Size() == offset+chunkSize {
 			reader, err := suite.StorageDriver.ReadStream(filename, offset)
 			c.Assert(err, check.IsNil)
@@ -799,6 +804,10 @@ func (suite *DriverSuite) TestEventualConsistency(c *check.C) {
 		} else {
 			misswrites++
 		}
+	}
+
+	if misswrites > 0 {
+		c.Log("There were " + string(misswrites) + " occurences of a write not being instantly available.")
 	}
 
 	c.Assert(misswrites, check.Not(check.Equals), 1024)
@@ -957,13 +966,9 @@ func (suite *DriverSuite) testFileStreams(c *check.C, size int64) {
 	tf.Sync()
 	tf.Seek(0, os.SEEK_SET)
 
-	totalRead := int64(0)
-	for totalRead < size {
-		nn, err := suite.StorageDriver.WriteStream(filename, 0, tf)
-		c.Assert(err, check.IsNil)
-		totalRead += nn
-	}
-	c.Assert(totalRead, check.Equals, size)
+	nn, err := suite.StorageDriver.WriteStream(filename, 0, tf)
+	c.Assert(err, check.IsNil)
+	c.Assert(nn, check.Equals, size)
 
 	reader, err := suite.StorageDriver.ReadStream(filename, 0)
 	c.Assert(err, check.IsNil)
