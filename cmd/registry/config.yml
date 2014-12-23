@@ -1,0 +1,7 @@
+version: 0.1
+loglevel: debug
+storage:
+    filesystem:
+        rootdirectory: /tmp/registry-dev
+http:
+    addr: :5000
