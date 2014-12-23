@@ -140,7 +140,13 @@ func TestRouter(t *testing.T) {
 		},
 	} {
 		// Register the endpoint
-		router.GetRoute(testcase.RouteName).Handler(testHandler)
+		route := router.GetRoute(testcase.RouteName)
+		if route == nil {
+			t.Fatalf("route for name %q not found", testcase.RouteName)
+		}
+
+		route.Handler(testHandler)
+
 		u := server.URL + testcase.RequestURI
 
 		resp, err := http.Get(u)

@@ -7,6 +7,7 @@ import (
 	"hash"
 	"io"
 	"io/ioutil"
+	"regexp"
 	"strings"
 
 	"github.com/docker/docker-registry/common"
@@ -35,6 +36,9 @@ type Digest string
 func NewDigest(alg string, h hash.Hash) Digest {
 	return Digest(fmt.Sprintf("%s:%x", alg, h.Sum(nil)))
 }
+
+// DigestRegexp matches valid digest types.
+var DigestRegexp = regexp.MustCompile(`[a-zA-Z0-9-_+.]+:[a-zA-Z0-9-_+.=]+`)
 
 var (
 	// ErrDigestInvalidFormat returned when digest format invalid.
@@ -124,6 +128,8 @@ func (d Digest) Validate() error {
 	default:
 		return ErrDigestUnsupported
 	}
+
+	// TODO(stevvooe): Use DigestRegexp to validate digest here.
 
 	return nil
 }
