@@ -362,7 +362,7 @@ func (suite *DriverSuite) TestContinueStreamAppend(c *check.C) {
 	filename := randomPath(32)
 	defer suite.StorageDriver.Delete(firstPart(filename))
 
-	chunkSize := int64(10 * 1024 * 1024)
+	chunkSize := int64(5 * 1024 * 1024)
 
 	contentsChunk1 := randomContents(chunkSize)
 	contentsChunk2 := randomContents(chunkSize)
@@ -687,9 +687,11 @@ func (suite *DriverSuite) TestStatCall(c *check.C) {
 	c.Assert(fi.Size(), check.Equals, int64(0))
 	c.Assert(fi.IsDir(), check.Equals, true)
 
-	if start.After(fi.ModTime()) {
-		c.Errorf("modtime %s before file created (%v)", fi.ModTime(), start)
-	}
+	// Directories do not need to support ModTime, since key-value stores
+	// cannot support it efficiently.
+	// if start.After(fi.ModTime()) {
+	// 	c.Errorf("modtime %s before file created (%v)", fi.ModTime(), start)
+	// }
 
 	if fi.ModTime().After(expectedModTime) {
 		c.Errorf("modtime %s after file created (%v)", fi.ModTime(), expectedModTime)
@@ -761,6 +763,54 @@ func (suite *DriverSuite) TestConcurrentFileStreams(c *check.C) {
 	}
 
 	wg.Wait()
+}
+
+// TestEventualConsistency checks that if stat says that a file is a certain size, then
+// you can freely read from the file (this is the only guarantee that the driver needs to provide)
+func (suite *DriverSuite) TestEventualConsistency(c *check.C) {
+	if testing.Short() {
+		c.Skip("Skipping test in short mode")
+	}
+
+	filename := randomPath(32)
+	defer suite.StorageDriver.Delete(firstPart(filename))
+
+	var offset int64
+	var misswrites int
+	var chunkSize int64 = 32
+
+	for i := 0; i < 1024; i++ {
+		contents := randomContents(chunkSize)
+		read, err := suite.StorageDriver.WriteStream(filename, offset, bytes.NewReader(contents))
+		c.Assert(err, check.IsNil)
+
+		fi, err := suite.StorageDriver.Stat(filename)
+		c.Assert(err, check.IsNil)
+
+		// We are most concerned with being able to read data as soon as Stat declares
+		// it is uploaded. This is the strongest guarantee that some drivers (that guarantee
+		// at best eventual consistency) absolutely need to provide.
+		if fi.Size() == offset+chunkSize {
+			reader, err := suite.StorageDriver.ReadStream(filename, offset)
+			c.Assert(err, check.IsNil)
+
+			readContents, err := ioutil.ReadAll(reader)
+			c.Assert(err, check.IsNil)
+
+			c.Assert(readContents, check.DeepEquals, contents)
+
+			reader.Close()
+			offset += read
+		} else {
+			misswrites++
+		}
+	}
+
+	if misswrites > 0 {
+		c.Log("There were " + string(misswrites) + " occurences of a write not being instantly available.")
+	}
+
+	c.Assert(misswrites, check.Not(check.Equals), 1024)
 }
 
 // BenchmarkPutGetEmptyFiles benchmarks PutContent/GetContent for 0B files
