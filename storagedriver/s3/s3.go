@@ -74,7 +74,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	secretKey, _ := parameters["secretkey"]
 
 	regionName, ok := parameters["region"]
-	if !ok || fmt.Sprint(regionName) == "" {
+	if !ok || regionName.(string) == "" {
 		return nil, fmt.Errorf("No region parameter provided")
 	}
 	region := aws.GetRegion(fmt.Sprint(regionName))
@@ -99,7 +99,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 
 	rootDirectory, ok := parameters["rootdirectory"]
 	if !ok {
-		return nil, fmt.Errorf("No rootDirectory parameter provided")
+		return nil, fmt.Errorf("No rootdirectory parameter provided")
 	}
 
 	return New(fmt.Sprint(accessKey), fmt.Sprint(secretKey), fmt.Sprint(bucket), fmt.Sprint(rootDirectory), region, encryptBool)
@@ -187,10 +187,10 @@ func (d *Driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
 	return resp.Body, nil
 }
 
-// WriteStream stores the contents of the provided io.ReadCloser at a
+// WriteStream stores the contents of the provided io.Reader at a
 // location designated by the given path. The driver will know it has
 // received the full contents when the reader returns io.EOF. The number
-// of successfully written bytes will be returned, even if an error is
+// of successfully READ bytes will be returned, even if an error is
 // returned. May be used to resume writing a stream by providing a nonzero
 // offset. Offsets past the current size will write from the position
 // beyond the end of the file.
@@ -582,7 +582,7 @@ func (d *Driver) Delete(path string) error {
 }
 
 func (d *Driver) s3Path(path string) string {
-	return strings.TrimLeft(d.rootDirectory+path, "/")
+	return strings.TrimLeft(strings.TrimRight(d.rootDirectory, "/")+path, "/")
 }
 
 func parseError(path string, err error) error {
