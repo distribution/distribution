@@ -6,8 +6,8 @@ import (
 
 	"github.com/docker/libtrust"
 
-	"github.com/docker/docker-registry/digest"
-	"github.com/docker/docker-registry/storagedriver/inmemory"
+	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/storagedriver/inmemory"
 )
 
 func TestManifestStorage(t *testing.T) {

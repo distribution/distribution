@@ -12,7 +12,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/docker/docker-registry/auth"
+	"github.com/docker/distribution/auth"
 )
 
 // accessController provides a simple implementation of auth.AccessController

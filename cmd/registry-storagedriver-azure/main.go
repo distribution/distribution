@@ -7,8 +7,8 @@ import (
 	"os"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/docker/docker-registry/storagedriver/azure"
-	"github.com/docker/docker-registry/storagedriver/ipc"
+	"github.com/docker/distribution/storagedriver/azure"
+	"github.com/docker/distribution/storagedriver/ipc"
 )
 
 // An out-of-process Azure Storage driver, intended to be run by ipc.NewDriverClient

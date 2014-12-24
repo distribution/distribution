@@ -3,8 +3,8 @@ package inmemory
 import (
 	"testing"
 
-	"github.com/docker/docker-registry/storagedriver"
-	"github.com/docker/docker-registry/storagedriver/testsuites"
+	"github.com/docker/distribution/storagedriver"
+	"github.com/docker/distribution/storagedriver/testsuites"
 
 	"gopkg.in/check.v1"
 )

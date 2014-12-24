@@ -8,8 +8,8 @@ import (
 
 	"github.com/Sirupsen/logrus"
 
-	"github.com/docker/docker-registry/storagedriver/ipc"
-	"github.com/docker/docker-registry/storagedriver/s3"
+	"github.com/docker/distribution/storagedriver/ipc"
+	"github.com/docker/distribution/storagedriver/s3"
 )
 
 // An out-of-process S3 driver, intended to be run by ipc.NewDriverClient

@@ -5,7 +5,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/docker/docker-registry/digest"
+	"github.com/docker/distribution/digest"
 )
 
 // Layer provides a readable and seekable layer object. Typically,

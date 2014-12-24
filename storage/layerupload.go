@@ -9,8 +9,8 @@ import (
 
 	"code.google.com/p/go-uuid/uuid"
 
-	"github.com/docker/docker-registry/digest"
-	"github.com/docker/docker-registry/storagedriver"
+	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/storagedriver"
 	"github.com/docker/docker/pkg/tarsum"
 
 	"io"

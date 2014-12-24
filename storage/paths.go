@@ -5,8 +5,8 @@ import (
 	"path"
 	"strings"
 
-	"github.com/docker/docker-registry/common"
-	"github.com/docker/docker-registry/digest"
+	"github.com/docker/distribution/common"
+	"github.com/docker/distribution/digest"
 )
 
 const storagePathVersion = "v2"

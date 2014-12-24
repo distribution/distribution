@@ -10,7 +10,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/docker/docker-registry/common"
+	"github.com/docker/distribution/common"
 	"github.com/docker/docker/pkg/tarsum"
 )
 

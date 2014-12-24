@@ -1,10 +1,10 @@
 FROM golang
 
-COPY . /go/src/github.com/docker/docker-registry
+COPY . /go/src/github.com/docker/distribution
 
 # Fetch any dependencies to run the registry
-RUN go get github.com/docker/docker-registry/...
-RUN go install github.com/docker/docker-registry/cmd/registry
+RUN go get github.com/docker/distribution/...
+RUN go install github.com/docker/distribution/cmd/registry
 
 ENV CONFIG_PATH /etc/docker/registry/config.yml
 COPY ./cmd/registry/config.yml $CONFIG_PATH

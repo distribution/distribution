@@ -13,12 +13,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/docker/docker-registry/api/v2"
-	"github.com/docker/docker-registry/common/testutil"
-	"github.com/docker/docker-registry/configuration"
-	"github.com/docker/docker-registry/digest"
-	"github.com/docker/docker-registry/storage"
-	_ "github.com/docker/docker-registry/storagedriver/inmemory"
+	"github.com/docker/distribution/api/v2"
+	"github.com/docker/distribution/common/testutil"
+	"github.com/docker/distribution/configuration"
+	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/storage"
+	_ "github.com/docker/distribution/storagedriver/inmemory"
 	"github.com/docker/libtrust"
 	"github.com/gorilla/handlers"
 )

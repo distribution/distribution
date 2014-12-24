@@ -9,9 +9,9 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/docker/docker-registry/common/testutil"
-	"github.com/docker/docker-registry/digest"
-	"github.com/docker/docker-registry/storage"
+	"github.com/docker/distribution/common/testutil"
+	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/storage"
 )
 
 type testBlob struct {

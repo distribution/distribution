@@ -3,7 +3,7 @@ package storage
 import (
 	"time"
 
-	"github.com/docker/docker-registry/digest"
+	"github.com/docker/distribution/digest"
 )
 
 // layerReadSeeker implements Layer and provides facilities for reading and

@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/docker/docker-registry/digest"
+	"github.com/docker/distribution/digest"
 	"github.com/gorilla/mux"
 )
 

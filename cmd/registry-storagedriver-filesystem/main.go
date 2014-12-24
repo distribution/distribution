@@ -8,8 +8,8 @@ import (
 
 	"github.com/Sirupsen/logrus"
 
-	"github.com/docker/docker-registry/storagedriver/filesystem"
-	"github.com/docker/docker-registry/storagedriver/ipc"
+	"github.com/docker/distribution/storagedriver/filesystem"
+	"github.com/docker/distribution/storagedriver/ipc"
 )
 
 // An out-of-process filesystem driver, intended to be run by ipc.NewDriverClient

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/docker/docker-registry/storage"
+	"github.com/docker/distribution/storage"
 
 	log "github.com/Sirupsen/logrus"
 )
