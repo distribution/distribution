@@ -1,40 +1,35 @@
-# Docker Registry API V2.1
+# Docker Registry HTTP API V2
 
-> **Note**: This specification has been ported over from the proposal on
-> docker/docker#9015. Much of the language in this document is still written
-> in the proposal tense and needs to be converted.
+## Introduction
 
-## Abstract
+The _Docker Registry HTTP API_ is the protocol to facilitate distribution of
+images to the docker engine. It interacts with instances of the docker
+registry, which is a service to manage information about docker images and
+enable their distribution. The specification covers the operation of version 2
+of this API, known as _Docker Registry HTTP API V2_.
 
-> **TODO**: Merge this section into the overview/introduction.
+While the V1 registry protocol is usable, there are several problems with the
+architecture that have led to this new version. The main driver of this
+specification these changes to the docker the image format, covered in
+docker/docker#8093. The new, self-contained image manifest simplifies image
+definition and improves security. This specification will build on that work,
+leveraging new properties of the manifest format to improve performance,
+reduce bandwidth usage and decrease the likelihood of backend corruption.
 
-The docker registry is a service to manage information about docker images and
-enable their distribution. While the current registry is usable, there are
-several problems with the architecture that have led to this proposal. For
-relevant details, please see the following issues:
+For relevant details and history leading up to this specification, please see
+the following issues:
 
 - docker/docker#8093
+- docker/docker#9015
 - docker/docker-registry#612
 
-The main driver of this proposal are changes to the docker the image format,
-covered in docker/docker#8093. The new, self-contained image manifest
-simplifies the image definition and the underlying backend layout. To reduce
-bandwidth usage, the new registry will be architected to avoid uploading
-existing layers and will support resumable layer uploads.
+### Scope
 
-While out of scope for this specification, the URI layout of the new API will
-be structured to support a rich Authentication and Authorization model by
-leveraging namespaces.
-
-Furthermore, to bring docker registry in line with docker core, the registry is written in Go.
-
-## Scope
-
-> **TODO**: Merge this section into the overview/introduction.
-
-This proposal covers the URL layout and protocols of the Docker Registry V2
-JSON API. This will affect the docker core registry API and the rewrite of
-docker-registry.
+This specification covers the URL layout and protocols of the interaction
+between docker registry and docker core. This will affect the docker core
+registry API and the rewrite of docker-registry. Docker registry
+implementations may implement other API endpoints, but they are not covered by
+this specification.
 
 This includes the following features:
 
@@ -45,17 +40,39 @@ This includes the following features:
 
 While authentication and authorization support will influence this
 specification, details of the protocol will be left to a future specification.
-Other features marked as next generation will be incorporated when the initial
-support is complete. Please see the road map for details.
+Relevant header definitions and error codes are present to provide an
+indication of what a client may encounter.
 
-## Use Cases
+#### Future
 
-> **TODO**: Merge this section into the overview/introduction.
+There are features that have been discussed during the process of cutting this
+specification. The following is an incomplete list:
+
+- Immutable image references
+- Multiple architecture support
+- Migration from v2compatibility representation
+
+These may represent features that are either out of the scope of this
+specification, the purview of another specification or have been deferred to a
+future version.
+
+### Use Cases
 
 For the most part, the use cases of the former registry API apply to the new
-version. Differentiating uses cases are covered below.
+version. Differentiating use cases are covered below.
 
-### Resumable Push
+#### Image Verification
+
+A docker engine instance would like to run verified image named
+"library/ubuntu", with the tag "latest". The engine contacts the registry,
+requesting the manifest for "library/ubuntu:latest". An untrusted registry
+returns a manifest. Before proceeding to download the individual layers, the
+engine verifies the manifest's signature, ensuring that the content was
+produced from a trusted source and no tampering has occured. After each layer
+is downloaded, the engine verifies the digest of the layer, ensuring that the
+content matches that specified by the manifest.
+
+#### Resumable Push
 
 Company X's build servers lose connectivity to docker registry before
 completing an image layer transfer. After connectivity returns, the build
@@ -63,14 +80,14 @@ server attempts to re-upload the image. The registry notifies the build server
 that the upload has already been partially attempted. The build server
 responds by only sending the remaining data to complete the image file.
 
-### Resumable Pull
+#### Resumable Pull
 
 Company X is having more connectivity problems but this time in their
 deployment datacenter. When downloading an image, the connection is
 interrupted before completion. The client keeps the partial data and uses http
 `Range` requests to avoid downloading repeated data.
 
-### Layer Upload De-duplication
+#### Layer Upload De-duplication
 
 Company Y's build system creates two identical docker layers from build
 processes A and B. Build process A completes uploading the layer before B.
@@ -81,10 +98,29 @@ If process A and B upload the same layer at the same time, both operations
 will proceed and the first to complete will be stored in the registry (Note:
 we may modify this to prevent dogpile with some locking mechanism).
 
+### Changes
+
+The V2 specification has been written to work as a living document, specifying
+only what is certain and leaving what is not specified open or to future
+changes. Only non-conflicting additions should be made to the API and accepted
+changes should avoid preventing future changes from happening.
+
+This section should be updated when changes are made to the specification,
+indicating what is different. Optionally, we may start marking parts of the specification to correspond with the versions enumerated here.
+
+<dl>
+	<dt>2.0</dt>
+	<dd>
+		This is the baseline specification.
+	</dd>
+</dl>
+
 ## Overview
 
-This section covers client flows and details of the API endpoints. All
-endpoints will be prefixed by the API version and the repository name:
+This section covers client flows and details of the API endpoints. The URI
+layout of the new API is structured to support a rich authentication and
+authorization model by leveraging namespaces. All endpoints will be prefixed
+by the API version and the repository name:
 
     /v2/<name>/
 
@@ -102,10 +138,10 @@ path component is less than 30 characters. The V2 registry API does not
 enforce this. The rules for a repository name are as follows:
 
 1. A repository name is broken up into _path components_. A component of a
-   repository name must be at least two characters, optionally separated by
-   periods, dashes or underscores. More strictly, it must match the regular
-   expression `[a-z0-9]+(?:[._-][a-z0-9]+)*` and the matched result must be 2
-   or more characters in length.
+   repository name must be at least two lowercase, alpha-numeric characters,
+   optionally separated by periods, dashes or underscores. More strictly, it
+   must match the regular expression `[a-z0-9]+(?:[._-][a-z0-9]+)*` and the
+   matched result must be 2 or more characters in length.
 2. The name of a repository must have at least two path components, separated
    by a forward slash.
 3. The total length of a repository name, including slashes, must be less the
@@ -118,7 +154,8 @@ All endpoints should support aggressive http caching, compression and range
 headers, where appropriate. The new API attempts to leverage HTTP semantics
 where possible but may break from standards to implement targeted features.
 
-For detail on individual endpoints, please see the _Detail_ section.
+For detail on individual endpoints, please see the [_Detail_](#detail)
+section.
 
 ### Errors
 
@@ -655,6 +692,7 @@ The error codes encountered via the API are enumerated in the following table:
 |Code|Message|Description|
 -------|----|------|------------
  `UNKNOWN` | unknown error | Generic error returned when the error does not have an API classification.
+ `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status.
  `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest.
  `SIZE_INVALID` | provided length did not match content length | When a layer is uploaded, the provided size will be checked against the uploaded content. If they do not match, this error will be returned.
  `NAME_INVALID` | manifest name did not match URI | During a manifest upload, if the name in the manifest does not match the uri name, this error will be returned.
