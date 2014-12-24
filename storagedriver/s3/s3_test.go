@@ -1,8 +1,7 @@
-// +build ignore
-
 package s3
 
 import (
+	"io/ioutil"
 	"os"
 	"strconv"
 	"testing"
@@ -22,13 +21,18 @@ func init() {
 	secretKey := os.Getenv("AWS_SECRET_KEY")
 	bucket := os.Getenv("S3_BUCKET")
 	encrypt := os.Getenv("S3_ENCRYPT")
+	region := os.Getenv("AWS_REGION")
+	root, err := ioutil.TempDir("", "driver-")
+	if err != nil {
+		panic(err)
+	}
 
 	s3DriverConstructor := func(region aws.Region) (storagedriver.StorageDriver, error) {
 		shouldEncrypt, err := strconv.ParseBool(encrypt)
 		if err != nil {
 			return nil, err
 		}
-		return New(accessKey, secretKey, region, shouldEncrypt, bucket)
+		return New(accessKey, secretKey, bucket, root, region, shouldEncrypt)
 	}
 
 	// Skip S3 storage driver tests if environment variable parameters are not provided
@@ -39,18 +43,20 @@ func init() {
 		return ""
 	}
 
-	for _, region := range aws.Regions {
-		if region == aws.USGovWest {
-			continue
-		}
+	// for _, region := range aws.Regions {
+	// 	if region == aws.USGovWest {
+	// 		continue
+	// 	}
 
-		testsuites.RegisterInProcessSuite(s3DriverConstructor(region), skipCheck)
-		testsuites.RegisterIPCSuite(driverName, map[string]string{
-			"accesskey": accessKey,
-			"secretkey": secretKey,
-			"region":    region.Name,
-			"bucket":    bucket,
-			"encrypt":   encrypt,
-		}, skipCheck)
-	}
+	testsuites.RegisterInProcessSuite(func() (storagedriver.StorageDriver, error) {
+		return s3DriverConstructor(aws.GetRegion(region))
+	}, skipCheck)
+	// testsuites.RegisterIPCSuite(driverName, map[string]string{
+	// 	"accesskey": accessKey,
+	// 	"secretkey": secretKey,
+	// 	"region":    region.Name,
+	// 	"bucket":    bucket,
+	// 	"encrypt":   encrypt,
+	// }, skipCheck)
+	// }
 }
