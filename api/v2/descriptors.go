@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/docker/docker-registry/common"
-	"github.com/docker/docker-registry/digest"
+	"github.com/docker/distribution/common"
+	"github.com/docker/distribution/digest"
 )
 
 var (

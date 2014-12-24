@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/docker/docker-registry/common"
+	"github.com/docker/distribution/common"
 )
 
 // joseBase64UrlEncode encodes the given data using the standard base64 url

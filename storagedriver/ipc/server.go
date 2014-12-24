@@ -10,7 +10,7 @@ import (
 	"os"
 	"reflect"
 
-	"github.com/docker/docker-registry/storagedriver"
+	"github.com/docker/distribution/storagedriver"
 	"github.com/docker/libchan"
 	"github.com/docker/libchan/spdy"
 )

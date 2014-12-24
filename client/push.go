@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/docker/docker-registry/storage"
+	"github.com/docker/distribution/storage"
 )
 
 // simultaneousLayerPushWindow is the size of the parallel layer push window.

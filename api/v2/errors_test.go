@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/docker/docker-registry/digest"
+	"github.com/docker/distribution/digest"
 )
 
 // TestErrorCodes ensures that error code format, mappings and

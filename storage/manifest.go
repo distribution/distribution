@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/docker/docker-registry/digest"
+	"github.com/docker/distribution/digest"
 	"github.com/docker/libtrust"
 )
 

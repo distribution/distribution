@@ -3,7 +3,7 @@ package client
 import (
 	"fmt"
 
-	"github.com/docker/docker-registry/digest"
+	"github.com/docker/distribution/digest"
 )
 
 // RepositoryNotFoundError is returned when making an operation against a

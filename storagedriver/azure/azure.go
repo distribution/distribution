@@ -13,8 +13,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/docker/docker-registry/storagedriver"
-	"github.com/docker/docker-registry/storagedriver/factory"
+	"github.com/docker/distribution/storagedriver"
+	"github.com/docker/distribution/storagedriver/factory"
 
 	azure "github.com/MSOpenTech/azure-sdk-for-go/clients/storage"
 )

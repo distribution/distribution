@@ -4,8 +4,8 @@ package main
 
 import (
 	"github.com/Sirupsen/logrus"
-	"github.com/docker/docker-registry/storagedriver/inmemory"
-	"github.com/docker/docker-registry/storagedriver/ipc"
+	"github.com/docker/distribution/storagedriver/inmemory"
+	"github.com/docker/distribution/storagedriver/ipc"
 )
 
 // An out-of-process inmemory driver, intended to be run by ipc.NewDriverClient

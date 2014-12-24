@@ -2,7 +2,7 @@ package registry
 
 import (
 	"github.com/Sirupsen/logrus"
-	"github.com/docker/docker-registry/api/v2"
+	"github.com/docker/distribution/api/v2"
 )
 
 // Context should contain the request specific context for use in across

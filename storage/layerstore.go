@@ -1,8 +1,8 @@
 package storage
 
 import (
-	"github.com/docker/docker-registry/digest"
-	"github.com/docker/docker-registry/storagedriver"
+	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/storagedriver"
 )
 
 type layerStore struct {

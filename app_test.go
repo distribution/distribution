@@ -7,9 +7,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/docker/docker-registry/api/v2"
-	_ "github.com/docker/docker-registry/auth/silly"
-	"github.com/docker/docker-registry/configuration"
+	"github.com/docker/distribution/api/v2"
+	_ "github.com/docker/distribution/auth/silly"
+	"github.com/docker/distribution/configuration"
 )
 
 // TestAppDispatcher builds an application with a test dispatcher and ensures

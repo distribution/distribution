@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/docker/docker-registry/storagedriver"
+	"github.com/docker/distribution/storagedriver"
 )
 
 // remoteFileReader provides a read seeker interface to files stored in

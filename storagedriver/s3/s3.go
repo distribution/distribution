@@ -26,8 +26,8 @@ import (
 
 	"github.com/crowdmob/goamz/aws"
 	"github.com/crowdmob/goamz/s3"
-	"github.com/docker/docker-registry/storagedriver"
-	"github.com/docker/docker-registry/storagedriver/factory"
+	"github.com/docker/distribution/storagedriver"
+	"github.com/docker/distribution/storagedriver/factory"
 )
 
 const driverName = "s3"

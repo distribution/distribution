@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/docker/docker-registry/api/v2"
-	"github.com/docker/docker-registry/auth"
-	"github.com/docker/docker-registry/configuration"
-	"github.com/docker/docker-registry/storage"
-	"github.com/docker/docker-registry/storagedriver"
-	"github.com/docker/docker-registry/storagedriver/factory"
+	"github.com/docker/distribution/api/v2"
+	"github.com/docker/distribution/auth"
+	"github.com/docker/distribution/configuration"
+	"github.com/docker/distribution/storage"
+	"github.com/docker/distribution/storagedriver"
+	"github.com/docker/distribution/storagedriver/factory"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"

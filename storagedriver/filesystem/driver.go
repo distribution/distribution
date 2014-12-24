@@ -9,8 +9,8 @@ import (
 	"path"
 	"time"
 
-	"github.com/docker/docker-registry/storagedriver"
-	"github.com/docker/docker-registry/storagedriver/factory"
+	"github.com/docker/distribution/storagedriver"
+	"github.com/docker/distribution/storagedriver/factory"
 )
 
 const driverName = "filesystem"

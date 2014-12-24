@@ -7,9 +7,9 @@ import (
 	"strconv"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/docker/docker-registry/api/v2"
-	"github.com/docker/docker-registry/digest"
-	"github.com/docker/docker-registry/storage"
+	"github.com/docker/distribution/api/v2"
+	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/storage"
 	"github.com/gorilla/handlers"
 )
 

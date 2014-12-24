@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker-registry/storagedriver"
+	"github.com/docker/distribution/storagedriver"
 
 	"gopkg.in/check.v1"
 )

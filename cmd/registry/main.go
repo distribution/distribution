@@ -12,12 +12,12 @@ import (
 	"github.com/gorilla/handlers"
 	"github.com/yvasiyarov/gorelic"
 
-	"github.com/docker/docker-registry"
-	_ "github.com/docker/docker-registry/auth/silly"
-	_ "github.com/docker/docker-registry/auth/token"
-	"github.com/docker/docker-registry/configuration"
-	_ "github.com/docker/docker-registry/storagedriver/filesystem"
-	_ "github.com/docker/docker-registry/storagedriver/inmemory"
+	"github.com/docker/distribution"
+	_ "github.com/docker/distribution/auth/silly"
+	_ "github.com/docker/distribution/auth/token"
+	"github.com/docker/distribution/configuration"
+	_ "github.com/docker/distribution/storagedriver/filesystem"
+	_ "github.com/docker/distribution/storagedriver/inmemory"
 )
 
 func main() {

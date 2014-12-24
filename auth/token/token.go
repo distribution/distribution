@@ -13,8 +13,8 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/libtrust"
 
-	"github.com/docker/docker-registry/auth"
-	"github.com/docker/docker-registry/common"
+	"github.com/docker/distribution/auth"
+	"github.com/docker/distribution/common"
 )
 
 const (
