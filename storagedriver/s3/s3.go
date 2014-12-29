@@ -97,20 +97,35 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		return nil, fmt.Errorf("The encrypt parameter should be a boolean")
 	}
 
+	secureBool := false
+	secure, ok := parameters["secure"]
+	if !ok {
+		secureBool = true
+	} else {
+		secureBool, ok = secure.(bool)
+		if !ok {
+			return nil, fmt.Errorf("The secure parameter should be a boolean")
+		}
+	}
+
 	rootDirectory, ok := parameters["rootdirectory"]
 	if !ok {
 		return nil, fmt.Errorf("No rootdirectory parameter provided")
 	}
 
-	return New(fmt.Sprint(accessKey), fmt.Sprint(secretKey), fmt.Sprint(bucket), fmt.Sprint(rootDirectory), region, encryptBool)
+	return New(fmt.Sprint(accessKey), fmt.Sprint(secretKey), fmt.Sprint(bucket), fmt.Sprint(rootDirectory), region, encryptBool, secureBool)
 }
 
 // New constructs a new Driver with the given AWS credentials, region, encryption flag, and
 // bucketName
-func New(accessKey, secretKey, bucketName, rootDirectory string, region aws.Region, encrypt bool) (*Driver, error) {
+func New(accessKey, secretKey, bucketName, rootDirectory string, region aws.Region, encrypt, secure bool) (*Driver, error) {
 	auth, err := aws.GetAuth(accessKey, secretKey, "", time.Time{})
 	if err != nil {
 		return nil, err
+	}
+
+	if !secure {
+		region.S3Endpoint = strings.Replace(region.S3Endpoint, "https", "http", 1)
 	}
 
 	s3obj := s3.New(auth, region)
