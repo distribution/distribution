@@ -693,8 +693,8 @@ The error codes encountered via the API are enumerated in the following table:
 
 {{.Description}}
 
-{{if .Requests}}{{range .Requests}}
-##### {{.Name}}
+{{if .Requests}}{{range .Requests}}{{if .Name}}
+##### {{.Name}}{{end}}
 
 ```
 {{$method.Method}} {{$route.Path|prettygorilla}}{{if .QueryParameters}}?{{range .QueryParameters}}{{.Name}}={{.Format}}{{end}}{{end}}{{range .Headers}}
@@ -728,8 +728,9 @@ Content-Type: {{.Body.ContentType}}{{end}}{{if .Body.Format}}
 {{.Body.Format}}{{end}}
 ```
 
-{{.Description}}{{if .Headers}}
-The following headers will be returned on the response:
+{{.Description}}
+
+{{if .Headers}}The following headers will be returned with the response:
 
 |Name|Description|
 |----|-----------|
