@@ -673,11 +673,9 @@ A list of methods and URIs are covered in the table below:
 | GET | `/v2/<name>/manifests/<tag>` | Manifest | Fetch the manifest identified by `name` and `tag`. |
 | PUT | `/v2/<name>/manifests/<tag>` | Manifest | Put the manifest identified by `name` and `tag`. |
 | DELETE | `/v2/<name>/manifests/<tag>` | Manifest | Delete the manifest identified by `name` and `tag`. |
-| GET | `/v2/<name>/blobs/<digest>` | Blob | Retrieve the blob from the registry identified by `digest`. |
-| HEAD | `/v2/<name>/blobs/<digest>` | Blob | Check if the blob is known to the registry. |
+| GET | `/v2/<name>/blobs/<digest>` | Blob | Retrieve the blob from the registry identified by `digest`. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data. |
 | POST | `/v2/<name>/blobs/uploads/` | Intiate Blob Upload | Initiate a resumable blob upload. If successful, an upload location will be provided to complete the upload. Optionally, if the `digest` parameter is present, the request body will be used to complete the upload in a single request. |
 | GET | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Retrieve status of upload identified by `uuid`. The primary purpose of this endpoint is to resolve the current status of a resumable upload. |
-| HEAD | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Retrieve status of upload identified by `uuid`. This is identical to the GET request. |
 | PATCH | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Upload a chunk of data for the specified upload. |
 | PUT | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Complete the upload specified by `uuid`, optionally appending the body as the final chunk. |
 | DELETE | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Cancel outstanding upload processes, releasing associated resources. If this is not called, the unfinished uploads will eventually timeout. |
@@ -718,10 +716,10 @@ Base V2 API route. Typically, this can be used for lightweight version checks an
 Check that the endpoint implements Docker Registry API V2.
 
 
-##### 
 
 ```
 GET /v2/
+Host: <registry host>
 Authorization: <scheme> <token>
 ```
 
@@ -732,7 +730,8 @@ The following parameters should be specified on the request:
 
 |Name|Kind|Description|
 |----|----|-----------|
-|`Authorization`|header|rfc7235 compliant authorization header.|
+|`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
+|`Authorization`|header|An RFC7235 compliant authorization header.|
 
 
 
@@ -747,11 +746,25 @@ The API implements V2 protocol and is accessible.
 
 
 
+
+
 ###### On Failure: Unauthorized
 
 ```
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
 ```
 
 The client is not authorized to access the registry.
@@ -761,6 +774,14 @@ The following headers will be returned on the response:
 |Name|Description|
 |----|-----------|
 |`WWW-Authenticate`|An RFC7235 compliant authentication challenge header.|
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
 
 
 
@@ -787,10 +808,11 @@ Retrieve information about tags.
 Fetch the tags under the repository identified by `name`.
 
 
-##### 
 
 ```
 GET /v2/<name>/tags/list
+Host: <registry host>
+Authorization: <scheme> <token>
 ```
 
 
@@ -800,6 +822,8 @@ The following parameters should be specified on the request:
 
 |Name|Kind|Description|
 |----|----|-----------|
+|`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
+|`Authorization`|header|An RFC7235 compliant authorization header.|
 |`name`|path|Name of the target repository.|
 
 
@@ -809,7 +833,8 @@ The following parameters should be specified on the request:
 
 ```
 200 OK
-Content-Type: application/json
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
 
 {
     "name": <name>,
@@ -822,15 +847,42 @@ Content-Type: application/json
 
 A list of tags for the named repository.
 
+The following headers will be returned with the response:
+
+|Name|Description|
+|----|-----------|
+|`Content-Length`|Length of the JSON response body.|
+
+
 
 
 ###### On Failure: Not Found
 
 ```
 404 Not Found
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
 ```
 
 The repository is not known to the registry.
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
 
 
 
@@ -838,9 +890,29 @@ The repository is not known to the registry.
 
 ```
 401 Unauthorized
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
 ```
 
-The client doesn't have access to repository.
+The client does not have access to the repository.
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
 
 
 
@@ -857,10 +929,11 @@ Create, update and retrieve manifests.
 Fetch the manifest identified by `name` and `tag`.
 
 
-##### 
 
 ```
 GET /v2/<name>/manifests/<tag>
+Host: <registry host>
+Authorization: <scheme> <token>
 ```
 
 
@@ -870,6 +943,8 @@ The following parameters should be specified on the request:
 
 |Name|Kind|Description|
 |----|----|-----------|
+|`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
+|`Authorization`|header|An RFC7235 compliant authorization header.|
 |`name`|path|Name of the target repository.|
 |`tag`|path|Tag of the target manifiest.|
 
@@ -880,7 +955,7 @@ The following parameters should be specified on the request:
 
 ```
 200 OK
-Content-Type: application/json
+Content-Type: application/json; charset=utf-8
 
 {
    "name": <name>,
@@ -897,7 +972,9 @@ Content-Type: application/json
 }
 ```
 
-The manifest idenfied by `name` and `tag`.
+The manifest idenfied by `name` and `tag`. The contents can be used to identify and resolve resources required to run the specified image.
+
+
 
 
 
@@ -905,10 +982,11 @@ The manifest idenfied by `name` and `tag`.
 
 ```
 400 Bad Request
-Content-Type: application/json
+Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [{
+	"errors:" [
+	    {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -931,14 +1009,45 @@ The error codes that may be included in the response body are enumerated below:
 
 
 
+###### On Failure: Unauthorized
+
+```
+401 Unauthorized
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The client does not have access to the repository.
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
+
+
+
 ###### On Failure: Not Found
 
 ```
 404 Not Found
-Content-Type: application/json
+Content-Type: application/json; charset=utf-8
 
 {
-	"errors:" [{
+	"errors:" [
+	    {
             "code": <error code>,
             "message": "<error message>",
             "detail": ...
@@ -967,12 +1076,12 @@ The error codes that may be included in the response body are enumerated below:
 Put the manifest identified by `name` and `tag`.
 
 
-##### 
 
 ```
 PUT /v2/<name>/manifests/<tag>
+Host: <registry host>
 Authorization: <scheme> <token>
-Content-Type: application/json
+Content-Type: application/json; charset=utf-8
 
 {
    "name": <name>,
@@ -996,7 +1105,8 @@ The following parameters should be specified on the request:
 
 |Name|Kind|Description|
 |----|----|-----------|
-|`Authorization`|header|rfc7235 compliant authorization header.|
+|`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
+|`Authorization`|header|An RFC7235 compliant authorization header.|
 |`name`|path|Name of the target repository.|
 |`tag`|path|Tag of the target manifiest.|
 
@@ -1007,19 +1117,41 @@ The following parameters should be specified on the request:
 
 ```
 202 Accepted
+Location: <url>
+Content-Length: 0
 ```
 
+The manifest has been accepted by the registry and is stored under the specified `name` and `tag`.
+
+The following headers will be returned with the response:
+
+|Name|Description|
+|----|-----------|
+|`Location`|The canonical location url of the uploaded manifest.|
+|`Content-Length`|The `Content-Length` header must be zero and the body must be empty.|
 
 
 
 
-###### On Failure: Bad Request
+###### On Failure: Invalid Manifest
 
 ```
 400 Bad Request
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
 ```
 
-
+The recieved manifest was invalid in some way, as described by the error codes. The client should resolve the issue and retry the request.
 
 
 
@@ -1035,11 +1167,41 @@ The error codes that may be included in the response body are enumerated below:
 
 
 
-###### On Failure: Bad Request
+###### On Failure: Unauthorized
+
+```
+401 Unauthorized
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The client does not have permission to push to the repository.
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
+
+
+
+###### On Failure: Missing Layer(s)
 
 ```
 400 Bad Request
-Content-Type: application/json
+Content-Type: application/json; charset=utf-8
 
 {
     "errors:" [{
@@ -1071,6 +1233,19 @@ The error codes that may be included in the response body are enumerated below:
 ```
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
 ```
 
 
@@ -1080,6 +1255,15 @@ The following headers will be returned on the response:
 |Name|Description|
 |----|-----------|
 |`WWW-Authenticate`|An RFC7235 compliant authentication challenge header.|
+|`Content-Length`|Length of the JSON error response body.|
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
 
 
 
@@ -1089,10 +1273,10 @@ The following headers will be returned on the response:
 Delete the manifest identified by `name` and `tag`.
 
 
-##### 
 
 ```
 DELETE /v2/<name>/manifests/<tag>
+Host: <registry host>
 Authorization: <scheme> <token>
 ```
 
@@ -1103,7 +1287,8 @@ The following parameters should be specified on the request:
 
 |Name|Kind|Description|
 |----|----|-----------|
-|`Authorization`|header|rfc7235 compliant authorization header.|
+|`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
+|`Authorization`|header|An RFC7235 compliant authorization header.|
 |`name`|path|Name of the target repository.|
 |`tag`|path|Tag of the target manifiest.|
 
@@ -1120,13 +1305,27 @@ The following parameters should be specified on the request:
 
 
 
-###### On Failure: Bad Request
+
+
+###### On Failure: Invalid Name or Tag
 
 ```
 400 Bad Request
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
 ```
 
-
+The specified `name` or `tag` were invalid and the delete was unable to proceed.
 
 
 
@@ -1144,6 +1343,19 @@ The error codes that may be included in the response body are enumerated below:
 ```
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
 ```
 
 
@@ -1153,16 +1365,37 @@ The following headers will be returned on the response:
 |Name|Description|
 |----|-----------|
 |`WWW-Authenticate`|An RFC7235 compliant authentication challenge header.|
+|`Content-Length`|Length of the JSON error response body.|
 
 
 
-###### On Failure: Not Found
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
+
+
+
+###### On Failure: Unknown Manifest
 
 ```
 404 Not Found
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
 ```
 
-
+The specified `name` or `tag` are unknown to the registry and the delete was unable to proceed. Clients can assume the manifest was already deleted if this response is returned.
 
 
 
@@ -1185,13 +1418,15 @@ Fetch the blob identified by `name` and `digest`. Used to fetch layers by tarsum
 
 #### GET Blob
 
-Retrieve the blob from the registry identified by `digest`.
+Retrieve the blob from the registry identified by `digest`. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data.
 
 
-##### 
+##### Fetch Blob
 
 ```
 GET /v2/<name>/blobs/<digest>
+Host: <registry host>
+Authorization: <scheme> <token>
 ```
 
 
@@ -1201,6 +1436,8 @@ The following parameters should be specified on the request:
 
 |Name|Kind|Description|
 |----|----|-----------|
+|`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
+|`Authorization`|header|An RFC7235 compliant authorization header.|
 |`name`|path|Name of the target repository.|
 |`digest`|path|Digest of desired blob.|
 
@@ -1211,12 +1448,20 @@ The following parameters should be specified on the request:
 
 ```
 200 OK
+Content-Length: <length>
 Content-Type: application/octet-stream
 
 <blob binary data>
 ```
 
 The blob identified by `digest` is available. The blob content will be present in the body of the request.
+
+The following headers will be returned with the response:
+
+|Name|Description|
+|----|-----------|
+|`Content-Length`|The length of the requested blob content.|
+
 ###### On Success: Temporary Redirect
 
 ```
@@ -1225,7 +1470,8 @@ Location: <blob location>
 ```
 
 The blob identified by `digest` is available at the provided location.
-The following headers will be returned on the response:
+
+The following headers will be returned with the response:
 
 |Name|Description|
 |----|-----------|
@@ -1238,9 +1484,21 @@ The following headers will be returned on the response:
 
 ```
 400 Bad Request
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
 ```
 
-
+There was a problem with the request that needs to be addressed by the client, such as an invalid `name` or `tag`.
 
 
 
@@ -1257,9 +1515,38 @@ The error codes that may be included in the response body are enumerated below:
 
 ```
 401 Unauthorized
+WWW-Authenticate: <scheme> realm="<realm>", ..."
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": "UNAUTHORIZED",
+            "message": "access to the requested resource is not authorized",
+            "detail": ...
+        },
+        ...
+    ]
+}
 ```
 
+The client does not have access to the repository.
 
+The following headers will be returned on the response:
+
+|Name|Description|
+|----|-----------|
+|`WWW-Authenticate`|An RFC7235 compliant authentication challenge header.|
+|`Content-Length`|Length of the JSON error response body.|
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
 
 
 
@@ -1267,6 +1554,167 @@ The error codes that may be included in the response body are enumerated below:
 
 ```
 404 Not Found
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The blob, identified by `name` and `digest`, is unknown to the registry.
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
+| `BLOB_UNKNOWN` | blob unknown to registry | This error may be returned when a blob is unknown to the registry in a specified repository. This can be returned with a standard get or if a manifest references an unknown layer during upload. |
+
+
+
+##### Fetch Blob Part
+
+```
+GET /v2/<name>/blobs/<digest>
+Host: <registry host>
+Authorization: <scheme> <token>
+Range: bytes=<start>-<end>
+```
+
+This endpoint may also support RFC7233 compliant range requests. Support can be detected by issuing a HEAD request. If the header `Accept-Range: bytes` is returned, range requests can be used to fetch partial content.
+
+
+The following parameters should be specified on the request:
+
+|Name|Kind|Description|
+|----|----|-----------|
+|`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
+|`Authorization`|header|An RFC7235 compliant authorization header.|
+|`Range`|header|HTTP Range header specifying blob chunk.|
+|`name`|path|Name of the target repository.|
+|`digest`|path|Digest of desired blob.|
+
+
+
+
+###### On Success: Partial Content
+
+```
+206 Partial Content
+Content-Length: <length>
+Content-Range: bytes <start>-<end>/<size>
+Content-Type: application/octet-stream
+
+<blob binary data>
+```
+
+The blob identified by `digest` is available. The specified chunk of blob content will be present in the body of the request.
+
+The following headers will be returned with the response:
+
+|Name|Description|
+|----|-----------|
+|`Content-Length`|The length of the requested blob chunk.|
+|`Content-Range`|Content range of blob chunk.|
+
+
+
+
+###### On Failure: Bad Request
+
+```
+400 Bad Request
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+There was a problem with the request that needs to be addressed by the client, such as an invalid `name` or `tag`.
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `NAME_INVALID` | manifest name did not match URI | During a manifest upload, if the name in the manifest does not match the uri name, this error will be returned. |
+| `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
+
+
+
+###### On Failure: Unauthorized
+
+```
+401 Unauthorized
+WWW-Authenticate: <scheme> realm="<realm>", ..."
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": "UNAUTHORIZED",
+            "message": "access to the requested resource is not authorized",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The client does not have access to the repository.
+
+The following headers will be returned on the response:
+
+|Name|Description|
+|----|-----------|
+|`WWW-Authenticate`|An RFC7235 compliant authentication challenge header.|
+|`Content-Length`|Length of the JSON error response body.|
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
+
+
+
+###### On Failure: Not Found
+
+```
+404 Not Found
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
 ```
 
 
@@ -1282,29 +1730,13 @@ The error codes that may be included in the response body are enumerated below:
 
 
 
-
-#### HEAD Blob
-
-Check if the blob is known to the registry.
-
-
-##### 
+###### On Failure: Requested Range Not Satisfiable
 
 ```
-HEAD /v2/<name>/blobs/<digest>
+416 Requested Range Not Satisfiable
 ```
 
-
-
-
-The following parameters should be specified on the request:
-
-|Name|Kind|Description|
-|----|----|-----------|
-|`name`|path|Name of the target repository.|
-|`digest`|path|Digest of desired blob.|
-
-
+The range specification cannot be satisfied for the requested content. This can happen when the range is not formatted correctly or if the range is outside of the valid size of the content.
 
 
 
@@ -1325,6 +1757,7 @@ Initiate a resumable blob upload. If successful, an upload location will be prov
 
 ```
 POST /v2/<name>/blobs/uploads/?digest=<tarsum>
+Host: <registry host>
 Authorization: <scheme> <token>
 Content-Length: <length of blob>
 Content-Type: application/octect-stream
@@ -1339,7 +1772,8 @@ The following parameters should be specified on the request:
 
 |Name|Kind|Description|
 |----|----|-----------|
-|`Authorization`|header|rfc7235 compliant authorization header.|
+|`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
+|`Authorization`|header|An RFC7235 compliant authorization header.|
 |`Content-Length`|header||
 |`name`|path|Name of the target repository.|
 |`digest`|query|Digest of uploaded blob. If present, the upload will be completed, in a single request, with contents of the request body as the resulting blob.|
@@ -1355,8 +1789,9 @@ Location: <blob location>
 Content-Length: 0
 ```
 
+The blob has been created in the registry and is available the provided location.
 
-The following headers will be returned on the response:
+The following headers will be returned with the response:
 
 |Name|Description|
 |----|-----------|
@@ -1390,15 +1825,29 @@ The error codes that may be included in the response body are enumerated below:
 ```
 401 Unauthorized
 WWW-Authenticate: <scheme> realm="<realm>", ..."
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": "UNAUTHORIZED",
+            "message": "access to the requested resource is not authorized",
+            "detail": ...
+        },
+        ...
+    ]
+}
 ```
 
-
+The client does not have access to push to the repository.
 
 The following headers will be returned on the response:
 
 |Name|Description|
 |----|-----------|
 |`WWW-Authenticate`|An RFC7235 compliant authentication challenge header.|
+|`Content-Length`|Length of the JSON error response body.|
 
 
 
@@ -1406,8 +1855,7 @@ The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
 -------|----|------|------------
-| `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
-| `NAME_INVALID` | manifest name did not match URI | During a manifest upload, if the name in the manifest does not match the uri name, this error will be returned. |
+| `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
 
 
 
@@ -1415,6 +1863,7 @@ The error codes that may be included in the response body are enumerated below:
 
 ```
 POST /v2/<name>/blobs/uploads/
+Host: <registry host>
 Authorization: <scheme> <token>
 Content-Length: 0
 ```
@@ -1426,7 +1875,8 @@ The following parameters should be specified on the request:
 
 |Name|Kind|Description|
 |----|----|-----------|
-|`Authorization`|header|rfc7235 compliant authorization header.|
+|`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
+|`Authorization`|header|An RFC7235 compliant authorization header.|
 |`Content-Length`|header|The `Content-Length` header must be zero and the body must be empty.|
 |`name`|path|Name of the target repository.|
 
@@ -1442,8 +1892,9 @@ Location: /v2/<name>/blobs/uploads/<uuid>
 Range: 0-0
 ```
 
-The upload has been created. The `Location` header must be used to complete the upload. The response should identical to a `GET` request on the contents of the returned `Location` header.
-The following headers will be returned on the response:
+The upload has been created. The `Location` header must be used to complete the upload. The response should be identical to a `GET` request on the contents of the returned `Location` header.
+
+The following headers will be returned with the response:
 
 |Name|Description|
 |----|-----------|
@@ -1454,10 +1905,69 @@ The following headers will be returned on the response:
 
 
 
+###### On Failure: Invalid Name or Digest
+
+```
+400 Bad Request
+```
+
+
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
+| `NAME_INVALID` | manifest name did not match URI | During a manifest upload, if the name in the manifest does not match the uri name, this error will be returned. |
+
+
+
+###### On Failure: Unauthorized
+
+```
+401 Unauthorized
+WWW-Authenticate: <scheme> realm="<realm>", ..."
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": "UNAUTHORIZED",
+            "message": "access to the requested resource is not authorized",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The client does not have access to push to the repository.
+
+The following headers will be returned on the response:
+
+|Name|Description|
+|----|-----------|
+|`WWW-Authenticate`|An RFC7235 compliant authentication challenge header.|
+|`Content-Length`|Length of the JSON error response body.|
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
+
+
+
+
 
 ### Blob Upload
 
-Interact with blob uploads. Clients should never assemble URLs for this endpoint and should only take it through the `Location` header on related API requests.
+Interact with blob uploads. Clients should never assemble URLs for this endpoint and should only take it through the `Location` header on related API requests. The `Location` header and its parameters should be preserved by clients, using the latest value returned via upload related API calls.
 
 
 
@@ -1466,10 +1976,11 @@ Interact with blob uploads. Clients should never assemble URLs for this endpoint
 Retrieve status of upload identified by `uuid`. The primary purpose of this endpoint is to resolve the current status of a resumable upload.
 
 
-##### 
 
 ```
 GET /v2/<name>/blobs/uploads/<uuid>
+Host: <registry host>
+Authorization: <scheme> <token>
 ```
 
 Retrieve the progress of the current upload, as reported by the `Range` header.
@@ -1479,66 +1990,132 @@ The following parameters should be specified on the request:
 
 |Name|Kind|Description|
 |----|----|-----------|
+|`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
+|`Authorization`|header|An RFC7235 compliant authorization header.|
 |`name`|path|Name of the target repository.|
 |`uuid`|path|A uuid identifying the upload. This field can accept almost anything.|
 
 
 
 
-###### On Success: No Content
+###### On Success: Upload Progress
 
 ```
 204 No Content
 Range: 0-<offset>
+Content-Length: 0
 ```
 
+The upload is known and in progress. The last received offset is available in the `Range` header.
+
+The following headers will be returned with the response:
+
+|Name|Description|
+|----|-----------|
+|`Range`|Range indicating the current progress of the upload.|
+|`Content-Length`|The `Content-Length` header must be zero and the body must be empty.|
+
+
+
+
+###### On Failure: Bad Request
+
+```
+400 Bad Request
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+There was an error processing the upload and it must be restarted.
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
+| `NAME_INVALID` | manifest name did not match URI | During a manifest upload, if the name in the manifest does not match the uri name, this error will be returned. |
+| `BLOB_UPLOAD_INVALID` | blob upload invalid | The blob upload encountered an error and can no longer proceed. |
+
+
+
+###### On Failure: Unauthorized
+
+```
+401 Unauthorized
+WWW-Authenticate: <scheme> realm="<realm>", ..."
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": "UNAUTHORIZED",
+            "message": "access to the requested resource is not authorized",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The client does not have access to the repository.
 
 The following headers will be returned on the response:
 
 |Name|Description|
 |----|-----------|
-|`Range`|Range indicating the current progress of the upload.|
+|`WWW-Authenticate`|An RFC7235 compliant authentication challenge header.|
+|`Content-Length`|Length of the JSON error response body.|
 
 
 
+The error codes that may be included in the response body are enumerated below:
 
-#### HEAD Blob Upload
-
-Retrieve status of upload identified by `uuid`. This is identical to the GET request.
-
-
-##### 
-
-```
-HEAD /v2/<name>/blobs/uploads/<uuid>
-```
-
-Retrieve the progress of the current upload, as reported by the `Range` header.
-
-
-The following parameters should be specified on the request:
-
-|Name|Kind|Description|
-|----|----|-----------|
-|`name`|path|Name of the target repository.|
-|`uuid`|path|A uuid identifying the upload. This field can accept almost anything.|
+|Code|Message|Description|
+-------|----|------|------------
+| `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
 
 
 
-
-###### On Success: No Content
+###### On Failure: Not Found
 
 ```
-204 No Content
-Range: 0-<offset>
+404 Not Found
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
 ```
 
+The upload is unknown to the registry. The upload must be restarted.
 
-The following headers will be returned on the response:
 
-|Name|Description|
-|----|-----------|
-|`Range`|Range indicating the current progress of the upload.|
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `BLOB_UPLOAD_UNKNOWN` | blob upload unknown to registry | If a blob upload has been cancelled or was never started, this error code may be returned. |
 
 
 
@@ -1548,10 +2125,11 @@ The following headers will be returned on the response:
 Upload a chunk of data for the specified upload.
 
 
-##### 
 
 ```
 PATCH /v2/<name>/blobs/uploads/<uuid>
+Host: <registry host>
+Authorization: <scheme> <token>
 Content-Range: <start of range>-<end of range, inclusive>
 Content-Length: <length of chunk>
 Content-Type: application/octet-stream
@@ -1566,6 +2144,8 @@ The following parameters should be specified on the request:
 
 |Name|Kind|Description|
 |----|----|-----------|
+|`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
+|`Authorization`|header|An RFC7235 compliant authorization header.|
 |`Content-Range`|header|Range of bytes identifying the desired block of content represented by the body. Start must the end offset retrieved via status check plus one. Note that this is a non-standard use of the `Content-Range` header.|
 |`Content-Length`|header|Length of the chunk being uploaded, corresponding the length of the request body.|
 |`name`|path|Name of the target repository.|
@@ -1574,21 +2154,136 @@ The following parameters should be specified on the request:
 
 
 
-###### On Success: No Content
+###### On Success: Chunk Accepted
 
 ```
 204 No Content
+Location: /v2/<name>/blobs/uploads/<uuid>
 Range: 0-<offset>
 Content-Length: 0
 ```
 
+The chunk of data has been accepted and the current progress is available in the range header. The updated upload location is available in the `Location` header.
+
+The following headers will be returned with the response:
+
+|Name|Description|
+|----|-----------|
+|`Location`|The location of the upload. Clients should assume this changes after each request. Clients should use the contents verbatim to complete the upload, adding parameters where required.|
+|`Range`|Range indicating the current progress of the upload.|
+|`Content-Length`|The `Content-Length` header must be zero and the body must be empty.|
+
+
+
+
+###### On Failure: Bad Request
+
+```
+400 Bad Request
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+There was an error processing the upload and it must be restarted.
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
+| `NAME_INVALID` | manifest name did not match URI | During a manifest upload, if the name in the manifest does not match the uri name, this error will be returned. |
+| `BLOB_UPLOAD_INVALID` | blob upload invalid | The blob upload encountered an error and can no longer proceed. |
+
+
+
+###### On Failure: Unauthorized
+
+```
+401 Unauthorized
+WWW-Authenticate: <scheme> realm="<realm>", ..."
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": "UNAUTHORIZED",
+            "message": "access to the requested resource is not authorized",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The client does not have access to push to the repository.
 
 The following headers will be returned on the response:
 
 |Name|Description|
 |----|-----------|
-|`Range`|Range indicating the current progress of the upload.|
-|`Content-Length`|The `Content-Length` header must be zero and the body must be empty.|
+|`WWW-Authenticate`|An RFC7235 compliant authentication challenge header.|
+|`Content-Length`|Length of the JSON error response body.|
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
+
+
+
+###### On Failure: Not Found
+
+```
+404 Not Found
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The upload is unknown to the registry. The upload must be restarted.
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `BLOB_UPLOAD_UNKNOWN` | blob upload unknown to registry | If a blob upload has been cancelled or was never started, this error code may be returned. |
+
+
+
+###### On Failure: Requested Range Not Satisfiable
+
+```
+416 Requested Range Not Satisfiable
+```
+
+The `Content-Range` specification cannot be accepted, either because it does not overlap with the current progress or it is invalid.
 
 
 
@@ -1598,30 +2293,11 @@ The following headers will be returned on the response:
 Complete the upload specified by `uuid`, optionally appending the body as the final chunk.
 
 
-##### 
 
 ```
 PUT /v2/<name>/blobs/uploads/<uuid>?digest=<tarsum>
-```
-
-Upload the _final_ chunk of data.
-
-
-The following parameters should be specified on the request:
-
-|Name|Kind|Description|
-|----|----|-----------|
-|`name`|path|Name of the target repository.|
-|`uuid`|path|A uuid identifying the upload. This field can accept almost anything.|
-|`digest`|query|Digest of uploaded blob.|
-
-
-
-
-###### On Success: No Content
-
-```
-204 No Content
+Host: <registry host>
+Authorization: <scheme> <token>
 Content-Range: <start of range>-<end of range, inclusive>
 Content-Length: <length of chunk>
 Content-Type: application/octet-stream
@@ -1629,13 +2305,163 @@ Content-Type: application/octet-stream
 <binary chunk>
 ```
 
+Complete the upload, providing the _final_ chunk of data, if necessary. This method may take a body with all the data. If the `Content-Range` header is specified, it may include the final chunk. A request without a body will just complete the upload with previously uploaded content.
+
+
+The following parameters should be specified on the request:
+
+|Name|Kind|Description|
+|----|----|-----------|
+|`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
+|`Authorization`|header|An RFC7235 compliant authorization header.|
+|`Content-Range`|header|Range of bytes identifying the block of content represented by the body. Start must the end offset retrieved via status check plus one. Note that this is a non-standard use of the `Content-Range` header. May be omitted if no data is provided.|
+|`Content-Length`|header|Length of the chunk being uploaded, corresponding to the length of the request body. May be zero if no data is provided.|
+|`name`|path|Name of the target repository.|
+|`uuid`|path|A uuid identifying the upload. This field can accept almost anything.|
+|`digest`|query|Digest of uploaded blob.|
+
+
+
+
+###### On Success: Upload Complete
+
+```
+204 No Content
+Location: <blob location>
+Content-Range: <start of range>-<end of range, inclusive>
+Content-Length: <length of chunk>
+```
+
+The upload has been completed and accepted by the registry. The canonical location will be available in the `Location` header.
+
+The following headers will be returned with the response:
+
+|Name|Description|
+|----|-----------|
+|`Location`||
+|`Content-Range`|Range of bytes identifying the desired block of content represented by the body. Start must match the end of offset retrieved via status check. Note that this is a non-standard use of the `Content-Range` header.|
+|`Content-Length`|Length of the chunk being uploaded, corresponding the length of the request body.|
+
+
+
+
+###### On Failure: Bad Request
+
+```
+400 Bad Request
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+There was an error processing the upload and it must be restarted.
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
+| `NAME_INVALID` | manifest name did not match URI | During a manifest upload, if the name in the manifest does not match the uri name, this error will be returned. |
+| `BLOB_UPLOAD_INVALID` | blob upload invalid | The blob upload encountered an error and can no longer proceed. |
+
+
+
+###### On Failure: Unauthorized
+
+```
+401 Unauthorized
+WWW-Authenticate: <scheme> realm="<realm>", ..."
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": "UNAUTHORIZED",
+            "message": "access to the requested resource is not authorized",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The client does not have access to push to the repository.
 
 The following headers will be returned on the response:
 
 |Name|Description|
 |----|-----------|
-|`Content-Range`|Range of bytes identifying the desired block of content represented by the body. Start must match the end of offset retrieved via status check. Note that this is a non-standard use of the `Content-Range` header.|
-|`Content-Length`|Length of the chunk being uploaded, corresponding the length of the request body.|
+|`WWW-Authenticate`|An RFC7235 compliant authentication challenge header.|
+|`Content-Length`|Length of the JSON error response body.|
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
+
+
+
+###### On Failure: Not Found
+
+```
+404 Not Found
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The upload is unknown to the registry. The upload must be restarted.
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `BLOB_UPLOAD_UNKNOWN` | blob upload unknown to registry | If a blob upload has been cancelled or was never started, this error code may be returned. |
+
+
+
+###### On Failure: Requested Range Not Satisfiable
+
+```
+416 Requested Range Not Satisfiable
+Location: /v2/<name>/blobs/uploads/<uuid>
+Range: 0-<offset>
+```
+
+The `Content-Range` specification cannot be accepted, either because it does not overlap with the current progress or it is invalid. The contents of the `Range` header may be used to resolve the condition.
+
+The following headers will be returned on the response:
+
+|Name|Description|
+|----|-----------|
+|`Location`|The location of the upload. Clients should assume this changes after each request. Clients should use the contents verbatim to complete the upload, adding parameters where required.|
+|`Range`|Range indicating the current progress of the upload.|
 
 
 
@@ -1645,10 +2471,12 @@ The following headers will be returned on the response:
 Cancel outstanding upload processes, releasing associated resources. If this is not called, the unfinished uploads will eventually timeout.
 
 
-##### 
 
 ```
 DELETE /v2/<name>/blobs/uploads/<uuid>
+Host: <registry host>
+Authorization: <scheme> <token>
+Content-Length: 0
 ```
 
 Cancel the upload specified by `uuid`.
@@ -1658,10 +2486,131 @@ The following parameters should be specified on the request:
 
 |Name|Kind|Description|
 |----|----|-----------|
+|`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
+|`Authorization`|header|An RFC7235 compliant authorization header.|
+|`Content-Length`|header|The `Content-Length` header must be zero and the body must be empty.|
 |`name`|path|Name of the target repository.|
 |`uuid`|path|A uuid identifying the upload. This field can accept almost anything.|
 
 
+
+
+###### On Success: Upload Deleted
+
+```
+204 No Content
+Content-Length: 0
+```
+
+The upload has been successfully deleted.
+
+The following headers will be returned with the response:
+
+|Name|Description|
+|----|-----------|
+|`Content-Length`|The `Content-Length` header must be zero and the body must be empty.|
+
+
+
+
+###### On Failure: Bad Request
+
+```
+400 Bad Request
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+An error was encountered processing the delete. The client may ignore this error.
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
+| `NAME_INVALID` | manifest name did not match URI | During a manifest upload, if the name in the manifest does not match the uri name, this error will be returned. |
+| `BLOB_UPLOAD_INVALID` | blob upload invalid | The blob upload encountered an error and can no longer proceed. |
+
+
+
+###### On Failure: Unauthorized
+
+```
+401 Unauthorized
+WWW-Authenticate: <scheme> realm="<realm>", ..."
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": "UNAUTHORIZED",
+            "message": "access to the requested resource is not authorized",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The client does not have access to the repository.
+
+The following headers will be returned on the response:
+
+|Name|Description|
+|----|-----------|
+|`WWW-Authenticate`|An RFC7235 compliant authentication challenge header.|
+|`Content-Length`|Length of the JSON error response body.|
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
+
+
+
+###### On Failure: Not Found
+
+```
+404 Not Found
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The upload is unknown to the registry. The client may ignore this error and assume the upload has been deleted.
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `BLOB_UPLOAD_UNKNOWN` | blob upload unknown to registry | If a blob upload has been cancelled or was never started, this error code may be returned. |
 
 
 
