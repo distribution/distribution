@@ -977,6 +977,14 @@ var errorDescriptors = []ErrorDescriptor{
 		started, this error code may be returned.`,
 		HTTPStatusCodes: []int{http.StatusNotFound},
 	},
+	{
+		Code:    ErrorCodeBlobUploadInvalid,
+		Value:   "BLOB_UPLOAD_INVALID",
+		Message: "blob upload invalid",
+		Description: `The blob upload encountered an error and can no
+		longer proceed.`,
+		HTTPStatusCodes: []int{http.StatusNotFound},
+	},
 }
 
 var errorCodeToDescriptors map[ErrorCode]ErrorDescriptor

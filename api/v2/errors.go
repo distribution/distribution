@@ -54,6 +54,9 @@ const (
 
 	// ErrorCodeBlobUploadUnknown is returned when an upload is unknown.
 	ErrorCodeBlobUploadUnknown
+
+	// ErrorCodeBlobUploadInvalid is returned when an upload is invalid.
+	ErrorCodeBlobUploadInvalid
 )
 
 // ParseErrorCode attempts to parse the error code string, returning
