@@ -7,6 +7,7 @@ import (
 
 	"github.com/docker/distribution/api/v2"
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/storage"
 	"github.com/gorilla/handlers"
 )
@@ -56,7 +57,7 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 	manifests := imh.services.Manifests()
 	dec := json.NewDecoder(r.Body)
 
-	var manifest storage.SignedManifest
+	var manifest manifest.SignedManifest
 	if err := dec.Decode(&manifest); err != nil {
 		imh.Errors.Push(v2.ErrorCodeManifestInvalid, err)
 		w.WriteHeader(http.StatusBadRequest)

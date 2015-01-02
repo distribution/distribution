@@ -2,6 +2,7 @@ package storage
 
 import (
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/storagedriver"
 )
 
@@ -59,10 +60,10 @@ type ManifestService interface {
 	Exists(name, tag string) (bool, error)
 
 	// Get retrieves the named manifest, if it exists.
-	Get(name, tag string) (*SignedManifest, error)
+	Get(name, tag string) (*manifest.SignedManifest, error)
 
 	// Put creates or updates the named manifest.
-	Put(name, tag string, manifest *SignedManifest) error
+	Put(name, tag string, manifest *manifest.SignedManifest) error
 
 	// Delete removes the named manifest, if it exists.
 	Delete(name, tag string) error

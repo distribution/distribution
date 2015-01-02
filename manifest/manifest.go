@@ -1,4 +1,4 @@
-package storage
+package manifest
 
 import (
 	"crypto/x509"
@@ -149,7 +149,7 @@ func (sm *SignedManifest) UnmarshalJSON(b []byte) error {
 
 // MarshalJSON returns the contents of raw. If Raw is nil, marshals the inner
 // contents. Applications requiring a marshaled signed manifest should simply
-// use Raw directly, since the the content produced by json.Marshal will
+// use Raw directly, since the the content produced by json.Marshal will be
 // compacted and will fail signature checks.
 func (sm *SignedManifest) MarshalJSON() ([]byte, error) {
 	if len(sm.Raw) > 0 {

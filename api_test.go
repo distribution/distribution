@@ -17,7 +17,7 @@ import (
 	"github.com/docker/distribution/common/testutil"
 	"github.com/docker/distribution/configuration"
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/storage"
+	"github.com/docker/distribution/manifest"
 	_ "github.com/docker/distribution/storagedriver/inmemory"
 	"github.com/docker/libtrust"
 	"github.com/gorilla/handlers"
@@ -268,10 +268,10 @@ func TestManifestAPI(t *testing.T) {
 
 	// --------------------------------
 	// Attempt to push unsigned manifest with missing layers
-	unsignedManifest := &storage.Manifest{
+	unsignedManifest := &manifest.Manifest{
 		Name: imageName,
 		Tag:  tag,
-		FSLayers: []storage.FSLayer{
+		FSLayers: []manifest.FSLayer{
 			{
 				BlobSum: "asdf",
 			},
@@ -362,7 +362,7 @@ func TestManifestAPI(t *testing.T) {
 
 	checkResponse(t, "fetching uploaded manifest", resp, http.StatusOK)
 
-	var fetchedManifest storage.SignedManifest
+	var fetchedManifest manifest.SignedManifest
 	dec = json.NewDecoder(resp.Body)
 	if err := dec.Decode(&fetchedManifest); err != nil {
 		t.Fatalf("error decoding fetched manifest: %v", err)
@@ -404,7 +404,7 @@ func TestManifestAPI(t *testing.T) {
 
 func putManifest(t *testing.T, msg, url string, v interface{}) *http.Response {
 	var body []byte
-	if sm, ok := v.(*storage.SignedManifest); ok {
+	if sm, ok := v.(*manifest.SignedManifest); ok {
 		body = sm.Raw
 	} else {
 		var err error

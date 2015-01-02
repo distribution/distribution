@@ -6,6 +6,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/storagedriver"
 	"github.com/docker/libtrust"
 )
@@ -116,7 +117,7 @@ func (ms *manifestStore) Exists(name, tag string) (bool, error) {
 	return true, nil
 }
 
-func (ms *manifestStore) Get(name, tag string) (*SignedManifest, error) {
+func (ms *manifestStore) Get(name, tag string) (*manifest.SignedManifest, error) {
 	p, err := ms.path(name, tag)
 	if err != nil {
 		return nil, err
@@ -132,7 +133,7 @@ func (ms *manifestStore) Get(name, tag string) (*SignedManifest, error) {
 		}
 	}
 
-	var manifest SignedManifest
+	var manifest manifest.SignedManifest
 
 	if err := json.Unmarshal(content, &manifest); err != nil {
 		// TODO(stevvooe): Corrupted manifest error?
@@ -144,7 +145,7 @@ func (ms *manifestStore) Get(name, tag string) (*SignedManifest, error) {
 	return &manifest, nil
 }
 
-func (ms *manifestStore) Put(name, tag string, manifest *SignedManifest) error {
+func (ms *manifestStore) Put(name, tag string, manifest *manifest.SignedManifest) error {
 	p, err := ms.path(name, tag)
 	if err != nil {
 		return err
@@ -185,7 +186,7 @@ func (ms *manifestStore) path(name, tag string) (string, error) {
 	})
 }
 
-func (ms *manifestStore) verifyManifest(name, tag string, manifest *SignedManifest) error {
+func (ms *manifestStore) verifyManifest(name, tag string, manifest *manifest.SignedManifest) error {
 	// TODO(stevvooe): This verification is present here, but this needs to be
 	// lifted out of the storage infrastructure and moved into a package
 	// oriented towards defining verifiers and reporting them with

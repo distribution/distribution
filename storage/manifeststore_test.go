@@ -4,10 +4,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/docker/libtrust"
-
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/storagedriver/inmemory"
+	"github.com/docker/libtrust"
 )
 
 func TestManifestStorage(t *testing.T) {
@@ -42,13 +42,13 @@ func TestManifestStorage(t *testing.T) {
 		}
 	}
 
-	manifest := Manifest{
-		Versioned: Versioned{
+	manifest := manifest.Manifest{
+		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
 		Name: name,
 		Tag:  tag,
-		FSLayers: []FSLayer{
+		FSLayers: []manifest.FSLayer{
 			{
 				BlobSum: "asdf",
 			},

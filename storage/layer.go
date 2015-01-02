@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/manifest"
 )
 
 // Layer provides a readable and seekable layer object. Typically,
@@ -74,7 +75,7 @@ var (
 
 // ErrUnknownLayer returned when layer cannot be found.
 type ErrUnknownLayer struct {
-	FSLayer FSLayer
+	FSLayer manifest.FSLayer
 }
 
 func (err ErrUnknownLayer) Error() string {
@@ -83,7 +84,7 @@ func (err ErrUnknownLayer) Error() string {
 
 // ErrLayerInvalidDigest returned when tarsum check fails.
 type ErrLayerInvalidDigest struct {
-	FSLayer FSLayer
+	FSLayer manifest.FSLayer
 }
 
 func (err ErrLayerInvalidDigest) Error() string {
