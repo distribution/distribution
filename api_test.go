@@ -345,7 +345,7 @@ func TestManifestAPI(t *testing.T) {
 
 	// -------------------
 	// Push the signed manifest with all layers pushed.
-	signedManifest, err := unsignedManifest.Sign(pk)
+	signedManifest, err := manifest.Sign(unsignedManifest, pk)
 	if err != nil {
 		t.Fatalf("unexpected error signing manifest: %v", err)
 	}

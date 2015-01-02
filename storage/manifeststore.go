@@ -186,19 +186,19 @@ func (ms *manifestStore) path(name, tag string) (string, error) {
 	})
 }
 
-func (ms *manifestStore) verifyManifest(name, tag string, manifest *manifest.SignedManifest) error {
+func (ms *manifestStore) verifyManifest(name, tag string, mnfst *manifest.SignedManifest) error {
 	// TODO(stevvooe): This verification is present here, but this needs to be
 	// lifted out of the storage infrastructure and moved into a package
 	// oriented towards defining verifiers and reporting them with
 	// granularity.
 
 	var errs ErrManifestVerification
-	if manifest.Name != name {
+	if mnfst.Name != name {
 		// TODO(stevvooe): This needs to be an exported error
 		errs = append(errs, fmt.Errorf("name does not match manifest name"))
 	}
 
-	if manifest.Tag != tag {
+	if mnfst.Tag != tag {
 		// TODO(stevvooe): This needs to be an exported error.
 		errs = append(errs, fmt.Errorf("tag does not match manifest tag"))
 	}
@@ -207,7 +207,7 @@ func (ms *manifestStore) verifyManifest(name, tag string, manifest *manifest.Sig
 	// VerifyWithChains. We need to define the exact source of the CA.
 	// Perhaps, its a configuration value injected into manifest store.
 
-	if _, err := manifest.Verify(); err != nil {
+	if _, err := manifest.Verify(mnfst); err != nil {
 		switch err {
 		case libtrust.ErrMissingSignatureKey, libtrust.ErrInvalidJSONContent, libtrust.ErrMissingSignatureKey:
 			errs = append(errs, ErrManifestUnverified{})
@@ -220,7 +220,7 @@ func (ms *manifestStore) verifyManifest(name, tag string, manifest *manifest.Sig
 		}
 	}
 
-	for _, fsLayer := range manifest.FSLayers {
+	for _, fsLayer := range mnfst.FSLayers {
 		exists, err := ms.layerService.Exists(name, fsLayer.BlobSum)
 		if err != nil {
 			errs = append(errs, err)

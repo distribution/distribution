@@ -47,7 +47,7 @@ func TestManifestUnmarshaling(t *testing.T) {
 func TestManifestVerification(t *testing.T) {
 	env := genEnv(t)
 
-	publicKeys, err := env.signed.Verify()
+	publicKeys, err := Verify(env.signed)
 	if err != nil {
 		t.Fatalf("error verifying manifest: %v", err)
 	}
@@ -95,7 +95,7 @@ func genEnv(t *testing.T) *testEnv {
 		},
 	}
 
-	sm, err := m.Sign(pk)
+	sm, err := Sign(&m, pk)
 	if err != nil {
 		t.Fatalf("error signing manifest: %v", err)
 	}

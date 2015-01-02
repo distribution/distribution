@@ -42,7 +42,7 @@ func TestManifestStorage(t *testing.T) {
 		}
 	}
 
-	manifest := manifest.Manifest{
+	m := manifest.Manifest{
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
@@ -63,7 +63,7 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("unexpected error generating private key: %v", err)
 	}
 
-	sm, err := manifest.Sign(pk)
+	sm, err := manifest.Sign(&m, pk)
 	if err != nil {
 		t.Fatalf("error signing manifest: %v", err)
 	}

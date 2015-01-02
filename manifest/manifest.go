@@ -1,12 +1,9 @@
 package manifest
 
 import (
-	"crypto/x509"
 	"encoding/json"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/docker/distribution/digest"
-	"github.com/docker/libtrust"
 )
 
 // Versioned provides a struct with just the manifest schemaVersion. Incoming
@@ -39,64 +36,6 @@ type Manifest struct {
 	History []ManifestHistory `json:"history"`
 }
 
-// Sign signs the manifest with the provided private key, returning a
-// SignedManifest. This typically won't be used within the registry, except
-// for testing.
-func (m *Manifest) Sign(pk libtrust.PrivateKey) (*SignedManifest, error) {
-	p, err := json.MarshalIndent(m, "", "   ")
-	if err != nil {
-		return nil, err
-	}
-
-	js, err := libtrust.NewJSONSignature(p)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := js.Sign(pk); err != nil {
-		return nil, err
-	}
-
-	pretty, err := js.PrettySignature("signatures")
-	if err != nil {
-		return nil, err
-	}
-
-	return &SignedManifest{
-		Manifest: *m,
-		Raw:      pretty,
-	}, nil
-}
-
-// SignWithChain signs the manifest with the given private key and x509 chain.
-// The public key of the first element in the chain must be the public key
-// corresponding with the sign key.
-func (m *Manifest) SignWithChain(key libtrust.PrivateKey, chain []*x509.Certificate) (*SignedManifest, error) {
-	p, err := json.MarshalIndent(m, "", "   ")
-	if err != nil {
-		return nil, err
-	}
-
-	js, err := libtrust.NewJSONSignature(p)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := js.SignWithChain(key, chain); err != nil {
-		return nil, err
-	}
-
-	pretty, err := js.PrettySignature("signatures")
-	if err != nil {
-		return nil, err
-	}
-
-	return &SignedManifest{
-		Manifest: *m,
-		Raw:      pretty,
-	}, nil
-}
-
 // SignedManifest provides an envelope for a signed image manifest, including
 // the format sensitive raw bytes. It contains fields to
 type SignedManifest struct {
@@ -107,30 +46,6 @@ type SignedManifest struct {
 	// serialization, or the signature check will fail. The manifest byte
 	// representation cannot change or it will have to be re-signed.
 	Raw []byte `json:"-"`
-}
-
-// Verify verifies the signature of the signed manifest returning the public
-// keys used during signing.
-func (sm *SignedManifest) Verify() ([]libtrust.PublicKey, error) {
-	js, err := libtrust.ParsePrettySignature(sm.Raw, "signatures")
-	if err != nil {
-		logrus.WithField("err", err).Debugf("(*SignedManifest).Verify")
-		return nil, err
-	}
-
-	return js.Verify()
-}
-
-// VerifyChains verifies the signature of the signed manifest against the
-// certificate pool returning the list of verified chains. Signatures without
-// an x509 chain are not checked.
-func (sm *SignedManifest) VerifyChains(ca *x509.CertPool) ([][]*x509.Certificate, error) {
-	js, err := libtrust.ParsePrettySignature(sm.Raw, "signatures")
-	if err != nil {
-		return nil, err
-	}
-
-	return js.VerifyChains(ca)
 }
 
 // UnmarshalJSON populates a new ImageManifest struct from JSON data.
