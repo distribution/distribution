@@ -21,6 +21,7 @@ func init() {
 	secretKey := os.Getenv("AWS_SECRET_KEY")
 	bucket := os.Getenv("S3_BUCKET")
 	encrypt := os.Getenv("S3_ENCRYPT")
+	secure := os.Getenv("S3_SECURE")
 	region := os.Getenv("AWS_REGION")
 	root, err := ioutil.TempDir("", "driver-")
 	if err != nil {
@@ -28,11 +29,19 @@ func init() {
 	}
 
 	s3DriverConstructor := func(region aws.Region) (storagedriver.StorageDriver, error) {
-		shouldEncrypt, err := strconv.ParseBool(encrypt)
+		encryptBool, err := strconv.ParseBool(encrypt)
 		if err != nil {
 			return nil, err
 		}
-		return New(accessKey, secretKey, bucket, root, region, shouldEncrypt)
+
+		secureBool := true
+		if secure != "" {
+			secureBool, err = strconv.ParseBool(secure)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return New(accessKey, secretKey, bucket, root, region, encryptBool, secureBool)
 	}
 
 	// Skip S3 storage driver tests if environment variable parameters are not provided
