@@ -1151,7 +1151,7 @@ Content-Type: application/json; charset=utf-8
 }
 ```
 
-The recieved manifest was invalid in some way, as described by the error codes. The client should resolve the issue and retry the request.
+The received manifest was invalid in some way, as described by the error codes. The client should resolve the issue and retry the request.
 
 
 
@@ -1789,7 +1789,7 @@ Location: <blob location>
 Content-Length: 0
 ```
 
-The blob has been created in the registry and is available the provided location.
+The blob has been created in the registry and is available at the provided location.
 
 The following headers will be returned with the response:
 
