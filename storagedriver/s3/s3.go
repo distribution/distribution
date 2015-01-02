@@ -87,19 +87,20 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		return nil, fmt.Errorf("No bucket parameter provided")
 	}
 
+	encryptBool := false
 	encrypt, ok := parameters["encrypt"]
 	if !ok {
-		return nil, fmt.Errorf("No encrypt parameter provided")
-	}
-
-	encryptBool, ok := encrypt.(bool)
-	if !ok {
-		return nil, fmt.Errorf("The encrypt parameter should be a boolean")
+		encryptBool = true
+	} else {
+		encryptBool, ok = encrypt.(bool)
+		if !ok {
+			return nil, fmt.Errorf("The encrypt parameter should be a boolean")
+		}
 	}
 
 	rootDirectory, ok := parameters["rootdirectory"]
 	if !ok {
-		return nil, fmt.Errorf("No rootdirectory parameter provided")
+		rootDirectory = ""
 	}
 
 	return New(fmt.Sprint(accessKey), fmt.Sprint(secretKey), fmt.Sprint(bucket), fmt.Sprint(rootDirectory), region, encryptBool)
