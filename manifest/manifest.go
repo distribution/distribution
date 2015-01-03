@@ -33,7 +33,7 @@ type Manifest struct {
 	FSLayers []FSLayer `json:"fsLayers"`
 
 	// History is a list of unstructured historical data for v1 compatibility
-	History []ManifestHistory `json:"history"`
+	History []History `json:"history"`
 }
 
 // SignedManifest provides an envelope for a signed image manifest, including
@@ -81,8 +81,8 @@ type FSLayer struct {
 	BlobSum digest.Digest `json:"blobSum"`
 }
 
-// ManifestHistory stores unstructured v1 compatibility information
-type ManifestHistory struct {
+// History stores unstructured v1 compatibility information
+type History struct {
 	// V1Compatibility is the raw v1 compatibility information
 	V1Compatibility string `json:"v1Compatibility"`
 }

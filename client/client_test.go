@@ -34,7 +34,7 @@ func TestPush(t *testing.T) {
 	}
 	uploadLocations := make([]string, len(testBlobs))
 	blobs := make([]manifest.FSLayer, len(testBlobs))
-	history := make([]manifest.ManifestHistory, len(testBlobs))
+	history := make([]manifest.History, len(testBlobs))
 
 	for i, blob := range testBlobs {
 		// TODO(bbland): this is returning the same location for all uploads,
@@ -43,7 +43,7 @@ func TestPush(t *testing.T) {
 		// to change at some point.
 		uploadLocations[i] = fmt.Sprintf("/v2/%s/blobs/test-uuid", name)
 		blobs[i] = manifest.FSLayer{BlobSum: blob.digest}
-		history[i] = manifest.ManifestHistory{V1Compatibility: blob.digest.String()}
+		history[i] = manifest.History{V1Compatibility: blob.digest.String()}
 	}
 
 	m := &manifest.SignedManifest{
@@ -161,11 +161,11 @@ func TestPull(t *testing.T) {
 		},
 	}
 	blobs := make([]manifest.FSLayer, len(testBlobs))
-	history := make([]manifest.ManifestHistory, len(testBlobs))
+	history := make([]manifest.History, len(testBlobs))
 
 	for i, blob := range testBlobs {
 		blobs[i] = manifest.FSLayer{BlobSum: blob.digest}
-		history[i] = manifest.ManifestHistory{V1Compatibility: blob.digest.String()}
+		history[i] = manifest.History{V1Compatibility: blob.digest.String()}
 	}
 
 	m := &manifest.SignedManifest{
@@ -273,11 +273,11 @@ func TestPullResume(t *testing.T) {
 		},
 	}
 	layers := make([]manifest.FSLayer, len(testBlobs))
-	history := make([]manifest.ManifestHistory, len(testBlobs))
+	history := make([]manifest.History, len(testBlobs))
 
 	for i, layer := range testBlobs {
 		layers[i] = manifest.FSLayer{BlobSum: layer.digest}
-		history[i] = manifest.ManifestHistory{V1Compatibility: layer.digest.String()}
+		history[i] = manifest.History{V1Compatibility: layer.digest.String()}
 	}
 
 	m := &manifest.Manifest{
