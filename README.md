@@ -52,4 +52,4 @@ Building awesome, independent, and well maintained distribution tools should giv
 
 ### Relevant documents
 
-* [Analysis of current state and goals](docs/opensprint/kickoff.md)
+* [Analysis of current state and goals](doc/opensprint/kickoff.md)
