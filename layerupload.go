@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/Sirupsen/logrus"
@@ -32,9 +33,17 @@ func layerUploadDispatcher(ctx *Context, r *http.Request) http.Handler {
 	if luh.UUID != "" {
 		luh.log = luh.log.WithField("uuid", luh.UUID)
 
-		layers := ctx.services.Layers()
-		upload, err := layers.Resume(luh.UUID)
+		state, err := ctx.tokenProvider.LayerUploadStateFromToken(r.FormValue("_state"))
+		if err != nil {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				logrus.Infof("error resolving upload: %v", err)
+				w.WriteHeader(http.StatusInternalServerError)
+				luh.Errors.Push(v2.ErrorCodeUnknown, err)
+			})
+		}
 
+		layers := ctx.services.Layers()
+		upload, err := layers.Resume(state)
 		if err != nil && err != storage.ErrLayerUploadUnknown {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				logrus.Infof("error resolving upload: %v", err)
@@ -162,7 +171,14 @@ func (luh *layerUploadHandler) CancelLayerUpload(w http.ResponseWriter, r *http.
 // chunk responses. This sets the correct headers but the response status is
 // left to the caller.
 func (luh *layerUploadHandler) layerUploadResponse(w http.ResponseWriter, r *http.Request) error {
-	uploadURL, err := luh.urlBuilder.BuildBlobUploadChunkURL(luh.Upload.Name(), luh.Upload.UUID())
+	values := make(url.Values)
+	stateToken, err := luh.Context.tokenProvider.LayerUploadStateToToken(storage.LayerUploadState{Name: luh.Upload.Name(), UUID: luh.Upload.UUID(), Offset: luh.Upload.Offset()})
+	if err != nil {
+		logrus.Infof("error building upload state token: %s", err)
+		return err
+	}
+	values.Set("_state", stateToken)
+	uploadURL, err := luh.urlBuilder.BuildBlobUploadChunkURL(luh.Upload.Name(), luh.Upload.UUID(), values)
 	if err != nil {
 		logrus.Infof("error building upload url: %s", err)
 		return err

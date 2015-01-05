@@ -459,6 +459,8 @@ func pushLayer(t *testing.T, ub *v2.URLBuilder, name string, dgst digest.Digest,
 	}
 
 	u.RawQuery = url.Values{
+		"_state": u.Query()["_state"],
+
 		"digest": []string{dgst.String()},
 
 		// TODO(stevvooe): Layer upload can be completed with and without size
