@@ -33,7 +33,7 @@ func layerUploadDispatcher(ctx *Context, r *http.Request) http.Handler {
 	if luh.UUID != "" {
 		luh.log = luh.log.WithField("uuid", luh.UUID)
 
-		state, err := ctx.tokenProvider.LayerUploadStateFromToken(r.FormValue("_state"))
+		state, err := ctx.tokenProvider.layerUploadStateFromToken(r.FormValue("_state"))
 		if err != nil {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				logrus.Infof("error resolving upload: %v", err)
@@ -172,7 +172,7 @@ func (luh *layerUploadHandler) CancelLayerUpload(w http.ResponseWriter, r *http.
 // left to the caller.
 func (luh *layerUploadHandler) layerUploadResponse(w http.ResponseWriter, r *http.Request) error {
 	values := make(url.Values)
-	stateToken, err := luh.Context.tokenProvider.LayerUploadStateToToken(storage.LayerUploadState{Name: luh.Upload.Name(), UUID: luh.Upload.UUID(), Offset: luh.Upload.Offset()})
+	stateToken, err := luh.Context.tokenProvider.layerUploadStateToToken(storage.LayerUploadState{Name: luh.Upload.Name(), UUID: luh.Upload.UUID(), Offset: luh.Upload.Offset()})
 	if err != nil {
 		logrus.Infof("error building upload state token: %s", err)
 		return err

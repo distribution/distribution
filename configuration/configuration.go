@@ -32,13 +32,10 @@ type Configuration struct {
 	HTTP struct {
 		// Addr specifies the bind address for the registry instance.
 		Addr string `yaml:"addr"`
-	} `yaml:"http"`
 
-	// Cluster contains configuration parameters for clustering the registry.
-	Cluster struct {
 		// Secret specifies the secret key which HMAC tokens are created with.
 		Secret string `yaml:"secret"`
-	} `yaml:"cluster"`
+	} `yaml:"http"`
 }
 
 // v0_1Configuration is a Version 0.1 Configuration struct

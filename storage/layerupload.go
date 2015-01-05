@@ -59,6 +59,8 @@ type layerUploadStore interface {
 	New(name string) (LayerUploadState, error)
 	Open(uuid string) (layerFile, error)
 	GetState(uuid string) (LayerUploadState, error)
+	// TODO: factor this method back in
+	// SaveState(lus LayerUploadState) error
 	DeleteState(uuid string) error
 }
 

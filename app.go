@@ -64,7 +64,7 @@ func NewApp(configuration configuration.Configuration) *App {
 
 	app.driver = driver
 	app.services = storage.NewServices(app.driver)
-	app.tokenProvider = newHMACTokenProvider(configuration.Cluster.Secret)
+	app.tokenProvider = newHMACTokenProvider(configuration.HTTP.Secret)
 
 	authType := configuration.Auth.Type()
 

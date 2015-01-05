@@ -12,11 +12,11 @@ import (
 
 // tokenProvider contains methods for serializing and deserializing state from token strings.
 type tokenProvider interface {
-	// LayerUploadStateFromToken retrieves the LayerUploadState for a given state token.
-	LayerUploadStateFromToken(stateToken string) (storage.LayerUploadState, error)
+	// layerUploadStateFromToken retrieves the LayerUploadState for a given state token.
+	layerUploadStateFromToken(stateToken string) (storage.LayerUploadState, error)
 
-	// LayerUploadStateToToken returns a token string representing the given LayerUploadState.
-	LayerUploadStateToToken(layerUploadState storage.LayerUploadState) (string, error)
+	// layerUploadStateToToken returns a token string representing the given LayerUploadState.
+	layerUploadStateToToken(layerUploadState storage.LayerUploadState) (string, error)
 }
 
 type hmacTokenProvider struct {
@@ -27,8 +27,8 @@ func newHMACTokenProvider(secret string) tokenProvider {
 	return &hmacTokenProvider{secret: secret}
 }
 
-// LayerUploadStateFromToken deserializes the given HMAC stateToken and validates the prefix HMAC
-func (ts *hmacTokenProvider) LayerUploadStateFromToken(stateToken string) (storage.LayerUploadState, error) {
+// layerUploadStateFromToken deserializes the given HMAC stateToken and validates the prefix HMAC
+func (ts *hmacTokenProvider) layerUploadStateFromToken(stateToken string) (storage.LayerUploadState, error) {
 	var lus storage.LayerUploadState
 
 	tokenBytes, err := base64.URLEncoding.DecodeString(stateToken)
@@ -56,8 +56,8 @@ func (ts *hmacTokenProvider) LayerUploadStateFromToken(stateToken string) (stora
 	return lus, nil
 }
 
-// LayerUploadStateToToken serializes the given LayerUploadState to JSON with an HMAC prepended
-func (ts *hmacTokenProvider) LayerUploadStateToToken(lus storage.LayerUploadState) (string, error) {
+// layerUploadStateToToken serializes the given LayerUploadState to JSON with an HMAC prepended
+func (ts *hmacTokenProvider) layerUploadStateToToken(lus storage.LayerUploadState) (string, error) {
 	mac := hmac.New(sha256.New, []byte(ts.secret))
 	stateJSON := fmt.Sprintf("{\"Name\": \"%s\", \"UUID\": \"%s\", \"Offset\": %d}", lus.Name, lus.UUID, lus.Offset)
 	mac.Write([]byte(stateJSON))
