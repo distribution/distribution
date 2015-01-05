@@ -46,6 +46,17 @@ What we want to achieve as a result is:
   - Client-side Go packages to consume this new API
   - Standalone binaries providing content distribution functionalities outside of Docker
 
+* Constraints for interface provided by Distribution to Core:
+  - The distribution repository is a collection of tools for packaging and
+    shipping content with Docker
+  - All tools are usable primarily as standalone command-line tools. They may
+    also expose bindings in one or more programming languages. Typically the
+    first available language is Go, but that is not automatically true and more
+    languages will be supported over time
+  - The distribution repository is still under incubation, any code layout,
+    interface and name may change before it gets included in a stable release of
+    Docker
+
 ### How will this integrate with Docker engine?
 
 Building awesome, independent, and well maintained distribution tools should give Docker core maintainers enough incentive to switch to the newly develop subsystem. We make no assumptions on a given date or milestone as urgency should be fixed through [docker/docker#9784](https://github.com/docker/docker/pull/9784), and in order to maintain focus on producing a top quality alternative.
