@@ -10,6 +10,7 @@ import (
 	"code.google.com/p/go-uuid/uuid"
 
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/storagedriver"
 	"github.com/docker/docker/pkg/tarsum"
 
@@ -284,7 +285,7 @@ func (luc *layerUploadController) validateLayer(fp layerFile, size int64, dgst d
 	}
 
 	if !digestVerifier.Verified() {
-		return "", ErrLayerInvalidDigest{FSLayer{BlobSum: dgst}}
+		return "", ErrLayerInvalidDigest{manifest.FSLayer{BlobSum: dgst}}
 	}
 
 	return dgst, nil

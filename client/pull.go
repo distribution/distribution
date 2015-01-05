@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/docker/distribution/storage"
-
 	log "github.com/Sirupsen/logrus"
+
+	"github.com/docker/distribution/manifest"
 )
 
 // simultaneousLayerPullWindow is the size of the parallel layer pull window.
@@ -77,7 +77,7 @@ func Pull(c Client, objectStore ObjectStore, name, tag string) error {
 	return nil
 }
 
-func pullLayer(c Client, objectStore ObjectStore, name string, fsLayer storage.FSLayer) error {
+func pullLayer(c Client, objectStore ObjectStore, name string, fsLayer manifest.FSLayer) error {
 	log.WithField("layer", fsLayer).Info("Pulling layer")
 
 	layer, err := objectStore.Layer(fsLayer.BlobSum)

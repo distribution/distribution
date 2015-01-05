@@ -2,6 +2,7 @@ package storage
 
 import (
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/storagedriver"
 )
 
@@ -33,7 +34,7 @@ func (ls *layerStore) Fetch(name string, digest digest.Digest) (Layer, error) {
 	if err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError, *storagedriver.PathNotFoundError:
-			return nil, ErrUnknownLayer{FSLayer{BlobSum: digest}}
+			return nil, ErrUnknownLayer{manifest.FSLayer{BlobSum: digest}}
 		default:
 			return nil, err
 		}
@@ -43,7 +44,7 @@ func (ls *layerStore) Fetch(name string, digest digest.Digest) (Layer, error) {
 	if err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError, *storagedriver.PathNotFoundError:
-			return nil, ErrUnknownLayer{FSLayer{BlobSum: digest}}
+			return nil, ErrUnknownLayer{manifest.FSLayer{BlobSum: digest}}
 		default:
 			return nil, err
 		}

@@ -11,7 +11,7 @@ import (
 
 	"github.com/docker/distribution/common/testutil"
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/storage"
+	"github.com/docker/distribution/manifest"
 )
 
 type testBlob struct {
@@ -33,8 +33,8 @@ func TestPush(t *testing.T) {
 		},
 	}
 	uploadLocations := make([]string, len(testBlobs))
-	blobs := make([]storage.FSLayer, len(testBlobs))
-	history := make([]storage.ManifestHistory, len(testBlobs))
+	blobs := make([]manifest.FSLayer, len(testBlobs))
+	history := make([]manifest.History, len(testBlobs))
 
 	for i, blob := range testBlobs {
 		// TODO(bbland): this is returning the same location for all uploads,
@@ -42,24 +42,24 @@ func TestPush(t *testing.T) {
 		// It's sort of okay because we're using unique digests, but this needs
 		// to change at some point.
 		uploadLocations[i] = fmt.Sprintf("/v2/%s/blobs/test-uuid", name)
-		blobs[i] = storage.FSLayer{BlobSum: blob.digest}
-		history[i] = storage.ManifestHistory{V1Compatibility: blob.digest.String()}
+		blobs[i] = manifest.FSLayer{BlobSum: blob.digest}
+		history[i] = manifest.History{V1Compatibility: blob.digest.String()}
 	}
 
-	manifest := &storage.SignedManifest{
-		Manifest: storage.Manifest{
+	m := &manifest.SignedManifest{
+		Manifest: manifest.Manifest{
 			Name:         name,
 			Tag:          tag,
 			Architecture: "x86",
 			FSLayers:     blobs,
 			History:      history,
-			Versioned: storage.Versioned{
+			Versioned: manifest.Versioned{
 				SchemaVersion: 1,
 			},
 		},
 	}
 	var err error
-	manifest.Raw, err = json.Marshal(manifest)
+	m.Raw, err = json.Marshal(m)
 
 	blobRequestResponseMappings := make([]testutil.RequestResponseMapping, 2*len(testBlobs))
 	for i, blob := range testBlobs {
@@ -94,7 +94,7 @@ func TestPush(t *testing.T) {
 		Request: testutil.Request{
 			Method: "PUT",
 			Route:  "/v2/" + name + "/manifests/" + tag,
-			Body:   manifest.Raw,
+			Body:   m.Raw,
 		},
 		Response: testutil.Response{
 			StatusCode: http.StatusOK,
@@ -119,7 +119,7 @@ func TestPush(t *testing.T) {
 	}
 	objectStore := &memoryObjectStore{
 		mutex:           new(sync.Mutex),
-		manifestStorage: make(map[string]*storage.SignedManifest),
+		manifestStorage: make(map[string]*manifest.SignedManifest),
 		layerStorage:    make(map[digest.Digest]Layer),
 	}
 
@@ -139,7 +139,7 @@ func TestPush(t *testing.T) {
 		writer.Close()
 	}
 
-	objectStore.WriteManifest(name, tag, manifest)
+	objectStore.WriteManifest(name, tag, m)
 
 	err = Push(client, objectStore, name, tag)
 	if err != nil {
@@ -160,27 +160,27 @@ func TestPull(t *testing.T) {
 			contents: []byte("some other contents"),
 		},
 	}
-	blobs := make([]storage.FSLayer, len(testBlobs))
-	history := make([]storage.ManifestHistory, len(testBlobs))
+	blobs := make([]manifest.FSLayer, len(testBlobs))
+	history := make([]manifest.History, len(testBlobs))
 
 	for i, blob := range testBlobs {
-		blobs[i] = storage.FSLayer{BlobSum: blob.digest}
-		history[i] = storage.ManifestHistory{V1Compatibility: blob.digest.String()}
+		blobs[i] = manifest.FSLayer{BlobSum: blob.digest}
+		history[i] = manifest.History{V1Compatibility: blob.digest.String()}
 	}
 
-	manifest := &storage.SignedManifest{
-		Manifest: storage.Manifest{
+	m := &manifest.SignedManifest{
+		Manifest: manifest.Manifest{
 			Name:         name,
 			Tag:          tag,
 			Architecture: "x86",
 			FSLayers:     blobs,
 			History:      history,
-			Versioned: storage.Versioned{
+			Versioned: manifest.Versioned{
 				SchemaVersion: 1,
 			},
 		},
 	}
-	manifestBytes, err := json.Marshal(manifest)
+	manifestBytes, err := json.Marshal(m)
 
 	blobRequestResponseMappings := make([]testutil.RequestResponseMapping, len(testBlobs))
 	for i, blob := range testBlobs {
@@ -213,7 +213,7 @@ func TestPull(t *testing.T) {
 	}
 	objectStore := &memoryObjectStore{
 		mutex:           new(sync.Mutex),
-		manifestStorage: make(map[string]*storage.SignedManifest),
+		manifestStorage: make(map[string]*manifest.SignedManifest),
 		layerStorage:    make(map[digest.Digest]Layer),
 	}
 
@@ -222,7 +222,7 @@ func TestPull(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	m, err := objectStore.Manifest(name, tag)
+	m, err = objectStore.Manifest(name, tag)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -272,25 +272,25 @@ func TestPullResume(t *testing.T) {
 			contents: []byte("some other contents"),
 		},
 	}
-	layers := make([]storage.FSLayer, len(testBlobs))
-	history := make([]storage.ManifestHistory, len(testBlobs))
+	layers := make([]manifest.FSLayer, len(testBlobs))
+	history := make([]manifest.History, len(testBlobs))
 
 	for i, layer := range testBlobs {
-		layers[i] = storage.FSLayer{BlobSum: layer.digest}
-		history[i] = storage.ManifestHistory{V1Compatibility: layer.digest.String()}
+		layers[i] = manifest.FSLayer{BlobSum: layer.digest}
+		history[i] = manifest.History{V1Compatibility: layer.digest.String()}
 	}
 
-	manifest := &storage.Manifest{
+	m := &manifest.Manifest{
 		Name:         name,
 		Tag:          tag,
 		Architecture: "x86",
 		FSLayers:     layers,
 		History:      history,
-		Versioned: storage.Versioned{
+		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
 	}
-	manifestBytes, err := json.Marshal(manifest)
+	manifestBytes, err := json.Marshal(m)
 
 	layerRequestResponseMappings := make([]testutil.RequestResponseMapping, 2*len(testBlobs))
 	for i, blob := range testBlobs {
@@ -340,7 +340,7 @@ func TestPullResume(t *testing.T) {
 	}
 	objectStore := &memoryObjectStore{
 		mutex:           new(sync.Mutex),
-		manifestStorage: make(map[string]*storage.SignedManifest),
+		manifestStorage: make(map[string]*manifest.SignedManifest),
 		layerStorage:    make(map[digest.Digest]Layer),
 	}
 
@@ -355,12 +355,12 @@ func TestPullResume(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	m, err := objectStore.Manifest(name, tag)
+	sm, err := objectStore.Manifest(name, tag)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	mBytes, err := json.Marshal(m)
+	mBytes, err := json.Marshal(sm)
 	if err != nil {
 		t.Fatal(err)
 	}

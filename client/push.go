@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/docker/distribution/storage"
+	"github.com/docker/distribution/manifest"
 )
 
 // simultaneousLayerPushWindow is the size of the parallel layer push window.
@@ -12,7 +12,7 @@ import (
 // push window has been successfully pushed.
 const simultaneousLayerPushWindow = 4
 
-type pushFunction func(fsLayer storage.FSLayer) error
+type pushFunction func(fsLayer manifest.FSLayer) error
 
 // Push implements a client push workflow for the image defined by the given
 // name and tag pair, using the given ObjectStore for local manifest and layer
@@ -71,7 +71,7 @@ func Push(c Client, objectStore ObjectStore, name, tag string) error {
 	return nil
 }
 
-func pushLayer(c Client, objectStore ObjectStore, name string, fsLayer storage.FSLayer) error {
+func pushLayer(c Client, objectStore ObjectStore, name string, fsLayer manifest.FSLayer) error {
 	log.WithField("layer", fsLayer).Info("Pushing layer")
 
 	layer, err := objectStore.Layer(fsLayer.BlobSum)
