@@ -5,7 +5,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/docker/distribution/common"
+	"github.com/docker/distribution/collections"
 )
 
 // joseBase64UrlEncode encodes the given data using the standard base64 url
@@ -35,11 +35,11 @@ func joseBase64UrlDecode(s string) ([]byte, error) {
 
 // actionSet is a special type of stringSet.
 type actionSet struct {
-	common.StringSet
+	collections.StringSet
 }
 
 func newActionSet(actions ...string) actionSet {
-	return actionSet{common.NewStringSet(actions...)}
+	return actionSet{collections.NewStringSet(actions...)}
 }
 
 // Contains calls StringSet.Contains() for

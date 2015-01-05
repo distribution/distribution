@@ -14,7 +14,7 @@ import (
 	"github.com/docker/libtrust"
 
 	"github.com/docker/distribution/auth"
-	"github.com/docker/distribution/common"
+	"github.com/docker/distribution/collections"
 )
 
 // accessSet maps a typed, named resource to
@@ -241,8 +241,8 @@ func (ac *accessController) Authorized(req *http.Request, accessItems ...auth.Ac
 	}
 
 	verifyOpts := VerifyOptions{
-		TrustedIssuers:    common.NewStringSet(ac.issuer),
-		AcceptedAudiences: common.NewStringSet(ac.service),
+		TrustedIssuers:    collections.NewStringSet(ac.issuer),
+		AcceptedAudiences: collections.NewStringSet(ac.service),
 		Roots:             ac.rootCerts,
 		TrustedKeys:       ac.trustedKeys,
 	}

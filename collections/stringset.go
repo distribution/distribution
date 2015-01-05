@@ -1,4 +1,4 @@
-package common
+package collections
 
 // StringSet is a useful type for looking up strings.
 type StringSet map[string]struct{}

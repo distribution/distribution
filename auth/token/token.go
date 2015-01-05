@@ -14,7 +14,7 @@ import (
 	"github.com/docker/libtrust"
 
 	"github.com/docker/distribution/auth"
-	"github.com/docker/distribution/common"
+	"github.com/docker/distribution/collections"
 )
 
 const (
@@ -71,8 +71,8 @@ type Token struct {
 // VerifyOptions is used to specify
 // options when verifying a JSON Web Token.
 type VerifyOptions struct {
-	TrustedIssuers    common.StringSet
-	AcceptedAudiences common.StringSet
+	TrustedIssuers    collections.StringSet
+	AcceptedAudiences collections.StringSet
 	Roots             *x509.CertPool
 	TrustedKeys       map[string]libtrust.PublicKey
 }
