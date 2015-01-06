@@ -7,7 +7,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/docker/distribution/common/testutil"
+	"github.com/docker/distribution/testutil"
 )
 
 func TestDigestVerifier(t *testing.T) {

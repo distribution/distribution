@@ -9,10 +9,10 @@ import (
 	"os"
 	"testing"
 
-	"github.com/docker/distribution/common/testutil"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/storagedriver"
 	"github.com/docker/distribution/storagedriver/inmemory"
+	"github.com/docker/distribution/testutil"
 )
 
 // TestSimpleLayerUpload covers the layer upload process, exercising common
