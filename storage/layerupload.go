@@ -1,8 +1,8 @@
 package storage
 
 import (
-	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -13,8 +13,6 @@ import (
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/storagedriver"
 	"github.com/docker/docker/pkg/tarsum"
-
-	"io"
 )
 
 // LayerUploadState captures the state serializable state of the layer upload.
@@ -61,7 +59,8 @@ type layerUploadStore interface {
 	New(name string) (LayerUploadState, error)
 	Open(uuid string) (layerFile, error)
 	GetState(uuid string) (LayerUploadState, error)
-	SaveState(lus LayerUploadState) error
+	// TODO: factor this method back in
+	// SaveState(lus LayerUploadState) error
 	DeleteState(uuid string) error
 }
 
@@ -170,11 +169,6 @@ func (luc *layerUploadController) Write(p []byte) (int, error) {
 	}
 
 	luc.LayerUploadState.Offset += int64(n)
-
-	if err := luc.uploadStore.SaveState(luc.LayerUploadState); err != nil {
-		// TODO(stevvooe): This failure case may require more thought.
-		return n, err
-	}
 
 	return n, err
 }
@@ -384,10 +378,6 @@ func (llufs *localFSLayerUploadStore) New(name string) (LayerUploadState, error)
 		return lus, err
 	}
 
-	if err := llufs.SaveState(lus); err != nil {
-		return lus, err
-	}
-
 	return lus, nil
 }
 
@@ -402,41 +392,16 @@ func (llufs *localFSLayerUploadStore) Open(uuid string) (layerFile, error) {
 }
 
 func (llufs *localFSLayerUploadStore) GetState(uuid string) (LayerUploadState, error) {
-	// TODO(stevvoe): Storing this state on the local file system is an
-	// intermediate stop gap. This technique is unlikely to handle any kind of
-	// concurrency very well.
-
 	var lus LayerUploadState
-	fp, err := os.Open(llufs.path(uuid, "state.json"))
-	if err != nil {
+
+	if _, err := os.Stat(llufs.path(uuid, "")); err != nil {
 		if os.IsNotExist(err) {
 			return lus, ErrLayerUploadUnknown
 		}
 
 		return lus, err
 	}
-	defer fp.Close()
-
-	dec := json.NewDecoder(fp)
-	if err := dec.Decode(&lus); err != nil {
-		return lus, err
-	}
-
 	return lus, nil
-}
-
-func (llufs *localFSLayerUploadStore) SaveState(lus LayerUploadState) error {
-	p, err := json.Marshal(lus)
-	if err != nil {
-		return err
-	}
-
-	err = ioutil.WriteFile(llufs.path(lus.UUID, "state.json"), p, 0644)
-	if os.IsNotExist(err) {
-		return ErrLayerUploadUnknown
-	}
-
-	return err
 }
 
 func (llufs *localFSLayerUploadStore) DeleteState(uuid string) error {

@@ -58,7 +58,7 @@ func TestSimpleLayerUpload(t *testing.T) {
 	}
 
 	// Do a resume, get unknown upload
-	layerUpload, err = ls.Resume(layerUpload.UUID())
+	layerUpload, err = ls.Resume(LayerUploadState{Name: layerUpload.Name(), UUID: layerUpload.UUID(), Offset: layerUpload.Offset()})
 	if err != ErrLayerUploadUnknown {
 		t.Fatalf("unexpected error resuming upload, should be unkown: %v", err)
 	}
@@ -90,7 +90,7 @@ func TestSimpleLayerUpload(t *testing.T) {
 	layerUpload.Close()
 
 	// Do a resume, for good fun
-	layerUpload, err = ls.Resume(layerUpload.UUID())
+	layerUpload, err = ls.Resume(LayerUploadState{Name: layerUpload.Name(), UUID: layerUpload.UUID(), Offset: layerUpload.Offset()})
 	if err != nil {
 		t.Fatalf("unexpected error resuming upload: %v", err)
 	}
@@ -103,7 +103,7 @@ func TestSimpleLayerUpload(t *testing.T) {
 	}
 
 	// After finishing an upload, it should no longer exist.
-	if _, err := ls.Resume(layerUpload.UUID()); err != ErrLayerUploadUnknown {
+	if _, err := ls.Resume(LayerUploadState{Name: layerUpload.Name(), UUID: layerUpload.UUID(), Offset: layerUpload.Offset()}); err != ErrLayerUploadUnknown {
 		t.Fatalf("expected layer upload to be unknown, got %v", err)
 	}
 

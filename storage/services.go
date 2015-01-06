@@ -83,5 +83,5 @@ type LayerService interface {
 
 	// Resume continues an in progress layer upload, returning the current
 	// state of the upload.
-	Resume(uuid string) (LayerUpload, error)
+	Resume(layerUploadState LayerUploadState) (LayerUpload, error)
 }

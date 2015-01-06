@@ -32,6 +32,9 @@ type Configuration struct {
 	HTTP struct {
 		// Addr specifies the bind address for the registry instance.
 		Addr string `yaml:"addr"`
+
+		// Secret specifies the secret key which HMAC tokens are created with.
+		Secret string `yaml:"secret"`
 	} `yaml:"http"`
 }
 

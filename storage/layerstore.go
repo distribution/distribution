@@ -76,8 +76,8 @@ func (ls *layerStore) Upload(name string) (LayerUpload, error) {
 
 // Resume continues an in progress layer upload, returning the current
 // state of the upload.
-func (ls *layerStore) Resume(uuid string) (LayerUpload, error) {
-	lus, err := ls.uploadStore.GetState(uuid)
+func (ls *layerStore) Resume(lus LayerUploadState) (LayerUpload, error) {
+	_, err := ls.uploadStore.GetState(lus.UUID)
 
 	if err != nil {
 		return nil, err
