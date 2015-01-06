@@ -5,7 +5,6 @@ import (
 	"path"
 	"strings"
 
-	"github.com/docker/distribution/common"
 	"github.com/docker/distribution/digest"
 )
 
@@ -189,7 +188,7 @@ func digestPathComoponents(dgst digest.Digest) ([]string, error) {
 		hex,
 	}
 
-	if tsi, err := common.ParseTarSum(dgst.String()); err == nil {
+	if tsi, err := digest.ParseTarSum(dgst.String()); err == nil {
 		// We have a tarsum!
 		version := tsi.Version
 		if version == "" {
