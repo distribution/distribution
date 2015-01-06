@@ -1,30 +1,30 @@
-package collections
+package token
 
 // StringSet is a useful type for looking up strings.
-type StringSet map[string]struct{}
+type stringSet map[string]struct{}
 
 // NewStringSet creates a new StringSet with the given strings.
-func NewStringSet(keys ...string) StringSet {
-	ss := make(StringSet, len(keys))
-	ss.Add(keys...)
+func newStringSet(keys ...string) stringSet {
+	ss := make(stringSet, len(keys))
+	ss.add(keys...)
 	return ss
 }
 
 // Add inserts the given keys into this StringSet.
-func (ss StringSet) Add(keys ...string) {
+func (ss stringSet) add(keys ...string) {
 	for _, key := range keys {
 		ss[key] = struct{}{}
 	}
 }
 
 // Contains returns whether the given key is in this StringSet.
-func (ss StringSet) Contains(key string) bool {
+func (ss stringSet) contains(key string) bool {
 	_, ok := ss[key]
 	return ok
 }
 
 // Keys returns a slice of all keys in this StringSet.
-func (ss StringSet) Keys() []string {
+func (ss stringSet) keys() []string {
 	keys := make([]string, 0, len(ss))
 
 	for key := range ss {
