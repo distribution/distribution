@@ -10,7 +10,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/docker/distribution/common"
 	"github.com/docker/docker/pkg/tarsum"
 )
 
@@ -105,7 +104,7 @@ func FromBytes(p []byte) (Digest, error) {
 func (d Digest) Validate() error {
 	s := string(d)
 	// Common case will be tarsum
-	_, err := common.ParseTarSum(s)
+	_, err := ParseTarSum(s)
 	if err == nil {
 		return nil
 	}

@@ -4,8 +4,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"strings"
-
-	"github.com/docker/distribution/common"
 )
 
 // joseBase64UrlEncode encodes the given data using the standard base64 url
@@ -35,15 +33,26 @@ func joseBase64UrlDecode(s string) ([]byte, error) {
 
 // actionSet is a special type of stringSet.
 type actionSet struct {
-	common.StringSet
+	stringSet
 }
 
 func newActionSet(actions ...string) actionSet {
-	return actionSet{common.NewStringSet(actions...)}
+	return actionSet{newStringSet(actions...)}
 }
 
 // Contains calls StringSet.Contains() for
 // either "*" or the given action string.
-func (s actionSet) Contains(action string) bool {
-	return s.StringSet.Contains("*") || s.StringSet.Contains(action)
+func (s actionSet) contains(action string) bool {
+	return s.stringSet.contains("*") || s.stringSet.contains(action)
+}
+
+// contains returns true if q is found in ss.
+func contains(ss []string, q string) bool {
+	for _, s := range ss {
+		if s == q {
+			return true
+		}
+	}
+
+	return false
 }

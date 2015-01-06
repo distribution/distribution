@@ -14,7 +14,6 @@ import (
 	"github.com/docker/libtrust"
 
 	"github.com/docker/distribution/auth"
-	"github.com/docker/distribution/common"
 )
 
 // accessSet maps a typed, named resource to
@@ -38,7 +37,7 @@ func newAccessSet(accessItems ...auth.Access) accessSet {
 			accessSet[resource] = set
 		}
 
-		set.Add(access.Action)
+		set.add(access.Action)
 	}
 
 	return accessSet
@@ -48,7 +47,7 @@ func newAccessSet(accessItems ...auth.Access) accessSet {
 func (s accessSet) contains(access auth.Access) bool {
 	actionSet, ok := s[access.Resource]
 	if ok {
-		return actionSet.Contains(access.Action)
+		return actionSet.contains(access.Action)
 	}
 
 	return false
@@ -61,7 +60,7 @@ func (s accessSet) scopeParam() string {
 	scopes := make([]string, 0, len(s))
 
 	for resource, actionSet := range s {
-		actions := strings.Join(actionSet.Keys(), ",")
+		actions := strings.Join(actionSet.keys(), ",")
 		scopes = append(scopes, fmt.Sprintf("%s:%s:%s", resource.Type, resource.Name, actions))
 	}
 
@@ -241,8 +240,8 @@ func (ac *accessController) Authorized(req *http.Request, accessItems ...auth.Ac
 	}
 
 	verifyOpts := VerifyOptions{
-		TrustedIssuers:    common.NewStringSet(ac.issuer),
-		AcceptedAudiences: common.NewStringSet(ac.service),
+		TrustedIssuers:    []string{ac.issuer},
+		AcceptedAudiences: []string{ac.service},
 		Roots:             ac.rootCerts,
 		TrustedKeys:       ac.trustedKeys,
 	}

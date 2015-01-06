@@ -14,11 +14,11 @@ import (
 	"testing"
 
 	"github.com/docker/distribution/api/v2"
-	"github.com/docker/distribution/common/testutil"
 	"github.com/docker/distribution/configuration"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	_ "github.com/docker/distribution/storagedriver/inmemory"
+	"github.com/docker/distribution/testutil"
 	"github.com/docker/libtrust"
 	"github.com/gorilla/handlers"
 )

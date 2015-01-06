@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/docker/distribution/common"
 	"github.com/docker/distribution/digest"
 )
 
@@ -12,7 +11,7 @@ var (
 	nameParameterDescriptor = ParameterDescriptor{
 		Name:        "name",
 		Type:        "string",
-		Format:      common.RepositoryNameRegexp.String(),
+		Format:      RepositoryNameRegexp.String(),
 		Required:    true,
 		Description: `Name of the target repository.`,
 	}
@@ -20,7 +19,7 @@ var (
 	tagParameterDescriptor = ParameterDescriptor{
 		Name:        "tag",
 		Type:        "string",
-		Format:      common.TagNameRegexp.String(),
+		Format:      TagNameRegexp.String(),
 		Required:    true,
 		Description: `Tag of the target manifiest.`,
 	}
@@ -377,7 +376,7 @@ var routeDescriptors = []RouteDescriptor{
 	},
 	{
 		Name:        RouteNameTags,
-		Path:        "/v2/{name:" + common.RepositoryNameRegexp.String() + "}/tags/list",
+		Path:        "/v2/{name:" + RepositoryNameRegexp.String() + "}/tags/list",
 		Entity:      "Tags",
 		Description: "Retrieve information about tags.",
 		Methods: []MethodDescriptor{
@@ -448,7 +447,7 @@ var routeDescriptors = []RouteDescriptor{
 	},
 	{
 		Name:        RouteNameManifest,
-		Path:        "/v2/{name:" + common.RepositoryNameRegexp.String() + "}/manifests/{tag:" + common.TagNameRegexp.String() + "}",
+		Path:        "/v2/{name:" + RepositoryNameRegexp.String() + "}/manifests/{tag:" + TagNameRegexp.String() + "}",
 		Entity:      "Manifest",
 		Description: "Create, update and retrieve manifests.",
 		Methods: []MethodDescriptor{
@@ -693,7 +692,7 @@ var routeDescriptors = []RouteDescriptor{
 
 	{
 		Name:        RouteNameBlob,
-		Path:        "/v2/{name:" + common.RepositoryNameRegexp.String() + "}/blobs/{digest:" + digest.DigestRegexp.String() + "}",
+		Path:        "/v2/{name:" + RepositoryNameRegexp.String() + "}/blobs/{digest:" + digest.DigestRegexp.String() + "}",
 		Entity:      "Blob",
 		Description: "Fetch the blob identified by `name` and `digest`. Used to fetch layers by tarsum digest.",
 		Methods: []MethodDescriptor{
@@ -852,7 +851,7 @@ var routeDescriptors = []RouteDescriptor{
 
 	{
 		Name:        RouteNameBlobUpload,
-		Path:        "/v2/{name:" + common.RepositoryNameRegexp.String() + "}/blobs/uploads/",
+		Path:        "/v2/{name:" + RepositoryNameRegexp.String() + "}/blobs/uploads/",
 		Entity:      "Intiate Blob Upload",
 		Description: "Initiate a blob upload. This endpoint can be used to create resumable uploads or monolithic uploads.",
 		Methods: []MethodDescriptor{
@@ -964,7 +963,7 @@ var routeDescriptors = []RouteDescriptor{
 
 	{
 		Name:        RouteNameBlobUploadChunk,
-		Path:        "/v2/{name:" + common.RepositoryNameRegexp.String() + "}/blobs/uploads/{uuid}",
+		Path:        "/v2/{name:" + RepositoryNameRegexp.String() + "}/blobs/uploads/{uuid}",
 		Entity:      "Blob Upload",
 		Description: "Interact with blob uploads. Clients should never assemble URLs for this endpoint and should only take it through the `Location` header on related API requests. The `Location` header and its parameters should be preserved by clients, using the latest value returned via upload related API calls.",
 		Methods: []MethodDescriptor{

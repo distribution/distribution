@@ -14,7 +14,6 @@ import (
 	"github.com/docker/libtrust"
 
 	"github.com/docker/distribution/auth"
-	"github.com/docker/distribution/common"
 )
 
 const (
@@ -71,8 +70,8 @@ type Token struct {
 // VerifyOptions is used to specify
 // options when verifying a JSON Web Token.
 type VerifyOptions struct {
-	TrustedIssuers    common.StringSet
-	AcceptedAudiences common.StringSet
+	TrustedIssuers    []string
+	AcceptedAudiences []string
 	Roots             *x509.CertPool
 	TrustedKeys       map[string]libtrust.PublicKey
 }
@@ -132,13 +131,13 @@ func NewToken(rawToken string) (*Token, error) {
 // Returns a nil error if the token is valid.
 func (t *Token) Verify(verifyOpts VerifyOptions) error {
 	// Verify that the Issuer claim is a trusted authority.
-	if !verifyOpts.TrustedIssuers.Contains(t.Claims.Issuer) {
+	if !contains(verifyOpts.TrustedIssuers, t.Claims.Issuer) {
 		log.Errorf("token from untrusted issuer: %q", t.Claims.Issuer)
 		return ErrInvalidToken
 	}
 
 	// Verify that the Audience claim is allowed.
-	if !verifyOpts.AcceptedAudiences.Contains(t.Claims.Audience) {
+	if !contains(verifyOpts.AcceptedAudiences, t.Claims.Audience) {
 		log.Errorf("token intended for another audience: %q", t.Claims.Audience)
 		return ErrInvalidToken
 	}
@@ -332,7 +331,7 @@ func (t *Token) accessSet() accessSet {
 		}
 
 		for _, action := range resourceActions.Actions {
-			set.Add(action)
+			set.add(action)
 		}
 	}
 
