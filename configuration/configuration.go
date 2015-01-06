@@ -236,7 +236,7 @@ type BugsnagReporting struct {
 type NewRelicReporting struct {
 	// LicenseKey is the NewRelic user license key
 	LicenseKey string `yaml:"licensekey"`
-	// AppName is the component name of the registry in NewRelic
+	// Name is the component name of the registry in NewRelic
 	Name string `yaml:"name"`
 }
 

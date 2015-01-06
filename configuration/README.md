@@ -29,6 +29,20 @@ storage:
     secretkey: SUPERSECRET
     host: ~
     port: ~
+auth:
+  silly:
+    realm: test-realm
+    service: my-service
+reporting:
+  bugsnag:
+    apikey: mybugsnagapikey
+    releasestage: development
+  newrelic:
+    licensekey: mynewreliclicensekey
+    name: docker-distribution
+http:
+  addr: 0.0.0.0:5000
+  secret: mytokensecret
 ```
 
 ```yaml
@@ -53,6 +67,44 @@ Supported values:
 This specifies the storage driver, and may be provided either as a string (only the driver type) or as a driver name with a parameters map, as seen in the first example above.
 
 The parameters map will be passed into the factory constructor of the given storage driver type.
+
+### auth
+This specifies the authorization method the registry will use, and is provided as an auth type with a parameters map.
+
+The parameters map will be passed into the factory constructor of the given auth type.
+
+### reporting
+This specifies metrics/error reporting systems which the registry will forward information about stats/errors to. There are currently two supported systems, which are documented below.
+
+#### bugsnag
+Reports http errors and panics to [bugsnag](https://bugsnag.com).
+
+##### apikey
+(Required for bugsnag use) Specifies the bugnsag API Key for authenticating to your account.
+
+##### releasestage
+(Optional) Tracks the stage at which the registry is deployed. For example: "production", "staging", "development".
+
+##### endpoint
+(Optional) Used for specifying an enterprise bugsnag endpoint other than https://bugsnag.com.
+
+#### newrelic
+Reports heap, goroutine, and http stats to [NewRelic](https://newrelic.com).
+
+##### licensekey
+(Required for newrelic use) Specifies the NewRelic License Key for authenticating to your account.
+
+##### name
+(Optional) Specifies the component name that is displayed in the NewRelic panel.
+
+### http
+This is used for HTTP transport-specific configuration options.
+
+#### addr
+Specifies the bind address for the registry instance. Example: 0.0.0.0:5000
+
+#### secret
+Specifies the secret key with which query-string HMAC tokens are generated.
 
 ### Notes
 
