@@ -218,7 +218,7 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 			// under which name is not set and we still allow access is when the
 			// base route is accessed. This section prevents us from making that
 			// mistake elsewhere in the code, allowing any operation to proceed.
-			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			w.WriteHeader(http.StatusForbidden)
 
 			var errs v2.Errors
@@ -230,7 +230,7 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 	if err := app.accessController.Authorized(r, accessRecords...); err != nil {
 		switch err := err.(type) {
 		case auth.Challenge:
-			w.Header().Set("Content-Type", "application/json")
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			err.ServeHTTP(w, r)
 
 			var errs v2.Errors
@@ -256,7 +256,7 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 func apiBase(w http.ResponseWriter, r *http.Request) {
 	const emptyJSON = "{}"
 	// Provide a simple /v2/ 200 OK response with empty json response.
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Content-Length", fmt.Sprint(len(emptyJSON)))
 
 	fmt.Fprint(w, emptyJSON)

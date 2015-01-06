@@ -53,7 +53,7 @@ func TestCheckAPI(t *testing.T) {
 
 	checkResponse(t, "issuing api base check", resp, http.StatusOK)
 	checkHeaders(t, resp, http.Header{
-		"Content-Type":   []string{"application/json"},
+		"Content-Type":   []string{"application/json; charset=utf-8"},
 		"Content-Length": []string{"2"},
 	})
 
@@ -221,7 +221,7 @@ func TestManifestAPI(t *testing.T) {
 
 	// TODO(stevvooe): Shoot. The error setup is not working out. The content-
 	// type headers are being set after writing the status code.
-	// if resp.Header.Get("Content-Type") != "application/json" {
+	// if resp.Header.Get("Content-Type") != "application/json; charset=utf-8" {
 	// 	t.Fatalf("unexpected content type: %v != 'application/json'",
 	// 		resp.Header.Get("Content-Type"))
 	// }

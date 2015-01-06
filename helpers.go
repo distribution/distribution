@@ -10,7 +10,7 @@ import (
 // 'application/json'. If a different status code is required, call
 // ResponseWriter.WriteHeader before this function.
 func serveJSON(w http.ResponseWriter, v interface{}) error {
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	enc := json.NewEncoder(w)
 
 	if err := enc.Encode(v); err != nil {
