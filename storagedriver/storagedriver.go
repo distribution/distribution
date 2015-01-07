@@ -71,16 +71,12 @@ type StorageDriver interface {
 	Delete(path string) error
 }
 
-// PathComponentRegexp is the regular expression which each repository path
-// component must match.
-// A component of a repository path must be at least two characters, optionally
-// separated by periods, dashes or underscores.
-var PathComponentRegexp = regexp.MustCompile(`[a-z0-9]+([._-]?[a-z0-9])+`)
-
-// PathRegexp is the regular expression which each repository path must match.
-// A repository path is absolute, beginning with a slash and containing a
-// positive number of path components separated by slashes.
-var PathRegexp = regexp.MustCompile(`^(/[a-z0-9]+([._-]?[a-z0-9])+)+$`)
+// PathRegexp is the regular expression which each file path must match.
+// A file path is absolute, beginning with a slash and containing a
+// positive number of path components separated by slashes, where each component
+// is restricted to lowercase alphanumeric characters, optionally separated by
+// a period, underscore, or hyphen.
+var PathRegexp = regexp.MustCompile(`^(/[a-z0-9]+([._-][a-z0-9]+)*)+$`)
 
 // PathNotFoundError is returned when operating on a nonexistent path.
 type PathNotFoundError struct {
