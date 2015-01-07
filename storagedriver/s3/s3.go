@@ -96,14 +96,21 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		}
 	}
 
-	secureBool := false
+	secureBool := true
 	secure, ok := parameters["secure"]
-	if !ok {
-		secureBool = true
-	} else {
+	if ok {
 		secureBool, ok = secure.(bool)
 		if !ok {
 			return nil, fmt.Errorf("The secure parameter should be a boolean")
+		}
+	}
+
+	v4AuthBool := true
+	v4Auth, ok := parameters["v4auth"]
+	if ok {
+		v4AuthBool, ok = v4Auth.(bool)
+		if !ok {
+			return nil, fmt.Errorf("The v4auth parameter should be a boolean")
 		}
 	}
 
@@ -112,12 +119,12 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		rootDirectory = ""
 	}
 
-	return New(fmt.Sprint(accessKey), fmt.Sprint(secretKey), fmt.Sprint(bucket), fmt.Sprint(rootDirectory), region, encryptBool, secureBool)
+	return New(fmt.Sprint(accessKey), fmt.Sprint(secretKey), fmt.Sprint(bucket), fmt.Sprint(rootDirectory), region, encryptBool, secureBool, v4AuthBool)
 }
 
 // New constructs a new Driver with the given AWS credentials, region, encryption flag, and
 // bucketName
-func New(accessKey, secretKey, bucketName, rootDirectory string, region aws.Region, encrypt, secure bool) (*Driver, error) {
+func New(accessKey, secretKey, bucketName, rootDirectory string, region aws.Region, encrypt, secure, v4auth bool) (*Driver, error) {
 	auth, err := aws.GetAuth(accessKey, secretKey, "", time.Time{})
 	if err != nil {
 		return nil, err
@@ -129,6 +136,14 @@ func New(accessKey, secretKey, bucketName, rootDirectory string, region aws.Regi
 
 	s3obj := s3.New(auth, region)
 	bucket := s3obj.Bucket(bucketName)
+
+	if v4auth {
+		s3obj.Signature = aws.V4Signature
+	} else {
+		if region.Name == "eu-central-1" {
+			return nil, fmt.Errorf("The eu-central-1 region only works with v4 authentication")
+		}
+	}
 
 	if _, err := bucket.List("", "", "", 1); err != nil {
 		return nil, err
@@ -428,7 +443,7 @@ func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (total
 			} else {
 				// offset > currentLength >= chunkSize
 				_, part, err = multi.PutPartCopy(partNumber,
-					s3.CopyOptions{CopySourceOptions: "bytes=0-" + strconv.FormatInt(currentLength-1, 10)},
+					s3.CopyOptions{},
 					d.Bucket.Name+"/"+d.s3Path(path))
 				if err != nil {
 					return 0, err

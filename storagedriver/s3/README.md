@@ -19,4 +19,6 @@ An implementation of the `storagedriver.StorageDriver` interface which uses Amaz
 
 `secure`: (optional) Whether you would like to transfer data over ssl or not. Defaults to true (meaning transfering over ssl) if not specified. Note that while setting this to false will improve performance, it is not recommended due to security concerns.
 
+`v4auth`: (optional) Whether you would like to use aws signature version 4 with your requests. This defaults to true if not specified (note that the eu-central-1 region does not work with version 2 signatures, so the driver will error out if initialized with this region and v4auth set to false)
+
 `rootdirectory`: (optional) The root directory tree in which all registry files will be stored. Defaults to the empty string (bucket root).

@@ -22,6 +22,7 @@ func init() {
 	bucket := os.Getenv("S3_BUCKET")
 	encrypt := os.Getenv("S3_ENCRYPT")
 	secure := os.Getenv("S3_SECURE")
+	v4auth := os.Getenv("S3_USE_V4_AUTH")
 	region := os.Getenv("AWS_REGION")
 	root, err := ioutil.TempDir("", "driver-")
 	if err != nil {
@@ -29,9 +30,12 @@ func init() {
 	}
 
 	s3DriverConstructor := func(region aws.Region) (storagedriver.StorageDriver, error) {
-		encryptBool, err := strconv.ParseBool(encrypt)
-		if err != nil {
-			return nil, err
+		encryptBool := true
+		if encrypt != "" {
+			encryptBool, err = strconv.ParseBool(encrypt)
+			if err != nil {
+				return nil, err
+			}
 		}
 
 		secureBool := true
@@ -41,7 +45,15 @@ func init() {
 				return nil, err
 			}
 		}
-		return New(accessKey, secretKey, bucket, root, region, encryptBool, secureBool)
+
+		v4AuthBool := true
+		if v4auth != "" {
+			v4AuthBool, err = strconv.ParseBool(v4auth)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return New(accessKey, secretKey, bucket, root, region, encryptBool, secureBool, v4AuthBool)
 	}
 
 	// Skip S3 storage driver tests if environment variable parameters are not provided
