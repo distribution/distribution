@@ -15,7 +15,7 @@ An implementation of the `storagedriver.StorageDriver` interface which uses Amaz
 
 `bucket`: The name of your s3 bucket where you wish to store objects (needs to already be created prior to driver initialization).
 
-`encrypt`: (optional) Whether you would like your data encrypted on the server side (defaults to true if not specified).
+`encrypt`: (optional) Whether you would like your data encrypted on the server side (defaults to false if not specified).
 
 `secure`: (optional) Whether you would like to transfer data over ssl or not. Defaults to true (meaning transfering over ssl) if not specified. Note that while setting this to false will improve performance, it is not recommended due to security concerns.
 

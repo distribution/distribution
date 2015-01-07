@@ -87,7 +87,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		return nil, fmt.Errorf("No bucket parameter provided")
 	}
 
-	encryptBool := true
+	encryptBool := false
 	encrypt, ok := parameters["encrypt"]
 	if ok {
 		encryptBool, ok = encrypt.(bool)
