@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"regexp"
 	"strconv"
 
@@ -398,9 +397,9 @@ func (r *clientImpl) UploadBlob(location string, blob io.ReadCloser, length int,
 		return err
 	}
 
-	queryValues := url.Values{}
-	queryValues.Set("digest", dgst.String())
-	putRequest.URL.RawQuery = queryValues.Encode()
+	values := putRequest.URL.Query()
+	values.Set("digest", dgst.String())
+	putRequest.URL.RawQuery = values.Encode()
 
 	putRequest.Header.Set("Content-Type", "application/octet-stream")
 	putRequest.Header.Set("Content-Length", fmt.Sprint(length))
@@ -486,9 +485,9 @@ func (r *clientImpl) FinishChunkedBlobUpload(location string, length int, dgst d
 		return err
 	}
 
-	queryValues := new(url.Values)
-	queryValues.Set("digest", dgst.String())
-	putRequest.URL.RawQuery = queryValues.Encode()
+	values := putRequest.URL.Query()
+	values.Set("digest", dgst.String())
+	putRequest.URL.RawQuery = values.Encode()
 
 	putRequest.Header.Set("Content-Type", "application/octet-stream")
 	putRequest.Header.Set("Content-Length", "0")
