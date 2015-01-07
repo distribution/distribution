@@ -39,6 +39,18 @@ const chunkSize = 5 * 1024 * 1024
 // listMax is the largest amount of objects you can request from S3 in a list call
 const listMax = 1000
 
+//DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
+type DriverParameters struct {
+	AccessKey     string
+	SecretKey     string
+	Bucket        string
+	Region        aws.Region
+	Encrypt       bool
+	Secure        bool
+	V4Auth        bool
+	RootDirectory string
+}
+
 func init() {
 	factory.Register(driverName, &s3DriverFactory{})
 }
@@ -119,28 +131,39 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		rootDirectory = ""
 	}
 
-	return New(fmt.Sprint(accessKey), fmt.Sprint(secretKey), fmt.Sprint(bucket), fmt.Sprint(rootDirectory), region, encryptBool, secureBool, v4AuthBool)
+	params := DriverParameters{
+		fmt.Sprint(accessKey),
+		fmt.Sprint(secretKey),
+		fmt.Sprint(bucket),
+		region,
+		encryptBool,
+		secureBool,
+		v4AuthBool,
+		fmt.Sprint(rootDirectory),
+	}
+
+	return New(params)
 }
 
 // New constructs a new Driver with the given AWS credentials, region, encryption flag, and
 // bucketName
-func New(accessKey, secretKey, bucketName, rootDirectory string, region aws.Region, encrypt, secure, v4auth bool) (*Driver, error) {
-	auth, err := aws.GetAuth(accessKey, secretKey, "", time.Time{})
+func New(params DriverParameters) (*Driver, error) {
+	auth, err := aws.GetAuth(params.AccessKey, params.SecretKey, "", time.Time{})
 	if err != nil {
 		return nil, err
 	}
 
-	if !secure {
-		region.S3Endpoint = strings.Replace(region.S3Endpoint, "https", "http", 1)
+	if !params.Secure {
+		params.Region.S3Endpoint = strings.Replace(params.Region.S3Endpoint, "https", "http", 1)
 	}
 
-	s3obj := s3.New(auth, region)
-	bucket := s3obj.Bucket(bucketName)
+	s3obj := s3.New(auth, params.Region)
+	bucket := s3obj.Bucket(params.Bucket)
 
-	if v4auth {
+	if params.V4Auth {
 		s3obj.Signature = aws.V4Signature
 	} else {
-		if region.Name == "eu-central-1" {
+		if params.Region.Name == "eu-central-1" {
 			return nil, fmt.Errorf("The eu-central-1 region only works with v4 authentication")
 		}
 	}
@@ -164,7 +187,7 @@ func New(accessKey, secretKey, bucketName, rootDirectory string, region aws.Regi
 	// 	}
 	// }
 
-	return &Driver{s3obj, bucket, encrypt, rootDirectory}, nil
+	return &Driver{s3obj, bucket, params.Encrypt, params.RootDirectory}, nil
 }
 
 // Implement the storagedriver.StorageDriver interface

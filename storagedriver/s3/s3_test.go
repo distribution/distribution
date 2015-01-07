@@ -28,9 +28,10 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+	defer os.Remove(root)
 
 	s3DriverConstructor := func(region aws.Region) (storagedriver.StorageDriver, error) {
-		encryptBool := true
+		encryptBool := false
 		if encrypt != "" {
 			encryptBool, err = strconv.ParseBool(encrypt)
 			if err != nil {
@@ -53,7 +54,19 @@ func init() {
 				return nil, err
 			}
 		}
-		return New(accessKey, secretKey, bucket, root, region, encryptBool, secureBool, v4AuthBool)
+
+		parameters := DriverParameters{
+			accessKey,
+			secretKey,
+			bucket,
+			region,
+			encryptBool,
+			secureBool,
+			v4AuthBool,
+			root,
+		}
+
+		return New(parameters)
 	}
 
 	// Skip S3 storage driver tests if environment variable parameters are not provided
