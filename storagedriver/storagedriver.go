@@ -1,6 +1,7 @@
 package storagedriver
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"regexp"
@@ -69,6 +70,10 @@ type StorageDriver interface {
 
 	// Delete recursively deletes all objects stored at "path" and its subpaths.
 	Delete(path string) error
+
+	// URLFor returns a URL which may be used to retrieve the content stored at the given path.
+	// May return an UnsupportedMethodErr in certain StorageDriver implementations.
+	URLFor(path string) (string, error)
 }
 
 // PathRegexp is the regular expression which each file path must match.
@@ -77,6 +82,9 @@ type StorageDriver interface {
 // is restricted to lowercase alphanumeric characters, optionally separated by
 // a period, underscore, or hyphen.
 var PathRegexp = regexp.MustCompile(`^(/[a-z0-9]+([._-][a-z0-9]+)*)+$`)
+
+// UnsupportedMethodErr may be returned in the case where a StorageDriver implementation does not support an optional method.
+var ErrUnsupportedMethod = errors.New("Unsupported method")
 
 // PathNotFoundError is returned when operating on a nonexistent path.
 type PathNotFoundError struct {

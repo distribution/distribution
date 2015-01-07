@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"math/rand"
+	"net/http"
 	"os"
 	"path"
 	"sort"
@@ -578,6 +579,32 @@ func (suite *DriverSuite) TestDelete(c *check.C) {
 	_, err = suite.StorageDriver.GetContent(filename)
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+}
+
+// TestURLFor checks that the URLFor method functions properly, but only if it
+// is implemented
+func (suite *DriverSuite) TestURLFor(c *check.C) {
+	filename := randomPath(32)
+	contents := randomContents(32)
+
+	defer suite.StorageDriver.Delete(firstPart(filename))
+
+	err := suite.StorageDriver.PutContent(filename, contents)
+	c.Assert(err, check.IsNil)
+
+	url, err := suite.StorageDriver.URLFor(filename)
+	if err == storagedriver.ErrUnsupportedMethod {
+		return
+	}
+	c.Assert(err, check.IsNil)
+
+	response, err := http.Get(url)
+	c.Assert(err, check.IsNil)
+	defer response.Body.Close()
+
+	read, err := ioutil.ReadAll(response.Body)
+	c.Assert(err, check.IsNil)
+	c.Assert(read, check.DeepEquals, contents)
 }
 
 // TestDeleteNonexistent checks that removing a nonexistent key fails.
