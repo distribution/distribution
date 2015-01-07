@@ -122,7 +122,7 @@ func (suite *DriverSuite) TearDownTest(c *check.C) {
 // storage driver.
 func (suite *DriverSuite) TestValidPaths(c *check.C) {
 	contents := randomContents(64)
-	validFiles := []string{"/aa", "/a.a", "/0-9/abcdefg", "/abcdefg/z.75", "/abc/1.2.3.4.5-6_zyx/123.z", "/docker/docker-registry"}
+	validFiles := []string{"/a", "/2", "/aa", "/a.a", "/0-9/abcdefg", "/abcdefg/z.75", "/abc/1.2.3.4.5-6_zyx/123.z/4", "/docker/docker-registry"}
 
 	for _, filename := range validFiles {
 		err := suite.StorageDriver.PutContent(filename, contents)
@@ -139,7 +139,7 @@ func (suite *DriverSuite) TestValidPaths(c *check.C) {
 // storage driver.
 func (suite *DriverSuite) TestInvalidPaths(c *check.C) {
 	contents := randomContents(64)
-	invalidFiles := []string{"", "/", "abc", "123.abc", "/abc./abc", "/.abc", "/a--b", "/a-.b", "/_.abc", "/a/bcd", "/abc_123/d", "/Docker/docker-registry"}
+	invalidFiles := []string{"", "/", "abc", "123.abc", "/abc./abc", "/.abc", "/a--b", "/a-.b", "/_.abc", "//bcd", "/abc_123/", "/Docker/docker-registry"}
 
 	for _, filename := range invalidFiles {
 		err := suite.StorageDriver.PutContent(filename, contents)
@@ -1015,14 +1015,13 @@ var separatorChars = []byte("._-")
 func randomPath(length int64) string {
 	path := "/"
 	for int64(len(path)) < length {
-		chunkLength := rand.Int63n(length-int64(len(path)+1)) + 2
+		chunkLength := rand.Int63n(length-int64(len(path))) + 1
 		chunk := randomFilename(chunkLength)
 		path += chunk
-		if length-int64(len(path)) == 1 {
+		remaining := length - int64(len(path))
+		if remaining == 1 {
 			path += randomFilename(1)
-		} else if length-int64(len(path)) == 2 {
-			path += randomFilename(2)
-		} else if length-int64(len(path)) > 2 {
+		} else if remaining > 1 {
 			path += "/"
 		}
 	}
