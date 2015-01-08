@@ -9,28 +9,18 @@ import (
 // Services provides various services with application-level operations for
 // use across backend storage drivers.
 type Services struct {
-	driver           storagedriver.StorageDriver
-	pathMapper       *pathMapper
-	layerUploadStore layerUploadStore
+	driver     storagedriver.StorageDriver
+	pathMapper *pathMapper
 }
 
 // NewServices creates a new Services object to access docker objects stored
 // in the underlying driver.
 func NewServices(driver storagedriver.StorageDriver) *Services {
-	layerUploadStore, err := newTemporaryLocalFSLayerUploadStore()
-
-	if err != nil {
-		// TODO(stevvooe): This failure needs to be understood in the context
-		// of the lifecycle of the services object, which is uncertain at this
-		// point.
-		panic("unable to allocate layerUploadStore: " + err.Error())
-	}
 
 	return &Services{
 		driver: driver,
 		// TODO(sday): This should be configurable.
-		pathMapper:       defaultPathMapper,
-		layerUploadStore: layerUploadStore,
+		pathMapper: defaultPathMapper,
 	}
 }
 
@@ -38,7 +28,7 @@ func NewServices(driver storagedriver.StorageDriver) *Services {
 // may be context sensitive in the future. The instance should be used similar
 // to a request local.
 func (ss *Services) Layers() LayerService {
-	return &layerStore{driver: ss.driver, pathMapper: ss.pathMapper, uploadStore: ss.layerUploadStore}
+	return &layerStore{driver: ss.driver, pathMapper: ss.pathMapper}
 }
 
 // Manifests returns an instance of ManifestService. Instantiation is cheap and
@@ -78,7 +68,8 @@ type LayerService interface {
 	// returning a handle.
 	Upload(name string) (LayerUpload, error)
 
-	// Resume continues an in progress layer upload, returning the current
-	// state of the upload.
-	Resume(layerUploadState LayerUploadState) (LayerUpload, error)
+	// Resume continues an in progress layer upload, returning a handle to the
+	// upload. The caller should seek to the latest desired upload location
+	// before proceeding.
+	Resume(name, uuid string) (LayerUpload, error)
 }

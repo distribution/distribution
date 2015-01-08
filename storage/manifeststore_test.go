@@ -153,6 +153,6 @@ func (mockedExistenceLayerService) Upload(name string) (LayerUpload, error) {
 	panic("not implemented")
 }
 
-func (mockedExistenceLayerService) Resume(lus LayerUploadState) (LayerUpload, error) {
+func (mockedExistenceLayerService) Resume(name, uuid string) (LayerUpload, error) {
 	panic("not implemented")
 }

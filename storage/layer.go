@@ -24,8 +24,7 @@ type Layer interface {
 	// layers.
 	Digest() digest.Digest
 
-	// CreatedAt returns the time this layer was created. Until we implement
-	// Stat call on storagedriver, this just returns the zero time.
+	// CreatedAt returns the time this layer was created.
 	CreatedAt() time.Time
 }
 
@@ -33,26 +32,22 @@ type Layer interface {
 // Instances can be obtained from the LayerService.Upload and
 // LayerService.Resume.
 type LayerUpload interface {
-	io.WriteCloser
-
-	// UUID returns the identifier for this upload.
-	UUID() string
+	io.WriteSeeker
+	io.Closer
 
 	// Name of the repository under which the layer will be linked.
 	Name() string
 
-	// Offset returns the position of the last byte written to this layer.
-	Offset() int64
+	// UUID returns the identifier for this upload.
+	UUID() string
 
-	// TODO(stevvooe): Consider completely removing the size check from this
-	// interface. The digest check may be adequate and we are making it
-	// optional in the HTTP API.
+	// StartedAt returns the time this layer upload was started.
+	StartedAt() time.Time
 
 	// Finish marks the upload as completed, returning a valid handle to the
-	// uploaded layer. The final size and digest are validated against the
-	// contents of the uploaded layer. If the size is negative, only the
-	// digest will be checked.
-	Finish(size int64, digest digest.Digest) (Layer, error)
+	// uploaded layer. The digest is validated against the contents of the
+	// uploaded layer.
+	Finish(digest digest.Digest) (Layer, error)
 
 	// Cancel the layer upload process.
 	Cancel() error
@@ -84,11 +79,11 @@ func (err ErrUnknownLayer) Error() string {
 
 // ErrLayerInvalidDigest returned when tarsum check fails.
 type ErrLayerInvalidDigest struct {
-	FSLayer manifest.FSLayer
+	Digest digest.Digest
 }
 
 func (err ErrLayerInvalidDigest) Error() string {
-	return fmt.Sprintf("invalid digest for referenced layer: %v", err.FSLayer.BlobSum)
+	return fmt.Sprintf("invalid digest for referenced layer: %v", err.Digest)
 }
 
 // ErrLayerInvalidSize returned when length check fails.
