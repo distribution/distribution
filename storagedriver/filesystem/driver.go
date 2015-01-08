@@ -265,6 +265,12 @@ func (d *Driver) Delete(subPath string) error {
 	return err
 }
 
+// URLFor returns a URL which may be used to retrieve the content stored at the given path.
+// May return an UnsupportedMethodErr in certain StorageDriver implementations.
+func (d *Driver) URLFor(path string) (string, error) {
+	return "", storagedriver.ErrUnsupportedMethod
+}
+
 // fullPath returns the absolute path of a key within the Driver's storage.
 func (d *Driver) fullPath(subPath string) string {
 	return path.Join(d.rootDirectory, subPath)
