@@ -133,6 +133,11 @@ func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (nn in
 		return 0, fmt.Errorf("not a file")
 	}
 
+	// Unlock while we are reading from the source, in case we are reading
+	// from the same mfs instance. This can be fixed by a more granular
+	// locking model.
+	d.mutex.Unlock()
+	d.mutex.RLock() // Take the readlock to block other writers.
 	var buf bytes.Buffer
 
 	nn, err = buf.ReadFrom(reader)
@@ -142,9 +147,13 @@ func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (nn in
 		// backend. What is the correct return value? Really, the caller needs
 		// to know that the reader has been advanced and reattempting the
 		// operation is incorrect.
+		d.mutex.RUnlock()
+		d.mutex.Lock()
 		return nn, err
 	}
 
+	d.mutex.RUnlock()
+	d.mutex.Lock()
 	f.WriteAt(buf.Bytes(), offset)
 	return nn, err
 }
