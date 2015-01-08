@@ -5,7 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strconv"
+	"os"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/distribution/api/v2"
@@ -33,26 +33,57 @@ func layerUploadDispatcher(ctx *Context, r *http.Request) http.Handler {
 	if luh.UUID != "" {
 		luh.log = luh.log.WithField("uuid", luh.UUID)
 
-		state, err := ctx.tokenProvider.layerUploadStateFromToken(r.FormValue("_state"))
+		state, err := hmacKey(ctx.Config.HTTP.Secret).unpackUploadState(r.FormValue("_state"))
 		if err != nil {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				logrus.Infof("error resolving upload: %v", err)
-				w.WriteHeader(http.StatusInternalServerError)
-				luh.Errors.Push(v2.ErrorCodeUnknown, err)
+				ctx.log.Infof("error resolving upload: %v", err)
+				w.WriteHeader(http.StatusBadRequest)
+				luh.Errors.Push(v2.ErrorCodeBlobUploadInvalid, err)
+			})
+		}
+		luh.State = state
+
+		if state.UUID != luh.UUID {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				ctx.log.Infof("mismatched uuid in upload state: %q != %q", state.UUID, luh.UUID)
+				w.WriteHeader(http.StatusBadRequest)
+				luh.Errors.Push(v2.ErrorCodeBlobUploadInvalid, err)
 			})
 		}
 
 		layers := ctx.services.Layers()
-		upload, err := layers.Resume(state)
+		upload, err := layers.Resume(luh.Name, luh.UUID)
 		if err != nil && err != storage.ErrLayerUploadUnknown {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				logrus.Infof("error resolving upload: %v", err)
-				w.WriteHeader(http.StatusInternalServerError)
-				luh.Errors.Push(v2.ErrorCodeUnknown, err)
+				ctx.log.Errorf("error resolving upload: %v", err)
+				w.WriteHeader(http.StatusBadRequest)
+				luh.Errors.Push(v2.ErrorCodeBlobUploadUnknown, err)
 			})
 		}
-
 		luh.Upload = upload
+
+		if state.Offset > 0 {
+			// Seek the layer upload to the correct spot if it's non-zero.
+			// These error conditions should be rare and demonstrate really
+			// problems. We basically cancel the upload and tell the client to
+			// start over.
+			if nn, err := upload.Seek(luh.State.Offset, os.SEEK_SET); err != nil {
+				ctx.log.Infof("error seeking layer upload: %v", err)
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusBadRequest)
+					luh.Errors.Push(v2.ErrorCodeBlobUploadInvalid, err)
+					upload.Cancel()
+				})
+			} else if nn != luh.State.Offset {
+				ctx.log.Infof("seek to wrong offest: %d != %d", nn, luh.State.Offset)
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusBadRequest)
+					luh.Errors.Push(v2.ErrorCodeBlobUploadInvalid, err)
+					upload.Cancel()
+				})
+			}
+		}
+
 		handler = closeResources(handler, luh.Upload)
 	}
 
@@ -67,6 +98,8 @@ type layerUploadHandler struct {
 	UUID string
 
 	Upload storage.LayerUpload
+
+	State layerUploadState
 }
 
 // StartLayerUpload begins the layer upload process and allocates a server-
@@ -171,14 +204,30 @@ func (luh *layerUploadHandler) CancelLayerUpload(w http.ResponseWriter, r *http.
 // chunk responses. This sets the correct headers but the response status is
 // left to the caller.
 func (luh *layerUploadHandler) layerUploadResponse(w http.ResponseWriter, r *http.Request) error {
-	values := make(url.Values)
-	stateToken, err := luh.Context.tokenProvider.layerUploadStateToToken(storage.LayerUploadState{Name: luh.Upload.Name(), UUID: luh.Upload.UUID(), Offset: luh.Upload.Offset()})
+
+	offset, err := luh.Upload.Seek(0, os.SEEK_CUR)
+	if err != nil {
+		luh.log.Errorf("unable get current offset of layer upload: %v", err)
+		return err
+	}
+
+	// TODO(stevvooe): Need a better way to manage the upload state automatically.
+	luh.State.Name = luh.Name
+	luh.State.UUID = luh.Upload.UUID()
+	luh.State.Offset = offset
+	luh.State.StartedAt = luh.Upload.StartedAt()
+
+	token, err := hmacKey(luh.Config.HTTP.Secret).packUploadState(luh.State)
 	if err != nil {
 		logrus.Infof("error building upload state token: %s", err)
 		return err
 	}
-	values.Set("_state", stateToken)
-	uploadURL, err := luh.urlBuilder.BuildBlobUploadChunkURL(luh.Upload.Name(), luh.Upload.UUID(), values)
+
+	uploadURL, err := luh.urlBuilder.BuildBlobUploadChunkURL(
+		luh.Upload.Name(), luh.Upload.UUID(),
+		url.Values{
+			"_state": []string{token},
+		})
 	if err != nil {
 		logrus.Infof("error building upload url: %s", err)
 		return err
@@ -186,7 +235,7 @@ func (luh *layerUploadHandler) layerUploadResponse(w http.ResponseWriter, r *htt
 
 	w.Header().Set("Location", uploadURL)
 	w.Header().Set("Content-Length", "0")
-	w.Header().Set("Range", fmt.Sprintf("0-%d", luh.Upload.Offset()))
+	w.Header().Set("Range", fmt.Sprintf("0-%d", luh.State.Offset))
 
 	return nil
 }
@@ -198,7 +247,6 @@ var errNotReadyToComplete = fmt.Errorf("not ready to complete upload")
 func (luh *layerUploadHandler) maybeCompleteUpload(w http.ResponseWriter, r *http.Request) error {
 	// If we get a digest and length, we can finish the upload.
 	dgstStr := r.FormValue("digest") // TODO(stevvooe): Support multiple digest parameters!
-	sizeStr := r.FormValue("size")
 
 	if dgstStr == "" {
 		return errNotReadyToComplete
@@ -209,23 +257,13 @@ func (luh *layerUploadHandler) maybeCompleteUpload(w http.ResponseWriter, r *htt
 		return err
 	}
 
-	var size int64
-	if sizeStr != "" {
-		size, err = strconv.ParseInt(sizeStr, 10, 64)
-		if err != nil {
-			return err
-		}
-	} else {
-		size = -1
-	}
-
-	luh.completeUpload(w, r, size, dgst)
+	luh.completeUpload(w, r, dgst)
 	return nil
 }
 
 // completeUpload finishes out the upload with the correct response.
-func (luh *layerUploadHandler) completeUpload(w http.ResponseWriter, r *http.Request, size int64, dgst digest.Digest) {
-	layer, err := luh.Upload.Finish(size, dgst)
+func (luh *layerUploadHandler) completeUpload(w http.ResponseWriter, r *http.Request, dgst digest.Digest) {
+	layer, err := luh.Upload.Finish(dgst)
 	if err != nil {
 		luh.Errors.Push(v2.ErrorCodeUnknown, err)
 		w.WriteHeader(http.StatusInternalServerError)
