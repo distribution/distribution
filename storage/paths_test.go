@@ -43,10 +43,18 @@ func TestPathMapper(t *testing.T) {
 			expected: "/pathmapper-test/blob/tarsum/v1/sha256/ab/abcdefabcdefabcdef908909909",
 		},
 		{
-			spec: blobPathSpec{
-				digest: digest.Digest("tarsum+sha256:abcdefabcdefabcdef908909909"),
+			spec: uploadDataPathSpec{
+				name: "foo/bar",
+				uuid: "asdf-asdf-asdf-adsf",
 			},
-			expected: "/pathmapper-test/blob/tarsum/v0/sha256/ab/abcdefabcdefabcdef908909909",
+			expected: "/pathmapper-test/repositories/foo/bar/uploads/asdf-asdf-asdf-adsf/data",
+		},
+		{
+			spec: uploadStartedAtPathSpec{
+				name: "foo/bar",
+				uuid: "asdf-asdf-asdf-adsf",
+			},
+			expected: "/pathmapper-test/repositories/foo/bar/uploads/asdf-asdf-asdf-adsf/startedat",
 		},
 	} {
 		p, err := pm.path(testcase.spec)
