@@ -588,7 +588,7 @@ func (d *Driver) URLFor(path string, options map[string]interface{}) (string, er
 	}
 
 	expiresTime := time.Now().Add(20 * time.Minute)
-	expires, ok := options["expires"]
+	expires, ok := options["expiry"]
 	if ok {
 		et, ok := expires.(time.Time)
 		if ok {
