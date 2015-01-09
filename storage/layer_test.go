@@ -26,21 +26,18 @@ func TestSimpleLayerUpload(t *testing.T) {
 
 	dgst := digest.Digest(tarSumStr)
 
-	uploadStore, err := newTemporaryLocalFSLayerUploadStore()
 	if err != nil {
 		t.Fatalf("error allocating upload store: %v", err)
 	}
 
 	imageName := "foo/bar"
-	driver := inmemory.New()
 
 	ls := &layerStore{
-		driver: driver,
+		driver: inmemory.New(),
 		pathMapper: &pathMapper{
 			root:    "/storage/testing",
 			version: storagePathVersion,
 		},
-		uploadStore: uploadStore,
 	}
 
 	h := sha256.New()
@@ -58,7 +55,7 @@ func TestSimpleLayerUpload(t *testing.T) {
 	}
 
 	// Do a resume, get unknown upload
-	layerUpload, err = ls.Resume(LayerUploadState{Name: layerUpload.Name(), UUID: layerUpload.UUID(), Offset: layerUpload.Offset()})
+	layerUpload, err = ls.Resume(layerUpload.Name(), layerUpload.UUID())
 	if err != ErrLayerUploadUnknown {
 		t.Fatalf("unexpected error resuming upload, should be unkown: %v", err)
 	}
@@ -84,26 +81,31 @@ func TestSimpleLayerUpload(t *testing.T) {
 		t.Fatalf("layer data write incomplete")
 	}
 
-	if layerUpload.Offset() != nn {
-		t.Fatalf("layerUpload not updated with correct offset: %v != %v", layerUpload.Offset(), nn)
+	offset, err := layerUpload.Seek(0, os.SEEK_CUR)
+	if err != nil {
+		t.Fatalf("unexpected error seeking layer upload: %v", err)
+	}
+
+	if offset != nn {
+		t.Fatalf("layerUpload not updated with correct offset: %v != %v", offset, nn)
 	}
 	layerUpload.Close()
 
 	// Do a resume, for good fun
-	layerUpload, err = ls.Resume(LayerUploadState{Name: layerUpload.Name(), UUID: layerUpload.UUID(), Offset: layerUpload.Offset()})
+	layerUpload, err = ls.Resume(layerUpload.Name(), layerUpload.UUID())
 	if err != nil {
 		t.Fatalf("unexpected error resuming upload: %v", err)
 	}
 
 	sha256Digest := digest.NewDigest("sha256", h)
-	layer, err := layerUpload.Finish(randomDataSize, dgst)
+	layer, err := layerUpload.Finish(dgst)
 
 	if err != nil {
 		t.Fatalf("unexpected error finishing layer upload: %v", err)
 	}
 
 	// After finishing an upload, it should no longer exist.
-	if _, err := ls.Resume(LayerUploadState{Name: layerUpload.Name(), UUID: layerUpload.UUID(), Offset: layerUpload.Offset()}); err != ErrLayerUploadUnknown {
+	if _, err := ls.Resume(layerUpload.Name(), layerUpload.UUID()); err != ErrLayerUploadUnknown {
 		t.Fatalf("expected layer upload to be unknown, got %v", err)
 	}
 

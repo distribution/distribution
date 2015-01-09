@@ -29,8 +29,6 @@ type App struct {
 	// services contains the main services instance for the application.
 	services *storage.Services
 
-	tokenProvider tokenProvider
-
 	layerHandler storage.LayerHandler
 
 	accessController auth.AccessController
@@ -66,8 +64,6 @@ func NewApp(configuration configuration.Configuration) *App {
 
 	app.driver = driver
 	app.services = storage.NewServices(app.driver)
-	app.tokenProvider = newHMACTokenProvider(configuration.HTTP.Secret)
-
 	authType := configuration.Auth.Type()
 
 	if authType != "" {

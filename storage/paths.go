@@ -23,20 +23,26 @@ const storagePathVersion = "v2"
 // 						<manifests by tag name>
 // 					-> layers/
 // 						<layer links to blob store>
+// 					-> uploads/<uuid>
+// 						data
+// 						startedat
 //			-> blob/<algorithm>
 //				<split directory content addressable storage>
 //
 // There are few important components to this path layout. First, we have the
 // repository store identified by name. This contains the image manifests and
-// a layer store with links to CAS blob ids. Outside of the named repo area,
-// we have the the blob store. It contains the actual layer data and any other
-// data that can be referenced by a CAS id.
+// a layer store with links to CAS blob ids. Upload coordination data is also
+// stored here. Outside of the named repo area, we have the the blob store. It
+// contains the actual layer data and any other data that can be referenced by
+// a CAS id.
 //
 // We cover the path formats implemented by this path mapper below.
 //
 // 	manifestPathSpec: <root>/v2/repositories/<name>/manifests/<tag>
 // 	layerLinkPathSpec: <root>/v2/repositories/<name>/layers/tarsum/<tarsum version>/<tarsum hash alg>/<tarsum hash>
 // 	blobPathSpec: <root>/v2/blob/<algorithm>/<first two hex bytes of digest>/<hex digest>
+// 	uploadDataPathSpec: <root>/v2/repositories/<name>/uploads/<uuid>/data
+// 	uploadStartedAtPathSpec: <root>/v2/repositories/<name>/uploads/<uuid>/startedat
 //
 // For more information on the semantic meaning of each path and their
 // contents, please see the path spec documentation.
@@ -103,6 +109,10 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 
 		blobPathPrefix := append(rootPrefix, "blob")
 		return path.Join(append(blobPathPrefix, components...)...), nil
+	case uploadDataPathSpec:
+		return path.Join(append(repoPrefix, v.name, "uploads", v.uuid, "data")...), nil
+	case uploadStartedAtPathSpec:
+		return path.Join(append(repoPrefix, v.name, "uploads", v.uuid, "startedat")...), nil
 	default:
 		// TODO(sday): This is an internal error. Ensure it doesn't escape (panic?).
 		return "", fmt.Errorf("unknown path spec: %#v", v)
@@ -169,6 +179,29 @@ type blobPathSpec struct {
 }
 
 func (blobPathSpec) pathSpec() {}
+
+// uploadDataPathSpec defines the path parameters of the data file for
+// uploads.
+type uploadDataPathSpec struct {
+	name string
+	uuid string
+}
+
+func (uploadDataPathSpec) pathSpec() {}
+
+// uploadDataPathSpec defines the path parameters for the file that stores the
+// start time of an uploads. If it is missing, the upload is considered
+// unknown. Admittedly, the presence of this file is an ugly hack to make sure
+// we have a way to cleanup old or stalled uploads that doesn't rely on driver
+// FileInfo behavior. If we come up with a more clever way to do this, we
+// should remove this file immediately and rely on the startetAt field from
+// the client to enforce time out policies.
+type uploadStartedAtPathSpec struct {
+	name string
+	uuid string
+}
+
+func (uploadStartedAtPathSpec) pathSpec() {}
 
 // digestPathComoponents provides a consistent path breakdown for a given
 // digest. For a generic digest, it will be as follows:
