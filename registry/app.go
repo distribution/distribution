@@ -31,6 +31,8 @@ type App struct {
 
 	tokenProvider tokenProvider
 
+	layerHandler storage.LayerHandler
+
 	accessController auth.AccessController
 }
 
@@ -74,6 +76,16 @@ func NewApp(configuration configuration.Configuration) *App {
 			panic(fmt.Sprintf("unable to configure authorization (%s): %v", authType, err))
 		}
 		app.accessController = accessController
+	}
+
+	layerHandlerType := configuration.HTTP.LayerHandler.Type()
+
+	if layerHandlerType != "" {
+		lh, err := storage.GetLayerHandler(layerHandlerType, configuration.HTTP.LayerHandler.Parameters(), driver)
+		if err != nil {
+			panic(fmt.Sprintf("unable to configure layer handler (%s): %v", layerHandlerType, err))
+		}
+		app.layerHandler = lh
 	}
 
 	return app

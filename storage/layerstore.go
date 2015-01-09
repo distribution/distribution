@@ -95,7 +95,7 @@ func (ls *layerStore) newLayerUpload(lus LayerUploadState) LayerUpload {
 	}
 }
 
-// resolveBlobId looks up the blob location in the repositories from a
+// resolveBlobPath looks up the blob location in the repositories from a
 // layer/blob link file, returning blob path or an error on failure.
 func (ls *layerStore) resolveBlobPath(name string, dgst digest.Digest) (string, error) {
 	pathSpec := layerLinkPathSpec{name: name, digest: dgst}

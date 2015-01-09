@@ -44,6 +44,11 @@ type pathMapper struct {
 	version string // should be a constant?
 }
 
+var defaultPathMapper = &pathMapper{
+	root:    "/docker/registry/",
+	version: storagePathVersion,
+}
+
 // path returns the path identified by spec.
 func (pm *pathMapper) path(spec pathSpec) (string, error) {
 
