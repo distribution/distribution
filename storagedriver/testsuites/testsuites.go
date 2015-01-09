@@ -592,7 +592,7 @@ func (suite *DriverSuite) TestURLFor(c *check.C) {
 	err := suite.StorageDriver.PutContent(filename, contents)
 	c.Assert(err, check.IsNil)
 
-	url, err := suite.StorageDriver.URLFor(filename)
+	url, err := suite.StorageDriver.URLFor(filename, nil)
 	if err == storagedriver.ErrUnsupportedMethod {
 		return
 	}

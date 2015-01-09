@@ -1,0 +1,73 @@
+package storage
+
+import (
+	"fmt"
+	"net/http"
+	"time"
+
+	"github.com/docker/distribution/storagedriver"
+)
+
+// delegateLayerHandler provides a simple implementation of layerHandler that
+// simply issues HTTP Temporary Redirects to the URL provided by the
+// storagedriver for a given Layer.
+type delegateLayerHandler struct {
+	storageDriver storagedriver.StorageDriver
+	pathMapper    *pathMapper
+	duration      time.Duration
+}
+
+var _ LayerHandler = &delegateLayerHandler{}
+
+func newDelegateLayerHandler(storageDriver storagedriver.StorageDriver, options map[string]interface{}) (LayerHandler, error) {
+	duration := 20 * time.Minute
+	d, ok := options["duration"]
+	if ok {
+		switch d := d.(type) {
+		case time.Duration:
+			duration = d
+		case string:
+			dur, err := time.ParseDuration(d)
+			if err != nil {
+				return nil, fmt.Errorf("Invalid duration: %s", err)
+			}
+			duration = dur
+		}
+	}
+
+	return &delegateLayerHandler{storageDriver: storageDriver, pathMapper: defaultPathMapper, duration: duration}, nil
+}
+
+// Resolve returns an http.Handler which can serve the contents of the given
+// Layer, or an error if not supported by the storagedriver.
+func (lh *delegateLayerHandler) Resolve(layer Layer) (http.Handler, error) {
+	layerURL, err := lh.urlFor(layer)
+	if err != nil {
+		return nil, err
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, layerURL, http.StatusTemporaryRedirect)
+	}), nil
+}
+
+// urlFor returns a download URL for the given layer, or the empty string if
+// unsupported.
+func (lh *delegateLayerHandler) urlFor(layer Layer) (string, error) {
+	blobPath, err := resolveBlobPath(lh.storageDriver, lh.pathMapper, layer.Name(), layer.Digest())
+	if err != nil {
+		return "", err
+	}
+
+	layerURL, err := lh.storageDriver.URLFor(blobPath, map[string]interface{}{"expiry": time.Now().Add(lh.duration)})
+	if err != nil {
+		return "", err
+	}
+
+	return layerURL, nil
+}
+
+// init registers the delegate layerHandler backend.
+func init() {
+	RegisterLayerHandler("delegate", LayerHandlerInitFunc(newDelegateLayerHandler))
+}

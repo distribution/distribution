@@ -582,12 +582,21 @@ func (d *Driver) Delete(path string) error {
 
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 // May return an UnsupportedMethodErr in certain StorageDriver implementations.
-func (d *Driver) URLFor(path string) (string, error) {
+func (d *Driver) URLFor(path string, options map[string]interface{}) (string, error) {
 	if !storagedriver.PathRegexp.MatchString(path) {
 		return "", storagedriver.InvalidPathError{Path: path}
 	}
 
-	return d.Bucket.SignedURL(d.s3Path(path), time.Now().Add(24*time.Hour)), nil
+	expiresTime := time.Now().Add(20 * time.Minute)
+	expires, ok := options["expiry"]
+	if ok {
+		et, ok := expires.(time.Time)
+		if ok {
+			expiresTime = et
+		}
+	}
+
+	return d.Bucket.SignedURL(d.s3Path(path), expiresTime), nil
 }
 
 func (d *Driver) s3Path(path string) string {

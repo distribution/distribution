@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/storagedriver"
 )
 
 const storagePathVersion = "v2"
@@ -42,6 +43,11 @@ const storagePathVersion = "v2"
 type pathMapper struct {
 	root    string
 	version string // should be a constant?
+}
+
+var defaultPathMapper = &pathMapper{
+	root:    "/docker/registry/",
+	version: storagePathVersion,
 }
 
 // path returns the path identified by spec.
@@ -203,4 +209,32 @@ func digestPathComoponents(dgst digest.Digest) ([]string, error) {
 	}
 
 	return append(prefix, suffix...), nil
+}
+
+// resolveBlobPath looks up the blob location in the repositories from a
+// layer/blob link file, returning blob path or an error on failure.
+func resolveBlobPath(driver storagedriver.StorageDriver, pm *pathMapper, name string, dgst digest.Digest) (string, error) {
+	pathSpec := layerLinkPathSpec{name: name, digest: dgst}
+	layerLinkPath, err := pm.path(pathSpec)
+
+	if err != nil {
+		return "", err
+	}
+
+	layerLinkContent, err := driver.GetContent(layerLinkPath)
+	if err != nil {
+		return "", err
+	}
+
+	// NOTE(stevvooe): The content of the layer link should match the digest.
+	// This layer of indirection is for name-based content protection.
+
+	linked, err := digest.ParseDigest(string(layerLinkContent))
+	if err != nil {
+		return "", err
+	}
+
+	bp := blobPathSpec{digest: linked}
+
+	return pm.path(bp)
 }

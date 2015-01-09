@@ -30,7 +30,7 @@ func (ls *layerStore) Exists(name string, digest digest.Digest) (bool, error) {
 }
 
 func (ls *layerStore) Fetch(name string, digest digest.Digest) (Layer, error) {
-	blobPath, err := ls.resolveBlobPath(name, digest)
+	blobPath, err := resolveBlobPath(ls.driver, ls.pathMapper, name, digest)
 	if err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError, *storagedriver.PathNotFoundError:
@@ -93,32 +93,4 @@ func (ls *layerStore) newLayerUpload(lus LayerUploadState) LayerUpload {
 		layerStore:       ls,
 		uploadStore:      ls.uploadStore,
 	}
-}
-
-// resolveBlobId looks up the blob location in the repositories from a
-// layer/blob link file, returning blob path or an error on failure.
-func (ls *layerStore) resolveBlobPath(name string, dgst digest.Digest) (string, error) {
-	pathSpec := layerLinkPathSpec{name: name, digest: dgst}
-	layerLinkPath, err := ls.pathMapper.path(pathSpec)
-
-	if err != nil {
-		return "", err
-	}
-
-	layerLinkContent, err := ls.driver.GetContent(layerLinkPath)
-	if err != nil {
-		return "", err
-	}
-
-	// NOTE(stevvooe): The content of the layer link should match the digest.
-	// This layer of indirection is for name-based content protection.
-
-	linked, err := digest.ParseDigest(string(layerLinkContent))
-	if err != nil {
-		return "", err
-	}
-
-	bp := blobPathSpec{digest: linked}
-
-	return ls.pathMapper.path(bp)
 }

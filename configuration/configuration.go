@@ -24,6 +24,9 @@ type Configuration struct {
 	// used to gate requests.
 	Auth Auth `yaml:"auth"`
 
+	// LayerHandler specifies a middleware for serving image layers.
+	LayerHandler LayerHandler `yaml:"layerhandler"`
+
 	// Reporting is the configuration for error reporting
 	Reporting Reporting `yaml:"reporting"`
 
@@ -238,6 +241,62 @@ type NewRelicReporting struct {
 	LicenseKey string `yaml:"licensekey"`
 	// Name is the component name of the registry in NewRelic
 	Name string `yaml:"name"`
+}
+
+// LayerHandler defines the configuration for middleware layer serving
+type LayerHandler map[string]Parameters
+
+// Type returns the layerhandler type
+func (layerHandler LayerHandler) Type() string {
+	// Return only key in this map
+	for k := range layerHandler {
+		return k
+	}
+	return ""
+}
+
+// Parameters returns the Parameters map for a LayerHandler configuration
+func (layerHandler LayerHandler) Parameters() Parameters {
+	return layerHandler[layerHandler.Type()]
+}
+
+// UnmarshalYAML implements the yaml.Unmarshaler interface
+// Unmarshals a single item map into a Storage or a string into a Storage type with no parameters
+func (layerHandler *LayerHandler) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var storageMap map[string]Parameters
+	err := unmarshal(&storageMap)
+	if err == nil {
+		if len(storageMap) > 1 {
+			types := make([]string, 0, len(storageMap))
+			for k := range storageMap {
+				types = append(types, k)
+			}
+			return fmt.Errorf("Must provide exactly one layerhandler type. Provided: %v", types)
+		}
+		*layerHandler = storageMap
+		return nil
+	}
+
+	var storageType string
+	err = unmarshal(&storageType)
+	if err == nil {
+		*layerHandler = LayerHandler{storageType: Parameters{}}
+		return nil
+	}
+
+	return err
+}
+
+// MarshalYAML implements the yaml.Marshaler interface
+func (layerHandler LayerHandler) MarshalYAML() (interface{}, error) {
+	if layerHandler.Parameters() == nil {
+		t := layerHandler.Type()
+		if t == "" {
+			return nil, nil
+		}
+		return t, nil
+	}
+	return map[string]Parameters(layerHandler), nil
 }
 
 // Parse parses an input configuration yaml document into a Configuration struct

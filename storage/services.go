@@ -28,11 +28,8 @@ func NewServices(driver storagedriver.StorageDriver) *Services {
 
 	return &Services{
 		driver: driver,
-		pathMapper: &pathMapper{
-			// TODO(sday): This should be configurable.
-			root:    "/docker/registry/",
-			version: storagePathVersion,
-		},
+		// TODO(sday): This should be configurable.
+		pathMapper:       defaultPathMapper,
 		layerUploadStore: layerUploadStore,
 	}
 }

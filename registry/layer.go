@@ -58,5 +58,13 @@ func (lh *layerHandler) GetLayer(w http.ResponseWriter, r *http.Request) {
 	}
 	defer layer.Close()
 
+	if lh.layerHandler != nil {
+		handler, _ := lh.layerHandler.Resolve(layer)
+		if handler != nil {
+			handler.ServeHTTP(w, r)
+			return
+		}
+	}
+
 	http.ServeContent(w, r, layer.Digest().String(), layer.CreatedAt(), layer)
 }
