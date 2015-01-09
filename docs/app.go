@@ -78,10 +78,10 @@ func NewApp(configuration configuration.Configuration) *App {
 		app.accessController = accessController
 	}
 
-	layerHandlerType := configuration.HTTP.LayerHandler.Type()
+	layerHandlerType := configuration.LayerHandler.Type()
 
 	if layerHandlerType != "" {
-		lh, err := storage.GetLayerHandler(layerHandlerType, configuration.HTTP.LayerHandler.Parameters(), driver)
+		lh, err := storage.GetLayerHandler(layerHandlerType, configuration.LayerHandler.Parameters(), driver)
 		if err != nil {
 			panic(fmt.Sprintf("unable to configure layer handler (%s): %v", layerHandlerType, err))
 		}
