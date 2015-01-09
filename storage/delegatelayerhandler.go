@@ -2,6 +2,7 @@ package storage
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/storagedriver"
@@ -42,7 +43,7 @@ func (lh *delegateLayerHandler) urlFor(layer Layer) (string, error) {
 		return "", err
 	}
 
-	layerURL, err := lh.storageDriver.URLFor(blobPath)
+	layerURL, err := lh.storageDriver.URLFor(blobPath, map[string]interface{}{"expires": time.Now().Add(20 * time.Minute)})
 	if err != nil {
 		return "", err
 	}

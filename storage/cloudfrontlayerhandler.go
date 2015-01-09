@@ -90,7 +90,7 @@ func (lh *cloudFrontLayerHandler) Resolve(layer Layer) (http.Handler, error) {
 		return nil, err
 	}
 
-	cfURL, err := lh.cloudfront.CannedSignedURL(layerURL.Path, "", time.Now().Add(time.Minute))
+	cfURL, err := lh.cloudfront.CannedSignedURL(layerURL.Path, "", time.Now().Add(20*time.Minute))
 	if err != nil {
 		return nil, err
 	}

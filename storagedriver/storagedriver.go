@@ -71,9 +71,11 @@ type StorageDriver interface {
 	// Delete recursively deletes all objects stored at "path" and its subpaths.
 	Delete(path string) error
 
-	// URLFor returns a URL which may be used to retrieve the content stored at the given path.
-	// May return an UnsupportedMethodErr in certain StorageDriver implementations.
-	URLFor(path string) (string, error)
+	// URLFor returns a URL which may be used to retrieve the content stored at
+	// the given path, possibly using the given options.
+	// May return an UnsupportedMethodErr in certain StorageDriver
+	// implementations.
+	URLFor(path string, options map[string]interface{}) (string, error)
 }
 
 // PathRegexp is the regular expression which each file path must match.
