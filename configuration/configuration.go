@@ -24,6 +24,9 @@ type Configuration struct {
 	// used to gate requests.
 	Auth Auth `yaml:"auth"`
 
+	// LayerHandler specifies a middleware for serving image layers.
+	LayerHandler LayerHandler `yaml:"layerhandler"`
+
 	// Reporting is the configuration for error reporting
 	Reporting Reporting `yaml:"reporting"`
 
@@ -35,9 +38,6 @@ type Configuration struct {
 
 		// Secret specifies the secret key which HMAC tokens are created with.
 		Secret string `yaml:"secret"`
-
-		// LayerHandler specifies a middleware for serving image layers.
-		LayerHandler LayerHandler `yaml:"layerhandler"`
 	} `yaml:"http"`
 }
 
@@ -290,7 +290,11 @@ func (layerHandler *LayerHandler) UnmarshalYAML(unmarshal func(interface{}) erro
 // MarshalYAML implements the yaml.Marshaler interface
 func (layerHandler LayerHandler) MarshalYAML() (interface{}, error) {
 	if layerHandler.Parameters() == nil {
-		return layerHandler.Type(), nil
+		t := layerHandler.Type()
+		if t == "" {
+			return nil, nil
+		}
+		return t, nil
 	}
 	return map[string]Parameters(layerHandler), nil
 }
