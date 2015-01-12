@@ -129,7 +129,6 @@ Usage: dist get [OPTIONS] objectid
 Get content or information on a locally stored object
 
   -e,--exists	Suppress all output; instead exit with zero status if <objectid> exists and is a valid object
-  -t,--type		Instead of the content, show the object type identified by <objectid>
   -s,--size		Instead of the content, show the object size identified by <objectid>
 ```
 
