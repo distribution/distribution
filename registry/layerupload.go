@@ -53,11 +53,18 @@ func layerUploadDispatcher(ctx *Context, r *http.Request) http.Handler {
 
 		layers := ctx.services.Layers()
 		upload, err := layers.Resume(luh.Name, luh.UUID)
-		if err != nil && err != storage.ErrLayerUploadUnknown {
+		if err != nil {
+			ctx.log.Errorf("error resolving upload: %v", err)
+			if err == storage.ErrLayerUploadUnknown {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusNotFound)
+					luh.Errors.Push(v2.ErrorCodeBlobUploadUnknown, err)
+				})
+			}
+
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				ctx.log.Errorf("error resolving upload: %v", err)
-				w.WriteHeader(http.StatusBadRequest)
-				luh.Errors.Push(v2.ErrorCodeBlobUploadUnknown, err)
+				w.WriteHeader(http.StatusInternalServerError)
+				luh.Errors.Push(v2.ErrorCodeUnknown, err)
 			})
 		}
 		luh.Upload = upload
@@ -68,6 +75,7 @@ func layerUploadDispatcher(ctx *Context, r *http.Request) http.Handler {
 			// problems. We basically cancel the upload and tell the client to
 			// start over.
 			if nn, err := upload.Seek(luh.State.Offset, os.SEEK_SET); err != nil {
+				defer upload.Close()
 				ctx.log.Infof("error seeking layer upload: %v", err)
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusBadRequest)
@@ -75,6 +83,7 @@ func layerUploadDispatcher(ctx *Context, r *http.Request) http.Handler {
 					upload.Cancel()
 				})
 			} else if nn != luh.State.Offset {
+				defer upload.Close()
 				ctx.log.Infof("seek to wrong offest: %d != %d", nn, luh.State.Offset)
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusBadRequest)
@@ -129,6 +138,7 @@ func (luh *layerUploadHandler) GetUploadStatus(w http.ResponseWriter, r *http.Re
 	if luh.Upload == nil {
 		w.WriteHeader(http.StatusNotFound)
 		luh.Errors.Push(v2.ErrorCodeBlobUploadUnknown)
+		return
 	}
 
 	if err := luh.layerUploadResponse(w, r); err != nil {
