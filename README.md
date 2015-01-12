@@ -1,3 +1,5 @@
+> **Notice:** *This repository hosts experimental components that are currently under heavy and fast-paced development, not-ready for public consumption. If you are looking for the stable registry, please head over to [docker/docker-registry](https://github.com/docker/docker-registry) instead.*
+
 Distribution
 ============
 
