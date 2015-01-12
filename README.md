@@ -20,6 +20,7 @@ The open sprint is a focused effort of a small group of people to kick-off a new
 **Having a dedicated team work on the subject doesn't mean that you, the community, cannot contribute!** We need your input to make the best use of the sprint, and focus our work on what matters for you. For this particular topic:
 
 * Come discuss on IRC: #docker-distribution on FreeNode
+* Come read and participate in the [Google Groups](https://groups.google.com/a/dockerproject.org/forum/#!forum/distribution)
 * Submit your ideas, and upvote those you think matter the most on [Google Moderator](https://www.google.com/moderator/?authuser=1#16/e=2165c3)
 
 ### Goal of the distribution sprint
