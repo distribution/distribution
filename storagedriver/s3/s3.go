@@ -39,6 +39,18 @@ const chunkSize = 5 * 1024 * 1024
 // listMax is the largest amount of objects you can request from S3 in a list call
 const listMax = 1000
 
+//DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
+type DriverParameters struct {
+	AccessKey     string
+	SecretKey     string
+	Bucket        string
+	Region        aws.Region
+	Encrypt       bool
+	Secure        bool
+	V4Auth        bool
+	RootDirectory string
+}
+
 func init() {
 	factory.Register(driverName, &s3DriverFactory{})
 }
@@ -87,7 +99,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		return nil, fmt.Errorf("No bucket parameter provided")
 	}
 
-	encryptBool := true
+	encryptBool := false
 	encrypt, ok := parameters["encrypt"]
 	if ok {
 		encryptBool, ok = encrypt.(bool)
@@ -96,24 +108,65 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		}
 	}
 
+	secureBool := true
+	secure, ok := parameters["secure"]
+	if ok {
+		secureBool, ok = secure.(bool)
+		if !ok {
+			return nil, fmt.Errorf("The secure parameter should be a boolean")
+		}
+	}
+
+	v4AuthBool := true
+	v4Auth, ok := parameters["v4auth"]
+	if ok {
+		v4AuthBool, ok = v4Auth.(bool)
+		if !ok {
+			return nil, fmt.Errorf("The v4auth parameter should be a boolean")
+		}
+	}
+
 	rootDirectory, ok := parameters["rootdirectory"]
 	if !ok {
 		rootDirectory = ""
 	}
 
-	return New(fmt.Sprint(accessKey), fmt.Sprint(secretKey), fmt.Sprint(bucket), fmt.Sprint(rootDirectory), region, encryptBool)
+	params := DriverParameters{
+		fmt.Sprint(accessKey),
+		fmt.Sprint(secretKey),
+		fmt.Sprint(bucket),
+		region,
+		encryptBool,
+		secureBool,
+		v4AuthBool,
+		fmt.Sprint(rootDirectory),
+	}
+
+	return New(params)
 }
 
 // New constructs a new Driver with the given AWS credentials, region, encryption flag, and
 // bucketName
-func New(accessKey, secretKey, bucketName, rootDirectory string, region aws.Region, encrypt bool) (*Driver, error) {
-	auth, err := aws.GetAuth(accessKey, secretKey, "", time.Time{})
+func New(params DriverParameters) (*Driver, error) {
+	auth, err := aws.GetAuth(params.AccessKey, params.SecretKey, "", time.Time{})
 	if err != nil {
 		return nil, err
 	}
 
-	s3obj := s3.New(auth, region)
-	bucket := s3obj.Bucket(bucketName)
+	if !params.Secure {
+		params.Region.S3Endpoint = strings.Replace(params.Region.S3Endpoint, "https", "http", 1)
+	}
+
+	s3obj := s3.New(auth, params.Region)
+	bucket := s3obj.Bucket(params.Bucket)
+
+	if params.V4Auth {
+		s3obj.Signature = aws.V4Signature
+	} else {
+		if params.Region.Name == "eu-central-1" {
+			return nil, fmt.Errorf("The eu-central-1 region only works with v4 authentication")
+		}
+	}
 
 	if _, err := bucket.List("", "", "", 1); err != nil {
 		return nil, err
@@ -134,7 +187,7 @@ func New(accessKey, secretKey, bucketName, rootDirectory string, region aws.Regi
 	// 	}
 	// }
 
-	return &Driver{s3obj, bucket, encrypt, rootDirectory}, nil
+	return &Driver{s3obj, bucket, params.Encrypt, params.RootDirectory}, nil
 }
 
 // Implement the storagedriver.StorageDriver interface
@@ -413,7 +466,7 @@ func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (total
 			} else {
 				// offset > currentLength >= chunkSize
 				_, part, err = multi.PutPartCopy(partNumber,
-					s3.CopyOptions{CopySourceOptions: "bytes=0-" + strconv.FormatInt(currentLength-1, 10)},
+					s3.CopyOptions{},
 					d.Bucket.Name+"/"+d.s3Path(path))
 				if err != nil {
 					return 0, err
