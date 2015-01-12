@@ -18,6 +18,7 @@ import (
 	"github.com/docker/distribution/registry"
 	_ "github.com/docker/distribution/storagedriver/filesystem"
 	_ "github.com/docker/distribution/storagedriver/inmemory"
+	_ "github.com/docker/distribution/storagedriver/s3"
 )
 
 func main() {

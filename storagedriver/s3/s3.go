@@ -168,7 +168,9 @@ func New(params DriverParameters) (*Driver, error) {
 		}
 	}
 
-	if _, err := bucket.List("", "", "", 1); err != nil {
+	// Validate that the given credentials have at least read permissions in the
+	// given bucket scope.
+	if _, err := bucket.List(strings.TrimRight(params.RootDirectory, "/"), "", "", 1); err != nil {
 		return nil, err
 	}
 
