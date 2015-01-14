@@ -642,6 +642,15 @@ func (d *Driver) URLFor(path string, options map[string]interface{}) (string, er
 		return "", storagedriver.InvalidPathError{Path: path}
 	}
 
+	methodString := "GET"
+	method, ok := options["method"]
+	if ok {
+		methodString, ok = method.(string)
+		if !ok || (methodString != "GET" && methodString != "HEAD") {
+			return "", storagedriver.ErrUnsupportedMethod
+		}
+	}
+
 	expiresTime := time.Now().Add(20 * time.Minute)
 	expires, ok := options["expiry"]
 	if ok {
@@ -651,7 +660,7 @@ func (d *Driver) URLFor(path string, options map[string]interface{}) (string, er
 		}
 	}
 
-	return d.Bucket.SignedURL(d.s3Path(path), expiresTime), nil
+	return d.Bucket.SignedURLWithMethod(methodString, d.s3Path(path), expiresTime, nil, nil), nil
 }
 
 func (d *Driver) s3Path(path string) string {
