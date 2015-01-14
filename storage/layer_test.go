@@ -31,13 +31,18 @@ func TestSimpleLayerUpload(t *testing.T) {
 	}
 
 	imageName := "foo/bar"
-
+	driver := inmemory.New()
+	pm := &pathMapper{
+		root:    "/storage/testing",
+		version: storagePathVersion,
+	}
 	ls := &layerStore{
-		driver: inmemory.New(),
-		pathMapper: &pathMapper{
-			root:    "/storage/testing",
-			version: storagePathVersion,
+		driver: driver,
+		blobStore: &blobStore{
+			driver: driver,
+			pm:     pm,
 		},
+		pathMapper: pm,
 	}
 
 	h := sha256.New()
@@ -140,12 +145,17 @@ func TestSimpleLayerUpload(t *testing.T) {
 func TestSimpleLayerRead(t *testing.T) {
 	imageName := "foo/bar"
 	driver := inmemory.New()
+	pm := &pathMapper{
+		root:    "/storage/testing",
+		version: storagePathVersion,
+	}
 	ls := &layerStore{
 		driver: driver,
-		pathMapper: &pathMapper{
-			root:    "/storage/testing",
-			version: storagePathVersion,
+		blobStore: &blobStore{
+			driver: driver,
+			pm:     pm,
 		},
+		pathMapper: pm,
 	}
 
 	randomLayerReader, tarSumStr, err := testutil.CreateRandomTarFile()
@@ -307,7 +317,7 @@ func writeTestLayer(driver storagedriver.StorageDriver, pathMapper *pathMapper, 
 
 	blobDigestSHA := digest.NewDigest("sha256", h)
 
-	blobPath, err := pathMapper.path(blobPathSpec{
+	blobPath, err := pathMapper.path(blobDataPathSpec{
 		digest: dgst,
 	})
 

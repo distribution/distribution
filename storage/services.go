@@ -28,14 +28,42 @@ func NewServices(driver storagedriver.StorageDriver) *Services {
 // may be context sensitive in the future. The instance should be used similar
 // to a request local.
 func (ss *Services) Layers() LayerService {
-	return &layerStore{driver: ss.driver, pathMapper: ss.pathMapper}
+	return &layerStore{
+		driver: ss.driver,
+		blobStore: &blobStore{
+			driver: ss.driver,
+			pm:     ss.pathMapper,
+		},
+		pathMapper: ss.pathMapper,
+	}
 }
 
 // Manifests returns an instance of ManifestService. Instantiation is cheap and
 // may be context sensitive in the future. The instance should be used similar
 // to a request local.
 func (ss *Services) Manifests() ManifestService {
-	return &manifestStore{driver: ss.driver, pathMapper: ss.pathMapper, layerService: ss.Layers()}
+	// TODO(stevvooe): Lose this kludge. An intermediary object is clearly
+	// missing here. This initialization is a mess.
+	bs := &blobStore{
+		driver: ss.driver,
+		pm:     ss.pathMapper,
+	}
+
+	return &manifestStore{
+		driver:     ss.driver,
+		pathMapper: ss.pathMapper,
+		revisionStore: &revisionStore{
+			driver:     ss.driver,
+			pathMapper: ss.pathMapper,
+			blobStore:  bs,
+		},
+		tagStore: &tagStore{
+			driver:     ss.driver,
+			blobStore:  bs,
+			pathMapper: ss.pathMapper,
+		},
+		blobStore:    bs,
+		layerService: ss.Layers()}
 }
 
 // ManifestService provides operations on image manifests.
@@ -43,7 +71,7 @@ type ManifestService interface {
 	// Tags lists the tags under the named repository.
 	Tags(name string) ([]string, error)
 
-	// Exists returns true if the layer exists.
+	// Exists returns true if the manifest exists.
 	Exists(name, tag string) (bool, error)
 
 	// Get retrieves the named manifest, if it exists.

@@ -188,7 +188,7 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 			return "", err
 		}
 
-		return path.Join(root, "current/link"), nil
+		return path.Join(root, "current", "link"), nil
 	case manifestTagIndexPathSpec:
 		root, err := pm.path(manifestTagPathSpec{
 			name: v.name,
