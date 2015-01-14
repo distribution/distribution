@@ -36,6 +36,11 @@ func NewDigest(alg string, h hash.Hash) Digest {
 	return Digest(fmt.Sprintf("%s:%x", alg, h.Sum(nil)))
 }
 
+// NewDigestFromHex returns a Digest from alg and a the hex encoded digest.
+func NewDigestFromHex(alg, hex string) Digest {
+	return Digest(fmt.Sprintf("%s:%s", alg, hex))
+}
+
 // DigestRegexp matches valid digest types.
 var DigestRegexp = regexp.MustCompile(`[a-zA-Z0-9-_+.]+:[a-zA-Z0-9-_+.=]+`)
 
@@ -57,33 +62,24 @@ func ParseDigest(s string) (Digest, error) {
 
 // FromReader returns the most valid digest for the underlying content.
 func FromReader(rd io.Reader) (Digest, error) {
-
-	// TODO(stevvooe): This is pretty inefficient to always be calculating a
-	// sha256 hash to provide fallback, but it provides some nice semantics in
-	// that we never worry about getting the right digest for a given reader.
-	// For the most part, we can detect tar vs non-tar with only a few bytes,
-	// so a scheme that saves those bytes would probably be better here.
-
 	h := sha256.New()
-	tr := io.TeeReader(rd, h)
 
-	ts, err := tarsum.NewTarSum(tr, true, tarsum.Version1)
+	if _, err := io.Copy(h, rd); err != nil {
+		return "", err
+	}
+
+	return NewDigest("sha256", h), nil
+}
+
+// FromTarArchive produces a tarsum digest from reader rd.
+func FromTarArchive(rd io.Reader) (Digest, error) {
+	ts, err := tarsum.NewTarSum(rd, true, tarsum.Version1)
 	if err != nil {
 		return "", err
 	}
 
-	// Try to copy from the tarsum, if we fail, copy the remaining bytes into
-	// hash directly.
 	if _, err := io.Copy(ioutil.Discard, ts); err != nil {
-		if err.Error() != "archive/tar: invalid tar header" {
-			return "", err
-		}
-
-		if _, err := io.Copy(h, rd); err != nil {
-			return "", err
-		}
-
-		return NewDigest("sha256", h), nil
+		return "", err
 	}
 
 	d, err := ParseDigest(ts.Sum(nil))
