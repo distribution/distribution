@@ -1,0 +1,95 @@
+{
+	"ImportPath": "github.com/docker/distribution",
+	"GoVersion": "go1.4",
+	"Packages": [
+		"./..."
+	],
+	"Deps": [
+		{
+			"ImportPath": "code.google.com/p/go-uuid/uuid",
+			"Comment": "null-12",
+			"Rev": "7dda39b2e7d5e265014674c5af696ba4186679e9"
+		},
+		{
+			"ImportPath": "github.com/Sirupsen/logrus",
+			"Comment": "v0.6.1-8-gcc09837",
+			"Rev": "cc09837bcd512ffe6bb2e3f635bed138c4cd6bc8"
+		},
+		{
+			"ImportPath": "github.com/bugsnag/bugsnag-go",
+			"Comment": "v1.0.2-5-gb1d1530",
+			"Rev": "b1d153021fcd90ca3f080db36bec96dc690fb274"
+		},
+		{
+			"ImportPath": "github.com/bugsnag/osext",
+			"Rev": "0dd3f918b21bec95ace9dc86c7e70266cfc5c702"
+		},
+		{
+			"ImportPath": "github.com/bugsnag/panicwrap",
+			"Rev": "e5f9854865b9778a45169fc249e99e338d4d6f27"
+		},
+		{
+			"ImportPath": "github.com/crowdmob/goamz/aws",
+			"Rev": "cd22d9897beff6f3de22cec4bdb7d46b9e2dee67"
+		},
+		{
+			"ImportPath": "github.com/crowdmob/goamz/cloudfront",
+			"Rev": "cd22d9897beff6f3de22cec4bdb7d46b9e2dee67"
+		},
+		{
+			"ImportPath": "github.com/crowdmob/goamz/s3",
+			"Rev": "cd22d9897beff6f3de22cec4bdb7d46b9e2dee67"
+		},
+		{
+			"ImportPath": "github.com/docker/docker/pkg/tarsum",
+			"Comment": "v1.4.1-330-g3fbf723",
+			"Rev": "3fbf723e81fa2696daa95847ccdcacddba6484da"
+		},
+		{
+			"ImportPath": "github.com/docker/docker/vendor/src/code.google.com/p/go/src/pkg/archive/tar",
+			"Comment": "v1.4.1-330-g3fbf723",
+			"Rev": "3fbf723e81fa2696daa95847ccdcacddba6484da"
+		},
+		{
+			"ImportPath": "github.com/docker/libtrust",
+			"Rev": "a9625ce37e2dc5fed2e51eec2d39c39e4ac4c1df"
+		},
+		{
+			"ImportPath": "github.com/gorilla/context",
+			"Rev": "14f550f51af52180c2eefed15e5fd18d63c0a64a"
+		},
+		{
+			"ImportPath": "github.com/gorilla/handlers",
+			"Rev": "0e84b7d810c16aed432217e330206be156bafae0"
+		},
+		{
+			"ImportPath": "github.com/gorilla/mux",
+			"Rev": "e444e69cbd2e2e3e0749a2f3c717cec491552bbf"
+		},
+		{
+			"ImportPath": "github.com/yvasiyarov/go-metrics",
+			"Rev": "57bccd1ccd43f94bb17fdd8bf3007059b802f85e"
+		},
+		{
+			"ImportPath": "github.com/yvasiyarov/gorelic",
+			"Comment": "v0.0.6-8-ga9bba5b",
+			"Rev": "a9bba5b9ab508a086f9a12b8c51fab68478e2128"
+		},
+		{
+			"ImportPath": "github.com/yvasiyarov/newrelic_platform_go",
+			"Rev": "b21fdbd4370f3717f3bbd2bf41c223bc273068e6"
+		},
+		{
+			"ImportPath": "gopkg.in/BrianBland/yaml.v2",
+			"Rev": "3e92d6a11b92fa4612d66712704844bdc0c48aed"
+		},
+		{
+			"ImportPath": "gopkg.in/check.v1",
+			"Rev": "64131543e7896d5bcc6bd5a76287eb75ea96c673"
+		},
+		{
+			"ImportPath": "gopkg.in/yaml.v2",
+			"Rev": "d466437aa4adc35830964cffc5b5f262c63ddcb4"
+		}
+	]
+}
