@@ -41,19 +41,30 @@ func newDelegateLayerHandler(storageDriver storagedriver.StorageDriver, options 
 // Resolve returns an http.Handler which can serve the contents of the given
 // Layer, or an error if not supported by the storagedriver.
 func (lh *delegateLayerHandler) Resolve(layer Layer) (http.Handler, error) {
-	layerURL, err := lh.urlFor(layer)
+	// TODO(bbland): This is just a sanity check to ensure that the
+	// storagedriver supports url generation. It would be nice if we didn't have
+	// to do this twice for non-GET requests.
+	layerURL, err := lh.urlFor(layer, map[string]interface{}{"method": "GET"})
 	if err != nil {
 		return nil, err
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			layerURL, err = lh.urlFor(layer, map[string]interface{}{"method": r.Method})
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+		}
+
 		http.Redirect(w, r, layerURL, http.StatusTemporaryRedirect)
 	}), nil
 }
 
 // urlFor returns a download URL for the given layer, or the empty string if
 // unsupported.
-func (lh *delegateLayerHandler) urlFor(layer Layer) (string, error) {
+func (lh *delegateLayerHandler) urlFor(layer Layer, options map[string]interface{}) (string, error) {
 	// Crack open the layer to get at the layerStore
 	layerRd, ok := layer.(*layerReader)
 	if !ok {
@@ -64,7 +75,12 @@ func (lh *delegateLayerHandler) urlFor(layer Layer) (string, error) {
 		return "", fmt.Errorf("unsupported layer type: cannot resolve blob path: %v", layer)
 	}
 
-	layerURL, err := lh.storageDriver.URLFor(layerRd.path, map[string]interface{}{"expiry": time.Now().Add(lh.duration)})
+	if options == nil {
+		options = make(map[string]interface{})
+	}
+	options["expiry"] = time.Now().Add(lh.duration)
+
+	layerURL, err := lh.storageDriver.URLFor(layerRd.path, options)
 	if err != nil {
 		return "", err
 	}
