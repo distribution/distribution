@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/storagedriver"
 )
 
 const storagePathVersion = "v2"
@@ -14,13 +13,21 @@ const storagePathVersion = "v2"
 // pathMapper maps paths based on "object names" and their ids. The "object
 // names" mapped by pathMapper are internal to the storage system.
 //
-// The path layout in the storage backend will be roughly as follows:
+// The path layout in the storage backend is roughly as follows:
 //
 //		<root>/v2
 //			-> repositories/
 // 				-><name>/
 // 					-> manifests/
-// 						<manifests by tag name>
+// 						revisions
+//							-> <manifest digest path>
+//								-> link
+//								-> signatures
+// 									<algorithm>/<digest>/link
+// 						tags/<tag>
+//							-> current/link
+// 							-> index
+//								-> <algorithm>/<hex digest>/link
 // 					-> layers/
 // 						<layer links to blob store>
 // 					-> uploads/<uuid>
@@ -29,20 +36,61 @@ const storagePathVersion = "v2"
 //			-> blob/<algorithm>
 //				<split directory content addressable storage>
 //
-// There are few important components to this path layout. First, we have the
-// repository store identified by name. This contains the image manifests and
-// a layer store with links to CAS blob ids. Upload coordination data is also
-// stored here. Outside of the named repo area, we have the the blob store. It
-// contains the actual layer data and any other data that can be referenced by
-// a CAS id.
+// The storage backend layout is broken up into a content- addressable blob
+// store and repositories. The content-addressable blob store holds most data
+// throughout the backend, keyed by algorithm and digests of the underlying
+// content. Access to the blob store is controled through links from the
+// repository to blobstore.
+//
+// A repository is made up of layers, manifests and tags. The layers component
+// is just a directory of layers which are "linked" into a repository. A layer
+// can only be accessed through a qualified repository name if it is linked in
+// the repository. Uploads of layers are managed in the uploads directory,
+// which is key by upload uuid. When all data for an upload is received, the
+// data is moved into the blob store and the upload directory is deleted.
+// Abandoned uploads can be garbage collected by reading the startedat file
+// and removing uploads that have been active for longer than a certain time.
+//
+// The third component of the repository directory is the manifests store,
+// which is made up of a revision store and tag store. Manifests are stored in
+// the blob store and linked into the revision store. Signatures are separated
+// from the manifest payload data and linked into the blob store, as well.
+// While the registry can save all revisions of a manifest, no relationship is
+// implied as to the ordering of changes to a manifest. The tag store provides
+// support for name, tag lookups of manifests, using "current/link" under a
+// named tag directory. An index is maintained to support deletions of all
+// revisions of a given manifest tag.
 //
 // We cover the path formats implemented by this path mapper below.
 //
-// 	manifestPathSpec: <root>/v2/repositories/<name>/manifests/<tag>
-// 	layerLinkPathSpec: <root>/v2/repositories/<name>/layers/tarsum/<tarsum version>/<tarsum hash alg>/<tarsum hash>
-// 	blobPathSpec: <root>/v2/blob/<algorithm>/<first two hex bytes of digest>/<hex digest>
-// 	uploadDataPathSpec: <root>/v2/repositories/<name>/uploads/<uuid>/data
-// 	uploadStartedAtPathSpec: <root>/v2/repositories/<name>/uploads/<uuid>/startedat
+//	Manifests:
+//
+// 	manifestRevisionPathSpec:      <root>/v2/repositories/<name>/manifests/revisions/<algorithm>/<hex digest>/
+// 	manifestRevisionLinkPathSpec:  <root>/v2/repositories/<name>/manifests/revisions/<algorithm>/<hex digest>/link
+// 	manifestSignaturesPathSpec:    <root>/v2/repositories/<name>/manifests/revisions/<algorithm>/<hex digest>/signatures/
+// 	manifestSignatureLinkPathSpec: <root>/v2/repositories/<name>/manifests/revisions/<algorithm>/<hex digest>/signatures/<algorithm>/<hex digest>/link
+//
+//	Tags:
+//
+// 	manifestTagsPathSpec:          <root>/v2/repositories/<name>/manifests/tags/
+// 	manifestTagPathSpec:           <root>/v2/repositories/<name>/manifests/tags/<tag>/
+// 	manifestTagCurrentPathSpec:    <root>/v2/repositories/<name>/manifests/tags/<tag>/current/link
+// 	manifestTagIndexPathSpec:      <root>/v2/repositories/<name>/manifests/tags/<tag>/index/
+// 	manifestTagIndexEntryPathSpec: <root>/v2/repositories/<name>/manifests/tags/<tag>/index/<algorithm>/<hex digest>/link
+//
+// 	Layers:
+//
+// 	layerLinkPathSpec:             <root>/v2/repositories/<name>/layers/tarsum/<tarsum version>/<tarsum hash alg>/<tarsum hash>/link
+//
+//	Uploads:
+//
+// 	uploadDataPathSpec:             <root>/v2/repositories/<name>/uploads/<uuid>/data
+// 	uploadStartedAtPathSpec:        <root>/v2/repositories/<name>/uploads/<uuid>/startedat
+//
+//	Blob Store:
+//
+// 	blobPathSpec:                   <root>/v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>
+// 	blobDataPathSpec:               <root>/v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>/data
 //
 // For more information on the semantic meaning of each path and their
 // contents, please see the path spec documentation.
@@ -75,13 +123,99 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 	repoPrefix := append(rootPrefix, "repositories")
 
 	switch v := spec.(type) {
-	case manifestTagsPath:
-		return path.Join(append(repoPrefix, v.name, "manifests")...), nil
-	case manifestPathSpec:
-		// TODO(sday): May need to store manifest by architecture.
-		return path.Join(append(repoPrefix, v.name, "manifests", v.tag)...), nil
+
+	case manifestRevisionPathSpec:
+		components, err := digestPathComponents(v.revision, false)
+		if err != nil {
+			return "", err
+		}
+
+		return path.Join(append(append(repoPrefix, v.name, "manifests", "revisions"), components...)...), nil
+	case manifestRevisionLinkPathSpec:
+		root, err := pm.path(manifestRevisionPathSpec{
+			name:     v.name,
+			revision: v.revision,
+		})
+
+		if err != nil {
+			return "", err
+		}
+
+		return path.Join(root, "link"), nil
+	case manifestSignaturesPathSpec:
+		root, err := pm.path(manifestRevisionPathSpec{
+			name:     v.name,
+			revision: v.revision,
+		})
+
+		if err != nil {
+			return "", err
+		}
+
+		return path.Join(root, "signatures"), nil
+	case manifestSignatureLinkPathSpec:
+		root, err := pm.path(manifestSignaturesPathSpec{
+			name:     v.name,
+			revision: v.revision,
+		})
+		if err != nil {
+			return "", err
+		}
+
+		signatureComponents, err := digestPathComponents(v.signature, false)
+		if err != nil {
+			return "", err
+		}
+
+		return path.Join(root, path.Join(append(signatureComponents, "link")...)), nil
+	case manifestTagsPathSpec:
+		return path.Join(append(repoPrefix, v.name, "manifests", "tags")...), nil
+	case manifestTagPathSpec:
+		root, err := pm.path(manifestTagsPathSpec{
+			name: v.name,
+		})
+		if err != nil {
+			return "", err
+		}
+
+		return path.Join(root, v.tag), nil
+	case manifestTagCurrentPathSpec:
+		root, err := pm.path(manifestTagPathSpec{
+			name: v.name,
+			tag:  v.tag,
+		})
+		if err != nil {
+			return "", err
+		}
+
+		return path.Join(root, "current", "link"), nil
+	case manifestTagIndexPathSpec:
+		root, err := pm.path(manifestTagPathSpec{
+			name: v.name,
+			tag:  v.tag,
+		})
+		if err != nil {
+			return "", err
+		}
+
+		return path.Join(root, "index"), nil
+	case manifestTagIndexEntryPathSpec:
+		root, err := pm.path(manifestTagIndexPathSpec{
+			name: v.name,
+			tag:  v.tag,
+		})
+		if err != nil {
+			return "", err
+		}
+
+		components, err := digestPathComponents(v.revision, false)
+		if err != nil {
+			return "", err
+		}
+
+		return path.Join(root, path.Join(append(components, "link")...)), nil
 	case layerLinkPathSpec:
-		components, err := digestPathComoponents(v.digest)
+		components, err := digestPathComponents(v.digest, false)
 		if err != nil {
 			return "", err
 		}
@@ -94,21 +228,17 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 
 		layerLinkPathComponents := append(repoPrefix, v.name, "layers")
 
-		return path.Join(append(layerLinkPathComponents, components...)...), nil
-	case blobPathSpec:
-		components, err := digestPathComoponents(v.digest)
+		return path.Join(path.Join(append(layerLinkPathComponents, components...)...), "link"), nil
+	case blobDataPathSpec:
+		components, err := digestPathComponents(v.digest, true)
 		if err != nil {
 			return "", err
 		}
 
-		// For now, only map tarsum paths.
-		if components[0] != "tarsum" {
-			// Only tarsum is supported, for now
-			return "", fmt.Errorf("unsupported content digest: %v", v.digest)
-		}
-
-		blobPathPrefix := append(rootPrefix, "blob")
+		components = append(components, "data")
+		blobPathPrefix := append(rootPrefix, "blobs")
 		return path.Join(append(blobPathPrefix, components...)...), nil
+
 	case uploadDataPathSpec:
 		return path.Join(append(repoPrefix, v.name, "uploads", v.uuid, "data")...), nil
 	case uploadStartedAtPathSpec:
@@ -126,22 +256,91 @@ type pathSpec interface {
 	pathSpec()
 }
 
-// manifestTagsPath describes the path elements required to point to the
-// directory with all manifest tags under the repository.
-type manifestTagsPath struct {
+// manifestRevisionPathSpec describes the components of the directory path for
+// a manifest revision.
+type manifestRevisionPathSpec struct {
+	name     string
+	revision digest.Digest
+}
+
+func (manifestRevisionPathSpec) pathSpec() {}
+
+// manifestRevisionLinkPathSpec describes the path components required to look
+// up the data link for a revision of a manifest. If this file is not present,
+// the manifest blob is not available in the given repo. The contents of this
+// file should just be the digest.
+type manifestRevisionLinkPathSpec struct {
+	name     string
+	revision digest.Digest
+}
+
+func (manifestRevisionLinkPathSpec) pathSpec() {}
+
+// manifestSignaturesPathSpec decribes the path components for the directory
+// containing all the signatures for the target blob. Entries are named with
+// the underlying key id.
+type manifestSignaturesPathSpec struct {
+	name     string
+	revision digest.Digest
+}
+
+func (manifestSignaturesPathSpec) pathSpec() {}
+
+// manifestSignatureLinkPathSpec decribes the path components used to look up
+// a signature file by the hash of its blob.
+type manifestSignatureLinkPathSpec struct {
+	name      string
+	revision  digest.Digest
+	signature digest.Digest
+}
+
+func (manifestSignatureLinkPathSpec) pathSpec() {}
+
+// manifestTagsPathSpec describes the path elements required to point to the
+// manifest tags directory.
+type manifestTagsPathSpec struct {
 	name string
 }
 
-func (manifestTagsPath) pathSpec() {}
+func (manifestTagsPathSpec) pathSpec() {}
 
-// manifestPathSpec describes the path elements used to build a manifest path.
-// The contents should be a signed manifest json file.
-type manifestPathSpec struct {
+// manifestTagPathSpec describes the path elements required to point to the
+// manifest tag links files under a repository. These contain a blob id that
+// can be used to look up the data and signatures.
+type manifestTagPathSpec struct {
 	name string
 	tag  string
 }
 
-func (manifestPathSpec) pathSpec() {}
+func (manifestTagPathSpec) pathSpec() {}
+
+// manifestTagCurrentPathSpec describes the link to the current revision for a
+// given tag.
+type manifestTagCurrentPathSpec struct {
+	name string
+	tag  string
+}
+
+func (manifestTagCurrentPathSpec) pathSpec() {}
+
+// manifestTagCurrentPathSpec describes the link to the index of revisions
+// with the given tag.
+type manifestTagIndexPathSpec struct {
+	name string
+	tag  string
+}
+
+func (manifestTagIndexPathSpec) pathSpec() {}
+
+// manifestTagIndexEntryPathSpec describes the link to a revisions of a
+// manifest with given tag within the index.
+type manifestTagIndexEntryPathSpec struct {
+	name     string
+	tag      string
+	revision digest.Digest
+}
+
+func (manifestTagIndexEntryPathSpec) pathSpec() {}
 
 // layerLink specifies a path for a layer link, which is a file with a blob
 // id. The layer link will contain a content addressable blob id reference
@@ -172,13 +371,20 @@ var blobAlgorithmReplacer = strings.NewReplacer(
 	";", "/",
 )
 
-// blobPath contains the path for the registry global blob store. For now,
-// this contains layer data, exclusively.
-type blobPathSpec struct {
+// // blobPathSpec contains the path for the registry global blob store.
+// type blobPathSpec struct {
+// 	digest digest.Digest
+// }
+
+// func (blobPathSpec) pathSpec() {}
+
+// blobDataPathSpec contains the path for the registry global blob store. For
+// now, this contains layer data, exclusively.
+type blobDataPathSpec struct {
 	digest digest.Digest
 }
 
-func (blobPathSpec) pathSpec() {}
+func (blobDataPathSpec) pathSpec() {}
 
 // uploadDataPathSpec defines the path parameters of the data file for
 // uploads.
@@ -203,18 +409,21 @@ type uploadStartedAtPathSpec struct {
 
 func (uploadStartedAtPathSpec) pathSpec() {}
 
-// digestPathComoponents provides a consistent path breakdown for a given
+// digestPathComponents provides a consistent path breakdown for a given
 // digest. For a generic digest, it will be as follows:
 //
-// 	<algorithm>/<first two bytes of digest>/<full digest>
+// 	<algorithm>/<hex digest>
 //
 // Most importantly, for tarsum, the layout looks like this:
 //
-// 	tarsum/<version>/<digest algorithm>/<first two bytes of digest>/<full digest>
+// 	tarsum/<version>/<digest algorithm>/<full digest>
 //
-// This is slightly specialized to store an extra version path for version 0
-// tarsums.
-func digestPathComoponents(dgst digest.Digest) ([]string, error) {
+// If multilevel is true, the first two bytes of the digest will separate
+// groups of digest folder. It will be as follows:
+//
+// 	<algorithm>/<first two bytes of digest>/<full digest>
+//
+func digestPathComponents(dgst digest.Digest, multilevel bool) ([]string, error) {
 	if err := dgst.Validate(); err != nil {
 		return nil, err
 	}
@@ -222,10 +431,14 @@ func digestPathComoponents(dgst digest.Digest) ([]string, error) {
 	algorithm := blobAlgorithmReplacer.Replace(dgst.Algorithm())
 	hex := dgst.Hex()
 	prefix := []string{algorithm}
-	suffix := []string{
-		hex[:2], // Breaks heirarchy up.
-		hex,
+
+	var suffix []string
+
+	if multilevel {
+		suffix = append(suffix, hex[:2])
 	}
+
+	suffix = append(suffix, hex)
 
 	if tsi, err := digest.ParseTarSum(dgst.String()); err == nil {
 		// We have a tarsum!
@@ -242,32 +455,4 @@ func digestPathComoponents(dgst digest.Digest) ([]string, error) {
 	}
 
 	return append(prefix, suffix...), nil
-}
-
-// resolveBlobPath looks up the blob location in the repositories from a
-// layer/blob link file, returning blob path or an error on failure.
-func resolveBlobPath(driver storagedriver.StorageDriver, pm *pathMapper, name string, dgst digest.Digest) (string, error) {
-	pathSpec := layerLinkPathSpec{name: name, digest: dgst}
-	layerLinkPath, err := pm.path(pathSpec)
-
-	if err != nil {
-		return "", err
-	}
-
-	layerLinkContent, err := driver.GetContent(layerLinkPath)
-	if err != nil {
-		return "", err
-	}
-
-	// NOTE(stevvooe): The content of the layer link should match the digest.
-	// This layer of indirection is for name-based content protection.
-
-	linked, err := digest.ParseDigest(string(layerLinkContent))
-	if err != nil {
-		return "", err
-	}
-
-	bp := blobPathSpec{digest: linked}
-
-	return pm.path(bp)
 }

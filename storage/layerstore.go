@@ -12,6 +12,7 @@ import (
 type layerStore struct {
 	driver     storagedriver.StorageDriver
 	pathMapper *pathMapper
+	blobStore  *blobStore
 }
 
 func (ls *layerStore) Exists(name string, digest digest.Digest) (bool, error) {
@@ -31,31 +32,21 @@ func (ls *layerStore) Exists(name string, digest digest.Digest) (bool, error) {
 	return true, nil
 }
 
-func (ls *layerStore) Fetch(name string, digest digest.Digest) (Layer, error) {
-	blobPath, err := resolveBlobPath(ls.driver, ls.pathMapper, name, digest)
+func (ls *layerStore) Fetch(name string, dgst digest.Digest) (Layer, error) {
+	bp, err := ls.path(name, dgst)
 	if err != nil {
-		switch err := err.(type) {
-		case storagedriver.PathNotFoundError, *storagedriver.PathNotFoundError:
-			return nil, ErrUnknownLayer{manifest.FSLayer{BlobSum: digest}}
-		default:
-			return nil, err
-		}
+		return nil, err
 	}
 
-	fr, err := newFileReader(ls.driver, blobPath)
+	fr, err := newFileReader(ls.driver, bp)
 	if err != nil {
-		switch err := err.(type) {
-		case storagedriver.PathNotFoundError, *storagedriver.PathNotFoundError:
-			return nil, ErrUnknownLayer{manifest.FSLayer{BlobSum: digest}}
-		default:
-			return nil, err
-		}
+		return nil, err
 	}
 
 	return &layerReader{
 		fileReader: *fr,
 		name:       name,
-		digest:     digest,
+		digest:     dgst,
 	}, nil
 }
 
@@ -150,4 +141,25 @@ func (ls *layerStore) newLayerUpload(name, uuid, path string, startedAt time.Tim
 		startedAt:  startedAt,
 		fileWriter: *fw,
 	}, nil
+}
+
+func (ls *layerStore) path(name string, dgst digest.Digest) (string, error) {
+	// We must traverse this path through the link to enforce ownership.
+	layerLinkPath, err := ls.pathMapper.path(layerLinkPathSpec{name: name, digest: dgst})
+	if err != nil {
+		return "", err
+	}
+
+	blobPath, err := ls.blobStore.resolve(layerLinkPath)
+
+	if err != nil {
+		switch err := err.(type) {
+		case storagedriver.PathNotFoundError:
+			return "", ErrUnknownLayer{manifest.FSLayer{BlobSum: dgst}}
+		default:
+			return "", err
+		}
+	}
+
+	return blobPath, nil
 }

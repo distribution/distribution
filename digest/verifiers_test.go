@@ -30,7 +30,7 @@ func TestDigestVerifier(t *testing.T) {
 		t.Fatalf("error creating tarfile: %v", err)
 	}
 
-	digest, err = FromReader(tf)
+	digest, err = FromTarArchive(tf)
 	if err != nil {
 		t.Fatalf("error digesting tarsum: %v", err)
 	}

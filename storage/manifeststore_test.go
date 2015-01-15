@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"bytes"
 	"reflect"
 	"testing"
 
@@ -12,12 +13,28 @@ import (
 
 func TestManifestStorage(t *testing.T) {
 	driver := inmemory.New()
-	ms := &manifestStore{
+	pm := pathMapper{
+		root:    "/storage/testing",
+		version: storagePathVersion,
+	}
+	bs := blobStore{
 		driver: driver,
-		pathMapper: &pathMapper{
-			root:    "/storage/testing",
-			version: storagePathVersion,
+		pm:     &pm,
+	}
+	ms := &manifestStore{
+		driver:     driver,
+		pathMapper: &pm,
+		revisionStore: &revisionStore{
+			driver:     driver,
+			pathMapper: &pm,
+			blobStore:  &bs,
 		},
+		tagStore: &tagStore{
+			driver:     driver,
+			pathMapper: &pm,
+			blobStore:  &bs,
+		},
+		blobStore:    &bs,
 		layerService: newMockedLayerService(),
 	}
 
@@ -100,6 +117,25 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("fetched manifest not equal: %#v != %#v", fetchedManifest, sm)
 	}
 
+	fetchedJWS, err := libtrust.ParsePrettySignature(fetchedManifest.Raw, "signatures")
+	if err != nil {
+		t.Fatalf("unexpected error parsing jws: %v", err)
+	}
+
+	payload, err := fetchedJWS.Payload()
+	if err != nil {
+		t.Fatalf("unexpected error extracting payload: %v", err)
+	}
+
+	sigs, err := fetchedJWS.Signatures()
+	if err != nil {
+		t.Fatalf("unable to extract signatures: %v", err)
+	}
+
+	if len(sigs) != 1 {
+		t.Fatalf("unexpected number of signatures: %d != %d", len(sigs), 1)
+	}
+
 	// Grabs the tags and check that this tagged manifest is present
 	tags, err := ms.Tags(name)
 	if err != nil {
@@ -112,6 +148,84 @@ func TestManifestStorage(t *testing.T) {
 
 	if tags[0] != tag {
 		t.Fatalf("unexpected tag found in tags: %v != %v", tags, []string{tag})
+	}
+
+	// Now, push the same manifest with a different key
+	pk2, err := libtrust.GenerateECP256PrivateKey()
+	if err != nil {
+		t.Fatalf("unexpected error generating private key: %v", err)
+	}
+
+	sm2, err := manifest.Sign(&m, pk2)
+	if err != nil {
+		t.Fatalf("unexpected error signing manifest: %v", err)
+	}
+
+	jws2, err := libtrust.ParsePrettySignature(sm2.Raw, "signatures")
+	if err != nil {
+		t.Fatalf("error parsing signature: %v", err)
+	}
+
+	sigs2, err := jws2.Signatures()
+	if err != nil {
+		t.Fatalf("unable to extract signatures: %v", err)
+	}
+
+	if len(sigs2) != 1 {
+		t.Fatalf("unexpected number of signatures: %d != %d", len(sigs2), 1)
+	}
+
+	if err = ms.Put(name, tag, sm2); err != nil {
+		t.Fatalf("unexpected error putting manifest: %v", err)
+	}
+
+	fetched, err := ms.Get(name, tag)
+	if err != nil {
+		t.Fatalf("unexpected error fetching manifest: %v", err)
+	}
+
+	if _, err := manifest.Verify(fetched); err != nil {
+		t.Fatalf("unexpected error verifying manifest: %v", err)
+	}
+
+	// Assemble our payload and two signatures to get what we expect!
+	expectedJWS, err := libtrust.NewJSONSignature(payload, sigs[0], sigs2[0])
+	if err != nil {
+		t.Fatalf("unexpected error merging jws: %v", err)
+	}
+
+	expectedSigs, err := expectedJWS.Signatures()
+	if err != nil {
+		t.Fatalf("unexpected error getting expected signatures: %v", err)
+	}
+
+	receivedJWS, err := libtrust.ParsePrettySignature(fetched.Raw, "signatures")
+	if err != nil {
+		t.Fatalf("unexpected error parsing jws: %v", err)
+	}
+
+	receivedPayload, err := receivedJWS.Payload()
+	if err != nil {
+		t.Fatalf("unexpected error extracting received payload: %v", err)
+	}
+
+	if !bytes.Equal(receivedPayload, payload) {
+		t.Fatalf("payloads are not equal")
+	}
+
+	receivedSigs, err := receivedJWS.Signatures()
+	if err != nil {
+		t.Fatalf("error getting signatures: %v", err)
+	}
+
+	for i, sig := range receivedSigs {
+		if !bytes.Equal(sig, expectedSigs[i]) {
+			t.Fatalf("mismatched signatures from remote: %v != %v", string(sig), string(expectedSigs[i]))
+		}
+	}
+
+	if err := ms.Delete(name, tag); err != nil {
+		t.Fatalf("unexpected error deleting manifest: %v", err)
 	}
 }
 

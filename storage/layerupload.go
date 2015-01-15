@@ -112,7 +112,7 @@ func (luc *layerUploadController) validateLayer(dgst digest.Digest) (digest.Dige
 	// sink. Instead, its read driven. This might be okay.
 
 	// Calculate an updated digest with the latest version.
-	canonical, err := digest.FromReader(tr)
+	canonical, err := digest.FromTarArchive(tr)
 	if err != nil {
 		return "", err
 	}
@@ -128,7 +128,7 @@ func (luc *layerUploadController) validateLayer(dgst digest.Digest) (digest.Dige
 // identified by dgst. The layer should be validated before commencing the
 // move.
 func (luc *layerUploadController) moveLayer(dgst digest.Digest) error {
-	blobPath, err := luc.layerStore.pathMapper.path(blobPathSpec{
+	blobPath, err := luc.layerStore.pathMapper.path(blobDataPathSpec{
 		digest: dgst,
 	})
 

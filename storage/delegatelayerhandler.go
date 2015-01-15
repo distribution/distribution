@@ -54,12 +54,17 @@ func (lh *delegateLayerHandler) Resolve(layer Layer) (http.Handler, error) {
 // urlFor returns a download URL for the given layer, or the empty string if
 // unsupported.
 func (lh *delegateLayerHandler) urlFor(layer Layer) (string, error) {
-	blobPath, err := resolveBlobPath(lh.storageDriver, lh.pathMapper, layer.Name(), layer.Digest())
-	if err != nil {
-		return "", err
+	// Crack open the layer to get at the layerStore
+	layerRd, ok := layer.(*layerReader)
+	if !ok {
+		// TODO(stevvooe): We probably want to find a better way to get at the
+		// underlying filesystem path for a given layer. Perhaps, the layer
+		// handler should have its own layer store but right now, it is not
+		// request scoped.
+		return "", fmt.Errorf("unsupported layer type: cannot resolve blob path: %v", layer)
 	}
 
-	layerURL, err := lh.storageDriver.URLFor(blobPath, map[string]interface{}{"expiry": time.Now().Add(lh.duration)})
+	layerURL, err := lh.storageDriver.URLFor(layerRd.path, map[string]interface{}{"expiry": time.Now().Add(lh.duration)})
 	if err != nil {
 		return "", err
 	}

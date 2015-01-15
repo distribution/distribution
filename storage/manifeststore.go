@@ -1,11 +1,10 @@
 package storage
 
 import (
-	"encoding/json"
 	"fmt"
-	"path"
 	"strings"
 
+	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/storagedriver"
 	"github.com/docker/libtrust"
@@ -32,6 +31,17 @@ func (err ErrUnknownManifest) Error() string {
 	return fmt.Sprintf("unknown manifest name=%s tag=%s", err.Name, err.Tag)
 }
 
+// ErrUnknownManifestRevision is returned when a manifest cannot be found by
+// revision within a repository.
+type ErrUnknownManifestRevision struct {
+	Name     string
+	Revision digest.Digest
+}
+
+func (err ErrUnknownManifestRevision) Error() string {
+	return fmt.Sprintf("unknown manifest name=%s revision=%s", err.Name, err.Revision)
+}
+
 // ErrManifestUnverified is returned when the registry is unable to verify
 // the manifest.
 type ErrManifestUnverified struct{}
@@ -55,143 +65,73 @@ func (errs ErrManifestVerification) Error() string {
 }
 
 type manifestStore struct {
-	driver       storagedriver.StorageDriver
-	pathMapper   *pathMapper
-	layerService LayerService
+	driver        storagedriver.StorageDriver
+	pathMapper    *pathMapper
+	revisionStore *revisionStore
+	tagStore      *tagStore
+	blobStore     *blobStore
+	layerService  LayerService
 }
 
 var _ ManifestService = &manifestStore{}
 
 func (ms *manifestStore) Tags(name string) ([]string, error) {
-	p, err := ms.pathMapper.path(manifestTagsPath{
-		name: name,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	var tags []string
-	entries, err := ms.driver.List(p)
-	if err != nil {
-		switch err := err.(type) {
-		case storagedriver.PathNotFoundError:
-			return nil, ErrUnknownRepository{Name: name}
-		default:
-			return nil, err
-		}
-	}
-
-	for _, entry := range entries {
-		_, filename := path.Split(entry)
-
-		tags = append(tags, filename)
-	}
-
-	return tags, nil
+	return ms.tagStore.tags(name)
 }
 
 func (ms *manifestStore) Exists(name, tag string) (bool, error) {
-	p, err := ms.path(name, tag)
-	if err != nil {
-		return false, err
-	}
-
-	fi, err := ms.driver.Stat(p)
-	if err != nil {
-		switch err.(type) {
-		case storagedriver.PathNotFoundError:
-			return false, nil
-		default:
-			return false, err
-		}
-	}
-
-	if fi.IsDir() {
-		return false, fmt.Errorf("unexpected directory at path: %v, name=%s tag=%s", p, name, tag)
-	}
-
-	if fi.Size() == 0 {
-		return false, nil
-	}
-
-	return true, nil
+	return ms.tagStore.exists(name, tag)
 }
 
 func (ms *manifestStore) Get(name, tag string) (*manifest.SignedManifest, error) {
-	p, err := ms.path(name, tag)
+	dgst, err := ms.tagStore.resolve(name, tag)
 	if err != nil {
 		return nil, err
 	}
 
-	content, err := ms.driver.GetContent(p)
-	if err != nil {
-		switch err := err.(type) {
-		case storagedriver.PathNotFoundError, *storagedriver.PathNotFoundError:
-			return nil, ErrUnknownManifest{Name: name, Tag: tag}
-		default:
-			return nil, err
-		}
-	}
-
-	var manifest manifest.SignedManifest
-
-	if err := json.Unmarshal(content, &manifest); err != nil {
-		// TODO(stevvooe): Corrupted manifest error?
-		return nil, err
-	}
-
-	// TODO(stevvooe): Verify the manifest here?
-
-	return &manifest, nil
+	return ms.revisionStore.get(name, dgst)
 }
 
 func (ms *manifestStore) Put(name, tag string, manifest *manifest.SignedManifest) error {
-	p, err := ms.path(name, tag)
-	if err != nil {
-		return err
-	}
-
+	// Verify the manifest.
 	if err := ms.verifyManifest(name, tag, manifest); err != nil {
 		return err
 	}
 
-	// TODO(stevvooe): Should we get old manifest first? Perhaps, write, then
-	// move to ensure a valid manifest?
-
-	return ms.driver.PutContent(p, manifest.Raw)
-}
-
-func (ms *manifestStore) Delete(name, tag string) error {
-	p, err := ms.path(name, tag)
+	// Store the revision of the manifest
+	revision, err := ms.revisionStore.put(name, manifest)
 	if err != nil {
 		return err
 	}
 
-	if err := ms.driver.Delete(p); err != nil {
-		switch err := err.(type) {
-		case storagedriver.PathNotFoundError, *storagedriver.PathNotFoundError:
-			return ErrUnknownManifest{Name: name, Tag: tag}
-		default:
+	// Now, tag the manifest
+	return ms.tagStore.tag(name, tag, revision)
+}
+
+// Delete removes all revisions of the given tag. We may want to change these
+// semantics in the future, but this will maintain consistency. The underlying
+// blobs are left alone.
+func (ms *manifestStore) Delete(name, tag string) error {
+	revisions, err := ms.tagStore.revisions(name, tag)
+	if err != nil {
+		return err
+	}
+
+	for _, revision := range revisions {
+		if err := ms.revisionStore.delete(name, revision); err != nil {
 			return err
 		}
 	}
 
-	return nil
+	return ms.tagStore.delete(name, tag)
 }
 
-func (ms *manifestStore) path(name, tag string) (string, error) {
-	return ms.pathMapper.path(manifestPathSpec{
-		name: name,
-		tag:  tag,
-	})
-}
-
+// verifyManifest ensures that the manifest content is valid from the
+// perspective of the registry. It ensures that the name and tag match and
+// that the signature is valid for the enclosed payload. As a policy, the
+// registry only tries to store valid content, leaving trust policies of that
+// content up to consumers.
 func (ms *manifestStore) verifyManifest(name, tag string, mnfst *manifest.SignedManifest) error {
-	// TODO(stevvooe): This verification is present here, but this needs to be
-	// lifted out of the storage infrastructure and moved into a package
-	// oriented towards defining verifiers and reporting them with
-	// granularity.
-
 	var errs ErrManifestVerification
 	if mnfst.Name != name {
 		// TODO(stevvooe): This needs to be an exported error
@@ -202,10 +142,6 @@ func (ms *manifestStore) verifyManifest(name, tag string, mnfst *manifest.Signed
 		// TODO(stevvooe): This needs to be an exported error.
 		errs = append(errs, fmt.Errorf("tag does not match manifest tag"))
 	}
-
-	// TODO(stevvooe): These pubkeys need to be checked with either Verify or
-	// VerifyWithChains. We need to define the exact source of the CA.
-	// Perhaps, its a configuration value injected into manifest store.
 
 	if _, err := manifest.Verify(mnfst); err != nil {
 		switch err {
