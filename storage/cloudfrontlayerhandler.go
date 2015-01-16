@@ -19,6 +19,7 @@ import (
 type cloudFrontLayerHandler struct {
 	cloudfront           *cloudfront.CloudFront
 	delegateLayerHandler *delegateLayerHandler
+	duration             time.Duration
 }
 
 var _ LayerHandler = &cloudFrontLayerHandler{}
@@ -74,13 +75,28 @@ func newCloudFrontLayerHandler(storageDriver storagedriver.StorageDriver, option
 
 	cf := cloudfront.New(baseURL, privateKey, keypairID)
 
-	return &cloudFrontLayerHandler{cloudfront: cf, delegateLayerHandler: dlh}, nil
+	duration := 20 * time.Minute
+	d, ok := options["duration"]
+	if ok {
+		switch d := d.(type) {
+		case time.Duration:
+			duration = d
+		case string:
+			dur, err := time.ParseDuration(d)
+			if err != nil {
+				return nil, fmt.Errorf("Invalid duration: %s", err)
+			}
+			duration = dur
+		}
+	}
+
+	return &cloudFrontLayerHandler{cloudfront: cf, delegateLayerHandler: dlh, duration: duration}, nil
 }
 
 // Resolve returns an http.Handler which can serve the contents of the given
 // Layer, or an error if not supported by the storagedriver.
 func (lh *cloudFrontLayerHandler) Resolve(layer Layer) (http.Handler, error) {
-	layerURLStr, err := lh.delegateLayerHandler.urlFor(layer)
+	layerURLStr, err := lh.delegateLayerHandler.urlFor(layer, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +106,7 @@ func (lh *cloudFrontLayerHandler) Resolve(layer Layer) (http.Handler, error) {
 		return nil, err
 	}
 
-	cfURL, err := lh.cloudfront.CannedSignedURL(layerURL.Path, "", time.Now().Add(20*time.Minute))
+	cfURL, err := lh.cloudfront.CannedSignedURL(layerURL.Path, "", time.Now().Add(lh.duration))
 	if err != nil {
 		return nil, err
 	}
