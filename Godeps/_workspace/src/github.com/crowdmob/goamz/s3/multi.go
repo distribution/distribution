@@ -165,7 +165,7 @@ func (m *Multi) PutPartCopy(n int, options CopyOptions, source string) (*CopyObj
 			params:  params,
 		}
 		resp := &CopyObjectResult{}
-		err := m.Bucket.S3.query(req, resp)
+		err = m.Bucket.S3.query(req, resp)
 		if shouldRetry(err) && attempt.HasNext() {
 			continue
 		}

@@ -518,7 +518,7 @@ func dialTimeout(network, addr string) (net.Conn, error) {
 	return net.DialTimeout(network, addr, time.Duration(2*time.Second))
 }
 
-func InstanceRegion() string {
+func AvailabilityZone() string {
 	transport := http.Transport{Dial: dialTimeout}
 	client := http.Client{
 		Transport: &transport,
@@ -532,10 +532,18 @@ func InstanceRegion() string {
 		if err != nil {
 			return "unknown"
 		} else {
-			b := string(body)
-			region := b[:len(b)-1]
-			return region
+			return string(body)
 		}
+	}
+}
+
+func InstanceRegion() string {
+	az := AvailabilityZone()
+	if az == "unknown" {
+		return az
+	} else {
+		region := az[:len(az)-1]
+		return region
 	}
 }
 
