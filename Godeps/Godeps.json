@@ -80,16 +80,12 @@
 			"Rev": "b21fdbd4370f3717f3bbd2bf41c223bc273068e6"
 		},
 		{
-			"ImportPath": "gopkg.in/BrianBland/yaml.v2",
-			"Rev": "3e92d6a11b92fa4612d66712704844bdc0c48aed"
-		},
-		{
 			"ImportPath": "gopkg.in/check.v1",
 			"Rev": "64131543e7896d5bcc6bd5a76287eb75ea96c673"
 		},
 		{
 			"ImportPath": "gopkg.in/yaml.v2",
-			"Rev": "d466437aa4adc35830964cffc5b5f262c63ddcb4"
+			"Rev": "71e7ede9d48a2e096f6d5d0516c763513a471bd1"
 		}
 	]
 }

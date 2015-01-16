@@ -419,6 +419,13 @@ var unmarshalTests = []struct {
 	}, {
 		"a: &a [1, 2]\nb: *a",
 		&struct{ B []int }{[]int{1, 2}},
+	}, {
+		"b: *a\na: &a {c: 1}",
+		&struct {
+			A, B struct {
+				C int
+			}
+		}{struct{ C int }{1}, struct{ C int }{1}},
 	},
 
 	// Bug #1133337
@@ -755,6 +762,37 @@ func (s *S) TestUnmarshalerError(c *C) {
 	c.Assert(err, Equals, failingErr)
 }
 
+type sliceUnmarshaler []int
+
+func (su *sliceUnmarshaler) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var slice []int
+	err := unmarshal(&slice)
+	if err == nil {
+		*su = slice
+		return nil
+	}
+
+	var intVal int
+	err = unmarshal(&intVal)
+	if err == nil {
+		*su = []int{intVal}
+		return nil
+	}
+
+	return err
+}
+
+func (s *S) TestUnmarshalerRetry(c *C) {
+	var su sliceUnmarshaler
+	err := yaml.Unmarshal([]byte("[1, 2, 3]"), &su)
+	c.Assert(err, IsNil)
+	c.Assert(su, DeepEquals, sliceUnmarshaler([]int{1, 2, 3}))
+
+	err = yaml.Unmarshal([]byte("1"), &su)
+	c.Assert(err, IsNil)
+	c.Assert(su, DeepEquals, sliceUnmarshaler([]int{1}))
+}
+
 // From http://yaml.org/type/merge.html
 var mergeTests = `
 anchors:
@@ -870,6 +908,13 @@ func (s *S) TestUnmarshalNull(c *C) {
 			c.Assert(reflect.ValueOf(item).Elem().Interface(), DeepEquals, zero)
 		}
 	}
+}
+
+func (s *S) TestUnmarshalSliceOnPreset(c *C) {
+	// Issue #48.
+	v := struct{ A []int }{[]int{1}}
+	yaml.Unmarshal([]byte("a: [2]"), &v)
+	c.Assert(v.A, DeepEquals, []int{2})
 }
 
 //var data []byte
