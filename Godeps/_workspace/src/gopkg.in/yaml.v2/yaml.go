@@ -32,7 +32,6 @@ type Unmarshaler interface {
 	UnmarshalYAML(unmarshal func(interface{}) error) error
 }
 
-
 // The Marshaler interface may be implemented by types to customize their
 // behavior when being marshaled into a YAML document. The returned value
 // is marshaled in place of the original value implementing Marshaler.
@@ -90,7 +89,7 @@ func Unmarshal(in []byte, out interface{}) (err error) {
 		}
 		d.unmarshal(node, v)
 	}
-	if d.terrors != nil {
+	if len(d.terrors) > 0 {
 		return &TypeError{d.terrors}
 	}
 	return nil
@@ -164,7 +163,7 @@ func fail(err error) {
 }
 
 func failf(format string, args ...interface{}) {
-	panic(yamlError{fmt.Errorf("yaml: " + format, args...)})
+	panic(yamlError{fmt.Errorf("yaml: "+format, args...)})
 }
 
 // A TypeError is returned by Unmarshal when one or more fields in
@@ -329,6 +328,17 @@ func isZero(v reflect.Value) bool {
 		return v.Uint() == 0
 	case reflect.Bool:
 		return !v.Bool()
+	case reflect.Struct:
+		vt := v.Type()
+		for i := v.NumField()-1; i >= 0; i-- {
+			if vt.Field(i).PkgPath != "" {
+				continue // Private field
+			}
+			if !isZero(v.Field(i)) {
+				return false
+			}
+		}
+		return true
 	}
 	return false
 }

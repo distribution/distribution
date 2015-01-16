@@ -32,9 +32,9 @@ type node struct {
 // Parser, produces a node tree out of a libyaml event stream.
 
 type parser struct {
-	parser  yaml_parser_t
-	event   yaml_event_t
-	doc     *node
+	parser yaml_parser_t
+	event  yaml_event_t
+	doc    *node
 }
 
 func newParser(b []byte) *parser {
@@ -194,10 +194,10 @@ type decoder struct {
 }
 
 var (
-	mapItemType = reflect.TypeOf(MapItem{})
-	durationType = reflect.TypeOf(time.Duration(0))
+	mapItemType    = reflect.TypeOf(MapItem{})
+	durationType   = reflect.TypeOf(time.Duration(0))
 	defaultMapType = reflect.TypeOf(map[interface{}]interface{}{})
-	ifaceType = defaultMapType.Elem()
+	ifaceType      = defaultMapType.Elem()
 )
 
 func newDecoder() *decoder {
@@ -476,34 +476,36 @@ func settableValueOf(i interface{}) reflect.Value {
 }
 
 func (d *decoder) sequence(n *node, out reflect.Value) (good bool) {
+	l := len(n.children)
+
 	var iface reflect.Value
 	switch out.Kind() {
 	case reflect.Slice:
-		// okay
+		out.Set(reflect.MakeSlice(out.Type(), l, l))
 	case reflect.Interface:
 		// No type hints. Will have to use a generic sequence.
 		iface = out
-		out = settableValueOf(make([]interface{}, 0))
+		out = settableValueOf(make([]interface{}, l))
 	default:
 		d.terror(n, yaml_SEQ_TAG, out)
 		return false
 	}
 	et := out.Type().Elem()
 
-	l := len(n.children)
+	j := 0
 	for i := 0; i < l; i++ {
 		e := reflect.New(et).Elem()
 		if ok := d.unmarshal(n.children[i], e); ok {
-			out.Set(reflect.Append(out, e))
+			out.Index(j).Set(e)
+			j++
 		}
 	}
+	out.Set(out.Slice(0, j))
 	if iface.IsValid() {
 		iface.Set(out)
 	}
 	return true
 }
-
-
 
 func (d *decoder) mapping(n *node, out reflect.Value) (good bool) {
 	switch out.Kind() {
