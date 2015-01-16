@@ -30,15 +30,15 @@
 		},
 		{
 			"ImportPath": "github.com/crowdmob/goamz/aws",
-			"Rev": "cd22d9897beff6f3de22cec4bdb7d46b9e2dee67"
+			"Rev": "962cedbbde5e1af59fb0b4ab681c848e61676941"
 		},
 		{
 			"ImportPath": "github.com/crowdmob/goamz/cloudfront",
-			"Rev": "cd22d9897beff6f3de22cec4bdb7d46b9e2dee67"
+			"Rev": "962cedbbde5e1af59fb0b4ab681c848e61676941"
 		},
 		{
 			"ImportPath": "github.com/crowdmob/goamz/s3",
-			"Rev": "cd22d9897beff6f3de22cec4bdb7d46b9e2dee67"
+			"Rev": "962cedbbde5e1af59fb0b4ab681c848e61676941"
 		},
 		{
 			"ImportPath": "github.com/docker/docker/pkg/tarsum",
@@ -52,7 +52,7 @@
 		},
 		{
 			"ImportPath": "github.com/docker/libtrust",
-			"Rev": "a9625ce37e2dc5fed2e51eec2d39c39e4ac4c1df"
+			"Rev": "c54fbb67c1f1e68d7d6f8d2ad7c9360404616a41"
 		},
 		{
 			"ImportPath": "github.com/gorilla/context",

@@ -151,16 +151,37 @@ Any changes to the request after signing the request will invalidate the signatu
 */
 func (s *V4Signer) Sign(req *http.Request) {
 	req.Header.Set("host", req.Host) // host header must be included as a signed header
-	payloadHash := s.payloadHash(req)
-	if s.IncludeXAmzContentSha256 {
-		req.Header.Set("x-amz-content-sha256", payloadHash) // x-amz-content-sha256 contains the payload hash
+	t := s.requestTime(req)          // Get request time
+
+	payloadHash := ""
+
+	if _, ok := req.Form["X-Amz-Expires"]; ok {
+		// We are authenticating the the request by using query params
+		// (also known as pre-signing a url, http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html)
+		payloadHash = "UNSIGNED-PAYLOAD"
+		req.Header.Del("x-amz-date")
+
+		req.Form["X-Amz-SignedHeaders"] = []string{s.signedHeaders(req.Header)}
+		req.Form["X-Amz-Algorithm"] = []string{"AWS4-HMAC-SHA256"}
+		req.Form["X-Amz-Credential"] = []string{s.auth.AccessKey + "/" + s.credentialScope(t)}
+		req.Form["X-Amz-Date"] = []string{t.Format(ISO8601BasicFormat)}
+		req.URL.RawQuery = req.Form.Encode()
+	} else {
+		payloadHash = s.payloadHash(req)
+		if s.IncludeXAmzContentSha256 {
+			req.Header.Set("x-amz-content-sha256", payloadHash) // x-amz-content-sha256 contains the payload hash
+		}
 	}
-	t := s.requestTime(req)                           // Get request time
 	creq := s.canonicalRequest(req, payloadHash)      // Build canonical request
 	sts := s.stringToSign(t, creq)                    // Build string to sign
 	signature := s.signature(t, sts)                  // Calculate the AWS Signature Version 4
 	auth := s.authorization(req.Header, t, signature) // Create Authorization header value
-	req.Header.Set("Authorization", auth)             // Add Authorization header to request
+
+	if _, ok := req.Form["X-Amz-Expires"]; ok {
+		req.Form["X-Amz-Signature"] = []string{signature}
+	} else {
+		req.Header.Set("Authorization", auth) // Add Authorization header to request
+	}
 	return
 }
 
@@ -266,8 +287,20 @@ func (s *V4Signer) canonicalQueryString(u *url.URL) string {
 }
 
 func (s *V4Signer) canonicalHeaders(h http.Header) string {
-	i, a := 0, make([]string, len(h))
+	i, a, lowerCase := 0, make([]string, len(h)), make(map[string][]string)
+
 	for k, v := range h {
+		lowerCase[strings.ToLower(k)] = v
+	}
+
+	var keys []string
+	for k := range lowerCase {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		v := lowerCase[k]
 		for j, w := range v {
 			v[j] = strings.Trim(w, " ")
 		}
@@ -275,7 +308,6 @@ func (s *V4Signer) canonicalHeaders(h http.Header) string {
 		a[i] = strings.ToLower(k) + ":" + strings.Join(v, ",")
 		i++
 	}
-	sort.Strings(a)
 	return strings.Join(a, "\n")
 }
 
