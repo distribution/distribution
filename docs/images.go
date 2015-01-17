@@ -38,8 +38,8 @@ type imageManifestHandler struct {
 
 // GetImageManifest fetches the image manifest from the storage backend, if it exists.
 func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http.Request) {
-	manifests := imh.services.Manifests()
-	manifest, err := manifests.Get(imh.Name, imh.Tag)
+	manifests := imh.Repository.Manifests()
+	manifest, err := manifests.Get(imh.Tag)
 
 	if err != nil {
 		imh.Errors.Push(v2.ErrorCodeManifestUnknown, err)
@@ -54,7 +54,7 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 
 // PutImageManifest validates and stores and image in the registry.
 func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http.Request) {
-	manifests := imh.services.Manifests()
+	manifests := imh.Repository.Manifests()
 	dec := json.NewDecoder(r.Body)
 
 	var manifest manifest.SignedManifest
@@ -64,7 +64,7 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 		return
 	}
 
-	if err := manifests.Put(imh.Name, imh.Tag, &manifest); err != nil {
+	if err := manifests.Put(imh.Tag, &manifest); err != nil {
 		// TODO(stevvooe): These error handling switches really need to be
 		// handled by an app global mapper.
 		switch err := err.(type) {
@@ -96,8 +96,8 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 
 // DeleteImageManifest removes the image with the given tag from the registry.
 func (imh *imageManifestHandler) DeleteImageManifest(w http.ResponseWriter, r *http.Request) {
-	manifests := imh.services.Manifests()
-	if err := manifests.Delete(imh.Name, imh.Tag); err != nil {
+	manifests := imh.Repository.Manifests()
+	if err := manifests.Delete(imh.Tag); err != nil {
 		switch err := err.(type) {
 		case storage.ErrUnknownManifest:
 			imh.Errors.Push(v2.ErrorCodeManifestUnknown, err)
