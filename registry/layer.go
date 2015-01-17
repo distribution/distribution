@@ -42,9 +42,8 @@ type layerHandler struct {
 // GetLayer fetches the binary data from backend storage returns it in the
 // response.
 func (lh *layerHandler) GetLayer(w http.ResponseWriter, r *http.Request) {
-	layers := lh.services.Layers()
-
-	layer, err := layers.Fetch(lh.Name, lh.Digest)
+	layers := lh.Repository.Layers()
+	layer, err := layers.Fetch(lh.Digest)
 
 	if err != nil {
 		switch err := err.(type) {

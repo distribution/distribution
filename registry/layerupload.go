@@ -43,6 +43,14 @@ func layerUploadDispatcher(ctx *Context, r *http.Request) http.Handler {
 		}
 		luh.State = state
 
+		if state.Name != ctx.Repository.Name() {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				ctx.log.Infof("mismatched repository name in upload state: %q != %q", state.Name, luh.Repository.Name())
+				w.WriteHeader(http.StatusBadRequest)
+				luh.Errors.Push(v2.ErrorCodeBlobUploadInvalid, err)
+			})
+		}
+
 		if state.UUID != luh.UUID {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				ctx.log.Infof("mismatched uuid in upload state: %q != %q", state.UUID, luh.UUID)
@@ -51,8 +59,8 @@ func layerUploadDispatcher(ctx *Context, r *http.Request) http.Handler {
 			})
 		}
 
-		layers := ctx.services.Layers()
-		upload, err := layers.Resume(luh.Name, luh.UUID)
+		layers := ctx.Repository.Layers()
+		upload, err := layers.Resume(luh.UUID)
 		if err != nil {
 			ctx.log.Errorf("error resolving upload: %v", err)
 			if err == storage.ErrLayerUploadUnknown {
@@ -114,8 +122,8 @@ type layerUploadHandler struct {
 // StartLayerUpload begins the layer upload process and allocates a server-
 // side upload session.
 func (luh *layerUploadHandler) StartLayerUpload(w http.ResponseWriter, r *http.Request) {
-	layers := luh.services.Layers()
-	upload, err := layers.Upload(luh.Name)
+	layers := luh.Repository.Layers()
+	upload, err := layers.Upload()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError) // Error conditions here?
 		luh.Errors.Push(v2.ErrorCodeUnknown, err)
@@ -222,7 +230,7 @@ func (luh *layerUploadHandler) layerUploadResponse(w http.ResponseWriter, r *htt
 	}
 
 	// TODO(stevvooe): Need a better way to manage the upload state automatically.
-	luh.State.Name = luh.Name
+	luh.State.Name = luh.Repository.Name()
 	luh.State.UUID = luh.Upload.UUID()
 	luh.State.Offset = offset
 	luh.State.StartedAt = luh.Upload.StartedAt()

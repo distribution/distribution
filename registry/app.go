@@ -26,8 +26,8 @@ type App struct {
 	// driver maintains the app global storage driver instance.
 	driver storagedriver.StorageDriver
 
-	// services contains the main services instance for the application.
-	services *storage.Services
+	// registry is the primary registry backend for the app instance.
+	registry storage.Registry
 
 	layerHandler storage.LayerHandler
 
@@ -63,7 +63,7 @@ func NewApp(configuration configuration.Configuration) *App {
 	}
 
 	app.driver = driver
-	app.services = storage.NewServices(app.driver)
+	app.registry = storage.NewRegistryWithDriver(app.driver)
 	authType := configuration.Auth.Type()
 
 	if authType != "" {
@@ -136,11 +136,11 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		context := app.context(r)
 
-		if err := app.authorized(w, r, context); err != nil {
+		if err := app.authorized(w, r, context, context.vars["name"]); err != nil {
 			return
 		}
 
-		context.log = log.WithField("name", context.Name)
+		context.log = log.WithField("name", context.Repository.Name())
 		handler := dispatch(context, r)
 
 		ssrw := &singleStatusResponseWriter{ResponseWriter: w}
@@ -165,7 +165,6 @@ func (app *App) context(r *http.Request) *Context {
 	vars := mux.Vars(r)
 	context := &Context{
 		App:        app,
-		Name:       vars["name"],
 		urlBuilder: v2.NewURLBuilderFromRequest(r),
 	}
 
@@ -175,19 +174,23 @@ func (app *App) context(r *http.Request) *Context {
 	return context
 }
 
-// authorized checks if the request can proceed with with request access-
-// level. If it cannot, the method will return an error.
-func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Context) error {
+// authorized checks if the request can proceed with access to the requested
+// repository. If it succeeds, the repository will be available on the
+// context. An error will be if access is not available.
+func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Context, repo string) error {
 	if app.accessController == nil {
+		// No access controller, so we simply provide access.
+		context.Repository = app.registry.Repository(repo)
+
 		return nil // access controller is not enabled.
 	}
 
 	var accessRecords []auth.Access
 
-	if context.Name != "" {
+	if repo != "" {
 		resource := auth.Resource{
 			Type: "repository",
-			Name: context.Name,
+			Name: repo,
 		}
 
 		switch r.Method {
@@ -255,6 +258,10 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 
 		return err
 	}
+
+	// At this point, the request should have access to the repository under
+	// the requested operation. Make is available on the context.
+	context.Repository = app.registry.Repository(repo)
 
 	return nil
 }
