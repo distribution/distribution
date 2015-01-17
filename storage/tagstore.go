@@ -9,15 +9,13 @@ import (
 
 // tagStore provides methods to manage manifest tags in a backend storage driver.
 type tagStore struct {
-	driver     storagedriver.StorageDriver
-	blobStore  *blobStore
-	pathMapper *pathMapper
+	*repository
 }
 
 // tags lists the manifest tags for the specified repository.
-func (ts *tagStore) tags(name string) ([]string, error) {
-	p, err := ts.pathMapper.path(manifestTagPathSpec{
-		name: name,
+func (ts *tagStore) tags() ([]string, error) {
+	p, err := ts.pm.path(manifestTagPathSpec{
+		name: ts.name,
 	})
 	if err != nil {
 		return nil, err
@@ -28,7 +26,7 @@ func (ts *tagStore) tags(name string) ([]string, error) {
 	if err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
-			return nil, ErrUnknownRepository{Name: name}
+			return nil, ErrUnknownRepository{Name: ts.name}
 		default:
 			return nil, err
 		}
@@ -44,9 +42,9 @@ func (ts *tagStore) tags(name string) ([]string, error) {
 }
 
 // exists returns true if the specified manifest tag exists in the repository.
-func (ts *tagStore) exists(name, tag string) (bool, error) {
-	tagPath, err := ts.pathMapper.path(manifestTagCurrentPathSpec{
-		name: name,
+func (ts *tagStore) exists(tag string) (bool, error) {
+	tagPath, err := ts.pm.path(manifestTagCurrentPathSpec{
+		name: ts.Name(),
 		tag:  tag,
 	})
 	if err != nil {
@@ -63,9 +61,9 @@ func (ts *tagStore) exists(name, tag string) (bool, error) {
 
 // tag tags the digest with the given tag, updating the the store to point at
 // the current tag. The digest must point to a manifest.
-func (ts *tagStore) tag(name, tag string, revision digest.Digest) error {
-	indexEntryPath, err := ts.pathMapper.path(manifestTagIndexEntryPathSpec{
-		name:     name,
+func (ts *tagStore) tag(tag string, revision digest.Digest) error {
+	indexEntryPath, err := ts.pm.path(manifestTagIndexEntryPathSpec{
+		name:     ts.Name(),
 		tag:      tag,
 		revision: revision,
 	})
@@ -74,8 +72,8 @@ func (ts *tagStore) tag(name, tag string, revision digest.Digest) error {
 		return err
 	}
 
-	currentPath, err := ts.pathMapper.path(manifestTagCurrentPathSpec{
-		name: name,
+	currentPath, err := ts.pm.path(manifestTagCurrentPathSpec{
+		name: ts.Name(),
 		tag:  tag,
 	})
 
@@ -93,9 +91,9 @@ func (ts *tagStore) tag(name, tag string, revision digest.Digest) error {
 }
 
 // resolve the current revision for name and tag.
-func (ts *tagStore) resolve(name, tag string) (digest.Digest, error) {
-	currentPath, err := ts.pathMapper.path(manifestTagCurrentPathSpec{
-		name: name,
+func (ts *tagStore) resolve(tag string) (digest.Digest, error) {
+	currentPath, err := ts.pm.path(manifestTagCurrentPathSpec{
+		name: ts.Name(),
 		tag:  tag,
 	})
 
@@ -106,7 +104,7 @@ func (ts *tagStore) resolve(name, tag string) (digest.Digest, error) {
 	if exists, err := exists(ts.driver, currentPath); err != nil {
 		return "", err
 	} else if !exists {
-		return "", ErrUnknownManifest{Name: name, Tag: tag}
+		return "", ErrUnknownManifest{Name: ts.Name(), Tag: tag}
 	}
 
 	revision, err := ts.blobStore.readlink(currentPath)
@@ -118,9 +116,9 @@ func (ts *tagStore) resolve(name, tag string) (digest.Digest, error) {
 }
 
 // revisions returns all revisions with the specified name and tag.
-func (ts *tagStore) revisions(name, tag string) ([]digest.Digest, error) {
-	manifestTagIndexPath, err := ts.pathMapper.path(manifestTagIndexPathSpec{
-		name: name,
+func (ts *tagStore) revisions(tag string) ([]digest.Digest, error) {
+	manifestTagIndexPath, err := ts.pm.path(manifestTagIndexPathSpec{
+		name: ts.Name(),
 		tag:  tag,
 	})
 
@@ -146,9 +144,9 @@ func (ts *tagStore) revisions(name, tag string) ([]digest.Digest, error) {
 
 // delete removes the tag from repository, including the history of all
 // revisions that have the specified tag.
-func (ts *tagStore) delete(name, tag string) error {
-	tagPath, err := ts.pathMapper.path(manifestTagPathSpec{
-		name: name,
+func (ts *tagStore) delete(tag string) error {
+	tagPath, err := ts.pm.path(manifestTagPathSpec{
+		name: ts.Name(),
 		tag:  tag,
 	})
 	if err != nil {

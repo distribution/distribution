@@ -6,7 +6,6 @@ import (
 
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
-	"github.com/docker/distribution/storagedriver"
 	"github.com/docker/libtrust"
 )
 
@@ -65,65 +64,67 @@ func (errs ErrManifestVerification) Error() string {
 }
 
 type manifestStore struct {
-	driver        storagedriver.StorageDriver
-	pathMapper    *pathMapper
+	repository *repository
+
 	revisionStore *revisionStore
 	tagStore      *tagStore
-	blobStore     *blobStore
-	layerService  LayerService
 }
 
 var _ ManifestService = &manifestStore{}
 
-func (ms *manifestStore) Tags(name string) ([]string, error) {
-	return ms.tagStore.tags(name)
+// func (ms *manifestStore) Repository() Repository {
+// 	return ms.repository
+// }
+
+func (ms *manifestStore) Tags() ([]string, error) {
+	return ms.tagStore.tags()
 }
 
-func (ms *manifestStore) Exists(name, tag string) (bool, error) {
-	return ms.tagStore.exists(name, tag)
+func (ms *manifestStore) Exists(tag string) (bool, error) {
+	return ms.tagStore.exists(tag)
 }
 
-func (ms *manifestStore) Get(name, tag string) (*manifest.SignedManifest, error) {
-	dgst, err := ms.tagStore.resolve(name, tag)
+func (ms *manifestStore) Get(tag string) (*manifest.SignedManifest, error) {
+	dgst, err := ms.tagStore.resolve(tag)
 	if err != nil {
 		return nil, err
 	}
 
-	return ms.revisionStore.get(name, dgst)
+	return ms.revisionStore.get(dgst)
 }
 
-func (ms *manifestStore) Put(name, tag string, manifest *manifest.SignedManifest) error {
+func (ms *manifestStore) Put(tag string, manifest *manifest.SignedManifest) error {
 	// Verify the manifest.
-	if err := ms.verifyManifest(name, tag, manifest); err != nil {
+	if err := ms.verifyManifest(tag, manifest); err != nil {
 		return err
 	}
 
 	// Store the revision of the manifest
-	revision, err := ms.revisionStore.put(name, manifest)
+	revision, err := ms.revisionStore.put(manifest)
 	if err != nil {
 		return err
 	}
 
 	// Now, tag the manifest
-	return ms.tagStore.tag(name, tag, revision)
+	return ms.tagStore.tag(tag, revision)
 }
 
 // Delete removes all revisions of the given tag. We may want to change these
 // semantics in the future, but this will maintain consistency. The underlying
 // blobs are left alone.
-func (ms *manifestStore) Delete(name, tag string) error {
-	revisions, err := ms.tagStore.revisions(name, tag)
+func (ms *manifestStore) Delete(tag string) error {
+	revisions, err := ms.tagStore.revisions(tag)
 	if err != nil {
 		return err
 	}
 
 	for _, revision := range revisions {
-		if err := ms.revisionStore.delete(name, revision); err != nil {
+		if err := ms.revisionStore.delete(revision); err != nil {
 			return err
 		}
 	}
 
-	return ms.tagStore.delete(name, tag)
+	return ms.tagStore.delete(tag)
 }
 
 // verifyManifest ensures that the manifest content is valid from the
@@ -131,11 +132,11 @@ func (ms *manifestStore) Delete(name, tag string) error {
 // that the signature is valid for the enclosed payload. As a policy, the
 // registry only tries to store valid content, leaving trust policies of that
 // content up to consumers.
-func (ms *manifestStore) verifyManifest(name, tag string, mnfst *manifest.SignedManifest) error {
+func (ms *manifestStore) verifyManifest(tag string, mnfst *manifest.SignedManifest) error {
 	var errs ErrManifestVerification
-	if mnfst.Name != name {
+	if mnfst.Name != ms.repository.Name() {
 		// TODO(stevvooe): This needs to be an exported error
-		errs = append(errs, fmt.Errorf("name does not match manifest name"))
+		errs = append(errs, fmt.Errorf("repository name does not match manifest name"))
 	}
 
 	if mnfst.Tag != tag {
@@ -157,7 +158,7 @@ func (ms *manifestStore) verifyManifest(name, tag string, mnfst *manifest.Signed
 	}
 
 	for _, fsLayer := range mnfst.FSLayers {
-		exists, err := ms.layerService.Exists(name, fsLayer.BlobSum)
+		exists, err := ms.repository.Layers().Exists(fsLayer.BlobSum)
 		if err != nil {
 			errs = append(errs, err)
 		}

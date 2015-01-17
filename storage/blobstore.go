@@ -18,8 +18,7 @@ import (
 // abstraction, providing utility methods that support creating and traversing
 // backend links.
 type blobStore struct {
-	driver storagedriver.StorageDriver
-	pm     *pathMapper
+	*registry
 }
 
 // exists reports whether or not the path exists. If the driver returns error

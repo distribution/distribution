@@ -32,23 +32,13 @@ func TestSimpleLayerUpload(t *testing.T) {
 
 	imageName := "foo/bar"
 	driver := inmemory.New()
-	pm := &pathMapper{
-		root:    "/storage/testing",
-		version: storagePathVersion,
-	}
-	ls := &layerStore{
-		driver: driver,
-		blobStore: &blobStore{
-			driver: driver,
-			pm:     pm,
-		},
-		pathMapper: pm,
-	}
+	registry := NewRegistryWithDriver(driver)
+	ls := registry.Repository(imageName).Layers()
 
 	h := sha256.New()
 	rd := io.TeeReader(randomDataReader, h)
 
-	layerUpload, err := ls.Upload(imageName)
+	layerUpload, err := ls.Upload()
 
 	if err != nil {
 		t.Fatalf("unexpected error starting layer upload: %s", err)
@@ -60,13 +50,13 @@ func TestSimpleLayerUpload(t *testing.T) {
 	}
 
 	// Do a resume, get unknown upload
-	layerUpload, err = ls.Resume(layerUpload.Name(), layerUpload.UUID())
+	layerUpload, err = ls.Resume(layerUpload.UUID())
 	if err != ErrLayerUploadUnknown {
 		t.Fatalf("unexpected error resuming upload, should be unkown: %v", err)
 	}
 
 	// Restart!
-	layerUpload, err = ls.Upload(imageName)
+	layerUpload, err = ls.Upload()
 	if err != nil {
 		t.Fatalf("unexpected error starting layer upload: %s", err)
 	}
@@ -97,7 +87,7 @@ func TestSimpleLayerUpload(t *testing.T) {
 	layerUpload.Close()
 
 	// Do a resume, for good fun
-	layerUpload, err = ls.Resume(layerUpload.Name(), layerUpload.UUID())
+	layerUpload, err = ls.Resume(layerUpload.UUID())
 	if err != nil {
 		t.Fatalf("unexpected error resuming upload: %v", err)
 	}
@@ -110,12 +100,12 @@ func TestSimpleLayerUpload(t *testing.T) {
 	}
 
 	// After finishing an upload, it should no longer exist.
-	if _, err := ls.Resume(layerUpload.Name(), layerUpload.UUID()); err != ErrLayerUploadUnknown {
+	if _, err := ls.Resume(layerUpload.UUID()); err != ErrLayerUploadUnknown {
 		t.Fatalf("expected layer upload to be unknown, got %v", err)
 	}
 
 	// Test for existence.
-	exists, err := ls.Exists(layer.Name(), layer.Digest())
+	exists, err := ls.Exists(layer.Digest())
 	if err != nil {
 		t.Fatalf("unexpected error checking for existence: %v", err)
 	}
@@ -145,18 +135,8 @@ func TestSimpleLayerUpload(t *testing.T) {
 func TestSimpleLayerRead(t *testing.T) {
 	imageName := "foo/bar"
 	driver := inmemory.New()
-	pm := &pathMapper{
-		root:    "/storage/testing",
-		version: storagePathVersion,
-	}
-	ls := &layerStore{
-		driver: driver,
-		blobStore: &blobStore{
-			driver: driver,
-			pm:     pm,
-		},
-		pathMapper: pm,
-	}
+	registry := NewRegistryWithDriver(driver)
+	ls := registry.Repository(imageName).Layers()
 
 	randomLayerReader, tarSumStr, err := testutil.CreateRandomTarFile()
 	if err != nil {
@@ -166,7 +146,7 @@ func TestSimpleLayerRead(t *testing.T) {
 	dgst := digest.Digest(tarSumStr)
 
 	// Test for existence.
-	exists, err := ls.Exists(imageName, dgst)
+	exists, err := ls.Exists(dgst)
 	if err != nil {
 		t.Fatalf("unexpected error checking for existence: %v", err)
 	}
@@ -176,7 +156,7 @@ func TestSimpleLayerRead(t *testing.T) {
 	}
 
 	// Try to get the layer and make sure we get a not found error
-	layer, err := ls.Fetch(imageName, dgst)
+	layer, err := ls.Fetch(dgst)
 	if err == nil {
 		t.Fatalf("error expected fetching unknown layer")
 	}
@@ -188,7 +168,7 @@ func TestSimpleLayerRead(t *testing.T) {
 		t.Fatalf("unexpected error fetching non-existent layer: %v", err)
 	}
 
-	randomLayerDigest, err := writeTestLayer(driver, ls.pathMapper, imageName, dgst, randomLayerReader)
+	randomLayerDigest, err := writeTestLayer(driver, ls.(*layerStore).repository.pm, imageName, dgst, randomLayerReader)
 	if err != nil {
 		t.Fatalf("unexpected error writing test layer: %v", err)
 	}
@@ -198,7 +178,7 @@ func TestSimpleLayerRead(t *testing.T) {
 		t.Fatalf("error getting seeker size for random layer: %v", err)
 	}
 
-	layer, err = ls.Fetch(imageName, dgst)
+	layer, err = ls.Fetch(dgst)
 	if err != nil {
 		t.Fatal(err)
 	}
