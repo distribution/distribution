@@ -705,42 +705,40 @@ func (suite *DriverSuite) TestStatCall(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// Call on regular file, check results
-	start := time.Now().Truncate(time.Second) // truncated for filesystem
 	fi, err = suite.StorageDriver.Stat(filePath)
 	c.Assert(err, check.IsNil)
-	expectedModTime := time.Now()
 	c.Assert(fi, check.NotNil)
 	c.Assert(fi.Path(), check.Equals, filePath)
 	c.Assert(fi.Size(), check.Equals, int64(len(content)))
 	c.Assert(fi.IsDir(), check.Equals, false)
+	createdTime := fi.ModTime()
 
-	if start.After(fi.ModTime()) {
-		c.Errorf("modtime %s before file created (%v)", fi.ModTime(), start)
+	// Sleep and modify the file
+	time.Sleep(time.Second * 10)
+	content = randomContents(4096)
+	err = suite.StorageDriver.PutContent(filePath, content)
+	c.Assert(err, check.IsNil)
+	fi, err = suite.StorageDriver.Stat(filePath)
+	c.Assert(err, check.IsNil)
+	c.Assert(fi, check.NotNil)
+	time.Sleep(time.Second * 5) // allow changes to propagate (eventual consistency)
+
+	// Check if the modification time is after the creation time.
+	// In case of cloud storage services, storage frontend nodes might have
+	// time drift between them, however that should be solved with sleeping
+	// before update.
+	modTime := fi.ModTime()
+	if !modTime.After(createdTime) {
+		c.Errorf("modtime (%s) is before the creation time (%s)", modTime, createdTime)
 	}
 
-	if fi.ModTime().After(expectedModTime) {
-		c.Errorf("modtime %s after file created (%v)", fi.ModTime(), expectedModTime)
-	}
-
-	// Call on directory
-	start = time.Now().Truncate(time.Second)
+	// Call on directory (do not check ModTime as dirs don't need to support it)
 	fi, err = suite.StorageDriver.Stat(dirPath)
 	c.Assert(err, check.IsNil)
-	expectedModTime = time.Now()
 	c.Assert(fi, check.NotNil)
 	c.Assert(fi.Path(), check.Equals, dirPath)
 	c.Assert(fi.Size(), check.Equals, int64(0))
 	c.Assert(fi.IsDir(), check.Equals, true)
-
-	// Directories do not need to support ModTime, since key-value stores
-	// cannot support it efficiently.
-	// if start.After(fi.ModTime()) {
-	// 	c.Errorf("modtime %s before file created (%v)", fi.ModTime(), start)
-	// }
-
-	if fi.ModTime().After(expectedModTime) {
-		c.Errorf("modtime %s after file created (%v)", fi.ModTime(), expectedModTime)
-	}
 }
 
 // TestConcurrentStreamReads checks that multiple clients can safely read from
