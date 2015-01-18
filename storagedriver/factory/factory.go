@@ -58,7 +58,12 @@ func Create(name string, parameters map[string]interface{}) (storagedriver.Stora
 		// }
 		// return driverClient, nil
 	}
-	return driverFactory.Create(parameters)
+	d, err := driverFactory.Create(parameters)
+	if err == nil {
+		// Wrap the storage driver for path validation
+		d = storagedriver.Wrap(d)
+	}
+	return d, err
 }
 
 // InvalidStorageDriverError records an attempt to construct an unregistered storage driver

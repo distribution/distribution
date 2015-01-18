@@ -196,10 +196,6 @@ func New(params DriverParameters) (*Driver, error) {
 
 // GetContent retrieves the content stored at "path" as a []byte.
 func (d *Driver) GetContent(path string) ([]byte, error) {
-	if !storagedriver.PathRegexp.MatchString(path) {
-		return nil, storagedriver.InvalidPathError{Path: path}
-	}
-
 	content, err := d.Bucket.Get(d.s3Path(path))
 	if err != nil {
 		return nil, parseError(path, err)
@@ -209,20 +205,12 @@ func (d *Driver) GetContent(path string) ([]byte, error) {
 
 // PutContent stores the []byte content at a location designated by "path".
 func (d *Driver) PutContent(path string, contents []byte) error {
-	if !storagedriver.PathRegexp.MatchString(path) {
-		return storagedriver.InvalidPathError{Path: path}
-	}
-
 	return parseError(path, d.Bucket.Put(d.s3Path(path), contents, d.getContentType(), getPermissions(), d.getOptions()))
 }
 
 // ReadStream retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
 func (d *Driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
-	if !storagedriver.PathRegexp.MatchString(path) {
-		return nil, storagedriver.InvalidPathError{Path: path}
-	}
-
 	if offset < 0 {
 		return nil, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
 	}
@@ -249,10 +237,6 @@ func (d *Driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
 // offset. Offsets past the current size will write from the position
 // beyond the end of the file.
 func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (totalRead int64, err error) {
-	if !storagedriver.PathRegexp.MatchString(path) {
-		return 0, storagedriver.InvalidPathError{Path: path}
-	}
-
 	if offset < 0 {
 		return 0, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
 	}
@@ -510,10 +494,6 @@ func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (total
 // Stat retrieves the FileInfo for the given path, including the current size
 // in bytes and the creation time.
 func (d *Driver) Stat(path string) (storagedriver.FileInfo, error) {
-	if !storagedriver.PathRegexp.MatchString(path) {
-		return nil, storagedriver.InvalidPathError{Path: path}
-	}
-
 	listResponse, err := d.Bucket.List(d.s3Path(path), "", "", 1)
 	if err != nil {
 		return nil, err
@@ -547,10 +527,6 @@ func (d *Driver) Stat(path string) (storagedriver.FileInfo, error) {
 
 // List returns a list of the objects that are direct descendants of the given path.
 func (d *Driver) List(path string) ([]string, error) {
-	if !storagedriver.PathRegexp.MatchString(path) && path != "/" {
-		return nil, storagedriver.InvalidPathError{Path: path}
-	}
-
 	if path != "/" && path[len(path)-1] != '/' {
 		path = path + "/"
 	}
@@ -587,12 +563,6 @@ func (d *Driver) List(path string) ([]string, error) {
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
 func (d *Driver) Move(sourcePath string, destPath string) error {
-	if !storagedriver.PathRegexp.MatchString(sourcePath) {
-		return storagedriver.InvalidPathError{Path: sourcePath}
-	} else if !storagedriver.PathRegexp.MatchString(destPath) {
-		return storagedriver.InvalidPathError{Path: destPath}
-	}
-
 	/* This is terrible, but aws doesn't have an actual move. */
 	_, err := d.Bucket.PutCopy(d.s3Path(destPath), getPermissions(),
 		s3.CopyOptions{Options: d.getOptions(), ContentType: d.getContentType()}, d.Bucket.Name+"/"+d.s3Path(sourcePath))
@@ -605,10 +575,6 @@ func (d *Driver) Move(sourcePath string, destPath string) error {
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
 func (d *Driver) Delete(path string) error {
-	if !storagedriver.PathRegexp.MatchString(path) {
-		return storagedriver.InvalidPathError{Path: path}
-	}
-
 	listResponse, err := d.Bucket.List(d.s3Path(path), "", "", listMax)
 	if err != nil || len(listResponse.Contents) == 0 {
 		return storagedriver.PathNotFoundError{Path: path}
@@ -638,10 +604,6 @@ func (d *Driver) Delete(path string) error {
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 // May return an UnsupportedMethodErr in certain StorageDriver implementations.
 func (d *Driver) URLFor(path string, options map[string]interface{}) (string, error) {
-	if !storagedriver.PathRegexp.MatchString(path) {
-		return "", storagedriver.InvalidPathError{Path: path}
-	}
-
 	methodString := "GET"
 	method, ok := options["method"]
 	if ok {

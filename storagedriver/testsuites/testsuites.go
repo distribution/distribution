@@ -98,6 +98,7 @@ func (suite *DriverSuite) SetUpSuite(c *check.C) {
 	}
 	d, err := suite.Constructor()
 	c.Assert(err, check.IsNil)
+	d = storagedriver.Wrap(d)
 	suite.StorageDriver = d
 }
 
