@@ -86,7 +86,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	secretKey, _ := parameters["secretkey"]
 
 	regionName, ok := parameters["region"]
-	if !ok || regionName.(string) == "" {
+	if !ok || fmt.Sprint(regionName) == "" {
 		return nil, fmt.Errorf("No region parameter provided")
 	}
 	region := aws.GetRegion(fmt.Sprint(regionName))
