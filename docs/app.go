@@ -88,6 +88,8 @@ func NewApp(configuration configuration.Configuration) *App {
 }
 
 func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Set a header with the Docker Distribution API Version for all responses.
+	w.Header().Add("Docker-Distribution-API-Version", "registry/2.0")
 	app.router.ServeHTTP(w, r)
 }
 
