@@ -16,7 +16,6 @@ import (
 type layerUploadController struct {
 	layerStore *layerStore
 
-	name      string
 	uuid      string
 	startedAt time.Time
 
@@ -27,7 +26,7 @@ var _ LayerUpload = &layerUploadController{}
 
 // Name of the repository under which the layer will be linked.
 func (luc *layerUploadController) Name() string {
-	return luc.name
+	return luc.layerStore.repository.Name()
 }
 
 // UUID returns the identifier for this upload.
@@ -63,7 +62,7 @@ func (luc *layerUploadController) Finish(digest digest.Digest) (Layer, error) {
 		return nil, err
 	}
 
-	return luc.layerStore.Fetch(luc.Name(), canonical)
+	return luc.layerStore.Fetch(canonical)
 }
 
 // Cancel the layer upload process.
@@ -128,7 +127,7 @@ func (luc *layerUploadController) validateLayer(dgst digest.Digest) (digest.Dige
 // identified by dgst. The layer should be validated before commencing the
 // move.
 func (luc *layerUploadController) moveLayer(dgst digest.Digest) error {
-	blobPath, err := luc.layerStore.pathMapper.path(blobDataPathSpec{
+	blobPath, err := luc.layerStore.repository.registry.pm.path(blobDataPathSpec{
 		digest: dgst,
 	})
 
@@ -137,7 +136,7 @@ func (luc *layerUploadController) moveLayer(dgst digest.Digest) error {
 	}
 
 	// Check for existence
-	if _, err := luc.layerStore.driver.Stat(blobPath); err != nil {
+	if _, err := luc.layerStore.repository.registry.driver.Stat(blobPath); err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
 			break // ensure that it doesn't exist.
@@ -158,7 +157,7 @@ func (luc *layerUploadController) moveLayer(dgst digest.Digest) error {
 // linkLayer links a valid, written layer blob into the registry under the
 // named repository for the upload controller.
 func (luc *layerUploadController) linkLayer(digest digest.Digest) error {
-	layerLinkPath, err := luc.layerStore.pathMapper.path(layerLinkPathSpec{
+	layerLinkPath, err := luc.layerStore.repository.registry.pm.path(layerLinkPathSpec{
 		name:   luc.Name(),
 		digest: digest,
 	})
@@ -167,15 +166,15 @@ func (luc *layerUploadController) linkLayer(digest digest.Digest) error {
 		return err
 	}
 
-	return luc.layerStore.driver.PutContent(layerLinkPath, []byte(digest))
+	return luc.layerStore.repository.registry.driver.PutContent(layerLinkPath, []byte(digest))
 }
 
 // removeResources should clean up all resources associated with the upload
 // instance. An error will be returned if the clean up cannot proceed. If the
 // resources are already not present, no error will be returned.
 func (luc *layerUploadController) removeResources() error {
-	dataPath, err := luc.layerStore.pathMapper.path(uploadDataPathSpec{
-		name: luc.name,
+	dataPath, err := luc.layerStore.repository.registry.pm.path(uploadDataPathSpec{
+		name: luc.Name(),
 		uuid: luc.uuid,
 	})
 

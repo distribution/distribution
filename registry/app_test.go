@@ -10,6 +10,8 @@ import (
 	"github.com/docker/distribution/api/v2"
 	_ "github.com/docker/distribution/auth/silly"
 	"github.com/docker/distribution/configuration"
+	"github.com/docker/distribution/storage"
+	"github.com/docker/distribution/storagedriver/inmemory"
 )
 
 // TestAppDispatcher builds an application with a test dispatcher and ensures
@@ -17,9 +19,12 @@ import (
 // This only tests the dispatch mechanism. The underlying dispatchers must be
 // tested individually.
 func TestAppDispatcher(t *testing.T) {
+	driver := inmemory.New()
 	app := &App{
-		Config: configuration.Configuration{},
-		router: v2.Router(),
+		Config:   configuration.Configuration{},
+		router:   v2.Router(),
+		driver:   driver,
+		registry: storage.NewRegistryWithDriver(driver),
 	}
 	server := httptest.NewServer(app)
 	router := v2.Router()
@@ -32,8 +37,8 @@ func TestAppDispatcher(t *testing.T) {
 	varCheckingDispatcher := func(expectedVars map[string]string) dispatchFunc {
 		return func(ctx *Context, r *http.Request) http.Handler {
 			// Always checks the same name context
-			if ctx.Name != ctx.vars["name"] {
-				t.Fatalf("unexpected name: %q != %q", ctx.Name, "foo/bar")
+			if ctx.Repository.Name() != ctx.vars["name"] {
+				t.Fatalf("unexpected name: %q != %q", ctx.Repository.Name(), "foo/bar")
 			}
 
 			// Check that we have all that is expected

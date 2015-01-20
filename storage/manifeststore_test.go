@@ -2,8 +2,11 @@ package storage
 
 import (
 	"bytes"
+	"io"
 	"reflect"
 	"testing"
+
+	"github.com/docker/distribution/testutil"
 
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
@@ -12,36 +15,14 @@ import (
 )
 
 func TestManifestStorage(t *testing.T) {
-	driver := inmemory.New()
-	pm := pathMapper{
-		root:    "/storage/testing",
-		version: storagePathVersion,
-	}
-	bs := blobStore{
-		driver: driver,
-		pm:     &pm,
-	}
-	ms := &manifestStore{
-		driver:     driver,
-		pathMapper: &pm,
-		revisionStore: &revisionStore{
-			driver:     driver,
-			pathMapper: &pm,
-			blobStore:  &bs,
-		},
-		tagStore: &tagStore{
-			driver:     driver,
-			pathMapper: &pm,
-			blobStore:  &bs,
-		},
-		blobStore:    &bs,
-		layerService: newMockedLayerService(),
-	}
-
 	name := "foo/bar"
 	tag := "thetag"
+	driver := inmemory.New()
+	registry := NewRegistryWithDriver(driver)
+	repo := registry.Repository(name)
+	ms := repo.Manifests()
 
-	exists, err := ms.Exists(name, tag)
+	exists, err := ms.Exists(tag)
 	if err != nil {
 		t.Fatalf("unexpected error checking manifest existence: %v", err)
 	}
@@ -50,7 +31,7 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("manifest should not exist")
 	}
 
-	if _, err := ms.Get(name, tag); true {
+	if _, err := ms.Get(tag); true {
 		switch err.(type) {
 		case ErrUnknownManifest:
 			break
@@ -65,14 +46,22 @@ func TestManifestStorage(t *testing.T) {
 		},
 		Name: name,
 		Tag:  tag,
-		FSLayers: []manifest.FSLayer{
-			{
-				BlobSum: "asdf",
-			},
-			{
-				BlobSum: "qwer",
-			},
-		},
+	}
+
+	// Build up some test layers and add them to the manifest, saving the
+	// readseekers for upload later.
+	testLayers := map[digest.Digest]io.ReadSeeker{}
+	for i := 0; i < 2; i++ {
+		rs, ds, err := testutil.CreateRandomTarFile()
+		if err != nil {
+			t.Fatalf("unexpected error generating test layer file")
+		}
+		dgst := digest.Digest(ds)
+
+		testLayers[digest.Digest(dgst)] = rs
+		m.FSLayers = append(m.FSLayers, manifest.FSLayer{
+			BlobSum: dgst,
+		})
 	}
 
 	pk, err := libtrust.GenerateECP256PrivateKey()
@@ -85,21 +74,34 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("error signing manifest: %v", err)
 	}
 
-	err = ms.Put(name, tag, sm)
+	err = ms.Put(tag, sm)
 	if err == nil {
 		t.Fatalf("expected errors putting manifest")
 	}
 
 	// TODO(stevvooe): We expect errors describing all of the missing layers.
 
-	ms.layerService.(*mockedExistenceLayerService).add(name, "asdf")
-	ms.layerService.(*mockedExistenceLayerService).add(name, "qwer")
+	// Now, upload the layers that were missing!
+	for dgst, rs := range testLayers {
+		upload, err := repo.Layers().Upload()
+		if err != nil {
+			t.Fatalf("unexpected error creating test upload: %v", err)
+		}
 
-	if err = ms.Put(name, tag, sm); err != nil {
+		if _, err := io.Copy(upload, rs); err != nil {
+			t.Fatalf("unexpected error copying to upload: %v", err)
+		}
+
+		if _, err := upload.Finish(dgst); err != nil {
+			t.Fatalf("unexpected error finishing upload: %v", err)
+		}
+	}
+
+	if err = ms.Put(tag, sm); err != nil {
 		t.Fatalf("unexpected error putting manifest: %v", err)
 	}
 
-	exists, err = ms.Exists(name, tag)
+	exists, err = ms.Exists(tag)
 	if err != nil {
 		t.Fatalf("unexpected error checking manifest existence: %v", err)
 	}
@@ -108,7 +110,7 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("manifest should exist")
 	}
 
-	fetchedManifest, err := ms.Get(name, tag)
+	fetchedManifest, err := ms.Get(tag)
 	if err != nil {
 		t.Fatalf("unexpected error fetching manifest: %v", err)
 	}
@@ -137,7 +139,7 @@ func TestManifestStorage(t *testing.T) {
 	}
 
 	// Grabs the tags and check that this tagged manifest is present
-	tags, err := ms.Tags(name)
+	tags, err := ms.Tags()
 	if err != nil {
 		t.Fatalf("unexpected error fetching tags: %v", err)
 	}
@@ -175,11 +177,11 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("unexpected number of signatures: %d != %d", len(sigs2), 1)
 	}
 
-	if err = ms.Put(name, tag, sm2); err != nil {
+	if err = ms.Put(tag, sm2); err != nil {
 		t.Fatalf("unexpected error putting manifest: %v", err)
 	}
 
-	fetched, err := ms.Get(name, tag)
+	fetched, err := ms.Get(tag)
 	if err != nil {
 		t.Fatalf("unexpected error fetching manifest: %v", err)
 	}
@@ -224,49 +226,7 @@ func TestManifestStorage(t *testing.T) {
 		}
 	}
 
-	if err := ms.Delete(name, tag); err != nil {
+	if err := ms.Delete(tag); err != nil {
 		t.Fatalf("unexpected error deleting manifest: %v", err)
 	}
-}
-
-type layerKey struct {
-	name   string
-	digest digest.Digest
-}
-
-type mockedExistenceLayerService struct {
-	exists map[layerKey]struct{}
-}
-
-func newMockedLayerService() *mockedExistenceLayerService {
-	return &mockedExistenceLayerService{
-		exists: make(map[layerKey]struct{}),
-	}
-}
-
-var _ LayerService = &mockedExistenceLayerService{}
-
-func (mels *mockedExistenceLayerService) add(name string, digest digest.Digest) {
-	mels.exists[layerKey{name: name, digest: digest}] = struct{}{}
-}
-
-func (mels *mockedExistenceLayerService) remove(name string, digest digest.Digest) {
-	delete(mels.exists, layerKey{name: name, digest: digest})
-}
-
-func (mels *mockedExistenceLayerService) Exists(name string, digest digest.Digest) (bool, error) {
-	_, ok := mels.exists[layerKey{name: name, digest: digest}]
-	return ok, nil
-}
-
-func (mockedExistenceLayerService) Fetch(name string, digest digest.Digest) (Layer, error) {
-	panic("not implemented")
-}
-
-func (mockedExistenceLayerService) Upload(name string) (LayerUpload, error) {
-	panic("not implemented")
-}
-
-func (mockedExistenceLayerService) Resume(name, uuid string) (LayerUpload, error) {
-	panic("not implemented")
 }

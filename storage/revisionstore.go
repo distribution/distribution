@@ -7,21 +7,18 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
-	"github.com/docker/distribution/storagedriver"
 	"github.com/docker/libtrust"
 )
 
 // revisionStore supports storing and managing manifest revisions.
 type revisionStore struct {
-	driver     storagedriver.StorageDriver
-	pathMapper *pathMapper
-	blobStore  *blobStore
+	*repository
 }
 
 // exists returns true if the revision is available in the named repository.
-func (rs *revisionStore) exists(name string, revision digest.Digest) (bool, error) {
-	revpath, err := rs.pathMapper.path(manifestRevisionPathSpec{
-		name:     name,
+func (rs *revisionStore) exists(revision digest.Digest) (bool, error) {
+	revpath, err := rs.pm.path(manifestRevisionPathSpec{
+		name:     rs.Name(),
 		revision: revision,
 	})
 
@@ -38,13 +35,13 @@ func (rs *revisionStore) exists(name string, revision digest.Digest) (bool, erro
 }
 
 // get retrieves the manifest, keyed by revision digest.
-func (rs *revisionStore) get(name string, revision digest.Digest) (*manifest.SignedManifest, error) {
+func (rs *revisionStore) get(revision digest.Digest) (*manifest.SignedManifest, error) {
 	// Ensure that this revision is available in this repository.
-	if exists, err := rs.exists(name, revision); err != nil {
+	if exists, err := rs.exists(revision); err != nil {
 		return nil, err
 	} else if !exists {
 		return nil, ErrUnknownManifestRevision{
-			Name:     name,
+			Name:     rs.Name(),
 			Revision: revision,
 		}
 	}
@@ -55,7 +52,7 @@ func (rs *revisionStore) get(name string, revision digest.Digest) (*manifest.Sig
 	}
 
 	// Fetch the signatures for the manifest
-	signatures, err := rs.getSignatures(name, revision)
+	signatures, err := rs.getSignatures(revision)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +80,7 @@ func (rs *revisionStore) get(name string, revision digest.Digest) (*manifest.Sig
 
 // put stores the manifest in the repository, if not already present. Any
 // updated signatures will be stored, as well.
-func (rs *revisionStore) put(name string, sm *manifest.SignedManifest) (digest.Digest, error) {
+func (rs *revisionStore) put(sm *manifest.SignedManifest) (digest.Digest, error) {
 	jsig, err := libtrust.ParsePrettySignature(sm.Raw, "signatures")
 	if err != nil {
 		return "", err
@@ -103,7 +100,7 @@ func (rs *revisionStore) put(name string, sm *manifest.SignedManifest) (digest.D
 	}
 
 	// Link the revision into the repository.
-	if err := rs.link(name, revision); err != nil {
+	if err := rs.link(revision); err != nil {
 		return "", err
 	}
 
@@ -114,7 +111,7 @@ func (rs *revisionStore) put(name string, sm *manifest.SignedManifest) (digest.D
 	}
 
 	for _, signature := range signatures {
-		if err := rs.putSignature(name, revision, signature); err != nil {
+		if err := rs.putSignature(revision, signature); err != nil {
 			return "", err
 		}
 	}
@@ -123,9 +120,9 @@ func (rs *revisionStore) put(name string, sm *manifest.SignedManifest) (digest.D
 }
 
 // link links the revision into the repository.
-func (rs *revisionStore) link(name string, revision digest.Digest) error {
-	revisionPath, err := rs.pathMapper.path(manifestRevisionLinkPathSpec{
-		name:     name,
+func (rs *revisionStore) link(revision digest.Digest) error {
+	revisionPath, err := rs.pm.path(manifestRevisionLinkPathSpec{
+		name:     rs.Name(),
 		revision: revision,
 	})
 
@@ -144,9 +141,9 @@ func (rs *revisionStore) link(name string, revision digest.Digest) error {
 }
 
 // delete removes the specified manifest revision from storage.
-func (rs *revisionStore) delete(name string, revision digest.Digest) error {
-	revisionPath, err := rs.pathMapper.path(manifestRevisionPathSpec{
-		name:     name,
+func (rs *revisionStore) delete(revision digest.Digest) error {
+	revisionPath, err := rs.pm.path(manifestRevisionPathSpec{
+		name:     rs.Name(),
 		revision: revision,
 	})
 
@@ -159,9 +156,9 @@ func (rs *revisionStore) delete(name string, revision digest.Digest) error {
 
 // getSignatures retrieves all of the signature blobs for the specified
 // manifest revision.
-func (rs *revisionStore) getSignatures(name string, revision digest.Digest) ([][]byte, error) {
-	signaturesPath, err := rs.pathMapper.path(manifestSignaturesPathSpec{
-		name:     name,
+func (rs *revisionStore) getSignatures(revision digest.Digest) ([][]byte, error) {
+	signaturesPath, err := rs.pm.path(manifestSignaturesPathSpec{
+		name:     rs.Name(),
 		revision: revision,
 	})
 
@@ -197,14 +194,14 @@ func (rs *revisionStore) getSignatures(name string, revision digest.Digest) ([][
 }
 
 // putSignature stores the signature for the provided manifest revision.
-func (rs *revisionStore) putSignature(name string, revision digest.Digest, signature []byte) error {
+func (rs *revisionStore) putSignature(revision digest.Digest, signature []byte) error {
 	signatureDigest, err := rs.blobStore.put(signature)
 	if err != nil {
 		return err
 	}
 
-	signaturePath, err := rs.pathMapper.path(manifestSignatureLinkPathSpec{
-		name:      name,
+	signaturePath, err := rs.pm.path(manifestSignatureLinkPathSpec{
+		name:      rs.Name(),
 		revision:  revision,
 		signature: signatureDigest,
 	})
