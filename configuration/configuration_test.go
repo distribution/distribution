@@ -183,6 +183,17 @@ func (suite *ConfigSuite) TestParseWithDifferentEnvStorageType(c *C) {
 	c.Assert(config, DeepEquals, suite.expectedConfig)
 }
 
+// TestParseWithExtraneousEnvStorageParams validates that environment variables
+// that change parameters out of the scope of the specified storage type are
+// ignored.
+func (suite *ConfigSuite) TestParseWithExtraneousEnvStorageParams(c *C) {
+	os.Setenv("REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY", "/tmp/testroot")
+
+	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
+	c.Assert(err, IsNil)
+	c.Assert(config, DeepEquals, suite.expectedConfig)
+}
+
 // TestParseWithDifferentEnvStorageTypeAndParams validates that providing an environment variable
 // that changes the storage type will be reflected in the parsed Configuration struct and that
 // environment storage parameters will also be included
