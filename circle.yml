@@ -45,13 +45,13 @@ dependencies:
 
   override:
   # Install dependencies for every copied clone/go version
-    - gvm use old && go get -t -d -v ./...:
+    - gvm use old && go get github.com/tools/godep:
         pwd: $BASE_OLD
 
-    - gvm use stable && go get -t -d -v ./...:
+    - gvm use stable && go get github.com/tools/godep:
         pwd: $BASE_STABLE
 
-    # - gvm use bleed && go get -t -d -v ./...:
+    # - gvm use bleed && go get github.com/tools/godep:
     #   pwd: $BASE_BLEED
 
   post:
@@ -81,7 +81,7 @@ test:
 
   override:
   # Test every version we have (but stable)
-    - gvm use old; go test -test.v -test.short ./...:
+    - gvm use old; godep go test -test.v -test.short ./...:
         timeout: 600
         pwd: $BASE_OLD
 
@@ -95,7 +95,7 @@ test:
     - gvm use stable; go list ./... | xargs -L 1 -I{} rm -f $GOPATH/src/{}/coverage.out:
         pwd: $BASE_STABLE
 
-    - gvm use stable; go list ./... | xargs -L 1 -I{} go test -test.short -coverprofile=$GOPATH/src/{}/coverage.out {}:
+    - gvm use stable; go list ./... | xargs -L 1 -I{} godep go test -test.short -coverprofile=$GOPATH/src/{}/coverage.out {}:
         timeout: 600
         pwd: $BASE_STABLE
 
@@ -112,12 +112,3 @@ test:
   # - go get code.google.com/p/go.tools/cmd/goimports
   # - test -z "$(goimports -l -w ./... | tee /dev/stderr)"
   # http://labix.org/gocheck
-
-general:
-  branches:
-    ignore:
-      - master
-      - 0.7
-      - 0.8
-      - 0.9
-      - 1.0
