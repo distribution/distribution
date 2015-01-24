@@ -82,8 +82,14 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	// Providing no values for these is valid in case the user is authenticating
 	// with an IAM on an ec2 instance (in which case the instance credentials will
 	// be summoned when GetAuth is called)
-	accessKey, _ := parameters["accesskey"]
-	secretKey, _ := parameters["secretkey"]
+	accessKey, ok := parameters["accesskey"]
+	if !ok {
+		accessKey = ""
+	}
+	secretKey, ok := parameters["secretkey"]
+	if !ok {
+		secretKey = ""
+	}
 
 	regionName, ok := parameters["region"]
 	if !ok || fmt.Sprint(regionName) == "" {
