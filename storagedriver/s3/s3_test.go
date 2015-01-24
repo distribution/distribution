@@ -63,6 +63,7 @@ func init() {
 			encryptBool,
 			secureBool,
 			v4AuthBool,
+			minChunkSize,
 			root,
 		}
 
