@@ -21,4 +21,6 @@ An implementation of the `storagedriver.StorageDriver` interface which uses Amaz
 
 `v4auth`: (optional) Whether you would like to use aws signature version 4 with your requests. This defaults to true if not specified (note that the eu-central-1 region does not work with version 2 signatures, so the driver will error out if initialized with this region and v4auth set to false)
 
+`chunksize`: (optional) The default part size for multipart uploads (performed by WriteStream) to s3. The default is 10 MB. Keep in mind that the minimum part size for s3 is 5MB. You might experience better performance for larger chunk sizes depending on the speed of your connection to s3.
+
 `rootdirectory`: (optional) The root directory tree in which all registry files will be stored. Defaults to the empty string (bucket root).
