@@ -259,16 +259,13 @@ func (suite *DriverSuite) TestWriteReadLargeStreams(c *check.C) {
 	defer suite.StorageDriver.Delete(firstPart(filename))
 
 	checksum := sha1.New()
-	var offset int64
-	var chunkSize int64 = 1024 * 1024
+	var fileSize int64 = 5 * 1024 * 1024 * 1024
 
-	for i := 0; i < 5*1024; i++ {
-		contents := randomContents(chunkSize)
-		written, err := suite.StorageDriver.WriteStream(filename, offset, io.TeeReader(bytes.NewReader(contents), checksum))
-		c.Assert(err, check.IsNil)
-		c.Assert(written, check.Equals, chunkSize)
-		offset += chunkSize
-	}
+	contents := newRandReader(fileSize)
+	written, err := suite.StorageDriver.WriteStream(filename, 0, io.TeeReader(contents, checksum))
+	c.Assert(err, check.IsNil)
+	c.Assert(written, check.Equals, fileSize)
+
 	reader, err := suite.StorageDriver.ReadStream(filename, 0)
 	c.Assert(err, check.IsNil)
 
@@ -1086,6 +1083,29 @@ func randomContents(length int64) []byte {
 		b[i] = byte(rand.Intn(2 << 8))
 	}
 	return b
+}
+
+type randReader struct {
+	r int64
+	m sync.Mutex
+}
+
+func (rr *randReader) Read(p []byte) (n int, err error) {
+	rr.m.Lock()
+	defer rr.m.Unlock()
+	for i := 0; i < len(p) && rr.r > 0; i++ {
+		p[i] = byte(rand.Intn(255))
+		n++
+		rr.r--
+	}
+	if rr.r == 0 {
+		err = io.EOF
+	}
+	return
+}
+
+func newRandReader(n int64) *randReader {
+	return &randReader{r: n}
 }
 
 func firstPart(filePath string) string {
