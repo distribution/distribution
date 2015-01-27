@@ -299,6 +299,7 @@ func (f *file) WriteAt(p []byte, offset int64) (n int, err error) {
 		f.data = data
 	}
 
+	f.mod = time.Now()
 	f.data = f.data[:off+len(p)]
 
 	return copy(f.data[off:off+len(p)], p), nil
