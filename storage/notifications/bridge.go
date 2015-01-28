@@ -72,7 +72,7 @@ func (b *bridge) createManifestEventAndWrite(action string, repo storage.Reposit
 
 func (b *bridge) createManifestEvent(action string, repo storage.Repository, sm *manifest.SignedManifest) (*Event, error) {
 	event := b.createEvent(action)
-	event.Target.Type = "manifest"
+	event.Target.Type = EventTargetTypeManifest
 	event.Target.Name = repo.Name()
 	event.Target.Tag = sm.Tag
 
@@ -107,7 +107,7 @@ func (b *bridge) createLayerEventAndWrite(action string, repo storage.Repository
 
 func (b *bridge) createLayerEvent(action string, repo storage.Repository, dgst digest.Digest) (*Event, error) {
 	event := b.createEvent(action)
-	event.Target.Type = "layer"
+	event.Target.Type = EventTargetTypeBlob
 	event.Target.Name = repo.Name()
 	event.Target.Digest = dgst
 

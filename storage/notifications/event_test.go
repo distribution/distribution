@@ -97,7 +97,7 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
 	manifestPush = prototype
 	manifestPush.ID = "asdf-asdf-asdf-asdf-0"
 	manifestPush.Target.Digest = "sha256:0123456789abcdef0"
-	manifestPush.Target.Type = "manifest"
+	manifestPush.Target.Type = EventTargetTypeManifest
 	manifestPush.Target.Name = "library/test"
 	manifestPush.Target.Tag = "latest"
 	manifestPush.Target.URL = "http://example.com/v2/library/test/manifests/latest"
@@ -106,7 +106,7 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
 	layerPush0 = prototype
 	layerPush0.ID = "asdf-asdf-asdf-asdf-1"
 	layerPush0.Target.Digest = "tarsum.v2+sha256:0123456789abcdef1"
-	layerPush0.Target.Type = "blob"
+	layerPush0.Target.Type = EventTargetTypeBlob
 	layerPush0.Target.Name = "library/test"
 	layerPush0.Target.URL = "http://example.com/v2/library/test/manifests/latest"
 
@@ -114,7 +114,7 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
 	layerPush1 = prototype
 	layerPush1.ID = "asdf-asdf-asdf-asdf-2"
 	layerPush1.Target.Digest = "tarsum.v2+sha256:0123456789abcdef2"
-	layerPush1.Target.Type = "blob"
+	layerPush1.Target.Type = EventTargetTypeBlob
 	layerPush1.Target.Name = "library/test"
 	layerPush1.Target.URL = "http://example.com/v2/library/test/manifests/latest"
 

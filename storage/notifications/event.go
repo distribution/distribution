@@ -12,7 +12,12 @@ const (
 	EventActionPull   = "pull"
 	EventActionPush   = "push"
 	EventActionDelete = "delete"
-	EventActionPing   = "ping"
+)
+
+// EventTargetType constants used in Target section of Event.
+const (
+	EventTargetTypeManifest = "manifest"
+	EventTargetTypeBlob     = "blob"
 )
 
 // EventsMediaType is the mediatype for the json event envelope. If the Event,
