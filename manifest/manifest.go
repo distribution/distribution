@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/docker/distribution/digest"
+	"github.com/docker/libtrust"
 )
 
 // Versioned provides a struct with just the manifest schemaVersion. Incoming
@@ -60,6 +61,31 @@ func (sm *SignedManifest) UnmarshalJSON(b []byte) error {
 	copy(sm.Raw, b)
 
 	return nil
+}
+
+// Payload returns the raw, signed content of the signed manifest. The
+// contents can be used to calculate the content identifier.
+func (sm *SignedManifest) Payload() ([]byte, error) {
+	jsig, err := libtrust.ParsePrettySignature(sm.Raw, "signatures")
+	if err != nil {
+		return nil, err
+	}
+
+	// Resolve the payload in the manifest.
+	return jsig.Payload()
+}
+
+// Signatures returns the signatures as provided by
+// (*libtrust.JSONSignature).Signatures. The byte slices are opaque jws
+// signatures.
+func (sm *SignedManifest) Signatures() ([][]byte, error) {
+	jsig, err := libtrust.ParsePrettySignature(sm.Raw, "signatures")
+	if err != nil {
+		return nil, err
+	}
+
+	// Resolve the payload in the manifest.
+	return jsig.Signatures()
 }
 
 // MarshalJSON returns the contents of raw. If Raw is nil, marshals the inner
