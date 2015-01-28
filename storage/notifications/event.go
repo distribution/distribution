@@ -36,7 +36,7 @@ type Envelope struct {
 // Event provides the fields required to describe a registry event.
 type Event struct {
 	// ID provides a unique identifier for the event.
-	ID string `json:"uuid,omitempty"`
+	ID string `json:"id,omitempty"`
 
 	// Timestamp is the time at which the event occurred.
 	Timestamp time.Time `json:"timestamp,omitempty"`
@@ -74,6 +74,8 @@ type Event struct {
 
 // ActorRecord specifies the agent that initiated the event. For most
 // situations, this could be from the authorizaton context of the request.
+// Data in this record can refer to both the initiating client and the
+// generating request.
 type ActorRecord struct {
 	// Name corresponds to the subject or username associated with the
 	// request context that generated the event.
@@ -82,6 +84,22 @@ type ActorRecord struct {
 	// Addr contains the ip or hostname and possibly port of the client
 	// connection that initiated the event.
 	Addr string `json:"addr,omitempty"`
+
+	// Host is the externally accessible host name of the registry instance,
+	// as specified by the http host header on incoming requests.
+	Host string `json:"host,omitempty"`
+
+	// RequestID uniquely identifies the registry request that generated the
+	// event.
+	RequestID string `json:"requestID,omitempty"`
+
+	// TODO(stevvooe): Look into setting a session cookie to get this
+	// without docker daemon.
+	//    SessionID
+
+	// TODO(stevvooe): Push the "Docker-Command" header to replace cookie and
+	// get the actual command.
+	//    Command
 }
 
 // SourceRecord identifies the registry node that generated the event. Put
@@ -93,12 +111,9 @@ type SourceRecord struct {
 	// os.Hostname() along with the running port.
 	Addr string `json:"addr,omitempty"`
 
-	// Host is the dns name of the registry cluster, as configured.
-	Host string `json:"host,omitempty"`
-
-	// RequestID uniquely identifies the registry request that generated the
-	// event.
-	RequestID string `json:"request_id,omitempty"`
+	// InstanceID identifies a running instance of an application. Changes
+	// after each restart.
+	InstanceID string `json:"instanceID,omitempty"`
 }
 
 var (

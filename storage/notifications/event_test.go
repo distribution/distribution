@@ -15,7 +15,7 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
 {
    "events": [
       {
-         "uuid": "asdf-asdf-asdf-asdf-0",
+         "id": "asdf-asdf-asdf-asdf-0",
          "timestamp": "2006-01-02T15:04:05Z",
          "action": "push",
          "target": {
@@ -27,16 +27,16 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
          },
          "actor": {
             "name": "test-actor",
-            "addr": "hostname.local"
+            "addr": "client.local",
+            "host": "registrycluster.local",
+            "requestID": "asdfasdf"
          },
          "source": {
-            "addr": "hostname.local",
-            "host": "registrycluster.local",
-            "request_id": "asdfasdf"
+            "addr": "hostname.local:port"
          }
       },
       {
-         "uuid": "asdf-asdf-asdf-asdf-1",
+         "id": "asdf-asdf-asdf-asdf-1",
          "timestamp": "2006-01-02T15:04:05Z",
          "action": "push",
          "target": {
@@ -47,16 +47,16 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
          },
          "actor": {
             "name": "test-actor",
-            "addr": "hostname.local"
+            "addr": "client.local",
+            "host": "registrycluster.local",
+            "requestID": "asdfasdf"
          },
          "source": {
-            "addr": "hostname.local",
-            "host": "registrycluster.local",
-            "request_id": "asdfasdf"
+            "addr": "hostname.local:port"
          }
       },
       {
-         "uuid": "asdf-asdf-asdf-asdf-2",
+         "id": "asdf-asdf-asdf-asdf-2",
          "timestamp": "2006-01-02T15:04:05Z",
          "action": "push",
          "target": {
@@ -67,12 +67,12 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
          },
          "actor": {
             "name": "test-actor",
-            "addr": "hostname.local"
+            "addr": "client.local",
+            "host": "registrycluster.local",
+            "requestID": "asdfasdf"
          },
          "source": {
-            "addr": "hostname.local",
-            "host": "registrycluster.local",
-            "request_id": "asdfasdf"
+            "addr": "hostname.local:port"
          }
       }
    ]
@@ -87,11 +87,11 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
 	var prototype Event
 	prototype.Action = "push"
 	prototype.Timestamp = tm
-	prototype.Actor.Addr = "hostname.local"
+	prototype.Actor.Addr = "client.local"
 	prototype.Actor.Name = "test-actor"
-	prototype.Source.Addr = "hostname.local"
-	prototype.Source.Host = "registrycluster.local"
-	prototype.Source.RequestID = "asdfasdf"
+	prototype.Actor.RequestID = "asdfasdf"
+	prototype.Actor.Host = "registrycluster.local"
+	prototype.Source.Addr = "hostname.local:port"
 
 	var manifestPush Event
 	manifestPush = prototype
