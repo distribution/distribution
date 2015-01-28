@@ -1,6 +1,7 @@
 package main
 
 import (
+	_ "expvar"
 	"flag"
 	"fmt"
 	"net/http"
@@ -46,6 +47,10 @@ func main() {
 	handler := configureReporting(app)
 	handler = handlers.CombinedLoggingHandler(os.Stdout, handler)
 	log.SetLevel(logLevel(config.Loglevel))
+
+	if config.HTTP.Debug.Addr != "" {
+		go debugServer(config.HTTP.Debug.Addr)
+	}
 
 	if config.HTTP.TLS.Certificate == "" {
 		log.Infof("listening on %v", config.HTTP.Addr)
@@ -141,4 +146,14 @@ func configureReporting(app *registry.App) http.Handler {
 	}
 
 	return handler
+}
+
+// debugServer starts the debug server with pprof, expvar among other
+// endpoints. The addr should not be exposed externally. For most of these to
+// work, tls cannot be enabled on the endpoint, so it is generally separate.
+func debugServer(addr string) {
+	log.Infof("debug server listening %v", addr)
+	if err := http.ListenAndServe(addr, nil); err != nil {
+		log.Fatalf("error listening on debug interface: %v", err)
+	}
 }

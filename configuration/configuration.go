@@ -54,6 +54,14 @@ type Configuration struct {
 			// Certificate.
 			Key string `yaml:"key"`
 		} `yaml:"tls"`
+
+		// Debug configures the http debug interface, if specified. This can
+		// include services such as pprof, expvar and other data that should
+		// not be exposed externally. Left disabled by default.
+		Debug struct {
+			// Addr specifies the bind address for the debug server.
+			Addr string `yaml:"addr"`
+		} `yaml:"debug"`
 	} `yaml:"http"`
 }
 

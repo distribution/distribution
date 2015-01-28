@@ -5,3 +5,6 @@ storage:
         rootdirectory: /tmp/registry-dev
 http:
     addr: :5000
+    secret: asecretforlocaldevelopment
+    debug:
+        addr: localhost:5001
