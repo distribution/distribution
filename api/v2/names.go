@@ -17,7 +17,7 @@ const (
 
 	// RepositoryNameMinComponents is the minimum number of slash-delimited
 	// components that a repository name must have
-	RepositoryNameMinComponents = 2
+	RepositoryNameMinComponents = 1
 
 	// RepositoryNameMaxComponents is the maximum number of slash-delimited
 	// components that a repository name must have
@@ -41,9 +41,9 @@ var RepositoryNameComponentAnchoredRegexp = regexp.MustCompile(`^` + RepositoryN
 // Looking path prefixes and s3 limitation of 1024, this should likely be
 // around 512 bytes. 256 bytes might be more manageable.
 
-// RepositoryNameRegexp builds on RepositoryNameComponentRegexp to allow 2 to
+// RepositoryNameRegexp builds on RepositoryNameComponentRegexp to allow 1 to
 // 5 path components, separated by a forward slash.
-var RepositoryNameRegexp = regexp.MustCompile(`(?:` + RepositoryNameComponentRegexp.String() + `/){1,4}` + RepositoryNameComponentRegexp.String())
+var RepositoryNameRegexp = regexp.MustCompile(`(?:` + RepositoryNameComponentRegexp.String() + `/){0,4}` + RepositoryNameComponentRegexp.String())
 
 // TagNameRegexp matches valid tag names. From docker/docker:graph/tags.go.
 var TagNameRegexp = regexp.MustCompile(`[\w][\w.-]{0,127}`)
