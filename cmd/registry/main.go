@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -34,7 +33,7 @@ func main() {
 	flag.Parse()
 
 	if showVersion {
-		printVersion(os.Stdout)
+		version.PrintVersion()
 		return
 	}
 
@@ -57,10 +56,6 @@ func main() {
 func usage() {
 	fmt.Fprintln(os.Stderr, "usage:", os.Args[0], "<config>")
 	flag.PrintDefaults()
-}
-
-func printVersion(w io.Writer) {
-	fmt.Fprintln(w, os.Args[0], version.Package, version.Version)
 }
 
 func fatalf(format string, args ...interface{}) {
