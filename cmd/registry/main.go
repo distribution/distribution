@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -19,11 +20,23 @@ import (
 	_ "github.com/docker/distribution/storagedriver/filesystem"
 	_ "github.com/docker/distribution/storagedriver/inmemory"
 	_ "github.com/docker/distribution/storagedriver/s3"
+	"github.com/docker/distribution/version"
 )
+
+var showVersion bool
+
+func init() {
+	flag.BoolVar(&showVersion, "version", false, "show the version and exit")
+}
 
 func main() {
 	flag.Usage = usage
 	flag.Parse()
+
+	if showVersion {
+		printVersion(os.Stdout)
+		return
+	}
 
 	config, err := resolveConfiguration()
 	if err != nil {
@@ -44,6 +57,10 @@ func main() {
 func usage() {
 	fmt.Fprintln(os.Stderr, "usage:", os.Args[0], "<config>")
 	flag.PrintDefaults()
+}
+
+func printVersion(w io.Writer) {
+	fmt.Fprintln(w, os.Args[0], version.Package, version.Version)
 }
 
 func fatalf(format string, args ...interface{}) {
