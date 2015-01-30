@@ -11,6 +11,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/docker/distribution/api/v2"
@@ -120,29 +121,59 @@ func TestLayerAPI(t *testing.T) {
 	checkResponse(t, "checking head on non-existent layer", resp, http.StatusNotFound)
 
 	// ------------------------------------------
-	// Upload a layer
-	layerUploadURL, err := builder.BuildBlobUploadURL(imageName)
+	// Start an upload and cancel
+	uploadURLBase := startPushLayer(t, builder, imageName)
+
+	req, err := http.NewRequest("DELETE", uploadURLBase, nil)
 	if err != nil {
-		t.Fatalf("error building upload url: %v", err)
+		t.Fatalf("unexpected error creating delete request: %v", err)
 	}
 
-	resp, err = http.Post(layerUploadURL, "", nil)
+	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
-		t.Fatalf("error starting layer upload: %v", err)
+		t.Fatalf("unexpected error sending delete request: %v", err)
 	}
 
-	checkResponse(t, "starting layer upload", resp, http.StatusAccepted)
-	checkHeaders(t, resp, http.Header{
-		"Location":       []string{"*"},
-		"Content-Length": []string{"0"},
-	})
+	checkResponse(t, "deleting upload", resp, http.StatusNoContent)
 
+	// A status check should result in 404
+	resp, err = http.Get(uploadURLBase)
+	if err != nil {
+		t.Fatalf("unexpected error getting upload status: %v", err)
+	}
+	checkResponse(t, "status of deleted upload", resp, http.StatusNotFound)
+
+	// -----------------------------------------
+	// Do layer push with an empty body
+	uploadURLBase = startPushLayer(t, builder, imageName)
+	resp, err = doPushLayer(t, builder, imageName, layerDigest, uploadURLBase, bytes.NewReader([]byte{}))
+	if err != nil {
+		t.Fatalf("unexpected error doing bad layer push: %v", err)
+	}
+
+	checkResponse(t, "bad layer push", resp, http.StatusBadRequest)
+	checkBodyHasErrorCodes(t, "bad layer push", resp, v2.ErrorCodeBlobUploadInvalid)
+
+	// -----------------------------------------
+	// Do layer push with an invalid body
+
+	// This is a valid but empty tarfile!
+	badTar := bytes.Repeat([]byte("\x00"), 1024)
+	uploadURLBase = startPushLayer(t, builder, imageName)
+	resp, err = doPushLayer(t, builder, imageName, layerDigest, uploadURLBase, bytes.NewReader(badTar))
+	if err != nil {
+		t.Fatalf("unexpected error doing bad layer push: %v", err)
+	}
+
+	checkResponse(t, "bad layer push", resp, http.StatusBadRequest)
+	checkBodyHasErrorCodes(t, "bad layer push", resp, v2.ErrorCodeDigestInvalid)
+
+	// ------------------------------------------
+	// Now, actually do successful upload.
 	layerLength, _ := layerFile.Seek(0, os.SEEK_END)
 	layerFile.Seek(0, os.SEEK_SET)
 
-	// TODO(sday): Cancel the layer upload here and restart.
-
-	uploadURLBase := startPushLayer(t, builder, imageName)
+	uploadURLBase = startPushLayer(t, builder, imageName)
 	pushLayer(t, builder, imageName, layerDigest, uploadURLBase, layerFile)
 
 	// ------------------------
@@ -218,27 +249,7 @@ func TestManifestAPI(t *testing.T) {
 	defer resp.Body.Close()
 
 	checkResponse(t, "getting non-existent manifest", resp, http.StatusNotFound)
-
-	// TODO(stevvooe): Shoot. The error setup is not working out. The content-
-	// type headers are being set after writing the status code.
-	// if resp.Header.Get("Content-Type") != "application/json; charset=utf-8" {
-	// 	t.Fatalf("unexpected content type: %v != 'application/json'",
-	// 		resp.Header.Get("Content-Type"))
-	// }
-	dec := json.NewDecoder(resp.Body)
-
-	var respErrs v2.Errors
-	if err := dec.Decode(&respErrs); err != nil {
-		t.Fatalf("unexpected error decoding error response: %v", err)
-	}
-
-	if len(respErrs.Errors) == 0 {
-		t.Fatalf("expected errors in response")
-	}
-
-	if respErrs.Errors[0].Code != v2.ErrorCodeManifestUnknown {
-		t.Fatalf("expected manifest unknown error: got %v", respErrs)
-	}
+	checkBodyHasErrorCodes(t, "getting non-existent manifest", resp, v2.ErrorCodeManifestUnknown)
 
 	tagsURL, err := builder.BuildTagsURL(imageName)
 	if err != nil {
@@ -253,18 +264,7 @@ func TestManifestAPI(t *testing.T) {
 
 	// Check that we get an unknown repository error when asking for tags
 	checkResponse(t, "getting unknown manifest tags", resp, http.StatusNotFound)
-	dec = json.NewDecoder(resp.Body)
-	if err := dec.Decode(&respErrs); err != nil {
-		t.Fatalf("unexpected error decoding error response: %v", err)
-	}
-
-	if len(respErrs.Errors) == 0 {
-		t.Fatalf("expected errors in response")
-	}
-
-	if respErrs.Errors[0].Code != v2.ErrorCodeNameUnknown {
-		t.Fatalf("expected respository unknown error: got %v", respErrs)
-	}
+	checkBodyHasErrorCodes(t, "getting unknown manifest tags", resp, v2.ErrorCodeNameUnknown)
 
 	// --------------------------------
 	// Attempt to push unsigned manifest with missing layers
@@ -284,41 +284,17 @@ func TestManifestAPI(t *testing.T) {
 	resp = putManifest(t, "putting unsigned manifest", manifestURL, unsignedManifest)
 	defer resp.Body.Close()
 	checkResponse(t, "posting unsigned manifest", resp, http.StatusBadRequest)
+	_, p, counts := checkBodyHasErrorCodes(t, "getting unknown manifest tags", resp,
+		v2.ErrorCodeManifestUnverified, v2.ErrorCodeBlobUnknown, v2.ErrorCodeDigestInvalid)
 
-	dec = json.NewDecoder(resp.Body)
-	if err := dec.Decode(&respErrs); err != nil {
-		t.Fatalf("unexpected error decoding error response: %v", err)
+	expectedCounts := map[v2.ErrorCode]int{
+		v2.ErrorCodeManifestUnverified: 1,
+		v2.ErrorCodeBlobUnknown:        2,
+		v2.ErrorCodeDigestInvalid:      2,
 	}
 
-	var unverified int
-	var missingLayers int
-	var invalidDigests int
-
-	for _, err := range respErrs.Errors {
-		switch err.Code {
-		case v2.ErrorCodeManifestUnverified:
-			unverified++
-		case v2.ErrorCodeBlobUnknown:
-			missingLayers++
-		case v2.ErrorCodeDigestInvalid:
-			// TODO(stevvooe): This error isn't quite descriptive enough --
-			// the layer with an invalid digest isn't identified.
-			invalidDigests++
-		default:
-			t.Fatalf("unexpected error: %v", err)
-		}
-	}
-
-	if unverified != 1 {
-		t.Fatalf("should have received one unverified manifest error: %v", respErrs)
-	}
-
-	if missingLayers != 2 {
-		t.Fatalf("should have received two missing layer errors: %v", respErrs)
-	}
-
-	if invalidDigests != 2 {
-		t.Fatalf("should have received two invalid digest errors: %v", respErrs)
+	if !reflect.DeepEqual(counts, expectedCounts) {
+		t.Fatalf("unexpected number of error codes encountered: %v\n!=\n%v\n---\n%s", counts, expectedCounts, string(p))
 	}
 
 	// TODO(stevvooe): Add a test case where we take a mostly valid registry,
@@ -363,7 +339,7 @@ func TestManifestAPI(t *testing.T) {
 	checkResponse(t, "fetching uploaded manifest", resp, http.StatusOK)
 
 	var fetchedManifest manifest.SignedManifest
-	dec = json.NewDecoder(resp.Body)
+	dec := json.NewDecoder(resp.Body)
 	if err := dec.Decode(&fetchedManifest); err != nil {
 		t.Fatalf("error decoding fetched manifest: %v", err)
 	}
@@ -448,11 +424,9 @@ func startPushLayer(t *testing.T, ub *v2.URLBuilder, name string) string {
 	return resp.Header.Get("Location")
 }
 
-// pushLayer pushes the layer content returning the url on success.
-func pushLayer(t *testing.T, ub *v2.URLBuilder, name string, dgst digest.Digest, uploadURLBase string, rs io.ReadSeeker) string {
-	rsLength, _ := rs.Seek(0, os.SEEK_END)
-	rs.Seek(0, os.SEEK_SET)
-
+// doPushLayer pushes the layer content returning the url on success returning
+// the response. If you're only expecting a successful response, use pushLayer.
+func doPushLayer(t *testing.T, ub *v2.URLBuilder, name string, dgst digest.Digest, uploadURLBase string, body io.Reader) (*http.Response, error) {
 	u, err := url.Parse(uploadURLBase)
 	if err != nil {
 		t.Fatalf("unexpected error parsing pushLayer url: %v", err)
@@ -462,23 +436,24 @@ func pushLayer(t *testing.T, ub *v2.URLBuilder, name string, dgst digest.Digest,
 		"_state": u.Query()["_state"],
 
 		"digest": []string{dgst.String()},
-
-		// TODO(stevvooe): Layer upload can be completed with and without size
-		// argument. We'll need to add a test that checks the latter path.
-		"size": []string{fmt.Sprint(rsLength)},
 	}.Encode()
 
 	uploadURL := u.String()
 
 	// Just do a monolithic upload
-	req, err := http.NewRequest("PUT", uploadURL, rs)
+	req, err := http.NewRequest("PUT", uploadURL, body)
 	if err != nil {
 		t.Fatalf("unexpected error creating new request: %v", err)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	return http.DefaultClient.Do(req)
+}
+
+// pushLayer pushes the layer content returning the url on success.
+func pushLayer(t *testing.T, ub *v2.URLBuilder, name string, dgst digest.Digest, uploadURLBase string, body io.Reader) string {
+	resp, err := doPushLayer(t, ub, name, dgst, uploadURLBase, body)
 	if err != nil {
-		t.Fatalf("unexpected error doing put: %v", err)
+		t.Fatalf("unexpected error doing push layer request: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -504,6 +479,57 @@ func checkResponse(t *testing.T, msg string, resp *http.Response, expectedStatus
 
 		t.FailNow()
 	}
+}
+
+// checkBodyHasErrorCodes ensures the body is an error body and has the
+// expected error codes, returning the error structure, the json slice and a
+// count of the errors by code.
+func checkBodyHasErrorCodes(t *testing.T, msg string, resp *http.Response, errorCodes ...v2.ErrorCode) (v2.Errors, []byte, map[v2.ErrorCode]int) {
+	p, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("unexpected error reading body %s: %v", msg, err)
+	}
+
+	var errs v2.Errors
+	if err := json.Unmarshal(p, &errs); err != nil {
+		t.Fatalf("unexpected error decoding error response: %v", err)
+	}
+
+	if len(errs.Errors) == 0 {
+		t.Fatalf("expected errors in response")
+	}
+
+	// TODO(stevvooe): Shoot. The error setup is not working out. The content-
+	// type headers are being set after writing the status code.
+	// if resp.Header.Get("Content-Type") != "application/json; charset=utf-8" {
+	// 	t.Fatalf("unexpected content type: %v != 'application/json'",
+	// 		resp.Header.Get("Content-Type"))
+	// }
+
+	expected := map[v2.ErrorCode]struct{}{}
+	counts := map[v2.ErrorCode]int{}
+
+	// Initialize map with zeros for expected
+	for _, code := range errorCodes {
+		expected[code] = struct{}{}
+		counts[code] = 0
+	}
+
+	for _, err := range errs.Errors {
+		if _, ok := expected[err.Code]; !ok {
+			t.Fatalf("unexpected error code %v encountered: %s ", err.Code, string(p))
+		}
+		counts[err.Code]++
+	}
+
+	// Ensure that counts of expected errors were all non-zero
+	for code := range expected {
+		if counts[code] == 0 {
+			t.Fatalf("expected error code %v not encounterd: %s", code, string(p))
+		}
+	}
+
+	return errs, p, counts
 }
 
 func maybeDumpResponse(t *testing.T, resp *http.Response) {
