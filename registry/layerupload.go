@@ -23,10 +23,12 @@ func layerUploadDispatcher(ctx *Context, r *http.Request) http.Handler {
 	}
 
 	handler := http.Handler(handlers.MethodHandler{
-		"POST":   http.HandlerFunc(luh.StartLayerUpload),
-		"GET":    http.HandlerFunc(luh.GetUploadStatus),
-		"HEAD":   http.HandlerFunc(luh.GetUploadStatus),
-		"PUT":    http.HandlerFunc(luh.PutLayerChunk),
+		"POST": http.HandlerFunc(luh.StartLayerUpload),
+		"GET":  http.HandlerFunc(luh.GetUploadStatus),
+		"HEAD": http.HandlerFunc(luh.GetUploadStatus),
+		// TODO(stevvooe): Must implement patch support.
+		// "PATCH":    http.HandlerFunc(luh.PutLayerChunk),
+		"PUT":    http.HandlerFunc(luh.PutLayerUploadComplete),
 		"DELETE": http.HandlerFunc(luh.CancelLayerUpload),
 	})
 
@@ -158,55 +160,80 @@ func (luh *layerUploadHandler) GetUploadStatus(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// PutLayerChunk receives a layer chunk during the layer upload process,
-// possible completing the upload with a checksum and length.
-func (luh *layerUploadHandler) PutLayerChunk(w http.ResponseWriter, r *http.Request) {
+// PutLayerUploadComplete takes the final request of a layer upload. The final
+// chunk may include all the layer data, the final chunk of layer data or no
+// layer data. Any data provided is received and verified. If successful, the
+// layer is linked into the blob store and 201 Created is returned with the
+// canonical url of the layer.
+func (luh *layerUploadHandler) PutLayerUploadComplete(w http.ResponseWriter, r *http.Request) {
 	if luh.Upload == nil {
 		w.WriteHeader(http.StatusNotFound)
 		luh.Errors.Push(v2.ErrorCodeBlobUploadUnknown)
-	}
-
-	var finished bool
-
-	// TODO(stevvooe): This is woefully incomplete. Missing stuff:
-	//
-	// 1. Extract information from range header, if present.
-	// 2. Check offset of current layer.
-	// 3. Emit correct error responses.
-
-	// Read in the chunk
-	io.Copy(luh.Upload, r.Body)
-
-	if err := luh.maybeCompleteUpload(w, r); err != nil {
-		if err != errNotReadyToComplete {
-			switch err := err.(type) {
-			case storage.ErrLayerInvalidSize:
-				w.WriteHeader(http.StatusBadRequest)
-				luh.Errors.Push(v2.ErrorCodeSizeInvalid, err)
-				return
-			case storage.ErrLayerInvalidDigest:
-				w.WriteHeader(http.StatusBadRequest)
-				luh.Errors.Push(v2.ErrorCodeDigestInvalid, err)
-				return
-			default:
-				w.WriteHeader(http.StatusInternalServerError)
-				luh.Errors.Push(v2.ErrorCodeUnknown, err)
-				return
-			}
-		}
-	}
-
-	if err := luh.layerUploadResponse(w, r); err != nil {
-		w.WriteHeader(http.StatusInternalServerError) // Error conditions here?
-		luh.Errors.Push(v2.ErrorCodeUnknown, err)
 		return
 	}
 
-	if finished {
-		w.WriteHeader(http.StatusCreated)
-	} else {
-		w.WriteHeader(http.StatusAccepted)
+	dgstStr := r.FormValue("digest") // TODO(stevvooe): Support multiple digest parameters!
+
+	if dgstStr == "" {
+		// no digest? return error, but allow retry.
+		w.WriteHeader(http.StatusNotFound)
+		luh.Errors.Push(v2.ErrorCodeDigestInvalid, "digest missing")
+		return
 	}
+
+	dgst, err := digest.ParseDigest(dgstStr)
+	if err != nil {
+		// no digest? return error, but allow retry.
+		w.WriteHeader(http.StatusNotFound)
+		luh.Errors.Push(v2.ErrorCodeDigestInvalid, "digest parsing failed")
+		return
+	}
+
+	// TODO(stevvooe): Check the incoming range header here, per the
+	// specification. LayerUpload should be seeked (sought?) to that position.
+
+	// Read in the final chunk, if any.
+	io.Copy(luh.Upload, r.Body)
+
+	layer, err := luh.Upload.Finish(dgst)
+	if err != nil {
+		switch err := err.(type) {
+		case storage.ErrLayerUploadUnavailable:
+			w.WriteHeader(http.StatusBadRequest)
+			// TODO(stevvooe): Arguably, we may want to add an error code to
+			// cover this condition. It is not always a client error but it
+			// may be. For now, we effectively throw out the upload and have
+			// them start over.
+			luh.Errors.Push(v2.ErrorCodeBlobUploadInvalid, err.Err)
+		case storage.ErrLayerInvalidDigest:
+			w.WriteHeader(http.StatusBadRequest)
+			luh.Errors.Push(v2.ErrorCodeDigestInvalid, err)
+		default:
+			luh.log.Errorf("unknown error completing upload: %#v", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			luh.Errors.Push(v2.ErrorCodeUnknown, err)
+		}
+
+		// Clean up the backend layer data if there was an error.
+		if err := luh.Upload.Cancel(); err != nil {
+			// If the cleanup fails, all we can do is observe and report.
+			luh.log.Errorf("error canceling upload after error: %v", err)
+		}
+
+		return
+	}
+
+	// Build our canonical layer url
+	layerURL, err := luh.urlBuilder.BuildBlobURL(layer.Name(), layer.Digest())
+	if err != nil {
+		luh.Errors.Push(v2.ErrorCodeUnknown, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Location", layerURL)
+	w.Header().Set("Content-Length", "0")
+	w.WriteHeader(http.StatusCreated)
 }
 
 // CancelLayerUpload cancels an in-progress upload of a layer.
@@ -214,8 +241,16 @@ func (luh *layerUploadHandler) CancelLayerUpload(w http.ResponseWriter, r *http.
 	if luh.Upload == nil {
 		w.WriteHeader(http.StatusNotFound)
 		luh.Errors.Push(v2.ErrorCodeBlobUploadUnknown)
+		return
 	}
 
+	if err := luh.Upload.Cancel(); err != nil {
+		luh.log.Errorf("error encountered canceling upload: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		luh.Errors.PushErr(err)
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // layerUploadResponse provides a standard request for uploading layers and
@@ -256,46 +291,4 @@ func (luh *layerUploadHandler) layerUploadResponse(w http.ResponseWriter, r *htt
 	w.Header().Set("Range", fmt.Sprintf("0-%d", luh.State.Offset))
 
 	return nil
-}
-
-var errNotReadyToComplete = fmt.Errorf("not ready to complete upload")
-
-// maybeCompleteUpload tries to complete the upload if the correct parameters
-// are available. Returns errNotReadyToComplete if not ready to complete.
-func (luh *layerUploadHandler) maybeCompleteUpload(w http.ResponseWriter, r *http.Request) error {
-	// If we get a digest and length, we can finish the upload.
-	dgstStr := r.FormValue("digest") // TODO(stevvooe): Support multiple digest parameters!
-
-	if dgstStr == "" {
-		return errNotReadyToComplete
-	}
-
-	dgst, err := digest.ParseDigest(dgstStr)
-	if err != nil {
-		return err
-	}
-
-	luh.completeUpload(w, r, dgst)
-	return nil
-}
-
-// completeUpload finishes out the upload with the correct response.
-func (luh *layerUploadHandler) completeUpload(w http.ResponseWriter, r *http.Request, dgst digest.Digest) {
-	layer, err := luh.Upload.Finish(dgst)
-	if err != nil {
-		luh.Errors.Push(v2.ErrorCodeUnknown, err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	layerURL, err := luh.urlBuilder.BuildBlobURL(layer.Name(), layer.Digest())
-	if err != nil {
-		luh.Errors.Push(v2.ErrorCodeUnknown, err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Location", layerURL)
-	w.Header().Set("Content-Length", "0")
-	w.WriteHeader(http.StatusCreated)
 }
