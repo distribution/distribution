@@ -102,7 +102,22 @@ func (luc *layerUploadController) validateLayer(dgst digest.Digest) (digest.Dige
 	// Read the file from the backend driver and validate it.
 	fr, err := newFileReader(luc.fileWriter.driver, luc.path)
 	if err != nil {
-		return "", err
+		switch err := err.(type) {
+		case storagedriver.PathNotFoundError:
+			// NOTE(stevvooe): Path not found can mean several things by we
+			// should report the upload is not available. This can happen if
+			// the following happens:
+			//
+			// 	1. If not data was received for the upload instance.
+			// 	2. Backend storage driver has not convereged after receiving latest data.
+			//
+			// This *does not* mean that the upload does not exist, since we
+			// can't even get a LayerUpload object without having the
+			// directory exist.
+			return "", ErrLayerUploadUnavailable{Err: err}
+		default:
+			return "", err
+		}
 	}
 
 	tr := io.TeeReader(fr, digestVerifier)

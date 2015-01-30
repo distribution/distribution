@@ -94,3 +94,14 @@ type ErrLayerInvalidSize struct {
 func (err ErrLayerInvalidSize) Error() string {
 	return fmt.Sprintf("invalid layer size: %d", err.Size)
 }
+
+// ErrLayerUploadUnavailable signals missing upload data, either when no data
+// has been received or when the backend reports the data as missing. This is
+// different from ErrLayerUploadUnknown.
+type ErrLayerUploadUnavailable struct {
+	Err error
+}
+
+func (err ErrLayerUploadUnavailable) Error() string {
+	return fmt.Sprintf("layer upload unavialable: %v", err)
+}
