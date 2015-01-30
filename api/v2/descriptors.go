@@ -1263,7 +1263,6 @@ var routeDescriptors = []RouteDescriptor{
 								Description: "An error was encountered processing the delete. The client may ignore this error.",
 								StatusCode:  http.StatusBadRequest,
 								ErrorCodes: []ErrorCode{
-									ErrorCodeDigestInvalid,
 									ErrorCodeNameInvalid,
 									ErrorCodeBlobUploadInvalid,
 								},
