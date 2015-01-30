@@ -10,6 +10,9 @@ func TestRepositoryNameRegexp(t *testing.T) {
 		err   error
 	}{
 		{
+			input: "short",
+		},
+		{
 			input: "simple/name",
 		},
 		{
@@ -41,7 +44,6 @@ func TestRepositoryNameRegexp(t *testing.T) {
 		},
 		{
 			input: "asdf",
-			err:   ErrRepositoryNameMissingComponents,
 		},
 		{
 			input: "asdf$$^/aa",
@@ -58,7 +60,7 @@ func TestRepositoryNameRegexp(t *testing.T) {
 		},
 		{
 			input: "a",
-			err:   ErrRepositoryNameMissingComponents,
+			err:   ErrRepositoryNameComponentShort,
 		},
 		{
 			input: "a-/a/a/a",
