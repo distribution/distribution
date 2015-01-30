@@ -19,11 +19,23 @@ import (
 	_ "github.com/docker/distribution/storagedriver/filesystem"
 	_ "github.com/docker/distribution/storagedriver/inmemory"
 	_ "github.com/docker/distribution/storagedriver/s3"
+	"github.com/docker/distribution/version"
 )
+
+var showVersion bool
+
+func init() {
+	flag.BoolVar(&showVersion, "version", false, "show the version and exit")
+}
 
 func main() {
 	flag.Usage = usage
 	flag.Parse()
+
+	if showVersion {
+		version.PrintVersion()
+		return
+	}
 
 	config, err := resolveConfiguration()
 	if err != nil {
