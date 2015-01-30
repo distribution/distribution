@@ -23,4 +23,4 @@ ${PREFIX}/bin/registry: version/version.go $(shell find . -type f -name '*.go')
 binaries: ${PREFIX}/bin/registry
 
 clean:
-	rm -rf ${PREFIX}/bin/registry
+	rm -rf "${PREFIX}/bin/registry"
