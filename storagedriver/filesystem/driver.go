@@ -56,10 +56,6 @@ func New(rootDirectory string) *Driver {
 
 // GetContent retrieves the content stored at "path" as a []byte.
 func (d *Driver) GetContent(path string) ([]byte, error) {
-	if !storagedriver.PathRegexp.MatchString(path) {
-		return nil, storagedriver.InvalidPathError{Path: path}
-	}
-
 	rc, err := d.ReadStream(path, 0)
 	if err != nil {
 		return nil, err
@@ -76,10 +72,6 @@ func (d *Driver) GetContent(path string) ([]byte, error) {
 
 // PutContent stores the []byte content at a location designated by "path".
 func (d *Driver) PutContent(subPath string, contents []byte) error {
-	if !storagedriver.PathRegexp.MatchString(subPath) {
-		return storagedriver.InvalidPathError{Path: subPath}
-	}
-
 	if _, err := d.WriteStream(subPath, 0, bytes.NewReader(contents)); err != nil {
 		return err
 	}
@@ -90,10 +82,6 @@ func (d *Driver) PutContent(subPath string, contents []byte) error {
 // ReadStream retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
 func (d *Driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
-	if !storagedriver.PathRegexp.MatchString(path) {
-		return nil, storagedriver.InvalidPathError{Path: path}
-	}
-
 	if offset < 0 {
 		return nil, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
 	}
@@ -122,10 +110,6 @@ func (d *Driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
 // WriteStream stores the contents of the provided io.Reader at a location
 // designated by the given path.
 func (d *Driver) WriteStream(subPath string, offset int64, reader io.Reader) (nn int64, err error) {
-	if !storagedriver.PathRegexp.MatchString(subPath) {
-		return 0, storagedriver.InvalidPathError{Path: subPath}
-	}
-
 	if offset < 0 {
 		return 0, storagedriver.InvalidOffsetError{Path: subPath, Offset: offset}
 	}
@@ -166,10 +150,6 @@ func (d *Driver) WriteStream(subPath string, offset int64, reader io.Reader) (nn
 // Stat retrieves the FileInfo for the given path, including the current size
 // in bytes and the creation time.
 func (d *Driver) Stat(subPath string) (storagedriver.FileInfo, error) {
-	if !storagedriver.PathRegexp.MatchString(subPath) {
-		return nil, storagedriver.InvalidPathError{Path: subPath}
-	}
-
 	fullPath := d.fullPath(subPath)
 
 	fi, err := os.Stat(fullPath)
@@ -190,10 +170,6 @@ func (d *Driver) Stat(subPath string) (storagedriver.FileInfo, error) {
 // List returns a list of the objects that are direct descendants of the given
 // path.
 func (d *Driver) List(subPath string) ([]string, error) {
-	if !storagedriver.PathRegexp.MatchString(subPath) && subPath != "/" {
-		return nil, storagedriver.InvalidPathError{Path: subPath}
-	}
-
 	if subPath[len(subPath)-1] != '/' {
 		subPath += "/"
 	}
@@ -225,12 +201,6 @@ func (d *Driver) List(subPath string) ([]string, error) {
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
 func (d *Driver) Move(sourcePath string, destPath string) error {
-	if !storagedriver.PathRegexp.MatchString(sourcePath) {
-		return storagedriver.InvalidPathError{Path: sourcePath}
-	} else if !storagedriver.PathRegexp.MatchString(destPath) {
-		return storagedriver.InvalidPathError{Path: destPath}
-	}
-
 	source := d.fullPath(sourcePath)
 	dest := d.fullPath(destPath)
 
@@ -248,10 +218,6 @@ func (d *Driver) Move(sourcePath string, destPath string) error {
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
 func (d *Driver) Delete(subPath string) error {
-	if !storagedriver.PathRegexp.MatchString(subPath) {
-		return storagedriver.InvalidPathError{Path: subPath}
-	}
-
 	fullPath := d.fullPath(subPath)
 
 	_, err := os.Stat(fullPath)
