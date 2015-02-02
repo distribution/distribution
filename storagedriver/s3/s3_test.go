@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/crowdmob/goamz/aws"
+	"github.com/AdRoll/goamz/aws"
 	"github.com/docker/distribution/storagedriver"
 	"github.com/docker/distribution/storagedriver/testsuites"
 

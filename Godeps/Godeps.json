@@ -11,6 +11,18 @@
 			"Rev": "7dda39b2e7d5e265014674c5af696ba4186679e9"
 		},
 		{
+			"ImportPath": "github.com/AdRoll/goamz/aws",
+			"Rev": "d3664b76d90508cdda5a6c92042f26eab5db3103"
+		},
+		{
+			"ImportPath": "github.com/AdRoll/goamz/cloudfront",
+			"Rev": "d3664b76d90508cdda5a6c92042f26eab5db3103"
+		},
+		{
+			"ImportPath": "github.com/AdRoll/goamz/s3",
+			"Rev": "d3664b76d90508cdda5a6c92042f26eab5db3103"
+		},
+		{
 			"ImportPath": "github.com/Sirupsen/logrus",
 			"Comment": "v0.6.1-8-gcc09837",
 			"Rev": "cc09837bcd512ffe6bb2e3f635bed138c4cd6bc8"
@@ -27,18 +39,6 @@
 		{
 			"ImportPath": "github.com/bugsnag/panicwrap",
 			"Rev": "e5f9854865b9778a45169fc249e99e338d4d6f27"
-		},
-		{
-			"ImportPath": "github.com/crowdmob/goamz/aws",
-			"Rev": "962cedbbde5e1af59fb0b4ab681c848e61676941"
-		},
-		{
-			"ImportPath": "github.com/crowdmob/goamz/cloudfront",
-			"Rev": "962cedbbde5e1af59fb0b4ab681c848e61676941"
-		},
-		{
-			"ImportPath": "github.com/crowdmob/goamz/s3",
-			"Rev": "962cedbbde5e1af59fb0b4ab681c848e61676941"
 		},
 		{
 			"ImportPath": "github.com/docker/docker/pkg/tarsum",
