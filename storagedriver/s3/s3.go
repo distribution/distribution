@@ -1,7 +1,7 @@
 // Package s3 provides a storagedriver.StorageDriver implementation to
 // store blobs in Amazon S3 cloud storage.
 //
-// This package leverages the crowdmob/goamz client library for interfacing with
+// This package leverages the AdRoll/goamz client library for interfacing with
 // s3.
 //
 // Because s3 is a key, value store the Stat call does not support last modification
@@ -24,8 +24,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/crowdmob/goamz/aws"
-	"github.com/crowdmob/goamz/s3"
+	"github.com/AdRoll/goamz/aws"
+	"github.com/AdRoll/goamz/s3"
 	"github.com/docker/distribution/storagedriver"
 	"github.com/docker/distribution/storagedriver/factory"
 )

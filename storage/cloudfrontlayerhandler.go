@@ -9,7 +9,7 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/crowdmob/goamz/cloudfront"
+	"github.com/AdRoll/goamz/cloudfront"
 	"github.com/docker/distribution/storagedriver"
 )
 
