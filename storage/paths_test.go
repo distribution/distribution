@@ -21,14 +21,14 @@ func TestPathMapper(t *testing.T) {
 				name:     "foo/bar",
 				revision: "sha256:abcdef0123456789",
 			},
-			expected: "/pathmapper-test/repositories/foo/bar/manifests/revisions/sha256/abcdef0123456789",
+			expected: "/pathmapper-test/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789",
 		},
 		{
 			spec: manifestRevisionLinkPathSpec{
 				name:     "foo/bar",
 				revision: "sha256:abcdef0123456789",
 			},
-			expected: "/pathmapper-test/repositories/foo/bar/manifests/revisions/sha256/abcdef0123456789/link",
+			expected: "/pathmapper-test/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789/link",
 		},
 		{
 			spec: manifestSignatureLinkPathSpec{
@@ -36,41 +36,41 @@ func TestPathMapper(t *testing.T) {
 				revision:  "sha256:abcdef0123456789",
 				signature: "sha256:abcdef0123456789",
 			},
-			expected: "/pathmapper-test/repositories/foo/bar/manifests/revisions/sha256/abcdef0123456789/signatures/sha256/abcdef0123456789/link",
+			expected: "/pathmapper-test/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789/signatures/sha256/abcdef0123456789/link",
 		},
 		{
 			spec: manifestSignaturesPathSpec{
 				name:     "foo/bar",
 				revision: "sha256:abcdef0123456789",
 			},
-			expected: "/pathmapper-test/repositories/foo/bar/manifests/revisions/sha256/abcdef0123456789/signatures",
+			expected: "/pathmapper-test/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789/signatures",
 		},
 		{
 			spec: manifestTagsPathSpec{
 				name: "foo/bar",
 			},
-			expected: "/pathmapper-test/repositories/foo/bar/manifests/tags",
+			expected: "/pathmapper-test/repositories/foo/bar/_manifests/tags",
 		},
 		{
 			spec: manifestTagPathSpec{
 				name: "foo/bar",
 				tag:  "thetag",
 			},
-			expected: "/pathmapper-test/repositories/foo/bar/manifests/tags/thetag",
+			expected: "/pathmapper-test/repositories/foo/bar/_manifests/tags/thetag",
 		},
 		{
 			spec: manifestTagCurrentPathSpec{
 				name: "foo/bar",
 				tag:  "thetag",
 			},
-			expected: "/pathmapper-test/repositories/foo/bar/manifests/tags/thetag/current/link",
+			expected: "/pathmapper-test/repositories/foo/bar/_manifests/tags/thetag/current/link",
 		},
 		{
 			spec: manifestTagIndexPathSpec{
 				name: "foo/bar",
 				tag:  "thetag",
 			},
-			expected: "/pathmapper-test/repositories/foo/bar/manifests/tags/thetag/index",
+			expected: "/pathmapper-test/repositories/foo/bar/_manifests/tags/thetag/index",
 		},
 		{
 			spec: manifestTagIndexEntryPathSpec{
@@ -78,14 +78,14 @@ func TestPathMapper(t *testing.T) {
 				tag:      "thetag",
 				revision: "sha256:abcdef0123456789",
 			},
-			expected: "/pathmapper-test/repositories/foo/bar/manifests/tags/thetag/index/sha256/abcdef0123456789/link",
+			expected: "/pathmapper-test/repositories/foo/bar/_manifests/tags/thetag/index/sha256/abcdef0123456789/link",
 		},
 		{
 			spec: layerLinkPathSpec{
 				name:   "foo/bar",
 				digest: "tarsum.v1+test:abcdef",
 			},
-			expected: "/pathmapper-test/repositories/foo/bar/layers/tarsum/v1/test/abcdef/link",
+			expected: "/pathmapper-test/repositories/foo/bar/_layers/tarsum/v1/test/abcdef/link",
 		},
 		{
 			spec: blobDataPathSpec{
@@ -105,14 +105,14 @@ func TestPathMapper(t *testing.T) {
 				name: "foo/bar",
 				uuid: "asdf-asdf-asdf-adsf",
 			},
-			expected: "/pathmapper-test/repositories/foo/bar/uploads/asdf-asdf-asdf-adsf/data",
+			expected: "/pathmapper-test/repositories/foo/bar/_uploads/asdf-asdf-asdf-adsf/data",
 		},
 		{
 			spec: uploadStartedAtPathSpec{
 				name: "foo/bar",
 				uuid: "asdf-asdf-asdf-adsf",
 			},
-			expected: "/pathmapper-test/repositories/foo/bar/uploads/asdf-asdf-asdf-adsf/startedat",
+			expected: "/pathmapper-test/repositories/foo/bar/_uploads/asdf-asdf-asdf-adsf/startedat",
 		},
 	} {
 		p, err := pm.path(testcase.spec)

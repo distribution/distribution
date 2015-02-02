@@ -78,12 +78,12 @@ type StorageDriver interface {
 	URLFor(path string, options map[string]interface{}) (string, error)
 }
 
-// PathRegexp is the regular expression which each file path must match.
-// A file path is absolute, beginning with a slash and containing a
-// positive number of path components separated by slashes, where each component
-// is restricted to lowercase alphanumeric characters, optionally separated by
-// a period, underscore, or hyphen.
-var PathRegexp = regexp.MustCompile(`^(/[a-z0-9]+([._-][a-z0-9]+)*)+$`)
+// PathRegexp is the regular expression which each file path must match. A
+// file path is absolute, beginning with a slash and containing a positive
+// number of path components separated by slashes, where each component is
+// restricted to lowercase alphanumeric characters or a period, underscore, or
+// hyphen.
+var PathRegexp = regexp.MustCompile(`^(/[a-z0-9._-]+)+$`)
 
 // UnsupportedMethodErr may be returned in the case where a StorageDriver implementation does not support an optional method.
 var ErrUnsupportedMethod = errors.New("Unsupported method")

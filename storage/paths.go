@@ -18,7 +18,7 @@ const storagePathVersion = "v2"
 //		<root>/v2
 //			-> repositories/
 // 				-><name>/
-// 					-> manifests/
+// 					-> _manifests/
 // 						revisions
 //							-> <manifest digest path>
 //								-> link
@@ -28,9 +28,9 @@ const storagePathVersion = "v2"
 //							-> current/link
 // 							-> index
 //								-> <algorithm>/<hex digest>/link
-// 					-> layers/
+// 					-> _layers/
 // 						<layer links to blob store>
-// 					-> uploads/<uuid>
+// 					-> _uploads/<uuid>
 // 						data
 // 						startedat
 //			-> blob/<algorithm>
@@ -65,27 +65,27 @@ const storagePathVersion = "v2"
 //
 //	Manifests:
 //
-// 	manifestRevisionPathSpec:      <root>/v2/repositories/<name>/manifests/revisions/<algorithm>/<hex digest>/
-// 	manifestRevisionLinkPathSpec:  <root>/v2/repositories/<name>/manifests/revisions/<algorithm>/<hex digest>/link
-// 	manifestSignaturesPathSpec:    <root>/v2/repositories/<name>/manifests/revisions/<algorithm>/<hex digest>/signatures/
-// 	manifestSignatureLinkPathSpec: <root>/v2/repositories/<name>/manifests/revisions/<algorithm>/<hex digest>/signatures/<algorithm>/<hex digest>/link
+// 	manifestRevisionPathSpec:      <root>/v2/repositories/<name>/_manifests/revisions/<algorithm>/<hex digest>/
+// 	manifestRevisionLinkPathSpec:  <root>/v2/repositories/<name>/_manifests/revisions/<algorithm>/<hex digest>/link
+// 	manifestSignaturesPathSpec:    <root>/v2/repositories/<name>/_manifests/revisions/<algorithm>/<hex digest>/signatures/
+// 	manifestSignatureLinkPathSpec: <root>/v2/repositories/<name>/_manifests/revisions/<algorithm>/<hex digest>/signatures/<algorithm>/<hex digest>/link
 //
 //	Tags:
 //
-// 	manifestTagsPathSpec:          <root>/v2/repositories/<name>/manifests/tags/
-// 	manifestTagPathSpec:           <root>/v2/repositories/<name>/manifests/tags/<tag>/
-// 	manifestTagCurrentPathSpec:    <root>/v2/repositories/<name>/manifests/tags/<tag>/current/link
-// 	manifestTagIndexPathSpec:      <root>/v2/repositories/<name>/manifests/tags/<tag>/index/
-// 	manifestTagIndexEntryPathSpec: <root>/v2/repositories/<name>/manifests/tags/<tag>/index/<algorithm>/<hex digest>/link
+// 	manifestTagsPathSpec:          <root>/v2/repositories/<name>/_manifests/tags/
+// 	manifestTagPathSpec:           <root>/v2/repositories/<name>/_manifests/tags/<tag>/
+// 	manifestTagCurrentPathSpec:    <root>/v2/repositories/<name>/_manifests/tags/<tag>/current/link
+// 	manifestTagIndexPathSpec:      <root>/v2/repositories/<name>/_manifests/tags/<tag>/index/
+// 	manifestTagIndexEntryPathSpec: <root>/v2/repositories/<name>/_manifests/tags/<tag>/index/<algorithm>/<hex digest>/link
 //
 // 	Layers:
 //
-// 	layerLinkPathSpec:             <root>/v2/repositories/<name>/layers/tarsum/<tarsum version>/<tarsum hash alg>/<tarsum hash>/link
+// 	layerLinkPathSpec:             <root>/v2/repositories/<name>/_layers/tarsum/<tarsum version>/<tarsum hash alg>/<tarsum hash>/link
 //
 //	Uploads:
 //
-// 	uploadDataPathSpec:             <root>/v2/repositories/<name>/uploads/<uuid>/data
-// 	uploadStartedAtPathSpec:        <root>/v2/repositories/<name>/uploads/<uuid>/startedat
+// 	uploadDataPathSpec:             <root>/v2/repositories/<name>/_uploads/<uuid>/data
+// 	uploadStartedAtPathSpec:        <root>/v2/repositories/<name>/_uploads/<uuid>/startedat
 //
 //	Blob Store:
 //
@@ -130,7 +130,7 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 			return "", err
 		}
 
-		return path.Join(append(append(repoPrefix, v.name, "manifests", "revisions"), components...)...), nil
+		return path.Join(append(append(repoPrefix, v.name, "_manifests", "revisions"), components...)...), nil
 	case manifestRevisionLinkPathSpec:
 		root, err := pm.path(manifestRevisionPathSpec{
 			name:     v.name,
@@ -169,7 +169,7 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 
 		return path.Join(root, path.Join(append(signatureComponents, "link")...)), nil
 	case manifestTagsPathSpec:
-		return path.Join(append(repoPrefix, v.name, "manifests", "tags")...), nil
+		return path.Join(append(repoPrefix, v.name, "_manifests", "tags")...), nil
 	case manifestTagPathSpec:
 		root, err := pm.path(manifestTagsPathSpec{
 			name: v.name,
@@ -226,7 +226,7 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 			return "", fmt.Errorf("unsupported content digest: %v", v.digest)
 		}
 
-		layerLinkPathComponents := append(repoPrefix, v.name, "layers")
+		layerLinkPathComponents := append(repoPrefix, v.name, "_layers")
 
 		return path.Join(path.Join(append(layerLinkPathComponents, components...)...), "link"), nil
 	case blobDataPathSpec:
@@ -240,9 +240,9 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 		return path.Join(append(blobPathPrefix, components...)...), nil
 
 	case uploadDataPathSpec:
-		return path.Join(append(repoPrefix, v.name, "uploads", v.uuid, "data")...), nil
+		return path.Join(append(repoPrefix, v.name, "_uploads", v.uuid, "data")...), nil
 	case uploadStartedAtPathSpec:
-		return path.Join(append(repoPrefix, v.name, "uploads", v.uuid, "startedat")...), nil
+		return path.Join(append(repoPrefix, v.name, "_uploads", v.uuid, "startedat")...), nil
 	default:
 		// TODO(sday): This is an internal error. Ensure it doesn't escape (panic?).
 		return "", fmt.Errorf("unknown path spec: %#v", v)
