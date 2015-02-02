@@ -194,6 +194,9 @@ func (d *Driver) List(path string) ([]string, error) {
 		return nil, storagedriver.InvalidPathError{Path: path}
 	}
 
+	d.mutex.RLock()
+	defer d.mutex.RUnlock()
+
 	normalized := normalize(path)
 
 	found := d.root.find(normalized)
