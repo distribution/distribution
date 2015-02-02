@@ -144,7 +144,7 @@ func TestLayerAPI(t *testing.T) {
 	checkResponse(t, "status of deleted upload", resp, http.StatusNotFound)
 
 	// -----------------------------------------
-	// Do layer push with an empty body
+	// Do layer push with an empty body and different digest
 	uploadURLBase = startPushLayer(t, builder, imageName)
 	resp, err = doPushLayer(t, builder, imageName, layerDigest, uploadURLBase, bytes.NewReader([]byte{}))
 	if err != nil {
@@ -152,21 +152,30 @@ func TestLayerAPI(t *testing.T) {
 	}
 
 	checkResponse(t, "bad layer push", resp, http.StatusBadRequest)
-	checkBodyHasErrorCodes(t, "bad layer push", resp, v2.ErrorCodeBlobUploadInvalid)
+	checkBodyHasErrorCodes(t, "bad layer push", resp, v2.ErrorCodeDigestInvalid)
 
 	// -----------------------------------------
-	// Do layer push with an invalid body
-
-	// This is a valid but empty tarfile!
-	badTar := bytes.Repeat([]byte("\x00"), 1024)
-	uploadURLBase = startPushLayer(t, builder, imageName)
-	resp, err = doPushLayer(t, builder, imageName, layerDigest, uploadURLBase, bytes.NewReader(badTar))
+	// Do layer push with an empty body and correct digest
+	zeroDigest, err := digest.FromTarArchive(bytes.NewReader([]byte{}))
 	if err != nil {
-		t.Fatalf("unexpected error doing bad layer push: %v", err)
+		t.Fatalf("unexpected error digesting empty buffer: %v", err)
 	}
 
-	checkResponse(t, "bad layer push", resp, http.StatusBadRequest)
-	checkBodyHasErrorCodes(t, "bad layer push", resp, v2.ErrorCodeDigestInvalid)
+	uploadURLBase = startPushLayer(t, builder, imageName)
+	pushLayer(t, builder, imageName, zeroDigest, uploadURLBase, bytes.NewReader([]byte{}))
+
+	// -----------------------------------------
+	// Do layer push with an empty body and correct digest
+
+	// This is a valid but empty tarfile!
+	emptyTar := bytes.Repeat([]byte("\x00"), 1024)
+	emptyDigest, err := digest.FromTarArchive(bytes.NewReader(emptyTar))
+	if err != nil {
+		t.Fatalf("unexpected error digesting empty tar: %v", err)
+	}
+
+	uploadURLBase = startPushLayer(t, builder, imageName)
+	pushLayer(t, builder, imageName, emptyDigest, uploadURLBase, bytes.NewReader(emptyTar))
 
 	// ------------------------------------------
 	// Now, actually do successful upload.
@@ -517,7 +526,7 @@ func checkBodyHasErrorCodes(t *testing.T, msg string, resp *http.Response, error
 
 	for _, err := range errs.Errors {
 		if _, ok := expected[err.Code]; !ok {
-			t.Fatalf("unexpected error code %v encountered: %s ", err.Code, string(p))
+			t.Fatalf("unexpected error code %v encountered during %s: %s ", err.Code, msg, string(p))
 		}
 		counts[err.Code]++
 	}
@@ -525,7 +534,7 @@ func checkBodyHasErrorCodes(t *testing.T, msg string, resp *http.Response, error
 	// Ensure that counts of expected errors were all non-zero
 	for code := range expected {
 		if counts[code] == 0 {
-			t.Fatalf("expected error code %v not encounterd: %s", code, string(p))
+			t.Fatalf("expected error code %v not encounterd during %s: %s", code, msg, string(p))
 		}
 	}
 

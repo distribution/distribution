@@ -198,13 +198,6 @@ func (luh *layerUploadHandler) PutLayerUploadComplete(w http.ResponseWriter, r *
 	layer, err := luh.Upload.Finish(dgst)
 	if err != nil {
 		switch err := err.(type) {
-		case storage.ErrLayerUploadUnavailable:
-			w.WriteHeader(http.StatusBadRequest)
-			// TODO(stevvooe): Arguably, we may want to add an error code to
-			// cover this condition. It is not always a client error but it
-			// may be. For now, we effectively throw out the upload and have
-			// them start over.
-			luh.Errors.Push(v2.ErrorCodeBlobUploadInvalid, err.Err)
 		case storage.ErrLayerInvalidDigest:
 			w.WriteHeader(http.StatusBadRequest)
 			luh.Errors.Push(v2.ErrorCodeDigestInvalid, err)
