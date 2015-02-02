@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"encoding/base32"
 	"fmt"
 	"path"
 	"strings"
@@ -42,14 +43,16 @@ const storagePathVersion = "v2"
 // content. Access to the blob store is controled through links from the
 // repository to blobstore.
 //
-// A repository is made up of layers, manifests and tags. The layers component
-// is just a directory of layers which are "linked" into a repository. A layer
-// can only be accessed through a qualified repository name if it is linked in
-// the repository. Uploads of layers are managed in the uploads directory,
-// which is key by upload uuid. When all data for an upload is received, the
-// data is moved into the blob store and the upload directory is deleted.
-// Abandoned uploads can be garbage collected by reading the startedat file
-// and removing uploads that have been active for longer than a certain time.
+// A repository is made up of layers, manifests and tags. A repository is
+// identified by name, which is stored on disk as base32hex encoded (padding
+// removed) when used as a filename. The layers component is just a directory
+// of layers which are "linked" into a repository. A layer can only be
+// accessed through a qualified repository name if it is linked in the
+// repository. Uploads of layers are managed in the uploads directory, which
+// is key by upload uuid. When all data for an upload is received, the data is
+// moved into the blob store and the upload directory is deleted. Abandoned
+// uploads can be garbage collected by reading the startedat file and removing
+// uploads that have been active for longer than a certain time.
 //
 // The third component of the repository directory is the manifests store,
 // which is made up of a revision store and tag store. Manifests are stored in
@@ -130,7 +133,7 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 			return "", err
 		}
 
-		return path.Join(append(append(repoPrefix, v.name, "manifests", "revisions"), components...)...), nil
+		return path.Join(append(append(repoPrefix, encodeName(v.name), "manifests", "revisions"), components...)...), nil
 	case manifestRevisionLinkPathSpec:
 		root, err := pm.path(manifestRevisionPathSpec{
 			name:     v.name,
@@ -169,7 +172,7 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 
 		return path.Join(root, path.Join(append(signatureComponents, "link")...)), nil
 	case manifestTagsPathSpec:
-		return path.Join(append(repoPrefix, v.name, "manifests", "tags")...), nil
+		return path.Join(append(repoPrefix, encodeName(v.name), "manifests", "tags")...), nil
 	case manifestTagPathSpec:
 		root, err := pm.path(manifestTagsPathSpec{
 			name: v.name,
@@ -226,7 +229,7 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 			return "", fmt.Errorf("unsupported content digest: %v", v.digest)
 		}
 
-		layerLinkPathComponents := append(repoPrefix, v.name, "layers")
+		layerLinkPathComponents := append(repoPrefix, encodeName(v.name), "layers")
 
 		return path.Join(path.Join(append(layerLinkPathComponents, components...)...), "link"), nil
 	case blobDataPathSpec:
@@ -240,9 +243,9 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 		return path.Join(append(blobPathPrefix, components...)...), nil
 
 	case uploadDataPathSpec:
-		return path.Join(append(repoPrefix, v.name, "uploads", v.uuid, "data")...), nil
+		return path.Join(append(repoPrefix, encodeName(v.name), "uploads", v.uuid, "data")...), nil
 	case uploadStartedAtPathSpec:
-		return path.Join(append(repoPrefix, v.name, "uploads", v.uuid, "startedat")...), nil
+		return path.Join(append(repoPrefix, encodeName(v.name), "uploads", v.uuid, "startedat")...), nil
 	default:
 		// TODO(sday): This is an internal error. Ensure it doesn't escape (panic?).
 		return "", fmt.Errorf("unknown path spec: %#v", v)
@@ -408,6 +411,44 @@ type uploadStartedAtPathSpec struct {
 }
 
 func (uploadStartedAtPathSpec) pathSpec() {}
+
+// encodeName protects names used in backend paths.
+func encodeName(name string) string {
+	return encodeNameBase32Hex(name)
+}
+
+// decodeName decodes encoded names, possible returning an error if the
+// process fails.
+func decodeName(encoded string) (string, error) {
+	return decodeNameBase32Hex(encoded)
+}
+
+// encodeNameBase32Hex protects names from escaping issues and corruption when
+// used a backed paths. The encoding uses urlsafe, base32hex, lowercased with
+// padding removed.
+func encodeNameBase32Hex(name string) string {
+	return strings.ToLower(strings.Trim(base32.HexEncoding.EncodeToString([]byte(name)), "="))
+}
+
+// decodeNameBase32Hex decodes base32 hex, lowercased recovering padding, if
+// required.
+func decodeNameBase32Hex(encoded string) (string, error) {
+	// NOTE(stevvvooe): Recovers padding in a base32hex encoded string. This
+	// only works when the message length can be recovered from the original
+	// endcoded version (which is true in this application).
+	npad := 8 - len(encoded)%8
+	if npad > 6 {
+		npad = 0
+	}
+
+	padchars := strings.Repeat("=", npad)
+	p, err := base32.HexEncoding.DecodeString(encoded + padchars)
+	if err != nil {
+		return "", err
+	}
+
+	return string(p), nil
+}
 
 // digestPathComponents provides a consistent path breakdown for a given
 // digest. For a generic digest, it will be as follows:
