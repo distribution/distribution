@@ -67,6 +67,10 @@ type Client interface {
 	CancelBlobUpload(location string) error
 }
 
+var (
+	patternRangeHeader = regexp.MustCompile("bytes=0-(\\d+)/(\\d+)")
+)
+
 // New returns a new Client which operates against a registry with the
 // given base endpoint
 // This endpoint should not include /v2/ or any part of the url after this.
@@ -553,15 +557,18 @@ func (r *clientImpl) CancelBlobUpload(location string) error {
 // parseRangeHeader parses out the offset and length from a returned Range
 // header
 func parseRangeHeader(byteRangeHeader string) (int, int, error) {
-	r := regexp.MustCompile("bytes=0-(\\d+)/(\\d+)")
-	submatches := r.FindStringSubmatch(byteRangeHeader)
-	offset, err := strconv.ParseInt(submatches[1], 10, 0)
+	submatches := patternRangeHeader.FindStringSubmatch(byteRangeHeader)
+	if submatches == nil || len(submatches) < 3 {
+		return 0, 0, fmt.Errorf("Malformed Range header")
+	}
+
+	offset, err := strconv.Atoi(submatches[1])
 	if err != nil {
 		return 0, 0, err
 	}
-	length, err := strconv.ParseInt(submatches[2], 10, 0)
+	length, err := strconv.Atoi(submatches[2])
 	if err != nil {
 		return 0, 0, err
 	}
-	return int(offset), int(length), nil
+	return offset, length, nil
 }

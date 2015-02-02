@@ -19,6 +19,37 @@ type testBlob struct {
 	contents []byte
 }
 
+func TestRangeHeaderParser(t *testing.T) {
+	const (
+		malformedRangeHeader = "bytes=0-A/C"
+		emptyRangeHeader     = ""
+		rFirst               = 100
+		rSecond              = 200
+	)
+
+	var (
+		wellformedRangeHeader = fmt.Sprintf("bytes=0-%d/%d", rFirst, rSecond)
+	)
+
+	if _, _, err := parseRangeHeader(malformedRangeHeader); err == nil {
+		t.Fatalf("malformedRangeHeader: error expected, got nil")
+	}
+
+	if _, _, err := parseRangeHeader(emptyRangeHeader); err == nil {
+		t.Fatalf("emptyRangeHeader: error expected, got nil")
+	}
+
+	first, second, err := parseRangeHeader(wellformedRangeHeader)
+	if err != nil {
+		t.Fatalf("wellformedRangeHeader: unexpected error %v", err)
+	}
+
+	if first != rFirst || second != rSecond {
+		t.Fatalf("Range has been parsed unproperly: %d/%d", first, second)
+	}
+
+}
+
 func TestPush(t *testing.T) {
 	name := "hello/world"
 	tag := "sometag"
