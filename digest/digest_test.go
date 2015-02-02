@@ -1,6 +1,10 @@
 package digest
 
-import "testing"
+import (
+	"bytes"
+	"io"
+	"testing"
+)
 
 func TestParseDigest(t *testing.T) {
 	for _, testcase := range []struct {
@@ -76,5 +80,27 @@ func TestParseDigest(t *testing.T) {
 		if newParsed != digest {
 			t.Fatalf("expected equal: %q != %q", newParsed, digest)
 		}
+	}
+}
+
+// A few test cases used to fix behavior we expect in storage backend.
+
+func TestFromTarArchiveZeroLength(t *testing.T) {
+	checkTarsumDigest(t, "zero-length archive", bytes.NewReader([]byte{}), DigestTarSumV1EmptyTar)
+}
+
+func TestFromTarArchiveEmptyTar(t *testing.T) {
+	// String of 1024 zeros is a valid, empty tar file.
+	checkTarsumDigest(t, "1024 zero bytes", bytes.NewReader(bytes.Repeat([]byte("\x00"), 1024)), DigestTarSumV1EmptyTar)
+}
+
+func checkTarsumDigest(t *testing.T, msg string, rd io.Reader, expected Digest) {
+	dgst, err := FromTarArchive(rd)
+	if err != nil {
+		t.Fatalf("unexpected error digesting %s: %v", msg, err)
+	}
+
+	if dgst != expected {
+		t.Fatalf("unexpected digest for %s: %q != %q", msg, dgst, expected)
 	}
 }

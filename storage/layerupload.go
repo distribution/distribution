@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"io"
 	"path"
 	"time"
@@ -89,7 +90,10 @@ func (luc *layerUploadController) validateLayer(dgst digest.Digest) (digest.Dige
 	case tarsum.Version1:
 	default:
 		// version 0 and dev, for now.
-		return "", ErrLayerTarSumVersionUnsupported
+		return "", ErrLayerInvalidDigest{
+			Digest: dgst,
+			Reason: ErrLayerTarSumVersionUnsupported,
+		}
 	}
 
 	digestVerifier := digest.NewDigestVerifier(dgst)
@@ -102,22 +106,7 @@ func (luc *layerUploadController) validateLayer(dgst digest.Digest) (digest.Dige
 	// Read the file from the backend driver and validate it.
 	fr, err := newFileReader(luc.fileWriter.driver, luc.path)
 	if err != nil {
-		switch err := err.(type) {
-		case storagedriver.PathNotFoundError:
-			// NOTE(stevvooe): Path not found can mean several things by we
-			// should report the upload is not available. This can happen if
-			// the following happens:
-			//
-			// 	1. If not data was received for the upload instance.
-			// 	2. Backend storage driver has not convereged after receiving latest data.
-			//
-			// This *does not* mean that the upload does not exist, since we
-			// can't even get a LayerUpload object without having the
-			// directory exist.
-			return "", ErrLayerUploadUnavailable{Err: err}
-		default:
-			return "", err
-		}
+		return "", err
 	}
 
 	tr := io.TeeReader(fr, digestVerifier)
@@ -132,7 +121,10 @@ func (luc *layerUploadController) validateLayer(dgst digest.Digest) (digest.Dige
 	}
 
 	if !digestVerifier.Verified() {
-		return "", ErrLayerInvalidDigest{Digest: dgst}
+		return "", ErrLayerInvalidDigest{
+			Digest: dgst,
+			Reason: fmt.Errorf("content does not match digest"),
+		}
 	}
 
 	return canonical, nil
@@ -151,7 +143,7 @@ func (luc *layerUploadController) moveLayer(dgst digest.Digest) error {
 	}
 
 	// Check for existence
-	if _, err := luc.layerStore.repository.registry.driver.Stat(blobPath); err != nil {
+	if _, err := luc.driver.Stat(blobPath); err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
 			break // ensure that it doesn't exist.
@@ -164,6 +156,31 @@ func (luc *layerUploadController) moveLayer(dgst digest.Digest) error {
 		// While it may be corrupted, detection of such corruption belongs
 		// elsewhere.
 		return nil
+	}
+
+	// If no data was received, we may not actually have a file on disk. Check
+	// the size here and write a zero-length file to blobPath if this is the
+	// case. For the most part, this should only ever happen with zero-length
+	// tars.
+	if _, err := luc.driver.Stat(luc.path); err != nil {
+		switch err := err.(type) {
+		case storagedriver.PathNotFoundError:
+			// HACK(stevvooe): This is slightly dangerous: if we verify above,
+			// get a hash, then the underlying file is deleted, we risk moving
+			// a zero-length blob into a nonzero-length blob location. To
+			// prevent this horrid thing, we employ the hack of only allowing
+			// to this happen for the zero tarsum.
+			if dgst == digest.DigestTarSumV1EmptyTar {
+				return luc.driver.PutContent(blobPath, []byte{})
+			}
+
+			// We let this fail during the move below.
+			logrus.
+				WithField("upload.uuid", luc.UUID()).
+				WithField("digest", dgst).Warnf("attempted to move zero-length content with non-zero digest")
+		default:
+			return err // unrelated error
+		}
 	}
 
 	return luc.driver.Move(luc.path, blobPath)

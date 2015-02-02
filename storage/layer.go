@@ -80,28 +80,10 @@ func (err ErrUnknownLayer) Error() string {
 // ErrLayerInvalidDigest returned when tarsum check fails.
 type ErrLayerInvalidDigest struct {
 	Digest digest.Digest
+	Reason error
 }
 
 func (err ErrLayerInvalidDigest) Error() string {
-	return fmt.Sprintf("invalid digest for referenced layer: %v", err.Digest)
-}
-
-// ErrLayerInvalidSize returned when length check fails.
-type ErrLayerInvalidSize struct {
-	Size int64
-}
-
-func (err ErrLayerInvalidSize) Error() string {
-	return fmt.Sprintf("invalid layer size: %d", err.Size)
-}
-
-// ErrLayerUploadUnavailable signals missing upload data, either when no data
-// has been received or when the backend reports the data as missing. This is
-// different from ErrLayerUploadUnknown.
-type ErrLayerUploadUnavailable struct {
-	Err error
-}
-
-func (err ErrLayerUploadUnavailable) Error() string {
-	return fmt.Sprintf("layer upload unavialable: %v", err)
+	return fmt.Sprintf("invalid digest for referenced layer: %v, %v",
+		err.Digest, err.Reason)
 }

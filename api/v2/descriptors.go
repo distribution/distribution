@@ -1332,9 +1332,9 @@ var errorDescriptors = []ErrorDescriptor{
 	{
 		Code:    ErrorCodeNameInvalid,
 		Value:   "NAME_INVALID",
-		Message: "manifest name did not match URI",
-		Description: `During a manifest upload, if the name in the manifest
-		does not match the uri name, this error will be returned.`,
+		Message: "invalid repository name",
+		Description: `Invalid repository name encountered either during
+		manifest validation or any API operation.`,
 		HTTPStatusCodes: []int{http.StatusBadRequest, http.StatusNotFound},
 	},
 	{

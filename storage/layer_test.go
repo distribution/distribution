@@ -235,6 +235,40 @@ func TestSimpleLayerRead(t *testing.T) {
 	}
 }
 
+// TestLayerUploadZeroLength uploads zero-length
+func TestLayerUploadZeroLength(t *testing.T) {
+	imageName := "foo/bar"
+	driver := inmemory.New()
+	registry := NewRegistryWithDriver(driver)
+	ls := registry.Repository(imageName).Layers()
+
+	upload, err := ls.Upload()
+	if err != nil {
+		t.Fatalf("unexpected error starting upload: %v", err)
+	}
+
+	io.Copy(upload, bytes.NewReader([]byte{}))
+
+	dgst, err := digest.FromTarArchive(bytes.NewReader([]byte{}))
+	if err != nil {
+		t.Fatalf("error getting zero digest: %v", err)
+	}
+
+	if dgst != digest.DigestTarSumV1EmptyTar {
+		// sanity check on zero digest
+		t.Fatalf("digest not as expected: %v != %v", dgst, digest.DigestTarSumV1EmptyTar)
+	}
+
+	layer, err := upload.Finish(dgst)
+	if err != nil {
+		t.Fatalf("unexpected error finishing upload: %v", err)
+	}
+
+	if layer.Digest() != dgst {
+		t.Fatalf("unexpected digest: %v != %v", layer.Digest(), dgst)
+	}
+}
+
 // writeRandomLayer creates a random layer under name and tarSum using driver
 // and pathMapper. An io.ReadSeeker with the data is returned, along with the
 // sha256 hex digest.

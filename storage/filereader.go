@@ -2,13 +2,22 @@ package storage
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"time"
 
 	"github.com/docker/distribution/storagedriver"
 )
+
+// TODO(stevvooe): Set an optimal buffer size here. We'll have to
+// understand the latency characteristics of the underlying network to
+// set this correctly, so we may want to leave it to the driver. For
+// out of process drivers, we'll have to optimize this buffer size for
+// local communication.
+const fileReaderBufferSize = 4 << 20
 
 // remoteFileReader provides a read seeker interface to files stored in
 // storagedriver. Used to implement part of layer interface and will be used
@@ -28,24 +37,40 @@ type fileReader struct {
 	err    error         // terminal error, if set, reader is closed
 }
 
+// newFileReader initializes a file reader for the remote file. The read takes
+// on the offset and size at the time the reader is created. If the underlying
+// file changes, one must create a new fileReader.
 func newFileReader(driver storagedriver.StorageDriver, path string) (*fileReader, error) {
+	rd := &fileReader{
+		driver: driver,
+		path:   path,
+	}
+
 	// Grab the size of the layer file, ensuring existence.
-	fi, err := driver.Stat(path)
+	if fi, err := driver.Stat(path); err != nil {
+		switch err := err.(type) {
+		case storagedriver.PathNotFoundError:
+			// NOTE(stevvooe): We really don't care if the file is not
+			// actually present for the reader. If the caller needs to know
+			// whether or not the file exists, they should issue a stat call
+			// on the path. There is still no guarantee, since the file may be
+			// gone by the time the reader is created. The only correct
+			// behavior is to return a reader that immediately returns EOF.
+		default:
+			// Any other error we want propagated up the stack.
+			return nil, err
+		}
+	} else {
+		if fi.IsDir() {
+			return nil, fmt.Errorf("cannot read a directory")
+		}
 
-	if err != nil {
-		return nil, err
+		// Fill in file information
+		rd.size = fi.Size()
+		rd.modtime = fi.ModTime()
 	}
 
-	if fi.IsDir() {
-		return nil, fmt.Errorf("cannot read a directory")
-	}
-
-	return &fileReader{
-		driver:  driver,
-		path:    path,
-		size:    fi.Size(),
-		modtime: fi.ModTime(),
-	}, nil
+	return rd, nil
 }
 
 func (fr *fileReader) Read(p []byte) (n int, err error) {
@@ -88,8 +113,6 @@ func (fr *fileReader) Seek(offset int64, whence int) (int64, error) {
 
 	if newOffset < 0 {
 		err = fmt.Errorf("cannot seek to negative position")
-	} else if newOffset > fr.size {
-		err = fmt.Errorf("cannot seek passed end of file")
 	} else {
 		if fr.offset != newOffset {
 			fr.reset()
@@ -134,9 +157,17 @@ func (fr *fileReader) reader() (io.Reader, error) {
 
 	// If we don't have a reader, open one up.
 	rc, err := fr.driver.ReadStream(fr.path, fr.offset)
-
 	if err != nil {
-		return nil, err
+		switch err := err.(type) {
+		case storagedriver.PathNotFoundError:
+			// NOTE(stevvooe): If the path is not found, we simply return a
+			// reader that returns io.EOF. However, we do not set fr.rc,
+			// allowing future attempts at getting a reader to possibly
+			// succeed if the file turns up later.
+			return ioutil.NopCloser(bytes.NewReader([]byte{})), nil
+		default:
+			return nil, err
+		}
 	}
 
 	fr.rc = rc
@@ -147,7 +178,7 @@ func (fr *fileReader) reader() (io.Reader, error) {
 		// set this correctly, so we may want to leave it to the driver. For
 		// out of process drivers, we'll have to optimize this buffer size for
 		// local communication.
-		fr.brd = bufio.NewReader(fr.rc)
+		fr.brd = bufio.NewReaderSize(fr.rc, fileReaderBufferSize)
 	} else {
 		fr.brd.Reset(fr.rc)
 	}
