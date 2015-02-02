@@ -47,9 +47,16 @@ func main() {
 	handler = handlers.CombinedLoggingHandler(os.Stdout, handler)
 	log.SetLevel(logLevel(config.Loglevel))
 
-	log.Infof("listening on %v", config.HTTP.Addr)
-	if err := http.ListenAndServe(config.HTTP.Addr, handler); err != nil {
-		log.Fatalln(err)
+	if config.HTTP.TLS.Certificate == "" {
+		log.Infof("listening on %v", config.HTTP.Addr)
+		if err := http.ListenAndServe(config.HTTP.Addr, handler); err != nil {
+			log.Fatalln(err)
+		}
+	} else {
+		log.Infof("listening on %v, tls", config.HTTP.Addr)
+		if err := http.ListenAndServeTLS(config.HTTP.Addr, config.HTTP.TLS.Certificate, config.HTTP.TLS.Key, handler); err != nil {
+			log.Fatalln(err)
+		}
 	}
 }
 

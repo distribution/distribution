@@ -38,6 +38,22 @@ type Configuration struct {
 
 		// Secret specifies the secret key which HMAC tokens are created with.
 		Secret string `yaml:"secret"`
+
+		// TLS instructs the http server to listen with a TLS configuration.
+		// This only support simple tls configuration with a cert and key.
+		// Mostly, this is useful for testing situations or simple deployments
+		// that require tls. If more complex configurations are required, use
+		// a proxy or make a proposal to add support here.
+		TLS struct {
+			// Certificate specifies the path to an x509 certificate file to
+			// be used for TLS.
+			Certificate string `yaml:"certificate"`
+
+			// Key specifies the path to the x509 key file, which should
+			// contain the private portion for the file specified in
+			// Certificate.
+			Key string `yaml:"key"`
+		} `yaml:"tls"`
 	} `yaml:"http"`
 }
 
