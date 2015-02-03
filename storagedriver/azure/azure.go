@@ -4,12 +4,10 @@ package azure
 
 import (
 	"bytes"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -30,7 +28,7 @@ const (
 // Driver is a storagedriver.StorageDriver implementation backed by
 // Microsoft Azure Blob Storage Service.
 type Driver struct {
-	client    *azure.BlobStorageClient
+	client    azure.BlobStorageClient
 	container string
 }
 
@@ -79,7 +77,7 @@ func New(accountName, accountKey, container string) (*Driver, error) {
 	}
 
 	return &Driver{
-		client:    blobClient,
+		client:    *blobClient,
 		container: container}, nil
 }
 
@@ -140,92 +138,22 @@ func (d *driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
 // WriteStream stores the contents of the provided io.ReadCloser at a location
 // designated by the given path.
 func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (int64, error) {
-	if !storagedriver.PathRegexp.MatchString(path) {
-		return 0, storagedriver.InvalidPathError{Path: path}
-	}
-
-	var (
-		lastBlockNum    int
-		resumableOffset int64
-		blocks          []azure.Block
-	)
-
 	if blobExists, err := d.client.BlobExists(d.container, path); err != nil {
 		return 0, err
-	} else if !blobExists { // new blob
-		lastBlockNum = 0
-		resumableOffset = 0
-	} else { // append
-		if parts, err := d.client.GetBlockList(d.container, path, azure.BlockListTypeCommitted); err != nil {
+	} else if !blobExists {
+		err := d.client.CreateBlockBlob(d.container, path)
+		if err != nil {
 			return 0, err
-		} else if len(parts.CommittedBlocks) == 0 {
-			lastBlockNum = 0
-			resumableOffset = 0
-		} else {
-			lastBlock := parts.CommittedBlocks[len(parts.CommittedBlocks)-1]
-			if lastBlockNum, err = fromBlockID(lastBlock.Name); err != nil {
-				return 0, fmt.Errorf("Cannot parse block name as number '%s': %s", lastBlock.Name, err.Error())
-			}
-
-			var totalSize int64
-			for _, v := range parts.CommittedBlocks {
-				blocks = append(blocks, azure.Block{
-					Id:     v.Name,
-					Status: azure.BlockStatusCommitted})
-				totalSize += int64(v.Size)
-			}
-
-			// NOTE: Azure driver currently supports only append mode (resumable
-			// index is exactly where the committed blocks of the blob end).
-			// In order to support writing to offsets other than last index,
-			// adjacent blocks overlapping with the [offset:offset+size] area
-			// must be fetched, splitted and should be overwritten accordingly.
-			// As the current use of this method is append only, that implementation
-			// is omitted.
-			resumableOffset = totalSize
 		}
 	}
-
-	if offset < resumableOffset {
-		// only writing at the end or after the end of the file is supported
+	if offset < 0 {
 		return 0, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
-	} else if offset > resumableOffset {
-		// zero-fill in between, construct a multi-reader
-		zeroReader := bytes.NewReader(make([]byte, offset-resumableOffset))
-		reader = io.MultiReader(zeroReader, reader)
 	}
 
-	// Put content
-	var nn int64
-	buf := make([]byte, azure.MaxBlobBlockSize)
-	for {
-		// Read chunks of exactly size N except the last chunk to
-		// maximize block size and minimize block count.
-		n, err := io.ReadFull(reader, buf)
-		if err == io.EOF {
-			break
-		}
-		nn += int64(n)
-
-		data := buf[:n]
-		lastBlockNum++
-		blockID := toBlockID(lastBlockNum)
-		if err = d.client.PutBlock(d.container, path, blockID, data); err != nil {
-			return 0, err
-		}
-
-		blocks = append(blocks, azure.Block{
-			Id:     blockID,
-			Status: azure.BlockStatusLatest})
-	}
-
-	// If there was a zero-fill, adjust nn to exclude zeros
-	if offset > resumableOffset {
-		nn -= offset - resumableOffset
-	}
-
-	// Commit block list
-	return nn, d.client.PutBlockList(d.container, path, blocks)
+	bs := newAzureBlockStorage(d.client)
+	bw := newRandomBlobWriter(&bs, azure.MaxBlobBlockSize)
+	zw := newZeroFillWriter(&bw)
+	return zw.Write(d.container, path, offset, reader)
 }
 
 // Stat retrieves the FileInfo for the given path, including the current size
@@ -435,18 +363,4 @@ func (d *Driver) listBlobs(container, virtPath string) ([]string, error) {
 func is404(err error) bool {
 	e, ok := err.(azure.StorageServiceError)
 	return ok && e.StatusCode == 404
-}
-
-func fromBlockID(b64Name string) (int, error) {
-	s, err := base64.StdEncoding.DecodeString(b64Name)
-	if err != nil {
-		return 0, err
-	}
-
-	return strconv.Atoi(string(s))
-}
-
-func toBlockID(i int) string {
-	s := fmt.Sprintf("%010d", i) // add zero padding
-	return base64.StdEncoding.EncodeToString([]byte(s))
 }
