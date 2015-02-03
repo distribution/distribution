@@ -67,6 +67,9 @@ type Event struct {
 		URL string `json:"url,omitempty"`
 	} `json:"target,omitempty"`
 
+	// Request covers the request that generated the event.
+	Request RequestRecord `json:"request,omitempty"`
+
 	// Actor specifies the agent that initiated the event. For most
 	// situations, this could be from the authorizaton context of the request.
 	Actor ActorRecord `json:"actor,omitempty"`
@@ -86,18 +89,6 @@ type ActorRecord struct {
 	// request context that generated the event.
 	Name string `json:"name,omitempty"`
 
-	// Addr contains the ip or hostname and possibly port of the client
-	// connection that initiated the event.
-	Addr string `json:"addr,omitempty"`
-
-	// Host is the externally accessible host name of the registry instance,
-	// as specified by the http host header on incoming requests.
-	Host string `json:"host,omitempty"`
-
-	// RequestID uniquely identifies the registry request that generated the
-	// event.
-	RequestID string `json:"requestID,omitempty"`
-
 	// TODO(stevvooe): Look into setting a session cookie to get this
 	// without docker daemon.
 	//    SessionID
@@ -105,6 +96,27 @@ type ActorRecord struct {
 	// TODO(stevvooe): Push the "Docker-Command" header to replace cookie and
 	// get the actual command.
 	//    Command
+}
+
+// RequestRecord covers the request that generated the event.
+type RequestRecord struct {
+	// ID uniquely identifies the request that initiated the event.
+	ID string `json:"id"`
+
+	// Addr contains the ip or hostname and possibly port of the client
+	// connection that initiated the event. This is the RemoteAddr from
+	// the standard http request.
+	Addr string `json:"addr,omitempty"`
+
+	// Host is the externally accessible host name of the registry instance,
+	// as specified by the http host header on incoming requests.
+	Host string `json:"host,omitempty"`
+
+	// Method has the request method that generated the event.
+	Method string `json:"method"`
+
+	// UserAgent contains the user agent header of the request.
+	UserAgent string `json:"useragent"`
 }
 
 // SourceRecord identifies the registry node that generated the event. Put

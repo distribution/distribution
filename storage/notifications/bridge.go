@@ -1,6 +1,7 @@
 package notifications
 
 import (
+	"net/http"
 	"time"
 
 	"github.com/docker/distribution/manifest"
@@ -11,10 +12,11 @@ import (
 )
 
 type bridge struct {
-	ub     URLBuilder
-	actor  ActorRecord
-	source SourceRecord
-	sink   Sink
+	ub      URLBuilder
+	actor   ActorRecord
+	source  SourceRecord
+	request RequestRecord
+	sink    Sink
 }
 
 var _ Listener = &bridge{}
@@ -28,12 +30,26 @@ type URLBuilder interface {
 // NewBridge returns a notification listener that writes records to sink,
 // using the actor and source. Any urls populated in the events created by
 // this bridge will be created using the URLBuilder.
-func NewBridge(ub URLBuilder, source SourceRecord, actor ActorRecord, sink Sink) Listener {
+// TODO(stevvooe): Update this to simply take a context.Context object.
+func NewBridge(ub URLBuilder, source SourceRecord, actor ActorRecord, request RequestRecord, sink Sink) Listener {
 	return &bridge{
-		ub:     ub,
-		actor:  actor,
-		source: source,
-		sink:   sink,
+		ub:      ub,
+		actor:   actor,
+		source:  source,
+		request: request,
+		sink:    sink,
+	}
+}
+
+// NewRequestRecord builds a RequestRecord for use in NewBridge from an
+// http.Request, associating it with a request id.
+func NewRequestRecord(id string, r *http.Request) RequestRecord {
+	return RequestRecord{
+		ID:        id,
+		Addr:      r.RemoteAddr,
+		Host:      r.Host,
+		Method:    r.Method,
+		UserAgent: r.UserAgent(),
 	}
 }
 
@@ -125,6 +141,7 @@ func (b *bridge) createEvent(action string) *Event {
 	event := createEvent(action)
 	event.Source = b.source
 	event.Actor = b.actor
+	event.Request = b.request
 
 	return event
 }

@@ -336,13 +336,11 @@ func (app *App) eventBridge(ctx *Context, r *http.Request) notifications.Listene
 	// auth system. Would prefer to do this during logging refactor and
 	// addition of user and google context type.
 	actor := notifications.ActorRecord{
-		Name:      "--todo--",
-		Addr:      r.RemoteAddr,
-		Host:      r.Host,
-		RequestID: ctx.RequestID,
+		Name: "--todo--",
 	}
+	request := notifications.NewRequestRecord(ctx.RequestID, r)
 
-	return notifications.NewBridge(ctx.urlBuilder, app.events.source, actor, app.events.sink)
+	return notifications.NewBridge(ctx.urlBuilder, app.events.source, actor, request, app.events.sink)
 }
 
 // apiBase implements a simple yes-man for doing overall checks against the

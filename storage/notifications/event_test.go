@@ -25,11 +25,15 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
             "tag": "latest",
             "url": "http://example.com/v2/library/test/manifests/latest"
          },
-         "actor": {
-            "name": "test-actor",
+         "request": {
+            "id": "asdfasdf",
             "addr": "client.local",
             "host": "registrycluster.local",
-            "requestID": "asdfasdf"
+            "method": "PUT",
+            "useragent": "test/0.1"
+         },
+         "actor": {
+            "name": "test-actor"
          },
          "source": {
             "addr": "hostname.local:port"
@@ -45,11 +49,15 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
             "digest": "tarsum.v2+sha256:0123456789abcdef1",
             "url": "http://example.com/v2/library/test/manifests/latest"
          },
-         "actor": {
-            "name": "test-actor",
+         "request": {
+            "id": "asdfasdf",
             "addr": "client.local",
             "host": "registrycluster.local",
-            "requestID": "asdfasdf"
+            "method": "PUT",
+            "useragent": "test/0.1"
+         },
+         "actor": {
+            "name": "test-actor"
          },
          "source": {
             "addr": "hostname.local:port"
@@ -65,11 +73,15 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
             "digest": "tarsum.v2+sha256:0123456789abcdef2",
             "url": "http://example.com/v2/library/test/manifests/latest"
          },
-         "actor": {
-            "name": "test-actor",
+         "request": {
+            "id": "asdfasdf",
             "addr": "client.local",
             "host": "registrycluster.local",
-            "requestID": "asdfasdf"
+            "method": "PUT",
+            "useragent": "test/0.1"
+         },
+         "actor": {
+            "name": "test-actor"
          },
          "source": {
             "addr": "hostname.local:port"
@@ -87,10 +99,12 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
 	var prototype Event
 	prototype.Action = "push"
 	prototype.Timestamp = tm
-	prototype.Actor.Addr = "client.local"
 	prototype.Actor.Name = "test-actor"
-	prototype.Actor.RequestID = "asdfasdf"
-	prototype.Actor.Host = "registrycluster.local"
+	prototype.Request.ID = "asdfasdf"
+	prototype.Request.Addr = "client.local"
+	prototype.Request.Host = "registrycluster.local"
+	prototype.Request.Method = "PUT"
+	prototype.Request.UserAgent = "test/0.1"
 	prototype.Source.Addr = "hostname.local:port"
 
 	var manifestPush Event
