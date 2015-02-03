@@ -124,7 +124,7 @@ func TestFileReaderSeek(t *testing.T) {
 		t.Fatalf("expected to seek to end: %v != %v", end, len(content))
 	}
 
-	// 4. Seek past end and before start, ensure error.
+	// 4. Seek before start, ensure error.
 
 	// seek before start
 	before, err := fr.Seek(-1, os.SEEK_SET)
@@ -132,9 +132,44 @@ func TestFileReaderSeek(t *testing.T) {
 		t.Fatalf("error expected, returned offset=%v", before)
 	}
 
-	after, err := fr.Seek(int64(len(content)+1), os.SEEK_END)
-	if err == nil {
-		t.Fatalf("error expected, returned offset=%v", after)
+	// 5. Seek after end,
+	after, err := fr.Seek(1, os.SEEK_END)
+	if err != nil {
+		t.Fatalf("unexpected error expected, returned offset=%v", after)
+	}
+
+	p := make([]byte, 16)
+	n, err := fr.Read(p)
+
+	if n != 0 {
+		t.Fatalf("bytes reads %d != %d", n, 0)
+	}
+
+	if err != io.EOF {
+		t.Fatalf("expected io.EOF, got %v", err)
+	}
+}
+
+// TestFileReaderNonExistentFile ensures the reader behaves as expected with a
+// missing or zero-length remote file. While the file may not exist, the
+// reader should not error out on creation and should return 0-bytes from the
+// read method, with an io.EOF error.
+func TestFileReaderNonExistentFile(t *testing.T) {
+	driver := inmemory.New()
+	fr, err := newFileReader(driver, "/doesnotexist")
+	if err != nil {
+		t.Fatalf("unexpected error initializing reader: %v", err)
+	}
+
+	var buf [1024]byte
+
+	n, err := fr.Read(buf[:])
+	if n != 0 {
+		t.Fatalf("non-zero byte read reported: %d != 0", n)
+	}
+
+	if err != io.EOF {
+		t.Fatalf("read on missing file should return io.EOF, got %v", err)
 	}
 }
 

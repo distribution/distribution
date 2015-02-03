@@ -13,6 +13,11 @@ import (
 	"github.com/docker/docker/pkg/tarsum"
 )
 
+const (
+	// DigestTarSumV1EmptyTar is the digest for the empty tar file.
+	DigestTarSumV1EmptyTar = "tarsum.v1+sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+)
+
 // Digest allows simple protection of hex formatted digest strings, prefixed
 // by their algorithm. Strings of type Digest have some guarantee of being in
 // the correct format and it provides quick access to the components of a

@@ -80,17 +80,10 @@ func (err ErrUnknownLayer) Error() string {
 // ErrLayerInvalidDigest returned when tarsum check fails.
 type ErrLayerInvalidDigest struct {
 	Digest digest.Digest
+	Reason error
 }
 
 func (err ErrLayerInvalidDigest) Error() string {
-	return fmt.Sprintf("invalid digest for referenced layer: %v", err.Digest)
-}
-
-// ErrLayerInvalidSize returned when length check fails.
-type ErrLayerInvalidSize struct {
-	Size int64
-}
-
-func (err ErrLayerInvalidSize) Error() string {
-	return fmt.Sprintf("invalid layer size: %d", err.Size)
+	return fmt.Sprintf("invalid digest for referenced layer: %v, %v",
+		err.Digest, err.Reason)
 }

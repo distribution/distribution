@@ -2539,7 +2539,6 @@ The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
 -------|----|------|------------
-| `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
 | `NAME_INVALID` | manifest name did not match URI | During a manifest upload, if the name in the manifest does not match the uri name, this error will be returned. |
 | `BLOB_UPLOAD_INVALID` | blob upload invalid | The blob upload encountered an error and can no longer proceed. |
 

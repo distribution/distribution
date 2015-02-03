@@ -57,8 +57,6 @@ func (rs *revisionStore) get(revision digest.Digest) (*manifest.SignedManifest, 
 		return nil, err
 	}
 
-	logrus.Infof("retrieved signatures: %v", string(signatures[0]))
-
 	jsig, err := libtrust.NewJSONSignature(content, signatures...)
 	if err != nil {
 		return nil, err
