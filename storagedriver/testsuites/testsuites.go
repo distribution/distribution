@@ -762,6 +762,27 @@ func (suite *DriverSuite) TestStatCall(c *check.C) {
 	c.Assert(fi.IsDir(), check.Equals, true)
 }
 
+// TestPutContentMultipleTimes checks that if storage driver can overwrite the content
+// in the subsequent puts. Validates that PutContent does not have to work
+// with an offset like WriteStream does and overwrites the file entirely
+// rather than writing the data to the [0,len(data)) of the file.
+func (suite *DriverSuite) TestPutContentMultipleTimes(c *check.C) {
+	filename := randomPath(32)
+	contents := randomContents(4096)
+
+	defer suite.StorageDriver.Delete(firstPart(filename))
+	err := suite.StorageDriver.PutContent(filename, contents)
+	c.Assert(err, check.IsNil)
+
+	contents = randomContents(2048) // upload a different, smaller file
+	err = suite.StorageDriver.PutContent(filename, contents)
+	c.Assert(err, check.IsNil)
+
+	readContents, err := suite.StorageDriver.GetContent(filename)
+	c.Assert(err, check.IsNil)
+	c.Assert(readContents, check.DeepEquals, contents)
+}
+
 // TestConcurrentStreamReads checks that multiple clients can safely read from
 // the same file simultaneously with various offsets.
 func (suite *DriverSuite) TestConcurrentStreamReads(c *check.C) {
