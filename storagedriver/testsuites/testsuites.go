@@ -123,7 +123,21 @@ func (suite *DriverSuite) TearDownTest(c *check.C) {
 // storage driver.
 func (suite *DriverSuite) TestValidPaths(c *check.C) {
 	contents := randomContents(64)
-	validFiles := []string{"/a", "/2", "/aa", "/a.a", "/0-9/abcdefg", "/abcdefg/z.75", "/abc/1.2.3.4.5-6_zyx/123.z/4", "/docker/docker-registry"}
+	validFiles := []string{
+		"/a",
+		"/2",
+		"/aa",
+		"/a.a",
+		"/0-9/abcdefg",
+		"/abcdefg/z.75",
+		"/abc/1.2.3.4.5-6_zyx/123.z/4",
+		"/docker/docker-registry",
+		"/123.abc",
+		"/abc./abc",
+		"/.abc",
+		"/a--b",
+		"/a-.b",
+		"/_.abc"}
 
 	for _, filename := range validFiles {
 		err := suite.StorageDriver.PutContent(filename, contents)
@@ -140,7 +154,14 @@ func (suite *DriverSuite) TestValidPaths(c *check.C) {
 // storage driver.
 func (suite *DriverSuite) TestInvalidPaths(c *check.C) {
 	contents := randomContents(64)
-	invalidFiles := []string{"", "/", "abc", "123.abc", "/abc./abc", "/.abc", "/a--b", "/a-.b", "/_.abc", "//bcd", "/abc_123/", "/Docker/docker-registry"}
+	invalidFiles := []string{
+		"",
+		"/",
+		"abc",
+		"123.abc",
+		"//bcd",
+		"/abc_123/",
+		"/Docker/docker-registry"}
 
 	for _, filename := range invalidFiles {
 		err := suite.StorageDriver.PutContent(filename, contents)
