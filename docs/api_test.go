@@ -336,8 +336,7 @@ func TestManifestAPI(t *testing.T) {
 	}
 
 	resp = putManifest(t, "putting signed manifest", manifestURL, signedManifest)
-
-	checkResponse(t, "putting signed manifest", resp, http.StatusOK)
+	checkResponse(t, "putting signed manifest", resp, http.StatusAccepted)
 
 	resp, err = http.Get(manifestURL)
 	if err != nil {
