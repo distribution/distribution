@@ -16,6 +16,7 @@ import (
 	"github.com/docker/distribution/storagedriver"
 	"github.com/docker/distribution/storagedriver/factory"
 	"github.com/gorilla/mux"
+	"golang.org/x/net/context"
 )
 
 // App is a global registry application object. Shared resources can be placed
@@ -189,6 +190,12 @@ func (ssrw *singleStatusResponseWriter) WriteHeader(status int) {
 	ssrw.ResponseWriter.WriteHeader(status)
 }
 
+// WithRequest adds an http request to the given context and requents
+// a new context with an "http.request" value.
+func WithRequest(ctx context.Context, r *http.Request) context.Context {
+	return context.WithValue(ctx, "http.request", r)
+}
+
 // dispatcher returns a handler that constructs a request specific context and
 // handler, using the dispatch factory function.
 func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
@@ -301,7 +308,8 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 		}
 	}
 
-	if err := app.accessController.Authorized(r, accessRecords...); err != nil {
+	authCtx, err := app.accessController.Authorized(WithRequest(nil, r), accessRecords...)
+	if err != nil {
 		switch err := err.(type) {
 		case auth.Challenge:
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -322,6 +330,10 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 		return err
 	}
 
+	// The authorized context should contain an auth.UserInfo
+	// object. If it doesn't, just use the zero value for now.
+	context.AuthUserInfo, _ = authCtx.Value("auth.user").(auth.UserInfo)
+
 	// At this point, the request should have access to the repository under
 	// the requested operation. Make is available on the context.
 	context.Repository = app.registry.Repository(repo)
@@ -332,11 +344,8 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 // eventBridge returns a bridge for the current request, configured with the
 // correct actor and source.
 func (app *App) eventBridge(ctx *Context, r *http.Request) notifications.Listener {
-	// TODO(stevvooe): Need to extract user data from request context using
-	// auth system. Would prefer to do this during logging refactor and
-	// addition of user and google context type.
 	actor := notifications.ActorRecord{
-		Name: "--todo--",
+		Name: ctx.AuthUserInfo.Name,
 	}
 	request := notifications.NewRequestRecord(ctx.RequestID, r)
 
