@@ -92,6 +92,8 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
+	w.WriteHeader(http.StatusAccepted)
 }
 
 // DeleteImageManifest removes the image with the given tag from the registry.
