@@ -72,8 +72,8 @@ func init() {
 
 	// Skip S3 storage driver tests if environment variable parameters are not provided
 	skipCheck := func() string {
-		if accessKey == "" || secretKey == "" || bucket == "" || encrypt == "" {
-			return "Must set AWS_ACCESS_KEY, AWS_SECRET_KEY, S3_BUCKET, and S3_ENCRYPT to run S3 tests"
+		if accessKey == "" || secretKey == "" || region == "" || bucket == "" || encrypt == "" {
+			return "Must set AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_REGION, S3_BUCKET, and S3_ENCRYPT to run S3 tests"
 		}
 		return ""
 	}
