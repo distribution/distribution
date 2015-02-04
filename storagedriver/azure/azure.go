@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/docker/distribution/storagedriver"
+	"github.com/docker/distribution/storagedriver/base"
 	"github.com/docker/distribution/storagedriver/factory"
 
 	azure "github.com/MSOpenTech/azure-sdk-for-go/clients/storage"
@@ -25,12 +26,16 @@ const (
 	paramContainer   = "container"
 )
 
-// Driver is a storagedriver.StorageDriver implementation backed by
-// Microsoft Azure Blob Storage Service.
-type Driver struct {
+type driver struct {
 	client    azure.BlobStorageClient
 	container string
 }
+
+type baseEmbed struct{ base.Base }
+
+// Driver is a storagedriver.StorageDriver implementation backed by
+// Microsoft Azure Blob Storage Service.
+type Driver struct{ baseEmbed }
 
 func init() {
 	factory.Register(driverName, &azureDriverFactory{})
@@ -76,19 +81,16 @@ func New(accountName, accountKey, container string) (*Driver, error) {
 		return nil, err
 	}
 
-	return &Driver{
+	d := &driver{
 		client:    *blobClient,
-		container: container}, nil
+		container: container}
+	return &Driver{baseEmbed: baseEmbed{Base: base.Base{StorageDriver: d}}}, nil
 }
 
 // Implement the storagedriver.StorageDriver interface.
 
 // GetContent retrieves the content stored at "path" as a []byte.
-func (d *Driver) GetContent(path string) ([]byte, error) {
-	if !storagedriver.PathRegexp.MatchString(path) {
-		return nil, storagedriver.InvalidPathError{Path: path}
-	}
-
+func (d *driver) GetContent(path string) ([]byte, error) {
 	blob, err := d.client.GetBlob(d.container, path)
 	if err != nil {
 		if is404(err) {
@@ -101,10 +103,7 @@ func (d *Driver) GetContent(path string) ([]byte, error) {
 }
 
 // PutContent stores the []byte content at a location designated by "path".
-func (d *Driver) PutContent(path string, contents []byte) error {
-	if !storagedriver.PathRegexp.MatchString(path) {
-		return storagedriver.InvalidPathError{Path: path}
-	}
+func (d *driver) PutContent(path string, contents []byte) error {
 	return d.client.PutBlockBlob(d.container, path, ioutil.NopCloser(bytes.NewReader(contents)))
 }
 
@@ -137,7 +136,7 @@ func (d *driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
 
 // WriteStream stores the contents of the provided io.ReadCloser at a location
 // designated by the given path.
-func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (int64, error) {
+func (d *driver) WriteStream(path string, offset int64, reader io.Reader) (int64, error) {
 	if blobExists, err := d.client.BlobExists(d.container, path); err != nil {
 		return 0, err
 	} else if !blobExists {
@@ -158,11 +157,7 @@ func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (int64
 
 // Stat retrieves the FileInfo for the given path, including the current size
 // in bytes and the creation time.
-func (d *Driver) Stat(path string) (storagedriver.FileInfo, error) {
-	if !storagedriver.PathRegexp.MatchString(path) {
-		return nil, storagedriver.InvalidPathError{Path: path}
-	}
-
+func (d *driver) Stat(path string) (storagedriver.FileInfo, error) {
 	// Check if the path is a blob
 	if ok, err := d.client.BlobExists(d.container, path); err != nil {
 		return nil, err
@@ -211,11 +206,7 @@ func (d *Driver) Stat(path string) (storagedriver.FileInfo, error) {
 
 // List returns a list of the objects that are direct descendants of the given
 // path.
-func (d *Driver) List(path string) ([]string, error) {
-	if !storagedriver.PathRegexp.MatchString(path) && path != "/" {
-		return nil, storagedriver.InvalidPathError{Path: path}
-	}
-
+func (d *driver) List(path string) ([]string, error) {
 	if path == "/" {
 		path = ""
 	}
@@ -231,13 +222,7 @@ func (d *Driver) List(path string) ([]string, error) {
 
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
-func (d *Driver) Move(sourcePath string, destPath string) error {
-	if !storagedriver.PathRegexp.MatchString(sourcePath) {
-		return storagedriver.InvalidPathError{Path: sourcePath}
-	} else if !storagedriver.PathRegexp.MatchString(destPath) {
-		return storagedriver.InvalidPathError{Path: destPath}
-	}
-
+func (d *driver) Move(sourcePath string, destPath string) error {
 	sourceBlobURL := d.client.GetBlobUrl(d.container, sourcePath)
 	err := d.client.CopyBlob(d.container, destPath, sourceBlobURL)
 	if err != nil {
@@ -251,11 +236,7 @@ func (d *Driver) Move(sourcePath string, destPath string) error {
 }
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
-func (d *Driver) Delete(path string) error {
-	if !storagedriver.PathRegexp.MatchString(path) {
-		return storagedriver.InvalidPathError{Path: path}
-	}
-
+func (d *driver) Delete(path string) error {
 	ok, err := d.client.DeleteBlobIfExists(d.container, path)
 	if err != nil {
 		return err
@@ -331,7 +312,7 @@ func directDescendants(blobs []string, prefix string) []string {
 	return keys
 }
 
-func (d *Driver) listBlobs(container, virtPath string) ([]string, error) {
+func (d *driver) listBlobs(container, virtPath string) ([]string, error) {
 	if virtPath != "" && !strings.HasSuffix(virtPath, "/") { // containerify the path
 		virtPath += "/"
 	}
