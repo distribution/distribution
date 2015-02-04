@@ -1,79 +1,92 @@
-package decorator
+package notifications
 
 import (
 	"io"
+	"reflect"
 	"testing"
-
-	"github.com/docker/libtrust"
 
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/storage"
 	"github.com/docker/distribution/storagedriver/inmemory"
 	"github.com/docker/distribution/testutil"
+	"github.com/docker/libtrust"
 )
 
-func TestRegistryDecorator(t *testing.T) {
-	// Initialize the expected decorations. Call counting is a horrible way to
-	// test this but should keep this code from being atrocious.
-	expected := map[string]int{
-		"repository":      1,
-		"manifestservice": 1,
-		"layerservice":    1,
-		"layer":           4,
-		"layerupload":     4,
-	}
-	decorated := map[string]int{}
-
-	decorator := Func(func(v interface{}) interface{} {
-		switch v := v.(type) {
-		case storage.Repository:
-			t.Logf("decorate repository: %T", v)
-			decorated["repository"]++
-		case storage.ManifestService:
-			t.Logf("decorate manifestservice: %T", v)
-			decorated["manifestservice"]++
-		case storage.LayerService:
-			t.Logf("decorate layerservice: %T", v)
-			decorated["layerservice"]++
-		case storage.Layer:
-			t.Logf("decorate layer: %T", v)
-			decorated["layer"]++
-		case storage.LayerUpload:
-			t.Logf("decorate layerupload: %T", v)
-			decorated["layerupload"]++
-		default:
-			t.Fatalf("unexpected object decorated: %v", v)
-		}
-
-		return v
-	})
-
+func TestListener(t *testing.T) {
 	registry := storage.NewRegistryWithDriver(inmemory.New())
-	registry = DecorateRegistry(registry, decorator)
+	tl := &testListener{
+		ops: make(map[string]int),
+	}
+	repository := Listen(registry.Repository("foo/bar"), tl)
 
 	// Now take the registry through a number of operations
-	checkExerciseRegistry(t, registry)
+	checkExerciseRepository(t, repository)
 
-	for component, calls := range expected {
-		if decorated[component] != calls {
-			t.Fatalf("%v was not decorated expected number of times: %d != %d", component, decorated[component], calls)
-		}
+	expectedOps := map[string]int{
+		"manifest:push": 1,
+		"manifest:pull": 1,
+		// "manifest:delete": 0, // deletes not supported for now
+		"layer:push": 2,
+		"layer:pull": 2,
+		// "layer:delete":    0, // deletes not supported for now
+	}
+
+	if !reflect.DeepEqual(tl.ops, expectedOps) {
+		t.Fatalf("counts do not match:\n%v\n !=\n%v", tl.ops, expectedOps)
 	}
 
 }
 
+type testListener struct {
+	ops map[string]int
+}
+
+func (tl *testListener) ManifestPushed(repo storage.Repository, sm *manifest.SignedManifest) error {
+	tl.ops["manifest:push"]++
+
+	return nil
+}
+
+func (tl *testListener) ManifestPulled(repo storage.Repository, sm *manifest.SignedManifest) error {
+	tl.ops["manifest:pull"]++
+	return nil
+}
+
+func (tl *testListener) ManifestDeleted(repo storage.Repository, sm *manifest.SignedManifest) error {
+	tl.ops["manifest:delete"]++
+	return nil
+}
+
+func (tl *testListener) LayerPushed(repo storage.Repository, layer storage.Layer) error {
+	tl.ops["layer:push"]++
+	return nil
+}
+
+func (tl *testListener) LayerPulled(repo storage.Repository, layer storage.Layer) error {
+	tl.ops["layer:pull"]++
+	return nil
+}
+
+func (tl *testListener) LayerDeleted(repo storage.Repository, layer storage.Layer) error {
+	tl.ops["layer:delete"]++
+	return nil
+}
+
 // checkExerciseRegistry takes the registry through all of its operations,
 // carrying out generic checks.
-func checkExerciseRegistry(t *testing.T, registry storage.Registry) {
-	name := "foo/bar"
+func checkExerciseRepository(t *testing.T, repository storage.Repository) {
+	// TODO(stevvooe): This would be a nice testutil function. Basically, it
+	// takes the registry through a common set of operations. This could be
+	// used to make cross-cutting updates by changing internals that affect
+	// update counts. Basically, it would make writing tests a lot easier.
+
 	tag := "thetag"
-	repository := registry.Repository(name)
 	m := manifest.Manifest{
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
-		Name: name,
+		Name: repository.Name(),
 		Tag:  tag,
 	}
 

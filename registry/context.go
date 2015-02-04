@@ -13,6 +13,9 @@ type Context struct {
 	// App points to the application structure that created this context.
 	*App
 
+	// RequestID is the unique id of the request.
+	RequestID string
+
 	// Repository is the repository for the current request. All requests
 	// should be scoped to a single repository. This field may be nil.
 	Repository storage.Repository

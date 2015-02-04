@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/http"
 	"reflect"
 	"strings"
+	"time"
 )
 
 // Configuration is a versioned registry configuration, intended to be provided by a yaml file, and
@@ -54,7 +56,19 @@ type Configuration struct {
 			// Certificate.
 			Key string `yaml:"key"`
 		} `yaml:"tls"`
+
+		// Debug configures the http debug interface, if specified. This can
+		// include services such as pprof, expvar and other data that should
+		// not be exposed externally. Left disabled by default.
+		Debug struct {
+			// Addr specifies the bind address for the debug server.
+			Addr string `yaml:"addr"`
+		} `yaml:"debug"`
 	} `yaml:"http"`
+
+	// Notifications specifies configuration about various endpoint to which
+	// registry events are dispatched.
+	Notifications Notifications `yaml:"notifications"`
 }
 
 // v0_1Configuration is a Version 0.1 Configuration struct
@@ -230,6 +244,26 @@ func (auth Auth) MarshalYAML() (interface{}, error) {
 		return auth.Type(), nil
 	}
 	return map[string]Parameters(auth), nil
+}
+
+// Notifications configures multiple http endpoints.
+type Notifications struct {
+	// Endpoints is a list of http configurations for endpoints that
+	// respond to webhook notifications. In the future, we may allow other
+	// kinds of endpoints, such as external queues.
+	Endpoints []Endpoint `yaml:"endpoints"`
+}
+
+// Endpoint describes the configuration of an http webhook notification
+// endpoint.
+type Endpoint struct {
+	Name      string        `yaml:"name"`      // identifies the endpoint in the registry instance.
+	Disabled  bool          `yaml:"disabled"`  // disables the endpoint
+	URL       string        `yaml:"url"`       // post url for the endpoint.
+	Headers   http.Header   `yaml:"headers"`   // static headers that should be added to all requests
+	Timeout   time.Duration `yaml:"timeout"`   // HTTP timeout
+	Threshold int           `yaml:"threshold"` // circuit breaker threshold before backing off on failure
+	Backoff   time.Duration `yaml:"backoff"`   // backoff duration
 }
 
 // Reporting defines error reporting methods.

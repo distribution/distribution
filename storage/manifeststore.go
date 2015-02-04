@@ -94,6 +94,11 @@ func (ms *manifestStore) Get(tag string) (*manifest.SignedManifest, error) {
 }
 
 func (ms *manifestStore) Put(tag string, manifest *manifest.SignedManifest) error {
+	// TODO(stevvooe): Add check here to see if the revision is already
+	// present in the repository. If it is, we should merge the signatures, do
+	// a shallow verify (or a full one, doesn't matter) and return an error
+	// indicating what happened.
+
 	// Verify the manifest.
 	if err := ms.verifyManifest(tag, manifest); err != nil {
 		return err

@@ -2,6 +2,7 @@ package configuration
 
 import (
 	"bytes"
+	"net/http"
 	"os"
 	"testing"
 
@@ -40,6 +41,17 @@ var configStruct = Configuration{
 			APIKey: "BugsnagApiKey",
 		},
 	},
+	Notifications: Notifications{
+		Endpoints: []Endpoint{
+			{
+				Name: "endpoint-1",
+				URL:  "http://example.com",
+				Headers: http.Header{
+					"Authorization": []string{"Bearer <example>"},
+				},
+			},
+		},
+	},
 }
 
 // configYamlV0_1 is a Version 0.1 yaml document representing configStruct
@@ -61,6 +73,12 @@ auth:
   silly:
     realm: silly
     service: silly
+notifications:
+  endpoints:
+    - name: endpoint-1
+      url:  http://example.com
+      headers:
+        Authorization: [Bearer <example>]
 reporting:
   bugsnag:
     apikey: BugsnagApiKey
@@ -76,6 +94,12 @@ auth:
   silly:
     realm: silly
     service: silly
+notifications:
+  endpoints:
+    - name: endpoint-1
+      url:  http://example.com
+      headers:
+        Authorization: [Bearer <example>]
 `
 
 type ConfigSuite struct {
@@ -129,6 +153,7 @@ func (suite *ConfigSuite) TestParseIncomplete(c *C) {
 	suite.expectedConfig.Storage = Storage{"filesystem": Parameters{"rootdirectory": "/tmp/testroot"}}
 	suite.expectedConfig.Auth = Auth{"silly": Parameters{"realm": "silly"}}
 	suite.expectedConfig.Reporting = Reporting{}
+	suite.expectedConfig.Notifications = Notifications{}
 
 	os.Setenv("REGISTRY_STORAGE", "filesystem")
 	os.Setenv("REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY", "/tmp/testroot")
@@ -290,6 +315,11 @@ func copyConfig(config Configuration) *Configuration {
 	configCopy.Auth = Auth{config.Auth.Type(): Parameters{}}
 	for k, v := range config.Auth.Parameters() {
 		configCopy.Auth.setParameter(k, v)
+	}
+
+	configCopy.Notifications = Notifications{Endpoints: []Endpoint{}}
+	for _, v := range config.Notifications.Endpoints {
+		configCopy.Notifications.Endpoints = append(configCopy.Notifications.Endpoints, v)
 	}
 
 	return configCopy

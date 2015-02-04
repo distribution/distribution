@@ -79,13 +79,8 @@ func (rs *revisionStore) get(revision digest.Digest) (*manifest.SignedManifest, 
 // put stores the manifest in the repository, if not already present. Any
 // updated signatures will be stored, as well.
 func (rs *revisionStore) put(sm *manifest.SignedManifest) (digest.Digest, error) {
-	jsig, err := libtrust.ParsePrettySignature(sm.Raw, "signatures")
-	if err != nil {
-		return "", err
-	}
-
 	// Resolve the payload in the manifest.
-	payload, err := jsig.Payload()
+	payload, err := sm.Payload()
 	if err != nil {
 		return "", err
 	}
@@ -103,7 +98,7 @@ func (rs *revisionStore) put(sm *manifest.SignedManifest) (digest.Digest, error)
 	}
 
 	// Grab each json signature and store them.
-	signatures, err := jsig.Signatures()
+	signatures, err := sm.Signatures()
 	if err != nil {
 		return "", err
 	}
