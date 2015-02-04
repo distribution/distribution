@@ -154,7 +154,7 @@ func (r *clientImpl) PutImageManifest(name, tag string, manifest *manifest.Signe
 
 	// TODO(bbland): handle other status codes, like 5xx errors
 	switch {
-	case response.StatusCode == http.StatusOK:
+	case response.StatusCode == http.StatusOK || response.StatusCode == http.StatusAccepted:
 		return nil
 	case response.StatusCode >= 400 && response.StatusCode < 500:
 		var errors v2.Errors
