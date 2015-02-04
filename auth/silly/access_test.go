@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/docker/distribution/auth"
+	"golang.org/x/net/context"
 )
 
 func TestSillyAccessController(t *testing.T) {
@@ -15,7 +16,9 @@ func TestSillyAccessController(t *testing.T) {
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if err := ac.Authorized(r); err != nil {
+		ctx := context.WithValue(nil, "http.request", r)
+		authCtx, err := ac.Authorized(ctx)
+		if err != nil {
 			switch err := err.(type) {
 			case auth.Challenge:
 				err.ServeHTTP(w, r)
@@ -23,6 +26,15 @@ func TestSillyAccessController(t *testing.T) {
 			default:
 				t.Fatalf("unexpected error authorizing request: %v", err)
 			}
+		}
+
+		userInfo, ok := authCtx.Value("auth.user").(auth.UserInfo)
+		if !ok {
+			t.Fatal("silly accessController did not set auth.user context")
+		}
+
+		if userInfo.Name != "silly" {
+			t.Fatalf("expected user name %q, got %q", "silly", userInfo.Name)
 		}
 
 		w.WriteHeader(http.StatusNoContent)

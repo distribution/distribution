@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/docker/distribution/auth"
+	"golang.org/x/net/context"
 )
 
 // accessController provides a simple implementation of auth.AccessController
@@ -41,7 +42,12 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 
 // Authorized simply checks for the existence of the authorization header,
 // responding with a bearer challenge if it doesn't exist.
-func (ac *accessController) Authorized(req *http.Request, accessRecords ...auth.Access) error {
+func (ac *accessController) Authorized(ctx context.Context, accessRecords ...auth.Access) (context.Context, error) {
+	req, err := auth.RequestFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	if req.Header.Get("Authorization") == "" {
 		challenge := challenge{
 			realm:   ac.realm,
@@ -56,10 +62,10 @@ func (ac *accessController) Authorized(req *http.Request, accessRecords ...auth.
 			challenge.scope = strings.Join(scopes, " ")
 		}
 
-		return &challenge
+		return nil, &challenge
 	}
 
-	return nil
+	return context.WithValue(ctx, "auth.user", auth.UserInfo{Name: "silly"}), nil
 }
 
 type challenge struct {

@@ -17,6 +17,7 @@ import (
 
 	"github.com/docker/distribution/auth"
 	"github.com/docker/libtrust"
+	"golang.org/x/net/context"
 )
 
 func makeRootKeys(numKeys int) ([]libtrust.PrivateKey, error) {
@@ -282,7 +283,8 @@ func TestAccessController(t *testing.T) {
 		Action: "baz",
 	}
 
-	err = accessController.Authorized(req, testAccess)
+	ctx := context.WithValue(nil, "http.request", req)
+	authCtx, err := accessController.Authorized(ctx, testAccess)
 	challenge, ok := err.(auth.Challenge)
 	if !ok {
 		t.Fatal("accessController did not return a challenge")
@@ -290,6 +292,10 @@ func TestAccessController(t *testing.T) {
 
 	if challenge.Error() != ErrTokenRequired.Error() {
 		t.Fatalf("accessControler did not get expected error - got %s - expected %s", challenge, ErrTokenRequired)
+	}
+
+	if authCtx != nil {
+		t.Fatalf("expected nil auth context but got %s", authCtx)
 	}
 
 	// 2. Supply an invalid token.
@@ -308,7 +314,7 @@ func TestAccessController(t *testing.T) {
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.compactRaw()))
 
-	err = accessController.Authorized(req, testAccess)
+	authCtx, err = accessController.Authorized(ctx, testAccess)
 	challenge, ok = err.(auth.Challenge)
 	if !ok {
 		t.Fatal("accessController did not return a challenge")
@@ -316,6 +322,10 @@ func TestAccessController(t *testing.T) {
 
 	if challenge.Error() != ErrInvalidToken.Error() {
 		t.Fatalf("accessControler did not get expected error - got %s - expected %s", challenge, ErrTokenRequired)
+	}
+
+	if authCtx != nil {
+		t.Fatalf("expected nil auth context but got %s", authCtx)
 	}
 
 	// 3. Supply a token with insufficient access.
@@ -330,7 +340,7 @@ func TestAccessController(t *testing.T) {
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.compactRaw()))
 
-	err = accessController.Authorized(req, testAccess)
+	authCtx, err = accessController.Authorized(ctx, testAccess)
 	challenge, ok = err.(auth.Challenge)
 	if !ok {
 		t.Fatal("accessController did not return a challenge")
@@ -338,6 +348,10 @@ func TestAccessController(t *testing.T) {
 
 	if challenge.Error() != ErrInsufficientScope.Error() {
 		t.Fatalf("accessControler did not get expected error - got %s - expected %s", challenge, ErrInsufficientScope)
+	}
+
+	if authCtx != nil {
+		t.Fatalf("expected nil auth context but got %s", authCtx)
 	}
 
 	// 4. Supply the token we need, or deserve, or whatever.
@@ -348,7 +362,7 @@ func TestAccessController(t *testing.T) {
 			Name:    testAccess.Name,
 			Actions: []string{testAccess.Action},
 		}},
-		rootKeys[0], 1, // Everything is valid except the key which signed it.
+		rootKeys[0], 1,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -356,7 +370,17 @@ func TestAccessController(t *testing.T) {
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.compactRaw()))
 
-	if err = accessController.Authorized(req, testAccess); err != nil {
+	authCtx, err = accessController.Authorized(ctx, testAccess)
+	if err != nil {
 		t.Fatalf("accessController returned unexpected error: %s", err)
+	}
+
+	userInfo, ok := authCtx.Value("auth.user").(auth.UserInfo)
+	if !ok {
+		t.Fatal("token accessController did not set auth.user context")
+	}
+
+	if userInfo.Name != "foo" {
+		t.Fatalf("expected user name %q, got %q", "foo", userInfo.Name)
 	}
 }

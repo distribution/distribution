@@ -11,9 +11,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/docker/libtrust"
-
 	"github.com/docker/distribution/auth"
+	"github.com/docker/libtrust"
+	"golang.org/x/net/context"
 )
 
 // accessSet maps a typed, named resource to
@@ -217,18 +217,23 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 
 // Authorized handles checking whether the given request is authorized
 // for actions on resources described by the given access items.
-func (ac *accessController) Authorized(req *http.Request, accessItems ...auth.Access) error {
+func (ac *accessController) Authorized(ctx context.Context, accessItems ...auth.Access) (context.Context, error) {
 	challenge := &authChallenge{
 		realm:     ac.realm,
 		service:   ac.service,
 		accessSet: newAccessSet(accessItems...),
 	}
 
+	req, err := auth.RequestFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
 	parts := strings.Split(req.Header.Get("Authorization"), " ")
 
 	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
 		challenge.err = ErrTokenRequired
-		return challenge
+		return nil, challenge
 	}
 
 	rawToken := parts[1]
@@ -236,7 +241,7 @@ func (ac *accessController) Authorized(req *http.Request, accessItems ...auth.Ac
 	token, err := NewToken(rawToken)
 	if err != nil {
 		challenge.err = err
-		return challenge
+		return nil, challenge
 	}
 
 	verifyOpts := VerifyOptions{
@@ -248,18 +253,18 @@ func (ac *accessController) Authorized(req *http.Request, accessItems ...auth.Ac
 
 	if err = token.Verify(verifyOpts); err != nil {
 		challenge.err = err
-		return challenge
+		return nil, challenge
 	}
 
 	accessSet := token.accessSet()
 	for _, access := range accessItems {
 		if !accessSet.contains(access) {
 			challenge.err = ErrInsufficientScope
-			return challenge
+			return nil, challenge
 		}
 	}
 
-	return nil
+	return context.WithValue(ctx, "auth.user", auth.UserInfo{Name: token.Claims.Subject}), nil
 }
 
 // init handles registering the token auth backend.

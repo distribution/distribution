@@ -18,7 +18,7 @@
 //			resource := auth.Resource{Type: "customerOrder", Name: orderNumber}
 // 			access := auth.Access{Resource: resource, Action: "update"}
 //
-// 			if err := accessController.Authorized(r, access); err != nil {
+// 			if ctx, err := accessController.Authorized(ctx, access); err != nil {
 //				if challenge, ok := err.(auth.Challenge) {
 //					// Let the challenge write the response.
 //					challenge.ServeHTTP(w, r)
@@ -31,9 +31,34 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+
+	"golang.org/x/net/context"
 )
+
+// Common errors used with this package.
+var (
+	ErrNoRequestContext = errors.New("no http request in context")
+	ErrNoAuthUserInfo   = errors.New("no auth user info in context")
+)
+
+// RequestFromContext returns the http request in the given context.
+// Returns ErrNoRequestContext if the context does not have an http
+// request associated with it.
+func RequestFromContext(ctx context.Context) (*http.Request, error) {
+	if r, ok := ctx.Value("http.request").(*http.Request); r != nil && ok {
+		return r, nil
+	}
+	return nil, ErrNoRequestContext
+}
+
+// UserInfo carries information about
+// an autenticated/authorized client.
+type UserInfo struct {
+	Name string
+}
 
 // Resource describes a resource by type and name.
 type Resource struct {
@@ -65,13 +90,16 @@ type Challenge interface {
 // and required access levels for a request. Implementations can support both
 // complete denial and http authorization challenges.
 type AccessController interface {
-	// Authorized returns non-nil if the request is granted access. If one or
-	// more Access structs are provided, the requested access will be compared
-	// with what is available to the request. If the error is non-nil, access
-	// should always be denied. The error may be of type Challenge, in which
-	// case the caller may have the Challenge handle the request or choose
-	// what action to take based on the Challenge header or response status.
-	Authorized(req *http.Request, access ...Access) error
+	// Authorized returns a non-nil error if the context is granted access and
+	// returns a new authorized context. If one or more Access structs are
+	// provided, the requested access will be compared with what is available
+	// to the context. The given context will contain a "http.request" key with
+	// a `*http.Request` value. If the error is non-nil, access should always
+	// be denied. The error may be of type Challenge, in which case the caller
+	// may have the Challenge handle the request or choose what action to take
+	// based on the Challenge header or response status. The returned context
+	// object should have a "auth.user" value set to a UserInfo struct.
+	Authorized(ctx context.Context, access ...Access) (context.Context, error)
 }
 
 // InitFunc is the type of an AccessController factory function and is used
