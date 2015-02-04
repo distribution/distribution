@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/docker/distribution/storagedriver"
+	"github.com/docker/distribution/storagedriver/base"
 	"github.com/docker/distribution/storagedriver/factory"
 )
 
@@ -25,31 +26,46 @@ func (factory *inMemoryDriverFactory) Create(parameters map[string]interface{}) 
 	return New(), nil
 }
 
-// Driver is a storagedriver.StorageDriver implementation backed by a local map.
-// Intended solely for example and testing purposes.
-type Driver struct {
+type driver struct {
 	root  *dir
 	mutex sync.RWMutex
 }
 
+// baseEmbed allows us to hide the Base embed.
+type baseEmbed struct {
+	base.Base
+}
+
+// Driver is a storagedriver.StorageDriver implementation backed by a local map.
+// Intended solely for example and testing purposes.
+type Driver struct {
+	baseEmbed // embedded, hidden base driver.
+}
+
+var _ storagedriver.StorageDriver = &Driver{}
+
 // New constructs a new Driver.
 func New() *Driver {
-	return &Driver{root: &dir{
-		common: common{
-			p:   "/",
-			mod: time.Now(),
+	return &Driver{
+		baseEmbed: baseEmbed{
+			Base: base.Base{
+				StorageDriver: &driver{
+					root: &dir{
+						common: common{
+							p:   "/",
+							mod: time.Now(),
+						},
+					},
+				},
+			},
 		},
-	}}
+	}
 }
 
 // Implement the storagedriver.StorageDriver interface.
 
 // GetContent retrieves the content stored at "path" as a []byte.
-func (d *Driver) GetContent(path string) ([]byte, error) {
-	if !storagedriver.PathRegexp.MatchString(path) {
-		return nil, storagedriver.InvalidPathError{Path: path}
-	}
-
+func (d *driver) GetContent(path string) ([]byte, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
@@ -63,11 +79,7 @@ func (d *Driver) GetContent(path string) ([]byte, error) {
 }
 
 // PutContent stores the []byte content at a location designated by "path".
-func (d *Driver) PutContent(p string, contents []byte) error {
-	if !storagedriver.PathRegexp.MatchString(p) {
-		return storagedriver.InvalidPathError{Path: p}
-	}
-
+func (d *driver) PutContent(p string, contents []byte) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -86,11 +98,7 @@ func (d *Driver) PutContent(p string, contents []byte) error {
 
 // ReadStream retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
-func (d *Driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
-	if !storagedriver.PathRegexp.MatchString(path) {
-		return nil, storagedriver.InvalidPathError{Path: path}
-	}
-
+func (d *driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
@@ -114,11 +122,7 @@ func (d *Driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
 
 // WriteStream stores the contents of the provided io.ReadCloser at a location
 // designated by the given path.
-func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (nn int64, err error) {
-	if !storagedriver.PathRegexp.MatchString(path) {
-		return 0, storagedriver.InvalidPathError{Path: path}
-	}
-
+func (d *driver) WriteStream(path string, offset int64, reader io.Reader) (nn int64, err error) {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -159,11 +163,7 @@ func (d *Driver) WriteStream(path string, offset int64, reader io.Reader) (nn in
 }
 
 // Stat returns info about the provided path.
-func (d *Driver) Stat(path string) (storagedriver.FileInfo, error) {
-	if !storagedriver.PathRegexp.MatchString(path) {
-		return nil, storagedriver.InvalidPathError{Path: path}
-	}
-
+func (d *driver) Stat(path string) (storagedriver.FileInfo, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
@@ -189,11 +189,7 @@ func (d *Driver) Stat(path string) (storagedriver.FileInfo, error) {
 
 // List returns a list of the objects that are direct descendants of the given
 // path.
-func (d *Driver) List(path string) ([]string, error) {
-	if !storagedriver.PathRegexp.MatchString(path) && path != "/" {
-		return nil, storagedriver.InvalidPathError{Path: path}
-	}
-
+func (d *driver) List(path string) ([]string, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
@@ -223,13 +219,7 @@ func (d *Driver) List(path string) ([]string, error) {
 
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
-func (d *Driver) Move(sourcePath string, destPath string) error {
-	if !storagedriver.PathRegexp.MatchString(sourcePath) {
-		return storagedriver.InvalidPathError{Path: sourcePath}
-	} else if !storagedriver.PathRegexp.MatchString(destPath) {
-		return storagedriver.InvalidPathError{Path: destPath}
-	}
-
+func (d *driver) Move(sourcePath string, destPath string) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -245,11 +235,7 @@ func (d *Driver) Move(sourcePath string, destPath string) error {
 }
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
-func (d *Driver) Delete(path string) error {
-	if !storagedriver.PathRegexp.MatchString(path) {
-		return storagedriver.InvalidPathError{Path: path}
-	}
-
+func (d *driver) Delete(path string) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -266,6 +252,6 @@ func (d *Driver) Delete(path string) error {
 
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 // May return an UnsupportedMethodErr in certain StorageDriver implementations.
-func (d *Driver) URLFor(path string, options map[string]interface{}) (string, error) {
+func (d *driver) URLFor(path string, options map[string]interface{}) (string, error) {
 	return "", storagedriver.ErrUnsupportedMethod
 }

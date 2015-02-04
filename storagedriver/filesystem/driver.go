@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/docker/distribution/storagedriver"
+	"github.com/docker/distribution/storagedriver/base"
 	"github.com/docker/distribution/storagedriver/factory"
 )
 
@@ -27,10 +28,18 @@ func (factory *filesystemDriverFactory) Create(parameters map[string]interface{}
 	return FromParameters(parameters), nil
 }
 
-// Driver is a storagedriver.StorageDriver implementation backed by a local
-// filesystem. All provided paths will be subpaths of the RootDirectory
-type Driver struct {
+type driver struct {
 	rootDirectory string
+}
+
+type baseEmbed struct {
+	base.Base
+}
+
+// Driver is a storagedriver.StorageDriver implementation backed by a local
+// filesystem. All provided paths will be subpaths of the RootDirectory.
+type Driver struct {
+	baseEmbed
 }
 
 // FromParameters constructs a new Driver with a given parameters map
@@ -49,17 +58,21 @@ func FromParameters(parameters map[string]interface{}) *Driver {
 
 // New constructs a new Driver with a given rootDirectory
 func New(rootDirectory string) *Driver {
-	return &Driver{rootDirectory}
+	return &Driver{
+		baseEmbed: baseEmbed{
+			Base: base.Base{
+				StorageDriver: &driver{
+					rootDirectory: rootDirectory,
+				},
+			},
+		},
+	}
 }
 
 // Implement the storagedriver.StorageDriver interface
 
 // GetContent retrieves the content stored at "path" as a []byte.
-func (d *Driver) GetContent(path string) ([]byte, error) {
-	if !storagedriver.PathRegexp.MatchString(path) {
-		return nil, storagedriver.InvalidPathError{Path: path}
-	}
-
+func (d *driver) GetContent(path string) ([]byte, error) {
 	rc, err := d.ReadStream(path, 0)
 	if err != nil {
 		return nil, err
@@ -75,11 +88,7 @@ func (d *Driver) GetContent(path string) ([]byte, error) {
 }
 
 // PutContent stores the []byte content at a location designated by "path".
-func (d *Driver) PutContent(subPath string, contents []byte) error {
-	if !storagedriver.PathRegexp.MatchString(subPath) {
-		return storagedriver.InvalidPathError{Path: subPath}
-	}
-
+func (d *driver) PutContent(subPath string, contents []byte) error {
 	if _, err := d.WriteStream(subPath, 0, bytes.NewReader(contents)); err != nil {
 		return err
 	}
@@ -89,15 +98,7 @@ func (d *Driver) PutContent(subPath string, contents []byte) error {
 
 // ReadStream retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
-func (d *Driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
-	if !storagedriver.PathRegexp.MatchString(path) {
-		return nil, storagedriver.InvalidPathError{Path: path}
-	}
-
-	if offset < 0 {
-		return nil, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
-	}
-
+func (d *driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
 	file, err := os.OpenFile(d.fullPath(path), os.O_RDONLY, 0644)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -121,15 +122,7 @@ func (d *Driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
 
 // WriteStream stores the contents of the provided io.Reader at a location
 // designated by the given path.
-func (d *Driver) WriteStream(subPath string, offset int64, reader io.Reader) (nn int64, err error) {
-	if !storagedriver.PathRegexp.MatchString(subPath) {
-		return 0, storagedriver.InvalidPathError{Path: subPath}
-	}
-
-	if offset < 0 {
-		return 0, storagedriver.InvalidOffsetError{Path: subPath, Offset: offset}
-	}
-
+func (d *driver) WriteStream(subPath string, offset int64, reader io.Reader) (nn int64, err error) {
 	// TODO(stevvooe): This needs to be a requirement.
 	// if !path.IsAbs(subPath) {
 	// 	return fmt.Errorf("absolute path required: %q", subPath)
@@ -165,11 +158,7 @@ func (d *Driver) WriteStream(subPath string, offset int64, reader io.Reader) (nn
 
 // Stat retrieves the FileInfo for the given path, including the current size
 // in bytes and the creation time.
-func (d *Driver) Stat(subPath string) (storagedriver.FileInfo, error) {
-	if !storagedriver.PathRegexp.MatchString(subPath) {
-		return nil, storagedriver.InvalidPathError{Path: subPath}
-	}
-
+func (d *driver) Stat(subPath string) (storagedriver.FileInfo, error) {
 	fullPath := d.fullPath(subPath)
 
 	fi, err := os.Stat(fullPath)
@@ -189,11 +178,7 @@ func (d *Driver) Stat(subPath string) (storagedriver.FileInfo, error) {
 
 // List returns a list of the objects that are direct descendants of the given
 // path.
-func (d *Driver) List(subPath string) ([]string, error) {
-	if !storagedriver.PathRegexp.MatchString(subPath) && subPath != "/" {
-		return nil, storagedriver.InvalidPathError{Path: subPath}
-	}
-
+func (d *driver) List(subPath string) ([]string, error) {
 	if subPath[len(subPath)-1] != '/' {
 		subPath += "/"
 	}
@@ -224,13 +209,7 @@ func (d *Driver) List(subPath string) ([]string, error) {
 
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
-func (d *Driver) Move(sourcePath string, destPath string) error {
-	if !storagedriver.PathRegexp.MatchString(sourcePath) {
-		return storagedriver.InvalidPathError{Path: sourcePath}
-	} else if !storagedriver.PathRegexp.MatchString(destPath) {
-		return storagedriver.InvalidPathError{Path: destPath}
-	}
-
+func (d *driver) Move(sourcePath string, destPath string) error {
 	source := d.fullPath(sourcePath)
 	dest := d.fullPath(destPath)
 
@@ -247,11 +226,7 @@ func (d *Driver) Move(sourcePath string, destPath string) error {
 }
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
-func (d *Driver) Delete(subPath string) error {
-	if !storagedriver.PathRegexp.MatchString(subPath) {
-		return storagedriver.InvalidPathError{Path: subPath}
-	}
-
+func (d *driver) Delete(subPath string) error {
 	fullPath := d.fullPath(subPath)
 
 	_, err := os.Stat(fullPath)
@@ -267,12 +242,12 @@ func (d *Driver) Delete(subPath string) error {
 
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 // May return an UnsupportedMethodErr in certain StorageDriver implementations.
-func (d *Driver) URLFor(path string, options map[string]interface{}) (string, error) {
+func (d *driver) URLFor(path string, options map[string]interface{}) (string, error) {
 	return "", storagedriver.ErrUnsupportedMethod
 }
 
 // fullPath returns the absolute path of a key within the Driver's storage.
-func (d *Driver) fullPath(subPath string) string {
+func (d *driver) fullPath(subPath string) string {
 	return path.Join(d.rootDirectory, subPath)
 }
 
