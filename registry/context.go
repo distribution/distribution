@@ -3,6 +3,7 @@ package registry
 import (
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/distribution/api/v2"
+	"github.com/docker/distribution/auth"
 	"github.com/docker/distribution/storage"
 )
 
@@ -24,6 +25,9 @@ type Context struct {
 	// returned to the client API. If errors are added to the collection, the
 	// handler *must not* start the response via http.ResponseWriter.
 	Errors v2.Errors
+
+	// AuthUserInfo contains information about an authorized client.
+	AuthUserInfo auth.UserInfo
 
 	// vars contains the extracted gorilla/mux variables that can be used for
 	// assignment.
