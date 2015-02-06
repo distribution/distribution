@@ -33,6 +33,7 @@ type Layer interface {
 // LayerService.Resume.
 type LayerUpload interface {
 	io.WriteSeeker
+	io.ReaderFrom
 	io.Closer
 
 	// Name of the repository under which the layer will be linked.
