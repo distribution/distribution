@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/docker/distribution/auth"
+	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/libtrust"
 	"golang.org/x/net/context"
 )
@@ -224,7 +225,7 @@ func (ac *accessController) Authorized(ctx context.Context, accessItems ...auth.
 		accessSet: newAccessSet(accessItems...),
 	}
 
-	req, err := auth.RequestFromContext(ctx)
+	req, err := ctxu.GetRequest(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -264,7 +265,7 @@ func (ac *accessController) Authorized(ctx context.Context, accessItems ...auth.
 		}
 	}
 
-	return context.WithValue(ctx, "auth.user", auth.UserInfo{Name: token.Claims.Subject}), nil
+	return auth.WithUser(ctx, auth.UserInfo{Name: token.Claims.Subject}), nil
 }
 
 // init handles registering the token auth backend.
