@@ -136,7 +136,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		}
 	}
 
-	v4AuthBool := true
+	v4AuthBool := false
 	v4Auth, ok := parameters["v4auth"]
 	if ok {
 		v4AuthBool, ok = v4Auth.(bool)
