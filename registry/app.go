@@ -7,10 +7,10 @@ import (
 	"os"
 
 	"code.google.com/p/go-uuid/uuid"
-	log "github.com/Sirupsen/logrus"
 	"github.com/docker/distribution/api/v2"
 	"github.com/docker/distribution/auth"
 	"github.com/docker/distribution/configuration"
+	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/storage"
 	"github.com/docker/distribution/storage/notifications"
 	"github.com/docker/distribution/storagedriver"
@@ -23,6 +23,7 @@ import (
 // on this object that will be accessible from all requests. Any writable
 // fields should be protected.
 type App struct {
+	context.Context
 	Config configuration.Configuration
 
 	// InstanceID is a unique id assigned to the application on each creation.
@@ -43,15 +44,29 @@ type App struct {
 	layerHandler storage.LayerHandler // allows dispatch of layer serving to external provider
 }
 
+// Value intercepts calls context.Context.Value, returning the current app id,
+// if requested.
+func (app *App) Value(key interface{}) interface{} {
+	switch key {
+	case "app.id":
+		return app.InstanceID
+	}
+
+	return app.Context.Value(key)
+}
+
 // NewApp takes a configuration and returns a configured app, ready to serve
 // requests. The app only implements ServeHTTP and can be wrapped in other
 // handlers accordingly.
-func NewApp(configuration configuration.Configuration) *App {
+func NewApp(ctx context.Context, configuration configuration.Configuration) *App {
 	app := &App{
 		Config:     configuration,
+		Context:    ctx,
 		InstanceID: uuid.New(),
 		router:     v2.Router(),
 	}
+
+	app.Context = ctxu.WithLogger(app.Context, ctxu.GetLogger(app, "app.id"))
 
 	// Register the handler dispatchers.
 	app.register(v2.RouteNameBase, func(ctx *Context, r *http.Request) http.Handler {
@@ -118,11 +133,11 @@ func (app *App) configureEvents(configuration *configuration.Configuration) {
 	var sinks []notifications.Sink
 	for _, endpoint := range configuration.Notifications.Endpoints {
 		if endpoint.Disabled {
-			log.Infof("endpoint %s disabled, skipping", endpoint.Name)
+			ctxu.GetLogger(app).Infof("endpoint %s disabled, skipping", endpoint.Name)
 			continue
 		}
 
-		log.Infof("configuring endpoint %v (%v), timeout=%s, headers=%v", endpoint.Name, endpoint.URL, endpoint.Timeout, endpoint.Headers)
+		ctxu.GetLogger(app).Infof("configuring endpoint %v (%v), timeout=%s, headers=%v", endpoint.Name, endpoint.URL, endpoint.Timeout, endpoint.Headers)
 		endpoint := notifications.NewEndpoint(endpoint.Name, endpoint.URL, notifications.EndpointConfig{
 			Timeout:   endpoint.Timeout,
 			Threshold: endpoint.Threshold,
@@ -190,27 +205,29 @@ func (ssrw *singleStatusResponseWriter) WriteHeader(status int) {
 	ssrw.ResponseWriter.WriteHeader(status)
 }
 
-// WithRequest adds an http request to the given context and requents
-// a new context with an "http.request" value.
-func WithRequest(ctx context.Context, r *http.Request) context.Context {
-	return context.WithValue(ctx, "http.request", r)
+func (ssrw *singleStatusResponseWriter) Flush() {
+	if flusher, ok := ssrw.ResponseWriter.(http.Flusher); ok {
+		flusher.Flush()
+	}
 }
 
 // dispatcher returns a handler that constructs a request specific context and
 // handler, using the dispatch factory function.
 func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		context := app.context(r)
+		context := app.context(w, r)
 
-		if err := app.authorized(w, r, context, context.vars["name"]); err != nil {
+		defer func() {
+			ctxu.GetResponseLogger(context).Infof("response completed")
+		}()
+
+		if err := app.authorized(w, r, context); err != nil {
 			return
 		}
 
 		// decorate the authorized repository with an event bridge.
 		context.Repository = notifications.Listen(
 			context.Repository, app.eventBridge(context, r))
-
-		context.log = log.WithField("name", context.Repository.Name())
 		handler := dispatch(context, r)
 
 		ssrw := &singleStatusResponseWriter{ResponseWriter: w}
@@ -230,16 +247,23 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 
 // context constructs the context object for the application. This only be
 // called once per request.
-func (app *App) context(r *http.Request) *Context {
-	vars := mux.Vars(r)
+func (app *App) context(w http.ResponseWriter, r *http.Request) *Context {
+	ctx := ctxu.WithRequest(app, r)
+	ctx, w = ctxu.WithResponseWriter(ctx, w)
+	ctx = ctxu.WithVars(ctx, r)
+	ctx = ctxu.WithLogger(ctx, ctxu.GetRequestLogger(ctx))
+	ctx = ctxu.WithLogger(ctx, ctxu.GetLogger(ctx,
+		"vars.name",
+		"vars.tag",
+		"vars.digest",
+		"vars.tag",
+		"vars.uuid"))
+
 	context := &Context{
 		App:        app,
-		RequestID:  uuid.New(),
+		Context:    ctx,
 		urlBuilder: v2.NewURLBuilderFromRequest(r),
 	}
-
-	// Store vars for underlying handlers.
-	context.vars = vars
 
 	return context
 }
@@ -247,7 +271,10 @@ func (app *App) context(r *http.Request) *Context {
 // authorized checks if the request can proceed with access to the requested
 // repository. If it succeeds, the repository will be available on the
 // context. An error will be if access is not available.
-func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Context, repo string) error {
+func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Context) error {
+	ctxu.GetLogger(context).Debug("authorizing request")
+	repo := getName(context)
+
 	if app.accessController == nil {
 		// No access controller, so we simply provide access.
 		context.Repository = app.registry.Repository(repo)
@@ -308,7 +335,7 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 		}
 	}
 
-	authCtx, err := app.accessController.Authorized(WithRequest(nil, r), accessRecords...)
+	ctx, err := app.accessController.Authorized(context.Context, accessRecords...)
 	if err != nil {
 		switch err := err.(type) {
 		case auth.Challenge:
@@ -323,16 +350,14 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 			// the configuration or whatever is backing the access
 			// controller. Just return a bad request with no information
 			// to avoid exposure. The request should not proceed.
-			context.log.Errorf("error checking authorization: %v", err)
+			ctxu.GetLogger(context).Errorf("error checking authorization: %v", err)
 			w.WriteHeader(http.StatusBadRequest)
 		}
 
 		return err
 	}
 
-	// The authorized context should contain an auth.UserInfo
-	// object. If it doesn't, just use the zero value for now.
-	context.AuthUserInfo, _ = authCtx.Value("auth.user").(auth.UserInfo)
+	context.Context = ctx
 
 	// At this point, the request should have access to the repository under
 	// the requested operation. Make is available on the context.
@@ -345,9 +370,9 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 // correct actor and source.
 func (app *App) eventBridge(ctx *Context, r *http.Request) notifications.Listener {
 	actor := notifications.ActorRecord{
-		Name: ctx.AuthUserInfo.Name,
+		Name: getUserName(ctx, r),
 	}
-	request := notifications.NewRequestRecord(ctx.RequestID, r)
+	request := notifications.NewRequestRecord(ctxu.GetRequestID(ctx), r)
 
 	return notifications.NewBridge(ctx.urlBuilder, app.events.source, actor, request, app.events.sink)
 }

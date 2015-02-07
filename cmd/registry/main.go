@@ -10,17 +10,18 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bugsnag/bugsnag-go"
-	"github.com/gorilla/handlers"
-	"github.com/yvasiyarov/gorelic"
-
 	_ "github.com/docker/distribution/auth/silly"
 	_ "github.com/docker/distribution/auth/token"
 	"github.com/docker/distribution/configuration"
+	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry"
 	_ "github.com/docker/distribution/storagedriver/filesystem"
 	_ "github.com/docker/distribution/storagedriver/inmemory"
 	_ "github.com/docker/distribution/storagedriver/s3"
 	"github.com/docker/distribution/version"
+	"github.com/gorilla/handlers"
+	"github.com/yvasiyarov/gorelic"
+	"golang.org/x/net/context"
 )
 
 var showVersion bool
@@ -38,29 +39,34 @@ func main() {
 		return
 	}
 
+	ctx := context.Background()
+
 	config, err := resolveConfiguration()
 	if err != nil {
 		fatalf("configuration error: %v", err)
 	}
 
-	app := registry.NewApp(*config)
+	log.SetLevel(logLevel(config.Loglevel))
+	ctx = context.WithValue(ctx, "version", version.Version)
+	ctx = ctxu.WithLogger(ctx, ctxu.GetLogger(ctx, "version"))
+
+	app := registry.NewApp(ctx, *config)
 	handler := configureReporting(app)
 	handler = handlers.CombinedLoggingHandler(os.Stdout, handler)
-	log.SetLevel(logLevel(config.Loglevel))
 
 	if config.HTTP.Debug.Addr != "" {
 		go debugServer(config.HTTP.Debug.Addr)
 	}
 
 	if config.HTTP.TLS.Certificate == "" {
-		log.Infof("listening on %v", config.HTTP.Addr)
+		ctxu.GetLogger(app).Infof("listening on %v", config.HTTP.Addr)
 		if err := http.ListenAndServe(config.HTTP.Addr, handler); err != nil {
-			log.Fatalln(err)
+			ctxu.GetLogger(app).Fatalln(err)
 		}
 	} else {
-		log.Infof("listening on %v, tls", config.HTTP.Addr)
+		ctxu.GetLogger(app).Infof("listening on %v, tls", config.HTTP.Addr)
 		if err := http.ListenAndServeTLS(config.HTTP.Addr, config.HTTP.TLS.Certificate, config.HTTP.TLS.Key, handler); err != nil {
-			log.Fatalln(err)
+			ctxu.GetLogger(app).Fatalln(err)
 		}
 	}
 }

@@ -22,26 +22,15 @@ import (
 	"github.com/docker/distribution/testutil"
 	"github.com/docker/libtrust"
 	"github.com/gorilla/handlers"
+	"golang.org/x/net/context"
 )
 
 // TestCheckAPI hits the base endpoint (/v2/) ensures we return the specified
 // 200 OK response.
 func TestCheckAPI(t *testing.T) {
-	config := configuration.Configuration{
-		Storage: configuration.Storage{
-			"inmemory": configuration.Parameters{},
-		},
-	}
+	env := newTestEnv(t)
 
-	app := NewApp(config)
-	server := httptest.NewServer(handlers.CombinedLoggingHandler(os.Stderr, app))
-	builder, err := v2.NewURLBuilderFromString(server.URL)
-
-	if err != nil {
-		t.Fatalf("error creating url builder: %v", err)
-	}
-
-	baseURL, err := builder.BuildBaseURL()
+	baseURL, err := env.builder.BuildBaseURL()
 	if err != nil {
 		t.Fatalf("unexpected error building base url: %v", err)
 	}
@@ -73,20 +62,7 @@ func TestLayerAPI(t *testing.T) {
 	// TODO(stevvooe): This test code is complete junk but it should cover the
 	// complete flow. This must be broken down and checked against the
 	// specification *before* we submit the final to docker core.
-
-	config := configuration.Configuration{
-		Storage: configuration.Storage{
-			"inmemory": configuration.Parameters{},
-		},
-	}
-
-	app := NewApp(config)
-	server := httptest.NewServer(handlers.CombinedLoggingHandler(os.Stderr, app))
-	builder, err := v2.NewURLBuilderFromString(server.URL)
-
-	if err != nil {
-		t.Fatalf("error creating url builder: %v", err)
-	}
+	env := newTestEnv(t)
 
 	imageName := "foo/bar"
 	// "build" our layer file
@@ -99,7 +75,7 @@ func TestLayerAPI(t *testing.T) {
 
 	// -----------------------------------
 	// Test fetch for non-existent content
-	layerURL, err := builder.BuildBlobURL(imageName, layerDigest)
+	layerURL, err := env.builder.BuildBlobURL(imageName, layerDigest)
 	if err != nil {
 		t.Fatalf("error building url: %v", err)
 	}
@@ -122,7 +98,7 @@ func TestLayerAPI(t *testing.T) {
 
 	// ------------------------------------------
 	// Start an upload and cancel
-	uploadURLBase := startPushLayer(t, builder, imageName)
+	uploadURLBase := startPushLayer(t, env.builder, imageName)
 
 	req, err := http.NewRequest("DELETE", uploadURLBase, nil)
 	if err != nil {
@@ -145,8 +121,8 @@ func TestLayerAPI(t *testing.T) {
 
 	// -----------------------------------------
 	// Do layer push with an empty body and different digest
-	uploadURLBase = startPushLayer(t, builder, imageName)
-	resp, err = doPushLayer(t, builder, imageName, layerDigest, uploadURLBase, bytes.NewReader([]byte{}))
+	uploadURLBase = startPushLayer(t, env.builder, imageName)
+	resp, err = doPushLayer(t, env.builder, imageName, layerDigest, uploadURLBase, bytes.NewReader([]byte{}))
 	if err != nil {
 		t.Fatalf("unexpected error doing bad layer push: %v", err)
 	}
@@ -161,8 +137,8 @@ func TestLayerAPI(t *testing.T) {
 		t.Fatalf("unexpected error digesting empty buffer: %v", err)
 	}
 
-	uploadURLBase = startPushLayer(t, builder, imageName)
-	pushLayer(t, builder, imageName, zeroDigest, uploadURLBase, bytes.NewReader([]byte{}))
+	uploadURLBase = startPushLayer(t, env.builder, imageName)
+	pushLayer(t, env.builder, imageName, zeroDigest, uploadURLBase, bytes.NewReader([]byte{}))
 
 	// -----------------------------------------
 	// Do layer push with an empty body and correct digest
@@ -174,16 +150,16 @@ func TestLayerAPI(t *testing.T) {
 		t.Fatalf("unexpected error digesting empty tar: %v", err)
 	}
 
-	uploadURLBase = startPushLayer(t, builder, imageName)
-	pushLayer(t, builder, imageName, emptyDigest, uploadURLBase, bytes.NewReader(emptyTar))
+	uploadURLBase = startPushLayer(t, env.builder, imageName)
+	pushLayer(t, env.builder, imageName, emptyDigest, uploadURLBase, bytes.NewReader(emptyTar))
 
 	// ------------------------------------------
 	// Now, actually do successful upload.
 	layerLength, _ := layerFile.Seek(0, os.SEEK_END)
 	layerFile.Seek(0, os.SEEK_SET)
 
-	uploadURLBase = startPushLayer(t, builder, imageName)
-	pushLayer(t, builder, imageName, layerDigest, uploadURLBase, layerFile)
+	uploadURLBase = startPushLayer(t, env.builder, imageName)
+	pushLayer(t, env.builder, imageName, layerDigest, uploadURLBase, layerFile)
 
 	// ------------------------
 	// Use a head request to see if the layer exists.
@@ -223,28 +199,12 @@ func TestLayerAPI(t *testing.T) {
 }
 
 func TestManifestAPI(t *testing.T) {
-	pk, err := libtrust.GenerateECP256PrivateKey()
-	if err != nil {
-		t.Fatalf("unexpected error generating private key: %v", err)
-	}
-
-	config := configuration.Configuration{
-		Storage: configuration.Storage{
-			"inmemory": configuration.Parameters{},
-		},
-	}
-
-	app := NewApp(config)
-	server := httptest.NewServer(handlers.CombinedLoggingHandler(os.Stderr, app))
-	builder, err := v2.NewURLBuilderFromString(server.URL)
-	if err != nil {
-		t.Fatalf("unexpected error creating url builder: %v", err)
-	}
+	env := newTestEnv(t)
 
 	imageName := "foo/bar"
 	tag := "thetag"
 
-	manifestURL, err := builder.BuildManifestURL(imageName, tag)
+	manifestURL, err := env.builder.BuildManifestURL(imageName, tag)
 	if err != nil {
 		t.Fatalf("unexpected error getting manifest url: %v", err)
 	}
@@ -260,7 +220,7 @@ func TestManifestAPI(t *testing.T) {
 	checkResponse(t, "getting non-existent manifest", resp, http.StatusNotFound)
 	checkBodyHasErrorCodes(t, "getting non-existent manifest", resp, v2.ErrorCodeManifestUnknown)
 
-	tagsURL, err := builder.BuildTagsURL(imageName)
+	tagsURL, err := env.builder.BuildTagsURL(imageName)
 	if err != nil {
 		t.Fatalf("unexpected error building tags url: %v", err)
 	}
@@ -324,13 +284,13 @@ func TestManifestAPI(t *testing.T) {
 		expectedLayers[dgst] = rs
 		unsignedManifest.FSLayers[i].BlobSum = dgst
 
-		uploadURLBase := startPushLayer(t, builder, imageName)
-		pushLayer(t, builder, imageName, dgst, uploadURLBase, rs)
+		uploadURLBase := startPushLayer(t, env.builder, imageName)
+		pushLayer(t, env.builder, imageName, dgst, uploadURLBase, rs)
 	}
 
 	// -------------------
 	// Push the signed manifest with all layers pushed.
-	signedManifest, err := manifest.Sign(unsignedManifest, pk)
+	signedManifest, err := manifest.Sign(unsignedManifest, env.pk)
 	if err != nil {
 		t.Fatalf("unexpected error signing manifest: %v", err)
 	}
@@ -383,6 +343,46 @@ func TestManifestAPI(t *testing.T) {
 
 	if tagsResponse.Tags[0] != tag {
 		t.Fatalf("tag not as expected: %q != %q", tagsResponse.Tags[0], tag)
+	}
+}
+
+type testEnv struct {
+	pk      libtrust.PrivateKey
+	ctx     context.Context
+	config  configuration.Configuration
+	app     *App
+	server  *httptest.Server
+	builder *v2.URLBuilder
+}
+
+func newTestEnv(t *testing.T) *testEnv {
+	ctx := context.Background()
+	config := configuration.Configuration{
+		Storage: configuration.Storage{
+			"inmemory": configuration.Parameters{},
+		},
+	}
+
+	app := NewApp(ctx, config)
+	server := httptest.NewServer(handlers.CombinedLoggingHandler(os.Stderr, app))
+	builder, err := v2.NewURLBuilderFromString(server.URL)
+
+	if err != nil {
+		t.Fatalf("error creating url builder: %v", err)
+	}
+
+	pk, err := libtrust.GenerateECP256PrivateKey()
+	if err != nil {
+		t.Fatalf("unexpected error generating private key: %v", err)
+	}
+
+	return &testEnv{
+		pk:      pk,
+		ctx:     ctx,
+		config:  config,
+		app:     app,
+		server:  server,
+		builder: builder,
 	}
 }
 
