@@ -693,7 +693,7 @@ The error codes encountered via the API are enumerated in the following table:
  `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status.
  `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest.
  `SIZE_INVALID` | provided length did not match content length | When a layer is uploaded, the provided size will be checked against the uploaded content. If they do not match, this error will be returned.
- `NAME_INVALID` | manifest name did not match URI | During a manifest upload, if the name in the manifest does not match the uri name, this error will be returned.
+ `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation.
  `TAG_INVALID` | manifest tag did not match URI | During a manifest upload, if the tag in the manifest does not match the uri tag, this error will be returned.
  `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry.
  `MANIFEST_UNKNOWN` | manifest unknown | This error is returned when the manifest, identified by name and tag is unknown to the repository.
@@ -1004,7 +1004,7 @@ The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
 -------|----|------|------------
-| `NAME_INVALID` | manifest name did not match URI | During a manifest upload, if the name in the manifest does not match the uri name, this error will be returned. |
+| `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 | `TAG_INVALID` | manifest tag did not match URI | During a manifest upload, if the tag in the manifest does not match the uri tag, this error will be returned. |
 
 
@@ -1159,7 +1159,7 @@ The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
 -------|----|------|------------
-| `NAME_INVALID` | manifest name did not match URI | During a manifest upload, if the name in the manifest does not match the uri name, this error will be returned. |
+| `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 | `TAG_INVALID` | manifest tag did not match URI | During a manifest upload, if the tag in the manifest does not match the uri tag, this error will be returned. |
 | `MANIFEST_INVALID` | manifest invalid | During upload, manifests undergo several checks ensuring validity. If those checks fail, this error may be returned, unless a more specific error is included. The detail will contain information the failed validation. |
 | `MANIFEST_UNVERIFIED` | manifest failed signature verification | During manifest upload, if the manifest fails signature verification, this error will be returned. |
@@ -1333,7 +1333,7 @@ The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
 -------|----|------|------------
-| `NAME_INVALID` | manifest name did not match URI | During a manifest upload, if the name in the manifest does not match the uri name, this error will be returned. |
+| `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 | `TAG_INVALID` | manifest tag did not match URI | During a manifest upload, if the tag in the manifest does not match the uri tag, this error will be returned. |
 
 
@@ -1506,7 +1506,7 @@ The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
 -------|----|------|------------
-| `NAME_INVALID` | manifest name did not match URI | During a manifest upload, if the name in the manifest does not match the uri name, this error will be returned. |
+| `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 | `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
 
 
@@ -1655,7 +1655,7 @@ The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
 -------|----|------|------------
-| `NAME_INVALID` | manifest name did not match URI | During a manifest upload, if the name in the manifest does not match the uri name, this error will be returned. |
+| `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 | `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
 
 
@@ -1816,7 +1816,7 @@ The error codes that may be included in the response body are enumerated below:
 |Code|Message|Description|
 -------|----|------|------------
 | `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
-| `NAME_INVALID` | manifest name did not match URI | During a manifest upload, if the name in the manifest does not match the uri name, this error will be returned. |
+| `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 
 
 
@@ -1920,7 +1920,7 @@ The error codes that may be included in the response body are enumerated below:
 |Code|Message|Description|
 -------|----|------|------------
 | `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
-| `NAME_INVALID` | manifest name did not match URI | During a manifest upload, if the name in the manifest does not match the uri name, this error will be returned. |
+| `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 
 
 
@@ -2045,7 +2045,7 @@ The error codes that may be included in the response body are enumerated below:
 |Code|Message|Description|
 -------|----|------|------------
 | `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
-| `NAME_INVALID` | manifest name did not match URI | During a manifest upload, if the name in the manifest does not match the uri name, this error will be returned. |
+| `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 | `BLOB_UPLOAD_INVALID` | blob upload invalid | The blob upload encountered an error and can no longer proceed. |
 
 
@@ -2203,7 +2203,7 @@ The error codes that may be included in the response body are enumerated below:
 |Code|Message|Description|
 -------|----|------|------------
 | `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
-| `NAME_INVALID` | manifest name did not match URI | During a manifest upload, if the name in the manifest does not match the uri name, this error will be returned. |
+| `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 | `BLOB_UPLOAD_INVALID` | blob upload invalid | The blob upload encountered an error and can no longer proceed. |
 
 
@@ -2372,7 +2372,7 @@ The error codes that may be included in the response body are enumerated below:
 |Code|Message|Description|
 -------|----|------|------------
 | `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
-| `NAME_INVALID` | manifest name did not match URI | During a manifest upload, if the name in the manifest does not match the uri name, this error will be returned. |
+| `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 | `BLOB_UPLOAD_INVALID` | blob upload invalid | The blob upload encountered an error and can no longer proceed. |
 
 
@@ -2539,7 +2539,7 @@ The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
 -------|----|------|------------
-| `NAME_INVALID` | manifest name did not match URI | During a manifest upload, if the name in the manifest does not match the uri name, this error will be returned. |
+| `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 | `BLOB_UPLOAD_INVALID` | blob upload invalid | The blob upload encountered an error and can no longer proceed. |
 
 
