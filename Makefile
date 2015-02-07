@@ -4,11 +4,9 @@ PREFIX?=$(shell pwd)
 # Used to populate version variable in main package.
 GO_LDFLAGS=-ldflags "-X `go list ./version`.Version `git describe --match 'v[0-9]*' --dirty='.m' --always`"
 
-.PHONY: clean binaries
+.PHONY: clean all fmt vet lint build test binaries
 .DEFAULT: default
-
-default:
-	@echo Please read the make targets before using this Makefile.
+all: clean fmt vet fmt lint build test binaries
 
 AUTHORS: .mailmap .git/ORIG_HEAD .git/FETCH_HEAD .git/HEAD
 	 git log --format='%aN <%aE>' | sort -fu >> $@
@@ -19,6 +17,25 @@ version/version.go:
 
 ${PREFIX}/bin/registry: version/version.go $(shell find . -type f -name '*.go')
 	go build -o $@ ${GO_LDFLAGS} ./cmd/registry
+
+vet:
+	go vet ./...
+
+fmt:
+	test -z "$$(gofmt -s -l . | grep -v Godeps/_workspace/src/ | tee /dev/stderr)" || \
+		echo "+ please format Go code with 'gofmt -s'"
+
+lint:
+	test -z "$$(golint ./... | grep -v Godeps/_workspace/src/ | tee /dev/stderr)"
+
+build:
+	go build ${GO_LDFLAGS} ./...
+
+test:
+	go test -test.short ./...
+
+test-full:
+	go test ./...
 
 binaries: ${PREFIX}/bin/registry
 
