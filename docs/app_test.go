@@ -12,6 +12,7 @@ import (
 	"github.com/docker/distribution/configuration"
 	"github.com/docker/distribution/storage"
 	"github.com/docker/distribution/storagedriver/inmemory"
+	"golang.org/x/net/context"
 )
 
 // TestAppDispatcher builds an application with a test dispatcher and ensures
@@ -22,6 +23,7 @@ func TestAppDispatcher(t *testing.T) {
 	driver := inmemory.New()
 	app := &App{
 		Config:   configuration.Configuration{},
+		Context:  context.Background(),
 		router:   v2.Router(),
 		driver:   driver,
 		registry: storage.NewRegistryWithDriver(driver),
@@ -37,19 +39,19 @@ func TestAppDispatcher(t *testing.T) {
 	varCheckingDispatcher := func(expectedVars map[string]string) dispatchFunc {
 		return func(ctx *Context, r *http.Request) http.Handler {
 			// Always checks the same name context
-			if ctx.Repository.Name() != ctx.vars["name"] {
+			if ctx.Repository.Name() != getName(ctx) {
 				t.Fatalf("unexpected name: %q != %q", ctx.Repository.Name(), "foo/bar")
 			}
 
 			// Check that we have all that is expected
 			for expectedK, expectedV := range expectedVars {
-				if ctx.vars[expectedK] != expectedV {
-					t.Fatalf("unexpected %s in context vars: %q != %q", expectedK, ctx.vars[expectedK], expectedV)
+				if ctx.Value(expectedK) != expectedV {
+					t.Fatalf("unexpected %s in context vars: %q != %q", expectedK, ctx.Value(expectedK), expectedV)
 				}
 			}
 
 			// Check that we only have variables that are expected
-			for k, v := range ctx.vars {
+			for k, v := range ctx.Value("vars").(map[string]string) {
 				_, ok := expectedVars[k]
 
 				if !ok { // name is checked on context
@@ -135,6 +137,7 @@ func TestAppDispatcher(t *testing.T) {
 // TestNewApp covers the creation of an application via NewApp with a
 // configuration.
 func TestNewApp(t *testing.T) {
+	ctx := context.Background()
 	config := configuration.Configuration{
 		Storage: configuration.Storage{
 			"inmemory": nil,
@@ -152,7 +155,7 @@ func TestNewApp(t *testing.T) {
 	// Mostly, with this test, given a sane configuration, we are simply
 	// ensuring that NewApp doesn't panic. We might want to tweak this
 	// behavior.
-	app := NewApp(config)
+	app := NewApp(ctx, config)
 
 	server := httptest.NewServer(app)
 	builder, err := v2.NewURLBuilderFromString(server.URL)

@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/docker/distribution/api/v2"
+	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/storage"
@@ -17,10 +18,8 @@ import (
 func imageManifestDispatcher(ctx *Context, r *http.Request) http.Handler {
 	imageManifestHandler := &imageManifestHandler{
 		Context: ctx,
-		Tag:     ctx.vars["tag"],
+		Tag:     getTag(ctx),
 	}
-
-	imageManifestHandler.log = imageManifestHandler.log.WithField("tag", imageManifestHandler.Tag)
 
 	return handlers.MethodHandler{
 		"GET":    http.HandlerFunc(imageManifestHandler.GetImageManifest),
@@ -38,6 +37,7 @@ type imageManifestHandler struct {
 
 // GetImageManifest fetches the image manifest from the storage backend, if it exists.
 func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http.Request) {
+	ctxu.GetLogger(imh).Debug("GetImageManifest")
 	manifests := imh.Repository.Manifests()
 	manifest, err := manifests.Get(imh.Tag)
 
@@ -54,6 +54,7 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 
 // PutImageManifest validates and stores and image in the registry.
 func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http.Request) {
+	ctxu.GetLogger(imh).Debug("PutImageManifest")
 	manifests := imh.Repository.Manifests()
 	dec := json.NewDecoder(r.Body)
 
@@ -98,6 +99,7 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 
 // DeleteImageManifest removes the image with the given tag from the registry.
 func (imh *imageManifestHandler) DeleteImageManifest(w http.ResponseWriter, r *http.Request) {
+	ctxu.GetLogger(imh).Debug("DeleteImageManifest")
 	manifests := imh.Repository.Manifests()
 	if err := manifests.Delete(imh.Tag); err != nil {
 		switch err := err.(type) {
