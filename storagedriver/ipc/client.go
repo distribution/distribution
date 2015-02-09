@@ -158,7 +158,6 @@ func (driver *StorageDriverClient) Stop() error {
 		killErr = driver.subprocess.Process.Kill()
 	}
 	if driver.stopChan != nil {
-		driver.stopChan <- struct{}{}
 		close(driver.stopChan)
 	}
 
