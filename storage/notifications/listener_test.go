@@ -11,6 +11,7 @@ import (
 	"github.com/docker/distribution/storagedriver/inmemory"
 	"github.com/docker/distribution/testutil"
 	"github.com/docker/libtrust"
+	"golang.org/x/net/context"
 )
 
 func TestListener(t *testing.T) {
@@ -18,7 +19,8 @@ func TestListener(t *testing.T) {
 	tl := &testListener{
 		ops: make(map[string]int),
 	}
-	repository := Listen(registry.Repository("foo/bar"), tl)
+	ctx := context.Background()
+	repository := Listen(registry.Repository(ctx, "foo/bar"), tl)
 
 	// Now take the registry through a number of operations
 	checkExerciseRepository(t, repository)

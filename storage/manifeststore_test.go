@@ -6,20 +6,21 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/docker/distribution/testutil"
-
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/storagedriver/inmemory"
+	"github.com/docker/distribution/testutil"
 	"github.com/docker/libtrust"
+	"golang.org/x/net/context"
 )
 
 func TestManifestStorage(t *testing.T) {
+	ctx := context.Background()
 	name := "foo/bar"
 	tag := "thetag"
 	driver := inmemory.New()
 	registry := NewRegistryWithDriver(driver)
-	repo := registry.Repository(name)
+	repo := registry.Repository(ctx, name)
 	ms := repo.Manifests()
 
 	exists, err := ms.Exists(tag)

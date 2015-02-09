@@ -3,10 +3,10 @@ package storage
 import (
 	"fmt"
 
-	"github.com/Sirupsen/logrus"
-
+	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/storagedriver"
+	"golang.org/x/net/context"
 )
 
 // TODO(stevvooe): Currently, the blobStore implementation used by the
@@ -19,6 +19,7 @@ import (
 // backend links.
 type blobStore struct {
 	*registry
+	ctx context.Context
 }
 
 // exists reports whether or not the path exists. If the driver returns error
@@ -110,7 +111,7 @@ func (bs *blobStore) resolve(path string) (string, error) {
 func (bs *blobStore) put(p []byte) (digest.Digest, error) {
 	dgst, err := digest.FromBytes(p)
 	if err != nil {
-		logrus.Errorf("error digesting content: %v, %s", err, string(p))
+		ctxu.GetLogger(bs.ctx).Errorf("error digesting content: %v, %s", err, string(p))
 		return "", err
 	}
 

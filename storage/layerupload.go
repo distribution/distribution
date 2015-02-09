@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/storagedriver"
 	"github.com/docker/docker/pkg/tarsum"
@@ -44,6 +45,7 @@ func (luc *layerUploadController) StartedAt() time.Time {
 // contents of the uploaded layer. The checksum should be provided in the
 // format <algorithm>:<hex digest>.
 func (luc *layerUploadController) Finish(digest digest.Digest) (Layer, error) {
+	ctxu.GetLogger(luc.layerStore.repository.ctx).Debug("(*layerUploadController).Finish")
 	canonical, err := luc.validateLayer(digest)
 	if err != nil {
 		return nil, err
@@ -68,6 +70,7 @@ func (luc *layerUploadController) Finish(digest digest.Digest) (Layer, error) {
 
 // Cancel the layer upload process.
 func (luc *layerUploadController) Cancel() error {
+	ctxu.GetLogger(luc.layerStore.repository.ctx).Debug("(*layerUploadController).Cancel")
 	if err := luc.removeResources(); err != nil {
 		return err
 	}

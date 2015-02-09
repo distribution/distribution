@@ -227,7 +227,8 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 
 		// decorate the authorized repository with an event bridge.
 		context.Repository = notifications.Listen(
-			context.Repository, app.eventBridge(context, r))
+			app.registry.Repository(context, getName(context)),
+			app.eventBridge(context, r))
 		handler := dispatch(context, r)
 
 		ssrw := &singleStatusResponseWriter{ResponseWriter: w}
@@ -276,9 +277,6 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 	repo := getName(context)
 
 	if app.accessController == nil {
-		// No access controller, so we simply provide access.
-		context.Repository = app.registry.Repository(repo)
-
 		return nil // access controller is not enabled.
 	}
 
@@ -357,11 +355,10 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 		return err
 	}
 
+	// TODO(stevvooe): This pattern needs to be cleaned up a bit. One context
+	// should be replaced by another, rather than replacing the context on a
+	// mutable object.
 	context.Context = ctx
-
-	// At this point, the request should have access to the repository under
-	// the requested operation. Make is available on the context.
-	context.Repository = app.registry.Repository(repo)
 
 	return nil
 }

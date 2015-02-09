@@ -3,6 +3,7 @@ package storage
 import (
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
+	"golang.org/x/net/context"
 )
 
 // TODO(stevvooe): These types need to be moved out of the storage package.
@@ -12,7 +13,7 @@ type Registry interface {
 	// Repository should return a reference to the named repository. The
 	// registry may or may not have the repository but should always return a
 	// reference.
-	Repository(name string) Repository
+	Repository(ctx context.Context, name string) Repository
 }
 
 // Repository is a named collection of manifests and layers.

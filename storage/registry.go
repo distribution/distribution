@@ -1,6 +1,9 @@
 package storage
 
-import "github.com/docker/distribution/storagedriver"
+import (
+	"github.com/docker/distribution/storagedriver"
+	"golang.org/x/net/context"
+)
 
 // registry is the top-level implementation of Registry for use in the storage
 // package. All instances should descend from this object.
@@ -32,8 +35,9 @@ func NewRegistryWithDriver(driver storagedriver.StorageDriver) Registry {
 // Repository returns an instance of the repository tied to the registry.
 // Instances should not be shared between goroutines but are cheap to
 // allocate. In general, they should be request scoped.
-func (reg *registry) Repository(name string) Repository {
+func (reg *registry) Repository(ctx context.Context, name string) Repository {
 	return &repository{
+		ctx:      ctx,
 		registry: reg,
 		name:     name,
 	}
@@ -42,6 +46,7 @@ func (reg *registry) Repository(name string) Repository {
 // repository provides name-scoped access to various services.
 type repository struct {
 	*registry
+	ctx  context.Context
 	name string
 }
 
