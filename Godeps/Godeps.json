@@ -23,6 +23,11 @@
 			"Rev": "d3664b76d90508cdda5a6c92042f26eab5db3103"
 		},
 		{
+			"ImportPath": "github.com/MSOpenTech/azure-sdk-for-go/clients/storage",
+			"Comment": "v1.1-119-g0fbd371",
+			"Rev": "0fbd37144de3adc2aef74db867c0e15e41c7f74a"
+		},
+		{
 			"ImportPath": "github.com/Sirupsen/logrus",
 			"Comment": "v0.6.4-12-g467d9d5",
 			"Rev": "467d9d55c2d2c17248441a8fc661561161f40d5e"

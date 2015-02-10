@@ -14,7 +14,7 @@ import (
 // An out-of-process Azure Storage driver, intended to be run by ipc.NewDriverClient
 func main() {
 	parametersBytes := []byte(os.Args[1])
-	var parameters map[string]string
+	var parameters map[string]interface{}
 	err := json.Unmarshal(parametersBytes, &parameters)
 	if err != nil {
 		panic(err)

@@ -1,5 +1,3 @@
-// +build ignore
-
 package azure
 
 import (
@@ -59,9 +57,9 @@ func init() {
 	}
 
 	testsuites.RegisterInProcessSuite(azureDriverConstructor, skipCheck)
-	testsuites.RegisterIPCSuite(driverName, map[string]string{
-		paramAccountName: accountName,
-		paramAccountKey:  accountKey,
-		paramContainer:   container,
-	}, skipCheck)
+	// testsuites.RegisterIPCSuite(driverName, map[string]string{
+	// 	paramAccountName: accountName,
+	// 	paramAccountKey:  accountKey,
+	// 	paramContainer:   container,
+	// }, skipCheck)
 }
