@@ -1,8 +1,8 @@
-# Logrus <img src="http://i.imgur.com/hTeVwmJ.png" width="40" height="40" alt=":walrus:" class="emoji" title=":walrus:"/>&nbsp;[![Build Status](https://travis-ci.org/Sirupsen/logrus.svg?branch=master)](https://travis-ci.org/Sirupsen/logrus)
+# Logrus <img src="http://i.imgur.com/hTeVwmJ.png" width="40" height="40" alt=":walrus:" class="emoji" title=":walrus:"/>&nbsp;[![Build Status](https://travis-ci.org/Sirupsen/logrus.svg?branch=master)](https://travis-ci.org/Sirupsen/logrus)&nbsp;[![godoc reference](https://godoc.org/github.com/Sirupsen/logrus?status.png)][godoc]
 
 Logrus is a structured logger for Go (golang), completely API compatible with
 the standard library logger. [Godoc][godoc]. **Please note the Logrus API is not
-yet stable (pre 1.0), the core API is unlikely change much but please version
+yet stable (pre 1.0), the core API is unlikely to change much but please version
 control your Logrus to make sure you aren't fetching latest `master` on every
 build.**
 
@@ -33,7 +33,7 @@ ocean","size":10,"time":"2014-03-10 19:57:38.562264131 -0400 EDT"}
 
 With the default `log.Formatter = new(logrus.TextFormatter)` when a TTY is not
 attached, the output is compatible with the
-[l2met](http://r.32k.io/l2met-introduction) format:
+[logfmt](http://godoc.org/github.com/kr/logfmt) format:
 
 ```text
 time="2014-04-20 15:36:23.830442383 -0400 EDT" level="info" msg="A group of walrus emerges from the ocean" animal="walrus" size=10
@@ -235,6 +235,12 @@ func init() {
 * [`github.com/nubo/hiprus`](https://github.com/nubo/hiprus)
   Send errors to a channel in hipchat.
 
+* [`github.com/sebest/logrusly`](https://github.com/sebest/logrusly)
+  Send logs to Loggly (https://www.loggly.com/)
+
+* [`github.com/johntdyer/slackrus`](https://github.com/johntdyer/slackrus)
+  Hook for Slack chat.
+
 #### Level logging
 
 Logrus has six logging levels: Debug, Info, Warning, Error, Fatal and Panic.
@@ -314,7 +320,7 @@ The built-in logging formatters are:
 
 Third party logging formatters:
 
-* [`zalgo`](https://github.com/aybabtme/logzalgo): invoking the P͉̫o̳̼̊w̖͈̰͎e̬͔̭͂r͚̼̹̲ ̫͓͉̳͈ō̠͕͖̚f̝͍̠ ͕̲̞͖͑Z̖̫̤̫ͪa͉̬͈̗l͖͎g̳̥o̰̥̅!̣͔̲̻͊̄ ̙̘̦̹̦.
+* [`zalgo`](https://github.com/aybabtme/logzalgo): invoking the P͉̫o̳̼̊w̖͈̰͎e̬͔̭͂r͚̼̹̲ ̫͓͉̳͈ō̠͕͖̚f̝͍̠ ͕̲̞͖͑Z̖̫̤̫ͪa͉̬͈̗l͖͎g̳̥o̰̥̅!̣͔̲̻͊̄ ̙̘̦̹̦.
 
 You can define your formatter by implementing the `Formatter` interface,
 requiring a `Format` method. `Format` takes an `*Entry`. `entry.Data` is a
@@ -338,6 +344,24 @@ func (f *JSONFormatter) Format(entry *Entry) ([]byte, error) {
   return append(serialized, '\n'), nil
 }
 ```
+
+#### Logger as an `io.Writer`
+
+Logrus can be transormed into an `io.Writer`. That writer is the end of an `io.Pipe` and it is your responsability to close it.
+
+```go
+w := logger.Writer()
+defer w.Close()
+
+srv := http.Server{
+    // create a stdlib log.Logger that writes to
+    // logrus.Logger.
+    ErrorLog: log.New(w, "", 0),
+}
+```
+
+Each line written to that writer will be printed the usual way, using formatters
+and hooks. The level for those entries is `info`.
 
 #### Rotation
 

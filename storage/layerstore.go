@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"code.google.com/p/go-uuid/uuid"
+	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/storagedriver"
@@ -14,6 +15,8 @@ type layerStore struct {
 }
 
 func (ls *layerStore) Exists(digest digest.Digest) (bool, error) {
+	ctxu.GetLogger(ls.repository.ctx).Debug("(*layerStore).Exists")
+
 	// Because this implementation just follows blob links, an existence check
 	// is pretty cheap by starting and closing a fetch.
 	_, err := ls.Fetch(digest)
@@ -31,6 +34,7 @@ func (ls *layerStore) Exists(digest digest.Digest) (bool, error) {
 }
 
 func (ls *layerStore) Fetch(dgst digest.Digest) (Layer, error) {
+	ctxu.GetLogger(ls.repository.ctx).Debug("(*layerStore).Fetch")
 	bp, err := ls.path(dgst)
 	if err != nil {
 		return nil, err
@@ -52,6 +56,7 @@ func (ls *layerStore) Fetch(dgst digest.Digest) (Layer, error) {
 // is already in progress or the layer has already been uploaded, this
 // will return an error.
 func (ls *layerStore) Upload() (LayerUpload, error) {
+	ctxu.GetLogger(ls.repository.ctx).Debug("(*layerStore).Upload")
 
 	// NOTE(stevvooe): Consider the issues with allowing concurrent upload of
 	// the same two layers. Should it be disallowed? For now, we allow both
@@ -89,6 +94,7 @@ func (ls *layerStore) Upload() (LayerUpload, error) {
 // Resume continues an in progress layer upload, returning the current
 // state of the upload.
 func (ls *layerStore) Resume(uuid string) (LayerUpload, error) {
+	ctxu.GetLogger(ls.repository.ctx).Debug("(*layerStore).Resume")
 	startedAtPath, err := ls.repository.registry.pm.path(uploadStartedAtPathSpec{
 		name: ls.repository.Name(),
 		uuid: uuid,

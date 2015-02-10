@@ -13,6 +13,7 @@ import (
 	"github.com/docker/distribution/storagedriver"
 	"github.com/docker/distribution/storagedriver/inmemory"
 	"github.com/docker/distribution/testutil"
+	"golang.org/x/net/context"
 )
 
 // TestSimpleLayerUpload covers the layer upload process, exercising common
@@ -30,10 +31,11 @@ func TestSimpleLayerUpload(t *testing.T) {
 		t.Fatalf("error allocating upload store: %v", err)
 	}
 
+	ctx := context.Background()
 	imageName := "foo/bar"
 	driver := inmemory.New()
 	registry := NewRegistryWithDriver(driver)
-	ls := registry.Repository(imageName).Layers()
+	ls := registry.Repository(ctx, imageName).Layers()
 
 	h := sha256.New()
 	rd := io.TeeReader(randomDataReader, h)
@@ -133,10 +135,11 @@ func TestSimpleLayerUpload(t *testing.T) {
 // open, read, seek, read works. More specific edge cases should be covered in
 // other tests.
 func TestSimpleLayerRead(t *testing.T) {
+	ctx := context.Background()
 	imageName := "foo/bar"
 	driver := inmemory.New()
 	registry := NewRegistryWithDriver(driver)
-	ls := registry.Repository(imageName).Layers()
+	ls := registry.Repository(ctx, imageName).Layers()
 
 	randomLayerReader, tarSumStr, err := testutil.CreateRandomTarFile()
 	if err != nil {
@@ -237,10 +240,11 @@ func TestSimpleLayerRead(t *testing.T) {
 
 // TestLayerUploadZeroLength uploads zero-length
 func TestLayerUploadZeroLength(t *testing.T) {
+	ctx := context.Background()
 	imageName := "foo/bar"
 	driver := inmemory.New()
 	registry := NewRegistryWithDriver(driver)
-	ls := registry.Repository(imageName).Layers()
+	ls := registry.Repository(ctx, imageName).Layers()
 
 	upload, err := ls.Upload()
 	if err != nil {

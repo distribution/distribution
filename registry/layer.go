@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/docker/distribution/api/v2"
+	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/storage"
 	"github.com/gorilla/handlers"
@@ -11,9 +12,16 @@ import (
 
 // layerDispatcher uses the request context to build a layerHandler.
 func layerDispatcher(ctx *Context, r *http.Request) http.Handler {
-	dgst, err := digest.ParseDigest(ctx.vars["digest"])
-
+	dgst, err := getDigest(ctx)
 	if err != nil {
+
+		if err == errDigestNotAvailable {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusNotFound)
+				ctx.Errors.Push(v2.ErrorCodeDigestInvalid, err)
+			})
+		}
+
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx.Errors.Push(v2.ErrorCodeDigestInvalid, err)
 		})
@@ -23,8 +31,6 @@ func layerDispatcher(ctx *Context, r *http.Request) http.Handler {
 		Context: ctx,
 		Digest:  dgst,
 	}
-
-	layerHandler.log = layerHandler.log.WithField("digest", dgst)
 
 	return handlers.MethodHandler{
 		"GET":  http.HandlerFunc(layerHandler.GetLayer),
@@ -42,6 +48,7 @@ type layerHandler struct {
 // GetLayer fetches the binary data from backend storage returns it in the
 // response.
 func (lh *layerHandler) GetLayer(w http.ResponseWriter, r *http.Request) {
+	ctxu.GetLogger(lh).Debug("GetImageLayer")
 	layers := lh.Repository.Layers()
 	layer, err := layers.Fetch(lh.Digest)
 

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/libtrust"
@@ -77,14 +78,17 @@ var _ ManifestService = &manifestStore{}
 // }
 
 func (ms *manifestStore) Tags() ([]string, error) {
+	ctxu.GetLogger(ms.repository.ctx).Debug("(*manifestStore).Tags")
 	return ms.tagStore.tags()
 }
 
 func (ms *manifestStore) Exists(tag string) (bool, error) {
+	ctxu.GetLogger(ms.repository.ctx).Debug("(*manifestStore).Exists")
 	return ms.tagStore.exists(tag)
 }
 
 func (ms *manifestStore) Get(tag string) (*manifest.SignedManifest, error) {
+	ctxu.GetLogger(ms.repository.ctx).Debug("(*manifestStore).Get")
 	dgst, err := ms.tagStore.resolve(tag)
 	if err != nil {
 		return nil, err
@@ -94,6 +98,8 @@ func (ms *manifestStore) Get(tag string) (*manifest.SignedManifest, error) {
 }
 
 func (ms *manifestStore) Put(tag string, manifest *manifest.SignedManifest) error {
+	ctxu.GetLogger(ms.repository.ctx).Debug("(*manifestStore).Put")
+
 	// TODO(stevvooe): Add check here to see if the revision is already
 	// present in the repository. If it is, we should merge the signatures, do
 	// a shallow verify (or a full one, doesn't matter) and return an error
@@ -118,6 +124,8 @@ func (ms *manifestStore) Put(tag string, manifest *manifest.SignedManifest) erro
 // semantics in the future, but this will maintain consistency. The underlying
 // blobs are left alone.
 func (ms *manifestStore) Delete(tag string) error {
+	ctxu.GetLogger(ms.repository.ctx).Debug("(*manifestStore).Delete")
+
 	revisions, err := ms.tagStore.revisions(tag)
 	if err != nil {
 		return err

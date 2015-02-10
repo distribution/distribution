@@ -31,28 +31,11 @@
 package auth
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 
 	"golang.org/x/net/context"
 )
-
-// Common errors used with this package.
-var (
-	ErrNoRequestContext = errors.New("no http request in context")
-	ErrNoAuthUserInfo   = errors.New("no auth user info in context")
-)
-
-// RequestFromContext returns the http request in the given context.
-// Returns ErrNoRequestContext if the context does not have an http
-// request associated with it.
-func RequestFromContext(ctx context.Context) (*http.Request, error) {
-	if r, ok := ctx.Value("http.request").(*http.Request); r != nil && ok {
-		return r, nil
-	}
-	return nil, ErrNoRequestContext
-}
 
 // UserInfo carries information about
 // an autenticated/authorized client.
@@ -100,6 +83,30 @@ type AccessController interface {
 	// based on the Challenge header or response status. The returned context
 	// object should have a "auth.user" value set to a UserInfo struct.
 	Authorized(ctx context.Context, access ...Access) (context.Context, error)
+}
+
+// WithUser returns a context with the authorized user info.
+func WithUser(ctx context.Context, user UserInfo) context.Context {
+	return userInfoContext{
+		Context: ctx,
+		user:    user,
+	}
+}
+
+type userInfoContext struct {
+	context.Context
+	user UserInfo
+}
+
+func (uic userInfoContext) Value(key interface{}) interface{} {
+	switch key {
+	case "auth.user":
+		return uic.user
+	case "auth.user.name":
+		return uic.user.Name
+	}
+
+	return uic.Context.Value(key)
 }
 
 // InitFunc is the type of an AccessController factory function and is used
