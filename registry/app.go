@@ -222,6 +222,7 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 		}()
 
 		if err := app.authorized(w, r, context); err != nil {
+			ctxu.GetLogger(context).Errorf("error authorizing context: %v", err)
 			return
 		}
 
@@ -270,8 +271,8 @@ func (app *App) context(w http.ResponseWriter, r *http.Request) *Context {
 }
 
 // authorized checks if the request can proceed with access to the requested
-// repository. If it succeeds, the repository will be available on the
-// context. An error will be if access is not available.
+// repository. If it succeeds, the context may access the requested
+// repository. An error will be returned if access is not available.
 func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Context) error {
 	ctxu.GetLogger(context).Debug("authorizing request")
 	repo := getName(context)
@@ -319,17 +320,19 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 		route := mux.CurrentRoute(r)
 
 		if route == nil || route.GetName() != v2.RouteNameBase {
-			// For this to be properly secured, context.Name must always be set
-			// for a resource that may make a modification. The only condition
-			// under which name is not set and we still allow access is when the
-			// base route is accessed. This section prevents us from making that
-			// mistake elsewhere in the code, allowing any operation to proceed.
+			// For this to be properly secured, repo must always be set for a
+			// resource that may make a modification. The only condition under
+			// which name is not set and we still allow access is when the
+			// base route is accessed. This section prevents us from making
+			// that mistake elsewhere in the code, allowing any operation to
+			// proceed.
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			w.WriteHeader(http.StatusForbidden)
 
 			var errs v2.Errors
 			errs.Push(v2.ErrorCodeUnauthorized)
 			serveJSON(w, errs)
+			return fmt.Errorf("forbidden: no repository name")
 		}
 	}
 
