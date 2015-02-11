@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/docker/distribution/api/v2"
+	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/storage"
 	"github.com/gorilla/handlers"
 )
