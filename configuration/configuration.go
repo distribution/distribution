@@ -24,22 +24,22 @@ type Configuration struct {
 
 	// Auth allows configuration of various authorization methods that may be
 	// used to gate requests.
-	Auth Auth `yaml:"auth"`
+	Auth Auth `yaml:"auth,omitempty"`
 
 	// LayerHandler specifies a middleware for serving image layers.
-	LayerHandler LayerHandler `yaml:"layerhandler"`
+	LayerHandler LayerHandler `yaml:"layerhandler,omitempty"`
 
 	// Reporting is the configuration for error reporting
-	Reporting Reporting `yaml:"reporting"`
+	Reporting Reporting `yaml:"reporting,omitempty"`
 
 	// HTTP contains configuration parameters for the registry's http
 	// interface.
 	HTTP struct {
 		// Addr specifies the bind address for the registry instance.
-		Addr string `yaml:"addr"`
+		Addr string `yaml:"addr,omitempty"`
 
 		// Secret specifies the secret key which HMAC tokens are created with.
-		Secret string `yaml:"secret"`
+		Secret string `yaml:"secret,omitempty"`
 
 		// TLS instructs the http server to listen with a TLS configuration.
 		// This only support simple tls configuration with a cert and key.
@@ -49,26 +49,26 @@ type Configuration struct {
 		TLS struct {
 			// Certificate specifies the path to an x509 certificate file to
 			// be used for TLS.
-			Certificate string `yaml:"certificate"`
+			Certificate string `yaml:"certificate,omitempty"`
 
 			// Key specifies the path to the x509 key file, which should
 			// contain the private portion for the file specified in
 			// Certificate.
-			Key string `yaml:"key"`
-		} `yaml:"tls"`
+			Key string `yaml:"key,omitempty"`
+		} `yaml:"tls,omitempty"`
 
 		// Debug configures the http debug interface, if specified. This can
 		// include services such as pprof, expvar and other data that should
 		// not be exposed externally. Left disabled by default.
 		Debug struct {
 			// Addr specifies the bind address for the debug server.
-			Addr string `yaml:"addr"`
-		} `yaml:"debug"`
-	} `yaml:"http"`
+			Addr string `yaml:"addr,omitempty"`
+		} `yaml:"debug,omitempty"`
+	} `yaml:"http,omitempty"`
 
 	// Notifications specifies configuration about various endpoint to which
 	// registry events are dispatched.
-	Notifications Notifications `yaml:"notifications"`
+	Notifications Notifications `yaml:"notifications,omitempty"`
 }
 
 // v0_1Configuration is a Version 0.1 Configuration struct
@@ -251,7 +251,7 @@ type Notifications struct {
 	// Endpoints is a list of http configurations for endpoints that
 	// respond to webhook notifications. In the future, we may allow other
 	// kinds of endpoints, such as external queues.
-	Endpoints []Endpoint `yaml:"endpoints"`
+	Endpoints []Endpoint `yaml:"endpoints,omitempty"`
 }
 
 // Endpoint describes the configuration of an http webhook notification
@@ -269,28 +269,28 @@ type Endpoint struct {
 // Reporting defines error reporting methods.
 type Reporting struct {
 	// Bugsnag configures error reporting for Bugsnag (bugsnag.com).
-	Bugsnag BugsnagReporting `yaml:"bugsnag"`
+	Bugsnag BugsnagReporting `yaml:"bugsnag,omitempty"`
 	// NewRelic configures error reporting for NewRelic (newrelic.com)
-	NewRelic NewRelicReporting `yaml:"newrelic"`
+	NewRelic NewRelicReporting `yaml:"newrelic,omitempty"`
 }
 
 // BugsnagReporting configures error reporting for Bugsnag (bugsnag.com).
 type BugsnagReporting struct {
 	// APIKey is the Bugsnag api key.
-	APIKey string `yaml:"apikey"`
+	APIKey string `yaml:"apikey,omitempty"`
 	// ReleaseStage tracks where the registry is deployed.
 	// Examples: production, staging, development
-	ReleaseStage string `yaml:"releasestage"`
+	ReleaseStage string `yaml:"releasestage,omitempty"`
 	// Endpoint is used for specifying an enterprise Bugsnag endpoint.
-	Endpoint string `yaml:"endpoint"`
+	Endpoint string `yaml:"endpoint,omitempty"`
 }
 
 // NewRelicReporting configures error reporting for NewRelic (newrelic.com)
 type NewRelicReporting struct {
 	// LicenseKey is the NewRelic user license key
-	LicenseKey string `yaml:"licensekey"`
+	LicenseKey string `yaml:"licensekey,omitempty"`
 	// Name is the component name of the registry in NewRelic
-	Name string `yaml:"name"`
+	Name string `yaml:"name,omitempty"`
 }
 
 // LayerHandler defines the configuration for middleware layer serving
