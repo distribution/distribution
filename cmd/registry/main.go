@@ -10,8 +10,8 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bugsnag/bugsnag-go"
-	_ "github.com/docker/distribution/auth/silly"
-	_ "github.com/docker/distribution/auth/token"
+	_ "github.com/docker/distribution/registry/auth/silly"
+	_ "github.com/docker/distribution/registry/auth/token"
 	"github.com/docker/distribution/configuration"
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/handlers"

@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/distribution/auth"
+	"github.com/docker/distribution/registry/auth"
 	"github.com/docker/libtrust"
 	"golang.org/x/net/context"
 )
