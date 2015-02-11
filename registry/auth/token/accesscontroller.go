@@ -11,8 +11,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/docker/distribution/registry/auth"
 	ctxu "github.com/docker/distribution/context"
+	"github.com/docker/distribution/registry/auth"
 	"github.com/docker/libtrust"
 	"golang.org/x/net/context"
 )

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/docker/distribution/registry/api/v2"
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/registry/storage"
 	"golang.org/x/net/context"
 )
