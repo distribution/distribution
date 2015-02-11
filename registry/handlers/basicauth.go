@@ -1,6 +1,6 @@
 // +build go1.4
 
-package registry
+package handlers
 
 import (
 	"net/http"
