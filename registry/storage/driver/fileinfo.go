@@ -1,4 +1,4 @@
-package storagedriver
+package driver
 
 import "time"
 

@@ -9,7 +9,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/storagedriver"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/docker/pkg/tarsum"
 )
 

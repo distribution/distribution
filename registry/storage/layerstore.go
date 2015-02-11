@@ -7,7 +7,7 @@ import (
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
-	"github.com/docker/distribution/storagedriver"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
 )
 
 type layerStore struct {

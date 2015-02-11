@@ -10,7 +10,7 @@ import (
 
 	"github.com/docker/distribution/digest"
 
-	"github.com/docker/distribution/storagedriver/inmemory"
+	"github.com/docker/distribution/registry/storage/driver/inmemory"
 )
 
 func TestSimpleRead(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"path"
 
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/storagedriver"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
 )
 
 // tagStore provides methods to manage manifest tags in a backend storage driver.

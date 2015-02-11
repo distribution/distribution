@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/AdRoll/goamz/aws"
-	"github.com/docker/distribution/storagedriver"
-	"github.com/docker/distribution/storagedriver/testsuites"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/registry/storage/driver/testsuites"
 
 	"gopkg.in/check.v1"
 )

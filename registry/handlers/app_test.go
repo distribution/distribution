@@ -7,11 +7,11 @@ import (
 	"net/url"
 	"testing"
 
+	"github.com/docker/distribution/configuration"
 	"github.com/docker/distribution/registry/api/v2"
 	_ "github.com/docker/distribution/registry/auth/silly"
-	"github.com/docker/distribution/configuration"
 	"github.com/docker/distribution/registry/storage"
-	"github.com/docker/distribution/storagedriver/inmemory"
+	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"golang.org/x/net/context"
 )
 

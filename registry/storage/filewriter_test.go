@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/storagedriver/inmemory"
+	"github.com/docker/distribution/registry/storage/driver/inmemory"
 )
 
 // TestSimpleWrite takes the fileWriter through common write operations

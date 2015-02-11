@@ -3,7 +3,7 @@ package factory
 import (
 	"fmt"
 
-	"github.com/docker/distribution/storagedriver"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
 )
 
 // driverFactories stores an internal mapping between storage driver names and their respective

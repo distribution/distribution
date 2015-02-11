@@ -40,7 +40,7 @@ package base
 import (
 	"io"
 
-	"github.com/docker/distribution/storagedriver"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
 )
 
 // Base provides a wrapper around a storagedriver implementation that provides

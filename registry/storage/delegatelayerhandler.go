@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/docker/distribution/storagedriver"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
 )
 
 // delegateLayerHandler provides a simple implementation of layerHandler that

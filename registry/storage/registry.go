@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"github.com/docker/distribution/storagedriver"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"golang.org/x/net/context"
 )
 
