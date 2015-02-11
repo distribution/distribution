@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/docker/distribution/registry/api/v2"
-	_ "github.com/docker/distribution/auth/silly"
+	_ "github.com/docker/distribution/registry/auth/silly"
 	"github.com/docker/distribution/configuration"
 	"github.com/docker/distribution/storage"
 	"github.com/docker/distribution/storagedriver/inmemory"

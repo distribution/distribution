@@ -8,7 +8,7 @@ import (
 
 	"code.google.com/p/go-uuid/uuid"
 	"github.com/docker/distribution/registry/api/v2"
-	"github.com/docker/distribution/auth"
+	"github.com/docker/distribution/registry/auth"
 	"github.com/docker/distribution/configuration"
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/storage"
