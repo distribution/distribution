@@ -12,8 +12,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/docker/distribution/registry/auth"
 	ctxu "github.com/docker/distribution/context"
+	"github.com/docker/distribution/registry/auth"
 	"golang.org/x/net/context"
 )
 
