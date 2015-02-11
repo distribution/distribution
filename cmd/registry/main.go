@@ -10,16 +10,16 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/bugsnag/bugsnag-go"
-	_ "github.com/docker/distribution/auth/silly"
-	_ "github.com/docker/distribution/auth/token"
 	"github.com/docker/distribution/configuration"
 	ctxu "github.com/docker/distribution/context"
-	"github.com/docker/distribution/registry"
-	_ "github.com/docker/distribution/storagedriver/filesystem"
-	_ "github.com/docker/distribution/storagedriver/inmemory"
-	_ "github.com/docker/distribution/storagedriver/s3"
+	_ "github.com/docker/distribution/registry/auth/silly"
+	_ "github.com/docker/distribution/registry/auth/token"
+	"github.com/docker/distribution/registry/handlers"
+	_ "github.com/docker/distribution/registry/storage/driver/filesystem"
+	_ "github.com/docker/distribution/registry/storage/driver/inmemory"
+	_ "github.com/docker/distribution/registry/storage/driver/s3"
 	"github.com/docker/distribution/version"
-	"github.com/gorilla/handlers"
+	gorhandlers "github.com/gorilla/handlers"
 	"github.com/yvasiyarov/gorelic"
 	"golang.org/x/net/context"
 )
@@ -50,9 +50,9 @@ func main() {
 	ctx = context.WithValue(ctx, "version", version.Version)
 	ctx = ctxu.WithLogger(ctx, ctxu.GetLogger(ctx, "version"))
 
-	app := registry.NewApp(ctx, *config)
+	app := handlers.NewApp(ctx, *config)
 	handler := configureReporting(app)
-	handler = handlers.CombinedLoggingHandler(os.Stdout, handler)
+	handler = gorhandlers.CombinedLoggingHandler(os.Stdout, handler)
 
 	if config.HTTP.Debug.Addr != "" {
 		go debugServer(config.HTTP.Debug.Addr)
@@ -118,7 +118,7 @@ func logLevel(level configuration.Loglevel) log.Level {
 	return l
 }
 
-func configureReporting(app *registry.App) http.Handler {
+func configureReporting(app *handlers.App) http.Handler {
 	var handler http.Handler = app
 
 	if app.Config.Reporting.Bugsnag.APIKey != "" {
