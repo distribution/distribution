@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/AdRoll/goamz/cloudfront"
-	"github.com/docker/distribution/storagedriver"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
 )
 
 // cloudFrontLayerHandler provides an simple implementation of layerHandler that

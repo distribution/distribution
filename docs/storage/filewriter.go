@@ -6,7 +6,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/docker/distribution/storagedriver"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
 )
 
 // fileWriter implements a remote file writer backed by a storage driver.

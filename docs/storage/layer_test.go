@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/storagedriver"
-	"github.com/docker/distribution/storagedriver/inmemory"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/docker/distribution/testutil"
 	"golang.org/x/net/context"
 )

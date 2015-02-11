@@ -7,14 +7,14 @@ import (
 	"os"
 
 	"code.google.com/p/go-uuid/uuid"
-	"github.com/docker/distribution/registry/api/v2"
-	"github.com/docker/distribution/registry/auth"
 	"github.com/docker/distribution/configuration"
 	ctxu "github.com/docker/distribution/context"
+	"github.com/docker/distribution/registry/api/v2"
+	"github.com/docker/distribution/registry/auth"
 	"github.com/docker/distribution/registry/storage"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/registry/storage/driver/factory"
 	"github.com/docker/distribution/registry/storage/notifications"
-	"github.com/docker/distribution/storagedriver"
-	"github.com/docker/distribution/storagedriver/factory"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 )
