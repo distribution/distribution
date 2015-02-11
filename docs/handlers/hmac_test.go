@@ -1,4 +1,4 @@
-package registry
+package handlers
 
 import "testing"
 
