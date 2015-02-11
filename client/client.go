@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/docker/distribution/api/v2"
+	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 )

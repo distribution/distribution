@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/docker/distribution/api/v2"
+	"github.com/docker/distribution/registry/api/v2"
 	_ "github.com/docker/distribution/auth/silly"
 	"github.com/docker/distribution/configuration"
 	"github.com/docker/distribution/storage"

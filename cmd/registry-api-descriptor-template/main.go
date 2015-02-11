@@ -20,7 +20,7 @@ import (
 	"regexp"
 	"text/template"
 
-	"github.com/docker/distribution/api/v2"
+	"github.com/docker/distribution/registry/api/v2"
 )
 
 var spaceRegex = regexp.MustCompile(`\n\s*`)
