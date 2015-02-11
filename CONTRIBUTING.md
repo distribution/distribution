@@ -52,3 +52,49 @@ Eventually, you will have to update your proposal to accommodate the feedback yo
 Usually, it's not advisable to start working too much on the implementation itself before the proposal receives sufficient feedback, since it can significantly altered (or rejected).
 
 Your implementation should then be submitted as a separate PR, that will be reviewed as well.
+
+## Issue and PR labels
+
+To keep track of the state of issues and PRs, we've adopted a set of simple labels. The following are currently in use:
+
+<dl>
+	<dt><a href="https://github.com/docker/distribution/issues?q=is%3Aopen+-label%3AReady+-label%3A%22In+Progress%22+-label%3A%22Blocked%22">Backlog</a></dt>
+	<dd>Issues marked with this label are considered not yet ready for implementation. Either they are untriaged or require futher detail to proceed.</dd>
+
+	<dt><a href="https://github.com/docker/distribution/labels/Blocked">Blocked</a></dt>
+	<dd>If an issue requires further clarification or is blocked on an unresolved dependency, this label should be used.</dd>
+
+	<dt><a href="https://github.com/docker/distribution/labels/Ready">Ready</a></dt>
+	<dd>Issues marked with this label should be ready for implementation. All required information should be available and design details have been worked out.</dd>
+
+	<dt><a href="https://github.com/docker/distribution/labels/In%20Progress">In Progress</a></dt>
+	<dd>The issue or PR is being actively worked on by the assignee.</dd>
+
+	<dt><a href="https://github.com/docker/distribution/issues?q=is%3Aclosed">Done</a></dt>
+	<dd>Issues marked with this label are complete. This can be considered a psuedo-label, in that if it is closed, it is considered "Done".</dd>
+</dl>
+
+These integrate with waffle.io to show the current status of the project. The project board is available at the following url:
+
+https://waffle.io/docker/distribution
+
+If an issue or PR is not labeled correctly or you believe it is not in the right state, please contact a maintainer to fix the problem.
+
+## Milestones
+
+Issues and PRs should be assigned to relevant milestones. If an issue or PR is assigned a milestone, it should be available by that date. Depending on level of effort, items may be shuffled in or out of milestones. Issues or PRs that don't have a milestone are considered unscheduled. Typically, "In Progress" issues should have a milestone.
+
+## PR Titles
+
+PR titles should be lowercased, except for proper noun references (such a
+method name or type).
+
+PR titles should be prefixed with affected directories, comma separated. For
+example, if a specification is modified, the prefix would be "doc/spec". If
+the modifications are only in the root, do not include it. If multiple
+directories are modified, include each, separated by a comma and space.
+
+Here are some examples:
+
+- doc/spec: move API specification into correct position
+- context, registry, auth, auth/token, cmd/registry: context aware logging
