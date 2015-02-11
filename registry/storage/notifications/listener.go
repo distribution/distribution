@@ -4,7 +4,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
-	"github.com/docker/distribution/storage"
+	"github.com/docker/distribution/registry/storage"
 )
 
 // ManifestListener describes a set of methods for listening to events related to manifests.

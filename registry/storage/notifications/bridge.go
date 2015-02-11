@@ -8,7 +8,7 @@ import (
 
 	"code.google.com/p/go-uuid/uuid"
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/storage"
+	"github.com/docker/distribution/registry/storage"
 )
 
 type bridge struct {

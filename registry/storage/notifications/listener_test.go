@@ -7,7 +7,7 @@ import (
 
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
-	"github.com/docker/distribution/storage"
+	"github.com/docker/distribution/registry/storage"
 	"github.com/docker/distribution/storagedriver/inmemory"
 	"github.com/docker/distribution/testutil"
 	"github.com/docker/libtrust"

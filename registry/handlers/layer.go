@@ -6,7 +6,7 @@ import (
 	"github.com/docker/distribution/registry/api/v2"
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/storage"
+	"github.com/docker/distribution/registry/storage"
 	"github.com/gorilla/handlers"
 )
 
