@@ -27,11 +27,6 @@ type layerUploadController struct {
 
 var _ distribution.LayerUpload = &layerUploadController{}
 
-// Name of the repository under which the layer will be linked.
-func (luc *layerUploadController) Name() string {
-	return luc.layerStore.repository.Name()
-}
-
 // UUID returns the identifier for this upload.
 func (luc *layerUploadController) UUID() string {
 	return luc.uuid
@@ -194,7 +189,7 @@ func (luc *layerUploadController) moveLayer(dgst digest.Digest) error {
 // named repository for the upload controller.
 func (luc *layerUploadController) linkLayer(digest digest.Digest) error {
 	layerLinkPath, err := luc.layerStore.repository.registry.pm.path(layerLinkPathSpec{
-		name:   luc.Name(),
+		name:   luc.layerStore.repository.Name(),
 		digest: digest,
 	})
 
@@ -210,7 +205,7 @@ func (luc *layerUploadController) linkLayer(digest digest.Digest) error {
 // resources are already not present, no error will be returned.
 func (luc *layerUploadController) removeResources() error {
 	dataPath, err := luc.layerStore.repository.registry.pm.path(uploadDataPathSpec{
-		name: luc.Name(),
+		name: luc.layerStore.repository.Name(),
 		uuid: luc.uuid,
 	})
 
