@@ -12,15 +12,10 @@ import (
 type layerReader struct {
 	fileReader
 
-	name   string // repo name of this layer
 	digest digest.Digest
 }
 
 var _ distribution.Layer = &layerReader{}
-
-func (lrs *layerReader) Name() string {
-	return lrs.name
-}
 
 func (lrs *layerReader) Digest() digest.Digest {
 	return lrs.digest

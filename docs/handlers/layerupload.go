@@ -215,7 +215,7 @@ func (luh *layerUploadHandler) PutLayerUploadComplete(w http.ResponseWriter, r *
 	}
 
 	// Build our canonical layer url
-	layerURL, err := luh.urlBuilder.BuildBlobURL(layer.Name(), layer.Digest())
+	layerURL, err := luh.urlBuilder.BuildBlobURL(luh.Repository.Name(), layer.Digest())
 	if err != nil {
 		luh.Errors.Push(v2.ErrorCodeUnknown, err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -268,7 +268,7 @@ func (luh *layerUploadHandler) layerUploadResponse(w http.ResponseWriter, r *htt
 	}
 
 	uploadURL, err := luh.urlBuilder.BuildBlobUploadChunkURL(
-		luh.Upload.Name(), luh.Upload.UUID(),
+		luh.Repository.Name(), luh.Upload.UUID(),
 		url.Values{
 			"_state": []string{token},
 		})

@@ -48,7 +48,6 @@ func (ls *layerStore) Fetch(dgst digest.Digest) (distribution.Layer, error) {
 
 	return &layerReader{
 		fileReader: *fr,
-		name:       ls.repository.Name(),
 		digest:     dgst,
 	}, nil
 }
