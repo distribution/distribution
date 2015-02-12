@@ -16,7 +16,6 @@ import (
 	"github.com/docker/distribution/registry/storage"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/factory"
-	"github.com/docker/distribution/registry/storage/notifications"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 )
