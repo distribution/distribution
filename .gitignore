@@ -25,3 +25,9 @@ _testmain.go
 
 # never checkin from the bin file (for now)
 bin/*
+
+# Test key files
+*.pem
+
+# Cover profiles
+*.out
