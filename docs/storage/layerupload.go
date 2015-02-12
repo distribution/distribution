@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/docker/distribution"
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
@@ -24,7 +25,7 @@ type layerUploadController struct {
 	fileWriter
 }
 
-var _ LayerUpload = &layerUploadController{}
+var _ distribution.LayerUpload = &layerUploadController{}
 
 // Name of the repository under which the layer will be linked.
 func (luc *layerUploadController) Name() string {
@@ -44,7 +45,7 @@ func (luc *layerUploadController) StartedAt() time.Time {
 // uploaded layer. The final size and checksum are validated against the
 // contents of the uploaded layer. The checksum should be provided in the
 // format <algorithm>:<hex digest>.
-func (luc *layerUploadController) Finish(digest digest.Digest) (Layer, error) {
+func (luc *layerUploadController) Finish(digest digest.Digest) (distribution.Layer, error) {
 	ctxu.GetLogger(luc.layerStore.repository.ctx).Debug("(*layerUploadController).Finish")
 	canonical, err := luc.validateLayer(digest)
 	if err != nil {
@@ -93,9 +94,9 @@ func (luc *layerUploadController) validateLayer(dgst digest.Digest) (digest.Dige
 	case tarsum.Version1:
 	default:
 		// version 0 and dev, for now.
-		return "", ErrLayerInvalidDigest{
+		return "", distribution.ErrLayerInvalidDigest{
 			Digest: dgst,
-			Reason: ErrLayerTarSumVersionUnsupported,
+			Reason: distribution.ErrLayerTarSumVersionUnsupported,
 		}
 	}
 
@@ -124,7 +125,7 @@ func (luc *layerUploadController) validateLayer(dgst digest.Digest) (digest.Dige
 	}
 
 	if !digestVerifier.Verified() {
-		return "", ErrLayerInvalidDigest{
+		return "", distribution.ErrLayerInvalidDigest{
 			Digest: dgst,
 			Reason: fmt.Errorf("content does not match digest"),
 		}

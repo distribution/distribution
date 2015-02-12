@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/docker/distribution"
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
@@ -72,7 +73,7 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 		case storage.ErrManifestVerification:
 			for _, verificationError := range err {
 				switch verificationError := verificationError.(type) {
-				case storage.ErrUnknownLayer:
+				case distribution.ErrUnknownLayer:
 					imh.Errors.Push(v2.ErrorCodeBlobUnknown, verificationError.FSLayer)
 				case storage.ErrManifestUnverified:
 					imh.Errors.Push(v2.ErrorCodeManifestUnverified)

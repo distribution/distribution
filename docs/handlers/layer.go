@@ -3,10 +3,10 @@ package handlers
 import (
 	"net/http"
 
+	"github.com/docker/distribution"
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/registry/api/v2"
-	"github.com/docker/distribution/registry/storage"
 	"github.com/gorilla/handlers"
 )
 
@@ -54,7 +54,7 @@ func (lh *layerHandler) GetLayer(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		switch err := err.(type) {
-		case storage.ErrUnknownLayer:
+		case distribution.ErrUnknownLayer:
 			w.WriteHeader(http.StatusNotFound)
 			lh.Errors.Push(v2.ErrorCodeBlobUnknown, err.FSLayer)
 		default:

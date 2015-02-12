@@ -7,8 +7,10 @@ import (
 	"os"
 
 	"code.google.com/p/go-uuid/uuid"
+	"github.com/docker/distribution"
 	"github.com/docker/distribution/configuration"
 	ctxu "github.com/docker/distribution/context"
+	"github.com/docker/distribution/notifications"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/registry/auth"
 	"github.com/docker/distribution/registry/storage"
@@ -32,7 +34,7 @@ type App struct {
 
 	router           *mux.Router                 // main application router, configured with dispatchers
 	driver           storagedriver.StorageDriver // driver maintains the app global storage driver instance.
-	registry         storage.Registry            // registry is the primary registry backend for the app instance.
+	registry         distribution.Registry       // registry is the primary registry backend for the app instance.
 	accessController auth.AccessController       // main access controller for application
 
 	// events contains notification related configuration.

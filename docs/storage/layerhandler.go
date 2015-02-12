@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/docker/distribution"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 )
 
@@ -13,7 +14,7 @@ type LayerHandler interface {
 	// Layer if possible, or nil and an error when unsupported. This may
 	// directly serve the contents of the layer or issue a redirect to another
 	// URL hosting the content.
-	Resolve(layer Layer) (http.Handler, error)
+	Resolve(layer distribution.Layer) (http.Handler, error)
 }
 
 // LayerHandlerInitFunc is the type of a LayerHandler factory function and is

@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"code.google.com/p/go-uuid/uuid"
+	"github.com/docker/distribution"
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
@@ -23,7 +24,7 @@ func (ls *layerStore) Exists(digest digest.Digest) (bool, error) {
 
 	if err != nil {
 		switch err.(type) {
-		case ErrUnknownLayer:
+		case distribution.ErrUnknownLayer:
 			return false, nil
 		}
 
@@ -33,7 +34,7 @@ func (ls *layerStore) Exists(digest digest.Digest) (bool, error) {
 	return true, nil
 }
 
-func (ls *layerStore) Fetch(dgst digest.Digest) (Layer, error) {
+func (ls *layerStore) Fetch(dgst digest.Digest) (distribution.Layer, error) {
 	ctxu.GetLogger(ls.repository.ctx).Debug("(*layerStore).Fetch")
 	bp, err := ls.path(dgst)
 	if err != nil {
@@ -55,7 +56,7 @@ func (ls *layerStore) Fetch(dgst digest.Digest) (Layer, error) {
 // Upload begins a layer upload, returning a handle. If the layer upload
 // is already in progress or the layer has already been uploaded, this
 // will return an error.
-func (ls *layerStore) Upload() (LayerUpload, error) {
+func (ls *layerStore) Upload() (distribution.LayerUpload, error) {
 	ctxu.GetLogger(ls.repository.ctx).Debug("(*layerStore).Upload")
 
 	// NOTE(stevvooe): Consider the issues with allowing concurrent upload of
@@ -93,7 +94,7 @@ func (ls *layerStore) Upload() (LayerUpload, error) {
 
 // Resume continues an in progress layer upload, returning the current
 // state of the upload.
-func (ls *layerStore) Resume(uuid string) (LayerUpload, error) {
+func (ls *layerStore) Resume(uuid string) (distribution.LayerUpload, error) {
 	ctxu.GetLogger(ls.repository.ctx).Debug("(*layerStore).Resume")
 	startedAtPath, err := ls.repository.registry.pm.path(uploadStartedAtPathSpec{
 		name: ls.repository.Name(),
@@ -108,7 +109,7 @@ func (ls *layerStore) Resume(uuid string) (LayerUpload, error) {
 	if err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
-			return nil, ErrLayerUploadUnknown
+			return nil, distribution.ErrLayerUploadUnknown
 		default:
 			return nil, err
 		}
@@ -132,7 +133,7 @@ func (ls *layerStore) Resume(uuid string) (LayerUpload, error) {
 }
 
 // newLayerUpload allocates a new upload controller with the given state.
-func (ls *layerStore) newLayerUpload(uuid, path string, startedAt time.Time) (LayerUpload, error) {
+func (ls *layerStore) newLayerUpload(uuid, path string, startedAt time.Time) (distribution.LayerUpload, error) {
 	fw, err := newFileWriter(ls.repository.driver, path)
 	if err != nil {
 		return nil, err
@@ -158,7 +159,9 @@ func (ls *layerStore) path(dgst digest.Digest) (string, error) {
 	if err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
-			return "", ErrUnknownLayer{manifest.FSLayer{BlobSum: dgst}}
+			return "", distribution.ErrUnknownLayer{
+				FSLayer: manifest.FSLayer{BlobSum: dgst},
+			}
 		default:
 			return "", err
 		}
