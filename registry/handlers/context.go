@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/docker/distribution"
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/registry/api/v2"
-	"github.com/docker/distribution/registry/storage"
 	"golang.org/x/net/context"
 )
 
@@ -21,7 +21,7 @@ type Context struct {
 
 	// Repository is the repository for the current request. All requests
 	// should be scoped to a single repository. This field may be nil.
-	Repository storage.Repository
+	Repository distribution.Repository
 
 	// Errors is a collection of errors encountered during the request to be
 	// returned to the client API. If errors are added to the collection, the

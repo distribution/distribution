@@ -3,6 +3,7 @@ package storage
 import (
 	"time"
 
+	"github.com/docker/distribution"
 	"github.com/docker/distribution/digest"
 )
 
@@ -15,7 +16,7 @@ type layerReader struct {
 	digest digest.Digest
 }
 
-var _ Layer = &layerReader{}
+var _ distribution.Layer = &layerReader{}
 
 func (lrs *layerReader) Name() string {
 	return lrs.name
@@ -27,4 +28,9 @@ func (lrs *layerReader) Digest() digest.Digest {
 
 func (lrs *layerReader) CreatedAt() time.Time {
 	return lrs.modtime
+}
+
+// Close the layer. Should be called when the resource is no longer needed.
+func (lrs *layerReader) Close() error {
+	return lrs.closeWithErr(distribution.ErrLayerClosed)
 }

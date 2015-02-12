@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/AdRoll/goamz/cloudfront"
+	"github.com/docker/distribution"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 )
 
@@ -95,7 +96,7 @@ func newCloudFrontLayerHandler(storageDriver storagedriver.StorageDriver, option
 
 // Resolve returns an http.Handler which can serve the contents of the given
 // Layer, or an error if not supported by the storagedriver.
-func (lh *cloudFrontLayerHandler) Resolve(layer Layer) (http.Handler, error) {
+func (lh *cloudFrontLayerHandler) Resolve(layer distribution.Layer) (http.Handler, error) {
 	layerURLStr, err := lh.delegateLayerHandler.urlFor(layer, nil)
 	if err != nil {
 		return nil, err

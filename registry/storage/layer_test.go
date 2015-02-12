@@ -9,6 +9,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/docker/distribution"
 	"github.com/docker/distribution/digest"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
@@ -53,7 +54,7 @@ func TestSimpleLayerUpload(t *testing.T) {
 
 	// Do a resume, get unknown upload
 	layerUpload, err = ls.Resume(layerUpload.UUID())
-	if err != ErrLayerUploadUnknown {
+	if err != distribution.ErrLayerUploadUnknown {
 		t.Fatalf("unexpected error resuming upload, should be unkown: %v", err)
 	}
 
@@ -102,7 +103,7 @@ func TestSimpleLayerUpload(t *testing.T) {
 	}
 
 	// After finishing an upload, it should no longer exist.
-	if _, err := ls.Resume(layerUpload.UUID()); err != ErrLayerUploadUnknown {
+	if _, err := ls.Resume(layerUpload.UUID()); err != distribution.ErrLayerUploadUnknown {
 		t.Fatalf("expected layer upload to be unknown, got %v", err)
 	}
 
@@ -165,7 +166,7 @@ func TestSimpleLayerRead(t *testing.T) {
 	}
 
 	switch err.(type) {
-	case ErrUnknownLayer:
+	case distribution.ErrUnknownLayer:
 		err = nil
 	default:
 		t.Fatalf("unexpected error fetching non-existent layer: %v", err)

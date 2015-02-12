@@ -2,31 +2,31 @@ package notifications
 
 import (
 	"github.com/Sirupsen/logrus"
+	"github.com/docker/distribution"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
-	"github.com/docker/distribution/registry/storage"
 )
 
 // ManifestListener describes a set of methods for listening to events related to manifests.
 type ManifestListener interface {
-	ManifestPushed(repo storage.Repository, sm *manifest.SignedManifest) error
-	ManifestPulled(repo storage.Repository, sm *manifest.SignedManifest) error
+	ManifestPushed(repo distribution.Repository, sm *manifest.SignedManifest) error
+	ManifestPulled(repo distribution.Repository, sm *manifest.SignedManifest) error
 
 	// TODO(stevvooe): Please note that delete support is still a little shaky
 	// and we'll need to propagate these in the future.
 
-	ManifestDeleted(repo storage.Repository, sm *manifest.SignedManifest) error
+	ManifestDeleted(repo distribution.Repository, sm *manifest.SignedManifest) error
 }
 
 // LayerListener describes a listener that can respond to layer related events.
 type LayerListener interface {
-	LayerPushed(repo storage.Repository, layer storage.Layer) error
-	LayerPulled(repo storage.Repository, layer storage.Layer) error
+	LayerPushed(repo distribution.Repository, layer distribution.Layer) error
+	LayerPulled(repo distribution.Repository, layer distribution.Layer) error
 
 	// TODO(stevvooe): Please note that delete support is still a little shaky
 	// and we'll need to propagate these in the future.
 
-	LayerDeleted(repo storage.Repository, layer storage.Layer) error
+	LayerDeleted(repo distribution.Repository, layer distribution.Layer) error
 }
 
 // Listener combines all repository events into a single interface.
@@ -36,26 +36,26 @@ type Listener interface {
 }
 
 type repositoryListener struct {
-	storage.Repository
+	distribution.Repository
 	listener Listener
 }
 
 // Listen dispatches events on the repository to the listener.
-func Listen(repo storage.Repository, listener Listener) storage.Repository {
+func Listen(repo distribution.Repository, listener Listener) distribution.Repository {
 	return &repositoryListener{
 		Repository: repo,
 		listener:   listener,
 	}
 }
 
-func (rl *repositoryListener) Manifests() storage.ManifestService {
+func (rl *repositoryListener) Manifests() distribution.ManifestService {
 	return &manifestServiceListener{
 		ManifestService: rl.Repository.Manifests(),
 		parent:          rl,
 	}
 }
 
-func (rl *repositoryListener) Layers() storage.LayerService {
+func (rl *repositoryListener) Layers() distribution.LayerService {
 	return &layerServiceListener{
 		LayerService: rl.Repository.Layers(),
 		parent:       rl,
@@ -63,7 +63,7 @@ func (rl *repositoryListener) Layers() storage.LayerService {
 }
 
 type manifestServiceListener struct {
-	storage.ManifestService
+	distribution.ManifestService
 	parent *repositoryListener
 }
 
@@ -91,11 +91,11 @@ func (msl *manifestServiceListener) Put(tag string, sm *manifest.SignedManifest)
 }
 
 type layerServiceListener struct {
-	storage.LayerService
+	distribution.LayerService
 	parent *repositoryListener
 }
 
-func (lsl *layerServiceListener) Fetch(dgst digest.Digest) (storage.Layer, error) {
+func (lsl *layerServiceListener) Fetch(dgst digest.Digest) (distribution.Layer, error) {
 	layer, err := lsl.LayerService.Fetch(dgst)
 	if err == nil {
 		if err := lsl.parent.listener.LayerPulled(lsl.parent.Repository, layer); err != nil {
@@ -106,17 +106,17 @@ func (lsl *layerServiceListener) Fetch(dgst digest.Digest) (storage.Layer, error
 	return layer, err
 }
 
-func (lsl *layerServiceListener) Upload() (storage.LayerUpload, error) {
+func (lsl *layerServiceListener) Upload() (distribution.LayerUpload, error) {
 	lu, err := lsl.LayerService.Upload()
 	return lsl.decorateUpload(lu), err
 }
 
-func (lsl *layerServiceListener) Resume(uuid string) (storage.LayerUpload, error) {
+func (lsl *layerServiceListener) Resume(uuid string) (distribution.LayerUpload, error) {
 	lu, err := lsl.LayerService.Resume(uuid)
 	return lsl.decorateUpload(lu), err
 }
 
-func (lsl *layerServiceListener) decorateUpload(lu storage.LayerUpload) storage.LayerUpload {
+func (lsl *layerServiceListener) decorateUpload(lu distribution.LayerUpload) distribution.LayerUpload {
 	return &layerUploadListener{
 		LayerUpload: lu,
 		parent:      lsl,
@@ -124,11 +124,11 @@ func (lsl *layerServiceListener) decorateUpload(lu storage.LayerUpload) storage.
 }
 
 type layerUploadListener struct {
-	storage.LayerUpload
+	distribution.LayerUpload
 	parent *layerServiceListener
 }
 
-func (lul *layerUploadListener) Finish(dgst digest.Digest) (storage.Layer, error) {
+func (lul *layerUploadListener) Finish(dgst digest.Digest) (distribution.Layer, error) {
 	layer, err := lul.LayerUpload.Finish(dgst)
 	if err == nil {
 		if err := lul.parent.parent.listener.LayerPushed(lul.parent.parent.Repository, layer); err != nil {

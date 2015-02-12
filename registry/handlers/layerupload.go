@@ -7,10 +7,10 @@ import (
 	"net/url"
 	"os"
 
+	"github.com/docker/distribution"
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/registry/api/v2"
-	"github.com/docker/distribution/registry/storage"
 	"github.com/gorilla/handlers"
 )
 
@@ -63,7 +63,7 @@ func layerUploadDispatcher(ctx *Context, r *http.Request) http.Handler {
 		upload, err := layers.Resume(luh.UUID)
 		if err != nil {
 			ctxu.GetLogger(ctx).Errorf("error resolving upload: %v", err)
-			if err == storage.ErrLayerUploadUnknown {
+			if err == distribution.ErrLayerUploadUnknown {
 				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusNotFound)
 					luh.Errors.Push(v2.ErrorCodeBlobUploadUnknown, err)
@@ -114,7 +114,7 @@ type layerUploadHandler struct {
 	// UUID identifies the upload instance for the current request.
 	UUID string
 
-	Upload storage.LayerUpload
+	Upload distribution.LayerUpload
 
 	State layerUploadState
 }
@@ -196,7 +196,7 @@ func (luh *layerUploadHandler) PutLayerUploadComplete(w http.ResponseWriter, r *
 	layer, err := luh.Upload.Finish(dgst)
 	if err != nil {
 		switch err := err.(type) {
-		case storage.ErrLayerInvalidDigest:
+		case distribution.ErrLayerInvalidDigest:
 			w.WriteHeader(http.StatusBadRequest)
 			luh.Errors.Push(v2.ErrorCodeDigestInvalid, err)
 		default:

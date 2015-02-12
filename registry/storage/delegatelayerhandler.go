@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/docker/distribution"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 )
 
@@ -40,7 +41,7 @@ func newDelegateLayerHandler(storageDriver storagedriver.StorageDriver, options 
 
 // Resolve returns an http.Handler which can serve the contents of the given
 // Layer, or an error if not supported by the storagedriver.
-func (lh *delegateLayerHandler) Resolve(layer Layer) (http.Handler, error) {
+func (lh *delegateLayerHandler) Resolve(layer distribution.Layer) (http.Handler, error) {
 	// TODO(bbland): This is just a sanity check to ensure that the
 	// storagedriver supports url generation. It would be nice if we didn't have
 	// to do this twice for non-GET requests.
@@ -64,7 +65,7 @@ func (lh *delegateLayerHandler) Resolve(layer Layer) (http.Handler, error) {
 
 // urlFor returns a download URL for the given layer, or the empty string if
 // unsupported.
-func (lh *delegateLayerHandler) urlFor(layer Layer, options map[string]interface{}) (string, error) {
+func (lh *delegateLayerHandler) urlFor(layer distribution.Layer, options map[string]interface{}) (string, error) {
 	// Crack open the layer to get at the layerStore
 	layerRd, ok := layer.(*layerReader)
 	if !ok {
