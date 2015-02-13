@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/docker/distribution"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/registry/storage"
@@ -44,40 +45,40 @@ type testListener struct {
 	ops map[string]int
 }
 
-func (tl *testListener) ManifestPushed(repo storage.Repository, sm *manifest.SignedManifest) error {
+func (tl *testListener) ManifestPushed(repo distribution.Repository, sm *manifest.SignedManifest) error {
 	tl.ops["manifest:push"]++
 
 	return nil
 }
 
-func (tl *testListener) ManifestPulled(repo storage.Repository, sm *manifest.SignedManifest) error {
+func (tl *testListener) ManifestPulled(repo distribution.Repository, sm *manifest.SignedManifest) error {
 	tl.ops["manifest:pull"]++
 	return nil
 }
 
-func (tl *testListener) ManifestDeleted(repo storage.Repository, sm *manifest.SignedManifest) error {
+func (tl *testListener) ManifestDeleted(repo distribution.Repository, sm *manifest.SignedManifest) error {
 	tl.ops["manifest:delete"]++
 	return nil
 }
 
-func (tl *testListener) LayerPushed(repo storage.Repository, layer storage.Layer) error {
+func (tl *testListener) LayerPushed(repo distribution.Repository, layer distribution.Layer) error {
 	tl.ops["layer:push"]++
 	return nil
 }
 
-func (tl *testListener) LayerPulled(repo storage.Repository, layer storage.Layer) error {
+func (tl *testListener) LayerPulled(repo distribution.Repository, layer distribution.Layer) error {
 	tl.ops["layer:pull"]++
 	return nil
 }
 
-func (tl *testListener) LayerDeleted(repo storage.Repository, layer storage.Layer) error {
+func (tl *testListener) LayerDeleted(repo distribution.Repository, layer distribution.Layer) error {
 	tl.ops["layer:delete"]++
 	return nil
 }
 
 // checkExerciseRegistry takes the registry through all of its operations,
 // carrying out generic checks.
-func checkExerciseRepository(t *testing.T, repository storage.Repository) {
+func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 	// TODO(stevvooe): This would be a nice testutil function. Basically, it
 	// takes the registry through a common set of operations. This could be
 	// used to make cross-cutting updates by changing internals that affect

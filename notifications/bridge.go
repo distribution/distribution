@@ -4,11 +4,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/docker/distribution/manifest"
-
 	"code.google.com/p/go-uuid/uuid"
+	"github.com/docker/distribution"
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/registry/storage"
+	"github.com/docker/distribution/manifest"
 )
 
 type bridge struct {
@@ -53,31 +52,31 @@ func NewRequestRecord(id string, r *http.Request) RequestRecord {
 	}
 }
 
-func (b *bridge) ManifestPushed(repo storage.Repository, sm *manifest.SignedManifest) error {
+func (b *bridge) ManifestPushed(repo distribution.Repository, sm *manifest.SignedManifest) error {
 	return b.createManifestEventAndWrite(EventActionPush, repo, sm)
 }
 
-func (b *bridge) ManifestPulled(repo storage.Repository, sm *manifest.SignedManifest) error {
+func (b *bridge) ManifestPulled(repo distribution.Repository, sm *manifest.SignedManifest) error {
 	return b.createManifestEventAndWrite(EventActionPull, repo, sm)
 }
 
-func (b *bridge) ManifestDeleted(repo storage.Repository, sm *manifest.SignedManifest) error {
+func (b *bridge) ManifestDeleted(repo distribution.Repository, sm *manifest.SignedManifest) error {
 	return b.createManifestEventAndWrite(EventActionDelete, repo, sm)
 }
 
-func (b *bridge) LayerPushed(repo storage.Repository, layer storage.Layer) error {
+func (b *bridge) LayerPushed(repo distribution.Repository, layer distribution.Layer) error {
 	return b.createLayerEventAndWrite(EventActionPush, repo, layer.Digest())
 }
 
-func (b *bridge) LayerPulled(repo storage.Repository, layer storage.Layer) error {
+func (b *bridge) LayerPulled(repo distribution.Repository, layer distribution.Layer) error {
 	return b.createLayerEventAndWrite(EventActionPull, repo, layer.Digest())
 }
 
-func (b *bridge) LayerDeleted(repo storage.Repository, layer storage.Layer) error {
+func (b *bridge) LayerDeleted(repo distribution.Repository, layer distribution.Layer) error {
 	return b.createLayerEventAndWrite(EventActionDelete, repo, layer.Digest())
 }
 
-func (b *bridge) createManifestEventAndWrite(action string, repo storage.Repository, sm *manifest.SignedManifest) error {
+func (b *bridge) createManifestEventAndWrite(action string, repo distribution.Repository, sm *manifest.SignedManifest) error {
 	event, err := b.createManifestEvent(action, repo, sm)
 	if err != nil {
 		return err
@@ -86,7 +85,7 @@ func (b *bridge) createManifestEventAndWrite(action string, repo storage.Reposit
 	return b.sink.Write(*event)
 }
 
-func (b *bridge) createManifestEvent(action string, repo storage.Repository, sm *manifest.SignedManifest) (*Event, error) {
+func (b *bridge) createManifestEvent(action string, repo distribution.Repository, sm *manifest.SignedManifest) (*Event, error) {
 	event := b.createEvent(action)
 	event.Target.Type = EventTargetTypeManifest
 	event.Target.Name = repo.Name()
@@ -112,7 +111,7 @@ func (b *bridge) createManifestEvent(action string, repo storage.Repository, sm 
 	return event, nil
 }
 
-func (b *bridge) createLayerEventAndWrite(action string, repo storage.Repository, dgst digest.Digest) error {
+func (b *bridge) createLayerEventAndWrite(action string, repo distribution.Repository, dgst digest.Digest) error {
 	event, err := b.createLayerEvent(action, repo, dgst)
 	if err != nil {
 		return err
@@ -121,7 +120,7 @@ func (b *bridge) createLayerEventAndWrite(action string, repo storage.Repository
 	return b.sink.Write(*event)
 }
 
-func (b *bridge) createLayerEvent(action string, repo storage.Repository, dgst digest.Digest) (*Event, error) {
+func (b *bridge) createLayerEvent(action string, repo distribution.Repository, dgst digest.Digest) (*Event, error) {
 	event := b.createEvent(action)
 	event.Target.Type = EventTargetTypeBlob
 	event.Target.Name = repo.Name()

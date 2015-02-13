@@ -125,23 +125,8 @@ func (fr *fileReader) Seek(offset int64, whence int) (int64, error) {
 	return fr.offset, err
 }
 
-// Close the layer. Should be called when the resource is no longer needed.
 func (fr *fileReader) Close() error {
-	if fr.err != nil {
-		return fr.err
-	}
-
-	fr.err = ErrLayerClosed
-
-	// close and release reader chain
-	if fr.rc != nil {
-		fr.rc.Close()
-	}
-
-	fr.rc = nil
-	fr.brd = nil
-
-	return fr.err
+	return fr.closeWithErr(fmt.Errorf("fileReader: closed"))
 }
 
 // reader prepares the current reader at the lrs offset, ensuring its buffered
@@ -198,4 +183,22 @@ func (fr *fileReader) reset() {
 		fr.rc.Close()
 		fr.rc = nil
 	}
+}
+
+func (fr *fileReader) closeWithErr(err error) error {
+	if fr.err != nil {
+		return fr.err
+	}
+
+	fr.err = err
+
+	// close and release reader chain
+	if fr.rc != nil {
+		fr.rc.Close()
+	}
+
+	fr.rc = nil
+	fr.brd = nil
+
+	return fr.err
 }

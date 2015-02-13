@@ -1,4 +1,4 @@
-package storage
+package distribution
 
 import (
 	"fmt"
@@ -17,9 +17,6 @@ type Layer interface {
 	io.ReadSeeker
 	io.Closer
 
-	// Name returns the repository under which this layer is linked.
-	Name() string // TODO(stevvooe): struggling with nomenclature: should this be "repo" or "name"?
-
 	// Digest returns the unique digest of the blob, which is the tarsum for
 	// layers.
 	Digest() digest.Digest
@@ -35,9 +32,6 @@ type LayerUpload interface {
 	io.WriteSeeker
 	io.ReaderFrom
 	io.Closer
-
-	// Name of the repository under which the layer will be linked.
-	Name() string
 
 	// UUID returns the identifier for this upload.
 	UUID() string

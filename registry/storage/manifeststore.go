@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/docker/distribution"
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
@@ -71,7 +72,7 @@ type manifestStore struct {
 	tagStore      *tagStore
 }
 
-var _ ManifestService = &manifestStore{}
+var _ distribution.ManifestService = &manifestStore{}
 
 // func (ms *manifestStore) Repository() Repository {
 // 	return ms.repository
@@ -177,7 +178,7 @@ func (ms *manifestStore) verifyManifest(tag string, mnfst *manifest.SignedManife
 		}
 
 		if !exists {
-			errs = append(errs, ErrUnknownLayer{FSLayer: fsLayer})
+			errs = append(errs, distribution.ErrUnknownLayer{FSLayer: fsLayer})
 		}
 	}
 

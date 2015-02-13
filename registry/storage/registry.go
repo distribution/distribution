@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"github.com/docker/distribution"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"golang.org/x/net/context"
 )
@@ -16,7 +17,7 @@ type registry struct {
 // NewRegistryWithDriver creates a new registry instance from the provided
 // driver. The resulting registry may be shared by multiple goroutines but is
 // cheap to allocate.
-func NewRegistryWithDriver(driver storagedriver.StorageDriver) Registry {
+func NewRegistryWithDriver(driver storagedriver.StorageDriver) distribution.Registry {
 	bs := &blobStore{}
 
 	reg := &registry{
@@ -35,7 +36,7 @@ func NewRegistryWithDriver(driver storagedriver.StorageDriver) Registry {
 // Repository returns an instance of the repository tied to the registry.
 // Instances should not be shared between goroutines but are cheap to
 // allocate. In general, they should be request scoped.
-func (reg *registry) Repository(ctx context.Context, name string) Repository {
+func (reg *registry) Repository(ctx context.Context, name string) distribution.Repository {
 	return &repository{
 		ctx:      ctx,
 		registry: reg,
@@ -58,7 +59,7 @@ func (repo *repository) Name() string {
 // Manifests returns an instance of ManifestService. Instantiation is cheap and
 // may be context sensitive in the future. The instance should be used similar
 // to a request local.
-func (repo *repository) Manifests() ManifestService {
+func (repo *repository) Manifests() distribution.ManifestService {
 	return &manifestStore{
 		repository: repo,
 		revisionStore: &revisionStore{
@@ -73,7 +74,7 @@ func (repo *repository) Manifests() ManifestService {
 // Layers returns an instance of the LayerService. Instantiation is cheap and
 // may be context sensitive in the future. The instance should be used similar
 // to a request local.
-func (repo *repository) Layers() LayerService {
+func (repo *repository) Layers() distribution.LayerService {
 	return &layerStore{
 		repository: repo,
 	}
