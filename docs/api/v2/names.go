@@ -6,6 +6,10 @@ import (
 	"strings"
 )
 
+// TODO(stevvooe): Move these definitions back to an exported package. While
+// they are used with v2 definitions, their relevance expands beyond.
+// "distribution/names" is a candidate package.
+
 const (
 	// RepositoryNameComponentMinLength is the minimum number of characters in a
 	// single repository name slash-delimited component
@@ -36,10 +40,6 @@ var RepositoryNameComponentRegexp = regexp.MustCompile(`[a-z0-9]+(?:[._-][a-z0-9
 // RepositoryNameComponentAnchoredRegexp is the version of
 // RepositoryNameComponentRegexp which must completely match the content
 var RepositoryNameComponentAnchoredRegexp = regexp.MustCompile(`^` + RepositoryNameComponentRegexp.String() + `$`)
-
-// TODO(stevvooe): RepositoryName needs to be limited to some fixed length.
-// Looking path prefixes and s3 limitation of 1024, this should likely be
-// around 512 bytes. 256 bytes might be more manageable.
 
 // RepositoryNameRegexp builds on RepositoryNameComponentRegexp to allow 1 to
 // 5 path components, separated by a forward slash.

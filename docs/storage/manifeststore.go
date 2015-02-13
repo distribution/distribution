@@ -2,68 +2,12 @@ package storage
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/docker/distribution"
 	ctxu "github.com/docker/distribution/context"
-	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/libtrust"
 )
-
-// ErrUnknownRepository is returned if the named repository is not known by
-// the registry.
-type ErrUnknownRepository struct {
-	Name string
-}
-
-func (err ErrUnknownRepository) Error() string {
-	return fmt.Sprintf("unknown respository name=%s", err.Name)
-}
-
-// ErrUnknownManifest is returned if the manifest is not known by the
-// registry.
-type ErrUnknownManifest struct {
-	Name string
-	Tag  string
-}
-
-func (err ErrUnknownManifest) Error() string {
-	return fmt.Sprintf("unknown manifest name=%s tag=%s", err.Name, err.Tag)
-}
-
-// ErrUnknownManifestRevision is returned when a manifest cannot be found by
-// revision within a repository.
-type ErrUnknownManifestRevision struct {
-	Name     string
-	Revision digest.Digest
-}
-
-func (err ErrUnknownManifestRevision) Error() string {
-	return fmt.Sprintf("unknown manifest name=%s revision=%s", err.Name, err.Revision)
-}
-
-// ErrManifestUnverified is returned when the registry is unable to verify
-// the manifest.
-type ErrManifestUnverified struct{}
-
-func (ErrManifestUnverified) Error() string {
-	return fmt.Sprintf("unverified manifest")
-}
-
-// ErrManifestVerification provides a type to collect errors encountered
-// during manifest verification. Currently, it accepts errors of all types,
-// but it may be narrowed to those involving manifest verification.
-type ErrManifestVerification []error
-
-func (errs ErrManifestVerification) Error() string {
-	var parts []string
-	for _, err := range errs {
-		parts = append(parts, err.Error())
-	}
-
-	return fmt.Sprintf("errors verifying manifest: %v", strings.Join(parts, ","))
-}
 
 type manifestStore struct {
 	repository *repository
@@ -147,7 +91,7 @@ func (ms *manifestStore) Delete(tag string) error {
 // registry only tries to store valid content, leaving trust policies of that
 // content up to consumers.
 func (ms *manifestStore) verifyManifest(tag string, mnfst *manifest.SignedManifest) error {
-	var errs ErrManifestVerification
+	var errs distribution.ErrManifestVerification
 	if mnfst.Name != ms.repository.Name() {
 		// TODO(stevvooe): This needs to be an exported error
 		errs = append(errs, fmt.Errorf("repository name does not match manifest name"))
@@ -161,10 +105,10 @@ func (ms *manifestStore) verifyManifest(tag string, mnfst *manifest.SignedManife
 	if _, err := manifest.Verify(mnfst); err != nil {
 		switch err {
 		case libtrust.ErrMissingSignatureKey, libtrust.ErrInvalidJSONContent, libtrust.ErrMissingSignatureKey:
-			errs = append(errs, ErrManifestUnverified{})
+			errs = append(errs, distribution.ErrManifestUnverified{})
 		default:
 			if err.Error() == "invalid signature" { // TODO(stevvooe): This should be exported by libtrust
-				errs = append(errs, ErrManifestUnverified{})
+				errs = append(errs, distribution.ErrManifestUnverified{})
 			} else {
 				errs = append(errs, err)
 			}

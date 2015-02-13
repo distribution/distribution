@@ -5,6 +5,7 @@ import (
 	"path"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/docker/distribution"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/libtrust"
@@ -40,7 +41,7 @@ func (rs *revisionStore) get(revision digest.Digest) (*manifest.SignedManifest, 
 	if exists, err := rs.exists(revision); err != nil {
 		return nil, err
 	} else if !exists {
-		return nil, ErrUnknownManifestRevision{
+		return nil, distribution.ErrUnknownManifestRevision{
 			Name:     rs.Name(),
 			Revision: revision,
 		}
