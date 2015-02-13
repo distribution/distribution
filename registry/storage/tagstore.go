@@ -3,6 +3,7 @@ package storage
 import (
 	"path"
 
+	"github.com/docker/distribution"
 	"github.com/docker/distribution/digest"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 )
@@ -26,7 +27,7 @@ func (ts *tagStore) tags() ([]string, error) {
 	if err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
-			return nil, ErrUnknownRepository{Name: ts.name}
+			return nil, distribution.ErrRepositoryUnknown{Name: ts.name}
 		default:
 			return nil, err
 		}
@@ -104,7 +105,7 @@ func (ts *tagStore) resolve(tag string) (digest.Digest, error) {
 	if exists, err := exists(ts.driver, currentPath); err != nil {
 		return "", err
 	} else if !exists {
-		return "", ErrUnknownManifest{Name: ts.Name(), Tag: tag}
+		return "", distribution.ErrManifestUnknown{Name: ts.Name(), Tag: tag}
 	}
 
 	revision, err := ts.blobStore.readlink(currentPath)

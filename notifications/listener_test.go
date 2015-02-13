@@ -21,7 +21,11 @@ func TestListener(t *testing.T) {
 		ops: make(map[string]int),
 	}
 	ctx := context.Background()
-	repository := Listen(registry.Repository(ctx, "foo/bar"), tl)
+	repository, err := registry.Repository(ctx, "foo/bar")
+	if err != nil {
+		t.Fatalf("unexpected error getting repo: %v", err)
+	}
+	repository = Listen(repository, tl)
 
 	// Now take the registry through a number of operations
 	checkExerciseRepository(t, repository)
