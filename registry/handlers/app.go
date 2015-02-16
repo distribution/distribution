@@ -227,10 +227,30 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 			return
 		}
 
-		// decorate the authorized repository with an event bridge.
-		context.Repository = notifications.Listen(
-			app.registry.Repository(context, getName(context)),
-			app.eventBridge(context, r))
+		if app.nameRequired(r) {
+			repository, err := app.registry.Repository(context, getName(context))
+
+			if err != nil {
+				ctxu.GetLogger(context).Errorf("error resolving repository: %v", err)
+
+				switch err := err.(type) {
+				case distribution.ErrRepositoryUnknown:
+					context.Errors.Push(v2.ErrorCodeNameUnknown, err)
+				case distribution.ErrRepositoryNameInvalid:
+					context.Errors.Push(v2.ErrorCodeNameInvalid, err)
+				}
+
+				w.WriteHeader(http.StatusBadRequest)
+				serveJSON(w, context.Errors)
+				return
+			}
+
+			// assign and decorate the authorized repository with an event bridge.
+			context.Repository = notifications.Listen(
+				repository,
+				app.eventBridge(context, r))
+		}
+
 		handler := dispatch(context, r)
 
 		ssrw := &singleStatusResponseWriter{ResponseWriter: w}
@@ -318,9 +338,7 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 		}
 	} else {
 		// Only allow the name not to be set on the base route.
-		route := mux.CurrentRoute(r)
-
-		if route == nil || route.GetName() != v2.RouteNameBase {
+		if app.nameRequired(r) {
 			// For this to be properly secured, repo must always be set for a
 			// resource that may make a modification. The only condition under
 			// which name is not set and we still allow access is when the
@@ -376,6 +394,12 @@ func (app *App) eventBridge(ctx *Context, r *http.Request) notifications.Listene
 	request := notifications.NewRequestRecord(ctxu.GetRequestID(ctx), r)
 
 	return notifications.NewBridge(ctx.urlBuilder, app.events.source, actor, request, app.events.sink)
+}
+
+// nameRequired returns true if the route requires a name.
+func (app *App) nameRequired(r *http.Request) bool {
+	route := mux.CurrentRoute(r)
+	return route == nil || route.GetName() != v2.RouteNameBase
 }
 
 // apiBase implements a simple yes-man for doing overall checks against the
