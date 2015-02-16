@@ -74,8 +74,7 @@ func (e *encoder) marshal(tag string, in reflect.Value) {
 			return
 		}
 		in = reflect.ValueOf(v)
-	}
-	if m, ok := iface.(encoding.TextMarshaler); ok {
+	} else if m, ok := iface.(encoding.TextMarshaler); ok {
 		text, err := m.MarshalText()
 		if err != nil {
 			fail(err)

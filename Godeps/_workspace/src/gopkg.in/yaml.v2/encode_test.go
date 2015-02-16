@@ -356,6 +356,10 @@ type marshalerType struct {
 	value interface{}
 }
 
+func (o marshalerType) MarshalText() ([]byte, error) {
+	panic("MarshalText called on type with MarshalYAML")
+}
+
 func (o marshalerType) MarshalYAML() (interface{}, error) {
 	return o.value, nil
 }

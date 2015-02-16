@@ -46,18 +46,23 @@
 			"Rev": "e5f9854865b9778a45169fc249e99e338d4d6f27"
 		},
 		{
+			"ImportPath": "github.com/codegangsta/cli",
+			"Comment": "1.2.0-66-g6086d79",
+			"Rev": "6086d7927ec35315964d9fea46df6c04e6d697c1"
+		},
+		{
 			"ImportPath": "github.com/docker/docker/pkg/tarsum",
-			"Comment": "v1.4.1-330-g3fbf723",
-			"Rev": "3fbf723e81fa2696daa95847ccdcacddba6484da"
+			"Comment": "v1.4.1-863-g165ea5c",
+			"Rev": "165ea5c158cff3fc40d476ffe233a5ccc03e7d61"
 		},
 		{
 			"ImportPath": "github.com/docker/docker/vendor/src/code.google.com/p/go/src/pkg/archive/tar",
-			"Comment": "v1.4.1-330-g3fbf723",
-			"Rev": "3fbf723e81fa2696daa95847ccdcacddba6484da"
+			"Comment": "v1.4.1-863-g165ea5c",
+			"Rev": "165ea5c158cff3fc40d476ffe233a5ccc03e7d61"
 		},
 		{
 			"ImportPath": "github.com/docker/libtrust",
-			"Rev": "c54fbb67c1f1e68d7d6f8d2ad7c9360404616a41"
+			"Rev": "fa567046d9b14f6aa788882a950d69651d230b21"
 		},
 		{
 			"ImportPath": "github.com/gorilla/context",
@@ -94,7 +99,7 @@
 		},
 		{
 			"ImportPath": "gopkg.in/yaml.v2",
-			"Rev": "71e7ede9d48a2e096f6d5d0516c763513a471bd1"
+			"Rev": "bef53efd0c76e49e6de55ead051f886bea7e9420"
 		}
 	]
 }
