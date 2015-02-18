@@ -597,11 +597,11 @@ func (d *driver) List(path string) ([]string, error) {
 
 	for {
 		for _, key := range listResponse.Contents {
-			files = append(files, strings.Replace(key.Key, d.s3Path(""), "", 1))
+			files = append(files, "/"+strings.Replace(key.Key, d.s3Path(""), "", 1))
 		}
 
 		for _, commonPrefix := range listResponse.CommonPrefixes {
-			directories = append(directories, strings.Replace(commonPrefix[0:len(commonPrefix)-1], d.s3Path(""), "", 1))
+			directories = append(directories, "/"+strings.Replace(commonPrefix[0:len(commonPrefix)-1], d.s3Path(""), "", 1))
 		}
 
 		if listResponse.IsTruncated {
