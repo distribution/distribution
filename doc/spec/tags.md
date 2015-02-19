@@ -111,7 +111,8 @@ The following is an example of a tag object, with media type
 		"mediatype": "application/vnd.docker.distribution.manifest.v1+json",
 		"digests": [
 			"sha256:...",
-		]
+		],
+		"size": 1024
 	}
 }
 ```
@@ -134,7 +135,8 @@ manifests are currently served. An example follows:
 		"mediatype": "application/vnd.docker.distribution.manifest.v1+json",
 		"digests": [
 			"sha256:...",
-		]
+		],
+		"size": 1024
 	},
 	"signatures": ...
 }
