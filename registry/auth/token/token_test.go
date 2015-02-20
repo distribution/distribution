@@ -261,7 +261,7 @@ func TestAccessController(t *testing.T) {
 		"realm":          realm,
 		"issuer":         issuer,
 		"service":        service,
-		"rootCertBundle": rootCertBundleFilename,
+		"rootcertbundle": rootCertBundleFilename,
 	}
 
 	accessController, err := newAccessController(options)
