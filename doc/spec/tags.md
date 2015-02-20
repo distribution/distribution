@@ -145,7 +145,7 @@ A regular JWS will be served up with the media type
 
 If two tags point at an identical target, they are considered to be
 "equivalent tags" or "aliases". For the purposes of this proposal, tag
-equavalence will be interpreted on the client-side and no endpoints will be
+equivalence will be interpreted on the client-side and no endpoints will be
 provided to identify sets of equivalent tags.
 
 Other proposals have championed the notion of an "aliases" field on a manifest
