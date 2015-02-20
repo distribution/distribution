@@ -85,9 +85,9 @@ The fields of a tag object are described, as follows:
 				Size, in bytes, of the targeted content.
 			</dd>
 
-			<dt>digests</dt>
+			<dt>digest</dt>
 			<dd>
-				A list of digests that identify the target object. The first entry
+				A digest that identifies the target object. The first entry
 				should be considered canonical.
 			</dd>
 		</dl>
@@ -109,9 +109,7 @@ The following is an example of a tag object, with media type
 	},
 	"target": {
 		"mediatype": "application/vnd.docker.distribution.manifest.v1+json",
-		"digests": [
-			"sha256:...",
-		],
+		"digest": "sha256:...",
 		"size": 1024
 	}
 }
@@ -133,9 +131,7 @@ manifests are currently served. An example follows:
 	},
 	"target": {
 		"mediatype": "application/vnd.docker.distribution.manifest.v1+json",
-		"digests": [
-			"sha256:...",
-		],
+		"digest": "sha256:...",
 		"size": 1024
 	},
 	"signatures": ...
