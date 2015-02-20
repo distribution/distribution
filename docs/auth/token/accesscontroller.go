@@ -146,7 +146,7 @@ type tokenAccessOptions struct {
 func checkOptions(options map[string]interface{}) (tokenAccessOptions, error) {
 	var opts tokenAccessOptions
 
-	keys := []string{"realm", "issuer", "service", "rootCertBundle"}
+	keys := []string{"realm", "issuer", "service", "rootcertbundle"}
 	vals := make([]string, 0, len(keys))
 	for _, key := range keys {
 		val, ok := options[key].(string)
