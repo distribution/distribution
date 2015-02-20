@@ -587,6 +587,15 @@ func (d *driver) List(path string) ([]string, error) {
 	if path != "/" && path[len(path)-1] != '/' {
 		path = path + "/"
 	}
+
+	// This is to cover for the cases when the rootDirectory of the driver is either "" or "/".
+	// In those cases, there is no root prefix to replace and we must actually add a "/" to all
+	// results in order to keep them as valid paths as recognized by storagedriver.PathRegexp
+	prefix := ""
+	if d.s3Path("") == "" {
+		prefix = "/"
+	}
+
 	listResponse, err := d.Bucket.List(d.s3Path(path), "/", "", listMax)
 	if err != nil {
 		return nil, err
@@ -597,11 +606,11 @@ func (d *driver) List(path string) ([]string, error) {
 
 	for {
 		for _, key := range listResponse.Contents {
-			files = append(files, strings.Replace(key.Key, d.s3Path(""), "", 1))
+			files = append(files, strings.Replace(key.Key, d.s3Path(""), prefix, 1))
 		}
 
 		for _, commonPrefix := range listResponse.CommonPrefixes {
-			directories = append(directories, strings.Replace(commonPrefix[0:len(commonPrefix)-1], d.s3Path(""), "", 1))
+			directories = append(directories, strings.Replace(commonPrefix[0:len(commonPrefix)-1], d.s3Path(""), prefix, 1))
 		}
 
 		if listResponse.IsTruncated {
