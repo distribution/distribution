@@ -34,9 +34,9 @@ func TestParseDigest(t *testing.T) {
 			hex:       "e58fcf7418d4390dec8e8fb69d88c06ec07039d651fedd3aa72af9972e7d046b",
 		},
 		{
-			input:     "md5:d41d8cd98f00b204e9800998ecf8427e",
-			algorithm: "md5",
-			hex:       "d41d8cd98f00b204e9800998ecf8427e",
+			input:     "sha384:d3fc7881460b7e22e3d172954463dddd7866d17597e7248453c48b3e9d26d9596bf9c4a9cf8072c9d5bad76e19af801d",
+			algorithm: "sha384",
+			hex:       "d3fc7881460b7e22e3d172954463dddd7866d17597e7248453c48b3e9d26d9596bf9c4a9cf8072c9d5bad76e19af801d",
 		},
 		{
 			// empty hex

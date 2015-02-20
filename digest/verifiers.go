@@ -1,9 +1,8 @@
 package digest
 
 import (
-	"crypto/md5"
-	"crypto/sha1"
 	"crypto/sha256"
+	"crypto/sha512"
 	"hash"
 	"io"
 	"io/ioutil"
@@ -32,7 +31,7 @@ type Verifier interface {
 func NewDigestVerifier(d Digest) Verifier {
 	alg := d.Algorithm()
 	switch alg {
-	case "md5", "sha1", "sha256":
+	case "sha256", "sha384", "sha512":
 		return hashVerifier{
 			hash:   newHash(alg),
 			digest: d,
@@ -97,10 +96,10 @@ func newHash(name string) hash.Hash {
 	switch name {
 	case "sha256":
 		return sha256.New()
-	case "sha1":
-		return sha1.New()
-	case "md5":
-		return md5.New()
+	case "sha384":
+		return sha512.New384()
+	case "sha512":
+		return sha512.New()
 	default:
 		panic("unsupport algorithm: " + name)
 	}

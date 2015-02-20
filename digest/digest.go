@@ -123,7 +123,7 @@ func (d Digest) Validate() error {
 	}
 
 	switch s[:i] {
-	case "md5", "sha1", "sha256":
+	case "sha256", "sha384", "sha512":
 		break
 	default:
 		return ErrDigestUnsupported
