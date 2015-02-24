@@ -25,12 +25,23 @@ var allEndpoints = []string{
 // methods. This can be used directly by both server implementations and
 // clients.
 func Router() *mux.Router {
-	router := mux.NewRouter().
-		StrictSlash(true)
+	return RouterWithPrefix("")
+}
+
+// RouterWithPrefix builds a gorilla router with a configured prefix
+// on all routes.
+func RouterWithPrefix(prefix string) *mux.Router {
+	rootRouter := mux.NewRouter()
+	router := rootRouter
+	if prefix != "" {
+		router = router.PathPrefix(prefix).Subrouter()
+	}
+
+	router.StrictSlash(true)
 
 	for _, descriptor := range routeDescriptors {
 		router.Path(descriptor.Path).Name(descriptor.Name)
 	}
 
-	return router
+	return rootRouter
 }

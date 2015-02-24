@@ -64,7 +64,7 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 		Config:     configuration,
 		Context:    ctx,
 		InstanceID: uuid.New(),
-		router:     v2.Router(),
+		router:     v2.RouterWithPrefix(configuration.HTTP.Prefix),
 	}
 
 	app.Context = ctxu.WithLogger(app.Context, ctxu.GetLogger(app, "app.id"))

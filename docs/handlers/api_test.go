@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/docker/distribution/configuration"
@@ -55,6 +56,40 @@ func TestCheckAPI(t *testing.T) {
 	if string(p) != "{}" {
 		t.Fatalf("unexpected response body: %v", string(p))
 	}
+}
+
+func TestURLPrefix(t *testing.T) {
+	config := configuration.Configuration{
+		Storage: configuration.Storage{
+			"inmemory": configuration.Parameters{},
+		},
+	}
+	config.HTTP.Prefix = "/test/"
+
+	env := newTestEnvWithConfig(t, &config)
+
+	baseURL, err := env.builder.BuildBaseURL()
+	if err != nil {
+		t.Fatalf("unexpected error building base url: %v", err)
+	}
+
+	parsed, _ := url.Parse(baseURL)
+	if !strings.HasPrefix(parsed.Path, config.HTTP.Prefix) {
+		t.Fatalf("Prefix %v not included in test url %v", config.HTTP.Prefix, baseURL)
+	}
+
+	resp, err := http.Get(baseURL)
+	if err != nil {
+		t.Fatalf("unexpected error issuing request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	checkResponse(t, "issuing api base check", resp, http.StatusOK)
+	checkHeaders(t, resp, http.Header{
+		"Content-Type":   []string{"application/json; charset=utf-8"},
+		"Content-Length": []string{"2"},
+	})
+
 }
 
 // TestLayerAPI conducts a full of the of the layer api.
@@ -356,16 +391,21 @@ type testEnv struct {
 }
 
 func newTestEnv(t *testing.T) *testEnv {
-	ctx := context.Background()
 	config := configuration.Configuration{
 		Storage: configuration.Storage{
 			"inmemory": configuration.Parameters{},
 		},
 	}
 
-	app := NewApp(ctx, config)
+	return newTestEnvWithConfig(t, &config)
+}
+
+func newTestEnvWithConfig(t *testing.T, config *configuration.Configuration) *testEnv {
+	ctx := context.Background()
+
+	app := NewApp(ctx, *config)
 	server := httptest.NewServer(handlers.CombinedLoggingHandler(os.Stderr, app))
-	builder, err := v2.NewURLBuilderFromString(server.URL)
+	builder, err := v2.NewURLBuilderFromString(server.URL + config.HTTP.Prefix)
 
 	if err != nil {
 		t.Fatalf("error creating url builder: %v", err)
@@ -379,7 +419,7 @@ func newTestEnv(t *testing.T) *testEnv {
 	return &testEnv{
 		pk:      pk,
 		ctx:     ctx,
-		config:  config,
+		config:  *config,
 		app:     app,
 		server:  server,
 		builder: builder,
