@@ -38,6 +38,8 @@ type Configuration struct {
 		// Addr specifies the bind address for the registry instance.
 		Addr string `yaml:"addr,omitempty"`
 
+		Prefix string `yaml:"prefix,omitempty"`
+
 		// Secret specifies the secret key which HMAC tokens are created with.
 		Secret string `yaml:"secret,omitempty"`
 

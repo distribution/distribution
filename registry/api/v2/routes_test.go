@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/gorilla/mux"
@@ -24,8 +25,16 @@ type routeTestCase struct {
 //
 // This may go away as the application structure comes together.
 func TestRouter(t *testing.T) {
+	baseTestRouter(t, "")
+}
 
-	router := Router()
+func TestRouterWithPrefix(t *testing.T) {
+	baseTestRouter(t, "/prefix/")
+}
+
+func baseTestRouter(t *testing.T, prefix string) {
+
+	router := RouterWithPrefix(prefix)
 
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		testCase := routeTestCase{
@@ -147,6 +156,8 @@ func TestRouter(t *testing.T) {
 			StatusCode: http.StatusNotFound,
 		},
 	} {
+		testcase.RequestURI = strings.TrimSuffix(prefix, "/") + testcase.RequestURI
+
 		// Register the endpoint
 		route := router.GetRoute(testcase.RouteName)
 		if route == nil {

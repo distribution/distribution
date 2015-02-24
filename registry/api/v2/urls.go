@@ -3,6 +3,7 @@ package v2
 import (
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/docker/distribution/digest"
 	"github.com/gorilla/mux"
@@ -64,9 +65,19 @@ func NewURLBuilderFromRequest(r *http.Request) *URLBuilder {
 		host = forwardedHost
 	}
 
+	basePath := routeDescriptorsMap[RouteNameBase].Path
+
+	requestPath := r.URL.Path
+	index := strings.Index(requestPath, basePath)
+
 	u := &url.URL{
 		Scheme: scheme,
 		Host:   host,
+	}
+
+	if index > 0 {
+		// N.B. index+1 is important because we want to include the trailing /
+		u.Path = requestPath[0 : index+1]
 	}
 
 	return NewURLBuilder(u)
@@ -169,6 +180,10 @@ func (cr clonedRoute) URL(pairs ...string) (*url.URL, error) {
 	routeURL, err := cr.Route.URL(pairs...)
 	if err != nil {
 		return nil, err
+	}
+
+	if routeURL.Scheme == "" && routeURL.User == nil && routeURL.Host == "" {
+		routeURL.Path = routeURL.Path[1:]
 	}
 
 	return cr.root.ResolveReference(routeURL), nil
