@@ -277,9 +277,8 @@ func (app *App) context(w http.ResponseWriter, r *http.Request) *Context {
 	ctx = ctxu.WithLogger(ctx, ctxu.GetRequestLogger(ctx))
 	ctx = ctxu.WithLogger(ctx, ctxu.GetLogger(ctx,
 		"vars.name",
-		"vars.tag",
+		"vars.reference",
 		"vars.digest",
-		"vars.tag",
 		"vars.uuid"))
 
 	context := &Context{

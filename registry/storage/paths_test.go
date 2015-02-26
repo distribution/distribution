@@ -78,6 +78,14 @@ func TestPathMapper(t *testing.T) {
 				tag:      "thetag",
 				revision: "sha256:abcdef0123456789",
 			},
+			expected: "/pathmapper-test/repositories/foo/bar/_manifests/tags/thetag/index/sha256/abcdef0123456789",
+		},
+		{
+			spec: manifestTagIndexEntryLinkPathSpec{
+				name:     "foo/bar",
+				tag:      "thetag",
+				revision: "sha256:abcdef0123456789",
+			},
 			expected: "/pathmapper-test/repositories/foo/bar/_manifests/tags/thetag/index/sha256/abcdef0123456789/link",
 		},
 		{

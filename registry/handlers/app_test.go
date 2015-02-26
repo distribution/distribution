@@ -84,7 +84,7 @@ func TestAppDispatcher(t *testing.T) {
 			endpoint: v2.RouteNameManifest,
 			vars: []string{
 				"name", "foo/bar",
-				"tag", "sometag",
+				"reference", "sometag",
 			},
 		},
 		{
