@@ -12,6 +12,7 @@ import (
 	"github.com/bugsnag/bugsnag-go"
 	"github.com/docker/distribution/configuration"
 	ctxu "github.com/docker/distribution/context"
+	_ "github.com/docker/distribution/health"
 	_ "github.com/docker/distribution/registry/auth/silly"
 	_ "github.com/docker/distribution/registry/auth/token"
 	"github.com/docker/distribution/registry/handlers"
