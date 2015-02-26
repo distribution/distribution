@@ -106,9 +106,20 @@ changes. Only non-conflicting additions should be made to the API and accepted
 changes should avoid preventing future changes from happening.
 
 This section should be updated when changes are made to the specification,
-indicating what is different. Optionally, we may start marking parts of the specification to correspond with the versions enumerated here.
+indicating what is different. Optionally, we may start marking parts of the
+specification to correspond with the versions enumerated here.
 
 <dl>
+	<dt>2.0.1</dt>
+	<dd>
+		<ul>
+			<li>Added support for immutable manifest references in manifest endpoints.</li>
+			<li>Deleting a manifest by tag has been deprecated.</li>
+			<li>Specified `Docker-Content-Digest` header for appropriate entities.</li>
+			<li>Added error code for unsupported operations.</li>
+		</ul>
+	</dd>
+
 	<dt>2.0</dt>
 	<dd>
 		This is the baseline specification.
@@ -235,10 +246,11 @@ the V2 registry API, keyed by their tarsum digest.
 The image manifest can be fetched with the following url:
 
 ```
-GET /v2/<name>/manifests/<tag>
+GET /v2/<name>/manifests/<reference>
 ```
 
-The "name" and "tag" parameter identify the image and are required.
+The `name` and `reference` parameter identify the image and are required. The
+reference may include a tag or digest.
 
 A `404 Not Found` response will be returned if the image is unknown to the
 registry. If the image exists and the response is successful, the image
@@ -330,6 +342,7 @@ http specification). The response will look as follows:
 ```
 200 OK
 Content-Length: <length of blob>
+Docker-Content-Digest: <digest>
 ```
 
 When this response is received, the client can assume that the layer is
@@ -509,10 +522,14 @@ will receive a `201 Created` response:
 201 Created
 Location: /v2/<name>/blobs/<tarsum>
 Content-Length: 0
+Docker-Content-Digest: <digest>
 ```
 
 The `Location` header will contain the registry URL to access the accepted
-layer file.
+layer file. The `Docker-Content-Digest` header returns the canonical digest of
+the uploaded blob which may differ from the provided digest. Most clients may
+ignore the value but if it is used, the client should verify the value against
+the uploaded blob data.
 
 ###### Digest Parameter
 
@@ -574,7 +591,7 @@ client must restart the upload process.
 Once all of the layers for an image are uploaded, the client can upload the
 image manifest. An image can be pushed using the following request format:
 
-    PUT /v2/<name>/manifests/<tag>
+    PUT /v2/<name>/manifests/<reference>
 
     {
        "name": <name>,
@@ -591,8 +608,8 @@ image manifest. An image can be pushed using the following request format:
        ...
     }
 
-The `name` and `tag` fields of the response body must match those specified in
-the URL.
+The `name` and `reference` fields of the response body must match those specified in
+the URL. The `reference` field may be a "tag" or a "digest".
 
 If there is a problem with pushing the manifest, a relevant 4xx response will
 be returned with a JSON error message. Please see the _PUT Manifest section
@@ -641,13 +658,14 @@ reduce copying.
 
 ### Deleting an Image
 
-An image may be deleted from the registry via its `name` and `tag`. A delete
-may be issued with the following request format:
+An image may be deleted from the registry via its `name` and `reference`. A
+delete may be issued with the following request format:
 
-    DELETE /v2/<name>/manifests/<tag>
+    DELETE /v2/<name>/manifests/<reference>
 
-If the image exists and has been successfully deleted, the following response
-will be issued:
+For deletes, `reference` *must* be a digest or the delete will fail. If the
+image exists and has been successfully deleted, the following response will be
+issued:
 
     202 Accepted
     Content-Length: None
@@ -677,9 +695,9 @@ A list of methods and URIs are covered in the table below:
 -------|----|------|------------
 | GET | `/v2/` | Base | Check that the endpoint implements Docker Registry API V2. |
 | GET | `/v2/<name>/tags/list` | Tags | Fetch the tags under the repository identified by `name`. |
-| GET | `/v2/<name>/manifests/<tag>` | Manifest | Fetch the manifest identified by `name` and `tag`. |
-| PUT | `/v2/<name>/manifests/<tag>` | Manifest | Put the manifest identified by `name` and `tag`. |
-| DELETE | `/v2/<name>/manifests/<tag>` | Manifest | Delete the manifest identified by `name` and `tag`. |
+| GET | `/v2/<name>/manifests/<reference>` | Manifest | Fetch the manifest identified by `name` and `reference` where `reference` can be a tag or digest. |
+| PUT | `/v2/<name>/manifests/<reference>` | Manifest | Put the manifest identified by `name` and `reference` where `reference` can be a tag or digest. |
+| DELETE | `/v2/<name>/manifests/<reference>` | Manifest | Delete the manifest identified by `name` and `reference` where `reference` can be a tag or digest. |
 | GET | `/v2/<name>/blobs/<digest>` | Blob | Retrieve the blob from the registry identified by `digest`. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data. |
 | POST | `/v2/<name>/blobs/uploads/` | Intiate Blob Upload | Initiate a resumable blob upload. If successful, an upload location will be provided to complete the upload. Optionally, if the `digest` parameter is present, the request body will be used to complete the upload in a single request. |
 | GET | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Retrieve status of upload identified by `uuid`. The primary purpose of this endpoint is to resolve the current status of a resumable upload. |
@@ -697,6 +715,7 @@ The error codes encountered via the API are enumerated in the following table:
 |Code|Message|Description|
 -------|----|------|------------
  `UNKNOWN` | unknown error | Generic error returned when the error does not have an API classification.
+ `UNSUPPORTED` | The operation is unsupported. | The operation was unsupported due to a missing implementation or invalid set of parameters.
  `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status.
  `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest.
  `SIZE_INVALID` | provided length did not match content length | When a layer is uploaded, the provided size will be checked against the uploaded content. If they do not match, this error will be returned.
@@ -933,12 +952,12 @@ Create, update and retrieve manifests.
 
 #### GET Manifest
 
-Fetch the manifest identified by `name` and `tag`.
+Fetch the manifest identified by `name` and `reference` where `reference` can be a tag or digest.
 
 
 
 ```
-GET /v2/<name>/manifests/<tag>
+GET /v2/<name>/manifests/<reference>
 Host: <registry host>
 Authorization: <scheme> <token>
 ```
@@ -962,6 +981,7 @@ The following parameters should be specified on the request:
 
 ```
 200 OK
+Docker-Content-Digest: <digest>
 Content-Type: application/json; charset=utf-8
 
 {
@@ -979,8 +999,13 @@ Content-Type: application/json; charset=utf-8
 }
 ```
 
-The manifest idenfied by `name` and `tag`. The contents can be used to identify and resolve resources required to run the specified image.
+The manifest idenfied by `name` and `reference`. The contents can be used to identify and resolve resources required to run the specified image.
 
+The following headers will be returned with the response:
+
+|Name|Description|
+|----|-----------|
+|`Docker-Content-Digest`|Digest of the targeted content for the request.|
 
 
 
@@ -1003,7 +1028,7 @@ Content-Type: application/json; charset=utf-8
 }
 ```
 
-The name or tag was invalid.
+The name or reference was invalid.
 
 
 
@@ -1080,12 +1105,12 @@ The error codes that may be included in the response body are enumerated below:
 
 #### PUT Manifest
 
-Put the manifest identified by `name` and `tag`.
+Put the manifest identified by `name` and `reference` where `reference` can be a tag or digest.
 
 
 
 ```
-PUT /v2/<name>/manifests/<tag>
+PUT /v2/<name>/manifests/<reference>
 Host: <registry host>
 Authorization: <scheme> <token>
 Content-Type: application/json; charset=utf-8
@@ -1126,6 +1151,7 @@ The following parameters should be specified on the request:
 202 Accepted
 Location: <url>
 Content-Length: 0
+Docker-Content-Digest: <digest>
 ```
 
 The manifest has been accepted by the registry and is stored under the specified `name` and `tag`.
@@ -1136,6 +1162,7 @@ The following headers will be returned with the response:
 |----|-----------|
 |`Location`|The canonical location url of the uploaded manifest.|
 |`Content-Length`|The `Content-Length` header must be zero and the body must be empty.|
+|`Docker-Content-Digest`|Digest of the targeted content for the request.|
 
 
 
@@ -1277,12 +1304,12 @@ The error codes that may be included in the response body are enumerated below:
 
 #### DELETE Manifest
 
-Delete the manifest identified by `name` and `tag`.
+Delete the manifest identified by `name` and `reference` where `reference` can be a tag or digest.
 
 
 
 ```
-DELETE /v2/<name>/manifests/<tag>
+DELETE /v2/<name>/manifests/<reference>
 Host: <registry host>
 Authorization: <scheme> <token>
 ```
@@ -1456,6 +1483,7 @@ The following parameters should be specified on the request:
 ```
 200 OK
 Content-Length: <length>
+Docker-Content-Digest: <digest>
 Content-Type: application/octet-stream
 
 <blob binary data>
@@ -1468,12 +1496,14 @@ The following headers will be returned with the response:
 |Name|Description|
 |----|-----------|
 |`Content-Length`|The length of the requested blob content.|
+|`Docker-Content-Digest`|Digest of the targeted content for the request.|
 
 ###### On Success: Temporary Redirect
 
 ```
 307 Temporary Redirect
 Location: <blob location>
+Docker-Content-Digest: <digest>
 ```
 
 The blob identified by `digest` is available at the provided location.
@@ -1483,6 +1513,7 @@ The following headers will be returned with the response:
 |Name|Description|
 |----|-----------|
 |`Location`|The location where the layer should be accessible.|
+|`Docker-Content-Digest`|Digest of the targeted content for the request.|
 
 
 
@@ -2345,6 +2376,7 @@ The following parameters should be specified on the request:
 Location: <blob location>
 Content-Range: <start of range>-<end of range, inclusive>
 Content-Length: <length of chunk>
+Docker-Content-Digest: <digest>
 ```
 
 The upload has been completed and accepted by the registry. The canonical location will be available in the `Location` header.
@@ -2356,6 +2388,7 @@ The following headers will be returned with the response:
 |`Location`||
 |`Content-Range`|Range of bytes identifying the desired block of content represented by the body. Start must match the end of offset retrieved via status check. Note that this is a non-standard use of the `Content-Range` header.|
 |`Content-Length`|Length of the chunk being uploaded, corresponding the length of the request body.|
+|`Docker-Content-Digest`|Digest of the targeted content for the request.|
 
 
 

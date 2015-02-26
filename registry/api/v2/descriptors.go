@@ -79,6 +79,13 @@ var (
 		Format:      "<uuid>",
 	}
 
+	digestHeader = ParameterDescriptor{
+		Name:        "Docker-Content-Digest",
+		Description: "Digest of the targeted content for the request.",
+		Type:        "digest",
+		Format:      "<digest>",
+	}
+
 	unauthorizedResponse = ResponseDescriptor{
 		Description: "The client does not have access to the repository.",
 		StatusCode:  http.StatusUnauthorized,
@@ -454,13 +461,13 @@ var routeDescriptors = []RouteDescriptor{
 	},
 	{
 		Name:        RouteNameManifest,
-		Path:        "/v2/{name:" + RepositoryNameRegexp.String() + "}/manifests/{tag:" + TagNameRegexp.String() + "}",
+		Path:        "/v2/{name:" + RepositoryNameRegexp.String() + "}/manifests/{reference:" + TagNameRegexp.String() + "|" + digest.DigestRegexp.String() + "}",
 		Entity:      "Manifest",
 		Description: "Create, update and retrieve manifests.",
 		Methods: []MethodDescriptor{
 			{
 				Method:      "GET",
-				Description: "Fetch the manifest identified by `name` and `tag`.",
+				Description: "Fetch the manifest identified by `name` and `reference` where `reference` can be a tag or digest.",
 				Requests: []RequestDescriptor{
 					{
 						Headers: []ParameterDescriptor{
@@ -473,8 +480,11 @@ var routeDescriptors = []RouteDescriptor{
 						},
 						Successes: []ResponseDescriptor{
 							{
-								Description: "The manifest idenfied by `name` and `tag`. The contents can be used to identify and resolve resources required to run the specified image.",
+								Description: "The manifest idenfied by `name` and `reference`. The contents can be used to identify and resolve resources required to run the specified image.",
 								StatusCode:  http.StatusOK,
+								Headers: []ParameterDescriptor{
+									digestHeader,
+								},
 								Body: BodyDescriptor{
 									ContentType: "application/json; charset=utf-8",
 									Format:      manifestBody,
@@ -483,7 +493,7 @@ var routeDescriptors = []RouteDescriptor{
 						},
 						Failures: []ResponseDescriptor{
 							{
-								Description: "The name or tag was invalid.",
+								Description: "The name or reference was invalid.",
 								StatusCode:  http.StatusBadRequest,
 								ErrorCodes: []ErrorCode{
 									ErrorCodeNameInvalid,
@@ -523,7 +533,7 @@ var routeDescriptors = []RouteDescriptor{
 			},
 			{
 				Method:      "PUT",
-				Description: "Put the manifest identified by `name` and `tag`.",
+				Description: "Put the manifest identified by `name` and `reference` where `reference` can be a tag or digest.",
 				Requests: []RequestDescriptor{
 					{
 						Headers: []ParameterDescriptor{
@@ -550,6 +560,7 @@ var routeDescriptors = []RouteDescriptor{
 										Format:      "<url>",
 									},
 									contentLengthZeroHeader,
+									digestHeader,
 								},
 							},
 						},
@@ -628,7 +639,7 @@ var routeDescriptors = []RouteDescriptor{
 			},
 			{
 				Method:      "DELETE",
-				Description: "Delete the manifest identified by `name` and `tag`.",
+				Description: "Delete the manifest identified by `name` and `reference` where `reference` can be a tag or digest.",
 				Requests: []RequestDescriptor{
 					{
 						Headers: []ParameterDescriptor{
@@ -729,6 +740,7 @@ var routeDescriptors = []RouteDescriptor{
 										Description: "The length of the requested blob content.",
 										Format:      "<length>",
 									},
+									digestHeader,
 								},
 								Body: BodyDescriptor{
 									ContentType: "application/octet-stream",
@@ -745,6 +757,7 @@ var routeDescriptors = []RouteDescriptor{
 										Description: "The location where the layer should be accessible.",
 										Format:      "<blob location>",
 									},
+									digestHeader,
 								},
 							},
 						},
@@ -1193,6 +1206,7 @@ var routeDescriptors = []RouteDescriptor{
 										Format:      "<length of chunk>",
 										Description: "Length of the chunk being uploaded, corresponding the length of the request body.",
 									},
+									digestHeader,
 								},
 							},
 						},
@@ -1311,6 +1325,13 @@ var errorDescriptors = []ErrorDescriptor{
 		Message: "unknown error",
 		Description: `Generic error returned when the error does not have an
 		API classification.`,
+	},
+	{
+		Code:    ErrorCodeUnsupported,
+		Value:   "UNSUPPORTED",
+		Message: "The operation is unsupported.",
+		Description: `The operation was unsupported due to a missing
+		implementation or invalid set of parameters.`,
 	},
 	{
 		Code:    ErrorCodeUnauthorized,
