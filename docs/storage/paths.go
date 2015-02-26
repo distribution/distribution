@@ -72,11 +72,12 @@ const storagePathVersion = "v2"
 //
 //	Tags:
 //
-// 	manifestTagsPathSpec:          <root>/v2/repositories/<name>/_manifests/tags/
-// 	manifestTagPathSpec:           <root>/v2/repositories/<name>/_manifests/tags/<tag>/
-// 	manifestTagCurrentPathSpec:    <root>/v2/repositories/<name>/_manifests/tags/<tag>/current/link
-// 	manifestTagIndexPathSpec:      <root>/v2/repositories/<name>/_manifests/tags/<tag>/index/
-// 	manifestTagIndexEntryPathSpec: <root>/v2/repositories/<name>/_manifests/tags/<tag>/index/<algorithm>/<hex digest>/link
+// 	manifestTagsPathSpec:                  <root>/v2/repositories/<name>/_manifests/tags/
+// 	manifestTagPathSpec:                   <root>/v2/repositories/<name>/_manifests/tags/<tag>/
+// 	manifestTagCurrentPathSpec:            <root>/v2/repositories/<name>/_manifests/tags/<tag>/current/link
+// 	manifestTagIndexPathSpec:              <root>/v2/repositories/<name>/_manifests/tags/<tag>/index/
+// 	manifestTagIndexEntryPathSpec:         <root>/v2/repositories/<name>/_manifests/tags/<tag>/index/<algorithm>/<hex digest>/
+// 	manifestTagIndexEntryLinkPathSpec:     <root>/v2/repositories/<name>/_manifests/tags/<tag>/index/<algorithm>/<hex digest>/link
 //
 // 	Layers:
 //
@@ -199,6 +200,17 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 		}
 
 		return path.Join(root, "index"), nil
+	case manifestTagIndexEntryLinkPathSpec:
+		root, err := pm.path(manifestTagIndexEntryPathSpec{
+			name:     v.name,
+			tag:      v.tag,
+			revision: v.revision,
+		})
+		if err != nil {
+			return "", err
+		}
+
+		return path.Join(root, "link"), nil
 	case manifestTagIndexEntryPathSpec:
 		root, err := pm.path(manifestTagIndexPathSpec{
 			name: v.name,
@@ -213,7 +225,7 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 			return "", err
 		}
 
-		return path.Join(root, path.Join(append(components, "link")...)), nil
+		return path.Join(root, path.Join(components...)), nil
 	case layerLinkPathSpec:
 		components, err := digestPathComponents(v.digest, false)
 		if err != nil {
@@ -332,8 +344,7 @@ type manifestTagIndexPathSpec struct {
 
 func (manifestTagIndexPathSpec) pathSpec() {}
 
-// manifestTagIndexEntryPathSpec describes the link to a revisions of a
-// manifest with given tag within the index.
+// manifestTagIndexEntryPathSpec contains the entries of the index by revision.
 type manifestTagIndexEntryPathSpec struct {
 	name     string
 	tag      string
@@ -341,6 +352,16 @@ type manifestTagIndexEntryPathSpec struct {
 }
 
 func (manifestTagIndexEntryPathSpec) pathSpec() {}
+
+// manifestTagIndexEntryLinkPathSpec describes the link to a revisions of a
+// manifest with given tag within the index.
+type manifestTagIndexEntryLinkPathSpec struct {
+	name     string
+	tag      string
+	revision digest.Digest
+}
+
+func (manifestTagIndexEntryLinkPathSpec) pathSpec() {}
 
 // layerLink specifies a path for a layer link, which is a file with a blob
 // id. The layer link will contain a content addressable blob id reference

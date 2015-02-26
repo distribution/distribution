@@ -63,7 +63,7 @@ func (ts *tagStore) exists(tag string) (bool, error) {
 // tag tags the digest with the given tag, updating the the store to point at
 // the current tag. The digest must point to a manifest.
 func (ts *tagStore) tag(tag string, revision digest.Digest) error {
-	indexEntryPath, err := ts.pm.path(manifestTagIndexEntryPathSpec{
+	indexEntryPath, err := ts.pm.path(manifestTagIndexEntryLinkPathSpec{
 		name:     ts.Name(),
 		tag:      tag,
 		revision: revision,
