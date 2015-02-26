@@ -2,20 +2,24 @@ package v2
 
 import (
 	"encoding/json"
+	"fmt"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 )
 
 type routeTestCase struct {
-	RequestURI string
-	Vars       map[string]string
-	RouteName  string
-	StatusCode int
+	RequestURI  string
+	ExpectedURI string
+	Vars        map[string]string
+	RouteName   string
+	StatusCode  int
 }
 
 // TestRouter registers a test handler with all the routes and ensures that
@@ -25,36 +29,7 @@ type routeTestCase struct {
 //
 // This may go away as the application structure comes together.
 func TestRouter(t *testing.T) {
-	baseTestRouter(t, "")
-}
-
-func TestRouterWithPrefix(t *testing.T) {
-	baseTestRouter(t, "/prefix/")
-}
-
-func baseTestRouter(t *testing.T, prefix string) {
-
-	router := RouterWithPrefix(prefix)
-
-	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		testCase := routeTestCase{
-			RequestURI: r.RequestURI,
-			Vars:       mux.Vars(r),
-			RouteName:  mux.CurrentRoute(r).GetName(),
-		}
-
-		enc := json.NewEncoder(w)
-
-		if err := enc.Encode(testCase); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	})
-
-	// Startup test server
-	server := httptest.NewServer(router)
-
-	for _, testcase := range []routeTestCase{
+	testCases := []routeTestCase{
 		{
 			RouteName:  RouteNameBase,
 			RequestURI: "/v2/",
@@ -150,14 +125,90 @@ func baseTestRouter(t *testing.T, prefix string) {
 				"name": "foo/bar/manifests",
 			},
 		},
-		{
-			RouteName:  RouteNameBlobUploadChunk,
-			RequestURI: "/v2/foo/../../blob/uploads/D95306FA-FAD3-4E36-8D41-CF1C93EF8286",
-			StatusCode: http.StatusNotFound,
-		},
-	} {
-		testcase.RequestURI = strings.TrimSuffix(prefix, "/") + testcase.RequestURI
+	}
 
+	checkTestRouter(t, testCases, "", true)
+	checkTestRouter(t, testCases, "/prefix/", true)
+}
+
+func TestRouterWithPathTraversals(t *testing.T) {
+	testCases := []routeTestCase{
+		{
+			RouteName:   RouteNameBlobUploadChunk,
+			RequestURI:  "/v2/foo/../../blob/uploads/D95306FA-FAD3-4E36-8D41-CF1C93EF8286",
+			ExpectedURI: "/blob/uploads/D95306FA-FAD3-4E36-8D41-CF1C93EF8286",
+			StatusCode:  http.StatusNotFound,
+		},
+		{
+			// Testing for path traversal attack handling
+			RouteName:   RouteNameTags,
+			RequestURI:  "/v2/foo/../bar/baz/tags/list",
+			ExpectedURI: "/v2/bar/baz/tags/list",
+			Vars: map[string]string{
+				"name": "bar/baz",
+			},
+		},
+	}
+	checkTestRouter(t, testCases, "", false)
+}
+
+func TestRouterWithBadCharacters(t *testing.T) {
+	if testing.Short() {
+		testCases := []routeTestCase{
+			{
+				RouteName:  RouteNameBlobUploadChunk,
+				RequestURI: "/v2/foo/blob/uploads/不95306FA-FAD3-4E36-8D41-CF1C93EF8286",
+				StatusCode: http.StatusNotFound,
+			},
+			{
+				// Testing for path traversal attack handling
+				RouteName:  RouteNameTags,
+				RequestURI: "/v2/foo/不bar/tags/list",
+				StatusCode: http.StatusNotFound,
+			},
+		}
+		checkTestRouter(t, testCases, "", true)
+	} else {
+		// in the long version we're going to fuzz the router
+		// with random UTF8 characters not in the 128 bit ASCII range.
+		// These are not valid characters for the router and we expect
+		// 404s on every test.
+		rand.Seed(time.Now().UTC().UnixNano())
+		testCases := make([]routeTestCase, 1000)
+		for idx := range testCases {
+			testCases[idx] = routeTestCase{
+				RouteName:  RouteNameTags,
+				RequestURI: fmt.Sprintf("/v2/%v/%v/tags/list", randomString(10), randomString(10)),
+				StatusCode: http.StatusNotFound,
+			}
+		}
+		checkTestRouter(t, testCases, "", true)
+	}
+}
+
+func checkTestRouter(t *testing.T, testCases []routeTestCase, prefix string, deeplyEqual bool) {
+	router := RouterWithPrefix(prefix)
+
+	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		testCase := routeTestCase{
+			RequestURI: r.RequestURI,
+			Vars:       mux.Vars(r),
+			RouteName:  mux.CurrentRoute(r).GetName(),
+		}
+
+		enc := json.NewEncoder(w)
+
+		if err := enc.Encode(testCase); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	})
+
+	// Startup test server
+	server := httptest.NewServer(router)
+
+	for _, testcase := range testCases {
+		testcase.RequestURI = strings.TrimSuffix(prefix, "/") + testcase.RequestURI
 		// Register the endpoint
 		route := router.GetRoute(testcase.RouteName)
 		if route == nil {
@@ -178,6 +229,10 @@ func baseTestRouter(t *testing.T, prefix string) {
 			// Override default, zero-value
 			testcase.StatusCode = http.StatusOK
 		}
+		if testcase.ExpectedURI == "" {
+			// Override default, zero-value
+			testcase.ExpectedURI = testcase.RequestURI
+		}
 
 		if resp.StatusCode != testcase.StatusCode {
 			t.Fatalf("unexpected status for %s: %v %v", u, resp.Status, resp.StatusCode)
@@ -197,13 +252,56 @@ func baseTestRouter(t *testing.T, prefix string) {
 		// Needs to be set out of band
 		actualRouteInfo.StatusCode = resp.StatusCode
 
+		if actualRouteInfo.RequestURI != testcase.ExpectedURI {
+			t.Fatalf("URI %v incorrectly parsed, expected %v", actualRouteInfo.RequestURI, testcase.ExpectedURI)
+		}
+
 		if actualRouteInfo.RouteName != testcase.RouteName {
 			t.Fatalf("incorrect route %q matched, expected %q", actualRouteInfo.RouteName, testcase.RouteName)
 		}
 
-		if !reflect.DeepEqual(actualRouteInfo, testcase) {
+		// when testing deep equality, the actualRouteInfo has an empty ExpectedURI, we don't want
+		// that to make the comparison fail. We're otherwise done with the testcase so empty the
+		// testcase.ExpectedURI
+		testcase.ExpectedURI = ""
+		if deeplyEqual && !reflect.DeepEqual(actualRouteInfo, testcase) {
 			t.Fatalf("actual does not equal expected: %#v != %#v", actualRouteInfo, testcase)
 		}
 	}
 
 }
+
+// -------------- START LICENSED CODE --------------
+// The following code is derivative of https://github.com/google/gofuzz
+// gofuzz is licensed under the Apache License, Version 2.0, January 2004,
+// a copy of which can be found in the LICENSE file at the root of this
+// repository.
+
+// These functions allow us to generate strings containing only multibyte
+// characters that are invalid in our URLs. They are used above for fuzzing
+// to ensure we always get 404s on these invalid strings
+type charRange struct {
+	first, last rune
+}
+
+// choose returns a random unicode character from the given range, using the
+// given randomness source.
+func (r *charRange) choose() rune {
+	count := int64(r.last - r.first)
+	return r.first + rune(rand.Int63n(count))
+}
+
+var unicodeRanges = []charRange{
+	{'\u00a0', '\u02af'}, // Multi-byte encoded characters
+	{'\u4e00', '\u9fff'}, // Common CJK (even longer encodings)
+}
+
+func randomString(length int) string {
+	runes := make([]rune, length)
+	for i := range runes {
+		runes[i] = unicodeRanges[rand.Intn(len(unicodeRanges))].choose()
+	}
+	return string(runes)
+}
+
+// -------------- END LICENSED CODE --------------
