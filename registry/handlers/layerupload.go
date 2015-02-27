@@ -138,6 +138,8 @@ func (luh *layerUploadHandler) StartLayerUpload(w http.ResponseWriter, r *http.R
 		luh.Errors.Push(v2.ErrorCodeUnknown, err)
 		return
 	}
+
+	w.Header().Set("Docker-Upload-UUID", luh.Upload.UUID())
 	w.WriteHeader(http.StatusAccepted)
 }
 
@@ -155,6 +157,7 @@ func (luh *layerUploadHandler) GetUploadStatus(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	w.Header().Set("Docker-Upload-UUID", luh.UUID)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -235,6 +238,7 @@ func (luh *layerUploadHandler) CancelLayerUpload(w http.ResponseWriter, r *http.
 		return
 	}
 
+	w.Header().Set("Docker-Upload-UUID", luh.UUID)
 	if err := luh.Upload.Cancel(); err != nil {
 		ctxu.GetLogger(luh).Errorf("error encountered canceling upload: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
@@ -277,6 +281,7 @@ func (luh *layerUploadHandler) layerUploadResponse(w http.ResponseWriter, r *htt
 		return err
 	}
 
+	w.Header().Set("Docker-Upload-UUID", luh.UUID)
 	w.Header().Set("Location", uploadURL)
 	w.Header().Set("Content-Length", "0")
 	w.Header().Set("Range", fmt.Sprintf("0-%d", luh.State.Offset))

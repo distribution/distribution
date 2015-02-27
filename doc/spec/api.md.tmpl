@@ -347,6 +347,7 @@ with the upload URL in the `Location` header:
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: bytes=0-<offset>
 Content-Length: 0
+Docker-Upload-UUID: <uuid>
 ```
 
 The rest of the upload process can be carried out with the returned url,
@@ -357,6 +358,10 @@ header is specified, clients should treat it as an opaque url and should never
 try to assemble the it. While the `uuid` parameter may be an actual UUID, this
 proposal imposes no constraints on the format and clients should never impose
 any.
+
+If clients need to correlate local upload state with remote upload state, the
+contents of the `Docker-Upload-UUID` header should be used. Such an id can be
+used to key the last used location header when implementing resumable uploads.
 
 ##### Upload Progress
 
@@ -384,6 +389,7 @@ The response will be similar to the above, except will return 204 status:
 204 No Content
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: bytes=0-<offset>
+Docker-Upload-UUID: <uuid>
 ```
 
 Note that the HTTP `Range` header byte ranges are inclusive and that will be
@@ -453,6 +459,7 @@ current status:
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: 0-<last valid range>
 Content-Length: 0
+Docker-Upload-UUID: <uuid>
 ```
 
 If this response is received, the client should resume from the "last valid
@@ -471,6 +478,7 @@ be returned, including a `Range` header with the current upload status:
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: bytes=0-<offset>
 Content-Length: 0
+Docker-Upload-UUID: <uuid>
 ```
 
 ##### Completed Upload

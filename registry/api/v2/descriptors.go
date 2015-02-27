@@ -72,6 +72,13 @@ var (
 		Format:      "0",
 	}
 
+	dockerUploadUUIDHeader = ParameterDescriptor{
+		Name:        "Docker-Upload-UUID",
+		Description: "Identifies the docker upload uuid for the current request.",
+		Type:        "uuid",
+		Format:      "<uuid>",
+	}
+
 	unauthorizedResponse = ResponseDescriptor{
 		Description: "The client does not have access to the repository.",
 		StatusCode:  http.StatusUnauthorized,
@@ -898,6 +905,7 @@ var routeDescriptors = []RouteDescriptor{
 										Format: "<blob location>",
 									},
 									contentLengthZeroHeader,
+									dockerUploadUUIDHeader,
 								},
 							},
 						},
@@ -941,6 +949,7 @@ var routeDescriptors = []RouteDescriptor{
 										Format:      "0-0",
 										Description: "Range header indicating the progress of the upload. When starting an upload, it will return an empty range, since no content has been received.",
 									},
+									dockerUploadUUIDHeader,
 								},
 							},
 						},
@@ -994,6 +1003,7 @@ var routeDescriptors = []RouteDescriptor{
 										Description: "Range indicating the current progress of the upload.",
 									},
 									contentLengthZeroHeader,
+									dockerUploadUUIDHeader,
 								},
 							},
 						},
@@ -1077,6 +1087,7 @@ var routeDescriptors = []RouteDescriptor{
 										Description: "Range indicating the current progress of the upload.",
 									},
 									contentLengthZeroHeader,
+									dockerUploadUUIDHeader,
 								},
 							},
 						},
