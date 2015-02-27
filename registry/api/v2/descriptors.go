@@ -1410,13 +1410,18 @@ var errorDescriptors = []ErrorDescriptor{
 
 var errorCodeToDescriptors map[ErrorCode]ErrorDescriptor
 var idToDescriptors map[string]ErrorDescriptor
+var routeDescriptorsMap map[string]RouteDescriptor
 
 func init() {
 	errorCodeToDescriptors = make(map[ErrorCode]ErrorDescriptor, len(errorDescriptors))
 	idToDescriptors = make(map[string]ErrorDescriptor, len(errorDescriptors))
+	routeDescriptorsMap = make(map[string]RouteDescriptor, len(routeDescriptors))
 
 	for _, descriptor := range errorDescriptors {
 		errorCodeToDescriptors[descriptor.Code] = descriptor
 		idToDescriptors[descriptor.Value] = descriptor
+	}
+	for _, descriptor := range routeDescriptors {
+		routeDescriptorsMap[descriptor.Name] = descriptor
 	}
 }
