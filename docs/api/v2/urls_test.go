@@ -108,6 +108,35 @@ func TestURLBuilder(t *testing.T) {
 	}
 }
 
+func TestURLBuilderWithPrefix(t *testing.T) {
+	roots := []string{
+		"http://example.com/prefix/",
+		"https://example.com/prefix/",
+		"http://localhost:5000/prefix/",
+		"https://localhost:5443/prefix/",
+	}
+
+	for _, root := range roots {
+		urlBuilder, err := NewURLBuilderFromString(root)
+		if err != nil {
+			t.Fatalf("unexpected error creating urlbuilder: %v", err)
+		}
+
+		for _, testCase := range makeURLBuilderTestCases(urlBuilder) {
+			url, err := testCase.build()
+			if err != nil {
+				t.Fatalf("%s: error building url: %v", testCase.description, err)
+			}
+
+			expectedURL := root[0:len(root)-1] + testCase.expectedPath
+
+			if url != expectedURL {
+				t.Fatalf("%s: %q != %q", testCase.description, url, expectedURL)
+			}
+		}
+	}
+}
+
 type builderFromRequestTestCase struct {
 	request *http.Request
 	base    string
@@ -146,6 +175,47 @@ func TestBuilderFromRequest(t *testing.T) {
 			}
 
 			expectedURL := tr.base + testCase.expectedPath
+
+			if url != expectedURL {
+				t.Fatalf("%s: %q != %q", testCase.description, url, expectedURL)
+			}
+		}
+	}
+}
+
+func TestBuilderFromRequestWithPrefix(t *testing.T) {
+	u, err := url.Parse("http://example.com/prefix/v2/")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	forwardedProtoHeader := make(http.Header, 1)
+	forwardedProtoHeader.Set("X-Forwarded-Proto", "https")
+
+	testRequests := []struct {
+		request *http.Request
+		base    string
+	}{
+		{
+			request: &http.Request{URL: u, Host: u.Host},
+			base:    "http://example.com/prefix/",
+		},
+		{
+			request: &http.Request{URL: u, Host: u.Host, Header: forwardedProtoHeader},
+			base:    "https://example.com/prefix/",
+		},
+	}
+
+	for _, tr := range testRequests {
+		builder := NewURLBuilderFromRequest(tr.request)
+
+		for _, testCase := range makeURLBuilderTestCases(builder) {
+			url, err := testCase.build()
+			if err != nil {
+				t.Fatalf("%s: error building url: %v", testCase.description, err)
+			}
+
+			expectedURL := tr.base[0:len(tr.base)-1] + testCase.expectedPath
 
 			if url != expectedURL {
 				t.Fatalf("%s: %q != %q", testCase.description, url, expectedURL)
