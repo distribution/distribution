@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/docker/distribution"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
@@ -20,7 +21,10 @@ func TestManifestStorage(t *testing.T) {
 	tag := "thetag"
 	driver := inmemory.New()
 	registry := NewRegistryWithDriver(driver)
-	repo := registry.Repository(ctx, name)
+	repo, err := registry.Repository(ctx, name)
+	if err != nil {
+		t.Fatalf("unexpected error getting repo: %v", err)
+	}
 	ms := repo.Manifests()
 
 	exists, err := ms.Exists(tag)
@@ -34,7 +38,7 @@ func TestManifestStorage(t *testing.T) {
 
 	if _, err := ms.Get(tag); true {
 		switch err.(type) {
-		case ErrUnknownManifest:
+		case distribution.ErrManifestUnknown:
 			break
 		default:
 			t.Fatalf("expected manifest unknown error: %#v", err)

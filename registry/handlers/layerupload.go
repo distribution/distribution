@@ -174,7 +174,7 @@ func (luh *layerUploadHandler) PutLayerUploadComplete(w http.ResponseWriter, r *
 
 	if dgstStr == "" {
 		// no digest? return error, but allow retry.
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusBadRequest)
 		luh.Errors.Push(v2.ErrorCodeDigestInvalid, "digest missing")
 		return
 	}

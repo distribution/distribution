@@ -10,7 +10,6 @@ import (
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/registry/api/v2"
-	"github.com/docker/distribution/registry/storage"
 	"github.com/gorilla/handlers"
 )
 
@@ -70,12 +69,12 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 		// TODO(stevvooe): These error handling switches really need to be
 		// handled by an app global mapper.
 		switch err := err.(type) {
-		case storage.ErrManifestVerification:
+		case distribution.ErrManifestVerification:
 			for _, verificationError := range err {
 				switch verificationError := verificationError.(type) {
 				case distribution.ErrUnknownLayer:
 					imh.Errors.Push(v2.ErrorCodeBlobUnknown, verificationError.FSLayer)
-				case storage.ErrManifestUnverified:
+				case distribution.ErrManifestUnverified:
 					imh.Errors.Push(v2.ErrorCodeManifestUnverified)
 				default:
 					if verificationError == digest.ErrDigestInvalidFormat {
@@ -104,7 +103,7 @@ func (imh *imageManifestHandler) DeleteImageManifest(w http.ResponseWriter, r *h
 	manifests := imh.Repository.Manifests()
 	if err := manifests.Delete(imh.Tag); err != nil {
 		switch err := err.(type) {
-		case storage.ErrUnknownManifest:
+		case distribution.ErrManifestUnknown:
 			imh.Errors.Push(v2.ErrorCodeManifestUnknown, err)
 			w.WriteHeader(http.StatusNotFound)
 		default:

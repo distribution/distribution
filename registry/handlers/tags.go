@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/docker/distribution"
 	"github.com/docker/distribution/registry/api/v2"
-	"github.com/docker/distribution/registry/storage"
 	"github.com/gorilla/handlers"
 )
 
@@ -38,7 +38,7 @@ func (th *tagsHandler) GetTags(w http.ResponseWriter, r *http.Request) {
 	tags, err := manifests.Tags()
 	if err != nil {
 		switch err := err.(type) {
-		case storage.ErrUnknownRepository:
+		case distribution.ErrRepositoryUnknown:
 			w.WriteHeader(404)
 			th.Errors.Push(v2.ErrorCodeNameUnknown, map[string]string{"name": th.Repository.Name()})
 		default:

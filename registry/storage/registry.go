@@ -2,6 +2,7 @@ package storage
 
 import (
 	"github.com/docker/distribution"
+	"github.com/docker/distribution/registry/api/v2"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"golang.org/x/net/context"
 )
@@ -36,12 +37,19 @@ func NewRegistryWithDriver(driver storagedriver.StorageDriver) distribution.Regi
 // Repository returns an instance of the repository tied to the registry.
 // Instances should not be shared between goroutines but are cheap to
 // allocate. In general, they should be request scoped.
-func (reg *registry) Repository(ctx context.Context, name string) distribution.Repository {
+func (reg *registry) Repository(ctx context.Context, name string) (distribution.Repository, error) {
+	if err := v2.ValidateRespositoryName(name); err != nil {
+		return nil, distribution.ErrRepositoryNameInvalid{
+			Name:   name,
+			Reason: err,
+		}
+	}
+
 	return &repository{
 		ctx:      ctx,
 		registry: reg,
 		name:     name,
-	}
+	}, nil
 }
 
 // repository provides name-scoped access to various services.

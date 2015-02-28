@@ -540,6 +540,12 @@ var unmarshalTests = []struct {
 		"a: 1.2.3.4\n",
 		map[string]net.IP{"a": net.IPv4(1, 2, 3, 4)},
 	},
+
+	// Encode empty lists as zero-length slices.
+	{
+		"a: []",
+		&struct{ A []int }{[]int{}},
+	},
 }
 
 type M map[interface{}]interface{}

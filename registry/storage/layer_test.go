@@ -36,7 +36,11 @@ func TestSimpleLayerUpload(t *testing.T) {
 	imageName := "foo/bar"
 	driver := inmemory.New()
 	registry := NewRegistryWithDriver(driver)
-	ls := registry.Repository(ctx, imageName).Layers()
+	repository, err := registry.Repository(ctx, imageName)
+	if err != nil {
+		t.Fatalf("unexpected error getting repo: %v", err)
+	}
+	ls := repository.Layers()
 
 	h := sha256.New()
 	rd := io.TeeReader(randomDataReader, h)
@@ -140,7 +144,11 @@ func TestSimpleLayerRead(t *testing.T) {
 	imageName := "foo/bar"
 	driver := inmemory.New()
 	registry := NewRegistryWithDriver(driver)
-	ls := registry.Repository(ctx, imageName).Layers()
+	repository, err := registry.Repository(ctx, imageName)
+	if err != nil {
+		t.Fatalf("unexpected error getting repo: %v", err)
+	}
+	ls := repository.Layers()
 
 	randomLayerReader, tarSumStr, err := testutil.CreateRandomTarFile()
 	if err != nil {
@@ -245,7 +253,11 @@ func TestLayerUploadZeroLength(t *testing.T) {
 	imageName := "foo/bar"
 	driver := inmemory.New()
 	registry := NewRegistryWithDriver(driver)
-	ls := registry.Repository(ctx, imageName).Layers()
+	repository, err := registry.Repository(ctx, imageName)
+	if err != nil {
+		t.Fatalf("unexpected error getting repo: %v", err)
+	}
+	ls := repository.Layers()
 
 	upload, err := ls.Upload()
 	if err != nil {

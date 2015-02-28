@@ -7,6 +7,16 @@ import (
 	"github.com/docker/libtrust"
 )
 
+// TODO(stevvooe): When we rev the manifest format, the contents of this
+// package should me moved to manifest/v1.
+
+const (
+	// ManifestMediaType specifies the mediaType for the current version. Note
+	// that for schema version 1, the the media is optionally
+	// "application/json".
+	ManifestMediaType = "application/vnd.docker.distribution.manifest.v1+json"
+)
+
 // Versioned provides a struct with just the manifest schemaVersion. Incoming
 // content with unknown schema version can be decoded against this struct to
 // check the version.

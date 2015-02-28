@@ -16,34 +16,48 @@ version/version.go:
 	./version/version.sh > $@
 
 ${PREFIX}/bin/registry: version/version.go $(shell find . -type f -name '*.go')
-	go build -o $@ ${GO_LDFLAGS} ./cmd/registry
+	@echo "+ $@"
+	@go build -o $@ ${GO_LDFLAGS} ./cmd/registry
 
 ${PREFIX}/bin/registry-api-descriptor-template: version/version.go $(shell find . -type f -name '*.go')
-	go build -o $@ ${GO_LDFLAGS} ./cmd/registry-api-descriptor-template
+	@echo "+ $@"
+	@go build -o $@ ${GO_LDFLAGS} ./cmd/registry-api-descriptor-template
+
+${PREFIX}/bin/dist: version/version.go $(shell find . -type f -name '*.go')
+	@echo "+ $@"
+	@go build -o $@ ${GO_LDFLAGS} ./cmd/dist
 
 doc/spec/api.md: doc/spec/api.md.tmpl ${PREFIX}/bin/registry-api-descriptor-template
 	./bin/registry-api-descriptor-template $< > $@
 
 vet:
-	go vet ./...
+	@echo "+ $@"
+	@go vet ./...
 
 fmt:
-	test -z "$$(gofmt -s -l . | grep -v Godeps/_workspace/src/ | tee /dev/stderr)" || \
+	@echo "+ $@"
+	@test -z "$$(gofmt -s -l . | grep -v Godeps/_workspace/src/ | tee /dev/stderr)" || \
 		echo "+ please format Go code with 'gofmt -s'"
 
 lint:
-	test -z "$$(golint ./... | grep -v Godeps/_workspace/src/ | tee /dev/stderr)"
+	@echo "+ $@"
+	@test -z "$$(golint ./... | grep -v Godeps/_workspace/src/ | tee /dev/stderr)"
 
 build:
-	go build ${GO_LDFLAGS} ./...
+	@echo "+ $@"
+	@go build -v ${GO_LDFLAGS} ./...
 
 test:
-	go test -test.short ./...
+	@echo "+ $@"
+	@go test -test.short ./...
 
 test-full:
-	go test ./...
+	@echo "+ $@"
+	@go test ./...
 
-binaries: ${PREFIX}/bin/registry ${PREFIX}/bin/registry-api-descriptor-template
+binaries: ${PREFIX}/bin/registry ${PREFIX}/bin/registry-api-descriptor-template ${PREFIX}/bin/dist
+	@echo "+ $@"
 
 clean:
-	rm -rf "${PREFIX}/bin/registry"
+	@echo "+ $@"
+	@rm -rf "${PREFIX}/bin/registry" "${PREFIX}/bin/registry-api-descriptor-template"
