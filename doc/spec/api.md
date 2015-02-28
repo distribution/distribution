@@ -362,8 +362,7 @@ any.
 
 The progress and chunk coordination of the upload process will be coordinated
 through the `Range` header. While this is a non-standard use of the `Range`
-header, there are examples of [similar approaches](https://developers.google.c
-om/youtube/v3/guides/using_resumable_upload_protocol) in APIs with heavy use.
+header, there are examples of [similar approaches](https://developers.google.com/youtube/v3/guides/using_resumable_upload_protocol) in APIs with heavy use.
 For an upload that just started, for an example with a 1000 byte layer file,
 the `Range` header would be as follows:
 
