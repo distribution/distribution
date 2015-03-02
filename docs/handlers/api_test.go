@@ -11,6 +11,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"path"
 	"reflect"
 	"strings"
 	"testing"
@@ -132,8 +133,20 @@ func TestLayerAPI(t *testing.T) {
 	checkResponse(t, "checking head on non-existent layer", resp, http.StatusNotFound)
 
 	// ------------------------------------------
-	// Start an upload and cancel
-	uploadURLBase := startPushLayer(t, env.builder, imageName)
+	// Start an upload, check the status then cancel
+	uploadURLBase, uploadUUID := startPushLayer(t, env.builder, imageName)
+
+	// A status check should work
+	resp, err = http.Get(uploadURLBase)
+	if err != nil {
+		t.Fatalf("unexpected error getting upload status: %v", err)
+	}
+	checkResponse(t, "status of deleted upload", resp, http.StatusNoContent)
+	checkHeaders(t, resp, http.Header{
+		"Location":           []string{"*"},
+		"Range":              []string{"0-0"},
+		"Docker-Upload-UUID": []string{uploadUUID},
+	})
 
 	req, err := http.NewRequest("DELETE", uploadURLBase, nil)
 	if err != nil {
@@ -156,7 +169,7 @@ func TestLayerAPI(t *testing.T) {
 
 	// -----------------------------------------
 	// Do layer push with an empty body and different digest
-	uploadURLBase = startPushLayer(t, env.builder, imageName)
+	uploadURLBase, uploadUUID = startPushLayer(t, env.builder, imageName)
 	resp, err = doPushLayer(t, env.builder, imageName, layerDigest, uploadURLBase, bytes.NewReader([]byte{}))
 	if err != nil {
 		t.Fatalf("unexpected error doing bad layer push: %v", err)
@@ -172,7 +185,7 @@ func TestLayerAPI(t *testing.T) {
 		t.Fatalf("unexpected error digesting empty buffer: %v", err)
 	}
 
-	uploadURLBase = startPushLayer(t, env.builder, imageName)
+	uploadURLBase, uploadUUID = startPushLayer(t, env.builder, imageName)
 	pushLayer(t, env.builder, imageName, zeroDigest, uploadURLBase, bytes.NewReader([]byte{}))
 
 	// -----------------------------------------
@@ -185,7 +198,7 @@ func TestLayerAPI(t *testing.T) {
 		t.Fatalf("unexpected error digesting empty tar: %v", err)
 	}
 
-	uploadURLBase = startPushLayer(t, env.builder, imageName)
+	uploadURLBase, uploadUUID = startPushLayer(t, env.builder, imageName)
 	pushLayer(t, env.builder, imageName, emptyDigest, uploadURLBase, bytes.NewReader(emptyTar))
 
 	// ------------------------------------------
@@ -193,7 +206,7 @@ func TestLayerAPI(t *testing.T) {
 	layerLength, _ := layerFile.Seek(0, os.SEEK_END)
 	layerFile.Seek(0, os.SEEK_SET)
 
-	uploadURLBase = startPushLayer(t, env.builder, imageName)
+	uploadURLBase, uploadUUID = startPushLayer(t, env.builder, imageName)
 	pushLayer(t, env.builder, imageName, layerDigest, uploadURLBase, layerFile)
 
 	// ------------------------
@@ -319,7 +332,7 @@ func TestManifestAPI(t *testing.T) {
 		expectedLayers[dgst] = rs
 		unsignedManifest.FSLayers[i].BlobSum = dgst
 
-		uploadURLBase := startPushLayer(t, env.builder, imageName)
+		uploadURLBase, _ := startPushLayer(t, env.builder, imageName)
 		pushLayer(t, env.builder, imageName, dgst, uploadURLBase, rs)
 	}
 
@@ -451,7 +464,7 @@ func putManifest(t *testing.T, msg, url string, v interface{}) *http.Response {
 	return resp
 }
 
-func startPushLayer(t *testing.T, ub *v2.URLBuilder, name string) string {
+func startPushLayer(t *testing.T, ub *v2.URLBuilder, name string) (location string, uuid string) {
 	layerUploadURL, err := ub.BuildBlobUploadURL(name)
 	if err != nil {
 		t.Fatalf("unexpected error building layer upload url: %v", err)
@@ -464,12 +477,20 @@ func startPushLayer(t *testing.T, ub *v2.URLBuilder, name string) string {
 	defer resp.Body.Close()
 
 	checkResponse(t, fmt.Sprintf("pushing starting layer push %v", name), resp, http.StatusAccepted)
+
+	u, err := url.Parse(resp.Header.Get("Location"))
+	if err != nil {
+		t.Fatalf("error parsing location header: %v", err)
+	}
+
+	uuid = path.Base(u.Path)
 	checkHeaders(t, resp, http.Header{
-		"Location":       []string{"*"},
-		"Content-Length": []string{"0"},
+		"Location":           []string{"*"},
+		"Content-Length":     []string{"0"},
+		"Docker-Upload-UUID": []string{uuid},
 	})
 
-	return resp.Header.Get("Location")
+	return resp.Header.Get("Location"), uuid
 }
 
 // doPushLayer pushes the layer content returning the url on success returning
