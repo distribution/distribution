@@ -1,12 +1,17 @@
 package storage
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
 	"os"
 
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
+)
+
+const (
+	fileWriterBufferSize = 5 << 20
 )
 
 // fileWriter implements a remote file writer backed by a storage driver.
@@ -22,6 +27,11 @@ type fileWriter struct {
 	err    error // terminal error, if set, reader is closed
 }
 
+type bufferedFileWriter struct {
+	fileWriter
+	bw *bufio.Writer
+}
+
 // fileWriterInterface makes the desired io compliant interface that the
 // filewriter should implement.
 type fileWriterInterface interface {
@@ -35,7 +45,7 @@ var _ fileWriterInterface = &fileWriter{}
 
 // newFileWriter returns a prepared fileWriter for the driver and path. This
 // could be considered similar to an "open" call on a regular filesystem.
-func newFileWriter(driver storagedriver.StorageDriver, path string) (*fileWriter, error) {
+func newFileWriter(driver storagedriver.StorageDriver, path string) (*bufferedFileWriter, error) {
 	fw := fileWriter{
 		driver: driver,
 		path:   path,
@@ -56,7 +66,42 @@ func newFileWriter(driver storagedriver.StorageDriver, path string) (*fileWriter
 		fw.size = fi.Size()
 	}
 
-	return &fw, nil
+	buffered := bufferedFileWriter{
+		fileWriter: fw,
+	}
+	buffered.bw = bufio.NewWriterSize(&buffered.fileWriter, fileWriterBufferSize)
+
+	return &buffered, nil
+}
+
+// wraps the fileWriter.Write method to buffer small writes
+func (bfw *bufferedFileWriter) Write(p []byte) (int, error) {
+	return bfw.bw.Write(p)
+}
+
+// wraps fileWriter.Close to ensure the buffer is flushed
+// before we close the writer.
+func (bfw *bufferedFileWriter) Close() (err error) {
+	if err = bfw.Flush(); err != nil {
+		return err
+	}
+	err = bfw.fileWriter.Close()
+	return err
+}
+
+// wraps fileWriter.Seek to ensure offset is handled
+// correctly in respect to pending data in the buffer
+func (bfw *bufferedFileWriter) Seek(offset int64, whence int) (int64, error) {
+	if err := bfw.Flush(); err != nil {
+		return 0, err
+	}
+	return bfw.fileWriter.Seek(offset, whence)
+}
+
+// wraps bufio.Writer.Flush to allow intermediate flushes
+// of the bufferedFileWriter
+func (bfw *bufferedFileWriter) Flush() error {
+	return bfw.bw.Flush()
 }
 
 // Write writes the buffer p at the current write offset.
@@ -108,6 +153,9 @@ func (fw *fileWriter) Seek(offset int64, whence int) (int64, error) {
 }
 
 // Close closes the fileWriter for writing.
+// Calling it once is valid and correct and it will
+// return a nil error. Calling it subsequent times will
+// detect that fw.err has been set and will return the error.
 func (fw *fileWriter) Close() error {
 	if fw.err != nil {
 		return fw.err
@@ -115,7 +163,7 @@ func (fw *fileWriter) Close() error {
 
 	fw.err = fmt.Errorf("filewriter@%v: closed", fw.path)
 
-	return fw.err
+	return nil
 }
 
 // readFromAt writes to fw from r at the specified offset. If offset is less

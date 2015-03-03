@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/docker/distribution/digest"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 )
 
@@ -42,6 +43,7 @@ func TestSimpleWrite(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error writing content: %v", err)
 	}
+	fw.Flush()
 
 	if n != len(content) {
 		t.Fatalf("unexpected write length: %d != %d", n, len(content))
@@ -144,5 +146,101 @@ func TestSimpleWrite(t *testing.T) {
 
 	if !verifier.Verified() {
 		t.Fatalf("unable to verify write data")
+	}
+}
+
+func TestBufferedFileWriter(t *testing.T) {
+	writer, err := newFileWriter(inmemory.New(), "/random")
+
+	if err != nil {
+		t.Fatalf("Failed to initialize bufferedFileWriter: %v", err.Error())
+	}
+
+	// write one byte and ensure the offset hasn't been incremented.
+	// offset will only get incremented when the buffer gets flushed
+	short := []byte{byte(1)}
+
+	writer.Write(short)
+
+	if writer.offset > 0 {
+		t.Fatalf("WriteStream called prematurely")
+	}
+
+	// write enough data to cause the buffer to flush and confirm
+	// the offset has been incremented
+	long := make([]byte, fileWriterBufferSize)
+	_, err = rand.Read(long)
+	if err != nil {
+		t.Fatalf("unexpected error building random data: %v", err)
+	}
+	for i := range long {
+		long[i] = byte(i)
+	}
+	writer.Write(long)
+	writer.Close()
+	if writer.offset != (fileWriterBufferSize + 1) {
+		t.Fatalf("WriteStream not called when buffer capacity reached")
+	}
+}
+
+func BenchmarkFileWriter(b *testing.B) {
+	b.StopTimer() // not sure how long setup above will take
+	for i := 0; i < b.N; i++ {
+		// Start basic fileWriter initialization
+		fw := fileWriter{
+			driver: inmemory.New(),
+			path:   "/random",
+		}
+
+		if fi, err := fw.driver.Stat(fw.path); err != nil {
+			switch err := err.(type) {
+			case storagedriver.PathNotFoundError:
+				// ignore, offset is zero
+			default:
+				b.Fatalf("Failed to initialize fileWriter: %v", err.Error())
+			}
+		} else {
+			if fi.IsDir() {
+				b.Fatalf("Cannot write to a directory")
+			}
+
+			fw.size = fi.Size()
+		}
+
+		randomBytes := make([]byte, 1<<20)
+		_, err := rand.Read(randomBytes)
+		if err != nil {
+			b.Fatalf("unexpected error building random data: %v", err)
+		}
+		// End basic file writer initialization
+
+		b.StartTimer()
+		for j := 0; j < 100; j++ {
+			fw.Write(randomBytes)
+		}
+		b.StopTimer()
+	}
+}
+
+func BenchmarkBufferedFileWriter(b *testing.B) {
+	b.StopTimer() // not sure how long setup above will take
+	for i := 0; i < b.N; i++ {
+		bfw, err := newFileWriter(inmemory.New(), "/random")
+
+		if err != nil {
+			b.Fatalf("Failed to initialize bufferedFileWriter: %v", err.Error())
+		}
+
+		randomBytes := make([]byte, 1<<20)
+		_, err = rand.Read(randomBytes)
+		if err != nil {
+			b.Fatalf("unexpected error building random data: %v", err)
+		}
+
+		b.StartTimer()
+		for j := 0; j < 100; j++ {
+			bfw.Write(randomBytes)
+		}
+		b.StopTimer()
 	}
 }
