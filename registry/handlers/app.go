@@ -16,6 +16,7 @@ import (
 	"github.com/docker/distribution/registry/storage"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/factory"
+	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 )
@@ -41,8 +42,6 @@ type App struct {
 		sink   notifications.Sink
 		source notifications.SourceRecord
 	}
-
-	layerHandler storage.LayerHandler // allows dispatch of layer serving to external provider
 }
 
 // Value intercepts calls context.Context.Value, returning the current app id,
@@ -101,14 +100,22 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 		app.accessController = accessController
 	}
 
-	layerHandlerType := configuration.LayerHandler.Type()
+	for _, mw := range configuration.Middleware {
+		if mw.Inject == "registry" {
+			// registry middleware can director wrap app.registry identically to storage middlewares with driver
+			panic(fmt.Sprintf("unable to configure registry middleware (%s): %v", mw.Name, err))
+		} else if mw.Inject == "repository" {
+			// we have to do something more intelligent with repository middleware, It needs to be staged
+			// for later to be wrapped around the repository at request time.
+			panic(fmt.Sprintf("unable to configure repository middleware (%s): %v", mw.Name, err))
+		} else if mw.Inject == "storage" {
+			smw, err := storagemiddleware.GetStorageMiddleware(mw.Name, mw.Options, app.driver)
 
-	if layerHandlerType != "" {
-		lh, err := storage.GetLayerHandler(layerHandlerType, configuration.LayerHandler.Parameters(), app.driver)
-		if err != nil {
-			panic(fmt.Sprintf("unable to configure layer handler (%s): %v", layerHandlerType, err))
+			if err != nil {
+				panic(fmt.Sprintf("unable to configure storage middleware (%s): %v", mw.Name, err))
+			}
+			app.driver = smw
 		}
-		app.layerHandler = lh
 	}
 
 	return app
