@@ -139,10 +139,10 @@ func (ls *layerStore) newLayerUpload(uuid, path string, startedAt time.Time) (di
 	}
 
 	return &layerUploadController{
-		layerStore: ls,
-		uuid:       uuid,
-		startedAt:  startedAt,
-		fileWriter: *fw,
+		layerStore:         ls,
+		uuid:               uuid,
+		startedAt:          startedAt,
+		bufferedFileWriter: *fw,
 	}, nil
 }
 
