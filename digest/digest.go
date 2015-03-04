@@ -47,7 +47,7 @@ func NewDigestFromHex(alg, hex string) Digest {
 }
 
 // DigestRegexp matches valid digest types.
-var DigestRegexp = regexp.MustCompile(`[a-zA-Z0-9-_+.]+:[a-zA-Z0-9-_+.=]+`)
+var DigestRegexp = regexp.MustCompile(`[a-zA-Z0-9-_+.]+:[a-fA-F0-9-_+.=]+$`)
 
 var (
 	// ErrDigestInvalidFormat returned when digest format invalid.
@@ -111,6 +111,10 @@ func (d Digest) Validate() error {
 	}
 
 	// Continue on for general parser
+
+	if !DigestRegexp.MatchString(s) {
+		return ErrDigestInvalidFormat
+	}
 
 	i := strings.Index(s, ":")
 	if i < 0 {
