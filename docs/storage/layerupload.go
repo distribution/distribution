@@ -22,7 +22,9 @@ type layerUploadController struct {
 	uuid      string
 	startedAt time.Time
 
-	fileWriter
+	// implementes io.WriteSeeker, io.ReaderFrom and io.Closer to satisy
+	// LayerUpload Interface
+	bufferedFileWriter
 }
 
 var _ distribution.LayerUpload = &layerUploadController{}
@@ -42,6 +44,12 @@ func (luc *layerUploadController) StartedAt() time.Time {
 // format <algorithm>:<hex digest>.
 func (luc *layerUploadController) Finish(digest digest.Digest) (distribution.Layer, error) {
 	ctxu.GetLogger(luc.layerStore.repository.ctx).Debug("(*layerUploadController).Finish")
+
+	err := luc.bufferedFileWriter.Close()
+	if err != nil {
+		return nil, err
+	}
+
 	canonical, err := luc.validateLayer(digest)
 	if err != nil {
 		return nil, err
@@ -103,7 +111,7 @@ func (luc *layerUploadController) validateLayer(dgst digest.Digest) (digest.Dige
 	// then only have to fetch the difference.
 
 	// Read the file from the backend driver and validate it.
-	fr, err := newFileReader(luc.fileWriter.driver, luc.path)
+	fr, err := newFileReader(luc.bufferedFileWriter.driver, luc.path)
 	if err != nil {
 		return "", err
 	}
