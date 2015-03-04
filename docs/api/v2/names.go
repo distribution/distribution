@@ -82,6 +82,16 @@ var (
 // registry. This function accepts a superset of what might be accepted by
 // docker core or docker hub. If the name does not pass validation, an error,
 // describing the conditions, is returned.
+//
+// Effectively, the name should comply with the following grammar:
+//
+// 	alpha-numeric := /[a-z0-9]+/
+//	separator := /[._-]/
+//	component := alpha-numeric [separator alpha-numeric]*
+//	namespace := component ['/' component]*
+//
+// The result of the production, known as the "namespace", should be limited
+// to 255 characters.
 func ValidateRespositoryName(name string) error {
 	if len(name) > RepositoryNameTotalLengthMax {
 		return ErrRepositoryNameLong
