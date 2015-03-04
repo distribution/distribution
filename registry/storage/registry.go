@@ -87,3 +87,9 @@ func (repo *repository) Layers() distribution.LayerService {
 		repository: repo,
 	}
 }
+
+func (repo *repository) Signatures() distribution.SignatureService {
+	return &signatureStore{
+		repository: repo,
+	}
+}

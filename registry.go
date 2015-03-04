@@ -27,6 +27,9 @@ type Repository interface {
 
 	// Layers returns a reference to this repository's layers service.
 	Layers() LayerService
+
+	// Signatures returns a reference to this repository's signatures service.
+	Signatures() SignatureService
 }
 
 // ManifestService provides operations on image manifests.
@@ -121,4 +124,13 @@ type LayerUpload interface {
 
 	// Cancel the layer upload process.
 	Cancel() error
+}
+
+// SignatureService provides operations on signatures.
+type SignatureService interface {
+	// Get retrieves all of the signature blobs for the specified digest.
+	Get(dgst digest.Digest) ([][]byte, error)
+
+	// Put stores the signature for the provided digest.
+	Put(dgst digest.Digest, signatures ...[]byte) error
 }
