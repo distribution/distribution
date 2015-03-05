@@ -112,6 +112,10 @@ func (d Digest) Validate() error {
 
 	// Continue on for general parser
 
+	if !DigestRegexp.MatchString(s) {
+		return ErrDigestInvalidFormat
+	}
+
 	i := strings.Index(s, ":")
 	if i < 0 {
 		return ErrDigestInvalidFormat
@@ -128,8 +132,6 @@ func (d Digest) Validate() error {
 	default:
 		return ErrDigestUnsupported
 	}
-
-	// TODO(stevvooe): Use DigestRegexp to validate digest here.
 
 	return nil
 }
