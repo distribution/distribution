@@ -65,36 +65,37 @@ func (b *bridge) ManifestDeleted(repo distribution.Repository, sm *manifest.Sign
 }
 
 func (b *bridge) LayerPushed(repo distribution.Repository, layer distribution.Layer) error {
-	return b.createLayerEventAndWrite(EventActionPush, repo, layer.Digest())
+	return b.createLayerEventAndWrite(EventActionPush, repo, layer)
 }
 
 func (b *bridge) LayerPulled(repo distribution.Repository, layer distribution.Layer) error {
-	return b.createLayerEventAndWrite(EventActionPull, repo, layer.Digest())
+	return b.createLayerEventAndWrite(EventActionPull, repo, layer)
 }
 
 func (b *bridge) LayerDeleted(repo distribution.Repository, layer distribution.Layer) error {
-	return b.createLayerEventAndWrite(EventActionDelete, repo, layer.Digest())
+	return b.createLayerEventAndWrite(EventActionDelete, repo, layer)
 }
 
 func (b *bridge) createManifestEventAndWrite(action string, repo distribution.Repository, sm *manifest.SignedManifest) error {
-	event, err := b.createManifestEvent(action, repo, sm)
+	manifestEvent, err := b.createManifestEvent(action, repo, sm)
 	if err != nil {
 		return err
 	}
 
-	return b.sink.Write(*event)
+	return b.sink.Write(*manifestEvent)
 }
 
 func (b *bridge) createManifestEvent(action string, repo distribution.Repository, sm *manifest.SignedManifest) (*Event, error) {
 	event := b.createEvent(action)
-	event.Target.Type = EventTargetTypeManifest
-	event.Target.Name = repo.Name()
-	event.Target.Tag = sm.Tag
+	event.Target.MediaType = manifest.ManifestMediaType
+	event.Target.Repository = repo.Name()
 
 	p, err := sm.Payload()
 	if err != nil {
 		return nil, err
 	}
+
+	event.Target.Length = int64(len(p))
 
 	event.Target.Digest, err = digest.FromBytes(p)
 	if err != nil {
@@ -111,8 +112,8 @@ func (b *bridge) createManifestEvent(action string, repo distribution.Repository
 	return event, nil
 }
 
-func (b *bridge) createLayerEventAndWrite(action string, repo distribution.Repository, dgst digest.Digest) error {
-	event, err := b.createLayerEvent(action, repo, dgst)
+func (b *bridge) createLayerEventAndWrite(action string, repo distribution.Repository, layer distribution.Layer) error {
+	event, err := b.createLayerEvent(action, repo, layer)
 	if err != nil {
 		return err
 	}
@@ -120,10 +121,14 @@ func (b *bridge) createLayerEventAndWrite(action string, repo distribution.Repos
 	return b.sink.Write(*event)
 }
 
-func (b *bridge) createLayerEvent(action string, repo distribution.Repository, dgst digest.Digest) (*Event, error) {
+func (b *bridge) createLayerEvent(action string, repo distribution.Repository, layer distribution.Layer) (*Event, error) {
 	event := b.createEvent(action)
-	event.Target.Type = EventTargetTypeBlob
-	event.Target.Name = repo.Name()
+	event.Target.MediaType = layerMediaType
+	event.Target.Repository = repo.Name()
+
+	event.Target.Length = layer.Length()
+
+	dgst := layer.Digest()
 	event.Target.Digest = dgst
 
 	var err error

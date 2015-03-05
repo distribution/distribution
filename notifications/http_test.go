@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"strconv"
 	"testing"
+
+	"github.com/docker/distribution/manifest"
 )
 
 // TestHTTPSink mocks out an http endpoint and notifies it under a couple of
@@ -73,14 +75,14 @@ func TestHTTPSink(t *testing.T) {
 		{
 			statusCode: http.StatusOK,
 			events: []Event{
-				createTestEvent("push", "library/test", "manifest")},
+				createTestEvent("push", "library/test", manifest.ManifestMediaType)},
 		},
 		{
 			statusCode: http.StatusOK,
 			events: []Event{
-				createTestEvent("push", "library/test", "manifest"),
-				createTestEvent("push", "library/test", "layer"),
-				createTestEvent("push", "library/test", "layer"),
+				createTestEvent("push", "library/test", manifest.ManifestMediaType),
+				createTestEvent("push", "library/test", layerMediaType),
+				createTestEvent("push", "library/test", layerMediaType),
 			},
 		},
 		{
@@ -148,8 +150,8 @@ func TestHTTPSink(t *testing.T) {
 func createTestEvent(action, repo, typ string) Event {
 	event := createEvent(action)
 
-	event.Target.Type = typ
-	event.Target.Name = repo
+	event.Target.MediaType = typ
+	event.Target.Repository = repo
 
 	return *event
 }

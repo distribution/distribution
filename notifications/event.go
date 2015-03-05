@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution"
 )
 
 // EventAction constants used in action field of Event.
@@ -14,16 +14,15 @@ const (
 	EventActionDelete = "delete"
 )
 
-// EventTargetType constants used in Target section of Event.
 const (
-	EventTargetTypeManifest = "manifest"
-	EventTargetTypeBlob     = "blob"
+	// EventsMediaType is the mediatype for the json event envelope. If the
+	// Event, ActorRecord, SourceRecord or Envelope structs change, the version
+	// number should be incremented.
+	EventsMediaType = "application/vnd.docker.distribution.events.v1+json"
+	// LayerMediaType is the media type for image rootfs diffs (aka "layers")
+	// used by Docker. We don't expect this to change for quite a while.
+	layerMediaType = "application/vnd.docker.container.image.rootfs.diff+x-gtar"
 )
-
-// EventsMediaType is the mediatype for the json event envelope. If the Event,
-// ActorRecord, SourceRecord or Envelope structs change, the version number
-// should be incremented.
-const EventsMediaType = "application/vnd.docker.distribution.events.v1+json"
 
 // Envelope defines the fields of a json event envelope message that can hold
 // one or more events.
@@ -51,19 +50,14 @@ type Event struct {
 
 	// Target uniquely describes the target of the event.
 	Target struct {
-		// Type should be "manifest" or "blob"
-		Type string `json:"type,omitempty"`
+		// TODO(stevvooe): Use http.DetectContentType for layers, maybe.
 
-		// Name identifies the named repository.
-		Name string `json:"name,omitempty"`
+		distribution.Descriptor
 
-		// Digest should identify the object in the repository.
-		Digest digest.Digest `json:"digest,omitempty"`
+		// Repository identifies the named repository.
+		Repository string `json:"repository,omitempty"`
 
-		// Tag is present if the operation involved a tagged manifest.
-		Tag string `json:"tag,omitempty"`
-
-		// URL provides a link to the content on the relevant repository instance.
+		// URL provides a direct link to the content.
 		URL string `json:"url,omitempty"`
 	} `json:"target,omitempty"`
 

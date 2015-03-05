@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/docker/distribution/manifest"
 )
 
 // TestEventJSONFormat provides silly test to detect if the event format or
@@ -19,10 +21,10 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
          "timestamp": "2006-01-02T15:04:05Z",
          "action": "push",
          "target": {
-            "type": "manifest",
-            "name": "library/test",
+            "mediaType": "application/vnd.docker.distribution.manifest.v1+json",
+            "length": 1,
             "digest": "sha256:0123456789abcdef0",
-            "tag": "latest",
+            "repository": "library/test",
             "url": "http://example.com/v2/library/test/manifests/latest"
          },
          "request": {
@@ -44,9 +46,10 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
          "timestamp": "2006-01-02T15:04:05Z",
          "action": "push",
          "target": {
-            "type": "blob",
-            "name": "library/test",
+            "mediaType": "application/vnd.docker.container.image.rootfs.diff+x-gtar",
+            "length": 2,
             "digest": "tarsum.v2+sha256:0123456789abcdef1",
+            "repository": "library/test",
             "url": "http://example.com/v2/library/test/manifests/latest"
          },
          "request": {
@@ -68,9 +71,10 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
          "timestamp": "2006-01-02T15:04:05Z",
          "action": "push",
          "target": {
-            "type": "blob",
-            "name": "library/test",
+            "mediaType": "application/vnd.docker.container.image.rootfs.diff+x-gtar",
+            "length": 3,
             "digest": "tarsum.v2+sha256:0123456789abcdef2",
+            "repository": "library/test",
             "url": "http://example.com/v2/library/test/manifests/latest"
          },
          "request": {
@@ -97,7 +101,7 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
 	}
 
 	var prototype Event
-	prototype.Action = "push"
+	prototype.Action = EventActionPush
 	prototype.Timestamp = tm
 	prototype.Actor.Name = "test-actor"
 	prototype.Request.ID = "asdfasdf"
@@ -111,25 +115,27 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
 	manifestPush = prototype
 	manifestPush.ID = "asdf-asdf-asdf-asdf-0"
 	manifestPush.Target.Digest = "sha256:0123456789abcdef0"
-	manifestPush.Target.Type = EventTargetTypeManifest
-	manifestPush.Target.Name = "library/test"
-	manifestPush.Target.Tag = "latest"
+	manifestPush.Target.Length = int64(1)
+	manifestPush.Target.MediaType = manifest.ManifestMediaType
+	manifestPush.Target.Repository = "library/test"
 	manifestPush.Target.URL = "http://example.com/v2/library/test/manifests/latest"
 
 	var layerPush0 Event
 	layerPush0 = prototype
 	layerPush0.ID = "asdf-asdf-asdf-asdf-1"
 	layerPush0.Target.Digest = "tarsum.v2+sha256:0123456789abcdef1"
-	layerPush0.Target.Type = EventTargetTypeBlob
-	layerPush0.Target.Name = "library/test"
+	layerPush0.Target.Length = 2
+	layerPush0.Target.MediaType = layerMediaType
+	layerPush0.Target.Repository = "library/test"
 	layerPush0.Target.URL = "http://example.com/v2/library/test/manifests/latest"
 
 	var layerPush1 Event
 	layerPush1 = prototype
 	layerPush1.ID = "asdf-asdf-asdf-asdf-2"
 	layerPush1.Target.Digest = "tarsum.v2+sha256:0123456789abcdef2"
-	layerPush1.Target.Type = EventTargetTypeBlob
-	layerPush1.Target.Name = "library/test"
+	layerPush1.Target.Length = 3
+	layerPush1.Target.MediaType = layerMediaType
+	layerPush1.Target.Repository = "library/test"
 	layerPush1.Target.URL = "http://example.com/v2/library/test/manifests/latest"
 
 	var envelope Envelope
