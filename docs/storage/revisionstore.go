@@ -2,7 +2,6 @@ package storage
 
 import (
 	"encoding/json"
-	"path"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/distribution"
@@ -53,7 +52,7 @@ func (rs *revisionStore) get(revision digest.Digest) (*manifest.SignedManifest, 
 	}
 
 	// Fetch the signatures for the manifest
-	signatures, err := rs.getSignatures(revision)
+	signatures, err := rs.Signatures().Get(revision)
 	if err != nil {
 		return nil, err
 	}
@@ -104,10 +103,8 @@ func (rs *revisionStore) put(sm *manifest.SignedManifest) (digest.Digest, error)
 		return "", err
 	}
 
-	for _, signature := range signatures {
-		if err := rs.putSignature(revision, signature); err != nil {
-			return "", err
-		}
+	if err := rs.Signatures().Put(revision, signatures...); err != nil {
+		return "", err
 	}
 
 	return revision, nil
@@ -146,63 +143,4 @@ func (rs *revisionStore) delete(revision digest.Digest) error {
 	}
 
 	return rs.driver.Delete(revisionPath)
-}
-
-// getSignatures retrieves all of the signature blobs for the specified
-// manifest revision.
-func (rs *revisionStore) getSignatures(revision digest.Digest) ([][]byte, error) {
-	signaturesPath, err := rs.pm.path(manifestSignaturesPathSpec{
-		name:     rs.Name(),
-		revision: revision,
-	})
-
-	if err != nil {
-		return nil, err
-	}
-
-	// Need to append signature digest algorithm to path to get all items.
-	// Perhaps, this should be in the pathMapper but it feels awkward. This
-	// can be eliminated by implementing listAll on drivers.
-	signaturesPath = path.Join(signaturesPath, "sha256")
-
-	signaturePaths, err := rs.driver.List(signaturesPath)
-	if err != nil {
-		return nil, err
-	}
-
-	var signatures [][]byte
-	for _, sigPath := range signaturePaths {
-		// Append the link portion
-		sigPath = path.Join(sigPath, "link")
-
-		// TODO(stevvooe): These fetches should be parallelized for performance.
-		p, err := rs.blobStore.linked(sigPath)
-		if err != nil {
-			return nil, err
-		}
-
-		signatures = append(signatures, p)
-	}
-
-	return signatures, nil
-}
-
-// putSignature stores the signature for the provided manifest revision.
-func (rs *revisionStore) putSignature(revision digest.Digest, signature []byte) error {
-	signatureDigest, err := rs.blobStore.put(signature)
-	if err != nil {
-		return err
-	}
-
-	signaturePath, err := rs.pm.path(manifestSignatureLinkPathSpec{
-		name:      rs.Name(),
-		revision:  revision,
-		signature: signatureDigest,
-	})
-
-	if err != nil {
-		return err
-	}
-
-	return rs.blobStore.link(signaturePath, signatureDigest)
 }
