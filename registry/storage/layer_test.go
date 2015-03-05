@@ -266,12 +266,12 @@ func TestLayerUploadZeroLength(t *testing.T) {
 
 	io.Copy(upload, bytes.NewReader([]byte{}))
 
-	dgst, err := digest.FromTarArchive(bytes.NewReader([]byte{}))
+	dgst, err := digest.FromReader(bytes.NewReader([]byte{}))
 	if err != nil {
 		t.Fatalf("error getting zero digest: %v", err)
 	}
 
-	if dgst != digest.DigestTarSumV1EmptyTar {
+	if dgst != digest.DigestSha256EmptyTar {
 		// sanity check on zero digest
 		t.Fatalf("digest not as expected: %v != %v", dgst, digest.DigestTarSumV1EmptyTar)
 	}
