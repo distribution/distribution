@@ -11,7 +11,6 @@ import (
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
-	"github.com/docker/docker/pkg/tarsum"
 )
 
 // layerUploadController is used to control the various aspects of resumable
@@ -61,7 +60,7 @@ func (luc *layerUploadController) Finish(digest digest.Digest) (distribution.Lay
 	}
 
 	// Link the layer blob into the repository.
-	if err := luc.linkLayer(canonical); err != nil {
+	if err := luc.linkLayer(canonical, digest); err != nil {
 		return nil, err
 	}
 
@@ -86,23 +85,6 @@ func (luc *layerUploadController) Cancel() error {
 // validateLayer checks the layer data against the digest, returning an error
 // if it does not match. The canonical digest is returned.
 func (luc *layerUploadController) validateLayer(dgst digest.Digest) (digest.Digest, error) {
-	// First, check the incoming tarsum version of the digest.
-	version, err := tarsum.GetVersionFromTarsum(dgst.String())
-	if err != nil {
-		return "", err
-	}
-
-	// TODO(stevvooe): Should we push this down into the digest type?
-	switch version {
-	case tarsum.Version1:
-	default:
-		// version 0 and dev, for now.
-		return "", distribution.ErrLayerInvalidDigest{
-			Digest: dgst,
-			Reason: distribution.ErrLayerTarSumVersionUnsupported,
-		}
-	}
-
 	digestVerifier := digest.NewDigestVerifier(dgst)
 
 	// TODO(stevvooe): Store resumable hash calculations in upload directory
@@ -122,7 +104,7 @@ func (luc *layerUploadController) validateLayer(dgst digest.Digest) (digest.Dige
 	// sink. Instead, its read driven. This might be okay.
 
 	// Calculate an updated digest with the latest version.
-	canonical, err := digest.FromTarArchive(tr)
+	canonical, err := digest.FromReader(tr)
 	if err != nil {
 		return "", err
 	}
@@ -195,17 +177,33 @@ func (luc *layerUploadController) moveLayer(dgst digest.Digest) error {
 
 // linkLayer links a valid, written layer blob into the registry under the
 // named repository for the upload controller.
-func (luc *layerUploadController) linkLayer(digest digest.Digest) error {
-	layerLinkPath, err := luc.layerStore.repository.registry.pm.path(layerLinkPathSpec{
-		name:   luc.layerStore.repository.Name(),
-		digest: digest,
-	})
+func (luc *layerUploadController) linkLayer(canonical digest.Digest, aliases ...digest.Digest) error {
+	dgsts := append([]digest.Digest{canonical}, aliases...)
 
-	if err != nil {
-		return err
+	// Don't make duplicate links.
+	seenDigests := make(map[digest.Digest]struct{}, len(dgsts))
+
+	for _, dgst := range dgsts {
+		if _, seen := seenDigests[dgst]; seen {
+			continue
+		}
+		seenDigests[dgst] = struct{}{}
+
+		layerLinkPath, err := luc.layerStore.repository.registry.pm.path(layerLinkPathSpec{
+			name:   luc.layerStore.repository.Name(),
+			digest: dgst,
+		})
+
+		if err != nil {
+			return err
+		}
+
+		if err := luc.layerStore.repository.registry.driver.PutContent(layerLinkPath, []byte(canonical)); err != nil {
+			return err
+		}
 	}
 
-	return luc.layerStore.repository.registry.driver.PutContent(layerLinkPath, []byte(digest))
+	return nil
 }
 
 // removeResources should clean up all resources associated with the upload
