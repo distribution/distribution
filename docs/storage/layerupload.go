@@ -159,7 +159,7 @@ func (luc *layerUploadController) moveLayer(dgst digest.Digest) error {
 			// a zero-length blob into a nonzero-length blob location. To
 			// prevent this horrid thing, we employ the hack of only allowing
 			// to this happen for the zero tarsum.
-			if dgst == digest.DigestTarSumV1EmptyTar {
+			if dgst == digest.DigestSha256EmptyTar {
 				return luc.driver.PutContent(blobPath, []byte{})
 			}
 

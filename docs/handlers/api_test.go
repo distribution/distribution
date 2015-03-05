@@ -573,7 +573,9 @@ func doPushLayer(t *testing.T, ub *v2.URLBuilder, name string, dgst digest.Diges
 
 // pushLayer pushes the layer content returning the url on success.
 func pushLayer(t *testing.T, ub *v2.URLBuilder, name string, dgst digest.Digest, uploadURLBase string, body io.Reader) string {
-	resp, err := doPushLayer(t, ub, name, dgst, uploadURLBase, body)
+	digester := digest.NewCanonicalDigester()
+
+	resp, err := doPushLayer(t, ub, name, dgst, uploadURLBase, io.TeeReader(body, &digester))
 	if err != nil {
 		t.Fatalf("unexpected error doing push layer request: %v", err)
 	}
@@ -581,7 +583,13 @@ func pushLayer(t *testing.T, ub *v2.URLBuilder, name string, dgst digest.Digest,
 
 	checkResponse(t, "putting monolithic chunk", resp, http.StatusCreated)
 
-	expectedLayerURL, err := ub.BuildBlobURL(name, dgst)
+	if err != nil {
+		t.Fatalf("error generating sha256 digest of body")
+	}
+
+	sha256Dgst := digester.Digest()
+
+	expectedLayerURL, err := ub.BuildBlobURL(name, sha256Dgst)
 	if err != nil {
 		t.Fatalf("error building expected layer url: %v", err)
 	}
@@ -589,7 +597,7 @@ func pushLayer(t *testing.T, ub *v2.URLBuilder, name string, dgst digest.Digest,
 	checkHeaders(t, resp, http.Header{
 		"Location":              []string{expectedLayerURL},
 		"Content-Length":        []string{"0"},
-		"Docker-Content-Digest": []string{dgst.String()},
+		"Docker-Content-Digest": []string{sha256Dgst.String()},
 	})
 
 	return resp.Header.Get("Location")
@@ -682,7 +690,7 @@ func checkHeaders(t *testing.T, resp *http.Response, headers http.Header) {
 
 			for _, hv := range resp.Header[k] {
 				if hv != v {
-					t.Fatalf("header value not matched in response: %q != %q", hv, v)
+					t.Fatalf("%v header value not matched in response: %q != %q", k, hv, v)
 				}
 			}
 		}
