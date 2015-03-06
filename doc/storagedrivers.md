@@ -6,11 +6,12 @@ This document describes the registry storage driver model, implementation, and e
 Provided Drivers
 ================
 
-This storage driver package comes bundled with three default drivers.
+This storage driver package comes bundled with several drivers:
 
-1. filesystem: A local storage driver configured to use a directory tree in the local filesystem.
-2. s3: A driver storing objects in an Amazon Simple Storage Solution (S3) bucket.
-3. inmemory: A temporary storage driver using a local inmemory map. This exists solely for reference and testing.
+- [inmemory](storagedriver/inmemory.md): A temporary storage driver using a local inmemory map. This exists solely for reference and testing.
+- [filesystem](storagedriver/filesystem.md): A local storage driver configured to use a directory tree in the local filesystem.
+- [s3](storagedriver/s3.md): A driver storing objects in an Amazon Simple Storage Solution (S3) bucket.
+- [azure](storagedriver/azure.md): A driver storing objects in [Microsoft Azure Blob Storage](http://azure.microsoft.com/en-us/services/storage/).
 
 Storage Driver API
 ==================
