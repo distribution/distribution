@@ -232,12 +232,6 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 			return "", err
 		}
 
-		// For now, only map tarsum paths.
-		if components[0] != "tarsum" {
-			// Only tarsum is supported, for now
-			return "", fmt.Errorf("unsupported content digest: %v", v.digest)
-		}
-
 		layerLinkPathComponents := append(repoPrefix, v.name, "_layers")
 
 		return path.Join(path.Join(append(layerLinkPathComponents, components...)...), "link"), nil
