@@ -91,6 +91,16 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 
 	app.configureEvents(&configuration)
 	app.registry = storage.NewRegistryWithDriver(app.driver)
+
+	registryHandlerType := configuration.RegistryHandler.Type()
+	if registryHandlerType != "" {
+		rh, err := GetRegistryHandler(registryHandlerType, app.registry, configuration.RegistryHandler.Parameters())
+		if err != nil {
+			panic(fmt.Sprintf("unable to configure registry handler (%s): %v", registryHandlerType, err))
+		}
+		app.registry = rh
+	}
+
 	authType := configuration.Auth.Type()
 
 	if authType != "" {
@@ -249,6 +259,15 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 			context.Repository = notifications.Listen(
 				repository,
 				app.eventBridge(context, r))
+
+			repositoryHandlerType := app.Config.RepositoryHandler.Type()
+			if repositoryHandlerType != "" {
+				rh, err := GetRepositoryHandler(repositoryHandlerType, context.Repository, app.Config.RepositoryHandler.Parameters())
+				if err != nil {
+					panic(fmt.Sprintf("unable to configure repository handler (%s): %v", repositoryHandlerType, err))
+				}
+				context.Repository = rh
+			}
 		}
 
 		handler := dispatch(context, r)

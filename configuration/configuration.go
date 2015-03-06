@@ -26,6 +26,12 @@ type Configuration struct {
 	// used to gate requests.
 	Auth Auth `yaml:"auth,omitempty"`
 
+	// RegistryHandler allows for custom behavior against a Registry.
+	RegistryHandler RegistryHandler `yaml:"registryhandler,omitempty"`
+
+	// RepositoryHandler allows for custom behavior against a Repository.
+	RepositoryHandler RepositoryHandler `yaml:"repositoryhandler,omitempty"`
+
 	// LayerHandler specifies a middleware for serving image layers.
 	LayerHandler LayerHandler `yaml:"layerhandler,omitempty"`
 
@@ -349,6 +355,118 @@ func (layerHandler LayerHandler) MarshalYAML() (interface{}, error) {
 		return t, nil
 	}
 	return map[string]Parameters(layerHandler), nil
+}
+
+// RegistryHandler defines the configuration for wrapping a Registry
+type RegistryHandler map[string]Parameters
+
+// Type returns the registryHandler type
+func (registryHandler RegistryHandler) Type() string {
+	// Return only key in this map
+	for k := range registryHandler {
+		return k
+	}
+	return ""
+}
+
+// Parameters returns the Parameters map for a RegistryHandler configuration
+func (registryHandler RegistryHandler) Parameters() Parameters {
+	return registryHandler[registryHandler.Type()]
+}
+
+// UnmarshalYAML implements the yaml.Unmarshaler interface
+// Unmarshals a single item map into a RegistryHandler or a string into a RegistryHandler type with no parameters
+func (registryHandler *RegistryHandler) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var params map[string]Parameters
+	err := unmarshal(&params)
+	if err == nil {
+		if len(params) > 1 {
+			types := make([]string, 0, len(params))
+			for k := range params {
+				types = append(types, k)
+			}
+			return fmt.Errorf("Must provide exactly one registryHandler type. Provided: %v", types)
+		}
+		*registryHandler = params
+		return nil
+	}
+
+	var registryHandlerType string
+	err = unmarshal(&registryHandlerType)
+	if err == nil {
+		*registryHandler = RegistryHandler{registryHandlerType: Parameters{}}
+		return nil
+	}
+
+	return err
+}
+
+// MarshalYAML implements the yaml.Marshaler interface
+func (registryHandler RegistryHandler) MarshalYAML() (interface{}, error) {
+	if registryHandler.Parameters() == nil {
+		t := registryHandler.Type()
+		if t == "" {
+			return nil, nil
+		}
+		return t, nil
+	}
+	return map[string]Parameters(registryHandler), nil
+}
+
+// RepositoryHandler defines the configuration for wrapping a Repository
+type RepositoryHandler map[string]Parameters
+
+// Type returns the repositoryHandler type
+func (repositoryHandler RepositoryHandler) Type() string {
+	// Return only key in this map
+	for k := range repositoryHandler {
+		return k
+	}
+	return ""
+}
+
+// Parameters returns the Parameters map for a RepositoryHandler configuration
+func (repositoryHandler RepositoryHandler) Parameters() Parameters {
+	return repositoryHandler[repositoryHandler.Type()]
+}
+
+// UnmarshalYAML implements the yaml.Unmarshaler interface
+// Unmarshals a single item map into a RepositoryHandler or a string into a RepositoryHandler type with no parameters
+func (repositoryHandler *RepositoryHandler) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	var params map[string]Parameters
+	err := unmarshal(&params)
+	if err == nil {
+		if len(params) > 1 {
+			types := make([]string, 0, len(params))
+			for k := range params {
+				types = append(types, k)
+			}
+			return fmt.Errorf("Must provide exactly one repositoryHandler type. Provided: %v", types)
+		}
+		*repositoryHandler = params
+		return nil
+	}
+
+	var repositoryHandlerType string
+	err = unmarshal(&repositoryHandlerType)
+	if err == nil {
+		*repositoryHandler = RepositoryHandler{repositoryHandlerType: Parameters{}}
+		return nil
+	}
+
+	return err
+}
+
+// MarshalYAML implements the yaml.Marshaler interface
+func (repositoryHandler RepositoryHandler) MarshalYAML() (interface{}, error) {
+	if repositoryHandler.Parameters() == nil {
+		t := repositoryHandler.Type()
+		if t == "" {
+			return nil, nil
+		}
+		return t, nil
+	}
+	return map[string]Parameters(repositoryHandler), nil
 }
 
 // Parse parses an input configuration yaml document into a Configuration struct
