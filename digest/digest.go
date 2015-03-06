@@ -16,6 +16,8 @@ import (
 const (
 	// DigestTarSumV1EmptyTar is the digest for the empty tar file.
 	DigestTarSumV1EmptyTar = "tarsum.v1+sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	// DigestSha256EmptyTar is the canonical sha256 digest of empty data
+	DigestSha256EmptyTar = "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 )
 
 // Digest allows simple protection of hex formatted digest strings, prefixed
