@@ -67,8 +67,8 @@ type manifestServiceListener struct {
 	parent *repositoryListener
 }
 
-func (msl *manifestServiceListener) Get(tag string) (*manifest.SignedManifest, error) {
-	sm, err := msl.ManifestService.Get(tag)
+func (msl *manifestServiceListener) Get(dgst digest.Digest) (*manifest.SignedManifest, error) {
+	sm, err := msl.ManifestService.Get(dgst)
 	if err == nil {
 		if err := msl.parent.listener.ManifestPulled(msl.parent.Repository, sm); err != nil {
 			logrus.Errorf("error dispatching manifest pull to listener: %v", err)
@@ -78,8 +78,8 @@ func (msl *manifestServiceListener) Get(tag string) (*manifest.SignedManifest, e
 	return sm, err
 }
 
-func (msl *manifestServiceListener) Put(tag string, sm *manifest.SignedManifest) error {
-	err := msl.ManifestService.Put(tag, sm)
+func (msl *manifestServiceListener) Put(sm *manifest.SignedManifest) error {
+	err := msl.ManifestService.Put(sm)
 
 	if err == nil {
 		if err := msl.parent.listener.ManifestPushed(msl.parent.Repository, sm); err != nil {
@@ -88,6 +88,17 @@ func (msl *manifestServiceListener) Put(tag string, sm *manifest.SignedManifest)
 	}
 
 	return err
+}
+
+func (msl *manifestServiceListener) GetByTag(tag string) (*manifest.SignedManifest, error) {
+	sm, err := msl.ManifestService.GetByTag(tag)
+	if err == nil {
+		if err := msl.parent.listener.ManifestPulled(msl.parent.Repository, sm); err != nil {
+			logrus.Errorf("error dispatching manifest pull to listener: %v", err)
+		}
+	}
+
+	return sm, err
 }
 
 type layerServiceListener struct {

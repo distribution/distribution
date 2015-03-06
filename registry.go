@@ -34,38 +34,41 @@ type Repository interface {
 
 // ManifestService provides operations on image manifests.
 type ManifestService interface {
+	// Exists returns true if the manifest exists.
+	Exists(dgst digest.Digest) (bool, error)
+
+	// Get retrieves the identified by the digest, if it exists.
+	Get(dgst digest.Digest) (*manifest.SignedManifest, error)
+
+	// Delete removes the manifest, if it exists.
+	Delete(dgst digest.Digest) error
+
+	// Put creates or updates the manifest.
+	Put(manifest *manifest.SignedManifest) error
+
+	// TODO(stevvooe): The methods after this message should be moved to a
+	// discrete TagService, per active proposals.
+
 	// Tags lists the tags under the named repository.
 	Tags() ([]string, error)
 
-	// Exists returns true if the manifest exists.
-	Exists(tag string) (bool, error)
+	// ExistsByTag returns true if the manifest exists.
+	ExistsByTag(tag string) (bool, error)
 
-	// Get retrieves the named manifest, if it exists.
-	Get(tag string) (*manifest.SignedManifest, error)
-
-	// Put creates or updates the named manifest.
-	// Put(tag string, manifest *manifest.SignedManifest) (digest.Digest, error)
-	Put(tag string, manifest *manifest.SignedManifest) error
-
-	// Delete removes the named manifest, if it exists.
-	Delete(tag string) error
+	// GetByTag retrieves the named manifest, if it exists.
+	GetByTag(tag string) (*manifest.SignedManifest, error)
 
 	// TODO(stevvooe): There are several changes that need to be done to this
 	// interface:
 	//
-	//	1. Get(tag string) should be GetByTag(tag string)
-	//	2. Put(tag string, manifest *manifest.SignedManifest) should be
-	//       Put(manifest *manifest.SignedManifest). The method can read the
-	//       tag on manifest to automatically tag it in the repository.
-	//	3. Need a GetByDigest(dgst digest.Digest) method.
-	//	4. Allow explicit tagging with Tag(digest digest.Digest, tag string)
-	//	5. Support reading tags with a re-entrant reader to avoid large
+	//	1. Allow explicit tagging with Tag(digest digest.Digest, tag string)
+	//	2. Support reading tags with a re-entrant reader to avoid large
 	//       allocations in the registry.
-	//	6. Long-term: Provide All() method that lets one scroll through all of
+	//	3. Long-term: Provide All() method that lets one scroll through all of
 	//       the manifest entries.
-	//	7. Long-term: break out concept of signing from manifests. This is
+	//	4. Long-term: break out concept of signing from manifests. This is
 	//       really a part of the distribution sprint.
-	//	8. Long-term: Manifest should be an interface. This code shouldn't
+	//	5. Long-term: Manifest should be an interface. This code shouldn't
 	//       really be concerned with the storage format.
 }
 

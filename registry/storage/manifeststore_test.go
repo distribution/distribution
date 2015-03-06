@@ -9,25 +9,47 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/docker/distribution/testutil"
 	"github.com/docker/libtrust"
 	"golang.org/x/net/context"
 )
 
-func TestManifestStorage(t *testing.T) {
+type manifestStoreTestEnv struct {
+	ctx        context.Context
+	driver     driver.StorageDriver
+	registry   distribution.Registry
+	repository distribution.Repository
+	name       string
+	tag        string
+}
+
+func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestEnv {
 	ctx := context.Background()
-	name := "foo/bar"
-	tag := "thetag"
 	driver := inmemory.New()
 	registry := NewRegistryWithDriver(driver)
+
 	repo, err := registry.Repository(ctx, name)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
 	}
-	ms := repo.Manifests()
 
-	exists, err := ms.Exists(tag)
+	return &manifestStoreTestEnv{
+		ctx:        ctx,
+		driver:     driver,
+		registry:   registry,
+		repository: repo,
+		name:       name,
+		tag:        tag,
+	}
+}
+
+func TestManifestStorage(t *testing.T) {
+	env := newManifestStoreTestEnv(t, "foo/bar", "thetag")
+	ms := env.repository.Manifests()
+
+	exists, err := ms.ExistsByTag(env.tag)
 	if err != nil {
 		t.Fatalf("unexpected error checking manifest existence: %v", err)
 	}
@@ -36,7 +58,7 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("manifest should not exist")
 	}
 
-	if _, err := ms.Get(tag); true {
+	if _, err := ms.GetByTag(env.tag); true {
 		switch err.(type) {
 		case distribution.ErrManifestUnknown:
 			break
@@ -49,8 +71,8 @@ func TestManifestStorage(t *testing.T) {
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
-		Name: name,
-		Tag:  tag,
+		Name: env.name,
+		Tag:  env.tag,
 	}
 
 	// Build up some test layers and add them to the manifest, saving the
@@ -79,7 +101,7 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("error signing manifest: %v", err)
 	}
 
-	err = ms.Put(tag, sm)
+	err = ms.Put(sm)
 	if err == nil {
 		t.Fatalf("expected errors putting manifest")
 	}
@@ -88,7 +110,7 @@ func TestManifestStorage(t *testing.T) {
 
 	// Now, upload the layers that were missing!
 	for dgst, rs := range testLayers {
-		upload, err := repo.Layers().Upload()
+		upload, err := env.repository.Layers().Upload()
 		if err != nil {
 			t.Fatalf("unexpected error creating test upload: %v", err)
 		}
@@ -102,11 +124,11 @@ func TestManifestStorage(t *testing.T) {
 		}
 	}
 
-	if err = ms.Put(tag, sm); err != nil {
+	if err = ms.Put(sm); err != nil {
 		t.Fatalf("unexpected error putting manifest: %v", err)
 	}
 
-	exists, err = ms.Exists(tag)
+	exists, err = ms.ExistsByTag(env.tag)
 	if err != nil {
 		t.Fatalf("unexpected error checking manifest existence: %v", err)
 	}
@@ -115,7 +137,7 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("manifest should exist")
 	}
 
-	fetchedManifest, err := ms.Get(tag)
+	fetchedManifest, err := ms.GetByTag(env.tag)
 	if err != nil {
 		t.Fatalf("unexpected error fetching manifest: %v", err)
 	}
@@ -132,6 +154,31 @@ func TestManifestStorage(t *testing.T) {
 	payload, err := fetchedJWS.Payload()
 	if err != nil {
 		t.Fatalf("unexpected error extracting payload: %v", err)
+	}
+
+	// Now that we have a payload, take a moment to check that the manifest is
+	// return by the payload digest.
+	dgst, err := digest.FromBytes(payload)
+	if err != nil {
+		t.Fatalf("error getting manifest digest: %v", err)
+	}
+
+	exists, err = ms.Exists(dgst)
+	if err != nil {
+		t.Fatalf("error checking manifest existence by digest: %v", err)
+	}
+
+	if !exists {
+		t.Fatalf("manifest %s should exist", dgst)
+	}
+
+	fetchedByDigest, err := ms.Get(dgst)
+	if err != nil {
+		t.Fatalf("unexpected error fetching manifest by digest: %v", err)
+	}
+
+	if !reflect.DeepEqual(fetchedByDigest, fetchedManifest) {
+		t.Fatalf("fetched manifest not equal: %#v != %#v", fetchedByDigest, fetchedManifest)
 	}
 
 	sigs, err := fetchedJWS.Signatures()
@@ -153,8 +200,8 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("unexpected tags returned: %v", tags)
 	}
 
-	if tags[0] != tag {
-		t.Fatalf("unexpected tag found in tags: %v != %v", tags, []string{tag})
+	if tags[0] != env.tag {
+		t.Fatalf("unexpected tag found in tags: %v != %v", tags, []string{env.tag})
 	}
 
 	// Now, push the same manifest with a different key
@@ -182,11 +229,11 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("unexpected number of signatures: %d != %d", len(sigs2), 1)
 	}
 
-	if err = ms.Put(tag, sm2); err != nil {
+	if err = ms.Put(sm2); err != nil {
 		t.Fatalf("unexpected error putting manifest: %v", err)
 	}
 
-	fetched, err := ms.Get(tag)
+	fetched, err := ms.GetByTag(env.tag)
 	if err != nil {
 		t.Fatalf("unexpected error fetching manifest: %v", err)
 	}
@@ -231,7 +278,11 @@ func TestManifestStorage(t *testing.T) {
 		}
 	}
 
-	if err := ms.Delete(tag); err != nil {
-		t.Fatalf("unexpected error deleting manifest: %v", err)
+	// TODO(stevvooe): Currently, deletes are not supported due to some
+	// complexity around managing tag indexes. We'll add this support back in
+	// when the manifest format has settled. For now, we expect an error for
+	// all deletes.
+	if err := ms.Delete(dgst); err == nil {
+		t.Fatalf("unexpected an error deleting manifest by digest: %v", err)
 	}
 }

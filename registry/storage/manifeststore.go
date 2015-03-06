@@ -5,6 +5,7 @@ import (
 
 	"github.com/docker/distribution"
 	ctxu "github.com/docker/distribution/context"
+	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/libtrust"
 )
@@ -18,31 +19,17 @@ type manifestStore struct {
 
 var _ distribution.ManifestService = &manifestStore{}
 
-// func (ms *manifestStore) Repository() Repository {
-// 	return ms.repository
-// }
-
-func (ms *manifestStore) Tags() ([]string, error) {
-	ctxu.GetLogger(ms.repository.ctx).Debug("(*manifestStore).Tags")
-	return ms.tagStore.tags()
-}
-
-func (ms *manifestStore) Exists(tag string) (bool, error) {
+func (ms *manifestStore) Exists(dgst digest.Digest) (bool, error) {
 	ctxu.GetLogger(ms.repository.ctx).Debug("(*manifestStore).Exists")
-	return ms.tagStore.exists(tag)
+	return ms.revisionStore.exists(dgst)
 }
 
-func (ms *manifestStore) Get(tag string) (*manifest.SignedManifest, error) {
+func (ms *manifestStore) Get(dgst digest.Digest) (*manifest.SignedManifest, error) {
 	ctxu.GetLogger(ms.repository.ctx).Debug("(*manifestStore).Get")
-	dgst, err := ms.tagStore.resolve(tag)
-	if err != nil {
-		return nil, err
-	}
-
 	return ms.revisionStore.get(dgst)
 }
 
-func (ms *manifestStore) Put(tag string, manifest *manifest.SignedManifest) error {
+func (ms *manifestStore) Put(manifest *manifest.SignedManifest) error {
 	ctxu.GetLogger(ms.repository.ctx).Debug("(*manifestStore).Put")
 
 	// TODO(stevvooe): Add check here to see if the revision is already
@@ -51,7 +38,7 @@ func (ms *manifestStore) Put(tag string, manifest *manifest.SignedManifest) erro
 	// indicating what happened.
 
 	// Verify the manifest.
-	if err := ms.verifyManifest(tag, manifest); err != nil {
+	if err := ms.verifyManifest(manifest); err != nil {
 		return err
 	}
 
@@ -62,44 +49,44 @@ func (ms *manifestStore) Put(tag string, manifest *manifest.SignedManifest) erro
 	}
 
 	// Now, tag the manifest
-	return ms.tagStore.tag(tag, revision)
+	return ms.tagStore.tag(manifest.Tag, revision)
 }
 
-// Delete removes all revisions of the given tag. We may want to change these
-// semantics in the future, but this will maintain consistency. The underlying
-// blobs are left alone.
-func (ms *manifestStore) Delete(tag string) error {
-	ctxu.GetLogger(ms.repository.ctx).Debug("(*manifestStore).Delete")
+// Delete removes the revision of the specified manfiest.
+func (ms *manifestStore) Delete(dgst digest.Digest) error {
+	ctxu.GetLogger(ms.repository.ctx).Debug("(*manifestStore).Delete - unsupported")
+	return fmt.Errorf("deletion of manifests not supported")
+}
 
-	revisions, err := ms.tagStore.revisions(tag)
+func (ms *manifestStore) Tags() ([]string, error) {
+	ctxu.GetLogger(ms.repository.ctx).Debug("(*manifestStore).Tags")
+	return ms.tagStore.tags()
+}
+
+func (ms *manifestStore) ExistsByTag(tag string) (bool, error) {
+	ctxu.GetLogger(ms.repository.ctx).Debug("(*manifestStore).ExistsByTag")
+	return ms.tagStore.exists(tag)
+}
+
+func (ms *manifestStore) GetByTag(tag string) (*manifest.SignedManifest, error) {
+	ctxu.GetLogger(ms.repository.ctx).Debug("(*manifestStore).GetByTag")
+	dgst, err := ms.tagStore.resolve(tag)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	for _, revision := range revisions {
-		if err := ms.revisionStore.delete(revision); err != nil {
-			return err
-		}
-	}
-
-	return ms.tagStore.delete(tag)
+	return ms.revisionStore.get(dgst)
 }
 
 // verifyManifest ensures that the manifest content is valid from the
-// perspective of the registry. It ensures that the name and tag match and
-// that the signature is valid for the enclosed payload. As a policy, the
-// registry only tries to store valid content, leaving trust policies of that
-// content up to consumers.
-func (ms *manifestStore) verifyManifest(tag string, mnfst *manifest.SignedManifest) error {
+// perspective of the registry. It ensures that the signature is valid for the
+// enclosed payload. As a policy, the registry only tries to store valid
+// content, leaving trust policies of that content up to consumers.
+func (ms *manifestStore) verifyManifest(mnfst *manifest.SignedManifest) error {
 	var errs distribution.ErrManifestVerification
 	if mnfst.Name != ms.repository.Name() {
 		// TODO(stevvooe): This needs to be an exported error
 		errs = append(errs, fmt.Errorf("repository name does not match manifest name"))
-	}
-
-	if mnfst.Tag != tag {
-		// TODO(stevvooe): This needs to be an exported error.
-		errs = append(errs, fmt.Errorf("tag does not match manifest tag"))
 	}
 
 	if _, err := manifest.Verify(mnfst); err != nil {

@@ -218,7 +218,8 @@ func TestLayerAPI(t *testing.T) {
 
 	checkResponse(t, "checking head on existing layer", resp, http.StatusOK)
 	checkHeaders(t, resp, http.Header{
-		"Content-Length": []string{fmt.Sprint(layerLength)},
+		"Content-Length":        []string{fmt.Sprint(layerLength)},
+		"Docker-Content-Digest": []string{layerDigest.String()},
 	})
 
 	// ----------------
@@ -230,7 +231,8 @@ func TestLayerAPI(t *testing.T) {
 
 	checkResponse(t, "fetching layer", resp, http.StatusOK)
 	checkHeaders(t, resp, http.Header{
-		"Content-Length": []string{fmt.Sprint(layerLength)},
+		"Content-Length":        []string{fmt.Sprint(layerLength)},
+		"Docker-Content-Digest": []string{layerDigest.String()},
 	})
 
 	// Verify the body
@@ -286,6 +288,9 @@ func TestManifestAPI(t *testing.T) {
 	// --------------------------------
 	// Attempt to push unsigned manifest with missing layers
 	unsignedManifest := &manifest.Manifest{
+		Versioned: manifest.Versioned{
+			SchemaVersion: 1,
+		},
 		Name: imageName,
 		Tag:  tag,
 		FSLayers: []manifest.FSLayer{
@@ -343,9 +348,33 @@ func TestManifestAPI(t *testing.T) {
 		t.Fatalf("unexpected error signing manifest: %v", err)
 	}
 
+	payload, err := signedManifest.Payload()
+	checkErr(t, err, "getting manifest payload")
+
+	dgst, err := digest.FromBytes(payload)
+	checkErr(t, err, "digesting manifest")
+
+	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, dgst.String())
+	checkErr(t, err, "building manifest url")
+
 	resp = putManifest(t, "putting signed manifest", manifestURL, signedManifest)
 	checkResponse(t, "putting signed manifest", resp, http.StatusAccepted)
+	checkHeaders(t, resp, http.Header{
+		"Location":              []string{manifestDigestURL},
+		"Docker-Content-Digest": []string{dgst.String()},
+	})
 
+	// --------------------
+	// Push by digest -- should get same result
+	resp = putManifest(t, "putting signed manifest", manifestDigestURL, signedManifest)
+	checkResponse(t, "putting signed manifest", resp, http.StatusAccepted)
+	checkHeaders(t, resp, http.Header{
+		"Location":              []string{manifestDigestURL},
+		"Docker-Content-Digest": []string{dgst.String()},
+	})
+
+	// ------------------
+	// Fetch by tag name
 	resp, err = http.Get(manifestURL)
 	if err != nil {
 		t.Fatalf("unexpected error fetching manifest: %v", err)
@@ -353,6 +382,9 @@ func TestManifestAPI(t *testing.T) {
 	defer resp.Body.Close()
 
 	checkResponse(t, "fetching uploaded manifest", resp, http.StatusOK)
+	checkHeaders(t, resp, http.Header{
+		"Docker-Content-Digest": []string{dgst.String()},
+	})
 
 	var fetchedManifest manifest.SignedManifest
 	dec := json.NewDecoder(resp.Body)
@@ -361,6 +393,27 @@ func TestManifestAPI(t *testing.T) {
 	}
 
 	if !bytes.Equal(fetchedManifest.Raw, signedManifest.Raw) {
+		t.Fatalf("manifests do not match")
+	}
+
+	// ---------------
+	// Fetch by digest
+	resp, err = http.Get(manifestDigestURL)
+	checkErr(t, err, "fetching manifest by digest")
+	defer resp.Body.Close()
+
+	checkResponse(t, "fetching uploaded manifest", resp, http.StatusOK)
+	checkHeaders(t, resp, http.Header{
+		"Docker-Content-Digest": []string{dgst.String()},
+	})
+
+	var fetchedManifestByDigest manifest.SignedManifest
+	dec = json.NewDecoder(resp.Body)
+	if err := dec.Decode(&fetchedManifestByDigest); err != nil {
+		t.Fatalf("error decoding fetched manifest: %v", err)
+	}
+
+	if !bytes.Equal(fetchedManifestByDigest.Raw, signedManifest.Raw) {
 		t.Fatalf("manifests do not match")
 	}
 
@@ -534,8 +587,9 @@ func pushLayer(t *testing.T, ub *v2.URLBuilder, name string, dgst digest.Digest,
 	}
 
 	checkHeaders(t, resp, http.Header{
-		"Location":       []string{expectedLayerURL},
-		"Content-Length": []string{"0"},
+		"Location":              []string{expectedLayerURL},
+		"Content-Length":        []string{"0"},
+		"Docker-Content-Digest": []string{dgst.String()},
 	})
 
 	return resp.Header.Get("Location")
@@ -632,5 +686,11 @@ func checkHeaders(t *testing.T, resp *http.Response, headers http.Header) {
 				}
 			}
 		}
+	}
+}
+
+func checkErr(t *testing.T, err error, msg string) {
+	if err != nil {
+		t.Fatalf("unexpected error %s: %v", msg, err)
 	}
 }

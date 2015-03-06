@@ -32,7 +32,7 @@ func TestListener(t *testing.T) {
 
 	expectedOps := map[string]int{
 		"manifest:push": 1,
-		"manifest:pull": 1,
+		"manifest:pull": 2,
 		// "manifest:delete": 0, // deletes not supported for now
 		"layer:push": 2,
 		"layer:pull": 2,
@@ -143,16 +143,35 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 
 	manifests := repository.Manifests()
 
-	if err := manifests.Put(tag, sm); err != nil {
+	if err := manifests.Put(sm); err != nil {
 		t.Fatalf("unexpected error putting the manifest: %v", err)
 	}
 
-	fetched, err := manifests.Get(tag)
+	p, err := sm.Payload()
+	if err != nil {
+		t.Fatalf("unexpected error getting manifest payload: %v", err)
+	}
+
+	dgst, err := digest.FromBytes(p)
+	if err != nil {
+		t.Fatalf("unexpected error digesting manifest payload: %v", err)
+	}
+
+	fetchedByManifest, err := manifests.Get(dgst)
 	if err != nil {
 		t.Fatalf("unexpected error fetching manifest: %v", err)
 	}
 
-	if fetched.Tag != fetched.Tag {
+	if fetchedByManifest.Tag != sm.Tag {
+		t.Fatalf("retrieved unexpected manifest: %v", err)
+	}
+
+	fetched, err := manifests.GetByTag(tag)
+	if err != nil {
+		t.Fatalf("unexpected error fetching manifest: %v", err)
+	}
+
+	if fetched.Tag != fetchedByManifest.Tag {
 		t.Fatalf("retrieved unexpected manifest: %v", err)
 	}
 }

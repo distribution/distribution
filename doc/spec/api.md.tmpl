@@ -106,9 +106,20 @@ changes. Only non-conflicting additions should be made to the API and accepted
 changes should avoid preventing future changes from happening.
 
 This section should be updated when changes are made to the specification,
-indicating what is different. Optionally, we may start marking parts of the specification to correspond with the versions enumerated here.
+indicating what is different. Optionally, we may start marking parts of the
+specification to correspond with the versions enumerated here.
 
 <dl>
+	<dt>2.0.1</dt>
+	<dd>
+		<ul>
+			<li>Added support for immutable manifest references in manifest endpoints.</li>
+			<li>Deleting a manifest by tag has been deprecated.</li>
+			<li>Specified `Docker-Content-Digest` header for appropriate entities.</li>
+			<li>Added error code for unsupported operations.</li>
+		</ul>
+	</dd>
+
 	<dt>2.0</dt>
 	<dd>
 		This is the baseline specification.
@@ -235,10 +246,11 @@ the V2 registry API, keyed by their tarsum digest.
 The image manifest can be fetched with the following url:
 
 ```
-GET /v2/<name>/manifests/<tag>
+GET /v2/<name>/manifests/<reference>
 ```
 
-The "name" and "tag" parameter identify the image and are required.
+The `name` and `reference` parameter identify the image and are required. The
+reference may include a tag or digest.
 
 A `404 Not Found` response will be returned if the image is unknown to the
 registry. If the image exists and the response is successful, the image
@@ -330,6 +342,7 @@ http specification). The response will look as follows:
 ```
 200 OK
 Content-Length: <length of blob>
+Docker-Content-Digest: <digest>
 ```
 
 When this response is received, the client can assume that the layer is
@@ -509,10 +522,14 @@ will receive a `201 Created` response:
 201 Created
 Location: /v2/<name>/blobs/<tarsum>
 Content-Length: 0
+Docker-Content-Digest: <digest>
 ```
 
 The `Location` header will contain the registry URL to access the accepted
-layer file.
+layer file. The `Docker-Content-Digest` header returns the canonical digest of
+the uploaded blob which may differ from the provided digest. Most clients may
+ignore the value but if it is used, the client should verify the value against
+the uploaded blob data.
 
 ###### Digest Parameter
 
@@ -574,7 +591,7 @@ client must restart the upload process.
 Once all of the layers for an image are uploaded, the client can upload the
 image manifest. An image can be pushed using the following request format:
 
-    PUT /v2/<name>/manifests/<tag>
+    PUT /v2/<name>/manifests/<reference>
 
     {
        "name": <name>,
@@ -591,8 +608,8 @@ image manifest. An image can be pushed using the following request format:
        ...
     }
 
-The `name` and `tag` fields of the response body must match those specified in
-the URL.
+The `name` and `reference` fields of the response body must match those specified in
+the URL. The `reference` field may be a "tag" or a "digest".
 
 If there is a problem with pushing the manifest, a relevant 4xx response will
 be returned with a JSON error message. Please see the _PUT Manifest section
@@ -641,13 +658,14 @@ reduce copying.
 
 ### Deleting an Image
 
-An image may be deleted from the registry via its `name` and `tag`. A delete
-may be issued with the following request format:
+An image may be deleted from the registry via its `name` and `reference`. A
+delete may be issued with the following request format:
 
-    DELETE /v2/<name>/manifests/<tag>
+    DELETE /v2/<name>/manifests/<reference>
 
-If the image exists and has been successfully deleted, the following response
-will be issued:
+For deletes, `reference` *must* be a digest or the delete will fail. If the
+image exists and has been successfully deleted, the following response will be
+issued:
 
     202 Accepted
     Content-Length: None
