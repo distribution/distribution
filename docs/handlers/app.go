@@ -13,6 +13,8 @@ import (
 	"github.com/docker/distribution/notifications"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/registry/auth"
+	registrymiddleware "github.com/docker/distribution/registry/middleware/registry"
+	repositorymiddleware "github.com/docker/distribution/registry/middleware/repository"
 	"github.com/docker/distribution/registry/storage"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/factory"
@@ -89,7 +91,16 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 	}
 
 	app.configureEvents(&configuration)
+
 	app.registry = storage.NewRegistryWithDriver(app.driver)
+	for _, mw := range configuration.Middleware["registry"] {
+		rmw, err := registrymiddleware.Get(mw.Name, mw.Options, app.registry)
+		if err != nil {
+			panic(fmt.Sprintf("unable to configure registry middleware (%s): %s", mw.Name, err))
+		}
+		app.registry = rmw
+	}
+
 	authType := configuration.Auth.Type()
 
 	if authType != "" {
@@ -100,22 +111,12 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 		app.accessController = accessController
 	}
 
-	for _, mw := range configuration.Middleware {
-		if mw.Inject == "registry" {
-			// registry middleware can director wrap app.registry identically to storage middlewares with driver
-			panic(fmt.Sprintf("unable to configure registry middleware (%s): %v", mw.Name, err))
-		} else if mw.Inject == "repository" {
-			// we have to do something more intelligent with repository middleware, It needs to be staged
-			// for later to be wrapped around the repository at request time.
-			panic(fmt.Sprintf("unable to configure repository middleware (%s): %v", mw.Name, err))
-		} else if mw.Inject == "storage" {
-			smw, err := storagemiddleware.GetStorageMiddleware(mw.Name, mw.Options, app.driver)
-
-			if err != nil {
-				panic(fmt.Sprintf("unable to configure storage middleware (%s): %v", mw.Name, err))
-			}
-			app.driver = smw
+	for _, mw := range configuration.Middleware["storage"] {
+		smw, err := storagemiddleware.Get(mw.Name, mw.Options, app.driver)
+		if err != nil {
+			panic(fmt.Sprintf("unable to configure storage middleware (%s): %v", mw.Name, err))
 		}
+		app.driver = smw
 	}
 
 	return app
@@ -256,6 +257,14 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 			context.Repository = notifications.Listen(
 				repository,
 				app.eventBridge(context, r))
+
+			for _, mw := range app.Config.Middleware["repository"] {
+				rmw, err := repositorymiddleware.Get(mw.Name, mw.Options, context.Repository)
+				if err != nil {
+					panic(fmt.Sprintf("unable to configure repository middleware (%s): %s", mw.Name, err))
+				}
+				context.Repository = rmw
+			}
 		}
 
 		handler := dispatch(context, r)
