@@ -27,7 +27,7 @@ type Configuration struct {
 	Auth Auth `yaml:"auth,omitempty"`
 
 	// Middleware lists all middlewares to be used by the registry.
-	Middleware []Middleware `yaml:"middleware,omitempty"`
+	Middleware map[string][]Middleware `yaml:"middleware,omitempty"`
 
 	// Reporting is the configuration for error reporting
 	Reporting Reporting `yaml:"reporting,omitempty"`
@@ -299,10 +299,6 @@ type NewRelicReporting struct {
 type Middleware struct {
 	// Name the middleware registers itself as
 	Name string `yaml:"name"`
-	// Injection point the middleware should be applied at
-	// N.B. ensure the middleware is applicable for the named injection point, middlewares
-	//      for different injection points are not interchangeable.
-	Inject string `yaml:"inject"`
 	// Flag to disable middleware easily
 	Disabled bool `yaml:"Disabled,omitempty"`
 	// Map of parameters that will be passed to the middleware's initialization function
