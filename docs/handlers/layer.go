@@ -49,8 +49,8 @@ type layerHandler struct {
 // response.
 func (lh *layerHandler) GetLayer(w http.ResponseWriter, r *http.Request) {
 	ctxu.GetLogger(lh).Debug("GetImageLayer")
-	layerStore := lh.Repository.Layers()
-	layerReader, err := layerStore.Fetch(lh.Digest)
+	layers := lh.Repository.Layers()
+	layer, err := layers.Fetch(lh.Digest)
 
 	if err != nil {
 		switch err := err.(type) {
@@ -63,5 +63,5 @@ func (lh *layerHandler) GetLayer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	layerReader.ServeHTTP(w, r)
+	layer.ServeHTTP(w, r)
 }

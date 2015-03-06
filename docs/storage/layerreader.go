@@ -8,7 +8,7 @@ import (
 	"github.com/docker/distribution/digest"
 )
 
-// LayerRead implements Layer and provides facilities for reading and
+// layerReader implements Layer and provides facilities for reading and
 // seeking.
 type layerReader struct {
 	fileReader
@@ -18,32 +18,32 @@ type layerReader struct {
 
 var _ distribution.Layer = &layerReader{}
 
-func (lrs *layerReader) Path() string {
-	return lrs.path
+func (lr *layerReader) Path() string {
+	return lr.path
 }
 
-func (lrs *layerReader) Digest() digest.Digest {
-	return lrs.digest
+func (lr *layerReader) Digest() digest.Digest {
+	return lr.digest
 }
 
-func (lrs *layerReader) Length() int64 {
-	return lrs.size
+func (lr *layerReader) Length() int64 {
+	return lr.size
 }
 
-func (lrs *layerReader) CreatedAt() time.Time {
-	return lrs.modtime
+func (lr *layerReader) CreatedAt() time.Time {
+	return lr.modtime
 }
 
 // Close the layer. Should be called when the resource is no longer needed.
-func (lrs *layerReader) Close() error {
-	return lrs.closeWithErr(distribution.ErrLayerClosed)
+func (lr *layerReader) Close() error {
+	return lr.closeWithErr(distribution.ErrLayerClosed)
 }
 
-func (lrs *layerReader) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Docker-Content-Digest", lrs.digest.String())
+func (lr *layerReader) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Docker-Content-Digest", lr.digest.String())
 
-	if url, err := lrs.fileReader.driver.URLFor(lrs.Path(), map[string]interface{}{}); err == nil {
+	if url, err := lr.fileReader.driver.URLFor(lr.Path(), map[string]interface{}{}); err == nil {
 		http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 	}
-	http.ServeContent(w, r, lrs.Digest().String(), lrs.CreatedAt(), lrs)
+	http.ServeContent(w, r, lr.digest.String(), lr.CreatedAt(), lr)
 }
