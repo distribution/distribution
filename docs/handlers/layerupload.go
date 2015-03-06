@@ -193,6 +193,10 @@ func (luh *layerUploadHandler) PutLayerUploadComplete(w http.ResponseWriter, r *
 	// TODO(stevvooe): Check the incoming range header here, per the
 	// specification. LayerUpload should be seeked (sought?) to that position.
 
+	// TODO(stevvooe): Consider checking the error on this copy.
+	// Theoretically, problems should be detected during verification but we
+	// may miss a root cause.
+
 	// Read in the final chunk, if any.
 	io.Copy(luh.Upload, r.Body)
 
@@ -227,6 +231,7 @@ func (luh *layerUploadHandler) PutLayerUploadComplete(w http.ResponseWriter, r *
 
 	w.Header().Set("Location", layerURL)
 	w.Header().Set("Content-Length", "0")
+	w.Header().Set("Docker-Content-Digest", layer.Digest().String())
 	w.WriteHeader(http.StatusCreated)
 }
 

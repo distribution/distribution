@@ -64,6 +64,8 @@ func (lh *layerHandler) GetLayer(w http.ResponseWriter, r *http.Request) {
 	}
 	defer layer.Close()
 
+	w.Header().Set("Docker-Content-Digest", lh.Digest.String())
+
 	if lh.layerHandler != nil {
 		handler, _ := lh.layerHandler.Resolve(layer)
 		if handler != nil {
