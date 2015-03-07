@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -23,7 +24,6 @@ func TestRepositoryNameRegexp(t *testing.T) {
 		},
 		{
 			input: "aa/aa/aa/aa/aa/aa/aa/aa/aa/bb/bb/bb/bb/bb/bb",
-			err:   ErrRepositoryNameTooManyComponents,
 		},
 		{
 			input: "aa/aa/bb/bb/bb",
@@ -65,6 +65,13 @@ func TestRepositoryNameRegexp(t *testing.T) {
 		{
 			input: "a-/a/a/a",
 			err:   ErrRepositoryNameComponentInvalid,
+		},
+		{
+			input: strings.Repeat("a", 255),
+		},
+		{
+			input: strings.Repeat("a", 256),
+			err:   ErrRepositoryNameLong,
 		},
 	} {
 
