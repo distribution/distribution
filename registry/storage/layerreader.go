@@ -21,6 +21,10 @@ func (lrs *layerReader) Digest() digest.Digest {
 	return lrs.digest
 }
 
+func (lrs *layerReader) Length() int64 {
+	return lrs.size
+}
+
 func (lrs *layerReader) CreatedAt() time.Time {
 	return lrs.modtime
 }
