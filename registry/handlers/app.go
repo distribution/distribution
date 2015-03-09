@@ -89,16 +89,17 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 		// a health check.
 		panic(err)
 	}
+	app.driver, err = applyStorageMiddleware(app.driver, configuration.Middleware["storage"])
+	if err != nil {
+		panic(err)
+	}
 
 	app.configureEvents(&configuration)
 
 	app.registry = storage.NewRegistryWithDriver(app.driver)
-	for _, mw := range configuration.Middleware["registry"] {
-		rmw, err := registrymiddleware.Get(mw.Name, mw.Options, app.registry)
-		if err != nil {
-			panic(fmt.Sprintf("unable to configure registry middleware (%s): %s", mw.Name, err))
-		}
-		app.registry = rmw
+	app.registry, err = applyRegistryMiddleware(app.registry, configuration.Middleware["registry"])
+	if err != nil {
+		panic(err)
 	}
 
 	authType := configuration.Auth.Type()
@@ -109,14 +110,6 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 			panic(fmt.Sprintf("unable to configure authorization (%s): %v", authType, err))
 		}
 		app.accessController = accessController
-	}
-
-	for _, mw := range configuration.Middleware["storage"] {
-		smw, err := storagemiddleware.Get(mw.Name, mw.Options, app.driver)
-		if err != nil {
-			panic(fmt.Sprintf("unable to configure storage middleware (%s): %v", mw.Name, err))
-		}
-		app.driver = smw
 	}
 
 	return app
@@ -258,12 +251,13 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 				repository,
 				app.eventBridge(context, r))
 
-			for _, mw := range app.Config.Middleware["repository"] {
-				rmw, err := repositorymiddleware.Get(mw.Name, mw.Options, context.Repository)
-				if err != nil {
-					panic(fmt.Sprintf("unable to configure repository middleware (%s): %s", mw.Name, err))
-				}
-				context.Repository = rmw
+			context.Repository, err = applyRepoMiddleware(context.Repository, app.Config.Middleware["repository"])
+			if err != nil {
+				ctxu.GetLogger(context).Errorf("error initializing repository middleware: %v", err)
+				context.Errors.Push(v2.ErrorCodeUnknown, err)
+				w.WriteHeader(http.StatusInternalServerError)
+				serveJSON(w, context.Errors)
+				return
 			}
 		}
 
@@ -432,4 +426,41 @@ func appendAccessRecords(records []auth.Access, method string, repo string) []au
 			})
 	}
 	return records
+}
+
+// applyRegistryMiddleware wraps a registry instance with the configured middlewares
+func applyRegistryMiddleware(registry distribution.Registry, middlewares []configuration.Middleware) (distribution.Registry, error) {
+	for _, mw := range middlewares {
+		rmw, err := registrymiddleware.Get(mw.Name, mw.Options, registry)
+		if err != nil {
+			return nil, fmt.Errorf("unable to configure registry middleware (%s): %s", mw.Name, err)
+		}
+		registry = rmw
+	}
+	return registry, nil
+
+}
+
+// applyRepoMiddleware wraps a repository with the configured middlewares
+func applyRepoMiddleware(repository distribution.Repository, middlewares []configuration.Middleware) (distribution.Repository, error) {
+	for _, mw := range middlewares {
+		rmw, err := repositorymiddleware.Get(mw.Name, mw.Options, repository)
+		if err != nil {
+			return nil, err
+		}
+		repository = rmw
+	}
+	return repository, nil
+}
+
+// applyStorageMiddleware wraps a storage driver with the configured middlewares
+func applyStorageMiddleware(driver storagedriver.StorageDriver, middlewares []configuration.Middleware) (storagedriver.StorageDriver, error) {
+	for _, mw := range middlewares {
+		smw, err := storagemiddleware.Get(mw.Name, mw.Options, driver)
+		if err != nil {
+			return nil, fmt.Errorf("unable to configure storage middleware (%s): %v", mw.Name, err)
+		}
+		driver = smw
+	}
+	return driver, nil
 }

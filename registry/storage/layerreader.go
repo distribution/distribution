@@ -18,10 +18,6 @@ type layerReader struct {
 
 var _ distribution.Layer = &layerReader{}
 
-func (lr *layerReader) Path() string {
-	return lr.path
-}
-
 func (lr *layerReader) Digest() digest.Digest {
 	return lr.digest
 }
@@ -42,7 +38,7 @@ func (lr *layerReader) Close() error {
 func (lr *layerReader) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Docker-Content-Digest", lr.digest.String())
 
-	if url, err := lr.fileReader.driver.URLFor(lr.Path(), map[string]interface{}{}); err == nil {
+	if url, err := lr.fileReader.driver.URLFor(lr.path, map[string]interface{}{}); err == nil {
 		http.Redirect(w, r, url, http.StatusTemporaryRedirect)
 	}
 	http.ServeContent(w, r, lr.digest.String(), lr.CreatedAt(), lr)

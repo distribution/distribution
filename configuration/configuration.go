@@ -300,7 +300,7 @@ type Middleware struct {
 	// Name the middleware registers itself as
 	Name string `yaml:"name"`
 	// Flag to disable middleware easily
-	Disabled bool `yaml:"Disabled,omitempty"`
+	Disabled bool `yaml:"disabled,omitempty"`
 	// Map of parameters that will be passed to the middleware's initialization function
 	Options Parameters `yaml:"options"`
 }
