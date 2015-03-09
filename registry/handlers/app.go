@@ -304,37 +304,7 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 	var accessRecords []auth.Access
 
 	if repo != "" {
-		resource := auth.Resource{
-			Type: "repository",
-			Name: repo,
-		}
-
-		switch r.Method {
-		case "GET", "HEAD":
-			accessRecords = append(accessRecords,
-				auth.Access{
-					Resource: resource,
-					Action:   "pull",
-				})
-		case "POST", "PUT", "PATCH":
-			accessRecords = append(accessRecords,
-				auth.Access{
-					Resource: resource,
-					Action:   "pull",
-				},
-				auth.Access{
-					Resource: resource,
-					Action:   "push",
-				})
-		case "DELETE":
-			// DELETE access requires full admin rights, which is represented
-			// as "*". This may not be ideal.
-			accessRecords = append(accessRecords,
-				auth.Access{
-					Resource: resource,
-					Action:   "*",
-				})
-		}
+		accessRecords = appendAccessRecords(accessRecords, r.Method, repo)
 	} else {
 		// Only allow the name not to be set on the base route.
 		if app.nameRequired(r) {
@@ -410,4 +380,40 @@ func apiBase(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Length", fmt.Sprint(len(emptyJSON)))
 
 	fmt.Fprint(w, emptyJSON)
+}
+
+// appendAccessRecords checks the method and adds the appropriate Access records to the records list.
+func appendAccessRecords(records []auth.Access, method string, repo string) []auth.Access {
+	resource := auth.Resource{
+		Type: "repository",
+		Name: repo,
+	}
+
+	switch method {
+	case "GET", "HEAD":
+		records = append(records,
+			auth.Access{
+				Resource: resource,
+				Action:   "pull",
+			})
+	case "POST", "PUT", "PATCH":
+		records = append(records,
+			auth.Access{
+				Resource: resource,
+				Action:   "pull",
+			},
+			auth.Access{
+				Resource: resource,
+				Action:   "push",
+			})
+	case "DELETE":
+		// DELETE access requires full admin rights, which is represented
+		// as "*". This may not be ideal.
+		records = append(records,
+			auth.Access{
+				Resource: resource,
+				Action:   "*",
+			})
+	}
+	return records
 }
