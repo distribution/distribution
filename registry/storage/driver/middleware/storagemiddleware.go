@@ -7,7 +7,7 @@ import (
 )
 
 // InitFunc is the type of a StorageMiddleware factory function and is
-// used to register the contsructor for different StorageMiddleware backends.
+// used to register the constructor for different StorageMiddleware backends.
 type InitFunc func(storageDriver storagedriver.StorageDriver, options map[string]interface{}) (storagedriver.StorageDriver, error)
 
 var storageMiddlewares map[string]InitFunc

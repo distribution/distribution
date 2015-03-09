@@ -7,7 +7,7 @@ import (
 )
 
 // InitFunc is the type of a RepositoryMiddleware factory function and is
-// used to register the contsructor for different RepositoryMiddleware backends.
+// used to register the constructor for different RepositoryMiddleware backends.
 type InitFunc func(repository distribution.Repository, options map[string]interface{}) (distribution.Repository, error)
 
 var middlewares map[string]InitFunc

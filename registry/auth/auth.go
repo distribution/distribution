@@ -110,7 +110,7 @@ func (uic userInfoContext) Value(key interface{}) interface{} {
 }
 
 // InitFunc is the type of an AccessController factory function and is used
-// to register the contsructor for different AccesController backends.
+// to register the constructor for different AccesController backends.
 type InitFunc func(options map[string]interface{}) (AccessController, error)
 
 var accessControllers map[string]InitFunc

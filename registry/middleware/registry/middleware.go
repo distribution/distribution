@@ -7,7 +7,7 @@ import (
 )
 
 // InitFunc is the type of a RegistryMiddleware factory function and is
-// used to register the contsructor for different RegistryMiddleware backends.
+// used to register the constructor for different RegistryMiddleware backends.
 type InitFunc func(registry distribution.Registry, options map[string]interface{}) (distribution.Registry, error)
 
 var middlewares map[string]InitFunc
