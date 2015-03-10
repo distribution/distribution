@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/manifest"
 )
 
 var (
@@ -89,12 +88,12 @@ func (errs ErrManifestVerification) Error() string {
 }
 
 // ErrUnknownLayer returned when layer cannot be found.
-type ErrUnknownLayer struct {
-	FSLayer manifest.FSLayer
+type ErrUnknownBlob struct {
+	Digest digest.Digest
 }
 
-func (err ErrUnknownLayer) Error() string {
-	return fmt.Sprintf("unknown layer %v", err.FSLayer.BlobSum)
+func (err ErrUnknownBlob) Error() string {
+	return fmt.Sprintf("unknown blob %v", err.Digest)
 }
 
 // ErrLayerInvalidDigest returned when tarsum check fails.
@@ -106,4 +105,15 @@ type ErrLayerInvalidDigest struct {
 func (err ErrLayerInvalidDigest) Error() string {
 	return fmt.Sprintf("invalid digest for referenced layer: %v, %v",
 		err.Digest, err.Reason)
+}
+
+// ErrTagUntrusted identifies a name to descriptor mapping that is possibly
+// valid but not verified by the trust system.
+type ErrTagUntrusted struct {
+	Name   string
+	Target Descriptor
+}
+
+func (err ErrTagUntrusted) Error() string {
+	return fmt.Sprintf("untrusted tag: %q -> %v", err.Name, err.Target)
 }
