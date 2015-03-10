@@ -68,8 +68,7 @@ For example, “example.com/foo/bar” would create a url
 <meta name=“docker-registry” content=“pull v2 https://registry.mirror.com/v2/”>
 <meta name=“docker-registry” content=“pull,notag v2 http://registry.mirror.com/v2/”>
 <meta name=“docker-search” content=“v1 https://search.mirror.com/v1/”>
-<meta name=“docker-trust” content=“gpg https://keys.example.com/{name}.key”>
-<meta name=“docker-trust” content=“tuf https://tuf.example.com/{name}/}”>
+<meta name=“docker-trust” content=“tuf https://registry.example.com/{name}/}”>
 ~~~
 
 #### Fallback (Compatibility)
@@ -108,9 +107,10 @@ providing content, which may or may not be part of the same entity which owns
 the namespace. The trust model enables scalable mirroring of content as well as
 peer-to-peer distribution.
 
-The trust model is primarily responsible to verifying tuples of (namespace, tag,
-content-address) as well as (namespace, tag group, content-address). The content
-address should point to a tag or tag list blob in the registry.
+The trust model is primarily responsible for providing verified tuples of
+(namespace, tag, content-address). The content-address may point directly at a
+image manifest which can itself by verified by its hash as well as provide 
+additional content-addresses.
 
 ### The Update Framework
 TUF would be used to get a trusted list of tag to manifest content addresses.
@@ -119,19 +119,6 @@ contact the registry for specific manifest content-addresses. The tag feature of
 the registry would not be used.
 
 Target files contain a content address, content-type, and size. There will be
-target files for individual tags as well as file for all tags which point at a
-tag list. The content-address will point at a tag (or tag list) type in the
-registry.
-
-### GPG
-When the GPG trust model is used, the first element fetched from a registry
-should have a signature by a key specified in the trust model metadata. This
-should be used to fetch and verify additional content, relying on the signature
-trust from the first element. Would require additional signature for time
-stamping builds.
-
-### SSL
-When verifying signed content, verify against a CA chain. The first element
-fetched from a registry should be signed to verify further actions. Would
-require additional signature for time stamping builds.
+target files for individual tags. The content-address will point at a manifest
+type in the registry.
 
