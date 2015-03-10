@@ -5,10 +5,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"reflect"
 	"testing"
 
 	"github.com/docker/distribution/configuration"
 	"github.com/docker/distribution/registry/api/v2"
+	"github.com/docker/distribution/registry/auth"
 	_ "github.com/docker/distribution/registry/auth/silly"
 	"github.com/docker/distribution/registry/storage"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
@@ -199,4 +201,70 @@ func TestNewApp(t *testing.T) {
 	if errs.Errors[0].Code != v2.ErrorCodeUnauthorized {
 		t.Fatalf("unexpected error code: %v != %v", errs.Errors[0].Code, v2.ErrorCodeUnauthorized)
 	}
+}
+
+// Test the access record accumulator
+func TestAppendAccessRecords(t *testing.T) {
+	repo := "testRepo"
+
+	expectedResource := auth.Resource{
+		Type: "repository",
+		Name: repo,
+	}
+
+	expectedPullRecord := auth.Access{
+		Resource: expectedResource,
+		Action:   "pull",
+	}
+	expectedPushRecord := auth.Access{
+		Resource: expectedResource,
+		Action:   "push",
+	}
+	expectedAllRecord := auth.Access{
+		Resource: expectedResource,
+		Action:   "*",
+	}
+
+	records := []auth.Access{}
+	result := appendAccessRecords(records, "GET", repo)
+	expectedResult := []auth.Access{expectedPullRecord}
+	if ok := reflect.DeepEqual(result, expectedResult); !ok {
+		t.Fatalf("Actual access record differs from expected")
+	}
+
+	records = []auth.Access{}
+	result = appendAccessRecords(records, "HEAD", repo)
+	expectedResult = []auth.Access{expectedPullRecord}
+	if ok := reflect.DeepEqual(result, expectedResult); !ok {
+		t.Fatalf("Actual access record differs from expected")
+	}
+
+	records = []auth.Access{}
+	result = appendAccessRecords(records, "POST", repo)
+	expectedResult = []auth.Access{expectedPullRecord, expectedPushRecord}
+	if ok := reflect.DeepEqual(result, expectedResult); !ok {
+		t.Fatalf("Actual access record differs from expected")
+	}
+
+	records = []auth.Access{}
+	result = appendAccessRecords(records, "PUT", repo)
+	expectedResult = []auth.Access{expectedPullRecord, expectedPushRecord}
+	if ok := reflect.DeepEqual(result, expectedResult); !ok {
+		t.Fatalf("Actual access record differs from expected")
+	}
+
+	records = []auth.Access{}
+	result = appendAccessRecords(records, "PATCH", repo)
+	expectedResult = []auth.Access{expectedPullRecord, expectedPushRecord}
+	if ok := reflect.DeepEqual(result, expectedResult); !ok {
+		t.Fatalf("Actual access record differs from expected")
+	}
+
+	records = []auth.Access{}
+	result = appendAccessRecords(records, "DELETE", repo)
+	expectedResult = []auth.Access{expectedAllRecord}
+	if ok := reflect.DeepEqual(result, expectedResult); !ok {
+		t.Fatalf("Actual access record differs from expected")
+	}
+
 }
