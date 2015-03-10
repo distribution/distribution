@@ -27,12 +27,10 @@ type TarSumInfo struct {
 
 // InvalidTarSumError provides informations about a TarSum that cannot be parsed
 // by ParseTarSum.
-type InvalidTarSumError struct {
-	TarSum string
-}
+type InvalidTarSumError string
 
 func (e InvalidTarSumError) Error() string {
-	return fmt.Sprintf("invalid tarsum: %q", e.TarSum)
+	return fmt.Sprintf("invalid tarsum: %q", string(e))
 }
 
 // ParseTarSum parses a tarsum string into its components of interest. For
@@ -52,7 +50,7 @@ func ParseTarSum(tarSum string) (tsi TarSumInfo, err error) {
 	components := TarsumRegexpCapturing.FindStringSubmatch(tarSum)
 
 	if len(components) != 1+TarsumRegexpCapturing.NumSubexp() {
-		return TarSumInfo{}, InvalidTarSumError{TarSum: tarSum}
+		return TarSumInfo{}, InvalidTarSumError(tarSum)
 	}
 
 	return TarSumInfo{

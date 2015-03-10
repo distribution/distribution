@@ -18,7 +18,11 @@ func TestDigestVerifier(t *testing.T) {
 		t.Fatalf("unexpected error digesting bytes: %#v", err)
 	}
 
-	verifier := NewDigestVerifier(digest)
+	verifier, err := NewDigestVerifier(digest)
+	if err != nil {
+		t.Fatalf("unexpected error getting digest verifier: %s", err)
+	}
+
 	io.Copy(verifier, bytes.NewReader(p))
 
 	if !verifier.Verified() {
@@ -45,7 +49,11 @@ func TestDigestVerifier(t *testing.T) {
 	// This is the most relevant example for the registry application. It's
 	// effectively a read through pipeline, where the final sink is the digest
 	// verifier.
-	verifier = NewDigestVerifier(digest)
+	verifier, err = NewDigestVerifier(digest)
+	if err != nil {
+		t.Fatalf("unexpected error getting digest verifier: %s", err)
+	}
+
 	lengthVerifier := NewLengthVerifier(expectedSize)
 	rd := io.TeeReader(tf, lengthVerifier)
 	io.Copy(verifier, rd)

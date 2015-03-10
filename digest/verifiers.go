@@ -20,27 +20,27 @@ type Verifier interface {
 	// Verified will return true if the content written to Verifier matches
 	// the digest.
 	Verified() bool
-
-	// Planned methods:
-	// Err() error
-	// Reset()
 }
 
 // NewDigestVerifier returns a verifier that compares the written bytes
 // against a passed in digest.
-func NewDigestVerifier(d Digest) Verifier {
+func NewDigestVerifier(d Digest) (Verifier, error) {
+	if err := d.Validate(); err != nil {
+		return nil, err
+	}
+
 	alg := d.Algorithm()
 	switch alg {
 	case "sha256", "sha384", "sha512":
 		return hashVerifier{
 			hash:   newHash(alg),
 			digest: d,
-		}
+		}, nil
 	default:
 		// Assume we have a tarsum.
 		version, err := tarsum.GetVersionFromTarsum(string(d))
 		if err != nil {
-			panic(err) // Always assume valid tarsum at this point.
+			return nil, err
 		}
 
 		pr, pw := io.Pipe()
@@ -50,7 +50,7 @@ func NewDigestVerifier(d Digest) Verifier {
 
 		ts, err := tarsum.NewTarSum(pr, true, version)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 
 		// TODO(sday): Ick! A goroutine per digest verification? We'll have to
@@ -65,7 +65,7 @@ func NewDigestVerifier(d Digest) Verifier {
 			ts:     ts,
 			pr:     pr,
 			pw:     pw,
-		}
+		}, nil
 	}
 }
 
