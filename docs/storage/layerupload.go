@@ -85,7 +85,10 @@ func (luc *layerUploadController) Cancel() error {
 // validateLayer checks the layer data against the digest, returning an error
 // if it does not match. The canonical digest is returned.
 func (luc *layerUploadController) validateLayer(dgst digest.Digest) (digest.Digest, error) {
-	digestVerifier := digest.NewDigestVerifier(dgst)
+	digestVerifier, err := digest.NewDigestVerifier(dgst)
+	if err != nil {
+		return "", err
+	}
 
 	// TODO(stevvooe): Store resumable hash calculations in upload directory
 	// in driver. Something like a file at path <uuid>/resumablehash/<offest>
