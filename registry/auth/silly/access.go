@@ -82,7 +82,7 @@ func (ch *challenge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		header = fmt.Sprintf("%s,scope=%q", header, ch.scope)
 	}
 
-	w.Header().Set("Authorization", header)
+	w.Header().Set("WWW-Authenticate", header)
 	w.WriteHeader(http.StatusUnauthorized)
 }
 
