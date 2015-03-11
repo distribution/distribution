@@ -21,11 +21,11 @@ func TestParseTarSumComponents(t *testing.T) {
 		},
 		{
 			input: "",
-			err:   InvalidTarSumError{},
+			err:   InvalidTarSumError(""),
 		},
 		{
 			input: "purejunk",
-			err:   InvalidTarSumError{TarSum: "purejunk"},
+			err:   InvalidTarSumError("purejunk"),
 		},
 		{
 			input: "tarsum.v23+test:12341234123412341effefefe",
