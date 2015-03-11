@@ -1,34 +1,36 @@
-package storage
+// Package middleware - cloudfront wrapper for storage libs
+// N.B. currently only works with S3, not arbitrary sites
+//
+package middleware
 
 import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"net/url"
 	"time"
 
 	"github.com/AdRoll/goamz/cloudfront"
-	"github.com/docker/distribution"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
+	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
 )
 
-// cloudFrontLayerHandler provides an simple implementation of layerHandler that
+// cloudFrontStorageMiddleware provides an simple implementation of layerHandler that
 // constructs temporary signed CloudFront URLs from the storagedriver layer URL,
 // then issues HTTP Temporary Redirects to this CloudFront content URL.
-type cloudFrontLayerHandler struct {
-	cloudfront           *cloudfront.CloudFront
-	delegateLayerHandler *delegateLayerHandler
-	duration             time.Duration
+type cloudFrontStorageMiddleware struct {
+	storagedriver.StorageDriver
+	cloudfront *cloudfront.CloudFront
+	duration   time.Duration
 }
 
-var _ LayerHandler = &cloudFrontLayerHandler{}
+var _ storagedriver.StorageDriver = &cloudFrontStorageMiddleware{}
 
 // newCloudFrontLayerHandler constructs and returns a new CloudFront
 // LayerHandler implementation.
 // Required options: baseurl, privatekey, keypairid
-func newCloudFrontLayerHandler(storageDriver storagedriver.StorageDriver, options map[string]interface{}) (LayerHandler, error) {
+func newCloudFrontStorageMiddleware(storageDriver storagedriver.StorageDriver, options map[string]interface{}) (storagedriver.StorageDriver, error) {
 	base, ok := options["baseurl"]
 	if !ok {
 		return nil, fmt.Errorf("No baseurl provided")
@@ -68,12 +70,6 @@ func newCloudFrontLayerHandler(storageDriver storagedriver.StorageDriver, option
 		return nil, err
 	}
 
-	lh, err := newDelegateLayerHandler(storageDriver, options)
-	if err != nil {
-		return nil, err
-	}
-	dlh := lh.(*delegateLayerHandler)
-
 	cf := cloudfront.New(baseURL, privateKey, keypairID)
 
 	duration := 20 * time.Minute
@@ -91,33 +87,33 @@ func newCloudFrontLayerHandler(storageDriver storagedriver.StorageDriver, option
 		}
 	}
 
-	return &cloudFrontLayerHandler{cloudfront: cf, delegateLayerHandler: dlh, duration: duration}, nil
+	return &cloudFrontStorageMiddleware{StorageDriver: storageDriver, cloudfront: cf, duration: duration}, nil
 }
 
 // Resolve returns an http.Handler which can serve the contents of the given
 // Layer, or an error if not supported by the storagedriver.
-func (lh *cloudFrontLayerHandler) Resolve(layer distribution.Layer) (http.Handler, error) {
-	layerURLStr, err := lh.delegateLayerHandler.urlFor(layer, nil)
+func (lh *cloudFrontStorageMiddleware) URLFor(path string, options map[string]interface{}) (string, error) {
+	// TODO(endophage): currently only supports S3
+	options["expiry"] = time.Now().Add(lh.duration)
+
+	layerURLStr, err := lh.StorageDriver.URLFor(path, options)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	layerURL, err := url.Parse(layerURLStr)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	cfURL, err := lh.cloudfront.CannedSignedURL(layerURL.Path, "", time.Now().Add(lh.duration))
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, cfURL, http.StatusTemporaryRedirect)
-	}), nil
+	return cfURL, nil
 }
 
 // init registers the cloudfront layerHandler backend.
 func init() {
-	RegisterLayerHandler("cloudfront", LayerHandlerInitFunc(newCloudFrontLayerHandler))
+	storagemiddleware.Register("cloudfront", storagemiddleware.InitFunc(newCloudFrontStorageMiddleware))
 }
