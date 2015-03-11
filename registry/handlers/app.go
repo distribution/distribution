@@ -13,9 +13,12 @@ import (
 	"github.com/docker/distribution/notifications"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/registry/auth"
+	registrymiddleware "github.com/docker/distribution/registry/middleware/registry"
+	repositorymiddleware "github.com/docker/distribution/registry/middleware/repository"
 	"github.com/docker/distribution/registry/storage"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/factory"
+	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 )
@@ -41,8 +44,6 @@ type App struct {
 		sink   notifications.Sink
 		source notifications.SourceRecord
 	}
-
-	layerHandler storage.LayerHandler // allows dispatch of layer serving to external provider
 }
 
 // Value intercepts calls context.Context.Value, returning the current app id,
@@ -88,9 +89,19 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 		// a health check.
 		panic(err)
 	}
+	app.driver, err = applyStorageMiddleware(app.driver, configuration.Middleware["storage"])
+	if err != nil {
+		panic(err)
+	}
 
 	app.configureEvents(&configuration)
+
 	app.registry = storage.NewRegistryWithDriver(app.driver)
+	app.registry, err = applyRegistryMiddleware(app.registry, configuration.Middleware["registry"])
+	if err != nil {
+		panic(err)
+	}
+
 	authType := configuration.Auth.Type()
 
 	if authType != "" {
@@ -99,16 +110,6 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 			panic(fmt.Sprintf("unable to configure authorization (%s): %v", authType, err))
 		}
 		app.accessController = accessController
-	}
-
-	layerHandlerType := configuration.LayerHandler.Type()
-
-	if layerHandlerType != "" {
-		lh, err := storage.GetLayerHandler(layerHandlerType, configuration.LayerHandler.Parameters(), app.driver)
-		if err != nil {
-			panic(fmt.Sprintf("unable to configure layer handler (%s): %v", layerHandlerType, err))
-		}
-		app.layerHandler = lh
 	}
 
 	return app
@@ -249,6 +250,15 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 			context.Repository = notifications.Listen(
 				repository,
 				app.eventBridge(context, r))
+
+			context.Repository, err = applyRepoMiddleware(context.Repository, app.Config.Middleware["repository"])
+			if err != nil {
+				ctxu.GetLogger(context).Errorf("error initializing repository middleware: %v", err)
+				context.Errors.Push(v2.ErrorCodeUnknown, err)
+				w.WriteHeader(http.StatusInternalServerError)
+				serveJSON(w, context.Errors)
+				return
+			}
 		}
 
 		handler := dispatch(context, r)
@@ -416,4 +426,41 @@ func appendAccessRecords(records []auth.Access, method string, repo string) []au
 			})
 	}
 	return records
+}
+
+// applyRegistryMiddleware wraps a registry instance with the configured middlewares
+func applyRegistryMiddleware(registry distribution.Registry, middlewares []configuration.Middleware) (distribution.Registry, error) {
+	for _, mw := range middlewares {
+		rmw, err := registrymiddleware.Get(mw.Name, mw.Options, registry)
+		if err != nil {
+			return nil, fmt.Errorf("unable to configure registry middleware (%s): %s", mw.Name, err)
+		}
+		registry = rmw
+	}
+	return registry, nil
+
+}
+
+// applyRepoMiddleware wraps a repository with the configured middlewares
+func applyRepoMiddleware(repository distribution.Repository, middlewares []configuration.Middleware) (distribution.Repository, error) {
+	for _, mw := range middlewares {
+		rmw, err := repositorymiddleware.Get(mw.Name, mw.Options, repository)
+		if err != nil {
+			return nil, err
+		}
+		repository = rmw
+	}
+	return repository, nil
+}
+
+// applyStorageMiddleware wraps a storage driver with the configured middlewares
+func applyStorageMiddleware(driver storagedriver.StorageDriver, middlewares []configuration.Middleware) (storagedriver.StorageDriver, error) {
+	for _, mw := range middlewares {
+		smw, err := storagemiddleware.Get(mw.Name, mw.Options, driver)
+		if err != nil {
+			return nil, fmt.Errorf("unable to configure storage middleware (%s): %v", mw.Name, err)
+		}
+		driver = smw
+	}
+	return driver, nil
 }

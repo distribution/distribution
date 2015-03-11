@@ -26,8 +26,8 @@ type Configuration struct {
 	// used to gate requests.
 	Auth Auth `yaml:"auth,omitempty"`
 
-	// LayerHandler specifies a middleware for serving image layers.
-	LayerHandler LayerHandler `yaml:"layerhandler,omitempty"`
+	// Middleware lists all middlewares to be used by the registry.
+	Middleware map[string][]Middleware `yaml:"middleware,omitempty"`
 
 	// Reporting is the configuration for error reporting
 	Reporting Reporting `yaml:"reporting,omitempty"`
@@ -295,60 +295,14 @@ type NewRelicReporting struct {
 	Name string `yaml:"name,omitempty"`
 }
 
-// LayerHandler defines the configuration for middleware layer serving
-type LayerHandler map[string]Parameters
-
-// Type returns the layerhandler type
-func (layerHandler LayerHandler) Type() string {
-	// Return only key in this map
-	for k := range layerHandler {
-		return k
-	}
-	return ""
-}
-
-// Parameters returns the Parameters map for a LayerHandler configuration
-func (layerHandler LayerHandler) Parameters() Parameters {
-	return layerHandler[layerHandler.Type()]
-}
-
-// UnmarshalYAML implements the yaml.Unmarshaler interface
-// Unmarshals a single item map into a Storage or a string into a Storage type with no parameters
-func (layerHandler *LayerHandler) UnmarshalYAML(unmarshal func(interface{}) error) error {
-	var storageMap map[string]Parameters
-	err := unmarshal(&storageMap)
-	if err == nil {
-		if len(storageMap) > 1 {
-			types := make([]string, 0, len(storageMap))
-			for k := range storageMap {
-				types = append(types, k)
-			}
-			return fmt.Errorf("Must provide exactly one layerhandler type. Provided: %v", types)
-		}
-		*layerHandler = storageMap
-		return nil
-	}
-
-	var storageType string
-	err = unmarshal(&storageType)
-	if err == nil {
-		*layerHandler = LayerHandler{storageType: Parameters{}}
-		return nil
-	}
-
-	return err
-}
-
-// MarshalYAML implements the yaml.Marshaler interface
-func (layerHandler LayerHandler) MarshalYAML() (interface{}, error) {
-	if layerHandler.Parameters() == nil {
-		t := layerHandler.Type()
-		if t == "" {
-			return nil, nil
-		}
-		return t, nil
-	}
-	return map[string]Parameters(layerHandler), nil
+// Middleware configures named middlewares to be applied at injection points.
+type Middleware struct {
+	// Name the middleware registers itself as
+	Name string `yaml:"name"`
+	// Flag to disable middleware easily
+	Disabled bool `yaml:"disabled,omitempty"`
+	// Map of parameters that will be passed to the middleware's initialization function
+	Options Parameters `yaml:"options"`
 }
 
 // Parse parses an input configuration yaml document into a Configuration struct
