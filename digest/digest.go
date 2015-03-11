@@ -51,6 +51,9 @@ func NewDigestFromHex(alg, hex string) Digest {
 // DigestRegexp matches valid digest types.
 var DigestRegexp = regexp.MustCompile(`[a-zA-Z0-9-_+.]+:[a-fA-F0-9]+`)
 
+// DigestRegexpAnchored matches valid digest types, anchored to the start and end of the match.
+var DigestRegexpAnchored = regexp.MustCompile(`^` + DigestRegexp.String() + `$`)
+
 var (
 	// ErrDigestInvalidFormat returned when digest format invalid.
 	ErrDigestInvalidFormat = fmt.Errorf("invalid checksum digest format")
@@ -114,7 +117,7 @@ func (d Digest) Validate() error {
 
 	// Continue on for general parser
 
-	if !DigestRegexp.MatchString(s) {
+	if !DigestRegexpAnchored.MatchString(s) {
 		return ErrDigestInvalidFormat
 	}
 

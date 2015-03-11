@@ -49,6 +49,11 @@ func TestParseDigest(t *testing.T) {
 			err:   ErrDigestInvalidFormat,
 		},
 		{
+			// not hex
+			input: "sha256:d41d8cd98f00b204e9800m98ecf8427e",
+			err:   ErrDigestInvalidFormat,
+		},
+		{
 			input: "foo:d41d8cd98f00b204e9800998ecf8427e",
 			err:   ErrDigestUnsupported,
 		},
