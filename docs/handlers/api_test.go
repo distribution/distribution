@@ -236,7 +236,10 @@ func TestLayerAPI(t *testing.T) {
 	})
 
 	// Verify the body
-	verifier := digest.NewDigestVerifier(layerDigest)
+	verifier, err := digest.NewDigestVerifier(layerDigest)
+	if err != nil {
+		t.Fatalf("unexpected error getting digest verifier: %s", err)
+	}
 	io.Copy(verifier, resp.Body)
 
 	if !verifier.Verified() {

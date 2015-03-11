@@ -55,7 +55,11 @@ func TestSimpleWrite(t *testing.T) {
 	}
 	defer fr.Close()
 
-	verifier := digest.NewDigestVerifier(dgst)
+	verifier, err := digest.NewDigestVerifier(dgst)
+	if err != nil {
+		t.Fatalf("unexpected error getting digest verifier: %s", err)
+	}
+
 	io.Copy(verifier, fr)
 
 	if !verifier.Verified() {
@@ -94,7 +98,11 @@ func TestSimpleWrite(t *testing.T) {
 	}
 	defer fr.Close()
 
-	verifier = digest.NewDigestVerifier(doubledgst)
+	verifier, err = digest.NewDigestVerifier(doubledgst)
+	if err != nil {
+		t.Fatalf("unexpected error getting digest verifier: %s", err)
+	}
+
 	io.Copy(verifier, fr)
 
 	if !verifier.Verified() {
@@ -141,7 +149,11 @@ func TestSimpleWrite(t *testing.T) {
 	}
 	defer fr.Close()
 
-	verifier = digest.NewDigestVerifier(doubledgst)
+	verifier, err = digest.NewDigestVerifier(doubledgst)
+	if err != nil {
+		t.Fatalf("unexpected error getting digest verifier: %s", err)
+	}
+
 	io.Copy(verifier, fr)
 
 	if !verifier.Verified() {
