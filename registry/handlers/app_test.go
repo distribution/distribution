@@ -188,8 +188,8 @@ func TestNewApp(t *testing.T) {
 	}
 
 	expectedAuthHeader := "Bearer realm=\"realm-test\",service=\"service-test\""
-	if req.Header.Get("Authorization") != expectedAuthHeader {
-		t.Fatalf("unexpected authorization header: %q != %q", req.Header.Get("Authorization"), expectedAuthHeader)
+	if e, a := expectedAuthHeader, req.Header.Get("WWW-Authenticate"); e != a {
+		t.Fatalf("unexpected WWW-Authenticate header: %q != %q", e, a)
 	}
 
 	var errs v2.Errors
