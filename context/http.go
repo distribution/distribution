@@ -133,6 +133,10 @@ func (ctx *httpRequestContext) Value(key interface{}) interface{} {
 			return ctx.r
 		}
 
+		if !strings.HasPrefix(keyStr, "http.request.") {
+			goto fallback
+		}
+
 		parts := strings.Split(keyStr, ".")
 
 		if len(parts) != 3 {
@@ -239,6 +243,10 @@ func (irw *instrumentedResponseWriter) Value(key interface{}) interface{} {
 	if keyStr, ok := key.(string); ok {
 		if keyStr == "http.response" {
 			return irw.ResponseWriter
+		}
+
+		if !strings.HasPrefix(keyStr, "http.response.") {
+			goto fallback
 		}
 
 		parts := strings.Split(keyStr, ".")
