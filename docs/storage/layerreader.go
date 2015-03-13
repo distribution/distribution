@@ -6,6 +6,7 @@ import (
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/registry/storage/driver"
 )
 
 // layerReader implements Layer and provides facilities for reading and
@@ -35,11 +36,29 @@ func (lr *layerReader) Close() error {
 	return lr.closeWithErr(distribution.ErrLayerClosed)
 }
 
-func (lr *layerReader) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Docker-Content-Digest", lr.digest.String())
+func (lr *layerReader) Handler(r *http.Request) (h http.Handler, err error) {
+	var handlerFunc http.HandlerFunc
 
-	if url, err := lr.fileReader.driver.URLFor(lr.path, map[string]interface{}{"method": r.Method}); err == nil {
-		http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+	redirectURL, err := lr.fileReader.driver.URLFor(lr.path, map[string]interface{}{"method": r.Method})
+
+	switch err {
+	case nil:
+		handlerFunc = func(w http.ResponseWriter, r *http.Request) {
+			// Redirect to storage URL.
+			http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
+		}
+	case driver.ErrUnsupportedMethod:
+		handlerFunc = func(w http.ResponseWriter, r *http.Request) {
+			// Fallback to serving the content directly.
+			http.ServeContent(w, r, lr.digest.String(), lr.CreatedAt(), lr)
+		}
+	default:
+		// Some unexpected error.
+		return nil, err
 	}
-	http.ServeContent(w, r, lr.digest.String(), lr.CreatedAt(), lr)
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Docker-Content-Digest", lr.digest.String())
+		handlerFunc.ServeHTTP(w, r)
+	}), nil
 }
