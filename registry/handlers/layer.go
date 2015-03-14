@@ -63,5 +63,12 @@ func (lh *layerHandler) GetLayer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	layer.ServeHTTP(w, r)
+	handler, err := layer.Handler(r)
+	if err != nil {
+		ctxu.GetLogger(lh).Debugf("unexpected error getting layer HTTP handler: %s", err)
+		lh.Errors.Push(v2.ErrorCodeUnknown, err)
+		return
+	}
+
+	handler.ServeHTTP(w, r)
 }
