@@ -73,7 +73,7 @@ type StorageDriver interface {
 
 	// URLFor returns a URL which may be used to retrieve the content stored at
 	// the given path, possibly using the given options.
-	// May return an UnsupportedMethodErr in certain StorageDriver
+	// May return an ErrUnsupportedMethod in certain StorageDriver
 	// implementations.
 	URLFor(path string, options map[string]interface{}) (string, error)
 }
@@ -85,8 +85,8 @@ type StorageDriver interface {
 // hyphen.
 var PathRegexp = regexp.MustCompile(`^(/[a-z0-9._-]+)+$`)
 
-// UnsupportedMethodErr may be returned in the case where a StorageDriver implementation does not support an optional method.
-var ErrUnsupportedMethod = errors.New("Unsupported method")
+// ErrUnsupportedMethod may be returned in the case where a StorageDriver implementation does not support an optional method.
+var ErrUnsupportedMethod = errors.New("unsupported method")
 
 // PathNotFoundError is returned when operating on a nonexistent path.
 type PathNotFoundError struct {
