@@ -6,23 +6,16 @@ import (
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/registry/api/v2"
-	"github.com/gorilla/handlers"
 )
 
-// tagsDispatcher constructs the tags handler api endpoint.
-func tagsDispatcher(ctx *Context, r *http.Request) http.Handler {
-	tagsHandler := &tagsHandler{
-		Context: ctx,
+func tagsHandler(ctx *Context, w http.ResponseWriter, r *http.Request) (httpErr error) {
+	switch r.Method {
+	case "GET":
+		httpErr = GetTags(ctx, w, r)
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
-
-	return handlers.MethodHandler{
-		"GET": http.HandlerFunc(tagsHandler.GetTags),
-	}
-}
-
-// tagsHandler handles requests for lists of tags under a repository name.
-type tagsHandler struct {
-	*Context
+	return httpErr
 }
 
 type tagsAPIResponse struct {
@@ -31,30 +24,31 @@ type tagsAPIResponse struct {
 }
 
 // GetTags returns a json list of tags for a specific image name.
-func (th *tagsHandler) GetTags(w http.ResponseWriter, r *http.Request) {
+func GetTags(ctx *Context, w http.ResponseWriter, r *http.Request) error {
 	defer r.Body.Close()
-	manifests := th.Repository.Manifests()
+	manifests := ctx.Repository.Manifests()
 
 	tags, err := manifests.Tags()
 	if err != nil {
 		switch err := err.(type) {
 		case distribution.ErrRepositoryUnknown:
-			w.WriteHeader(404)
-			th.Errors.Push(v2.ErrorCodeNameUnknown, map[string]string{"name": th.Repository.Name()})
+			return NewHTTPError(v2.ErrorCodeNameUnknown, map[string]string{"name": ctx.Repository.Name()}, http.StatusNotFound)
 		default:
-			th.Errors.PushErr(err)
+			return NewHTTPError(v2.ErrorCodeUnknown, err, http.StatusInternalServerError)
 		}
-		return
 	}
 
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 
+	// TODO (endophage): we might want to attempt the encoding first,
+	// especially for something like this we expect to be small. That
+	// was we can still serve a status header if an error occurs
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(tagsAPIResponse{
-		Name: th.Repository.Name(),
+		Name: ctx.Repository.Name(),
 		Tags: tags,
 	}); err != nil {
-		th.Errors.PushErr(err)
-		return
+		return NewHTTPError(v2.ErrorCodeUnknown, err, http.StatusInternalServerError)
 	}
+	return nil
 }

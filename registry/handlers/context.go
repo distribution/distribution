@@ -16,24 +16,48 @@ import (
 // handlers. Resources that don't need to be shared across handlers should not
 // be on this object.
 type Context struct {
-	// App points to the application structure that created this context.
-	*App
 	context.Context
 
 	// Repository is the repository for the current request. All requests
 	// should be scoped to a single repository. This field may be nil.
 	Repository distribution.Repository
 
-	// Errors is a collection of errors encountered during the request to be
-	// returned to the client API. If errors are added to the collection, the
-	// handler *must not* start the response via http.ResponseWriter.
-	Errors v2.Errors
+	Secret string
 
 	urlBuilder *v2.URLBuilder
+}
 
-	// TODO(stevvooe): The goal is too completely factor this context and
-	// dispatching out of the web application. Ideally, we should lean on
-	// context.Context for injection of these resources.
+// ContextHandler represents an HTTP Handler that also accepts a context object
+// in addition to the ResponseWriter and Request
+type ContextHandler func(*Context, http.ResponseWriter, *http.Request) error
+
+// ContextHandlerPartial binds the application to the ContextHandler in a closure
+// such that we can generate request scoped contexts. It also generically handles
+// the various HTTP errors that a ContextHandler might return.
+func ContextHandlerPartial(app *App, ctxHandler ContextHandler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		context, err := app.requestContext(w, r)
+		if err == nil {
+			defer func() {
+				ctxu.GetResponseLogger(context).Infof("response completed")
+			}()
+
+			err = ctxHandler(context, w, r)
+		}
+
+		if err != nil {
+			err = serveError(err, w)
+			if err != nil {
+				// TODO (endophage): we might want to log something
+			}
+			return
+		}
+
+		if flusher, ok := w.(http.Flusher); ok {
+			flusher.Flush()
+		}
+
+	})
 }
 
 // Value overrides context.Context.Value to ensure that calls are routed to
@@ -41,7 +65,6 @@ type Context struct {
 func (ctx *Context) Value(key interface{}) interface{} {
 	return ctx.Context.Value(key)
 }
-
 func getName(ctx context.Context) (name string) {
 	return ctxu.GetStringValue(ctx, "vars.name")
 }
