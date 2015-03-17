@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"encoding/json"
 	"reflect"
+	"runtime"
 	"testing"
 
+	"github.com/docker/distribution"
 	"github.com/docker/libtrust"
 )
 
 type testEnv struct {
 	name, tag string
-	manifest  *Manifest
-	signed    *SignedManifest
+	manifest  distribution.Manifest
 	pk        libtrust.PrivateKey
 }
 
@@ -21,13 +22,14 @@ func TestManifestMarshaling(t *testing.T) {
 
 	// Check that the Raw field is the same as json.MarshalIndent with these
 	// parameters.
-	p, err := json.MarshalIndent(env.signed, "", "   ")
+	p, err := json.Marshal(env.manifest)
 	if err != nil {
 		t.Fatalf("error marshaling manifest: %v", err)
 	}
 
-	if !bytes.Equal(p, env.signed.Raw) {
-		t.Fatalf("manifest bytes not equal: %q != %q", string(env.signed.Raw), string(p))
+	raw := env.manifest.(*SignedManifest).Raw
+	if !bytes.Equal(p, raw) {
+		t.Fatalf("manifest bytes not equal: %q != %q", string(raw), string(p))
 	}
 }
 
@@ -35,19 +37,27 @@ func TestManifestUnmarshaling(t *testing.T) {
 	env := genEnv(t)
 
 	var signed SignedManifest
-	if err := json.Unmarshal(env.signed.Raw, &signed); err != nil {
+	if err := json.Unmarshal(env.manifest.(*SignedManifest).Raw, &signed); err != nil {
 		t.Fatalf("error unmarshaling signed manifest: %v", err)
 	}
 
-	if !reflect.DeepEqual(&signed, env.signed) {
-		t.Fatalf("manifests are different after unmarshaling: %v != %v", signed, env.signed)
+	if signed.Descriptor() != env.manifest.Descriptor() {
+		t.Fatalf("blobs must be the same: %#v != %#v", signed.Descriptor(), env.manifest.Descriptor())
+	}
+
+	if !reflect.DeepEqual(signed.Manifest, env.manifest.(*SignedManifest).Manifest) {
+		t.Fatalf("inner manifests must be equal: %#v != %#v", signed.Manifest, env.manifest.(*SignedManifest).Manifest)
+	}
+
+	if !reflect.DeepEqual(&signed, env.manifest) {
+		t.Fatalf("manifests are different after unmarshaling: %#v != %#v", signed, env.manifest)
 	}
 }
 
 func TestManifestVerification(t *testing.T) {
 	env := genEnv(t)
 
-	publicKeys, err := Verify(env.signed)
+	publicKeys, err := Verify(env.manifest)
 	if err != nil {
 		t.Fatalf("error verifying manifest: %v", err)
 	}
@@ -71,6 +81,18 @@ func TestManifestVerification(t *testing.T) {
 	}
 }
 
+func TestManifestInterface(t *testing.T) {
+	env := genEnv(t)
+
+	fsLayers := env.manifest.(*SignedManifest).FSLayers
+
+	for i, dep := range env.manifest.Dependencies() {
+		if dep.Digest != fsLayers[len(fsLayers)-i].BlobSum {
+			t.Fatalf("depedendencies returned in incorrect order")
+		}
+	}
+}
+
 func genEnv(t *testing.T) *testEnv {
 	pk, err := libtrust.GenerateECP256PrivateKey()
 	if err != nil {
@@ -78,33 +100,20 @@ func genEnv(t *testing.T) *testEnv {
 	}
 
 	name, tag := "foo/bar", "test"
+	mb := NewManifestBuilder(pk, name, tag, runtime.GOARCH)
 
-	m := Manifest{
-		Versioned: Versioned{
-			SchemaVersion: 1,
-		},
-		Name: name,
-		Tag:  tag,
-		FSLayers: []FSLayer{
-			{
-				BlobSum: "asdf",
-			},
-			{
-				BlobSum: "qwer",
-			},
-		},
-	}
+	mb.AddDependency(Dependency{Digest: "qwer"})
+	mb.AddDependency(Dependency{Digest: "asdf"})
 
-	sm, err := Sign(&m, pk)
+	m, err := mb.Build()
 	if err != nil {
-		t.Fatalf("error signing manifest: %v", err)
+		t.Fatalf("unexpected error building manifest: %v", err)
 	}
 
 	return &testEnv{
 		name:     name,
 		tag:      tag,
-		manifest: &m,
-		signed:   sm,
+		manifest: m,
 		pk:       pk,
 	}
 }

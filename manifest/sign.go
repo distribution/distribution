@@ -4,14 +4,21 @@ import (
 	"crypto/x509"
 	"encoding/json"
 
+	"github.com/docker/distribution"
 	"github.com/docker/libtrust"
 )
 
 // Sign signs the manifest with the provided private key, returning a
 // SignedManifest. This typically won't be used within the registry, except
 // for testing.
-func Sign(m *Manifest, pk libtrust.PrivateKey) (*SignedManifest, error) {
-	p, err := json.MarshalIndent(m, "", "   ")
+func Sign(m *Manifest, pk libtrust.PrivateKey) (distribution.Manifest, error) {
+	p, err := json.Marshal(m)
+	if err != nil {
+		return nil, err
+	}
+
+	// p becomes the blob
+	blob, err := distribution.NewBlobFromBytes(ManifestMediaType, p)
 	if err != nil {
 		return nil, err
 	}
@@ -30,17 +37,24 @@ func Sign(m *Manifest, pk libtrust.PrivateKey) (*SignedManifest, error) {
 		return nil, err
 	}
 
+	sigs, err := js.Signatures()
+	if err != nil {
+		return nil, err
+	}
+
 	return &SignedManifest{
-		Manifest: *m,
-		Raw:      pretty,
+		Manifest:   *m,
+		Blob:       blob,
+		Raw:        pretty,
+		Signatures: sigs,
 	}, nil
 }
 
 // SignWithChain signs the manifest with the given private key and x509 chain.
 // The public key of the first element in the chain must be the public key
 // corresponding with the sign key.
-func SignWithChain(m *Manifest, key libtrust.PrivateKey, chain []*x509.Certificate) (*SignedManifest, error) {
-	p, err := json.MarshalIndent(m, "", "   ")
+func SignWithChain(m *Manifest, key libtrust.PrivateKey, chain []*x509.Certificate) (distribution.Manifest, error) {
+	p, err := json.Marshal(m)
 	if err != nil {
 		return nil, err
 	}
