@@ -64,8 +64,8 @@ To keep track of the state of issues and PRs, we've adopted a set of simple labe
 	<dt><a href="https://github.com/docker/distribution/labels/Blocked">Blocked</a></dt>
 	<dd>If an issue requires further clarification or is blocked on an unresolved dependency, this label should be used.</dd>
 
-	<dt><a href="https://github.com/docker/distribution/labels/Ready">Ready</a></dt>
-	<dd>Issues marked with this label should be ready for implementation. All required information should be available and design details have been worked out.</dd>
+	<dt><a href="https://github.com/docker/distribution/labels/Sprint">Sprint</a></dt>
+	<dd>Issues marked with this label are being worked in the current sprint. All required information should be available and design details have been worked out.</dd>
 
 	<dt><a href="https://github.com/docker/distribution/labels/In%20Progress">In Progress</a></dt>
 	<dd>The issue or PR is being actively worked on by the assignee.</dd>
