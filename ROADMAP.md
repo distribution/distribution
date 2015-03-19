@@ -63,6 +63,8 @@ Planned Features:
 
 TBD
 
+***
+
 ### Distribution Package 
 
 At its core, the Distribution Project is a set of Go packages that make up
@@ -74,6 +76,8 @@ The package itself is considered unstable. If you're using it, please take care 
 For feature additions, please see the Registry section. In the future, we may break out a
 separate Roadmap for distribution-specific features that apply to more than
 just the registry.
+
+***
 
 ### Project Planning
 
