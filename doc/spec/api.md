@@ -235,6 +235,9 @@ tag       | The tag for this version of the image.         |
 fsLayers  | A list of layer descriptors (including tarsum) |
 signature | A JWS used to verify the manifest content      |
 
+**TODO**: this suggests to the reader that important API info (the manifest format)
+is not in this spec, but burried in #8093.
+
 For more information about the manifest format, please see
 [docker/docker#8093](https://github.com/docker/docker/issues/8093).
 
