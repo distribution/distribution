@@ -2,19 +2,20 @@
 
 ## Introduction
 
-The _Docker Registry HTTP API_ is the protocol to facilitate distribution of
-images to the docker engine. It interacts with instances of the docker
-registry, which is a service to manage information about docker images and
-enable their distribution. The specification covers the operation of version 2
-of this API, known as _Docker Registry HTTP API V2_.
+The _Docker Registry HTTP API_ defines the API endpoints used to facilitate the
+distribution of Docker images. These API endpoints are implemented by the Docker
+Registry and used by Docker Engines to push and pull images.
 
-While the V1 registry protocol is usable, there are several problems with the
-architecture that have led to this new version. The main driver of this
-specification these changes to the docker the image format, covered in
-docker/docker#8093. The new, self-contained image manifest simplifies image
+This specification covers the operation the _Docker Registry HTTP API V2_. See
+[Docker Registry HTTP API V1](http://docs.docker.com/reference/api/registry_api/)
+for the previous version.
+
+The main driver of this specification are changes to the docker the image format,
+covered in [docker/docker#8093](https://github.com/docker/docker/issues/8903).
+The new, self-contained image manifest simplifies image
 definition and improves security. This specification will build on that work,
 leveraging new properties of the manifest format to improve performance,
-reduce bandwidth usage and decrease the likelihood of backend corruption.
+reduce bandwidth usage and decrease the likelihood of image store corruption.
 
 For relevant details and history leading up to this specification, please see
 the following issues:
@@ -25,10 +26,10 @@ the following issues:
 
 ### Scope
 
-This specification covers the URL layout and protocols of the interaction
-between docker registry and docker core. This will affect the docker core
-registry API and the rewrite of docker-registry. Docker registry
-implementations may implement other API endpoints, but they are not covered by
+This specification covers the URL layout and protocol interaction
+between Docker Registry and Docker core. This will affect the Docker core
+registry API and the rewrite of docker-registry. Docker Registry
+implementations may implement other API endpoints, but these are not covered by
 this specification.
 
 This includes the following features:
@@ -43,18 +44,17 @@ specification, details of the protocol will be left to a future specification.
 Relevant header definitions and error codes are present to provide an
 indication of what a client may encounter.
 
-#### Future
+#### Future work
 
-There are features that have been discussed during the process of cutting this
+There are features that have been discussed during the process of writing this
 specification. The following is an incomplete list:
 
 - Immutable image references
 - Multiple architecture support
-- Migration from v2compatibility representation
+- Migration from the V2 compatibility representation
 
-These may represent features that are either out of the scope of this
-specification, the purview of another specification or have been deferred to a
-future version.
+These features that are either outside the scope of this specification, the
+purview of another specification or have been deferred to a future version.
 
 ### Use Cases
 
@@ -63,18 +63,18 @@ version. Differentiating use cases are covered below.
 
 #### Image Verification
 
-A docker engine instance would like to run verified image named
+A Docker Engine instance would like to run a verified image named
 "library/ubuntu", with the tag "latest". The engine contacts the registry,
 requesting the manifest for "library/ubuntu:latest". An untrusted registry
 returns a manifest. Before proceeding to download the individual layers, the
 engine verifies the manifest's signature, ensuring that the content was
-produced from a trusted source and no tampering has occured. After each layer
+produced from a trusted source and no tampering has occurred. After each layer
 is downloaded, the engine verifies the digest of the layer, ensuring that the
 content matches that specified by the manifest.
 
 #### Resumable Push
 
-Company X's build servers lose connectivity to docker registry before
+Company X's build servers lose connectivity to Docker Registry before
 completing an image layer transfer. After connectivity returns, the build
 server attempts to re-upload the image. The registry notifies the build server
 that the upload has already been partially attempted. The build server
@@ -84,7 +84,7 @@ responds by only sending the remaining data to complete the image file.
 
 Company X is having more connectivity problems but this time in their
 deployment datacenter. When downloading an image, the connection is
-interrupted before completion. The client keeps the partial data and uses http
+interrupted before completion. The client keeps the partial data and uses HTTP
 `Range` requests to avoid downloading repeated data.
 
 #### Layer Upload De-duplication
@@ -130,19 +130,20 @@ specification to correspond with the versions enumerated here.
 
 This section covers client flows and details of the API endpoints. The URI
 layout of the new API is structured to support a rich authentication and
-authorization model by leveraging namespaces. All endpoints will be prefixed
-by the API version and the repository name:
+authorization model by leveraging namespaces. All endpoints will begin with an
+optional `<prefix>` (see [the http configuration](../configuration.md#http)),
+the API version and the repository name:
 
-    /v2/<name>/
+    <prefix>/v2/<name>/
 
 For example, an API endpoint that will work with the `library/ubuntu`
-repository, the URI prefix will be:
+repository, the URI will begin with:
 
-    /v2/library/ubuntu/
+    <prefix>/v2/library/ubuntu/
 
 This scheme provides rich access control over various operations and methods
-using the URI prefix and http methods that can be controlled in variety of
-ways.
+using the URI beginning and HTTP methods that can be controlled in variety of
+ways. The remainder of this document will treat the `<prefix>` as an empty string.
 
 Classically, repository names have always been two path components where each
 path component is less than 30 characters. The V2 registry API does not
@@ -159,9 +160,9 @@ enforce this. The rules for a repository name are as follows:
    256 characters.
 
 These name requirements _only_ apply to the registry API and should accept a
-superset of what is supported by other docker ecosystem components.
+superset of what is supported by other Docker ecosystem components.
 
-All endpoints should support aggressive http caching, compression and range
+All endpoints should support aggressive HTTP caching, compression and range
 headers, where appropriate. The new API attempts to leverage HTTP semantics
 where possible but may break from standards to implement targeted features.
 
@@ -171,7 +172,7 @@ section.
 ### Errors
 
 Actionable failure conditions, covered in detail in their relevant sections,
-are reported as part of 4xx responses, in a json response body. One or more
+are reported as part of 4xx responses, in a JSON response body. One or more
 errors will be returned in the following format:
 
     {
@@ -186,7 +187,7 @@ errors will be returned in the following format:
 
 The `code` field will be a unique identifier, all caps with underscores by
 convention. The `message` field will be a human readable string. The optional
-`detail` field may contain arbitrary json data providing information the
+`detail` field may contain arbitrary JSON data providing information the
 client can use to resolve the issue.
 
 While the client can take action on certain error codes, the registry may add
@@ -195,7 +196,8 @@ error codes as `UNKNOWN`, allowing future error codes to be added without
 breaking API compatibility. For the purposes of the specification error codes
 will only be added and never removed.
 
-For a complete account of all error codes, please see the _Detail_ section.
+For a complete account of all error codes, please see the [_Detail_](#detail)
+section.
 
 ### API Version Check
 
@@ -243,7 +245,7 @@ the V2 registry API, keyed by their tarsum digest.
 
 #### Pulling an Image Manifest
 
-The image manifest can be fetched with the following url:
+The image manifest can be fetched with the following URL:
 
 ```
 GET /v2/<name>/manifests/<reference>
@@ -277,7 +279,7 @@ before fetching layers.
 #### Pulling a Layer
 
 Layers are stored in the blob portion of the registry, keyed by tarsum digest.
-Pulling a layer is carried out by a standard http request. The URL is as
+Pulling a layer is carried out by a standard HTTP request. The URL is as
 follows:
 
     GET /v2/<name>/blobs/<tarsum>
@@ -301,19 +303,15 @@ image manifest, the client must first push the individual layers. When the
 layers are fully pushed into the registry, the client should upload the signed
 manifest.
 
-The details of each step of the process are covered in the following sections.
-
 #### Pushing a Layer
 
-All layer uploads use two steps to manage the upload process. The first step
-starts the upload in the registry service, returning a url to carry out the
-second step. The second step uses the upload url to transfer the actual data.
-Uploads are started with a POST request which returns a url that can be used
-to push data and check upload status.
+All layer uploads use two steps to manage the upload process.
+Uploads are begun with a POST request returning a URL that is then used
+to push the layer data and check upload status.
 
 The `Location` header will be used to communicate the upload location after
-each request. While it won't change in the this specification, clients should
-use the most recent value returned by the API.
+each request. While the upload location won't change in the this specification,
+clients should use the most recent value returned by the API.
 
 ##### Starting An Upload
 
@@ -323,7 +321,7 @@ To begin the process, a POST request should be issued in the following format:
 POST /v2/<name>/blobs/uploads/
 ```
 
-The parameters of this request are the image namespace under which the layer
+The parameters for this request are the image namespace under which the layer
 will be linked. Responses to this request are covered below.
 
 ##### Existing Layers
@@ -337,7 +335,7 @@ HEAD /v2/<name>/blobs/<digest>
 
 If the layer with the tarsum specified in `digest` is available, a 200 OK
 response will be received, with no actual body content (this is according to
-http specification). The response will look as follows:
+HTTP specification). The response will look as follows:
 
 ```
 200 OK
@@ -363,11 +361,11 @@ Content-Length: 0
 Docker-Upload-UUID: <uuid>
 ```
 
-The rest of the upload process can be carried out with the returned url,
+The rest of the upload process can be carried out with the returned URL,
 called the "Upload URL" from the `Location` header. All responses to the
-upload url, whether sending data or getting status, will be in this format.
+upload URL, whether sending data or getting status, will be in this format.
 Though the URI format (`/v2/<name>/blobs/uploads/<uuid>`) for the `Location`
-header is specified, clients should treat it as an opaque url and should never
+header is specified, clients should treat it as an opaque URL and should never
 try to assemble the it. While the `uuid` parameter may be an actual UUID, this
 proposal imposes no constraints on the format and clients should never impose
 any.
@@ -411,7 +409,7 @@ honored, even in non-standard use cases.
 
 A monolithic upload is simply a chunked upload with a single chunk and may be
 favored by clients that would like to avoided the complexity of chunking. To
-carry out a "monolithic" upload, one can simply put the entire content blob to
+carry out a "monolithic" upload, one can PUT the entire content blob to
 the provided URL:
 
 ```
@@ -433,19 +431,19 @@ the uploads endpoint, including the "size" and "digest" parameters:
 POST /v2/<name>/blobs/uploads/?digest=<tarsum>[&digest=sha256:<hex digest>]
 Content-Length: <size of layer>
 Content-Type: application/octet-stream
-  
+
 <Layer Binary Data>
 ```
 
 On the registry service, this should allocate a download, accept and verify
-the data and return the same  response as the final chunk of an upload. If the
+the data and return the same response as the final chunk of an upload. If the
 POST request fails collecting the data in any way, the registry should attempt
 to return an error response to the client with the `Location` header providing
 a place to continue the download.
 
 The single `POST` method is provided for convenience and most clients should
 implement `POST` + `PUT` to support reliable resume of uploads.
-  
+
 ##### Chunked Upload
 
 To carry out an upload of a chunk, the client can specify a range header and
@@ -569,7 +567,7 @@ DELETE /v2/<name>/blobs/uploads/<uuid>
 After this request is issued, the upload uuid will no longer be valid and the
 registry server will dump all intermediate data. While uploads will time out
 if not completed, clients should issue this request if they encounter a fatal
-error but still have the ability to issue an http request.
+error but still have the ability to issue an HTTP request.
 
 ##### Errors
 
@@ -608,16 +606,18 @@ image manifest. An image can be pushed using the following request format:
        ...
     }
 
+**TODO**: do you mean `tag` field in the next sentence (or is the JSON out of date)?
+
 The `name` and `reference` fields of the response body must match those specified in
 the URL. The `reference` field may be a "tag" or a "digest".
 
 If there is a problem with pushing the manifest, a relevant 4xx response will
-be returned with a JSON error message. Please see the _PUT Manifest section
+be returned with a JSON error message. Please see the PUT Manifest section
 for details on possible error codes that may be returned.
 
 If one or more layers are unknown to the registry, `BLOB_UNKNOWN` errors are
-returned. The `detail` field of the error response will have a `digest` field
-identifying the missing blob, which will be a tarsum. An error is returned for
+returned. The `detail` field of the error response will contain a `digest` field
+identifying the missing blob by its tarsum. An error is returned for
 each unknown blob. The response format is as follows:
 
     {
@@ -659,7 +659,7 @@ reduce copying.
 ### Deleting an Image
 
 An image may be deleted from the registry via its `name` and `reference`. A
-delete may be issued with the following request format:
+DELETE may be issued with the following request format:
 
     DELETE /v2/<name>/manifests/<reference>
 
@@ -689,7 +689,7 @@ corresponding responses, with success and failure, are enumerated.
 > request, a description of the request, followed by information about that
 > request.
 
-A list of methods and URIs are covered in the table below:
+The table below lists the methods and URIs covered:
 
 |Method|Path|Entity|Description|
 -------|----|------|------------
@@ -699,7 +699,7 @@ A list of methods and URIs are covered in the table below:
 | PUT | `/v2/<name>/manifests/<reference>` | Manifest | Put the manifest identified by `name` and `reference` where `reference` can be a tag or digest. |
 | DELETE | `/v2/<name>/manifests/<reference>` | Manifest | Delete the manifest identified by `name` and `reference` where `reference` can be a tag or digest. |
 | GET | `/v2/<name>/blobs/<digest>` | Blob | Retrieve the blob from the registry identified by `digest`. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data. |
-| POST | `/v2/<name>/blobs/uploads/` | Intiate Blob Upload | Initiate a resumable blob upload. If successful, an upload location will be provided to complete the upload. Optionally, if the `digest` parameter is present, the request body will be used to complete the upload in a single request. |
+| POST | `/v2/<name>/blobs/uploads/` | Initiate Blob Upload | Initiate a resumable blob upload. If successful, an upload location will be provided to complete the upload. Optionally, if the `digest` parameter is present, the request body will be used to complete the upload in a single request. |
 | GET | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Retrieve status of upload identified by `uuid`. The primary purpose of this endpoint is to resolve the current status of a resumable upload. |
 | PATCH | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Upload a chunk of data for the specified upload. |
 | PUT | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Complete the upload specified by `uuid`, optionally appending the body as the final chunk. |
@@ -999,7 +999,7 @@ Content-Type: application/json; charset=utf-8
 }
 ```
 
-The manifest idenfied by `name` and `reference`. The contents can be used to identify and resolve resources required to run the specified image.
+The manifest identified by `name` and `reference`. The contents can be used to identify and resolve resources required to run the specified image.
 
 The following headers will be returned with the response:
 
@@ -1368,7 +1368,7 @@ The error codes that may be included in the response body are enumerated below:
 |Code|Message|Description|
 -------|----|------|------------
 | `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
-| `TAG_INVALID` | manifest tag did not match URI | During a manifest upload, if the tag in the manifest does not match the uri tag, this error will be returned. |
+| `TAG_INVALID` | manifest tag did not match URI | During a manifest upload, if the tag in the manifest does not match the URI tag, this error will be returned. |
 
 
 
@@ -2319,7 +2319,7 @@ The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
 -------|----|------|------------
-| `BLOB_UPLOAD_UNKNOWN` | blob upload unknown to registry | If a blob upload has been cancelled or was never started, this error code may be returned. |
+| `BLOB_UPLOAD_UNKNOWN` | blob upload unknown to registry | If a blob upload has been canceled or was never started, this error code may be returned. |
 
 
 
@@ -2657,7 +2657,7 @@ The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
 -------|----|------|------------
-| `BLOB_UPLOAD_UNKNOWN` | blob upload unknown to registry | If a blob upload has been cancelled or was never started, this error code may be returned. |
+| `BLOB_UPLOAD_UNKNOWN` | blob upload unknown to registry | If a blob upload has been canceled or was never started, this error code may be returned. |
 
 
 
