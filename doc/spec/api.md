@@ -426,7 +426,7 @@ The "digest" parameter must be included with the PUT request. Please see the
 _Completed Upload_ section for details on the parameters and expected
 responses.
 
-Additionally, the download can be completed with a single `POST` request to
+Additionally, the upload can be completed with a single `POST` request to
 the uploads endpoint, including the "size" and "digest" parameters:
 
 ```
@@ -497,7 +497,7 @@ Docker-Upload-UUID: <uuid>
 
 For an upload to be considered complete, the client must submit a `PUT`
 request on the upload endpoint with a digest parameter. If it is not provided,
-the download will not be considered complete. The format for the final chunk
+the upload will not be considered complete. The format for the final chunk
 will be as follows:
 
 ```
