@@ -62,6 +62,9 @@ http:
 	tls:
 		certificate: /path/to/x509/public
 		key: /path/to/x509/private
+    clientcas:
+      - /path/to/ca.pem
+      - /path/to/another/ca.pem
 	debug:
 		addr: localhost:5001
 notifications:
@@ -260,6 +263,9 @@ http:
 	tls:
 		certificate: /path/to/x509/public
 		key: /path/to/x509/private
+    clientcas:
+      - /path/to/ca.pem
+      - /path/to/another/ca.pem
 	debug:
 		addr: localhost:5001
 ```
@@ -276,6 +282,7 @@ The tls option within http is **optional** and allows you to configure SSL for t
 
 - certificate: **Required** - Absolute path to x509 cert file
 - key: **Required** - Absolute path to x509 private key file
+- clientcas: **Optional** - An array of absolute paths to a x509 CA file
 
 ### debug
 
