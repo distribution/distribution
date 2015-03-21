@@ -60,6 +60,8 @@ The new registry implementation provides the following benefits:
 - pluggable storage backend
 - webhook notifications
 
+For information on upcoming functionality, please see [ROADMAP.md](ROADMAP.md).
+
 Installation
 ------------
 
