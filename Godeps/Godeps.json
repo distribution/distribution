@@ -23,7 +23,7 @@
 			"Rev": "d3664b76d90508cdda5a6c92042f26eab5db3103"
 		},
 		{
-			"ImportPath": "github.com/MSOpenTech/azure-sdk-for-go",
+			"ImportPath": "github.com/MSOpenTech/azure-sdk-for-go/storage",
 			"Comment": "v1.2-43-gd90753b",
 			"Rev": "d90753bcad2ed782fcead7392d1e831df29aa2bb"
 		},
