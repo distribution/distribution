@@ -10,6 +10,7 @@ The following parameters must be used to authenticate and configure the storage 
 * `accountname`: Name of the Azure Storage Account.
 * `accountkey`: Primary or Secondary Key for the Storage Account.
 * `container`: Name of the root storage container in which all registry data will be stored. Must comply the storage container name [requirements][create-container-api].
+* `realm`: (optional) Domain name suffix for the Storage Service API endpoint. Defaults to `core.windows.net`. For example realm for "Azure in China" would be `core.chinacloudapi.cn` and realm for "Azure Government" would be `core.usgovcloudapi.net`.
 
 
 [azure-blob-storage]: http://azure.microsoft.com/en-us/services/storage/
