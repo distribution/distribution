@@ -20,7 +20,7 @@ storage:
 		encrypt: true
 		secure: true
 		v4auth: true
-		chunksize: 32000
+		chunksize: 5242880
 		rootdirectory: /s3/object/name/prefix
 auth:
 	silly:
@@ -118,7 +118,7 @@ storage:
 		encrypt: true
 		secure: true
 		v4auth: true
-		chunksize: 32000
+		chunksize: 5242880
 		rootdirectory: /s3/object/name/prefix
 ```
 
