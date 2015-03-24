@@ -9,6 +9,7 @@ import (
 	"os"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/Sirupsen/logrus/formatters/logstash"
 	"github.com/bugsnag/bugsnag-go"
 	"github.com/docker/distribution/configuration"
 	ctxu "github.com/docker/distribution/context"
@@ -49,7 +50,10 @@ func main() {
 		fatalf("configuration error: %v", err)
 	}
 
-	log.SetLevel(logLevel(config.Loglevel))
+	if err := configureLogging(config); err != nil {
+		fatalf("error configuring logger: %v", err)
+	}
+
 	ctx = context.WithValue(ctx, "version", version.Version)
 	ctx = ctxu.WithLogger(ctx, ctxu.GetLogger(ctx, "version"))
 
@@ -111,16 +115,6 @@ func resolveConfiguration() (*configuration.Configuration, error) {
 	return config, nil
 }
 
-func logLevel(level configuration.Loglevel) log.Level {
-	l, err := log.ParseLevel(string(level))
-	if err != nil {
-		log.Warnf("error parsing level %q: %v", level, err)
-		l = log.InfoLevel
-	}
-
-	return l
-}
-
 func configureReporting(app *handlers.App) http.Handler {
 	var handler http.Handler = app
 
@@ -155,6 +149,48 @@ func configureReporting(app *handlers.App) http.Handler {
 	}
 
 	return handler
+}
+
+// configureLogging the default logger using the configuration. Must be called
+// before creating any contextual loggers.
+func configureLogging(config *configuration.Configuration) error {
+	if config.Log.Level == "" && config.Log.Formatter == "" {
+		// If no config for logging is set, fallback to deprecated "Loglevel".
+		log.SetLevel(logLevel(config.Loglevel))
+		return nil
+	}
+
+	log.SetLevel(logLevel(config.Log.Level))
+
+	switch config.Log.Formatter {
+	case "json":
+		log.SetFormatter(&log.JSONFormatter{})
+	case "text":
+		log.SetFormatter(&log.TextFormatter{})
+	case "logstash":
+		log.SetFormatter(&logstash.LogstashFormatter{Type: "registry"})
+	default:
+		// just let the library use default on empty string.
+		if config.Log.Formatter != "" {
+			return fmt.Errorf("unsupported logging formatter: %q", config.Log.Formatter)
+		}
+	}
+
+	if config.Log.Formatter != "" {
+		log.Debugf("using %q logging formatter", config.Log.Formatter)
+	}
+
+	return nil
+}
+
+func logLevel(level configuration.Loglevel) log.Level {
+	l, err := log.ParseLevel(string(level))
+	if err != nil {
+		l = log.InfoLevel
+		log.Warnf("error parsing level %q: %v, using %q	", level, err, l)
+	}
+
+	return l
 }
 
 // debugServer starts the debug server with pprof, expvar among other

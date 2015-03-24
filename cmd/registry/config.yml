@@ -1,5 +1,6 @@
 version: 0.1
-loglevel: debug
+log:
+  level: debug
 storage:
     filesystem:
         rootdirectory: /tmp/registry-dev

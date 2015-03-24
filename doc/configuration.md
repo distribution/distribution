@@ -4,7 +4,10 @@ Below is a comprehensive example of all possible configuration options for the r
 
 ```yaml
 version: 0.1
-loglevel: debug
+log:
+	level: debug
+	formatter: text
+loglevel: debug # deprecated: use "log"
 storage:
 	filesystem:
 		rootdirectory: /tmp/registry
@@ -87,18 +90,34 @@ The version option is **required** and indicates the version of the configuratio
 
 N.B. The version of the registry software may be found at [/version/version.go](https://github.com/docker/distribution/blob/master/version/version.go)
 
+## log
+
+The log subsection configures the behavior of the logging system. The logging
+system outputs everything to stdout. The granularity and format of the log
+messages can be adjusted with this configuration section.
+
+```yaml
+log:
+	level: debug
+	formatter: text
+```
+
+- level: **Optional** - Sets the sensitivity of logging output. Permitted
+  values are `error`, `warn`, `info` and `debug`. The default is `info`.
+- formatter: **Optional** - This selects the format of logging output, which
+  mostly affects how keyed attributes for a log line are encoded. Options are
+  "text", "json" or "logstash". The default is "text".
+
 ## loglevel
+
+> **DEPRECATED:** Please use [log](#log) instead.
 
 ```yaml
 loglevel: debug
 ```
 
-The loglevel option is **required** and sets the sensitivity of logging output. Permitted values are:
-
-- ```error```
-- ```warn```
-- ```info```
-- ```debug```
+Permitted values are `error`, `warn`, `info` and `debug`. The default is
+`info`.
 
 ## storage
 
