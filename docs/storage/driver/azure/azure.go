@@ -15,7 +15,7 @@ import (
 	"github.com/docker/distribution/registry/storage/driver/base"
 	"github.com/docker/distribution/registry/storage/driver/factory"
 
-	azure "github.com/MSOpenTech/azure-sdk-for-go/clients/storage"
+	azure "github.com/MSOpenTech/azure-sdk-for-go/storage"
 )
 
 const driverName = "azure"
