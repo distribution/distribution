@@ -2,9 +2,10 @@
 
 Logrus is a structured logger for Go (golang), completely API compatible with
 the standard library logger. [Godoc][godoc]. **Please note the Logrus API is not
-yet stable (pre 1.0), the core API is unlikely to change much but please version
-control your Logrus to make sure you aren't fetching latest `master` on every
-build.**
+yet stable (pre 1.0). Logrus itself is completely stable and has been used in
+many large deployments. The core API is unlikely to change much but please
+version control your Logrus to make sure you aren't fetching latest `master` on
+every build.**
 
 Nicely color-coded in development (when a TTY is attached, otherwise just
 plain text):
@@ -81,7 +82,7 @@ func init() {
 
   // Use the Airbrake hook to report errors that have Error severity or above to
   // an exception tracker. You can create custom hooks, see the Hooks section.
-  log.AddHook(&logrus_airbrake.AirbrakeHook{})
+  log.AddHook(airbrake.NewHook("https://example.com", "xyz", "development"))
 
   // Output to stderr instead of stdout, could also be a file.
   log.SetOutput(os.Stderr)
@@ -163,43 +164,8 @@ You can add hooks for logging levels. For example to send errors to an exception
 tracking service on `Error`, `Fatal` and `Panic`, info to StatsD or log to
 multiple places simultaneously, e.g. syslog.
 
-```go
-// Not the real implementation of the Airbrake hook. Just a simple sample.
-import (
-  log "github.com/Sirupsen/logrus"
-)
-
-func init() {
-  log.AddHook(new(AirbrakeHook))
-}
-
-type AirbrakeHook struct{}
-
-// `Fire()` takes the entry that the hook is fired for. `entry.Data[]` contains
-// the fields for the entry. See the Fields section of the README.
-func (hook *AirbrakeHook) Fire(entry *logrus.Entry) error {
-  err := airbrake.Notify(entry.Data["error"].(error))
-  if err != nil {
-    log.WithFields(log.Fields{
-      "source":   "airbrake",
-      "endpoint": airbrake.Endpoint,
-    }).Info("Failed to send error to Airbrake")
-  }
-
-  return nil
-}
-
-// `Levels()` returns a slice of `Levels` the hook is fired for.
-func (hook *AirbrakeHook) Levels() []log.Level {
-  return []log.Level{
-    log.ErrorLevel,
-    log.FatalLevel,
-    log.PanicLevel,
-  }
-}
-```
-
-Logrus comes with built-in hooks. Add those, or your custom hook, in `init`:
+Logrus comes with [built-in hooks](hooks/). Add those, or your custom hook, in
+`init`:
 
 ```go
 import (
@@ -210,7 +176,7 @@ import (
 )
 
 func init() {
-  log.AddHook(new(logrus_airbrake.AirbrakeHook))
+  log.AddHook(airbrake.NewHook("https://example.com", "xyz", "development"))
 
   hook, err := logrus_syslog.NewSyslogHook("udp", "localhost:514", syslog.LOG_INFO, "")
   if err != nil {
@@ -232,6 +198,9 @@ func init() {
   Send errors to remote syslog server.
   Uses standard library `log/syslog` behind the scenes.
 
+* [`github.com/Sirupsen/logrus/hooks/bugsnag`](https://github.com/Sirupsen/logrus/blob/master/hooks/bugsnag/bugsnag.go)
+  Send errors to the Bugsnag exception tracking service.
+
 * [`github.com/nubo/hiprus`](https://github.com/nubo/hiprus)
   Send errors to a channel in hipchat.
 
@@ -240,6 +209,9 @@ func init() {
 
 * [`github.com/johntdyer/slackrus`](https://github.com/johntdyer/slackrus)
   Hook for Slack chat.
+
+* [`github.com/wercker/journalhook`](https://github.com/wercker/journalhook).
+  Hook for logging to `systemd-journald`.
 
 #### Level logging
 
@@ -317,6 +289,11 @@ The built-in logging formatters are:
     field to `true`.  To force no colored output even if there is a TTY  set the
     `DisableColors` field to `true`
 * `logrus.JSONFormatter`. Logs fields as JSON.
+* `logrus_logstash.LogstashFormatter`. Logs fields as Logstash Events (http://logstash.net).
+
+    ```go
+      logrus.SetFormatter(&logrus_logstash.LogstashFormatter{Type: “application_name"})
+    ```
 
 Third party logging formatters:
 
@@ -347,7 +324,7 @@ func (f *JSONFormatter) Format(entry *Entry) ([]byte, error) {
 
 #### Logger as an `io.Writer`
 
-Logrus can be transormed into an `io.Writer`. That writer is the end of an `io.Pipe` and it is your responsability to close it.
+Logrus can be transormed into an `io.Writer`. That writer is the end of an `io.Pipe` and it is your responsibility to close it.
 
 ```go
 w := logger.Writer()
@@ -366,7 +343,7 @@ and hooks. The level for those entries is `info`.
 #### Rotation
 
 Log rotation is not provided with Logrus. Log rotation should be done by an
-external program (like `logrotated(8)`) that can compress and delete old log
+external program (like `logrotate(8)`) that can compress and delete old log
 entries. It should not be a feature of the application-level logger.
 
 
