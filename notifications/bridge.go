@@ -6,6 +6,7 @@ import (
 
 	"code.google.com/p/go-uuid/uuid"
 	"github.com/docker/distribution"
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 )
@@ -42,10 +43,11 @@ func NewBridge(ub URLBuilder, source SourceRecord, actor ActorRecord, request Re
 
 // NewRequestRecord builds a RequestRecord for use in NewBridge from an
 // http.Request, associating it with a request id.
+
 func NewRequestRecord(id string, r *http.Request) RequestRecord {
 	return RequestRecord{
 		ID:        id,
-		Addr:      r.RemoteAddr,
+		Addr:      context.RemoteAddr(r),
 		Host:      r.Host,
 		Method:    r.Method,
 		UserAgent: r.UserAgent(),

@@ -17,11 +17,34 @@ var (
 	ErrNoRequestContext = errors.New("no http request in context")
 )
 
+// http.Request.RemoteAddr is not the originating IP if the request
+// came through a reverse proxy.
+// X-Forwarded-For and X-Real-IP provide this information with decreased
+// support, so check in that order.  There may be multiple 'X-Forwarded-For'
+// headers, but go maps don't retain order so just pick one.
+func RemoteAddr(r *http.Request) string {
+	remoteAddr := r.RemoteAddr
+
+	if prior, ok := r.Header["X-Forwarded-For"]; ok {
+		proxies := strings.Split(prior[0], ",")
+		if len(proxies) > 0 {
+			remoteAddr = strings.Trim(proxies[0], " ")
+		}
+	} else if realip, ok := r.Header["X-Real-Ip"]; ok {
+		if len(realip) > 0 {
+			remoteAddr = realip[0]
+		}
+	}
+
+	return remoteAddr
+}
+
 // WithRequest places the request on the context. The context of the request
 // is assigned a unique id, available at "http.request.id". The request itself
 // is available at "http.request". Other common attributes are available under
 // the prefix "http.request.". If a request is already present on the context,
 // this method will panic.
+
 func WithRequest(ctx context.Context, r *http.Request) context.Context {
 	if ctx.Value("http.request") != nil {
 		// NOTE(stevvooe): This needs to be considered a programming error. It
@@ -147,7 +170,7 @@ func (ctx *httpRequestContext) Value(key interface{}) interface{} {
 		case "uri":
 			return ctx.r.RequestURI
 		case "remoteaddr":
-			return ctx.r.RemoteAddr
+			return RemoteAddr(ctx.r)
 		case "method":
 			return ctx.r.Method
 		case "host":
