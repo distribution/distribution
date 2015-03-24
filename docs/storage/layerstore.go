@@ -142,6 +142,7 @@ func (ls *layerStore) newLayerUpload(uuid, path string, startedAt time.Time) (di
 		layerStore:         ls,
 		uuid:               uuid,
 		startedAt:          startedAt,
+		resumableDigester:  digest.NewCanonicalResumableDigester(),
 		bufferedFileWriter: *fw,
 	}, nil
 }

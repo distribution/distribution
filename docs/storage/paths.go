@@ -33,6 +33,7 @@ const storagePathVersion = "v2"
 // 					-> _uploads/<uuid>
 // 						data
 // 						startedat
+// 						hashstates/<algorithm>/<offset>
 //			-> blob/<algorithm>
 //				<split directory content addressable storage>
 //
@@ -87,6 +88,7 @@ const storagePathVersion = "v2"
 //
 // 	uploadDataPathSpec:             <root>/v2/repositories/<name>/_uploads/<uuid>/data
 // 	uploadStartedAtPathSpec:        <root>/v2/repositories/<name>/_uploads/<uuid>/startedat
+// 	uploadHashStatePathSpec:        <root>/v2/repositories/<name>/_uploads/<uuid>/hashstates/<algorithm>/<offset>
 //
 //	Blob Store:
 //
@@ -249,6 +251,12 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 		return path.Join(append(repoPrefix, v.name, "_uploads", v.uuid, "data")...), nil
 	case uploadStartedAtPathSpec:
 		return path.Join(append(repoPrefix, v.name, "_uploads", v.uuid, "startedat")...), nil
+	case uploadHashStatePathSpec:
+		offset := fmt.Sprintf("%d", v.offset)
+		if v.list {
+			offset = "" // Limit to the prefix for listing offsets.
+		}
+		return path.Join(append(repoPrefix, v.name, "_uploads", v.uuid, "hashstates", v.alg, offset)...), nil
 	default:
 		// TODO(sday): This is an internal error. Ensure it doesn't escape (panic?).
 		return "", fmt.Errorf("unknown path spec: %#v", v)
@@ -423,6 +431,20 @@ type uploadStartedAtPathSpec struct {
 }
 
 func (uploadStartedAtPathSpec) pathSpec() {}
+
+// uploadHashStatePathSpec defines the path parameters for the file that stores
+// the hash function state of an upload at a specific byte offset. If `list` is
+// set, then the path mapper will generate a list prefix for all hash state
+// offsets for the upload identified by the name, uuid, and alg.
+type uploadHashStatePathSpec struct {
+	name   string
+	uuid   string
+	alg    string
+	offset int64
+	list   bool
+}
+
+func (uploadHashStatePathSpec) pathSpec() {}
 
 // digestPathComponents provides a consistent path breakdown for a given
 // digest. For a generic digest, it will be as follows:
