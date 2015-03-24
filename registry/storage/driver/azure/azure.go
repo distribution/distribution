@@ -24,6 +24,7 @@ const (
 	paramAccountName = "accountname"
 	paramAccountKey  = "accountkey"
 	paramContainer   = "container"
+	paramRealm       = "realm"
 )
 
 type driver struct {
@@ -64,12 +65,17 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		return nil, fmt.Errorf("No %s parameter provided", paramContainer)
 	}
 
-	return New(fmt.Sprint(accountName), fmt.Sprint(accountKey), fmt.Sprint(container))
+	realm, ok := parameters[paramRealm]
+	if !ok || fmt.Sprint(realm) == "" {
+		realm = azure.DefaultBaseUrl
+	}
+
+	return New(fmt.Sprint(accountName), fmt.Sprint(accountKey), fmt.Sprint(container), fmt.Sprint(realm))
 }
 
 // New constructs a new Driver with the given Azure Storage Account credentials
-func New(accountName, accountKey, container string) (*Driver, error) {
-	api, err := azure.NewBasicClient(accountName, accountKey)
+func New(accountName, accountKey, container, realm string) (*Driver, error) {
+	api, err := azure.NewClient(accountName, accountKey, realm, azure.DefaultApiVersion, true)
 	if err != nil {
 		return nil, err
 	}
@@ -343,5 +349,5 @@ func (d *driver) listBlobs(container, virtPath string) ([]string, error) {
 
 func is404(err error) bool {
 	e, ok := err.(azure.StorageServiceError)
-	return ok && e.StatusCode == 404
+	return ok && e.StatusCode == http.StatusNotFound
 }

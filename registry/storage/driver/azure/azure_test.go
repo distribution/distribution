@@ -15,6 +15,7 @@ const (
 	envAccountName = "AZURE_STORAGE_ACCOUNT_NAME"
 	envAccountKey  = "AZURE_STORAGE_ACCOUNT_KEY"
 	envContainer   = "AZURE_STORAGE_CONTAINER"
+	envRealm       = "AZURE_STORAGE_REALM"
 )
 
 // Hook up gocheck into the "go test" runner.
@@ -25,6 +26,7 @@ func init() {
 		accountName string
 		accountKey  string
 		container   string
+		realm       string
 	)
 
 	config := []struct {
@@ -34,6 +36,7 @@ func init() {
 		{envAccountName, &accountName},
 		{envAccountKey, &accountKey},
 		{envContainer, &container},
+		{envRealm, &realm},
 	}
 
 	missing := []string{}
@@ -45,7 +48,7 @@ func init() {
 	}
 
 	azureDriverConstructor := func() (storagedriver.StorageDriver, error) {
-		return New(accountName, accountKey, container)
+		return New(accountName, accountKey, container, realm)
 	}
 
 	// Skip Azure storage driver tests if environment variable parameters are not provided
@@ -61,5 +64,6 @@ func init() {
 	// 	paramAccountName: accountName,
 	// 	paramAccountKey:  accountKey,
 	// 	paramContainer:   container,
+	// 	paramRealm:       realm,
 	// }, skipCheck)
 }
