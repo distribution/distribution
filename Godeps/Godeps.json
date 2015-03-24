@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/docker/distribution",
-	"GoVersion": "go1.4.1",
+	"GoVersion": "go1.4.2",
 	"Packages": [
 		"./..."
 	],
@@ -23,9 +23,9 @@
 			"Rev": "d3664b76d90508cdda5a6c92042f26eab5db3103"
 		},
 		{
-			"ImportPath": "github.com/MSOpenTech/azure-sdk-for-go",
-			"Comment": "v1.2",
-			"Rev": "0fbd37144de3adc2aef74db867c0e15e41c7f74a"
+			"ImportPath": "github.com/MSOpenTech/azure-sdk-for-go/storage",
+			"Comment": "v1.2-43-gd90753b",
+			"Rev": "d90753bcad2ed782fcead7392d1e831df29aa2bb"
 		},
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",

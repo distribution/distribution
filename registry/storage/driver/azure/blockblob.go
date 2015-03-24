@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	azure "github.com/MSOpenTech/azure-sdk-for-go/clients/storage"
+	azure "github.com/MSOpenTech/azure-sdk-for-go/storage"
 )
 
 // azureBlockStorage is adaptor between azure.BlobStorageClient and
