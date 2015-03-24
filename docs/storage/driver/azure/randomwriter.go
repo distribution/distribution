@@ -5,7 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 
-	azure "github.com/MSOpenTech/azure-sdk-for-go/clients/storage"
+	azure "github.com/MSOpenTech/azure-sdk-for-go/storage"
 )
 
 // blockStorage is the interface required from a block storage service
