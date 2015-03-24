@@ -77,6 +77,10 @@
 			"Rev": "e444e69cbd2e2e3e0749a2f3c717cec491552bbf"
 		},
 		{
+			"ImportPath": "github.com/jlhawn/go-crypto",
+			"Rev": "cd738dde20f0b3782516181b0866c9bb9db47401"
+		},
+		{
 			"ImportPath": "github.com/yvasiyarov/go-metrics",
 			"Rev": "57bccd1ccd43f94bb17fdd8bf3007059b802f85e"
 		},
