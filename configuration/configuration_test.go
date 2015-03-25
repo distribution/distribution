@@ -15,7 +15,14 @@ func Test(t *testing.T) { TestingT(t) }
 
 // configStruct is a canonical example configuration, which should map to configYamlV0_1
 var configStruct = Configuration{
-	Version:  "0.1",
+	Version: "0.1",
+	Log: struct {
+		Level     Loglevel          `yaml:"level"`
+		Formatter string            `yaml:"formatter"`
+		Fields    map[string]string `yaml:"fields"`
+	}{
+		Fields: map[string]string{"environment": "test"},
+	},
 	Loglevel: "info",
 	Storage: Storage{
 		"s3": Parameters{
@@ -57,6 +64,9 @@ var configStruct = Configuration{
 // configYamlV0_1 is a Version 0.1 yaml document representing configStruct
 var configYamlV0_1 = `
 version: 0.1
+log:
+  fields:
+    environment: test
 loglevel: info
 storage:
   s3:
@@ -136,6 +146,7 @@ func (suite *ConfigSuite) TestParseSimple(c *C) {
 func (suite *ConfigSuite) TestParseInmemory(c *C) {
 	suite.expectedConfig.Storage = Storage{"inmemory": Parameters{}}
 	suite.expectedConfig.Reporting = Reporting{}
+	suite.expectedConfig.Log.Fields = nil
 
 	config, err := Parse(bytes.NewReader([]byte(inmemoryConfigYamlV0_1)))
 	c.Assert(err, IsNil)
@@ -150,6 +161,7 @@ func (suite *ConfigSuite) TestParseIncomplete(c *C) {
 	_, err := Parse(bytes.NewReader([]byte(incompleteConfigYaml)))
 	c.Assert(err, NotNil)
 
+	suite.expectedConfig.Log.Fields = nil
 	suite.expectedConfig.Storage = Storage{"filesystem": Parameters{"rootdirectory": "/tmp/testroot"}}
 	suite.expectedConfig.Auth = Auth{"silly": Parameters{"realm": "silly"}}
 	suite.expectedConfig.Reporting = Reporting{}
@@ -303,6 +315,12 @@ func copyConfig(config Configuration) *Configuration {
 
 	configCopy.Version = MajorMinorVersion(config.Version.Major(), config.Version.Minor())
 	configCopy.Loglevel = config.Loglevel
+	configCopy.Log = config.Log
+	configCopy.Log.Fields = make(map[string]string, len(config.Log.Fields))
+	for k, v := range config.Log.Fields {
+		configCopy.Log.Fields[k] = v
+	}
+
 	configCopy.Storage = Storage{config.Storage.Type(): Parameters{}}
 	for k, v := range config.Storage.Parameters() {
 		configCopy.Storage.setParameter(k, v)

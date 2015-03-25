@@ -16,7 +16,23 @@ type Configuration struct {
 	// Version is the version which defines the format of the rest of the configuration
 	Version Version `yaml:"version"`
 
-	// Loglevel is the level at which registry operations are logged
+	// Log supports setting various parameters related to the logging
+	// subsystem.
+	Log struct {
+		// Level is the granularity at which registry operations are logged.
+		Level Loglevel `yaml:"level"`
+
+		// Formatter overrides the default formatter with another. Options
+		// include "text", "json" and "logstash".
+		Formatter string `yaml:"formatter"`
+
+		// Fields allows users to specify static string fields to include in
+		// the logger context.
+		Fields map[string]string `yaml:"fields"`
+	}
+
+	// Loglevel is the level at which registry operations are logged. This is
+	// deprecated. Please use Log.Level in the future.
 	Loglevel Loglevel `yaml:"loglevel"`
 
 	// Storage is the configuration for the registry's storage driver

@@ -29,8 +29,8 @@
 		},
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",
-			"Comment": "v0.6.4-12-g467d9d5",
-			"Rev": "467d9d55c2d2c17248441a8fc661561161f40d5e"
+			"Comment": "v0.7.1",
+			"Rev": "3fc34d061b9c78a70db853c7cb6b0576b6d4f32d"
 		},
 		{
 			"ImportPath": "github.com/bugsnag/bugsnag-go",
