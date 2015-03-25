@@ -1,6 +1,9 @@
 version: 0.1
 log:
   level: debug
+  fields:
+    service: registry
+    environment: development
 storage:
     filesystem:
         rootdirectory: /tmp/registry-dev

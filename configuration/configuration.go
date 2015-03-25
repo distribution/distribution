@@ -25,6 +25,10 @@ type Configuration struct {
 		// Formatter overrides the default formatter with another. Options
 		// include "text", "json" and "logstash".
 		Formatter string `yaml:"formatter"`
+
+		// Fields allows users to specify static string fields to include in
+		// the logger context.
+		Fields map[string]string `yaml:"fields"`
 	}
 
 	// Loglevel is the level at which registry operations are logged. This is

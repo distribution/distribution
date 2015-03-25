@@ -50,12 +50,10 @@ func main() {
 		fatalf("configuration error: %v", err)
 	}
 
-	if err := configureLogging(config); err != nil {
+	ctx, err = configureLogging(ctx, config)
+	if err != nil {
 		fatalf("error configuring logger: %v", err)
 	}
-
-	ctx = context.WithValue(ctx, "version", version.Version)
-	ctx = ctxu.WithLogger(ctx, ctxu.GetLogger(ctx, "version"))
 
 	app := handlers.NewApp(ctx, *config)
 	handler := configureReporting(app)
@@ -151,13 +149,14 @@ func configureReporting(app *handlers.App) http.Handler {
 	return handler
 }
 
-// configureLogging the default logger using the configuration. Must be called
-// before creating any contextual loggers.
-func configureLogging(config *configuration.Configuration) error {
+// configureLogging prepares the context with a logger using the
+// configuration.
+func configureLogging(ctx context.Context, config *configuration.Configuration) (context.Context, error) {
 	if config.Log.Level == "" && config.Log.Formatter == "" {
 		// If no config for logging is set, fallback to deprecated "Loglevel".
 		log.SetLevel(logLevel(config.Loglevel))
-		return nil
+		ctx = ctxu.WithLogger(ctx, ctxu.GetLogger(ctx, "version"))
+		return ctx, nil
 	}
 
 	log.SetLevel(logLevel(config.Log.Level))
@@ -168,11 +167,11 @@ func configureLogging(config *configuration.Configuration) error {
 	case "text":
 		log.SetFormatter(&log.TextFormatter{})
 	case "logstash":
-		log.SetFormatter(&logstash.LogstashFormatter{Type: "registry"})
+		log.SetFormatter(&logstash.LogstashFormatter{})
 	default:
 		// just let the library use default on empty string.
 		if config.Log.Formatter != "" {
-			return fmt.Errorf("unsupported logging formatter: %q", config.Log.Formatter)
+			return ctx, fmt.Errorf("unsupported logging formatter: %q", config.Log.Formatter)
 		}
 	}
 
@@ -180,7 +179,21 @@ func configureLogging(config *configuration.Configuration) error {
 		log.Debugf("using %q logging formatter", config.Log.Formatter)
 	}
 
-	return nil
+	// log the application version with messages
+	ctx = context.WithValue(ctx, "version", version.Version)
+
+	if len(config.Log.Fields) > 0 {
+		// build up the static fields, if present.
+		var fields []interface{}
+		for k := range config.Log.Fields {
+			fields = append(fields, k)
+		}
+
+		ctx = withMapContext(ctx, config.Log.Fields)
+		ctx = ctxu.WithLogger(ctx, ctxu.GetLogger(ctx, fields...))
+	}
+
+	return ctx, nil
 }
 
 func logLevel(level configuration.Loglevel) log.Level {
@@ -191,6 +204,36 @@ func logLevel(level configuration.Loglevel) log.Level {
 	}
 
 	return l
+}
+
+// stringMapContext is a simple context implementation that checks a map for a
+// key, falling back to a parent if not present.
+type stringMapContext struct {
+	context.Context
+	m map[string]string
+}
+
+// withMapContext returns a context that proxies lookups through a map.
+func withMapContext(ctx context.Context, m map[string]string) context.Context {
+	mo := make(map[string]string, len(m)) // make our own copy.
+	for k, v := range m {
+		mo[k] = v
+	}
+
+	return stringMapContext{
+		Context: ctx,
+		m:       mo,
+	}
+}
+
+func (smc stringMapContext) Value(key interface{}) interface{} {
+	if ks, ok := key.(string); ok {
+		if v, ok := smc.m[ks]; ok {
+			return v
+		}
+	}
+
+	return smc.Context.Value(key)
 }
 
 // debugServer starts the debug server with pprof, expvar among other

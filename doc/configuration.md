@@ -7,6 +7,9 @@ version: 0.1
 log:
 	level: debug
 	formatter: text
+	fields:
+		service: registry
+		environment: staging
 loglevel: debug # deprecated: use "log"
 storage:
 	filesystem:
@@ -100,6 +103,9 @@ messages can be adjusted with this configuration section.
 log:
 	level: debug
 	formatter: text
+	fields:
+		service: registry
+		environment: staging
 ```
 
 - level: **Optional** - Sets the sensitivity of logging output. Permitted
@@ -107,6 +113,9 @@ log:
 - formatter: **Optional** - This selects the format of logging output, which
   mostly affects how keyed attributes for a log line are encoded. Options are
   "text", "json" or "logstash". The default is "text".
+- fields: **Optional** - A map of field names to values that will be added to
+  every log line for the context. This is useful for identifying log messages
+  source after being mixed in other systems.
 
 ## loglevel
 
