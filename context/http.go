@@ -2,6 +2,7 @@ package context
 
 import (
 	"errors"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
@@ -17,26 +18,27 @@ var (
 	ErrNoRequestContext = errors.New("no http request in context")
 )
 
-// http.Request.RemoteAddr is not the originating IP if the request
-// came through a reverse proxy.
-// X-Forwarded-For and X-Real-IP provide this information with decreased
-// support, so check in that order.  There may be multiple 'X-Forwarded-For'
-// headers, but go maps don't retain order so just pick one.
+// RemoteAddr extracts the remote address of the request, taking into
+// account proxy headers.
 func RemoteAddr(r *http.Request) string {
-	remoteAddr := r.RemoteAddr
-
-	if prior, ok := r.Header["X-Forwarded-For"]; ok {
-		proxies := strings.Split(prior[0], ",")
+	if prior := r.Header.Get("X-Forwarded-For"); prior != "" {
+		proxies := strings.Split(prior, ",")
 		if len(proxies) > 0 {
-			remoteAddr = strings.Trim(proxies[0], " ")
+			remoteAddr := strings.Trim(proxies[0], " ")
+			if net.ParseIP(remoteAddr) != nil {
+				return remoteAddr
+			}
 		}
-	} else if realip, ok := r.Header["X-Real-Ip"]; ok {
-		if len(realip) > 0 {
-			remoteAddr = realip[0]
+	}
+	// X-Real-Ip is less supported, but worth checking in the
+	// absence of X-Forwarded-For
+	if realIP := r.Header.Get("X-Real-Ip"); realIP != "" {
+		if net.ParseIP(realIP) != nil {
+			return realIP
 		}
 	}
 
-	return remoteAddr
+	return r.RemoteAddr
 }
 
 // WithRequest places the request on the context. The context of the request
@@ -44,7 +46,6 @@ func RemoteAddr(r *http.Request) string {
 // is available at "http.request". Other common attributes are available under
 // the prefix "http.request.". If a request is already present on the context,
 // this method will panic.
-
 func WithRequest(ctx context.Context, r *http.Request) context.Context {
 	if ctx.Value("http.request") != nil {
 		// NOTE(stevvooe): This needs to be considered a programming error. It

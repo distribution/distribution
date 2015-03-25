@@ -43,7 +43,6 @@ func NewBridge(ub URLBuilder, source SourceRecord, actor ActorRecord, request Re
 
 // NewRequestRecord builds a RequestRecord for use in NewBridge from an
 // http.Request, associating it with a request id.
-
 func NewRequestRecord(id string, r *http.Request) RequestRecord {
 	return RequestRecord{
 		ID:        id,

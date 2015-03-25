@@ -214,16 +214,15 @@ func TestWithVars(t *testing.T) {
 // at the transport layer to 127.0.0.1:<port> .  However, as the X-Forwarded-For header
 // just contains the IP address, it is different enough for testing.
 func TestRemoteAddr(t *testing.T) {
-	expectedRemote := "127.0.0.1"
-	var actualRemote string
+	var expectedRemote string
 	backend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
 
 		if r.RemoteAddr == expectedRemote {
 			t.Errorf("Unexpected matching remote addresses")
 		}
-		actualRemote = RemoteAddr(r)
 
+		actualRemote := RemoteAddr(r)
 		if expectedRemote != actualRemote {
 			t.Errorf("Mismatching remote hosts: %v != %v", expectedRemote, actualRemote)
 		}
@@ -241,14 +240,35 @@ func TestRemoteAddr(t *testing.T) {
 	frontend := httptest.NewServer(proxy)
 	defer frontend.Close()
 
-	getReq, err := http.NewRequest("GET", frontend.URL, nil)
+	// X-Forwarded-For set by proxy
+	expectedRemote = "127.0.0.1"
+	proxyReq, err := http.NewRequest("GET", frontend.URL, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	_, err = http.DefaultClient.Do(proxyReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// RemoteAddr in X-Real-Ip
+	getReq, err := http.NewRequest("GET", backend.URL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	expectedRemote = "1.2.3.4"
+	getReq.Header["X-Real-ip"] = []string{expectedRemote}
 	_, err = http.DefaultClient.Do(getReq)
 	if err != nil {
 		t.Fatal(err)
 	}
 
+	// Valid X-Real-Ip and invalid X-Forwarded-For
+	getReq.Header["X-forwarded-for"] = []string{"1.2.3"}
+	_, err = http.DefaultClient.Do(getReq)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
