@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"code.google.com/p/go-uuid/uuid"
+	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 )
@@ -18,6 +19,14 @@ var (
 	ErrNoRequestContext = errors.New("no http request in context")
 )
 
+func parseIP(ipStr string) net.IP {
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		log.Warnf("invalid remote IP address: %q", ipStr)
+	}
+	return ip
+}
+
 // RemoteAddr extracts the remote address of the request, taking into
 // account proxy headers.
 func RemoteAddr(r *http.Request) string {
@@ -25,7 +34,7 @@ func RemoteAddr(r *http.Request) string {
 		proxies := strings.Split(prior, ",")
 		if len(proxies) > 0 {
 			remoteAddr := strings.Trim(proxies[0], " ")
-			if net.ParseIP(remoteAddr) != nil {
+			if parseIP(remoteAddr) != nil {
 				return remoteAddr
 			}
 		}
@@ -33,7 +42,7 @@ func RemoteAddr(r *http.Request) string {
 	// X-Real-Ip is less supported, but worth checking in the
 	// absence of X-Forwarded-For
 	if realIP := r.Header.Get("X-Real-Ip"); realIP != "" {
-		if net.ParseIP(realIP) != nil {
+		if parseIP(realIP) != nil {
 			return realIP
 		}
 	}
