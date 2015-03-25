@@ -2,12 +2,14 @@ package context
 
 import (
 	"errors"
+	"net"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
 	"code.google.com/p/go-uuid/uuid"
+	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 )
@@ -16,6 +18,37 @@ import (
 var (
 	ErrNoRequestContext = errors.New("no http request in context")
 )
+
+func parseIP(ipStr string) net.IP {
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		log.Warnf("invalid remote IP address: %q", ipStr)
+	}
+	return ip
+}
+
+// RemoteAddr extracts the remote address of the request, taking into
+// account proxy headers.
+func RemoteAddr(r *http.Request) string {
+	if prior := r.Header.Get("X-Forwarded-For"); prior != "" {
+		proxies := strings.Split(prior, ",")
+		if len(proxies) > 0 {
+			remoteAddr := strings.Trim(proxies[0], " ")
+			if parseIP(remoteAddr) != nil {
+				return remoteAddr
+			}
+		}
+	}
+	// X-Real-Ip is less supported, but worth checking in the
+	// absence of X-Forwarded-For
+	if realIP := r.Header.Get("X-Real-Ip"); realIP != "" {
+		if parseIP(realIP) != nil {
+			return realIP
+		}
+	}
+
+	return r.RemoteAddr
+}
 
 // WithRequest places the request on the context. The context of the request
 // is assigned a unique id, available at "http.request.id". The request itself
@@ -147,7 +180,7 @@ func (ctx *httpRequestContext) Value(key interface{}) interface{} {
 		case "uri":
 			return ctx.r.RequestURI
 		case "remoteaddr":
-			return ctx.r.RemoteAddr
+			return RemoteAddr(ctx.r)
 		case "method":
 			return ctx.r.Method
 		case "host":
