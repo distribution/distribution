@@ -4,6 +4,7 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/registry/api/v2"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
+	"github.com/garyburd/redigo/redis"
 	"golang.org/x/net/context"
 )
 
@@ -13,23 +14,26 @@ type registry struct {
 	driver    storagedriver.StorageDriver
 	pm        *pathMapper
 	blobStore *blobStore
+	redis     *redis.Pool
 }
 
 // NewRegistryWithDriver creates a new registry instance from the provided
 // driver. The resulting registry may be shared by multiple goroutines but is
 // cheap to allocate.
-func NewRegistryWithDriver(driver storagedriver.StorageDriver) distribution.Registry {
-	bs := &blobStore{}
+func NewRegistryWithDriver(driver storagedriver.StorageDriver, redis *redis.Pool) distribution.Registry {
+	bs := &blobStore{
+		driver: driver,
+		pm:     defaultPathMapper,
+	}
 
 	reg := &registry{
 		driver:    driver,
 		blobStore: bs,
 
 		// TODO(sday): This should be configurable.
-		pm: defaultPathMapper,
+		pm:    defaultPathMapper,
+		redis: redis,
 	}
-
-	reg.blobStore.registry = reg
 
 	return reg
 }
@@ -83,8 +87,22 @@ func (repo *repository) Manifests() distribution.ManifestService {
 // may be context sensitive in the future. The instance should be used similar
 // to a request local.
 func (repo *repository) Layers() distribution.LayerService {
-	return &layerStore{
+	ls := &layerStore{
 		repository: repo,
+	}
+
+	// TODO(stevvooe): This is not the best place to setup a cache. We would
+	// really like to decouple the cache from the backend but also have the
+	// manifeset service use the layer service cache. For now, we can simply
+	// integrate the cache directly. The main issue is that we have layer
+	// access and layer data coupled in a single object. Work is already under
+	// way to decouple this.
+	return &layerInfoCache{
+		Repository:   repo,
+		LayerService: ls,
+		ctx:          repo.ctx,
+		driver:       repo.driver,
+		blobStore:    repo.blobStore,
 	}
 }
 

@@ -73,6 +73,17 @@ notifications:
 		  timeout: 500
 		  threshold: 5
 		  backoff: 1000
+redis:
+	addr: localhost:6379
+	password: asecret
+	db: 0
+	dialtimeout: 10ms
+	readtimeout: 10ms
+	writetimeout: 10ms
+	pool:
+		maxidle: 16
+		maxactive: 64
+		idletimeout: 300s
 ```
 
 N.B. In some instances a configuration option may be marked **optional** but contain child options marked as **required**. This indicates that a parent may be omitted with all its children, however, if the parent is included, the children marked **required** must be included.
@@ -312,3 +323,48 @@ Endpoints is a list of named services (URLs) that can accept event notifications
 - threshold: **Required** - TODO: fill in description
 - backoff: **Required** - TODO: fill in description
 
+## redis
+
+```yaml
+redis:
+	addr: localhost:6379
+	password: asecret
+	db: 0
+	dialtimeout: 10ms
+	readtimeout: 10ms
+	writetimeout: 10ms
+	pool:
+		maxidle: 16
+		maxactive: 64
+		idletimeout: 300s
+```
+
+Declare parameters for constructing the redis connections. Registry instances
+may use the redis instance for several applications. The current purpose is
+caching information about immutable blobs. Most of the options below control
+how the registry connects to redis. The behavior of the pool can be controlled
+with the [pool](#pool) subsection.
+
+- addr: **Required** - Address (host and port) of redis instance.
+- password: **Optional** - A password used to authenticate to the redis instance.
+- db: **Optional** - Selects the db for each connection.
+- dialtimeout: **Optional** - Timeout for connecting to a redis instance.
+- readtimeout: **Optional** - Timeout for reading from redis connections.
+- writetimeout: **Optional** - Timeout for writing to redis connections.
+
+### pool
+
+```yaml
+pool:
+	maxidle: 16
+	maxactive: 64
+	idletimeout: 300s
+```
+
+Configure the behavior of the redis connection pool.
+
+- maxidle: **Optional** - sets the maximum number of idle connections.
+- maxactive: **Optional** - sets the maximum number of connections that should
+  be opened before blocking a connection request.
+- idletimeout: **Optional** - sets the amount time to wait before closing
+  inactive connections.

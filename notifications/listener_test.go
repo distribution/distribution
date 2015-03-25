@@ -16,7 +16,7 @@ import (
 )
 
 func TestListener(t *testing.T) {
-	registry := storage.NewRegistryWithDriver(inmemory.New())
+	registry := storage.NewRegistryWithDriver(inmemory.New(), nil)
 	tl := &testListener{
 		ops: make(map[string]int),
 	}
