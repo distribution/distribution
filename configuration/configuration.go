@@ -73,6 +73,10 @@ type Configuration struct {
 			// contain the private portion for the file specified in
 			// Certificate.
 			Key string `yaml:"key,omitempty"`
+
+			// Specifies the CA certs for client authentication
+			// A file may contain multiple CA certificates encoded as PEM
+			ClientCAs []string `yaml:"clientcas,omitempty"`
 		} `yaml:"tls,omitempty"`
 
 		// Debug configures the http debug interface, if specified. This can

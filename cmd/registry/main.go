@@ -1,9 +1,12 @@
 package main
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	_ "expvar"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	_ "net/http/pprof"
 	"os"
@@ -69,8 +72,40 @@ func main() {
 			ctxu.GetLogger(app).Fatalln(err)
 		}
 	} else {
+		tlsConf := &tls.Config{
+			ClientAuth: tls.NoClientCert,
+		}
+
+		if len(config.HTTP.TLS.ClientCAs) != 0 {
+			pool := x509.NewCertPool()
+
+			for _, ca := range config.HTTP.TLS.ClientCAs {
+				caPem, err := ioutil.ReadFile(ca)
+				if err != nil {
+					ctxu.GetLogger(app).Fatalln(err)
+				}
+
+				if ok := pool.AppendCertsFromPEM(caPem); !ok {
+					ctxu.GetLogger(app).Fatalln(fmt.Errorf("Could not add CA to pool"))
+				}
+			}
+
+			for _, subj := range pool.Subjects() {
+				ctxu.GetLogger(app).Debugf("CA Subject: %s", string(subj))
+			}
+
+			tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
+			tlsConf.ClientCAs = pool
+		}
+
 		ctxu.GetLogger(app).Infof("listening on %v, tls", config.HTTP.Addr)
-		if err := http.ListenAndServeTLS(config.HTTP.Addr, config.HTTP.TLS.Certificate, config.HTTP.TLS.Key, handler); err != nil {
+		server := &http.Server{
+			Addr:      config.HTTP.Addr,
+			Handler:   handler,
+			TLSConfig: tlsConf,
+		}
+
+		if err := server.ListenAndServeTLS(config.HTTP.TLS.Certificate, config.HTTP.TLS.Key); err != nil {
 			ctxu.GetLogger(app).Fatalln(err)
 		}
 	}

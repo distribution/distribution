@@ -59,6 +59,27 @@ var configStruct = Configuration{
 			},
 		},
 	},
+	HTTP: struct {
+		Addr   string `yaml:"addr,omitempty"`
+		Prefix string `yaml:"prefix,omitempty"`
+		Secret string `yaml:"secret,omitempty"`
+		TLS    struct {
+			Certificate string   `yaml:"certificate,omitempty"`
+			Key         string   `yaml:"key,omitempty"`
+			ClientCAs   []string `yaml:"clientcas,omitempty"`
+		} `yaml:"tls,omitempty"`
+		Debug struct {
+			Addr string `yaml:"addr,omitempty"`
+		} `yaml:"debug,omitempty"`
+	}{
+		TLS: struct {
+			Certificate string   `yaml:"certificate,omitempty"`
+			Key         string   `yaml:"key,omitempty"`
+			ClientCAs   []string `yaml:"clientcas,omitempty"`
+		}{
+			ClientCAs: []string{"/path/to/ca.pem"},
+		},
+	},
 }
 
 // configYamlV0_1 is a Version 0.1 yaml document representing configStruct
@@ -92,6 +113,9 @@ notifications:
 reporting:
   bugsnag:
     apikey: BugsnagApiKey
+http:
+  clientcas:
+    - /path/to/ca.pem
 `
 
 // inmemoryConfigYamlV0_1 is a Version 0.1 yaml document specifying an inmemory
