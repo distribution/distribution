@@ -18,8 +18,9 @@ import (
 // abstraction, providing utility methods that support creating and traversing
 // backend links.
 type blobStore struct {
-	*registry
-	ctx context.Context
+	driver storagedriver.StorageDriver
+	pm     *pathMapper
+	ctx    context.Context
 }
 
 // exists reports whether or not the path exists. If the driver returns error

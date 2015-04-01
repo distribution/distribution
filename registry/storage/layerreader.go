@@ -17,6 +17,21 @@ type layerReader struct {
 	digest digest.Digest
 }
 
+// newLayerReader returns a new layerReader with the digest, path and length,
+// eliding round trips to the storage backend.
+func newLayerReader(driver driver.StorageDriver, dgst digest.Digest, path string, length int64) (*layerReader, error) {
+	fr := &fileReader{
+		driver: driver,
+		path:   path,
+		size:   length,
+	}
+
+	return &layerReader{
+		fileReader: *fr,
+		digest:     dgst,
+	}, nil
+}
+
 var _ distribution.Layer = &layerReader{}
 
 func (lr *layerReader) Digest() digest.Digest {
