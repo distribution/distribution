@@ -18,6 +18,7 @@ import (
 	registrymiddleware "github.com/docker/distribution/registry/middleware/registry"
 	repositorymiddleware "github.com/docker/distribution/registry/middleware/repository"
 	"github.com/docker/distribution/registry/storage"
+	"github.com/docker/distribution/registry/storage/cache"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/factory"
 	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
@@ -102,7 +103,13 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 	app.configureEvents(&configuration)
 	app.configureRedis(&configuration)
 
-	app.registry = storage.NewRegistryWithDriver(app.driver)
+	if app.redis != nil {
+		app.registry = storage.NewRegistryWithDriver(app.driver, cache.NewRedisLayerInfoCache(app.redis))
+	} else {
+		// always fall back to inmemory storage
+		app.registry = storage.NewRegistryWithDriver(app.driver, cache.NewInMemoryLayerInfoCache())
+	}
+
 	app.registry, err = applyRegistryMiddleware(app.registry, configuration.Middleware["registry"])
 	if err != nil {
 		panic(err)

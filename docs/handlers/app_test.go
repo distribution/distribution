@@ -13,6 +13,7 @@ import (
 	"github.com/docker/distribution/registry/auth"
 	_ "github.com/docker/distribution/registry/auth/silly"
 	"github.com/docker/distribution/registry/storage"
+	"github.com/docker/distribution/registry/storage/cache"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"golang.org/x/net/context"
 )
@@ -28,7 +29,7 @@ func TestAppDispatcher(t *testing.T) {
 		Context:  context.Background(),
 		router:   v2.Router(),
 		driver:   driver,
-		registry: storage.NewRegistryWithDriver(driver),
+		registry: storage.NewRegistryWithDriver(driver, cache.NewInMemoryLayerInfoCache()),
 	}
 	server := httptest.NewServer(app)
 	router := v2.Router()

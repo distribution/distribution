@@ -27,8 +27,8 @@ type fileReader struct {
 
 	// identifying fields
 	path    string
-	size    int64 // size is the total layer size, must be set.
-	modtime time.Time
+	size    int64     // size is the total size, must be set.
+	modtime time.Time // TODO(stevvooe): This is not needed anymore.
 
 	// mutable fields
 	rc     io.ReadCloser // remote read closer

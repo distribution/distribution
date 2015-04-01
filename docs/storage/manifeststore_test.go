@@ -6,6 +6,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/docker/distribution/registry/storage/cache"
+
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
@@ -28,7 +30,7 @@ type manifestStoreTestEnv struct {
 func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestEnv {
 	ctx := context.Background()
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(driver)
+	registry := NewRegistryWithDriver(driver, cache.NewInMemoryLayerInfoCache())
 
 	repo, err := registry.Repository(ctx, name)
 	if err != nil {
