@@ -28,7 +28,7 @@ func TestAppDispatcher(t *testing.T) {
 		Context:  context.Background(),
 		router:   v2.Router(),
 		driver:   driver,
-		registry: storage.NewRegistryWithDriver(driver),
+		registry: storage.NewRegistryWithDriver(driver, nil),
 	}
 	server := httptest.NewServer(app)
 	router := v2.Router()

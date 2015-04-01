@@ -33,6 +33,10 @@ type Repository interface {
 	Signatures() SignatureService
 }
 
+// TODO(stevvooe): Must add close methods to all these. May want to change the
+// way instances are created to better reflect internal dependency
+// relationships.
+
 // ManifestService provides operations on image manifests.
 type ManifestService interface {
 	// Exists returns true if the manifest exists.
