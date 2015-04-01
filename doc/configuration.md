@@ -219,7 +219,7 @@ Token based authentication allows the authentication system to be decoupled from
 - issuer: **Required** - The name of the token issuer. The issuer inserts this into the token so it must match the value configured for the issuer.
 - rootcertbundle: **Required** - The absolute path to the root certificate bundle containing the public part of the certificates that will be used to sign authentication tokens.
 
-For more information about Token based authentication configuration, see the [specification.](spec/auth/token.md)
+For more information about Token based authentication configuration, see the [specification.](auth/token.md)
 
 ## middleware
 

@@ -1,0 +1,21 @@
+
+#- ['distribution/index.md', 'Registry 2.0', 'User Guide']
+
+- ['distribution/auth/token.md', 'Registry 2.0', 'Token']
+- ['distribution/api.md', 'Registry 2.0', 'API']
+- ['distribution/architecture.md', 'Registry 2.0', 'Architecture']
+- ['distribution/overview.md', 'Registry 2.0', 'Overview']
+- ['distribution/deploying.md', 'Registry 2.0', 'Deploying']
+- ['distribution/configuration.md', 'Registry 2.0', 'Configuration']
+- ['distribution/storagedrivers.md', 'Registry 2.0', 'Storage Drivers']
+
+
+- ['distribution/storagedriver/inmemory.md', 'Registry 2.0', 'In-memory Storage Driver']
+- ['distribution/storagedriver/azure.md', 'Registry 2.0', 'Azure Storage Driver']
+- ['distribution/storagedriver/filesystem.md', 'Registry 2.0', 'Filesystem Storage Driver']
+- ['distribution/storagedriver/s3.md', 'Registry 2.0', 's3 Storage Driver']
+
+- ['distribution/notifications.md', 'Registry 2.0', 'Notifications']
+- ['distribution/glossary.md', 'Registry 2.0', 'Glossary']
+
+# doc/spec/json.md
