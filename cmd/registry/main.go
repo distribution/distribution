@@ -224,7 +224,7 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 			fields = append(fields, k)
 		}
 
-		ctx = withMapContext(ctx, config.Log.Fields)
+		ctx = ctxu.WithValues(ctx, config.Log.Fields)
 		ctx = ctxu.WithLogger(ctx, ctxu.GetLogger(ctx, fields...))
 	}
 
@@ -239,36 +239,6 @@ func logLevel(level configuration.Loglevel) log.Level {
 	}
 
 	return l
-}
-
-// stringMapContext is a simple context implementation that checks a map for a
-// key, falling back to a parent if not present.
-type stringMapContext struct {
-	context.Context
-	m map[string]string
-}
-
-// withMapContext returns a context that proxies lookups through a map.
-func withMapContext(ctx context.Context, m map[string]string) context.Context {
-	mo := make(map[string]string, len(m)) // make our own copy.
-	for k, v := range m {
-		mo[k] = v
-	}
-
-	return stringMapContext{
-		Context: ctx,
-		m:       mo,
-	}
-}
-
-func (smc stringMapContext) Value(key interface{}) interface{} {
-	if ks, ok := key.(string); ok {
-		if v, ok := smc.m[ks]; ok {
-			return v
-		}
-	}
-
-	return smc.Context.Value(key)
 }
 
 // debugServer starts the debug server with pprof, expvar among other

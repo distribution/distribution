@@ -8,8 +8,6 @@ import (
 	"reflect"
 	"testing"
 	"time"
-
-	"golang.org/x/net/context"
 )
 
 func TestWithRequest(t *testing.T) {
@@ -23,7 +21,7 @@ func TestWithRequest(t *testing.T) {
 	req.Header.Set("Referer", "foo.com/referer")
 	req.Header.Set("User-Agent", "test/0.1")
 
-	ctx := WithRequest(context.Background(), &req)
+	ctx := WithRequest(Background(), &req)
 	for _, testcase := range []struct {
 		key      string
 		expected interface{}
@@ -132,7 +130,7 @@ func (trw *testResponseWriter) Flush() {
 
 func TestWithResponseWriter(t *testing.T) {
 	trw := testResponseWriter{}
-	ctx, rw := WithResponseWriter(context.Background(), &trw)
+	ctx, rw := WithResponseWriter(Background(), &trw)
 
 	if ctx.Value("http.response") != &trw {
 		t.Fatalf("response not available in context: %v != %v", ctx.Value("http.response"), &trw)
@@ -183,7 +181,7 @@ func TestWithVars(t *testing.T) {
 		return vars
 	}
 
-	ctx := WithVars(context.Background(), &req)
+	ctx := WithVars(Background(), &req)
 	for _, testcase := range []struct {
 		key      string
 		expected interface{}
