@@ -2,7 +2,8 @@
 PREFIX?=$(shell pwd)
 
 # Used to populate version variable in main package.
-GO_LDFLAGS=-ldflags "-X `go list ./version`.Version `git describe --match 'v[0-9]*' --dirty='.m' --always`"
+VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always)
+GO_LDFLAGS=-ldflags "-X `go list ./version`.Version $(VERSION)"
 
 .PHONY: clean all fmt vet lint build test binaries
 .DEFAULT: default
@@ -61,3 +62,20 @@ binaries: ${PREFIX}/bin/registry ${PREFIX}/bin/registry-api-descriptor-template 
 clean:
 	@echo "+ $@"
 	@rm -rf "${PREFIX}/bin/registry" "${PREFIX}/bin/registry-api-descriptor-template"
+
+	
+# Use the existing docs build cmds from docker/docker
+# Later, we will move this into an import
+DOCS_MOUNT := $(if $(DOCSDIR),-v $(CURDIR)/$(DOCSDIR):/$(DOCSDIR))
+DOCSPORT := 8000
+DOCKER_DOCS_IMAGE := docker-docs-$(VERSION)
+DOCKER_RUN_DOCS := docker run --rm -it $(DOCS_MOUNT) -e AWS_S3_BUCKET -e NOCACHE
+
+docs: docs-build
+	$(DOCKER_RUN_DOCS) -p $(DOCSPORT):8000 "$(DOCKER_DOCS_IMAGE)" mkdocs serve
+
+docs-shell: docs-build
+	$(DOCKER_RUN_DOCS) -p $(DOCSPORT):8000 "$(DOCKER_DOCS_IMAGE)" bash
+
+docs-build:
+	docker build -t "$(DOCKER_DOCS_IMAGE)" -f docs/Dockerfile .
