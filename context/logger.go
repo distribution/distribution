@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/Sirupsen/logrus"
-	"golang.org/x/net/context"
 )
 
 // Logger provides a leveled-logging interface.
@@ -41,8 +40,8 @@ type Logger interface {
 }
 
 // WithLogger creates a new context with provided logger.
-func WithLogger(ctx context.Context, logger Logger) context.Context {
-	return context.WithValue(ctx, "logger", logger)
+func WithLogger(ctx Context, logger Logger) Context {
+	return WithValue(ctx, "logger", logger)
 }
 
 // GetLogger returns the logger from the current context, if present. If one
@@ -51,7 +50,7 @@ func WithLogger(ctx context.Context, logger Logger) context.Context {
 // argument passed to GetLogger will be passed to fmt.Sprint when expanded as
 // a logging key field. If context keys are integer constants, for example,
 // its recommended that a String method is implemented.
-func GetLogger(ctx context.Context, keys ...interface{}) Logger {
+func GetLogger(ctx Context, keys ...interface{}) Logger {
 	return getLogrusLogger(ctx, keys...)
 }
 
@@ -59,7 +58,7 @@ func GetLogger(ctx context.Context, keys ...interface{}) Logger {
 // are provided, they will be resolved on the context and included in the
 // logger. Only use this function if specific logrus functionality is
 // required.
-func getLogrusLogger(ctx context.Context, keys ...interface{}) *logrus.Entry {
+func getLogrusLogger(ctx Context, keys ...interface{}) *logrus.Entry {
 	var logger *logrus.Entry
 
 	// Get a logger, if it is present.

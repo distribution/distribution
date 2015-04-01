@@ -31,3 +31,7 @@ bin/*
 
 # Cover profiles
 *.out
+
+# Editor/IDE specific files.
+*.sublime-project
+*.sublime-workspace

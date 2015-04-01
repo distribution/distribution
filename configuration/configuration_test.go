@@ -17,11 +17,11 @@ func Test(t *testing.T) { TestingT(t) }
 var configStruct = Configuration{
 	Version: "0.1",
 	Log: struct {
-		Level     Loglevel          `yaml:"level"`
-		Formatter string            `yaml:"formatter"`
-		Fields    map[string]string `yaml:"fields"`
+		Level     Loglevel               `yaml:"level"`
+		Formatter string                 `yaml:"formatter"`
+		Fields    map[string]interface{} `yaml:"fields"`
 	}{
-		Fields: map[string]string{"environment": "test"},
+		Fields: map[string]interface{}{"environment": "test"},
 	},
 	Loglevel: "info",
 	Storage: Storage{
@@ -340,7 +340,7 @@ func copyConfig(config Configuration) *Configuration {
 	configCopy.Version = MajorMinorVersion(config.Version.Major(), config.Version.Minor())
 	configCopy.Loglevel = config.Loglevel
 	configCopy.Log = config.Log
-	configCopy.Log.Fields = make(map[string]string, len(config.Log.Fields))
+	configCopy.Log.Fields = make(map[string]interface{}, len(config.Log.Fields))
 	for k, v := range config.Log.Fields {
 		configCopy.Log.Fields[k] = v
 	}

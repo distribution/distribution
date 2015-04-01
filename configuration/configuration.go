@@ -28,7 +28,7 @@ type Configuration struct {
 
 		// Fields allows users to specify static string fields to include in
 		// the logger context.
-		Fields map[string]string `yaml:"fields"`
+		Fields map[string]interface{} `yaml:"fields"`
 	}
 
 	// Loglevel is the level at which registry operations are logged. This is
