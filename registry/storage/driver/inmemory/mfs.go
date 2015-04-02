@@ -212,12 +212,17 @@ func (d *dir) move(src, dst string) error {
 		return errNotExists
 	}
 
-	s, ok := sp.(*dir).children[srcFilename]
+	spd, ok := sp.(*dir)
+	if !ok {
+		return errIsNotDir // paranoid.
+	}
+
+	s, ok := spd.children[srcFilename]
 	if !ok {
 		return errNotExists
 	}
 
-	delete(sp.(*dir).children, srcFilename)
+	delete(spd.children, srcFilename)
 
 	switch n := s.(type) {
 	case *dir:
