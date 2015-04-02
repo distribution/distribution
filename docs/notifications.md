@@ -1,6 +1,8 @@
-# Notifications
+page_title: Work with Notifications
+page_description: Explains how to deploy a registry service
+page_keywords: registry, service, images, repository
 
-> **TODO:** Link out to the architecture document on notification support.
+# Notifications
 
 The Registry supports sending webhook notifications in response to events
 happening within the registry. Notifications are sent in response to manifest
@@ -8,7 +10,7 @@ pushes and pulls and layer pushes and pulls. These actions are serialized into
 events. The events are queued into a registry-internal broadcast system which
 queues and dispatches events to [_Endpoints_](#endpoints).
 
-> **TODO:** Insert diagram of event system.
+![](/distribution/images/notifications.png)
 
 ## Endpoints
 
@@ -63,7 +65,7 @@ _target, identifying the object mutated during the event.
 The fields available in an event are described in detail in the
 [godoc](http://godoc.org/github.com/docker/distribution/notifications#Event).
 
-> **TODO:** Let's break out the fields here rather than rely on the godoc.
+**TODO:** Let's break out the fields here rather than rely on the godoc.
 
 The following is an example of a JSON event, sent in response to the push of a
 manifest:

@@ -1,10 +1,8 @@
 # Docker Distribution JSON Canonicalization
 
-## Introduction
-
 To provide consistent content hashing of JSON objects throughout Docker
-Distribution APIs, a canonical JSON format has been defined. Adopting such a
-canonicalization also aids in caching JSON responses.
+Distribution APIs, the specification defines a canonical JSON format. Adopting
+such a canonicalization also aids in caching JSON responses.
 
 ## Rules
 

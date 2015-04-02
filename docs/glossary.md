@@ -1,10 +1,7 @@
 # Glossary
 
-**TODO(stevvooe):** Define and describe distribution related terms. Ideally,
-we reference back to the actual documentation and specifications where
-appropriate.
-
-**TODO(stevvooe):** The following list is a start but woefully incomplete.
+This page contains distribution related terms. For a complete Docker glossary,
+see the [glossary in the full documentation set](http://docs.docker.com/reference/glossary/).
 
 <dl>
 	<dt>Blob</dt>

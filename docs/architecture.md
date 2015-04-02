@@ -1,9 +1,7 @@
 # Architecture
 
-**TODO(stevvooe):** Discuss the architecture of the registry, internally and
-externally, in a few different deployment scenarios.
-
 ## Design
+**TODO(stevvooe):** Discuss the architecture of the registry, internally and externally, in a few different deployment scenarios.
 
 ### Eventual Consistency
 

@@ -1,5 +1,4 @@
-Docker-Registry In-Memory Storage Driver
-=========================================
+# In-memory storage driver
 
 An implementation of the `storagedriver.StorageDriver` interface which uses local memory for object storage.
 

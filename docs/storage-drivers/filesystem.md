@@ -1,5 +1,4 @@
-Docker-Registry Filesystem Storage Driver
-=========================================
+# Filesystem storage driver
 
 An implementation of the `storagedriver.StorageDriver` interface which uses the local filesystem.
 

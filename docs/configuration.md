@@ -1,4 +1,41 @@
-# Configuration
+page_title: Configure a Registry
+page_description: Explains how to deploy a registry service
+page_keywords: registry, service, images, repository
+
+
+# Configure a Registry
+
+The registry server can be configured with a YAML file. This section provides a
+simple example and a complete reference.
+
+## A simple development configuration
+
+The following is a simple example that can used for local development:
+
+```yaml
+version: 0.1
+log: 
+	level: debug
+storage:
+    filesystem:
+        rootdirectory: /tmp/registry-dev
+http:
+    addr: localhost:5000
+    secret: asecretforlocaldevelopment
+    debug:
+        addr: localhost:5001
+```
+
+The above configures the registry instance to run on port 5000, binding to
+"localhost", with the debug server enabled. Registry data will be stored in
+"/tmp/registry-dev". Logging will be in "debug" mode, which is the most
+verbose.
+
+A similar simple configuration is available at
+[config.yml](https://github.com/docker/distribution/blob/master/cmd/registry/config.yml), which is generally useful for local development.
+
+
+##  Configuration Reference
 
 Below is a comprehensive example of all possible configuration options for the registry. Some options are mutually exclusive, and each section is explained in more detail below, but this is a good starting point from which you may delete the sections you do not need to create your own configuration. A copy of this configuration can be found at config.sample.yml.
 
@@ -242,7 +279,7 @@ Token based authentication allows the authentication system to be decoupled from
 - issuer: **Required** - The name of the token issuer. The issuer inserts this into the token so it must match the value configured for the issuer.
 - rootcertbundle: **Required** - The absolute path to the root certificate bundle containing the public part of the certificates that will be used to sign authentication tokens.
 
-For more information about Token based authentication configuration, see the [specification.](spec/auth/token.md)
+For more information about Token based authentication configuration, see the [specification.]
 
 ## middleware
 
