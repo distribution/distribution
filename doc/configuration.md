@@ -28,6 +28,8 @@ storage:
 		v4auth: true
 		chunksize: 5242880
 		rootdirectory: /s3/object/name/prefix
+	cache:
+		layerinfo: inmemory
 auth:
 	silly:
 		realm: silly-realm
@@ -162,9 +164,19 @@ storage:
 		v4auth: true
 		chunksize: 5242880
 		rootdirectory: /s3/object/name/prefix
+	cache:
+		layerinfo: inmemory
 ```
 
 The storage option is **required** and defines which storage backend is in use. At the moment only one backend may be configured, an error is returned when the registry is started with more than one storage backend configured.
+
+A `cache` subsection can be used to enable caching of data accessed in the
+storage backend. Currently, the only available cache provides fast access to
+layer metadata. This if configured using the `layerinfo` field. The following
+cache implementations are available:
+
+- redis: using the redis pool to cache layer meta data.
+- inmemory: use an in memory map to cache layer meta data.
 
 The following backends may be configured, **all options for a given storage backend are required**:
 

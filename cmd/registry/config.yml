@@ -5,6 +5,8 @@ log:
     service: registry
     environment: development
 storage:
+    cache:
+        layerinfo: inmemory
     filesystem:
         rootdirectory: /tmp/registry-dev
 http:

@@ -187,7 +187,12 @@ type Storage map[string]Parameters
 func (storage Storage) Type() string {
 	// Return only key in this map
 	for k := range storage {
-		return k
+		switch k {
+		case "cache":
+			// allow configuration of caching
+		default:
+			return k
+		}
 	}
 	return ""
 }
@@ -211,9 +216,17 @@ func (storage *Storage) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		if len(storageMap) > 1 {
 			types := make([]string, 0, len(storageMap))
 			for k := range storageMap {
-				types = append(types, k)
+				switch k {
+				case "cache":
+					// allow configuration of caching
+				default:
+					types = append(types, k)
+				}
 			}
-			return fmt.Errorf("Must provide exactly one storage type. Provided: %v", types)
+
+			if len(types) > 1 {
+				return fmt.Errorf("Must provide exactly one storage type. Provided: %v", types)
+			}
 		}
 		*storage = storageMap
 		return nil

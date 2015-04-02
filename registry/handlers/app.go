@@ -103,11 +103,28 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 	app.configureEvents(&configuration)
 	app.configureRedis(&configuration)
 
-	if app.redis != nil {
-		app.registry = storage.NewRegistryWithDriver(app.driver, cache.NewRedisLayerInfoCache(app.redis))
-	} else {
-		// always fall back to inmemory storage
-		app.registry = storage.NewRegistryWithDriver(app.driver, cache.NewInMemoryLayerInfoCache())
+	// configure storage caches
+	if cc, ok := configuration.Storage["cache"]; ok {
+		switch cc["layerinfo"] {
+		case "redis":
+			if app.redis == nil {
+				panic("redis configuration required to use for layerinfo cache")
+			}
+			app.registry = storage.NewRegistryWithDriver(app.driver, cache.NewRedisLayerInfoCache(app.redis))
+			ctxu.GetLogger(app).Infof("using redis layerinfo cache")
+		case "inmemory":
+			app.registry = storage.NewRegistryWithDriver(app.driver, cache.NewInMemoryLayerInfoCache())
+			ctxu.GetLogger(app).Infof("using inmemory layerinfo cache")
+		default:
+			if cc["layerinfo"] != "" {
+				ctxu.GetLogger(app).Warnf("unkown cache type %q, caching disabled", configuration.Storage["cache"])
+			}
+		}
+	}
+
+	if app.registry == nil {
+		// configure the registry if no cache section is available.
+		app.registry = storage.NewRegistryWithDriver(app.driver, nil)
 	}
 
 	app.registry, err = applyRegistryMiddleware(app.registry, configuration.Middleware["registry"])
