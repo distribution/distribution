@@ -2035,7 +2035,7 @@ The following parameters should be specified on the request:
 |`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
 |`Authorization`|header|An RFC7235 compliant authorization header.|
 |`name`|path|Name of the target repository.|
-|`uuid`|path|A uuid identifying the upload. This field can accept almost anything.|
+|`uuid`|path|A uuid identifying the upload. This field can accept characters that match `[a-zA-Z0-9-_.=]+`.|
 
 
 
@@ -2193,7 +2193,7 @@ The following parameters should be specified on the request:
 |`Content-Range`|header|Range of bytes identifying the desired block of content represented by the body. Start must the end offset retrieved via status check plus one. Note that this is a non-standard use of the `Content-Range` header.|
 |`Content-Length`|header|Length of the chunk being uploaded, corresponding the length of the request body.|
 |`name`|path|Name of the target repository.|
-|`uuid`|path|A uuid identifying the upload. This field can accept almost anything.|
+|`uuid`|path|A uuid identifying the upload. This field can accept characters that match `[a-zA-Z0-9-_.=]+`.|
 
 
 
@@ -2363,7 +2363,7 @@ The following parameters should be specified on the request:
 |`Content-Range`|header|Range of bytes identifying the block of content represented by the body. Start must the end offset retrieved via status check plus one. Note that this is a non-standard use of the `Content-Range` header. May be omitted if no data is provided.|
 |`Content-Length`|header|Length of the chunk being uploaded, corresponding to the length of the request body. May be zero if no data is provided.|
 |`name`|path|Name of the target repository.|
-|`uuid`|path|A uuid identifying the upload. This field can accept almost anything.|
+|`uuid`|path|A uuid identifying the upload. This field can accept characters that match `[a-zA-Z0-9-_.=]+`.|
 |`digest`|query|Digest of uploaded blob.|
 
 
@@ -2538,7 +2538,7 @@ The following parameters should be specified on the request:
 |`Authorization`|header|An RFC7235 compliant authorization header.|
 |`Content-Length`|header|The `Content-Length` header must be zero and the body must be empty.|
 |`name`|path|Name of the target repository.|
-|`uuid`|path|A uuid identifying the upload. This field can accept almost anything.|
+|`uuid`|path|A uuid identifying the upload. This field can accept characters that match `[a-zA-Z0-9-_.=]+`.|
 
 
 
