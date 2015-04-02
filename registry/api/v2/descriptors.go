@@ -28,7 +28,7 @@ var (
 		Name:        "uuid",
 		Type:        "opaque",
 		Required:    true,
-		Description: `A uuid identifying the upload. This field can accept almost anything.`,
+		Description: "A uuid identifying the upload. This field can accept characters that match `[a-zA-Z0-9-_.=]+`.",
 	}
 
 	digestPathParameter = ParameterDescriptor{
@@ -985,7 +985,7 @@ var routeDescriptors = []RouteDescriptor{
 
 	{
 		Name:        RouteNameBlobUploadChunk,
-		Path:        "/v2/{name:" + RepositoryNameRegexp.String() + "}/blobs/uploads/{uuid}",
+		Path:        "/v2/{name:" + RepositoryNameRegexp.String() + "}/blobs/uploads/{uuid:[a-zA-Z0-9-_.=]+}",
 		Entity:      "Blob Upload",
 		Description: "Interact with blob uploads. Clients should never assemble URLs for this endpoint and should only take it through the `Location` header on related API requests. The `Location` header and its parameters should be preserved by clients, using the latest value returned via upload related API calls.",
 		Methods: []MethodDescriptor{
