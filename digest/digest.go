@@ -2,7 +2,6 @@ package digest
 
 import (
 	"bytes"
-	"crypto/sha256"
 	"fmt"
 	"hash"
 	"io"
@@ -72,13 +71,13 @@ func ParseDigest(s string) (Digest, error) {
 
 // FromReader returns the most valid digest for the underlying content.
 func FromReader(rd io.Reader) (Digest, error) {
-	h := sha256.New()
+	digester := NewCanonicalDigester()
 
-	if _, err := io.Copy(h, rd); err != nil {
+	if _, err := io.Copy(digester, rd); err != nil {
 		return "", err
 	}
 
-	return NewDigest("sha256", h), nil
+	return digester.Digest(), nil
 }
 
 // FromTarArchive produces a tarsum digest from reader rd.
