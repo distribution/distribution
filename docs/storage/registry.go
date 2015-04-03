@@ -3,6 +3,7 @@ package storage
 import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/registry/api/v2"
+	"github.com/docker/distribution/registry/storage/cache"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"golang.org/x/net/context"
 )
@@ -10,28 +11,29 @@ import (
 // registry is the top-level implementation of Registry for use in the storage
 // package. All instances should descend from this object.
 type registry struct {
-	driver    storagedriver.StorageDriver
-	pm        *pathMapper
-	blobStore *blobStore
+	driver         storagedriver.StorageDriver
+	pm             *pathMapper
+	blobStore      *blobStore
+	layerInfoCache cache.LayerInfoCache
 }
 
 // NewRegistryWithDriver creates a new registry instance from the provided
 // driver. The resulting registry may be shared by multiple goroutines but is
 // cheap to allocate.
-func NewRegistryWithDriver(driver storagedriver.StorageDriver) distribution.Registry {
-	bs := &blobStore{}
+func NewRegistryWithDriver(driver storagedriver.StorageDriver, layerInfoCache cache.LayerInfoCache) distribution.Registry {
+	bs := &blobStore{
+		driver: driver,
+		pm:     defaultPathMapper,
+	}
 
-	reg := &registry{
+	return &registry{
 		driver:    driver,
 		blobStore: bs,
 
 		// TODO(sday): This should be configurable.
-		pm: defaultPathMapper,
+		pm:             defaultPathMapper,
+		layerInfoCache: layerInfoCache,
 	}
-
-	reg.blobStore.registry = reg
-
-	return reg
 }
 
 // Repository returns an instance of the repository tied to the registry.
@@ -83,9 +85,29 @@ func (repo *repository) Manifests() distribution.ManifestService {
 // may be context sensitive in the future. The instance should be used similar
 // to a request local.
 func (repo *repository) Layers() distribution.LayerService {
-	return &layerStore{
+	ls := &layerStore{
 		repository: repo,
 	}
+
+	if repo.registry.layerInfoCache != nil {
+		// TODO(stevvooe): This is not the best place to setup a cache. We would
+		// really like to decouple the cache from the backend but also have the
+		// manifeset service use the layer service cache. For now, we can simply
+		// integrate the cache directly. The main issue is that we have layer
+		// access and layer data coupled in a single object. Work is already under
+		// way to decouple this.
+
+		return &cachedLayerService{
+			LayerService: ls,
+			repository:   repo,
+			ctx:          repo.ctx,
+			driver:       repo.driver,
+			blobStore:    repo.blobStore,
+			cache:        repo.registry.layerInfoCache,
+		}
+	}
+
+	return ls
 }
 
 func (repo *repository) Signatures() distribution.SignatureService {
