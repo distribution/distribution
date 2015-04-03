@@ -5,6 +5,8 @@ log:
     service: registry
     environment: development
 storage:
+    cache:
+        layerinfo: inmemory
     filesystem:
         rootdirectory: /tmp/registry-dev
 http:
@@ -12,6 +14,15 @@ http:
     secret: asecretforlocaldevelopment
     debug:
         addr: localhost:5001
+redis:
+  addr: localhost:6379
+  pool:
+    maxidle: 16
+    maxactive: 64
+    idletimeout: 300s
+  dialtimeout: 10ms
+  readtimeout: 10ms
+  writetimeout: 10ms
 notifications:
     endpoints:
         - name: local-8082

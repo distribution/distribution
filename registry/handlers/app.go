@@ -1,10 +1,12 @@
 package handlers
 
 import (
+	"expvar"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
+	"time"
 
 	"code.google.com/p/go-uuid/uuid"
 	"github.com/docker/distribution"
@@ -16,9 +18,11 @@ import (
 	registrymiddleware "github.com/docker/distribution/registry/middleware/registry"
 	repositorymiddleware "github.com/docker/distribution/registry/middleware/repository"
 	"github.com/docker/distribution/registry/storage"
+	"github.com/docker/distribution/registry/storage/cache"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/factory"
 	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
+	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 )
@@ -44,6 +48,8 @@ type App struct {
 		sink   notifications.Sink
 		source notifications.SourceRecord
 	}
+
+	redis *redis.Pool
 }
 
 // Value intercepts calls context.Context.Value, returning the current app id,
@@ -95,8 +101,32 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 	}
 
 	app.configureEvents(&configuration)
+	app.configureRedis(&configuration)
 
-	app.registry = storage.NewRegistryWithDriver(app.driver)
+	// configure storage caches
+	if cc, ok := configuration.Storage["cache"]; ok {
+		switch cc["layerinfo"] {
+		case "redis":
+			if app.redis == nil {
+				panic("redis configuration required to use for layerinfo cache")
+			}
+			app.registry = storage.NewRegistryWithDriver(app.driver, cache.NewRedisLayerInfoCache(app.redis))
+			ctxu.GetLogger(app).Infof("using redis layerinfo cache")
+		case "inmemory":
+			app.registry = storage.NewRegistryWithDriver(app.driver, cache.NewInMemoryLayerInfoCache())
+			ctxu.GetLogger(app).Infof("using inmemory layerinfo cache")
+		default:
+			if cc["layerinfo"] != "" {
+				ctxu.GetLogger(app).Warnf("unkown cache type %q, caching disabled", configuration.Storage["cache"])
+			}
+		}
+	}
+
+	if app.registry == nil {
+		// configure the registry if no cache section is available.
+		app.registry = storage.NewRegistryWithDriver(app.driver, nil)
+	}
+
 	app.registry, err = applyRegistryMiddleware(app.registry, configuration.Middleware["registry"])
 	if err != nil {
 		panic(err)
@@ -172,6 +202,88 @@ func (app *App) configureEvents(configuration *configuration.Configuration) {
 		Addr:       hostname,
 		InstanceID: app.InstanceID,
 	}
+}
+
+func (app *App) configureRedis(configuration *configuration.Configuration) {
+	if configuration.Redis.Addr == "" {
+		ctxu.GetLogger(app).Infof("redis not configured")
+		return
+	}
+
+	pool := &redis.Pool{
+		Dial: func() (redis.Conn, error) {
+			// TODO(stevvooe): Yet another use case for contextual timing.
+			ctx := context.WithValue(app, "redis.connect.startedat", time.Now())
+
+			done := func(err error) {
+				logger := ctxu.GetLoggerWithField(ctx, "redis.connect.duration",
+					ctxu.Since(ctx, "redis.connect.startedat"))
+				if err != nil {
+					logger.Errorf("redis: error connecting: %v", err)
+				} else {
+					logger.Infof("redis: connect %v", configuration.Redis.Addr)
+				}
+			}
+
+			conn, err := redis.DialTimeout("tcp",
+				configuration.Redis.Addr,
+				configuration.Redis.DialTimeout,
+				configuration.Redis.ReadTimeout,
+				configuration.Redis.WriteTimeout)
+			if err != nil {
+				ctxu.GetLogger(app).Errorf("error connecting to redis instance %s: %v",
+					configuration.Redis.Addr, err)
+				done(err)
+				return nil, err
+			}
+
+			// authorize the connection
+			if configuration.Redis.Password != "" {
+				if _, err = conn.Do("AUTH", configuration.Redis.Password); err != nil {
+					defer conn.Close()
+					done(err)
+					return nil, err
+				}
+			}
+
+			// select the database to use
+			if configuration.Redis.DB != 0 {
+				if _, err = conn.Do("SELECT", configuration.Redis.DB); err != nil {
+					defer conn.Close()
+					done(err)
+					return nil, err
+				}
+			}
+
+			done(nil)
+			return conn, nil
+		},
+		MaxIdle:     configuration.Redis.Pool.MaxIdle,
+		MaxActive:   configuration.Redis.Pool.MaxActive,
+		IdleTimeout: configuration.Redis.Pool.IdleTimeout,
+		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+			// TODO(stevvooe): We can probably do something more interesting
+			// here with the health package.
+			_, err := c.Do("PING")
+			return err
+		},
+		Wait: false, // if a connection is not avialable, proceed without cache.
+	}
+
+	app.redis = pool
+
+	// setup expvar
+	registry := expvar.Get("registry")
+	if registry == nil {
+		registry = expvar.NewMap("registry")
+	}
+
+	registry.(*expvar.Map).Set("redis", expvar.Func(func() interface{} {
+		return map[string]interface{}{
+			"Config": configuration.Redis,
+			"Active": app.redis.ActiveCount(),
+		}
+	}))
 }
 
 func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {

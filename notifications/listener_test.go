@@ -9,6 +9,7 @@ import (
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/registry/storage"
+	"github.com/docker/distribution/registry/storage/cache"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/docker/distribution/testutil"
 	"github.com/docker/libtrust"
@@ -16,7 +17,7 @@ import (
 )
 
 func TestListener(t *testing.T) {
-	registry := storage.NewRegistryWithDriver(inmemory.New())
+	registry := storage.NewRegistryWithDriver(inmemory.New(), cache.NewInMemoryLayerInfoCache())
 	tl := &testListener{
 		ops: make(map[string]int),
 	}

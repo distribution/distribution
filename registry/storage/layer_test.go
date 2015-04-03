@@ -11,6 +11,7 @@ import (
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/registry/storage/cache"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/docker/distribution/testutil"
@@ -35,7 +36,7 @@ func TestSimpleLayerUpload(t *testing.T) {
 	ctx := context.Background()
 	imageName := "foo/bar"
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(driver)
+	registry := NewRegistryWithDriver(driver, cache.NewInMemoryLayerInfoCache())
 	repository, err := registry.Repository(ctx, imageName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
@@ -143,7 +144,7 @@ func TestSimpleLayerRead(t *testing.T) {
 	ctx := context.Background()
 	imageName := "foo/bar"
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(driver)
+	registry := NewRegistryWithDriver(driver, cache.NewInMemoryLayerInfoCache())
 	repository, err := registry.Repository(ctx, imageName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
@@ -180,7 +181,7 @@ func TestSimpleLayerRead(t *testing.T) {
 		t.Fatalf("unexpected error fetching non-existent layer: %v", err)
 	}
 
-	randomLayerDigest, err := writeTestLayer(driver, ls.(*layerStore).repository.pm, imageName, dgst, randomLayerReader)
+	randomLayerDigest, err := writeTestLayer(driver, defaultPathMapper, imageName, dgst, randomLayerReader)
 	if err != nil {
 		t.Fatalf("unexpected error writing test layer: %v", err)
 	}
@@ -252,7 +253,7 @@ func TestLayerUploadZeroLength(t *testing.T) {
 	ctx := context.Background()
 	imageName := "foo/bar"
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(driver)
+	registry := NewRegistryWithDriver(driver, cache.NewInMemoryLayerInfoCache())
 	repository, err := registry.Repository(ctx, imageName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
