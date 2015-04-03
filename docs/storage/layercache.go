@@ -174,7 +174,26 @@ var layerInfoCacheMetrics struct {
 }
 
 func init() {
-	expvar.Publish("layerinfocache", expvar.Func(func() interface{} {
+	registry := expvar.Get("registry")
+	if registry == nil {
+		registry = expvar.NewMap("registry")
+	}
+
+	cache := registry.(*expvar.Map).Get("cache")
+	if cache == nil {
+		cache = &expvar.Map{}
+		cache.(*expvar.Map).Init()
+		registry.(*expvar.Map).Set("cache", cache)
+	}
+
+	storage := cache.(*expvar.Map).Get("storage")
+	if storage == nil {
+		storage = &expvar.Map{}
+		storage.(*expvar.Map).Init()
+		cache.(*expvar.Map).Set("storage", storage)
+	}
+
+	storage.(*expvar.Map).Set("layerinfo", expvar.Func(func() interface{} {
 		// no need for synchronous access: the increments are atomic and
 		// during reading, we don't care if the data is up to date. The
 		// numbers will always *eventually* be reported correctly.

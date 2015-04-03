@@ -272,13 +272,18 @@ func (app *App) configureRedis(configuration *configuration.Configuration) {
 
 	app.redis = pool
 
-	expvar.Publish("redis", expvar.Func(func() interface{} {
+	// setup expvar
+	registry := expvar.Get("registry")
+	if registry == nil {
+		registry = expvar.NewMap("registry")
+	}
+
+	registry.(*expvar.Map).Set("redis", expvar.Func(func() interface{} {
 		return map[string]interface{}{
 			"Config": configuration.Redis,
 			"Active": app.redis.ActiveCount(),
 		}
 	}))
-
 }
 
 func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
