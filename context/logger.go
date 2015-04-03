@@ -47,14 +47,14 @@ func WithLogger(ctx Context, logger Logger) Context {
 // GetLoggerWithField returns a logger instance with the specified field key
 // and value without affecting the context. Extra specified keys will be
 // resolved from the context.
-func GetLoggerWithField(ctx context.Context, key, value interface{}, keys ...interface{}) Logger {
+func GetLoggerWithField(ctx Context, key, value interface{}, keys ...interface{}) Logger {
 	return getLogrusLogger(ctx, keys...).WithField(fmt.Sprint(key), value)
 }
 
 // GetLoggerWithFields returns a logger instance with the specified fields
 // without affecting the context. Extra specified keys will be resolved from
 // the context.
-func GetLoggerWithFields(ctx context.Context, fields map[string]interface{}, keys ...interface{}) Logger {
+func GetLoggerWithFields(ctx Context, fields map[string]interface{}, keys ...interface{}) Logger {
 	return getLogrusLogger(ctx, keys...).WithFields(logrus.Fields(fields))
 }
 
