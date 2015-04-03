@@ -19,7 +19,7 @@ reduce bandwidth usage and decrease the likelihood of backend corruption.
 For relevant details and history leading up to this specification, please see
 the following issues:
 
-- [docker/docker#8093](https://github.com/docker/docker/issues/8903)
+- [docker/docker#8093](https://github.com/docker/docker/issues/8093)
 - [docker/docker#9015](https://github.com/docker/docker/issues/9015)
 - [docker/docker-registry#612](https://github.com/docker/docker-registry/issues/612)
 
