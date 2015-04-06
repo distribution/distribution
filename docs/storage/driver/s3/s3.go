@@ -695,6 +695,11 @@ func (d *driver) s3Path(path string) string {
 	return strings.TrimLeft(strings.TrimRight(d.RootDirectory, "/")+path, "/")
 }
 
+// S3BucketKey returns the s3 bucket key for the given storage driver path.
+func (d *Driver) S3BucketKey(path string) string {
+	return d.StorageDriver.(*driver).s3Path(path)
+}
+
 func parseError(path string, err error) error {
 	if s3Err, ok := err.(*s3.Error); ok && s3Err.Code == "NoSuchKey" {
 		return storagedriver.PathNotFoundError{Path: path}
