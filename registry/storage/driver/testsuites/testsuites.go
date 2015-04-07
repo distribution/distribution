@@ -136,7 +136,9 @@ func (suite *DriverSuite) TestValidPaths(c *check.C) {
 		"/.abc",
 		"/a--b",
 		"/a-.b",
-		"/_.abc"}
+		"/_.abc",
+		"/Docker/docker-registry",
+		"/Abc/Cba"}
 
 	for _, filename := range validFiles {
 		err := suite.StorageDriver.PutContent(filename, contents)
@@ -159,8 +161,7 @@ func (suite *DriverSuite) TestInvalidPaths(c *check.C) {
 		"abc",
 		"123.abc",
 		"//bcd",
-		"/abc_123/",
-		"/Docker/docker-registry"}
+		"/abc_123/"}
 
 	for _, filename := range invalidFiles {
 		err := suite.StorageDriver.PutContent(filename, contents)
