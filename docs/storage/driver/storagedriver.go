@@ -83,7 +83,7 @@ type StorageDriver interface {
 // number of path components separated by slashes, where each component is
 // restricted to lowercase alphanumeric characters or a period, underscore, or
 // hyphen.
-var PathRegexp = regexp.MustCompile(`^(/[a-z0-9._-]+)+$`)
+var PathRegexp = regexp.MustCompile(`^(/[A-Za-z0-9._-]+)+$`)
 
 // ErrUnsupportedMethod may be returned in the case where a StorageDriver implementation does not support an optional method.
 var ErrUnsupportedMethod = errors.New("unsupported method")
