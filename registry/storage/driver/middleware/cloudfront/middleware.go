@@ -8,10 +8,10 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
-	"net/url"
 	"time"
 
 	"github.com/AdRoll/goamz/cloudfront"
+	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
 )
@@ -90,23 +90,23 @@ func newCloudFrontStorageMiddleware(storageDriver storagedriver.StorageDriver, o
 	return &cloudFrontStorageMiddleware{StorageDriver: storageDriver, cloudfront: cf, duration: duration}, nil
 }
 
+// S3BucketKeyer is any type that is capable of returning the S3 bucket key
+// which should be cached by AWS CloudFront.
+type S3BucketKeyer interface {
+	S3BucketKey(path string) string
+}
+
 // Resolve returns an http.Handler which can serve the contents of the given
 // Layer, or an error if not supported by the storagedriver.
 func (lh *cloudFrontStorageMiddleware) URLFor(path string, options map[string]interface{}) (string, error) {
 	// TODO(endophage): currently only supports S3
-	options["expiry"] = time.Now().Add(lh.duration)
-
-	layerURLStr, err := lh.StorageDriver.URLFor(path, options)
-	if err != nil {
-		return "", err
+	keyer, ok := lh.StorageDriver.(S3BucketKeyer)
+	if !ok {
+		context.GetLogger(context.Background()).Warn("the CloudFront middleware does not support this backend storage driver")
+		return lh.StorageDriver.URLFor(path, options)
 	}
 
-	layerURL, err := url.Parse(layerURLStr)
-	if err != nil {
-		return "", err
-	}
-
-	cfURL, err := lh.cloudfront.CannedSignedURL(layerURL.Path, "", time.Now().Add(lh.duration))
+	cfURL, err := lh.cloudfront.CannedSignedURL(keyer.S3BucketKey(path), "", time.Now().Add(lh.duration))
 	if err != nil {
 		return "", err
 	}
