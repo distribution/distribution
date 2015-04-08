@@ -18,8 +18,8 @@ var configStruct = Configuration{
 	Version: "0.1",
 	Log: struct {
 		Level     Loglevel               `yaml:"level"`
-		Formatter string                 `yaml:"formatter"`
-		Fields    map[string]interface{} `yaml:"fields"`
+		Formatter string                 `yaml:"formatter,omitempty"`
+		Fields    map[string]interface{} `yaml:"fields,omitempty"`
 	}{
 		Fields: map[string]interface{}{"environment": "test"},
 	},
