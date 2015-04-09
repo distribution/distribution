@@ -21,7 +21,7 @@ should be as useful with docker as they are without.
 This repository contains the following components:
 
 - **registry (beta):** An implementation of the [Docker Registry HTTP API
-  V2](doc/spec/api.md) for use with docker 1.5+.
+  V2](docs/spec/api.md) for use with docker 1.5+.
 - **libraries (unstable):** A rich set of libraries for interacting with
   distribution components. Please see
   [godoc](http://godoc.org/github.com/docker/distribution) for details. Note
@@ -29,8 +29,8 @@ This repository contains the following components:
 - **dist (experimental):** An experimental tool to provide distribution
   oriented functionality without the docker daemon.
 - **specifications**: _Distribution_ related specifications are available in
-  [doc/spec](doc/spec).
-- **documentation:** Documentation is available in [doc](doc/overview.md).
+  [docs/spec](docs/spec).
+- **documentation:** Documentation is available in [docs](docs/overview.md).
 
 ### How will this integrate with Docker engine?
 
@@ -100,7 +100,7 @@ which is generally useful for local development.
 can point to a documentation section.
 
 For full details about configuring a registry server, please see [the
-documentation](doc/configuration.md).
+documentation](docs/configuration.md).
 
 ### Upgrading
 
