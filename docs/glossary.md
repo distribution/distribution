@@ -23,7 +23,7 @@ see the [glossary in the full documentation set](http://docs.docker.com/referenc
 	<dd>Describes a collection layers that make up an image.</dd>
 
 	<dt>Registry</dt>
-	<dd>A registry is a collection of repositories.</dd>
+	<dd>A registry is a service which serves repositories.</dd>
 
 	<dt>Repository</dt>
 	<dd>
@@ -33,4 +33,11 @@ see the [glossary in the full documentation set](http://docs.docker.com/referenc
 
 	<dt>Tag</dt>
 	<dd>Tag provides a common name to an image.</dd>
+
+	<dt>Namespace</dt>
+	<dd>A namespace is a collection of repositories with a common name prefix. The
+	namespace with an empty common prefix is considered the Global Namespace.</dd>
+
+	<dt>Scope</dt>
+	<dd>A common repository name prefix.</dd>
 </dl>
