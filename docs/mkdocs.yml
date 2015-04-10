@@ -1,6 +1,9 @@
-
-- ['distribution/overview.md', 'User Guide', 'Docker Distribution' ]
-- ['distribution/install.md', 'Installation', 'Docker Distribution']
-- ['distribution/architecture.md', 'Reference', 'Distribution Architecture']
-
+- ['distribution/overview.md', 'Reference', 'Docker Registry Service 2.0']
+- ['distribution/deploying.md', 'Reference', '-- Deploy a registry' ]
+- ['distribution/configuration.md', 'Reference', '-- Configure a registry' ]
+- ['distribution/storagedrivers.md', 'Reference', '-- Storage driver model' ]
+- ['distribution/notifications.md', 'Reference', '-- Work with notifications' ]
+- ['distribution/spec/api.md', 'Reference', '-- Registry Service API v2' ]
+- ['distribution/spec/json.md', 'Reference', '-- JSON format' ]
+- ['distribution/spec/auth/token.md', 'Reference', '-- Authenticate via central service' ]
 

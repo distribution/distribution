@@ -1,4 +1,4 @@
-# Docker Registry Microsoft Azure Blob Storage Driver
+# Microsoft Azure storage driver
 
 
 An implementation of the `storagedriver.StorageDriver` interface which uses [Microsoft Azure Blob Storage][azure-blob-storage] for object storage.
