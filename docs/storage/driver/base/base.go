@@ -40,6 +40,7 @@ package base
 import (
 	"io"
 
+	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 )
 
@@ -51,6 +52,9 @@ type Base struct {
 
 // GetContent wraps GetContent of underlying storage driver.
 func (base *Base) GetContent(path string) ([]byte, error) {
+	_, done := context.WithTrace(context.Background())
+	defer done("Base.GetContent")
+
 	if !storagedriver.PathRegexp.MatchString(path) {
 		return nil, storagedriver.InvalidPathError{Path: path}
 	}
@@ -60,6 +64,9 @@ func (base *Base) GetContent(path string) ([]byte, error) {
 
 // PutContent wraps PutContent of underlying storage driver.
 func (base *Base) PutContent(path string, content []byte) error {
+	_, done := context.WithTrace(context.Background())
+	defer done("Base.PutContent")
+
 	if !storagedriver.PathRegexp.MatchString(path) {
 		return storagedriver.InvalidPathError{Path: path}
 	}
@@ -69,6 +76,9 @@ func (base *Base) PutContent(path string, content []byte) error {
 
 // ReadStream wraps ReadStream of underlying storage driver.
 func (base *Base) ReadStream(path string, offset int64) (io.ReadCloser, error) {
+	_, done := context.WithTrace(context.Background())
+	defer done("Base.ReadStream")
+
 	if offset < 0 {
 		return nil, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
 	}
@@ -82,6 +92,9 @@ func (base *Base) ReadStream(path string, offset int64) (io.ReadCloser, error) {
 
 // WriteStream wraps WriteStream of underlying storage driver.
 func (base *Base) WriteStream(path string, offset int64, reader io.Reader) (nn int64, err error) {
+	_, done := context.WithTrace(context.Background())
+	defer done("Base.WriteStream")
+
 	if offset < 0 {
 		return 0, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
 	}
@@ -95,6 +108,9 @@ func (base *Base) WriteStream(path string, offset int64, reader io.Reader) (nn i
 
 // Stat wraps Stat of underlying storage driver.
 func (base *Base) Stat(path string) (storagedriver.FileInfo, error) {
+	_, done := context.WithTrace(context.Background())
+	defer done("Base.Stat")
+
 	if !storagedriver.PathRegexp.MatchString(path) {
 		return nil, storagedriver.InvalidPathError{Path: path}
 	}
@@ -104,6 +120,9 @@ func (base *Base) Stat(path string) (storagedriver.FileInfo, error) {
 
 // List wraps List of underlying storage driver.
 func (base *Base) List(path string) ([]string, error) {
+	_, done := context.WithTrace(context.Background())
+	defer done("Base.List")
+
 	if !storagedriver.PathRegexp.MatchString(path) && path != "/" {
 		return nil, storagedriver.InvalidPathError{Path: path}
 	}
@@ -113,6 +132,9 @@ func (base *Base) List(path string) ([]string, error) {
 
 // Move wraps Move of underlying storage driver.
 func (base *Base) Move(sourcePath string, destPath string) error {
+	_, done := context.WithTrace(context.Background())
+	defer done("Base.Move")
+
 	if !storagedriver.PathRegexp.MatchString(sourcePath) {
 		return storagedriver.InvalidPathError{Path: sourcePath}
 	} else if !storagedriver.PathRegexp.MatchString(destPath) {
@@ -124,6 +146,9 @@ func (base *Base) Move(sourcePath string, destPath string) error {
 
 // Delete wraps Delete of underlying storage driver.
 func (base *Base) Delete(path string) error {
+	_, done := context.WithTrace(context.Background())
+	defer done("Base.Move")
+
 	if !storagedriver.PathRegexp.MatchString(path) {
 		return storagedriver.InvalidPathError{Path: path}
 	}
@@ -133,6 +158,9 @@ func (base *Base) Delete(path string) error {
 
 // URLFor wraps URLFor of underlying storage driver.
 func (base *Base) URLFor(path string, options map[string]interface{}) (string, error) {
+	_, done := context.WithTrace(context.Background())
+	defer done("Base.URLFor")
+
 	if !storagedriver.PathRegexp.MatchString(path) {
 		return "", storagedriver.InvalidPathError{Path: path}
 	}
