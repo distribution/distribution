@@ -20,7 +20,7 @@ type registry struct {
 // NewRegistryWithDriver creates a new registry instance from the provided
 // driver. The resulting registry may be shared by multiple goroutines but is
 // cheap to allocate.
-func NewRegistryWithDriver(driver storagedriver.StorageDriver, layerInfoCache cache.LayerInfoCache) distribution.Registry {
+func NewRegistryWithDriver(driver storagedriver.StorageDriver, layerInfoCache cache.LayerInfoCache) distribution.Namespace {
 	bs := &blobStore{
 		driver: driver,
 		pm:     defaultPathMapper,
@@ -34,6 +34,12 @@ func NewRegistryWithDriver(driver storagedriver.StorageDriver, layerInfoCache ca
 		pm:             defaultPathMapper,
 		layerInfoCache: layerInfoCache,
 	}
+}
+
+// Scope returns the namespace scope for a registry. The registry
+// will only serve repositories contained within this scope.
+func (reg *registry) Scope() distribution.Scope {
+	return distribution.GlobalScope
 }
 
 // Repository returns an instance of the repository tied to the registry.

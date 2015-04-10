@@ -283,7 +283,7 @@ For more information about Token based authentication configuration, see the [sp
 
 ## middleware
 
-The middleware option is **optional** and allows middlewares to be injected at named hook points. A requirement of all middlewares is that they implement the same interface as the object they're wrapping. This means a registry middleware must implement the `distribution.Registry` interface, repository middleware must implement `distribution.Respository`, and storage middleware must implement `driver.StorageDriver`.
+The middleware option is **optional** and allows middlewares to be injected at named hook points. A requirement of all middlewares is that they implement the same interface as the object they're wrapping. This means a registry middleware must implement the `distribution.Namespace` interface, repository middleware must implement `distribution.Respository`, and storage middleware must implement `driver.StorageDriver`.
 
 Currently only one middleware, cloudfront, a storage middleware, is included in the registry. 
 
