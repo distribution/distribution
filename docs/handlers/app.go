@@ -40,7 +40,7 @@ type App struct {
 
 	router           *mux.Router                 // main application router, configured with dispatchers
 	driver           storagedriver.StorageDriver // driver maintains the app global storage driver instance.
-	registry         distribution.Registry       // registry is the primary registry backend for the app instance.
+	registry         distribution.Namespace      // registry is the primary registry backend for the app instance.
 	accessController auth.AccessController       // main access controller for application
 
 	// events contains notification related configuration.
@@ -541,7 +541,7 @@ func appendAccessRecords(records []auth.Access, method string, repo string) []au
 }
 
 // applyRegistryMiddleware wraps a registry instance with the configured middlewares
-func applyRegistryMiddleware(registry distribution.Registry, middlewares []configuration.Middleware) (distribution.Registry, error) {
+func applyRegistryMiddleware(registry distribution.Namespace, middlewares []configuration.Middleware) (distribution.Namespace, error) {
 	for _, mw := range middlewares {
 		rmw, err := registrymiddleware.Get(mw.Name, mw.Options, registry)
 		if err != nil {
