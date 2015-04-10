@@ -8,7 +8,7 @@ import (
 
 // InitFunc is the type of a RegistryMiddleware factory function and is
 // used to register the constructor for different RegistryMiddleware backends.
-type InitFunc func(registry distribution.Registry, options map[string]interface{}) (distribution.Registry, error)
+type InitFunc func(registry distribution.Namespace, options map[string]interface{}) (distribution.Namespace, error)
 
 var middlewares map[string]InitFunc
 
@@ -28,7 +28,7 @@ func Register(name string, initFunc InitFunc) error {
 }
 
 // Get constructs a RegistryMiddleware with the given options using the named backend.
-func Get(name string, options map[string]interface{}, registry distribution.Registry) (distribution.Registry, error) {
+func Get(name string, options map[string]interface{}, registry distribution.Namespace) (distribution.Namespace, error) {
 	if middlewares != nil {
 		if initFunc, exists := middlewares[name]; exists {
 			return initFunc(registry, options)
