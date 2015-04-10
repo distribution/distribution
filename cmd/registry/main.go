@@ -10,6 +10,7 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/Sirupsen/logrus/formatters/logstash"
@@ -196,13 +197,24 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 
 	log.SetLevel(logLevel(config.Log.Level))
 
-	switch config.Log.Formatter {
+	formatter := config.Log.Formatter
+	if formatter == "" {
+		formatter = "text" // default formatter
+	}
+
+	switch formatter {
 	case "json":
-		log.SetFormatter(&log.JSONFormatter{})
+		log.SetFormatter(&log.JSONFormatter{
+			TimestampFormat: time.RFC3339Nano,
+		})
 	case "text":
-		log.SetFormatter(&log.TextFormatter{})
+		log.SetFormatter(&log.TextFormatter{
+			TimestampFormat: time.RFC3339Nano,
+		})
 	case "logstash":
-		log.SetFormatter(&logstash.LogstashFormatter{})
+		log.SetFormatter(&logstash.LogstashFormatter{
+			TimestampFormat: time.RFC3339Nano,
+		})
 	default:
 		// just let the library use default on empty string.
 		if config.Log.Formatter != "" {
