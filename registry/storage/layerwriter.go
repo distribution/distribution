@@ -109,6 +109,10 @@ func (lw *layerWriter) ReadFrom(r io.Reader) (n int64, err error) {
 }
 
 func (lw *layerWriter) Close() error {
+	if lw.err != nil {
+		return lw.err
+	}
+
 	if err := lw.storeHashState(); err != nil {
 		return err
 	}
