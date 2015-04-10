@@ -22,7 +22,7 @@ storage:
   s3:
     region: us-east-1
     bucket: my-bucket
-    rootpath: /registry
+    rootdirectory: /registry
     encrypt: true
     secure: false
     accesskey: SAMPLEACCESSKEY
