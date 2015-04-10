@@ -8,7 +8,6 @@ import (
 	"os"
 	"time"
 
-	"code.google.com/p/go-uuid/uuid"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/configuration"
 	ctxu "github.com/docker/distribution/context"
@@ -32,11 +31,8 @@ import (
 // fields should be protected.
 type App struct {
 	context.Context
-	Config configuration.Configuration
 
-	// InstanceID is a unique id assigned to the application on each creation.
-	// Provides information in the logs and context to identify restarts.
-	InstanceID string
+	Config configuration.Configuration
 
 	router           *mux.Router                 // main application router, configured with dispatchers
 	driver           storagedriver.StorageDriver // driver maintains the app global storage driver instance.
@@ -52,29 +48,17 @@ type App struct {
 	redis *redis.Pool
 }
 
-// Value intercepts calls context.Context.Value, returning the current app id,
-// if requested.
-func (app *App) Value(key interface{}) interface{} {
-	switch key {
-	case "app.id":
-		return app.InstanceID
-	}
-
-	return app.Context.Value(key)
-}
-
 // NewApp takes a configuration and returns a configured app, ready to serve
 // requests. The app only implements ServeHTTP and can be wrapped in other
 // handlers accordingly.
 func NewApp(ctx context.Context, configuration configuration.Configuration) *App {
 	app := &App{
-		Config:     configuration,
-		Context:    ctx,
-		InstanceID: uuid.New(),
-		router:     v2.RouterWithPrefix(configuration.HTTP.Prefix),
+		Config:  configuration,
+		Context: ctx,
+		router:  v2.RouterWithPrefix(configuration.HTTP.Prefix),
 	}
 
-	app.Context = ctxu.WithLogger(app.Context, ctxu.GetLogger(app, "app.id"))
+	app.Context = ctxu.WithLogger(app.Context, ctxu.GetLogger(app, "instance.id"))
 
 	// Register the handler dispatchers.
 	app.register(v2.RouteNameBase, func(ctx *Context, r *http.Request) http.Handler {
@@ -200,7 +184,7 @@ func (app *App) configureEvents(configuration *configuration.Configuration) {
 
 	app.events.source = notifications.SourceRecord{
 		Addr:       hostname,
-		InstanceID: app.InstanceID,
+		InstanceID: ctxu.GetStringValue(app, "instance.id"),
 	}
 }
 
