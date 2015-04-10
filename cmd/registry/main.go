@@ -16,7 +16,7 @@ import (
 	"github.com/Sirupsen/logrus/formatters/logstash"
 	"github.com/bugsnag/bugsnag-go"
 	"github.com/docker/distribution/configuration"
-	ctxu "github.com/docker/distribution/context"
+	"github.com/docker/distribution/context"
 	_ "github.com/docker/distribution/health"
 	_ "github.com/docker/distribution/registry/auth/silly"
 	_ "github.com/docker/distribution/registry/auth/token"
@@ -29,7 +29,6 @@ import (
 	"github.com/docker/distribution/version"
 	gorhandlers "github.com/gorilla/handlers"
 	"github.com/yvasiyarov/gorelic"
-	"golang.org/x/net/context"
 )
 
 var showVersion bool
@@ -68,9 +67,9 @@ func main() {
 	}
 
 	if config.HTTP.TLS.Certificate == "" {
-		ctxu.GetLogger(app).Infof("listening on %v", config.HTTP.Addr)
+		context.GetLogger(app).Infof("listening on %v", config.HTTP.Addr)
 		if err := http.ListenAndServe(config.HTTP.Addr, handler); err != nil {
-			ctxu.GetLogger(app).Fatalln(err)
+			context.GetLogger(app).Fatalln(err)
 		}
 	} else {
 		tlsConf := &tls.Config{
@@ -83,23 +82,23 @@ func main() {
 			for _, ca := range config.HTTP.TLS.ClientCAs {
 				caPem, err := ioutil.ReadFile(ca)
 				if err != nil {
-					ctxu.GetLogger(app).Fatalln(err)
+					context.GetLogger(app).Fatalln(err)
 				}
 
 				if ok := pool.AppendCertsFromPEM(caPem); !ok {
-					ctxu.GetLogger(app).Fatalln(fmt.Errorf("Could not add CA to pool"))
+					context.GetLogger(app).Fatalln(fmt.Errorf("Could not add CA to pool"))
 				}
 			}
 
 			for _, subj := range pool.Subjects() {
-				ctxu.GetLogger(app).Debugf("CA Subject: %s", string(subj))
+				context.GetLogger(app).Debugf("CA Subject: %s", string(subj))
 			}
 
 			tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
 			tlsConf.ClientCAs = pool
 		}
 
-		ctxu.GetLogger(app).Infof("listening on %v, tls", config.HTTP.Addr)
+		context.GetLogger(app).Infof("listening on %v, tls", config.HTTP.Addr)
 		server := &http.Server{
 			Addr:      config.HTTP.Addr,
 			Handler:   handler,
@@ -107,7 +106,7 @@ func main() {
 		}
 
 		if err := server.ListenAndServeTLS(config.HTTP.TLS.Certificate, config.HTTP.TLS.Key); err != nil {
-			ctxu.GetLogger(app).Fatalln(err)
+			context.GetLogger(app).Fatalln(err)
 		}
 	}
 }
@@ -191,7 +190,7 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 	if config.Log.Level == "" && config.Log.Formatter == "" {
 		// If no config for logging is set, fallback to deprecated "Loglevel".
 		log.SetLevel(logLevel(config.Loglevel))
-		ctx = ctxu.WithLogger(ctx, ctxu.GetLogger(ctx, "version"))
+		ctx = context.WithLogger(ctx, context.GetLogger(ctx, "version"))
 		return ctx, nil
 	}
 
@@ -236,8 +235,8 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 			fields = append(fields, k)
 		}
 
-		ctx = ctxu.WithValues(ctx, config.Log.Fields)
-		ctx = ctxu.WithLogger(ctx, ctxu.GetLogger(ctx, fields...))
+		ctx = context.WithValues(ctx, config.Log.Fields)
+		ctx = context.WithLogger(ctx, context.GetLogger(ctx, fields...))
 	}
 
 	return ctx, nil

@@ -1,6 +1,7 @@
 package context
 
 import (
+	"code.google.com/p/go-uuid/uuid"
 	"golang.org/x/net/context"
 )
 
@@ -9,9 +10,31 @@ type Context interface {
 	context.Context
 }
 
-// Background returns a non-nil, empty Context.
+// instanceContext is a context that provides only an instance id. It is
+// provided as the main background context.
+type instanceContext struct {
+	Context
+	id string // id of context, logged as "instance.id"
+}
+
+func (ic *instanceContext) Value(key interface{}) interface{} {
+	if key == "instance.id" {
+		return ic.id
+	}
+
+	return ic.Context.Value(key)
+}
+
+var background = &instanceContext{
+	Context: context.Background(),
+	id:      uuid.New(),
+}
+
+// Background returns a non-nil, empty Context. The background context
+// provides a single key, "instance.id" that is globally unique to the
+// process.
 func Background() Context {
-	return context.Background()
+	return background
 }
 
 // WithValue returns a copy of parent in which the value associated with key is
