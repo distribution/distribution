@@ -26,15 +26,15 @@ var configStruct = Configuration{
 	Loglevel: "info",
 	Storage: Storage{
 		"s3": Parameters{
-			"region":    "us-east-1",
-			"bucket":    "my-bucket",
-			"rootpath":  "/registry",
-			"encrypt":   true,
-			"secure":    false,
-			"accesskey": "SAMPLEACCESSKEY",
-			"secretkey": "SUPERSECRET",
-			"host":      nil,
-			"port":      42,
+			"region":        "us-east-1",
+			"bucket":        "my-bucket",
+			"rootdirectory": "/registry",
+			"encrypt":       true,
+			"secure":        false,
+			"accesskey":     "SAMPLEACCESSKEY",
+			"secretkey":     "SUPERSECRET",
+			"host":          nil,
+			"port":          42,
 		},
 	},
 	Auth: Auth{
@@ -93,7 +93,7 @@ storage:
   s3:
     region: us-east-1
     bucket: my-bucket
-    rootpath: /registry
+    rootdirectory: /registry
     encrypt: true
     secure: false
     accesskey: SAMPLEACCESSKEY
