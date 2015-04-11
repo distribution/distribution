@@ -174,8 +174,14 @@ func configureReporting(app *handlers.App) http.Handler {
 		if app.Config.Reporting.NewRelic.Name != "" {
 			agent.NewrelicName = app.Config.Reporting.NewRelic.Name
 		}
+		if app.Config.Reporting.NewRelic.Verbose != "" {
+			agent.Verbose = app.Config.Reporting.NewRelic.Verbose
+		}
+		else {
+			agent.Verbose = false
+		}
+
 		agent.CollectHTTPStat = true
-		agent.Verbose = true
 		agent.Run()
 
 		handler = agent.WrapHTTPHandler(handler)
