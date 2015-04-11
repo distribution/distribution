@@ -180,7 +180,6 @@ func configureReporting(app *handlers.App) http.Handler {
 		else {
 			agent.Verbose = false
 		}
-
 		agent.CollectHTTPStat = true
 		agent.Run()
 
