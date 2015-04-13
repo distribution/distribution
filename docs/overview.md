@@ -22,7 +22,7 @@ is collection of images. Users interact with the registry by pushing images to
 or pulling images from the registry. The Docker Registry includes several
 optional features that you can configure according to your needs.
 
-![](/distribution/images/registry.png)
+![](../images/registry.png)
 
 The architecture supports a configurable storage backend. You can store images
 on  a file system or on a service such as Amazon S3 or Microsoft Azure. The
@@ -64,4 +64,3 @@ For more information and resources, please visit the [Getting Help project page]
  - [Storage driver model](storagedrivers.md)
  - [Working with notifications](notifications.md)
  - [Registry API v2](spec/api.md)
-
