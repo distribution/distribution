@@ -8,7 +8,7 @@ This section explains how to deploy a Docker Registry Service either privately
 for your own company or publicly for other users. For example, your company may
 require a private registry to support your continuous integration (CI) system as
 it builds new releases or test servers. Alternatively, your company may have a
-large number of products or services with images you wish to server in a branded
+large number of products or services with images you wish to serve in a branded
 manner.
 
 Docker's public registry maintains a default `registry` image to assist you in the
