@@ -351,7 +351,7 @@ func copyConfig(config Configuration) *Configuration {
 	}
 	configCopy.Reporting = Reporting{
 		Bugsnag:  BugsnagReporting{config.Reporting.Bugsnag.APIKey, config.Reporting.Bugsnag.ReleaseStage, config.Reporting.Bugsnag.Endpoint},
-		NewRelic: NewRelicReporting{config.Reporting.NewRelic.LicenseKey, config.Reporting.NewRelic.Name},
+		NewRelic: NewRelicReporting{config.Reporting.NewRelic.LicenseKey, config.Reporting.NewRelic.Name, config.Reporting.NewRelic.Verbose},
 	}
 
 	configCopy.Auth = Auth{config.Auth.Type(): Parameters{}}
