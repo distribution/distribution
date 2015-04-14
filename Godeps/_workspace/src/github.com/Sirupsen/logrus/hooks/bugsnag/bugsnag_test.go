@@ -62,3 +62,41 @@ func TestNoticeReceived(t *testing.T) {
 		t.Error("Timed out; no notice received by Bugsnag API")
 	}
 }
+
+func TestPanicReceived(t *testing.T) {
+	expectedMsg := "it is panic for bugsnag testing"
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var notice struct {
+			Events []struct {
+				Exceptions []struct {
+					Message string `json:"message"`
+				} `json:"exceptions"`
+			} `json:"events"`
+		}
+		data, _ := ioutil.ReadAll(r.Body)
+		if err := json.Unmarshal(data, &notice); err != nil {
+			logrus.Error(err)
+		}
+		_ = r.Body.Close()
+		if notice.Events[0].Exceptions[0].Message != expectedMsg {
+			t.Errorf("Unexpected message received: %s", notice.Events[0].Exceptions[0].Message)
+		}
+
+	}))
+	defer ts.Close()
+
+	hook, _ := NewBugsnagHook()
+	log := logrus.New()
+	log.Hooks.Add(hook)
+
+	defer bugsnag.Recover()
+	defer bugsnag.AutoNotify(bugsnag.Configuration{
+		Endpoint:        ts.URL,
+		ProjectPackages: []string{"handlers"},
+		ReleaseStage:    "production",
+		APIKey:          "12345678901234567890123456789012",
+		Synchronous:     true,
+	})
+	panic(expectedMsg)
+
+}
