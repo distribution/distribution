@@ -324,6 +324,9 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 			return
 		}
 
+		// Add username to request logging
+		context.Context = ctxu.WithLogger(context.Context, ctxu.GetLogger(context.Context, "auth.user.name"))
+
 		if app.nameRequired(r) {
 			repository, err := app.registry.Repository(context, getName(context))
 
@@ -456,7 +459,6 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 	// should be replaced by another, rather than replacing the context on a
 	// mutable object.
 	context.Context = ctx
-
 	return nil
 }
 
