@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"sync"
 
 	"github.com/docker/distribution"
 	ctxu "github.com/docker/distribution/context"
@@ -87,4 +88,63 @@ func getUserName(ctx context.Context, r *http.Request) string {
 	}
 
 	return username
+}
+
+// contextManager allows us to associate net/context.Context instances with a
+// request, based on the memory identity of http.Request. This prepares http-
+// level context, which is not application specific. If this is called,
+// (*contextManager).release must be called on the context when the request is
+// completed.
+//
+// Providing this circumvents a lot of necessity for dispatchers with the
+// benefit of instantiating the request context much earlier.
+//
+// TODO(stevvooe): Consider making this facility a part of the context package.
+type contextManager struct {
+	contexts map[*http.Request]context.Context
+	mu       sync.Mutex
+}
+
+// defaultContextManager is just a global instance to register request contexts.
+var defaultContextManager = newContextManager()
+
+func newContextManager() *contextManager {
+	return &contextManager{
+		contexts: make(map[*http.Request]context.Context),
+	}
+}
+
+// context either returns a new context or looks it up in the manager.
+func (cm *contextManager) context(parent context.Context, w http.ResponseWriter, r *http.Request) context.Context {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
+	ctx, ok := cm.contexts[r]
+	if ok {
+		return ctx
+	}
+
+	if parent == nil {
+		parent = ctxu.Background()
+	}
+
+	ctx = ctxu.WithRequest(parent, r)
+	ctx, w = ctxu.WithResponseWriter(ctx, w)
+	ctx = ctxu.WithLogger(ctx, ctxu.GetRequestLogger(ctx))
+	cm.contexts[r] = ctx
+
+	return ctx
+}
+
+// releases frees any associated with resources from request.
+func (cm *contextManager) release(ctx context.Context) {
+	cm.mu.Lock()
+	defer cm.mu.Unlock()
+
+	r, err := ctxu.GetRequest(ctx)
+	if err != nil {
+		ctxu.GetLogger(ctx).Errorf("no request found in context during release")
+		return
+	}
+	delete(cm.contexts, r)
 }
