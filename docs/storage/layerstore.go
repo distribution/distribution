@@ -138,13 +138,16 @@ func (ls *layerStore) newLayerUpload(uuid, path string, startedAt time.Time) (di
 		return nil, err
 	}
 
-	return &layerWriter{
+	lw := &layerWriter{
 		layerStore:         ls,
 		uuid:               uuid,
 		startedAt:          startedAt,
-		resumableDigester:  digest.NewCanonicalResumableDigester(),
 		bufferedFileWriter: *fw,
-	}, nil
+	}
+
+	lw.setupResumableDigester()
+
+	return lw, nil
 }
 
 func (ls *layerStore) path(dgst digest.Digest) (string, error) {

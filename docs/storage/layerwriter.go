@@ -87,6 +87,10 @@ func (lw *layerWriter) Cancel() error {
 }
 
 func (lw *layerWriter) Write(p []byte) (int, error) {
+	if lw.resumableDigester == nil {
+		return lw.bufferedFileWriter.Write(p)
+	}
+
 	// Ensure that the current write offset matches how many bytes have been
 	// written to the digester. If not, we need to update the digest state to
 	// match the current write position.
@@ -98,6 +102,10 @@ func (lw *layerWriter) Write(p []byte) (int, error) {
 }
 
 func (lw *layerWriter) ReadFrom(r io.Reader) (n int64, err error) {
+	if lw.resumableDigester == nil {
+		return lw.bufferedFileWriter.ReadFrom(r)
+	}
+
 	// Ensure that the current write offset matches how many bytes have been
 	// written to the digester. If not, we need to update the digest state to
 	// match the current write position.
@@ -113,8 +121,10 @@ func (lw *layerWriter) Close() error {
 		return lw.err
 	}
 
-	if err := lw.storeHashState(); err != nil {
-		return err
+	if lw.resumableDigester != nil {
+		if err := lw.storeHashState(); err != nil {
+			return err
+		}
 	}
 
 	return lw.bufferedFileWriter.Close()
@@ -261,22 +271,37 @@ func (lw *layerWriter) storeHashState() error {
 // validateLayer checks the layer data against the digest, returning an error
 // if it does not match. The canonical digest is returned.
 func (lw *layerWriter) validateLayer(dgst digest.Digest) (digest.Digest, error) {
-	// Restore the hasher state to the end of the upload.
-	if err := lw.resumeHashAt(lw.size); err != nil {
-		return "", err
+	var (
+		verified, fullHash bool
+		canonical          digest.Digest
+	)
+
+	if lw.resumableDigester != nil {
+		// Restore the hasher state to the end of the upload.
+		if err := lw.resumeHashAt(lw.size); err != nil {
+			return "", err
+		}
+
+		canonical = lw.resumableDigester.Digest()
+
+		if canonical.Algorithm() == dgst.Algorithm() {
+			// Common case: client and server prefer the same canonical digest
+			// algorithm - currently SHA256.
+			verified = dgst == canonical
+		} else {
+			// The client wants to use a different digest algorithm. They'll just
+			// have to be patient and wait for us to download and re-hash the
+			// uploaded content using that digest algorithm.
+			fullHash = true
+		}
+	} else {
+		// Not using resumable digests, so we need to hash the entire layer.
+		fullHash = true
 	}
 
-	var verified bool
-	canonical := lw.resumableDigester.Digest()
+	if fullHash {
+		digester := digest.NewCanonicalDigester()
 
-	if canonical.Algorithm() == dgst.Algorithm() {
-		// Common case: client and server prefer the same canonical digest
-		// algorithm - currently SHA256.
-		verified = dgst == canonical
-	} else {
-		// The client wants to use a different digest algorithm. They'll just
-		// have to be patient and wait for us to download and re-hash the
-		// uploaded content using that digest algorithm.
 		digestVerifier, err := digest.NewDigestVerifier(dgst)
 		if err != nil {
 			return "", err
@@ -288,10 +313,13 @@ func (lw *layerWriter) validateLayer(dgst digest.Digest) (digest.Digest, error) 
 			return "", err
 		}
 
-		if _, err = io.Copy(digestVerifier, fr); err != nil {
+		tr := io.TeeReader(fr, digester)
+
+		if _, err = io.Copy(digestVerifier, tr); err != nil {
 			return "", err
 		}
 
+		canonical = digester.Digest()
 		verified = digestVerifier.Verified()
 	}
 
