@@ -1190,9 +1190,10 @@ var routeDescriptors = []RouteDescriptor{
 								StatusCode:  http.StatusNoContent,
 								Headers: []ParameterDescriptor{
 									{
-										Name:   "Location",
-										Type:   "url",
-										Format: "<blob location>",
+										Name:        "Location",
+										Type:        "url",
+										Format:      "<blob location>",
+										Description: "The canonical location of the blob for retrieval",
 									},
 									{
 										Name:        "Content-Range",
@@ -1200,12 +1201,7 @@ var routeDescriptors = []RouteDescriptor{
 										Format:      "<start of range>-<end of range, inclusive>",
 										Description: "Range of bytes identifying the desired block of content represented by the body. Start must match the end of offset retrieved via status check. Note that this is a non-standard use of the `Content-Range` header.",
 									},
-									{
-										Name:        "Content-Length",
-										Type:        "integer",
-										Format:      "<length of chunk>",
-										Description: "Length of the chunk being uploaded, corresponding the length of the request body.",
-									},
+									contentLengthZeroHeader,
 									digestHeader,
 								},
 							},
