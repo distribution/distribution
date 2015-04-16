@@ -104,7 +104,7 @@ a local registry.
 		* Connection #0 to host localhost left intact
 		
 	You can also get this information by entering the
-	`http://52.10.125.146:5000/v2/hello-mine/tags/list` address in your browser.
+	`http://localhost:5000/v2/hello-mine/tags/list` address in your browser.
 			
 8. Remove all the unused images from your local environment:
 
