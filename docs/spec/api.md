@@ -2375,7 +2375,7 @@ The following parameters should be specified on the request:
 204 No Content
 Location: <blob location>
 Content-Range: <start of range>-<end of range, inclusive>
-Content-Length: <length of chunk>
+Content-Length: 0
 Docker-Content-Digest: <digest>
 ```
 
@@ -2385,9 +2385,9 @@ The following headers will be returned with the response:
 
 |Name|Description|
 |----|-----------|
-|`Location`||
+|`Location`|The canonical location of the blob for retrieval|
 |`Content-Range`|Range of bytes identifying the desired block of content represented by the body. Start must match the end of offset retrieved via status check. Note that this is a non-standard use of the `Content-Range` header.|
-|`Content-Length`|Length of the chunk being uploaded, corresponding the length of the request body.|
+|`Content-Length`|The `Content-Length` header must be zero and the body must be empty.|
 |`Docker-Content-Digest`|Digest of the targeted content for the request.|
 
 
