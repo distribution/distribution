@@ -39,7 +39,7 @@ a local registry.
 
 3. Start a registry service on your localhost.
 
-		$ docker run -p 5000:5000 registry
+		$ docker run -p 5000:5000 registry:2.0
 		
 	This starts a registry on your `DOCKER_HOST` running on port `5000`. 
 	
