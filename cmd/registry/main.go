@@ -47,6 +47,7 @@ func main() {
 	}
 
 	ctx := context.Background()
+	ctx = context.WithValue(ctx, "version", version.Version)
 
 	config, err := resolveConfiguration()
 	if err != nil {
@@ -226,7 +227,7 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 	}
 
 	// log the application version with messages
-	ctx = context.WithValue(ctx, "version", version.Version)
+	ctx = context.WithLogger(ctx, context.GetLogger(ctx, "version"))
 
 	if len(config.Log.Fields) > 0 {
 		// build up the static fields, if present.
