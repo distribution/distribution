@@ -257,6 +257,8 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 			offset = "" // Limit to the prefix for listing offsets.
 		}
 		return path.Join(append(repoPrefix, v.name, "_uploads", v.uuid, "hashstates", v.alg, offset)...), nil
+	case repositoriesRootPathSpec:
+		return path.Join(repoPrefix...), nil
 	default:
 		// TODO(sday): This is an internal error. Ensure it doesn't escape (panic?).
 		return "", fmt.Errorf("unknown path spec: %#v", v)
@@ -445,6 +447,12 @@ type uploadHashStatePathSpec struct {
 }
 
 func (uploadHashStatePathSpec) pathSpec() {}
+
+// repositoriesRootPathSpec returns the root of repositories
+type repositoriesRootPathSpec struct {
+}
+
+func (repositoriesRootPathSpec) pathSpec() {}
 
 // digestPathComponents provides a consistent path breakdown for a given
 // digest. For a generic digest, it will be as follows:

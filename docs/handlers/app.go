@@ -3,6 +3,7 @@ package handlers
 import (
 	"expvar"
 	"fmt"
+	"math/rand"
 	"net"
 	"net/http"
 	"os"
@@ -79,6 +80,9 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 		// a health check.
 		panic(err)
 	}
+
+	startUploadPurger(app.driver, ctxu.GetLogger(app))
+
 	app.driver, err = applyStorageMiddleware(app.driver, configuration.Middleware["storage"])
 	if err != nil {
 		panic(err)
@@ -548,4 +552,28 @@ func applyStorageMiddleware(driver storagedriver.StorageDriver, middlewares []co
 		driver = smw
 	}
 	return driver, nil
+}
+
+// startUploadPurger schedules a goroutine which will periodically
+// check upload directories for old files and delete them
+func startUploadPurger(storageDriver storagedriver.StorageDriver, log ctxu.Logger) {
+	rand.Seed(time.Now().Unix())
+	jitter := time.Duration(rand.Int()%60) * time.Minute
+
+	// Start with reasonable defaults
+	// TODO:(richardscothern) make configurable
+	purgeAge := time.Duration(7 * 24 * time.Hour)
+	timeBetweenPurges := time.Duration(1 * 24 * time.Hour)
+
+	go func() {
+		log.Infof("Starting upload purge in %s", jitter)
+		time.Sleep(jitter)
+
+		for {
+			storage.PurgeUploads(storageDriver, time.Now().Add(-purgeAge), true)
+			log.Infof("Starting upload purge in %s", timeBetweenPurges)
+			time.Sleep(timeBetweenPurges)
+		}
+	}()
+
 }
