@@ -15,7 +15,7 @@ This repository contains the following components:
 | **libraries**      | A rich set of libraries for interacting with,distribution components. Please see [godoc](http://godoc.org/github.com/docker/distribution) for details. **Note**: These libraries are **unstable**. |
 | **dist**           | An _experimental_ tool to provide distribution, oriented functionality without the `docker` daemon.                                                                                                |
 | **specifications** | _Distribution_ related specifications are available in [docs/spec](docs/spec)                                                                                                                        |
-| **documentation**  | Documentation is available in [doc](http://docs.docker.com/distribution).                                                                                                                                              |
+| **documentation**  | Docker's full documentation set is available at [docs.docker.com](http://docs.docker.com). This repository [contains the subset](docs/overview.md) related just to the registry.                                                                                                                                          |
 
 ### How does this integrate with Docker engine?
 

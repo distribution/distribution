@@ -3,41 +3,17 @@ page_description: Explains how to deploy a registry service
 page_keywords: registry, service, images, repository
 
 
-# Configure a Registry
+# Registry Configuration Reference
 
-The registry server can be configured with a YAML file. This section provides a
-simple example and a complete reference.
+You configure a registry server using a YAML file. This page explains the
+configuration options and the values they can take. You'll also find examples of
+middleware and development environment configurations.
 
-## A simple development configuration
+## List of configuration options
 
-The following is a simple example that can used for local development:
-
-```yaml
-version: 0.1
-log: 
-	level: debug
-storage:
-    filesystem:
-        rootdirectory: /tmp/registry-dev
-http:
-    addr: localhost:5000
-    secret: asecretforlocaldevelopment
-    debug:
-        addr: localhost:5001
-```
-
-The above configures the registry instance to run on port 5000, binding to
-"localhost", with the debug server enabled. Registry data will be stored in
-"/tmp/registry-dev". Logging will be in "debug" mode, which is the most
-verbose.
-
-A similar simple configuration is available at
-[config.yml](https://github.com/docker/distribution/blob/master/cmd/registry/config.yml), which is generally useful for local development.
-
-
-##  Configuration Reference
-
-Below is a comprehensive example of all possible configuration options for the registry. Some options are mutually exclusive, and each section is explained in more detail below, but this is a good starting point from which you may delete the sections you do not need to create your own configuration. A copy of this configuration can be found at config.sample.yml.
+This section lists all the registry configuration options. Some options in
+the list are mutually exclusive. So, make sure to read the detailed reference
+information about each option that appears later in this page.
 
 ```yaml
 version: 0.1
@@ -100,6 +76,7 @@ reporting:
 	newrelic:
 		licensekey: newreliclicensekey
 		name: newrelicname
+		verbose: true
 http:
 	addr: localhost:5000
 	prefix: /my/nested/registry/
@@ -134,7 +111,10 @@ redis:
 		idletimeout: 300s
 ```
 
-N.B. In some instances a configuration option may be marked **optional** but contain child options marked as **required**. This indicates that a parent may be omitted with all its children, however, if the parent is included, the children marked **required** must be included.
+In some instances a configuration option is **optional** but it contains child
+options marked as **required**. This indicates that you can omit the parent with
+all its children. However, if the parent is included, you must also include all
+the children marked **required**.
 
 ## version 
 
@@ -142,15 +122,15 @@ N.B. In some instances a configuration option may be marked **optional** but con
 version: 0.1
 ```
 
-The version option is **required** and indicates the version of the configuration being used. It is expected to remain a top-level field, to allow for a consistent version check before parsing the remainder of the configuration file. 
-
-N.B. The version of the registry software may be found at [/version/version.go](https://github.com/docker/distribution/blob/master/version/version.go)
+The `version` option is **required**. It specifies the configuration's version.
+It is expected to remain a top-level field, to allow for a consistent version
+check before parsing the remainder of the configuration file. 
 
 ## log
 
-The log subsection configures the behavior of the logging system. The logging
-system outputs everything to stdout. The granularity and format of the log
-messages can be adjusted with this configuration section.
+The `log` subsection configures the behavior of the logging system. The logging
+system outputs everything to stdout. You can adjust the granularity and format
+with this configuration section.
 
 ```yaml
 log:
@@ -161,14 +141,52 @@ log:
 		environment: staging
 ```
 
-- level: **Optional** - Sets the sensitivity of logging output. Permitted
-  values are `error`, `warn`, `info` and `debug`. The default is `info`.
-- formatter: **Optional** - This selects the format of logging output, which
-  mostly affects how keyed attributes for a log line are encoded. Options are
-  "text", "json" or "logstash". The default is "text".
-- fields: **Optional** - A map of field names to values that will be added to
-  every log line for the context. This is useful for identifying log messages
-  source after being mixed in other systems.
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>level</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Sets the sensitivity of logging output. Permitted values are
+      <code>error</code>, <code>warn</code>, <code>info</code> and
+      <code>debug</code>. The default is <code>info</code>.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>formatter</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      This selects the format of logging output. The format primarily affects how keyed
+      attributes for a log line are encoded. Options are <code>text</code>, <code>json</code> or
+      <code>logstash</code>. The default is <code>text</code>.
+    </td>
+  </tr>
+    <tr>
+    <td>
+      <code>fields</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      A map of field names to values. These are added to every log line for
+      the context. This is useful for identifying log messages source after
+      being mixed in other systems.
+    </td>
+</table>
+
 
 ## loglevel
 
@@ -205,45 +223,193 @@ storage:
 		layerinfo: inmemory
 ```
 
-The storage option is **required** and defines which storage backend is in use. At the moment only one backend may be configured, an error is returned when the registry is started with more than one storage backend configured.
+The storage option is **required** and defines which storage backend is in use.
+You must configure one backend; if you configure more, the registry returns an error.
 
-A `cache` subsection can be used to enable caching of data accessed in the
-storage backend. Currently, the only available cache provides fast access to
-layer metadata. This if configured using the `layerinfo` field. The following
-cache implementations are available:
+### cache
 
-- redis: using the redis pool to cache layer meta data.
-- inmemory: use an in memory map to cache layer meta data.
+Use the `cache` subsection to enable caching of data accessed in the storage
+backend. Currently, the only available cache provides fast access to layer
+metadata. This, if configured, uses the `layerinfo` field.  
 
-The following backends may be configured, **all options for a given storage backend are required**:
+You can set `layerinfo` field to `redis` or `inmemory`.  The `redis` value uses
+a Redis pool to cache layer metadata.  The `inmemory` value uses an in memory
+map.
 
 ### filesystem
 
-This storage backend uses the local disk to store registry files. It is ideal for development and may be appropriate for some small scale production applications.
+The `filesystem` storage backend uses the local disk to store registry files. It
+is ideal for development and may be appropriate for some small-scale production
+applications.
 
-- rootdirectory: **Required** - This is the absolute path to directory in which the repository will store data.
+This backend has a single, required `rootdirectory` parameter. The parameter
+specifies the absolute path to a directory. The registry stores all its data
+here so make sure there is adequate space available.
 
 ### azure
 
 This storage backend uses Microsoft's Azure Storage platform. 
 
-- accountname: **Required** - Azure account name
-- accountkey: **Required** - Azure account key
-- container: **Required** - Name of the Azure container into which data will be stored
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>accountname</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      Azure account name.
+    </td>
+  </tr>
+   <tr>
+    <td>
+      <code>accountkey</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      Azure account key.
+    </td>
+  </tr>
+   <tr>
+    <td>
+      <code>container</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      Name of the Azure container into which to store data.
+    </td>
+  </tr>  
+</table>
+
+
 
 ### S3
 
-This storage backend uses Amazon's Simple Storage Service (a.k.a. S3).
+This storage backend uses Amazon's Simple Storage Service (S3).
 
-- accesskey: **Required** - Your AWS Access Key
-- secretkey: **Required** - Your AWS Secret Key.
-- region: **Required** - The AWS region in which your bucket exists. For the moment, the Go AWS library in use does not use the newer DNS based bucket routing.
-- bucket: **Required** - The bucket name in which you want to store the registry's data.
-- encrypt: TODO: fill in description
-- secure: TODO: fill in description
-- v4auth: This indicates whether Version 4 of AWS's authentication should be used. Generally you will want to set this to true.
-- chunksize: TODO: fill in description
-- rootdirectory: **Optional** - This is a prefix that will be applied to all S3 keys to allow you to segment data in your bucket if necessary.
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>accesskey</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      Your AWS Access Key.
+    </td>
+  </tr>
+    <tr>
+    <td>
+      <code>secretkey</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      Your AWS Secret Key.
+    </td>
+  </tr>
+    <tr>
+    <td>
+      <code>region</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      The AWS region in which your bucket exists. For the moment, the Go AWS
+      library in use does not use the newer DNS based bucket routing.
+    </td>
+  </tr>
+    <tr>
+    <td>
+      <code>bucket</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      The bucket name in which you want to store the registry's data.
+    </td>
+  </tr>
+    <tr>
+    <td>
+      <code>encrypt</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+       Specifies whether the registry stores the image in encrypted format or
+       not. A boolean value. The default is false.
+    </td>
+  </tr>
+    <tr>
+    <td>
+      <code>secure</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Indicates whether to use HTTPS instead of HTTP. A boolean value. The
+      default is false.
+    </td>
+  </tr>
+    <tr>
+    <td>
+      <code>v4auth</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Indicates whether the registry uses Version 4 of AWS's authentication.
+      Generally, you should set this to <code>true</code>. By default, this is
+      <code>false</code>.
+    </td>
+  </tr>
+    <tr>
+    <td>
+      <code>chunksize</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      The S3 API requires multipart upload chunks to be at least 5MB. This value
+      should be a number that is larger than 5*1024*1024.
+    </td>
+  </tr>
+   <tr>
+    <td>
+      <code>rootdirectory</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      This is a prefix that will be applied to all S3 keys to allow you to segment data in your bucket if necessary.
+    </td>
+  </tr> 
+</table>
+
 
 ## auth
 
@@ -259,33 +425,126 @@ auth:
 		rootcertbundle: /root/certs/bundle
 ```
 
-The auth option is **optional** as there are use cases (i.e. a mirror that only permits pulls) for which authentication may not be desired. There are currently 2 possible auth providers, "silly" and "token", only one auth provider may be configured at the moment:
+The `auth` option is **optional** as there are use cases (i.e. a mirror that
+only permits pulls) for which authentication may not be desired. There are
+currently 2 possible auth providers, `silly` and `token`. You can configure only
+one `auth` provider.
 
 ### silly
 
-The "silly" auth is only for development purposes. It simply checks for the existence of the "Authorization" header in the HTTP request, with no regard for the value of the header. If the header does not exist, it will respond with a challenge response, echoing back the realm, service, and scope that access was denied for. 
+The `silly` auth is only for development purposes. It simply checks for the
+existence of the `Authorization` header in the HTTP request. It has no regard for
+the header's value. If the header does not exist, the `silly` auth responds with a
+challenge response, echoing back the realm, service, and scope that access was
+denied for. 
 
-The values of the ```realm``` and ```service``` options are used in authentication reponses, both options are **required**
+The following values are used to configure the response:
 
-- realm: **Required** - The realm in which the registry server authenticates.
-- service: **Required** - The service being authenticated.
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>realm</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      The realm in which the registry server authenticates.
+    </td>
+  </tr>
+    <tr>
+    <td>
+      <code>service</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      The service being authenticated.
+    </td>
+  </tr>
+</table>
+
+
 
 ### token
 
-Token based authentication allows the authentication system to be decoupled from the registry. It is a well established authentication paradigm with a high degree of security. 
+Token based authentication allows the authentication system to be decoupled from
+the registry. It is a well established authentication paradigm with a high
+degree of security. 
 
-- realm: **Required** - The realm in which the registry server authenticates.
-- service: **Required** - The service being authenticated.
-- issuer: **Required** - The name of the token issuer. The issuer inserts this into the token so it must match the value configured for the issuer.
-- rootcertbundle: **Required** - The absolute path to the root certificate bundle containing the public part of the certificates that will be used to sign authentication tokens.
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>realm</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      The realm in which the registry server authenticates.
+    </td>
+  </tr>
+    <tr>
+    <td>
+      <code>service</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      The service being authenticated.
+    </td>
+  </tr>
+    <tr>
+    <td>
+      <code>issuer</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+The name of the token issuer. The issuer inserts this into
+the token so it must match the value configured for the issuer.
+    </td>
+  </tr>
+    <tr>
+    <td>
+      <code>rootcertbundle</code>
+    </td>
+    <td>
+			yes 
+     </td>
+    <td>
+The absolute path to the root certificate bundle. This bundle contains the
+public part of the certificates that is used to sign authentication tokens.
+     </td>
+  </tr>
+</table> 
 
 For more information about Token based authentication configuration, see the [specification.]
 
 ## middleware
 
-The middleware option is **optional** and allows middlewares to be injected at named hook points. A requirement of all middlewares is that they implement the same interface as the object they're wrapping. This means a registry middleware must implement the `distribution.Namespace` interface, repository middleware must implement `distribution.Respository`, and storage middleware must implement `driver.StorageDriver`.
+The `middleware` option is **optional**. Use this option to inject middleware at
+named hook points. All middlewares must implement the same interface as the
+object they're wrapping. This means a registry middleware must implement the
+`distribution.Namespace` interface, repository middleware must implement
+`distribution.Respository`, and storage middleware must implement
+`driver.StorageDriver`.
 
-Currently only one middleware, cloudfront, a storage middleware, is included in the registry. 
+Currently only one middleware, `cloudfront`, a storage middleware, is supported
+in the registry implementation. 
 
 ```yaml
 middleware:
@@ -306,14 +565,68 @@ middleware:
 			duration: 3000
 ```
 
-Each middleware entry has `name` and `options` entries. The `name` must correspond to the name under which the middleware registers itself. The `options` field is a map that details custom configuration required to initialize the middleware. It is treated as a map[string]interface{} and as such will support any interesting structures desired, leaving it up to the middleware initialization function to best determine how to handle the specific interpretation of the options.
+Each middleware entry has `name` and `options` entries. The `name` must
+correspond to the name under which the middleware registers itself. The
+`options` field is a map that details custom configuration required to
+initialize the middleware. It is treated as a `map[string]interface{}`. As such,
+it supports any interesting structures desired, leaving it up to the middleware
+initialization function to best determine how to handle the specific
+interpretation of the options.
 
 ### cloudfront
 
-- baseurl: **Required** - SCHEME://HOST[/PATH] at which Cloudfront is served.
-- privatekey: **Required** - Private Key for Cloudfront provided by AWS
-- keypairid: **Required** - Key Pair ID provided by AWS
-- duration: **Optional** - Duration for which a signed URL should be valid
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>baseurl</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      <code>SCHEME://HOST[/PATH]</code> at which Cloudfront is served.
+    </td>
+  </tr>
+    <tr>
+    <td>
+      <code>privatekey</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      Private Key for Cloudfront provided by AWS.
+    </td>
+  </tr>
+    <tr>
+    <td>
+      <code>keypairid</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      Key pair ID provided by AWS.
+    </td>
+  </tr>
+    <tr>
+    <td>
+      <code>duration</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Duration for which a signed URL should be valid.
+    </td>
+  </tr>
+</table>
+
 
 ## reporting
 
@@ -326,20 +639,102 @@ reporting:
 	newrelic:
 		licensekey: newreliclicensekey
 		name: newrelicname
+		verbose: true
 ```
 
-The reporting option is **optional** and configures error and metrics reporting tools. At the moment only two services are supported, New Relic and Bugsnag, a valid configuration may contain both.
+The `reporting` option is **optional** and configures error and metrics
+reporting tools. At the moment only two services are supported, [New
+Relic](http://newrelic.com/) and [Bugsnag](http://bugsnag.com), a valid
+configuration may contain both.
 
 ### bugsnag
 
-- apikey: **Required** - API Key provided by Bugsnag
-- releasestage: **Optional** - TODO: fill in description
-- endpoint: **Optional** - TODO: fill in description
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>apikey</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      API Key provided by Bugsnag
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>releasestage</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Tracks where the registry is deployed, for example,
+      <codde>production</code>,<codde>staging</code>, or
+      <codde>development</code>.
+    </td>
+  </tr>  
+  <tr>
+    <td>
+      <code>endpoint</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Specify the enterprise Bugsnag endpoint. 
+    </td>
+  </tr>  
+</table>
+
 
 ### newrelic
 
-- licensekey: **Required** - License key provided by New Relic
-- name: **Optional** - New Relic application name
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>licensekey</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      License key provided by New Relic.
+    </td>
+  </tr>
+   <tr>
+    <td>
+      <code>name</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      New Relic application name.
+    </td>
+  </tr> 
+     <tr>
+    <td>
+      <code>verbose</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Enable New Relic debugging output on stdout.
+    </td>
+  </tr> 
+</table>
 
 ## http
 
@@ -358,25 +753,112 @@ http:
 		addr: localhost:5001
 ```
 
-The http option details the configuration for the HTTP server that hosts the registry.
+The `http` option details the configuration for the HTTP server that hosts the registry.
 
-- addr: **Required** - The HOST:PORT for which the server should accept connections.
-- prefix: **Optional** - If the server will not run at the root path, this should specify the prefix (the part of the path before ```v2```). It should have both preceding and trailing slashes.
-- secret: A random piece of data. It is used to sign state that may be stored with the client to protect against tampering. For production use you should generate a random piece of data using a cryptographically secure random generator.
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>addr</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      The <code>HOST:PORT</code> for which the server should accept connections.
+    </td>
+  </tr>
+    <tr>
+    <td>
+      <code>prefix</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+If the server does not run at the root path use this value to specify the
+prefix. The root path is the section before <code>v2</code>. It
+should have both preceding and trailing slashes, for example <code>/path/</code>.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>secret</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+A random piece of data. This is used to sign state that may be stored with the
+client to protect against tampering. For production environments you should generate a
+random piece of data using a cryptographically secure random generator.
+    </td>
+  </tr>
+</table>
+
 
 ### tls
 
-The tls option within http is **optional** and allows you to configure SSL for the server. If you already have a server such as Nginx or Apache running on the same host as the registry, you may prefer to configure SSL termination there and proxy connections to the registry server.
+The `tls` struct within `http` is **optional**. Use this to configure TLS
+for the server. If you already have a server such as Nginx or Apache running on
+the same host as the registry, you may prefer to configure TLS termination there
+and proxy connections to the registry server.
 
-- certificate: **Required** - Absolute path to x509 cert file
-- key: **Required** - Absolute path to x509 private key file
-- clientcas: **Optional** - An array of absolute paths to a x509 CA file
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>certificate</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+       Absolute path to x509 cert file
+    </td>
+  </tr>
+    <tr>
+    <td>
+      <code>key</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      Absolute path to x509 private key file.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>clientcas</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      An array of absolute paths to a x509 CA file
+    </td>
+  </tr>  
+</table>
+
 
 ### debug
 
-The debug option is **optional** and allows you to configure a debug server that can be helpful in diagnosing problems. It is of most use to contributers to the distribution repository and should generally be disabled in production deployments.
+The `debug` option is **optional** . Use it to configure a debug server that can
+be helpful in diagnosing problems. Contributors to the distribution repository
+should find the debug server useful. Docker recommends disabling it in
+production environments.
 
-- addr: **Required** - The HOST:PORT on which the debug server should accept connections.
+The `debug` section takes a single, required `addr` parameter. This parameter
+specifies the `HOST:PORT` on which the debug server should accept connections.
 
 
 ## notifications
@@ -393,19 +875,119 @@ notifications:
 		  backoff: 1000
 ```
 
-The notifications option is **optional** and currently may contain a single option, ```endpoints```.
+The notifications option is **optional** and currently may contain a single
+option, `endpoints`.
 
 ### endpoints
 
 Endpoints is a list of named services (URLs) that can accept event notifications.
 
-- name: **Required** - A human readable name for the service. 
-- disabled: **Optional** - A boolean to enable/disable notifications for a service.
-- url: **Required** - The URL to which events should be published.
-- headers: **Required** - TODO: fill in description
-- timeout: **Required** - TODO: fill in description
-- threshold: **Required** - TODO: fill in description
-- backoff: **Required** - TODO: fill in description
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>name</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+A human readable name for the service.     
+</td>
+  </tr>
+  <tr>
+    <td>
+      <code>disabled</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+A boolean to enable/disable notifications for a service.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>url</code>
+    </td>
+    <td>
+		yes
+    </td>
+    <td>
+The URL to which events should be published.
+    </td>
+  </tr>  
+   <tr>
+    <td>
+      <code>headers</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      Static headers to add to each request.
+    </td>
+  </tr> 
+  <tr>
+    <td>
+      <code>timeout</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      An HTTP timeout value. This field takes a positive integer and an optional
+      suffix indicating the unit of time. Possible units are:
+      <ul>
+      	<li><code>ns</code> (nanoseconds)</li>
+      	<li><code>us</code> (microseconds)</li>
+      	<li><code>ms</code> (milliseconds)</li>
+      	<li><code>s</code> (seconds)</li>
+      	<li><code>m</code> (minutes)</li>
+        <li><code>h</code> (hours)</li>
+      </ul>
+    If you omit the suffix, the system interprets the value as nanoseconds.
+    </td>
+  </tr>  
+  <tr>
+    <td>
+      <code>threshold</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      An integer specifying how long to wait before backing off a failure.
+    </td>
+  </tr>  
+  <tr>
+    <td>
+      <code>backoff</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      How long the system backs off before retrying. This field takes a positive
+      integer and an optional suffix indicating the unit of time. Possible units
+      are:
+      <ul>
+      	<li><code>ns</code> (nanoseconds)</li>
+      	<li><code>us</code> (microseconds)</li>
+      	<li><code>ms</code> (milliseconds)</li>
+      	<li><code>s</code> (seconds)</li>
+      	<li><code>m</code> (minutes)</li>
+        <li><code>h</code> (hours)</li>
+      </ul>
+    If you omit the suffix, the system interprets the value as nanoseconds.
+    </td>
+  </tr>  
+</table>
+
 
 ## redis
 
@@ -424,17 +1006,85 @@ redis:
 ```
 
 Declare parameters for constructing the redis connections. Registry instances
-may use the redis instance for several applications. The current purpose is
+may use the Redis instance for several applications. The current purpose is
 caching information about immutable blobs. Most of the options below control
-how the registry connects to redis. The behavior of the pool can be controlled
+how the registry connects to redis. You can control the pool's behavior
 with the [pool](#pool) subsection.
 
-- addr: **Required** - Address (host and port) of redis instance.
-- password: **Optional** - A password used to authenticate to the redis instance.
-- db: **Optional** - Selects the db for each connection.
-- dialtimeout: **Optional** - Timeout for connecting to a redis instance.
-- readtimeout: **Optional** - Timeout for reading from redis connections.
-- writetimeout: **Optional** - Timeout for writing to redis connections.
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>addr</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      Address (host and port) of redis instance.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>password</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      A password used to authenticate to the redis instance.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>db</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Selects the db for each connection.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>dialtimeout</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Timeout for connecting to a redis instance.
+    </td>
+  </tr>  
+  <tr>
+    <td>
+      <code>readtimeout</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Timeout for reading from redis connections.
+    </td>
+  </tr>   
+  <tr>
+    <td>
+      <code>writetimeout</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Timeout for writing to redis connections.
+    </td>
+  </tr>   
+</table>
+
 
 ### pool
 
@@ -445,10 +1095,132 @@ pool:
 	idletimeout: 300s
 ```
 
-Configure the behavior of the redis connection pool.
+Configure the behavior of the Redis connection pool.
 
-- maxidle: **Optional** - sets the maximum number of idle connections.
-- maxactive: **Optional** - sets the maximum number of connections that should
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>maxidle</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Sets the maximum number of idle connections.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>maxactive</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      sets the maximum number of connections that should
   be opened before blocking a connection request.
-- idletimeout: **Optional** - sets the amount time to wait before closing
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>idletimeout</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      sets the amount time to wait before closing
   inactive connections.
+    </td>
+  </tr>  
+</table>
+ 
+## Example: Development configuration
+
+The following is a simple example you can use for local development:
+
+```yaml
+version: 0.1
+log: 
+	level: debug
+storage:
+    filesystem:
+        rootdirectory: /tmp/registry-dev
+http:
+    addr: localhost:5000
+    secret: asecretforlocaldevelopment
+    debug:
+        addr: localhost:5001
+```
+
+The above configures the registry instance to run on port `5000`, binding to
+`localhost`, with the `debug` server enabled. Registry data storage is in the 
+`/tmp/registry-dev` directory. Logging is in `debug` mode, which is the most
+verbose.
+
+A similar simple configuration is available at
+[config.yml](https://github.com/docker/distribution/blob/master/cmd/registry/
+config.yml). Both are generally useful for local development.
+
+
+## Example: Middleware configuration
+
+This example illustrates how to configure storage middleware in a registry.
+Middleware allows the registry to serve layers via a content delivery network
+(CDN). This is useful for reducing requests to the storage layer.  
+
+Currently, the registry supports [Amazon
+Cloudfront](http://aws.amazon.com/cloudfront/). You can only use Cloudfront in
+conjunction with the S3 storage driver.
+
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td><code>name</code></td>
+    <td>The storage middleware name. Currently <code>cloudfront</code> is an accepted value.</td>
+  </tr>
+  <tr>
+    <td><code>disabled<code></td>
+    <td>Set to <code>false</code> to easily disable the middleware.</td>
+  </tr>
+  <tr>
+    <td><code>options:</code></td>
+    <td> 
+    A set of key/value options to configure the middleware.
+    <ul>
+    <li><code>baseurl:</code> The Cloudfront base URL.</li>
+    <li><code>privatekey:</code> The location of your AWS private key on the filesystem. </li>
+    <li><code>keypairid:</code> The ID of your Cloudfront keypair. </li>
+ 		<li><code>duration:</code> The duration in minutes for which the URL is valid. Default is 20. </li>
+ 		</ul>
+    </td>
+  </tr>
+</table>
+
+The following example illustrates these values:
+
+```
+middleware:
+    storage:
+        - name: cloudfront
+          disabled: false
+          options:
+             baseurl: http://d111111abcdef8.cloudfront.net
+             privatekey: /path/to/asecret.pem
+             keypairid: asecret
+             duration: 60
+```
+
+
+>**Note**: Cloudfront keys exist separately to other AWS keys.  See
+>[the documentation on AWS credentials](http://docs.aws.amazon.com/AWSSecurityCredentials/1.0/
+>AboutAWSCredentials.html#KeyPairs) for more information.
+
