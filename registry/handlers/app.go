@@ -273,6 +273,21 @@ func (app *App) configureRedis(configuration *configuration.Configuration) {
 func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close() // ensure that request body is always closed.
 
+	// Instantiate an http context here so we can track the error codes
+	// returned by the request router.
+	ctx := defaultContextManager.context(app, w, r)
+	defer func() {
+		ctxu.GetResponseLogger(ctx).Infof("response completed")
+	}()
+	defer defaultContextManager.release(ctx)
+
+	// NOTE(stevvooe): Total hack to get instrumented responsewriter from context.
+	var err error
+	w, err = ctxu.GetResponseWriter(ctx)
+	if err != nil {
+		ctxu.GetLogger(ctx).Warnf("response writer not found in context")
+	}
+
 	// Set a header with the Docker Distribution API Version for all responses.
 	w.Header().Add("Docker-Distribution-API-Version", "registry/2.0")
 	app.router.ServeHTTP(w, r)
@@ -287,37 +302,11 @@ type dispatchFunc func(ctx *Context, r *http.Request) http.Handler
 // TODO(stevvooe): dispatchers should probably have some validation error
 // chain with proper error reporting.
 
-// singleStatusResponseWriter only allows the first status to be written to be
-// the valid request status. The current use case of this class should be
-// factored out.
-type singleStatusResponseWriter struct {
-	http.ResponseWriter
-	status int
-}
-
-func (ssrw *singleStatusResponseWriter) WriteHeader(status int) {
-	if ssrw.status != 0 {
-		return
-	}
-	ssrw.status = status
-	ssrw.ResponseWriter.WriteHeader(status)
-}
-
-func (ssrw *singleStatusResponseWriter) Flush() {
-	if flusher, ok := ssrw.ResponseWriter.(http.Flusher); ok {
-		flusher.Flush()
-	}
-}
-
 // dispatcher returns a handler that constructs a request specific context and
 // handler, using the dispatch factory function.
 func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		context := app.context(w, r)
-
-		defer func() {
-			ctxu.GetResponseLogger(context).Infof("response completed")
-		}()
 
 		if err := app.authorized(w, r, context); err != nil {
 			ctxu.GetLogger(context).Errorf("error authorizing context: %v", err)
@@ -360,16 +349,16 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 			}
 		}
 
-		handler := dispatch(context, r)
-
-		ssrw := &singleStatusResponseWriter{ResponseWriter: w}
-		handler.ServeHTTP(ssrw, r)
+		dispatch(context, r).ServeHTTP(w, r)
 
 		// Automated error response handling here. Handlers may return their
 		// own errors if they need different behavior (such as range errors
 		// for layer upload).
 		if context.Errors.Len() > 0 {
-			if ssrw.status == 0 {
+			if context.Value("http.response.status") == 0 {
+				// TODO(stevvooe): Getting this value from the context is a
+				// bit of a hack. We can further address with some of our
+				// future refactoring.
 				w.WriteHeader(http.StatusBadRequest)
 			}
 			serveJSON(w, context.Errors)
@@ -380,10 +369,8 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 // context constructs the context object for the application. This only be
 // called once per request.
 func (app *App) context(w http.ResponseWriter, r *http.Request) *Context {
-	ctx := ctxu.WithRequest(app, r)
-	ctx, w = ctxu.WithResponseWriter(ctx, w)
+	ctx := defaultContextManager.context(app, w, r)
 	ctx = ctxu.WithVars(ctx, r)
-	ctx = ctxu.WithLogger(ctx, ctxu.GetRequestLogger(ctx))
 	ctx = ctxu.WithLogger(ctx, ctxu.GetLogger(ctx,
 		"vars.name",
 		"vars.reference",
