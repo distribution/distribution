@@ -4,6 +4,16 @@ log:
   fields:
     service: registry
     environment: development
+handlers:
+    error:
+      - type: email
+        smtp_host: mail.example.com
+        smtp_port: 25
+        smtp_login: mailuser
+        smtp_password: password
+        smtp_insecure: true
+        from_addr: registry@$HOSTNAME
+        to_addr: errors@example.com
 storage:
     cache:
         layerinfo: inmemory
@@ -39,3 +49,8 @@ notifications:
           threshold: 10
           backoff: 1s
           disabled: true
+reporting:
+  bugsnag:
+      apikey: 
+      releasestage: production
+      endpoint: localhost:7092 

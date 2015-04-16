@@ -121,6 +121,17 @@ type Configuration struct {
 			IdleTimeout time.Duration `yaml:"idletimeout,omitempty"`
 		} `yaml:"pool,omitempty"`
 	} `yaml:"redis,omitempty"`
+	Handlers struct {
+		Mail struct {
+			Host     string   `yaml:"smtp_host,omitempty"`
+			Port     string   `yaml:"smtp_port,omitempty"`
+			Login    string   `yaml:"smtp_login,omitempty"`
+			Password string   `yaml:"smtp_password,omitempty"`
+			Insecure bool     `yaml:"smtp_insecure,omitempty"`
+			FromAddr string   `yaml:"from_addr,omitempty"`
+			ToAddr   []string `yaml:"to_addr,omitempty"`
+		}
+	} `yaml:"handlers,omitempty"`
 }
 
 // v0_1Configuration is a Version 0.1 Configuration struct

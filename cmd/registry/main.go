@@ -3,17 +3,22 @@ package main
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
+	"errors"
 	_ "expvar"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	_ "net/http/pprof"
+	"net/smtp"
 	"os"
+	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/Sirupsen/logrus/formatters/logstash"
+	"github.com/Sirupsen/logrus/hooks/bugsnag"
 	"github.com/bugsnag/bugsnag-go"
 	"github.com/docker/distribution/configuration"
 	"github.com/docker/distribution/context"
@@ -59,11 +64,34 @@ func main() {
 	}
 
 	app := handlers.NewApp(ctx, *config)
-	handler := configureReporting(app)
+	handler := configureReportingNewRelic(app)
 	handler = gorhandlers.CombinedLoggingHandler(os.Stdout, handler)
 
 	if config.HTTP.Debug.Addr != "" {
 		go debugServer(config.HTTP.Debug.Addr)
+	}
+
+	//Config Bugsnag, and be ready to receive panic message
+	if err := configureReportingBugsnag(app); err == nil {
+		portMap := strings.Split(app.Config.Reporting.Bugsnag.Endpoint, ":")
+		port := ":" + portMap[1]
+		go http.ListenAndServe(port, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			var notice struct {
+				Events []struct {
+					Exceptions []struct {
+						Message string `json:"message"`
+					} `json:"exceptions"`
+				} `json:"events"`
+			}
+			data, _ := ioutil.ReadAll(r.Body)
+			if err := json.Unmarshal(data, &notice); err != nil {
+				log.Error(err)
+				return
+			}
+			_ = r.Body.Close()
+			log.Info("Snag the Panic: ", notice.Events[0].Exceptions[0].Message)
+			mailSending(app, notice.Events[0].Exceptions[0].Message)
+		}))
 	}
 
 	if config.HTTP.TLS.Certificate == "" {
@@ -148,25 +176,8 @@ func resolveConfiguration() (*configuration.Configuration, error) {
 	return config, nil
 }
 
-func configureReporting(app *handlers.App) http.Handler {
+func configureReportingNewRelic(app *handlers.App) http.Handler {
 	var handler http.Handler = app
-
-	if app.Config.Reporting.Bugsnag.APIKey != "" {
-		bugsnagConfig := bugsnag.Configuration{
-			APIKey: app.Config.Reporting.Bugsnag.APIKey,
-			// TODO(brianbland): provide the registry version here
-			// AppVersion: "2.0",
-		}
-		if app.Config.Reporting.Bugsnag.ReleaseStage != "" {
-			bugsnagConfig.ReleaseStage = app.Config.Reporting.Bugsnag.ReleaseStage
-		}
-		if app.Config.Reporting.Bugsnag.Endpoint != "" {
-			bugsnagConfig.Endpoint = app.Config.Reporting.Bugsnag.Endpoint
-		}
-		bugsnag.Configure(bugsnagConfig)
-
-		handler = bugsnag.Handler(handler)
-	}
 
 	if app.Config.Reporting.NewRelic.LicenseKey != "" {
 		agent := gorelic.NewAgent()
@@ -182,6 +193,56 @@ func configureReporting(app *handlers.App) http.Handler {
 	}
 
 	return handler
+}
+
+func configureReportingBugsnag(app *handlers.App) error {
+	if app.Config.Reporting.Bugsnag.APIKey != "" {
+		bugsnagConfig := bugsnag.Configuration{
+			APIKey:      app.Config.Reporting.Bugsnag.APIKey,
+			Synchronous: true,
+			// TODO(brianbland): provide the registry version here
+			// AppVersion: "2.0",
+		}
+		if app.Config.Reporting.Bugsnag.ReleaseStage != "" {
+			bugsnagConfig.ReleaseStage = app.Config.Reporting.Bugsnag.ReleaseStage
+		}
+		if app.Config.Reporting.Bugsnag.Endpoint != "" {
+			bugsnagConfig.Endpoint = "http://" + app.Config.Reporting.Bugsnag.Endpoint
+		}
+		bugsnag.Configure(bugsnagConfig)
+		hook, _ := logrus_bugsnag.NewBugsnagHook()
+		logger := log.New()
+		logger.Hooks.Add(hook)
+		return nil
+	}
+	return errors.New("Invalid Bugsnag Configuration")
+}
+
+func mailSending(app *handlers.App, message string) error {
+	log.Info("Enter Mail Sending Func")
+	subject := "Web Panic on Docker Registry"
+	msg := fmt.Sprintf("To: %s\r\nFrom: %s\r\nSubject: %s\r\nContent-Type: text/html\r\n\r\n%s",
+		strings.Join(app.Config.Handlers.Mail.ToAddr, ";"),
+		app.Config.Handlers.Mail.FromAddr,
+		subject,
+		message)
+	auth := smtp.PlainAuth(
+		"",
+		app.Config.Handlers.Mail.Login,
+		app.Config.Handlers.Mail.Password,
+		app.Config.Handlers.Mail.Host,
+	)
+	err := smtp.SendMail(
+		app.Config.Handlers.Mail.Host+":"+app.Config.Handlers.Mail.Port,
+		auth,
+		app.Config.Handlers.Mail.FromAddr,
+		app.Config.Handlers.Mail.ToAddr,
+		[]byte(msg),
+	)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // configureLogging prepares the context with a logger using the
