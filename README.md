@@ -11,7 +11,7 @@ This repository contains the following components:
 
 |**Component**       |Description                                                                                                                                                                                         |
 |--------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **registry**       | An implementation of the [Docker Registry HTTP API V2](docs/spec/api.md) for use with docker 1.5+.                                                                                                  |
+| **registry**       | An implementation of the [Docker Registry HTTP API V2](docs/spec/api.md) for use with docker 1.6+.                                                                                                  |
 | **libraries**      | A rich set of libraries for interacting with,distribution components. Please see [godoc](http://godoc.org/github.com/docker/distribution) for details. **Note**: These libraries are **unstable**. |
 | **dist**           | An _experimental_ tool to provide distribution, oriented functionality without the `docker` daemon.                                                                                                |
 | **specifications** | _Distribution_ related specifications are available in [docs/spec](docs/spec)                                                                                                                        |
