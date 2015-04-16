@@ -28,7 +28,7 @@ ${PREFIX}/bin/dist: version/version.go $(shell find . -type f -name '*.go')
 	@echo "+ $@"
 	@go build -o $@ ${GO_LDFLAGS} ./cmd/dist
 
-doc/spec/api.md: doc/spec/api.md.tmpl ${PREFIX}/bin/registry-api-descriptor-template
+docs/spec/api.md: docs/spec/api.md.tmpl ${PREFIX}/bin/registry-api-descriptor-template
 	./bin/registry-api-descriptor-template $< > $@
 
 vet:
