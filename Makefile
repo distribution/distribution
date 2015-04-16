@@ -5,9 +5,9 @@ PREFIX?=$(shell pwd)
 VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always)
 GO_LDFLAGS=-ldflags "-X `go list ./version`.Version $(VERSION)"
 
-.PHONY: clean all fmt vet lint build test binaries
+.PHONY: clean all fmt vet lint deps build test binaries
 .DEFAULT: default
-all: AUTHORS clean fmt vet fmt lint build test binaries
+all: AUTHORS clean fmt vet fmt lint deps build test binaries
 
 AUTHORS: .mailmap .git/HEAD
 	 git log --format='%aN <%aE>' | sort -fu > $@
@@ -43,6 +43,10 @@ fmt:
 lint:
 	@echo "+ $@"
 	@test -z "$$(golint ./... | grep -v Godeps/_workspace/src/ | tee /dev/stderr)"
+
+deps:
+	@echo "+ $@"
+	@go get -d ./...
 
 build:
 	@echo "+ $@"
