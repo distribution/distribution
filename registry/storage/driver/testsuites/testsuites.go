@@ -435,7 +435,7 @@ func (suite *DriverSuite) testContinueStreamAppend(c *check.C, chunkSize int64) 
 	c.Assert(err, check.IsNil)
 	c.Assert(received, check.DeepEquals, fullContents)
 
-	// Writing past size of file extends file (no offest error). We would like
+	// Writing past size of file extends file (no offset error). We would like
 	// to write chunk 4 one chunk length past chunk 3. It should be successful
 	// and the resulting file will be 5 chunks long, with a chunk of all
 	// zeros.
