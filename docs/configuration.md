@@ -1164,8 +1164,8 @@ The above configures the registry instance to run on port `5000`, binding to
 verbose.
 
 A similar simple configuration is available at
-[config.yml](https://github.com/docker/distribution/blob/master/cmd/registry/
-config.yml). Both are generally useful for local development.
+[config.yml](https://github.com/docker/distribution/blob/master/cmd/registry/config.yml).
+Both are generally useful for local development.
 
 
 ## Example: Middleware configuration
@@ -1221,6 +1221,6 @@ middleware:
 
 
 >**Note**: Cloudfront keys exist separately to other AWS keys.  See
->[the documentation on AWS credentials](http://docs.aws.amazon.com/AWSSecurityCredentials/1.0/
->AboutAWSCredentials.html#KeyPairs) for more information.
+>[the documentation on AWS credentials](http://docs.aws.amazon.com/AWSSecurityCredentials/1.0/AboutAWSCredentials.html#KeyPairs)
+>for more information.
 
