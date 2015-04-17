@@ -81,7 +81,18 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 		panic(err)
 	}
 
-	startUploadPurger(app.driver, ctxu.GetLogger(app))
+	purgeConfig := uploadPurgeDefaultConfig()
+	if mc, ok := configuration.Storage["maintenance"]; ok {
+		for k, v := range mc {
+			switch k {
+			case "uploadpurging":
+				purgeConfig = v.(map[interface{}]interface{})
+			}
+		}
+
+	}
+
+	startUploadPurger(app.driver, ctxu.GetLogger(app), purgeConfig)
 
 	app.driver, err = applyStorageMiddleware(app.driver, configuration.Middleware["storage"])
 	if err != nil {
@@ -568,26 +579,82 @@ func applyStorageMiddleware(driver storagedriver.StorageDriver, middlewares []co
 	return driver, nil
 }
 
+// uploadPurgeDefaultConfig provides a default configuration for upload
+// purging to be used in the absence of configuration in the
+// confifuration file
+func uploadPurgeDefaultConfig() map[interface{}]interface{} {
+	config := map[interface{}]interface{}{}
+	config["enabled"] = true
+	config["age"] = "168h"
+	config["interval"] = "24h"
+	config["dryrun"] = false
+	return config
+}
+
+func badPurgeUploadConfig(reason string) {
+	panic(fmt.Sprintf("Unable to parse upload purge configuration: %s", reason))
+}
+
 // startUploadPurger schedules a goroutine which will periodically
 // check upload directories for old files and delete them
-func startUploadPurger(storageDriver storagedriver.StorageDriver, log ctxu.Logger) {
-	rand.Seed(time.Now().Unix())
-	jitter := time.Duration(rand.Int()%60) * time.Minute
+func startUploadPurger(storageDriver storagedriver.StorageDriver, log ctxu.Logger, config map[interface{}]interface{}) {
+	if config["enabled"] == false {
+		return
+	}
 
-	// Start with reasonable defaults
-	// TODO:(richardscothern) make configurable
-	purgeAge := time.Duration(7 * 24 * time.Hour)
-	timeBetweenPurges := time.Duration(1 * 24 * time.Hour)
+	var purgeAgeDuration time.Duration
+	var err error
+	purgeAge, ok := config["age"]
+	if ok {
+		ageStr, ok := purgeAge.(string)
+		if !ok {
+			badPurgeUploadConfig("age is not a string")
+		}
+		purgeAgeDuration, err = time.ParseDuration(ageStr)
+		if err != nil {
+			badPurgeUploadConfig(fmt.Sprintf("Cannot parse duration: %s", err.Error()))
+		}
+	} else {
+		badPurgeUploadConfig("age missing")
+	}
+
+	var intervalDuration time.Duration
+	interval, ok := config["interval"]
+	if ok {
+		intervalStr, ok := interval.(string)
+		if !ok {
+			badPurgeUploadConfig("interval is not a string")
+		}
+
+		intervalDuration, err = time.ParseDuration(intervalStr)
+		if err != nil {
+			badPurgeUploadConfig(fmt.Sprintf("Cannot parse interval: %s", err.Error()))
+		}
+	} else {
+		badPurgeUploadConfig("interval missing")
+	}
+
+	var dryRunBool bool
+	dryRun, ok := config["dryrun"]
+	if ok {
+		dryRunBool, ok = dryRun.(bool)
+		if !ok {
+			badPurgeUploadConfig("cannot parse dryrun")
+		}
+	} else {
+		badPurgeUploadConfig("dryrun missing")
+	}
 
 	go func() {
+		rand.Seed(time.Now().Unix())
+		jitter := time.Duration(rand.Int()%60) * time.Minute
 		log.Infof("Starting upload purge in %s", jitter)
 		time.Sleep(jitter)
 
 		for {
-			storage.PurgeUploads(storageDriver, time.Now().Add(-purgeAge), true)
-			log.Infof("Starting upload purge in %s", timeBetweenPurges)
-			time.Sleep(timeBetweenPurges)
+			storage.PurgeUploads(storageDriver, time.Now().Add(-purgeAgeDuration), !dryRunBool)
+			log.Infof("Starting upload purge in %s", intervalDuration)
+			time.Sleep(intervalDuration)
 		}
 	}()
-
 }
