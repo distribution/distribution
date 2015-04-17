@@ -20,6 +20,7 @@ var configStruct = Configuration{
 		Level     Loglevel               `yaml:"level"`
 		Formatter string                 `yaml:"formatter,omitempty"`
 		Fields    map[string]interface{} `yaml:"fields,omitempty"`
+		Hooks     []LogHook              `yaml:"hooks,omitempty"`
 	}{
 		Fields: map[string]interface{}{"environment": "test"},
 	},

@@ -25,6 +25,20 @@ log:
 	fields:
 		service: registry
 		environment: staging
+	hooks:
+		- type: mail
+		  disabled: true
+		  levels:
+			- panic
+		  options:
+			smtp:
+				addr: mail.example.com:25
+				username: mailuser
+				password: password
+				insecure: true
+			from: sender@example.com
+			to: 
+				- errors@example.com
 loglevel: debug # deprecated: use "log"
 storage:
 	filesystem:
@@ -229,6 +243,28 @@ log:
     </td>
 </table>
 
+## hooks
+
+
+```yaml 
+hooks:
+  - type: mail
+    levels:
+      - panic
+    options:
+      smtp:
+        addr: smtp.sendhost.com:25
+        username: sendername
+        password: password
+        insecure: true
+      from: name@sendhost.com
+      to:
+        - name@receivehost.com
+```
+
+The `hooks` subsection configures the logging hooks' behavior. This subsection
+includes a sequence handler which you can use for sending mail, for example.
+Refer to `loglevel` to configure the level of messages printed.
 
 ## loglevel
 

@@ -4,6 +4,20 @@ log:
   fields:
     service: registry
     environment: development
+  hooks:
+    - type: mail
+      disabled: true
+      levels:
+        - panic
+      options:
+        smtp:
+          addr: mail.example.com:25
+          username: mailuser
+          password: password
+          insecure: true
+        from: sender@example.com
+        to:
+          - errors@example.com
 storage:
     cache:
         blobdescriptor: redis
@@ -41,5 +55,5 @@ notifications:
           timeout: 1s
           threshold: 10
           backoff: 1s
-          disabled: true
-   
+          disabled: true 
+

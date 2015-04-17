@@ -29,6 +29,10 @@ type Configuration struct {
 		// Fields allows users to specify static string fields to include in
 		// the logger context.
 		Fields map[string]interface{} `yaml:"fields,omitempty"`
+
+		// Hooks allows users to configurate the log hooks, to enabling the
+		// sequent handling behavior, when defined levels of log message emit.
+		Hooks []LogHook `yaml:"hooks,omitempty"`
 	}
 
 	// Loglevel is the level at which registry operations are logged. This is
@@ -124,6 +128,47 @@ type Configuration struct {
 			IdleTimeout time.Duration `yaml:"idletimeout,omitempty"`
 		} `yaml:"pool,omitempty"`
 	} `yaml:"redis,omitempty"`
+}
+
+// LogHook is composed of hook Level and Type.
+// After hooks configuration, it can execute the next handling automatically,
+// when defined levels of log message emitted.
+// Example: hook can sending an email notification when error log happens in app.
+type LogHook struct {
+	// Disable lets user select to enable hook or not.
+	Disabled bool `yaml:"disabled,omitempty"`
+
+	// Type allows user to select which type of hook handler they want.
+	Type string `yaml:"type,omitempty"`
+
+	// Levels set which levels of log message will let hook executed.
+	Levels []string `yaml:"levels,omitempty"`
+
+	// MailOptions allows user to configurate email parameters.
+	MailOptions MailOptions `yaml:"options,omitempty"`
+}
+
+// MailOptions provides the configuration sections to user, for specific handler.
+type MailOptions struct {
+	SMTP struct {
+		// Addr defines smtp host address
+		Addr string `yaml:"addr,omitempty"`
+
+		// Username defines user name to smtp host
+		Username string `yaml:"username,omitempty"`
+
+		// Password defines password of login user
+		Password string `yaml:"password,omitempty"`
+
+		// Insecure defines if smtp login skips the secure cerification.
+		Insecure bool `yaml:"insecure,omitempty"`
+	} `yaml:"smtp,omitempty"`
+
+	// From defines mail sending address
+	From string `yaml:"from,omitempty"`
+
+	// To defines mail receiving address
+	To []string `yaml:"to,omitempty"`
 }
 
 // v0_1Configuration is a Version 0.1 Configuration struct
