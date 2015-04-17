@@ -3,7 +3,7 @@
 // An access controller has a simple interface with a single `Authorized`
 // method which checks that a given request is authorized to perform one or
 // more actions on one or more resources. This method should return a non-nil
-// error if the requset is not authorized.
+// error if the request is not authorized.
 //
 // An implementation registers its access controller by name with a constructor
 // which accepts an options map for configuring the access controller.
@@ -50,7 +50,7 @@ type Resource struct {
 }
 
 // Access describes a specific action that is
-// requested or allowed for a given recource.
+// requested or allowed for a given resource.
 type Access struct {
 	Resource
 	Action string

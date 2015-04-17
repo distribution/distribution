@@ -220,7 +220,7 @@ type retryingSink struct {
 	sink   Sink
 	closed bool
 
-	// circuit breaker hueristics
+	// circuit breaker heuristics
 	failures struct {
 		threshold int
 		recent    int
@@ -317,7 +317,7 @@ func (rs *retryingSink) wait(backoff time.Duration) {
 	time.Sleep(backoff)
 }
 
-// reset marks a succesful call.
+// reset marks a successful call.
 func (rs *retryingSink) reset() {
 	rs.failures.recent = 0
 	rs.failures.last = time.Time{}
@@ -330,7 +330,7 @@ func (rs *retryingSink) failure() {
 }
 
 // proceed returns true if the call should proceed based on circuit breaker
-// hueristics.
+// heuristics.
 func (rs *retryingSink) proceed() bool {
 	return rs.failures.recent < rs.failures.threshold ||
 		time.Now().UTC().After(rs.failures.last.Add(rs.failures.backoff))

@@ -336,7 +336,7 @@ func seekerSize(seeker io.ReadSeeker) (int64, error) {
 
 // createTestLayer creates a simple test layer in the provided driver under
 // tarsum dgst, returning the sha256 digest location. This is implemented
-// peicemeal and should probably be replaced by the uploader when it's ready.
+// piecemeal and should probably be replaced by the uploader when it's ready.
 func writeTestLayer(driver storagedriver.StorageDriver, pathMapper *pathMapper, name string, dgst digest.Digest, content io.Reader) (digest.Digest, error) {
 	h := sha256.New()
 	rd := io.TeeReader(content, h)

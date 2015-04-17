@@ -387,7 +387,7 @@ type layerLinkPathSpec struct {
 func (layerLinkPathSpec) pathSpec() {}
 
 // blobAlgorithmReplacer does some very simple path sanitization for user
-// input. Mostly, this is to provide some heirachry for tarsum digests. Paths
+// input. Mostly, this is to provide some hierarchy for tarsum digests. Paths
 // should be "safe" before getting this far due to strict digest requirements
 // but we can add further path conversion here, if needed.
 var blobAlgorithmReplacer = strings.NewReplacer(
