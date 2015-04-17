@@ -182,7 +182,7 @@ func (lw *layerWriter) resumeHashAt(offset int64) error {
 	}
 
 	if offset == int64(lw.resumableDigester.Len()) {
-		// State of digester is already at the requseted offset.
+		// State of digester is already at the requested offset.
 		return nil
 	}
 
