@@ -1,11 +1,11 @@
 # Project
 
 ## Contents
-- [Docker Registry Service 2.0](overview.md)
+- [Docker Registry 2.0](index.md)
 - [Architecture](architecture.md)
 - [Build the development environment](building.md)
 - [Configure a registry](configuration.md)
-- [Deploying a registry service](deploying.md)
+- [Deploying a registry server](deploying.md)
 - [Microsoft Azure storage driver](storage-drivers/azure.md)
 - [Filesystem storage driver](storage-drivers/filesystem.md)
 - [In-memory storage driver](storage-drivers/inmemory.md)

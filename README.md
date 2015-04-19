@@ -2,7 +2,7 @@
 
 The Docker toolset to pack, ship, store, and deliver content.
 
-This repository's main product is the Docker Registry Service 2.0 implementation
+This repository's main product is the Docker Registry 2.0 implementation
 for storing and distributing Docker images. It supersedes the [docker/docker-
 registry](https://github.com/docker/docker-registry) project with a new API
 design, focused around security and performance.
@@ -15,7 +15,7 @@ This repository contains the following components:
 | **libraries**      | A rich set of libraries for interacting with,distribution components. Please see [godoc](http://godoc.org/github.com/docker/distribution) for details. **Note**: These libraries are **unstable**. |
 | **dist**           | An _experimental_ tool to provide distribution, oriented functionality without the `docker` daemon.                                                                                                |
 | **specifications** | _Distribution_ related specifications are available in [docs/spec](docs/spec)                                                                                                                        |
-| **documentation**  | Docker's full documentation set is available at [docs.docker.com](http://docs.docker.com). This repository [contains the subset](docs/overview.md) related just to the registry.                                                                                                                                          |
+| **documentation**  | Docker's full documentation set is available at [docs.docker.com](http://docs.docker.com). This repository [contains the subset](docs/index.md) related just to the registry.                                                                                                                                          |
 
 ### How does this integrate with Docker engine?
 
@@ -69,7 +69,9 @@ may be the better choice.
 
 ## Contribute
 
-Please see [CONTRIBUTING.md](CONTRIBUTING.md).
+Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute
+issues, fixes, and patches to this project. If you are contributing code, see
+the instructions for [building a development environment](docs/building.md).
 
 ## Support
 
