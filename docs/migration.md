@@ -10,7 +10,7 @@ One can migrate images from one version to the other by pulling images from the 
 
 -----
 
-The Docker Registry Service 2.0 is backward compatible with images created by the earlier specification. If you are migrating a private registry to version 2.0, you should use the following process:
+The Docker Registry 2.0 is backward compatible with images created by the earlier specification. If you are migrating a private registry to version 2.0, you should use the following process:
 
 1. Configure and test a 2.0 registry image in a sandbox environment.
 

@@ -12,11 +12,11 @@ RUN git reset --hard
 # The above line causes a floating point error in our tools
 #
 RUN grep "VERSION =" /src/version/version.go  | sed 's/.*"\(.*\)".*/\1/' > /docs/VERSION
-COPY docs/* /docs/sources/distribution/
-COPY docs/images/* /docs/sources/distribution/images/
-COPY docs/spec/* /docs/sources/distribution/spec/
-COPY docs/spec/auth/* /docs/sources/distribution/spec/auth/
-COPY docs/storage-drivers/* /docs/sources/distribution/storage-drivers/
+COPY docs/* /docs/sources/registry/
+COPY docs/images/* /docs/sources/registry/images/
+COPY docs/spec/* /docs/sources/registry/spec/
+COPY docs/spec/auth/* /docs/sources/registry/spec/auth/
+COPY docs/storage-drivers/* /docs/sources/registry/storage-drivers/
 COPY docs/mkdocs.yml /docs/mkdocs-distribution.yml
 
 

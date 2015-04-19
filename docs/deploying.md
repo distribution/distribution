@@ -1,10 +1,10 @@
-page_title: Deploying a registry service
-page_description: Explains how to deploy a registry service
+page_title: Deploying a registry server
+page_description: Explains how to deploy a registry server
 page_keywords: registry, service, images, repository
 
-# Deploying a registry service
+# Deploying a registry server
 
-This section explains how to deploy a Docker Registry Service either privately
+This section explains how to deploy a Docker Registry either privately
 for your own company or publicly for other users. For example, your company may
 require a private registry to support your continuous integration (CI) system as
 it builds new releases or test servers. Alternatively, your company may have a
@@ -37,7 +37,7 @@ a local registry.
 	The `run` command automatically pulls a `hello-world` image from Docker's
 	official images.
 
-3. Start a registry service on your localhost.
+3. Start a registry on your localhost.
 
 		$ docker run -p 5000:5000 registry:2.0
 		
@@ -82,7 +82,7 @@ a local registry.
 		511136ea3c5a: Image already exists 
 		Digest: sha256:a1b13bc01783882434593119198938b9b9ef2bd32a0a246f16ac99b01383ef7a
 		
-7. Use the `curl` command and the Docker Registry Service API v2 to list your
+7. Use the `curl` command and the Docker Registry API v2 to list your
    image in the registry:
    
 		$ curl -v -X GET http://localhost:5000/v2/hello-mine/tags/list
