@@ -1,5 +1,5 @@
 page_title: Work with Notifications
-page_description: Explains how to deploy a registry service
+page_description: Explains how to deploy a registry server
 page_keywords: registry, service, images, repository
 
 # Notifications
