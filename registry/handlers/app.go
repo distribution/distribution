@@ -365,9 +365,23 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 				// future refactoring.
 				w.WriteHeader(http.StatusBadRequest)
 			}
+			app.logError(context, context.Errors)
 			serveJSON(w, context.Errors)
 		}
 	})
+}
+
+func (app *App) logError(context context.Context, errors v2.Errors) {
+	for _, e := range errors.Errors {
+		c := ctxu.WithValue(context, "err.code", e.Code)
+		c = ctxu.WithValue(c, "err.message", e.Message)
+		c = ctxu.WithValue(c, "err.detail", e.Detail)
+		c = ctxu.WithLogger(c, ctxu.GetLogger(c,
+			"err.code",
+			"err.message",
+			"err.detail"))
+		ctxu.GetLogger(c).Errorf("An error occured")
+	}
 }
 
 // context constructs the context object for the application. This only be
