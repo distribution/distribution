@@ -62,14 +62,12 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 	app.Context = ctxu.WithLogger(app.Context, ctxu.GetLogger(app, "instance.id"))
 
 	// Register the handler dispatchers.
-	app.register(v2.RouteNameBase, func(ctx *Context, r *http.Request) http.Handler {
-		return http.HandlerFunc(apiBase)
-	})
-	app.register(v2.RouteNameManifest, imageManifestDispatcher)
-	app.register(v2.RouteNameTags, tagsDispatcher)
-	app.register(v2.RouteNameBlob, layerDispatcher)
-	app.register(v2.RouteNameBlobUpload, layerUploadDispatcher)
-	app.register(v2.RouteNameBlobUploadChunk, layerUploadDispatcher)
+	app.router.GetRoute(v2.RouteNameBase).Handler(ContextHandlerPartial(app, apiBase))
+	app.router.GetRoute(v2.RouteNameTags).Handler(ContextHandlerPartial(app, tagsHandler))
+	app.router.GetRoute(v2.RouteNameBlob).Handler(ContextHandlerPartial(app, layerHandler))
+	app.router.GetRoute(v2.RouteNameBlobUpload).Handler(ContextHandlerPartial(app, layerUploadHandler))
+	app.router.GetRoute(v2.RouteNameBlobUploadChunk).Handler(ContextHandlerPartial(app, layerUploadHandler))
+	app.router.GetRoute(v2.RouteNameManifest).Handler(ContextHandlerPartial(app, imageManifestHandler))
 
 	var err error
 	app.driver, err = factory.Create(configuration.Storage.Type(), configuration.Storage.Parameters())
@@ -131,20 +129,6 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 	}
 
 	return app
-}
-
-// register a handler with the application, by route name. The handler will be
-// passed through the application filters and context will be constructed at
-// request time.
-func (app *App) register(routeName string, dispatch dispatchFunc) {
-
-	// TODO(stevvooe): This odd dispatcher/route registration is by-product of
-	// some limitations in the gorilla/mux router. We are using it to keep
-	// routing consistent between the client and server, but we may want to
-	// replace it with manual routing and structure-based dispatch for better
-	// control over the request execution.
-
-	app.router.GetRoute(routeName).Handler(app.dispatcher(dispatch))
 }
 
 // configureEvents prepares the event sink for action.
@@ -297,77 +281,44 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	app.router.ServeHTTP(w, r)
 }
 
-// dispatchFunc takes a context and request and returns a constructed handler
-// for the route. The dispatcher will use this to dynamically create request
-// specific handlers for each endpoint without creating a new router for each
-// request.
-type dispatchFunc func(ctx *Context, r *http.Request) http.Handler
-
 // TODO(stevvooe): dispatchers should probably have some validation error
 // chain with proper error reporting.
 
-// dispatcher returns a handler that constructs a request specific context and
-// handler, using the dispatch factory function.
-func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		context := app.context(w, r)
+func (app *App) requestContext(w http.ResponseWriter, r *http.Request) (*Context, error) {
+	context := app.context(w, r)
+	if err := app.authorized(w, r, context); err != nil {
+		ctxu.GetLogger(context).Errorf("error authorizing context: %v", err)
+		return nil, err
+	}
 
-		if err := app.authorized(w, r, context); err != nil {
-			ctxu.GetLogger(context).Errorf("error authorizing context: %v", err)
-			return
-		}
+	if app.nameRequired(r) {
+		repository, err := app.registry.Repository(context, getName(context))
 
-		// Add username to request logging
-		context.Context = ctxu.WithLogger(context.Context, ctxu.GetLogger(context.Context, "auth.user.name"))
+		if err != nil {
+			ctxu.GetLogger(context).Errorf("error resolving repository: %v", err)
 
-		if app.nameRequired(r) {
-			repository, err := app.registry.Repository(context, getName(context))
-
-			if err != nil {
-				ctxu.GetLogger(context).Errorf("error resolving repository: %v", err)
-
-				switch err := err.(type) {
-				case distribution.ErrRepositoryUnknown:
-					context.Errors.Push(v2.ErrorCodeNameUnknown, err)
-				case distribution.ErrRepositoryNameInvalid:
-					context.Errors.Push(v2.ErrorCodeNameInvalid, err)
-				}
-
-				w.WriteHeader(http.StatusBadRequest)
-				serveJSON(w, context.Errors)
-				return
-			}
-
-			// assign and decorate the authorized repository with an event bridge.
-			context.Repository = notifications.Listen(
-				repository,
-				app.eventBridge(context, r))
-
-			context.Repository, err = applyRepoMiddleware(context.Repository, app.Config.Middleware["repository"])
-			if err != nil {
-				ctxu.GetLogger(context).Errorf("error initializing repository middleware: %v", err)
-				context.Errors.Push(v2.ErrorCodeUnknown, err)
-				w.WriteHeader(http.StatusInternalServerError)
-				serveJSON(w, context.Errors)
-				return
+			switch err := err.(type) {
+			case distribution.ErrRepositoryUnknown:
+				return nil, NewHTTPError(v2.ErrorCodeNameUnknown, err, http.StatusBadRequest)
+			case distribution.ErrRepositoryNameInvalid:
+				return nil, NewHTTPError(v2.ErrorCodeNameInvalid, err, http.StatusBadRequest)
 			}
 		}
 
-		dispatch(context, r).ServeHTTP(w, r)
+		// assign and decorate the authorized repository with an event bridge.
+		context.Repository = notifications.Listen(
+			repository,
+			app.eventBridge(context, r))
 
-		// Automated error response handling here. Handlers may return their
-		// own errors if they need different behavior (such as range errors
-		// for layer upload).
-		if context.Errors.Len() > 0 {
-			if context.Value("http.response.status") == 0 {
-				// TODO(stevvooe): Getting this value from the context is a
-				// bit of a hack. We can further address with some of our
-				// future refactoring.
-				w.WriteHeader(http.StatusBadRequest)
-			}
-			serveJSON(w, context.Errors)
+		repo, err := applyRepoMiddleware(context.Repository, app.Config.Middleware["repository"])
+		if err != nil {
+			ctxu.GetLogger(context).Errorf("error initializing repository middleware: %v", err)
+			return nil, NewHTTPError(v2.ErrorCodeUnknown, err, http.StatusInternalServerError)
 		}
-	})
+		context.Repository = repo
+	}
+	return context, nil
+
 }
 
 // context constructs the context object for the application. This only be
@@ -382,8 +333,8 @@ func (app *App) context(w http.ResponseWriter, r *http.Request) *Context {
 		"vars.uuid"))
 
 	context := &Context{
-		App:        app,
 		Context:    ctx,
+		Secret:     app.Config.HTTP.Secret,
 		urlBuilder: v2.NewURLBuilderFromRequest(r),
 	}
 
@@ -414,13 +365,8 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 			// base route is accessed. This section prevents us from making
 			// that mistake elsewhere in the code, allowing any operation to
 			// proceed.
-			w.Header().Set("Content-Type", "application/json; charset=utf-8")
-			w.WriteHeader(http.StatusForbidden)
 
-			var errs v2.Errors
-			errs.Push(v2.ErrorCodeUnauthorized)
-			serveJSON(w, errs)
-			return fmt.Errorf("forbidden: no repository name")
+			return NewHTTPError(v2.ErrorCodeUnauthorized, nil, http.StatusForbidden)
 		}
 	}
 
@@ -430,20 +376,15 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 		case auth.Challenge:
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
 			err.ServeHTTP(w, r)
-
-			var errs v2.Errors
-			errs.Push(v2.ErrorCodeUnauthorized, accessRecords)
-			serveJSON(w, errs)
+			return NewHTTPError(v2.ErrorCodeUnauthorized, accessRecords, 0)
 		default:
 			// This condition is a potential security problem either in
 			// the configuration or whatever is backing the access
 			// controller. Just return a bad request with no information
 			// to avoid exposure. The request should not proceed.
 			ctxu.GetLogger(context).Errorf("error checking authorization: %v", err)
-			w.WriteHeader(http.StatusBadRequest)
+			return NewHTTPError(0, nil, http.StatusBadRequest)
 		}
-
-		return err
 	}
 
 	// TODO(stevvooe): This pattern needs to be cleaned up a bit. One context
@@ -472,13 +413,14 @@ func (app *App) nameRequired(r *http.Request) bool {
 
 // apiBase implements a simple yes-man for doing overall checks against the
 // api. This can support auth roundtrips to support docker login.
-func apiBase(w http.ResponseWriter, r *http.Request) {
+func apiBase(ctx *Context, w http.ResponseWriter, r *http.Request) error {
 	const emptyJSON = "{}"
 	// Provide a simple /v2/ 200 OK response with empty json response.
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Content-Length", fmt.Sprint(len(emptyJSON)))
 
 	fmt.Fprint(w, emptyJSON)
+	return nil
 }
 
 // appendAccessRecords checks the method and adds the appropriate Access records to the records list.

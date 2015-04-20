@@ -5,70 +5,52 @@ import (
 
 	"github.com/docker/distribution"
 	ctxu "github.com/docker/distribution/context"
-	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/registry/api/v2"
-	"github.com/gorilla/handlers"
 )
 
 // layerDispatcher uses the request context to build a layerHandler.
-func layerDispatcher(ctx *Context, r *http.Request) http.Handler {
-	dgst, err := getDigest(ctx)
-	if err != nil {
-
-		if err == errDigestNotAvailable {
-			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusNotFound)
-				ctx.Errors.Push(v2.ErrorCodeDigestInvalid, err)
-			})
-		}
-
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx.Errors.Push(v2.ErrorCodeDigestInvalid, err)
-		})
+func layerHandler(ctx *Context, w http.ResponseWriter, r *http.Request) (httpErr error) {
+	switch r.Method {
+	case "GET", "HEAD":
+		httpErr = GetLayer(ctx, w, r)
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
-
-	layerHandler := &layerHandler{
-		Context: ctx,
-		Digest:  dgst,
-	}
-
-	return handlers.MethodHandler{
-		"GET":  http.HandlerFunc(layerHandler.GetLayer),
-		"HEAD": http.HandlerFunc(layerHandler.GetLayer),
-	}
-}
-
-// layerHandler serves http layer requests.
-type layerHandler struct {
-	*Context
-
-	Digest digest.Digest
+	return httpErr
 }
 
 // GetLayer fetches the binary data from backend storage returns it in the
 // response.
-func (lh *layerHandler) GetLayer(w http.ResponseWriter, r *http.Request) {
-	ctxu.GetLogger(lh).Debug("GetImageLayer")
-	layers := lh.Repository.Layers()
-	layer, err := layers.Fetch(lh.Digest)
+func GetLayer(ctx *Context, w http.ResponseWriter, r *http.Request) error {
+	ctxu.GetLogger(ctx).Debug("GetImageLayer")
+	dgst, err := getDigest(ctx)
+	if err != nil {
+
+		if err == errDigestNotAvailable {
+			return NewHTTPError(v2.ErrorCodeDigestInvalid, err, http.StatusNotFound)
+		}
+
+		return NewHTTPError(v2.ErrorCodeDigestInvalid, err, http.StatusBadRequest)
+	}
+
+	layers := ctx.Repository.Layers()
+	layer, err := layers.Fetch(dgst)
 
 	if err != nil {
 		switch err := err.(type) {
 		case distribution.ErrUnknownLayer:
-			w.WriteHeader(http.StatusNotFound)
-			lh.Errors.Push(v2.ErrorCodeBlobUnknown, err.FSLayer)
+			return NewHTTPError(v2.ErrorCodeBlobUnknown, err, http.StatusNotFound)
 		default:
-			lh.Errors.Push(v2.ErrorCodeUnknown, err)
+			return NewHTTPError(v2.ErrorCodeUnknown, err, http.StatusInternalServerError)
 		}
-		return
 	}
 
 	handler, err := layer.Handler(r)
 	if err != nil {
-		ctxu.GetLogger(lh).Debugf("unexpected error getting layer HTTP handler: %s", err)
-		lh.Errors.Push(v2.ErrorCodeUnknown, err)
-		return
+		ctxu.GetLogger(ctx).Debugf("unexpected error getting layer HTTP handler: %s", err)
+		return NewHTTPError(v2.ErrorCodeUnknown, err, http.StatusInternalServerError)
 	}
 
 	handler.ServeHTTP(w, r)
+	return nil
 }

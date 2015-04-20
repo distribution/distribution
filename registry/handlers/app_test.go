@@ -39,9 +39,8 @@ func TestAppDispatcher(t *testing.T) {
 		t.Fatalf("error parsing server url: %v", err)
 	}
 
-	varCheckingDispatcher := func(expectedVars map[string]string) dispatchFunc {
-		return func(ctx *Context, r *http.Request) http.Handler {
-			// Always checks the same name context
+	varCheckingHandler := func(expectedVars map[string]string) http.Handler {
+		return ContextHandlerPartial(app, func(ctx *Context, w http.ResponseWriter, r *http.Request) error {
 			if ctx.Repository.Name() != getName(ctx) {
 				t.Fatalf("unexpected name: %q != %q", ctx.Repository.Name(), "foo/bar")
 			}
@@ -62,11 +61,9 @@ func TestAppDispatcher(t *testing.T) {
 					t.Fatalf("unexpected key %q in vars with value %q", k, v)
 				}
 			}
-
-			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusOK)
-			})
-		}
+			w.WriteHeader(http.StatusOK)
+			return nil
+		})
 	}
 
 	// unflatten a list of variables, suitable for gorilla/mux, to a map[string]string
@@ -117,7 +114,7 @@ func TestAppDispatcher(t *testing.T) {
 			},
 		},
 	} {
-		app.register(testcase.endpoint, varCheckingDispatcher(unflatten(testcase.vars)))
+		app.router.GetRoute(testcase.endpoint).Handler(varCheckingHandler(unflatten(testcase.vars)))
 		route := router.GetRoute(testcase.endpoint).Host(serverURL.Host)
 		u, err := route.URL(testcase.vars...)
 
@@ -181,7 +178,7 @@ func TestNewApp(t *testing.T) {
 	defer req.Body.Close()
 
 	if req.StatusCode != http.StatusUnauthorized {
-		t.Fatalf("unexpected status code during request: %v", err)
+		t.Fatalf("unexpected status code during request: %v\nExpected %v Received %v", err, http.StatusUnauthorized, req.StatusCode)
 	}
 
 	if req.Header.Get("Content-Type") != "application/json; charset=utf-8" {
