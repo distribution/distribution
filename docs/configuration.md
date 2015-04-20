@@ -9,6 +9,18 @@ You configure a registry server using a YAML file. This page explains the
 configuration options and the values they can take. You'll also find examples of
 middleware and development environment configurations.
 
+## Overriding configuration options
+Environment variables may be used to override configuration parameters other than 
+version.  To override a configuration option, create an environment variable named 
+REGISTRY\_variable_ where *variable* is the name of the configuration option.
+
+e.g 
+```
+REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/tmp/registry/test
+```
+
+will set the storage root directory to `/tmp/registry/test`
+
 ## List of configuration options
 
 This section lists all the registry configuration options. Some options in
