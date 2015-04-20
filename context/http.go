@@ -302,7 +302,7 @@ func (irw *instrumentedResponseWriter) Flush() {
 func (irw *instrumentedResponseWriter) Value(key interface{}) interface{} {
 	if keyStr, ok := key.(string); ok {
 		if keyStr == "http.response" {
-			return irw.ResponseWriter
+			return irw
 		}
 
 		if !strings.HasPrefix(keyStr, "http.response.") {
