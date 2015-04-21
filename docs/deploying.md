@@ -1,8 +1,23 @@
-page_title: Deploying a registry server
-page_description: Explains how to deploy a registry server
-page_keywords: registry, service, images, repository
 
 # Deploying a registry server
+
+
+# Menu
+* [Simple example with the official image](#simple-example-with-the-official-image)
+* [Making Docker's official registry image production ready](#making-dockers-official-registry-image-production-ready)
+* [Understand production deployment](#understand-production-deployment)
+* [Configure TLS on a registry server](#configure-tls-on-a-registry-server)
+	* [Download the source and generate certificates](#download-the-source-and-generate-certificates)
+	* [Add TLS to the configuration](#add-tls-to-the-configuration)
+	* [Build and run your registry image](#build-and-run-your-registry-image)
+* [Configure Nginx with a v1 and v2 registry](#configure-nginx-with-a-v1-and-v2-registry)
+	* [Install Docker Compose](#install-docker-compose)
+	* [Do some housekeeping](#do-some-housekeeping)
+	* [Configure SSL](#configure-ssl)
+	* [Build and run](#build-and-run)
+	* [Explore a bit](#explore-a-bit)
+	
+
 
 This section explains how to deploy a Docker Registry either privately
 for your own company or publicly for other users. For example, your company may
