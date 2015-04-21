@@ -345,6 +345,8 @@ func (lw *layerWriter) validateLayer(dgst digest.Digest) (digest.Digest, error) 
 	}
 
 	if !verified {
+		ctxu.GetLoggerWithField(lw.layerStore.repository.ctx, "canonical", dgst).
+			Errorf("canonical digest does match provided digest")
 		return "", distribution.ErrLayerInvalidDigest{
 			Digest: dgst,
 			Reason: fmt.Errorf("content does not match digest"),
