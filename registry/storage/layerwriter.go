@@ -59,8 +59,8 @@ func (lw *layerWriter) Finish(dgst digest.Digest) (distribution.Layer, error) {
 	)
 
 	// HACK(stevvooe): To deal with s3's lack of consistency, attempt to retry
-	// validation on failure. Three attempts are made, backing off 100ms each
-	// time.
+	// validation on failure. Three attempts are made, backing off
+	// retries*100ms each time.
 	for retries := 0; ; retries++ {
 		canonical, err = lw.validateLayer(dgst)
 		if err == nil {
@@ -71,7 +71,7 @@ func (lw *layerWriter) Finish(dgst digest.Digest) (distribution.Layer, error) {
 			Errorf("error validating layer: %v", err)
 
 		if retries < 3 {
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(100 * time.Millisecond * time.Duration(retries+1))
 			continue
 		}
 
