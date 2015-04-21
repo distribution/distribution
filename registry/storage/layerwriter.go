@@ -46,16 +46,37 @@ func (lw *layerWriter) StartedAt() time.Time {
 // uploaded layer. The final size and checksum are validated against the
 // contents of the uploaded layer. The checksum should be provided in the
 // format <algorithm>:<hex digest>.
-func (lw *layerWriter) Finish(digest digest.Digest) (distribution.Layer, error) {
+func (lw *layerWriter) Finish(dgst digest.Digest) (distribution.Layer, error) {
 	ctxu.GetLogger(lw.layerStore.repository.ctx).Debug("(*layerWriter).Finish")
 
 	if err := lw.bufferedFileWriter.Close(); err != nil {
 		return nil, err
 	}
 
-	canonical, err := lw.validateLayer(digest)
-	if err != nil {
+	var (
+		canonical digest.Digest
+		err       error
+	)
+
+	// HACK(stevvooe): To deal with s3's lack of consistency, attempt to retry
+	// validation on failure. Three attempts are made, backing off 100ms each
+	// time.
+	for retries := 0; ; retries++ {
+		canonical, err = lw.validateLayer(dgst)
+		if err == nil {
+			break
+		}
+
+		ctxu.GetLoggerWithField(lw.layerStore.repository.ctx, "retries", retries).
+			Errorf("error validating layer: %v", err)
+
+		if retries < 3 {
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+
 		return nil, err
+
 	}
 
 	if err := lw.moveLayer(canonical); err != nil {
@@ -64,7 +85,7 @@ func (lw *layerWriter) Finish(digest digest.Digest) (distribution.Layer, error) 
 	}
 
 	// Link the layer blob into the repository.
-	if err := lw.linkLayer(canonical, digest); err != nil {
+	if err := lw.linkLayer(canonical, dgst); err != nil {
 		return nil, err
 	}
 
