@@ -26,6 +26,10 @@ storage:
     maintenance:
         uploadpurging:
             enabled: false
+auth:
+    basic:
+       realm: test-realm
+       path: /tmp/registry-dev/.htpasswd
 http:
     addr: :5000
     secret: asecretforlocaldevelopment
