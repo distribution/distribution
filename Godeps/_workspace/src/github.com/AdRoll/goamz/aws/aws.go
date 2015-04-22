@@ -62,6 +62,7 @@ type Region struct {
 	SESEndpoint            string
 	IAMEndpoint            string
 	ELBEndpoint            string
+	KMSEndpoint            string
 	DynamoDBEndpoint       string
 	CloudWatchServicepoint ServiceInfo
 	AutoScalingEndpoint    string
@@ -83,6 +84,7 @@ var Regions = map[string]Region{
 	USWest2.Name:      USWest2,
 	USGovWest.Name:    USGovWest,
 	SAEast.Name:       SAEast,
+	CNNorth1.Name:     CNNorth1,
 }
 
 // Designates a signer interface suitable for signing AWS requests, params
@@ -208,7 +210,10 @@ func (a *Auth) Token() string {
 		return ""
 	}
 	if time.Since(a.expiration) >= -30*time.Second { //in an ideal world this should be zero assuming the instance is synching it's clock
-		*a, _ = GetAuth("", "", "", time.Time{})
+		auth, err := GetAuth("", "", "", time.Time{})
+		if err == nil {
+			*a = auth
+		}
 	}
 	return a.token
 }
