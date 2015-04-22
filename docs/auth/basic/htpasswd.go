@@ -8,17 +8,22 @@ import (
 	"os"
 )
 
+// ErrSHARequired - returned in error field of challenge when the htpasswd was not made using SHA1 algorithm.
+// 	            (SHA1 is considered obsolete but the alternative for htpasswd is MD5, or system crypt...)
 var ErrSHARequired = errors.New("htpasswd file must use SHA (htpasswd -s)")
 
+// HTPasswd - holds a path to a system .htpasswd file and the machinery to parse it.
 type HTPasswd struct {
 	path   string
 	reader *csv.Reader
 }
 
+// NewHTPasswd - Create a new HTPasswd with the given path to .htpasswd file.
 func NewHTPasswd(htpath string) *HTPasswd {
 	return &HTPasswd{path: htpath}
 }
 
+// AuthenticateUser - Check a given user:password credential against the receiving HTPasswd's file.
 func (htpasswd *HTPasswd) AuthenticateUser(user string, pwd string) (bool, error) {
 
 	// Hash the credential.

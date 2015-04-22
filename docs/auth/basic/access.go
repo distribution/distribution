@@ -6,7 +6,6 @@
 // system crypt() may be as well.
 //
 // This authentication method MUST be used under TLS, as simple token-replay attack is possible.
-
 package basic
 
 import (
@@ -33,7 +32,9 @@ type challenge struct {
 
 var _ auth.AccessController = &accessController{}
 var (
+	// ErrPasswordRequired - returned when no auth token is given.
 	ErrPasswordRequired  = errors.New("authorization credential required")
+   	// ErrInvalidCredential - returned when the auth token does not authenticate correctly.
 	ErrInvalidCredential = errors.New("invalid authorization credential")
 )
 
@@ -98,7 +99,7 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 }
 
 func (ch *challenge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	header := fmt.Sprintf("Realm realm=%q", ch.realm)
+	header := fmt.Sprintf("Basic realm=%q", ch.realm)
 	w.Header().Set("WWW-Authenticate", header)
 	w.WriteHeader(http.StatusUnauthorized)
 }
