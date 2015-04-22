@@ -230,6 +230,22 @@ func (s *S) TestPutObject(c *check.C) {
 	c.Assert(req.Header["X-Amz-Acl"], check.DeepEquals, []string{"private"})
 }
 
+func (s *S) TestPutObjectReducedRedundancy(c *check.C) {
+	testServer.Response(200, nil, "")
+
+	b := s.s3.Bucket("bucket")
+	err := b.Put("name", []byte("content"), "content-type", s3.Private, s3.Options{StorageClass: s3.ReducedRedundancy})
+	c.Assert(err, check.IsNil)
+
+	req := testServer.WaitRequest()
+	c.Assert(req.Method, check.Equals, "PUT")
+	c.Assert(req.URL.Path, check.Equals, "/bucket/name")
+	c.Assert(req.Header["Date"], check.Not(check.DeepEquals), []string{""})
+	c.Assert(req.Header["Content-Type"], check.DeepEquals, []string{"content-type"})
+	c.Assert(req.Header["Content-Length"], check.DeepEquals, []string{"7"})
+	c.Assert(req.Header["X-Amz-Storage-Class"], check.DeepEquals, []string{"REDUCED_REDUNDANCY"})
+}
+
 // PutCopy docs: http://goo.gl/mhEHtA
 func (s *S) TestPutCopy(c *check.C) {
 	testServer.Response(200, nil, PutCopyResultDump)
