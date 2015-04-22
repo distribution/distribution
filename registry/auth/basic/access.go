@@ -33,8 +33,8 @@ type challenge struct {
 var _ auth.AccessController = &accessController{}
 var (
 	// ErrPasswordRequired - returned when no auth token is given.
-	ErrPasswordRequired  = errors.New("authorization credential required")
-   	// ErrInvalidCredential - returned when the auth token does not authenticate correctly.
+	ErrPasswordRequired = errors.New("authorization credential required")
+	// ErrInvalidCredential - returned when the auth token does not authenticate correctly.
 	ErrInvalidCredential = errors.New("invalid authorization credential")
 )
 
