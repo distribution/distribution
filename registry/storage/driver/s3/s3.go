@@ -20,6 +20,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -148,9 +149,23 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	chunkSize := int64(defaultChunkSize)
 	chunkSizeParam, ok := parameters["chunksize"]
 	if ok {
-		chunkSize, ok = chunkSizeParam.(int64)
-		if !ok || chunkSize < minChunkSize {
-			return nil, fmt.Errorf("The chunksize parameter should be a number that is larger than 5*1024*1024")
+		switch v := chunkSizeParam.(type) {
+		case string:
+			vv, err := strconv.ParseInt(v, 0, 64)
+			if err != nil {
+				return nil, fmt.Errorf("chunksize parameter must be an integer, %v invalid", chunkSizeParam)
+			}
+			chunkSize = vv
+		case int64:
+			chunkSize = v
+		case int, uint, int32, uint32, uint64:
+			chunkSize = reflect.ValueOf(v).Convert(reflect.TypeOf(chunkSize)).Int()
+		default:
+			return nil, fmt.Errorf("invalid valud for chunksize: %#v", chunkSizeParam)
+		}
+
+		if chunkSize <= minChunkSize {
+			return nil, fmt.Errorf("The chunksize %#v parameter should be a number that is larger than or equal to %d", chunkSize, minChunkSize)
 		}
 	}
 
