@@ -198,7 +198,11 @@ func (luh *layerUploadHandler) PutLayerUploadComplete(w http.ResponseWriter, r *
 	// may miss a root cause.
 
 	// Read in the final chunk, if any.
-	io.Copy(luh.Upload, r.Body)
+	if _, err := io.Copy(luh.Upload, r.Body); err != nil {
+		ctxu.GetLogger(luh).Errorf("unknown error copying into upload: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		luh.Errors.Push(v2.ErrorCodeUnknown, err)
+	}
 
 	layer, err := luh.Upload.Finish(dgst)
 	if err != nil {
