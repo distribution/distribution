@@ -10,4 +10,5 @@
 - ['registry/storage-drivers/azure.md', '**HIDDEN**' ]
 - ['registry/storage-drivers/filesystem.md', '**HIDDEN**' ]
 - ['registry/storage-drivers/inmemory.md', '**HIDDEN**' ]
+- ['registry/storage-drivers/rados.md', '**HIDDEN**' ]
 - ['registry/storage-drivers/s3.md','**HIDDEN**' ]

@@ -43,6 +43,10 @@ storage:
 		v4auth: true
 		chunksize: 5242880
 		rootdirectory: /s3/object/name/prefix
+	rados:
+		poolname: radospool
+		username: radosuser
+		chunksize: 4194304
 	cache:
 		blobdescriptor: redis
 	maintenance:
@@ -261,6 +265,10 @@ storage:
 		v4auth: true
 		chunksize: 5242880
 		rootdirectory: /s3/object/name/prefix
+	rados:
+		poolname: radospool
+		username: radosuser
+		chunksize: 4194304
 	cache:
 		blobdescriptor: inmemory
 	maintenance:
@@ -347,6 +355,51 @@ This storage backend uses Microsoft's Azure Storage platform.
   </tr>
 </table>
 
+
+### rados
+
+This storage backend uses [Ceph Object Storage](http://ceph.com/docs/master/rados/).
+
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>poolname</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      Ceph pool name.
+    </td>
+  </tr>
+   <tr>
+    <td>
+      <code>username</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Ceph cluster user to connect as (i.e. admin, not client.admin).
+    </td>
+  </tr>
+   <tr>
+    <td>
+      <code>chunksize</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Size of the written RADOS objects. Default value is 4MB (4194304).
+    </td>
+  </tr>
+</table>
 
 
 ### S3

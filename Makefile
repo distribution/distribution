@@ -18,7 +18,7 @@ version/version.go:
 
 ${PREFIX}/bin/registry: version/version.go $(shell find . -type f -name '*.go')
 	@echo "+ $@"
-	@go build -o $@ ${GO_LDFLAGS} ./cmd/registry
+	@go build -tags "${DOCKER_BUILDTAGS}" -o $@ ${GO_LDFLAGS} ./cmd/registry
 
 ${PREFIX}/bin/registry-api-descriptor-template: version/version.go $(shell find . -type f -name '*.go')
 	@echo "+ $@"
@@ -46,11 +46,11 @@ lint:
 
 build:
 	@echo "+ $@"
-	@go build -v ${GO_LDFLAGS} ./...
+	@go build -tags "${DOCKER_BUILDTAGS}" -v ${GO_LDFLAGS} ./...
 
 test:
 	@echo "+ $@"
-	@go test -test.short ./...
+	@go test -test.short -tags "${DOCKER_BUILDTAGS}" ./...
 
 test-full:
 	@echo "+ $@"
