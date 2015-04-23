@@ -202,6 +202,7 @@ func (luh *layerUploadHandler) PutLayerUploadComplete(w http.ResponseWriter, r *
 		ctxu.GetLogger(luh).Errorf("unknown error copying into upload: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		luh.Errors.Push(v2.ErrorCodeUnknown, err)
+		return
 	}
 
 	layer, err := luh.Upload.Finish(dgst)
