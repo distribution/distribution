@@ -168,7 +168,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 			return nil, fmt.Errorf("invalid valud for chunksize: %#v", chunkSizeParam)
 		}
 
-		if chunkSize <= minChunkSize {
+		if chunkSize < minChunkSize {
 			return nil, fmt.Errorf("The chunksize %#v parameter should be a number that is larger than or equal to %d", chunkSize, minChunkSize)
 		}
 	}
