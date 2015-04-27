@@ -188,6 +188,8 @@ func (storage Storage) Type() string {
 	// Return only key in this map
 	for k := range storage {
 		switch k {
+		case "maintenance":
+			// allow configuration of maintenance
 		case "cache":
 			// allow configuration of caching
 		default:
@@ -217,6 +219,8 @@ func (storage *Storage) UnmarshalYAML(unmarshal func(interface{}) error) error {
 			types := make([]string, 0, len(storageMap))
 			for k := range storageMap {
 				switch k {
+				case "maintenance":
+					// allow for configuration of maintenance
 				case "cache":
 					// allow configuration of caching
 				default:
