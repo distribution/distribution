@@ -14,7 +14,6 @@ type manifestStore struct {
 	repository *repository
 
 	revisionStore *revisionStore
-	tagStore      *tagStore
 }
 
 var _ distribution.ManifestService = &manifestStore{}
@@ -49,7 +48,7 @@ func (ms *manifestStore) Put(manifest *manifest.SignedManifest) error {
 	}
 
 	// Now, tag the manifest
-	return ms.tagStore.tag(manifest.Tag, revision)
+	return ms.tag(manifest.Tag, revision)
 }
 
 // Delete removes the revision of the specified manfiest.
@@ -58,24 +57,35 @@ func (ms *manifestStore) Delete(dgst digest.Digest) error {
 	return fmt.Errorf("deletion of manifests not supported")
 }
 
-func (ms *manifestStore) Tags() ([]string, error) {
-	ctxu.GetLogger(ms.repository.ctx).Debug("(*manifestStore).Tags")
-	return ms.tagStore.tags()
-}
+// tag tags the digest with the given tag, updating the the store to point at
+// the current tag. The digest must point to a manifest.
+func (ms *manifestStore) tag(tag string, revision digest.Digest) error {
+	indexEntryPath, err := ms.repository.pm.path(manifestTagIndexEntryLinkPathSpec{
+		name:     ms.repository.Name(),
+		tag:      tag,
+		revision: revision,
+	})
 
-func (ms *manifestStore) ExistsByTag(tag string) (bool, error) {
-	ctxu.GetLogger(ms.repository.ctx).Debug("(*manifestStore).ExistsByTag")
-	return ms.tagStore.exists(tag)
-}
-
-func (ms *manifestStore) GetByTag(tag string) (*manifest.SignedManifest, error) {
-	ctxu.GetLogger(ms.repository.ctx).Debug("(*manifestStore).GetByTag")
-	dgst, err := ms.tagStore.resolve(tag)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return ms.revisionStore.get(dgst)
+	currentPath, err := ms.repository.pm.path(manifestTagCurrentPathSpec{
+		name: ms.repository.Name(),
+		tag:  tag,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	// Link into the index
+	if err := ms.repository.blobStore.link(indexEntryPath, revision); err != nil {
+		return err
+	}
+
+	// Overwrite the current link
+	return ms.repository.blobStore.link(currentPath, revision)
 }
 
 // verifyManifest ensures that the manifest content is valid from the
