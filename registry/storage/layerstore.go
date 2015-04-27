@@ -65,7 +65,7 @@ func (ls *layerStore) Upload() (distribution.LayerUpload, error) {
 	uuid := uuid.New()
 	startedAt := time.Now().UTC()
 
-	path, err := ls.repository.registry.pm.path(uploadDataPathSpec{
+	path, err := ls.repository.pm.path(uploadDataPathSpec{
 		name: ls.repository.Name(),
 		uuid: uuid,
 	})
@@ -74,7 +74,7 @@ func (ls *layerStore) Upload() (distribution.LayerUpload, error) {
 		return nil, err
 	}
 
-	startedAtPath, err := ls.repository.registry.pm.path(uploadStartedAtPathSpec{
+	startedAtPath, err := ls.repository.pm.path(uploadStartedAtPathSpec{
 		name: ls.repository.Name(),
 		uuid: uuid,
 	})
@@ -95,7 +95,7 @@ func (ls *layerStore) Upload() (distribution.LayerUpload, error) {
 // state of the upload.
 func (ls *layerStore) Resume(uuid string) (distribution.LayerUpload, error) {
 	ctxu.GetLogger(ls.repository.ctx).Debug("(*layerStore).Resume")
-	startedAtPath, err := ls.repository.registry.pm.path(uploadStartedAtPathSpec{
+	startedAtPath, err := ls.repository.pm.path(uploadStartedAtPathSpec{
 		name: ls.repository.Name(),
 		uuid: uuid,
 	})
@@ -152,7 +152,7 @@ func (ls *layerStore) newLayerUpload(uuid, path string, startedAt time.Time) (di
 
 func (ls *layerStore) path(dgst digest.Digest) (string, error) {
 	// We must traverse this path through the link to enforce ownership.
-	layerLinkPath, err := ls.repository.registry.pm.path(layerLinkPathSpec{name: ls.repository.Name(), digest: dgst})
+	layerLinkPath, err := ls.repository.pm.path(layerLinkPathSpec{name: ls.repository.Name(), digest: dgst})
 	if err != nil {
 		return "", err
 	}
