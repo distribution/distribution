@@ -158,7 +158,7 @@ type hashStateEntry struct {
 
 // getStoredHashStates returns a slice of hashStateEntries for this upload.
 func (lw *layerWriter) getStoredHashStates() ([]hashStateEntry, error) {
-	uploadHashStatePathPrefix, err := lw.layerStore.repository.registry.pm.path(uploadHashStatePathSpec{
+	uploadHashStatePathPrefix, err := lw.layerStore.repository.pm.path(uploadHashStatePathSpec{
 		name: lw.layerStore.repository.Name(),
 		uuid: lw.uuid,
 		alg:  lw.resumableDigester.Digest().Algorithm(),
@@ -271,7 +271,7 @@ func (lw *layerWriter) resumeHashAt(offset int64) error {
 }
 
 func (lw *layerWriter) storeHashState() error {
-	uploadHashStatePath, err := lw.layerStore.repository.registry.pm.path(uploadHashStatePathSpec{
+	uploadHashStatePath, err := lw.layerStore.repository.pm.path(uploadHashStatePathSpec{
 		name:   lw.layerStore.repository.Name(),
 		uuid:   lw.uuid,
 		alg:    lw.resumableDigester.Digest().Algorithm(),
@@ -360,7 +360,7 @@ func (lw *layerWriter) validateLayer(dgst digest.Digest) (digest.Digest, error) 
 // identified by dgst. The layer should be validated before commencing the
 // move.
 func (lw *layerWriter) moveLayer(dgst digest.Digest) error {
-	blobPath, err := lw.layerStore.repository.registry.pm.path(blobDataPathSpec{
+	blobPath, err := lw.layerStore.repository.pm.path(blobDataPathSpec{
 		digest: dgst,
 	})
 
@@ -426,7 +426,7 @@ func (lw *layerWriter) linkLayer(canonical digest.Digest, aliases ...digest.Dige
 		}
 		seenDigests[dgst] = struct{}{}
 
-		layerLinkPath, err := lw.layerStore.repository.registry.pm.path(layerLinkPathSpec{
+		layerLinkPath, err := lw.layerStore.repository.pm.path(layerLinkPathSpec{
 			name:   lw.layerStore.repository.Name(),
 			digest: dgst,
 		})
@@ -435,7 +435,7 @@ func (lw *layerWriter) linkLayer(canonical digest.Digest, aliases ...digest.Dige
 			return err
 		}
 
-		if err := lw.layerStore.repository.registry.driver.PutContent(layerLinkPath, []byte(canonical)); err != nil {
+		if err := lw.layerStore.repository.driver.PutContent(layerLinkPath, []byte(canonical)); err != nil {
 			return err
 		}
 	}
@@ -447,7 +447,7 @@ func (lw *layerWriter) linkLayer(canonical digest.Digest, aliases ...digest.Dige
 // instance. An error will be returned if the clean up cannot proceed. If the
 // resources are already not present, no error will be returned.
 func (lw *layerWriter) removeResources() error {
-	dataPath, err := lw.layerStore.repository.registry.pm.path(uploadDataPathSpec{
+	dataPath, err := lw.layerStore.repository.pm.path(uploadDataPathSpec{
 		name: lw.layerStore.repository.Name(),
 		uuid: lw.uuid,
 	})
