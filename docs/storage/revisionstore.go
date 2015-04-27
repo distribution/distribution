@@ -26,7 +26,7 @@ func (rs *revisionStore) exists(revision digest.Digest) (bool, error) {
 		return false, err
 	}
 
-	exists, err := exists(rs.driver, revpath)
+	exists, err := exists(rs.repository.ctx, rs.driver, revpath)
 	if err != nil {
 		return false, err
 	}
@@ -121,7 +121,7 @@ func (rs *revisionStore) link(revision digest.Digest) error {
 		return err
 	}
 
-	if exists, err := exists(rs.driver, revisionPath); err != nil {
+	if exists, err := exists(rs.repository.ctx, rs.driver, revisionPath); err != nil {
 		return err
 	} else if exists {
 		// Revision has already been linked!
@@ -142,5 +142,5 @@ func (rs *revisionStore) delete(revision digest.Digest) error {
 		return err
 	}
 
-	return rs.driver.Delete(revisionPath)
+	return rs.driver.Delete(rs.repository.ctx, revisionPath)
 }

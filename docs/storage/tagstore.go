@@ -4,6 +4,7 @@ import (
 	"path"
 
 	"github.com/docker/distribution"
+	//	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 )
@@ -23,7 +24,7 @@ func (ts *tagStore) tags() ([]string, error) {
 	}
 
 	var tags []string
-	entries, err := ts.driver.List(p)
+	entries, err := ts.driver.List(ts.repository.ctx, p)
 	if err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
@@ -52,7 +53,7 @@ func (ts *tagStore) exists(tag string) (bool, error) {
 		return false, err
 	}
 
-	exists, err := exists(ts.driver, tagPath)
+	exists, err := exists(ts.repository.ctx, ts.driver, tagPath)
 	if err != nil {
 		return false, err
 	}
@@ -102,7 +103,7 @@ func (ts *tagStore) resolve(tag string) (digest.Digest, error) {
 		return "", err
 	}
 
-	if exists, err := exists(ts.driver, currentPath); err != nil {
+	if exists, err := exists(ts.repository.ctx, ts.driver, currentPath); err != nil {
 		return "", err
 	} else if !exists {
 		return "", distribution.ErrManifestUnknown{Name: ts.Name(), Tag: tag}
@@ -130,7 +131,7 @@ func (ts *tagStore) revisions(tag string) ([]digest.Digest, error) {
 	// TODO(stevvooe): Need to append digest alg to get listing of revisions.
 	manifestTagIndexPath = path.Join(manifestTagIndexPath, "sha256")
 
-	entries, err := ts.driver.List(manifestTagIndexPath)
+	entries, err := ts.driver.List(ts.repository.ctx, manifestTagIndexPath)
 	if err != nil {
 		return nil, err
 	}
@@ -154,5 +155,5 @@ func (ts *tagStore) delete(tag string) error {
 		return err
 	}
 
-	return ts.driver.Delete(tagPath)
+	return ts.driver.Delete(ts.repository.ctx, tagPath)
 }

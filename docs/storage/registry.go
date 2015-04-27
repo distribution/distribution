@@ -20,10 +20,11 @@ type registry struct {
 // NewRegistryWithDriver creates a new registry instance from the provided
 // driver. The resulting registry may be shared by multiple goroutines but is
 // cheap to allocate.
-func NewRegistryWithDriver(driver storagedriver.StorageDriver, layerInfoCache cache.LayerInfoCache) distribution.Namespace {
+func NewRegistryWithDriver(ctx context.Context, driver storagedriver.StorageDriver, layerInfoCache cache.LayerInfoCache) distribution.Namespace {
 	bs := &blobStore{
 		driver: driver,
 		pm:     defaultPathMapper,
+		ctx:    ctx,
 	}
 
 	return &registry{

@@ -7,6 +7,7 @@ import (
 
 	"code.google.com/p/go-uuid/uuid"
 	log "github.com/Sirupsen/logrus"
+	"github.com/docker/distribution/context"
 	storageDriver "github.com/docker/distribution/registry/storage/driver"
 )
 
@@ -28,9 +29,9 @@ func newUploadData() uploadData {
 // PurgeUploads deletes files from the upload directory
 // created before olderThan.  The list of files deleted and errors
 // encountered are returned
-func PurgeUploads(driver storageDriver.StorageDriver, olderThan time.Time, actuallyDelete bool) ([]string, []error) {
+func PurgeUploads(ctx context.Context, driver storageDriver.StorageDriver, olderThan time.Time, actuallyDelete bool) ([]string, []error) {
 	log.Infof("PurgeUploads starting: olderThan=%s, actuallyDelete=%t", olderThan, actuallyDelete)
-	uploadData, errors := getOutstandingUploads(driver)
+	uploadData, errors := getOutstandingUploads(ctx, driver)
 	var deleted []string
 	for _, uploadData := range uploadData {
 		if uploadData.startedAt.Before(olderThan) {
@@ -38,7 +39,7 @@ func PurgeUploads(driver storageDriver.StorageDriver, olderThan time.Time, actua
 			log.Infof("Upload files in %s have older date (%s) than purge date (%s).  Removing upload directory.",
 				uploadData.containingDir, uploadData.startedAt, olderThan)
 			if actuallyDelete {
-				err = driver.Delete(uploadData.containingDir)
+				err = driver.Delete(ctx, uploadData.containingDir)
 			}
 			if err == nil {
 				deleted = append(deleted, uploadData.containingDir)
@@ -56,7 +57,7 @@ func PurgeUploads(driver storageDriver.StorageDriver, olderThan time.Time, actua
 // which could be eligible for deletion.  The only reliable way to
 // classify the age of a file is with the date stored in the startedAt
 // file, so gather files by UUID with a date from startedAt.
-func getOutstandingUploads(driver storageDriver.StorageDriver) (map[string]uploadData, []error) {
+func getOutstandingUploads(ctx context.Context, driver storageDriver.StorageDriver) (map[string]uploadData, []error) {
 	var errors []error
 	uploads := make(map[string]uploadData, 0)
 
@@ -65,7 +66,7 @@ func getOutstandingUploads(driver storageDriver.StorageDriver) (map[string]uploa
 	if err != nil {
 		return uploads, append(errors, err)
 	}
-	err = Walk(driver, root, func(fileInfo storageDriver.FileInfo) error {
+	err = Walk(ctx, driver, root, func(fileInfo storageDriver.FileInfo) error {
 		filePath := fileInfo.Path()
 		_, file := path.Split(filePath)
 		if file[0] == '_' {
@@ -124,7 +125,8 @@ func uUIDFromPath(path string) (string, bool) {
 
 // readStartedAtFile reads the date from an upload's startedAtFile
 func readStartedAtFile(driver storageDriver.StorageDriver, path string) (time.Time, error) {
-	startedAtBytes, err := driver.GetContent(path)
+	// todo:(richardscothern) - pass in a context
+	startedAtBytes, err := driver.GetContent(context.Background(), path)
 	if err != nil {
 		return time.Now(), err
 	}

@@ -10,7 +10,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/distribution"
-	ctxu "github.com/docker/distribution/context"
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 )
@@ -47,7 +47,7 @@ func (lw *layerWriter) StartedAt() time.Time {
 // contents of the uploaded layer. The checksum should be provided in the
 // format <algorithm>:<hex digest>.
 func (lw *layerWriter) Finish(dgst digest.Digest) (distribution.Layer, error) {
-	ctxu.GetLogger(lw.layerStore.repository.ctx).Debug("(*layerWriter).Finish")
+	context.GetLogger(lw.layerStore.repository.ctx).Debug("(*layerWriter).Finish")
 
 	if err := lw.bufferedFileWriter.Close(); err != nil {
 		return nil, err
@@ -67,7 +67,7 @@ func (lw *layerWriter) Finish(dgst digest.Digest) (distribution.Layer, error) {
 			break
 		}
 
-		ctxu.GetLoggerWithField(lw.layerStore.repository.ctx, "retries", retries).
+		context.GetLoggerWithField(lw.layerStore.repository.ctx, "retries", retries).
 			Errorf("error validating layer: %v", err)
 
 		if retries < 3 {
@@ -98,7 +98,7 @@ func (lw *layerWriter) Finish(dgst digest.Digest) (distribution.Layer, error) {
 
 // Cancel the layer upload process.
 func (lw *layerWriter) Cancel() error {
-	ctxu.GetLogger(lw.layerStore.repository.ctx).Debug("(*layerWriter).Cancel")
+	context.GetLogger(lw.layerStore.repository.ctx).Debug("(*layerWriter).Cancel")
 	if err := lw.removeResources(); err != nil {
 		return err
 	}
@@ -168,7 +168,7 @@ func (lw *layerWriter) getStoredHashStates() ([]hashStateEntry, error) {
 		return nil, err
 	}
 
-	paths, err := lw.driver.List(uploadHashStatePathPrefix)
+	paths, err := lw.driver.List(lw.layerStore.repository.ctx, uploadHashStatePathPrefix)
 	if err != nil {
 		if _, ok := err.(storagedriver.PathNotFoundError); !ok {
 			return nil, err
@@ -214,6 +214,7 @@ func (lw *layerWriter) resumeHashAt(offset int64) error {
 		return fmt.Errorf("unable to get stored hash states with offset %d: %s", offset, err)
 	}
 
+	ctx := lw.layerStore.repository.ctx
 	// Find the highest stored hashState with offset less than or equal to
 	// the requested offset.
 	for _, hashState := range hashStates {
@@ -229,7 +230,7 @@ func (lw *layerWriter) resumeHashAt(offset int64) error {
 			// is probably okay to skip for now since we don't expect anyone to
 			// use the API in this way. For that reason, we don't treat an
 			// an error here as a fatal error, but only log it.
-			if err := lw.driver.Delete(hashState.path); err != nil {
+			if err := lw.driver.Delete(ctx, hashState.path); err != nil {
 				logrus.Errorf("unable to delete stale hash state %q: %s", hashState.path, err)
 			}
 		}
@@ -239,7 +240,7 @@ func (lw *layerWriter) resumeHashAt(offset int64) error {
 		// No need to load any state, just reset the hasher.
 		lw.resumableDigester.Reset()
 	} else {
-		storedState, err := lw.driver.GetContent(hashStateMatch.path)
+		storedState, err := lw.driver.GetContent(ctx, hashStateMatch.path)
 		if err != nil {
 			return err
 		}
@@ -251,9 +252,8 @@ func (lw *layerWriter) resumeHashAt(offset int64) error {
 
 	// Mind the gap.
 	if gapLen := offset - int64(lw.resumableDigester.Len()); gapLen > 0 {
-		// Need to read content from the upload to catch up to the desired
-		// offset.
-		fr, err := newFileReader(lw.driver, lw.path)
+		// Need to read content from the upload to catch up to the desired offset.
+		fr, err := newFileReader(ctx, lw.driver, lw.path)
 		if err != nil {
 			return err
 		}
@@ -286,7 +286,7 @@ func (lw *layerWriter) storeHashState() error {
 		return err
 	}
 
-	return lw.driver.PutContent(uploadHashStatePath, hashState)
+	return lw.driver.PutContent(lw.layerStore.repository.ctx, uploadHashStatePath, hashState)
 }
 
 // validateLayer checks the layer data against the digest, returning an error
@@ -329,7 +329,7 @@ func (lw *layerWriter) validateLayer(dgst digest.Digest) (digest.Digest, error) 
 		}
 
 		// Read the file from the backend driver and validate it.
-		fr, err := newFileReader(lw.bufferedFileWriter.driver, lw.path)
+		fr, err := newFileReader(lw.layerStore.repository.ctx, lw.bufferedFileWriter.driver, lw.path)
 		if err != nil {
 			return "", err
 		}
@@ -345,7 +345,7 @@ func (lw *layerWriter) validateLayer(dgst digest.Digest) (digest.Digest, error) 
 	}
 
 	if !verified {
-		ctxu.GetLoggerWithField(lw.layerStore.repository.ctx, "canonical", dgst).
+		context.GetLoggerWithField(lw.layerStore.repository.ctx, "canonical", dgst).
 			Errorf("canonical digest does match provided digest")
 		return "", distribution.ErrLayerInvalidDigest{
 			Digest: dgst,
@@ -368,8 +368,9 @@ func (lw *layerWriter) moveLayer(dgst digest.Digest) error {
 		return err
 	}
 
+	ctx := lw.layerStore.repository.ctx
 	// Check for existence
-	if _, err := lw.driver.Stat(blobPath); err != nil {
+	if _, err := lw.driver.Stat(ctx, blobPath); err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
 			break // ensure that it doesn't exist.
@@ -388,7 +389,7 @@ func (lw *layerWriter) moveLayer(dgst digest.Digest) error {
 	// the size here and write a zero-length file to blobPath if this is the
 	// case. For the most part, this should only ever happen with zero-length
 	// tars.
-	if _, err := lw.driver.Stat(lw.path); err != nil {
+	if _, err := lw.driver.Stat(ctx, lw.path); err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
 			// HACK(stevvooe): This is slightly dangerous: if we verify above,
@@ -397,7 +398,7 @@ func (lw *layerWriter) moveLayer(dgst digest.Digest) error {
 			// prevent this horrid thing, we employ the hack of only allowing
 			// to this happen for the zero tarsum.
 			if dgst == digest.DigestSha256EmptyTar {
-				return lw.driver.PutContent(blobPath, []byte{})
+				return lw.driver.PutContent(ctx, blobPath, []byte{})
 			}
 
 			// We let this fail during the move below.
@@ -409,7 +410,7 @@ func (lw *layerWriter) moveLayer(dgst digest.Digest) error {
 		}
 	}
 
-	return lw.driver.Move(lw.path, blobPath)
+	return lw.driver.Move(ctx, lw.path, blobPath)
 }
 
 // linkLayer links a valid, written layer blob into the registry under the
@@ -435,7 +436,8 @@ func (lw *layerWriter) linkLayer(canonical digest.Digest, aliases ...digest.Dige
 			return err
 		}
 
-		if err := lw.layerStore.repository.driver.PutContent(layerLinkPath, []byte(canonical)); err != nil {
+		ctx := lw.layerStore.repository.ctx
+		if err := lw.layerStore.repository.driver.PutContent(ctx, layerLinkPath, []byte(canonical)); err != nil {
 			return err
 		}
 	}
@@ -459,8 +461,7 @@ func (lw *layerWriter) removeResources() error {
 	// Resolve and delete the containing directory, which should include any
 	// upload related files.
 	dirPath := path.Dir(dataPath)
-
-	if err := lw.driver.Delete(dirPath); err != nil {
+	if err := lw.driver.Delete(lw.layerStore.repository.ctx, dirPath); err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
 			break // already gone!

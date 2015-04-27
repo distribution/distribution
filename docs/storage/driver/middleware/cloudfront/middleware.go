@@ -98,12 +98,12 @@ type S3BucketKeyer interface {
 
 // Resolve returns an http.Handler which can serve the contents of the given
 // Layer, or an error if not supported by the storagedriver.
-func (lh *cloudFrontStorageMiddleware) URLFor(path string, options map[string]interface{}) (string, error) {
+func (lh *cloudFrontStorageMiddleware) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
 	// TODO(endophage): currently only supports S3
 	keyer, ok := lh.StorageDriver.(S3BucketKeyer)
 	if !ok {
-		context.GetLogger(context.Background()).Warn("the CloudFront middleware does not support this backend storage driver")
-		return lh.StorageDriver.URLFor(path, options)
+		context.GetLogger(ctx).Warn("the CloudFront middleware does not support this backend storage driver")
+		return lh.StorageDriver.URLFor(ctx, path, options)
 	}
 
 	cfURL, err := lh.cloudfront.CannedSignedURL(keyer.S3BucketKey(path), "", time.Now().Add(lh.duration))

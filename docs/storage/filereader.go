@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 )
 
@@ -25,6 +26,8 @@ const fileReaderBufferSize = 4 << 20
 type fileReader struct {
 	driver storagedriver.StorageDriver
 
+	ctx context.Context
+
 	// identifying fields
 	path    string
 	size    int64     // size is the total size, must be set.
@@ -40,14 +43,15 @@ type fileReader struct {
 // newFileReader initializes a file reader for the remote file. The read takes
 // on the offset and size at the time the reader is created. If the underlying
 // file changes, one must create a new fileReader.
-func newFileReader(driver storagedriver.StorageDriver, path string) (*fileReader, error) {
+func newFileReader(ctx context.Context, driver storagedriver.StorageDriver, path string) (*fileReader, error) {
 	rd := &fileReader{
 		driver: driver,
 		path:   path,
+		ctx:    ctx,
 	}
 
 	// Grab the size of the layer file, ensuring existence.
-	if fi, err := driver.Stat(path); err != nil {
+	if fi, err := driver.Stat(ctx, path); err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
 			// NOTE(stevvooe): We really don't care if the file is not
@@ -141,7 +145,7 @@ func (fr *fileReader) reader() (io.Reader, error) {
 	}
 
 	// If we don't have a reader, open one up.
-	rc, err := fr.driver.ReadStream(fr.path, fr.offset)
+	rc, err := fr.driver.ReadStream(fr.ctx, fr.path, fr.offset)
 	if err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
