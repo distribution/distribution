@@ -7,3 +7,10 @@
 - ['registry/spec/json.md', 'Reference', '&nbsp;&nbsp;&nbsp;&nbsp;&blacksquare;&nbsp; JSON format' ]
 - ['registry/spec/auth/token.md', 'Reference', '&nbsp;&nbsp;&nbsp;&nbsp;&blacksquare;&nbsp; Authenticate via central service' ]
 
+<<<<<<< HEAD
+=======
+- ['registry/storage-drivers/azure.md', '**HIDDEN**' ]
+- ['registry/storage-drivers/filesystem.md', '**HIDDEN**' ]
+- ['registry/storage-drivers/inmemory.md', '**HIDDEN**' ]
+- ['registry/storage-drivers/s3.md','**HIDDEN**' ]
+>>>>>>> d5c0300... Pushing fix for mkdocs.yml introduced
