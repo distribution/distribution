@@ -9,18 +9,6 @@ You configure a registry server using a YAML file. This page explains the
 configuration options and the values they can take. You'll also find examples of
 middleware and development environment configurations.
 
-## Overriding configuration options
-Environment variables may be used to override configuration parameters other than 
-version.  To override a configuration option, create an environment variable named 
-REGISTRY\_variable_ where *variable* is the name of the configuration option.
-
-e.g 
-```
-REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/tmp/registry/test
-```
-
-will set the storage root directory to `/tmp/registry/test`
-
 ## List of configuration options
 
 This section lists all the registry configuration options. Some options in
@@ -133,6 +121,34 @@ In some instances a configuration option is **optional** but it contains child
 options marked as **required**. This indicates that you can omit the parent with
 all its children. However, if the parent is included, you must also include all
 the children marked **required**.
+
+## Override configuration options
+
+You can use environment variables to override most configuration parameters. The
+exception is the `version` variable which cannot be overridden. You can set
+environment variables on the command line using the `-e` flag on `docker run` or
+from within a Dockerfile using the `ENV` instruction.
+
+To override a configuration option, create an environment variable named
+`REGISTRY\variable_` where *`variable`* is the name of the configuration option
+and the `_` (underscore) represents indention levels. For example, you can
+configure the `rootdirectory` of the `filesystem` storage backend:
+
+```
+storage:
+	filesystem:
+		rootdirectory: /tmp/registry
+```
+
+To override this value, set an environment variable like this:
+
+```
+REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/tmp/registry/test
+```
+
+This variable overrides the `/tmp/registry` value to the `/tmp/registry/test`
+directory.
+
 
 ## version 
 
