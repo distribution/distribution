@@ -17,11 +17,12 @@ import (
 )
 
 func TestListener(t *testing.T) {
-	registry := storage.NewRegistryWithDriver(inmemory.New(), cache.NewInMemoryLayerInfoCache())
+	ctx := context.Background()
+	registry := storage.NewRegistryWithDriver(ctx, inmemory.New(), cache.NewInMemoryLayerInfoCache())
 	tl := &testListener{
 		ops: make(map[string]int),
 	}
-	ctx := context.Background()
+
 	repository, err := registry.Repository(ctx, "foo/bar")
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)

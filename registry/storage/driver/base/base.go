@@ -51,32 +51,32 @@ type Base struct {
 }
 
 // GetContent wraps GetContent of underlying storage driver.
-func (base *Base) GetContent(path string) ([]byte, error) {
-	_, done := context.WithTrace(context.Background())
+func (base *Base) GetContent(ctx context.Context, path string) ([]byte, error) {
+	ctx, done := context.WithTrace(ctx)
 	defer done("%s.GetContent(%q)", base.Name(), path)
 
 	if !storagedriver.PathRegexp.MatchString(path) {
 		return nil, storagedriver.InvalidPathError{Path: path}
 	}
 
-	return base.StorageDriver.GetContent(path)
+	return base.StorageDriver.GetContent(ctx, path)
 }
 
 // PutContent wraps PutContent of underlying storage driver.
-func (base *Base) PutContent(path string, content []byte) error {
-	_, done := context.WithTrace(context.Background())
+func (base *Base) PutContent(ctx context.Context, path string, content []byte) error {
+	ctx, done := context.WithTrace(context.Background())
 	defer done("%s.PutContent(%q)", base.Name(), path)
 
 	if !storagedriver.PathRegexp.MatchString(path) {
 		return storagedriver.InvalidPathError{Path: path}
 	}
 
-	return base.StorageDriver.PutContent(path, content)
+	return base.StorageDriver.PutContent(ctx, path, content)
 }
 
 // ReadStream wraps ReadStream of underlying storage driver.
-func (base *Base) ReadStream(path string, offset int64) (io.ReadCloser, error) {
-	_, done := context.WithTrace(context.Background())
+func (base *Base) ReadStream(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
+	ctx, done := context.WithTrace(context.Background())
 	defer done("%s.ReadStream(%q, %d)", base.Name(), path, offset)
 
 	if offset < 0 {
@@ -87,12 +87,12 @@ func (base *Base) ReadStream(path string, offset int64) (io.ReadCloser, error) {
 		return nil, storagedriver.InvalidPathError{Path: path}
 	}
 
-	return base.StorageDriver.ReadStream(path, offset)
+	return base.StorageDriver.ReadStream(ctx, path, offset)
 }
 
 // WriteStream wraps WriteStream of underlying storage driver.
-func (base *Base) WriteStream(path string, offset int64, reader io.Reader) (nn int64, err error) {
-	_, done := context.WithTrace(context.Background())
+func (base *Base) WriteStream(ctx context.Context, path string, offset int64, reader io.Reader) (nn int64, err error) {
+	ctx, done := context.WithTrace(ctx)
 	defer done("%s.WriteStream(%q, %d)", base.Name(), path, offset)
 
 	if offset < 0 {
@@ -103,36 +103,36 @@ func (base *Base) WriteStream(path string, offset int64, reader io.Reader) (nn i
 		return 0, storagedriver.InvalidPathError{Path: path}
 	}
 
-	return base.StorageDriver.WriteStream(path, offset, reader)
+	return base.StorageDriver.WriteStream(ctx, path, offset, reader)
 }
 
 // Stat wraps Stat of underlying storage driver.
-func (base *Base) Stat(path string) (storagedriver.FileInfo, error) {
-	_, done := context.WithTrace(context.Background())
+func (base *Base) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
+	ctx, done := context.WithTrace(ctx)
 	defer done("%s.Stat(%q)", base.Name(), path)
 
 	if !storagedriver.PathRegexp.MatchString(path) {
 		return nil, storagedriver.InvalidPathError{Path: path}
 	}
 
-	return base.StorageDriver.Stat(path)
+	return base.StorageDriver.Stat(ctx, path)
 }
 
 // List wraps List of underlying storage driver.
-func (base *Base) List(path string) ([]string, error) {
-	_, done := context.WithTrace(context.Background())
+func (base *Base) List(ctx context.Context, path string) ([]string, error) {
+	ctx, done := context.WithTrace(ctx)
 	defer done("%s.List(%q)", base.Name(), path)
 
 	if !storagedriver.PathRegexp.MatchString(path) && path != "/" {
 		return nil, storagedriver.InvalidPathError{Path: path}
 	}
 
-	return base.StorageDriver.List(path)
+	return base.StorageDriver.List(ctx, path)
 }
 
 // Move wraps Move of underlying storage driver.
-func (base *Base) Move(sourcePath string, destPath string) error {
-	_, done := context.WithTrace(context.Background())
+func (base *Base) Move(ctx context.Context, sourcePath string, destPath string) error {
+	ctx, done := context.WithTrace(ctx)
 	defer done("%s.Move(%q, %q", base.Name(), sourcePath, destPath)
 
 	if !storagedriver.PathRegexp.MatchString(sourcePath) {
@@ -141,29 +141,29 @@ func (base *Base) Move(sourcePath string, destPath string) error {
 		return storagedriver.InvalidPathError{Path: destPath}
 	}
 
-	return base.StorageDriver.Move(sourcePath, destPath)
+	return base.StorageDriver.Move(ctx, sourcePath, destPath)
 }
 
 // Delete wraps Delete of underlying storage driver.
-func (base *Base) Delete(path string) error {
-	_, done := context.WithTrace(context.Background())
+func (base *Base) Delete(ctx context.Context, path string) error {
+	ctx, done := context.WithTrace(ctx)
 	defer done("%s.Delete(%q)", base.Name(), path)
 
 	if !storagedriver.PathRegexp.MatchString(path) {
 		return storagedriver.InvalidPathError{Path: path}
 	}
 
-	return base.StorageDriver.Delete(path)
+	return base.StorageDriver.Delete(ctx, path)
 }
 
 // URLFor wraps URLFor of underlying storage driver.
-func (base *Base) URLFor(path string, options map[string]interface{}) (string, error) {
-	_, done := context.WithTrace(context.Background())
+func (base *Base) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
+	ctx, done := context.WithTrace(ctx)
 	defer done("%s.URLFor(%q)", base.Name(), path)
 
 	if !storagedriver.PathRegexp.MatchString(path) {
 		return "", storagedriver.InvalidPathError{Path: path}
 	}
 
-	return base.StorageDriver.URLFor(path, options)
+	return base.StorageDriver.URLFor(ctx, path, options)
 }

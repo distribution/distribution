@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 )
 
@@ -17,6 +18,8 @@ const (
 // fileWriter implements a remote file writer backed by a storage driver.
 type fileWriter struct {
 	driver storagedriver.StorageDriver
+
+	ctx context.Context
 
 	// identifying fields
 	path string
@@ -45,13 +48,14 @@ var _ fileWriterInterface = &fileWriter{}
 
 // newFileWriter returns a prepared fileWriter for the driver and path. This
 // could be considered similar to an "open" call on a regular filesystem.
-func newFileWriter(driver storagedriver.StorageDriver, path string) (*bufferedFileWriter, error) {
+func newFileWriter(ctx context.Context, driver storagedriver.StorageDriver, path string) (*bufferedFileWriter, error) {
 	fw := fileWriter{
 		driver: driver,
 		path:   path,
+		ctx:    ctx,
 	}
 
-	if fi, err := driver.Stat(path); err != nil {
+	if fi, err := driver.Stat(ctx, path); err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
 			// ignore, offset is zero
@@ -179,7 +183,7 @@ func (fw *fileWriter) readFromAt(r io.Reader, offset int64) (n int64, err error)
 		updateOffset = true
 	}
 
-	nn, err := fw.driver.WriteStream(fw.path, offset, r)
+	nn, err := fw.driver.WriteStream(fw.ctx, fw.path, offset, r)
 
 	if updateOffset {
 		// We should forward the offset, whether or not there was an error.

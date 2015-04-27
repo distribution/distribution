@@ -54,7 +54,7 @@ func (lr *layerReader) Close() error {
 func (lr *layerReader) Handler(r *http.Request) (h http.Handler, err error) {
 	var handlerFunc http.HandlerFunc
 
-	redirectURL, err := lr.fileReader.driver.URLFor(lr.path, map[string]interface{}{"method": r.Method})
+	redirectURL, err := lr.fileReader.driver.URLFor(lr.ctx, lr.path, map[string]interface{}{"method": r.Method})
 
 	switch err {
 	case nil:
