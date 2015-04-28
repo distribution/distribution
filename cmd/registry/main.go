@@ -77,22 +77,18 @@ func main() {
 			ClientAuth: tls.NoClientCert,
 		}
 
-		if len(config.HTTP.TLS.ClientCAs) != 0 {
-			pool := x509.NewCertPool()
-
-			for _, ca := range config.HTTP.TLS.ClientCAs {
-				caPem, err := ioutil.ReadFile(ca)
-				if err != nil {
-					context.GetLogger(app).Fatalln(err)
-				}
-
-				if ok := pool.AppendCertsFromPEM(caPem); !ok {
-					context.GetLogger(app).Fatalln(fmt.Errorf("Could not add CA to pool"))
-				}
+		if len(config.HTTP.TLS.RootCAs) != 0 {
+			pool, err := createCertPool(config.HTTP.TLS.RootCAs, ioutil.ReadFile)
+			if err != nil {
+				context.GetLogger(app).Fatalln(err)
 			}
+			tlsConf.RootCAs = pool
+		}
 
-			for _, subj := range pool.Subjects() {
-				context.GetLogger(app).Debugf("CA Subject: %s", string(subj))
+		if len(config.HTTP.TLS.ClientCAs) != 0 {
+			pool, err := createCertPool(config.HTTP.TLS.ClientCAs, ioutil.ReadFile)
+			if err != nil {
+				context.GetLogger(app).Fatalln(err)
 			}
 
 			tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
@@ -261,4 +257,23 @@ func debugServer(addr string) {
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Fatalf("error listening on debug interface: %v", err)
 	}
+}
+
+type reader func(path string) ([]byte, error)
+
+func createCertPool(certs []string, fileReader reader) (*x509.CertPool, error) {
+	pool := x509.NewCertPool()
+
+	for _, cert := range certs {
+		pem, err := fileReader(cert)
+		if err != nil {
+			return pool, err
+		}
+
+		if ok := pool.AppendCertsFromPEM(pem); !ok {
+			return pool, fmt.Errorf("Could not add cert to the pool")
+		}
+	}
+
+	return pool, nil
 }

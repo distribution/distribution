@@ -66,6 +66,7 @@ var configStruct = Configuration{
 		TLS    struct {
 			Certificate string   `yaml:"certificate,omitempty"`
 			Key         string   `yaml:"key,omitempty"`
+			RootCAs     []string `yaml:"rootcas,omitempty"`
 			ClientCAs   []string `yaml:"clientcas,omitempty"`
 		} `yaml:"tls,omitempty"`
 		Debug struct {
@@ -75,6 +76,7 @@ var configStruct = Configuration{
 		TLS: struct {
 			Certificate string   `yaml:"certificate,omitempty"`
 			Key         string   `yaml:"key,omitempty"`
+			RootCAs     []string `yaml:"rootcas,omitempty"`
 			ClientCAs   []string `yaml:"clientcas,omitempty"`
 		}{
 			ClientCAs: []string{"/path/to/ca.pem"},

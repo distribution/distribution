@@ -74,6 +74,10 @@ type Configuration struct {
 			// Certificate.
 			Key string `yaml:"key,omitempty"`
 
+			// RootCAs for clients to verify
+			// server certificates, helpful for self signed setups
+			RootCAs []string `yaml:"rootcas,omitempty"`
+
 			// Specifies the CA certs for client authentication
 			// A file may contain multiple CA certificates encoded as PEM
 			ClientCAs []string `yaml:"clientcas,omitempty"`
