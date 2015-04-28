@@ -51,24 +51,6 @@ func TestManifestStorage(t *testing.T) {
 	env := newManifestStoreTestEnv(t, "foo/bar", "thetag")
 	ms := env.repository.Manifests()
 
-	exists, err := ms.ExistsByTag(env.tag)
-	if err != nil {
-		t.Fatalf("unexpected error checking manifest existence: %v", err)
-	}
-
-	if exists {
-		t.Fatalf("manifest should not exist")
-	}
-
-	if _, err := ms.GetByTag(env.tag); true {
-		switch err.(type) {
-		case distribution.ErrManifestUnknown:
-			break
-		default:
-			t.Fatalf("expected manifest unknown error: %#v", err)
-		}
-	}
-
 	m := manifest.Manifest{
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
@@ -130,19 +112,8 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("unexpected error putting manifest: %v", err)
 	}
 
-	exists, err = ms.ExistsByTag(env.tag)
-	if err != nil {
-		t.Fatalf("unexpected error checking manifest existence: %v", err)
-	}
-
-	if !exists {
-		t.Fatalf("manifest should exist")
-	}
-
-	fetchedManifest, err := ms.GetByTag(env.tag)
-	if err != nil {
-		t.Fatalf("unexpected error fetching manifest: %v", err)
-	}
+	revision, _ := env.repository.Tags().GetRevision(env.tag)
+	fetchedManifest, _ := ms.Get(revision)
 
 	if !reflect.DeepEqual(fetchedManifest, sm) {
 		t.Fatalf("fetched manifest not equal: %#v != %#v", fetchedManifest, sm)
@@ -165,7 +136,7 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("error getting manifest digest: %v", err)
 	}
 
-	exists, err = ms.Exists(dgst)
+	exists, err := ms.Exists(dgst)
 	if err != nil {
 		t.Fatalf("error checking manifest existence by digest: %v", err)
 	}
@@ -190,20 +161,6 @@ func TestManifestStorage(t *testing.T) {
 
 	if len(sigs) != 1 {
 		t.Fatalf("unexpected number of signatures: %d != %d", len(sigs), 1)
-	}
-
-	// Grabs the tags and check that this tagged manifest is present
-	tags, err := ms.Tags()
-	if err != nil {
-		t.Fatalf("unexpected error fetching tags: %v", err)
-	}
-
-	if len(tags) != 1 {
-		t.Fatalf("unexpected tags returned: %v", tags)
-	}
-
-	if tags[0] != env.tag {
-		t.Fatalf("unexpected tag found in tags: %v != %v", tags, []string{env.tag})
 	}
 
 	// Now, push the same manifest with a different key
@@ -235,10 +192,7 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("unexpected error putting manifest: %v", err)
 	}
 
-	fetched, err := ms.GetByTag(env.tag)
-	if err != nil {
-		t.Fatalf("unexpected error fetching manifest: %v", err)
-	}
+	fetched, _ := ms.Get(revision)
 
 	if _, err := manifest.Verify(fetched); err != nil {
 		t.Fatalf("unexpected error verifying manifest: %v", err)

@@ -4,17 +4,20 @@ import (
 	"path"
 
 	"github.com/docker/distribution"
+	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 )
 
-// tagStore provides methods to manage manifest tags in a backend storage driver.
+// tagStore provides methods to manage repository tags in a backend storage driver.
 type tagStore struct {
 	*repository
 }
 
-// tags lists the manifest tags for the specified repository.
-func (ts *tagStore) tags() ([]string, error) {
+var _ distribution.TagService = &tagStore{}
+
+func (ts *tagStore) List() ([]string, error) {
+	ctxu.GetLogger(ts.ctx).Info("(*tagStore).List")
 	p, err := ts.pm.path(manifestTagPathSpec{
 		name: ts.name,
 	})
@@ -42,8 +45,8 @@ func (ts *tagStore) tags() ([]string, error) {
 	return tags, nil
 }
 
-// exists returns true if the specified manifest tag exists in the repository.
-func (ts *tagStore) exists(tag string) (bool, error) {
+func (ts *tagStore) Exists(tag string) (bool, error) {
+	ctxu.GetLogger(ts.repository.ctx).Debug("(*tagStore).Exists")
 	tagPath, err := ts.pm.path(manifestTagCurrentPathSpec{
 		name: ts.Name(),
 		tag:  tag,
@@ -60,35 +63,14 @@ func (ts *tagStore) exists(tag string) (bool, error) {
 	return exists, nil
 }
 
-// tag tags the digest with the given tag, updating the the store to point at
-// the current tag. The digest must point to a manifest.
-func (ts *tagStore) tag(tag string, revision digest.Digest) error {
-	indexEntryPath, err := ts.pm.path(manifestTagIndexEntryLinkPathSpec{
-		name:     ts.Name(),
-		tag:      tag,
-		revision: revision,
-	})
+func (ts *tagStore) GetRevision(tag string) (digest.Digest, error) {
+	ctxu.GetLogger(ts.repository.ctx).Debug("(*tagStore).GetRevision")
+	return ts.resolve(tag)
+}
 
-	if err != nil {
-		return err
-	}
-
-	currentPath, err := ts.pm.path(manifestTagCurrentPathSpec{
-		name: ts.Name(),
-		tag:  tag,
-	})
-
-	if err != nil {
-		return err
-	}
-
-	// Link into the index
-	if err := ts.blobStore.link(indexEntryPath, revision); err != nil {
-		return err
-	}
-
-	// Overwrite the current link
-	return ts.blobStore.link(currentPath, revision)
+func (ts *tagStore) GetAllRevisions(tag string) ([]digest.Digest, error) {
+	ctxu.GetLogger(ts.repository.ctx).Debug("(*tagStore).GetAllRevisions")
+	return ts.revisions(tag)
 }
 
 // resolve the current revision for name and tag.

@@ -50,14 +50,16 @@ type imageManifestHandler struct {
 func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http.Request) {
 	ctxu.GetLogger(imh).Debug("GetImageManifest")
 	manifests := imh.Repository.Manifests()
-
+	tags := imh.Repository.Tags()
 	var (
 		sm  *manifest.SignedManifest
 		err error
 	)
 
 	if imh.Tag != "" {
-		sm, err = manifests.GetByTag(imh.Tag)
+		if dgst, err := tags.GetRevision(imh.Tag); err == nil {
+			sm, err = manifests.Get(dgst)
+		}
 	} else {
 		sm, err = manifests.Get(imh.Digest)
 	}

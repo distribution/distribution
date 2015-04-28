@@ -55,6 +55,13 @@ func (rl *repositoryListener) Manifests() distribution.ManifestService {
 	}
 }
 
+func (rl *repositoryListener) Tags() distribution.TagService {
+	return &tagServiceListener{
+		TagService: rl.Repository.Tags(),
+		parent:     rl,
+	}
+}
+
 func (rl *repositoryListener) Layers() distribution.LayerService {
 	return &layerServiceListener{
 		LayerService: rl.Repository.Layers(),
@@ -90,15 +97,9 @@ func (msl *manifestServiceListener) Put(sm *manifest.SignedManifest) error {
 	return err
 }
 
-func (msl *manifestServiceListener) GetByTag(tag string) (*manifest.SignedManifest, error) {
-	sm, err := msl.ManifestService.GetByTag(tag)
-	if err == nil {
-		if err := msl.parent.listener.ManifestPulled(msl.parent.Repository, sm); err != nil {
-			logrus.Errorf("error dispatching manifest pull to listener: %v", err)
-		}
-	}
-
-	return sm, err
+type tagServiceListener struct {
+	distribution.TagService
+	parent *repositoryListener
 }
 
 type layerServiceListener struct {

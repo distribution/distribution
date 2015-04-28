@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/gorilla/handlers"
@@ -33,9 +34,11 @@ type tagsAPIResponse struct {
 // GetTags returns a json list of tags for a specific image name.
 func (th *tagsHandler) GetTags(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	manifests := th.Repository.Manifests()
 
-	tags, err := manifests.Tags()
+	ts := th.Repository.Tags()
+	tags, err := ts.List()
+	logrus.Info("tags:  ", tags)
+
 	if err != nil {
 		switch err := err.(type) {
 		case distribution.ErrRepositoryUnknown:

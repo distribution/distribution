@@ -49,6 +49,9 @@ type Repository interface {
 	// Manifests returns a reference to this repository's manifest service.
 	Manifests() ManifestService
 
+	// Tags returns a reference to this repository's tags service.
+	Tags() TagService
+
 	// Layers returns a reference to this repository's layers service.
 	Layers() LayerService
 
@@ -73,18 +76,21 @@ type ManifestService interface {
 
 	// Put creates or updates the manifest.
 	Put(manifest *manifest.SignedManifest) error
+}
 
-	// TODO(stevvooe): The methods after this message should be moved to a
-	// discrete TagService, per active proposals.
+// TagService provides operations on repo tags.
+type TagService interface {
+	// List lists the tags under the named repository.
+	List() ([]string, error)
 
-	// Tags lists the tags under the named repository.
-	Tags() ([]string, error)
+	// Exists returns true if the manifest exists.
+	Exists(tag string) (bool, error)
 
-	// ExistsByTag returns true if the manifest exists.
-	ExistsByTag(tag string) (bool, error)
+	// GetRevision returns current revision by the specified tag name.
+	GetRevision(tag string) (digest.Digest, error)
 
-	// GetByTag retrieves the named manifest, if it exists.
-	GetByTag(tag string) (*manifest.SignedManifest, error)
+	// GetAllRevisions returns returns all revisions with the specified name and tag.
+	GetAllRevisions(tag string) ([]digest.Digest, error)
 
 	// TODO(stevvooe): There are several changes that need to be done to this
 	// interface:

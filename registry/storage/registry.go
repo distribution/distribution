@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"github.com/Sirupsen/logrus"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/registry/storage/cache"
@@ -81,9 +82,17 @@ func (repo *repository) Manifests() distribution.ManifestService {
 		revisionStore: &revisionStore{
 			repository: repo,
 		},
-		tagStore: &tagStore{
-			repository: repo,
-		},
+		//	tagStore: &tagStore{
+		//		repository: repo,
+		//	},
+	}
+}
+
+// Tags returns an instance of the TagService.
+func (repo *repository) Tags() distribution.TagService {
+	logrus.Info("TagInstanceFunc, repo name  ", repo.name)
+	return &tagStore{
+		repository: repo,
 	}
 }
 
