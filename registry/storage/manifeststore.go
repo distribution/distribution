@@ -63,11 +63,6 @@ func (ms *manifestStore) Tags() ([]string, error) {
 	return ms.tagStore.tags()
 }
 
-func (ms *manifestStore) ExistsByTag(tag string) (bool, error) {
-	ctxu.GetLogger(ms.repository.ctx).Debug("(*manifestStore).ExistsByTag")
-	return ms.tagStore.exists(tag)
-}
-
 func (ms *manifestStore) GetByTag(tag string) (*manifest.SignedManifest, error) {
 	ctxu.GetLogger(ms.repository.ctx).Debug("(*manifestStore).GetByTag")
 	dgst, err := ms.tagStore.resolve(tag)

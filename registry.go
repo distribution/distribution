@@ -80,9 +80,6 @@ type ManifestService interface {
 	// Tags lists the tags under the named repository.
 	Tags() ([]string, error)
 
-	// ExistsByTag returns true if the manifest exists.
-	ExistsByTag(tag string) (bool, error)
-
 	// GetByTag retrieves the named manifest, if it exists.
 	GetByTag(tag string) (*manifest.SignedManifest, error)
 
