@@ -1,4 +1,10 @@
-# Docker-Registry Storage Driver
+<!--GITHUB
+page_title: Docker Registry Storage Driver
+page_description: Explains how to use the storage drivers
+page_keywords: registry, service, driver, images, storage
+IGNORES-->
+
+# Docker Registry Storage Driver
 
 This document describes the registry storage driver model, implementation, and explains how to contribute new storage drivers.
 
