@@ -42,24 +42,6 @@ func (ts *tagStore) tags() ([]string, error) {
 	return tags, nil
 }
 
-// exists returns true if the specified manifest tag exists in the repository.
-func (ts *tagStore) exists(tag string) (bool, error) {
-	tagPath, err := ts.pm.path(manifestTagCurrentPathSpec{
-		name: ts.Name(),
-		tag:  tag,
-	})
-	if err != nil {
-		return false, err
-	}
-
-	exists, err := exists(ts.driver, tagPath)
-	if err != nil {
-		return false, err
-	}
-
-	return exists, nil
-}
-
 // tag tags the digest with the given tag, updating the the store to point at
 // the current tag. The digest must point to a manifest.
 func (ts *tagStore) tag(tag string, revision digest.Digest) error {

@@ -51,15 +51,6 @@ func TestManifestStorage(t *testing.T) {
 	env := newManifestStoreTestEnv(t, "foo/bar", "thetag")
 	ms := env.repository.Manifests()
 
-	exists, err := ms.ExistsByTag(env.tag)
-	if err != nil {
-		t.Fatalf("unexpected error checking manifest existence: %v", err)
-	}
-
-	if exists {
-		t.Fatalf("manifest should not exist")
-	}
-
 	if _, err := ms.GetByTag(env.tag); true {
 		switch err.(type) {
 		case distribution.ErrManifestUnknown:
@@ -130,15 +121,6 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("unexpected error putting manifest: %v", err)
 	}
 
-	exists, err = ms.ExistsByTag(env.tag)
-	if err != nil {
-		t.Fatalf("unexpected error checking manifest existence: %v", err)
-	}
-
-	if !exists {
-		t.Fatalf("manifest should exist")
-	}
-
 	fetchedManifest, err := ms.GetByTag(env.tag)
 	if err != nil {
 		t.Fatalf("unexpected error fetching manifest: %v", err)
@@ -165,7 +147,7 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("error getting manifest digest: %v", err)
 	}
 
-	exists, err = ms.Exists(dgst)
+	exists, err := ms.Exists(dgst)
 	if err != nil {
 		t.Fatalf("error checking manifest existence by digest: %v", err)
 	}
