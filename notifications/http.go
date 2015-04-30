@@ -53,6 +53,7 @@ type httpStatusListener interface {
 func (hs *httpSink) Write(events ...Event) error {
 	hs.mu.Lock()
 	defer hs.mu.Unlock()
+	defer hs.client.Transport.(*headerRoundTripper).CloseIdleConnections()
 
 	if hs.closed {
 		return ErrSinkClosed
@@ -83,6 +84,7 @@ func (hs *httpSink) Write(events ...Event) error {
 
 		return fmt.Errorf("%v: error posting: %v", hs, err)
 	}
+	defer resp.Body.Close()
 
 	// The notifier will treat any 2xx or 3xx response as accepted by the
 	// endpoint.
