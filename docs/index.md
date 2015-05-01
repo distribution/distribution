@@ -1,6 +1,8 @@
+<!--GITHUB
 page_title: Docker Registry 2.0
 page_description: Introduces the Docker Registry
 page_keywords: registry, images, repository
+IGNORES-->
 
 # Docker Registry 2.0
 

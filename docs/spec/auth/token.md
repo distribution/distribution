@@ -1,3 +1,10 @@
+<!--GITHUB
+page_title: Docker Registry v2 Authentication
+page_description: Introduces the Docker Registry v2 authentication
+page_keywords: registry, images, repository, v2, authentication
+IGNORES-->
+
+
 # Docker Registry v2 authentication via central service
 
 Today a Docker Registry can run in standalone mode in which there are no
