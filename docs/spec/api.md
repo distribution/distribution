@@ -995,7 +995,7 @@ Content-Type: application/json; charset=utf-8
    "tag": <tag>,
    "fsLayers": [
       {
-         "blobSum": <tarsum>
+         "blobSum": "<digest>"
       },
       ...
     ]
@@ -1126,7 +1126,7 @@ Content-Type: application/json; charset=utf-8
    "tag": <tag>,
    "fsLayers": [
       {
-         "blobSum": <tarsum>
+         "blobSum": "<digest>"
       },
       ...
     ]
@@ -1248,7 +1248,7 @@ Content-Type: application/json; charset=utf-8
             "code": "BLOB_UNKNOWN",
             "message": "blob unknown to registry",
             "detail": {
-                "digest": <tarsum>
+                "digest": "<digest>"
             }
         },
         ...
@@ -1452,7 +1452,7 @@ The error codes that may be included in the response body are enumerated below:
 
 ### Blob
 
-Fetch the blob identified by `name` and `digest`. Used to fetch layers by tarsum digest.
+Fetch the blob identified by `name` and `digest`. Used to fetch layers by digest.
 
 
 
@@ -1800,7 +1800,7 @@ Initiate a resumable blob upload. If successful, an upload location will be prov
 ##### Initiate Monolithic Blob Upload
 
 ```
-POST /v2/<name>/blobs/uploads/?digest=<tarsum>
+POST /v2/<name>/blobs/uploads/?digest=<digest>
 Host: <registry host>
 Authorization: <scheme> <token>
 Content-Length: <length of blob>
@@ -2347,7 +2347,7 @@ Complete the upload specified by `uuid`, optionally appending the body as the fi
 
 
 ```
-PUT /v2/<name>/blobs/uploads/<uuid>?digest=<tarsum>
+PUT /v2/<name>/blobs/uploads/<uuid>?digest=<digest>
 Host: <registry host>
 Authorization: <scheme> <token>
 Content-Range: <start of range>-<end of range, inclusive>
