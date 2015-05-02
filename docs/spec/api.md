@@ -157,7 +157,7 @@ enforce this. The rules for a repository name are as follows:
 1. A repository name is broken up into _path components_. A component of a
    repository name must be at least two lowercase, alpha-numeric characters,
    optionally separated by periods, dashes or underscores. More strictly, it
-   must match the regular expression `[a-z0-9]+(?:[._-][a-z0-9]+)*` and the
+   must match the regular expression `[a-z0-9]+(?:[.:_-][a-z0-9]+)*` and the
    matched result must be 2 or more characters in length.
 2. The name of a repository must have at least two path components, separated
    by a forward slash.
