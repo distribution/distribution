@@ -1,5 +1,10 @@
-# Microsoft Azure storage driver
+<!--GITHUB
+page_title: Microsoft Azure storage driver
+page_description: Explains how to use the Azure storage drivers
+page_keywords: registry, service, driver, images, storage, azure
+IGNORES-->
 
+# Microsoft Azure storage driver
 
 An implementation of the `storagedriver.StorageDriver` interface which uses [Microsoft Azure Blob Storage][azure-blob-storage] for object storage.
 

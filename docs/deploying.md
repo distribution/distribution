@@ -1,6 +1,9 @@
+<!--GITHUB
 page_title: Deploying a registry server
 page_description: Explains how to deploy a registry server
 page_keywords: registry, service, images, repository
+IGNORES-->
+
 
 # Deploying a registry server
 
