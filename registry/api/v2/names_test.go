@@ -43,6 +43,9 @@ func TestRepositoryNameRegexp(t *testing.T) {
 			input: "blog.foo.com/bar/baz",
 		},
 		{
+			input: "registry.bar.net/dog.cat:fish-taco/baz",
+		},
+		{
 			input: "asdf",
 		},
 		{
