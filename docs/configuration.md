@@ -1,6 +1,8 @@
+<!--GITHUB
 page_title: Configure a Registry
 page_description: Explains how to deploy a registry 
 page_keywords: registry, service, images, repository
+IGNORES-->
 
 
 # Registry Configuration Reference
