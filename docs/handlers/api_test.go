@@ -209,6 +209,13 @@ func TestLayerAPI(t *testing.T) {
 	uploadURLBase, uploadUUID = startPushLayer(t, env.builder, imageName)
 	pushLayer(t, env.builder, imageName, layerDigest, uploadURLBase, layerFile)
 
+	// ------------------------------------------
+	// Now, push just a chunk
+	layerFile.Seek(0, 0)
+
+	uploadURLBase, uploadUUID = startPushLayer(t, env.builder, imageName)
+	uploadURLBase, dgst := pushChunk(t, env.builder, imageName, uploadURLBase, layerFile, layerLength)
+	finishUpload(t, env.builder, imageName, uploadURLBase, dgst)
 	// ------------------------
 	// Use a head request to see if the layer exists.
 	resp, err = http.Head(layerURL)
@@ -614,6 +621,75 @@ func pushLayer(t *testing.T, ub *v2.URLBuilder, name string, dgst digest.Digest,
 	})
 
 	return resp.Header.Get("Location")
+}
+
+func finishUpload(t *testing.T, ub *v2.URLBuilder, name string, uploadURLBase string, dgst digest.Digest) string {
+	resp, err := doPushLayer(t, ub, name, dgst, uploadURLBase, nil)
+	if err != nil {
+		t.Fatalf("unexpected error doing push layer request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	checkResponse(t, "putting monolithic chunk", resp, http.StatusCreated)
+
+	expectedLayerURL, err := ub.BuildBlobURL(name, dgst)
+	if err != nil {
+		t.Fatalf("error building expected layer url: %v", err)
+	}
+
+	checkHeaders(t, resp, http.Header{
+		"Location":              []string{expectedLayerURL},
+		"Content-Length":        []string{"0"},
+		"Docker-Content-Digest": []string{dgst.String()},
+	})
+
+	return resp.Header.Get("Location")
+}
+
+func doPushChunk(t *testing.T, uploadURLBase string, body io.Reader) (*http.Response, digest.Digest, error) {
+	u, err := url.Parse(uploadURLBase)
+	if err != nil {
+		t.Fatalf("unexpected error parsing pushLayer url: %v", err)
+	}
+
+	u.RawQuery = url.Values{
+		"_state": u.Query()["_state"],
+	}.Encode()
+
+	uploadURL := u.String()
+
+	digester := digest.NewCanonicalDigester()
+
+	req, err := http.NewRequest("PATCH", uploadURL, io.TeeReader(body, digester))
+	if err != nil {
+		t.Fatalf("unexpected error creating new request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/octet-stream")
+
+	resp, err := http.DefaultClient.Do(req)
+
+	return resp, digester.Digest(), err
+}
+
+func pushChunk(t *testing.T, ub *v2.URLBuilder, name string, uploadURLBase string, body io.Reader, length int64) (string, digest.Digest) {
+	resp, dgst, err := doPushChunk(t, uploadURLBase, body)
+	if err != nil {
+		t.Fatalf("unexpected error doing push layer request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	checkResponse(t, "putting chunk", resp, http.StatusAccepted)
+
+	if err != nil {
+		t.Fatalf("error generating sha256 digest of body")
+	}
+
+	checkHeaders(t, resp, http.Header{
+		"Range":          []string{fmt.Sprintf("0-%d", length-1)},
+		"Content-Length": []string{"0"},
+	})
+
+	return resp.Header.Get("Location"), dgst
 }
 
 func checkResponse(t *testing.T, msg string, resp *http.Response, expectedStatus int) {
