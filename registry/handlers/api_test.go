@@ -93,7 +93,7 @@ func TestURLPrefix(t *testing.T) {
 
 }
 
-// TestLayerAPI conducts a full of the of the layer api.
+// TestLayerAPI conducts a full test of the of the layer api.
 func TestLayerAPI(t *testing.T) {
 	// TODO(stevvooe): This test code is complete junk but it should cover the
 	// complete flow. This must be broken down and checked against the
@@ -245,6 +245,16 @@ func TestLayerAPI(t *testing.T) {
 	if !verifier.Verified() {
 		t.Fatalf("response body did not pass verification")
 	}
+
+	// ----------------
+	// Fetch the layer with an invalid digest
+	badURL := strings.Replace(layerURL, "tarsum", "trsum", 1)
+	resp, err = http.Get(badURL)
+	if err != nil {
+		t.Fatalf("unexpected error fetching layer: %v", err)
+	}
+
+	checkResponse(t, "fetching layer bad digest", resp, http.StatusBadRequest)
 
 	// Missing tests:
 	// 	- Upload the same tarsum file under and different repository and

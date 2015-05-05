@@ -322,9 +322,7 @@ func (irw *instrumentedResponseWriter) Value(key interface{}) interface{} {
 		case "written":
 			return irw.written
 		case "status":
-			if irw.status != 0 {
-				return irw.status
-			}
+			return irw.status
 		case "contenttype":
 			contentType := irw.Header().Get("Content-Type")
 			if contentType != "" {
