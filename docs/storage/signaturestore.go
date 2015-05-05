@@ -30,7 +30,7 @@ func (s *signatureStore) Get(dgst digest.Digest) ([][]byte, error) {
 	// can be eliminated by implementing listAll on drivers.
 	signaturesPath = path.Join(signaturesPath, "sha256")
 
-	signaturePaths, err := s.driver.List(signaturesPath)
+	signaturePaths, err := s.driver.List(s.repository.ctx, signaturesPath)
 	if err != nil {
 		return nil, err
 	}

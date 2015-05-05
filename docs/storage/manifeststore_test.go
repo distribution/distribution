@@ -30,7 +30,7 @@ type manifestStoreTestEnv struct {
 func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestEnv {
 	ctx := context.Background()
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(driver, cache.NewInMemoryLayerInfoCache())
+	registry := NewRegistryWithDriver(ctx, driver, cache.NewInMemoryLayerInfoCache())
 
 	repo, err := registry.Repository(ctx, name)
 	if err != nil {

@@ -4,17 +4,19 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 )
 
-func testFS(t *testing.T) (driver.StorageDriver, map[string]string) {
+func testFS(t *testing.T) (driver.StorageDriver, map[string]string, context.Context) {
 	d := inmemory.New()
 	c := []byte("")
-	if err := d.PutContent("/a/b/c/d", c); err != nil {
+	ctx := context.Background()
+	if err := d.PutContent(ctx, "/a/b/c/d", c); err != nil {
 		t.Fatalf("Unable to put to inmemory fs")
 	}
-	if err := d.PutContent("/a/b/c/e", c); err != nil {
+	if err := d.PutContent(ctx, "/a/b/c/e", c); err != nil {
 		t.Fatalf("Unable to put to inmemory fs")
 	}
 
@@ -26,20 +28,20 @@ func testFS(t *testing.T) (driver.StorageDriver, map[string]string) {
 		"/a/b/c/e": "file",
 	}
 
-	return d, expected
+	return d, expected, ctx
 }
 
 func TestWalkErrors(t *testing.T) {
-	d, expected := testFS(t)
+	d, expected, ctx := testFS(t)
 	fileCount := len(expected)
-	err := Walk(d, "", func(fileInfo driver.FileInfo) error {
+	err := Walk(ctx, d, "", func(fileInfo driver.FileInfo) error {
 		return nil
 	})
 	if err == nil {
 		t.Error("Expected invalid root err")
 	}
 
-	err = Walk(d, "/", func(fileInfo driver.FileInfo) error {
+	err = Walk(ctx, d, "/", func(fileInfo driver.FileInfo) error {
 		// error on the 2nd file
 		if fileInfo.Path() == "/a/b" {
 			return fmt.Errorf("Early termination")
@@ -54,7 +56,7 @@ func TestWalkErrors(t *testing.T) {
 		t.Error(err.Error())
 	}
 
-	err = Walk(d, "/nonexistant", func(fileInfo driver.FileInfo) error {
+	err = Walk(ctx, d, "/nonexistant", func(fileInfo driver.FileInfo) error {
 		return nil
 	})
 	if err == nil {
@@ -64,8 +66,8 @@ func TestWalkErrors(t *testing.T) {
 }
 
 func TestWalk(t *testing.T) {
-	d, expected := testFS(t)
-	err := Walk(d, "/", func(fileInfo driver.FileInfo) error {
+	d, expected, ctx := testFS(t)
+	err := Walk(ctx, d, "/", func(fileInfo driver.FileInfo) error {
 		filePath := fileInfo.Path()
 		filetype, ok := expected[filePath]
 		if !ok {
@@ -93,8 +95,8 @@ func TestWalk(t *testing.T) {
 }
 
 func TestWalkSkipDir(t *testing.T) {
-	d, expected := testFS(t)
-	err := Walk(d, "/", func(fileInfo driver.FileInfo) error {
+	d, expected, ctx := testFS(t)
+	err := Walk(ctx, d, "/", func(fileInfo driver.FileInfo) error {
 		filePath := fileInfo.Path()
 		if filePath == "/a/b" {
 			// skip processing /a/b/c and /a/b/c/d

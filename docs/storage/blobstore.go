@@ -3,10 +3,9 @@ package storage
 import (
 	"fmt"
 
-	ctxu "github.com/docker/distribution/context"
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
-	"golang.org/x/net/context"
 )
 
 // TODO(stevvooe): Currently, the blobStore implementation used by the
@@ -32,7 +31,7 @@ func (bs *blobStore) exists(dgst digest.Digest) (bool, error) {
 		return false, err
 	}
 
-	ok, err := exists(bs.driver, path)
+	ok, err := exists(bs.ctx, bs.driver, path)
 	if err != nil {
 		return false, err
 	}
@@ -48,7 +47,7 @@ func (bs *blobStore) get(dgst digest.Digest) ([]byte, error) {
 		return nil, err
 	}
 
-	return bs.driver.GetContent(bp)
+	return bs.driver.GetContent(bs.ctx, bp)
 }
 
 // link links the path to the provided digest by writing the digest into the
@@ -62,7 +61,7 @@ func (bs *blobStore) link(path string, dgst digest.Digest) error {
 
 	// The contents of the "link" file are the exact string contents of the
 	// digest, which is specified in that package.
-	return bs.driver.PutContent(path, []byte(dgst))
+	return bs.driver.PutContent(bs.ctx, path, []byte(dgst))
 }
 
 // linked reads the link at path and returns the content.
@@ -77,7 +76,7 @@ func (bs *blobStore) linked(path string) ([]byte, error) {
 
 // readlink returns the linked digest at path.
 func (bs *blobStore) readlink(path string) (digest.Digest, error) {
-	content, err := bs.driver.GetContent(path)
+	content, err := bs.driver.GetContent(bs.ctx, path)
 	if err != nil {
 		return "", err
 	}
@@ -112,7 +111,7 @@ func (bs *blobStore) resolve(path string) (string, error) {
 func (bs *blobStore) put(p []byte) (digest.Digest, error) {
 	dgst, err := digest.FromBytes(p)
 	if err != nil {
-		ctxu.GetLogger(bs.ctx).Errorf("error digesting content: %v, %s", err, string(p))
+		context.GetLogger(bs.ctx).Errorf("error digesting content: %v, %s", err, string(p))
 		return "", err
 	}
 
@@ -128,7 +127,7 @@ func (bs *blobStore) put(p []byte) (digest.Digest, error) {
 		return dgst, nil
 	}
 
-	return dgst, bs.driver.PutContent(bp, p)
+	return dgst, bs.driver.PutContent(bs.ctx, bp, p)
 }
 
 // path returns the canonical path for the blob identified by digest. The blob
@@ -145,9 +144,9 @@ func (bs *blobStore) path(dgst digest.Digest) (string, error) {
 	return bp, nil
 }
 
-// exists provides a utility method to test whether or not
-func exists(driver storagedriver.StorageDriver, path string) (bool, error) {
-	if _, err := driver.Stat(path); err != nil {
+// exists provides a utility method to test whether or not a path exists
+func exists(ctx context.Context, driver storagedriver.StorageDriver, path string) (bool, error) {
+	if _, err := driver.Stat(ctx, path); err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
 			return false, nil

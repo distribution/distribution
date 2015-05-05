@@ -24,12 +24,13 @@ import (
 // tested individually.
 func TestAppDispatcher(t *testing.T) {
 	driver := inmemory.New()
+	ctx := context.Background()
 	app := &App{
 		Config:   configuration.Configuration{},
-		Context:  context.Background(),
+		Context:  ctx,
 		router:   v2.Router(),
 		driver:   driver,
-		registry: storage.NewRegistryWithDriver(driver, cache.NewInMemoryLayerInfoCache()),
+		registry: storage.NewRegistryWithDriver(ctx, driver, cache.NewInMemoryLayerInfoCache()),
 	}
 	server := httptest.NewServer(app)
 	router := v2.Router()

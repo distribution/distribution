@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/docker/distribution/context"
 	storageDriver "github.com/docker/distribution/registry/storage/driver"
 )
 
@@ -20,13 +21,13 @@ type WalkFn func(fileInfo storageDriver.FileInfo) error
 
 // Walk traverses a filesystem defined within driver, starting
 // from the given path, calling f on each file
-func Walk(driver storageDriver.StorageDriver, from string, f WalkFn) error {
-	children, err := driver.List(from)
+func Walk(ctx context.Context, driver storageDriver.StorageDriver, from string, f WalkFn) error {
+	children, err := driver.List(ctx, from)
 	if err != nil {
 		return err
 	}
 	for _, child := range children {
-		fileInfo, err := driver.Stat(child)
+		fileInfo, err := driver.Stat(ctx, child)
 		if err != nil {
 			return err
 		}
@@ -37,7 +38,7 @@ func Walk(driver storageDriver.StorageDriver, from string, f WalkFn) error {
 		}
 
 		if fileInfo.IsDir() && !skipDir {
-			Walk(driver, child, f)
+			Walk(ctx, driver, child, f)
 		}
 	}
 	return nil

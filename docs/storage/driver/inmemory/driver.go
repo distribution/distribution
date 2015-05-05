@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/base"
 	"github.com/docker/distribution/registry/storage/driver/factory"
@@ -69,11 +70,11 @@ func (d *driver) Name() string {
 }
 
 // GetContent retrieves the content stored at "path" as a []byte.
-func (d *driver) GetContent(path string) ([]byte, error) {
+func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
-	rc, err := d.ReadStream(path, 0)
+	rc, err := d.ReadStream(ctx, path, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +84,7 @@ func (d *driver) GetContent(path string) ([]byte, error) {
 }
 
 // PutContent stores the []byte content at a location designated by "path".
-func (d *driver) PutContent(p string, contents []byte) error {
+func (d *driver) PutContent(ctx context.Context, p string, contents []byte) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -102,7 +103,7 @@ func (d *driver) PutContent(p string, contents []byte) error {
 
 // ReadStream retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
-func (d *driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
+func (d *driver) ReadStream(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
@@ -126,7 +127,7 @@ func (d *driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
 
 // WriteStream stores the contents of the provided io.ReadCloser at a location
 // designated by the given path.
-func (d *driver) WriteStream(path string, offset int64, reader io.Reader) (nn int64, err error) {
+func (d *driver) WriteStream(ctx context.Context, path string, offset int64, reader io.Reader) (nn int64, err error) {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -167,7 +168,7 @@ func (d *driver) WriteStream(path string, offset int64, reader io.Reader) (nn in
 }
 
 // Stat returns info about the provided path.
-func (d *driver) Stat(path string) (storagedriver.FileInfo, error) {
+func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
@@ -193,7 +194,7 @@ func (d *driver) Stat(path string) (storagedriver.FileInfo, error) {
 
 // List returns a list of the objects that are direct descendants of the given
 // path.
-func (d *driver) List(path string) ([]string, error) {
+func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
@@ -223,7 +224,7 @@ func (d *driver) List(path string) ([]string, error) {
 
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
-func (d *driver) Move(sourcePath string, destPath string) error {
+func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -239,7 +240,7 @@ func (d *driver) Move(sourcePath string, destPath string) error {
 }
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
-func (d *driver) Delete(path string) error {
+func (d *driver) Delete(ctx context.Context, path string) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 
@@ -256,6 +257,6 @@ func (d *driver) Delete(path string) error {
 
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 // May return an UnsupportedMethodErr in certain StorageDriver implementations.
-func (d *driver) URLFor(path string, options map[string]interface{}) (string, error) {
+func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
 	return "", storagedriver.ErrUnsupportedMethod
 }

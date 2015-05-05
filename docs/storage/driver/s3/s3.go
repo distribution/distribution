@@ -29,6 +29,8 @@ import (
 	"github.com/AdRoll/goamz/aws"
 	"github.com/AdRoll/goamz/s3"
 	"github.com/Sirupsen/logrus"
+
+	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/base"
 	"github.com/docker/distribution/registry/storage/driver/factory"
@@ -267,7 +269,7 @@ func (d *driver) Name() string {
 }
 
 // GetContent retrieves the content stored at "path" as a []byte.
-func (d *driver) GetContent(path string) ([]byte, error) {
+func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 	content, err := d.Bucket.Get(d.s3Path(path))
 	if err != nil {
 		return nil, parseError(path, err)
@@ -276,13 +278,13 @@ func (d *driver) GetContent(path string) ([]byte, error) {
 }
 
 // PutContent stores the []byte content at a location designated by "path".
-func (d *driver) PutContent(path string, contents []byte) error {
+func (d *driver) PutContent(ctx context.Context, path string, contents []byte) error {
 	return parseError(path, d.Bucket.Put(d.s3Path(path), contents, d.getContentType(), getPermissions(), d.getOptions()))
 }
 
 // ReadStream retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
-func (d *driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
+func (d *driver) ReadStream(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
 	headers := make(http.Header)
 	headers.Add("Range", "bytes="+strconv.FormatInt(offset, 10)+"-")
 
@@ -304,7 +306,7 @@ func (d *driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
 // returned. May be used to resume writing a stream by providing a nonzero
 // offset. Offsets past the current size will write from the position
 // beyond the end of the file.
-func (d *driver) WriteStream(path string, offset int64, reader io.Reader) (totalRead int64, err error) {
+func (d *driver) WriteStream(ctx context.Context, path string, offset int64, reader io.Reader) (totalRead int64, err error) {
 	partNumber := 1
 	bytesRead := 0
 	var putErrChan chan error
@@ -350,7 +352,7 @@ func (d *driver) WriteStream(path string, offset int64, reader io.Reader) (total
 
 	// Fills from 0 to total from current
 	fromSmallCurrent := func(total int64) error {
-		current, err := d.ReadStream(path, 0)
+		current, err := d.ReadStream(ctx, path, 0)
 		if err != nil {
 			return err
 		}
@@ -638,7 +640,7 @@ func (d *driver) WriteStream(path string, offset int64, reader io.Reader) (total
 
 // Stat retrieves the FileInfo for the given path, including the current size
 // in bytes and the creation time.
-func (d *driver) Stat(path string) (storagedriver.FileInfo, error) {
+func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
 	listResponse, err := d.Bucket.List(d.s3Path(path), "", "", 1)
 	if err != nil {
 		return nil, err
@@ -671,7 +673,7 @@ func (d *driver) Stat(path string) (storagedriver.FileInfo, error) {
 }
 
 // List returns a list of the objects that are direct descendants of the given path.
-func (d *driver) List(path string) ([]string, error) {
+func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 	if path != "/" && path[len(path)-1] != '/' {
 		path = path + "/"
 	}
@@ -716,7 +718,7 @@ func (d *driver) List(path string) ([]string, error) {
 
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
-func (d *driver) Move(sourcePath string, destPath string) error {
+func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
 	/* This is terrible, but aws doesn't have an actual move. */
 	_, err := d.Bucket.PutCopy(d.s3Path(destPath), getPermissions(),
 		s3.CopyOptions{Options: d.getOptions(), ContentType: d.getContentType()}, d.Bucket.Name+"/"+d.s3Path(sourcePath))
@@ -724,11 +726,11 @@ func (d *driver) Move(sourcePath string, destPath string) error {
 		return parseError(sourcePath, err)
 	}
 
-	return d.Delete(sourcePath)
+	return d.Delete(ctx, sourcePath)
 }
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
-func (d *driver) Delete(path string) error {
+func (d *driver) Delete(ctx context.Context, path string) error {
 	listResponse, err := d.Bucket.List(d.s3Path(path), "", "", listMax)
 	if err != nil || len(listResponse.Contents) == 0 {
 		return storagedriver.PathNotFoundError{Path: path}
@@ -757,7 +759,7 @@ func (d *driver) Delete(path string) error {
 
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 // May return an UnsupportedMethodErr in certain StorageDriver implementations.
-func (d *driver) URLFor(path string, options map[string]interface{}) (string, error) {
+func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
 	methodString := "GET"
 	method, ok := options["method"]
 	if ok {

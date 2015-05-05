@@ -8,12 +8,13 @@ import (
 	"os"
 	"testing"
 
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
-
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 )
 
 func TestSimpleRead(t *testing.T) {
+	ctx := context.Background()
 	content := make([]byte, 1<<20)
 	n, err := rand.Read(content)
 	if err != nil {
@@ -21,7 +22,7 @@ func TestSimpleRead(t *testing.T) {
 	}
 
 	if n != len(content) {
-		t.Fatalf("random read did't fill buffer")
+		t.Fatalf("random read didn't fill buffer")
 	}
 
 	dgst, err := digest.FromReader(bytes.NewReader(content))
@@ -32,11 +33,11 @@ func TestSimpleRead(t *testing.T) {
 	driver := inmemory.New()
 	path := "/random"
 
-	if err := driver.PutContent(path, content); err != nil {
+	if err := driver.PutContent(ctx, path, content); err != nil {
 		t.Fatalf("error putting patterned content: %v", err)
 	}
 
-	fr, err := newFileReader(driver, path)
+	fr, err := newFileReader(ctx, driver, path)
 	if err != nil {
 		t.Fatalf("error allocating file reader: %v", err)
 	}
@@ -59,12 +60,13 @@ func TestFileReaderSeek(t *testing.T) {
 	repititions := 1024
 	path := "/patterned"
 	content := bytes.Repeat([]byte(pattern), repititions)
+	ctx := context.Background()
 
-	if err := driver.PutContent(path, content); err != nil {
+	if err := driver.PutContent(ctx, path, content); err != nil {
 		t.Fatalf("error putting patterned content: %v", err)
 	}
 
-	fr, err := newFileReader(driver, path)
+	fr, err := newFileReader(ctx, driver, path)
 
 	if err != nil {
 		t.Fatalf("unexpected error creating file reader: %v", err)
@@ -160,7 +162,7 @@ func TestFileReaderSeek(t *testing.T) {
 // read method, with an io.EOF error.
 func TestFileReaderNonExistentFile(t *testing.T) {
 	driver := inmemory.New()
-	fr, err := newFileReader(driver, "/doesnotexist")
+	fr, err := newFileReader(context.Background(), driver, "/doesnotexist")
 	if err != nil {
 		t.Fatalf("unexpected error initializing reader: %v", err)
 	}

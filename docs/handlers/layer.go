@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	"github.com/docker/distribution"
-	ctxu "github.com/docker/distribution/context"
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/gorilla/handlers"
@@ -48,7 +48,7 @@ type layerHandler struct {
 // GetLayer fetches the binary data from backend storage returns it in the
 // response.
 func (lh *layerHandler) GetLayer(w http.ResponseWriter, r *http.Request) {
-	ctxu.GetLogger(lh).Debug("GetImageLayer")
+	context.GetLogger(lh).Debug("GetImageLayer")
 	layers := lh.Repository.Layers()
 	layer, err := layers.Fetch(lh.Digest)
 
@@ -65,7 +65,7 @@ func (lh *layerHandler) GetLayer(w http.ResponseWriter, r *http.Request) {
 
 	handler, err := layer.Handler(r)
 	if err != nil {
-		ctxu.GetLogger(lh).Debugf("unexpected error getting layer HTTP handler: %s", err)
+		context.GetLogger(lh).Debugf("unexpected error getting layer HTTP handler: %s", err)
 		lh.Errors.Push(v2.ErrorCodeUnknown, err)
 		return
 	}

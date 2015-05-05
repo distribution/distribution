@@ -10,12 +10,12 @@ import (
 	"testing"
 
 	"github.com/docker/distribution"
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/registry/storage/cache"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/docker/distribution/testutil"
-	"golang.org/x/net/context"
 )
 
 // TestSimpleLayerUpload covers the layer upload process, exercising common
@@ -36,7 +36,7 @@ func TestSimpleLayerUpload(t *testing.T) {
 	ctx := context.Background()
 	imageName := "foo/bar"
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(driver, cache.NewInMemoryLayerInfoCache())
+	registry := NewRegistryWithDriver(ctx, driver, cache.NewInMemoryLayerInfoCache())
 	repository, err := registry.Repository(ctx, imageName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
@@ -144,7 +144,7 @@ func TestSimpleLayerRead(t *testing.T) {
 	ctx := context.Background()
 	imageName := "foo/bar"
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(driver, cache.NewInMemoryLayerInfoCache())
+	registry := NewRegistryWithDriver(ctx, driver, cache.NewInMemoryLayerInfoCache())
 	repository, err := registry.Repository(ctx, imageName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
@@ -253,7 +253,7 @@ func TestLayerUploadZeroLength(t *testing.T) {
 	ctx := context.Background()
 	imageName := "foo/bar"
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(driver, cache.NewInMemoryLayerInfoCache())
+	registry := NewRegistryWithDriver(ctx, driver, cache.NewInMemoryLayerInfoCache())
 	repository, err := registry.Repository(ctx, imageName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
@@ -353,7 +353,8 @@ func writeTestLayer(driver storagedriver.StorageDriver, pathMapper *pathMapper, 
 		digest: dgst,
 	})
 
-	if err := driver.PutContent(blobPath, p); err != nil {
+	ctx := context.Background()
+	if err := driver.PutContent(ctx, blobPath, p); err != nil {
 		return "", err
 	}
 
@@ -370,7 +371,7 @@ func writeTestLayer(driver storagedriver.StorageDriver, pathMapper *pathMapper, 
 		return "", err
 	}
 
-	if err := driver.PutContent(layerLinkPath, []byte(dgst)); err != nil {
+	if err := driver.PutContent(ctx, layerLinkPath, []byte(dgst)); err != nil {
 		return "", nil
 	}
 
