@@ -9,6 +9,7 @@ import (
 	"path"
 	"time"
 
+	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/base"
 	"github.com/docker/distribution/registry/storage/driver/factory"
@@ -76,8 +77,8 @@ func (d *driver) Name() string {
 }
 
 // GetContent retrieves the content stored at "path" as a []byte.
-func (d *driver) GetContent(path string) ([]byte, error) {
-	rc, err := d.ReadStream(path, 0)
+func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
+	rc, err := d.ReadStream(ctx, path, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -92,8 +93,8 @@ func (d *driver) GetContent(path string) ([]byte, error) {
 }
 
 // PutContent stores the []byte content at a location designated by "path".
-func (d *driver) PutContent(subPath string, contents []byte) error {
-	if _, err := d.WriteStream(subPath, 0, bytes.NewReader(contents)); err != nil {
+func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte) error {
+	if _, err := d.WriteStream(ctx, subPath, 0, bytes.NewReader(contents)); err != nil {
 		return err
 	}
 
@@ -102,7 +103,7 @@ func (d *driver) PutContent(subPath string, contents []byte) error {
 
 // ReadStream retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
-func (d *driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
+func (d *driver) ReadStream(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
 	file, err := os.OpenFile(d.fullPath(path), os.O_RDONLY, 0644)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -126,7 +127,7 @@ func (d *driver) ReadStream(path string, offset int64) (io.ReadCloser, error) {
 
 // WriteStream stores the contents of the provided io.Reader at a location
 // designated by the given path.
-func (d *driver) WriteStream(subPath string, offset int64, reader io.Reader) (nn int64, err error) {
+func (d *driver) WriteStream(ctx context.Context, subPath string, offset int64, reader io.Reader) (nn int64, err error) {
 	// TODO(stevvooe): This needs to be a requirement.
 	// if !path.IsAbs(subPath) {
 	// 	return fmt.Errorf("absolute path required: %q", subPath)
@@ -162,7 +163,7 @@ func (d *driver) WriteStream(subPath string, offset int64, reader io.Reader) (nn
 
 // Stat retrieves the FileInfo for the given path, including the current size
 // in bytes and the creation time.
-func (d *driver) Stat(subPath string) (storagedriver.FileInfo, error) {
+func (d *driver) Stat(ctx context.Context, subPath string) (storagedriver.FileInfo, error) {
 	fullPath := d.fullPath(subPath)
 
 	fi, err := os.Stat(fullPath)
@@ -182,7 +183,7 @@ func (d *driver) Stat(subPath string) (storagedriver.FileInfo, error) {
 
 // List returns a list of the objects that are direct descendants of the given
 // path.
-func (d *driver) List(subPath string) ([]string, error) {
+func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
 	if subPath[len(subPath)-1] != '/' {
 		subPath += "/"
 	}
@@ -213,7 +214,7 @@ func (d *driver) List(subPath string) ([]string, error) {
 
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
-func (d *driver) Move(sourcePath string, destPath string) error {
+func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
 	source := d.fullPath(sourcePath)
 	dest := d.fullPath(destPath)
 
@@ -230,7 +231,7 @@ func (d *driver) Move(sourcePath string, destPath string) error {
 }
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
-func (d *driver) Delete(subPath string) error {
+func (d *driver) Delete(ctx context.Context, subPath string) error {
 	fullPath := d.fullPath(subPath)
 
 	_, err := os.Stat(fullPath)
@@ -246,7 +247,7 @@ func (d *driver) Delete(subPath string) error {
 
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 // May return an UnsupportedMethodErr in certain StorageDriver implementations.
-func (d *driver) URLFor(path string, options map[string]interface{}) (string, error) {
+func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
 	return "", storagedriver.ErrUnsupportedMethod
 }
 

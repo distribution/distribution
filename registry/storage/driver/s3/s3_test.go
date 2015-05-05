@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/AdRoll/goamz/aws"
+	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/testsuites"
 
@@ -134,16 +135,17 @@ func (suite *S3DriverSuite) TestEmptyRootList(c *check.C) {
 
 	filename := "/test"
 	contents := []byte("contents")
-	err = rootedDriver.PutContent(filename, contents)
+	ctx := context.Background()
+	err = rootedDriver.PutContent(ctx, filename, contents)
 	c.Assert(err, check.IsNil)
-	defer rootedDriver.Delete(filename)
+	defer rootedDriver.Delete(ctx, filename)
 
-	keys, err := emptyRootDriver.List("/")
+	keys, err := emptyRootDriver.List(ctx, "/")
 	for _, path := range keys {
 		c.Assert(storagedriver.PathRegexp.MatchString(path), check.Equals, true)
 	}
 
-	keys, err = slashRootDriver.List("/")
+	keys, err = slashRootDriver.List(ctx, "/")
 	for _, path := range keys {
 		c.Assert(storagedriver.PathRegexp.MatchString(path), check.Equals, true)
 	}

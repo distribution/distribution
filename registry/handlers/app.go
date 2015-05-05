@@ -73,7 +73,6 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 
 	var err error
 	app.driver, err = factory.Create(configuration.Storage.Type(), configuration.Storage.Parameters())
-
 	if err != nil {
 		// TODO(stevvooe): Move the creation of a service into a protected
 		// method, where this is created lazily. Its status can be queried via
@@ -92,7 +91,7 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 
 	}
 
-	startUploadPurger(app.driver, ctxu.GetLogger(app), purgeConfig)
+	startUploadPurger(app, app.driver, ctxu.GetLogger(app), purgeConfig)
 
 	app.driver, err = applyStorageMiddleware(app.driver, configuration.Middleware["storage"])
 	if err != nil {
@@ -109,10 +108,10 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 			if app.redis == nil {
 				panic("redis configuration required to use for layerinfo cache")
 			}
-			app.registry = storage.NewRegistryWithDriver(app.driver, cache.NewRedisLayerInfoCache(app.redis))
+			app.registry = storage.NewRegistryWithDriver(app, app.driver, cache.NewRedisLayerInfoCache(app.redis))
 			ctxu.GetLogger(app).Infof("using redis layerinfo cache")
 		case "inmemory":
-			app.registry = storage.NewRegistryWithDriver(app.driver, cache.NewInMemoryLayerInfoCache())
+			app.registry = storage.NewRegistryWithDriver(app, app.driver, cache.NewInMemoryLayerInfoCache())
 			ctxu.GetLogger(app).Infof("using inmemory layerinfo cache")
 		default:
 			if cc["layerinfo"] != "" {
@@ -123,7 +122,7 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 
 	if app.registry == nil {
 		// configure the registry if no cache section is available.
-		app.registry = storage.NewRegistryWithDriver(app.driver, nil)
+		app.registry = storage.NewRegistryWithDriver(app.Context, app.driver, nil)
 	}
 
 	app.registry, err = applyRegistryMiddleware(app.registry, configuration.Middleware["registry"])
@@ -365,7 +364,6 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 		}
 
 		dispatch(context, r).ServeHTTP(w, r)
-
 		// Automated error response handling here. Handlers may return their
 		// own errors if they need different behavior (such as range errors
 		// for layer upload).
@@ -597,7 +595,7 @@ func badPurgeUploadConfig(reason string) {
 
 // startUploadPurger schedules a goroutine which will periodically
 // check upload directories for old files and delete them
-func startUploadPurger(storageDriver storagedriver.StorageDriver, log ctxu.Logger, config map[interface{}]interface{}) {
+func startUploadPurger(ctx context.Context, storageDriver storagedriver.StorageDriver, log ctxu.Logger, config map[interface{}]interface{}) {
 	if config["enabled"] == false {
 		return
 	}
@@ -652,7 +650,7 @@ func startUploadPurger(storageDriver storagedriver.StorageDriver, log ctxu.Logge
 		time.Sleep(jitter)
 
 		for {
-			storage.PurgeUploads(storageDriver, time.Now().Add(-purgeAgeDuration), !dryRunBool)
+			storage.PurgeUploads(ctx, storageDriver, time.Now().Add(-purgeAgeDuration), !dryRunBool)
 			log.Infof("Starting upload purge in %s", intervalDuration)
 			time.Sleep(intervalDuration)
 		}
