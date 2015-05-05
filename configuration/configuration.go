@@ -54,6 +54,9 @@ type Configuration struct {
 		// Addr specifies the bind address for the registry instance.
 		Addr string `yaml:"addr,omitempty"`
 
+		// Net specifies the net portion of the bind address. A default empty value means tcp.
+		Net string `yaml:"net,omitempty"`
+
 		Prefix string `yaml:"prefix,omitempty"`
 
 		// Secret specifies the secret key which HMAC tokens are created with.

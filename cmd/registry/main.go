@@ -21,6 +21,7 @@ import (
 	_ "github.com/docker/distribution/registry/auth/silly"
 	_ "github.com/docker/distribution/registry/auth/token"
 	"github.com/docker/distribution/registry/handlers"
+	"github.com/docker/distribution/registry/listener"
 	_ "github.com/docker/distribution/registry/storage/driver/azure"
 	_ "github.com/docker/distribution/registry/storage/driver/filesystem"
 	_ "github.com/docker/distribution/registry/storage/driver/inmemory"
@@ -67,14 +68,26 @@ func main() {
 		go debugServer(config.HTTP.Debug.Addr)
 	}
 
-	if config.HTTP.TLS.Certificate == "" {
-		context.GetLogger(app).Infof("listening on %v", config.HTTP.Addr)
-		if err := http.ListenAndServe(config.HTTP.Addr, handler); err != nil {
-			context.GetLogger(app).Fatalln(err)
-		}
-	} else {
+	server := &http.Server{
+		Handler: handler,
+	}
+
+	ln, err := listener.NewListener(config.HTTP.Net, config.HTTP.Addr)
+	if err != nil {
+		context.GetLogger(app).Fatalln(err)
+	}
+	defer ln.Close()
+
+	if config.HTTP.TLS.Certificate != "" {
 		tlsConf := &tls.Config{
-			ClientAuth: tls.NoClientCert,
+			ClientAuth:   tls.NoClientCert,
+			NextProtos:   []string{"http/1.1"},
+			Certificates: make([]tls.Certificate, 1),
+		}
+
+		tlsConf.Certificates[0], err = tls.LoadX509KeyPair(config.HTTP.TLS.Certificate, config.HTTP.TLS.Key)
+		if err != nil {
+			context.GetLogger(app).Fatalln(err)
 		}
 
 		if len(config.HTTP.TLS.ClientCAs) != 0 {
@@ -99,16 +112,14 @@ func main() {
 			tlsConf.ClientCAs = pool
 		}
 
-		context.GetLogger(app).Infof("listening on %v, tls", config.HTTP.Addr)
-		server := &http.Server{
-			Addr:      config.HTTP.Addr,
-			Handler:   handler,
-			TLSConfig: tlsConf,
-		}
+		ln = tls.NewListener(ln, tlsConf)
+		context.GetLogger(app).Infof("listening on %v, tls", ln.Addr())
+	} else {
+		context.GetLogger(app).Infof("listening on %v", ln.Addr())
+	}
 
-		if err := server.ListenAndServeTLS(config.HTTP.TLS.Certificate, config.HTTP.TLS.Key); err != nil {
-			context.GetLogger(app).Fatalln(err)
-		}
+	if err := server.Serve(ln); err != nil {
+		context.GetLogger(app).Fatalln(err)
 	}
 }
 
