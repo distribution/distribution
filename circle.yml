@@ -103,10 +103,11 @@ test:
   # Aggregate and report to coveralls
     - gvm use stable; go list ./... | xargs -L 1 -I{} cat "$GOPATH/src/{}/coverage.out" | grep -v "$CIRCLE_PAIN" >> ~/goverage.report:
         pwd: $BASE_STABLE
-    - gvm use stable; goveralls -service circleci -coverprofile=/home/ubuntu/goverage.report -repotoken $COVERALLS_TOKEN:
-        pwd: $BASE_STABLE
+#    - gvm use stable; goveralls -service circleci -coverprofile=/home/ubuntu/goverage.report -repotoken $COVERALLS_TOKEN:
+#        pwd: $BASE_STABLE
 
   ## Notes
+  # Disabled coveralls reporting: build breaking sending coverage data to coveralls
   # Disabled the -race detector due to massive memory usage.
   # Do we want these as well?
   # - go get code.google.com/p/go.tools/cmd/goimports
