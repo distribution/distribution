@@ -163,6 +163,12 @@ REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/tmp/registry/test
 This variable overrides the `/tmp/registry` value to the `/tmp/registry/test`
 directory.
 
+>**Note**: If an environment variable changes a map value into a string, such
+>as replacing the storage driver type with `REGISTRY_STORAGE=filesystem`, then
+>all sub-fields will be erased. As such, specifying the storage type in the
+>environment will remove all parameters related to the old storage
+>configuration.
+
 
 ## version 
 
