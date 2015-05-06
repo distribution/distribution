@@ -24,6 +24,7 @@ func init() {
 	secretKey := os.Getenv("ALIYUN_ACCESS_KEY_SECRET")
 	bucket := os.Getenv("OSS_BUCKET")
 	region := os.Getenv("OSS_REGION")
+	internal := os.Getenv("OSS_INTERNAL")
 	encrypt := os.Getenv("OSS_ENCRYPT")
 	secure := os.Getenv("OSS_SECURE")
 	root, err := ioutil.TempDir("", "driver-")
@@ -41,9 +42,17 @@ func init() {
 			}
 		}
 
-		secureBool := true
+		secureBool := false
 		if secure != "" {
 			secureBool, err = strconv.ParseBool(secure)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		internalBool := false
+		if internal != "" {
+			internalBool, err = strconv.ParseBool(internal)
 			if err != nil {
 				return nil, err
 			}
@@ -54,6 +63,7 @@ func init() {
 			secretKey,
 			bucket,
 			alioss.Region(region),
+			internalBool,
 			encryptBool,
 			secureBool,
 			minChunkSize,

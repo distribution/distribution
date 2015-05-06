@@ -53,9 +53,9 @@ type DriverParameters struct {
 	Region          oss.Region
 	Internal        bool
 	Encrypt         bool
-	//Secure          bool
-	ChunkSize     int64
-	RootDirectory string
+	Secure          bool
+	ChunkSize       int64
+	RootDirectory   string
 }
 
 func init() {
@@ -120,12 +120,30 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		return nil, fmt.Errorf("No bucket parameter provided")
 	}
 
+	internalBool := false
+	internal, ok := parameters["internal"]
+	if ok {
+		internalBool, ok = internal.(bool)
+		if !ok {
+			return nil, fmt.Errorf("The encrypt parameter should be a boolean")
+		}
+	}
+
 	encryptBool := false
 	encrypt, ok := parameters["encrypt"]
 	if ok {
 		encryptBool, ok = encrypt.(bool)
 		if !ok {
 			return nil, fmt.Errorf("The encrypt parameter should be a boolean")
+		}
+	}
+
+	secureBool := true
+	secure, ok := parameters["secure"]
+	if ok {
+		secureBool, ok = secure.(bool)
+		if !ok {
+			return nil, fmt.Errorf("The secure parameter should be a boolean")
 		}
 	}
 
@@ -165,6 +183,8 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		ChunkSize:       chunkSize,
 		RootDirectory:   fmt.Sprint(rootDirectory),
 		Encrypt:         encryptBool,
+		Secure:          secureBool,
+		Internal:        internalBool,
 	}
 
 	return New(params)
