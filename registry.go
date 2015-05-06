@@ -14,12 +14,19 @@ import (
 type Scope interface {
 	// Contains returns true if the name belongs to the namespace.
 	Contains(name string) bool
+
+	// String returns the string representation of the scope.
+	String() string
 }
 
 type fullScope struct{}
 
 func (f fullScope) Contains(string) bool {
 	return true
+}
+
+func (f fullScope) String() string {
+	return "/"
 }
 
 // GlobalScope represents the full namespace scope which contains

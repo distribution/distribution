@@ -3,9 +3,9 @@ package main
 import (
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/codegangsta/cli"
+	"github.com/docker/distribution/namespace"
 )
 
 var (
@@ -27,7 +27,11 @@ func add(ctx *cli.Context) {
 		os.Exit(1)
 	}
 
-	entry, err := ParseEntry(strings.Join([]string(args), " "))
+	var extra []string
+	if len(args) > 2 {
+		extra = args[2:]
+	}
+	entry, err := namespace.NewEntry(args[0], args[1], extra...)
 	if err != nil {
 		errorf("cannot add entry: %v", err)
 	}

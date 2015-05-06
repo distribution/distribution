@@ -1,9 +1,8 @@
 package main
 
 import (
-	"strings"
-
 	"github.com/codegangsta/cli"
+	"github.com/docker/distribution/namespace"
 )
 
 var (
@@ -17,13 +16,18 @@ var (
 
 func remove(ctx *cli.Context) {
 	defer write()
+	args := []string(ctx.Args())
 
-	if len(ctx.Args()) < 2 {
+	if len(args) < 2 {
 		cli.ShowCommandHelp(ctx, ctx.Command.Name)
 		errorf("must specify a scope and action")
 	}
 
-	entry, err := ParseEntry(strings.Join(ctx.Args(), " "))
+	var extra []string
+	if len(args) > 2 {
+		extra = args[2:]
+	}
+	entry, err := namespace.NewEntry(args[0], args[1], extra...)
 	if err != nil {
 		errorf("error parsing entry: %v", err)
 	}

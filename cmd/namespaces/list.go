@@ -3,9 +3,9 @@ package main
 import (
 	"log"
 	"os"
-	"sort"
 
 	"github.com/codegangsta/cli"
+	"github.com/docker/distribution/namespace"
 )
 
 var (
@@ -26,9 +26,9 @@ func list(ctx *cli.Context) {
 	// 	log.Fatalln(err)
 	// }
 
-	sort.Stable(entries)
+	// sort.Stable(entries)
 
-	if err := WriteManager(os.Stdout, &entries); err != nil {
+	if err := namespace.WriteEntries(os.Stdout, entries); err != nil {
 		log.Fatalln(err)
 	}
 }

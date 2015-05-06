@@ -4,15 +4,15 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sort"
 
 	"github.com/codegangsta/cli"
+	"github.com/docker/distribution/namespace"
 )
 
 // Important considerations:
-//	1. Why are aliases and namespace config in the same file? It's important
-//       to understand the mapping of namespaces to remotes. To keep this
-//       simple, the mapping to a remote is managed within the namespace file.
+//  1. Why are aliases and namespace config in the same file? It's important
+//     to understand the mapping of namespaces to remotes. To keep this
+//     simple, the mapping to a remote is managed within the namespace file.
 //  2. Let's say we have the default config with foo.com trust added. We
 //     should still resolve the aliases to pick up extra config, even if we
 //     have a match:
@@ -31,40 +31,9 @@ import (
 //  1. 	./namespaces add local/* alias redhat.com/
 //         -> doesn't get added
 
-type Discoverer interface {
-	Discover(namespace string) (Entries, error)
-}
-
-// silly globals for now.
-var namespaces Manager
-var discoverer hardCodedDiscoverer
-
-var defaults = Entries{
-	{
-		Scope:  "docker.com/",
-		Action: "pull",
-		Args:   []string{"https://registry.docker.com"},
-	},
-	{
-		Scope:  "docker.com/",
-		Action: "push",
-		Args:   []string{"https://registry.docker.com"},
-	},
-	{
-		Scope:  "library/",
-		Action: "alias",
-		Args:   []string{"docker.com/library"},
-	},
-	{
-		Scope:  "*/*",
-		Action: "alias",
-		Args:   []string{"docker.com/"},
-	},
-	{
-		Scope:  "*",
-		Action: "alias",
-		Args:   []string{"docker.com/library/"},
-	},
+func init() {
+	addDefault("docker.com", "pull", "https://registry.docker.com")
+	addDefault("docker.com", "push", "https://registry.docker.com")
 }
 
 func main() {
@@ -82,10 +51,25 @@ func main() {
 		commandDiscover,
 		commandList,
 		commandRemove,
-		commandResolve,
 	}
 
 	app.RunAndExitOnError()
+}
+
+// silly globals for now.
+var discoverer hardCodedDiscoverer
+
+var namespaces = namespace.NewEntries()
+var defaults = namespace.NewEntries()
+
+func addDefault(scope, action string, args ...string) {
+	entry, err := namespace.NewEntry(scope, action, args...)
+	if err != nil {
+		panic(err)
+	}
+	if err := defaults.Add(entry); err != nil {
+		panic(err)
+	}
 }
 
 func read() error {
@@ -95,25 +79,19 @@ func read() error {
 			return err
 		}
 
-		entries := make(Entries, len(defaults))
-
-		// use defaults
-		copy(entries, defaults)
-		sort.Stable(entries)
-
-		log.Println("using defaults", entries)
-		namespaces = &entries
+		log.Println("using defaults")
+		namespaces = defaults
 
 		return nil
 	}
 	defer fp.Close()
 
-	parsed, err := ParseEntries(fp)
+	parsed, err := namespace.ParseEntries(fp)
 	if err != nil {
 		return err
 	}
 
-	namespaces = &parsed
+	namespaces = parsed
 
 	return nil
 }
@@ -125,7 +103,7 @@ func write() error {
 	}
 	defer fp.Close()
 
-	return WriteManager(fp, namespaces)
+	return namespace.WriteEntries(fp, namespaces)
 }
 
 func errorf(format string, args ...interface{}) {

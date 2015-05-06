@@ -2,9 +2,9 @@ package main
 
 import (
 	"os"
-	"sort"
 
 	"github.com/codegangsta/cli"
+	"github.com/docker/distribution/namespace"
 )
 
 var (
@@ -23,103 +23,92 @@ func discover(ctx *cli.Context) {
 	}
 	defer write()
 
-	if err := namespaces.Add(entries...); err != nil {
+	namespaces, err = namespaces.Join(entries)
+	if err != nil {
 		errorf("error adding discovered namespaces: %v", err)
 	}
 
-	WriteManager(os.Stdout, &entries)
+	namespace.WriteEntries(os.Stdout, entries)
 }
 
 type hardCodedDiscoverer int
 
-func (hardCodedDiscoverer) Discover(namespaces ...string) (Entries, error) {
-	var entries Entries
-
-	for _, namespace := range namespaces {
-		switch namespace {
+func (hardCodedDiscoverer) Discover(namespaces ...string) (*namespace.Entries, error) {
+	nsEntries := namespace.NewEntries()
+	for _, ns := range namespaces {
+		var entries [][]string
+		switch ns {
 		case "mycompany.com":
-			entries = append(entries, Entries{
+			entries = [][]string{
 				{
-					Scope:  "mycompany.com/",
-					Action: "push",
-					Args:   []string{"https://registry.mycompany.com", "v2"},
+					"mycompany.com/",
+					"push",
+					"https://registry.mycompany.com", "v2",
 				},
 				{
-					Scope:  "mycompany.com/",
-					Action: "pull",
-					Args:   []string{"https://registry.mycompany.com", "v2"},
+					"mycompany.com/",
+					"pull",
+					"https://registry.mycompany.com", "v2",
 				},
 				{
-					Scope:  "mycompany.com/production/",
-					Action: "push",
-					Args:   []string{"https://production.mycompany.com", "v2"},
+					"mycompany.com/production/",
+					"push",
+					"https://production.mycompany.com", "v2",
 				},
-				{
-					Scope:  "production/",
-					Action: "alias",
-					// Note the lack of ending slash here: This means that
-					// only a replacement should be used.
-					Args: []string{"mycompany.com/production"},
-				},
-				{
-					Scope:  "staging/",
-					Action: "alias",
-					// Note the lack of ending slash here: This means that
-					// only a replacement should be used.
-					Args: []string{"mycompany.com"},
-				},
-			}...)
+			}
 		case "redhat.com":
-			entries = append(entries, Entries{
+			entries = [][]string{
 				{
-					Scope:  "redhat.com/",
-					Action: "push",
-					Args:   []string{"https://registry.docker.com", "v2"},
+					"redhat.com/",
+					"push",
+					"https://registry.docker.com", "v2",
 				},
 				{
-					Scope:  "redhat.com/",
-					Action: "pull",
-					Args:   []string{"https://registry.docker.com", "v2"},
+					"redhat.com/",
+					"pull",
+					"https://registry.docker.com", "v2",
 				},
-				{
-					Scope:  "redhat/",
-					Action: "alias",
-					// Note the lack of ending slash here: This means that
-					// only a replacement should be used.
-					Args: []string{"redhat.com"},
-				},
-			}...)
+			}
 		case "docker.com":
-			entries = append(entries, Entries{
+			entries = [][]string{
 				{
-					Scope:  "docker.com/",
-					Action: "push",
-					Args:   []string{"https://registry.docker.com", "v2"},
+					"docker.com/",
+					"push",
+					"https://registry.docker.com", "v2",
 				},
 				{
-					Scope:  "docker.com/",
-					Action: "pull",
-					Args:   []string{"https://registry.docker.com"},
+					"docker.com/",
+					"pull",
+					"https://registry.docker.com",
 				},
 				{
-					Scope:  "docker.com/",
-					Action: "pull",
-					Args:   []string{"https://mirror0.docker.com", "mirror"},
+					"docker.com/",
+					"pull",
+					"https://mirror0.docker.com", "mirror",
 				},
 				{
-					Scope:  "docker.com/",
-					Action: "pull",
-					Args:   []string{"https://mirror1.docker.com", "mirror"},
+					"docker.com/",
+					"pull",
+					"https://mirror1.docker.com", "mirror",
 				},
 				{
-					Scope:  "docker.com/",
-					Action: "pull",
-					Args:   []string{"https://mirror2.docker.com", "mirror"},
+					"docker.com/",
+					"pull",
+					"https://mirror2.docker.com", "mirror",
 				},
-			}...)
+			}
+		}
+		for _, entry := range entries {
+			e, err := namespace.NewEntry(entry[0], entry[1], entry[2:]...)
+			if err != nil {
+				panic(err)
+			}
+			if err := nsEntries.Add(e); err != nil {
+				panic(err)
+			}
+
 		}
 	}
 
-	sort.Stable(entries)
-	return entries, nil
+	return nsEntries, nil
 }
