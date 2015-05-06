@@ -233,6 +233,11 @@ If `404 Not Found` response status, or other unexpected status, is returned,
 the client should proceed with the assumption that the registry does not
 implement V2 of the API.
 
+When a `200 OK` or `401 Unauthorized` response is returned, the
+"Docker-Distribution-API-Version" header should be set to "registry/2.0".
+Clients may require this header value to determine if the endpoint serves this
+API. When this header is omitted, clients may fallback to an older API version.
+
 ### Pulling An Image
 
 An "image" is a combination of a JSON manifest and individual layer files. The
