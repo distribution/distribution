@@ -119,13 +119,19 @@ specification to correspond with the versions enumerated here.
 	<dt>2.0.1</dt>
 	<dd>
 		<ul>
+			<li>Added capability of doing streaming upload to PATCH blob upload.</li>
+			<li>Updated PUT blob upload to no longer take final chunk, now requires entire data or no data.</li>
+			<li>Removed `416 Requested Range Not Satisfiable` response status from PUT blob upload.</li>
+		</ul>
+	</dd>
+
+	<dt>2.0.0</dt>
+	<dd>
+		<ul>
 			<li>Added support for immutable manifest references in manifest endpoints.</li>
 			<li>Deleting a manifest by tag has been deprecated.</li>
 			<li>Specified `Docker-Content-Digest` header for appropriate entities.</li>
 			<li>Added error code for unsupported operations.</li>
-			<li>Added capability of doing streaming upload to PATCH blob upload.</li>
-			<li>Updated PUT blob upload to no longer take final chunk, now requires entire data or no data.</li>
-			<li>Removed 416 return code from PUT blob upload.</li>
 		</ul>
 	</dd>
 
