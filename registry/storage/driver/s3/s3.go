@@ -20,12 +20,15 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/AdRoll/goamz/aws"
 	"github.com/AdRoll/goamz/s3"
+	"github.com/Sirupsen/logrus"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/base"
 	"github.com/docker/distribution/registry/storage/driver/factory"
@@ -72,6 +75,9 @@ type driver struct {
 	ChunkSize     int64
 	Encrypt       bool
 	RootDirectory string
+
+	pool  sync.Pool // pool []byte buffers used for WriteStream
+	zeros []byte    // shared, zero-valued buffer used for WriteStream
 }
 
 type baseEmbed struct {
@@ -148,9 +154,23 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	chunkSize := int64(defaultChunkSize)
 	chunkSizeParam, ok := parameters["chunksize"]
 	if ok {
-		chunkSize, ok = chunkSizeParam.(int64)
-		if !ok || chunkSize < minChunkSize {
-			return nil, fmt.Errorf("The chunksize parameter should be a number that is larger than 5*1024*1024")
+		switch v := chunkSizeParam.(type) {
+		case string:
+			vv, err := strconv.ParseInt(v, 0, 64)
+			if err != nil {
+				return nil, fmt.Errorf("chunksize parameter must be an integer, %v invalid", chunkSizeParam)
+			}
+			chunkSize = vv
+		case int64:
+			chunkSize = v
+		case int, uint, int32, uint32, uint64:
+			chunkSize = reflect.ValueOf(v).Convert(reflect.TypeOf(chunkSize)).Int()
+		default:
+			return nil, fmt.Errorf("invalid valud for chunksize: %#v", chunkSizeParam)
+		}
+
+		if chunkSize < minChunkSize {
+			return nil, fmt.Errorf("The chunksize %#v parameter should be a number that is larger than or equal to %d", chunkSize, minChunkSize)
 		}
 	}
 
@@ -224,6 +244,11 @@ func New(params DriverParameters) (*Driver, error) {
 		ChunkSize:     params.ChunkSize,
 		Encrypt:       params.Encrypt,
 		RootDirectory: params.RootDirectory,
+		zeros:         make([]byte, params.ChunkSize),
+	}
+
+	d.pool.New = func() interface{} {
+		return make([]byte, d.ChunkSize)
 	}
 
 	return &Driver{
@@ -236,6 +261,10 @@ func New(params DriverParameters) (*Driver, error) {
 }
 
 // Implement the storagedriver.StorageDriver interface
+
+func (d *driver) Name() string {
+	return driverName
+}
 
 // GetContent retrieves the content stored at "path" as a []byte.
 func (d *driver) GetContent(path string) ([]byte, error) {
@@ -281,14 +310,14 @@ func (d *driver) WriteStream(path string, offset int64, reader io.Reader) (total
 	var putErrChan chan error
 	parts := []s3.Part{}
 	var part s3.Part
+	done := make(chan struct{}) // stopgap to free up waiting goroutines
 
 	multi, err := d.Bucket.InitMulti(d.s3Path(path), d.getContentType(), getPermissions(), d.getOptions())
 	if err != nil {
 		return 0, err
 	}
 
-	buf := make([]byte, d.ChunkSize)
-	zeroBuf := make([]byte, d.ChunkSize)
+	buf := d.getbuf()
 
 	// We never want to leave a dangling multipart upload, our only consistent state is
 	// when there is a whole object at path. This is in order to remain consistent with
@@ -314,6 +343,9 @@ func (d *driver) WriteStream(path string, offset int64, reader io.Reader) (total
 				}
 			}
 		}
+
+		d.putbuf(buf) // needs to be here to pick up new buf value
+		close(done)   // free up any waiting goroutines
 	}()
 
 	// Fills from 0 to total from current
@@ -367,21 +399,77 @@ func (d *driver) WriteStream(path string, offset int64, reader io.Reader) (total
 		}
 
 		go func(bytesRead int, from int64, buf []byte) {
-			// parts and partNumber are safe, because this function is the only one modifying them and we
-			// force it to be executed serially.
-			if bytesRead > 0 {
-				part, putErr := multi.PutPart(int(partNumber), bytes.NewReader(buf[0:int64(bytesRead)+from]))
-				if putErr != nil {
-					putErrChan <- putErr
+			defer d.putbuf(buf) // this buffer gets dropped after this call
+
+			// DRAGONS(stevvooe): There are few things one might want to know
+			// about this section. First, the putErrChan is expecting an error
+			// and a nil or just a nil to come through the channel. This is
+			// covered by the silly defer below. The other aspect is the s3
+			// retry backoff to deal with RequestTimeout errors. Even though
+			// the underlying s3 library should handle it, it doesn't seem to
+			// be part of the shouldRetry function (see AdRoll/goamz/s3).
+			defer func() {
+				select {
+				case putErrChan <- nil: // for some reason, we do this no matter what.
+				case <-done:
+					return // ensure we don't leak the goroutine
+				}
+			}()
+
+			if bytesRead <= 0 {
+				return
+			}
+
+			var err error
+			var part s3.Part
+
+		loop:
+			for retries := 0; retries < 5; retries++ {
+				part, err = multi.PutPart(int(partNumber), bytes.NewReader(buf[0:int64(bytesRead)+from]))
+				if err == nil {
+					break // success!
 				}
 
-				parts = append(parts, part)
-				partNumber++
+				// NOTE(stevvooe): This retry code tries to only retry under
+				// conditions where the s3 package does not. We may add s3
+				// error codes to the below if we see others bubble up in the
+				// application. Right now, the most troubling is
+				// RequestTimeout, which seems to only triggered when a tcp
+				// connection to s3 slows to a crawl. If the RequestTimeout
+				// ends up getting added to the s3 library and we don't see
+				// other errors, this retry loop can be removed.
+				switch err := err.(type) {
+				case *s3.Error:
+					switch err.Code {
+					case "RequestTimeout":
+						// allow retries on only this error.
+					default:
+						break loop
+					}
+				}
+
+				backoff := 100 * time.Millisecond * time.Duration(retries+1)
+				logrus.Errorf("error putting part, retrying after %v: %v", err, backoff.String())
+				time.Sleep(backoff)
 			}
-			putErrChan <- nil
+
+			if err != nil {
+				logrus.Errorf("error putting part, aborting: %v", err)
+				select {
+				case putErrChan <- err:
+				case <-done:
+					return // don't leak the goroutine
+				}
+			}
+
+			// parts and partNumber are safe, because this function is the
+			// only one modifying them and we force it to be executed
+			// serially.
+			parts = append(parts, part)
+			partNumber++
 		}(bytesRead, from, buf)
 
-		buf = make([]byte, d.ChunkSize)
+		buf = d.getbuf() // use a new buffer for the next call
 		return nil
 	}
 
@@ -429,7 +517,7 @@ func (d *driver) WriteStream(path string, offset int64, reader io.Reader) (total
 			fromZeroFillSmall := func(from, to int64) error {
 				bytesRead = 0
 				for from+int64(bytesRead) < to {
-					nn, err := bytes.NewReader(zeroBuf).Read(buf[from+int64(bytesRead) : to])
+					nn, err := bytes.NewReader(d.zeros).Read(buf[from+int64(bytesRead) : to])
 					bytesRead += nn
 					if err != nil {
 						return err
@@ -443,7 +531,7 @@ func (d *driver) WriteStream(path string, offset int64, reader io.Reader) (total
 			fromZeroFillLarge := func(from, to int64) error {
 				bytesRead64 := int64(0)
 				for to-(from+bytesRead64) >= d.ChunkSize {
-					part, err := multi.PutPart(int(partNumber), bytes.NewReader(zeroBuf))
+					part, err := multi.PutPart(int(partNumber), bytes.NewReader(d.zeros))
 					if err != nil {
 						return err
 					}
@@ -723,4 +811,14 @@ func getPermissions() s3.ACL {
 
 func (d *driver) getContentType() string {
 	return "application/octet-stream"
+}
+
+// getbuf returns a buffer from the driver's pool with length d.ChunkSize.
+func (d *driver) getbuf() []byte {
+	return d.pool.Get().([]byte)
+}
+
+func (d *driver) putbuf(p []byte) {
+	copy(p, d.zeros)
+	d.pool.Put(p)
 }

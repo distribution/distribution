@@ -46,16 +46,37 @@ func (lw *layerWriter) StartedAt() time.Time {
 // uploaded layer. The final size and checksum are validated against the
 // contents of the uploaded layer. The checksum should be provided in the
 // format <algorithm>:<hex digest>.
-func (lw *layerWriter) Finish(digest digest.Digest) (distribution.Layer, error) {
+func (lw *layerWriter) Finish(dgst digest.Digest) (distribution.Layer, error) {
 	ctxu.GetLogger(lw.layerStore.repository.ctx).Debug("(*layerWriter).Finish")
 
 	if err := lw.bufferedFileWriter.Close(); err != nil {
 		return nil, err
 	}
 
-	canonical, err := lw.validateLayer(digest)
-	if err != nil {
+	var (
+		canonical digest.Digest
+		err       error
+	)
+
+	// HACK(stevvooe): To deal with s3's lack of consistency, attempt to retry
+	// validation on failure. Three attempts are made, backing off
+	// retries*100ms each time.
+	for retries := 0; ; retries++ {
+		canonical, err = lw.validateLayer(dgst)
+		if err == nil {
+			break
+		}
+
+		ctxu.GetLoggerWithField(lw.layerStore.repository.ctx, "retries", retries).
+			Errorf("error validating layer: %v", err)
+
+		if retries < 3 {
+			time.Sleep(100 * time.Millisecond * time.Duration(retries+1))
+			continue
+		}
+
 		return nil, err
+
 	}
 
 	if err := lw.moveLayer(canonical); err != nil {
@@ -64,7 +85,7 @@ func (lw *layerWriter) Finish(digest digest.Digest) (distribution.Layer, error) 
 	}
 
 	// Link the layer blob into the repository.
-	if err := lw.linkLayer(canonical, digest); err != nil {
+	if err := lw.linkLayer(canonical, dgst); err != nil {
 		return nil, err
 	}
 
@@ -137,7 +158,7 @@ type hashStateEntry struct {
 
 // getStoredHashStates returns a slice of hashStateEntries for this upload.
 func (lw *layerWriter) getStoredHashStates() ([]hashStateEntry, error) {
-	uploadHashStatePathPrefix, err := lw.layerStore.repository.registry.pm.path(uploadHashStatePathSpec{
+	uploadHashStatePathPrefix, err := lw.layerStore.repository.pm.path(uploadHashStatePathSpec{
 		name: lw.layerStore.repository.Name(),
 		uuid: lw.uuid,
 		alg:  lw.resumableDigester.Digest().Algorithm(),
@@ -182,7 +203,7 @@ func (lw *layerWriter) resumeHashAt(offset int64) error {
 	}
 
 	if offset == int64(lw.resumableDigester.Len()) {
-		// State of digester is already at the requseted offset.
+		// State of digester is already at the requested offset.
 		return nil
 	}
 
@@ -250,7 +271,7 @@ func (lw *layerWriter) resumeHashAt(offset int64) error {
 }
 
 func (lw *layerWriter) storeHashState() error {
-	uploadHashStatePath, err := lw.layerStore.repository.registry.pm.path(uploadHashStatePathSpec{
+	uploadHashStatePath, err := lw.layerStore.repository.pm.path(uploadHashStatePathSpec{
 		name:   lw.layerStore.repository.Name(),
 		uuid:   lw.uuid,
 		alg:    lw.resumableDigester.Digest().Algorithm(),
@@ -324,6 +345,8 @@ func (lw *layerWriter) validateLayer(dgst digest.Digest) (digest.Digest, error) 
 	}
 
 	if !verified {
+		ctxu.GetLoggerWithField(lw.layerStore.repository.ctx, "canonical", dgst).
+			Errorf("canonical digest does match provided digest")
 		return "", distribution.ErrLayerInvalidDigest{
 			Digest: dgst,
 			Reason: fmt.Errorf("content does not match digest"),
@@ -337,7 +360,7 @@ func (lw *layerWriter) validateLayer(dgst digest.Digest) (digest.Digest, error) 
 // identified by dgst. The layer should be validated before commencing the
 // move.
 func (lw *layerWriter) moveLayer(dgst digest.Digest) error {
-	blobPath, err := lw.layerStore.repository.registry.pm.path(blobDataPathSpec{
+	blobPath, err := lw.layerStore.repository.pm.path(blobDataPathSpec{
 		digest: dgst,
 	})
 
@@ -403,7 +426,7 @@ func (lw *layerWriter) linkLayer(canonical digest.Digest, aliases ...digest.Dige
 		}
 		seenDigests[dgst] = struct{}{}
 
-		layerLinkPath, err := lw.layerStore.repository.registry.pm.path(layerLinkPathSpec{
+		layerLinkPath, err := lw.layerStore.repository.pm.path(layerLinkPathSpec{
 			name:   lw.layerStore.repository.Name(),
 			digest: dgst,
 		})
@@ -412,7 +435,7 @@ func (lw *layerWriter) linkLayer(canonical digest.Digest, aliases ...digest.Dige
 			return err
 		}
 
-		if err := lw.layerStore.repository.registry.driver.PutContent(layerLinkPath, []byte(canonical)); err != nil {
+		if err := lw.layerStore.repository.driver.PutContent(layerLinkPath, []byte(canonical)); err != nil {
 			return err
 		}
 	}
@@ -424,7 +447,7 @@ func (lw *layerWriter) linkLayer(canonical digest.Digest, aliases ...digest.Dige
 // instance. An error will be returned if the clean up cannot proceed. If the
 // resources are already not present, no error will be returned.
 func (lw *layerWriter) removeResources() error {
-	dataPath, err := lw.layerStore.repository.registry.pm.path(uploadDataPathSpec{
+	dataPath, err := lw.layerStore.repository.pm.path(uploadDataPathSpec{
 		name: lw.layerStore.repository.Name(),
 		uuid: lw.uuid,
 	})

@@ -135,7 +135,7 @@ const (
    "tag": <tag>,
    "fsLayers": [
       {
-         "blobSum": <tarsum>
+         "blobSum": "<digest>"
       },
       ...
     ]
@@ -606,7 +606,7 @@ var routeDescriptors = []RouteDescriptor{
             "code": "BLOB_UNKNOWN",
             "message": "blob unknown to registry",
             "detail": {
-                "digest": <tarsum>
+                "digest": "<digest>"
             }
         },
         ...
@@ -712,7 +712,7 @@ var routeDescriptors = []RouteDescriptor{
 		Name:        RouteNameBlob,
 		Path:        "/v2/{name:" + RepositoryNameRegexp.String() + "}/blobs/{digest:" + digest.DigestRegexp.String() + "}",
 		Entity:      "Blob",
-		Description: "Fetch the blob identified by `name` and `digest`. Used to fetch layers by tarsum digest.",
+		Description: "Fetch the blob identified by `name` and `digest`. Used to fetch layers by digest.",
 		Methods: []MethodDescriptor{
 
 			{
@@ -898,7 +898,7 @@ var routeDescriptors = []RouteDescriptor{
 							{
 								Name:        "digest",
 								Type:        "query",
-								Format:      "<tarsum>",
+								Format:      "<digest>",
 								Regexp:      digest.DigestRegexp,
 								Description: `Digest of uploaded blob. If present, the upload will be completed, in a single request, with contents of the request body as the resulting blob.`,
 							},
@@ -1173,7 +1173,7 @@ var routeDescriptors = []RouteDescriptor{
 							{
 								Name:        "digest",
 								Type:        "string",
-								Format:      "<tarsum>",
+								Format:      "<digest>",
 								Regexp:      digest.DigestRegexp,
 								Required:    true,
 								Description: `Digest of uploaded blob.`,

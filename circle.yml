@@ -6,8 +6,8 @@ machine:
 
   post:
   # Install many go versions
-    - gvm install go1.3.3 -B --name=old
-    - gvm install go1.4 -B --name=stable
+    # - gvm install go1.3.3 -B --name=old
+    - gvm install go1.4.2 -B --name=stable
     # - gvm install tip --name=bleed
 
   environment:
@@ -28,10 +28,10 @@ machine:
 dependencies:
   pre:
   # Copy the code to the gopath of all go versions
-    - >
-      gvm use old &&
-      mkdir -p "$(dirname $BASE_OLD)" &&
-      cp -R "$CHECKOUT" "$BASE_OLD"
+    # - >
+    #   gvm use old &&
+    #   mkdir -p "$(dirname $BASE_OLD)" &&
+    #   cp -R "$CHECKOUT" "$BASE_OLD"
 
     - >
       gvm use stable &&
@@ -45,8 +45,8 @@ dependencies:
 
   override:
   # Install dependencies for every copied clone/go version
-    - gvm use old && go get github.com/tools/godep:
-        pwd: $BASE_OLD
+    # - gvm use old && go get github.com/tools/godep:
+    #     pwd: $BASE_OLD
 
     - gvm use stable && go get github.com/tools/godep:
         pwd: $BASE_STABLE
@@ -63,7 +63,7 @@ dependencies:
 test:
   pre:
   # Output the go versions we are going to test
-    - gvm use old && go version
+    # - gvm use old && go version
     - gvm use stable && go version
     # - gvm use bleed && go version
 
@@ -81,9 +81,9 @@ test:
 
   override:
   # Test every version we have (but stable)
-    - gvm use old; godep go test -test.v -test.short ./...:
-        timeout: 600
-        pwd: $BASE_OLD
+    # - gvm use old; godep go test -test.v -test.short ./...:
+    #     timeout: 600
+    #     pwd: $BASE_OLD
 
     # - gvm use bleed; go test -test.v -test.short ./...:
     #     timeout: 600
@@ -103,10 +103,11 @@ test:
   # Aggregate and report to coveralls
     - gvm use stable; go list ./... | xargs -L 1 -I{} cat "$GOPATH/src/{}/coverage.out" | grep -v "$CIRCLE_PAIN" >> ~/goverage.report:
         pwd: $BASE_STABLE
-    - gvm use stable; goveralls -service circleci -coverprofile=/home/ubuntu/goverage.report -repotoken $COVERALLS_TOKEN:
-        pwd: $BASE_STABLE
+#    - gvm use stable; goveralls -service circleci -coverprofile=/home/ubuntu/goverage.report -repotoken $COVERALLS_TOKEN:
+#        pwd: $BASE_STABLE
 
   ## Notes
+  # Disabled coveralls reporting: build breaking sending coverage data to coveralls
   # Disabled the -race detector due to massive memory usage.
   # Do we want these as well?
   # - go get code.google.com/p/go.tools/cmd/goimports

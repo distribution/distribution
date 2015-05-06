@@ -25,6 +25,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -70,9 +71,8 @@ type Options struct {
 	ContentMD5           string
 	ContentDisposition   string
 	Range                string
+	StorageClass         StorageClass
 	// What else?
-	//// The following become headers so they are []strings rather than strings... I think
-	// x-amz-storage-class []string
 }
 
 type CopyOptions struct {
@@ -96,7 +96,7 @@ var attempts = aws.AttemptStrategy{
 
 // New creates a new S3.
 func New(auth aws.Auth, region aws.Region) *S3 {
-	return &S3{auth, region, 0, 0, 0, aws.V2Signature}
+	return &S3{auth, region, 0, 0, aws.V2Signature, 0}
 }
 
 // Bucket returns a Bucket with the given name.
@@ -162,6 +162,13 @@ const (
 	AuthenticatedRead = ACL("authenticated-read")
 	BucketOwnerRead   = ACL("bucket-owner-read")
 	BucketOwnerFull   = ACL("bucket-owner-full-control")
+)
+
+type StorageClass string
+
+const (
+	ReducedRedundancy = StorageClass("REDUCED_REDUNDANCY")
+	StandardStorage   = StorageClass("STANDARD")
 )
 
 // PutBucket creates a new bucket.
@@ -400,6 +407,10 @@ func (o Options) addHeaders(headers map[string][]string) {
 	}
 	if len(o.ContentDisposition) != 0 {
 		headers["Content-Disposition"] = []string{o.ContentDisposition}
+	}
+	if len(o.StorageClass) != 0 {
+		headers["x-amz-storage-class"] = []string{string(o.StorageClass)}
+
 	}
 	for k, v := range o.Meta {
 		headers["x-amz-meta-"+k] = v
@@ -816,8 +827,8 @@ func (b *Bucket) SignedURLWithMethod(method, path string, expires time.Time, par
 // UploadSignedURL returns a signed URL that allows anyone holding the URL
 // to upload the object at path. The signature is valid until expires.
 // contenttype is a string like image/png
-// path is the resource name in s3 terminalogy like images/ali.png [obviously exclusing the bucket name itself]
-func (b *Bucket) UploadSignedURL(path, method, content_type string, expires time.Time) string {
+// name is the resource name in s3 terminology like images/ali.png [obviously excluding the bucket name itself]
+func (b *Bucket) UploadSignedURL(name, method, content_type string, expires time.Time) string {
 	expire_date := expires.Unix()
 	if method != "POST" {
 		method = "PUT"
@@ -830,7 +841,7 @@ func (b *Bucket) UploadSignedURL(path, method, content_type string, expires time
 		tokenData = "x-amz-security-token:" + a.Token() + "\n"
 	}
 
-	stringToSign := method + "\n\n" + content_type + "\n" + strconv.FormatInt(expire_date, 10) + "\n" + tokenData + "/" + b.Name + "/" + path
+	stringToSign := method + "\n\n" + content_type + "\n" + strconv.FormatInt(expire_date, 10) + "\n" + tokenData + "/" + path.Join(b.Name, name)
 	secretKey := a.SecretKey
 	accessId := a.AccessKey
 	mac := hmac.New(sha1.New, []byte(secretKey))
@@ -844,7 +855,7 @@ func (b *Bucket) UploadSignedURL(path, method, content_type string, expires time
 		log.Println("ERROR sining url for S3 upload", err)
 		return ""
 	}
-	signedurl.Path += path
+	signedurl.Path = name
 	params := url.Values{}
 	params.Add("AWSAccessKeyId", accessId)
 	params.Add("Expires", strconv.FormatInt(expire_date, 10))

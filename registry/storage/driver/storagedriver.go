@@ -35,6 +35,11 @@ const CurrentVersion Version = "0.1"
 // StorageDriver defines methods that a Storage Driver must implement for a
 // filesystem-like key/value object storage.
 type StorageDriver interface {
+	// Name returns the human-readable "name" of the driver, useful in error
+	// messages and logging. By convention, this will just be the registration
+	// name, but drivers may provide other information here.
+	Name() string
+
 	// GetContent retrieves the content stored at "path" as a []byte.
 	// This should primarily be used for small objects.
 	GetContent(path string) ([]byte, error)

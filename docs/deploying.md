@@ -208,6 +208,9 @@ storage:
       layerinfo: inmemory
   filesystem:
       rootdirectory: /tmp/registry-dev
+  maintenance:
+		uploadpurging:
+			enabled: false
 http:
   addr: :5000
   secret: asecretforlocaldevelopment

@@ -57,6 +57,12 @@ storage:
 		rootdirectory: /s3/object/name/prefix
 	cache:
 		layerinfo: inmemory
+	maintenance:
+		uploadpurging:
+			enabled: true
+			age: 168h
+			interval: 24h
+			dryrun: false
 auth:
 	silly:
 		realm: silly-realm
@@ -129,6 +135,34 @@ In some instances a configuration option is **optional** but it contains child
 options marked as **required**. This indicates that you can omit the parent with
 all its children. However, if the parent is included, you must also include all
 the children marked **required**.
+
+## Override configuration options
+
+You can use environment variables to override most configuration parameters. The
+exception is the `version` variable which cannot be overridden. You can set
+environment variables on the command line using the `-e` flag on `docker run` or
+from within a Dockerfile using the `ENV` instruction.
+
+To override a configuration option, create an environment variable named
+`REGISTRY\variable_` where *`variable`* is the name of the configuration option
+and the `_` (underscore) represents indention levels. For example, you can
+configure the `rootdirectory` of the `filesystem` storage backend:
+
+```
+storage:
+	filesystem:
+		rootdirectory: /tmp/registry
+```
+
+To override this value, set an environment variable like this:
+
+```
+REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/tmp/registry/test
+```
+
+This variable overrides the `/tmp/registry` value to the `/tmp/registry/test`
+directory.
+
 
 ## version 
 
@@ -235,6 +269,12 @@ storage:
 		rootdirectory: /s3/object/name/prefix
 	cache:
 		layerinfo: inmemory
+	maintenance:
+		uploadpurging:
+			enabled: true
+			age: 168h
+			interval: 24h
+			dryrun: false
 ```
 
 The storage option is **required** and defines which storage backend is in use.
@@ -424,6 +464,27 @@ This storage backend uses Amazon's Simple Storage Service (S3).
   </tr> 
 </table>
 
+### Maintenance
+
+Currently the registry can perform one maintenance function: upload purging.  This and future
+maintenance functions which are related to storage can be configured under the maintenance section.
+
+### Upload Purging
+
+Upload purging is a background process that periodically removes orphaned files from the upload
+directories of the registry.  Upload purging is enabled by default.  To 
+ configure upload directory purging, the following parameters
+must be set.
+
+
+| Parameter | Required | Description
+  --------- | -------- | -----------
+`enabled` | yes | Set to true to enable upload purging.  Default=true. |
+`age` | yes | Upload directories which are older than this age will be deleted.  Default=168h (1 week)
+`interval` | yes | The interval between upload directory purging.  Default=24h.  
+`dryrun` | yes |  dryrun can be set to true to obtain a summary of what directories will be deleted.  Default=false.
+
+Note: `age` and `interval` are strings containing a number with optional fraction and a unit suffix: e.g. 45m, 2h10m, 168h (1 week).  
 
 ## auth
 
@@ -1153,7 +1214,8 @@ Configure the behavior of the Redis connection pool.
     </td>
   </tr>  
 </table>
- 
+
+
 ## Example: Development configuration
 
 The following is a simple example you can use for local development:

@@ -94,6 +94,9 @@ func New(accountName, accountKey, container, realm string) (*Driver, error) {
 }
 
 // Implement the storagedriver.StorageDriver interface.
+func (d *driver) Name() string {
+	return driverName
+}
 
 // GetContent retrieves the content stored at "path" as a []byte.
 func (d *driver) GetContent(path string) ([]byte, error) {
