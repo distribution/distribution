@@ -30,13 +30,15 @@ func parseScope(s string) (scope, error) {
 
 // Contains returns true if the name matches the scope.
 func (s scope) Contains(name string) bool {
+	cleanScope := path.Clean(string(s))
+	cleanName := path.Clean(name)
 	// Check for an exact match, with a cleaned path component
-	if path.Clean(string(s)) == path.Clean(name) {
+	if cleanScope == cleanName {
 		return true
 	}
 
 	// A simple prefix match is enough.
-	if strings.HasPrefix(name, string(s)) {
+	if strings.HasPrefix(cleanName, cleanScope+"/") {
 		return true
 	}
 

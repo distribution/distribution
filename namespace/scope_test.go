@@ -24,8 +24,12 @@ func TestScope(t *testing.T) {
 		t.Fatal("Expected scope to contain child match")
 	}
 
-	if scope.Contains("name") {
-		t.Fatal("Expected scope to contain NOT contain ancestor")
+	if unscoped := "name"; scope.Contains(unscoped) {
+		t.Fatalf("Unexpected scope match of %q", unscoped)
+	}
+
+	if unscoped := "name/scope1"; scope.Contains(unscoped) {
+		t.Fatalf("Unexpected scope match of %q", unscoped)
 	}
 
 	if _, err := parseScope(""); err == nil {
