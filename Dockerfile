@@ -8,5 +8,5 @@ COPY . $DISTRIBUTION_DIR
 RUN make PREFIX=/go clean binaries
 
 EXPOSE 5000
-ENTRYPOINT ["registry"]
-CMD ["cmd/registry/config.yml"]
+ENTRYPOINT ["./docker-entrypoint.sh"]
+CMD ["registry", "cmd/registry/config.yml"]
