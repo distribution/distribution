@@ -39,10 +39,24 @@ package base
 
 import (
 	"io"
+	"time"
 
 	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/utils"
+	"github.com/prometheus/client_golang/prometheus"
 )
+
+var storageDuration = prometheus.NewSummaryVec(prometheus.SummaryOpts{
+	Namespace: utils.PrometheusNamespace,
+	Subsystem: "storage",
+	Name:      "duration_seconds",
+	Help:      "Duration of storage operations in seconds.",
+}, []string{"op", "driver"})
+
+func init() {
+	prometheus.MustRegister(storageDuration)
+}
 
 // Base provides a wrapper around a storagedriver implementation that provides
 // common path and bounds checking.
@@ -59,6 +73,7 @@ func (base *Base) GetContent(ctx context.Context, path string) ([]byte, error) {
 		return nil, storagedriver.InvalidPathError{Path: path}
 	}
 
+	defer utils.PrometheusObserveDuration(time.Now(), storageDuration, "get", base.Name())
 	return base.StorageDriver.GetContent(ctx, path)
 }
 
@@ -71,6 +86,7 @@ func (base *Base) PutContent(ctx context.Context, path string, content []byte) e
 		return storagedriver.InvalidPathError{Path: path}
 	}
 
+	defer utils.PrometheusObserveDuration(time.Now(), storageDuration, "put", base.Name())
 	return base.StorageDriver.PutContent(ctx, path, content)
 }
 
@@ -87,6 +103,7 @@ func (base *Base) ReadStream(ctx context.Context, path string, offset int64) (io
 		return nil, storagedriver.InvalidPathError{Path: path}
 	}
 
+	defer utils.PrometheusObserveDuration(time.Now(), storageDuration, "read-stream", base.Name())
 	return base.StorageDriver.ReadStream(ctx, path, offset)
 }
 
@@ -103,6 +120,7 @@ func (base *Base) WriteStream(ctx context.Context, path string, offset int64, re
 		return 0, storagedriver.InvalidPathError{Path: path}
 	}
 
+	defer utils.PrometheusObserveDuration(time.Now(), storageDuration, "write-stream", base.Name())
 	return base.StorageDriver.WriteStream(ctx, path, offset, reader)
 }
 
@@ -115,6 +133,7 @@ func (base *Base) Stat(ctx context.Context, path string) (storagedriver.FileInfo
 		return nil, storagedriver.InvalidPathError{Path: path}
 	}
 
+	defer utils.PrometheusObserveDuration(time.Now(), storageDuration, "stat", base.Name())
 	return base.StorageDriver.Stat(ctx, path)
 }
 
@@ -127,6 +146,7 @@ func (base *Base) List(ctx context.Context, path string) ([]string, error) {
 		return nil, storagedriver.InvalidPathError{Path: path}
 	}
 
+	defer utils.PrometheusObserveDuration(time.Now(), storageDuration, "list", base.Name())
 	return base.StorageDriver.List(ctx, path)
 }
 
@@ -140,6 +160,7 @@ func (base *Base) Move(ctx context.Context, sourcePath string, destPath string) 
 	} else if !storagedriver.PathRegexp.MatchString(destPath) {
 		return storagedriver.InvalidPathError{Path: destPath}
 	}
+	defer utils.PrometheusObserveDuration(time.Now(), storageDuration, "move", base.Name())
 
 	return base.StorageDriver.Move(ctx, sourcePath, destPath)
 }
@@ -153,6 +174,7 @@ func (base *Base) Delete(ctx context.Context, path string) error {
 		return storagedriver.InvalidPathError{Path: path}
 	}
 
+	defer utils.PrometheusObserveDuration(time.Now(), storageDuration, "delete", base.Name())
 	return base.StorageDriver.Delete(ctx, path)
 }
 
@@ -165,5 +187,6 @@ func (base *Base) URLFor(ctx context.Context, path string, options map[string]in
 		return "", storagedriver.InvalidPathError{Path: path}
 	}
 
+	defer utils.PrometheusObserveDuration(time.Now(), storageDuration, "url-for", base.Name())
 	return base.StorageDriver.URLFor(ctx, path, options)
 }

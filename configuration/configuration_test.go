@@ -69,7 +69,11 @@ var configStruct = Configuration{
 			ClientCAs   []string `yaml:"clientcas,omitempty"`
 		} `yaml:"tls,omitempty"`
 		Debug struct {
-			Addr string `yaml:"addr,omitempty"`
+			Addr       string `yaml:"addr,omitempty"`
+			Prometheus struct {
+				Enabled bool   `yaml:"enabled,omitempty"`
+				Path    string `yaml:"path,omitempty"`
+			} `yaml:"prometheus,omitempty"`
 		} `yaml:"debug,omitempty"`
 	}{
 		TLS: struct {

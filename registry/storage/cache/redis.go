@@ -31,6 +31,11 @@ func NewRedisLayerInfoCache(pool *redis.Pool) LayerInfoCache {
 	}}
 }
 
+// Name implements the LayerInfoCache interface.
+func (rlic *redisLayerInfoCache) Name() string {
+	return "redis"
+}
+
 // Contains does a membership check on the repository blob set in redis. This
 // is used as an access check before looking up global path information. If
 // false is returned, the caller should still check the backend to if it

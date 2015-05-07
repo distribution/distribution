@@ -7,18 +7,34 @@ package cache
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/utils"
+	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/net/context"
 )
 
-// ErrNotFound is returned when a meta item is not found.
-var ErrNotFound = fmt.Errorf("not found")
+var (
+	// ErrNotFound is returned when a meta item is not found.
+	ErrNotFound = fmt.Errorf("not found")
+
+	cacheDuration = prometheus.NewSummaryVec(prometheus.SummaryOpts{
+		Namespace: utils.PrometheusNamespace,
+		Subsystem: "cache",
+		Name:      "duration_seconds",
+		Help:      "Duration of cache operations in seconds.",
+	}, []string{"op", "driver"})
+)
 
 // LayerMeta describes the backend location and length of layer data.
 type LayerMeta struct {
 	Path   string
 	Length int64
+}
+
+func init() {
+	prometheus.MustRegister(cacheDuration)
 }
 
 // LayerInfoCache is a driver-aware cache of layer metadata. Basically, it
@@ -32,6 +48,9 @@ type LayerMeta struct {
 // repo and dgst arguments, since these are mostly used behind existing
 // implementations.
 type LayerInfoCache interface {
+	// Name returns the human-readable "name" of the cache driver.
+	Name() string
+
 	// Contains returns true if the repository with name contains the layer.
 	Contains(ctx context.Context, repo string, dgst digest.Digest) (bool, error)
 
@@ -62,6 +81,7 @@ func (b *base) Contains(ctx context.Context, repo string, dgst digest.Digest) (b
 		return false, fmt.Errorf("cache: cannot check for empty digests")
 	}
 
+	defer utils.PrometheusObserveDuration(time.Now(), cacheDuration, "contains", b.Name())
 	return b.LayerInfoCache.Contains(ctx, repo, dgst)
 }
 
@@ -74,6 +94,7 @@ func (b *base) Add(ctx context.Context, repo string, dgst digest.Digest) error {
 		return fmt.Errorf("cache: cannot add empty digest")
 	}
 
+	defer utils.PrometheusObserveDuration(time.Now(), cacheDuration, "add", b.Name())
 	return b.LayerInfoCache.Add(ctx, repo, dgst)
 }
 
@@ -82,6 +103,7 @@ func (b *base) Meta(ctx context.Context, dgst digest.Digest) (LayerMeta, error) 
 		return LayerMeta{}, fmt.Errorf("cache: cannot get meta for empty digest")
 	}
 
+	defer utils.PrometheusObserveDuration(time.Now(), cacheDuration, "meta", b.Name())
 	return b.LayerInfoCache.Meta(ctx, dgst)
 }
 
@@ -94,5 +116,6 @@ func (b *base) SetMeta(ctx context.Context, dgst digest.Digest, meta LayerMeta) 
 		return fmt.Errorf("cache: cannot set empty path for meta")
 	}
 
+	defer utils.PrometheusObserveDuration(time.Now(), cacheDuration, "set-meta", b.Name())
 	return b.LayerInfoCache.SetMeta(ctx, dgst, meta)
 }

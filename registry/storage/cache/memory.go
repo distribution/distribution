@@ -20,6 +20,11 @@ func NewInMemoryLayerInfoCache() LayerInfoCache {
 	}}
 }
 
+// Name implements the LayerInfoCache interface.
+func (ilic *inmemoryLayerInfoCache) Name() string {
+	return "memory"
+}
+
 func (ilic *inmemoryLayerInfoCache) Contains(ctx context.Context, repo string, dgst digest.Digest) (bool, error) {
 	members, ok := ilic.membership[repo]
 	if !ok {

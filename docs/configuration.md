@@ -97,6 +97,9 @@ http:
       - /path/to/another/ca.pem
 	debug:
 		addr: localhost:5001
+    prometheus:
+      enabled: true
+      path: /metrics
 notifications:
 	endpoints: 
 		- name: alistener
