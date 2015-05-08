@@ -280,11 +280,54 @@ func TestManifestStorage(t *testing.T) {
 		}
 	}
 
-	// TODO(stevvooe): Currently, deletes are not supported due to some
-	// complexity around managing tag indexes. We'll add this support back in
-	// when the manifest format has settled. For now, we expect an error for
-	// all deletes.
-	if err := ms.Delete(dgst); err == nil {
+	// Test deleting manifests
+	err = ms.Delete(dgst)
+	if err != nil {
 		t.Fatalf("unexpected an error deleting manifest by digest: %v", err)
+	}
+
+	exists, err = ms.Exists(dgst)
+	if err != nil {
+		t.Fatalf("Error querying manifest existence")
+	}
+	if exists {
+		t.Errorf("Deleted manifest should not exist")
+	}
+
+	deletedManifest, err := ms.Get(dgst)
+	if err == nil {
+		t.Errorf("Unexpected success getting deleted manifest")
+	}
+	switch err.(type) {
+	case distribution.ErrUnknownManifestRevision:
+		break
+	default:
+		t.Errorf("Unexpected error getting deleted manifest: %s", reflect.ValueOf(err).Type())
+	}
+
+	if deletedManifest != nil {
+		t.Errorf("Deleted manifest get returned non-nil")
+	}
+
+	// Re-upload should restore manifest to a good state
+	err = ms.Put(sm)
+	if err != nil {
+		t.Errorf("Error re-uploading deleted manifest")
+	}
+
+	exists, err = ms.Exists(dgst)
+	if err != nil {
+		t.Fatalf("Error querying manifest existence")
+	}
+	if !exists {
+		t.Errorf("Restored manifest should exist")
+	}
+
+	deletedManifest, err = ms.Get(dgst)
+	if err != nil {
+		t.Errorf("Unexpected error getting manifest")
+	}
+	if deletedManifest == nil {
+		t.Errorf("Deleted manifest get returned non-nil")
 	}
 }

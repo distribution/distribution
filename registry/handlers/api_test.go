@@ -266,6 +266,80 @@ func TestLayerAPI(t *testing.T) {
 	// Missing tests:
 	// 	- Upload the same tarsum file under and different repository and
 	//       ensure the content remains uncorrupted.
+
+	// ---------------
+	// Delete a layer
+	resp, err = httpDelete(layerURL)
+	if err != nil {
+		t.Fatalf("unexpected error deleting layer: %v", err)
+	}
+
+	checkResponse(t, "deleting layer", resp, http.StatusAccepted)
+	checkHeaders(t, resp, http.Header{
+		"Content-Length": []string{"0"},
+	})
+
+	// ---------------
+	// Try and get it back
+	// Use a head request to see if the layer exists.
+	resp, err = http.Head(layerURL)
+	if err != nil {
+		t.Fatalf("unexpected error checking head on existing layer: %v", err)
+	}
+
+	checkResponse(t, "checking existence of deleted layer", resp, http.StatusNotFound)
+
+	// ----------------
+	// Delete already deleted layer
+	resp, err = httpDelete(layerURL)
+	if err != nil {
+		t.Fatalf("unexpected error deleting layer: %v", err)
+	}
+
+	checkResponse(t, "deleting layer", resp, http.StatusNotFound)
+
+	// ----------------
+	// Attempt to delete a layer with an invalid digest
+	resp, err = httpDelete(badURL)
+	if err != nil {
+		t.Fatalf("unexpected error fetching layer: %v", err)
+	}
+
+	checkResponse(t, "deleting layer bad digest", resp, http.StatusBadRequest)
+
+	// ----------------
+	// Reupload previously deleted blob
+	layerFile.Seek(0, os.SEEK_SET)
+
+	uploadURLBase, uploadUUID = startPushLayer(t, env.builder, imageName)
+	pushLayer(t, env.builder, imageName, layerDigest, uploadURLBase, layerFile)
+
+	// ------------------------
+	// Use a head request to see if it exists
+	resp, err = http.Head(layerURL)
+	if err != nil {
+		t.Fatalf("unexpected error checking head on existing layer: %v", err)
+	}
+
+	checkResponse(t, "checking head on reuploaded layer", resp, http.StatusOK)
+	checkHeaders(t, resp, http.Header{
+		"Content-Length":        []string{fmt.Sprint(layerLength)},
+		"Docker-Content-Digest": []string{layerDigest.String()},
+	})
+}
+
+func httpDelete(url string) (*http.Response, error) {
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	return resp, err
 }
 
 func TestManifestAPI(t *testing.T) {
@@ -465,6 +539,61 @@ func TestManifestAPI(t *testing.T) {
 	if tagsResponse.Tags[0] != tag {
 		t.Fatalf("tag not as expected: %q != %q", tagsResponse.Tags[0], tag)
 	}
+
+	// ---------------
+	// Delete by digest
+	resp, err = httpDelete(manifestDigestURL)
+	checkErr(t, err, "deleting manifest by digest")
+
+	checkResponse(t, "deleting manifest", resp, http.StatusAccepted)
+	checkHeaders(t, resp, http.Header{
+		"Content-Length": []string{"0"},
+	})
+
+	// ---------------
+	// Attempt to fetch deleted digest
+	resp, err = http.Get(manifestDigestURL)
+	checkErr(t, err, "fetching deleted manifest by digest")
+	defer resp.Body.Close()
+
+	checkResponse(t, "fetching deleted manifest", resp, http.StatusNotFound)
+
+	// ---------------
+	// Delete already deleted digest
+	resp, err = httpDelete(manifestDigestURL)
+	checkErr(t, err, "deleting manifest by digest")
+
+	checkResponse(t, "deleting manifest", resp, http.StatusNotFound)
+
+	// --------------------
+	// Re-upload manifest by digest
+	resp = putManifest(t, "putting signed manifest", manifestDigestURL, signedManifest)
+	checkResponse(t, "putting signed manifest", resp, http.StatusAccepted)
+	checkHeaders(t, resp, http.Header{
+		"Location":              []string{manifestDigestURL},
+		"Docker-Content-Digest": []string{dgst.String()},
+	})
+
+	// ---------------
+	// Attempt to fetch re-uploaded deleted digest
+	resp, err = http.Get(manifestDigestURL)
+	checkErr(t, err, "fetching re-uploaded manifest by digest")
+	defer resp.Body.Close()
+
+	checkResponse(t, "fetching re-uploaded manifest", resp, http.StatusOK)
+	checkHeaders(t, resp, http.Header{
+		"Docker-Content-Digest": []string{dgst.String()},
+	})
+
+	// ---------------
+	// Attempt to delete an unknown manifest
+	unknownDigest := "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	unknownManifestDigestURL, err := env.builder.BuildManifestURL(imageName, unknownDigest)
+	checkErr(t, err, "building unknown manifest url")
+
+	resp, err = httpDelete(unknownManifestDigestURL)
+	checkErr(t, err, "delting unknown manifest by digest")
+	checkResponse(t, "fetching deleted manifest", resp, http.StatusNotFound)
 }
 
 type testEnv struct {
@@ -779,7 +908,7 @@ func checkHeaders(t *testing.T, resp *http.Response, headers http.Header) {
 
 			for _, hv := range resp.Header[k] {
 				if hv != v {
-					t.Fatalf("%v header value not matched in response: %q != %q", k, hv, v)
+					t.Fatalf("%+v %v header value not matched in response: %q != %q", resp.Header, k, hv, v)
 				}
 			}
 		}
