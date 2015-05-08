@@ -244,7 +244,7 @@ notifications:
 ```
 
 This configuration is very basic and you can see it would present some problems
-in a production. For example, the `http` section details the configuration for
+in a production environment. For example, the `http` section details the configuration for
 the HTTP server that hosts the registry. The server is not using even the most
 minimal transport layer security (TLS). Let's configure that in the next section. 
 
