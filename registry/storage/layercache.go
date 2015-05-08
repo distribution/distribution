@@ -10,7 +10,30 @@ import (
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/registry/storage/cache"
 	"github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/utils"
+	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/net/context"
+)
+
+var (
+	cacheReads = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: utils.PrometheusNamespace,
+		Subsystem: "storage",
+		Name:      "cache_reads_total",
+		Help:      "Total number storage cache read attempts.",
+	}, []string{"op"})
+	cacheHits = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: utils.PrometheusNamespace,
+		Subsystem: "storage",
+		Name:      "cache_hits_total",
+		Help:      "Total number storage cache hits.",
+	}, []string{"op"})
+	cacheErrors = prometheus.NewCounterVec(prometheus.CounterOpts{
+		Namespace: utils.PrometheusNamespace,
+		Subsystem: "storage",
+		Name:      "cache_errors_total",
+		Help:      "Total number of failed storage cache requests.",
+	}, []string{"op"})
 )
 
 // cachedLayerService implements the layer service with path-aware caching,
@@ -30,6 +53,7 @@ type cachedLayerService struct {
 func (lc *cachedLayerService) Exists(dgst digest.Digest) (bool, error) {
 	ctxu.GetLogger(lc.ctx).Debugf("(*cachedLayerService).Exists(%q)", dgst)
 	now := time.Now()
+	cacheReads.WithLabelValues("exists").Inc()
 	defer func() {
 		// TODO(stevvooe): Replace this with a decent context-based metrics solution
 		ctxu.GetLoggerWithField(lc.ctx, "blob.exists.duration", time.Since(now)).
@@ -44,6 +68,7 @@ func (lc *cachedLayerService) Exists(dgst digest.Digest) (bool, error) {
 	}
 
 	if available {
+		cacheHits.WithLabelValues("exists").Inc()
 		atomic.AddUint64(&layerInfoCacheMetrics.Exists.Hits, 1)
 		return true, nil
 	}
@@ -52,6 +77,7 @@ fallback:
 	atomic.AddUint64(&layerInfoCacheMetrics.Exists.Misses, 1)
 	exists, err := lc.LayerService.Exists(dgst)
 	if err != nil {
+		cacheErrors.WithLabelValues("exists").Inc()
 		return exists, err
 	}
 
@@ -72,6 +98,7 @@ fallback:
 func (lc *cachedLayerService) Fetch(dgst digest.Digest) (distribution.Layer, error) {
 	ctxu.GetLogger(lc.ctx).Debugf("(*layerInfoCache).Fetch(%q)", dgst)
 	now := time.Now()
+	cacheReads.WithLabelValues("fetch").Inc()
 	defer func() {
 		ctxu.GetLoggerWithField(lc.ctx, "blob.fetch.duration", time.Since(now)).
 			Infof("(*layerInfoCache).Fetch(%q)", dgst)
@@ -92,6 +119,7 @@ func (lc *cachedLayerService) Fetch(dgst digest.Digest) (distribution.Layer, err
 			goto fallback
 		}
 
+		cacheHits.WithLabelValues("fetch").Inc()
 		atomic.AddUint64(&layerInfoCacheMetrics.Fetch.Hits, 1)
 		return newLayerReader(lc.driver, dgst, meta.Path, meta.Length)
 	}
@@ -104,6 +132,7 @@ fallback:
 	atomic.AddUint64(&layerInfoCacheMetrics.Fetch.Misses, 1)
 	layer, err := lc.LayerService.Fetch(dgst)
 	if err != nil {
+		cacheErrors.WithLabelValues("fetch").Inc()
 		return nil, err
 	}
 
@@ -199,4 +228,8 @@ func init() {
 		// numbers will always *eventually* be reported correctly.
 		return layerInfoCacheMetrics
 	}))
+
+	prometheus.MustRegister(cacheReads)
+	prometheus.MustRegister(cacheHits)
+	prometheus.MustRegister(cacheErrors)
 }

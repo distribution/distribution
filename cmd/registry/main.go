@@ -26,8 +26,10 @@ import (
 	_ "github.com/docker/distribution/registry/storage/driver/inmemory"
 	_ "github.com/docker/distribution/registry/storage/driver/middleware/cloudfront"
 	_ "github.com/docker/distribution/registry/storage/driver/s3"
+	"github.com/docker/distribution/utils"
 	"github.com/docker/distribution/version"
 	gorhandlers "github.com/gorilla/handlers"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/yvasiyarov/gorelic"
 )
 
@@ -62,9 +64,12 @@ func main() {
 	app := handlers.NewApp(ctx, *config)
 	handler := configureReporting(app)
 	handler = gorhandlers.CombinedLoggingHandler(os.Stdout, handler)
+	if config.HTTP.Debug.Prometheus.Enabled {
+		handler = prometheus.InstrumentHandler(utils.PrometheusNamespace, handler)
+	}
 
 	if config.HTTP.Debug.Addr != "" {
-		go debugServer(config.HTTP.Debug.Addr)
+		go debugServer(config)
 	}
 
 	if config.HTTP.TLS.Certificate == "" {
@@ -256,8 +261,17 @@ func logLevel(level configuration.Loglevel) log.Level {
 // debugServer starts the debug server with pprof, expvar among other
 // endpoints. The addr should not be exposed externally. For most of these to
 // work, tls cannot be enabled on the endpoint, so it is generally separate.
-func debugServer(addr string) {
+func debugServer(config *configuration.Configuration) {
+	addr := config.HTTP.Debug.Addr
 	log.Infof("debug server listening %v", addr)
+	if config.HTTP.Debug.Prometheus.Enabled {
+		path := config.HTTP.Debug.Prometheus.Path
+		if path == "" {
+			path = "/metrics"
+		}
+		log.Info("providing prometheus metrics on ", path)
+		http.Handle(path, prometheus.Handler())
+	}
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Fatalf("error listening on debug interface: %v", err)
 	}

@@ -85,6 +85,12 @@ type Configuration struct {
 		Debug struct {
 			// Addr specifies the bind address for the debug server.
 			Addr string `yaml:"addr,omitempty"`
+
+			// Prometheus configures the Prometheus telemetry endpoint.
+			Prometheus struct {
+				Enabled bool   `yaml:"enabled,omitempty"`
+				Path    string `yaml:"path,omitempty"`
+			} `yaml:"prometheus,omitempty"`
 		} `yaml:"debug,omitempty"`
 	} `yaml:"http,omitempty"`
 

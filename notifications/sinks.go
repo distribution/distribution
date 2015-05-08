@@ -7,12 +7,49 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/docker/distribution/utils"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // NOTE(stevvooe): This file contains definitions for several utility sinks.
 // Typically, the broadcaster is the only sink that should be required
 // externally, but others are suitable for export if the need arises. Albeit,
 // the tight integration with endpoint metrics should be removed.
+
+var (
+	queueEventPops = prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: utils.PrometheusNamespace,
+		Subsystem: "notifications",
+		Name:      "queue_pops_total",
+		Help:      "Total number of events removed from the queue.",
+	})
+
+	queueEventPushes = prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: utils.PrometheusNamespace,
+		Subsystem: "notifications",
+		Name:      "queue_pushes_total",
+		Help:      "Total number of events added the queue.",
+	})
+	queueEventLatency = prometheus.NewSummary(prometheus.SummaryOpts{
+		Namespace: utils.PrometheusNamespace,
+		Subsystem: "notifications",
+		Name:      "queue_latency",
+		Help:      "Summary of event latencies.",
+	})
+	queueEventLength = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: utils.PrometheusNamespace,
+		Subsystem: "notifications",
+		Name:      "queue_length",
+		Help:      "Number of elements in queue.",
+	})
+)
+
+func init() {
+	prometheus.MustRegister(queueEventPops)
+	prometheus.MustRegister(queueEventPushes)
+	prometheus.MustRegister(queueEventLatency)
+	prometheus.MustRegister(queueEventLength)
+}
 
 // Broadcaster sends events to multiple, reliable Sinks. The goal of this
 // component is to dispatch events to configured endpoints. Reliability can be
@@ -147,6 +184,9 @@ func (eq *eventQueue) Write(events ...Event) error {
 	}
 	eq.events.PushBack(events)
 	eq.cond.Signal() // signal waiters
+	n := float64(len(events))
+	queueEventPushes.Add(n)
+	queueEventLength.Sub(n)
 
 	return nil
 }
@@ -206,7 +246,11 @@ func (eq *eventQueue) next() []Event {
 	front := eq.events.Front()
 	block := front.Value.([]Event)
 	eq.events.Remove(front)
-
+	queueEventPops.Inc()
+	queueEventLength.Dec()
+	if ev, ok := front.Value.(Event); ok {
+		queueEventLatency.Observe(time.Since(ev.Timestamp).Seconds())
+	}
 	return block
 }
 

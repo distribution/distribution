@@ -3,6 +3,9 @@ package v2
 import (
 	"fmt"
 	"strings"
+
+	"github.com/docker/distribution/utils"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 // ErrorCode represents the error type. The errors are serialized via strings
@@ -61,6 +64,17 @@ const (
 	// ErrorCodeBlobUploadInvalid is returned when an upload is invalid.
 	ErrorCodeBlobUploadInvalid
 )
+
+var apiErrors = prometheus.NewCounterVec(prometheus.CounterOpts{
+	Namespace: utils.PrometheusNamespace,
+	Subsystem: "api",
+	Name:      "errors_total",
+	Help:      "Total number of API errors by error type.",
+}, []string{"error"})
+
+func init() {
+	prometheus.MustRegister(apiErrors)
+}
 
 // ParseErrorCode attempts to parse the error code string, returning
 // ErrorCodeUnknown if the error is not known.
@@ -150,7 +164,7 @@ func (errs *Errors) Push(code ErrorCode, details ...interface{}) {
 	if err, ok := detail.(error); ok {
 		detail = err.Error()
 	}
-
+	apiErrors.WithLabelValues(code.String()).Inc()
 	errs.PushErr(Error{
 		Code:    code,
 		Message: code.Message(),

@@ -6,6 +6,11 @@
 	],
 	"Deps": [
 		{
+			"ImportPath": "bitbucket.org/ww/goautoneg",
+			"Comment": "null-5",
+			"Rev": "75cd24fc2f2c2a2088577d12123ddee5f54e0675"
+		},
+		{
 			"ImportPath": "code.google.com/p/go-uuid/uuid",
 			"Comment": "null-15",
 			"Rev": "35bc42037350f0078e3c974c6ea690f1926603ab"
@@ -33,6 +38,10 @@
 			"Rev": "55eb11d21d2a31a3cc93838241d04800f52e823d"
 		},
 		{
+			"ImportPath": "github.com/beorn7/perks/quantile",
+			"Rev": "b965b613227fddccbfffe13eae360ed3fa822f8d"
+		},
+		{
 			"ImportPath": "github.com/bugsnag/bugsnag-go",
 			"Comment": "v1.0.2-5-gb1d1530",
 			"Rev": "b1d153021fcd90ca3f080db36bec96dc690fb274"
@@ -56,11 +65,6 @@
 			"Rev": "165ea5c158cff3fc40d476ffe233a5ccc03e7d61"
 		},
 		{
-			"ImportPath": "github.com/docker/docker/vendor/src/code.google.com/p/go/src/pkg/archive/tar",
-			"Comment": "v1.4.1-863-g165ea5c",
-			"Rev": "165ea5c158cff3fc40d476ffe233a5ccc03e7d61"
-		},
-		{
 			"ImportPath": "github.com/docker/libtrust",
 			"Rev": "fa567046d9b14f6aa788882a950d69651d230b21"
 		},
@@ -71,6 +75,10 @@
 		{
 			"ImportPath": "github.com/garyburd/redigo/redis",
 			"Rev": "535138d7bcd717d6531c701ef5933d98b1866257"
+		},
+		{
+			"ImportPath": "github.com/golang/protobuf/proto",
+			"Rev": "efd7476481382c195beb33acd8ec2f1527167fb4"
 		},
 		{
 			"ImportPath": "github.com/gorilla/context",
@@ -87,6 +95,34 @@
 		{
 			"ImportPath": "github.com/jlhawn/go-crypto",
 			"Rev": "cd738dde20f0b3782516181b0866c9bb9db47401"
+		},
+		{
+			"ImportPath": "github.com/matttproud/golang_protobuf_extensions/pbutil",
+			"Rev": "fc2b8d3a73c4867e51861bbdd5ae3c1f0869dd6a"
+		},
+		{
+			"ImportPath": "github.com/prometheus/client_golang/model",
+			"Comment": "0.4.0-12-g6efaf95",
+			"Rev": "6efaf95d98c65194de7c6e4288da8462e5b9716f"
+		},
+		{
+			"ImportPath": "github.com/prometheus/client_golang/prometheus",
+			"Comment": "0.4.0-12-g6efaf95",
+			"Rev": "6efaf95d98c65194de7c6e4288da8462e5b9716f"
+		},
+		{
+			"ImportPath": "github.com/prometheus/client_golang/text",
+			"Comment": "0.4.0-12-g6efaf95",
+			"Rev": "6efaf95d98c65194de7c6e4288da8462e5b9716f"
+		},
+		{
+			"ImportPath": "github.com/prometheus/client_model/go",
+			"Comment": "model-0.0.2-12-gfa8ad6f",
+			"Rev": "fa8ad6fec33561be4280a8f0514318c79d7f6cb6"
+		},
+		{
+			"ImportPath": "github.com/prometheus/procfs",
+			"Rev": "03bec5746ab759224727d47517b18210ee71cf0f"
 		},
 		{
 			"ImportPath": "github.com/yvasiyarov/go-metrics",
