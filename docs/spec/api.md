@@ -119,6 +119,15 @@ specification to correspond with the versions enumerated here.
 	<dt>2.0.1</dt>
 	<dd>
 		<ul>
+			<li>Added capability of doing streaming upload to PATCH blob upload.</li>
+			<li>Updated PUT blob upload to no longer take final chunk, now requires entire data or no data.</li>
+			<li>Removed `416 Requested Range Not Satisfiable` response status from PUT blob upload.</li>
+		</ul>
+	</dd>
+
+	<dt>2.0.0</dt>
+	<dd>
+		<ul>
 			<li>Added support for immutable manifest references in manifest endpoints.</li>
 			<li>Deleting a manifest by tag has been deprecated.</li>
 			<li>Specified `Docker-Content-Digest` header for appropriate entities.</li>
@@ -223,6 +232,11 @@ authenticate against different resources, even if this check succeeds.
 If `404 Not Found` response status, or other unexpected status, is returned,
 the client should proceed with the assumption that the registry does not
 implement V2 of the API.
+
+When a `200 OK` or `401 Unauthorized` response is returned, the
+"Docker-Distribution-API-Version" header should be set to "registry/2.0".
+Clients may require this header value to determine if the endpoint serves this
+API. When this header is omitted, clients may fallback to an older API version.
 
 ### Pulling An Image
 
@@ -2175,6 +2189,158 @@ The error codes that may be included in the response body are enumerated below:
 Upload a chunk of data for the specified upload.
 
 
+##### Stream upload
+
+```
+PATCH /v2/<name>/blobs/uploads/<uuid>
+Host: <registry host>
+Authorization: <scheme> <token>
+Content-Type: application/octet-stream
+
+<binary data>
+```
+
+Upload a stream of data to upload without completing the upload.
+
+
+The following parameters should be specified on the request:
+
+|Name|Kind|Description|
+|----|----|-----------|
+|`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
+|`Authorization`|header|An RFC7235 compliant authorization header.|
+|`name`|path|Name of the target repository.|
+|`uuid`|path|A uuid identifying the upload. This field can accept characters that match `[a-zA-Z0-9-_.=]+`.|
+
+
+
+
+###### On Success: Data Accepted
+
+```
+204 No Content
+Location: /v2/<name>/blobs/uploads/<uuid>
+Range: 0-<offset>
+Content-Length: 0
+Docker-Upload-UUID: <uuid>
+```
+
+The stream of data has been accepted and the current progress is available in the range header. The updated upload location is available in the `Location` header.
+
+The following headers will be returned with the response:
+
+|Name|Description|
+|----|-----------|
+|`Location`|The location of the upload. Clients should assume this changes after each request. Clients should use the contents verbatim to complete the upload, adding parameters where required.|
+|`Range`|Range indicating the current progress of the upload.|
+|`Content-Length`|The `Content-Length` header must be zero and the body must be empty.|
+|`Docker-Upload-UUID`|Identifies the docker upload uuid for the current request.|
+
+
+
+
+###### On Failure: Bad Request
+
+```
+400 Bad Request
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+There was an error processing the upload and it must be restarted.
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
+| `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
+| `BLOB_UPLOAD_INVALID` | blob upload invalid | The blob upload encountered an error and can no longer proceed. |
+
+
+
+###### On Failure: Unauthorized
+
+```
+401 Unauthorized
+WWW-Authenticate: <scheme> realm="<realm>", ..."
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": "UNAUTHORIZED",
+            "message": "access to the requested resource is not authorized",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The client does not have access to push to the repository.
+
+The following headers will be returned on the response:
+
+|Name|Description|
+|----|-----------|
+|`WWW-Authenticate`|An RFC7235 compliant authentication challenge header.|
+|`Content-Length`|Length of the JSON error response body.|
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
+
+
+
+###### On Failure: Not Found
+
+```
+404 Not Found
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The upload is unknown to the registry. The upload must be restarted.
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `BLOB_UPLOAD_UNKNOWN` | blob upload unknown to registry | If a blob upload has been cancelled or was never started, this error code may be returned. |
+
+
+
+##### Chunked upload
 
 ```
 PATCH /v2/<name>/blobs/uploads/<uuid>
@@ -2187,7 +2353,7 @@ Content-Type: application/octet-stream
 <binary chunk>
 ```
 
-Upload a chunk of data to specified upload without completing the upload.
+Upload a chunk of data to specified upload without completing the upload. The data will be uploaded to the specified Content Range.
 
 
 The following parameters should be specified on the request:
@@ -2350,14 +2516,13 @@ Complete the upload specified by `uuid`, optionally appending the body as the fi
 PUT /v2/<name>/blobs/uploads/<uuid>?digest=<digest>
 Host: <registry host>
 Authorization: <scheme> <token>
-Content-Range: <start of range>-<end of range, inclusive>
-Content-Length: <length of chunk>
+Content-Length: <length of data>
 Content-Type: application/octet-stream
 
-<binary chunk>
+<binary data>
 ```
 
-Complete the upload, providing the _final_ chunk of data, if necessary. This method may take a body with all the data. If the `Content-Range` header is specified, it may include the final chunk. A request without a body will just complete the upload with previously uploaded content.
+Complete the upload, providing all the data in the body, if necessary. A request without a body will just complete the upload with previously uploaded content.
 
 
 The following parameters should be specified on the request:
@@ -2366,8 +2531,7 @@ The following parameters should be specified on the request:
 |----|----|-----------|
 |`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
 |`Authorization`|header|An RFC7235 compliant authorization header.|
-|`Content-Range`|header|Range of bytes identifying the block of content represented by the body. Start must the end offset retrieved via status check plus one. Note that this is a non-standard use of the `Content-Range` header. May be omitted if no data is provided.|
-|`Content-Length`|header|Length of the chunk being uploaded, corresponding to the length of the request body. May be zero if no data is provided.|
+|`Content-Length`|header|Length of the data being uploaded, corresponding to the length of the request body. May be zero if no data is provided.|
 |`name`|path|Name of the target repository.|
 |`uuid`|path|A uuid identifying the upload. This field can accept characters that match `[a-zA-Z0-9-_.=]+`.|
 |`digest`|query|Digest of uploaded blob.|
@@ -2497,25 +2661,6 @@ The error codes that may be included in the response body are enumerated below:
 |Code|Message|Description|
 -------|----|------|------------
 | `BLOB_UPLOAD_UNKNOWN` | blob upload unknown to registry | If a blob upload has been cancelled or was never started, this error code may be returned. |
-
-
-
-###### On Failure: Requested Range Not Satisfiable
-
-```
-416 Requested Range Not Satisfiable
-Location: /v2/<name>/blobs/uploads/<uuid>
-Range: 0-<offset>
-```
-
-The `Content-Range` specification cannot be accepted, either because it does not overlap with the current progress or it is invalid. The contents of the `Range` header may be used to resolve the condition.
-
-The following headers will be returned on the response:
-
-|Name|Description|
-|----|-----------|
-|`Location`|The location of the upload. Clients should assume this changes after each request. Clients should use the contents verbatim to complete the upload, adding parameters where required.|
-|`Range`|Range indicating the current progress of the upload.|
 
 
 

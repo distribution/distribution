@@ -119,6 +119,15 @@ specification to correspond with the versions enumerated here.
 	<dt>2.0.1</dt>
 	<dd>
 		<ul>
+			<li>Added capability of doing streaming upload to PATCH blob upload.</li>
+			<li>Updated PUT blob upload to no longer take final chunk, now requires entire data or no data.</li>
+			<li>Removed `416 Requested Range Not Satisfiable` response status from PUT blob upload.</li>
+		</ul>
+	</dd>
+
+	<dt>2.0.0</dt>
+	<dd>
+		<ul>
 			<li>Added support for immutable manifest references in manifest endpoints.</li>
 			<li>Deleting a manifest by tag has been deprecated.</li>
 			<li>Specified `Docker-Content-Digest` header for appropriate entities.</li>
@@ -223,6 +232,11 @@ authenticate against different resources, even if this check succeeds.
 If `404 Not Found` response status, or other unexpected status, is returned,
 the client should proceed with the assumption that the registry does not
 implement V2 of the API.
+
+When a `200 OK` or `401 Unauthorized` response is returned, the
+"Docker-Distribution-API-Version" header should be set to "registry/2.0".
+Clients may require this header value to determine if the endpoint serves this
+API. When this header is omitted, clients may fallback to an older API version.
 
 ### Pulling An Image
 

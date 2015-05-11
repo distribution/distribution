@@ -145,6 +145,10 @@ func TestWithResponseWriter(t *testing.T) {
 		t.Fatalf("unexpected response writer returned: %#v != %#v", grw, rw)
 	}
 
+	if ctx.Value("http.response.status") != 0 {
+		t.Fatalf("response status should always be a number and should be zero here: %v != 0", ctx.Value("http.response.status"))
+	}
+
 	if n, err := rw.Write(make([]byte, 1024)); err != nil {
 		t.Fatalf("unexpected error writing: %v", err)
 	} else if n != 1024 {
