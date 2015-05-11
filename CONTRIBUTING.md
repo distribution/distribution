@@ -90,11 +90,11 @@ PR titles should be lowercased, except for proper noun references (such a
 method name or type).
 
 PR titles should be prefixed with affected directories, comma separated. For
-example, if a specification is modified, the prefix would be "doc/spec". If
+example, if a specification is modified, the prefix would be "docs/spec". If
 the modifications are only in the root, do not include it. If multiple
 directories are modified, include each, separated by a comma and space.
 
 Here are some examples:
 
-- doc/spec: move API specification into correct position
+- docs/spec: move API specification into correct position
 - context, registry, auth, auth/token, cmd/registry: context aware logging
