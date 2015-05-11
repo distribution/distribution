@@ -6,7 +6,7 @@ import (
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/testsuites"
 	"io/ioutil"
-	"log"
+	//"log"
 	"os"
 	"strconv"
 	"testing"
@@ -33,7 +33,7 @@ func init() {
 	}
 	defer os.Remove(root)
 
-	s3DriverConstructor := func(rootDirectory string) (*Driver, error) {
+	ossDriverConstructor := func(rootDirectory string) (*Driver, error) {
 		encryptBool := false
 		if encrypt != "" {
 			encryptBool, err = strconv.ParseBool(encrypt)
@@ -73,26 +73,25 @@ func init() {
 		return New(parameters)
 	}
 
-	// Skip S3 storage driver tests if environment variable parameters are not provided
+	// Skip OSS storage driver tests if environment variable parameters are not provided
 	skipCheck := func() string {
 		if accessKey == "" || secretKey == "" || region == "" || bucket == "" || encrypt == "" {
-			log.Println("Missing something")
-			return "Must set AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_REGION, S3_BUCKET, and S3_ENCRYPT to run S3 tests"
+			return "Must set ALIYUN_ACCESS_KEY_ID, ALIYUN_ACCESS_KEY_SECRET, OSS_REGION, OSS_BUCKET, and OSS_ENCRYPT to run OSS tests"
 		}
 		return ""
 	}
 
 	driverConstructor := func() (storagedriver.StorageDriver, error) {
-		return s3DriverConstructor(root)
+		return ossDriverConstructor(root)
 	}
 
 	testsuites.RegisterInProcessSuite(driverConstructor, skipCheck)
 
-	// s3Constructor := func() (*Driver, error) {
-	// 	return s3DriverConstructor(aws.GetRegion(region))
+	// ossConstructor := func() (*Driver, error) {
+	// 	return ossDriverConstructor(aws.GetRegion(region))
 	// }
 
-	RegisterS3DriverSuite(s3DriverConstructor, skipCheck)
+	RegisterOSSDriverSuite(ossDriverConstructor, skipCheck)
 
 	// testsuites.RegisterIPCSuite(driverName, map[string]string{
 	// 	"accesskey": accessKey,
@@ -104,25 +103,25 @@ func init() {
 	// }
 }
 
-func RegisterS3DriverSuite(s3DriverConstructor OSSDriverConstructor, skipCheck testsuites.SkipCheck) {
-	check.Suite(&S3DriverSuite{
-		Constructor: s3DriverConstructor,
+func RegisterOSSDriverSuite(ossDriverConstructor OSSDriverConstructor, skipCheck testsuites.SkipCheck) {
+	check.Suite(&OSSDriverSuite{
+		Constructor: ossDriverConstructor,
 		SkipCheck:   skipCheck,
 	})
 }
 
-type S3DriverSuite struct {
+type OSSDriverSuite struct {
 	Constructor OSSDriverConstructor
 	testsuites.SkipCheck
 }
 
-func (suite *S3DriverSuite) SetUpSuite(c *check.C) {
+func (suite *OSSDriverSuite) SetUpSuite(c *check.C) {
 	if reason := suite.SkipCheck(); reason != "" {
 		c.Skip(reason)
 	}
 }
 
-func (suite *S3DriverSuite) TestEmptyRootList(c *check.C) {
+func (suite *OSSDriverSuite) TestEmptyRootList(c *check.C) {
 	validRoot, err := ioutil.TempDir("", "driver-")
 	c.Assert(err, check.IsNil)
 	defer os.Remove(validRoot)

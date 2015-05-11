@@ -1,13 +1,13 @@
-// Package s3 provides a storagedriver.StorageDriver implementation to
-// store blobs in Amazon S3 cloud storage.
+// Package oss provides a storagedriver.StorageDriver implementation to
+// store blobs in Aliyun OSS cloud storage.
 //
-// This package leverages the AdRoll/goamz client library for interfacing with
+// This package leverages the denverdino/aliyungo client library for interfacing with
 // oss.
 //
-// Because s3 is a key, value store the Stat call does not support last modification
+// Because OSS is a key, value store the Stat call does not support last modification
 // time for directories (directories are an abstraction for key, value stores)
 //
-// Keep in mind that s3 guarantees only eventual consistency, so do not assume
+// Keep in mind that OSS guarantees only eventual consistency, so do not assume
 // that a successful write will mean immediate access to the data written (although
 // in most regions a new object put has guaranteed read after write). The only true
 // guarantee is that once you call Stat and receive a certain file size, that much of
@@ -37,12 +37,12 @@ import (
 const driverName = "oss"
 
 // minChunkSize defines the minimum multipart upload chunk size
-// S3 API requires multipart upload chunks to be at least 5MB
+// OSS API requires multipart upload chunks to be at least 5MB
 const minChunkSize = 5 << 20
 
 const defaultChunkSize = 2 * minChunkSize
 
-// listMax is the largest amount of objects you can request from S3 in a list call
+// listMax is the largest amount of objects you can request from OSS in a list call
 const listMax = 1000
 
 //DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
@@ -59,13 +59,13 @@ type DriverParameters struct {
 }
 
 func init() {
-	factory.Register(driverName, &s3DriverFactory{})
+	factory.Register(driverName, &ossDriverFactory{})
 }
 
-// s3DriverFactory implements the factory.StorageDriverFactory interface
-type s3DriverFactory struct{}
+// ossDriverFactory implements the factory.StorageDriverFactory interface
+type ossDriverFactory struct{}
 
-func (factory *s3DriverFactory) Create(parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
+func (factory *ossDriverFactory) Create(parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
 	return FromParameters(parameters)
 }
 
@@ -84,7 +84,7 @@ type baseEmbed struct {
 	base.Base
 }
 
-// Driver is a storagedriver.StorageDriver implementation backed by Amazon S3
+// Driver is a storagedriver.StorageDriver implementation backed by Aliyun OSS
 // Objects are stored at absolute keys in the provided bucket.
 type Driver struct {
 	baseEmbed
@@ -194,8 +194,8 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 // bucketName
 func New(params DriverParameters) (*Driver, error) {
 
-	s3obj := oss.NewOSSClient(params.Region, params.Internal, params.AccessKeyId, params.AccessKeySecret)
-	bucket := s3obj.Bucket(params.Bucket)
+	client := oss.NewOSSClient(params.Region, params.Internal, params.AccessKeyId, params.AccessKeySecret)
+	bucket := client.Bucket(params.Bucket)
 
 	// Validate that the given credentials have at least read permissions in the
 	// given bucket scope.
@@ -204,7 +204,7 @@ func New(params DriverParameters) (*Driver, error) {
 	}
 
 	// TODO Currently multipart uploads have no timestamps, so this would be unwise
-	// if you initiated a new s3driver while another one is running on the same bucket.
+	// if you initiated a new OSS client while another one is running on the same bucket.
 	// multis, _, err := bucket.ListMulti("", "")
 	// if err != nil {
 	// 	return nil, err
@@ -219,7 +219,7 @@ func New(params DriverParameters) (*Driver, error) {
 	// }
 
 	d := &driver{
-		Client:        s3obj,
+		Client:        client,
 		Bucket:        bucket,
 		ChunkSize:     params.ChunkSize,
 		Encrypt:       params.Encrypt,
@@ -248,7 +248,7 @@ func (d *driver) Name() string {
 
 // GetContent retrieves the content stored at "path" as a []byte.
 func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
-	content, err := d.Bucket.Get(d.s3Path(path))
+	content, err := d.Bucket.Get(d.ossPath(path))
 	if err != nil {
 		return nil, parseError(path, err)
 	}
@@ -257,7 +257,7 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 
 // PutContent stores the []byte content at a location designated by "path".
 func (d *driver) PutContent(ctx context.Context, path string, contents []byte) error {
-	return parseError(path, d.Bucket.Put(d.s3Path(path), contents, d.getContentType(), getPermissions(), d.getOptions()))
+	return parseError(path, d.Bucket.Put(d.ossPath(path), contents, d.getContentType(), getPermissions(), d.getOptions()))
 }
 
 // ReadStream retrieves an io.ReadCloser for the content stored at "path" with a
@@ -266,9 +266,9 @@ func (d *driver) ReadStream(ctx context.Context, path string, offset int64) (io.
 	headers := make(http.Header)
 	headers.Add("Range", "bytes="+strconv.FormatInt(offset, 10)+"-")
 
-	resp, err := d.Bucket.GetResponseWithHeaders(d.s3Path(path), headers)
+	resp, err := d.Bucket.GetResponseWithHeaders(d.ossPath(path), headers)
 	if err != nil {
-		if s3Err, ok := err.(*oss.Error); ok && s3Err.Code == "InvalidRange" {
+		if ossErr, ok := err.(*oss.Error); ok && ossErr.Code == "InvalidRange" {
 			return ioutil.NopCloser(bytes.NewReader(nil)), nil
 		}
 
@@ -292,7 +292,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 	var part oss.Part
 	done := make(chan struct{}) // stopgap to free up waiting goroutines
 
-	multi, err := d.Bucket.InitMulti(d.s3Path(path), d.getContentType(), getPermissions(), d.getOptions())
+	multi, err := d.Bucket.InitMulti(d.ossPath(path), d.getContentType(), getPermissions(), d.getOptions())
 	if err != nil {
 		return 0, err
 	}
@@ -384,10 +384,10 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 			// DRAGONS(stevvooe): There are few things one might want to know
 			// about this section. First, the putErrChan is expecting an error
 			// and a nil or just a nil to come through the channel. This is
-			// covered by the silly defer below. The other aspect is the s3
+			// covered by the silly defer below. The other aspect is the OSS
 			// retry backoff to deal with RequestTimeout errors. Even though
-			// the underlying s3 library should handle it, it doesn't seem to
-			// be part of the shouldRetry function (see AdRoll/goamz/s3).
+			// the underlying OSS library should handle it, it doesn't seem to
+			// be part of the shouldRetry function (see denverdino/aliyungo/oss).
 			defer func() {
 				select {
 				case putErrChan <- nil: // for some reason, we do this no matter what.
@@ -411,12 +411,12 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 				}
 
 				// NOTE(stevvooe): This retry code tries to only retry under
-				// conditions where the s3 package does not. We may add s3
+				// conditions where the OSS package does not. We may add oss
 				// error codes to the below if we see others bubble up in the
 				// application. Right now, the most troubling is
 				// RequestTimeout, which seems to only triggered when a tcp
-				// connection to s3 slows to a crawl. If the RequestTimeout
-				// ends up getting added to the s3 library and we don't see
+				// connection to OSS slows to a crawl. If the RequestTimeout
+				// ends up getting added to the OSS library and we don't see
 				// other errors, this retry loop can be removed.
 				switch err := err.(type) {
 				case *oss.Error:
@@ -454,9 +454,9 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 	}
 
 	if offset > 0 {
-		resp, err := d.Bucket.Head(d.s3Path(path), nil)
+		resp, err := d.Bucket.Head(d.ossPath(path), nil)
 		if err != nil {
-			if s3Err, ok := err.(*oss.Error); !ok || s3Err.Code != "NoSuchKey" {
+			if ossErr, ok := err.(*oss.Error); !ok || ossErr.Code != "NoSuchKey" {
 				return 0, err
 			}
 		}
@@ -484,7 +484,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 				// currentLength >= offset >= chunkSize
 				_, part, err = multi.PutPartCopy(partNumber,
 					oss.CopyOptions{CopySourceOptions: "bytes=0-" + strconv.FormatInt(offset-1, 10)},
-					d.Bucket.Name+"/"+d.s3Path(path))
+					d.Bucket.Name+"/"+d.ossPath(path))
 				if err != nil {
 					return 0, err
 				}
@@ -578,7 +578,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 				// offset > currentLength >= chunkSize
 				_, part, err = multi.PutPartCopy(partNumber,
 					oss.CopyOptions{},
-					d.Bucket.Name+"/"+d.s3Path(path))
+					d.Bucket.Name+"/"+d.ossPath(path))
 				if err != nil {
 					return 0, err
 				}
@@ -619,7 +619,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 // Stat retrieves the FileInfo for the given path, including the current size
 // in bytes and the creation time.
 func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
-	listResponse, err := d.Bucket.List(d.s3Path(path), "", "", 1)
+	listResponse, err := d.Bucket.List(d.ossPath(path), "", "", 1)
 	if err != nil {
 		return nil, err
 	}
@@ -629,7 +629,7 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 	}
 
 	if len(listResponse.Contents) == 1 {
-		if listResponse.Contents[0].Key != d.s3Path(path) {
+		if listResponse.Contents[0].Key != d.ossPath(path) {
 			fi.IsDir = true
 		} else {
 			fi.IsDir = false
@@ -660,11 +660,11 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 	// In those cases, there is no root prefix to replace and we must actually add a "/" to all
 	// results in order to keep them as valid paths as recognized by storagedriver.PathRegexp
 	prefix := ""
-	if d.s3Path("") == "" {
+	if d.ossPath("") == "" {
 		prefix = "/"
 	}
 
-	listResponse, err := d.Bucket.List(d.s3Path(path), "/", "", listMax)
+	listResponse, err := d.Bucket.List(d.ossPath(path), "/", "", listMax)
 	if err != nil {
 		return nil, err
 	}
@@ -674,15 +674,15 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 
 	for {
 		for _, key := range listResponse.Contents {
-			files = append(files, strings.Replace(key.Key, d.s3Path(""), prefix, 1))
+			files = append(files, strings.Replace(key.Key, d.ossPath(""), prefix, 1))
 		}
 
 		for _, commonPrefix := range listResponse.CommonPrefixes {
-			directories = append(directories, strings.Replace(commonPrefix[0:len(commonPrefix)-1], d.s3Path(""), prefix, 1))
+			directories = append(directories, strings.Replace(commonPrefix[0:len(commonPrefix)-1], d.ossPath(""), prefix, 1))
 		}
 
 		if listResponse.IsTruncated {
-			listResponse, err = d.Bucket.List(d.s3Path(path), "/", listResponse.NextMarker, listMax)
+			listResponse, err = d.Bucket.List(d.ossPath(path), "/", listResponse.NextMarker, listMax)
 			if err != nil {
 				return nil, err
 			}
@@ -697,14 +697,14 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
 func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
-	logrus.Infof("Move from %s to %s", d.Bucket.Path("/"+d.s3Path(sourcePath)), d.s3Path(destPath))
+	logrus.Infof("Move from %s to %s", d.Bucket.Path("/"+d.ossPath(sourcePath)), d.ossPath(destPath))
 	/* This is terrible, but aws doesn't have an actual move. */
-	_, err := d.Bucket.PutCopy(d.s3Path(destPath), getPermissions(),
+	_, err := d.Bucket.PutCopy(d.ossPath(destPath), getPermissions(),
 		oss.CopyOptions{
 		//Options:     d.getOptions(),
 		//ContentType: d.getContentType()
 		},
-		d.Bucket.Path(d.s3Path(sourcePath)))
+		d.Bucket.Path(d.ossPath(sourcePath)))
 	if err != nil {
 		return parseError(sourcePath, err)
 	}
@@ -714,24 +714,24 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
 func (d *driver) Delete(ctx context.Context, path string) error {
-	listResponse, err := d.Bucket.List(d.s3Path(path), "", "", listMax)
+	listResponse, err := d.Bucket.List(d.ossPath(path), "", "", listMax)
 	if err != nil || len(listResponse.Contents) == 0 {
 		return storagedriver.PathNotFoundError{Path: path}
 	}
 
-	s3Objects := make([]oss.Object, listMax)
+	ossObjects := make([]oss.Object, listMax)
 
 	for len(listResponse.Contents) > 0 {
 		for index, key := range listResponse.Contents {
-			s3Objects[index].Key = key.Key
+			ossObjects[index].Key = key.Key
 		}
 
-		err := d.Bucket.DelMulti(oss.Delete{Quiet: false, Objects: s3Objects[0:len(listResponse.Contents)]})
+		err := d.Bucket.DelMulti(oss.Delete{Quiet: false, Objects: ossObjects[0:len(listResponse.Contents)]})
 		if err != nil {
 			return nil
 		}
 
-		listResponse, err = d.Bucket.List(d.s3Path(path), "", "", listMax)
+		listResponse, err = d.Bucket.List(d.ossPath(path), "", "", listMax)
 		if err != nil {
 			return err
 		}
@@ -763,22 +763,22 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 		}
 	}
 	logrus.Infof("expiresTime: %d", expiresTime)
-	testURL := d.Bucket.SignedURLWithMethod(methodString, d.s3Path(path), expiresTime, nil, nil)
+	testURL := d.Bucket.SignedURLWithMethod(methodString, d.ossPath(path), expiresTime, nil, nil)
 	logrus.Infof("testURL: %s", testURL)
 	return testURL, nil
 }
 
-func (d *driver) s3Path(path string) string {
+func (d *driver) ossPath(path string) string {
 	return strings.TrimLeft(strings.TrimRight(d.RootDirectory, "/")+path, "/")
 }
 
-// S3BucketKey returns the s3 bucket key for the given storage driver path.
+// S3BucketKey returns the OSS bucket key for the given storage driver path.
 func (d *Driver) S3BucketKey(path string) string {
-	return d.StorageDriver.(*driver).s3Path(path)
+	return d.StorageDriver.(*driver).ossPath(path)
 }
 
 func parseError(path string, err error) error {
-	if s3Err, ok := err.(*oss.Error); ok && s3Err.Code == "NoSuchKey" {
+	if ossErr, ok := err.(*oss.Error); ok && ossErr.Code == "NoSuchKey" {
 		return storagedriver.PathNotFoundError{Path: path}
 	}
 
@@ -786,8 +786,8 @@ func parseError(path string, err error) error {
 }
 
 func hasCode(err error, code string) bool {
-	s3err, ok := err.(*oss.Error)
-	return ok && s3err.Code == code
+	ossErr, ok := err.(*oss.Error)
+	return ok && ossErr.Code == code
 }
 
 func (d *driver) getOptions() oss.Options {
