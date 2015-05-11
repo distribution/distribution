@@ -47,7 +47,7 @@ const listMax = 1000
 
 //DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
 type DriverParameters struct {
-	AccessKeyId     string
+	AccessKeyID     string
 	AccessKeySecret string
 	Bucket          string
 	Region          oss.Region
@@ -176,7 +176,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	}
 
 	params := DriverParameters{
-		AccessKeyId:     fmt.Sprint(accessKey),
+		AccessKeyID:     fmt.Sprint(accessKey),
 		AccessKeySecret: fmt.Sprint(secretKey),
 		Bucket:          fmt.Sprint(bucket),
 		Region:          oss.Region(fmt.Sprint(regionName)),
@@ -194,7 +194,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 // bucketName
 func New(params DriverParameters) (*Driver, error) {
 
-	client := oss.NewOSSClient(params.Region, params.Internal, params.AccessKeyId, params.AccessKeySecret)
+	client := oss.NewOSSClient(params.Region, params.Internal, params.AccessKeyID, params.AccessKeySecret)
 	bucket := client.Bucket(params.Bucket)
 
 	// Validate that the given credentials have at least read permissions in the
