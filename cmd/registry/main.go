@@ -28,6 +28,7 @@ import (
 	_ "github.com/docker/distribution/registry/storage/driver/inmemory"
 	_ "github.com/docker/distribution/registry/storage/driver/middleware/cloudfront"
 	_ "github.com/docker/distribution/registry/storage/driver/s3"
+	_ "github.com/docker/distribution/registry/storage/driver/swift"
 	"github.com/docker/distribution/version"
 	gorhandlers "github.com/gorilla/handlers"
 	"github.com/yvasiyarov/gorelic"

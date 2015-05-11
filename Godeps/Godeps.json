@@ -81,6 +81,9 @@
 		{
 			"ImportPath": "github.com/stevvooe/resumable",
 			"Rev": "51ad44105773cafcbe91927f70ac68e1bf78f8b4"
+                },
+			"ImportPath": "github.com/lebauce/swift",
+			"Rev": "677cb70f5d40fa1a81ddb32f872615a57bb42381"
 		},
 		{
 			"ImportPath": "github.com/yvasiyarov/go-metrics",

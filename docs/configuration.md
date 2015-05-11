@@ -49,6 +49,7 @@ This section lists all the registry configuration options. Some options in
 the list are mutually exclusive. So, make sure to read the detailed reference
 information about each option that appears later in this page.
 
+<<<<<<< HEAD
     version: 0.1
     log:
       level: debug
@@ -92,6 +93,14 @@ information about each option that appears later in this page.
         poolname: radospool
         username: radosuser
         chunksize: 4194304
+      swift:
+        username: username
+        password: password
+        authurl: https://storage.myprovider.com/v2.0
+        tenant: tenantname
+        region: fr
+        container: containername
+        rootdirectory: /swift/object/name/prefix
       cache:
         blobdescriptor: redis
       maintenance:
@@ -579,6 +588,107 @@ must be set.
 `dryrun` | yes |  dryrun can be set to true to obtain a summary of what directories will be deleted.  Default=false.
 
 Note: `age` and `interval` are strings containing a number with optional fraction and a unit suffix: e.g. 45m, 2h10m, 168h (1 week).
+
+### Openstack Swift
+
+This storage backend uses Openstack Swift object storage.
+
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>authurl</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      URL for obtaining an auth token.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>username</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      Your Openstack user name.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>password</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      Your Openstack password.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>region</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      The Openstack region in which your container exists.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>container</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      The container name in which you want to store the registry's data.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>tenant</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Your Openstack tenant name.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>chunksize</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Size of the data segments for the Swift Dynamic Large Objects. This value should be a number (defaults to 5M).
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>rootdirectory</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      This is a prefix that will be applied to all Swift keys to allow you to segment data in your container if necessary.
+    </td>
+  </tr>
+</table>
+
 
 ## auth
 
