@@ -67,9 +67,9 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 	})
 	app.register(v2.RouteNameManifest, imageManifestDispatcher)
 	app.register(v2.RouteNameTags, tagsDispatcher)
-	app.register(v2.RouteNameBlob, layerDispatcher)
-	app.register(v2.RouteNameBlobUpload, layerUploadDispatcher)
-	app.register(v2.RouteNameBlobUploadChunk, layerUploadDispatcher)
+	app.register(v2.RouteNameBlob, blobDispatcher)
+	app.register(v2.RouteNameBlobUpload, blobUploadDispatcher)
+	app.register(v2.RouteNameBlobUploadChunk, blobUploadDispatcher)
 
 	var err error
 	app.driver, err = factory.Create(configuration.Storage.Type(), configuration.Storage.Parameters())
@@ -103,18 +103,24 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 
 	// configure storage caches
 	if cc, ok := configuration.Storage["cache"]; ok {
-		switch cc["layerinfo"] {
+		v, ok := cc["blobdescriptor"]
+		if !ok {
+			// Backwards compatible: "layerinfo" == "blobdescriptor"
+			v = cc["layerinfo"]
+		}
+
+		switch v {
 		case "redis":
 			if app.redis == nil {
 				panic("redis configuration required to use for layerinfo cache")
 			}
-			app.registry = storage.NewRegistryWithDriver(app, app.driver, cache.NewRedisLayerInfoCache(app.redis))
-			ctxu.GetLogger(app).Infof("using redis layerinfo cache")
+			app.registry = storage.NewRegistryWithDriver(app, app.driver, cache.NewRedisBlobDescriptorCacheProvider(app.redis))
+			ctxu.GetLogger(app).Infof("using redis blob descriptor cache")
 		case "inmemory":
-			app.registry = storage.NewRegistryWithDriver(app, app.driver, cache.NewInMemoryLayerInfoCache())
-			ctxu.GetLogger(app).Infof("using inmemory layerinfo cache")
+			app.registry = storage.NewRegistryWithDriver(app, app.driver, cache.NewInMemoryBlobDescriptorCacheProvider())
+			ctxu.GetLogger(app).Infof("using inmemory blob descriptor cache")
 		default:
-			if cc["layerinfo"] != "" {
+			if v != "" {
 				ctxu.GetLogger(app).Warnf("unkown cache type %q, caching disabled", configuration.Storage["cache"])
 			}
 		}

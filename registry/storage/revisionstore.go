@@ -3,8 +3,8 @@ package storage
 import (
 	"encoding/json"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/docker/distribution"
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/libtrust"
@@ -12,47 +12,56 @@ import (
 
 // revisionStore supports storing and managing manifest revisions.
 type revisionStore struct {
-	*repository
+	repository *repository
+	blobStore  *linkedBlobStore
+	ctx        context.Context
 }
 
-// exists returns true if the revision is available in the named repository.
-func (rs *revisionStore) exists(revision digest.Digest) (bool, error) {
-	revpath, err := rs.pm.path(manifestRevisionPathSpec{
-		name:     rs.Name(),
-		revision: revision,
-	})
-
-	if err != nil {
-		return false, err
+func newRevisionStore(ctx context.Context, repo *repository, blobStore *blobStore) *revisionStore {
+	return &revisionStore{
+		ctx:        ctx,
+		repository: repo,
+		blobStore: &linkedBlobStore{
+			blobStore:  blobStore,
+			repository: repo,
+			ctx:        ctx,
+			linkPath:   manifestRevisionLinkPath,
+		},
 	}
-
-	exists, err := exists(rs.repository.ctx, rs.driver, revpath)
-	if err != nil {
-		return false, err
-	}
-
-	return exists, nil
 }
 
 // get retrieves the manifest, keyed by revision digest.
-func (rs *revisionStore) get(revision digest.Digest) (*manifest.SignedManifest, error) {
+func (rs *revisionStore) get(ctx context.Context, revision digest.Digest) (*manifest.SignedManifest, error) {
 	// Ensure that this revision is available in this repository.
-	if exists, err := rs.exists(revision); err != nil {
-		return nil, err
-	} else if !exists {
-		return nil, distribution.ErrUnknownManifestRevision{
-			Name:     rs.Name(),
-			Revision: revision,
+	_, err := rs.blobStore.Stat(ctx, revision)
+	if err != nil {
+		if err == distribution.ErrBlobUnknown {
+			return nil, distribution.ErrManifestUnknownRevision{
+				Name:     rs.repository.Name(),
+				Revision: revision,
+			}
 		}
+
+		return nil, err
 	}
 
-	content, err := rs.blobStore.get(revision)
+	// TODO(stevvooe): Need to check descriptor from above to ensure that the
+	// mediatype is as we expect for the manifest store.
+
+	content, err := rs.blobStore.Get(ctx, revision)
 	if err != nil {
+		if err == distribution.ErrBlobUnknown {
+			return nil, distribution.ErrManifestUnknownRevision{
+				Name:     rs.repository.Name(),
+				Revision: revision,
+			}
+		}
+
 		return nil, err
 	}
 
 	// Fetch the signatures for the manifest
-	signatures, err := rs.Signatures().Get(revision)
+	signatures, err := rs.repository.Signatures().Get(revision)
 	if err != nil {
 		return nil, err
 	}
@@ -78,69 +87,34 @@ func (rs *revisionStore) get(revision digest.Digest) (*manifest.SignedManifest, 
 
 // put stores the manifest in the repository, if not already present. Any
 // updated signatures will be stored, as well.
-func (rs *revisionStore) put(sm *manifest.SignedManifest) (digest.Digest, error) {
+func (rs *revisionStore) put(ctx context.Context, sm *manifest.SignedManifest) (distribution.Descriptor, error) {
 	// Resolve the payload in the manifest.
 	payload, err := sm.Payload()
 	if err != nil {
-		return "", err
+		return distribution.Descriptor{}, err
 	}
 
 	// Digest and store the manifest payload in the blob store.
-	revision, err := rs.blobStore.put(payload)
+	revision, err := rs.blobStore.Put(ctx, manifest.ManifestMediaType, payload)
 	if err != nil {
-		logrus.Errorf("error putting payload into blobstore: %v", err)
-		return "", err
+		context.GetLogger(ctx).Errorf("error putting payload into blobstore: %v", err)
+		return distribution.Descriptor{}, err
 	}
 
 	// Link the revision into the repository.
-	if err := rs.link(revision); err != nil {
-		return "", err
+	if err := rs.blobStore.linkBlob(ctx, revision); err != nil {
+		return distribution.Descriptor{}, err
 	}
 
 	// Grab each json signature and store them.
 	signatures, err := sm.Signatures()
 	if err != nil {
-		return "", err
+		return distribution.Descriptor{}, err
 	}
 
-	if err := rs.Signatures().Put(revision, signatures...); err != nil {
-		return "", err
+	if err := rs.repository.Signatures().Put(revision.Digest, signatures...); err != nil {
+		return distribution.Descriptor{}, err
 	}
 
 	return revision, nil
-}
-
-// link links the revision into the repository.
-func (rs *revisionStore) link(revision digest.Digest) error {
-	revisionPath, err := rs.pm.path(manifestRevisionLinkPathSpec{
-		name:     rs.Name(),
-		revision: revision,
-	})
-
-	if err != nil {
-		return err
-	}
-
-	if exists, err := exists(rs.repository.ctx, rs.driver, revisionPath); err != nil {
-		return err
-	} else if exists {
-		// Revision has already been linked!
-		return nil
-	}
-
-	return rs.blobStore.link(revisionPath, revision)
-}
-
-// delete removes the specified manifest revision from storage.
-func (rs *revisionStore) delete(revision digest.Digest) error {
-	revisionPath, err := rs.pm.path(manifestRevisionPathSpec{
-		name:     rs.Name(),
-		revision: revision,
-	})
-
-	if err != nil {
-		return err
-	}
-
-	return rs.driver.Delete(rs.repository.ctx, revisionPath)
 }

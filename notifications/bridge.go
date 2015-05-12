@@ -65,16 +65,16 @@ func (b *bridge) ManifestDeleted(repo distribution.Repository, sm *manifest.Sign
 	return b.createManifestEventAndWrite(EventActionDelete, repo, sm)
 }
 
-func (b *bridge) LayerPushed(repo distribution.Repository, layer distribution.Layer) error {
-	return b.createLayerEventAndWrite(EventActionPush, repo, layer)
+func (b *bridge) BlobPushed(repo distribution.Repository, desc distribution.Descriptor) error {
+	return b.createBlobEventAndWrite(EventActionPush, repo, desc)
 }
 
-func (b *bridge) LayerPulled(repo distribution.Repository, layer distribution.Layer) error {
-	return b.createLayerEventAndWrite(EventActionPull, repo, layer)
+func (b *bridge) BlobPulled(repo distribution.Repository, desc distribution.Descriptor) error {
+	return b.createBlobEventAndWrite(EventActionPull, repo, desc)
 }
 
-func (b *bridge) LayerDeleted(repo distribution.Repository, layer distribution.Layer) error {
-	return b.createLayerEventAndWrite(EventActionDelete, repo, layer)
+func (b *bridge) BlobDeleted(repo distribution.Repository, desc distribution.Descriptor) error {
+	return b.createBlobEventAndWrite(EventActionDelete, repo, desc)
 }
 
 func (b *bridge) createManifestEventAndWrite(action string, repo distribution.Repository, sm *manifest.SignedManifest) error {
@@ -113,8 +113,8 @@ func (b *bridge) createManifestEvent(action string, repo distribution.Repository
 	return event, nil
 }
 
-func (b *bridge) createLayerEventAndWrite(action string, repo distribution.Repository, layer distribution.Layer) error {
-	event, err := b.createLayerEvent(action, repo, layer)
+func (b *bridge) createBlobEventAndWrite(action string, repo distribution.Repository, desc distribution.Descriptor) error {
+	event, err := b.createBlobEvent(action, repo, desc)
 	if err != nil {
 		return err
 	}
@@ -122,18 +122,13 @@ func (b *bridge) createLayerEventAndWrite(action string, repo distribution.Repos
 	return b.sink.Write(*event)
 }
 
-func (b *bridge) createLayerEvent(action string, repo distribution.Repository, layer distribution.Layer) (*Event, error) {
+func (b *bridge) createBlobEvent(action string, repo distribution.Repository, desc distribution.Descriptor) (*Event, error) {
 	event := b.createEvent(action)
-	event.Target.MediaType = layerMediaType
+	event.Target.Descriptor = desc
 	event.Target.Repository = repo.Name()
 
-	event.Target.Length = layer.Length()
-
-	dgst := layer.Digest()
-	event.Target.Digest = dgst
-
 	var err error
-	event.Target.URL, err = b.ub.BuildBlobURL(repo.Name(), dgst)
+	event.Target.URL, err = b.ub.BuildBlobURL(repo.Name(), desc.Digest)
 	if err != nil {
 		return nil, err
 	}

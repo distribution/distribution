@@ -54,9 +54,14 @@ func WithTrace(ctx Context) (Context, func(format string, a ...interface{})) {
 	}
 
 	return ctx, func(format string, a ...interface{}) {
-		GetLogger(ctx, "trace.duration", "trace.id", "trace.parent.id",
-			"trace.func", "trace.file", "trace.line").
-			Infof(format, a...) // info may be too chatty.
+		GetLogger(ctx,
+			"trace.duration",
+			"trace.id",
+			"trace.parent.id",
+			"trace.func",
+			"trace.file",
+			"trace.line").
+			Debugf(format, a...)
 	}
 }
 

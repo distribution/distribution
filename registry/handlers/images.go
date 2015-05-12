@@ -136,14 +136,12 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 		case distribution.ErrManifestVerification:
 			for _, verificationError := range err {
 				switch verificationError := verificationError.(type) {
-				case distribution.ErrUnknownLayer:
-					imh.Errors.Push(v2.ErrorCodeBlobUnknown, verificationError.FSLayer)
+				case distribution.ErrManifestBlobUnknown:
+					imh.Errors.Push(v2.ErrorCodeBlobUnknown, verificationError.Digest)
 				case distribution.ErrManifestUnverified:
 					imh.Errors.Push(v2.ErrorCodeManifestUnverified)
 				default:
 					if verificationError == digest.ErrDigestInvalidFormat {
-						// TODO(stevvooe): We need to really need to move all
-						// errors to types. Its much more straightforward.
 						imh.Errors.Push(v2.ErrorCodeDigestInvalid)
 					} else {
 						imh.Errors.PushErr(verificationError)

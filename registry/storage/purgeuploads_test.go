@@ -24,7 +24,7 @@ func testUploadFS(t *testing.T, numUploads int, repoName string, startedAt time.
 }
 
 func addUploads(ctx context.Context, t *testing.T, d driver.StorageDriver, uploadID, repo string, startedAt time.Time) {
-	dataPath, err := pm.path(uploadDataPathSpec{name: repo, uuid: uploadID})
+	dataPath, err := pm.path(uploadDataPathSpec{name: repo, id: uploadID})
 	if err != nil {
 		t.Fatalf("Unable to resolve path")
 	}
@@ -32,7 +32,7 @@ func addUploads(ctx context.Context, t *testing.T, d driver.StorageDriver, uploa
 		t.Fatalf("Unable to write data file")
 	}
 
-	startedAtPath, err := pm.path(uploadStartedAtPathSpec{name: repo, uuid: uploadID})
+	startedAtPath, err := pm.path(uploadStartedAtPathSpec{name: repo, id: uploadID})
 	if err != nil {
 		t.Fatalf("Unable to resolve path")
 	}
@@ -115,7 +115,7 @@ func TestPurgeOnlyUploads(t *testing.T) {
 
 	// Create a directory tree outside _uploads and ensure
 	// these files aren't deleted.
-	dataPath, err := pm.path(uploadDataPathSpec{name: "test-repo", uuid: uuid.New()})
+	dataPath, err := pm.path(uploadDataPathSpec{name: "test-repo", id: uuid.New()})
 	if err != nil {
 		t.Fatalf(err.Error())
 	}

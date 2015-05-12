@@ -6,7 +6,7 @@ log:
     environment: development
 storage:
     cache:
-        layerinfo: inmemory
+        blobdescriptor: redis
     filesystem:
         rootdirectory: /tmp/registry-dev
     maintenance:
