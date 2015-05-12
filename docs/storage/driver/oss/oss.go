@@ -125,7 +125,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	if ok {
 		internalBool, ok = internal.(bool)
 		if !ok {
-			return nil, fmt.Errorf("The encrypt parameter should be a boolean")
+			return nil, fmt.Errorf("The internal parameter should be a boolean")
 		}
 	}
 
@@ -194,7 +194,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 // bucketName
 func New(params DriverParameters) (*Driver, error) {
 
-	client := oss.NewOSSClient(params.Region, params.Internal, params.AccessKeyID, params.AccessKeySecret)
+	client := oss.NewOSSClient(params.Region, params.Internal, params.AccessKeyID, params.AccessKeySecret, params.Secure)
 	bucket := client.Bucket(params.Bucket)
 
 	// Validate that the given credentials have at least read permissions in the
