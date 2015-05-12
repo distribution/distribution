@@ -45,6 +45,14 @@
 			"Rev": "6086d7927ec35315964d9fea46df6c04e6d697c1"
 		},
 		{
+			"ImportPath": "github.com/denverdino/aliyungo/oss",
+			"Rev": "17d1e888c907ffdbd875f37500f3d130ce2ee6eb"
+		},
+		{
+			"ImportPath": "github.com/denverdino/aliyungo/util",
+			"Rev": "17d1e888c907ffdbd875f37500f3d130ce2ee6eb"
+		},
+		{
 			"ImportPath": "github.com/docker/docker/pkg/tarsum",
 			"Comment": "v1.4.1-3932-gb63ec6e",
 			"Rev": "b63ec6e4b1f6f5c77a6a74a52fcea9564538c575"
