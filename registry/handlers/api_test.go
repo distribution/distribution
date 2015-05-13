@@ -263,6 +263,43 @@ func TestLayerAPI(t *testing.T) {
 
 	checkResponse(t, "fetching layer bad digest", resp, http.StatusBadRequest)
 
+	// Cache headers
+	resp, err = http.Get(layerURL)
+	if err != nil {
+		t.Fatalf("unexpected error fetching layer: %v", err)
+	}
+
+	checkResponse(t, "fetching layer", resp, http.StatusOK)
+	checkHeaders(t, resp, http.Header{
+		"Content-Length":        []string{fmt.Sprint(layerLength)},
+		"Docker-Content-Digest": []string{layerDigest.String()},
+		"ETag":                  []string{layerDigest.String()},
+		"Cache-Control":         []string{"max-age=86400"},
+	})
+
+	// Matching etag, gives 304
+	etag := resp.Header.Get("Etag")
+	req, err = http.NewRequest("GET", layerURL, nil)
+	if err != nil {
+		t.Fatalf("Error constructing request: %s", err)
+	}
+	req.Header.Set("If-None-Match", etag)
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("Error constructing request: %s", err)
+	}
+
+	checkResponse(t, "fetching layer with etag", resp, http.StatusNotModified)
+
+	// Non-matching etag, gives 200
+	req, err = http.NewRequest("GET", layerURL, nil)
+	if err != nil {
+		t.Fatalf("Error constructing request: %s", err)
+	}
+	req.Header.Set("If-None-Match", "")
+	resp, err = http.DefaultClient.Do(req)
+	checkResponse(t, "fetching layer with invalid etag", resp, http.StatusOK)
+
 	// Missing tests:
 	// 	- Upload the same tarsum file under and different repository and
 	//       ensure the content remains uncorrupted.
