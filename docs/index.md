@@ -4,54 +4,36 @@ page_description: Introduces the Docker Registry
 page_keywords: registry, images, repository
 IGNORES-->
 
-# Docker Registry 2.0
+# Docker Registry
 
-Docker Registry stores and distributes images centrally. It's where you push images to and pull them from; Docker Registry gives team members the ability to share images and deploy them to testing, staging and production environments.
+The Registry is a stateless, highly scalable server side component that stores and lets you distribute Docker images.
 
-Docker provides a hosted registry as part of [Docker Hub](https://hub.docker.com). Docker Hub is a cloud service that securely manages your images. It features organization accounts, automated builds, and much, much more.
+Users looking for a ready-to-go solution are encouraged to head-over to the [Docker Hub](https://hub.docker.com), which provides a free-to-use, hosted Registry, plus additional features (organization accounts, automated builds, and more).
 
-Docker Registry is the core technology behind the Docker Hub. You can run your own registry instance if you want to host your images privately. Docker Registry features:
+On the other hand, people interested in finer grained integration, or more control over the content they publish, should run and operate their own Registry.
 
- - **Pluggable storage drivers**: Images can be stored in Amazon S3, Microsoft Azure or the local filesystem.
- - **Webhook notifications**: When an image is pushed to your registry, webhooks can fire off to launch CI builds, send notifications to IRC, etc.
+## About versions
 
-You can only connect to a 2.0 Docker Registry with a Docker client that is version 1.6.0 or newer. To get started with your own Docker Registry, refer to the instructions on [how to deploy a registry](deploying.md).
+You need to use a Docker client that is version 1.6.0 or newer for this to work.
+If you really need to work with older Docker versions, you should look into the [old python registry](https://github.com/docker/docker-registry)
 
-## Understanding the registry
+## Understanding the Registry
 
-A registry is, at its heart, a collection of repositories. In turn, a repository
-is collection of images. Users interact with the registry by pushing images to
-or pulling images from the registry. The Docker Registry includes several
-optional features that you can configure according to your needs.
+A registry is a storage and content delivery system, holding named Docker images, available in different tagged versions. For example, the image `distribution/registry`, with tags `2.0` and `latest`.
 
-![](images/registry.png)
+Users interact with a registry by using docker push and pull commands. For example, `docker pull myregistry.com/stevvooe/batman:voice`.
 
-The architecture supports a configurable storage backend. You can store images
-on  a file system or on a service such as Amazon S3 or Microsoft Azure. The
-default storage system is the local disk; this is suitable for development or
-some small deployments.
+Storage itself is delegated to drivers. The default storage driver is the local posix filesystem, which is suitable for development or small deployments. Additional cloud-based storage driver like S3, Microsoft Azure and Ceph are also supported. People looking into using other storage backends may do so by writing their own driver implementing the [Storage API](storagedrivers.md).
 
-Securing access to images is a concern for even the simplest deployment. The
-registry service supports transport layer security (TLS) natively. You must
-configure it in your instance to make use of it. You can also use a proxy server
-such as Nginx and basic authentication to extend the security of a deployment.  
+Since securing access to your hosted images is paramount, the Registry natively supports TLS. You can also enforce basic authentication through a proxy like Nginx.
 
-The registry repository includes reference implementations for additional
-authentication and authorization support. Only very large or public registry
-deployments are expected to extend the registry in this way.
+The Registry GitHub repository includes reference implementations for additional authentication and authorization methods. Only very large or public deployments are expected to extend the Registry in this way.
 
-Docker Registry architecture includes a robust notification system. This system
-sends webhook notifications in response to registry activity.  The registry also
-includes features for both logging and reporting as well. Reporting is useful
-for large installations that want to collect metrics. Currently, the feature
-supports both New Relic and Bugsnag.
+Finally, the Registry includes a robust [notification system](notifications.md), calling webhooks in response to activity, and both extensive logging and reporting. Reporting is mostly useful for large installations that want to collect metrics. Currently, New Relic and Bugsnag are supported.
 
 ## Getting help
 
-Docker Registry is an open source project and is under active development. If
-you need help, would like to contribute, or simply want to talk about the
-project with like-minded individuals, we have a number of open channels for
-communication.
+The Registry is an open source project and is under active development. If you need help, would like to contribute, or simply want to talk about the project, we have a number of open channels for communication.
 
 - To report bugs or file feature requests: please use the [issue tracker on Github](https://github.com/docker/distribution/issues).
 - To talk about the project please post a message to the [mailing list](https://groups.google.com/a/dockerproject.org/forum/#!forum/distribution) or join the `#docker-distribution` channel on IRC.
@@ -59,10 +41,15 @@ communication.
 
 For more information and resources, please visit the [Getting Help project page](https://docs.docker.com/project/get-help/).
 
-## Registry documentation
+## Documentation
 
- - [Deploying a registry](deploying.md)
- - [Configure a registry](configuration.md)
+Basics:
+
+ - [Deployment](deploying.md)
+ - [Configuration](configuration.md)
+
+Advanced:
+
  - [Storage driver model](storagedrivers.md)
  - [Working with notifications](notifications.md)
- - [Registry API v2](spec/api.md)
+ - [Registry API](spec/api.md)
