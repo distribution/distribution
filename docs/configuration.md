@@ -90,6 +90,9 @@ http:
 	prefix: /my/nested/registry/
 	secret: asecretforlocaldevelopment
 	tls:
+    rootcas:
+      - /path/to/ca.pem
+      - /path/to/another/ca.pem
 		certificate: /path/to/x509/public
 		key: /path/to/x509/private
     clientcas:
@@ -814,6 +817,9 @@ http:
 	prefix: /my/nested/registry/
 	secret: asecretforlocaldevelopment
 	tls:
+    rootcas:
+      - /path/to/ca.pem
+      - /path/to/another/ca.pem
 		certificate: /path/to/x509/public
 		key: /path/to/x509/private
     clientcas:
@@ -906,6 +912,18 @@ and proxy connections to the registry server.
     </td>
     <td>
        Absolute path to x509 cert file
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>rootcas</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      An array of paths to the root CA files, as x509. This is to validate the
+      server certificate.
     </td>
   </tr>
     <tr>
