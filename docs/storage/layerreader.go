@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -73,7 +74,31 @@ func (lr *layerReader) Handler(r *http.Request) (h http.Handler, err error) {
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// If the registry is serving this content itself, check
+		// the If-None-Match header and return 304 on match.  Redirected
+		// storage implementations do the same.
+
+		if etagMatch(r, lr.digest.String()) {
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
+		setCacheHeaders(w, 86400, lr.digest.String())
 		w.Header().Set("Docker-Content-Digest", lr.digest.String())
 		handlerFunc.ServeHTTP(w, r)
 	}), nil
+}
+
+func etagMatch(r *http.Request, etag string) bool {
+	for _, headerVal := range r.Header["If-None-Match"] {
+		if headerVal == etag {
+			return true
+		}
+	}
+	return false
+}
+
+func setCacheHeaders(w http.ResponseWriter, cacheAge int, etag string) {
+	w.Header().Set("ETag", etag)
+	w.Header().Set("Cache-Control", fmt.Sprintf("max-age=%d", cacheAge))
+
 }
