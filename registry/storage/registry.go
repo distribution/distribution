@@ -81,6 +81,10 @@ func (repo *repository) Manifests() distribution.ManifestService {
 		repository: repo,
 		revisionStore: &revisionStore{
 			repository: repo,
+			tomb: tombstone{
+				pm:     defaultPathMapper,
+				driver: repo.driver,
+			},
 		},
 		tagStore: &tagStore{
 			repository: repo,
@@ -94,6 +98,10 @@ func (repo *repository) Manifests() distribution.ManifestService {
 func (repo *repository) Layers() distribution.LayerService {
 	ls := &layerStore{
 		repository: repo,
+		tomb: tombstone{
+			pm:     defaultPathMapper,
+			driver: repo.driver,
+		},
 	}
 
 	if repo.registry.layerInfoCache != nil {

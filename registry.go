@@ -65,7 +65,7 @@ type ManifestService interface {
 	// Exists returns true if the manifest exists.
 	Exists(dgst digest.Digest) (bool, error)
 
-	// Get retrieves the identified by the digest, if it exists.
+	// Get retrieves the manifest identified by the digest, if it exists.
 	Get(dgst digest.Digest) (*manifest.SignedManifest, error)
 
 	// Delete removes the manifest, if it exists.
@@ -116,6 +116,9 @@ type LayerService interface {
 	// upload. The caller should seek to the latest desired upload location
 	// before proceeding.
 	Resume(uuid string) (LayerUpload, error)
+
+	// Delete a layer with the given digest
+	Delete(digest digest.Digest) error
 }
 
 // Layer provides a readable and seekable layer object. Typically,

@@ -13,10 +13,21 @@ import (
 // revisionStore supports storing and managing manifest revisions.
 type revisionStore struct {
 	*repository
+	tomb tombstone
 }
 
 // exists returns true if the revision is available in the named repository.
 func (rs *revisionStore) exists(revision digest.Digest) (bool, error) {
+	ctx := rs.repository.ctx
+
+	tombstoneExists, err := rs.tomb.tombstoneExists(ctx, rs.Name(), revision)
+	if err != nil {
+		return false, err
+	}
+	if tombstoneExists {
+		return false, nil
+	}
+
 	revpath, err := rs.pm.path(manifestRevisionPathSpec{
 		name:     rs.Name(),
 		revision: revision,
@@ -26,7 +37,7 @@ func (rs *revisionStore) exists(revision digest.Digest) (bool, error) {
 		return false, err
 	}
 
-	exists, err := exists(rs.repository.ctx, rs.driver, revpath)
+	exists, err := exists(ctx, rs.driver, revpath)
 	if err != nil {
 		return false, err
 	}
@@ -79,10 +90,28 @@ func (rs *revisionStore) get(revision digest.Digest) (*manifest.SignedManifest, 
 // put stores the manifest in the repository, if not already present. Any
 // updated signatures will be stored, as well.
 func (rs *revisionStore) put(sm *manifest.SignedManifest) (digest.Digest, error) {
+	ctx := rs.repository.ctx
 	// Resolve the payload in the manifest.
 	payload, err := sm.Payload()
 	if err != nil {
 		return "", err
+	}
+
+	// This put may be restoring a previously deleted manifest
+	// If so, remove the tombstone
+	dgst, err := digest.FromBytes(payload)
+	if err != nil {
+		return "", err
+	}
+
+	tombstoneExists, err := rs.tomb.tombstoneExists(ctx, rs.Name(), dgst)
+	if err != nil {
+		return "", err
+	}
+	if tombstoneExists {
+		if err := rs.tomb.deleteTombstone(ctx, rs.Name(), dgst); err != nil {
+			return "", err
+		}
 	}
 
 	// Digest and store the manifest payload in the blob store.
@@ -131,16 +160,25 @@ func (rs *revisionStore) link(revision digest.Digest) error {
 	return rs.blobStore.link(revisionPath, revision)
 }
 
-// delete removes the specified manifest revision from storage.
+// delete creates a tombstone for the given digest revision.  The tombstone
+// is a link file which points to the deleted manifest.
 func (rs *revisionStore) delete(revision digest.Digest) error {
-	revisionPath, err := rs.pm.path(manifestRevisionPathSpec{
-		name:     rs.Name(),
-		revision: revision,
-	})
-
+	// don't allow deleting a blob that doesn't already exist
+	exists, err := rs.exists(revision)
 	if err != nil {
 		return err
 	}
 
-	return rs.driver.Delete(rs.repository.ctx, revisionPath)
+	if !exists {
+		return distribution.ErrUnknownManifestRevision{
+			Name:     rs.Name(),
+			Revision: revision,
+		}
+	}
+
+	if err := rs.tomb.putTombstone(rs.repository.ctx, rs.Name(), revision); err != nil {
+		return err
+	}
+
+	return nil
 }

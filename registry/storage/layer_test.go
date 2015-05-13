@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/docker/distribution"
@@ -246,6 +247,50 @@ func TestSimpleLayerRead(t *testing.T) {
 	if !bytes.Equal(p, randomLayerData) {
 		t.Fatalf("layer data not equal")
 	}
+
+	// Delete the layer
+	err = ls.Delete(randomLayerDigest)
+	if err != nil {
+		t.Fatalf("Unexpected error deleting layer")
+	}
+
+	exists, err = ls.Exists(randomLayerDigest)
+	if err != nil {
+		t.Errorf("Error querying layer existence")
+	}
+	if exists {
+		t.Errorf("Deleted layer should not exist")
+	}
+
+	_, err = ls.Fetch(randomLayerDigest)
+	if err == nil {
+		t.Errorf("Unexpected success getting deleted layer")
+	}
+	switch err.(type) {
+	case distribution.ErrUnknownLayer:
+		break
+	default:
+		t.Errorf("Unexpected error getting deleted manifest: %s", reflect.ValueOf(err).Type())
+	}
+
+	// Re-upload the blob
+	expectedDigest, _ := digest.FromBytes(randomLayerData)
+	fmt.Println(expectedDigest)
+	simpleUpload(t, &ls, randomLayerData, expectedDigest)
+
+	exists, err = ls.Exists(randomLayerDigest)
+	if err != nil {
+		t.Errorf("Error querying layer existence")
+	}
+	if !exists {
+		t.Errorf("Restored layer should exist")
+	}
+
+	_, err = ls.Fetch(randomLayerDigest)
+	if err != nil {
+		t.Errorf("Unexpected error getting layer")
+	}
+
 }
 
 // TestLayerUploadZeroLength uploads zero-length
@@ -260,24 +305,28 @@ func TestLayerUploadZeroLength(t *testing.T) {
 	}
 	ls := repository.Layers()
 
-	upload, err := ls.Upload()
+	simpleUpload(t, &ls, []byte{}, digest.DigestSha256EmptyTar)
+}
+
+func simpleUpload(t *testing.T, ls *distribution.LayerService, blob []byte, expectedDigest digest.Digest) {
+	as := *ls
+	h := sha256.New()
+	dataReader := bytes.NewReader(blob)
+	rd := io.TeeReader(dataReader, h)
+
+	layerUpload, err := as.Upload()
 	if err != nil {
 		t.Fatalf("unexpected error starting upload: %v", err)
 	}
 
-	io.Copy(upload, bytes.NewReader([]byte{}))
-
-	dgst, err := digest.FromReader(bytes.NewReader([]byte{}))
+	_, err = io.Copy(layerUpload, rd)
 	if err != nil {
-		t.Fatalf("error getting zero digest: %v", err)
+		t.Errorf("Failed to copy into upload")
 	}
 
-	if dgst != digest.DigestSha256EmptyTar {
-		// sanity check on zero digest
-		t.Fatalf("digest not as expected: %v != %v", dgst, digest.DigestTarSumV1EmptyTar)
-	}
+	dgst := digest.NewDigest("sha256", h)
+	layer, err := layerUpload.Finish(dgst)
 
-	layer, err := upload.Finish(dgst)
 	if err != nil {
 		t.Fatalf("unexpected error finishing upload: %v", err)
 	}

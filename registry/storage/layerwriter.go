@@ -29,9 +29,8 @@ type layerWriter struct {
 	// implementes io.WriteSeeker, io.ReaderFrom and io.Closer to satisfy
 	// LayerUpload Interface
 	bufferedFileWriter
+	tomb tombstone
 }
-
-var _ distribution.LayerUpload = &layerWriter{}
 
 // UUID returns the identifier for this upload.
 func (lw *layerWriter) UUID() string {
@@ -47,16 +46,26 @@ func (lw *layerWriter) StartedAt() time.Time {
 // contents of the uploaded layer. The checksum should be provided in the
 // format <algorithm>:<hex digest>.
 func (lw *layerWriter) Finish(dgst digest.Digest) (distribution.Layer, error) {
-	context.GetLogger(lw.layerStore.repository.ctx).Debug("(*layerWriter).Finish")
+	ctx := lw.layerStore.repository.ctx
+	context.GetLogger(ctx).Debug("(*layerWriter).Finish")
 
 	if err := lw.bufferedFileWriter.Close(); err != nil {
 		return nil, err
 	}
 
-	var (
-		canonical digest.Digest
-		err       error
-	)
+	// If this upload is replacing a previously deleted file, remove the
+	// tombstone and contineu to write the file
+	exists, err := lw.tomb.tombstoneExists(ctx, lw.layerStore.repository.Name(), dgst)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		if err := lw.tomb.deleteTombstone(ctx, lw.layerStore.repository.Name(), dgst); err != nil {
+			return nil, err
+		}
+	}
+
+	var canonical digest.Digest
 
 	// HACK(stevvooe): To deal with s3's lack of consistency, attempt to retry
 	// validation on failure. Three attempts are made, backing off

@@ -13,14 +13,35 @@ import (
 
 type layerStore struct {
 	repository *repository
+	tomb       tombstone
 }
 
 func (ls *layerStore) Exists(digest digest.Digest) (bool, error) {
-	context.GetLogger(ls.repository.ctx).Debug("(*layerStore).Exists")
+	ctx := ls.repository.ctx
+	context.GetLogger(ctx).Debug("(*layerStore).Exists")
 
-	// Because this implementation just follows blob links, an existence check
-	// is pretty cheap by starting and closing a fetch.
-	_, err := ls.Fetch(digest)
+	tombstoneExists, err := ls.tomb.tombstoneExists(ctx, ls.repository.Name(), digest)
+	if err != nil {
+		return false, err
+	}
+	if tombstoneExists {
+		return false, nil
+	}
+
+	bp, err := ls.path(digest)
+	if err != nil {
+		switch err.(type) {
+		case distribution.ErrUnknownLayer:
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	_, err = ls.repository.driver.Stat(ctx, bp)
+	if err != nil {
+		return false, err
+	}
 
 	if err != nil {
 		switch err.(type) {
@@ -37,6 +58,16 @@ func (ls *layerStore) Exists(digest digest.Digest) (bool, error) {
 func (ls *layerStore) Fetch(dgst digest.Digest) (distribution.Layer, error) {
 	ctx := ls.repository.ctx
 	context.GetLogger(ctx).Debug("(*layerStore).Fetch")
+
+	exists, err := ls.Exists(dgst)
+	if err != nil {
+		return nil, err
+	}
+
+	if !exists {
+		return nil, distribution.ErrUnknownLayer{FSLayer: manifest.FSLayer{BlobSum: dgst}}
+	}
+
 	bp, err := ls.path(dgst)
 	if err != nil {
 		return nil, err
@@ -135,6 +166,29 @@ func (ls *layerStore) Resume(uuid string) (distribution.LayerUpload, error) {
 	return ls.newLayerUpload(uuid, path, startedAt)
 }
 
+// Delete deletes a blob referenced by digest from storage by creating a tombstone
+// file.  Subsequent layer operations must check the presence of the tombstone
+func (ls *layerStore) Delete(dgst digest.Digest) error {
+	ctx := ls.repository.ctx
+	context.GetLogger(ctx).Debug("(*layerStore).Delete")
+
+	tombstoneExists, err := ls.tomb.tombstoneExists(ctx, ls.repository.Name(), dgst)
+	if err != nil {
+		return err
+	}
+	if tombstoneExists {
+		return distribution.ErrUnknownLayer{
+			FSLayer: manifest.FSLayer{BlobSum: dgst},
+		}
+	}
+
+	if err := ls.tomb.putTombstone(ctx, ls.repository.Name(), dgst); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // newLayerUpload allocates a new upload controller with the given state.
 func (ls *layerStore) newLayerUpload(uuid, path string, startedAt time.Time) (distribution.LayerUpload, error) {
 	fw, err := newFileWriter(ls.repository.ctx, ls.repository.driver, path)
@@ -147,6 +201,10 @@ func (ls *layerStore) newLayerUpload(uuid, path string, startedAt time.Time) (di
 		uuid:               uuid,
 		startedAt:          startedAt,
 		bufferedFileWriter: *fw,
+		tomb: tombstone{
+			pm:     defaultPathMapper,
+			driver: ls.repository.driver,
+		},
 	}
 
 	lw.setupResumableDigester()
