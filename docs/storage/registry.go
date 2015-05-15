@@ -29,10 +29,7 @@ func NewRegistryWithDriver(ctx context.Context, driver storagedriver.StorageDriv
 	}
 
 	if blobDescriptorCacheProvider != nil {
-		statter = &cachedBlobStatter{
-			cache:   blobDescriptorCacheProvider,
-			backend: statter,
-		}
+		statter = cache.NewCachedBlobStatter(blobDescriptorCacheProvider, statter)
 	}
 
 	bs := &blobStore{
@@ -143,10 +140,7 @@ func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
 	}
 
 	if repo.descriptorCache != nil {
-		statter = &cachedBlobStatter{
-			cache:   repo.descriptorCache,
-			backend: statter,
-		}
+		statter = cache.NewCachedBlobStatter(repo.descriptorCache, statter)
 	}
 
 	return &linkedBlobStore{
