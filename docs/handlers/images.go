@@ -64,7 +64,6 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 
 	if err != nil {
 		imh.Errors.Push(v2.ErrorCodeManifestUnknown, err)
-		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
@@ -73,7 +72,6 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 		dgst, err := digestManifest(imh, sm)
 		if err != nil {
 			imh.Errors.Push(v2.ErrorCodeDigestInvalid, err)
-			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
@@ -95,14 +93,12 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 	var manifest manifest.SignedManifest
 	if err := dec.Decode(&manifest); err != nil {
 		imh.Errors.Push(v2.ErrorCodeManifestInvalid, err)
-		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
 	dgst, err := digestManifest(imh, &manifest)
 	if err != nil {
 		imh.Errors.Push(v2.ErrorCodeDigestInvalid, err)
-		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -111,7 +107,6 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 		if manifest.Tag != imh.Tag {
 			ctxu.GetLogger(imh).Errorf("invalid tag on manifest payload: %q != %q", manifest.Tag, imh.Tag)
 			imh.Errors.Push(v2.ErrorCodeTagInvalid)
-			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 
@@ -120,12 +115,10 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 		if dgst != imh.Digest {
 			ctxu.GetLogger(imh).Errorf("payload digest does match: %q != %q", dgst, imh.Digest)
 			imh.Errors.Push(v2.ErrorCodeDigestInvalid)
-			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 	} else {
 		imh.Errors.Push(v2.ErrorCodeTagInvalid, "no tag or digest specified")
-		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -152,7 +145,6 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 			imh.Errors.PushErr(err)
 		}
 
-		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
@@ -180,7 +172,6 @@ func (imh *imageManifestHandler) DeleteImageManifest(w http.ResponseWriter, r *h
 	// Once we work out schema version 2, the full deletion system will be
 	// worked out and we can add support back.
 	imh.Errors.Push(v2.ErrorCodeUnsupported)
-	w.WriteHeader(http.StatusBadRequest)
 }
 
 // digestManifest takes a digest of the given manifest. This belongs somewhere

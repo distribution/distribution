@@ -39,7 +39,6 @@ func (th *tagsHandler) GetTags(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch err := err.(type) {
 		case distribution.ErrRepositoryUnknown:
-			w.WriteHeader(404)
 			th.Errors.Push(v2.ErrorCodeNameUnknown, map[string]string{"name": th.Repository.Name()})
 		default:
 			th.Errors.PushErr(err)

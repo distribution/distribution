@@ -13,6 +13,7 @@ import (
 	"github.com/docker/distribution/configuration"
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/notifications"
+	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/registry/auth"
 	registrymiddleware "github.com/docker/distribution/registry/middleware/registry"
@@ -350,7 +351,6 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 					context.Errors.Push(v2.ErrorCodeNameInvalid, err)
 				}
 
-				w.WriteHeader(http.StatusBadRequest)
 				serveJSON(w, context.Errors)
 				return
 			}
@@ -363,8 +363,8 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 			context.Repository, err = applyRepoMiddleware(context.Repository, app.Config.Middleware["repository"])
 			if err != nil {
 				ctxu.GetLogger(context).Errorf("error initializing repository middleware: %v", err)
-				context.Errors.Push(v2.ErrorCodeUnknown, err)
-				w.WriteHeader(http.StatusInternalServerError)
+				context.Errors.Push(errcode.ErrorCodeUnknown, err)
+
 				serveJSON(w, context.Errors)
 				return
 			}
@@ -375,19 +375,14 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 		// own errors if they need different behavior (such as range errors
 		// for layer upload).
 		if context.Errors.Len() > 0 {
-			if context.Value("http.response.status") == 0 {
-				// TODO(stevvooe): Getting this value from the context is a
-				// bit of a hack. We can further address with some of our
-				// future refactoring.
-				w.WriteHeader(http.StatusBadRequest)
-			}
 			app.logError(context, context.Errors)
+
 			serveJSON(w, context.Errors)
 		}
 	})
 }
 
-func (app *App) logError(context context.Context, errors v2.Errors) {
+func (app *App) logError(context context.Context, errors errcode.Errors) {
 	for _, e := range errors.Errors {
 		c := ctxu.WithValue(context, "err.code", e.Code)
 		c = ctxu.WithValue(c, "err.message", e.Message)
@@ -444,11 +439,10 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 			// base route is accessed. This section prevents us from making
 			// that mistake elsewhere in the code, allowing any operation to
 			// proceed.
-			w.Header().Set("Content-Type", "application/json; charset=utf-8")
-			w.WriteHeader(http.StatusForbidden)
 
-			var errs v2.Errors
+			var errs errcode.Errors
 			errs.Push(v2.ErrorCodeUnauthorized)
+
 			serveJSON(w, errs)
 			return fmt.Errorf("forbidden: no repository name")
 		}
@@ -458,10 +452,18 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 	if err != nil {
 		switch err := err.(type) {
 		case auth.Challenge:
+			// Since err.ServeHTTP will set the HTTP status code for us
+			// we need to set the content-type here.  The serveJSON
+			// func will try to do it but it'll be too late at that point.
+			// I would have have preferred to just have the auth.Challenge
+			// ServerHTTP func just add the WWW-Authenticate header and let
+			// serveJSON set the HTTP status code and content-type but I wasn't
+			// sure if that's an ok design change. STEVVOOE ?
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
 			err.ServeHTTP(w, r)
 
-			var errs v2.Errors
+			var errs errcode.Errors
 			errs.Push(v2.ErrorCodeUnauthorized, accessRecords)
 			serveJSON(w, errs)
 		default:
