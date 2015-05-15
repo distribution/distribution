@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"github.com/docker/distribution/registry/api/errcode"
 	"io"
 	"net/http"
 )
@@ -11,6 +12,17 @@ import (
 // ResponseWriter.WriteHeader before this function.
 func serveJSON(w http.ResponseWriter, v interface{}) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	sc := http.StatusInternalServerError
+
+	if errs, ok := v.(errcode.Errors); ok && errs.Len() > 0 {
+		sc = errs.Errors[0].Code.Descriptor().HTTPStatusCode
+		if sc == 0 {
+			sc = http.StatusInternalServerError
+		}
+	}
+
+	w.WriteHeader(sc)
+
 	enc := json.NewEncoder(w)
 
 	if err := enc.Encode(v); err != nil {
