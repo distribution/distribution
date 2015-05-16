@@ -51,7 +51,7 @@ func TestSimpleWrite(t *testing.T) {
 		t.Fatalf("unexpected write length: %d != %d", n, len(content))
 	}
 
-	fr, err := newFileReader(ctx, driver, path)
+	fr, err := newFileReader(ctx, driver, path, int64(len(content)))
 	if err != nil {
 		t.Fatalf("unexpected error creating fileReader: %v", err)
 	}
@@ -78,23 +78,23 @@ func TestSimpleWrite(t *testing.T) {
 		t.Fatalf("write did not advance offset: %d != %d", end, len(content))
 	}
 
-	// Double the content, but use the WriteAt method
+	// Double the content
 	doubled := append(content, content...)
 	doubledgst, err := digest.FromReader(bytes.NewReader(doubled))
 	if err != nil {
 		t.Fatalf("unexpected error digesting doubled content: %v", err)
 	}
 
-	n, err = fw.WriteAt(content, end)
+	nn, err := fw.ReadFrom(bytes.NewReader(content))
 	if err != nil {
-		t.Fatalf("unexpected error writing content at %d: %v", end, err)
+		t.Fatalf("unexpected error doubling content: %v", err)
 	}
 
-	if n != len(content) {
+	if nn != int64(len(content)) {
 		t.Fatalf("writeat was short: %d != %d", n, len(content))
 	}
 
-	fr, err = newFileReader(ctx, driver, path)
+	fr, err = newFileReader(ctx, driver, path, int64(len(doubled)))
 	if err != nil {
 		t.Fatalf("unexpected error creating fileReader: %v", err)
 	}
@@ -111,20 +111,20 @@ func TestSimpleWrite(t *testing.T) {
 		t.Fatalf("unable to verify write data")
 	}
 
-	// Check that WriteAt didn't update the offset.
+	// Check that Write updated the offset.
 	end, err = fw.Seek(0, os.SEEK_END)
 	if err != nil {
 		t.Fatalf("unexpected error seeking: %v", err)
 	}
 
-	if end != int64(len(content)) {
-		t.Fatalf("write did not advance offset: %d != %d", end, len(content))
+	if end != int64(len(doubled)) {
+		t.Fatalf("write did not advance offset: %d != %d", end, len(doubled))
 	}
 
 	// Now, we copy from one path to another, running the data through the
 	// fileReader to fileWriter, rather than the driver.Move command to ensure
 	// everything is working correctly.
-	fr, err = newFileReader(ctx, driver, path)
+	fr, err = newFileReader(ctx, driver, path, int64(len(doubled)))
 	if err != nil {
 		t.Fatalf("unexpected error creating fileReader: %v", err)
 	}
@@ -136,7 +136,7 @@ func TestSimpleWrite(t *testing.T) {
 	}
 	defer fw.Close()
 
-	nn, err := io.Copy(fw, fr)
+	nn, err = io.Copy(fw, fr)
 	if err != nil {
 		t.Fatalf("unexpected error copying data: %v", err)
 	}
@@ -145,7 +145,7 @@ func TestSimpleWrite(t *testing.T) {
 		t.Fatalf("unexpected copy length: %d != %d", nn, len(doubled))
 	}
 
-	fr, err = newFileReader(ctx, driver, "/copied")
+	fr, err = newFileReader(ctx, driver, "/copied", int64(len(doubled)))
 	if err != nil {
 		t.Fatalf("unexpected error creating fileReader: %v", err)
 	}

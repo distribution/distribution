@@ -17,7 +17,7 @@ func init() {
 
 // TestRedisLayerInfoCache exercises a live redis instance using the cache
 // implementation.
-func TestRedisLayerInfoCache(t *testing.T) {
+func TestRedisBlobDescriptorCacheProvider(t *testing.T) {
 	if redisAddr == "" {
 		// fallback to an environement variable
 		redisAddr = os.Getenv("TEST_REGISTRY_STORAGE_CACHE_REDIS_ADDR")
@@ -46,5 +46,5 @@ func TestRedisLayerInfoCache(t *testing.T) {
 		t.Fatalf("unexpected error flushing redis db: %v", err)
 	}
 
-	checkLayerInfoCache(t, NewRedisLayerInfoCache(pool))
+	checkBlobDescriptorCache(t, NewRedisBlobDescriptorCacheProvider(pool))
 }

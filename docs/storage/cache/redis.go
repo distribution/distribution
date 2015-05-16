@@ -1,20 +1,28 @@
 package cache
 
 import (
-	ctxu "github.com/docker/distribution/context"
+	"fmt"
+
+	"github.com/docker/distribution/registry/api/v2"
+
+	"github.com/docker/distribution"
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/garyburd/redigo/redis"
-	"golang.org/x/net/context"
 )
 
-// redisLayerInfoCache provides an implementation of storage.LayerInfoCache
-// based on redis. Layer info is stored in two parts. The first provide fast
-// access to repository membership through a redis set for each repo. The
-// second is a redis hash keyed by the digest of the layer, providing path and
-// length information. Note that there is no implied relationship between
-// these two caches. The layer may exist in one, both or none and the code
-// must be written this way.
-type redisLayerInfoCache struct {
+// redisBlobStatService provides an implementation of
+// BlobDescriptorCacheProvider based on redis. Blob descritors are stored in
+// two parts. The first provide fast access to repository membership through a
+// redis set for each repo. The second is a redis hash keyed by the digest of
+// the layer, providing path, length and mediatype information. There is also
+// a per-repository redis hash of the blob descriptor, allowing override of
+// data. This is currently used to override the mediatype on a per-repository
+// basis.
+//
+// Note that there is no implied relationship between these two caches. The
+// layer may exist in one, both or none and the code must be written this way.
+type redisBlobDescriptorService struct {
 	pool *redis.Pool
 
 	// TODO(stevvooe): We use a pool because we don't have great control over
@@ -23,76 +31,194 @@ type redisLayerInfoCache struct {
 	// request objects, we can change this to a connection.
 }
 
-// NewRedisLayerInfoCache returns a new redis-based LayerInfoCache using the
-// provided redis connection pool.
-func NewRedisLayerInfoCache(pool *redis.Pool) LayerInfoCache {
-	return &base{&redisLayerInfoCache{
+var _ BlobDescriptorCacheProvider = &redisBlobDescriptorService{}
+
+// NewRedisBlobDescriptorCacheProvider returns a new redis-based
+// BlobDescriptorCacheProvider using the provided redis connection pool.
+func NewRedisBlobDescriptorCacheProvider(pool *redis.Pool) BlobDescriptorCacheProvider {
+	return &redisBlobDescriptorService{
 		pool: pool,
-	}}
+	}
 }
 
-// Contains does a membership check on the repository blob set in redis. This
-// is used as an access check before looking up global path information. If
-// false is returned, the caller should still check the backend to if it
-// exists elsewhere.
-func (rlic *redisLayerInfoCache) Contains(ctx context.Context, repo string, dgst digest.Digest) (bool, error) {
-	conn := rlic.pool.Get()
-	defer conn.Close()
+// RepositoryScoped returns the scoped cache.
+func (rbds *redisBlobDescriptorService) RepositoryScoped(repo string) (distribution.BlobDescriptorService, error) {
+	if err := v2.ValidateRespositoryName(repo); err != nil {
+		return nil, err
+	}
 
-	ctxu.GetLogger(ctx).Debugf("(*redisLayerInfoCache).Contains(%q, %q)", repo, dgst)
-	return redis.Bool(conn.Do("SISMEMBER", rlic.repositoryBlobSetKey(repo), dgst))
+	return &repositoryScopedRedisBlobDescriptorService{
+		repo:     repo,
+		upstream: rbds,
+	}, nil
 }
 
-// Add adds the layer to the redis repository blob set.
-func (rlic *redisLayerInfoCache) Add(ctx context.Context, repo string, dgst digest.Digest) error {
-	conn := rlic.pool.Get()
+// Stat retrieves the descriptor data from the redis hash entry.
+func (rbds *redisBlobDescriptorService) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+	if err := validateDigest(dgst); err != nil {
+		return distribution.Descriptor{}, err
+	}
+
+	conn := rbds.pool.Get()
 	defer conn.Close()
 
-	ctxu.GetLogger(ctx).Debugf("(*redisLayerInfoCache).Add(%q, %q)", repo, dgst)
-	_, err := conn.Do("SADD", rlic.repositoryBlobSetKey(repo), dgst)
-	return err
+	return rbds.stat(ctx, conn, dgst)
 }
 
-// Meta retrieves the layer meta data from the redis hash, returning
-// ErrUnknownLayer if not found.
-func (rlic *redisLayerInfoCache) Meta(ctx context.Context, dgst digest.Digest) (LayerMeta, error) {
-	conn := rlic.pool.Get()
-	defer conn.Close()
-
-	reply, err := redis.Values(conn.Do("HMGET", rlic.blobMetaHashKey(dgst), "path", "length"))
+// stat provides an internal stat call that takes a connection parameter. This
+// allows some internal management of the connection scope.
+func (rbds *redisBlobDescriptorService) stat(ctx context.Context, conn redis.Conn, dgst digest.Digest) (distribution.Descriptor, error) {
+	reply, err := redis.Values(conn.Do("HMGET", rbds.blobDescriptorHashKey(dgst), "digest", "length", "mediatype"))
 	if err != nil {
-		return LayerMeta{}, err
+		return distribution.Descriptor{}, err
 	}
 
-	if len(reply) < 2 || reply[0] == nil || reply[1] == nil {
-		return LayerMeta{}, ErrNotFound
+	if len(reply) < 2 || reply[0] == nil || reply[1] == nil { // don't care if mediatype is nil
+		return distribution.Descriptor{}, distribution.ErrBlobUnknown
 	}
 
-	var meta LayerMeta
-	if _, err := redis.Scan(reply, &meta.Path, &meta.Length); err != nil {
-		return LayerMeta{}, err
+	var desc distribution.Descriptor
+	if _, err := redis.Scan(reply, &desc.Digest, &desc.Length, &desc.MediaType); err != nil {
+		return distribution.Descriptor{}, err
 	}
 
-	return meta, nil
+	return desc, nil
 }
 
-// SetMeta sets the meta data for the given digest using a redis hash. A hash
-// is used here since we may store unrelated fields about a layer in the
-// future.
-func (rlic *redisLayerInfoCache) SetMeta(ctx context.Context, dgst digest.Digest, meta LayerMeta) error {
-	conn := rlic.pool.Get()
+// SetDescriptor sets the descriptor data for the given digest using a redis
+// hash. A hash is used here since we may store unrelated fields about a layer
+// in the future.
+func (rbds *redisBlobDescriptorService) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
+	if err := validateDigest(dgst); err != nil {
+		return err
+	}
+
+	if err := validateDescriptor(desc); err != nil {
+		return err
+	}
+
+	conn := rbds.pool.Get()
 	defer conn.Close()
 
-	_, err := conn.Do("HMSET", rlic.blobMetaHashKey(dgst), "path", meta.Path, "length", meta.Length)
-	return err
+	return rbds.setDescriptor(ctx, conn, dgst, desc)
 }
 
-// repositoryBlobSetKey returns the key for the blob set in the cache.
-func (rlic *redisLayerInfoCache) repositoryBlobSetKey(repo string) string {
-	return "repository::" + repo + "::blobs"
+func (rbds *redisBlobDescriptorService) setDescriptor(ctx context.Context, conn redis.Conn, dgst digest.Digest, desc distribution.Descriptor) error {
+	if _, err := conn.Do("HMSET", rbds.blobDescriptorHashKey(dgst),
+		"digest", desc.Digest,
+		"length", desc.Length); err != nil {
+		return err
+	}
+
+	// Only set mediatype if not already set.
+	if _, err := conn.Do("HSETNX", rbds.blobDescriptorHashKey(dgst),
+		"mediatype", desc.MediaType); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-// blobMetaHashKey returns the cache key for immutable blob meta data.
-func (rlic *redisLayerInfoCache) blobMetaHashKey(dgst digest.Digest) string {
+func (rbds *redisBlobDescriptorService) blobDescriptorHashKey(dgst digest.Digest) string {
 	return "blobs::" + dgst.String()
+}
+
+type repositoryScopedRedisBlobDescriptorService struct {
+	repo     string
+	upstream *redisBlobDescriptorService
+}
+
+var _ distribution.BlobDescriptorService = &repositoryScopedRedisBlobDescriptorService{}
+
+// Stat ensures that the digest is a member of the specified repository and
+// forwards the descriptor request to the global blob store. If the media type
+// differs for the repository, we override it.
+func (rsrbds *repositoryScopedRedisBlobDescriptorService) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+	if err := validateDigest(dgst); err != nil {
+		return distribution.Descriptor{}, err
+	}
+
+	conn := rsrbds.upstream.pool.Get()
+	defer conn.Close()
+
+	// Check membership to repository first
+	member, err := redis.Bool(conn.Do("SISMEMBER", rsrbds.repositoryBlobSetKey(rsrbds.repo), dgst))
+	if err != nil {
+		return distribution.Descriptor{}, err
+	}
+
+	if !member {
+		return distribution.Descriptor{}, distribution.ErrBlobUnknown
+	}
+
+	upstream, err := rsrbds.upstream.stat(ctx, conn, dgst)
+	if err != nil {
+		return distribution.Descriptor{}, err
+	}
+
+	// We allow a per repository mediatype, let's look it up here.
+	mediatype, err := redis.String(conn.Do("HGET", rsrbds.blobDescriptorHashKey(dgst), "mediatype"))
+	if err != nil {
+		return distribution.Descriptor{}, err
+	}
+
+	if mediatype != "" {
+		upstream.MediaType = mediatype
+	}
+
+	return upstream, nil
+}
+
+func (rsrbds *repositoryScopedRedisBlobDescriptorService) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
+	if err := validateDigest(dgst); err != nil {
+		return err
+	}
+
+	if err := validateDescriptor(desc); err != nil {
+		return err
+	}
+
+	if dgst != desc.Digest {
+		if dgst.Algorithm() == desc.Digest.Algorithm() {
+			return fmt.Errorf("redis cache: digest for descriptors differ but algorthim does not: %q != %q", dgst, desc.Digest)
+		}
+	}
+
+	conn := rsrbds.upstream.pool.Get()
+	defer conn.Close()
+
+	return rsrbds.setDescriptor(ctx, conn, dgst, desc)
+}
+
+func (rsrbds *repositoryScopedRedisBlobDescriptorService) setDescriptor(ctx context.Context, conn redis.Conn, dgst digest.Digest, desc distribution.Descriptor) error {
+	if _, err := conn.Do("SADD", rsrbds.repositoryBlobSetKey(rsrbds.repo), dgst); err != nil {
+		return err
+	}
+
+	if err := rsrbds.upstream.setDescriptor(ctx, conn, dgst, desc); err != nil {
+		return err
+	}
+
+	// Override repository mediatype.
+	if _, err := conn.Do("HSET", rsrbds.blobDescriptorHashKey(dgst), "mediatype", desc.MediaType); err != nil {
+		return err
+	}
+
+	// Also set the values for the primary descriptor, if they differ by
+	// algorithm (ie sha256 vs tarsum).
+	if desc.Digest != "" && dgst != desc.Digest && dgst.Algorithm() != desc.Digest.Algorithm() {
+		if err := rsrbds.setDescriptor(ctx, conn, desc.Digest, desc); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (rsrbds *repositoryScopedRedisBlobDescriptorService) blobDescriptorHashKey(dgst digest.Digest) string {
+	return "repository::" + rsrbds.repo + "::blobs::" + dgst.String()
+}
+
+func (rsrbds *repositoryScopedRedisBlobDescriptorService) repositoryBlobSetKey(repo string) string {
+	return "repository::" + rsrbds.repo + "::blobs"
 }

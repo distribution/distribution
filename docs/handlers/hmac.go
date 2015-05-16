@@ -9,9 +9,9 @@ import (
 	"time"
 )
 
-// layerUploadState captures the state serializable state of the layer upload.
-type layerUploadState struct {
-	// name is the primary repository under which the layer will be linked.
+// blobUploadState captures the state serializable state of the blob upload.
+type blobUploadState struct {
+	// name is the primary repository under which the blob will be linked.
 	Name string
 
 	// UUID identifies the upload.
@@ -26,10 +26,10 @@ type layerUploadState struct {
 
 type hmacKey string
 
-// unpackUploadState unpacks and validates the layer upload state from the
+// unpackUploadState unpacks and validates the blob upload state from the
 // token, using the hmacKey secret.
-func (secret hmacKey) unpackUploadState(token string) (layerUploadState, error) {
-	var state layerUploadState
+func (secret hmacKey) unpackUploadState(token string) (blobUploadState, error) {
+	var state blobUploadState
 
 	tokenBytes, err := base64.URLEncoding.DecodeString(token)
 	if err != nil {
@@ -59,7 +59,7 @@ func (secret hmacKey) unpackUploadState(token string) (layerUploadState, error) 
 // packUploadState packs the upload state signed with and hmac digest using
 // the hmacKey secret, encoding to url safe base64. The resulting token can be
 // used to share data with minimized risk of external tampering.
-func (secret hmacKey) packUploadState(lus layerUploadState) (string, error) {
+func (secret hmacKey) packUploadState(lus blobUploadState) (string, error) {
 	mac := hmac.New(sha256.New, []byte(secret))
 	p, err := json.Marshal(lus)
 	if err != nil {

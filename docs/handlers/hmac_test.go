@@ -2,7 +2,7 @@ package handlers
 
 import "testing"
 
-var layerUploadStates = []layerUploadState{
+var blobUploadStates = []blobUploadState{
 	{
 		Name:   "hello",
 		UUID:   "abcd-1234-qwer-0987",
@@ -45,7 +45,7 @@ var secrets = []string{
 func TestLayerUploadTokens(t *testing.T) {
 	secret := hmacKey("supersecret")
 
-	for _, testcase := range layerUploadStates {
+	for _, testcase := range blobUploadStates {
 		token, err := secret.packUploadState(testcase)
 		if err != nil {
 			t.Fatal(err)
@@ -56,7 +56,7 @@ func TestLayerUploadTokens(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		assertLayerUploadStateEquals(t, testcase, lus)
+		assertBlobUploadStateEquals(t, testcase, lus)
 	}
 }
 
@@ -68,7 +68,7 @@ func TestHMACValidation(t *testing.T) {
 		secret2 := hmacKey(secret)
 		badSecret := hmacKey("DifferentSecret")
 
-		for _, testcase := range layerUploadStates {
+		for _, testcase := range blobUploadStates {
 			token, err := secret1.packUploadState(testcase)
 			if err != nil {
 				t.Fatal(err)
@@ -79,7 +79,7 @@ func TestHMACValidation(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			assertLayerUploadStateEquals(t, testcase, lus)
+			assertBlobUploadStateEquals(t, testcase, lus)
 
 			_, err = badSecret.unpackUploadState(token)
 			if err == nil {
@@ -104,7 +104,7 @@ func TestHMACValidation(t *testing.T) {
 	}
 }
 
-func assertLayerUploadStateEquals(t *testing.T, expected layerUploadState, received layerUploadState) {
+func assertBlobUploadStateEquals(t *testing.T, expected blobUploadState, received blobUploadState) {
 	if expected.Name != received.Name {
 		t.Fatalf("Expected Name=%q, Received Name=%q", expected.Name, received.Name)
 	}

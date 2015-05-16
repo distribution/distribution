@@ -111,14 +111,14 @@ func TestPathMapper(t *testing.T) {
 		{
 			spec: uploadDataPathSpec{
 				name: "foo/bar",
-				uuid: "asdf-asdf-asdf-adsf",
+				id:   "asdf-asdf-asdf-adsf",
 			},
 			expected: "/pathmapper-test/repositories/foo/bar/_uploads/asdf-asdf-asdf-adsf/data",
 		},
 		{
 			spec: uploadStartedAtPathSpec{
 				name: "foo/bar",
-				uuid: "asdf-asdf-asdf-adsf",
+				id:   "asdf-asdf-asdf-adsf",
 			},
 			expected: "/pathmapper-test/repositories/foo/bar/_uploads/asdf-asdf-asdf-adsf/startedat",
 		},
