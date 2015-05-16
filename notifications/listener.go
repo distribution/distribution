@@ -1,8 +1,11 @@
 package notifications
 
 import (
+	"net/http"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/distribution"
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 )
@@ -18,21 +21,21 @@ type ManifestListener interface {
 	ManifestDeleted(repo distribution.Repository, sm *manifest.SignedManifest) error
 }
 
-// LayerListener describes a listener that can respond to layer related events.
-type LayerListener interface {
-	LayerPushed(repo distribution.Repository, layer distribution.Layer) error
-	LayerPulled(repo distribution.Repository, layer distribution.Layer) error
+// BlobListener describes a listener that can respond to layer related events.
+type BlobListener interface {
+	BlobPushed(repo distribution.Repository, desc distribution.Descriptor) error
+	BlobPulled(repo distribution.Repository, desc distribution.Descriptor) error
 
 	// TODO(stevvooe): Please note that delete support is still a little shaky
 	// and we'll need to propagate these in the future.
 
-	LayerDeleted(repo distribution.Repository, layer distribution.Layer) error
+	BlobDeleted(repo distribution.Repository, desc distribution.Descriptor) error
 }
 
 // Listener combines all repository events into a single interface.
 type Listener interface {
 	ManifestListener
-	LayerListener
+	BlobListener
 }
 
 type repositoryListener struct {
@@ -55,10 +58,10 @@ func (rl *repositoryListener) Manifests() distribution.ManifestService {
 	}
 }
 
-func (rl *repositoryListener) Layers() distribution.LayerService {
-	return &layerServiceListener{
-		LayerService: rl.Repository.Layers(),
-		parent:       rl,
+func (rl *repositoryListener) Blobs(ctx context.Context) distribution.BlobStore {
+	return &blobServiceListener{
+		BlobStore: rl.Repository.Blobs(ctx),
+		parent:    rl,
 	}
 }
 
@@ -101,51 +104,98 @@ func (msl *manifestServiceListener) GetByTag(tag string) (*manifest.SignedManife
 	return sm, err
 }
 
-type layerServiceListener struct {
-	distribution.LayerService
+type blobServiceListener struct {
+	distribution.BlobStore
 	parent *repositoryListener
 }
 
-func (lsl *layerServiceListener) Fetch(dgst digest.Digest) (distribution.Layer, error) {
-	layer, err := lsl.LayerService.Fetch(dgst)
+var _ distribution.BlobStore = &blobServiceListener{}
+
+func (bsl *blobServiceListener) Get(ctx context.Context, dgst digest.Digest) ([]byte, error) {
+	p, err := bsl.BlobStore.Get(ctx, dgst)
 	if err == nil {
-		if err := lsl.parent.listener.LayerPulled(lsl.parent.Repository, layer); err != nil {
-			logrus.Errorf("error dispatching layer pull to listener: %v", err)
+		if desc, err := bsl.Stat(ctx, dgst); err != nil {
+			context.GetLogger(ctx).Errorf("error resolving descriptor in ServeBlob listener: %v", err)
+		} else {
+			if err := bsl.parent.listener.BlobPulled(bsl.parent.Repository, desc); err != nil {
+				context.GetLogger(ctx).Errorf("error dispatching layer pull to listener: %v", err)
+			}
 		}
 	}
 
-	return layer, err
+	return p, err
 }
 
-func (lsl *layerServiceListener) Upload() (distribution.LayerUpload, error) {
-	lu, err := lsl.LayerService.Upload()
-	return lsl.decorateUpload(lu), err
-}
-
-func (lsl *layerServiceListener) Resume(uuid string) (distribution.LayerUpload, error) {
-	lu, err := lsl.LayerService.Resume(uuid)
-	return lsl.decorateUpload(lu), err
-}
-
-func (lsl *layerServiceListener) decorateUpload(lu distribution.LayerUpload) distribution.LayerUpload {
-	return &layerUploadListener{
-		LayerUpload: lu,
-		parent:      lsl,
-	}
-}
-
-type layerUploadListener struct {
-	distribution.LayerUpload
-	parent *layerServiceListener
-}
-
-func (lul *layerUploadListener) Finish(dgst digest.Digest) (distribution.Layer, error) {
-	layer, err := lul.LayerUpload.Finish(dgst)
+func (bsl *blobServiceListener) Open(ctx context.Context, dgst digest.Digest) (distribution.ReadSeekCloser, error) {
+	rc, err := bsl.BlobStore.Open(ctx, dgst)
 	if err == nil {
-		if err := lul.parent.parent.listener.LayerPushed(lul.parent.parent.Repository, layer); err != nil {
-			logrus.Errorf("error dispatching layer push to listener: %v", err)
+		if desc, err := bsl.Stat(ctx, dgst); err != nil {
+			context.GetLogger(ctx).Errorf("error resolving descriptor in ServeBlob listener: %v", err)
+		} else {
+			if err := bsl.parent.listener.BlobPulled(bsl.parent.Repository, desc); err != nil {
+				context.GetLogger(ctx).Errorf("error dispatching layer pull to listener: %v", err)
+			}
 		}
 	}
 
-	return layer, err
+	return rc, err
+}
+
+func (bsl *blobServiceListener) ServeBlob(ctx context.Context, w http.ResponseWriter, r *http.Request, dgst digest.Digest) error {
+	err := bsl.BlobStore.ServeBlob(ctx, w, r, dgst)
+	if err == nil {
+		if desc, err := bsl.Stat(ctx, dgst); err != nil {
+			context.GetLogger(ctx).Errorf("error resolving descriptor in ServeBlob listener: %v", err)
+		} else {
+			if err := bsl.parent.listener.BlobPulled(bsl.parent.Repository, desc); err != nil {
+				context.GetLogger(ctx).Errorf("error dispatching layer pull to listener: %v", err)
+			}
+		}
+	}
+
+	return err
+}
+
+func (bsl *blobServiceListener) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
+	desc, err := bsl.BlobStore.Put(ctx, mediaType, p)
+	if err == nil {
+		if err := bsl.parent.listener.BlobPushed(bsl.parent.Repository, desc); err != nil {
+			context.GetLogger(ctx).Errorf("error dispatching layer pull to listener: %v", err)
+		}
+	}
+
+	return desc, err
+}
+
+func (bsl *blobServiceListener) Create(ctx context.Context) (distribution.BlobWriter, error) {
+	wr, err := bsl.BlobStore.Create(ctx)
+	return bsl.decorateWriter(wr), err
+}
+
+func (bsl *blobServiceListener) Resume(ctx context.Context, id string) (distribution.BlobWriter, error) {
+	wr, err := bsl.BlobStore.Resume(ctx, id)
+	return bsl.decorateWriter(wr), err
+}
+
+func (bsl *blobServiceListener) decorateWriter(wr distribution.BlobWriter) distribution.BlobWriter {
+	return &blobWriterListener{
+		BlobWriter: wr,
+		parent:     bsl,
+	}
+}
+
+type blobWriterListener struct {
+	distribution.BlobWriter
+	parent *blobServiceListener
+}
+
+func (bwl *blobWriterListener) Commit(ctx context.Context, desc distribution.Descriptor) (distribution.Descriptor, error) {
+	committed, err := bwl.BlobWriter.Commit(ctx, desc)
+	if err == nil {
+		if err := bwl.parent.parent.listener.BlobPushed(bwl.parent.parent.Repository, committed); err != nil {
+			context.GetLogger(ctx).Errorf("error dispatching blob push to listener: %v", err)
+		}
+	}
+
+	return committed, err
 }

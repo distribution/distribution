@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/docker/distribution"
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/registry/storage"
@@ -13,12 +14,11 @@ import (
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/docker/distribution/testutil"
 	"github.com/docker/libtrust"
-	"golang.org/x/net/context"
 )
 
 func TestListener(t *testing.T) {
 	ctx := context.Background()
-	registry := storage.NewRegistryWithDriver(ctx, inmemory.New(), cache.NewInMemoryLayerInfoCache())
+	registry := storage.NewRegistryWithDriver(ctx, inmemory.New(), cache.NewInMemoryBlobDescriptorCacheProvider())
 	tl := &testListener{
 		ops: make(map[string]int),
 	}
@@ -67,17 +67,17 @@ func (tl *testListener) ManifestDeleted(repo distribution.Repository, sm *manife
 	return nil
 }
 
-func (tl *testListener) LayerPushed(repo distribution.Repository, layer distribution.Layer) error {
+func (tl *testListener) BlobPushed(repo distribution.Repository, desc distribution.Descriptor) error {
 	tl.ops["layer:push"]++
 	return nil
 }
 
-func (tl *testListener) LayerPulled(repo distribution.Repository, layer distribution.Layer) error {
+func (tl *testListener) BlobPulled(repo distribution.Repository, desc distribution.Descriptor) error {
 	tl.ops["layer:pull"]++
 	return nil
 }
 
-func (tl *testListener) LayerDeleted(repo distribution.Repository, layer distribution.Layer) error {
+func (tl *testListener) BlobDeleted(repo distribution.Repository, desc distribution.Descriptor) error {
 	tl.ops["layer:delete"]++
 	return nil
 }
@@ -89,7 +89,7 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 	// takes the registry through a common set of operations. This could be
 	// used to make cross-cutting updates by changing internals that affect
 	// update counts. Basically, it would make writing tests a lot easier.
-
+	ctx := context.Background()
 	tag := "thetag"
 	m := manifest.Manifest{
 		Versioned: manifest.Versioned{
@@ -99,27 +99,28 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 		Tag:  tag,
 	}
 
-	layers := repository.Layers()
+	blobs := repository.Blobs(ctx)
 	for i := 0; i < 2; i++ {
 		rs, ds, err := testutil.CreateRandomTarFile()
 		if err != nil {
 			t.Fatalf("error creating test layer: %v", err)
 		}
 		dgst := digest.Digest(ds)
-		upload, err := layers.Upload()
+
+		wr, err := blobs.Create(ctx)
 		if err != nil {
 			t.Fatalf("error creating layer upload: %v", err)
 		}
 
 		// Use the resumes, as well!
-		upload, err = layers.Resume(upload.UUID())
+		wr, err = blobs.Resume(ctx, wr.ID())
 		if err != nil {
 			t.Fatalf("error resuming layer upload: %v", err)
 		}
 
-		io.Copy(upload, rs)
+		io.Copy(wr, rs)
 
-		if _, err := upload.Finish(dgst); err != nil {
+		if _, err := wr.Commit(ctx, distribution.Descriptor{Digest: dgst}); err != nil {
 			t.Fatalf("unexpected error finishing upload: %v", err)
 		}
 
@@ -127,9 +128,11 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 			BlobSum: dgst,
 		})
 
-		// Then fetch the layers
-		if _, err := layers.Fetch(dgst); err != nil {
+		// Then fetch the blobs
+		if rc, err := blobs.Open(ctx, dgst); err != nil {
 			t.Fatalf("error fetching layer: %v", err)
+		} else {
+			defer rc.Close()
 		}
 	}
 

@@ -205,7 +205,7 @@ log:
     environment: development
 storage:
   cache:
-      layerinfo: inmemory
+      blobdescriptor: inmemory
   filesystem:
       rootdirectory: /tmp/registry-dev
   maintenance:
@@ -337,7 +337,7 @@ support.
 		$ docker run -p 5000:5000 secure_registry:latest
 		time="2015-04-12T03:06:18.616502588Z" level=info msg="endpoint local-8082 disabled, skipping" environment=development instance.id=bf33c9dc-2564-406b-97c3-6ee69dc20ec6 service=registry 
 		time="2015-04-12T03:06:18.617012948Z" level=info msg="endpoint local-8083 disabled, skipping" environment=development instance.id=bf33c9dc-2564-406b-97c3-6ee69dc20ec6 service=registry 
-		time="2015-04-12T03:06:18.617190113Z" level=info msg="using inmemory layerinfo cache" environment=development instance.id=bf33c9dc-2564-406b-97c3-6ee69dc20ec6 service=registry 
+		time="2015-04-12T03:06:18.617190113Z" level=info msg="using inmemory blob descriptor cache" environment=development instance.id=bf33c9dc-2564-406b-97c3-6ee69dc20ec6 service=registry 
 		time="2015-04-12T03:06:18.617349067Z" level=info msg="listening on :5000, tls" environment=development instance.id=bf33c9dc-2564-406b-97c3-6ee69dc20ec6 service=registry 
 		time="2015-04-12T03:06:18.628589577Z" level=info msg="debug server listening localhost:5001" 
 		2015/04/12 03:06:28 http: TLS handshake error from 172.17.42.1:44261: remote error: unknown certificate authority

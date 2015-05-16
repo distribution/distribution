@@ -13,14 +13,13 @@ import (
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/registry/storage/cache"
-	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/docker/distribution/testutil"
 )
 
-// TestSimpleLayerUpload covers the layer upload process, exercising common
+// TestSimpleBlobUpload covers the blob upload process, exercising common
 // error paths that might be seen during an upload.
-func TestSimpleLayerUpload(t *testing.T) {
+func TestSimpleBlobUpload(t *testing.T) {
 	randomDataReader, tarSumStr, err := testutil.CreateRandomTarFile()
 
 	if err != nil {
@@ -36,35 +35,35 @@ func TestSimpleLayerUpload(t *testing.T) {
 	ctx := context.Background()
 	imageName := "foo/bar"
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(ctx, driver, cache.NewInMemoryLayerInfoCache())
+	registry := NewRegistryWithDriver(ctx, driver, cache.NewInMemoryBlobDescriptorCacheProvider())
 	repository, err := registry.Repository(ctx, imageName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
 	}
-	ls := repository.Layers()
+	bs := repository.Blobs(ctx)
 
 	h := sha256.New()
 	rd := io.TeeReader(randomDataReader, h)
 
-	layerUpload, err := ls.Upload()
+	blobUpload, err := bs.Create(ctx)
 
 	if err != nil {
 		t.Fatalf("unexpected error starting layer upload: %s", err)
 	}
 
 	// Cancel the upload then restart it
-	if err := layerUpload.Cancel(); err != nil {
+	if err := blobUpload.Cancel(ctx); err != nil {
 		t.Fatalf("unexpected error during upload cancellation: %v", err)
 	}
 
 	// Do a resume, get unknown upload
-	layerUpload, err = ls.Resume(layerUpload.UUID())
-	if err != distribution.ErrLayerUploadUnknown {
+	blobUpload, err = bs.Resume(ctx, blobUpload.ID())
+	if err != distribution.ErrBlobUploadUnknown {
 		t.Fatalf("unexpected error resuming upload, should be unkown: %v", err)
 	}
 
 	// Restart!
-	layerUpload, err = ls.Upload()
+	blobUpload, err = bs.Create(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error starting layer upload: %s", err)
 	}
@@ -75,7 +74,7 @@ func TestSimpleLayerUpload(t *testing.T) {
 		t.Fatalf("error getting seeker size of random data: %v", err)
 	}
 
-	nn, err := io.Copy(layerUpload, rd)
+	nn, err := io.Copy(blobUpload, rd)
 	if err != nil {
 		t.Fatalf("unexpected error uploading layer data: %v", err)
 	}
@@ -84,46 +83,51 @@ func TestSimpleLayerUpload(t *testing.T) {
 		t.Fatalf("layer data write incomplete")
 	}
 
-	offset, err := layerUpload.Seek(0, os.SEEK_CUR)
+	offset, err := blobUpload.Seek(0, os.SEEK_CUR)
 	if err != nil {
 		t.Fatalf("unexpected error seeking layer upload: %v", err)
 	}
 
 	if offset != nn {
-		t.Fatalf("layerUpload not updated with correct offset: %v != %v", offset, nn)
+		t.Fatalf("blobUpload not updated with correct offset: %v != %v", offset, nn)
 	}
-	layerUpload.Close()
+	blobUpload.Close()
 
 	// Do a resume, for good fun
-	layerUpload, err = ls.Resume(layerUpload.UUID())
+	blobUpload, err = bs.Resume(ctx, blobUpload.ID())
 	if err != nil {
 		t.Fatalf("unexpected error resuming upload: %v", err)
 	}
 
 	sha256Digest := digest.NewDigest("sha256", h)
-	layer, err := layerUpload.Finish(dgst)
-
+	desc, err := blobUpload.Commit(ctx, distribution.Descriptor{Digest: dgst})
 	if err != nil {
 		t.Fatalf("unexpected error finishing layer upload: %v", err)
 	}
 
 	// After finishing an upload, it should no longer exist.
-	if _, err := ls.Resume(layerUpload.UUID()); err != distribution.ErrLayerUploadUnknown {
+	if _, err := bs.Resume(ctx, blobUpload.ID()); err != distribution.ErrBlobUploadUnknown {
 		t.Fatalf("expected layer upload to be unknown, got %v", err)
 	}
 
 	// Test for existence.
-	exists, err := ls.Exists(layer.Digest())
+	statDesc, err := bs.Stat(ctx, desc.Digest)
 	if err != nil {
-		t.Fatalf("unexpected error checking for existence: %v", err)
+		t.Fatalf("unexpected error checking for existence: %v, %#v", err, bs)
 	}
 
-	if !exists {
-		t.Fatalf("layer should now exist")
+	if statDesc != desc {
+		t.Fatalf("descriptors not equal: %v != %v", statDesc, desc)
 	}
+
+	rc, err := bs.Open(ctx, desc.Digest)
+	if err != nil {
+		t.Fatalf("unexpected error opening blob for read: %v", err)
+	}
+	defer rc.Close()
 
 	h.Reset()
-	nn, err = io.Copy(h, layer)
+	nn, err = io.Copy(h, rc)
 	if err != nil {
 		t.Fatalf("error reading layer: %v", err)
 	}
@@ -137,21 +141,21 @@ func TestSimpleLayerUpload(t *testing.T) {
 	}
 }
 
-// TestSimpleLayerRead just creates a simple layer file and ensures that basic
+// TestSimpleBlobRead just creates a simple blob file and ensures that basic
 // open, read, seek, read works. More specific edge cases should be covered in
 // other tests.
-func TestSimpleLayerRead(t *testing.T) {
+func TestSimpleBlobRead(t *testing.T) {
 	ctx := context.Background()
 	imageName := "foo/bar"
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(ctx, driver, cache.NewInMemoryLayerInfoCache())
+	registry := NewRegistryWithDriver(ctx, driver, cache.NewInMemoryBlobDescriptorCacheProvider())
 	repository, err := registry.Repository(ctx, imageName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
 	}
-	ls := repository.Layers()
+	bs := repository.Blobs(ctx)
 
-	randomLayerReader, tarSumStr, err := testutil.CreateRandomTarFile()
+	randomLayerReader, tarSumStr, err := testutil.CreateRandomTarFile() // TODO(stevvooe): Consider using just a random string.
 	if err != nil {
 		t.Fatalf("error creating random data: %v", err)
 	}
@@ -159,31 +163,14 @@ func TestSimpleLayerRead(t *testing.T) {
 	dgst := digest.Digest(tarSumStr)
 
 	// Test for existence.
-	exists, err := ls.Exists(dgst)
-	if err != nil {
-		t.Fatalf("unexpected error checking for existence: %v", err)
+	desc, err := bs.Stat(ctx, dgst)
+	if err != distribution.ErrBlobUnknown {
+		t.Fatalf("expected not found error when testing for existence: %v", err)
 	}
 
-	if exists {
-		t.Fatalf("layer should not exist")
-	}
-
-	// Try to get the layer and make sure we get a not found error
-	layer, err := ls.Fetch(dgst)
-	if err == nil {
-		t.Fatalf("error expected fetching unknown layer")
-	}
-
-	switch err.(type) {
-	case distribution.ErrUnknownLayer:
-		err = nil
-	default:
-		t.Fatalf("unexpected error fetching non-existent layer: %v", err)
-	}
-
-	randomLayerDigest, err := writeTestLayer(driver, defaultPathMapper, imageName, dgst, randomLayerReader)
-	if err != nil {
-		t.Fatalf("unexpected error writing test layer: %v", err)
+	rc, err := bs.Open(ctx, dgst)
+	if err != distribution.ErrBlobUnknown {
+		t.Fatalf("expected not found error when opening non-existent blob: %v", err)
 	}
 
 	randomLayerSize, err := seekerSize(randomLayerReader)
@@ -191,45 +178,57 @@ func TestSimpleLayerRead(t *testing.T) {
 		t.Fatalf("error getting seeker size for random layer: %v", err)
 	}
 
-	layer, err = ls.Fetch(dgst)
+	descBefore := distribution.Descriptor{Digest: dgst, MediaType: "application/octet-stream", Length: randomLayerSize}
+	t.Logf("desc: %v", descBefore)
+
+	desc, err = addBlob(ctx, bs, descBefore, randomLayerReader)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("error adding blob to blobservice: %v", err)
 	}
-	defer layer.Close()
+
+	if desc.Length != randomLayerSize {
+		t.Fatalf("committed blob has incorrect length: %v != %v", desc.Length, randomLayerSize)
+	}
+
+	rc, err = bs.Open(ctx, desc.Digest) // note that we are opening with original digest.
+	if err != nil {
+		t.Fatalf("error opening blob with %v: %v", dgst, err)
+	}
+	defer rc.Close()
 
 	// Now check the sha digest and ensure its the same
 	h := sha256.New()
-	nn, err := io.Copy(h, layer)
-	if err != nil && err != io.EOF {
+	nn, err := io.Copy(h, rc)
+	if err != nil {
 		t.Fatalf("unexpected error copying to hash: %v", err)
 	}
 
 	if nn != randomLayerSize {
-		t.Fatalf("stored incorrect number of bytes in layer: %d != %d", nn, randomLayerSize)
+		t.Fatalf("stored incorrect number of bytes in blob: %d != %d", nn, randomLayerSize)
 	}
 
 	sha256Digest := digest.NewDigest("sha256", h)
-	if sha256Digest != randomLayerDigest {
-		t.Fatalf("fetched digest does not match: %q != %q", sha256Digest, randomLayerDigest)
+	if sha256Digest != desc.Digest {
+		t.Fatalf("fetched digest does not match: %q != %q", sha256Digest, desc.Digest)
 	}
 
-	// Now seek back the layer, read the whole thing and check against randomLayerData
-	offset, err := layer.Seek(0, os.SEEK_SET)
+	// Now seek back the blob, read the whole thing and check against randomLayerData
+	offset, err := rc.Seek(0, os.SEEK_SET)
 	if err != nil {
-		t.Fatalf("error seeking layer: %v", err)
+		t.Fatalf("error seeking blob: %v", err)
 	}
 
 	if offset != 0 {
 		t.Fatalf("seek failed: expected 0 offset, got %d", offset)
 	}
 
-	p, err := ioutil.ReadAll(layer)
+	p, err := ioutil.ReadAll(rc)
 	if err != nil {
-		t.Fatalf("error reading all of layer: %v", err)
+		t.Fatalf("error reading all of blob: %v", err)
 	}
 
 	if len(p) != int(randomLayerSize) {
-		t.Fatalf("layer data read has different length: %v != %v", len(p), randomLayerSize)
+		t.Fatalf("blob data read has different length: %v != %v", len(p), randomLayerSize)
 	}
 
 	// Reset the randomLayerReader and read back the buffer
@@ -253,19 +252,26 @@ func TestLayerUploadZeroLength(t *testing.T) {
 	ctx := context.Background()
 	imageName := "foo/bar"
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(ctx, driver, cache.NewInMemoryLayerInfoCache())
+	registry := NewRegistryWithDriver(ctx, driver, cache.NewInMemoryBlobDescriptorCacheProvider())
 	repository, err := registry.Repository(ctx, imageName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
 	}
-	ls := repository.Layers()
+	bs := repository.Blobs(ctx)
 
-	upload, err := ls.Upload()
+	wr, err := bs.Create(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error starting upload: %v", err)
 	}
 
-	io.Copy(upload, bytes.NewReader([]byte{}))
+	nn, err := io.Copy(wr, bytes.NewReader([]byte{}))
+	if err != nil {
+		t.Fatalf("error copying into blob writer: %v", err)
+	}
+
+	if nn != 0 {
+		t.Fatalf("unexpected number of bytes copied: %v > 0", nn)
+	}
 
 	dgst, err := digest.FromReader(bytes.NewReader([]byte{}))
 	if err != nil {
@@ -277,35 +283,14 @@ func TestLayerUploadZeroLength(t *testing.T) {
 		t.Fatalf("digest not as expected: %v != %v", dgst, digest.DigestTarSumV1EmptyTar)
 	}
 
-	layer, err := upload.Finish(dgst)
+	desc, err := wr.Commit(ctx, distribution.Descriptor{Digest: dgst})
 	if err != nil {
-		t.Fatalf("unexpected error finishing upload: %v", err)
+		t.Fatalf("unexpected error committing write: %v", err)
 	}
 
-	if layer.Digest() != dgst {
-		t.Fatalf("unexpected digest: %v != %v", layer.Digest(), dgst)
+	if desc.Digest != dgst {
+		t.Fatalf("unexpected digest: %v != %v", desc.Digest, dgst)
 	}
-}
-
-// writeRandomLayer creates a random layer under name and tarSum using driver
-// and pathMapper. An io.ReadSeeker with the data is returned, along with the
-// sha256 hex digest.
-func writeRandomLayer(driver storagedriver.StorageDriver, pathMapper *pathMapper, name string) (rs io.ReadSeeker, tarSum digest.Digest, sha256digest digest.Digest, err error) {
-	reader, tarSumStr, err := testutil.CreateRandomTarFile()
-	if err != nil {
-		return nil, "", "", err
-	}
-
-	tarSum = digest.Digest(tarSumStr)
-
-	// Now, actually create the layer.
-	randomLayerDigest, err := writeTestLayer(driver, pathMapper, name, tarSum, ioutil.NopCloser(reader))
-
-	if _, err := reader.Seek(0, os.SEEK_SET); err != nil {
-		return nil, "", "", err
-	}
-
-	return reader, tarSum, randomLayerDigest, err
 }
 
 // seekerSize seeks to the end of seeker, checks the size and returns it to
@@ -334,46 +319,20 @@ func seekerSize(seeker io.ReadSeeker) (int64, error) {
 	return end, nil
 }
 
-// createTestLayer creates a simple test layer in the provided driver under
-// tarsum dgst, returning the sha256 digest location. This is implemented
-// piecemeal and should probably be replaced by the uploader when it's ready.
-func writeTestLayer(driver storagedriver.StorageDriver, pathMapper *pathMapper, name string, dgst digest.Digest, content io.Reader) (digest.Digest, error) {
-	h := sha256.New()
-	rd := io.TeeReader(content, h)
-
-	p, err := ioutil.ReadAll(rd)
-
+// addBlob simply consumes the reader and inserts into the blob service,
+// returning a descriptor on success.
+func addBlob(ctx context.Context, bs distribution.BlobIngester, desc distribution.Descriptor, rd io.Reader) (distribution.Descriptor, error) {
+	wr, err := bs.Create(ctx)
 	if err != nil {
-		return "", nil
+		return distribution.Descriptor{}, err
+	}
+	defer wr.Cancel(ctx)
+
+	if nn, err := io.Copy(wr, rd); err != nil {
+		return distribution.Descriptor{}, err
+	} else if nn != desc.Length {
+		return distribution.Descriptor{}, fmt.Errorf("incorrect number of bytes copied: %v != %v", nn, desc.Length)
 	}
 
-	blobDigestSHA := digest.NewDigest("sha256", h)
-
-	blobPath, err := pathMapper.path(blobDataPathSpec{
-		digest: dgst,
-	})
-
-	ctx := context.Background()
-	if err := driver.PutContent(ctx, blobPath, p); err != nil {
-		return "", err
-	}
-
-	if err != nil {
-		return "", err
-	}
-
-	layerLinkPath, err := pathMapper.path(layerLinkPathSpec{
-		name:   name,
-		digest: dgst,
-	})
-
-	if err != nil {
-		return "", err
-	}
-
-	if err := driver.PutContent(ctx, layerLinkPath, []byte(dgst)); err != nil {
-		return "", nil
-	}
-
-	return blobDigestSHA, err
+	return wr.Commit(ctx, desc)
 }

@@ -37,7 +37,7 @@ func TestSimpleRead(t *testing.T) {
 		t.Fatalf("error putting patterned content: %v", err)
 	}
 
-	fr, err := newFileReader(ctx, driver, path)
+	fr, err := newFileReader(ctx, driver, path, int64(len(content)))
 	if err != nil {
 		t.Fatalf("error allocating file reader: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestFileReaderSeek(t *testing.T) {
 		t.Fatalf("error putting patterned content: %v", err)
 	}
 
-	fr, err := newFileReader(ctx, driver, path)
+	fr, err := newFileReader(ctx, driver, path, int64(len(content)))
 
 	if err != nil {
 		t.Fatalf("unexpected error creating file reader: %v", err)
@@ -162,7 +162,7 @@ func TestFileReaderSeek(t *testing.T) {
 // read method, with an io.EOF error.
 func TestFileReaderNonExistentFile(t *testing.T) {
 	driver := inmemory.New()
-	fr, err := newFileReader(context.Background(), driver, "/doesnotexist")
+	fr, err := newFileReader(context.Background(), driver, "/doesnotexist", 10)
 	if err != nil {
 		t.Fatalf("unexpected error initializing reader: %v", err)
 	}

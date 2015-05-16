@@ -44,7 +44,7 @@ storage:
 		chunksize: 5242880
 		rootdirectory: /s3/object/name/prefix
 	cache:
-		layerinfo: inmemory
+		blobdescriptor: redis
 	maintenance:
 		uploadpurging:
 			enabled: true
@@ -262,7 +262,7 @@ storage:
 		chunksize: 5242880
 		rootdirectory: /s3/object/name/prefix
 	cache:
-		layerinfo: inmemory
+		blobdescriptor: inmemory
 	maintenance:
 		uploadpurging:
 			enabled: true
@@ -278,11 +278,15 @@ You must configure one backend; if you configure more, the registry returns an e
 
 Use the `cache` subsection to enable caching of data accessed in the storage
 backend. Currently, the only available cache provides fast access to layer
-metadata. This, if configured, uses the `layerinfo` field.
+metadata. This, if configured, uses the `blobdescriptor` field.
 
-You can set `layerinfo` field to `redis` or `inmemory`.  The `redis` value uses
+You can set `blobdescriptor` field to `redis` or `inmemory`.  The `redis` value uses
 a Redis pool to cache layer metadata.  The `inmemory` value uses an in memory
 map.
+
+>**NOTE**: Formerly, `blobdescriptor` was known as `layerinfo`. While these
+>are equivalent, `layerinfo` has been deprecated, in favor or
+>`blobdescriptor`.
 
 ### filesystem
 

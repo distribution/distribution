@@ -93,8 +93,8 @@ func TestURLPrefix(t *testing.T) {
 
 }
 
-// TestLayerAPI conducts a full test of the of the layer api.
-func TestLayerAPI(t *testing.T) {
+// TestBlobAPI conducts a full test of the of the blob api.
+func TestBlobAPI(t *testing.T) {
 	// TODO(stevvooe): This test code is complete junk but it should cover the
 	// complete flow. This must be broken down and checked against the
 	// specification *before* we submit the final to docker core.
@@ -213,6 +213,13 @@ func TestLayerAPI(t *testing.T) {
 	// Now, push just a chunk
 	layerFile.Seek(0, 0)
 
+	canonicalDigester := digest.NewCanonicalDigester()
+	if _, err := io.Copy(canonicalDigester, layerFile); err != nil {
+		t.Fatalf("error copying to digest: %v", err)
+	}
+	canonicalDigest := canonicalDigester.Digest()
+
+	layerFile.Seek(0, 0)
 	uploadURLBase, uploadUUID = startPushLayer(t, env.builder, imageName)
 	uploadURLBase, dgst := pushChunk(t, env.builder, imageName, uploadURLBase, layerFile, layerLength)
 	finishUpload(t, env.builder, imageName, uploadURLBase, dgst)
@@ -226,7 +233,7 @@ func TestLayerAPI(t *testing.T) {
 	checkResponse(t, "checking head on existing layer", resp, http.StatusOK)
 	checkHeaders(t, resp, http.Header{
 		"Content-Length":        []string{fmt.Sprint(layerLength)},
-		"Docker-Content-Digest": []string{layerDigest.String()},
+		"Docker-Content-Digest": []string{canonicalDigest.String()},
 	})
 
 	// ----------------
@@ -239,7 +246,7 @@ func TestLayerAPI(t *testing.T) {
 	checkResponse(t, "fetching layer", resp, http.StatusOK)
 	checkHeaders(t, resp, http.Header{
 		"Content-Length":        []string{fmt.Sprint(layerLength)},
-		"Docker-Content-Digest": []string{layerDigest.String()},
+		"Docker-Content-Digest": []string{canonicalDigest.String()},
 	})
 
 	// Verify the body
@@ -272,9 +279,9 @@ func TestLayerAPI(t *testing.T) {
 	checkResponse(t, "fetching layer", resp, http.StatusOK)
 	checkHeaders(t, resp, http.Header{
 		"Content-Length":        []string{fmt.Sprint(layerLength)},
-		"Docker-Content-Digest": []string{layerDigest.String()},
-		"ETag":                  []string{layerDigest.String()},
-		"Cache-Control":         []string{"max-age=86400"},
+		"Docker-Content-Digest": []string{canonicalDigest.String()},
+		"ETag":                  []string{canonicalDigest.String()},
+		"Cache-Control":         []string{"max-age=31536000"},
 	})
 
 	// Matching etag, gives 304

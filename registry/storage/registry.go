@@ -2,38 +2,53 @@ package storage
 
 import (
 	"github.com/docker/distribution"
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/registry/storage/cache"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
-	"golang.org/x/net/context"
 )
 
 // registry is the top-level implementation of Registry for use in the storage
 // package. All instances should descend from this object.
 type registry struct {
-	driver         storagedriver.StorageDriver
-	pm             *pathMapper
-	blobStore      *blobStore
-	layerInfoCache cache.LayerInfoCache
+	blobStore                   *blobStore
+	blobServer                  distribution.BlobServer
+	statter                     distribution.BlobStatter // global statter service.
+	blobDescriptorCacheProvider cache.BlobDescriptorCacheProvider
 }
 
 // NewRegistryWithDriver creates a new registry instance from the provided
 // driver. The resulting registry may be shared by multiple goroutines but is
 // cheap to allocate.
-func NewRegistryWithDriver(ctx context.Context, driver storagedriver.StorageDriver, layerInfoCache cache.LayerInfoCache) distribution.Namespace {
-	bs := &blobStore{
+func NewRegistryWithDriver(ctx context.Context, driver storagedriver.StorageDriver, blobDescriptorCacheProvider cache.BlobDescriptorCacheProvider) distribution.Namespace {
+
+	// create global statter, with cache.
+	var statter distribution.BlobStatter = &blobStatter{
 		driver: driver,
 		pm:     defaultPathMapper,
-		ctx:    ctx,
+	}
+
+	if blobDescriptorCacheProvider != nil {
+		statter = &cachedBlobStatter{
+			cache:   blobDescriptorCacheProvider,
+			backend: statter,
+		}
+	}
+
+	bs := &blobStore{
+		driver:  driver,
+		pm:      defaultPathMapper,
+		statter: statter,
 	}
 
 	return &registry{
-		driver:    driver,
 		blobStore: bs,
-
-		// TODO(sday): This should be configurable.
-		pm:             defaultPathMapper,
-		layerInfoCache: layerInfoCache,
+		blobServer: &blobServer{
+			driver:  driver,
+			statter: statter,
+			pathFn:  bs.path,
+		},
+		blobDescriptorCacheProvider: blobDescriptorCacheProvider,
 	}
 }
 
@@ -54,18 +69,29 @@ func (reg *registry) Repository(ctx context.Context, name string) (distribution.
 		}
 	}
 
+	var descriptorCache distribution.BlobDescriptorService
+	if reg.blobDescriptorCacheProvider != nil {
+		var err error
+		descriptorCache, err = reg.blobDescriptorCacheProvider.RepositoryScoped(name)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return &repository{
-		ctx:      ctx,
-		registry: reg,
-		name:     name,
+		ctx:             ctx,
+		registry:        reg,
+		name:            name,
+		descriptorCache: descriptorCache,
 	}, nil
 }
 
 // repository provides name-scoped access to various services.
 type repository struct {
 	*registry
-	ctx  context.Context
-	name string
+	ctx             context.Context
+	name            string
+	descriptorCache distribution.BlobDescriptorService
 }
 
 // Name returns the name of the repository.
@@ -78,47 +104,68 @@ func (repo *repository) Name() string {
 // to a request local.
 func (repo *repository) Manifests() distribution.ManifestService {
 	return &manifestStore{
+		ctx:        repo.ctx,
 		repository: repo,
 		revisionStore: &revisionStore{
+			ctx:        repo.ctx,
 			repository: repo,
+			blobStore: &linkedBlobStore{
+				ctx:        repo.ctx,
+				blobStore:  repo.blobStore,
+				repository: repo,
+				statter: &linkedBlobStatter{
+					blobStore:  repo.blobStore,
+					repository: repo,
+					linkPath:   manifestRevisionLinkPath,
+				},
+
+				// TODO(stevvooe): linkPath limits this blob store to only
+				// manifests. This instance cannot be used for blob checks.
+				linkPath: manifestRevisionLinkPath,
+			},
 		},
 		tagStore: &tagStore{
+			ctx:        repo.ctx,
 			repository: repo,
+			blobStore:  repo.registry.blobStore,
 		},
 	}
 }
 
-// Layers returns an instance of the LayerService. Instantiation is cheap and
+// Blobs returns an instance of the BlobStore. Instantiation is cheap and
 // may be context sensitive in the future. The instance should be used similar
 // to a request local.
-func (repo *repository) Layers() distribution.LayerService {
-	ls := &layerStore{
+func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
+	var statter distribution.BlobStatter = &linkedBlobStatter{
+		blobStore:  repo.blobStore,
 		repository: repo,
+		linkPath:   blobLinkPath,
 	}
 
-	if repo.registry.layerInfoCache != nil {
-		// TODO(stevvooe): This is not the best place to setup a cache. We would
-		// really like to decouple the cache from the backend but also have the
-		// manifeset service use the layer service cache. For now, we can simply
-		// integrate the cache directly. The main issue is that we have layer
-		// access and layer data coupled in a single object. Work is already under
-		// way to decouple this.
-
-		return &cachedLayerService{
-			LayerService: ls,
-			repository:   repo,
-			ctx:          repo.ctx,
-			driver:       repo.driver,
-			blobStore:    repo.blobStore,
-			cache:        repo.registry.layerInfoCache,
+	if repo.descriptorCache != nil {
+		statter = &cachedBlobStatter{
+			cache:   repo.descriptorCache,
+			backend: statter,
 		}
 	}
 
-	return ls
+	return &linkedBlobStore{
+		blobStore:  repo.blobStore,
+		blobServer: repo.blobServer,
+		statter:    statter,
+		repository: repo,
+		ctx:        ctx,
+
+		// TODO(stevvooe): linkPath limits this blob store to only layers.
+		// This instance cannot be used for manifest checks.
+		linkPath: blobLinkPath,
+	}
 }
 
 func (repo *repository) Signatures() distribution.SignatureService {
 	return &signatureStore{
 		repository: repo,
+		blobStore:  repo.blobStore,
+		ctx:        repo.ctx,
 	}
 }
