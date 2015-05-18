@@ -148,8 +148,15 @@ information on making this image production ready.
 
 ## Understand production deployment
 
+The Docker Registry 2.0 only accepts connections from a Docker client that is
+version 1.6.0 or newer. This means, for example, if you are deploying in a
+environment with 1.5.X clients you'll need to either upgrade them or deploy an
+older version of the Docker Registry to support them. For information on how to
+do this, see [Configure Nginx with a v1 and v2
+registry](#configure-nginx-with-a-v1-and-v2-registry) on this page.
+
 When deploying a registry for a production deployment you should consider these
-factors:
+key factors:
 
 <table>
   <tr>
