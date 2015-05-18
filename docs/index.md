@@ -15,7 +15,7 @@ Docker Registry is the core technology behind the Docker Hub. You can run your o
  - **Pluggable storage drivers**: Images can be stored in Amazon S3, Microsoft Azure or the local filesystem.
  - **Webhook notifications**: When an image is pushed to your registry, webhooks can fire off to launch CI builds, send notifications to IRC, etc.
 
-To get started with your own Docker Registry, head over to the instructions on how to [deploy a registry](deploying.md).
+You can only connect to a 2.0 Docker Registry with a Docker client that is version 1.6.0 or newer. To get started with your own Docker Registry, refer to the instructions on [how to deploy a registry](deploying.md).
 
 ## Understanding the registry
 
