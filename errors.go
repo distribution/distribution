@@ -14,7 +14,7 @@ type ErrRepositoryUnknown struct {
 }
 
 func (err ErrRepositoryUnknown) Error() string {
-	return fmt.Sprintf("unknown respository name=%s", err.Name)
+	return fmt.Sprintf("unknown repository name=%s", err.Name)
 }
 
 // ErrRepositoryNameInvalid should be used to denote an invalid repository
