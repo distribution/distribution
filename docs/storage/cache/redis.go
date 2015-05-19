@@ -43,7 +43,7 @@ func NewRedisBlobDescriptorCacheProvider(pool *redis.Pool) BlobDescriptorCachePr
 
 // RepositoryScoped returns the scoped cache.
 func (rbds *redisBlobDescriptorService) RepositoryScoped(repo string) (distribution.BlobDescriptorService, error) {
-	if err := v2.ValidateRespositoryName(repo); err != nil {
+	if err := v2.ValidateRepositoryName(repo); err != nil {
 		return nil, err
 	}
 
