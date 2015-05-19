@@ -25,7 +25,7 @@ func NewInMemoryBlobDescriptorCacheProvider() BlobDescriptorCacheProvider {
 }
 
 func (imbdcp *inMemoryBlobDescriptorCacheProvider) RepositoryScoped(repo string) (distribution.BlobDescriptorService, error) {
-	if err := v2.ValidateRespositoryName(repo); err != nil {
+	if err := v2.ValidateRepositoryName(repo); err != nil {
 		return nil, err
 	}
 

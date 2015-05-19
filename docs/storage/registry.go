@@ -62,7 +62,7 @@ func (reg *registry) Scope() distribution.Scope {
 // Instances should not be shared between goroutines but are cheap to
 // allocate. In general, they should be request scoped.
 func (reg *registry) Repository(ctx context.Context, name string) (distribution.Repository, error) {
-	if err := v2.ValidateRespositoryName(name); err != nil {
+	if err := v2.ValidateRepositoryName(name); err != nil {
 		return nil, distribution.ErrRepositoryNameInvalid{
 			Name:   name,
 			Reason: err,
