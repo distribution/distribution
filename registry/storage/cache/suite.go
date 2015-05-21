@@ -8,10 +8,10 @@ import (
 	"github.com/docker/distribution/digest"
 )
 
-// checkBlobDescriptorCache takes a cache implementation through a common set
+// CheckBlobDescriptorCache takes a cache implementation through a common set
 // of operations. If adding new tests, please add them here so new
-// implementations get the benefit.
-func checkBlobDescriptorCache(t *testing.T, provider BlobDescriptorCacheProvider) {
+// implementations get the benefit. This should be used for unit tests.
+func CheckBlobDescriptorCache(t *testing.T, provider BlobDescriptorCacheProvider) {
 	ctx := context.Background()
 
 	checkBlobDescriptorCacheEmptyRepository(t, ctx, provider)

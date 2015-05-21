@@ -18,7 +18,8 @@ import (
 	registrymiddleware "github.com/docker/distribution/registry/middleware/registry"
 	repositorymiddleware "github.com/docker/distribution/registry/middleware/repository"
 	"github.com/docker/distribution/registry/storage"
-	"github.com/docker/distribution/registry/storage/cache"
+	memorycache "github.com/docker/distribution/registry/storage/cache/memory"
+	rediscache "github.com/docker/distribution/registry/storage/cache/redis"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/factory"
 	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
@@ -114,10 +115,10 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 			if app.redis == nil {
 				panic("redis configuration required to use for layerinfo cache")
 			}
-			app.registry = storage.NewRegistryWithDriver(app, app.driver, cache.NewRedisBlobDescriptorCacheProvider(app.redis))
+			app.registry = storage.NewRegistryWithDriver(app, app.driver, rediscache.NewRedisBlobDescriptorCacheProvider(app.redis))
 			ctxu.GetLogger(app).Infof("using redis blob descriptor cache")
 		case "inmemory":
-			app.registry = storage.NewRegistryWithDriver(app, app.driver, cache.NewInMemoryBlobDescriptorCacheProvider())
+			app.registry = storage.NewRegistryWithDriver(app, app.driver, memorycache.NewInMemoryBlobDescriptorCacheProvider())
 			ctxu.GetLogger(app).Infof("using inmemory blob descriptor cache")
 		default:
 			if v != "" {

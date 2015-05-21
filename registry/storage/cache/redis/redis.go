@@ -1,13 +1,13 @@
-package cache
+package redis
 
 import (
 	"fmt"
 
-	"github.com/docker/distribution/registry/api/v2"
-
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/registry/api/v2"
+	"github.com/docker/distribution/registry/storage/cache"
 	"github.com/garyburd/redigo/redis"
 )
 
@@ -31,11 +31,9 @@ type redisBlobDescriptorService struct {
 	// request objects, we can change this to a connection.
 }
 
-var _ BlobDescriptorCacheProvider = &redisBlobDescriptorService{}
-
 // NewRedisBlobDescriptorCacheProvider returns a new redis-based
 // BlobDescriptorCacheProvider using the provided redis connection pool.
-func NewRedisBlobDescriptorCacheProvider(pool *redis.Pool) BlobDescriptorCacheProvider {
+func NewRedisBlobDescriptorCacheProvider(pool *redis.Pool) cache.BlobDescriptorCacheProvider {
 	return &redisBlobDescriptorService{
 		pool: pool,
 	}
@@ -55,7 +53,7 @@ func (rbds *redisBlobDescriptorService) RepositoryScoped(repo string) (distribut
 
 // Stat retrieves the descriptor data from the redis hash entry.
 func (rbds *redisBlobDescriptorService) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
-	if err := validateDigest(dgst); err != nil {
+	if err := dgst.Validate(); err != nil {
 		return distribution.Descriptor{}, err
 	}
 
@@ -89,11 +87,11 @@ func (rbds *redisBlobDescriptorService) stat(ctx context.Context, conn redis.Con
 // hash. A hash is used here since we may store unrelated fields about a layer
 // in the future.
 func (rbds *redisBlobDescriptorService) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
-	if err := validateDigest(dgst); err != nil {
+	if err := dgst.Validate(); err != nil {
 		return err
 	}
 
-	if err := validateDescriptor(desc); err != nil {
+	if err := cache.ValidateDescriptor(desc); err != nil {
 		return err
 	}
 
@@ -134,7 +132,7 @@ var _ distribution.BlobDescriptorService = &repositoryScopedRedisBlobDescriptorS
 // forwards the descriptor request to the global blob store. If the media type
 // differs for the repository, we override it.
 func (rsrbds *repositoryScopedRedisBlobDescriptorService) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
-	if err := validateDigest(dgst); err != nil {
+	if err := dgst.Validate(); err != nil {
 		return distribution.Descriptor{}, err
 	}
 
@@ -170,11 +168,11 @@ func (rsrbds *repositoryScopedRedisBlobDescriptorService) Stat(ctx context.Conte
 }
 
 func (rsrbds *repositoryScopedRedisBlobDescriptorService) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
-	if err := validateDigest(dgst); err != nil {
+	if err := dgst.Validate(); err != nil {
 		return err
 	}
 
-	if err := validateDescriptor(desc); err != nil {
+	if err := cache.ValidateDescriptor(desc); err != nil {
 		return err
 	}
 
