@@ -214,7 +214,7 @@ func TestBlobAPI(t *testing.T) {
 	layerFile.Seek(0, 0)
 
 	canonicalDigester := digest.NewCanonicalDigester()
-	if _, err := io.Copy(canonicalDigester, layerFile); err != nil {
+	if _, err := io.Copy(canonicalDigester.Hash(), layerFile); err != nil {
 		t.Fatalf("error copying to digest: %v", err)
 	}
 	canonicalDigest := canonicalDigester.Digest()
@@ -639,7 +639,7 @@ func doPushLayer(t *testing.T, ub *v2.URLBuilder, name string, dgst digest.Diges
 func pushLayer(t *testing.T, ub *v2.URLBuilder, name string, dgst digest.Digest, uploadURLBase string, body io.Reader) string {
 	digester := digest.NewCanonicalDigester()
 
-	resp, err := doPushLayer(t, ub, name, dgst, uploadURLBase, io.TeeReader(body, &digester))
+	resp, err := doPushLayer(t, ub, name, dgst, uploadURLBase, io.TeeReader(body, digester.Hash()))
 	if err != nil {
 		t.Fatalf("unexpected error doing push layer request: %v", err)
 	}
@@ -704,7 +704,7 @@ func doPushChunk(t *testing.T, uploadURLBase string, body io.Reader) (*http.Resp
 
 	digester := digest.NewCanonicalDigester()
 
-	req, err := http.NewRequest("PATCH", uploadURL, io.TeeReader(body, digester))
+	req, err := http.NewRequest("PATCH", uploadURL, io.TeeReader(body, digester.Hash()))
 	if err != nil {
 		t.Fatalf("unexpected error creating new request: %v", err)
 	}
