@@ -1,4 +1,4 @@
-package cache
+package memory
 
 import (
 	"sync"
@@ -7,6 +7,7 @@ import (
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/registry/api/v2"
+	"github.com/docker/distribution/registry/storage/cache"
 )
 
 type inMemoryBlobDescriptorCacheProvider struct {
@@ -17,7 +18,7 @@ type inMemoryBlobDescriptorCacheProvider struct {
 
 // NewInMemoryBlobDescriptorCacheProvider returns a new mapped-based cache for
 // storing blob descriptor data.
-func NewInMemoryBlobDescriptorCacheProvider() BlobDescriptorCacheProvider {
+func NewInMemoryBlobDescriptorCacheProvider() cache.BlobDescriptorCacheProvider {
 	return &inMemoryBlobDescriptorCacheProvider{
 		global:       newMapBlobDescriptorCache(),
 		repositories: make(map[string]*mapBlobDescriptorCache),
@@ -117,7 +118,7 @@ func newMapBlobDescriptorCache() *mapBlobDescriptorCache {
 }
 
 func (mbdc *mapBlobDescriptorCache) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
-	if err := validateDigest(dgst); err != nil {
+	if err := dgst.Validate(); err != nil {
 		return distribution.Descriptor{}, err
 	}
 
@@ -133,11 +134,11 @@ func (mbdc *mapBlobDescriptorCache) Stat(ctx context.Context, dgst digest.Digest
 }
 
 func (mbdc *mapBlobDescriptorCache) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
-	if err := validateDigest(dgst); err != nil {
+	if err := dgst.Validate(); err != nil {
 		return err
 	}
 
-	if err := validateDescriptor(desc); err != nil {
+	if err := cache.ValidateDescriptor(desc); err != nil {
 		return err
 	}
 

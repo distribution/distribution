@@ -1,4 +1,4 @@
-package cache
+package redis
 
 import (
 	"flag"
@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/docker/distribution/registry/storage/cache"
 	"github.com/garyburd/redigo/redis"
 )
 
@@ -46,5 +47,5 @@ func TestRedisBlobDescriptorCacheProvider(t *testing.T) {
 		t.Fatalf("unexpected error flushing redis db: %v", err)
 	}
 
-	checkBlobDescriptorCache(t, NewRedisBlobDescriptorCacheProvider(pool))
+	cache.CheckBlobDescriptorCache(t, NewRedisBlobDescriptorCacheProvider(pool))
 }
