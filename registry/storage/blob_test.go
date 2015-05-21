@@ -12,7 +12,7 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/registry/storage/cache"
+	"github.com/docker/distribution/registry/storage/cache/memory"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/docker/distribution/testutil"
 )
@@ -35,7 +35,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 	ctx := context.Background()
 	imageName := "foo/bar"
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(ctx, driver, cache.NewInMemoryBlobDescriptorCacheProvider())
+	registry := NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider())
 	repository, err := registry.Repository(ctx, imageName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
@@ -148,7 +148,7 @@ func TestSimpleBlobRead(t *testing.T) {
 	ctx := context.Background()
 	imageName := "foo/bar"
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(ctx, driver, cache.NewInMemoryBlobDescriptorCacheProvider())
+	registry := NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider())
 	repository, err := registry.Repository(ctx, imageName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
@@ -252,7 +252,7 @@ func TestLayerUploadZeroLength(t *testing.T) {
 	ctx := context.Background()
 	imageName := "foo/bar"
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(ctx, driver, cache.NewInMemoryBlobDescriptorCacheProvider())
+	registry := NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider())
 	repository, err := registry.Repository(ctx, imageName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)

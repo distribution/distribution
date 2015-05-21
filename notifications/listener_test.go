@@ -10,7 +10,7 @@ import (
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/registry/storage"
-	"github.com/docker/distribution/registry/storage/cache"
+	"github.com/docker/distribution/registry/storage/cache/memory"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/docker/distribution/testutil"
 	"github.com/docker/libtrust"
@@ -18,7 +18,7 @@ import (
 
 func TestListener(t *testing.T) {
 	ctx := context.Background()
-	registry := storage.NewRegistryWithDriver(ctx, inmemory.New(), cache.NewInMemoryBlobDescriptorCacheProvider())
+	registry := storage.NewRegistryWithDriver(ctx, inmemory.New(), memory.NewInMemoryBlobDescriptorCacheProvider())
 	tl := &testListener{
 		ops: make(map[string]int),
 	}
