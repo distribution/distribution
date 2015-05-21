@@ -1,57 +1,95 @@
 # Contributing to the registry
 
-## Are you having issues?
+## Before reporting an issue...
 
-Please first try any of these support forums before opening an issue:
+### If your problem is with...
 
- * irc #docker on freenode (archives: [https://botbot.me/freenode/docker/])
- * https://forums.docker.com/
- * if your problem is with the "hub" (the website and other user-facing components), or about automated builds, then please direct your issues to https://support.docker.com
+ - [ ] automated builds
+ - [ ] your account on the [Docker Hub](https://hub.docker.com/)
+ - [ ] any other [Docker Hub](https://hub.docker.com/) issue
 
-## So, you found a bug?
+Then please do not report your issue here - you should instead report it to [https://support.docker.com]
 
-First check if your problem was already reported in the issue tracker.
+### If you...
 
-If it's already there, please refrain from adding "same here" comments - these don't add any value and are only adding useless noise. **Said comments will quite often be deleted at sight**. On the other hand, if you have any technical, relevant information to add, by all means do!
+ - [ ] need help setting up your registry
+ - [ ] can't figure out something
+ - [ ] are not sure what's going on or what your problem is
 
-Your issue is not there? Then please, create a ticket.
+Then please do not open an issue here yet - you should first try one of the following support forums:
 
-If possible the following guidelines should be followed:
+ * irc: #docker-distribution on freenode
+ * mailing-list: <distribution@dockerproject.org> or https://groups.google.com/a/dockerproject.org/forum/#!forum/distribution
 
- * try to come up with a minimal, simple to reproduce test-case
- * try to add a title that describe succinctly the issue
- * if you are running your own registry, please provide:
-  * registry version
-  * registry launch command used
-  * registry configuration
-  * registry logs
- * in all cases:
-  * `docker version` and `docker info`
-  * run your docker daemon in debug mode (-D), and provide docker daemon logs 
+## Reporting an issue properly
 
-## You have a patch for a known bug, or a small correction?
+By following these simple rules you will get better and faster feedback on your issue.
 
-Basic github workflow (fork, patch, make sure the tests pass, PR).
+ - [ ] search the bugtracker for an already reported issue
 
-... and some simple rules to ensure quick merge:
+### If you found an issue that describes your problem:
 
- * clearly point to the issue(s) you want to fix
- * when possible, prefer multiple (smaller) PRs addressing individual issues over a big one trying to address multiple issues at once
- * if you need to amend your PR following comments, squash instead of adding more commits
+ - [ ] please read other user comments first, and confirm this is the same issue: a given error condition might be indicative of different problems - you may also find a workaround in the comments
+ - [ ] please refrain from adding "same thing here" or "+1" comments
+ - [ ] you don't need to comment on an issue to get notified of updates: just hit the "subscribe" button
+ - [ ] comment if you have some new, technical and relevant information to add to the case
 
-## You want some shiny new feature to be added?
+### If you have not found an existing issue that describes your problem:
 
-Fork the project.
+ - [ ] create a new issue, with a succinct title that describes your issue:
+   * bad title: "It doesn't work with my docker"
+   * good title: "Private registry push fail: 400 error with E_INVALID_DIGEST"
+ - [ ] copy the output of `docker version`
+ - [ ] copy the output of `docker info`
+ - [ ] copy your Registry version
+ - [ ] copy the command line you used to launch your Registry
+ - [ ] restart your docker daemon in debug mode (add `-D` to the daemon launch arguments)
+ - [ ] reproduce your problem and get your docker daemon logs showing the error
+ - [ ] if relevant, copy your registry logs that show the error
+ - [ ] provide any relevant detail about your specific Registry configuration (eg: storage backend used)
+ - [ ] indicate if you are using an enterprise proxy, Nginx, or anything else between you and your Registry
 
-Create a new proposal in the folder `open-design/specs`, named `DEP_MY_AWESOME_PROPOSAL.md`, using `open-design/specs/TEMPLATE.md` as a starting point.
+## Contributing a patch for a known bug, or a small correction
 
-Then immediately submit this new file as a pull-request, in order to get early feedback.
+You should follow the basic GitHub workflow:
 
-Eventually, you will have to update your proposal to accommodate the feedback you received.
+ - [ ] fork
+ - [ ] commit a change
+ - [ ] make sure the tests pass
+ - [ ] PR
 
-Usually, it's not advisable to start working too much on the implementation itself before the proposal receives sufficient feedback, since it can be significantly altered (or rejected).
+Additionally, you must [sign your commits](https://github.com/docker/docker/blob/master/CONTRIBUTING.md#sign-your-work). It's very simple:
 
-Your implementation should then be submitted as a separate PR, that will be reviewed as well.
+ * configure your name with git: `git config user.name "Real Name" && git config user.email mail@example.com`
+ * sign your commits using `-s`: `git commit -s -m "My commit"`
+
+Some simple rules to ensure quick merge:
+
+ - [ ] clearly point to the issue(s) you want to fix in your PR comment
+ - [ ] when possible, prefer multiple (smaller) PRs addressing individual issues over a big one trying to address multiple issues at once
+ - [ ] if you need to amend your PR following comments, please squash instead of adding more commits
+
+## Contributing new features
+
+You are heavily encouraged to first discuss what you want to do. You can do so on the irc channel, or by opening an issue that clearly describes the use case you want to fulfill, or the problem you are trying to solve.
+
+If this is a major new feature, you should then submit a proposal that describes your technical solution and reasoning.
+If you did discuss it first, this will likely be greenlighted very fast. It's advisable to address all feedback on this proposal before starting actual work. 
+
+Then you should submit your implementation, clearly linking to the issue (and possible proposal).
+
+Your PR will be reviewed by the community, then ultimately by the project maintainers, before being merged.
+
+It's mandatory to:
+
+ * interact respectfully with other community members and maintainers - more generally, you are expected to abide by the [Docker community rules](https://github.com/docker/docker/blob/master/CONTRIBUTING.md#docker-community-guidelines)
+ * address maintainers' comments and modify your submission accordingly
+ * write tests for any new code
+
+Complying to these simple rules will greatly accelerate the review process, and will ensure you have a pleasant experience in contributing code to the Registry.
+
+Have a look at a great, succesful contribution: the [Ceph driver PR](https://github.com/docker/distribution/pull/443)
+
 
 ## Issue and PR labels
 
@@ -74,27 +112,8 @@ To keep track of the state of issues and PRs, we've adopted a set of simple labe
 	<dd>Issues marked with this label are complete. This can be considered a psuedo-label, in that if it is closed, it is considered "Done".</dd>
 </dl>
 
-These integrate with waffle.io to show the current status of the project. The project board is available at the following url:
-
-https://waffle.io/docker/distribution
-
 If an issue or PR is not labeled correctly or you believe it is not in the right state, please contact a maintainer to fix the problem.
 
 ## Milestones
 
 Issues and PRs should be assigned to relevant milestones. If an issue or PR is assigned a milestone, it should be available by that date. Depending on level of effort, items may be shuffled in or out of milestones. Issues or PRs that don't have a milestone are considered unscheduled. Typically, "In Progress" issues should have a milestone.
-
-## PR Titles
-
-PR titles should be lowercased, except for proper noun references (such a
-method name or type).
-
-PR titles should be prefixed with affected directories, comma separated. For
-example, if a specification is modified, the prefix would be "docs/spec". If
-the modifications are only in the root, do not include it. If multiple
-directories are modified, include each, separated by a comma and space.
-
-Here are some examples:
-
-- docs/spec: move API specification into correct position
-- context, registry, auth, auth/token, cmd/registry: context aware logging
