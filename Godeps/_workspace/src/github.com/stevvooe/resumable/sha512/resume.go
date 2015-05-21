@@ -6,8 +6,8 @@ import (
 )
 
 // Len returns the number of bytes which have been written to the digest.
-func (d *digest) Len() uint64 {
-	return d.len
+func (d *digest) Len() int64 {
+	return int64(d.len)
 }
 
 // State returns a snapshot of the state of the digest.

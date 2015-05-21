@@ -2,15 +2,17 @@ package sha512
 
 import (
 	"bytes"
-	stdlib "crypto"
-	"crypto/rand"
-	_ "crypto/sha512" // To register the stdlib sha224 and sha256 algs.
-	resumable "github.com/jlhawn/go-crypto"
+	"crypto"
+	"crypto/rand" // To register the stdlib sha224 and sha256 algs.
+	"crypto/sha512"
+	"hash"
 	"io"
 	"testing"
+
+	"github.com/stevvooe/resumable"
 )
 
-func compareResumableHash(t *testing.T, r resumable.Hash, h stdlib.Hash) {
+func compareResumableHash(t *testing.T, newResumable func() hash.Hash, newStdlib func() hash.Hash) {
 	// Read 3 Kilobytes of random data into a buffer.
 	buf := make([]byte, 3*1024)
 	if _, err := io.ReadFull(rand.Reader, buf); err != nil {
@@ -20,8 +22,8 @@ func compareResumableHash(t *testing.T, r resumable.Hash, h stdlib.Hash) {
 	// Use two Hash objects to consume prefixes of the data. One will be
 	// snapshotted and resumed with each additional byte, then both will write
 	// that byte. The digests should be equal after each byte is digested.
-	resumableHasher := r.New()
-	stdlibHasher := h.New()
+	resumableHasher := newResumable().(resumable.Hash)
+	stdlibHasher := newStdlib()
 
 	// First, assert that the initial distest is the same.
 	if !bytes.Equal(resumableHasher.Sum(nil), stdlibHasher.Sum(nil)) {
@@ -52,6 +54,21 @@ func compareResumableHash(t *testing.T, r resumable.Hash, h stdlib.Hash) {
 }
 
 func TestResumable(t *testing.T) {
-	compareResumableHash(t, resumable.SHA384, stdlib.SHA384)
-	compareResumableHash(t, resumable.SHA512, stdlib.SHA512)
+	compareResumableHash(t, New384, sha512.New384)
+	compareResumableHash(t, New, sha512.New)
+}
+
+func TestResumableRegistered(t *testing.T) {
+
+	for _, hf := range []crypto.Hash{crypto.SHA384, crypto.SHA512} {
+		// make sure that the hash gets the resumable version from the global
+		// registry in crypto library.
+		h := hf.New()
+
+		if rh, ok := h.(resumable.Hash); !ok {
+			t.Fatalf("non-resumable hash function registered: %#v %#v", rh, crypto.SHA256)
+		}
+
+	}
+
 }
