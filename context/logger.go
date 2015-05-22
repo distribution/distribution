@@ -3,6 +3,8 @@ package context
 import (
 	"fmt"
 
+	"github.com/docker/distribution/uuid"
+
 	"github.com/Sirupsen/logrus"
 )
 
@@ -98,4 +100,9 @@ func getLogrusLogger(ctx Context, keys ...interface{}) *logrus.Entry {
 	}
 
 	return logger.WithFields(fields)
+}
+
+func init() {
+	// inject a logger into the uuid library.
+	uuid.Loggerf = GetLogger(Background()).Warnf
 }

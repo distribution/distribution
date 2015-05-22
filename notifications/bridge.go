@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"time"
 
-	"code.google.com/p/go-uuid/uuid"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/uuid"
 )
 
 type bridge struct {
@@ -149,7 +149,7 @@ func (b *bridge) createEvent(action string) *Event {
 // createEvent returns a new event, timestamped, with the specified action.
 func createEvent(action string) *Event {
 	return &Event{
-		ID:        uuid.New(),
+		ID:        uuid.Generate().String(),
 		Timestamp: time.Now(),
 		Action:    action,
 	}
