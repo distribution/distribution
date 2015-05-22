@@ -1,6 +1,6 @@
 # Openstack Swift storage driver
 
-An implementation of the `storagedriver.StorageDriver` interface which uses Openstack Swift for object storage.
+An implementation of the `storagedriver.StorageDriver` interface which uses [Openstack Swift](http://docs.openstack.org/developer/swift/) for object storage.
 
 ## Parameters
 
