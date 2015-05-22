@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"code.google.com/p/go-uuid/uuid"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
+	"github.com/docker/distribution/uuid"
 )
 
 var pm = defaultPathMapper
@@ -18,7 +18,7 @@ func testUploadFS(t *testing.T, numUploads int, repoName string, startedAt time.
 	d := inmemory.New()
 	ctx := context.Background()
 	for i := 0; i < numUploads; i++ {
-		addUploads(ctx, t, d, uuid.New(), repoName, startedAt)
+		addUploads(ctx, t, d, uuid.Generate().String(), repoName, startedAt)
 	}
 	return d, ctx
 }
@@ -73,7 +73,7 @@ func TestPurgeAll(t *testing.T) {
 	fs, ctx := testUploadFS(t, uploadCount, "test-repo", oneHourAgo)
 
 	// Ensure > 1 repos are purged
-	addUploads(ctx, t, fs, uuid.New(), "test-repo2", oneHourAgo)
+	addUploads(ctx, t, fs, uuid.Generate().String(), "test-repo2", oneHourAgo)
 	uploadCount++
 
 	deleted, errs := PurgeUploads(ctx, fs, time.Now(), true)
@@ -95,7 +95,7 @@ func TestPurgeSome(t *testing.T) {
 	newUploadCount := 4
 
 	for i := 0; i < newUploadCount; i++ {
-		addUploads(ctx, t, fs, uuid.New(), "test-repo", time.Now().Add(1*time.Hour))
+		addUploads(ctx, t, fs, uuid.Generate().String(), "test-repo", time.Now().Add(1*time.Hour))
 	}
 
 	deleted, errs := PurgeUploads(ctx, fs, time.Now(), true)
@@ -115,7 +115,7 @@ func TestPurgeOnlyUploads(t *testing.T) {
 
 	// Create a directory tree outside _uploads and ensure
 	// these files aren't deleted.
-	dataPath, err := pm.path(uploadDataPathSpec{name: "test-repo", id: uuid.New()})
+	dataPath, err := pm.path(uploadDataPathSpec{name: "test-repo", id: uuid.Generate().String()})
 	if err != nil {
 		t.Fatalf(err.Error())
 	}

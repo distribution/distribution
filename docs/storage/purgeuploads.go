@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"code.google.com/p/go-uuid/uuid"
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/distribution/context"
 	storageDriver "github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/uuid"
 )
 
 // uploadData stored the location of temporary files created during a layer upload
@@ -116,8 +116,8 @@ func getOutstandingUploads(ctx context.Context, driver storageDriver.StorageDriv
 func uUIDFromPath(path string) (string, bool) {
 	components := strings.Split(path, "/")
 	for i := len(components) - 1; i >= 0; i-- {
-		if uuid := uuid.Parse(components[i]); uuid != nil {
-			return uuid.String(), i == len(components)-1
+		if u, err := uuid.Parse(components[i]); err == nil {
+			return u.String(), i == len(components)-1
 		}
 	}
 	return "", false
