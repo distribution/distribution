@@ -21,15 +21,15 @@ type SwiftDriverConstructor func(rootDirectory string) (*Driver, error)
 
 func init() {
 	var (
-		username     string
-		password     string
-		authURL      string
-		tenant       string
-		container    string
-		region       string
-		prefix       string
+		username    string
+		password    string
+		authURL     string
+		tenant      string
+		container   string
+		region      string
+		prefix      string
 		swiftServer *swifttest.SwiftServer
-		err          error
+		err         error
 	)
 	if username = os.Getenv("OS_USERNAME"); username == "" {
 		username = os.Getenv("ST_USER")
