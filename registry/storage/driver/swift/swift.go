@@ -155,8 +155,8 @@ func New(params DriverParameters) (*Driver, error) {
 		return nil, fmt.Errorf("Failed to create container %s (%s)", params.Container, err)
 	}
 
-	if err := ct.ContainerCreate(params.Container + "_segments", nil); err != nil {
-		return nil, fmt.Errorf("Failed to create container %s (%s)", params.Container + "_segments", err)
+	if err := ct.ContainerCreate(params.Container+"_segments", nil); err != nil {
+		return nil, fmt.Errorf("Failed to create container %s (%s)", params.Container+"_segments", err)
 	}
 
 	d := &driver{
@@ -197,7 +197,7 @@ func (d *driver) PutContent(ctx context.Context, path string, contents []byte) e
 		return parseError(dir, err)
 	}
 	err := d.Conn.ObjectPutBytes(d.Container, d.swiftPath(path),
-	                             contents, d.getContentType())
+		contents, d.getContentType())
 	return parseError(path, err)
 }
 
@@ -262,7 +262,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 				headers := make(swift.Headers)
 				headers["X-Object-Manifest"] = segmentsContainer + "/" + d.swiftPath(path)
 				manifest, err := d.Conn.ObjectCreate(d.Container, d.swiftPath(path), false, "",
-				                                     d.getContentType(), headers)
+					d.getContentType(), headers)
 				manifest.Close()
 				if err != nil {
 					return bytesRead, parseError(path, err)
@@ -279,7 +279,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 		headers := make(swift.Headers)
 		headers["Content-Type"] = "application/json"
 		opts := &swift.ObjectsOpts{Prefix: d.swiftPath(path), Headers: headers}
-		segments, err = d.Conn.Objects(d.Container + "_segments", opts)
+		segments, err = d.Conn.Objects(d.Container+"_segments", opts)
 		if err != nil {
 			return bytesRead, parseError(path, err)
 		}
@@ -287,7 +287,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 
 	// First, we skip the existing segments that are not modified by this call
 	for i := range segments {
-		if offset < cursor + segments[i].Bytes {
+		if offset < cursor+segments[i].Bytes {
 			break
 		}
 		cursor += segments[i].Bytes
@@ -297,11 +297,11 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 	// We reached the end of the file but we haven't reached 'offset' yet
 	// Therefore we add blocks of zeros
 	if offset >= currentLength {
-		for offset - currentLength >= d.ChunkSize {
+		for offset-currentLength >= d.ChunkSize {
 			// Insert a block a zero
 			d.Conn.ObjectPut(segmentsContainer, getSegment(),
-			                 bytes.NewReader(zeroBuf), false, "",
-			                 d.getContentType(), nil)
+				bytes.NewReader(zeroBuf), false, "",
+				d.getContentType(), nil)
 			currentLength += d.ChunkSize
 			partNumber++
 		}
@@ -318,8 +318,8 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 	}
 
 	multi := io.MultiReader(
-		io.LimitReader(paddingReader, offset - cursor),
-		io.LimitReader(reader, d.ChunkSize - (offset - cursor)),
+		io.LimitReader(paddingReader, offset-cursor),
+		io.LimitReader(reader, d.ChunkSize-(offset-cursor)),
 	)
 
 	for {
@@ -335,10 +335,10 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 
 		if n < d.ChunkSize {
 			// We wrote all the data
-			if cursor + n < currentLength {
+			if cursor+n < currentLength {
 				// Copy the end of the chunk
 				headers := make(swift.Headers)
-				headers["Range"] = "bytes=" + strconv.FormatInt(cursor + n, 10) + "-" + strconv.FormatInt(cursor + d.ChunkSize, 10)
+				headers["Range"] = "bytes=" + strconv.FormatInt(cursor+n, 10) + "-" + strconv.FormatInt(cursor+d.ChunkSize, 10)
 				file, _, err := d.Conn.ObjectOpen(d.Container, d.swiftPath(path), false, headers)
 				if err != nil {
 					return bytesRead, parseError(path, err)
@@ -348,13 +348,13 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 			}
 			if n > 0 {
 				currentSegment.Close()
-				bytesRead += n - max(0, offset - cursor)
+				bytesRead += n - max(0, offset-cursor)
 			}
 			break
 		}
 
 		currentSegment.Close()
-		bytesRead += n - max(0, offset - cursor)
+		bytesRead += n - max(0, offset-cursor)
 		multi = io.MultiReader(io.LimitReader(reader, d.ChunkSize))
 		cursor += d.ChunkSize
 		partNumber++
@@ -405,7 +405,7 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 // object.
 func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
 	err := d.Conn.ObjectMove(d.Container, d.swiftPath(sourcePath),
-	                         d.Container, d.swiftPath(destPath))
+		d.Container, d.swiftPath(destPath))
 	if err != nil {
 		return parseError(sourcePath, err)
 	}
@@ -443,7 +443,7 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 				if ok {
 					components := strings.SplitN(manifest, "/", 2)
 					segContainer := components[0]
-					segments, err := d.Conn.ObjectNamesAll(segContainer, &swift.ObjectsOpts{ Prefix: components[1] })
+					segments, err := d.Conn.ObjectNamesAll(segContainer, &swift.ObjectsOpts{Prefix: components[1]})
 					if err != nil {
 						return parseError(name, err)
 					}
@@ -483,7 +483,7 @@ func (d *driver) createParentFolder(path string) (string, error) {
 		_, _, err := d.Conn.Object(d.Container, d.swiftPath(dir))
 		if swiftErr, ok := err.(*swift.Error); ok && swiftErr.StatusCode == 404 {
 			_, err := d.Conn.ObjectPut(d.Container, d.swiftPath(dir), bytes.NewReader(make([]byte, 0)),
-			                           false, "", "application/directory", nil)
+				false, "", "application/directory", nil)
 			if err != nil {
 				return dir, err
 			}
