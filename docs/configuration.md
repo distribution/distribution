@@ -604,8 +604,7 @@ auth:
 		rootcertbundle: /root/certs/bundle
 ```
 
-The `auth` option is **optional** as there are use cases (i.e. a mirror that
-only permits pulls) for which authentication may not be desired. There are
+The `auth` option is **optional**. There are
 currently 2 possible auth providers, `silly` and `token`. You can configure only
 one `auth` provider.
 
