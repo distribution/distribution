@@ -30,7 +30,7 @@ To override this value, set an environment variable like this:
 REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/tmp/registry/test
 ```
 
-This variable overrides the `/tmp/registry` value to the `/tmp/registry/test`
+This variable overrides the `/tmp/registry-dev` value to the `/tmp/registry/test`
 directory.
 
 >**Note**: If an environment variable changes a map value into a string, such

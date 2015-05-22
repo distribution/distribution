@@ -7,7 +7,7 @@ IGNORES-->
 
 # Deploying a registry server
 
-You obviously need to [install Docker](https://docs.docker.com/installation/) (remember you need at Docker version 1.6.0 or newer).
+You obviously need to [install Docker](https://docs.docker.com/installation/) (remember you need Docker version 1.6.0 or newer).
 
 ## Getting started in 2 lines
 
@@ -17,7 +17,9 @@ Create a folder for your registry data:
 
 Start your registry:
 
-     $ docker run -d -p 5000:5000 -v `pwd`/registry-data:/tmp/registry-dev --restart=always --name registry registry:2
+     $ docker run -d -p 5000:5000 \
+     		-v `pwd`/registry-data:/tmp/registry-dev \
+     		--restart=always --name registry registry:2
 
 That's it.
 
@@ -40,7 +42,12 @@ Let assume your registry is accessible via the domain name `myregistrydomain.com
 If you try to `docker pull myregistrydomain.com:5000/batman/ubuntu`, you will see the following error message:
 
 ```
-FATA[0000] Error response from daemon: v1 ping attempt failed with error: Get https://nonregistry:5000/v1/_ping: dial tcp: lookup nonregistry: no such host. If this private registry supports only HTTP or HTTPS with an unknown CA certificate, please add `--insecure-registry nonregistry:5000` to the daemon's arguments. In the case of HTTPS, if you have access to the registry's CA certificate, no need for the flag; simply place the CA certificate at /etc/docker/certs.d/nonregistry:5000/ca.crt
+FATA[0000] Error response from daemon: v1 ping attempt failed with error: Get
+https://nonregistry:5000/v1/_ping: dial tcp: lookup nonregistry: no such host. If
+this private registry supports only HTTP or HTTPS with an unknown CA certificate,
+please add `--insecure-registry nonregistry:5000` to the daemon's arguments. In
+the case of HTTPS, if you have access to the registry's CA certificate, no need
+for the flag; simply place the CA certificate at /etc/docker/certs.d/nonregistry:5000/ca.crt
 ```
 
 You basically have three different options to comply with docker security requirements here.
@@ -135,8 +142,8 @@ registry:
     REGISTRY_HTTP_TLS_KEY: /certs/domain.key
     REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /data
   volumes:
-    - `pwd`/registry-data:/data
-    - `pwd`/certs:/certs
+    - /path/registry-data:/data
+    - /path/certs:/certs
 ```
 
 You can then start your registry with a simple
