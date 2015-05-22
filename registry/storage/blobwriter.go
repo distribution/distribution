@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -13,7 +14,7 @@ import (
 )
 
 var (
-	errResumableDigestNotAvailable = fmt.Errorf("resumable digest not available")
+	errResumableDigestNotAvailable = errors.New("resumable digest not available")
 )
 
 // layerWriter is used to control the various aspects of resumable
@@ -197,7 +198,7 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc distribution.Descri
 		// the same, we don't need to read the data from the backend. This is
 		// because we've written the entire file in the lifecycle of the
 		// current instance.
-		if bw.written == bw.size && digest.CanonicalAlgorithm == desc.Digest.Algorithm() {
+		if bw.written == bw.size && digest.Canonical == desc.Digest.Algorithm() {
 			canonical = bw.digester.Digest()
 			verified = desc.Digest == canonical
 		}
@@ -206,7 +207,7 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc distribution.Descri
 		// paths. We may be able to make the size-based check a stronger
 		// guarantee, so this may be defensive.
 		if !verified {
-			digester := digest.NewCanonicalDigester()
+			digester := digest.Canonical.New()
 
 			digestVerifier, err := digest.NewDigestVerifier(desc.Digest)
 			if err != nil {

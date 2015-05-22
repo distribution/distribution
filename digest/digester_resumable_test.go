@@ -13,9 +13,9 @@ import (
 // is exposed through the digester type, which is just a hash plus a Digest
 // method.
 func TestResumableDetection(t *testing.T) {
-	d := NewCanonicalDigester()
+	d := Canonical.New()
 
 	if _, ok := d.Hash().(resumable.Hash); !ok {
-		t.Fatalf("expected digester to implement resumable: %#v, %v", d, d.Hash())
+		t.Fatalf("expected digester to implement resumable.Hash: %#v, %v", d, d.Hash())
 	}
 }

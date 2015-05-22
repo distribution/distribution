@@ -3,6 +3,9 @@ package sha256
 import (
 	"bytes"
 	"encoding/gob"
+
+	// import to ensure that our init function runs after the standard package
+	_ "crypto/sha256"
 )
 
 // Len returns the number of bytes which have been written to the digest.

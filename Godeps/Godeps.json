@@ -86,7 +86,7 @@
 		},
 		{
 			"ImportPath": "github.com/stevvooe/resumable",
-			"Rev": "cf61dd331ceba0ab845444fdb626b9a465704e49"
+			"Rev": "51ad44105773cafcbe91927f70ac68e1bf78f8b4"
 		},
 		{
 			"ImportPath": "github.com/yvasiyarov/go-metrics",
