@@ -201,7 +201,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 func New(params DriverParameters) (*Driver, error) {
 	auth, err := aws.GetAuth(params.AccessKey, params.SecretKey, "", time.Time{})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to resolve aws credentials, please ensure that 'accesskey' and 'secretkey' are properly set or the credentials are available in $HOME/.aws/credentials: %v", err)
 	}
 
 	if !params.Secure {
