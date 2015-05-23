@@ -164,10 +164,9 @@ func (lbs *linkedBlobStore) newBlobUpload(ctx context.Context, uuid, path string
 		blobStore:          lbs,
 		id:                 uuid,
 		startedAt:          startedAt,
+		digester:           digest.Canonical.New(),
 		bufferedFileWriter: *fw,
 	}
-
-	bw.setupResumableDigester()
 
 	return bw, nil
 }

@@ -7,7 +7,8 @@
 package sha512
 
 import (
-	"github.com/jlhawn/go-crypto"
+	"crypto"
+	"hash"
 )
 
 func init() {
@@ -77,15 +78,15 @@ func (d *digest) Reset() {
 	d.len = 0
 }
 
-// New returns a new crypto.ResumableHash computing the SHA512 checksum.
-func New() crypto.ResumableHash {
+// New returns a new hash.Hash computing the SHA512 checksum.
+func New() hash.Hash {
 	d := new(digest)
 	d.Reset()
 	return d
 }
 
-// New384 returns a new crypto.ResumableHash computing the SHA384 checksum.
-func New384() crypto.ResumableHash {
+// New384 returns a new hash.Hash computing the SHA384 checksum.
+func New384() hash.Hash {
 	d := new(digest)
 	d.is384 = true
 	d.Reset()

@@ -262,7 +262,7 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 		if v.list {
 			offset = "" // Limit to the prefix for listing offsets.
 		}
-		return path.Join(append(repoPrefix, v.name, "_uploads", v.id, "hashstates", v.alg, offset)...), nil
+		return path.Join(append(repoPrefix, v.name, "_uploads", v.id, "hashstates", string(v.alg), offset)...), nil
 	case repositoriesRootPathSpec:
 		return path.Join(repoPrefix...), nil
 	default:
@@ -447,7 +447,7 @@ func (uploadStartedAtPathSpec) pathSpec() {}
 type uploadHashStatePathSpec struct {
 	name   string
 	id     string
-	alg    string
+	alg    digest.Algorithm
 	offset int64
 	list   bool
 }
@@ -479,7 +479,7 @@ func digestPathComponents(dgst digest.Digest, multilevel bool) ([]string, error)
 		return nil, err
 	}
 
-	algorithm := blobAlgorithmReplacer.Replace(dgst.Algorithm())
+	algorithm := blobAlgorithmReplacer.Replace(string(dgst.Algorithm()))
 	hex := dgst.Hex()
 	prefix := []string{algorithm}
 

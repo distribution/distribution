@@ -42,17 +42,17 @@ func NewSet() *Set {
 // values or short values. This function does not test equality,
 // rather whether the second value could match against the first
 // value.
-func checkShortMatch(alg, hex, shortAlg, shortHex string) bool {
+func checkShortMatch(alg Algorithm, hex, shortAlg, shortHex string) bool {
 	if len(hex) == len(shortHex) {
 		if hex != shortHex {
 			return false
 		}
-		if len(shortAlg) > 0 && alg != shortAlg {
+		if len(shortAlg) > 0 && string(alg) != shortAlg {
 			return false
 		}
 	} else if !strings.HasPrefix(hex, shortHex) {
 		return false
-	} else if len(shortAlg) > 0 && alg != shortAlg {
+	} else if len(shortAlg) > 0 && string(alg) != shortAlg {
 		return false
 	}
 	return true
@@ -68,7 +68,7 @@ func (dst *Set) Lookup(d string) (Digest, error) {
 	}
 	var (
 		searchFunc func(int) bool
-		alg        string
+		alg        Algorithm
 		hex        string
 	)
 	dgst, err := ParseDigest(d)
@@ -88,13 +88,13 @@ func (dst *Set) Lookup(d string) (Digest, error) {
 		}
 	}
 	idx := sort.Search(len(dst.entries), searchFunc)
-	if idx == len(dst.entries) || !checkShortMatch(dst.entries[idx].alg, dst.entries[idx].val, alg, hex) {
+	if idx == len(dst.entries) || !checkShortMatch(dst.entries[idx].alg, dst.entries[idx].val, string(alg), hex) {
 		return "", ErrDigestNotFound
 	}
 	if dst.entries[idx].alg == alg && dst.entries[idx].val == hex {
 		return dst.entries[idx].digest, nil
 	}
-	if idx+1 < len(dst.entries) && checkShortMatch(dst.entries[idx+1].alg, dst.entries[idx+1].val, alg, hex) {
+	if idx+1 < len(dst.entries) && checkShortMatch(dst.entries[idx+1].alg, dst.entries[idx+1].val, string(alg), hex) {
 		return "", ErrDigestAmbiguous
 	}
 
@@ -172,7 +172,7 @@ func ShortCodeTable(dst *Set, length int) map[Digest]string {
 }
 
 type digestEntry struct {
-	alg    string
+	alg    Algorithm
 	val    string
 	digest Digest
 }

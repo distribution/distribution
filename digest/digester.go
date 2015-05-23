@@ -1,54 +1,95 @@
 package digest
 
 import (
-	"crypto/sha256"
+	"crypto"
 	"hash"
 )
 
-// Digester calculates the digest of written data. It is functionally
-// equivalent to hash.Hash but provides methods for returning the Digest type
-// rather than raw bytes.
-type Digester struct {
-	alg string
-	hash.Hash
+// Algorithm identifies and implementation of a digester by an identifier.
+// Note the that this defines both the hash algorithm used and the string
+// encoding.
+type Algorithm string
+
+// supported digest types
+const (
+	SHA256         Algorithm = "sha256"           // sha256 with hex encoding
+	SHA384         Algorithm = "sha384"           // sha384 with hex encoding
+	SHA512         Algorithm = "sha512"           // sha512 with hex encoding
+	TarsumV1SHA256 Algorithm = "tarsum+v1+sha256" // supported tarsum version, verification only
+
+	// Canonical is the primary digest algorithm used with the distribution
+	// project. Other digests may be used but this one is the primary storage
+	// digest.
+	Canonical = SHA256
+)
+
+var (
+	// TODO(stevvooe): Follow the pattern of the standard crypto package for
+	// registration of digests. Effectively, we are a registerable set and
+	// common symbol access.
+
+	// algorithms maps values to hash.Hash implementations. Other algorithms
+	// may be available but they cannot be calculated by the digest package.
+	algorithms = map[Algorithm]crypto.Hash{
+		SHA256: crypto.SHA256,
+		SHA384: crypto.SHA384,
+		SHA512: crypto.SHA512,
+	}
+)
+
+// Available returns true if the digest type is available for use. If this
+// returns false, New and Hash will return nil.
+func (a Algorithm) Available() bool {
+	h, ok := algorithms[a]
+	if !ok {
+		return false
+	}
+
+	// check availability of the hash, as well
+	return h.Available()
 }
 
-// NewDigester create a new Digester with the given hashing algorithm and instance
-// of that algo's hasher.
-func NewDigester(alg string, h hash.Hash) Digester {
-	return Digester{
-		alg:  alg,
-		Hash: h,
+// New returns a new digester for the specified algorithm. If the algorithm
+// does not have a digester implementation, nil will be returned. This can be
+// checked by calling Available before calling New.
+func (a Algorithm) New() Digester {
+	return &digester{
+		alg:  a,
+		hash: a.Hash(),
 	}
 }
 
-// NewCanonicalDigester is a convenience function to create a new Digester with
-// our default settings.
-func NewCanonicalDigester() Digester {
-	return NewDigester("sha256", sha256.New())
+// Hash returns a new hash as used by the algorithm. If not available, nil is
+// returned. Make sure to check Available before calling.
+func (a Algorithm) Hash() hash.Hash {
+	if !a.Available() {
+		return nil
+	}
+
+	return algorithms[a].New()
 }
 
-// Digest returns the current digest for this digester.
-func (d *Digester) Digest() Digest {
-	return NewDigest(d.alg, d.Hash)
-}
+// TODO(stevvooe): Allow resolution of verifiers using the digest type and
+// this registration system.
 
-// ResumableHash is the common interface implemented by all resumable hash
-// functions.
-type ResumableHash interface {
-	// ResumableHash is a superset of hash.Hash
-	hash.Hash
-	// Len returns the number of bytes written to the Hash so far.
-	Len() uint64
-	// State returns a snapshot of the state of the Hash.
-	State() ([]byte, error)
-	// Restore resets the Hash to the given state.
-	Restore(state []byte) error
-}
-
-// ResumableDigester is a digester that can export its internal state and be
-// restored from saved state.
-type ResumableDigester interface {
-	ResumableHash
+// Digester calculates the digest of written data. Writes should go directly
+// to the return value of Hash, while calling Digest will return the current
+// value of the digest.
+type Digester interface {
+	Hash() hash.Hash // provides direct access to underlying hash instance.
 	Digest() Digest
+}
+
+// digester provides a simple digester definition that embeds a hasher.
+type digester struct {
+	alg  Algorithm
+	hash hash.Hash
+}
+
+func (d *digester) Hash() hash.Hash {
+	return d.hash
+}
+
+func (d *digester) Digest() Digest {
+	return NewDigest(d.alg, d.hash)
 }

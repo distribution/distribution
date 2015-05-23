@@ -7,7 +7,8 @@
 package sha256
 
 import (
-	"github.com/jlhawn/go-crypto"
+	"crypto"
+	"hash"
 )
 
 func init() {
@@ -77,15 +78,15 @@ func (d *digest) Reset() {
 	d.len = 0
 }
 
-// New returns a new crypto.ResumableHash computing the SHA256 checksum.
-func New() crypto.ResumableHash {
+// New returns a new hash.Hash computing the SHA256 checksum.
+func New() hash.Hash {
 	d := new(digest)
 	d.Reset()
 	return d
 }
 
-// New224 returns a new crypto.ResumableHash computing the SHA224 checksum.
-func New224() crypto.ResumableHash {
+// New224 returns a new hash.Hash computing the SHA224 checksum.
+func New224() hash.Hash {
 	d := new(digest)
 	d.is224 = true
 	d.Reset()

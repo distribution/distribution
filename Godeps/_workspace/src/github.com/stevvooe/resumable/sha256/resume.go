@@ -1,13 +1,16 @@
-package sha512
+package sha256
 
 import (
 	"bytes"
 	"encoding/gob"
+
+	// import to ensure that our init function runs after the standard package
+	_ "crypto/sha256"
 )
 
 // Len returns the number of bytes which have been written to the digest.
-func (d *digest) Len() uint64 {
-	return d.len
+func (d *digest) Len() int64 {
+	return int64(d.len)
 }
 
 // State returns a snapshot of the state of the digest.
@@ -18,7 +21,7 @@ func (d *digest) State() ([]byte, error) {
 	// We encode this way so that we do not have
 	// to export these fields of the digest struct.
 	vals := []interface{}{
-		d.h, d.x, d.nx, d.len, d.is384,
+		d.h, d.x, d.nx, d.len, d.is224,
 	}
 
 	for _, val := range vals {
@@ -37,7 +40,7 @@ func (d *digest) Restore(state []byte) error {
 	// We decode this way so that we do not have
 	// to export these fields of the digest struct.
 	vals := []interface{}{
-		&d.h, &d.x, &d.nx, &d.len, &d.is384,
+		&d.h, &d.x, &d.nx, &d.len, &d.is224,
 	}
 
 	for _, val := range vals {
