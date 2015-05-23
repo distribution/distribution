@@ -5,9 +5,9 @@ PREFIX?=$(shell pwd)
 VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always)
 GO_LDFLAGS=-ldflags "-X `go list ./version`.Version $(VERSION)"
 
-.PHONY: clean all fmt vet lint build test binaries
+.PHONY: clean all fmt vet lint deps build test binaries
 .DEFAULT: default
-all: AUTHORS clean fmt vet fmt lint build test binaries
+all: AUTHORS clean fmt vet fmt lint deps build test binaries
 
 AUTHORS: .mailmap .git/HEAD
 	 git log --format='%aN <%aE>' | sort -fu > $@
@@ -18,43 +18,47 @@ version/version.go:
 
 ${PREFIX}/bin/registry: version/version.go $(shell find . -type f -name '*.go')
 	@echo "+ $@"
-	@go build -o $@ ${GO_LDFLAGS} ./cmd/registry
+	@godep go build -o $@ ${GO_LDFLAGS} ./cmd/registry
 
 ${PREFIX}/bin/registry-api-descriptor-template: version/version.go $(shell find . -type f -name '*.go')
 	@echo "+ $@"
-	@go build -o $@ ${GO_LDFLAGS} ./cmd/registry-api-descriptor-template
+	@godep go build -o $@ ${GO_LDFLAGS} ./cmd/registry-api-descriptor-template
 
 ${PREFIX}/bin/dist: version/version.go $(shell find . -type f -name '*.go')
 	@echo "+ $@"
-	@go build -o $@ ${GO_LDFLAGS} ./cmd/dist
+	@godep go build -o $@ ${GO_LDFLAGS} ./cmd/dist
 
 docs/spec/api.md: docs/spec/api.md.tmpl ${PREFIX}/bin/registry-api-descriptor-template
 	./bin/registry-api-descriptor-template $< > $@
 
 vet:
 	@echo "+ $@"
-	@go vet ./...
+	@godep go vet ./...
 
 fmt:
 	@echo "+ $@"
-	@test -z "$$(gofmt -s -l . | grep -v Godeps/_workspace/src/ | tee /dev/stderr)" || \
+	@test -z "$$(GOPATH=`godep path` gofmt -s -l . | grep -v Godeps/_workspace/src/ | tee /dev/stderr)" || \
 		echo "+ please format Go code with 'gofmt -s'"
 
 lint:
 	@echo "+ $@"
-	@test -z "$$(golint ./... | grep -v Godeps/_workspace/src/ | tee /dev/stderr)"
+	@test -z "$$(GOPATH=`godep path` golint ./... | grep -v Godeps/_workspace/src/ | tee /dev/stderr)"
+
+deps:
+	@echo "+ $@"
+	@godep restore
 
 build:
 	@echo "+ $@"
-	@go build -v ${GO_LDFLAGS} ./...
+	@godep go build -v ${GO_LDFLAGS} ./...
 
 test:
 	@echo "+ $@"
-	@go test -test.short ./...
+	@godep go test -test.short ./...
 
 test-full:
 	@echo "+ $@"
-	@go test ./...
+	@godep go test ./...
 
 binaries: ${PREFIX}/bin/registry ${PREFIX}/bin/registry-api-descriptor-template ${PREFIX}/bin/dist
 	@echo "+ $@"
