@@ -34,6 +34,7 @@ Here is a short example from the docs
         UserName: "user",
         ApiKey:   "key",
         AuthUrl:  "auth_url",
+        Tenant:   "tenant",  // Name of the tenant (v2 auth only)
     }
     // Authenticate
     err := c.Authenticate()
