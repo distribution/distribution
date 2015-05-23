@@ -5,7 +5,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/lebauce/swift/swifttest"
+	"github.com/ncw/swift/swifttest"
 
 	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"

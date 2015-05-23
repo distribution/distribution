@@ -21,7 +21,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lebauce/swift"
+	"github.com/ncw/swift"
 
 	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
