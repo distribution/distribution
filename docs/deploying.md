@@ -284,7 +284,7 @@ source](https://github.com/docker/distribution/releases/tag/v2.0.0).
 5. Use SSL to generate some self-signed certificates.
 	
 		$ openssl req \
-				 -newkey rsa:2048 -nodes -sha256 -keyout certs/domain.key \
+				 -newkey rsa:4096 -nodes -sha256 -keyout certs/domain.key \
 				 -x509 -days 365 -out certs/domain.crt
 				 
 	This command prompts you for basic information it needs to create the certificates.
@@ -420,7 +420,7 @@ procedure. The directory includes an example `compose` configuration.
 2. Use SSL to generate some self-signed certificates.
 	
 		$ openssl req \
-				 -newkey rsa:2048 -nodes -sha256 -keyout domain.key \
+				 -newkey rsa:4096 -nodes -sha256 -keyout domain.key \
 				 -x509 -days 365 -out domain.crt
 				 
 	 This command prompts you for basic information it needs to create certificates.
