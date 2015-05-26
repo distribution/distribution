@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"code.google.com/p/go-uuid/uuid"
 	log "github.com/Sirupsen/logrus"
+	"github.com/docker/distribution/uuid"
 	"github.com/gorilla/mux"
 )
 
@@ -79,7 +79,7 @@ func WithRequest(ctx Context, r *http.Request) Context {
 	return &httpRequestContext{
 		Context:   ctx,
 		startedAt: time.Now(),
-		id:        uuid.New(), // assign the request a unique.
+		id:        uuid.Generate().String(),
 		r:         r,
 	}
 }

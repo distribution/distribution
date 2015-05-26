@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"time"
 
-	"code.google.com/p/go-uuid/uuid"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/uuid"
 )
 
 // linkedBlobStore provides a full BlobService that namespaces the blobs to a
@@ -85,7 +85,7 @@ func (lbs *linkedBlobStore) Put(ctx context.Context, mediaType string, p []byte)
 func (lbs *linkedBlobStore) Create(ctx context.Context) (distribution.BlobWriter, error) {
 	context.GetLogger(ctx).Debug("(*linkedBlobStore).Writer")
 
-	uuid := uuid.New()
+	uuid := uuid.Generate().String()
 	startedAt := time.Now().UTC()
 
 	path, err := lbs.blobStore.pm.path(uploadDataPathSpec{
