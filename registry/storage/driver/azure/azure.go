@@ -4,6 +4,7 @@ package azure
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -68,7 +69,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 
 	realm, ok := parameters[paramRealm]
 	if !ok || fmt.Sprint(realm) == "" {
-		realm = azure.DefaultBaseUrl
+		realm = azure.DefaultBaseURL
 	}
 
 	return New(fmt.Sprint(accountName), fmt.Sprint(accountKey), fmt.Sprint(container), fmt.Sprint(realm))
@@ -76,7 +77,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 
 // New constructs a new Driver with the given Azure Storage Account credentials
 func New(accountName, accountKey, container, realm string) (*Driver, error) {
-	api, err := azure.NewClient(accountName, accountKey, realm, azure.DefaultApiVersion, true)
+	api, err := azure.NewClient(accountName, accountKey, realm, azure.DefaultAPIVersion, true)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +115,21 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 
 // PutContent stores the []byte content at a location designated by "path".
 func (d *driver) PutContent(ctx context.Context, path string, contents []byte) error {
-	return d.client.PutBlockBlob(d.container, path, ioutil.NopCloser(bytes.NewReader(contents)))
+	// TODO
+	//
+	// return d.client.PutBlockBlob(d.container, path, ioutil.NopCloser(bytes.NewReader(contents)))
+	//
+	// Azure SDK developers removed 'PutBlockBlob' function from client, so this function is not available anymore. They
+	// are refactoring to include an equivalent function on blobutil package as we can see on the following issues and
+	// commits:
+	//
+	//   - https://github.com/Azure/azure-sdk-for-go/issues/71
+	//   - https://github.com/ahmetalpbalkan/azure-sdk-for-go/commit/bf6723e87ca7c26e523b13c18f29383da60ab64f
+	//
+	// While it's not available I changed this code with an error mock. The following code is TEMPORAL and should be
+	// removed asap.
+	//
+	return errors.New("not implemented")
 }
 
 // ReadStream retrieves an io.ReadCloser for the content stored at "path" with a
@@ -233,7 +248,7 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
 func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
-	sourceBlobURL := d.client.GetBlobUrl(d.container, sourcePath)
+	sourceBlobURL := d.client.GetBlobURL(d.container, sourcePath)
 	err := d.client.CopyBlob(d.container, destPath, sourceBlobURL)
 	if err != nil {
 		if is404(err) {
@@ -352,6 +367,6 @@ func (d *driver) listBlobs(container, virtPath string) ([]string, error) {
 }
 
 func is404(err error) bool {
-	e, ok := err.(azure.StorageServiceError)
+	e, ok := err.(azure.AzureStorageServiceError)
 	return ok && e.StatusCode == http.StatusNotFound
 }
