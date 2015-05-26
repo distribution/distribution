@@ -39,7 +39,7 @@ func TestParseAndEquality(t *testing.T) {
 		"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",    // correct length, incorrect format
 		"  20cc7775-2671-43c7-8742-51d1cfa23258",  // leading space
 		"20cc7775-2671-43c7-8742-51d1cfa23258   ", // trailing space
-		"00000000-0000-0000-0000-x00000000000   ", // out of range character
+		"00000000-0000-0000-0000-x00000000000",    // out of range character
 	} {
 		if _, err := Parse(c); err == nil {
 			t.Fatalf("parsing %q should have failed", c)
