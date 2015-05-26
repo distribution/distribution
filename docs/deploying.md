@@ -372,7 +372,7 @@ support.
 	
 ## Configure Nginx with a v1 and v2 registry
 
-This sections describes how to  user `docker-compose` to run a combined version
+This sections describes how to use `docker-compose` to run a combined version
 1 and version 2.0 registry behind an `nginx` proxy. The combined registry is
 accessed at `localhost:5000`. If a `docker` client has a version less than 1.6,
 Nginx will route its requests to the 1.0 registry. Requests from newer clients
