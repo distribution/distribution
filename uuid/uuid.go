@@ -7,7 +7,6 @@ package uuid
 import (
 	"crypto/rand"
 	"fmt"
-	"io"
 	"log"
 	"syscall"
 	"time"
@@ -59,7 +58,7 @@ func Generate() (u UUID) {
 		time.Sleep(b)
 		totalBackoff += b
 
-		_, err := io.ReadFull(rand.Reader, u[:])
+		_, err := rand.Read(u[:])
 		if err != nil {
 			if err == syscall.EPERM {
 				// EPERM represents an entropy pool exhaustion, a condition under
