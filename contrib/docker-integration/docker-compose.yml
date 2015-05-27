@@ -17,7 +17,7 @@ nginx:
     - registryv1:registryv1
     - registryv2:registryv2
 registryv1:
-  image: registry
+  image: registry:0.9.1
   ports:
     - "5000"
 registryv2:

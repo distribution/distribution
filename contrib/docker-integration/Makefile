@@ -14,9 +14,11 @@ clean:
 	docker-compose rm -f
 
 install:
-	sh ./install_certs.sh
+	sh ./install_certs.sh localhost
+	sh ./install_certs.sh localregistry
 
 test: 
-	# Run tests
+	@echo "!!!!Ensure /etc/hosts entry is updated for localregistry and make install has been run"
+	sh ./test_docker.sh localregistry
 
 all: build
