@@ -125,6 +125,12 @@ reference and shouldn't be used outside the specification other than to
 identify a set of modifications.
 
 <dl>
+  <dt>f</dt>
+  <dd>
+    <ul>
+      <li>Specify the delete API for layers and manifests.</li>
+    </ul>
+  </dd>
 
   <dt>e</dt>
   <dd>
@@ -169,7 +175,6 @@ identify a set of modifications.
       <li>Added error code for unsupported operations.</li>
     </ul>
   </dd>
-
 </dl>
 
 ## Overview
@@ -713,6 +718,25 @@ action.
 Note that the upload url will not be available forever. If the upload uuid is
 unknown to the registry, a `404 Not Found` response will be returned and the
 client must restart the upload process.
+
+### Deleting a Layer
+
+A layer may be deleted from the registry via its `name` and `digest`. A
+delete may be issued with the following request format:
+
+    DELETE /v2/<name>/blobs/<digest>
+
+If the blob exists and has been successfully deleted, the following response
+will be issued:
+
+    202 Accepted
+    Content-Length: None
+
+If the blob had already been deleted or did not exist, a `404 Not Found`
+response will be issued instead.
+
+If a layer is deleted which is referenced by a manifest in the registry,
+then the complete images will not be resolvable.
 
 #### Pushing an Image Manifest
 

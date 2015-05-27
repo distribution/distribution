@@ -240,6 +240,8 @@ func (storage Storage) Type() string {
 			// allow configuration of maintenance
 		case "cache":
 			// allow configuration of caching
+		case "delete":
+			// allow configuration of delete
 		default:
 			return k
 		}
@@ -271,6 +273,9 @@ func (storage *Storage) UnmarshalYAML(unmarshal func(interface{}) error) error {
 					// allow for configuration of maintenance
 				case "cache":
 					// allow configuration of caching
+				case "delete":
+					// allow configuration of delete
+
 				default:
 					types = append(types, k)
 				}

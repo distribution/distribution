@@ -17,19 +17,6 @@ type revisionStore struct {
 	ctx        context.Context
 }
 
-func newRevisionStore(ctx context.Context, repo *repository, blobStore *blobStore) *revisionStore {
-	return &revisionStore{
-		ctx:        ctx,
-		repository: repo,
-		blobStore: &linkedBlobStore{
-			blobStore:  blobStore,
-			repository: repo,
-			ctx:        ctx,
-			linkPath:   manifestRevisionLinkPath,
-		},
-	}
-}
-
 // get retrieves the manifest, keyed by revision digest.
 func (rs *revisionStore) get(ctx context.Context, revision digest.Digest) (*manifest.SignedManifest, error) {
 	// Ensure that this revision is available in this repository.
@@ -117,4 +104,8 @@ func (rs *revisionStore) put(ctx context.Context, sm *manifest.SignedManifest) (
 	}
 
 	return revision, nil
+}
+
+func (rs *revisionStore) delete(ctx context.Context, revision digest.Digest) error {
+	return rs.blobStore.Delete(ctx, revision)
 }

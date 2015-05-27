@@ -69,8 +69,8 @@ func (ms *manifestStore) Put(manifest *manifest.SignedManifest) error {
 
 // Delete removes the revision of the specified manfiest.
 func (ms *manifestStore) Delete(dgst digest.Digest) error {
-	context.GetLogger(ms.ctx).Debug("(*manifestStore).Delete - unsupported")
-	return fmt.Errorf("deletion of manifests not supported")
+	context.GetLogger(ms.ctx).Debug("(*manifestStore).Delete")
+	return ms.revisionStore.delete(ms.ctx, dgst)
 }
 
 func (ms *manifestStore) Tags() ([]string, error) {

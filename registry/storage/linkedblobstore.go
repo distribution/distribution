@@ -16,10 +16,11 @@ import (
 // that grant access to the global blob store.
 type linkedBlobStore struct {
 	*blobStore
-	blobServer distribution.BlobServer
-	statter    distribution.BlobStatter
-	repository distribution.Repository
-	ctx        context.Context // only to be used where context can't come through method args
+	blobServer           distribution.BlobServer
+	blobAccessController distribution.BlobDescriptorService
+	repository           distribution.Repository
+	ctx                  context.Context // only to be used where context can't come through method args
+	deleteEnabled        bool
 
 	// linkPath allows one to control the repository blob link set to which
 	// the blob store dispatches. This is required because manifest and layer
@@ -31,7 +32,7 @@ type linkedBlobStore struct {
 var _ distribution.BlobStore = &linkedBlobStore{}
 
 func (lbs *linkedBlobStore) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
-	return lbs.statter.Stat(ctx, dgst)
+	return lbs.blobAccessController.Stat(ctx, dgst)
 }
 
 func (lbs *linkedBlobStore) Get(ctx context.Context, dgst digest.Digest) ([]byte, error) {
@@ -67,10 +68,18 @@ func (lbs *linkedBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter
 }
 
 func (lbs *linkedBlobStore) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
+	dgst, err := digest.FromBytes(p)
+	if err != nil {
+		return distribution.Descriptor{}, err
+	}
 	// Place the data in the blob store first.
 	desc, err := lbs.blobStore.Put(ctx, mediaType, p)
 	if err != nil {
 		context.GetLogger(ctx).Errorf("error putting into main store: %v", err)
+		return distribution.Descriptor{}, err
+	}
+
+	if err := lbs.blobAccessController.SetDescriptor(ctx, dgst, desc); err != nil {
 		return distribution.Descriptor{}, err
 	}
 
@@ -153,7 +162,26 @@ func (lbs *linkedBlobStore) Resume(ctx context.Context, id string) (distribution
 	return lbs.newBlobUpload(ctx, id, path, startedAt)
 }
 
-// newLayerUpload allocates a new upload controller with the given state.
+func (lbs *linkedBlobStore) Delete(ctx context.Context, dgst digest.Digest) error {
+	if !lbs.deleteEnabled {
+		return distribution.ErrUnsupported
+	}
+
+	// Ensure the blob is available for deletion
+	_, err := lbs.blobAccessController.Stat(ctx, dgst)
+	if err != nil {
+		return err
+	}
+
+	err = lbs.blobAccessController.Clear(ctx, dgst)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// newBlobUpload allocates a new upload controller with the given state.
 func (lbs *linkedBlobStore) newBlobUpload(ctx context.Context, uuid, path string, startedAt time.Time) (distribution.BlobWriter, error) {
 	fw, err := newFileWriter(ctx, lbs.driver, path)
 	if err != nil {
@@ -213,7 +241,7 @@ type linkedBlobStatter struct {
 	linkPath func(pm *pathMapper, name string, dgst digest.Digest) (string, error)
 }
 
-var _ distribution.BlobStatter = &linkedBlobStatter{}
+var _ distribution.BlobDescriptorService = &linkedBlobStatter{}
 
 func (lbs *linkedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
 	blobLinkPath, err := lbs.linkPath(lbs.pm, lbs.repository.Name(), dgst)
@@ -244,6 +272,20 @@ func (lbs *linkedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (dis
 	// the returned descriptor.
 
 	return lbs.blobStore.statter.Stat(ctx, target)
+}
+
+func (lbs *linkedBlobStatter) Clear(ctx context.Context, dgst digest.Digest) error {
+	blobLinkPath, err := lbs.linkPath(lbs.pm, lbs.repository.Name(), dgst)
+	if err != nil {
+		return err
+	}
+
+	return lbs.blobStore.driver.Delete(ctx, blobLinkPath)
+}
+
+func (lbs *linkedBlobStatter) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
+	// The canonical descriptor for a blob is set at the commit phase of upload
+	return nil
 }
 
 // blobLinkPath provides the path to the blob link, also known as layers.
