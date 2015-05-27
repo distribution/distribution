@@ -14,8 +14,8 @@ func serveJSON(w http.ResponseWriter, v interface{}) error {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	sc := http.StatusInternalServerError
 
-	if errs, ok := v.(errcode.Errors); ok && errs.Len() > 0 {
-		sc = errs.Errors[0].Code.Descriptor().HTTPStatusCode
+	if errs, ok := v.(errcode.Errors); ok && len(errs) > 0 {
+		sc = errs[0].Code.Descriptor().HTTPStatusCode
 		if sc == 0 {
 			sc = http.StatusInternalServerError
 		}

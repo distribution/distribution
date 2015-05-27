@@ -346,9 +346,9 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 
 				switch err := err.(type) {
 				case distribution.ErrRepositoryUnknown:
-					context.Errors.Push(v2.ErrorCodeNameUnknown, err)
+					context.Errors = append(context.Errors, errcode.NewError(v2.ErrorCodeNameUnknown, err))
 				case distribution.ErrRepositoryNameInvalid:
-					context.Errors.Push(v2.ErrorCodeNameInvalid, err)
+					context.Errors = append(context.Errors, errcode.NewError(v2.ErrorCodeNameInvalid, err))
 				}
 
 				serveJSON(w, context.Errors)
@@ -363,7 +363,7 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 			context.Repository, err = applyRepoMiddleware(context.Repository, app.Config.Middleware["repository"])
 			if err != nil {
 				ctxu.GetLogger(context).Errorf("error initializing repository middleware: %v", err)
-				context.Errors.Push(errcode.ErrorCodeUnknown, err)
+				context.Errors = append(context.Errors, errcode.NewError(errcode.ErrorCodeUnknown, err))
 
 				serveJSON(w, context.Errors)
 				return
@@ -383,9 +383,9 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 }
 
 func (app *App) logError(context context.Context, errors errcode.Errors) {
-	for _, e := range errors.Errors {
+	for _, e := range errors {
 		c := ctxu.WithValue(context, "err.code", e.Code)
-		c = ctxu.WithValue(c, "err.message", e.Message)
+		c = ctxu.WithValue(c, "err.message", e.Code.Message())
 		c = ctxu.WithValue(c, "err.detail", e.Detail)
 		c = ctxu.WithLogger(c, ctxu.GetLogger(c,
 			"err.code",
@@ -441,7 +441,7 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 			// proceed.
 
 			var errs errcode.Errors
-			errs.Push(v2.ErrorCodeUnauthorized)
+			errs = append(errs, errcode.NewError(v2.ErrorCodeUnauthorized))
 
 			serveJSON(w, errs)
 			return fmt.Errorf("forbidden: no repository name")
@@ -464,7 +464,7 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 			err.ServeHTTP(w, r)
 
 			var errs errcode.Errors
-			errs.Push(v2.ErrorCodeUnauthorized, accessRecords)
+			errs = append(errs, errcode.NewError(v2.ErrorCodeUnauthorized, accessRecords))
 			serveJSON(w, errs)
 		default:
 			// This condition is a potential security problem either in

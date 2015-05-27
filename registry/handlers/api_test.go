@@ -760,7 +760,7 @@ func checkBodyHasErrorCodes(t *testing.T, msg string, resp *http.Response, error
 		t.Fatalf("unexpected error decoding error response: %v", err)
 	}
 
-	if len(errs.Errors) == 0 {
+	if len(errs) == 0 {
 		t.Fatalf("expected errors in response")
 	}
 
@@ -780,7 +780,7 @@ func checkBodyHasErrorCodes(t *testing.T, msg string, resp *http.Response, error
 		counts[code] = 0
 	}
 
-	for _, err := range errs.Errors {
+	for _, err := range errs {
 		if _, ok := expected[err.Code]; !ok {
 			t.Fatalf("unexpected error code %v encountered during %s: %s ", err.Code, msg, string(p))
 		}

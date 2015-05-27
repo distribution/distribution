@@ -55,8 +55,8 @@ var errorDescriptors = []ErrorDescriptor{
 }
 
 // LoadErrors will register a new set of Errors into the system
-func LoadErrors(errs *[]ErrorDescriptor) {
-	for _, descriptor := range *errs {
+func LoadErrors(errs []ErrorDescriptor) {
+	for _, descriptor := range errs {
 		if _, ok := idToDescriptors[descriptor.Value]; ok {
 			panic(fmt.Sprintf("ErrorValue %s is already registered", descriptor.Value))
 		}
@@ -123,28 +123,28 @@ func (ec *ErrorCode) UnmarshalText(text []byte) error {
 
 // Error provides a wrapper around ErrorCode with extra Details provided.
 type Error struct {
-	Code    ErrorCode   `json:"code"`
-	Message string      `json:"message,omitempty"`
-	Detail  interface{} `json:"detail,omitempty"`
+	Code   ErrorCode   `json:"code"`
+	Detail interface{} `json:"detail,omitempty"`
 }
 
 // Error returns a human readable representation of the error.
 func (e Error) Error() string {
 	return fmt.Sprintf("%s: %s",
 		strings.ToLower(strings.Replace(e.Code.String(), "_", " ", -1)),
-		e.Message)
+		e.Code.Message())
+}
+
+// Message returned the human-readable error message for this Error
+func (e Error) Message() string {
+	return e.Code.Message()
 }
 
 // Errors provides the envelope for multiple errors and a few sugar methods
 // for use within the application.
-type Errors struct {
-	Errors []Error `json:"errors,omitempty"`
-}
+type Errors []Error
 
-// Push pushes an error on to the error stack, with the optional detail
-// argument. It is a programming error (ie panic) to push more than one
-// detail at a time.
-func (errs *Errors) Push(code ErrorCode, details ...interface{}) {
+// NewError creates a new Error struct based on the passed-in info
+func NewError(code ErrorCode, details ...interface{}) Error {
 	if len(details) > 1 {
 		panic("please specify zero or one detail items for this error")
 	}
@@ -158,49 +158,33 @@ func (errs *Errors) Push(code ErrorCode, details ...interface{}) {
 		detail = err.Error()
 	}
 
-	errs.PushErr(Error{
-		Code:    code,
-		Message: code.Message(),
-		Detail:  detail,
-	})
-}
-
-// PushErr pushes an error interface onto the error stack.
-func (errs *Errors) PushErr(err error) {
-	switch err.(type) {
-	case Error:
-		errs.Errors = append(errs.Errors, err.(Error))
-	default:
-		errs.Errors = append(errs.Errors, Error{Message: err.Error()})
+	return Error{
+		Code:   code,
+		Detail: detail,
 	}
 }
 
-func (errs *Errors) Error() string {
-	switch errs.Len() {
+func (errs Errors) Error() string {
+	switch len(errs) {
 	case 0:
 		return "<nil>"
 	case 1:
-		return errs.Errors[0].Error()
+		return errs[0].Error()
 	default:
 		msg := "errors:\n"
-		for _, err := range errs.Errors {
+		for _, err := range errs {
 			msg += err.Error() + "\n"
 		}
 		return msg
 	}
 }
 
-// Clear clears the errors.
-func (errs *Errors) Clear() {
-	errs.Errors = nil
-}
-
 // Len returns the current number of errors.
-func (errs *Errors) Len() int {
-	return len(errs.Errors)
+func (errs Errors) Len() int {
+	return len(errs)
 }
 
 // init loads the default errors that are part of the errcode package
 func init() {
-	LoadErrors(&errorDescriptors)
+	LoadErrors(errorDescriptors)
 }

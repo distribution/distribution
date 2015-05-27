@@ -188,5 +188,5 @@ var errorDescriptors = []errcode.ErrorDescriptor{
 
 // init registers our errors with the errcode system
 func init() {
-	errcode.LoadErrors(&errorDescriptors)
+	errcode.LoadErrors(errorDescriptors)
 }

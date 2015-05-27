@@ -203,8 +203,8 @@ func TestNewApp(t *testing.T) {
 		t.Fatalf("error decoding error response: %v", err)
 	}
 
-	if errs.Errors[0].Code != v2.ErrorCodeUnauthorized {
-		t.Fatalf("unexpected error code: %v != %v", errs.Errors[0].Code, v2.ErrorCodeUnauthorized)
+	if errs[0].Code != v2.ErrorCodeUnauthorized {
+		t.Fatalf("unexpected error code: %v != %v", errs[0].Code, v2.ErrorCodeUnauthorized)
 	}
 }
 
