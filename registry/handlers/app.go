@@ -452,6 +452,7 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 	if err != nil {
 		switch err := err.(type) {
 		case auth.Challenge:
+			// NOTE(duglin):
 			// Since err.ServeHTTP will set the HTTP status code for us
 			// we need to set the content-type here.  The serveJSON
 			// func will try to do it but it'll be too late at that point.

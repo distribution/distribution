@@ -2,9 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
-	"github.com/docker/distribution/registry/api/errcode"
 	"io"
 	"net/http"
+
+	"github.com/docker/distribution/registry/api/errcode"
 )
 
 // serveJSON marshals v and sets the content-type header to
