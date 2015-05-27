@@ -51,33 +51,33 @@ type testListener struct {
 	ops map[string]int
 }
 
-func (tl *testListener) ManifestPushed(repo distribution.Repository, sm *manifest.SignedManifest) error {
+func (tl *testListener) ManifestPushed(repo string, sm *manifest.SignedManifest) error {
 	tl.ops["manifest:push"]++
 
 	return nil
 }
 
-func (tl *testListener) ManifestPulled(repo distribution.Repository, sm *manifest.SignedManifest) error {
+func (tl *testListener) ManifestPulled(repo string, sm *manifest.SignedManifest) error {
 	tl.ops["manifest:pull"]++
 	return nil
 }
 
-func (tl *testListener) ManifestDeleted(repo distribution.Repository, sm *manifest.SignedManifest) error {
+func (tl *testListener) ManifestDeleted(repo string, sm *manifest.SignedManifest) error {
 	tl.ops["manifest:delete"]++
 	return nil
 }
 
-func (tl *testListener) BlobPushed(repo distribution.Repository, desc distribution.Descriptor) error {
+func (tl *testListener) BlobPushed(repo string, desc distribution.Descriptor) error {
 	tl.ops["layer:push"]++
 	return nil
 }
 
-func (tl *testListener) BlobPulled(repo distribution.Repository, desc distribution.Descriptor) error {
+func (tl *testListener) BlobPulled(repo string, desc distribution.Descriptor) error {
 	tl.ops["layer:pull"]++
 	return nil
 }
 
-func (tl *testListener) BlobDeleted(repo distribution.Repository, desc distribution.Descriptor) error {
+func (tl *testListener) BlobDeleted(repo string, desc distribution.Descriptor) error {
 	tl.ops["layer:delete"]++
 	return nil
 }
