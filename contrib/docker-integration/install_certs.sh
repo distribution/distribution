@@ -6,6 +6,9 @@ if [ "$hostname" = "" ]; then
 	hostname="localhost"
 fi
 
+mkdir -p /etc/docker/certs.d/$hostname:5011
+cp ./nginx/ssl/registry-ca+ca.pem /etc/docker/certs.d/$hostname:5011/ca.crt
+
 mkdir -p /etc/docker/certs.d/$hostname:5440
 cp ./nginx/ssl/registry-ca+ca.pem /etc/docker/certs.d/$hostname:5440/ca.crt
 
