@@ -15,6 +15,7 @@ import (
 	"github.com/docker/distribution/registry/storage/cache/memory"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/docker/distribution/testutil"
+	"reflect"
 )
 
 // TestSimpleBlobUpload covers the blob upload process, exercising common
@@ -139,6 +140,61 @@ func TestSimpleBlobUpload(t *testing.T) {
 	if digest.NewDigest("sha256", h) != sha256Digest {
 		t.Fatalf("unexpected digest from uploaded layer: %q != %q", digest.NewDigest("sha256", h), sha256Digest)
 	}
+
+	// Delete a blob
+	err = bs.Delete(ctx, desc.Digest)
+	if err != nil {
+		t.Fatalf("Unexpected error deleting blob")
+	}
+
+	d, err := bs.Stat(ctx, desc.Digest)
+	if err == nil {
+		t.Fatalf("unexpected non-error stating deleted blob: %s", d)
+	}
+
+	switch err {
+	case distribution.ErrBlobUnknown:
+		break
+	default:
+		t.Errorf("Unexpected error type stat-ing deleted manifest: %s", reflect.ValueOf(err).Type())
+	}
+
+	_, err = bs.Open(ctx, desc.Digest)
+	if err == nil {
+		t.Fatalf("unexpected success opening deleted blob for read")
+	}
+
+	switch err {
+	case distribution.ErrBlobUnknown:
+		break
+	default:
+		t.Errorf("Unexpected error type getting deleted manifest: %s", reflect.ValueOf(err).Type())
+	}
+
+	// Re-upload the blob
+	randomBlob, err := ioutil.ReadAll(randomDataReader)
+	if err != nil {
+		t.Fatalf("Error reading all of blob %s", err.Error())
+	}
+	expectedDigest, err := digest.FromBytes(randomBlob)
+	if err != nil {
+		t.Fatalf("Error getting digest from bytes: %s", err)
+	}
+	simpleUpload(t, bs, randomBlob, expectedDigest)
+
+	d, err = bs.Stat(ctx, expectedDigest)
+	if err != nil {
+		t.Errorf("unexpected error stat-ing blob")
+	}
+	if d.Digest != expectedDigest {
+		t.Errorf("Mismatching digest with restored blob")
+	}
+
+	_, err = bs.Open(ctx, expectedDigest)
+	if err != nil {
+		t.Errorf("Unexpected error opening blob")
+	}
+
 }
 
 // TestSimpleBlobRead just creates a simple blob file and ensures that basic
@@ -259,12 +315,19 @@ func TestLayerUploadZeroLength(t *testing.T) {
 	}
 	bs := repository.Blobs(ctx)
 
+	simpleUpload(t, bs, []byte{}, digest.DigestSha256EmptyTar)
+}
+
+func simpleUpload(t *testing.T, bs distribution.BlobIngester, blob []byte, expectedDigest digest.Digest) {
+	//	h := sha256.New()
+	//	dataReader := bytes.NewReader(blob)
+	ctx := context.Background()
 	wr, err := bs.Create(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error starting upload: %v", err)
 	}
 
-	nn, err := io.Copy(wr, bytes.NewReader([]byte{}))
+	nn, err := io.Copy(wr, bytes.NewReader(blob))
 	if err != nil {
 		t.Fatalf("error copying into blob writer: %v", err)
 	}
@@ -273,12 +336,12 @@ func TestLayerUploadZeroLength(t *testing.T) {
 		t.Fatalf("unexpected number of bytes copied: %v > 0", nn)
 	}
 
-	dgst, err := digest.FromReader(bytes.NewReader([]byte{}))
+	dgst, err := digest.FromReader(bytes.NewReader(blob))
 	if err != nil {
 		t.Fatalf("error getting zero digest: %v", err)
 	}
 
-	if dgst != digest.DigestSha256EmptyTar {
+	if dgst != expectedDigest {
 		// sanity check on zero digest
 		t.Fatalf("digest not as expected: %v != %v", dgst, digest.DigestTarSumV1EmptyTar)
 	}

@@ -70,6 +70,11 @@ type BlobStatter interface {
 	Stat(ctx context.Context, dgst digest.Digest) (Descriptor, error)
 }
 
+// BlobDeleter enables deleting blobs from storage.
+type BlobDeleter interface {
+	Delete(ctx context.Context, dgst digest.Digest) error
+}
+
 // BlobDescriptorService manages metadata about a blob by digest. Most
 // implementations will not expose such an interface explicitly. Such mappings
 // should be maintained by interacting with the BlobIngester. Hence, this is
@@ -183,8 +188,9 @@ type BlobService interface {
 }
 
 // BlobStore represent the entire suite of blob related operations. Such an
-// implementation can access, read, write and serve blobs.
+// implementation can access, read, write, delete and serve blobs.
 type BlobStore interface {
 	BlobService
 	BlobServer
+	BlobDeleter
 }

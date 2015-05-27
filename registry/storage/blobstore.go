@@ -7,7 +7,7 @@ import (
 	"github.com/docker/distribution/registry/storage/driver"
 )
 
-// blobStore implements a the read side of the blob store interface over a
+// blobStore implements the read side of the blob store interface over a
 // driver without enforcing per-repository membership. This object is
 // intentionally a leaky abstraction, providing utility methods that support
 // creating and traversing backend links.
@@ -141,6 +141,7 @@ func (bs *blobStore) resolve(ctx context.Context, path string) (string, error) {
 type blobStatter struct {
 	driver driver.StorageDriver
 	pm     *pathMapper
+	tomb   tomb
 }
 
 var _ distribution.BlobStatter = &blobStatter{}

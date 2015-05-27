@@ -20,7 +20,7 @@ log:
           - errors@example.com
 storage:
     cache:
-        blobdescriptor: redis
+        blobdescriptor: inmemory
     filesystem:
         rootdirectory: /tmp/registry-dev
     maintenance:

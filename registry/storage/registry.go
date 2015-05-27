@@ -26,6 +26,10 @@ func NewRegistryWithDriver(ctx context.Context, driver storagedriver.StorageDriv
 	var statter distribution.BlobStatter = &blobStatter{
 		driver: driver,
 		pm:     defaultPathMapper,
+		tomb: tomb{
+			pm:     defaultPathMapper,
+			driver: driver,
+		},
 	}
 
 	if blobDescriptorCacheProvider != nil {
@@ -100,7 +104,12 @@ func (repo *repository) Name() string {
 // may be context sensitive in the future. The instance should be used similar
 // to a request local.
 func (repo *repository) Manifests() distribution.ManifestService {
-	return &manifestStore{
+	tomb := tomb{
+		pm:     defaultPathMapper,
+		driver: repo.registry.blobStore.driver,
+	}
+
+	ms := &manifestStore{
 		ctx:        repo.ctx,
 		repository: repo,
 		revisionStore: &revisionStore{
@@ -110,10 +119,12 @@ func (repo *repository) Manifests() distribution.ManifestService {
 				ctx:        repo.ctx,
 				blobStore:  repo.blobStore,
 				repository: repo,
+				tomb:       tomb,
 				statter: &linkedBlobStatter{
 					blobStore:  repo.blobStore,
 					repository: repo,
 					linkPath:   manifestRevisionLinkPath,
+					tomb:       tomb,
 				},
 
 				// TODO(stevvooe): linkPath limits this blob store to only
@@ -127,16 +138,24 @@ func (repo *repository) Manifests() distribution.ManifestService {
 			blobStore:  repo.registry.blobStore,
 		},
 	}
+
+	return ms
+
 }
 
 // Blobs returns an instance of the BlobStore. Instantiation is cheap and
 // may be context sensitive in the future. The instance should be used similar
 // to a request local.
 func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
+	tomb := tomb{
+		pm:     defaultPathMapper,
+		driver: repo.registry.blobStore.driver,
+	}
 	var statter distribution.BlobStatter = &linkedBlobStatter{
 		blobStore:  repo.blobStore,
 		repository: repo,
 		linkPath:   blobLinkPath,
+		tomb:       tomb,
 	}
 
 	if repo.descriptorCache != nil {
@@ -149,6 +168,7 @@ func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
 		statter:    statter,
 		repository: repo,
 		ctx:        ctx,
+		tomb:       tomb,
 
 		// TODO(stevvooe): linkPath limits this blob store to only layers.
 		// This instance cannot be used for manifest checks.
