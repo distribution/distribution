@@ -186,11 +186,9 @@ func TestNewApp(t *testing.T) {
 		t.Fatalf("unexpected status code during request: %v", err)
 	}
 
-	/*
-		if req.Header.Get("Content-Type") != "application/json; charset=utf-8" {
-			t.Fatalf("unexpected content-type: %v != %v", req.Header.Get("Content-Type"), "application/json; charset=utf-8")
-		}
-	*/
+	if req.Header.Get("Content-Type") != "application/json; charset=utf-8" {
+		t.Fatalf("unexpected content-type: %v != %v", req.Header.Get("Content-Type"), "application/json; charset=utf-8")
+	}
 
 	expectedAuthHeader := "Bearer realm=\"realm-test\",service=\"service-test\""
 	if e, a := expectedAuthHeader, req.Header.Get("WWW-Authenticate"); e != a {

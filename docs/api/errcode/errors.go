@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 )
 
 // ErrorCode represents the error type. The errors are serialized via strings
@@ -36,49 +37,70 @@ type ErrorDescriptor struct {
 var (
 	errorCodeToDescriptors = map[ErrorCode]ErrorDescriptor{}
 	idToDescriptors        = map[string]ErrorDescriptor{}
+	groupToDescriptors     = map[string][]ErrorDescriptor{}
 )
 
-const (
-	// ErrorCodeUnknown is a catch-all for errors not defined below.
-	ErrorCodeUnknown ErrorCode = 10000 + iota
-)
-
-var errorDescriptors = []ErrorDescriptor{
-	{
-		Code:    ErrorCodeUnknown,
-		Value:   "UNKNOWN",
-		Message: "unknown error",
-		Description: `Generic error returned when the error does not have an
+// ErrorCodeUnknown is a generic error that can be used as a last
+// resort if there is no situation-specific error message that can be used
+var ErrorCodeUnknown = Register("registry.api.errcode", ErrorDescriptor{
+	Value:   "UNKNOWN",
+	Message: "unknown error",
+	Description: `Generic error returned when the error does not have an
 									        API classification.`,
-		HTTPStatusCode: http.StatusInternalServerError,
-	},
-}
+	HTTPStatusCode: http.StatusInternalServerError,
+})
 
-// LoadErrors will register a new set of Errors into the system
-func LoadErrors(errs []ErrorDescriptor) {
-	for _, descriptor := range errs {
-		if _, ok := idToDescriptors[descriptor.Value]; ok {
-			panic(fmt.Sprintf("ErrorValue %s is already registered", descriptor.Value))
-		}
-		if _, ok := errorCodeToDescriptors[descriptor.Code]; ok {
-			panic(fmt.Sprintf("ErrorCode %d is already registered", descriptor.Code))
-		}
+var nextCode = 1000
+var registerLock sync.Mutex
 
-		errorCodeToDescriptors[descriptor.Code] = descriptor
-		idToDescriptors[descriptor.Value] = descriptor
+// Register will make the passed-in error known to the environment and
+// return a new ErrorCode
+func Register(group string, descriptor ErrorDescriptor) ErrorCode {
+	registerLock.Lock()
+	defer registerLock.Unlock()
+	code := ErrorCode(nextCode)
+
+	descriptor.Code = code
+
+	if _, ok := idToDescriptors[descriptor.Value]; ok {
+		panic(fmt.Sprintf("ErrorValue %s is already registered", descriptor.Value))
 	}
-}
-
-// ParseErrorCode attempts to parse the error code string, returning
-// ErrorCodeUnknown if the error is not known.
-func ParseErrorCode(s string) ErrorCode {
-	desc, ok := idToDescriptors[s]
-
-	if !ok {
-		return ErrorCodeUnknown
+	if _, ok := errorCodeToDescriptors[descriptor.Code]; ok {
+		panic(fmt.Sprintf("ErrorCode %d is already registered", descriptor.Code))
 	}
 
-	return desc.Code
+	groupToDescriptors[group] = append(groupToDescriptors[group], descriptor)
+	errorCodeToDescriptors[code] = descriptor
+	idToDescriptors[descriptor.Value] = descriptor
+
+	nextCode++
+	return code
+}
+
+// ParseErrorCode returns the value by the string error code.
+// `ErrorCodeUnknown` will be returned if the error is not known.
+func ParseErrorCode(value string) ErrorCode {
+	ed, ok := idToDescriptors[value]
+	if ok {
+		return ed.Code
+	}
+
+	return ErrorCodeUnknown
+}
+
+// GetGroupNames returns the list of Error group names that are registered
+func GetGroupNames() []string {
+	keys := []string{}
+
+	for k := range groupToDescriptors {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+// GetErrorCodeGroup returns the named group of error descriptors
+func GetErrorCodeGroup(name string) []ErrorDescriptor {
+	return groupToDescriptors[name]
 }
 
 // Descriptor returns the descriptor for the error code.
@@ -182,9 +204,4 @@ func (errs Errors) Error() string {
 // Len returns the current number of errors.
 func (errs Errors) Len() int {
 	return len(errs)
-}
-
-// init loads the default errors that are part of the errcode package
-func init() {
-	LoadErrors(errorDescriptors)
 }

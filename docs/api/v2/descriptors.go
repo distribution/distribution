@@ -172,13 +172,8 @@ const (
 var APIDescriptor = struct {
 	// RouteDescriptors provides a list of the routes available in the API.
 	RouteDescriptors []RouteDescriptor
-
-	// ErrorDescriptors provides a list of the error codes and their
-	// associated documentation and metadata.
-	ErrorDescriptors []errcode.ErrorDescriptor
 }{
 	RouteDescriptors: routeDescriptors,
-	ErrorDescriptors: errorDescriptors,
 }
 
 // RouteDescriptor describes a route specified by name.
