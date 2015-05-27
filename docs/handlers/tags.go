@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/docker/distribution"
+	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/gorilla/handlers"
 )
@@ -39,9 +40,9 @@ func (th *tagsHandler) GetTags(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch err := err.(type) {
 		case distribution.ErrRepositoryUnknown:
-			th.Errors.Push(v2.ErrorCodeNameUnknown, map[string]string{"name": th.Repository.Name()})
+			th.Errors = append(th.Errors, errcode.NewError(v2.ErrorCodeNameUnknown, map[string]string{"name": th.Repository.Name()}))
 		default:
-			th.Errors.PushErr(err)
+			th.Errors = append(th.Errors, errcode.NewError(errcode.ErrorCodeUnknown, err))
 		}
 		return
 	}
@@ -53,7 +54,7 @@ func (th *tagsHandler) GetTags(w http.ResponseWriter, r *http.Request) {
 		Name: th.Repository.Name(),
 		Tags: tags,
 	}); err != nil {
-		th.Errors.PushErr(err)
+		th.Errors = append(th.Errors, errcode.NewError(errcode.ErrorCodeUnknown, err))
 		return
 	}
 }

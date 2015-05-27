@@ -18,12 +18,12 @@ func blobDispatcher(ctx *Context, r *http.Request) http.Handler {
 
 		if err == errDigestNotAvailable {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				ctx.Errors.Push(v2.ErrorCodeDigestInvalid, err)
+				ctx.Errors = append(ctx.Errors, errcode.NewError(v2.ErrorCodeDigestInvalid, err))
 			})
 		}
 
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx.Errors.Push(v2.ErrorCodeDigestInvalid, err)
+			ctx.Errors = append(ctx.Errors, errcode.NewError(v2.ErrorCodeDigestInvalid, err))
 		})
 	}
 
@@ -53,16 +53,16 @@ func (bh *blobHandler) GetBlob(w http.ResponseWriter, r *http.Request) {
 	desc, err := blobs.Stat(bh, bh.Digest)
 	if err != nil {
 		if err == distribution.ErrBlobUnknown {
-			bh.Errors.Push(v2.ErrorCodeBlobUnknown, bh.Digest)
+			bh.Errors = append(bh.Errors, errcode.NewError(v2.ErrorCodeBlobUnknown, bh.Digest))
 		} else {
-			bh.Errors.Push(errcode.ErrorCodeUnknown, err)
+			bh.Errors = append(bh.Errors, errcode.NewError(errcode.ErrorCodeUnknown, err))
 		}
 		return
 	}
 
 	if err := blobs.ServeBlob(bh, w, r, desc.Digest); err != nil {
 		context.GetLogger(bh).Debugf("unexpected error getting blob HTTP handler: %v", err)
-		bh.Errors.Push(errcode.ErrorCodeUnknown, err)
+		bh.Errors = append(bh.Errors, errcode.NewError(errcode.ErrorCodeUnknown, err))
 		return
 	}
 }
