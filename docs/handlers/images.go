@@ -186,16 +186,38 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusAccepted)
 }
 
-// DeleteImageManifest removes the image with the given tag from the registry.
+// DeleteImageManifest removes the manifest with the given digest from the registry.
 func (imh *imageManifestHandler) DeleteImageManifest(w http.ResponseWriter, r *http.Request) {
 	ctxu.GetLogger(imh).Debug("DeleteImageManifest")
 
-	// TODO(stevvooe): Unfortunately, at this point, manifest deletes are
-	// unsupported. There are issues with schema version 1 that make removing
-	// tag index entries a serious problem in eventually consistent storage.
-	// Once we work out schema version 2, the full deletion system will be
-	// worked out and we can add support back.
-	imh.Errors = append(imh.Errors, v2.ErrorCodeUnsupported)
+	manifests, err := imh.Repository.Manifests(imh)
+	if err != nil {
+		imh.Errors = append(imh.Errors, err)
+		return
+	}
+
+	err = manifests.Delete(imh.Digest)
+	if err != nil {
+		switch err {
+		case digest.ErrDigestUnsupported:
+		case digest.ErrDigestInvalidFormat:
+			imh.Errors = append(imh.Errors, v2.ErrorCodeDigestInvalid)
+			return
+		case distribution.ErrBlobUnknown:
+			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown)
+			w.WriteHeader(http.StatusNotFound)
+			return
+		case distribution.ErrUnsupported:
+			imh.Errors = append(imh.Errors, v2.ErrorCodeUnsupported)
+			w.WriteHeader(http.StatusMethodNotAllowed)
+		default:
+			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusAccepted)
 }
 
 // digestManifest takes a digest of the given manifest. This belongs somewhere

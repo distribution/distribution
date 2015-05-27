@@ -33,7 +33,7 @@ import (
 // TestCheckAPI hits the base endpoint (/v2/) ensures we return the specified
 // 200 OK response.
 func TestCheckAPI(t *testing.T) {
-	env := newTestEnv(t)
+	env := newTestEnv(t, false)
 
 	baseURL, err := env.builder.BuildBaseURL()
 	if err != nil {
@@ -65,7 +65,7 @@ func TestCheckAPI(t *testing.T) {
 // TestCatalogAPI tests the /v2/_catalog endpoint
 func TestCatalogAPI(t *testing.T) {
 	chunkLen := 2
-	env := newTestEnv(t)
+	env := newTestEnv(t, false)
 
 	values := url.Values{
 		"last": []string{""},
@@ -239,24 +239,82 @@ func TestURLPrefix(t *testing.T) {
 		"Content-Type":   []string{"application/json; charset=utf-8"},
 		"Content-Length": []string{"2"},
 	})
-
 }
 
-// TestBlobAPI conducts a full test of the of the blob api.
-func TestBlobAPI(t *testing.T) {
-	// TODO(stevvooe): This test code is complete junk but it should cover the
-	// complete flow. This must be broken down and checked against the
-	// specification *before* we submit the final to docker core.
-	env := newTestEnv(t)
+type blobArgs struct {
+	imageName   string
+	layerFile   io.ReadSeeker
+	layerDigest digest.Digest
+	tarSumStr   string
+}
 
-	imageName := "foo/bar"
-	// "build" our layer file
+func makeBlobArgs(t *testing.T) blobArgs {
 	layerFile, tarSumStr, err := testutil.CreateRandomTarFile()
 	if err != nil {
 		t.Fatalf("error creating random layer file: %v", err)
 	}
 
 	layerDigest := digest.Digest(tarSumStr)
+
+	args := blobArgs{
+		imageName:   "foo/bar",
+		layerFile:   layerFile,
+		layerDigest: layerDigest,
+		tarSumStr:   tarSumStr,
+	}
+	return args
+}
+
+// TestBlobAPI conducts a full test of the of the blob api.
+func TestBlobAPI(t *testing.T) {
+	deleteEnabled := false
+	env := newTestEnv(t, deleteEnabled)
+	args := makeBlobArgs(t)
+	testBlobAPI(t, env, args)
+
+	deleteEnabled = true
+	env = newTestEnv(t, deleteEnabled)
+	args = makeBlobArgs(t)
+	testBlobAPI(t, env, args)
+
+}
+
+func TestBlobDelete(t *testing.T) {
+	deleteEnabled := true
+	env := newTestEnv(t, deleteEnabled)
+
+	args := makeBlobArgs(t)
+	env = testBlobAPI(t, env, args)
+	testBlobDelete(t, env, args)
+}
+
+func TestBlobDeleteDisabled(t *testing.T) {
+	deleteEnabled := false
+	env := newTestEnv(t, deleteEnabled)
+	args := makeBlobArgs(t)
+
+	imageName := args.imageName
+	layerDigest := args.layerDigest
+	layerURL, err := env.builder.BuildBlobURL(imageName, layerDigest)
+	if err != nil {
+		t.Fatalf("error building url: %v", err)
+	}
+
+	resp, err := httpDelete(layerURL)
+	if err != nil {
+		t.Fatalf("unexpected error deleting when disabled: %v", err)
+	}
+
+	checkResponse(t, "status of disabled delete", resp, http.StatusMethodNotAllowed)
+}
+
+func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
+	// TODO(stevvooe): This test code is complete junk but it should cover the
+	// complete flow. This must be broken down and checked against the
+	// specification *before* we submit the final to docker core.
+	imageName := args.imageName
+	layerFile := args.layerFile
+	layerDigest := args.layerDigest
 
 	// -----------------------------------
 	// Test fetch for non-existent content
@@ -372,6 +430,7 @@ func TestBlobAPI(t *testing.T) {
 	uploadURLBase, uploadUUID = startPushLayer(t, env.builder, imageName)
 	uploadURLBase, dgst := pushChunk(t, env.builder, imageName, uploadURLBase, layerFile, layerLength)
 	finishUpload(t, env.builder, imageName, uploadURLBase, dgst)
+
 	// ------------------------
 	// Use a head request to see if the layer exists.
 	resp, err = http.Head(layerURL)
@@ -459,12 +518,188 @@ func TestBlobAPI(t *testing.T) {
 	// Missing tests:
 	// 	- Upload the same tarsum file under and different repository and
 	//       ensure the content remains uncorrupted.
+	return env
+}
+
+func testBlobDelete(t *testing.T, env *testEnv, args blobArgs) {
+	// Upload a layer
+	imageName := args.imageName
+	layerFile := args.layerFile
+	layerDigest := args.layerDigest
+
+	layerURL, err := env.builder.BuildBlobURL(imageName, layerDigest)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	// ---------------
+	// Delete a layer
+	resp, err := httpDelete(layerURL)
+	if err != nil {
+		t.Fatalf("unexpected error deleting layer: %v", err)
+	}
+
+	checkResponse(t, "deleting layer", resp, http.StatusAccepted)
+	checkHeaders(t, resp, http.Header{
+		"Content-Length": []string{"0"},
+	})
+
+	// ---------------
+	// Try and get it back
+	// Use a head request to see if the layer exists.
+	resp, err = http.Head(layerURL)
+	if err != nil {
+		t.Fatalf("unexpected error checking head on existing layer: %v", err)
+	}
+
+	checkResponse(t, "checking existence of deleted layer", resp, http.StatusNotFound)
+
+	// Delete already deleted layer
+	resp, err = httpDelete(layerURL)
+	if err != nil {
+		t.Fatalf("unexpected error deleting layer: %v", err)
+	}
+
+	checkResponse(t, "deleting layer", resp, http.StatusNotFound)
+
+	// ----------------
+	// Attempt to delete a layer with an invalid digest
+	badURL := strings.Replace(layerURL, "tarsum", "trsum", 1)
+	resp, err = httpDelete(badURL)
+	if err != nil {
+		t.Fatalf("unexpected error fetching layer: %v", err)
+	}
+
+	checkResponse(t, "deleting layer bad digest", resp, http.StatusBadRequest)
+
+	// ----------------
+	// Reupload previously deleted blob
+	layerFile.Seek(0, os.SEEK_SET)
+
+	uploadURLBase, _ := startPushLayer(t, env.builder, imageName)
+	pushLayer(t, env.builder, imageName, layerDigest, uploadURLBase, layerFile)
+
+	layerFile.Seek(0, os.SEEK_SET)
+	canonicalDigester := digest.Canonical.New()
+	if _, err := io.Copy(canonicalDigester.Hash(), layerFile); err != nil {
+		t.Fatalf("error copying to digest: %v", err)
+	}
+	canonicalDigest := canonicalDigester.Digest()
+
+	// ------------------------
+	// Use a head request to see if it exists
+	resp, err = http.Head(layerURL)
+	if err != nil {
+		t.Fatalf("unexpected error checking head on existing layer: %v", err)
+	}
+
+	layerLength, _ := layerFile.Seek(0, os.SEEK_END)
+	checkResponse(t, "checking head on reuploaded layer", resp, http.StatusOK)
+	checkHeaders(t, resp, http.Header{
+		"Content-Length":        []string{fmt.Sprint(layerLength)},
+		"Docker-Content-Digest": []string{canonicalDigest.String()},
+	})
+}
+
+func TestDeleteDisabled(t *testing.T) {
+	env := newTestEnv(t, false)
+
+	imageName := "foo/bar"
+	// "build" our layer file
+	layerFile, tarSumStr, err := testutil.CreateRandomTarFile()
+	if err != nil {
+		t.Fatalf("error creating random layer file: %v", err)
+	}
+
+	layerDigest := digest.Digest(tarSumStr)
+	layerURL, err := env.builder.BuildBlobURL(imageName, layerDigest)
+	if err != nil {
+		t.Fatalf("Error building blob URL")
+	}
+	uploadURLBase, _ := startPushLayer(t, env.builder, imageName)
+	pushLayer(t, env.builder, imageName, layerDigest, uploadURLBase, layerFile)
+
+	resp, err := httpDelete(layerURL)
+	if err != nil {
+		t.Fatalf("unexpected error deleting layer: %v", err)
+	}
+
+	checkResponse(t, "deleting layer with delete disabled", resp, http.StatusMethodNotAllowed)
+}
+
+func httpDelete(url string) (*http.Response, error) {
+	req, err := http.NewRequest("DELETE", url, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	//	defer resp.Body.Close()
+	return resp, err
+}
+
+type manifestArgs struct {
+	imageName      string
+	signedManifest *manifest.SignedManifest
+	dgst           digest.Digest
+}
+
+func makeManifestArgs(t *testing.T) manifestArgs {
+	args := manifestArgs{
+		imageName: "foo/bar",
+	}
+
+	return args
 }
 
 func TestManifestAPI(t *testing.T) {
-	env := newTestEnv(t)
+	deleteEnabled := false
+	env := newTestEnv(t, deleteEnabled)
+	args := makeManifestArgs(t)
+	testManifestAPI(t, env, args)
 
-	imageName := "foo/bar"
+	deleteEnabled = true
+	env = newTestEnv(t, deleteEnabled)
+	args = makeManifestArgs(t)
+	testManifestAPI(t, env, args)
+}
+
+func TestManifestDelete(t *testing.T) {
+	deleteEnabled := true
+	env := newTestEnv(t, deleteEnabled)
+	args := makeManifestArgs(t)
+	env, args = testManifestAPI(t, env, args)
+	testManifestDelete(t, env, args)
+}
+
+func TestManifestDeleteDisabled(t *testing.T) {
+	deleteEnabled := false
+	env := newTestEnv(t, deleteEnabled)
+	args := makeManifestArgs(t)
+	testManifestDeleteDisabled(t, env, args)
+}
+
+func testManifestDeleteDisabled(t *testing.T, env *testEnv, args manifestArgs) *testEnv {
+	imageName := args.imageName
+	manifestURL, err := env.builder.BuildManifestURL(imageName, digest.DigestSha256EmptyTar)
+	if err != nil {
+		t.Fatalf("unexpected error getting manifest url: %v", err)
+	}
+
+	resp, err := httpDelete(manifestURL)
+	if err != nil {
+		t.Fatalf("unexpected error deleting manifest %v", err)
+	}
+	defer resp.Body.Close()
+
+	checkResponse(t, "status of disabled delete of manifest", resp, http.StatusMethodNotAllowed)
+	return nil
+}
+
+func testManifestAPI(t *testing.T, env *testEnv, args manifestArgs) (*testEnv, manifestArgs) {
+	imageName := args.imageName
 	tag := "thetag"
 
 	manifestURL, err := env.builder.BuildManifestURL(imageName, tag)
@@ -566,6 +801,9 @@ func TestManifestAPI(t *testing.T) {
 
 	dgst, err := digest.FromBytes(payload)
 	checkErr(t, err, "digesting manifest")
+
+	args.signedManifest = signedManifest
+	args.dgst = dgst
 
 	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, dgst.String())
 	checkErr(t, err, "building manifest url")
@@ -687,6 +925,70 @@ func TestManifestAPI(t *testing.T) {
 	if tagsResponse.Tags[0] != tag {
 		t.Fatalf("tag not as expected: %q != %q", tagsResponse.Tags[0], tag)
 	}
+
+	return env, args
+}
+
+func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
+	imageName := args.imageName
+	dgst := args.dgst
+	signedManifest := args.signedManifest
+	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, dgst.String())
+	// ---------------
+	// Delete by digest
+	resp, err := httpDelete(manifestDigestURL)
+	checkErr(t, err, "deleting manifest by digest")
+
+	checkResponse(t, "deleting manifest", resp, http.StatusAccepted)
+	checkHeaders(t, resp, http.Header{
+		"Content-Length": []string{"0"},
+	})
+
+	// ---------------
+	// Attempt to fetch deleted manifest
+	resp, err = http.Get(manifestDigestURL)
+	checkErr(t, err, "fetching deleted manifest by digest")
+	defer resp.Body.Close()
+
+	checkResponse(t, "fetching deleted manifest", resp, http.StatusNotFound)
+
+	// ---------------
+	// Delete already deleted manifest by digest
+	resp, err = httpDelete(manifestDigestURL)
+	checkErr(t, err, "re-deleting manifest by digest")
+
+	checkResponse(t, "re-deleting manifest", resp, http.StatusNotFound)
+
+	// --------------------
+	// Re-upload manifest by digest
+	resp = putManifest(t, "putting signed manifest", manifestDigestURL, signedManifest)
+	checkResponse(t, "putting signed manifest", resp, http.StatusAccepted)
+	checkHeaders(t, resp, http.Header{
+		"Location":              []string{manifestDigestURL},
+		"Docker-Content-Digest": []string{dgst.String()},
+	})
+
+	// ---------------
+	// Attempt to fetch re-uploaded deleted digest
+	resp, err = http.Get(manifestDigestURL)
+	checkErr(t, err, "fetching re-uploaded manifest by digest")
+	defer resp.Body.Close()
+
+	checkResponse(t, "fetching re-uploaded manifest", resp, http.StatusOK)
+	checkHeaders(t, resp, http.Header{
+		"Docker-Content-Digest": []string{dgst.String()},
+	})
+
+	// ---------------
+	// Attempt to delete an unknown manifest
+	unknownDigest := "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	unknownManifestDigestURL, err := env.builder.BuildManifestURL(imageName, unknownDigest)
+	checkErr(t, err, "building unknown manifest url")
+
+	resp, err = httpDelete(unknownManifestDigestURL)
+	checkErr(t, err, "delting unknown manifest by digest")
+	checkResponse(t, "fetching deleted manifest", resp, http.StatusNotFound)
+
 }
 
 type testEnv struct {
@@ -698,10 +1000,11 @@ type testEnv struct {
 	builder *v2.URLBuilder
 }
 
-func newTestEnv(t *testing.T) *testEnv {
+func newTestEnv(t *testing.T, deleteEnabled bool) *testEnv {
 	config := configuration.Configuration{
 		Storage: configuration.Storage{
 			"inmemory": configuration.Parameters{},
+			"delete":   configuration.Parameters{"enabled": deleteEnabled},
 		},
 	}
 
@@ -1005,7 +1308,7 @@ func checkHeaders(t *testing.T, resp *http.Response, headers http.Header) {
 
 			for _, hv := range resp.Header[k] {
 				if hv != v {
-					t.Fatalf("%v header value not matched in response: %q != %q", k, hv, v)
+					t.Fatalf("%+v %v header value not matched in response: %q != %q", resp.Header, k, hv, v)
 				}
 			}
 		}

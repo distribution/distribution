@@ -33,8 +33,9 @@ func blobDispatcher(ctx *Context, r *http.Request) http.Handler {
 	}
 
 	return handlers.MethodHandler{
-		"GET":  http.HandlerFunc(blobHandler.GetBlob),
-		"HEAD": http.HandlerFunc(blobHandler.GetBlob),
+		"GET":    http.HandlerFunc(blobHandler.GetBlob),
+		"HEAD":   http.HandlerFunc(blobHandler.GetBlob),
+		"DELETE": http.HandlerFunc(blobHandler.DeleteBlob),
 	}
 }
 
@@ -65,4 +66,28 @@ func (bh *blobHandler) GetBlob(w http.ResponseWriter, r *http.Request) {
 		bh.Errors = append(bh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		return
 	}
+}
+
+// DeleteBlob deletes a layer blob
+func (bh *blobHandler) DeleteBlob(w http.ResponseWriter, r *http.Request) {
+	context.GetLogger(bh).Debug("DeleteBlob")
+
+	blobs := bh.Repository.Blobs(bh)
+	err := blobs.Delete(bh, bh.Digest)
+	if err != nil {
+		switch err {
+		case distribution.ErrBlobUnknown:
+			w.WriteHeader(http.StatusNotFound)
+			bh.Errors = append(bh.Errors, v2.ErrorCodeBlobUnknown)
+		case distribution.ErrUnsupported:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			bh.Errors = append(bh.Errors, v2.ErrorCodeUnsupported)
+		default:
+			bh.Errors = append(bh.Errors, errcode.ErrorCodeUnknown)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Length", "0")
+	w.WriteHeader(http.StatusAccepted)
 }
