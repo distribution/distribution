@@ -1,5 +1,7 @@
 FROM debian:jessie
 
+MAINTAINER Docker Distribution Team <distribution@docker.com>
+
 # compile and runtime deps
 # https://github.com/docker/docker/blob/master/project/PACKAGERS.md#runtime-dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -25,17 +27,6 @@ RUN curl -L -o /usr/local/bin/docker https://test.docker.com/builds/Linux/x86_64
 # Install DIND
 RUN curl -L -o /dind https://raw.githubusercontent.com/docker/docker/master/hack/dind \
     && chmod +x /dind
-
-# Install golang
-ENV GO_VERSION 1.4.2
-RUN curl -sSL https://golang.org/dl/go${GO_VERSION}.src.tar.gz | tar -v -C /usr/local -xz \
-    && mkdir -p /go/bin
-ENV PATH /go/bin:/usr/local/go/bin:$PATH
-ENV GOPATH /go
-RUN cd /usr/local/go/src && ./make.bash --no-clean 2>&1
-
-# Go dependencies
-RUN go get github.com/tools/godep
 
 # Install bats
 RUN cd /usr/local/src/ \

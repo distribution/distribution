@@ -15,8 +15,7 @@ fi
 INTEGRATION_IMAGE=${INTEGRATION_IMAGE:-distribution/docker-integration}
 
 # Make sure we upgrade the integration environment.
-# Not yet on hub, run `docker build -t distribution/docker-integration .`
-#docker pull $INTEGRATION_IMAGE
+docker pull $INTEGRATION_IMAGE
 
 # Start the integration tests in a Docker container.
 ID=$(docker run -d -t --privileged $volumeMount \
