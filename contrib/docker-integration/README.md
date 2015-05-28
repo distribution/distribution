@@ -14,7 +14,7 @@ locally.
 
 *Building locally*
 ```
-docker build -t distribution/docker-integration .
+$ docker build -t distribution/docker-integration .
 ```
 
 ### Run script
@@ -22,7 +22,14 @@ docker build -t distribution/docker-integration .
 Invoke the tests within Docker through the `run.sh` script.
 
 ```
-./run.sh
+$ ./run.sh
+```
+
+Run with aufs driver and tmp volume
+**NOTE: Using a volume will prevent multiple runs from needing to
+re-pull images**
+```
+$ STORAGE_DRIVER=aufs DOCKER_VOLUME=/tmp/volume ./run.sh
 ```
 
 ## Running manually outside of Docker

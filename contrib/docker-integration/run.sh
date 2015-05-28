@@ -6,6 +6,11 @@ cd "$(dirname "$(readlink -f "$BASH_SOURCE")")"
 # Root directory of Distribution
 DISTRIBUTION_ROOT=$(cd ../..; pwd -P)
 
+volumeMount=""
+if [ "$DOCKER_VOLUME" != "" ]; then
+	volumeMount="-v ${DOCKER_VOLUME}:/var/lib/docker"
+fi
+
 # Image containing the integration tests environment.
 INTEGRATION_IMAGE=${INTEGRATION_IMAGE:-distribution/docker-integration}
 
@@ -14,9 +19,8 @@ INTEGRATION_IMAGE=${INTEGRATION_IMAGE:-distribution/docker-integration}
 #docker pull $INTEGRATION_IMAGE
 
 # Start the integration tests in a Docker container.
-ID=$(docker run -d -t --privileged \
+ID=$(docker run -d -t --privileged $volumeMount \
 	-v ${DISTRIBUTION_ROOT}:/go/src/github.com/docker/distribution \
-	-e "DOCKER_IMAGE=$DOCKER_IMAGE" \
 	-e "DOCKER_VERSION=$DOCKER_VERSION" \
 	-e "STORAGE_DRIVER=$STORAGE_DRIVER" \
 	-e "EXEC_DRIVER=$EXEC_DRIVER" \
