@@ -4,6 +4,7 @@ nginx:
     - "5000:5000"
     - "5001:5001"
     - "5002:5002"
+    - "5011:5011"
     - "5440:5440"
     - "5441:5441"
     - "5442:5442"
@@ -17,7 +18,7 @@ nginx:
     - registryv1:registryv1
     - registryv2:registryv2
 registryv1:
-  image: registry
+  image: registry:0.9.1
   ports:
     - "5000"
 registryv2:
