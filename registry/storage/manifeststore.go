@@ -42,11 +42,6 @@ func (ms *manifestStore) Get(dgst digest.Digest) (*manifest.SignedManifest, erro
 func (ms *manifestStore) Put(manifest *manifest.SignedManifest) error {
 	context.GetLogger(ms.ctx).Debug("(*manifestStore).Put")
 
-	// Verify the manifest.
-	if err := ms.verifyManifest(ms.ctx, manifest); err != nil {
-		return err
-	}
-
 	// Store the revision of the manifest
 	revision, err := ms.revisionStore.put(ms.ctx, manifest)
 	if err != nil {
@@ -83,11 +78,11 @@ func (ms *manifestStore) GetByTag(tag string) (*manifest.SignedManifest, error) 
 	return ms.revisionStore.get(ms.ctx, dgst)
 }
 
-// verifyManifest ensures that the manifest content is valid from the
+// VerifyLocalManifest ensures that the manifest content is valid from the
 // perspective of the registry. It ensures that the signature is valid for the
 // enclosed payload. As a policy, the registry only tries to store valid
 // content, leaving trust policies of that content up to consumers.
-func (ms *manifestStore) verifyManifest(ctx context.Context, mnfst *manifest.SignedManifest) error {
+func (ms *manifestStore) Verify(ctx context.Context, mnfst *manifest.SignedManifest) error {
 	var errs distribution.ErrManifestVerification
 	if mnfst.Name != ms.repository.Name() {
 		errs = append(errs, fmt.Errorf("repository name does not match manifest name"))

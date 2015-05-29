@@ -12,7 +12,6 @@ import (
 	"net/url"
 	"os"
 	"path"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -367,6 +366,7 @@ func TestManifestAPI(t *testing.T) {
 			},
 		},
 	}
+	//todo(richardscothern): reenable if interface change gets sign-off
 
 	resp = putManifest(t, "putting unsigned manifest", manifestURL, unsignedManifest)
 	defer resp.Body.Close()
@@ -374,7 +374,7 @@ func TestManifestAPI(t *testing.T) {
 	_, p, counts := checkBodyHasErrorCodes(t, "getting unknown manifest tags", resp,
 		v2.ErrorCodeManifestUnverified, v2.ErrorCodeBlobUnknown, v2.ErrorCodeDigestInvalid)
 
-	expectedCounts := map[errcode.ErrorCode]int{
+	expectedCounts := map[v2.ErrorCode]int{
 		v2.ErrorCodeManifestUnverified: 1,
 		v2.ErrorCodeBlobUnknown:        2,
 		v2.ErrorCodeDigestInvalid:      2,

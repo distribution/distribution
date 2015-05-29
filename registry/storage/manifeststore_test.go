@@ -103,8 +103,13 @@ func TestManifestStorage(t *testing.T) {
 	}
 
 	err = ms.Put(sm)
+	if err != nil {
+		t.Fatalf("unexpected errors putting manifest: %v", err)
+	}
+
+	err = ms.Verify(env.ctx, sm)
 	if err == nil {
-		t.Fatalf("expected errors putting manifest")
+		t.Fatalf("expected errors verifying manifest: %v", err)
 	}
 
 	switch err := err.(type) {

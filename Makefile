@@ -54,7 +54,7 @@ lint:
 
 build:
 	@echo "+ $@"
-	@go build -tags "${DOCKER_BUILDTAGS}" -v ${GO_LDFLAGS} ./...
+	@go build -tags  "${DOCKER_BUILDTAGS}" -v ${GO_LDFLAGS} ./...
 
 test:
 	@echo "+ $@"

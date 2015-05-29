@@ -141,6 +141,12 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 		return
 	}
 
+	if err := manifests.Verify(imh.Context, &manifest); err != nil {
+		// todo(richardscothern): reuse the error handling code from below here
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	if err := manifests.Put(&manifest); err != nil {
 		// TODO(stevvooe): These error handling switches really need to be
 		// handled by an app global mapper.

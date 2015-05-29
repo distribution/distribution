@@ -150,7 +150,6 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 		app.accessController = accessController
 		ctxu.GetLogger(app).Debugf("configured %q access controller", authType)
 	}
-
 	return app
 }
 

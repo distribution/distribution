@@ -86,6 +86,9 @@ type ManifestService interface {
 	// GetByTag retrieves the named manifest, if it exists.
 	GetByTag(tag string) (*manifest.SignedManifest, error)
 
+	// Verify ensures the manifest content is valid
+	Verify(ctx context.Context, manifest *manifest.SignedManifest) error
+
 	// TODO(stevvooe): There are several changes that need to be done to this
 	// interface:
 	//

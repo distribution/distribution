@@ -179,8 +179,12 @@ func (ms *manifests) GetByTag(tag string) (*manifest.SignedManifest, error) {
 	if err != nil {
 		return nil, err
 	}
+	req, err := http.NewRequest("GET", u, nil)
+	if err != nil {
+		return nil, err
+	}
 
-	resp, err := ms.client.Get(u)
+	resp, err := ms.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
@@ -249,6 +253,11 @@ func (ms *manifests) Delete(dgst digest.Digest) error {
 	default:
 		return handleErrorResponse(resp)
 	}
+}
+
+func (ms *manifests) Verify(ctx context.Context, manifest *manifest.SignedManifest) error {
+	// implemented and called in remote service
+	return nil
 }
 
 type blobs struct {
