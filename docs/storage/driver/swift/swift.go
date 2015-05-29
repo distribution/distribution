@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mitchellh/mapstructure"
 	"github.com/ncw/swift"
 
 	"github.com/docker/distribution/context"
@@ -33,6 +34,10 @@ const driverName = "swift"
 
 const defaultChunkSize = 5 * 1024 * 1024
 
+const minChunkSize = 1 << 20
+
+const directoryMimeType = "application/directory"
+
 //DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
 type DriverParameters struct {
 	Username  string
@@ -42,7 +47,7 @@ type DriverParameters struct {
 	Region    string
 	Container string
 	Prefix    string
-	ChunkSize int64
+	ChunkSize int
 }
 
 type swiftInfo map[string]interface{}
@@ -63,7 +68,7 @@ type driver struct {
 	Container         string
 	Prefix            string
 	BulkDeleteSupport bool
-	ChunkSize         int64
+	ChunkSize         int
 }
 
 type baseEmbed struct {
@@ -83,52 +88,32 @@ type Driver struct {
 // - authurl
 // - container
 func FromParameters(parameters map[string]interface{}) (*Driver, error) {
-	username, ok := parameters["username"]
-	if !ok || fmt.Sprint(username) == "" {
-		return nil, fmt.Errorf("No username parameter provided")
-	}
-	password, ok := parameters["password"]
-	if !ok || fmt.Sprint(password) == "" {
-		return nil, fmt.Errorf("No password parameter provided")
-	}
-	authURL, ok := parameters["authurl"]
-	if !ok || fmt.Sprint(authURL) == "" {
-		return nil, fmt.Errorf("No container parameter provided")
-	}
-	container, ok := parameters["container"]
-	if !ok || fmt.Sprint(container) == "" {
-		return nil, fmt.Errorf("No container parameter provided")
-	}
-	tenant, ok := parameters["tenant"]
-	if !ok {
-		tenant = ""
-	}
-	region, ok := parameters["region"]
-	if !ok {
-		region = ""
-	}
-	rootDirectory, ok := parameters["rootdirectory"]
-	if !ok {
-		rootDirectory = ""
-	}
-	chunkSize := int64(defaultChunkSize)
-	chunkSizeParam, ok := parameters["chunksize"]
-	if ok {
-		chunkSize, ok = chunkSizeParam.(int64)
-		if !ok {
-			return nil, fmt.Errorf("The chunksize parameter should be a number")
-		}
+	params := DriverParameters{
+		ChunkSize: defaultChunkSize,
 	}
 
-	params := DriverParameters{
-		fmt.Sprint(username),
-		fmt.Sprint(password),
-		fmt.Sprint(authURL),
-		fmt.Sprint(tenant),
-		fmt.Sprint(region),
-		fmt.Sprint(container),
-		fmt.Sprint(rootDirectory),
-		chunkSize,
+	if err := mapstructure.Decode(parameters, &params); err != nil {
+		return nil, err
+	}
+
+	if params.Username == "" {
+		return nil, fmt.Errorf("No username parameter provided")
+	}
+
+	if params.Password == "" {
+		return nil, fmt.Errorf("No password parameter provided")
+	}
+
+	if params.AuthURL == "" {
+		return nil, fmt.Errorf("No authurl parameter provided")
+	}
+
+	if params.Container == "" {
+		return nil, fmt.Errorf("No container parameter provided")
+	}
+
+	if params.ChunkSize < minChunkSize {
+		return nil, fmt.Errorf("The chunksize %#v parameter should be a number that is larger than or equal to %d", params.ChunkSize, minChunkSize)
 	}
 
 	return New(params)
@@ -231,13 +216,14 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 	var (
 		segments      []swift.Object
 		paddingReader io.Reader
+		bytesRead     int64
+		currentLength int64
+		cursor        int64
 	)
 
-	partNumber := int64(1)
-	bytesRead := int64(0)
-	currentLength := int64(0)
+	partNumber := 1
+	chunkSize := int64(d.ChunkSize)
 	zeroBuf := make([]byte, d.ChunkSize)
-	cursor := int64(0)
 	segmentsContainer := d.getSegmentsContainer()
 
 	getSegment := func() string {
@@ -287,12 +273,12 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 	// We reached the end of the file but we haven't reached 'offset' yet
 	// Therefore we add blocks of zeros
 	if offset >= currentLength {
-		for offset-currentLength >= d.ChunkSize {
+		for offset-currentLength >= chunkSize {
 			// Insert a block a zero
 			d.Conn.ObjectPut(segmentsContainer, getSegment(),
 				bytes.NewReader(zeroBuf), false, "",
 				d.getContentType(), nil)
-			currentLength += d.ChunkSize
+			currentLength += chunkSize
 			partNumber++
 		}
 
@@ -309,7 +295,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 
 	multi := io.MultiReader(
 		io.LimitReader(paddingReader, offset-cursor),
-		io.LimitReader(reader, d.ChunkSize-(offset-cursor)),
+		io.LimitReader(reader, chunkSize-(offset-cursor)),
 	)
 
 	for {
@@ -323,12 +309,12 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 			return bytesRead, parseError(path, err)
 		}
 
-		if n < d.ChunkSize {
+		if n < chunkSize {
 			// We wrote all the data
 			if cursor+n < currentLength {
 				// Copy the end of the chunk
 				headers := make(swift.Headers)
-				headers["Range"] = "bytes=" + strconv.FormatInt(cursor+n, 10) + "-" + strconv.FormatInt(cursor+d.ChunkSize, 10)
+				headers["Range"] = "bytes=" + strconv.FormatInt(cursor+n, 10) + "-" + strconv.FormatInt(cursor+chunkSize, 10)
 				file, _, err := d.Conn.ObjectOpen(d.Container, d.swiftPath(path), false, headers)
 				if err != nil {
 					return bytesRead, parseError(path, err)
@@ -347,8 +333,8 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 
 		currentSegment.Close()
 		bytesRead += n - max(0, offset-cursor)
-		multi = io.MultiReader(io.LimitReader(reader, d.ChunkSize))
-		cursor += d.ChunkSize
+		multi = io.MultiReader(io.LimitReader(reader, chunkSize))
+		cursor += chunkSize
 		partNumber++
 	}
 
@@ -365,7 +351,7 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 
 	fi := storagedriver.FileInfoFields{
 		Path:    path,
-		IsDir:   info.ContentType == "application/directory",
+		IsDir:   info.ContentType == directoryMimeType,
 		Size:    info.Bytes,
 		ModTime: info.LastModified,
 	}
