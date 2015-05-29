@@ -237,8 +237,8 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 	bytesRead := int64(0)
 	currentLength := int64(0)
 	zeroBuf := make([]byte, d.ChunkSize)
-	segmentsContainer := d.Container + "_segments"
 	cursor := int64(0)
+	segmentsContainer := d.getSegmentsContainer()
 
 	getSegment := func() string {
 		return d.swiftPath(path) + "/" + fmt.Sprintf("%016d", partNumber)
@@ -269,10 +269,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 	} else {
 		// The manifest already exists. Get all the segments
 		currentLength = info.Bytes
-		headers := make(swift.Headers)
-		headers["Content-Type"] = "application/json"
-		opts := &swift.ObjectsOpts{Prefix: d.swiftPath(path), Headers: headers}
-		segments, err = d.Conn.Objects(d.Container+"_segments", opts)
+		segments, err = d.getAllSegments(segmentsContainer, path)
 		if err != nil {
 			return bytesRead, parseError(path, err)
 		}
@@ -438,14 +435,14 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 				if ok {
 					components := strings.SplitN(manifest, "/", 2)
 					segContainer := components[0]
-					segments, err := d.Conn.ObjectNamesAll(segContainer, &swift.ObjectsOpts{Prefix: components[1]})
+					segments, err := d.getAllSegments(segContainer, components[1])
 					if err != nil {
 						return parseError(name, err)
 					}
 
 					for _, s := range segments {
-						if err := d.Conn.ObjectDelete(segContainer, s); err != nil {
-							return parseError(s, err)
+						if err := d.Conn.ObjectDelete(segContainer, s.Name); err != nil {
+							return parseError(s.Name, err)
 						}
 					}
 				}
@@ -490,6 +487,21 @@ func (d *driver) createParentFolder(path string) (string, error) {
 
 func (d *driver) getContentType() string {
 	return "application/octet-stream"
+}
+
+func (d *driver) getSegmentsContainer() string {
+	return d.Container + "_segments"
+}
+
+func (d *driver) getAllSegments(container string, path string) ([]swift.Object, error) {
+	return d.Conn.Objects(container, &swift.ObjectsOpts{Prefix: d.swiftPath(path)})
+}
+
+func (d *driver) createManifest(path string) (*swift.ObjectCreateFile, error) {
+	headers := make(swift.Headers)
+	headers["X-Object-Manifest"] = d.getSegmentsContainer() + "/" + d.swiftPath(path)
+	return d.Conn.ObjectCreate(d.Container, d.swiftPath(path), false, "",
+		d.getContentType(), headers)
 }
 
 func detectBulkDelete(authURL string) (bulkDelete bool) {
