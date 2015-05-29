@@ -253,23 +253,16 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 
 	info, _, err := d.Conn.Object(d.Container, d.swiftPath(path))
 	if err != nil {
-		if swiftErr, ok := err.(*swift.Error); ok {
-			if swiftErr.StatusCode == 404 {
-				// Create a object manifest
-				if dir, err := d.createParentFolder(path); err != nil {
-					return bytesRead, parseError(dir, err)
-				}
-				headers := make(swift.Headers)
-				headers["X-Object-Manifest"] = segmentsContainer + "/" + d.swiftPath(path)
-				manifest, err := d.Conn.ObjectCreate(d.Container, d.swiftPath(path), false, "",
-					d.getContentType(), headers)
-				manifest.Close()
-				if err != nil {
-					return bytesRead, parseError(path, err)
-				}
-			} else {
+		if swiftErr, ok := err.(*swift.Error); ok && swiftErr.StatusCode == 404 {
+			// Create a object manifest
+			if dir, err := d.createParentFolder(path); err != nil {
+				return bytesRead, parseError(dir, err)
+			}
+			manifest, err := d.createManifest(path)
+			if err != nil {
 				return bytesRead, parseError(path, err)
 			}
+			manifest.Close()
 		} else {
 			return bytesRead, parseError(path, err)
 		}
