@@ -343,7 +343,9 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 				if err != nil {
 					return bytesRead, parseError(path, err)
 				}
-				io.Copy(currentSegment, file)
+				if _, err := io.Copy(currentSegment, file); err != nil {
+					return bytesRead, parseError(path, err)
+				}
 				file.Close()
 			}
 			if n > 0 {
