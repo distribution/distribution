@@ -457,14 +457,16 @@ func (d *driver) swiftPath(path string) string {
 
 func (d *driver) createParentFolder(path string) (string, error) {
 	dir := gopath.Dir(path)
-	if dir != "/" {
-		_, _, err := d.Conn.Object(d.Container, d.swiftPath(dir))
-		if swiftErr, ok := err.(*swift.Error); ok && swiftErr.StatusCode == 404 {
-			_, err := d.Conn.ObjectPut(d.Container, d.swiftPath(dir), bytes.NewReader(make([]byte, 0)),
-				false, "", "application/directory", nil)
-			if err != nil {
-				return dir, err
-			}
+	if dir == "/" {
+		return dir, nil
+	}
+
+	_, _, err := d.Conn.Object(d.Container, d.swiftPath(dir))
+	if swiftErr, ok := err.(*swift.Error); ok && swiftErr.StatusCode == 404 {
+		_, err := d.Conn.ObjectPut(d.Container, d.swiftPath(dir), bytes.NewReader(make([]byte, 0)),
+			false, "", directoryMimeType, nil)
+		if err != nil {
+			return dir, err
 		}
 	}
 
