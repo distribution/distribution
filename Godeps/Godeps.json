@@ -84,6 +84,11 @@
 			"Rev": "51ad44105773cafcbe91927f70ac68e1bf78f8b4"
 		},
 		{
+			"ImportPath": "github.com/noahdesu/go-ceph/rados",
+			"Comment": "v.0.3.0-29-gb15639c",
+			"Rev": "b15639c44c05368348355229070361395d9152ee"
+		},
+		{
 			"ImportPath": "github.com/yvasiyarov/go-metrics",
 			"Rev": "57bccd1ccd43f94bb17fdd8bf3007059b802f85e"
 		},

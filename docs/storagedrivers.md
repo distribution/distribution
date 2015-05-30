@@ -16,6 +16,7 @@ This storage driver package comes bundled with several drivers:
 - [filesystem](storage-drivers/filesystem.md): A local storage driver configured to use a directory tree in the local filesystem.
 - [s3](storage-drivers/s3.md): A driver storing objects in an Amazon Simple Storage Solution (S3) bucket.
 - [azure](storage-drivers/azure.md): A driver storing objects in [Microsoft Azure Blob Storage](http://azure.microsoft.com/en-us/services/storage/).
+- [rados](storage-drivers/rados.md): A driver storing objects in a [Ceph Object Storage](http://ceph.com/docs/master/rados/) pool.
 
 ## Storage Driver API
 
