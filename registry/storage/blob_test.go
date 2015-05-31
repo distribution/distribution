@@ -59,7 +59,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 	// Do a resume, get unknown upload
 	blobUpload, err = bs.Resume(ctx, blobUpload.ID())
 	if err != distribution.ErrBlobUploadUnknown {
-		t.Fatalf("unexpected error resuming upload, should be unkown: %v", err)
+		t.Fatalf("unexpected error resuming upload, should be unknown: %v", err)
 	}
 
 	// Restart!
