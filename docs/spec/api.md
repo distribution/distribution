@@ -992,7 +992,7 @@ The following parameters should be specified on the request:
 |`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
 |`Authorization`|header|An RFC7235 compliant authorization header.|
 |`name`|path|Name of the target repository.|
-|`tag`|path|Tag of the target manifiest.|
+|`reference`|path|Tag or digest of the target manifest.|
 
 
 
@@ -1160,7 +1160,7 @@ The following parameters should be specified on the request:
 |`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
 |`Authorization`|header|An RFC7235 compliant authorization header.|
 |`name`|path|Name of the target repository.|
-|`tag`|path|Tag of the target manifiest.|
+|`reference`|path|Tag or digest of the target manifest.|
 
 
 
@@ -1344,7 +1344,7 @@ The following parameters should be specified on the request:
 |`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
 |`Authorization`|header|An RFC7235 compliant authorization header.|
 |`name`|path|Name of the target repository.|
-|`tag`|path|Tag of the target manifiest.|
+|`reference`|path|Tag or digest of the target manifest.|
 
 
 
