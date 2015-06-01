@@ -36,17 +36,7 @@ $ STORAGE_DRIVER=aufs DOCKER_VOLUME=/tmp/volume ./run.sh
 
 ### Install Docker Compose
 
-1. Open a new terminal on the host with your `distribution` source.
-
-2. Get the `docker-compose` binary.
-
-		$ sudo wget https://github.com/docker/compose/releases/download/1.1.0/docker-compose-`uname  -s`-`uname -m` -O /usr/local/bin/docker-compose
-
-	This command installs the binary in the `/usr/local/bin` directory.
-
-3. Add executable permissions to the binary.
-
-		$  sudo chmod +x /usr/local/bin/docker-compose
+[Docker Compose Installation Guide](http://docs.docker.com/compose/install/)
 
 ### Start compose setup
 ```
