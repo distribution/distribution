@@ -9,12 +9,12 @@ import (
 	"path"
 	"strconv"
 
-	"code.google.com/p/go-uuid/uuid"
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/base"
 	"github.com/docker/distribution/registry/storage/driver/factory"
+	"github.com/docker/distribution/uuid"
 	"github.com/noahdesu/go-ceph/rados"
 )
 
@@ -497,7 +497,7 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 
 // Generate a blob identifier
 func (d *driver) generateOid() string {
-	return objectBlobPrefix + uuid.New()
+	return objectBlobPrefix + uuid.Generate().String()
 }
 
 // Reference a object and its hierarchy
