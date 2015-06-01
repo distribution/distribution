@@ -64,7 +64,9 @@ dependencies:
   # For the stable go version, additionally install linting tools
     - >
       gvm use stable &&
-      go get github.com/axw/gocov/gocov github.com/mattn/goveralls github.com/golang/lint/golint
+      go get github.com/axw/gocov/gocov github.com/golang/lint/golint
+  # Disabling goveralls for now
+  # go get github.com/axw/gocov/gocov github.com/mattn/goveralls github.com/golang/lint/golint
 
 test:
   pre:
