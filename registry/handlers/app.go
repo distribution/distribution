@@ -122,7 +122,7 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 			ctxu.GetLogger(app).Infof("using inmemory blob descriptor cache")
 		default:
 			if v != "" {
-				ctxu.GetLogger(app).Warnf("unkown cache type %q, caching disabled", configuration.Storage["cache"])
+				ctxu.GetLogger(app).Warnf("unknown cache type %q, caching disabled", configuration.Storage["cache"])
 			}
 		}
 	}
