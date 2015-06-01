@@ -17,7 +17,7 @@ You should use the Registry if you want to:
 
  * tightly control where your images are being stored
  * fully own your images distribution pipeline
- * integrate images storage and distribution into your inhouse, on premises development workflow
+ * integrate images storage and distribution into your inhouse development workflow
 
 ## Alternatives
 
@@ -27,7 +27,7 @@ Users looking for a commercially supported version of the Registry should look i
 
 ## Requirements
 
-The Registry is compatible with Docker engine version 1.6.0 or higher.
+The Registry is compatible with Docker engine **version 1.6.0 or higher**.
 If you really need to work with older Docker versions, you should look into the [old python registry](https://github.com/docker/docker-registry)
 
 ## TL;DR
@@ -36,16 +36,16 @@ If you really need to work with older Docker versions, you should look into the 
 # Start your registry
 docker run -d -p 5000:5000 registry:2
 
-# Pull (or build) some image
+# Pull (or build) some image from the hub
 docker pull ubuntu
 
-# Name the image to point to your registry
+# Tag the image so that it points to your registry
 docker tag ubuntu localhost:5000/myfirstimage
 
 # Push it
 docker push localhost:5000/myfirstimage
 
-# Pull it
+# Pull it back
 docker pull localhost:5000/myfirstimage
 ```
 
@@ -60,14 +60,19 @@ Simple as that? Yes. Now, please read the...
  - [Getting help](help.md)
  - [Contributing](../CONTRIBUTING.md)
 
-Advanced topics:
+### Reference and advanced topics
 
+ - [Glossary](glossary.md)
  - [Authentication](authentication.md)
  - [Working with notifications](notifications.md)
- - [Advanced ops](advanced.md)
 
-Development resources:
+### Development resources
+
  - [Storage driver model](storagedrivers.md)
  - [Registry API](spec/api.md)
+<!--
+ - [Building the registry](building.md)
+ - [Architecture notes](architecture.md)
+ -->
 
-
+ 
