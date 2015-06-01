@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	log "github.com/Sirupsen/logrus"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/configuration"
 	ctxu "github.com/docker/distribution/context"
@@ -101,6 +102,7 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 
 	app.configureEvents(&configuration)
 	app.configureRedis(&configuration)
+	app.configureLogHook(&configuration)
 
 	// configure storage caches
 	if cc, ok := configuration.Storage["cache"]; ok {
@@ -289,6 +291,31 @@ func (app *App) configureRedis(configuration *configuration.Configuration) {
 			"Active": app.redis.ActiveCount(),
 		}
 	}))
+}
+
+// configureLogHook prepares logging hook parameters.
+func (app *App) configureLogHook(configuration *configuration.Configuration) {
+	logger := ctxu.GetLogger(app).(*log.Entry).Logger
+	for _, configHook := range configuration.Log.Hooks {
+		if !configHook.Disabled {
+			switch configHook.Type {
+			case "mail":
+				hook := &logHook{}
+				hook.LevelsParam = configHook.Levels
+				hook.Mail = &mailer{
+					Addr:     configHook.MailOptions.SMTP.Addr,
+					Username: configHook.MailOptions.SMTP.Username,
+					Password: configHook.MailOptions.SMTP.Password,
+					Insecure: configHook.MailOptions.SMTP.Insecure,
+					From:     configHook.MailOptions.From,
+					To:       configHook.MailOptions.To,
+				}
+				logger.Hooks.Add(hook)
+			default:
+			}
+		}
+	}
+	app.Context = ctxu.WithLogger(app.Context, logger)
 }
 
 func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
