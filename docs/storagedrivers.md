@@ -41,7 +41,7 @@ To create a valid storage driver, one must implement the `storagedriver.StorageD
 Storage drivers should call `factory.Register` with their driver name in an `init` method, allowing callers of `factory.New` to construct instances of this driver without requiring modification of imports throughout the codebase.
 
 #### Out-of-process drivers
-As many users will run the registry as a pre-constructed docker container, storage drivers should also be distributable as IPC server executables. Drivers written in go should model the main method provided in `storagedriver/filesystem/registry-storage-filesystem/filesystem.go`. Parameters to IPC drivers will be provided as a JSON-serialized map in the first argument to the process. These parameters should be validated and then a blocking call to `ipc.StorageDriverServer` should be made with a new storage driver.
+As many users will run the registry as a pre-constructed docker container, storage drivers should also be distributable as IPC server executables. Drivers written in go should model the main method provided in `registry/storage/driverfilesystem/driver.go`. Parameters to IPC drivers will be provided as a JSON-serialized map in the first argument to the process. These parameters should be validated and then a blocking call to `ipc.StorageDriverServer` should be made with a new storage driver.
 
 Out-of-process drivers must also implement the `ipc.IPCStorageDriver` interface, which exposes a `Version` check for the storage driver. This is used to validate storage driver api compatibility at driver load-time.
 
