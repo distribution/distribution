@@ -62,6 +62,7 @@ func main() {
 
 	app := handlers.NewApp(ctx, *config)
 	handler := configureReporting(app)
+	handler = panicHandler(handler)
 	handler = gorhandlers.CombinedLoggingHandler(os.Stdout, handler)
 
 	if config.HTTP.Debug.Addr != "" {
@@ -272,4 +273,18 @@ func debugServer(addr string) {
 	if err := http.ListenAndServe(addr, nil); err != nil {
 		log.Fatalf("error listening on debug interface: %v", err)
 	}
+}
+
+// panicHandler add a HTTP handler to web app. The handler recover the happening
+// panic. logrus.Panic transmits panic message to pre-config log hooks, which is
+// defined in config.yml.
+func panicHandler(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				log.Panic(fmt.Sprintf("%v", err))
+			}
+		}()
+		handler.ServeHTTP(w, r)
+	})
 }
