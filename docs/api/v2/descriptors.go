@@ -16,12 +16,12 @@ var (
 		Description: `Name of the target repository.`,
 	}
 
-	tagParameterDescriptor = ParameterDescriptor{
-		Name:        "tag",
+	referenceParameterDescriptor = ParameterDescriptor{
+		Name:        "reference",
 		Type:        "string",
 		Format:      TagNameRegexp.String(),
 		Required:    true,
-		Description: `Tag of the target manifiest.`,
+		Description: `Tag or digest of the target manifest.`,
 	}
 
 	uuidParameterDescriptor = ParameterDescriptor{
@@ -476,7 +476,7 @@ var routeDescriptors = []RouteDescriptor{
 						},
 						PathParameters: []ParameterDescriptor{
 							nameParameterDescriptor,
-							tagParameterDescriptor,
+							referenceParameterDescriptor,
 						},
 						Successes: []ResponseDescriptor{
 							{
@@ -542,7 +542,7 @@ var routeDescriptors = []RouteDescriptor{
 						},
 						PathParameters: []ParameterDescriptor{
 							nameParameterDescriptor,
-							tagParameterDescriptor,
+							referenceParameterDescriptor,
 						},
 						Body: BodyDescriptor{
 							ContentType: "application/json; charset=utf-8",
@@ -648,7 +648,7 @@ var routeDescriptors = []RouteDescriptor{
 						},
 						PathParameters: []ParameterDescriptor{
 							nameParameterDescriptor,
-							tagParameterDescriptor,
+							referenceParameterDescriptor,
 						},
 						Successes: []ResponseDescriptor{
 							{
