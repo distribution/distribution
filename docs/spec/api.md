@@ -120,6 +120,16 @@ indicating what is different. Optionally, we may start marking parts of the
 specification to correspond with the versions enumerated here.
 
 <dl>
+
+  <dt>2.0.4</dt>>
+  <dd>
+    <ul>
+      <li>Added support for listing registry contents.</li>
+      <li>Added pagination to tags API.</li>
+      <li>Added common approach to support pagination.</li>
+    </ul>
+  </dd>
+
   <dt>2.0.3</dt>
   <dd>
     <li>Allow repository name components to be one character.</li>
@@ -131,7 +141,6 @@ specification to correspond with the versions enumerated here.
     <li>Added section covering digest format.</li>
     <li>Added more clarification that manifest cannot be deleted by tag.</li>
   </dd>
-
 	<dt>2.0.1</dt>
 	<dd>
 		<ul>
@@ -745,7 +754,9 @@ each unknown blob. The response format is as follows:
         ]
     }
 
-#### Listing Image Tags
+
+
+### Listing Image Tags
 
 It may be necessary to list all of the tags under a given repository. The tags
 for an image repository can be retrieved with the following request:
@@ -766,8 +777,166 @@ The response will be in the following format:
     }
 
 For repositories with a large number of tags, this response may be quite
-large, so care should be taken by the client when parsing the response to
-reduce copying.
+large. If such a response is expected, one should use the pagination.
+
+#### Pagination
+
+Paginated tag results can be retrieved by adding the appropriate pagination
+parameters. Starting a paginated flow may begin as follows:
+
+```
+GET /v2/<name>/tags/list?n=<integer>
+```
+
+The above specifies that a tags response should be returned, from the start of
+the result set, ordered lexically, limiting the number of results to `n`. The
+response to such a request would look as follows:
+
+```
+200 OK
+Content-Type: application/json
+
+{
+  "name": <name>,
+  "tags": [
+    <tag>,
+    ...
+  ]
+  "next": <url>?n=<n from the request>&last=<last tag value from previous response>
+}
+```
+
+> __TODO(stevvooe):__ Consider using a Header here, rather than a body parameter. A
+header would allow one to issue the next request before parsing the response
+body.
+
+To get the next result set, a client would issue the request as follows, using
+the value of "next" from the response body:
+
+```
+GET /v2/<name>/tags/list?n=<n from the request>&last=<last tag value from previous response>
+```
+
+The above process should then be repeated until the `next` parameter is no
+longer set in the response.
+
+The behavior of `last` is quite simple and can be demonstrated with an
+example. Let's say the repository has the following tags:
+
+```
+a
+b
+c
+d
+```
+
+If the value of `n` is 2, _a_ and _b_ will be returned on the first response.
+The `next` url within the respone will have `n` set to 2 and last set to _b_:
+
+```
+"next": <url>?n=2&last=b
+```
+
+The client can then issue the response, receiving the values _c_ and _d_. Note
+that n may change on second to last response or be omitted fully, if the
+server may so choose.
+
+### Listing Repositories
+
+Images are stored in collections, known as a _repository_, which is keyed by a
+`name`, as seen throughout the API specification. A registry instance may
+contain several repositories. The list of available repositories, or image
+names, is made available through the _catalog_.
+
+The catalog for a given registry can be retrived with the following request:
+
+```
+GET /v2/_catalog
+```
+
+The response will be in the following format:
+
+```
+200 OK
+Content-Type: application/json
+
+{
+  "repositories": [
+    <name>,
+    ...
+  ]
+}
+```
+
+For registries with a large number of repositories, this response may be quite
+large. If such a response is expected, one should use the pagination.
+
+#### Pagination
+
+Paginated repository results can be retrieved by adding the appropriate
+pagination parameters, which are similar to those available in the tag API.
+Starting a paginated flow may begin as follows:
+
+```
+GET /v2/_catalog?n=<integer>
+```
+
+The above specifies that a catalog response should be returned, from the start of
+the result set, ordered lexically, limiting the number of results to `n`. The
+response to such a request would look as follows:
+
+```
+200 OK
+Content-Type: application/json
+
+{
+  "repositories": [
+    <name>,
+    ...
+  ]
+  "next": <url>?n=<n from the request>&last=<last repository value from previous response>
+}
+```
+
+> __TODO(stevvooe):__ Consider using a Header here, rather than a body parameter. A
+header would allow one to issue the next request before parsing the response
+body.
+
+To get the next result set, a client would issue the request as follows, using
+the value of "next" from the response body:
+
+```
+GET /v2/_catalog?n=<n from the request>&last=<last repostory value from previous response>
+```
+
+The above process should then be repeated until the `next` parameter is no
+longer set in the response.
+
+The result set of repository names is represented abstractly as a lexically
+sorted list, where the position in that list can be specified by the query
+term `last`. The entries in the response start _after_ the term specified by
+`last`, up to `n` entries.
+
+The behavior of `last` is quite simple when demonstrated with an example.
+Let's say the registry has the following repositories:
+
+```
+a
+b
+c
+d
+```
+
+If the value of `n` is 2, _a_ and _b_ will be returned on the first response.
+The `next` url within the respone will have `n` set to 2 and last set to _b_:
+
+```
+"next": <url>?n=2&last=b
+```
+
+The client can then issue the request with above value of `next`, receiving
+the values _c_ and _d_. Note that n may change on second to last response or
+be omitted fully, if the server may so choose.
 
 ### Deleting an Image
 
@@ -817,6 +986,7 @@ A list of methods and URIs are covered in the table below:
 | PATCH | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Upload a chunk of data for the specified upload. |
 | PUT | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Complete the upload specified by `uuid`, optionally appending the body as the final chunk. |
 | DELETE | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Cancel outstanding upload processes, releasing associated resources. If this is not called, the unfinished uploads will eventually timeout. |
+| GET | `/v2/_catalog` | Catalog | Retrieve a sorted, json list of repositories available in the registry. |
 
 
 The detail for each endpoint is covered in the following sections.
@@ -882,7 +1052,6 @@ The following parameters should be specified on the request:
 ```
 
 The API implements V2 protocol and is accessible.
-
 
 
 
@@ -1052,6 +1221,57 @@ The error codes that may be included in the response body are enumerated below:
 |Code|Message|Description|
 |----|-------|-----------|
 | `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
+
+
+
+
+```
+GET /v2/<name>/tags/list?n=<integer>last=<integer>
+```
+
+Return a portion of the tags for the specified repository.
+
+
+The following parameters should be specified on the request:
+
+|Name|Kind|Description|
+|----|----|-----------|
+|`name`|path|Name of the target repository.|
+|`n`|query|Limit the number of entries in each response. It not present, all entries will be returned.|
+|`last`|query|Result set will include values lexically after last.|
+
+
+
+
+###### On Success: OK
+
+```
+200 OK
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+    "name": <name>,
+    "tags": [
+        <tag>,
+        ...
+    ],
+    "next": "<url>?last=<name>&n=<last value of n>"
+}
+```
+
+A list of tags for the named repository.
+The following fields may be returned in the response body:
+
+|Name|Description|
+|----|-----------|
+|`next`|Provides the URL to get the next set of results, if available.|
+
+The following headers will be returned with the response:
+
+|Name|Description|
+|----|-----------|
+|`Content-Length`|Length of the JSON response body.|
 
 
 
@@ -1447,7 +1667,6 @@ The following parameters should be specified on the request:
 ```
 202 Accepted
 ```
-
 
 
 
@@ -2902,6 +3121,106 @@ The error codes that may be included in the response body are enumerated below:
 |Code|Message|Description|
 |----|-------|-----------|
 | `BLOB_UPLOAD_UNKNOWN` | blob upload unknown to registry | If a blob upload has been cancelled or was never started, this error code may be returned. |
+
+
+
+
+
+### Catalog
+
+List a set of available repositories in the local registry cluster. Does not provide any indication of what may be available upstream. Applications can only determine if a repository is available but not if it is not available.
+
+
+
+#### GET Catalog
+
+Retrieve a sorted, json list of repositories available in the registry.
+
+
+##### Catalog Fetch Complete
+
+```
+GET /v2/_catalog
+```
+
+Request an unabridged list of repositories available.
+
+
+
+
+
+###### On Success: OK
+
+```
+200 OK
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"repositories": [
+		<name>,
+		...
+	]
+}
+```
+
+Returns the unabridged list of repositories as a json response.
+
+The following headers will be returned with the response:
+
+|Name|Description|
+|----|-----------|
+|`Content-Length`|Length of the JSON response body.|
+
+
+
+##### Catalog Fetch Paginated
+
+```
+GET /v2/_catalog?n=<integer>last=<integer>
+```
+
+Return the specified portion of repositories.
+
+
+The following parameters should be specified on the request:
+
+|Name|Kind|Description|
+|----|----|-----------|
+|`n`|query|Limit the number of entries in each response. It not present, all entries will be returned.|
+|`last`|query|Result set will include values lexically after last.|
+
+
+
+
+###### On Success: OK
+
+```
+200 OK
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"repositories": [
+		<name>,
+		...
+	]
+	"next": "<url>?last=<name>&n=<last value of n>"
+}
+```
+
+
+The following fields may be returned in the response body:
+
+|Name|Description|
+|----|-----------|
+|`next`|Provides the URL to get the next set of results, if available.|
+
+The following headers will be returned with the response:
+
+|Name|Description|
+|----|-----------|
+|`Content-Length`|Length of the JSON response body.|
 
 
 
