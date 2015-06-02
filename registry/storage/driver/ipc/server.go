@@ -101,7 +101,7 @@ func handleRequest(driver storagedriver.StorageDriver, request Request) {
 		}
 	case "ReadStream":
 		path, _ := request.Parameters["Path"].(string)
-		// Depending on serialization method, Offset may be convereted to any int/uint type
+		// Depending on serialization method, Offset may be converted to any int/uint type
 		offset := reflect.ValueOf(request.Parameters["Offset"]).Convert(reflect.TypeOf(int64(0))).Int()
 		reader, err := driver.ReadStream(path, offset)
 		var response ReadStreamResponse
@@ -116,9 +116,9 @@ func handleRequest(driver storagedriver.StorageDriver, request Request) {
 		}
 	case "WriteStream":
 		path, _ := request.Parameters["Path"].(string)
-		// Depending on serialization method, Offset may be convereted to any int/uint type
+		// Depending on serialization method, Offset may be converted to any int/uint type
 		offset := reflect.ValueOf(request.Parameters["Offset"]).Convert(reflect.TypeOf(int64(0))).Int()
-		// Depending on serialization method, Size may be convereted to any int/uint type
+		// Depending on serialization method, Size may be converted to any int/uint type
 		size := reflect.ValueOf(request.Parameters["Size"]).Convert(reflect.TypeOf(int64(0))).Int()
 		reader, _ := request.Parameters["Reader"].(io.ReadCloser)
 		err := driver.WriteStream(path, offset, size, reader)

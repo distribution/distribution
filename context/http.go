@@ -302,7 +302,7 @@ func (irw *instrumentedResponseWriter) Flush() {
 func (irw *instrumentedResponseWriter) Value(key interface{}) interface{} {
 	if keyStr, ok := key.(string); ok {
 		if keyStr == "http.response" {
-			return irw.ResponseWriter
+			return irw
 		}
 
 		if !strings.HasPrefix(keyStr, "http.response.") {
@@ -322,9 +322,7 @@ func (irw *instrumentedResponseWriter) Value(key interface{}) interface{} {
 		case "written":
 			return irw.written
 		case "status":
-			if irw.status != 0 {
-				return irw.status
-			}
+			return irw.status
 		case "contenttype":
 			contentType := irw.Header().Get("Content-Type")
 			if contentType != "" {

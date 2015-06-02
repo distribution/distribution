@@ -12,15 +12,15 @@
 		},
 		{
 			"ImportPath": "github.com/AdRoll/goamz/aws",
-			"Rev": "d3664b76d90508cdda5a6c92042f26eab5db3103"
+			"Rev": "cc210f45dcb9889c2769a274522be2bf70edfb99"
 		},
 		{
 			"ImportPath": "github.com/AdRoll/goamz/cloudfront",
-			"Rev": "d3664b76d90508cdda5a6c92042f26eab5db3103"
+			"Rev": "cc210f45dcb9889c2769a274522be2bf70edfb99"
 		},
 		{
 			"ImportPath": "github.com/AdRoll/goamz/s3",
-			"Rev": "d3664b76d90508cdda5a6c92042f26eab5db3103"
+			"Rev": "cc210f45dcb9889c2769a274522be2bf70edfb99"
 		},
 		{
 			"ImportPath": "github.com/MSOpenTech/azure-sdk-for-go/storage",

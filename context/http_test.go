@@ -132,8 +132,21 @@ func TestWithResponseWriter(t *testing.T) {
 	trw := testResponseWriter{}
 	ctx, rw := WithResponseWriter(Background(), &trw)
 
-	if ctx.Value("http.response") != &trw {
-		t.Fatalf("response not available in context: %v != %v", ctx.Value("http.response"), &trw)
+	if ctx.Value("http.response") != rw {
+		t.Fatalf("response not available in context: %v != %v", ctx.Value("http.response"), rw)
+	}
+
+	grw, err := GetResponseWriter(ctx)
+	if err != nil {
+		t.Fatalf("error getting response writer: %v", err)
+	}
+
+	if grw != rw {
+		t.Fatalf("unexpected response writer returned: %#v != %#v", grw, rw)
+	}
+
+	if ctx.Value("http.response.status") != 0 {
+		t.Fatalf("response status should always be a number and should be zero here: %v != 0", ctx.Value("http.response.status"))
 	}
 
 	if n, err := rw.Write(make([]byte, 1024)); err != nil {

@@ -2,6 +2,6 @@
 // docker distribution. The goal is to allow users to reliably package, ship
 // and store content related to docker images.
 //
-// This is currently a work in progress. More details are availalbe in the
+// This is currently a work in progress. More details are available in the
 // README.md.
 package distribution

@@ -49,7 +49,7 @@ Then immediately submit this new file as a pull-request, in order to get early f
 
 Eventually, you will have to update your proposal to accommodate the feedback you received.
 
-Usually, it's not advisable to start working too much on the implementation itself before the proposal receives sufficient feedback, since it can significantly altered (or rejected).
+Usually, it's not advisable to start working too much on the implementation itself before the proposal receives sufficient feedback, since it can be significantly altered (or rejected).
 
 Your implementation should then be submitted as a separate PR, that will be reviewed as well.
 
