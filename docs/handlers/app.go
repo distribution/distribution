@@ -346,9 +346,9 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 
 				switch err := err.(type) {
 				case distribution.ErrRepositoryUnknown:
-					context.Errors = append(context.Errors, errcode.NewError(v2.ErrorCodeNameUnknown, err))
+					context.Errors = append(context.Errors, v2.ErrorCodeNameUnknown.WithDetail(err))
 				case distribution.ErrRepositoryNameInvalid:
-					context.Errors = append(context.Errors, errcode.NewError(v2.ErrorCodeNameInvalid, err))
+					context.Errors = append(context.Errors, v2.ErrorCodeNameInvalid.WithDetail(err))
 				}
 
 				serveJSON(w, context.Errors)
@@ -363,7 +363,7 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 			context.Repository, err = applyRepoMiddleware(context.Repository, app.Config.Middleware["repository"])
 			if err != nil {
 				ctxu.GetLogger(context).Errorf("error initializing repository middleware: %v", err)
-				context.Errors = append(context.Errors, errcode.NewError(errcode.ErrorCodeUnknown, err))
+				context.Errors = append(context.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 
 				serveJSON(w, context.Errors)
 				return
@@ -383,10 +383,25 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 }
 
 func (app *App) logError(context context.Context, errors errcode.Errors) {
-	for _, e := range errors {
-		c := ctxu.WithValue(context, "err.code", e.Code)
-		c = ctxu.WithValue(c, "err.message", e.Code.Message())
-		c = ctxu.WithValue(c, "err.detail", e.Detail)
+	for _, e1 := range errors {
+		var c ctxu.Context
+
+		switch e1.(type) {
+		case errcode.Error:
+			e, _ := e1.(errcode.Error)
+			c = ctxu.WithValue(context, "err.code", e.Code)
+			c = ctxu.WithValue(c, "err.message", e.Code.Message())
+			c = ctxu.WithValue(c, "err.detail", e.Detail)
+		case errcode.ErrorCode:
+			e, _ := e1.(errcode.ErrorCode)
+			c = ctxu.WithValue(context, "err.code", e)
+			c = ctxu.WithValue(c, "err.message", e.Message())
+		default:
+			// just normal go 'error'
+			c = ctxu.WithValue(context, "err.code", errcode.ErrorCodeUnknown)
+			c = ctxu.WithValue(c, "err.message", e1.Error())
+		}
+
 		c = ctxu.WithLogger(c, ctxu.GetLogger(c,
 			"err.code",
 			"err.message",
@@ -441,7 +456,7 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 			// proceed.
 
 			var errs errcode.Errors
-			errs = append(errs, errcode.NewError(v2.ErrorCodeUnauthorized))
+			errs = append(errs, v2.ErrorCodeUnauthorized)
 
 			serveJSON(w, errs)
 			return fmt.Errorf("forbidden: no repository name")
@@ -465,7 +480,7 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 			err.ServeHTTP(w, r)
 
 			var errs errcode.Errors
-			errs = append(errs, errcode.NewError(v2.ErrorCodeUnauthorized, accessRecords))
+			errs = append(errs, v2.ErrorCodeUnauthorized.WithDetail(accessRecords))
 			serveJSON(w, errs)
 		default:
 			// This condition is a potential security problem either in

@@ -1,106 +1,29 @@
 package errcode
 
 import (
+	"encoding/json"
 	"fmt"
-	"net/http"
 	"strings"
-	"sync"
 )
+
+// ErrorCoder is the base interface for ErrorCode and Error allowing
+// users of each to just call ErrorCode to get the real ID of each
+type ErrorCoder interface {
+	ErrorCode() ErrorCode
+}
 
 // ErrorCode represents the error type. The errors are serialized via strings
 // and the integer format may change and should *never* be exported.
 type ErrorCode int
 
-// ErrorDescriptor provides relevant information about a given error code.
-type ErrorDescriptor struct {
-	// Code is the error code that this descriptor describes.
-	Code ErrorCode
-
-	// Value provides a unique, string key, often captilized with
-	// underscores, to identify the error code. This value is used as the
-	// keyed value when serializing api errors.
-	Value string
-
-	// Message is a short, human readable decription of the error condition
-	// included in API responses.
-	Message string
-
-	// Description provides a complete account of the errors purpose, suitable
-	// for use in documentation.
-	Description string
-
-	// HTTPStatusCode provides the http status code that is associated with
-	// this error condition.
-	HTTPStatusCode int
+// ErrorCode just returns itself
+func (ec ErrorCode) ErrorCode() ErrorCode {
+	return ec
 }
 
-var (
-	errorCodeToDescriptors = map[ErrorCode]ErrorDescriptor{}
-	idToDescriptors        = map[string]ErrorDescriptor{}
-	groupToDescriptors     = map[string][]ErrorDescriptor{}
-)
-
-// ErrorCodeUnknown is a generic error that can be used as a last
-// resort if there is no situation-specific error message that can be used
-var ErrorCodeUnknown = Register("registry.api.errcode", ErrorDescriptor{
-	Value:   "UNKNOWN",
-	Message: "unknown error",
-	Description: `Generic error returned when the error does not have an
-									        API classification.`,
-	HTTPStatusCode: http.StatusInternalServerError,
-})
-
-var nextCode = 1000
-var registerLock sync.Mutex
-
-// Register will make the passed-in error known to the environment and
-// return a new ErrorCode
-func Register(group string, descriptor ErrorDescriptor) ErrorCode {
-	registerLock.Lock()
-	defer registerLock.Unlock()
-	code := ErrorCode(nextCode)
-
-	descriptor.Code = code
-
-	if _, ok := idToDescriptors[descriptor.Value]; ok {
-		panic(fmt.Sprintf("ErrorValue %s is already registered", descriptor.Value))
-	}
-	if _, ok := errorCodeToDescriptors[descriptor.Code]; ok {
-		panic(fmt.Sprintf("ErrorCode %d is already registered", descriptor.Code))
-	}
-
-	groupToDescriptors[group] = append(groupToDescriptors[group], descriptor)
-	errorCodeToDescriptors[code] = descriptor
-	idToDescriptors[descriptor.Value] = descriptor
-
-	nextCode++
-	return code
-}
-
-// ParseErrorCode returns the value by the string error code.
-// `ErrorCodeUnknown` will be returned if the error is not known.
-func ParseErrorCode(value string) ErrorCode {
-	ed, ok := idToDescriptors[value]
-	if ok {
-		return ed.Code
-	}
-
-	return ErrorCodeUnknown
-}
-
-// GetGroupNames returns the list of Error group names that are registered
-func GetGroupNames() []string {
-	keys := []string{}
-
-	for k := range groupToDescriptors {
-		keys = append(keys, k)
-	}
-	return keys
-}
-
-// GetErrorCodeGroup returns the named group of error descriptors
-func GetErrorCodeGroup(name string) []ErrorDescriptor {
-	return groupToDescriptors[name]
+// Error returns the ID/Value
+func (ec ErrorCode) Error() string {
+	return ec.Descriptor().Value
 }
 
 // Descriptor returns the descriptor for the error code.
@@ -143,10 +66,28 @@ func (ec *ErrorCode) UnmarshalText(text []byte) error {
 	return nil
 }
 
+// WithDetail creates a new Error struct based on the passed-in info and
+// set the Detail property appropriately
+func (ec ErrorCode) WithDetail(detail interface{}) Error {
+	if err, ok := detail.(error); ok {
+		detail = err.Error()
+	}
+
+	return Error{
+		Code:   ec,
+		Detail: detail,
+	}
+}
+
 // Error provides a wrapper around ErrorCode with extra Details provided.
 type Error struct {
 	Code   ErrorCode   `json:"code"`
 	Detail interface{} `json:"detail,omitempty"`
+}
+
+// ErrorCode returns the ID/Value of this Error
+func (e Error) ErrorCode() ErrorCode {
+	return e.Code
 }
 
 // Error returns a human readable representation of the error.
@@ -161,30 +102,43 @@ func (e Error) Message() string {
 	return e.Code.Message()
 }
 
+// ErrorDescriptor provides relevant information about a given error code.
+type ErrorDescriptor struct {
+	// Code is the error code that this descriptor describes.
+	Code ErrorCode
+
+	// Value provides a unique, string key, often captilized with
+	// underscores, to identify the error code. This value is used as the
+	// keyed value when serializing api errors.
+	Value string
+
+	// Message is a short, human readable decription of the error condition
+	// included in API responses.
+	Message string
+
+	// Description provides a complete account of the errors purpose, suitable
+	// for use in documentation.
+	Description string
+
+	// HTTPStatusCode provides the http status code that is associated with
+	// this error condition.
+	HTTPStatusCode int
+}
+
+// ParseErrorCode returns the value by the string error code.
+// `ErrorCodeUnknown` will be returned if the error is not known.
+func ParseErrorCode(value string) ErrorCode {
+	ed, ok := idToDescriptors[value]
+	if ok {
+		return ed.Code
+	}
+
+	return ErrorCodeUnknown
+}
+
 // Errors provides the envelope for multiple errors and a few sugar methods
 // for use within the application.
-type Errors []Error
-
-// NewError creates a new Error struct based on the passed-in info
-func NewError(code ErrorCode, details ...interface{}) Error {
-	if len(details) > 1 {
-		panic("please specify zero or one detail items for this error")
-	}
-
-	var detail interface{}
-	if len(details) > 0 {
-		detail = details[0]
-	}
-
-	if err, ok := detail.(error); ok {
-		detail = err.Error()
-	}
-
-	return Error{
-		Code:   code,
-		Detail: detail,
-	}
-}
+type Errors []error
 
 func (errs Errors) Error() string {
 	switch len(errs) {
@@ -204,4 +158,68 @@ func (errs Errors) Error() string {
 // Len returns the current number of errors.
 func (errs Errors) Len() int {
 	return len(errs)
+}
+
+// jsonError extends Error with 'Message' so that we can include the
+// error text, just in case the receiver of the JSON doesn't have this
+// particular ErrorCode registered
+type jsonError struct {
+	Code    ErrorCode   `json:"code"`
+	Message string      `json:"message"`
+	Detail  interface{} `json:"detail,omitempty"`
+}
+
+// MarshalJSON converts slice of error, ErrorCode or Error into a
+// slice of Error - then serializes
+func (errs Errors) MarshalJSON() ([]byte, error) {
+	var tmpErrs []jsonError
+
+	for _, daErr := range errs {
+		var err Error
+
+		switch daErr.(type) {
+		case ErrorCode:
+			err = daErr.(ErrorCode).WithDetail(nil)
+		case Error:
+			err = daErr.(Error)
+		default:
+			err = ErrorCodeUnknown.WithDetail(daErr)
+
+		}
+
+		tmpErrs = append(tmpErrs, jsonError{
+			Code:    err.Code,
+			Message: err.Message(),
+			Detail:  err.Detail,
+		})
+	}
+
+	return json.Marshal(tmpErrs)
+}
+
+// UnmarshalJSON deserializes []Error and then converts it into slice of
+// Error or ErrorCode
+func (errs *Errors) UnmarshalJSON(data []byte) error {
+	var tmpErrs []jsonError
+
+	if err := json.Unmarshal(data, &tmpErrs); err != nil {
+		return err
+	}
+
+	var newErrs Errors
+	for _, daErr := range tmpErrs {
+		if daErr.Detail == nil {
+			// Error's w/o details get converted to ErrorCode
+			newErrs = append(newErrs, daErr.Code)
+		} else {
+			// Error's w/ details are untouched
+			newErrs = append(newErrs, Error{
+				Code:   daErr.Code,
+				Detail: daErr.Detail,
+			})
+		}
+	}
+
+	*errs = newErrs
+	return nil
 }

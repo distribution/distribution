@@ -6,9 +6,11 @@ import (
 	"github.com/docker/distribution/registry/api/errcode"
 )
 
+const errGroup = "registry.api.v2"
+
 var (
 	// ErrorCodeUnsupported is returned when an operation is not supported.
-	ErrorCodeUnsupported = errcode.Register("registry.api.v2", errcode.ErrorDescriptor{
+	ErrorCodeUnsupported = errcode.Register(errGroup, errcode.ErrorDescriptor{
 		Value:   "UNSUPPORTED",
 		Message: "The operation is unsupported.",
 		Description: `The operation was unsupported due to a missing
@@ -16,7 +18,7 @@ var (
 	})
 
 	// ErrorCodeUnauthorized is returned if a request is not authorized.
-	ErrorCodeUnauthorized = errcode.Register("registry.api.v2", errcode.ErrorDescriptor{
+	ErrorCodeUnauthorized = errcode.Register(errGroup, errcode.ErrorDescriptor{
 		Value:   "UNAUTHORIZED",
 		Message: "access to the requested resource is not authorized",
 		Description: `The access controller denied access for the operation on
@@ -27,7 +29,7 @@ var (
 
 	// ErrorCodeDigestInvalid is returned when uploading a blob if the
 	// provided digest does not match the blob contents.
-	ErrorCodeDigestInvalid = errcode.Register("registry.api.v2", errcode.ErrorDescriptor{
+	ErrorCodeDigestInvalid = errcode.Register(errGroup, errcode.ErrorDescriptor{
 		Value:   "DIGEST_INVALID",
 		Message: "provided digest did not match uploaded content",
 		Description: `When a blob is uploaded, the registry will check that
@@ -39,7 +41,7 @@ var (
 	})
 
 	// ErrorCodeSizeInvalid is returned when uploading a blob if the provided
-	ErrorCodeSizeInvalid = errcode.Register("registry.api.v2", errcode.ErrorDescriptor{
+	ErrorCodeSizeInvalid = errcode.Register(errGroup, errcode.ErrorDescriptor{
 		Value:   "SIZE_INVALID",
 		Message: "provided length did not match content length",
 		Description: `When a layer is uploaded, the provided size will be
@@ -50,7 +52,7 @@ var (
 
 	// ErrorCodeNameInvalid is returned when the name in the manifest does not
 	// match the provided name.
-	ErrorCodeNameInvalid = errcode.Register("registry.api.v2", errcode.ErrorDescriptor{
+	ErrorCodeNameInvalid = errcode.Register(errGroup, errcode.ErrorDescriptor{
 		Value:   "NAME_INVALID",
 		Message: "invalid repository name",
 		Description: `Invalid repository name encountered either during
@@ -60,7 +62,7 @@ var (
 
 	// ErrorCodeTagInvalid is returned when the tag in the manifest does not
 	// match the provided tag.
-	ErrorCodeTagInvalid = errcode.Register("registry.api.v2", errcode.ErrorDescriptor{
+	ErrorCodeTagInvalid = errcode.Register(errGroup, errcode.ErrorDescriptor{
 		Value:   "TAG_INVALID",
 		Message: "manifest tag did not match URI",
 		Description: `During a manifest upload, if the tag in the manifest
@@ -69,7 +71,7 @@ var (
 	})
 
 	// ErrorCodeNameUnknown when the repository name is not known.
-	ErrorCodeNameUnknown = errcode.Register("registry.api.v2", errcode.ErrorDescriptor{
+	ErrorCodeNameUnknown = errcode.Register(errGroup, errcode.ErrorDescriptor{
 		Value:   "NAME_UNKNOWN",
 		Message: "repository name not known to registry",
 		Description: `This is returned if the name used during an operation is
@@ -78,7 +80,7 @@ var (
 	})
 
 	// ErrorCodeManifestUnknown returned when image manifest is unknown.
-	ErrorCodeManifestUnknown = errcode.Register("registry.api.v2", errcode.ErrorDescriptor{
+	ErrorCodeManifestUnknown = errcode.Register(errGroup, errcode.ErrorDescriptor{
 		Value:   "MANIFEST_UNKNOWN",
 		Message: "manifest unknown",
 		Description: `This error is returned when the manifest, identified by
@@ -89,7 +91,7 @@ var (
 	// ErrorCodeManifestInvalid returned when an image manifest is invalid,
 	// typically during a PUT operation. This error encompasses all errors
 	// encountered during manifest validation that aren't signature errors.
-	ErrorCodeManifestInvalid = errcode.Register("registry.api.v2", errcode.ErrorDescriptor{
+	ErrorCodeManifestInvalid = errcode.Register(errGroup, errcode.ErrorDescriptor{
 		Value:   "MANIFEST_INVALID",
 		Message: "manifest invalid",
 		Description: `During upload, manifests undergo several checks ensuring
@@ -101,7 +103,7 @@ var (
 
 	// ErrorCodeManifestUnverified is returned when the manifest fails
 	// signature verfication.
-	ErrorCodeManifestUnverified = errcode.Register("registry.api.v2", errcode.ErrorDescriptor{
+	ErrorCodeManifestUnverified = errcode.Register(errGroup, errcode.ErrorDescriptor{
 		Value:   "MANIFEST_UNVERIFIED",
 		Message: "manifest failed signature verification",
 		Description: `During manifest upload, if the manifest fails signature
@@ -111,7 +113,7 @@ var (
 
 	// ErrorCodeManifestBlobUnknown is returned when a manifest blob is
 	// unknown to the registry.
-	ErrorCodeManifestBlobUnknown = errcode.Register("registry.api.v2", errcode.ErrorDescriptor{
+	ErrorCodeManifestBlobUnknown = errcode.Register(errGroup, errcode.ErrorDescriptor{
 		Value:   "MANIFEST_BLOB_UNKNOWN",
 		Message: "blob unknown to registry",
 		Description: `This error may be returned when a manifest blob is 
@@ -122,7 +124,7 @@ var (
 	// ErrorCodeBlobUnknown is returned when a blob is unknown to the
 	// registry. This can happen when the manifest references a nonexistent
 	// layer or the result is not found by a blob fetch.
-	ErrorCodeBlobUnknown = errcode.Register("registry.api.v2", errcode.ErrorDescriptor{
+	ErrorCodeBlobUnknown = errcode.Register(errGroup, errcode.ErrorDescriptor{
 		Value:   "BLOB_UNKNOWN",
 		Message: "blob unknown to registry",
 		Description: `This error may be returned when a blob is unknown to the
@@ -133,7 +135,7 @@ var (
 	})
 
 	// ErrorCodeBlobUploadUnknown is returned when an upload is unknown.
-	ErrorCodeBlobUploadUnknown = errcode.Register("registry.api.v2", errcode.ErrorDescriptor{
+	ErrorCodeBlobUploadUnknown = errcode.Register(errGroup, errcode.ErrorDescriptor{
 		Value:   "BLOB_UPLOAD_UNKNOWN",
 		Message: "blob upload unknown to registry",
 		Description: `If a blob upload has been cancelled or was never
@@ -142,7 +144,7 @@ var (
 	})
 
 	// ErrorCodeBlobUploadInvalid is returned when an upload is invalid.
-	ErrorCodeBlobUploadInvalid = errcode.Register("registry.api.v2", errcode.ErrorDescriptor{
+	ErrorCodeBlobUploadInvalid = errcode.Register(errGroup, errcode.ErrorDescriptor{
 		Value:   "BLOB_UPLOAD_INVALID",
 		Message: "blob upload invalid",
 		Description: `The blob upload encountered an error and can no

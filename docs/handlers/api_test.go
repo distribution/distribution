@@ -780,11 +780,15 @@ func checkBodyHasErrorCodes(t *testing.T, msg string, resp *http.Response, error
 		counts[code] = 0
 	}
 
-	for _, err := range errs {
-		if _, ok := expected[err.Code]; !ok {
-			t.Fatalf("unexpected error code %v encountered during %s: %s ", err.Code, msg, string(p))
+	for _, e := range errs {
+		err, ok := e.(errcode.ErrorCoder)
+		if !ok {
+			t.Fatalf("not an ErrorCoder: %#v", e)
 		}
-		counts[err.Code]++
+		if _, ok := expected[err.ErrorCode()]; !ok {
+			t.Fatalf("unexpected error code %v encountered during %s: %s ", err.ErrorCode(), msg, string(p))
+		}
+		counts[err.ErrorCode()]++
 	}
 
 	// Ensure that counts of expected errors were all non-zero
