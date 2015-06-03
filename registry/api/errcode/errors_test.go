@@ -79,8 +79,8 @@ var ErrorCodeTest2 = Register("v2.errors", ErrorDescriptor{
 func TestErrorsManagement(t *testing.T) {
 	var errs Errors
 
-	errs = append(errs, NewError(ErrorCodeTest1))
-	errs = append(errs, NewError(ErrorCodeTest2,
+	errs = append(errs, ErrorCodeTest1)
+	errs = append(errs, ErrorCodeTest2.WithDetail(
 		map[string]interface{}{"digest": "sometestblobsumdoesntmatter"}))
 
 	p, err := json.Marshal(errs)
@@ -89,10 +89,10 @@ func TestErrorsManagement(t *testing.T) {
 		t.Fatalf("error marashaling errors: %v", err)
 	}
 
-	expectedJSON := "[{\"code\":\"TEST1\"},{\"code\":\"TEST2\",\"detail\":{\"digest\":\"sometestblobsumdoesntmatter\"}}]"
+	expectedJSON := "[{\"code\":\"TEST1\",\"message\":\"test error 1\"},{\"code\":\"TEST2\",\"message\":\"test error 2\",\"detail\":{\"digest\":\"sometestblobsumdoesntmatter\"}}]"
 
 	if string(p) != expectedJSON {
-		t.Fatalf("unexpected json: %q != %q", string(p), expectedJSON)
+		t.Fatalf("unexpected json:\ngot:\n%q\n\nexpected:\n%q", string(p), expectedJSON)
 	}
 
 	// Now test the reverse
@@ -106,8 +106,8 @@ func TestErrorsManagement(t *testing.T) {
 	}
 
 	// Test again with a single value this time
-	errs = Errors{NewError(ErrorCodeUnknown)}
-	expectedJSON = "[{\"code\":\"UNKNOWN\"}]"
+	errs = Errors{ErrorCodeUnknown}
+	expectedJSON = "[{\"code\":\"UNKNOWN\",\"message\":\"unknown error\"}]"
 	p, err = json.Marshal(errs)
 
 	if err != nil {

@@ -20,6 +20,7 @@ import (
 	"regexp"
 	"text/template"
 
+	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
 )
 
@@ -44,7 +45,15 @@ func main() {
 
 	tmpl := template.Must(template.New(filename).Funcs(funcMap).ParseFiles(path))
 
-	if err := tmpl.Execute(os.Stdout, v2.APIDescriptor); err != nil {
+	data := struct {
+		RouteDescriptors []v2.RouteDescriptor
+		ErrorDescriptors []errcode.ErrorDescriptor
+	}{
+		RouteDescriptors: v2.APIDescriptor.RouteDescriptors,
+		ErrorDescriptors: errcode.GetErrorCodeGroup("registry.api.v2"),
+	}
+
+	if err := tmpl.Execute(os.Stdout, data); err != nil {
 		log.Fatalln(err)
 	}
 }
