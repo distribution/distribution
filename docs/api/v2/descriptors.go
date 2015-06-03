@@ -87,6 +87,13 @@ var (
 		Format:      "<digest>",
 	}
 
+	linkHeader = ParameterDescriptor{
+		Name:        "Link",
+		Type:        "link",
+		Description: "RFC5988 compliant rel='next' with URL to next result set, if available",
+		Format:      `<<url>?n=<last n value>&last=<last entry from response>>; rel="next"`,
+	}
+
 	paginationParameters = []ParameterDescriptor{
 		{
 			Name:        "n",
@@ -462,14 +469,7 @@ var routeDescriptors = []RouteDescriptor{
 										Description: "Length of the JSON response body.",
 										Format:      "<length>",
 									},
-								},
-								Fields: []ParameterDescriptor{
-									{
-										Name:        "next",
-										Type:        "url",
-										Description: "Provides the URL to get the next set of results, if available.",
-										Format:      "<url>",
-									},
+									linkHeader,
 								},
 								Body: BodyDescriptor{
 									ContentType: "application/json; charset=utf-8",
@@ -479,7 +479,6 @@ var routeDescriptors = []RouteDescriptor{
         <tag>,
         ...
     ],
-    "next": "<url>?last=<name>&n=<last value of n>"
 }`,
 								},
 							},
@@ -1439,14 +1438,7 @@ var routeDescriptors = []RouteDescriptor{
 										Description: "Length of the JSON response body.",
 										Format:      "<length>",
 									},
-								},
-								Fields: []ParameterDescriptor{
-									{
-										Name:        "next",
-										Type:        "url",
-										Description: "Provides the URL to get the next set of results, if available.",
-										Format:      "<url>",
-									},
+									linkHeader,
 								},
 							},
 						},
