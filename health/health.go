@@ -195,11 +195,16 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 		if len(checksStatus) != 0 {
 			w.WriteHeader(http.StatusServiceUnavailable)
 		}
-		err := json.NewEncoder(w).Encode(checksStatus)
+		encoder := json.NewEncoder(w)
+		err := encoder.Encode(checksStatus)
 
 		// Parsing of the JSON failed. Returning generic error message
 		if err != nil {
-			w.Write([]byte("{server_error: 'Could not parse error message'}"))
+			encoder.Encode(struct {
+				ServerError string `json:"server_error"`
+			}{
+				ServerError: "Could not parse error message",
+			})
 		}
 	} else {
 		w.WriteHeader(http.StatusNotFound)
