@@ -1,10 +1,11 @@
-page_title: Build the development environment
-page_description: Explains how to build the distribution project
-page_keywords: registry, service, images, repository
-
 # Build the development environment
 
-If a go development environment is setup, one can use `go get` to install the
+The first prequisite of properly building distribution targets is to have a Go
+development environment setup. Please follow [How to Write Go Code](https://golang.org/doc/code.html)
+for proper setup. If done correctly, you should have a GOROOT and GOPATH set in the
+environment.
+
+If a Go development environment is setup, one can use `go get` to install the
 `registry` command from the current latest:
 
 ```sh
@@ -18,6 +19,11 @@ binary can then be run with the following:
 $ $GOPATH/bin/registry -version
 $GOPATH/bin/registry github.com/docker/distribution v2.0.0-alpha.1+unknown
 ```
+
+> __NOTE:__ While you do not need to use `go get` to checkout the distribution
+> project, for these build instructions to work, the project must be checked
+> out in the correct location in the `GOPATH`. This should almost always be
+> `$GOPATH/src/github.com/docker/distribution`.
 
 The registry can be run with the default config using the following
 incantantation:
