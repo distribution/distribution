@@ -754,7 +754,129 @@ each unknown blob. The response format is as follows:
         ]
     }
 
+### Listing Repositories
 
+Images are stored in collections, known as a _repository_, which is keyed by a
+`name`, as seen throughout the API specification. A registry instance may
+contain several repositories. The list of available repositories is made
+available through the _catalog_.
+
+The catalog for a given registry can be retrived with the following request:
+
+```
+GET /v2/_catalog
+```
+
+The response will be in the following format:
+
+```
+200 OK
+Content-Type: application/json
+
+{
+  "repositories": [
+    <name>,
+    ...
+  ]
+}
+```
+
+Note that the contents of the response are specific to the registry
+implementation. Some registries may opt to provide a full catalog output,
+limit it based on the user's access level or omit upstream results, if
+providing mirroring functionality. Subsequently, the presence of a repository
+in the catalog listing only means that the registry *may* provide access to
+the repository at the time of the request. Conversely, a missing entry does
+*not* mean that the registry does not have the repository. More succinctly,
+the presence of a repository only guarantees that it is there but not that it
+is _not_ there.
+
+For registries with a large number of repositories, this response may be quite
+large. If such a response is expected, one should use pagination.
+
+#### Pagination
+
+Paginated catalog results can be retrieved by adding an `n` parameter to the
+request URL, declaring that the response should be limited to `n` results.
+Starting a paginated flow begins as follows:
+
+```
+GET /v2/_catalog?n=<integer>
+```
+
+The above specifies that a catalog response should be returned, from the start of
+the result set, ordered lexically, limiting the number of results to `n`. The
+response to such a request would look as follows:
+
+```
+200 OK
+Content-Type: application/json
+Link: <<url>?n=<n from the request>&last=<last repository in response>>; rel="next"
+
+{
+  "repositories": [
+    <name>,
+    ...
+  ]
+}
+```
+
+The above includes the _first_ `n` entries from the result set. To get the
+_next_ `n` entries, one can create a URL where the argument `last` has the
+value from `repositories[len(repositories)-1]`. If there are indeed more
+results, the URL for the next block is encoded in an
+[RFC5988](https://tools.ietf.org/html/rfc5988) `Link` header, as a "next"
+relation. The presence of the `Link` header communicates to the client that
+the entire result set has not been returned and another request must be
+issued. If the header is not present, the client can assume that all results
+have been recieved.
+
+> __NOTE:__ In the request template above, note that the brackets
+> are required. For example, if the url is
+> `http://example.com/v2/_catalog?n=20&last=b`, the value of the header would
+> be `<http://example.com/v2/_catalog?n=20&last=b>; rel="next"`. Please see
+> [RFC5988](https://tools.ietf.org/html/rfc5988) for details.
+
+Compliant client implementations should always use the `Link` header
+value when proceeding through results linearly. The client may construct URLs
+to skip forward in the catalog.
+
+To get the next result set, a client would issue the request as follows, using
+the URL encoded in the described `Link` header:
+
+```
+GET /v2/_catalog?n=<n from the request>&last=<last repostory value from previous response>
+```
+
+The above process should then be repeated until the `Link` header is no longer
+set.
+
+The catalog result set is represented abstractly as a lexically sorted list,
+where the position in that list can be specified by the query term `last`. The
+entries in the response start _after_ the term specified by `last`, up to `n`
+entries.
+
+The behavior of `last` is quite simple when demonstrated with an example. Let
+us say the registry has the following repositories:
+
+```
+a
+b
+c
+d
+```
+
+If the value of `n` is 2, _a_ and _b_ will be returned on the first response.
+The `Link` header returned on the response will have `n` set to 2 and last set
+to _b_:
+
+```
+Link: <<url>?n=2&last=b>; rel="next"
+```
+
+The client can then issue the request with above value from the `Link` header,
+receiving the values _c_ and _d_. Note that n may change on second to last
+response or be omitted fully, if the server may so choose.
 
 ### Listing Image Tags
 
@@ -781,8 +903,12 @@ large. If such a response is expected, one should use the pagination.
 
 #### Pagination
 
-Paginated tag results can be retrieved by adding the appropriate pagination
-parameters. Starting a paginated flow may begin as follows:
+Paginated tag results can be retrieved by adding the appropriate parameters to
+the request URL described above. The behavior of tag pagination is identical
+to that specified for catalog pagination. We cover a simple flow to highlight
+any differences.
+
+Starting a paginated flow may begin as follows:
 
 ```
 GET /v2/<name>/tags/list?n=<integer>
@@ -795,6 +921,7 @@ response to such a request would look as follows:
 ```
 200 OK
 Content-Type: application/json
+Link: <<url>?n=<n from the request>&last=<last tag value from previous response>>; rel="next"
 
 {
   "name": <name>,
@@ -802,141 +929,21 @@ Content-Type: application/json
     <tag>,
     ...
   ]
-  "next": <url>?n=<n from the request>&last=<last tag value from previous response>
 }
 ```
 
-> __TODO(stevvooe):__ Consider using a Header here, rather than a body parameter. A
-header would allow one to issue the next request before parsing the response
-body.
-
 To get the next result set, a client would issue the request as follows, using
-the value of "next" from the response body:
+the value encoded in the [RFC5988](https://tools.ietf.org/html/rfc5988) `Link`
+header:
 
 ```
 GET /v2/<name>/tags/list?n=<n from the request>&last=<last tag value from previous response>
 ```
 
-The above process should then be repeated until the `next` parameter is no
-longer set in the response.
-
-The behavior of `last` is quite simple and can be demonstrated with an
-example. Let's say the repository has the following tags:
-
-```
-a
-b
-c
-d
-```
-
-If the value of `n` is 2, _a_ and _b_ will be returned on the first response.
-The `next` url within the respone will have `n` set to 2 and last set to _b_:
-
-```
-"next": <url>?n=2&last=b
-```
-
-The client can then issue the response, receiving the values _c_ and _d_. Note
-that n may change on second to last response or be omitted fully, if the
-server may so choose.
-
-### Listing Repositories
-
-Images are stored in collections, known as a _repository_, which is keyed by a
-`name`, as seen throughout the API specification. A registry instance may
-contain several repositories. The list of available repositories, or image
-names, is made available through the _catalog_.
-
-The catalog for a given registry can be retrived with the following request:
-
-```
-GET /v2/_catalog
-```
-
-The response will be in the following format:
-
-```
-200 OK
-Content-Type: application/json
-
-{
-  "repositories": [
-    <name>,
-    ...
-  ]
-}
-```
-
-For registries with a large number of repositories, this response may be quite
-large. If such a response is expected, one should use the pagination.
-
-#### Pagination
-
-Paginated repository results can be retrieved by adding the appropriate
-pagination parameters, which are similar to those available in the tag API.
-Starting a paginated flow may begin as follows:
-
-```
-GET /v2/_catalog?n=<integer>
-```
-
-The above specifies that a catalog response should be returned, from the start of
-the result set, ordered lexically, limiting the number of results to `n`. The
-response to such a request would look as follows:
-
-```
-200 OK
-Content-Type: application/json
-
-{
-  "repositories": [
-    <name>,
-    ...
-  ]
-  "next": <url>?n=<n from the request>&last=<last repository value from previous response>
-}
-```
-
-> __TODO(stevvooe):__ Consider using a Header here, rather than a body parameter. A
-header would allow one to issue the next request before parsing the response
-body.
-
-To get the next result set, a client would issue the request as follows, using
-the value of "next" from the response body:
-
-```
-GET /v2/_catalog?n=<n from the request>&last=<last repostory value from previous response>
-```
-
-The above process should then be repeated until the `next` parameter is no
-longer set in the response.
-
-The result set of repository names is represented abstractly as a lexically
-sorted list, where the position in that list can be specified by the query
-term `last`. The entries in the response start _after_ the term specified by
-`last`, up to `n` entries.
-
-The behavior of `last` is quite simple when demonstrated with an example.
-Let's say the registry has the following repositories:
-
-```
-a
-b
-c
-d
-```
-
-If the value of `n` is 2, _a_ and _b_ will be returned on the first response.
-The `next` url within the respone will have `n` set to 2 and last set to _b_:
-
-```
-"next": <url>?n=2&last=b
-```
-
-The client can then issue the request with above value of `next`, receiving
-the values _c_ and _d_. Note that n may change on second to last response or
-be omitted fully, if the server may so choose.
+The above process should then be repeated until the `Link` header is no longer
+set in the response. The behavior of the `last` parameter, the provided
+response result, lexical ordering and encoding of the `Link` header are
+identical to that of catalog pagination.
 
 ### Deleting an Image
 
@@ -1142,6 +1149,7 @@ The following parameters should be specified on the request:
 ```
 200 OK
 Content-Length: <length>
+Link: <<url>?n=<last n value>&last=<last entry from response>>; rel="next"
 Content-Type: application/json; charset=utf-8
 
 {
@@ -1256,22 +1264,17 @@ Content-Type: application/json; charset=utf-8
         <tag>,
         ...
     ],
-    "next": "<url>?last=<name>&n=<last value of n>"
 }
 ```
 
 A list of tags for the named repository.
-The following fields may be returned in the response body:
-
-|Name|Description|
-|----|-----------|
-|`next`|Provides the URL to get the next set of results, if available.|
 
 The following headers will be returned with the response:
 
 |Name|Description|
 |----|-----------|
 |`Content-Length`|Length of the JSON response body.|
+|`Link`|RFC5988 compliant rel='next' with URL to next result set, if available|
 
 
 
@@ -3154,6 +3157,7 @@ Request an unabridged list of repositories available.
 ```
 200 OK
 Content-Length: <length>
+Link: <<url>?n=<last n value>&last=<last entry from response>>; rel="next"
 Content-Type: application/json; charset=utf-8
 
 {
@@ -3210,17 +3214,13 @@ Content-Type: application/json; charset=utf-8
 ```
 
 
-The following fields may be returned in the response body:
-
-|Name|Description|
-|----|-----------|
-|`next`|Provides the URL to get the next set of results, if available.|
 
 The following headers will be returned with the response:
 
 |Name|Description|
 |----|-----------|
 |`Content-Length`|Length of the JSON response body.|
+|`Link`|RFC5988 compliant rel='next' with URL to next result set, if available|
 
 
 
