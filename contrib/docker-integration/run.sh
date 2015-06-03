@@ -11,6 +11,11 @@ if [ "$DOCKER_VOLUME" != "" ]; then
 	volumeMount="-v ${DOCKER_VOLUME}:/var/lib/docker"
 fi
 
+dockerMount=""
+if [ "$DOCKER_BINARY" != "" ]; then
+	dockerMount="-v ${DOCKER_BINARY}:/usr/local/bin/docker"
+fi
+
 # Image containing the integration tests environment.
 INTEGRATION_IMAGE=${INTEGRATION_IMAGE:-distribution/docker-integration}
 
@@ -18,10 +23,9 @@ INTEGRATION_IMAGE=${INTEGRATION_IMAGE:-distribution/docker-integration}
 docker pull $INTEGRATION_IMAGE
 
 # Start the integration tests in a Docker container.
-ID=$(docker run -d -t --privileged $volumeMount \
+ID=$(docker run -d -t --privileged $volumeMount $dockerMount \
 	-v ${DISTRIBUTION_ROOT}:/go/src/github.com/docker/distribution \
-	-e "DOCKER_VERSION=$DOCKER_VERSION" \
-	-e "STORAGE_DRIVER=$STORAGE_DRIVER" \
+	-e "STORAGE_DRIVER=$DOCKER_GRAPHDRIVER" \
 	-e "EXEC_DRIVER=$EXEC_DRIVER" \
 	${INTEGRATION_IMAGE} \
 	./test_runner.sh "$@")

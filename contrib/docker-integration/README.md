@@ -29,7 +29,53 @@ Run with aufs driver and tmp volume
 **NOTE: Using a volume will prevent multiple runs from needing to
 re-pull images**
 ```
-$ STORAGE_DRIVER=aufs DOCKER_VOLUME=/tmp/volume ./run.sh
+$ DOCKER_GRAPHDRIVER=aufs DOCKER_VOLUME=/tmp/volume ./run.sh
+```
+
+### Example developer flow 
+
+These tests are useful for developing both as a registry and docker
+core developer. The following setup may be used to do integration
+testing between development versions
+
+Insert into your `.zshrc` or `.bashrc`
+
+```
+# /usr/lib/docker for Docker-in-Docker
+# Set this directory to make each invocation run much faster, without
+# the need to repull images.
+export DOCKER_VOLUME=$HOME/.docker-test-volume
+
+# Use overlay for all Docker testing, try aufs if overlay not supported
+export DOCKER_GRAPHDRIVER=overlay
+
+# Name this according to personal preference
+function rdtest() {
+  if [ "$1" != "" ]; then
+    DOCKER_BINARY=$GOPATH/src/github.com/docker/docker/bundles/$1/binary/docker
+    if [ ! -f $DOCKER_BINARY ]; then
+      current_version=`cat $GOPATH/src/github.com/docker/docker/VERSION`
+      echo "$DOCKER_BINARY does not exist"
+      echo "Current checked out docker version: $current_version"
+      echo "Checkout desired version and run 'make binary' from $GOPATH/src/github.com/docker/docker"
+      return 1
+    fi
+  fi
+
+  $GOPATH/src/github.com/docker/distribution/contrib/docker-integration/run.sh
+}
+```
+
+Run with Docker release version
+```
+$ rdtest
+```
+
+Run using local development version of docker
+```
+$ cd $GOPATH/src/github.com/docker/docker
+$ make binary
+$ rdtest `cat VERSION`
 ```
 
 ## Running manually outside of Docker
