@@ -4,70 +4,71 @@
 
 ### If your problem is with...
 
- - [ ] automated builds
- - [ ] your account on the [Docker Hub](https://hub.docker.com/)
- - [ ] any other [Docker Hub](https://hub.docker.com/) issue
+ - automated builds
+ - your account on the [Docker Hub](https://hub.docker.com/)
+ - any other [Docker Hub](https://hub.docker.com/) issue
 
-Then please do not report your issue here - you should instead report it to [https://support.docker.com]
+Then please do not report your issue here - you should instead report it to [https://support.docker.com](https://support.docker.com)
 
 ### If you...
 
- - [ ] need help setting up your registry
- - [ ] can't figure out something
- - [ ] are not sure what's going on or what your problem is
+ - need help setting up your registry
+ - can't figure out something
+ - are not sure what's going on or what your problem is
 
 Then please do not open an issue here yet - you should first try one of the following support forums:
 
- * irc: #docker-distribution on freenode
- * mailing-list: <distribution@dockerproject.org> or https://groups.google.com/a/dockerproject.org/forum/#!forum/distribution
+ - irc: #docker-distribution on freenode
+ - mailing-list: <distribution@dockerproject.org> or https://groups.google.com/a/dockerproject.org/forum/#!forum/distribution
 
 ## Reporting an issue properly
 
 By following these simple rules you will get better and faster feedback on your issue.
 
- - [ ] search the bugtracker for an already reported issue
+ - search the bugtracker for an already reported issue
 
 ### If you found an issue that describes your problem:
 
- - [ ] please read other user comments first, and confirm this is the same issue: a given error condition might be indicative of different problems - you may also find a workaround in the comments
- - [ ] please refrain from adding "same thing here" or "+1" comments
- - [ ] you don't need to comment on an issue to get notified of updates: just hit the "subscribe" button
- - [ ] comment if you have some new, technical and relevant information to add to the case
+ - please read other user comments first, and confirm this is the same issue: a given error condition might be indicative of different problems - you may also find a workaround in the comments
+ - please refrain from adding "same thing here" or "+1" comments
+ - you don't need to comment on an issue to get notified of updates: just hit the "subscribe" button
+ - comment if you have some new, technical and relevant information to add to the case
 
 ### If you have not found an existing issue that describes your problem:
 
- - [ ] create a new issue, with a succinct title that describes your issue:
-   * bad title: "It doesn't work with my docker"
-   * good title: "Private registry push fail: 400 error with E_INVALID_DIGEST"
- - [ ] copy the output of `docker version`
- - [ ] copy the output of `docker info`
- - [ ] copy your Registry version
- - [ ] copy the command line you used to launch your Registry
- - [ ] restart your docker daemon in debug mode (add `-D` to the daemon launch arguments)
- - [ ] reproduce your problem and get your docker daemon logs showing the error
- - [ ] if relevant, copy your registry logs that show the error
- - [ ] provide any relevant detail about your specific Registry configuration (eg: storage backend used)
- - [ ] indicate if you are using an enterprise proxy, Nginx, or anything else between you and your Registry
+ 1. create a new issue, with a succinct title that describes your issue:
+   - bad title: "It doesn't work with my docker"
+   - good title: "Private registry push fail: 400 error with E_INVALID_DIGEST"
+ 2. copy the output of:
+   - `docker version`
+   - `docker info`
+   - `docker exec <registry-container> registry -version`
+ 3. copy the command line you used to launch your Registry
+ 4. restart your docker daemon in debug mode (add `-D` to the daemon launch arguments)
+ 5. reproduce your problem and get your docker daemon logs showing the error
+ 6. if relevant, copy your registry logs that show the error
+ 7. provide any relevant detail about your specific Registry configuration (e.g., storage backend used)
+ 8. indicate if you are using an enterprise proxy, Nginx, or anything else between you and your Registry
 
 ## Contributing a patch for a known bug, or a small correction
 
 You should follow the basic GitHub workflow:
 
- - [ ] fork
- - [ ] commit a change
- - [ ] make sure the tests pass
- - [ ] PR
+ 1. fork
+ 2. commit a change
+ 3. make sure the tests pass
+ 4. PR
 
 Additionally, you must [sign your commits](https://github.com/docker/docker/blob/master/CONTRIBUTING.md#sign-your-work). It's very simple:
 
- * configure your name with git: `git config user.name "Real Name" && git config user.email mail@example.com`
- * sign your commits using `-s`: `git commit -s -m "My commit"`
+ - configure your name with git: `git config user.name "Real Name" && git config user.email mail@example.com`
+ - sign your commits using `-s`: `git commit -s -m "My commit"`
 
 Some simple rules to ensure quick merge:
 
- - [ ] clearly point to the issue(s) you want to fix in your PR comment
- - [ ] when possible, prefer multiple (smaller) PRs addressing individual issues over a big one trying to address multiple issues at once
- - [ ] if you need to amend your PR following comments, please squash instead of adding more commits
+ - clearly point to the issue(s) you want to fix in your PR comment (e.g., `closes #12345`)
+ - prefer multiple (smaller) PRs addressing individual issues over a big one trying to address multiple issues at once
+ - if you need to amend your PR following comments, please squash instead of adding more commits
 
 ## Contributing new features
 
@@ -82,9 +83,9 @@ Your PR will be reviewed by the community, then ultimately by the project mainta
 
 It's mandatory to:
 
- * interact respectfully with other community members and maintainers - more generally, you are expected to abide by the [Docker community rules](https://github.com/docker/docker/blob/master/CONTRIBUTING.md#docker-community-guidelines)
- * address maintainers' comments and modify your submission accordingly
- * write tests for any new code
+ - interact respectfully with other community members and maintainers - more generally, you are expected to abide by the [Docker community rules](https://github.com/docker/docker/blob/master/CONTRIBUTING.md#docker-community-guidelines)
+ - address maintainers' comments and modify your submission accordingly
+ - write tests for any new code
 
 Complying to these simple rules will greatly accelerate the review process, and will ensure you have a pleasant experience in contributing code to the Registry.
 
@@ -96,20 +97,20 @@ Have a look at a great, succesful contribution: the [Ceph driver PR](https://git
 To keep track of the state of issues and PRs, we've adopted a set of simple labels. The following are currently in use:
 
 <dl>
-	<dt><a href="https://github.com/docker/distribution/issues?q=is%3Aopen+-label%3AReady+-label%3A%22In+Progress%22+-label%3A%22Blocked%22">Backlog</a></dt>
-	<dd>Issues marked with this label are considered not yet ready for implementation. Either they are untriaged or require futher detail to proceed.</dd>
+    <dt><a href="https://github.com/docker/distribution/issues?q=is%3Aopen+-label%3AReady+-label%3A%22In+Progress%22+-label%3A%22Blocked%22">Backlog</a></dt>
+    <dd>Issues marked with this label are considered not yet ready for implementation. Either they are untriaged or require futher detail to proceed.</dd>
 
-	<dt><a href="https://github.com/docker/distribution/labels/Blocked">Blocked</a></dt>
-	<dd>If an issue requires further clarification or is blocked on an unresolved dependency, this label should be used.</dd>
+    <dt><a href="https://github.com/docker/distribution/labels/Blocked">Blocked</a></dt>
+    <dd>If an issue requires further clarification or is blocked on an unresolved dependency, this label should be used.</dd>
 
-	<dt><a href="https://github.com/docker/distribution/labels/Sprint">Sprint</a></dt>
-	<dd>Issues marked with this label are being worked in the current sprint. All required information should be available and design details have been worked out.</dd>
+    <dt><a href="https://github.com/docker/distribution/labels/Sprint">Sprint</a></dt>
+    <dd>Issues marked with this label are being worked in the current sprint. All required information should be available and design details have been worked out.</dd>
 
-	<dt><a href="https://github.com/docker/distribution/labels/In%20Progress">In Progress</a></dt>
-	<dd>The issue or PR is being actively worked on by the assignee.</dd>
+    <dt><a href="https://github.com/docker/distribution/labels/In%20Progress">In Progress</a></dt>
+    <dd>The issue or PR is being actively worked on by the assignee.</dd>
 
-	<dt><a href="https://github.com/docker/distribution/issues?q=is%3Aclosed">Done</a></dt>
-	<dd>Issues marked with this label are complete. This can be considered a psuedo-label, in that if it is closed, it is considered "Done".</dd>
+    <dt><a href="https://github.com/docker/distribution/issues?q=is%3Aclosed">Done</a></dt>
+    <dd>Issues marked with this label are complete. This can be considered a psuedo-label, in that if it is closed, it is considered "Done".</dd>
 </dl>
 
 If an issue or PR is not labeled correctly or you believe it is not in the right state, please contact a maintainer to fix the problem.
