@@ -361,19 +361,23 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 
 // List returns a list of the objects that are direct descendants of the given path.
 func (d *driver) List(ctx context.Context, path string) ([]string, error) {
+	var files []string
+
 	prefix := d.swiftPath(path)
 	if prefix != "" {
 		prefix += "/"
 	}
 
 	opts := &swift.ObjectsOpts{
-		Path:      prefix,
+		Prefix:    prefix,
 		Delimiter: '/',
 	}
 
-	files, err := d.Conn.ObjectNames(d.Container, opts)
-	for index, name := range files {
-		files[index] = "/" + strings.TrimSuffix(name, "/")
+	objects, err := d.Conn.Objects(d.Container, opts)
+	for _, obj := range objects {
+		if !obj.PseudoDirectory {
+			files = append(files, "/"+strings.TrimSuffix(obj.Name, "/"))
+		}
 	}
 
 	return files, parseError(path, err)
