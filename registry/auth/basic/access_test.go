@@ -14,8 +14,13 @@ import (
 func TestBasicAccessController(t *testing.T) {
 
 	testRealm := "The-Shire"
-	testUser := "bilbo"
-	testHtpasswdContent := "bilbo:{SHA}5siv5c0SHx681xU6GiSx9ZQryqs="
+	testUsers := []string{"bilbo","frodo","MiShil","DeokMan"}
+	testPasswords := []string{"baggins","baggins","새주","공주님"}
+	testHtpasswdContent := `bilbo:{SHA}5siv5c0SHx681xU6GiSx9ZQryqs=
+							frodo:$2y$05$926C3y10Quzn/LnqQH86VOEVh/18T6RnLaS.khre96jLNL/7e.K5W
+							MiShil:$2y$05$0oHgwMehvoe8iAWS8I.7l.KoECXrwVaC16RPfaSCU5eVTFrATuMI2
+							DeokMan:공주님`
+	
 
 	tempFile, err := ioutil.TempFile("", "htpasswd-test")
 	if err != nil {
@@ -36,7 +41,9 @@ func TestBasicAccessController(t *testing.T) {
 	}
 
 	tempFile.Close()
-
+	
+	var userNumber = 0
+	
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithValue(nil, "http.request", r)
 		authCtx, err := accessController.Authorized(ctx)
@@ -55,8 +62,8 @@ func TestBasicAccessController(t *testing.T) {
 			t.Fatal("basic accessController did not set auth.user context")
 		}
 
-		if userInfo.Name != testUser {
-			t.Fatalf("expected user name %q, got %q", testUser, userInfo.Name)
+		if userInfo.Name != testUsers[userNumber] {
+			t.Fatalf("expected user name %q, got %q", testUsers[userNumber], userInfo.Name)
 		}
 
 		w.WriteHeader(http.StatusNoContent)
@@ -79,22 +86,25 @@ func TestBasicAccessController(t *testing.T) {
 		t.Fatalf("unexpected non-fail response status: %v != %v", resp.StatusCode, http.StatusUnauthorized)
 	}
 
-	req, _ = http.NewRequest("GET", server.URL, nil)
+	for i := 0; i < len(testUsers); i++ {
+		userNumber = i
+		req, _ = http.NewRequest("GET", server.URL, nil)
+		sekrit := testUsers[i]+":"+testPasswords[i] 
+		credential := "Basic " + base64.StdEncoding.EncodeToString([]byte(sekrit))
 
-	sekrit := "bilbo:baggins"
-	credential := "Basic " + base64.StdEncoding.EncodeToString([]byte(sekrit))
+		req.Header.Set("Authorization", credential)
+		resp, err = client.Do(req)
+		
+		if err != nil {
+			t.Fatalf("unexpected error during GET: %v", err)
+		}
+		defer resp.Body.Close()
 
-	req.Header.Set("Authorization", credential)
-	resp, err = client.Do(req)
-
-	if err != nil {
-		t.Fatalf("unexpected error during GET: %v", err)
+		// Request should be authorized
+		if resp.StatusCode != http.StatusNoContent {
+			t.Fatalf("unexpected non-success response status: %v != %v for %s %s %s", resp.StatusCode, http.StatusNoContent, testUsers[i], testPasswords[i], credential)
+		}
 	}
-	defer resp.Body.Close()
-
-	// Request should be authorized
-	if resp.StatusCode != http.StatusNoContent {
-		t.Fatalf("unexpected non-success response status: %v != %v", resp.StatusCode, http.StatusNoContent)
-	}
+	
 
 }
