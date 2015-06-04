@@ -9,11 +9,9 @@
 package basic
 
 import (
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/auth"
@@ -58,8 +56,7 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 		return nil, err
 	}
 
-	authHeader := req.Header.Get("Authorization")
-
+	authHeader := req.Header.Get("Authorization") 
 	if authHeader == "" {
 		challenge := challenge{
 			realm: ac.realm,
@@ -67,35 +64,20 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 		return nil, &challenge
 	}
 
-	parts := strings.Split(req.Header.Get("Authorization"), " ")
-
-	challenge := challenge{
-		realm: ac.realm,
+	user, pass, ok := req.BasicAuth()
+	if !ok {
+		return nil, errors.New("Invalid Authorization header")
 	}
-
-	if len(parts) != 2 || strings.ToLower(parts[0]) != "basic" {
-		challenge.err = ErrPasswordRequired
-		return nil, &challenge
-	}
-
-	text, err := base64.StdEncoding.DecodeString(parts[1])
-	if err != nil {
+		
+	if res, _ := ac.htpasswd.AuthenticateUser(user, pass); !res {
+		challenge := challenge{
+			realm: ac.realm,
+		}
 		challenge.err = ErrInvalidCredential
 		return nil, &challenge
 	}
 
-	credential := strings.Split(string(text), ":")
-	if len(credential) != 2 {
-		challenge.err = ErrInvalidCredential
-		return nil, &challenge
-	}
-
-	if res, _ := ac.htpasswd.AuthenticateUser(credential[0], credential[1]); !res {
-		challenge.err = ErrInvalidCredential
-		return nil, &challenge
-	}
-
-	return auth.WithUser(ctx, auth.UserInfo{Name: credential[0]}), nil
+	return auth.WithUser(ctx, auth.UserInfo{Name: user}), nil
 }
 
 func (ch *challenge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
