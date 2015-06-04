@@ -178,8 +178,8 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 
 // PutContent stores the []byte content at a location designated by "path".
 func (d *driver) PutContent(ctx context.Context, path string, contents []byte) error {
-	if dir, err := d.createParentFolder(path); err != nil {
-		return parseError(dir, err)
+	if err := d.createParentFolders(path); err != nil {
+		return err
 	}
 	err := d.Conn.ObjectPutBytes(d.Container, d.swiftPath(path),
 		contents, d.getContentType())
@@ -241,8 +241,8 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 	if err != nil {
 		if swiftErr, ok := err.(*swift.Error); ok && swiftErr.StatusCode == 404 {
 			// Create a object manifest
-			if dir, err := d.createParentFolder(path); err != nil {
-				return bytesRead, parseError(dir, err)
+			if err := d.createParentFolders(path); err != nil {
+				return bytesRead, err
 			}
 			manifest, err := d.createManifest(path)
 			if err != nil {
@@ -455,22 +455,21 @@ func (d *driver) swiftPath(path string) string {
 	return strings.TrimLeft(strings.TrimRight(d.Prefix, "/")+path, "/")
 }
 
-func (d *driver) createParentFolder(path string) (string, error) {
+func (d *driver) createParentFolders(path string) error {
 	dir := gopath.Dir(path)
-	if dir == "/" {
-		return dir, nil
-	}
-
-	_, _, err := d.Conn.Object(d.Container, d.swiftPath(dir))
-	if swiftErr, ok := err.(*swift.Error); ok && swiftErr.StatusCode == 404 {
-		_, err := d.Conn.ObjectPut(d.Container, d.swiftPath(dir), bytes.NewReader(make([]byte, 0)),
-			false, "", directoryMimeType, nil)
-		if err != nil {
-			return dir, err
+	for dir != "/" {
+		_, _, err := d.Conn.Object(d.Container, d.swiftPath(dir))
+		if swiftErr, ok := err.(*swift.Error); ok && swiftErr.StatusCode == 404 {
+			_, err := d.Conn.ObjectPut(d.Container, d.swiftPath(dir), bytes.NewReader(make([]byte, 0)),
+				false, "", directoryMimeType, nil)
+			if err != nil {
+				return parseError(dir, err)
+			}
 		}
+		dir = gopath.Dir(dir)
 	}
 
-	return dir, nil
+	return nil
 }
 
 func (d *driver) getContentType() string {
