@@ -73,6 +73,42 @@ func TestRepositoryNameRegexp(t *testing.T) {
 			input: strings.Repeat("a", 256),
 			err:   ErrRepositoryNameLong,
 		},
+		{
+			input: "-foo/bar",
+			err:   ErrRepositoryNameComponentInvalid,
+		},
+		{
+			input: "foo/bar-",
+			err:   ErrRepositoryNameComponentInvalid,
+		},
+		{
+			input: "foo-/bar",
+			err:   ErrRepositoryNameComponentInvalid,
+		},
+		{
+			input: "foo/-bar",
+			err:   ErrRepositoryNameComponentInvalid,
+		},
+		{
+			input: "_foo/bar",
+			err:   ErrRepositoryNameComponentInvalid,
+		},
+		{
+			input: "foo/bar_",
+			err:   ErrRepositoryNameComponentInvalid,
+		},
+		{
+			input: "____/____",
+			err:   ErrRepositoryNameComponentInvalid,
+		},
+		{
+			input: "_docker/_docker",
+			err:   ErrRepositoryNameComponentInvalid,
+		},
+		{
+			input: "docker_/docker_",
+			err:   ErrRepositoryNameComponentInvalid,
+		},
 	} {
 
 		failf := func(format string, v ...interface{}) {
