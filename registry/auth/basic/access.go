@@ -56,7 +56,7 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 		return nil, err
 	}
 
-	authHeader := req.Header.Get("Authorization") 
+	authHeader := req.Header.Get("Authorization")
 	if authHeader == "" {
 		challenge := challenge{
 			realm: ac.realm,
@@ -68,7 +68,7 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 	if !ok {
 		return nil, errors.New("Invalid Authorization header")
 	}
-		
+
 	if res, _ := ac.htpasswd.AuthenticateUser(user, pass); !res {
 		challenge := challenge{
 			realm: ac.realm,
