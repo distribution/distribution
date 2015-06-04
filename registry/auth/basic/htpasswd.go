@@ -8,12 +8,12 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	
+
 	"golang.org/x/crypto/bcrypt"
 )
 
 // AuthenticationFailureErr - a generic error message for authentication failure to be presented to agent.
-var AuthenticationFailureErr = errors.New("Bad username or password")
+var ErrAuthenticationFailure = errors.New("Bad username or password")
 
 // HTPasswd - holds a path to a system .htpasswd file and the machinery to parse it.
 type HTPasswd struct {
@@ -22,34 +22,44 @@ type HTPasswd struct {
 }
 
 // AuthType represents a particular hash function used in the htpasswd file.
-type AuthType int 
+type AuthType int
+
 const (
-	PlainText 	AuthType 	= iota
+	// PlainText - Plain-text password storage (htpasswd -p)
+	PlainText AuthType = iota
+	// SHA1 - sha hashed password storage (htpasswd -s)
 	SHA1
+	// ApacheMD5 - apr iterated md5 hashing (htpasswd -m)
 	ApacheMD5
+	// BCrypt - BCrypt adapative password hashing (htpasswd -B)
 	BCrypt
+	// Crypt - System crypt() hashes.  (htpasswd -d)
 	Crypt
 )
 
 // String returns a text representation of the AuthType
 func (at AuthType) String() string {
-	switch(at) {
-		case PlainText: return "plaintext"
-		case SHA1: return "sha1"
-		case ApacheMD5: return "md5"
-		case BCrypt: return "bcrypt"
-		case Crypt: return "system crypt"
+	switch at {
+	case PlainText:
+		return "plaintext"
+	case SHA1:
+		return "sha1"
+	case ApacheMD5:
+		return "md5"
+	case BCrypt:
+		return "bcrypt"
+	case Crypt:
+		return "system crypt"
 	}
 	return "unknown"
 }
-
 
 // NewHTPasswd - Create a new HTPasswd with the given path to .htpasswd file.
 func NewHTPasswd(htpath string) *HTPasswd {
 	return &HTPasswd{path: htpath}
 }
 
-var bcryptPrefixRegexp *regexp.Regexp = regexp.MustCompile(`^\$2[ab]?y\$`)
+var bcryptPrefixRegexp = regexp.MustCompile(`^\$2[ab]?y\$`)
 
 // GetAuthCredentialType - Inspect an htpasswd file credential and guess the encryption algorithm used.
 func GetAuthCredentialType(cred string) AuthType {
@@ -72,7 +82,6 @@ func GetAuthCredentialType(cred string) AuthType {
 // AuthenticateUser - Check a given user:password credential against the receiving HTPasswd's file.
 func (htpasswd *HTPasswd) AuthenticateUser(user string, pwd string) (bool, error) {
 
-
 	// Open the file.
 	in, err := os.Open(htpasswd.path)
 	if err != nil {
@@ -94,34 +103,39 @@ func (htpasswd *HTPasswd) AuthenticateUser(user string, pwd string) (bool, error
 		if entry[0] == user {
 			credential := entry[1]
 			credType := GetAuthCredentialType(credential)
-			switch(credType) {
-				case SHA1: {
+			switch credType {
+			case SHA1:
+				{
 					sha := sha1.New()
 					sha.Write([]byte(pwd))
 					hash := base64.StdEncoding.EncodeToString(sha.Sum(nil))
 					return entry[1][5:] == hash, nil
 				}
-				case ApacheMD5: {
-					return false, errors.New(ApacheMD5.String()+" htpasswd hash function not yet supported")
+			case ApacheMD5:
+				{
+					return false, errors.New(ApacheMD5.String() + " htpasswd hash function not yet supported")
 				}
-				case BCrypt: {
-					err := bcrypt.CompareHashAndPassword([]byte(credential),[]byte(pwd))
+			case BCrypt:
+				{
+					err := bcrypt.CompareHashAndPassword([]byte(credential), []byte(pwd))
 					if err != nil {
 						return false, err
 					}
 					return true, nil
 				}
-				case Crypt: {
-					return false, errors.New(Crypt.String()+" htpasswd hash function not yet supported")
+			case Crypt:
+				{
+					return false, errors.New(Crypt.String() + " htpasswd hash function not yet supported")
 				}
-				case PlainText: {
+			case PlainText:
+				{
 					if pwd == credential {
 						return true, nil
-					} 
-					return false, AuthenticationFailureErr
+					}
+					return false, ErrAuthenticationFailure
 				}
 			}
 		}
 	}
-	return false, AuthenticationFailureErr
+	return false, ErrAuthenticationFailure
 }
