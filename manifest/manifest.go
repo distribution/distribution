@@ -8,7 +8,7 @@ import (
 )
 
 // TODO(stevvooe): When we rev the manifest format, the contents of this
-// package should me moved to manifest/v1.
+// package should be moved to manifest/v1.
 
 const (
 	// ManifestMediaType specifies the mediaType for the current version. Note
