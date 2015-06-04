@@ -139,3 +139,8 @@ To enable the [Ceph RADOS storage driver](storage-drivers/rados.md)
 ```sh
 export DOCKER_BUILDTAGS='include_rados'
 ```
+
+To enable the [Azure storage driver](storage-drivers/azure.md), use the
+`include_azure` build tag.
+
+
