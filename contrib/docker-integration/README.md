@@ -1,16 +1,31 @@
-# Docker Registry Multi-Configuration Testing
+# Docker Registry Integration Testing
 
-This compose configuration is intended to setup a testing environment for Docker
+These integration tests cover interactions between the Docker daemon and the
+registry server. All tests are run using the docker cli.
+
+The compose configuration is intended to setup a testing environment for Docker
 using multiple registry configurations. These configurations include different
 combinations of a v1 and v2 registry as well as TLS configurations.
 
-### Limitations
+## Running inside of Docker
+### Get integration container
+The container image to run the integation tests will need to be pulled or built
+locally.
 
-Currently this setup is configured to use localhost as the hostname which
-limits the ease of testing within Docker since localhost is always treated
-as an insecure registry. To treat localhost as secure the Docker code must
-be modified. Without localhost as secure, the test cases will not distinguish
-between a TLS configuration with a CA and self-signed.
+*Building locally*
+```
+docker build -t distribution/docker-integration .
+```
+
+### Run script
+
+Invoke the tests within Docker through the `run.sh` script.
+
+```
+./run.sh
+```
+
+## Running manually outside of Docker
 
 ### Install Docker Compose
 
@@ -26,15 +41,14 @@ between a TLS configuration with a CA and self-signed.
 
 		$  sudo chmod +x /usr/local/bin/docker-compose
 
-## Usage
-
 ### Start compose setup
 ```
 docker-compose up
 ```
 
 ### Install Certificates
-The certificates must be installed in /etc/docker/cert.d in order to use TLS client auth and use the CA certificate.
+The certificates must be installed in /etc/docker/cert.d in order to use TLS
+client auth and use the CA certificate.
 ```
 sudo sh ./install_certs.sh
 ```
@@ -52,6 +66,16 @@ docker push localhost:5441/hello-world
 # Perform login using user `testuser` and password `passpassword`
 ```
 
+### Set /etc/hosts entry
+Find the non-localhost ip address of local machine
+
+### Run bats
+Run the bats tests after updating /etc/hosts, installing the certificates, and
+running the `docker-compose` script.
+```
+bats -p .
+```
+
 ## Configurations
 
 Port | V2 | V1 | TLS | Authentication
@@ -59,6 +83,7 @@ Port | V2 | V1 | TLS | Authentication
 5000 | yes | yes | no | none
 5001 | no | yes | no | none
 5002 | yes | no | no | none
+5011 | no | yes | yes | none
 5440 | yes | yes | yes | none
 5441 | yes | yes | yes | basic (testuser/passpassword)
 5442 | yes | yes | yes | TLS client

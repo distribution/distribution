@@ -48,7 +48,3 @@ execute docker-compose up -d
 # Run the tests.
 execute time bats -p $TESTS
 
-
-# Run test script
-execute sh test_docker.sh localregistry
-
