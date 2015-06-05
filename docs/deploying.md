@@ -111,6 +111,9 @@ a local registry.
 			
 8. Remove all the unused images from your local environment:
 
+  If you are building other images and haven't pushed them yet, publish them before
+  running this command.
+
 		$ docker rmi -f $(docker images -q -a )
 
 	This command is for illustrative purposes; removing the image forces any `run`
@@ -369,8 +372,159 @@ support.
 		* Closing connection 0
 		curl: (60) SSL certificate problem: self signed certificate
 		More details here: http://curl.haxx.se/docs/sslcerts.html
+
+## Deploy a v2 registry with Nginx and basic authentication
+
+This example shows you how to securely deploy a v2 registry using basic authentication.
+
+### Install Docker Compose
+
+1. Open a new terminal on the host with your `distribution` directory.
+
+2. Get the `docker-compose` binary.
+
+		$ sudo wget https://github.com/docker/compose/releases/download/1.3.0/docker-compose-`uname  -s`-`uname -m` -O /usr/local/bin/docker-compose
+
+	This command installs the binary in the `/usr/local/bin` directory. 
 	
-## Configure Nginx with a v1 and v2 registry
+3. Add executable permissions to the binary.
+
+		$  sudo chmod +x /usr/local/bin/docker-compose
+
+### Do some housekeeping
+
+1. Remove all the unused images from your local environment:
+
+     If you are building other images and haven't pushed them yet, publish them before
+     running this command.
+
+        $ docker rmi -f $(docker images -q -a )
+    
+     This step is a housekeeping step. It prevents you from mistakenly picking up
+     an old image as you work through this example.
+		
+2. Edit the `distribution/cmd/registry/config.yml` file and remove the `tls` block.
+
+	If you worked through the previous example, you'll have a `tls` block. To use
+	TLS with the registry and Nginx, you should terminate the TLS on the Nginx
+	rather than the registry.
+
+### Configure your system
+
+1. Change to the `distribution/contrib/basicauth` directory.
+
+	This directory contains a single `docker-compose.yml` configuration file and an `nginx`
+	configuration directory. The `nginx` directory contains:
+	
+	| File                      | Description                                                                        |
+  |---------------------------|------------------------------------------------------------------------------------|
+  | `Dockerfile`              | Describes the Nginx image with a configuration that supports basic authentication. |
+  | `docker-registry-v2.conf` | Specifies the headers required by the registry.                                    |
+  | `registry-basic.conf`     | Specifies the basic authentication configuration required by the registry.         |
+  | `registry.conf`           | Specifies the base configuration, including TLS, required by the registry.         |
+  | `ssl`                     | Contains pre-generated certificates to use in the example.                         |
+  | `test.pass`               | Contains a username-password combination to use in testing.                        |
+			
+2. Create a `certs.d` directory on your local machine. 
+
+        $ sudo mkdir -p /etc/docker/certs.d/localhost:5441
+	  
+3. Copy the sample certification to your new `certs.d` directory.
+	
+        $ sudo cp nginx/ssl/registry-ca+ca.pem /etc/docker/certs.d/localhost:5441/ca.crt
+
+### Build and run the example
+
+1. Go to the `distribution/basicauth` directory
+
+	This directory includes a single `docker-compose.yml` configuration.
+	
+        nginx:
+          build: "nginx"
+          ports:
+            - "5441:5441"
+          links:
+            - registryv2:registryv2
+        registryv2:
+          build: "../../"
+          ports:
+            - "5000"
+
+ This configuration builds a new `nginx` image as specified by the
+ `nginx/Dockerfile` file. The `registryv2` image is built from the
+ `distribution/Dockerfile` you've used previously.
+	
+2. Use `docker-compose` to build both the `nginx` and `registryv2` server image.
+
+        $ docker-compose build
+        Building registryv2...
+        Step 0 : FROM golang:1.4
+        1.4: Pulling from golang
+        ...
+        Step 6 : COPY test.passwd /etc/nginx/test.passwd
+         ---> d6994dfe21b7
+        Removing intermediate container 31fcbfc0402e
+        Successfully built d6994dfe21b7
+
+3. Use `docker-compose` to run both the `nginx` and `registryv2` images in containers.
+
+        $ docker-compose up
+        Creating basicauth_registryv2_1...
+        Creating basicauth_nginx_1...
+        Attaching to basicauth_registryv2_1, basicauth_nginx_1
+        registryv2_1 | time="2015-05-31T04:54:07.598983831Z" level=info msg="endpoint local-8082 disabled, skipping" environment=development instance.id=8206ce7e-f52d-44cf-90c1-aeec0c070457 service=registry version=v2.0.0-alpha.3-332-gc07cca3 
+        registryv2_1 | time="2015-05-31T04:54:07.60037357Z" level=info msg="endpoint local-8083 disabled, skipping" environment=development instance.id=8206ce7e-f52d-44cf-90c1-aeec0c070457 service=registry version=v2.0.0-alpha.3-332-gc07cca3 
+        registryv2_1 | time="2015-05-31T04:54:07.60042165Z" level=info msg="using redis blob descriptor cache" environment=development instance.id=8206ce7e-f52d-44cf-90c1-aeec0c070457 service=registry version=v2.0.0-alpha.3-332-gc07cca3 
+        registryv2_1 | time="2015-05-31T04:54:07.600524214Z" level=info msg="listening on [::]:5000" environment=development instance.id=8206ce7e-f52d-44cf-90c1-aeec0c070457 service=registry version=v2.0.0-alpha.3-332-gc07cca3 
+
+5. In another terminal, verify both servers are running:
+
+        $ docker ps
+        CONTAINER ID        IMAGE                         COMMAND                CREATED              STATUS              PORTS                                     NAMES
+        a4aecbfaebc2        basicauth_nginx:latest        "nginx -g 'daemon of   About a minute ago   Up About a minute   80/tcp, 443/tcp, 0.0.0.0:5441->5441/tcp   basicauth_nginx_1        
+        4f4aeba1db03        basicauth_registryv2:latest   "registry cmd/regist   About a minute ago   Up About a minute   0.0.0.0:32768->5000/tcp                   basicauth_registryv2_1  
+  
+### Test basic authentication on the registry
+
+The best way to test your configuration is to login to the registry and push an image.
+
+1. Log into your new registry with the `testuser` username and `passpassword` password.
+
+        $ docker login -u testuser -p passpassword -e distribution@docker.com localhost:5441
+        WARNING: login credentials saved in /home/ubuntu/.dockercfg.
+        Login Succeeded
+
+2. Tag the `nginx` 1.9 image that you built.
+
+        $ docker tag nginx:1.9 localhost:5441/nginx:1.9
+		
+3. Verify the tag exists:
+
+  You should see both the original image you built with `docker-compose` and the
+  image you just tagged.
+
+        $ docker images
+        REPOSITORY              TAG                 IMAGE ID            CREATED             VIRTUAL SIZE
+        basicauth_nginx         latest              d6994dfe21b7        6 minutes ago       132.9 MB
+        basicauth_registryv2    latest              fcd261727e25        6 minutes ago       548.4 MB
+        nginx                   1.9                 a785ba7493fd        3 days ago          132.9 MB
+        localhost:5441/nginx   1.9                 a785ba7493fd        3 days ago          132.9 MB
+        golang                  1.4                 769d811a57fd        5 days ago          517.3 MB
+
+2. Push the image to your registry.
+
+        $ docker push localhost:5441/nginx:1.9
+        The push refers to a repository [localhost:5441/nginx] (len: 1)
+        a785ba7493fd: Image already exists 
+        72d73c46937a: Image successfully pushed 
+        ...snip...
+        dc2e1697e33e: Image successfully pushed 
+        df2a0347c9d0: Image successfully pushed 
+        39bb80489af7: Image successfully pushed 
+        Digest: sha256:3ac60bb3f14f8842dcbab52bee2a1fb99f2d88e3024830c3e8d7b38434335242
+
+	
+## Deploy Nginx with a v1 and v2 registry
 
 This sections describes how to use `docker-compose` to run a combined version
 1 and version 2.0 registry behind an `nginx` proxy. The combined registry is
@@ -387,7 +541,7 @@ procedure. The directory includes an example `compose` configuration.
 
 2. Get the `docker-compose` binary.
 
-		$ sudo wget https://github.com/docker/compose/releases/download/1.1.0/docker-compose-`uname  -s`-`uname -m` -O /usr/local/bin/docker-compose
+		$ sudo wget https://github.com/docker/compose/releases/download/1.3.0/docker-compose-`uname  -s`-`uname -m` -O /usr/local/bin/docker-compose
 
 	This command installs the binary in the `/usr/local/bin` directory. 
 	
@@ -398,7 +552,10 @@ procedure. The directory includes an example `compose` configuration.
 
 ### Do some housekeeping
 
-1. Remove any previous images.
+1. Remove all the unused and previous images from your local environment:
+
+   If you are building other images and haven't pushed them yet, publish them
+   before running this command.
 
 		$ docker rmi -f $(docker images -q -a )
 		
@@ -575,4 +732,5 @@ procedure. The directory includes an example `compose` configuration.
 		
 	This example refers to the specific port assigned to the 2.0 registry. You saw
 	this port earlier, when you used `docker ps` to show your running containers.
+
 

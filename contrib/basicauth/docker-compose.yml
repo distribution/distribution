@@ -1,0 +1,10 @@
+nginx:
+  build: "nginx"
+  ports:
+    - "5441:5441"
+  links:
+    - registryv2:registryv2
+registryv2:
+  build: "../../"
+  ports:
+    - "5000"
