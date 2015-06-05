@@ -116,6 +116,12 @@ indicating what is different. Optionally, we may start marking parts of the
 specification to correspond with the versions enumerated here.
 
 <dl>
+  <dt>2.0.2</dt>
+  <dd>
+    <li>Added section covering digest format.</li>
+    <li>Added more clarification that manifest cannot be deleted by tag.</li>
+  </dd>
+
 	<dt>2.0.1</dt>
 	<dd>
 		<ul>
@@ -237,6 +243,84 @@ When a `200 OK` or `401 Unauthorized` response is returned, the
 "Docker-Distribution-API-Version" header should be set to "registry/2.0".
 Clients may require this header value to determine if the endpoint serves this
 API. When this header is omitted, clients may fallback to an older API version.
+
+### Content Digests
+
+This API design is driven heavily by [content addressability](http://en.wikipedia.org/wiki/Content-addressable_storage).
+The core of this design is the concept of a content addressable identifier. It
+uniquely identifies content by taking a collision-resistent hash of the bytes.
+Such an identifier can be independently calculated and verified by selection
+of a common _algorithm_. If such an identifier can be communicated in a secure
+manner, one can retrieve the content from an insecure source, calculate it
+independently and be certain that the correct content was obtained. Put simply,
+the identifier is a property of the content.
+
+To disambiguate from other concepts, we call this identifier a _digest_. A
+_digest_ is a serialized hash result, consisting of a _algorithm_ and _hex_
+portion. The _algorithm_ identifies the methodology used to calculate the
+digest. The _hex_ portion is the hex-encoded result of the hash.
+
+We define a _digest_ string to match the following grammar:
+
+  digest      := algorithm ":" hex
+  algorithm   := /[A-Fa-f0-9_+.-]+/
+  hex         := /[A-Fa-f0-9]+/
+
+Some examples of _digests_ include the following:
+
+digest                                                                            | description                                   |
+----------------------------------------------------------------------------------|------------------------------------------------
+sha256:6c3c624b58dbbcd3c0dd82b4c53f04194d1247c6eebdaab7c610cf7d66709b3b           | Common sha256 based digest                    |
+tarsum.v1+sha256:6c3c624b58dbbcd3c0dd82b4c53f04194d1247c6eebdaab7c610cf7d66709b3b | Tarsum digest, used for legacy layer digests. |
+
+> __NOTE:__ While we show an example of using a `tarsum` digest, the security
+> of tarsum has not been verified. It is recommended that most implementations
+> use sha256 for interoperability.
+
+While the _algorithm_ does allow one to implement a wide variety of
+algorithms, compliant implementations should use sha256. Heavy processing of
+input before calculating a hash is discouraged to avoid degrading the
+uniqueness of the _digest_ but some canonicalization may be performed to
+ensure consistent identifiers.
+
+Let's use a simple example in pseudo-code to demonstrate a digest calculation:
+
+```
+let C = 'a small string'
+let B = sha256(C)
+let D = 'sha256:' + EncodeHex(B)
+let ID(C) = D
+```
+
+Above, we have bytestring _C_ passed into a function, _SHA256_, that returns a
+bytestring B, which is the hash of _C_. _D_ gets the algorithm concatenated
+with the hex encoding of _B_. We then define the identifier of _C_ to _ID(C)_
+as equal to _D_. A digest can be verified by independently calculating _D_ and
+comparing it with identifier _ID(C)_
+
+#### Digest Header
+
+To provide verification of http content, any response may include a `Docker-
+Content-Digest` header. This will include the digest of the target entity
+returned in the response. For blobs, this is the entire blob content. For
+manifests, this is the manifest body without the signature content, also known
+as the JWS payload. Note that the commonly used canonicalization for digest
+calculation may be dependent on the mediatype of the content, such as with
+manifests.
+
+The client may choose to ignore the header or may verify it to ensure content
+integrity and transport security. This is most important when fetching by a
+digest. To ensure security, the content should be verified against the digest
+used to fetch the content. At times, the returned digest may differ from that
+used to initiate a request. Such digests are considered to be from different
+_domains_, meaning they have different values for _algorithm_. In such a case,
+the client may choose to verify the digests in both domains or ignore the
+server's digest. To maintain security, the client _must_ always verify the
+content against the _digest_ used to fetch the content.
+
+> __IMPORTANT:__ If a _digest_ is used to fetch content, the client should use
+> the same digest used to fetch the content to verify it. The header `Docker-
+> Content-Digest` should not be trusted over the "local" digest.
 
 ### Pulling An Image
 
