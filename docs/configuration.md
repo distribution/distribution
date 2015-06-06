@@ -348,7 +348,7 @@ here so make sure there is adequate space available.
 
 ### azure
 
-This storage backend uses Microsoft's Azure Storage platform.
+This storage backend uses Microsoft's Azure Blob Storage.
 
 <table>
   <tr>
@@ -367,7 +367,7 @@ This storage backend uses Microsoft's Azure Storage platform.
       Azure account name.
     </td>
   </tr>
-   <tr>
+  <tr>
     <td>
       <code>accountkey</code>
     </td>
@@ -378,7 +378,7 @@ This storage backend uses Microsoft's Azure Storage platform.
       Azure account key.
     </td>
   </tr>
-   <tr>
+  <tr>
     <td>
       <code>container</code>
     </td>
@@ -389,6 +389,19 @@ This storage backend uses Microsoft's Azure Storage platform.
       Name of the Azure container into which to store data.
     </td>
   </tr>
+   <tr>
+    <td>
+      <code>realm</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Domain name suffix for the Storage Service API endpoint. By default, this
+      is <code>core.windows.net</code>.
+    </td>
+  </tr>
+
 </table>
 
 
