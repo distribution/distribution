@@ -44,7 +44,7 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 		return nil, fmt.Errorf(`"path" must be set for basic access controller`)
 	}
 
-	return &accessController{realm: realm.(string), htpasswd: NewHTPasswd(path.(string))}, nil
+	return &accessController{realm: realm.(string), htpasswd: newHTPasswd(path.(string))}, nil
 }
 
 func (ac *accessController) Authorized(ctx context.Context, accessRecords ...auth.Access) (context.Context, error) {

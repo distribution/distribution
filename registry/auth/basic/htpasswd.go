@@ -55,7 +55,7 @@ func (at AuthType) String() string {
 }
 
 // NewHTPasswd Create a new HTPasswd with the given path to .htpasswd file.
-func NewHTPasswd(htpath string) *htpasswd {
+func newHTPasswd(htpath string) *htpasswd {
 	return &htpasswd{path: htpath}
 }
 
