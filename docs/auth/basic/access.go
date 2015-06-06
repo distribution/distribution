@@ -2,9 +2,6 @@
 // user credential hash in an htpasswd formatted file in a configuration-determined
 // location.
 //
-// The use of SHA hashes (htpasswd -s) is enforced since MD5 is insecure and simple
-// system crypt() may be as well.
-//
 // This authentication method MUST be used under TLS, as simple token-replay attack is possible.
 package basic
 
@@ -20,7 +17,7 @@ import (
 
 type accessController struct {
 	realm    string
-	htpasswd *HTPasswd
+	htpasswd *htpasswd
 }
 
 type challenge struct {
@@ -30,9 +27,9 @@ type challenge struct {
 
 var _ auth.AccessController = &accessController{}
 var (
-	// ErrPasswordRequired - returned when no auth token is given.
+	// ErrPasswordRequired Returned when no auth token is given.
 	ErrPasswordRequired = errors.New("authorization credential required")
-	// ErrInvalidCredential - returned when the auth token does not authenticate correctly.
+	// ErrInvalidCredential is returned when the auth token does not authenticate correctly.
 	ErrInvalidCredential = errors.New("invalid authorization credential")
 )
 
