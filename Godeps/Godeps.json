@@ -47,13 +47,8 @@
 		},
 		{
 			"ImportPath": "github.com/docker/docker/pkg/tarsum",
-			"Comment": "v1.4.1-863-g165ea5c",
-			"Rev": "165ea5c158cff3fc40d476ffe233a5ccc03e7d61"
-		},
-		{
-			"ImportPath": "github.com/docker/docker/vendor/src/code.google.com/p/go/src/pkg/archive/tar",
-			"Comment": "v1.4.1-863-g165ea5c",
-			"Rev": "165ea5c158cff3fc40d476ffe233a5ccc03e7d61"
+			"Comment": "v1.4.1-3932-gb63ec6e",
+			"Rev": "b63ec6e4b1f6f5c77a6a74a52fcea9564538c575"
 		},
 		{
 			"ImportPath": "github.com/docker/libtrust",
@@ -80,13 +75,13 @@
 			"Rev": "e444e69cbd2e2e3e0749a2f3c717cec491552bbf"
 		},
 		{
-			"ImportPath": "github.com/stevvooe/resumable",
-			"Rev": "51ad44105773cafcbe91927f70ac68e1bf78f8b4"
-		},
-		{
 			"ImportPath": "github.com/noahdesu/go-ceph/rados",
 			"Comment": "v.0.3.0-29-gb15639c",
 			"Rev": "b15639c44c05368348355229070361395d9152ee"
+		},
+		{
+			"ImportPath": "github.com/stevvooe/resumable",
+			"Rev": "51ad44105773cafcbe91927f70ac68e1bf78f8b4"
 		},
 		{
 			"ImportPath": "github.com/yvasiyarov/go-metrics",
