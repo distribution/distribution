@@ -150,7 +150,7 @@ environment variables on the command line using the `-e` flag on `docker run` or
 from within a Dockerfile using the `ENV` instruction.
 
 To override a configuration option, create an environment variable named
-`REGISTRY\variable_` where *`variable`* is the name of the configuration option
+`REGISTRY_variable` where *`variable`* is the name of the configuration option
 and the `_` (underscore) represents indention levels. For example, you can
 configure the `rootdirectory` of the `filesystem` storage backend:
 
