@@ -16,22 +16,24 @@ import (
 	"archive/tar"
 	"bytes"
 	"crypto/md5"
+	"crypto/tls"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"github.com/ncw/swift"
+	"github.com/ncw/swift/swifttest"
 	"io"
 	"net/http"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/ncw/swift"
-	"github.com/ncw/swift/swifttest"
 )
 
 var (
-	c                swift.Connection
+	c                *swift.Connection
 	srv              *swifttest.SwiftServer
 	m1               = swift.Metadata{"Hello": "1", "potato-Salad": "2"}
 	m2               = swift.Metadata{"hello": "", "potato-salad": ""}
@@ -54,36 +56,106 @@ const (
 
 type someTransport struct{ http.Transport }
 
-func TestTransport(t *testing.T) {
+func makeConnection() (*swift.Connection, error) {
 	var err error
+
 	UserName := os.Getenv("SWIFT_API_USER")
 	ApiKey := os.Getenv("SWIFT_API_KEY")
 	AuthUrl := os.Getenv("SWIFT_AUTH_URL")
+
+	Insecure := os.Getenv("SWIFT_AUTH_INSECURE")
+	ConnectionChannelTimeout := os.Getenv("SWIFT_CONNECTION_CHANNEL_TIMEOUT")
+	DataChannelTimeout := os.Getenv("SWIFT_DATA_CHANNEL_TIMEOUT")
+
 	if UserName == "" || ApiKey == "" || AuthUrl == "" {
+		if srv != nil {
+			srv.Close()
+		}
 		srv, err = swifttest.NewSwiftServer("localhost")
 		if err != nil {
-			t.Fatal("Failed to create server", err)
+			return nil, err
 		}
+
 		UserName = "swifttest"
 		ApiKey = "swifttest"
 		AuthUrl = srv.AuthURL
 	}
-	tr := &someTransport{Transport: http.Transport{MaxIdleConnsPerHost: 2048}}
-	ct := swift.Connection{
+
+	transport := &http.Transport{
+		Proxy:               http.ProxyFromEnvironment,
+		MaxIdleConnsPerHost: 2048,
+	}
+	if Insecure == "1" {
+		transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+
+	c := swift.Connection{
 		UserName:       UserName,
 		ApiKey:         ApiKey,
 		AuthUrl:        AuthUrl,
-		Tenant:         os.Getenv("SWIFT_TENANT"),
-		TenantId:       os.Getenv("SWIFT_TENANT_ID"),
-		Transport:      tr,
+		Transport:      transport,
 		ConnectTimeout: 60 * time.Second,
 		Timeout:        60 * time.Second,
 	}
-	err = ct.Authenticate()
+
+	var timeout int64
+	if ConnectionChannelTimeout != "" {
+		timeout, err = strconv.ParseInt(ConnectionChannelTimeout, 10, 32)
+		if err == nil {
+			c.ConnectTimeout = time.Duration(timeout) * time.Second
+		}
+	}
+
+	if DataChannelTimeout != "" {
+		timeout, err = strconv.ParseInt(DataChannelTimeout, 10, 32)
+		if err == nil {
+			c.Timeout = time.Duration(timeout) * time.Second
+		}
+	}
+
+	return &c, nil
+}
+
+func isV3Api() bool {
+	AuthUrl := os.Getenv("SWIFT_AUTH_URL")
+	return strings.Contains(AuthUrl, "v3")
+}
+
+func TestTransport(t *testing.T) {
+	var err error
+
+	c, err = makeConnection()
+	if err != nil {
+		t.Fatal("Failed to create server", err)
+	}
+
+	tr := &someTransport{
+		Transport: http.Transport{
+			MaxIdleConnsPerHost: 2048,
+		},
+	}
+
+	Insecure := os.Getenv("SWIFT_AUTH_INSECURE")
+
+	if Insecure == "1" {
+		tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+
+	c.Transport = tr
+
+	if isV3Api() {
+		c.Tenant = os.Getenv("SWIFT_TENANT")
+		c.Domain = os.Getenv("SWIFT_API_DOMAIN")
+	} else {
+		c.Tenant = os.Getenv("SWIFT_TENANT")
+		c.TenantId = os.Getenv("SWIFT_TENANT_ID")
+	}
+
+	err = c.Authenticate()
 	if err != nil {
 		t.Fatal("Auth failed", err)
 	}
-	if !ct.Authenticated() {
+	if !c.Authenticated() {
 		t.Fatal("Not authenticated")
 	}
 	if srv != nil {
@@ -92,27 +164,116 @@ func TestTransport(t *testing.T) {
 }
 
 // The following Test functions are run in order - this one must come before the others!
-func TestAuthenticate(t *testing.T) {
+func TestV1V2Authenticate(t *testing.T) {
 	var err error
-	UserName := os.Getenv("SWIFT_API_USER")
-	ApiKey := os.Getenv("SWIFT_API_KEY")
-	AuthUrl := os.Getenv("SWIFT_AUTH_URL")
-	if UserName == "" || ApiKey == "" || AuthUrl == "" {
-		srv, err = swifttest.NewSwiftServer("localhost")
-		if err != nil {
-			t.Fatal("Failed to create server", err)
-		}
-		UserName = "swifttest"
-		ApiKey = "swifttest"
-		AuthUrl = srv.AuthURL
+
+	if isV3Api() {
+		return
 	}
-	c = swift.Connection{
-		UserName: UserName,
-		ApiKey:   ApiKey,
-		AuthUrl:  AuthUrl,
-		Tenant:   os.Getenv("SWIFT_TENANT"),
-		TenantId: os.Getenv("SWIFT_TENANT_ID"),
+
+	c, err = makeConnection()
+	if err != nil {
+		t.Fatal("Failed to create server", err)
 	}
+
+	c.Tenant = os.Getenv("SWIFT_TENANT")
+	c.TenantId = os.Getenv("SWIFT_TENANT_ID")
+
+	err = c.Authenticate()
+	if err != nil {
+		t.Fatal("Auth failed", err)
+	}
+	if !c.Authenticated() {
+		t.Fatal("Not authenticated")
+	}
+}
+
+func TestV3AuthenticateWithDomainNameAndTenantId(t *testing.T) {
+	var err error
+	if !isV3Api() {
+		return
+	}
+
+	c, err = makeConnection()
+	if err != nil {
+		t.Fatal("Failed to create server", err)
+	}
+
+	c.TenantId = os.Getenv("SWIFT_TENANT_ID")
+	c.Domain = os.Getenv("SWIFT_API_DOMAIN")
+
+	err = c.Authenticate()
+	if err != nil {
+		t.Fatal("Auth failed", err)
+	}
+	if !c.Authenticated() {
+		t.Fatal("Not authenticated")
+	}
+}
+
+func TestV3AuthenticateWithDomainIdAndTenantId(t *testing.T) {
+	var err error
+
+	if !isV3Api() {
+		return
+	}
+
+	c, err = makeConnection()
+	if err != nil {
+		t.Fatal("Failed to create server", err)
+	}
+
+	c.TenantId = os.Getenv("SWIFT_TENANT_ID")
+	c.DomainId = os.Getenv("SWIFT_API_DOMAIN_ID")
+
+	err = c.Authenticate()
+	if err != nil {
+		t.Fatal("Auth failed", err)
+	}
+	if !c.Authenticated() {
+		t.Fatal("Not authenticated")
+	}
+}
+
+func TestV3AuthenticateWithDomainNameAndTenantName(t *testing.T) {
+	var err error
+
+	if !isV3Api() {
+		return
+	}
+
+	c, err = makeConnection()
+	if err != nil {
+		t.Fatal("Failed to create server", err)
+	}
+
+	c.Tenant = os.Getenv("SWIFT_TENANT")
+	c.Domain = os.Getenv("SWIFT_API_DOMAIN")
+
+	err = c.Authenticate()
+	if err != nil {
+		t.Fatal("Auth failed", err)
+	}
+	if !c.Authenticated() {
+		t.Fatal("Not authenticated")
+	}
+}
+
+func TestV3AuthenticateWithDomainIdAndTenantName(t *testing.T) {
+	var err error
+
+	if !isV3Api() {
+		return
+	}
+
+	c, err = makeConnection()
+	if err != nil {
+		t.Fatal("Failed to create server", err)
+	}
+
+	c.Tenant = os.Getenv("SWIFT_TENANT")
+	c.DomainId = os.Getenv("SWIFT_API_DOMAIN_ID")
+
 	err = c.Authenticate()
 	if err != nil {
 		t.Fatal("Auth failed", err)

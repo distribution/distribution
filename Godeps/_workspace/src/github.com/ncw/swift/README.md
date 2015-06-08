@@ -34,6 +34,7 @@ Here is a short example from the docs
         UserName: "user",
         ApiKey:   "key",
         AuthUrl:  "auth_url",
+        Domain:   "domain",  // Name of the domain (v3 auth only)
         Tenant:   "tenant",  // Name of the tenant (v2 auth only)
     }
     // Authenticate
@@ -45,7 +46,7 @@ Here is a short example from the docs
     containers, err := c.ContainerNames(nil)
     fmt.Println(containers)
     // etc...
-    
+
 Additions
 ---------
 
@@ -68,6 +69,25 @@ And optionally these if using v2 authentication
 
     export SWIFT_TENANT='TenantName'
     export SWIFT_TENANT_ID='TenantId'
+
+And optionally these if using v3 authentication
+
+    export SWIFT_TENANT='TenantName'
+    export SWIFT_TENANT_ID='TenantId'
+    export SWIFT_API_DOMAIN_ID='domain id'
+    export SWIFT_API_DOMAIN='domain name'
+
+And optionally this if you want to skip server certificate validation
+
+    export SWIFT_AUTH_INSECURE=1
+
+And optionally this to configure the connect channel timeout, in seconds
+
+    export SWIFT_CONNECTION_CHANNEL_TIMEOUT=60
+
+And optionally this to configure the data channel timeout, in seconds
+
+    export SWIFT_DATA_CHANNEL_TIMEOUT=60
 
 Then run the tests with `go test`
 
@@ -105,3 +125,4 @@ Contributors
 - lsowen <lsowen@s1network.com>
 - Sylvain Baubeau <sbaubeau@redhat.com>
 - Chris Kastorff <encryptio@gmail.com>
+- Dai HaoJun <haojun.dai@hp.com>

@@ -80,6 +80,8 @@ const (
 type Connection struct {
 	// Parameters - fill these in before calling Authenticate
 	// They are all optional except UserName, ApiKey and AuthUrl
+	Domain         string            // User's domain name
+	DomainId       string            // User's domain Id
 	UserName       string            // UserName for api
 	ApiKey         string            // Key for api access
 	AuthUrl        string            // Auth URL

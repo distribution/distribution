@@ -444,7 +444,7 @@ func (objr objectResource) get(a *action) interface{} {
 				if start >= cursor+length {
 					continue
 				}
-				segments = append(segments, bytes.NewReader(obj.data[max(0, start - cursor):]))
+				segments = append(segments, bytes.NewReader(obj.data[max(0, start-cursor):]))
 				cursor += length
 			}
 		}
@@ -452,7 +452,7 @@ func (objr objectResource) get(a *action) interface{} {
 		if end == -1 {
 			end = size
 		}
-		reader = io.LimitReader(io.MultiReader(segments...), int64(end - start))
+		reader = io.LimitReader(io.MultiReader(segments...), int64(end-start))
 	} else {
 		if end == -1 {
 			end = len(obj.data)
@@ -461,7 +461,7 @@ func (objr objectResource) get(a *action) interface{} {
 		reader = bytes.NewReader(obj.data[start:end])
 	}
 
-	h.Set("Content-Length", fmt.Sprint(end - start))
+	h.Set("Content-Length", fmt.Sprint(end-start))
 	h.Set("ETag", hex.EncodeToString(etag))
 	h.Set("Last-Modified", obj.mtime.Format(http.TimeFormat))
 
@@ -519,7 +519,7 @@ func (objr objectResource) put(a *action) interface{} {
 
 	var content_type string
 	if content_type = a.req.Header.Get("Content-Type"); content_type == "" {
-		content_type := mime.TypeByExtension(obj.name)
+		content_type = mime.TypeByExtension(obj.name)
 		if content_type == "" {
 			content_type = "application/octet-stream"
 		}
@@ -880,6 +880,6 @@ func NewSwiftServer(address string) (*SwiftServer, error) {
 	return server, nil
 }
 
-func (srv SwiftServer) Close() {
+func (srv *SwiftServer) Close() {
 	srv.Listener.Close()
 }
