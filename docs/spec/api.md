@@ -1,8 +1,14 @@
-<!--GITHUB
-page_title: Docker Registry HTTP API V2
-page_description: Explains how to use registry API
-page_keywords: registry, service, driver, images, storage, api
-IGNORES-->
+<!--[metadata]>
++++
+draft = true
+title = "Docker Registry HTTP API V2"
+description = "This is a specification for the API."
+keywords = ["registry, service, driver, images, storage,  api"]
+[menu.main]
+parent="smn_registry_ref"
++++
+<![end-metadata]-->
+
 
 # Docker Registry HTTP API V2
 

@@ -1,8 +1,13 @@
-<!--GITHUB
-page_title: Docker Registry v2 Authentication
-page_description: Introduces the Docker Registry v2 authentication
-page_keywords: registry, images, repository, v2, authentication
-IGNORES-->
+<!--[metadata]>
++++
+title = "Docker Registry v2 Authentication"
+description = "Introduces the Docker Registry v2 authentication"
+keywords = ["registry, images, repository, v2,  authentication"]
+[menu.main]
+parent="smn_registry_ref"
++++
+<![end-metadata]-->
+
 
 
 # Docker Registry v2 authentication via central service

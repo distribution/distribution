@@ -1,3 +1,9 @@
+<!--[metadata]>
++++
+draft = "true"
++++
+<![end-metadata]-->
+
 # Migrating a 1.0 registry to 2.0
 
 TODO: This needs to be revised in light of Olivier's work

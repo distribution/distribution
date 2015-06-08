@@ -1,8 +1,8 @@
-<!--GITHUB
-page_title: Distribution glossary
-page_description: Provides definition for distribution terms
-page_keywords: registry, service, images, repository, distribution, glossary, layer, blob
-IGNORES-->
+<!--[metadata]>
++++
+draft = "true"
++++
+<![end-metadata]-->
 
 # Glossary
 

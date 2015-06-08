@@ -1,3 +1,9 @@
+<!--[metadata]>
++++
+draft = "true"
++++
+<![end-metadata]-->
+
 # OS X Setup Guide
 
 This guide will walk you through running the new Go based [Docker registry](https://github.com/docker/distribution) on your local OS X machine.

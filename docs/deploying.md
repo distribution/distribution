@@ -1,8 +1,14 @@
-<!--GITHUB
-page_title: Deploying a registry server
-page_description: Explains how to deploy a registry server
-page_keywords: registry, service, images, repository, deploy
-IGNORES-->
+<!--[metadata]>
++++
+title = "Deploying a registry server"
+description = "Explains how to deploy a registry server"
+keywords = ["registry, service, images,  repository"]
+[menu.main]
+parent="smn_registry"
+weight=1
++++
+<![end-metadata]-->
+
 
 # Deploying a registry server
 
