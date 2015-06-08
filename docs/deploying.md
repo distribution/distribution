@@ -119,11 +119,9 @@ Then you have to instruct every docker daemon to trust that certificate. This is
 
  - you have to configure every docker daemon that wants to access your registry
 
-
-
 ## Using Compose
 
-It's highly recommended to use Docker Compose to facilitate managing your Registry configuration.
+It's highly recommended to use [Docker Compose](https://docs.docker.com/compose/) to facilitate managing your Registry configuration.
 
 Here is a simple `docker-compose.yml` that does setup your registry exactly as above, with TLS enabled.
 
