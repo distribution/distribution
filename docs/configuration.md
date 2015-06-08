@@ -49,7 +49,6 @@ This section lists all the registry configuration options. Some options in
 the list are mutually exclusive. So, make sure to read the detailed reference
 information about each option that appears later in this page.
 
-<<<<<<< HEAD
     version: 0.1
     log:
       level: debug
@@ -96,8 +95,12 @@ information about each option that appears later in this page.
       swift:
         username: username
         password: password
-        authurl: https://storage.myprovider.com/v2.0
+        authurl: https://storage.myprovider.com/v2.0 or https://storage.myprovider.com/v3/auth
         tenant: tenantname
+        tenantid: tenantid
+        domain: domain name for Openstack Identity v3 API
+        domainid: domain id for Openstack Identity v3 API
+        insecureskipverify: true
         region: fr
         container: containername
         rootdirectory: /swift/object/name/prefix
@@ -663,6 +666,50 @@ This storage backend uses Openstack Swift object storage.
     </td>
     <td>
       Your Openstack tenant name.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>tenantid</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Your Openstack tenant id.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>domain</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Your Openstack domain name for Identity v3 API.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>domainid</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Your Openstack domain id for Identity v3 API.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>insecureskipverify</code>
+    </td>
+    <td>
+      no
+    </td>
+      true for skip TLS verification, false by default.
+    <td>
     </td>
   </tr>
   <tr>

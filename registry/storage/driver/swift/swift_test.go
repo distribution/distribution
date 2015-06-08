@@ -3,6 +3,7 @@ package swift
 import (
 	"io/ioutil"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/ncw/swift/swifttest"
@@ -21,15 +22,19 @@ type SwiftDriverConstructor func(rootDirectory string) (*Driver, error)
 
 func init() {
 	var (
-		username    string
-		password    string
-		authURL     string
-		tenant      string
-		container   string
-		region      string
-		prefix      string
-		swiftServer *swifttest.SwiftServer
-		err         error
+		username           string
+		password           string
+		authURL            string
+		tenant             string
+		tenantID           string
+		domain             string
+		domainID           string
+		container          string
+		region             string
+		prefix             string
+		insecureSkipVerify bool
+		swiftServer        *swifttest.SwiftServer
+		err                error
 	)
 	if username = os.Getenv("OS_USERNAME"); username == "" {
 		username = os.Getenv("ST_USER")
@@ -41,9 +46,13 @@ func init() {
 		authURL = os.Getenv("ST_AUTH")
 	}
 	tenant = os.Getenv("OS_TENANT_NAME")
+	tenantID = os.Getenv("OS_TENANT_ID")
+	domain = os.Getenv("OS_DOMAIN_NAME")
+	domainID = os.Getenv("OS_DOMAIN_ID")
 	container = os.Getenv("OS_CONTAINER_NAME")
 	region = os.Getenv("OS_REGION_NAME")
 	prefix = os.Getenv("OS_CONTAINER_PREFIX")
+	insecureSkipVerify, _ = strconv.ParseBool(os.Getenv("ST_INSECURESKIPVERIFY"))
 
 	if username == "" || password == "" || authURL == "" || container == "" {
 		if swiftServer, err = swifttest.NewSwiftServer("localhost"); err != nil {
@@ -67,9 +76,13 @@ func init() {
 			password,
 			authURL,
 			tenant,
+			tenantID,
+			domain,
+			domainID,
 			region,
 			container,
 			prefix,
+			insecureSkipVerify,
 			defaultChunkSize,
 		}
 

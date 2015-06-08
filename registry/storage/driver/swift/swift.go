@@ -10,6 +10,7 @@ package swift
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -40,14 +41,18 @@ const directoryMimeType = "application/directory"
 
 //DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
 type DriverParameters struct {
-	Username  string
-	Password  string
-	AuthURL   string
-	Tenant    string
-	Region    string
-	Container string
-	Prefix    string
-	ChunkSize int
+	Username           string
+	Password           string
+	AuthURL            string
+	Tenant             string
+	TenantID           string
+	Domain             string
+	DomainID           string
+	Region             string
+	Container          string
+	Prefix             string
+	InsecureSkipVerify bool
+	ChunkSize          int
 }
 
 type swiftInfo map[string]interface{}
@@ -89,7 +94,8 @@ type Driver struct {
 // - container
 func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	params := DriverParameters{
-		ChunkSize: defaultChunkSize,
+		ChunkSize:          defaultChunkSize,
+		InsecureSkipVerify: false,
 	}
 
 	if err := mapstructure.Decode(parameters, &params); err != nil {
@@ -121,6 +127,12 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 
 // New constructs a new Driver with the given Openstack Swift credentials and container name
 func New(params DriverParameters) (*Driver, error) {
+	transport := &http.Transport{
+		Proxy:               http.ProxyFromEnvironment,
+		MaxIdleConnsPerHost: 2048,
+		TLSClientConfig:     &tls.Config{InsecureSkipVerify: params.InsecureSkipVerify},
+	}
+
 	ct := swift.Connection{
 		UserName:       params.Username,
 		ApiKey:         params.Password,
@@ -128,6 +140,10 @@ func New(params DriverParameters) (*Driver, error) {
 		Region:         params.Region,
 		UserAgent:      "distribution",
 		Tenant:         params.Tenant,
+		TenantId:       params.TenantID,
+		Domain:         params.Domain,
+		DomainId:       params.DomainID,
+		Transport:      transport,
 		ConnectTimeout: 60 * time.Second,
 		Timeout:        15 * 60 * time.Second,
 	}
