@@ -98,10 +98,10 @@ server {
 EOF
 
 # Now, create a password file for "testuser" and "testpassword"
-echo 'testuser:$apr1$8TVQAgWs$jzdkx8IgYR.guL0hzNDXq.' > auth/registry.password
+echo 'testuser:$2y$05$.nIfPAEgpWCh.rpts/XHX.UOfCRNtvMmYjh6sY/AZBmeg/dQyN62q' > auth/registry.password
 
 # Alternatively you could have achieved the same thing with htpasswd
-# htpasswd -bc auth/registry.password testuser testpassword
+# htpasswd -Bbc auth/registry.password testuser testpassword
 
 # Copy over your certificate files
 cp domain.crt auth
