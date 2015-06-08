@@ -813,6 +813,8 @@ A list of methods and URIs are covered in the table below:
 | PATCH | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Upload a chunk of data for the specified upload. |
 | PUT | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Complete the upload specified by `uuid`, optionally appending the body as the final chunk. |
 | DELETE | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Cancel outstanding upload processes, releasing associated resources. If this is not called, the unfinished uploads will eventually timeout. |
+| GET | `/v2/<name>/_trust/tuf/<role>.json` | Trust | Get the TUF file for the repository identified by `name` and TUF role identified by `role`. |
+| POST | `/v2/<name>/_trust/tuf/<role>.json` | Trust | Update the TUF file for the repository identified by `name` and TUF role identified by `role`. |
 
 
 The detail for each endpoint is covered in the following sections.
@@ -2901,5 +2903,145 @@ The error codes that may be included in the response body are enumerated below:
 
 
 
+### Trust
+
+Trust is built on top of The Update Framework (TUF). TUF uses roles, each with their own JSON file to enable secure distribution and updates of content.
+In the initial release, we will use the root, targets, snapshot, and timestamp roles. The optional mirrors role will not be used. Repository owners will
+be responsible for signing the root, targets, and snapshot roles, while the server will sign the timestamp role.
+
+#### GET Trust
+
+Get the TUF file for a specific role associated with a specific image name.
 
 
+```
+GET /v2/<name>/\_trust/tuf/<role>.json
+Host: <registry host>
+Authorization: <scheme> <token>
+```
+
+Get the TUF `role` JSON file for `name`.
+
+
+The following parameters should be specified on the request:
+
+|Name|Kind|Description|
+|----|----|-----------|
+|`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
+|`Authorization`|header|An RFC7235 compliant authorization header.|
+|`name`|path|Name of the target repository.|
+|`role`|path|The TUF role name being requested. It must always end in the `.json` file extension.|
+
+
+##### On Success: TUF role file downloaded
+
+```
+200 OK
+Content-Type: application/json; charset=utf-8
+```
+
+The TUF role file was found, and the user has permissions to read the named repository. The content of the file will be returned in the body of the response.
+
+The following headers will be returned with the response:
+
+|Name|Description|
+|----|-----------|
+|`Content-Type`|All TUF files have the `application/json` content type.|
+
+
+###### On Failure: Bad Request
+
+```
+400 Bad Request
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+There was a problem with the request that needs to be addressed by the client, such as an invalid `name` or `role`.
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `NAME_INVALID` | invalid repository name | Invalid repository name encountered during API operation. |
+| `ROLE_INVALID` | role invalid | The role name provided was invalid. In the current release, the only valid roles are `root`, `timestamp`, `snapshot`, and `targets`. |
+
+
+
+###### On Failure: Unauthorized
+
+```
+401 Unauthorized
+WWW-Authenticate: <scheme> realm="<realm>", ..."
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": "UNAUTHORIZED",
+            "message": "access to the requested resource is not authorized",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The client does not have access to the repository specified by `name`.
+
+The following headers will be returned on the response:
+
+|Name|Description|
+|----|-----------|
+|`WWW-Authenticate`|An RFC7235 compliant authentication challenge header.|
+|`Content-Length`|Length of the JSON error response body.|
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
+
+
+
+###### On Failure: Not Found
+
+```
+404 Not Found
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The repository identified by `name` was not found. When TUF target delegations are implemented in the future, this may also indicate that a requested delegated targets role was not found.
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+-------|----|------|------------
+| `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
+| `ROLE_UNKNOWN` | role unknown to registry | This is returned when a delegated targets role was not found. |
