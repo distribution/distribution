@@ -102,8 +102,7 @@ test:
     - echo "$CIRCLE_PAIN" > ~/goverage.report
     - gvm use stable; go list ./... | xargs -L 1 -I{} rm -f $GOPATH/src/{}/coverage.out:
         pwd: $BASE_STABLE
-
-    - gvm use stable; go list ./... | xargs -L 1 -I{} godep go test -tags "$DOCKER_BUILDTAGS" -test.short -coverprofile=$GOPATH/src/{}/coverage.out {}:
+    - gvm use stable; go list -tags "$DOCKER_BUILDTAGS" ./... | xargs -L 1 -I{} godep go test -tags "$DOCKER_BUILDTAGS" -test.short -coverprofile=$GOPATH/src/{}/coverage.out {}:
         timeout: 600
         pwd: $BASE_STABLE
 
