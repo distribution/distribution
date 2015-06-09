@@ -135,15 +135,9 @@ func (s *signatureStore) linkedBlobStore(ctx context.Context, revision digest.Di
 			blobStore:  s.blobStore,
 			repository: s.repository,
 			linkPath:   linkpath,
-			tomb: tomb{
-				pm:     defaultPathMapper,
-				driver: s.repository.registry.blobStore.driver,
-			},
+			tomb:       s.repository.tomb,
 		},
 		linkPath: linkpath,
-		tomb: tomb{
-			pm:     defaultPathMapper,
-			driver: s.repository.registry.blobStore.driver,
-		},
+		tomb:     s.repository.tomb,
 	}
 }

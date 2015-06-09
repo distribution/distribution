@@ -92,6 +92,9 @@ type BlobDescriptorService interface {
 	// the restriction that the algorithm of the descriptor must match the
 	// canonical algorithm (ie sha256) of the annotator.
 	SetDescriptor(ctx context.Context, dgst digest.Digest, desc Descriptor) error
+
+	// Delete enables descriptors to be unlinked
+	Delete(ctx context.Context, dgst digest.Digest) error
 }
 
 // ReadSeekCloser is the primary reader type for blob data, combining

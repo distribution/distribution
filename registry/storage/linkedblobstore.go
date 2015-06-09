@@ -17,9 +17,9 @@ import (
 type linkedBlobStore struct {
 	*blobStore
 	blobServer distribution.BlobServer
-	statter    distribution.BlobStatter
+	statter    distribution.BlobDescriptorService
 	repository distribution.Repository
-	tomb       tomb
+	tomb       *tomb
 	ctx        context.Context // only to be used where context can't come through method args
 
 	// linkPath allows one to control the repository blob link set to which
@@ -32,13 +32,6 @@ type linkedBlobStore struct {
 var _ distribution.BlobStore = &linkedBlobStore{}
 
 func (lbs *linkedBlobStore) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
-	tombstoneExists, err := lbs.tomb.tombstoneExists(ctx, lbs.repository.Name(), dgst)
-	if err != nil {
-		return distribution.Descriptor{}, err
-	}
-	if tombstoneExists {
-		return distribution.Descriptor{}, distribution.ErrBlobUnknown
-	}
 	return lbs.statter.Stat(ctx, dgst)
 }
 
@@ -83,10 +76,11 @@ func (lbs *linkedBlobStore) Put(ctx context.Context, mediaType string, p []byte)
 	}
 
 	// Remove a tombstone if one exists for this blob.  Continue to write
-	// the blob as it may have been removed by the GC sweep process
+	// the blob as it may have been removed by the GC sweep process.  If
+	// deletes are not enabled, fall through
 	dgst, err := digest.FromBytes(p)
 	tombstoneExists, err := lbs.tomb.tombstoneExists(ctx, lbs.repository.Name(), dgst)
-	if err != nil {
+	if err != nil && err != ErrDeleteDisabled {
 		return distribution.Descriptor{}, err
 	}
 	if tombstoneExists {
@@ -175,18 +169,23 @@ func (lbs *linkedBlobStore) Resume(ctx context.Context, id string) (distribution
 }
 
 func (lbs *linkedBlobStore) Delete(ctx context.Context, dgst digest.Digest) error {
+	if !lbs.tomb.enabled {
+		return ErrDeleteDisabled
+	}
+
 	_, err := lbs.statter.Stat(ctx, dgst)
 	if err != nil {
 		return err
 	}
-	if err == distribution.ErrBlobUnknown {
-		return distribution.ErrBlobUnknown
+
+	err = lbs.statter.Delete(ctx, dgst)
+	if err != nil {
+		return err
 	}
 
 	if err := lbs.tomb.putTombstone(ctx, lbs.repository.Name(), dgst); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -242,7 +241,7 @@ func (lbs *linkedBlobStore) linkBlob(ctx context.Context, canonical distribution
 type linkedBlobStatter struct {
 	*blobStore
 	repository distribution.Repository
-	tomb       tomb
+	tomb       *tomb
 
 	// linkPath allows one to control the repository blob link set to which
 	// the blob store dispatches. This is required because manifest and layer
@@ -251,11 +250,11 @@ type linkedBlobStatter struct {
 	linkPath func(pm *pathMapper, name string, dgst digest.Digest) (string, error)
 }
 
-var _ distribution.BlobStatter = &linkedBlobStatter{}
+var _ distribution.BlobDescriptorService = &linkedBlobStatter{}
 
 func (lbs *linkedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
 	tombstoneExists, err := lbs.tomb.tombstoneExists(ctx, lbs.repository.Name(), dgst)
-	if err != nil {
+	if err != nil && err != ErrDeleteDisabled {
 		return distribution.Descriptor{}, err
 	}
 	if tombstoneExists {
@@ -290,6 +289,16 @@ func (lbs *linkedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (dis
 	// the returned descriptor.
 
 	return lbs.blobStore.statter.Stat(ctx, target)
+}
+
+func (lbs *linkedBlobStatter) Delete(ctx context.Context, dgst digest.Digest) error {
+	// Not implemented in linkedBlobStatter
+	return nil
+}
+
+func (lbs *linkedBlobStatter) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
+	// Not implemented in linkedBlobStatter
+	return nil
 }
 
 // blobLinkPath provides the path to the blob link, also known as layers.

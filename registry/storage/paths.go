@@ -34,6 +34,8 @@ const storagePathVersion = "v2"
 // 						data
 // 						startedat
 // 						hashstates/<algorithm>/<offset>
+//                                      -> _deleted/<id>
+//                                              -> link
 //			-> blob/<algorithm>
 //				<split directory content addressable storage>
 //

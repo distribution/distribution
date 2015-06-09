@@ -29,7 +29,7 @@ type manifestStoreTestEnv struct {
 func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestEnv {
 	ctx := context.Background()
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider())
+	registry := NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider(), true)
 	repo, err := registry.Repository(ctx, name)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
@@ -340,5 +340,18 @@ func TestManifestStorage(t *testing.T) {
 	}
 	if deletedManifest == nil {
 		t.Errorf("Deleted manifest get returned non-nil")
+	}
+
+	ctx := env.ctx
+
+	r := NewRegistryWithDriver(ctx, env.driver, memory.NewInMemoryBlobDescriptorCacheProvider(), false)
+	repo, err := r.Repository(ctx, env.name)
+	if err != nil {
+		t.Fatalf("unexpected error getting repo: %v", err)
+	}
+	ms = repo.Manifests()
+	err = ms.Delete(dgst)
+	if err == nil {
+		t.Errorf("Unexpected success deleting while disabled")
 	}
 }

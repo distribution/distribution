@@ -11,6 +11,7 @@ import (
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/registry/api/v2"
+	"github.com/docker/distribution/registry/storage"
 	"github.com/gorilla/handlers"
 	"golang.org/x/net/context"
 )
@@ -187,6 +188,9 @@ func (imh *imageManifestHandler) DeleteImageManifest(w http.ResponseWriter, r *h
 			imh.Errors.Push(v2.ErrorCodeManifestUnknown)
 			w.WriteHeader(http.StatusNotFound)
 			return
+		case storage.ErrDeleteDisabled:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			imh.Errors.Push(v2.ErrorCodeDisabled, imh.Digest)
 		default:
 			imh.Errors.PushErr(err)
 			w.WriteHeader(http.StatusBadRequest)

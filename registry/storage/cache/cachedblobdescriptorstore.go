@@ -32,7 +32,7 @@ type cachedBlobStatter struct {
 
 // NewCachedBlobStatter creates a new statter which prefers a cache and
 // falls back to a backend.
-func NewCachedBlobStatter(cache distribution.BlobDescriptorService, backend distribution.BlobStatter) distribution.BlobStatter {
+func NewCachedBlobStatter(cache distribution.BlobDescriptorService, backend distribution.BlobStatter) distribution.BlobDescriptorService {
 	return &cachedBlobStatter{
 		cache:   cache,
 		backend: backend,
@@ -77,4 +77,16 @@ fallback:
 	}
 
 	return desc, err
+
+}
+
+func (cbds *cachedBlobStatter) Delete(ctx context.Context, dgst digest.Digest) error {
+	return cbds.cache.Delete(ctx, dgst)
+}
+
+func (cbds *cachedBlobStatter) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
+	if err := cbds.cache.SetDescriptor(ctx, dgst, desc); err != nil {
+		context.GetLogger(ctx).Errorf("error adding descriptor %v to cache: %v", desc.Digest, err)
+	}
+	return nil
 }

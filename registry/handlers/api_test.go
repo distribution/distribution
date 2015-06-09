@@ -30,7 +30,7 @@ import (
 // TestCheckAPI hits the base endpoint (/v2/) ensures we return the specified
 // 200 OK response.
 func TestCheckAPI(t *testing.T) {
-	env := newTestEnv(t)
+	env := newTestEnv(t, false)
 
 	baseURL, err := env.builder.BuildBaseURL()
 	if err != nil {
@@ -90,24 +90,75 @@ func TestURLPrefix(t *testing.T) {
 		"Content-Type":   []string{"application/json; charset=utf-8"},
 		"Content-Length": []string{"2"},
 	})
-
 }
 
-// TestBlobAPI conducts a full test of the of the blob api.
-func TestBlobAPI(t *testing.T) {
-	// TODO(stevvooe): This test code is complete junk but it should cover the
-	// complete flow. This must be broken down and checked against the
-	// specification *before* we submit the final to docker core.
-	env := newTestEnv(t)
-
-	imageName := "foo/bar"
-	// "build" our layer file
+func makeBlobArgs(t *testing.T) map[string]interface{} {
 	layerFile, tarSumStr, err := testutil.CreateRandomTarFile()
 	if err != nil {
 		t.Fatalf("error creating random layer file: %v", err)
 	}
 
 	layerDigest := digest.Digest(tarSumStr)
+
+	args := map[string]interface{}{
+		"imageName":   "foo/bar",
+		"layerFile":   layerFile,
+		"layerDigest": layerDigest,
+		"tarsumStr":   tarSumStr,
+	}
+	return args
+}
+
+// TestBlobAPI conducts a full test of the of the blob api.
+func TestBlobAPI(t *testing.T) {
+	deleteEnabled := false
+	env := newTestEnv(t, deleteEnabled)
+	args := makeBlobArgs(t)
+	testBlobAPI(t, env, args)
+
+	deleteEnabled = true
+	env = newTestEnv(t, deleteEnabled)
+	args = makeBlobArgs(t)
+	testBlobAPI(t, env, args)
+
+}
+
+func TestBlobDelete(t *testing.T) {
+	deleteEnabled := true
+	env := newTestEnv(t, deleteEnabled)
+
+	args := makeBlobArgs(t)
+	env = testBlobAPI(t, env, args)
+	testBlobDelete(t, env, args)
+}
+
+func TestBlobDeleteDisabled(t *testing.T) {
+	deleteEnabled := false
+	env := newTestEnv(t, deleteEnabled)
+	args := makeBlobArgs(t)
+
+	imageName := args["imageName"].(string)
+	layerDigest := args["layerDigest"].(digest.Digest)
+	layerURL, err := env.builder.BuildBlobURL(imageName, layerDigest)
+	if err != nil {
+		t.Fatalf("error building url: %v", err)
+	}
+
+	resp, err := httpDelete(layerURL)
+	if err != nil {
+		t.Fatalf("unexpected error deleting when disabled: %v", err)
+	}
+
+	checkResponse(t, "status of disabled delete", resp, http.StatusMethodNotAllowed)
+}
+
+func testBlobAPI(t *testing.T, env *testEnv, args map[string]interface{}) *testEnv {
+	// TODO(stevvooe): This test code is complete junk but it should cover the
+	// complete flow. This must be broken down and checked against the
+	// specification *before* we submit the final to docker core.
+	imageName := args["imageName"].(string)
+	layerFile := args["layerFile"].(io.ReadSeeker)
+	layerDigest := args["layerDigest"].(digest.Digest)
 
 	// -----------------------------------
 	// Test fetch for non-existent content
@@ -223,6 +274,7 @@ func TestBlobAPI(t *testing.T) {
 	uploadURLBase, uploadUUID = startPushLayer(t, env.builder, imageName)
 	uploadURLBase, dgst := pushChunk(t, env.builder, imageName, uploadURLBase, layerFile, layerLength)
 	finishUpload(t, env.builder, imageName, uploadURLBase, dgst)
+
 	// ------------------------
 	// Use a head request to see if the layer exists.
 	resp, err = http.Head(layerURL)
@@ -310,10 +362,22 @@ func TestBlobAPI(t *testing.T) {
 	// Missing tests:
 	// 	- Upload the same tarsum file under and different repository and
 	//       ensure the content remains uncorrupted.
+	return env
+}
 
+func testBlobDelete(t *testing.T, env *testEnv, args map[string]interface{}) {
+	// Upload a layer
+	imageName := args["imageName"].(string)
+	layerFile := args["layerFile"].(io.ReadSeeker)
+	layerDigest := args["layerDigest"].(digest.Digest)
+
+	layerURL, err := env.builder.BuildBlobURL(imageName, layerDigest)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
 	// ---------------
 	// Delete a layer
-	resp, err = httpDelete(layerURL)
+	resp, err := httpDelete(layerURL)
 	if err != nil {
 		t.Fatalf("unexpected error deleting layer: %v", err)
 	}
@@ -333,7 +397,6 @@ func TestBlobAPI(t *testing.T) {
 
 	checkResponse(t, "checking existence of deleted layer", resp, http.StatusNotFound)
 
-	// ----------------
 	// Delete already deleted layer
 	resp, err = httpDelete(layerURL)
 	if err != nil {
@@ -344,6 +407,7 @@ func TestBlobAPI(t *testing.T) {
 
 	// ----------------
 	// Attempt to delete a layer with an invalid digest
+	badURL := strings.Replace(layerURL, "tarsum", "trsum", 1)
 	resp, err = httpDelete(badURL)
 	if err != nil {
 		t.Fatalf("unexpected error fetching layer: %v", err)
@@ -355,21 +419,55 @@ func TestBlobAPI(t *testing.T) {
 	// Reupload previously deleted blob
 	layerFile.Seek(0, os.SEEK_SET)
 
-	uploadURLBase, uploadUUID = startPushLayer(t, env.builder, imageName)
+	uploadURLBase, _ := startPushLayer(t, env.builder, imageName)
 	pushLayer(t, env.builder, imageName, layerDigest, uploadURLBase, layerFile)
+
+	layerFile.Seek(0, os.SEEK_SET)
+	canonicalDigester := digest.Canonical.New()
+	if _, err := io.Copy(canonicalDigester.Hash(), layerFile); err != nil {
+		t.Fatalf("error copying to digest: %v", err)
+	}
+	canonicalDigest := canonicalDigester.Digest()
 
 	// ------------------------
 	// Use a head request to see if it exists
-	resp, err = http.Get(layerURL)
+	resp, err = http.Head(layerURL)
 	if err != nil {
 		t.Fatalf("unexpected error checking head on existing layer: %v", err)
 	}
 
+	layerLength, _ := layerFile.Seek(0, os.SEEK_END)
 	checkResponse(t, "checking head on reuploaded layer", resp, http.StatusOK)
 	checkHeaders(t, resp, http.Header{
 		"Content-Length":        []string{fmt.Sprint(layerLength)},
 		"Docker-Content-Digest": []string{canonicalDigest.String()},
 	})
+}
+
+func TestDeleteDisabled(t *testing.T) {
+	env := newTestEnv(t, false)
+
+	imageName := "foo/bar"
+	// "build" our layer file
+	layerFile, tarSumStr, err := testutil.CreateRandomTarFile()
+	if err != nil {
+		t.Fatalf("error creating random layer file: %v", err)
+	}
+
+	layerDigest := digest.Digest(tarSumStr)
+	layerURL, err := env.builder.BuildBlobURL(imageName, layerDigest)
+	if err != nil {
+		t.Fatalf("Error building blob URL")
+	}
+	uploadURLBase, _ := startPushLayer(t, env.builder, imageName)
+	pushLayer(t, env.builder, imageName, layerDigest, uploadURLBase, layerFile)
+
+	resp, err := httpDelete(layerURL)
+	if err != nil {
+		t.Fatalf("unexpected error deleting layer: %v", err)
+	}
+
+	checkResponse(t, "deleting layer with delete disabled", resp, http.StatusMethodNotAllowed)
 }
 
 func httpDelete(url string) (*http.Response, error) {
@@ -386,10 +484,60 @@ func httpDelete(url string) (*http.Response, error) {
 	return resp, err
 }
 
-func TestManifestAPI(t *testing.T) {
-	env := newTestEnv(t)
+func makeManifestArgs(t *testing.T) map[string]interface{} {
+	args := map[string]interface{}{
+		"imageName": "foo/bar",
+	}
 
-	imageName := "foo/bar"
+	return args
+}
+
+func TestManifestAPI(t *testing.T) {
+	deleteEnabled := false
+	env := newTestEnv(t, deleteEnabled)
+	args := makeManifestArgs(t)
+	testManifestAPI(t, env, args)
+
+	deleteEnabled = true
+	env = newTestEnv(t, deleteEnabled)
+	args = makeManifestArgs(t)
+	testManifestAPI(t, env, args)
+}
+
+func TestManifestDelete(t *testing.T) {
+	deleteEnabled := true
+	env := newTestEnv(t, deleteEnabled)
+	args := makeManifestArgs(t)
+	env, args = testManifestAPI(t, env, args)
+	testManifestDelete(t, env, args)
+}
+
+func TestManifestDeleteDisabled(t *testing.T) {
+	deleteEnabled := false
+	env := newTestEnv(t, deleteEnabled)
+	args := makeManifestArgs(t)
+	testManifestDeleteDisabled(t, env, args)
+}
+
+func testManifestDeleteDisabled(t *testing.T, env *testEnv, args map[string]interface{}) *testEnv {
+	imageName := args["imageName"].(string)
+	manifestURL, err := env.builder.BuildManifestURL(imageName, digest.DigestSha256EmptyTar)
+	if err != nil {
+		t.Fatalf("unexpected error getting manifest url: %v", err)
+	}
+
+	resp, err := httpDelete(manifestURL)
+	if err != nil {
+		t.Fatalf("unexpected error deleting manifest %v", err)
+	}
+	defer resp.Body.Close()
+
+	checkResponse(t, "status of disabled delete of manifest", resp, http.StatusMethodNotAllowed)
+	return nil
+}
+
+func testManifestAPI(t *testing.T, env *testEnv, args map[string]interface{}) (*testEnv, map[string]interface{}) {
+	imageName := args["imageName"].(string)
 	tag := "thetag"
 
 	manifestURL, err := env.builder.BuildManifestURL(imageName, tag)
@@ -492,6 +640,9 @@ func TestManifestAPI(t *testing.T) {
 	dgst, err := digest.FromBytes(payload)
 	checkErr(t, err, "digesting manifest")
 
+	args["signedmanifest"] = signedManifest
+	args["dgst"] = dgst
+
 	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, dgst.String())
 	checkErr(t, err, "building manifest url")
 
@@ -584,9 +735,17 @@ func TestManifestAPI(t *testing.T) {
 		t.Fatalf("tag not as expected: %q != %q", tagsResponse.Tags[0], tag)
 	}
 
+	return env, args
+}
+
+func testManifestDelete(t *testing.T, env *testEnv, args map[string]interface{}) {
+	imageName := args["imageName"].(string)
+	dgst := args["dgst"].(digest.Digest)
+	signedManifest := args["signedmanifest"].(*manifest.SignedManifest)
+	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, dgst.String())
 	// ---------------
 	// Delete by digest
-	resp, err = httpDelete(manifestDigestURL)
+	resp, err := httpDelete(manifestDigestURL)
 	checkErr(t, err, "deleting manifest by digest")
 
 	checkResponse(t, "deleting manifest", resp, http.StatusAccepted)
@@ -638,6 +797,7 @@ func TestManifestAPI(t *testing.T) {
 	resp, err = httpDelete(unknownManifestDigestURL)
 	checkErr(t, err, "delting unknown manifest by digest")
 	checkResponse(t, "fetching deleted manifest", resp, http.StatusNotFound)
+
 }
 
 type testEnv struct {
@@ -649,10 +809,11 @@ type testEnv struct {
 	builder *v2.URLBuilder
 }
 
-func newTestEnv(t *testing.T) *testEnv {
+func newTestEnv(t *testing.T, deleteEnabled bool) *testEnv {
 	config := configuration.Configuration{
 		Storage: configuration.Storage{
 			"inmemory": configuration.Parameters{},
+			"delete":   configuration.Parameters{"enabled": deleteEnabled},
 		},
 	}
 

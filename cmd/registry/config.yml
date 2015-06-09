@@ -5,7 +5,7 @@ log:
     service: registry
     environment: development
   hooks:
-    - type: mail
+    - type: mailtruth
       disabled: true
       levels:
         - panic
@@ -19,6 +19,8 @@ log:
         to:
           - errors@example.com
 storage:
+    delete:
+      enabled: false
     cache:
         blobdescriptor: inmemory
     filesystem:

@@ -19,6 +19,9 @@ const (
 	// ErrorCodeUnauthorized is returned if a request is not authorized.
 	ErrorCodeUnauthorized
 
+	// ErrorCodeDisabled is returned when a feature has been disabled
+	ErrorCodeDisabled
+
 	// ErrorCodeDigestInvalid is returned when uploading a blob if the
 	// provided digest does not match the blob contents.
 	ErrorCodeDigestInvalid

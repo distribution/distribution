@@ -15,20 +15,17 @@ import (
 	"github.com/docker/distribution/registry/storage/cache/memory"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/docker/distribution/testutil"
-	"reflect"
 )
 
 // TestSimpleBlobUpload covers the blob upload process, exercising common
 // error paths that might be seen during an upload.
 func TestSimpleBlobUpload(t *testing.T) {
 	randomDataReader, tarSumStr, err := testutil.CreateRandomTarFile()
-
 	if err != nil {
 		t.Fatalf("error creating random reader: %v", err)
 	}
 
 	dgst := digest.Digest(tarSumStr)
-
 	if err != nil {
 		t.Fatalf("error allocating upload store: %v", err)
 	}
@@ -36,7 +33,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 	ctx := context.Background()
 	imageName := "foo/bar"
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider())
+	registry := NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider(), true)
 	repository, err := registry.Repository(ctx, imageName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
@@ -156,7 +153,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 	case distribution.ErrBlobUnknown:
 		break
 	default:
-		t.Errorf("Unexpected error type stat-ing deleted manifest: %s", reflect.ValueOf(err).Type())
+		t.Errorf("Unexpected error type stat-ing deleted manifest: %#v", err)
 	}
 
 	_, err = bs.Open(ctx, desc.Digest)
@@ -168,7 +165,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 	case distribution.ErrBlobUnknown:
 		break
 	default:
-		t.Errorf("Unexpected error type getting deleted manifest: %s", reflect.ValueOf(err).Type())
+		t.Errorf("Unexpected error type getting deleted manifest: %#v", err)
 	}
 
 	// Re-upload the blob
@@ -195,6 +192,17 @@ func TestSimpleBlobUpload(t *testing.T) {
 		t.Errorf("Unexpected error opening blob")
 	}
 
+	// Reuse state to test delete with a delete-disabled registry
+	registry = NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider(), false)
+	repository, err = registry.Repository(ctx, imageName)
+	if err != nil {
+		t.Fatalf("unexpected error getting repo: %v", err)
+	}
+	bs = repository.Blobs(ctx)
+	err = bs.Delete(ctx, desc.Digest)
+	if err == nil {
+		t.Errorf("Unexpected success deleting while disabled")
+	}
 }
 
 // TestSimpleBlobRead just creates a simple blob file and ensures that basic
@@ -204,7 +212,7 @@ func TestSimpleBlobRead(t *testing.T) {
 	ctx := context.Background()
 	imageName := "foo/bar"
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider())
+	registry := NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider(), true)
 	repository, err := registry.Repository(ctx, imageName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
@@ -308,7 +316,7 @@ func TestLayerUploadZeroLength(t *testing.T) {
 	ctx := context.Background()
 	imageName := "foo/bar"
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider())
+	registry := NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider(), true)
 	repository, err := registry.Repository(ctx, imageName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)

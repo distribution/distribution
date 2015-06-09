@@ -7,6 +7,7 @@ import (
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/registry/api/v2"
+	"github.com/docker/distribution/registry/storage"
 	"github.com/gorilla/handlers"
 )
 
@@ -69,7 +70,7 @@ func (bh *blobHandler) GetBlob(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// DeleteBlob performs a soft delete of a layer blob
+// DeleteBlob deletes a layer blob
 func (bh *blobHandler) DeleteBlob(w http.ResponseWriter, r *http.Request) {
 	context.GetLogger(bh).Debug("DeleteBlob")
 
@@ -80,6 +81,9 @@ func (bh *blobHandler) DeleteBlob(w http.ResponseWriter, r *http.Request) {
 		case distribution.ErrBlobUnknown:
 			w.WriteHeader(http.StatusNotFound)
 			bh.Errors.Push(v2.ErrorCodeBlobUnknown, bh.Digest)
+		case storage.ErrDeleteDisabled:
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			bh.Errors.Push(v2.ErrorCodeDisabled, bh.Digest)
 		default:
 			bh.Errors.Push(v2.ErrorCodeUnknown, err)
 		}

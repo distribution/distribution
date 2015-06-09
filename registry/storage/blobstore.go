@@ -141,7 +141,7 @@ func (bs *blobStore) resolve(ctx context.Context, path string) (string, error) {
 type blobStatter struct {
 	driver driver.StorageDriver
 	pm     *pathMapper
-	tomb   tomb
+	tomb   *tomb
 }
 
 var _ distribution.BlobStatter = &blobStatter{}
