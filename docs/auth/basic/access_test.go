@@ -1,14 +1,13 @@
 package basic
 
 import (
-	"encoding/base64"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/auth"
-	"golang.org/x/net/context"
 )
 
 func TestBasicAccessController(t *testing.T) {
@@ -33,6 +32,7 @@ func TestBasicAccessController(t *testing.T) {
 		"realm": testRealm,
 		"path":  tempFile.Name(),
 	}
+	ctx := context.Background()
 
 	accessController, err := newAccessController(options)
 	if err != nil {
@@ -44,7 +44,7 @@ func TestBasicAccessController(t *testing.T) {
 	var userNumber = 0
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := context.WithValue(nil, "http.request", r)
+		ctx := context.WithRequest(ctx, r)
 		authCtx, err := accessController.Authorized(ctx)
 		if err != nil {
 			switch err := err.(type) {
@@ -87,13 +87,14 @@ func TestBasicAccessController(t *testing.T) {
 
 	for i := 0; i < len(testUsers); i++ {
 		userNumber = i
-		req, _ = http.NewRequest("GET", server.URL, nil)
-		sekrit := testUsers[i] + ":" + testPasswords[i]
-		credential := "Basic " + base64.StdEncoding.EncodeToString([]byte(sekrit))
+		req, err := http.NewRequest("GET", server.URL, nil)
+		if err != nil {
+			t.Fatalf("error allocating new request: %v", err)
+		}
 
-		req.Header.Set("Authorization", credential)
+		req.SetBasicAuth(testUsers[i], testPasswords[i])
+
 		resp, err = client.Do(req)
-
 		if err != nil {
 			t.Fatalf("unexpected error during GET: %v", err)
 		}
@@ -101,7 +102,7 @@ func TestBasicAccessController(t *testing.T) {
 
 		// Request should be authorized
 		if resp.StatusCode != http.StatusNoContent {
-			t.Fatalf("unexpected non-success response status: %v != %v for %s %s %s", resp.StatusCode, http.StatusNoContent, testUsers[i], testPasswords[i], credential)
+			t.Fatalf("unexpected non-success response status: %v != %v for %s %s", resp.StatusCode, http.StatusNoContent, testUsers[i], testPasswords[i])
 		}
 	}
 

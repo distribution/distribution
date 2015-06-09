@@ -15,23 +15,20 @@ import (
 	"golang.org/x/net/context"
 )
 
+var (
+	// ErrInvalidCredential is returned when the auth token does not authenticate correctly.
+	ErrInvalidCredential = errors.New("invalid authorization credential")
+
+	// ErrAuthenticationFailure returned when authentication failure to be presented to agent.
+	ErrAuthenticationFailure = errors.New("authentication failured")
+)
+
 type accessController struct {
 	realm    string
 	htpasswd *htpasswd
 }
 
-type challenge struct {
-	realm string
-	err   error
-}
-
 var _ auth.AccessController = &accessController{}
-var (
-	// ErrPasswordRequired Returned when no auth token is given.
-	ErrPasswordRequired = errors.New("authorization credential required")
-	// ErrInvalidCredential is returned when the auth token does not authenticate correctly.
-	ErrInvalidCredential = errors.New("invalid authorization credential")
-)
 
 func newAccessController(options map[string]interface{}) (auth.AccessController, error) {
 	realm, present := options["realm"]
@@ -53,28 +50,29 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 		return nil, err
 	}
 
-	authHeader := req.Header.Get("Authorization")
-	if authHeader == "" {
-		challenge := challenge{
-			realm: ac.realm,
-		}
-		return nil, &challenge
-	}
-
-	user, pass, ok := req.BasicAuth()
+	username, password, ok := req.BasicAuth()
 	if !ok {
-		return nil, errors.New("Invalid Authorization header")
-	}
-
-	if res, _ := ac.htpasswd.AuthenticateUser(user, pass); !res {
-		challenge := challenge{
+		return nil, &challenge{
 			realm: ac.realm,
+			err:   ErrInvalidCredential,
 		}
-		challenge.err = ErrInvalidCredential
-		return nil, &challenge
 	}
 
-	return auth.WithUser(ctx, auth.UserInfo{Name: user}), nil
+	if err := ac.htpasswd.authenticateUser(ctx, username, password); err != nil {
+		ctxu.GetLogger(ctx).Errorf("error authenticating user %q: %v", username, err)
+		return nil, &challenge{
+			realm: ac.realm,
+			err:   ErrAuthenticationFailure,
+		}
+	}
+
+	return auth.WithUser(ctx, auth.UserInfo{Name: username}), nil
+}
+
+// challenge implements the auth.Challenge interface.
+type challenge struct {
+	realm string
+	err   error
 }
 
 func (ch *challenge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
