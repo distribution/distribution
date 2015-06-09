@@ -1,43 +1,70 @@
+<!--GITHUB
+page_title: Distribution glossary
+page_description: Provides definition for distribution terms
+page_keywords: registry, service, images, repository, distribution, glossary, layer, blob
+IGNORES-->
+
 # Glossary
 
-This page contains distribution related terms. For a complete Docker glossary,
-see the [glossary in the full documentation set](http://docs.docker.com/reference/glossary/).
+This page contains definitions for distribution related terms.
 
 <dl>
-	<dt>Blob</dt>
+	<dt id="blob"><h4>Blob</h4></dt>
 	<dd>
-	The primary unit of registry storage. A string of bytes identified by
-	content-address, known as a _digest_.
+      <blockquote>A blob is any kind of content that is stored by a Registry under a content-addressable identifier (a "digest").</blockquote>
+      <p>
+      	<a href="#layer">Layers</a> are a good example of "blobs".
+      </p>
 	</dd>
 
-	<dt>Image</dt>
-	<dd>An image is a collection of content from which a docker container can be created.</dd>
-
-	<dt>Layer</dt>
+	<dt id="image"><h4>Image</h4></dt>
 	<dd>
-	A tar file representing the partial content of a filesystem. Several
-	layers can be "stacked" to make up the root filesystem.
+      <blockquote>An image is a named set of immutable data from which a Docker container can be created.</blockquote>
+      <p>
+      An image is represented by a json file called a <a href="#manifest">manifest</a>, and is conceptually a set of <a hred="#layer">layers</a>.
+
+      Image names indicate the location where they can be pulled from and pushed to, as they usually start with a <a href="#registry">registry</a> domain name and port.
+
+      </p>
+    </dd>
+
+	<dt id="layer"><h4>Layer</h4></dt>
+	<dd>
+	<blockquote>A layer is a tar archive bundling partial content from a filesystem.</blockquote>
+	<p>
+	Layers from an <a href="#image">image</a> are usually extracted in order on top of each other to make up a root filesystem from which containers run out.
+	</p>
 	</dd>
 
-	<dt>Manifest</dt>
-	<dd>Describes a collection layers that make up an image.</dd>
+	<dt id="manifest"><h4>Manifest</h4></dt>
+	<dd><blockquote>A manifest is the JSON representation of an image.</blockquote></dd>
 
-	<dt>Registry</dt>
-	<dd>A registry is a service which serves repositories.</dd>
-
-	<dt>Repository</dt>
-	<dd>
-	A repository is a collection of docker images, made up of manifests, tags
-	and layers. The base unit of these components are blobs.
+	<dt id="namespace"><h4>Namespace</h4></dt>
+	<dd><blockquote>A namespace is a collection of repositories with a common name prefix.</blockquote>
+	<p>
+	The namespace with an empty prefix is considered the Global Namespace.
+	</p>
 	</dd>
 
-	<dt>Tag</dt>
-	<dd>Tag provides a common name to an image.</dd>
+	<dt id="registry"><h4>Registry</h4></dt>
+	<dd><blockquote>A registry is a service that let you store and deliver <a href="#images">images</a>.</blockquote>
+	</dd>
 
-	<dt>Namespace</dt>
-	<dd>A namespace is a collection of repositories with a common name prefix. The
-	namespace with an empty common prefix is considered the Global Namespace.</dd>
+	<dt id="registry"><h4>Repository</h4></dt>
+	<dd>
+	<blockquote>A repository is a set of data containing all versions of a given image.</blockquote>
+	</dd>
 
-	<dt>Scope</dt>
-	<dd>A common repository name prefix.</dd>
+	<dt id="scope"><h4>Scope</h4></dt>
+	<dd><blockquote>A scope is the portion of a namespace onto which a given authorization token is granted.</blockquote></dd>
+
+	<dt id="tag"><h4>Tag</h4></dt>
+	<dd><blockquote>A tag is conceptually a "version" of a <a href="#image">named image</a>.</blockquote>
+	<p>
+	Example: `docker pull myimage:latest` instructs docker to pull the image "myimage" in version "latest".
+	</p>
+	
+	</dd>
+	
+
 </dl>

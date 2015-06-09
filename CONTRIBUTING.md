@@ -90,31 +90,3 @@ It's mandatory to:
 Complying to these simple rules will greatly accelerate the review process, and will ensure you have a pleasant experience in contributing code to the Registry.
 
 Have a look at a great, succesful contribution: the [Ceph driver PR](https://github.com/docker/distribution/pull/443)
-
-
-## Issue and PR labels
-
-To keep track of the state of issues and PRs, we've adopted a set of simple labels. The following are currently in use:
-
-<dl>
-    <dt><a href="https://github.com/docker/distribution/issues?q=is%3Aopen+-label%3AReady+-label%3A%22In+Progress%22+-label%3A%22Blocked%22">Backlog</a></dt>
-    <dd>Issues marked with this label are considered not yet ready for implementation. Either they are untriaged or require futher detail to proceed.</dd>
-
-    <dt><a href="https://github.com/docker/distribution/labels/Blocked">Blocked</a></dt>
-    <dd>If an issue requires further clarification or is blocked on an unresolved dependency, this label should be used.</dd>
-
-    <dt><a href="https://github.com/docker/distribution/labels/Sprint">Sprint</a></dt>
-    <dd>Issues marked with this label are being worked in the current sprint. All required information should be available and design details have been worked out.</dd>
-
-    <dt><a href="https://github.com/docker/distribution/labels/In%20Progress">In Progress</a></dt>
-    <dd>The issue or PR is being actively worked on by the assignee.</dd>
-
-    <dt><a href="https://github.com/docker/distribution/issues?q=is%3Aclosed">Done</a></dt>
-    <dd>Issues marked with this label are complete. This can be considered a psuedo-label, in that if it is closed, it is considered "Done".</dd>
-</dl>
-
-If an issue or PR is not labeled correctly or you believe it is not in the right state, please contact a maintainer to fix the problem.
-
-## Milestones
-
-Issues and PRs should be assigned to relevant milestones. If an issue or PR is assigned a milestone, it should be available by that date. Depending on level of effort, items may be shuffled in or out of milestones. Issues or PRs that don't have a milestone are considered unscheduled. Typically, "In Progress" issues should have a milestone.

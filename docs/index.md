@@ -6,50 +6,73 @@ IGNORES-->
 
 # Docker Registry
 
-The Registry is a stateless, highly scalable server side component that stores and lets you distribute Docker images.
+## What it is
 
-Users looking for a ready-to-go solution are encouraged to head-over to the [Docker Hub](https://hub.docker.com), which provides a free-to-use, hosted Registry, plus additional features (organization accounts, automated builds, and more).
+The Registry is a stateless, highly scalable server side application that stores and lets you distribute Docker images.
+The Registry is open-source, under the permissive [Apache license](http://en.wikipedia.org/wiki/Apache_License).
 
-On the other hand, people interested in finer grained integration, or more control over the content they publish, should run and operate their own Registry.
+## Why use it
 
-## About versions
+You should use the Registry if you want to:
 
-You need to use a Docker client that is version 1.6.0 or newer for this to work.
+ * tightly control where your images are being stored
+ * fully own your images distribution pipeline
+ * integrate images storage and distribution into your inhouse development workflow
+
+## Alternatives
+
+Users looking for a zero maintenance, ready-to-go solution are encouraged to head-over to the [Docker Hub](https://hub.docker.com), which provides a free-to-use, hosted Registry, plus additional features (organization accounts, automated builds, and more).
+
+Users looking for a commercially supported version of the Registry should look into [Docker Hub Enterprise](https://docs.docker.com/docker-hub-enterprise/).
+
+## Requirements
+
+The Registry is compatible with Docker engine **version 1.6.0 or higher**.
 If you really need to work with older Docker versions, you should look into the [old python registry](https://github.com/docker/docker-registry)
 
-## Understanding the Registry
+## TL;DR
 
-A registry is a storage and content delivery system, holding named Docker images, available in different tagged versions. For example, the image `distribution/registry`, with tags `2.0` and `latest`.
+```
+# Start your registry
+docker run -d -p 5000:5000 registry:2
 
-Users interact with a registry by using docker push and pull commands. For example, `docker pull myregistry.com/stevvooe/batman:voice`.
+# Pull (or build) some image from the hub
+docker pull ubuntu
 
-Storage itself is delegated to drivers. The default storage driver is the local posix filesystem, which is suitable for development or small deployments. Additional cloud-based storage driver like S3, Microsoft Azure and Ceph are also supported. People looking into using other storage backends may do so by writing their own driver implementing the [Storage API](storagedrivers.md).
+# Tag the image so that it points to your registry
+docker tag ubuntu localhost:5000/myfirstimage
 
-Since securing access to your hosted images is paramount, the Registry natively supports TLS. You can also enforce basic authentication through a proxy like Nginx.
+# Push it
+docker push localhost:5000/myfirstimage
 
-The Registry GitHub repository includes reference implementations for additional authentication and authorization methods. Only very large or public deployments are expected to extend the Registry in this way.
+# Pull it back
+docker pull localhost:5000/myfirstimage
+```
 
-Finally, the Registry includes a robust [notification system](notifications.md), calling webhooks in response to activity, and both extensive logging and reporting. Reporting is mostly useful for large installations that want to collect metrics. Currently, New Relic and Bugsnag are supported.
+Simple as that? Yes. Now, please read the...
 
-## Getting help
-
-The Registry is an open source project and is under active development. If you need help, would like to contribute, or simply want to talk about the project, we have a number of open channels for communication.
-
-- To report bugs or file feature requests: please use the [issue tracker on Github](https://github.com/docker/distribution/issues).
-- To talk about the project please post a message to the [mailing list](https://groups.google.com/a/dockerproject.org/forum/#!forum/distribution) or join the `#docker-distribution` channel on IRC.
-- To contribute code or documentation changes: please submit a [pull request on Github](https://github.com/docker/distribution/pulls).
-
-For more information and resources, please visit the [Getting Help project page](https://docs.docker.com/project/get-help/).
 
 ## Documentation
 
-Basics:
-
+ - [Introduction](introduction.md)
  - [Deployment](deploying.md)
  - [Configuration](configuration.md)
+ - [Getting help](help.md)
+ - [Contributing](../CONTRIBUTING.md)
 
-Advanced:
+### Reference and advanced topics
+
+ - [Glossary](glossary.md)
+ - [Authentication](authentication.md)
+ - [Working with notifications](notifications.md)
+
+### Development resources
 
  - [Storage driver model](storagedrivers.md)
- - [Working with notifications](notifications.md)
  - [Registry API](spec/api.md)
+<!--
+ - [Building the registry](building.md)
+ - [Architecture notes](architecture.md)
+ -->
+
+ 

@@ -1,15 +1,45 @@
 <!--GITHUB
 page_title: Configure a Registry
-page_description: Explains how to deploy a registry
-page_keywords: registry, service, images, repository
+page_description: Explains how to configure a registry
+page_keywords: registry, service, images, repository, configuration
 IGNORES-->
 
 
 # Registry Configuration Reference
 
-You configure a registry server using a YAML file. This page explains the
-configuration options and the values they can take. You'll also find examples of
-middleware and development environment configurations.
+The Registry configuration is based on a YAML file, detailed below. While it comes with sane default values out of the box, you are heavily encouraged to review it exhaustively before moving your systems to production.
+
+## Override configuration options
+
+In a typical setup where you run your Registry from the official image, you can specify any configuration variable from the environment by passing `-e` arguments to your `docker run` stanza, or from within a Dockerfile using the `ENV` instruction.
+
+To override a configuration option, create an environment variable named
+`REGISTRY_variable` where *`variable`* is the name of the configuration option
+and the `_` (underscore) represents indention levels. For example, you can
+configure the `rootdirectory` of the `filesystem` storage backend:
+
+```
+storage:
+	filesystem:
+		rootdirectory: /tmp/registry-dev
+```
+
+To override this value, set an environment variable like this:
+
+```
+REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/tmp/registry/test
+```
+
+This variable overrides the `/tmp/registry-dev` value to the `/tmp/registry/test`
+directory.
+
+>**Note**: If an environment variable changes a map value into a string, such
+>as replacing the storage driver type with `REGISTRY_STORAGE=filesystem`, then
+>all sub-fields will be erased. As such, specifying the storage type in the
+>environment will remove all parameters related to the old storage
+>configuration.
+
+
 
 ## List of configuration options
 
@@ -42,7 +72,7 @@ log:
 loglevel: debug # deprecated: use "log"
 storage:
 	filesystem:
-		rootdirectory: /tmp/registry
+		rootdirectory: /tmp/registry-dev
 	azure:
 		accountname: accountname
 		accountkey: base64encodedaccountkey
@@ -142,38 +172,6 @@ options marked as **required**. This indicates that you can omit the parent with
 all its children. However, if the parent is included, you must also include all
 the children marked **required**.
 
-## Override configuration options
-
-You can use environment variables to override most configuration parameters. The
-exception is the `version` variable which cannot be overridden. You can set
-environment variables on the command line using the `-e` flag on `docker run` or
-from within a Dockerfile using the `ENV` instruction.
-
-To override a configuration option, create an environment variable named
-`REGISTRY\variable_` where *`variable`* is the name of the configuration option
-and the `_` (underscore) represents indention levels. For example, you can
-configure the `rootdirectory` of the `filesystem` storage backend:
-
-```
-storage:
-	filesystem:
-		rootdirectory: /tmp/registry
-```
-
-To override this value, set an environment variable like this:
-
-```
-REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/tmp/registry/test
-```
-
-This variable overrides the `/tmp/registry` value to the `/tmp/registry/test`
-directory.
-
->**Note**: If an environment variable changes a map value into a string, such
->as replacing the storage driver type with `REGISTRY_STORAGE=filesystem`, then
->all sub-fields will be erased. As such, specifying the storage type in the
->environment will remove all parameters related to the old storage
->configuration.
 
 
 ## version
@@ -604,8 +602,7 @@ auth:
 		rootcertbundle: /root/certs/bundle
 ```
 
-The `auth` option is **optional** as there are use cases (i.e. a mirror that
-only permits pulls) for which authentication may not be desired. There are
+The `auth` option is **optional**. There are
 currently 2 possible auth providers, `silly` and `token`. You can configure only
 one `auth` provider.
 
