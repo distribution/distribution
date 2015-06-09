@@ -1,3 +1,5 @@
+// +build include_rados
+
 package rados
 
 import (
