@@ -639,7 +639,7 @@ var routeDescriptors = []RouteDescriptor{
 			},
 			{
 				Method:      "DELETE",
-				Description: "Delete the manifest identified by `name` and `reference` where `reference` can be a tag or digest.",
+				Description: "Delete the manifest identified by `name` and `reference`. Note that a manifest can _only_ be deleted by `digest`.",
 				Requests: []RequestDescriptor{
 					{
 						Headers: []ParameterDescriptor{
@@ -657,8 +657,8 @@ var routeDescriptors = []RouteDescriptor{
 						},
 						Failures: []ResponseDescriptor{
 							{
-								Name:        "Invalid Name or Tag",
-								Description: "The specified `name` or `tag` were invalid and the delete was unable to proceed.",
+								Name:        "Invalid Name or Reference",
+								Description: "The specified `name` or `reference` were invalid and the delete was unable to proceed.",
 								StatusCode:  http.StatusBadRequest,
 								ErrorCodes: []ErrorCode{
 									ErrorCodeNameInvalid,
@@ -690,7 +690,7 @@ var routeDescriptors = []RouteDescriptor{
 							},
 							{
 								Name:        "Unknown Manifest",
-								Description: "The specified `name` or `tag` are unknown to the registry and the delete was unable to proceed. Clients can assume the manifest was already deleted if this response is returned.",
+								Description: "The specified `name` or `reference` are unknown to the registry and the delete was unable to proceed. Clients can assume the manifest was already deleted if this response is returned.",
 								StatusCode:  http.StatusNotFound,
 								ErrorCodes: []ErrorCode{
 									ErrorCodeNameUnknown,
