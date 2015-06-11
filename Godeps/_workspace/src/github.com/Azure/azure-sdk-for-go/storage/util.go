@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/base64"
@@ -13,7 +14,7 @@ import (
 	"time"
 )
 
-func (c StorageClient) computeHmac256(message string) string {
+func (c Client) computeHmac256(message string) string {
 	h := hmac.New(sha256.New, c.accountKey)
 	h.Write([]byte(message))
 	return base64.StdEncoding.EncodeToString(h.Sum(nil))
@@ -47,17 +48,24 @@ func mergeParams(v1, v2 url.Values) url.Values {
 func prepareBlockListRequest(blocks []Block) string {
 	s := `<?xml version="1.0" encoding="utf-8"?><BlockList>`
 	for _, v := range blocks {
-		s += fmt.Sprintf("<%s>%s</%s>", v.Status, v.Id, v.Status)
+		s += fmt.Sprintf("<%s>%s</%s>", v.Status, v.ID, v.Status)
 	}
 	s += `</BlockList>`
 	return s
 }
 
-func xmlUnmarshal(body io.ReadCloser, v interface{}) error {
+func xmlUnmarshal(body io.Reader, v interface{}) error {
 	data, err := ioutil.ReadAll(body)
 	if err != nil {
 		return err
 	}
-	defer body.Close()
 	return xml.Unmarshal(data, v)
+}
+
+func xmlMarshal(v interface{}) (io.Reader, int, error) {
+	b, err := xml.Marshal(v)
+	if err != nil {
+		return nil, 0, err
+	}
+	return bytes.NewReader(b), len(b), nil
 }

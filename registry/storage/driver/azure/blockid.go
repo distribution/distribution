@@ -7,7 +7,7 @@ import (
 	"sync"
 	"time"
 
-	azure "github.com/MSOpenTech/azure-sdk-for-go/storage"
+	azure "github.com/Azure/azure-sdk-for-go/storage"
 )
 
 type blockIDGenerator struct {

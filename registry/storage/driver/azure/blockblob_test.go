@@ -6,7 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 
-	azure "github.com/MSOpenTech/azure-sdk-for-go/storage"
+	azure "github.com/Azure/azure-sdk-for-go/storage"
 )
 
 type StorageSimulator struct {
@@ -122,12 +122,12 @@ func (s *StorageSimulator) PutBlockList(container, blob string, blocks []azure.B
 
 	var blockIDs []string
 	for _, v := range blocks {
-		bl, ok := bb.blocks[v.Id]
+		bl, ok := bb.blocks[v.ID]
 		if !ok { // check if block ID exists
-			return fmt.Errorf("Block id '%s' not found", v.Id)
+			return fmt.Errorf("Block id '%s' not found", v.ID)
 		}
 		bl.committed = true
-		blockIDs = append(blockIDs, v.Id)
+		blockIDs = append(blockIDs, v.ID)
 	}
 
 	// Mark all other blocks uncommitted
