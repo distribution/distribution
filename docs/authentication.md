@@ -159,7 +159,7 @@ update-ca-trust
 
 Now:
 
- * `service docker stop && docker service start` (or any other way you use to restart docker)
+ * `service docker stop && service docker start` (or any other way you use to restart docker)
  * `docker-compose up -d` to bring your registry up
 
 ## Token-based delegated authentication
