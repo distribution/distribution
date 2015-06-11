@@ -13,3 +13,13 @@ func TestFileChecker(t *testing.T) {
 		t.Errorf("NoSuchFileFromMoon was expected as not exists, error:%v", err)
 	}
 }
+
+func TestHTTPChecker(t *testing.T) {
+	if err := HTTPChecker("https://www.google.cybertron").Check(); err == nil {
+		t.Errorf("Google on Cybertron was expected as not exists")
+	}
+
+	if err := HTTPChecker("https://www.google.pt").Check(); err != nil {
+		t.Errorf("Google at Portugal was expected as exists, error:%v", err)
+	}
+}
