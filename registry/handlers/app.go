@@ -147,6 +147,7 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 			panic(fmt.Sprintf("unable to configure authorization (%s): %v", authType, err))
 		}
 		app.accessController = accessController
+		ctxu.GetLogger(app).Debugf("configured %q access controller", authType)
 	}
 
 	return app
