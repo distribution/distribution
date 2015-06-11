@@ -16,7 +16,7 @@ import (
 )
 
 const driverName = "filesystem"
-const defaultRootDirectory = "/tmp/registry/storage"
+const defaultRootDirectory = "/var/lib/registry"
 
 func init() {
 	factory.Register(driverName, &filesystemDriverFactory{})
