@@ -12,7 +12,7 @@ WORKDIR $DISTRIBUTION_DIR
 COPY . $DISTRIBUTION_DIR
 RUN make PREFIX=/go clean binaries
 
-VOLUME ["/tmp/registry-dev"]
+VOLUME ["/var/lib/registry"]
 EXPOSE 5000
 ENTRYPOINT ["registry"]
 CMD ["cmd/registry/config.yml"]
