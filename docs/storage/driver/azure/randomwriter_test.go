@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	azure "github.com/MSOpenTech/azure-sdk-for-go/storage"
+	azure "github.com/Azure/azure-sdk-for-go/storage"
 )
 
 func TestRandomWriter_writeChunkToBlocks(t *testing.T) {
