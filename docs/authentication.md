@@ -21,7 +21,7 @@ The second method requires significantly more investment, and only make sense if
 
 With this method, you implement basic authentication in a reverse proxy that sits in front of your registry.
 
-Since the Docker engine uses basic authentication to negociate access to the Registry, securing communication between docker engines and your proxy is absolutely paramount. 
+Since the Docker engine uses basic authentication to negotiate access to the Registry, securing communication between docker engines and your proxy is absolutely paramount. 
 
 While this model gives you the ability to use whatever authentication backend you want through a secondary authentication mechanism implemented inside your proxy, it also requires that you move TLS termination from the Registry to the proxy itself.
 
