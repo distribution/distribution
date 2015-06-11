@@ -1,9 +1,9 @@
-// Package basic provides a simple authentication scheme that checks for the
+// Package htpasswd provides a simple authentication scheme that checks for the
 // user credential hash in an htpasswd formatted file in a configuration-determined
 // location.
 //
 // This authentication method MUST be used under TLS, as simple token-replay attack is possible.
-package basic
+package htpasswd
 
 import (
 	"errors"
@@ -34,12 +34,12 @@ var _ auth.AccessController = &accessController{}
 func newAccessController(options map[string]interface{}) (auth.AccessController, error) {
 	realm, present := options["realm"]
 	if _, ok := realm.(string); !present || !ok {
-		return nil, fmt.Errorf(`"realm" must be set for basic access controller`)
+		return nil, fmt.Errorf(`"realm" must be set for htpasswd access controller`)
 	}
 
 	path, present := options["path"]
 	if _, ok := path.(string); !present || !ok {
-		return nil, fmt.Errorf(`"path" must be set for basic access controller`)
+		return nil, fmt.Errorf(`"path" must be set for htpasswd access controller`)
 	}
 
 	f, err := os.Open(path.(string))
@@ -98,5 +98,5 @@ func (ch *challenge) Error() string {
 }
 
 func init() {
-	auth.Register("basic", auth.InitFunc(newAccessController))
+	auth.Register("htpasswd", auth.InitFunc(newAccessController))
 }

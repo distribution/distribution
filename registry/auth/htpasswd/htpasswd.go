@@ -1,4 +1,4 @@
-package basic
+package htpasswd
 
 import (
 	"bufio"
