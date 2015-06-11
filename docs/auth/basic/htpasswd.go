@@ -2,149 +2,79 @@ package basic
 
 import (
 	"bufio"
-	"crypto/sha1"
-	"encoding/base64"
+	"fmt"
 	"io"
-	"os"
-	"regexp"
 	"strings"
 
-	"github.com/docker/distribution/context"
 	"golang.org/x/crypto/bcrypt"
 )
 
-// htpasswd holds a path to a system .htpasswd file and the machinery to parse it.
+// htpasswd holds a path to a system .htpasswd file and the machinery to parse
+// it. Only bcrypt hash entries are supported.
 type htpasswd struct {
-	path string
+	entries map[string][]byte // maps username to password byte slice.
 }
 
-// authType represents a particular hash function used in the htpasswd file.
-type authType int
-
-const (
-	authTypePlainText authType = iota // Plain-text password storage (htpasswd -p)
-	authTypeSHA1                      // sha hashed password storage (htpasswd -s)
-	authTypeApacheMD5                 // apr iterated md5 hashing (htpasswd -m)
-	authTypeBCrypt                    // BCrypt adapative password hashing (htpasswd -B)
-	authTypeCrypt                     // System crypt() hashes.  (htpasswd -d)
-)
-
-var bcryptPrefixRegexp = regexp.MustCompile(`^\$2[ab]?y\$`)
-
-// detectAuthCredentialType inspects the credential and resolves the encryption scheme.
-func detectAuthCredentialType(cred string) authType {
-	if strings.HasPrefix(cred, "{SHA}") {
-		return authTypeSHA1
+// newHTPasswd parses the reader and returns an htpasswd or an error.
+func newHTPasswd(rd io.Reader) (*htpasswd, error) {
+	entries, err := parseHTPasswd(rd)
+	if err != nil {
+		return nil, err
 	}
-	if strings.HasPrefix(cred, "$apr1$") {
-		return authTypeApacheMD5
-	}
-	if bcryptPrefixRegexp.MatchString(cred) {
-		return authTypeBCrypt
-	}
-	// There's just not a great way to distinguish between these next two...
-	if len(cred) == 13 {
-		return authTypeCrypt
-	}
-	return authTypePlainText
-}
 
-// String Returns a text representation of the AuthType
-func (at authType) String() string {
-	switch at {
-	case authTypePlainText:
-		return "plaintext"
-	case authTypeSHA1:
-		return "sha1"
-	case authTypeApacheMD5:
-		return "md5"
-	case authTypeBCrypt:
-		return "bcrypt"
-	case authTypeCrypt:
-		return "system crypt"
-	}
-	return "unknown"
-}
-
-// NewHTPasswd Create a new HTPasswd with the given path to .htpasswd file.
-func newHTPasswd(htpath string) *htpasswd {
-	return &htpasswd{path: htpath}
+	return &htpasswd{entries: entries}, nil
 }
 
 // AuthenticateUser checks a given user:password credential against the
-// receiving HTPasswd's file. If the check passes, nil is returned. Note that
-// this parses the htpasswd file on each request so ensure that updates are
-// available.
-func (htpasswd *htpasswd) authenticateUser(ctx context.Context, username string, password string) error {
-	// Open the file.
-	in, err := os.Open(htpasswd.path)
+// receiving HTPasswd's file. If the check passes, nil is returned.
+func (htpasswd *htpasswd) authenticateUser(username string, password string) error {
+	credentials, ok := htpasswd.entries[username]
+	if !ok {
+		// timing attack paranoia
+		bcrypt.CompareHashAndPassword([]byte{}, []byte(password))
+
+		return ErrAuthenticationFailure
+	}
+
+	err := bcrypt.CompareHashAndPassword([]byte(credentials), []byte(password))
 	if err != nil {
-		return err
-	}
-	defer in.Close()
-
-	for _, entry := range parseHTPasswd(ctx, in) {
-		if entry.username != username {
-			continue // wrong entry
-		}
-
-		switch t := detectAuthCredentialType(entry.password); t {
-		case authTypeSHA1:
-			sha := sha1.New()
-			sha.Write([]byte(password))
-			hash := base64.StdEncoding.EncodeToString(sha.Sum(nil))
-
-			if entry.password[5:] != hash {
-				return ErrAuthenticationFailure
-			}
-
-			return nil
-		case authTypeBCrypt:
-			err := bcrypt.CompareHashAndPassword([]byte(entry.password), []byte(password))
-			if err != nil {
-				return ErrAuthenticationFailure
-			}
-
-			return nil
-		case authTypePlainText:
-			if password != entry.password {
-				return ErrAuthenticationFailure
-			}
-
-			return nil
-		default:
-			context.GetLogger(ctx).Errorf("unsupported basic authentication type: %v", t)
-		}
+		return ErrAuthenticationFailure
 	}
 
-	return ErrAuthenticationFailure
+	return nil
 }
 
-// htpasswdEntry represents a line in an htpasswd file.
-type htpasswdEntry struct {
-	username string // username, plain text
-	password string // stores hashed passwd
-}
-
-// parseHTPasswd parses the contents of htpasswd. Bad entries are skipped and
-// logged, so this may return empty. This will read all the entries in the
-// file, whether or not they are needed.
-func parseHTPasswd(ctx context.Context, rd io.Reader) []htpasswdEntry {
-	entries := []htpasswdEntry{}
+// parseHTPasswd parses the contents of htpasswd. This will read all the
+// entries in the file, whether or not they are needed. An error is returned
+// if an syntax errors are encountered or if the reader fails.
+func parseHTPasswd(rd io.Reader) (map[string][]byte, error) {
+	entries := map[string][]byte{}
 	scanner := bufio.NewScanner(rd)
+	var line int
 	for scanner.Scan() {
+		line++ // 1-based line numbering
 		t := strings.TrimSpace(scanner.Text())
-		i := strings.Index(t, ":")
-		if i < 0 || i >= len(t) {
-			context.GetLogger(ctx).Errorf("bad entry in htpasswd: %q", t)
+
+		if len(t) < 1 {
 			continue
 		}
 
-		entries = append(entries, htpasswdEntry{
-			username: t[:i],
-			password: t[i+1:],
-		})
+		// lines that *begin* with a '#' are considered comments
+		if t[0] == '#' {
+			continue
+		}
+
+		i := strings.Index(t, ":")
+		if i < 0 || i >= len(t) {
+			return nil, fmt.Errorf("htpasswd: invalid entry at line %d: %q", line, scanner.Text())
+		}
+
+		entries[t[:i]] = []byte(t[i+1:])
 	}
 
-	return entries
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return entries, nil
 }

@@ -11,7 +11,6 @@ import (
 )
 
 func TestBasicAccessController(t *testing.T) {
-
 	testRealm := "The-Shire"
 	testUsers := []string{"bilbo", "frodo", "MiShil", "DeokMan"}
 	testPasswords := []string{"baggins", "baggins", "새주", "공주님"}
@@ -85,6 +84,11 @@ func TestBasicAccessController(t *testing.T) {
 		t.Fatalf("unexpected non-fail response status: %v != %v", resp.StatusCode, http.StatusUnauthorized)
 	}
 
+	nonbcrypt := map[string]struct{}{
+		"bilbo":   struct{}{},
+		"DeokMan": struct{}{},
+	}
+
 	for i := 0; i < len(testUsers); i++ {
 		userNumber = i
 		req, err := http.NewRequest("GET", server.URL, nil)
@@ -100,9 +104,17 @@ func TestBasicAccessController(t *testing.T) {
 		}
 		defer resp.Body.Close()
 
-		// Request should be authorized
-		if resp.StatusCode != http.StatusNoContent {
-			t.Fatalf("unexpected non-success response status: %v != %v for %s %s", resp.StatusCode, http.StatusNoContent, testUsers[i], testPasswords[i])
+		if _, ok := nonbcrypt[testUsers[i]]; ok {
+			// these are not allowed.
+			// Request should be authorized
+			if resp.StatusCode != http.StatusUnauthorized {
+				t.Fatalf("unexpected non-success response status: %v != %v for %s %s", resp.StatusCode, http.StatusUnauthorized, testUsers[i], testPasswords[i])
+			}
+		} else {
+			// Request should be authorized
+			if resp.StatusCode != http.StatusNoContent {
+				t.Fatalf("unexpected non-success response status: %v != %v for %s %s", resp.StatusCode, http.StatusNoContent, testUsers[i], testPasswords[i])
+			}
 		}
 	}
 

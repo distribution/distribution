@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/auth"
@@ -41,7 +42,18 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 		return nil, fmt.Errorf(`"path" must be set for basic access controller`)
 	}
 
-	return &accessController{realm: realm.(string), htpasswd: newHTPasswd(path.(string))}, nil
+	f, err := os.Open(path.(string))
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+
+	h, err := newHTPasswd(f)
+	if err != nil {
+		return nil, err
+	}
+
+	return &accessController{realm: realm.(string), htpasswd: h}, nil
 }
 
 func (ac *accessController) Authorized(ctx context.Context, accessRecords ...auth.Access) (context.Context, error) {
@@ -58,7 +70,7 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 		}
 	}
 
-	if err := ac.htpasswd.authenticateUser(ctx, username, password); err != nil {
+	if err := ac.htpasswd.authenticateUser(username, password); err != nil {
 		ctxu.GetLogger(ctx).Errorf("error authenticating user %q: %v", username, err)
 		return nil, &challenge{
 			realm: ac.realm,
