@@ -8,11 +8,7 @@ IGNORES-->
 
 You obviously need to [install Docker](https://docs.docker.com/installation/) (remember you need **Docker version 1.6.0 or newer**).
 
-## Getting started in 2 lines
-
-Create a folder for your registry data:
-
-     $ mkdir registry-data
+## Getting started
 
 Start your registry:
 
@@ -30,6 +26,20 @@ Then pull it back:
 
     $ docker pull localhost:5000/batman/ubuntu
 
+## Where is my data?
+
+By default, your registry stores its data on the local filesystem, inside the container.
+
+In a production environment, it's highly recommended to use [another storage backend](https://github.com/docker/distribution/blob/master/docs/storagedrivers.md), by [configuring it](https://github.com/docker/distribution/blob/master/docs/configuration.md#storage).
+
+If you want to stick with the local posix filesystem, you should store your data outside of the container.
+
+This is achieved by mounting a volume into the container:
+
+     $ docker run -d -p 5000:5000 \
+        -e REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/var/lib/registry \
+        -v /myregistrydata:/var/lib/registry \
+        --restart=always --name registry registry:2
 
 ## Making your Registry available
 
@@ -40,7 +50,12 @@ Let assume your registry is accessible via the domain name `myregistrydomain.com
 If you try to `docker pull myregistrydomain.com:5000/batman/ubuntu`, you will see the following error message:
 
 ```
-FATA[0000] Error response from daemon: v1 ping attempt failed with error: Get https://myregistrydomain.com:5000/v1/_ping: tls: oversized record received with length 20527. If this private registry supports only HTTP or HTTPS with an unknown CA certificate, please add `--insecure-registry myregistrydomain.com:5000` to the daemon's arguments. In the case of HTTPS, if you have access to the registry's CA certificate, no need for the flag; simply place the CA certificate at /etc/docker/certs.d/myregistrydomain.com:5000/ca.crt
+FATA[0000] Error response from daemon: v1 ping attempt failed with error:
+Get https://myregistrydomain.com:5000/v1/_ping: tls: oversized record received with length 20527. 
+If this private registry supports only HTTP or HTTPS with an unknown CA certificate,please add 
+`--insecure-registry myregistrydomain.com:5000` to the daemon's arguments.
+In the case of HTTPS, if you have access to the registry's CA certificate, no need for the flag;
+simply place the CA certificate at /etc/docker/certs.d/myregistrydomain.com:5000/ca.crt
 ```
 
 If trying to reach a non `localhost` registry, Docker requires that you secure it using https, or make it explicit that you want to run an insecure registry.
@@ -132,9 +147,9 @@ registry:
   environment:
     REGISTRY_HTTP_TLS_CERTIFICATE: /certs/domain.crt
     REGISTRY_HTTP_TLS_KEY: /certs/domain.key
-    REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /data
+    REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
   volumes:
-    - /path/registry-data:/data
+    - /path/registry-data:/var/lib/registry
     - /path/certs:/certs
 ```
 
