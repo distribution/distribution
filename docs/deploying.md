@@ -17,7 +17,6 @@ Create a folder for your registry data:
 Start your registry:
 
      $ docker run -d -p 5000:5000 \
-     		-v `pwd`/registry-data:/tmp/registry-dev \
      		--restart=always --name registry registry:2
 
 That's it.
@@ -62,7 +61,6 @@ docker stop registry && docker rm registry
 
 # Start your registry with TLS enabled
 docker run -d -p 5000:5000 \
-	-v `pwd`/registry-data:/tmp/registry-dev \
 	-v `pwd`/certs:/certs \
 	-e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/domain.crt \
 	-e REGISTRY_HTTP_TLS_KEY=/certs/domain.key \
