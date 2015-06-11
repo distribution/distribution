@@ -21,16 +21,16 @@ configure the `rootdirectory` of the `filesystem` storage backend:
 ```
 storage:
 	filesystem:
-		rootdirectory: /tmp/registry-dev
+		rootdirectory: /var/lib/registry
 ```
 
 To override this value, set an environment variable like this:
 
 ```
-REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/tmp/registry/test
+REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/somewhere
 ```
 
-This variable overrides the `/tmp/registry-dev` value to the `/tmp/registry/test`
+This variable overrides the `/var/lib/registry` value to the `/somewhere`
 directory.
 
 >**Note**: If an environment variable changes a map value into a string, such
@@ -72,7 +72,7 @@ log:
 loglevel: debug # deprecated: use "log"
 storage:
 	filesystem:
-		rootdirectory: /tmp/registry-dev
+		rootdirectory: /var/lib/registry
 	azure:
 		accountname: accountname
 		accountkey: base64encodedaccountkey
@@ -284,7 +284,7 @@ Permitted values are `error`, `warn`, `info` and `debug`. The default is
 ```yaml
 storage:
 	filesystem:
-		rootdirectory: /tmp/registry
+		rootdirectory: /var/lib/registry
 	azure:
 		accountname: accountname
 		accountkey: base64encodedaccountkey
@@ -1342,7 +1342,7 @@ log:
 	level: debug
 storage:
     filesystem:
-        rootdirectory: /tmp/registry-dev
+        rootdirectory: /var/lib/registry
 http:
     addr: localhost:5000
     secret: asecretforlocaldevelopment
@@ -1352,7 +1352,7 @@ http:
 
 The above configures the registry instance to run on port `5000`, binding to
 `localhost`, with the `debug` server enabled. Registry data storage is in the
-`/tmp/registry-dev` directory. Logging is in `debug` mode, which is the most
+`/var/lib/registry` directory. Logging is in `debug` mode, which is the most
 verbose.
 
 A similar simple configuration is available at

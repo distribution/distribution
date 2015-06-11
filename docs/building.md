@@ -12,7 +12,17 @@ If a Go development environment is setup, one can use `go get` to install the
 go get github.com/docker/distribution/cmd/registry
 ```
 
-The above will install the source repository into the `GOPATH`. The `registry`
+The above will install the source repository into the `GOPATH`.
+
+Now create the directory for the registry data (this might require you to set permissions properly)
+
+```sh
+mkdir -p /var/lib/registry
+```
+
+... or alternatively `export REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/somewhere` if you want to store data into another location.
+
+The `registry`
 binary can then be run with the following:
 
 ```
