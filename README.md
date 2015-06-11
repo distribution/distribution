@@ -61,7 +61,7 @@ if they have a [Docker Hub](https://hub.docker.com/) account.
 For some users and even companies, this default behavior is sufficient. For
 others, it is not. 
 
-For example, users with their own software products and may want to maintain an
+For example, users with their own software products may want to maintain a
 registry for private, company images. Also, you may wish to deploy your own
 image repository for images used to test or in continuous integration. For these
 use cases and others, [deploying your own registry instance](docs/deploying.md)
