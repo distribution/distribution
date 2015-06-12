@@ -6,137 +6,125 @@ IGNORES-->
 
 # Deploying a registry server
 
-You obviously need to [install Docker](https://docs.docker.com/installation/) (remember you need **Docker version 1.6.0 or newer**).
+You obviously need to [install Docker version 1.6.0 or newer](https://docs.docker.com/installation/).
 
-## Getting started
+## Running on localhost
 
 Start your registry:
 
-     $ docker run -d -p 5000:5000 \
-     		--restart=always --name registry registry:2
+    docker run -d -p 5000:5000 --restart=always --name registry registry:2
 
-That's it.
+You can now use it with docker:
 
-You can now tag an image and push it:
+	# Get any image from the hub and tag it to point to your registry:
+    docker pull ubuntu && docker tag ubuntu localhost:5000/batman/ubuntu
 
-    $ docker pull ubuntu && docker tag ubuntu localhost:5000/batman/ubuntu
-    $ docker push localhost:5000/batman/ubuntu
+	# ... then push it to your registry:
+    docker push localhost:5000/batman/ubuntu
 
-Then pull it back:
+	# ... then pull it back from your registry:
+    docker pull localhost:5000/batman/ubuntu
 
-    $ docker pull localhost:5000/batman/ubuntu
+Now, stop your registry:
 
-## Where is my data?
+    docker stop registry && docker rm registry
 
-By default, your registry stores its data on the local filesystem, inside the container.
+## Storage
 
-In a production environment, it's highly recommended to use [another storage backend](https://github.com/docker/distribution/blob/master/docs/storagedrivers.md), by [configuring it](https://github.com/docker/distribution/blob/master/docs/configuration.md#storage).
+By default, your registry data is stored *inside the container* - thus it will be lost if you remove the container.
 
-If you want to stick with the local posix filesystem, you should store your data outside of the container.
+If you want your data to persist, and in order to achieve decent I/O performance, you should mount a host volume inside the container and instruct the registry to use that folder:
 
-This is achieved by mounting a volume into the container:
-
-     $ docker run -d -p 5000:5000 \
+	docker run -d -p 5000:5000 --restart=always --name registry \
         -e REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/var/lib/registry \
-        -v /myregistrydata:/var/lib/registry \
-        --restart=always --name registry registry:2
+        -v `pwd`/data:/var/lib/registry \
+        registry:2
 
-## Making your Registry available
+### Alternatives
 
-Now that your registry works on `localhost`, you probably want to make it available as well to other hosts.
+You might consider using [another storage backend](https://github.com/docker/distribution/blob/master/docs/storagedrivers.md) instead of the local filesystem, by [configuring it](https://github.com/docker/distribution/blob/master/docs/configuration.md#storage).
 
-Let assume your registry is accessible via the domain name `myregistrydomain.com` (still on port `5000`).
 
-If you try to `docker pull myregistrydomain.com:5000/batman/ubuntu`, you will see the following error message:
+## Running a domain registry
 
-```
-FATA[0000] Error response from daemon: v1 ping attempt failed with error:
-Get https://myregistrydomain.com:5000/v1/_ping: tls: oversized record received with length 20527. 
-If this private registry supports only HTTP or HTTPS with an unknown CA certificate,please add 
-`--insecure-registry myregistrydomain.com:5000` to the daemon's arguments.
-In the case of HTTPS, if you have access to the registry's CA certificate, no need for the flag;
-simply place the CA certificate at /etc/docker/certs.d/myregistrydomain.com:5000/ca.crt
-```
+While running on `localhost` has its uses, most people want their registry to be more widely available. To do so, the Docker engine requires you to secure it using TLS, which is conceptually very similar to configuring your web server with SSL.
 
-If trying to reach a non `localhost` registry, Docker requires that you secure it using https, or make it explicit that you want to run an insecure registry.
+### Get a certificate
 
-You basically have three different options to comply with that security requirement here.
+Assuming that you own the domain `myregistrydomain.com`, and that its DNS record points to the host where you are running your registry, you first need to buy a certificate from a CA.
 
-### 1. buy a SSL certificate for your domain
+Move and/or rename your crt file to: `certs/domain.crt` - and your key file to: `certs/domain.key`.
 
-This is the (highly) recommended solution.
+Make sure you stopped your registry from the previous steps, then start your registry again with TLS enabled:
 
-You can buy a certificate for as cheap as 10$ a year (some registrars even offer certificates for free), and this will save you a lot of trouble.
+	docker run -d -p 5000:5000 --restart=always --name registry \
+	  -v `pwd`/certs:/certs \
+	  -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/domain.crt \
+	  -e REGISTRY_HTTP_TLS_KEY=/certs/domain.key \
+	  registry:2
 
-Assuming you now have a `domain.crt` and `domain.key` inside a directory named `certs`:
+You should now be able to access your registry from another docker host:
 
-```
-# Stop your registry
-docker stop registry && docker rm registry
+    docker pull ubuntu
+    docker tag ubuntu myregistrydomain.com:5000/batman/ubuntu
+    docker push myregistrydomain.com:5000/batman/ubuntu
+    docker pull myregistrydomain.com:5000/batman/ubuntu
 
-# Start your registry with TLS enabled
-docker run -d -p 5000:5000 \
-	-v `pwd`/certs:/certs \
-	-e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/domain.crt \
-	-e REGISTRY_HTTP_TLS_KEY=/certs/domain.key \
-	--restart=always --name registry \
-	registry:2
-```
+### Alternatives
 
-**Pros:**
+While rarely advisable, you may want to use self-signed certificates instead, or use your registry in an insecure fashion. You will find instructions [here](insecure.md).
 
- - best solution
- - work without further ado (assuming you bought your certificate from a CA that is trusted by your operating system)
+## Restricting access
 
-**Cons:**
+While running an unrestricted registry is certainly ok for development, secured local networks, or test setups, you should probably implement access restriction if you plan on making it available to a wider audience or through public internet.
 
- - ?
+### Native basic auth
 
-### 2. instruct docker to trust your registry as insecure
+> THIS FEATURE IS ON MASTER ONLY: please refer to [nginx based basic auth](nginx.md) if you are running the official image
 
-This basically tells Docker to entirely disregard security for your registry.
+The simplest way to achieve access restriction is through basic authentication (this is very similar to other web servers basic authentication mechanism).
 
-1. edit the file `/etc/default/docker` so that there is a line that reads: `DOCKER_OPTS="--insecure-registry myregistrydomain.com:5000"` (or add that to existing `DOCKER_OPTS`). Restart docker.
-2. restart your Docker daemon: on ubuntu, this is usually `service docker stop && service docker start`
+:warning: You **cannot** use authentication with an insecure registry. You have to [configure TLS first](#making-your-registry-available) for this to work.
 
-**Pros:**
+First create a password file with one entry for the user "testuser", with password "testpassword":
 
- - easy to configure
- 
-**Cons:**
- 
- - very insecure
- - you have to configure every docker daemon that wants to access your registry 
-  
-### 3. use a self-signed certificate and configure docker to trust it
+	mkdir auth
+	docker run --entrypoint htpasswd registry:2 -Bbn testuser testpassword > auth/htpasswd
 
-Alternatively, you can generate your own certificate:
+Make sure you stopped your registry from the previous step, then kick it:
 
-```
-mkdir -p certs && openssl req \
-	-newkey rsa:4096 -nodes -sha256 -keyout certs/domain.key \
-	-x509 -days 365 -out certs/domain.crt
-```
+	docker run -d -p 5000:5000 --restart=always --name registry \
+	  -v `pwd`/auth:/auth \
+	  -e "REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm" \
+	  -e REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd \
+	  -v `pwd`/certs:/certs \
+	  -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/domain.crt \
+	  -e REGISTRY_HTTP_TLS_KEY=/certs/domain.key \
+	  registry:2
 
-Be sure to use the name `myregistrydomain.com` as a CN.
+You should now be able to:
 
-Now go to solution 1 above and stop and restart your registry.
+	docker login myregistrydomain.com:5000
 
-Then you have to instruct every docker daemon to trust that certificate. This is done by copying the `domain.crt` file to `/etc/docker/certs.d/myregistrydomain.com:5000/ca.crt` (don't forget to restart docker after doing so).
+You can now push and pull images as an authenticated user.
 
-**Pros:**
+### Alternatives
 
- - more secure than solution 2
+1. You may want to leverage more advanced basic auth implementations through a proxy design, in front of the registry. You will find an example of such design in the [nginx proxy documentation](nginx.md).
 
-**Cons:**
+2. Alternatively, the Registry also supports delegated authentication, redirecting users to a specific, trusted token server. That approach requires significantly more investment, and only make sense if you want to fully configure ACLs and more control over the Registry integration into your global authorization and authentication systems.
 
- - you have to configure every docker daemon that wants to access your registry
+	You will find [background information here](spec/auth/token.md), [configuration information here](configuration.md#auth).
 
-## Using Compose
+	Beware that you will have to implement your own authentication service for this to work.
 
-It's highly recommended to use [Docker Compose](https://docs.docker.com/compose/) to facilitate managing your Registry configuration.
+## Managing with Compose
 
-Here is a simple `docker-compose.yml` that does setup your registry exactly as above, with TLS enabled.
+As your registry configuration grows more complex, dealing with it can quickly become tedious.
+
+It's highly recommended to use [Docker Compose](https://docs.docker.com/compose/) to facilitate operating your registry. 
+
+Here is a simple `docker-compose.yml` example that condenses everything explained so far:
 
 ```
 registry:
@@ -148,16 +136,20 @@ registry:
     REGISTRY_HTTP_TLS_CERTIFICATE: /certs/domain.crt
     REGISTRY_HTTP_TLS_KEY: /certs/domain.key
     REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
+    REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
+    REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
   volumes:
-    - /path/registry-data:/var/lib/registry
+    - /path/data:/var/lib/registry
     - /path/certs:/certs
+    - /path/auth:/auth
 ```
+
+:warning: replace `/path` by whatever directory that holds your `certs` and `auth` folder from above.
 
 You can then start your registry with a simple
 
     $ docker-compose up -d
 
-
 ## Next
 
-You are now ready to explore [the registry configuration](configuration.md)
+You are now ready to explore the registry [advanced configuration](configuration.md)
