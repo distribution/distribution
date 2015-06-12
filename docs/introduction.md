@@ -12,9 +12,9 @@ Users interact with a registry by using docker push and pull commands. For examp
 
 Storage itself is delegated to drivers. The default storage driver is the local posix filesystem, which is suitable for development or small deployments. Additional cloud-based storage driver like S3, Microsoft Azure and Ceph are also supported. People looking into using other storage backends may do so by writing their own driver implementing the [Storage API](storagedrivers.md).
 
-Since securing access to your hosted images is paramount, the Registry natively supports TLS. You can also enforce basic authentication through a proxy like Nginx.
+Since securing access to your hosted images is paramount, the Registry natively supports TLS and basic authentication.
 
-The Registry GitHub repository includes reference implementations for additional authentication and authorization methods. Only very large or public deployments are expected to extend the Registry in this way.
+The Registry GitHub repository includes information about advanced authentication and authorization methods. Only very large or public deployments are expected to extend the Registry in this way.
 
 Finally, the Registry includes a robust [notification system](notifications.md), calling webhooks in response to activity, and both extensive logging and reporting. Reporting is mostly useful for large installations that want to collect metrics. Currently, New Relic and Bugsnag are supported.
 

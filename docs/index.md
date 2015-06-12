@@ -63,8 +63,11 @@ Simple as that? Yes. Now, please read the...
 ### Reference and advanced topics
 
  - [Glossary](glossary.md)
- - [Authentication](authentication.md)
  - [Working with notifications](notifications.md)
+
+### Miscellanee
+ - [Nginx as a proxy](nginx.md)
+ - [Insecure registry](insecure.md)
 
 ### Development resources
 
