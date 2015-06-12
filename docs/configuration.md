@@ -108,9 +108,9 @@ auth:
 		service: token-service
 		issuer: registry-token-issuer
 		rootcertbundle: /root/certs/bundle
-  htpasswd:
-    realm: basic-realm
-    path: /path/to/htpasswd
+	htpasswd:
+		realm: basic-realm
+		path: /path/to/htpasswd
 middleware:
 	registry:
 		- name: ARegistryMiddleware
@@ -603,9 +603,9 @@ auth:
 		service: token-service
 		issuer: registry-token-issuer
 		rootcertbundle: /root/certs/bundle
-  htpasswd:
-    realm: basic-realm
-    path: /path/to/htpasswd
+	htpasswd:
+		realm: basic-realm
+		path: /path/to/htpasswd
 ```
 
 The `auth` option is **optional**. There are
@@ -719,7 +719,7 @@ For more information about Token based authentication configuration, see the [sp
 ### htpasswd
 
 The _htpasswd_ authentication backed allows one to configure basic auth using an
-[Apache HTPasswd File](http://httpd.apache.org/docs/2.4/programs/htpasswd.html).
+[Apache HTPasswd File](https://httpd.apache.org/docs/2.4/programs/htpasswd.html).
 Only [`bcrypt`](http://en.wikipedia.org/wiki/Bcrypt) format passwords are
 supported. Entries with other hash types will be ignored. The htpasswd file is
 loaded once, at startup. If the file is invalid, the registry will display and
