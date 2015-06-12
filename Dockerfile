@@ -1,7 +1,7 @@
 FROM golang:1.4
 
 RUN apt-get update && \
-    apt-get install -y librados-dev && \
+    apt-get install -y librados-dev apache2-utils && \
     rm -rf /var/lib/apt/lists/*
 
 ENV DISTRIBUTION_DIR /go/src/github.com/docker/distribution
