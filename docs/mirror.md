@@ -1,3 +1,9 @@
+<!--[metadata]>
++++
+draft = "true"
++++
+<![end-metadata]-->
+
 # Registry as a pull through cache
 
 A v2 Registry can be configured as a pull through cache.  In this mode a Registry responds to all normal docker pull requests but stores all content locally.

@@ -2,12 +2,11 @@
 +++
 title = "Docker Registry 2.0"
 description = "Introduces the Docker Registry"
-keywords = ["registry, images,  repository"]
+keywords = ["registry, images, repository"]
 [menu.main]
 parent="smn_registry"
 +++
 <![end-metadata]-->
-
 
 # Docker Registry
 
@@ -22,7 +21,7 @@ You should use the Registry if you want to:
 
  * tightly control where your images are being stored
  * fully own your images distribution pipeline
- * integrate images storage and distribution into your inhouse development workflow
+ * integrate image storage and distribution tightly into your in-house development workflow
 
 ## Alternatives
 
@@ -37,27 +36,31 @@ If you really need to work with older Docker versions, you should look into the 
 
 ## TL;DR
 
-```
-# Start your registry
-docker run -d -p 5000:5000 registry:2
+Start your registry
 
-# Pull (or build) some image from the hub
-docker pull ubuntu
+    docker run -d -p 5000:5000 --name registry registry:2
 
-# Tag the image so that it points to your registry
-docker tag ubuntu localhost:5000/myfirstimage
+Pull (or build) some image from the hub
 
-# Push it
-docker push localhost:5000/myfirstimage
+    docker pull ubuntu
 
-# Pull it back
-docker pull localhost:5000/myfirstimage
-```
+Tag the image so that it points to your registry
 
-## Where to go next
+    docker tag ubuntu localhost:5000/myfirstimage
 
-Simple as that? Yes. Continue on to read the [overview of the registry](introduction.md).
+Push it
 
+    docker push localhost:5000/myfirstimage
 
+Pull it back
 
+    docker pull localhost:5000/myfirstimage
+
+Now stop your registry and remove all data
+
+    docker stop registry && docker rm -v registry
+
+## Next
+
+You should now read the [detailed introduction about the registry](introduction.md), or jump directly to [deployment instructions](deploying.md).
  

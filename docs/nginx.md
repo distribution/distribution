@@ -1,36 +1,20 @@
 <!--[metadata]>
 +++
-title = "Authentication for the Registry"
-description = "Restricting access to your registry"
+title = "Authentication for the Registry with a proxy"
+description = "Restricting access to your registry using a proxy"
 keywords = ["registry, service, images, repository, authentication"]
 [menu.main]
 parent="smn_registry"
-weight=6
 +++
 <![end-metadata]-->
 
-# Authentication
-
-While running an unrestricted registry is certainly ok for development, secured local networks, or test setups, you should probably implement access restriction if you plan on making your registry available to a wider audience or through public internet.
-
-The Registry supports two different authentication methods to get your there:
-
- * direct authentication, through the use of a proxy
- * delegated authentication, redirecting to a trusted token server
-
-The first method is recommended for most people as the most straight-forward solution.
-
-The second method requires significantly more investment, and only make sense if you want to fully configure ACLs and more control over the Registry integration into your global authorization and authentication systems.
-
-## Direct authentication through a proxy
+# Authenticating proxy with nginx
 
 With this method, you implement basic authentication in a reverse proxy that sits in front of your registry.
 
-Since the Docker engine uses basic authentication to negotiate access to the Registry, securing communication between docker engines and your proxy is absolutely paramount.
-
 While this model gives you the ability to use whatever authentication backend you want through a secondary authentication mechanism implemented inside your proxy, it also requires that you move TLS termination from the Registry to the proxy itself.
 
-Below is a simple example of secured basic authentication (using TLS), using nginx as a proxy.
+Furthermore, introducing an extra http layer in your communication pipeline will make it more complex to deploy, maintain, and debug, and will possibly create issues (typically, nginx does buffer client requests to disk, opening the door to a host of problems if you are dealing with huge images and a lot of traffic).
 
 ### Requirements
 
@@ -42,10 +26,9 @@ At this point, it's assumed that:
 
  * you understand Docker security requirements, and how to configure your docker engines properly
  * you have installed Docker Compose
- * you have a `domain.crt` and `domain.key` files, for the CN `myregistrydomain.com` (or whatever domain name you want to use)
- * these files are located inside the current directory, and there is nothing else in that directory
  * it's HIGHLY recommended that you get a certificate from a known CA instead of self-signed certificates
- * be sure you have stopped and removed any previously running registry (typically `docker stop registry && docker rm registry`)
+ * inside the current directory, you have a X509 `domain.crt` and `domain.key`, for the CN `myregistrydomain.com` (or whatever domain name you want to use)
+ * be sure you have stopped and removed any previously running registry (typically `docker stop registry && docker rm -v registry`)
 
 ### Setting things up
 
@@ -56,8 +39,8 @@ Ready?
 Run the following:
 
 ```
-mkdir auth
-mkdir data
+mkdir -p auth
+mkdir -p data
 
 # This is the main nginx configuration you will use
 cat <<EOF > auth/registry.conf
@@ -87,8 +70,8 @@ server {
     }
 
     # To add basic authentication to v2 use auth_basic setting plus add_header
-    auth_basic "registry.localhost";
-    auth_basic_user_file /etc/nginx/conf.d/registry.password;
+    auth_basic "Registry realm";
+    auth_basic_user_file /etc/nginx/conf.d/htpasswd;
     add_header 'Docker-Distribution-Api-Version' 'registry/2.0' always;
 
     proxy_pass                          http://docker-registry;
@@ -102,10 +85,7 @@ server {
 EOF
 
 # Now, create a password file for "testuser" and "testpassword"
-echo 'testuser:$2y$05$.nIfPAEgpWCh.rpts/XHX.UOfCRNtvMmYjh6sY/AZBmeg/dQyN62q' > auth/registry.password
-
-# Alternatively you could have achieved the same thing with htpasswd
-# htpasswd -Bbc auth/registry.password testuser testpassword
+htpasswd -bn testuser testpassword > auth/htpasswd
 
 # Copy over your certificate files
 cp domain.crt auth
@@ -165,21 +145,3 @@ Now:
 
  * `service docker stop && service docker start` (or any other way you use to restart docker)
  * `docker-compose up -d` to bring your registry up
-
-## Token-based delegated authentication
-
-This is **advanced**.
-
-You will find [background information here](./spec/auth/token.md), [configuration information here](configuration.md#auth).
-
-Beware that you will have to implement your own authentication service for this to work (though there exist third-party open-source implementations).
-
-# Manual Set-up
-
-If you'd like to manually configure your HTTP server, here are a few requirements that are absolutely necessary for the docker client to be able to interface with it:
-
-- Each response needs to have the header "Docker-Distribution-Api-Version registry/2.0" set, even (especially) if there is a 401 or 404 error response. Make sure using cURL that this header is provided. Note: If you're using Nginx, this functionality is only available since 1.7.5 using the "always" add_header directive, or when compiling with the "more_set_headers" module.
-
-- A large enough maximum for client body size, preferably unlimited. Because images can be pretty big, the very low default maximum size of most HTTP servers won't be sufficient to be able to upload the files.
-
-- Support for chunked transfer encoding.

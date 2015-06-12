@@ -9,15 +9,13 @@ weight=4
 +++
 <![end-metadata]-->
 
-
-
 # Registry Configuration Reference
 
 The Registry configuration is based on a YAML file, detailed below. While it comes with sane default values out of the box, you are heavily encouraged to review it exhaustively before moving your systems to production.
 
-## Override configuration options
+## Override specific configuration options
 
-In a typical setup where you run your Registry from the official image, you can specify any configuration variable from the environment by passing `-e` arguments to your `docker run` stanza, or from within a Dockerfile using the `ENV` instruction.
+In a typical setup where you run your Registry from the official image, you can specify a configuration variable from the environment by passing `-e` arguments to your `docker run` stanza, or from within a Dockerfile using the `ENV` instruction.
 
 To override a configuration option, create an environment variable named
 `REGISTRY_variable` where *`variable`* is the name of the configuration option
@@ -41,7 +39,17 @@ directory.
 >environment will remove all parameters related to the old storage
 >configuration.
 
+## Overriding the entire configuration file
 
+If the default configuration is not a sound basis for your usage, or if you are having issues overriding keys from the environment, you can specify an alternate YAML configuration file by mounting it as a volume in the container.
+
+Typically, create a new configuration file from scratch, and call it `config.yml`, then:
+
+  docker run -d -p 5000:5000 --restart=always --name registry \
+    -v `pwd`/config.yml:/etc/docker/registry/config.yml \
+    registry:2
+
+You can (and probably should) use [this a starting point](https://github.com/docker/distribution/blob/master/cmd/registry/config-example.yml).
 
 ## List of configuration options
 

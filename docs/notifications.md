@@ -9,8 +9,6 @@ weight=5
 +++
 <![end-metadata]-->
 
-
-
 # Notifications
 
 The Registry supports sending webhook notifications in response to events
