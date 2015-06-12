@@ -85,8 +85,8 @@ func TestBasicAccessController(t *testing.T) {
 	}
 
 	nonbcrypt := map[string]struct{}{
-		"bilbo":   struct{}{},
-		"DeokMan": struct{}{},
+		"bilbo":   {},
+		"DeokMan": {},
 	}
 
 	for i := 0; i < len(testUsers); i++ {
