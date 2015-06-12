@@ -148,7 +148,7 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 
 	manifests := repository.Manifests()
 
-	if err := manifests.Put(sm); err != nil {
+	if err := manifests.Put(sm, storage.VerifyLocalManifest); err != nil {
 		t.Fatalf("unexpected error putting the manifest: %v", err)
 	}
 

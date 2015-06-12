@@ -12,6 +12,7 @@ import (
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
+	"github.com/docker/distribution/registry/storage"
 	"github.com/gorilla/handlers"
 	"golang.org/x/net/context"
 )
@@ -141,13 +142,7 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 		return
 	}
 
-	if err := manifests.Verify(imh.Context, &manifest); err != nil {
-		// todo(richardscothern): reuse the error handling code from below here
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-
-	if err := manifests.Put(&manifest); err != nil {
+	if err := manifests.Put(&manifest, storage.VerifyLocalManifest); err != nil {
 		// TODO(stevvooe): These error handling switches really need to be
 		// handled by an app global mapper.
 		switch err := err.(type) {

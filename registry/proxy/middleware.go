@@ -63,7 +63,7 @@ func (prm proxyMiddleware) Signatures() distribution.SignatureService {
 	return prm.repository.Signatures()
 }
 
-// init registers the proxy registry
+// init registers the proxy repository
 func init() {
 	middleware.Register("proxy", middleware.InitFunc(newProxyMiddleware))
 }

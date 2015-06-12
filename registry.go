@@ -60,6 +60,9 @@ type Repository interface {
 // way instances are created to better reflect internal dependency
 // relationships.
 
+// ManifestVerifyFunc verifies a manifest on Put
+type ManifestVerifyFunc func(ctx context.Context, mnfst *manifest.SignedManifest, name string, bs BlobService) error
+
 // ManifestService provides operations on image manifests.
 type ManifestService interface {
 	// Exists returns true if the manifest exists.
@@ -71,8 +74,9 @@ type ManifestService interface {
 	// Delete removes the manifest, if it exists.
 	Delete(dgst digest.Digest) error
 
-	// Put creates or updates the manifest.
-	Put(manifest *manifest.SignedManifest) error
+	// Put creates or updates the manifest.  VerifyFunc is run
+	// and must return a nil error in order to successfully put
+	Put(manifest *manifest.SignedManifest, verifyFunc ManifestVerifyFunc) error
 
 	// TODO(stevvooe): The methods after this message should be moved to a
 	// discrete TagService, per active proposals.
@@ -85,9 +89,6 @@ type ManifestService interface {
 
 	// GetByTag retrieves the named manifest, if it exists.
 	GetByTag(tag string) (*manifest.SignedManifest, error)
-
-	// Verify ensures the manifest content is valid
-	Verify(ctx context.Context, manifest *manifest.SignedManifest) error
 
 	// TODO(stevvooe): There are several changes that need to be done to this
 	// interface:

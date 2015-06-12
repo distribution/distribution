@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -366,7 +367,6 @@ func TestManifestAPI(t *testing.T) {
 			},
 		},
 	}
-	//todo(richardscothern): reenable if interface change gets sign-off
 
 	resp = putManifest(t, "putting unsigned manifest", manifestURL, unsignedManifest)
 	defer resp.Body.Close()

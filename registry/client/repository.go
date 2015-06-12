@@ -205,7 +205,7 @@ func (ms *manifests) GetByTag(tag string) (*manifest.SignedManifest, error) {
 	}
 }
 
-func (ms *manifests) Put(m *manifest.SignedManifest) error {
+func (ms *manifests) Put(m *manifest.SignedManifest, verifyFunc distribution.ManifestVerifyFunc) error {
 	manifestURL, err := ms.ub.BuildManifestURL(ms.name, m.Tag)
 	if err != nil {
 		return err

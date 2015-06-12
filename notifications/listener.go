@@ -81,8 +81,8 @@ func (msl *manifestServiceListener) Get(dgst digest.Digest) (*manifest.SignedMan
 	return sm, err
 }
 
-func (msl *manifestServiceListener) Put(sm *manifest.SignedManifest) error {
-	err := msl.ManifestService.Put(sm)
+func (msl *manifestServiceListener) Put(sm *manifest.SignedManifest, verifyFunc distribution.ManifestVerifyFunc) error {
+	err := msl.ManifestService.Put(sm, verifyFunc)
 
 	if err == nil {
 		if err := msl.parent.listener.ManifestPushed(msl.parent.Repository.Name(), sm); err != nil {
