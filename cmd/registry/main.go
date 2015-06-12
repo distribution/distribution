@@ -152,6 +152,8 @@ func resolveConfiguration() (*configuration.Configuration, error) {
 		return nil, err
 	}
 
+	defer fp.Close()
+
 	config, err := configuration.Parse(fp)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing %s: %v", configurationPath, err)
