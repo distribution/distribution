@@ -8,6 +8,7 @@ import (
 	"github.com/docker/distribution"
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
 	"golang.org/x/net/context"
 )
@@ -27,7 +28,7 @@ type Context struct {
 	// Errors is a collection of errors encountered during the request to be
 	// returned to the client API. If errors are added to the collection, the
 	// handler *must not* start the response via http.ResponseWriter.
-	Errors v2.Errors
+	Errors errcode.Errors
 
 	urlBuilder *v2.URLBuilder
 

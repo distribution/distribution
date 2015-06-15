@@ -19,6 +19,7 @@ import (
 	"github.com/docker/distribution/configuration"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
 	_ "github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/docker/distribution/testutil"
@@ -373,7 +374,7 @@ func TestManifestAPI(t *testing.T) {
 	_, p, counts := checkBodyHasErrorCodes(t, "getting unknown manifest tags", resp,
 		v2.ErrorCodeManifestUnverified, v2.ErrorCodeBlobUnknown, v2.ErrorCodeDigestInvalid)
 
-	expectedCounts := map[v2.ErrorCode]int{
+	expectedCounts := map[errcode.ErrorCode]int{
 		v2.ErrorCodeManifestUnverified: 1,
 		v2.ErrorCodeBlobUnknown:        2,
 		v2.ErrorCodeDigestInvalid:      2,
@@ -748,18 +749,18 @@ func checkResponse(t *testing.T, msg string, resp *http.Response, expectedStatus
 // checkBodyHasErrorCodes ensures the body is an error body and has the
 // expected error codes, returning the error structure, the json slice and a
 // count of the errors by code.
-func checkBodyHasErrorCodes(t *testing.T, msg string, resp *http.Response, errorCodes ...v2.ErrorCode) (v2.Errors, []byte, map[v2.ErrorCode]int) {
+func checkBodyHasErrorCodes(t *testing.T, msg string, resp *http.Response, errorCodes ...errcode.ErrorCode) (errcode.Errors, []byte, map[errcode.ErrorCode]int) {
 	p, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("unexpected error reading body %s: %v", msg, err)
 	}
 
-	var errs v2.Errors
+	var errs errcode.Errors
 	if err := json.Unmarshal(p, &errs); err != nil {
 		t.Fatalf("unexpected error decoding error response: %v", err)
 	}
 
-	if len(errs.Errors) == 0 {
+	if len(errs) == 0 {
 		t.Fatalf("expected errors in response")
 	}
 
@@ -770,8 +771,8 @@ func checkBodyHasErrorCodes(t *testing.T, msg string, resp *http.Response, error
 	// 		resp.Header.Get("Content-Type"))
 	// }
 
-	expected := map[v2.ErrorCode]struct{}{}
-	counts := map[v2.ErrorCode]int{}
+	expected := map[errcode.ErrorCode]struct{}{}
+	counts := map[errcode.ErrorCode]int{}
 
 	// Initialize map with zeros for expected
 	for _, code := range errorCodes {
@@ -779,11 +780,15 @@ func checkBodyHasErrorCodes(t *testing.T, msg string, resp *http.Response, error
 		counts[code] = 0
 	}
 
-	for _, err := range errs.Errors {
-		if _, ok := expected[err.Code]; !ok {
-			t.Fatalf("unexpected error code %v encountered during %s: %s ", err.Code, msg, string(p))
+	for _, e := range errs {
+		err, ok := e.(errcode.ErrorCoder)
+		if !ok {
+			t.Fatalf("not an ErrorCoder: %#v", e)
 		}
-		counts[err.Code]++
+		if _, ok := expected[err.ErrorCode()]; !ok {
+			t.Fatalf("unexpected error code %v encountered during %s: %s ", err.ErrorCode(), msg, string(p))
+		}
+		counts[err.ErrorCode()]++
 	}
 
 	// Ensure that counts of expected errors were all non-zero

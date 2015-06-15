@@ -6,6 +6,7 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/gorilla/handlers"
 )
@@ -17,13 +18,12 @@ func blobDispatcher(ctx *Context, r *http.Request) http.Handler {
 
 		if err == errDigestNotAvailable {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusNotFound)
-				ctx.Errors.Push(v2.ErrorCodeDigestInvalid, err)
+				ctx.Errors = append(ctx.Errors, v2.ErrorCodeDigestInvalid.WithDetail(err))
 			})
 		}
 
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx.Errors.Push(v2.ErrorCodeDigestInvalid, err)
+			ctx.Errors = append(ctx.Errors, v2.ErrorCodeDigestInvalid.WithDetail(err))
 		})
 	}
 
@@ -53,17 +53,16 @@ func (bh *blobHandler) GetBlob(w http.ResponseWriter, r *http.Request) {
 	desc, err := blobs.Stat(bh, bh.Digest)
 	if err != nil {
 		if err == distribution.ErrBlobUnknown {
-			w.WriteHeader(http.StatusNotFound)
-			bh.Errors.Push(v2.ErrorCodeBlobUnknown, bh.Digest)
+			bh.Errors = append(bh.Errors, v2.ErrorCodeBlobUnknown.WithDetail(bh.Digest))
 		} else {
-			bh.Errors.Push(v2.ErrorCodeUnknown, err)
+			bh.Errors = append(bh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		}
 		return
 	}
 
 	if err := blobs.ServeBlob(bh, w, r, desc.Digest); err != nil {
 		context.GetLogger(bh).Debugf("unexpected error getting blob HTTP handler: %v", err)
-		bh.Errors.Push(v2.ErrorCodeUnknown, err)
+		bh.Errors = append(bh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		return
 	}
 }

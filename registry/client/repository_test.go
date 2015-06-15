@@ -18,6 +18,7 @@ import (
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/testutil"
 )
@@ -668,14 +669,14 @@ func TestManifestUnauthorized(t *testing.T) {
 	if err == nil {
 		t.Fatal("Expected error fetching manifest")
 	}
-	v2Err, ok := err.(*v2.Error)
+	v2Err, ok := err.(*errcode.Error)
 	if !ok {
 		t.Fatalf("Unexpected error type: %#v", err)
 	}
 	if v2Err.Code != v2.ErrorCodeUnauthorized {
 		t.Fatalf("Unexpected error code: %s", v2Err.Code.String())
 	}
-	if expected := "401 Unauthorized"; v2Err.Message != expected {
-		t.Fatalf("Unexpected message value: %s, expected %s", v2Err.Message, expected)
+	if expected := errcode.ErrorCode(v2.ErrorCodeUnauthorized).Message(); v2Err.Message() != expected {
+		t.Fatalf("Unexpected message value: %s, expected %s", v2Err.Message(), expected)
 	}
 }
