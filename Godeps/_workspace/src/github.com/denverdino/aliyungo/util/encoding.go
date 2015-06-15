@@ -39,49 +39,48 @@ func setQueryValues(i interface{}, values *url.Values, prefix string) {
 		}
 		if kind == reflect.Ptr {
 			field = field.Elem()
+			kind = field.Kind()
 		}
 		var value string
-		switch field.Interface().(type) {
-		case int, int8, int16, int32, int64:
+		//switch field.Interface().(type) {
+		switch kind {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 			i := field.Int()
 			if i != 0 {
 				value = strconv.FormatInt(i, 10)
 			}
-		case uint, uint8, uint16, uint32, uint64:
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			i := field.Uint()
 			if i != 0 {
 				value = strconv.FormatUint(i, 10)
 			}
-		case float32:
+		case reflect.Float32:
 			value = strconv.FormatFloat(field.Float(), 'f', 4, 32)
-		case float64:
+		case reflect.Float64:
 			value = strconv.FormatFloat(field.Float(), 'f', 4, 64)
-		case []byte:
-			value = string(field.Bytes())
-		case bool:
+		case reflect.Bool:
 			value = strconv.FormatBool(field.Bool())
-		case string:
+		case reflect.String:
 			value = field.String()
-		case []string:
-			l := field.Len()
-			if l > 0 {
-				strArray := make([]string, l)
-				for i := 0; i < l; i++ {
-					strArray[i] = field.Index(i).String()
+		case reflect.Slice:
+			switch field.Type().Elem().Kind() {
+			case reflect.Uint8:
+				value = string(field.Bytes())
+			case reflect.String:
+				l := field.Len()
+				if l > 0 {
+					strArray := make([]string, l)
+					for i := 0; i < l; i++ {
+						strArray[i] = field.Index(i).String()
+					}
+					bytes, err := json.Marshal(strArray)
+					if err == nil {
+						value = string(bytes)
+					} else {
+						log.Printf("Failed to convert JSON: %v", err)
+					}
 				}
-				bytes, err := json.Marshal(strArray)
-				if err == nil {
-					value = string(bytes)
-				} else {
-					log.Printf("Failed to convert JSON: %v", err)
-				}
-			}
-		case time.Time:
-			t := field.Interface().(time.Time)
-			value = GetISO8601TimeStamp(t)
-
-		default:
-			if kind == reflect.Slice { //Array of structs
+			default:
 				l := field.Len()
 				for j := 0; j < l; j++ {
 					prefixName := fmt.Sprintf("%s.%d.", fieldName, (j + 1))
@@ -91,7 +90,18 @@ func setQueryValues(i interface{}, values *url.Values, prefix string) {
 						setQueryValues(ifc, values, prefixName)
 					}
 				}
-			} else {
+				continue
+			}
+
+		default:
+			switch field.Interface().(type) {
+			case ISO6801Time:
+				t := field.Interface().(ISO6801Time)
+				value = t.String()
+			case time.Time:
+				t := field.Interface().(time.Time)
+				value = GetISO8601TimeStamp(t)
+			default:
 				ifc := field.Interface()
 				if ifc != nil {
 					SetQueryValues(ifc, values)

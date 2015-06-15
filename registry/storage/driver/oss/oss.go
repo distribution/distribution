@@ -56,6 +56,7 @@ type DriverParameters struct {
 	Secure          bool
 	ChunkSize       int64
 	RootDirectory   string
+	Endpoint        string
 }
 
 func init() {
@@ -175,6 +176,11 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		rootDirectory = ""
 	}
 
+	endpoint, ok := parameters["endpoint"]
+	if !ok {
+		endpoint = ""
+	}
+
 	params := DriverParameters{
 		AccessKeyID:     fmt.Sprint(accessKey),
 		AccessKeySecret: fmt.Sprint(secretKey),
@@ -185,6 +191,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		Encrypt:         encryptBool,
 		Secure:          secureBool,
 		Internal:        internalBool,
+		Endpoint:        fmt.Sprint(endpoint),
 	}
 
 	return New(params)
@@ -195,6 +202,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 func New(params DriverParameters) (*Driver, error) {
 
 	client := oss.NewOSSClient(params.Region, params.Internal, params.AccessKeyID, params.AccessKeySecret, params.Secure)
+	client.SetEndpoint(params.Endpoint)
 	bucket := client.Bucket(params.Bucket)
 
 	// Validate that the given credentials have at least read permissions in the

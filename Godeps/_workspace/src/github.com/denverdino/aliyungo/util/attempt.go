@@ -4,9 +4,11 @@ import (
 	"time"
 )
 
+// AttemptStrategy is reused from the goamz package
+
 // AttemptStrategy represents a strategy for waiting for an action
 // to complete successfully. This is an internal type used by the
-// implementation of other goamz packages.
+// implementation of other packages.
 type AttemptStrategy struct {
 	Total time.Duration // total duration of attempt.
 	Delay time.Duration // interval between each try in the burst.

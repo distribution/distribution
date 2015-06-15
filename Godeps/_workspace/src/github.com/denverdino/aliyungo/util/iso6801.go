@@ -21,7 +21,7 @@ type ISO6801Time time.Time
 // time.Time instance.  This causes the nanosecond field to be set to
 // 0, and its time zone set to a fixed zone with no offset from UTC
 // (but it is *not* UTC itself).
-func New(t time.Time) ISO6801Time {
+func NewISO6801Time(t time.Time) ISO6801Time {
 	return ISO6801Time(time.Date(
 		t.Year(),
 		t.Month(),
@@ -58,5 +58,5 @@ func (it *ISO6801Time) UnmarshalJSON(data []byte) error {
 
 // String returns the time in ISO6801Time format
 func (it ISO6801Time) String() string {
-	return time.Time(it).String()
+	return time.Time(it).Format(formatISO8601)
 }

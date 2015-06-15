@@ -35,7 +35,9 @@ type Client struct {
 	Secure          bool
 	ConnectTimeout  time.Duration
 	ReadTimeout     time.Duration
-	debug           bool
+
+	endpoint string
+	debug    bool
 }
 
 // The Bucket type encapsulates operations with an bucket.
@@ -157,6 +159,12 @@ var createBucketConfiguration = `<CreateBucketConfiguration>
 func (client *Client) locationConstraint() io.Reader {
 	constraint := fmt.Sprintf(createBucketConfiguration, client.Region)
 	return strings.NewReader(constraint)
+}
+
+// override default endpoint
+func (client *Client) SetEndpoint(endpoint string) {
+	// TODO check endpoint
+	client.endpoint = endpoint
 }
 
 // PutBucket creates a new bucket.
@@ -963,7 +971,12 @@ func (client *Client) query(req *request, resp interface{}) error {
 
 // Sets baseurl on req from bucket name and the region endpoint
 func (client *Client) setBaseURL(req *request) error {
-	req.baseurl = client.Region.GetEndpoint(client.Internal, req.bucket, client.Secure)
+
+	if client.endpoint == "" {
+		req.baseurl = client.Region.GetEndpoint(client.Internal, req.bucket, client.Secure)
+	} else {
+		req.baseurl = fmt.Sprintf("%s://%s", client.endpoint, getProtocol(client.Secure))
+	}
 
 	return nil
 }
