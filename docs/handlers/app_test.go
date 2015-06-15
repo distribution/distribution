@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/docker/distribution/configuration"
+	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/registry/auth"
 	_ "github.com/docker/distribution/registry/auth/silly"
@@ -194,14 +195,18 @@ func TestNewApp(t *testing.T) {
 		t.Fatalf("unexpected WWW-Authenticate header: %q != %q", e, a)
 	}
 
-	var errs v2.Errors
+	var errs errcode.Errors
 	dec := json.NewDecoder(req.Body)
 	if err := dec.Decode(&errs); err != nil {
 		t.Fatalf("error decoding error response: %v", err)
 	}
 
-	if errs.Errors[0].Code != v2.ErrorCodeUnauthorized {
-		t.Fatalf("unexpected error code: %v != %v", errs.Errors[0].Code, v2.ErrorCodeUnauthorized)
+	err2, ok := errs[0].(errcode.ErrorCoder)
+	if !ok {
+		t.Fatalf("not an ErrorCoder: %#v", errs[0])
+	}
+	if err2.ErrorCode() != v2.ErrorCodeUnauthorized {
+		t.Fatalf("unexpected error code: %v != %v", err2.ErrorCode(), v2.ErrorCodeUnauthorized)
 	}
 }
 
