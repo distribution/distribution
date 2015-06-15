@@ -146,9 +146,12 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 		t.Fatalf("unexpected error signing manifest: %v", err)
 	}
 
-	manifests := repository.Manifests()
+	manifests, err := repository.Manifests(ctx)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
 
-	if err := manifests.Put(sm); err != nil {
+	if err = manifests.Put(sm); err != nil {
 		t.Fatalf("unexpected error putting the manifest: %v", err)
 	}
 

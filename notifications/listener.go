@@ -51,11 +51,15 @@ func Listen(repo distribution.Repository, listener Listener) distribution.Reposi
 	}
 }
 
-func (rl *repositoryListener) Manifests() distribution.ManifestService {
-	return &manifestServiceListener{
-		ManifestService: rl.Repository.Manifests(),
-		parent:          rl,
+func (rl *repositoryListener) Manifests(ctx context.Context, options ...distribution.ManifestServiceOption) (distribution.ManifestService, error) {
+	manifests, err := rl.Repository.Manifests(ctx, options...)
+	if err != nil {
+		return nil, err
 	}
+	return &manifestServiceListener{
+		ManifestService: manifests,
+		parent:          rl,
+	}, nil
 }
 
 func (rl *repositoryListener) Blobs(ctx context.Context) distribution.BlobStore {
