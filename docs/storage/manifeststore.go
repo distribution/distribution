@@ -11,10 +11,11 @@ import (
 )
 
 type manifestStore struct {
-	repository    *repository
-	revisionStore *revisionStore
-	tagStore      *tagStore
-	ctx           context.Context
+	repository                 *repository
+	revisionStore              *revisionStore
+	tagStore                   *tagStore
+	ctx                        context.Context
+	skipDependencyVerification bool
 }
 
 var _ distribution.ManifestService = &manifestStore{}
@@ -39,10 +40,19 @@ func (ms *manifestStore) Get(dgst digest.Digest) (*manifest.SignedManifest, erro
 	return ms.revisionStore.get(ms.ctx, dgst)
 }
 
+// SkipLayerVerification allows a manifest to be Put before it's
+// layers are on the filesystem
+func SkipLayerVerification(ms distribution.ManifestService) error {
+	if ms, ok := ms.(*manifestStore); ok {
+		ms.skipDependencyVerification = true
+		return nil
+	}
+	return fmt.Errorf("skip layer verification only valid for manifeststore")
+}
+
 func (ms *manifestStore) Put(manifest *manifest.SignedManifest) error {
 	context.GetLogger(ms.ctx).Debug("(*manifestStore).Put")
 
-	// Verify the manifest.
 	if err := ms.verifyManifest(ms.ctx, manifest); err != nil {
 		return err
 	}
@@ -113,18 +123,19 @@ func (ms *manifestStore) verifyManifest(ctx context.Context, mnfst *manifest.Sig
 		}
 	}
 
-	for _, fsLayer := range mnfst.FSLayers {
-		_, err := ms.repository.Blobs(ctx).Stat(ctx, fsLayer.BlobSum)
-		if err != nil {
-			if err != distribution.ErrBlobUnknown {
-				errs = append(errs, err)
-			}
+	if !ms.skipDependencyVerification {
+		for _, fsLayer := range mnfst.FSLayers {
+			_, err := ms.repository.Blobs(ctx).Stat(ctx, fsLayer.BlobSum)
+			if err != nil {
+				if err != distribution.ErrBlobUnknown {
+					errs = append(errs, err)
+				}
 
-			// On error here, we always append unknown blob errors.
-			errs = append(errs, distribution.ErrManifestBlobUnknown{Digest: fsLayer.BlobSum})
+				// On error here, we always append unknown blob errors.
+				errs = append(errs, distribution.ErrManifestBlobUnknown{Digest: fsLayer.BlobSum})
+			}
 		}
 	}
-
 	if len(errs) != 0 {
 		return errs
 	}
