@@ -27,6 +27,7 @@ func init() {
 	internal := os.Getenv("OSS_INTERNAL")
 	encrypt := os.Getenv("OSS_ENCRYPT")
 	secure := os.Getenv("OSS_SECURE")
+	endpoint := os.Getenv("OSS_ENDPOINT")
 	root, err := ioutil.TempDir("", "driver-")
 	if err != nil {
 		panic(err)
@@ -59,15 +60,16 @@ func init() {
 		}
 
 		parameters := DriverParameters{
-			accessKey,
-			secretKey,
-			bucket,
-			alioss.Region(region),
-			internalBool,
-			encryptBool,
-			secureBool,
-			minChunkSize,
-			rootDirectory,
+			AccessKeyID:     accessKey,
+			AccessKeySecret: secretKey,
+			Bucket:          bucket,
+			Region:          alioss.Region(region),
+			Internal:        internalBool,
+			ChunkSize:       minChunkSize,
+			RootDirectory:   rootDirectory,
+			Encrypt:         encryptBool,
+			Secure:          secureBool,
+			Endpoint:        endpoint,
 		}
 
 		return New(parameters)
