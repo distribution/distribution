@@ -69,6 +69,18 @@ func (bw *blobWriter) Commit(ctx context.Context, desc distribution.Descriptor) 
 		return distribution.Descriptor{}, err
 	}
 
+	// If this upload is replacing a previously deleted file, remove the tombstone
+	// If tombstones deletes are not enabled, fall through
+	exists, err := bw.blobStore.tomb.tombstoneExists(ctx, bw.blobStore.repository.Name(), desc.Digest)
+	if err != nil && err != distribution.ErrUnsupported {
+		return distribution.Descriptor{}, err
+	}
+	if exists {
+		if err := bw.blobStore.tomb.deleteTombstone(ctx, bw.blobStore.repository.Name(), desc.Digest); err != nil {
+			return distribution.Descriptor{}, err
+		}
+	}
+
 	return canonical, nil
 }
 

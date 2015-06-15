@@ -15,12 +15,13 @@ type registry struct {
 	blobServer                  distribution.BlobServer
 	statter                     distribution.BlobStatter // global statter service.
 	blobDescriptorCacheProvider cache.BlobDescriptorCacheProvider
+	deleteEnabled               bool
 }
 
 // NewRegistryWithDriver creates a new registry instance from the provided
 // driver. The resulting registry may be shared by multiple goroutines but is
 // cheap to allocate.
-func NewRegistryWithDriver(ctx context.Context, driver storagedriver.StorageDriver, blobDescriptorCacheProvider cache.BlobDescriptorCacheProvider) distribution.Namespace {
+func NewRegistryWithDriver(ctx context.Context, driver storagedriver.StorageDriver, blobDescriptorCacheProvider cache.BlobDescriptorCacheProvider, deleteEnabled bool) distribution.Namespace {
 
 	// create global statter, with cache.
 	var statter distribution.BlobStatter = &blobStatter{
@@ -46,6 +47,7 @@ func NewRegistryWithDriver(ctx context.Context, driver storagedriver.StorageDriv
 			pathFn:  bs.path,
 		},
 		blobDescriptorCacheProvider: blobDescriptorCacheProvider,
+		deleteEnabled:               deleteEnabled,
 	}
 }
 
@@ -75,11 +77,18 @@ func (reg *registry) Repository(ctx context.Context, name string) (distribution.
 		}
 	}
 
+	tomb := &tomb{
+		pm:      defaultPathMapper,
+		driver:  reg.blobStore.driver,
+		enabled: reg.deleteEnabled,
+	}
+
 	return &repository{
 		ctx:             ctx,
 		registry:        reg,
 		name:            name,
 		descriptorCache: descriptorCache,
+		tomb:            tomb,
 	}, nil
 }
 
@@ -89,6 +98,7 @@ type repository struct {
 	ctx             context.Context
 	name            string
 	descriptorCache distribution.BlobDescriptorService
+	tomb            *tomb
 }
 
 // Name returns the name of the repository.
@@ -100,7 +110,7 @@ func (repo *repository) Name() string {
 // may be context sensitive in the future. The instance should be used similar
 // to a request local.
 func (repo *repository) Manifests() distribution.ManifestService {
-	return &manifestStore{
+	ms := &manifestStore{
 		ctx:        repo.ctx,
 		repository: repo,
 		revisionStore: &revisionStore{
@@ -110,10 +120,12 @@ func (repo *repository) Manifests() distribution.ManifestService {
 				ctx:        repo.ctx,
 				blobStore:  repo.blobStore,
 				repository: repo,
+				tomb:       repo.tomb,
 				statter: &linkedBlobStatter{
 					blobStore:  repo.blobStore,
 					repository: repo,
 					linkPath:   manifestRevisionLinkPath,
+					tomb:       repo.tomb,
 				},
 
 				// TODO(stevvooe): linkPath limits this blob store to only
@@ -127,16 +139,20 @@ func (repo *repository) Manifests() distribution.ManifestService {
 			blobStore:  repo.registry.blobStore,
 		},
 	}
+
+	return ms
+
 }
 
 // Blobs returns an instance of the BlobStore. Instantiation is cheap and
 // may be context sensitive in the future. The instance should be used similar
 // to a request local.
 func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
-	var statter distribution.BlobStatter = &linkedBlobStatter{
+	var statter distribution.BlobDescriptorService = &linkedBlobStatter{
 		blobStore:  repo.blobStore,
 		repository: repo,
 		linkPath:   blobLinkPath,
+		tomb:       repo.tomb,
 	}
 
 	if repo.descriptorCache != nil {
@@ -149,6 +165,7 @@ func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
 		statter:    statter,
 		repository: repo,
 		ctx:        ctx,
+		tomb:       repo.tomb,
 
 		// TODO(stevvooe): linkPath limits this blob store to only layers.
 		// This instance cannot be used for manifest checks.

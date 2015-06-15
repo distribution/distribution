@@ -19,8 +19,10 @@ log:
         to:
           - errors@example.com
 storage:
+    delete:
+      enabled: false
     cache:
-        blobdescriptor: redis
+        blobdescriptor: inmemory
     filesystem:
         rootdirectory: /var/lib/registry
     maintenance:

@@ -115,8 +115,8 @@ func (s *signatureStore) Put(dgst digest.Digest, signatures ...[]byte) error {
 	return nil
 }
 
-// namedBlobStore returns the namedBlobStore of the signatures for the
-// manifest with the given digest. Effectively, each singature link path
+// linkedBlobStore returns the namedBlobStore of the signatures for the
+// manifest with the given digest. Effectively, each signature link path
 // layout is a unique linked blob store.
 func (s *signatureStore) linkedBlobStore(ctx context.Context, revision digest.Digest) *linkedBlobStore {
 	linkpath := func(pm *pathMapper, name string, dgst digest.Digest) (string, error) {
@@ -135,7 +135,9 @@ func (s *signatureStore) linkedBlobStore(ctx context.Context, revision digest.Di
 			blobStore:  s.blobStore,
 			repository: s.repository,
 			linkPath:   linkpath,
+			tomb:       s.repository.tomb,
 		},
 		linkPath: linkpath,
+		tomb:     s.repository.tomb,
 	}
 }
