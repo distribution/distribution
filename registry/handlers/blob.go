@@ -7,7 +7,6 @@ import (
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/registry/api/v2"
-	"github.com/docker/distribution/registry/storage"
 	"github.com/gorilla/handlers"
 )
 
@@ -81,9 +80,9 @@ func (bh *blobHandler) DeleteBlob(w http.ResponseWriter, r *http.Request) {
 		case distribution.ErrBlobUnknown:
 			w.WriteHeader(http.StatusNotFound)
 			bh.Errors.Push(v2.ErrorCodeBlobUnknown, bh.Digest)
-		case storage.ErrDeleteDisabled:
+		case distribution.ErrUnsupported:
 			w.WriteHeader(http.StatusMethodNotAllowed)
-			bh.Errors.Push(v2.ErrorCodeDisabled, bh.Digest)
+			bh.Errors.Push(v2.ErrorCodeUnsupported, bh.Digest)
 		default:
 			bh.Errors.Push(v2.ErrorCodeUnknown, err)
 		}

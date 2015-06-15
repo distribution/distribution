@@ -80,7 +80,7 @@ func (lbs *linkedBlobStore) Put(ctx context.Context, mediaType string, p []byte)
 	// deletes are not enabled, fall through
 	dgst, err := digest.FromBytes(p)
 	tombstoneExists, err := lbs.tomb.tombstoneExists(ctx, lbs.repository.Name(), dgst)
-	if err != nil && err != ErrDeleteDisabled {
+	if err != nil && err != distribution.ErrUnsupported {
 		return distribution.Descriptor{}, err
 	}
 	if tombstoneExists {
@@ -170,7 +170,7 @@ func (lbs *linkedBlobStore) Resume(ctx context.Context, id string) (distribution
 
 func (lbs *linkedBlobStore) Delete(ctx context.Context, dgst digest.Digest) error {
 	if !lbs.tomb.enabled {
-		return ErrDeleteDisabled
+		return distribution.ErrUnsupported
 	}
 
 	_, err := lbs.statter.Stat(ctx, dgst)
@@ -254,7 +254,7 @@ var _ distribution.BlobDescriptorService = &linkedBlobStatter{}
 
 func (lbs *linkedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
 	tombstoneExists, err := lbs.tomb.tombstoneExists(ctx, lbs.repository.Name(), dgst)
-	if err != nil && err != ErrDeleteDisabled {
+	if err != nil && err != distribution.ErrUnsupported {
 		return distribution.Descriptor{}, err
 	}
 	if tombstoneExists {

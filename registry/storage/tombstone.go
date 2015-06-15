@@ -6,7 +6,7 @@ package storage
 // the existence of tombstone files and act accordingly.
 
 import (
-	"fmt"
+	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/registry/storage/driver"
@@ -19,14 +19,10 @@ type tomb struct {
 	enabled bool
 }
 
-// ErrDeleteDisabled is returned from tombstone functions
-// if delete has not been enabled in the app configuration
-var ErrDeleteDisabled = fmt.Errorf("Delete disabled")
-
 // tombstoneExists queries existance of a tombstone for the given digest
 func (t *tomb) tombstoneExists(ctx context.Context, repositoryName string, digest digest.Digest) (bool, error) {
 	if !t.enabled {
-		return false, ErrDeleteDisabled
+		return false, distribution.ErrUnsupported
 	}
 	tombstone, err := t.pm.path(tombstoneSpec{name: repositoryName, digest: digest})
 	if err != nil {
@@ -44,7 +40,7 @@ func (t *tomb) tombstoneExists(ctx context.Context, repositoryName string, diges
 // putTombstone creates a tombstone for the given digest
 func (t *tomb) putTombstone(ctx context.Context, repositoryName string, digest digest.Digest) error {
 	if !t.enabled {
-		return ErrDeleteDisabled
+		return distribution.ErrUnsupported
 	}
 
 	tombstone, err := t.pm.path(tombstoneSpec{name: repositoryName, digest: digest})
@@ -62,7 +58,7 @@ func (t *tomb) putTombstone(ctx context.Context, repositoryName string, digest d
 // deleteTombstone deletes a tombstone for the given digest
 func (t *tomb) deleteTombstone(ctx context.Context, repositoryName string, digest digest.Digest) error {
 	if !t.enabled {
-		return ErrDeleteDisabled
+		return distribution.ErrUnsupported
 	}
 
 	tombstone, err := t.pm.path(tombstoneSpec{name: repositoryName, digest: digest})

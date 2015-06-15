@@ -1376,13 +1376,6 @@ var errorDescriptors = []ErrorDescriptor{
 		response status.`,
 	},
 	{
-		Code:    ErrorCodeDisabled,
-		Value:   "DISABLED",
-		Message: "The operation is not enabled.",
-		Description: `The operation was not able to complete because
-                it has been disabled.`,
-	},
-	{
 		Code:    ErrorCodeDigestInvalid,
 		Value:   "DIGEST_INVALID",
 		Message: "provided digest did not match uploaded content",

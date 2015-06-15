@@ -116,6 +116,13 @@ indicating what is different. Optionally, we may start marking parts of the
 specification to correspond with the versions enumerated here.
 
 <dl>
+  <dt>2.0.3</dt>
+	<dd>
+        <ul>
+	     	<li>Implement the delete API for blobs and manifests by using tombstone files to represent deleted data</li>
+	</ul>
+  </dd>
+
   <dt>2.0.2</dt>
   <dd>
     <li>Added section covering digest format.</li>

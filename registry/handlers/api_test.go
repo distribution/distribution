@@ -92,7 +92,14 @@ func TestURLPrefix(t *testing.T) {
 	})
 }
 
-func makeBlobArgs(t *testing.T) map[string]interface{} {
+type blobArgs struct {
+	imageName   string
+	layerFile   io.ReadSeeker
+	layerDigest digest.Digest
+	tarSumStr   string
+}
+
+func makeBlobArgs(t *testing.T) blobArgs {
 	layerFile, tarSumStr, err := testutil.CreateRandomTarFile()
 	if err != nil {
 		t.Fatalf("error creating random layer file: %v", err)
@@ -100,11 +107,11 @@ func makeBlobArgs(t *testing.T) map[string]interface{} {
 
 	layerDigest := digest.Digest(tarSumStr)
 
-	args := map[string]interface{}{
-		"imageName":   "foo/bar",
-		"layerFile":   layerFile,
-		"layerDigest": layerDigest,
-		"tarsumStr":   tarSumStr,
+	args := blobArgs{
+		imageName:   "foo/bar",
+		layerFile:   layerFile,
+		layerDigest: layerDigest,
+		tarSumStr:   tarSumStr,
 	}
 	return args
 }
@@ -137,8 +144,8 @@ func TestBlobDeleteDisabled(t *testing.T) {
 	env := newTestEnv(t, deleteEnabled)
 	args := makeBlobArgs(t)
 
-	imageName := args["imageName"].(string)
-	layerDigest := args["layerDigest"].(digest.Digest)
+	imageName := args.imageName
+	layerDigest := args.layerDigest
 	layerURL, err := env.builder.BuildBlobURL(imageName, layerDigest)
 	if err != nil {
 		t.Fatalf("error building url: %v", err)
@@ -152,13 +159,13 @@ func TestBlobDeleteDisabled(t *testing.T) {
 	checkResponse(t, "status of disabled delete", resp, http.StatusMethodNotAllowed)
 }
 
-func testBlobAPI(t *testing.T, env *testEnv, args map[string]interface{}) *testEnv {
+func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 	// TODO(stevvooe): This test code is complete junk but it should cover the
 	// complete flow. This must be broken down and checked against the
 	// specification *before* we submit the final to docker core.
-	imageName := args["imageName"].(string)
-	layerFile := args["layerFile"].(io.ReadSeeker)
-	layerDigest := args["layerDigest"].(digest.Digest)
+	imageName := args.imageName
+	layerFile := args.layerFile
+	layerDigest := args.layerDigest
 
 	// -----------------------------------
 	// Test fetch for non-existent content
@@ -365,11 +372,11 @@ func testBlobAPI(t *testing.T, env *testEnv, args map[string]interface{}) *testE
 	return env
 }
 
-func testBlobDelete(t *testing.T, env *testEnv, args map[string]interface{}) {
+func testBlobDelete(t *testing.T, env *testEnv, args blobArgs) {
 	// Upload a layer
-	imageName := args["imageName"].(string)
-	layerFile := args["layerFile"].(io.ReadSeeker)
-	layerDigest := args["layerDigest"].(digest.Digest)
+	imageName := args.imageName
+	layerFile := args.layerFile
+	layerDigest := args.layerDigest
 
 	layerURL, err := env.builder.BuildBlobURL(imageName, layerDigest)
 	if err != nil {
@@ -484,9 +491,15 @@ func httpDelete(url string) (*http.Response, error) {
 	return resp, err
 }
 
-func makeManifestArgs(t *testing.T) map[string]interface{} {
-	args := map[string]interface{}{
-		"imageName": "foo/bar",
+type manifestArgs struct {
+	imageName      string
+	signedManifest *manifest.SignedManifest
+	dgst           digest.Digest
+}
+
+func makeManifestArgs(t *testing.T) manifestArgs {
+	args := manifestArgs{
+		imageName: "foo/bar",
 	}
 
 	return args
@@ -519,8 +532,8 @@ func TestManifestDeleteDisabled(t *testing.T) {
 	testManifestDeleteDisabled(t, env, args)
 }
 
-func testManifestDeleteDisabled(t *testing.T, env *testEnv, args map[string]interface{}) *testEnv {
-	imageName := args["imageName"].(string)
+func testManifestDeleteDisabled(t *testing.T, env *testEnv, args manifestArgs) *testEnv {
+	imageName := args.imageName
 	manifestURL, err := env.builder.BuildManifestURL(imageName, digest.DigestSha256EmptyTar)
 	if err != nil {
 		t.Fatalf("unexpected error getting manifest url: %v", err)
@@ -536,8 +549,8 @@ func testManifestDeleteDisabled(t *testing.T, env *testEnv, args map[string]inte
 	return nil
 }
 
-func testManifestAPI(t *testing.T, env *testEnv, args map[string]interface{}) (*testEnv, map[string]interface{}) {
-	imageName := args["imageName"].(string)
+func testManifestAPI(t *testing.T, env *testEnv, args manifestArgs) (*testEnv, manifestArgs) {
+	imageName := args.imageName
 	tag := "thetag"
 
 	manifestURL, err := env.builder.BuildManifestURL(imageName, tag)
@@ -640,8 +653,8 @@ func testManifestAPI(t *testing.T, env *testEnv, args map[string]interface{}) (*
 	dgst, err := digest.FromBytes(payload)
 	checkErr(t, err, "digesting manifest")
 
-	args["signedmanifest"] = signedManifest
-	args["dgst"] = dgst
+	args.signedManifest = signedManifest
+	args.dgst = dgst
 
 	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, dgst.String())
 	checkErr(t, err, "building manifest url")
@@ -738,10 +751,10 @@ func testManifestAPI(t *testing.T, env *testEnv, args map[string]interface{}) (*
 	return env, args
 }
 
-func testManifestDelete(t *testing.T, env *testEnv, args map[string]interface{}) {
-	imageName := args["imageName"].(string)
-	dgst := args["dgst"].(digest.Digest)
-	signedManifest := args["signedmanifest"].(*manifest.SignedManifest)
+func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
+	imageName := args.imageName
+	dgst := args.dgst
+	signedManifest := args.signedManifest
 	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, dgst.String())
 	// ---------------
 	// Delete by digest
