@@ -108,6 +108,9 @@ auth:
 		service: token-service
 		issuer: registry-token-issuer
 		rootcertbundle: /root/certs/bundle
+	htpasswd:
+		realm: basic-realm
+		path: /path/to/htpasswd
 middleware:
 	registry:
 		- name: ARegistryMiddleware
@@ -600,6 +603,9 @@ auth:
 		service: token-service
 		issuer: registry-token-issuer
 		rootcertbundle: /root/certs/bundle
+	htpasswd:
+		realm: basic-realm
+		path: /path/to/htpasswd
 ```
 
 The `auth` option is **optional**. There are
@@ -709,6 +715,49 @@ public part of the certificates that is used to sign authentication tokens.
 </table>
 
 For more information about Token based authentication configuration, see the [specification.]
+
+### htpasswd
+
+The _htpasswd_ authentication backed allows one to configure basic auth using an
+[Apache HTPasswd File](https://httpd.apache.org/docs/2.4/programs/htpasswd.html).
+Only [`bcrypt`](http://en.wikipedia.org/wiki/Bcrypt) format passwords are
+supported. Entries with other hash types will be ignored. The htpasswd file is
+loaded once, at startup. If the file is invalid, the registry will display and
+error and will not start.
+
+> __WARNING:__ This authentication scheme should only be used with TLS
+> configured, since basic authentication sends passwords as part of the http
+> header.
+
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>realm</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      The realm in which the registry server authenticates.
+    </td>
+  </tr>
+    <tr>
+    <td>
+      <code>path</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      Path to htpasswd file to load at startup.
+    </td>
+  </tr>
+</table>
 
 ## middleware
 
