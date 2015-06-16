@@ -1,8 +1,14 @@
-<!--GITHUB
-page_title: Docker Registry Storage Driver
-page_description: Explains how to use the storage drivers
-page_keywords: registry, service, driver, images, storage
-IGNORES-->
+<!--[metadata]>
++++
+title = "Docker Registry Storage Driver"
+description = "Explains how to use the storage drivers"
+keywords = ["registry, service, driver, images,  storage"]
+[menu.main]
+parent="smn_registry_ref"
+identifier="smn_registry_drivers"
++++
+<![end-metadata]-->
+
 
 # Docker Registry Storage Driver
 

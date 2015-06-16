@@ -1,8 +1,13 @@
-<!--GITHUB
-page_title: In-memory storage driver
-page_description: Explains how to use the in-memory storage drivers
-page_keywords: registry, service, driver, images, storage, in-memory
-IGNORES-->
+<!--[metadata]>
++++
+title = "In-memory storage driver"
+description = "Explains how to use the in-memory storage drivers"
+keywords = ["registry, service, driver, images, storage,  in-memory"]
+[menu.main]
+parent="smn_registry_drivers"
++++
+<![end-metadata]-->
+
 
 # In-memory storage driver
 

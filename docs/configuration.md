@@ -1,8 +1,14 @@
-<!--GITHUB
-page_title: Configure a Registry
-page_description: Explains how to configure a registry
-page_keywords: registry, service, images, repository, configuration
-IGNORES-->
+<!--[metadata]>
++++
+title = "Configure a Registry"
+description = "Explains how to deploy a registry"
+keywords = ["registry, service, images,  repository"]
+[menu.main]
+parent="smn_registry"
+weight=2
++++
+<![end-metadata]-->
+
 
 
 # Registry Configuration Reference

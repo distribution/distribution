@@ -1,3 +1,9 @@
+<!--[metadata]>
++++
+draft = "true"
++++
+<![end-metadata]-->
+
 # Build the development environment
 
 The first prequisite of properly building distribution targets is to have a Go

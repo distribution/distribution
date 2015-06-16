@@ -1,8 +1,13 @@
-<!--GITHUB
-page_title: Docker Registry 2.0
-page_description: Introduces the Docker Registry
-page_keywords: registry, images, repository
-IGNORES-->
+<!--[metadata]>
++++
+title = "Docker Registry 2.0"
+description = "Introduces the Docker Registry"
+keywords = ["registry, images,  repository"]
+[menu.main]
+parent="smn_registry"
++++
+<![end-metadata]-->
+
 
 # Docker Registry
 

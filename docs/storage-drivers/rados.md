@@ -1,8 +1,13 @@
-<!--GITHUB
-page_title: Ceph RADOS storage driver
-page_description: Explains how to use the Ceph RADOS storage driver
-page_keywords: registry, service, driver, images, storage, ceph, rados
-IGNORES-->
+<!--[metadata]>
++++
+title = "Ceph RADOS storage driver"
+description = "Explains how to use the Ceph RADOS storage driver"
+keywords = ["registry, service, driver, images, storage, ceph,  rados"]
+[menu.main]
+parent="smn_registry_drivers"
++++
+<![end-metadata]-->
+
 
 # Ceph RADOS storage driver
 

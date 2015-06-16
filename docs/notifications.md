@@ -1,8 +1,14 @@
-<!--GITHUB
-page_title: Work with Notifications
-page_description: Explains how to deploy a registry server
-page_keywords: registry, service, images, repository
-IGNORES-->
+<!--[metadata]>
++++
+title = "Work with Notifications"
+description = "Explains work with registry notifications"
+keywords = ["registry, service, images, notifications,  repository"]
+[menu.main]
+parent="smn_registry"
+weight=1
++++
+<![end-metadata]-->
+
 
 
 # Notifications
