@@ -1,8 +1,16 @@
 # Set an output prefix, which is the local directory if not specified
 PREFIX?=$(shell pwd)
 
+
 # Used to populate version variable in main package.
 VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always)
+
+# Allow turning off function inlining and variable registerization
+ifeq (${DISABLE_OPTIMIZATION},true)
+	GO_GCFLAGS=-gcflags "-N -l"
+	VERSION:="$(VERSION)-noopt"
+endif
+
 GO_LDFLAGS=-ldflags "-X `go list ./version`.Version $(VERSION)"
 
 .PHONY: clean all fmt vet lint build test binaries
@@ -18,15 +26,15 @@ version/version.go:
 
 ${PREFIX}/bin/registry: version/version.go $(shell find . -type f -name '*.go')
 	@echo "+ $@"
-	@go build -tags "${DOCKER_BUILDTAGS}" -o $@ ${GO_LDFLAGS} ./cmd/registry
+	@go build -tags "${DOCKER_BUILDTAGS}" -o $@ ${GO_LDFLAGS}  ${GO_GCFLAGS} ./cmd/registry
 
 ${PREFIX}/bin/registry-api-descriptor-template: version/version.go $(shell find . -type f -name '*.go')
 	@echo "+ $@"
-	@go build -o $@ ${GO_LDFLAGS} ./cmd/registry-api-descriptor-template
+	@go build -o $@ ${GO_LDFLAGS} ${GO_GCFLAGS} ./cmd/registry-api-descriptor-template
 
 ${PREFIX}/bin/dist: version/version.go $(shell find . -type f -name '*.go')
 	@echo "+ $@"
-	@go build -o $@ ${GO_LDFLAGS} ./cmd/dist
+	@go build -o $@ ${GO_LDFLAGS} ${GO_GCFLAGS} ./cmd/dist
 
 docs/spec/api.md: docs/spec/api.md.tmpl ${PREFIX}/bin/registry-api-descriptor-template
 	./bin/registry-api-descriptor-template $< > $@
