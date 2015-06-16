@@ -104,11 +104,11 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	// be summoned when GetAuth is called)
 	accessKey, ok := parameters["accesskeyid"]
 	if !ok {
-		accessKey = ""
+		return nil, fmt.Errorf("No accesskeyid parameter provided")
 	}
 	secretKey, ok := parameters["accesskeysecret"]
 	if !ok {
-		secretKey = ""
+		return nil, fmt.Errorf("No accesskeysecret parameter provided")
 	}
 
 	regionName, ok := parameters["region"]
