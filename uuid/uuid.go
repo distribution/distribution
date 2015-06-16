@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"syscall"
 	"time"
 )
@@ -61,19 +62,15 @@ func Generate() (u UUID) {
 
 		_, err := io.ReadFull(rand.Reader, u[:])
 		if err != nil {
-			if err == syscall.EPERM {
-				// EPERM represents an entropy pool exhaustion, a condition under
-				// which we backoff and retry.
-				if retries < maxretries {
-					retries++
-					Loggerf("error generating version 4 uuid, retrying: %v", err)
-					continue
-				}
+			if retryOnError(err) && retries < maxretries {
+				retries++
+				Loggerf("error generating version 4 uuid, retrying: %v", err)
+				continue
 			}
 
 			// Any other errors represent a system problem. What did someone
 			// do to /dev/urandom?
-			panic(fmt.Errorf("error reading random number generator, retried for %v: %v", totalBackoff, err))
+			panic(fmt.Errorf("error reading random number generator, retried for %v: %v", totalBackoff.String(), err))
 		}
 
 		break
@@ -109,4 +106,20 @@ func Parse(s string) (u UUID, err error) {
 
 func (u UUID) String() string {
 	return fmt.Sprintf(format, u[:4], u[4:6], u[6:8], u[8:10], u[10:])
+}
+
+// retryOnError tries to detect whether or not retrying would be fruitful.
+func retryOnError(err error) bool {
+	switch err := err.(type) {
+	case *os.PathError:
+		return retryOnError(err.Err) // unpack the target error
+	case syscall.Errno:
+		if err == syscall.EPERM {
+			// EPERM represents an entropy pool exhaustion, a condition under
+			// which we backoff and retry.
+			return true
+		}
+	}
+
+	return false
 }
