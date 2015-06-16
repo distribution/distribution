@@ -18,6 +18,10 @@ http:
     secret: asecretforlocaldevelopment
     debug:
         addr: localhost:5001
+    tls:
+        certificate: /Users/richard/go/src/github.com/docker/distribution/certs/domain.crt
+        key: /Users/richard/go/src/github.com/docker/distribution/certs/domain.key
+
 redis:
   addr: localhost:6379
   pool:
