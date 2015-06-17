@@ -5,7 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 
-	azure "github.com/MSOpenTech/azure-sdk-for-go/storage"
+	azure "github.com/Azure/azure-sdk-for-go/storage"
 )
 
 // blockStorage is the interface required from a block storage service
@@ -75,7 +75,7 @@ func (r *randomBlobWriter) WriteBlobAt(container, blob string, offset int64, chu
 		// Use existing block list
 		var existingBlocks []azure.Block
 		for _, v := range blocks.CommittedBlocks {
-			existingBlocks = append(existingBlocks, azure.Block{Id: v.Name, Status: azure.BlockStatusCommitted})
+			existingBlocks = append(existingBlocks, azure.Block{ID: v.Name, Status: azure.BlockStatusCommitted})
 		}
 		blockList = append(existingBlocks, blockList...)
 	}
@@ -111,7 +111,7 @@ func (r *randomBlobWriter) writeChunkToBlocks(container, blob string, chunk io.R
 		if err := r.bs.PutBlock(container, blob, blockID, data); err != nil {
 			return newBlocks, nn, err
 		}
-		newBlocks = append(newBlocks, azure.Block{Id: blockID, Status: azure.BlockStatusUncommitted})
+		newBlocks = append(newBlocks, azure.Block{ID: blockID, Status: azure.BlockStatusUncommitted})
 	}
 	return newBlocks, nn, nil
 }
@@ -131,7 +131,7 @@ func (r *randomBlobWriter) blocksLeftSide(container, blob string, writeOffset in
 	for _, v := range bx.CommittedBlocks {
 		blkSize := int64(v.Size)
 		if o >= blkSize { // use existing block
-			left = append(left, azure.Block{Id: v.Name, Status: azure.BlockStatusCommitted})
+			left = append(left, azure.Block{ID: v.Name, Status: azure.BlockStatusCommitted})
 			o -= blkSize
 			elapsed += blkSize
 		} else if o > 0 { // current block needs to be splitted
@@ -150,7 +150,7 @@ func (r *randomBlobWriter) blocksLeftSide(container, blob string, writeOffset in
 			if err = r.bs.PutBlock(container, blob, newBlockID, data); err != nil {
 				return left, err
 			}
-			left = append(left, azure.Block{Id: newBlockID, Status: azure.BlockStatusUncommitted})
+			left = append(left, azure.Block{ID: newBlockID, Status: azure.BlockStatusUncommitted})
 			break
 		}
 	}
@@ -177,7 +177,7 @@ func (r *randomBlobWriter) blocksRightSide(container, blob string, writeOffset i
 		)
 
 		if bs > re { // take the block as is
-			right = append(right, azure.Block{Id: v.Name, Status: azure.BlockStatusCommitted})
+			right = append(right, azure.Block{ID: v.Name, Status: azure.BlockStatusCommitted})
 		} else if be > re { // current block needs to be splitted
 			part, err := r.bs.GetSectionReader(container, blob, re+1, be-(re+1)+1)
 			if err != nil {
@@ -192,7 +192,7 @@ func (r *randomBlobWriter) blocksRightSide(container, blob string, writeOffset i
 			if err = r.bs.PutBlock(container, blob, newBlockID, data); err != nil {
 				return right, err
 			}
-			right = append(right, azure.Block{Id: newBlockID, Status: azure.BlockStatusUncommitted})
+			right = append(right, azure.Block{ID: newBlockID, Status: azure.BlockStatusUncommitted})
 		}
 		elapsed += int64(v.Size)
 	}

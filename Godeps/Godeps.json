@@ -18,9 +18,8 @@
 			"Rev": "cc210f45dcb9889c2769a274522be2bf70edfb99"
 		},
 		{
-			"ImportPath": "github.com/MSOpenTech/azure-sdk-for-go/storage",
-			"Comment": "v1.2-43-gd90753b",
-			"Rev": "d90753bcad2ed782fcead7392d1e831df29aa2bb"
+			"ImportPath": "github.com/Azure/azure-sdk-for-go/storage",
+			"Rev": "97d9593768bbbbd316f9c055dfc5f780933cd7fc"
 		},
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",
