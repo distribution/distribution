@@ -24,7 +24,7 @@ var (
 		Description: `The access controller denied access for the operation on
 		a resource. Often this will be accompanied by a 401 Unauthorized
 		response status.`,
-		HTTPStatusCode: http.StatusForbidden,
+		HTTPStatusCode: http.StatusUnauthorized,
 	})
 
 	// ErrorCodeDigestInvalid is returned when uploading a blob if the

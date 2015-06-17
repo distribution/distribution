@@ -83,7 +83,6 @@ func (ch *challenge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("WWW-Authenticate", header)
-	w.WriteHeader(http.StatusUnauthorized)
 }
 
 func (ch *challenge) Error() string {
