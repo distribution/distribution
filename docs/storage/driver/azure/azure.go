@@ -16,7 +16,7 @@ import (
 	"github.com/docker/distribution/registry/storage/driver/base"
 	"github.com/docker/distribution/registry/storage/driver/factory"
 
-	azure "github.com/MSOpenTech/azure-sdk-for-go/storage"
+	azure "github.com/Azure/azure-sdk-for-go/storage"
 )
 
 const driverName = "azure"
@@ -68,7 +68,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 
 	realm, ok := parameters[paramRealm]
 	if !ok || fmt.Sprint(realm) == "" {
-		realm = azure.DefaultBaseUrl
+		realm = azure.DefaultBaseURL
 	}
 
 	return New(fmt.Sprint(accountName), fmt.Sprint(accountKey), fmt.Sprint(container), fmt.Sprint(realm))
@@ -76,7 +76,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 
 // New constructs a new Driver with the given Azure Storage Account credentials
 func New(accountName, accountKey, container, realm string) (*Driver, error) {
-	api, err := azure.NewClient(accountName, accountKey, realm, azure.DefaultApiVersion, true)
+	api, err := azure.NewClient(accountName, accountKey, realm, azure.DefaultAPIVersion, true)
 	if err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func New(accountName, accountKey, container, realm string) (*Driver, error) {
 	}
 
 	d := &driver{
-		client:    *blobClient,
+		client:    blobClient,
 		container: container}
 	return &Driver{baseEmbed: baseEmbed{Base: base.Base{StorageDriver: d}}}, nil
 }
@@ -114,7 +114,16 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 
 // PutContent stores the []byte content at a location designated by "path".
 func (d *driver) PutContent(ctx context.Context, path string, contents []byte) error {
-	return d.client.PutBlockBlob(d.container, path, ioutil.NopCloser(bytes.NewReader(contents)))
+	if _, err := d.client.DeleteBlobIfExists(d.container, path); err != nil {
+		return err
+	}
+	if err := d.client.CreateBlockBlob(d.container, path); err != nil {
+		return err
+	}
+	bs := newAzureBlockStorage(d.client)
+	bw := newRandomBlobWriter(&bs, azure.MaxBlobBlockSize)
+	_, err := bw.WriteBlobAt(d.container, path, 0, bytes.NewReader(contents))
+	return err
 }
 
 // ReadStream retrieves an io.ReadCloser for the content stored at "path" with a
@@ -233,7 +242,7 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
 func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
-	sourceBlobURL := d.client.GetBlobUrl(d.container, sourcePath)
+	sourceBlobURL := d.client.GetBlobURL(d.container, sourcePath)
 	err := d.client.CopyBlob(d.container, destPath, sourceBlobURL)
 	if err != nil {
 		if is404(err) {
@@ -352,6 +361,6 @@ func (d *driver) listBlobs(container, virtPath string) ([]string, error) {
 }
 
 func is404(err error) bool {
-	e, ok := err.(azure.StorageServiceError)
+	e, ok := err.(azure.AzureStorageServiceError)
 	return ok && e.StatusCode == http.StatusNotFound
 }

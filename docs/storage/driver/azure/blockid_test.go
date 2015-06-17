@@ -4,7 +4,7 @@ import (
 	"math"
 	"testing"
 
-	azure "github.com/MSOpenTech/azure-sdk-for-go/storage"
+	azure "github.com/Azure/azure-sdk-for-go/storage"
 )
 
 func Test_blockIdGenerator(t *testing.T) {
