@@ -256,7 +256,7 @@ type blobs struct {
 	ub     *v2.URLBuilder
 	client *http.Client
 
-	statter distribution.BlobStatter
+	statter distribution.BlobDescriptorService
 	distribution.BlobDeleter
 }
 
@@ -284,31 +284,6 @@ func sanitizeLocation(location, source string) (string, error) {
 func (bs *blobs) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
 	return bs.statter.Stat(ctx, dgst)
 
-}
-
-func (bs *blobs) Delete(ctx context.Context, dgst digest.Digest) error {
-	blobURL, err := bs.ub.BuildBlobURL(bs.name, dgst)
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequest("DELETE", blobURL, nil)
-	if err != nil {
-		return err
-	}
-
-	resp, err := bs.client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	switch resp.StatusCode {
-	case http.StatusAccepted:
-		return nil
-	default:
-		return handleErrorResponse(resp)
-	}
 }
 
 func (bs *blobs) Get(ctx context.Context, dgst digest.Digest) ([]byte, error) {
@@ -400,6 +375,10 @@ func (bs *blobs) Resume(ctx context.Context, id string) (distribution.BlobWriter
 	panic("not implemented")
 }
 
+func (bs *blobs) Delete(ctx context.Context, dgst digest.Digest) error {
+	return bs.statter.Delete(ctx, dgst)
+}
+
 type blobStatter struct {
 	name   string
 	ub     *v2.URLBuilder
@@ -436,4 +415,33 @@ func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (distributi
 	default:
 		return distribution.Descriptor{}, handleErrorResponse(resp)
 	}
+}
+
+func (bs *blobStatter) Delete(ctx context.Context, dgst digest.Digest) error {
+	blobURL, err := bs.ub.BuildBlobURL(bs.name, dgst)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("DELETE", blobURL, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := bs.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		return nil
+	default:
+		return handleErrorResponse(resp)
+	}
+}
+
+func (bs *blobStatter) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
+	return nil
 }

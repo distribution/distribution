@@ -143,7 +143,7 @@ type blobStatter struct {
 	pm     *pathMapper
 }
 
-var _ distribution.BlobStatter = &blobStatter{}
+var _ distribution.BlobDescriptorService = &blobStatter{}
 
 // Stat implements BlobStatter.Stat by returning the descriptor for the blob
 // in the main blob store. If this method returns successfully, there is
@@ -187,4 +187,12 @@ func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (distributi
 		MediaType: "application/octet-stream",
 		Digest:    dgst,
 	}, nil
+}
+
+func (bs *blobStatter) Delete(ctx context.Context, dgst digest.Digest) error {
+	return distribution.ErrUnsupported
+}
+
+func (bs *blobStatter) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
+	return distribution.ErrUnsupported
 }

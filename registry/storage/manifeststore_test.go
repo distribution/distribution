@@ -151,6 +151,7 @@ func TestManifestStorage(t *testing.T) {
 	}
 
 	fetchedManifest, err := ms.GetByTag(env.tag)
+
 	if err != nil {
 		t.Fatalf("unexpected error fetching manifest: %v", err)
 	}

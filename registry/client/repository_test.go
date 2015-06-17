@@ -100,7 +100,6 @@ func TestBlobDelete(t *testing.T) {
 		t.Fatal(err)
 	}
 	l := r.Blobs(ctx)
-
 	err = l.Delete(ctx, dgst)
 	if err != nil {
 		t.Errorf("Error deleting blob: %s", err.Error())

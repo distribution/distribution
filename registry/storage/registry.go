@@ -24,7 +24,7 @@ type registry struct {
 func NewRegistryWithDriver(ctx context.Context, driver storagedriver.StorageDriver, blobDescriptorCacheProvider cache.BlobDescriptorCacheProvider, deleteEnabled bool) distribution.Namespace {
 
 	// create global statter, with cache.
-	var statter distribution.BlobStatter = &blobStatter{
+	var statter distribution.BlobDescriptorService = &blobStatter{
 		driver: driver,
 		pm:     defaultPathMapper,
 	}
@@ -117,11 +117,11 @@ func (repo *repository) Manifests() distribution.ManifestService {
 			ctx:        repo.ctx,
 			repository: repo,
 			blobStore: &linkedBlobStore{
-				ctx:        repo.ctx,
-				blobStore:  repo.blobStore,
-				repository: repo,
-				tomb:       repo.tomb,
-				statter: &linkedBlobStatter{
+				ctx:           repo.ctx,
+				blobStore:     repo.blobStore,
+				repository:    repo,
+				deleteEnabled: repo.tomb.enabled,
+				blobAccessController: &linkedBlobStatter{
 					blobStore:  repo.blobStore,
 					repository: repo,
 					linkPath:   manifestRevisionLinkPath,
@@ -160,16 +160,16 @@ func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
 	}
 
 	return &linkedBlobStore{
-		blobStore:  repo.blobStore,
-		blobServer: repo.blobServer,
-		statter:    statter,
-		repository: repo,
-		ctx:        ctx,
-		tomb:       repo.tomb,
+		blobStore:            repo.blobStore,
+		blobServer:           repo.blobServer,
+		blobAccessController: statter,
+		repository:           repo,
+		ctx:                  ctx,
 
 		// TODO(stevvooe): linkPath limits this blob store to only layers.
 		// This instance cannot be used for manifest checks.
-		linkPath: blobLinkPath,
+		linkPath:      blobLinkPath,
+		deleteEnabled: repo.registry.deleteEnabled,
 	}
 }
 

@@ -131,13 +131,12 @@ func (s *signatureStore) linkedBlobStore(ctx context.Context, revision digest.Di
 		ctx:        ctx,
 		repository: s.repository,
 		blobStore:  s.blobStore,
-		statter: &linkedBlobStatter{
+		blobAccessController: &linkedBlobStatter{
 			blobStore:  s.blobStore,
 			repository: s.repository,
 			linkPath:   linkpath,
 			tomb:       s.repository.tomb,
 		},
 		linkPath: linkpath,
-		tomb:     s.repository.tomb,
 	}
 }

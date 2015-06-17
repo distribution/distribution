@@ -16,11 +16,11 @@ import (
 // that grant access to the global blob store.
 type linkedBlobStore struct {
 	*blobStore
-	blobServer distribution.BlobServer
-	statter    distribution.BlobDescriptorService
-	repository distribution.Repository
-	tomb       *tomb
-	ctx        context.Context // only to be used where context can't come through method args
+	blobServer           distribution.BlobServer
+	blobAccessController distribution.BlobDescriptorService
+	repository           distribution.Repository
+	ctx                  context.Context // only to be used where context can't come through method args
+	deleteEnabled        bool
 
 	// linkPath allows one to control the repository blob link set to which
 	// the blob store dispatches. This is required because manifest and layer
@@ -32,7 +32,7 @@ type linkedBlobStore struct {
 var _ distribution.BlobStore = &linkedBlobStore{}
 
 func (lbs *linkedBlobStore) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
-	return lbs.statter.Stat(ctx, dgst)
+	return lbs.blobAccessController.Stat(ctx, dgst)
 }
 
 func (lbs *linkedBlobStore) Get(ctx context.Context, dgst digest.Digest) ([]byte, error) {
@@ -68,6 +68,10 @@ func (lbs *linkedBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter
 }
 
 func (lbs *linkedBlobStore) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
+	dgst, err := digest.FromBytes(p)
+	if err != nil {
+		return distribution.Descriptor{}, err
+	}
 	// Place the data in the blob store first.
 	desc, err := lbs.blobStore.Put(ctx, mediaType, p)
 	if err != nil {
@@ -75,18 +79,8 @@ func (lbs *linkedBlobStore) Put(ctx context.Context, mediaType string, p []byte)
 		return distribution.Descriptor{}, err
 	}
 
-	// Remove a tombstone if one exists for this blob.  Continue to write
-	// the blob as it may have been removed by the GC sweep process.  If
-	// deletes are not enabled, fall through
-	dgst, err := digest.FromBytes(p)
-	tombstoneExists, err := lbs.tomb.tombstoneExists(ctx, lbs.repository.Name(), dgst)
-	if err != nil && err != distribution.ErrUnsupported {
+	if err := lbs.blobAccessController.SetDescriptor(ctx, dgst, desc); err != nil {
 		return distribution.Descriptor{}, err
-	}
-	if tombstoneExists {
-		if err := lbs.tomb.deleteTombstone(ctx, lbs.repository.Name(), dgst); err != nil {
-			return distribution.Descriptor{}, err
-		}
 	}
 
 	// TODO(stevvooe): Write out mediatype if incoming differs from what is
@@ -169,23 +163,20 @@ func (lbs *linkedBlobStore) Resume(ctx context.Context, id string) (distribution
 }
 
 func (lbs *linkedBlobStore) Delete(ctx context.Context, dgst digest.Digest) error {
-	if !lbs.tomb.enabled {
+	if !lbs.deleteEnabled {
 		return distribution.ErrUnsupported
 	}
 
-	_, err := lbs.statter.Stat(ctx, dgst)
+	_, err := lbs.blobAccessController.Stat(ctx, dgst)
 	if err != nil {
 		return err
 	}
 
-	err = lbs.statter.Delete(ctx, dgst)
+	err = lbs.blobAccessController.Delete(ctx, dgst)
 	if err != nil {
 		return err
 	}
 
-	if err := lbs.tomb.putTombstone(ctx, lbs.repository.Name(), dgst); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -292,12 +283,23 @@ func (lbs *linkedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (dis
 }
 
 func (lbs *linkedBlobStatter) Delete(ctx context.Context, dgst digest.Digest) error {
-	// Not implemented in linkedBlobStatter
+	if err := lbs.tomb.putTombstone(ctx, lbs.repository.Name(), dgst); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func (lbs *linkedBlobStatter) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
-	// Not implemented in linkedBlobStatter
+	tombstoneExists, err := lbs.tomb.tombstoneExists(ctx, lbs.repository.Name(), dgst)
+	if err != nil && err != distribution.ErrUnsupported {
+		return err
+	}
+	if tombstoneExists {
+		if err := lbs.tomb.deleteTombstone(ctx, lbs.repository.Name(), dgst); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
