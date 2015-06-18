@@ -5,7 +5,7 @@ description = "Explains how to deploy a registry server"
 keywords = ["registry, service, images,  repository"]
 [menu.main]
 parent="smn_registry"
-weight=1
+weight=3
 +++
 <![end-metadata]-->
 
@@ -36,7 +36,7 @@ Then pull it back:
 
 By default, your registry stores its data on the local filesystem, inside the container.
 
-In a production environment, it's highly recommended to use [another storage backend](https://github.com/docker/distribution/blob/master/docs/storagedrivers.md), by [configuring it](https://github.com/docker/distribution/blob/master/docs/configuration.md#storage).
+In a production environment, it's highly recommended to use [another storage backend](storagedrivers.md), by [configuring it](/configuration.md).
 
 If you want to stick with the local posix filesystem, you should store your data outside of the container.
 

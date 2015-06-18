@@ -1,8 +1,13 @@
-<!--GITHUB
-page_title: Getting help
-page_description: Getting help with the Registry
-page_keywords: registry, service, images, repository, help
-IGNORES-->
+<!--[metadata]>
++++
+title = "Getting help"
+description = "Getting help with the Registry"
+keywords = ["registry, service, images,  repository, help"]
+[menu.main]
+parent="smn_registry"
+weight=9
++++
+<![end-metadata]-->
 
 # Getting help
 

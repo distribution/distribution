@@ -1,6 +1,5 @@
 <!--[metadata]>
 +++
-draft = true
 title = "Docker Registry HTTP API V2"
 description = "This is a specification for the API."
 keywords = ["registry, service, driver, images, storage,  api"]

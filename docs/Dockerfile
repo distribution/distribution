@@ -4,21 +4,23 @@ MAINTAINER Mary Anthony <mary@docker.com> (@moxiegirl)
 # To get the git info for this repo
 COPY . /src
 
-COPY . /docs/content/distribution/
+COPY . /docs/content/registry/
 
 # Sed to process GitHub Markdown
 # 1-2 Remove comment code from metadata block
-# 3 Remove .md extension from link text
-# 4 Change ](/ to ](/project/ in links
-# 5 Change ](word) to ](/project/word)
-# 6 Change ](../../ to ](/project/
-# 7 Change ](../ to ](/project/word)
+# 3 Change ](/word to ](/project/ in links
+# 4 Change ](word.md) to ](/project/word)
+# 5 Remove .md extension from link text
+# 6 Change ](./ to ](/project/word) 
+# 7 Change ](../../ to ](/project/ 
+# 8 Change ](../ to ](/project/ 
 # 
-# 
-RUN find /docs/content/distribution -type f -name "*.md" -exec sed -i.old \
+RUN find /docs/content/registry -type f -name "*.md" -exec sed -i.old \
     -e '/^<!.*metadata]>/g' \
     -e '/^<!.*end-metadata.*>/g' \
-    -e 's/\([(]\)\(.*\)\(\.md\)/\1\2/g' \
-    -e 's/\(\]\)\([(]\)\(\/\)/\1\2\/distribution\//g' \
-    -e 's/\(\][(]\)\([A-z]*[)]\)/\]\(\/distribution\/\2/g' \
-    -e 's/\(\][(]\)\(\.\.\/\)/\1\/distribution\//g' {} \;
+    -e 's/\(\]\)\([(]\)\(\/\)/\1\2\/registry\//g' \
+    -e 's/\(\][(]\)\([A-z].*\)\(\.md\)/\1\/registry\/\2/g' \
+    -e 's/\([(]\)\(.*\)\(\.md\)/\1\2/g'  \
+    -e 's/\(\][(]\)\(\.\/\)/\1\/registry\//g' \
+    -e 's/\(\][(]\)\(\.\.\/\.\.\/\)/\1\/registry\//g' \
+    -e 's/\(\][(]\)\(\.\.\/\)/\1\/registry\//g' {} \;

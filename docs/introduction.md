@@ -1,8 +1,13 @@
-<!--GITHUB
-page_title: Understanding the Registry
-page_description: Explains what it is, basic use cases and requirements
-page_keywords: registry, service, images, repository, understand, use cases, requirements
-IGNORES-->
+<!--[metadata]>
++++
+title = "Understanding the Registry"
+description = "Explains what it is, basic use cases and requirements"
+keywords = ["registry, service, images, repository, understand, use cases, requirements"]
+[menu.main]
+parent="smn_registry"
+weight=2
++++
+<![end-metadata]-->
 
 # Understanding the Registry
 
@@ -42,6 +47,13 @@ You absolutely need to be familiar with Docker, specifically with regard to push
 
 Also, while just starting a registry is fairly easy, operating it in a production environment requires operational skills, just like any other service. You are expected to be familiar with systems availability and scalability, logging and log processing, systems monitoring, and security 101. Strong understanding of http and overall network communications, plus familiarity with golang are certainly useful as well.
 
-## Next
+## Related information
 
-You are now ready to [deploy your registry](deploying.md).
+ - [Deploy a registry](deploying.md)
+ - [Configure a registry](configuration.md)
+ - [Authentication](authentication.md)
+ - [Working with notifications](notifications.md)
+ - [Registry API](spec/api.md)
+ - [Storage driver model](storagedrivers.md)
+
+

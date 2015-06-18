@@ -3,8 +3,6 @@
 title = "Filesystem storage driver"
 description = "Explains how to use the filesystem storage drivers"
 keywords = ["registry, service, driver, images, storage,  filesystem"]
-[menu.main]
-parent="smn_registry_drivers"
 +++
 <![end-metadata]-->
 

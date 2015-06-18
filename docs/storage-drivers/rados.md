@@ -3,8 +3,6 @@
 title = "Ceph RADOS storage driver"
 description = "Explains how to use the Ceph RADOS storage driver"
 keywords = ["registry, service, driver, images, storage, ceph,  rados"]
-[menu.main]
-parent="smn_registry_drivers"
 +++
 <![end-metadata]-->
 

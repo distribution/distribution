@@ -54,30 +54,10 @@ docker push localhost:5000/myfirstimage
 docker pull localhost:5000/myfirstimage
 ```
 
-Simple as that? Yes. Now, please read the...
+## Where to go next
+
+Simple as that? Yes. Continue on to read the [overview of the registry](introduction.md).
 
 
-## Documentation
-
- - [Introduction](introduction.md)
- - [Deployment](deploying.md)
- - [Configuration](configuration.md)
- - [Getting help](help.md)
- - [Contributing](../CONTRIBUTING.md)
-
-### Reference and advanced topics
-
- - [Glossary](glossary.md)
- - [Authentication](authentication.md)
- - [Working with notifications](notifications.md)
-
-### Development resources
-
- - [Storage driver model](storagedrivers.md)
- - [Registry API](spec/api.md)
-<!--
- - [Building the registry](building.md)
- - [Architecture notes](architecture.md)
- -->
 
  

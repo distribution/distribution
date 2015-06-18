@@ -5,7 +5,7 @@ description = "Explains work with registry notifications"
 keywords = ["registry, service, images, notifications,  repository"]
 [menu.main]
 parent="smn_registry"
-weight=1
+weight=5
 +++
 <![end-metadata]-->
 
@@ -17,7 +17,7 @@ The Registry supports sending webhook notifications in response to events
 happening within the registry. Notifications are sent in response to manifest
 pushes and pulls and layer pushes and pulls. These actions are serialized into
 events. The events are queued into a registry-internal broadcast system which
-queues and dispatches events to [_Endpoints_](#endpoints).
+queues and dispatches events to endpoints. 
 
 ![](../images/notifications.png)
 
@@ -49,12 +49,12 @@ notifications:
 ```
 
 The above would configure the registry with an endpoint to send events to
-"https://mylistener.example.com/event", with the header "Authorization: Bearer
+`https://mylistener.example.com/event`, with the header "Authorization: Bearer
 <your token, if needed>". The request would timeout after 500 milliseconds. If
 5 failures happen consecutively, the registry will backoff for 1 second before
 trying again.
 
-For details on the fields, please see the [configuration documentation](configuration.md#notifications).
+For details on the fields, please see the [configuration documentation](configuration.md).
 
 A properly configured endpoint should lead to a log message from the registry
 upon startup:
