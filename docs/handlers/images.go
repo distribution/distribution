@@ -60,6 +60,10 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 	if imh.Tag != "" {
 		sm, err = manifests.GetByTag(imh.Tag)
 	} else {
+		if etagMatch(r, imh.Digest.String()) {
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
 		sm, err = manifests.Get(imh.Digest)
 	}
 
@@ -75,6 +79,10 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 			imh.Errors = append(imh.Errors, v2.ErrorCodeDigestInvalid.WithDetail(err))
 			return
 		}
+		if etagMatch(r, dgst.String()) {
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
 
 		imh.Digest = dgst
 	}
@@ -82,7 +90,17 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Content-Length", fmt.Sprint(len(sm.Raw)))
 	w.Header().Set("Docker-Content-Digest", imh.Digest.String())
+	w.Header().Set("Etag", imh.Digest.String())
 	w.Write(sm.Raw)
+}
+
+func etagMatch(r *http.Request, etag string) bool {
+	for _, headerVal := range r.Header["If-None-Match"] {
+		if headerVal == etag {
+			return true
+		}
+	}
+	return false
 }
 
 // PutImageManifest validates and stores and image in the registry.
