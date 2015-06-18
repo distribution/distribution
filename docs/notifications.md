@@ -17,7 +17,7 @@ The Registry supports sending webhook notifications in response to events
 happening within the registry. Notifications are sent in response to manifest
 pushes and pulls and layer pushes and pulls. These actions are serialized into
 events. The events are queued into a registry-internal broadcast system which
-queues and dispatches events to endpoints. 
+queues and dispatches events to [_Endpoints_](#endpoints).
 
 ![](../images/notifications.png)
 
@@ -54,7 +54,7 @@ The above would configure the registry with an endpoint to send events to
 5 failures happen consecutively, the registry will backoff for 1 second before
 trying again.
 
-For details on the fields, please see the [configuration documentation](configuration.md).
+For details on the fields, please see the [configuration documentation](configuration.md#notifications).
 
 A properly configured endpoint should lead to a log message from the registry
 upon startup:

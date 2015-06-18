@@ -36,7 +36,7 @@ Then pull it back:
 
 By default, your registry stores its data on the local filesystem, inside the container.
 
-In a production environment, it's highly recommended to use [another storage backend](storagedrivers.md), by [configuring it](/configuration.md).
+In a production environment, it's highly recommended to use [another storage backend](storagedrivers.md), by [configuring it](configuration.md).
 
 If you want to stick with the local posix filesystem, you should store your data outside of the container.
 
