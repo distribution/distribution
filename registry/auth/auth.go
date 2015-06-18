@@ -62,10 +62,10 @@ type Access struct {
 type Challenge interface {
 	error
 	// ServeHTTP prepares the request to conduct the appropriate challenge
-	// response. For most implementations, simply calling ServeHTTP should be
-	// sufficient. Because no body is written, users may write a custom body after
-	// calling ServeHTTP, but any headers must be written before the call and may
-	// be overwritten.
+	// response by adding the appropriate HTTP challenge header on the response
+	// message. Callers are expected to set the appropriate HTTP status code
+	// (e.g. 401) themselves. Because no body is written, users may write a
+	// custom body after calling ServeHTTP.
 	ServeHTTP(w http.ResponseWriter, r *http.Request)
 }
 

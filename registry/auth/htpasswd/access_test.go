@@ -49,6 +49,7 @@ func TestBasicAccessController(t *testing.T) {
 			switch err := err.(type) {
 			case auth.Challenge:
 				err.ServeHTTP(w, r)
+				w.WriteHeader(http.StatusUnauthorized)
 				return
 			default:
 				t.Fatalf("unexpected error authorizing request: %v", err)
