@@ -19,7 +19,7 @@ RUN find /docs/content/registry -type f -name "*.md" -exec sed -i.old \
     -e '/^<!.*metadata]>/g' \
     -e '/^<!.*end-metadata.*>/g' \
     -e 's/\(\]\)\([(]\)\(\/\)/\1\2\/registry\//g' \
-    -e 's/\(\][(]\)\([A-z].*\)\(\.md\)/\1\/registry\/\2/g' \
+    -e 's/\(\][(]\)\([A-Za-z0-9]*\)\(\.md\)/\1\/registry\/\2/g' \
     -e 's/\([(]\)\(.*\)\(\.md\)/\1\2/g'  \
     -e 's/\(\][(]\)\(\.\/\)/\1\/registry\//g' \
     -e 's/\(\][(]\)\(\.\.\/\.\.\/\)/\1\/registry\//g' \
