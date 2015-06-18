@@ -117,10 +117,9 @@ func (ac *authChallenge) SetHeader(header http.Header) {
 }
 
 // ServeHttp handles writing the challenge response
-// by setting the challenge header and status code.
+// by setting the challenge header.
 func (ac *authChallenge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ac.SetHeader(w.Header())
-	w.WriteHeader(ac.Status())
 }
 
 // accessController implements the auth.AccessController interface.

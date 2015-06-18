@@ -90,7 +90,6 @@ type challenge struct {
 func (ch *challenge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	header := fmt.Sprintf("Basic realm=%q", ch.realm)
 	w.Header().Set("WWW-Authenticate", header)
-	w.WriteHeader(http.StatusUnauthorized)
 }
 
 func (ch *challenge) Error() string {
