@@ -250,7 +250,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 
 	info, _, err := d.Conn.Object(d.Container, d.swiftPath(path))
 	if err != nil {
-		if swiftErr, ok := err.(*swift.Error); ok && swiftErr.StatusCode == 404 {
+		if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
 			// Create a object manifest
 			if err := d.createParentFolders(path); err != nil {
 				return 0, err
@@ -537,7 +537,7 @@ func detectBulkDelete(authURL string) (bulkDelete bool) {
 }
 
 func parseError(path string, err error) error {
-	if swiftErr, ok := err.(*swift.Error); ok && swiftErr.StatusCode == 404 {
+	if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
 		return storagedriver.PathNotFoundError{Path: path}
 	}
 
