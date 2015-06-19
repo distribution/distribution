@@ -172,7 +172,9 @@ type jsonError struct {
 // MarshalJSON converts slice of error, ErrorCode or Error into a
 // slice of Error - then serializes
 func (errs Errors) MarshalJSON() ([]byte, error) {
-	var tmpErrs []jsonError
+	var tmpErrs struct {
+		Errors []jsonError `json:"errors,omitempty"`
+	}
 
 	for _, daErr := range errs {
 		var err Error
@@ -187,7 +189,7 @@ func (errs Errors) MarshalJSON() ([]byte, error) {
 
 		}
 
-		tmpErrs = append(tmpErrs, jsonError{
+		tmpErrs.Errors = append(tmpErrs.Errors, jsonError{
 			Code:    err.Code,
 			Message: err.Message(),
 			Detail:  err.Detail,
@@ -200,14 +202,16 @@ func (errs Errors) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON deserializes []Error and then converts it into slice of
 // Error or ErrorCode
 func (errs *Errors) UnmarshalJSON(data []byte) error {
-	var tmpErrs []jsonError
+	var tmpErrs struct {
+		Errors []jsonError
+	}
 
 	if err := json.Unmarshal(data, &tmpErrs); err != nil {
 		return err
 	}
 
 	var newErrs Errors
-	for _, daErr := range tmpErrs {
+	for _, daErr := range tmpErrs.Errors {
 		if daErr.Detail == nil {
 			// Error's w/o details get converted to ErrorCode
 			newErrs = append(newErrs, daErr.Code)
