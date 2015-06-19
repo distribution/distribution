@@ -33,7 +33,7 @@ import (
 
 const driverName = "swift"
 
-const defaultChunkSize = 5 * 1024 * 1024
+const defaultChunkSize = 20 * 1024 * 1024
 
 const minChunkSize = 1 << 20
 
