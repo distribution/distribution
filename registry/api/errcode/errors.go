@@ -160,10 +160,10 @@ func (errs Errors) Len() int {
 	return len(errs)
 }
 
-// jsonError extends Error with 'Message' so that we can include the
+// outboundJSONError extends Error with 'Message' so that we can include the
 // error text, just in case the receiver of the JSON doesn't have this
 // particular ErrorCode registered
-type jsonError struct {
+type outboundJSONError struct {
 	Code    ErrorCode   `json:"code"`
 	Message string      `json:"message"`
 	Detail  interface{} `json:"detail,omitempty"`
@@ -173,7 +173,7 @@ type jsonError struct {
 // slice of Error - then serializes
 func (errs Errors) MarshalJSON() ([]byte, error) {
 	var tmpErrs struct {
-		Errors []jsonError `json:"errors,omitempty"`
+		Errors []outboundJSONError `json:"errors,omitempty"`
 	}
 
 	for _, daErr := range errs {
@@ -189,7 +189,7 @@ func (errs Errors) MarshalJSON() ([]byte, error) {
 
 		}
 
-		tmpErrs.Errors = append(tmpErrs.Errors, jsonError{
+		tmpErrs.Errors = append(tmpErrs.Errors, outboundJSONError{
 			Code:    err.Code,
 			Message: err.Message(),
 			Detail:  err.Detail,
@@ -199,11 +199,19 @@ func (errs Errors) MarshalJSON() ([]byte, error) {
 	return json.Marshal(tmpErrs)
 }
 
+// inboundJSONError is like outboundJsonError except it leaves 'Code'
+// as a string so that we can register unknown codes appropriately
+type inboundJSONError struct {
+	Code    string      `json:"code"`
+	Message string      `json:"message"`
+	Detail  interface{} `json:"detail,omitempty"`
+}
+
 // UnmarshalJSON deserializes []Error and then converts it into slice of
 // Error or ErrorCode
 func (errs *Errors) UnmarshalJSON(data []byte) error {
 	var tmpErrs struct {
-		Errors []jsonError
+		Errors []inboundJSONError
 	}
 
 	if err := json.Unmarshal(data, &tmpErrs); err != nil {
@@ -212,13 +220,25 @@ func (errs *Errors) UnmarshalJSON(data []byte) error {
 
 	var newErrs Errors
 	for _, daErr := range tmpErrs.Errors {
+		// Make sure this ErrorCode is registered, and if not register it
+		desc, ok := idToDescriptors[daErr.Code]
+		if !ok {
+			desc = ErrorDescriptor{
+				Value:          daErr.Code,
+				Message:        daErr.Message,
+				Description:    "unknown",
+				HTTPStatusCode: ErrorCodeUnknown.Descriptor().HTTPStatusCode,
+			}
+			desc = Register("unknown", desc).Descriptor()
+		}
+
 		if daErr.Detail == nil {
 			// Error's w/o details get converted to ErrorCode
-			newErrs = append(newErrs, daErr.Code)
+			newErrs = append(newErrs, desc.Code)
 		} else {
 			// Error's w/ details are untouched
 			newErrs = append(newErrs, Error{
-				Code:   daErr.Code,
+				Code:   desc.Code,
 				Detail: daErr.Detail,
 			})
 		}
