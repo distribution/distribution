@@ -89,7 +89,7 @@ func TestErrorsManagement(t *testing.T) {
 		t.Fatalf("error marashaling errors: %v", err)
 	}
 
-	expectedJSON := "[{\"code\":\"TEST1\",\"message\":\"test error 1\"},{\"code\":\"TEST2\",\"message\":\"test error 2\",\"detail\":{\"digest\":\"sometestblobsumdoesntmatter\"}}]"
+	expectedJSON := "{\"errors\":[{\"code\":\"TEST1\",\"message\":\"test error 1\"},{\"code\":\"TEST2\",\"message\":\"test error 2\",\"detail\":{\"digest\":\"sometestblobsumdoesntmatter\"}}]}"
 
 	if string(p) != expectedJSON {
 		t.Fatalf("unexpected json:\ngot:\n%q\n\nexpected:\n%q", string(p), expectedJSON)
@@ -107,7 +107,7 @@ func TestErrorsManagement(t *testing.T) {
 
 	// Test again with a single value this time
 	errs = Errors{ErrorCodeUnknown}
-	expectedJSON = "[{\"code\":\"UNKNOWN\",\"message\":\"unknown error\"}]"
+	expectedJSON = "{\"errors\":[{\"code\":\"UNKNOWN\",\"message\":\"unknown error\"}]}"
 	p, err = json.Marshal(errs)
 
 	if err != nil {
