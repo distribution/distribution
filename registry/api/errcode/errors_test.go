@@ -129,3 +129,50 @@ func TestErrorsManagement(t *testing.T) {
 	}
 
 }
+
+// TestErrorsUnknown will verify that while unmarshalling a JSON Errors
+// structure, if we hit an ErrorCode that we've never seen before that
+// we'll register it, and reuse it later on if we see that same ErrorCode again
+func TestErrorsUnknown(t *testing.T) {
+	var errs Errors
+
+	p := `{"errors":[{"code":"newONE","message":"test error"}]}`
+	if err := json.Unmarshal([]byte(p), &errs); err != nil {
+		t.Fatalf("unexpected error unmarshaling error envelope: %v", err)
+	}
+
+	if len(errs) != 1 {
+		t.Fatalf("should only have one err: %#v", errs)
+	}
+
+	e1, ok := errs[0].(ErrorCode)
+	if !ok {
+		t.Fatalf("first item in slice isn't an ErrorCode: %#v", errs)
+	}
+
+	if e1.String() != "newONE" || e1.Message() != "test error" || e1 < 1000 {
+		t.Fatalf("incorrect err data: %#v", e1)
+	}
+
+	// Now do it again with same unknown error, but this time we have
+	// a Details property so it should return an Error not an ErrorCode,
+	// but it should reuse the same ErrorCode that was previously registered
+	errs = Errors{}
+	p = `{"errors":[{"code":"newONE","message":"test error","detail":"data"}]}`
+	if err := json.Unmarshal([]byte(p), &errs); err != nil {
+		t.Fatalf("unexpected error unmarshaling error envelope: %v", err)
+	}
+
+	if len(errs) != 1 {
+		t.Fatalf("should only have one err: %#v", errs)
+	}
+
+	e2, ok := errs[0].(Error)
+	if !ok {
+		t.Fatalf("first item in slice isn't an Error: %#v", errs)
+	}
+
+	if e2.ErrorCode().String() != "newONE" || e2.Message() != "test error" || e2.ErrorCode() < 1000 || e2.ErrorCode() != e1.ErrorCode() || e2.Detail != "data" {
+		t.Fatalf("incorrect err data: %#v", e2)
+	}
+}
