@@ -295,7 +295,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 
 		cursor = currentLength
 		paddingReader = bytes.NewReader(zeroBuf)
-	} else {
+	} else if offset-cursor > 0 {
 		// Offset is inside the current segment : we need to read the
 		// data from the beginning of the segment to offset
 		file, _, err := d.Conn.ObjectOpen(d.Container, getSegment(), false, nil)
@@ -307,10 +307,12 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 		}
 	}
 
-	multi = io.MultiReader(
-		io.LimitReader(paddingReader, offset-cursor),
-		io.LimitReader(reader, chunkSize-(offset-cursor)),
-	)
+	readers := []io.Reader{}
+	if paddingReader != nil {
+		readers = append(readers, io.LimitReader(paddingReader, offset-cursor))
+	}
+	readers = append(readers, io.LimitReader(reader, chunkSize-(offset-cursor)))
+	multi = io.MultiReader(readers...)
 
 	writeSegment := func(segment string) (finished bool, bytesRead int64, err error) {
 		currentSegment, err := d.Conn.ObjectCreate(d.Container, segment, false, "", d.getContentType(), nil)
