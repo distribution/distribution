@@ -449,6 +449,7 @@ func TestManifestAPI(t *testing.T) {
 	checkResponse(t, "fetching uploaded manifest", resp, http.StatusOK)
 	checkHeaders(t, resp, http.Header{
 		"Docker-Content-Digest": []string{dgst.String()},
+		"ETag":                  []string{dgst.String()},
 	})
 
 	var fetchedManifest manifest.SignedManifest
@@ -470,6 +471,7 @@ func TestManifestAPI(t *testing.T) {
 	checkResponse(t, "fetching uploaded manifest", resp, http.StatusOK)
 	checkHeaders(t, resp, http.Header{
 		"Docker-Content-Digest": []string{dgst.String()},
+		"ETag":                  []string{dgst.String()},
 	})
 
 	var fetchedManifestByDigest manifest.SignedManifest
@@ -481,6 +483,33 @@ func TestManifestAPI(t *testing.T) {
 	if !bytes.Equal(fetchedManifestByDigest.Raw, signedManifest.Raw) {
 		t.Fatalf("manifests do not match")
 	}
+
+	// Get by name with etag, gives 304
+	etag := resp.Header.Get("Etag")
+	req, err := http.NewRequest("GET", manifestURL, nil)
+	if err != nil {
+		t.Fatalf("Error constructing request: %s", err)
+	}
+	req.Header.Set("If-None-Match", etag)
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("Error constructing request: %s", err)
+	}
+
+	checkResponse(t, "fetching layer with etag", resp, http.StatusNotModified)
+
+	// Get by digest with etag, gives 304
+	req, err = http.NewRequest("GET", manifestDigestURL, nil)
+	if err != nil {
+		t.Fatalf("Error constructing request: %s", err)
+	}
+	req.Header.Set("If-None-Match", etag)
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("Error constructing request: %s", err)
+	}
+
+	checkResponse(t, "fetching layer with etag", resp, http.StatusNotModified)
 
 	// Ensure that the tag is listed.
 	resp, err = http.Get(tagsURL)
