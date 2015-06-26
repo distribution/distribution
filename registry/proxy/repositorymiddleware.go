@@ -1,15 +1,14 @@
-// Package middleware - proxy wrapper for the registry
-
 package proxy
 
 import (
 	"fmt"
+	"net/http"
+	"strings"
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/client"
 	"github.com/docker/distribution/registry/middleware/repository"
-	"net/http"
 )
 
 type proxyMiddleware struct {
@@ -27,7 +26,9 @@ func newProxyMiddleware(repository distribution.Repository, options map[string]i
 	}
 
 	ctx := context.Background()
-	remoteRepo, err := client.NewRepository(ctx, repository.Name(), remoteURL, http.DefaultTransport)
+
+	stripped := strings.Replace(repository.Name(), "library/", "", 1)
+	remoteRepo, err := client.NewRepository(ctx, stripped, remoteURL, http.DefaultTransport)
 	if err != nil {
 		return nil, err
 	}
@@ -35,6 +36,7 @@ func newProxyMiddleware(repository distribution.Repository, options map[string]i
 	return proxyMiddleware{
 		repository: repository,
 		manifests: proxyManifestStore{
+			repositoryName:  repository.Name(),
 			localManifests:  repository.Manifests(),
 			remoteManifests: remoteRepo.Manifests(),
 		},
@@ -45,7 +47,7 @@ func newProxyMiddleware(repository distribution.Repository, options map[string]i
 	}, nil
 }
 
-// Implement the Repository interface:
+// proxyMiddleware implements the Repository interface
 
 func (prm proxyMiddleware) Name() string {
 	return prm.repository.Name()
@@ -63,7 +65,7 @@ func (prm proxyMiddleware) Signatures() distribution.SignatureService {
 	return prm.repository.Signatures()
 }
 
-// init registers the proxy repository
+// init registers the proxy repository middlewarep
 func init() {
 	middleware.Register("proxy", middleware.InitFunc(newProxyMiddleware))
 }

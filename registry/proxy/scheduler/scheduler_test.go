@@ -18,7 +18,7 @@ func TestSchedule(t *testing.T) {
 		"testBlob3": true,
 	}
 
-	s := New(context.Background(), inmemory.New(), "/ttl")
+	s := new(context.Background(), inmemory.New(), "/ttl")
 	deleteFunc := func(repoName string) error {
 		if len(remainingRepos) == 0 {
 			t.Fatalf("Incorrect expiry count")
@@ -32,17 +32,17 @@ func TestSchedule(t *testing.T) {
 
 		return nil
 	}
-	s.OnBlobExpire(deleteFunc)
-	err := s.Start()
+	s.onBlobExpire = deleteFunc
+	err := s.start()
 	if err != nil {
 		t.Fatalf("Error starting ttlExpirationScheduler: %s", err)
 	}
 
-	s.AddBlob("testBlob1", 3*timeUnit)
-	s.AddBlob("testBlob2", 1*timeUnit)
+	s.add("testBlob1", 3*timeUnit, entryTypeBlob)
+	s.add("testBlob2", 1*timeUnit, entryTypeBlob)
 
 	func() {
-		s.AddBlob("testBlob3", 1*timeUnit)
+		s.add("testBlob3", 1*timeUnit, entryTypeBlob)
 
 	}()
 
@@ -73,12 +73,12 @@ func TestRestoreOld(t *testing.T) {
 
 	timeUnit := time.Millisecond
 	serialized, err := json.Marshal(&map[string]schedulerEntry{
-		"testBlob1": schedulerEntry{
+		"testBlob1": {
 			ExpiryDate: time.Now().Add(1 * timeUnit),
 			Key:        "testBlob1",
 			EntryType:  0,
 		},
-		"oldRepo": schedulerEntry{
+		"oldRepo": {
 			ExpiryDate: time.Now().Add(-3 * timeUnit), // TTL passed, should be removed first
 			Key:        "oldRepo",
 			EntryType:  0,
@@ -95,9 +95,9 @@ func TestRestoreOld(t *testing.T) {
 	if err != nil {
 		t.Fatal("Unable to write serialized data to fs")
 	}
-	s := New(context.Background(), fs, "/ttl")
-	s.OnBlobExpire(deleteFunc)
-	err = s.Start()
+	s := new(context.Background(), fs, "/ttl")
+	s.onBlobExpire = deleteFunc
+	err = s.start()
 	if err != nil {
 		t.Fatalf("Error starting ttlExpirationScheduler: %s", err)
 	}
@@ -121,25 +121,25 @@ func TestStopRestore(t *testing.T) {
 
 	fs := inmemory.New()
 	pathToStateFile := "/ttl"
-	s := New(context.Background(), fs, pathToStateFile)
-	s.OnBlobExpire(deleteFunc)
+	s := new(context.Background(), fs, pathToStateFile)
+	s.onBlobExpire = deleteFunc
 
-	err := s.Start()
+	err := s.start()
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	s.AddBlob("testBlob1", 300*timeUnit)
-	s.AddBlob("testBlob2", 100*timeUnit)
+	s.add("testBlob1", 300*timeUnit, entryTypeBlob)
+	s.add("testBlob2", 100*timeUnit, entryTypeBlob)
 
 	// Start and stop before all operations complete
 	// state will be written to fs
-	s.Stop()
+	s.stop()
 	time.Sleep(10 * time.Millisecond)
 
 	// v2 will restore state from fs
-	s2 := New(context.Background(), fs, pathToStateFile)
-	s2.OnBlobExpire(deleteFunc)
-	err = s2.Start()
+	s2 := new(context.Background(), fs, pathToStateFile)
+	s2.onBlobExpire = deleteFunc
+	err = s2.start()
 	if err != nil {
 		t.Fatalf("Error starting v2: %s", err.Error())
 	}
@@ -152,13 +152,13 @@ func TestStopRestore(t *testing.T) {
 }
 
 func TestDoubleStart(t *testing.T) {
-	s := New(context.Background(), inmemory.New(), "/ttl")
-	err := s.Start()
+	s := new(context.Background(), inmemory.New(), "/ttl")
+	err := s.start()
 	if err != nil {
 		t.Fatalf("Unable to start scheduler")
 	}
 	fmt.Printf("%#v", s)
-	err = s.Start()
+	err = s.start()
 	if err == nil {
 		t.Fatalf("Scheduler started twice without error")
 	}

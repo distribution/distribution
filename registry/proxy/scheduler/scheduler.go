@@ -8,21 +8,11 @@ import (
 
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/registry/storage/driver/filesystem"
 )
 
 // onTTLExpiryFunc is called when a repositories' TTL expires
 type expiryFunc func(string) error
-
-type Scheduler interface {
-	Start() error
-	Stop()
-
-	AddBlob(string, time.Duration)
-	AddManifest(string, time.Duration)
-
-	OnBlobExpire(expiryFunc)
-	OnManifestExpire(expiryFunc)
-}
 
 const (
 	entryTypeBlob = iota
@@ -30,19 +20,24 @@ const (
 	entryTypeSentinel
 )
 
+// schedulerEntry represents an entry in the scheduler
+// fields are exported for serialization
 type schedulerEntry struct {
 	Key        string
 	ExpiryDate time.Time
 	EntryType  int
 }
 
-func (s schedulerEntry) String() string {
-	return fmt.Sprintf("schedulerEntry[%s] -> %s", s.Key, s.ExpiryDate.Sub(time.Now()))
+var theScheduler *ttlExpirationScheduler
+
+func init() {
+	// todo(richardscother): Find a way to make the driver and path configurable
+	theScheduler = new(context.Background(), filesystem.New("/tmp"), "/ttl.json")
 }
 
-// TTLExpirationScheduler is a scheduler used to perform actions
+// ttlExpirationScheduler is a scheduler used to perform actions
 // when TTLs expire
-type TTLExpirationScheduler struct {
+type ttlExpirationScheduler struct {
 	entries  map[string]schedulerEntry
 	addChan  chan schedulerEntry
 	stopChan chan bool
@@ -64,8 +59,8 @@ type addChan chan schedulerEntry
 type stopChan chan bool
 
 // New returns a new TTL expiration scheduler
-func New(ctx context.Context, driver driver.StorageDriver, path string) Scheduler {
-	return &TTLExpirationScheduler{
+func new(ctx context.Context, driver driver.StorageDriver, path string) *ttlExpirationScheduler {
+	return &ttlExpirationScheduler{
 		entries:         make(map[string]schedulerEntry),
 		addChan:         make(chan schedulerEntry),
 		stopChan:        make(chan bool),
@@ -77,27 +72,41 @@ func New(ctx context.Context, driver driver.StorageDriver, path string) Schedule
 }
 
 // OnBlobExpire is called when a scheduled blob's TTL expires
-func (ttles *TTLExpirationScheduler) OnBlobExpire(f expiryFunc) {
-	ttles.onBlobExpire = f
+func OnBlobExpire(f expiryFunc) {
+	theScheduler.onBlobExpire = f
 }
 
 // OnManifestExpire is called when a scheduled manifest's TTL expires
-func (ttles *TTLExpirationScheduler) OnManifestExpire(f expiryFunc) {
-	ttles.onManifestExpire = f
+func OnManifestExpire(f expiryFunc) {
+	theScheduler.onManifestExpire = f
 }
 
 // AddBlob schedules a blob cleanup after ttl expires
-func (ttles *TTLExpirationScheduler) AddBlob(dgst string, ttl time.Duration) {
-	ttles.add(dgst, ttl, entryTypeBlob)
+func AddBlob(dgst string, ttl time.Duration) error {
+	if theScheduler.stopped {
+		return fmt.Errorf("scheduler not started")
+	}
+	theScheduler.add(dgst, ttl, entryTypeBlob)
+	return nil
 }
 
 // AddManifest schedules a manifest cleanup after ttl expires
-func (ttles *TTLExpirationScheduler) AddManifest(repoName string, ttl time.Duration) {
-	ttles.add(repoName, ttl, entryTypeManifest)
+func AddManifest(repoName string, ttl time.Duration) error {
+	if theScheduler.stopped {
+		return fmt.Errorf("scheduler not started")
+	}
+
+	theScheduler.add(repoName, ttl, entryTypeManifest)
+	return nil
+}
+
+// Start starts the scheduler
+func Start() error {
+	return theScheduler.start()
 }
 
 // Add schedules new TTL expiries
-func (ttles *TTLExpirationScheduler) add(key string, ttl time.Duration, eType int) {
+func (ttles *ttlExpirationScheduler) add(key string, ttl time.Duration, eType int) {
 	entry := schedulerEntry{
 		Key:        key,
 		ExpiryDate: time.Now().Add(ttl),
@@ -106,13 +115,11 @@ func (ttles *TTLExpirationScheduler) add(key string, ttl time.Duration, eType in
 	ttles.addChan <- entry
 }
 
-// Stop stops the scheduler - used for testing
-func (ttles *TTLExpirationScheduler) Stop() {
+func (ttles *ttlExpirationScheduler) stop() {
 	ttles.stopChan <- true
 }
 
-// Start calls the given onTTlExpiryFunc when the repositories' TTL expires
-func (ttles *TTLExpirationScheduler) Start() error {
+func (ttles *ttlExpirationScheduler) start() error {
 	err := ttles.readState()
 	if err != nil {
 		return err
@@ -122,7 +129,7 @@ func (ttles *TTLExpirationScheduler) Start() error {
 		return fmt.Errorf("Scheduler already started")
 	}
 
-	context.GetLogger(ttles.ctx).Infof("Starting TTL expiration scheduler...")
+	context.GetLogger(ttles.ctx).Infof("Starting cached object TTL expiration scheduler...")
 	ttles.stopped = false
 	go ttles.mainloop()
 
@@ -132,18 +139,21 @@ func (ttles *TTLExpirationScheduler) Start() error {
 // mainloop uses a select statement to listen for events.  Most of its time
 // is spent in waiting on a TTL to expire but can be interrupted when TTLs
 // are added.
-func (ttles *TTLExpirationScheduler) mainloop() {
+func (ttles *ttlExpirationScheduler) mainloop() {
 	for {
 		if ttles.stopped {
 			return
 		}
 
 		nextEntry, ttl := nextExpiringEntry(ttles.entries)
-		context.GetLogger(ttles.ctx).Infof("mainloop() : Sleeping for %s until cleanup of %s", ttl, nextEntry.Key)
+		if len(ttles.entries) == 0 {
+			context.GetLogger(ttles.ctx).Infof("scheduler mainloop(): Nothing to do, sleeping for %s", ttl)
+		} else {
+			context.GetLogger(ttles.ctx).Infof("scheduler mainloop(): Sleeping for %s until cleanup of %s", ttl, nextEntry.Key)
+		}
 
 		select {
 		case <-time.After(ttl):
-
 			var f expiryFunc
 
 			switch nextEntry.EntryType {
@@ -151,36 +161,39 @@ func (ttles *TTLExpirationScheduler) mainloop() {
 				f = ttles.onBlobExpire
 			case entryTypeManifest:
 				f = ttles.onManifestExpire
+			case entryTypeSentinel:
+				f = func(repoName string) error {
+					// No implementation
+					return nil
+				}
 			default:
 				f = func(repoName string) error {
-					return nil
+					return fmt.Errorf("Unknown scheduler entry type: %d", nextEntry.EntryType)
 				}
 			}
 
-			if f == nil {
-				context.GetLogger(ttles.ctx).Errorf("Nil func: %#v\n", ttles.onBlobExpire)
-				delete(ttles.entries, nextEntry.Key)
-				break
-			}
-
 			if err := f(nextEntry.Key); err != nil {
-				context.GetLogger(ttles.ctx).Errorf("Error returned from OnExpire(%s): %s", nextEntry.Key, err)
+				context.GetLogger(ttles.ctx).Errorf("Schedluer error returned from OnExpire(%s): %s", nextEntry.Key, err)
 				break
 			}
 
 			delete(ttles.entries, nextEntry.Key)
 
 			if err := ttles.writeState(); err != nil {
-				context.GetLogger(ttles.ctx).Errorf("Error writing TTL state: %s", err)
+				context.GetLogger(ttles.ctx).Errorf("Error writing scheduler state: %s", err)
 			}
 		case entry := <-ttles.addChan:
-			context.GetLogger(ttles.ctx).Errorf("Adding new entry for %s with ttl=%s", entry.Key, entry.ExpiryDate.Sub(time.Now()))
+			context.GetLogger(ttles.ctx).Infof("Adding new scheduler entry for %s with ttl=%s", entry.Key, entry.ExpiryDate.Sub(time.Now()))
 			ttles.entries[entry.Key] = entry
-			ttles.writeState()
+			if err := ttles.writeState(); err != nil {
+				context.GetLogger(ttles.ctx).Errorf("Error writing scheduler state: %s", err)
+			}
 			break
 
 		case <-ttles.stopChan:
-			ttles.writeState()
+			if err := ttles.writeState(); err != nil {
+				context.GetLogger(ttles.ctx).Errorf("Error writing scheduler state: %s", err)
+			}
 			ttles.stopped = true
 		}
 	}
@@ -211,7 +224,7 @@ func nextExpiringEntry(entries map[string]schedulerEntry) (schedulerEntry, time.
 	return nextEntry, nextEntry.ExpiryDate.Sub(time.Now())
 }
 
-func (ttles *TTLExpirationScheduler) writeState() error {
+func (ttles *ttlExpirationScheduler) writeState() error {
 	jsonBytes, err := json.Marshal(ttles.entries)
 	if err != nil {
 		return err
@@ -224,7 +237,7 @@ func (ttles *TTLExpirationScheduler) writeState() error {
 	return nil
 }
 
-func (ttles *TTLExpirationScheduler) readState() error {
+func (ttles *ttlExpirationScheduler) readState() error {
 	if _, err := ttles.driver.Stat(ttles.ctx, ttles.pathToStateFile); err != nil {
 		switch err := err.(type) {
 		case driver.PathNotFoundError:

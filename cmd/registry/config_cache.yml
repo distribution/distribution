@@ -1,11 +1,10 @@
-
 version: 0.1
 log:
   level: debug
   fields:
     service: registry
     environment: development
-storage:
+storage: &STORAGE
     cache:
         blobdescriptor: inmemory
     filesystem:
@@ -51,4 +50,8 @@ middleware:
   repository:
     - name: proxy
       options:
-        remoteurl: http://localhost:6000
+        remoteurl: http://45.79.111.217:5005
+  registry:
+    - name: proxy
+      options:
+        storage: *STORAGE

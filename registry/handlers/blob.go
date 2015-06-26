@@ -36,7 +36,6 @@ func blobDispatcher(ctx *Context, r *http.Request) http.Handler {
 		"GET":  http.HandlerFunc(blobHandler.GetBlob),
 		"HEAD": http.HandlerFunc(blobHandler.GetBlob),
 	}
-
 }
 
 // blobHandler serves http blob requests.
@@ -49,7 +48,7 @@ type blobHandler struct {
 // GetBlob fetches the binary data from backend storage returns it in the
 // response.
 func (bh *blobHandler) GetBlob(w http.ResponseWriter, r *http.Request) {
-	context.GetLogger(bh).Debug("GetBlob", bh.Digest)
+	context.GetLogger(bh).Debug("GetBlob")
 	blobs := bh.Repository.Blobs(bh)
 	desc, err := blobs.Stat(bh, bh.Digest)
 	if err != nil {

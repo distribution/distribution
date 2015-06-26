@@ -374,7 +374,7 @@ func TestManifestAPI(t *testing.T) {
 	_, p, counts := checkBodyHasErrorCodes(t, "getting unknown manifest tags", resp,
 		v2.ErrorCodeManifestUnverified, v2.ErrorCodeBlobUnknown, v2.ErrorCodeDigestInvalid)
 
-	expectedCounts := map[v2.ErrorCode]int{
+	expectedCounts := map[errcode.ErrorCode]int{
 		v2.ErrorCodeManifestUnverified: 1,
 		v2.ErrorCodeBlobUnknown:        2,
 		v2.ErrorCodeDigestInvalid:      2,

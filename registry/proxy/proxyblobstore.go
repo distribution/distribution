@@ -9,7 +9,11 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/registry/proxy/scheduler"
 )
+
+// todo(richardscothern): make configurable
+const blobTTL = time.Duration(10 * time.Second)
 
 type proxyBlobStore struct {
 	localStore  distribution.BlobStore
@@ -56,6 +60,9 @@ func (pbs proxyBlobStore) Get(ctx context.Context, dgst digest.Digest) ([]byte, 
 			context.GetLogger(ctx).Errorf("Unable to write blob to local storage: %s", err)
 		}
 	}()
+
+	scheduler.AddBlob(dgst.String(), blobTTL)
+
 	return blob, nil
 }
 

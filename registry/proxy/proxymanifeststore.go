@@ -2,19 +2,24 @@ package proxy
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/registry/proxy/scheduler"
 	"github.com/docker/libtrust"
 )
 
-// proxyManifest
+// todo(richardscothern): make configurable
+const repositoryTTL = time.Duration(10 * time.Second)
+
 type proxyManifestStore struct {
 	ctx             context.Context
 	localManifests  distribution.ManifestService
 	remoteManifests distribution.ManifestService
+	repositoryName  string
 }
 
 var _ distribution.ManifestService = &proxyManifestStore{}
@@ -48,8 +53,10 @@ func (pms proxyManifestStore) Get(dgst digest.Digest) (*manifest.SignedManifest,
 		// have to be an error.  This could also be async
 		return nil, err
 	}
-	return sm, err
 
+	scheduler.AddManifest(pms.repositoryName, repositoryTTL)
+
+	return sm, err
 }
 
 func (pms proxyManifestStore) Put(manifest *manifest.SignedManifest, verifyFunc distribution.ManifestVerifyFunc) error {
@@ -80,17 +87,8 @@ func (pms proxyManifestStore) GetByTag(tag string) (*manifest.SignedManifest, er
 	// If a manifest is fetched by tag, always check the remote
 	// for fresh content.
 
-	exists, err := pms.remoteManifests.ExistsByTag(tag)
-	if err != nil {
-		return nil, err
-	}
-
-	if exists {
-		// todo(richardscothern): get digest from local manifest
-		// and use as etag with If-None-Match in the GetByTag
-		// request.  If we get 307, return here
-	}
-
+	// todo(richardscothern): this call will be much more efficient
+	// with a supplied etag and a way of checking the return type.
 	sm, err := pms.remoteManifests.GetByTag(tag)
 	if err != nil {
 		return nil, err
@@ -102,6 +100,12 @@ func (pms proxyManifestStore) GetByTag(tag string) (*manifest.SignedManifest, er
 		// have to be an error.  This could also be async
 		return nil, err
 	}
+
+	// todo(richardscothern): only want to do this if we had to put
+	// a new manifest.  We don't know this yet due to the above
+	ttl := time.Duration(10 * time.Second)
+	scheduler.AddManifest(pms.repositoryName, ttl)
+
 	return sm, err
 }
 
