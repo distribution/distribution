@@ -1,8 +1,13 @@
-<!--GITHUB
-page_title: Authentication for the Registry
-page_description: Restricting access to your registry
-page_keywords: registry, service, images, repository, authentication
-IGNORES-->
+<!--[metadata]>
++++
+title = "Authentication for the Registry"
+description = "Restricting access to your registry"
+keywords = ["registry, service, images, repository, authentication"]
+[menu.main]
+parent="smn_registry"
+weight=6
++++
+<![end-metadata]-->
 
 # Authentication
 
