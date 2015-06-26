@@ -8,7 +8,6 @@ parent="smn_registry_ref"
 +++
 <![end-metadata]-->
 
-
 # Docker Registry HTTP API V2
 
 ## Introduction
@@ -801,7 +800,7 @@ corresponding responses, with success and failure, are enumerated.
 A list of methods and URIs are covered in the table below:
 
 |Method|Path|Entity|Description|
--------|----|------|------------
+|------|----|------|-----------|
 | GET | `/v2/` | Base | Check that the endpoint implements Docker Registry API V2. |
 | GET | `/v2/<name>/tags/list` | Tags | Fetch the tags under the repository identified by `name`. |
 | GET | `/v2/<name>/manifests/<reference>` | Manifest | Fetch the manifest identified by `name` and `reference` where `reference` can be a tag or digest. |
@@ -822,7 +821,7 @@ The detail for each endpoint is covered in the following sections.
 The error codes encountered via the API are enumerated in the following table:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
  `BLOB_UNKNOWN` | blob unknown to registry | This error may be returned when a blob is unknown to the registry in a specified repository. This can be returned with a standard get or if a manifest references an unknown layer during upload.
  `BLOB_UPLOAD_INVALID` | blob upload invalid | The blob upload encountered an error and can no longer proceed.
  `BLOB_UPLOAD_UNKNOWN` | blob upload unknown to registry | If a blob upload has been cancelled or was never started, this error code may be returned.
@@ -915,7 +914,7 @@ The following headers will be returned on the response:
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
 
 
@@ -1016,7 +1015,7 @@ The repository is not known to the registry.
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
 
 
@@ -1046,7 +1045,7 @@ The client does not have access to the repository.
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
 
 
@@ -1144,7 +1143,7 @@ The name or reference was invalid.
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 | `TAG_INVALID` | manifest tag did not match URI | During a manifest upload, if the tag in the manifest does not match the uri tag, this error will be returned. |
 
@@ -1175,7 +1174,7 @@ The client does not have access to the repository.
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
 
 
@@ -1205,7 +1204,7 @@ The named manifest is not known to the registry.
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
 | `MANIFEST_UNKNOWN` | manifest unknown | This error is returned when the manifest, identified by name and tag is unknown to the repository. |
 
@@ -1301,7 +1300,7 @@ The received manifest was invalid in some way, as described by the error codes. 
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 | `TAG_INVALID` | manifest tag did not match URI | During a manifest upload, if the tag in the manifest does not match the uri tag, this error will be returned. |
 | `MANIFEST_INVALID` | manifest invalid | During upload, manifests undergo several checks ensuring validity. If those checks fail, this error may be returned, unless a more specific error is included. The detail will contain information the failed validation. |
@@ -1335,7 +1334,7 @@ The client does not have permission to push to the repository.
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
 
 
@@ -1366,7 +1365,7 @@ One or more layers may be missing during a manifest upload. If so, the missing l
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `BLOB_UNKNOWN` | blob unknown to registry | This error may be returned when a blob is unknown to the registry in a specified repository. This can be returned with a standard get or if a manifest references an unknown layer during upload. |
 
 
@@ -1405,7 +1404,7 @@ The following headers will be returned on the response:
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
 
 
@@ -1475,7 +1474,7 @@ The specified `name` or `reference` were invalid and the delete was unable to pr
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 | `TAG_INVALID` | manifest tag did not match URI | During a manifest upload, if the tag in the manifest does not match the uri tag, this error will be returned. |
 
@@ -1515,7 +1514,7 @@ The following headers will be returned on the response:
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
 
 
@@ -1545,7 +1544,7 @@ The specified `name` or `reference` are unknown to the registry and the delete w
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
 | `MANIFEST_UNKNOWN` | manifest unknown | This error is returned when the manifest, identified by name and tag is unknown to the repository. |
 
@@ -1652,7 +1651,7 @@ There was a problem with the request that needs to be addressed by the client, s
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 | `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
 
@@ -1692,7 +1691,7 @@ The following headers will be returned on the response:
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
 
 
@@ -1722,7 +1721,7 @@ The blob, identified by `name` and `digest`, is unknown to the registry.
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
 | `BLOB_UNKNOWN` | blob unknown to registry | This error may be returned when a blob is unknown to the registry in a specified repository. This can be returned with a standard get or if a manifest references an unknown layer during upload. |
 
@@ -1801,7 +1800,7 @@ There was a problem with the request that needs to be addressed by the client, s
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 | `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
 
@@ -1841,7 +1840,7 @@ The following headers will be returned on the response:
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
 
 
@@ -1871,7 +1870,7 @@ Content-Type: application/json; charset=utf-8
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
 | `BLOB_UNKNOWN` | blob unknown to registry | This error may be returned when a blob is unknown to the registry in a specified repository. This can be returned with a standard get or if a manifest references an unknown layer during upload. |
 
@@ -1963,7 +1962,7 @@ The following headers will be returned with the response:
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
 | `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 
@@ -2003,7 +2002,7 @@ The following headers will be returned on the response:
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
 
 
@@ -2069,7 +2068,7 @@ The following headers will be returned with the response:
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
 | `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 
@@ -2109,7 +2108,7 @@ The following headers will be returned on the response:
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
 
 
@@ -2196,7 +2195,7 @@ There was an error processing the upload and it must be restarted.
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
 | `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 | `BLOB_UPLOAD_INVALID` | blob upload invalid | The blob upload encountered an error and can no longer proceed. |
@@ -2237,7 +2236,7 @@ The following headers will be returned on the response:
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
 
 
@@ -2267,7 +2266,7 @@ The upload is unknown to the registry. The upload must be restarted.
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `BLOB_UPLOAD_UNKNOWN` | blob upload unknown to registry | If a blob upload has been cancelled or was never started, this error code may be returned. |
 
 
@@ -2353,7 +2352,7 @@ There was an error processing the upload and it must be restarted.
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
 | `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 | `BLOB_UPLOAD_INVALID` | blob upload invalid | The blob upload encountered an error and can no longer proceed. |
@@ -2394,7 +2393,7 @@ The following headers will be returned on the response:
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
 
 
@@ -2424,7 +2423,7 @@ The upload is unknown to the registry. The upload must be restarted.
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `BLOB_UPLOAD_UNKNOWN` | blob upload unknown to registry | If a blob upload has been cancelled or was never started, this error code may be returned. |
 
 
@@ -2508,7 +2507,7 @@ There was an error processing the upload and it must be restarted.
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
 | `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 | `BLOB_UPLOAD_INVALID` | blob upload invalid | The blob upload encountered an error and can no longer proceed. |
@@ -2549,7 +2548,7 @@ The following headers will be returned on the response:
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
 
 
@@ -2579,7 +2578,7 @@ The upload is unknown to the registry. The upload must be restarted.
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `BLOB_UPLOAD_UNKNOWN` | blob upload unknown to registry | If a blob upload has been cancelled or was never started, this error code may be returned. |
 
 
@@ -2677,7 +2676,7 @@ There was an error processing the upload and it must be restarted.
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
 | `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 | `BLOB_UPLOAD_INVALID` | blob upload invalid | The blob upload encountered an error and can no longer proceed. |
@@ -2718,7 +2717,7 @@ The following headers will be returned on the response:
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
 
 
@@ -2748,7 +2747,7 @@ The upload is unknown to the registry. The upload must be restarted.
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `BLOB_UPLOAD_UNKNOWN` | blob upload unknown to registry | If a blob upload has been cancelled or was never started, this error code may be returned. |
 
 
@@ -2826,7 +2825,7 @@ An error was encountered processing the delete. The client may ignore this error
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 | `BLOB_UPLOAD_INVALID` | blob upload invalid | The blob upload encountered an error and can no longer proceed. |
 
@@ -2866,7 +2865,7 @@ The following headers will be returned on the response:
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
 
 
@@ -2896,7 +2895,7 @@ The upload is unknown to the registry. The client may ignore this error and assu
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 | `BLOB_UPLOAD_UNKNOWN` | blob upload unknown to registry | If a blob upload has been cancelled or was never started, this error code may be returned. |
 
 

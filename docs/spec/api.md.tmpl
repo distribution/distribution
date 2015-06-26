@@ -800,7 +800,7 @@ corresponding responses, with success and failure, are enumerated.
 A list of methods and URIs are covered in the table below:
 
 |Method|Path|Entity|Description|
--------|----|------|------------
+|------|----|------|-----------|
 {{range $route := .RouteDescriptors}}{{range $method := .Methods}}| {{$method.Method}} | `{{$route.Path|prettygorilla}}` | {{$route.Entity}} | {{$method.Description}} |
 {{end}}{{end}}
 
@@ -811,7 +811,7 @@ The detail for each endpoint is covered in the following sections.
 The error codes encountered via the API are enumerated in the following table:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 {{range $err := .ErrorDescriptors}} `{{$err.Value}}` | {{$err.Message}} | {{$err.Description|removenewlines}}
 {{end}}
 
@@ -895,7 +895,7 @@ The following headers will be returned on the response:
 The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
--------|----|------|------------
+|----|-------|-----------|
 {{range $err := .ErrorCodes}}| `{{$err}}` | {{$err.Descriptor.Message}} | {{$err.Descriptor.Description|removenewlines}} |
 {{end}}
 
