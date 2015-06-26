@@ -30,13 +30,11 @@ Since the Docker engine uses basic authentication to negotiate access to the Reg
 
 While this model gives you the ability to use whatever authentication backend you want through a secondary authentication mechanism implemented inside your proxy, it also requires that you move TLS termination from the Registry to the proxy itself.
 
-Below is a simple example of secured basic authentication (using TLS), using nginx as a proxy.
+Below is a simple example of secured basic authentication (using TLS), using nginx as a proxy. 
 
-### Requirements
+### Requirements
 
-You should have followed entirely the basic [deployment guide](deployement.md).
-
-If you have not, please take the time to do so.
+You should have followed entirely the basic [deployment guide](deploying.md). If you have not, please take the time to do so.
 
 At this point, it's assumed that:
 
@@ -171,6 +169,6 @@ Now:
 
 This is **advanced**.
 
-You will find [background information here](spec/auth/token.md), [configuration information here](configuration.md#auth).
+You will find [background information here](/spec/auth/token.md), [configuration information here](configuration.md#auth).
 
 Beware that you will have to implement your own authentication service for this to work (though there exist third-party open-source implementations).
