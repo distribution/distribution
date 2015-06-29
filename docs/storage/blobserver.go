@@ -65,6 +65,7 @@ func (bs *blobServer) ServeBlob(ctx context.Context, w http.ResponseWriter, r *h
 		}
 
 		http.ServeContent(w, r, desc.Digest.String(), time.Time{}, br)
+		return nil
 	}
 
 	// Some unexpected error.
