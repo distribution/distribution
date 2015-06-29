@@ -36,5 +36,5 @@ func init() {
 		return ""
 	}
 
-	testsuites.RegisterInProcessSuite(driverConstructor, skipCheck)
+	testsuites.RegisterSuite(driverConstructor, skipCheck)
 }

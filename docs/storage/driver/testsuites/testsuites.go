@@ -22,47 +22,14 @@ import (
 // Test hooks up gocheck into the "go test" runner.
 func Test(t *testing.T) { check.TestingT(t) }
 
-// RegisterInProcessSuite registers an in-process storage driver test suite with
+// RegisterSuite registers an in-process storage driver test suite with
 // the go test runner.
-func RegisterInProcessSuite(driverConstructor DriverConstructor, skipCheck SkipCheck) {
+func RegisterSuite(driverConstructor DriverConstructor, skipCheck SkipCheck) {
 	check.Suite(&DriverSuite{
 		Constructor: driverConstructor,
 		SkipCheck:   skipCheck,
 		ctx:         context.Background(),
 	})
-}
-
-// RegisterIPCSuite registers a storage driver test suite which runs the named
-// driver as a child process with the given parameters.
-func RegisterIPCSuite(driverName string, ipcParams map[string]string, skipCheck SkipCheck) {
-	panic("ipc testing is disabled for now")
-
-	// NOTE(stevvooe): IPC testing is disabled for now. Uncomment the code
-	// block before and remove the panic when we phase it back in.
-
-	// suite := &DriverSuite{
-	// 	Constructor: func() (storagedriver.StorageDriver, error) {
-	// 		d, err := ipc.NewDriverClient(driverName, ipcParams)
-	// 		if err != nil {
-	// 			return nil, err
-	// 		}
-	// 		err = d.Start()
-	// 		if err != nil {
-	// 			return nil, err
-	// 		}
-	// 		return d, nil
-	// 	},
-	// 	SkipCheck: skipCheck,
-	// }
-	// suite.Teardown = func() error {
-	// 	if suite.StorageDriver == nil {
-	// 		return nil
-	// 	}
-
-	// 	driverClient := suite.StorageDriver.(*ipc.StorageDriverClient)
-	// 	return driverClient.Stop()
-	// }
-	// check.Suite(suite)
 }
 
 // SkipCheck is a function used to determine if a test suite should be skipped.
@@ -82,9 +49,8 @@ type DriverConstructor func() (storagedriver.StorageDriver, error)
 type DriverTeardown func() error
 
 // DriverSuite is a gocheck test suite designed to test a
-// storagedriver.StorageDriver.
-// The intended way to create a DriverSuite is with RegisterInProcessSuite or
-// RegisterIPCSuite.
+// storagedriver.StorageDriver. The intended way to create a DriverSuite is
+// with RegisterSuite.
 type DriverSuite struct {
 	Constructor DriverConstructor
 	Teardown    DriverTeardown
@@ -841,10 +807,6 @@ func (suite *DriverSuite) TestConcurrentStreamReads(c *check.C) {
 // TestConcurrentFileStreams checks that multiple *os.File objects can be passed
 // in to WriteStream concurrently without hanging.
 func (suite *DriverSuite) TestConcurrentFileStreams(c *check.C) {
-	// if _, isIPC := suite.StorageDriver.(*ipc.StorageDriverClient); isIPC {
-	// 	c.Skip("Need to fix out-of-process concurrency")
-	// }
-
 	numStreams := 32
 
 	if testing.Short() {

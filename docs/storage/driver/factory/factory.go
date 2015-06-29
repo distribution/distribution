@@ -33,30 +33,14 @@ func Register(name string, factory StorageDriverFactory) {
 	driverFactories[name] = factory
 }
 
-// Create a new storagedriver.StorageDriver with the given name and parameters
-// To run in-process, the StorageDriverFactory must first be registered with the given name
-// If no in-process drivers are found with the given name, this attempts to create an IPC driver
-// If no in-process or external drivers are found, an InvalidStorageDriverError is returned
+// Create a new storagedriver.StorageDriver with the given name and
+// parameters. To use a driver, the StorageDriverFactory must first be
+// registered with the given name. If no drivers are found, an
+// InvalidStorageDriverError is returned
 func Create(name string, parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
 	driverFactory, ok := driverFactories[name]
 	if !ok {
 		return nil, InvalidStorageDriverError{name}
-
-		// NOTE(stevvooe): We are disabling storagedriver ipc for now, as the
-		// server and client need to be updated for the changed API calls and
-		// there were some problems libchan hanging. We'll phase this
-		// functionality back in over the next few weeks.
-
-		// No registered StorageDriverFactory found, try ipc
-		// driverClient, err := ipc.NewDriverClient(name, parameters)
-		// if err != nil {
-		// 	return nil, InvalidStorageDriverError{name}
-		// }
-		// err = driverClient.Start()
-		// if err != nil {
-		// 	return nil, err
-		// }
-		// return driverClient, nil
 	}
 	return driverFactory.Create(parameters)
 }
