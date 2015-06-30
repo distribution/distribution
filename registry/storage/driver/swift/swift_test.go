@@ -36,23 +36,17 @@ func init() {
 		swiftServer        *swifttest.SwiftServer
 		err                error
 	)
-	if username = os.Getenv("OS_USERNAME"); username == "" {
-		username = os.Getenv("ST_USER")
-	}
-	if password = os.Getenv("OS_PASSWORD"); password == "" {
-		password = os.Getenv("ST_KEY")
-	}
-	if authURL = os.Getenv("OS_AUTH_URL"); authURL == "" {
-		authURL = os.Getenv("ST_AUTH")
-	}
-	tenant = os.Getenv("OS_TENANT_NAME")
-	tenantID = os.Getenv("OS_TENANT_ID")
-	domain = os.Getenv("OS_DOMAIN_NAME")
-	domainID = os.Getenv("OS_DOMAIN_ID")
-	container = os.Getenv("OS_CONTAINER_NAME")
-	region = os.Getenv("OS_REGION_NAME")
-	prefix = os.Getenv("OS_CONTAINER_PREFIX")
-	insecureSkipVerify, _ = strconv.ParseBool(os.Getenv("ST_INSECURESKIPVERIFY"))
+	username = os.Getenv("SWIFT_USERNAME")
+	password = os.Getenv("SWIFT_PASSWORD")
+	authURL = os.Getenv("SWIFT_AUTH_URL")
+	tenant = os.Getenv("SWIFT_TENANT_NAME")
+	tenantID = os.Getenv("SWIFT_TENANT_ID")
+	domain = os.Getenv("SWIFT_DOMAIN_NAME")
+	domainID = os.Getenv("SWIFT_DOMAIN_ID")
+	container = os.Getenv("SWIFT_CONTAINER_NAME")
+	region = os.Getenv("SWIFT_REGION_NAME")
+	prefix = os.Getenv("SWIFT_CONTAINER_PREFIX")
+	insecureSkipVerify, _ = strconv.ParseBool(os.Getenv("SWIFT_INSECURESKIPVERIFY"))
 
 	if username == "" || password == "" || authURL == "" || container == "" {
 		if swiftServer, err = swifttest.NewSwiftServer("localhost"); err != nil {
