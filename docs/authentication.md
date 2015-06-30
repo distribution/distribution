@@ -171,6 +171,6 @@ Now:
 
 This is **advanced**.
 
-You will find [background information here](spec/auth/token.md), [configuration information here](configuration.md#auth).
+You will find [background information here](./spec/auth/token.md), [configuration information here](configuration.md#auth).
 
 Beware that you will have to implement your own authentication service for this to work (though there exist third-party open-source implementations).
