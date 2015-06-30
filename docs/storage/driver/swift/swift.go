@@ -312,12 +312,12 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 		// Offset is inside the current segment : we need to read the
 		// data from the beginning of the segment to offset
 		file, _, err := d.Conn.ObjectOpen(d.Container, getSegment(), false, nil)
-		defer file.Close()
-		paddingReader = file
-
 		if err != nil {
 			return 0, parseError(getSegment(), err)
 		}
+
+		defer file.Close()
+		paddingReader = file
 	}
 
 	readers := []io.Reader{}
