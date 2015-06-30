@@ -18,7 +18,7 @@ import (
 // Hook up gocheck into the "go test" runner.
 func Test(t *testing.T) { check.TestingT(t) }
 
-type SwiftDriverConstructor func(rootDirectory string) (*Driver, error)
+var swiftDriverConstructor func(prefix string) (*Driver, error)
 
 func init() {
 	var (
@@ -31,7 +31,6 @@ func init() {
 		domainID           string
 		container          string
 		region             string
-		prefix             string
 		insecureSkipVerify bool
 		swiftServer        *swifttest.SwiftServer
 		err                error
@@ -45,7 +44,6 @@ func init() {
 	domainID = os.Getenv("SWIFT_DOMAIN_ID")
 	container = os.Getenv("SWIFT_CONTAINER_NAME")
 	region = os.Getenv("SWIFT_REGION_NAME")
-	prefix = os.Getenv("SWIFT_CONTAINER_PREFIX")
 	insecureSkipVerify, _ = strconv.ParseBool(os.Getenv("SWIFT_INSECURESKIPVERIFY"))
 
 	if username == "" || password == "" || authURL == "" || container == "" {
@@ -58,13 +56,13 @@ func init() {
 		container = "test"
 	}
 
-	root, err := ioutil.TempDir("", "driver-")
+	prefix, err := ioutil.TempDir("", "driver-")
 	if err != nil {
 		panic(err)
 	}
-	defer os.Remove(root)
+	defer os.Remove(prefix)
 
-	swiftDriverConstructor := func(rootDirectory string) (*Driver, error) {
+	swiftDriverConstructor = func(root string) (*Driver, error) {
 		parameters := Parameters{
 			username,
 			password,
@@ -75,7 +73,7 @@ func init() {
 			domainID,
 			region,
 			container,
-			prefix,
+			root,
 			insecureSkipVerify,
 			defaultChunkSize,
 		}
@@ -83,66 +81,55 @@ func init() {
 		return New(parameters)
 	}
 
-	skipCheck := func() string {
-		return ""
-	}
-
 	driverConstructor := func() (storagedriver.StorageDriver, error) {
-		return swiftDriverConstructor(root)
+		return swiftDriverConstructor(prefix)
 	}
 
-	testsuites.RegisterInProcessSuite(driverConstructor, skipCheck)
-
-	RegisterSwiftDriverSuite(swiftDriverConstructor, skipCheck, swiftServer)
+	testsuites.RegisterInProcessSuite(driverConstructor, testsuites.NeverSkip)
 }
 
-func RegisterSwiftDriverSuite(swiftDriverConstructor SwiftDriverConstructor, skipCheck testsuites.SkipCheck,
-	swiftServer *swifttest.SwiftServer) {
-	check.Suite(&SwiftDriverSuite{
-		Constructor: swiftDriverConstructor,
-		SkipCheck:   skipCheck,
-		SwiftServer: swiftServer,
-	})
-}
-
-type SwiftDriverSuite struct {
-	Constructor SwiftDriverConstructor
-	SwiftServer *swifttest.SwiftServer
-	testsuites.SkipCheck
-}
-
-func (suite *SwiftDriverSuite) SetUpSuite(c *check.C) {
-	if reason := suite.SkipCheck(); reason != "" {
-		c.Skip(reason)
-	}
-}
-
-func (suite *SwiftDriverSuite) TestEmptyRootList(c *check.C) {
+func TestEmptyRootList(t *testing.T) {
 	validRoot, err := ioutil.TempDir("", "driver-")
-	c.Assert(err, check.IsNil)
+	if err != nil {
+		t.Fatalf("unexpected error creating temporary directory: %v", err)
+	}
 	defer os.Remove(validRoot)
 
-	rootedDriver, err := suite.Constructor(validRoot)
-	c.Assert(err, check.IsNil)
-	emptyRootDriver, err := suite.Constructor("")
-	c.Assert(err, check.IsNil)
-	slashRootDriver, err := suite.Constructor("/")
-	c.Assert(err, check.IsNil)
+	rootedDriver, err := swiftDriverConstructor(validRoot)
+	if err != nil {
+		t.Fatalf("unexpected error creating rooted driver: %v", err)
+	}
+
+	emptyRootDriver, err := swiftDriverConstructor("")
+	if err != nil {
+		t.Fatalf("unexpected error creating empty root driver: %v", err)
+	}
+
+	slashRootDriver, err := swiftDriverConstructor("/")
+	if err != nil {
+		t.Fatalf("unexpected error creating slash root driver: %v", err)
+	}
 
 	filename := "/test"
 	contents := []byte("contents")
 	ctx := context.Background()
 	err = rootedDriver.PutContent(ctx, filename, contents)
-	c.Assert(err, check.IsNil)
+	if err != nil {
+		t.Fatalf("unexpected error creating content: %v", err)
+	}
 	defer rootedDriver.Delete(ctx, filename)
 
 	keys, err := emptyRootDriver.List(ctx, "/")
 	for _, path := range keys {
-		c.Assert(storagedriver.PathRegexp.MatchString(path), check.Equals, true)
+		if !storagedriver.PathRegexp.MatchString(path) {
+			t.Fatalf("unexpected string in path: %q != %q", path, storagedriver.PathRegexp)
+		}
 	}
 
 	keys, err = slashRootDriver.List(ctx, "/")
 	for _, path := range keys {
-		c.Assert(storagedriver.PathRegexp.MatchString(path), check.Equals, true)
+		if !storagedriver.PathRegexp.MatchString(path) {
+			t.Fatalf("unexpected string in path: %q != %q", path, storagedriver.PathRegexp)
+		}
 	}
 }
