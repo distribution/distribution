@@ -25,8 +25,4 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	if err := ipc.StorageDriverServer(driver); err != nil {
-		logrus.Fatalln(err)
-	}
 }

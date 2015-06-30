@@ -49,7 +49,8 @@ const defaultChunkSize = 20 * 1024 * 1024
 // minChunkSize defines the minimum size of a segment
 const minChunkSize = 1 << 20
 
-const directoryMimeType = "application/directory"
+// Vendor MIME type used for objects that act as directories
+const directoryMimeType = "application/vnd.swift.directory"
 
 //DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
 type DriverParameters struct {
