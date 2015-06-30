@@ -39,6 +39,7 @@ import (
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/base"
 	"github.com/docker/distribution/registry/storage/driver/factory"
+	"github.com/docker/distribution/version"
 )
 
 const driverName = "swift"
@@ -151,7 +152,7 @@ func New(params Parameters) (*Driver, error) {
 		ApiKey:         params.Password,
 		AuthUrl:        params.AuthURL,
 		Region:         params.Region,
-		UserAgent:      "distribution",
+		UserAgent:      "distribution/" + version.Version,
 		Tenant:         params.Tenant,
 		TenantId:       params.TenantID,
 		Domain:         params.Domain,
