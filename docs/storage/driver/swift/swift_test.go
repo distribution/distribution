@@ -71,7 +71,7 @@ func init() {
 	defer os.Remove(root)
 
 	swiftDriverConstructor := func(rootDirectory string) (*Driver, error) {
-		parameters := DriverParameters{
+		parameters := Parameters{
 			username,
 			password,
 			authURL,

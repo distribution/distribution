@@ -52,8 +52,8 @@ const minChunkSize = 1 << 20
 // Vendor MIME type used for objects that act as directories
 const directoryMimeType = "application/vnd.swift.directory"
 
-//DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
-type DriverParameters struct {
+// Parameters A struct that encapsulates all of the driver parameters after all values have been set
+type Parameters struct {
 	Username           string
 	Password           string
 	AuthURL            string
@@ -106,7 +106,7 @@ type Driver struct {
 // - authurl
 // - container
 func FromParameters(parameters map[string]interface{}) (*Driver, error) {
-	params := DriverParameters{
+	params := Parameters{
 		ChunkSize:          defaultChunkSize,
 		InsecureSkipVerify: false,
 	}
@@ -139,7 +139,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 }
 
 // New constructs a new Driver with the given Openstack Swift credentials and container name
-func New(params DriverParameters) (*Driver, error) {
+func New(params Parameters) (*Driver, error) {
 	transport := &http.Transport{
 		Proxy:               http.ProxyFromEnvironment,
 		MaxIdleConnsPerHost: 2048,
