@@ -64,7 +64,7 @@ func (base *Base) GetContent(ctx context.Context, path string) ([]byte, error) {
 
 // PutContent wraps PutContent of underlying storage driver.
 func (base *Base) PutContent(ctx context.Context, path string, content []byte) error {
-	ctx, done := context.WithTrace(context.Background())
+	ctx, done := context.WithTrace(ctx)
 	defer done("%s.PutContent(%q)", base.Name(), path)
 
 	if !storagedriver.PathRegexp.MatchString(path) {
@@ -76,7 +76,7 @@ func (base *Base) PutContent(ctx context.Context, path string, content []byte) e
 
 // ReadStream wraps ReadStream of underlying storage driver.
 func (base *Base) ReadStream(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
-	ctx, done := context.WithTrace(context.Background())
+	ctx, done := context.WithTrace(ctx)
 	defer done("%s.ReadStream(%q, %d)", base.Name(), path, offset)
 
 	if offset < 0 {
