@@ -4,8 +4,18 @@
 // This package leverages the ncw/swift client library for interfacing with
 // Swift.
 //
-// Because Swift is a key, value store the Stat call does not support last modification
-// time for directories (directories are an abstraction for key, value stores)
+// It supports both TempAuth authentication and Keystone authentication
+// (up to version 3).
+//
+// Since Swift has no concept of directories (directories are an abstration),
+// empty objects are created with the MIME type application/vnd.swift.directory.
+//
+// As Swift has a limit on the size of a single uploaded object (by default
+// this is 5GB), the driver makes use of the Swift Large Object Support
+// (http://docs.openstack.org/developer/swift/overview_large_objects.html).
+// Only one container is used for both manifests and data objects. Manifests
+// are stored in the 'files' pseudo directory, data objects are stored under
+// 'segments'.
 package swift
 
 import (
@@ -33,8 +43,10 @@ import (
 
 const driverName = "swift"
 
+// defaultChunkSize defines the default size of a segment
 const defaultChunkSize = 20 * 1024 * 1024
 
+// minChunkSize defines the minimum size of a segment
 const minChunkSize = 1 << 20
 
 const directoryMimeType = "application/directory"
@@ -80,8 +92,8 @@ type baseEmbed struct {
 	base.Base
 }
 
-// Driver is a storagedriver.StorageDriver implementation backed by Amazon Swift
-// Objects are stored at absolute keys in the provided bucket.
+// Driver is a storagedriver.StorageDriver implementation backed by Openstack Swift
+// Objects are stored at absolute keys in the provided container.
 type Driver struct {
 	baseEmbed
 }
