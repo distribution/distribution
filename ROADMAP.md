@@ -14,6 +14,7 @@ The Distribution Project consists of several components, some of which are still
   distribution package.
 - Define a strong data model for distributing docker images
 - Provide a flexible distribution tool kit for use in the docker platform
+- Unlock new distribution models
 
 ## Distribution Components
 
