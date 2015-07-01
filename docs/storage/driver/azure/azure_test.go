@@ -59,11 +59,5 @@ func init() {
 		return ""
 	}
 
-	testsuites.RegisterInProcessSuite(azureDriverConstructor, skipCheck)
-	// testsuites.RegisterIPCSuite(driverName, map[string]string{
-	// 	paramAccountName: accountName,
-	// 	paramAccountKey:  accountKey,
-	// 	paramContainer:   container,
-	// 	paramRealm:       realm,
-	// }, skipCheck)
+	testsuites.RegisterSuite(azureDriverConstructor, skipCheck)
 }

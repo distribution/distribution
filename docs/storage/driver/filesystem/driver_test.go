@@ -20,10 +20,7 @@ func init() {
 	}
 	defer os.Remove(root)
 
-	testsuites.RegisterInProcessSuite(func() (storagedriver.StorageDriver, error) {
+	testsuites.RegisterSuite(func() (storagedriver.StorageDriver, error) {
 		return New(root), nil
 	}, testsuites.NeverSkip)
-
-	// BUG(stevvooe): IPC is broken so we're disabling for now. Will revisit later.
-	// testsuites.RegisterIPCSuite(driverName, map[string]string{"rootdirectory": root}, testsuites.NeverSkip)
 }
