@@ -433,7 +433,7 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 		Delimiter: '/',
 	}
 
-	objects, err := d.Conn.Objects(d.Container, opts)
+	objects, err := d.Conn.ObjectsAll(d.Container, opts)
 	for _, obj := range objects {
 		files = append(files, strings.TrimPrefix(strings.TrimSuffix(obj.Name, "/"), d.swiftPath("/")))
 	}
@@ -459,7 +459,7 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		Prefix: d.swiftPath(path) + "/",
 	}
 
-	objects, err := d.Conn.Objects(d.Container, &opts)
+	objects, err := d.Conn.ObjectsAll(d.Container, &opts)
 	if err != nil {
 		return parseError(path, err)
 	}
@@ -531,7 +531,7 @@ func (d *driver) getContentType() string {
 }
 
 func (d *driver) getAllSegments(path string) ([]swift.Object, error) {
-	return d.Conn.Objects(d.Container, &swift.ObjectsOpts{Prefix: d.swiftSegmentPath(path)})
+	return d.Conn.ObjectsAll(d.Container, &swift.ObjectsOpts{Prefix: d.swiftSegmentPath(path)})
 }
 
 func (d *driver) createManifest(path string) (*swift.ObjectCreateFile, error) {
