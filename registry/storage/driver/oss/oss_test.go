@@ -17,7 +17,9 @@ import (
 // Hook up gocheck into the "go test" runner.
 func Test(t *testing.T) { check.TestingT(t) }
 
-type OSSDriverConstructor func(rootDirectory string) (*Driver, error)
+var ossDriverConstructor func(rootDirectory string) (*Driver, error)
+
+var skipCheck func() string
 
 func init() {
 	accessKey := os.Getenv("ALIYUN_ACCESS_KEY_ID")
@@ -34,7 +36,7 @@ func init() {
 	}
 	defer os.Remove(root)
 
-	ossDriverConstructor := func(rootDirectory string) (*Driver, error) {
+	ossDriverConstructor = func(rootDirectory string) (*Driver, error) {
 		encryptBool := false
 		if encrypt != "" {
 			encryptBool, err = strconv.ParseBool(encrypt)
@@ -76,79 +78,64 @@ func init() {
 	}
 
 	// Skip OSS storage driver tests if environment variable parameters are not provided
-	skipCheck := func() string {
+	skipCheck = func() string {
 		if accessKey == "" || secretKey == "" || region == "" || bucket == "" || encrypt == "" {
 			return "Must set ALIYUN_ACCESS_KEY_ID, ALIYUN_ACCESS_KEY_SECRET, OSS_REGION, OSS_BUCKET, and OSS_ENCRYPT to run OSS tests"
 		}
 		return ""
 	}
 
-	driverConstructor := func() (storagedriver.StorageDriver, error) {
+	testsuites.RegisterSuite(func() (storagedriver.StorageDriver, error) {
 		return ossDriverConstructor(root)
+	}, skipCheck)
+}
+
+func TestEmptyRootList(t *testing.T) {
+	if skipCheck() != "" {
+		t.Skip(skipCheck())
 	}
 
-	testsuites.RegisterInProcessSuite(driverConstructor, skipCheck)
-
-	// ossConstructor := func() (*Driver, error) {
-	// 	return ossDriverConstructor(aws.GetRegion(region))
-	// }
-
-	RegisterOSSDriverSuite(ossDriverConstructor, skipCheck)
-
-	// testsuites.RegisterIPCSuite(driverName, map[string]string{
-	// 	"accesskey": accessKey,
-	// 	"secretkey": secretKey,
-	// 	"region":    region.Name,
-	// 	"bucket":    bucket,
-	// 	"encrypt":   encrypt,
-	// }, skipCheck)
-	// }
-}
-
-func RegisterOSSDriverSuite(ossDriverConstructor OSSDriverConstructor, skipCheck testsuites.SkipCheck) {
-	check.Suite(&OSSDriverSuite{
-		Constructor: ossDriverConstructor,
-		SkipCheck:   skipCheck,
-	})
-}
-
-type OSSDriverSuite struct {
-	Constructor OSSDriverConstructor
-	testsuites.SkipCheck
-}
-
-func (suite *OSSDriverSuite) SetUpSuite(c *check.C) {
-	if reason := suite.SkipCheck(); reason != "" {
-		c.Skip(reason)
-	}
-}
-
-func (suite *OSSDriverSuite) TestEmptyRootList(c *check.C) {
 	validRoot, err := ioutil.TempDir("", "driver-")
-	c.Assert(err, check.IsNil)
+	if err != nil {
+		t.Fatalf("unexpected error creating temporary directory: %v", err)
+	}
 	defer os.Remove(validRoot)
 
-	rootedDriver, err := suite.Constructor(validRoot)
-	c.Assert(err, check.IsNil)
-	emptyRootDriver, err := suite.Constructor("")
-	c.Assert(err, check.IsNil)
-	slashRootDriver, err := suite.Constructor("/")
-	c.Assert(err, check.IsNil)
+	rootedDriver, err := ossDriverConstructor(validRoot)
+	if err != nil {
+		t.Fatalf("unexpected error creating rooted driver: %v", err)
+	}
+
+	emptyRootDriver, err := ossDriverConstructor("")
+	if err != nil {
+		t.Fatalf("unexpected error creating empty root driver: %v", err)
+	}
+
+	slashRootDriver, err := ossDriverConstructor("/")
+	if err != nil {
+		t.Fatalf("unexpected error creating slash root driver: %v", err)
+	}
 
 	filename := "/test"
 	contents := []byte("contents")
 	ctx := context.Background()
 	err = rootedDriver.PutContent(ctx, filename, contents)
-	c.Assert(err, check.IsNil)
+	if err != nil {
+		t.Fatalf("unexpected error creating content: %v", err)
+	}
 	defer rootedDriver.Delete(ctx, filename)
 
 	keys, err := emptyRootDriver.List(ctx, "/")
 	for _, path := range keys {
-		c.Assert(storagedriver.PathRegexp.MatchString(path), check.Equals, true)
+		if !storagedriver.PathRegexp.MatchString(path) {
+			t.Fatalf("unexpected string in path: %q != %q", path, storagedriver.PathRegexp)
+		}
 	}
 
 	keys, err = slashRootDriver.List(ctx, "/")
 	for _, path := range keys {
-		c.Assert(storagedriver.PathRegexp.MatchString(path), check.Equals, true)
+		if !storagedriver.PathRegexp.MatchString(path) {
+			t.Fatalf("unexpected string in path: %q != %q", path, storagedriver.PathRegexp)
+		}
 	}
 }
