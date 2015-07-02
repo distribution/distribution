@@ -49,9 +49,6 @@ const defaultChunkSize = 20 * 1024 * 1024
 // minChunkSize defines the minimum size of a segment
 const minChunkSize = 1 << 20
 
-// Vendor MIME type used for objects that act as directories
-const directoryMimeType = "application/vnd.swift.directory"
-
 // Parameters A struct that encapsulates all of the driver parameters after all values have been set
 type Parameters struct {
 	Username           string
@@ -203,9 +200,6 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 
 // PutContent stores the []byte content at a location designated by "path".
 func (d *driver) PutContent(ctx context.Context, path string, contents []byte) error {
-	if err := d.createParentFolders(path); err != nil {
-		return err
-	}
 	err := d.Conn.ObjectPutBytes(d.Container, d.swiftPath(path),
 		contents, d.getContentType())
 	return parseError(path, err)
@@ -265,9 +259,6 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 	if err != nil {
 		if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
 			// Create a object manifest
-			if err := d.createParentFolders(path); err != nil {
-				return 0, err
-			}
 			manifest, err := d.createManifest(path)
 			if err != nil {
 				return 0, parseError(path, err)
@@ -392,19 +383,40 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 // Stat retrieves the FileInfo for the given path, including the current size
 // in bytes and the creation time.
 func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
-	info, _, err := d.Conn.Object(d.Container, d.swiftPath(path))
+	swiftPath := d.swiftPath(path)
+	opts := &swift.ObjectsOpts{
+		Prefix:    swiftPath,
+		Delimiter: '/',
+	}
+
+	objects, err := d.Conn.ObjectsAll(d.Container, opts)
 	if err != nil {
-		return nil, parseError(path, err)
+		return nil, err
 	}
 
 	fi := storagedriver.FileInfoFields{
-		Path:    path,
-		IsDir:   info.ContentType == directoryMimeType,
-		Size:    info.Bytes,
-		ModTime: info.LastModified,
+		Path: strings.TrimPrefix(strings.TrimSuffix(swiftPath, "/"), d.swiftPath("/")),
 	}
 
-	return storagedriver.FileInfoInternal{FileInfoFields: fi}, nil
+	for _, obj := range objects {
+		if obj.PseudoDirectory && obj.Name == swiftPath+"/" {
+			fi.IsDir = true
+			return storagedriver.FileInfoInternal{FileInfoFields: fi}, nil
+		} else if obj.Name == swiftPath {
+			// On Swift 1.12, the 'bytes' field is always 0
+			// so we need to do a second HEAD request
+			info, _, err := d.Conn.Object(d.Container, swiftPath)
+			if err != nil {
+				return nil, parseError(path, err)
+			}
+			fi.IsDir = false
+			fi.Size = info.Bytes
+			fi.ModTime = info.LastModified
+			return storagedriver.FileInfoInternal{FileInfoFields: fi}, nil
+		}
+	}
+
+	return nil, storagedriver.PathNotFoundError{Path: path}
 }
 
 // List returns a list of the objects that are direct descendants of the given path.
@@ -423,9 +435,7 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 
 	objects, err := d.Conn.Objects(d.Container, opts)
 	for _, obj := range objects {
-		if !obj.PseudoDirectory {
-			files = append(files, strings.TrimPrefix(strings.TrimSuffix(obj.Name, "/"), d.swiftPath("/")))
-		}
+		files = append(files, strings.TrimPrefix(strings.TrimSuffix(obj.Name, "/"), d.swiftPath("/")))
 	}
 
 	return files, parseError(path, err)
@@ -514,23 +524,6 @@ func (d *driver) swiftPath(path string) string {
 
 func (d *driver) swiftSegmentPath(path string) string {
 	return strings.TrimLeft(strings.TrimRight(d.Prefix+"/segments"+path, "/"), "/")
-}
-
-func (d *driver) createParentFolders(path string) error {
-	dir := gopath.Dir(path)
-	for dir != "/" {
-		_, _, err := d.Conn.Object(d.Container, d.swiftPath(dir))
-		if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
-			_, err := d.Conn.ObjectPut(d.Container, d.swiftPath(dir), bytes.NewReader(make([]byte, 0)),
-				false, "", directoryMimeType, nil)
-			if err != nil {
-				return parseError(dir, err)
-			}
-		}
-		dir = gopath.Dir(dir)
-	}
-
-	return nil
 }
 
 func (d *driver) getContentType() string {
