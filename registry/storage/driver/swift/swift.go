@@ -251,7 +251,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 	zeroBuf := make([]byte, d.ChunkSize)
 
 	getSegment := func() string {
-		return d.swiftSegmentPath(path) + "/" + fmt.Sprintf("%016d", partNumber)
+		return fmt.Sprintf("%s/%016d", d.swiftSegmentPath(path), partNumber)
 	}
 
 	max := func(a int64, b int64) int64 {
