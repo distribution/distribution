@@ -124,6 +124,22 @@
 			"Rev": "1dfe7915deaf3f80b962c163b918868d8a6d8974"
 		},
 		{
+			"ImportPath": "golang.org/x/net/icmp",
+			"Rev": "1dfe7915deaf3f80b962c163b918868d8a6d8974"
+		},
+		{
+			"ImportPath": "golang.org/x/net/internal/iana",
+			"Rev": "1dfe7915deaf3f80b962c163b918868d8a6d8974"
+		},
+		{
+			"ImportPath": "golang.org/x/net/ipv4",
+			"Rev": "1dfe7915deaf3f80b962c163b918868d8a6d8974"
+		},
+		{
+			"ImportPath": "golang.org/x/net/ipv6",
+			"Rev": "1dfe7915deaf3f80b962c163b918868d8a6d8974"
+		},
+		{
 			"ImportPath": "gopkg.in/check.v1",
 			"Rev": "64131543e7896d5bcc6bd5a76287eb75ea96c673"
 		},
