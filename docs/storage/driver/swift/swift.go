@@ -447,32 +447,36 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 // Delete recursively deletes all objects stored at "path" and its subpaths.
 func (d *driver) Delete(ctx context.Context, path string) error {
 	opts := swift.ObjectsOpts{
-		Prefix: d.swiftPath(path),
+		Prefix: d.swiftPath(path) + "/",
 	}
 
-	objects, err := d.Conn.ObjectNamesAll(d.Container, &opts)
+	objects, err := d.Conn.Objects(d.Container, &opts)
 	if err != nil {
 		return parseError(path, err)
 	}
-	if len(objects) == 0 {
-		return storagedriver.PathNotFoundError{Path: path}
-	}
 
 	if d.BulkDeleteSupport {
-		if _, err := d.Conn.BulkDelete(d.Container, objects); err != swift.Forbidden {
+		filenames := make([]string, len(objects))
+		for i, obj := range objects {
+			filenames[i] = obj.Name
+		}
+		if _, err := d.Conn.BulkDelete(d.Container, filenames); err != swift.Forbidden {
 			return parseError(path, err)
 		}
 	}
 
-	for _, name := range objects {
-		if _, headers, err := d.Conn.Object(d.Container, name); err == nil {
+	for _, obj := range objects {
+		if obj.PseudoDirectory {
+			continue
+		}
+		if _, headers, err := d.Conn.Object(d.Container, obj.Name); err == nil {
 			manifest, ok := headers["X-Object-Manifest"]
 			if ok {
 				components := strings.SplitN(manifest, "/", 2)
 				segContainer := components[0]
 				segments, err := d.getAllSegments(components[1])
 				if err != nil {
-					return parseError(name, err)
+					return parseError(obj.Name, err)
 				}
 
 				for _, s := range segments {
@@ -482,12 +486,18 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 				}
 			}
 		} else {
-			return parseError(name, err)
+			return parseError(obj.Name, err)
 		}
 
-		if err := d.Conn.ObjectDelete(d.Container, name); err != nil {
-			return parseError(name, err)
+		if err := d.Conn.ObjectDelete(d.Container, obj.Name); err != nil {
+			return parseError(obj.Name, err)
 		}
+	}
+
+	if _, err := d.Stat(ctx, path); err == nil {
+		return parseError(path, d.Conn.ObjectDelete(d.Container, d.swiftPath(path)))
+	} else if len(objects) == 0 {
+		return storagedriver.PathNotFoundError{Path: path}
 	}
 
 	return nil
