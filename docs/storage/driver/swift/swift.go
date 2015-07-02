@@ -220,7 +220,7 @@ func (d *driver) ReadStream(ctx context.Context, path string, offset int64) (io.
 	file, _, err := d.Conn.ObjectOpen(d.Container, d.swiftPath(path), false, headers)
 
 	if err != nil {
-		if swiftErr, ok := err.(*swift.Error); ok && swiftErr.StatusCode == 416 {
+		if swiftErr, ok := err.(*swift.Error); ok && swiftErr.StatusCode == http.StatusRequestedRangeNotSatisfiable {
 			return ioutil.NopCloser(bytes.NewReader(nil)), nil
 		}
 
