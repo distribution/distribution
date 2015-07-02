@@ -27,7 +27,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	gopath "path"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -550,7 +549,7 @@ func (d *driver) createManifest(path string) (*swift.ObjectCreateFile, error) {
 }
 
 func detectBulkDelete(authURL string) (bulkDelete bool) {
-	resp, err := http.Get(filepath.Join(authURL, "..", "..") + "/info")
+	resp, err := http.Get(gopath.Join(authURL, "..", "..") + "/info")
 	if err == nil {
 		defer resp.Body.Close()
 		decoder := json.NewDecoder(resp.Body)
