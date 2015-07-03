@@ -46,11 +46,11 @@
 		},
 		{
 			"ImportPath": "github.com/denverdino/aliyungo/oss",
-			"Rev": "cab34948f93584226cdaac45adb09f3bb3725875"
+			"Rev": "641bb4f0ddb552750324cb54c0140ca08865abd0"
 		},
 		{
 			"ImportPath": "github.com/denverdino/aliyungo/util",
-			"Rev": "cab34948f93584226cdaac45adb09f3bb3725875"
+			"Rev": "641bb4f0ddb552750324cb54c0140ca08865abd0"
 		},
 		{
 			"ImportPath": "github.com/docker/docker/pkg/tarsum",

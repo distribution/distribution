@@ -10,12 +10,6 @@ import (
 	"sort"
 	"strconv"
 	"time"
-	"errors"
-)
-
-
-const (
-	StatusUnKnown     = "NA"
 )
 
 //CreateRandomString create random string
@@ -137,25 +131,4 @@ func GenerateRandomECSPassword() string {
 
 	return string(s)
 
-}
-
-
-func LoopCall(attempts AttemptStrategy,api func() (bool,interface{},error))(interface{}, error){
-
-	for attempt := attempts.Start(); attempt.Next(); {
-		needStop,status,err := api()
-
-		if(err != nil) {
-			return nil, errors.New("execution failed")
-		}
-		if(needStop){
-			return status,nil;
-		}
-
-		if attempt.HasNext() {
-			continue;
-		}
-		return nil,errors.New("timeout execution ")
-	}
-	panic("unreachable")
 }
