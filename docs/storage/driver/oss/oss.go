@@ -492,7 +492,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 				// currentLength >= offset >= chunkSize
 				_, part, err = multi.PutPartCopy(partNumber,
 					oss.CopyOptions{CopySourceOptions: "bytes=0-" + strconv.FormatInt(offset-1, 10)},
-					d.Bucket.Name+"/"+d.ossPath(path))
+					d.Bucket.Path(d.ossPath(path)))
 				if err != nil {
 					return 0, err
 				}
@@ -586,7 +586,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 				// offset > currentLength >= chunkSize
 				_, part, err = multi.PutPartCopy(partNumber,
 					oss.CopyOptions{},
-					d.Bucket.Name+"/"+d.ossPath(path))
+					d.Bucket.Path(d.ossPath(path)))
 				if err != nil {
 					return 0, err
 				}
