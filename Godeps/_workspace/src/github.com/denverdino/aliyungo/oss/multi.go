@@ -139,6 +139,9 @@ func (b *Bucket) InitMulti(key string, contType string, perm ACL, options Option
 }
 
 func (m *Multi) PutPartCopy(n int, options CopyOptions, source string) (*CopyObjectResult, Part, error) {
+	// TODO source format a /BUCKET/PATH/TO/OBJECT
+	// TODO not a good design. API could be changed to PutPartCopyWithinBucket(..., path) and PutPartCopyFromBucket(bucket, path)
+
 	headers := make(http.Header)
 	headers.Set("x-oss-copy-source", source)
 
@@ -150,8 +153,9 @@ func (m *Multi) PutPartCopy(n int, options CopyOptions, source string) (*CopyObj
 	sourceBucket := m.Bucket.Client.Bucket(strings.TrimRight(strings.Split(source, "/")[1], "/"))
 	//log.Println("source: ", source)
 	//log.Println("sourceBucket: ", sourceBucket.Name)
-	//log.Println("HEAD: ", strings.Split(source, "/")[2])
-	sourceMeta, err := sourceBucket.Head(strings.Split(source, "/")[2], nil)
+	//log.Println("HEAD: ", strings.strings.SplitAfterN(source, "/", 3)[2])
+	// TODO SplitAfterN can be use in bucket name
+	sourceMeta, err := sourceBucket.Head(strings.SplitAfterN(source, "/", 3)[2], nil)
 	if err != nil {
 		return nil, Part{}, err
 	}
