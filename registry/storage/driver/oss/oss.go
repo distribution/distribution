@@ -276,12 +276,18 @@ func (d *driver) ReadStream(ctx context.Context, path string, offset int64) (io.
 
 	resp, err := d.Bucket.GetResponseWithHeaders(d.ossPath(path), headers)
 	if err != nil {
-		if ossErr, ok := err.(*oss.Error); ok && ossErr.Code == "InvalidRange" {
-			return ioutil.NopCloser(bytes.NewReader(nil)), nil
-		}
-
 		return nil, parseError(path, err)
 	}
+
+	// Due to Aliyun OSS API, status 200 and whole object will be return instead of an
+	// InvalidRange error when range is invalid.
+	//
+	// OSS sever will always return http.StatusPartialContent if range is acceptable.
+	if resp.StatusCode != http.StatusPartialContent {
+		resp.Body.Close()
+		return ioutil.NopCloser(bytes.NewReader(nil)), nil
+	}
+
 	return resp.Body, nil
 }
 
