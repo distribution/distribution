@@ -195,7 +195,7 @@ func (d *driver) Name() string {
 // GetContent retrieves the content stored at "path" as a []byte.
 func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 	content, err := d.Conn.ObjectGetBytes(d.Container, d.swiftPath(path))
-	if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
+	if err == swift.ObjectNotFound {
 		return nil, storagedriver.PathNotFoundError{Path: path}
 	}
 	return content, nil
@@ -204,7 +204,7 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 // PutContent stores the []byte content at a location designated by "path".
 func (d *driver) PutContent(ctx context.Context, path string, contents []byte) error {
 	err := d.Conn.ObjectPutBytes(d.Container, d.swiftPath(path), contents, d.getContentType())
-	if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
+	if err == swift.ObjectNotFound {
 		return storagedriver.PathNotFoundError{Path: path}
 	}
 	return err
@@ -217,7 +217,7 @@ func (d *driver) ReadStream(ctx context.Context, path string, offset int64) (io.
 	headers["Range"] = "bytes=" + strconv.FormatInt(offset, 10) + "-"
 
 	file, _, err := d.Conn.ObjectOpen(d.Container, d.swiftPath(path), false, headers)
-	if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
+	if err == swift.ObjectNotFound {
 		return nil, storagedriver.PathNotFoundError{Path: path}
 	}
 	if swiftErr, ok := err.(*swift.Error); ok && swiftErr.StatusCode == http.StatusRequestedRangeNotSatisfiable {
@@ -308,7 +308,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 			// Insert a block a zero
 			_, err := d.Conn.ObjectPut(d.Container, getSegment(), bytes.NewReader(zeroBuf), false, "", d.getContentType(), nil)
 			if err != nil {
-				if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
+				if err == swift.ObjectNotFound {
 					return 0, storagedriver.PathNotFoundError{Path: getSegment()}
 				}
 				return 0, err
@@ -324,7 +324,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 		// data from the beginning of the segment to offset
 		file, _, err := d.Conn.ObjectOpen(d.Container, getSegment(), false, nil)
 		if err != nil {
-			if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
+			if err == swift.ObjectNotFound {
 				return 0, storagedriver.PathNotFoundError{Path: getSegment()}
 			}
 			return 0, err
@@ -343,7 +343,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 	writeSegment := func(segment string) (finished bool, bytesRead int64, err error) {
 		currentSegment, err := d.Conn.ObjectCreate(d.Container, segment, false, "", d.getContentType(), nil)
 		if err != nil {
-			if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
+			if err == swift.ObjectNotFound {
 				return false, bytesRead, storagedriver.PathNotFoundError{Path: segment}
 			}
 			return false, bytesRead, err
@@ -367,7 +367,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 				headers["Range"] = "bytes=" + strconv.FormatInt(cursor+n, 10) + "-" + strconv.FormatInt(cursor+chunkSize, 10)
 				file, _, err := d.Conn.ObjectOpen(d.Container, d.swiftPath(path), false, headers)
 				if err != nil {
-					if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
+					if err == swift.ObjectNotFound {
 						return false, bytesRead, storagedriver.PathNotFoundError{Path: path}
 					}
 					return false, bytesRead, err
@@ -376,7 +376,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 				_, copyErr := io.Copy(currentSegment, file)
 
 				if err := file.Close(); err != nil {
-					if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
+					if err == swift.ObjectNotFound {
 						return false, bytesRead, storagedriver.PathNotFoundError{Path: path}
 					}
 					return false, bytesRead, err
@@ -441,7 +441,7 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 			// so we need to do a second HEAD request
 			info, _, err := d.Conn.Object(d.Container, swiftPath)
 			if err != nil {
-				if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
+				if err == swift.ObjectNotFound {
 					return nil, storagedriver.PathNotFoundError{Path: path}
 				}
 				return nil, err
@@ -521,7 +521,7 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 			filenames[i] = obj.Name
 		}
 		if _, err := d.Conn.BulkDelete(d.Container, filenames); err != swift.Forbidden {
-			if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
+			if err == swift.ContainerNotFound {
 				return storagedriver.PathNotFoundError{Path: path}
 			}
 			return err
@@ -543,7 +543,7 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 
 				for _, s := range segments {
 					if err := d.Conn.ObjectDelete(segContainer, s.Name); err != nil {
-						if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
+						if err == swift.ObjectNotFound {
 							return storagedriver.PathNotFoundError{Path: s.Name}
 						}
 						return err
@@ -551,14 +551,14 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 				}
 			}
 		} else {
-			if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
+			if err == swift.ObjectNotFound {
 				return storagedriver.PathNotFoundError{Path: obj.Name}
 			}
 			return err
 		}
 
 		if err := d.Conn.ObjectDelete(d.Container, obj.Name); err != nil {
-			if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
+			if err == swift.ObjectNotFound {
 				return storagedriver.PathNotFoundError{Path: obj.Name}
 			}
 			return err
@@ -568,15 +568,17 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 	_, _, err = d.Conn.Object(d.Container, d.swiftPath(path))
 	if err == nil {
 		if err := d.Conn.ObjectDelete(d.Container, d.swiftPath(path)); err != nil {
-			if err == swift.ContainerNotFound || err == swift.ObjectNotFound {
+			if err == swift.ObjectNotFound {
 				return storagedriver.PathNotFoundError{Path: path}
 			}
 			return err
 		}
-	} else if err == swift.ObjectNotFound && len(objects) == 0 {
-		return storagedriver.PathNotFoundError{Path: path}
-	} else if err == swift.ContainerNotFound {
-		return storagedriver.PathNotFoundError{Path: path}
+	} else if err == swift.ObjectNotFound {
+		if len(objects) == 0 {
+			return storagedriver.PathNotFoundError{Path: path}
+		}
+	} else {
+		return err
 	}
 	return nil
 }
