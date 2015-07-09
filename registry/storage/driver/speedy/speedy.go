@@ -16,15 +16,16 @@ import (
 
 const driverName = "speedy"
 
+//DriverParameters A struct that encapulates all of the driver parameters after all values have been set
 type DriverParameters struct {
-	storageUrls       string
+	storageURLs       string
 	chunkSize         uint64
 	heartBeatInterval int
 }
 
 type driver struct {
-	storageUrlArr     []string
-	healthUrlArr      []string
+	storageURLArr     []string
+	healthURLArr      []string
 	chunkSize         uint64
 	heartBeatInterval int
 	client            *SpeedyClient
@@ -35,6 +36,7 @@ type basedEmbed struct {
 	base.Base
 }
 
+//Driver is a storagedriver.StorageDriver implementation backed by speedy.
 type Driver struct {
 	basedEmbed
 }
@@ -64,7 +66,7 @@ func (factory *speedyDriverFactory) Create(parameters map[string]interface{}) (s
 
 // FromParameters constructs a new Driver with a given paramters map.
 func FromParameters(parameters map[string]interface{}) (*Driver, error) {
-	storageUrl, ok := parameters["storageurl"]
+	storageURL, ok := parameters["storageurl"]
 	if !ok {
 		return nil, fmt.Errorf("No storageurl parameter provided")
 	}
@@ -93,7 +95,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	}
 
 	params := DriverParameters{
-		storageUrls:       fmt.Sprint(storageUrl),
+		storageURLs:       fmt.Sprint(storageURL),
 		chunkSize:         uint64(chunkSize),
 		heartBeatInterval: heartBeatInterval,
 	}
@@ -103,16 +105,16 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 
 //New constructs a new Driver with the speedy param.
 func New(params DriverParameters) (*Driver, error) {
-	storageUrlArr := strings.Split(params.storageUrls, ";")
-	if len(storageUrlArr) < 1 {
-		return nil, fmt.Errorf("The storageUrl parameter may be error")
+	storageURLArr := strings.Split(params.storageURLs, ";")
+	if len(storageURLArr) < 1 {
+		return nil, fmt.Errorf("The storageURL parameter may be error")
 	}
 
 	client := &SpeedyClient{}
 
 	d := &driver{
-		storageUrlArr:     storageUrlArr,
-		healthUrlArr:      make([]string, 0),
+		storageURLArr:     storageURLArr,
+		healthURLArr:      make([]string, 0),
 		chunkSize:         params.chunkSize,
 		heartBeatInterval: params.heartBeatInterval,
 		client:            client,
@@ -134,18 +136,18 @@ func (d *driver) Name() string {
 	return driverName
 }
 
-func (d *driver) updateHealthUrlArr() {
-	healthUrlArr := make([]string, 0)
-	for i, _ := range d.storageUrlArr {
-		err := d.client.Ping(d.storageUrlArr[i])
+func (d *driver) updateHealthURLArr() {
+	var healthURLArr []string
+	for i := range d.storageURLArr {
+		err := d.client.Ping(d.storageURLArr[i])
 		if err != nil {
 			log.Errorf("speedy driver ping error: %v", err)
 			continue
 		}
-		healthUrlArr = append(healthUrlArr, d.storageUrlArr[i])
+		healthURLArr = append(healthURLArr, d.storageURLArr[i])
 	}
 	d.rwlock.Lock()
-	d.healthUrlArr = healthUrlArr
+	d.healthURLArr = healthURLArr
 	d.rwlock.Unlock()
 }
 
@@ -154,14 +156,14 @@ func (d *driver) healthCheck(seconds int) {
 	for {
 		select {
 		case <-timer.C:
-			d.updateHealthUrlArr()
+			d.updateHealthURLArr()
 		}
 	}
 }
 
 //GetContent retrives the content stored at the "path" as a []byte.
 func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
-	url, err := d.getUrl()
+	url, err := d.getURL()
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +195,7 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 
 //PutContent stores the []byte content at a location designated by "path".
 func (d *driver) PutContent(ctx context.Context, path string, contents []byte) error {
-	url, err := d.getUrl()
+	url, err := d.getURL()
 	if err != nil {
 		return err
 	}
@@ -241,7 +243,7 @@ func (r *readStreamReader) Read(b []byte) (n int, err error) {
 			r.offset += readSize
 		}
 
-		url, err := r.driver.getUrl()
+		url, err := r.driver.getURL()
 		if err != nil {
 			return int(bufferOffset), err
 		}
@@ -270,7 +272,7 @@ func (r *readStreamReader) Close() error {
 // May be used to resume reading a stream by providing a nonzero offset.
 func (d *driver) ReadStream(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
 	//get all metainfos
-	url, err := d.getUrl()
+	url, err := d.getURL()
 	if err != nil {
 		return nil, err
 	}
@@ -289,7 +291,7 @@ func (d *driver) ReadStream(ctx context.Context, path string, offset int64) (io.
 
 func (d *driver) initReadStream(path string, offset uint64, infoArr []*MetaInfoValue) (io.ReadCloser, error) {
 	var size uint64
-	for index, _ := range infoArr {
+	for index := range infoArr {
 		size += infoArr[index].End - infoArr[index].Start
 	}
 
@@ -308,7 +310,7 @@ func (d *driver) initReadStream(path string, offset uint64, infoArr []*MetaInfoV
 		offset:       0,
 	}
 
-	index := 0
+	var index int
 	var readOffset uint64 = 0
 	for index < len(infoArr) {
 		nextReadOffset := readOffset + (infoArr[index].End - infoArr[index].Start)
@@ -320,7 +322,7 @@ func (d *driver) initReadStream(path string, offset uint64, infoArr []*MetaInfoV
 		continue
 	}
 
-	url, err := d.getUrl()
+	url, err := d.getURL()
 	if err != nil {
 		return nil, err
 	}
@@ -340,7 +342,7 @@ func (d *driver) initReadStream(path string, offset uint64, infoArr []*MetaInfoV
 // May be used to resume writing a stream by providing a nonzero offset.
 // The offset must be no larger than the CurrentSize for this path.
 func (d *driver) WriteStream(ctx context.Context, path string, offset int64, reader io.Reader) (int64, error) {
-	url, err := d.getUrl()
+	url, err := d.getURL()
 	if err != nil {
 		return 0, err
 	}
@@ -351,8 +353,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 	}
 
 	var totalRead int64
-	totalRead = 0
-	index := 0
+	var index int
 	var currentSize uint64 = 0
 
 	//Align to chunk size, skip already exist chunk
@@ -369,7 +370,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 		//read 1MB every time
 		var tempSize uint64 = 1 << 20
 		tempBuf := make([]byte, tempSize)
-		var distance uint64 = 0
+		var distance uint64 
 		if currentSize > uint64(offset) {
 			distance = currentSize - uint64(offset)
 		}
@@ -425,7 +426,7 @@ func (d *driver) writeStreamToSpeedy(path string, currentOffset uint64, reader i
 			IsLast: isLast,
 		}
 
-		url, err := d.getUrl()
+		url, err := d.getURL()
 		if err != nil {
 			return totalRead, err
 		}
@@ -447,7 +448,7 @@ func (d *driver) writeStreamToSpeedy(path string, currentOffset uint64, reader i
 // Stat retrieves the FileInfo for the given path, including the current
 // size in bytes and the modification time.
 func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
-	url, err := d.getUrl()
+	url, err := d.getURL()
 	if err != nil {
 		return nil, err
 	}
@@ -477,7 +478,7 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 
 	var totalSize uint64
 	modTime := infoArr[0].ModTime
-	for index, _ := range infoArr {
+	for index := range infoArr {
 		totalSize += infoArr[index].End - infoArr[index].Start
 		if infoArr[index].ModTime.After(modTime) {
 			modTime = infoArr[index].ModTime
@@ -496,7 +497,7 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 // List returns a list of the objects that are direct descendants of the
 //given path.
 func (d *driver) List(ctx context.Context, path string) ([]string, error) {
-	url, err := d.getUrl()
+	url, err := d.getURL()
 	if err != nil {
 		return nil, err
 	}
@@ -519,7 +520,7 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 // Note: This may be no more efficient than a copy followed by a delete for
 // many implementations.
 func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
-	url, err := d.getUrl()
+	url, err := d.getURL()
 	if err != nil {
 		return err
 	}
@@ -529,7 +530,7 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
 func (d *driver) Delete(ctx context.Context, path string) error {
-	url, err := d.getUrl()
+	url, err := d.getURL()
 	if err != nil {
 		return err
 	}
@@ -545,24 +546,24 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 	return "", storagedriver.ErrUnsupportedMethod
 }
 
-func (d *driver) getUrl() (string, error) {
+func (d *driver) getURL() (string, error) {
 	d.rwlock.RLock()
-	healthUrlArr := d.healthUrlArr
+	healthURLArr := d.healthURLArr
 	d.rwlock.RUnlock()
-	//try to get url from healthUrlArr
-	healthSize := len(healthUrlArr)
+	//try to get url from healthURLArr
+	healthSize := len(healthURLArr)
 	if healthSize != 0 {
 		index := rand.Int() % healthSize
-		url := healthUrlArr[index]
+		url := healthURLArr[index]
 		return url, nil
 	}
 
-	//try to get url from storageUrlArr
-	totalSize := len(d.storageUrlArr)
+	//try to get url from storageURLArr
+	totalSize := len(d.storageURLArr)
 	if totalSize == 0 {
-		return "", fmt.Errorf("The storageUrlArr is empty")
+		return "", fmt.Errorf("The storageURLArr is empty")
 	}
 	index := rand.Int() % totalSize
-	url := d.storageUrlArr[index]
+	url := d.storageURLArr[index]
 	return url, nil
 }

@@ -11,9 +11,11 @@ import (
 	"time"
 )
 
+//Client for speedy.
 type SpeedyClient struct {
 }
 
+//The metainfo format of speedy. 
 type MetaInfoValue struct {
 	Index   uint64
 	Start   uint64
@@ -23,6 +25,8 @@ type MetaInfoValue struct {
 	ModTime time.Time
 }
 
+//Used to sort metainfo by index.
+//E.g. we may get a metainfo array for a special path, so we need to sort this metainfo array.
 type OrderByIndex []*MetaInfoValue
 
 const (
@@ -50,7 +54,7 @@ func (a OrderByIndex) Less(i, j int) bool {
 	return a[i].Index < a[j].Index
 }
 
-func (c *SpeedyClient) DoRequest(req *http.Request) ([]byte, int, error) {
+func (c *SpeedyClient) doRequest(req *http.Request) ([]byte, int, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -68,7 +72,7 @@ func (c *SpeedyClient) DoRequest(req *http.Request) ([]byte, int, error) {
 	return dataBody, resp.StatusCode, nil
 }
 
-func (c *SpeedyClient) getMetaInfoValueFromJson(data []byte) ([]*MetaInfoValue, error) {
+func (c *SpeedyClient) getMetaInfoValueFromJSON(data []byte) ([]*MetaInfoValue, error) {
 	var mapResult map[string]interface{}
 	err := json.Unmarshal(data, &mapResult)
 	if err != nil {
@@ -85,7 +89,7 @@ func (c *SpeedyClient) getMetaInfoValueFromJson(data []byte) ([]*MetaInfoValue, 
 		return nil, fmt.Errorf("Response format maybe error, value is not a array: %v", fragmentInfoValue)
 	}
 
-	result := make([]*MetaInfoValue, 0)
+	var result []*MetaInfoValue
 	for _, info := range infoArr {
 		m, ok := info.(map[string]interface{})
 		if !ok {
@@ -146,6 +150,7 @@ func (c *SpeedyClient) sortMetaInfoValue(origin []*MetaInfoValue) ([]*MetaInfoVa
 	return origin, nil
 }
 
+//Get meta info from speedy by path.
 func (c *SpeedyClient) GetFileInfo(url string, path string) ([]*MetaInfoValue, error) {
 	req, err := http.NewRequest("GET", url+"/v1/fileinfo", nil)
 	if err != nil {
@@ -155,9 +160,9 @@ func (c *SpeedyClient) GetFileInfo(url string, path string) ([]*MetaInfoValue, e
 	header := make(http.Header)
 	header.Set(headerPath, path)
 	req.Header = header
-	dataBody, statusCode, err := c.DoRequest(req)
+	dataBody, statusCode, err := c.doRequest(req)
 	if err == nil && statusCode == http.StatusOK {
-		infoArr, err := c.getMetaInfoValueFromJson(dataBody)
+		infoArr, err := c.getMetaInfoValueFromJSON(dataBody)
 		if err != nil {
 			return nil, err
 		}
@@ -175,6 +180,7 @@ func (c *SpeedyClient) GetFileInfo(url string, path string) ([]*MetaInfoValue, e
 	return nil, fmt.Errorf("GetFileInfo failed, statusCode: %d, err: %v", statusCode, err)
 }
 
+//Download file from speedy by path and meta info.
 func (c *SpeedyClient) DownloadFile(url string, path string, info *MetaInfoValue) ([]byte, error) {
 	req, err := http.NewRequest("GET", url+"/v1/file", nil)
 	if err != nil {
@@ -187,13 +193,14 @@ func (c *SpeedyClient) DownloadFile(url string, path string, info *MetaInfoValue
 	header.Set(headerRange, fmt.Sprintf("%d-%d", info.Start, info.End))
 	header.Set(headerIsLast, fmt.Sprintf("%v", info.IsLast))
 	req.Header = header
-	dataBody, statusCode, err := c.DoRequest(req)
+	dataBody, statusCode, err := c.doRequest(req)
 	if err == nil && statusCode == http.StatusOK {
 		return dataBody, nil
 	}
 	return nil, fmt.Errorf("DownloadFile failed, statusCode: %d, err: %v", statusCode, err)
 }
 
+//Get directory info from speedy by path.
 func (c *SpeedyClient) GetDirectoryInfo(url string, path string) ([]string, error) {
 	req, err := http.NewRequest("GET", url+"/v1/list_directory", nil)
 	if err != nil {
@@ -203,7 +210,7 @@ func (c *SpeedyClient) GetDirectoryInfo(url string, path string) ([]string, erro
 	header := make(http.Header)
 	header.Set(headerPath, path)
 	req.Header = header
-	dataBody, statusCode, err := c.DoRequest(req)
+	dataBody, statusCode, err := c.doRequest(req)
 	if err == nil && statusCode == http.StatusOK {
 		var mapResult map[string][]string
 		err := json.Unmarshal(dataBody, &mapResult)
@@ -226,6 +233,7 @@ func (c *SpeedyClient) GetDirectoryInfo(url string, path string) ([]string, erro
 	return nil, fmt.Errorf("GetDirectoryInfo failed, statusCode: %d, err: %v", statusCode, err)
 }
 
+//Get direct descendants path from speedy by path. 
 func (c *SpeedyClient) GetDirectDescendantPath(url string, path string) ([]string, error) {
 	req, err := http.NewRequest("GET", url+"/v1/list_descendant", nil)
 	if err != nil {
@@ -235,7 +243,7 @@ func (c *SpeedyClient) GetDirectDescendantPath(url string, path string) ([]strin
 	header := make(http.Header)
 	header.Set(headerPath, path)
 	req.Header = header
-	dataBody, statusCode, err := c.DoRequest(req)
+	dataBody, statusCode, err := c.doRequest(req)
 	if err == nil && statusCode == http.StatusOK {
 		var mapResult map[string][]string
 		err := json.Unmarshal(dataBody, &mapResult)
@@ -298,6 +306,7 @@ func (c *SpeedyClient) directDescendPath(prefix string, descendants []string) ([
 	return keys, nil
 }
 
+//Upload file to speedy by path and meta info.
 func (c *SpeedyClient) UploadFile(url string, path string, info *MetaInfoValue, data []byte) error {
 	req, err := http.NewRequest("POST", url+"/v1/file", bytes.NewBuffer(data))
 	if err != nil {
@@ -310,26 +319,28 @@ func (c *SpeedyClient) UploadFile(url string, path string, info *MetaInfoValue, 
 	header.Set(headerRange, fmt.Sprintf("%d-%d", info.Start, info.End))
 	header.Set(headerIsLast, fmt.Sprintf("%v", info.IsLast))
 	req.Header = header
-	_, statusCode, err := c.DoRequest(req)
+	_, statusCode, err := c.doRequest(req)
 	if statusCode == http.StatusOK {
 		return nil
 	}
 	return fmt.Errorf("UploadFile failed, statusCode: %d, error: %v", statusCode, err)
 }
 
+//Ping with speedy used to check the health of speedy.
 func (c *SpeedyClient) Ping(url string) error {
 	req, err := http.NewRequest("POST", url+"/v1/_ping", nil)
 	if err != nil {
 		return err
 	}
 
-	_, statusCode, err := c.DoRequest(req)
+	_, statusCode, err := c.doRequest(req)
 	if statusCode == http.StatusOK {
 		return nil
 	}
 	return fmt.Errorf("Ping failed, statusCode: %d, error: %v", statusCode, err)
 }
 
+//Delete file from speedy by path.
 func (c *SpeedyClient) DeleteFile(url string, path string) error {
 	req, err := http.NewRequest("DELETE", url+"/v1/file", nil)
 	if err != nil {
@@ -339,7 +350,7 @@ func (c *SpeedyClient) DeleteFile(url string, path string) error {
 	header := make(http.Header)
 	header.Set(headerPath, path)
 	req.Header = header
-	_, statusCode, err := c.DoRequest(req)
+	_, statusCode, err := c.doRequest(req)
 	if statusCode == http.StatusNoContent {
 		return nil
 	}
@@ -347,6 +358,7 @@ func (c *SpeedyClient) DeleteFile(url string, path string) error {
 	return fmt.Errorf("DeleteFile failed, statusCode: %d, error: %v", statusCode, err)
 }
 
+//Move file in speedy from source path to destination path.
 func (c *SpeedyClient) MoveFile(url string, sourcePath string, destPath string) error {
 	req, err := http.NewRequest("POST", url+"/v1/move", nil)
 	if err != nil {
@@ -357,7 +369,7 @@ func (c *SpeedyClient) MoveFile(url string, sourcePath string, destPath string) 
 	header.Set(headerSourcePath, sourcePath)
 	header.Set(headerDestPath, destPath)
 	req.Header = header
-	_, statusCode, err := c.DoRequest(req)
+	_, statusCode, err := c.doRequest(req)
 	if statusCode == http.StatusOK {
 		return nil
 	}
