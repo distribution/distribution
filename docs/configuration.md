@@ -308,6 +308,18 @@ Permitted values are `error`, `warn`, `info` and `debug`. The default is
         poolname: radospool
         username: radosuser
         chunksize: 4194304
+      swift:
+        username: username
+        password: password
+        authurl: https://storage.myprovider.com/v2.0 or https://storage.myprovider.com/v3/auth
+        tenant: tenantname
+        tenantid: tenantid
+        domain: domain name for Openstack Identity v3 API
+        domainid: domain id for Openstack Identity v3 API
+        insecureskipverify: true
+        region: fr
+        container: containername
+        rootdirectory: /swift/object/name/prefix
       cache:
         blobdescriptor: inmemory
       maintenance:
@@ -610,7 +622,7 @@ This storage backend uses Openstack Swift object storage.
       yes
     </td>
     <td>
-      URL for obtaining an auth token.
+      URL for obtaining an auth token. https://storage.myprovider.com/v2.0 or https://storage.myprovider.com/v3/auth
     </td>
   </tr>
   <tr>
@@ -708,8 +720,8 @@ This storage backend uses Openstack Swift object storage.
     <td>
       no
     </td>
-      true for skip TLS verification, false by default.
     <td>
+      true to skip TLS verification, false by default.
     </td>
   </tr>
   <tr>
