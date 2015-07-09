@@ -15,7 +15,7 @@ import (
 type Client struct {
 }
 
-//MetaInfoValue is meta info format of speedy. 
+//MetaInfoValue is meta info format of speedy.
 type MetaInfoValue struct {
 	Index   uint64
 	Start   uint64
@@ -233,7 +233,7 @@ func (c *Client) GetDirectoryInfo(url string, path string) ([]string, error) {
 	return nil, fmt.Errorf("GetDirectoryInfo failed, statusCode: %d, err: %v", statusCode, err)
 }
 
-//GetDirectDescendantPath is used to get direct descendants path from speedy by path. 
+//GetDirectDescendantPath is used to get direct descendants path from speedy by path.
 func (c *Client) GetDirectDescendantPath(url string, path string) ([]string, error) {
 	req, err := http.NewRequest("GET", url+"/v1/list_descendant", nil)
 	if err != nil {
