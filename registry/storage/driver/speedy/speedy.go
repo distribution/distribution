@@ -445,7 +445,7 @@ func (d *driver) writeStreamToSpeedy(path string, currentOffset uint64, reader i
 }
 
 // Stat retrieves the FileInfo for the given path, including the current
-// size in bytes and the creation time.
+// size in bytes and the modification time.
 func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
 	url, err := d.getUrl()
 	if err != nil {
