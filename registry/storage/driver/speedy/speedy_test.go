@@ -12,7 +12,7 @@ import (
 func Test(t *testing.T) { check.TestingT(t) }
 
 func init() {
-	storageUrls := os.Getenv("SPEEDY_STORAGE_URL")
+	storageURLs := os.Getenv("SPEEDY_STORAGE_URL")
 	chunkSizeStr := os.Getenv("SPEEDY_CHUNKSIZE")
 	heartBeatIntervalStr := os.Getenv("SPEEDY_HEART_BEAT")
 	var chunkSize int         //MB
@@ -28,7 +28,7 @@ func init() {
 
 	driverConstructor := func() (storagedriver.StorageDriver, error) {
 		parameters := DriverParameters{
-			storageUrls:       storageUrls,
+			storageURLs:       storageURLs,
 			chunkSize:         uint64(chunkSize),
 			heartBeatInterval: heartBeatInterval,
 		}
@@ -37,7 +37,7 @@ func init() {
 	}
 
 	skipCheck := func() string {
-		if storageUrls == "" || chunkSize == 0 || heartBeatInterval == 0 {
+		if storageURLs == "" || chunkSize == 0 || heartBeatInterval == 0 {
 			return "Must set SPEEDY_STORAGE_URL, SPEEDY_CHUNKSIZE and SPEEDY_HEART_BEAT to run speedy test"
 		}
 		return ""
