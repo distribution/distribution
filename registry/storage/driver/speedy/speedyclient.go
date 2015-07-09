@@ -11,8 +11,8 @@ import (
 	"time"
 )
 
-//SpeedyClient is client for speedy.
-type SpeedyClient struct {
+//Client is the client for speedy.
+type Client struct {
 }
 
 //MetaInfoValue is meta info format of speedy. 
@@ -54,7 +54,7 @@ func (a OrderByIndex) Less(i, j int) bool {
 	return a[i].Index < a[j].Index
 }
 
-func (c *SpeedyClient) doRequest(req *http.Request) ([]byte, int, error) {
+func (c *Client) doRequest(req *http.Request) ([]byte, int, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -72,7 +72,7 @@ func (c *SpeedyClient) doRequest(req *http.Request) ([]byte, int, error) {
 	return dataBody, resp.StatusCode, nil
 }
 
-func (c *SpeedyClient) getMetaInfoValueFromJSON(data []byte) ([]*MetaInfoValue, error) {
+func (c *Client) getMetaInfoValueFromJSON(data []byte) ([]*MetaInfoValue, error) {
 	var mapResult map[string]interface{}
 	err := json.Unmarshal(data, &mapResult)
 	if err != nil {
@@ -145,13 +145,13 @@ func (c *SpeedyClient) getMetaInfoValueFromJSON(data []byte) ([]*MetaInfoValue, 
 	return result, nil
 }
 
-func (c *SpeedyClient) sortMetaInfoValue(origin []*MetaInfoValue) ([]*MetaInfoValue, error) {
+func (c *Client) sortMetaInfoValue(origin []*MetaInfoValue) ([]*MetaInfoValue, error) {
 	sort.Sort(OrderByIndex(origin))
 	return origin, nil
 }
 
 //GetFileInfo is used to get meta info from speedy by path.
-func (c *SpeedyClient) GetFileInfo(url string, path string) ([]*MetaInfoValue, error) {
+func (c *Client) GetFileInfo(url string, path string) ([]*MetaInfoValue, error) {
 	req, err := http.NewRequest("GET", url+"/v1/fileinfo", nil)
 	if err != nil {
 		return nil, err
@@ -181,7 +181,7 @@ func (c *SpeedyClient) GetFileInfo(url string, path string) ([]*MetaInfoValue, e
 }
 
 //DownloadFile is used to download file from speedy by path and meta info.
-func (c *SpeedyClient) DownloadFile(url string, path string, info *MetaInfoValue) ([]byte, error) {
+func (c *Client) DownloadFile(url string, path string, info *MetaInfoValue) ([]byte, error) {
 	req, err := http.NewRequest("GET", url+"/v1/file", nil)
 	if err != nil {
 		return nil, err
@@ -201,7 +201,7 @@ func (c *SpeedyClient) DownloadFile(url string, path string, info *MetaInfoValue
 }
 
 //GetDirectoryInfo is used to get directory info from speedy by path.
-func (c *SpeedyClient) GetDirectoryInfo(url string, path string) ([]string, error) {
+func (c *Client) GetDirectoryInfo(url string, path string) ([]string, error) {
 	req, err := http.NewRequest("GET", url+"/v1/list_directory", nil)
 	if err != nil {
 		return nil, err
@@ -234,7 +234,7 @@ func (c *SpeedyClient) GetDirectoryInfo(url string, path string) ([]string, erro
 }
 
 //GetDirectDescendantPath is used to get direct descendants path from speedy by path. 
-func (c *SpeedyClient) GetDirectDescendantPath(url string, path string) ([]string, error) {
+func (c *Client) GetDirectDescendantPath(url string, path string) ([]string, error) {
 	req, err := http.NewRequest("GET", url+"/v1/list_descendant", nil)
 	if err != nil {
 		return nil, err
@@ -274,7 +274,7 @@ func (c *SpeedyClient) GetDirectDescendantPath(url string, path string) ([]strin
 // directDescendPath will find direct descendants of the prefix and will return their full paths.
 // Example: direct descendants of "/" in {"/foo", "/bar/1", "/bar/2"} is
 // {"/foo", "/bar"} and direct descendants of "bar" is {"/bar/1", "/bar/2"}
-func (c *SpeedyClient) directDescendPath(prefix string, descendants []string) ([]string, error) {
+func (c *Client) directDescendPath(prefix string, descendants []string) ([]string, error) {
 	if descendants == nil || len(descendants) == 0 {
 		return nil, fmt.Errorf("descendants is empty")
 	}
@@ -307,7 +307,7 @@ func (c *SpeedyClient) directDescendPath(prefix string, descendants []string) ([
 }
 
 //UploadFile is used to get file to speedy by path and meta info.
-func (c *SpeedyClient) UploadFile(url string, path string, info *MetaInfoValue, data []byte) error {
+func (c *Client) UploadFile(url string, path string, info *MetaInfoValue, data []byte) error {
 	req, err := http.NewRequest("POST", url+"/v1/file", bytes.NewBuffer(data))
 	if err != nil {
 		return err
@@ -327,7 +327,7 @@ func (c *SpeedyClient) UploadFile(url string, path string, info *MetaInfoValue, 
 }
 
 //Ping with speedy used to check the health of speedy.
-func (c *SpeedyClient) Ping(url string) error {
+func (c *Client) Ping(url string) error {
 	req, err := http.NewRequest("POST", url+"/v1/_ping", nil)
 	if err != nil {
 		return err
@@ -341,7 +341,7 @@ func (c *SpeedyClient) Ping(url string) error {
 }
 
 //DeleteFile is used to delete file from speedy by path.
-func (c *SpeedyClient) DeleteFile(url string, path string) error {
+func (c *Client) DeleteFile(url string, path string) error {
 	req, err := http.NewRequest("DELETE", url+"/v1/file", nil)
 	if err != nil {
 		return err
@@ -359,7 +359,7 @@ func (c *SpeedyClient) DeleteFile(url string, path string) error {
 }
 
 //MoveFile is used to move file in speedy from source path to destination path.
-func (c *SpeedyClient) MoveFile(url string, sourcePath string, destPath string) error {
+func (c *Client) MoveFile(url string, sourcePath string, destPath string) error {
 	req, err := http.NewRequest("POST", url+"/v1/move", nil)
 	if err != nil {
 		return err

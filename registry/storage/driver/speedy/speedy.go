@@ -28,7 +28,7 @@ type driver struct {
 	healthURLArr      []string
 	chunkSize         uint64
 	heartBeatInterval int
-	client            *SpeedyClient
+	client            *Client
 	rwlock            sync.RWMutex
 }
 
@@ -110,7 +110,7 @@ func New(params DriverParameters) (*Driver, error) {
 		return nil, fmt.Errorf("The storageURL parameter may be error")
 	}
 
-	client := &SpeedyClient{}
+	client := &Client{}
 
 	d := &driver{
 		storageURLArr:     storageURLArr,
