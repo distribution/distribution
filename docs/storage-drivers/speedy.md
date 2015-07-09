@@ -15,8 +15,8 @@ The following parameters must be used to configure the storage driver
 (case-sensitive):
 
 * `storageurl`: The speedy(imageserver) address (e.g. http://127.0.0.1:6788 or http://127.0.0.1:6788;http://127.0.0.1:6789). 
-* `chunksize`: Size of the written objects(e.g. 4 means 4MB).
-* `heartbeatinterval`: The interval of heartbeat (e.g. 2 means 2 seconds) 
+* `chunksize`: Size of the written objects(units is MB, e.g. 4 is 4MB).
+* `heartbeatinterval`: The interval of heartbeat (units is seconds, e.g. 2 is 2 seconds) 
 
 
 [speedy]: https://github.com/jcloudpub/speedy
