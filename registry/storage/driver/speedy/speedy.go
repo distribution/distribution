@@ -311,7 +311,7 @@ func (d *driver) initReadStream(path string, offset uint64, infoArr []*MetaInfoV
 	}
 
 	var index int
-	var readOffset uint64 = 0
+	var readOffset uint64
 	for index < len(infoArr) {
 		nextReadOffset := readOffset + (infoArr[index].End - infoArr[index].Start)
 		if nextReadOffset >= uint64(offset) {
@@ -354,7 +354,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 
 	var totalRead int64
 	var index int
-	var currentSize uint64 = 0
+	var currentSize uint64
 
 	//Align to chunk size, skip already exist chunk
 	if len(infoArr) != 0 {
@@ -370,13 +370,13 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 		//read 1MB every time
 		var tempSize uint64 = 1 << 20
 		tempBuf := make([]byte, tempSize)
-		var distance uint64 
+		var distance uint64
 		if currentSize > uint64(offset) {
 			distance = currentSize - uint64(offset)
 		}
 
 		for distance > 0 {
-			var readSize uint64 = 0
+			var readSize uint64
 			if distance > tempSize {
 				readSize = tempSize
 			} else {
