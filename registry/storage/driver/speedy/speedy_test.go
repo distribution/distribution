@@ -19,11 +19,11 @@ func init() {
 	var heartBeatInterval int //seconds
 
 	if chunkSizeStr != "" {
-		chunkSize, _ := strconv.Atoi(chunkSizeStr)
+		chunkSize, _ = strconv.Atoi(chunkSizeStr)
 	}
 
 	if heartBeatIntervalStr != "" {
-		heartBeatInterval, _ := strconv.Atoi(heartBeatIntervalStr)
+		heartBeatInterval, _ = strconv.Atoi(heartBeatIntervalStr)
 	}
 
 	driverConstructor := func() (storagedriver.StorageDriver, error) {
