@@ -89,7 +89,13 @@ docker run -d -p 5000:5000 \
 	registry:2
 ```
 
-If the certificate issuer supplies you with an 'intermediate' certificate, you need to combine your certificate with the intermediates to form a 'certificate bundle'. You can do this using the cat command: ```cat server.crt intermediate-certificates.pem > server.with-intermediate.crt```. You can then configure the registry to use your certificate bundle with the ```REGISTRY_HTTP_TLS_CERTIFICATE``` environment variable.
+A certificate issuer may supply you with an *intermediate* certificate. In this case, you must combine your certificate with the intermediate's to form a *certificate bundle*. You can do this using the `cat` command: 
+
+```
+$ cat server.crt intermediate-certificates.pem > server.with-intermediate.crt
+```
+
+You then configure the registry to use your certificate bundle by providing the `REGISTRY_HTTP_TLS_CERTIFICATE` environment variable.
 
 **Pros:**
 
