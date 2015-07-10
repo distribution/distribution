@@ -3,7 +3,7 @@ package storage
 import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/registry/api/v2"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/cache"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 )
@@ -107,10 +107,10 @@ func (reg *registry) Scope() distribution.Scope {
 // Repository returns an instance of the repository tied to the registry.
 // Instances should not be shared between goroutines but are cheap to
 // allocate. In general, they should be request scoped.
-func (reg *registry) Repository(ctx context.Context, name string) (distribution.Repository, error) {
-	if err := v2.ValidateRepositoryName(name); err != nil {
+func (reg *registry) Repository(ctx context.Context, canonicalName string) (distribution.Repository, error) {
+	if _, err := reference.NewRepository(canonicalName); err != nil {
 		return nil, distribution.ErrRepositoryNameInvalid{
-			Name:   name,
+			Name:   canonicalName,
 			Reason: err,
 		}
 	}
@@ -118,7 +118,7 @@ func (reg *registry) Repository(ctx context.Context, name string) (distribution.
 	var descriptorCache distribution.BlobDescriptorService
 	if reg.blobDescriptorCacheProvider != nil {
 		var err error
-		descriptorCache, err = reg.blobDescriptorCacheProvider.RepositoryScoped(name)
+		descriptorCache, err = reg.blobDescriptorCacheProvider.RepositoryScoped(canonicalName)
 		if err != nil {
 			return nil, err
 		}
@@ -127,7 +127,7 @@ func (reg *registry) Repository(ctx context.Context, name string) (distribution.
 	return &repository{
 		ctx:             ctx,
 		registry:        reg,
-		name:            name,
+		name:            canonicalName,
 		descriptorCache: descriptorCache,
 	}, nil
 }

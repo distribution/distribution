@@ -1,6 +1,7 @@
-package v2
+package reference
 
 import (
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -20,11 +21,13 @@ var (
 		invalid bool
 	}{
 		{
-			input: "",
-			err:   ErrRepositoryNameEmpty,
+			input:   "",
+			err:     ErrRepositoryNameEmpty,
+			invalid: true,
 		},
 		{
 			input: "short",
+			err:   ErrRepositoryNameMissingHostname,
 		},
 		{
 			input: "simple/name",
@@ -56,6 +59,7 @@ var (
 		},
 		{
 			input: "a",
+			err:   ErrRepositoryNameMissingHostname,
 		},
 		{
 			input: "a/aa",
@@ -72,11 +76,7 @@ var (
 			invalid: true,
 		},
 		{
-			// TODO: this testcase should be valid once we switch to
-			// the reference package.
-			input:   "foo.com:8080/bar",
-			err:     ErrRepositoryNameComponentInvalid,
-			invalid: true,
+			input: "foo.com:8080/bar",
 		},
 		{
 			input: "foo.com/bar",
@@ -92,10 +92,16 @@ var (
 		},
 		{
 			input: "asdf",
+			err:   ErrRepositoryNameMissingHostname,
+		},
+		{
+			input:   "aa/asdf$$^/aa",
+			err:     ErrRepositoryNameComponentInvalid,
+			invalid: true,
 		},
 		{
 			input:   "asdf$$^/aa",
-			err:     ErrRepositoryNameComponentInvalid,
+			err:     ErrRepositoryNameHostnameInvalid,
 			invalid: true,
 		},
 		{
@@ -108,20 +114,34 @@ var (
 			input: "a-a/a-a",
 		},
 		{
+			input: "a",
+			err:   ErrRepositoryNameMissingHostname,
+		},
+		{
+			input: "a/image",
+		},
+		{
 			input:   "a-/a/a/a",
+			err:     ErrRepositoryNameHostnameInvalid,
+			invalid: true,
+		},
+		{
+			input:   "a/a-/a/a/a",
 			err:     ErrRepositoryNameComponentInvalid,
 			invalid: true,
 		},
 		{
-			input: strings.Repeat("a", 255),
+			// total length = 255
+			input: "a/" + strings.Repeat("a", 253),
 		},
 		{
-			input: strings.Repeat("a", 256),
+			// total length = 256
+			input: "b/" + strings.Repeat("a", 254),
 			err:   ErrRepositoryNameLong,
 		},
 		{
 			input:   "-foo/bar",
-			err:     ErrRepositoryNameComponentInvalid,
+			err:     ErrRepositoryNameHostnameInvalid,
 			invalid: true,
 		},
 		{
@@ -131,7 +151,7 @@ var (
 		},
 		{
 			input:   "foo-/bar",
-			err:     ErrRepositoryNameComponentInvalid,
+			err:     ErrRepositoryNameHostnameInvalid,
 			invalid: true,
 		},
 		{
@@ -141,7 +161,7 @@ var (
 		},
 		{
 			input:   "_foo/bar",
-			err:     ErrRepositoryNameComponentInvalid,
+			err:     ErrRepositoryNameHostnameInvalid,
 			invalid: true,
 		},
 		{
@@ -151,17 +171,17 @@ var (
 		},
 		{
 			input:   "____/____",
-			err:     ErrRepositoryNameComponentInvalid,
+			err:     ErrRepositoryNameHostnameInvalid,
 			invalid: true,
 		},
 		{
 			input:   "_docker/_docker",
-			err:     ErrRepositoryNameComponentInvalid,
+			err:     ErrRepositoryNameHostnameInvalid,
 			invalid: true,
 		},
 		{
 			input:   "docker_/docker_",
-			err:     ErrRepositoryNameComponentInvalid,
+			err:     ErrRepositoryNameHostnameInvalid,
 			invalid: true,
 		},
 		{
@@ -190,8 +210,17 @@ var (
 			invalid: true,
 		},
 		{
-			input:   "-docker/docker",
-			err:     ErrRepositoryNameComponentInvalid,
+			input: "-docker/docker",
+			err:   ErrRepositoryNameComponentInvalid,
+		},
+		{
+			input:   "xn--n3h.com/myimage", // http://☃.com in punycode
+			err:     ErrRepositoryNameHostnameInvalid,
+			invalid: true,
+		},
+		{
+			input:   "xn--7o8h.com/myimage", // http://🐳.com in punycode
+			err:     ErrRepositoryNameHostnameInvalid,
 			invalid: true,
 		},
 		{
@@ -218,7 +247,7 @@ func TestValidateRepositoryName(t *testing.T) {
 			t.Fail()
 		}
 
-		if err := ValidateRepositoryName(testcase.input); err != testcase.err {
+		if _, err := NewRepository(testcase.input); err != testcase.err {
 			if testcase.err != nil {
 				if err != nil {
 					failf("unexpected error for invalid repository: got %v, expected %v", err, testcase.err)
@@ -238,13 +267,14 @@ func TestValidateRepositoryName(t *testing.T) {
 }
 
 func TestRepositoryNameRegexp(t *testing.T) {
+	AnchoredRepositoryNameRegexp := regexp.MustCompile(`^` + RepositoryNameRegexp.String() + `$`)
 	for _, testcase := range regexpTestcases {
 		failf := func(format string, v ...interface{}) {
 			t.Logf(strconv.Quote(testcase.input)+": "+format, v...)
 			t.Fail()
 		}
 
-		matches := RepositoryNameRegexp.FindString(testcase.input) == testcase.input
+		matches := AnchoredRepositoryNameRegexp.MatchString(testcase.input)
 		if matches == testcase.invalid {
 			if testcase.invalid {
 				failf("expected invalid repository name %s", testcase.input)
