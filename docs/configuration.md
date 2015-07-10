@@ -24,17 +24,13 @@ To override a configuration option, create an environment variable named
 and the `_` (underscore) represents indention levels. For example, you can
 configure the `rootdirectory` of the `filesystem` storage backend:
 
-```
-storage:
-	filesystem:
-		rootdirectory: /var/lib/registry
-```
+    storage:
+      filesystem:
+        rootdirectory: /var/lib/registry
 
 To override this value, set an environment variable like this:
 
-```
-REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/somewhere
-```
+    REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/somewhere
 
 This variable overrides the `/var/lib/registry` value to the `/somewhere`
 directory.
@@ -53,128 +49,126 @@ This section lists all the registry configuration options. Some options in
 the list are mutually exclusive. So, make sure to read the detailed reference
 information about each option that appears later in this page.
 
-```yaml
-version: 0.1
-log:
-	level: debug
-	formatter: text
-	fields:
-		service: registry
-		environment: staging
-	hooks:
-		- type: mail
-		  disabled: true
-		  levels:
-			- panic
-		  options:
-			smtp:
-				addr: mail.example.com:25
-				username: mailuser
-				password: password
-				insecure: true
-			from: sender@example.com
-			to: 
-				- errors@example.com
-loglevel: debug # deprecated: use "log"
-storage:
-	filesystem:
-		rootdirectory: /var/lib/registry
-	azure:
-		accountname: accountname
-		accountkey: base64encodedaccountkey
-		container: containername
-	s3:
-		accesskey: awsaccesskey
-		secretkey: awssecretkey
-		region: us-west-1
-		bucket: bucketname
-		encrypt: true
-		secure: true
-		v4auth: true
-		chunksize: 5242880
-		rootdirectory: /s3/object/name/prefix
-	rados:
-		poolname: radospool
-		username: radosuser
-		chunksize: 4194304
-	cache:
-		blobdescriptor: redis
-	maintenance:
-		uploadpurging:
-			enabled: true
-			age: 168h
-			interval: 24h
-			dryrun: false
-auth:
-	silly:
-		realm: silly-realm
-		service: silly-service
-	token:
-		realm: token-realm
-		service: token-service
-		issuer: registry-token-issuer
-		rootcertbundle: /root/certs/bundle
-	htpasswd:
-		realm: basic-realm
-		path: /path/to/htpasswd
-middleware:
-	registry:
-		- name: ARegistryMiddleware
-		  options:
-			foo: bar
-	repository:
-		- name: ARepositoryMiddleware
-		  options:
-			foo: bar
-	storage:
-		- name: cloudfront
-		  options:
-			baseurl: https://my.cloudfronted.domain.com/
-			privatekey: /path/to/pem
-			keypairid: cloudfrontkeypairid
-			duration: 3000
-reporting:
-	bugsnag:
-		apikey: bugsnagapikey
-		releasestage: bugsnagreleasestage
-		endpoint: bugsnagendpoint
-	newrelic:
-		licensekey: newreliclicensekey
-		name: newrelicname
-		verbose: true
-http:
-	addr: localhost:5000
-	prefix: /my/nested/registry/
-	secret: asecretforlocaldevelopment
-	tls:
-		certificate: /path/to/x509/public
-		key: /path/to/x509/private
-    clientcas:
-      - /path/to/ca.pem
-      - /path/to/another/ca.pem
-	debug:
-		addr: localhost:5001
-notifications:
-	endpoints:
-		- name: alistener
-		  disabled: false
-		  url: https://my.listener.com/event
-		  headers: <http.Header>
-		  timeout: 500
-		  threshold: 5
-		  backoff: 1000
-redis:
-	addr: localhost:6379
-	password: asecret
-	db: 0
-	dialtimeout: 10ms
-	readtimeout: 10ms
-	writetimeout: 10ms
-	pool:
-		maxidle: 16
-		maxactive: 64
-		idletimeout: 300s
-```
+    version: 0.1
+    log:
+      level: debug
+      formatter: text
+      fields:
+        service: registry
+        environment: staging
+      hooks:
+        - type: mail
+          disabled: true
+          levels:
+          - panic
+          options:
+            smtp:
+              addr: mail.example.com:25
+              username: mailuser
+              password: password
+              insecure: true
+            from: sender@example.com
+            to: 
+              - errors@example.com
+    loglevel: debug # deprecated: use "log"
+    storage:
+      filesystem:
+        rootdirectory: /var/lib/registry
+      azure:
+        accountname: accountname
+        accountkey: base64encodedaccountkey
+        container: containername
+      s3:
+        accesskey: awsaccesskey
+        secretkey: awssecretkey
+        region: us-west-1
+        bucket: bucketname
+        encrypt: true
+        secure: true
+        v4auth: true
+        chunksize: 5242880
+        rootdirectory: /s3/object/name/prefix
+      rados:
+        poolname: radospool
+        username: radosuser
+        chunksize: 4194304
+      cache:
+        blobdescriptor: redis
+      maintenance:
+        uploadpurging:
+          enabled: true
+          age: 168h
+          interval: 24h
+          dryrun: false
+    auth:
+      silly:
+        realm: silly-realm
+        service: silly-service
+      token:
+        realm: token-realm
+        service: token-service
+        issuer: registry-token-issuer
+        rootcertbundle: /root/certs/bundle
+      htpasswd:
+        realm: basic-realm
+        path: /path/to/htpasswd
+    middleware:
+      registry:
+        - name: ARegistryMiddleware
+          options:
+            foo: bar
+      repository:
+        - name: ARepositoryMiddleware
+          options:
+            foo: bar
+      storage:
+        - name: cloudfront
+          options:
+            baseurl: https://my.cloudfronted.domain.com/
+            privatekey: /path/to/pem
+            keypairid: cloudfrontkeypairid
+            duration: 3000
+    reporting:
+      bugsnag:
+        apikey: bugsnagapikey
+        releasestage: bugsnagreleasestage
+        endpoint: bugsnagendpoint
+      newrelic:
+        licensekey: newreliclicensekey
+        name: newrelicname
+        verbose: true
+    http:
+      addr: localhost:5000
+      prefix: /my/nested/registry/
+      secret: asecretforlocaldevelopment
+      tls:
+        certificate: /path/to/x509/public
+        key: /path/to/x509/private
+        clientcas:
+          - /path/to/ca.pem
+          - /path/to/another/ca.pem
+      debug:
+        addr: localhost:5001
+    notifications:
+      endpoints:
+        - name: alistener
+          disabled: false
+          url: https://my.listener.com/event
+          headers: <http.Header>
+          timeout: 500
+          threshold: 5
+          backoff: 1000
+    redis:
+      addr: localhost:6379
+      password: asecret
+      db: 0
+      dialtimeout: 10ms
+      readtimeout: 10ms
+      writetimeout: 10ms
+      pool:
+        maxidle: 16
+        maxactive: 64
+        idletimeout: 300s
 
 In some instances a configuration option is **optional** but it contains child
 options marked as **required**. This indicates that you can omit the parent with
@@ -185,9 +179,7 @@ the children marked **required**.
 
 ## version
 
-```yaml
-version: 0.1
-```
+    version: 0.1
 
 The `version` option is **required**. It specifies the configuration's version.
 It is expected to remain a top-level field, to allow for a consistent version
@@ -199,14 +191,12 @@ The `log` subsection configures the behavior of the logging system. The logging
 system outputs everything to stdout. You can adjust the granularity and format
 with this configuration section.
 
-```yaml
-log:
-	level: debug
-	formatter: text
-	fields:
-		service: registry
-		environment: staging
-```
+    log:
+      level: debug
+      formatter: text
+      fields:
+        service: registry
+        environment: staging
 
 <table>
   <tr>
@@ -256,22 +246,19 @@ log:
 
 ## hooks
 
-
-```yaml 
-hooks:
-  - type: mail
-    levels:
-      - panic
-    options:
-      smtp:
-        addr: smtp.sendhost.com:25
-        username: sendername
-        password: password
-        insecure: true
-      from: name@sendhost.com
-      to:
-        - name@receivehost.com
-```
+    hooks:
+      - type: mail
+        levels:
+          - panic
+        options:
+          smtp:
+            addr: smtp.sendhost.com:25
+            username: sendername
+            password: password
+            insecure: true
+          from: name@sendhost.com
+          to:
+            - name@receivehost.com
 
 The `hooks` subsection configures the logging hooks' behavior. This subsection
 includes a sequence handler which you can use for sending mail, for example.
@@ -281,46 +268,42 @@ Refer to `loglevel` to configure the level of messages printed.
 
 > **DEPRECATED:** Please use [log](#logs) instead.
 
-```yaml
-loglevel: debug
-```
+    loglevel: debug
 
 Permitted values are `error`, `warn`, `info` and `debug`. The default is
 `info`.
 
 ## storage
 
-```yaml
-storage:
-	filesystem:
-		rootdirectory: /var/lib/registry
-	azure:
-		accountname: accountname
-		accountkey: base64encodedaccountkey
-		container: containername
-	s3:
-		accesskey: awsaccesskey
-		secretkey: awssecretkey
-		region: us-west-1
-		bucket: bucketname
-		encrypt: true
-		secure: true
-		v4auth: true
-		chunksize: 5242880
-		rootdirectory: /s3/object/name/prefix
-	rados:
-		poolname: radospool
-		username: radosuser
-		chunksize: 4194304
-	cache:
-		blobdescriptor: inmemory
-	maintenance:
-		uploadpurging:
-			enabled: true
-			age: 168h
-			interval: 24h
-			dryrun: false
-```
+    storage:
+      filesystem:
+        rootdirectory: /var/lib/registry
+      azure:
+        accountname: accountname
+        accountkey: base64encodedaccountkey
+        container: containername
+      s3:
+        accesskey: awsaccesskey
+        secretkey: awssecretkey
+        region: us-west-1
+        bucket: bucketname
+        encrypt: true
+        secure: true
+        v4auth: true
+        chunksize: 5242880
+        rootdirectory: /s3/object/name/prefix
+      rados:
+        poolname: radospool
+        username: radosuser
+        chunksize: 4194304
+      cache:
+        blobdescriptor: inmemory
+      maintenance:
+        uploadpurging:
+          enabled: true
+          age: 168h
+          interval: 24h
+          dryrun: false
 
 The storage option is **required** and defines which storage backend is in use.
 You must configure one backend; if you configure more, the registry returns an error.
@@ -599,20 +582,18 @@ Note: `age` and `interval` are strings containing a number with optional fractio
 
 ## auth
 
-```yaml
-auth:
-	silly:
-		realm: silly-realm
-		service: silly-service
-	token:
-		realm: token-realm
-		service: token-service
-		issuer: registry-token-issuer
-		rootcertbundle: /root/certs/bundle
-	htpasswd:
-		realm: basic-realm
-		path: /path/to/htpasswd
-```
+    auth:
+      silly:
+        realm: silly-realm
+        service: silly-service
+      token:
+        realm: token-realm
+        service: token-service
+        issuer: registry-token-issuer
+        rootcertbundle: /root/certs/bundle
+      htpasswd:
+        realm: basic-realm
+        path: /path/to/htpasswd
 
 The `auth` option is **optional**. There are
 currently 2 possible auth providers, `silly` and `token`. You can configure only
@@ -711,7 +692,7 @@ the token so it must match the value configured for the issuer.
       <code>rootcertbundle</code>
     </td>
     <td>
-			yes
+      yes
      </td>
     <td>
 The absolute path to the root certificate bundle. This bundle contains the
@@ -777,24 +758,22 @@ object they're wrapping. This means a registry middleware must implement the
 Currently only one middleware, `cloudfront`, a storage middleware, is supported
 in the registry implementation.
 
-```yaml
-middleware:
-	registry:
-		- name: ARegistryMiddleware
-		  options:
-			foo: bar
-	repository:
-		- name: ARepositoryMiddleware
-		  options:
-			foo: bar
-	storage:
-		- name: cloudfront
-		  options:
-			baseurl: https://my.cloudfronted.domain.com/
-			privatekey: /path/to/pem
-			keypairid: cloudfrontkeypairid
-			duration: 3000
-```
+    middleware:
+      registry:
+        - name: ARegistryMiddleware
+          options:
+          foo: bar
+      repository:
+        - name: ARepositoryMiddleware
+          options:
+          foo: bar
+      storage:
+        - name: cloudfront
+          options:
+          baseurl: https://my.cloudfronted.domain.com/
+          privatekey: /path/to/pem
+          keypairid: cloudfrontkeypairid
+          duration: 3000
 
 Each middleware entry has `name` and `options` entries. The `name` must
 correspond to the name under which the middleware registers itself. The
@@ -861,17 +840,15 @@ interpretation of the options.
 
 ## reporting
 
-```yaml
-reporting:
-	bugsnag:
-		apikey: bugsnagapikey
-		releasestage: bugsnagreleasestage
-		endpoint: bugsnagendpoint
-	newrelic:
-		licensekey: newreliclicensekey
-		name: newrelicname
-		verbose: true
-```
+    reporting:
+      bugsnag:
+        apikey: bugsnagapikey
+        releasestage: bugsnagreleasestage
+        endpoint: bugsnagendpoint
+      newrelic:
+        licensekey: newreliclicensekey
+        name: newrelicname
+        verbose: true
 
 The `reporting` option is **optional** and configures error and metrics
 reporting tools. At the moment only two services are supported, [New
@@ -969,21 +946,19 @@ configuration may contain both.
 
 ## http
 
-```yaml
-http:
-	addr: localhost:5000
-	net: tcp
-	prefix: /my/nested/registry/
-	secret: asecretforlocaldevelopment
-	tls:
-		certificate: /path/to/x509/public
-		key: /path/to/x509/private
-    clientcas:
-      - /path/to/ca.pem
-      - /path/to/another/ca.pem
-	debug:
-		addr: localhost:5001
-```
+    http:
+      addr: localhost:5000
+      net: tcp
+      prefix: /my/nested/registry/
+      secret: asecretforlocaldevelopment
+      tls:
+        certificate: /path/to/x509/public
+        key: /path/to/x509/private
+        clientcas:
+          - /path/to/ca.pem
+          - /path/to/another/ca.pem
+      debug:
+        addr: localhost:5001
 
 The `http` option details the configuration for the HTTP server that hosts the registry.
 
@@ -1109,17 +1084,15 @@ specifies the `HOST:PORT` on which the debug server should accept connections.
 
 ## notifications
 
-```yaml
-notifications:
-	endpoints:
-		- name: alistener
-		  disabled: false
-		  url: https://my.listener.com/event
-		  headers: <http.Header>
-		  timeout: 500
-		  threshold: 5
-		  backoff: 1000
-```
+    notifications:
+      endpoints:
+        - name: alistener
+          disabled: false
+          url: https://my.listener.com/event
+          headers: <http.Header>
+          timeout: 500
+          threshold: 5
+          backoff: 1000
 
 The notifications option is **optional** and currently may contain a single
 option, `endpoints`.
@@ -1161,7 +1134,7 @@ A boolean to enable/disable notifications for a service.
       <code>url</code>
     </td>
     <td>
-		yes
+    yes
     </td>
     <td>
 The URL to which events should be published.
@@ -1189,11 +1162,11 @@ The URL to which events should be published.
       An HTTP timeout value. This field takes a positive integer and an optional
       suffix indicating the unit of time. Possible units are:
       <ul>
-      	<li><code>ns</code> (nanoseconds)</li>
-      	<li><code>us</code> (microseconds)</li>
-      	<li><code>ms</code> (milliseconds)</li>
-      	<li><code>s</code> (seconds)</li>
-      	<li><code>m</code> (minutes)</li>
+        <li><code>ns</code> (nanoseconds)</li>
+        <li><code>us</code> (microseconds)</li>
+        <li><code>ms</code> (milliseconds)</li>
+        <li><code>s</code> (seconds)</li>
+        <li><code>m</code> (minutes)</li>
         <li><code>h</code> (hours)</li>
       </ul>
     If you omit the suffix, the system interprets the value as nanoseconds.
@@ -1222,11 +1195,11 @@ The URL to which events should be published.
       integer and an optional suffix indicating the unit of time. Possible units
       are:
       <ul>
-      	<li><code>ns</code> (nanoseconds)</li>
-      	<li><code>us</code> (microseconds)</li>
-      	<li><code>ms</code> (milliseconds)</li>
-      	<li><code>s</code> (seconds)</li>
-      	<li><code>m</code> (minutes)</li>
+        <li><code>ns</code> (nanoseconds)</li>
+        <li><code>us</code> (microseconds)</li>
+        <li><code>ms</code> (milliseconds)</li>
+        <li><code>s</code> (seconds)</li>
+        <li><code>m</code> (minutes)</li>
         <li><code>h</code> (hours)</li>
       </ul>
     If you omit the suffix, the system interprets the value as nanoseconds.
@@ -1237,19 +1210,17 @@ The URL to which events should be published.
 
 ## redis
 
-```yaml
-redis:
-	addr: localhost:6379
-	password: asecret
-	db: 0
-	dialtimeout: 10ms
-	readtimeout: 10ms
-	writetimeout: 10ms
-	pool:
-		maxidle: 16
-		maxactive: 64
-		idletimeout: 300s
-```
+    redis:
+      addr: localhost:6379
+      password: asecret
+      db: 0
+      dialtimeout: 10ms
+      readtimeout: 10ms
+      writetimeout: 10ms
+      pool:
+        maxidle: 16
+        maxactive: 64
+        idletimeout: 300s
 
 Declare parameters for constructing the redis connections. Registry instances
 may use the Redis instance for several applications. The current purpose is
@@ -1334,12 +1305,10 @@ with the [pool](#pool) subsection.
 
 ### pool
 
-```yaml
-pool:
-	maxidle: 16
-	maxactive: 64
-	idletimeout: 300s
-```
+    pool:
+      maxidle: 16
+      maxactive: 64
+      idletimeout: 300s
 
 Configure the behavior of the Redis connection pool.
 
@@ -1391,19 +1360,17 @@ Configure the behavior of the Redis connection pool.
 
 The following is a simple example you can use for local development:
 
-```yaml
-version: 0.1
-log:
-	level: debug
-storage:
-    filesystem:
-        rootdirectory: /var/lib/registry
-http:
-    addr: localhost:5000
-    secret: asecretforlocaldevelopment
-    debug:
-        addr: localhost:5001
-```
+    version: 0.1
+    log:
+      level: debug
+    storage:
+        filesystem:
+            rootdirectory: /var/lib/registry
+    http:
+        addr: localhost:5000
+        secret: asecretforlocaldevelopment
+        debug:
+            addr: localhost:5001
 
 The above configures the registry instance to run on port `5000`, binding to
 `localhost`, with the `debug` server enabled. Registry data storage is in the
@@ -1446,25 +1413,23 @@ conjunction with the S3 storage driver.
     <li><code>baseurl:</code> The Cloudfront base URL.</li>
     <li><code>privatekey:</code> The location of your AWS private key on the filesystem. </li>
     <li><code>keypairid:</code> The ID of your Cloudfront keypair. </li>
- 		<li><code>duration:</code> The duration in minutes for which the URL is valid. Default is 20. </li>
- 		</ul>
+    <li><code>duration:</code> The duration in minutes for which the URL is valid. Default is 20. </li>
+    </ul>
     </td>
   </tr>
 </table>
 
 The following example illustrates these values:
 
-```
-middleware:
-    storage:
-        - name: cloudfront
-          disabled: false
-          options:
-             baseurl: http://d111111abcdef8.cloudfront.net
-             privatekey: /path/to/asecret.pem
-             keypairid: asecret
-             duration: 60
-```
+    middleware:
+        storage:
+            - name: cloudfront
+              disabled: false
+              options:
+                 baseurl: http://d111111abcdef8.cloudfront.net
+                 privatekey: /path/to/asecret.pem
+                 keypairid: asecret
+                 duration: 60
 
 
 >**Note**: Cloudfront keys exist separately to other AWS keys.  See
