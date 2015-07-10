@@ -12,8 +12,8 @@ import (
 	"github.com/docker/libtrust"
 )
 
-// todo(richardscothern): make configurable
-const repositoryTTL = time.Duration(10 * time.Second)
+// todo(richardscothern): from cache control header
+const repositoryTTL = time.Duration(10 * time.Minute)
 
 type proxyManifestStore struct {
 	ctx             context.Context
@@ -49,8 +49,6 @@ func (pms proxyManifestStore) Get(dgst digest.Digest) (*manifest.SignedManifest,
 
 	err = pms.localManifests.Put(sm, VerifyRemoteManifest)
 	if err != nil {
-		// todo(richardscothern): A temporary failure to write doesn't
-		// have to be an error.  This could also be async
 		return nil, err
 	}
 
@@ -84,27 +82,39 @@ func (pms proxyManifestStore) ExistsByTag(tag string) (bool, error) {
 }
 
 func (pms proxyManifestStore) GetByTag(tag string) (*manifest.SignedManifest, error) {
-	// If a manifest is fetched by tag, always check the remote
-	// for fresh content.
+	// todo(richardscothern): this would be much more efficient with etag
+	// support in the client.
 
-	// todo(richardscothern): this call will be much more efficient
-	// with a supplied etag and a way of checking the return type.
 	sm, err := pms.remoteManifests.GetByTag(tag)
 	if err != nil {
 		return nil, err
 	}
 
-	err = pms.localManifests.Put(sm, VerifyRemoteManifest)
+	payload, err := sm.Payload()
 	if err != nil {
-		// todo(richardscothern): A temporary failure to write doesn't
-		// have to be an error.  This could also be async
 		return nil, err
 	}
 
-	// todo(richardscothern): only want to do this if we had to put
-	// a new manifest.  We don't know this yet due to the above
-	ttl := time.Duration(10 * time.Second)
-	scheduler.AddManifest(pms.repositoryName, ttl)
+	digestFromRemote, err := digest.FromBytes(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	remoteManifestExistsLocally, err := pms.localManifests.Exists(digestFromRemote)
+	if err != nil {
+		return nil, err
+	}
+	if remoteManifestExistsLocally {
+		return sm, err
+	}
+
+	context.GetLogger(pms.ctx).Infof("Newer manifest fetched for %q = %s", tag, digestFromRemote)
+	err = pms.localManifests.Put(sm, VerifyRemoteManifest)
+	if err != nil {
+		return nil, err
+	}
+
+	scheduler.AddManifest(pms.repositoryName, repositoryTTL)
 
 	return sm, err
 }

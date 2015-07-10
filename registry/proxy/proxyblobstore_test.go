@@ -3,8 +3,8 @@ package proxy
 import (
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"testing"
-	"time"
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
@@ -30,15 +30,18 @@ func (sbs statsBlobStore) Get(ctx context.Context, dgst digest.Digest) ([]byte, 
 }
 
 func (sbs statsBlobStore) Create(ctx context.Context) (distribution.BlobWriter, error) {
-	return nil, fmt.Errorf("Not Allowed")
+	sbs.stats["create"]++
+	return sbs.blobs.Create(ctx)
 }
 
 func (sbs statsBlobStore) Resume(ctx context.Context, id string) (distribution.BlobWriter, error) {
-	return nil, fmt.Errorf("Not Allowed")
+	sbs.stats["resume"]++
+	return sbs.blobs.Resume(ctx, id)
 }
 
 func (sbs statsBlobStore) Open(ctx context.Context, dgst digest.Digest) (distribution.ReadSeekCloser, error) {
-	return nil, fmt.Errorf("Not implemented yet")
+	sbs.stats["open"]++
+	return sbs.blobs.Open(ctx, dgst)
 }
 
 func (sbs statsBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter, r *http.Request, dgst digest.Digest) error {
@@ -52,7 +55,7 @@ func (sbs statsBlobStore) Stat(ctx context.Context, dgst digest.Digest) (distrib
 }
 
 type testEnv struct {
-	inRemote []digest.Digest
+	inRemote []distribution.Descriptor
 	store    proxyBlobStore
 	ctx      context.Context
 }
@@ -70,6 +73,13 @@ func (te testEnv) RemoteStats() *map[string]int {
 // Populate remote store and record the digests
 func makeTestEnv(t *testing.T, name string) testEnv {
 	ctx := context.Background()
+
+	localRegistry := storage.NewRegistryWithDriver(ctx, inmemory.New(), memory.NewInMemoryBlobDescriptorCacheProvider())
+	localRepo, err := localRegistry.Repository(ctx, name)
+	if err != nil {
+		t.Fatalf("unexpected error getting repo: %v", err)
+	}
+
 	truthRegistry := storage.NewRegistryWithDriver(ctx, inmemory.New(), memory.NewInMemoryBlobDescriptorCacheProvider())
 	truthRepo, err := truthRegistry.Repository(ctx, name)
 	if err != nil {
@@ -79,23 +89,6 @@ func makeTestEnv(t *testing.T, name string) testEnv {
 	truthBlobs := statsBlobStore{
 		stats: make(map[string]int),
 		blobs: truthRepo.Blobs(ctx),
-	}
-
-	var inRemote []digest.Digest
-	for i := 0; i < 3; i++ {
-		bytes := []byte(fmt.Sprintf("blob%d", i))
-
-		desc, err := truthBlobs.Put(ctx, "", bytes)
-		if err != nil {
-			t.Errorf("Put in store")
-		}
-		inRemote = append(inRemote, desc.Digest)
-	}
-
-	localRegistry := storage.NewRegistryWithDriver(ctx, inmemory.New(), memory.NewInMemoryBlobDescriptorCacheProvider())
-	localRepo, err := localRegistry.Repository(ctx, name)
-	if err != nil {
-		t.Fatalf("unexpected error getting repo: %v", err)
 	}
 
 	localBlobs := statsBlobStore{
@@ -109,79 +102,119 @@ func makeTestEnv(t *testing.T, name string) testEnv {
 	}
 
 	te := testEnv{
-		inRemote: inRemote,
-		store:    proxyBlobStore,
-		ctx:      ctx,
+		store: proxyBlobStore,
+		ctx:   ctx,
 	}
-
 	return te
 }
 
-func TestProxyStore(t *testing.T) {
+func populate(t *testing.T, te *testEnv, blobCount int) {
+	var inRemote []distribution.Descriptor
+	for i := 0; i < blobCount; i++ {
+		bytes := []byte(fmt.Sprintf("blob%d", i))
+
+		desc, err := te.store.remoteStore.Put(te.ctx, "", bytes)
+		if err != nil {
+			t.Errorf("Put in store")
+		}
+		inRemote = append(inRemote, desc)
+	}
+
+	te.inRemote = inRemote
+
+}
+
+func TestProxyStoreStat(t *testing.T) {
 	te := makeTestEnv(t, "foo/bar")
-	remoteBlobCount := len(te.inRemote)
+	remoteBlobCount := 1
+	populate(t, &te, remoteBlobCount)
 
 	localStats := te.LocalStats()
 	remoteStats := te.RemoteStats()
 
 	// Stat - touches both stores
 	for _, d := range te.inRemote {
-		_, err := te.store.Stat(te.ctx, d)
+		_, err := te.store.Stat(te.ctx, d.Digest)
 		if err != nil {
 			t.Fatalf("Error stating proxy store")
 		}
 	}
 
-	localStatCount := (*localStats)["stat"]
-	remoteStatCount := (*remoteStats)["stat"]
-	if localStatCount != remoteBlobCount {
+	if (*localStats)["stat"] != remoteBlobCount {
 		t.Errorf("Unexpected local stat count")
 	}
 
-	if remoteStatCount != len(te.inRemote) {
+	if (*remoteStats)["stat"] != remoteBlobCount {
 		t.Errorf("Unexpected remote stat count")
 	}
+}
 
-	// Get - pulls through blobs
+func TestProxyStoreServe(t *testing.T) {
+	te := makeTestEnv(t, "foo/bar")
+	remoteBlobCount := 1
+	populate(t, &te, remoteBlobCount)
+
+	localStats := te.LocalStats()
+	remoteStats := te.RemoteStats()
+
+	// Serveblob - pulls through blobs
 	for _, dr := range te.inRemote {
-		b, err := te.store.Get(te.ctx, dr)
+		w := httptest.NewRecorder()
+		r, err := http.NewRequest("GET", "", nil)
 		if err != nil {
-			t.Fatalf("Error getting from proxy store: %s", err)
+			t.Fatal(err)
 		}
-		dl, err := digest.FromBytes(b)
+
+		err = te.store.ServeBlob(te.ctx, w, r, dr.Digest)
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
+
+		dl, err := digest.FromBytes(w.Body.Bytes())
 		if err != nil {
 			t.Fatalf("Error making digest from blob")
 		}
-		if dl != dr {
+		if dl != dr.Digest {
 			t.Errorf("Mismatching blob fetch from proxy")
 		}
 	}
 
-	if (*localStats)["get"] != remoteBlobCount {
-		t.Errorf("Unexpected local get count")
+	if (*localStats)["stat"] != remoteBlobCount && (*localStats)["create"] != remoteBlobCount {
+		t.Fatalf("unexpected local stats")
+	}
+	if (*remoteStats)["stat"] != remoteBlobCount && (*remoteStats)["open"] != remoteBlobCount {
+		t.Fatalf("unexpected local stats")
 	}
 
-	if (*remoteStats)["get"] != remoteBlobCount {
-		t.Errorf("Unexpected remote get count")
-	}
-
-	// This is gross, but the PUT is async, so there is a race with Stat.
-	// Try runtime.Gosched or remove this test
-	time.Sleep(500 * time.Millisecond)
-
-	// Stat - stats only local
-	for _, d := range te.inRemote {
-		_, err := te.store.Stat(te.ctx, d)
+	// Serveblob - blobs come from local
+	for _, dr := range te.inRemote {
+		w := httptest.NewRecorder()
+		r, err := http.NewRequest("GET", "", nil)
 		if err != nil {
-			t.Fatalf("Error stating proxy store")
+			t.Fatal(err)
+		}
+
+		err = te.store.ServeBlob(te.ctx, w, r, dr.Digest)
+		if err != nil {
+			t.Fatalf(err.Error())
+		}
+
+		dl, err := digest.FromBytes(w.Body.Bytes())
+		if err != nil {
+			t.Fatalf("Error making digest from blob")
+		}
+		if dl != dr.Digest {
+			t.Errorf("Mismatching blob fetch from proxy")
 		}
 	}
 
-	if 2*localStatCount != (*localStats)["stat"] {
-		t.Errorf("Unexpected local stat count after pull through")
+	if (*localStats)["stat"] != remoteBlobCount*2 && (*localStats)["create"] != remoteBlobCount*2 {
+		t.Fatalf("unexpected local stats")
 	}
 
-	if remoteBlobCount != (*remoteStats)["stat"] {
-		t.Errorf("Unexpected remote stat count after pull through: %#v", te.RemoteStats())
+	// Remote unchanged
+	if (*remoteStats)["stat"] != remoteBlobCount && (*remoteStats)["open"] != remoteBlobCount {
+		t.Fatalf("unexpected local stats")
 	}
+
 }

@@ -39,6 +39,7 @@ func newProxyMiddleware(repository distribution.Repository, options map[string]i
 			repositoryName:  repository.Name(),
 			localManifests:  repository.Manifests(),
 			remoteManifests: remoteRepo.Manifests(),
+			ctx:             ctx,
 		},
 		blobStore: proxyBlobStore{
 			localStore:  repository.Blobs(ctx),

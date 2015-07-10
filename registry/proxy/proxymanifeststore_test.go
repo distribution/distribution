@@ -97,6 +97,7 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 
 	return &manifestStoreTestEnv{
 		manifests: proxyManifestStore{
+			ctx:             ctx,
 			localManifests:  localManifests,
 			remoteManifests: truthManifests,
 		},
@@ -148,14 +149,6 @@ func populateRepo(t *testing.T, ctx context.Context, repository distribution.Rep
 	}
 }
 
-// TODO:
-// No remote
-// Push/Delete errors
-// Missing manifest contacts remote
-//   - not in remote
-//   - in remote
-// Auth
-
 // TestProxyManifests contains basic acceptance tests
 // for the pull-through behavior
 func TestProxyManifests(t *testing.T) {
@@ -205,14 +198,14 @@ func TestProxyManifests(t *testing.T) {
 
 	}
 
-	// Get - should stat remote, get from remote and put local
+	// Get - should get from remote, to test freshness
 	_, err = env.manifests.GetByTag("latest")
 	if err != nil {
 		t.Fatalf("Error getting manifest by digest")
 	}
 	fmt.Printf("\tlocal=%#v, \n\tremote=%#v\n", localStats, remoteStats)
 
-	if (*remoteStats)["getbytag"] != 1 && (*remoteStats)["existsbytag"] != 2 && (*localStats)["put"] != 2 {
+	if (*remoteStats)["getbytag"] != 2 && (*remoteStats)["existsbytag"] != 1 && (*localStats)["put"] != 1 {
 		t.Errorf("Unexpected get count")
 	}
 

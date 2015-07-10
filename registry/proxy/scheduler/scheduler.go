@@ -173,12 +173,10 @@ func (ttles *ttlExpirationScheduler) mainloop() {
 			}
 
 			if err := f(nextEntry.Key); err != nil {
-				context.GetLogger(ttles.ctx).Errorf("Schedluer error returned from OnExpire(%s): %s", nextEntry.Key, err)
-				break
+				context.GetLogger(ttles.ctx).Errorf("Scheduler error returned from OnExpire(%s): %s", nextEntry.Key, err)
 			}
 
 			delete(ttles.entries, nextEntry.Key)
-
 			if err := ttles.writeState(); err != nil {
 				context.GetLogger(ttles.ctx).Errorf("Error writing scheduler state: %s", err)
 			}
