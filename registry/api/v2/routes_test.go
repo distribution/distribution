@@ -263,6 +263,7 @@ func checkTestRouter(t *testing.T, testCases []routeTestCase, prefix string, dee
 		}
 
 		if testcase.StatusCode != http.StatusOK {
+			resp.Body.Close()
 			// We don't care about json response.
 			continue
 		}
@@ -291,6 +292,8 @@ func checkTestRouter(t *testing.T, testCases []routeTestCase, prefix string, dee
 		if deeplyEqual && !reflect.DeepEqual(actualRouteInfo, testcase) {
 			t.Fatalf("actual does not equal expected: %#v != %#v", actualRouteInfo, testcase)
 		}
+
+		resp.Body.Close()
 	}
 
 }
