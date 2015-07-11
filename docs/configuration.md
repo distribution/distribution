@@ -762,18 +762,18 @@ in the registry implementation.
       registry:
         - name: ARegistryMiddleware
           options:
-          foo: bar
+            foo: bar
       repository:
         - name: ARepositoryMiddleware
           options:
-          foo: bar
+            foo: bar
       storage:
         - name: cloudfront
           options:
-          baseurl: https://my.cloudfronted.domain.com/
-          privatekey: /path/to/pem
-          keypairid: cloudfrontkeypairid
-          duration: 3000
+            baseurl: https://my.cloudfronted.domain.com/
+            privatekey: /path/to/pem
+            keypairid: cloudfrontkeypairid
+            duration: 3000
 
 Each middleware entry has `name` and `options` entries. The `name` must
 correspond to the name under which the middleware registers itself. The
