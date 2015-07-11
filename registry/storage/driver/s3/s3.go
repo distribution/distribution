@@ -15,12 +15,10 @@
 package s3
 
 import (
-	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
-	"net/http"
 	"reflect"
+	"net/http"
 	"strconv"
 	"strings"
 	"sync"
@@ -28,7 +26,8 @@ import (
 
 	"github.com/AdRoll/goamz/aws"
 	"github.com/AdRoll/goamz/s3"
-	"github.com/Sirupsen/logrus"
+  s3muxer "github.com/rlmcpherson/s3gof3r"
+	//"github.com/Sirupsen/logrus"
 
 	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
@@ -74,6 +73,8 @@ func (factory *s3DriverFactory) Create(parameters map[string]interface{}) (stora
 type driver struct {
 	S3            *s3.S3
 	Bucket        *s3.Bucket
+  Muxer         *s3muxer.Bucket
+  MuxerConf     *s3muxer.Config
 	ChunkSize     int64
 	Encrypt       bool
 	RootDirectory string
@@ -225,23 +226,31 @@ func New(params DriverParameters) (*Driver, error) {
 		return nil, err
 	}
 
-	// TODO Currently multipart uploads have no timestamps, so this would be unwise
-	// if you initiated a new s3driver while another one is running on the same bucket.
-	// multis, _, err := bucket.ListMulti("", "")
-	// if err != nil {
-	// 	return nil, err
-	// }
+  // Construct the appropriate S3 endpoint from the region
+  // For the muxer
+  endpoint_slug := ""
+  if params.Region.Name != "us-east-1" {
+   endpoint_slug = fmt.Sprint("-",params.Region.Name)
+  }
+  endpoint := fmt.Sprint("s3", endpoint_slug, "amazonaws.com")
 
-	// for _, multi := range multis {
-	// 	err := multi.Abort()
-	// 	//TODO appropriate to do this error checking?
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// }
+  // Build the correct key structure for the muxer
+  muxkeys := s3muxer.Keys{
+    AccessKey: params.AccessKey,
+    SecretKey: params.SecretKey,
+  }
+
+  mux_conf := new(s3muxer.Config)
+ *mux_conf = *s3muxer.DefaultConfig
+
+  // create the muxer
+  s3mux := s3muxer.New(endpoint, muxkeys)
+  muxer := s3mux.Bucket(params.Bucket)
 
 	d := &driver{
 		S3:            s3obj,
+    Muxer:         muxer,
+    MuxerConf:     mux_conf,
 		Bucket:        bucket,
 		ChunkSize:     params.ChunkSize,
 		Encrypt:       params.Encrypt,
@@ -270,33 +279,23 @@ func (d *driver) Name() string {
 
 // GetContent retrieves the content stored at "path" as a []byte.
 func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
-	content, err := d.Bucket.Get(d.s3Path(path))
-	if err != nil {
-		return nil, parseError(path, err)
-	}
-	return content, nil
+  content, err := d.Bucket.Get(d.s3Path(path))
+  if err != nil {
+    return nil, parseError(path, err)
+  }
+  return content, nil
 }
 
 // PutContent stores the []byte content at a location designated by "path".
 func (d *driver) PutContent(ctx context.Context, path string, contents []byte) error {
-	return parseError(path, d.Bucket.Put(d.s3Path(path), contents, d.getContentType(), getPermissions(), d.getOptions()))
+  return parseError(path, d.Bucket.Put(d.s3Path(path), contents, d.getContentType(), getPermissions(), d.getOptions()))
 }
 
 // ReadStream retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
 func (d *driver) ReadStream(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
-	headers := make(http.Header)
-	headers.Add("Range", "bytes="+strconv.FormatInt(offset, 10)+"-")
-
-	resp, err := d.Bucket.GetResponseWithHeaders(d.s3Path(path), headers)
-	if err != nil {
-		if s3Err, ok := err.(*s3.Error); ok && s3Err.Code == "InvalidRange" {
-			return ioutil.NopCloser(bytes.NewReader(nil)), nil
-		}
-
-		return nil, parseError(path, err)
-	}
-	return resp.Body, nil
+  r, _, err := d.Muxer.GetReader(path, d.MuxerConf)
+  return r, err
 }
 
 // WriteStream stores the contents of the provided io.Reader at a
@@ -307,335 +306,8 @@ func (d *driver) ReadStream(ctx context.Context, path string, offset int64) (io.
 // offset. Offsets past the current size will write from the position
 // beyond the end of the file.
 func (d *driver) WriteStream(ctx context.Context, path string, offset int64, reader io.Reader) (totalRead int64, err error) {
-	partNumber := 1
-	bytesRead := 0
-	var putErrChan chan error
-	parts := []s3.Part{}
-	var part s3.Part
-	done := make(chan struct{}) // stopgap to free up waiting goroutines
-
-	multi, err := d.Bucket.InitMulti(d.s3Path(path), d.getContentType(), getPermissions(), d.getOptions())
-	if err != nil {
-		return 0, err
-	}
-
-	buf := d.getbuf()
-
-	// We never want to leave a dangling multipart upload, our only consistent state is
-	// when there is a whole object at path. This is in order to remain consistent with
-	// the stat call.
-	//
-	// Note that if the machine dies before executing the defer, we will be left with a dangling
-	// multipart upload, which will eventually be cleaned up, but we will lose all of the progress
-	// made prior to the machine crashing.
-	defer func() {
-		if putErrChan != nil {
-			if putErr := <-putErrChan; putErr != nil {
-				err = putErr
-			}
-		}
-
-		if len(parts) > 0 {
-			if multi == nil {
-				// Parts should be empty if the multi is not initialized
-				panic("Unreachable")
-			} else {
-				if multi.Complete(parts) != nil {
-					multi.Abort()
-				}
-			}
-		}
-
-		d.putbuf(buf) // needs to be here to pick up new buf value
-		close(done)   // free up any waiting goroutines
-	}()
-
-	// Fills from 0 to total from current
-	fromSmallCurrent := func(total int64) error {
-		current, err := d.ReadStream(ctx, path, 0)
-		if err != nil {
-			return err
-		}
-
-		bytesRead = 0
-		for int64(bytesRead) < total {
-			//The loop should very rarely enter a second iteration
-			nn, err := current.Read(buf[bytesRead:total])
-			bytesRead += nn
-			if err != nil {
-				if err != io.EOF {
-					return err
-				}
-
-				break
-			}
-
-		}
-		return nil
-	}
-
-	// Fills from parameter to chunkSize from reader
-	fromReader := func(from int64) error {
-		bytesRead = 0
-		for from+int64(bytesRead) < d.ChunkSize {
-			nn, err := reader.Read(buf[from+int64(bytesRead):])
-			totalRead += int64(nn)
-			bytesRead += nn
-
-			if err != nil {
-				if err != io.EOF {
-					return err
-				}
-
-				break
-			}
-		}
-
-		if putErrChan == nil {
-			putErrChan = make(chan error)
-		} else {
-			if putErr := <-putErrChan; putErr != nil {
-				putErrChan = nil
-				return putErr
-			}
-		}
-
-		go func(bytesRead int, from int64, buf []byte) {
-			defer d.putbuf(buf) // this buffer gets dropped after this call
-
-			// DRAGONS(stevvooe): There are few things one might want to know
-			// about this section. First, the putErrChan is expecting an error
-			// and a nil or just a nil to come through the channel. This is
-			// covered by the silly defer below. The other aspect is the s3
-			// retry backoff to deal with RequestTimeout errors. Even though
-			// the underlying s3 library should handle it, it doesn't seem to
-			// be part of the shouldRetry function (see AdRoll/goamz/s3).
-			defer func() {
-				select {
-				case putErrChan <- nil: // for some reason, we do this no matter what.
-				case <-done:
-					return // ensure we don't leak the goroutine
-				}
-			}()
-
-			if bytesRead <= 0 {
-				return
-			}
-
-			var err error
-			var part s3.Part
-
-		loop:
-			for retries := 0; retries < 5; retries++ {
-				part, err = multi.PutPart(int(partNumber), bytes.NewReader(buf[0:int64(bytesRead)+from]))
-				if err == nil {
-					break // success!
-				}
-
-				// NOTE(stevvooe): This retry code tries to only retry under
-				// conditions where the s3 package does not. We may add s3
-				// error codes to the below if we see others bubble up in the
-				// application. Right now, the most troubling is
-				// RequestTimeout, which seems to only triggered when a tcp
-				// connection to s3 slows to a crawl. If the RequestTimeout
-				// ends up getting added to the s3 library and we don't see
-				// other errors, this retry loop can be removed.
-				switch err := err.(type) {
-				case *s3.Error:
-					switch err.Code {
-					case "RequestTimeout":
-						// allow retries on only this error.
-					default:
-						break loop
-					}
-				}
-
-				backoff := 100 * time.Millisecond * time.Duration(retries+1)
-				logrus.Errorf("error putting part, retrying after %v: %v", err, backoff.String())
-				time.Sleep(backoff)
-			}
-
-			if err != nil {
-				logrus.Errorf("error putting part, aborting: %v", err)
-				select {
-				case putErrChan <- err:
-				case <-done:
-					return // don't leak the goroutine
-				}
-			}
-
-			// parts and partNumber are safe, because this function is the
-			// only one modifying them and we force it to be executed
-			// serially.
-			parts = append(parts, part)
-			partNumber++
-		}(bytesRead, from, buf)
-
-		buf = d.getbuf() // use a new buffer for the next call
-		return nil
-	}
-
-	if offset > 0 {
-		resp, err := d.Bucket.Head(d.s3Path(path), nil)
-		if err != nil {
-			if s3Err, ok := err.(*s3.Error); !ok || s3Err.Code != "NoSuchKey" {
-				return 0, err
-			}
-		}
-
-		currentLength := int64(0)
-		if err == nil {
-			currentLength = resp.ContentLength
-		}
-
-		if currentLength >= offset {
-			if offset < d.ChunkSize {
-				// chunkSize > currentLength >= offset
-				if err = fromSmallCurrent(offset); err != nil {
-					return totalRead, err
-				}
-
-				if err = fromReader(offset); err != nil {
-					return totalRead, err
-				}
-
-				if totalRead+offset < d.ChunkSize {
-					return totalRead, nil
-				}
-			} else {
-				// currentLength >= offset >= chunkSize
-				_, part, err = multi.PutPartCopy(partNumber,
-					s3.CopyOptions{CopySourceOptions: "bytes=0-" + strconv.FormatInt(offset-1, 10)},
-					d.Bucket.Name+"/"+d.s3Path(path))
-				if err != nil {
-					return 0, err
-				}
-
-				parts = append(parts, part)
-				partNumber++
-			}
-		} else {
-			// Fills between parameters with 0s but only when to - from <= chunkSize
-			fromZeroFillSmall := func(from, to int64) error {
-				bytesRead = 0
-				for from+int64(bytesRead) < to {
-					nn, err := bytes.NewReader(d.zeros).Read(buf[from+int64(bytesRead) : to])
-					bytesRead += nn
-					if err != nil {
-						return err
-					}
-				}
-
-				return nil
-			}
-
-			// Fills between parameters with 0s, making new parts
-			fromZeroFillLarge := func(from, to int64) error {
-				bytesRead64 := int64(0)
-				for to-(from+bytesRead64) >= d.ChunkSize {
-					part, err := multi.PutPart(int(partNumber), bytes.NewReader(d.zeros))
-					if err != nil {
-						return err
-					}
-					bytesRead64 += d.ChunkSize
-
-					parts = append(parts, part)
-					partNumber++
-				}
-
-				return fromZeroFillSmall(0, (to-from)%d.ChunkSize)
-			}
-
-			// currentLength < offset
-			if currentLength < d.ChunkSize {
-				if offset < d.ChunkSize {
-					// chunkSize > offset > currentLength
-					if err = fromSmallCurrent(currentLength); err != nil {
-						return totalRead, err
-					}
-
-					if err = fromZeroFillSmall(currentLength, offset); err != nil {
-						return totalRead, err
-					}
-
-					if err = fromReader(offset); err != nil {
-						return totalRead, err
-					}
-
-					if totalRead+offset < d.ChunkSize {
-						return totalRead, nil
-					}
-				} else {
-					// offset >= chunkSize > currentLength
-					if err = fromSmallCurrent(currentLength); err != nil {
-						return totalRead, err
-					}
-
-					if err = fromZeroFillSmall(currentLength, d.ChunkSize); err != nil {
-						return totalRead, err
-					}
-
-					part, err = multi.PutPart(int(partNumber), bytes.NewReader(buf))
-					if err != nil {
-						return totalRead, err
-					}
-
-					parts = append(parts, part)
-					partNumber++
-
-					//Zero fill from chunkSize up to offset, then some reader
-					if err = fromZeroFillLarge(d.ChunkSize, offset); err != nil {
-						return totalRead, err
-					}
-
-					if err = fromReader(offset % d.ChunkSize); err != nil {
-						return totalRead, err
-					}
-
-					if totalRead+(offset%d.ChunkSize) < d.ChunkSize {
-						return totalRead, nil
-					}
-				}
-			} else {
-				// offset > currentLength >= chunkSize
-				_, part, err = multi.PutPartCopy(partNumber,
-					s3.CopyOptions{},
-					d.Bucket.Name+"/"+d.s3Path(path))
-				if err != nil {
-					return 0, err
-				}
-
-				parts = append(parts, part)
-				partNumber++
-
-				//Zero fill from currentLength up to offset, then some reader
-				if err = fromZeroFillLarge(currentLength, offset); err != nil {
-					return totalRead, err
-				}
-
-				if err = fromReader((offset - currentLength) % d.ChunkSize); err != nil {
-					return totalRead, err
-				}
-
-				if totalRead+((offset-currentLength)%d.ChunkSize) < d.ChunkSize {
-					return totalRead, nil
-				}
-			}
-
-		}
-	}
-
-	for {
-		if err = fromReader(0); err != nil {
-			return totalRead, err
-		}
-
-		if int64(bytesRead) < d.ChunkSize {
-			break
-		}
-	}
-
-	return totalRead, nil
+  writer, err := d.Muxer.PutWriter(path, make(http.Header), d.MuxerConf)
+  return io.Copy(writer, reader)
 }
 
 // Stat retrieves the FileInfo for the given path, including the current size
