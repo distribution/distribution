@@ -179,7 +179,7 @@ Token has 3 main parts:
 
 1.  Headers
 
-    The header of a JSON Web Token is a standard JOSE header. The "typ" field
+    The header of a JSON Web Token is a standard JOSN header. The "typ" field
     will be "JWT" and it will also contain the "alg" which identifies the
     signing algorithm used to produce the signature. It will also usually have
     a "kid" field, the ID of the key which was used to sign the token.
