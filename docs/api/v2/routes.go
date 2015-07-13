@@ -16,6 +16,7 @@ const (
 
 var allEndpoints = []string{
 	RouteNameManifest,
+	RouteNameCatalog,
 	RouteNameTags,
 	RouteNameBlob,
 	RouteNameBlobUpload,
