@@ -36,17 +36,15 @@ order is not guaranteed.
 To setup a registry instance to send notifications to endpoints, one must add
 them to the configuration. A simple example follows:
 
-```yaml
-notifications:
-  endpoints:
-    - name: alistener
-	  url: https://mylistener.example.com/event
-      headers:
-        Authorization: [Bearer <your token, if needed>]
-      timeout: 500ms
-      threshold: 5
-      backoff: 1s
-```
+      notifications:
+        endpoints:
+          - name: alistener
+            url: https://mylistener.example.com/event
+            headers:
+              Authorization: [Bearer <your token, if needed>]
+            timeout: 500ms
+            threshold: 5
+            backoff: 1s
 
 The above would configure the registry with an endpoint to send events to
 `https://mylistener.example.com/event`, with the header "Authorization: Bearer
