@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"fmt"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
@@ -32,6 +33,8 @@ func (pbs proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter, 
 		return err
 	}
 
+	// todo(richardscothern): support Content-Range, eTag
+
 	if err == nil { // have it locally
 		localReader, err := pbs.localStore.Open(ctx, dgst)
 		if err != nil {
@@ -53,9 +56,6 @@ func (pbs proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter, 
 		return err
 	}
 
-	// http.ServeContent is too restrictive here - it requires a Seek to get the size which we already have
-	// therefore todo(richardscothern): support If-Modified-Since
-
 	bw, err := pbs.localStore.Create(ctx)
 	if err != nil {
 		context.GetLogger(ctx).Errorf("%s", err)
@@ -74,7 +74,12 @@ func (pbs proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter, 
 		context.GetLogger(ctx).Errorf("copy failed: %q", err)
 		return err
 	}
-	context.GetLogger(ctx).Infof("Wrote %d bytes", written)
+	if written != desc.Length {
+		errMsg := fmt.Sprintf("Length mismatch: %db written, %db expected", desc.Length, written)
+		context.GetLogger(ctx).Errorf(errMsg)
+		return fmt.Errorf(errMsg)
+	}
+
 	_, err = bw.Commit(ctx, desc)
 	if err != nil {
 		return err

@@ -22,8 +22,10 @@ func newProxyRegistry(registry distribution.Namespace, options map[string]interf
 	if err != nil {
 		return nil, fmt.Errorf("Unable to configure storage from : %#v", options)
 	}
-
 	ctx := context.Background()
+
+	// todo(richardscothern): this would be cleaner with
+	// functional arguments
 	v := storage.NewVacuum(ctx, d)
 	scheduler.OnBlobExpire(func(digest string) error {
 		return v.RemoveBlob(digest)

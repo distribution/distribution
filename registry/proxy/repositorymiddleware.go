@@ -42,6 +42,8 @@ func newProxyMiddleware(repository distribution.Repository, options map[string]i
 			ctx:             ctx,
 		},
 		blobStore: proxyBlobStore{
+			// this is a linkedBlobStore which has features we don't want
+			// including hashState stuff.  Change to a normal blobStore?
 			localStore:  repository.Blobs(ctx),
 			remoteStore: remoteRepo.Blobs(ctx),
 		},
