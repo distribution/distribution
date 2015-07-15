@@ -9,7 +9,6 @@ import (
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/registry/proxy/scheduler"
-	"github.com/docker/libtrust"
 )
 
 // todo(richardscothern): from cache control header
@@ -81,7 +80,7 @@ func (pms proxyManifestStore) ExistsByTag(tag string) (bool, error) {
 	return pms.remoteManifests.ExistsByTag(tag)
 }
 
-func (pms proxyManifestStore) GetByTag(tag string) (*manifest.SignedManifest, error) {
+func (pms proxyManifestStore) GetByTag(tag string, options ...distribution.ManifestServiceOption) (*manifest.SignedManifest, error) {
 	// todo(richardscothern): this would be much more efficient with etag
 	// support in the client.
 
@@ -117,28 +116,4 @@ func (pms proxyManifestStore) GetByTag(tag string) (*manifest.SignedManifest, er
 	scheduler.AddManifest(pms.repositoryName, repositoryTTL)
 
 	return sm, err
-}
-
-// verifyManifest ensures that the manifest content is valid from the
-// perspective of the registry proxy.  It does not ensure referenced
-// blobs exists locally
-func (pms proxyManifestStore) Verify(ctx context.Context, mnfst *manifest.SignedManifest) error {
-	var errs distribution.ErrManifestVerification
-	if mnfst.Name != pms.name {
-		errs = append(errs, fmt.Errorf("repository name does not match manifest name"))
-	}
-
-	if _, err := manifest.Verify(mnfst); err != nil {
-		switch err {
-		case libtrust.ErrMissingSignatureKey, libtrust.ErrInvalidJSONContent, libtrust.ErrMissingSignatureKey:
-			errs = append(errs, distribution.ErrManifestUnverified{})
-		default:
-			if err.Error() == "invalid signature" { // TODO(stevvooe): This should be exported by libtrust
-				errs = append(errs, distribution.ErrManifestUnverified{})
-			} else {
-				errs = append(errs, err)
-			}
-		}
-	}
-	return nil
 }

@@ -46,6 +46,7 @@ func newRandomBlob(size int) (digest.Digest, []byte) {
 }
 
 func addTestFetch(repo string, dgst digest.Digest, content []byte, m *testutil.RequestResponseMap) {
+
 	*m = append(*m, testutil.RequestResponseMapping{
 		Request: testutil.Request{
 			Method: "GET",
@@ -60,6 +61,7 @@ func addTestFetch(repo string, dgst digest.Digest, content []byte, m *testutil.R
 			}),
 		},
 	})
+
 	*m = append(*m, testutil.RequestResponseMapping{
 		Request: testutil.Request{
 			Method: "HEAD",
@@ -398,6 +400,40 @@ func newRandomSchemaV1Manifest(name, tag string, blobCount int) (*manifest.Signe
 	return m, dgst
 }
 
+func addTestManifestWithEtag(repo, reference string, content []byte, m *testutil.RequestResponseMap, dgst string) {
+	actualDigest, _ := digest.FromBytes(content)
+	getReqWithEtag := testutil.Request{
+		Method: "GET",
+		Route:  "/v2/" + repo + "/manifests/" + reference,
+		Headers: http.Header(map[string][]string{
+			"Etag": {dgst},
+		}),
+	}
+
+	var getRespWithEtag testutil.Response
+	if actualDigest.String() == dgst {
+		getRespWithEtag = testutil.Response{
+			StatusCode: http.StatusNotModified,
+			Body:       []byte{},
+			Headers: http.Header(map[string][]string{
+				"Content-Length": {"0"},
+				"Last-Modified":  {time.Now().Add(-1 * time.Second).Format(time.ANSIC)},
+			}),
+		}
+	} else {
+		getRespWithEtag = testutil.Response{
+			StatusCode: http.StatusOK,
+			Body:       content,
+			Headers: http.Header(map[string][]string{
+				"Content-Length": {fmt.Sprint(len(content))},
+				"Last-Modified":  {time.Now().Add(-1 * time.Second).Format(time.ANSIC)},
+			}),
+		}
+
+	}
+	*m = append(*m, testutil.RequestResponseMapping{Request: getReqWithEtag, Response: getRespWithEtag})
+}
+
 func addTestManifest(repo, reference string, content []byte, m *testutil.RequestResponseMap) {
 	*m = append(*m, testutil.RequestResponseMapping{
 		Request: testutil.Request{
@@ -456,6 +492,7 @@ func checkEqualManifest(m1, m2 *manifest.SignedManifest) error {
 }
 
 func TestManifestFetch(t *testing.T) {
+	ctx := context.Background()
 	repo := "test.example.com/repo"
 	m1, dgst := newRandomSchemaV1Manifest(repo, "latest", 6)
 	var m testutil.RequestResponseMap
@@ -468,7 +505,10 @@ func TestManifestFetch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ms := r.Manifests()
+	ms, err := r.Manifests(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	ok, err := ms.Exists(dgst)
 	if err != nil {
@@ -487,11 +527,11 @@ func TestManifestFetch(t *testing.T) {
 	}
 }
 
-func TestManifestFetchByTag(t *testing.T) {
+func TestManifestFetchWithEtag(t *testing.T) {
 	repo := "test.example.com/repo/by/tag"
-	m1, _ := newRandomSchemaV1Manifest(repo, "latest", 6)
+	m1, d1 := newRandomSchemaV1Manifest(repo, "latest", 6)
 	var m testutil.RequestResponseMap
-	addTestManifest(repo, "latest", m1.Raw, &m)
+	addTestManifestWithEtag(repo, "latest", m1.Raw, &m, d1.String())
 
 	e, c := testServer(m)
 	defer c()
@@ -500,22 +540,18 @@ func TestManifestFetchByTag(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	ms := r.Manifests()
-	ok, err := ms.ExistsByTag("latest")
+	ctx := context.Background()
+	ms, err := r.Manifests(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !ok {
-		t.Fatal("Manifest does not exist")
-	}
 
-	manifest, err := ms.GetByTag("latest")
+	m2, err := ms.GetByTag("latest", AddEtagToTag("latest", d1.String()))
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := checkEqualManifest(manifest, m1); err != nil {
-		t.Fatal(err)
+	if m2 != nil {
+		t.Fatal("Expected empty manifest for matching etag")
 	}
 }
 
@@ -544,8 +580,12 @@ func TestManifestDelete(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx := context.Background()
+	ms, err := r.Manifests(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	ms := r.Manifests()
 	if err := ms.Delete(dgst1); err != nil {
 		t.Fatal(err)
 	}
@@ -581,8 +621,12 @@ func TestManifestPut(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx := context.Background()
+	ms, err := r.Manifests(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	ms := r.Manifests()
 	if err := ms.Put(m1); err != nil {
 		t.Fatal(err)
 	}
@@ -625,8 +669,12 @@ func TestManifestTags(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx := context.Background()
+	ms, err := r.Manifests(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-	ms := r.Manifests()
 	tags, err := ms.Tags()
 	if err != nil {
 		t.Fatal(err)
@@ -663,20 +711,24 @@ func TestManifestUnauthorized(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	ms := r.Manifests()
+	ctx := context.Background()
+	ms, err := r.Manifests(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	_, err = ms.Get(dgst)
 	if err == nil {
 		t.Fatal("Expected error fetching manifest")
 	}
-	v2Err, ok := err.(*errcode.Error)
+	v2Err, ok := err.(errcode.Error)
 	if !ok {
 		t.Fatalf("Unexpected error type: %#v", err)
 	}
 	if v2Err.Code != v2.ErrorCodeUnauthorized {
 		t.Fatalf("Unexpected error code: %s", v2Err.Code.String())
 	}
-	if expected := errcode.ErrorCode(v2.ErrorCodeUnauthorized).Message(); v2Err.Message() != expected {
-		t.Fatalf("Unexpected message value: %s, expected %s", v2Err.Message(), expected)
+	if expected := v2.ErrorCodeUnauthorized.Message(); v2Err.Message != expected {
+		t.Fatalf("Unexpected message value: %q, expected %q", v2Err.Message, expected)
 	}
 }

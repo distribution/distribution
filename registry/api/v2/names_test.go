@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -10,6 +11,10 @@ func TestRepositoryNameRegexp(t *testing.T) {
 		input string
 		err   error
 	}{
+		{
+			input: "",
+			err:   ErrRepositoryNameEmpty,
+		},
 		{
 			input: "short",
 		},
@@ -30,11 +35,26 @@ func TestRepositoryNameRegexp(t *testing.T) {
 		},
 		{
 			input: "a/a/a/b/b",
-			err:   ErrRepositoryNameComponentShort,
 		},
 		{
 			input: "a/a/a/a/",
-			err:   ErrRepositoryNameComponentShort,
+			err:   ErrRepositoryNameComponentInvalid,
+		},
+		{
+			input: "a//a/a",
+			err:   ErrRepositoryNameComponentInvalid,
+		},
+		{
+			input: "a",
+		},
+		{
+			input: "a/aa",
+		},
+		{
+			input: "aa/a",
+		},
+		{
+			input: "a/aa/a",
 		},
 		{
 			input: "foo.com/bar/baz",
@@ -57,10 +77,6 @@ func TestRepositoryNameRegexp(t *testing.T) {
 		},
 		{
 			input: "a-a/a-a",
-		},
-		{
-			input: "a",
-			err:   ErrRepositoryNameComponentShort,
 		},
 		{
 			input: "a-/a/a/a",
@@ -110,9 +126,8 @@ func TestRepositoryNameRegexp(t *testing.T) {
 			err:   ErrRepositoryNameComponentInvalid,
 		},
 	} {
-
 		failf := func(format string, v ...interface{}) {
-			t.Logf(testcase.input+": "+format, v...)
+			t.Logf(strconv.Quote(testcase.input)+": "+format, v...)
 			t.Fail()
 		}
 

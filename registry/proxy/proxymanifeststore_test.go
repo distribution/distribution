@@ -55,14 +55,14 @@ func (sm statsManifest) Get(dgst digest.Digest) (*manifest.SignedManifest, error
 	return sm.manifests.Get(dgst)
 }
 
-func (sm statsManifest) GetByTag(tag string) (*manifest.SignedManifest, error) {
+func (sm statsManifest) GetByTag(tag string, options ...distribution.ManifestServiceOption) (*manifest.SignedManifest, error) {
 	sm.stats["getbytag"]++
-	return sm.manifests.GetByTag(tag)
+	return sm.manifests.GetByTag(tag, options...)
 }
 
-func (sm statsManifest) Put(manifest *manifest.SignedManifest, verifyFunc distribution.ManifestVerifyFunc) error {
+func (sm statsManifest) Put(manifest *manifest.SignedManifest) error {
 	sm.stats["put"]++
-	return sm.manifests.Put(manifest, verifyFunc)
+	return sm.manifests.Put(manifest)
 }
 
 func (sm statsManifest) Tags() ([]string, error) {
@@ -77,8 +77,12 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
 	}
+	tr, err := truthRepo.Manifests(ctx)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
 	truthManifests := statsManifest{
-		manifests: truthRepo.Manifests(),
+		manifests: tr,
 		stats:     make(map[string]int),
 	}
 
@@ -89,9 +93,13 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
 	}
+	lr, err := localRepo.Manifests(ctx)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
 
 	localManifests := statsManifest{
-		manifests: localRepo.Manifests(),
+		manifests: lr,
 		stats:     make(map[string]int),
 	}
 
@@ -143,7 +151,11 @@ func populateRepo(t *testing.T, ctx context.Context, repository distribution.Rep
 		t.Fatalf("error signing manifest: %v", err)
 	}
 
-	err = repository.Manifests().Put(sm, storage.VerifyLocalManifest)
+	ms, err := repository.Manifests(ctx)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+	ms.Put(sm)
 	if err != nil {
 		t.Fatalf("unexpected errors putting manifest: %v", err)
 	}

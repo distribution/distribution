@@ -11,10 +11,11 @@ import (
 )
 
 type manifestStore struct {
-	repository    *repository
-	revisionStore *revisionStore
-	tagStore      *tagStore
-	ctx           context.Context
+	repository                 *repository
+	revisionStore              *revisionStore
+	tagStore                   *tagStore
+	ctx                        context.Context
+	skipDependencyVerification bool
 }
 
 var _ distribution.ManifestService = &manifestStore{}
@@ -39,8 +40,22 @@ func (ms *manifestStore) Get(dgst digest.Digest) (*manifest.SignedManifest, erro
 	return ms.revisionStore.get(ms.ctx, dgst)
 }
 
+// SkipLayerVerification allows a manifest to be Put before it's
+// layers are on the filesystem
+func SkipLayerVerification(ms distribution.ManifestService) error {
+	if ms, ok := ms.(*manifestStore); ok {
+		ms.skipDependencyVerification = true
+		return nil
+	}
+	return fmt.Errorf("skip layer verification only valid for manifeststore")
+}
+
 func (ms *manifestStore) Put(manifest *manifest.SignedManifest) error {
 	context.GetLogger(ms.ctx).Debug("(*manifestStore).Put")
+
+	if err := ms.verifyManifest(ms.ctx, manifest); err != nil {
+		return err
+	}
 
 	// Store the revision of the manifest
 	revision, err := ms.revisionStore.put(ms.ctx, manifest)
@@ -68,7 +83,14 @@ func (ms *manifestStore) ExistsByTag(tag string) (bool, error) {
 	return ms.tagStore.exists(tag)
 }
 
-func (ms *manifestStore) GetByTag(tag string) (*manifest.SignedManifest, error) {
+func (ms *manifestStore) GetByTag(tag string, options ...distribution.ManifestServiceOption) (*manifest.SignedManifest, error) {
+	for _, option := range options {
+		err := option(ms)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	context.GetLogger(ms.ctx).Debug("(*manifestStore).GetByTag")
 	dgst, err := ms.tagStore.resolve(tag)
 	if err != nil {
@@ -78,11 +100,11 @@ func (ms *manifestStore) GetByTag(tag string) (*manifest.SignedManifest, error) 
 	return ms.revisionStore.get(ms.ctx, dgst)
 }
 
-// VerifyLocalManifest ensures that the manifest content is valid from the
+// verifyManifest ensures that the manifest content is valid from the
 // perspective of the registry. It ensures that the signature is valid for the
 // enclosed payload. As a policy, the registry only tries to store valid
 // content, leaving trust policies of that content up to consumers.
-func (ms *manifestStore) Verify(ctx context.Context, mnfst *manifest.SignedManifest) error {
+func (ms *manifestStore) verifyManifest(ctx context.Context, mnfst *manifest.SignedManifest) error {
 	var errs distribution.ErrManifestVerification
 	if mnfst.Name != ms.repository.Name() {
 		errs = append(errs, fmt.Errorf("repository name does not match manifest name"))
@@ -101,18 +123,19 @@ func (ms *manifestStore) Verify(ctx context.Context, mnfst *manifest.SignedManif
 		}
 	}
 
-	for _, fsLayer := range mnfst.FSLayers {
-		_, err := ms.repository.Blobs(ctx).Stat(ctx, fsLayer.BlobSum)
-		if err != nil {
-			if err != distribution.ErrBlobUnknown {
-				errs = append(errs, err)
-			}
+	if !ms.skipDependencyVerification {
+		for _, fsLayer := range mnfst.FSLayers {
+			_, err := ms.repository.Blobs(ctx).Stat(ctx, fsLayer.BlobSum)
+			if err != nil {
+				if err != distribution.ErrBlobUnknown {
+					errs = append(errs, err)
+				}
 
-			// On error here, we always append unknown blob errors.
-			errs = append(errs, distribution.ErrManifestBlobUnknown{Digest: fsLayer.BlobSum})
+				// On error here, we always append unknown blob errors.
+				errs = append(errs, distribution.ErrManifestBlobUnknown{Digest: fsLayer.BlobSum})
+			}
 		}
 	}
-
 	if len(errs) != 0 {
 		return errs
 	}

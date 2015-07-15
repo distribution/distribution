@@ -99,15 +99,15 @@ func (repo *repository) Name() string {
 // Manifests returns an instance of ManifestService. Instantiation is cheap and
 // may be context sensitive in the future. The instance should be used similar
 // to a request local.
-func (repo *repository) Manifests() distribution.ManifestService {
-	return &manifestStore{
-		ctx:        repo.ctx,
+func (repo *repository) Manifests(ctx context.Context, options ...distribution.ManifestServiceOption) (distribution.ManifestService, error) {
+	ms := &manifestStore{
+		ctx:        ctx,
 		repository: repo,
 		revisionStore: &revisionStore{
-			ctx:        repo.ctx,
+			ctx:        ctx,
 			repository: repo,
 			blobStore: &linkedBlobStore{
-				ctx:        repo.ctx,
+				ctx:        ctx,
 				blobStore:  repo.blobStore,
 				repository: repo,
 				statter: &linkedBlobStatter{
@@ -122,11 +122,21 @@ func (repo *repository) Manifests() distribution.ManifestService {
 			},
 		},
 		tagStore: &tagStore{
-			ctx:        repo.ctx,
+			ctx:        ctx,
 			repository: repo,
 			blobStore:  repo.registry.blobStore,
 		},
 	}
+
+	// Apply options
+	for _, option := range options {
+		err := option(ms)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return ms, nil
 }
 
 // Blobs returns an instance of the BlobStore. Instantiation is cheap and

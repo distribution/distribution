@@ -51,11 +51,15 @@ func Listen(repo distribution.Repository, listener Listener) distribution.Reposi
 	}
 }
 
-func (rl *repositoryListener) Manifests() distribution.ManifestService {
-	return &manifestServiceListener{
-		ManifestService: rl.Repository.Manifests(),
-		parent:          rl,
+func (rl *repositoryListener) Manifests(ctx context.Context, options ...distribution.ManifestServiceOption) (distribution.ManifestService, error) {
+	manifests, err := rl.Repository.Manifests(ctx, options...)
+	if err != nil {
+		return nil, err
 	}
+	return &manifestServiceListener{
+		ManifestService: manifests,
+		parent:          rl,
+	}, nil
 }
 
 func (rl *repositoryListener) Blobs(ctx context.Context) distribution.BlobStore {
@@ -93,8 +97,8 @@ func (msl *manifestServiceListener) Put(sm *manifest.SignedManifest) error {
 	return err
 }
 
-func (msl *manifestServiceListener) GetByTag(tag string) (*manifest.SignedManifest, error) {
-	sm, err := msl.ManifestService.GetByTag(tag)
+func (msl *manifestServiceListener) GetByTag(tag string, options ...distribution.ManifestServiceOption) (*manifest.SignedManifest, error) {
+	sm, err := msl.ManifestService.GetByTag(tag, options...)
 	if err == nil {
 		if err := msl.parent.listener.ManifestPulled(msl.parent.Repository.Name(), sm); err != nil {
 			logrus.Errorf("error dispatching manifest pull to listener: %v", err)

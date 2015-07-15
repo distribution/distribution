@@ -17,7 +17,8 @@ import (
 // Hook up gocheck into the "go test" runner.
 func Test(t *testing.T) { check.TestingT(t) }
 
-type S3DriverConstructor func(rootDirectory string) (*Driver, error)
+var s3DriverConstructor func(rootDirectory string) (*Driver, error)
+var skipS3 func() string
 
 func init() {
 	accessKey := os.Getenv("AWS_ACCESS_KEY")
@@ -33,7 +34,7 @@ func init() {
 	}
 	defer os.Remove(root)
 
-	s3DriverConstructor := func(rootDirectory string) (*Driver, error) {
+	s3DriverConstructor = func(rootDirectory string) (*Driver, error) {
 		encryptBool := false
 		if encrypt != "" {
 			encryptBool, err = strconv.ParseBool(encrypt)
@@ -74,79 +75,64 @@ func init() {
 	}
 
 	// Skip S3 storage driver tests if environment variable parameters are not provided
-	skipCheck := func() string {
+	skipS3 = func() string {
 		if accessKey == "" || secretKey == "" || region == "" || bucket == "" || encrypt == "" {
 			return "Must set AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_REGION, S3_BUCKET, and S3_ENCRYPT to run S3 tests"
 		}
 		return ""
 	}
 
-	driverConstructor := func() (storagedriver.StorageDriver, error) {
+	testsuites.RegisterSuite(func() (storagedriver.StorageDriver, error) {
 		return s3DriverConstructor(root)
+	}, skipS3)
+}
+
+func TestEmptyRootList(t *testing.T) {
+	if skipS3() != "" {
+		t.Skip(skipS3())
 	}
 
-	testsuites.RegisterInProcessSuite(driverConstructor, skipCheck)
-
-	// s3Constructor := func() (*Driver, error) {
-	// 	return s3DriverConstructor(aws.GetRegion(region))
-	// }
-
-	RegisterS3DriverSuite(s3DriverConstructor, skipCheck)
-
-	// testsuites.RegisterIPCSuite(driverName, map[string]string{
-	// 	"accesskey": accessKey,
-	// 	"secretkey": secretKey,
-	// 	"region":    region.Name,
-	// 	"bucket":    bucket,
-	// 	"encrypt":   encrypt,
-	// }, skipCheck)
-	// }
-}
-
-func RegisterS3DriverSuite(s3DriverConstructor S3DriverConstructor, skipCheck testsuites.SkipCheck) {
-	check.Suite(&S3DriverSuite{
-		Constructor: s3DriverConstructor,
-		SkipCheck:   skipCheck,
-	})
-}
-
-type S3DriverSuite struct {
-	Constructor S3DriverConstructor
-	testsuites.SkipCheck
-}
-
-func (suite *S3DriverSuite) SetUpSuite(c *check.C) {
-	if reason := suite.SkipCheck(); reason != "" {
-		c.Skip(reason)
-	}
-}
-
-func (suite *S3DriverSuite) TestEmptyRootList(c *check.C) {
 	validRoot, err := ioutil.TempDir("", "driver-")
-	c.Assert(err, check.IsNil)
+	if err != nil {
+		t.Fatalf("unexpected error creating temporary directory: %v", err)
+	}
 	defer os.Remove(validRoot)
 
-	rootedDriver, err := suite.Constructor(validRoot)
-	c.Assert(err, check.IsNil)
-	emptyRootDriver, err := suite.Constructor("")
-	c.Assert(err, check.IsNil)
-	slashRootDriver, err := suite.Constructor("/")
-	c.Assert(err, check.IsNil)
+	rootedDriver, err := s3DriverConstructor(validRoot)
+	if err != nil {
+		t.Fatalf("unexpected error creating rooted driver: %v", err)
+	}
+
+	emptyRootDriver, err := s3DriverConstructor("")
+	if err != nil {
+		t.Fatalf("unexpected error creating empty root driver: %v", err)
+	}
+
+	slashRootDriver, err := s3DriverConstructor("/")
+	if err != nil {
+		t.Fatalf("unexpected error creating slash root driver: %v", err)
+	}
 
 	filename := "/test"
 	contents := []byte("contents")
 	ctx := context.Background()
 	err = rootedDriver.PutContent(ctx, filename, contents)
-	c.Assert(err, check.IsNil)
+	if err != nil {
+		t.Fatalf("unexpected error creating content: %v", err)
+	}
 	defer rootedDriver.Delete(ctx, filename)
 
 	keys, err := emptyRootDriver.List(ctx, "/")
 	for _, path := range keys {
-		c.Assert(storagedriver.PathRegexp.MatchString(path), check.Equals, true)
+		if !storagedriver.PathRegexp.MatchString(path) {
+			t.Fatalf("unexpected string in path: %q != %q", path, storagedriver.PathRegexp)
+		}
 	}
 
 	keys, err = slashRootDriver.List(ctx, "/")
 	for _, path := range keys {
-		c.Assert(storagedriver.PathRegexp.MatchString(path), check.Equals, true)
+		if !storagedriver.PathRegexp.MatchString(path) {
+			t.Fatalf("unexpected string in path: %q != %q", path, storagedriver.PathRegexp)
+		}
 	}
 }

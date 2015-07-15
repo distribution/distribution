@@ -76,12 +76,21 @@ var ErrorCodeTest2 = Register("v2.errors", ErrorDescriptor{
 	HTTPStatusCode: http.StatusNotFound,
 })
 
+var ErrorCodeTest3 = Register("v2.errors", ErrorDescriptor{
+	Value:          "TEST3",
+	Message:        "Sorry %q isn't valid",
+	Description:    `Just a test message #3.`,
+	HTTPStatusCode: http.StatusNotFound,
+})
+
 func TestErrorsManagement(t *testing.T) {
 	var errs Errors
 
 	errs = append(errs, ErrorCodeTest1)
 	errs = append(errs, ErrorCodeTest2.WithDetail(
 		map[string]interface{}{"digest": "sometestblobsumdoesntmatter"}))
+	errs = append(errs, ErrorCodeTest3.WithArgs("BOOGIE"))
+	errs = append(errs, ErrorCodeTest3.WithArgs("BOOGIE").WithDetail("data"))
 
 	p, err := json.Marshal(errs)
 
@@ -89,7 +98,12 @@ func TestErrorsManagement(t *testing.T) {
 		t.Fatalf("error marashaling errors: %v", err)
 	}
 
-	expectedJSON := "{\"errors\":[{\"code\":\"TEST1\",\"message\":\"test error 1\"},{\"code\":\"TEST2\",\"message\":\"test error 2\",\"detail\":{\"digest\":\"sometestblobsumdoesntmatter\"}}]}"
+	expectedJSON := `{"errors":[` +
+		`{"code":"TEST1","message":"test error 1"},` +
+		`{"code":"TEST2","message":"test error 2","detail":{"digest":"sometestblobsumdoesntmatter"}},` +
+		`{"code":"TEST3","message":"Sorry \"BOOGIE\" isn't valid"},` +
+		`{"code":"TEST3","message":"Sorry \"BOOGIE\" isn't valid","detail":"data"}` +
+		`]}`
 
 	if string(p) != expectedJSON {
 		t.Fatalf("unexpected json:\ngot:\n%q\n\nexpected:\n%q", string(p), expectedJSON)
@@ -103,6 +117,13 @@ func TestErrorsManagement(t *testing.T) {
 
 	if !reflect.DeepEqual(unmarshaled, errs) {
 		t.Fatalf("errors not equal after round trip:\nunmarshaled:\n%#v\n\nerrs:\n%#v", unmarshaled, errs)
+	}
+
+	// Test the arg substitution stuff
+	e1 := unmarshaled[3].(Error)
+	exp1 := `Sorry "BOOGIE" isn't valid`
+	if e1.Message != exp1 {
+		t.Fatalf("Wrong msg, got:\n%q\n\nexpected:\n%q", e1.Message, exp1)
 	}
 
 	// Test again with a single value this time
@@ -126,6 +147,28 @@ func TestErrorsManagement(t *testing.T) {
 
 	if !reflect.DeepEqual(unmarshaled, errs) {
 		t.Fatalf("errors not equal after round trip:\nunmarshaled:\n%#v\n\nerrs:\n%#v", unmarshaled, errs)
+	}
+
+	// Verify that calling WithArgs() more than once does the right thing.
+	// Meaning creates a new Error and uses the ErrorCode Message
+	e1 = ErrorCodeTest3.WithArgs("test1")
+	e2 := e1.WithArgs("test2")
+	if &e1 == &e2 {
+		t.Fatalf("args: e2 and e1 should not be the same, but they are")
+	}
+	if e2.Message != `Sorry "test2" isn't valid` {
+		t.Fatalf("e2 had wrong message: %q", e2.Message)
+	}
+
+	// Verify that calling WithDetail() more than once does the right thing.
+	// Meaning creates a new Error and overwrites the old detail field
+	e1 = ErrorCodeTest3.WithDetail("stuff1")
+	e2 = e1.WithDetail("stuff2")
+	if &e1 == &e2 {
+		t.Fatalf("detail: e2 and e1 should not be the same, but they are")
+	}
+	if e2.Detail != `stuff2` {
+		t.Fatalf("e2 had wrong detail: %q", e2.Detail)
 	}
 
 }

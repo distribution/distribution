@@ -9,6 +9,7 @@ import (
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/client"
 	"github.com/docker/distribution/registry/middleware/repository"
+	"github.com/docker/distribution/registry/storage"
 )
 
 type proxyMiddleware struct {
@@ -33,12 +34,20 @@ func newProxyMiddleware(repository distribution.Repository, options map[string]i
 		return nil, err
 	}
 
+	localManifests, err := repository.Manifests(ctx, storage.SkipLayerVerification)
+	if err != nil {
+		return nil, err
+	}
+	remoteManifests, err := remoteRepo.Manifests(ctx)
+	if err != nil {
+		return nil, err
+	}
 	return proxyMiddleware{
 		repository: repository,
 		manifests: proxyManifestStore{
 			repositoryName:  repository.Name(),
-			localManifests:  repository.Manifests(),
-			remoteManifests: remoteRepo.Manifests(),
+			localManifests:  localManifests,
+			remoteManifests: remoteManifests,
 			ctx:             ctx,
 		},
 		blobStore: proxyBlobStore{
@@ -60,8 +69,8 @@ func (prm proxyMiddleware) Blobs(ctx context.Context) distribution.BlobStore {
 	return prm.blobStore
 }
 
-func (prm proxyMiddleware) Manifests() distribution.ManifestService {
-	return prm.manifests
+func (prm proxyMiddleware) Manifests(ctx context.Context, options ...distribution.ManifestServiceOption) (distribution.ManifestService, error) {
+	return prm.manifests, nil
 }
 
 func (prm proxyMiddleware) Signatures() distribution.SignatureService {
