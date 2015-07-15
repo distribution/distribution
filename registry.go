@@ -46,7 +46,8 @@ type Repository interface {
 	Name() string
 
 	// Manifests returns a reference to this repository's manifest service.
-	Manifests() ManifestService
+	// with the supplied options applied.
+	Manifests(ctx context.Context, options ...ManifestServiceOption) (ManifestService, error)
 
 	// Blobs returns a reference to this repository's blob service.
 	Blobs(ctx context.Context) BlobStore
