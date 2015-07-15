@@ -47,7 +47,7 @@ func (pms proxyManifestStore) Get(dgst digest.Digest) (*manifest.SignedManifest,
 		return nil, err
 	}
 
-	err = pms.localManifests.Put(sm, VerifyRemoteManifest)
+	err = pms.localManifests.Put(sm)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func (pms proxyManifestStore) Get(dgst digest.Digest) (*manifest.SignedManifest,
 	return sm, err
 }
 
-func (pms proxyManifestStore) Put(manifest *manifest.SignedManifest, verifyFunc distribution.ManifestVerifyFunc) error {
+func (pms proxyManifestStore) Put(manifest *manifest.SignedManifest) error {
 	return fmt.Errorf("Not supported")
 }
 
@@ -109,7 +109,7 @@ func (pms proxyManifestStore) GetByTag(tag string) (*manifest.SignedManifest, er
 	}
 
 	context.GetLogger(pms.ctx).Infof("Newer manifest fetched for %q = %s", tag, digestFromRemote)
-	err = pms.localManifests.Put(sm, VerifyRemoteManifest)
+	err = pms.localManifests.Put(sm)
 	if err != nil {
 		return nil, err
 	}
@@ -119,12 +119,12 @@ func (pms proxyManifestStore) GetByTag(tag string) (*manifest.SignedManifest, er
 	return sm, err
 }
 
-// VerifyRemoteManifest ensures that the manifest content is valid from the
+// verifyManifest ensures that the manifest content is valid from the
 // perspective of the registry proxy.  It does not ensure referenced
 // blobs exists locally
-func VerifyRemoteManifest(ctx context.Context, mnfst *manifest.SignedManifest, name string, bs distribution.BlobService) error {
+func (pms proxyManifestStore) Verify(ctx context.Context, mnfst *manifest.SignedManifest) error {
 	var errs distribution.ErrManifestVerification
-	if mnfst.Name != name {
+	if mnfst.Name != pms.name {
 		errs = append(errs, fmt.Errorf("repository name does not match manifest name"))
 	}
 

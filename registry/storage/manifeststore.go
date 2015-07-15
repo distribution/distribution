@@ -39,13 +39,8 @@ func (ms *manifestStore) Get(dgst digest.Digest) (*manifest.SignedManifest, erro
 	return ms.revisionStore.get(ms.ctx, dgst)
 }
 
-func (ms *manifestStore) Put(manifest *manifest.SignedManifest, verifyFunc distribution.ManifestVerifyFunc) error {
+func (ms *manifestStore) Put(manifest *manifest.SignedManifest) error {
 	context.GetLogger(ms.ctx).Debug("(*manifestStore).Put")
-
-	err := verifyFunc(ms.ctx, manifest, ms.repository.Name(), ms.repository.Blobs(ms.ctx))
-	if err != nil {
-		return err
-	}
 
 	// Store the revision of the manifest
 	revision, err := ms.revisionStore.put(ms.ctx, manifest)
@@ -87,9 +82,9 @@ func (ms *manifestStore) GetByTag(tag string) (*manifest.SignedManifest, error) 
 // perspective of the registry. It ensures that the signature is valid for the
 // enclosed payload. As a policy, the registry only tries to store valid
 // content, leaving trust policies of that content up to consumers.
-func VerifyLocalManifest(ctx context.Context, mnfst *manifest.SignedManifest, name string, bs distribution.BlobService) error {
+func (ms *manifestStore) Verify(ctx context.Context, mnfst *manifest.SignedManifest) error {
 	var errs distribution.ErrManifestVerification
-	if mnfst.Name != name {
+	if mnfst.Name != ms.repository.Name() {
 		errs = append(errs, fmt.Errorf("repository name does not match manifest name"))
 	}
 
@@ -107,7 +102,7 @@ func VerifyLocalManifest(ctx context.Context, mnfst *manifest.SignedManifest, na
 	}
 
 	for _, fsLayer := range mnfst.FSLayers {
-		_, err := bs.Stat(ctx, fsLayer.BlobSum)
+		_, err := ms.repository.Blobs(ctx).Stat(ctx, fsLayer.BlobSum)
 		if err != nil {
 			if err != distribution.ErrBlobUnknown {
 				errs = append(errs, err)

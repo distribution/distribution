@@ -102,9 +102,14 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("error signing manifest: %v", err)
 	}
 
-	err = ms.Put(sm, VerifyLocalManifest)
-	if err == nil {
+	err = ms.Put(sm)
+	if err != nil {
 		t.Fatalf("unexpected errors putting manifest: %v", err)
+	}
+
+	err = ms.Verify(env.ctx, sm)
+	if err == nil {
+		t.Fatalf("expected errors verifying manifest: %v", err)
 	}
 
 	switch err := err.(type) {
@@ -138,7 +143,7 @@ func TestManifestStorage(t *testing.T) {
 		}
 	}
 
-	if err = ms.Put(sm, VerifyLocalManifest); err != nil {
+	if err = ms.Put(sm); err != nil {
 		t.Fatalf("unexpected error putting manifest: %v", err)
 	}
 
@@ -243,7 +248,7 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("unexpected number of signatures: %d != %d", len(sigs2), 1)
 	}
 
-	if err = ms.Put(sm2, VerifyLocalManifest); err != nil {
+	if err = ms.Put(sm2); err != nil {
 		t.Fatalf("unexpected error putting manifest: %v", err)
 	}
 

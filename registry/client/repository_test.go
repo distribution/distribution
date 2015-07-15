@@ -20,7 +20,6 @@ import (
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
-	"github.com/docker/distribution/registry/storage"
 	"github.com/docker/distribution/testutil"
 )
 
@@ -584,7 +583,7 @@ func TestManifestPut(t *testing.T) {
 	}
 
 	ms := r.Manifests()
-	if err := ms.Put(m1, storage.VerifyLocalManifest); err != nil {
+	if err := ms.Put(m1); err != nil {
 		t.Fatal(err)
 	}
 
