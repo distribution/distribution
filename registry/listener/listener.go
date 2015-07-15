@@ -57,7 +57,17 @@ func newUnixListener(laddr string) (net.Listener, error) {
 		return nil, err
 	}
 
-	return net.Listen("unix", laddr)
+	ln, err := net.Listen("unix", laddr)
+	if err != nil {
+		return nil, err
+	}
+
+	// make sock file writable for other user
+	if err := os.Chmod(laddr, 0777); err != nil {
+		return nil, err
+	}
+
+	return ln, nil
 }
 
 func isSocket(m os.FileMode) bool {
