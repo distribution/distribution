@@ -73,7 +73,14 @@ func (ms *manifestStore) ExistsByTag(tag string) (bool, error) {
 	return ms.tagStore.exists(tag)
 }
 
-func (ms *manifestStore) GetByTag(tag string) (*manifest.SignedManifest, error) {
+func (ms *manifestStore) GetByTag(tag string, options ...distribution.ManifestServiceOption) (*manifest.SignedManifest, error) {
+	for _, option := range options {
+		err := option(ms)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	context.GetLogger(ms.ctx).Debug("(*manifestStore).GetByTag")
 	dgst, err := ms.tagStore.resolve(tag)
 	if err != nil {
