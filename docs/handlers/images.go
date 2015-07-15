@@ -50,13 +50,13 @@ type imageManifestHandler struct {
 // GetImageManifest fetches the image manifest from the storage backend, if it exists.
 func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http.Request) {
 	ctxu.GetLogger(imh).Debug("GetImageManifest")
-	manifests := imh.Repository.Manifests()
+	manifests, err := imh.Repository.Manifests(imh)
+	if err != nil {
+		imh.Errors = append(imh.Errors, err)
+		return
+	}
 
-	var (
-		sm  *manifest.SignedManifest
-		err error
-	)
-
+	var sm *manifest.SignedManifest
 	if imh.Tag != "" {
 		sm, err = manifests.GetByTag(imh.Tag)
 	} else {
@@ -106,7 +106,12 @@ func etagMatch(r *http.Request, etag string) bool {
 // PutImageManifest validates and stores and image in the registry.
 func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http.Request) {
 	ctxu.GetLogger(imh).Debug("PutImageManifest")
-	manifests := imh.Repository.Manifests()
+	manifests, err := imh.Repository.Manifests(imh)
+	if err != nil {
+		imh.Errors = append(imh.Errors, err)
+		return
+	}
+
 	dec := json.NewDecoder(r.Body)
 
 	var manifest manifest.SignedManifest

@@ -48,7 +48,11 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 
 func TestManifestStorage(t *testing.T) {
 	env := newManifestStoreTestEnv(t, "foo/bar", "thetag")
-	ms := env.repository.Manifests()
+	ctx := context.Background()
+	ms, err := env.repository.Manifests(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	exists, err := ms.ExistsByTag(env.tag)
 	if err != nil {
@@ -97,14 +101,14 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("unexpected error generating private key: %v", err)
 	}
 
-	sm, err := manifest.Sign(&m, pk)
-	if err != nil {
+	sm, merr := manifest.Sign(&m, pk)
+	if merr != nil {
 		t.Fatalf("error signing manifest: %v", err)
 	}
 
 	err = ms.Put(sm)
 	if err == nil {
-		t.Fatalf("expected errors putting manifest")
+		t.Fatalf("expected errors putting manifest with full verification")
 	}
 
 	switch err := err.(type) {

@@ -34,7 +34,11 @@ type tagsAPIResponse struct {
 // GetTags returns a json list of tags for a specific image name.
 func (th *tagsHandler) GetTags(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	manifests := th.Repository.Manifests()
+	manifests, err := th.Repository.Manifests(th)
+	if err != nil {
+		th.Errors = append(th.Errors, err)
+		return
+	}
 
 	tags, err := manifests.Tags()
 	if err != nil {
