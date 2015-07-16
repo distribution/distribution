@@ -379,7 +379,9 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 					context.Errors = append(context.Errors, v2.ErrorCodeNameInvalid.WithDetail(err))
 				}
 
-				serveJSON(w, context.Errors)
+				if err := errcode.ServeJSON(w, context.Errors); err != nil {
+					ctxu.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
+				}
 				return
 			}
 
@@ -393,7 +395,9 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 				ctxu.GetLogger(context).Errorf("error initializing repository middleware: %v", err)
 				context.Errors = append(context.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 
-				serveJSON(w, context.Errors)
+				if err := errcode.ServeJSON(w, context.Errors); err != nil {
+					ctxu.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
+				}
 				return
 			}
 		}
@@ -405,7 +409,9 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 		if context.Errors.Len() > 0 {
 			app.logError(context, context.Errors)
 
-			serveJSON(w, context.Errors)
+			if err := errcode.ServeJSON(w, context.Errors); err != nil {
+				ctxu.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
+			}
 		}
 	})
 }
@@ -482,11 +488,9 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 			// base route is accessed. This section prevents us from making
 			// that mistake elsewhere in the code, allowing any operation to
 			// proceed.
-
-			var errs errcode.Errors
-			errs = append(errs, v2.ErrorCodeUnauthorized)
-
-			serveJSON(w, errs)
+			if err := errcode.ServeJSON(w, v2.ErrorCodeUnauthorized); err != nil {
+				ctxu.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
+			}
 			return fmt.Errorf("forbidden: no repository name")
 		}
 	}
@@ -498,9 +502,9 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 			// Add the appropriate WWW-Auth header
 			err.ServeHTTP(w, r)
 
-			var errs errcode.Errors
-			errs = append(errs, v2.ErrorCodeUnauthorized.WithDetail(accessRecords))
-			serveJSON(w, errs)
+			if err := errcode.ServeJSON(w, v2.ErrorCodeUnauthorized.WithDetail(accessRecords)); err != nil {
+				ctxu.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
+			}
 		default:
 			// This condition is a potential security problem either in
 			// the configuration or whatever is backing the access
