@@ -107,7 +107,8 @@ func (ms *manifestStore) GetByTag(tag string, options ...distribution.ManifestSe
 func (ms *manifestStore) verifyManifest(ctx context.Context, mnfst *manifest.SignedManifest) error {
 	var errs distribution.ErrManifestVerification
 	if mnfst.Name != ms.repository.Name() {
-		errs = append(errs, fmt.Errorf("%q != %q", mnfst.Name, ms.repository.Name()))
+		errs = append(errs, fmt.Errorf("repository name does not match manifest name"))
+
 	}
 
 	if _, err := manifest.Verify(mnfst); err != nil {

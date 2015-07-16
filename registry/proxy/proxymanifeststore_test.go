@@ -4,7 +4,6 @@ import (
 	"io"
 	"testing"
 
-	"fmt"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
@@ -22,7 +21,8 @@ type statsManifest struct {
 }
 
 type manifestStoreTestEnv struct {
-	manifests proxyManifestStore
+	manifestDigest digest.Digest // digest of the signed manifest in the local storage
+	manifests      proxyManifestStore
 }
 
 func (te manifestStoreTestEnv) LocalStats() *map[string]int {
@@ -86,7 +86,10 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 		stats:     make(map[string]int),
 	}
 
-	populateRepo(t, ctx, truthRepo, name, tag)
+	manifestDigest, err := populateRepo(t, ctx, truthRepo, name, tag)
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
 
 	localRegistry := storage.NewRegistryWithDriver(ctx, inmemory.New(), memory.NewInMemoryBlobDescriptorCacheProvider())
 	localRepo, err := localRegistry.Repository(ctx, name)
@@ -104,6 +107,7 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 	}
 
 	return &manifestStoreTestEnv{
+		manifestDigest: manifestDigest,
 		manifests: proxyManifestStore{
 			ctx:             ctx,
 			localManifests:  localManifests,
@@ -112,7 +116,7 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 	}
 }
 
-func populateRepo(t *testing.T, ctx context.Context, repository distribution.Repository, name, tag string) {
+func populateRepo(t *testing.T, ctx context.Context, repository distribution.Repository, name, tag string) (digest.Digest, error) {
 	m := manifest.Manifest{
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
@@ -159,6 +163,11 @@ func populateRepo(t *testing.T, ctx context.Context, repository distribution.Rep
 	if err != nil {
 		t.Fatalf("unexpected errors putting manifest: %v", err)
 	}
+	pl, err := sm.Payload()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return digest.FromBytes(pl)
 }
 
 // TestProxyManifests contains basic acceptance tests
@@ -184,11 +193,11 @@ func TestProxyManifests(t *testing.T) {
 	}
 
 	// Get - should succeed and pull manifest into local
-	_, err = env.manifests.GetByTag("latest")
+	_, err = env.manifests.Get(env.manifestDigest)
 	if err != nil {
-		t.Fatalf("Unexpected error getting by tag")
+		t.Fatal(err)
 	}
-	if (*localStats)["getbytag"] != 1 && (*remoteStats)["getbytag"] != 1 {
+	if (*localStats)["get"] != 1 && (*remoteStats)["get"] != 1 {
 		t.Errorf("Unexpected get count")
 	}
 
@@ -199,7 +208,7 @@ func TestProxyManifests(t *testing.T) {
 	// Stat - should only go to local
 	exists, err = env.manifests.ExistsByTag("latest")
 	if err != nil {
-		t.Fatalf("Unexpected error getting by tag")
+		t.Fatal(err)
 	}
 	if !exists {
 		t.Errorf("Unexpected non-existant manifest")
@@ -211,13 +220,12 @@ func TestProxyManifests(t *testing.T) {
 	}
 
 	// Get - should get from remote, to test freshness
-	_, err = env.manifests.GetByTag("latest")
+	_, err = env.manifests.Get(env.manifestDigest)
 	if err != nil {
-		t.Fatalf("Error getting manifest by digest")
+		t.Fatal(err)
 	}
-	fmt.Printf("\tlocal=%#v, \n\tremote=%#v\n", localStats, remoteStats)
 
-	if (*remoteStats)["getbytag"] != 2 && (*remoteStats)["existsbytag"] != 1 && (*localStats)["put"] != 1 {
+	if (*remoteStats)["get"] != 2 && (*remoteStats)["existsbytag"] != 1 && (*localStats)["put"] != 1 {
 		t.Errorf("Unexpected get count")
 	}
 

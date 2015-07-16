@@ -19,6 +19,7 @@ import (
 	"github.com/docker/distribution/registry/client/transport"
 	"github.com/docker/distribution/registry/storage/cache"
 	"github.com/docker/distribution/registry/storage/cache/memory"
+	"reflect"
 )
 
 // NewRepository creates a new Repository for the given repository name and base URL
@@ -186,7 +187,7 @@ func AddEtagToTag(tagName, dgst string) distribution.ManifestServiceOption {
 			ms.etags[tagName] = dgst
 			return nil
 		}
-		return fmt.Errorf("etag options is a client-only option")
+		return fmt.Errorf("etag options is a client-only option %s", reflect.ValueOf(ms).Type())
 	}
 }
 
@@ -208,14 +209,13 @@ func (ms *manifests) GetByTag(tag string, options ...distribution.ManifestServic
 	}
 
 	if _, ok := ms.etags[tag]; ok {
-		req.Header.Set("eTag", ms.etags[tag])
+		req.Header.Set("If-None-Match", ms.etags[tag])
 	}
 	resp, err := ms.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
-
 	switch resp.StatusCode {
 	case http.StatusOK:
 		var sm manifest.SignedManifest

@@ -8,6 +8,7 @@ import (
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/registry/api/v2"
+	"github.com/docker/distribution/registry/client"
 	"github.com/docker/distribution/registry/proxy/scheduler"
 )
 
@@ -76,32 +77,42 @@ func (pms proxyManifestStore) ExistsByTag(tag string) (bool, error) {
 }
 
 func (pms proxyManifestStore) GetByTag(tag string, options ...distribution.ManifestServiceOption) (*manifest.SignedManifest, error) {
-	// todo(richardscothern): use Etag
-	sm, err := pms.remoteManifests.GetByTag(tag)
+	var localDigest digest.Digest
+	var payload []byte
+
+	localManifest, err := pms.localManifests.GetByTag(tag, options...)
+	switch err.(type) {
+	case distribution.ErrManifestUnknown:
+		goto fromremote
+	case nil:
+		break
+	default:
+		return nil, err
+	}
+
+	payload, err = localManifest.Payload()
 	if err != nil {
 		return nil, err
 	}
 
-	payload, err := sm.Payload()
+	localDigest, err = digest.FromBytes(payload)
 	if err != nil {
 		return nil, err
 	}
 
-	digestFromRemote, err := digest.FromBytes(payload)
+fromremote:
+	var sm *manifest.SignedManifest
+	sm, err = pms.remoteManifests.GetByTag(tag, client.AddEtagToTag(tag, localDigest.String()))
 	if err != nil {
 		return nil, err
 	}
 
-	remoteManifestExistsLocally, err := pms.localManifests.Exists(digestFromRemote)
-	if err != nil {
-		return nil, err
+	if sm == nil {
+		context.GetLogger(pms.ctx).Errorf("Have latest manifest for %q, dgst=%d", tag, localDigest.String())
+		return localManifest, nil
 	}
-	if remoteManifestExistsLocally {
-		proxyMetrics.ManifestPush(uint64(len(payload)))
-		return sm, err
-	}
+	context.GetLogger(pms.ctx).Errorf("Updated manifest for %q, dgst=%d", tag, localDigest.String())
 
-	context.GetLogger(pms.ctx).Infof("Newer manifest fetched for %q = %s", tag, digestFromRemote)
 	err = pms.localManifests.Put(sm)
 	if err != nil {
 		return nil, err
