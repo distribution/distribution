@@ -16,6 +16,8 @@ type ErrorCoder interface {
 // and the integer format may change and should *never* be exported.
 type ErrorCode int
 
+var _ error = ErrorCode(0)
+
 // ErrorCode just returns itself
 func (ec ErrorCode) ErrorCode() ErrorCode {
 	return ec
@@ -93,6 +95,8 @@ type Error struct {
 	// variable substitution right before showing the message to the user
 }
 
+var _ error = Error{}
+
 // ErrorCode returns the ID/Value of this Error
 func (e Error) ErrorCode() ErrorCode {
 	return e.Code
@@ -162,6 +166,8 @@ func ParseErrorCode(value string) ErrorCode {
 // Errors provides the envelope for multiple errors and a few sugar methods
 // for use within the application.
 type Errors []error
+
+var _ error = Errors{}
 
 func (errs Errors) Error() string {
 	switch len(errs) {
