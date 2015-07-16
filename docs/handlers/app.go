@@ -359,7 +359,7 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 		context := app.context(w, r)
 
 		if err := app.authorized(w, r, context); err != nil {
-			ctxu.GetLogger(context).Errorf("error authorizing context: %v", err)
+			ctxu.GetLogger(context).Warnf("error authorizing context: %v", err)
 			return
 		}
 
