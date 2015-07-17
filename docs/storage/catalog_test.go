@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"io"
 	"testing"
 
 	"github.com/docker/distribution"
@@ -15,7 +16,6 @@ type setupEnv struct {
 	driver   driver.StorageDriver
 	expected []string
 	registry distribution.Namespace
-	catalog  distribution.CatalogService
 }
 
 func setupFS(t *testing.T) *setupEnv {
@@ -41,8 +41,6 @@ func setupFS(t *testing.T) *setupEnv {
 		}
 	}
 
-	catalog := registry.Catalog(ctx)
-
 	expected := []string{
 		"bar/c",
 		"bar/d",
@@ -56,20 +54,21 @@ func setupFS(t *testing.T) *setupEnv {
 		driver:   d,
 		expected: expected,
 		registry: registry,
-		catalog:  catalog,
 	}
 }
 
 func TestCatalog(t *testing.T) {
 	env := setupFS(t)
 
-	repos, more, _ := env.catalog.Get(100, "")
+	p := make([]string, 50)
 
-	if !testEq(repos, env.expected) {
+	numFilled, err := env.registry.Repositories(env.ctx, p, "")
+
+	if !testEq(p, env.expected, numFilled) {
 		t.Errorf("Expected catalog repos err")
 	}
 
-	if more {
+	if err != io.EOF {
 		t.Errorf("Catalog has more values which we aren't expecting")
 	}
 }
@@ -78,50 +77,46 @@ func TestCatalogInParts(t *testing.T) {
 	env := setupFS(t)
 
 	chunkLen := 2
+	p := make([]string, chunkLen)
 
-	repos, more, _ := env.catalog.Get(chunkLen, "")
-	if !testEq(repos, env.expected[0:chunkLen]) {
+	numFilled, err := env.registry.Repositories(env.ctx, p, "")
+	if err == io.EOF || numFilled != len(p) {
+		t.Errorf("Expected more values in catalog")
+	}
+
+	if !testEq(p, env.expected[0:chunkLen], numFilled) {
 		t.Errorf("Expected catalog first chunk err")
 	}
 
-	if !more {
+	lastRepo := p[len(p)-1]
+	numFilled, err = env.registry.Repositories(env.ctx, p, lastRepo)
+
+	if err == io.EOF || numFilled != len(p) {
 		t.Errorf("Expected more values in catalog")
 	}
 
-	lastRepo := repos[len(repos)-1]
-	repos, more, _ = env.catalog.Get(chunkLen, lastRepo)
-
-	if !testEq(repos, env.expected[chunkLen:chunkLen*2]) {
+	if !testEq(p, env.expected[chunkLen:chunkLen*2], numFilled) {
 		t.Errorf("Expected catalog second chunk err")
 	}
 
-	if !more {
-		t.Errorf("Expected more values in catalog")
-	}
+	lastRepo = p[len(p)-1]
+	numFilled, err = env.registry.Repositories(env.ctx, p, lastRepo)
 
-	lastRepo = repos[len(repos)-1]
-	repos, more, _ = env.catalog.Get(chunkLen, lastRepo)
-
-	if !testEq(repos, env.expected[chunkLen*2:chunkLen*3-1]) {
-		t.Errorf("Expected catalog third chunk err")
-	}
-
-	if more {
+	if err != io.EOF {
 		t.Errorf("Catalog has more values which we aren't expecting")
+	}
+
+	if !testEq(p, env.expected[chunkLen*2:chunkLen*3-1], numFilled) {
+		t.Errorf("Expected catalog third chunk err")
 	}
 
 }
 
-func testEq(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-
-	for count := range a {
-		if a[count] != b[count] {
+func testEq(a, b []string, size int) bool {
+	for cnt := 0; cnt < size-1; cnt++ {
+		if a[cnt] != b[cnt] {
 			return false
 		}
 	}
-
 	return true
 }

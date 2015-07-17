@@ -32,9 +32,6 @@ type Context struct {
 
 	urlBuilder *v2.URLBuilder
 
-	// Catalog allows getting a complete list of the contents of the registry.
-	Catalog distribution.CatalogService
-
 	// TODO(stevvooe): The goal is too completely factor this context and
 	// dispatching out of the web application. Ideally, we should lean on
 	// context.Context for injection of these resources.
