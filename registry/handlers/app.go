@@ -367,9 +367,6 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 		// Add username to request logging
 		context.Context = ctxu.WithLogger(context.Context, ctxu.GetLogger(context.Context, "auth.user.name"))
 
-		catalog := app.registry.Catalog(context)
-		context.Catalog = catalog
-
 		if app.nameRequired(r) {
 			repository, err := app.registry.Repository(context, getName(context))
 

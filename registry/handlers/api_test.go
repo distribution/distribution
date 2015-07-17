@@ -13,6 +13,8 @@ import (
 	"os"
 	"path"
 	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -60,10 +62,14 @@ func TestCheckAPI(t *testing.T) {
 	}
 }
 
+// TestCatalogAPI tests the /v2/_catalog endpoint
 func TestCatalogAPI(t *testing.T) {
+	chunkLen := 2
 	env := newTestEnv(t)
 
-	values := url.Values{"last": []string{""}, "n": []string{"100"}}
+	values := url.Values{
+		"last": []string{""},
+		"n":    []string{strconv.Itoa(chunkLen)}}
 
 	catalogURL, err := env.builder.BuildCatalogURL(values)
 	if err != nil {
@@ -90,7 +96,7 @@ func TestCatalogAPI(t *testing.T) {
 	}
 
 	// we haven't pushed anything to the registry yet
-	if ctlg.Repositories != nil {
+	if len(ctlg.Repositories) != 0 {
 		t.Fatalf("repositories has unexpected values")
 	}
 
@@ -100,8 +106,49 @@ func TestCatalogAPI(t *testing.T) {
 
 	// -----------------------------------
 	// push something to the registry and try again
-	imageName := "foo/bar"
-	createRepository(env, t, imageName, "sometag")
+	images := []string{"foo/aaaa", "foo/bbbb", "foo/cccc"}
+
+	for _, image := range images {
+		createRepository(env, t, image, "sometag")
+	}
+
+	resp, err = http.Get(catalogURL)
+	if err != nil {
+		t.Fatalf("unexpected error issuing request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	checkResponse(t, "issuing catalog api check", resp, http.StatusOK)
+
+	dec = json.NewDecoder(resp.Body)
+	if err = dec.Decode(&ctlg); err != nil {
+		t.Fatalf("error decoding fetched manifest: %v", err)
+	}
+
+	if len(ctlg.Repositories) != chunkLen {
+		t.Fatalf("repositories has unexpected values")
+	}
+
+	for _, image := range images[:chunkLen] {
+		if !contains(ctlg.Repositories, image) {
+			t.Fatalf("didn't find our repository '%s' in the catalog", image)
+		}
+	}
+
+	link := resp.Header.Get("Link")
+	if link == "" {
+		t.Fatalf("repositories has less data than expected")
+	}
+
+	newValues := checkLink(t, link, chunkLen, ctlg.Repositories[len(ctlg.Repositories)-1])
+
+	// -----------------------------------
+	// get the last chunk of data
+
+	catalogURL, err = env.builder.BuildCatalogURL(newValues)
+	if err != nil {
+		t.Fatalf("unexpected error building catalog url: %v", err)
+	}
 
 	resp, err = http.Get(catalogURL)
 	if err != nil {
@@ -120,14 +167,36 @@ func TestCatalogAPI(t *testing.T) {
 		t.Fatalf("repositories has unexpected values")
 	}
 
-	if !contains(ctlg.Repositories, imageName) {
-		t.Fatalf("didn't find our repository '%s' in the catalog", imageName)
+	lastImage := images[len(images)-1]
+	if !contains(ctlg.Repositories, lastImage) {
+		t.Fatalf("didn't find our repository '%s' in the catalog", lastImage)
 	}
 
-	if resp.Header.Get("Link") != "" {
-		t.Fatalf("repositories has more data when none expected")
+	link = resp.Header.Get("Link")
+	if link != "" {
+		t.Fatalf("catalog has unexpected data")
+	}
+}
+
+func checkLink(t *testing.T, urlStr string, numEntries int, last string) url.Values {
+	re := regexp.MustCompile("<(/v2/_catalog.*)>; rel=\"next\"")
+	matches := re.FindStringSubmatch(urlStr)
+
+	if len(matches) != 2 {
+		t.Fatalf("Catalog link address response was incorrect")
+	}
+	linkURL, _ := url.Parse(matches[1])
+	urlValues := linkURL.Query()
+
+	if urlValues.Get("n") != strconv.Itoa(numEntries) {
+		t.Fatalf("Catalog link entry size is incorrect")
 	}
 
+	if urlValues.Get("last") != last {
+		t.Fatal("Catalog link last entry is incorrect")
+	}
+
+	return urlValues
 }
 
 func contains(elems []string, e string) bool {

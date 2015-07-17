@@ -36,8 +36,11 @@ type Namespace interface {
 	// reference.
 	Repository(ctx context.Context, name string) (Repository, error)
 
-	// Catalog returns a reference which can be used for listing repositories
-	Catalog(ctx context.Context) CatalogService
+	// Repositories fills 'repos' with a lexigraphically sorted catalog of repositories
+	// up to the size of 'repos' and returns the value 'n' for the number of entries
+	// which were filled.  'last' contains an offset in the catalog, and 'err' will be
+	// set to io.EOF if there are no more entries to obtain.
+	Repositories(ctx context.Context, repos []string, last string) (n int, err error)
 }
 
 // ManifestServiceOption is a function argument for Manifest Service methods
@@ -114,10 +117,4 @@ type SignatureService interface {
 
 	// Put stores the signature for the provided digest.
 	Put(dgst digest.Digest, signatures ...[]byte) error
-}
-
-// CatalogService provides a way of retrieving the names of each of the repositories
-type CatalogService interface {
-	// Get retrieves repository names from the registry.
-	Get(n int, q string) (p []string, moreEntries bool, err error)
 }

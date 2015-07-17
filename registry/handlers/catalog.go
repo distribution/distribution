@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -32,6 +33,8 @@ type catalogAPIResponse struct {
 }
 
 func (ch *catalogHandler) GetCatalog(w http.ResponseWriter, r *http.Request) {
+	var moreEntries = true
+
 	q := r.URL.Query()
 	lastEntry := q.Get("last")
 	maxEntries, err := strconv.Atoi(q.Get("n"))
@@ -39,8 +42,12 @@ func (ch *catalogHandler) GetCatalog(w http.ResponseWriter, r *http.Request) {
 		maxEntries = maximumReturnedEntries
 	}
 
-	repos, moreEntries, err := ch.Catalog.Get(maxEntries, lastEntry)
-	if err != nil {
+	repos := make([]string, maxEntries)
+
+	filled, err := ch.App.registry.Repositories(ch.Context, repos, lastEntry)
+	if err == io.EOF {
+		moreEntries = false
+	} else if err != nil {
 		ch.Errors = append(ch.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		return
 	}
@@ -49,7 +56,8 @@ func (ch *catalogHandler) GetCatalog(w http.ResponseWriter, r *http.Request) {
 
 	// Add a link header if there are more entries to retrieve
 	if moreEntries {
-		urlStr, err := createLinkEntry(r.URL.String(), maxEntries, repos)
+		lastEntry = repos[len(repos)-1]
+		urlStr, err := createLinkEntry(r.URL.String(), maxEntries, lastEntry)
 		if err != nil {
 			ch.Errors = append(ch.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 			return
@@ -59,7 +67,7 @@ func (ch *catalogHandler) GetCatalog(w http.ResponseWriter, r *http.Request) {
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(catalogAPIResponse{
-		Repositories: repos,
+		Repositories: repos[0:filled],
 	}); err != nil {
 		ch.Errors = append(ch.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		return
@@ -68,13 +76,18 @@ func (ch *catalogHandler) GetCatalog(w http.ResponseWriter, r *http.Request) {
 
 // Use the original URL from the request to create a new URL for
 // the link header
-func createLinkEntry(origURL string, maxEntries int, repos []string) (string, error) {
+func createLinkEntry(origURL string, maxEntries int, lastEntry string) (string, error) {
 	calledURL, err := url.Parse(origURL)
 	if err != nil {
 		return "", err
 	}
 
-	calledURL.RawQuery = fmt.Sprintf("n=%d&last=%s", maxEntries, repos[len(repos)-1])
+	v := url.Values{}
+	v.Add("n", strconv.Itoa(maxEntries))
+	v.Add("last", lastEntry)
+
+	calledURL.RawQuery = v.Encode()
+
 	calledURL.Fragment = ""
 	urlStr := fmt.Sprintf("<%s>; rel=\"next\"", calledURL.String())
 

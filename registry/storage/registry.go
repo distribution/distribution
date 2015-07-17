@@ -55,15 +55,6 @@ func (reg *registry) Scope() distribution.Scope {
 	return distribution.GlobalScope
 }
 
-// Catalog returns an instance of the catalog service which can be
-// used to dump all of the repositories in a registry
-func (reg *registry) Catalog(ctx context.Context) distribution.CatalogService {
-	return &catalogSvc{
-		ctx:    ctx,
-		driver: reg.blobStore.driver,
-	}
-}
-
 // Repository returns an instance of the repository tied to the registry.
 // Instances should not be shared between goroutines but are cheap to
 // allocate. In general, they should be request scoped.

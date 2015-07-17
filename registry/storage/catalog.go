@@ -1,36 +1,38 @@
 package storage
 
 import (
+	"errors"
+	"io"
 	"path"
 	"sort"
 	"strings"
 
-	log "github.com/Sirupsen/logrus"
-	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
-	storageDriver "github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/registry/storage/driver"
 )
 
-type catalogSvc struct {
-	ctx    context.Context
-	driver storageDriver.StorageDriver
-}
-
-var _ distribution.CatalogService = &catalogSvc{}
-
-// Get returns a list, or partial list, of repositories in the registry.
+// Returns a list, or partial list, of repositories in the registry.
 // Because it's a quite expensive operation, it should only be used when building up
 // an initial set of repositories.
-func (c *catalogSvc) Get(maxEntries int, lastEntry string) ([]string, bool, error) {
-	log.Infof("Retrieving up to %d entries of the catalog starting with '%s'", maxEntries, lastEntry)
-	var repos []string
+func (reg *registry) Repositories(ctx context.Context, repos []string, last string) (n int, err error) {
+	var foundRepos []string
+	var errVal error
+
+	if len(repos) == 0 {
+		return 0, errors.New("no space in slice")
+	}
 
 	root, err := defaultPathMapper.path(repositoriesRootPathSpec{})
 	if err != nil {
-		return repos, false, err
+		return 0, err
 	}
 
-	Walk(c.ctx, c.driver, root, func(fileInfo storageDriver.FileInfo) error {
+	// Walk each of the directories in our storage.  Unfortunately since there's no
+	// guarantee that storage will return files in lexigraphical order, we have
+	// to store everything another slice, sort it and then copy it back to our
+	// passed in slice.
+
+	Walk(ctx, reg.blobStore.driver, root, func(fileInfo driver.FileInfo) error {
 		filePath := fileInfo.Path()
 
 		// lop the base path off
@@ -39,8 +41,8 @@ func (c *catalogSvc) Get(maxEntries int, lastEntry string) ([]string, bool, erro
 		_, file := path.Split(repoPath)
 		if file == "_layers" {
 			repoPath = strings.TrimSuffix(repoPath, "/_layers")
-			if repoPath > lastEntry {
-				repos = append(repos, repoPath)
+			if repoPath > last {
+				foundRepos = append(foundRepos, repoPath)
 			}
 			return ErrSkipDir
 		} else if strings.HasPrefix(file, "_") {
@@ -50,13 +52,14 @@ func (c *catalogSvc) Get(maxEntries int, lastEntry string) ([]string, bool, erro
 		return nil
 	})
 
-	sort.Strings(repos)
+	sort.Strings(foundRepos)
+	n = copy(repos, foundRepos)
 
-	moreEntries := false
-	if len(repos) > maxEntries {
-		moreEntries = true
-		repos = repos[0:maxEntries]
+	// Signal that we have no more entries by setting EOF
+	if len(foundRepos) <= len(repos) {
+		errVal = io.EOF
 	}
 
-	return repos, moreEntries, nil
+	return n, errVal
+
 }
