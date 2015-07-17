@@ -4,9 +4,9 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
-	"fmt"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
@@ -27,23 +27,29 @@ type proxyBlobStore struct {
 
 var _ distribution.BlobStore = proxyBlobStore{}
 
+// inflight tracks currently downloading blobs
+var inflight = make(map[digest.Digest]distribution.BlobWriter)
+
+// mu protects inflight
+var mu sync.Mutex
+
+func setResponseHeaders(w http.ResponseWriter, length int64, mediaType string, digest digest.Digest) {
+	w.Header().Set("Content-Length", strconv.FormatInt(length, 10))
+	w.Header().Set("Content-Type", mediaType)
+	w.Header().Set("Docker-Content-Digest", digest.String())
+	w.Header().Set("Etag", digest.String())
+}
+
+// todo(richardscothern): Support Content-Range
 func (pbs proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter, r *http.Request, dgst digest.Digest) error {
 	desc, err := pbs.localStore.Stat(ctx, dgst)
 	if err != nil && err != distribution.ErrBlobUnknown {
 		return err
 	}
 
-	// todo(richardscothern): support Content-Range, eTag
-
-	if err == nil { // have it locally
-		localReader, err := pbs.localStore.Open(ctx, dgst)
-		if err != nil {
-			return err
-		}
-		defer localReader.Close()
-
-		http.ServeContent(w, r, "", time.Time{}, localReader)
-		return nil
+	if err == nil {
+		proxyMetrics.BlobPush(uint64(desc.Length))
+		return pbs.serveLocalBlob(ctx, dgst, w, r)
 	}
 
 	desc, err = pbs.remoteStore.Stat(ctx, dgst)
@@ -56,36 +62,123 @@ func (pbs proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter, 
 		return err
 	}
 
-	bw, err := pbs.localStore.Create(ctx)
+	bw, isNew, cleanup, err := getOrCreateBlobWriter(ctx, pbs.localStore, dgst)
 	if err != nil {
-		context.GetLogger(ctx).Errorf("%s", err)
 		return err
 	}
-	defer bw.Close()
+	defer cleanup()
 
-	blobSize := desc.Length
+	if isNew {
+		doneChan := make(chan bool)
+		go func() {
+			err := streamToStorage(ctx, remoteReader, desc, bw, doneChan)
+			if err != nil {
+				context.GetLogger(ctx).Error(err)
+			}
 
-	w.Header().Set("Content-Length", strconv.FormatInt(blobSize, 10))
-	w.Header().Set("Content-Type", desc.MediaType)
+			proxyMetrics.BlobPull(uint64(desc.Length))
+		}()
+		err := streamToClient(ctx, w, desc, bw)
+		if err != nil {
+			return err
+		}
 
-	mw := io.MultiWriter(bw, w)
-	written, err := io.CopyN(mw, remoteReader, desc.Length)
+		doneChan <- true
+
+		proxyMetrics.BlobPush(uint64(desc.Length))
+		scheduler.AddBlob(dgst.String(), blobTTL)
+		return nil
+	}
+
+	err = streamToClient(ctx, w, desc, bw)
 	if err != nil {
-		context.GetLogger(ctx).Errorf("copy failed: %q", err)
 		return err
 	}
-	if written != desc.Length {
-		errMsg := fmt.Sprintf("Length mismatch: %db written, %db expected", desc.Length, written)
-		context.GetLogger(ctx).Errorf(errMsg)
-		return fmt.Errorf(errMsg)
+	proxyMetrics.BlobPush(uint64(desc.Length))
+	return nil
+}
+
+type cleanupFunc func()
+
+func getOrCreateBlobWriter(ctx context.Context, blobs distribution.BlobService, dgst digest.Digest) (distribution.BlobWriter, bool, cleanupFunc, error) {
+	var bw distribution.BlobWriter
+	mu.Lock()
+	defer mu.Unlock()
+
+	cleanup := func() {
+		// Intentionally blank
 	}
+
+	_, isInflight := inflight[dgst]
+	if isInflight {
+		bw = inflight[dgst]
+		cleanup = func() {
+			mu.Lock()
+			delete(inflight, dgst)
+			mu.Unlock()
+		}
+	} else {
+		var err error
+		bw, err = blobs.Create(ctx)
+		if err != nil {
+			return nil, false, nil, err
+		}
+		inflight[dgst] = bw
+	}
+	return bw, !isInflight, cleanup, nil
+}
+
+func streamToStorage(ctx context.Context, remoteReader distribution.ReadSeekCloser, desc distribution.Descriptor, bw distribution.BlobWriter, readyChan chan bool) error {
+	_, err := io.CopyN(bw, remoteReader, desc.Length)
+	if err != nil {
+		return err
+	}
+
+	// Wait for the data to to be streamed to the client before
+	// Commiting the blob
+	<-readyChan
 
 	_, err = bw.Commit(ctx, desc)
 	if err != nil {
 		return err
 	}
 
-	scheduler.AddBlob(dgst.String(), blobTTL)
+	return nil
+}
+
+func streamToClient(ctx context.Context, w http.ResponseWriter, desc distribution.Descriptor, bw distribution.BlobWriter) error {
+	setResponseHeaders(w, desc.Length, desc.MediaType, desc.Digest)
+
+	reader, err := bw.Reader()
+	if err != nil {
+		return err
+	}
+	defer reader.Close()
+	teeReader := io.TeeReader(reader, w)
+	buf := make([]byte, 32768, 32786)
+	var soFar int64
+	for {
+		rd, err := teeReader.Read(buf)
+		if err == nil || err == io.EOF {
+			soFar += int64(rd)
+			if soFar < desc.Length {
+				// buffer underflow, keep trying
+				continue
+			}
+			return nil
+		}
+		return err
+	}
+}
+
+func (pbs proxyBlobStore) serveLocalBlob(ctx context.Context, dgst digest.Digest, w http.ResponseWriter, r *http.Request) error {
+	localReader, err := pbs.localStore.Open(ctx, dgst)
+	if err != nil {
+		return err
+	}
+	defer localReader.Close()
+
+	http.ServeContent(w, r, "", time.Time{}, localReader)
 	return nil
 }
 

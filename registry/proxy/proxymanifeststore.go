@@ -1,13 +1,13 @@
 package proxy
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/registry/proxy/scheduler"
 )
 
@@ -38,6 +38,7 @@ func (pms proxyManifestStore) Exists(dgst digest.Digest) (bool, error) {
 func (pms proxyManifestStore) Get(dgst digest.Digest) (*manifest.SignedManifest, error) {
 	sm, err := pms.localManifests.Get(dgst)
 	if err == nil {
+		proxyMetrics.ManifestPush(uint64(len(sm.Raw)))
 		return sm, err
 	}
 
@@ -46,22 +47,16 @@ func (pms proxyManifestStore) Get(dgst digest.Digest) (*manifest.SignedManifest,
 		return nil, err
 	}
 
+	proxyMetrics.ManifestPull(uint64(len(sm.Raw)))
 	err = pms.localManifests.Put(sm)
 	if err != nil {
 		return nil, err
 	}
 
 	scheduler.AddManifest(pms.repositoryName, repositoryTTL)
+	proxyMetrics.ManifestPush(uint64(len(sm.Raw)))
 
 	return sm, err
-}
-
-func (pms proxyManifestStore) Put(manifest *manifest.SignedManifest) error {
-	return fmt.Errorf("Not supported")
-}
-
-func (pms proxyManifestStore) Delete(dgst digest.Digest) error {
-	return fmt.Errorf("Not supported")
 }
 
 func (pms proxyManifestStore) Tags() ([]string, error) {
@@ -81,9 +76,7 @@ func (pms proxyManifestStore) ExistsByTag(tag string) (bool, error) {
 }
 
 func (pms proxyManifestStore) GetByTag(tag string, options ...distribution.ManifestServiceOption) (*manifest.SignedManifest, error) {
-	// todo(richardscothern): this would be much more efficient with etag
-	// support in the client.
-
+	// todo(richardscothern): use Etag
 	sm, err := pms.remoteManifests.GetByTag(tag)
 	if err != nil {
 		return nil, err
@@ -104,6 +97,7 @@ func (pms proxyManifestStore) GetByTag(tag string, options ...distribution.Manif
 		return nil, err
 	}
 	if remoteManifestExistsLocally {
+		proxyMetrics.ManifestPush(uint64(len(payload)))
 		return sm, err
 	}
 
@@ -112,8 +106,18 @@ func (pms proxyManifestStore) GetByTag(tag string, options ...distribution.Manif
 	if err != nil {
 		return nil, err
 	}
+	proxyMetrics.ManifestPull(uint64(len(sm.Raw)))
+	proxyMetrics.ManifestPush(uint64(len(sm.Raw)))
 
 	scheduler.AddManifest(pms.repositoryName, repositoryTTL)
 
 	return sm, err
+}
+
+func (pms proxyManifestStore) Put(manifest *manifest.SignedManifest) error {
+	return v2.ErrorCodeUnsupported
+}
+
+func (pms proxyManifestStore) Delete(dgst digest.Digest) error {
+	return v2.ErrorCodeUnsupported
 }

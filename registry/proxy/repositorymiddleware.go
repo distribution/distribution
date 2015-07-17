@@ -3,7 +3,6 @@ package proxy
 import (
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
@@ -27,9 +26,7 @@ func newProxyMiddleware(repository distribution.Repository, options map[string]i
 	}
 
 	ctx := context.Background()
-
-	stripped := strings.Replace(repository.Name(), "library/", "", 1)
-	remoteRepo, err := client.NewRepository(ctx, stripped, remoteURL, http.DefaultTransport)
+	remoteRepo, err := client.NewRepository(ctx, repository.Name(), remoteURL, http.DefaultTransport)
 	if err != nil {
 		return nil, err
 	}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"testing"
 
 	"github.com/docker/distribution"
@@ -186,6 +187,10 @@ func TestProxyStoreServe(t *testing.T) {
 		t.Fatalf("unexpected local stats")
 	}
 
+	// todo(richardscothern): this is a bit gross, but the storage goroutine
+	// is async and may not have finished here so yield to it
+	runtime.Gosched()
+
 	// Serveblob - blobs come from local
 	for _, dr := range te.inRemote {
 		w := httptest.NewRecorder()
@@ -208,12 +213,14 @@ func TestProxyStoreServe(t *testing.T) {
 		}
 	}
 
+	// Stat to find local, but no new blobs were created
 	if (*localStats)["stat"] != remoteBlobCount*2 && (*localStats)["create"] != remoteBlobCount*2 {
 		t.Fatalf("unexpected local stats")
 	}
 
 	// Remote unchanged
 	if (*remoteStats)["stat"] != remoteBlobCount && (*remoteStats)["open"] != remoteBlobCount {
+		fmt.Printf("\tlocal=%#v, \n\tremote=%#v\n", localStats, remoteStats)
 		t.Fatalf("unexpected local stats")
 	}
 
