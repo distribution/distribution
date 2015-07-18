@@ -148,7 +148,7 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc distribution.Descri
 			// NOTE(stevvooe): We really don't care if the file is
 			// not actually present for the reader. We now assume
 			// that the desc length is zero.
-			desc.Length = 0
+			desc.Size = 0
 		default:
 			// Any other error we want propagated up the stack.
 			return distribution.Descriptor{}, err
@@ -161,14 +161,14 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc distribution.Descri
 		bw.size = fi.Size()
 	}
 
-	if desc.Length > 0 {
-		if desc.Length != bw.size {
+	if desc.Size > 0 {
+		if desc.Size != bw.size {
 			return distribution.Descriptor{}, distribution.ErrBlobInvalidLength
 		}
 	} else {
 		// if provided 0 or negative length, we can assume caller doesn't know or
 		// care about length.
-		desc.Length = bw.size
+		desc.Size = bw.size
 	}
 
 	// TODO(stevvooe): This section is very meandering. Need to be broken down
@@ -216,7 +216,7 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc distribution.Descri
 			}
 
 			// Read the file from the backend driver and validate it.
-			fr, err := newFileReader(ctx, bw.bufferedFileWriter.driver, bw.path, desc.Length)
+			fr, err := newFileReader(ctx, bw.bufferedFileWriter.driver, bw.path, desc.Size)
 			if err != nil {
 				return distribution.Descriptor{}, err
 			}
