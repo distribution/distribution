@@ -41,7 +41,7 @@ func (bs *blobServer) ServeBlob(ctx context.Context, w http.ResponseWriter, r *h
 		http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
 	case driver.ErrUnsupportedMethod:
 		// Fallback to serving the content directly.
-		br, err := newFileReader(ctx, bs.driver, path, desc.Length)
+		br, err := newFileReader(ctx, bs.driver, path, desc.Size)
 		if err != nil {
 			return err
 		}
@@ -61,7 +61,7 @@ func (bs *blobServer) ServeBlob(ctx context.Context, w http.ResponseWriter, r *h
 
 		if w.Header().Get("Content-Length") == "" {
 			// Set the content length if not already set.
-			w.Header().Set("Content-Length", fmt.Sprint(desc.Length))
+			w.Header().Set("Content-Length", fmt.Sprint(desc.Size))
 		}
 
 		http.ServeContent(w, r, desc.Digest.String(), time.Time{}, br)
