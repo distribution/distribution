@@ -22,8 +22,9 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
          "action": "push",
          "target": {
             "mediaType": "application/vnd.docker.distribution.manifest.v1+json",
-            "length": 1,
+            "size": 1,
             "digest": "sha256:0123456789abcdef0",
+            "length": 1,
             "repository": "library/test",
             "url": "http://example.com/v2/library/test/manifests/latest"
          },
@@ -47,8 +48,9 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
          "action": "push",
          "target": {
             "mediaType": "application/vnd.docker.container.image.rootfs.diff+x-gtar",
-            "length": 2,
+            "size": 2,
             "digest": "tarsum.v2+sha256:0123456789abcdef1",
+            "length": 2,
             "repository": "library/test",
             "url": "http://example.com/v2/library/test/manifests/latest"
          },
@@ -72,8 +74,9 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
          "action": "push",
          "target": {
             "mediaType": "application/vnd.docker.container.image.rootfs.diff+x-gtar",
-            "length": 3,
+            "size": 3,
             "digest": "tarsum.v2+sha256:0123456789abcdef2",
+            "length": 3,
             "repository": "library/test",
             "url": "http://example.com/v2/library/test/manifests/latest"
          },
@@ -115,7 +118,8 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
 	manifestPush = prototype
 	manifestPush.ID = "asdf-asdf-asdf-asdf-0"
 	manifestPush.Target.Digest = "sha256:0123456789abcdef0"
-	manifestPush.Target.Length = int64(1)
+	manifestPush.Target.Length = 1
+	manifestPush.Target.Size = 1
 	manifestPush.Target.MediaType = manifest.ManifestMediaType
 	manifestPush.Target.Repository = "library/test"
 	manifestPush.Target.URL = "http://example.com/v2/library/test/manifests/latest"
@@ -125,6 +129,7 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
 	layerPush0.ID = "asdf-asdf-asdf-asdf-1"
 	layerPush0.Target.Digest = "tarsum.v2+sha256:0123456789abcdef1"
 	layerPush0.Target.Length = 2
+	layerPush0.Target.Size = 2
 	layerPush0.Target.MediaType = layerMediaType
 	layerPush0.Target.Repository = "library/test"
 	layerPush0.Target.URL = "http://example.com/v2/library/test/manifests/latest"
@@ -134,6 +139,7 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
 	layerPush1.ID = "asdf-asdf-asdf-asdf-2"
 	layerPush1.Target.Digest = "tarsum.v2+sha256:0123456789abcdef2"
 	layerPush1.Target.Length = 3
+	layerPush1.Target.Size = 3
 	layerPush1.Target.MediaType = layerMediaType
 	layerPush1.Target.Repository = "library/test"
 	layerPush1.Target.URL = "http://example.com/v2/library/test/manifests/latest"

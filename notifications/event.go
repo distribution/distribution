@@ -54,6 +54,10 @@ type Event struct {
 
 		distribution.Descriptor
 
+		// Length in bytes of content. Same as Size field in Descriptor.
+		// Provided for backwards compatibility.
+		Length int64 `json:"length,omitempty"`
+
 		// Repository identifies the named repository.
 		Repository string `json:"repository,omitempty"`
 
