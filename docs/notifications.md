@@ -84,8 +84,9 @@ manifest:
    "action": "push",
    "target": {
       "mediaType": "application/vnd.docker.distribution.manifest.v1+json",
-      "length": 1,
+      "size": 1,
       "digest": "sha256:0123456789abcdef0",
+      "length": 1,
       "repository": "library/test",
       "url": "http://example.com/v2/library/test/manifests/latest"
    },
@@ -104,6 +105,11 @@ manifest:
    }
 }
 ```
+
+> __NOTE(stevvooe):__ As of version 2.1, the `length` field for event targets
+> is being deprecated for the `size` field, bringing the target in line with
+> common nomenclature. Both will continue to be set for the foreseeable
+> future. Newer code should favor `size` but accept either.
 
 ## Envelope
 

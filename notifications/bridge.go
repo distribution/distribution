@@ -97,6 +97,7 @@ func (b *bridge) createManifestEvent(action string, repo string, sm *manifest.Si
 	}
 
 	event.Target.Length = int64(len(p))
+	event.Target.Size = int64(len(p))
 	event.Target.Digest, err = digest.FromBytes(p)
 	if err != nil {
 		return nil, err
@@ -122,6 +123,7 @@ func (b *bridge) createBlobEventAndWrite(action string, repo string, desc distri
 func (b *bridge) createBlobEvent(action string, repo string, desc distribution.Descriptor) (*Event, error) {
 	event := b.createEvent(action)
 	event.Target.Descriptor = desc
+	event.Target.Length = desc.Size
 	event.Target.Repository = repo
 
 	var err error

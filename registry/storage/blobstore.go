@@ -50,7 +50,7 @@ func (bs *blobStore) Open(ctx context.Context, dgst digest.Digest) (distribution
 		return nil, err
 	}
 
-	return newFileReader(ctx, bs.driver, path, desc.Length)
+	return newFileReader(ctx, bs.driver, path, desc.Size)
 }
 
 // Put stores the content p in the blob store, calculating the digest. If the
@@ -81,7 +81,7 @@ func (bs *blobStore) Put(ctx context.Context, mediaType string, p []byte) (distr
 	// TODO(stevvooe): Write out mediatype here, as well.
 
 	return distribution.Descriptor{
-		Length: int64(len(p)),
+		Size: int64(len(p)),
 
 		// NOTE(stevvooe): The central blob store firewalls media types from
 		// other users. The caller should look this up and override the value
@@ -179,7 +179,7 @@ func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (distributi
 	// mediatype that overrides the main one.
 
 	return distribution.Descriptor{
-		Length: fi.Size(),
+		Size: fi.Size(),
 
 		// NOTE(stevvooe): The central blob store firewalls media types from
 		// other users. The caller should look this up and override the value
