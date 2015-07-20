@@ -6,6 +6,42 @@
 	],
 	"Deps": [
 		{
+			"ImportPath": "golang.org/x/oauth2",
+			"Rev": "8914e5017ca260f2a3a1575b1e6868874050d95e"
+		},
+		{
+			"ImportPath": "golang.org/x/oauth2/google",
+			"Rev": "8914e5017ca260f2a3a1575b1e6868874050d95e"
+		},
+		{
+			"ImportPath": "google.golang.org/api/storage/v1",
+			"Rev": "18450f4e95c7e76ce3a5dc3a8cb7178ab6d56121"
+		},
+		{
+			"ImportPath": "google.golang.org/cloud",
+			"Rev": "2400193c85c3561d13880d34e0e10c4315bb02af"
+		},
+		{
+			"ImportPath": "google.golang.org/api",
+			"Rev": "18450f4e95c7e76ce3a5dc3a8cb7178ab6d56121"
+		},
+		{
+			"ImportPath": "google.golang.org/grpc",
+			"Rev": "91c8b79535eb6045d70ec671d302213f88a3ab95"
+		},
+		{
+			"ImportPath": "github.com/bradfitz/http2",
+			"Rev": "f8202bc903bda493ebba4aa54922d78430c2c42f"
+		},
+		{
+			"ImportPath": "github.com/golang/protobuf",
+			"Rev": "0f7a9caded1fb3c9cc5a9b4bcf2ff633cc8ae644"
+		},
+		{
+			"ImportPath": "google.golang.org/cloud/storage",
+			"Rev": "2400193c85c3561d13880d34e0e10c4315bb02af"
+		},
+		{
 			"ImportPath": "github.com/AdRoll/goamz/aws",
 			"Rev": "aa6e716d710a0c7941cb2075cfbb9661f16d21f1"
 		},
@@ -128,7 +164,11 @@
 		},
 		{
 			"ImportPath": "golang.org/x/net/context",
-			"Rev": "1dfe7915deaf3f80b962c163b918868d8a6d8974"
+			"Rev": "2cba614e8ff920c60240d2677bc019af32ee04e5"
+		},
+		{
+			"ImportPath": "golang.org/x/net/trace",
+			"Rev": "2cba614e8ff920c60240d2677bc019af32ee04e5"
 		},
 		{
 			"ImportPath": "gopkg.in/check.v1",
