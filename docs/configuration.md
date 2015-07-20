@@ -95,7 +95,7 @@ information about each option that appears later in this page.
       swift:
         username: username
         password: password
-        authurl: https://storage.myprovider.com/v2.0 or https://storage.myprovider.com/v3/auth
+        authurl: https://storage.myprovider.com/auth/v1.0 or https://storage.myprovider.com/v2.0 or https://storage.myprovider.com/v3/auth
         tenant: tenantname
         tenantid: tenantid
         domain: domain name for Openstack Identity v3 API
