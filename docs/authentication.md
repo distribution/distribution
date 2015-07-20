@@ -34,7 +34,7 @@ Below is a simple example of secured basic authentication (using TLS), using ngi
 
 ### Requirements
 
-You should have followed entirely the basic [deployment guide](deployement.md).
+You should have followed entirely the basic [deployment guide](deploying.md).
 
 If you have not, please take the time to do so.
 
