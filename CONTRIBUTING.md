@@ -118,7 +118,9 @@ The rules:
 8. No utils or helpers packages. If a function is not general enough to
    warrant it's own package, it has not been written generally enough to be a
    part of a util package. Just leave it unexported and well-documented.
-9. No, we don't need another unit testing framework.
+9. All tests should run with `go test` and outside tooling should not be
+   required. No, we don't need another unit testing framework. Assertion
+   packages are acceptable if they provide _real_ incremental value.
 10. Even though we call these "rules" above, they are actually just
     guidelines. Since you've read all the rules, you now know that.
 
