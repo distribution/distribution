@@ -258,6 +258,7 @@ func (suite *DriverSuite) TestWriteReadLargeStreams(c *check.C) {
 
 	reader, err := suite.StorageDriver.ReadStream(suite.ctx, filename, 0)
 	c.Assert(err, check.IsNil)
+	defer reader.Close()
 
 	writtenChecksum := sha1.New()
 	io.Copy(writtenChecksum, reader)
