@@ -701,7 +701,7 @@ public part of the certificates that is used to sign authentication tokens.
   </tr>
 </table>
 
-For more information about Token based authentication configuration, see the [specification.]
+For more information about Token based authentication configuration, see the [specification](spec/auth/token.md).
 
 ### htpasswd
 

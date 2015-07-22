@@ -48,7 +48,7 @@ func (pbs proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter, 
 	}
 
 	if err == nil {
-		proxyMetrics.BlobPush(uint64(desc.Length))
+		proxyMetrics.BlobPush(uint64(desc.Size))
 		return pbs.serveLocalBlob(ctx, dgst, w, r)
 	}
 
@@ -76,7 +76,7 @@ func (pbs proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter, 
 				context.GetLogger(ctx).Error(err)
 			}
 
-			proxyMetrics.BlobPull(uint64(desc.Length))
+			proxyMetrics.BlobPull(uint64(desc.Size))
 		}()
 		err := streamToClient(ctx, w, desc, bw)
 		if err != nil {
@@ -85,7 +85,7 @@ func (pbs proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter, 
 
 		doneChan <- true
 
-		proxyMetrics.BlobPush(uint64(desc.Length))
+		proxyMetrics.BlobPush(uint64(desc.Size))
 		scheduler.AddBlob(dgst.String(), blobTTL)
 		return nil
 	}
@@ -94,7 +94,7 @@ func (pbs proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter, 
 	if err != nil {
 		return err
 	}
-	proxyMetrics.BlobPush(uint64(desc.Length))
+	proxyMetrics.BlobPush(uint64(desc.Size))
 	return nil
 }
 
@@ -129,7 +129,7 @@ func getOrCreateBlobWriter(ctx context.Context, blobs distribution.BlobService, 
 }
 
 func streamToStorage(ctx context.Context, remoteReader distribution.ReadSeekCloser, desc distribution.Descriptor, bw distribution.BlobWriter, readyChan chan bool) error {
-	_, err := io.CopyN(bw, remoteReader, desc.Length)
+	_, err := io.CopyN(bw, remoteReader, desc.Size)
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func streamToStorage(ctx context.Context, remoteReader distribution.ReadSeekClos
 }
 
 func streamToClient(ctx context.Context, w http.ResponseWriter, desc distribution.Descriptor, bw distribution.BlobWriter) error {
-	setResponseHeaders(w, desc.Length, desc.MediaType, desc.Digest)
+	setResponseHeaders(w, desc.Size, desc.MediaType, desc.Digest)
 
 	reader, err := bw.Reader()
 	if err != nil {
@@ -161,7 +161,7 @@ func streamToClient(ctx context.Context, w http.ResponseWriter, desc distributio
 		rd, err := teeReader.Read(buf)
 		if err == nil || err == io.EOF {
 			soFar += int64(rd)
-			if soFar < desc.Length {
+			if soFar < desc.Size {
 				// buffer underflow, keep trying
 				continue
 			}

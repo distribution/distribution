@@ -178,7 +178,7 @@ func TestSimpleBlobRead(t *testing.T) {
 		t.Fatalf("error getting seeker size for random layer: %v", err)
 	}
 
-	descBefore := distribution.Descriptor{Digest: dgst, MediaType: "application/octet-stream", Length: randomLayerSize}
+	descBefore := distribution.Descriptor{Digest: dgst, MediaType: "application/octet-stream", Size: randomLayerSize}
 	t.Logf("desc: %v", descBefore)
 
 	desc, err = addBlob(ctx, bs, descBefore, randomLayerReader)
@@ -186,8 +186,8 @@ func TestSimpleBlobRead(t *testing.T) {
 		t.Fatalf("error adding blob to blobservice: %v", err)
 	}
 
-	if desc.Length != randomLayerSize {
-		t.Fatalf("committed blob has incorrect length: %v != %v", desc.Length, randomLayerSize)
+	if desc.Size != randomLayerSize {
+		t.Fatalf("committed blob has incorrect length: %v != %v", desc.Size, randomLayerSize)
 	}
 
 	rc, err = bs.Open(ctx, desc.Digest) // note that we are opening with original digest.
@@ -330,8 +330,8 @@ func addBlob(ctx context.Context, bs distribution.BlobIngester, desc distributio
 
 	if nn, err := io.Copy(wr, rd); err != nil {
 		return distribution.Descriptor{}, err
-	} else if nn != desc.Length {
-		return distribution.Descriptor{}, fmt.Errorf("incorrect number of bytes copied: %v != %v", nn, desc.Length)
+	} else if nn != desc.Size {
+		return distribution.Descriptor{}, fmt.Errorf("incorrect number of bytes copied: %v != %v", nn, desc.Size)
 	}
 
 	return wr.Commit(ctx, desc)

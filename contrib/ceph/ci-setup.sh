@@ -100,7 +100,7 @@ sed -i -r 's/auth_service_required =.*/auth_service_required = none/' ceph.conf
 sed -i -r 's/auth_client_required =.*/auth_client_required = none/' ceph.conf
 
 # Setup monitor and keyrings
-ceph-deploy mon create-initial $NODE
+ceph-deploy mon create-initial
 ceph-deploy admin $NODE
 sudo chmod a+r /etc/ceph/ceph.client.admin.keyring
 

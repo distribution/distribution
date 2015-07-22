@@ -46,7 +46,7 @@ incantantation:
 
 ```
 $ $GOPATH/bin/registry $GOPATH/src/github.com/docker/distribution/cmd/registry/config.yml
-INFO[0000] endpoint local-8082 disabled, skipping        app.id=34bbec38-a91a-494a-9a3f-b72f9010081f version=v2.0.0-alpha.1+unknown
+INFO[0000] endpoint local-5003 disabled, skipping        app.id=34bbec38-a91a-494a-9a3f-b72f9010081f version=v2.0.0-alpha.1+unknown
 INFO[0000] endpoint local-8083 disabled, skipping        app.id=34bbec38-a91a-494a-9a3f-b72f9010081f version=v2.0.0-alpha.1+unknown
 INFO[0000] listening on :5000                            app.id=34bbec38-a91a-494a-9a3f-b72f9010081f version=v2.0.0-alpha.1+unknown
 INFO[0000] debug server listening localhost:5001
