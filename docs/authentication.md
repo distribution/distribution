@@ -26,7 +26,7 @@ The second method requires significantly more investment, and only make sense if
 
 With this method, you implement basic authentication in a reverse proxy that sits in front of your registry.
 
-Since the Docker engine uses basic authentication to negotiate access to the Registry, securing communication between docker engines and your proxy is absolutely paramount. 
+Since the Docker engine uses basic authentication to negotiate access to the Registry, securing communication between docker engines and your proxy is absolutely paramount.
 
 While this model gives you the ability to use whatever authentication backend you want through a secondary authentication mechanism implemented inside your proxy, it also requires that you move TLS termination from the Registry to the proxy itself.
 
@@ -46,7 +46,6 @@ At this point, it's assumed that:
  * these files are located inside the current directory, and there is nothing else in that directory
  * it's HIGHLY recommended that you get a certificate from a known CA instead of self-signed certificates
  * be sure you have stopped and removed any previously running registry (typically `docker stop registry && docker rm registry`)
-
 
 ### Setting things up
 
@@ -174,3 +173,13 @@ This is **advanced**.
 You will find [background information here](./spec/auth/token.md), [configuration information here](configuration.md#auth).
 
 Beware that you will have to implement your own authentication service for this to work (though there exist third-party open-source implementations).
+
+# Manual Set-up
+
+If you'd like to manually configure your HTTP server, here are a few requirements that are absolutely necessary for the docker client to be able to interface with it:
+
+- Each response needs to have the header "Docker-Distribution-Api-Version registry/2.0" set, even (especially) if there is a 401 or 404 error response. Make sure using cURL that this header is provided. Note: If you're using Nginx, this functionality is only available since 1.7.5 using the "always" add_header directive, or when compiling with the "more_set_headers" module.
+
+- A large enough maximum for client body size, preferrably unlimited. Because images can be pretty big, the very low default maximum size of most HTTP servers won't be sufficient to be able to upload the files.
+
+- Support for chunked transfer encoding.
