@@ -126,6 +126,11 @@ func TestErrorsManagement(t *testing.T) {
 		t.Fatalf("Wrong msg, got:\n%q\n\nexpected:\n%q", e1.Message, exp1)
 	}
 
+	exp1 = "test3: " + exp1
+	if e1.Error() != exp1 {
+		t.Fatalf("Error() didn't return the right string, got:%s\nexpected:%s", e1.Error(), exp1)
+	}
+
 	// Test again with a single value this time
 	errs = Errors{ErrorCodeUnknown}
 	expectedJSON = "{\"errors\":[{\"code\":\"UNKNOWN\",\"message\":\"unknown error\"}]}"
