@@ -1,4 +1,4 @@
-package v2
+package reference
 
 import (
 	"strconv"
@@ -17,12 +17,10 @@ func TestRepositoryNameRegexp(t *testing.T) {
 		},
 		{
 			input: "short",
+			err:   ErrRepositoryNameMissingHostname,
 		},
 		{
 			input: "simple/name",
-		},
-		{
-			input: "library/ubuntu",
 		},
 		{
 			input: "docker/stevvooe/app",
@@ -46,6 +44,7 @@ func TestRepositoryNameRegexp(t *testing.T) {
 		},
 		{
 			input: "a",
+			err:   ErrRepositoryNameMissingHostname,
 		},
 		{
 			input: "a/aa",
@@ -64,10 +63,15 @@ func TestRepositoryNameRegexp(t *testing.T) {
 		},
 		{
 			input: "asdf",
+			err:   ErrRepositoryNameMissingHostname,
+		},
+		{
+			input: "aa/asdf$$^/aa",
+			err:   ErrRepositoryNameComponentInvalid,
 		},
 		{
 			input: "asdf$$^/aa",
-			err:   ErrRepositoryNameComponentInvalid,
+			err:   ErrRepositoryNameHostnameInvalid,
 		},
 		{
 			input: "aa-a/aa",
@@ -79,19 +83,32 @@ func TestRepositoryNameRegexp(t *testing.T) {
 			input: "a-a/a-a",
 		},
 		{
+			input: "a",
+			err:   ErrRepositoryNameMissingHostname,
+		},
+		{
+			input: "a/image",
+		},
+		{
 			input: "a-/a/a/a",
+			err:   ErrRepositoryNameHostnameInvalid,
+		},
+		{
+			input: "a/a-/a/a/a",
 			err:   ErrRepositoryNameComponentInvalid,
 		},
 		{
-			input: strings.Repeat("a", 255),
+			// total length = 255
+			input: "a/" + strings.Repeat("a", 253),
 		},
 		{
-			input: strings.Repeat("a", 256),
+			// total length = 256
+			input: "b/" + strings.Repeat("a", 254),
 			err:   ErrRepositoryNameLong,
 		},
 		{
 			input: "-foo/bar",
-			err:   ErrRepositoryNameComponentInvalid,
+			err:   ErrRepositoryNameHostnameInvalid,
 		},
 		{
 			input: "foo/bar-",
@@ -99,7 +116,7 @@ func TestRepositoryNameRegexp(t *testing.T) {
 		},
 		{
 			input: "foo-/bar",
-			err:   ErrRepositoryNameComponentInvalid,
+			err:   ErrRepositoryNameHostnameInvalid,
 		},
 		{
 			input: "foo/-bar",
@@ -107,7 +124,7 @@ func TestRepositoryNameRegexp(t *testing.T) {
 		},
 		{
 			input: "_foo/bar",
-			err:   ErrRepositoryNameComponentInvalid,
+			err:   ErrRepositoryNameHostnameInvalid,
 		},
 		{
 			input: "foo/bar_",
@@ -115,15 +132,15 @@ func TestRepositoryNameRegexp(t *testing.T) {
 		},
 		{
 			input: "____/____",
-			err:   ErrRepositoryNameComponentInvalid,
+			err:   ErrRepositoryNameHostnameInvalid,
 		},
 		{
 			input: "_docker/_docker",
-			err:   ErrRepositoryNameComponentInvalid,
+			err:   ErrRepositoryNameHostnameInvalid,
 		},
 		{
 			input: "docker_/docker_",
-			err:   ErrRepositoryNameComponentInvalid,
+			err:   ErrRepositoryNameHostnameInvalid,
 		},
 	} {
 		failf := func(format string, v ...interface{}) {
@@ -131,7 +148,7 @@ func TestRepositoryNameRegexp(t *testing.T) {
 			t.Fail()
 		}
 
-		if err := ValidateRepositoryName(testcase.input); err != testcase.err {
+		if _, err := NewRepository(testcase.input); err != testcase.err {
 			if testcase.err != nil {
 				if err != nil {
 					failf("unexpected error for invalid repository: got %v, expected %v", err, testcase.err)
