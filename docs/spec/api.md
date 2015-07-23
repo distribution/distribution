@@ -119,9 +119,14 @@ This section should be updated when changes are made to the specification,
 indicating what is different. Optionally, we may start marking parts of the
 specification to correspond with the versions enumerated here.
 
+Each set of changes is given a letter corresponding to a set of modifications
+that were applied to the baseline specification. These are merely for
+reference and shouldn't be used outside the specification other than to
+identify a set of modifications.
+
 <dl>
 
-  <dt>2.0.4</dt>>
+  <dt>e</dt>
   <dd>
     <ul>
       <li>Added support for listing registry contents.</li>
@@ -130,40 +135,41 @@ specification to correspond with the versions enumerated here.
     </ul>
   </dd>
 
-  <dt>2.0.3</dt>
+  <dt>d</dt>
   <dd>
-    <li>Allow repository name components to be one character.</li>
-    <li>Clarified that single component names are allowed.</li>
+    <ul>
+      <li>Allow repository name components to be one character.</li>
+      <li>Clarified that single component names are allowed.</li>
+    </ul>
   </dd>
 
-  <dt>2.0.2</dt>
+  <dt>c</dt>
   <dd>
-    <li>Added section covering digest format.</li>
-    <li>Added more clarification that manifest cannot be deleted by tag.</li>
+    <ul>
+      <li>Added section covering digest format.</li>
+      <li>Added more clarification that manifest cannot be deleted by tag.</li>
+    </ul>
   </dd>
-	<dt>2.0.1</dt>
-	<dd>
-		<ul>
-			<li>Added capability of doing streaming upload to PATCH blob upload.</li>
-			<li>Updated PUT blob upload to no longer take final chunk, now requires entire data or no data.</li>
-			<li>Removed `416 Requested Range Not Satisfiable` response status from PUT blob upload.</li>
-		</ul>
-	</dd>
 
-	<dt>2.0.0</dt>
-	<dd>
-		<ul>
-			<li>Added support for immutable manifest references in manifest endpoints.</li>
-			<li>Deleting a manifest by tag has been deprecated.</li>
-			<li>Specified `Docker-Content-Digest` header for appropriate entities.</li>
-			<li>Added error code for unsupported operations.</li>
-		</ul>
-	</dd>
+  <dt>b</dt>
+  <dd>
+    <ul>
+      <li>Added capability of doing streaming upload to PATCH blob upload.</li>
+      <li>Updated PUT blob upload to no longer take final chunk, now requires entire data or no data.</li>
+      <li>Removed `416 Requested Range Not Satisfiable` response status from PUT blob upload.</li>
+    </ul>
+  </dd>
 
-	<dt>2.0</dt>
-	<dd>
-		This is the baseline specification.
-	</dd>
+  <dt>a</dt>
+  <dd>
+    <ul>
+      <li>Added support for immutable manifest references in manifest endpoints.</li>
+      <li>Deleting a manifest by tag has been deprecated.</li>
+      <li>Specified `Docker-Content-Digest` header for appropriate entities.</li>
+      <li>Added error code for unsupported operations.</li>
+    </ul>
+  </dd>
+
 </dl>
 
 ## Overview
