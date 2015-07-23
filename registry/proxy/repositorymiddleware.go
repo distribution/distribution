@@ -1,12 +1,13 @@
 package proxy
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/client"
+	"github.com/docker/distribution/registry/client/auth"
+	"github.com/docker/distribution/registry/client/transport"
 	"github.com/docker/distribution/registry/middleware/repository"
 	"github.com/docker/distribution/registry/storage"
 )
@@ -19,18 +20,15 @@ type proxyMiddleware struct {
 
 var _ distribution.Repository = &proxyMiddleware{}
 
-func newProxyMiddleware(repository distribution.Repository, options map[string]interface{}) (distribution.Repository, error) {
-	remoteURL, ok := options["remoteurl"].(string)
-	if !ok || remoteURL == "" {
-		return nil, fmt.Errorf("No remote URL")
-	}
-
+func proxyRepositoryMiddleware(repository distribution.Repository, options map[string]interface{}) (distribution.Repository, error) {
 	ctx := context.Background()
-	remoteRepo, err := client.NewRepository(ctx, repository.Name(), remoteURL, http.DefaultTransport)
+	tr := transport.NewTransport(http.DefaultTransport,
+		auth.NewAuthorizer(scm, auth.NewTokenHandler(http.DefaultTransport, cs, repository.Name(), "pull")))
+
+	remoteRepo, err := client.NewRepository(ctx, repository.Name(), remoteURL, tr)
 	if err != nil {
 		return nil, err
 	}
-
 	localManifests, err := repository.Manifests(ctx, storage.SkipLayerVerification)
 	if err != nil {
 		return nil, err
@@ -48,8 +46,6 @@ func newProxyMiddleware(repository distribution.Repository, options map[string]i
 			ctx:             ctx,
 		},
 		blobStore: proxyBlobStore{
-			// this is a linkedBlobStore which has features we don't want
-			// including hashState stuff.  Change to a normal blobStore?
 			localStore:  repository.Blobs(ctx),
 			remoteStore: remoteRepo.Blobs(ctx),
 		},
@@ -76,5 +72,5 @@ func (prm proxyMiddleware) Signatures() distribution.SignatureService {
 
 // init registers the proxy repository middleware
 func init() {
-	middleware.Register("proxy", middleware.InitFunc(newProxyMiddleware))
+	middleware.Register("proxy", middleware.InitFunc(proxyRepositoryMiddleware))
 }

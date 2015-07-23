@@ -355,7 +355,7 @@ func (bw *blobWriter) Reader() (io.ReadCloser, error) {
 		}
 		switch err.(type) {
 		case storagedriver.PathNotFoundError:
-			context.GetLogger(bw.ctx).Errorf("Nothing found on try %d, sleeping...", try)
+			context.GetLogger(bw.ctx).Debugf("Nothing found on try %d, sleeping...", try)
 			time.Sleep(1 * time.Second)
 			try++
 		default:

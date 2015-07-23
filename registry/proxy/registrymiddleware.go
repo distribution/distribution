@@ -14,19 +14,24 @@ import (
 
 type proxyRegistry struct {
 	proxiedRegistry distribution.Namespace
-	vacuum          storage.Vacuum
 }
 
-func newProxyRegistry(registry distribution.Namespace, options map[string]interface{}) (distribution.Namespace, error) {
-	d, err := configureStorage(options)
+func proxyRegistryMiddleware(registry distribution.Namespace, options map[string]interface{}) (distribution.Namespace, error) {
+	err := configureAuth(options)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to configure storage from : %#v", options)
+		return nil, err
 	}
+
+	driver, err := configureStorage(options)
+	if err != nil {
+		return nil, err
+	}
+
 	ctx := context.Background()
 
-	// todo(richardscothern): this would be cleaner with
-	// functional arguments
-	v := storage.NewVacuum(ctx, d)
+	// todo(richardscothern): Make these functional arguments
+	// and allow state drive and location to be specified
+	v := storage.NewVacuum(ctx, driver)
 	scheduler.OnBlobExpire(func(digest string) error {
 		return v.RemoveBlob(digest)
 	})
@@ -49,11 +54,6 @@ func (pr proxyRegistry) Scope() distribution.Scope {
 
 func (pr proxyRegistry) Repository(ctx context.Context, name string) (distribution.Repository, error) {
 	return pr.proxiedRegistry.Repository(ctx, name)
-}
-
-// init registers the proxy registry
-func init() {
-	middleware.Register("proxy", middleware.InitFunc(newProxyRegistry))
 }
 
 func configureStorage(options map[string]interface{}) (driver.StorageDriver, error) {
@@ -83,4 +83,9 @@ func configureStorage(options map[string]interface{}) (driver.StorageDriver, err
 		return nil, fmt.Errorf("Unable to configure storage driver from : %#v", options)
 	}
 	return driver, err
+}
+
+// init registers the proxy registry
+func init() {
+	middleware.Register("proxy", middleware.InitFunc(proxyRegistryMiddleware))
 }

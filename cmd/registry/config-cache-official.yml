@@ -49,9 +49,10 @@ notifications:
 middleware:
   repository:
     - name: proxy
-      options:
-        remoteurl: http://45.79.111.217:5005
   registry:
     - name: proxy
       options:
         storage: *STORAGE
+        remoteurl: https://registry-1.docker.io
+        username: richardscothern
+        password: thisisatest
