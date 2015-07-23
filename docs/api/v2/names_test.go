@@ -6,10 +6,18 @@ import (
 	"testing"
 )
 
-func TestRepositoryNameRegexp(t *testing.T) {
-	for _, testcase := range []struct {
+var (
+	// regexpTestcases is a unified set of testcases for
+	// TestValidateRepositoryName and TestRepositoryNameRegexp.
+	// Some of them are valid inputs for one and not the other.
+	regexpTestcases = []struct {
+		// input is the repository name or name component testcase
 		input string
-		err   error
+		// err is the error expected from ValidateRepositoryName, or nil
+		err error
+		// invalid should be true if the testcase is *not* expected to
+		// match RepositoryNameRegexp
+		invalid bool
 	}{
 		{
 			input: "",
@@ -37,12 +45,14 @@ func TestRepositoryNameRegexp(t *testing.T) {
 			input: "a/a/a/b/b",
 		},
 		{
-			input: "a/a/a/a/",
-			err:   ErrRepositoryNameComponentInvalid,
+			input:   "a/a/a/a/",
+			err:     ErrRepositoryNameComponentInvalid,
+			invalid: true,
 		},
 		{
-			input: "a//a/a",
-			err:   ErrRepositoryNameComponentInvalid,
+			input:   "a//a/a",
+			err:     ErrRepositoryNameComponentInvalid,
+			invalid: true,
 		},
 		{
 			input: "a",
@@ -57,7 +67,25 @@ func TestRepositoryNameRegexp(t *testing.T) {
 			input: "a/aa/a",
 		},
 		{
+			input:   "foo.com/",
+			err:     ErrRepositoryNameComponentInvalid,
+			invalid: true,
+		},
+		{
+			// TODO: this testcase should be valid once we switch to
+			// the reference package.
+			input:   "foo.com:8080/bar",
+			err:     ErrRepositoryNameComponentInvalid,
+			invalid: true,
+		},
+		{
+			input: "foo.com/bar",
+		},
+		{
 			input: "foo.com/bar/baz",
+		},
+		{
+			input: "foo.com/bar/baz/quux",
 		},
 		{
 			input: "blog.foo.com/bar/baz",
@@ -66,8 +94,9 @@ func TestRepositoryNameRegexp(t *testing.T) {
 			input: "asdf",
 		},
 		{
-			input: "asdf$$^/aa",
-			err:   ErrRepositoryNameComponentInvalid,
+			input:   "asdf$$^/aa",
+			err:     ErrRepositoryNameComponentInvalid,
+			invalid: true,
 		},
 		{
 			input: "aa-a/aa",
@@ -79,8 +108,9 @@ func TestRepositoryNameRegexp(t *testing.T) {
 			input: "a-a/a-a",
 		},
 		{
-			input: "a-/a/a/a",
-			err:   ErrRepositoryNameComponentInvalid,
+			input:   "a-/a/a/a",
+			err:     ErrRepositoryNameComponentInvalid,
+			invalid: true,
 		},
 		{
 			input: strings.Repeat("a", 255),
@@ -90,42 +120,57 @@ func TestRepositoryNameRegexp(t *testing.T) {
 			err:   ErrRepositoryNameLong,
 		},
 		{
-			input: "-foo/bar",
-			err:   ErrRepositoryNameComponentInvalid,
+			input:   "-foo/bar",
+			err:     ErrRepositoryNameComponentInvalid,
+			invalid: true,
 		},
 		{
-			input: "foo/bar-",
-			err:   ErrRepositoryNameComponentInvalid,
+			input:   "foo/bar-",
+			err:     ErrRepositoryNameComponentInvalid,
+			invalid: true,
 		},
 		{
-			input: "foo-/bar",
-			err:   ErrRepositoryNameComponentInvalid,
+			input:   "foo-/bar",
+			err:     ErrRepositoryNameComponentInvalid,
+			invalid: true,
 		},
 		{
-			input: "foo/-bar",
-			err:   ErrRepositoryNameComponentInvalid,
+			input:   "foo/-bar",
+			err:     ErrRepositoryNameComponentInvalid,
+			invalid: true,
 		},
 		{
-			input: "_foo/bar",
-			err:   ErrRepositoryNameComponentInvalid,
+			input:   "_foo/bar",
+			err:     ErrRepositoryNameComponentInvalid,
+			invalid: true,
 		},
 		{
-			input: "foo/bar_",
-			err:   ErrRepositoryNameComponentInvalid,
+			input:   "foo/bar_",
+			err:     ErrRepositoryNameComponentInvalid,
+			invalid: true,
 		},
 		{
-			input: "____/____",
-			err:   ErrRepositoryNameComponentInvalid,
+			input:   "____/____",
+			err:     ErrRepositoryNameComponentInvalid,
+			invalid: true,
 		},
 		{
-			input: "_docker/_docker",
-			err:   ErrRepositoryNameComponentInvalid,
+			input:   "_docker/_docker",
+			err:     ErrRepositoryNameComponentInvalid,
+			invalid: true,
 		},
 		{
-			input: "docker_/docker_",
-			err:   ErrRepositoryNameComponentInvalid,
+			input:   "docker_/docker_",
+			err:     ErrRepositoryNameComponentInvalid,
+			invalid: true,
 		},
-	} {
+	}
+)
+
+// TestValidateRepositoryName tests the ValidateRepositoryName function,
+// which uses RepositoryNameComponentAnchoredRegexp for validation
+func TestValidateRepositoryName(t *testing.T) {
+	for _, testcase := range regexpTestcases {
 		failf := func(format string, v ...interface{}) {
 			t.Logf(strconv.Quote(testcase.input)+": "+format, v...)
 			t.Fail()
@@ -145,6 +190,24 @@ func TestRepositoryNameRegexp(t *testing.T) {
 				} else {
 					failf("unexpected error validating repository name: %v", err)
 				}
+			}
+		}
+	}
+}
+
+func TestRepositoryNameRegexp(t *testing.T) {
+	for _, testcase := range regexpTestcases {
+		failf := func(format string, v ...interface{}) {
+			t.Logf(strconv.Quote(testcase.input)+": "+format, v...)
+			t.Fail()
+		}
+
+		matches := RepositoryNameRegexp.FindString(testcase.input) == testcase.input
+		if matches == testcase.invalid {
+			if testcase.invalid {
+				failf("expected invalid repository name %s", testcase.input)
+			} else {
+				failf("expected valid repository name %s", testcase.input)
 			}
 		}
 	}

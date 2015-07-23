@@ -67,6 +67,27 @@ func TestRouter(t *testing.T) {
 			},
 		},
 		{
+			RouteName:  RouteNameTags,
+			RequestURI: "/v2/docker.com/foo/tags/list",
+			Vars: map[string]string{
+				"name": "docker.com/foo",
+			},
+		},
+		{
+			RouteName:  RouteNameTags,
+			RequestURI: "/v2/docker.com/foo/bar/tags/list",
+			Vars: map[string]string{
+				"name": "docker.com/foo/bar",
+			},
+		},
+		{
+			RouteName:  RouteNameTags,
+			RequestURI: "/v2/docker.com/foo/bar/baz/tags/list",
+			Vars: map[string]string{
+				"name": "docker.com/foo/bar/baz",
+			},
+		},
+		{
 			RouteName:  RouteNameBlob,
 			RequestURI: "/v2/foo/bar/blobs/tarsum.dev+foo:abcdef0919234",
 			Vars: map[string]string{
