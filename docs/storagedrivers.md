@@ -23,6 +23,7 @@ This storage driver package comes bundled with several drivers:
 - [s3](storage-drivers/s3.md): A driver storing objects in an Amazon Simple Storage Solution (S3) bucket.
 - [azure](storage-drivers/azure.md): A driver storing objects in [Microsoft Azure Blob Storage](http://azure.microsoft.com/en-us/services/storage/).
 - [rados](storage-drivers/rados.md): A driver storing objects in a [Ceph Object Storage](http://ceph.com/docs/master/rados/) pool.
+- [swift](storage-drivers/swift.md): A driver storing objects in [Openstack Swift](http://docs.openstack.org/developer/swift/).
 
 ## Storage Driver API
 

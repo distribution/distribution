@@ -92,6 +92,18 @@ information about each option that appears later in this page.
         poolname: radospool
         username: radosuser
         chunksize: 4194304
+      swift:
+        username: username
+        password: password
+        authurl: https://storage.myprovider.com/auth/v1.0 or https://storage.myprovider.com/v2.0 or https://storage.myprovider.com/v3/auth
+        tenant: tenantname
+        tenantid: tenantid
+        domain: domain name for Openstack Identity v3 API
+        domainid: domain id for Openstack Identity v3 API
+        insecureskipverify: true
+        region: fr
+        container: containername
+        rootdirectory: /swift/object/name/prefix
       cache:
         blobdescriptor: redis
       maintenance:
@@ -296,6 +308,18 @@ Permitted values are `error`, `warn`, `info` and `debug`. The default is
         poolname: radospool
         username: radosuser
         chunksize: 4194304
+      swift:
+        username: username
+        password: password
+        authurl: https://storage.myprovider.com/v2.0 or https://storage.myprovider.com/v3/auth
+        tenant: tenantname
+        tenantid: tenantid
+        domain: domain name for Openstack Identity v3 API
+        domainid: domain id for Openstack Identity v3 API
+        insecureskipverify: true
+        region: fr
+        container: containername
+        rootdirectory: /swift/object/name/prefix
       cache:
         blobdescriptor: inmemory
       maintenance:
@@ -579,6 +603,151 @@ must be set.
 `dryrun` | yes |  dryrun can be set to true to obtain a summary of what directories will be deleted.  Default=false.
 
 Note: `age` and `interval` are strings containing a number with optional fraction and a unit suffix: e.g. 45m, 2h10m, 168h (1 week).
+
+### Openstack Swift
+
+This storage backend uses Openstack Swift object storage.
+
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>authurl</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      URL for obtaining an auth token. https://storage.myprovider.com/v2.0 or https://storage.myprovider.com/v3/auth
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>username</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      Your Openstack user name.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>password</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      Your Openstack password.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>region</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      The Openstack region in which your container exists.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>container</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      The container name in which you want to store the registry's data.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>tenant</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Your Openstack tenant name.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>tenantid</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Your Openstack tenant id.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>domain</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Your Openstack domain name for Identity v3 API.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>domainid</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Your Openstack domain id for Identity v3 API.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>insecureskipverify</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      true to skip TLS verification, false by default.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>chunksize</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Size of the data segments for the Swift Dynamic Large Objects. This value should be a number (defaults to 5M).
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>rootdirectory</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      This is a prefix that will be applied to all Swift keys to allow you to segment data in your container if necessary.
+    </td>
+  </tr>
+</table>
+
 
 ## auth
 
