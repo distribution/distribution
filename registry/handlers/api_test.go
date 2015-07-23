@@ -13,6 +13,8 @@ import (
 	"os"
 	"path"
 	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -58,6 +60,152 @@ func TestCheckAPI(t *testing.T) {
 	if string(p) != "{}" {
 		t.Fatalf("unexpected response body: %v", string(p))
 	}
+}
+
+// TestCatalogAPI tests the /v2/_catalog endpoint
+func TestCatalogAPI(t *testing.T) {
+	chunkLen := 2
+	env := newTestEnv(t)
+
+	values := url.Values{
+		"last": []string{""},
+		"n":    []string{strconv.Itoa(chunkLen)}}
+
+	catalogURL, err := env.builder.BuildCatalogURL(values)
+	if err != nil {
+		t.Fatalf("unexpected error building catalog url: %v", err)
+	}
+
+	// -----------------------------------
+	// try to get an empty catalog
+	resp, err := http.Get(catalogURL)
+	if err != nil {
+		t.Fatalf("unexpected error issuing request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	checkResponse(t, "issuing catalog api check", resp, http.StatusOK)
+
+	var ctlg struct {
+		Repositories []string `json:"repositories"`
+	}
+
+	dec := json.NewDecoder(resp.Body)
+	if err := dec.Decode(&ctlg); err != nil {
+		t.Fatalf("error decoding fetched manifest: %v", err)
+	}
+
+	// we haven't pushed anything to the registry yet
+	if len(ctlg.Repositories) != 0 {
+		t.Fatalf("repositories has unexpected values")
+	}
+
+	if resp.Header.Get("Link") != "" {
+		t.Fatalf("repositories has more data when none expected")
+	}
+
+	// -----------------------------------
+	// push something to the registry and try again
+	images := []string{"foo/aaaa", "foo/bbbb", "foo/cccc"}
+
+	for _, image := range images {
+		createRepository(env, t, image, "sometag")
+	}
+
+	resp, err = http.Get(catalogURL)
+	if err != nil {
+		t.Fatalf("unexpected error issuing request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	checkResponse(t, "issuing catalog api check", resp, http.StatusOK)
+
+	dec = json.NewDecoder(resp.Body)
+	if err = dec.Decode(&ctlg); err != nil {
+		t.Fatalf("error decoding fetched manifest: %v", err)
+	}
+
+	if len(ctlg.Repositories) != chunkLen {
+		t.Fatalf("repositories has unexpected values")
+	}
+
+	for _, image := range images[:chunkLen] {
+		if !contains(ctlg.Repositories, image) {
+			t.Fatalf("didn't find our repository '%s' in the catalog", image)
+		}
+	}
+
+	link := resp.Header.Get("Link")
+	if link == "" {
+		t.Fatalf("repositories has less data than expected")
+	}
+
+	newValues := checkLink(t, link, chunkLen, ctlg.Repositories[len(ctlg.Repositories)-1])
+
+	// -----------------------------------
+	// get the last chunk of data
+
+	catalogURL, err = env.builder.BuildCatalogURL(newValues)
+	if err != nil {
+		t.Fatalf("unexpected error building catalog url: %v", err)
+	}
+
+	resp, err = http.Get(catalogURL)
+	if err != nil {
+		t.Fatalf("unexpected error issuing request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	checkResponse(t, "issuing catalog api check", resp, http.StatusOK)
+
+	dec = json.NewDecoder(resp.Body)
+	if err = dec.Decode(&ctlg); err != nil {
+		t.Fatalf("error decoding fetched manifest: %v", err)
+	}
+
+	if len(ctlg.Repositories) != 1 {
+		t.Fatalf("repositories has unexpected values")
+	}
+
+	lastImage := images[len(images)-1]
+	if !contains(ctlg.Repositories, lastImage) {
+		t.Fatalf("didn't find our repository '%s' in the catalog", lastImage)
+	}
+
+	link = resp.Header.Get("Link")
+	if link != "" {
+		t.Fatalf("catalog has unexpected data")
+	}
+}
+
+func checkLink(t *testing.T, urlStr string, numEntries int, last string) url.Values {
+	re := regexp.MustCompile("<(/v2/_catalog.*)>; rel=\"next\"")
+	matches := re.FindStringSubmatch(urlStr)
+
+	if len(matches) != 2 {
+		t.Fatalf("Catalog link address response was incorrect")
+	}
+	linkURL, _ := url.Parse(matches[1])
+	urlValues := linkURL.Query()
+
+	if urlValues.Get("n") != strconv.Itoa(numEntries) {
+		t.Fatalf("Catalog link entry size is incorrect")
+	}
+
+	if urlValues.Get("last") != last {
+		t.Fatal("Catalog link last entry is incorrect")
+	}
+
+	return urlValues
+}
+
+func contains(elems []string, e string) bool {
+	for _, elem := range elems {
+		if elem == e {
+			return true
+		}
+	}
+	return false
 }
 
 func TestURLPrefix(t *testing.T) {
@@ -868,4 +1016,61 @@ func checkErr(t *testing.T, err error, msg string) {
 	if err != nil {
 		t.Fatalf("unexpected error %s: %v", msg, err)
 	}
+}
+
+func createRepository(env *testEnv, t *testing.T, imageName string, tag string) {
+	unsignedManifest := &manifest.Manifest{
+		Versioned: manifest.Versioned{
+			SchemaVersion: 1,
+		},
+		Name: imageName,
+		Tag:  tag,
+		FSLayers: []manifest.FSLayer{
+			{
+				BlobSum: "asdf",
+			},
+			{
+				BlobSum: "qwer",
+			},
+		},
+	}
+
+	// Push 2 random layers
+	expectedLayers := make(map[digest.Digest]io.ReadSeeker)
+
+	for i := range unsignedManifest.FSLayers {
+		rs, dgstStr, err := testutil.CreateRandomTarFile()
+
+		if err != nil {
+			t.Fatalf("error creating random layer %d: %v", i, err)
+		}
+		dgst := digest.Digest(dgstStr)
+
+		expectedLayers[dgst] = rs
+		unsignedManifest.FSLayers[i].BlobSum = dgst
+
+		uploadURLBase, _ := startPushLayer(t, env.builder, imageName)
+		pushLayer(t, env.builder, imageName, dgst, uploadURLBase, rs)
+	}
+
+	signedManifest, err := manifest.Sign(unsignedManifest, env.pk)
+	if err != nil {
+		t.Fatalf("unexpected error signing manifest: %v", err)
+	}
+
+	payload, err := signedManifest.Payload()
+	checkErr(t, err, "getting manifest payload")
+
+	dgst, err := digest.FromBytes(payload)
+	checkErr(t, err, "digesting manifest")
+
+	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, dgst.String())
+	checkErr(t, err, "building manifest url")
+
+	resp := putManifest(t, "putting signed manifest", manifestDigestURL, signedManifest)
+	checkResponse(t, "putting signed manifest", resp, http.StatusAccepted)
+	checkHeaders(t, resp, http.Header{
+		"Location":              []string{manifestDigestURL},
+		"Docker-Content-Digest": []string{dgst.String()},
+	})
 }
