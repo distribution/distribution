@@ -16,7 +16,11 @@ parent="smn_registry"
 The Registry is a stateless, highly scalable server side application that stores and lets you distribute Docker images.
 The Registry is open-source, under the permissive [Apache license](http://en.wikipedia.org/wiki/Apache_License).
 
-## Why use it
+## Why not to use it
+
+You should be aware that Registry 2 is not feature complete in any way. It does not provide any search functionality and is not a drop-in replacement for the original Registry. Do not replace your existing registry with this if you need to list the images stored within it.
+
+## Why to use it
 
 You should use the Registry if you want to:
 
