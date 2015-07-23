@@ -1129,6 +1129,7 @@ Retrieve information about tags.
 Fetch the tags under the repository identified by `name`.
 
 
+##### Tags
 
 ```
 GET /v2/<name>/tags/list
@@ -1136,7 +1137,7 @@ Host: <registry host>
 Authorization: <scheme> <token>
 ```
 
-
+Return all tags for the repository
 
 
 The following parameters should be specified on the request:
@@ -1155,7 +1156,6 @@ The following parameters should be specified on the request:
 ```
 200 OK
 Content-Length: <length>
-Link: <<url>?n=<last n value>&last=<last entry from response>>; rel="next"
 Content-Type: application/json; charset=utf-8
 
 {
@@ -1238,6 +1238,7 @@ The error codes that may be included in the response body are enumerated below:
 
 
 
+##### Tags Paginated
 
 ```
 GET /v2/<name>/tags/list?n=<integer>last=<integer>
@@ -1262,6 +1263,7 @@ The following parameters should be specified on the request:
 ```
 200 OK
 Content-Length: <length>
+Link: <<url>?n=<last n value>&last=<last entry from response>>; rel="next"
 Content-Type: application/json; charset=utf-8
 
 {
@@ -1281,6 +1283,67 @@ The following headers will be returned with the response:
 |----|-----------|
 |`Content-Length`|Length of the JSON response body.|
 |`Link`|RFC5988 compliant rel='next' with URL to next result set, if available|
+
+
+
+
+###### On Failure: Not Found
+
+```
+404 Not Found
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The repository is not known to the registry.
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
+
+
+
+###### On Failure: Unauthorized
+
+```
+401 Unauthorized
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The client does not have access to the repository.
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
 
 
 
@@ -3163,7 +3226,6 @@ Request an unabridged list of repositories available.
 ```
 200 OK
 Content-Length: <length>
-Link: <<url>?n=<last n value>&last=<last entry from response>>; rel="next"
 Content-Type: application/json; charset=utf-8
 
 {
@@ -3208,6 +3270,7 @@ The following parameters should be specified on the request:
 ```
 200 OK
 Content-Length: <length>
+Link: <<url>?n=<last n value>&last=<last entry from response>>; rel="next"
 Content-Type: application/json; charset=utf-8
 
 {
