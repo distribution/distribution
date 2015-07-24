@@ -502,7 +502,7 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 		switch err := err.(type) {
 		case auth.Challenge:
 			// Add the appropriate WWW-Auth header
-			err.ServeHTTP(w, r)
+			err.SetHeaders(w)
 
 			if err := errcode.ServeJSON(w, v2.ErrorCodeUnauthorized.WithDetail(accessRecords)); err != nil {
 				ctxu.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)

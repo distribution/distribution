@@ -87,12 +87,14 @@ type challenge struct {
 	err   error
 }
 
-func (ch *challenge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	header := fmt.Sprintf("Basic realm=%q", ch.realm)
-	w.Header().Set("WWW-Authenticate", header)
+var _ auth.Challenge = challenge{}
+
+// SetHeaders sets the basic challenge header on the response.
+func (ch challenge) SetHeaders(w http.ResponseWriter) {
+	w.Header().Set("WWW-Authenticate", fmt.Sprintf("Basic realm=%q", ch.realm))
 }
 
-func (ch *challenge) Error() string {
+func (ch challenge) Error() string {
 	return fmt.Sprintf("basic authentication challenge: %#v", ch)
 }
 
