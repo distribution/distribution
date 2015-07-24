@@ -247,6 +247,69 @@ Please see the following issues for more detail:
 - https://github.com/docker/distribution/issues/461
 - https://github.com/docker/distribution/issues/462
 
+##### Trusted Delivery and Signatures
+
+Delivering content reliably does not necessarily provide any guarantees
+the content is trusted and is the exact content which was intended. In
+order to a useful distribution system, there must be assurance of the 
+content which is being delivered. Any content that is fetched by the
+content address is easy to verify by the fetcher and puts the burden
+on the fetcher to trust the content address. However using the tag
+APIs provided by the registry provide no way for the fetcher to prove
+the tag represents correct content, forcing complete trust in the
+registry server. If the registry server is compromised, then
+delivering tampered data is trivial through the tag API. This
+becomes more of a problem scaling a distribution system where mirroring
+is desired and maintaining strict control of the security of mirrors
+is impossible. The goal of distribution is have less trust in any
+individual registry server such that mirrors can be operated by
+any individual, even untrusted individuals.
+
+Existing work will primarily be focused in 3 areas.
+
+- _External Tagging with Notary_ - Since the registry is unable to provide
+a secure mechanism for providing tag to content address resolution,
+(Notary)[https://github.com/docker/notary] can be leveraged by distribution
+clients to provide this. Notary provides a system to reliable get
+up-to-date metadata about repositories including the full list of
+tags and content addresses. These content addresses may then be used
+by clients to get trusted delivery of content.
+- _Detached Signatures_ - Full provenance of images and layers may be
+needed by some clients to make decisions about whether to trust content.
+These signatures may be used orthogonolly to signatures needed
+for trusted delivery. A stricter client may require additional signatures
+on an image before running, despite having the assurance it has received
+correct and up-to-date content. Without detached signatures, users may
+be forced to completely rely on tagging to apply trusted attributes to
+repositories, which strip out any cryptographically verifiable provenance.
+Relying on tagging for such functionality also overloads the intent of tags
+leading to bad architectural designs and difficult to understand tags.
+Detached signatures will require a separate API endpoint to manage and
+fetch signatures. Detached signatures must always be used to add value
+to content and assumed that registries can alter the set of signatures.
+In the case of receiving a bad set of signatures, a client must be able
+to independently verify a signature and should reject images which
+are missing expected signatures. The registry cannot be relied on for
+the revocation of signatures. It is possible to use Notary in the future
+to also provide a set of detached signatures.
+- _Attached Signature Deprecation_ - Scheme version 1 of the manifest
+defines a format which includes attached signatures. These signatures
+are used for provenance of the builder and also contains support
+for adding multiple signatures. Having these signatures attached
+creates problems in computing the content-address and requires use of
+non-standard construction of both signatures and JSON structures. 
+Since this approach provides no benefits over detached signatures and
+adds complexity to the system, future version of the manifest will
+not include attached signatures. Because of this attached signatures
+will be deprecated. The deprecation process will mostly involve
+client side changes to support v1 manifests which do not include a
+signatures. To maintain backwards compatibility registries will
+need to continue deliver attached signatures for older Docker clients
+which require the signatures. Since attached signatures are not used
+anywhere else, deprecating should cause no other problems. Existing
+signatures could be treated as detached signature for forward
+compatibility with detached signatures.
+
 ### Distribution Package 
 
 At its core, the Distribution Project is a set of Go packages that make up
