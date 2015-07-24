@@ -423,7 +423,7 @@ func TestManifestAPI(t *testing.T) {
 	checkErr(t, err, "building manifest url")
 
 	resp = putManifest(t, "putting signed manifest", manifestURL, signedManifest)
-	checkResponse(t, "putting signed manifest", resp, http.StatusAccepted)
+	checkResponse(t, "putting signed manifest", resp, http.StatusCreated)
 	checkHeaders(t, resp, http.Header{
 		"Location":              []string{manifestDigestURL},
 		"Docker-Content-Digest": []string{dgst.String()},
@@ -432,7 +432,7 @@ func TestManifestAPI(t *testing.T) {
 	// --------------------
 	// Push by digest -- should get same result
 	resp = putManifest(t, "putting signed manifest", manifestDigestURL, signedManifest)
-	checkResponse(t, "putting signed manifest", resp, http.StatusAccepted)
+	checkResponse(t, "putting signed manifest", resp, http.StatusCreated)
 	checkHeaders(t, resp, http.Header{
 		"Location":              []string{manifestDigestURL},
 		"Docker-Content-Digest": []string{dgst.String()},

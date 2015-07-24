@@ -183,7 +183,7 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 
 	w.Header().Set("Location", location)
 	w.Header().Set("Docker-Content-Digest", imh.Digest.String())
-	w.WriteHeader(http.StatusAccepted)
+	w.WriteHeader(http.StatusCreated)
 }
 
 // DeleteImageManifest removes the image with the given tag from the registry.

@@ -523,7 +523,7 @@ var routeDescriptors = []RouteDescriptor{
 						Successes: []ResponseDescriptor{
 							{
 								Description: "The manifest has been accepted by the registry and is stored under the specified `name` and `tag`.",
-								StatusCode:  http.StatusAccepted,
+								StatusCode:  http.StatusCreated,
 								Headers: []ParameterDescriptor{
 									{
 										Name:        "Location",
