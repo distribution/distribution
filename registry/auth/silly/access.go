@@ -75,7 +75,10 @@ type challenge struct {
 	scope   string
 }
 
-func (ch *challenge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+var _ auth.Challenge = challenge{}
+
+// SetHeaders sets a simple bearer challenge on the response.
+func (ch challenge) SetHeaders(w http.ResponseWriter) {
 	header := fmt.Sprintf("Bearer realm=%q,service=%q", ch.realm, ch.service)
 
 	if ch.scope != "" {
@@ -85,7 +88,7 @@ func (ch *challenge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("WWW-Authenticate", header)
 }
 
-func (ch *challenge) Error() string {
+func (ch challenge) Error() string {
 	return fmt.Sprintf("silly authentication challenge: %#v", ch)
 }
 
