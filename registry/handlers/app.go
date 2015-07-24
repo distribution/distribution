@@ -298,7 +298,14 @@ func (app *App) configureRedis(configuration *configuration.Configuration) {
 
 // configureLogHook prepares logging hook parameters.
 func (app *App) configureLogHook(configuration *configuration.Configuration) {
-	logger := ctxu.GetLogger(app).(*log.Entry).Logger
+	entry, ok := ctxu.GetLogger(app).(*log.Entry)
+	if !ok {
+		// somehow, we are not using logrus
+		return
+	}
+
+	logger := entry.Logger
+
 	for _, configHook := range configuration.Log.Hooks {
 		if !configHook.Disabled {
 			switch configHook.Type {
@@ -318,7 +325,6 @@ func (app *App) configureLogHook(configuration *configuration.Configuration) {
 			}
 		}
 	}
-	app.Context = ctxu.WithLogger(app.Context, logger)
 }
 
 func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
