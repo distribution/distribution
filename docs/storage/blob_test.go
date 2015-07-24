@@ -33,7 +33,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 	ctx := context.Background()
 	imageName := "foo/bar"
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider(), true)
+	registry := NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider(), true, true)
 	repository, err := registry.Repository(ctx, imageName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
@@ -193,7 +193,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 	}
 
 	// Reuse state to test delete with a delete-disabled registry
-	registry = NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider(), false)
+	registry = NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider(), false, true)
 	repository, err = registry.Repository(ctx, imageName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
@@ -212,7 +212,7 @@ func TestSimpleBlobRead(t *testing.T) {
 	ctx := context.Background()
 	imageName := "foo/bar"
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider(), true)
+	registry := NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider(), true, true)
 	repository, err := registry.Repository(ctx, imageName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
@@ -316,7 +316,7 @@ func TestLayerUploadZeroLength(t *testing.T) {
 	ctx := context.Background()
 	imageName := "foo/bar"
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider(), true)
+	registry := NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider(), true, true)
 	repository, err := registry.Repository(ctx, imageName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
