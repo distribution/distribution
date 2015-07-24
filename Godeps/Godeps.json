@@ -81,7 +81,8 @@
 		{
 			"ImportPath": "github.com/stevvooe/resumable",
 			"Rev": "51ad44105773cafcbe91927f70ac68e1bf78f8b4"
-                },
+		},
+		{
 			"ImportPath": "github.com/mitchellh/mapstructure",
 			"Rev": "482a9fd5fa83e8c4e7817413b80f3eb8feec03ef"
 		},
