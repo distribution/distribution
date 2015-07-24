@@ -11,10 +11,9 @@ import (
 	"os"
 	"strings"
 
-	ctxu "github.com/docker/distribution/context"
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/auth"
 	"github.com/docker/libtrust"
-	"golang.org/x/net/context"
 )
 
 // accessSet maps a typed, named resource to
@@ -82,20 +81,22 @@ type authChallenge struct {
 	accessSet accessSet
 }
 
+var _ auth.Challenge = authChallenge{}
+
 // Error returns the internal error string for this authChallenge.
-func (ac *authChallenge) Error() string {
+func (ac authChallenge) Error() string {
 	return ac.err.Error()
 }
 
 // Status returns the HTTP Response Status Code for this authChallenge.
-func (ac *authChallenge) Status() int {
+func (ac authChallenge) Status() int {
 	return http.StatusUnauthorized
 }
 
 // challengeParams constructs the value to be used in
 // the WWW-Authenticate response challenge header.
 // See https://tools.ietf.org/html/rfc6750#section-3
-func (ac *authChallenge) challengeParams() string {
+func (ac authChallenge) challengeParams() string {
 	str := fmt.Sprintf("Bearer realm=%q,service=%q", ac.realm, ac.service)
 
 	if scope := ac.accessSet.scopeParam(); scope != "" {
@@ -111,15 +112,9 @@ func (ac *authChallenge) challengeParams() string {
 	return str
 }
 
-// SetHeader sets the WWW-Authenticate value for the given header.
-func (ac *authChallenge) SetHeader(header http.Header) {
-	header.Add("WWW-Authenticate", ac.challengeParams())
-}
-
-// ServeHttp handles writing the challenge response
-// by setting the challenge header.
-func (ac *authChallenge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	ac.SetHeader(w.Header())
+// SetChallenge sets the WWW-Authenticate value for the response.
+func (ac authChallenge) SetHeaders(w http.ResponseWriter) {
+	w.Header().Add("WWW-Authenticate", ac.challengeParams())
 }
 
 // accessController implements the auth.AccessController interface.
@@ -224,7 +219,7 @@ func (ac *accessController) Authorized(ctx context.Context, accessItems ...auth.
 		accessSet: newAccessSet(accessItems...),
 	}
 
-	req, err := ctxu.GetRequest(ctx)
+	req, err := context.GetRequest(ctx)
 	if err != nil {
 		return nil, err
 	}

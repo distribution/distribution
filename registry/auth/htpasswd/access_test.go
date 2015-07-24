@@ -48,7 +48,7 @@ func TestBasicAccessController(t *testing.T) {
 		if err != nil {
 			switch err := err.(type) {
 			case auth.Challenge:
-				err.ServeHTTP(w, r)
+				err.SetHeaders(w)
 				w.WriteHeader(http.StatusUnauthorized)
 				return
 			default:
