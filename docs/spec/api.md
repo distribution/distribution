@@ -125,6 +125,12 @@ reference and shouldn't be used outside the specification other than to
 identify a set of modifications.
 
 <dl>
+  <dt>f</dt>
+  <dd>
+    <ul>
+      <li>Specify the delete API for layers and manifests.</li>
+    </ul>
+  </dd>
 
   <dt>e</dt>
   <dd>
@@ -714,6 +720,22 @@ Note that the upload url will not be available forever. If the upload uuid is
 unknown to the registry, a `404 Not Found` response will be returned and the
 client must restart the upload process.
 
+### Deleting a Layer
+
+A layer may be deleted from the registry via its `name` and `digest`. A
+delete may be issued with the following request format:
+
+    DELETE /v2/<name>/blobs/<digest>
+
+If the blob exists and has been successfully deleted, the following response will be issued:
+
+    202 Accepted
+    Content-Length: None
+
+If the blob had already been deleted or did not exist, a `404 Not Found`
+response will be issued instead.
+
+
 #### Pushing an Image Manifest
 
 Once all of the layers for an image are uploaded, the client can upload the
@@ -1000,6 +1022,7 @@ A list of methods and URIs are covered in the table below:
 | PUT | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Complete the upload specified by `uuid`, optionally appending the body as the final chunk. |
 | DELETE | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Cancel outstanding upload processes, releasing associated resources. If this is not called, the unfinished uploads will eventually timeout. |
 | GET | `/v2/_catalog` | Catalog | Retrieve a sorted, json list of repositories available in the registry. |
+| DELETE | `/v2/<name>/blobs/<digest>` | Blob delete | Delete the blob identified by `name` and `digest`|
 
 
 The detail for each endpoint is covered in the following sections.
@@ -1708,6 +1731,7 @@ The error codes that may be included in the response body are enumerated below:
 
 
 #### DELETE Manifest
+
 
 Delete the manifest identified by `name` and `reference`. Note that a manifest can _only_ be deleted by `digest`.
 

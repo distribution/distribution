@@ -19,6 +19,8 @@ log:
         to:
           - errors@example.com
 storage:
+    delete:
+      enabled: true
     cache:
         blobdescriptor: redis
     filesystem:

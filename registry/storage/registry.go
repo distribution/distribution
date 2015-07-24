@@ -15,15 +15,16 @@ type registry struct {
 	blobServer                  distribution.BlobServer
 	statter                     distribution.BlobStatter // global statter service.
 	blobDescriptorCacheProvider cache.BlobDescriptorCacheProvider
+	deleteEnabled               bool
 }
 
 // NewRegistryWithDriver creates a new registry instance from the provided
 // driver. The resulting registry may be shared by multiple goroutines but is
 // cheap to allocate.
-func NewRegistryWithDriver(ctx context.Context, driver storagedriver.StorageDriver, blobDescriptorCacheProvider cache.BlobDescriptorCacheProvider) distribution.Namespace {
+func NewRegistryWithDriver(ctx context.Context, driver storagedriver.StorageDriver, blobDescriptorCacheProvider cache.BlobDescriptorCacheProvider, deleteEnabled bool) distribution.Namespace {
 
 	// create global statter, with cache.
-	var statter distribution.BlobStatter = &blobStatter{
+	var statter distribution.BlobDescriptorService = &blobStatter{
 		driver: driver,
 		pm:     defaultPathMapper,
 	}
@@ -46,6 +47,7 @@ func NewRegistryWithDriver(ctx context.Context, driver storagedriver.StorageDriv
 			pathFn:  bs.path,
 		},
 		blobDescriptorCacheProvider: blobDescriptorCacheProvider,
+		deleteEnabled:               deleteEnabled,
 	}
 }
 
@@ -107,10 +109,11 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 			ctx:        ctx,
 			repository: repo,
 			blobStore: &linkedBlobStore{
-				ctx:        ctx,
-				blobStore:  repo.blobStore,
-				repository: repo,
-				statter: &linkedBlobStatter{
+				ctx:           ctx,
+				blobStore:     repo.blobStore,
+				repository:    repo,
+				deleteEnabled: repo.registry.deleteEnabled,
+				blobAccessController: &linkedBlobStatter{
 					blobStore:  repo.blobStore,
 					repository: repo,
 					linkPath:   manifestRevisionLinkPath,
@@ -143,7 +146,7 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 // may be context sensitive in the future. The instance should be used similar
 // to a request local.
 func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
-	var statter distribution.BlobStatter = &linkedBlobStatter{
+	var statter distribution.BlobDescriptorService = &linkedBlobStatter{
 		blobStore:  repo.blobStore,
 		repository: repo,
 		linkPath:   blobLinkPath,
@@ -154,15 +157,16 @@ func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
 	}
 
 	return &linkedBlobStore{
-		blobStore:  repo.blobStore,
-		blobServer: repo.blobServer,
-		statter:    statter,
-		repository: repo,
-		ctx:        ctx,
+		blobStore:            repo.blobStore,
+		blobServer:           repo.blobServer,
+		blobAccessController: statter,
+		repository:           repo,
+		ctx:                  ctx,
 
 		// TODO(stevvooe): linkPath limits this blob store to only layers.
 		// This instance cannot be used for manifest checks.
-		linkPath: blobLinkPath,
+		linkPath:      blobLinkPath,
+		deleteEnabled: repo.registry.deleteEnabled,
 	}
 }
 

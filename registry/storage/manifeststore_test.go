@@ -29,8 +29,7 @@ type manifestStoreTestEnv struct {
 func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestEnv {
 	ctx := context.Background()
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider())
-
+	registry := NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider(), true)
 	repo, err := registry.Repository(ctx, name)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
@@ -156,6 +155,7 @@ func TestManifestStorage(t *testing.T) {
 	}
 
 	fetchedManifest, err := ms.GetByTag(env.tag)
+
 	if err != nil {
 		t.Fatalf("unexpected error fetching manifest: %v", err)
 	}
@@ -296,11 +296,68 @@ func TestManifestStorage(t *testing.T) {
 		}
 	}
 
-	// TODO(stevvooe): Currently, deletes are not supported due to some
-	// complexity around managing tag indexes. We'll add this support back in
-	// when the manifest format has settled. For now, we expect an error for
-	// all deletes.
-	if err := ms.Delete(dgst); err == nil {
+	// Test deleting manifests
+	err = ms.Delete(dgst)
+	if err != nil {
 		t.Fatalf("unexpected an error deleting manifest by digest: %v", err)
+	}
+
+	exists, err = ms.Exists(dgst)
+	if err != nil {
+		t.Fatalf("Error querying manifest existence")
+	}
+	if exists {
+		t.Errorf("Deleted manifest should not exist")
+	}
+
+	deletedManifest, err := ms.Get(dgst)
+	if err == nil {
+		t.Errorf("Unexpected success getting deleted manifest")
+	}
+	switch err.(type) {
+	case distribution.ErrManifestUnknownRevision:
+		break
+	default:
+		t.Errorf("Unexpected error getting deleted manifest: %s", reflect.ValueOf(err).Type())
+	}
+
+	if deletedManifest != nil {
+		t.Errorf("Deleted manifest get returned non-nil")
+	}
+
+	// Re-upload should restore manifest to a good state
+	err = ms.Put(sm)
+	if err != nil {
+		t.Errorf("Error re-uploading deleted manifest")
+	}
+
+	exists, err = ms.Exists(dgst)
+	if err != nil {
+		t.Fatalf("Error querying manifest existence")
+	}
+	if !exists {
+		t.Errorf("Restored manifest should exist")
+	}
+
+	deletedManifest, err = ms.Get(dgst)
+	if err != nil {
+		t.Errorf("Unexpected error getting manifest")
+	}
+	if deletedManifest == nil {
+		t.Errorf("Deleted manifest get returned non-nil")
+	}
+
+	r := NewRegistryWithDriver(ctx, env.driver, memory.NewInMemoryBlobDescriptorCacheProvider(), false)
+	repo, err := r.Repository(ctx, env.name)
+	if err != nil {
+		t.Fatalf("unexpected error getting repo: %v", err)
+	}
+	ms, err = repo.Manifests(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = ms.Delete(dgst)
+	if err == nil {
+		t.Errorf("Unexpected success deleting while disabled")
 	}
 }
