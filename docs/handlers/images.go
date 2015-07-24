@@ -90,13 +90,13 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.Header().Set("Content-Length", fmt.Sprint(len(sm.Raw)))
 	w.Header().Set("Docker-Content-Digest", imh.Digest.String())
-	w.Header().Set("Etag", imh.Digest.String())
+	w.Header().Set("Etag", fmt.Sprintf(`"%s"`, imh.Digest))
 	w.Write(sm.Raw)
 }
 
 func etagMatch(r *http.Request, etag string) bool {
 	for _, headerVal := range r.Header["If-None-Match"] {
-		if headerVal == etag {
+		if headerVal == etag || headerVal == fmt.Sprintf(`"%s"`, etag) { // allow quoted or unquoted
 			return true
 		}
 	}
