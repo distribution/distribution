@@ -31,7 +31,7 @@ func TestAppDispatcher(t *testing.T) {
 		Context:  ctx,
 		router:   v2.Router(),
 		driver:   driver,
-		registry: storage.NewRegistryWithDriver(ctx, driver, memorycache.NewInMemoryBlobDescriptorCacheProvider()),
+		registry: storage.NewRegistryWithDriver(ctx, driver, memorycache.NewInMemoryBlobDescriptorCacheProvider(), true),
 	}
 	server := httptest.NewServer(app)
 	router := v2.Router()

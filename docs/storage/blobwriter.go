@@ -70,6 +70,11 @@ func (bw *blobWriter) Commit(ctx context.Context, desc distribution.Descriptor) 
 		return distribution.Descriptor{}, err
 	}
 
+	err = bw.blobStore.blobAccessController.SetDescriptor(ctx, canonical.Digest, canonical)
+	if err != nil {
+		return distribution.Descriptor{}, err
+	}
+
 	return canonical, nil
 }
 

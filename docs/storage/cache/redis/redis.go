@@ -12,7 +12,7 @@ import (
 )
 
 // redisBlobStatService provides an implementation of
-// BlobDescriptorCacheProvider based on redis. Blob descritors are stored in
+// BlobDescriptorCacheProvider based on redis. Blob descriptors are stored in
 // two parts. The first provide fast access to repository membership through a
 // redis set for each repo. The second is a redis hash keyed by the digest of
 // the layer, providing path, length and mediatype information. There is also
@@ -61,6 +61,27 @@ func (rbds *redisBlobDescriptorService) Stat(ctx context.Context, dgst digest.Di
 	defer conn.Close()
 
 	return rbds.stat(ctx, conn, dgst)
+}
+
+func (rbds *redisBlobDescriptorService) Clear(ctx context.Context, dgst digest.Digest) error {
+	if err := dgst.Validate(); err != nil {
+		return err
+	}
+
+	conn := rbds.pool.Get()
+	defer conn.Close()
+
+	// Not atomic in redis <= 2.3
+	reply, err := conn.Do("HDEL", rbds.blobDescriptorHashKey(dgst), "digest", "length", "mediatype")
+	if err != nil {
+		return err
+	}
+
+	if reply == 0 {
+		return distribution.ErrBlobUnknown
+	}
+
+	return nil
 }
 
 // stat provides an internal stat call that takes a connection parameter. This
@@ -168,6 +189,28 @@ func (rsrbds *repositoryScopedRedisBlobDescriptorService) Stat(ctx context.Conte
 	}
 
 	return upstream, nil
+}
+
+// Clear removes the descriptor from the cache and forwards to the upstream descriptor store
+func (rsrbds *repositoryScopedRedisBlobDescriptorService) Clear(ctx context.Context, dgst digest.Digest) error {
+	if err := dgst.Validate(); err != nil {
+		return err
+	}
+
+	conn := rsrbds.upstream.pool.Get()
+	defer conn.Close()
+
+	// Check membership to repository first
+	member, err := redis.Bool(conn.Do("SISMEMBER", rsrbds.repositoryBlobSetKey(rsrbds.repo), dgst))
+	if err != nil {
+		return err
+	}
+
+	if !member {
+		return distribution.ErrBlobUnknown
+	}
+
+	return rsrbds.upstream.Clear(ctx, dgst)
 }
 
 func (rsrbds *repositoryScopedRedisBlobDescriptorService) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
