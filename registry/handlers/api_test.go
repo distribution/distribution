@@ -429,7 +429,7 @@ func TestBlobAPI(t *testing.T) {
 	checkHeaders(t, resp, http.Header{
 		"Content-Length":        []string{fmt.Sprint(layerLength)},
 		"Docker-Content-Digest": []string{canonicalDigest.String()},
-		"ETag":                  []string{canonicalDigest.String()},
+		"ETag":                  []string{fmt.Sprintf(`"%s"`, canonicalDigest)},
 		"Cache-Control":         []string{"max-age=31536000"},
 	})
 
@@ -440,6 +440,7 @@ func TestBlobAPI(t *testing.T) {
 		t.Fatalf("Error constructing request: %s", err)
 	}
 	req.Header.Set("If-None-Match", etag)
+
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
 		t.Fatalf("Error constructing request: %s", err)
@@ -597,7 +598,7 @@ func TestManifestAPI(t *testing.T) {
 	checkResponse(t, "fetching uploaded manifest", resp, http.StatusOK)
 	checkHeaders(t, resp, http.Header{
 		"Docker-Content-Digest": []string{dgst.String()},
-		"ETag":                  []string{dgst.String()},
+		"ETag":                  []string{fmt.Sprintf(`"%s"`, dgst)},
 	})
 
 	var fetchedManifest manifest.SignedManifest
@@ -619,7 +620,7 @@ func TestManifestAPI(t *testing.T) {
 	checkResponse(t, "fetching uploaded manifest", resp, http.StatusOK)
 	checkHeaders(t, resp, http.Header{
 		"Docker-Content-Digest": []string{dgst.String()},
-		"ETag":                  []string{dgst.String()},
+		"ETag":                  []string{fmt.Sprintf(`"%s"`, dgst)},
 	})
 
 	var fetchedManifestByDigest manifest.SignedManifest
@@ -998,12 +999,12 @@ func checkHeaders(t *testing.T, resp *http.Response, headers http.Header) {
 		for _, v := range vs {
 			if v == "*" {
 				// Just ensure there is some value.
-				if len(resp.Header[k]) > 0 {
+				if len(resp.Header[http.CanonicalHeaderKey(k)]) > 0 {
 					continue
 				}
 			}
 
-			for _, hv := range resp.Header[k] {
+			for _, hv := range resp.Header[http.CanonicalHeaderKey(k)] {
 				if hv != v {
 					t.Fatalf("%v header value not matched in response: %q != %q", k, hv, v)
 				}
