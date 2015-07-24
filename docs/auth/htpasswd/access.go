@@ -11,9 +11,8 @@ import (
 	"net/http"
 	"os"
 
-	ctxu "github.com/docker/distribution/context"
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/auth"
-	"golang.org/x/net/context"
 )
 
 var (
@@ -57,7 +56,7 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 }
 
 func (ac *accessController) Authorized(ctx context.Context, accessRecords ...auth.Access) (context.Context, error) {
-	req, err := ctxu.GetRequest(ctx)
+	req, err := context.GetRequest(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +70,7 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 	}
 
 	if err := ac.htpasswd.authenticateUser(username, password); err != nil {
-		ctxu.GetLogger(ctx).Errorf("error authenticating user %q: %v", username, err)
+		context.GetLogger(ctx).Errorf("error authenticating user %q: %v", username, err)
 		return nil, &challenge{
 			realm: ac.realm,
 			err:   ErrAuthenticationFailure,

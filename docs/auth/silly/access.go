@@ -12,9 +12,8 @@ import (
 	"net/http"
 	"strings"
 
-	ctxu "github.com/docker/distribution/context"
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/auth"
-	"golang.org/x/net/context"
 )
 
 // accessController provides a simple implementation of auth.AccessController
@@ -44,7 +43,7 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 // Authorized simply checks for the existence of the authorization header,
 // responding with a bearer challenge if it doesn't exist.
 func (ac *accessController) Authorized(ctx context.Context, accessRecords ...auth.Access) (context.Context, error) {
-	req, err := ctxu.GetRequest(ctx)
+	req, err := context.GetRequest(ctx)
 	if err != nil {
 		return nil, err
 	}

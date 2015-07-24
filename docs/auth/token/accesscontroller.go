@@ -11,10 +11,9 @@ import (
 	"os"
 	"strings"
 
-	ctxu "github.com/docker/distribution/context"
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/auth"
 	"github.com/docker/libtrust"
-	"golang.org/x/net/context"
 )
 
 // accessSet maps a typed, named resource to
@@ -220,7 +219,7 @@ func (ac *accessController) Authorized(ctx context.Context, accessItems ...auth.
 		accessSet: newAccessSet(accessItems...),
 	}
 
-	req, err := ctxu.GetRequest(ctx)
+	req, err := context.GetRequest(ctx)
 	if err != nil {
 		return nil, err
 	}
