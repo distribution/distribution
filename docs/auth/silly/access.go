@@ -12,9 +12,8 @@ import (
 	"net/http"
 	"strings"
 
-	ctxu "github.com/docker/distribution/context"
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/auth"
-	"golang.org/x/net/context"
 )
 
 // accessController provides a simple implementation of auth.AccessController
@@ -44,7 +43,7 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 // Authorized simply checks for the existence of the authorization header,
 // responding with a bearer challenge if it doesn't exist.
 func (ac *accessController) Authorized(ctx context.Context, accessRecords ...auth.Access) (context.Context, error) {
-	req, err := ctxu.GetRequest(ctx)
+	req, err := context.GetRequest(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +74,10 @@ type challenge struct {
 	scope   string
 }
 
-func (ch *challenge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+var _ auth.Challenge = challenge{}
+
+// SetHeaders sets a simple bearer challenge on the response.
+func (ch challenge) SetHeaders(w http.ResponseWriter) {
 	header := fmt.Sprintf("Bearer realm=%q,service=%q", ch.realm, ch.service)
 
 	if ch.scope != "" {
@@ -85,7 +87,7 @@ func (ch *challenge) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("WWW-Authenticate", header)
 }
 
-func (ch *challenge) Error() string {
+func (ch challenge) Error() string {
 	return fmt.Sprintf("silly authentication challenge: %#v", ch)
 }
 
