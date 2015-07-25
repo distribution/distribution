@@ -8,8 +8,7 @@
 // time for directories (directories are an abstraction for key, value stores)
 //
 // Keep in mind that OSS guarantees only eventual consistency, so do not assume
-// that a successful write will mean immediate access to the data written (although
-// in most regions a new object put has guaranteed read after write). The only true
+// that a successful write will mean immediate access to the data written. The only true
 // guarantee is that once you call Stat and receive a certain file size, that much of
 // the file is already accessible.
 package oss
