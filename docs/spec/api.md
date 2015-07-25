@@ -1241,7 +1241,7 @@ The error codes that may be included in the response body are enumerated below:
 ##### Tags Paginated
 
 ```
-GET /v2/<name>/tags/list?n=<integer>last=<integer>
+GET /v2/<name>/tags/list?n=<integer>&last=<integer>
 ```
 
 Return a portion of the tags for the specified repository.
@@ -3249,7 +3249,7 @@ The following headers will be returned with the response:
 ##### Catalog Fetch Paginated
 
 ```
-GET /v2/_catalog?n=<integer>last=<integer>
+GET /v2/_catalog?n=<integer>&last=<integer>
 ```
 
 Return the specified portion of repositories.
