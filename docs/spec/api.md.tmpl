@@ -1041,7 +1041,7 @@ The error codes encountered via the API are enumerated in the following table:
 ##### {{.Name}}{{end}}
 
 ```
-{{$method.Method}} {{$route.Path|prettygorilla}}{{if .QueryParameters}}?{{range .QueryParameters}}{{.Name}}={{.Format}}{{end}}{{end}}{{range .Headers}}
+{{$method.Method}} {{$route.Path|prettygorilla}}{{range $i, $param := .QueryParameters}}{{if eq $i 0}}?{{else}}&{{end}}{{$param.Name}}={{$param.Format}}{{end}}{{range .Headers}}
 {{.Name}}: {{.Format}}{{end}}{{if .Body.ContentType}}
 Content-Type: {{.Body.ContentType}}{{end}}{{if .Body.Format}}
 
