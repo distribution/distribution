@@ -103,8 +103,13 @@ func GetRequestID(ctx Context) string {
 // WithResponseWriter returns a new context and response writer that makes
 // interesting response statistics available within the context.
 func WithResponseWriter(ctx Context, w http.ResponseWriter) (Context, http.ResponseWriter) {
+	closeNotifier, ok := w.(http.CloseNotifier)
+	if !ok {
+		panic("the ResponseWriter does not implement CloseNotifier")
+	}
 	irw := &instrumentedResponseWriter{
 		ResponseWriter: w,
+		CloseNotifier:  closeNotifier,
 		Context:        ctx,
 	}
 
@@ -262,6 +267,7 @@ func (ctx *muxVarsContext) Value(key interface{}) interface{} {
 // context.
 type instrumentedResponseWriter struct {
 	http.ResponseWriter
+	http.CloseNotifier
 	Context
 
 	mu      sync.Mutex
