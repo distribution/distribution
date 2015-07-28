@@ -49,6 +49,7 @@ func Generate() (u UUID) {
 
 	var (
 		totalBackoff time.Duration
+		count        int
 		retries      int
 	)
 
@@ -60,9 +61,10 @@ func Generate() (u UUID) {
 		time.Sleep(b)
 		totalBackoff += b
 
-		_, err := io.ReadFull(rand.Reader, u[:])
+		n, err := io.ReadFull(rand.Reader, u[count:])
 		if err != nil {
 			if retryOnError(err) && retries < maxretries {
+				count += n
 				retries++
 				Loggerf("error generating version 4 uuid, retrying: %v", err)
 				continue
