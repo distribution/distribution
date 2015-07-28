@@ -963,7 +963,7 @@ func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
 	// --------------------
 	// Re-upload manifest by digest
 	resp = putManifest(t, "putting signed manifest", manifestDigestURL, signedManifest)
-	checkResponse(t, "putting signed manifest", resp, http.StatusAccepted)
+	checkResponse(t, "putting signed manifest", resp, http.StatusCreated)
 	checkHeaders(t, resp, http.Header{
 		"Location":              []string{manifestDigestURL},
 		"Docker-Content-Digest": []string{dgst.String()},
@@ -1372,7 +1372,7 @@ func createRepository(env *testEnv, t *testing.T, imageName string, tag string) 
 	checkErr(t, err, "building manifest url")
 
 	resp := putManifest(t, "putting signed manifest", manifestDigestURL, signedManifest)
-	checkResponse(t, "putting signed manifest", resp, http.StatusAccepted)
+	checkResponse(t, "putting signed manifest", resp, http.StatusCreated)
 	checkHeaders(t, resp, http.Header{
 		"Location":              []string{manifestDigestURL},
 		"Docker-Content-Digest": []string{dgst.String()},
