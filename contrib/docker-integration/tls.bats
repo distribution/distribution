@@ -16,13 +16,8 @@ function setup() {
 # has_digest enforces the last output line is "Digest: sha256:..."
 # the input is the name of the array containing the output lines
 function has_digest() {
-	name=$1[@]
-	lines=("${!name}")
-	length=${#lines[@]}
-	digest_idx=$((length-1))
-	value=${lines[$digest_idx]}
-	result=$(echo "$value"|cut -d':' -f1,2)
-	[ "$result" = "Digest: sha256" ]
+	filtered=$(echo "$1" |sed -rn '/[dD]igest\: sha(256|384|512)/ p')
+	[ "$filtered" != "" ]
 }
 
 function login() {
@@ -36,7 +31,7 @@ function login() {
 	docker tag -f $image $hostname:5440/$image
 	run docker push $hostname:5440/$image
 	[ "$status" -eq 0 ]
-	has_digest lines
+	has_digest "$output"
 }
 
 @test "Test basic auth" {
@@ -44,14 +39,14 @@ function login() {
 	docker tag -f $image $hostname:5441/$image
 	run docker push $hostname:5441/$image
 	[ "$status" -eq 0 ]
-	has_digest lines
+	has_digest "$output"
 }
 
 @test "Test TLS client auth" {
 	docker tag -f $image $hostname:5442/$image
 	run docker push $hostname:5442/$image
 	[ "$status" -eq 0 ]
-	has_digest lines
+	has_digest "$output"
 }
 
 @test "Test TLS client with invalid certificate authority fails" {
@@ -65,7 +60,7 @@ function login() {
 	docker tag -f $image $hostname:5444/$image
 	run docker push $hostname:5444/$image
 	[ "$status" -eq 0 ]
-	has_digest lines
+	has_digest "$output"
 }
 
 @test "Test unknown certificate authority fails" {
