@@ -1,3 +1,5 @@
+// +build include_oss
+
 package oss
 
 import (
