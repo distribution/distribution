@@ -1573,10 +1573,10 @@ The following parameters should be specified on the request:
 
 
 
-###### On Success: Accepted
+###### On Success: Created
 
 ```
-202 Accepted
+201 Created
 Location: <url>
 Content-Length: 0
 Docker-Content-Digest: <digest>
