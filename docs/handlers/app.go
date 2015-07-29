@@ -20,6 +20,7 @@ import (
 	"github.com/docker/distribution/registry/auth"
 	registrymiddleware "github.com/docker/distribution/registry/middleware/registry"
 	repositorymiddleware "github.com/docker/distribution/registry/middleware/repository"
+	"github.com/docker/distribution/registry/proxy"
 	"github.com/docker/distribution/registry/storage"
 	memorycache "github.com/docker/distribution/registry/storage/cache/memory"
 	rediscache "github.com/docker/distribution/registry/storage/cache/redis"
@@ -55,6 +56,9 @@ type App struct {
 	}
 
 	redis *redis.Pool
+
+	// true if this registry is configured as a pull through cache
+	isCache bool
 }
 
 // NewApp takes a configuration and returns a configured app, ready to serve
@@ -65,6 +69,7 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 		Config:  configuration,
 		Context: ctx,
 		router:  v2.RouterWithPrefix(configuration.HTTP.Prefix),
+		isCache: configuration.Proxy.RemoteURL != "",
 	}
 
 	app.Context = ctxu.WithLogger(app.Context, ctxu.GetLogger(app, "instance.id"))
@@ -152,10 +157,10 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 			if app.redis == nil {
 				panic("redis configuration required to use for layerinfo cache")
 			}
-			app.registry = storage.NewRegistryWithDriver(app, app.driver, rediscache.NewRedisBlobDescriptorCacheProvider(app.redis), deleteEnabled, !redirectDisabled)
+			app.registry = storage.NewRegistryWithDriver(app, app.driver, rediscache.NewRedisBlobDescriptorCacheProvider(app.redis), deleteEnabled, !redirectDisabled, app.isCache)
 			ctxu.GetLogger(app).Infof("using redis blob descriptor cache")
 		case "inmemory":
-			app.registry = storage.NewRegistryWithDriver(app, app.driver, memorycache.NewInMemoryBlobDescriptorCacheProvider(), deleteEnabled, !redirectDisabled)
+			app.registry = storage.NewRegistryWithDriver(app, app.driver, memorycache.NewInMemoryBlobDescriptorCacheProvider(), deleteEnabled, !redirectDisabled, app.isCache)
 			ctxu.GetLogger(app).Infof("using inmemory blob descriptor cache")
 		default:
 			if v != "" {
@@ -166,10 +171,10 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 
 	if app.registry == nil {
 		// configure the registry if no cache section is available.
-		app.registry = storage.NewRegistryWithDriver(app.Context, app.driver, nil, deleteEnabled, !redirectDisabled)
+		app.registry = storage.NewRegistryWithDriver(app.Context, app.driver, nil, deleteEnabled, !redirectDisabled, app.isCache)
 	}
 
-	app.registry, err = applyRegistryMiddleware(app.registry, configuration.Middleware["registry"])
+	app.registry, err = applyRegistryMiddleware(app.Context, app.registry, configuration.Middleware["registry"])
 	if err != nil {
 		panic(err)
 	}
@@ -183,6 +188,16 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 		}
 		app.accessController = accessController
 		ctxu.GetLogger(app).Debugf("configured %q access controller", authType)
+	}
+
+	// configure as a pull through cache
+	if configuration.Proxy.RemoteURL != "" {
+		app.registry, err = proxy.NewRegistryPullThroughCache(ctx, app.registry, app.driver, configuration.Proxy)
+		if err != nil {
+			panic(err.Error())
+		}
+		app.isCache = true
+		ctxu.GetLogger(app).Info("Registry configured as a proxy cache to ", configuration.Proxy.RemoteURL)
 	}
 
 	return app
@@ -447,7 +462,7 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 				repository,
 				app.eventBridge(context, r))
 
-			context.Repository, err = applyRepoMiddleware(context.Repository, app.Config.Middleware["repository"])
+			context.Repository, err = applyRepoMiddleware(context.Context, context.Repository, app.Config.Middleware["repository"])
 			if err != nil {
 				ctxu.GetLogger(context).Errorf("error initializing repository middleware: %v", err)
 				context.Errors = append(context.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
@@ -668,9 +683,9 @@ func appendCatalogAccessRecord(accessRecords []auth.Access, r *http.Request) []a
 }
 
 // applyRegistryMiddleware wraps a registry instance with the configured middlewares
-func applyRegistryMiddleware(registry distribution.Namespace, middlewares []configuration.Middleware) (distribution.Namespace, error) {
+func applyRegistryMiddleware(ctx context.Context, registry distribution.Namespace, middlewares []configuration.Middleware) (distribution.Namespace, error) {
 	for _, mw := range middlewares {
-		rmw, err := registrymiddleware.Get(mw.Name, mw.Options, registry)
+		rmw, err := registrymiddleware.Get(ctx, mw.Name, mw.Options, registry)
 		if err != nil {
 			return nil, fmt.Errorf("unable to configure registry middleware (%s): %s", mw.Name, err)
 		}
@@ -681,9 +696,9 @@ func applyRegistryMiddleware(registry distribution.Namespace, middlewares []conf
 }
 
 // applyRepoMiddleware wraps a repository with the configured middlewares
-func applyRepoMiddleware(repository distribution.Repository, middlewares []configuration.Middleware) (distribution.Repository, error) {
+func applyRepoMiddleware(ctx context.Context, repository distribution.Repository, middlewares []configuration.Middleware) (distribution.Repository, error) {
 	for _, mw := range middlewares {
-		rmw, err := repositorymiddleware.Get(mw.Name, mw.Options, repository)
+		rmw, err := repositorymiddleware.Get(ctx, mw.Name, mw.Options, repository)
 		if err != nil {
 			return nil, err
 		}
