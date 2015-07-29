@@ -343,8 +343,12 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Instantiate an http context here so we can track the error codes
 	// returned by the request router.
 	ctx := defaultContextManager.context(app, w, r)
+
 	defer func() {
-		ctxu.GetResponseLogger(ctx).Infof("response completed")
+		status, ok := ctx.Value("http.response.status").(int)
+		if ok && status >= 200 && status <= 399 {
+			ctxu.GetResponseLogger(ctx).Infof("response completed")
+		}
 	}()
 	defer defaultContextManager.release(ctx)
 
@@ -424,11 +428,11 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 		// own errors if they need different behavior (such as range errors
 		// for layer upload).
 		if context.Errors.Len() > 0 {
-			app.logError(context, context.Errors)
-
 			if err := errcode.ServeJSON(w, context.Errors); err != nil {
 				ctxu.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
 			}
+
+			app.logError(context, context.Errors)
 		}
 	})
 }
@@ -457,7 +461,7 @@ func (app *App) logError(context context.Context, errors errcode.Errors) {
 			"err.code",
 			"err.message",
 			"err.detail"))
-		ctxu.GetLogger(c).Errorf("An error occured")
+		ctxu.GetResponseLogger(c).Errorf("response completed with error")
 	}
 }
 
