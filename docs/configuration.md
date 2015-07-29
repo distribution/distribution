@@ -1184,7 +1184,12 @@ should have both preceding and trailing slashes, for example <code>/path/</code>
     <td>
 A random piece of data. This is used to sign state that may be stored with the
 client to protect against tampering. For production environments you should generate a
-random piece of data using a cryptographically secure random generator.
+random piece of data using a cryptographically secure random generator. This
+configuration parameter may be omitted, in which case the registry will automatically
+generate a secret at launch.
+<p />
+<b>WARNING: If you are building a cluster of registries behind a load balancer, you MUST
+ensure the secret is the same for all registries.</b>
     </td>
   </tr>
 </table>
