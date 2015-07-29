@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	cryptorand "crypto/rand"
 	"expvar"
 	"fmt"
 	"math/rand"
@@ -29,6 +30,10 @@ import (
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 )
+
+// randomSecretSize is the number of random bytes to generate if no secret
+// was specified.
+const randomSecretSize = 32
 
 // App is a global registry application object. Shared resources can be placed
 // on this object that will be accessible from all requests. Any writable
@@ -102,6 +107,7 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 		panic(err)
 	}
 
+	app.configureSecret(&configuration)
 	app.configureEvents(&configuration)
 	app.configureRedis(&configuration)
 	app.configureLogHook(&configuration)
@@ -334,6 +340,19 @@ func (app *App) configureLogHook(configuration *configuration.Configuration) {
 			default:
 			}
 		}
+	}
+}
+
+// configureSecret creates a random secret if a secret wasn't included in the
+// configuration.
+func (app *App) configureSecret(configuration *configuration.Configuration) {
+	if configuration.HTTP.Secret == "" {
+		var secretBytes [randomSecretSize]byte
+		if _, err := cryptorand.Read(secretBytes[:]); err != nil {
+			panic(fmt.Sprintf("could not generate random bytes for HTTP secret: %v", err))
+		}
+		configuration.HTTP.Secret = string(secretBytes[:])
+		ctxu.GetLogger(app).Warn("No HTTP secret provided - generated random secret. This may cause problems with uploads if multiple registries are behind a load-balancer. To provide a shared secret, fill in http.secret in the configuration file or set the REGISTRY_HTTP_SECRET environment variable.")
 	}
 }
 
