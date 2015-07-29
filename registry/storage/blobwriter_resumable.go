@@ -24,6 +24,10 @@ import (
 // offset. Any unhashed bytes remaining less than the given offset are hashed
 // from the content uploaded so far.
 func (bw *blobWriter) resumeDigestAt(ctx context.Context, offset int64) error {
+	if !bw.resumableDigestEnabled {
+		return errResumableDigestNotAvailable
+	}
+
 	if offset < 0 {
 		return fmt.Errorf("cannot resume hash at negative offset: %d", offset)
 	}
@@ -143,6 +147,10 @@ func (bw *blobWriter) getStoredHashStates(ctx context.Context) ([]hashStateEntry
 }
 
 func (bw *blobWriter) storeHashState(ctx context.Context) error {
+	if !bw.resumableDigestEnabled {
+		return errResumableDigestNotAvailable
+	}
+
 	h, ok := bw.digester.Hash().(resumable.Hash)
 	if !ok {
 		return errResumableDigestNotAvailable

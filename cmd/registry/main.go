@@ -23,6 +23,7 @@ import (
 	_ "github.com/docker/distribution/registry/auth/token"
 	"github.com/docker/distribution/registry/handlers"
 	"github.com/docker/distribution/registry/listener"
+	_ "github.com/docker/distribution/registry/proxy"
 	_ "github.com/docker/distribution/registry/storage/driver/azure"
 	_ "github.com/docker/distribution/registry/storage/driver/filesystem"
 	_ "github.com/docker/distribution/registry/storage/driver/inmemory"

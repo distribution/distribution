@@ -16,6 +16,7 @@ type registry struct {
 	statter                     distribution.BlobStatter // global statter service.
 	blobDescriptorCacheProvider cache.BlobDescriptorCacheProvider
 	deleteEnabled               bool
+	resumableDigestEnabled      bool
 }
 
 // NewRegistryWithDriver creates a new registry instance from the provided
@@ -23,9 +24,9 @@ type registry struct {
 // cheap to allocate. If redirect is true, the backend blob server will
 // attempt to use (StorageDriver).URLFor to serve all blobs.
 //
-// TODO(stevvooe): This function signature is getting out of hand. Move to
+// TODO(stevvooe): This function signature is getting very out of hand. Move to
 // functional options for instance configuration.
-func NewRegistryWithDriver(ctx context.Context, driver storagedriver.StorageDriver, blobDescriptorCacheProvider cache.BlobDescriptorCacheProvider, deleteEnabled bool, redirect bool) distribution.Namespace {
+func NewRegistryWithDriver(ctx context.Context, driver storagedriver.StorageDriver, blobDescriptorCacheProvider cache.BlobDescriptorCacheProvider, deleteEnabled bool, redirect bool, isCache bool) distribution.Namespace {
 	// create global statter, with cache.
 	var statter distribution.BlobDescriptorService = &blobStatter{
 		driver: driver,
@@ -52,6 +53,7 @@ func NewRegistryWithDriver(ctx context.Context, driver storagedriver.StorageDriv
 		},
 		blobDescriptorCacheProvider: blobDescriptorCacheProvider,
 		deleteEnabled:               deleteEnabled,
+		resumableDigestEnabled:      !isCache,
 	}
 }
 

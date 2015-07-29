@@ -29,7 +29,7 @@ type manifestStoreTestEnv struct {
 func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestEnv {
 	ctx := context.Background()
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider(), true, true)
+	registry := NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider(), true, true, false)
 
 	repo, err := registry.Repository(ctx, name)
 	if err != nil {
@@ -348,7 +348,7 @@ func TestManifestStorage(t *testing.T) {
 		t.Errorf("Deleted manifest get returned non-nil")
 	}
 
-	r := NewRegistryWithDriver(ctx, env.driver, memory.NewInMemoryBlobDescriptorCacheProvider(), false, true)
+	r := NewRegistryWithDriver(ctx, env.driver, memory.NewInMemoryBlobDescriptorCacheProvider(), false, true, false)
 	repo, err := r.Repository(ctx, env.name)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
