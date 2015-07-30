@@ -18,7 +18,7 @@ import (
 
 func TestListener(t *testing.T) {
 	ctx := context.Background()
-	registry := storage.NewRegistryWithDriver(ctx, inmemory.New(), memory.NewInMemoryBlobDescriptorCacheProvider(), true)
+	registry := storage.NewRegistryWithDriver(ctx, inmemory.New(), memory.NewInMemoryBlobDescriptorCacheProvider(), true, true)
 	tl := &testListener{
 		ops: make(map[string]int),
 	}

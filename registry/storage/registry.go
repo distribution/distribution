@@ -20,9 +20,12 @@ type registry struct {
 
 // NewRegistryWithDriver creates a new registry instance from the provided
 // driver. The resulting registry may be shared by multiple goroutines but is
-// cheap to allocate.
-func NewRegistryWithDriver(ctx context.Context, driver storagedriver.StorageDriver, blobDescriptorCacheProvider cache.BlobDescriptorCacheProvider, deleteEnabled bool) distribution.Namespace {
-
+// cheap to allocate. If redirect is true, the backend blob server will
+// attempt to use (StorageDriver).URLFor to serve all blobs.
+//
+// TODO(stevvooe): This function signature is getting out of hand. Move to
+// functional options for instance configuration.
+func NewRegistryWithDriver(ctx context.Context, driver storagedriver.StorageDriver, blobDescriptorCacheProvider cache.BlobDescriptorCacheProvider, deleteEnabled bool, redirect bool) distribution.Namespace {
 	// create global statter, with cache.
 	var statter distribution.BlobDescriptorService = &blobStatter{
 		driver: driver,
@@ -42,9 +45,10 @@ func NewRegistryWithDriver(ctx context.Context, driver storagedriver.StorageDriv
 	return &registry{
 		blobStore: bs,
 		blobServer: &blobServer{
-			driver:  driver,
-			statter: statter,
-			pathFn:  bs.path,
+			driver:   driver,
+			statter:  statter,
+			pathFn:   bs.path,
+			redirect: redirect,
 		},
 		blobDescriptorCacheProvider: blobDescriptorCacheProvider,
 		deleteEnabled:               deleteEnabled,

@@ -104,6 +104,8 @@ information about each option that appears later in this page.
         region: fr
         container: containername
         rootdirectory: /swift/object/name/prefix
+      redirect:
+        disable: false
       cache:
         blobdescriptor: redis
       maintenance:
@@ -328,6 +330,8 @@ Permitted values are `error`, `warn`, `info` and `debug`. The default is
           age: 168h
           interval: 24h
           dryrun: false
+      redirect:
+        disable: false
 
 The storage option is **required** and defines which storage backend is in use.
 You must configure one backend; if you configure more, the registry returns an error.
@@ -349,6 +353,21 @@ map.
 >**NOTE**: Formerly, `blobdescriptor` was known as `layerinfo`. While these
 >are equivalent, `layerinfo` has been deprecated, in favor or
 >`blobdescriptor`.
+
+### redirect
+
+The `redirect` subsection provides configuration for managing redirects from
+content backends. For backends that support it, redirecting is enabled by
+default. Certain deployment scenarios may prefer to route all data through the
+Registry, rather than redirecting to the backend. This may be more efficient
+when using a backend that is not colocated or when a registry instance is
+doing aggressive caching.
+
+Redirects can be disabled by adding a single flag `disable`, set to `true`
+under the `redirect` section:
+
+  redirect:
+    disable: true
 
 ### filesystem
 
