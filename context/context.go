@@ -1,8 +1,14 @@
 package context
 
 import (
+	"sync"
+
 	"github.com/docker/distribution/uuid"
 	"golang.org/x/net/context"
+)
+
+var (
+	once sync.Once
 )
 
 // Context is a copy of Context from the golang.org/x/net/context package.
@@ -19,6 +25,13 @@ type instanceContext struct {
 
 func (ic *instanceContext) Value(key interface{}) interface{} {
 	if key == "instance.id" {
+		once.Do(func() {
+			// We want to lazy initialize the UUID such that we don't
+			// call a random generator from the package initialization
+			// code. For various reasons random could not be available
+			// https://github.com/docker/distribution/issues/782
+			ic.id = uuid.Generate().String()
+		})
 		return ic.id
 	}
 
@@ -27,7 +40,6 @@ func (ic *instanceContext) Value(key interface{}) interface{} {
 
 var background = &instanceContext{
 	Context: context.Background(),
-	id:      uuid.Generate().String(),
 }
 
 // Background returns a non-nil, empty Context. The background context
