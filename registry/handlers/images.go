@@ -1,9 +1,9 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"strings"
 
@@ -113,35 +113,14 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 		return
 	}
 
-	// Get a channel that tells us if the client disconnects
-	var clientClosed <-chan bool
-	if notifier, ok := w.(http.CloseNotifier); ok {
-		clientClosed = notifier.CloseNotify()
-	} else {
-		panic("the ResponseWriter does not implement CloseNotifier")
-	}
-
-	// Copy the data
-	jsonBytes, err := ioutil.ReadAll(r.Body)
-	if clientClosed != nil && (err != nil || (r.ContentLength > 0 && int64(len(jsonBytes)) < r.ContentLength)) {
-		// Didn't recieve as much content as expected. Did the client
-		// disconnect during the request? If so, avoid returning a 400
-		// error to keep the logs cleaner.
-		select {
-		case <-clientClosed:
-			ctxu.GetLogger(imh).Error("client disconnected during image manifest PUT")
-			return
-		default:
-		}
-	}
-	if err != nil {
-		ctxu.GetLogger(imh).Errorf("unknown error reading payload: %v", err)
-		imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+	var jsonBuf bytes.Buffer
+	if err := copyFullPayload(w, r, &jsonBuf, imh, "image manifest PUT", &imh.Errors); err != nil {
+		// copyFullPayload reports the error if necessary
 		return
 	}
 
 	var manifest manifest.SignedManifest
-	if err := json.Unmarshal(jsonBytes, &manifest); err != nil {
+	if err := json.Unmarshal(jsonBuf.Bytes(), &manifest); err != nil {
 		imh.Errors = append(imh.Errors, v2.ErrorCodeManifestInvalid.WithDetail(err))
 		return
 	}
