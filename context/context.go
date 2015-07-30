@@ -27,13 +27,15 @@ func (ic *instanceContext) Value(key interface{}) interface{} {
 
 var background = &instanceContext{
 	Context: context.Background(),
-	id:      uuid.Generate().String(),
 }
 
 // Background returns a non-nil, empty Context. The background context
 // provides a single key, "instance.id" that is globally unique to the
 // process.
 func Background() Context {
+	if len(background.id) == 0 {
+		background.id = uuid.Generate().String()
+	}
 	return background
 }
 
