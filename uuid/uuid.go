@@ -8,7 +8,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"syscall"
 	"time"
@@ -30,7 +29,7 @@ var (
 
 	// Loggerf can be used to override the default logging destination. Such
 	// log messages in this library should be logged at warning or higher.
-	Loggerf = log.Printf
+	Loggerf func(string, ...interface{})
 )
 
 // UUID represents a UUID value. UUIDs can be compared and set to other values
@@ -66,7 +65,9 @@ func Generate() (u UUID) {
 			if retryOnError(err) && retries < maxretries {
 				count += n
 				retries++
-				Loggerf("error generating version 4 uuid, retrying: %v", err)
+				if Loggerf != nil {
+					Loggerf("error generating version 4 uuid, retrying: %v", err)
+				}
 				continue
 			}
 
