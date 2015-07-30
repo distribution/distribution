@@ -3,6 +3,7 @@
 # Run the integration tests with multiple versions of the Docker engine
 
 set -e
+set -x
 
 # Don't use /tmp because this isn't available in boot2docker
 tmpdir_template="`pwd`/docker-versions.XXXXX"
@@ -23,24 +24,31 @@ fi
 
 # Released versions
 
-versions="1.6.0 1.7.0"
+versions="1.6.0 1.6.1 1.7.0 1.7.1"
 
 for v in $versions; do
-	echo "Downloading Docker $v"
-	binpath="$tmpdir/docker-$v"
-	curl -L -o "$binpath" "https://test.docker.com/builds/Linux/x86_64/docker-$v"
-	chmod +x "$binpath"
+	echo "Extracting Docker $v from dind image"
+	binpath="$tmpdir/docker-$v/docker"
+	ID=$(docker create dockerswarm/dind:$v)
+	docker cp "$ID:/usr/local/bin/docker" "$tmpdir/docker-$v"
+
 	echo "Running tests with Docker $v"
 	DOCKER_BINARY="$binpath" DOCKER_VOLUME="$volume" ./run.sh
+
+	# Cleanup.
+	docker rm -f "$ID"
 done
 
 # Latest experimental version
 
-# Extract URI from https://experimental.docker.com/builds/
-experimental=`curl -sSL https://experimental.docker.com/builds/ | tr " " "\n" | grep 'https://experimental.docker.com/builds/Linux/'`
-echo "Downloading Docker experimental"
-binpath="$tmpdir/docker-experimental"
-curl -L -o "$binpath" "$experimental"
-chmod +x "$binpath"
-echo "Running tests with Docker experimental"
+echo "Extracting Docker master from dind image"
+binpath="$tmpdir/docker-master/docker"
+docker pull dockerswarm/dind-master
+ID=$(docker create dockerswarm/dind-master)
+docker cp "$ID:/usr/local/bin/docker" "$tmpdir/docker-master"
+
+echo "Running tests with Docker master"
 DOCKER_BINARY="$binpath" DOCKER_VOLUME="$volume" ./run.sh
+
+# Cleanup.
+docker rm -f "$ID"

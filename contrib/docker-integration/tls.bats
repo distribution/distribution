@@ -16,9 +16,9 @@ function setup() {
 # skip basic auth tests with Docker 1.6, where they don't pass due to
 # certificate issues
 function basic_auth_version_check() {
-	run sh -c 'docker version | fgrep -q "Client version: 1.6.0"'
+	run sh -c 'docker version | fgrep -q "Client version: 1.6."'
 	if [ "$status" -eq 0 ]; then
-		skip "Basic auth tests don't support 1.6.0"
+		skip "Basic auth tests don't support 1.6.x"
 	fi
 }
 
