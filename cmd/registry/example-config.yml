@@ -1,0 +1,14 @@
+version: 0.1
+log:
+  fields:
+    service: registry
+storage:
+    cache:
+        layerinfo: inmemory
+    filesystem:
+        rootdirectory: /var/lib/registry
+    maintenance:
+        uploadpurging:
+            enabled: false
+http:
+    addr: :5000

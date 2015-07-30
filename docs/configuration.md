@@ -1552,7 +1552,7 @@ The above configures the registry instance to run on port `5000`, binding to
 verbose.
 
 A similar simple configuration is available at
-[config.yml](https://github.com/docker/distribution/blob/master/cmd/registry/config.yml).
+[example-config.yml](https://github.com/docker/distribution/blob/master/cmd/registry/example-config.yml).
 Both are generally useful for local development.
 
 
