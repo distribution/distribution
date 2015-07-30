@@ -164,6 +164,23 @@ var (
 			err:     ErrRepositoryNameComponentInvalid,
 			invalid: true,
 		},
+		{
+			input: "b.gcr.io/test.example.com/my-app", // embedded domain component
+		},
+		// TODO(stevvooe): The following is a punycode domain name that we may
+		// want to allow in the future. Currently, this is not allowed but we
+		// may want to change this in the future. Adding this here as invalid
+		// for the time being.
+		{
+			input:   "xn--n3h.com/myimage", // http://☃.com in punycode
+			err:     ErrRepositoryNameComponentInvalid,
+			invalid: true,
+		},
+		{
+			input:   "xn--7o8h.com/myimage", // http://🐳.com in punycode
+			err:     ErrRepositoryNameComponentInvalid,
+			invalid: true,
+		},
 	}
 )
 
