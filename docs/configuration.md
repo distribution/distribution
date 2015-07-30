@@ -278,7 +278,7 @@ Refer to `loglevel` to configure the level of messages printed.
 
 ## loglevel
 
-> **DEPRECATED:** Please use [log](#logs) instead.
+> **DEPRECATED:** Please use [log](#log) instead.
 
     loglevel: debug
 
@@ -1607,5 +1607,5 @@ The following example illustrates these values:
 
 
 >**Note**: Cloudfront keys exist separately to other AWS keys.  See
->[the documentation on AWS credentials](http://docs.aws.amazon.com/AWSSecurityCredentials/1.0/AboutAWSCredentials.html#KeyPairs)
+>[the documentation on AWS credentials](http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html)
 >for more information.
