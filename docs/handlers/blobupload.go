@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -170,30 +169,8 @@ func (buh *blobUploadHandler) PatchBlobData(w http.ResponseWriter, r *http.Reque
 
 	// TODO(dmcgowan): support Content-Range header to seek and write range
 
-	// Get a channel that tells us if the client disconnects
-	var clientClosed <-chan bool
-	if notifier, ok := w.(http.CloseNotifier); ok {
-		clientClosed = notifier.CloseNotify()
-	} else {
-		panic("the ResponseWriter does not implement CloseNotifier")
-	}
-
-	// Copy the data
-	copied, err := io.Copy(buh.Upload, r.Body)
-	if clientClosed != nil && (err != nil || (r.ContentLength > 0 && copied < r.ContentLength)) {
-		// Didn't recieve as much content as expected. Did the client
-		// disconnect during the request? If so, avoid returning a 400
-		// error to keep the logs cleaner.
-		select {
-		case <-clientClosed:
-			ctxu.GetLogger(buh).Error("client disconnected during blob PATCH")
-			return
-		default:
-		}
-	}
-	if err != nil {
-		ctxu.GetLogger(buh).Errorf("unknown error copying into upload: %v", err)
-		buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+	if err := copyFullPayload(w, r, buh.Upload, buh, "blob PATCH", &buh.Errors); err != nil {
+		// copyFullPayload reports the error if necessary
 		return
 	}
 
@@ -231,30 +208,8 @@ func (buh *blobUploadHandler) PutBlobUploadComplete(w http.ResponseWriter, r *ht
 		return
 	}
 
-	// Get a channel that tells us if the client disconnects
-	var clientClosed <-chan bool
-	if notifier, ok := w.(http.CloseNotifier); ok {
-		clientClosed = notifier.CloseNotify()
-	} else {
-		panic("the ResponseWriter does not implement CloseNotifier")
-	}
-
-	// Read in the data, if any.
-	copied, err := io.Copy(buh.Upload, r.Body)
-	if clientClosed != nil && (err != nil || (r.ContentLength > 0 && copied < r.ContentLength)) {
-		// Didn't recieve as much content as expected. Did the client
-		// disconnect during the request? If so, avoid returning a 400
-		// error to keep the logs cleaner.
-		select {
-		case <-clientClosed:
-			ctxu.GetLogger(buh).Error("client disconnected during blob PUT")
-			return
-		default:
-		}
-	}
-	if err != nil {
-		ctxu.GetLogger(buh).Errorf("unknown error copying into upload: %v", err)
-		buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+	if err := copyFullPayload(w, r, buh.Upload, buh, "blob PUT", &buh.Errors); err != nil {
+		// copyFullPayload reports the error if necessary
 		return
 	}
 
