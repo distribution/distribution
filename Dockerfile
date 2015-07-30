@@ -15,4 +15,4 @@ RUN make PREFIX=/go clean binaries
 VOLUME ["/var/lib/registry"]
 EXPOSE 5000
 ENTRYPOINT ["registry"]
-CMD ["cmd/registry/config.yml"]
+CMD ["cmd/registry/dev-config.yml"]
