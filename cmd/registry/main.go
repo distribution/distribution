@@ -29,6 +29,7 @@ import (
 	_ "github.com/docker/distribution/registry/storage/driver/middleware/cloudfront"
 	_ "github.com/docker/distribution/registry/storage/driver/s3"
 	_ "github.com/docker/distribution/registry/storage/driver/swift"
+	"github.com/docker/distribution/uuid"
 	"github.com/docker/distribution/version"
 	gorhandlers "github.com/gorilla/handlers"
 	"github.com/yvasiyarov/gorelic"
@@ -61,6 +62,10 @@ func main() {
 	if err != nil {
 		fatalf("error configuring logger: %v", err)
 	}
+
+	// inject a logger into the uuid library. warns us if there is a problem
+	// with uuid generation under low entropy.
+	uuid.Loggerf = context.GetLogger(ctx).Warnf
 
 	app := handlers.NewApp(ctx, *config)
 	handler := configureReporting(app)
