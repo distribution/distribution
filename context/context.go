@@ -7,10 +7,6 @@ import (
 	"golang.org/x/net/context"
 )
 
-var (
-	once sync.Once
-)
-
 // Context is a copy of Context from the golang.org/x/net/context package.
 type Context interface {
 	context.Context
@@ -20,12 +16,13 @@ type Context interface {
 // provided as the main background context.
 type instanceContext struct {
 	Context
-	id string // id of context, logged as "instance.id"
+	id   string    // id of context, logged as "instance.id"
+	once sync.Once // once protect generation of the id
 }
 
 func (ic *instanceContext) Value(key interface{}) interface{} {
 	if key == "instance.id" {
-		once.Do(func() {
+		ic.once.Do(func() {
 			// We want to lazy initialize the UUID such that we don't
 			// call a random generator from the package initialization
 			// code. For various reasons random could not be available
