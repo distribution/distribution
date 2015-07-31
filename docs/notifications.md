@@ -23,7 +23,7 @@ queues and dispatches events to [_Endpoints_](#endpoints).
 
 ## Endpoints
 
-Notifications are sent to _endpoints_ via HTTP requests. Each configurated
+Notifications are sent to _endpoints_ via HTTP requests. Each configured
 endpoint has isolated queues, retry configuration and http targets within each
 instance of a registry. When an action happens within the registry, it is
 converted into an event which is dropped into an inmemory queue. When the

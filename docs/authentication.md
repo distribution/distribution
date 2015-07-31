@@ -180,6 +180,6 @@ If you'd like to manually configure your HTTP server, here are a few requirement
 
 - Each response needs to have the header "Docker-Distribution-Api-Version registry/2.0" set, even (especially) if there is a 401 or 404 error response. Make sure using cURL that this header is provided. Note: If you're using Nginx, this functionality is only available since 1.7.5 using the "always" add_header directive, or when compiling with the "more_set_headers" module.
 
-- A large enough maximum for client body size, preferrably unlimited. Because images can be pretty big, the very low default maximum size of most HTTP servers won't be sufficient to be able to upload the files.
+- A large enough maximum for client body size, preferably unlimited. Because images can be pretty big, the very low default maximum size of most HTTP servers won't be sufficient to be able to upload the files.
 
 - Support for chunked transfer encoding.
