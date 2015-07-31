@@ -14,7 +14,6 @@ package oss
 import (
 	"bytes"
 	"fmt"
-	"github.com/docker/distribution/context"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -23,6 +22,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/docker/distribution/context"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/denverdino/aliyungo/oss"

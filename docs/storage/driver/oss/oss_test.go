@@ -3,11 +3,12 @@
 package oss
 
 import (
+	"io/ioutil"
+
 	alioss "github.com/denverdino/aliyungo/oss"
 	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/testsuites"
-	"io/ioutil"
 	//"log"
 	"os"
 	"strconv"
