@@ -277,7 +277,7 @@ API. When this header is omitted, clients may fallback to an older API version.
 
 This API design is driven heavily by [content addressability](http://en.wikipedia.org/wiki/Content-addressable_storage).
 The core of this design is the concept of a content addressable identifier. It
-uniquely identifies content by taking a collision-resistent hash of the bytes.
+uniquely identifies content by taking a collision-resistant hash of the bytes.
 Such an identifier can be independently calculated and verified by selection
 of a common _algorithm_. If such an identifier can be communicated in a secure
 manner, one can retrieve the content from an insecure source, calculate it
@@ -791,7 +791,7 @@ Images are stored in collections, known as a _repository_, which is keyed by a
 contain several repositories. The list of available repositories is made
 available through the _catalog_.
 
-The catalog for a given registry can be retrived with the following request:
+The catalog for a given registry can be retrieved with the following request:
 
 ```
 GET /v2/_catalog
@@ -875,7 +875,7 @@ To get the next result set, a client would issue the request as follows, using
 the URL encoded in the described `Link` header:
 
 ```
-GET /v2/_catalog?n=<n from the request>&last=<last repostory value from previous response>
+GET /v2/_catalog?n=<n from the request>&last=<last repository value from previous response>
 ```
 
 The above process should then be repeated until the `Link` header is no longer
