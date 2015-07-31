@@ -785,8 +785,8 @@ func TestManifestUnauthorized(t *testing.T) {
 	if v2Err.Code != v2.ErrorCodeUnauthorized {
 		t.Fatalf("Unexpected error code: %s", v2Err.Code.String())
 	}
-	if expected := v2.ErrorCodeUnauthorized.Message(); v2Err.Message != expected {
-		t.Fatalf("Unexpected message value: %q, expected %q", v2Err.Message, expected)
+	if expected := v2.ErrorCodeUnauthorized.Message(); v2Err.Message() != expected {
+		t.Fatalf("Unexpected message value: %q, expected %q", v2Err.Message(), expected)
 	}
 }
 
