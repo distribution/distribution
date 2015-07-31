@@ -536,7 +536,7 @@ var routeDescriptors = []RouteDescriptor{
 						},
 						Successes: []ResponseDescriptor{
 							{
-								Description: "The manifest idenfied by `name` and `reference`. The contents can be used to identify and resolve resources required to run the specified image.",
+								Description: "The manifest identified by `name` and `reference`. The contents can be used to identify and resolve resources required to run the specified image.",
 								StatusCode:  http.StatusOK,
 								Headers: []ParameterDescriptor{
 									digestHeader,
@@ -928,7 +928,7 @@ var routeDescriptors = []RouteDescriptor{
 	{
 		Name:        RouteNameBlobUpload,
 		Path:        "/v2/{name:" + RepositoryNameRegexp.String() + "}/blobs/uploads/",
-		Entity:      "Intiate Blob Upload",
+		Entity:      "Initiate Blob Upload",
 		Description: "Initiate a blob upload. This endpoint can be used to create resumable uploads or monolithic uploads.",
 		Methods: []MethodDescriptor{
 			{
