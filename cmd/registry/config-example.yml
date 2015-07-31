@@ -7,8 +7,5 @@ storage:
         layerinfo: inmemory
     filesystem:
         rootdirectory: /var/lib/registry
-    maintenance:
-        uploadpurging:
-            enabled: true
 http:
     addr: :5000
