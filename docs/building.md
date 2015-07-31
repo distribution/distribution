@@ -6,7 +6,7 @@ draft = "true"
 
 # Build the development environment
 
-The first prequisite of properly building distribution targets is to have a Go
+The first prerequisite of properly building distribution targets is to have a Go
 development environment setup. Please follow [How to Write Go Code](https://golang.org/doc/code.html)
 for proper setup. If done correctly, you should have a GOROOT and GOPATH set in the
 environment.
@@ -42,7 +42,7 @@ $GOPATH/bin/registry github.com/docker/distribution v2.0.0-alpha.1+unknown
 > `$GOPATH/src/github.com/docker/distribution`.
 
 The registry can be run with the default config using the following
-incantantation:
+incantation:
 
 ```
 $ $GOPATH/bin/registry $GOPATH/src/github.com/docker/distribution/cmd/registry/config-dev.yml

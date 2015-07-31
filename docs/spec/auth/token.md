@@ -276,7 +276,7 @@ Token has 3 main parts:
                     <code>name</code>
                 </dt>
                 <dd>
-                    The name of the recource of the given type hosted by the
+                    The name of the resource of the given type hosted by the
                     service.
                 </dd>
                 <dt>

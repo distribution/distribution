@@ -278,7 +278,7 @@ API. When this header is omitted, clients may fallback to an older API version.
 
 This API design is driven heavily by [content addressability](http://en.wikipedia.org/wiki/Content-addressable_storage).
 The core of this design is the concept of a content addressable identifier. It
-uniquely identifies content by taking a collision-resistent hash of the bytes.
+uniquely identifies content by taking a collision-resistant hash of the bytes.
 Such an identifier can be independently calculated and verified by selection
 of a common _algorithm_. If such an identifier can be communicated in a secure
 manner, one can retrieve the content from an insecure source, calculate it
@@ -789,7 +789,7 @@ Images are stored in collections, known as a _repository_, which is keyed by a
 contain several repositories. The list of available repositories is made
 available through the _catalog_.
 
-The catalog for a given registry can be retrived with the following request:
+The catalog for a given registry can be retrieved with the following request:
 
 ```
 GET /v2/_catalog
@@ -873,7 +873,7 @@ To get the next result set, a client would issue the request as follows, using
 the URL encoded in the described `Link` header:
 
 ```
-GET /v2/_catalog?n=<n from the request>&last=<last repostory value from previous response>
+GET /v2/_catalog?n=<n from the request>&last=<last repository value from previous response>
 ```
 
 The above process should then be repeated until the `Link` header is no longer
@@ -1016,7 +1016,7 @@ A list of methods and URIs are covered in the table below:
 | PUT | `/v2/<name>/manifests/<reference>` | Manifest | Put the manifest identified by `name` and `reference` where `reference` can be a tag or digest. |
 | DELETE | `/v2/<name>/manifests/<reference>` | Manifest | Delete the manifest identified by `name` and `reference`. Note that a manifest can _only_ be deleted by `digest`. |
 | GET | `/v2/<name>/blobs/<digest>` | Blob | Retrieve the blob from the registry identified by `digest`. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data. |
-| POST | `/v2/<name>/blobs/uploads/` | Intiate Blob Upload | Initiate a resumable blob upload. If successful, an upload location will be provided to complete the upload. Optionally, if the `digest` parameter is present, the request body will be used to complete the upload in a single request. |
+| POST | `/v2/<name>/blobs/uploads/` | Initiate Blob Upload | Initiate a resumable blob upload. If successful, an upload location will be provided to complete the upload. Optionally, if the `digest` parameter is present, the request body will be used to complete the upload in a single request. |
 | GET | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Retrieve status of upload identified by `uuid`. The primary purpose of this endpoint is to resolve the current status of a resumable upload. |
 | PATCH | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Upload a chunk of data for the specified upload. |
 | PUT | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Complete the upload specified by `uuid`, optionally appending the body as the final chunk. |
@@ -1427,7 +1427,7 @@ Content-Type: application/json; charset=utf-8
 }
 ```
 
-The manifest idenfied by `name` and `reference`. The contents can be used to identify and resolve resources required to run the specified image.
+The manifest identified by `name` and `reference`. The contents can be used to identify and resolve resources required to run the specified image.
 
 The following headers will be returned with the response:
 
@@ -2208,13 +2208,13 @@ The range specification cannot be satisfied for the requested content. This can 
 
 
 
-### Intiate Blob Upload
+### Initiate Blob Upload
 
 Initiate a blob upload. This endpoint can be used to create resumable uploads or monolithic uploads.
 
 
 
-#### POST Intiate Blob Upload
+#### POST Initiate Blob Upload
 
 Initiate a resumable blob upload. If successful, an upload location will be provided to complete the upload. Optionally, if the `digest` parameter is present, the request body will be used to complete the upload in a single request.
 

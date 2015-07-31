@@ -34,7 +34,7 @@ You can find out more about the various Docker commands dealing with images in t
 
 ## Use cases
 
-Running your own Registry is a great solution to integrate with and complement your CI/CD system. In a typical workflow, a commit to your source revision control system would trigger a build on your CI system, which would then push a new image to your Registry if the build is succesful. A notification from the Registry would then trigger a deployment on a staging environment, or notify other systems that a new image is available.
+Running your own Registry is a great solution to integrate with and complement your CI/CD system. In a typical workflow, a commit to your source revision control system would trigger a build on your CI system, which would then push a new image to your Registry if the build is successful. A notification from the Registry would then trigger a deployment on a staging environment, or notify other systems that a new image is available.
 
 It's also an essential component if you want to quickly deploy a new image over a large cluster of machines.
 

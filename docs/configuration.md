@@ -940,7 +940,7 @@ The `middleware` option is **optional**. Use this option to inject middleware at
 named hook points. All middlewares must implement the same interface as the
 object they're wrapping. This means a registry middleware must implement the
 `distribution.Namespace` interface, repository middleware must implement
-`distribution.Respository`, and storage middleware must implement
+`distribution.Repository`, and storage middleware must implement
 `driver.StorageDriver`.
 
 Currently only one middleware, `cloudfront`, a storage middleware, is supported
@@ -1071,8 +1071,8 @@ configuration may contain both.
     </td>
     <td>
       Tracks where the registry is deployed, for example,
-      <codde>production</code>,<codde>staging</code>, or
-      <codde>development</code>.
+      <code>production</code>,<code>staging</code>, or
+      <code>development</code>.
     </td>
   </tr>
   <tr>
