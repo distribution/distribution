@@ -209,20 +209,8 @@ func New(params DriverParameters) (*Driver, error) {
 		return nil, err
 	}
 
-	// TODO Currently multipart uploads have no timestamps, so this would be unwise
+	// TODO(tg123): Currently multipart uploads have no timestamps, so this would be unwise
 	// if you initiated a new OSS client while another one is running on the same bucket.
-	// multis, _, err := bucket.ListMulti("", "")
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// for _, multi := range multis {
-	// 	err := multi.Abort()
-	// 	//TODO appropriate to do this error checking?
-	// 	if err != nil {
-	// 		return nil, err
-	// 	}
-	// }
 
 	d := &driver{
 		Client:        client,
