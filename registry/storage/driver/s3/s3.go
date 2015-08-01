@@ -53,6 +53,7 @@ type DriverParameters struct {
 	SecretKey     string
 	Bucket        string
 	Region        aws.Region
+	SupportsHead  bool
 	Encrypt       bool
 	Secure        bool
 	V4Auth        bool
@@ -74,6 +75,7 @@ func (factory *s3DriverFactory) Create(parameters map[string]interface{}) (stora
 type driver struct {
 	S3            *s3.S3
 	Bucket        *s3.Bucket
+	SupportsHead  bool
 	ChunkSize     int64
 	Encrypt       bool
 	RootDirectory string
@@ -97,6 +99,8 @@ type Driver struct {
 // - accesskey
 // - secretkey
 // - region
+// - regionendpoint
+// - regionsupportshead
 // - bucket
 // - encrypt
 func FromParameters(parameters map[string]interface{}) (*Driver, error) {
@@ -116,9 +120,28 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	if !ok || fmt.Sprint(regionName) == "" {
 		return nil, fmt.Errorf("No region parameter provided")
 	}
-	region := aws.GetRegion(fmt.Sprint(regionName))
-	if region.Name == "" {
-		return nil, fmt.Errorf("Invalid region provided: %v", region)
+
+	var region aws.Region
+	if fmt.Sprint(regionName) == "generic" {
+		regionEndpoint, ok := parameters["regionendpoint"]
+		if !ok || fmt.Sprint(regionEndpoint) == "" {
+			return nil, fmt.Errorf("No S3 endpoint for generic region")
+		}
+		region = aws.Region{Name: fmt.Sprint(regionName), S3Endpoint: fmt.Sprint(regionEndpoint), S3LocationConstraint: true}
+	} else {
+		region = aws.GetRegion(fmt.Sprint(regionName))
+		if region.Name == "" {
+			return nil, fmt.Errorf("Invalid region provided: %v", region)
+		}
+	}
+
+	regionSupportsHead := true
+	regionsupportshead, ok := parameters["regionsupportshead"]
+	if ok {
+		regionSupportsHead, ok = regionsupportshead.(bool)
+		if !ok {
+			return nil, fmt.Errorf("The secure parameter should be a boolean")
+		}
 	}
 
 	bucket, ok := parameters["bucket"]
@@ -186,6 +209,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(secretKey),
 		fmt.Sprint(bucket),
 		region,
+		regionSupportsHead,
 		encryptBool,
 		secureBool,
 		v4AuthBool,
@@ -237,6 +261,7 @@ func New(params DriverParameters) (*Driver, error) {
 	d := &driver{
 		S3:            s3obj,
 		Bucket:        bucket,
+		SupportsHead:  params.SupportsHead,
 		ChunkSize:     params.ChunkSize,
 		Encrypt:       params.Encrypt,
 		RootDirectory: params.RootDirectory,
@@ -754,6 +779,9 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 // May return an UnsupportedMethodErr in certain StorageDriver implementations.
 func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
+	if d.SupportsHead == false {
+		return "", storagedriver.ErrUnsupportedMethod
+	}
 	methodString := "GET"
 	method, ok := options["method"]
 	if ok {
