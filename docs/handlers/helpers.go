@@ -40,6 +40,12 @@ func copyFullPayload(responseWriter http.ResponseWriter, r *http.Request, destWr
 		// error to keep the logs cleaner.
 		select {
 		case <-clientClosed:
+			// Set the response code to "499 Client Closed Request"
+			// Even though the connection has already been closed,
+			// this causes the logger to pick up a 499 error
+			// instead of showing 0 for the HTTP status.
+			responseWriter.WriteHeader(499)
+
 			ctxu.GetLogger(context).Error("client disconnected during " + action)
 			return errors.New("client disconnected")
 		default:
