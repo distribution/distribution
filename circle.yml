@@ -75,6 +75,11 @@ test:
     - gvm use stable && go version
     # - gvm use bleed && go version
 
+  # First thing: build everything. This will catch compile errors, and it's
+  # also necessary for go vet to work properly (see #807).
+    - gvm use stable && godep go install ./...:
+        pwd: $BASE_STABLE
+
   # FMT
     - gvm use stable && test -z "$(gofmt -s -l . | grep -v Godeps/_workspace/src/ | tee /dev/stderr)":
         pwd: $BASE_STABLE

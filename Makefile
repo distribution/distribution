@@ -39,7 +39,9 @@ ${PREFIX}/bin/dist: version/version.go $(shell find . -type f -name '*.go')
 docs/spec/api.md: docs/spec/api.md.tmpl ${PREFIX}/bin/registry-api-descriptor-template
 	./bin/registry-api-descriptor-template $< > $@
 
-vet:
+# Depends on binaries because vet will silently fail if it can't load compiled
+# imports
+vet: binaries
 	@echo "+ $@"
 	@go vet ./...
 
@@ -70,5 +72,3 @@ binaries: ${PREFIX}/bin/registry ${PREFIX}/bin/registry-api-descriptor-template 
 clean:
 	@echo "+ $@"
 	@rm -rf "${PREFIX}/bin/registry" "${PREFIX}/bin/registry-api-descriptor-template"
-
-	
