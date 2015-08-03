@@ -146,7 +146,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 
 	d, err := bs.Stat(ctx, desc.Digest)
 	if err == nil {
-		t.Fatalf("unexpected non-error stating deleted blob: %s", d)
+		t.Fatalf("unexpected non-error stating deleted blob: %v", d)
 	}
 
 	switch err {
