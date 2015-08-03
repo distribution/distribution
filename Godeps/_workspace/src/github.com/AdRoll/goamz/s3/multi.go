@@ -394,6 +394,14 @@ func (p completeParts) Len() int           { return len(p) }
 func (p completeParts) Less(i, j int) bool { return p[i].PartNumber < p[j].PartNumber }
 func (p completeParts) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
+// We can't know in advance whether we'll have an Error or a
+// CompleteMultipartUploadResult, so this structure is just a placeholder to
+// know the name of the XML object.
+type completeUploadResp struct {
+	XMLName  xml.Name
+	InnerXML string `xml:",innerxml"`
+}
+
 // Complete assembles the given previously uploaded parts into the
 // final object. This operation may take several minutes.
 //
@@ -419,11 +427,41 @@ func (m *Multi) Complete(parts []Part) error {
 			params:  params,
 			payload: bytes.NewReader(data),
 		}
-		err := m.Bucket.S3.query(req, nil)
+		var resp completeUploadResp
+		err := m.Bucket.S3.query(req, &resp)
 		if shouldRetry(err) && attempt.HasNext() {
 			continue
 		}
-		return err
+
+		if err != nil {
+			return err
+		}
+
+		// A 200 error code does not guarantee that there were no errors (see
+		// http://docs.aws.amazon.com/AmazonS3/latest/API/mpUploadComplete.html ),
+		// so first figure out what kind of XML "object" we are dealing with.
+
+		if resp.XMLName.Local == "Error" {
+			// S3.query does the unmarshalling for us, so we can't unmarshal
+			// again in a different struct... So we need to duct-tape back the
+			// original XML back together.
+			fullErrorXml := "<Error>" + resp.InnerXML + "</Error>"
+			s3err := &Error{}
+
+			if err := xml.Unmarshal([]byte(fullErrorXml), s3err); err != nil {
+				return err
+			}
+
+			return s3err
+		}
+
+		if resp.XMLName.Local == "CompleteMultipartUploadResult" {
+			// FIXME: One could probably add a CompleteFull method returning the
+			// actual contents of the CompleteMultipartUploadResult object.
+			return nil
+		}
+
+		return errors.New("Invalid XML struct returned: " + resp.XMLName.Local)
 	}
 	panic("unreachable")
 }

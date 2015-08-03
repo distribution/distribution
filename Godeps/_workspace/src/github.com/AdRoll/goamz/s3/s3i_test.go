@@ -456,7 +456,11 @@ func (s *ClientTests) TestMultiComplete(c *check.C) {
 	err := b.PutBucket(s3.Private)
 	c.Assert(err, check.IsNil)
 
-	multi, err := b.InitMulti("multi", "text/plain", s3.Private, s3.Options{})
+	contentType := "text/plain"
+	meta := make(map[string][]string)
+	meta["X-Amz-Meta-TestField"] = []string{"testValue"}
+	options := s3.Options{ContentEncoding: "identity", ContentDisposition: "inline", Meta: meta}
+	multi, err := b.InitMulti("multi", contentType, s3.Private, options)
 	c.Assert(err, check.IsNil)
 	c.Assert(multi.UploadId, check.Matches, ".+")
 	defer multi.Abort()
@@ -484,6 +488,16 @@ func (s *ClientTests) TestMultiComplete(c *check.C) {
 		}
 	}
 	c.Assert(string(data[len(data1):]), check.Equals, string(data2))
+
+	resp, err := b.GetResponse("multi")
+	c.Assert(resp.Header.Get("Content-Type"), check.Equals, contentType)
+	c.Assert(resp.Header.Get("x-amz-acl"), check.Equals, s3.Private)
+	c.Assert(resp.Header.Get("Content-MD5"), check.Equals, options.ContentMD5)
+	c.Assert(resp.Header.Get("Content-Encoding"), check.Equals, options.ContentEncoding)
+	c.Assert(resp.Header.Get("Content-Disposition"), check.Equals, options.ContentDisposition)
+	for k, values := range meta {
+		c.Assert(resp.Header.Get(k), check.Equals, strings.Join(values, ","))
+	}
 }
 
 type multiList []*s3.Multi

@@ -4,6 +4,7 @@ import (
 	"github.com/AdRoll/goamz/aws"
 	"github.com/AdRoll/goamz/s3"
 	"github.com/AdRoll/goamz/s3/s3test"
+	"github.com/AdRoll/goamz/testutil"
 	"gopkg.in/check.v1"
 )
 
@@ -76,4 +77,11 @@ func (s *LocalServerSuite) TestBucketList(c *check.C) {
 
 func (s *LocalServerSuite) TestDoublePutBucket(c *check.C) {
 	s.clientTests.TestDoublePutBucket(c)
+}
+
+func (s *LocalServerSuite) TestMultiComplete(c *check.C) {
+	if !testutil.Amazon {
+		c.Skip("live tests against AWS disabled (no -amazon)")
+	}
+	s.clientTests.TestMultiComplete(c)
 }
