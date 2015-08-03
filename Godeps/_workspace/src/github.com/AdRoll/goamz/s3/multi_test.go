@@ -343,10 +343,7 @@ func (s *S) TestPutAllResume(c *check.C) {
 
 func (s *S) TestMultiComplete(c *check.C) {
 	testServer.Response(200, nil, InitMultiResultDump)
-	// Note the 200 response. Completing will hold the connection on some
-	// kind of long poll, and may return a late error even after a 200.
-	testServer.Response(200, nil, InternalErrorDump)
-	testServer.Response(200, nil, "")
+	testServer.Response(200, nil, MultiCompleteDump)
 
 	b := s.s3.Bucket("sample")
 
@@ -380,6 +377,24 @@ func (s *S) TestMultiComplete(c *check.C) {
 	c.Assert(payload.Part[0].ETag, check.Equals, `"ETag1"`)
 	c.Assert(payload.Part[1].PartNumber, check.Equals, 2)
 	c.Assert(payload.Part[1].ETag, check.Equals, `"ETag2"`)
+}
+
+func (s *S) TestMultiCompleteError(c *check.C) {
+	testServer.Response(200, nil, InitMultiResultDump)
+	// Note the 200 response. Completing will hold the connection on some
+	// kind of long poll, and may return a late error even after a 200.
+	testServer.Response(200, nil, InternalErrorDump)
+
+	b := s.s3.Bucket("sample")
+
+	multi, err := b.InitMulti("multi", "text/plain", s3.Private, s3.Options{})
+	c.Assert(err, check.IsNil)
+
+	err = multi.Complete([]s3.Part{{2, `"ETag2"`, 32}, {1, `"ETag1"`, 64}})
+	c.Assert(err, check.NotNil)
+
+	testServer.WaitRequest()
+	testServer.WaitRequest()
 }
 
 func (s *S) TestMultiAbort(c *check.C) {

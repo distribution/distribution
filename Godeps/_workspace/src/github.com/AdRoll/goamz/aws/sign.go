@@ -75,19 +75,6 @@ func NewRoute53Signer(auth Auth) *Route53Signer {
 	return &Route53Signer{auth: auth}
 }
 
-// getCurrentDate fetches the date stamp from the aws servers to
-// ensure the auth headers are within 5 minutes of the server time
-func (s *Route53Signer) getCurrentDate() string {
-	response, err := http.Get("https://route53.amazonaws.com/date")
-	if err != nil {
-		fmt.Print("Unable to get date from amazon: ", err)
-		return ""
-	}
-
-	response.Body.Close()
-	return response.Header.Get("Date")
-}
-
 // Creates the authorize signature based on the date stamp and secret key
 func (s *Route53Signer) getHeaderAuthorize(message string) string {
 	hmacSha256 := hmac.New(sha256.New, []byte(s.auth.SecretKey))
@@ -100,16 +87,18 @@ func (s *Route53Signer) getHeaderAuthorize(message string) string {
 // Adds all the required headers for AWS Route53 API to the request
 // including the authorization
 func (s *Route53Signer) Sign(req *http.Request) {
-	date := s.getCurrentDate()
+	date := time.Now().UTC().Format(time.RFC1123)
+	delete(req.Header, "Date")
+	req.Header.Set("Date", date)
+
 	authHeader := fmt.Sprintf("AWS3-HTTPS AWSAccessKeyId=%s,Algorithm=%s,Signature=%s",
 		s.auth.AccessKey, "HmacSHA256", s.getHeaderAuthorize(date))
 
 	req.Header.Set("Host", req.Host)
 	req.Header.Set("X-Amzn-Authorization", authHeader)
-	req.Header.Set("X-Amz-Date", date)
 	req.Header.Set("Content-Type", "application/xml")
 	if s.auth.Token() != "" {
-		req.Header.Set("X-Amzn-Security-Token", s.auth.Token())
+		req.Header.Set("X-Amz-Security-Token", s.auth.Token())
 	}
 }
 
