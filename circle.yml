@@ -80,7 +80,7 @@ test:
         pwd: $BASE_STABLE
 
   # VET
-    - gvm use stable && go vet ./...:
+    - gvm use stable && go list ./... && go vet ./... && go vet registry/storage/blob_test.go:
         pwd: $BASE_STABLE
 
   # LINT
