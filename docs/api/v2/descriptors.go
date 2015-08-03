@@ -519,7 +519,7 @@ var routeDescriptors = []RouteDescriptor{
 		Name:        RouteNameManifest,
 		Path:        "/v2/{name:" + RepositoryNameRegexp.String() + "}/manifests/{reference:" + TagNameRegexp.String() + "|" + digest.DigestRegexp.String() + "}",
 		Entity:      "Manifest",
-		Description: "Create, update and retrieve manifests.",
+		Description: "Create, update, delete and retrieve manifests.",
 		Methods: []MethodDescriptor{
 			{
 				Method:      "GET",
@@ -768,9 +768,8 @@ var routeDescriptors = []RouteDescriptor{
 		Name:        RouteNameBlob,
 		Path:        "/v2/{name:" + RepositoryNameRegexp.String() + "}/blobs/{digest:" + digest.DigestRegexp.String() + "}",
 		Entity:      "Blob",
-		Description: "Fetch the blob identified by `name` and `digest`. Used to fetch layers by digest.",
+		Description: "Operations on blobs identified by `name` and `digest`. Used to fetch or delete layers by digest.",
 		Methods: []MethodDescriptor{
-
 			{
 				Method:      "GET",
 				Description: "Retrieve the blob from the registry identified by `digest`. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data.",
@@ -919,6 +918,70 @@ var routeDescriptors = []RouteDescriptor{
 					},
 				},
 			},
+			{
+				Method:      "DELETE",
+				Description: "Delete the blob identified by `name` and `digest`",
+				Requests: []RequestDescriptor{
+					{
+						Headers: []ParameterDescriptor{
+							hostHeader,
+							authHeader,
+						},
+						PathParameters: []ParameterDescriptor{
+							nameParameterDescriptor,
+							digestPathParameter,
+						},
+						Successes: []ResponseDescriptor{
+							{
+								StatusCode: http.StatusAccepted,
+								Headers: []ParameterDescriptor{
+									{
+										Name:        "Content-Length",
+										Type:        "integer",
+										Description: "0",
+										Format:      "0",
+									},
+									digestHeader,
+								},
+							},
+						},
+						Failures: []ResponseDescriptor{
+							{
+								Name:       "Invalid Name or Digest",
+								StatusCode: http.StatusBadRequest,
+								ErrorCodes: []errcode.ErrorCode{
+									ErrorCodeDigestInvalid,
+									ErrorCodeNameInvalid,
+								},
+							},
+							{
+								Description: "The blob, identified by `name` and `digest`, is unknown to the registry.",
+								StatusCode:  http.StatusNotFound,
+								Body: BodyDescriptor{
+									ContentType: "application/json; charset=utf-8",
+									Format:      errorsBody,
+								},
+								ErrorCodes: []errcode.ErrorCode{
+									ErrorCodeNameUnknown,
+									ErrorCodeBlobUnknown,
+								},
+							},
+							{
+								Description: "Delete is not enabled on the registry",
+								StatusCode:  http.StatusMethodNotAllowed,
+								Body: BodyDescriptor{
+									ContentType: "application/json; charset=utf-8",
+									Format:      errorsBody,
+								},
+								ErrorCodes: []errcode.ErrorCode{
+									ErrorCodeUnsupported,
+								},
+							},
+						},
+					},
+				},
+			},
+
 			// TODO(stevvooe): We may want to add a PUT request here to
 			// kickoff an upload of a blob, integrated with the blob upload
 			// API.
