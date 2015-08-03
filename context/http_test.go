@@ -114,7 +114,7 @@ func (trw *testResponseWriter) Header() http.Header {
 // http.CloseNotifier interface, which WithResponseWriter expects to be
 // implemented.
 func (trw *testResponseWriter) CloseNotify() <-chan bool {
-	return nil
+	return make(chan bool)
 }
 
 func (trw *testResponseWriter) Write(p []byte) (n int, err error) {
