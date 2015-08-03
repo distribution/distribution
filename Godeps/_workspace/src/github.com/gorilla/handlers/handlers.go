@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-/*
-Package handlers is a collection of handlers for use with Go's net/http package.
-*/
 package handlers
 
 import (
@@ -29,7 +26,7 @@ import (
 // available methods.
 //
 // If the request's method doesn't match any of its keys the handler responds with
-// a status of 406, Method not allowed and sets the Allow header to a comma-separated list
+// a status of 405, Method not allowed and sets the Allow header to a comma-separated list
 // of available methods.
 type MethodHandler map[string]http.Handler
 
@@ -65,12 +62,7 @@ type combinedLoggingHandler struct {
 
 func (h loggingHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	t := time.Now()
-	var logger loggingResponseWriter
-	if _, ok := w.(http.Hijacker); ok {
-		logger = &hijackLogger{responseLogger: responseLogger{w: w}}
-	} else {
-		logger = &responseLogger{w: w}
-	}
+	logger := makeLogger(w)
 	url := *req.URL
 	h.handler.ServeHTTP(logger, req)
 	writeLog(h.writer, req, url, t, logger.Status(), logger.Size())
@@ -78,19 +70,31 @@ func (h loggingHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 func (h combinedLoggingHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	t := time.Now()
-	var logger loggingResponseWriter
-	if _, ok := w.(http.Hijacker); ok {
-		logger = &hijackLogger{responseLogger: responseLogger{w: w}}
-	} else {
-		logger = &responseLogger{w: w}
-	}
+	logger := makeLogger(w)
 	url := *req.URL
 	h.handler.ServeHTTP(logger, req)
 	writeCombinedLog(h.writer, req, url, t, logger.Status(), logger.Size())
 }
 
+func makeLogger(w http.ResponseWriter) loggingResponseWriter {
+	var logger loggingResponseWriter = &responseLogger{w: w}
+	if _, ok := w.(http.Hijacker); ok {
+		logger = &hijackLogger{responseLogger{w: w}}
+	}
+	h, ok1 := logger.(http.Hijacker)
+	c, ok2 := w.(http.CloseNotifier)
+	if ok1 && ok2 {
+		return hijackCloseNotifier{logger, h, c}
+	}
+	if ok2 {
+		return &closeNotifyWriter{logger, c}
+	}
+	return logger
+}
+
 type loggingResponseWriter interface {
 	http.ResponseWriter
+	http.Flusher
 	Status() int
 	Size() int
 }
@@ -130,6 +134,13 @@ func (l *responseLogger) Size() int {
 	return l.size
 }
 
+func (l *responseLogger) Flush() {
+	f, ok := l.w.(http.Flusher)
+	if ok {
+		f.Flush()
+	}
+}
+
 type hijackLogger struct {
 	responseLogger
 }
@@ -142,6 +153,17 @@ func (l *hijackLogger) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 		l.responseLogger.status = http.StatusSwitchingProtocols
 	}
 	return conn, rw, err
+}
+
+type closeNotifyWriter struct {
+	loggingResponseWriter
+	http.CloseNotifier
+}
+
+type hijackCloseNotifier struct {
+	loggingResponseWriter
+	http.Hijacker
+	http.CloseNotifier
 }
 
 const lowerhex = "0123456789abcdef"

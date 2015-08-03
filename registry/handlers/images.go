@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -112,10 +113,14 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 		return
 	}
 
-	dec := json.NewDecoder(r.Body)
+	var jsonBuf bytes.Buffer
+	if err := copyFullPayload(w, r, &jsonBuf, imh, "image manifest PUT", &imh.Errors); err != nil {
+		// copyFullPayload reports the error if necessary
+		return
+	}
 
 	var manifest manifest.SignedManifest
-	if err := dec.Decode(&manifest); err != nil {
+	if err := json.Unmarshal(jsonBuf.Bytes(), &manifest); err != nil {
 		imh.Errors = append(imh.Errors, v2.ErrorCodeManifestInvalid.WithDetail(err))
 		return
 	}

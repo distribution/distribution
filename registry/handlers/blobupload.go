@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -170,10 +169,8 @@ func (buh *blobUploadHandler) PatchBlobData(w http.ResponseWriter, r *http.Reque
 
 	// TODO(dmcgowan): support Content-Range header to seek and write range
 
-	// Copy the data
-	if _, err := io.Copy(buh.Upload, r.Body); err != nil {
-		ctxu.GetLogger(buh).Errorf("unknown error copying into upload: %v", err)
-		buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+	if err := copyFullPayload(w, r, buh.Upload, buh, "blob PATCH", &buh.Errors); err != nil {
+		// copyFullPayload reports the error if necessary
 		return
 	}
 
@@ -211,10 +208,8 @@ func (buh *blobUploadHandler) PutBlobUploadComplete(w http.ResponseWriter, r *ht
 		return
 	}
 
-	// Read in the data, if any.
-	if _, err := io.Copy(buh.Upload, r.Body); err != nil {
-		ctxu.GetLogger(buh).Errorf("unknown error copying into upload: %v", err)
-		buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+	if err := copyFullPayload(w, r, buh.Upload, buh, "blob PUT", &buh.Errors); err != nil {
+		// copyFullPayload reports the error if necessary
 		return
 	}
 

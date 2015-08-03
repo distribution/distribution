@@ -67,7 +67,7 @@
 		},
 		{
 			"ImportPath": "github.com/gorilla/handlers",
-			"Rev": "0e84b7d810c16aed432217e330206be156bafae0"
+			"Rev": "60c7bfde3e33c201519a200a4507a158cc03a17b"
 		},
 		{
 			"ImportPath": "github.com/gorilla/mux",

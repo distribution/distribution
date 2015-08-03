@@ -110,6 +110,13 @@ func (trw *testResponseWriter) Header() http.Header {
 	return trw.header
 }
 
+// CloseNotify is only here to make the testResponseWriter implement the
+// http.CloseNotifier interface, which WithResponseWriter expects to be
+// implemented.
+func (trw *testResponseWriter) CloseNotify() <-chan bool {
+	return nil
+}
+
 func (trw *testResponseWriter) Write(p []byte) (n int, err error) {
 	if trw.status == 0 {
 		trw.status = http.StatusOK
