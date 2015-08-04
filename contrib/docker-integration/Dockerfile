@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Install Docker
-ENV VERSION 1.7.0-rc1
+ENV VERSION 1.7.1
 RUN curl -L -o /usr/local/bin/docker https://test.docker.com/builds/Linux/x86_64/docker-${VERSION} \
     && chmod +x /usr/local/bin/docker
 
