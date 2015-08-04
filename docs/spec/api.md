@@ -175,7 +175,6 @@ identify a set of modifications.
       <li>Added error code for unsupported operations.</li>
     </ul>
   </dd>
-
 </dl>
 
 ## Overview
@@ -727,7 +726,8 @@ delete may be issued with the following request format:
 
     DELETE /v2/<name>/blobs/<digest>
 
-If the blob exists and has been successfully deleted, the following response will be issued:
+If the blob exists and has been successfully deleted, the following response
+will be issued:
 
     202 Accepted
     Content-Length: None
@@ -735,6 +735,8 @@ If the blob exists and has been successfully deleted, the following response wil
 If the blob had already been deleted or did not exist, a `404 Not Found`
 response will be issued instead.
 
+If a layer is deleted which is referenced by a manifest in the registry,
+then the complete images will not be resolvable.
 
 #### Pushing an Image Manifest
 
@@ -1016,13 +1018,13 @@ A list of methods and URIs are covered in the table below:
 | PUT | `/v2/<name>/manifests/<reference>` | Manifest | Put the manifest identified by `name` and `reference` where `reference` can be a tag or digest. |
 | DELETE | `/v2/<name>/manifests/<reference>` | Manifest | Delete the manifest identified by `name` and `reference`. Note that a manifest can _only_ be deleted by `digest`. |
 | GET | `/v2/<name>/blobs/<digest>` | Blob | Retrieve the blob from the registry identified by `digest`. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data. |
+| DELETE | `/v2/<name>/blobs/<digest>` | Blob | Delete the blob identified by `name` and `digest` |
 | POST | `/v2/<name>/blobs/uploads/` | Initiate Blob Upload | Initiate a resumable blob upload. If successful, an upload location will be provided to complete the upload. Optionally, if the `digest` parameter is present, the request body will be used to complete the upload in a single request. |
 | GET | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Retrieve status of upload identified by `uuid`. The primary purpose of this endpoint is to resolve the current status of a resumable upload. |
 | PATCH | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Upload a chunk of data for the specified upload. |
 | PUT | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Complete the upload specified by `uuid`, optionally appending the body as the final chunk. |
 | DELETE | `/v2/<name>/blobs/uploads/<uuid>` | Blob Upload | Cancel outstanding upload processes, releasing associated resources. If this is not called, the unfinished uploads will eventually timeout. |
 | GET | `/v2/_catalog` | Catalog | Retrieve a sorted, json list of repositories available in the registry. |
-| DELETE | `/v2/<name>/blobs/<digest>` | Blob delete | Delete the blob identified by `name` and `digest`|
 
 
 The detail for each endpoint is covered in the following sections.
@@ -1374,7 +1376,7 @@ The error codes that may be included in the response body are enumerated below:
 
 ### Manifest
 
-Create, update and retrieve manifests.
+Create, update, delete and retrieve manifests.
 
 
 
@@ -1732,7 +1734,6 @@ The error codes that may be included in the response body are enumerated below:
 
 #### DELETE Manifest
 
-
 Delete the manifest identified by `name` and `reference`. Note that a manifest can _only_ be deleted by `digest`.
 
 
@@ -1874,7 +1875,7 @@ The error codes that may be included in the response body are enumerated below:
 
 ### Blob
 
-Fetch the blob identified by `name` and `digest`. Used to fetch layers by digest.
+Operations on blobs identified by `name` and `digest`. Used to fetch or delete layers by digest.
 
 
 
@@ -2203,6 +2204,134 @@ The error codes that may be included in the response body are enumerated below:
 ```
 
 The range specification cannot be satisfied for the requested content. This can happen when the range is not formatted correctly or if the range is outside of the valid size of the content.
+
+
+
+
+#### DELETE Blob
+
+Delete the blob identified by `name` and `digest`
+
+
+
+```
+DELETE /v2/<name>/blobs/<digest>
+Host: <registry host>
+Authorization: <scheme> <token>
+```
+
+
+
+
+The following parameters should be specified on the request:
+
+|Name|Kind|Description|
+|----|----|-----------|
+|`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
+|`Authorization`|header|An RFC7235 compliant authorization header.|
+|`name`|path|Name of the target repository.|
+|`digest`|path|Digest of desired blob.|
+
+
+
+
+###### On Success: Accepted
+
+```
+202 Accepted
+Content-Length: 0
+Docker-Content-Digest: <digest>
+```
+
+
+
+The following headers will be returned with the response:
+
+|Name|Description|
+|----|-----------|
+|`Content-Length`|Zero|
+|`Docker-Content-Digest`|Digest of the targeted content for the request.|
+
+
+
+
+###### On Failure: Invalid Name or Digest
+
+```
+400 Bad Request
+```
+
+
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
+| `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
+
+
+
+###### On Failure: Not Found
+
+```
+404 Not Found
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The blob, identified by `name` and `digest`, is unknown to the registry.
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
+| `BLOB_UNKNOWN` | blob unknown to registry | This error may be returned when a blob is unknown to the registry in a specified repository. This can be returned with a standard get or if a manifest references an unknown layer during upload. |
+
+
+
+###### On Failure: Method Not Allowed
+
+```
+405 Method Not Allowed
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+Delete is not enabled on the registry
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `UNSUPPORTED` | The operation is unsupported. | The operation was unsupported due to a missing implementation or invalid set of parameters. |
 
 
 
