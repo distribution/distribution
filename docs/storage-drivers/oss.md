@@ -6,7 +6,7 @@ IGNORES-->
 
 # Aliyun OSS storage driver
 
-An implementation of the `storagedriver.StorageDriver` interface which uses Aliyun OSS for object storage.
+An implementation of the `storagedriver.StorageDriver` interface which uses [Aliyun OSS](http://www.aliyun.com/product/oss) for object storage.
 
 ## Parameters
 
