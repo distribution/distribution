@@ -69,6 +69,14 @@ image repository for images used to test or in continuous integration. For these
 use cases and others, [deploying your own registry instance](docs/deploying.md)
 may be the better choice.
 
+### Migration to Registry 2.0
+
+For those who have previously deployed their own registry based on the Registry
+1.0 implementation and wish to deploy a Registry 2.0 while retaining images,
+data migration is required. A tool to assist with migration efforts has been
+created. For more information see [docker/migrator]
+(https://github.com/docker/migrator).
+
 ## Contribute
 
 Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute
