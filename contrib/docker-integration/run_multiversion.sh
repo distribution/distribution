@@ -5,44 +5,20 @@
 set -e
 set -x
 
-# Don't use /tmp because this isn't available in boot2docker
-tmpdir_template="`pwd`/docker-versions.XXXXX"
+source helpers.bash
+
+if [ `uname` = "Linux" ]; then
+	tmpdir_template="$TMPDIR/docker-versions.XXXXX"
+else
+	# /tmp isn't available for mounting in boot2docker
+	tmpdir_template="`pwd`/../../../docker-versions.XXXXX"
+fi
+
 tmpdir=`mktemp -d "$tmpdir_template"`
 trap "rm -rf $tmpdir" EXIT
 
 if [ "$1" == "-d" ]; then
-	# Start docker daemon
-
-	# Drivers to use for Docker engines the tests are going to create.
-	STORAGE_DRIVER=${STORAGE_DRIVER:-overlay}
-	EXEC_DRIVER=${EXEC_DRIVER:-native}
-
-	docker --daemon --log-level=panic \
-		--storage-driver="$STORAGE_DRIVER" --exec-driver="$EXEC_DRIVER" &
-	DOCKER_PID=$!
-
-	# Wait for it to become reachable.
-	tries=10
-	until docker version &> /dev/null; do
-		(( tries-- ))
-		if [ $tries -le 0 ]; then
-			echo >&2 "error: daemon failed to start"
-			exit 1
-		fi
-		sleep 1
-	done
-fi
-
-# If DOCKER_VOLUME is unset, create a temporary directory to cache containers
-# between runs
-# Only do this on Linux, because using /var/lib/docker from a host volume seems
-# problematic with boot2docker.
-if [ "$DOCKER_VOLUME" = "" -a `uname` = "Linux" ]; then
-	volumes_template="`pwd`/docker-versions.XXXXX"
-	volume=`mktemp -d "$volumes_template"`
-	trap "rm -rf $tmpdir $volume" EXIT
-else
-	volume="$DOCKER_VOLUME"
+	start_daemon
 fi
 
 # Released versions
@@ -56,7 +32,7 @@ for v in $versions; do
 	docker cp "$ID:/usr/local/bin/docker" "$tmpdir/docker-$v"
 
 	echo "Running tests with Docker $v"
-	DOCKER_BINARY="$binpath" DOCKER_VOLUME="$volume" ./run.sh
+	DOCKER_BINARY="$binpath" DOCKER_VOLUME="$DOCKER_VOLUME" DOCKER_GRAPHDRIVER="$DOCKER_GRAPHDRIVER" ./run.sh
 
 	# Cleanup.
 	docker rm -f "$ID"
@@ -71,7 +47,7 @@ ID=$(docker create dockerswarm/dind-master)
 docker cp "$ID:/usr/local/bin/docker" "$tmpdir/docker-master"
 
 echo "Running tests with Docker master"
-DOCKER_BINARY="$binpath" DOCKER_VOLUME="$volume" ./run.sh
+DOCKER_BINARY="$binpath" DOCKER_VOLUME="$DOCKER_VOLUME" ./run.sh
 
 # Cleanup.
 docker rm -f "$ID"
