@@ -50,24 +50,21 @@ func NewCachedBlobStatterWithMetrics(cache distribution.BlobDescriptorService, b
 }
 
 func (cbds *cachedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
-	desc, err := cbds.cache.Stat(ctx, dgst)
-	if err != nil {
+	if desc, err := cbds.cache.Stat(ctx, dgst); err != nil {
 		if err != distribution.ErrBlobUnknown {
 			context.GetLogger(ctx).Errorf("error retrieving descriptor from cache: %v", err)
 		}
-
-		goto fallback
+	} else {
+		if cbds.tracker != nil {
+			cbds.tracker.Hit()
+		}
+		return desc, nil
 	}
 
-	if cbds.tracker != nil {
-		cbds.tracker.Hit()
-	}
-	return desc, nil
-fallback:
 	if cbds.tracker != nil {
 		cbds.tracker.Miss()
 	}
-	desc, err = cbds.backend.Stat(ctx, dgst)
+	desc, err := cbds.backend.Stat(ctx, dgst)
 	if err != nil {
 		return desc, err
 	}
