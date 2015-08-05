@@ -16,11 +16,12 @@ import (
 // that grant access to the global blob store.
 type linkedBlobStore struct {
 	*blobStore
-	blobServer           distribution.BlobServer
-	blobAccessController distribution.BlobDescriptorService
-	repository           distribution.Repository
-	ctx                  context.Context // only to be used where context can't come through method args
-	deleteEnabled        bool
+	blobServer             distribution.BlobServer
+	blobAccessController   distribution.BlobDescriptorService
+	repository             distribution.Repository
+	ctx                    context.Context // only to be used where context can't come through method args
+	deleteEnabled          bool
+	resumableDigestEnabled bool
 
 	// linkPath allows one to control the repository blob link set to which
 	// the blob store dispatches. This is required because manifest and layer
@@ -189,11 +190,12 @@ func (lbs *linkedBlobStore) newBlobUpload(ctx context.Context, uuid, path string
 	}
 
 	bw := &blobWriter{
-		blobStore:          lbs,
-		id:                 uuid,
-		startedAt:          startedAt,
-		digester:           digest.Canonical.New(),
-		bufferedFileWriter: *fw,
+		blobStore:              lbs,
+		id:                     uuid,
+		startedAt:              startedAt,
+		digester:               digest.Canonical.New(),
+		bufferedFileWriter:     *fw,
+		resumableDigestEnabled: lbs.resumableDigestEnabled,
 	}
 
 	return bw, nil

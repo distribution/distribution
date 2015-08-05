@@ -4,11 +4,12 @@ import (
 	"fmt"
 
 	"github.com/docker/distribution"
+	"github.com/docker/distribution/context"
 )
 
 // InitFunc is the type of a RegistryMiddleware factory function and is
 // used to register the constructor for different RegistryMiddleware backends.
-type InitFunc func(registry distribution.Namespace, options map[string]interface{}) (distribution.Namespace, error)
+type InitFunc func(ctx context.Context, registry distribution.Namespace, options map[string]interface{}) (distribution.Namespace, error)
 
 var middlewares map[string]InitFunc
 
@@ -28,10 +29,10 @@ func Register(name string, initFunc InitFunc) error {
 }
 
 // Get constructs a RegistryMiddleware with the given options using the named backend.
-func Get(name string, options map[string]interface{}, registry distribution.Namespace) (distribution.Namespace, error) {
+func Get(ctx context.Context, name string, options map[string]interface{}, registry distribution.Namespace) (distribution.Namespace, error) {
 	if middlewares != nil {
 		if initFunc, exists := middlewares[name]; exists {
-			return initFunc(registry, options)
+			return initFunc(ctx, registry, options)
 		}
 	}
 

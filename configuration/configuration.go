@@ -128,6 +128,8 @@ type Configuration struct {
 			IdleTimeout time.Duration `yaml:"idletimeout,omitempty"`
 		} `yaml:"pool,omitempty"`
 	} `yaml:"redis,omitempty"`
+
+	Proxy Proxy `yaml:"proxy,omitempty"`
 }
 
 // LogHook is composed of hook Level and Type.
@@ -428,6 +430,18 @@ type Middleware struct {
 	Disabled bool `yaml:"disabled,omitempty"`
 	// Map of parameters that will be passed to the middleware's initialization function
 	Options Parameters `yaml:"options"`
+}
+
+// Proxy configures the registry as a pull through cache
+type Proxy struct {
+	// RemoteURL is the URL of the remote registry
+	RemoteURL string `yaml:"remoteurl"`
+
+	// Username of the hub user
+	Username string `yaml:"username"`
+
+	// Password of the hub user
+	Password string `yaml:"password"`
 }
 
 // Parse parses an input configuration yaml document into a Configuration struct

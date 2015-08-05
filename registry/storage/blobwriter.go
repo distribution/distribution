@@ -31,6 +31,8 @@ type blobWriter struct {
 	// implementes io.WriteSeeker, io.ReaderFrom and io.Closer to satisfy
 	// LayerUpload Interface
 	bufferedFileWriter
+
+	resumableDigestEnabled bool
 }
 
 var _ distribution.BlobWriter = &blobWriter{}
@@ -348,4 +350,30 @@ func (bw *blobWriter) removeResources(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (bw *blobWriter) Reader() (io.ReadCloser, error) {
+	// todo(richardscothern): Change to exponential backoff, i=0.5, e=2, n=4
+	try := 1
+	for try <= 5 {
+		_, err := bw.bufferedFileWriter.driver.Stat(bw.ctx, bw.path)
+		if err == nil {
+			break
+		}
+		switch err.(type) {
+		case storagedriver.PathNotFoundError:
+			context.GetLogger(bw.ctx).Debugf("Nothing found on try %d, sleeping...", try)
+			time.Sleep(1 * time.Second)
+			try++
+		default:
+			return nil, err
+		}
+	}
+
+	readCloser, err := bw.bufferedFileWriter.driver.ReadStream(bw.ctx, bw.path, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	return readCloser, nil
 }
