@@ -118,6 +118,7 @@ information about each option that appears later in this page.
           age: 168h
           interval: 24h
           dryrun: false
+        readonly: false
     auth:
       silly:
         realm: silly-realm
@@ -643,14 +644,15 @@ This storage backend uses Amazon's Simple Storage Service (S3).
 
 ### Maintenance
 
-Currently the registry can perform one maintenance function: upload purging.  This and future
-maintenance functions which are related to storage can be configured under the maintenance section.
+Currently upload purging and read-only mode are the only maintenance functions available.
+These and future maintenance functions which are related to storage can be configured under
+the maintenance section.
 
 ### Upload Purging
 
 Upload purging is a background process that periodically removes orphaned files from the upload
 directories of the registry.  Upload purging is enabled by default.  To
- configure upload directory purging, the following parameters
+configure upload directory purging, the following parameters
 must be set.
 
 
@@ -662,6 +664,15 @@ must be set.
 `dryrun` | yes |  dryrun can be set to true to obtain a summary of what directories will be deleted.  Default=false.
 
 Note: `age` and `interval` are strings containing a number with optional fraction and a unit suffix: e.g. 45m, 2h10m, 168h (1 week).
+
+### Read-only mode
+
+If the `readonly` parameter in the `maintenance` section is set to true, clients
+will not be allowed to write to the registry. This mode is useful to temporarily
+prevent writes to the backend storage so a garbage collection pass can be run.
+Before running garbage collection, the registry should be restarted with
+`readonly` set to true. After the garbage collection pass finishes, the registry
+may be restarted again, this time with `readonly` removed from the configuration.
 
 ### Openstack Swift
 

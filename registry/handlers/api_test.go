@@ -633,6 +633,54 @@ func TestDeleteDisabled(t *testing.T) {
 	checkResponse(t, "deleting layer with delete disabled", resp, http.StatusMethodNotAllowed)
 }
 
+func TestDeleteReadOnly(t *testing.T) {
+	env := newTestEnv(t, true)
+
+	imageName := "foo/bar"
+	// "build" our layer file
+	layerFile, tarSumStr, err := testutil.CreateRandomTarFile()
+	if err != nil {
+		t.Fatalf("error creating random layer file: %v", err)
+	}
+
+	layerDigest := digest.Digest(tarSumStr)
+	layerURL, err := env.builder.BuildBlobURL(imageName, layerDigest)
+	if err != nil {
+		t.Fatalf("Error building blob URL")
+	}
+	uploadURLBase, _ := startPushLayer(t, env.builder, imageName)
+	pushLayer(t, env.builder, imageName, layerDigest, uploadURLBase, layerFile)
+
+	env.app.readOnly = true
+
+	resp, err := httpDelete(layerURL)
+	if err != nil {
+		t.Fatalf("unexpected error deleting layer: %v", err)
+	}
+
+	checkResponse(t, "deleting layer in read-only mode", resp, http.StatusServiceUnavailable)
+}
+
+func TestStartPushReadOnly(t *testing.T) {
+	env := newTestEnv(t, true)
+	env.app.readOnly = true
+
+	imageName := "foo/bar"
+
+	layerUploadURL, err := env.builder.BuildBlobUploadURL(imageName)
+	if err != nil {
+		t.Fatalf("unexpected error building layer upload url: %v", err)
+	}
+
+	resp, err := http.Post(layerUploadURL, "", nil)
+	if err != nil {
+		t.Fatalf("unexpected error starting layer push: %v", err)
+	}
+	defer resp.Body.Close()
+
+	checkResponse(t, "starting push in read-only mode", resp, http.StatusServiceUnavailable)
+}
+
 func httpDelete(url string) (*http.Response, error) {
 	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {

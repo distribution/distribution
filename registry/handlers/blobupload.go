@@ -23,12 +23,12 @@ func blobUploadDispatcher(ctx *Context, r *http.Request) http.Handler {
 	}
 
 	handler := http.Handler(handlers.MethodHandler{
-		"POST":   http.HandlerFunc(buh.StartBlobUpload),
+		"POST":   mutableHandler(buh.StartBlobUpload, ctx),
 		"GET":    http.HandlerFunc(buh.GetUploadStatus),
 		"HEAD":   http.HandlerFunc(buh.GetUploadStatus),
-		"PATCH":  http.HandlerFunc(buh.PatchBlobData),
-		"PUT":    http.HandlerFunc(buh.PutBlobUploadComplete),
-		"DELETE": http.HandlerFunc(buh.CancelBlobUpload),
+		"PATCH":  mutableHandler(buh.PatchBlobData, ctx),
+		"PUT":    mutableHandler(buh.PutBlobUploadComplete, ctx),
+		"DELETE": mutableHandler(buh.CancelBlobUpload, ctx),
 	})
 
 	if buh.UUID != "" {
