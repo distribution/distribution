@@ -575,7 +575,7 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 			// base route is accessed. This section prevents us from making
 			// that mistake elsewhere in the code, allowing any operation to
 			// proceed.
-			if err := errcode.ServeJSON(w, v2.ErrorCodeUnauthorized); err != nil {
+			if err := errcode.ServeJSON(w, errcode.ErrorCodeUnauthorized); err != nil {
 				ctxu.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
 			}
 			return fmt.Errorf("forbidden: no repository name")
@@ -590,7 +590,7 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 			// Add the appropriate WWW-Auth header
 			err.SetHeaders(w)
 
-			if err := errcode.ServeJSON(w, v2.ErrorCodeUnauthorized.WithDetail(accessRecords)); err != nil {
+			if err := errcode.ServeJSON(w, errcode.ErrorCodeUnauthorized.WithDetail(accessRecords)); err != nil {
 				ctxu.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
 			}
 		default:

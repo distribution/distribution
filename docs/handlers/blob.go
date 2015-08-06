@@ -81,7 +81,7 @@ func (bh *blobHandler) DeleteBlob(w http.ResponseWriter, r *http.Request) {
 			bh.Errors = append(bh.Errors, v2.ErrorCodeBlobUnknown)
 		case distribution.ErrUnsupported:
 			w.WriteHeader(http.StatusMethodNotAllowed)
-			bh.Errors = append(bh.Errors, v2.ErrorCodeUnsupported)
+			bh.Errors = append(bh.Errors, errcode.ErrorCodeUnsupported)
 		default:
 			bh.Errors = append(bh.Errors, errcode.ErrorCodeUnknown)
 		}
