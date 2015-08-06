@@ -29,7 +29,7 @@ func copyFullPayload(responseWriter http.ResponseWriter, r *http.Request, destWr
 	if notifier, ok := responseWriter.(http.CloseNotifier); ok {
 		clientClosed = notifier.CloseNotify()
 	} else {
-		panic("the ResponseWriter does not implement CloseNotifier")
+		ctxu.GetLogger(context).Warn("the ResponseWriter does not implement CloseNotifier")
 	}
 
 	// Read in the data, if any.
