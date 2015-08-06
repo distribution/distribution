@@ -103,17 +103,21 @@ func GetRequestID(ctx Context) string {
 // WithResponseWriter returns a new context and response writer that makes
 // interesting response statistics available within the context.
 func WithResponseWriter(ctx Context, w http.ResponseWriter) (Context, http.ResponseWriter) {
-	closeNotifier, ok := w.(http.CloseNotifier)
-	if !ok {
-		panic("the ResponseWriter does not implement CloseNotifier")
-	}
-	irw := &instrumentedResponseWriter{
+	irw := instrumentedResponseWriter{
 		ResponseWriter: w,
-		CloseNotifier:  closeNotifier,
 		Context:        ctx,
 	}
 
-	return irw, irw
+	if closeNotifier, ok := w.(http.CloseNotifier); ok {
+		irwCN := &instrumentedResponseWriterCN{
+			instrumentedResponseWriter: irw,
+			CloseNotifier:              closeNotifier,
+		}
+
+		return irwCN, irwCN
+	}
+
+	return &irw, &irw
 }
 
 // GetResponseWriter returns the http.ResponseWriter from the provided
@@ -263,11 +267,19 @@ func (ctx *muxVarsContext) Value(key interface{}) interface{} {
 	return ctx.Context.Value(key)
 }
 
+// instrumentedResponseWriterCN provides response writer information in a
+// context. It implements http.CloseNotifier so that users can detect
+// early disconnects.
+type instrumentedResponseWriterCN struct {
+	instrumentedResponseWriter
+	http.CloseNotifier
+}
+
 // instrumentedResponseWriter provides response writer information in a
-// context.
+// context. This variant is only used in the case where CloseNotifier is not
+// implemented by the parent ResponseWriter.
 type instrumentedResponseWriter struct {
 	http.ResponseWriter
-	http.CloseNotifier
 	Context
 
 	mu      sync.Mutex
