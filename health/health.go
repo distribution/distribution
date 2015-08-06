@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/docker/distribution/context"
+	"github.com/docker/distribution/registry/api/errcode"
 )
 
 var (
@@ -214,7 +215,8 @@ func Handler(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		checks := CheckStatus()
 		if len(checks) != 0 {
-			statusResponse(w, r, http.StatusServiceUnavailable, checks)
+			errcode.ServeJSON(w, errcode.ErrorCodeUnavailable.
+				WithDetail("health check failed: please see /debug/health"))
 			return
 		}
 
