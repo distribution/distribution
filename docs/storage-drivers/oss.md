@@ -1,8 +1,10 @@
-<!--GITHUB
-page_title: Aliyun OSS storage driver
-page_description: Explains how to use the Aliyun OSS storage drivers
-page_keywords: registry, service, driver, images, storage, OSS, aliyun
-IGNORES-->
+<!--[metadata]>
++++
+title = "Aliyun OSS storage driver"
+description = "Explains how to use the Aliyun OSS storage driver"
+keywords = ["registry, service, driver, images, storage, OSS, aliyun"]
++++
+<![end-metadata]-->
 
 # Aliyun OSS storage driver
 
