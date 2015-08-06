@@ -1,26 +1,23 @@
 FROM docs/base:latest
 MAINTAINER Mary Anthony <mary@docker.com> (@moxiegirl)
 
+ENV PROJECT=registry
+
 # To get the git info for this repo
 COPY . /src
 
-COPY . /docs/content/registry/
+COPY . /docs/content/$PROJECT/
 
-# Sed to process GitHub Markdown
-# 1-2 Remove comment code from metadata block
-# 3 Change ](/word to ](/project/ in links
-# 4 Change ](word.md) to ](/project/word)
-# 5 Remove .md extension from link text
-# 6 Change ](./ to ](/project/word) 
-# 7 Change ](../../ to ](/project/ 
-# 8 Change ](../ to ](/project/ 
-# 
-RUN find /docs/content/registry -type f -name "*.md" -exec sed -i.old \
-    -e '/^<!.*metadata]>/g' \
-    -e '/^<!.*end-metadata.*>/g' \
-    -e 's/\(\]\)\([(]\)\(\/\)/\1\2\/registry\//g' \
-    -e 's/\(\][(]\)\([A-Za-z0-9]*\)\(\.md\)/\1\/registry\/\2/g' \
-    -e 's/\([(]\)\(.*\)\(\.md\)/\1\2/g'  \
-    -e 's/\(\][(]\)\(\.\/\)/\1\/registry\//g' \
-    -e 's/\(\][(]\)\(\.\.\/\.\.\/\)/\1\/registry\//g' \
-    -e 's/\(\][(]\)\(\.\.\/\)/\1\/registry\//g' {} \;
+# Processing GitHub Markdown
+# 1 Remove <!--[metadata]> and <![end-metadata]-->
+# 2 Remove any leading combination of dots and slashes (./, ../, ../../, etc)
+# 3 Prepend /$PROJECT to all links, remove any trailing .md, only for non http:// links and non internal anchors
+
+RUN find /docs/content/$PROJECT -type f -name "*.md" -not -name "*.compare.md" -exec sed -i.old \
+    -e '/^<!\(--\)\{0,1\}\[\(end-\)\{0,1\}metadata\]\(--\)\{0,1\}>/g' \
+    -e 's/\(\][(]\)\(\.*\/\)*/\1/g' \
+    -e 's/\(\][(]\)\([A-Za-z0-9_/-]\{1,\}\)\(\.md\)\{0,1\}\(#\{0,1\}\(#[A-Za-z0-9_-]*\)\{0,1\}\)[)]/\1\/'$PROJECT'\/\2\4)/g' \
+        {} \;
+
+# Prepare the compare file and expect an empty diff against test.md
+RUN sed -i.old -e 's/\/placeholder\//\/'$PROJECT'\//g' /docs/content/$PROJECT/test.compare.md && diff -u /docs/content/$PROJECT/test.md /docs/content/$PROJECT/test.compare.md
