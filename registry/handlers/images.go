@@ -213,7 +213,7 @@ func (imh *imageManifestHandler) DeleteImageManifest(w http.ResponseWriter, r *h
 			w.WriteHeader(http.StatusNotFound)
 			return
 		case distribution.ErrUnsupported:
-			imh.Errors = append(imh.Errors, v2.ErrorCodeUnsupported)
+			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnsupported)
 			w.WriteHeader(http.StatusMethodNotAllowed)
 		default:
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown)

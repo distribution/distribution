@@ -124,7 +124,7 @@ var (
 			},
 		},
 		ErrorCodes: []errcode.ErrorCode{
-			ErrorCodeUnauthorized,
+			errcode.ErrorCodeUnauthorized,
 		},
 		Body: BodyDescriptor{
 			ContentType: "application/json; charset=utf-8",
@@ -145,7 +145,7 @@ var (
 			},
 		},
 		ErrorCodes: []errcode.ErrorCode{
-			ErrorCodeUnauthorized,
+			errcode.ErrorCodeUnauthorized,
 		},
 		Body: BodyDescriptor{
 			ContentType: "application/json; charset=utf-8",
@@ -374,7 +374,7 @@ var routeDescriptors = []RouteDescriptor{
 									Format:      errorsBody,
 								},
 								ErrorCodes: []errcode.ErrorCode{
-									ErrorCodeUnauthorized,
+									errcode.ErrorCodeUnauthorized,
 								},
 							},
 							{
@@ -451,7 +451,7 @@ var routeDescriptors = []RouteDescriptor{
 									Format:      errorsBody,
 								},
 								ErrorCodes: []errcode.ErrorCode{
-									ErrorCodeUnauthorized,
+									errcode.ErrorCodeUnauthorized,
 								},
 							},
 						},
@@ -506,7 +506,7 @@ var routeDescriptors = []RouteDescriptor{
 									Format:      errorsBody,
 								},
 								ErrorCodes: []errcode.ErrorCode{
-									ErrorCodeUnauthorized,
+									errcode.ErrorCodeUnauthorized,
 								},
 							},
 						},
@@ -568,7 +568,7 @@ var routeDescriptors = []RouteDescriptor{
 									Format:      errorsBody,
 								},
 								ErrorCodes: []errcode.ErrorCode{
-									ErrorCodeUnauthorized,
+									errcode.ErrorCodeUnauthorized,
 								},
 							},
 							{
@@ -645,7 +645,7 @@ var routeDescriptors = []RouteDescriptor{
 									Format:      errorsBody,
 								},
 								ErrorCodes: []errcode.ErrorCode{
-									ErrorCodeUnauthorized,
+									errcode.ErrorCodeUnauthorized,
 								},
 							},
 							{
@@ -682,7 +682,7 @@ var routeDescriptors = []RouteDescriptor{
 									},
 								},
 								ErrorCodes: []errcode.ErrorCode{
-									ErrorCodeUnauthorized,
+									errcode.ErrorCodeUnauthorized,
 								},
 								Body: BodyDescriptor{
 									ContentType: "application/json; charset=utf-8",
@@ -737,7 +737,7 @@ var routeDescriptors = []RouteDescriptor{
 									},
 								},
 								ErrorCodes: []errcode.ErrorCode{
-									ErrorCodeUnauthorized,
+									errcode.ErrorCodeUnauthorized,
 								},
 								Body: BodyDescriptor{
 									ContentType: "application/json; charset=utf-8",
@@ -974,7 +974,7 @@ var routeDescriptors = []RouteDescriptor{
 									Format:      errorsBody,
 								},
 								ErrorCodes: []errcode.ErrorCode{
-									ErrorCodeUnsupported,
+									errcode.ErrorCodeUnsupported,
 								},
 							},
 						},
