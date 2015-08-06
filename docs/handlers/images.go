@@ -34,8 +34,8 @@ func imageManifestDispatcher(ctx *Context, r *http.Request) http.Handler {
 
 	return handlers.MethodHandler{
 		"GET":    http.HandlerFunc(imageManifestHandler.GetImageManifest),
-		"PUT":    http.HandlerFunc(imageManifestHandler.PutImageManifest),
-		"DELETE": http.HandlerFunc(imageManifestHandler.DeleteImageManifest),
+		"PUT":    mutableHandler(imageManifestHandler.PutImageManifest, ctx),
+		"DELETE": mutableHandler(imageManifestHandler.DeleteImageManifest, ctx),
 	}
 }
 

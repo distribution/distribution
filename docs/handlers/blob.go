@@ -35,7 +35,7 @@ func blobDispatcher(ctx *Context, r *http.Request) http.Handler {
 	return handlers.MethodHandler{
 		"GET":    http.HandlerFunc(blobHandler.GetBlob),
 		"HEAD":   http.HandlerFunc(blobHandler.GetBlob),
-		"DELETE": http.HandlerFunc(blobHandler.DeleteBlob),
+		"DELETE": mutableHandler(blobHandler.DeleteBlob, ctx),
 	}
 }
 
