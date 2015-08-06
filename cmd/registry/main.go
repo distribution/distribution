@@ -17,7 +17,7 @@ import (
 	"github.com/bugsnag/bugsnag-go"
 	"github.com/docker/distribution/configuration"
 	"github.com/docker/distribution/context"
-	_ "github.com/docker/distribution/health"
+	"github.com/docker/distribution/health"
 	_ "github.com/docker/distribution/registry/auth/htpasswd"
 	_ "github.com/docker/distribution/registry/auth/silly"
 	_ "github.com/docker/distribution/registry/auth/token"
@@ -70,8 +70,10 @@ func main() {
 	uuid.Loggerf = context.GetLogger(ctx).Warnf
 
 	app := handlers.NewApp(ctx, *config)
+	app.RegisterHealthChecks()
 	handler := configureReporting(app)
 	handler = panicHandler(handler)
+	handler = health.Handler(handler)
 	handler = gorhandlers.CombinedLoggingHandler(os.Stdout, handler)
 
 	if config.HTTP.Debug.Addr != "" {

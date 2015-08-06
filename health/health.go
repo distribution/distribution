@@ -2,9 +2,12 @@ package health
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/docker/distribution/context"
 )
 
 var (
@@ -140,7 +143,7 @@ func PeriodicThresholdChecker(check Checker, period time.Duration, threshold int
 }
 
 // CheckStatus returns a map with all the current health check errors
-func CheckStatus() map[string]string {
+func CheckStatus() map[string]string { // TODO(stevvooe) this needs a proper type
 	mutex.RLock()
 	defer mutex.RUnlock()
 	statusKeys := make(map[string]string)
@@ -174,13 +177,13 @@ func RegisterFunc(name string, check func() error) {
 
 // RegisterPeriodicFunc allows the convenience of registering a PeriodicChecker
 // from an arbitrary func() error
-func RegisterPeriodicFunc(name string, check func() error, period time.Duration) {
+func RegisterPeriodicFunc(name string, period time.Duration, check CheckFunc) {
 	Register(name, PeriodicChecker(CheckFunc(check), period))
 }
 
 // RegisterPeriodicThresholdFunc allows the convenience of registering a
 // PeriodicChecker from an arbitrary func() error
-func RegisterPeriodicThresholdFunc(name string, check func() error, period time.Duration, threshold int) {
+func RegisterPeriodicThresholdFunc(name string, period time.Duration, threshold int, check CheckFunc) {
 	Register(name, PeriodicThresholdChecker(CheckFunc(check), period, threshold))
 }
 
@@ -189,25 +192,60 @@ func RegisterPeriodicThresholdFunc(name string, check func() error, period time.
 // Returns 503 if any Error status exists, 200 otherwise
 func StatusHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		checksStatus := CheckStatus()
-		// If there is an error, return 503
-		if len(checksStatus) != 0 {
-			w.WriteHeader(http.StatusServiceUnavailable)
-		}
-		encoder := json.NewEncoder(w)
-		err := encoder.Encode(checksStatus)
+		checks := CheckStatus()
+		status := http.StatusOK
 
-		// Parsing of the JSON failed. Returning generic error message
-		if err != nil {
-			encoder.Encode(struct {
-				ServerError string `json:"server_error"`
-			}{
-				ServerError: "Could not parse error message",
-			})
+		// If there is an error, return 503
+		if len(checks) != 0 {
+			status = http.StatusServiceUnavailable
 		}
+
+		statusResponse(w, r, status, checks)
 	} else {
-		w.WriteHeader(http.StatusNotFound)
+		http.NotFound(w, r)
+	}
+}
+
+// Handler returns a handler that will return 503 response code if the health
+// checks have failed. If everything is okay with the health checks, the
+// handler will pass through to the provided handler. Use this handler to
+// disable a web application when the health checks fail.
+func Handler(handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		checks := CheckStatus()
+		if len(checks) != 0 {
+			statusResponse(w, r, http.StatusServiceUnavailable, checks)
+			return
+		}
+
+		handler.ServeHTTP(w, r) // pass through
+	})
+}
+
+// statusResponse completes the request with a response describing the health
+// of the service.
+func statusResponse(w http.ResponseWriter, r *http.Request, status int, checks map[string]string) {
+	p, err := json.Marshal(checks)
+	if err != nil {
+		context.GetLogger(context.Background()).Errorf("error serializing health status: %v", err)
+		p, err = json.Marshal(struct {
+			ServerError string `json:"server_error"`
+		}{
+			ServerError: "Could not parse error message",
+		})
+		status = http.StatusInternalServerError
+
+		if err != nil {
+			context.GetLogger(context.Background()).Errorf("error serializing health status failure message: %v", err)
+			return
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Content-Length", fmt.Sprint(len(p)))
+	w.WriteHeader(status)
+	if _, err := w.Write(p); err != nil {
+		context.GetLogger(context.Background()).Errorf("error writing health status response body: %v", err)
 	}
 }
 
