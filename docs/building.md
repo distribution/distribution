@@ -99,7 +99,6 @@ ok    github.com/docker/distribution/registry/auth/silly  0.011s
 ...
 + /Users/sday/go/src/github.com/docker/distribution/bin/registry
 + /Users/sday/go/src/github.com/docker/distribution/bin/registry-api-descriptor-template
-+ /Users/sday/go/src/github.com/docker/distribution/bin/dist
 + binaries
 ```
 

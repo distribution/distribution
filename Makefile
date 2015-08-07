@@ -32,10 +32,6 @@ ${PREFIX}/bin/registry-api-descriptor-template: version/version.go $(shell find 
 	@echo "+ $@"
 	@go build -o $@ ${GO_LDFLAGS} ${GO_GCFLAGS} ./cmd/registry-api-descriptor-template
 
-${PREFIX}/bin/dist: version/version.go $(shell find . -type f -name '*.go')
-	@echo "+ $@"
-	@go build -o $@ ${GO_LDFLAGS} ${GO_GCFLAGS} ./cmd/dist
-
 docs/spec/api.md: docs/spec/api.md.tmpl ${PREFIX}/bin/registry-api-descriptor-template
 	./bin/registry-api-descriptor-template $< > $@
 
@@ -66,7 +62,7 @@ test-full:
 	@echo "+ $@"
 	@go test ./...
 
-binaries: ${PREFIX}/bin/registry ${PREFIX}/bin/registry-api-descriptor-template ${PREFIX}/bin/dist
+binaries: ${PREFIX}/bin/registry ${PREFIX}/bin/registry-api-descriptor-template
 	@echo "+ $@"
 
 clean:
