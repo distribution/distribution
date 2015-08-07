@@ -22,14 +22,17 @@ func blobUploadDispatcher(ctx *Context, r *http.Request) http.Handler {
 		UUID:    getUploadUUID(ctx),
 	}
 
-	handler := http.Handler(handlers.MethodHandler{
-		"POST":   mutableHandler(buh.StartBlobUpload, ctx),
-		"GET":    http.HandlerFunc(buh.GetUploadStatus),
-		"HEAD":   http.HandlerFunc(buh.GetUploadStatus),
-		"PATCH":  mutableHandler(buh.PatchBlobData, ctx),
-		"PUT":    mutableHandler(buh.PutBlobUploadComplete, ctx),
-		"DELETE": mutableHandler(buh.CancelBlobUpload, ctx),
-	})
+	handler := handlers.MethodHandler{
+		"GET":  http.HandlerFunc(buh.GetUploadStatus),
+		"HEAD": http.HandlerFunc(buh.GetUploadStatus),
+	}
+
+	if !ctx.readOnly {
+		handler["POST"] = http.HandlerFunc(buh.StartBlobUpload)
+		handler["PATCH"] = http.HandlerFunc(buh.PatchBlobData)
+		handler["PUT"] = http.HandlerFunc(buh.PutBlobUploadComplete)
+		handler["DELETE"] = http.HandlerFunc(buh.CancelBlobUpload)
+	}
 
 	if buh.UUID != "" {
 		state, err := hmacKey(ctx.Config.HTTP.Secret).unpackUploadState(r.FormValue("_state"))
@@ -93,7 +96,7 @@ func blobUploadDispatcher(ctx *Context, r *http.Request) http.Handler {
 			}
 		}
 
-		handler = closeResources(handler, buh.Upload)
+		return closeResources(handler, buh.Upload)
 	}
 
 	return handler

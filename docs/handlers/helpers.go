@@ -7,7 +7,6 @@ import (
 
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/api/errcode"
-	"github.com/docker/distribution/registry/api/v2"
 )
 
 // closeResources closes all the provided resources after running the target
@@ -60,17 +59,4 @@ func copyFullPayload(responseWriter http.ResponseWriter, r *http.Request, destWr
 	}
 
 	return nil
-}
-
-// mutableHandler wraps a http.HandlerFunc with a check that the registry is
-// not in read-only mode. If it is in read-only mode, the wrapper returns
-// v2.ErrorCodeMaintenanceMode to the client.
-func mutableHandler(handler http.HandlerFunc, ctx *Context) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if ctx.App.readOnly {
-			ctx.Errors = append(ctx.Errors, v2.ErrorCodeMaintenanceMode)
-			return
-		}
-		handler(w, r)
-	}
 }

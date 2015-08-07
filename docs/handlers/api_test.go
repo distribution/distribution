@@ -658,7 +658,7 @@ func TestDeleteReadOnly(t *testing.T) {
 		t.Fatalf("unexpected error deleting layer: %v", err)
 	}
 
-	checkResponse(t, "deleting layer in read-only mode", resp, http.StatusServiceUnavailable)
+	checkResponse(t, "deleting layer in read-only mode", resp, http.StatusMethodNotAllowed)
 }
 
 func TestStartPushReadOnly(t *testing.T) {
@@ -678,7 +678,7 @@ func TestStartPushReadOnly(t *testing.T) {
 	}
 	defer resp.Body.Close()
 
-	checkResponse(t, "starting push in read-only mode", resp, http.StatusServiceUnavailable)
+	checkResponse(t, "starting push in read-only mode", resp, http.StatusMethodNotAllowed)
 }
 
 func httpDelete(url string) (*http.Response, error) {

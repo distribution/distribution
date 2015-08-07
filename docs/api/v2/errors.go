@@ -133,14 +133,4 @@ var (
 		longer proceed.`,
 		HTTPStatusCode: http.StatusNotFound,
 	})
-
-	// ErrorCodeMaintenanceMode is returned when an upload can't be
-	// accepted because the registry is in maintenance mode.
-	ErrorCodeMaintenanceMode = errcode.Register(errGroup, errcode.ErrorDescriptor{
-		Value:   "MAINTENANCE_MODE",
-		Message: "registry in maintenance mode",
-		Description: `The upload cannot be accepted because the registry
-		is running read-only in maintenance mode.`,
-		HTTPStatusCode: http.StatusServiceUnavailable,
-	})
 )

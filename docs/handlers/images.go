@@ -32,11 +32,16 @@ func imageManifestDispatcher(ctx *Context, r *http.Request) http.Handler {
 		imageManifestHandler.Digest = dgst
 	}
 
-	return handlers.MethodHandler{
-		"GET":    http.HandlerFunc(imageManifestHandler.GetImageManifest),
-		"PUT":    mutableHandler(imageManifestHandler.PutImageManifest, ctx),
-		"DELETE": mutableHandler(imageManifestHandler.DeleteImageManifest, ctx),
+	mhandler := handlers.MethodHandler{
+		"GET": http.HandlerFunc(imageManifestHandler.GetImageManifest),
 	}
+
+	if !ctx.readOnly {
+		mhandler["PUT"] = http.HandlerFunc(imageManifestHandler.PutImageManifest)
+		mhandler["DELETE"] = http.HandlerFunc(imageManifestHandler.DeleteImageManifest)
+	}
+
+	return mhandler
 }
 
 // imageManifestHandler handles http operations on image manifests.

@@ -109,9 +109,15 @@ func NewApp(ctx context.Context, configuration *configuration.Configuration) *Ap
 			}
 		}
 		if v, ok := mc["readonly"]; ok {
-			app.readOnly, ok = v.(bool)
+			readOnly, ok := v.(map[interface{}]interface{})
 			if !ok {
-				panic("readonly config key must have a boolean value")
+				panic("readonly config key must contain additional keys")
+			}
+			if readOnlyEnabled, ok := readOnly["enabled"]; ok {
+				app.readOnly, ok = readOnlyEnabled.(bool)
+				if !ok {
+					panic("readonly's enabled config key must have a boolean value")
+				}
 			}
 		}
 	}
