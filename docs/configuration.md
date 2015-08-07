@@ -118,7 +118,8 @@ information about each option that appears later in this page.
           age: 168h
           interval: 24h
           dryrun: false
-        readonly: false
+        readonly:
+          enabled: false
     auth:
       silly:
         realm: silly-realm
@@ -667,12 +668,13 @@ Note: `age` and `interval` are strings containing a number with optional fractio
 
 ### Read-only mode
 
-If the `readonly` parameter in the `maintenance` section is set to true, clients
-will not be allowed to write to the registry. This mode is useful to temporarily
-prevent writes to the backend storage so a garbage collection pass can be run.
-Before running garbage collection, the registry should be restarted with
-`readonly` set to true. After the garbage collection pass finishes, the registry
-may be restarted again, this time with `readonly` removed from the configuration.
+If the `readonly` section under `maintenance` has `enabled` set to `true`,
+clients will not be allowed to write to the registry. This mode is useful to
+temporarily prevent writes to the backend storage so a garbage collection pass
+can be run.  Before running garbage collection, the registry should be
+restarted with readonly's `enabled` set to true. After the garbage collection
+pass finishes, the registry may be restarted again, this time with `readonly`
+removed from the configuration (or set to false).
 
 ### Openstack Swift
 
