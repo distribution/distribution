@@ -36,7 +36,11 @@ ${PREFIX}/bin/dist: version/version.go $(shell find . -type f -name '*.go')
 	@echo "+ $@"
 	@go build -o $@ ${GO_LDFLAGS} ${GO_GCFLAGS} ./cmd/dist
 
-docs/spec/api.md: docs/spec/api.md.tmpl ${PREFIX}/bin/registry-api-descriptor-template
+${PREFIX}/bin/namespaces: version/version.go $(shell find . -type f -name '*.go')
+	@echo "+ $@"
+	@go build -o $@ ${GO_LDFLAGS} ./cmd/namespaces
+
+doc/spec/api.md: doc/spec/api.md.tmpl ${PREFIX}/bin/registry-api-descriptor-template
 	./bin/registry-api-descriptor-template $< > $@
 
 # Depends on binaries because vet will silently fail if it can't load compiled
@@ -66,7 +70,7 @@ test-full:
 	@echo "+ $@"
 	@go test ./...
 
-binaries: ${PREFIX}/bin/registry ${PREFIX}/bin/registry-api-descriptor-template ${PREFIX}/bin/dist
+binaries: ${PREFIX}/bin/registry ${PREFIX}/bin/registry-api-descriptor-template ${PREFIX}/bin/dist ${PREFIX}/bin/namespaces
 	@echo "+ $@"
 
 clean:
