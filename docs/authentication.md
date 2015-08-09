@@ -143,6 +143,10 @@ That's it. You can now:
  * `docker tag ubuntu myregistrydomain.com:5043/toto`
  * `docker push myregistrydomain.com:5043/toto`
 
+### Authentication failure?
+
+There is a known issue where the password hashing algorithm used in `auth/registry.password` differs from the algorithm used at authentication-time. Refer to [issue #655](https://github.com/docker/distribution/issues/655) for more context (including an insecure workaround).
+
 ### Docker still complains about the certificate?
 
 That's certainly because you are using a self-signed certificate, despite the warnings.
