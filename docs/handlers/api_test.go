@@ -30,6 +30,10 @@ import (
 	"golang.org/x/net/context"
 )
 
+var headerConfig = http.Header{
+	"X-Content-Type-Options": []string{"nosniff"},
+}
+
 // TestCheckAPI hits the base endpoint (/v2/) ensures we return the specified
 // 200 OK response.
 func TestCheckAPI(t *testing.T) {
@@ -215,6 +219,7 @@ func TestURLPrefix(t *testing.T) {
 		},
 	}
 	config.HTTP.Prefix = "/test/"
+	config.HTTP.Headers = headerConfig
 
 	env := newTestEnvWithConfig(t, &config)
 
@@ -1009,6 +1014,8 @@ func newTestEnv(t *testing.T, deleteEnabled bool) *testEnv {
 		},
 	}
 
+	config.HTTP.Headers = headerConfig
+
 	return newTestEnvWithConfig(t, &config)
 }
 
@@ -1221,6 +1228,14 @@ func pushChunk(t *testing.T, ub *v2.URLBuilder, name string, uploadURLBase strin
 func checkResponse(t *testing.T, msg string, resp *http.Response, expectedStatus int) {
 	if resp.StatusCode != expectedStatus {
 		t.Logf("unexpected status %s: %v != %v", msg, resp.StatusCode, expectedStatus)
+		maybeDumpResponse(t, resp)
+
+		t.FailNow()
+	}
+
+	// We expect the headers included in the configuration
+	if !reflect.DeepEqual(resp.Header["X-Content-Type-Options"], []string{"nosniff"}) {
+		t.Logf("missing or incorrect header X-Content-Type-Options %s", msg)
 		maybeDumpResponse(t, resp)
 
 		t.FailNow()

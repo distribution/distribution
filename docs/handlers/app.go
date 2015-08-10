@@ -428,6 +428,12 @@ type dispatchFunc func(ctx *Context, r *http.Request) http.Handler
 // handler, using the dispatch factory function.
 func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		for headerName, headerValues := range app.Config.HTTP.Headers {
+			for _, value := range headerValues {
+				w.Header().Add(headerName, value)
+			}
+		}
+
 		context := app.context(w, r)
 
 		if err := app.authorized(w, r, context); err != nil {
