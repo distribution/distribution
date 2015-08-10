@@ -784,7 +784,7 @@ This storage backend uses Openstack Swift object storage.
         path: /path/to/htpasswd
 
 The `auth` option is **optional**. There are
-currently 2 possible auth providers, `silly` and `token`. You can configure only
+currently 3 possible auth providers, `silly`, `token` and `htpasswd`. You can configure only
 one `auth` provider.
 
 ### silly
