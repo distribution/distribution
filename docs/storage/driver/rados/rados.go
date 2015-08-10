@@ -409,7 +409,9 @@ func (d *driver) List(ctx context.Context, dirPath string) ([]string, error) {
 
 	keys := make([]string, 0, len(files))
 	for k := range files {
-		keys = append(keys, path.Join(dirPath, k))
+		if k != dirPath {
+			keys = append(keys, path.Join(dirPath, k))
+		}
 	}
 
 	return keys, nil
@@ -528,7 +530,7 @@ func (d *driver) putOid(objectPath string, oid string) error {
 	}
 
 	// Esure parent virtual directories
-	if createParentReference && directory != "/" {
+	if createParentReference {
 		return d.putOid(directory, "")
 	}
 
@@ -581,7 +583,7 @@ func (d *driver) deleteOid(objectPath string) error {
 		}
 
 		// Remove reference on parent omaps
-		if directory != "/" {
+		if directory != "" {
 			return d.deleteOid(directory)
 		}
 	}
