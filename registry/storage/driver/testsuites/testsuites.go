@@ -87,6 +87,14 @@ func (suite *DriverSuite) TearDownTest(c *check.C) {
 	}
 }
 
+// TestRootExists ensures that all storage drivers have a root path by default.
+func (suite *DriverSuite) TestRootExists(c *check.C) {
+	_, err := suite.StorageDriver.List(suite.ctx, "/")
+	if err != nil {
+		c.Fatalf(`the root path "/" should always exist: %v`, err)
+	}
+}
+
 // TestValidPaths checks that various valid file paths are accepted by the
 // storage driver.
 func (suite *DriverSuite) TestValidPaths(c *check.C) {
