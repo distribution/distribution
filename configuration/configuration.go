@@ -86,6 +86,12 @@ type Configuration struct {
 			ClientCAs []string `yaml:"clientcas,omitempty"`
 		} `yaml:"tls,omitempty"`
 
+		// Headers is a set of headers to include in HTTP responses. A common
+		// use case for this would be security headers such as
+		// Strict-Transport-Security. The map keys are the header names, and
+		// the values are the associated header payloads.
+		Headers http.Header `yaml:"headers,omitempty"`
+
 		// Debug configures the http debug interface, if specified. This can
 		// include services such as pprof, expvar and other data that should
 		// not be exposed externally. Left disabled by default.

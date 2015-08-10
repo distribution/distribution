@@ -70,7 +70,8 @@ var configStruct = Configuration{
 			Key         string   `yaml:"key,omitempty"`
 			ClientCAs   []string `yaml:"clientcas,omitempty"`
 		} `yaml:"tls,omitempty"`
-		Debug struct {
+		Headers http.Header `yaml:"headers,omitempty"`
+		Debug   struct {
 			Addr string `yaml:"addr,omitempty"`
 		} `yaml:"debug,omitempty"`
 	}{
@@ -80,6 +81,9 @@ var configStruct = Configuration{
 			ClientCAs   []string `yaml:"clientcas,omitempty"`
 		}{
 			ClientCAs: []string{"/path/to/ca.pem"},
+		},
+		Headers: http.Header{
+			"X-Content-Type-Options": []string{"nosniff"},
 		},
 	},
 }
@@ -118,6 +122,8 @@ reporting:
 http:
   clientcas:
     - /path/to/ca.pem
+  headers:
+    X-Content-Type-Options: [nosniff]
 `
 
 // inmemoryConfigYamlV0_1 is a Version 0.1 yaml document specifying an inmemory
@@ -136,6 +142,9 @@ notifications:
       url:  http://example.com
       headers:
         Authorization: [Bearer <example>]
+http:
+  headers:
+    X-Content-Type-Options: [nosniff]
 `
 
 type ConfigSuite struct {
@@ -192,6 +201,7 @@ func (suite *ConfigSuite) TestParseIncomplete(c *C) {
 	suite.expectedConfig.Auth = Auth{"silly": Parameters{"realm": "silly"}}
 	suite.expectedConfig.Reporting = Reporting{}
 	suite.expectedConfig.Notifications = Notifications{}
+	suite.expectedConfig.HTTP.Headers = nil
 
 	os.Setenv("REGISTRY_STORAGE", "filesystem")
 	os.Setenv("REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY", "/tmp/testroot")
@@ -364,6 +374,11 @@ func copyConfig(config Configuration) *Configuration {
 	configCopy.Notifications = Notifications{Endpoints: []Endpoint{}}
 	for _, v := range config.Notifications.Endpoints {
 		configCopy.Notifications.Endpoints = append(configCopy.Notifications.Endpoints, v)
+	}
+
+	configCopy.HTTP.Headers = make(http.Header)
+	for k, v := range config.HTTP.Headers {
+		configCopy.HTTP.Headers[k] = v
 	}
 
 	return configCopy
