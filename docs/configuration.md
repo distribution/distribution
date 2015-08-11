@@ -374,8 +374,8 @@ doing aggressive caching.
 Redirects can be disabled by adding a single flag `disable`, set to `true`
 under the `redirect` section:
 
-  redirect:
-    disable: true
+    redirect:
+      disable: true
 
 ### filesystem
 
