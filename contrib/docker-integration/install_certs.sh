@@ -1,6 +1,10 @@
 #!/bin/sh
 set -e
 
+# Set IP address in /etc/hosts for localregistry
+IP=$(ifconfig eth0|grep "inet addr:"| cut -d: -f2 | awk '{ print $1}')
+echo "$IP localregistry" >> /etc/hosts
+
 hostname=$1
 if [ "$hostname" = "" ]; then
 	hostname="localhost"
