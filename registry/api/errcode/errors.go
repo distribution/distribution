@@ -3,7 +3,6 @@ package errcode
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 )
 
 // ErrorCoder is the base interface for ErrorCode and Error allowing
@@ -23,8 +22,13 @@ func (ec ErrorCode) ErrorCode() ErrorCode {
 	return ec
 }
 
-// Error returns the ID/Value
+// Error returns the human readable version of the ErrorCode
 func (ec ErrorCode) Error() string {
+	return ec.Message()
+}
+
+// ID returns the ID/Value
+func (ec ErrorCode) ID() string {
 	return ec.Descriptor().Value
 }
 
@@ -72,24 +76,24 @@ func (ec *ErrorCode) UnmarshalText(text []byte) error {
 // set the Detail property appropriately
 func (ec ErrorCode) WithDetail(detail interface{}) Error {
 	return Error{
-		Code:    ec,
-		Message: ec.Message(),
+		Code: ec,
+		Msg:  ec.Message(),
 	}.WithDetail(detail)
 }
 
 // WithArgs creates a new Error struct and sets the Args slice
 func (ec ErrorCode) WithArgs(args ...interface{}) Error {
 	return Error{
-		Code:    ec,
-		Message: ec.Message(),
+		Code: ec,
+		Msg:  ec.Message(),
 	}.WithArgs(args...)
 }
 
 // Error provides a wrapper around ErrorCode with extra Details provided.
 type Error struct {
-	Code    ErrorCode   `json:"code"`
-	Message string      `json:"message"`
-	Detail  interface{} `json:"detail,omitempty"`
+	Code   ErrorCode   `json:"code"`
+	Msg    string      `json:"message"`
+	Detail interface{} `json:"detail,omitempty"`
 
 	// TODO(duglin): See if we need an "args" property so we can do the
 	// variable substitution right before showing the message to the user
@@ -97,25 +101,28 @@ type Error struct {
 
 var _ error = Error{}
 
-// ErrorCode returns the ID/Value of this Error
+// ErrorCode returns the ID/Value of this Error.
 func (e Error) ErrorCode() ErrorCode {
 	return e.Code
 }
 
 // Error returns a human readable representation of the error.
 func (e Error) Error() string {
-	return fmt.Sprintf("%s: %s",
-		strings.ToLower(strings.Replace(e.Code.String(), "_", " ", -1)),
-		e.Message)
+	return e.Message()
+}
+
+// Message returns the human readable error message.
+func (e Error) Message() string {
+	return e.Msg
 }
 
 // WithDetail will return a new Error, based on the current one, but with
 // some Detail info added
 func (e Error) WithDetail(detail interface{}) Error {
 	return Error{
-		Code:    e.Code,
-		Message: e.Message,
-		Detail:  detail,
+		Code:   e.Code,
+		Msg:    e.Message(),
+		Detail: detail,
 	}
 }
 
@@ -123,9 +130,9 @@ func (e Error) WithDetail(detail interface{}) Error {
 // variables in the Error's Message string, but returns a new Error
 func (e Error) WithArgs(args ...interface{}) Error {
 	return Error{
-		Code:    e.Code,
-		Message: fmt.Sprintf(e.Code.Message(), args...),
-		Detail:  e.Detail,
+		Code:   e.Code,
+		Msg:    fmt.Sprintf(e.Code.Message(), args...),
+		Detail: e.Detail,
 	}
 }
 
@@ -211,15 +218,15 @@ func (errs Errors) MarshalJSON() ([]byte, error) {
 
 		// If the Error struct was setup and they forgot to set the
 		// Message field (meaning its "") then grab it from the ErrCode
-		msg := err.Message
+		msg := err.Message()
 		if msg == "" {
 			msg = err.Code.Message()
 		}
 
 		tmpErrs.Errors = append(tmpErrs.Errors, Error{
-			Code:    err.Code,
-			Message: msg,
-			Detail:  err.Detail,
+			Code:   err.Code,
+			Msg:    msg,
+			Detail: err.Detail,
 		})
 	}
 
@@ -241,15 +248,15 @@ func (errs *Errors) UnmarshalJSON(data []byte) error {
 	for _, daErr := range tmpErrs.Errors {
 		// If Message is empty or exactly matches the Code's message string
 		// then just use the Code, no need for a full Error struct
-		if daErr.Detail == nil && (daErr.Message == "" || daErr.Message == daErr.Code.Message()) {
+		if daErr.Detail == nil && (daErr.Message() == "" || daErr.Message() == daErr.Code.Message()) {
 			// Error's w/o details get converted to ErrorCode
 			newErrs = append(newErrs, daErr.Code)
 		} else {
 			// Error's w/ details are untouched
 			newErrs = append(newErrs, Error{
-				Code:    daErr.Code,
-				Message: daErr.Message,
-				Detail:  daErr.Detail,
+				Code:   daErr.Code,
+				Msg:    daErr.Message(),
+				Detail: daErr.Detail,
 			})
 		}
 	}

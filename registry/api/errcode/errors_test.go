@@ -122,11 +122,10 @@ func TestErrorsManagement(t *testing.T) {
 	// Test the arg substitution stuff
 	e1 := unmarshaled[3].(Error)
 	exp1 := `Sorry "BOOGIE" isn't valid`
-	if e1.Message != exp1 {
-		t.Fatalf("Wrong msg, got:\n%q\n\nexpected:\n%q", e1.Message, exp1)
+	if e1.Message() != exp1 {
+		t.Fatalf("Wrong msg, got:\n%q\n\nexpected:\n%q", e1.Message(), exp1)
 	}
 
-	exp1 = "test3: " + exp1
 	if e1.Error() != exp1 {
 		t.Fatalf("Error() didn't return the right string, got:%s\nexpected:%s", e1.Error(), exp1)
 	}
@@ -161,8 +160,8 @@ func TestErrorsManagement(t *testing.T) {
 	if &e1 == &e2 {
 		t.Fatalf("args: e2 and e1 should not be the same, but they are")
 	}
-	if e2.Message != `Sorry "test2" isn't valid` {
-		t.Fatalf("e2 had wrong message: %q", e2.Message)
+	if e2.Message() != `Sorry "test2" isn't valid` {
+		t.Fatalf("e2 had wrong message: %q", e2.Message())
 	}
 
 	// Verify that calling WithDetail() more than once does the right thing.
