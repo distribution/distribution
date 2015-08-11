@@ -117,8 +117,13 @@ type blobUploadHandler struct {
 func (buh *blobUploadHandler) StartBlobUpload(w http.ResponseWriter, r *http.Request) {
 	blobs := buh.Repository.Blobs(buh)
 	upload, err := blobs.Create(buh)
+
 	if err != nil {
-		buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+		if err == distribution.ErrUnsupported {
+			buh.Errors = append(buh.Errors, errcode.ErrorCodeUnsupported)
+		} else {
+			buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+		}
 		return
 	}
 
@@ -227,6 +232,8 @@ func (buh *blobUploadHandler) PutBlobUploadComplete(w http.ResponseWriter, r *ht
 			buh.Errors = append(buh.Errors, v2.ErrorCodeDigestInvalid.WithDetail(err))
 		default:
 			switch err {
+			case distribution.ErrUnsupported:
+				buh.Errors = append(buh.Errors, errcode.ErrorCodeUnsupported)
 			case distribution.ErrBlobInvalidLength, distribution.ErrBlobDigestUnsupported:
 				buh.Errors = append(buh.Errors, v2.ErrorCodeBlobUploadInvalid.WithDetail(err))
 			default:
