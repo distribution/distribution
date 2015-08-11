@@ -205,8 +205,8 @@ func TestNewApp(t *testing.T) {
 	if !ok {
 		t.Fatalf("not an ErrorCoder: %#v", errs[0])
 	}
-	if err2.ErrorCode() != v2.ErrorCodeUnauthorized {
-		t.Fatalf("unexpected error code: %v != %v", err2.ErrorCode(), v2.ErrorCodeUnauthorized)
+	if err2.ErrorCode() != errcode.ErrorCodeUnauthorized {
+		t.Fatalf("unexpected error code: %v != %v", err2.ErrorCode(), errcode.ErrorCodeUnauthorized)
 	}
 }
 

@@ -14,6 +14,7 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/configuration"
 	ctxu "github.com/docker/distribution/context"
+	"github.com/docker/distribution/health"
 	"github.com/docker/distribution/notifications"
 	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
@@ -201,6 +202,20 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 	}
 
 	return app
+}
+
+// RegisterHealthChecks is an awful hack to defer health check registration
+// control to callers. This should only ever be called once per registry
+// process, typically in a main function. The correct way would be register
+// health checks outside of app, since multiple apps may exist in the same
+// process. Because the configuration and app are tightly coupled,
+// implementing this properly will require a refactor. This method may panic
+// if called twice in the same process.
+func (app *App) RegisterHealthChecks() {
+	health.RegisterPeriodicThresholdFunc("storagedriver_"+app.Config.Storage.Type(), 10*time.Second, 3, func() error {
+		_, err := app.driver.List(app, "/") // "/" should always exist
+		return err                          // any error will be treated as failure
+	})
 }
 
 // register a handler with the application, by route name. The handler will be
@@ -560,7 +575,7 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 			// base route is accessed. This section prevents us from making
 			// that mistake elsewhere in the code, allowing any operation to
 			// proceed.
-			if err := errcode.ServeJSON(w, v2.ErrorCodeUnauthorized); err != nil {
+			if err := errcode.ServeJSON(w, errcode.ErrorCodeUnauthorized); err != nil {
 				ctxu.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
 			}
 			return fmt.Errorf("forbidden: no repository name")
@@ -575,7 +590,7 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 			// Add the appropriate WWW-Auth header
 			err.SetHeaders(w)
 
-			if err := errcode.ServeJSON(w, v2.ErrorCodeUnauthorized.WithDetail(accessRecords)); err != nil {
+			if err := errcode.ServeJSON(w, errcode.ErrorCodeUnauthorized.WithDetail(accessRecords)); err != nil {
 				ctxu.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
 			}
 		default:

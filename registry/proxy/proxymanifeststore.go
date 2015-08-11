@@ -7,7 +7,7 @@ import (
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
-	"github.com/docker/distribution/registry/api/v2"
+	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/client"
 	"github.com/docker/distribution/registry/proxy/scheduler"
 )
@@ -147,9 +147,9 @@ func manifestDigest(sm *manifest.SignedManifest) (digest.Digest, error) {
 }
 
 func (pms proxyManifestStore) Put(manifest *manifest.SignedManifest) error {
-	return v2.ErrorCodeUnsupported
+	return errcode.ErrorCodeUnsupported
 }
 
 func (pms proxyManifestStore) Delete(dgst digest.Digest) error {
-	return v2.ErrorCodeUnsupported
+	return errcode.ErrorCodeUnsupported
 }

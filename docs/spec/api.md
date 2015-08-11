@@ -2249,7 +2249,7 @@ The following headers will be returned with the response:
 
 |Name|Description|
 |----|-----------|
-|`Content-Length`|Zero|
+|`Content-Length`|0|
 |`Docker-Content-Digest`|Digest of the targeted content for the request.|
 
 

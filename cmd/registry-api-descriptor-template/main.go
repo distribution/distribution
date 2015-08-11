@@ -50,7 +50,10 @@ func main() {
 		ErrorDescriptors []errcode.ErrorDescriptor
 	}{
 		RouteDescriptors: v2.APIDescriptor.RouteDescriptors,
-		ErrorDescriptors: errcode.GetErrorCodeGroup("registry.api.v2"),
+		ErrorDescriptors: append(errcode.GetErrorCodeGroup("registry.api.v2"),
+			// The following are part of the specification but provided by errcode default.
+			errcode.ErrorCodeUnauthorized.Descriptor(),
+			errcode.ErrorCodeUnsupported.Descriptor()),
 	}
 
 	if err := tmpl.Execute(os.Stdout, data); err != nil {
