@@ -45,11 +45,11 @@ If the default configuration is not a sound basis for your usage, or if you are 
 
 Typically, create a new configuration file from scratch, and call it `config.yml`, then:
 
-  docker run -d -p 5000:5000 --restart=always --name registry \
-    -v `pwd`/config.yml:/etc/docker/registry/config.yml \
-    registry:2
+    docker run -d -p 5000:5000 --restart=always --name registry \
+      -v `pwd`/config.yml:/etc/docker/registry/config.yml \
+      registry:2
 
-You can (and probably should) use [this a starting point](https://github.com/docker/distribution/blob/master/cmd/registry/config-example.yml).
+You can (and probably should) use [this as a starting point](https://github.com/docker/distribution/blob/master/cmd/registry/config-example.yml).
 
 ## List of configuration options
 

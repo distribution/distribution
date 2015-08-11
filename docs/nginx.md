@@ -130,16 +130,14 @@ That's certainly because you are using a self-signed certificate, despite the wa
 If you really insist on using these, you have to trust it at the OS level.
 
 Usually, on Ubuntu this is done with:
-```
-cp auth/domain.crt /usr/local/share/ca-certificates/myregistrydomain.com.crt
-update-ca-certificates
-```
+
+    cp auth/domain.crt /usr/local/share/ca-certificates/myregistrydomain.com.crt
+    update-ca-certificates
 
 ... and on RedHat with:
-```
-cp auth/domain.crt /etc/pki/ca-trust/source/anchors/myregistrydomain.com.crt
-update-ca-trust
-```
+
+    cp auth/domain.crt /etc/pki/ca-trust/source/anchors/myregistrydomain.com.crt
+    update-ca-trust
 
 Now:
 

@@ -43,9 +43,9 @@ By default, your registry data is persisted as a [docker volume](https://docs.do
 
 Specifically, you might want to point your volume location to a specific place in order to more easily access your registry data. To do so you can:
 
-	docker run -d -p 5000:5000 --restart=always --name registry \
-        -v `pwd`/data:/var/lib/registry \
-        registry:2
+    docker run -d -p 5000:5000 --restart=always --name registry \
+      -v `pwd`/data:/var/lib/registry \
+      registry:2
 
 ### Alternatives
 
@@ -65,11 +65,11 @@ Move and/or rename your crt file to: `certs/domain.crt` - and your key file to: 
 
 Make sure you stopped your registry from the previous steps, then start your registry again with TLS enabled:
 
-	docker run -d -p 5000:5000 --restart=always --name registry \
-	  -v `pwd`/certs:/certs \
-	  -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/domain.crt \
-	  -e REGISTRY_HTTP_TLS_KEY=/certs/domain.key \
-	  registry:2
+    docker run -d -p 5000:5000 --restart=always --name registry \
+      -v `pwd`/certs:/certs \
+      -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/domain.crt \
+      -e REGISTRY_HTTP_TLS_KEY=/certs/domain.key \
+      registry:2
 
 You should now be able to access your registry from another docker host:
 
@@ -77,6 +77,12 @@ You should now be able to access your registry from another docker host:
     docker tag ubuntu myregistrydomain.com:5000/ubuntu
     docker push myregistrydomain.com:5000/ubuntu
     docker pull myregistrydomain.com:5000/ubuntu
+
+#### Gotcha
+
+A certificate issuer may supply you with an *intermediate* certificate. In this case, you must combine your certificate with the intermediate's to form a *certificate bundle*. You can do this using the `cat` command: 
+
+    cat server.crt intermediate-certificates.pem > certs/domain.crt
 
 ### Alternatives
 
@@ -90,27 +96,27 @@ Except for registries running on secure local networks, registries should always
 
 The simplest way to achieve access restriction is through basic authentication (this is very similar to other web servers' basic authentication mechanism).
 
-> :warning: You **cannot** use authentication with an insecure registry. You have to [configure TLS first](#running-a-domain-registry) for this to work.
+:warning: You **cannot** use authentication with an insecure registry. You have to [configure TLS first](#running-a-domain-registry) for this to work.
 
 First create a password file with one entry for the user "testuser", with password "testpassword":
 
-	mkdir auth
-	docker run --entrypoint htpasswd registry:2 -Bbn testuser testpassword > auth/htpasswd
+    mkdir auth
+    docker run --entrypoint htpasswd registry:2 -Bbn testuser testpassword > auth/htpasswd
 
 Make sure you stopped your registry from the previous step, then start it again:
 
-	docker run -d -p 5000:5000 --restart=always --name registry \
-	  -v `pwd`/auth:/auth \
-	  -e "REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm" \
-	  -e REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd \
-	  -v `pwd`/certs:/certs \
-	  -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/domain.crt \
-	  -e REGISTRY_HTTP_TLS_KEY=/certs/domain.key \
-	  registry:2
+    docker run -d -p 5000:5000 --restart=always --name registry \
+      -v `pwd`/auth:/auth \
+      -e "REGISTRY_AUTH_HTPASSWD_REALM=Registry Realm" \
+      -e REGISTRY_AUTH_HTPASSWD_PATH=/auth/htpasswd \
+      -v `pwd`/certs:/certs \
+      -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/domain.crt \
+      -e REGISTRY_HTTP_TLS_KEY=/certs/domain.key \
+      registry:2
 
 You should now be able to:
 
-	docker login myregistrydomain.com:5000
+    docker login myregistrydomain.com:5000
 
 And then push and pull images as an authenticated user.
 
@@ -120,9 +126,9 @@ And then push and pull images as an authenticated user.
 
 2. Alternatively, the Registry also supports delegated authentication, redirecting users to a specific, trusted token server. That approach requires significantly more investment, and only make sense if you want to fully configure ACLs and more control over the Registry integration into your global authorization and authentication systems.
 
-	You will find [background information here](spec/auth/token.md), and [configuration information here](configuration.md#auth).
+You will find [background information here](spec/auth/token.md), and [configuration information here](configuration.md#auth).
 
-	Beware that you will have to implement your own authentication service for this to work.
+Beware that you will have to implement your own authentication service for this to work.
 
 ## Managing with Compose
 

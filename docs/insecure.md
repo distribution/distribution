@@ -38,11 +38,9 @@ This basically tells Docker to entirely disregard security for your registry.
 
 Generate your own certificate:
 
-```
-mkdir -p certs && openssl req \
-  -newkey rsa:4096 -nodes -sha256 -keyout certs/domain.key \
-  -x509 -days 365 -out certs/domain.crt
-```
+    mkdir -p certs && openssl req \
+      -newkey rsa:4096 -nodes -sha256 -keyout certs/domain.key \
+      -x509 -days 365 -out certs/domain.crt
 
 Be sure to use the name `myregistrydomain.com` as a CN.
 
