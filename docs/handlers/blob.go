@@ -76,16 +76,17 @@ func (bh *blobHandler) DeleteBlob(w http.ResponseWriter, r *http.Request) {
 	err := blobs.Delete(bh, bh.Digest)
 	if err != nil {
 		switch err {
-		case distribution.ErrBlobUnknown:
-			w.WriteHeader(http.StatusNotFound)
-			bh.Errors = append(bh.Errors, v2.ErrorCodeBlobUnknown)
 		case distribution.ErrUnsupported:
-			w.WriteHeader(http.StatusMethodNotAllowed)
 			bh.Errors = append(bh.Errors, errcode.ErrorCodeUnsupported)
+			return
+		case distribution.ErrBlobUnknown:
+			bh.Errors = append(bh.Errors, v2.ErrorCodeBlobUnknown)
+			return
 		default:
-			bh.Errors = append(bh.Errors, errcode.ErrorCodeUnknown)
+			bh.Errors = append(bh.Errors, err)
+			context.GetLogger(bh).Errorf("Unknown error deleting blob: %s", err.Error())
+			return
 		}
-		return
 	}
 
 	w.Header().Set("Content-Length", "0")

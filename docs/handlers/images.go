@@ -154,6 +154,10 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 	if err := manifests.Put(&manifest); err != nil {
 		// TODO(stevvooe): These error handling switches really need to be
 		// handled by an app global mapper.
+		if err == distribution.ErrUnsupported {
+			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnsupported)
+			return
+		}
 		switch err := err.(type) {
 		case distribution.ErrManifestVerification:
 			for _, verificationError := range err {
@@ -210,14 +214,12 @@ func (imh *imageManifestHandler) DeleteImageManifest(w http.ResponseWriter, r *h
 			return
 		case distribution.ErrBlobUnknown:
 			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown)
-			w.WriteHeader(http.StatusNotFound)
 			return
 		case distribution.ErrUnsupported:
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnsupported)
-			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
 		default:
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown)
-			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
 	}

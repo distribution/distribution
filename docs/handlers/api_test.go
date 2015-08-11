@@ -1001,6 +1001,21 @@ type testEnv struct {
 	builder *v2.URLBuilder
 }
 
+func newTestEnvMirror(t *testing.T, deleteEnabled bool) *testEnv {
+	config := configuration.Configuration{
+		Storage: configuration.Storage{
+			"inmemory": configuration.Parameters{},
+			"delete":   configuration.Parameters{"enabled": deleteEnabled},
+		},
+		Proxy: configuration.Proxy{
+			RemoteURL: "http://example.com",
+		},
+	}
+
+	return newTestEnvWithConfig(t, &config)
+
+}
+
 func newTestEnv(t *testing.T, deleteEnabled bool) *testEnv {
 	config := configuration.Configuration{
 		Storage: configuration.Storage{
@@ -1377,4 +1392,54 @@ func createRepository(env *testEnv, t *testing.T, imageName string, tag string) 
 		"Location":              []string{manifestDigestURL},
 		"Docker-Content-Digest": []string{dgst.String()},
 	})
+}
+
+// Test mutation operations on a registry configured as a cache.  Ensure that they return
+// appropriate errors.
+func TestRegistryAsCacheMutationAPIs(t *testing.T) {
+	deleteEnabled := true
+	env := newTestEnvMirror(t, deleteEnabled)
+
+	imageName := "foo/bar"
+	tag := "latest"
+	manifestURL, err := env.builder.BuildManifestURL(imageName, tag)
+	if err != nil {
+		t.Fatalf("unexpected error building base url: %v", err)
+	}
+
+	// Manifest upload
+	unsignedManifest := &manifest.Manifest{
+		Versioned: manifest.Versioned{
+			SchemaVersion: 1,
+		},
+		Name:     imageName,
+		Tag:      tag,
+		FSLayers: []manifest.FSLayer{},
+	}
+	resp := putManifest(t, "putting unsigned manifest", manifestURL, unsignedManifest)
+	checkResponse(t, "putting signed manifest to cache", resp, errcode.ErrorCodeUnsupported.Descriptor().HTTPStatusCode)
+
+	// Manifest Delete
+	resp, err = httpDelete(manifestURL)
+	checkResponse(t, "deleting signed manifest from cache", resp, errcode.ErrorCodeUnsupported.Descriptor().HTTPStatusCode)
+
+	// Blob upload initialization
+	layerUploadURL, err := env.builder.BuildBlobUploadURL(imageName)
+	if err != nil {
+		t.Fatalf("unexpected error building layer upload url: %v", err)
+	}
+
+	resp, err = http.Post(layerUploadURL, "", nil)
+	if err != nil {
+		t.Fatalf("unexpected error starting layer push: %v", err)
+	}
+	defer resp.Body.Close()
+
+	checkResponse(t, fmt.Sprintf("starting layer push to cache %v", imageName), resp, errcode.ErrorCodeUnsupported.Descriptor().HTTPStatusCode)
+
+	// Blob Delete
+	blobURL, err := env.builder.BuildBlobURL(imageName, digest.DigestSha256EmptyTar)
+	resp, err = httpDelete(blobURL)
+	checkResponse(t, "deleting blob from cache", resp, errcode.ErrorCodeUnsupported.Descriptor().HTTPStatusCode)
+
 }
