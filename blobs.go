@@ -27,9 +27,6 @@ var (
 	// ErrBlobInvalidLength returned when the blob has an expected length on
 	// commit, meaning mismatched with the descriptor or an invalid value.
 	ErrBlobInvalidLength = errors.New("blob invalid length")
-
-	// ErrUnsupported returned when an unsupported operation is attempted
-	ErrUnsupported = errors.New("unsupported operation")
 )
 
 // ErrBlobInvalidDigest returned when digest check fails.

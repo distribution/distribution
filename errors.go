@@ -7,6 +7,10 @@ import (
 	"github.com/docker/distribution/digest"
 )
 
+// ErrUnsupported is returned when an unimplemented or unsupported action is
+// performed
+var ErrUnsupported = fmt.Errorf("operation unsupported")
+
 // ErrRepositoryUnknown is returned if the named repository is not known by
 // the registry.
 type ErrRepositoryUnknown struct {

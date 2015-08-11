@@ -30,7 +30,7 @@ var (
 		Message: "The operation is unsupported.",
 		Description: `The operation was unsupported due to a missing
 		implementation or invalid set of parameters.`,
-		HTTPStatusCode: http.StatusBadRequest,
+		HTTPStatusCode: http.StatusMethodNotAllowed,
 	})
 
 	// ErrorCodeUnauthorized is returned if a request is not authorized.

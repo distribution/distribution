@@ -1731,6 +1731,24 @@ The error codes that may be included in the response body are enumerated below:
 
 
 
+###### On Failure: Not allowed
+
+```
+405 Method Not Allowed
+```
+
+Manifest put is not allowed because the registry is configured as a pull-through cache or for some other reason
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `UNSUPPORTED` | The operation is unsupported. | The operation was unsupported due to a missing implementation or invalid set of parameters. |
+
+
+
 
 #### DELETE Manifest
 
@@ -1868,6 +1886,24 @@ The error codes that may be included in the response body are enumerated below:
 |----|-------|-----------|
 | `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
 | `MANIFEST_UNKNOWN` | manifest unknown | This error is returned when the manifest, identified by name and tag is unknown to the repository. |
+
+
+
+###### On Failure: Not allowed
+
+```
+405 Method Not Allowed
+```
+
+Manifest delete is not allowed because the registry is configured as a pull-through cache or `delete` has been disabled.
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `UNSUPPORTED` | The operation is unsupported. | The operation was unsupported due to a missing implementation or invalid set of parameters. |
 
 
 
@@ -2323,7 +2359,7 @@ Content-Type: application/json; charset=utf-8
 }
 ```
 
-Delete is not enabled on the registry
+Blob delete is not allowed because the registry is configured as a pull-through cache or `delete` has been disabled
 
 
 
@@ -2453,6 +2489,24 @@ The error codes that may be included in the response body are enumerated below:
 |Code|Message|Description|
 |----|-------|-----------|
 | `UNAUTHORIZED` | access to the requested resource is not authorized | The access controller denied access for the operation on a resource. Often this will be accompanied by a 401 Unauthorized response status. |
+
+
+
+###### On Failure: Not allowed
+
+```
+405 Method Not Allowed
+```
+
+Blob upload is not allowed because the registry is configured as a pull-through cache or for some other reason
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `UNSUPPORTED` | The operation is unsupported. | The operation was unsupported due to a missing implementation or invalid set of parameters. |
 
 
 
@@ -3129,6 +3183,7 @@ The error codes that may be included in the response body are enumerated below:
 | `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
 | `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
 | `BLOB_UPLOAD_INVALID` | blob upload invalid | The blob upload encountered an error and can no longer proceed. |
+| `UNSUPPORTED` | The operation is unsupported. | The operation was unsupported due to a missing implementation or invalid set of parameters. |
 
 
 
