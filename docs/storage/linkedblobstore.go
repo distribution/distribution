@@ -11,6 +11,10 @@ import (
 	"github.com/docker/distribution/uuid"
 )
 
+// linkPathFunc describes a function that can resolve a link based on the
+// repository name and digest.
+type linkPathFunc func(pm *pathMapper, name string, dgst digest.Digest) (string, error)
+
 // linkedBlobStore provides a full BlobService that namespaces the blobs to a
 // given repository. Effectively, it manages the links in a given repository
 // that grant access to the global blob store.
@@ -297,5 +301,5 @@ func blobLinkPath(pm *pathMapper, name string, dgst digest.Digest) (string, erro
 
 // manifestRevisionLinkPath provides the path to the manifest revision link.
 func manifestRevisionLinkPath(pm *pathMapper, name string, dgst digest.Digest) (string, error) {
-	return pm.path(layerLinkPathSpec{name: name, digest: dgst})
+	return pm.path(manifestRevisionLinkPathSpec{name: name, revision: dgst})
 }
