@@ -1,10 +1,8 @@
 <!--[metadata]>
 +++
-title = "Authentication for the Registry with a proxy"
+title = "Authenticating proxy with nginx"
 description = "Restricting access to your registry using a proxy"
 keywords = ["registry, service, images, repository, authentication"]
-[menu.main]
-parent="smn_registry"
 +++
 <![end-metadata]-->
 
