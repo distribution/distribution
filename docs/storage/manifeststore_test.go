@@ -362,3 +362,37 @@ func TestManifestStorage(t *testing.T) {
 		t.Errorf("Unexpected success deleting while disabled")
 	}
 }
+
+// TestLinkPathFuncs ensures that the link path functions behavior are locked
+// down and implemented as expected.
+func TestLinkPathFuncs(t *testing.T) {
+	for _, testcase := range []struct {
+		repo       string
+		digest     digest.Digest
+		linkPathFn linkPathFunc
+		expected   string
+	}{
+		{
+			repo:       "foo/bar",
+			digest:     "sha256:deadbeaf",
+			linkPathFn: blobLinkPath,
+			expected:   "/docker/registry/v2/repositories/foo/bar/_layers/sha256/deadbeaf/link",
+		},
+		{
+			repo:       "foo/bar",
+			digest:     "sha256:deadbeaf",
+			linkPathFn: manifestRevisionLinkPath,
+			expected:   "/docker/registry/v2/repositories/foo/bar/_manifests/revisions/sha256/deadbeaf/link",
+		},
+	} {
+		p, err := testcase.linkPathFn(defaultPathMapper, testcase.repo, testcase.digest)
+		if err != nil {
+			t.Fatalf("unexpected error calling linkPathFn(pm, %q, %q): %v", testcase.repo, testcase.digest, err)
+		}
+
+		if p != testcase.expected {
+			t.Fatalf("incorrect path returned: %q != %q", p, testcase.expected)
+		}
+	}
+
+}

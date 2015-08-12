@@ -122,7 +122,7 @@ func (ts *tagStore) delete(tag string) error {
 	return ts.blobStore.driver.Delete(ts.ctx, tagPath)
 }
 
-// namedBlobStore returns the namedBlobStore for the named tag, allowing one
+// linkedBlobStore returns the linkedBlobStore for the named tag, allowing one
 // to index manifest blobs by tag name. While the tag store doesn't map
 // precisely to the linked blob store, using this ensures the links are
 // managed via the same code path.
@@ -131,13 +131,12 @@ func (ts *tagStore) linkedBlobStore(ctx context.Context, tag string) *linkedBlob
 		blobStore:  ts.blobStore,
 		repository: ts.repository,
 		ctx:        ctx,
-		linkPath: func(pm *pathMapper, name string, dgst digest.Digest) (string, error) {
+		linkPathFns: []linkPathFunc{func(pm *pathMapper, name string, dgst digest.Digest) (string, error) {
 			return pm.path(manifestTagIndexEntryLinkPathSpec{
 				name:     name,
 				tag:      tag,
 				revision: dgst,
 			})
-		},
+		}},
 	}
-
 }
