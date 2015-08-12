@@ -1,10 +1,8 @@
 <!--[metadata]>
 +++
-title = "Docker Registry 2.0"
+title = "Insecure Registry"
 description = "Deploying an insecure Registry"
 keywords = ["registry, images, repository"]
-[menu.main]
-parent="smn_registry"
 +++
 <![end-metadata]-->
 
