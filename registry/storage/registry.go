@@ -108,6 +108,13 @@ func (repo *repository) Name() string {
 // may be context sensitive in the future. The instance should be used similar
 // to a request local.
 func (repo *repository) Manifests(ctx context.Context, options ...distribution.ManifestServiceOption) (distribution.ManifestService, error) {
+	manifestLinkPathFns := []linkPathFunc{
+		// NOTE(stevvooe): Need to search through multiple locations since
+		// 2.1.0 unintentionally linked into  _layers.
+		manifestRevisionLinkPath,
+		blobLinkPath,
+	}
+
 	ms := &manifestStore{
 		ctx:        ctx,
 		repository: repo,
@@ -120,14 +127,14 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 				repository:    repo,
 				deleteEnabled: repo.registry.deleteEnabled,
 				blobAccessController: &linkedBlobStatter{
-					blobStore:  repo.blobStore,
-					repository: repo,
-					linkPath:   manifestRevisionLinkPath,
+					blobStore:   repo.blobStore,
+					repository:  repo,
+					linkPathFns: manifestLinkPathFns,
 				},
 
 				// TODO(stevvooe): linkPath limits this blob store to only
 				// manifests. This instance cannot be used for blob checks.
-				linkPath: manifestRevisionLinkPath,
+				linkPathFns: manifestLinkPathFns,
 			},
 		},
 		tagStore: &tagStore{
@@ -153,9 +160,9 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 // to a request local.
 func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
 	var statter distribution.BlobDescriptorService = &linkedBlobStatter{
-		blobStore:  repo.blobStore,
-		repository: repo,
-		linkPath:   blobLinkPath,
+		blobStore:   repo.blobStore,
+		repository:  repo,
+		linkPathFns: []linkPathFunc{blobLinkPath},
 	}
 
 	if repo.descriptorCache != nil {
@@ -171,7 +178,7 @@ func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
 
 		// TODO(stevvooe): linkPath limits this blob store to only layers.
 		// This instance cannot be used for manifest checks.
-		linkPath:      blobLinkPath,
+		linkPathFns:   []linkPathFunc{blobLinkPath},
 		deleteEnabled: repo.registry.deleteEnabled,
 	}
 }
