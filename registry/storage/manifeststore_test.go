@@ -2,6 +2,7 @@ package storage
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"reflect"
 	"testing"
@@ -14,6 +15,7 @@ import (
 	"github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/docker/distribution/testutil"
+	"github.com/docker/distribution/uuid"
 	"github.com/docker/libtrust"
 )
 
@@ -106,6 +108,38 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("error signing manifest: %v", err)
 	}
 
+	// try to put the manifest initially. this will fail since we have not
+	// included history or pushed any layers.
+	err = ms.Put(sm)
+	if err == nil {
+		t.Fatalf("expected errors putting manifest with full verification")
+	}
+
+	switch err := err.(type) {
+	case distribution.ErrManifestVerification:
+		if len(err) != 4 {
+			t.Fatalf("expected 4 verification errors: %#v", err)
+		}
+
+		for _, err := range err {
+			switch err := err.(type) {
+			case distribution.ErrManifestBlobUnknown, distribution.ErrManifestValidation:
+				// noop: we expect these errors
+			default:
+				t.Fatalf("unexpected error type: %v", err)
+			}
+		}
+	default:
+		t.Fatalf("unexpected error verifying manifest: %v", err)
+	}
+
+	m.History = generateHistory(t, len(m.FSLayers))
+	sm, err = manifest.Sign(&m, pk)
+	if err != nil {
+		t.Fatalf("unexpected error signing manfiest with history: %v", err)
+	}
+
+	// we've fixed the missing history, try the push and fail on layer checks.
 	err = ms.Put(sm)
 	if err == nil {
 		t.Fatalf("expected errors putting manifest with full verification")
@@ -395,4 +429,38 @@ func TestLinkPathFuncs(t *testing.T) {
 		}
 	}
 
+}
+
+// generateHistory creates a valid history entry of length n.
+func generateHistory(t *testing.T, n int) []manifest.History {
+	var images []map[string]interface{}
+
+	// first pass: create images entries.
+	for i := 0; i < n; i++ {
+		// simulate correct id -> parent links in v1Compatibility, using uuids.
+		image := map[string]interface{}{
+			"id": uuid.Generate().String(),
+		}
+
+		images = append(images, image)
+	}
+
+	var history []manifest.History
+
+	for i, image := range images {
+		if i+1 < len(images) {
+			image["parent"] = images[i+1]["id"]
+		}
+
+		p, err := json.Marshal(image)
+		if err != nil {
+			t.Fatalf("error generating image json: %v", err)
+		}
+
+		history = append(history, manifest.History{
+			V1Compatibility: string(p),
+		})
+	}
+
+	return history
 }

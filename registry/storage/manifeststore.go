@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/docker/distribution"
@@ -107,7 +108,8 @@ func (ms *manifestStore) GetByTag(tag string, options ...distribution.ManifestSe
 func (ms *manifestStore) verifyManifest(ctx context.Context, mnfst *manifest.SignedManifest) error {
 	var errs distribution.ErrManifestVerification
 	if mnfst.Name != ms.repository.Name() {
-		errs = append(errs, fmt.Errorf("repository name does not match manifest name"))
+		errs = append(errs, distribution.ErrManifestValidation{
+			Reason: "repository name does not match manifest name"})
 	}
 
 	if _, err := manifest.Verify(mnfst); err != nil {
@@ -124,6 +126,16 @@ func (ms *manifestStore) verifyManifest(ctx context.Context, mnfst *manifest.Sig
 	}
 
 	if !ms.skipDependencyVerification {
+		if len(mnfst.FSLayers) == 0 || len(mnfst.History) == 0 {
+			errs = append(errs, distribution.ErrManifestValidation{
+				Reason: "no layers present"})
+		}
+
+		if len(mnfst.FSLayers) != len(mnfst.History) {
+			errs = append(errs, distribution.ErrManifestValidation{
+				Reason: "mismatched layers and history"})
+		}
+
 		for _, fsLayer := range mnfst.FSLayers {
 			_, err := ms.repository.Blobs(ctx).Stat(ctx, fsLayer.BlobSum)
 			if err != nil {
@@ -135,7 +147,41 @@ func (ms *manifestStore) verifyManifest(ctx context.Context, mnfst *manifest.Sig
 				errs = append(errs, distribution.ErrManifestBlobUnknown{Digest: fsLayer.BlobSum})
 			}
 		}
+
+		// image provides a local type for validating the image relationship.
+		type image struct {
+			Id     string
+			Parent string
+		}
+
+		// Process the history portion to ensure that the parent links are
+		// correctly represented. We serialize the image json, then walk the
+		// entries, checking the parent link.
+		var images []image
+		for _, entry := range mnfst.History {
+			var im image
+			if err := json.Unmarshal([]byte(entry.V1Compatibility), &im); err != nil {
+				errs = append(errs, err)
+			}
+
+			images = append(images, im)
+		}
+
+		// go back through each image, checking the parent link and rank
+		var parentID string
+		for i := len(images) - 1; i >= 0; i-- {
+			// ensure that the parent id matches parent. There are cases where
+			// successive layers don't fill in the parents but parent id
+			// should be empty so it should work out.
+			if images[i].Parent != parentID {
+				errs = append(errs, distribution.ErrManifestValidation{
+					Reason: "parent not adjacent in manifest"})
+			}
+
+			parentID = images[i].Id
+		}
 	}
+
 	if len(errs) != 0 {
 		return errs
 	}
