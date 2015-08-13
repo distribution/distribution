@@ -76,7 +76,7 @@ information about each option that appears later in this page.
               password: password
               insecure: true
             from: sender@example.com
-            to: 
+            to:
               - errors@example.com
     loglevel: debug # deprecated: use "log"
     storage:
@@ -112,6 +112,8 @@ information about each option that appears later in this page.
         region: fr
         container: containername
         rootdirectory: /swift/object/name/prefix
+      delete:
+        enabled: false
       redirect:
         disable: false
       cache:
@@ -330,6 +332,8 @@ Permitted values are `error`, `warn`, `info` and `debug`. The default is
         region: fr
         container: containername
         rootdirectory: /swift/object/name/prefix
+      delete:
+        enabled: false
       cache:
         blobdescriptor: inmemory
       maintenance:
@@ -344,9 +348,18 @@ Permitted values are `error`, `warn`, `info` and `debug`. The default is
 The storage option is **required** and defines which storage backend is in use.
 You must configure one backend; if you configure more, the registry returns an error.
 
-If you are deploying a registry on Windows, be aware that a Windows volume mounted from the host is not recommended. Instead, you can use a S3, or Azure, backing data-store. If you do use a Windows volume, you must ensure that the `PATH` to the mount point is within Windows' `MAX_PATH` limits (typically 255 characters). Failure to do so can result in the following error message: 
+If you are deploying a registry on Windows, be aware that a Windows volume mounted from the host is not recommended. Instead, you can use a S3, or Azure, backing data-store. If you do use a Windows volume, you must ensure that the `PATH` to the mount point is within Windows' `MAX_PATH` limits (typically 255 characters). Failure to do so can result in the following error message:
 
     mkdir /XXX protocol error and your registry will not function properly.
+
+### delete
+
+Use the `delete` subsection to enable the deletion of image blobs and manifests
+by digest. It defaults to false, but it can be enabled by writing the following
+on the configuration file:
+
+    delete:
+      enabled: true
 
 ### cache
 
