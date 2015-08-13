@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/docker/distribution"
@@ -100,6 +101,48 @@ func (ms *manifestStore) verifyManifest(mnfst *manifest.SignedManifest) error {
 				errs = append(errs, err)
 			}
 		}
+	}
+
+	if len(mnfst.FSLayers) == 0 || len(mnfst.History) == 0 {
+		errs = append(errs, distribution.ErrManifestValidation{
+			Reason: "no layers present"})
+	}
+
+	if len(mnfst.FSLayers) != len(mnfst.History) {
+		errs = append(errs, distribution.ErrManifestValidation{
+			Reason: "mismatched layers and history"})
+	}
+
+	// image provides a local type for validating the image relationship.
+	type image struct {
+		ID     string `json:"id"`
+		Parent string `json:"parent"`
+	}
+
+	// Process the history portion to ensure that the parent links are
+	// correctly represented. We serialize the image json, then walk the
+	// entries, checking the parent link.
+	var images []image
+	for _, entry := range mnfst.History {
+		var im image
+		if err := json.Unmarshal([]byte(entry.V1Compatibility), &im); err != nil {
+			errs = append(errs, err)
+		}
+
+		images = append(images, im)
+	}
+
+	// go back through each image, checking the parent link and rank
+	var parentID string
+	for i := len(images) - 1; i >= 0; i-- {
+		// ensure that the parent id matches but only if there is a parent.
+		// There are cases where successive layers don't fill in the parents.
+		if images[i].Parent != parentID {
+			errs = append(errs, distribution.ErrManifestValidation{
+				Reason: "parent not adjacent in manifest"})
+		}
+
+		parentID = images[i].ID
 	}
 
 	for _, fsLayer := range mnfst.FSLayers {

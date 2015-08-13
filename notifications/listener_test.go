@@ -1,10 +1,12 @@
 package notifications
 
 import (
+	"encoding/json"
 	"io"
 	"reflect"
 	"testing"
 
+	"code.google.com/p/go-uuid/uuid"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
@@ -132,6 +134,8 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 		}
 	}
 
+	m.History = generateHistory(t, len(m.FSLayers))
+
 	pk, err := libtrust.GenerateECP256PrivateKey()
 	if err != nil {
 		t.Fatalf("unexpected error generating key: %v", err)
@@ -175,4 +179,38 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 	if fetched.Tag != fetchedByManifest.Tag {
 		t.Fatalf("retrieved unexpected manifest: %v", err)
 	}
+}
+
+// generateHistory creates a valid history entry of length n.
+func generateHistory(t *testing.T, n int) []manifest.History {
+	var images []map[string]interface{}
+
+	// first pass: create images entries.
+	for i := 0; i < n; i++ {
+		// simulate correct id -> parent links in v1Compatibility, using uuids.
+		image := map[string]interface{}{
+			"id": uuid.New(),
+		}
+
+		images = append(images, image)
+	}
+
+	var history []manifest.History
+
+	for i, image := range images {
+		if i+1 < len(images) {
+			image["parent"] = images[i+1]["id"]
+		}
+
+		p, err := json.Marshal(image)
+		if err != nil {
+			t.Fatalf("error generating image json: %v", err)
+		}
+
+		history = append(history, manifest.History{
+			V1Compatibility: string(p),
+		})
+	}
+
+	return history
 }

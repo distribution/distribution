@@ -140,6 +140,8 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 					imh.Errors.Push(v2.ErrorCodeBlobUnknown, verificationError.FSLayer)
 				case distribution.ErrManifestUnverified:
 					imh.Errors.Push(v2.ErrorCodeManifestUnverified)
+				case distribution.ErrManifestValidation:
+					imh.Errors.Push(v2.ErrorCodeManifestInvalid, verificationError.Error())
 				default:
 					if verificationError == digest.ErrDigestInvalidFormat {
 						// TODO(stevvooe): We need to really need to move all
