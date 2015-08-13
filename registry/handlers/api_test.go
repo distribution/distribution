@@ -16,6 +16,7 @@ import (
 	"strings"
 	"testing"
 
+	"code.google.com/p/go-uuid/uuid"
 	"github.com/docker/distribution/configuration"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
@@ -323,10 +324,12 @@ func TestManifestAPI(t *testing.T) {
 		},
 	}
 
+	unsignedManifest.History = generateHistory(t, len(unsignedManifest.FSLayers), false)
+
 	resp = putManifest(t, "putting unsigned manifest", manifestURL, unsignedManifest)
 	defer resp.Body.Close()
 	checkResponse(t, "posting unsigned manifest", resp, http.StatusBadRequest)
-	_, p, counts := checkBodyHasErrorCodes(t, "getting unknown manifest tags", resp,
+	_, p, counts := checkBodyHasErrorCodes(t, "putting unsigned manifest", resp,
 		v2.ErrorCodeManifestUnverified, v2.ErrorCodeBlobUnknown, v2.ErrorCodeDigestInvalid)
 
 	expectedCounts := map[v2.ErrorCode]int{
@@ -361,8 +364,10 @@ func TestManifestAPI(t *testing.T) {
 		pushLayer(t, env.builder, imageName, dgst, uploadURLBase, rs)
 	}
 
-	// -------------------
-	// Push the signed manifest with all layers pushed.
+	// -----------------------
+	// mostly valid, but we have an extra parent point in history.
+	unsignedManifest.History = generateHistory(t, len(unsignedManifest.FSLayers), true)
+
 	signedManifest, err := manifest.Sign(unsignedManifest, env.pk)
 	if err != nil {
 		t.Fatalf("unexpected error signing manifest: %v", err)
@@ -375,6 +380,36 @@ func TestManifestAPI(t *testing.T) {
 	checkErr(t, err, "digesting manifest")
 
 	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, dgst.String())
+	checkErr(t, err, "building manifest url")
+
+	resp = putManifest(t, "putting signed manifest with bad parent", manifestURL, signedManifest)
+	checkResponse(t, "putting signed manifest with bad parent", resp, http.StatusBadRequest)
+	_, p, counts = checkBodyHasErrorCodes(t, "putting unsigned manifest with bad parent", resp, v2.ErrorCodeManifestInvalid)
+
+	expectedCounts = map[v2.ErrorCode]int{
+		v2.ErrorCodeManifestInvalid: 1,
+	}
+
+	if !reflect.DeepEqual(counts, expectedCounts) {
+		t.Fatalf("unexpected number of error codes encountered: %v\n!=\n%v\n---\n%s", counts, expectedCounts, string(p))
+	}
+
+	// -------------------
+	// Push the signed manifest with all layers pushed.
+	unsignedManifest.History = generateHistory(t, len(unsignedManifest.FSLayers), false)
+
+	signedManifest, err = manifest.Sign(unsignedManifest, env.pk)
+	if err != nil {
+		t.Fatalf("unexpected error signing manifest: %v", err)
+	}
+
+	payload, err = signedManifest.Payload()
+	checkErr(t, err, "getting manifest payload")
+
+	dgst, err = digest.FromBytes(payload)
+	checkErr(t, err, "digesting manifest")
+
+	manifestDigestURL, err = env.builder.BuildManifestURL(imageName, dgst.String())
 	checkErr(t, err, "building manifest url")
 
 	resp = putManifest(t, "putting signed manifest", manifestURL, signedManifest)
@@ -790,4 +825,42 @@ func checkErr(t *testing.T, err error, msg string) {
 	if err != nil {
 		t.Fatalf("unexpected error %s: %v", msg, err)
 	}
+}
+
+// generateHistory creates a valid history entry of length n.
+func generateHistory(t *testing.T, n int, extraParent bool) []manifest.History {
+	var images []map[string]interface{}
+
+	// first pass: create images entries.
+	for i := 0; i < n; i++ {
+		// simulate correct id -> parent links in v1Compatibility, using uuids.
+		image := map[string]interface{}{
+			"id": uuid.New(),
+		}
+
+		images = append(images, image)
+	}
+
+	var history []manifest.History
+
+	for i, image := range images {
+		if i+1 < len(images) {
+			image["parent"] = images[i+1]["id"]
+		}
+
+		if extraParent && i == len(images)-1 {
+			image["parent"] = uuid.New()
+		}
+
+		p, err := json.Marshal(image)
+		if err != nil {
+			t.Fatalf("error generating image json: %v", err)
+		}
+
+		history = append(history, manifest.History{
+			V1Compatibility: string(p),
+		})
+	}
+
+	return history
 }

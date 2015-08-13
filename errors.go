@@ -74,6 +74,16 @@ func (ErrManifestUnverified) Error() string {
 	return fmt.Sprintf("unverified manifest")
 }
 
+// ErrManifestValidation is returned during manifest verification if a common
+// validation error is encountered.
+type ErrManifestValidation struct {
+	Reason string
+}
+
+func (err ErrManifestValidation) Error() string {
+	return fmt.Sprintf("invalid manifest: %s", err.Reason)
+}
+
 // ErrManifestVerification provides a type to collect errors encountered
 // during manifest verification. Currently, it accepts errors of all types,
 // but it may be narrowed to those involving manifest verification.
