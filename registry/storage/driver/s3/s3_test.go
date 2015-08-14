@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/AdRoll/goamz/aws"
+	"github.com/AdRoll/goamz/s3"
+	"github.com/AdRoll/goamz/s3/s3test"
 	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/testsuites"
@@ -137,5 +139,120 @@ func TestEmptyRootList(t *testing.T) {
 		if !storagedriver.PathRegexp.MatchString(path) {
 			t.Fatalf("unexpected string in path: %q != %q", path, storagedriver.PathRegexp)
 		}
+	}
+}
+
+func startS3Server(bucketName string) (*s3test.Server, error) {
+	srv, err := s3test.NewServer(nil)
+	if err != nil {
+		return nil, err
+	}
+	auth := aws.Auth{AccessKey: "accesskey", SecretKey: "secretkey"}
+	region := aws.Region{Name: "generic", S3Endpoint: srv.URL(), S3LocationConstraint: true}
+	conn := s3.New(auth, region)
+	bucket := conn.Bucket(bucketName)
+	bucket.PutBucket(s3.Private)
+	return srv, nil
+}
+
+func TestFromParametersWithGenericRegion(t *testing.T) {
+	bucketName := "bkt-name"
+	srv, err := startS3Server(bucketName)
+	if err != nil {
+		t.Fatalf("unexpected error while setting S3 server mock")
+	}
+	params := map[string]interface{}{
+		"accesskey":      "accesskey",
+		"secretkey":      "secretkey",
+		"region":         "generic",
+		"regionendpoint": srv.URL(),
+		"bucket":         bucketName,
+	}
+	d, err := FromParameters(params)
+	if err != nil {
+		t.Fatalf("unexpected error while creating driver: %q", err)
+	}
+	drv, _ := d.baseEmbed.Base.StorageDriver.(*driver)
+	if bName := drv.Bucket.Name; bName != params["bucket"] {
+		t.Fatalf("invalid bucket name: expected: %q got: %q", params["bucket"], bName)
+	}
+	if regionName := drv.S3.Name; regionName != params["region"] {
+		t.Fatalf("invalid region name: expected: %q got: %q", params["region"], regionName)
+	}
+	if s3endpoint := drv.S3.S3Endpoint; s3endpoint != params["regionendpoint"] {
+		t.Fatalf("invalid region endpoint: expected: %q got: %q", params["regionendpoint"], s3endpoint)
+	}
+	if s3locConstr := drv.S3.S3LocationConstraint; s3locConstr == false {
+		t.Fatalf("S3 Location Constraint not properly set: expected: %t got: %t", true, s3locConstr)
+	}
+}
+
+func TestFromParametersWithDisabledHeadRequests(t *testing.T) {
+	bucketName := "bkt-name"
+	srv, err := startS3Server(bucketName)
+	if err != nil {
+		t.Fatalf("unexpected error while setting S3 server mock")
+	}
+	params := map[string]interface{}{
+		"accesskey":          "accesskey",
+		"secretkey":          "secretkey",
+		"region":             "generic",
+		"regionendpoint":     srv.URL(),
+		"regionsupportshead": false,
+		"bucket":             bucketName,
+	}
+	d, err := FromParameters(params)
+	if err != nil {
+		t.Fatalf("unexpected error while creating driver: %q", err)
+	}
+	drv, _ := d.baseEmbed.Base.StorageDriver.(*driver)
+	if supportsHead := drv.SupportsHead; supportsHead != false {
+		t.Fatalf("not properly set: expected: %t got: %t", true, supportsHead)
+	}
+}
+
+func TestFromParametersDefaultSupportsHead(t *testing.T) {
+	bucketName := "bkt-name"
+	srv, err := startS3Server(bucketName)
+	if err != nil {
+		t.Fatalf("unexpected error while setting S3 server mock")
+	}
+	params := map[string]interface{}{
+		"accesskey":      "accesskey",
+		"secretkey":      "secretkey",
+		"region":         "generic",
+		"regionendpoint": srv.URL(),
+		"bucket":         bucketName,
+	}
+	d, err := FromParameters(params)
+	if err != nil {
+		t.Fatalf("unexpected error while creating driver: %q", err)
+	}
+	drv, _ := d.baseEmbed.Base.StorageDriver.(*driver)
+	if supportsHead := drv.SupportsHead; supportsHead == false {
+		t.Fatalf("Region HEAD requests disabled by default: expected: %t got: %t", true, supportsHead)
+	}
+}
+
+func TestDriverURLForWithHeadDisabled(t *testing.T) {
+	bucketName := "bkt-name"
+	srv, err := startS3Server(bucketName)
+	if err != nil {
+		t.Fatalf("unexpected error while setting S3 server mock")
+	}
+	params := map[string]interface{}{
+		"accesskey":          "accesskey",
+		"secretkey":          "secretkey",
+		"region":             "generic",
+		"regionendpoint":     srv.URL(),
+		"regionsupportshead": false,
+		"bucket":             bucketName,
+	}
+	d, err := FromParameters(params)
+	if err != nil {
+		t.Fatalf("unexpected error while creating driver: %q", err)
+	}
+	if _, err := d.URLFor(nil, "/test", nil); err != storagedriver.ErrUnsupportedMethod {
+		t.Fatalf("Invalid error type: expected: %q got: %q", storagedriver.ErrUnsupportedMethod, err)
 	}
 }
