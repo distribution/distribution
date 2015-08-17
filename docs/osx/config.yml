@@ -6,7 +6,7 @@ log:
     environment: macbook-air
 storage:
     cache:
-        layerinfo: inmemory
+        blobdescriptor: inmemory
     filesystem:
         rootdirectory: /Users/Shared/Registry
 http:
