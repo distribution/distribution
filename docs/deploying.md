@@ -84,6 +84,49 @@ A certificate issuer may supply you with an *intermediate* certificate. In this 
 
     cat server.crt intermediate-certificates.pem > certs/domain.crt
 
+#### Load Balancing Considerations
+
+One may want to use a load balancer to distribute load, terminate TLS or
+provide high availability. While a full laod balancing setup is outside the
+scope this document, there are a few considerations that can make the process
+smoother.
+
+The most important aspect is that a load balanced cluster of registries must
+share the same resources. For the current version of the registry, this means
+the following must be the same:
+
+  - Storage Driver
+  - HTTP Secret
+  - Redis Cache (if configured)
+
+If any of these are different, the registry may have trouble serving requests.
+As an example, if you're using the filesystem driver, all registry instances
+must have access to the same filesystem root, which means they should be in
+the same machine. For other drivers, such as s3 or azure, they should be
+accessing the same resource, and will likely share an identical configuration.
+The _HTTP Secret_ coordinates uploads, so also must be the same across
+instances. Configuring different redis instances will mostly work (at the time
+of writing), but will not be optimal if the instances are not shared, causing
+more reqeusts to be directed to the backend.
+
+Getting the headers correct is very important. For all responses to any
+request under the "/v2/" url space, the `Docker-Distribution-API-Version`
+header should be set to the value "registry/2.0", even for a 4xx response.
+This header allows the docker engine to quickly resolve authentication realms
+and fallback to version 1 registries, if necessary. Confirming this is setup
+correctly can help avoid problems with fallback.
+
+A properly secured registry should return 401 when the "/v2/" endpoint is hit
+without credentials. The response should include a `WWW-Authenticate`
+challenge, providing guidance on how to authenticate, such as with basic auth
+or a token service. If the load balancer has health checks, it is recommended
+to configure it to consider a 401 response as healthy and any others as down.
+This will secure your registry by ensuring that configuration problems with
+authentication don't accidentally expose an unprotected registry. If you're
+using a less sophisticated load balancer, such as Amazon's Elastic Load
+Balancer, that doesn't allow one to change the healthy response code, health
+checks can be directed at "/", which will always return a `200 OK` response.
+
 ### Alternatives
 
 While rarely advisable, you may want to use self-signed certificates instead, or use your registry in an insecure fashion. You will find instructions [here](insecure.md).
