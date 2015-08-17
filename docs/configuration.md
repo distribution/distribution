@@ -33,12 +33,6 @@ To override this value, set an environment variable like this:
 This variable overrides the `/var/lib/registry` value to the `/somewhere`
 directory.
 
->**Note**: If an environment variable changes a map value into a string, such
->as replacing the storage driver type with `REGISTRY_STORAGE=filesystem`, then
->all sub-fields will be erased. As such, specifying the storage type in the
->environment will remove all parameters related to the old storage
->configuration (order *matters*).
-
 ## Overriding the entire configuration file
 
 If the default configuration is not a sound basis for your usage, or if you are having issues overriding keys from the environment, you can specify an alternate YAML configuration file by mounting it as a volume in the container.
