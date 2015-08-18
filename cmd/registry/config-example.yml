@@ -9,3 +9,5 @@ storage:
         rootdirectory: /var/lib/registry
 http:
     addr: :5000
+    headers:
+        X-Content-Type-Options: [nosniff]

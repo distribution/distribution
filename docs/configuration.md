@@ -173,6 +173,8 @@ information about each option that appears later in this page.
           - /path/to/another/ca.pem
       debug:
         addr: localhost:5001
+      headers:
+        X-Content-Type-Options: [nosniff]
     notifications:
       endpoints:
         - name: alistener
@@ -1168,6 +1170,8 @@ configuration may contain both.
           - /path/to/another/ca.pem
       debug:
         addr: localhost:5001
+      headers:
+        X-Content-Type-Options: [nosniff]
 
 The `http` option details the configuration for the HTTP server that hosts the registry.
 
@@ -1294,6 +1298,21 @@ access to the debug endpoint is locked down in a production environment.
 
 The `debug` section takes a single, required `addr` parameter. This parameter
 specifies the `HOST:PORT` on which the debug server should accept connections.
+
+
+### headers
+
+The `headers` option is **optional** . Use it to specify headers that the HTTP
+server should include in responses. This can be used for security headers such
+as `Strict-Transport-Security`.
+
+The `headers` option should contain an option for each header to include, where
+the parameter name is the header's name, and the parameter value a list of the
+header's payload values.
+
+Including `X-Content-Type-Options: [nosniff]` is recommended, so that browsers
+will not interpret content as HTML if they are directed to load a page from the
+registry. This header is included in the example configuration files.
 
 
 ## notifications
