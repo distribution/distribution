@@ -33,7 +33,10 @@ func TestSimpleBlobUpload(t *testing.T) {
 	ctx := context.Background()
 	imageName := "foo/bar"
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider(), true, true, false)
+	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
+	if err != nil {
+		t.Fatalf("error creating registry: %v", err)
+	}
 	repository, err := registry.Repository(ctx, imageName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
@@ -193,7 +196,10 @@ func TestSimpleBlobUpload(t *testing.T) {
 	}
 
 	// Reuse state to test delete with a delete-disabled registry
-	registry = NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider(), false, true, false)
+	registry, err = NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableRedirect)
+	if err != nil {
+		t.Fatalf("error creating registry: %v", err)
+	}
 	repository, err = registry.Repository(ctx, imageName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
@@ -212,7 +218,10 @@ func TestSimpleBlobRead(t *testing.T) {
 	ctx := context.Background()
 	imageName := "foo/bar"
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider(), true, true, false)
+	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
+	if err != nil {
+		t.Fatalf("error creating registry: %v", err)
+	}
 	repository, err := registry.Repository(ctx, imageName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
@@ -316,7 +325,10 @@ func TestLayerUploadZeroLength(t *testing.T) {
 	ctx := context.Background()
 	imageName := "foo/bar"
 	driver := inmemory.New()
-	registry := NewRegistryWithDriver(ctx, driver, memory.NewInMemoryBlobDescriptorCacheProvider(), true, true, false)
+	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
+	if err != nil {
+		t.Fatalf("error creating registry: %v", err)
+	}
 	repository, err := registry.Repository(ctx, imageName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)

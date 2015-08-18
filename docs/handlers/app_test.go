@@ -26,12 +26,16 @@ import (
 func TestAppDispatcher(t *testing.T) {
 	driver := inmemory.New()
 	ctx := context.Background()
+	registry, err := storage.NewRegistry(ctx, driver, storage.BlobDescriptorCacheProvider(memorycache.NewInMemoryBlobDescriptorCacheProvider()), storage.EnableDelete, storage.EnableRedirect)
+	if err != nil {
+		t.Fatalf("error creating registry: %v", err)
+	}
 	app := &App{
 		Config:   configuration.Configuration{},
 		Context:  ctx,
 		router:   v2.Router(),
 		driver:   driver,
-		registry: storage.NewRegistryWithDriver(ctx, driver, memorycache.NewInMemoryBlobDescriptorCacheProvider(), true, true, false),
+		registry: registry,
 	}
 	server := httptest.NewServer(app)
 	router := v2.Router()

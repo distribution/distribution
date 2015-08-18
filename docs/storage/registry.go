@@ -12,28 +12,65 @@ import (
 // package. All instances should descend from this object.
 type registry struct {
 	blobStore                   *blobStore
-	blobServer                  distribution.BlobServer
-	statter                     distribution.BlobStatter // global statter service.
+	blobServer                  *blobServer
+	statter                     *blobStatter // global statter service.
 	blobDescriptorCacheProvider cache.BlobDescriptorCacheProvider
 	deleteEnabled               bool
 	resumableDigestEnabled      bool
 }
 
-// NewRegistryWithDriver creates a new registry instance from the provided
-// driver. The resulting registry may be shared by multiple goroutines but is
-// cheap to allocate. If redirect is true, the backend blob server will
-// attempt to use (StorageDriver).URLFor to serve all blobs.
-//
-// TODO(stevvooe): This function signature is getting very out of hand. Move to
-// functional options for instance configuration.
-func NewRegistryWithDriver(ctx context.Context, driver storagedriver.StorageDriver, blobDescriptorCacheProvider cache.BlobDescriptorCacheProvider, deleteEnabled bool, redirect bool, isCache bool) distribution.Namespace {
-	// create global statter, with cache.
-	var statter distribution.BlobDescriptorService = &blobStatter{
-		driver: driver,
-	}
+// RegistryOption is the type used for functional options for NewRegistry.
+type RegistryOption func(*registry) error
 
-	if blobDescriptorCacheProvider != nil {
-		statter = cache.NewCachedBlobStatter(blobDescriptorCacheProvider, statter)
+// EnableRedirect is a functional option for NewRegistry. It causes the backend
+// blob server to attempt using (StorageDriver).URLFor to serve all blobs.
+func EnableRedirect(registry *registry) error {
+	registry.blobServer.redirect = true
+	return nil
+}
+
+// EnableDelete is a functional option for NewRegistry. It enables deletion on
+// the registry.
+func EnableDelete(registry *registry) error {
+	registry.deleteEnabled = true
+	return nil
+}
+
+// DisableDigestResumption is a functional option for NewRegistry. It should be
+// used if the registry is acting as a caching proxy.
+func DisableDigestResumption(registry *registry) error {
+	registry.resumableDigestEnabled = false
+	return nil
+}
+
+// BlobDescriptorCacheProvider returns a functional option for
+// NewRegistry. It creates a cached blob statter for use by the
+// registry.
+func BlobDescriptorCacheProvider(blobDescriptorCacheProvider cache.BlobDescriptorCacheProvider) RegistryOption {
+	// TODO(aaronl): The duplication of statter across several objects is
+	// ugly, and prevents us from using interface types in the registry
+	// struct. Ideally, blobStore and blobServer should be lazily
+	// initialized, and use the current value of
+	// blobDescriptorCacheProvider.
+	return func(registry *registry) error {
+		if blobDescriptorCacheProvider != nil {
+			statter := cache.NewCachedBlobStatter(blobDescriptorCacheProvider, registry.statter)
+			registry.blobStore.statter = statter
+			registry.blobServer.statter = statter
+			registry.blobDescriptorCacheProvider = blobDescriptorCacheProvider
+		}
+		return nil
+	}
+}
+
+// NewRegistry creates a new registry instance from the provided driver. The
+// resulting registry may be shared by multiple goroutines but is cheap to
+// allocate. If the Redirect option is specified, the backend blob server will
+// attempt to use (StorageDriver).URLFor to serve all blobs.
+func NewRegistry(ctx context.Context, driver storagedriver.StorageDriver, options ...RegistryOption) (distribution.Namespace, error) {
+	// create global statter
+	statter := &blobStatter{
+		driver: driver,
 	}
 
 	bs := &blobStore{
@@ -41,18 +78,24 @@ func NewRegistryWithDriver(ctx context.Context, driver storagedriver.StorageDriv
 		statter: statter,
 	}
 
-	return &registry{
+	registry := &registry{
 		blobStore: bs,
 		blobServer: &blobServer{
-			driver:   driver,
-			statter:  statter,
-			pathFn:   bs.path,
-			redirect: redirect,
+			driver:  driver,
+			statter: statter,
+			pathFn:  bs.path,
 		},
-		blobDescriptorCacheProvider: blobDescriptorCacheProvider,
-		deleteEnabled:               deleteEnabled,
-		resumableDigestEnabled:      !isCache,
+		statter:                statter,
+		resumableDigestEnabled: true,
 	}
+
+	for _, option := range options {
+		if err := option(registry); err != nil {
+			return nil, err
+		}
+	}
+
+	return registry, nil
 }
 
 // Scope returns the namespace scope for a registry. The registry
