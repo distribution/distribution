@@ -13,7 +13,7 @@ import (
 
 // linkPathFunc describes a function that can resolve a link based on the
 // repository name and digest.
-type linkPathFunc func(pm *pathMapper, name string, dgst digest.Digest) (string, error)
+type linkPathFunc func(name string, dgst digest.Digest) (string, error)
 
 // linkedBlobStore provides a full BlobService that namespaces the blobs to a
 // given repository. Effectively, it manages the links in a given repository
@@ -104,7 +104,7 @@ func (lbs *linkedBlobStore) Create(ctx context.Context) (distribution.BlobWriter
 	uuid := uuid.Generate().String()
 	startedAt := time.Now().UTC()
 
-	path, err := lbs.blobStore.pm.path(uploadDataPathSpec{
+	path, err := pathFor(uploadDataPathSpec{
 		name: lbs.repository.Name(),
 		id:   uuid,
 	})
@@ -113,7 +113,7 @@ func (lbs *linkedBlobStore) Create(ctx context.Context) (distribution.BlobWriter
 		return nil, err
 	}
 
-	startedAtPath, err := lbs.blobStore.pm.path(uploadStartedAtPathSpec{
+	startedAtPath, err := pathFor(uploadStartedAtPathSpec{
 		name: lbs.repository.Name(),
 		id:   uuid,
 	})
@@ -133,7 +133,7 @@ func (lbs *linkedBlobStore) Create(ctx context.Context) (distribution.BlobWriter
 func (lbs *linkedBlobStore) Resume(ctx context.Context, id string) (distribution.BlobWriter, error) {
 	context.GetLogger(ctx).Debug("(*linkedBlobStore).Resume")
 
-	startedAtPath, err := lbs.blobStore.pm.path(uploadStartedAtPathSpec{
+	startedAtPath, err := pathFor(uploadStartedAtPathSpec{
 		name: lbs.repository.Name(),
 		id:   id,
 	})
@@ -157,7 +157,7 @@ func (lbs *linkedBlobStore) Resume(ctx context.Context, id string) (distribution
 		return nil, err
 	}
 
-	path, err := lbs.pm.path(uploadDataPathSpec{
+	path, err := pathFor(uploadDataPathSpec{
 		name: lbs.repository.Name(),
 		id:   id,
 	})
@@ -228,7 +228,7 @@ func (lbs *linkedBlobStore) linkBlob(ctx context.Context, canonical distribution
 		}
 		seenDigests[dgst] = struct{}{}
 
-		blobLinkPath, err := linkPathFn(lbs.pm, lbs.repository.Name(), dgst)
+		blobLinkPath, err := linkPathFn(lbs.repository.Name(), dgst)
 		if err != nil {
 			return err
 		}
@@ -298,7 +298,7 @@ func (lbs *linkedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (dis
 func (lbs *linkedBlobStatter) Clear(ctx context.Context, dgst digest.Digest) (err error) {
 	// clear any possible existence of a link described in linkPathFns
 	for _, linkPathFn := range lbs.linkPathFns {
-		blobLinkPath, err := linkPathFn(lbs.pm, lbs.repository.Name(), dgst)
+		blobLinkPath, err := linkPathFn(lbs.repository.Name(), dgst)
 		if err != nil {
 			return err
 		}
@@ -321,7 +321,7 @@ func (lbs *linkedBlobStatter) Clear(ctx context.Context, dgst digest.Digest) (er
 // linkPathFuncs to let us try a few different paths before returning not
 // found.
 func (lbs *linkedBlobStatter) resolveWithLinkFunc(ctx context.Context, dgst digest.Digest, linkPathFn linkPathFunc) (digest.Digest, error) {
-	blobLinkPath, err := linkPathFn(lbs.pm, lbs.repository.Name(), dgst)
+	blobLinkPath, err := linkPathFn(lbs.repository.Name(), dgst)
 	if err != nil {
 		return "", err
 	}
@@ -335,11 +335,11 @@ func (lbs *linkedBlobStatter) SetDescriptor(ctx context.Context, dgst digest.Dig
 }
 
 // blobLinkPath provides the path to the blob link, also known as layers.
-func blobLinkPath(pm *pathMapper, name string, dgst digest.Digest) (string, error) {
-	return pm.path(layerLinkPathSpec{name: name, digest: dgst})
+func blobLinkPath(name string, dgst digest.Digest) (string, error) {
+	return pathFor(layerLinkPathSpec{name: name, digest: dgst})
 }
 
 // manifestRevisionLinkPath provides the path to the manifest revision link.
-func manifestRevisionLinkPath(pm *pathMapper, name string, dgst digest.Digest) (string, error) {
-	return pm.path(manifestRevisionLinkPathSpec{name: name, revision: dgst})
+func manifestRevisionLinkPath(name string, dgst digest.Digest) (string, error) {
+	return pathFor(manifestRevisionLinkPathSpec{name: name, revision: dgst})
 }

@@ -111,12 +111,13 @@ type hashStateEntry struct {
 
 // getStoredHashStates returns a slice of hashStateEntries for this upload.
 func (bw *blobWriter) getStoredHashStates(ctx context.Context) ([]hashStateEntry, error) {
-	uploadHashStatePathPrefix, err := bw.blobStore.pm.path(uploadHashStatePathSpec{
+	uploadHashStatePathPrefix, err := pathFor(uploadHashStatePathSpec{
 		name: bw.blobStore.repository.Name(),
 		id:   bw.id,
 		alg:  bw.digester.Digest().Algorithm(),
 		list: true,
 	})
+
 	if err != nil {
 		return nil, err
 	}
@@ -156,12 +157,13 @@ func (bw *blobWriter) storeHashState(ctx context.Context) error {
 		return errResumableDigestNotAvailable
 	}
 
-	uploadHashStatePath, err := bw.blobStore.pm.path(uploadHashStatePathSpec{
+	uploadHashStatePath, err := pathFor(uploadHashStatePathSpec{
 		name:   bw.blobStore.repository.Name(),
 		id:     bw.id,
 		alg:    bw.digester.Digest().Algorithm(),
 		offset: int64(h.Len()),
 	})
+
 	if err != nil {
 		return err
 	}

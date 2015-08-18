@@ -18,13 +18,11 @@ func NewVacuum(ctx context.Context, driver driver.StorageDriver) Vacuum {
 	return Vacuum{
 		ctx:    ctx,
 		driver: driver,
-		pm:     defaultPathMapper,
 	}
 }
 
 // Vacuum removes content from the filesystem
 type Vacuum struct {
-	pm     *pathMapper
 	driver driver.StorageDriver
 	ctx    context.Context
 }
@@ -36,7 +34,7 @@ func (v Vacuum) RemoveBlob(dgst string) error {
 		return err
 	}
 
-	blobPath, err := v.pm.path(blobDataPathSpec{digest: d})
+	blobPath, err := pathFor(blobDataPathSpec{digest: d})
 	if err != nil {
 		return err
 	}
@@ -52,7 +50,7 @@ func (v Vacuum) RemoveBlob(dgst string) error {
 // RemoveRepository removes a repository directory from the
 // filesystem
 func (v Vacuum) RemoveRepository(repoName string) error {
-	rootForRepository, err := v.pm.path(repositoriesRootPathSpec{})
+	rootForRepository, err := pathFor(repositoriesRootPathSpec{})
 	if err != nil {
 		return err
 	}

@@ -22,7 +22,7 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 		return 0, errors.New("no space in slice")
 	}
 
-	root, err := defaultPathMapper.path(repositoriesRootPathSpec{})
+	root, err := pathFor(repositoriesRootPathSpec{})
 	if err != nil {
 		return 0, err
 	}

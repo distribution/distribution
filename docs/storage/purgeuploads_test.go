@@ -12,8 +12,6 @@ import (
 	"github.com/docker/distribution/uuid"
 )
 
-var pm = defaultPathMapper
-
 func testUploadFS(t *testing.T, numUploads int, repoName string, startedAt time.Time) (driver.StorageDriver, context.Context) {
 	d := inmemory.New()
 	ctx := context.Background()
@@ -24,7 +22,7 @@ func testUploadFS(t *testing.T, numUploads int, repoName string, startedAt time.
 }
 
 func addUploads(ctx context.Context, t *testing.T, d driver.StorageDriver, uploadID, repo string, startedAt time.Time) {
-	dataPath, err := pm.path(uploadDataPathSpec{name: repo, id: uploadID})
+	dataPath, err := pathFor(uploadDataPathSpec{name: repo, id: uploadID})
 	if err != nil {
 		t.Fatalf("Unable to resolve path")
 	}
@@ -32,7 +30,7 @@ func addUploads(ctx context.Context, t *testing.T, d driver.StorageDriver, uploa
 		t.Fatalf("Unable to write data file")
 	}
 
-	startedAtPath, err := pm.path(uploadStartedAtPathSpec{name: repo, id: uploadID})
+	startedAtPath, err := pathFor(uploadStartedAtPathSpec{name: repo, id: uploadID})
 	if err != nil {
 		t.Fatalf("Unable to resolve path")
 	}
@@ -115,7 +113,7 @@ func TestPurgeOnlyUploads(t *testing.T) {
 
 	// Create a directory tree outside _uploads and ensure
 	// these files aren't deleted.
-	dataPath, err := pm.path(uploadDataPathSpec{name: "test-repo", id: uuid.Generate().String()})
+	dataPath, err := pathFor(uploadDataPathSpec{name: "test-repo", id: uuid.Generate().String()})
 	if err != nil {
 		t.Fatalf(err.Error())
 	}

@@ -8,10 +8,18 @@ import (
 	"github.com/docker/distribution/digest"
 )
 
-const storagePathVersion = "v2"
+const (
+	storagePathVersion = "v2"                // fixed storage layout version
+	storagePathRoot    = "/docker/registry/" // all driver paths have a prefix
 
-// pathMapper maps paths based on "object names" and their ids. The "object
-// names" mapped by pathMapper are internal to the storage system.
+	// TODO(stevvooe): Get rid of the "storagePathRoot". Initially, we though
+	// storage path root would configurable for all drivers through this
+	// package. In reality, we've found it simpler to do this on a per driver
+	// basis.
+)
+
+// pathFor maps paths based on "object names" and their ids. The "object
+// names" mapped by are internal to the storage system.
 //
 // The path layout in the storage backend is roughly as follows:
 //
@@ -37,7 +45,7 @@ const storagePathVersion = "v2"
 //			-> blob/<algorithm>
 //				<split directory content addressable storage>
 //
-// The storage backend layout is broken up into a content- addressable blob
+// The storage backend layout is broken up into a content-addressable blob
 // store and repositories. The content-addressable blob store holds most data
 // throughout the backend, keyed by algorithm and digests of the underlying
 // content. Access to the blob store is controled through links from the
@@ -98,18 +106,7 @@ const storagePathVersion = "v2"
 //
 // For more information on the semantic meaning of each path and their
 // contents, please see the path spec documentation.
-type pathMapper struct {
-	root    string
-	version string // should be a constant?
-}
-
-var defaultPathMapper = &pathMapper{
-	root:    "/docker/registry/",
-	version: storagePathVersion,
-}
-
-// path returns the path identified by spec.
-func (pm *pathMapper) path(spec pathSpec) (string, error) {
+func pathFor(spec pathSpec) (string, error) {
 
 	// Switch on the path object type and return the appropriate path. At
 	// first glance, one may wonder why we don't use an interface to
@@ -123,7 +120,7 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 	// to an intermediate path object, than can be consumed and mapped by the
 	// other version.
 
-	rootPrefix := []string{pm.root, pm.version}
+	rootPrefix := []string{storagePathRoot, storagePathVersion}
 	repoPrefix := append(rootPrefix, "repositories")
 
 	switch v := spec.(type) {
@@ -136,7 +133,7 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 
 		return path.Join(append(append(repoPrefix, v.name, "_manifests", "revisions"), components...)...), nil
 	case manifestRevisionLinkPathSpec:
-		root, err := pm.path(manifestRevisionPathSpec{
+		root, err := pathFor(manifestRevisionPathSpec{
 			name:     v.name,
 			revision: v.revision,
 		})
@@ -147,7 +144,7 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 
 		return path.Join(root, "link"), nil
 	case manifestSignaturesPathSpec:
-		root, err := pm.path(manifestRevisionPathSpec{
+		root, err := pathFor(manifestRevisionPathSpec{
 			name:     v.name,
 			revision: v.revision,
 		})
@@ -158,10 +155,11 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 
 		return path.Join(root, "signatures"), nil
 	case manifestSignatureLinkPathSpec:
-		root, err := pm.path(manifestSignaturesPathSpec{
+		root, err := pathFor(manifestSignaturesPathSpec{
 			name:     v.name,
 			revision: v.revision,
 		})
+
 		if err != nil {
 			return "", err
 		}
@@ -175,50 +173,55 @@ func (pm *pathMapper) path(spec pathSpec) (string, error) {
 	case manifestTagsPathSpec:
 		return path.Join(append(repoPrefix, v.name, "_manifests", "tags")...), nil
 	case manifestTagPathSpec:
-		root, err := pm.path(manifestTagsPathSpec{
+		root, err := pathFor(manifestTagsPathSpec{
 			name: v.name,
 		})
+
 		if err != nil {
 			return "", err
 		}
 
 		return path.Join(root, v.tag), nil
 	case manifestTagCurrentPathSpec:
-		root, err := pm.path(manifestTagPathSpec{
+		root, err := pathFor(manifestTagPathSpec{
 			name: v.name,
 			tag:  v.tag,
 		})
+
 		if err != nil {
 			return "", err
 		}
 
 		return path.Join(root, "current", "link"), nil
 	case manifestTagIndexPathSpec:
-		root, err := pm.path(manifestTagPathSpec{
+		root, err := pathFor(manifestTagPathSpec{
 			name: v.name,
 			tag:  v.tag,
 		})
+
 		if err != nil {
 			return "", err
 		}
 
 		return path.Join(root, "index"), nil
 	case manifestTagIndexEntryLinkPathSpec:
-		root, err := pm.path(manifestTagIndexEntryPathSpec{
+		root, err := pathFor(manifestTagIndexEntryPathSpec{
 			name:     v.name,
 			tag:      v.tag,
 			revision: v.revision,
 		})
+
 		if err != nil {
 			return "", err
 		}
 
 		return path.Join(root, "link"), nil
 	case manifestTagIndexEntryPathSpec:
-		root, err := pm.path(manifestTagIndexPathSpec{
+		root, err := pathFor(manifestTagIndexPathSpec{
 			name: v.name,
 			tag:  v.tag,
 		})
+
 		if err != nil {
 			return "", err
 		}
