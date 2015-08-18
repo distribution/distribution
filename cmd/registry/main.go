@@ -72,8 +72,9 @@ func main() {
 	app := handlers.NewApp(ctx, *config)
 	app.RegisterHealthChecks()
 	handler := configureReporting(app)
-	handler = panicHandler(handler)
+	handler = alive("/", handler)
 	handler = health.Handler(handler)
+	handler = panicHandler(handler)
 	handler = gorhandlers.CombinedLoggingHandler(os.Stdout, handler)
 
 	if config.HTTP.Debug.Addr != "" {
@@ -310,6 +311,23 @@ func panicHandler(handler http.Handler) http.Handler {
 				log.Panic(fmt.Sprintf("%v", err))
 			}
 		}()
+		handler.ServeHTTP(w, r)
+	})
+}
+
+// alive simply wraps the handler with a route that always returns an http 200
+// response when the path is matched. If the path is not matched, the request
+// is passed to the provided handler. There is no guarantee of anything but
+// that the server is up. Wrap with other handlers (such as health.Handler)
+// for greater affect.
+func alive(path string, handler http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == path {
+			w.Header().Set("Cache-Control", "no-cache")
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		handler.ServeHTTP(w, r)
 	})
 }
