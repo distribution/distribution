@@ -266,7 +266,7 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc distribution.Descri
 // identified by dgst. The layer should be validated before commencing the
 // move.
 func (bw *blobWriter) moveBlob(ctx context.Context, desc distribution.Descriptor) error {
-	blobPath, err := bw.blobStore.pm.path(blobDataPathSpec{
+	blobPath, err := pathFor(blobDataPathSpec{
 		digest: desc.Digest,
 	})
 
@@ -324,7 +324,7 @@ func (bw *blobWriter) moveBlob(ctx context.Context, desc distribution.Descriptor
 // instance. An error will be returned if the clean up cannot proceed. If the
 // resources are already not present, no error will be returned.
 func (bw *blobWriter) removeResources(ctx context.Context) error {
-	dataPath, err := bw.blobStore.pm.path(uploadDataPathSpec{
+	dataPath, err := pathFor(uploadDataPathSpec{
 		name: bw.blobStore.repository.Name(),
 		id:   bw.id,
 	})

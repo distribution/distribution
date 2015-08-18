@@ -62,10 +62,11 @@ func getOutstandingUploads(ctx context.Context, driver storageDriver.StorageDriv
 	uploads := make(map[string]uploadData, 0)
 
 	inUploadDir := false
-	root, err := defaultPathMapper.path(repositoriesRootPathSpec{})
+	root, err := pathFor(repositoriesRootPathSpec{})
 	if err != nil {
 		return uploads, append(errors, err)
 	}
+
 	err = Walk(ctx, driver, root, func(fileInfo storageDriver.FileInfo) error {
 		filePath := fileInfo.Path()
 		_, file := path.Split(filePath)

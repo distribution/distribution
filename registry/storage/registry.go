@@ -30,7 +30,6 @@ func NewRegistryWithDriver(ctx context.Context, driver storagedriver.StorageDriv
 	// create global statter, with cache.
 	var statter distribution.BlobDescriptorService = &blobStatter{
 		driver: driver,
-		pm:     defaultPathMapper,
 	}
 
 	if blobDescriptorCacheProvider != nil {
@@ -39,7 +38,6 @@ func NewRegistryWithDriver(ctx context.Context, driver storagedriver.StorageDriv
 
 	bs := &blobStore{
 		driver:  driver,
-		pm:      defaultPathMapper,
 		statter: statter,
 	}
 
