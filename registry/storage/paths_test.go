@@ -17,14 +17,14 @@ func TestPathMapper(t *testing.T) {
 				name:     "foo/bar",
 				revision: "sha256:abcdef0123456789",
 			},
-			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789",
+			expected: "/v2/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789",
 		},
 		{
 			spec: manifestRevisionLinkPathSpec{
 				name:     "foo/bar",
 				revision: "sha256:abcdef0123456789",
 			},
-			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789/link",
+			expected: "/v2/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789/link",
 		},
 		{
 			spec: manifestSignatureLinkPathSpec{
@@ -32,41 +32,41 @@ func TestPathMapper(t *testing.T) {
 				revision:  "sha256:abcdef0123456789",
 				signature: "sha256:abcdef0123456789",
 			},
-			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789/signatures/sha256/abcdef0123456789/link",
+			expected: "/v2/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789/signatures/sha256/abcdef0123456789/link",
 		},
 		{
 			spec: manifestSignaturesPathSpec{
 				name:     "foo/bar",
 				revision: "sha256:abcdef0123456789",
 			},
-			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789/signatures",
+			expected: "/v2/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789/signatures",
 		},
 		{
 			spec: manifestTagsPathSpec{
 				name: "foo/bar",
 			},
-			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/tags",
+			expected: "/v2/repositories/foo/bar/_manifests/tags",
 		},
 		{
 			spec: manifestTagPathSpec{
 				name: "foo/bar",
 				tag:  "thetag",
 			},
-			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/tags/thetag",
+			expected: "/v2/repositories/foo/bar/_manifests/tags/thetag",
 		},
 		{
 			spec: manifestTagCurrentPathSpec{
 				name: "foo/bar",
 				tag:  "thetag",
 			},
-			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/tags/thetag/current/link",
+			expected: "/v2/repositories/foo/bar/_manifests/tags/thetag/current/link",
 		},
 		{
 			spec: manifestTagIndexPathSpec{
 				name: "foo/bar",
 				tag:  "thetag",
 			},
-			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/tags/thetag/index",
+			expected: "/v2/repositories/foo/bar/_manifests/tags/thetag/index",
 		},
 		{
 			spec: manifestTagIndexEntryPathSpec{
@@ -74,7 +74,7 @@ func TestPathMapper(t *testing.T) {
 				tag:      "thetag",
 				revision: "sha256:abcdef0123456789",
 			},
-			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/tags/thetag/index/sha256/abcdef0123456789",
+			expected: "/v2/repositories/foo/bar/_manifests/tags/thetag/index/sha256/abcdef0123456789",
 		},
 		{
 			spec: manifestTagIndexEntryLinkPathSpec{
@@ -82,26 +82,26 @@ func TestPathMapper(t *testing.T) {
 				tag:      "thetag",
 				revision: "sha256:abcdef0123456789",
 			},
-			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/tags/thetag/index/sha256/abcdef0123456789/link",
+			expected: "/v2/repositories/foo/bar/_manifests/tags/thetag/index/sha256/abcdef0123456789/link",
 		},
 		{
 			spec: layerLinkPathSpec{
 				name:   "foo/bar",
 				digest: "tarsum.v1+test:abcdef",
 			},
-			expected: "/docker/registry/v2/repositories/foo/bar/_layers/tarsum/v1/test/abcdef/link",
+			expected: "/v2/repositories/foo/bar/_layers/tarsum/v1/test/abcdef/link",
 		},
 		{
 			spec: blobDataPathSpec{
 				digest: digest.Digest("tarsum.dev+sha512:abcdefabcdefabcdef908909909"),
 			},
-			expected: "/docker/registry/v2/blobs/tarsum/dev/sha512/ab/abcdefabcdefabcdef908909909/data",
+			expected: "/v2/blobs/tarsum/dev/sha512/ab/abcdefabcdefabcdef908909909/data",
 		},
 		{
 			spec: blobDataPathSpec{
 				digest: digest.Digest("tarsum.v1+sha256:abcdefabcdefabcdef908909909"),
 			},
-			expected: "/docker/registry/v2/blobs/tarsum/v1/sha256/ab/abcdefabcdefabcdef908909909/data",
+			expected: "/v2/blobs/tarsum/v1/sha256/ab/abcdefabcdefabcdef908909909/data",
 		},
 
 		{
@@ -109,14 +109,14 @@ func TestPathMapper(t *testing.T) {
 				name: "foo/bar",
 				id:   "asdf-asdf-asdf-adsf",
 			},
-			expected: "/docker/registry/v2/repositories/foo/bar/_uploads/asdf-asdf-asdf-adsf/data",
+			expected: "/v2/repositories/foo/bar/_uploads/asdf-asdf-asdf-adsf/data",
 		},
 		{
 			spec: uploadStartedAtPathSpec{
 				name: "foo/bar",
 				id:   "asdf-asdf-asdf-adsf",
 			},
-			expected: "/docker/registry/v2/repositories/foo/bar/_uploads/asdf-asdf-asdf-adsf/startedat",
+			expected: "/v2/repositories/foo/bar/_uploads/asdf-asdf-asdf-adsf/startedat",
 		},
 	} {
 		p, err := pathFor(testcase.spec)
