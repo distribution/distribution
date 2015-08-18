@@ -73,7 +73,10 @@ func (sm statsManifest) Tags() ([]string, error) {
 
 func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestEnv {
 	ctx := context.Background()
-	truthRegistry := storage.NewRegistryWithDriver(ctx, inmemory.New(), memory.NewInMemoryBlobDescriptorCacheProvider(), false, false, false)
+	truthRegistry, err := storage.NewRegistry(ctx, inmemory.New(), storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()))
+	if err != nil {
+		t.Fatalf("error creating registry: %v", err)
+	}
 	truthRepo, err := truthRegistry.Repository(ctx, name)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
@@ -92,7 +95,10 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 		t.Fatalf(err.Error())
 	}
 
-	localRegistry := storage.NewRegistryWithDriver(ctx, inmemory.New(), memory.NewInMemoryBlobDescriptorCacheProvider(), false, true, true)
+	localRegistry, err := storage.NewRegistry(ctx, inmemory.New(), storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), storage.EnableRedirect, storage.DisableDigestResumption)
+	if err != nil {
+		t.Fatalf("error creating registry: %v", err)
+	}
 	localRepo, err := localRegistry.Repository(ctx, name)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
