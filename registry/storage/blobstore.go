@@ -13,7 +13,6 @@ import (
 // creating and traversing backend links.
 type blobStore struct {
 	driver  driver.StorageDriver
-	pm      *pathMapper
 	statter distribution.BlobStatter
 }
 
@@ -94,7 +93,7 @@ func (bs *blobStore) Put(ctx context.Context, mediaType string, p []byte) (distr
 // path returns the canonical path for the blob identified by digest. The blob
 // may or may not exist.
 func (bs *blobStore) path(dgst digest.Digest) (string, error) {
-	bp, err := bs.pm.path(blobDataPathSpec{
+	bp, err := pathFor(blobDataPathSpec{
 		digest: dgst,
 	})
 
@@ -140,7 +139,6 @@ func (bs *blobStore) resolve(ctx context.Context, path string) (string, error) {
 
 type blobStatter struct {
 	driver driver.StorageDriver
-	pm     *pathMapper
 }
 
 var _ distribution.BlobDescriptorService = &blobStatter{}
@@ -149,9 +147,10 @@ var _ distribution.BlobDescriptorService = &blobStatter{}
 // in the main blob store. If this method returns successfully, there is
 // strong guarantee that the blob exists and is available.
 func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
-	path, err := bs.pm.path(blobDataPathSpec{
+	path, err := pathFor(blobDataPathSpec{
 		digest: dgst,
 	})
+
 	if err != nil {
 		return distribution.Descriptor{}, err
 	}

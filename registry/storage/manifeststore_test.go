@@ -385,7 +385,7 @@ func TestLinkPathFuncs(t *testing.T) {
 			expected:   "/docker/registry/v2/repositories/foo/bar/_manifests/revisions/sha256/deadbeaf/link",
 		},
 	} {
-		p, err := testcase.linkPathFn(defaultPathMapper, testcase.repo, testcase.digest)
+		p, err := testcase.linkPathFn(testcase.repo, testcase.digest)
 		if err != nil {
 			t.Fatalf("unexpected error calling linkPathFn(pm, %q, %q): %v", testcase.repo, testcase.digest, err)
 		}
