@@ -26,7 +26,7 @@ func newSignatureStore(ctx context.Context, repo *repository, blobStore *blobSto
 var _ distribution.SignatureService = &signatureStore{}
 
 func (s *signatureStore) Get(dgst digest.Digest) ([][]byte, error) {
-	signaturesPath, err := s.blobStore.pm.path(manifestSignaturesPathSpec{
+	signaturesPath, err := pathFor(manifestSignaturesPathSpec{
 		name:     s.repository.Name(),
 		revision: dgst,
 	})
@@ -119,12 +119,13 @@ func (s *signatureStore) Put(dgst digest.Digest, signatures ...[]byte) error {
 // manifest with the given digest. Effectively, each signature link path
 // layout is a unique linked blob store.
 func (s *signatureStore) linkedBlobStore(ctx context.Context, revision digest.Digest) *linkedBlobStore {
-	linkpath := func(pm *pathMapper, name string, dgst digest.Digest) (string, error) {
-		return pm.path(manifestSignatureLinkPathSpec{
+	linkpath := func(name string, dgst digest.Digest) (string, error) {
+		return pathFor(manifestSignatureLinkPathSpec{
 			name:      name,
 			revision:  revision,
 			signature: dgst,
 		})
+
 	}
 
 	return &linkedBlobStore{

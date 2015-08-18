@@ -18,9 +18,10 @@ type tagStore struct {
 
 // tags lists the manifest tags for the specified repository.
 func (ts *tagStore) tags() ([]string, error) {
-	p, err := ts.blobStore.pm.path(manifestTagPathSpec{
+	p, err := pathFor(manifestTagPathSpec{
 		name: ts.repository.Name(),
 	})
+
 	if err != nil {
 		return nil, err
 	}
@@ -47,10 +48,11 @@ func (ts *tagStore) tags() ([]string, error) {
 
 // exists returns true if the specified manifest tag exists in the repository.
 func (ts *tagStore) exists(tag string) (bool, error) {
-	tagPath, err := ts.blobStore.pm.path(manifestTagCurrentPathSpec{
+	tagPath, err := pathFor(manifestTagCurrentPathSpec{
 		name: ts.repository.Name(),
 		tag:  tag,
 	})
+
 	if err != nil {
 		return false, err
 	}
@@ -66,7 +68,7 @@ func (ts *tagStore) exists(tag string) (bool, error) {
 // tag tags the digest with the given tag, updating the the store to point at
 // the current tag. The digest must point to a manifest.
 func (ts *tagStore) tag(tag string, revision digest.Digest) error {
-	currentPath, err := ts.blobStore.pm.path(manifestTagCurrentPathSpec{
+	currentPath, err := pathFor(manifestTagCurrentPathSpec{
 		name: ts.repository.Name(),
 		tag:  tag,
 	})
@@ -87,10 +89,11 @@ func (ts *tagStore) tag(tag string, revision digest.Digest) error {
 
 // resolve the current revision for name and tag.
 func (ts *tagStore) resolve(tag string) (digest.Digest, error) {
-	currentPath, err := ts.blobStore.pm.path(manifestTagCurrentPathSpec{
+	currentPath, err := pathFor(manifestTagCurrentPathSpec{
 		name: ts.repository.Name(),
 		tag:  tag,
 	})
+
 	if err != nil {
 		return "", err
 	}
@@ -111,10 +114,11 @@ func (ts *tagStore) resolve(tag string) (digest.Digest, error) {
 // delete removes the tag from repository, including the history of all
 // revisions that have the specified tag.
 func (ts *tagStore) delete(tag string) error {
-	tagPath, err := ts.blobStore.pm.path(manifestTagPathSpec{
+	tagPath, err := pathFor(manifestTagPathSpec{
 		name: ts.repository.Name(),
 		tag:  tag,
 	})
+
 	if err != nil {
 		return err
 	}
@@ -131,12 +135,13 @@ func (ts *tagStore) linkedBlobStore(ctx context.Context, tag string) *linkedBlob
 		blobStore:  ts.blobStore,
 		repository: ts.repository,
 		ctx:        ctx,
-		linkPathFns: []linkPathFunc{func(pm *pathMapper, name string, dgst digest.Digest) (string, error) {
-			return pm.path(manifestTagIndexEntryLinkPathSpec{
+		linkPathFns: []linkPathFunc{func(name string, dgst digest.Digest) (string, error) {
+			return pathFor(manifestTagIndexEntryLinkPathSpec{
 				name:     name,
 				tag:      tag,
 				revision: dgst,
 			})
+
 		}},
 	}
 }
