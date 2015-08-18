@@ -34,9 +34,10 @@ const defaultKeysFetched = 1
 
 //DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
 type DriverParameters struct {
-	poolname  string
-	username  string
-	chunksize uint64
+	poolname      string
+	username      string
+	chunksize     uint64
+	rootdirectory string
 }
 
 func init() {
@@ -51,9 +52,10 @@ func (factory *radosDriverFactory) Create(parameters map[string]interface{}) (st
 }
 
 type driver struct {
-	Conn      *rados.Conn
-	Ioctx     *rados.IOContext
-	chunksize uint64
+	Conn          *rados.Conn
+	Ioctx         *rados.IOContext
+	chunksize     uint64
+	rootdirectory string
 }
 
 type baseEmbed struct {
@@ -70,7 +72,6 @@ type Driver struct {
 // Required parameters:
 // - poolname: the ceph pool name
 func FromParameters(parameters map[string]interface{}) (*Driver, error) {
-
 	pool, ok := parameters["poolname"]
 	if !ok {
 		return nil, fmt.Errorf("No poolname parameter provided")
@@ -79,6 +80,11 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	username, ok := parameters["username"]
 	if !ok {
 		username = ""
+	}
+
+	rootdirectory, ok := parameters["rootdirectory"]
+	if !ok {
+		rootdirectory = ""
 	}
 
 	chunksize := uint64(defaultChunkSize)
@@ -94,6 +100,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(pool),
 		fmt.Sprint(username),
 		chunksize,
+		rootdirectory,
 	}
 
 	return New(params)
@@ -137,9 +144,10 @@ func New(params DriverParameters) (*Driver, error) {
 	}
 
 	d := &driver{
-		Ioctx:     ioctx,
-		Conn:      conn,
-		chunksize: params.chunksize,
+		Ioctx:         ioctx,
+		Conn:          conn,
+		chunksize:     params.chunksize,
+		rootdirectory: params.rootdirectory,
 	}
 
 	return &Driver{
@@ -506,8 +514,7 @@ func (d *driver) generateOid() string {
 
 // Reference a object and its hierarchy
 func (d *driver) putOid(objectPath string, oid string) error {
-	directory := path.Dir(objectPath)
-	base := path.Base(objectPath)
+	objectPath = path.Join(d.rootdirectory, objectPath)
 	createParentReference := true
 
 	// After creating this reference, skip the parents referencing since the
@@ -539,8 +546,7 @@ func (d *driver) putOid(objectPath string, oid string) error {
 
 // Get the object identifier from an object name
 func (d *driver) getOid(objectPath string) (string, error) {
-	directory := path.Dir(objectPath)
-	base := path.Base(objectPath)
+	directory, base := d.objectPath(objectPath)
 
 	files, err := d.Ioctx.GetOmapValues(directory, "", base, 1)
 
@@ -559,8 +565,8 @@ func (d *driver) listDirectoryOid(path string) (list map[string][]byte, err erro
 // Remove a file from the files hierarchy
 func (d *driver) deleteOid(objectPath string) error {
 	// Remove object reference
-	directory := path.Dir(objectPath)
-	base := path.Base(objectPath)
+	directory, base := d.objectPath(objectPath)
+
 	err := d.Ioctx.RmOmapKeys(directory, []string{base})
 
 	if err != nil {
@@ -589,6 +595,13 @@ func (d *driver) deleteOid(objectPath string) error {
 	}
 
 	return nil
+}
+
+// objectPath maps the path p a directory and base, ensuring to map
+// rootdirectory.
+func (d *driver) objectPath(p string) (directory string, base string) {
+	objectPath = path.Join("/", d.rootdirectory, p)
+	return path.Dir(objectPath), path.Base(objectPath)
 }
 
 // Takes an offset in an chunked object and return the chunk name and a new

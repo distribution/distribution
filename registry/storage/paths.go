@@ -9,13 +9,7 @@ import (
 )
 
 const (
-	storagePathVersion = "v2"                // fixed storage layout version
-	storagePathRoot    = "/docker/registry/" // all driver paths have a prefix
-
-	// TODO(stevvooe): Get rid of the "storagePathRoot". Initially, we though
-	// storage path root would configurable for all drivers through this
-	// package. In reality, we've found it simpler to do this on a per driver
-	// basis.
+	storagePathVersion = "v2" // fixed storage layout version
 )
 
 // pathFor maps paths based on "object names" and their ids. The "object
@@ -74,35 +68,35 @@ const (
 //
 //	Manifests:
 //
-// 	manifestRevisionPathSpec:      <root>/v2/repositories/<name>/_manifests/revisions/<algorithm>/<hex digest>/
-// 	manifestRevisionLinkPathSpec:  <root>/v2/repositories/<name>/_manifests/revisions/<algorithm>/<hex digest>/link
-// 	manifestSignaturesPathSpec:    <root>/v2/repositories/<name>/_manifests/revisions/<algorithm>/<hex digest>/signatures/
-// 	manifestSignatureLinkPathSpec: <root>/v2/repositories/<name>/_manifests/revisions/<algorithm>/<hex digest>/signatures/<algorithm>/<hex digest>/link
+// 	manifestRevisionPathSpec:      /v2/repositories/<name>/_manifests/revisions/<algorithm>/<hex digest>/
+// 	manifestRevisionLinkPathSpec:  /v2/repositories/<name>/_manifests/revisions/<algorithm>/<hex digest>/link
+// 	manifestSignaturesPathSpec:    /v2/repositories/<name>/_manifests/revisions/<algorithm>/<hex digest>/signatures/
+// 	manifestSignatureLinkPathSpec: /v2/repositories/<name>/_manifests/revisions/<algorithm>/<hex digest>/signatures/<algorithm>/<hex digest>/link
 //
 //	Tags:
 //
-// 	manifestTagsPathSpec:                  <root>/v2/repositories/<name>/_manifests/tags/
-// 	manifestTagPathSpec:                   <root>/v2/repositories/<name>/_manifests/tags/<tag>/
-// 	manifestTagCurrentPathSpec:            <root>/v2/repositories/<name>/_manifests/tags/<tag>/current/link
-// 	manifestTagIndexPathSpec:              <root>/v2/repositories/<name>/_manifests/tags/<tag>/index/
-// 	manifestTagIndexEntryPathSpec:         <root>/v2/repositories/<name>/_manifests/tags/<tag>/index/<algorithm>/<hex digest>/
-// 	manifestTagIndexEntryLinkPathSpec:     <root>/v2/repositories/<name>/_manifests/tags/<tag>/index/<algorithm>/<hex digest>/link
+// 	manifestTagsPathSpec:                  /v2/repositories/<name>/_manifests/tags/
+// 	manifestTagPathSpec:                   /v2/repositories/<name>/_manifests/tags/<tag>/
+// 	manifestTagCurrentPathSpec:            /v2/repositories/<name>/_manifests/tags/<tag>/current/link
+// 	manifestTagIndexPathSpec:              /v2/repositories/<name>/_manifests/tags/<tag>/index/
+// 	manifestTagIndexEntryPathSpec:         /v2/repositories/<name>/_manifests/tags/<tag>/index/<algorithm>/<hex digest>/
+// 	manifestTagIndexEntryLinkPathSpec:     /v2/repositories/<name>/_manifests/tags/<tag>/index/<algorithm>/<hex digest>/link
 //
 // 	Blobs:
 //
-// 	layerLinkPathSpec:            <root>/v2/repositories/<name>/_layers/<algorithm>/<hex digest>/link
+// 	layerLinkPathSpec:            /v2/repositories/<name>/_layers/<algorithm>/<hex digest>/link
 //
 //	Uploads:
 //
-// 	uploadDataPathSpec:             <root>/v2/repositories/<name>/_uploads/<id>/data
-// 	uploadStartedAtPathSpec:        <root>/v2/repositories/<name>/_uploads/<id>/startedat
-// 	uploadHashStatePathSpec:        <root>/v2/repositories/<name>/_uploads/<id>/hashstates/<algorithm>/<offset>
+// 	uploadDataPathSpec:             /v2/repositories/<name>/_uploads/<id>/data
+// 	uploadStartedAtPathSpec:        /v2/repositories/<name>/_uploads/<id>/startedat
+// 	uploadHashStatePathSpec:        /v2/repositories/<name>/_uploads/<id>/hashstates/<algorithm>/<offset>
 //
 //	Blob Store:
 //
-// 	blobPathSpec:                   <root>/v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>
-// 	blobDataPathSpec:               <root>/v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>/data
-// 	blobMediaTypePathSpec:               <root>/v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>/data
+// 	blobPathSpec:                   /v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>
+// 	blobDataPathSpec:               /v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>/data
+// 	blobMediaTypePathSpec:               /v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>/data
 //
 // For more information on the semantic meaning of each path and their
 // contents, please see the path spec documentation.
@@ -120,7 +114,7 @@ func pathFor(spec pathSpec) (string, error) {
 	// to an intermediate path object, than can be consumed and mapped by the
 	// other version.
 
-	rootPrefix := []string{storagePathRoot, storagePathVersion}
+	rootPrefix := []string{"/" + storagePathVersion}
 	repoPrefix := append(rootPrefix, "repositories")
 
 	switch v := spec.(type) {

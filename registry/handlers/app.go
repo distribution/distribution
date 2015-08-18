@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -102,14 +103,7 @@ func NewApp(ctx context.Context, configuration *configuration.Configuration) *Ap
 	app.register(v2.RouteNameBlobUpload, blobUploadDispatcher)
 	app.register(v2.RouteNameBlobUploadChunk, blobUploadDispatcher)
 
-	var err error
-	app.driver, err = factory.Create(configuration.Storage.Type(), configuration.Storage.Parameters())
-	if err != nil {
-		// TODO(stevvooe): Move the creation of a service into a protected
-		// method, where this is created lazily. Its status can be queried via
-		// a health check.
-		panic(err)
-	}
+	app.configureDriver(configuration)
 
 	purgeConfig := uploadPurgeDefaultConfig()
 	if mc, ok := configuration.Storage["maintenance"]; ok {
@@ -135,6 +129,7 @@ func NewApp(ctx context.Context, configuration *configuration.Configuration) *Ap
 
 	startUploadPurger(app, app.driver, ctxu.GetLogger(app), purgeConfig)
 
+	var err error
 	app.driver, err = applyStorageMiddleware(app.driver, configuration.Middleware["storage"])
 	if err != nil {
 		panic(err)
@@ -360,6 +355,82 @@ func (app *App) register(routeName string, dispatch dispatchFunc) {
 	// control over the request execution.
 
 	app.router.GetRoute(routeName).Handler(app.dispatcher(dispatch))
+}
+
+func (app *App) configureDriver(configuration *configuration.Configuration) {
+	for {
+		var err error
+		app.driver, err = factory.Create(configuration.Storage.Type(), configuration.Storage.Parameters())
+		if err != nil {
+			// TODO(stevvooe): Move the creation of a service into a protected
+			// method, where this is created lazily. Its status can be queried via
+			// a health check.
+			panic(err)
+		}
+
+		// HACK(stevvooe): Previously, the storage package automatically added
+		// "/docker/registry" as a path prefix for all registry paths. The
+		// intention was to have common root configuration for all drivers.
+		// Instead, we've opted to leave this up to the driver by allowing the
+		// configuration of "rootdirectory" or similar configuration.
+		//
+		// To make the transition smoother, we are adding a nice hack to
+		// rewrite the rootdirectory path for the drivers that support it. To
+		// do this, we issue a few listings, rewrite the configuration, if
+		// necessary, then loop again.
+		//
+		// For all drivers added after 2.1 release, this doesn't matter.
+		//
+		// Leave this detection in for 2.2 to provide people time to update
+		// their configurations. The below can be removed in 2.3.
+
+		// detect a fresh registry: empty root. "/v2" and "/docker/registry"
+		// don't exist.
+		entries, err := app.driver.List(app, "/")
+		if err != nil {
+			panic(err)
+		}
+
+		if len(entries) == 0 {
+			break // detected a fresh registry
+		}
+
+		// if "/v2" is present at the root, as a directory, we are good to go.
+		if _, err := app.driver.Stat(app, "/v2"); err == nil {
+			break
+		} else {
+			// only proceed if we got a not found error.
+			if _, ok := err.(storagedriver.PathNotFoundError); !ok {
+				panic(err) // actual problem accessing backend.
+			}
+		}
+
+		// confirm that we actually have the old root before proceeding.
+		if _, err := app.driver.Stat(app, "/docker/registry"); err != nil {
+			if _, ok := err.(storagedriver.PathNotFoundError); ok {
+				break // not actually there, no need to rewrite.
+			}
+
+			panic(err) // backend access issue.
+		}
+
+		// we've passed all the conditions, so we must rewrite the configuration.
+		configuredRoot, ok := configuration.Storage.Parameters()["rootdirectory"]
+		if !ok {
+			// nothing we can do. The driver has not support for "rootdirectory". Move along.
+			break
+		}
+
+		root, ok := configuredRoot.(string)
+		if !ok {
+			break // for some reason, it is not a string.
+		}
+
+		rewritten := path.Join(root, "/docker/registry")
+		ctxu.GetLogger(app).Warnf("storage path prefix detected: rewriting storage.%s.rootdirectory %q -> %q. To avoid this warning, set storage.%s.rootdirectory to %q or move the data to %q. If your configuration is not updated before version deploying with 2.3, automatic detection will be deprecated and you may not be able to see your data until the configuration is fixed.",
+			configuration.Storage.Type(), root, rewritten, configuration.Storage.Type(), rewritten, root)
+		configuration.Storage.Parameters()["rootdirectory"] = rewritten
+	}
 }
 
 // configureEvents prepares the event sink for action.
