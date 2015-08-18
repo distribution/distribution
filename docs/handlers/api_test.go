@@ -1248,8 +1248,10 @@ func checkResponse(t *testing.T, msg string, resp *http.Response, expectedStatus
 		t.FailNow()
 	}
 
-	// We expect the headers included in the configuration
-	if !reflect.DeepEqual(resp.Header["X-Content-Type-Options"], []string{"nosniff"}) {
+	// We expect the headers included in the configuration, unless the
+	// status code is 405 (Method Not Allowed), which means the handler
+	// doesn't even get called.
+	if resp.StatusCode != 405 && !reflect.DeepEqual(resp.Header["X-Content-Type-Options"], []string{"nosniff"}) {
 		t.Logf("missing or incorrect header X-Content-Type-Options %s", msg)
 		maybeDumpResponse(t, resp)
 
