@@ -235,10 +235,23 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 // implementing this properly will require a refactor. This method may panic
 // if called twice in the same process.
 func (app *App) RegisterHealthChecks() {
-	health.RegisterPeriodicThresholdFunc("storagedriver_"+app.Config.Storage.Type(), defaultCheckInterval, 3, func() error {
-		_, err := app.driver.List(app, "/") // "/" should always exist
-		return err                          // any error will be treated as failure
-	})
+	if app.Config.Health.StorageDriver.Enabled {
+		interval := app.Config.Health.StorageDriver.Interval
+		if interval == 0 {
+			interval = defaultCheckInterval
+		}
+
+		storageDriverCheck := func() error {
+			_, err := app.driver.List(app, "/") // "/" should always exist
+			return err                          // any error will be treated as failure
+		}
+
+		if app.Config.Health.StorageDriver.Threshold != 0 {
+			health.RegisterPeriodicThresholdFunc("storagedriver_"+app.Config.Storage.Type(), interval, app.Config.Health.StorageDriver.Threshold, storageDriverCheck)
+		} else {
+			health.RegisterPeriodicFunc("storagedriver_"+app.Config.Storage.Type(), interval, storageDriverCheck)
+		}
+	}
 
 	for _, fileChecker := range app.Config.Health.FileCheckers {
 		interval := fileChecker.Interval
