@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/docker/distribution/configuration"
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/registry/api/errcode"
@@ -27,7 +28,6 @@ import (
 	"github.com/docker/distribution/testutil"
 	"github.com/docker/libtrust"
 	"github.com/gorilla/handlers"
-	"golang.org/x/net/context"
 )
 
 var headerConfig = http.Header{
