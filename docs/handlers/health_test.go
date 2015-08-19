@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -15,9 +14,6 @@ import (
 )
 
 func TestFileHealthCheck(t *testing.T) {
-	// In case other tests registered checks before this one
-	health.UnregisterAll()
-
 	interval := time.Second
 
 	tmpfile, err := ioutil.TempFile(os.TempDir(), "healthcheck")
@@ -43,60 +39,29 @@ func TestFileHealthCheck(t *testing.T) {
 	ctx := context.Background()
 
 	app := NewApp(ctx, config)
-	app.RegisterHealthChecks()
-
-	debugServer := httptest.NewServer(nil)
+	healthRegistry := health.NewRegistry()
+	app.RegisterHealthChecks(healthRegistry)
 
 	// Wait for health check to happen
 	<-time.After(2 * interval)
 
-	resp, err := http.Get(debugServer.URL + "/debug/health")
-	if err != nil {
-		t.Fatalf("error performing HTTP GET: %v", err)
+	status := healthRegistry.CheckStatus()
+	if len(status) != 1 {
+		t.Fatal("expected 1 item in health check results")
 	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("error reading HTTP body: %v", err)
-	}
-	resp.Body.Close()
-	var decoded map[string]string
-	err = json.Unmarshal(body, &decoded)
-	if err != nil {
-		t.Fatalf("error unmarshaling json: %v", err)
-	}
-	if len(decoded) != 1 {
-		t.Fatal("expected 1 item in returned json")
-	}
-	if decoded[tmpfile.Name()] != "file exists" {
+	if status[tmpfile.Name()] != "file exists" {
 		t.Fatal(`did not get "file exists" result for health check`)
 	}
 
 	os.Remove(tmpfile.Name())
 
 	<-time.After(2 * interval)
-	resp, err = http.Get(debugServer.URL + "/debug/health")
-	if err != nil {
-		t.Fatalf("error performing HTTP GET: %v", err)
-	}
-	body, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("error reading HTTP body: %v", err)
-	}
-	resp.Body.Close()
-	var decoded2 map[string]string
-	err = json.Unmarshal(body, &decoded2)
-	if err != nil {
-		t.Fatalf("error unmarshaling json: %v", err)
-	}
-	if len(decoded2) != 0 {
-		t.Fatal("expected 0 items in returned json")
+	if len(healthRegistry.CheckStatus()) != 0 {
+		t.Fatal("expected 0 items in health check results")
 	}
 }
 
 func TestHTTPHealthCheck(t *testing.T) {
-	// In case other tests registered checks before this one
-	health.UnregisterAll()
-
 	interval := time.Second
 	threshold := 3
 
@@ -132,32 +97,18 @@ func TestHTTPHealthCheck(t *testing.T) {
 	ctx := context.Background()
 
 	app := NewApp(ctx, config)
-	app.RegisterHealthChecks()
-
-	debugServer := httptest.NewServer(nil)
+	healthRegistry := health.NewRegistry()
+	app.RegisterHealthChecks(healthRegistry)
 
 	for i := 0; ; i++ {
 		<-time.After(interval)
 
-		resp, err := http.Get(debugServer.URL + "/debug/health")
-		if err != nil {
-			t.Fatalf("error performing HTTP GET: %v", err)
-		}
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			t.Fatalf("error reading HTTP body: %v", err)
-		}
-		resp.Body.Close()
-		var decoded map[string]string
-		err = json.Unmarshal(body, &decoded)
-		if err != nil {
-			t.Fatalf("error unmarshaling json: %v", err)
-		}
+		status := healthRegistry.CheckStatus()
 
 		if i < threshold-1 {
 			// definitely shouldn't have hit the threshold yet
-			if len(decoded) != 0 {
-				t.Fatal("expected 1 items in returned json")
+			if len(status) != 0 {
+				t.Fatal("expected 1 item in health check results")
 			}
 			continue
 		}
@@ -166,10 +117,10 @@ func TestHTTPHealthCheck(t *testing.T) {
 			continue
 		}
 
-		if len(decoded) != 1 {
-			t.Fatal("expected 1 item in returned json")
+		if len(status) != 1 {
+			t.Fatal("expected 1 item in health check results")
 		}
-		if decoded[checkedServer.URL] != "downstream service returned unexpected status: 500" {
+		if status[checkedServer.URL] != "downstream service returned unexpected status: 500" {
 			t.Fatal("did not get expected result for health check")
 		}
 
@@ -180,21 +131,8 @@ func TestHTTPHealthCheck(t *testing.T) {
 	close(stopFailing)
 
 	<-time.After(2 * interval)
-	resp, err := http.Get(debugServer.URL + "/debug/health")
-	if err != nil {
-		t.Fatalf("error performing HTTP GET: %v", err)
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Fatalf("error reading HTTP body: %v", err)
-	}
-	resp.Body.Close()
-	var decoded map[string]string
-	err = json.Unmarshal(body, &decoded)
-	if err != nil {
-		t.Fatalf("error unmarshaling json: %v", err)
-	}
-	if len(decoded) != 0 {
-		t.Fatal("expected 0 items in returned json")
+
+	if len(healthRegistry.CheckStatus()) != 0 {
+		t.Fatal("expected 0 items in health check results")
 	}
 }
