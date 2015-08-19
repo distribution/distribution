@@ -166,7 +166,7 @@ And then push and pull images as an authenticated user.
 
 ### Alternatives
 
-1. You may want to leverage more advanced basic auth implementations through a proxy design, in front of the registry. You will find an example of such design in the [nginx proxy documentation](nginx.md).
+1. You may want to leverage more advanced basic auth implementations through a proxy design, in front of the registry. You will find examples of such patterns in the [recipes list](recipes.md).
 
 2. Alternatively, the Registry also supports delegated authentication, redirecting users to a specific, trusted token server. That approach requires significantly more investment, and only make sense if you want to fully configure ACLs and more control over the Registry integration into your global authorization and authentication systems.
 
@@ -192,6 +192,7 @@ registry:
     REGISTRY_HTTP_TLS_CERTIFICATE: /certs/domain.crt
     REGISTRY_HTTP_TLS_KEY: /certs/domain.key
     REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
+    REGISTRY_AUTH: htpasswd
     REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
     REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
   volumes:
@@ -212,6 +213,7 @@ You will find more specific and advanced informations in the following sections:
 
  - [Configuration reference](configuration.md)
  - [Working with notifications](notifications.md)
+ - [Advanced "recipes"](recipes.md)
  - [Registry API](spec/api.md)
  - [Storage driver model](storagedrivers.md)
 
