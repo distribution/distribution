@@ -210,6 +210,17 @@ type Health struct {
 	FileCheckers []FileChecker `yaml:"file,omitempty"`
 	// HTTPChecker is a list of URIs to check
 	HTTPCheckers []HTTPChecker `yaml:"http,omitempty"`
+	// StorageDriver configures a health check on the configured storage
+	// driver
+	StorageDriver struct {
+		// Enabled turns on the health check for the storage driver
+		Enabled bool `yaml:"enabled,omitempty"`
+		// Interval is the number of seconds in between checks
+		Interval time.Duration `yaml:"interval,omitempty"`
+		// Threshold is the number of times a check must fail to trigger an
+		// unhealthy state
+		Threshold int `yaml:"threshold,omitempty"`
+	} `yaml:"storagedriver,omitempty"`
 }
 
 // v0_1Configuration is a Version 0.1 Configuration struct

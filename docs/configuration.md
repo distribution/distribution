@@ -196,6 +196,10 @@ information about each option that appears later in this page.
         maxactive: 64
         idletimeout: 300s
     health:
+      storagedriver:
+        enabled: true
+        interval: 10s
+        threshold: 3
       file:
         - file: /path/to/checked/file
           interval: 10s
@@ -1600,6 +1604,10 @@ Configure the behavior of the Redis connection pool.
 ## health
 
     health:
+      storagedriver:
+        enabled: true
+        interval: 10s
+        threshold: 3
       file:
         - file: /path/to/checked/file
           interval: 10s
@@ -1609,8 +1617,72 @@ Configure the behavior of the Redis connection pool.
           interval: 10s
           threshold: 3
 
-The health option is **optional**. It may contain lists of file checkers
-and/or HTTP checkers.
+The health option is **optional**. It may contain preferences for a periodic
+health check on the storage driver's backend storage, and optional periodic
+checks on local files and/or HTTP URIs. The results of the health checks are
+available at /debug/health on the debug HTTP server if the debug HTTP server is
+enabled (see http section).
+
+### storagedriver
+
+storagedriver contains options for a health check on the configured storage
+driver's backend storage. enabled must be set to true for this health check to
+be active.
+
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>enabled</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+"true" to enable the storage driver health check or "false" to disable it.
+</td>
+  </tr>
+  <tr>
+    <td>
+      <code>interval</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      The length of time to wait between repetitions of the check. This field
+      takes a positive integer and an optional suffix indicating the unit of
+      time. Possible units are:
+      <ul>
+        <li><code>ns</code> (nanoseconds)</li>
+        <li><code>us</code> (microseconds)</li>
+        <li><code>ms</code> (milliseconds)</li>
+        <li><code>s</code> (seconds)</li>
+        <li><code>m</code> (minutes)</li>
+        <li><code>h</code> (hours)</li>
+      </ul>
+    If you omit the suffix, the system interprets the value as nanoseconds.
+    The default value is 10 seconds if this field is omitted.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>threshold</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      An integer specifying the number of times the check must fail before the
+      check triggers an unhealthy state. If this filed is not specified, a
+      single failure will trigger an unhealthy state.
+    </td>
+  </tr>
+</table>
 
 ### file
 
