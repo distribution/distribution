@@ -1460,3 +1460,31 @@ func TestRegistryAsCacheMutationAPIs(t *testing.T) {
 	checkResponse(t, "deleting blob from cache", resp, errcode.ErrorCodeUnsupported.Descriptor().HTTPStatusCode)
 
 }
+
+// TestCheckContextNotifier makes sure the API endpoints get a ResponseWriter
+// that implements http.ContextNotifier.
+func TestCheckContextNotifier(t *testing.T) {
+	env := newTestEnv(t, false)
+
+	// Register a new endpoint for testing
+	env.app.router.Handle("/unittest/{name}/", env.app.dispatcher(func(ctx *Context, r *http.Request) http.Handler {
+		return handlers.MethodHandler{
+			"GET": http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if _, ok := w.(http.CloseNotifier); !ok {
+					t.Fatal("could not cast ResponseWriter to CloseNotifier")
+				}
+				w.WriteHeader(200)
+			}),
+		}
+	}))
+
+	resp, err := http.Get(env.server.URL + "/unittest/reponame/")
+	if err != nil {
+		t.Fatalf("unexpected error issuing request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		t.Fatalf("wrong status code - expected 200, got %d", resp.StatusCode)
+	}
+}
