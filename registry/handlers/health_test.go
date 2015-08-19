@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/docker/distribution/configuration"
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/health"
-	"golang.org/x/net/context"
 )
 
 func TestFileHealthCheck(t *testing.T) {

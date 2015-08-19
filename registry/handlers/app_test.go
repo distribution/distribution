@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/docker/distribution/configuration"
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/registry/auth"
@@ -16,7 +17,6 @@ import (
 	"github.com/docker/distribution/registry/storage"
 	memorycache "github.com/docker/distribution/registry/storage/cache/memory"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
-	"golang.org/x/net/context"
 )
 
 // TestAppDispatcher builds an application with a test dispatcher and ensures
