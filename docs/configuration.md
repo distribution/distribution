@@ -195,6 +195,15 @@ information about each option that appears later in this page.
         maxidle: 16
         maxactive: 64
         idletimeout: 300s
+    health:
+      file:
+        - file: /path/to/checked/file
+          interval: 10s
+          threshold: 3
+      http:
+        - uri: http://server.to.check/must/return/200
+          interval: 10s
+          threshold: 3
 
 In some instances a configuration option is **optional** but it contains child
 options marked as **required**. This indicates that you can omit the parent with
@@ -1588,6 +1597,141 @@ Configure the behavior of the Redis connection pool.
   </tr>
 </table>
 
+## health
+
+    health:
+      file:
+        - file: /path/to/checked/file
+          interval: 10s
+          threshold: 3
+      http:
+        - uri: http://server.to.check/must/return/200
+          interval: 10s
+          threshold: 3
+
+The health option is **optional**. It may contain lists of file checkers
+and/or HTTP checkers.
+
+### file
+
+file is a list of paths to be periodically checked for the existence of a file.
+If a file exists at the given path, the health check will fail. This can be
+used as a way of bringing a registry out of rotation by creating a file.
+
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>file</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+The path to check for the existence of a file.
+</td>
+  </tr>
+  <tr>
+    <td>
+      <code>interval</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      The length of time to wait between repetitions of the check. This field
+      takes a positive integer and an optional suffix indicating the unit of
+      time. Possible units are:
+      <ul>
+        <li><code>ns</code> (nanoseconds)</li>
+        <li><code>us</code> (microseconds)</li>
+        <li><code>ms</code> (milliseconds)</li>
+        <li><code>s</code> (seconds)</li>
+        <li><code>m</code> (minutes)</li>
+        <li><code>h</code> (hours)</li>
+      </ul>
+    If you omit the suffix, the system interprets the value as nanoseconds.
+    The default value is 10 seconds if this field is omitted.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>threshold</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      An integer specifying the number of times the check must fail before the
+      check triggers an unhealthy state. If this filed is not specified, a
+      single failure will trigger an unhealthy state.
+    </td>
+  </tr>
+</table>
+
+### http
+
+http is a list of HTTP URIs to be periodically checked with HEAD requests. If
+a HEAD request returns a status code other than 200, the health check will fail.
+
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>uri</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+The URI to check.
+</td>
+  </tr>
+  <tr>
+    <td>
+      <code>interval</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      The length of time to wait between repetitions of the check. This field
+      takes a positive integer and an optional suffix indicating the unit of
+      time. Possible units are:
+      <ul>
+        <li><code>ns</code> (nanoseconds)</li>
+        <li><code>us</code> (microseconds)</li>
+        <li><code>ms</code> (milliseconds)</li>
+        <li><code>s</code> (seconds)</li>
+        <li><code>m</code> (minutes)</li>
+        <li><code>h</code> (hours)</li>
+      </ul>
+    If you omit the suffix, the system interprets the value as nanoseconds.
+    The default value is 10 seconds if this field is omitted.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>threshold</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      An integer specifying the number of times the check must fail before the
+      check triggers an unhealthy state. If this filed is not specified, a
+      single failure will trigger an unhealthy state.
+    </td>
+  </tr>
+</table>
 
 ## Example: Development configuration
 

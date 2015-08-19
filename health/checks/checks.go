@@ -2,9 +2,11 @@ package checks
 
 import (
 	"errors"
-	"github.com/docker/distribution/health"
 	"net/http"
 	"os"
+	"strconv"
+
+	"github.com/docker/distribution/health"
 )
 
 // FileChecker checks the existence of a file and returns and error
@@ -28,7 +30,7 @@ func HTTPChecker(r string) health.Checker {
 			return errors.New("error while checking: " + r)
 		}
 		if response.StatusCode != http.StatusOK {
-			return errors.New("downstream service returned unexpected status: " + string(response.StatusCode))
+			return errors.New("downstream service returned unexpected status: " + strconv.Itoa(response.StatusCode))
 		}
 		return nil
 	})

@@ -170,6 +170,20 @@ func Register(name string, check Checker) {
 	registeredChecks[name] = check
 }
 
+// Unregister removes the named checker.
+func Unregister(name string) {
+	mutex.Lock()
+	defer mutex.Unlock()
+	delete(registeredChecks, name)
+}
+
+// UnregisterAll removes all registered checkers.
+func UnregisterAll() {
+	mutex.Lock()
+	defer mutex.Unlock()
+	registeredChecks = make(map[string]Checker)
+}
+
 // RegisterFunc allows the convenience of registering a checker directly
 // from an arbitrary func() error
 func RegisterFunc(name string, check func() error) {

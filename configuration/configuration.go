@@ -135,6 +135,8 @@ type Configuration struct {
 		} `yaml:"pool,omitempty"`
 	} `yaml:"redis,omitempty"`
 
+	Health Health `yaml:"health,omitempty"`
+
 	Proxy Proxy `yaml:"proxy,omitempty"`
 }
 
@@ -177,6 +179,37 @@ type MailOptions struct {
 
 	// To defines mail receiving address
 	To []string `yaml:"to,omitempty"`
+}
+
+// FileChecker is a type of entry in the checkers section for checking files
+type FileChecker struct {
+	// Interval is the number of seconds in between checks
+	Interval time.Duration `yaml:"interval,omitempty"`
+	// File is the path to check
+	File string `yaml:"file,omitempty"`
+	// Threshold is the number of times a check must fail to trigger an
+	// unhealthy state
+	Threshold int `yaml:"threshold,omitempty"`
+}
+
+// HTTPChecker is a type of entry in the checkers section for checking HTTP
+// URIs
+type HTTPChecker struct {
+	// Interval is the number of seconds in between checks
+	Interval time.Duration `yaml:"interval,omitempty"`
+	// URI is the HTTP URI to check
+	URI string `yaml:"uri,omitempty"`
+	// Threshold is the number of times a check must fail to trigger an
+	// unhealthy state
+	Threshold int `yaml:"threshold,omitempty"`
+}
+
+// Health provides the configuration section for health checks.
+type Health struct {
+	// FileChecker is a list of paths to check
+	FileCheckers []FileChecker `yaml:"file,omitempty"`
+	// HTTPChecker is a list of URIs to check
+	HTTPCheckers []HTTPChecker `yaml:"http,omitempty"`
 }
 
 // v0_1Configuration is a Version 0.1 Configuration struct

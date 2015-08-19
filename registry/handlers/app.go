@@ -15,6 +15,7 @@ import (
 	"github.com/docker/distribution/configuration"
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/health"
+	"github.com/docker/distribution/health/checks"
 	"github.com/docker/distribution/notifications"
 	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
@@ -36,6 +37,9 @@ import (
 // randomSecretSize is the number of random bytes to generate if no secret
 // was specified.
 const randomSecretSize = 32
+
+// defaultCheckInterval is the default time in between health checks
+const defaultCheckInterval = 10 * time.Second
 
 // App is a global registry application object. Shared resources can be placed
 // on this object that will be accessible from all requests. Any writable
@@ -231,10 +235,38 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 // implementing this properly will require a refactor. This method may panic
 // if called twice in the same process.
 func (app *App) RegisterHealthChecks() {
-	health.RegisterPeriodicThresholdFunc("storagedriver_"+app.Config.Storage.Type(), 10*time.Second, 3, func() error {
+	health.RegisterPeriodicThresholdFunc("storagedriver_"+app.Config.Storage.Type(), defaultCheckInterval, 3, func() error {
 		_, err := app.driver.List(app, "/") // "/" should always exist
 		return err                          // any error will be treated as failure
 	})
+
+	for _, fileChecker := range app.Config.Health.FileCheckers {
+		interval := fileChecker.Interval
+		if interval == 0 {
+			interval = defaultCheckInterval
+		}
+		if fileChecker.Threshold != 0 {
+			ctxu.GetLogger(app).Infof("configuring file health check path=%s, interval=%d, threshold=%d", fileChecker.File, interval/time.Second, fileChecker.Threshold)
+			health.Register(fileChecker.File, health.PeriodicThresholdChecker(checks.FileChecker(fileChecker.File), interval, fileChecker.Threshold))
+		} else {
+			ctxu.GetLogger(app).Infof("configuring file health check path=%s, interval=%d", fileChecker.File, interval/time.Second)
+			health.Register(fileChecker.File, health.PeriodicChecker(checks.FileChecker(fileChecker.File), interval))
+		}
+	}
+
+	for _, httpChecker := range app.Config.Health.HTTPCheckers {
+		interval := httpChecker.Interval
+		if interval == 0 {
+			interval = defaultCheckInterval
+		}
+		if httpChecker.Threshold != 0 {
+			ctxu.GetLogger(app).Infof("configuring HTTP health check uri=%s, interval=%d, threshold=%d", httpChecker.URI, interval/time.Second, httpChecker.Threshold)
+			health.Register(httpChecker.URI, health.PeriodicThresholdChecker(checks.HTTPChecker(httpChecker.URI), interval, httpChecker.Threshold))
+		} else {
+			ctxu.GetLogger(app).Infof("configuring HTTP health check uri=%s, interval=%d", httpChecker.URI, interval/time.Second)
+			health.Register(httpChecker.URI, health.PeriodicChecker(checks.HTTPChecker(httpChecker.URI), interval))
+		}
+	}
 }
 
 // register a handler with the application, by route name. The handler will be
