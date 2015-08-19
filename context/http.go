@@ -352,3 +352,13 @@ func (irw *instrumentedResponseWriter) Value(key interface{}) interface{} {
 fallback:
 	return irw.Context.Value(key)
 }
+
+func (irw *instrumentedResponseWriterCN) Value(key interface{}) interface{} {
+	if keyStr, ok := key.(string); ok {
+		if keyStr == "http.response" {
+			return irw
+		}
+	}
+
+	return irw.instrumentedResponseWriter.Value(key)
+}
