@@ -11,10 +11,26 @@ import (
 	"github.com/docker/distribution/registry/api/errcode"
 )
 
-var (
-	mutex            sync.RWMutex
-	registeredChecks = make(map[string]Checker)
-)
+// A Registry is a collection of checks. Most applications will use the global
+// registry defined in DefaultRegistry. However, unit tests may need to create
+// separate registries to isolate themselves from other tests.
+type Registry struct {
+	mu               sync.RWMutex
+	registeredChecks map[string]Checker
+}
+
+// NewRegistry creates a new registry. This isn't necessary for normal use of
+// the package, but may be useful for unit tests so individual tests have their
+// own set of checks.
+func NewRegistry() *Registry {
+	return &Registry{
+		registeredChecks: make(map[string]Checker),
+	}
+}
+
+// DefaultRegistry is the default registry where checks are registered. It is
+// the registry used by the HTTP handler.
+var DefaultRegistry *Registry
 
 // Checker is the interface for a Health Checker
 type Checker interface {
@@ -144,11 +160,11 @@ func PeriodicThresholdChecker(check Checker, period time.Duration, threshold int
 }
 
 // CheckStatus returns a map with all the current health check errors
-func CheckStatus() map[string]string { // TODO(stevvooe) this needs a proper type
-	mutex.RLock()
-	defer mutex.RUnlock()
+func (registry *Registry) CheckStatus() map[string]string { // TODO(stevvooe) this needs a proper type
+	registry.mu.RLock()
+	defer registry.mu.RUnlock()
 	statusKeys := make(map[string]string)
-	for k, v := range registeredChecks {
+	for k, v := range registry.registeredChecks {
 		err := v.Check()
 		if err != nil {
 			statusKeys[k] = err.Error()
@@ -158,48 +174,66 @@ func CheckStatus() map[string]string { // TODO(stevvooe) this needs a proper typ
 	return statusKeys
 }
 
-// Register associates the checker with the provided name. We allow
-// overwrites to a specific check status.
-func Register(name string, check Checker) {
-	mutex.Lock()
-	defer mutex.Unlock()
-	_, ok := registeredChecks[name]
+// CheckStatus returns a map with all the current health check errors from the
+// default registry.
+func CheckStatus() map[string]string {
+	return DefaultRegistry.CheckStatus()
+}
+
+// Register associates the checker with the provided name.
+func (registry *Registry) Register(name string, check Checker) {
+	if registry == nil {
+		registry = DefaultRegistry
+	}
+	registry.mu.Lock()
+	defer registry.mu.Unlock()
+	_, ok := registry.registeredChecks[name]
 	if ok {
 		panic("Check already exists: " + name)
 	}
-	registeredChecks[name] = check
+	registry.registeredChecks[name] = check
 }
 
-// Unregister removes the named checker.
-func Unregister(name string) {
-	mutex.Lock()
-	defer mutex.Unlock()
-	delete(registeredChecks, name)
+// Register associates the checker with the provided name in the default
+// registry.
+func Register(name string, check Checker) {
+	DefaultRegistry.Register(name, check)
 }
 
-// UnregisterAll removes all registered checkers.
-func UnregisterAll() {
-	mutex.Lock()
-	defer mutex.Unlock()
-	registeredChecks = make(map[string]Checker)
+// RegisterFunc allows the convenience of registering a checker directly from
+// an arbitrary func() error.
+func (registry *Registry) RegisterFunc(name string, check func() error) {
+	registry.Register(name, CheckFunc(check))
 }
 
-// RegisterFunc allows the convenience of registering a checker directly
-// from an arbitrary func() error
+// RegisterFunc allows the convenience of registering a checker in the default
+// registry directly from an arbitrary func() error.
 func RegisterFunc(name string, check func() error) {
-	Register(name, CheckFunc(check))
+	DefaultRegistry.RegisterFunc(name, check)
 }
 
 // RegisterPeriodicFunc allows the convenience of registering a PeriodicChecker
-// from an arbitrary func() error
+// from an arbitrary func() error.
+func (registry *Registry) RegisterPeriodicFunc(name string, period time.Duration, check CheckFunc) {
+	registry.Register(name, PeriodicChecker(CheckFunc(check), period))
+}
+
+// RegisterPeriodicFunc allows the convenience of registering a PeriodicChecker
+// in the default registry from an arbitrary func() error.
 func RegisterPeriodicFunc(name string, period time.Duration, check CheckFunc) {
-	Register(name, PeriodicChecker(CheckFunc(check), period))
+	DefaultRegistry.RegisterPeriodicFunc(name, period, check)
 }
 
 // RegisterPeriodicThresholdFunc allows the convenience of registering a
-// PeriodicChecker from an arbitrary func() error
+// PeriodicChecker from an arbitrary func() error.
+func (registry *Registry) RegisterPeriodicThresholdFunc(name string, period time.Duration, threshold int, check CheckFunc) {
+	registry.Register(name, PeriodicThresholdChecker(CheckFunc(check), period, threshold))
+}
+
+// RegisterPeriodicThresholdFunc allows the convenience of registering a
+// PeriodicChecker in the default registry from an arbitrary func() error.
 func RegisterPeriodicThresholdFunc(name string, period time.Duration, threshold int, check CheckFunc) {
-	Register(name, PeriodicThresholdChecker(CheckFunc(check), period, threshold))
+	DefaultRegistry.RegisterPeriodicThresholdFunc(name, period, threshold, check)
 }
 
 // StatusHandler returns a JSON blob with all the currently registered Health Checks
@@ -265,7 +299,8 @@ func statusResponse(w http.ResponseWriter, r *http.Request, status int, checks m
 	}
 }
 
-// Registers global /debug/health api endpoint
+// Registers global /debug/health api endpoint, creates default registry
 func init() {
+	DefaultRegistry = NewRegistry()
 	http.HandleFunc("/debug/health", StatusHandler)
 }

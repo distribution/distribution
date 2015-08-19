@@ -39,7 +39,7 @@
 //
 // The recommended way of registering checks is using a periodic Check.
 // PeriodicChecks run on a certain schedule and asynchronously update the
-// status of the check. This allows "CheckStatus()" to return without blocking
+// status of the check. This allows CheckStatus to return without blocking
 // on an expensive check.
 //
 // A trivial example of a check that runs every 5 seconds and shuts down our

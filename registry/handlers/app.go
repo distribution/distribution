@@ -234,7 +234,15 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 // process. Because the configuration and app are tightly coupled,
 // implementing this properly will require a refactor. This method may panic
 // if called twice in the same process.
-func (app *App) RegisterHealthChecks() {
+func (app *App) RegisterHealthChecks(healthRegistries ...*health.Registry) {
+	if len(healthRegistries) > 1 {
+		panic("RegisterHealthChecks called with more than one registry")
+	}
+	healthRegistry := health.DefaultRegistry
+	if len(healthRegistries) == 1 {
+		healthRegistry = healthRegistries[0]
+	}
+
 	if app.Config.Health.StorageDriver.Enabled {
 		interval := app.Config.Health.StorageDriver.Interval
 		if interval == 0 {
@@ -247,9 +255,9 @@ func (app *App) RegisterHealthChecks() {
 		}
 
 		if app.Config.Health.StorageDriver.Threshold != 0 {
-			health.RegisterPeriodicThresholdFunc("storagedriver_"+app.Config.Storage.Type(), interval, app.Config.Health.StorageDriver.Threshold, storageDriverCheck)
+			healthRegistry.RegisterPeriodicThresholdFunc("storagedriver_"+app.Config.Storage.Type(), interval, app.Config.Health.StorageDriver.Threshold, storageDriverCheck)
 		} else {
-			health.RegisterPeriodicFunc("storagedriver_"+app.Config.Storage.Type(), interval, storageDriverCheck)
+			healthRegistry.RegisterPeriodicFunc("storagedriver_"+app.Config.Storage.Type(), interval, storageDriverCheck)
 		}
 	}
 
@@ -260,10 +268,10 @@ func (app *App) RegisterHealthChecks() {
 		}
 		if fileChecker.Threshold != 0 {
 			ctxu.GetLogger(app).Infof("configuring file health check path=%s, interval=%d, threshold=%d", fileChecker.File, interval/time.Second, fileChecker.Threshold)
-			health.Register(fileChecker.File, health.PeriodicThresholdChecker(checks.FileChecker(fileChecker.File), interval, fileChecker.Threshold))
+			healthRegistry.Register(fileChecker.File, health.PeriodicThresholdChecker(checks.FileChecker(fileChecker.File), interval, fileChecker.Threshold))
 		} else {
 			ctxu.GetLogger(app).Infof("configuring file health check path=%s, interval=%d", fileChecker.File, interval/time.Second)
-			health.Register(fileChecker.File, health.PeriodicChecker(checks.FileChecker(fileChecker.File), interval))
+			healthRegistry.Register(fileChecker.File, health.PeriodicChecker(checks.FileChecker(fileChecker.File), interval))
 		}
 	}
 
@@ -274,10 +282,10 @@ func (app *App) RegisterHealthChecks() {
 		}
 		if httpChecker.Threshold != 0 {
 			ctxu.GetLogger(app).Infof("configuring HTTP health check uri=%s, interval=%d, threshold=%d", httpChecker.URI, interval/time.Second, httpChecker.Threshold)
-			health.Register(httpChecker.URI, health.PeriodicThresholdChecker(checks.HTTPChecker(httpChecker.URI), interval, httpChecker.Threshold))
+			healthRegistry.Register(httpChecker.URI, health.PeriodicThresholdChecker(checks.HTTPChecker(httpChecker.URI), interval, httpChecker.Threshold))
 		} else {
 			ctxu.GetLogger(app).Infof("configuring HTTP health check uri=%s, interval=%d", httpChecker.URI, interval/time.Second)
-			health.Register(httpChecker.URI, health.PeriodicChecker(checks.HTTPChecker(httpChecker.URI), interval))
+			healthRegistry.Register(httpChecker.URI, health.PeriodicChecker(checks.HTTPChecker(httpChecker.URI), interval))
 		}
 	}
 }
