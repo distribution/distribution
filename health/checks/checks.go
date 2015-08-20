@@ -24,12 +24,21 @@ func FileChecker(f string) health.Checker {
 
 // HTTPChecker does a HEAD request and verifies that the HTTP status code
 // returned matches statusCode.
-func HTTPChecker(r string, statusCode int, timeout time.Duration) health.Checker {
+func HTTPChecker(r string, statusCode int, timeout time.Duration, headers http.Header) health.Checker {
 	return health.CheckFunc(func() error {
 		client := http.Client{
 			Timeout: timeout,
 		}
-		response, err := client.Head(r)
+		req, err := http.NewRequest("HEAD", r, nil)
+		if err != nil {
+			return errors.New("error creating request: " + r)
+		}
+		for headerName, headerValues := range headers {
+			for _, headerValue := range headerValues {
+				req.Header.Add(headerName, headerValue)
+			}
+		}
+		response, err := client.Do(req)
 		if err != nil {
 			return errors.New("error while checking: " + r)
 		}

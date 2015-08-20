@@ -281,7 +281,7 @@ func (app *App) RegisterHealthChecks(healthRegistries ...*health.Registry) {
 			statusCode = 200
 		}
 
-		checker := checks.HTTPChecker(httpChecker.URI, statusCode, httpChecker.Timeout)
+		checker := checks.HTTPChecker(httpChecker.URI, statusCode, httpChecker.Timeout, httpChecker.Headers)
 
 		if httpChecker.Threshold != 0 {
 			ctxu.GetLogger(app).Infof("configuring HTTP health check uri=%s, interval=%d, threshold=%d", httpChecker.URI, interval/time.Second, httpChecker.Threshold)

@@ -205,6 +205,8 @@ information about each option that appears later in this page.
           interval: 10s
       http:
         - uri: http://server.to.check/must/return/200
+          headers:
+            Authorization: [Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==]
           statuscode: 200
           timeout: 3s
           interval: 10s
@@ -1400,7 +1402,9 @@ The URL to which events should be published.
       yes
     </td>
     <td>
-      Static headers to add to each request.
+      Static headers to add to each request. Each header's name should be a key
+      underneath headers, and each value is a list of payloads for that
+      header name. Note that values must always be lists.
     </td>
   </tr>
   <tr>
@@ -1619,6 +1623,8 @@ Configure the behavior of the Redis connection pool.
           interval: 10s
       http:
         - uri: http://server.to.check/must/return/200
+          headers:
+            Authorization: [Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==]
           statuscode: 200
           timeout: 3s
           interval: 10s
@@ -1766,6 +1772,19 @@ health check will fail.
     <td>
 The URI to check.
 </td>
+  </tr>
+   <tr>
+    <td>
+      <code>headers</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Static headers to add to each request. Each header's name should be a key
+      underneath headers, and each value is a list of payloads for that
+      header name. Note that values must always be lists.
+    </td>
   </tr>
   <tr>
     <td>

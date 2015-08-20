@@ -202,6 +202,8 @@ type HTTPChecker struct {
 	Interval time.Duration `yaml:"interval,omitempty"`
 	// URI is the HTTP URI to check
 	URI string `yaml:"uri,omitempty"`
+	// Headers lists static headers that should be added to all requests
+	Headers http.Header `yaml:"headers"`
 	// Threshold is the number of times a check must fail to trigger an
 	// unhealthy state
 	Threshold int `yaml:"threshold,omitempty"`
