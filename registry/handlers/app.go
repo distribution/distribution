@@ -47,7 +47,7 @@ const defaultCheckInterval = 10 * time.Second
 type App struct {
 	context.Context
 
-	Config configuration.Configuration
+	Config *configuration.Configuration
 
 	router           *mux.Router                 // main application router, configured with dispatchers
 	driver           storagedriver.StorageDriver // driver maintains the app global storage driver instance.
@@ -69,7 +69,7 @@ type App struct {
 // NewApp takes a configuration and returns a configured app, ready to serve
 // requests. The app only implements ServeHTTP and can be wrapped in other
 // handlers accordingly.
-func NewApp(ctx context.Context, configuration configuration.Configuration) *App {
+func NewApp(ctx context.Context, configuration *configuration.Configuration) *App {
 	app := &App{
 		Config:  configuration,
 		Context: ctx,
@@ -117,10 +117,10 @@ func NewApp(ctx context.Context, configuration configuration.Configuration) *App
 		panic(err)
 	}
 
-	app.configureSecret(&configuration)
-	app.configureEvents(&configuration)
-	app.configureRedis(&configuration)
-	app.configureLogHook(&configuration)
+	app.configureSecret(configuration)
+	app.configureEvents(configuration)
+	app.configureRedis(configuration)
+	app.configureLogHook(configuration)
 
 	options := []storage.RegistryOption{}
 
