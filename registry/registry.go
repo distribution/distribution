@@ -5,7 +5,6 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"os"
 	"time"
@@ -21,17 +20,61 @@ import (
 	"github.com/docker/distribution/uuid"
 	"github.com/docker/distribution/version"
 	gorhandlers "github.com/gorilla/handlers"
+	"github.com/spf13/cobra"
 	"github.com/yvasiyarov/gorelic"
 	"golang.org/x/net/context"
 )
 
+// Cmd is a cobra command for running the registry.
+var Cmd = &cobra.Command{
+	Use:   "registry <config>",
+	Short: "registry stores and distributes Docker images",
+	Long:  "registry stores and distributes Docker images.",
+	Run: func(cmd *cobra.Command, args []string) {
+		if showVersion {
+			version.PrintVersion()
+			return
+		}
+
+		config, err := resolveConfiguration(args)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "configuration error: %v\n", err)
+			cmd.Usage()
+			os.Exit(1)
+		}
+
+		if config.HTTP.Debug.Addr != "" {
+			go func(addr string) {
+				log.Infof("debug server listening %v", addr)
+				if err := http.ListenAndServe(addr, nil); err != nil {
+					log.Fatalf("error listening on debug interface: %v", err)
+				}
+			}(config.HTTP.Debug.Addr)
+		}
+
+		registry, err := NewRegistry(context.Background(), config)
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		if err = registry.ListenAndServe(); err != nil {
+			log.Fatalln(err)
+		}
+	},
+}
+
+var showVersion bool
+
+func init() {
+	Cmd.PersistentFlags().BoolVarP(&showVersion, "version", "v", false, "show the version and exit")
+}
+
 // A Registry represents a complete instance of the registry.
+// TODO(aaronl): It might make sense for Registry to become an interface.
 type Registry struct {
-	config  *configuration.Configuration
-	app     *handlers.App
-	server  *http.Server
-	ln      net.Listener
-	debugLn net.Listener
+	config *configuration.Configuration
+	app    *handlers.App
+	server *http.Server
 }
 
 // NewRegistry creates a new registry from a context and configuration struct.
@@ -63,18 +106,20 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 		Handler: handler,
 	}
 
+	return &Registry{
+		app:    app,
+		config: config,
+		server: server,
+	}, nil
+}
+
+// ListenAndServe runs the registry's HTTP server.
+func (registry *Registry) ListenAndServe() error {
+	config := registry.config
+
 	ln, err := listener.NewListener(config.HTTP.Net, config.HTTP.Addr)
 	if err != nil {
-		return nil, err
-	}
-
-	var debugLn net.Listener
-	if config.HTTP.Debug.Addr != "" {
-		debugLn, err = listener.NewListener("tcp", config.HTTP.Debug.Addr)
-		if err != nil {
-			return nil, fmt.Errorf("error listening on debug interface: %v", err)
-		}
-		log.Infof("debug server listening %v", config.HTTP.Debug.Addr)
+		return err
 	}
 
 	if config.HTTP.TLS.Certificate != "" {
@@ -98,7 +143,7 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 
 		tlsConf.Certificates[0], err = tls.LoadX509KeyPair(config.HTTP.TLS.Certificate, config.HTTP.TLS.Key)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		if len(config.HTTP.TLS.ClientCAs) != 0 {
@@ -107,16 +152,16 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 			for _, ca := range config.HTTP.TLS.ClientCAs {
 				caPem, err := ioutil.ReadFile(ca)
 				if err != nil {
-					return nil, err
+					return err
 				}
 
 				if ok := pool.AppendCertsFromPEM(caPem); !ok {
-					return nil, fmt.Errorf("Could not add CA to pool")
+					return fmt.Errorf("Could not add CA to pool")
 				}
 			}
 
 			for _, subj := range pool.Subjects() {
-				ctxu.GetLogger(app).Debugf("CA Subject: %s", string(subj))
+				ctxu.GetLogger(registry.app).Debugf("CA Subject: %s", string(subj))
 			}
 
 			tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
@@ -124,38 +169,12 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 		}
 
 		ln = tls.NewListener(ln, tlsConf)
-		ctxu.GetLogger(app).Infof("listening on %v, tls", ln.Addr())
+		ctxu.GetLogger(registry.app).Infof("listening on %v, tls", ln.Addr())
 	} else {
-		ctxu.GetLogger(app).Infof("listening on %v", ln.Addr())
+		ctxu.GetLogger(registry.app).Infof("listening on %v", ln.Addr())
 	}
 
-	return &Registry{
-		app:     app,
-		config:  config,
-		server:  server,
-		ln:      ln,
-		debugLn: debugLn,
-	}, nil
-}
-
-// Serve runs the registry's HTTP server(s).
-func (registry *Registry) Serve() error {
-	defer registry.ln.Close()
-
-	errChan := make(chan error)
-
-	if registry.debugLn != nil {
-		defer registry.debugLn.Close()
-		go func() {
-			errChan <- http.Serve(registry.debugLn, nil)
-		}()
-	}
-
-	go func() {
-		errChan <- registry.server.Serve(registry.ln)
-	}()
-
-	return <-errChan
+	return registry.server.Serve(ln)
 }
 
 func configureReporting(app *handlers.App) http.Handler {
@@ -291,4 +310,32 @@ func alive(path string, handler http.Handler) http.Handler {
 
 		handler.ServeHTTP(w, r)
 	})
+}
+
+func resolveConfiguration(args []string) (*configuration.Configuration, error) {
+	var configurationPath string
+
+	if len(args) > 0 {
+		configurationPath = args[0]
+	} else if os.Getenv("REGISTRY_CONFIGURATION_PATH") != "" {
+		configurationPath = os.Getenv("REGISTRY_CONFIGURATION_PATH")
+	}
+
+	if configurationPath == "" {
+		return nil, fmt.Errorf("configuration path unspecified")
+	}
+
+	fp, err := os.Open(configurationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	defer fp.Close()
+
+	config, err := configuration.Parse(fp)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing %s: %v", configurationPath, err)
+	}
+
+	return config, nil
 }
