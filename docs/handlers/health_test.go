@@ -23,7 +23,7 @@ func TestFileHealthCheck(t *testing.T) {
 	}
 	defer tmpfile.Close()
 
-	config := configuration.Configuration{
+	config := &configuration.Configuration{
 		Storage: configuration.Storage{
 			"inmemory": configuration.Parameters{},
 		},
@@ -83,7 +83,7 @@ func TestTCPHealthCheck(t *testing.T) {
 		}
 	}()
 
-	config := configuration.Configuration{
+	config := &configuration.Configuration{
 		Storage: configuration.Storage{
 			"inmemory": configuration.Parameters{},
 		},
@@ -142,7 +142,7 @@ func TestHTTPHealthCheck(t *testing.T) {
 		}
 	}))
 
-	config := configuration.Configuration{
+	config := &configuration.Configuration{
 		Storage: configuration.Storage{
 			"inmemory": configuration.Parameters{},
 		},

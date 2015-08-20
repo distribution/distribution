@@ -31,7 +31,7 @@ func TestAppDispatcher(t *testing.T) {
 		t.Fatalf("error creating registry: %v", err)
 	}
 	app := &App{
-		Config:   configuration.Configuration{},
+		Config:   &configuration.Configuration{},
 		Context:  ctx,
 		router:   v2.Router(),
 		driver:   driver,
@@ -164,7 +164,7 @@ func TestNewApp(t *testing.T) {
 	// Mostly, with this test, given a sane configuration, we are simply
 	// ensuring that NewApp doesn't panic. We might want to tweak this
 	// behavior.
-	app := NewApp(ctx, config)
+	app := NewApp(ctx, &config)
 
 	server := httptest.NewServer(app)
 	builder, err := v2.NewURLBuilderFromString(server.URL)

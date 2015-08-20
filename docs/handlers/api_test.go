@@ -1038,7 +1038,7 @@ func newTestEnv(t *testing.T, deleteEnabled bool) *testEnv {
 func newTestEnvWithConfig(t *testing.T, config *configuration.Configuration) *testEnv {
 	ctx := context.Background()
 
-	app := NewApp(ctx, *config)
+	app := NewApp(ctx, config)
 	server := httptest.NewServer(handlers.CombinedLoggingHandler(os.Stderr, app))
 	builder, err := v2.NewURLBuilderFromString(server.URL + config.HTTP.Prefix)
 
