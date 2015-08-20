@@ -266,13 +266,8 @@ func (app *App) RegisterHealthChecks(healthRegistries ...*health.Registry) {
 		if interval == 0 {
 			interval = defaultCheckInterval
 		}
-		if fileChecker.Threshold != 0 {
-			ctxu.GetLogger(app).Infof("configuring file health check path=%s, interval=%d, threshold=%d", fileChecker.File, interval/time.Second, fileChecker.Threshold)
-			healthRegistry.Register(fileChecker.File, health.PeriodicThresholdChecker(checks.FileChecker(fileChecker.File), interval, fileChecker.Threshold))
-		} else {
-			ctxu.GetLogger(app).Infof("configuring file health check path=%s, interval=%d", fileChecker.File, interval/time.Second)
-			healthRegistry.Register(fileChecker.File, health.PeriodicChecker(checks.FileChecker(fileChecker.File), interval))
-		}
+		ctxu.GetLogger(app).Infof("configuring file health check path=%s, interval=%d", fileChecker.File, interval/time.Second)
+		healthRegistry.Register(fileChecker.File, health.PeriodicChecker(checks.FileChecker(fileChecker.File), interval))
 	}
 
 	for _, httpChecker := range app.Config.Health.HTTPCheckers {
@@ -280,12 +275,37 @@ func (app *App) RegisterHealthChecks(healthRegistries ...*health.Registry) {
 		if interval == 0 {
 			interval = defaultCheckInterval
 		}
+
+		statusCode := httpChecker.StatusCode
+		if statusCode == 0 {
+			statusCode = 200
+		}
+
+		checker := checks.HTTPChecker(httpChecker.URI, statusCode, httpChecker.Timeout)
+
 		if httpChecker.Threshold != 0 {
 			ctxu.GetLogger(app).Infof("configuring HTTP health check uri=%s, interval=%d, threshold=%d", httpChecker.URI, interval/time.Second, httpChecker.Threshold)
-			healthRegistry.Register(httpChecker.URI, health.PeriodicThresholdChecker(checks.HTTPChecker(httpChecker.URI), interval, httpChecker.Threshold))
+			healthRegistry.Register(httpChecker.URI, health.PeriodicThresholdChecker(checker, interval, httpChecker.Threshold))
 		} else {
 			ctxu.GetLogger(app).Infof("configuring HTTP health check uri=%s, interval=%d", httpChecker.URI, interval/time.Second)
-			healthRegistry.Register(httpChecker.URI, health.PeriodicChecker(checks.HTTPChecker(httpChecker.URI), interval))
+			healthRegistry.Register(httpChecker.URI, health.PeriodicChecker(checker, interval))
+		}
+	}
+
+	for _, tcpChecker := range app.Config.Health.TCPCheckers {
+		interval := tcpChecker.Interval
+		if interval == 0 {
+			interval = defaultCheckInterval
+		}
+
+		checker := checks.TCPChecker(tcpChecker.Addr, tcpChecker.Timeout)
+
+		if tcpChecker.Threshold != 0 {
+			ctxu.GetLogger(app).Infof("configuring TCP health check addr=%s, interval=%d, threshold=%d", tcpChecker.Addr, interval/time.Second, tcpChecker.Threshold)
+			healthRegistry.Register(tcpChecker.Addr, health.PeriodicThresholdChecker(checker, interval, tcpChecker.Threshold))
+		} else {
+			ctxu.GetLogger(app).Infof("configuring TCP health check addr=%s, interval=%d", tcpChecker.Addr, interval/time.Second)
+			healthRegistry.Register(tcpChecker.Addr, health.PeriodicChecker(checker, interval))
 		}
 	}
 }

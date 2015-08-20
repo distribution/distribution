@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"io/ioutil"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -58,6 +59,68 @@ func TestFileHealthCheck(t *testing.T) {
 	<-time.After(2 * interval)
 	if len(healthRegistry.CheckStatus()) != 0 {
 		t.Fatal("expected 0 items in health check results")
+	}
+}
+
+func TestTCPHealthCheck(t *testing.T) {
+	interval := time.Second
+
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("could not create listener: %v", err)
+	}
+	addrStr := ln.Addr().String()
+
+	// Start accepting
+	go func() {
+		for {
+			conn, err := ln.Accept()
+			if err != nil {
+				// listener was closed
+				return
+			}
+			defer conn.Close()
+		}
+	}()
+
+	config := configuration.Configuration{
+		Storage: configuration.Storage{
+			"inmemory": configuration.Parameters{},
+		},
+		Health: configuration.Health{
+			TCPCheckers: []configuration.TCPChecker{
+				{
+					Interval: interval,
+					Addr:     addrStr,
+					Timeout:  500 * time.Millisecond,
+				},
+			},
+		},
+	}
+
+	ctx := context.Background()
+
+	app := NewApp(ctx, config)
+	healthRegistry := health.NewRegistry()
+	app.RegisterHealthChecks(healthRegistry)
+
+	// Wait for health check to happen
+	<-time.After(2 * interval)
+
+	if len(healthRegistry.CheckStatus()) != 0 {
+		t.Fatal("expected 0 items in health check results")
+	}
+
+	ln.Close()
+	<-time.After(2 * interval)
+
+	// Health check should now fail
+	status := healthRegistry.CheckStatus()
+	if len(status) != 1 {
+		t.Fatal("expected 1 item in health check results")
+	}
+	if status[addrStr] != "connection to "+addrStr+" failed" {
+		t.Fatal(`did not get "connection failed" result for health check`)
 	}
 }
 
