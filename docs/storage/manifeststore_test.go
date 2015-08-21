@@ -10,6 +10,7 @@ import (
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/registry/storage/cache/memory"
 	"github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
@@ -75,7 +76,7 @@ func TestManifestStorage(t *testing.T) {
 		}
 	}
 
-	m := manifest.Manifest{
+	m := schema1.Manifest{
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
@@ -94,7 +95,7 @@ func TestManifestStorage(t *testing.T) {
 		dgst := digest.Digest(ds)
 
 		testLayers[digest.Digest(dgst)] = rs
-		m.FSLayers = append(m.FSLayers, manifest.FSLayer{
+		m.FSLayers = append(m.FSLayers, schema1.FSLayer{
 			BlobSum: dgst,
 		})
 	}
@@ -104,7 +105,7 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("unexpected error generating private key: %v", err)
 	}
 
-	sm, merr := manifest.Sign(&m, pk)
+	sm, merr := schema1.Sign(&m, pk)
 	if merr != nil {
 		t.Fatalf("error signing manifest: %v", err)
 	}
@@ -232,7 +233,7 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("unexpected error generating private key: %v", err)
 	}
 
-	sm2, err := manifest.Sign(&m, pk2)
+	sm2, err := schema1.Sign(&m, pk2)
 	if err != nil {
 		t.Fatalf("unexpected error signing manifest: %v", err)
 	}
@@ -260,7 +261,7 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("unexpected error fetching manifest: %v", err)
 	}
 
-	if _, err := manifest.Verify(fetched); err != nil {
+	if _, err := schema1.Verify(fetched); err != nil {
 		t.Fatalf("unexpected error verifying manifest: %v", err)
 	}
 

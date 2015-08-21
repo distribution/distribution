@@ -6,7 +6,7 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/libtrust"
 )
 
@@ -35,7 +35,7 @@ func (ms *manifestStore) Exists(dgst digest.Digest) (bool, error) {
 	return true, nil
 }
 
-func (ms *manifestStore) Get(dgst digest.Digest) (*manifest.SignedManifest, error) {
+func (ms *manifestStore) Get(dgst digest.Digest) (*schema1.SignedManifest, error) {
 	context.GetLogger(ms.ctx).Debug("(*manifestStore).Get")
 	return ms.revisionStore.get(ms.ctx, dgst)
 }
@@ -50,7 +50,7 @@ func SkipLayerVerification(ms distribution.ManifestService) error {
 	return fmt.Errorf("skip layer verification only valid for manifeststore")
 }
 
-func (ms *manifestStore) Put(manifest *manifest.SignedManifest) error {
+func (ms *manifestStore) Put(manifest *schema1.SignedManifest) error {
 	context.GetLogger(ms.ctx).Debug("(*manifestStore).Put")
 
 	if err := ms.verifyManifest(ms.ctx, manifest); err != nil {
@@ -83,7 +83,7 @@ func (ms *manifestStore) ExistsByTag(tag string) (bool, error) {
 	return ms.tagStore.exists(tag)
 }
 
-func (ms *manifestStore) GetByTag(tag string, options ...distribution.ManifestServiceOption) (*manifest.SignedManifest, error) {
+func (ms *manifestStore) GetByTag(tag string, options ...distribution.ManifestServiceOption) (*schema1.SignedManifest, error) {
 	for _, option := range options {
 		err := option(ms)
 		if err != nil {
@@ -104,13 +104,13 @@ func (ms *manifestStore) GetByTag(tag string, options ...distribution.ManifestSe
 // perspective of the registry. It ensures that the signature is valid for the
 // enclosed payload. As a policy, the registry only tries to store valid
 // content, leaving trust policies of that content up to consumers.
-func (ms *manifestStore) verifyManifest(ctx context.Context, mnfst *manifest.SignedManifest) error {
+func (ms *manifestStore) verifyManifest(ctx context.Context, mnfst *schema1.SignedManifest) error {
 	var errs distribution.ErrManifestVerification
 	if mnfst.Name != ms.repository.Name() {
 		errs = append(errs, fmt.Errorf("repository name does not match manifest name"))
 	}
 
-	if _, err := manifest.Verify(mnfst); err != nil {
+	if _, err := schema1.Verify(mnfst); err != nil {
 		switch err {
 		case libtrust.ErrMissingSignatureKey, libtrust.ErrInvalidJSONContent, libtrust.ErrMissingSignatureKey:
 			errs = append(errs, distribution.ErrManifestUnverified{})

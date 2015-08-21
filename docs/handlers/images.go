@@ -10,7 +10,7 @@ import (
 	"github.com/docker/distribution"
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/gorilla/handlers"
@@ -57,7 +57,7 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 		return
 	}
 
-	var sm *manifest.SignedManifest
+	var sm *schema1.SignedManifest
 	if imh.Tag != "" {
 		sm, err = manifests.GetByTag(imh.Tag)
 	} else {
@@ -119,7 +119,7 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 		return
 	}
 
-	var manifest manifest.SignedManifest
+	var manifest schema1.SignedManifest
 	if err := json.Unmarshal(jsonBuf.Bytes(), &manifest); err != nil {
 		imh.Errors = append(imh.Errors, v2.ErrorCodeManifestInvalid.WithDetail(err))
 		return
@@ -229,7 +229,7 @@ func (imh *imageManifestHandler) DeleteImageManifest(w http.ResponseWriter, r *h
 
 // digestManifest takes a digest of the given manifest. This belongs somewhere
 // better but we'll wait for a refactoring cycle to find that real somewhere.
-func digestManifest(ctx context.Context, sm *manifest.SignedManifest) (digest.Digest, error) {
+func digestManifest(ctx context.Context, sm *schema1.SignedManifest) (digest.Digest, error) {
 	p, err := sm.Payload()
 	if err != nil {
 		if !strings.Contains(err.Error(), "missing signature key") {
