@@ -4,8 +4,32 @@ import (
 	"encoding/json"
 	"net/http"
 	"reflect"
+	"strings"
 	"testing"
 )
+
+// TestErrorsManagement does a quick check of the Errors type to ensure that
+// members are properly pushed and marshaled.
+var ErrorCodeTest1 = Register("test.errors", ErrorDescriptor{
+	Value:          "TEST1",
+	Message:        "test error 1",
+	Description:    `Just a test message #1.`,
+	HTTPStatusCode: http.StatusInternalServerError,
+})
+
+var ErrorCodeTest2 = Register("test.errors", ErrorDescriptor{
+	Value:          "TEST2",
+	Message:        "test error 2",
+	Description:    `Just a test message #2.`,
+	HTTPStatusCode: http.StatusNotFound,
+})
+
+var ErrorCodeTest3 = Register("test.errors", ErrorDescriptor{
+	Value:          "TEST3",
+	Message:        "Sorry %q isn't valid",
+	Description:    `Just a test message #3.`,
+	HTTPStatusCode: http.StatusNotFound,
+})
 
 // TestErrorCodes ensures that error code format, mappings and
 // marshaling/unmarshaling. round trips are stable.
@@ -56,32 +80,14 @@ func TestErrorCodes(t *testing.T) {
 		if ecUnmarshaled != ec {
 			t.Fatalf("unexpected error code during error code marshal/unmarshal: %v != %v", ecUnmarshaled, ec)
 		}
+
+		expectedErrorString := strings.ToLower(strings.Replace(ec.Descriptor().Value, "_", " ", -1))
+		if ec.Error() != expectedErrorString {
+			t.Fatalf("unexpected return from %v.Error(): %q != %q", ec, ec.Error(), expectedErrorString)
+		}
 	}
 
 }
-
-// TestErrorsManagement does a quick check of the Errors type to ensure that
-// members are properly pushed and marshaled.
-var ErrorCodeTest1 = Register("v2.errors", ErrorDescriptor{
-	Value:          "TEST1",
-	Message:        "test error 1",
-	Description:    `Just a test message #1.`,
-	HTTPStatusCode: http.StatusInternalServerError,
-})
-
-var ErrorCodeTest2 = Register("v2.errors", ErrorDescriptor{
-	Value:          "TEST2",
-	Message:        "test error 2",
-	Description:    `Just a test message #2.`,
-	HTTPStatusCode: http.StatusNotFound,
-})
-
-var ErrorCodeTest3 = Register("v2.errors", ErrorDescriptor{
-	Value:          "TEST3",
-	Message:        "Sorry %q isn't valid",
-	Description:    `Just a test message #3.`,
-	HTTPStatusCode: http.StatusNotFound,
-})
 
 func TestErrorsManagement(t *testing.T) {
 	var errs Errors
