@@ -7,18 +7,18 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/manifest/schema1"
 )
 
 // ManifestListener describes a set of methods for listening to events related to manifests.
 type ManifestListener interface {
-	ManifestPushed(repo string, sm *manifest.SignedManifest) error
-	ManifestPulled(repo string, sm *manifest.SignedManifest) error
+	ManifestPushed(repo string, sm *schema1.SignedManifest) error
+	ManifestPulled(repo string, sm *schema1.SignedManifest) error
 
 	// TODO(stevvooe): Please note that delete support is still a little shaky
 	// and we'll need to propagate these in the future.
 
-	ManifestDeleted(repo string, sm *manifest.SignedManifest) error
+	ManifestDeleted(repo string, sm *schema1.SignedManifest) error
 }
 
 // BlobListener describes a listener that can respond to layer related events.
@@ -74,7 +74,7 @@ type manifestServiceListener struct {
 	parent *repositoryListener
 }
 
-func (msl *manifestServiceListener) Get(dgst digest.Digest) (*manifest.SignedManifest, error) {
+func (msl *manifestServiceListener) Get(dgst digest.Digest) (*schema1.SignedManifest, error) {
 	sm, err := msl.ManifestService.Get(dgst)
 	if err == nil {
 		if err := msl.parent.listener.ManifestPulled(msl.parent.Repository.Name(), sm); err != nil {
@@ -85,7 +85,7 @@ func (msl *manifestServiceListener) Get(dgst digest.Digest) (*manifest.SignedMan
 	return sm, err
 }
 
-func (msl *manifestServiceListener) Put(sm *manifest.SignedManifest) error {
+func (msl *manifestServiceListener) Put(sm *schema1.SignedManifest) error {
 	err := msl.ManifestService.Put(sm)
 
 	if err == nil {
@@ -97,7 +97,7 @@ func (msl *manifestServiceListener) Put(sm *manifest.SignedManifest) error {
 	return err
 }
 
-func (msl *manifestServiceListener) GetByTag(tag string, options ...distribution.ManifestServiceOption) (*manifest.SignedManifest, error) {
+func (msl *manifestServiceListener) GetByTag(tag string, options ...distribution.ManifestServiceOption) (*schema1.SignedManifest, error) {
 	sm, err := msl.ManifestService.GetByTag(tag, options...)
 	if err == nil {
 		if err := msl.parent.listener.ManifestPulled(msl.parent.Repository.Name(), sm); err != nil {

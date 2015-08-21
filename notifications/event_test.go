@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/manifest/schema1"
 )
 
 // TestEventJSONFormat provides silly test to detect if the event format or
@@ -120,7 +120,7 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
 	manifestPush.Target.Digest = "sha256:0123456789abcdef0"
 	manifestPush.Target.Length = 1
 	manifestPush.Target.Size = 1
-	manifestPush.Target.MediaType = manifest.ManifestMediaType
+	manifestPush.Target.MediaType = schema1.ManifestMediaType
 	manifestPush.Target.Repository = "library/test"
 	manifestPush.Target.URL = "http://example.com/v2/library/test/manifests/latest"
 

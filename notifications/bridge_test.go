@@ -7,7 +7,7 @@ import (
 
 	"github.com/docker/libtrust"
 
-	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/manifest/schema1"
 
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/uuid"
@@ -27,12 +27,12 @@ var (
 		Name: "test",
 	}
 	request = RequestRecord{}
-	m       = manifest.Manifest{
+	m       = schema1.Manifest{
 		Name: repo,
 		Tag:  "latest",
 	}
 
-	sm      *manifest.SignedManifest
+	sm      *schema1.SignedManifest
 	payload []byte
 	dgst    digest.Digest
 )
@@ -80,7 +80,7 @@ func createTestEnv(t *testing.T, fn testSinkFn) Listener {
 		t.Fatalf("error generating private key: %v", err)
 	}
 
-	sm, err = manifest.Sign(&m, pk)
+	sm, err = schema1.Sign(&m, pk)
 	if err != nil {
 		t.Fatalf("error signing manifest: %v", err)
 	}
