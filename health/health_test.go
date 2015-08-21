@@ -51,7 +51,7 @@ func TestReturns503IfThereAreErrorChecks(t *testing.T) {
 // the web application when things aren't so healthy.
 func TestHealthHandler(t *testing.T) {
 	// clear out existing checks.
-	registeredChecks = make(map[string]Checker)
+	DefaultRegistry = NewRegistry()
 
 	// protect an http server
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

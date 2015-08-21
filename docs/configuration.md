@@ -195,6 +195,27 @@ information about each option that appears later in this page.
         maxidle: 16
         maxactive: 64
         idletimeout: 300s
+    health:
+      storagedriver:
+        enabled: true
+        interval: 10s
+        threshold: 3
+      file:
+        - file: /path/to/checked/file
+          interval: 10s
+      http:
+        - uri: http://server.to.check/must/return/200
+          headers:
+            Authorization: [Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==]
+          statuscode: 200
+          timeout: 3s
+          interval: 10s
+          threshold: 3
+      tcp:
+        - addr: redis-server.domain.com:6379
+          timeout: 3s
+          interval: 10s
+          threshold: 3
 
 In some instances a configuration option is **optional** but it contains child
 options marked as **required**. This indicates that you can omit the parent with
@@ -1381,7 +1402,9 @@ The URL to which events should be published.
       yes
     </td>
     <td>
-      Static headers to add to each request.
+      Static headers to add to each request. Each header's name should be a key
+      underneath headers, and each value is a list of payloads for that
+      header name. Note that values must always be lists.
     </td>
   </tr>
   <tr>
@@ -1588,6 +1611,334 @@ Configure the behavior of the Redis connection pool.
   </tr>
 </table>
 
+## health
+
+    health:
+      storagedriver:
+        enabled: true
+        interval: 10s
+        threshold: 3
+      file:
+        - file: /path/to/checked/file
+          interval: 10s
+      http:
+        - uri: http://server.to.check/must/return/200
+          headers:
+            Authorization: [Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==]
+          statuscode: 200
+          timeout: 3s
+          interval: 10s
+          threshold: 3
+      tcp:
+        - addr: redis-server.domain.com:6379
+          timeout: 3s
+          interval: 10s
+          threshold: 3
+
+The health option is **optional**. It may contain preferences for a periodic
+health check on the storage driver's backend storage, and optional periodic
+checks on local files, HTTP URIs, and/or TCP servers. The results of the health
+checks are available at /debug/health on the debug HTTP server if the debug
+HTTP server is enabled (see http section).
+
+### storagedriver
+
+storagedriver contains options for a health check on the configured storage
+driver's backend storage. enabled must be set to true for this health check to
+be active.
+
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>enabled</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+"true" to enable the storage driver health check or "false" to disable it.
+</td>
+  </tr>
+  <tr>
+    <td>
+      <code>interval</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      The length of time to wait between repetitions of the check. This field
+      takes a positive integer and an optional suffix indicating the unit of
+      time. Possible units are:
+      <ul>
+        <li><code>ns</code> (nanoseconds)</li>
+        <li><code>us</code> (microseconds)</li>
+        <li><code>ms</code> (milliseconds)</li>
+        <li><code>s</code> (seconds)</li>
+        <li><code>m</code> (minutes)</li>
+        <li><code>h</code> (hours)</li>
+      </ul>
+    If you omit the suffix, the system interprets the value as nanoseconds.
+    The default value is 10 seconds if this field is omitted.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>threshold</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      An integer specifying the number of times the check must fail before the
+      check triggers an unhealthy state. If this filed is not specified, a
+      single failure will trigger an unhealthy state.
+    </td>
+  </tr>
+</table>
+
+### file
+
+file is a list of paths to be periodically checked for the existence of a file.
+If a file exists at the given path, the health check will fail. This can be
+used as a way of bringing a registry out of rotation by creating a file.
+
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>file</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+The path to check for the existence of a file.
+</td>
+  </tr>
+  <tr>
+    <td>
+      <code>interval</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      The length of time to wait between repetitions of the check. This field
+      takes a positive integer and an optional suffix indicating the unit of
+      time. Possible units are:
+      <ul>
+        <li><code>ns</code> (nanoseconds)</li>
+        <li><code>us</code> (microseconds)</li>
+        <li><code>ms</code> (milliseconds)</li>
+        <li><code>s</code> (seconds)</li>
+        <li><code>m</code> (minutes)</li>
+        <li><code>h</code> (hours)</li>
+      </ul>
+    If you omit the suffix, the system interprets the value as nanoseconds.
+    The default value is 10 seconds if this field is omitted.
+    </td>
+  </tr>
+</table>
+
+### http
+
+http is a list of HTTP URIs to be periodically checked with HEAD requests. If
+a HEAD request doesn't complete or returns an unexpected status code, the
+health check will fail.
+
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>uri</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+The URI to check.
+</td>
+  </tr>
+   <tr>
+    <td>
+      <code>headers</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Static headers to add to each request. Each header's name should be a key
+      underneath headers, and each value is a list of payloads for that
+      header name. Note that values must always be lists.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>statuscode</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+Expected status code from the HTTP URI. Defaults to 200.
+</td>
+  </tr>
+  <tr>
+    <td>
+      <code>timeout</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      The length of time to wait before timing out the HTTP request. This field
+      takes a positive integer and an optional suffix indicating the unit of
+      time. Possible units are:
+      <ul>
+        <li><code>ns</code> (nanoseconds)</li>
+        <li><code>us</code> (microseconds)</li>
+        <li><code>ms</code> (milliseconds)</li>
+        <li><code>s</code> (seconds)</li>
+        <li><code>m</code> (minutes)</li>
+        <li><code>h</code> (hours)</li>
+      </ul>
+    If you omit the suffix, the system interprets the value as nanoseconds.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>interval</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      The length of time to wait between repetitions of the check. This field
+      takes a positive integer and an optional suffix indicating the unit of
+      time. Possible units are:
+      <ul>
+        <li><code>ns</code> (nanoseconds)</li>
+        <li><code>us</code> (microseconds)</li>
+        <li><code>ms</code> (milliseconds)</li>
+        <li><code>s</code> (seconds)</li>
+        <li><code>m</code> (minutes)</li>
+        <li><code>h</code> (hours)</li>
+      </ul>
+    If you omit the suffix, the system interprets the value as nanoseconds.
+    The default value is 10 seconds if this field is omitted.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>threshold</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      An integer specifying the number of times the check must fail before the
+      check triggers an unhealthy state. If this filed is not specified, a
+      single failure will trigger an unhealthy state.
+    </td>
+  </tr>
+</table>
+
+### tcp
+
+tcp is a list of TCP addresses to be periodically checked with connection
+attempts. The addresses must include port numbers. If a connection attempt
+fails, the health check will fail.
+
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>addr</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+The TCP address to connect to, including a port number.
+</td>
+  </tr>
+  <tr>
+    <td>
+      <code>timeout</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      The length of time to wait before timing out the TCP connection. This
+      field takes a positive integer and an optional suffix indicating the unit
+      of time. Possible units are:
+      <ul>
+        <li><code>ns</code> (nanoseconds)</li>
+        <li><code>us</code> (microseconds)</li>
+        <li><code>ms</code> (milliseconds)</li>
+        <li><code>s</code> (seconds)</li>
+        <li><code>m</code> (minutes)</li>
+        <li><code>h</code> (hours)</li>
+      </ul>
+    If you omit the suffix, the system interprets the value as nanoseconds.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>interval</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      The length of time to wait between repetitions of the check. This field
+      takes a positive integer and an optional suffix indicating the unit of
+      time. Possible units are:
+      <ul>
+        <li><code>ns</code> (nanoseconds)</li>
+        <li><code>us</code> (microseconds)</li>
+        <li><code>ms</code> (milliseconds)</li>
+        <li><code>s</code> (seconds)</li>
+        <li><code>m</code> (minutes)</li>
+        <li><code>h</code> (hours)</li>
+      </ul>
+    If you omit the suffix, the system interprets the value as nanoseconds.
+    The default value is 10 seconds if this field is omitted.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>threshold</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      An integer specifying the number of times the check must fail before the
+      check triggers an unhealthy state. If this filed is not specified, a
+      single failure will trigger an unhealthy state.
+    </td>
+  </tr>
+</table>
 
 ## Example: Development configuration
 

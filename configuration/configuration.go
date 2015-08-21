@@ -135,6 +135,8 @@ type Configuration struct {
 		} `yaml:"pool,omitempty"`
 	} `yaml:"redis,omitempty"`
 
+	Health Health `yaml:"health,omitempty"`
+
 	Proxy Proxy `yaml:"proxy,omitempty"`
 }
 
@@ -177,6 +179,68 @@ type MailOptions struct {
 
 	// To defines mail receiving address
 	To []string `yaml:"to,omitempty"`
+}
+
+// FileChecker is a type of entry in the health section for checking files.
+type FileChecker struct {
+	// Interval is the duration in between checks
+	Interval time.Duration `yaml:"interval,omitempty"`
+	// File is the path to check
+	File string `yaml:"file,omitempty"`
+	// Threshold is the number of times a check must fail to trigger an
+	// unhealthy state
+	Threshold int `yaml:"threshold,omitempty"`
+}
+
+// HTTPChecker is a type of entry in the health section for checking HTTP URIs.
+type HTTPChecker struct {
+	// Timeout is the duration to wait before timing out the HTTP request
+	Timeout time.Duration `yaml:"interval,omitempty"`
+	// StatusCode is the expected status code
+	StatusCode int
+	// Interval is the duration in between checks
+	Interval time.Duration `yaml:"interval,omitempty"`
+	// URI is the HTTP URI to check
+	URI string `yaml:"uri,omitempty"`
+	// Headers lists static headers that should be added to all requests
+	Headers http.Header `yaml:"headers"`
+	// Threshold is the number of times a check must fail to trigger an
+	// unhealthy state
+	Threshold int `yaml:"threshold,omitempty"`
+}
+
+// TCPChecker is a type of entry in the health section for checking TCP servers.
+type TCPChecker struct {
+	// Timeout is the duration to wait before timing out the TCP connection
+	Timeout time.Duration `yaml:"interval,omitempty"`
+	// Interval is the duration in between checks
+	Interval time.Duration `yaml:"interval,omitempty"`
+	// Addr is the TCP address to check
+	Addr string `yaml:"addr,omitempty"`
+	// Threshold is the number of times a check must fail to trigger an
+	// unhealthy state
+	Threshold int `yaml:"threshold,omitempty"`
+}
+
+// Health provides the configuration section for health checks.
+type Health struct {
+	// FileCheckers is a list of paths to check
+	FileCheckers []FileChecker `yaml:"file,omitempty"`
+	// HTTPCheckers is a list of URIs to check
+	HTTPCheckers []HTTPChecker `yaml:"http,omitempty"`
+	// TCPCheckers is a list of URIs to check
+	TCPCheckers []TCPChecker `yaml:"tcp,omitempty"`
+	// StorageDriver configures a health check on the configured storage
+	// driver
+	StorageDriver struct {
+		// Enabled turns on the health check for the storage driver
+		Enabled bool `yaml:"enabled,omitempty"`
+		// Interval is the duration in between checks
+		Interval time.Duration `yaml:"interval,omitempty"`
+		// Threshold is the number of times a check must fail to trigger an
+		// unhealthy state
+		Threshold int `yaml:"threshold,omitempty"`
+	} `yaml:"storagedriver,omitempty"`
 }
 
 // v0_1Configuration is a Version 0.1 Configuration struct

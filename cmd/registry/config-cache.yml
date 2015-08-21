@@ -48,3 +48,8 @@ proxy:
   remoteurl: https://registry-1.docker.io
   username: username
   password: password
+health:
+  storagedriver:
+    enabled: true
+    interval: 10s
+    threshold: 3

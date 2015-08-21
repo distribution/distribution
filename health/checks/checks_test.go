@@ -15,11 +15,11 @@ func TestFileChecker(t *testing.T) {
 }
 
 func TestHTTPChecker(t *testing.T) {
-	if err := HTTPChecker("https://www.google.cybertron").Check(); err == nil {
+	if err := HTTPChecker("https://www.google.cybertron", 200, 0, nil).Check(); err == nil {
 		t.Errorf("Google on Cybertron was expected as not exists")
 	}
 
-	if err := HTTPChecker("https://www.google.pt").Check(); err != nil {
+	if err := HTTPChecker("https://www.google.pt", 200, 0, nil).Check(); err != nil {
 		t.Errorf("Google at Portugal was expected as exists, error:%v", err)
 	}
 }
