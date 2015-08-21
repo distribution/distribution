@@ -4,7 +4,6 @@ import (
 	"path"
 	"sync"
 
-	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 )
@@ -14,16 +13,6 @@ type signatureStore struct {
 	blobStore  *blobStore
 	ctx        context.Context
 }
-
-func newSignatureStore(ctx context.Context, repo *repository, blobStore *blobStore) *signatureStore {
-	return &signatureStore{
-		ctx:        ctx,
-		repository: repo,
-		blobStore:  blobStore,
-	}
-}
-
-var _ distribution.SignatureService = &signatureStore{}
 
 func (s *signatureStore) Get(dgst digest.Digest) ([][]byte, error) {
 	signaturesPath, err := pathFor(manifestSignaturesPathSpec{

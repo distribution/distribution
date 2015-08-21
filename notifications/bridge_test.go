@@ -85,7 +85,7 @@ func createTestEnv(t *testing.T, fn testSinkFn) Listener {
 		t.Fatalf("error signing manifest: %v", err)
 	}
 
-	payload, err = sm.Payload()
+	_, payload, err = sm.Payload()
 	if err != nil {
 		t.Fatalf("error getting manifest payload: %v", err)
 	}
@@ -109,7 +109,7 @@ func checkCommonManifest(t *testing.T, action string, events ...Event) {
 	}
 
 	if event.Target.URL != u {
-		t.Fatalf("incorrect url passed: %q != %q", event.Target.URL, u)
+		t.Fatalf("incorrect url passed: \n%q != \n%q", event.Target.URL, u)
 	}
 }
 

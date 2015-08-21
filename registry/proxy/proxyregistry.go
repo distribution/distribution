@@ -42,6 +42,7 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 	s.OnManifestExpire(func(repoName string) error {
 		return v.RemoveRepository(repoName)
 	})
+
 	err = s.Start()
 	if err != nil {
 		return nil, err
@@ -78,7 +79,7 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name string) (distri
 	if err != nil {
 		return nil, err
 	}
-	localManifests, err := localRepo.Manifests(ctx, storage.SkipLayerVerification)
+	localManifests, err := localRepo.Manifests(ctx, storage.SkipLayerVerification())
 	if err != nil {
 		return nil, err
 	}
@@ -106,8 +107,11 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name string) (distri
 			ctx:             ctx,
 			scheduler:       pr.scheduler,
 		},
-		name:       name,
-		signatures: localRepo.Signatures(),
+		name: name,
+		tags: proxyTagService{
+			localTags:  localRepo.Tags(ctx),
+			remoteTags: remoteRepo.Tags(ctx),
+		},
 	}, nil
 }
 
@@ -115,14 +119,13 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name string) (distri
 // locally, or pulling it through from a remote and caching it locally if it doesn't
 // already exist
 type proxiedRepository struct {
-	blobStore  distribution.BlobStore
-	manifests  distribution.ManifestService
-	name       string
-	signatures distribution.SignatureService
+	blobStore distribution.BlobStore
+	manifests distribution.ManifestService
+	name      string
+	tags      distribution.TagService
 }
 
 func (pr *proxiedRepository) Manifests(ctx context.Context, options ...distribution.ManifestServiceOption) (distribution.ManifestService, error) {
-	// options
 	return pr.manifests, nil
 }
 
@@ -134,6 +137,6 @@ func (pr *proxiedRepository) Name() string {
 	return pr.name
 }
 
-func (pr *proxiedRepository) Signatures() distribution.SignatureService {
-	return pr.signatures
+func (pr *proxiedRepository) Tags(ctx context.Context) distribution.TagService {
+	return pr.tags
 }

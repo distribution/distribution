@@ -871,19 +871,15 @@ func testManifestAPI(t *testing.T, env *testEnv, args manifestArgs) (*testEnv, m
 		t.Fatalf("unexpected error signing manifest: %v", err)
 	}
 
-	payload, err := signedManifest.Payload()
-	checkErr(t, err, "getting manifest payload")
-
-	dgst := digest.FromBytes(payload)
-
+	dgst := digest.FromBytes(signedManifest.Canonical)
 	args.signedManifest = signedManifest
 	args.dgst = dgst
 
 	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, dgst.String())
 	checkErr(t, err, "building manifest url")
 
-	resp = putManifest(t, "putting signed manifest", manifestURL, signedManifest)
-	checkResponse(t, "putting signed manifest", resp, http.StatusCreated)
+	resp = putManifest(t, "putting signed manifest no error", manifestURL, signedManifest)
+	checkResponse(t, "putting signed manifest no error", resp, http.StatusCreated)
 	checkHeaders(t, resp, http.Header{
 		"Location":              []string{manifestDigestURL},
 		"Docker-Content-Digest": []string{dgst.String()},
@@ -914,11 +910,12 @@ func testManifestAPI(t *testing.T, env *testEnv, args manifestArgs) (*testEnv, m
 
 	var fetchedManifest schema1.SignedManifest
 	dec := json.NewDecoder(resp.Body)
+
 	if err := dec.Decode(&fetchedManifest); err != nil {
 		t.Fatalf("error decoding fetched manifest: %v", err)
 	}
 
-	if !bytes.Equal(fetchedManifest.Raw, signedManifest.Raw) {
+	if !bytes.Equal(fetchedManifest.Canonical, signedManifest.Canonical) {
 		t.Fatalf("manifests do not match")
 	}
 
@@ -940,8 +937,53 @@ func testManifestAPI(t *testing.T, env *testEnv, args manifestArgs) (*testEnv, m
 		t.Fatalf("error decoding fetched manifest: %v", err)
 	}
 
-	if !bytes.Equal(fetchedManifestByDigest.Raw, signedManifest.Raw) {
+	if !bytes.Equal(fetchedManifestByDigest.Canonical, signedManifest.Canonical) {
 		t.Fatalf("manifests do not match")
+	}
+
+	// check signature was roundtripped
+	signatures, err := fetchedManifestByDigest.Signatures()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(signatures) != 1 {
+		t.Fatalf("expected 1 signature from manifest, got: %d", len(signatures))
+	}
+
+	// Re-sign, push and pull the same digest
+	sm2, err := schema1.Sign(&fetchedManifestByDigest.Manifest, env.pk)
+	if err != nil {
+		t.Fatal(err)
+
+	}
+
+	resp = putManifest(t, "re-putting signed manifest", manifestDigestURL, sm2)
+	checkResponse(t, "re-putting signed manifest", resp, http.StatusCreated)
+
+	resp, err = http.Get(manifestDigestURL)
+	checkErr(t, err, "re-fetching manifest by digest")
+	defer resp.Body.Close()
+
+	checkResponse(t, "re-fetching uploaded manifest", resp, http.StatusOK)
+	checkHeaders(t, resp, http.Header{
+		"Docker-Content-Digest": []string{dgst.String()},
+		"ETag":                  []string{fmt.Sprintf(`"%s"`, dgst)},
+	})
+
+	dec = json.NewDecoder(resp.Body)
+	if err := dec.Decode(&fetchedManifestByDigest); err != nil {
+		t.Fatalf("error decoding fetched manifest: %v", err)
+	}
+
+	// check two signatures were roundtripped
+	signatures, err = fetchedManifestByDigest.Signatures()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(signatures) != 2 {
+		t.Fatalf("expected 2 signature from manifest, got: %d", len(signatures))
 	}
 
 	// Get by name with etag, gives 304
@@ -956,7 +998,7 @@ func testManifestAPI(t *testing.T, env *testEnv, args manifestArgs) (*testEnv, m
 		t.Fatalf("Error constructing request: %s", err)
 	}
 
-	checkResponse(t, "fetching layer with etag", resp, http.StatusNotModified)
+	checkResponse(t, "fetching manifest by name with etag", resp, http.StatusNotModified)
 
 	// Get by digest with etag, gives 304
 	req, err = http.NewRequest("GET", manifestDigestURL, nil)
@@ -969,7 +1011,7 @@ func testManifestAPI(t *testing.T, env *testEnv, args manifestArgs) (*testEnv, m
 		t.Fatalf("Error constructing request: %s", err)
 	}
 
-	checkResponse(t, "fetching layer with etag", resp, http.StatusNotModified)
+	checkResponse(t, "fetching manifest by dgst with etag", resp, http.StatusNotModified)
 
 	// Ensure that the tag is listed.
 	resp, err = http.Get(tagsURL)
@@ -1143,8 +1185,13 @@ func newTestEnvWithConfig(t *testing.T, config *configuration.Configuration) *te
 
 func putManifest(t *testing.T, msg, url string, v interface{}) *http.Response {
 	var body []byte
+
 	if sm, ok := v.(*schema1.SignedManifest); ok {
-		body = sm.Raw
+		_, pl, err := sm.Payload()
+		if err != nil {
+			t.Fatalf("error getting payload: %v", err)
+		}
+		body = pl
 	} else {
 		var err error
 		body, err = json.MarshalIndent(v, "", "   ")
@@ -1435,7 +1482,7 @@ func checkErr(t *testing.T, err error, msg string) {
 	}
 }
 
-func createRepository(env *testEnv, t *testing.T, imageName string, tag string) {
+func createRepository(env *testEnv, t *testing.T, imageName string, tag string) digest.Digest {
 	unsignedManifest := &schema1.Manifest{
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
@@ -1459,7 +1506,6 @@ func createRepository(env *testEnv, t *testing.T, imageName string, tag string) 
 
 	for i := range unsignedManifest.FSLayers {
 		rs, dgstStr, err := testutil.CreateRandomTarFile()
-
 		if err != nil {
 			t.Fatalf("error creating random layer %d: %v", i, err)
 		}
@@ -1477,20 +1523,22 @@ func createRepository(env *testEnv, t *testing.T, imageName string, tag string) 
 		t.Fatalf("unexpected error signing manifest: %v", err)
 	}
 
-	payload, err := signedManifest.Payload()
-	checkErr(t, err, "getting manifest payload")
+	dgst := digest.FromBytes(signedManifest.Canonical)
 
-	dgst := digest.FromBytes(payload)
-
-	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, dgst.String())
+	// Create this repository by tag to ensure the tag mapping is made in the registry
+	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, tag)
 	checkErr(t, err, "building manifest url")
+
+	location, err := env.builder.BuildManifestURL(imageName, dgst.String())
+	checkErr(t, err, "building location URL")
 
 	resp := putManifest(t, "putting signed manifest", manifestDigestURL, signedManifest)
 	checkResponse(t, "putting signed manifest", resp, http.StatusCreated)
 	checkHeaders(t, resp, http.Header{
-		"Location":              []string{manifestDigestURL},
+		"Location":              []string{location},
 		"Docker-Content-Digest": []string{dgst.String()},
 	})
+	return dgst
 }
 
 // Test mutation operations on a registry configured as a cache.  Ensure that they return
@@ -1576,4 +1624,65 @@ func TestCheckContextNotifier(t *testing.T) {
 	if resp.StatusCode != 200 {
 		t.Fatalf("wrong status code - expected 200, got %d", resp.StatusCode)
 	}
+}
+
+func TestProxyManifestGetByTag(t *testing.T) {
+	truthConfig := configuration.Configuration{
+		Storage: configuration.Storage{
+			"inmemory": configuration.Parameters{},
+		},
+	}
+	truthConfig.HTTP.Headers = headerConfig
+
+	imageName := "foo/bar"
+	tag := "latest"
+
+	truthEnv := newTestEnvWithConfig(t, &truthConfig)
+	// create a repository in the truth registry
+	dgst := createRepository(truthEnv, t, imageName, tag)
+
+	proxyConfig := configuration.Configuration{
+		Storage: configuration.Storage{
+			"inmemory": configuration.Parameters{},
+		},
+		Proxy: configuration.Proxy{
+			RemoteURL: truthEnv.server.URL,
+		},
+	}
+	proxyConfig.HTTP.Headers = headerConfig
+
+	proxyEnv := newTestEnvWithConfig(t, &proxyConfig)
+
+	manifestDigestURL, err := proxyEnv.builder.BuildManifestURL(imageName, dgst.String())
+	checkErr(t, err, "building manifest url")
+
+	resp, err := http.Get(manifestDigestURL)
+	checkErr(t, err, "fetching manifest from proxy by digest")
+	defer resp.Body.Close()
+
+	manifestTagURL, err := proxyEnv.builder.BuildManifestURL(imageName, tag)
+	checkErr(t, err, "building manifest url")
+
+	resp, err = http.Get(manifestTagURL)
+	checkErr(t, err, "fetching manifest from proxy by tag")
+	defer resp.Body.Close()
+	checkResponse(t, "fetching manifest from proxy by tag", resp, http.StatusOK)
+	checkHeaders(t, resp, http.Header{
+		"Docker-Content-Digest": []string{dgst.String()},
+	})
+
+	// Create another manifest in the remote with the same image/tag pair
+	newDigest := createRepository(truthEnv, t, imageName, tag)
+	if dgst == newDigest {
+		t.Fatalf("non-random test data")
+	}
+
+	// fetch it with the same proxy URL as before.  Ensure the updated content is at the same tag
+	resp, err = http.Get(manifestTagURL)
+	checkErr(t, err, "fetching manifest from proxy by tag")
+	defer resp.Body.Close()
+	checkResponse(t, "fetching manifest from proxy by tag", resp, http.StatusOK)
+	checkHeaders(t, resp, http.Header{
+		"Docker-Content-Digest": []string{newDigest.String()},
+	})
 }
