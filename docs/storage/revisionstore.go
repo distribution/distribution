@@ -6,7 +6,7 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/libtrust"
 )
 
@@ -18,7 +18,7 @@ type revisionStore struct {
 }
 
 // get retrieves the manifest, keyed by revision digest.
-func (rs *revisionStore) get(ctx context.Context, revision digest.Digest) (*manifest.SignedManifest, error) {
+func (rs *revisionStore) get(ctx context.Context, revision digest.Digest) (*schema1.SignedManifest, error) {
 	// Ensure that this revision is available in this repository.
 	_, err := rs.blobStore.Stat(ctx, revision)
 	if err != nil {
@@ -64,7 +64,7 @@ func (rs *revisionStore) get(ctx context.Context, revision digest.Digest) (*mani
 		return nil, err
 	}
 
-	var sm manifest.SignedManifest
+	var sm schema1.SignedManifest
 	if err := json.Unmarshal(raw, &sm); err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ func (rs *revisionStore) get(ctx context.Context, revision digest.Digest) (*mani
 
 // put stores the manifest in the repository, if not already present. Any
 // updated signatures will be stored, as well.
-func (rs *revisionStore) put(ctx context.Context, sm *manifest.SignedManifest) (distribution.Descriptor, error) {
+func (rs *revisionStore) put(ctx context.Context, sm *schema1.SignedManifest) (distribution.Descriptor, error) {
 	// Resolve the payload in the manifest.
 	payload, err := sm.Payload()
 	if err != nil {
@@ -82,7 +82,7 @@ func (rs *revisionStore) put(ctx context.Context, sm *manifest.SignedManifest) (
 	}
 
 	// Digest and store the manifest payload in the blob store.
-	revision, err := rs.blobStore.Put(ctx, manifest.ManifestMediaType, payload)
+	revision, err := rs.blobStore.Put(ctx, schema1.ManifestMediaType, payload)
 	if err != nil {
 		context.GetLogger(ctx).Errorf("error putting payload into blobstore: %v", err)
 		return distribution.Descriptor{}, err
