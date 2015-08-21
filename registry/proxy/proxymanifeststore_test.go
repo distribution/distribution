@@ -8,6 +8,7 @@ import (
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/registry/proxy/scheduler"
 	"github.com/docker/distribution/registry/storage"
 	"github.com/docker/distribution/registry/storage/cache/memory"
@@ -51,17 +52,17 @@ func (sm statsManifest) ExistsByTag(tag string) (bool, error) {
 	return sm.manifests.ExistsByTag(tag)
 }
 
-func (sm statsManifest) Get(dgst digest.Digest) (*manifest.SignedManifest, error) {
+func (sm statsManifest) Get(dgst digest.Digest) (*schema1.SignedManifest, error) {
 	sm.stats["get"]++
 	return sm.manifests.Get(dgst)
 }
 
-func (sm statsManifest) GetByTag(tag string, options ...distribution.ManifestServiceOption) (*manifest.SignedManifest, error) {
+func (sm statsManifest) GetByTag(tag string, options ...distribution.ManifestServiceOption) (*schema1.SignedManifest, error) {
 	sm.stats["getbytag"]++
 	return sm.manifests.GetByTag(tag, options...)
 }
 
-func (sm statsManifest) Put(manifest *manifest.SignedManifest) error {
+func (sm statsManifest) Put(manifest *schema1.SignedManifest) error {
 	sm.stats["put"]++
 	return sm.manifests.Put(manifest)
 }
@@ -126,7 +127,7 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 }
 
 func populateRepo(t *testing.T, ctx context.Context, repository distribution.Repository, name, tag string) (digest.Digest, error) {
-	m := manifest.Manifest{
+	m := schema1.Manifest{
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
@@ -159,7 +160,7 @@ func populateRepo(t *testing.T, ctx context.Context, repository distribution.Rep
 		t.Fatalf("unexpected error generating private key: %v", err)
 	}
 
-	sm, err := manifest.Sign(&m, pk)
+	sm, err := schema1.Sign(&m, pk)
 	if err != nil {
 		t.Fatalf("error signing manifest: %v", err)
 	}

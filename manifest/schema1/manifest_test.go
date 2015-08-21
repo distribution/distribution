@@ -1,4 +1,4 @@
-package manifest
+package schema1
 
 import (
 	"bytes"
@@ -80,11 +80,9 @@ func genEnv(t *testing.T) *testEnv {
 	name, tag := "foo/bar", "test"
 
 	m := Manifest{
-		Versioned: Versioned{
-			SchemaVersion: 1,
-		},
-		Name: name,
-		Tag:  tag,
+		Versioned: SchemaVersion,
+		Name:      name,
+		Tag:       tag,
 		FSLayers: []FSLayer{
 			{
 				BlobSum: "asdf",

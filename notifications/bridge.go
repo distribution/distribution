@@ -7,7 +7,7 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/uuid"
 )
 
@@ -53,15 +53,15 @@ func NewRequestRecord(id string, r *http.Request) RequestRecord {
 	}
 }
 
-func (b *bridge) ManifestPushed(repo string, sm *manifest.SignedManifest) error {
+func (b *bridge) ManifestPushed(repo string, sm *schema1.SignedManifest) error {
 	return b.createManifestEventAndWrite(EventActionPush, repo, sm)
 }
 
-func (b *bridge) ManifestPulled(repo string, sm *manifest.SignedManifest) error {
+func (b *bridge) ManifestPulled(repo string, sm *schema1.SignedManifest) error {
 	return b.createManifestEventAndWrite(EventActionPull, repo, sm)
 }
 
-func (b *bridge) ManifestDeleted(repo string, sm *manifest.SignedManifest) error {
+func (b *bridge) ManifestDeleted(repo string, sm *schema1.SignedManifest) error {
 	return b.createManifestEventAndWrite(EventActionDelete, repo, sm)
 }
 
@@ -77,7 +77,7 @@ func (b *bridge) BlobDeleted(repo string, desc distribution.Descriptor) error {
 	return b.createBlobEventAndWrite(EventActionDelete, repo, desc)
 }
 
-func (b *bridge) createManifestEventAndWrite(action string, repo string, sm *manifest.SignedManifest) error {
+func (b *bridge) createManifestEventAndWrite(action string, repo string, sm *schema1.SignedManifest) error {
 	manifestEvent, err := b.createManifestEvent(action, repo, sm)
 	if err != nil {
 		return err
@@ -86,9 +86,9 @@ func (b *bridge) createManifestEventAndWrite(action string, repo string, sm *man
 	return b.sink.Write(*manifestEvent)
 }
 
-func (b *bridge) createManifestEvent(action string, repo string, sm *manifest.SignedManifest) (*Event, error) {
+func (b *bridge) createManifestEvent(action string, repo string, sm *schema1.SignedManifest) (*Event, error) {
 	event := b.createEvent(action)
-	event.Target.MediaType = manifest.ManifestMediaType
+	event.Target.MediaType = schema1.ManifestMediaType
 	event.Target.Repository = repo
 
 	p, err := sm.Payload()

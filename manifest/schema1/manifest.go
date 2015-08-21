@@ -1,9 +1,10 @@
-package manifest
+package schema1
 
 import (
 	"encoding/json"
 
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/manifest"
 	"github.com/docker/libtrust"
 )
 
@@ -17,18 +18,18 @@ const (
 	ManifestMediaType = "application/vnd.docker.distribution.manifest.v1+json"
 )
 
-// Versioned provides a struct with just the manifest schemaVersion. Incoming
-// content with unknown schema version can be decoded against this struct to
-// check the version.
-type Versioned struct {
-	// SchemaVersion is the image manifest schema that this image follows
-	SchemaVersion int `json:"schemaVersion"`
-}
+var (
+	// SchemaVersion provides a pre-initialized version structure for this
+	// packages version of the manifest.
+	SchemaVersion = manifest.Versioned{
+		SchemaVersion: 1,
+	}
+)
 
 // Manifest provides the base accessible fields for working with V2 image
 // format in the registry.
 type Manifest struct {
-	Versioned
+	manifest.Versioned
 
 	// Name is the name of the image's repository
 	Name string `json:"name"`

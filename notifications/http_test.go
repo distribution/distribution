@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/manifest/schema1"
 )
 
 // TestHTTPSink mocks out an http endpoint and notifies it under a couple of
@@ -75,12 +75,12 @@ func TestHTTPSink(t *testing.T) {
 		{
 			statusCode: http.StatusOK,
 			events: []Event{
-				createTestEvent("push", "library/test", manifest.ManifestMediaType)},
+				createTestEvent("push", "library/test", schema1.ManifestMediaType)},
 		},
 		{
 			statusCode: http.StatusOK,
 			events: []Event{
-				createTestEvent("push", "library/test", manifest.ManifestMediaType),
+				createTestEvent("push", "library/test", schema1.ManifestMediaType),
 				createTestEvent("push", "library/test", layerMediaType),
 				createTestEvent("push", "library/test", layerMediaType),
 			},

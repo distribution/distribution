@@ -22,6 +22,7 @@ import (
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
 	_ "github.com/docker/distribution/registry/storage/driver/inmemory"
@@ -648,7 +649,7 @@ func httpDelete(url string) (*http.Response, error) {
 
 type manifestArgs struct {
 	imageName      string
-	signedManifest *manifest.SignedManifest
+	signedManifest *schema1.SignedManifest
 	dgst           digest.Digest
 }
 
@@ -741,13 +742,13 @@ func testManifestAPI(t *testing.T, env *testEnv, args manifestArgs) (*testEnv, m
 
 	// --------------------------------
 	// Attempt to push unsigned manifest with missing layers
-	unsignedManifest := &manifest.Manifest{
+	unsignedManifest := &schema1.Manifest{
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
 		Name: imageName,
 		Tag:  tag,
-		FSLayers: []manifest.FSLayer{
+		FSLayers: []schema1.FSLayer{
 			{
 				BlobSum: "asdf",
 			},
@@ -797,7 +798,7 @@ func testManifestAPI(t *testing.T, env *testEnv, args manifestArgs) (*testEnv, m
 
 	// -------------------
 	// Push the signed manifest with all layers pushed.
-	signedManifest, err := manifest.Sign(unsignedManifest, env.pk)
+	signedManifest, err := schema1.Sign(unsignedManifest, env.pk)
 	if err != nil {
 		t.Fatalf("unexpected error signing manifest: %v", err)
 	}
@@ -844,7 +845,7 @@ func testManifestAPI(t *testing.T, env *testEnv, args manifestArgs) (*testEnv, m
 		"ETag":                  []string{fmt.Sprintf(`"%s"`, dgst)},
 	})
 
-	var fetchedManifest manifest.SignedManifest
+	var fetchedManifest schema1.SignedManifest
 	dec := json.NewDecoder(resp.Body)
 	if err := dec.Decode(&fetchedManifest); err != nil {
 		t.Fatalf("error decoding fetched manifest: %v", err)
@@ -866,7 +867,7 @@ func testManifestAPI(t *testing.T, env *testEnv, args manifestArgs) (*testEnv, m
 		"ETag":                  []string{fmt.Sprintf(`"%s"`, dgst)},
 	})
 
-	var fetchedManifestByDigest manifest.SignedManifest
+	var fetchedManifestByDigest schema1.SignedManifest
 	dec = json.NewDecoder(resp.Body)
 	if err := dec.Decode(&fetchedManifestByDigest); err != nil {
 		t.Fatalf("error decoding fetched manifest: %v", err)
@@ -1062,7 +1063,7 @@ func newTestEnvWithConfig(t *testing.T, config *configuration.Configuration) *te
 
 func putManifest(t *testing.T, msg, url string, v interface{}) *http.Response {
 	var body []byte
-	if sm, ok := v.(*manifest.SignedManifest); ok {
+	if sm, ok := v.(*schema1.SignedManifest); ok {
 		body = sm.Raw
 	} else {
 		var err error
@@ -1355,13 +1356,13 @@ func checkErr(t *testing.T, err error, msg string) {
 }
 
 func createRepository(env *testEnv, t *testing.T, imageName string, tag string) {
-	unsignedManifest := &manifest.Manifest{
+	unsignedManifest := &schema1.Manifest{
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
 		Name: imageName,
 		Tag:  tag,
-		FSLayers: []manifest.FSLayer{
+		FSLayers: []schema1.FSLayer{
 			{
 				BlobSum: "asdf",
 			},
@@ -1389,7 +1390,7 @@ func createRepository(env *testEnv, t *testing.T, imageName string, tag string) 
 		pushLayer(t, env.builder, imageName, dgst, uploadURLBase, rs)
 	}
 
-	signedManifest, err := manifest.Sign(unsignedManifest, env.pk)
+	signedManifest, err := schema1.Sign(unsignedManifest, env.pk)
 	if err != nil {
 		t.Fatalf("unexpected error signing manifest: %v", err)
 	}
@@ -1425,13 +1426,13 @@ func TestRegistryAsCacheMutationAPIs(t *testing.T) {
 	}
 
 	// Manifest upload
-	unsignedManifest := &manifest.Manifest{
+	unsignedManifest := &schema1.Manifest{
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
 		Name:     imageName,
 		Tag:      tag,
-		FSLayers: []manifest.FSLayer{},
+		FSLayers: []schema1.FSLayer{},
 	}
 	resp := putManifest(t, "putting unsigned manifest", manifestURL, unsignedManifest)
 	checkResponse(t, "putting signed manifest to cache", resp, errcode.ErrorCodeUnsupported.Descriptor().HTTPStatusCode)

@@ -9,6 +9,7 @@ import (
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/registry/storage"
 	"github.com/docker/distribution/registry/storage/cache/memory"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
@@ -54,18 +55,18 @@ type testListener struct {
 	ops map[string]int
 }
 
-func (tl *testListener) ManifestPushed(repo string, sm *manifest.SignedManifest) error {
+func (tl *testListener) ManifestPushed(repo string, sm *schema1.SignedManifest) error {
 	tl.ops["manifest:push"]++
 
 	return nil
 }
 
-func (tl *testListener) ManifestPulled(repo string, sm *manifest.SignedManifest) error {
+func (tl *testListener) ManifestPulled(repo string, sm *schema1.SignedManifest) error {
 	tl.ops["manifest:pull"]++
 	return nil
 }
 
-func (tl *testListener) ManifestDeleted(repo string, sm *manifest.SignedManifest) error {
+func (tl *testListener) ManifestDeleted(repo string, sm *schema1.SignedManifest) error {
 	tl.ops["manifest:delete"]++
 	return nil
 }
@@ -94,7 +95,7 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 	// update counts. Basically, it would make writing tests a lot easier.
 	ctx := context.Background()
 	tag := "thetag"
-	m := manifest.Manifest{
+	m := schema1.Manifest{
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
@@ -127,7 +128,7 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 			t.Fatalf("unexpected error finishing upload: %v", err)
 		}
 
-		m.FSLayers = append(m.FSLayers, manifest.FSLayer{
+		m.FSLayers = append(m.FSLayers, schema1.FSLayer{
 			BlobSum: dgst,
 		})
 
@@ -144,7 +145,7 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 		t.Fatalf("unexpected error generating key: %v", err)
 	}
 
-	sm, err := manifest.Sign(&m, pk)
+	sm, err := schema1.Sign(&m, pk)
 	if err != nil {
 		t.Fatalf("unexpected error signing manifest: %v", err)
 	}

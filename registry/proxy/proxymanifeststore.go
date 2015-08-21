@@ -6,7 +6,7 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/registry/client"
 	"github.com/docker/distribution/registry/proxy/scheduler"
 )
@@ -36,7 +36,7 @@ func (pms proxyManifestStore) Exists(dgst digest.Digest) (bool, error) {
 	return pms.remoteManifests.Exists(dgst)
 }
 
-func (pms proxyManifestStore) Get(dgst digest.Digest) (*manifest.SignedManifest, error) {
+func (pms proxyManifestStore) Get(dgst digest.Digest) (*schema1.SignedManifest, error) {
 	sm, err := pms.localManifests.Get(dgst)
 	if err == nil {
 		proxyMetrics.ManifestPush(uint64(len(sm.Raw)))
@@ -81,7 +81,7 @@ func (pms proxyManifestStore) ExistsByTag(tag string) (bool, error) {
 	return pms.remoteManifests.ExistsByTag(tag)
 }
 
-func (pms proxyManifestStore) GetByTag(tag string, options ...distribution.ManifestServiceOption) (*manifest.SignedManifest, error) {
+func (pms proxyManifestStore) GetByTag(tag string, options ...distribution.ManifestServiceOption) (*schema1.SignedManifest, error) {
 	var localDigest digest.Digest
 
 	localManifest, err := pms.localManifests.GetByTag(tag, options...)
@@ -100,7 +100,7 @@ func (pms proxyManifestStore) GetByTag(tag string, options ...distribution.Manif
 	}
 
 fromremote:
-	var sm *manifest.SignedManifest
+	var sm *schema1.SignedManifest
 	sm, err = pms.remoteManifests.GetByTag(tag, client.AddEtagToTag(tag, localDigest.String()))
 	if err != nil {
 		return nil, err
@@ -130,7 +130,7 @@ fromremote:
 	return sm, err
 }
 
-func manifestDigest(sm *manifest.SignedManifest) (digest.Digest, error) {
+func manifestDigest(sm *schema1.SignedManifest) (digest.Digest, error) {
 	payload, err := sm.Payload()
 	if err != nil {
 		return "", err
@@ -145,7 +145,7 @@ func manifestDigest(sm *manifest.SignedManifest) (digest.Digest, error) {
 	return dgst, nil
 }
 
-func (pms proxyManifestStore) Put(manifest *manifest.SignedManifest) error {
+func (pms proxyManifestStore) Put(manifest *schema1.SignedManifest) error {
 	return distribution.ErrUnsupported
 }
 
