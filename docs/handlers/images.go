@@ -2,19 +2,15 @@ package handlers
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/docker/distribution"
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/gorilla/handlers"
-	"golang.org/x/net/context"
 )
 
 // imageManifestDispatcher takes the request context and builds the
@@ -33,7 +29,8 @@ func imageManifestDispatcher(ctx *Context, r *http.Request) http.Handler {
 	}
 
 	mhandler := handlers.MethodHandler{
-		"GET": http.HandlerFunc(imageManifestHandler.GetImageManifest),
+		"GET":  http.HandlerFunc(imageManifestHandler.GetImageManifest),
+		"HEAD": http.HandlerFunc(imageManifestHandler.GetImageManifest),
 	}
 
 	if !ctx.readOnly {
@@ -54,6 +51,8 @@ type imageManifestHandler struct {
 }
 
 // GetImageManifest fetches the image manifest from the storage backend, if it exists.
+// todo(richardscothern): this assumes v2 schema 1 manifests for now but in the future
+// get the version from the Accept HTTP header
 func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http.Request) {
 	ctxu.GetLogger(imh).Debug("GetImageManifest")
 	manifests, err := imh.Repository.Manifests(imh)
@@ -62,42 +61,38 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 		return
 	}
 
-	var sm *schema1.SignedManifest
+	var manifest distribution.Manifest
 	if imh.Tag != "" {
-		sm, err = manifests.GetByTag(imh.Tag)
-	} else {
-		if etagMatch(r, imh.Digest.String()) {
-			w.WriteHeader(http.StatusNotModified)
+		tags := imh.Repository.Tags(imh)
+		desc, err := tags.Get(imh, imh.Tag)
+		if err != nil {
+			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
 			return
 		}
-		sm, err = manifests.Get(imh.Digest)
+		imh.Digest = desc.Digest
 	}
 
+	if etagMatch(r, imh.Digest.String()) {
+		w.WriteHeader(http.StatusNotModified)
+		return
+	}
+
+	manifest, err = manifests.Get(imh, imh.Digest)
 	if err != nil {
 		imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
 		return
 	}
 
-	// Get the digest, if we don't already have it.
-	if imh.Digest == "" {
-		dgst, err := digestManifest(imh, sm)
-		if err != nil {
-			imh.Errors = append(imh.Errors, v2.ErrorCodeDigestInvalid.WithDetail(err))
-			return
-		}
-		if etagMatch(r, dgst.String()) {
-			w.WriteHeader(http.StatusNotModified)
-			return
-		}
-
-		imh.Digest = dgst
+	ct, p, err := manifest.Payload()
+	if err != nil {
+		return
 	}
 
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.Header().Set("Content-Length", fmt.Sprint(len(sm.Raw)))
+	w.Header().Set("Content-Type", ct)
+	w.Header().Set("Content-Length", fmt.Sprint(len(p)))
 	w.Header().Set("Docker-Content-Digest", imh.Digest.String())
 	w.Header().Set("Etag", fmt.Sprintf(`"%s"`, imh.Digest))
-	w.Write(sm.Raw)
+	w.Write(p)
 }
 
 func etagMatch(r *http.Request, etag string) bool {
@@ -109,7 +104,7 @@ func etagMatch(r *http.Request, etag string) bool {
 	return false
 }
 
-// PutImageManifest validates and stores and image in the registry.
+// PutImageManifest validates and stores an image in the registry.
 func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http.Request) {
 	ctxu.GetLogger(imh).Debug("PutImageManifest")
 	manifests, err := imh.Repository.Manifests(imh)
@@ -124,39 +119,28 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 		return
 	}
 
-	var manifest schema1.SignedManifest
-	if err := json.Unmarshal(jsonBuf.Bytes(), &manifest); err != nil {
+	mediaType := r.Header.Get("Content-Type")
+	manifest, desc, err := distribution.UnmarshalManifest(mediaType, jsonBuf.Bytes())
+	if err != nil {
 		imh.Errors = append(imh.Errors, v2.ErrorCodeManifestInvalid.WithDetail(err))
 		return
 	}
 
-	dgst, err := digestManifest(imh, &manifest)
-	if err != nil {
-		imh.Errors = append(imh.Errors, v2.ErrorCodeDigestInvalid.WithDetail(err))
-		return
-	}
-
-	// Validate manifest tag or digest matches payload
-	if imh.Tag != "" {
-		if manifest.Tag != imh.Tag {
-			ctxu.GetLogger(imh).Errorf("invalid tag on manifest payload: %q != %q", manifest.Tag, imh.Tag)
-			imh.Errors = append(imh.Errors, v2.ErrorCodeTagInvalid)
-			return
-		}
-
-		imh.Digest = dgst
-	} else if imh.Digest != "" {
-		if dgst != imh.Digest {
-			ctxu.GetLogger(imh).Errorf("payload digest does match: %q != %q", dgst, imh.Digest)
+	if imh.Digest != "" {
+		if desc.Digest != imh.Digest {
+			ctxu.GetLogger(imh).Errorf("payload digest does match: %q != %q", desc.Digest, imh.Digest)
 			imh.Errors = append(imh.Errors, v2.ErrorCodeDigestInvalid)
 			return
 		}
+	} else if imh.Tag != "" {
+		imh.Digest = desc.Digest
 	} else {
 		imh.Errors = append(imh.Errors, v2.ErrorCodeTagInvalid.WithDetail("no tag or digest specified"))
 		return
 	}
 
-	if err := manifests.Put(&manifest); err != nil {
+	_, err = manifests.Put(imh, manifest)
+	if err != nil {
 		// TODO(stevvooe): These error handling switches really need to be
 		// handled by an app global mapper.
 		if err == distribution.ErrUnsupported {
@@ -188,6 +172,17 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 		return
 	}
 
+	// Tag this manifest
+	if imh.Tag != "" {
+		tags := imh.Repository.Tags(imh)
+		err = tags.Tag(imh, imh.Tag, desc)
+		if err != nil {
+			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+			return
+		}
+
+	}
+
 	// Construct a canonical url for the uploaded manifest.
 	location, err := imh.urlBuilder.BuildManifestURL(imh.Repository.Name(), imh.Digest.String())
 	if err != nil {
@@ -212,7 +207,7 @@ func (imh *imageManifestHandler) DeleteImageManifest(w http.ResponseWriter, r *h
 		return
 	}
 
-	err = manifests.Delete(imh.Digest)
+	err = manifests.Delete(imh, imh.Digest)
 	if err != nil {
 		switch err {
 		case digest.ErrDigestUnsupported:
@@ -232,23 +227,4 @@ func (imh *imageManifestHandler) DeleteImageManifest(w http.ResponseWriter, r *h
 	}
 
 	w.WriteHeader(http.StatusAccepted)
-}
-
-// digestManifest takes a digest of the given manifest. This belongs somewhere
-// better but we'll wait for a refactoring cycle to find that real somewhere.
-func digestManifest(ctx context.Context, sm *schema1.SignedManifest) (digest.Digest, error) {
-	p, err := sm.Payload()
-	if err != nil {
-		if !strings.Contains(err.Error(), "missing signature key") {
-			ctxu.GetLogger(ctx).Errorf("error getting manifest payload: %v", err)
-			return "", err
-		}
-
-		// NOTE(stevvooe): There are no signatures but we still have a
-		// payload. The request will fail later but this is not the
-		// responsibility of this part of the code.
-		p = sm.Raw
-	}
-
-	return digest.FromBytes(p), nil
 }
