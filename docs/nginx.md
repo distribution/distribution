@@ -8,29 +8,34 @@ keywords = ["registry, service, images, repository, authentication"]
 
 # Authenticating proxy with nginx
 
-With this method, you implement basic authentication in a reverse proxy that sits in front of your registry.
 
-While this model gives you the ability to use whatever authentication backend you want through a secondary authentication mechanism implemented inside your proxy, it also requires that you move TLS termination from the Registry to the proxy itself.
+## Use-case
 
-Furthermore, introducing an extra http layer in your communication pipeline will make it more complex to deploy, maintain, and debug, and will possibly create issues (typically, nginx does buffer client requests to disk, opening the door to a host of problems if you are dealing with huge images and a lot of traffic).
+People already relying on a nginx proxy to authenticate their users to other services might want to leverage it and have Registry communications tunneled through the same pipeline.
 
-### Requirements
+Usually, that includes enterprise setups using LDAP/AD on the backend and a SSO mechanism fronting their internal http portal.
 
-You should have followed entirely the basic [deployment guide](deploying.md).
+### Alternatives
 
-If you have not, please take the time to do so.
+If you just want authentication for your registry, and are happy maintaining users access separately, you should really consider sticking with the native [basic auth registry feature](deploying.md#native-basic-auth). 
 
-At this point, it's assumed that:
+### Solution
 
- * you understand Docker security requirements, and how to configure your docker engines properly
- * you have installed Docker Compose
- * it's HIGHLY recommended that you get a certificate from a known CA instead of self-signed certificates
- * inside the current directory, you have a X509 `domain.crt` and `domain.key`, for the CN `myregistrydomain.com` (or whatever domain name you want to use)
- * be sure you have stopped and removed any previously running registry (typically `docker stop registry && docker rm -v registry`)
+With the method presented here, you implement basic authentication for docker engines in a reverse proxy that sits in front of your registry.
 
-### Setting things up
+While we use a simple htpasswd file as an example, any other nginx authentication backend should be fairly easy to implement once you are done with the exemple.
 
-Read again the requirements.
+We also implement push restriction (to a limited user group) for the sake of the exemple. Again, you should modify this to fit your mileage. 
+
+### Gotchas
+
+While this model gives you the ability to use whatever authentication backend you want through the secondary authentication mechanism implemented inside your proxy, it also requires that you move TLS termination from the Registry to the proxy itself.
+
+Furthermore, introducing an extra http layer in your communication pipeline will make it more complex to deploy, maintain, and debug, and will possibly create issues.
+
+## Setting things up
+
+Read again [the requirements](recipes.md#requirements).
 
 Ready?
 
@@ -41,7 +46,7 @@ mkdir -p auth
 mkdir -p data
 
 # This is the main nginx configuration you will use
-cat <<EOF > auth/registry.conf
+cat <<EOF > auth/nginx.conf
 upstream docker-registry {
   server registry:5000;
 }
@@ -53,6 +58,12 @@ server {
   # SSL
   ssl_certificate /etc/nginx/conf.d/domain.crt;
   ssl_certificate_key /etc/nginx/conf.d/domain.key;
+
+  # Recommandations from https://raymii.org/s/tutorials/Strong_SSL_Security_On_nginx.html
+  ssl_protocols TLSv1.1 TLSv1.2;
+  ssl_ciphers 'EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH';
+  ssl_prefer_server_ciphers on;
+  ssl_session_cache shared:SSL:10m;
 
   # disable any limits to avoid HTTP 413 for large image uploads
   client_max_body_size 0;
@@ -69,7 +80,7 @@ server {
 
     # To add basic authentication to v2 use auth_basic setting plus add_header
     auth_basic "Registry realm";
-    auth_basic_user_file /etc/nginx/conf.d/htpasswd;
+    auth_basic_user_file /etc/nginx/conf.d/nginx.htpasswd;
     add_header 'Docker-Distribution-Api-Version' 'registry/2.0' always;
 
     proxy_pass                          http://docker-registry;
@@ -83,7 +94,7 @@ server {
 EOF
 
 # Now, create a password file for "testuser" and "testpassword"
-htpasswd -bn testuser testpassword > auth/htpasswd
+docker run --entrypoint htpasswd httpd:2.4 -bn testuser testpassword > auth/nginx.htpasswd
 
 # Copy over your certificate files
 cp domain.crt auth
@@ -105,23 +116,25 @@ registry:
   image: registry:2
   ports:
     - 127.0.0.1:5000:5000
-  environment:
-    REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /data
   volumes:
-    - `pwd`/data:/data
+    - `pwd`/data:/var/lib/registry
 EOF
 ```
 
-### Starting and stopping
+## Starting and stopping
 
-That's it. You can now:
+Now, start your stack:
 
- * `docker-compose up -d` to start your registry
- * `docker login myregistrydomain.com:5043` (using `testuser` and `testpassword`)
- * `docker tag ubuntu myregistrydomain.com:5043/toto`
- * `docker push myregistrydomain.com:5043/toto`
+    docker-compose up -d
 
-### Docker still complains about the certificate?
+Login with a "push" authorized user (using `testuserpush` and `testpasswordpush`), then tag and push your first image: 
+
+    docker login myregistrydomain.com:5043
+    docker tag ubuntu myregistrydomain.com:5043/test
+    docker push myregistrydomain.com:5043/test
+    docker pull myregistrydomain.com:5043/test
+
+## Docker still complains about the certificate?
 
 That's certainly because you are using a self-signed certificate, despite the warnings.
 
