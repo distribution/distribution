@@ -17,6 +17,10 @@ To provide consistent content hashing of JSON objects throughout Docker
 Distribution APIs, the specification defines a canonical JSON format. Adopting
 such a canonicalization also aids in caching JSON responses.
 
+Note that protocols should not be designed to depend on identical JSON being
+generated across different versions or clients. The canonicalization rules are
+merely useful for caching and consistency.
+
 ## Rules
 
 Compliant JSON should conform to the following rules:
@@ -28,6 +32,8 @@ Compliant JSON should conform to the following rules:
    keys shall always appear in lexically sorted order.
 4. All whitespace between tokens should be removed.
 5. No "trailing commas" are allowed in object or array definitions.
+6. The angle brackets "<" and ">" are escaped to "\u003c" and "\u003e".
+   Ampersand "&" is escaped to "\u0026".
 
 ## Examples
 
