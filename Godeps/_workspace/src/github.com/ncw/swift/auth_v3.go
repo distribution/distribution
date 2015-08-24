@@ -33,6 +33,7 @@ type v3AuthRequest struct {
 type v3Scope struct {
 	Project *v3Project `json:"project,omitempty"`
 	Domain  *v3Domain  `json:"domain,omitempty"`
+	Trust   *v3Trust   `json:"OS-TRUST:trust,omitempty"`
 }
 
 type v3Domain struct {
@@ -44,6 +45,10 @@ type v3Project struct {
 	Name   string    `json:"name,omitempty"`
 	Id     string    `json:"id,omitempty"`
 	Domain *v3Domain `json:"domain,omitempty"`
+}
+
+type v3Trust struct {
+	Id string `json:"id"`
 }
 
 type v3User struct {
@@ -66,7 +71,12 @@ type v3AuthResponse struct {
 	Token struct {
 		Expires_At, Issued_At string
 		Methods               []string
-		Roles                 []map[string]string
+		Roles                 []struct {
+			Id, Name string
+			Links    struct {
+				Self string
+			}
+		}
 
 		Project struct {
 			Domain struct {
@@ -129,7 +139,9 @@ func (auth *v3Auth) Request(c *Connection) (*http.Request, error) {
 		v3.Auth.Identity.Password.User.Domain = domain
 	}
 
-	if c.TenantId != "" || c.Tenant != "" {
+	if c.TrustId != "" {
+		v3.Auth.Scope = &v3Scope{Trust: &v3Trust{Id: c.TrustId}}
+	} else if c.TenantId != "" || c.Tenant != "" {
 
 		v3.Auth.Scope = &v3Scope{Project: &v3Project{}}
 
@@ -159,7 +171,7 @@ func (auth *v3Auth) Request(c *Connection) (*http.Request, error) {
 	if !strings.HasSuffix(url, "/") {
 		url += "/"
 	}
-	url += "tokens"
+	url += "auth/tokens"
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
 	if err != nil {
 		return nil, err

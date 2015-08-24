@@ -77,6 +77,10 @@ And optionally these if using v3 authentication
     export SWIFT_API_DOMAIN_ID='domain id'
     export SWIFT_API_DOMAIN='domain name'
 
+And optionally these if using v3 trust
+
+    export SWIFT_TRUST_ID='TrustId'
+
 And optionally this if you want to skip server certificate validation
 
     export SWIFT_AUTH_INSECURE=1
@@ -126,3 +130,5 @@ Contributors
 - Sylvain Baubeau <sbaubeau@redhat.com>
 - Chris Kastorff <encryptio@gmail.com>
 - Dai HaoJun <haojun.dai@hp.com>
+- Hua Wang <wanghua.humble@gmail.com>
+- Fabian Ruff <fabian@progra.de>
