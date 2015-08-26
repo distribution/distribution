@@ -8,6 +8,8 @@ draft = "true"
 
 A v2 Registry can be configured as a pull through cache.  In this mode a Registry responds to all normal docker pull requests but stores all content locally.
 
+NOTE: Currently this feature can only be used to proxy against the official Docker Hub.
+
 ## Why?
 
 If you have multiple instances of Docker running in your environment (e.g., multiple physical or virtual machines, all running the Docker daemon), each time one of them requires an image that it doesn’t have it will go out to the internet and fetch it from the public Docker registry. By running a local registry mirror, you can keep most of the image fetch traffic on your local network.
