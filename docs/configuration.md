@@ -1,8 +1,8 @@
 <!--[metadata]>
 +++
-title = "Configure a Registry"
-description = "Explains how to deploy a registry"
-keywords = ["registry, service, images,  repository"]
+title = "Configuring a registry"
+description = "Explains how to configure a registry"
+keywords = ["registry, on-prem, images, tags, repository, distribution, configuration"]
 [menu.main]
 parent="smn_registry"
 weight=4
@@ -37,7 +37,7 @@ directory.
 >as replacing the storage driver type with `REGISTRY_STORAGE=filesystem`, then
 >all sub-fields will be erased. As such, specifying the storage type in the
 >environment will remove all parameters related to the old storage
->configuration.
+>configuration (order *matters*).
 
 ## Overriding the entire configuration file
 
@@ -225,8 +225,6 @@ In some instances a configuration option is **optional** but it contains child
 options marked as **required**. This indicates that you can omit the parent with
 all its children. However, if the parent is included, you must also include all
 the children marked **required**.
-
-
 
 ## version
 

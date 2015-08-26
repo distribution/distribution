@@ -28,7 +28,7 @@ HTTP for mirror and HTTPS for v1 & v2
 
 ### Registry v2
 
-    docker run -d -e SETTINGS_FLAVOR=dev -v /var/lib/axway/docker-registry/storage/hosting2-v2:/tmp -p 5002:5000 registry:2.0"
+    docker run -d -e SETTINGS_FLAVOR=dev -v /var/lib/axway/docker-registry/storage/hosting2-v2:/tmp -p 5002:5000 registry:2"
 
 # For Hosting mode access
 

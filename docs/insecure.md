@@ -1,8 +1,8 @@
 <!--[metadata]>
 +++
-title = "Insecure Registry"
-description = "Deploying an insecure Registry"
-keywords = ["registry, images, repository"]
+title = "Testing an insecure registry"
+description = "Deploying a Registry in an insecure fashion"
+keywords = ["registry, on-prem, images, tags, repository, distribution, insecure"]
 +++
 <![end-metadata]-->
 
@@ -23,16 +23,16 @@ This basically tells Docker to entirely disregard security for your registry.
 
 **Pros:**
 
- - easy to configure
+ - relatively easy to configure
  
 **Cons:**
  
- - very insecure
+ - this is **very** insecure: you are basically exposing yourself to trivial MITM, and this solution should only be used for isolated testing or in a tightly controlled, air-gapped environment
  - you have to configure every docker daemon that wants to access your registry 
   
 ## Using self-signed certificates
 
-> :warning: using this along with basic authentication requires to **also** trust the certificate into the OS cert store for some versions of docker
+> :warning: using this along with basic authentication requires to **also** trust the certificate into the OS cert store for some versions of docker (see below)
 
 Generate your own certificate:
 
@@ -42,11 +42,11 @@ Generate your own certificate:
 
 Be sure to use the name `myregistrydomain.com` as a CN.
 
-Stop and restart your registry.
+Use the result to [start your registry with TLS enabled](https://github.com/docker/distribution/blob/master/docs/deploying.md#get-a-certificate)
 
-Then you have to instruct every docker daemon to trust that certificate. This is done by copying the `domain.crt` file to `/etc/docker/certs.d/myregistrydomain.com:5000/ca.crt` (don't forget to restart docker after doing so).
+Then you have to instruct every docker daemon to trust that certificate. This is done by copying the `domain.crt` file to `/etc/docker/certs.d/myregistrydomain.com:5000/ca.crt`.
 
-Stop and restart all your docker daemons.
+Don't forget to restart docker after doing so.
 
 **Pros:**
 
@@ -68,3 +68,19 @@ If this private registry supports only HTTP or HTTPS with an unknown CA certific
 In the case of HTTPS, if you have access to the registry's CA certificate, no need for the flag;
 simply place the CA certificate at /etc/docker/certs.d/myregistrydomain.com:5000/ca.crt
 ```
+
+## Docker still complains about the certificate when using authentication?
+
+When using authentication, some versions of docker also require you to trust the certificate at the OS level.
+
+Usually, on Ubuntu this is done with:
+
+    cp auth/domain.crt /usr/local/share/ca-certificates/myregistrydomain.com.crt
+    update-ca-certificates
+
+... and on RedHat with:
+
+    cp auth/domain.crt /etc/pki/ca-trust/source/anchors/myregistrydomain.com.crt
+    update-ca-trust
+
+Now restart docker (`service docker stop && service docker start`, or any other way you use to restart docker).

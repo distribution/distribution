@@ -1,8 +1,8 @@
 <!--[metadata]>
 +++
-title = "Docker Registry 2.0"
-description = "Introduces the Docker Registry"
-keywords = ["registry, images, repository"]
+title = "Docker Registry"
+description = "High-level overview of the Registry"
+keywords = ["registry, on-prem, images, tags, repository, distribution"]
 [menu.main]
 parent="smn_registry"
 +++
@@ -32,7 +32,7 @@ Users looking for a commercially supported version of the Registry should look i
 ## Requirements
 
 The Registry is compatible with Docker engine **version 1.6.0 or higher**.
-If you really need to work with older Docker versions, you should look into the [old python registry](https://github.com/docker/docker-registry)
+If you really need to work with older Docker versions, you should look into the [old python registry](https://github.com/docker/docker-registry).
 
 ## TL;DR
 

@@ -1,14 +1,12 @@
 <!--[metadata]>
 +++
-title = "Docker Registry v2 Authentication"
+title = "Token Authentication"
 description = "Introduces the Docker Registry v2 authentication"
-keywords = ["registry, images, repository, v2,  authentication"]
+keywords = ["registry, on-prem, images, tags, repository, distribution, JWT authentication, advanced"]
 [menu.main]
 parent="smn_registry_ref"
 +++
 <![end-metadata]-->
-
-
 
 # Docker Registry v2 authentication via central service
 

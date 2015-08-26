@@ -1,11 +1,10 @@
 <!--[metadata]>
 +++
-title = "Docker Registry Storage Driver"
-description = "Explains how to use the storage drivers"
-keywords = ["registry, service, driver, images,  storage"]
+title = "Storage Drivers"
+description = "Explains how to use storage drivers"
+keywords = ["registry, on-prem, images, tags, repository, distribution, storage drivers, advanced"]
 [menu.main]
 parent="smn_registry_ref"
-identifier="smn_registry_drivers"
 +++
 <![end-metadata]-->
 
@@ -47,14 +46,17 @@ with a driver name and parameters map. If no such storage driver can be found,
 ## Driver Contribution
 
 ### Writing new storage drivers
+
 To create a valid storage driver, one must implement the
 `storagedriver.StorageDriver` interface and make sure to expose this driver
 via the factory system.
 
 #### Registering
+
 Storage drivers should call `factory.Register` with their driver name in an `init` method, allowing callers of `factory.New` to construct instances of this driver without requiring modification of imports throughout the codebase.
 
 ## Testing
+
 Storage driver test suites are provided in
 `storagedriver/testsuites/testsuites.go` and may be used for any storage
 driver written in Go. Tests can be registered using the `RegisterSuite`

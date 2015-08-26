@@ -1,8 +1,8 @@
 <!--[metadata]>
 +++
 title = "Deploying a registry server"
-description = "Explains how to deploy a registry server"
-keywords = ["registry, service, images, repository"]
+description = "Explains how to deploy a registry"
+keywords = ["registry, on-prem, images, tags, repository, distribution, deployment"]
 [menu.main]
 parent="smn_registry"
 weight=3
@@ -61,7 +61,11 @@ While running on `localhost` has its uses, most people want their registry to be
 
 Assuming that you own the domain `myregistrydomain.com`, and that its DNS record points to the host where you are running your registry, you first need to get a certificate from a CA.
 
-Move and/or rename your crt file to: `certs/domain.crt` - and your key file to: `certs/domain.key`.
+Create a `certs` directory:
+
+    mkdir -p certs
+
+Then move and/or rename your crt file to: `certs/domain.crt`, and your key file to: `certs/domain.key`.
 
 Make sure you stopped your registry from the previous steps, then start your registry again with TLS enabled:
 
@@ -82,13 +86,17 @@ You should now be able to access your registry from another docker host:
 
 A certificate issuer may supply you with an *intermediate* certificate. In this case, you must combine your certificate with the intermediate's to form a *certificate bundle*. You can do this using the `cat` command: 
 
-    cat server.crt intermediate-certificates.pem > certs/domain.crt
+    cat domain.crt intermediate-certificates.pem > certs/domain.crt
 
-#### Load Balancing Considerations
+### Alternatives
+
+While rarely advisable, you may want to use self-signed certificates instead, or use your registry in an insecure fashion. You will find instructions [here](insecure.md).
+
+## Load Balancing Considerations
 
 One may want to use a load balancer to distribute load, terminate TLS or
-provide high availability. While a full laod balancing setup is outside the
-scope this document, there are a few considerations that can make the process
+provide high availability. While a full load balancing setup is outside the
+scope of this document, there are a few considerations that can make the process
 smoother.
 
 The most important aspect is that a load balanced cluster of registries must
@@ -99,15 +107,15 @@ the following must be the same:
   - HTTP Secret
   - Redis Cache (if configured)
 
-If any of these are different, the registry may have trouble serving requests.
+If any of these are different, the registry will have trouble serving requests.
 As an example, if you're using the filesystem driver, all registry instances
 must have access to the same filesystem root, which means they should be in
 the same machine. For other drivers, such as s3 or azure, they should be
 accessing the same resource, and will likely share an identical configuration.
 The _HTTP Secret_ coordinates uploads, so also must be the same across
-instances. Configuring different redis instances will mostly work (at the time
+instances. Configuring different redis instances will work (at the time
 of writing), but will not be optimal if the instances are not shared, causing
-more reqeusts to be directed to the backend.
+more requests to be directed to the backend.
 
 Getting the headers correct is very important. For all responses to any
 request under the "/v2/" url space, the `Docker-Distribution-API-Version`
@@ -116,20 +124,21 @@ This header allows the docker engine to quickly resolve authentication realms
 and fallback to version 1 registries, if necessary. Confirming this is setup
 correctly can help avoid problems with fallback.
 
+In the same train of thought, you must make sure you are properly sending the
+`X-Forwarded-Proto`, `X-Forwared-For` and `Host` headers to their "client-side"
+values. Failure to do so usually makes the registry issue redirects to internal
+hostnames or downgrading from https to http.
+
 A properly secured registry should return 401 when the "/v2/" endpoint is hit
 without credentials. The response should include a `WWW-Authenticate`
 challenge, providing guidance on how to authenticate, such as with basic auth
 or a token service. If the load balancer has health checks, it is recommended
-to configure it to consider a 401 response as healthy and any others as down.
+to configure it to consider a 401 response as healthy and any other as down.
 This will secure your registry by ensuring that configuration problems with
 authentication don't accidentally expose an unprotected registry. If you're
 using a less sophisticated load balancer, such as Amazon's Elastic Load
 Balancer, that doesn't allow one to change the healthy response code, health
 checks can be directed at "/", which will always return a `200 OK` response.
-
-### Alternatives
-
-While rarely advisable, you may want to use self-signed certificates instead, or use your registry in an insecure fashion. You will find instructions [here](insecure.md).
 
 ## Restricting access
 
@@ -164,15 +173,19 @@ You should now be able to:
 
 And then push and pull images as an authenticated user.
 
+#### Gotcha
+
+Seeing X509 errors is usually a sign you are trying to use self-signed certificates, and failed to [configure your docker daemon properly](insecure.md).
+
 ### Alternatives
 
 1. You may want to leverage more advanced basic auth implementations through a proxy design, in front of the registry. You will find examples of such patterns in the [recipes list](recipes.md).
 
-2. Alternatively, the Registry also supports delegated authentication, redirecting users to a specific, trusted token server. That approach requires significantly more investment, and only make sense if you want to fully configure ACLs and more control over the Registry integration into your global authorization and authentication systems.
+2. Alternatively, the Registry also supports delegated authentication, redirecting users to a specific, trusted token server. That approach requires significantly more investment, and only makes sense if you want to fully configure ACLs and more control over the Registry integration into your global authorization and authentication systems.
 
 You will find [background information here](spec/auth/token.md), and [configuration information here](configuration.md#auth).
 
-Beware that you will have to implement your own authentication service for this to work.
+Beware that you will have to implement your own authentication service for this to work, or leverage a third-party implementation.
 
 ## Managing with Compose
 
@@ -191,7 +204,6 @@ registry:
   environment:
     REGISTRY_HTTP_TLS_CERTIFICATE: /certs/domain.crt
     REGISTRY_HTTP_TLS_KEY: /certs/domain.key
-    REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
     REGISTRY_AUTH: htpasswd
     REGISTRY_AUTH_HTPASSWD_PATH: /auth/htpasswd
     REGISTRY_AUTH_HTPASSWD_REALM: Registry Realm
@@ -216,10 +228,4 @@ You will find more specific and advanced informations in the following sections:
  - [Advanced "recipes"](recipes.md)
  - [Registry API](spec/api.md)
  - [Storage driver model](storagedrivers.md)
-
-<!--
- - [Glossary](glossary.md)
-### Development resources
- - [Building the registry](building.md)
- - [Architecture notes](architecture.md)
- -->
+ - [Token authentication](spec/auth/token.md)

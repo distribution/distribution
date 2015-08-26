@@ -1,8 +1,8 @@
 <!--[metadata]>
 +++
-title = "Work with Notifications"
-description = "Explains work with registry notifications"
-keywords = ["registry, service, images, notifications,  repository"]
+title = "Working with notifications"
+description = "Explains how to work with registry notifications"
+keywords = ["registry, on-prem, images, tags, repository, distribution, notifications, advanced"]
 [menu.main]
 parent="smn_registry"
 weight=5
@@ -17,7 +17,7 @@ pushes and pulls and layer pushes and pulls. These actions are serialized into
 events. The events are queued into a registry-internal broadcast system which
 queues and dispatches events to [_Endpoints_](#endpoints).
 
-![](../images/notifications.png)
+![](images/notifications.png)
 
 ## Endpoints
 
@@ -63,7 +63,7 @@ INFO[0000] configuring endpoint alistener (https://mylistener.example.com/event)
 
 Events have a well-defined JSON structure and are sent as the body of
 notification requests. One or more events are sent in a structure called an
-envelope. Each event has a unique id that can be used to uniqify incoming
+envelope. Each event has a unique id that can be used to uniquify incoming
 requests, if required. Along with that, an _action_ is provided with a
 _target, identifying the object mutated during the event.
 
@@ -104,7 +104,7 @@ manifest:
 }
 ```
 
-> __NOTE(stevvooe):__ As of version 2.1, the `length` field for event targets
+> __NOTE:__ As of version 2.1, the `length` field for event targets
 > is being deprecated for the `size` field, bringing the target in line with
 > common nomenclature. Both will continue to be set for the foreseeable
 > future. Newer code should favor `size` but accept either.
@@ -234,7 +234,7 @@ The state of the endpoints are reported via the debug/vars http interface,
 usually configured to "http://localhost:5001/debug/vars". Information such as
 configuration and metrics are available by endpoint.
 
-The following provides and example of a few endpoints that have experience
+The following provides an example of a few endpoints that have experienced
 several failures and have since recovered:
 
 ```json
@@ -318,4 +318,3 @@ is a possibility, although it may have an effect on request service time.
 Please see the
 [godoc](http://godoc.org/github.com/docker/distribution/notifications#Sink)
 for more information.
-
