@@ -94,9 +94,8 @@ func (ms *manifestStore) DeleteByTag(tag string) (bool, error) {
 		err = ms.tagStore.delete(tag)
 		if err != nil {
 			return false, err
-		} else {
-			return true, nil
 		}
+		return true, nil
 	}
 }
 
