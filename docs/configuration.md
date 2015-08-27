@@ -216,6 +216,10 @@ information about each option that appears later in this page.
           timeout: 3s
           interval: 10s
           threshold: 3
+    proxy:
+      remoteurl: https://registry-1.docker.io
+      username: [username]
+      password: [password]
 
 In some instances a configuration option is **optional** but it contains child
 options marked as **required**. This indicates that you can omit the parent with
@@ -1942,6 +1946,59 @@ The TCP address to connect to, including a port number.
     </td>
   </tr>
 </table>
+
+## Proxy
+
+    proxy:
+      remoteurl: https://registry-1.docker.io
+      username: [username]
+      password: [password]
+
+Proxy enables a registry to be configured as a pull through cache to the official Docker Hub.  See [mirror.md](mirror.md) for more information
+
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>remoteurl</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+     The URL of the official Docker Hub
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>username</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+     The username of the Docker Hub account
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>password</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+     The password for the official Docker Hub account
+    </td>
+  </tr>
+</table>
+
+To enable pulling private repositories (e.g. `batman/robin`) a username and password for user `batman` must be specified.  Note: These private repositories will be stored in the proxy cache's storage and relevant measures should be taken to protect access to this.
+
 
 ## Example: Development configuration
 
