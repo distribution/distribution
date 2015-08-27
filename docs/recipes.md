@@ -32,3 +32,4 @@ At this point, it's assumed that:
  * [using Nginx as an authenticating proxy](nginx.md)
  * [running a Registry on OSX](osx-setup-guide.md)
  * [hacking the registry: build instructions](building.md)
+ * [mirror the Docker Hub](mirror.md)
