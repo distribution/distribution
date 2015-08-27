@@ -1564,7 +1564,7 @@ var routeDescriptors = []RouteDescriptor{
 	},
 	{
 		Name:        RouteNameTag,
-		Path:        "/v2/{name:" + RepositoryNameRegexp.String() + "}/tag/{reference:"+TagNameRegexp.String()+"}",
+		Path:        "/v2/{name:" + RepositoryNameRegexp.String() + "}/tag/{reference:" + TagNameRegexp.String() + "}",
 		Entity:      "Tag",
 		Description: "Delete tag by given tag name",
 		Methods: []MethodDescriptor{
