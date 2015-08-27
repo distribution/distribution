@@ -105,12 +105,12 @@ func (th *tagsHandler) DeleteByTag(w http.ResponseWriter, r *http.Request) {
 	if ok {
 		enc.Encode(tagDeleteAPIResponse{
 			Status: "0",
-			Msg: "success",
+			Msg:    "success",
 		})
 	} else {
 		enc.Encode(tagDeleteAPIResponse{
 			Status: "1",
-			Msg: err.Error(),
+			Msg:    err.Error(),
 		})
 	}
 }
