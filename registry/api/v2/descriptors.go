@@ -1562,6 +1562,77 @@ var routeDescriptors = []RouteDescriptor{
 			},
 		},
 	},
+	{
+		Name:        RouteNameTag,
+		Path:        "/v2/{name:" + RepositoryNameRegexp.String() + "}/tag/{reference:"+TagNameRegexp.String()+"}",
+		Entity:      "Tag",
+		Description: "Delete tag by given tag name",
+		Methods: []MethodDescriptor{
+			{
+				Method:      "DELETE",
+				Description: "Delete tag by `name:tag`.",
+				Requests: []RequestDescriptor{
+					{
+						Name:        "Tag",
+						Description: "Delete tag by given tag name",
+						Headers: []ParameterDescriptor{
+							hostHeader,
+							authHeader,
+						},
+						PathParameters: []ParameterDescriptor{
+							nameParameterDescriptor,
+							referenceParameterDescriptor,
+						},
+						Successes: []ResponseDescriptor{
+							{
+								StatusCode:  http.StatusOK,
+								Description: "Delete success.",
+								Headers: []ParameterDescriptor{
+									{
+										Name:        "Content-Length",
+										Type:        "integer",
+										Description: "Length of the JSON response body.",
+										Format:      "<length>",
+									},
+								},
+								Body: BodyDescriptor{
+									ContentType: "application/json; charset=utf-8",
+									Format: `{
+    "status": <name>,
+    "msg": <description>
+}`,
+								},
+							},
+						},
+						Failures: []ResponseDescriptor{
+							{
+								StatusCode:  http.StatusNotFound,
+								Description: "Delete fail for unknown reason.",
+								Body: BodyDescriptor{
+									ContentType: "application/json; charset=utf-8",
+									Format:      errorsBody,
+								},
+								ErrorCodes: []errcode.ErrorCode{
+									ErrorCodeNameUnknown,
+								},
+							},
+							{
+								StatusCode:  http.StatusUnauthorized,
+								Description: "The client does not have access to the repository.",
+								Body: BodyDescriptor{
+									ContentType: "application/json; charset=utf-8",
+									Format:      errorsBody,
+								},
+								ErrorCodes: []errcode.ErrorCode{
+									errcode.ErrorCodeUnauthorized,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	},
 }
 
 var routeDescriptorsMap map[string]RouteDescriptor

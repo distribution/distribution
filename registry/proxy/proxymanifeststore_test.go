@@ -52,6 +52,11 @@ func (sm statsManifest) ExistsByTag(tag string) (bool, error) {
 	return sm.manifests.ExistsByTag(tag)
 }
 
+func (sm statsManifest) DeleteByTag(tag string) (bool, error) {
+	sm.stats["deletebytag"]++
+	return sm.manifests.DeleteByTag(tag)
+}
+
 func (sm statsManifest) Get(dgst digest.Digest) (*schema1.SignedManifest, error) {
 	sm.stats["get"]++
 	return sm.manifests.Get(dgst)

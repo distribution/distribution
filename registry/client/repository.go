@@ -242,6 +242,11 @@ func (ms *manifests) ExistsByTag(tag string) (bool, error) {
 	return false, handleErrorResponse(resp)
 }
 
+func (ms *manifests) DeleteByTag(tag string) (bool, error) {
+	// TODO: not implement
+	return false, nil
+}
+
 func (ms *manifests) Get(dgst digest.Digest) (*schema1.SignedManifest, error) {
 	// Call by Tag endpoint since the API uses the same
 	// URL endpoint for tags and digests.

@@ -93,6 +93,9 @@ type ManifestService interface {
 	// ExistsByTag returns true if the manifest exists.
 	ExistsByTag(tag string) (bool, error)
 
+	// DeleteTag returns true if delete success or tag not exist
+	DeleteByTag(tag string) (bool, error)
+
 	// GetByTag retrieves the named manifest, if it exists.
 	GetByTag(tag string, options ...ManifestServiceOption) (*schema1.SignedManifest, error)
 
