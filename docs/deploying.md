@@ -87,7 +87,7 @@ A certificate issuer may supply you with an *intermediate* certificate. In this 
 #### Load Balancing Considerations
 
 One may want to use a load balancer to distribute load, terminate TLS or
-provide high availability. While a full laod balancing setup is outside the
+provide high availability. While a full load balancing setup is outside the
 scope this document, there are a few considerations that can make the process
 smoother.
 
