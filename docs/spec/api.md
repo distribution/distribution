@@ -730,7 +730,7 @@ If the blob exists and has been successfully deleted, the following response
 will be issued:
 
     202 Accepted
-    Content-Length: None
+    Content-Length: 0
 
 If the blob had already been deleted or did not exist, a `404 Not Found`
 response will be issued instead.
@@ -987,7 +987,6 @@ image exists and has been successfully deleted, the following response will be
 issued:
 
     202 Accepted
-    Content-Length: None
 
 If the image had already been deleted or did not exist, a `404 Not Found`
 response will be issued instead.
