@@ -1,8 +1,8 @@
 <!--[metadata]>
 +++
-title = "Recipes for Registry"
+title = "Recipes"
 description = "Fun stuff to do with your registry"
-keywords = ["registry, service, images, repository, recipe"]
+keywords = ["registry, on-prem, images, tags, repository, distribution, recipes, advanced"]
 +++
 <![end-metadata]-->
 
@@ -30,3 +30,6 @@ At this point, it's assumed that:
 
  * [using Apache as an authenticating proxy](apache.md)
  * [using Nginx as an authenticating proxy](nginx.md)
+ * [running a Registry on OS X](osx-setup-guide.md)
+ * [hacking the registry: build instructions](building.md)
+ * [mirror the Docker Hub](mirror.md)

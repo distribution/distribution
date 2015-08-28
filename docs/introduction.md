@@ -1,8 +1,8 @@
 <!--[metadata]>
 +++
 title = "Understanding the Registry"
-description = "Explains what it is, basic use cases and requirements"
-keywords = ["registry, service, images, repository, understand, use cases, requirements"]
+description = "Explains what the Registry is, basic use cases and requirements"
+keywords = ["registry, on-prem, images, tags, repository, distribution, use cases, requirements"]
 [menu.main]
 parent="smn_registry"
 weight=2
@@ -31,7 +31,7 @@ Finally, the Registry ships with a robust [notification system](notifications.md
 
 Image names as used in typical docker commands reflect their origin:
 
- * `docker pull ubuntu` instructs docker to pull an image named `ubuntu` from the official Docker Hub. This is simply a shortcut for the longer `docker pull registry-1.docker.io/library/ubuntu` command
+ * `docker pull ubuntu` instructs docker to pull an image named `ubuntu` from the official Docker Hub. This is simply a shortcut for the longer `docker pull docker.io/library/ubuntu` command
  * `docker pull myregistrydomain:port/foo/bar` instructs docker to contact the registry located at `myregistrydomain:port` to find the image `foo/bar`
 
 You can find out more about the various Docker commands dealing with images in the [official Docker engine documentation](https://docs.docker.com/reference/commandline/cli/).

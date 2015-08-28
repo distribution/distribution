@@ -2,7 +2,7 @@
 +++
 title = "Getting help"
 description = "Getting help with the Registry"
-keywords = ["registry, service, images,  repository, help"]
+keywords = ["registry, on-prem, images, tags, repository, distribution, help, 101, TL;DR"]
 [menu.main]
 parent="smn_registry"
 weight=9

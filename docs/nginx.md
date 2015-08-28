@@ -1,8 +1,8 @@
 <!--[metadata]>
 +++
 title = "Authenticating proxy with nginx"
-description = "Restricting access to your registry using a proxy"
-keywords = ["registry, service, images, repository, authentication"]
+description = "Restricting access to your registry using a nginx proxy"
+keywords = ["registry, on-prem, images, tags, repository, distribution, nginx, proxy, authentication, TLS, recipe, advanced"]
 +++
 <![end-metadata]-->
 
@@ -133,24 +133,3 @@ Login with a "push" authorized user (using `testuserpush` and `testpasswordpush`
     docker tag ubuntu myregistrydomain.com:5043/test
     docker push myregistrydomain.com:5043/test
     docker pull myregistrydomain.com:5043/test
-
-## Docker still complains about the certificate?
-
-That's certainly because you are using a self-signed certificate, despite the warnings.
-
-If you really insist on using these, you have to trust it at the OS level.
-
-Usually, on Ubuntu this is done with:
-
-    cp auth/domain.crt /usr/local/share/ca-certificates/myregistrydomain.com.crt
-    update-ca-certificates
-
-... and on RedHat with:
-
-    cp auth/domain.crt /etc/pki/ca-trust/source/anchors/myregistrydomain.com.crt
-    update-ca-trust
-
-Now:
-
- * `service docker stop && service docker start` (or any other way you use to restart docker)
- * `docker-compose up -d` to bring your registry up
