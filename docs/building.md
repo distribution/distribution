@@ -18,11 +18,11 @@ Most people should use the [official Registry docker image](https://hub.docker.c
 
 People looking for advanced operational use cases might consider rolling their own image with a custom Dockerfile inheriting `FROM registry:2`.
 
-OSX users who want to run natively can do so following [the instructions here](osx-setup-guide.md).
+OS X users who want to run natively can do so following [the instructions here](osx-setup-guide.md).
 
 ### Gotchas
 
-You are expected to know your way with go & git.
+You are expected to know your way around with go & git.
 
 If you are a casual user with no development experience, and no preliminary knowledge of go, building from source is probably not a good solution for you.
 
@@ -34,7 +34,7 @@ for proper setup. If done correctly, you should have a GOROOT and GOPATH set in 
 environment.
 
 If a Go development environment is setup, one can use `go get` to install the
-`registry` source code from the current latest:
+`registry` command from the current latest:
 
     go get github.com/docker/distribution/cmd/registry
 

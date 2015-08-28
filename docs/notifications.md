@@ -63,7 +63,7 @@ INFO[0000] configuring endpoint alistener (https://mylistener.example.com/event)
 
 Events have a well-defined JSON structure and are sent as the body of
 notification requests. One or more events are sent in a structure called an
-envelope. Each event has a unique id that can be used to uniquify incoming
+envelope. Each event has a unique id that can be used to uniquely identify incoming
 requests, if required. Along with that, an _action_ is provided with a
 _target, identifying the object mutated during the event.
 

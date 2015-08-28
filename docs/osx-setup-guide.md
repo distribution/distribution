@@ -1,8 +1,8 @@
 <!--[metadata]>
 +++
-title = "Running on OSX"
-description = "Explains how to run a registry on OSX"
-keywords = ["registry, on-prem, images, tags, repository, distribution, osx, recipe, advanced"]
+title = "Running on OS X"
+description = "Explains how to run a registry on OS X"
+keywords = ["registry, on-prem, images, tags, repository, distribution, OS X, recipe, advanced"]
 +++
 <![end-metadata]-->
 
@@ -10,21 +10,21 @@ keywords = ["registry, on-prem, images, tags, repository, distribution, osx, rec
 
 ## Use-case
 
-This is useful if you intend to run a registry server natively on OSX.
+This is useful if you intend to run a registry server natively on OS X.
 
 ### Alternatives
 
-You can start a VM on OSX, and deploy your registry normally as a container using Docker inside that VM.
+You can start a VM on OS X, and deploy your registry normally as a container using Docker inside that VM.
 
 The simplest road to get there is traditionally to use the [docker Toolbox](https://www.docker.com/toolbox), or [docker-machine](https://docs.docker.com/machine/), which usually relies on the [boot2docker](http://boot2docker.io/) iso inside a VirtualBox VM.
 
 ### Solution
 
-Using the method described here, you install and compile your own from the git repository and run it as an OSX agent.
+Using the method described here, you install and compile your own from the git repository and run it as an OS X agent.
 
 ### Gotchas
 
-Production services operation on OSX is out of scope of this document. Be sure you understand well these aspects before considering going to production with this.
+Production services operation on OS X is out of scope of this document. Be sure you understand well these aspects before considering going to production with this.
 
 ## Setup golang on your machine
 
