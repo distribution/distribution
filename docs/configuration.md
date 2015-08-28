@@ -68,7 +68,7 @@ information about each option that appears later in this page.
         - type: mail
           disabled: true
           levels:
-          - panic
+            - panic
           options:
             smtp:
               addr: mail.example.com:25
