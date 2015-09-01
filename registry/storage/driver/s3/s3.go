@@ -398,12 +398,12 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 		}
 		return nil
 	}
-	
-	readAndPutPart := func(start int64,end int64) error{
+
+	readAndPutPart := func(start int64, end int64) error {
 		headers := make(http.Header)
 		if end == 0 {
 			headers.Add("Range", "bytes="+strconv.FormatInt(start, 10)+"-")
-		}else {
+		} else {
 			headers.Add("Range", "bytes="+strconv.FormatInt(start, 10)+"-"+strconv.FormatInt(end, 10))
 		}
 		resp, err := d.Bucket.GetResponseWithHeaders(d.s3Path(path), headers)
@@ -415,8 +415,8 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 			return parseError(path, err)
 		}
 		tempBuf := d.getbuf()
-		_,err = resp.Body.Read(tempBuf)
-		part,err = multi.PutPart(partNumber,bytes.NewReader(tempBuf))
+		_, err = resp.Body.Read(tempBuf)
+		part, err = multi.PutPart(partNumber, bytes.NewReader(tempBuf))
 		d.putbuf(tempBuf)
 		return err
 	}
@@ -553,8 +553,8 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 				// currentLength >= offset >= chunkSize
 				var err error
 				if d.S3.Region.Name == "generic" {
-					err = readAndPutPart(0,offset-1)
-				}else{
+					err = readAndPutPart(0, offset-1)
+				} else {
 					_, part, err = multi.PutPartCopy(partNumber,
 						s3.CopyOptions{CopySourceOptions: "bytes=0-" + strconv.FormatInt(offset-1, 10)},
 						d.Bucket.Name+"/"+d.s3Path(path))
@@ -652,8 +652,8 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 				// offset > currentLength >= chunkSize
 				var err error
 				if d.S3.Region.Name == "generic" {
-					err = readAndPutPart(0,0)
-				}else{
+					err = readAndPutPart(0, 0)
+				} else {
 					_, part, err = multi.PutPartCopy(partNumber,
 						s3.CopyOptions{},
 						d.Bucket.Name+"/"+d.s3Path(path))
@@ -801,7 +801,7 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 					return nil
 				}
 			}
-		}else{
+		} else {
 			s3Objects := make([]s3.Object, listMax)
 			for index, key := range listResponse.Contents {
 				s3Objects[index].Key = key.Key
