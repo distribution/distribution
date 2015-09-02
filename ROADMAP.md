@@ -263,11 +263,5 @@ just the registry.
 
 ### Project Planning
 
-Distribution Components map to Docker Platform Releases via the use of labels. Project Pages are used to define the set of features that are included in each Docker Platform Release.
-
-| Platform Version | Label | Planning |
-|-----------|------|-----|
-| Docker 1.6 |  [Docker/1.6](https://github.com/docker/distribution/labels/docker%2F1.6) | [Project Page](https://github.com/docker/distribution/wiki/docker-1.6-Project-Page) |
-| Docker 1.7|  [Docker/1.7](https://github.com/docker/distribution/labels/docker%2F1.7) | [Project Page](https://github.com/docker/distribution/wiki/docker-1.7-Project-Page) |
-| Docker 1.8|  [Docker/1.8](https://github.com/docker/distribution/labels/docker%2F1.8) | [Project Page](https://github.com/docker/distribution/wiki/docker-1.8-Project-Page) |
+An [Open-Source Planning Process](https://github.com/docker/distribution/wiki/Open-Source-Planning-Process) is used to define the Roadmap. [Project Pages](https://github.com/docker/distribution/wiki) define the goals for each Milestone and identify current progress.
 
