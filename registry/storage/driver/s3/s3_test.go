@@ -35,6 +35,7 @@ func init() {
 	defer os.Remove(root)
 
 	s3DriverConstructor = func(rootDirectory string) (*Driver, error) {
+		regionSupportHead := true
 		encryptBool := false
 		if encrypt != "" {
 			encryptBool, err = strconv.ParseBool(encrypt)
@@ -64,6 +65,7 @@ func init() {
 			secretKey,
 			bucket,
 			aws.GetRegion(region),
+			regionSupportHead,
 			encryptBool,
 			secureBool,
 			v4AuthBool,

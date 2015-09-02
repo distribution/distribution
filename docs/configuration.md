@@ -90,7 +90,9 @@ information about each option that appears later in this page.
         accesskey: awsaccesskey
         secretkey: awssecretkey
         region: us-west-1
-        bucket: bucketname
+        regionendpoint: http://myobjects.local
+        regionsupportshead: true
+	bucket: bucketname
         encrypt: true
         secure: true
         v4auth: true
@@ -335,6 +337,8 @@ Permitted values are `error`, `warn`, `info` and `debug`. The default is
         accesskey: awsaccesskey
         secretkey: awssecretkey
         region: us-west-1
+        regionendpoint: http://myobjects.local
+        regionsupportshead: true
         bucket: bucketname
         encrypt: true
         secure: true
@@ -532,7 +536,7 @@ This storage backend uses [Ceph Object Storage](http://ceph.com/docs/master/rado
 
 ### S3
 
-This storage backend uses Amazon's Simple Storage Service (S3).
+This storage backend uses Amazon's Simple Storage Service (S3) and compatible APIs.
 
 <table>
   <tr>
@@ -572,6 +576,29 @@ This storage backend uses Amazon's Simple Storage Service (S3).
     <td>
       The AWS region in which your bucket exists. For the moment, the Go AWS
       library in use does not use the newer DNS based bucket routing.
+    </td>
+  </tr>
+    <tr>
+    <td>
+	<code>regionendpoint</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+        Endpoint for S3 compatible APIs (Ceph Rados Gateway, Riak CS, etc)
+    </td>
+  </tr>
+    <tr>
+    <td>
+      <code>regionsupportshead</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      For S3 compatible APIs, indicates whether to use HEAD for object info.
+      A boolean value. The default is true. For old APIs, use false.
     </td>
   </tr>
     <tr>

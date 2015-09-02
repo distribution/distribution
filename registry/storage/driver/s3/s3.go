@@ -53,6 +53,7 @@ type DriverParameters struct {
 	SecretKey     string
 	Bucket        string
 	Region        aws.Region
+	SupportsHead  bool
 	Encrypt       bool
 	Secure        bool
 	V4Auth        bool
@@ -74,6 +75,7 @@ func (factory *s3DriverFactory) Create(parameters map[string]interface{}) (stora
 type driver struct {
 	S3            *s3.S3
 	Bucket        *s3.Bucket
+	SupportsHead  bool
 	ChunkSize     int64
 	Encrypt       bool
 	RootDirectory string
@@ -97,6 +99,8 @@ type Driver struct {
 // - accesskey
 // - secretkey
 // - region
+// - regionendpoint
+// - regionsupportshead
 // - bucket
 // - encrypt
 func FromParameters(parameters map[string]interface{}) (*Driver, error) {
@@ -116,9 +120,28 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	if !ok || fmt.Sprint(regionName) == "" {
 		return nil, fmt.Errorf("No region parameter provided")
 	}
-	region := aws.GetRegion(fmt.Sprint(regionName))
-	if region.Name == "" {
-		return nil, fmt.Errorf("Invalid region provided: %v", region)
+
+	var region aws.Region
+	if fmt.Sprint(regionName) == "generic" {
+		regionEndpoint, ok := parameters["regionendpoint"]
+		if !ok || fmt.Sprint(regionEndpoint) == "" {
+			return nil, fmt.Errorf("No S3 endpoint for generic region")
+		}
+		region = aws.Region{Name: fmt.Sprint(regionName), S3Endpoint: fmt.Sprint(regionEndpoint), S3LocationConstraint: true}
+	} else {
+		region = aws.GetRegion(fmt.Sprint(regionName))
+		if region.Name == "" {
+			return nil, fmt.Errorf("Invalid region provided: %v", region)
+		}
+	}
+
+	regionSupportsHead := true
+	regionsupportshead, ok := parameters["regionsupportshead"]
+	if ok {
+		regionSupportsHead, ok = regionsupportshead.(bool)
+		if !ok {
+			return nil, fmt.Errorf("The secure parameter should be a boolean")
+		}
 	}
 
 	bucket, ok := parameters["bucket"]
@@ -186,6 +209,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(secretKey),
 		fmt.Sprint(bucket),
 		region,
+		regionSupportsHead,
 		encryptBool,
 		secureBool,
 		v4AuthBool,
@@ -243,6 +267,7 @@ func New(params DriverParameters) (*Driver, error) {
 	d := &driver{
 		S3:            s3obj,
 		Bucket:        bucket,
+		SupportsHead:  params.SupportsHead,
 		ChunkSize:     params.ChunkSize,
 		Encrypt:       params.Encrypt,
 		RootDirectory: params.RootDirectory,
@@ -372,6 +397,28 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 
 		}
 		return nil
+	}
+
+	readAndPutPart := func(start int64, end int64) error {
+		headers := make(http.Header)
+		if end == 0 {
+			headers.Add("Range", "bytes="+strconv.FormatInt(start, 10)+"-")
+		} else {
+			headers.Add("Range", "bytes="+strconv.FormatInt(start, 10)+"-"+strconv.FormatInt(end, 10))
+		}
+		resp, err := d.Bucket.GetResponseWithHeaders(d.s3Path(path), headers)
+
+		if err != nil {
+			if s3Err, ok := err.(*s3.Error); ok && s3Err.Code == "InvalidRange" {
+				return err
+			}
+			return parseError(path, err)
+		}
+		tempBuf := d.getbuf()
+		_, err = resp.Body.Read(tempBuf)
+		part, err = multi.PutPart(partNumber, bytes.NewReader(tempBuf))
+		d.putbuf(tempBuf)
+		return err
 	}
 
 	// Fills from parameter to chunkSize from reader
@@ -504,9 +551,14 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 				}
 			} else {
 				// currentLength >= offset >= chunkSize
-				_, part, err = multi.PutPartCopy(partNumber,
-					s3.CopyOptions{CopySourceOptions: "bytes=0-" + strconv.FormatInt(offset-1, 10)},
-					d.Bucket.Name+"/"+d.s3Path(path))
+				var err error
+				if d.S3.Region.Name == "generic" {
+					err = readAndPutPart(0, offset-1)
+				} else {
+					_, part, err = multi.PutPartCopy(partNumber,
+						s3.CopyOptions{CopySourceOptions: "bytes=0-" + strconv.FormatInt(offset-1, 10)},
+						d.Bucket.Name+"/"+d.s3Path(path))
+				}
 				if err != nil {
 					return 0, err
 				}
@@ -598,9 +650,14 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 				}
 			} else {
 				// offset > currentLength >= chunkSize
-				_, part, err = multi.PutPartCopy(partNumber,
-					s3.CopyOptions{},
-					d.Bucket.Name+"/"+d.s3Path(path))
+				var err error
+				if d.S3.Region.Name == "generic" {
+					err = readAndPutPart(0, 0)
+				} else {
+					_, part, err = multi.PutPartCopy(partNumber,
+						s3.CopyOptions{},
+						d.Bucket.Name+"/"+d.s3Path(path))
+				}
 				if err != nil {
 					return 0, err
 				}
@@ -736,16 +793,24 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		return storagedriver.PathNotFoundError{Path: path}
 	}
 
-	s3Objects := make([]s3.Object, listMax)
-
 	for len(listResponse.Contents) > 0 {
-		for index, key := range listResponse.Contents {
-			s3Objects[index].Key = key.Key
-		}
+		if d.S3.Region.Name == "generic" {
+			for _, key := range listResponse.Contents {
+				err := d.Bucket.Del(key.Key)
+				if err != nil {
+					return nil
+				}
+			}
+		} else {
+			s3Objects := make([]s3.Object, listMax)
+			for index, key := range listResponse.Contents {
+				s3Objects[index].Key = key.Key
+			}
 
-		err := d.Bucket.DelMulti(s3.Delete{Quiet: false, Objects: s3Objects[0:len(listResponse.Contents)]})
-		if err != nil {
-			return nil
+			err := d.Bucket.DelMulti(s3.Delete{Quiet: false, Objects: s3Objects[0:len(listResponse.Contents)]})
+			if err != nil {
+				return nil
+			}
 		}
 
 		listResponse, err = d.Bucket.List(d.s3Path(path), "", "", listMax)
@@ -760,6 +825,9 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 // May return an UnsupportedMethodErr in certain StorageDriver implementations.
 func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
+	if d.SupportsHead == false {
+		return "", storagedriver.ErrUnsupportedMethod
+	}
 	methodString := "GET"
 	method, ok := options["method"]
 	if ok {
