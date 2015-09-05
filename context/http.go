@@ -10,7 +10,6 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/distribution/uuid"
-	"github.com/gorilla/mux"
 )
 
 // Common errors used with this package.
@@ -134,22 +133,6 @@ func GetResponseWriter(ctx Context) (http.ResponseWriter, error) {
 	return rw, nil
 }
 
-// getVarsFromRequest let's us change request vars implementation for testing
-// and maybe future changes.
-var getVarsFromRequest = mux.Vars
-
-// WithVars extracts gorilla/mux vars and makes them available on the returned
-// context. Variables are available at keys with the prefix "vars.". For
-// example, if looking for the variable "name", it can be accessed as
-// "vars.name". Implementations that are accessing values need not know that
-// the underlying context is implemented with gorilla/mux vars.
-func WithVars(ctx Context, r *http.Request) Context {
-	return &muxVarsContext{
-		Context: ctx,
-		vars:    getVarsFromRequest(r),
-	}
-}
-
 // GetRequestLogger returns a logger that contains fields from the request in
 // the current context. If the request is not available in the context, no
 // fields will display. Request loggers can safely be pushed onto the context.
@@ -241,29 +224,6 @@ func (ctx *httpRequestContext) Value(key interface{}) interface{} {
 	}
 
 fallback:
-	return ctx.Context.Value(key)
-}
-
-type muxVarsContext struct {
-	Context
-	vars map[string]string
-}
-
-func (ctx *muxVarsContext) Value(key interface{}) interface{} {
-	if keyStr, ok := key.(string); ok {
-		if keyStr == "vars" {
-			return ctx.vars
-		}
-
-		if strings.HasPrefix(keyStr, "vars.") {
-			keyStr = strings.TrimPrefix(keyStr, "vars.")
-		}
-
-		if v, ok := ctx.vars[keyStr]; ok {
-			return v
-		}
-	}
-
 	return ctx.Context.Value(key)
 }
 

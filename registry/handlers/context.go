@@ -3,6 +3,7 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 
 	"github.com/docker/distribution"
@@ -10,6 +11,7 @@ import (
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
+	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
 )
 
@@ -148,4 +150,43 @@ func (cm *contextManager) release(ctx context.Context) {
 		return
 	}
 	delete(cm.contexts, r)
+}
+
+type muxVarsContext struct {
+	context.Context
+	vars map[string]string
+}
+
+func (ctx *muxVarsContext) Value(key interface{}) interface{} {
+	if keyStr, ok := key.(string); ok {
+		if keyStr == "vars" {
+			return ctx.vars
+		}
+
+		if strings.HasPrefix(keyStr, "vars.") {
+			keyStr = strings.TrimPrefix(keyStr, "vars.")
+		}
+
+		if v, ok := ctx.vars[keyStr]; ok {
+			return v
+		}
+	}
+
+	return ctx.Context.Value(key)
+}
+
+// getVarsFromRequest let's us change request vars implementation for testing
+// and maybe future changes.
+var getVarsFromRequest = mux.Vars
+
+// contextWithVars extracts gorilla/mux vars and makes them available on the returned
+// context. Variables are available at keys with the prefix "vars.". For
+// example, if looking for the variable "name", it can be accessed as
+// "vars.name". Implementations that are accessing values need not know that
+// the underlying context is implemented with gorilla/mux vars.
+func contextWithVars(ctx context.Context, r *http.Request) context.Context {
+	return &muxVarsContext{
+		Context: ctx,
+		vars:    getVarsFromRequest(r),
+	}
 }

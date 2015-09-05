@@ -633,7 +633,7 @@ func (app *App) logError(context context.Context, errors errcode.Errors) {
 // called once per request.
 func (app *App) context(w http.ResponseWriter, r *http.Request) *Context {
 	ctx := defaultContextManager.context(app, w, r)
-	ctx = ctxu.WithVars(ctx, r)
+	ctx = contextWithVars(ctx, r)
 	ctx = ctxu.WithLogger(ctx, ctxu.GetLogger(ctx,
 		"vars.name",
 		"vars.reference",
