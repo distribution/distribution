@@ -181,7 +181,7 @@ func GetResponseLogger(ctx Context) Logger {
 		l = l.WithField("http.response.duration", duration.String())
 	}
 
-	return l
+	return &entry{l}
 }
 
 // httpRequestContext makes information about a request available to context.
