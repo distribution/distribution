@@ -48,14 +48,14 @@ func WithLogger(ctx Context, logger Logger) Context {
 // and value without affecting the context. Extra specified keys will be
 // resolved from the context.
 func GetLoggerWithField(ctx Context, key, value interface{}, keys ...interface{}) Logger {
-	return getLogrusLogger(ctx, keys...).WithField(fmt.Sprint(key), value)
+	return &entry{getLogrusLogger(ctx, keys...).WithField(fmt.Sprint(key), value)}
 }
 
 // GetLoggerWithFields returns a logger instance with the specified fields
 // without affecting the context. Extra specified keys will be resolved from
 // the context.
 func GetLoggerWithFields(ctx Context, fields map[string]interface{}, keys ...interface{}) Logger {
-	return getLogrusLogger(ctx, keys...).WithFields(logrus.Fields(fields))
+	return &entry{getLogrusLogger(ctx, keys...).WithFields(logrus.Fields(fields))}
 }
 
 // GetLogger returns the logger from the current context, if present. If one
@@ -65,7 +65,7 @@ func GetLoggerWithFields(ctx Context, fields map[string]interface{}, keys ...int
 // a logging key field. If context keys are integer constants, for example,
 // its recommended that a String method is implemented.
 func GetLogger(ctx Context, keys ...interface{}) Logger {
-	return getLogrusLogger(ctx, keys...)
+	return &entry{getLogrusLogger(ctx, keys...)}
 }
 
 // GetLogrusLogger returns the logrus logger for the context. If one more keys
@@ -99,3 +99,31 @@ func getLogrusLogger(ctx Context, keys ...interface{}) *logrus.Entry {
 
 	return logger.WithFields(fields)
 }
+
+var _ Logger = new(entry)
+
+type entry struct {
+	*logrus.Entry
+}
+
+func (e *entry) Print(args ...interface{})                 { e.Entry.Print(args...) }
+func (e *entry) Printf(format string, args ...interface{}) { e.Entry.Printf(format, args...) }
+func (e *entry) Println(args ...interface{})               { e.Entry.Println(args...) }
+func (e *entry) Fatal(args ...interface{})                 { e.Entry.Fatal(args...) }
+func (e *entry) Fatalf(format string, args ...interface{}) { e.Entry.Fatalf(format, args...) }
+func (e *entry) Fatalln(args ...interface{})               { e.Entry.Fatalln(args...) }
+func (e *entry) Panic(args ...interface{})                 { e.Entry.Panic(args...) }
+func (e *entry) Panicf(format string, args ...interface{}) { e.Entry.Panicf(format, args...) }
+func (e *entry) Panicln(args ...interface{})               { e.Entry.Panicln(args...) }
+func (e *entry) Debug(args ...interface{})                 { e.Entry.Debug(args...) }
+func (e *entry) Debugf(format string, args ...interface{}) { e.Entry.Debugf(format, args...) }
+func (e *entry) Debugln(args ...interface{})               { e.Entry.Debugln(args...) }
+func (e *entry) Error(args ...interface{})                 { e.Entry.Error(args...) }
+func (e *entry) Errorf(format string, args ...interface{}) { e.Entry.Errorf(format, args...) }
+func (e *entry) Errorln(args ...interface{})               { e.Entry.Errorln(args...) }
+func (e *entry) Info(args ...interface{})                  { e.Entry.Info(args...) }
+func (e *entry) Infof(format string, args ...interface{})  { e.Entry.Infof(format, args...) }
+func (e *entry) Infoln(args ...interface{})                { e.Entry.Infoln(args...) }
+func (e *entry) Warn(args ...interface{})                  { e.Entry.Warn(args...) }
+func (e *entry) Warnf(format string, args ...interface{})  { e.Entry.Warnf(format, args...) }
+func (e *entry) Warnln(args ...interface{})                { e.Entry.Warnln(args...) }
