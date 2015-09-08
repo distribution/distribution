@@ -7,11 +7,13 @@
 //
 //	// repository.go
 //	repository			:= hostname ['/' component]+
-//	hostname 			:= component [':' port-number]
+//	hostname 			:= hostcomponent [':' port-number]
 //	component			:= alpha-numeric [separator alpha-numeric]*
+//	hostcomponent                   := [hostpart '.']* hostpart
 // 	alpha-numeric			:= /[a-zA-Z0-9]+/
-//	separator			:= /[._-]/
+//	separator			:= /[_-]/
 //	port-number			:= /[0-9]+/
+//	hostpart                        := /([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])/
 //
 //	// tag.go
 //	tag                             := /[\w][\w.-]{0,127}/
@@ -20,167 +22,224 @@
 //	digest                          := digest-algorithm ":" digest-hex
 //	digest-algorithm                := digest-algorithm-component [ digest-algorithm-separator digest-algorithm-component ]
 //	digest-algorithm-separator      := /[+.-_]/
-//	digest-algorithm-component      := /[A-Za-z]/ /[A-Za-z0-9]*/
-//	digest-hex                      := /[A-Za-z0-9_-]+/ ; supports hex bytes or url safe base64
+//	digest-algorithm-component      := /[A-Za-z][A-Za-z0-9]*/
+//	digest-hex                      := /[0-9a-fA-F]{32,}/ ; Atleast 128 bit digest value
 package reference
 
 import (
 	"errors"
-	"regexp"
+	"fmt"
 
 	"github.com/docker/distribution/digest"
 )
 
-// ErrReferenceInvalidFormat represents an error while trying to parse a string as a reference.
-var ErrReferenceInvalidFormat = errors.New("invalid reference format")
+const (
+	// NameTotalLengthMax is the maximum total number of characters in a repository name.
+	NameTotalLengthMax = 255
+)
 
-// Reference abstracts types that reference images in a certain way.
+var (
+	// ErrReferenceInvalidFormat represents an error while trying to parse a string as a reference.
+	ErrReferenceInvalidFormat = errors.New("invalid reference format")
+
+	// ErrNameEmpty is returned for empty, invalid repository names.
+	ErrNameEmpty = errors.New("repository name must have at least one component")
+
+	// ErrNameTooLong is returned when a repository name is longer than
+	// RepositoryNameTotalLengthMax
+	ErrNameTooLong = fmt.Errorf("repository name must not be more than %v characters", NameTotalLengthMax)
+)
+
+// Reference is an opaque object reference identifier that may include
+// modifiers such as a hostname, name, tag, and digest.
 type Reference interface {
-	// Repository returns the repository part of a reference
-	Repository() Repository
-	// String returns the entire reference, including the repository part
+	// String returns the full reference
 	String() string
 }
 
-func parseHostname(s string) (hostname, tail string) {
-	tail = s
-	i := regexp.MustCompile(`^` + RepositoryNameHostnameRegexp.String()).FindStringIndex(s)
-	if i == nil {
-		return
-	}
-	return s[:i[1]], s[i[1]:]
+// Named is an object with a full name
+type Named interface {
+	Name() string
 }
 
-func parseRepositoryName(s string) (repo, tail string) {
-	tail = s
-	i := regexp.MustCompile(`^/(?:` + RepositoryNameComponentRegexp.String() + `/)*` + RepositoryNameComponentRegexp.String()).FindStringIndex(s)
-	if i == nil {
-		return
-	}
-	return s[:i[1]], s[i[1]:]
+// Tagged is an object which has a tag
+type Tagged interface {
+	Tag() string
 }
 
-func parseTag(s string) (tag Tag, tail string) {
-	tail = s
-	if len(s) == 0 || s[0] != ':' {
-		return
-	}
-	tag, err := NewTag(s[1:])
-	if err != nil {
-		return
-	}
-	tail = s[len(tag)+1:]
-	return
+// Digested is an object which has a digest
+// in which it can be referenced by
+type Digested interface {
+	Digest() digest.Digest
 }
 
-func parseDigest(s string) (dgst digest.Digest, tail string) {
-	tail = s
-	if len(s) == 0 || s[0] != '@' {
-		return
+// Canonical reference is an object with a fully unique
+// name including a name with hostname and digest
+type Canonical interface {
+	Reference
+	Named
+	Digested
+}
+
+// SplitHostname splits a named reference into a
+// hostname and name string. If no valid hostname is
+// found, the hostname is empty and the full value
+// is returned as name
+func SplitHostname(named Named) (string, string) {
+	name := named.Name()
+	match := anchoredNameRegexp.FindStringSubmatch(name)
+	if match == nil || len(match) != 3 {
+		return "", name
 	}
-	dgst, err := digest.ParseDigest(s[1:])
-	if err != nil {
-		return
-	}
-	tail = s[len(dgst)+1:]
-	return
+	return match[1], match[2]
 }
 
 // Parse parses s and returns a syntactically valid Reference.
 // If an error was encountered it is returned, along with a nil Reference.
+// NOTE: Parse will not handle short digests.
 func Parse(s string) (Reference, error) {
-	hostname, s := parseHostname(s)
-	name, s := parseRepositoryName(s)
-	repository := Repository{Hostname: hostname, Name: name}
-	if err := repository.Validate(); err != nil {
-		return nil, err
-	}
-	tag, s := parseTag(s)
-	dgst, s := parseDigest(s)
-	if len(s) > 0 {
+	matches := ReferenceRegexp.FindStringSubmatch(s)
+	if matches == nil {
+		if s == "" {
+			return nil, ErrNameEmpty
+		}
+		// TODO(dmcgowan): Provide more specific and helpful error
 		return nil, ErrReferenceInvalidFormat
 	}
 
-	if dgst != "" {
-		return DigestReference{repository: repository, digest: dgst, tag: tag}, nil
+	if len(matches[1]) > NameTotalLengthMax {
+		return nil, ErrNameTooLong
 	}
-	if tag != "" {
-		return TagReference{repository: repository, tag: tag}, nil
+
+	ref := reference{
+		name: matches[1],
+		tag:  matches[2],
 	}
-	return nil, ErrReferenceInvalidFormat
-}
-
-// DigestReference represents a reference of the form `repository@sha256:deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef`.
-// Implements the Reference interface.
-type DigestReference struct {
-	repository Repository
-	digest     digest.Digest
-	tag        Tag
-}
-
-// Repository returns the repository part.
-func (r DigestReference) Repository() Repository { return r.repository }
-
-// String returns the full string reference.
-func (r DigestReference) String() string {
-	return r.repository.String() + "@" + string(r.digest)
-}
-
-// NewDigestReference returns an initialized DigestReference.
-func NewDigestReference(canonicalRepository string, digest digest.Digest, optionalTag Tag) (DigestReference, error) {
-	ref := DigestReference{}
-
-	repo, err := NewRepository(canonicalRepository)
-	if err != nil {
-		return ref, err
-	}
-	ref.repository = repo
-
-	if err := digest.Validate(); err != nil {
-		return ref, err
-	}
-	ref.digest = digest
-
-	if len(optionalTag) > 0 {
-		if err := optionalTag.Validate(); err != nil {
-			return ref, err
+	if matches[3] != "" {
+		var err error
+		ref.digest, err = digest.ParseDigest(matches[3])
+		if err != nil {
+			return nil, err
 		}
-		ref.tag = optionalTag
 	}
 
-	return ref, err
-}
-
-// TagReference represents a reference of the form `repository:tag`.
-// Implements the Reference interface.
-type TagReference struct {
-	repository Repository
-	tag        Tag
-}
-
-// Repository returns the repository part.
-func (r TagReference) Repository() Repository { return r.repository }
-
-// String returns the full string reference.
-func (r TagReference) String() string {
-	return r.repository.String() + ":" + string(r.tag)
-}
-
-// NewTagReference returns an initialized TagReference.
-func NewTagReference(canonicalRepository string, tagName string) (TagReference, error) {
-	ref := TagReference{}
-
-	repo, err := NewRepository(canonicalRepository)
-	if err != nil {
-		return ref, err
+	r := getBestReferenceType(ref)
+	if r == nil {
+		return nil, ErrNameEmpty
 	}
-	ref.repository = repo
 
-	tag, err := NewTag(tagName)
-	if err != nil {
-		return ref, err
+	return r, nil
+}
+
+// ParseNamed parses the input string and returns a named
+// object representing the given string. If the input is
+// invalid ErrReferenceInvalidFormat will be returned.
+func ParseNamed(name string) (Named, error) {
+	if !anchoredNameRegexp.MatchString(name) {
+		return nil, ErrReferenceInvalidFormat
 	}
-	ref.tag = tag
+	return repository(name), nil
+}
 
-	return ref, err
+func getBestReferenceType(ref reference) Reference {
+	if ref.name == "" {
+		// Allow digest only references
+		if ref.digest != "" {
+			return digestReference(ref.digest)
+		}
+		return nil
+	}
+	if ref.tag == "" {
+		if ref.digest != "" {
+			return canonicalReference{
+				name:   ref.name,
+				digest: ref.digest,
+			}
+		}
+		return repository(ref.name)
+	}
+	if ref.digest == "" {
+		return taggedReference{
+			name: ref.name,
+			tag:  ref.tag,
+		}
+	}
+
+	return ref
+}
+
+type reference struct {
+	name   string
+	tag    string
+	digest digest.Digest
+}
+
+func (r reference) String() string {
+	return r.name + ":" + r.tag + "@" + r.digest.String()
+}
+
+func (r reference) Name() string {
+	return r.name
+}
+
+func (r reference) Tag() string {
+	return r.tag
+}
+
+func (r reference) Digest() digest.Digest {
+	return r.digest
+}
+
+type repository string
+
+func (r repository) String() string {
+	return string(r)
+}
+
+func (r repository) Name() string {
+	return string(r)
+}
+
+type digestReference digest.Digest
+
+func (d digestReference) String() string {
+	return d.String()
+}
+
+func (d digestReference) Digest() digest.Digest {
+	return digest.Digest(d)
+}
+
+type taggedReference struct {
+	name string
+	tag  string
+}
+
+func (t taggedReference) String() string {
+	return t.name + ":" + t.tag
+}
+
+func (t taggedReference) Name() string {
+	return t.name
+}
+
+func (t taggedReference) Tag() string {
+	return t.tag
+}
+
+type canonicalReference struct {
+	name   string
+	digest digest.Digest
+}
+
+func (c canonicalReference) String() string {
+	return c.name + "@" + c.digest.String()
+}
+
+func (c canonicalReference) Name() string {
+	return c.name
+}
+
+func (c canonicalReference) Digest() digest.Digest {
+	return c.digest
 }

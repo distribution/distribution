@@ -170,6 +170,14 @@ func TestRouter(t *testing.T) {
 				"name": "foo/bar/manifests",
 			},
 		},
+		{
+			RouteName:  RouteNameManifest,
+			RequestURI: "/v2/locahost:8080/foo/bar/baz/manifests/tag",
+			Vars: map[string]string{
+				"name":      "locahost:8080/foo/bar/baz",
+				"reference": "tag",
+			},
+		},
 	}
 
 	checkTestRouter(t, testCases, "", true)
