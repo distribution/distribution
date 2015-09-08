@@ -40,13 +40,13 @@ func NewRedisBlobDescriptorCacheProvider(pool *redis.Pool) cache.BlobDescriptorC
 }
 
 // RepositoryScoped returns the scoped cache.
-func (rbds *redisBlobDescriptorService) RepositoryScoped(canonicalName string) (distribution.BlobDescriptorService, error) {
-	if _, err := reference.NewRepository(canonicalName); err != nil {
+func (rbds *redisBlobDescriptorService) RepositoryScoped(repo string) (distribution.BlobDescriptorService, error) {
+	if _, err := reference.ParseNamed(repo); err != nil {
 		return nil, err
 	}
 
 	return &repositoryScopedRedisBlobDescriptorService{
-		repo:     canonicalName,
+		repo:     repo,
 		upstream: rbds,
 	}, nil
 }
