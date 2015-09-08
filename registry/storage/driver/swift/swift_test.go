@@ -29,6 +29,7 @@ func init() {
 		tenantID           string
 		domain             string
 		domainID           string
+		trustID            string
 		container          string
 		region             string
 		insecureSkipVerify bool
@@ -42,6 +43,7 @@ func init() {
 	tenantID = os.Getenv("SWIFT_TENANT_ID")
 	domain = os.Getenv("SWIFT_DOMAIN_NAME")
 	domainID = os.Getenv("SWIFT_DOMAIN_ID")
+	trustID = os.Getenv("SWIFT_TRUST_ID")
 	container = os.Getenv("SWIFT_CONTAINER_NAME")
 	region = os.Getenv("SWIFT_REGION_NAME")
 	insecureSkipVerify, _ = strconv.ParseBool(os.Getenv("SWIFT_INSECURESKIPVERIFY"))
@@ -71,6 +73,7 @@ func init() {
 			tenantID,
 			domain,
 			domainID,
+			trustID,
 			region,
 			container,
 			root,

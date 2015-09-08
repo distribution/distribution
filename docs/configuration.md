@@ -780,6 +780,17 @@ This storage backend uses Openstack Swift object storage.
   </tr>
   <tr>
     <td>
+      <code>trustid</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Your Openstack trust id for Identity v3 API.
+    </td>
+  </tr>
+  <tr>
+    <td>
       <code>insecureskipverify</code>
     </td>
     <td>

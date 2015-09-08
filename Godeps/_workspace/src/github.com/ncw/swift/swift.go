@@ -3,7 +3,10 @@ package swift
 import (
 	"bufio"
 	"bytes"
+	"crypto/hmac"
 	"crypto/md5"
+	"crypto/sha1"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"hash"
@@ -94,6 +97,7 @@ type Connection struct {
 	Internal       bool              // Set this to true to use the the internal / service network
 	Tenant         string            // Name of the tenant (v2 auth only)
 	TenantId       string            // Id of the tenant (v2 auth only)
+	TrustId        string            // Id of the trust (v3 auth only)
 	Transport      http.RoundTripper `json:"-" xml:"-"` // Optional specialised http.Transport (eg. for Google Appengine)
 	// These are filled in after Authenticate is called as are the defaults for above
 	StorageUrl string
@@ -1422,8 +1426,10 @@ func (c *Connection) ObjectOpen(container string, objectName string, checkHash b
 		file.body = io.TeeReader(resp.Body, file.hash)
 	}
 	// Read Content-Length
-	file.length, err = getInt64FromHeader(resp, "Content-Length")
-	file.lengthOk = (err == nil)
+	if resp.Header.Get("Content-Length") != "" {
+		file.length, err = getInt64FromHeader(resp, "Content-Length")
+		file.lengthOk = (err == nil)
+	}
 	return
 }
 
@@ -1477,6 +1483,16 @@ func (c *Connection) ObjectDelete(container string, objectName string) error {
 		ErrorMap:   objectErrorMap,
 	})
 	return err
+}
+
+// ObjectTempUrl returns a temporary URL for an object
+func (c *Connection) ObjectTempUrl(container string, objectName string, secretKey string, method string, expires time.Time) string {
+	mac := hmac.New(sha1.New, []byte(secretKey))
+	prefix, _ := url.Parse(c.StorageUrl)
+	body := fmt.Sprintf("%s\n%d\n%s/%s/%s", method, expires.Unix(), prefix.Path, container, objectName)
+	mac.Write([]byte(body))
+	sig := hex.EncodeToString(mac.Sum(nil))
+	return fmt.Sprintf("%s/%s/%s?temp_url_sig=%s&temp_url_expires=%d", c.StorageUrl, container, objectName, sig, expires.Unix())
 }
 
 // parseResponseStatus parses string like "200 OK" and returns Error.

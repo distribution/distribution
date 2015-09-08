@@ -8,8 +8,10 @@ package swifttest
 
 import (
 	"bytes"
+	"crypto/hmac"
 	"crypto/md5"
 	"crypto/rand"
+	"crypto/sha1"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -33,19 +35,19 @@ import (
 )
 
 const (
-	DEBUG = false
+	DEBUG        = false
+	TEST_ACCOUNT = "swifttest"
 )
 
 type SwiftServer struct {
-	t          *testing.T
-	reqId      int
-	mu         sync.Mutex
-	Listener   net.Listener
-	AuthURL    string
-	URL        string
-	Containers map[string]*container
-	Accounts   map[string]*account
-	Sessions   map[string]*session
+	t        *testing.T
+	reqId    int
+	mu       sync.Mutex
+	Listener net.Listener
+	AuthURL  string
+	URL      string
+	Accounts map[string]*account
+	Sessions map[string]*session
 }
 
 // The Folder type represents a container stored in an account
@@ -96,7 +98,8 @@ type metadata struct {
 type account struct {
 	swift.Account
 	metadata
-	password string
+	password   string
+	Containers map[string]*container
 }
 
 type object struct {
@@ -294,8 +297,8 @@ func (r containerResource) delete(a *action) interface{} {
 	if len(b.objects) > 0 {
 		fatalf(409, "Conflict", "The container you tried to delete is not empty")
 	}
-	delete(a.srv.Containers, b.name)
-	a.user.Containers--
+	delete(a.user.Containers, b.name)
+	a.user.Account.Containers--
 	return nil
 }
 
@@ -316,8 +319,8 @@ func (r containerResource) put(a *action) interface{} {
 			},
 		}
 		r.container.setMetadata(a, "container")
-		a.srv.Containers[r.name] = r.container
-		a.user.Containers++
+		a.user.Containers[r.name] = r.container
+		a.user.Account.Containers++
 	}
 
 	return nil
@@ -430,7 +433,7 @@ func (objr objectResource) get(a *action) interface{} {
 	if manifest, ok := obj.meta["X-Object-Manifest"]; ok {
 		var segments []io.Reader
 		components := strings.SplitN(manifest[0], "/", 2)
-		segContainer := a.srv.Containers[components[0]]
+		segContainer := a.user.Containers[components[0]]
 		prefix := components[1]
 		resp := segContainer.list("", "", prefix, "")
 		sum := md5.New()
@@ -575,7 +578,7 @@ func (objr objectResource) copy(a *action) interface{} {
 		objr2 objectResource
 	)
 
-	destURL, _ := url.Parse("/v1/AUTH_tk/" + destination)
+	destURL, _ := url.Parse("/v1/AUTH_" + TEST_ACCOUNT + "/" + destination)
 	r := a.srv.resourceForURL(destURL)
 	switch t := r.(type) {
 	case objectResource:
@@ -665,15 +668,34 @@ func (s *SwiftServer) serveHTTP(w http.ResponseWriter, req *http.Request) {
 		panic(notAuthorized())
 	}
 
-	key := req.Header.Get("x-auth-token")
-	session, ok := s.Sessions[key[7:]]
-	if !ok {
-		panic(notAuthorized())
-	}
-
-	a.user = s.Accounts[session.username]
-
 	r = s.resourceForURL(req.URL)
+
+	key := req.Header.Get("x-auth-token")
+	if key == "" {
+		secretKey := ""
+		signature := req.URL.Query().Get("temp_url_sig")
+		expires := req.URL.Query().Get("temp_url_expires")
+		accountName, _, _, _ := s.parseURL(req.URL)
+		if account, ok := s.Accounts[accountName]; ok {
+			secretKey = account.meta.Get("X-Account-Meta-Temp-Url-Key")
+		}
+
+		mac := hmac.New(sha1.New, []byte(secretKey))
+		body := fmt.Sprintf("%s\n%s\n%s", req.Method, expires, req.URL.Path)
+		mac.Write([]byte(body))
+		expectedSignature := hex.EncodeToString(mac.Sum(nil))
+
+		if signature != expectedSignature {
+			panic(notAuthorized())
+		}
+	} else {
+		session, ok := s.Sessions[key[7:]]
+		if !ok {
+			panic(notAuthorized())
+		}
+
+		a.user = s.Accounts[session.username]
+	}
 
 	switch req.Method {
 	case "PUT":
@@ -712,22 +734,38 @@ func jsonMarshal(w io.Writer, x interface{}) {
 	}
 }
 
-var pathRegexp = regexp.MustCompile("/v1/AUTH_[a-zA-Z0-9]+(/([^/]+)(/(.*))?)?")
+var pathRegexp = regexp.MustCompile("/v1/AUTH_([a-zA-Z0-9]+)(/([^/]+)(/(.*))?)?")
+
+func (srv *SwiftServer) parseURL(u *url.URL) (account string, container string, object string, err error) {
+	m := pathRegexp.FindStringSubmatch(u.Path)
+	if m == nil {
+		return "", "", "", fmt.Errorf("Couldn't parse the specified URI")
+	}
+	account = m[1]
+	container = m[3]
+	object = m[5]
+	return
+}
 
 // resourceForURL returns a resource object for the given URL.
 func (srv *SwiftServer) resourceForURL(u *url.URL) (r resource) {
-	m := pathRegexp.FindStringSubmatch(u.Path)
-	if m == nil {
-		fatalf(404, "InvalidURI", "Couldn't parse the specified URI")
+	accountName, containerName, objectName, err := srv.parseURL(u)
+
+	if err != nil {
+		fatalf(404, "InvalidURI", err.Error())
 	}
-	containerName := m[2]
-	objectName := m[4]
+
+	account, ok := srv.Accounts[accountName]
+	if !ok {
+		fatalf(404, "NoSuchAccount", "The specified account does not exist")
+	}
+
 	if containerName == "" {
 		return rootResource{}
 	}
 	b := containerResource{
 		name:      containerName,
-		container: srv.Containers[containerName],
+		container: account.Containers[containerName],
 	}
 
 	if objectName == "" {
@@ -780,7 +818,7 @@ func (rootResource) get(a *action) interface{} {
 	h := a.w.Header()
 
 	h.Set("X-Account-Bytes-Used", strconv.Itoa(int(a.user.BytesUsed)))
-	h.Set("X-Account-Container-Count", strconv.Itoa(int(a.user.Containers)))
+	h.Set("X-Account-Container-Count", strconv.Itoa(int(a.user.Account.Containers)))
 	h.Set("X-Account-Object-Count", strconv.Itoa(int(a.user.Objects)))
 
 	// add metadata
@@ -792,7 +830,7 @@ func (rootResource) get(a *action) interface{} {
 
 	var tmp orderedContainers
 	// first get all matching objects and arrange them in alphabetical order.
-	for _, container := range a.srv.Containers {
+	for _, container := range a.user.Containers {
 		if strings.HasPrefix(container.name, prefix) {
 			tmp = append(tmp, container)
 		}
@@ -858,19 +896,19 @@ func NewSwiftServer(address string) (*SwiftServer, error) {
 	}
 
 	server := &SwiftServer{
-		Listener:   l,
-		AuthURL:    "http://" + l.Addr().String() + "/v1.0",
-		URL:        "http://" + l.Addr().String() + "/v1",
-		Containers: make(map[string]*container),
-		Accounts:   make(map[string]*account),
-		Sessions:   make(map[string]*session),
+		Listener: l,
+		AuthURL:  "http://" + l.Addr().String() + "/v1.0",
+		URL:      "http://" + l.Addr().String() + "/v1",
+		Accounts: make(map[string]*account),
+		Sessions: make(map[string]*session),
 	}
 
-	server.Accounts["swifttest"] = &account{
-		password: "swifttest",
+	server.Accounts[TEST_ACCOUNT] = &account{
+		password: TEST_ACCOUNT,
 		metadata: metadata{
 			meta: make(http.Header),
 		},
+		Containers: make(map[string]*container),
 	}
 
 	go http.Serve(l, http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
