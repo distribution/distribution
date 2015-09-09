@@ -1,15 +1,15 @@
 package s3
 
 import (
-	"io/ioutil"
-	"os"
-	"strconv"
-	"testing"
-
+	"fmt"
 	"github.com/AdRoll/goamz/aws"
 	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/testsuites"
+	"io/ioutil"
+	"os"
+	"strconv"
+	"testing"
 
 	"gopkg.in/check.v1"
 )
@@ -26,6 +26,7 @@ func init() {
 	bucket := os.Getenv("S3_BUCKET")
 	encrypt := os.Getenv("S3_ENCRYPT")
 	secure := os.Getenv("S3_SECURE")
+	s3EntryPoint := os.Getenv("S3_ENTRYPOINT")
 	v4auth := os.Getenv("S3_USE_V4_AUTH")
 	region := os.Getenv("AWS_REGION")
 	root, err := ioutil.TempDir("", "driver-")
@@ -59,11 +60,23 @@ func init() {
 			}
 		}
 
+		var realregion aws.Region
+		if region == "generic" {
+			if s3EntryPoint == "" {
+				return nil, fmt.Errorf("No S3 endpoint for generic region")
+			}
+			realregion = aws.Region{Name: region, S3Endpoint: s3EntryPoint, S3LocationConstraint: true}
+		} else {
+			realregion = aws.GetRegion(region)
+			if realregion.Name == "" {
+				return nil, fmt.Errorf("Invalid region provided: %v", region)
+			}
+		}
 		parameters := DriverParameters{
 			accessKey,
 			secretKey,
 			bucket,
-			aws.GetRegion(region),
+			realregion,
 			encryptBool,
 			secureBool,
 			v4AuthBool,
@@ -76,6 +89,12 @@ func init() {
 
 	// Skip S3 storage driver tests if environment variable parameters are not provided
 	skipS3 = func() string {
+		if region == "generic" && (accessKey == "" || secretKey == "" || bucket == "" || s3EntryPoint == "") {
+			return "Must set AWS_ACCESS_KEY, AWS_SECRET_KEY, S3_BUCKET, REGION_SUPPORTS_HEAD, and S3_ENTRYPOINT to test RadosGW as storage"
+		}
+		if region == "generic" {
+			return ""
+		}
 		if accessKey == "" || secretKey == "" || region == "" || bucket == "" || encrypt == "" {
 			return "Must set AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_REGION, S3_BUCKET, and S3_ENCRYPT to run S3 tests"
 		}

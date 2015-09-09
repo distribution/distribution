@@ -374,6 +374,28 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 		return nil
 	}
 
+	readAndPutPart := func(start int64, end int64) error {
+		headers := make(http.Header)
+		if end == 0 {
+			headers.Add("Range", "bytes="+strconv.FormatInt(start, 10)+"-")
+		} else {
+			headers.Add("Range", "bytes="+strconv.FormatInt(start, 10)+"-"+strconv.FormatInt(end, 10))
+		}
+		resp, err := d.Bucket.GetResponseWithHeaders(d.s3Path(path), headers)
+
+		if err != nil {
+			if s3Err, ok := err.(*s3.Error); ok && s3Err.Code == "InvalidRange" {
+				return err
+			}
+			return parseError(path, err)
+		}
+		tempBuf := d.getbuf()
+		_, err = resp.Body.Read(tempBuf)
+		part, err = multi.PutPart(partNumber, bytes.NewReader(tempBuf))
+		d.putbuf(tempBuf)
+		return err
+	}
+
 	// Fills from parameter to chunkSize from reader
 	fromReader := func(from int64) error {
 		bytesRead = 0
@@ -504,9 +526,27 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 				}
 			} else {
 				// currentLength >= offset >= chunkSize
-				_, part, err = multi.PutPartCopy(partNumber,
-					s3.CopyOptions{CopySourceOptions: "bytes=0-" + strconv.FormatInt(offset-1, 10)},
-					d.Bucket.Name+"/"+d.s3Path(path))
+				if d.S3.Region.Name == "generic" {
+					start := int64(0)
+					for start+d.ChunkSize < offset {
+						err = readAndPutPart(start, start+d.ChunkSize-1)
+						if err != nil {
+							return 0, err
+						}
+						start += d.ChunkSize
+						parts = append(parts, part)
+						partNumber++
+					}
+					if offset-start > 0 {
+						err = readAndPutPart(start, offset-1)
+
+					}
+
+				} else {
+					_, part, err = multi.PutPartCopy(partNumber,
+						s3.CopyOptions{CopySourceOptions: "bytes=0-" + strconv.FormatInt(offset-1, 10)},
+						d.Bucket.Name+"/"+d.s3Path(path))
+				}
 				if err != nil {
 					return 0, err
 				}
@@ -598,9 +638,27 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 				}
 			} else {
 				// offset > currentLength >= chunkSize
-				_, part, err = multi.PutPartCopy(partNumber,
-					s3.CopyOptions{},
-					d.Bucket.Name+"/"+d.s3Path(path))
+				if d.S3.Region.Name == "generic" {
+
+					start := int64(0)
+					for start+d.ChunkSize < currentLength {
+						err = readAndPutPart(start, start+d.ChunkSize-1)
+						if err != nil {
+							return 0, err
+						}
+						start += d.ChunkSize
+						parts = append(parts, part)
+						partNumber++
+					}
+					if currentLength-start > 0 {
+						err = readAndPutPart(start, 0)
+
+					}
+				} else {
+					_, part, err = multi.PutPartCopy(partNumber,
+						s3.CopyOptions{},
+						d.Bucket.Name+"/"+d.s3Path(path))
+				}
 				if err != nil {
 					return 0, err
 				}
@@ -736,16 +794,24 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		return storagedriver.PathNotFoundError{Path: path}
 	}
 
-	s3Objects := make([]s3.Object, listMax)
-
 	for len(listResponse.Contents) > 0 {
-		for index, key := range listResponse.Contents {
-			s3Objects[index].Key = key.Key
-		}
+		if d.S3.Region.Name == "generic" {
+			for _, key := range listResponse.Contents {
+				err := d.Bucket.Del(key.Key)
+				if err != nil {
+					return nil
+				}
+			}
+		} else {
+			s3Objects := make([]s3.Object, listMax)
+			for index, key := range listResponse.Contents {
+				s3Objects[index].Key = key.Key
+			}
 
-		err := d.Bucket.DelMulti(s3.Delete{Quiet: false, Objects: s3Objects[0:len(listResponse.Contents)]})
-		if err != nil {
-			return nil
+			err := d.Bucket.DelMulti(s3.Delete{Quiet: false, Objects: s3Objects[0:len(listResponse.Contents)]})
+			if err != nil {
+				return nil
+			}
 		}
 
 		listResponse, err = d.Bucket.List(d.s3Path(path), "", "", listMax)
