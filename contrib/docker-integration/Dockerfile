@@ -25,7 +25,7 @@ RUN curl -L -o /usr/local/bin/docker https://test.docker.com/builds/Linux/x86_64
     && chmod +x /usr/local/bin/docker
 
 # Install DIND
-RUN curl -L -o /dind https://raw.githubusercontent.com/docker/docker/master/hack/dind \
+RUN curl -L -o /dind https://raw.githubusercontent.com/docker/docker/v1.8.1/hack/dind \
     && chmod +x /dind
 
 # Install bats
