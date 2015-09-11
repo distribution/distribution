@@ -40,11 +40,6 @@
 			"Rev": "e5f9854865b9778a45169fc249e99e338d4d6f27"
 		},
 		{
-			"ImportPath": "github.com/codegangsta/cli",
-			"Comment": "1.2.0-66-g6086d79",
-			"Rev": "6086d7927ec35315964d9fea46df6c04e6d697c1"
-		},
-		{
 			"ImportPath": "github.com/denverdino/aliyungo/oss",
 			"Rev": "0e0f322d0a54b994dea9d32541050d177edf6aa3"
 		},
@@ -82,13 +77,8 @@
 			"Rev": "e444e69cbd2e2e3e0749a2f3c717cec491552bbf"
 		},
 		{
-			"ImportPath": "github.com/noahdesu/go-ceph/rados",
-			"Comment": "v.0.3.0-29-gb15639c",
-			"Rev": "b15639c44c05368348355229070361395d9152ee"
-		},
-		{
-			"ImportPath": "github.com/stevvooe/resumable",
-			"Rev": "51ad44105773cafcbe91927f70ac68e1bf78f8b4"
+			"ImportPath": "github.com/inconshreveable/mousetrap",
+			"Rev": "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
 		},
 		{
 			"ImportPath": "github.com/mitchellh/mapstructure",
@@ -96,7 +86,28 @@
 		},
 		{
 			"ImportPath": "github.com/ncw/swift",
+			"Rev": "22c8fa9fb5ba145b4d4e2cebb027e84b1a7b1296"
+		},
+		{
+			"ImportPath": "github.com/noahdesu/go-ceph/rados",
+			"Comment": "v.0.3.0-29-gb15639c",
+			"Rev": "b15639c44c05368348355229070361395d9152ee"
+		},
+		{
+			"ImportPath": "github.com/spf13/cobra",
+			"Rev": "312092086bed4968099259622145a0c9ae280064"
+		},
+		{
+			"ImportPath": "github.com/spf13/pflag",
+			"Rev": "5644820622454e71517561946e3d94b9f9db6842"
+		},
+		{
+			"ImportPath": "github.com/ncw/swift",
 			"Rev": "ca8cbbde50d4e12dd8ad70b1bd66589ae98efc5c"
+		},
+		{
+			"ImportPath": "github.com/stevvooe/resumable",
+			"Rev": "51ad44105773cafcbe91927f70ac68e1bf78f8b4"
 		},
 		{
 			"ImportPath": "github.com/yvasiyarov/go-metrics",

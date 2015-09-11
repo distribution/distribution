@@ -1,3 +1,2 @@
-// Package registry is a placeholder package for registry interface
-// definitions and utilities.
+// Package registry provides the main entrypoints for running a registry.
 package registry
