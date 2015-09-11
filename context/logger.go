@@ -90,8 +90,16 @@ func getLogrusLogger(ctx Context, keys ...interface{}) *logrus.Entry {
 	}
 
 	if logger == nil {
+		fields := logrus.Fields{}
+
+		// Fill in the instance id, if we have it.
+		instanceID := ctx.Value("instance.id")
+		if instanceID != nil {
+			fields["instance.id"] = instanceID
+		}
+
 		// If no logger is found, just return the standard logger.
-		logger = logrus.NewEntry(logrus.StandardLogger())
+		logger = logrus.StandardLogger().WithFields(fields)
 	}
 
 	fields := logrus.Fields{}
