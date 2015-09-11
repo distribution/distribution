@@ -11,7 +11,10 @@ import (
 )
 
 // Configuration is a versioned registry configuration, intended to be provided by a yaml file, and
-// optionally modified by environment variables
+// optionally modified by environment variables.
+//
+// Note that yaml field names should never include _ characters, since this is the separator used
+// in environment variable names.
 type Configuration struct {
 	// Version is the version which defines the format of the rest of the configuration
 	Version Version `yaml:"version"`
@@ -305,6 +308,8 @@ type Storage map[string]Parameters
 
 // Type returns the storage driver type, such as filesystem or s3
 func (storage Storage) Type() string {
+	var storageType []string
+
 	// Return only key in this map
 	for k := range storage {
 		switch k {
@@ -317,8 +322,14 @@ func (storage Storage) Type() string {
 		case "redirect":
 			// allow configuration of redirect
 		default:
-			return k
+			storageType = append(storageType, k)
 		}
+	}
+	if len(storageType) > 1 {
+		panic("multiple storage drivers specified in configuration or environment: " + strings.Join(storageType, ", "))
+	}
+	if len(storageType) == 1 {
+		return storageType[0]
 	}
 	return ""
 }
