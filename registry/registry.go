@@ -13,7 +13,7 @@ import (
 	"github.com/Sirupsen/logrus/formatters/logstash"
 	"github.com/bugsnag/bugsnag-go"
 	"github.com/docker/distribution/configuration"
-	ctxu "github.com/docker/distribution/context"
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/health"
 	"github.com/docker/distribution/registry/handlers"
 	"github.com/docker/distribution/registry/listener"
@@ -22,7 +22,6 @@ import (
 	gorhandlers "github.com/gorilla/handlers"
 	"github.com/spf13/cobra"
 	"github.com/yvasiyarov/gorelic"
-	"golang.org/x/net/context"
 )
 
 // Cmd is a cobra command for running the registry.
@@ -80,7 +79,7 @@ type Registry struct {
 // NewRegistry creates a new registry from a context and configuration struct.
 func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Registry, error) {
 	// Note this
-	ctx = ctxu.WithValue(ctx, "version", version.Version)
+	ctx = context.WithValue(ctx, "version", version.Version)
 
 	var err error
 	ctx, err = configureLogging(ctx, config)
@@ -90,7 +89,7 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 
 	// inject a logger into the uuid library. warns us if there is a problem
 	// with uuid generation under low entropy.
-	uuid.Loggerf = ctxu.GetLogger(ctx).Warnf
+	uuid.Loggerf = context.GetLogger(ctx).Warnf
 
 	app := handlers.NewApp(ctx, config)
 	// TODO(aaronl): The global scope of the health checks means NewRegistry
@@ -161,7 +160,7 @@ func (registry *Registry) ListenAndServe() error {
 			}
 
 			for _, subj := range pool.Subjects() {
-				ctxu.GetLogger(registry.app).Debugf("CA Subject: %s", string(subj))
+				context.GetLogger(registry.app).Debugf("CA Subject: %s", string(subj))
 			}
 
 			tlsConf.ClientAuth = tls.RequireAndVerifyClientCert
@@ -169,9 +168,9 @@ func (registry *Registry) ListenAndServe() error {
 		}
 
 		ln = tls.NewListener(ln, tlsConf)
-		ctxu.GetLogger(registry.app).Infof("listening on %v, tls", ln.Addr())
+		context.GetLogger(registry.app).Infof("listening on %v, tls", ln.Addr())
 	} else {
-		ctxu.GetLogger(registry.app).Infof("listening on %v", ln.Addr())
+		context.GetLogger(registry.app).Infof("listening on %v", ln.Addr())
 	}
 
 	return registry.server.Serve(ln)
@@ -215,11 +214,11 @@ func configureReporting(app *handlers.App) http.Handler {
 
 // configureLogging prepares the context with a logger using the
 // configuration.
-func configureLogging(ctx ctxu.Context, config *configuration.Configuration) (context.Context, error) {
+func configureLogging(ctx context.Context, config *configuration.Configuration) (context.Context, error) {
 	if config.Log.Level == "" && config.Log.Formatter == "" {
 		// If no config for logging is set, fallback to deprecated "Loglevel".
 		log.SetLevel(logLevel(config.Loglevel))
-		ctx = ctxu.WithLogger(ctx, ctxu.GetLogger(ctx, "version"))
+		ctx = context.WithLogger(ctx, context.GetLogger(ctx, "version"))
 		return ctx, nil
 	}
 
@@ -255,7 +254,7 @@ func configureLogging(ctx ctxu.Context, config *configuration.Configuration) (co
 	}
 
 	// log the application version with messages
-	ctx = ctxu.WithLogger(ctx, ctxu.GetLogger(ctx, "version"))
+	ctx = context.WithLogger(ctx, context.GetLogger(ctx, "version"))
 
 	if len(config.Log.Fields) > 0 {
 		// build up the static fields, if present.
@@ -264,8 +263,8 @@ func configureLogging(ctx ctxu.Context, config *configuration.Configuration) (co
 			fields = append(fields, k)
 		}
 
-		ctx = ctxu.WithValues(ctx, config.Log.Fields)
-		ctx = ctxu.WithLogger(ctx, ctxu.GetLogger(ctx, fields...))
+		ctx = context.WithValues(ctx, config.Log.Fields)
+		ctx = context.WithLogger(ctx, context.GetLogger(ctx, fields...))
 	}
 
 	return ctx, nil
