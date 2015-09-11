@@ -1,6 +1,7 @@
 package s3
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -30,6 +31,7 @@ func init() {
 	secure := os.Getenv("S3_SECURE")
 	v4auth := os.Getenv("S3_USE_V4_AUTH")
 	region := os.Getenv("AWS_REGION")
+	s3EntryPoint := os.Getenv("S3_ENTRYPOINT")
 	root, err := ioutil.TempDir("", "driver-")
 	if err != nil {
 		panic(err)
@@ -63,11 +65,23 @@ func init() {
 			}
 		}
 
+		var realregion aws.Region
+		if region == "generic" {
+			if s3EntryPoint == "" {
+				return nil, fmt.Errorf("No S3 endpoint for generic region")
+			}
+			realregion = aws.Region{Name: region, S3Endpoint: s3EntryPoint, S3LocationConstraint: true}
+		} else {
+			realregion = aws.GetRegion(region)
+			if realregion.Name == "" {
+				return nil, fmt.Errorf("Invalid region provided: %v", region)
+			}
+		}
 		parameters := DriverParameters{
 			accessKey,
 			secretKey,
 			bucket,
-			aws.GetRegion(region),
+			realregion,
 			regionSupportHead,
 			encryptBool,
 			secureBool,
@@ -81,6 +95,12 @@ func init() {
 
 	// Skip S3 storage driver tests if environment variable parameters are not provided
 	skipS3 = func() string {
+		if region == "generic" && (accessKey == "" || secretKey == "" || bucket == "" || s3EntryPoint == "") {
+			return "Must set AWS_ACCESS_KEY, AWS_SECRET_KEY, S3_BUCKET, and S3_ENTRYPOINT to test RadosGW as storage"
+		}
+		if region == "generic" {
+			return ""
+		}
 		if accessKey == "" || secretKey == "" || region == "" || bucket == "" || encrypt == "" {
 			return "Must set AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_REGION, S3_BUCKET, and S3_ENCRYPT to run S3 tests"
 		}
