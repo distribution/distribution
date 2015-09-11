@@ -35,6 +35,9 @@ var Cmd = &cobra.Command{
 			return
 		}
 
+		// setup context
+		ctx := context.WithVersion(context.Background(), version.Version)
+
 		config, err := resolveConfiguration(args)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "configuration error: %v\n", err)
@@ -51,7 +54,7 @@ var Cmd = &cobra.Command{
 			}(config.HTTP.Debug.Addr)
 		}
 
-		registry, err := NewRegistry(context.Background(), config)
+		registry, err := NewRegistry(ctx, config)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -78,9 +81,6 @@ type Registry struct {
 
 // NewRegistry creates a new registry from a context and configuration struct.
 func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Registry, error) {
-	// Note this
-	ctx = context.WithValue(ctx, "version", version.Version)
-
 	var err error
 	ctx, err = configureLogging(ctx, config)
 	if err != nil {
@@ -218,7 +218,7 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 	if config.Log.Level == "" && config.Log.Formatter == "" {
 		// If no config for logging is set, fallback to deprecated "Loglevel".
 		log.SetLevel(logLevel(config.Loglevel))
-		ctx = context.WithLogger(ctx, context.GetLogger(ctx, "version"))
+		ctx = context.WithLogger(ctx, context.GetLogger(ctx))
 		return ctx, nil
 	}
 
@@ -252,9 +252,6 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 	if config.Log.Formatter != "" {
 		log.Debugf("using %q logging formatter", config.Log.Formatter)
 	}
-
-	// log the application version with messages
-	ctx = context.WithLogger(ctx, context.GetLogger(ctx, "version"))
 
 	if len(config.Log.Fields) > 0 {
 		// build up the static fields, if present.
