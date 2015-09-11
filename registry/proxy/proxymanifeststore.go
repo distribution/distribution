@@ -81,6 +81,18 @@ func (pms proxyManifestStore) ExistsByTag(tag string) (bool, error) {
 	return pms.remoteManifests.ExistsByTag(tag)
 }
 
+func (pms proxyManifestStore) DeleteByTag(tag string) (bool, error) {
+	ok, err := pms.localManifests.DeleteByTag(tag)
+	if err != nil {
+		return false, err
+	}
+	if !ok {
+		return false, nil
+	}
+
+	return pms.remoteManifests.DeleteByTag(tag)
+}
+
 func (pms proxyManifestStore) GetByTag(tag string, options ...distribution.ManifestServiceOption) (*schema1.SignedManifest, error) {
 	var localDigest digest.Digest
 

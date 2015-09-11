@@ -8,6 +8,7 @@ const (
 	RouteNameBase            = "base"
 	RouteNameManifest        = "manifest"
 	RouteNameTags            = "tags"
+	RouteNameTag             = "tag"
 	RouteNameBlob            = "blob"
 	RouteNameBlobUpload      = "blob-upload"
 	RouteNameBlobUploadChunk = "blob-upload-chunk"
@@ -18,6 +19,7 @@ var allEndpoints = []string{
 	RouteNameManifest,
 	RouteNameCatalog,
 	RouteNameTags,
+	RouteNameTag,
 	RouteNameBlob,
 	RouteNameBlobUpload,
 	RouteNameBlobUploadChunk,

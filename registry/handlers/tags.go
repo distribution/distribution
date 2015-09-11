@@ -21,6 +21,16 @@ func tagsDispatcher(ctx *Context, r *http.Request) http.Handler {
 	}
 }
 
+func tagDispatcher(ctx *Context, r *http.Request) http.Handler {
+	tagsHandler := &tagsHandler{
+		Context: ctx,
+	}
+
+	return handlers.MethodHandler{
+		"DELETE": http.HandlerFunc(tagsHandler.DeleteByTag),
+	}
+}
+
 // tagsHandler handles requests for lists of tags under a repository name.
 type tagsHandler struct {
 	*Context
@@ -29,6 +39,11 @@ type tagsHandler struct {
 type tagsAPIResponse struct {
 	Name string   `json:"name"`
 	Tags []string `json:"tags"`
+}
+
+type tagDeleteAPIResponse struct {
+	Status string `json:"status"`
+	Msg    string `json:"msg"`
 }
 
 // GetTags returns a json list of tags for a specific image name.
@@ -60,5 +75,42 @@ func (th *tagsHandler) GetTags(w http.ResponseWriter, r *http.Request) {
 	}); err != nil {
 		th.Errors = append(th.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		return
+	}
+}
+
+func (th *tagsHandler) DeleteByTag(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	manifests, err := th.Repository.Manifests(th)
+	if err != nil {
+		th.Errors = append(th.Errors, err)
+		return
+	}
+
+	tag := getReference(th.Context)
+
+	ok, err := manifests.DeleteByTag(tag)
+	if err != nil {
+		switch err := err.(type) {
+		case distribution.ErrRepositoryUnknown:
+			th.Errors = append(th.Errors, v2.ErrorCodeNameUnknown.WithDetail(map[string]string{"name": th.Repository.Name()}))
+		default:
+			th.Errors = append(th.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	enc := json.NewEncoder(w)
+	if ok {
+		enc.Encode(tagDeleteAPIResponse{
+			Status: "0",
+			Msg:    "success",
+		})
+	} else {
+		enc.Encode(tagDeleteAPIResponse{
+			Status: "1",
+			Msg:    err.Error(),
+		})
 	}
 }

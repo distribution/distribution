@@ -83,6 +83,22 @@ func (ms *manifestStore) ExistsByTag(tag string) (bool, error) {
 	return ms.tagStore.exists(tag)
 }
 
+func (ms *manifestStore) DeleteByTag(tag string) (bool, error) {
+	context.GetLogger(ms.ctx).Debug("(*manifestStore).DeleteByTag")
+	exist, err := ms.tagStore.exists(tag)
+	if err != nil {
+		return false, err
+	} else if !exist {
+		return true, nil
+	} else {
+		err = ms.tagStore.delete(tag)
+		if err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+}
+
 func (ms *manifestStore) GetByTag(tag string, options ...distribution.ManifestServiceOption) (*schema1.SignedManifest, error) {
 	for _, option := range options {
 		err := option(ms)
