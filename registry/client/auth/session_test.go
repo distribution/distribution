@@ -7,10 +7,19 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 
 	"github.com/docker/distribution/registry/client/transport"
 	"github.com/docker/distribution/testutil"
 )
+
+// An implementation of clock for providing fake time data.
+type fakeClock struct {
+	current time.Time
+}
+
+// Now implements clock
+func (fc *fakeClock) Now() time.Time { return fc.current }
 
 func testServer(rrm testutil.RequestResponseMap) (string, func()) {
 	h := testutil.NewHandler(rrm)
@@ -262,6 +271,146 @@ func TestEndpointAuthorizeTokenBasic(t *testing.T) {
 
 	if resp.StatusCode != http.StatusAccepted {
 		t.Fatalf("Unexpected status code: %d, expected %d", resp.StatusCode, http.StatusAccepted)
+	}
+}
+
+func TestEndpointAuthorizeTokenBasicWithExpiresIn(t *testing.T) {
+	service := "localhost.localdomain"
+	repo := "some/fun/registry"
+	scope := fmt.Sprintf("repository:%s:pull,push", repo)
+	username := "tokenuser"
+	password := "superSecretPa$$word"
+
+	tokenMap := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
+		{
+			Request: testutil.Request{
+				Method: "GET",
+				Route:  fmt.Sprintf("/token?account=%s&scope=%s&service=%s", username, url.QueryEscape(scope), service),
+			},
+			Response: testutil.Response{
+				StatusCode: http.StatusOK,
+				Body:       []byte(`{"token":"statictoken", "expires_in": 3001}`),
+			},
+		},
+		{
+			Request: testutil.Request{
+				Method: "GET",
+				Route:  fmt.Sprintf("/token?account=%s&scope=%s&service=%s", username, url.QueryEscape(scope), service),
+			},
+			Response: testutil.Response{
+				StatusCode: http.StatusOK,
+				Body:       []byte(`{"token":"statictoken", "expires_in": 3001}`),
+			},
+		},
+	})
+
+	authenicate1 := fmt.Sprintf("Basic realm=localhost")
+	tokenExchanges := 0
+	basicCheck := func(a string) bool {
+		tokenExchanges = tokenExchanges + 1
+		return a == fmt.Sprintf("Basic %s", basicAuth(username, password))
+	}
+	te, tc := testServerWithAuth(tokenMap, authenicate1, basicCheck)
+	defer tc()
+
+	m := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
+		{
+			Request: testutil.Request{
+				Method: "GET",
+				Route:  "/v2/hello",
+			},
+			Response: testutil.Response{
+				StatusCode: http.StatusAccepted,
+			},
+		},
+		{
+			Request: testutil.Request{
+				Method: "GET",
+				Route:  "/v2/hello",
+			},
+			Response: testutil.Response{
+				StatusCode: http.StatusAccepted,
+			},
+		},
+		{
+			Request: testutil.Request{
+				Method: "GET",
+				Route:  "/v2/hello",
+			},
+			Response: testutil.Response{
+				StatusCode: http.StatusAccepted,
+			},
+		},
+		{
+			Request: testutil.Request{
+				Method: "GET",
+				Route:  "/v2/hello",
+			},
+			Response: testutil.Response{
+				StatusCode: http.StatusAccepted,
+			},
+		},
+		{
+			Request: testutil.Request{
+				Method: "GET",
+				Route:  "/v2/hello",
+			},
+			Response: testutil.Response{
+				StatusCode: http.StatusAccepted,
+			},
+		},
+	})
+
+	authenicate2 := fmt.Sprintf("Bearer realm=%q,service=%q", te+"/token", service)
+	bearerCheck := func(a string) bool {
+		return a == "Bearer statictoken"
+	}
+	e, c := testServerWithAuth(m, authenicate2, bearerCheck)
+	defer c()
+
+	creds := &testCredentialStore{
+		username: username,
+		password: password,
+	}
+
+	challengeManager := NewSimpleChallengeManager()
+	_, err := ping(challengeManager, e+"/v2/", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	clock := &fakeClock{current: time.Now()}
+	transport1 := transport.NewTransport(nil, NewAuthorizer(challengeManager, newTokenHandler(nil, creds, clock, repo, "pull", "push"), NewBasicHandler(creds)))
+	client := &http.Client{Transport: transport1}
+
+	// First call should result in a token exchange
+	// Subsequent calls should recycle the token from the first request, until the expiration has lapsed.
+	timeIncrement := 1000 * time.Second
+	for i := 0; i < 4; i++ {
+		req, _ := http.NewRequest("GET", e+"/v2/hello", nil)
+		resp, err := client.Do(req)
+		if err != nil {
+			t.Fatalf("Error sending get request: %s", err)
+		}
+		if resp.StatusCode != http.StatusAccepted {
+			t.Fatalf("Unexpected status code: %d, expected %d", resp.StatusCode, http.StatusAccepted)
+		}
+		if tokenExchanges != 1 {
+			t.Fatalf("Unexpected number of token exchanges, want: 1, got %d", tokenExchanges)
+		}
+		clock.current = clock.current.Add(timeIncrement)
+	}
+
+	// After we've exceeded the expiration, we should see a second token exchange.
+	req, _ := http.NewRequest("GET", e+"/v2/hello", nil)
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("Error sending get request: %s", err)
+	}
+	if resp.StatusCode != http.StatusAccepted {
+		t.Fatalf("Unexpected status code: %d, expected %d", resp.StatusCode, http.StatusAccepted)
+	}
+	if tokenExchanges != 2 {
+		t.Fatalf("Unexpected number of token exchanges, want: 2, got %d", tokenExchanges)
 	}
 }
 
