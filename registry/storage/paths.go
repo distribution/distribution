@@ -193,45 +193,6 @@ func pathFor(spec pathSpec) (string, error) {
 		}
 
 		return path.Join(root, "current", "link"), nil
-	case manifestTagIndexPathSpec:
-		root, err := pathFor(manifestTagPathSpec{
-			name: v.name,
-			tag:  v.tag,
-		})
-
-		if err != nil {
-			return "", err
-		}
-
-		return path.Join(root, "index"), nil
-	case manifestTagIndexEntryLinkPathSpec:
-		root, err := pathFor(manifestTagIndexEntryPathSpec{
-			name:     v.name,
-			tag:      v.tag,
-			revision: v.revision,
-		})
-
-		if err != nil {
-			return "", err
-		}
-
-		return path.Join(root, "link"), nil
-	case manifestTagIndexEntryPathSpec:
-		root, err := pathFor(manifestTagIndexPathSpec{
-			name: v.name,
-			tag:  v.tag,
-		})
-
-		if err != nil {
-			return "", err
-		}
-
-		components, err := digestPathComponents(v.revision, false)
-		if err != nil {
-			return "", err
-		}
-
-		return path.Join(root, path.Join(components...)), nil
 	case layerLinkPathSpec:
 		components, err := digestPathComponents(v.digest, false)
 		if err != nil {
@@ -348,35 +309,7 @@ type manifestTagCurrentPathSpec struct {
 
 func (manifestTagCurrentPathSpec) pathSpec() {}
 
-// manifestTagCurrentPathSpec describes the link to the index of revisions
-// with the given tag.
-type manifestTagIndexPathSpec struct {
-	name string
-	tag  string
-}
-
-func (manifestTagIndexPathSpec) pathSpec() {}
-
-// manifestTagIndexEntryPathSpec contains the entries of the index by revision.
-type manifestTagIndexEntryPathSpec struct {
-	name     string
-	tag      string
-	revision digest.Digest
-}
-
-func (manifestTagIndexEntryPathSpec) pathSpec() {}
-
-// manifestTagIndexEntryLinkPathSpec describes the link to a revisions of a
-// manifest with given tag within the index.
-type manifestTagIndexEntryLinkPathSpec struct {
-	name     string
-	tag      string
-	revision digest.Digest
-}
-
-func (manifestTagIndexEntryLinkPathSpec) pathSpec() {}
-
-// blobLinkPathSpec specifies a path for a blob link, which is a file with a
+// layerLinkPathSpec specifies a path for a blob link, which is a file with a
 // blob id. The blob link will contain a content addressable blob id reference
 // into the blob store. The format of the contents is as follows:
 //

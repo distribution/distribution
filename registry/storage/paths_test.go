@@ -62,29 +62,6 @@ func TestPathMapper(t *testing.T) {
 			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/tags/thetag/current/link",
 		},
 		{
-			spec: manifestTagIndexPathSpec{
-				name: "foo/bar",
-				tag:  "thetag",
-			},
-			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/tags/thetag/index",
-		},
-		{
-			spec: manifestTagIndexEntryPathSpec{
-				name:     "foo/bar",
-				tag:      "thetag",
-				revision: "sha256:abcdef0123456789",
-			},
-			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/tags/thetag/index/sha256/abcdef0123456789",
-		},
-		{
-			spec: manifestTagIndexEntryLinkPathSpec{
-				name:     "foo/bar",
-				tag:      "thetag",
-				revision: "sha256:abcdef0123456789",
-			},
-			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/tags/thetag/index/sha256/abcdef0123456789/link",
-		},
-		{
 			spec: layerLinkPathSpec{
 				name:   "foo/bar",
 				digest: "tarsum.v1+test:abcdef",
