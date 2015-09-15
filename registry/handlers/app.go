@@ -77,8 +77,6 @@ func NewApp(ctx context.Context, configuration *configuration.Configuration) *Ap
 		isCache: configuration.Proxy.RemoteURL != "",
 	}
 
-	app.Context = ctxu.WithLogger(app.Context, ctxu.GetLogger(app, "instance.id"))
-
 	// Register the handler dispatchers.
 	app.register(v2.RouteNameBase, func(ctx *Context, r *http.Request) http.Handler {
 		return http.HandlerFunc(apiBase)
