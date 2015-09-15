@@ -163,7 +163,7 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 			for _, verificationError := range err {
 				switch verificationError := verificationError.(type) {
 				case distribution.ErrManifestBlobUnknown:
-					imh.Errors = append(imh.Errors, v2.ErrorCodeBlobUnknown.WithDetail(verificationError.Digest))
+					imh.Errors = append(imh.Errors, v2.ErrorCodeManifestBlobUnknown.WithDetail(verificationError.Digest))
 				case distribution.ErrManifestUnverified:
 					imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnverified)
 				default:

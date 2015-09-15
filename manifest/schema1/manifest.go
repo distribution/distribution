@@ -62,15 +62,20 @@ type SignedManifest struct {
 
 // UnmarshalJSON populates a new ImageManifest struct from JSON data.
 func (sm *SignedManifest) UnmarshalJSON(b []byte) error {
+	sm.Raw = make([]byte, len(b), len(b))
+	copy(sm.Raw, b)
+
+	p, err := sm.Payload()
+	if err != nil {
+		return err
+	}
+
 	var manifest Manifest
-	if err := json.Unmarshal(b, &manifest); err != nil {
+	if err := json.Unmarshal(p, &manifest); err != nil {
 		return err
 	}
 
 	sm.Manifest = manifest
-	sm.Raw = make([]byte, len(b), len(b))
-	copy(sm.Raw, b)
-
 	return nil
 }
 
