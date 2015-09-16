@@ -46,7 +46,7 @@ the above process by using cryptographically signed tokens and no longer
 require the client to authenticate each request with a username and password
 stored locally in plain text.
 
-The new registry workflow is more like this:
+The v2 registry token workflow is more like this:
 
 ![v2 registry auth](https://docs.google.com/drawings/d/1EHZU9uBLmcH0kytDClBv6jv6WR4xZjE8RKEUw1mARJA/pub?w=480&h=360)
 
@@ -55,19 +55,20 @@ The new registry workflow is more like this:
    HTTP response with information on how to authenticate.
 3. The registry client makes a request to the authorization service for a
    signed JSON Web Token.
-4. The authorization service returns a token.
+4. The authorization service returns an opaque token representing the client's
+   authorized access.
 5. The client retries the original request with the token embedded in the
    request header.
-6. The Registry authorizes the client and begins the push/pull session as
-   usual. 
+6. The Registry authorizes the client by validating the token and the claim set
+   embedded within it and begins the push/pull session as usual. 
 
 ## Requirements
 
-- Registry Clients capable of generating key pairs which can be used to
-  authenticate to an authorization server.
-- An authorization server capable of managing user accounts, their public keys,
-  and access controls to their resources hosted by any given service (such as
-  repositories in a Docker Registry).
+- Registry clients which can understand and respond to token auth challenges
+  returned by the resource server.
+- An authorization server capable of managing access controls to their
+  resources hosted by any given service (such as repositories in a Docker
+  Registry).
 - A Docker Registry capable of trusting the authorization server to sign tokens
   which clients can use for authorization and the ability to verify these
   tokens for single use or for use during a sufficiently short period of time.
@@ -76,39 +77,55 @@ The new registry workflow is more like this:
 
 This document borrows heavily from the [JSON Web Token Draft Spec](https://tools.ietf.org/html/draft-ietf-oauth-json-web-token-32)
 
-The described server is meant to serve as a user account and key manager and a
-centralized access control list for resources hosted by other services which
-wish to authenticate and manage authorizations using this services accounts and
-their public keys.
+The described server is meant to serve as a standalone access control manager
+for resources hosted by other services which wish to authenticate and manage
+authorizations using a separate access control manager.
 
-Such a service could be used by the official docker registry to authenticate
-clients and verify their authorization to docker image repositories.
+Such a service could be used by the official Docker Registry to authenticate
+clients and verify their authorization to Docker image repositories.
 
-Docker will need to be updated to interact with an authorization server to get
-an authorization token.
+As of Docker 1.6, the registry client within the Docker Engine has been updated
+to handle such an authorization workflow.
 
 ## How to authenticate
 
-Today, registry clients first contact the index to initiate a push or pull.
-For v2, clients should contact the registry first. If the registry server
-requires authentication it will return a `401 Unauthorized` response with a
-`WWW-Authenticate` header detailing how to authenticate to this registry.
+Registry V1 clients first contact the index to initiate a push or pull. Under
+the Registry V2 workflow, clients should contact the registry first. If the
+registry server requires authentication it will return a `401 Unauthorized`
+response with a `WWW-Authenticate` header detailing how to authenticate to this
+registry.
 
 For example, say I (username `jlhawn`) am attempting to push an image to the
-repository `samalba/my-app`. For the registry to authorize this, I either need
-`push` access to the `samalba/my-app` repository or `push` access to the whole
-`samalba` namespace in general. The registry will first return this response:
+repository `samalba/my-app`. For the registry to authorize this, I will need
+`push` access to the `samalba/my-app` repository. The registry will first
+return this response:
 
 ```
 HTTP/1.1 401 Unauthorized
-WWW-Authenticate: Bearer realm="https://auth.docker.com/v2/token/",service="registry.docker.com",scope="repository:samalba/my-app:push"
+Content-Type: application/json; charset=utf-8
+Docker-Distribution-Api-Version: registry/2.0
+Www-Authenticate: Bearer realm="https://auth.docker.io/token",service="registry.docker.io",scope="repository:samalba/my-app:pull,push"
+Date: Thu, 10 Sep 2015 19:32:31 GMT
+Content-Length: 235
+Strict-Transport-Security: max-age=31536000
+
+{"errors":[{"code":"UNAUTHORIZED","message":"access to the requested resource is not authorized","detail":[{"Type":"repository","Name":"samalba/my-app","Action":"pull"},{"Type":"repository","Name":"samalba/my-app","Action":"push"}]}]}
+```
+
+Note the HTTP Response Header indicating the auth challenge:
+
+```
+Www-Authenticate: Bearer realm="https://auth.docker.io/token",service="registry.docker.io",scope="repository:samalba/my-app:pull,push"
 ```
 
 This format is documented in [Section 3 of RFC 6750: The OAuth 2.0 Authorization Framework: Bearer Token Usage](https://tools.ietf.org/html/rfc6750#section-3)
 
-The client will then know to make a `GET` request to the URL
-`https://auth.docker.com/v2/token/` using the `service` and `scope` values from
-the `WWW-Authenticate` header.
+This challenge indicates that the registry requires a token issued by the
+specified token server and that the request the client is attempting will
+need to include sufficient access entries in its claim set. To respond to this
+challenge, the client will need to make a `GET` request to the URL
+`https://auth.docker.io/token` using the `service` and `scope` values from the
+`WWW-Authenticate` header.
 
 ## Requesting a Token
 
@@ -132,45 +149,51 @@ the `WWW-Authenticate` header.
         header. The above example would be specified as:
         <code>scope=repository:samalba/my-app:push</code>.
     </dd>
-    <dt>
-        <code>account</code>
-    </dt>
-    <dd>
-        The name of the account which the client is acting as. Optional if it
-        can be inferred from client authentication.
-    </dd>
 </dl>
 
-#### Description
+#### Example Token Request
 
-Requests an authorization token for access to a specific resource hosted by a
-specific service provider. Requires the client to authenticate either using a
-TLS client certificate or using basic authentication (or any other kind of
-digest/challenge/response authentication scheme if the client doesn't support
-TLS client certs). If the key in the client certificate is linked to an account
-then the token is issued for that account key. If the key in the certificate is
-linked to multiple accounts then the client must specify the `account` query
-parameter. The returned token is in JWT (JSON Web Token) format, signed using
-the authorization server's private key.
-
-#### Example
-
-For this example, the client makes an HTTP request to the following endpoint
-over TLS using a client certificate with the server being configured to allow a
-non-verified issuer during the handshake (i.e., a self-signed client cert is
-okay).
+For this example, the client makes an HTTP GET request to the following URL:
 
 ```
-GET /v2/token/?service=registry.docker.com&scope=repository:samalba/my-app:push&account=jlhawn HTTP/1.1
-Host: auth.docker.com
+https://auth.docker.io/token?service=registry.docker.io&scope=repository:samalba/my-app:pull,push
 ```
 
-The server first inspects the client certificate to extract the subject key and
-lookup which account it is associated with. The client is now authenticated
-using that account.
+The token server should first attempt to authenticate the client using any
+authentication credentials provided with the request. As of Docker 1.8, the
+registry client in the Docker Engine only supports Basic Authentication to
+these token servers. If an attempt to authenticate to the token server fails,
+the token server should return a `401 Unauthorized` response indicating that
+the provided credentials are invalid.
 
-The server next searches its access control list for the account's access to
-the repository `samalba/my-app` hosted by the service `registry.docker.com`.
+Whether the token server requires authentication is up to the policy of that
+access control provider. Some requests may require authentication to determine
+access (such as pushing or pulling a private repository) while others may not
+(such as pulling from a public repository).
+
+After authenticating the client (which may simply be an anonymous client if
+no attempt was made to authenticate), the token server must next query its
+access control list to determine whether the client has the requested scope. In
+this example request, if I have authenticated as user `jlhawn`, the token
+server will determine what access I have to the repository `samalba/my-app`
+hosted by the entity `registry.docker.io`.
+
+Once the token server has determined what access the client has to the
+resources requested in the `scope` parameter, it will take the intersection of
+the set of requested actions on each resource and the set of actions that the
+client has in fact been granted. If the client only has a subset of the
+requested access **it must not be considered an error** as it is not the
+responsibility of the token server to indicate authorization errors as part of
+this workflow.
+
+Continuing with the example request, the token server will find that the
+client's set of granted access to the repository is `[pull, push]` which when
+intersected with the requested access `[pull, push]` yields an equal set. If
+the granted access set was found only to be `[pull]` then the intersected set
+would only be `[pull]`. If the client has no access to the repository then the
+intersected set would be empty, `[]`.
+
+It is this intersected set of access which is placed in the returned token.
 
 The server will now construct a JSON Web Token to sign and return. A JSON Web
 Token has 3 main parts:
@@ -214,14 +237,16 @@ Token has 3 main parts:
             <code>sub</code> (Subject)
         </dt>
         <dd>
-            The subject of the token; the id of the client which requested it.
+            The subject of the token; the name or id of the client which
+            requested it. This should be empty (`""`) if the client did not
+            authenticate.
         </dd>
         <dt>
             <code>aud</code> (Audience)
         </dt>
         <dd>
-            The intended audience of the token; the id of the service which
-            will verify the token to authorize the client/subject.
+            The intended audience of the token; the name or id of the service
+            which will verify the token to authorize the client/subject.
         </dd>
         <dt>
             <code>exp</code> (Expiration)
@@ -305,6 +330,7 @@ Token has 3 main parts:
                 "type": "repository",
                 "name": "samalba/my-app",
                 "actions": [
+                    "pull",
                     "push"
                 ]
             }
@@ -416,8 +442,16 @@ claim set within. The registry will:
   level of access for the operation the client is attempting to perform.
 - Verify that the signature of the token is valid.
 
-At no point in this process should the registry need to <em>call back</em> to
-the authorization server. If anything, it would only need to update a list of
-trusted public keys for verifying token signatures or use a separate API
-(still to be spec'd) to add/update resource records on the authorization
-server.
+If any of these requirements are not met, the registry will return a
+`403 Forbidden` response to indicate that the token is invalid.
+
+**Note**: it is only at this point in the workflow that an authorization error
+may occur. The token server should *not* return errors when the user does not
+have the requested authorization. Instead, the returned token should indicate
+whatever of the requested scope the client does have (the intersection of
+requested and granted access). If the token does not supply proper
+authorization then the registry will return the appropriate error.
+
+At no point in this process should the registry need to call back to the
+authorization server. The registry only needs to be supplied with the trusted
+public keys to verify the token signatures.
