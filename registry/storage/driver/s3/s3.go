@@ -219,12 +219,6 @@ func New(params DriverParameters) (*Driver, error) {
 		}
 	}
 
-	// Validate that the given credentials have at least read permissions in the
-	// given bucket scope.
-	if _, err := bucket.List(strings.TrimRight(params.RootDirectory, "/"), "", "", 1); err != nil {
-		return nil, err
-	}
-
 	// TODO Currently multipart uploads have no timestamps, so this would be unwise
 	// if you initiated a new s3driver while another one is running on the same bucket.
 	// multis, _, err := bucket.ListMulti("", "")
