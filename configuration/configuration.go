@@ -64,6 +64,10 @@ type Configuration struct {
 		// Net specifies the net portion of the bind address. A default empty value means tcp.
 		Net string `yaml:"net,omitempty"`
 
+		// Host specifies an externally-reachable address for the registry, as a fully
+		// qualified URL.
+		Host string `yaml:"host,omitempty"`
+
 		Prefix string `yaml:"prefix,omitempty"`
 
 		// Secret specifies the secret key which HMAC tokens are created with.

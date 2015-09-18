@@ -158,6 +158,7 @@ information about each option that appears later in this page.
     http:
       addr: localhost:5000
       prefix: /my/nested/registry/
+      host: https://myregistryaddress.org:5000
       secret: asecretforlocaldevelopment
       tls:
         certificate: /path/to/x509/public
@@ -1189,6 +1190,7 @@ configuration may contain both.
       addr: localhost:5000
       net: tcp
       prefix: /my/nested/registry/
+      host: https://myregistryaddress.org:5000
       secret: asecretforlocaldevelopment
       tls:
         certificate: /path/to/x509/public
@@ -1233,7 +1235,7 @@ The `http` option details the configuration for the HTTP server that hosts the r
      The default empty value means tcp.
     </td>
   </tr>
-    <tr>
+  <tr>
     <td>
       <code>prefix</code>
     </td>
@@ -1244,6 +1246,19 @@ The `http` option details the configuration for the HTTP server that hosts the r
 If the server does not run at the root path use this value to specify the
 prefix. The root path is the section before <code>v2</code>. It
 should have both preceding and trailing slashes, for example <code>/path/</code>.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>host</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+This parameter specifies an externally-reachable address for the registry, as a
+fully qualified URL. If present, it is used when creating generated URLs.
+Otherwise, these URLs are derived from client requests.
     </td>
   </tr>
   <tr>
