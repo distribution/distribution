@@ -102,11 +102,11 @@ func (pms proxyManifestStore) GetByTag(tag string, options ...distribution.Manif
 fromremote:
 	var sm *schema1.SignedManifest
 	sm, err = pms.remoteManifests.GetByTag(tag, client.AddEtagToTag(tag, localDigest.String()))
-	if err != nil {
+	if err != nil && err != distribution.ErrManifestNotModified {
 		return nil, err
 	}
 
-	if sm == nil {
+	if err == distribution.ErrManifestNotModified {
 		context.GetLogger(pms.ctx).Debugf("Local manifest for %q is latest, dgst=%s", tag, localDigest.String())
 		return localManifest, nil
 	}
