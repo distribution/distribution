@@ -65,6 +65,7 @@ var configStruct = Configuration{
 	HTTP: struct {
 		Addr   string `yaml:"addr,omitempty"`
 		Net    string `yaml:"net,omitempty"`
+		Host   string `yaml:"host,omitempty"`
 		Prefix string `yaml:"prefix,omitempty"`
 		Secret string `yaml:"secret,omitempty"`
 		TLS    struct {
