@@ -55,18 +55,22 @@ Manifest provides the base accessible fields for working with V2 image format
    
 - **`history`** *array*
    
-   history is a list of unstructured historical data for v1 compatibility.
+   history is a list of unstructured historical data for v1 compatibility. It 
+   contains ID of the image layer and ID of the layer's parent layers.
    
    history is a struct consisting of the following fields
    - **`v1Compatibility`** string
    
-      V1Compatibility is the raw V1 compatibility information.  This  will 
+      V1Compatibility is the raw V1 compatibility information. This will 
       contain the JSON object describing the V1 of this image.
       
 - **`schemaVersion`** *int*
 	
    SchemaVersion is the image manifest schema that this image follows.
 	
+>**Note**:the length of `history` must be equal to the length of `fsLayers` and 
+>entries in each are correlated by index.
+
 ## Signed Manifests
 
 Signed manifests provides an envelope for a signed image manifest.  A signed 
