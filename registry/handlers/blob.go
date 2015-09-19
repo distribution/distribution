@@ -52,15 +52,13 @@ func (bh *blobHandler) GetBlob(w http.ResponseWriter, r *http.Request) {
 	context.GetLogger(bh).Debug("GetBlob")
 	blobs := bh.Repository.Blobs(bh)
 	desc, err := blobs.Stat(bh, bh.Digest)
-	if err != nil {
-		if err == distribution.ErrBlobUnknown {
-			bh.Errors = append(bh.Errors, v2.ErrorCodeBlobUnknown.WithDetail(bh.Digest))
-		} else {
-			bh.Errors = append(bh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
-		}
+	if err == distribution.ErrBlobUnknown {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	} else if err != nil {
+		bh.Errors = append(bh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		return
 	}
-
 	if err := blobs.ServeBlob(bh, w, r, desc.Digest); err != nil {
 		context.GetLogger(bh).Debugf("unexpected error getting blob HTTP handler: %v", err)
 		bh.Errors = append(bh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
