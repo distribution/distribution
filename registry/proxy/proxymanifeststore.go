@@ -81,7 +81,6 @@ func (pms proxyManifestStore) Delete(ctx context.Context, dgst digest.Digest) er
 	return distribution.ErrUnsupported
 }
 
-/*func (pms proxyManifestStore) Enumerate(ctx context.Context, manifests []distribution.Manifest, last distribution.Manifest) (n int, err error) {
-	return 0, distribution.ErrUnsupported
+func (pms proxyManifestStore) Enumerate(ctx context.Context, fn func(digest.Digest) error) error {
+	return distribution.ErrUnsupported
 }
-*/

@@ -25,10 +25,10 @@ type manifestStoreTestEnv struct {
 	registry   distribution.Namespace
 	repository distribution.Repository
 	name       reference.Named
-	tag        string
+	tags       []string
 }
 
-func newManifestStoreTestEnv(t *testing.T, name reference.Named, tag string) *manifestStoreTestEnv {
+func newManifestStoreTestEnv(t *testing.T, name reference.Named, tags ...string) *manifestStoreTestEnv {
 	ctx := context.Background()
 	driver := inmemory.New()
 	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(
@@ -48,7 +48,7 @@ func newManifestStoreTestEnv(t *testing.T, name reference.Named, tag string) *ma
 		registry:   registry,
 		repository: repo,
 		name:       name,
-		tag:        tag,
+		tags:       tags,
 	}
 }
 
@@ -66,7 +66,7 @@ func TestManifestStorage(t *testing.T) {
 			SchemaVersion: 1,
 		},
 		Name: env.name.Name(),
-		Tag:  env.tag,
+		Tag:  env.tags[0],
 	}
 
 	// Build up some test layers and add them to the manifest, saving the
@@ -398,4 +398,196 @@ func TestLinkPathFuncs(t *testing.T) {
 		}
 	}
 
+}
+
+func makeManifestStorageForEnumeration(t *testing.T, repoName string) (*manifestStoreTestEnv, map[string]digest.Digest) {
+	tags := []string{"without", "distribution", "no", "fun", "with", "docker"}
+	imageName, err := reference.ParseNamed(repoName)
+	if err != nil {
+		t.Fatalf("failed to parse repoName %q: %v", repoName, err)
+	}
+	env := newManifestStoreTestEnv(t, imageName, tags...)
+	ms, err := env.repository.Manifests(env.ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	pk, err := libtrust.GenerateECP256PrivateKey()
+	if err != nil {
+		t.Fatalf("unexpected error generating private key: %v", err)
+	}
+
+	res := make(map[string]digest.Digest)
+
+	for _, tag := range tags {
+		m := schema1.Manifest{
+			Versioned: manifest.Versioned{
+				SchemaVersion: 1,
+			},
+			Name: repoName,
+			Tag:  tag,
+		}
+
+		sm, merr := schema1.Sign(&m, pk)
+		if merr != nil {
+			t.Fatalf("error signing manifest: %v", err)
+		}
+
+		dgst, err := ms.Put(env.ctx, sm)
+		if err != nil {
+			t.Fatalf("expected errors putting manifest with full verification")
+		}
+
+		exists, err := ms.Exists(env.ctx, dgst)
+		if err != nil {
+			t.Fatalf("unexpected error checking manifest existence: %v", err)
+		}
+		if !exists {
+			t.Fatalf("manifest revision for %s:%s must exist", repoName, tag)
+		}
+
+		t.Logf("stored manifest %s:%s with digest %q", repoName, tag, dgst)
+
+		res[tag] = dgst
+	}
+
+	return env, res
+}
+
+func testEnumerateManifestRevisions(t *testing.T, env *manifestStoreTestEnv, ms distribution.ManifestService, validDigests []digest.Digest, orphanedDigests []digest.Digest) {
+	alltagset := make(map[string]struct{})
+	for _, t := range env.tags {
+		alltagset[t] = struct{}{}
+	}
+
+	validset := make(map[digest.Digest]struct{})
+	for _, dgst := range validDigests {
+		validset[dgst] = struct{}{}
+	}
+	orphanedset := make(map[digest.Digest]struct{})
+	for _, dgst := range orphanedDigests {
+		orphanedset[dgst] = struct{}{}
+	}
+
+	manifests := []digest.Digest{}
+	tags := make(map[string]struct{})
+	dgsts := make(map[digest.Digest]struct{})
+
+	err := EnumerateManifestRevisions(ms, env.ctx, func(dgst digest.Digest, m distribution.Manifest, err error) error {
+		manifests = append(manifests, dgst)
+		if m == nil {
+			if _, exists := orphanedset[dgst]; !exists {
+				t.Errorf("Got unexpected orphaned manifest %q", dgst.String())
+			}
+			if _, ok := err.(distribution.ErrManifestUnknownRevision); !ok {
+				t.Errorf("Got unexpected error for orphaned manifest %q: %v", dgst.String(), err)
+			}
+
+		} else {
+			switch mt := m.(type) {
+			case *schema1.SignedManifest:
+				if _, exists := alltagset[mt.Tag]; !exists {
+					t.Fatalf("Received manifest with unexpected tag %q", mt.Tag)
+				}
+				if _, exists := tags[mt.Tag]; exists {
+					t.Errorf("Received duplicate manifest %s:%s", mt.Name, mt.Tag)
+				}
+				tags[mt.Tag] = struct{}{}
+
+				dgst = digest.FromBytes(mt.Canonical)
+				if _, exists := validset[dgst]; !exists {
+					t.Errorf("Got unexpected valid manifest %q", dgst.String())
+				}
+
+			default:
+				t.Errorf("Got unexpected manifest type %T", m)
+			}
+		}
+
+		if _, exists := dgsts[dgst]; exists {
+			t.Errorf("Received duplicate manifest reference %q", dgst.String())
+		} else {
+			dgsts[dgst] = struct{}{}
+		}
+		return nil
+	})
+	if err != io.EOF {
+		t.Errorf("Unexpected error enumerating manifest revisions: %v", err)
+	}
+	if len(manifests) != len(validDigests)+len(orphanedDigests) {
+		t.Errorf("Unexpected number of enumerated revisions (%d != %d)", len(manifests), len(env.tags))
+	}
+}
+
+func TestManifestStorageEnumerateValid(t *testing.T) {
+	env, dgstForTag := makeManifestStorageForEnumeration(t, "foo/valid")
+
+	// valid revisions are enumerated by default
+	ms, err := env.repository.Manifests(env.ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	digests := make([]digest.Digest, 0, len(env.tags))
+	for _, t := range env.tags {
+		digests = append(digests, dgstForTag[t])
+	}
+	testEnumerateManifestRevisions(t, env, ms, digests, []digest.Digest{})
+
+	for i := 0; i < len(digests); i++ {
+		err := ms.Delete(env.ctx, digests[i])
+		if err != nil {
+			t.Fatalf("Failed to delete manifest %s@%s: %v", env.name, digests[i].String(), err)
+		}
+		t.Logf("deleted manifest %s@%s", env.name, digests[i])
+		testEnumerateManifestRevisions(t, env, ms, digests[i+1:], []digest.Digest{})
+	}
+}
+
+func TestManifestStorageEnumerateOrphaned(t *testing.T) {
+	env, dgstForTag := makeManifestStorageForEnumeration(t, "foo/orphaned")
+
+	ms, err := env.repository.Manifests(env.ctx, EnumerateOrphanedManifestRevisions())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	digests := make([]digest.Digest, 0, len(env.tags))
+	for _, t := range env.tags {
+		digests = append(digests, dgstForTag[t])
+	}
+	testEnumerateManifestRevisions(t, env, ms, []digest.Digest{}, digests[:0])
+
+	for i := 0; i < len(digests); i++ {
+		err := ms.Delete(env.ctx, digests[i])
+		if err != nil {
+			t.Fatalf("Failed to delete manifest %s@%s", env.name, digests[i].String())
+		}
+		t.Logf("deleted manifest %s@%s", env.name, digests[i])
+		testEnumerateManifestRevisions(t, env, ms, []digest.Digest{}, digests[:i+1])
+	}
+}
+
+func TestManifestStorageEnumerateAll(t *testing.T) {
+	env, dgstForTag := makeManifestStorageForEnumeration(t, "foo/all")
+
+	ms, err := env.repository.Manifests(env.ctx, EnumerateAllManifestRevisions())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	digests := make([]digest.Digest, 0, len(env.tags))
+	for _, t := range env.tags {
+		digests = append(digests, dgstForTag[t])
+	}
+	testEnumerateManifestRevisions(t, env, ms, digests, digests[:0])
+
+	for i := 0; i < len(digests); i++ {
+		err := ms.Delete(env.ctx, digests[i])
+		if err != nil {
+			t.Fatalf("Failed to delete manifest %s@%s", env.name, env.tags[i])
+		}
+		t.Logf("deleted manifest %s@%s", env.name, digests[i])
+		testEnumerateManifestRevisions(t, env, ms, digests[i+1:], digests[:i+1])
+	}
 }

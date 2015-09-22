@@ -116,6 +116,47 @@ func TestWalk(t *testing.T) {
 		t.Errorf("Missed files in walk: %q", expected)
 	}
 
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+}
+
+func TestWalkSortedChildren(t *testing.T) {
+	d, expected, ctx := testFS(t)
+	var traversed []string
+
+	err := WalkSortedChildren(ctx, d, "/", func(fileInfo driver.FileInfo) error {
+		filePath := fileInfo.Path()
+		filetype, ok := expected[filePath]
+
+		if !ok {
+			t.Fatalf("Unexpected file in walk: %q", filePath)
+		}
+
+		if fileInfo.IsDir() {
+			if filetype != "dir" {
+				t.Errorf("Unexpected file type: %q", filePath)
+			}
+		} else {
+			if filetype != "file" {
+				t.Errorf("Unexpected file type: %q", filePath)
+			}
+
+			// each file has its own path as the contents. If the length
+			// doesn't match the path length, fail.
+			if fileInfo.Size() != int64(len(fileInfo.Path())) {
+				t.Fatalf("unexpected size for %q: %v != %v",
+					fileInfo.Path(), fileInfo.Size(), len(fileInfo.Path()))
+			}
+		}
+		delete(expected, filePath)
+		traversed = append(traversed, filePath)
+		return nil
+	})
+	if len(expected) > 0 {
+		t.Errorf("Missed files in walk: %q", expected)
+	}
+
 	if !sort.StringsAreSorted(traversed) {
 		t.Errorf("result should be sorted: %v", traversed)
 	}

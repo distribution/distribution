@@ -40,6 +40,9 @@ type Namespace interface {
 	// which were filled.  'last' contains an offset in the catalog, and 'err' will be
 	// set to io.EOF if there are no more entries to obtain.
 	Repositories(ctx context.Context, repos []string, last string) (n int, err error)
+
+	// Blobs returns a reference to registry's blob service.
+	Blobs() BlobService
 }
 
 // ManifestServiceOption is a function argument for Manifest Service methods

@@ -509,9 +509,9 @@ func (ms *manifests) Delete(ctx context.Context, dgst digest.Digest) error {
 }
 
 // todo(richardscothern): Restore interface and implementation with merge of #1050
-/*func (ms *manifests) Enumerate(ctx context.Context, manifests []distribution.Manifest, last distribution.Manifest) (n int, err error) {
-	panic("not supported")
-}*/
+func (ms *manifests) Enumerate(ctx context.Context, ingester func(digest.Digest) error) error {
+	return distribution.ErrUnsupported
+}
 
 type blobs struct {
 	name   reference.Named
@@ -688,6 +688,10 @@ func (bs *blobs) Resume(ctx context.Context, id string) (distribution.BlobWriter
 
 func (bs *blobs) Delete(ctx context.Context, dgst digest.Digest) error {
 	return bs.statter.Clear(ctx, dgst)
+}
+
+func (bs *blobs) Enumerate(ctx context.Context, ingester func(digest.Digest) error) error {
+	return distribution.ErrUnsupported
 }
 
 type blobStatter struct {
