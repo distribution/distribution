@@ -106,6 +106,19 @@ func (rs *revisionStore) put(ctx context.Context, sm *schema1.SignedManifest) (d
 	return revision, nil
 }
 
+// list returns an array of digests of all found manifest revisions.
+func (rs *revisionStore) list() ([]digest.Digest, error) {
+	bl, err := rs.blobStore.list()
+	if err != nil {
+		return nil, err
+	}
+	res := make([]digest.Digest, 0, bl.Len())
+	for e := bl.Front(); e != nil; e = e.Next() {
+		res = append(res, e.Value.(digest.Digest))
+	}
+	return res, nil
+}
+
 func (rs *revisionStore) delete(ctx context.Context, revision digest.Digest) error {
 	return rs.blobStore.Delete(ctx, revision)
 }
