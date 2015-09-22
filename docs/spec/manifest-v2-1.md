@@ -84,7 +84,7 @@ Image manifests can be signed in two different ways: with a *libtrust* private
    
 ### Signed Manifest Field Description
 
-Signed manifests include an image manifest and and a list of signatures generated
+Signed manifests include an image manifest and a list of signatures generated
 by *libtrust*.  A signature consists of the following fields:
 
 
