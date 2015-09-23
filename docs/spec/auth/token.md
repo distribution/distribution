@@ -148,6 +148,9 @@ challenge, the client will need to make a `GET` request to the URL
         there is more than one <code>scope</code> entry from the <code>WWW-Authenticate</code>
         header. The above example would be specified as:
         <code>scope=repository:samalba/my-app:push</code>.
+	* `PUT` or `docker push` request need authenticate actions of `[pull,push]`;
+	* `GET` or `docker pull` request need authenticate action of `[pull]`;
+	* `DELETE` request need authenticate action of `[*]`;
     </dd>
 </dl>
 
@@ -192,6 +195,13 @@ intersected with the requested access `[pull, push]` yields an equal set. If
 the granted access set was found only to be `[pull]` then the intersected set
 would only be `[pull]`. If the client has no access to the repository then the
 intersected set would be empty, `[]`.
+
+In the case of `docker login`, the HTTP request has no `scope` parameters. the 
+request URL like the following:
+
+```
+https://auth.docker.io/token?service=registry.docker.io
+```
 
 It is this intersected set of access which is placed in the returned token.
 
