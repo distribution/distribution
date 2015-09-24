@@ -33,14 +33,25 @@ var (
 		HTTPStatusCode: http.StatusMethodNotAllowed,
 	})
 
+	// ErrorCodeUnauthenticated is returned if a request requires
+	// authentication.
+	ErrorCodeUnauthenticated = Register("errcode", ErrorDescriptor{
+		Value:   "UNAUTHENTICATED",
+		Message: "authentication required",
+		Description: `The access controller was unable to authenticate
+		the client. Often this will be accompanied by a 401
+		Unauthorized response status with a Www-Authenticate header
+		indicating how to authenticate.`,
+		HTTPStatusCode: http.StatusUnauthorized,
+	})
+
 	// ErrorCodeUnauthorized is returned if a request is not authorized.
 	ErrorCodeUnauthorized = Register("errcode", ErrorDescriptor{
 		Value:   "UNAUTHORIZED",
 		Message: "access to the requested resource is not authorized",
-		Description: `The access controller denied access for the operation on
-		a resource. Often this will be accompanied by a 401 Unauthorized
-		response status.`,
-		HTTPStatusCode: http.StatusUnauthorized,
+		Description: `The access controller denied access for the
+		operation on a resource.`,
+		HTTPStatusCode: http.StatusForbidden,
 	})
 
 	// ErrorCodeUnavailable provides a common error to report unavialability

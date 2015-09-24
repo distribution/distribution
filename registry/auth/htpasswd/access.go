@@ -16,11 +16,12 @@ import (
 )
 
 var (
-	// ErrInvalidCredential is returned when the auth token does not authenticate correctly.
-	ErrInvalidCredential = errors.New("invalid authorization credential")
-
-	// ErrAuthenticationFailure returned when authentication failure to be presented to agent.
-	ErrAuthenticationFailure = errors.New("authentication failured")
+	// ErrAuthenticationRequired is returned when credentials are not
+	// provided.
+	ErrAuthenticationRequired = errors.New("authentication required")
+	// ErrInvalidCredentials is returned when the provided credentials are
+	// not valid.
+	ErrInvalidCredentials = errors.New("invalid credentials")
 )
 
 type accessController struct {
@@ -55,7 +56,7 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 	return &accessController{realm: realm.(string), htpasswd: h}, nil
 }
 
-func (ac *accessController) Authorized(ctx context.Context, accessRecords ...auth.Access) (context.Context, error) {
+func (ac *accessController) Authorized(ctx context.Context, resource auth.Resource, actions ...string) (context.Context, error) {
 	req, err := context.GetRequest(ctx)
 	if err != nil {
 		return nil, err
@@ -63,38 +64,43 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 
 	username, password, ok := req.BasicAuth()
 	if !ok {
-		return nil, &challenge{
+		return nil, &authenticationError{
 			realm: ac.realm,
-			err:   ErrInvalidCredential,
+			err:   ErrAuthenticationRequired,
 		}
 	}
 
 	if err := ac.htpasswd.authenticateUser(username, password); err != nil {
 		context.GetLogger(ctx).Errorf("error authenticating user %q: %v", username, err)
-		return nil, &challenge{
+		return nil, &authenticationError{
 			realm: ac.realm,
-			err:   ErrAuthenticationFailure,
+			err:   ErrInvalidCredentials,
 		}
 	}
 
 	return auth.WithUser(ctx, auth.UserInfo{Name: username}), nil
 }
 
-// challenge implements the auth.Challenge interface.
-type challenge struct {
+// authenticationError implements the auth.Challenge interface.
+type authenticationError struct {
 	realm string
 	err   error
 }
 
-var _ auth.Challenge = challenge{}
+var _ auth.AuthenticationError = &authenticationError{}
 
-// SetHeaders sets the basic challenge header on the response.
-func (ch challenge) SetHeaders(w http.ResponseWriter) {
-	w.Header().Set("WWW-Authenticate", fmt.Sprintf("Basic realm=%q", ch.realm))
+// SetChallengeHeaders sets the basic challenge header..
+func (ae *authenticationError) SetChallengeHeaders(h http.Header) {
+	h.Set("WWW-Authenticate", fmt.Sprintf("Basic realm=%q", ae.realm))
 }
 
-func (ch challenge) Error() string {
-	return fmt.Sprintf("basic authentication challenge: %#v", ch)
+// AuthenticationErrorDetails is no different than the regular Error method.
+func (ae *authenticationError) AuthenticationErrorDetails() interface{} {
+	return ae.Error()
+}
+
+func (ae *authenticationError) Error() string {
+	return ae.err.Error()
 }
 
 func init() {

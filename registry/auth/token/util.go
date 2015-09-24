@@ -45,14 +45,3 @@ func newActionSet(actions ...string) actionSet {
 func (s actionSet) contains(action string) bool {
 	return s.stringSet.contains("*") || s.stringSet.contains(action)
 }
-
-// contains returns true if q is found in ss.
-func contains(ss []string, q string) bool {
-	for _, s := range ss {
-		if s == q {
-			return true
-		}
-	}
-
-	return false
-}

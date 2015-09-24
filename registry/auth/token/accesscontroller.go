@@ -16,105 +16,86 @@ import (
 	"github.com/docker/libtrust"
 )
 
-// accessSet maps a typed, named resource to
-// a set of actions requested or authorized.
-type accessSet map[auth.Resource]actionSet
-
-// newAccessSet constructs an accessSet from
-// a variable number of auth.Access items.
-func newAccessSet(accessItems ...auth.Access) accessSet {
-	accessSet := make(accessSet, len(accessItems))
-
-	for _, access := range accessItems {
-		resource := auth.Resource{
-			Type: access.Type,
-			Name: access.Name,
-		}
-
-		set, exists := accessSet[resource]
-		if !exists {
-			set = newActionSet()
-			accessSet[resource] = set
-		}
-
-		set.add(access.Action)
-	}
-
-	return accessSet
-}
-
-// contains returns whether or not the given access is in this accessSet.
-func (s accessSet) contains(access auth.Access) bool {
-	actionSet, ok := s[access.Resource]
-	if ok {
-		return actionSet.contains(access.Action)
-	}
-
-	return false
-}
-
-// scopeParam returns a collection of scopes which can
-// be used for a WWW-Authenticate challenge parameter.
+// scopeParam returns a scope parameter which can be
+// used in a WWW-Authenticate challenge header.
 // See https://tools.ietf.org/html/rfc6750#section-3
-func (s accessSet) scopeParam() string {
-	scopes := make([]string, 0, len(s))
-
-	for resource, actionSet := range s {
-		actions := strings.Join(actionSet.keys(), ",")
-		scopes = append(scopes, fmt.Sprintf("%s:%s:%s", resource.Type, resource.Name, actions))
+func scopeParam(resource auth.Resource, actions actionSet) string {
+	combinedActions := strings.Join(actions.keys(), ",")
+	if combinedActions == "" {
+		return ""
 	}
 
-	return strings.Join(scopes, " ")
+	return fmt.Sprintf("%s:%s:%s", resource.Type, resource.Name, combinedActions)
 }
 
-// Errors used and exported by this package.
-var (
-	ErrInsufficientScope = errors.New("insufficient scope")
-	ErrTokenRequired     = errors.New("authorization token required")
-)
+var errTokenRequired = errors.New("authorization token required")
 
-// authChallenge implements the auth.Challenge interface.
-type authChallenge struct {
-	err       error
-	realm     string
-	service   string
-	accessSet accessSet
+// authenticationError implements the auth.AuthenticationError interface.
+type verificationError struct {
+	err      error
+	realm    string
+	service  string
+	resource auth.Resource
+	actions  actionSet
 }
 
-var _ auth.Challenge = authChallenge{}
+var _ auth.AuthenticationError = &verificationError{}
 
-// Error returns the internal error string for this authChallenge.
-func (ac authChallenge) Error() string {
-	return ac.err.Error()
-}
-
-// Status returns the HTTP Response Status Code for this authChallenge.
-func (ac authChallenge) Status() int {
-	return http.StatusUnauthorized
+// Error returns the internal error string for this verificationError.
+func (ve *verificationError) Error() string {
+	return ve.err.Error()
 }
 
 // challengeParams constructs the value to be used in
 // the WWW-Authenticate response challenge header.
 // See https://tools.ietf.org/html/rfc6750#section-3
-func (ac authChallenge) challengeParams() string {
-	str := fmt.Sprintf("Bearer realm=%q,service=%q", ac.realm, ac.service)
+func (ve *verificationError) challengeParams() string {
+	str := fmt.Sprintf("Bearer realm=%q,service=%q", ve.realm, ve.service)
 
-	if scope := ac.accessSet.scopeParam(); scope != "" {
+	if scope := scopeParam(ve.resource, ve.actions); scope != "" {
 		str = fmt.Sprintf("%s,scope=%q", str, scope)
 	}
 
-	if ac.err == ErrInvalidToken || ac.err == ErrMalformedToken {
-		str = fmt.Sprintf("%s,error=%q", str, "invalid_token")
-	} else if ac.err == ErrInsufficientScope {
-		str = fmt.Sprintf("%s,error=%q", str, "insufficient_scope")
+	if ve.err != errTokenRequired {
+		str = fmt.Sprintf("%s,error=%q,error_description=%q", str, "invalid token", ve.err.Error())
 	}
 
 	return str
 }
 
-// SetChallenge sets the WWW-Authenticate value for the response.
-func (ac authChallenge) SetHeaders(w http.ResponseWriter) {
-	w.Header().Add("WWW-Authenticate", ac.challengeParams())
+// AuthenticationErrorDetails is no different than the regular Error method.
+func (ve *verificationError) AuthenticationErrorDetails() interface{} {
+	return ve.Error()
+}
+
+// SetChallengeHeaders sets the WWW-Authenticate value for the response.
+func (ve *verificationError) SetChallengeHeaders(h http.Header) {
+	h.Add("WWW-Authenticate", ve.challengeParams())
+}
+
+// authorizationError implements the auth.AuthorizationError interface.
+type authorizationError struct {
+	requestedActions actionSet
+	grantedActions   actionSet
+}
+
+var _ auth.AuthorizationError = &authorizationError{}
+
+// Error returns a string describing this authorizationError.
+func (ae *authorizationError) Error() string {
+	return fmt.Sprintf("requested actions: %q authorized actions: %q", ae.requestedActions.keys(), ae.grantedActions.keys())
+}
+
+// AuthorizationErrorDetails is no different than the regular Error method.
+func (ae *authorizationError) AuthorizationErrorDetails() interface{} {
+	return ae.Error()
+}
+
+// ResourceHidden returns whether the existence of the requested resource
+// should be exposed to the client. If the client was granted no actions to the
+// requested resource then it should be hidden.
+func (ae *authorizationError) ResourceHidden() bool {
+	return len(ae.grantedActions.stringSet) == 0
 }
 
 // accessController implements the auth.AccessController interface.
@@ -212,12 +193,16 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 
 // Authorized handles checking whether the given request is authorized
 // for actions on resources described by the given access items.
-func (ac *accessController) Authorized(ctx context.Context, accessItems ...auth.Access) (context.Context, error) {
-	challenge := &authChallenge{
-		realm:     ac.realm,
-		service:   ac.service,
-		accessSet: newAccessSet(accessItems...),
-	}
+func (ac *accessController) Authorized(ctx context.Context, resource auth.Resource, actions ...string) (context.Context, error) {
+	var (
+		requestedActions = newActionSet(actions...)
+		verificationErr  = &verificationError{
+			realm:    ac.realm,
+			service:  ac.service,
+			resource: resource,
+			actions:  requestedActions,
+		}
+	)
 
 	req, err := context.GetRequest(ctx)
 	if err != nil {
@@ -227,35 +212,39 @@ func (ac *accessController) Authorized(ctx context.Context, accessItems ...auth.
 	parts := strings.Split(req.Header.Get("Authorization"), " ")
 
 	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-		challenge.err = ErrTokenRequired
-		return nil, challenge
+		verificationErr.err = errTokenRequired
+		return nil, verificationErr
 	}
 
 	rawToken := parts[1]
 
 	token, err := NewToken(rawToken)
 	if err != nil {
-		challenge.err = err
-		return nil, challenge
+		verificationErr.err = err
+		return nil, verificationErr
 	}
 
 	verifyOpts := VerifyOptions{
-		TrustedIssuers:    []string{ac.issuer},
-		AcceptedAudiences: []string{ac.service},
+		TrustedIssuers:    newStringSet(ac.issuer),
+		AcceptedAudiences: newStringSet(ac.service),
 		Roots:             ac.rootCerts,
 		TrustedKeys:       ac.trustedKeys,
 	}
 
 	if err = token.Verify(verifyOpts); err != nil {
-		challenge.err = err
-		return nil, challenge
+		verificationErr.err = err
+		return nil, verificationErr
 	}
 
-	accessSet := token.accessSet()
-	for _, access := range accessItems {
-		if !accessSet.contains(access) {
-			challenge.err = ErrInsufficientScope
-			return nil, challenge
+	grantedActions := token.accessSet()[resource]
+	for requestedAction := range requestedActions.stringSet {
+		if !grantedActions.contains(requestedAction) {
+			// The client is not granted access to perform this
+			// action.
+			return nil, &authorizationError{
+				requestedActions: requestedActions,
+				grantedActions:   grantedActions,
+			}
 		}
 	}
 
