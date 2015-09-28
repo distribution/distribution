@@ -42,7 +42,7 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 
 // Authorized simply checks for the existence of the authorization header,
 // responding with a bearer challenge if it doesn't exist.
-func (ac *accessController) Authorized(ctx context.Context, accessRecords ...auth.Access) (context.Context, error) {
+func (ac *accessController) Authorized(ctx context.Context, resource auth.Resource, actions ...string) (context.Context, error) {
 	req, err := context.GetRequest(ctx)
 	if err != nil {
 		return nil, err
@@ -54,15 +54,12 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 			service: ac.service,
 		}
 
-		if len(accessRecords) > 0 {
-			var scopes []string
-			for _, access := range accessRecords {
-				scopes = append(scopes, fmt.Sprintf("%s:%s:%s", access.Type, access.Resource.Name, access.Action))
-			}
-			challenge.scope = strings.Join(scopes, " ")
+		combinedActions := strings.Join(actions, ",")
+		if combinedActions != "" {
+			challenge.scope = fmt.Sprintf("%s:%s:%s", resource.Type, resource.Name, combinedActions)
 		}
 
-		return nil, &challenge
+		return nil, challenge
 	}
 
 	return auth.WithUser(ctx, auth.UserInfo{Name: "silly"}), nil
@@ -74,17 +71,22 @@ type challenge struct {
 	scope   string
 }
 
-var _ auth.Challenge = challenge{}
+var _ auth.AuthenticationChallenge = challenge{}
 
 // SetHeaders sets a simple bearer challenge on the response.
-func (ch challenge) SetHeaders(w http.ResponseWriter) {
+func (ch challenge) SetChallengeHeaders(h http.Header) {
 	header := fmt.Sprintf("Bearer realm=%q,service=%q", ch.realm, ch.service)
 
 	if ch.scope != "" {
 		header = fmt.Sprintf("%s,scope=%q", header, ch.scope)
 	}
 
-	w.Header().Set("WWW-Authenticate", header)
+	h.Set("WWW-Authenticate", header)
+}
+
+// AuthenticationErrorDetails is no different than the Error() method.
+func (ch challenge) AuthenticationErrorDetails() interface{} {
+	return ch.Error()
 }
 
 func (ch challenge) Error() string {

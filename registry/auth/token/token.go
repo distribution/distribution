@@ -24,8 +24,13 @@ const (
 
 // Errors used by token parsing and verification.
 var (
-	ErrMalformedToken = errors.New("malformed token")
-	ErrInvalidToken   = errors.New("invalid token")
+	errMalformedToken               = errors.New("malformed token")
+	errUntrustedTokenIssuer         = errors.New("untrusted token issuer")
+	errUnacceptedTokenAudience      = errors.New("unaccepted token audience")
+	errTokenExpiredOrNotYetValid    = errors.New("token expired or not yet valid")
+	errTokenMissingSignature        = errors.New("token missing signature")
+	errUntrustedTokenSigner         = errors.New("untrusted token signer")
+	errUnableToVerifyTokenSignature = errors.New("unable to verify token signature")
 )
 
 // ResourceActions stores allowed actions on a named and typed resource.
@@ -70,8 +75,8 @@ type Token struct {
 // VerifyOptions is used to specify
 // options when verifying a JSON Web Token.
 type VerifyOptions struct {
-	TrustedIssuers    []string
-	AcceptedAudiences []string
+	TrustedIssuers    stringSet
+	AcceptedAudiences stringSet
 	Roots             *x509.CertPool
 	TrustedKeys       map[string]libtrust.PublicKey
 }
@@ -81,7 +86,7 @@ type VerifyOptions struct {
 func NewToken(rawToken string) (*Token, error) {
 	parts := strings.Split(rawToken, TokenSeparator)
 	if len(parts) != 3 {
-		return nil, ErrMalformedToken
+		return nil, errMalformedToken
 	}
 
 	var (
@@ -98,12 +103,12 @@ func NewToken(rawToken string) (*Token, error) {
 
 	if headerJSON, err = joseBase64UrlDecode(rawHeader); err != nil {
 		err = fmt.Errorf("unable to decode header: %s", err)
-		return nil, ErrMalformedToken
+		return nil, errMalformedToken
 	}
 
 	if claimsJSON, err = joseBase64UrlDecode(rawClaims); err != nil {
 		err = fmt.Errorf("unable to decode claims: %s", err)
-		return nil, ErrMalformedToken
+		return nil, errMalformedToken
 	}
 
 	token := new(Token)
@@ -113,15 +118,15 @@ func NewToken(rawToken string) (*Token, error) {
 	token.Raw = strings.Join(parts[:2], TokenSeparator)
 	if token.Signature, err = joseBase64UrlDecode(parts[2]); err != nil {
 		err = fmt.Errorf("unable to decode signature: %s", err)
-		return nil, ErrMalformedToken
+		return nil, errMalformedToken
 	}
 
 	if err = json.Unmarshal(headerJSON, token.Header); err != nil {
-		return nil, ErrMalformedToken
+		return nil, errMalformedToken
 	}
 
 	if err = json.Unmarshal(claimsJSON, token.Claims); err != nil {
-		return nil, ErrMalformedToken
+		return nil, errMalformedToken
 	}
 
 	return token, nil
@@ -131,41 +136,41 @@ func NewToken(rawToken string) (*Token, error) {
 // Returns a nil error if the token is valid.
 func (t *Token) Verify(verifyOpts VerifyOptions) error {
 	// Verify that the Issuer claim is a trusted authority.
-	if !contains(verifyOpts.TrustedIssuers, t.Claims.Issuer) {
+	if !verifyOpts.TrustedIssuers.contains(t.Claims.Issuer) {
 		log.Errorf("token from untrusted issuer: %q", t.Claims.Issuer)
-		return ErrInvalidToken
+		return errUntrustedTokenIssuer
 	}
 
 	// Verify that the Audience claim is allowed.
-	if !contains(verifyOpts.AcceptedAudiences, t.Claims.Audience) {
+	if !verifyOpts.AcceptedAudiences.contains(t.Claims.Audience) {
 		log.Errorf("token intended for another audience: %q", t.Claims.Audience)
-		return ErrInvalidToken
+		return errUnacceptedTokenAudience
 	}
 
 	// Verify that the token is currently usable and not expired.
 	currentUnixTime := time.Now().Unix()
 	if !(t.Claims.NotBefore <= currentUnixTime && currentUnixTime <= t.Claims.Expiration) {
 		log.Errorf("token not to be used before %d or after %d - currently %d", t.Claims.NotBefore, t.Claims.Expiration, currentUnixTime)
-		return ErrInvalidToken
+		return errTokenExpiredOrNotYetValid
 	}
 
 	// Verify the token signature.
 	if len(t.Signature) == 0 {
 		log.Error("token has no signature")
-		return ErrInvalidToken
+		return errTokenMissingSignature
 	}
 
 	// Verify that the signing key is trusted.
 	signingKey, err := t.VerifySigningKey(verifyOpts)
 	if err != nil {
 		log.Error(err)
-		return ErrInvalidToken
+		return errUntrustedTokenSigner
 	}
 
 	// Finally, verify the signature of the token using the key which signed it.
 	if err := signingKey.Verify(strings.NewReader(t.Raw), t.Header.SigningAlg, t.Signature); err != nil {
 		log.Errorf("unable to verify token signature: %s", err)
-		return ErrInvalidToken
+		return errUnableToVerifyTokenSignature
 	}
 
 	return nil
@@ -311,12 +316,12 @@ func parseAndVerifyRawJWK(rawJWK json.RawMessage, verifyOpts VerifyOptions) (pub
 
 // accessSet returns a set of actions available for the resource
 // actions listed in the `access` section of this token.
-func (t *Token) accessSet() accessSet {
+func (t *Token) accessSet() map[auth.Resource]actionSet {
 	if t.Claims == nil {
 		return nil
 	}
 
-	accessSet := make(accessSet, len(t.Claims.Access))
+	accessSet := make(map[auth.Resource]actionSet, len(t.Claims.Access))
 
 	for _, resourceActions := range t.Claims.Access {
 		resource := auth.Resource{

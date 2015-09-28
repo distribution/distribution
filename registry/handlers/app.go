@@ -549,7 +549,7 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 		// Add username to request logging
 		context.Context = ctxu.WithLogger(context.Context, ctxu.GetLogger(context.Context, "auth.user.name"))
 
-		if app.nameRequired(r) {
+		if nameRequired(r) {
 			repository, err := app.registry.Repository(context, getName(context))
 
 			if err != nil {
@@ -652,41 +652,67 @@ func (app *App) context(w http.ResponseWriter, r *http.Request) *Context {
 // repository. An error will be returned if access is not available.
 func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Context) error {
 	ctxu.GetLogger(context).Debug("authorizing request")
-	repo := getName(context)
+
+	var (
+		resource auth.Resource
+		actions  []string
+		repo     = getName(context)
+	)
 
 	if app.accessController == nil {
 		return nil // access controller is not enabled.
 	}
 
-	var accessRecords []auth.Access
-
-	if repo != "" {
-		accessRecords = appendAccessRecords(accessRecords, r.Method, repo)
-	} else {
-		// Only allow the name not to be set on the base route.
-		if app.nameRequired(r) {
-			// For this to be properly secured, repo must always be set for a
-			// resource that may make a modification. The only condition under
-			// which name is not set and we still allow access is when the
-			// base route is accessed. This section prevents us from making
-			// that mistake elsewhere in the code, allowing any operation to
-			// proceed.
-			if err := errcode.ServeJSON(w, errcode.ErrorCodeUnauthorized); err != nil {
-				ctxu.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
-			}
-			return fmt.Errorf("forbidden: no repository name")
+	switch {
+	case isV2BaseRoute(r):
+		resource = auth.Resource{
+			Type: "registry",
+			Name: "base",
 		}
-		accessRecords = appendCatalogAccessRecord(accessRecords, r)
+		actions = getRequiredV2BaseActions()
+	case isV2CatalogRoute(r):
+		resource = auth.Resource{
+			Type: "registry",
+			Name: "catalog",
+		}
+		actions = getRequiredCatalogActions()
+	case repo != "":
+		resource = auth.Resource{
+			Type: "repository",
+			Name: repo,
+		}
+		actions = getRequiredRepoActions(r.Method)
+	default:
+		// The route is neither the v2 base route, catolog route, nor
+		// is it any reposistory route. If it is an unknown endpoint
+		// then a case should be added above. Until then, access is
+		// forbidden.
+		if err := errcode.ServeJSON(w, errcode.ErrorCodeDenied); err != nil {
+			ctxu.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
+		}
+		return fmt.Errorf("forbidden: no repository name")
 	}
 
-	ctx, err := app.accessController.Authorized(context.Context, accessRecords...)
+	ctx, err := app.accessController.Authorized(context.Context, resource, actions...)
 	if err != nil {
 		switch err := err.(type) {
-		case auth.Challenge:
+		case auth.AuthenticationChallenge:
 			// Add the appropriate WWW-Auth header
-			err.SetHeaders(w)
+			err.SetChallengeHeaders(w.Header())
 
-			if err := errcode.ServeJSON(w, errcode.ErrorCodeUnauthorized.WithDetail(accessRecords)); err != nil {
+			if err := errcode.ServeJSON(w, errcode.ErrorCodeUnauthorized.WithDetail(err.AuthenticationErrorDetails())); err != nil {
+				ctxu.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
+			}
+		case auth.PermissionDenied:
+			var srvErr error
+			if err.ResourceHidden() && resource.Type == "repository" {
+				// Return a 404 Not Found error.
+				srvErr = errcode.ServeJSON(w, v2.ErrorCodeNameUnknown.WithDetail(distribution.ErrRepositoryUnknown{Name: resource.Name}))
+			} else {
+				srvErr = errcode.ServeJSON(w, errcode.ErrorCodeDenied.WithDetail(err.AuthorizationErrorDetails()))
+			}
+
+			if srvErr != nil {
 				ctxu.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
 			}
 		default:
@@ -708,6 +734,54 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 	return nil
 }
 
+func isV2BaseRoute(r *http.Request) bool {
+	return mux.CurrentRoute(r).GetName() == v2.RouteNameBase
+}
+
+func isV2CatalogRoute(r *http.Request) bool {
+	return mux.CurrentRoute(r).GetName() == v2.RouteNameCatalog
+}
+
+func nameRequired(r *http.Request) bool {
+	return !(isV2BaseRoute(r) || isV2CatalogRoute(r))
+}
+
+// Get the actions required for the v2 base endpoint.
+func getRequiredV2BaseActions() []string {
+	// No actions required. This is also kind of a hack to make the token
+	// access controller backend still work. It will require a valid token
+	// but will not require any access claims. Because the v2 base endpoint
+	// acts as an authentication check endpoint, all access controller
+	// implementations SHOULD require that the client be authenticated.
+	// This means that anonymous clients (those who do not attempt to
+	// authenticate) should receive a 401 response with a challenge
+	// header that can be understood by the registry client built into the
+	// Docker daemon.
+	return []string{}
+}
+
+// Get the actions required for the catalog endpoint.
+func getRequiredCatalogActions() []string {
+	return []string{"*"}
+}
+
+// getRequiredRepoActions returns the appropriate actions required for a
+// repository given the HTTP method.
+func getRequiredRepoActions(method string) []string {
+	switch method {
+	case "GET", "HEAD":
+		return []string{"pull"}
+	case "POST", "PUT", "PATCH":
+		return []string{"pull", "push"}
+	case "DELETE":
+		// DELETE access requires full admin rights, which is represented
+		// as "*". This may not be ideal.
+		return []string{"*"}
+	}
+
+	return nil
+}
+
 // eventBridge returns a bridge for the current request, configured with the
 // correct actor and source.
 func (app *App) eventBridge(ctx *Context, r *http.Request) notifications.Listener {
@@ -719,13 +793,6 @@ func (app *App) eventBridge(ctx *Context, r *http.Request) notifications.Listene
 	return notifications.NewBridge(ctx.urlBuilder, app.events.source, actor, request, app.events.sink)
 }
 
-// nameRequired returns true if the route requires a name.
-func (app *App) nameRequired(r *http.Request) bool {
-	route := mux.CurrentRoute(r)
-	routeName := route.GetName()
-	return route == nil || (routeName != v2.RouteNameBase && routeName != v2.RouteNameCatalog)
-}
-
 // apiBase implements a simple yes-man for doing overall checks against the
 // api. This can support auth roundtrips to support docker login.
 func apiBase(w http.ResponseWriter, r *http.Request) {
@@ -735,62 +802,6 @@ func apiBase(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Length", fmt.Sprint(len(emptyJSON)))
 
 	fmt.Fprint(w, emptyJSON)
-}
-
-// appendAccessRecords checks the method and adds the appropriate Access records to the records list.
-func appendAccessRecords(records []auth.Access, method string, repo string) []auth.Access {
-	resource := auth.Resource{
-		Type: "repository",
-		Name: repo,
-	}
-
-	switch method {
-	case "GET", "HEAD":
-		records = append(records,
-			auth.Access{
-				Resource: resource,
-				Action:   "pull",
-			})
-	case "POST", "PUT", "PATCH":
-		records = append(records,
-			auth.Access{
-				Resource: resource,
-				Action:   "pull",
-			},
-			auth.Access{
-				Resource: resource,
-				Action:   "push",
-			})
-	case "DELETE":
-		// DELETE access requires full admin rights, which is represented
-		// as "*". This may not be ideal.
-		records = append(records,
-			auth.Access{
-				Resource: resource,
-				Action:   "*",
-			})
-	}
-	return records
-}
-
-// Add the access record for the catalog if it's our current route
-func appendCatalogAccessRecord(accessRecords []auth.Access, r *http.Request) []auth.Access {
-	route := mux.CurrentRoute(r)
-	routeName := route.GetName()
-
-	if routeName == v2.RouteNameCatalog {
-		resource := auth.Resource{
-			Type: "registry",
-			Name: "catalog",
-		}
-
-		accessRecords = append(accessRecords,
-			auth.Access{
-				Resource: resource,
-				Action:   "*",
-			})
-	}
-	return accessRecords
 }
 
 // applyRegistryMiddleware wraps a registry instance with the configured middlewares
