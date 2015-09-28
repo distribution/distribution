@@ -52,6 +52,7 @@ func main() {
 		RouteDescriptors: v2.APIDescriptor.RouteDescriptors,
 		ErrorDescriptors: append(errcode.GetErrorCodeGroup("registry.api.v2"),
 			// The following are part of the specification but provided by errcode default.
+			errcode.ErrorCodeUnauthenticated.Descriptor(),
 			errcode.ErrorCodeUnauthorized.Descriptor(),
 			errcode.ErrorCodeUnsupported.Descriptor()),
 	}

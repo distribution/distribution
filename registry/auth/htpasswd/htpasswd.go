@@ -33,12 +33,12 @@ func (htpasswd *htpasswd) authenticateUser(username string, password string) err
 		// timing attack paranoia
 		bcrypt.CompareHashAndPassword([]byte{}, []byte(password))
 
-		return ErrAuthenticationFailure
+		return ErrInvalidCredentials
 	}
 
 	err := bcrypt.CompareHashAndPassword([]byte(credentials), []byte(password))
 	if err != nil {
-		return ErrAuthenticationFailure
+		return ErrInvalidCredentials
 	}
 
 	return nil
