@@ -1074,11 +1074,14 @@ func (s3 *S3) prepare(req *request) error {
 			return err
 		}
 
-		signpathPatiallyEscaped := partiallyEscapedPath(req.path)
+		signpathPartiallyEscaped := partiallyEscapedPath(req.path)
+		if strings.IndexAny(s3.Region.S3BucketEndpoint, "${bucket}") >= 0 {
+			signpathPartiallyEscaped = "/" + req.bucket + signpathPartiallyEscaped
+		}
 		req.headers["Host"] = []string{u.Host}
 		req.headers["Date"] = []string{time.Now().In(time.UTC).Format(time.RFC1123)}
 
-		sign(s3.Auth, req.method, signpathPatiallyEscaped, req.params, req.headers)
+		sign(s3.Auth, req.method, signpathPartiallyEscaped, req.params, req.headers)
 	} else {
 		hreq, err := s3.setupHttpRequest(req)
 		if err != nil {
@@ -1111,7 +1114,9 @@ func (s3 *S3) setupHttpRequest(req *request) (*http.Request, error) {
 	if err != nil {
 		return nil, err
 	}
-	u.Opaque = fmt.Sprintf("//%s%s", u.Host, partiallyEscapedPath(u.Path))
+	if s3.Region.Name != "generic" {
+		u.Opaque = fmt.Sprintf("//%s%s", u.Host, partiallyEscapedPath(u.Path))
+	}
 
 	hreq := http.Request{
 		URL:        u,

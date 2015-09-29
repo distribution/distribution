@@ -15,6 +15,28 @@ import (
 	"time"
 )
 
+// AWS specifies that the parameters in a signed request must
+// be provided in the natural order of the keys. This is distinct
+// from the natural order of the encoded value of key=value.
+// Percent and gocheck.Equals affect the sorting order.
+func EncodeSorted(values url.Values) string {
+	// preallocate the arrays for perfomance
+	keys := make([]string, 0, len(values))
+	sarray := make([]string, 0, len(values))
+	for k, _ := range values {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		for _, v := range values[k] {
+			sarray = append(sarray, Encode(k)+"="+Encode(v))
+		}
+	}
+
+	return strings.Join(sarray, "&")
+}
+
 type V2Signer struct {
 	auth    Auth
 	service ServiceInfo
@@ -38,7 +60,6 @@ func (s *V2Signer) Sign(method, path string, params map[string]string) {
 	if s.auth.Token() != "" {
 		params["SecurityToken"] = s.auth.Token()
 	}
-
 	// AWS specifies that the parameters in a signed request must
 	// be provided in the natural order of the keys. This is distinct
 	// from the natural order of the encoded value of key=value.
@@ -59,6 +80,28 @@ func (s *V2Signer) Sign(method, path string, params map[string]string) {
 	b64.Encode(signature, hash.Sum(nil))
 
 	params["Signature"] = string(signature)
+}
+
+func (s *V2Signer) SignRequest(req *http.Request) error {
+	req.ParseForm()
+	req.Form.Set("AWSAccessKeyId", s.auth.AccessKey)
+	req.Form.Set("SignatureVersion", "2")
+	req.Form.Set("SignatureMethod", "HmacSHA256")
+	if s.auth.Token() != "" {
+		req.Form.Set("SecurityToken", s.auth.Token())
+	}
+
+	payload := req.Method + "\n" + req.URL.Host + "\n" + req.URL.Path + "\n" + EncodeSorted(req.Form)
+	hash := hmac.New(sha256.New, []byte(s.auth.SecretKey))
+	hash.Write([]byte(payload))
+	signature := make([]byte, b64.EncodedLen(hash.Size()))
+	b64.Encode(signature, hash.Sum(nil))
+
+	req.Form.Set("Signature", string(signature))
+
+	req.URL.RawQuery = req.Form.Encode()
+
+	return nil
 }
 
 // Common date formats for signing requests
@@ -172,6 +215,11 @@ func (s *V4Signer) Sign(req *http.Request) {
 		req.Header.Set("Authorization", auth) // Add Authorization header to request
 	}
 	return
+}
+
+func (s *V4Signer) SignRequest(req *http.Request) error {
+	s.Sign(req)
+	return nil
 }
 
 /*

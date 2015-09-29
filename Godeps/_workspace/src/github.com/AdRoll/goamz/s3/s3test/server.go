@@ -316,7 +316,8 @@ func (nullResource) get(a *action) interface{}    { return notAllowed() }
 func (nullResource) post(a *action) interface{}   { return notAllowed() }
 func (nullResource) delete(a *action) interface{} { return notAllowed() }
 
-const timeFormat = "2006-01-02T15:04:05.000Z07:00"
+const timeFormat = "2006-01-02T15:04:05.000Z"
+const lastModifiedTimeFormat = "Mon, 2 Jan 2006 15:04:05 GMT"
 
 type bucketResource struct {
 	name   string
@@ -418,7 +419,7 @@ func (s orderedObjects) Less(i, j int) bool {
 func (obj *object) s3Key() s3.Key {
 	return s3.Key{
 		Key:          obj.name,
-		LastModified: obj.mtime.Format(timeFormat),
+		LastModified: obj.mtime.UTC().Format(timeFormat),
 		Size:         int64(len(obj.data)),
 		ETag:         fmt.Sprintf(`"%x"`, obj.checksum),
 		// TODO StorageClass
@@ -647,8 +648,8 @@ func (objr objectResource) get(a *action) interface{} {
 	// TODO Connection: close ??
 	// TODO x-amz-request-id
 	h.Set("Content-Length", fmt.Sprint(len(data)))
-	h.Set("ETag", hex.EncodeToString(obj.checksum))
-	h.Set("Last-Modified", obj.mtime.Format(time.RFC1123))
+	h.Set("ETag", "\""+hex.EncodeToString(obj.checksum)+"\"")
+	h.Set("Last-Modified", obj.mtime.Format(lastModifiedTimeFormat))
 
 	if status != http.StatusOK {
 		a.w.WriteHeader(status)
@@ -750,8 +751,45 @@ func (objr objectResource) put(a *action) interface{} {
 				obj.meta[key] = values
 			}
 		}
-		obj.data = data
-		obj.checksum = gotHash
+
+		if copySource := a.req.Header.Get("X-Amz-Copy-Source"); copySource != "" {
+			idx := strings.IndexByte(copySource, '/')
+
+			if idx == -1 {
+				fatalf(400, "InvalidRequest", "Wrongly formatted X-Amz-Copy-Source")
+			}
+
+			sourceBucketName := copySource[0:idx]
+			sourceKey := copySource[1+idx:]
+
+			sourceBucket := a.srv.buckets[sourceBucketName]
+
+			if sourceBucket == nil {
+				fatalf(404, "NoSuchBucket", "The specified source bucket does not exist")
+			}
+
+			sourceObject := sourceBucket.objects[sourceKey]
+
+			if sourceObject == nil {
+				fatalf(404, "NoSuchKey", "The specified source key does not exist")
+			}
+
+			obj.data = make([]byte, len(sourceObject.data))
+			copy(obj.data, sourceObject.data)
+
+			obj.checksum = make([]byte, len(sourceObject.checksum))
+			copy(obj.checksum, sourceObject.checksum)
+
+			obj.meta = make(http.Header, len(sourceObject.meta))
+
+			for k, v := range sourceObject.meta {
+				obj.meta[k] = make([]string, len(v))
+				copy(obj.meta[k], v)
+			}
+		} else {
+			obj.data = data
+			obj.checksum = gotHash
+		}
 		obj.mtime = time.Now()
 		objr.bucket.objects[objr.name] = obj
 	} else {

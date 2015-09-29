@@ -7,15 +7,15 @@
 	"Deps": [
 		{
 			"ImportPath": "github.com/AdRoll/goamz/aws",
-			"Rev": "f8c4952d5bc3056c0ca6711a1f56bc88b828d989"
+			"Rev": "aa6e716d710a0c7941cb2075cfbb9661f16d21f1"
 		},
 		{
 			"ImportPath": "github.com/AdRoll/goamz/cloudfront",
-			"Rev": "f8c4952d5bc3056c0ca6711a1f56bc88b828d989"
+			"Rev": "aa6e716d710a0c7941cb2075cfbb9661f16d21f1"
 		},
 		{
 			"ImportPath": "github.com/AdRoll/goamz/s3",
-			"Rev": "f8c4952d5bc3056c0ca6711a1f56bc88b828d989"
+			"Rev": "aa6e716d710a0c7941cb2075cfbb9661f16d21f1"
 		},
 		{
 			"ImportPath": "github.com/Azure/azure-sdk-for-go/storage",
