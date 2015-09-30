@@ -1,6 +1,7 @@
 package reference
 
 import (
+	"encoding/json"
 	"strconv"
 	"strings"
 	"testing"
@@ -263,5 +264,134 @@ func TestSplitHostname(t *testing.T) {
 		if name != testcase.name {
 			failf("unexpected name: got %q, expected %q", name, testcase.name)
 		}
+	}
+}
+
+type serializationType struct {
+	Description string
+	Field       Field
+}
+
+func TestSerialization(t *testing.T) {
+	testcases := []struct {
+		description string
+		input       string
+		name        string
+		tag         string
+		digest      string
+		err         error
+	}{
+		{
+			description: "empty value",
+			err:         ErrNameEmpty,
+		},
+		{
+			description: "just a name",
+			input:       "example.com:8000/named",
+			name:        "example.com:8000/named",
+		},
+		{
+			description: "name with a tag",
+			input:       "example.com:8000/named:tagged",
+			name:        "example.com:8000/named",
+			tag:         "tagged",
+		},
+		{
+			description: "name with digest",
+			input:       "other.com/named@sha256:1234567890098765432112345667890098765",
+			name:        "other.com/named",
+			digest:      "sha256:1234567890098765432112345667890098765",
+		},
+	}
+	for _, testcase := range testcases {
+		failf := func(format string, v ...interface{}) {
+			t.Logf(strconv.Quote(testcase.input)+": "+format, v...)
+			t.Fail()
+		}
+
+		m := map[string]string{
+			"Description": testcase.description,
+			"Field":       testcase.input,
+		}
+		b, err := json.Marshal(m)
+		if err != nil {
+			failf("error marshalling: %v", err)
+		}
+		t := serializationType{}
+
+		if err := json.Unmarshal(b, &t); err != nil {
+			if testcase.err == nil {
+				failf("error unmarshalling: %v", err)
+			}
+			if err != testcase.err {
+				failf("wrong error, expected %v, got %v", testcase.err, err)
+			}
+
+			continue
+		} else if testcase.err != nil {
+			failf("expected error unmarshalling: %v", testcase.err)
+		}
+
+		if t.Description != testcase.description {
+			failf("wrong description, expected %q, got %q", testcase.description, t.Description)
+		}
+
+		ref := t.Field.Reference()
+
+		if named, ok := ref.(Named); ok {
+			if named.Name() != testcase.name {
+				failf("unexpected repository: got %q, expected %q", named.Name(), testcase.name)
+			}
+		} else if testcase.name != "" {
+			failf("expected named type, got %T", ref)
+		}
+
+		tagged, ok := ref.(Tagged)
+		if testcase.tag != "" {
+			if ok {
+				if tagged.Tag() != testcase.tag {
+					failf("unexpected tag: got %q, expected %q", tagged.Tag(), testcase.tag)
+				}
+			} else {
+				failf("expected tagged type, got %T", ref)
+			}
+		} else if ok {
+			failf("unexpected tagged type")
+		}
+
+		digested, ok := ref.(Digested)
+		if testcase.digest != "" {
+			if ok {
+				if digested.Digest().String() != testcase.digest {
+					failf("unexpected digest: got %q, expected %q", digested.Digest().String(), testcase.digest)
+				}
+			} else {
+				failf("expected digested type, got %T", ref)
+			}
+		} else if ok {
+			failf("unexpected digested type")
+		}
+
+		t = serializationType{
+			Description: testcase.description,
+			Field:       AsField(ref),
+		}
+
+		b2, err := json.Marshal(t)
+		if err != nil {
+			failf("error marshing serialization type: %v", err)
+		}
+
+		if string(b) != string(b2) {
+			failf("unexpected serialized value: expected %q, got %q", string(b), string(b2))
+		}
+
+		// Ensure t.Field is not implementing "Reference" directly, getting
+		// around the Reference type system
+		var fieldInterface interface{} = t.Field
+		if _, ok := fieldInterface.(Reference); ok {
+			failf("field should not implement Reference interface")
+		}
+
 	}
 }

@@ -57,6 +57,44 @@ type Reference interface {
 	String() string
 }
 
+// Field provides a wrapper type for resolving correct reference types when
+// working with encoding.
+type Field struct {
+	reference Reference
+}
+
+// AsField wraps a reference in a Field for encoding.
+func AsField(reference Reference) Field {
+	return Field{reference}
+}
+
+// Reference unwraps the reference type from the field to
+// return the Reference object. This object should be
+// of the appropriate type to further check for different
+// reference types.
+func (f Field) Reference() Reference {
+	return f.reference
+}
+
+// MarshalText serializes the field to byte text which
+// is the string of the reference.
+func (f Field) MarshalText() (p []byte, err error) {
+	return []byte(f.reference.String()), nil
+}
+
+// UnmarshalText parses text bytes by invoking the
+// reference parser to ensure the appropriately
+// typed reference object is wrapped by field.
+func (f *Field) UnmarshalText(p []byte) error {
+	r, err := Parse(string(p))
+	if err != nil {
+		return err
+	}
+
+	f.reference = r
+	return nil
+}
+
 // Named is an object with a full name
 type Named interface {
 	Name() string
