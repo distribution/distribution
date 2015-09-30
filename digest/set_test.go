@@ -125,6 +125,66 @@ func TestAddDuplication(t *testing.T) {
 	}
 }
 
+func TestRemove(t *testing.T) {
+	digests, err := createDigests(10)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dset := NewSet()
+	for i := range digests {
+		if err := dset.Add(digests[i]); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	dgst, err := dset.Lookup(digests[0].String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dgst != digests[0] {
+		t.Fatalf("Unexpected digest value:\n\tExpected: %s\n\tActual: %s", digests[0], dgst)
+	}
+
+	if err := dset.Remove(digests[0]); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := dset.Lookup(digests[0].String()); err != ErrDigestNotFound {
+		t.Fatalf("Expected error %v when looking up removed digest, got %v", ErrDigestNotFound, err)
+	}
+}
+
+func TestAll(t *testing.T) {
+	digests, err := createDigests(100)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dset := NewSet()
+	for i := range digests {
+		if err := dset.Add(digests[i]); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	all := map[Digest]struct{}{}
+	for _, dgst := range dset.All() {
+		all[dgst] = struct{}{}
+	}
+
+	if len(all) != len(digests) {
+		t.Fatalf("Unexpected number of unique digests found:\n\tExpected: %d\n\tActual: %d", len(digests), len(all))
+	}
+
+	for i, dgst := range digests {
+		if _, ok := all[dgst]; !ok {
+			t.Fatalf("Missing element at position %d: %s", i, dgst)
+		}
+	}
+
+}
+
 func assertEqualShort(t *testing.T, actual, expected string) {
 	if actual != expected {
 		t.Fatalf("Unexpected short value:\n\tExpected: %s\n\tActual: %s", expected, actual)
@@ -219,6 +279,29 @@ func benchLookupNTable(b *testing.B, n int, shortLen int) {
 	}
 }
 
+func benchRemoveNTable(b *testing.B, n int) {
+	digests, err := createDigests(n)
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		dset := &Set{entries: digestEntries(make([]*digestEntry, 0, n))}
+		b.StopTimer()
+		for j := range digests {
+			if err = dset.Add(digests[j]); err != nil {
+				b.Fatal(err)
+			}
+		}
+		b.StartTimer()
+		for j := range digests {
+			if err = dset.Remove(digests[j]); err != nil {
+				b.Fatal(err)
+			}
+		}
+	}
+}
+
 func benchShortCodeNTable(b *testing.B, n int, shortLen int) {
 	digests, err := createDigests(n)
 	if err != nil {
@@ -247,6 +330,18 @@ func BenchmarkAdd100(b *testing.B) {
 
 func BenchmarkAdd1000(b *testing.B) {
 	benchAddNTable(b, 1000)
+}
+
+func BenchmarkRemove10(b *testing.B) {
+	benchRemoveNTable(b, 10)
+}
+
+func BenchmarkRemove100(b *testing.B) {
+	benchRemoveNTable(b, 100)
+}
+
+func BenchmarkRemove1000(b *testing.B) {
+	benchRemoveNTable(b, 1000)
 }
 
 func BenchmarkLookup10(b *testing.B) {
