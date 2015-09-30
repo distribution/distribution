@@ -86,7 +86,7 @@
 		},
 		{
 			"ImportPath": "github.com/ncw/swift",
-			"Rev": "22c8fa9fb5ba145b4d4e2cebb027e84b1a7b1296"
+			"Rev": "ca8cbbde50d4e12dd8ad70b1bd66589ae98efc5c"
 		},
 		{
 			"ImportPath": "github.com/noahdesu/go-ceph/rados",
@@ -100,10 +100,6 @@
 		{
 			"ImportPath": "github.com/spf13/pflag",
 			"Rev": "5644820622454e71517561946e3d94b9f9db6842"
-		},
-		{
-			"ImportPath": "github.com/ncw/swift",
-			"Rev": "ca8cbbde50d4e12dd8ad70b1bd66589ae98efc5c"
 		},
 		{
 			"ImportPath": "github.com/stevvooe/resumable",
