@@ -51,7 +51,7 @@ type ServiceInfo struct {
 // See http://goo.gl/d8BP1 for more details.
 type Region struct {
 	Name                   string // the canonical name of this region.
-	EC2Endpoint            string
+	EC2Endpoint            ServiceInfo
 	S3Endpoint             string
 	S3BucketEndpoint       string // Not needed by AWS S3. Use ${bucket} for bucket name.
 	S3LocationConstraint   bool   // true if this region requires a LocationConstraint declaration.

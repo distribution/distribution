@@ -500,3 +500,14 @@ func (s *S) TestLocation(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(resultUsWest1, check.Equals, expectedUsWest1)
 }
+
+func (s *S) TestSupportRadosGW(c *check.C) {
+	testServer.Response(200, nil, "content")
+	s.s3.Region.Name = "generic"
+	b := s.s3.Bucket("bucket")
+	_, err := b.Get("rgw")
+
+	req := testServer.WaitRequest()
+	c.Assert(err, check.IsNil)
+	c.Assert(req.RequestURI, check.Equals, "/bucket/rgw")
+}
