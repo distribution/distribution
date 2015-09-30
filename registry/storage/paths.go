@@ -16,6 +16,10 @@ const (
 	// storage path root would configurable for all drivers through this
 	// package. In reality, we've found it simpler to do this on a per driver
 	// basis.
+
+	layersDirectory    = "_layers"
+	manifestsDirectory = "_manifests"
+	uploadsDirectory   = "_uploads"
 )
 
 // pathFor maps paths based on "object names" and their ids. The "object
@@ -42,7 +46,7 @@ const (
 // 						data
 // 						startedat
 // 						hashstates/<algorithm>/<offset>
-//			-> blob/<algorithm>
+//			-> blobs/<algorithm>
 //				<split directory content addressable storage>
 //
 // The storage backend layout is broken up into a content-addressable blob
@@ -74,6 +78,7 @@ const (
 //
 //	Manifests:
 //
+// 	manifestRevisionsPathSpec:     <root>/v2/repositories/<name>/_manifests/revisions/
 // 	manifestRevisionPathSpec:      <root>/v2/repositories/<name>/_manifests/revisions/<algorithm>/<hex digest>/
 // 	manifestRevisionLinkPathSpec:  <root>/v2/repositories/<name>/_manifests/revisions/<algorithm>/<hex digest>/link
 // 	manifestSignaturesPathSpec:    <root>/v2/repositories/<name>/_manifests/revisions/<algorithm>/<hex digest>/signatures/
@@ -90,6 +95,7 @@ const (
 //
 // 	Blobs:
 //
+// 	layersPathSpec:               <root>/v2/repositories/<name>/_layers/
 // 	layerLinkPathSpec:            <root>/v2/repositories/<name>/_layers/<algorithm>/<hex digest>/link
 //
 //	Uploads:
@@ -125,13 +131,20 @@ func pathFor(spec pathSpec) (string, error) {
 
 	switch v := spec.(type) {
 
+	case manifestRevisionsPathSpec:
+
+		return path.Join(append(repoPrefix, v.name, manifestsDirectory, "revisions")...), nil
 	case manifestRevisionPathSpec:
+		revisionsPrefix, err := pathFor(manifestRevisionsPathSpec{name: v.name})
+		if err != nil {
+			return "", err
+		}
 		components, err := digestPathComponents(v.revision, false)
 		if err != nil {
 			return "", err
 		}
 
-		return path.Join(append(append(repoPrefix, v.name, "_manifests", "revisions"), components...)...), nil
+		return path.Join(append([]string{revisionsPrefix}, components...)...), nil
 	case manifestRevisionLinkPathSpec:
 		root, err := pathFor(manifestRevisionPathSpec{
 			name:     v.name,
@@ -171,7 +184,7 @@ func pathFor(spec pathSpec) (string, error) {
 
 		return path.Join(root, path.Join(append(signatureComponents, "link")...)), nil
 	case manifestTagsPathSpec:
-		return path.Join(append(repoPrefix, v.name, "_manifests", "tags")...), nil
+		return path.Join(append(repoPrefix, v.name, manifestsDirectory, "tags")...), nil
 	case manifestTagPathSpec:
 		root, err := pathFor(manifestTagsPathSpec{
 			name: v.name,
@@ -232,40 +245,54 @@ func pathFor(spec pathSpec) (string, error) {
 		}
 
 		return path.Join(root, path.Join(components...)), nil
+	case layersPathSpec:
+
+		return path.Join(append(repoPrefix, v.name, layersDirectory)...), nil
 	case layerLinkPathSpec:
+		layersPrefix, err := pathFor(layersPathSpec{name: v.name})
+		if err != nil {
+			return "", err
+		}
 		components, err := digestPathComponents(v.digest, false)
 		if err != nil {
 			return "", err
 		}
+		components = append(components, "link")
 
 		// TODO(stevvooe): Right now, all blobs are linked under "_layers". If
 		// we have future migrations, we may want to rename this to "_blobs".
 		// A migration strategy would simply leave existing items in place and
 		// write the new paths, commit a file then delete the old files.
 
-		blobLinkPathComponents := append(repoPrefix, v.name, "_layers")
-
-		return path.Join(path.Join(append(blobLinkPathComponents, components...)...), "link"), nil
-	case blobDataPathSpec:
+		return path.Join(append([]string{layersPrefix}, components...)...), nil
+	case blobPathSpec:
 		components, err := digestPathComponents(v.digest, true)
 		if err != nil {
 			return "", err
 		}
 
-		components = append(components, "data")
 		blobPathPrefix := append(rootPrefix, "blobs")
-		return path.Join(append(blobPathPrefix, components...)...), nil
 
+		return path.Join(append(blobPathPrefix, components...)...), nil
+	case blobDataPathSpec:
+		blobPathPrefix, err := pathFor(blobPathSpec{
+			digest: v.digest,
+		})
+		if err != nil {
+			return "", err
+		}
+
+		return path.Join(blobPathPrefix, "data"), nil
 	case uploadDataPathSpec:
-		return path.Join(append(repoPrefix, v.name, "_uploads", v.id, "data")...), nil
+		return path.Join(append(repoPrefix, v.name, uploadsDirectory, v.id, "data")...), nil
 	case uploadStartedAtPathSpec:
-		return path.Join(append(repoPrefix, v.name, "_uploads", v.id, "startedat")...), nil
+		return path.Join(append(repoPrefix, v.name, uploadsDirectory, v.id, "startedat")...), nil
 	case uploadHashStatePathSpec:
 		offset := fmt.Sprintf("%d", v.offset)
 		if v.list {
 			offset = "" // Limit to the prefix for listing offsets.
 		}
-		return path.Join(append(repoPrefix, v.name, "_uploads", v.id, "hashstates", string(v.alg), offset)...), nil
+		return path.Join(append(repoPrefix, v.name, uploadsDirectory, v.id, "hashstates", string(v.alg), offset)...), nil
 	case repositoriesRootPathSpec:
 		return path.Join(repoPrefix...), nil
 	default:
@@ -280,6 +307,14 @@ func pathFor(spec pathSpec) (string, error) {
 type pathSpec interface {
 	pathSpec()
 }
+
+// manifestRevisionsPathSpec describes the components of the directory path for
+// a root of repository revisions.
+type manifestRevisionsPathSpec struct {
+	name string
+}
+
+func (manifestRevisionsPathSpec) pathSpec() {}
 
 // manifestRevisionPathSpec describes the components of the directory path for
 // a manifest revision.
@@ -376,6 +411,13 @@ type manifestTagIndexEntryLinkPathSpec struct {
 
 func (manifestTagIndexEntryLinkPathSpec) pathSpec() {}
 
+// layersPathSpec describes the root directory of repository layer links.
+type layersPathSpec struct {
+	name string
+}
+
+func (layersPathSpec) pathSpec() {}
+
 // blobLinkPathSpec specifies a path for a blob link, which is a file with a
 // blob id. The blob link will contain a content addressable blob id reference
 // into the blob store. The format of the contents is as follows:
@@ -405,12 +447,12 @@ var blobAlgorithmReplacer = strings.NewReplacer(
 	";", "/",
 )
 
-// // blobPathSpec contains the path for the registry global blob store.
-// type blobPathSpec struct {
-// 	digest digest.Digest
-// }
+// blobPathSpec contains the path for the registry global blob store.
+type blobPathSpec struct {
+	digest digest.Digest
+}
 
-// func (blobPathSpec) pathSpec() {}
+func (blobPathSpec) pathSpec() {}
 
 // blobDataPathSpec contains the path for the registry global blob store. For
 // now, this contains layer data, exclusively.

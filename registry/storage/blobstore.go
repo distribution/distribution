@@ -1,6 +1,9 @@
 package storage
 
 import (
+	"container/list"
+	"path"
+
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
@@ -135,6 +138,39 @@ func (bs *blobStore) resolve(ctx context.Context, path string) (string, error) {
 	}
 
 	return bs.path(dgst)
+}
+
+func (bs *blobStore) list(ctx context.Context) (*list.List, error) {
+	bl := list.New()
+	algPaths, err := bs.driver.List(ctx, path.Join(storagePathRoot, storagePathVersion, "blobs"))
+	if err != nil {
+		return nil, err
+	}
+	for _, algPath := range algPaths {
+		//algsPath := path.Join(blobStoragePath, alg)
+		prefs, err := bs.driver.List(ctx, algPath)
+		if err != nil {
+			return nil, err
+		}
+		for _, prefPath := range prefs {
+			//prefPath := path.Join(algsPath, pref)
+			dgsts, err := bs.driver.List(ctx, prefPath)
+			if err != nil {
+				return nil, err
+			}
+			for _, dgstPath := range dgsts {
+				alg := path.Base(algPath)
+				dgstHex := path.Base(dgstPath)
+				dgst := digest.NewDigestFromHex(alg, dgstHex)
+				if err := dgst.Validate(); err == nil {
+					bl.PushBack(dgst)
+				} else {
+					context.GetLogger(ctx).Warnf("skipping invalid digest: %s:%s, due to: %v", alg, dgst, err)
+				}
+			}
+		}
+	}
+	return bl, nil
 }
 
 type blobStatter struct {

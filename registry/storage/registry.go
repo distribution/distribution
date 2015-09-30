@@ -1,6 +1,9 @@
 package storage
 
 import (
+	"container/list"
+	"path"
+
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/api/v2"
@@ -132,6 +135,85 @@ func (reg *registry) Repository(ctx context.Context, name string) (distribution.
 	}, nil
 }
 
+// listScope recursively walks directories under given scopePath and returns a
+// list of all repository names found. scope is a suffix of scopePath that
+// starts a registry name.
+func (reg *registry) listScope(ctx context.Context, scopePath, scope string) (*list.List, error) {
+	d := reg.blobStore.driver
+	rl := list.New()
+	isRepository, err := exists(ctx, d, path.Join(scopePath, manifestsDirectory))
+	if err != nil {
+		return nil, err
+	}
+	if isRepository {
+		// Assume that repository doesn't contain sub-repositories
+		rl.PushBack(scope)
+		return rl, nil
+	}
+	logger := context.GetLogger(ctx)
+	children, err := d.List(ctx, scopePath)
+	if err != nil {
+		return nil, err
+	}
+	for _, child := range children {
+		name := path.Base(child)
+		subScope := path.Join(scope, name)
+		info, err := d.Stat(ctx, child)
+		if err != nil {
+			logger.Warnf("Failed to stat scope %q: %v", subScope)
+			continue
+		}
+		if !info.IsDir() {
+			continue
+		}
+		if !v2.RepositoryNameComponentAnchoredRegexp.Match([]byte(name)) || len(subScope) > v2.RepositoryNameTotalLengthMax {
+			logger.Debugf("Skipping invalid scope %q", child)
+			continue
+		}
+		scopeList, err := reg.listScope(ctx, child, subScope)
+		if err != nil {
+			logger.Warnf("Failed to list scope %q: %v", subScope, err)
+			continue
+		}
+		rl.PushBackList(scopeList)
+	}
+	return rl, nil
+}
+
+// listRepositories list of all repository names found under registry root.
+func (reg *registry) listRepositories(ctx context.Context) (*list.List, error) {
+	d := reg.blobStore.driver
+	reposRoot, err := pathFor(repositoriesRootPathSpec{})
+	if err != nil {
+		return nil, err
+	}
+	scopePaths, err := d.List(ctx, reposRoot)
+	if err != nil {
+		return nil, err
+	}
+	rl := list.New()
+	logger := context.GetLogger(ctx)
+	for _, scopePath := range scopePaths {
+		info, err := d.Stat(ctx, scopePath)
+		if err != nil {
+			logger.Warnf("Failed to stat %q: %v", scopePath, err)
+		} else if info.IsDir() {
+			scope := path.Base(scopePath)
+			if !v2.RepositoryNameComponentAnchoredRegexp.Match([]byte(scope)) {
+				logger.Debugf("Skipping invalid scope %q", scope)
+				continue
+			}
+			scopeList, err := reg.listScope(ctx, scopePath, scope)
+			if err != nil {
+				logger.Warnf("Failed to list scope %q: %v", scope, err)
+				continue
+			}
+			rl.PushBackList(scopeList)
+		}
+	}
+	return rl, nil
+}
+
 // repository provides name-scoped access to various services.
 type repository struct {
 	*registry
@@ -155,6 +237,10 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 		manifestRevisionLinkPath,
 		blobLinkPath,
 	}
+	manifestRootPathFns := []blobsRootPathFunc{
+		manifestRevisionsPath,
+		blobsRootPath,
+	}
 
 	ms := &manifestStore{
 		ctx:        ctx,
@@ -175,7 +261,8 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 
 				// TODO(stevvooe): linkPath limits this blob store to only
 				// manifests. This instance cannot be used for blob checks.
-				linkPathFns: manifestLinkPathFns,
+				linkPathFns:      manifestLinkPathFns,
+				blobsRootPathFns: manifestRootPathFns,
 			},
 		},
 		tagStore: &tagStore{
@@ -219,8 +306,9 @@ func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
 
 		// TODO(stevvooe): linkPath limits this blob store to only layers.
 		// This instance cannot be used for manifest checks.
-		linkPathFns:   []linkPathFunc{blobLinkPath},
-		deleteEnabled: repo.registry.deleteEnabled,
+		linkPathFns:      []linkPathFunc{blobLinkPath},
+		blobsRootPathFns: []blobsRootPathFunc{blobsRootPath},
+		deleteEnabled:    repo.registry.deleteEnabled,
 	}
 }
 

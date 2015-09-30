@@ -1,7 +1,9 @@
 package storage
 
 import (
+	"container/list"
 	"net/http"
+	"path"
 	"time"
 
 	"github.com/docker/distribution"
@@ -14,6 +16,10 @@ import (
 // linkPathFunc describes a function that can resolve a link based on the
 // repository name and digest.
 type linkPathFunc func(name string, dgst digest.Digest) (string, error)
+
+// blobsRootPathFunc describes a function that can resolve a root directory of
+// blob links based on the repository name.
+type blobsRootPathFunc func(name string) (string, error)
 
 // linkedBlobStore provides a full BlobService that namespaces the blobs to a
 // given repository. Effectively, it manages the links in a given repository
@@ -34,6 +40,10 @@ type linkedBlobStore struct {
 	// removed an the blob links folder should be merged. The first entry is
 	// treated as the "canonical" link location and will be used for writes.
 	linkPathFns []linkPathFunc
+
+	// blobsRootPathFns functions the same way for blob root directories as
+	// linkPathFns for blob links.
+	blobsRootPathFns []blobsRootPathFunc
 }
 
 var _ distribution.BlobStore = &linkedBlobStore{}
@@ -241,6 +251,41 @@ func (lbs *linkedBlobStore) linkBlob(ctx context.Context, canonical distribution
 	return nil
 }
 
+// list returns a list of digests pointing to blobs. This is useful for garbage
+// collection.
+func (lbs *linkedBlobStore) list() (*list.List, error) {
+	bl := list.New()
+
+	for _, fn := range lbs.blobsRootPathFns {
+		blobsRootPath, err := fn(lbs.repository.Name())
+		if err != nil {
+			return nil, err
+		}
+
+		algPaths, err := lbs.driver.List(lbs.ctx, blobsRootPath)
+		if err != nil {
+			return nil, err
+		}
+		for _, algPath := range algPaths {
+			dgsts, err := lbs.driver.List(lbs.ctx, algPath)
+			if err != nil {
+				return nil, err
+			}
+			for _, dgstPath := range dgsts {
+				alg := path.Base(algPath)
+				dgstHex := path.Base(dgstPath)
+				dgst := digest.NewDigestFromHex(alg, dgstHex)
+				if err := dgst.Validate(); err == nil {
+					bl.PushBack(dgst)
+				} else {
+					context.GetLogger(lbs.ctx).Warnf("skipping invalid digest: %s:%s, due to: %v", alg, dgst, err)
+				}
+			}
+		}
+	}
+	return bl, nil
+}
+
 type linkedBlobStatter struct {
 	*blobStore
 	repository distribution.Repository
@@ -339,7 +384,18 @@ func blobLinkPath(name string, dgst digest.Digest) (string, error) {
 	return pathFor(layerLinkPathSpec{name: name, digest: dgst})
 }
 
+// blobsRootPath provides the path to the root of blob links, also known as
+// layers.
+func blobsRootPath(name string) (string, error) {
+	return pathFor(layersPathSpec{name: name})
+}
+
 // manifestRevisionLinkPath provides the path to the manifest revision link.
 func manifestRevisionLinkPath(name string, dgst digest.Digest) (string, error) {
 	return pathFor(manifestRevisionLinkPathSpec{name: name, revision: dgst})
+}
+
+// manifestRevisionsPath provides the path to the manifest revisions directory.
+func manifestRevisionsPath(name string) (string, error) {
+	return pathFor(manifestRevisionsPathSpec{name: name})
 }

@@ -115,6 +115,20 @@ func (s *signatureStore) Put(dgst digest.Digest, signatures ...[]byte) error {
 	return nil
 }
 
+// list returns an array of digests of manifest signatures.
+func (s *signatureStore) list(manifestReference digest.Digest) ([]digest.Digest, error) {
+	sl, err := s.linkedBlobStore(s.ctx, manifestReference).list()
+	if err != nil {
+		return nil, err
+	}
+	res := make([]digest.Digest, 0, sl.Len())
+	for e := sl.Front(); e != nil; e = e.Next() {
+		res = append(res, e.Value.(digest.Digest))
+	}
+
+	return res, nil
+}
+
 // linkedBlobStore returns the namedBlobStore of the signatures for the
 // manifest with the given digest. Effectively, each signature link path
 // layout is a unique linked blob store.
@@ -125,7 +139,12 @@ func (s *signatureStore) linkedBlobStore(ctx context.Context, revision digest.Di
 			revision:  revision,
 			signature: dgst,
 		})
-
+	}
+	linkRootPath := func(name string) (string, error) {
+		return pathFor(manifestSignaturesPathSpec{
+			name:     name,
+			revision: revision,
+		})
 	}
 
 	return &linkedBlobStore{
@@ -137,6 +156,7 @@ func (s *signatureStore) linkedBlobStore(ctx context.Context, revision digest.Di
 			repository:  s.repository,
 			linkPathFns: []linkPathFunc{linkpath},
 		},
-		linkPathFns: []linkPathFunc{linkpath},
+		linkPathFns:      []linkPathFunc{linkpath},
+		blobsRootPathFns: []blobsRootPathFunc{linkRootPath},
 	}
 }

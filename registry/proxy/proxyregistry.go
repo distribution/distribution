@@ -37,7 +37,7 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 
 	s := scheduler.New(ctx, driver, "/scheduler-state.json")
 	s.OnBlobExpire(func(digest string) error {
-		return v.RemoveBlob(digest)
+		return v.RemoveBlob(digest, false)
 	})
 	s.OnManifestExpire(func(repoName string) error {
 		return v.RemoveRepository(repoName)
