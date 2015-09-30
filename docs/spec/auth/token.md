@@ -113,6 +113,45 @@ challenge, the client will need to make a `GET` request to the URL
     </dd>
 </dl>
 
+
+#### Token Response Fields
+
+<dl>
+    <dt>
+        <code>token</code>
+    </dt>
+    <dd>
+        An opaque <code>Bearer</code> token that clients should supply to subsequent
+        requests in the <code>Authorization</code> header.
+    </dd>
+    <dt>
+        <code>access_token</code>
+    </dt>
+    <dd>
+        For compatibility with OAuth 2.0, we will also accept <code>token</code> under the name
+        <code>access_token</code>.  At least one of these fields <b>must</b> be specified, but
+        both may also appear (for compatibility with older clients).  When both are specified,
+        they should be equivalent; if they differ the client's choice is undefined.
+    </dd>
+    <dt>
+        <code>expires_in</code>
+    </dt>
+    <dd>
+        (Optional) The duration in seconds since the token was issued that it 
+        will remain valid.  When omitted, this defaults to 60 seconds.  For
+        compatibility with older clients, a token should never be returned with
+        less than 60 seconds to live.
+    </dd>
+    <dt>
+        <code>issued_at</code>
+    </dt>
+    <dd>
+        (Optional) The <a href="https://www.ietf.org/rfc/rfc3339.txt">RFC3339</a>-serialized UTC
+        standard time at which a given token was issued. If <code>issued_at</code> is omitted, the
+        expiration is from when the token exchange completed.
+    </dd>
+</dl>
+
 #### Example
 
 For this example, the client makes an HTTP GET request to the following URL:
@@ -159,14 +198,15 @@ It is this intersected set of access which is placed in the returned token.
 
 The server then constructs an implementation-specific token with this
 intersected set of access, and returns it to the Docker client to use to
-authenticate to the audience service:
+authenticate to the audience service (within the indicated window of time):
 
 ```
 HTTP/1.1 200 OK
 Content-Type: application/json
 
-{"token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiIsImtpZCI6IlBZWU86VEVXVTpWN0pIOjI2SlY6QVFUWjpMSkMzOlNYVko6WEdIQTozNEYyOjJMQVE6WlJNSzpaN1E2In0.eyJpc3MiOiJhdXRoLmRvY2tlci5jb20iLCJzdWIiOiJqbGhhd24iLCJhdWQiOiJyZWdpc3RyeS5kb2NrZXIuY29tIiwiZXhwIjoxNDE1Mzg3MzE1LCJuYmYiOjE0MTUzODcwMTUsImlhdCI6MTQxNTM4NzAxNSwianRpIjoidFlKQ08xYzZjbnl5N2tBbjBjN3JLUGdiVjFIMWJGd3MiLCJhY2Nlc3MiOlt7InR5cGUiOiJyZXBvc2l0b3J5IiwibmFtZSI6InNhbWFsYmEvbXktYXBwIiwiYWN0aW9ucyI6WyJwdXNoIl19XX0.QhflHPfbd6eVF4lM9bwYpFZIV0PfikbyXuLx959ykRTBpe3CYnzs6YBK8FToVb5R47920PVLrh8zuLzdCr9t3w"}
+{"token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiIsImtpZCI6IlBZWU86VEVXVTpWN0pIOjI2SlY6QVFUWjpMSkMzOlNYVko6WEdIQTozNEYyOjJMQVE6WlJNSzpaN1E2In0.eyJpc3MiOiJhdXRoLmRvY2tlci5jb20iLCJzdWIiOiJqbGhhd24iLCJhdWQiOiJyZWdpc3RyeS5kb2NrZXIuY29tIiwiZXhwIjoxNDE1Mzg3MzE1LCJuYmYiOjE0MTUzODcwMTUsImlhdCI6MTQxNTM4NzAxNSwianRpIjoidFlKQ08xYzZjbnl5N2tBbjBjN3JLUGdiVjFIMWJGd3MiLCJhY2Nlc3MiOlt7InR5cGUiOiJyZXBvc2l0b3J5IiwibmFtZSI6InNhbWFsYmEvbXktYXBwIiwiYWN0aW9ucyI6WyJwdXNoIl19XX0.QhflHPfbd6eVF4lM9bwYpFZIV0PfikbyXuLx959ykRTBpe3CYnzs6YBK8FToVb5R47920PVLrh8zuLzdCr9t3w", "expires_in": "3600","issued_at": "2009-11-10T23:00:00Z"}
 ```
+
 
 ## Using the Bearer token
 
