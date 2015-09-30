@@ -1,4 +1,4 @@
-package cache
+package cachecheck
 
 import (
 	"testing"
@@ -6,19 +6,20 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/registry/storage/cache"
 )
 
 // CheckBlobDescriptorCache takes a cache implementation through a common set
 // of operations. If adding new tests, please add them here so new
 // implementations get the benefit. This should be used for unit tests.
-func CheckBlobDescriptorCache(t *testing.T, provider BlobDescriptorCacheProvider) {
+func CheckBlobDescriptorCache(t *testing.T, provider cache.BlobDescriptorCacheProvider) {
 	ctx := context.Background()
 
 	checkBlobDescriptorCacheEmptyRepository(t, ctx, provider)
 	checkBlobDescriptorCacheSetAndRead(t, ctx, provider)
 }
 
-func checkBlobDescriptorCacheEmptyRepository(t *testing.T, ctx context.Context, provider BlobDescriptorCacheProvider) {
+func checkBlobDescriptorCacheEmptyRepository(t *testing.T, ctx context.Context, provider cache.BlobDescriptorCacheProvider) {
 	if _, err := provider.Stat(ctx, "sha384:abc"); err != distribution.ErrBlobUnknown {
 		t.Fatalf("expected unknown blob error with empty store: %v", err)
 	}
@@ -56,7 +57,7 @@ func checkBlobDescriptorCacheEmptyRepository(t *testing.T, ctx context.Context, 
 	}
 }
 
-func checkBlobDescriptorCacheSetAndRead(t *testing.T, ctx context.Context, provider BlobDescriptorCacheProvider) {
+func checkBlobDescriptorCacheSetAndRead(t *testing.T, ctx context.Context, provider cache.BlobDescriptorCacheProvider) {
 	localDigest := digest.Digest("sha384:abc")
 	expected := distribution.Descriptor{
 		Digest:    "sha256:abc",
@@ -140,7 +141,7 @@ func checkBlobDescriptorCacheSetAndRead(t *testing.T, ctx context.Context, provi
 	}
 }
 
-func checkBlobDescriptorClear(t *testing.T, ctx context.Context, provider BlobDescriptorCacheProvider) {
+func checkBlobDescriptorClear(t *testing.T, ctx context.Context, provider cache.BlobDescriptorCacheProvider) {
 	localDigest := digest.Digest("sha384:abc")
 	expected := distribution.Descriptor{
 		Digest:    "sha256:abc",
