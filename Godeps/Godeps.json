@@ -102,10 +102,6 @@
 			"Rev": "5644820622454e71517561946e3d94b9f9db6842"
 		},
 		{
-			"ImportPath": "github.com/ncw/swift",
-			"Rev": "ca8cbbde50d4e12dd8ad70b1bd66589ae98efc5c"
-		},
-		{
 			"ImportPath": "github.com/stevvooe/resumable",
 			"Rev": "51ad44105773cafcbe91927f70ac68e1bf78f8b4"
 		},
