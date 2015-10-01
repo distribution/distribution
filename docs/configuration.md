@@ -600,7 +600,7 @@ This storage backend uses Amazon's Simple Storage Service (S3).
     </td>
     <td>
       Indicates whether to use HTTPS instead of HTTP. A boolean value. The
-      default is false.
+      default is <code>true</code>.
     </td>
   </tr>
     <tr>
