@@ -38,7 +38,7 @@ import (
 )
 
 // UserInfo carries information about
-// an autenticated/authorized client.
+// an authenticated/authorized client.
 type UserInfo struct {
 	Name string
 }
