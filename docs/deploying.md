@@ -125,7 +125,7 @@ and fallback to version 1 registries, if necessary. Confirming this is setup
 correctly can help avoid problems with fallback.
 
 In the same train of thought, you must make sure you are properly sending the
-`X-Forwarded-Proto`, `X-Forwared-For` and `Host` headers to their "client-side"
+`X-Forwarded-Proto`, `X-Forwarded-For` and `Host` headers to their "client-side"
 values. Failure to do so usually makes the registry issue redirects to internal
 hostnames or downgrading from https to http.
 
