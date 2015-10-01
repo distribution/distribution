@@ -167,8 +167,12 @@ func New(params Parameters) (*Driver, error) {
 		return nil, fmt.Errorf("Swift authentication failed: %s", err)
 	}
 
-	if err := ct.ContainerCreate(params.Container, nil); err != nil {
-		return nil, fmt.Errorf("Failed to create container %s (%s)", params.Container, err)
+	if _, _, err := ct.Container(params.Container); err == swift.ContainerNotFound {
+		if err := ct.ContainerCreate(params.Container, nil); err != nil {
+			return nil, fmt.Errorf("Failed to create container %s (%s)", params.Container, err)
+		}
+	} else if err != nil {
+		return nil, fmt.Errorf("Failed to retrieve info about container %s (%s)", params.Container, err)
 	}
 
 	d := &driver{
