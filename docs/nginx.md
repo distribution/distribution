@@ -65,6 +65,12 @@ mkdir -p data
 
 # This is the main nginx configuration you will use
 cat <<EOF > auth/nginx.conf
+events {
+    worker_connections  1024;
+}
+
+http {
+
 upstream docker-registry {
   server registry:5000;
 }
@@ -109,10 +115,11 @@ server {
     proxy_read_timeout                  900;
   }
 }
+}
 EOF
 
 # Now, create a password file for "testuser" and "testpassword"
-docker run --entrypoint htpasswd httpd:2.4 -bn testuser testpassword > auth/nginx.htpasswd
+docker run --rm --entrypoint htpasswd  registry:2 -bn testuser testpassword > auth/nginx.htpasswd
 
 # Copy over your certificate files
 cp domain.crt auth
@@ -128,14 +135,15 @@ nginx:
   links:
     - registry:registry
   volumes:
-    - `pwd`/auth/:/etc/nginx/conf.d
+    - ./auth:/etc/nginx/conf.d
+    - ./auth/nginx.conf:/etc/nginx/nginx.conf:ro
 
 registry:
   image: registry:2
   ports:
     - 127.0.0.1:5000:5000
   volumes:
-    - `pwd`/data:/var/lib/registry
+    - ./data:/var/lib/registry
 EOF
 ```
 
@@ -145,9 +153,9 @@ Now, start your stack:
 
     docker-compose up -d
 
-Login with a "push" authorized user (using `testuserpush` and `testpasswordpush`), then tag and push your first image:
+Login with a "push" authorized user (using `testuser` and `testpassword`), then tag and push your first image:
 
-    docker login myregistrydomain.com:5043
+    docker login -p=testuser -u=testpassword -e=root@example.ch myregistrydomain.com:5043
     docker tag ubuntu myregistrydomain.com:5043/test
     docker push myregistrydomain.com:5043/test
     docker pull myregistrydomain.com:5043/test
