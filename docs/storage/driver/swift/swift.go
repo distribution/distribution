@@ -658,14 +658,14 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
 	if d.SecretKey == "" {
-		return "", storagedriver.ErrUnsupportedMethod
+		return "", storagedriver.ErrUnsupportedMethod{}
 	}
 
 	methodString := "GET"
 	method, ok := options["method"]
 	if ok {
 		if methodString, ok = method.(string); !ok {
-			return "", storagedriver.ErrUnsupportedMethod
+			return "", storagedriver.ErrUnsupportedMethod{}
 		}
 	}
 
@@ -684,7 +684,7 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 	}
 
 	if !supported {
-		return "", storagedriver.ErrUnsupportedMethod
+		return "", storagedriver.ErrUnsupportedMethod{}
 	}
 
 	expiresTime := time.Now().Add(20 * time.Minute)

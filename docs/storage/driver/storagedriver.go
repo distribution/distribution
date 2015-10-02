@@ -1,7 +1,6 @@
 package driver
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"regexp"
@@ -93,33 +92,42 @@ type StorageDriver interface {
 var PathRegexp = regexp.MustCompile(`^(/[A-Za-z0-9._-]+)+$`)
 
 // ErrUnsupportedMethod may be returned in the case where a StorageDriver implementation does not support an optional method.
-var ErrUnsupportedMethod = errors.New("unsupported method")
+type ErrUnsupportedMethod struct {
+	DriverName string
+}
+
+func (err ErrUnsupportedMethod) Error() string {
+	return fmt.Sprintf("[%s] unsupported method", err.DriverName)
+}
 
 // PathNotFoundError is returned when operating on a nonexistent path.
 type PathNotFoundError struct {
-	Path string
+	Path       string
+	DriverName string
 }
 
 func (err PathNotFoundError) Error() string {
-	return fmt.Sprintf("Path not found: %s", err.Path)
+	return fmt.Sprintf("[%s] Path not found: %s", err.DriverName, err.Path)
 }
 
 // InvalidPathError is returned when the provided path is malformed.
 type InvalidPathError struct {
-	Path string
+	Path       string
+	DriverName string
 }
 
 func (err InvalidPathError) Error() string {
-	return fmt.Sprintf("Invalid path: %s", err.Path)
+	return fmt.Sprintf("[%s] Invalid path: %s", err.DriverName, err.Path)
 }
 
 // InvalidOffsetError is returned when attempting to read or write from an
 // invalid offset.
 type InvalidOffsetError struct {
-	Path   string
-	Offset int64
+	Path       string
+	Offset     int64
+	DriverName string
 }
 
 func (err InvalidOffsetError) Error() string {
-	return fmt.Sprintf("Invalid offset: %d for path: %s", err.Offset, err.Path)
+	return fmt.Sprintf("[%s] Invalid offset: %d for path: %s", err.DriverName, err.Offset, err.Path)
 }

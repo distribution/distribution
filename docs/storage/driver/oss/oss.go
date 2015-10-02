@@ -748,7 +748,7 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 	if ok {
 		methodString, ok = method.(string)
 		if !ok || (methodString != "GET" && methodString != "HEAD") {
-			return "", storagedriver.ErrUnsupportedMethod
+			return "", new(storagedriver.ErrUnsupportedMethod)
 		}
 	}
 
