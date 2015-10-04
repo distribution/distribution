@@ -158,8 +158,10 @@ func TestBuilderFromRequest(t *testing.T) {
 	forwardedHostHeader2.Set("X-Forwarded-Host", "first.example.com, proxy1.example.com")
 
 	testRequests := []struct {
-		request *http.Request
-		base    string
+		request      *http.Request
+		base         string
+		configScheme string
+		configHost   string
 	}{
 		{
 			request: &http.Request{URL: u, Host: u.Host},
@@ -177,10 +179,16 @@ func TestBuilderFromRequest(t *testing.T) {
 			request: &http.Request{URL: u, Host: u.Host, Header: forwardedHostHeader2},
 			base:    "http://first.example.com",
 		},
+		{
+			request:      &http.Request{URL: u, Host: u.Host, Header: forwardedHostHeader2},
+			base:         "https://third.example.com:5000",
+			configScheme: "https",
+			configHost:   "third.example.com:5000",
+		},
 	}
 
 	for _, tr := range testRequests {
-		builder := NewURLBuilderFromRequest(tr.request)
+		builder := NewURLBuilderFromRequest(tr.request, tr.configScheme, tr.configHost)
 
 		for _, testCase := range makeURLBuilderTestCases(builder) {
 			url, err := testCase.build()
@@ -207,8 +215,10 @@ func TestBuilderFromRequestWithPrefix(t *testing.T) {
 	forwardedProtoHeader.Set("X-Forwarded-Proto", "https")
 
 	testRequests := []struct {
-		request *http.Request
-		base    string
+		request      *http.Request
+		base         string
+		configScheme string
+		configHost   string
 	}{
 		{
 			request: &http.Request{URL: u, Host: u.Host},
@@ -218,10 +228,16 @@ func TestBuilderFromRequestWithPrefix(t *testing.T) {
 			request: &http.Request{URL: u, Host: u.Host, Header: forwardedProtoHeader},
 			base:    "https://example.com/prefix/",
 		},
+		{
+			request:      &http.Request{URL: u, Host: u.Host, Header: forwardedProtoHeader},
+			base:         "https://subdomain.example.com/prefix/",
+			configScheme: "https",
+			configHost:   "subdomain.example.com",
+		},
 	}
 
 	for _, tr := range testRequests {
-		builder := NewURLBuilderFromRequest(tr.request)
+		builder := NewURLBuilderFromRequest(tr.request, tr.configScheme, tr.configHost)
 
 		for _, testCase := range makeURLBuilderTestCases(builder) {
 			url, err := testCase.build()

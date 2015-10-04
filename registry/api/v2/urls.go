@@ -42,43 +42,52 @@ func NewURLBuilderFromString(root string) (*URLBuilder, error) {
 }
 
 // NewURLBuilderFromRequest uses information from an *http.Request to
-// construct the root url.
-func NewURLBuilderFromRequest(r *http.Request) *URLBuilder {
-	var scheme string
+// construct the root url. configScheme and configHost are the URI scheme and
+// hostname, respectively, from the configuration - or empty strings if
+// unspecified.
+func NewURLBuilderFromRequest(r *http.Request, configScheme, configHost string) *URLBuilder {
+	u := &url.URL{}
 
-	forwardedProto := r.Header.Get("X-Forwarded-Proto")
+	if configScheme != "" && configHost != "" {
+		// A "host" item in the configuration takes precedence over
+		// X-Forwarded-Proto and X-Forwarded-Host headers, and the
+		// hostname in the request.
+		u.Scheme = configScheme
+		u.Host = configHost
+	} else {
+		var scheme string
 
-	switch {
-	case len(forwardedProto) > 0:
-		scheme = forwardedProto
-	case r.TLS != nil:
-		scheme = "https"
-	case len(r.URL.Scheme) > 0:
-		scheme = r.URL.Scheme
-	default:
-		scheme = "http"
-	}
+		forwardedProto := r.Header.Get("X-Forwarded-Proto")
 
-	host := r.Host
-	forwardedHost := r.Header.Get("X-Forwarded-Host")
-	if len(forwardedHost) > 0 {
-		// According to the Apache mod_proxy docs, X-Forwarded-Host can be a
-		// comma-separated list of hosts, to which each proxy appends the
-		// requested host. We want to grab the first from this comma-separated
-		// list.
-		hosts := strings.SplitN(forwardedHost, ",", 2)
-		host = strings.TrimSpace(hosts[0])
+		switch {
+		case len(forwardedProto) > 0:
+			scheme = forwardedProto
+		case r.TLS != nil:
+			scheme = "https"
+		case len(r.URL.Scheme) > 0:
+			scheme = r.URL.Scheme
+		default:
+			scheme = "http"
+		}
+
+		host := r.Host
+		forwardedHost := r.Header.Get("X-Forwarded-Host")
+		if len(forwardedHost) > 0 {
+			// According to the Apache mod_proxy docs, X-Forwarded-Host can be a
+			// comma-separated list of hosts, to which each proxy appends the
+			// requested host. We want to grab the first from this comma-separated
+			// list.
+			hosts := strings.SplitN(forwardedHost, ",", 2)
+			host = strings.TrimSpace(hosts[0])
+		}
+		u.Scheme = scheme
+		u.Host = host
 	}
 
 	basePath := routeDescriptorsMap[RouteNameBase].Path
 
 	requestPath := r.URL.Path
 	index := strings.Index(requestPath, basePath)
-
-	u := &url.URL{
-		Scheme: scheme,
-		Host:   host,
-	}
 
 	if index > 0 {
 		// N.B. index+1 is important because we want to include the trailing /
