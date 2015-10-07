@@ -165,21 +165,46 @@ var (
 			invalid: true,
 		},
 		{
+			input:   "do__cker/docker",
+			err:     ErrRepositoryNameComponentInvalid,
+			invalid: true,
+		},
+		{
+			input:   "docker./docker",
+			err:     ErrRepositoryNameComponentInvalid,
+			invalid: true,
+		},
+		{
+			input:   ".docker/docker",
+			err:     ErrRepositoryNameComponentInvalid,
+			invalid: true,
+		},
+		{
+			input:   "do..cker/docker",
+			err:     ErrRepositoryNameComponentInvalid,
+			invalid: true,
+		},
+		{
+			input:   "docker-/docker",
+			err:     ErrRepositoryNameComponentInvalid,
+			invalid: true,
+		},
+		{
+			input:   "-docker/docker",
+			err:     ErrRepositoryNameComponentInvalid,
+			invalid: true,
+		},
+		{
 			input: "b.gcr.io/test.example.com/my-app", // embedded domain component
 		},
-		// TODO(stevvooe): The following is a punycode domain name that we may
-		// want to allow in the future. Currently, this is not allowed but we
-		// may want to change this in the future. Adding this here as invalid
-		// for the time being.
 		{
-			input:   "xn--n3h.com/myimage", // http://☃.com in punycode
-			err:     ErrRepositoryNameComponentInvalid,
-			invalid: true,
+			input: "xn--n3h.com/myimage", // http://☃.com in punycode
 		},
 		{
-			input:   "xn--7o8h.com/myimage", // http://🐳.com in punycode
-			err:     ErrRepositoryNameComponentInvalid,
-			invalid: true,
+			input: "xn--7o8h.com/myimage", // http://🐳.com in punycode
+		},
+		{
+			input: "registry.io/foo/project--id.module--name.ver---sion--name", // image with hostname
 		},
 	}
 )
