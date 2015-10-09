@@ -98,26 +98,28 @@ func (f *Field) UnmarshalText(p []byte) error {
 
 // Named is an object with a full name
 type Named interface {
+	Reference
 	Name() string
 }
 
 // Tagged is an object which has a tag
 type Tagged interface {
+	Reference
 	Tag() string
 }
 
 // Digested is an object which has a digest
 // in which it can be referenced by
 type Digested interface {
+	Reference
 	Digest() digest.Digest
 }
 
 // Canonical reference is an object with a fully unique
 // name including a name with hostname and digest
 type Canonical interface {
-	Reference
 	Named
-	Digested
+	Digest() digest.Digest
 }
 
 // SplitHostname splits a named reference into a
