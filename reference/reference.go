@@ -8,12 +8,13 @@
 //	// repository.go
 //	repository			:= hostname ['/' component]+
 //	hostname 			:= hostcomponent [':' port-number]
-//	component			:= alpha-numeric [separator alpha-numeric]*
+//	component			:= subcomponent [separator subcomponent]*
+//	subcomponent			:= alpha-numeric ['-'* alpha-numeric]*
 //	hostcomponent                   := [hostpart '.']* hostpart
-// 	alpha-numeric			:= /[a-zA-Z0-9]+/
-//	separator			:= /[_-]/
+// 	alpha-numeric			:= /[a-z0-9]+/
+//	separator			:= /([_.]|__)/
 //	port-number			:= /[0-9]+/
-//	hostpart                        := /([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])/
+//	hostpart                        := /([a-z0-9]|[a-z0-9][a-z0-9-]*[a-z0-9])/
 //
 //	// tag.go
 //	tag                             := /[\w][\w.-]{0,127}/

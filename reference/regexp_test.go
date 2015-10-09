@@ -16,14 +16,14 @@ func checkRegexp(t *testing.T, r *regexp.Regexp, m regexpMatch) {
 	matches := r.FindStringSubmatch(m.input)
 	if m.match && matches != nil {
 		if len(matches) != (r.NumSubexp()+1) || matches[0] != m.input {
-			t.Fatalf("Bad match result: %#v", matches)
+			t.Fatalf("Bad match result %#v for %q", matches, m.input)
 		}
 		if len(matches) < (len(m.subs) + 1) {
-			t.Errorf("Expected %d sub matches, only have %d", len(m.subs), len(matches)-1)
+			t.Errorf("Expected %d sub matches, only have %d for %q", len(m.subs), len(matches)-1, m.input)
 		}
 		for i := range m.subs {
 			if m.subs[i] != matches[i+1] {
-				t.Errorf("Unexpected submatch %d: %q, expected %q", i+1, matches[i+1], m.subs[i])
+				t.Errorf("Unexpected submatch %d: %q, expected %q for %q", i+1, matches[i+1], m.subs[i], m.input)
 			}
 		}
 	} else if m.match {
@@ -324,6 +324,75 @@ func TestFullNameRegexp(t *testing.T) {
 			input: "xn--7o8h.com/myimage", // 🐳.com in punycode
 			match: true,
 			subs:  []string{"xn--7o8h.com", "myimage"},
+		},
+		{
+			input: "example.com/xn--7o8h.com/myimage", // 🐳.com in punycode
+			match: true,
+			subs:  []string{"example.com", "xn--7o8h.com/myimage"},
+		},
+		{
+			input: "example.com/some_separator__underscore/myimage",
+			match: true,
+			subs:  []string{"example.com", "some_separator__underscore/myimage"},
+		},
+		{
+			input: "example.com/__underscore/myimage",
+			match: false,
+		},
+		{
+			input: "example.com/..dots/myimage",
+			match: false,
+		},
+		{
+			input: "example.com/.dots/myimage",
+			match: false,
+		},
+		{
+			input: "example.com/nodouble..dots/myimage",
+			match: false,
+		},
+		{
+			input: "example.com/nodouble..dots/myimage",
+			match: false,
+		},
+		{
+			input: "docker./docker",
+			match: false,
+		},
+		{
+			input: ".docker/docker",
+			match: false,
+		},
+		{
+			input: "docker-/docker",
+			match: false,
+		},
+		{
+			input: "-docker/docker",
+			match: false,
+		},
+		{
+			input: "do..cker/docker",
+			match: false,
+		},
+		{
+			input: "do__cker:8080/docker",
+			match: false,
+		},
+		{
+			input: "do__cker/docker",
+			match: true,
+			subs:  []string{"", "do__cker/docker"},
+		},
+		{
+			input: "b.gcr.io/test.example.com/my-app",
+			match: true,
+			subs:  []string{"b.gcr.io", "test.example.com/my-app"},
+		},
+		{
+			input: "registry.io/foo/project--id.module--name.ver---sion--name",
+			match: true,
+			subs:  []string{"registry.io", "foo/project--id.module--name.ver---sion--name"},
 		},
 	}
 	for i := range testcases {

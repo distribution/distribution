@@ -3,14 +3,19 @@ package reference
 import "regexp"
 
 var (
+	// nameSubComponentRegexp defines the part of the name which must be
+	// begin and end with an alphanumeric character. These characters can
+	// be separated by any number of dashes.
+	nameSubComponentRegexp = regexp.MustCompile(`[a-z0-9]+(?:[-]+[a-z0-9]+)*`)
+
 	// nameComponentRegexp restricts registry path component names to
 	// start with at least one letter or number, with following parts able to
-	// be separated by one period, dash or underscore.
-	nameComponentRegexp = regexp.MustCompile(`[a-zA-Z0-9]+(?:[._-][a-z0-9]+)*`)
+	// be separated by one period, underscore or double underscore.
+	nameComponentRegexp = regexp.MustCompile(nameSubComponentRegexp.String() + `(?:(?:[._]|__)` + nameSubComponentRegexp.String() + `)*`)
 
 	nameRegexp = regexp.MustCompile(`(?:` + nameComponentRegexp.String() + `/)*` + nameComponentRegexp.String())
 
-	hostnameComponentRegexp = regexp.MustCompile(`(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])`)
+	hostnameComponentRegexp = regexp.MustCompile(`(?:[a-z0-9]|[a-z0-9][a-z0-9-]*[a-z0-9])`)
 
 	// hostnameComponentRegexp restricts the registry hostname component of a repository name to
 	// start with a component as defined by hostnameRegexp and followed by an optional port.
