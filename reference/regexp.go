@@ -28,6 +28,13 @@ var (
 	// end of the matched string.
 	anchoredTagRegexp = regexp.MustCompile(`^` + TagRegexp.String() + `$`)
 
+	// DigestRegexp matches valid digests.
+	DigestRegexp = regexp.MustCompile(`[A-Za-z][A-Za-z0-9]*(?:[-_+.][A-Za-z][A-Za-z0-9]*)*[:][[:xdigit:]]{32,}`)
+
+	// anchoredDigestRegexp matches valid digests, anchored at the start and
+	// end of the matched string.
+	anchoredDigestRegexp = regexp.MustCompile(`^` + DigestRegexp.String() + `$`)
+
 	// NameRegexp is the format for the name component of references. The
 	// regexp has capturing groups for the hostname and name part omitting
 	// the seperating forward slash from either.
@@ -35,7 +42,7 @@ var (
 
 	// ReferenceRegexp is the full supported format of a reference. The
 	// regexp has capturing groups for name, tag, and digest components.
-	ReferenceRegexp = regexp.MustCompile(`^((?:` + hostnameRegexp.String() + `/)?` + nameRegexp.String() + `)(?:[:](` + TagRegexp.String() + `))?(?:[@]([A-Za-z][A-Za-z0-9]*(?:[-_+.][A-Za-z][A-Za-z0-9]*)*[:][[:xdigit:]]{32,}))?$`)
+	ReferenceRegexp = regexp.MustCompile(`^((?:` + hostnameRegexp.String() + `/)?` + nameRegexp.String() + `)(?:[:](` + TagRegexp.String() + `))?(?:[@](` + DigestRegexp.String() + `))?$`)
 
 	// anchoredNameRegexp is used to parse a name value, capturing hostname
 	anchoredNameRegexp = regexp.MustCompile(`^(?:(` + hostnameRegexp.String() + `)/)?(` + nameRegexp.String() + `)$`)

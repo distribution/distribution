@@ -395,3 +395,87 @@ func TestSerialization(t *testing.T) {
 
 	}
 }
+
+func TestWithTag(t *testing.T) {
+	testcases := []struct {
+		name     string
+		tag      string
+		combined string
+	}{
+		{
+			name:     "test.com/foo",
+			tag:      "tag",
+			combined: "test.com/foo:tag",
+		},
+		{
+			name:     "foo",
+			tag:      "tag2",
+			combined: "foo:tag2",
+		},
+		{
+			name:     "test.com:8000/foo",
+			tag:      "tag4",
+			combined: "test.com:8000/foo:tag4",
+		},
+	}
+	for _, testcase := range testcases {
+		failf := func(format string, v ...interface{}) {
+			t.Logf(strconv.Quote(testcase.name)+": "+format, v...)
+			t.Fail()
+		}
+
+		named, err := ParseNamed(testcase.name)
+		if err != nil {
+			failf("error parsing name: %s", err)
+		}
+		tagged, err := WithTag(named, testcase.tag)
+		if err != nil {
+			failf("WithTag failed: %s", err)
+		}
+		if tagged.String() != testcase.combined {
+			failf("unexpected: got %q, expected %q", tagged.String(), testcase.combined)
+		}
+	}
+}
+
+func TestWithDigest(t *testing.T) {
+	testcases := []struct {
+		name     string
+		digest   digest.Digest
+		combined string
+	}{
+		{
+			name:     "test.com/foo",
+			digest:   "sha256:1234567890098765432112345667890098765",
+			combined: "test.com/foo@sha256:1234567890098765432112345667890098765",
+		},
+		{
+			name:     "foo",
+			digest:   "sha256:1234567890098765432112345667890098765",
+			combined: "foo@sha256:1234567890098765432112345667890098765",
+		},
+		{
+			name:     "test.com:8000/foo",
+			digest:   "sha256:1234567890098765432112345667890098765",
+			combined: "test.com:8000/foo@sha256:1234567890098765432112345667890098765",
+		},
+	}
+	for _, testcase := range testcases {
+		failf := func(format string, v ...interface{}) {
+			t.Logf(strconv.Quote(testcase.name)+": "+format, v...)
+			t.Fail()
+		}
+
+		named, err := ParseNamed(testcase.name)
+		if err != nil {
+			failf("error parsing name: %s", err)
+		}
+		digested, err := WithDigest(named, testcase.digest)
+		if err != nil {
+			failf("WithDigest failed: %s", err)
+		}
+		if digested.String() != testcase.combined {
+			failf("unexpected: got %q, expected %q", digested.String(), testcase.combined)
+		}
+	}
+}

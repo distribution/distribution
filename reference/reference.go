@@ -43,6 +43,12 @@ var (
 	// ErrReferenceInvalidFormat represents an error while trying to parse a string as a reference.
 	ErrReferenceInvalidFormat = errors.New("invalid reference format")
 
+	// ErrTagInvalidFormat represents an error while trying to parse a string as a tag.
+	ErrTagInvalidFormat = errors.New("invalid tag format")
+
+	// ErrDigestInvalidFormat represents an error while trying to parse a string as a tag.
+	ErrDigestInvalidFormat = errors.New("invalid digest format")
+
 	// ErrNameEmpty is returned for empty, invalid repository names.
 	ErrNameEmpty = errors.New("repository name must have at least one component")
 
@@ -180,6 +186,30 @@ func ParseNamed(name string) (Named, error) {
 		return nil, ErrReferenceInvalidFormat
 	}
 	return repository(name), nil
+}
+
+// WithTag combines the name from "name" and the tag from "tag" to form a
+// reference incorporating both the name and the tag.
+func WithTag(name Named, tag string) (Tagged, error) {
+	if !anchoredNameRegexp.MatchString(tag) {
+		return nil, ErrTagInvalidFormat
+	}
+	return taggedReference{
+		name: name.Name(),
+		tag:  tag,
+	}, nil
+}
+
+// WithDigest combines the name from "name" and the digest from "digest" to form
+// a reference incorporating both the name and the digest.
+func WithDigest(name Named, digest digest.Digest) (Digested, error) {
+	if !anchoredDigestRegexp.MatchString(digest.String()) {
+		return nil, ErrDigestInvalidFormat
+	}
+	return canonicalReference{
+		name:   name.Name(),
+		digest: digest,
+	}, nil
 }
 
 func getBestReferenceType(ref reference) Reference {
