@@ -174,6 +174,12 @@ func (ub *URLBuilder) BuildBlobUploadChunkURL(name, uuid string, values ...url.V
 		return "", err
 	}
 
+	//when upload layer, distrubiton will return the response with upload URL in Location header,
+	//the upload URL should not contain the scheme and host.
+	//clear the scheme and host from the upload URL.
+	uploadURL.Scheme = ""
+	uploadURL.Host = ""
+
 	return appendValuesURL(uploadURL, values...).String(), nil
 }
 
