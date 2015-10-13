@@ -158,8 +158,9 @@ func TestBuilderFromRequest(t *testing.T) {
 	forwardedHostHeader2.Set("X-Forwarded-Host", "first.example.com, proxy1.example.com")
 
 	testRequests := []struct {
-		request *http.Request
-		base    string
+		request    *http.Request
+		base       string
+		configHost url.URL
 	}{
 		{
 			request: &http.Request{URL: u, Host: u.Host},
@@ -177,10 +178,23 @@ func TestBuilderFromRequest(t *testing.T) {
 			request: &http.Request{URL: u, Host: u.Host, Header: forwardedHostHeader2},
 			base:    "http://first.example.com",
 		},
+		{
+			request: &http.Request{URL: u, Host: u.Host, Header: forwardedHostHeader2},
+			base:    "https://third.example.com:5000",
+			configHost: url.URL{
+				Scheme: "https",
+				Host:   "third.example.com:5000",
+			},
+		},
 	}
 
 	for _, tr := range testRequests {
-		builder := NewURLBuilderFromRequest(tr.request)
+		var builder *URLBuilder
+		if tr.configHost.Scheme != "" && tr.configHost.Host != "" {
+			builder = NewURLBuilder(&tr.configHost)
+		} else {
+			builder = NewURLBuilderFromRequest(tr.request)
+		}
 
 		for _, testCase := range makeURLBuilderTestCases(builder) {
 			url, err := testCase.build()
@@ -207,8 +221,9 @@ func TestBuilderFromRequestWithPrefix(t *testing.T) {
 	forwardedProtoHeader.Set("X-Forwarded-Proto", "https")
 
 	testRequests := []struct {
-		request *http.Request
-		base    string
+		request    *http.Request
+		base       string
+		configHost url.URL
 	}{
 		{
 			request: &http.Request{URL: u, Host: u.Host},
@@ -218,10 +233,23 @@ func TestBuilderFromRequestWithPrefix(t *testing.T) {
 			request: &http.Request{URL: u, Host: u.Host, Header: forwardedProtoHeader},
 			base:    "https://example.com/prefix/",
 		},
+		{
+			request: &http.Request{URL: u, Host: u.Host, Header: forwardedProtoHeader},
+			base:    "https://subdomain.example.com/prefix/",
+			configHost: url.URL{
+				Scheme: "https",
+				Host:   "subdomain.example.com/prefix",
+			},
+		},
 	}
 
 	for _, tr := range testRequests {
-		builder := NewURLBuilderFromRequest(tr.request)
+		var builder *URLBuilder
+		if tr.configHost.Scheme != "" && tr.configHost.Host != "" {
+			builder = NewURLBuilder(&tr.configHost)
+		} else {
+			builder = NewURLBuilderFromRequest(tr.request)
+		}
 
 		for _, testCase := range makeURLBuilderTestCases(builder) {
 			url, err := testCase.build()

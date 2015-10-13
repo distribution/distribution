@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -53,6 +54,10 @@ type App struct {
 	driver           storagedriver.StorageDriver // driver maintains the app global storage driver instance.
 	registry         distribution.Namespace      // registry is the primary registry backend for the app instance.
 	accessController auth.AccessController       // main access controller for application
+
+	// httpHost is a parsed representation of the http.host parameter from
+	// the configuration. Only the Scheme and Host fields are used.
+	httpHost url.URL
 
 	// events contains notification related configuration.
 	events struct {
@@ -119,6 +124,14 @@ func NewApp(ctx context.Context, configuration *configuration.Configuration) *Ap
 	app.configureEvents(configuration)
 	app.configureRedis(configuration)
 	app.configureLogHook(configuration)
+
+	if configuration.HTTP.Host != "" {
+		u, err := url.Parse(configuration.HTTP.Host)
+		if err != nil {
+			panic(fmt.Sprintf(`could not parse http "host" parameter: %v`, err))
+		}
+		app.httpHost = *u
+	}
 
 	options := []storage.RegistryOption{}
 
@@ -639,9 +652,17 @@ func (app *App) context(w http.ResponseWriter, r *http.Request) *Context {
 		"vars.uuid"))
 
 	context := &Context{
-		App:        app,
-		Context:    ctx,
-		urlBuilder: v2.NewURLBuilderFromRequest(r),
+		App:     app,
+		Context: ctx,
+	}
+
+	if app.httpHost.Scheme != "" && app.httpHost.Host != "" {
+		// A "host" item in the configuration takes precedence over
+		// X-Forwarded-Proto and X-Forwarded-Host headers, and the
+		// hostname in the request.
+		context.urlBuilder = v2.NewURLBuilder(&app.httpHost)
+	} else {
+		context.urlBuilder = v2.NewURLBuilderFromRequest(r)
 	}
 
 	return context
