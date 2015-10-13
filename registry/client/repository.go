@@ -15,6 +15,7 @@ import (
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest/schema1"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/registry/client/transport"
 	"github.com/docker/distribution/registry/storage/cache"
@@ -96,9 +97,9 @@ func (r *registry) Repositories(ctx context.Context, entries []string, last stri
 	return numFilled, returnErr
 }
 
-// NewRepository creates a new Repository for the given repository name and base URL
+// NewRepository creates a new Repository for the given repository name and base URL.
 func NewRepository(ctx context.Context, name, baseURL string, transport http.RoundTripper) (distribution.Repository, error) {
-	if err := v2.ValidateRepositoryName(name); err != nil {
+	if _, err := reference.ParseNamed(name); err != nil {
 		return nil, err
 	}
 

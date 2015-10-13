@@ -6,7 +6,7 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/registry/api/v2"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/cache"
 	"github.com/garyburd/redigo/redis"
 )
@@ -41,7 +41,7 @@ func NewRedisBlobDescriptorCacheProvider(pool *redis.Pool) cache.BlobDescriptorC
 
 // RepositoryScoped returns the scoped cache.
 func (rbds *redisBlobDescriptorService) RepositoryScoped(repo string) (distribution.BlobDescriptorService, error) {
-	if err := v2.ValidateRepositoryName(repo); err != nil {
+	if _, err := reference.ParseNamed(repo); err != nil {
 		return nil, err
 	}
 
