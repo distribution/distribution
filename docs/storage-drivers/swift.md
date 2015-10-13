@@ -49,10 +49,7 @@ An implementation of the `storagedriver.StorageDriver` interface that uses [Open
   </td>
   <td>
   <p>
-	  The name of your Swift container where you wish to store objects. An
-  additional container called <code><container>_segments</code> stores the data
-  is used. The driver creates both the named container and the segments
-  container during its initialization.
+	The name of your Swift container where you wish to store objects. The driver creates the named container during its initialization.
   </p>
   </td>
 </tr>
