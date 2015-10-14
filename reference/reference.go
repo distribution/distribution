@@ -114,6 +114,12 @@ type Tagged interface {
 	Tag() string
 }
 
+// NamedTagged is an object including a name and tag.
+type NamedTagged interface {
+	Named
+	Tag() string
+}
+
 // Digested is an object which has a digest
 // in which it can be referenced by
 type Digested interface {
@@ -178,10 +184,26 @@ func Parse(s string) (Reference, error) {
 	return r, nil
 }
 
-// ParseNamed parses the input string and returns a named
-// object representing the given string. If the input is
-// invalid ErrReferenceInvalidFormat will be returned.
-func ParseNamed(name string) (Named, error) {
+// ParseNamed parses s and returns a syntactically valid reference implementing
+// the Named interface. The reference must have a name, otherwise an error is
+// returned.
+// If an error was encountered it is returned, along with a nil Reference.
+// NOTE: ParseNamed will not handle short digests.
+func ParseNamed(s string) (Named, error) {
+	ref, err := Parse(s)
+	if err != nil {
+		return nil, err
+	}
+	named, isNamed := ref.(Named)
+	if !isNamed {
+		return nil, fmt.Errorf("reference %s has no name", ref.String())
+	}
+	return named, nil
+}
+
+// WithName returns a named object representing the given string. If the input
+// is invalid ErrReferenceInvalidFormat will be returned.
+func WithName(name string) (Named, error) {
 	if !anchoredNameRegexp.MatchString(name) {
 		return nil, ErrReferenceInvalidFormat
 	}
@@ -190,7 +212,7 @@ func ParseNamed(name string) (Named, error) {
 
 // WithTag combines the name from "name" and the tag from "tag" to form a
 // reference incorporating both the name and the tag.
-func WithTag(name Named, tag string) (Tagged, error) {
+func WithTag(name Named, tag string) (NamedTagged, error) {
 	if !anchoredNameRegexp.MatchString(tag) {
 		return nil, ErrTagInvalidFormat
 	}
@@ -202,7 +224,7 @@ func WithTag(name Named, tag string) (Tagged, error) {
 
 // WithDigest combines the name from "name" and the digest from "digest" to form
 // a reference incorporating both the name and the digest.
-func WithDigest(name Named, digest digest.Digest) (Digested, error) {
+func WithDigest(name Named, digest digest.Digest) (Canonical, error) {
 	if !anchoredDigestRegexp.MatchString(digest.String()) {
 		return nil, ErrDigestInvalidFormat
 	}

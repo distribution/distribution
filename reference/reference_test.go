@@ -253,7 +253,7 @@ func TestSplitHostname(t *testing.T) {
 			t.Fail()
 		}
 
-		named, err := ParseNamed(testcase.input)
+		named, err := WithName(testcase.input)
 		if err != nil {
 			failf("error parsing name: %s", err)
 		}
@@ -424,7 +424,7 @@ func TestWithTag(t *testing.T) {
 			t.Fail()
 		}
 
-		named, err := ParseNamed(testcase.name)
+		named, err := WithName(testcase.name)
 		if err != nil {
 			failf("error parsing name: %s", err)
 		}
@@ -466,7 +466,7 @@ func TestWithDigest(t *testing.T) {
 			t.Fail()
 		}
 
-		named, err := ParseNamed(testcase.name)
+		named, err := WithName(testcase.name)
 		if err != nil {
 			failf("error parsing name: %s", err)
 		}
