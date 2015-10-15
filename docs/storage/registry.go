@@ -175,7 +175,8 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 
 				// TODO(stevvooe): linkPath limits this blob store to only
 				// manifests. This instance cannot be used for blob checks.
-				linkPathFns: manifestLinkPathFns,
+				linkPathFns:            manifestLinkPathFns,
+				resumableDigestEnabled: repo.resumableDigestEnabled,
 			},
 		},
 		tagStore: &tagStore{
@@ -219,8 +220,9 @@ func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
 
 		// TODO(stevvooe): linkPath limits this blob store to only layers.
 		// This instance cannot be used for manifest checks.
-		linkPathFns:   []linkPathFunc{blobLinkPath},
-		deleteEnabled: repo.registry.deleteEnabled,
+		linkPathFns:            []linkPathFunc{blobLinkPath},
+		deleteEnabled:          repo.registry.deleteEnabled,
+		resumableDigestEnabled: repo.resumableDigestEnabled,
 	}
 }
 
