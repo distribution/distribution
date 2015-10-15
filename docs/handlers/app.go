@@ -69,6 +69,9 @@ type App struct {
 
 	// true if this registry is configured as a pull through cache
 	isCache bool
+
+	// true if the registry is in a read-only maintenance mode
+	readOnly bool
 }
 
 // NewApp takes a configuration and returns a configured app, ready to serve
@@ -104,13 +107,24 @@ func NewApp(ctx context.Context, configuration *configuration.Configuration) *Ap
 
 	purgeConfig := uploadPurgeDefaultConfig()
 	if mc, ok := configuration.Storage["maintenance"]; ok {
-		for k, v := range mc {
-			switch k {
-			case "uploadpurging":
-				purgeConfig = v.(map[interface{}]interface{})
+		if v, ok := mc["uploadpurging"]; ok {
+			purgeConfig, ok = v.(map[interface{}]interface{})
+			if !ok {
+				panic("uploadpurging config key must contain additional keys")
 			}
 		}
-
+		if v, ok := mc["readonly"]; ok {
+			readOnly, ok := v.(map[interface{}]interface{})
+			if !ok {
+				panic("readonly config key must contain additional keys")
+			}
+			if readOnlyEnabled, ok := readOnly["enabled"]; ok {
+				app.readOnly, ok = readOnlyEnabled.(bool)
+				if !ok {
+					panic("readonly's enabled config key must have a boolean value")
+				}
+			}
+		}
 	}
 
 	startUploadPurger(app, app.driver, ctxu.GetLogger(app), purgeConfig)
