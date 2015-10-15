@@ -760,14 +760,32 @@ func testManifestAPI(t *testing.T, env *testEnv, args manifestArgs) (*testEnv, m
 
 	resp = putManifest(t, "putting unsigned manifest", manifestURL, unsignedManifest)
 	defer resp.Body.Close()
-	checkResponse(t, "posting unsigned manifest", resp, http.StatusBadRequest)
-	_, p, counts := checkBodyHasErrorCodes(t, "getting unknown manifest tags", resp,
-		v2.ErrorCodeManifestUnverified, v2.ErrorCodeBlobUnknown, v2.ErrorCodeDigestInvalid)
+	checkResponse(t, "putting unsigned manifest", resp, http.StatusBadRequest)
+	_, p, counts := checkBodyHasErrorCodes(t, "getting unknown manifest tags", resp, v2.ErrorCodeManifestInvalid)
 
 	expectedCounts := map[errcode.ErrorCode]int{
-		v2.ErrorCodeManifestUnverified: 1,
-		v2.ErrorCodeBlobUnknown:        2,
-		v2.ErrorCodeDigestInvalid:      2,
+		v2.ErrorCodeManifestInvalid: 1,
+	}
+
+	if !reflect.DeepEqual(counts, expectedCounts) {
+		t.Fatalf("unexpected number of error codes encountered: %v\n!=\n%v\n---\n%s", counts, expectedCounts, string(p))
+	}
+
+	// sign the manifest and still get some interesting errors.
+	sm, err := schema1.Sign(unsignedManifest, env.pk)
+	if err != nil {
+		t.Fatalf("error signing manifest: %v", err)
+	}
+
+	resp = putManifest(t, "putting signed manifest with errors", manifestURL, sm)
+	defer resp.Body.Close()
+	checkResponse(t, "putting signed manifest with errors", resp, http.StatusBadRequest)
+	_, p, counts = checkBodyHasErrorCodes(t, "putting signed manifest with errors", resp,
+		v2.ErrorCodeManifestBlobUnknown, v2.ErrorCodeDigestInvalid)
+
+	expectedCounts = map[errcode.ErrorCode]int{
+		v2.ErrorCodeManifestBlobUnknown: 2,
+		v2.ErrorCodeDigestInvalid:       2,
 	}
 
 	if !reflect.DeepEqual(counts, expectedCounts) {
@@ -1426,7 +1444,7 @@ func TestRegistryAsCacheMutationAPIs(t *testing.T) {
 	}
 
 	// Manifest upload
-	unsignedManifest := &schema1.Manifest{
+	m := &schema1.Manifest{
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
@@ -1434,7 +1452,13 @@ func TestRegistryAsCacheMutationAPIs(t *testing.T) {
 		Tag:      tag,
 		FSLayers: []schema1.FSLayer{},
 	}
-	resp := putManifest(t, "putting unsigned manifest", manifestURL, unsignedManifest)
+
+	sm, err := schema1.Sign(m, env.pk)
+	if err != nil {
+		t.Fatalf("error signing manifest: %v", err)
+	}
+
+	resp := putManifest(t, "putting unsigned manifest", manifestURL, sm)
 	checkResponse(t, "putting signed manifest to cache", resp, errcode.ErrorCodeUnsupported.Descriptor().HTTPStatusCode)
 
 	// Manifest Delete
