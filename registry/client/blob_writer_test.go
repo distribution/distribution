@@ -94,7 +94,7 @@ func TestUploadReadFrom(t *testing.T) {
 								"detail": "more detail"
 							}
 						]
-					} `),
+					}`),
 			},
 		},
 		// Test 400 invalid json

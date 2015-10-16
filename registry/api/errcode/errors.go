@@ -71,28 +71,20 @@ func (ec *ErrorCode) UnmarshalText(text []byte) error {
 // WithDetail creates a new Error struct based on the passed-in info and
 // set the Detail property appropriately
 func (ec ErrorCode) WithDetail(detail interface{}) Error {
-	return Error{
-		Code:    ec,
-		Message: ec.Message(),
-	}.WithDetail(detail)
+	return newError(ec, ec.Message(), detail, []interface{}{})
 }
 
 // WithArgs creates a new Error struct and sets the Args slice
 func (ec ErrorCode) WithArgs(args ...interface{}) Error {
-	return Error{
-		Code:    ec,
-		Message: ec.Message(),
-	}.WithArgs(args...)
+	return newError(ec, ec.Message(), nil, args)
 }
 
 // Error provides a wrapper around ErrorCode with extra Details provided.
 type Error struct {
-	Code    ErrorCode   `json:"code"`
-	Message string      `json:"message"`
-	Detail  interface{} `json:"detail,omitempty"`
-
-	// TODO(duglin): See if we need an "args" property so we can do the
-	// variable substitution right before showing the message to the user
+	Code    ErrorCode
+	Message string
+	Detail  interface{}
+	Args    []interface{}
 }
 
 var _ error = Error{}
@@ -104,28 +96,44 @@ func (e Error) ErrorCode() ErrorCode {
 
 // Error returns a human readable representation of the error.
 func (e Error) Error() string {
-	return fmt.Sprintf("%s: %s",
-		strings.ToLower(strings.Replace(e.Code.String(), "_", " ", -1)),
-		e.Message)
+	return strings.ToLower(strings.Replace(e.Code.String(), "_", " ", -1)) + ": " + e.format()
+}
+
+// format returns the string formatted representation of a message.
+func (e Error) format() string {
+	return fmt.Sprintf(e.Message, e.Args...)
 }
 
 // WithDetail will return a new Error, based on the current one, but with
 // some Detail info added
 func (e Error) WithDetail(detail interface{}) Error {
-	return Error{
-		Code:    e.Code,
-		Message: e.Message,
-		Detail:  detail,
-	}
+	return newError(e.Code, e.Code.Message(), detail, e.Args)
 }
 
 // WithArgs uses the passed-in list of interface{} as the substitution
 // variables in the Error's Message string, but returns a new Error
 func (e Error) WithArgs(args ...interface{}) Error {
-	return Error{
+	return newError(e.Code, e.Code.Message(), e.Detail, args)
+}
+
+func (e Error) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		Code    ErrorCode   `json:"code"`
+		Message string      `json:"message"`
+		Detail  interface{} `json:"detail,omitempty"`
+	}{
 		Code:    e.Code,
-		Message: fmt.Sprintf(e.Code.Message(), args...),
+		Message: e.format(),
 		Detail:  e.Detail,
+	})
+}
+
+func newError(code ErrorCode, message string, detail interface{}, args []interface{}) Error {
+	return Error{
+		Code:    code,
+		Message: message,
+		Detail:  detail,
+		Args:    args,
 	}
 }
 
@@ -220,6 +228,7 @@ func (errs Errors) MarshalJSON() ([]byte, error) {
 			Code:    err.Code,
 			Message: msg,
 			Detail:  err.Detail,
+			Args:    err.Args,
 		})
 	}
 

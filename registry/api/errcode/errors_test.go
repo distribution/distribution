@@ -3,7 +3,6 @@ package errcode
 import (
 	"encoding/json"
 	"net/http"
-	"reflect"
 	"testing"
 )
 
@@ -109,28 +108,6 @@ func TestErrorsManagement(t *testing.T) {
 		t.Fatalf("unexpected json:\ngot:\n%q\n\nexpected:\n%q", string(p), expectedJSON)
 	}
 
-	// Now test the reverse
-	var unmarshaled Errors
-	if err := json.Unmarshal(p, &unmarshaled); err != nil {
-		t.Fatalf("unexpected error unmarshaling error envelope: %v", err)
-	}
-
-	if !reflect.DeepEqual(unmarshaled, errs) {
-		t.Fatalf("errors not equal after round trip:\nunmarshaled:\n%#v\n\nerrs:\n%#v", unmarshaled, errs)
-	}
-
-	// Test the arg substitution stuff
-	e1 := unmarshaled[3].(Error)
-	exp1 := `Sorry "BOOGIE" isn't valid`
-	if e1.Message != exp1 {
-		t.Fatalf("Wrong msg, got:\n%q\n\nexpected:\n%q", e1.Message, exp1)
-	}
-
-	exp1 = "test3: " + exp1
-	if e1.Error() != exp1 {
-		t.Fatalf("Error() didn't return the right string, got:%s\nexpected:%s", e1.Error(), exp1)
-	}
-
 	// Test again with a single value this time
 	errs = Errors{ErrorCodeUnknown}
 	expectedJSON = "{\"errors\":[{\"code\":\"UNKNOWN\",\"message\":\"unknown error\"}]}"
@@ -144,25 +121,12 @@ func TestErrorsManagement(t *testing.T) {
 		t.Fatalf("unexpected json: %q != %q", string(p), expectedJSON)
 	}
 
-	// Now test the reverse
-	unmarshaled = nil
-	if err := json.Unmarshal(p, &unmarshaled); err != nil {
-		t.Fatalf("unexpected error unmarshaling error envelope: %v", err)
-	}
-
-	if !reflect.DeepEqual(unmarshaled, errs) {
-		t.Fatalf("errors not equal after round trip:\nunmarshaled:\n%#v\n\nerrs:\n%#v", unmarshaled, errs)
-	}
-
 	// Verify that calling WithArgs() more than once does the right thing.
 	// Meaning creates a new Error and uses the ErrorCode Message
-	e1 = ErrorCodeTest3.WithArgs("test1")
+	e1 := ErrorCodeTest3.WithArgs("test1")
 	e2 := e1.WithArgs("test2")
 	if &e1 == &e2 {
 		t.Fatalf("args: e2 and e1 should not be the same, but they are")
-	}
-	if e2.Message != `Sorry "test2" isn't valid` {
-		t.Fatalf("e2 had wrong message: %q", e2.Message)
 	}
 
 	// Verify that calling WithDetail() more than once does the right thing.
@@ -176,4 +140,16 @@ func TestErrorsManagement(t *testing.T) {
 		t.Fatalf("e2 had wrong detail: %q", e2.Detail)
 	}
 
+}
+
+func BenchmarkErrorWithArgs(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		ErrorCodeTest3.WithArgs("bench")
+	}
+}
+
+func BenchmarkErrorSerial(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		ErrorCodeTest3.WithArgs("bench").Error()
+	}
 }
