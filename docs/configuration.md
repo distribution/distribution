@@ -1985,7 +1985,7 @@ The TCP address to connect to, including a port number.
       username: [username]
       password: [password]
 
-Proxy enables a registry to be configured as a pull through cache to the official Docker Hub.  See [mirror.md](mirror.md) for more information. Pushing to a registry configured as a pull through cache is currently unsupported.
+Proxy enables a registry to be configured as a pull through cache to the official Docker Hub.  See [mirror](mirror.md) for more information. Pushing to a registry configured as a pull through cache is currently unsupported.
 
 <table>
   <tr>

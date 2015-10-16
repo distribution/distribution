@@ -8,11 +8,11 @@ keywords = ["registry, on-prem, images, tags, repository, distribution, mirror, 
 
 # Registry as a pull through cache
 
-## Use-case
+## Use-case
 
 If you have multiple instances of Docker running in your environment (e.g., multiple physical or virtual machines, all running the Docker daemon), each time one of them requires an image that it doesn’t have it will go out to the internet and fetch it from the public Docker registry. By running a local registry mirror, you can keep most of the redundant image fetch traffic on your local network.
 
-### Alternatives
+### Alternatives
 
 Alternatively, if the set of images you are using is well delimited, you can simply pull them manually and push them to a simple, local, private registry.
 
