@@ -94,7 +94,7 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name string) (distri
 	}
 
 	return &proxiedRepository{
-		blobStore: proxyBlobStore{
+		blobStore: &proxyBlobStore{
 			localStore:  localRepo.Blobs(ctx),
 			remoteStore: remoteRepo.Blobs(ctx),
 			scheduler:   pr.scheduler,
