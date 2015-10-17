@@ -22,15 +22,10 @@ type proxyBlobStore struct {
 	scheduler   *scheduler.TTLExpirationScheduler
 }
 
-var _ distribution.BlobStore = proxyBlobStore{}
-
-type inflightBlob struct {
-	refCount int
-	bw       distribution.BlobWriter
-}
+var _ distribution.BlobStore = &proxyBlobStore{}
 
 // inflight tracks currently downloading blobs
-var inflight = make(map[digest.Digest]*inflightBlob)
+var inflight = make(map[digest.Digest]struct{})
 
 // mu protects inflight
 var mu sync.Mutex
@@ -42,140 +37,113 @@ func setResponseHeaders(w http.ResponseWriter, length int64, mediaType string, d
 	w.Header().Set("Etag", digest.String())
 }
 
-func (pbs proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter, r *http.Request, dgst digest.Digest) error {
-	desc, err := pbs.localStore.Stat(ctx, dgst)
-	if err != nil && err != distribution.ErrBlobUnknown {
-		return err
-	}
-
-	if err == nil {
-		proxyMetrics.BlobPush(uint64(desc.Size))
-		return pbs.localStore.ServeBlob(ctx, w, r, dgst)
-	}
-
-	desc, err = pbs.remoteStore.Stat(ctx, dgst)
+func (pbs *proxyBlobStore) copyContent(ctx context.Context, dgst digest.Digest, writer io.Writer) (distribution.Descriptor, error) {
+	desc, err := pbs.remoteStore.Stat(ctx, dgst)
 	if err != nil {
-		return err
+		return distribution.Descriptor{}, err
+	}
+
+	if w, ok := writer.(http.ResponseWriter); ok {
+		setResponseHeaders(w, desc.Size, desc.MediaType, dgst)
 	}
 
 	remoteReader, err := pbs.remoteStore.Open(ctx, dgst)
 	if err != nil {
-		return err
+		return distribution.Descriptor{}, err
 	}
 
-	bw, isNew, cleanup, err := getOrCreateBlobWriter(ctx, pbs.localStore, desc)
+	_, err = io.CopyN(writer, remoteReader, desc.Size)
+	if err != nil {
+		return distribution.Descriptor{}, err
+	}
+
+	proxyMetrics.BlobPush(uint64(desc.Size))
+
+	return desc, nil
+}
+
+func (pbs *proxyBlobStore) serveLocal(ctx context.Context, w http.ResponseWriter, r *http.Request, dgst digest.Digest) (bool, error) {
+	localDesc, err := pbs.localStore.Stat(ctx, dgst)
+	if err != nil {
+		// Stat can report a zero sized file here if it's checked between creation
+		// and population.  Return nil error, and continue
+		return false, nil
+	}
+
+	if err == nil {
+		proxyMetrics.BlobPush(uint64(localDesc.Size))
+		return true, pbs.localStore.ServeBlob(ctx, w, r, dgst)
+	}
+
+	return false, nil
+
+}
+
+func (pbs *proxyBlobStore) storeLocal(ctx context.Context, dgst digest.Digest) error {
+	defer func() {
+		mu.Lock()
+		delete(inflight, dgst)
+		mu.Unlock()
+	}()
+
+	var desc distribution.Descriptor
+	var err error
+	var bw distribution.BlobWriter
+
+	bw, err = pbs.localStore.Create(ctx)
 	if err != nil {
 		return err
 	}
-	defer cleanup()
 
-	if isNew {
-		go func() {
-			err := streamToStorage(ctx, remoteReader, desc, bw)
-			if err != nil {
-				context.GetLogger(ctx).Error(err)
-			}
+	desc, err = pbs.copyContent(ctx, dgst, bw)
+	if err != nil {
+		return err
+	}
 
-			proxyMetrics.BlobPull(uint64(desc.Size))
-		}()
-		err := streamToClient(ctx, w, desc, bw)
-		if err != nil {
-			return err
-		}
+	_, err = bw.Commit(ctx, desc)
+	if err != nil {
+		return err
+	}
 
-		proxyMetrics.BlobPush(uint64(desc.Size))
-		pbs.scheduler.AddBlob(dgst.String(), blobTTL)
+	return nil
+}
+
+func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter, r *http.Request, dgst digest.Digest) error {
+	served, err := pbs.serveLocal(ctx, w, r, dgst)
+	if err != nil {
+		context.GetLogger(ctx).Errorf("Error serving blob from local storage: %s", err.Error())
+		return err
+	}
+
+	if served {
 		return nil
 	}
 
-	err = streamToClient(ctx, w, desc, bw)
-	if err != nil {
-		return err
-	}
-	proxyMetrics.BlobPush(uint64(desc.Size))
-	return nil
-}
-
-type cleanupFunc func()
-
-// getOrCreateBlobWriter will track which blobs are currently being downloaded and enable client requesting
-// the same blob concurrently to read from the existing stream.
-func getOrCreateBlobWriter(ctx context.Context, blobs distribution.BlobService, desc distribution.Descriptor) (distribution.BlobWriter, bool, cleanupFunc, error) {
 	mu.Lock()
-	defer mu.Unlock()
-	dgst := desc.Digest
-
-	cleanup := func() {
-		mu.Lock()
-		defer mu.Unlock()
-		inflight[dgst].refCount--
-
-		if inflight[dgst].refCount == 0 {
-			defer delete(inflight, dgst)
-			_, err := inflight[dgst].bw.Commit(ctx, desc)
-			if err != nil {
-				// There is a narrow race here where Commit can be called while this blob's TTL is expiring
-				// and its being removed from storage.  In that case, the client stream will continue
-				// uninterruped and the blob will be pulled through on the next request, so just log it
-				context.GetLogger(ctx).Errorf("Error committing blob: %q", err)
-			}
-
-		}
-	}
-
-	var bw distribution.BlobWriter
 	_, ok := inflight[dgst]
 	if ok {
-		bw = inflight[dgst].bw
-		inflight[dgst].refCount++
-		return bw, false, cleanup, nil
+		mu.Unlock()
+		_, err := pbs.copyContent(ctx, dgst, w)
+		return err
 	}
+	inflight[dgst] = struct{}{}
+	mu.Unlock()
 
-	var err error
-	bw, err = blobs.Create(ctx)
-	if err != nil {
-		return nil, false, nil, err
-	}
+	go func(dgst digest.Digest) {
+		if err := pbs.storeLocal(ctx, dgst); err != nil {
+			context.GetLogger(ctx).Errorf("Error committing to storage: %s", err.Error())
+		}
+		pbs.scheduler.AddBlob(dgst.String(), repositoryTTL)
+	}(dgst)
 
-	inflight[dgst] = &inflightBlob{refCount: 1, bw: bw}
-	return bw, true, cleanup, nil
-}
-
-func streamToStorage(ctx context.Context, remoteReader distribution.ReadSeekCloser, desc distribution.Descriptor, bw distribution.BlobWriter) error {
-	_, err := io.CopyN(bw, remoteReader, desc.Size)
+	_, err = pbs.copyContent(ctx, dgst, w)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
-func streamToClient(ctx context.Context, w http.ResponseWriter, desc distribution.Descriptor, bw distribution.BlobWriter) error {
-	setResponseHeaders(w, desc.Size, desc.MediaType, desc.Digest)
-
-	reader, err := bw.Reader()
-	if err != nil {
-		return err
-	}
-	defer reader.Close()
-	teeReader := io.TeeReader(reader, w)
-	buf := make([]byte, 32768, 32786)
-	var soFar int64
-	for {
-		rd, err := teeReader.Read(buf)
-		if err == nil || err == io.EOF {
-			soFar += int64(rd)
-			if soFar < desc.Size {
-				// buffer underflow, keep trying
-				continue
-			}
-			return nil
-		}
-		return err
-	}
-}
-
-func (pbs proxyBlobStore) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+func (pbs *proxyBlobStore) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
 	desc, err := pbs.localStore.Stat(ctx, dgst)
 	if err == nil {
 		return desc, err
@@ -189,26 +157,26 @@ func (pbs proxyBlobStore) Stat(ctx context.Context, dgst digest.Digest) (distrib
 }
 
 // Unsupported functions
-func (pbs proxyBlobStore) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
+func (pbs *proxyBlobStore) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
 	return distribution.Descriptor{}, distribution.ErrUnsupported
 }
 
-func (pbs proxyBlobStore) Create(ctx context.Context) (distribution.BlobWriter, error) {
+func (pbs *proxyBlobStore) Create(ctx context.Context) (distribution.BlobWriter, error) {
 	return nil, distribution.ErrUnsupported
 }
 
-func (pbs proxyBlobStore) Resume(ctx context.Context, id string) (distribution.BlobWriter, error) {
+func (pbs *proxyBlobStore) Resume(ctx context.Context, id string) (distribution.BlobWriter, error) {
 	return nil, distribution.ErrUnsupported
 }
 
-func (pbs proxyBlobStore) Open(ctx context.Context, dgst digest.Digest) (distribution.ReadSeekCloser, error) {
+func (pbs *proxyBlobStore) Open(ctx context.Context, dgst digest.Digest) (distribution.ReadSeekCloser, error) {
 	return nil, distribution.ErrUnsupported
 }
 
-func (pbs proxyBlobStore) Get(ctx context.Context, dgst digest.Digest) ([]byte, error) {
+func (pbs *proxyBlobStore) Get(ctx context.Context, dgst digest.Digest) ([]byte, error) {
 	return nil, distribution.ErrUnsupported
 }
 
-func (pbs proxyBlobStore) Delete(ctx context.Context, dgst digest.Digest) error {
+func (pbs *proxyBlobStore) Delete(ctx context.Context, dgst digest.Digest) error {
 	return distribution.ErrUnsupported
 }
