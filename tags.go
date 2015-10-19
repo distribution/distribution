@@ -5,8 +5,6 @@ import (
 	"github.com/docker/distribution/reference"
 )
 
-type OnTagFunc func(reference.Tagged)
-
 // TagService provides access to information about tagged objects.
 type TagService interface {
 	// Get retrieves the descriptor identified by the tag. Some
@@ -22,6 +20,9 @@ type TagService interface {
 	// Untag removes the given tag association
 	Untag(ctx context.Context, ref reference.Tagged) error
 
-	// Foreach allows iterating through all tags in the service
-	Foreach(ctx context.Context, f OnTagFunc) error
+	// Enumerate fills 'refs' with a lexigraphically sorted set of tags up to
+	// the size of 'refs' and returns 'n' for the number of entries which were
+	// filled.  'last' contains an offset in the tag set and can be used to resume
+	// iteration.
+	Enumerate(ctx context.Context, refs []reference.Tagged, last reference.Tagged) (n int, err error)
 }

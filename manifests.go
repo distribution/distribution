@@ -21,10 +21,6 @@ type Manifest interface {
 	// the mediatype. // TODO(richardscothern): make mediatype its
 	// own function?
 	Payload() (mediatype string, payload []byte, err error)
-
-	// Reference returns the tag for this manifest.  This is for convenience
-	// and is not necessarily part of the manifest schema
-	Tag() reference.Tagged
 }
 
 // ManifestBuilder creates a manifest allowing one to include dependencies.
@@ -47,8 +43,6 @@ type ManifestBuilder interface {
 	AddConstituent(dependency Descriptor) error
 }
 
-type OnManifestFunc func(Manifest)
-
 // ManifestService describes operations on image manifests.
 type ManifestService interface {
 	// Exists returns true if the manifest exists.
@@ -64,6 +58,9 @@ type ManifestService interface {
 	// a manifest that doesn't exist will return ErrManifestNotFound
 	Delete(ctx context.Context, dgst digest.Digest) error
 
-	// Foreach allows iterating through all Manifests in the service
-	Foreach(ctx context.Context, f OnManifestFunc) error
+	// Enumerate fills 'manifests' with the manifests in this service up
+	// to the size of 'manifests' and returns 'n' for the number of entries
+	// which were filled.  'last' contains an offset in the manifest set
+	// and can be used to resume iteration.
+	Enumerate(ctx context.Context, manifests []Manifest, last Manifest) (n int, err error)
 }
