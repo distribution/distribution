@@ -33,6 +33,8 @@ To override this value, set an environment variable like this:
 This variable overrides the `/var/lib/registry` value to the `/somewhere`
 directory.
 
+>**NOTE**: It is highly recommended to create a base configuration file with which environment variables can be used to tweak individual values.  Overriding configuration sections with environment variables is not recommended.
+
 ## Overriding the entire configuration file
 
 If the default configuration is not a sound basis for your usage, or if you are having issues overriding keys from the environment, you can specify an alternate YAML configuration file by mounting it as a volume in the container.
