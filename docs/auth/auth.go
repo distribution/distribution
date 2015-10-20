@@ -21,7 +21,9 @@
 // 			if ctx, err := accessController.Authorized(ctx, access); err != nil {
 //				if challenge, ok := err.(auth.Challenge) {
 //					// Let the challenge write the response.
-//					challenge.ServeHTTP(w, r)
+//					challenge.SetHeaders(w)
+//					w.WriteHeader(http.StatusUnauthorized)
+//					return
 //				} else {
 //					// Some other error.
 //				}
