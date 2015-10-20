@@ -8,7 +8,7 @@ import (
 	storageDriver "github.com/docker/distribution/registry/storage/driver"
 )
 
-// SkipDir is used as a return value from onFileFunc to indicate that
+// ErrSkipDir is used as a return value from onFileFunc to indicate that
 // the directory named in the call is to be skipped. It is not returned
 // as an error by any function.
 var ErrSkipDir = errors.New("skip this directory")
