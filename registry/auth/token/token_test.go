@@ -195,8 +195,8 @@ func TestTokenVerify(t *testing.T) {
 	}
 
 	verifyOps := VerifyOptions{
-		TrustedIssuers:    []string{issuer},
-		AcceptedAudiences: []string{audience},
+		TrustedIssuers:    newStringSet(issuer),
+		AcceptedAudiences: newStringSet(audience),
 		Roots:             rootPool,
 		TrustedKeys:       trustedKeys,
 	}
@@ -275,23 +275,24 @@ func TestAccessController(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testAccess := auth.Access{
-		Resource: auth.Resource{
+	var (
+		ctx          = context.WithValue(nil, "http.request", req)
+		testResource = auth.Resource{
 			Type: "foo",
 			Name: "bar",
-		},
-		Action: "baz",
-	}
+		}
+		testAction = "baz"
+	)
 
-	ctx := context.WithValue(nil, "http.request", req)
-	authCtx, err := accessController.Authorized(ctx, testAccess)
-	challenge, ok := err.(auth.Challenge)
-	if !ok {
-		t.Fatal("accessController did not return a challenge")
-	}
-
-	if challenge.Error() != ErrTokenRequired.Error() {
-		t.Fatalf("accessControler did not get expected error - got %s - expected %s", challenge, ErrTokenRequired)
+	authCtx, err := accessController.Authorized(ctx, testResource, testAction)
+	switch err := err.(type) {
+	case auth.AuthenticationChallenge:
+		if err.Error() != errTokenRequired.Error() {
+			t.Fatalf("accessControler did not get expected error - got %s - expected %s", err, errTokenRequired)
+		}
+		t.Log(err.Error())
+	default:
+		t.Fatal("accessController did not return an authentication error")
 	}
 
 	if authCtx != nil {
@@ -302,9 +303,9 @@ func TestAccessController(t *testing.T) {
 	token, err := makeTestToken(
 		issuer, service,
 		[]*ResourceActions{{
-			Type:    testAccess.Type,
-			Name:    testAccess.Name,
-			Actions: []string{testAccess.Action},
+			Type:    testResource.Type,
+			Name:    testResource.Name,
+			Actions: []string{testAction},
 		}},
 		rootKeys[1], 1, // Everything is valid except the key which signed it.
 	)
@@ -314,53 +315,28 @@ func TestAccessController(t *testing.T) {
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.compactRaw()))
 
-	authCtx, err = accessController.Authorized(ctx, testAccess)
-	challenge, ok = err.(auth.Challenge)
-	if !ok {
-		t.Fatal("accessController did not return a challenge")
-	}
-
-	if challenge.Error() != ErrInvalidToken.Error() {
-		t.Fatalf("accessControler did not get expected error - got %s - expected %s", challenge, ErrTokenRequired)
-	}
-
-	if authCtx != nil {
-		t.Fatalf("expected nil auth context but got %s", authCtx)
-	}
-
-	// 3. Supply a token with insufficient access.
-	token, err = makeTestToken(
-		issuer, service,
-		[]*ResourceActions{}, // No access specified.
-		rootKeys[0], 1,
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.compactRaw()))
-
-	authCtx, err = accessController.Authorized(ctx, testAccess)
-	challenge, ok = err.(auth.Challenge)
-	if !ok {
-		t.Fatal("accessController did not return a challenge")
-	}
-
-	if challenge.Error() != ErrInsufficientScope.Error() {
-		t.Fatalf("accessControler did not get expected error - got %s - expected %s", challenge, ErrInsufficientScope)
+	authCtx, err = accessController.Authorized(ctx, testResource, testAction)
+	switch err := err.(type) {
+	case auth.AuthenticationChallenge:
+		if err.Error() != errUntrustedTokenSigner.Error() {
+			t.Fatalf("accessControler did not get expected error - got %s - expected %s", err, errUntrustedTokenSigner)
+		}
+		t.Log(err.Error())
+	default:
+		t.Fatal("accessController did not return an authentication error")
 	}
 
 	if authCtx != nil {
 		t.Fatalf("expected nil auth context but got %s", authCtx)
 	}
 
-	// 4. Supply the token we need, or deserve, or whatever.
+	// 3. Supply a token with no access.
 	token, err = makeTestToken(
 		issuer, service,
 		[]*ResourceActions{{
-			Type:    testAccess.Type,
-			Name:    testAccess.Name,
-			Actions: []string{testAccess.Action},
+			Type:    testResource.Type,
+			Name:    testResource.Name,
+			Actions: []string{},
 		}},
 		rootKeys[0], 1,
 	)
@@ -370,7 +346,69 @@ func TestAccessController(t *testing.T) {
 
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.compactRaw()))
 
-	authCtx, err = accessController.Authorized(ctx, testAccess)
+	authCtx, err = accessController.Authorized(ctx, testResource, testAction)
+	switch err := err.(type) {
+	case auth.PermissionDenied:
+		if !err.ResourceHidden() {
+			t.Fatalf("accessControler did not get expected error - got %s - expected ResourceHidden() to be true", err)
+		}
+		t.Log(err.Error())
+	default:
+		t.Fatal("accessController did not return an authorization error")
+	}
+
+	if authCtx != nil {
+		t.Fatalf("expected nil auth context but got %s", authCtx)
+	}
+
+	// 4. Supply a token with some other access.
+	token, err = makeTestToken(
+		issuer, service,
+		[]*ResourceActions{{
+			Type:    testResource.Type,
+			Name:    testResource.Name,
+			Actions: []string{"someRandomAction"},
+		}},
+		rootKeys[0], 1,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.compactRaw()))
+
+	authCtx, err = accessController.Authorized(ctx, testResource, testAction)
+	switch err := err.(type) {
+	case auth.PermissionDenied:
+		if err.ResourceHidden() {
+			t.Fatalf("accessControler did not get expected error - got %s - expected ResourceHidden() to be false", err)
+		}
+		t.Log(err.Error())
+	default:
+		t.Fatal("accessController did not return an authorization error")
+	}
+
+	if authCtx != nil {
+		t.Fatalf("expected nil auth context but got %s", authCtx)
+	}
+
+	// 5. Supply the token we need, or deserve, or whatever.
+	token, err = makeTestToken(
+		issuer, service,
+		[]*ResourceActions{{
+			Type:    testResource.Type,
+			Name:    testResource.Name,
+			Actions: []string{testAction},
+		}},
+		rootKeys[0], 1,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", token.compactRaw()))
+
+	authCtx, err = accessController.Authorized(ctx, testResource, testAction)
 	if err != nil {
 		t.Fatalf("accessController returned unexpected error: %s", err)
 	}

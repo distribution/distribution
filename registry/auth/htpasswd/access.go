@@ -55,7 +55,7 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 	return &accessController{realm: realm.(string), htpasswd: h}, nil
 }
 
-func (ac *accessController) Authorized(ctx context.Context, accessRecords ...auth.Access) (context.Context, error) {
+func (ac *accessController) Authorized(ctx context.Context, resource auth.Resource, actions ...string) (context.Context, error) {
 	req, err := context.GetRequest(ctx)
 	if err != nil {
 		return nil, err
@@ -86,11 +86,16 @@ type challenge struct {
 	err   error
 }
 
-var _ auth.Challenge = challenge{}
+var _ auth.AuthenticationChallenge = challenge{}
 
-// SetHeaders sets the basic challenge header on the response.
-func (ch challenge) SetHeaders(w http.ResponseWriter) {
-	w.Header().Set("WWW-Authenticate", fmt.Sprintf("Basic realm=%q", ch.realm))
+// SetChallengeHeaders sets the basic challenge header on the response.
+func (ch challenge) SetChallengeHeaders(h http.Header) {
+	h.Set("WWW-Authenticate", fmt.Sprintf("Basic realm=%q", ch.realm))
+}
+
+// AuthenticationErrorDetails is no different than the Error() method.
+func (ch challenge) AuthenticationErrorDetails() interface{} {
+	return ch.Error()
 }
 
 func (ch challenge) Error() string {

@@ -44,11 +44,11 @@ func TestBasicAccessController(t *testing.T) {
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithRequest(ctx, r)
-		authCtx, err := accessController.Authorized(ctx)
+		authCtx, err := accessController.Authorized(ctx, auth.Resource{})
 		if err != nil {
 			switch err := err.(type) {
-			case auth.Challenge:
-				err.SetHeaders(w)
+			case auth.AuthenticationChallenge:
+				err.SetChallengeHeaders(w.Header())
 				w.WriteHeader(http.StatusUnauthorized)
 				return
 			default:
