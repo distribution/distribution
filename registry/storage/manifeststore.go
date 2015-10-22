@@ -16,6 +16,7 @@ type manifestStore struct {
 	tagStore                   *tagStore
 	ctx                        context.Context
 	skipDependencyVerification bool
+	skipNameVerification       bool
 }
 
 var _ distribution.ManifestService = &manifestStore{}
@@ -48,6 +49,15 @@ func SkipLayerVerification(ms distribution.ManifestService) error {
 		return nil
 	}
 	return fmt.Errorf("skip layer verification only valid for manifestStore")
+}
+
+// SkipNameVerification allows rewriting names
+func SkipNameVerification(ms distribution.ManifestService) error {
+	if ms, ok := ms.(*manifestStore); ok {
+		ms.skipNameVerification = true
+		return nil
+	}
+	return fmt.Errorf("skip name verification only valid for manifestStore")
 }
 
 func (ms *manifestStore) Put(manifest *schema1.SignedManifest) error {
@@ -107,8 +117,10 @@ func (ms *manifestStore) GetByTag(tag string, options ...distribution.ManifestSe
 func (ms *manifestStore) verifyManifest(ctx context.Context, mnfst *schema1.SignedManifest) error {
 	var errs distribution.ErrManifestVerification
 
+	if !ms.skipNameVerification {
 	if mnfst.Name != ms.repository.Name() {
 		errs = append(errs, fmt.Errorf("repository name does not match manifest name"))
+	}
 	}
 
 	if len(mnfst.History) != len(mnfst.FSLayers) {
