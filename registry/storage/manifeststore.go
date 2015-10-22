@@ -118,9 +118,9 @@ func (ms *manifestStore) verifyManifest(ctx context.Context, mnfst *schema1.Sign
 	var errs distribution.ErrManifestVerification
 
 	if !ms.skipNameVerification {
-	if mnfst.Name != ms.repository.Name() {
-		errs = append(errs, fmt.Errorf("repository name does not match manifest name"))
-	}
+		if mnfst.Name != ms.repository.Name() {
+			errs = append(errs, fmt.Errorf("repository name does not match manifest name"))
+		}
 	}
 
 	if len(mnfst.History) != len(mnfst.FSLayers) {
