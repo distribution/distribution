@@ -231,7 +231,7 @@ registry.
 ## Monitoring
 
 The state of the endpoints are reported via the debug/vars http interface,
-usually configured to "http://localhost:5001/debug/vars". Information such as
+usually configured to `http://localhost:5001/debug/vars`. Information such as
 configuration and metrics are available by endpoint.
 
 The following provides an example of a few endpoints that have experienced
