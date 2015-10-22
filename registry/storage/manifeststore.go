@@ -47,7 +47,7 @@ func SkipLayerVerification(ms distribution.ManifestService) error {
 		ms.skipDependencyVerification = true
 		return nil
 	}
-	return fmt.Errorf("skip layer verification only valid for manifeststore")
+	return fmt.Errorf("skip layer verification only valid for manifestStore")
 }
 
 func (ms *manifestStore) Put(manifest *schema1.SignedManifest) error {
