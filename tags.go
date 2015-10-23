@@ -25,4 +25,7 @@ type TagService interface {
 	// filled.  'last' contains an offset in the tag set and can be used to resume
 	// iteration.
 	Enumerate(ctx context.Context, refs []reference.Tagged, last reference.Tagged) (n int, err error)
+
+	// Lookup returns the set of tags referencing the given digest
+	Lookup(ctx context.Context, digest digest.Descriptor) ([]reference.Tagged, error)
 }

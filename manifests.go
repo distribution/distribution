@@ -6,20 +6,20 @@ import (
 	"github.com/docker/distribution/reference"
 )
 
-// Manifest represents a registry object specifying a target and a set of constituents
+// Manifest represents a registry object specifying a set of
+// references and an optional target
 type Manifest interface {
 	// Target returns a descriptor for the configuration of this manifest.  This
-	// may return a nil descriptor if none exists for this manifest.
+	// may return a nil descriptor if a target is not applicable for the given manifest.
 	Target() Descriptor
 
-	// Constituents returns a list of objects which make up this manifest.
-	// The dependencies are strictly ordered from base to head. A constituent
+	// References returns a list of objects which make up this manifest.
+	// The references are strictly ordered from base to head. A reference
 	// is anything which can be represented by a distribution.Descriptor
-	Constituents() []Descriptor
+	References() []Descriptor
 
 	// Payload provides the serialized format of the manifest, in addition to
-	// the mediatype. // TODO(richardscothern): make mediatype its
-	// own function?
+	// the mediatype.
 	Payload() (mediatype string, payload []byte, err error)
 }
 
@@ -30,17 +30,15 @@ type ManifestBuilder interface {
 	// Build creates the manifest from his builder.
 	Build() (Manifest, error)
 
-	// Constituents returns a list of objects which have been added to this
+	// References returns a list of objects which have been added to this
 	// builder. The dependencies are returned in the order they were added,
 	// which should be from base to head.
-	Constituents() []Descriptor
+	References() []Descriptor
 
-	// AddConstituent includes the given object in the manifest after any
+	// AppendReference includes the given object in the manifest after any
 	// existing dependencies. If the add fails, such as when adding an
-	// unsupported dependency, an error may be returned.  Constituent isn't
-	// a great name but correctly describes history/layer pairs (schema v1),
-	// Manifests (schema v2 manifest list) and layers (schema v2 image manifest)
-	AddConstituent(dependency Descriptor) error
+	// unsupported dependency, an error may be returned.
+	AppendReference(dependency Descriptor) error
 }
 
 // ManifestService describes operations on image manifests.
