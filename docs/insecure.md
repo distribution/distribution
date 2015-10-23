@@ -14,7 +14,7 @@ You have to understand the downsides in doing so, and the extra burden in config
 
 ## Deploying a plain HTTP registry
 
-> :warning: it's not possible to use an insecure registry with basic authentication
+> **Warning**: it's not possible to use an insecure registry with basic authentication
 
 This basically tells Docker to entirely disregard security for your registry.
 
@@ -32,7 +32,7 @@ This basically tells Docker to entirely disregard security for your registry.
   
 ## Using self-signed certificates
 
-> :warning: using this along with basic authentication requires to **also** trust the certificate into the OS cert store for some versions of docker (see below)
+> **Warning**: using this along with basic authentication requires to **also** trust the certificate into the OS cert store for some versions of docker (see below)
 
 Generate your own certificate:
 
