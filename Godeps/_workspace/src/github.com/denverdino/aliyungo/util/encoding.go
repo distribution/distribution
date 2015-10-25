@@ -23,13 +23,24 @@ func SetQueryValues(ifc interface{}, values *url.Values) {
 }
 
 func setQueryValues(i interface{}, values *url.Values, prefix string) {
+	// add to support url.Values
+	mapValues, ok := i.(url.Values)
+	if ok {
+		for k, _ := range mapValues {
+			values.Set(k, mapValues.Get(k))
+		}
+		return
+	}
+
 	elem := reflect.ValueOf(i)
 	if elem.Kind() == reflect.Ptr {
 		elem = elem.Elem()
 	}
 	elemType := elem.Type()
+
 	for i := 0; i < elem.NumField(); i++ {
 		fieldName := elemType.Field(i).Name
+		anonymous := elemType.Field(i).Anonymous
 		field := elem.Field(i)
 		// TODO Use Tag for validation
 		// tag := typ.Field(i).Tag.Get("tagname")
@@ -62,6 +73,19 @@ func setQueryValues(i interface{}, values *url.Values, prefix string) {
 			value = strconv.FormatBool(field.Bool())
 		case reflect.String:
 			value = field.String()
+		case reflect.Map:
+			ifc := field.Interface()
+			m := ifc.(map[string]string)
+			if m != nil {
+				j := 0
+				for k, v := range m {
+					j++
+					keyName := fmt.Sprintf("%s.%d.Key", fieldName, j)
+					values.Set(keyName, k)
+					valueName := fmt.Sprintf("%s.%d.Value", fieldName, j)
+					values.Set(valueName, v)
+				}
+			}
 		case reflect.Slice:
 			switch field.Type().Elem().Kind() {
 			case reflect.Uint8:
@@ -85,7 +109,7 @@ func setQueryValues(i interface{}, values *url.Values, prefix string) {
 				for j := 0; j < l; j++ {
 					prefixName := fmt.Sprintf("%s.%d.", fieldName, (j + 1))
 					ifc := field.Index(j).Interface()
-					log.Printf("%s : %v", prefixName, ifc)
+					//log.Printf("%s : %v", prefixName, ifc)
 					if ifc != nil {
 						setQueryValues(ifc, values, prefixName)
 					}
@@ -104,7 +128,12 @@ func setQueryValues(i interface{}, values *url.Values, prefix string) {
 			default:
 				ifc := field.Interface()
 				if ifc != nil {
-					SetQueryValues(ifc, values)
+					if anonymous {
+						SetQueryValues(ifc, values)
+					} else {
+						prefixName := fieldName + "."
+						setQueryValues(ifc, values, prefixName)
+					}
 					continue
 				}
 			}
