@@ -9,12 +9,15 @@ type Region string
 
 // Constants of region definition
 const (
-	Hangzhou      = Region("oss-cn-hangzhou")
-	Qingdao       = Region("oss-cn-qingdao")
-	Beijing       = Region("oss-cn-beijing")
-	Hongkong      = Region("oss-cn-hongkong")
-	Shenzhen      = Region("oss-cn-shenzhen")
-	USWest1       = Region("oss-us-west-1")
+	Hangzhou     = Region("oss-cn-hangzhou")
+	Qingdao      = Region("oss-cn-qingdao")
+	Beijing      = Region("oss-cn-beijing")
+	Hongkong     = Region("oss-cn-hongkong")
+	Shenzhen     = Region("oss-cn-shenzhen")
+	USWest1      = Region("oss-us-west-1")
+	APSouthEast1 = Region("oss-ap-southeast-1")
+	Shanghai     = Region("oss-cn-shanghai")
+
 	DefaultRegion = Hangzhou
 )
 
