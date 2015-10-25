@@ -238,7 +238,8 @@ func TestBuilderFromRequestWithPrefix(t *testing.T) {
 			base:    "https://subdomain.example.com/prefix/",
 			configHost: url.URL{
 				Scheme: "https",
-				Host:   "subdomain.example.com/prefix",
+				Host:   "subdomain.example.com",
+				Path:   "/prefix/",
 			},
 		},
 	}
