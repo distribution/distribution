@@ -153,7 +153,7 @@ The simplest way to achieve access restriction is through basic authentication (
 First create a password file with one entry for the user "testuser", with password "testpassword":
 
     mkdir auth
-    docker run --entrypoint htpasswd registry:2 -Bbn testuser testpassword > auth/htpasswd
+    docker run --entrypoint htpasswd registry:2.1 -Bbn testuser testpassword > auth/htpasswd
 
 Make sure you stopped your registry from the previous step, then start it again:
 
