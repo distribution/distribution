@@ -20,7 +20,7 @@ This storage driver package comes bundled with several drivers:
 
 - [inmemory](storage-drivers/inmemory.md): A temporary storage driver using a local inmemory map. This exists solely for reference and testing.
 - [filesystem](storage-drivers/filesystem.md): A local storage driver configured to use a directory tree in the local filesystem.
-- [s3](storage-drivers/s3.md): A driver storing objects in an Amazon Simple Storage Solution (S3) bucket.
+- [s3](storage-drivers/s3.md): A driver storing objects in an [Amazon Simple Storage Solution](https://aws.amazon.com/s3/) (S3) bucket.
 - [azure](storage-drivers/azure.md): A driver storing objects in [Microsoft Azure Blob Storage](http://azure.microsoft.com/en-us/services/storage/).
 - [rados](storage-drivers/rados.md): A driver storing objects in a [Ceph Object Storage](http://ceph.com/docs/master/rados/) pool.
 - [swift](storage-drivers/swift.md): A driver storing objects in [Openstack Swift](http://docs.openstack.org/developer/swift/).
