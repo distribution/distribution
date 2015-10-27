@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Sirupsen/logrus"
+	"runtime"
 )
 
 // Logger provides a leveled-logging interface.
@@ -98,6 +99,7 @@ func getLogrusLogger(ctx Context, keys ...interface{}) *logrus.Entry {
 			fields["instance.id"] = instanceID
 		}
 
+		fields["go.version"] = runtime.Version()
 		// If no logger is found, just return the standard logger.
 		logger = logrus.StandardLogger().WithFields(fields)
 	}
