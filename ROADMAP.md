@@ -103,20 +103,20 @@ via IRC or the mailing list and we can talk about adding it. The goal here is
 to make sure that new features go through a rigid design process before
 landing in the registry.
 
-##### Mirroring and Pull-through Caching
+##### Proxying to other Registries
 
-Mirroring and pull-through caching are related but slight different. We've
-adopted the term _mirroring_ to be a proper mirror of a registry, meaning it
-has all the content the upstream would have. Providing such mirrors in the
-Docker ecosystem is dependent on a solid trust system, which is still in the
-works.
+A _pull-through caching_ mode exists for the registry, but is restricted from 
+within the docker client to only mirror the official Docker Hub.  This functionality
+can be expanded when image provenance has been specified and implemented in the 
+distribution project.
 
-The more commonly helpful feature is _pull-through caching_, where data is
-fetched from an upstream when not available in a local registry instance.
+##### Metadata storage
 
-Please see the following issues:
-
-- https://github.com/docker/distribution/issues/459
+Metadata for the registry is currently stored with the manifest and layer data on
+the storage backend.  While this is a big win for simplicity and reliably maintaining
+state, it comes with the cost of consistency and high latency.  The mutable registry
+metadata operations should be abstracted behind an API which will allow ACID compliant
+storage systems to handle metadata.
 
 ##### Peer to Peer transfer
 
