@@ -70,7 +70,28 @@ func (ms *manifestStore) Put(manifest *schema1.SignedManifest) error {
 // Delete removes the revision of the specified manfiest.
 func (ms *manifestStore) Delete(dgst digest.Digest) error {
 	context.GetLogger(ms.ctx).Debug("(*manifestStore).Delete")
-	return ms.revisionStore.delete(ms.ctx, dgst)
+
+	if !ms.revisionStore.blobStore.deleteEnabled {
+		return distribution.ErrUnsupported
+	}
+
+	// Ensure the blob is available for deletion
+	_, err := ms.revisionStore.blobStore.blobAccessController.Stat(ms.ctx, dgst)
+	if err != nil {
+		return err
+	}
+
+	//return ms.revisionStore.delete(ms.ctx, dgst)
+
+	m, err := ms.revisionStore.get(ms.ctx, dgst)
+	if err != nil {
+		return err
+	}
+	err = ms.revisionStore.delete(ms.ctx, dgst)
+	if err != nil {
+		return err
+	}
+	return ms.tagStore.delete(m.Tag)
 }
 
 func (ms *manifestStore) Tags() ([]string, error) {
