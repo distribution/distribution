@@ -417,6 +417,11 @@ func TestWithTag(t *testing.T) {
 			tag:      "tag4",
 			combined: "test.com:8000/foo:tag4",
 		},
+		{
+			name:     "test.com:8000/foo",
+			tag:      "TAG5",
+			combined: "test.com:8000/foo:TAG5",
+		},
 	}
 	for _, testcase := range testcases {
 		failf := func(format string, v ...interface{}) {

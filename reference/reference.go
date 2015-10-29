@@ -213,7 +213,7 @@ func WithName(name string) (Named, error) {
 // WithTag combines the name from "name" and the tag from "tag" to form a
 // reference incorporating both the name and the tag.
 func WithTag(name Named, tag string) (NamedTagged, error) {
-	if !anchoredNameRegexp.MatchString(tag) {
+	if !anchoredTagRegexp.MatchString(tag) {
 		return nil, ErrTagInvalidFormat
 	}
 	return taggedReference{
