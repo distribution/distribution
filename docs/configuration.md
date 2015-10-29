@@ -82,6 +82,10 @@ information about each option that appears later in this page.
         accountname: accountname
         accountkey: base64encodedaccountkey
         container: containername
+      gcs:
+        bucket: bucketname
+        keyfile: /path/to/keyfile
+        rootdirectory: /gcs/object/name/prefix
       s3:
         accesskey: awsaccesskey
         secretkey: awssecretkey
@@ -330,6 +334,10 @@ Permitted values are `error`, `warn`, `info` and `debug`. The default is
         accountname: accountname
         accountkey: base64encodedaccountkey
         container: containername
+      gcs:
+        bucket: bucketname
+        keyfile: /path/to/keyfile
+        rootdirectory: /gcs/object/name/prefix
       s3:
         accesskey: awsaccesskey
         secretkey: awssecretkey
@@ -482,6 +490,50 @@ This storage backend uses Microsoft's Azure Blob Storage.
 
 </table>
 
+# gcs
+
+This storage backend uses Google Cloud Storage.
+
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>bucket</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      Storage bucket name.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>keyfile</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      A private service account key file in JSON format. Instead of a key file <a href="https://developers.google.com/identity/protocols/application-default-credentials">Google Application Default Credentials</a> can be used.
+    </td>
+  </tr>
+   <tr>
+    <td>
+      <code>rootdirectory</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      This is a prefix that will be applied to all Google Cloud Storage keys to allow you to segment data in your bucket if necessary.
+  </tr>
+
+</table>
 
 ### rados
 
