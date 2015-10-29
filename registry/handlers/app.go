@@ -377,14 +377,20 @@ func (app *App) configureEvents(configuration *configuration.Configuration) {
 	app.events.sink = notifications.NewBroadcaster(sinks...)
 
 	// Populate registry event source
-	hostname, err := os.Hostname()
-	if err != nil {
-		hostname = configuration.HTTP.Addr
+	var hostname string
+	if configuration.HTTP.Host != "" {
+		hostname = configuration.HTTP.Host
 	} else {
-		// try to pick the port off the config
-		_, port, err := net.SplitHostPort(configuration.HTTP.Addr)
-		if err == nil {
-			hostname = net.JoinHostPort(hostname, port)
+		var err error
+		hostname, err = os.Hostname()
+		if err != nil {
+			hostname = configuration.HTTP.Addr
+		} else {
+			// try to pick the port off the config
+			_, port, err := net.SplitHostPort(configuration.HTTP.Addr)
+			if err == nil {
+				hostname = net.JoinHostPort(hostname, port)
+			}
 		}
 	}
 
