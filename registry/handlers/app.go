@@ -867,7 +867,7 @@ func applyStorageMiddleware(driver storagedriver.StorageDriver, middlewares []co
 
 // uploadPurgeDefaultConfig provides a default configuration for upload
 // purging to be used in the absence of configuration in the
-// confifuration file
+// configuration file
 func uploadPurgeDefaultConfig() map[interface{}]interface{} {
 	config := map[interface{}]interface{}{}
 	config["enabled"] = true

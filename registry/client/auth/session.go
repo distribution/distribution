@@ -16,9 +16,9 @@ import (
 )
 
 // AuthenticationHandler is an interface for authorizing a request from
-// params from a "WWW-Authenicate" header for a single scheme.
+// params from a "WWW-Authenticate" header for a single scheme.
 type AuthenticationHandler interface {
-	// Scheme returns the scheme as expected from the "WWW-Authenicate" header.
+	// Scheme returns the scheme as expected from the "WWW-Authenticate" header.
 	Scheme() string
 
 	// AuthorizeRequest adds the authorization header to a request (if needed)
@@ -128,7 +128,7 @@ type realClock struct{}
 // Now implements clock
 func (realClock) Now() time.Time { return time.Now() }
 
-// NewTokenHandler creates a new AuthenicationHandler which supports
+// NewTokenHandler creates a new AuthenticationHandler which supports
 // fetching tokens from a remote token server.
 func NewTokenHandler(transport http.RoundTripper, creds CredentialStore, scope string, actions ...string) AuthenticationHandler {
 	return newTokenHandler(transport, creds, realClock{}, scope, actions...)
@@ -279,7 +279,7 @@ type basicHandler struct {
 	creds CredentialStore
 }
 
-// NewBasicHandler creaters a new authentiation handler which adds
+// NewBasicHandler creates a new authentication handler which adds
 // basic authentication credentials to a request.
 func NewBasicHandler(creds CredentialStore) AuthenticationHandler {
 	return &basicHandler{
