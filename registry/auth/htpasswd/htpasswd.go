@@ -35,9 +35,8 @@ func (htpasswd *htpasswd) authenticateUser(username string, password string) err
 
 		return ErrAuthenticationFailure
 	}
-
-
-	if err := bcrypt.CompareHashAndPassword([]byte(credentials), []byte(password)); err != nil {
+	err := bcrypt.CompareHashAndPassword([]byte(credentials), []byte(password))
+	if err != nil {
 		return ErrAuthenticationFailure
 	}
 
