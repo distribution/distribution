@@ -52,25 +52,29 @@ type Base struct {
 
 // Format errors received from the storage driver
 func (base *Base) setDriverName(e error) error {
-	if e != nil {
-		if actualErr, ok := e.(storagedriver.ErrUnsupportedMethod); ok {
-			actualErr.DriverName = base.StorageDriver.Name()
-			return actualErr
+	switch actual := e.(type) {
+	case nil:
+		return nil
+	case storagedriver.ErrUnsupportedMethod:
+		actual.DriverName = base.StorageDriver.Name()
+		return actual
+	case storagedriver.PathNotFoundError:
+		actual.DriverName = base.StorageDriver.Name()
+		return actual
+	case storagedriver.InvalidPathError:
+		actual.DriverName = base.StorageDriver.Name()
+		return actual
+	case storagedriver.InvalidOffsetError:
+		actual.DriverName = base.StorageDriver.Name()
+		return actual
+	default:
+		storageError := storagedriver.Error{
+			DriverName: base.StorageDriver.Name(),
+			Enclosed:   e,
 		}
-		if actualErr, ok := e.(storagedriver.PathNotFoundError); ok {
-			actualErr.DriverName = base.StorageDriver.Name()
-			return actualErr
-		}
-		if actualErr, ok := e.(storagedriver.InvalidPathError); ok {
-			actualErr.DriverName = base.StorageDriver.Name()
-			return actualErr
-		}
-		if actualErr, ok := e.(storagedriver.InvalidOffsetError); ok {
-			actualErr.DriverName = base.StorageDriver.Name()
-			return actualErr
-		}
+
+		return storageError
 	}
-	return e
 }
 
 // GetContent wraps GetContent of underlying storage driver.
