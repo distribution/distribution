@@ -210,6 +210,51 @@ func TestReferenceParse(t *testing.T) {
 	}
 }
 
+// TestWithNameFailure tests cases where WithName should fail. Cases where it
+// should succeed are covered by TestSplitHostname, below.
+func TestWithNameFailure(t *testing.T) {
+	testcases := []struct {
+		input string
+		err   error
+	}{
+		{
+			input: "",
+			err:   ErrNameEmpty,
+		},
+		{
+			input: ":justtag",
+			err:   ErrReferenceInvalidFormat,
+		},
+		{
+			input: "@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+			err:   ErrReferenceInvalidFormat,
+		},
+		{
+			input: "validname@invaliddigest:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+			err:   ErrReferenceInvalidFormat,
+		},
+		{
+			input: strings.Repeat("a/", 128) + "a:tag",
+			err:   ErrNameTooLong,
+		},
+		{
+			input: "aa/asdf$$^/aa",
+			err:   ErrReferenceInvalidFormat,
+		},
+	}
+	for _, testcase := range testcases {
+		failf := func(format string, v ...interface{}) {
+			t.Logf(strconv.Quote(testcase.input)+": "+format, v...)
+			t.Fail()
+		}
+
+		_, err := WithName(testcase.input)
+		if err == nil {
+			failf("no error parsing name. expected: %s", testcase.err)
+		}
+	}
+}
+
 func TestSplitHostname(t *testing.T) {
 	testcases := []struct {
 		input    string
