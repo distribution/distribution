@@ -227,6 +227,7 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc distribution.Descri
 			if err != nil {
 				return distribution.Descriptor{}, err
 			}
+			defer fr.Close()
 
 			tr := io.TeeReader(fr, digester.Hash())
 

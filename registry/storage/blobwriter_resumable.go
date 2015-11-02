@@ -91,6 +91,7 @@ func (bw *blobWriter) resumeDigestAt(ctx context.Context, offset int64) error {
 		if err != nil {
 			return err
 		}
+		defer fr.Close()
 
 		if _, err = fr.Seek(int64(h.Len()), os.SEEK_SET); err != nil {
 			return fmt.Errorf("unable to seek to layer reader offset %d: %s", h.Len(), err)
