@@ -204,6 +204,9 @@ func ParseNamed(s string) (Named, error) {
 // WithName returns a named object representing the given string. If the input
 // is invalid ErrReferenceInvalidFormat will be returned.
 func WithName(name string) (Named, error) {
+	if len(name) > NameTotalLengthMax {
+		return nil, ErrNameTooLong
+	}
 	if !anchoredNameRegexp.MatchString(name) {
 		return nil, ErrReferenceInvalidFormat
 	}
