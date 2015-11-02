@@ -131,3 +131,14 @@ type InvalidOffsetError struct {
 func (err InvalidOffsetError) Error() string {
 	return fmt.Sprintf("[%s] Invalid offset: %d for path: %s", err.DriverName, err.Offset, err.Path)
 }
+
+// Error is a catch-all error type which captures an error string and
+// the driver type on which it occured.
+type Error struct {
+	DriverName string
+	Enclosed   error
+}
+
+func (err Error) Error() string {
+	return fmt.Sprintf("[%s] %s", err.DriverName, err.Enclosed)
+}

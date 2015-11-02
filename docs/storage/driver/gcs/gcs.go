@@ -575,7 +575,7 @@ func (d *driver) Delete(context ctx.Context, path string) error {
 // Returns ErrUnsupportedMethod if this driver has no privateKey
 func (d *driver) URLFor(context ctx.Context, path string, options map[string]interface{}) (string, error) {
 	if d.privateKey == nil {
-		return "", storagedriver.ErrUnsupportedMethod
+		return "", storagedriver.ErrUnsupportedMethod{}
 	}
 
 	name := d.pathToKey(path)
@@ -584,7 +584,7 @@ func (d *driver) URLFor(context ctx.Context, path string, options map[string]int
 	if ok {
 		methodString, ok = method.(string)
 		if !ok || (methodString != "GET" && methodString != "HEAD") {
-			return "", storagedriver.ErrUnsupportedMethod
+			return "", storagedriver.ErrUnsupportedMethod{}
 		}
 	}
 
