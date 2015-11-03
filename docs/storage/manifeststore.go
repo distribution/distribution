@@ -110,6 +110,11 @@ func (ms *manifestStore) verifyManifest(ctx context.Context, mnfst *schema1.Sign
 		errs = append(errs, fmt.Errorf("repository name does not match manifest name"))
 	}
 
+	if len(mnfst.History) != len(mnfst.FSLayers) {
+		errs = append(errs, fmt.Errorf("mismatched history and fslayer cardinality %d != %d",
+			len(mnfst.History), len(mnfst.FSLayers)))
+	}
+
 	if _, err := schema1.Verify(mnfst); err != nil {
 		switch err {
 		case libtrust.ErrMissingSignatureKey, libtrust.ErrInvalidJSONContent, libtrust.ErrMissingSignatureKey:
