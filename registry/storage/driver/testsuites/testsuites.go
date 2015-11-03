@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 	"sort"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -145,10 +146,12 @@ func (suite *DriverSuite) TestInvalidPaths(c *check.C) {
 		defer suite.StorageDriver.Delete(suite.ctx, firstPart(filename))
 		c.Assert(err, check.NotNil)
 		c.Assert(err, check.FitsTypeOf, storagedriver.InvalidPathError{})
+		c.Assert(strings.Contains(err.Error(), suite.Name()), check.Equals, true)
 
 		_, err = suite.StorageDriver.GetContent(suite.ctx, filename)
 		c.Assert(err, check.NotNil)
 		c.Assert(err, check.FitsTypeOf, storagedriver.InvalidPathError{})
+		c.Assert(strings.Contains(err.Error(), suite.Name()), check.Equals, true)
 	}
 }
 
@@ -205,6 +208,7 @@ func (suite *DriverSuite) TestReadNonexistent(c *check.C) {
 	_, err := suite.StorageDriver.GetContent(suite.ctx, filename)
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+	c.Assert(strings.Contains(err.Error(), suite.Name()), check.Equals, true)
 }
 
 // TestWriteReadStreams1 tests a simple write-read streaming workflow.
@@ -321,6 +325,7 @@ func (suite *DriverSuite) TestReadStreamWithOffset(c *check.C) {
 	c.Assert(err.(storagedriver.InvalidOffsetError).Offset, check.Equals, int64(-1))
 	c.Assert(err.(storagedriver.InvalidOffsetError).Path, check.Equals, filename)
 	c.Assert(reader, check.IsNil)
+	c.Assert(strings.Contains(err.Error(), suite.Name()), check.Equals, true)
 
 	// Read past the end of the content and make sure we get a reader that
 	// returns 0 bytes and io.EOF
@@ -443,6 +448,7 @@ func (suite *DriverSuite) testContinueStreamAppend(c *check.C, chunkSize int64) 
 	c.Assert(err, check.FitsTypeOf, storagedriver.InvalidOffsetError{})
 	c.Assert(err.(storagedriver.InvalidOffsetError).Path, check.Equals, filename)
 	c.Assert(err.(storagedriver.InvalidOffsetError).Offset, check.Equals, int64(-1))
+	c.Assert(strings.Contains(err.Error(), suite.Name()), check.Equals, true)
 }
 
 // TestReadNonexistentStream tests that reading a stream for a nonexistent path
@@ -453,10 +459,12 @@ func (suite *DriverSuite) TestReadNonexistentStream(c *check.C) {
 	_, err := suite.StorageDriver.ReadStream(suite.ctx, filename, 0)
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+	c.Assert(strings.Contains(err.Error(), suite.Name()), check.Equals, true)
 
 	_, err = suite.StorageDriver.ReadStream(suite.ctx, filename, 64)
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+	c.Assert(strings.Contains(err.Error(), suite.Name()), check.Equals, true)
 }
 
 // TestList checks the returned list of keys after populating a directory tree.
@@ -517,6 +525,7 @@ func (suite *DriverSuite) TestMove(c *check.C) {
 	_, err = suite.StorageDriver.GetContent(suite.ctx, sourcePath)
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+	c.Assert(strings.Contains(err.Error(), suite.Name()), check.Equals, true)
 }
 
 // TestMoveOverwrite checks that a moved object no longer exists at the source
@@ -546,6 +555,7 @@ func (suite *DriverSuite) TestMoveOverwrite(c *check.C) {
 	_, err = suite.StorageDriver.GetContent(suite.ctx, sourcePath)
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+	c.Assert(strings.Contains(err.Error(), suite.Name()), check.Equals, true)
 }
 
 // TestMoveNonexistent checks that moving a nonexistent key fails and does not
@@ -563,6 +573,7 @@ func (suite *DriverSuite) TestMoveNonexistent(c *check.C) {
 	err = suite.StorageDriver.Move(suite.ctx, sourcePath, destPath)
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+	c.Assert(strings.Contains(err.Error(), suite.Name()), check.Equals, true)
 
 	received, err := suite.StorageDriver.GetContent(suite.ctx, destPath)
 	c.Assert(err, check.IsNil)
@@ -600,6 +611,7 @@ func (suite *DriverSuite) TestDelete(c *check.C) {
 	_, err = suite.StorageDriver.GetContent(suite.ctx, filename)
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+	c.Assert(strings.Contains(err.Error(), suite.Name()), check.Equals, true)
 }
 
 // TestURLFor checks that the URLFor method functions properly, but only if it
@@ -614,7 +626,7 @@ func (suite *DriverSuite) TestURLFor(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	url, err := suite.StorageDriver.URLFor(suite.ctx, filename, nil)
-	if err == storagedriver.ErrUnsupportedMethod {
+	if _, ok := err.(storagedriver.ErrUnsupportedMethod); ok {
 		return
 	}
 	c.Assert(err, check.IsNil)
@@ -628,7 +640,7 @@ func (suite *DriverSuite) TestURLFor(c *check.C) {
 	c.Assert(read, check.DeepEquals, contents)
 
 	url, err = suite.StorageDriver.URLFor(suite.ctx, filename, map[string]interface{}{"method": "HEAD"})
-	if err == storagedriver.ErrUnsupportedMethod {
+	if _, ok := err.(storagedriver.ErrUnsupportedMethod); ok {
 		return
 	}
 	c.Assert(err, check.IsNil)
@@ -644,6 +656,7 @@ func (suite *DriverSuite) TestDeleteNonexistent(c *check.C) {
 	err := suite.StorageDriver.Delete(suite.ctx, filename)
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+	c.Assert(strings.Contains(err.Error(), suite.Name()), check.Equals, true)
 }
 
 // TestDeleteFolder checks that deleting a folder removes all child elements.
@@ -671,6 +684,7 @@ func (suite *DriverSuite) TestDeleteFolder(c *check.C) {
 	_, err = suite.StorageDriver.GetContent(suite.ctx, path.Join(dirname, filename1))
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+	c.Assert(strings.Contains(err.Error(), suite.Name()), check.Equals, true)
 
 	_, err = suite.StorageDriver.GetContent(suite.ctx, path.Join(dirname, filename2))
 	c.Assert(err, check.IsNil)
@@ -684,14 +698,17 @@ func (suite *DriverSuite) TestDeleteFolder(c *check.C) {
 	_, err = suite.StorageDriver.GetContent(suite.ctx, path.Join(dirname, filename1))
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+	c.Assert(strings.Contains(err.Error(), suite.Name()), check.Equals, true)
 
 	_, err = suite.StorageDriver.GetContent(suite.ctx, path.Join(dirname, filename2))
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+	c.Assert(strings.Contains(err.Error(), suite.Name()), check.Equals, true)
 
 	_, err = suite.StorageDriver.GetContent(suite.ctx, path.Join(dirname, filename3))
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+	c.Assert(strings.Contains(err.Error(), suite.Name()), check.Equals, true)
 }
 
 // TestStatCall runs verifies the implementation of the storagedriver's Stat call.
@@ -707,11 +724,13 @@ func (suite *DriverSuite) TestStatCall(c *check.C) {
 	fi, err := suite.StorageDriver.Stat(suite.ctx, dirPath)
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+	c.Assert(strings.Contains(err.Error(), suite.Name()), check.Equals, true)
 	c.Assert(fi, check.IsNil)
 
 	fi, err = suite.StorageDriver.Stat(suite.ctx, filePath)
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+	c.Assert(strings.Contains(err.Error(), suite.Name()), check.Equals, true)
 	c.Assert(fi, check.IsNil)
 
 	err = suite.StorageDriver.PutContent(suite.ctx, filePath, content)
