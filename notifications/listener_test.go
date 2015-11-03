@@ -131,6 +131,9 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 		m.FSLayers = append(m.FSLayers, schema1.FSLayer{
 			BlobSum: dgst,
 		})
+		m.History = append(m.History, schema1.History{
+			V1Compatibility: "",
+		})
 
 		// Then fetch the blobs
 		if rc, err := blobs.Open(ctx, dgst); err != nil {
