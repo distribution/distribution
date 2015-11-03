@@ -383,13 +383,13 @@ func TestLinkPathFuncs(t *testing.T) {
 			repo:       "foo/bar",
 			digest:     "sha256:deadbeaf",
 			linkPathFn: blobLinkPath,
-			expected:   "/docker/registry/v2/repositories/foo/bar/_layers/sha256/deadbeaf/link",
+			expected:   "/v2/repositories/foo/bar/_layers/sha256/deadbeaf/link",
 		},
 		{
 			repo:       "foo/bar",
 			digest:     "sha256:deadbeaf",
 			linkPathFn: manifestRevisionLinkPath,
-			expected:   "/docker/registry/v2/repositories/foo/bar/_manifests/revisions/sha256/deadbeaf/link",
+			expected:   "/v2/repositories/foo/bar/_manifests/revisions/sha256/deadbeaf/link",
 		},
 	} {
 		p, err := testcase.linkPathFn(testcase.repo, testcase.digest)
