@@ -36,16 +36,15 @@ func (bs *blobServer) ServeBlob(ctx context.Context, w http.ResponseWriter, r *h
 
 	redirectURL, err := bs.driver.URLFor(ctx, path, map[string]interface{}{"method": r.Method})
 
-	switch err {
-	case nil:
+	if err == nil {
 		if bs.redirect {
 			// Redirect to storage URL.
 			http.Redirect(w, r, redirectURL, http.StatusTemporaryRedirect)
 			return err
 		}
+	}
 
-		fallthrough
-	case driver.ErrUnsupportedMethod:
+	if _, ok := err.(*driver.ErrUnsupportedMethod); ok {
 		// Fallback to serving the content directly.
 		br, err := newFileReader(ctx, bs.driver, path, desc.Size)
 		if err != nil {
