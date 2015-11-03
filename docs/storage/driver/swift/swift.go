@@ -7,9 +7,6 @@
 // It supports both TempAuth authentication and Keystone authentication
 // (up to version 3).
 //
-// Since Swift has no concept of directories (directories are an abstration),
-// empty objects are created with the MIME type application/vnd.swift.directory.
-//
 // As Swift has a limit on the size of a single uploaded object (by default
 // this is 5GB), the driver makes use of the Swift Large Object Support
 // (http://docs.openstack.org/developer/swift/overview_large_objects.html).
@@ -24,12 +21,11 @@ import (
 	"crypto/sha1"
 	"crypto/tls"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
-	gopath "path"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -54,22 +50,34 @@ const minChunkSize = 1 << 20
 
 // Parameters A struct that encapsulates all of the driver parameters after all values have been set
 type Parameters struct {
-	Username           string
-	Password           string
-	AuthURL            string
-	Tenant             string
-	TenantID           string
-	Domain             string
-	DomainID           string
-	TrustID            string
-	Region             string
-	Container          string
-	Prefix             string
-	InsecureSkipVerify bool
-	ChunkSize          int
+	Username            string
+	Password            string
+	AuthURL             string
+	Tenant              string
+	TenantID            string
+	Domain              string
+	DomainID            string
+	TrustID             string
+	Region              string
+	Container           string
+	Prefix              string
+	InsecureSkipVerify  bool
+	ChunkSize           int
+	SecretKey           string
+	AccessKey           string
+	TempURLContainerKey bool
+	TempURLMethods      []string
 }
 
-type swiftInfo map[string]interface{}
+// swiftInfo maps the JSON structure returned by Swift /info endpoint
+type swiftInfo struct {
+	Swift struct {
+		Version string `mapstructure:"version"`
+	}
+	Tempurl struct {
+		Methods []string `mapstructure:"methods"`
+	}
+}
 
 func init() {
 	factory.Register(driverName, &swiftDriverFactory{})
@@ -83,11 +91,15 @@ func (factory *swiftDriverFactory) Create(parameters map[string]interface{}) (st
 }
 
 type driver struct {
-	Conn              swift.Connection
-	Container         string
-	Prefix            string
-	BulkDeleteSupport bool
-	ChunkSize         int
+	Conn                swift.Connection
+	Container           string
+	Prefix              string
+	BulkDeleteSupport   bool
+	ChunkSize           int
+	SecretKey           string
+	AccessKey           string
+	TempURLContainerKey bool
+	TempURLMethods      []string
 }
 
 type baseEmbed struct {
@@ -176,11 +188,65 @@ func New(params Parameters) (*Driver, error) {
 	}
 
 	d := &driver{
-		Conn:              ct,
-		Container:         params.Container,
-		Prefix:            params.Prefix,
-		BulkDeleteSupport: detectBulkDelete(params.AuthURL),
-		ChunkSize:         params.ChunkSize,
+		Conn:           ct,
+		Container:      params.Container,
+		Prefix:         params.Prefix,
+		ChunkSize:      params.ChunkSize,
+		TempURLMethods: make([]string, 0),
+		AccessKey:      params.AccessKey,
+	}
+
+	info := swiftInfo{}
+	if config, err := d.Conn.QueryInfo(); err == nil {
+		_, d.BulkDeleteSupport = config["bulk_delete"]
+
+		if err := mapstructure.Decode(config, &info); err == nil {
+			d.TempURLContainerKey = info.Swift.Version >= "2.3.0"
+			d.TempURLMethods = info.Tempurl.Methods
+		}
+	} else {
+		d.TempURLContainerKey = params.TempURLContainerKey
+		d.TempURLMethods = params.TempURLMethods
+	}
+
+	if len(d.TempURLMethods) > 0 {
+		secretKey := params.SecretKey
+		if secretKey == "" {
+			secretKey, _ = generateSecret()
+		}
+
+		// Since Swift 2.2.2, we can now set secret keys on containers
+		// in addition to the account secret keys. Use them in preference.
+		if d.TempURLContainerKey {
+			_, containerHeaders, err := d.Conn.Container(d.Container)
+			if err != nil {
+				return nil, fmt.Errorf("Failed to fetch container info %s (%s)", d.Container, err)
+			}
+
+			d.SecretKey = containerHeaders["X-Container-Meta-Temp-Url-Key"]
+			if d.SecretKey == "" || (params.SecretKey != "" && d.SecretKey != params.SecretKey) {
+				m := swift.Metadata{}
+				m["temp-url-key"] = secretKey
+				if d.Conn.ContainerUpdate(d.Container, m.ContainerHeaders()); err == nil {
+					d.SecretKey = secretKey
+				}
+			}
+		} else {
+			// Use the account secret key
+			_, accountHeaders, err := d.Conn.Account()
+			if err != nil {
+				return nil, fmt.Errorf("Failed to fetch account info (%s)", err)
+			}
+
+			d.SecretKey = accountHeaders["X-Account-Meta-Temp-Url-Key"]
+			if d.SecretKey == "" || (params.SecretKey != "" && d.SecretKey != params.SecretKey) {
+				m := swift.Metadata{}
+				m["temp-url-key"] = secretKey
+				if err := d.Conn.AccountUpdate(m.AccountHeaders()); err == nil {
+					d.SecretKey = secretKey
+				}
+			}
+		}
 	}
 
 	return &Driver{
@@ -590,9 +656,58 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 }
 
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
-// May return an UnsupportedMethodErr in certain StorageDriver implementations.
 func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
-	return "", storagedriver.ErrUnsupportedMethod
+	if d.SecretKey == "" {
+		return "", storagedriver.ErrUnsupportedMethod
+	}
+
+	methodString := "GET"
+	method, ok := options["method"]
+	if ok {
+		if methodString, ok = method.(string); !ok {
+			return "", storagedriver.ErrUnsupportedMethod
+		}
+	}
+
+	if methodString == "HEAD" {
+		// A "HEAD" request on a temporary URL is allowed if the
+		// signature was generated with "GET", "POST" or "PUT"
+		methodString = "GET"
+	}
+
+	supported := false
+	for _, method := range d.TempURLMethods {
+		if method == methodString {
+			supported = true
+			break
+		}
+	}
+
+	if !supported {
+		return "", storagedriver.ErrUnsupportedMethod
+	}
+
+	expiresTime := time.Now().Add(20 * time.Minute)
+	expires, ok := options["expiry"]
+	if ok {
+		et, ok := expires.(time.Time)
+		if ok {
+			expiresTime = et
+		}
+	}
+
+	tempURL := d.Conn.ObjectTempUrl(d.Container, d.swiftPath(path), d.SecretKey, methodString, expiresTime)
+
+	if d.AccessKey != "" {
+		// On HP Cloud, the signature must be in the form of tenant_id:access_key:signature
+		url, _ := url.Parse(tempURL)
+		query := url.Query()
+		query.Set("temp_url_sig", fmt.Sprintf("%s:%s:%s", d.Conn.TenantId, d.AccessKey, query.Get("temp_url_sig")))
+		url.RawQuery = query.Encode()
+		tempURL = url.String()
+	}
+
+	return tempURL, nil
 }
 
 func (d *driver) swiftPath(path string) string {
@@ -640,19 +755,6 @@ func (d *driver) createManifest(path string, segments string) error {
 	return nil
 }
 
-func detectBulkDelete(authURL string) (bulkDelete bool) {
-	resp, err := http.Get(gopath.Join(authURL, "..", "..") + "/info")
-	if err == nil {
-		defer resp.Body.Close()
-		decoder := json.NewDecoder(resp.Body)
-		var infos swiftInfo
-		if decoder.Decode(&infos) == nil {
-			_, bulkDelete = infos["bulk_delete"]
-		}
-	}
-	return
-}
-
 func parseManifest(manifest string) (container string, prefix string) {
 	components := strings.SplitN(manifest, "/", 2)
 	container = components[0]
@@ -660,4 +762,12 @@ func parseManifest(manifest string) (container string, prefix string) {
 		prefix = components[1]
 	}
 	return container, prefix
+}
+
+func generateSecret() (string, error) {
+	var secretBytes [32]byte
+	if _, err := rand.Read(secretBytes[:]); err != nil {
+		return "", fmt.Errorf("could not generate random bytes for Swift secret key: %v", err)
+	}
+	return hex.EncodeToString(secretBytes[:]), nil
 }
