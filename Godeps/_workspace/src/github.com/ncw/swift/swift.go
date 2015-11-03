@@ -392,6 +392,26 @@ func (c *Connection) authenticated() bool {
 	return c.StorageUrl != "" && c.AuthToken != ""
 }
 
+// SwiftInfo contains the JSON object returned by Swift when the /info
+// route is queried. The object contains, among others, the Swift version,
+// the enabled middlewares and their configuration
+type SwiftInfo map[string]interface{}
+
+// Discover Swift configuration by doing a request against /info
+func (c *Connection) QueryInfo() (infos SwiftInfo, err error) {
+	infoUrl, err := url.Parse(c.StorageUrl)
+	if err != nil {
+		return nil, err
+	}
+	infoUrl.Path = path.Join(infoUrl.Path, "..", "..", "info")
+	resp, err := http.Get(infoUrl.String())
+	if err == nil {
+		err = readJson(resp, &infos)
+		return infos, err
+	}
+	return nil, err
+}
+
 // RequestOpts contains parameters for Connection.storage.
 type RequestOpts struct {
 	Container  string
@@ -418,6 +438,10 @@ type RequestOpts struct {
 // resp.Body.Close() must be called on it, unless noResponse is set in
 // which case the body will be closed in this function
 //
+// If "Content-Length" is set in p.Headers it will be used - this can
+// be used to override the default chunked transfer encoding for
+// uploads.
+//
 // This will Authenticate if necessary, and re-authenticate if it
 // receives a 401 error which means the token has expired
 //
@@ -433,8 +457,9 @@ func (c *Connection) Call(targetUrl string, p RequestOpts) (resp *http.Response,
 	var req *http.Request
 	for {
 		var authToken string
-		targetUrl, authToken, err = c.getUrlAndAuthToken(targetUrl, p.OnReAuth)
-
+		if targetUrl, authToken, err = c.getUrlAndAuthToken(targetUrl, p.OnReAuth); err != nil {
+			return //authentication failure
+		}
 		var URL *url.URL
 		URL, err = url.Parse(targetUrl)
 		if err != nil {
@@ -460,18 +485,27 @@ func (c *Connection) Call(targetUrl string, p RequestOpts) (resp *http.Response,
 		}
 		if p.Headers != nil {
 			for k, v := range p.Headers {
-				req.Header.Add(k, v)
+				// Set ContentLength in req if the user passed it in in the headers
+				if k == "Content-Length" {
+					contentLength, err := strconv.ParseInt(v, 10, 64)
+					if err != nil {
+						return nil, nil, fmt.Errorf("Invalid %q header %q: %v", k, v, err)
+					}
+					req.ContentLength = contentLength
+				} else {
+					req.Header.Add(k, v)
+				}
 			}
 		}
-		req.Header.Add("User-Agent", DefaultUserAgent)
+		req.Header.Add("User-Agent", c.UserAgent)
 		req.Header.Add("X-Auth-Token", authToken)
 		resp, err = c.doTimeoutRequest(timer, req)
 		if err != nil {
-			if p.Operation == "HEAD" || p.Operation == "GET" {
+			if (p.Operation == "HEAD" || p.Operation == "GET") && retries > 0 {
 				retries--
 				continue
 			}
-			return
+			return nil, nil, err
 		}
 		// Check to see if token has expired
 		if resp.StatusCode == 401 && retries > 0 {
@@ -566,7 +600,8 @@ func readJson(resp *http.Response, result interface{}) (err error) {
 // ContainersOpts is options for Containers() and ContainerNames()
 type ContainersOpts struct {
 	Limit     int     // For an integer value n, limits the number of results to at most n values.
-	Marker    string  // Given a string value x, return object names greater in value than the specified marker.
+	Prefix    string  // Given a string value x, return container names matching the specified prefix.
+	Marker    string  // Given a string value x, return container names greater in value than the specified marker.
 	EndMarker string  // Given a string value x, return container names less in value than the specified marker.
 	Headers   Headers // Any additional HTTP headers - can be nil
 }
@@ -578,6 +613,9 @@ func (opts *ContainersOpts) parse() (url.Values, Headers) {
 	if opts != nil {
 		if opts.Limit > 0 {
 			v.Set("limit", strconv.Itoa(opts.Limit))
+		}
+		if opts.Prefix != "" {
+			v.Set("prefix", opts.Prefix)
 		}
 		if opts.Marker != "" {
 			v.Set("marker", opts.Marker)
