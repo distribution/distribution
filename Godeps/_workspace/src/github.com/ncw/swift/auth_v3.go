@@ -177,6 +177,7 @@ func (auth *v3Auth) Request(c *Connection) (*http.Request, error) {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", c.UserAgent)
 	return req, nil
 }
 
