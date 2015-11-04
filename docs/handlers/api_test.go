@@ -804,6 +804,14 @@ func testManifestAPI(t *testing.T, env *testEnv, args manifestArgs) (*testEnv, m
 				BlobSum: "qwer",
 			},
 		},
+		History: []schema1.History{
+			{
+				V1Compatibility: "",
+			},
+			{
+				V1Compatibility: "",
+			},
+		},
 	}
 
 	resp = putManifest(t, "putting unsigned manifest", manifestURL, unsignedManifest)
@@ -998,6 +1006,19 @@ func testManifestAPI(t *testing.T, env *testEnv, args manifestArgs) (*testEnv, m
 	if tagsResponse.Tags[0] != tag {
 		t.Fatalf("tag not as expected: %q != %q", tagsResponse.Tags[0], tag)
 	}
+
+	// Attempt to put a manifest with mismatching FSLayer and History array cardinalities
+
+	unsignedManifest.History = append(unsignedManifest.History, schema1.History{
+		V1Compatibility: "",
+	})
+	invalidSigned, err := schema1.Sign(unsignedManifest, env.pk)
+	if err != nil {
+		t.Fatalf("error signing manifest")
+	}
+
+	resp = putManifest(t, "putting invalid signed manifest", manifestDigestURL, invalidSigned)
+	checkResponse(t, "putting invalid signed manifest", resp, http.StatusBadRequest)
 
 	return env, args
 }
@@ -1432,8 +1453,10 @@ func createRepository(env *testEnv, t *testing.T, imageName string, tag string) 
 			{
 				BlobSum: "asdf",
 			},
+		},
+		History: []schema1.History{
 			{
-				BlobSum: "qwer",
+				V1Compatibility: "",
 			},
 		},
 	}
@@ -1499,6 +1522,7 @@ func TestRegistryAsCacheMutationAPIs(t *testing.T) {
 		Name:     imageName,
 		Tag:      tag,
 		FSLayers: []schema1.FSLayer{},
+		History:  []schema1.History{},
 	}
 
 	sm, err := schema1.Sign(m, env.pk)
