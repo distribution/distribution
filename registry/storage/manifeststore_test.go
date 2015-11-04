@@ -98,6 +98,10 @@ func TestManifestStorage(t *testing.T) {
 		m.FSLayers = append(m.FSLayers, schema1.FSLayer{
 			BlobSum: dgst,
 		})
+		m.History = append(m.History, schema1.History{
+			V1Compatibility: "",
+		})
+
 	}
 
 	pk, err := libtrust.GenerateECP256PrivateKey()

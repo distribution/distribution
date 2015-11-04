@@ -10,10 +10,10 @@ import (
 )
 
 type testEnv struct {
-	name, tag string
-	manifest  *Manifest
-	signed    *SignedManifest
-	pk        libtrust.PrivateKey
+	name, tag     string
+	invalidSigned *SignedManifest
+	signed        *SignedManifest
+	pk            libtrust.PrivateKey
 }
 
 func TestManifestMarshaling(t *testing.T) {
@@ -42,6 +42,7 @@ func TestManifestUnmarshaling(t *testing.T) {
 	if !reflect.DeepEqual(&signed, env.signed) {
 		t.Fatalf("manifests are different after unmarshaling: %v != %v", signed, env.signed)
 	}
+
 }
 
 func TestManifestVerification(t *testing.T) {
@@ -69,6 +70,12 @@ func TestManifestVerification(t *testing.T) {
 	if !found {
 		t.Fatalf("expected public key, %v, not found in verified keys: %v", publicKey, publicKeys)
 	}
+
+	// Check that an invalid manifest fails verification
+	_, err = Verify(env.invalidSigned)
+	if err != nil {
+		t.Fatalf("Invalid manifest should not pass Verify()")
+	}
 }
 
 func genEnv(t *testing.T) *testEnv {
@@ -79,7 +86,7 @@ func genEnv(t *testing.T) *testEnv {
 
 	name, tag := "foo/bar", "test"
 
-	m := Manifest{
+	invalid := Manifest{
 		Versioned: SchemaVersion,
 		Name:      name,
 		Tag:       tag,
@@ -93,16 +100,37 @@ func genEnv(t *testing.T) *testEnv {
 		},
 	}
 
-	sm, err := Sign(&m, pk)
+	valid := Manifest{
+		Versioned: SchemaVersion,
+		Name:      name,
+		Tag:       tag,
+		FSLayers: []FSLayer{
+			{
+				BlobSum: "asdf",
+			},
+		},
+		History: []History{
+			{
+				V1Compatibility: "",
+			},
+		},
+	}
+
+	sm, err := Sign(&valid, pk)
+	if err != nil {
+		t.Fatalf("error signing manifest: %v", err)
+	}
+
+	invalidSigned, err := Sign(&invalid, pk)
 	if err != nil {
 		t.Fatalf("error signing manifest: %v", err)
 	}
 
 	return &testEnv{
-		name:     name,
-		tag:      tag,
-		manifest: &m,
-		signed:   sm,
-		pk:       pk,
+		name:          name,
+		tag:           tag,
+		invalidSigned: invalidSigned,
+		signed:        sm,
+		pk:            pk,
 	}
 }
