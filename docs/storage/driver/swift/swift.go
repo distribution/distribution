@@ -587,7 +587,7 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		return err
 	}
 
-	if d.BulkDeleteSupport {
+	if len(objects) > 0 && d.BulkDeleteSupport {
 		filenames := make([]string, len(objects))
 		for i, obj := range objects {
 			filenames[i] = obj.Name
