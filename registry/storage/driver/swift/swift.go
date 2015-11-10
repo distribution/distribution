@@ -573,6 +573,47 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 	return err
 }
 
+// deleteSingleObject deletes one object. It is used when bulk deletion is not
+// supported.
+func (d *driver) deleteSingleObject(ctx context.Context, obj swift.Object) error {
+	if obj.PseudoDirectory {
+		return nil
+	}
+	if _, headers, err := d.Conn.Object(d.Container, obj.Name); err == nil {
+		manifest, ok := headers["X-Object-Manifest"]
+		if ok {
+			segContainer, prefix := parseManifest(manifest)
+			segments, err := d.getAllSegments(prefix)
+			if err != nil {
+				return err
+			}
+
+			for _, s := range segments {
+				if err := d.Conn.ObjectDelete(segContainer, s.Name); err != nil {
+					if err == swift.ObjectNotFound {
+						return storagedriver.PathNotFoundError{Path: s.Name}
+					}
+					return err
+				}
+			}
+		}
+	} else {
+		if err == swift.ObjectNotFound {
+			return storagedriver.PathNotFoundError{Path: obj.Name}
+		}
+		return err
+	}
+
+	if err := d.Conn.ObjectDelete(d.Container, obj.Name); err != nil {
+		if err == swift.ObjectNotFound {
+			return storagedriver.PathNotFoundError{Path: obj.Name}
+		}
+		return err
+	}
+
+	return nil
+}
+
 // Delete recursively deletes all objects stored at "path" and its subpaths.
 func (d *driver) Delete(ctx context.Context, path string) error {
 	opts := swift.ObjectsOpts{
@@ -592,48 +633,20 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		for i, obj := range objects {
 			filenames[i] = obj.Name
 		}
-		if _, err := d.Conn.BulkDelete(d.Container, filenames); err != swift.Forbidden {
+		_, err = d.Conn.BulkDelete(d.Container, filenames)
+		// Don't fail on ObjectNotFound because eventual consistency
+		// makes this situation normal.
+		if err != nil && err != swift.Forbidden && err != swift.ObjectNotFound {
 			if err == swift.ContainerNotFound {
 				return storagedriver.PathNotFoundError{Path: path}
 			}
 			return err
 		}
-	}
-
-	for _, obj := range objects {
-		if obj.PseudoDirectory {
-			continue
-		}
-		if _, headers, err := d.Conn.Object(d.Container, obj.Name); err == nil {
-			manifest, ok := headers["X-Object-Manifest"]
-			if ok {
-				segContainer, prefix := parseManifest(manifest)
-				segments, err := d.getAllSegments(prefix)
-				if err != nil {
-					return err
-				}
-
-				for _, s := range segments {
-					if err := d.Conn.ObjectDelete(segContainer, s.Name); err != nil {
-						if err == swift.ObjectNotFound {
-							return storagedriver.PathNotFoundError{Path: s.Name}
-						}
-						return err
-					}
-				}
+	} else {
+		for _, obj := range objects {
+			if err := d.deleteSingleObject(ctx, obj); err != nil {
+				return err
 			}
-		} else {
-			if err == swift.ObjectNotFound {
-				return storagedriver.PathNotFoundError{Path: obj.Name}
-			}
-			return err
-		}
-
-		if err := d.Conn.ObjectDelete(d.Container, obj.Name); err != nil {
-			if err == swift.ObjectNotFound {
-				return storagedriver.PathNotFoundError{Path: obj.Name}
-			}
-			return err
 		}
 	}
 
