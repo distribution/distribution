@@ -10,7 +10,7 @@ ENV DOCKER_BUILDTAGS include_rados include_oss
 
 WORKDIR $DISTRIBUTION_DIR
 COPY . $DISTRIBUTION_DIR
-COPY cmd/registry/config-dev.yml /etc/docker/registry/config.yml
+COPY cmd/registry/config-my.yml /etc/docker/registry/config.yml
 RUN make PREFIX=/go clean binaries
 
 VOLUME ["/var/lib/registry"]
