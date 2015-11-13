@@ -472,6 +472,13 @@ func (suite *DriverSuite) TestList(c *check.C) {
 	rootDirectory := "/" + randomFilename(int64(8+rand.Intn(8)))
 	defer suite.StorageDriver.Delete(suite.ctx, rootDirectory)
 
+	doesnotexist := path.Join(rootDirectory, "nonexistent")
+	_, err := suite.StorageDriver.List(suite.ctx, doesnotexist)
+	c.Assert(err, check.Equals, storagedriver.PathNotFoundError{
+		Path:       doesnotexist,
+		DriverName: suite.StorageDriver.Name(),
+	})
+
 	parentDirectory := rootDirectory + "/" + randomFilename(int64(8+rand.Intn(8)))
 	childFiles := make([]string, 50)
 	for i := 0; i < len(childFiles); i++ {
