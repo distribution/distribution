@@ -16,3 +16,5 @@ health:
     enabled: true
     interval: 10s
     threshold: 3
+proxy:
+  remoteurl: https://registry-1.docker.io
