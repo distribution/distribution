@@ -143,7 +143,7 @@ registry:
   ports:
     - 127.0.0.1:5000:5000
   volumes:
-    - ./data:/var/lib/registry
+    - `pwd`./data:/var/lib/registry
 EOF
 ```
 
