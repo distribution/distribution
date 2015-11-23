@@ -29,7 +29,7 @@ type ChallengeManager interface {
 
 	// AddResponse adds the response to the challenge
 	// manager. The challenges will be parsed out of
-	// the WWW-Authenicate headers and added to the
+	// the WWW-Authenticate headers and added to the
 	// URL which was produced the response. If the
 	// response was authorized, any challenges for the
 	// endpoint will be cleared.
