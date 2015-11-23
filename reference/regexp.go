@@ -22,7 +22,7 @@ var (
 	hostnameRegexp = regexp.MustCompile(`(?:` + hostnameComponentRegexp.String() + `\.)*` + hostnameComponentRegexp.String() + `(?::[0-9]+)?`)
 
 	// TagRegexp matches valid tag names. From docker/docker:graph/tags.go.
-	TagRegexp = regexp.MustCompile(`[\w][\w.-]{0,127}`)
+	TagRegexp = regexp.MustCompile(`[\w][\w.\-\+]{0,127}`)
 
 	// anchoredTagRegexp matches valid tag names, anchored at the start and
 	// end of the matched string.

@@ -465,3 +465,124 @@ func TestReferenceRegexp(t *testing.T) {
 	}
 
 }
+
+func TestAnchoredTagRegexp(t *testing.T) {
+	testcases := []regexpMatch{
+		{
+			input: "0.0.0-alpha.1.beta.2+abc.def.123-456",
+			match: true,
+		},
+		{
+			input: "0.0.0-alpha.1.beta.2+abc.def.123",
+			match: true,
+		},
+		{
+			input: "0.0.0-alpha.1.beta.2",
+			match: true,
+		},
+		{
+			input: "0.0.0-alpha.1.beta",
+			match: true,
+		},
+		{
+			input: "0.0.0-alpha.1",
+			match: true,
+		},
+		{
+			input: "0.0.0",
+			match: true,
+		},
+		{
+			input: "10001345563.34532.1234",
+			match: true,
+		},
+		{
+			input: "10001345563.34532.1234+hello-world",
+			match: true,
+		},
+		{
+			input: "v0.0.0-alpha.1.beta.2+abc.def.123-456",
+			match: true,
+		},
+		{
+			input: "v0.0.0-alpha.1.beta.2+abc.def.123",
+			match: true,
+		},
+		{
+			input: "v0.0.0-alpha.1.beta.2",
+			match: true,
+		},
+		{
+			input: "v0.0.0-alpha.1.beta",
+			match: true,
+		},
+		{
+			input: "v0.0.0-alpha.1",
+			match: true,
+		},
+		{
+			input: "v0.0.0",
+			match: true,
+		},
+		{
+			input: "v10001345563.34532.1234",
+			match: true,
+		},
+		{
+			input: "v10001345563.34532.1234+hello-world",
+			match: true,
+		},
+		{
+			input: "some-valid-tag",
+			match: true,
+		},
+		{
+			input: "a",
+			match: true,
+		},
+		{
+			input: "0",
+			match: true,
+		},
+		{
+			input: "hi",
+			match: true,
+		},
+		{
+			input: "no, siree",
+			match: false,
+		},
+		{
+			input: "-nope",
+			match: false,
+		},
+		{
+			input: "yep-",
+			match: true,
+		},
+		{
+			input: "nah-±-mate",
+			match: false,
+		},
+		{
+			input: "grrr-👹",
+			match: false,
+		},
+		{
+			input: "erm;no",
+			match: false,
+		},
+		{
+			input: "stop:it",
+			match: false,
+		},
+		{
+			input: "bored,now",
+			match: false,
+		},
+	}
+
+	for _, c := range testcases {
+		checkRegexp(t, anchoredTagRegexp, c)
+	}
+}
