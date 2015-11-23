@@ -1,6 +1,6 @@
 <!--[metadata]>
 +++
-draft = "true"
+draft = true
 +++
 <![end-metadata]-->
 

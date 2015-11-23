@@ -1,3 +1,9 @@
+<!--[metadata]>
++++
+draft = true
++++
+<![end-metadata]-->
+
 # Image Manifest Version 2, Schema 1 
 
 This document outlines the format of of the V2 image manifest. The image
