@@ -84,6 +84,7 @@ Usually, on Ubuntu this is done with:
     update-ca-trust
 
 ... On some distributions, e.g. Oracle Linux 6, the Shared System Certificates feature needs to be manually enabled:
-    $ sudo update-ca-trust enable
+
+    update-ca-trust enable
 
 Now restart docker (`service docker stop && service docker start`, or any other way you use to restart docker).
