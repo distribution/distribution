@@ -404,7 +404,7 @@ func (d *driver) List(ctx context.Context, dirPath string) ([]string, error) {
 	files, err := d.listDirectoryOid(dirPath)
 
 	if err != nil {
-		return nil, err
+		return nil, storagedriver.PathNotFoundError{Path: dirPath}
 	}
 
 	keys := make([]string, 0, len(files))
