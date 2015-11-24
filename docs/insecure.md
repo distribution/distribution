@@ -78,9 +78,12 @@ Usually, on Ubuntu this is done with:
     cp auth/domain.crt /usr/local/share/ca-certificates/myregistrydomain.com.crt
     update-ca-certificates
 
-... and on RedHat with:
+... and on Red Hat (and its derivatives) with:
 
     cp auth/domain.crt /etc/pki/ca-trust/source/anchors/myregistrydomain.com.crt
     update-ca-trust
+
+... On some distributions, e.g. Oracle Linux 6, the Shared System Certificates feature needs to be manually enabled:
+    $ sudo update-ca-trust enable
 
 Now restart docker (`service docker stop && service docker start`, or any other way you use to restart docker).
