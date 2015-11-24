@@ -97,7 +97,7 @@ type ErrUnsupportedMethod struct {
 }
 
 func (err ErrUnsupportedMethod) Error() string {
-	return fmt.Sprintf("[%s] unsupported method", err.DriverName)
+	return fmt.Sprintf("%s: unsupported method", err.DriverName)
 }
 
 // PathNotFoundError is returned when operating on a nonexistent path.
@@ -107,7 +107,7 @@ type PathNotFoundError struct {
 }
 
 func (err PathNotFoundError) Error() string {
-	return fmt.Sprintf("[%s] Path not found: %s", err.DriverName, err.Path)
+	return fmt.Sprintf("%s: Path not found: %s", err.DriverName, err.Path)
 }
 
 // InvalidPathError is returned when the provided path is malformed.
@@ -117,7 +117,7 @@ type InvalidPathError struct {
 }
 
 func (err InvalidPathError) Error() string {
-	return fmt.Sprintf("[%s] Invalid path: %s", err.DriverName, err.Path)
+	return fmt.Sprintf("%s: invalid path: %s", err.DriverName, err.Path)
 }
 
 // InvalidOffsetError is returned when attempting to read or write from an
@@ -129,7 +129,7 @@ type InvalidOffsetError struct {
 }
 
 func (err InvalidOffsetError) Error() string {
-	return fmt.Sprintf("[%s] Invalid offset: %d for path: %s", err.DriverName, err.Offset, err.Path)
+	return fmt.Sprintf("%s: invalid offset: %d for path: %s", err.DriverName, err.Offset, err.Path)
 }
 
 // Error is a catch-all error type which captures an error string and
@@ -140,5 +140,5 @@ type Error struct {
 }
 
 func (err Error) Error() string {
-	return fmt.Sprintf("[%s] %s", err.DriverName, err.Enclosed)
+	return fmt.Sprintf("%s: %s", err.DriverName, err.Enclosed)
 }
