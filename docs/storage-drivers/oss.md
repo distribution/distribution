@@ -26,7 +26,7 @@ An implementation of the `storagedriver.StorageDriver` interface which uses [Ali
 
 * `encrypt`: (optional) Whether you would like your data encrypted on the server side (defaults to false if not specified).
 
-* `secure`: (optional) Whether you would like to transfer data to the bucket over ssl or not. Defaults to false if not specified.
+* `secure`: (optional) Whether you would like to transfer data to the bucket over ssl or not. Defaults to true if not specified.
 
 * `chunksize`: (optional) The default part size for multipart uploads (performed by WriteStream) to OSS. The default is 10 MB. Keep in mind that the minimum part size for OSS is 5MB. You might experience better performance for larger chunk sizes depending on the speed of your connection to OSS.
 
