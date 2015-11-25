@@ -106,9 +106,6 @@ func (ms *manifestStore) GetByTag(tag string, options ...distribution.ManifestSe
 // content, leaving trust policies of that content up to consumers.
 func (ms *manifestStore) verifyManifest(ctx context.Context, mnfst *schema1.SignedManifest) error {
 	var errs distribution.ErrManifestVerification
-	if mnfst.Name != ms.repository.Name() {
-		errs = append(errs, fmt.Errorf("repository name does not match manifest name"))
-	}
 
 	if len(mnfst.History) != len(mnfst.FSLayers) {
 		errs = append(errs, fmt.Errorf("mismatched history and fslayer cardinality %d != %d",
