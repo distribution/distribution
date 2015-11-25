@@ -643,6 +643,12 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 		return nil, err
 	}
 
+	if len(listResponse.Contents) == 0 {
+		// Treat empty response as missing directory, since we don't actually
+		// have directories in s3.
+		return nil, storagedriver.PathNotFoundError{Path: path}
+	}
+
 	files := []string{}
 	directories := []string{}
 
@@ -721,7 +727,7 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 	if ok {
 		methodString, ok = method.(string)
 		if !ok || (methodString != "GET" && methodString != "PUT") {
-			return "", storagedriver.ErrUnsupportedMethod
+			return "", storagedriver.ErrUnsupportedMethod{driverName}
 		}
 	}
 
