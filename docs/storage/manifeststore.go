@@ -7,6 +7,7 @@ import (
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest/schema1"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/libtrust"
 )
 
@@ -106,6 +107,10 @@ func (ms *manifestStore) GetByTag(tag string, options ...distribution.ManifestSe
 // content, leaving trust policies of that content up to consumers.
 func (ms *manifestStore) verifyManifest(ctx context.Context, mnfst *schema1.SignedManifest) error {
 	var errs distribution.ErrManifestVerification
+
+	if len(mnfst.Name) > reference.NameTotalLengthMax {
+		errs = append(errs, fmt.Errorf("manifest name must not be more than %v characters", reference.NameTotalLengthMax))
+	}
 
 	if len(mnfst.History) != len(mnfst.FSLayers) {
 		errs = append(errs, fmt.Errorf("mismatched history and fslayer cardinality %d != %d",
