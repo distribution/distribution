@@ -801,10 +801,10 @@ This storage backend uses Openstack Swift object storage.
       <code>tenant</code>
     </td>
     <td>
-      no
+      yes
     </td>
     <td>
-      Your Openstack tenant name.
+      Your Openstack tenant name. You should provide at least one information of tenant: tenant name or tenant id or both.
     </td>
   </tr>
   <tr>
@@ -812,10 +812,10 @@ This storage backend uses Openstack Swift object storage.
       <code>tenantid</code>
     </td>
     <td>
-      no
+      yes
     </td>
     <td>
-      Your Openstack tenant id.
+      Your Openstack tenant id. You should provide at least one information of tenant: tenant name or tenant id or both.
     </td>
   </tr>
   <tr>
