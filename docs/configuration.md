@@ -801,10 +801,10 @@ This storage backend uses Openstack Swift object storage.
       <code>tenant</code>
     </td>
     <td>
-      no
+      --
     </td>
     <td>
-      Your Openstack tenant name.
+      Your Openstack tenant name. Whether required depends on the authentication version you use. More information, please refer to [OpenStack Identity Service](http://docs.openstack.org/developer/keystone/)
     </td>
   </tr>
   <tr>
@@ -812,10 +812,10 @@ This storage backend uses Openstack Swift object storage.
       <code>tenantid</code>
     </td>
     <td>
-      no
+      --
     </td>
     <td>
-      Your Openstack tenant id.
+      Your Openstack tenant id. Whether required depends on the authentication version you use. More information, please refer to [OpenStack Identity Service](http://docs.openstack.org/developer/keystone/)
     </td>
   </tr>
   <tr>
