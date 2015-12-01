@@ -589,7 +589,7 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 		files = append(files, strings.TrimPrefix(strings.TrimSuffix(obj.Name, "/"), d.swiftPath("/")))
 	}
 
-	if err == swift.ContainerNotFound {
+	if err == swift.ContainerNotFound || (len(objects) == 0 && path != "/") {
 		return files, storagedriver.PathNotFoundError{Path: path}
 	}
 	return files, err
