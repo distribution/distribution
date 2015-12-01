@@ -669,6 +669,12 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 		return nil, err
 	}
 
+	if len(listResponse.Contents) == 0 {
+		// Treat empty response as missing directory, since we don't actually
+		// have directories in OSS.
+		return nil, storagedriver.PathNotFoundError{Path: path}
+	}
+
 	files := []string{}
 	directories := []string{}
 
