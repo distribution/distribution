@@ -109,11 +109,19 @@ func (ms *manifestStore) verifyManifest(ctx context.Context, mnfst *schema1.Sign
 	var errs distribution.ErrManifestVerification
 
 	if len(mnfst.Name) > reference.NameTotalLengthMax {
-		errs = append(errs, fmt.Errorf("manifest name must not be more than %v characters", reference.NameTotalLengthMax))
+		errs = append(errs,
+			distribution.ErrManifestNameInvalid{
+				Name:   mnfst.Name,
+				Reason: fmt.Errorf("manifest name must not be more than %v characters", reference.NameTotalLengthMax),
+			})
 	}
 
 	if !reference.NameRegexp.MatchString(mnfst.Name) {
-		errs = append(errs, fmt.Errorf("invalid manifest name format"))
+		errs = append(errs,
+			distribution.ErrManifestNameInvalid{
+				Name:   mnfst.Name,
+				Reason: fmt.Errorf("invalid manifest name format"),
+			})
 	}
 
 	if len(mnfst.History) != len(mnfst.FSLayers) {
