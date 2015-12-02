@@ -38,7 +38,9 @@ func Walk(ctx context.Context, driver storageDriver.StorageDriver, from string, 
 		}
 
 		if fileInfo.IsDir() && !skipDir {
-			Walk(ctx, driver, child, f)
+			if err := Walk(ctx, driver, child, f); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

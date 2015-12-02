@@ -41,10 +41,12 @@ func TestWalkErrors(t *testing.T) {
 		t.Error("Expected invalid root err")
 	}
 
+	errEarlyExpected := fmt.Errorf("Early termination")
+
 	err = Walk(ctx, d, "/", func(fileInfo driver.FileInfo) error {
 		// error on the 2nd file
 		if fileInfo.Path() == "/a/b" {
-			return fmt.Errorf("Early termination")
+			return errEarlyExpected
 		}
 		delete(expected, fileInfo.Path())
 		return nil
@@ -52,8 +54,12 @@ func TestWalkErrors(t *testing.T) {
 	if len(expected) != fileCount-1 {
 		t.Error("Walk failed to terminate with error")
 	}
-	if err != nil {
-		t.Error(err.Error())
+	if err != errEarlyExpected {
+		if err == nil {
+			t.Fatalf("expected an error due to early termination")
+		} else {
+			t.Error(err.Error())
+		}
 	}
 
 	err = Walk(ctx, d, "/nonexistant", func(fileInfo driver.FileInfo) error {
