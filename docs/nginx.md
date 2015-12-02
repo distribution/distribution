@@ -36,9 +36,9 @@ Furthermore, introducing an extra http layer in your communication pipeline will
 Please notice, if you have multiple https/http layers in your communication pipeline, you only need to set these three headers in the first layer.
 
 ```
-X-Real-IP
-X-Forwarded-For
-X-Forwarded-Proto
+X-Real-IP         $remote_addr; # pass on real client's IP
+X-Forwarded-For   $proxy_add_x_forwarded_for;
+X-Forwarded-Proto $scheme;
 ```
 
 For instance, Amazon's Elastic Load Balancer (ELB) in HTTPS mode already sets the following client header:
