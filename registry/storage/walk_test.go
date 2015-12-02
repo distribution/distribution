@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"sort"
 	"testing"
 
 	"github.com/docker/distribution/context"
@@ -73,6 +74,7 @@ func TestWalkErrors(t *testing.T) {
 
 func TestWalk(t *testing.T) {
 	d, expected, ctx := testFS(t)
+	var traversed []string
 	err := Walk(ctx, d, "/", func(fileInfo driver.FileInfo) error {
 		filePath := fileInfo.Path()
 		filetype, ok := expected[filePath]
@@ -90,11 +92,17 @@ func TestWalk(t *testing.T) {
 			}
 		}
 		delete(expected, filePath)
+		traversed = append(traversed, filePath)
 		return nil
 	})
 	if len(expected) > 0 {
 		t.Errorf("Missed files in walk: %q", expected)
 	}
+
+	if !sort.StringsAreSorted(traversed) {
+		t.Errorf("result should be sorted: %v", traversed)
+	}
+
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
