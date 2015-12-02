@@ -1193,7 +1193,7 @@ func (c *Connection) ObjectCreate(container string, objectName string, checkHash
 	}
 	// Run the PUT in the background piping it data
 	go func() {
-		file.resp, file.headers, file.err = c.storage(RequestOpts{
+		opts := RequestOpts{
 			Container:  container,
 			ObjectName: objectName,
 			Operation:  "PUT",
@@ -1201,7 +1201,13 @@ func (c *Connection) ObjectCreate(container string, objectName string, checkHash
 			Body:       pipeReader,
 			NoResponse: true,
 			ErrorMap:   objectErrorMap,
-		})
+		}
+		if _, slo := extraHeaders["X-Static-Large-Object"]; slo {
+			opts.Parameters = url.Values{}
+			opts.Parameters.Set("multipart-manifest", "put")
+			delete(extraHeaders, "X-Static-Large-Object")
+		}
+		file.resp, file.headers, file.err = c.storage(opts)
 		// Signal finished
 		pipeReader.Close()
 		close(file.done)
@@ -1435,13 +1441,19 @@ var _ io.Seeker = &ObjectOpenFile{}
 // headers["Content-Type"] will give the content type if desired.
 func (c *Connection) ObjectOpen(container string, objectName string, checkHash bool, h Headers) (file *ObjectOpenFile, headers Headers, err error) {
 	var resp *http.Response
-	resp, headers, err = c.storage(RequestOpts{
+	opts := RequestOpts{
 		Container:  container,
 		ObjectName: objectName,
 		Operation:  "GET",
 		ErrorMap:   objectErrorMap,
 		Headers:    h,
-	})
+	}
+	if _, slo := h["X-Static-Large-Object"]; slo {
+		opts.Parameters = url.Values{}
+		opts.Parameters.Set("multipart-manifest", "get")
+		delete(h, "X-Static-Large-Object")
+	}
+	resp, headers, err = c.storage(opts)
 	if err != nil {
 		return
 	}
