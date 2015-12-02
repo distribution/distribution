@@ -33,6 +33,14 @@ While this model gives you the ability to use whatever authentication backend yo
 
 Furthermore, introducing an extra http layer in your communication pipeline will make it more complex to deploy, maintain, and debug, and will possibly create issues. Make sure the extra complexity is required.
 
+Please notice, if you have multiple https/http layers in your communication pipeline, you only need to set these three headers in the first layer.
+
+```
+X-Real-IP
+X-Forwarded-For
+X-Forwarded-Proto
+```
+
 For instance, Amazon's Elastic Load Balancer (ELB) in HTTPS mode already sets the following client header:
 
 ```
