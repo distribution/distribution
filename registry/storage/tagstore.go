@@ -77,12 +77,6 @@ func (ts *tagStore) tag(tag string, revision digest.Digest) error {
 		return err
 	}
 
-	nbs := ts.linkedBlobStore(ts.ctx, tag)
-	// Link into the index
-	if err := nbs.linkBlob(ts.ctx, distribution.Descriptor{Digest: revision}); err != nil {
-		return err
-	}
-
 	// Overwrite the current link
 	return ts.blobStore.link(ts.ctx, currentPath, revision)
 }
@@ -124,24 +118,4 @@ func (ts *tagStore) delete(tag string) error {
 	}
 
 	return ts.blobStore.driver.Delete(ts.ctx, tagPath)
-}
-
-// linkedBlobStore returns the linkedBlobStore for the named tag, allowing one
-// to index manifest blobs by tag name. While the tag store doesn't map
-// precisely to the linked blob store, using this ensures the links are
-// managed via the same code path.
-func (ts *tagStore) linkedBlobStore(ctx context.Context, tag string) *linkedBlobStore {
-	return &linkedBlobStore{
-		blobStore:  ts.blobStore,
-		repository: ts.repository,
-		ctx:        ctx,
-		linkPathFns: []linkPathFunc{func(name string, dgst digest.Digest) (string, error) {
-			return pathFor(manifestTagIndexEntryLinkPathSpec{
-				name:     name,
-				tag:      tag,
-				revision: dgst,
-			})
-
-		}},
-	}
 }
