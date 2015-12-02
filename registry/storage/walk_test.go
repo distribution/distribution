@@ -12,14 +12,7 @@ import (
 
 func testFS(t *testing.T) (driver.StorageDriver, map[string]string, context.Context) {
 	d := inmemory.New()
-	c := []byte("")
 	ctx := context.Background()
-	if err := d.PutContent(ctx, "/a/b/c/d", c); err != nil {
-		t.Fatalf("Unable to put to inmemory fs")
-	}
-	if err := d.PutContent(ctx, "/a/b/c/e", c); err != nil {
-		t.Fatalf("Unable to put to inmemory fs")
-	}
 
 	expected := map[string]string{
 		"/a":       "dir",
@@ -27,6 +20,22 @@ func testFS(t *testing.T) (driver.StorageDriver, map[string]string, context.Cont
 		"/a/b/c":   "dir",
 		"/a/b/c/d": "file",
 		"/a/b/c/e": "file",
+		"/a/b/f":   "dir",
+		"/a/b/f/g": "file",
+		"/a/b/f/h": "file",
+		"/a/b/f/i": "file",
+		"/z":       "dir",
+		"/z/y":     "file",
+	}
+
+	for p, typ := range expected {
+		if typ != "file" {
+			continue
+		}
+
+		if err := d.PutContent(ctx, p, []byte(p)); err != nil {
+			t.Fatalf("unable to put content into fixture: %v", err)
+		}
 	}
 
 	return d, expected, ctx
@@ -49,6 +58,7 @@ func TestWalkErrors(t *testing.T) {
 		if fileInfo.Path() == "/a/b" {
 			return errEarlyExpected
 		}
+
 		delete(expected, fileInfo.Path())
 		return nil
 	})
@@ -89,6 +99,13 @@ func TestWalk(t *testing.T) {
 		} else {
 			if filetype != "file" {
 				t.Errorf("Unexpected file type: %q", filePath)
+			}
+
+			// each file has its own path as the contents. If the length
+			// doesn't match the path length, fail.
+			if fileInfo.Size() != int64(len(fileInfo.Path())) {
+				t.Fatalf("unexpected size for %q: %v != %v",
+					fileInfo.Path(), fileInfo.Size(), len(fileInfo.Path()))
 			}
 		}
 		delete(expected, filePath)
