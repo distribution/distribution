@@ -490,7 +490,7 @@ This storage backend uses Microsoft's Azure Blob Storage.
 
 </table>
 
-# gcs
+### gcs
 
 This storage backend uses Google Cloud Storage.
 
