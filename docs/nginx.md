@@ -74,7 +74,7 @@ upstream docker-registry {
 ## The registry always sets this header.
 ## In the case of nginx performing auth, the header will be unset
 ## since nginx is auth-ing before proxying.
-map $upstream_http_docker_distribution_api_version $docker_distribution_api_version {
+map \$upstream_http_docker_distribution_api_version \$docker_distribution_api_version {
   'registry/2.0' '';
   default registry/2.0;
 }
