@@ -822,7 +822,13 @@ the presence of a repository only guarantees that it is there but not that it
 is _not_ there.
 
 For registries with a large number of repositories, this response may be quite
-large. If such a response is expected, one should use pagination.
+large. If such a response is expected, one should use pagination. A registry
+may also limit the amount of responses returned even if pagination was not
+explicitly requested. In this case the `Link` header will be returned along
+with the results, and subsequent results can be obtained by following the link
+as if pagination had been initially requested.
+
+For details of the `Link` header, please see the _Pagination_ section.
 
 #### Pagination
 
