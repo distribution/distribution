@@ -88,6 +88,10 @@ func TestReferenceParse(t *testing.T) {
 			err:   ErrReferenceInvalidFormat,
 		},
 		{
+			input: "repo@sha256:ffffffffffffffffffffffffffffffffff",
+			err:   digest.ErrDigestInvalidLength,
+		},
+		{
 			input: "validname@invaliddigest:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
 			err:   digest.ErrDigestUnsupported,
 		},
@@ -129,11 +133,11 @@ func TestReferenceParse(t *testing.T) {
 			tag:        "xn--n3h.com",
 		},
 		{
-			input:      "xn--7o8h.com/myimage:xn--7o8h.com@sha512:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // 🐳.com in punycode
+			input:      "xn--7o8h.com/myimage:xn--7o8h.com@sha512:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // 🐳.com in punycode
 			hostname:   "xn--7o8h.com",
 			repository: "xn--7o8h.com/myimage",
 			tag:        "xn--7o8h.com",
-			digest:     "sha512:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+			digest:     "sha512:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
 		},
 		{
 			input:      "foo_bar.com:8080",
@@ -343,9 +347,9 @@ func TestSerialization(t *testing.T) {
 		},
 		{
 			description: "name with digest",
-			input:       "other.com/named@sha256:1234567890098765432112345667890098765",
+			input:       "other.com/named@sha256:1234567890098765432112345667890098765432112345667890098765432112",
 			name:        "other.com/named",
-			digest:      "sha256:1234567890098765432112345667890098765",
+			digest:      "sha256:1234567890098765432112345667890098765432112345667890098765432112",
 		},
 	}
 	for _, testcase := range testcases {
