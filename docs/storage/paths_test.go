@@ -15,31 +15,31 @@ func TestPathMapper(t *testing.T) {
 		{
 			spec: manifestRevisionPathSpec{
 				name:     "foo/bar",
-				revision: "sha256:abcdef0123456789",
+				revision: "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
 			},
-			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789",
+			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
 		},
 		{
 			spec: manifestRevisionLinkPathSpec{
 				name:     "foo/bar",
-				revision: "sha256:abcdef0123456789",
+				revision: "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
 			},
-			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789/link",
+			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789/link",
 		},
 		{
 			spec: manifestSignatureLinkPathSpec{
 				name:      "foo/bar",
-				revision:  "sha256:abcdef0123456789",
-				signature: "sha256:abcdef0123456789",
+				revision:  "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+				signature: "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
 			},
-			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789/signatures/sha256/abcdef0123456789/link",
+			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789/signatures/sha256/abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789/link",
 		},
 		{
 			spec: manifestSignaturesPathSpec{
 				name:     "foo/bar",
-				revision: "sha256:abcdef0123456789",
+				revision: "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
 			},
-			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789/signatures",
+			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789/signatures",
 		},
 		{
 			spec: manifestTagsPathSpec{
@@ -72,17 +72,17 @@ func TestPathMapper(t *testing.T) {
 			spec: manifestTagIndexEntryPathSpec{
 				name:     "foo/bar",
 				tag:      "thetag",
-				revision: "sha256:abcdef0123456789",
+				revision: "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
 			},
-			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/tags/thetag/index/sha256/abcdef0123456789",
+			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/tags/thetag/index/sha256/abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
 		},
 		{
 			spec: manifestTagIndexEntryLinkPathSpec{
 				name:     "foo/bar",
 				tag:      "thetag",
-				revision: "sha256:abcdef0123456789",
+				revision: "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
 			},
-			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/tags/thetag/index/sha256/abcdef0123456789/link",
+			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/tags/thetag/index/sha256/abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789/link",
 		},
 		{
 			spec: layerLinkPathSpec{
@@ -93,15 +93,15 @@ func TestPathMapper(t *testing.T) {
 		},
 		{
 			spec: blobDataPathSpec{
-				digest: digest.Digest("tarsum.dev+sha512:abcdefabcdefabcdef908909909"),
+				digest: digest.Digest("tarsum.dev+sha512:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"),
 			},
-			expected: "/docker/registry/v2/blobs/tarsum/dev/sha512/ab/abcdefabcdefabcdef908909909/data",
+			expected: "/docker/registry/v2/blobs/tarsum/dev/sha512/ab/abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789/data",
 		},
 		{
 			spec: blobDataPathSpec{
-				digest: digest.Digest("tarsum.v1+sha256:abcdefabcdefabcdef908909909"),
+				digest: digest.Digest("tarsum.v1+sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"),
 			},
-			expected: "/docker/registry/v2/blobs/tarsum/v1/sha256/ab/abcdefabcdefabcdef908909909/data",
+			expected: "/docker/registry/v2/blobs/tarsum/v1/sha256/ab/abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789/data",
 		},
 
 		{
