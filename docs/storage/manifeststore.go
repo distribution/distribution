@@ -7,6 +7,7 @@ import (
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest/schema1"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/libtrust"
 )
 
@@ -47,7 +48,7 @@ func SkipLayerVerification(ms distribution.ManifestService) error {
 		ms.skipDependencyVerification = true
 		return nil
 	}
-	return fmt.Errorf("skip layer verification only valid for manifeststore")
+	return fmt.Errorf("skip layer verification only valid for manifestStore")
 }
 
 func (ms *manifestStore) Put(manifest *schema1.SignedManifest) error {
@@ -106,8 +107,21 @@ func (ms *manifestStore) GetByTag(tag string, options ...distribution.ManifestSe
 // content, leaving trust policies of that content up to consumers.
 func (ms *manifestStore) verifyManifest(ctx context.Context, mnfst *schema1.SignedManifest) error {
 	var errs distribution.ErrManifestVerification
-	if mnfst.Name != ms.repository.Name() {
-		errs = append(errs, fmt.Errorf("repository name does not match manifest name"))
+
+	if len(mnfst.Name) > reference.NameTotalLengthMax {
+		errs = append(errs,
+			distribution.ErrManifestNameInvalid{
+				Name:   mnfst.Name,
+				Reason: fmt.Errorf("manifest name must not be more than %v characters", reference.NameTotalLengthMax),
+			})
+	}
+
+	if !reference.NameRegexp.MatchString(mnfst.Name) {
+		errs = append(errs,
+			distribution.ErrManifestNameInvalid{
+				Name:   mnfst.Name,
+				Reason: fmt.Errorf("invalid manifest name format"),
+			})
 	}
 
 	if len(mnfst.History) != len(mnfst.FSLayers) {
