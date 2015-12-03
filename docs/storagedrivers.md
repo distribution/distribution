@@ -3,6 +3,7 @@
 title = "Storage Drivers"
 description = "Explains how to use storage drivers"
 keywords = ["registry, on-prem, images, tags, repository, distribution, storage drivers, advanced"]
+aliases = ["/registry/storage-drivers/"]
 [menu.main]
 parent="smn_registry_ref"
 +++
