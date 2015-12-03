@@ -3,6 +3,7 @@ package storage
 import (
 	"errors"
 	"fmt"
+	"sort"
 
 	"github.com/docker/distribution/context"
 	storageDriver "github.com/docker/distribution/registry/storage/driver"
@@ -26,7 +27,12 @@ func Walk(ctx context.Context, driver storageDriver.StorageDriver, from string, 
 	if err != nil {
 		return err
 	}
+	sort.Stable(sort.StringSlice(children))
 	for _, child := range children {
+		// TODO(stevvooe): Calling driver.Stat for every entry is quite
+		// expensive when running against backends with a slow Stat
+		// implementation, such as s3. This is very likely a serious
+		// performance bottleneck.
 		fileInfo, err := driver.Stat(ctx, child)
 		if err != nil {
 			return err
@@ -38,7 +44,9 @@ func Walk(ctx context.Context, driver storageDriver.StorageDriver, from string, 
 		}
 
 		if fileInfo.IsDir() && !skipDir {
-			Walk(ctx, driver, child, f)
+			if err := Walk(ctx, driver, child, f); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
