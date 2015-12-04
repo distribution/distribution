@@ -87,7 +87,7 @@ type StorageDriver interface {
 // PathRegexp is the regular expression which each file path must match. A
 // file path is absolute, beginning with a slash and containing a positive
 // number of path components separated by slashes, where each component is
-// restricted to lowercase alphanumeric characters or a period, underscore, or
+// restricted to alphanumeric characters or a period, underscore, or
 // hyphen.
 var PathRegexp = regexp.MustCompile(`^(/[A-Za-z0-9._-]+)+$`)
 
