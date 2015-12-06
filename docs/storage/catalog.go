@@ -4,19 +4,22 @@ import (
 	"errors"
 	"io"
 	"path"
-	"sort"
 	"strings"
 
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/storage/driver"
 )
 
+// ErrFinishedWalk is used when the called walk function no longer wants
+// to accept any more values.  This is used for pagination when the
+// required number of repos have been found.
+var ErrFinishedWalk = errors.New("finished walk")
+
 // Returns a list, or partial list, of repositories in the registry.
 // Because it's a quite expensive operation, it should only be used when building up
 // an initial set of repositories.
-func (reg *registry) Repositories(ctx context.Context, repos []string, last string) (n int, err error) {
+func (reg *registry) Repositories(ctx context.Context, repos []string, last string) (n int, errVal error) {
 	var foundRepos []string
-	var errVal error
 
 	if len(repos) == 0 {
 		return 0, errors.New("no space in slice")
@@ -27,12 +30,7 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 		return 0, err
 	}
 
-	// Walk each of the directories in our storage.  Unfortunately since there's no
-	// guarantee that storage will return files in lexigraphical order, we have
-	// to store everything another slice, sort it and then copy it back to our
-	// passed in slice.
-
-	Walk(ctx, reg.blobStore.driver, root, func(fileInfo driver.FileInfo) error {
+	err = Walk(ctx, reg.blobStore.driver, root, func(fileInfo driver.FileInfo) error {
 		filePath := fileInfo.Path()
 
 		// lop the base path off
@@ -49,17 +47,20 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 			return ErrSkipDir
 		}
 
+		// if we've filled our array, no need to walk any further
+		if len(foundRepos) == len(repos) {
+			return ErrFinishedWalk
+		}
+
 		return nil
 	})
 
-	sort.Strings(foundRepos)
 	n = copy(repos, foundRepos)
 
 	// Signal that we have no more entries by setting EOF
-	if len(foundRepos) <= len(repos) {
+	if len(foundRepos) <= len(repos) && err != ErrFinishedWalk {
 		errVal = io.EOF
 	}
 
 	return n, errVal
-
 }
