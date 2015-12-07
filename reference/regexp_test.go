@@ -119,6 +119,11 @@ func TestHostRegexp(t *testing.T) {
 }
 
 func TestFullNameRegexp(t *testing.T) {
+	if anchoredNameRegexp.NumSubexp() != 2 {
+		t.Fatalf("anchored name regexp should have two submatches: %v, %v != 2",
+			anchoredNameRegexp, anchoredNameRegexp.NumSubexp())
+	}
+
 	testcases := []regexpMatch{
 		{
 			input: "",
@@ -401,6 +406,11 @@ func TestFullNameRegexp(t *testing.T) {
 }
 
 func TestReferenceRegexp(t *testing.T) {
+	if ReferenceRegexp.NumSubexp() != 3 {
+		t.Fatalf("anchored name regexp should have three submatches: %v, %v != 3",
+			ReferenceRegexp, ReferenceRegexp.NumSubexp())
+	}
+
 	testcases := []regexpMatch{
 		{
 			input: "registry.com:8080/myapp:tag",

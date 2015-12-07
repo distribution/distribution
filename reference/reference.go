@@ -4,22 +4,16 @@
 // Grammar
 //
 // 	reference                       := repository [ ":" tag ] [ "@" digest ]
+//	name                            := [hostname '/'] component ['/' component]*
+//	hostname                        := hostcomponent ['.' hostcomponent]* [':' port-number]
+//	hostcomponent                   := /([a-z0-9]|[a-z0-9][a-z0-9-]*[a-z0-9])/
+//	port-number                     := /[0-9]+/
+//	component                       := alpha-numeric [separator alpha-numeric]*
+// 	alpha-numeric                   := /[a-z0-9]+/
+//	separator                       := /[_.]|__|[-]*/
 //
-//	// repository.go
-//	repository			:= hostname ['/' component]+
-//	hostname			:= hostcomponent [':' port-number]
-//	component			:= subcomponent [separator subcomponent]*
-//	subcomponent			:= alpha-numeric ['-'* alpha-numeric]*
-//	hostcomponent                   := [hostpart '.']* hostpart
-// 	alpha-numeric			:= /[a-z0-9]+/
-//	separator			:= /([_.]|__)/
-//	port-number			:= /[0-9]+/
-//	hostpart                        := /([a-z0-9]|[a-z0-9][a-z0-9-]*[a-z0-9])/
-//
-//	// tag.go
 //	tag                             := /[\w][\w.-]{0,127}/
 //
-//	// from the digest package
 //	digest                          := digest-algorithm ":" digest-hex
 //	digest-algorithm                := digest-algorithm-component [ digest-algorithm-separator digest-algorithm-component ]
 //	digest-algorithm-separator      := /[+.-_]/
