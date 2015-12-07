@@ -134,7 +134,6 @@ func TestEmptyRootList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error creating content: %v", err)
 	}
-	defer rootedDriver.Delete(ctx, filename)
 
 	keys, err := emptyRootDriver.List(ctx, "/")
 	for _, path := range keys {
@@ -148,5 +147,25 @@ func TestEmptyRootList(t *testing.T) {
 		if !storagedriver.PathRegexp.MatchString(path) {
 			t.Fatalf("unexpected string in path: %q != %q", path, storagedriver.PathRegexp)
 		}
+	}
+
+	// Create an object with a path nested under the existing object
+	err = rootedDriver.PutContent(ctx, filename+"/file1", contents)
+	if err != nil {
+		t.Fatalf("unexpected error creating content: %v", err)
+	}
+
+	err = rootedDriver.Delete(ctx, filename)
+	if err != nil {
+		t.Fatalf("failed to delete: %v", err)
+	}
+
+	keys, err = rootedDriver.List(ctx, "/")
+	if err != nil {
+		t.Fatalf("failed to list objects after deletion: %v", err)
+	}
+
+	if len(keys) != 0 {
+		t.Fatal("delete did not remove nested objects")
 	}
 }

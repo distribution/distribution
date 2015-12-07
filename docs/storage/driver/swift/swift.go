@@ -629,19 +629,6 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		return err
 	}
 
-	if len(objects) > 0 && d.BulkDeleteSupport {
-		filenames := make([]string, len(objects))
-		for i, obj := range objects {
-			filenames[i] = obj.Name
-		}
-		if _, err := d.Conn.BulkDelete(d.Container, filenames); err != swift.Forbidden {
-			if err == swift.ContainerNotFound {
-				return storagedriver.PathNotFoundError{Path: path}
-			}
-			return err
-		}
-	}
-
 	for _, obj := range objects {
 		if obj.PseudoDirectory {
 			continue
@@ -649,20 +636,12 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		if _, headers, err := d.Conn.Object(d.Container, obj.Name); err == nil {
 			manifest, ok := headers["X-Object-Manifest"]
 			if ok {
-				segContainer, prefix := parseManifest(manifest)
+				_, prefix := parseManifest(manifest)
 				segments, err := d.getAllSegments(prefix)
 				if err != nil {
 					return err
 				}
-
-				for _, s := range segments {
-					if err := d.Conn.ObjectDelete(segContainer, s.Name); err != nil {
-						if err == swift.ObjectNotFound {
-							return storagedriver.PathNotFoundError{Path: s.Name}
-						}
-						return err
-					}
-				}
+				objects = append(objects, segments...)
 			}
 		} else {
 			if err == swift.ObjectNotFound {
@@ -670,12 +649,30 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 			}
 			return err
 		}
+	}
 
-		if err := d.Conn.ObjectDelete(d.Container, obj.Name); err != nil {
-			if err == swift.ObjectNotFound {
-				return storagedriver.PathNotFoundError{Path: obj.Name}
+	if d.BulkDeleteSupport && len(objects) > 0 {
+		filenames := make([]string, len(objects))
+		for i, obj := range objects {
+			filenames[i] = obj.Name
+		}
+		_, err = d.Conn.BulkDelete(d.Container, filenames)
+		// Don't fail on ObjectNotFound because eventual consistency
+		// makes this situation normal.
+		if err != nil && err != swift.Forbidden && err != swift.ObjectNotFound {
+			if err == swift.ContainerNotFound {
+				return storagedriver.PathNotFoundError{Path: path}
 			}
 			return err
+		}
+	} else {
+		for _, obj := range objects {
+			if err := d.Conn.ObjectDelete(d.Container, obj.Name); err != nil {
+				if err == swift.ObjectNotFound {
+					return storagedriver.PathNotFoundError{Path: obj.Name}
+				}
+				return err
+			}
 		}
 	}
 
