@@ -47,7 +47,10 @@ func parseHTTPErrorResponse(r io.Reader) error {
 	return errors
 }
 
-func handleErrorResponse(resp *http.Response) error {
+// HandleErrorResponse returns an error for an unsuccessful HTTP response code
+// (in the range 400 - 499 inclusive). Response code outside of the range will
+// return with an error with unexpected HTTP status.
+func HandleErrorResponse(resp *http.Response) error {
 	if resp.StatusCode == 401 {
 		err := parseHTTPErrorResponse(resp.Body)
 		if uErr, ok := err.(*UnexpectedHTTPResponseError); ok {
