@@ -1135,12 +1135,19 @@ func randomFilename(length int64) string {
 	return string(b)
 }
 
-func randomContents(length int64) []byte {
-	b := make([]byte, length)
-	for i := range b {
-		b[i] = byte(rand.Intn(2 << 8))
+// randomBytes pre-allocates all of the memory sizes needed for the test. If
+// anything panics while accessing randomBytes, just make this number bigger.
+var randomBytes = make([]byte, 96<<20)
+
+func init() {
+	// increase the random bytes to the required maximum
+	for i := range randomBytes {
+		randomBytes[i] = byte(rand.Intn(2 << 8))
 	}
-	return b
+}
+
+func randomContents(length int64) []byte {
+	return randomBytes[:length]
 }
 
 type randReader struct {
@@ -1151,14 +1158,14 @@ type randReader struct {
 func (rr *randReader) Read(p []byte) (n int, err error) {
 	rr.m.Lock()
 	defer rr.m.Unlock()
-	for i := 0; i < len(p) && rr.r > 0; i++ {
-		p[i] = byte(rand.Intn(255))
-		n++
-		rr.r--
-	}
-	if rr.r == 0 {
+
+	n = copy(p, randomContents(int64(len(p))))
+	rr.r -= int64(n)
+
+	if rr.r <= 0 {
 		err = io.EOF
 	}
+
 	return
 }
 
