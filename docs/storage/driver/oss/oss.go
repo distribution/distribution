@@ -651,8 +651,9 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 }
 
 // List returns a list of the objects that are direct descendants of the given path.
-func (d *driver) List(ctx context.Context, path string) ([]string, error) {
-	if path != "/" && path[len(path)-1] != '/' {
+func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
+	path := opath
+	if path != "/" && opath[len(path)-1] != '/' {
 		path = path + "/"
 	}
 
@@ -666,13 +667,7 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 
 	listResponse, err := d.Bucket.List(d.ossPath(path), "/", "", listMax)
 	if err != nil {
-		return nil, parseError(path, err)
-	}
-
-	if len(listResponse.Contents) == 0 && path != "/" {
-		// Treat empty response as missing directory, since we don't actually
-		// have directories in OSS.
-		return nil, storagedriver.PathNotFoundError{Path: path}
+		return nil, parseError(opath, err)
 	}
 
 	files := []string{}
@@ -694,6 +689,14 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 			}
 		} else {
 			break
+		}
+	}
+
+	if opath != "/" {
+		if len(files) == 0 && len(directories) == 0 {
+			// Treat empty response as missing directory, since we don't actually
+			// have directories in s3.
+			return nil, storagedriver.PathNotFoundError{Path: opath}
 		}
 	}
 
