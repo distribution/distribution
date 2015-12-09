@@ -184,9 +184,6 @@ func (d *driver) Stat(ctx context.Context, subPath string) (storagedriver.FileIn
 // List returns a list of the objects that are direct descendants of the given
 // path.
 func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
-	if subPath[len(subPath)-1] != '/' {
-		subPath += "/"
-	}
 	fullPath := d.fullPath(subPath)
 
 	dir, err := os.Open(fullPath)
