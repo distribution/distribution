@@ -49,7 +49,7 @@ An implementation of the `storagedriver.StorageDriver` interface that uses [Open
   </td>
   <td>
   <p>
-	The name of your Swift container where you wish to store objects. The driver creates the named container during its initialization.
+	The name of your Swift container where you wish to store the registry's data. The driver creates the named container during its initialization.
   </p>
   </td>
 </tr>
@@ -139,7 +139,7 @@ An implementation of the `storagedriver.StorageDriver` interface that uses [Open
     </td>
     <td>
     <p>
-    Optionally, supply the root directory tree in which to store all registry files. Defaults to the empty string which is the container's root.</p>
+    Optionally, supply a prefix that will be applied to all Swift keys to allow you to segment data in your container if necessary. Defaults to the empty string which is the container's root.</p>
     </p>
     </td>
 </tr>
