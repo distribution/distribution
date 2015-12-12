@@ -9,17 +9,17 @@ keywords = ["registry, on-prem, images, tags, repository, distribution, nginx, p
 # Authenticating proxy with nginx
 
 
-## Use-case
+## Use-case
 
 People already relying on a nginx proxy to authenticate their users to other services might want to leverage it and have Registry communications tunneled through the same pipeline.
 
 Usually, that includes enterprise setups using LDAP/AD on the backend and a SSO mechanism fronting their internal http portal.
 
-### Alternatives
+### Alternatives
 
 If you just want authentication for your registry, and are happy maintaining users access separately, you should really consider sticking with the native [basic auth registry feature](deploying.md#native-basic-auth).
 
-### Solution
+### Solution
 
 With the method presented here, you implement basic authentication for docker engines in a reverse proxy that sits in front of your registry.
 
@@ -87,7 +87,7 @@ server {
   ssl_certificate /etc/nginx/conf.d/domain.crt;
   ssl_certificate_key /etc/nginx/conf.d/domain.key;
 
-  # Recommendations from https://raymii.org/s/tutorials/Strong_SSL_Security_On_nginx.html
+  # Recommendations from https://raymii.org/s/tutorials/Strong_SSL_Security_On_nginx.html
   ssl_protocols TLSv1.1 TLSv1.2;
   ssl_ciphers 'EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH';
   ssl_prefer_server_ciphers on;

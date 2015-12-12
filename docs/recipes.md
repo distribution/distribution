@@ -12,7 +12,7 @@ You will find here a list of "recipes", end-to-end scenarios for exotic or other
 
 Most users are not expected to have a use for these.
 
-## Requirements
+## Requirements
 
 You should have followed entirely the basic [deployment guide](deploying.md).
 

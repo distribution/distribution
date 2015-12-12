@@ -6,13 +6,13 @@ keywords = ["registry, on-prem, images, tags, repository, distribution, build, r
 +++
 <![end-metadata]-->
 
-# Building the registry source
+# Building the registry source
 
 ## Use-case
 
 This is useful if you intend to actively work on the registry.
 
-### Alternatives
+### Alternatives
 
 Most people should use the [official Registry docker image](https://hub.docker.com/r/library/registry/).
 
