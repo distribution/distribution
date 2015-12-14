@@ -112,7 +112,7 @@ server {
 
     ## If $docker_distribution_api_version is empty, the header will not be added.
     ## See the map directive above where this variable is defined.
-    add_header 'Docker-Distribution-Api-Version' $docker_distribution_api_version always;
+    add_header 'Docker-Distribution-Api-Version' \$docker_distribution_api_version always;
 
     proxy_pass                          http://docker-registry;
     proxy_set_header  Host              \$http_host;   # required for docker client's sake
