@@ -185,11 +185,7 @@ func TestManifestStorage(t *testing.T) {
 
 	// Now that we have a payload, take a moment to check that the manifest is
 	// return by the payload digest.
-	dgst, err := digest.FromBytes(payload)
-	if err != nil {
-		t.Fatalf("error getting manifest digest: %v", err)
-	}
-
+	dgst := digest.FromBytes(payload)
 	exists, err = ms.Exists(dgst)
 	if err != nil {
 		t.Fatalf("error checking manifest existence by digest: %v", err)

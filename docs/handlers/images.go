@@ -250,11 +250,5 @@ func digestManifest(ctx context.Context, sm *schema1.SignedManifest) (digest.Dig
 		p = sm.Raw
 	}
 
-	dgst, err := digest.FromBytes(p)
-	if err != nil {
-		ctxu.GetLogger(ctx).Errorf("error digesting manifest: %v", err)
-		return "", err
-	}
-
-	return dgst, err
+	return digest.FromBytes(p), nil
 }

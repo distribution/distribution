@@ -176,10 +176,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error reading all of blob %s", err.Error())
 	}
-	expectedDigest, err := digest.FromBytes(randomBlob)
-	if err != nil {
-		t.Fatalf("Error getting digest from bytes: %s", err)
-	}
+	expectedDigest := digest.FromBytes(randomBlob)
 	simpleUpload(t, bs, randomBlob, expectedDigest)
 
 	d, err = bs.Stat(ctx, expectedDigest)
