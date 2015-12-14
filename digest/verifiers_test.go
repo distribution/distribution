@@ -15,10 +15,7 @@ import (
 func TestDigestVerifier(t *testing.T) {
 	p := make([]byte, 1<<20)
 	rand.Read(p)
-	digest, err := FromBytes(p)
-	if err != nil {
-		t.Fatalf("unexpected error digesting bytes: %#v", err)
-	}
+	digest := FromBytes(p)
 
 	verifier, err := NewDigestVerifier(digest)
 	if err != nil {

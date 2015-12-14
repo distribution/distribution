@@ -167,11 +167,7 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 		t.Fatalf("unexpected error getting manifest payload: %v", err)
 	}
 
-	dgst, err := digest.FromBytes(p)
-	if err != nil {
-		t.Fatalf("unexpected error digesting manifest payload: %v", err)
-	}
-
+	dgst := digest.FromBytes(p)
 	fetchedByManifest, err := manifests.Get(dgst)
 	if err != nil {
 		t.Fatalf("unexpected error fetching manifest: %v", err)

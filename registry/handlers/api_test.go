@@ -880,8 +880,7 @@ func testManifestAPI(t *testing.T, env *testEnv, args manifestArgs) (*testEnv, m
 	payload, err := signedManifest.Payload()
 	checkErr(t, err, "getting manifest payload")
 
-	dgst, err := digest.FromBytes(payload)
-	checkErr(t, err, "digesting manifest")
+	dgst := digest.FromBytes(payload)
 
 	args.signedManifest = signedManifest
 	args.dgst = dgst
@@ -1487,8 +1486,7 @@ func createRepository(env *testEnv, t *testing.T, imageName string, tag string) 
 	payload, err := signedManifest.Payload()
 	checkErr(t, err, "getting manifest payload")
 
-	dgst, err := digest.FromBytes(payload)
-	checkErr(t, err, "digesting manifest")
+	dgst := digest.FromBytes(payload)
 
 	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, dgst.String())
 	checkErr(t, err, "building manifest url")

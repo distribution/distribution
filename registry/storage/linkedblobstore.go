@@ -75,10 +75,7 @@ func (lbs *linkedBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter
 }
 
 func (lbs *linkedBlobStore) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
-	dgst, err := digest.FromBytes(p)
-	if err != nil {
-		return distribution.Descriptor{}, err
-	}
+	dgst := digest.FromBytes(p)
 	// Place the data in the blob store first.
 	desc, err := lbs.blobStore.Put(ctx, mediaType, p)
 	if err != nil {

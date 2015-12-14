@@ -56,12 +56,7 @@ func (bs *blobStore) Open(ctx context.Context, dgst digest.Digest) (distribution
 // content is already present, only the digest will be returned. This should
 // only be used for small objects, such as manifests. This implemented as a convenience for other Put implementations
 func (bs *blobStore) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
-	dgst, err := digest.FromBytes(p)
-	if err != nil {
-		context.GetLogger(ctx).Errorf("blobStore: error digesting content: %v, %s", err, string(p))
-		return distribution.Descriptor{}, err
-	}
-
+	dgst := digest.FromBytes(p)
 	desc, err := bs.statter.Stat(ctx, dgst)
 	if err == nil {
 		// content already present
