@@ -46,7 +46,7 @@ func blobUploadDispatcher(ctx *Context, r *http.Request) http.Handler {
 		}
 		buh.State = state
 
-		if state.Name != ctx.Repository.Name() {
+		if state.Name != ctx.Repository.Name().Name() {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				ctxu.GetLogger(ctx).Infof("mismatched repository name in upload state: %q != %q", state.Name, buh.Repository.Name())
 				buh.Errors = append(buh.Errors, v2.ErrorCodeBlobUploadInvalid.WithDetail(err))
@@ -312,7 +312,7 @@ func (buh *blobUploadHandler) blobUploadResponse(w http.ResponseWriter, r *http.
 	}
 
 	// TODO(stevvooe): Need a better way to manage the upload state automatically.
-	buh.State.Name = buh.Repository.Name()
+	buh.State.Name = buh.Repository.Name().Name()
 	buh.State.UUID = buh.Upload.ID()
 	buh.State.Offset = offset
 	buh.State.StartedAt = buh.Upload.StartedAt()

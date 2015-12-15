@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/reference"
 	"github.com/gorilla/mux"
 )
 
@@ -113,10 +114,10 @@ func (ub *URLBuilder) BuildCatalogURL(values ...url.Values) (string, error) {
 }
 
 // BuildTagsURL constructs a url to list the tags in the named repository.
-func (ub *URLBuilder) BuildTagsURL(name string) (string, error) {
+func (ub *URLBuilder) BuildTagsURL(name reference.Named) (string, error) {
 	route := ub.cloneRoute(RouteNameTags)
 
-	tagsURL, err := route.URL("name", name)
+	tagsURL, err := route.URL("name", name.Name())
 	if err != nil {
 		return "", err
 	}
@@ -126,10 +127,10 @@ func (ub *URLBuilder) BuildTagsURL(name string) (string, error) {
 
 // BuildManifestURL constructs a url for the manifest identified by name and
 // reference. The argument reference may be either a tag or digest.
-func (ub *URLBuilder) BuildManifestURL(name, reference string) (string, error) {
+func (ub *URLBuilder) BuildManifestURL(name reference.Named, reference string) (string, error) {
 	route := ub.cloneRoute(RouteNameManifest)
 
-	manifestURL, err := route.URL("name", name, "reference", reference)
+	manifestURL, err := route.URL("name", name.Name(), "reference", reference)
 	if err != nil {
 		return "", err
 	}
@@ -138,10 +139,10 @@ func (ub *URLBuilder) BuildManifestURL(name, reference string) (string, error) {
 }
 
 // BuildBlobURL constructs the url for the blob identified by name and dgst.
-func (ub *URLBuilder) BuildBlobURL(name string, dgst digest.Digest) (string, error) {
+func (ub *URLBuilder) BuildBlobURL(name reference.Named, dgst digest.Digest) (string, error) {
 	route := ub.cloneRoute(RouteNameBlob)
 
-	layerURL, err := route.URL("name", name, "digest", dgst.String())
+	layerURL, err := route.URL("name", name.Name(), "digest", dgst.String())
 	if err != nil {
 		return "", err
 	}
@@ -151,10 +152,10 @@ func (ub *URLBuilder) BuildBlobURL(name string, dgst digest.Digest) (string, err
 
 // BuildBlobUploadURL constructs a url to begin a blob upload in the
 // repository identified by name.
-func (ub *URLBuilder) BuildBlobUploadURL(name string, values ...url.Values) (string, error) {
+func (ub *URLBuilder) BuildBlobUploadURL(name reference.Named, values ...url.Values) (string, error) {
 	route := ub.cloneRoute(RouteNameBlobUpload)
 
-	uploadURL, err := route.URL("name", name)
+	uploadURL, err := route.URL("name", name.Name())
 	if err != nil {
 		return "", err
 	}
@@ -166,10 +167,10 @@ func (ub *URLBuilder) BuildBlobUploadURL(name string, values ...url.Values) (str
 // including any url values. This should generally not be used by clients, as
 // this url is provided by server implementations during the blob upload
 // process.
-func (ub *URLBuilder) BuildBlobUploadChunkURL(name, uuid string, values ...url.Values) (string, error) {
+func (ub *URLBuilder) BuildBlobUploadChunkURL(name reference.Named, uuid string, values ...url.Values) (string, error) {
 	route := ub.cloneRoute(RouteNameBlobUploadChunk)
 
-	uploadURL, err := route.URL("name", name, "uuid", uuid)
+	uploadURL, err := route.URL("name", name.Name(), "uuid", uuid)
 	if err != nil {
 		return "", err
 	}

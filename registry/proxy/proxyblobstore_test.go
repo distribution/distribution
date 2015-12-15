@@ -12,6 +12,7 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/proxy/scheduler"
 	"github.com/docker/distribution/registry/storage"
 	"github.com/docker/distribution/registry/storage/cache/memory"
@@ -114,6 +115,11 @@ func (te *testEnv) RemoteStats() *map[string]int {
 
 // Populate remote store and record the digests
 func makeTestEnv(t *testing.T, name string) *testEnv {
+	nameRef, err := reference.ParseNamed(name)
+	if err != nil {
+		t.Fatalf("unable to parse reference: %s", err)
+	}
+
 	ctx := context.Background()
 
 	truthDir, err := ioutil.TempDir("", "truth")
@@ -131,7 +137,7 @@ func makeTestEnv(t *testing.T, name string) *testEnv {
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
-	localRepo, err := localRegistry.Repository(ctx, name)
+	localRepo, err := localRegistry.Repository(ctx, nameRef)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
 	}
@@ -140,7 +146,7 @@ func makeTestEnv(t *testing.T, name string) *testEnv {
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
-	truthRepo, err := truthRegistry.Repository(ctx, name)
+	truthRepo, err := truthRegistry.Repository(ctx, nameRef)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
 	}

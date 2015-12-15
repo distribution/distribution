@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/docker/distribution/context"
+	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/driver"
 )
 
@@ -80,19 +82,19 @@ func (ttles *TTLExpirationScheduler) OnManifestExpire(f expiryFunc) {
 }
 
 // AddBlob schedules a blob cleanup after ttl expires
-func (ttles *TTLExpirationScheduler) AddBlob(dgst string, ttl time.Duration) error {
+func (ttles *TTLExpirationScheduler) AddBlob(dgst digest.Digest, ttl time.Duration) error {
 	ttles.Lock()
 	defer ttles.Unlock()
 
 	if ttles.stopped {
 		return fmt.Errorf("scheduler not started")
 	}
-	ttles.add(dgst, ttl, entryTypeBlob)
+	ttles.add(dgst.String(), ttl, entryTypeBlob)
 	return nil
 }
 
 // AddManifest schedules a manifest cleanup after ttl expires
-func (ttles *TTLExpirationScheduler) AddManifest(repoName string, ttl time.Duration) error {
+func (ttles *TTLExpirationScheduler) AddManifest(repoName reference.Named, ttl time.Duration) error {
 	ttles.Lock()
 	defer ttles.Unlock()
 
@@ -100,7 +102,7 @@ func (ttles *TTLExpirationScheduler) AddManifest(repoName string, ttl time.Durat
 		return fmt.Errorf("scheduler not started")
 	}
 
-	ttles.add(repoName, ttl, entryTypeManifest)
+	ttles.add(repoName.Name(), ttl, entryTypeManifest)
 	return nil
 }
 
