@@ -235,8 +235,11 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 			TimestampFormat: time.RFC3339Nano,
 		})
 	case "text":
+		nocolor := config.Log.NoColors
+		fmt.Printf("nocolor: %v\n", nocolor)
 		log.SetFormatter(&log.TextFormatter{
 			TimestampFormat: time.RFC3339Nano,
+			DisableColors:   nocolor,
 		})
 	case "logstash":
 		log.SetFormatter(&logstash.LogstashFormatter{

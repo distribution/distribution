@@ -12,6 +12,7 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	logrus_syslog "github.com/Sirupsen/logrus/hooks/syslog"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/configuration"
 	ctxu "github.com/docker/distribution/context"
@@ -33,6 +34,7 @@ import (
 	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
+	"log/syslog"
 )
 
 // randomSecretSize is the number of random bytes to generate if no secret
@@ -84,6 +86,8 @@ func NewApp(ctx context.Context, configuration *configuration.Configuration) *Ap
 		router:  v2.RouterWithPrefix(configuration.HTTP.Prefix),
 		isCache: configuration.Proxy.RemoteURL != "",
 	}
+
+	app.configureLogHook(configuration)
 
 	// Register the handler dispatchers.
 	app.register(v2.RouteNameBase, func(ctx *Context, r *http.Request) http.Handler {
@@ -137,7 +141,6 @@ func NewApp(ctx context.Context, configuration *configuration.Configuration) *Ap
 	app.configureSecret(configuration)
 	app.configureEvents(configuration)
 	app.configureRedis(configuration)
-	app.configureLogHook(configuration)
 
 	if configuration.HTTP.Host != "" {
 		u, err := url.Parse(configuration.HTTP.Host)
@@ -501,6 +504,11 @@ func (app *App) configureLogHook(configuration *configuration.Configuration) {
 					To:       configHook.MailOptions.To,
 				}
 				logger.Hooks.Add(hook)
+			case "syslog":
+				hook, err := logrus_syslog.NewSyslogHook("", "", syslog.LOG_DEBUG, "registry")
+				if err == nil {
+					logger.Hooks.Add(hook)
+				}
 			default:
 			}
 		}
