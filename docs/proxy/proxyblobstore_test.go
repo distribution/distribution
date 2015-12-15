@@ -58,6 +58,14 @@ func (sbs statsBlobStore) Resume(ctx context.Context, id string) (distribution.B
 	return sbs.blobs.Resume(ctx, id)
 }
 
+func (sbs statsBlobStore) Mount(ctx context.Context, sourceRepo string, dgst digest.Digest) (distribution.Descriptor, error) {
+	sbsMu.Lock()
+	sbs.stats["mount"]++
+	sbsMu.Unlock()
+
+	return sbs.blobs.Mount(ctx, sourceRepo, dgst)
+}
+
 func (sbs statsBlobStore) Open(ctx context.Context, dgst digest.Digest) (distribution.ReadSeekCloser, error) {
 	sbsMu.Lock()
 	sbs.stats["open"]++
