@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
+
+	"github.com/docker/distribution/reference"
 )
 
 type urlBuilderTestCase struct {
@@ -13,6 +15,7 @@ type urlBuilderTestCase struct {
 }
 
 func makeURLBuilderTestCases(urlBuilder *URLBuilder) []urlBuilderTestCase {
+	fooBarRef, _ := reference.ParseNamed("foo/bar")
 	return []urlBuilderTestCase{
 		{
 			description:  "test base url",
@@ -23,35 +26,35 @@ func makeURLBuilderTestCases(urlBuilder *URLBuilder) []urlBuilderTestCase {
 			description:  "test tags url",
 			expectedPath: "/v2/foo/bar/tags/list",
 			build: func() (string, error) {
-				return urlBuilder.BuildTagsURL("foo/bar")
+				return urlBuilder.BuildTagsURL(fooBarRef)
 			},
 		},
 		{
 			description:  "test manifest url",
 			expectedPath: "/v2/foo/bar/manifests/tag",
 			build: func() (string, error) {
-				return urlBuilder.BuildManifestURL("foo/bar", "tag")
+				return urlBuilder.BuildManifestURL(fooBarRef, "tag")
 			},
 		},
 		{
 			description:  "build blob url",
 			expectedPath: "/v2/foo/bar/blobs/sha256:3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5",
 			build: func() (string, error) {
-				return urlBuilder.BuildBlobURL("foo/bar", "sha256:3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5")
+				return urlBuilder.BuildBlobURL(fooBarRef, "sha256:3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5")
 			},
 		},
 		{
 			description:  "build blob upload url",
 			expectedPath: "/v2/foo/bar/blobs/uploads/",
 			build: func() (string, error) {
-				return urlBuilder.BuildBlobUploadURL("foo/bar")
+				return urlBuilder.BuildBlobUploadURL(fooBarRef)
 			},
 		},
 		{
 			description:  "build blob upload url with digest and size",
 			expectedPath: "/v2/foo/bar/blobs/uploads/?digest=sha256%3A3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5&size=10000",
 			build: func() (string, error) {
-				return urlBuilder.BuildBlobUploadURL("foo/bar", url.Values{
+				return urlBuilder.BuildBlobUploadURL(fooBarRef, url.Values{
 					"size":   []string{"10000"},
 					"digest": []string{"sha256:3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5"},
 				})
@@ -61,14 +64,14 @@ func makeURLBuilderTestCases(urlBuilder *URLBuilder) []urlBuilderTestCase {
 			description:  "build blob upload chunk url",
 			expectedPath: "/v2/foo/bar/blobs/uploads/uuid-part",
 			build: func() (string, error) {
-				return urlBuilder.BuildBlobUploadChunkURL("foo/bar", "uuid-part")
+				return urlBuilder.BuildBlobUploadChunkURL(fooBarRef, "uuid-part")
 			},
 		},
 		{
 			description:  "build blob upload chunk url with digest and size",
 			expectedPath: "/v2/foo/bar/blobs/uploads/uuid-part?digest=sha256%3A3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5&size=10000",
 			build: func() (string, error) {
-				return urlBuilder.BuildBlobUploadChunkURL("foo/bar", "uuid-part", url.Values{
+				return urlBuilder.BuildBlobUploadChunkURL(fooBarRef, "uuid-part", url.Values{
 					"size":   []string{"10000"},
 					"digest": []string{"sha256:3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5"},
 				})

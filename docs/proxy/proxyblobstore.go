@@ -10,6 +10,7 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/proxy/scheduler"
 )
 
@@ -133,7 +134,7 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 		if err := pbs.storeLocal(ctx, dgst); err != nil {
 			context.GetLogger(ctx).Errorf("Error committing to storage: %s", err.Error())
 		}
-		pbs.scheduler.AddBlob(dgst.String(), repositoryTTL)
+		pbs.scheduler.AddBlob(dgst, repositoryTTL)
 	}(dgst)
 
 	_, err = pbs.copyContent(ctx, dgst, w)
@@ -169,7 +170,7 @@ func (pbs *proxyBlobStore) Resume(ctx context.Context, id string) (distribution.
 	return nil, distribution.ErrUnsupported
 }
 
-func (pbs *proxyBlobStore) Mount(ctx context.Context, sourceRepo string, dgst digest.Digest) (distribution.Descriptor, error) {
+func (pbs *proxyBlobStore) Mount(ctx context.Context, sourceRepo reference.Named, dgst digest.Digest) (distribution.Descriptor, error) {
 	return distribution.Descriptor{}, distribution.ErrUnsupported
 }
 

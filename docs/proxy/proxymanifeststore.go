@@ -6,6 +6,7 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/proxy/scheduler"
 )
 
@@ -16,7 +17,7 @@ type proxyManifestStore struct {
 	ctx             context.Context
 	localManifests  distribution.ManifestService
 	remoteManifests distribution.ManifestService
-	repositoryName  string
+	repositoryName  reference.Named
 	scheduler       *scheduler.TTLExpirationScheduler
 }
 
@@ -65,7 +66,7 @@ func (pms proxyManifestStore) Get(ctx context.Context, dgst digest.Digest, optio
 		pms.scheduler.AddManifest(pms.repositoryName, repositoryTTL)
 
 		// Ensure the manifest blob is cleaned up
-		pms.scheduler.AddBlob(dgst.String(), repositoryTTL)
+		pms.scheduler.AddBlob(dgst, repositoryTTL)
 	}
 
 	return manifest, err

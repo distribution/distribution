@@ -5,6 +5,7 @@ import (
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 )
 
@@ -21,7 +22,8 @@ func testTagStore(t *testing.T) *tagsTestEnv {
 		t.Fatal(err)
 	}
 
-	repo, err := reg.Repository(ctx, "a/b")
+	repoRef, _ := reference.ParseNamed("a/b")
+	repo, err := reg.Repository(ctx, repoRef)
 	if err != nil {
 		t.Fatal(err)
 	}

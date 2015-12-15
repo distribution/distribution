@@ -107,18 +107,11 @@ func (reg *registry) Scope() distribution.Scope {
 // Repository returns an instance of the repository tied to the registry.
 // Instances should not be shared between goroutines but are cheap to
 // allocate. In general, they should be request scoped.
-func (reg *registry) Repository(ctx context.Context, canonicalName string) (distribution.Repository, error) {
-	if _, err := reference.ParseNamed(canonicalName); err != nil {
-		return nil, distribution.ErrRepositoryNameInvalid{
-			Name:   canonicalName,
-			Reason: err,
-		}
-	}
-
+func (reg *registry) Repository(ctx context.Context, canonicalName reference.Named) (distribution.Repository, error) {
 	var descriptorCache distribution.BlobDescriptorService
 	if reg.blobDescriptorCacheProvider != nil {
 		var err error
-		descriptorCache, err = reg.blobDescriptorCacheProvider.RepositoryScoped(canonicalName)
+		descriptorCache, err = reg.blobDescriptorCacheProvider.RepositoryScoped(canonicalName.Name())
 		if err != nil {
 			return nil, err
 		}
@@ -136,12 +129,12 @@ func (reg *registry) Repository(ctx context.Context, canonicalName string) (dist
 type repository struct {
 	*registry
 	ctx             context.Context
-	name            string
+	name            reference.Named
 	descriptorCache distribution.BlobDescriptorService
 }
 
 // Name returns the name of the repository.
-func (repo *repository) Name() string {
+func (repo *repository) Name() reference.Named {
 	return repo.name
 }
 

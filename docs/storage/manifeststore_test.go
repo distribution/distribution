@@ -11,6 +11,7 @@ import (
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/manifest/schema1"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/cache/memory"
 	"github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
@@ -23,11 +24,11 @@ type manifestStoreTestEnv struct {
 	driver     driver.StorageDriver
 	registry   distribution.Namespace
 	repository distribution.Repository
-	name       string
+	name       reference.Named
 	tag        string
 }
 
-func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestEnv {
+func newManifestStoreTestEnv(t *testing.T, name reference.Named, tag string) *manifestStoreTestEnv {
 	ctx := context.Background()
 	driver := inmemory.New()
 	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(
@@ -52,7 +53,8 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 }
 
 func TestManifestStorage(t *testing.T) {
-	env := newManifestStoreTestEnv(t, "foo/bar", "thetag")
+	repoName, _ := reference.ParseNamed("foo/bar")
+	env := newManifestStoreTestEnv(t, repoName, "thetag")
 	ctx := context.Background()
 	ms, err := env.repository.Manifests(ctx)
 	if err != nil {
@@ -63,7 +65,7 @@ func TestManifestStorage(t *testing.T) {
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
-		Name: env.name,
+		Name: env.name.Name(),
 		Tag:  env.tag,
 	}
 

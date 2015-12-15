@@ -113,7 +113,7 @@ type hashStateEntry struct {
 // getStoredHashStates returns a slice of hashStateEntries for this upload.
 func (bw *blobWriter) getStoredHashStates(ctx context.Context) ([]hashStateEntry, error) {
 	uploadHashStatePathPrefix, err := pathFor(uploadHashStatePathSpec{
-		name: bw.blobStore.repository.Name(),
+		name: bw.blobStore.repository.Name().String(),
 		id:   bw.id,
 		alg:  bw.digester.Digest().Algorithm(),
 		list: true,
@@ -159,7 +159,7 @@ func (bw *blobWriter) storeHashState(ctx context.Context) error {
 	}
 
 	uploadHashStatePath, err := pathFor(uploadHashStatePathSpec{
-		name:   bw.blobStore.repository.Name(),
+		name:   bw.blobStore.repository.Name().String(),
 		id:     bw.id,
 		alg:    bw.digester.Digest().Algorithm(),
 		offset: int64(h.Len()),
