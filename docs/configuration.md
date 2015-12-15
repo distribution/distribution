@@ -1016,7 +1016,7 @@ The _htpasswd_ authentication backed allows one to configure basic auth using an
 [Apache HTPasswd File](https://httpd.apache.org/docs/2.4/programs/htpasswd.html).
 Only [`bcrypt`](http://en.wikipedia.org/wiki/Bcrypt) format passwords are
 supported. Entries with other hash types will be ignored. The htpasswd file is
-loaded once, at startup. If the file is invalid, the registry will display and
+loaded once, at startup. If the file is invalid, the registry will display an
 error and will not start.
 
 > __WARNING:__ This authentication scheme should only be used with TLS
