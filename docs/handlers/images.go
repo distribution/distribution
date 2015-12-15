@@ -8,6 +8,8 @@ import (
 	"github.com/docker/distribution"
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/manifest/schema1"
+	"github.com/docker/distribution/manifest/schema2"
 	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/gorilla/handlers"
@@ -51,8 +53,6 @@ type imageManifestHandler struct {
 }
 
 // GetImageManifest fetches the image manifest from the storage backend, if it exists.
-// todo(richardscothern): this assumes v2 schema 1 manifests for now but in the future
-// get the version from the Accept HTTP header
 func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http.Request) {
 	ctxu.GetLogger(imh).Debug("GetImageManifest")
 	manifests, err := imh.Repository.Manifests(imh)
@@ -81,6 +81,47 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 	if err != nil {
 		imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
 		return
+	}
+
+	// Only rewrite schema2 manifests when they are being fetched by tag.
+	// If they are being fetched by digest, we can't return something not
+	// matching the digest.
+	if _, isSchema2 := manifest.(*schema2.DeserializedManifest); imh.Tag != "" && isSchema2 {
+		supportsSchema2 := false
+		if acceptHeaders, ok := r.Header["Accept"]; ok {
+			for _, mediaType := range acceptHeaders {
+				if mediaType == schema2.MediaTypeManifest {
+					supportsSchema2 = true
+					break
+				}
+			}
+		}
+
+		if !supportsSchema2 {
+			// Rewrite manifest in schema1 format
+			ctxu.GetLogger(imh).Infof("rewriting manifest %s in schema1 format to support old client", imh.Digest.String())
+
+			targetDescriptor := manifest.Target()
+			blobs := imh.Repository.Blobs(imh)
+			configJSON, err := blobs.Get(imh, targetDescriptor.Digest)
+			if err != nil {
+				imh.Errors = append(imh.Errors, v2.ErrorCodeManifestInvalid.WithDetail(err))
+				return
+			}
+
+			builder := schema1.NewConfigManifestBuilder(imh.Repository.Blobs(imh), imh.Context.App.trustKey, imh.Repository.Name(), imh.Tag, configJSON)
+			for _, d := range manifest.References() {
+				if err := builder.AppendReference(d); err != nil {
+					imh.Errors = append(imh.Errors, v2.ErrorCodeManifestInvalid.WithDetail(err))
+					return
+				}
+			}
+			manifest, err = builder.Build(imh)
+			if err != nil {
+				imh.Errors = append(imh.Errors, v2.ErrorCodeManifestInvalid.WithDetail(err))
+				return
+			}
+		}
 	}
 
 	ct, p, err := manifest.Payload()
