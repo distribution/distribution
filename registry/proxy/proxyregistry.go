@@ -7,6 +7,7 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/configuration"
 	"github.com/docker/distribution/context"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/client"
 	"github.com/docker/distribution/registry/client/auth"
 	"github.com/docker/distribution/registry/client/transport"
@@ -70,9 +71,9 @@ func (pr *proxyingRegistry) Repositories(ctx context.Context, repos []string, la
 	return pr.embedded.Repositories(ctx, repos, last)
 }
 
-func (pr *proxyingRegistry) Repository(ctx context.Context, name string) (distribution.Repository, error) {
+func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named) (distribution.Repository, error) {
 	tr := transport.NewTransport(http.DefaultTransport,
-		auth.NewAuthorizer(pr.challengeManager, auth.NewTokenHandler(http.DefaultTransport, pr.credentialStore, name, "pull")))
+		auth.NewAuthorizer(pr.challengeManager, auth.NewTokenHandler(http.DefaultTransport, pr.credentialStore, name.String(), "pull")))
 
 	localRepo, err := pr.embedded.Repository(ctx, name)
 	if err != nil {
@@ -117,7 +118,7 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name string) (distri
 type proxiedRepository struct {
 	blobStore  distribution.BlobStore
 	manifests  distribution.ManifestService
-	name       string
+	name       reference.Named
 	signatures distribution.SignatureService
 }
 
@@ -130,7 +131,7 @@ func (pr *proxiedRepository) Blobs(ctx context.Context) distribution.BlobStore {
 	return pr.blobStore
 }
 
-func (pr *proxiedRepository) Name() string {
+func (pr *proxiedRepository) Name() reference.Named {
 	return pr.name
 }
 

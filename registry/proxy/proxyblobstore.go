@@ -133,7 +133,7 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 		if err := pbs.storeLocal(ctx, dgst); err != nil {
 			context.GetLogger(ctx).Errorf("Error committing to storage: %s", err.Error())
 		}
-		pbs.scheduler.AddBlob(dgst.String(), repositoryTTL)
+		pbs.scheduler.AddBlob(dgst, repositoryTTL)
 	}(dgst)
 
 	_, err = pbs.copyContent(ctx, dgst, w)

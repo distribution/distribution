@@ -10,6 +10,7 @@ import (
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/manifest/schema1"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage"
 	"github.com/docker/distribution/registry/storage/cache/memory"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
@@ -27,7 +28,8 @@ func TestListener(t *testing.T) {
 		ops: make(map[string]int),
 	}
 
-	repository, err := registry.Repository(ctx, "foo/bar")
+	repoRef, _ := reference.ParseNamed("foo/bar")
+	repository, err := registry.Repository(ctx, repoRef)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
 	}
@@ -55,33 +57,33 @@ type testListener struct {
 	ops map[string]int
 }
 
-func (tl *testListener) ManifestPushed(repo string, sm *schema1.SignedManifest) error {
+func (tl *testListener) ManifestPushed(repo reference.Named, sm *schema1.SignedManifest) error {
 	tl.ops["manifest:push"]++
 
 	return nil
 }
 
-func (tl *testListener) ManifestPulled(repo string, sm *schema1.SignedManifest) error {
+func (tl *testListener) ManifestPulled(repo reference.Named, sm *schema1.SignedManifest) error {
 	tl.ops["manifest:pull"]++
 	return nil
 }
 
-func (tl *testListener) ManifestDeleted(repo string, sm *schema1.SignedManifest) error {
+func (tl *testListener) ManifestDeleted(repo reference.Named, sm *schema1.SignedManifest) error {
 	tl.ops["manifest:delete"]++
 	return nil
 }
 
-func (tl *testListener) BlobPushed(repo string, desc distribution.Descriptor) error {
+func (tl *testListener) BlobPushed(repo reference.Named, desc distribution.Descriptor) error {
 	tl.ops["layer:push"]++
 	return nil
 }
 
-func (tl *testListener) BlobPulled(repo string, desc distribution.Descriptor) error {
+func (tl *testListener) BlobPulled(repo reference.Named, desc distribution.Descriptor) error {
 	tl.ops["layer:pull"]++
 	return nil
 }
 
-func (tl *testListener) BlobDeleted(repo string, desc distribution.Descriptor) error {
+func (tl *testListener) BlobDeleted(repo reference.Named, desc distribution.Descriptor) error {
 	tl.ops["layer:delete"]++
 	return nil
 }
@@ -99,7 +101,7 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
-		Name: repository.Name(),
+		Name: repository.Name().String(),
 		Tag:  tag,
 	}
 

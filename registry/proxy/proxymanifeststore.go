@@ -7,6 +7,7 @@ import (
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest/schema1"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/client"
 	"github.com/docker/distribution/registry/proxy/scheduler"
 )
@@ -18,7 +19,7 @@ type proxyManifestStore struct {
 	ctx             context.Context
 	localManifests  distribution.ManifestService
 	remoteManifests distribution.ManifestService
-	repositoryName  string
+	repositoryName  reference.Named
 	scheduler       *scheduler.TTLExpirationScheduler
 }
 
@@ -58,7 +59,7 @@ func (pms proxyManifestStore) Get(dgst digest.Digest) (*schema1.SignedManifest, 
 	pms.scheduler.AddManifest(pms.repositoryName, repositoryTTL)
 
 	// Ensure the manifest blob is cleaned up
-	pms.scheduler.AddBlob(dgst.String(), repositoryTTL)
+	pms.scheduler.AddBlob(dgst, repositoryTTL)
 
 	proxyMetrics.ManifestPush(uint64(len(sm.Raw)))
 
@@ -121,7 +122,7 @@ fromremote:
 	if err != nil {
 		return nil, err
 	}
-	pms.scheduler.AddBlob(dgst.String(), repositoryTTL)
+	pms.scheduler.AddBlob(dgst, repositoryTTL)
 	pms.scheduler.AddManifest(pms.repositoryName, repositoryTTL)
 
 	proxyMetrics.ManifestPull(uint64(len(sm.Raw)))
