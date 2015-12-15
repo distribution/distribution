@@ -23,6 +23,7 @@ import (
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/manifest/schema1"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
 	_ "github.com/docker/distribution/registry/storage/driver/inmemory"
@@ -248,7 +249,7 @@ func TestURLPrefix(t *testing.T) {
 }
 
 type blobArgs struct {
-	imageName   string
+	imageName   reference.Named
 	layerFile   io.ReadSeeker
 	layerDigest digest.Digest
 	tarSumStr   string
@@ -263,11 +264,11 @@ func makeBlobArgs(t *testing.T) blobArgs {
 	layerDigest := digest.Digest(tarSumStr)
 
 	args := blobArgs{
-		imageName:   "foo/bar",
 		layerFile:   layerFile,
 		layerDigest: layerDigest,
 		tarSumStr:   tarSumStr,
 	}
+	args.imageName, _ = reference.ParseNamed("foo/bar")
 	return args
 }
 
@@ -610,7 +611,7 @@ func testBlobDelete(t *testing.T, env *testEnv, args blobArgs) {
 func TestDeleteDisabled(t *testing.T) {
 	env := newTestEnv(t, false)
 
-	imageName := "foo/bar"
+	imageName, _ := reference.ParseNamed("foo/bar")
 	// "build" our layer file
 	layerFile, tarSumStr, err := testutil.CreateRandomTarFile()
 	if err != nil {
@@ -636,7 +637,7 @@ func TestDeleteDisabled(t *testing.T) {
 func TestDeleteReadOnly(t *testing.T) {
 	env := newTestEnv(t, true)
 
-	imageName := "foo/bar"
+	imageName, _ := reference.ParseNamed("foo/bar")
 	// "build" our layer file
 	layerFile, tarSumStr, err := testutil.CreateRandomTarFile()
 	if err != nil {
@@ -665,7 +666,7 @@ func TestStartPushReadOnly(t *testing.T) {
 	env := newTestEnv(t, true)
 	env.app.readOnly = true
 
-	imageName := "foo/bar"
+	imageName, _ := reference.ParseNamed("foo/bar")
 
 	layerUploadURL, err := env.builder.BuildBlobUploadURL(imageName)
 	if err != nil {
@@ -696,15 +697,14 @@ func httpDelete(url string) (*http.Response, error) {
 }
 
 type manifestArgs struct {
-	imageName      string
+	imageName      reference.Named
 	signedManifest *schema1.SignedManifest
 	dgst           digest.Digest
 }
 
 func makeManifestArgs(t *testing.T) manifestArgs {
-	args := manifestArgs{
-		imageName: "foo/bar",
-	}
+	args := manifestArgs{}
+	args.imageName, _ = reference.ParseNamed("foo/bar")
 
 	return args
 }
@@ -794,7 +794,7 @@ func testManifestAPI(t *testing.T, env *testEnv, args manifestArgs) (*testEnv, m
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
-		Name: imageName,
+		Name: imageName.String(),
 		Tag:  tag,
 		FSLayers: []schema1.FSLayer{
 			{
@@ -995,8 +995,8 @@ func testManifestAPI(t *testing.T, env *testEnv, args manifestArgs) (*testEnv, m
 		t.Fatalf("unexpected error decoding error response: %v", err)
 	}
 
-	if tagsResponse.Name != imageName {
-		t.Fatalf("tags name should match image name: %v != %v", tagsResponse.Name, imageName)
+	if tagsResponse.Name != imageName.String() {
+		t.Fatalf("tags name should match image name: %v != %v", tagsResponse.Name, imageName.String())
 	}
 
 	if len(tagsResponse.Tags) != 1 {
@@ -1173,7 +1173,7 @@ func putManifest(t *testing.T, msg, url string, v interface{}) *http.Response {
 	return resp
 }
 
-func startPushLayer(t *testing.T, ub *v2.URLBuilder, name string) (location string, uuid string) {
+func startPushLayer(t *testing.T, ub *v2.URLBuilder, name reference.Named) (location string, uuid string) {
 	layerUploadURL, err := ub.BuildBlobUploadURL(name)
 	if err != nil {
 		t.Fatalf("unexpected error building layer upload url: %v", err)
@@ -1185,7 +1185,7 @@ func startPushLayer(t *testing.T, ub *v2.URLBuilder, name string) (location stri
 	}
 	defer resp.Body.Close()
 
-	checkResponse(t, fmt.Sprintf("pushing starting layer push %v", name), resp, http.StatusAccepted)
+	checkResponse(t, fmt.Sprintf("pushing starting layer push %v", name.String()), resp, http.StatusAccepted)
 
 	u, err := url.Parse(resp.Header.Get("Location"))
 	if err != nil {
@@ -1204,7 +1204,7 @@ func startPushLayer(t *testing.T, ub *v2.URLBuilder, name string) (location stri
 
 // doPushLayer pushes the layer content returning the url on success returning
 // the response. If you're only expecting a successful response, use pushLayer.
-func doPushLayer(t *testing.T, ub *v2.URLBuilder, name string, dgst digest.Digest, uploadURLBase string, body io.Reader) (*http.Response, error) {
+func doPushLayer(t *testing.T, ub *v2.URLBuilder, name reference.Named, dgst digest.Digest, uploadURLBase string, body io.Reader) (*http.Response, error) {
 	u, err := url.Parse(uploadURLBase)
 	if err != nil {
 		t.Fatalf("unexpected error parsing pushLayer url: %v", err)
@@ -1228,7 +1228,7 @@ func doPushLayer(t *testing.T, ub *v2.URLBuilder, name string, dgst digest.Diges
 }
 
 // pushLayer pushes the layer content returning the url on success.
-func pushLayer(t *testing.T, ub *v2.URLBuilder, name string, dgst digest.Digest, uploadURLBase string, body io.Reader) string {
+func pushLayer(t *testing.T, ub *v2.URLBuilder, name reference.Named, dgst digest.Digest, uploadURLBase string, body io.Reader) string {
 	digester := digest.Canonical.New()
 
 	resp, err := doPushLayer(t, ub, name, dgst, uploadURLBase, io.TeeReader(body, digester.Hash()))
@@ -1259,7 +1259,7 @@ func pushLayer(t *testing.T, ub *v2.URLBuilder, name string, dgst digest.Digest,
 	return resp.Header.Get("Location")
 }
 
-func finishUpload(t *testing.T, ub *v2.URLBuilder, name string, uploadURLBase string, dgst digest.Digest) string {
+func finishUpload(t *testing.T, ub *v2.URLBuilder, name reference.Named, uploadURLBase string, dgst digest.Digest) string {
 	resp, err := doPushLayer(t, ub, name, dgst, uploadURLBase, nil)
 	if err != nil {
 		t.Fatalf("unexpected error doing push layer request: %v", err)
@@ -1307,7 +1307,7 @@ func doPushChunk(t *testing.T, uploadURLBase string, body io.Reader) (*http.Resp
 	return resp, digester.Digest(), err
 }
 
-func pushChunk(t *testing.T, ub *v2.URLBuilder, name string, uploadURLBase string, body io.Reader, length int64) (string, digest.Digest) {
+func pushChunk(t *testing.T, ub *v2.URLBuilder, name reference.Named, uploadURLBase string, body io.Reader, length int64) (string, digest.Digest) {
 	resp, dgst, err := doPushChunk(t, uploadURLBase, body)
 	if err != nil {
 		t.Fatalf("unexpected error doing push layer request: %v", err)
@@ -1443,6 +1443,11 @@ func checkErr(t *testing.T, err error, msg string) {
 }
 
 func createRepository(env *testEnv, t *testing.T, imageName string, tag string) {
+	imageNameRef, err := reference.ParseNamed(imageName)
+	if err != nil {
+		t.Fatalf("unable to parse reference: %v", err)
+	}
+
 	unsignedManifest := &schema1.Manifest{
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
@@ -1475,8 +1480,8 @@ func createRepository(env *testEnv, t *testing.T, imageName string, tag string) 
 		expectedLayers[dgst] = rs
 		unsignedManifest.FSLayers[i].BlobSum = dgst
 
-		uploadURLBase, _ := startPushLayer(t, env.builder, imageName)
-		pushLayer(t, env.builder, imageName, dgst, uploadURLBase, rs)
+		uploadURLBase, _ := startPushLayer(t, env.builder, imageNameRef)
+		pushLayer(t, env.builder, imageNameRef, dgst, uploadURLBase, rs)
 	}
 
 	signedManifest, err := schema1.Sign(unsignedManifest, env.pk)
@@ -1490,7 +1495,7 @@ func createRepository(env *testEnv, t *testing.T, imageName string, tag string) 
 	dgst, err := digest.FromBytes(payload)
 	checkErr(t, err, "digesting manifest")
 
-	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, dgst.String())
+	manifestDigestURL, err := env.builder.BuildManifestURL(imageNameRef, dgst.String())
 	checkErr(t, err, "building manifest url")
 
 	resp := putManifest(t, "putting signed manifest", manifestDigestURL, signedManifest)
@@ -1507,7 +1512,7 @@ func TestRegistryAsCacheMutationAPIs(t *testing.T) {
 	deleteEnabled := true
 	env := newTestEnvMirror(t, deleteEnabled)
 
-	imageName := "foo/bar"
+	imageName, _ := reference.ParseNamed("foo/bar")
 	tag := "latest"
 	manifestURL, err := env.builder.BuildManifestURL(imageName, tag)
 	if err != nil {
@@ -1519,7 +1524,7 @@ func TestRegistryAsCacheMutationAPIs(t *testing.T) {
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
-		Name:     imageName,
+		Name:     imageName.String(),
 		Tag:      tag,
 		FSLayers: []schema1.FSLayer{},
 		History:  []schema1.History{},

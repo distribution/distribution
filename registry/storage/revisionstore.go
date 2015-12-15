@@ -24,7 +24,7 @@ func (rs *revisionStore) get(ctx context.Context, revision digest.Digest) (*sche
 	if err != nil {
 		if err == distribution.ErrBlobUnknown {
 			return nil, distribution.ErrManifestUnknownRevision{
-				Name:     rs.repository.Name(),
+				Name:     rs.repository.Name().String(),
 				Revision: revision,
 			}
 		}
@@ -39,7 +39,7 @@ func (rs *revisionStore) get(ctx context.Context, revision digest.Digest) (*sche
 	if err != nil {
 		if err == distribution.ErrBlobUnknown {
 			return nil, distribution.ErrManifestUnknownRevision{
-				Name:     rs.repository.Name(),
+				Name:     rs.repository.Name().String(),
 				Revision: revision,
 			}
 		}

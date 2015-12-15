@@ -8,6 +8,7 @@ import (
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest/schema1"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/uuid"
 )
 
@@ -23,8 +24,8 @@ var _ Listener = &bridge{}
 
 // URLBuilder defines a subset of url builder to be used by the event listener.
 type URLBuilder interface {
-	BuildManifestURL(name, tag string) (string, error)
-	BuildBlobURL(name string, dgst digest.Digest) (string, error)
+	BuildManifestURL(name reference.Named, tag string) (string, error)
+	BuildBlobURL(name reference.Named, dgst digest.Digest) (string, error)
 }
 
 // NewBridge returns a notification listener that writes records to sink,
@@ -53,31 +54,31 @@ func NewRequestRecord(id string, r *http.Request) RequestRecord {
 	}
 }
 
-func (b *bridge) ManifestPushed(repo string, sm *schema1.SignedManifest) error {
+func (b *bridge) ManifestPushed(repo reference.Named, sm *schema1.SignedManifest) error {
 	return b.createManifestEventAndWrite(EventActionPush, repo, sm)
 }
 
-func (b *bridge) ManifestPulled(repo string, sm *schema1.SignedManifest) error {
+func (b *bridge) ManifestPulled(repo reference.Named, sm *schema1.SignedManifest) error {
 	return b.createManifestEventAndWrite(EventActionPull, repo, sm)
 }
 
-func (b *bridge) ManifestDeleted(repo string, sm *schema1.SignedManifest) error {
+func (b *bridge) ManifestDeleted(repo reference.Named, sm *schema1.SignedManifest) error {
 	return b.createManifestEventAndWrite(EventActionDelete, repo, sm)
 }
 
-func (b *bridge) BlobPushed(repo string, desc distribution.Descriptor) error {
+func (b *bridge) BlobPushed(repo reference.Named, desc distribution.Descriptor) error {
 	return b.createBlobEventAndWrite(EventActionPush, repo, desc)
 }
 
-func (b *bridge) BlobPulled(repo string, desc distribution.Descriptor) error {
+func (b *bridge) BlobPulled(repo reference.Named, desc distribution.Descriptor) error {
 	return b.createBlobEventAndWrite(EventActionPull, repo, desc)
 }
 
-func (b *bridge) BlobDeleted(repo string, desc distribution.Descriptor) error {
+func (b *bridge) BlobDeleted(repo reference.Named, desc distribution.Descriptor) error {
 	return b.createBlobEventAndWrite(EventActionDelete, repo, desc)
 }
 
-func (b *bridge) createManifestEventAndWrite(action string, repo string, sm *schema1.SignedManifest) error {
+func (b *bridge) createManifestEventAndWrite(action string, repo reference.Named, sm *schema1.SignedManifest) error {
 	manifestEvent, err := b.createManifestEvent(action, repo, sm)
 	if err != nil {
 		return err
@@ -86,10 +87,10 @@ func (b *bridge) createManifestEventAndWrite(action string, repo string, sm *sch
 	return b.sink.Write(*manifestEvent)
 }
 
-func (b *bridge) createManifestEvent(action string, repo string, sm *schema1.SignedManifest) (*Event, error) {
+func (b *bridge) createManifestEvent(action string, repo reference.Named, sm *schema1.SignedManifest) (*Event, error) {
 	event := b.createEvent(action)
 	event.Target.MediaType = schema1.ManifestMediaType
-	event.Target.Repository = repo
+	event.Target.Repository = repo.String()
 
 	p, err := sm.Payload()
 	if err != nil {
@@ -103,7 +104,12 @@ func (b *bridge) createManifestEvent(action string, repo string, sm *schema1.Sig
 		return nil, err
 	}
 
-	event.Target.URL, err = b.ub.BuildManifestURL(sm.Name, event.Target.Digest.String())
+	nameRef, err := reference.ParseNamed(sm.Name)
+	if err != nil {
+		return nil, err
+	}
+
+	event.Target.URL, err = b.ub.BuildManifestURL(nameRef, event.Target.Digest.String())
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +117,7 @@ func (b *bridge) createManifestEvent(action string, repo string, sm *schema1.Sig
 	return event, nil
 }
 
-func (b *bridge) createBlobEventAndWrite(action string, repo string, desc distribution.Descriptor) error {
+func (b *bridge) createBlobEventAndWrite(action string, repo reference.Named, desc distribution.Descriptor) error {
 	event, err := b.createBlobEvent(action, repo, desc)
 	if err != nil {
 		return err
@@ -120,11 +126,11 @@ func (b *bridge) createBlobEventAndWrite(action string, repo string, desc distri
 	return b.sink.Write(*event)
 }
 
-func (b *bridge) createBlobEvent(action string, repo string, desc distribution.Descriptor) (*Event, error) {
+func (b *bridge) createBlobEvent(action string, repo reference.Named, desc distribution.Descriptor) (*Event, error) {
 	event := b.createEvent(action)
 	event.Target.Descriptor = desc
 	event.Target.Length = desc.Size
-	event.Target.Repository = repo
+	event.Target.Repository = repo.String()
 
 	var err error
 	event.Target.URL, err = b.ub.BuildBlobURL(repo, desc.Digest)

@@ -27,7 +27,7 @@ var _ distribution.SignatureService = &signatureStore{}
 
 func (s *signatureStore) Get(dgst digest.Digest) ([][]byte, error) {
 	signaturesPath, err := pathFor(manifestSignaturesPathSpec{
-		name:     s.repository.Name(),
+		name:     s.repository.Name().String(),
 		revision: dgst,
 	})
 

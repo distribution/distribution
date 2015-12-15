@@ -8,28 +8,29 @@ import (
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest/schema1"
+	"github.com/docker/distribution/reference"
 )
 
 // ManifestListener describes a set of methods for listening to events related to manifests.
 type ManifestListener interface {
-	ManifestPushed(repo string, sm *schema1.SignedManifest) error
-	ManifestPulled(repo string, sm *schema1.SignedManifest) error
+	ManifestPushed(repo reference.Named, sm *schema1.SignedManifest) error
+	ManifestPulled(repo reference.Named, sm *schema1.SignedManifest) error
 
 	// TODO(stevvooe): Please note that delete support is still a little shaky
 	// and we'll need to propagate these in the future.
 
-	ManifestDeleted(repo string, sm *schema1.SignedManifest) error
+	ManifestDeleted(repo reference.Named, sm *schema1.SignedManifest) error
 }
 
 // BlobListener describes a listener that can respond to layer related events.
 type BlobListener interface {
-	BlobPushed(repo string, desc distribution.Descriptor) error
-	BlobPulled(repo string, desc distribution.Descriptor) error
+	BlobPushed(repo reference.Named, desc distribution.Descriptor) error
+	BlobPulled(repo reference.Named, desc distribution.Descriptor) error
 
 	// TODO(stevvooe): Please note that delete support is still a little shaky
 	// and we'll need to propagate these in the future.
 
-	BlobDeleted(repo string, desc distribution.Descriptor) error
+	BlobDeleted(repo reference.Named, desc distribution.Descriptor) error
 }
 
 // Listener combines all repository events into a single interface.

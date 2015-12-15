@@ -19,7 +19,7 @@ type tagStore struct {
 // tags lists the manifest tags for the specified repository.
 func (ts *tagStore) tags() ([]string, error) {
 	p, err := pathFor(manifestTagPathSpec{
-		name: ts.repository.Name(),
+		name: ts.repository.Name().String(),
 	})
 
 	if err != nil {
@@ -31,7 +31,7 @@ func (ts *tagStore) tags() ([]string, error) {
 	if err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
-			return nil, distribution.ErrRepositoryUnknown{Name: ts.repository.Name()}
+			return nil, distribution.ErrRepositoryUnknown{Name: ts.repository.Name().String()}
 		default:
 			return nil, err
 		}
@@ -49,7 +49,7 @@ func (ts *tagStore) tags() ([]string, error) {
 // exists returns true if the specified manifest tag exists in the repository.
 func (ts *tagStore) exists(tag string) (bool, error) {
 	tagPath, err := pathFor(manifestTagCurrentPathSpec{
-		name: ts.repository.Name(),
+		name: ts.repository.Name().String(),
 		tag:  tag,
 	})
 
@@ -69,7 +69,7 @@ func (ts *tagStore) exists(tag string) (bool, error) {
 // the current tag. The digest must point to a manifest.
 func (ts *tagStore) tag(tag string, revision digest.Digest) error {
 	currentPath, err := pathFor(manifestTagCurrentPathSpec{
-		name: ts.repository.Name(),
+		name: ts.repository.Name().String(),
 		tag:  tag,
 	})
 
@@ -90,7 +90,7 @@ func (ts *tagStore) tag(tag string, revision digest.Digest) error {
 // resolve the current revision for name and tag.
 func (ts *tagStore) resolve(tag string) (digest.Digest, error) {
 	currentPath, err := pathFor(manifestTagCurrentPathSpec{
-		name: ts.repository.Name(),
+		name: ts.repository.Name().String(),
 		tag:  tag,
 	})
 
@@ -102,7 +102,7 @@ func (ts *tagStore) resolve(tag string) (digest.Digest, error) {
 	if err != nil {
 		switch err.(type) {
 		case storagedriver.PathNotFoundError:
-			return "", distribution.ErrManifestUnknown{Name: ts.repository.Name(), Tag: tag}
+			return "", distribution.ErrManifestUnknown{Name: ts.repository.Name().String(), Tag: tag}
 		}
 
 		return "", err
@@ -115,7 +115,7 @@ func (ts *tagStore) resolve(tag string) (digest.Digest, error) {
 // revisions that have the specified tag.
 func (ts *tagStore) delete(tag string) error {
 	tagPath, err := pathFor(manifestTagPathSpec{
-		name: ts.repository.Name(),
+		name: ts.repository.Name().String(),
 		tag:  tag,
 	})
 

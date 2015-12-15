@@ -105,7 +105,7 @@ func (lbs *linkedBlobStore) Create(ctx context.Context) (distribution.BlobWriter
 	startedAt := time.Now().UTC()
 
 	path, err := pathFor(uploadDataPathSpec{
-		name: lbs.repository.Name(),
+		name: lbs.repository.Name().String(),
 		id:   uuid,
 	})
 
@@ -114,7 +114,7 @@ func (lbs *linkedBlobStore) Create(ctx context.Context) (distribution.BlobWriter
 	}
 
 	startedAtPath, err := pathFor(uploadStartedAtPathSpec{
-		name: lbs.repository.Name(),
+		name: lbs.repository.Name().String(),
 		id:   uuid,
 	})
 
@@ -134,7 +134,7 @@ func (lbs *linkedBlobStore) Resume(ctx context.Context, id string) (distribution
 	context.GetLogger(ctx).Debug("(*linkedBlobStore).Resume")
 
 	startedAtPath, err := pathFor(uploadStartedAtPathSpec{
-		name: lbs.repository.Name(),
+		name: lbs.repository.Name().String(),
 		id:   id,
 	})
 
@@ -158,7 +158,7 @@ func (lbs *linkedBlobStore) Resume(ctx context.Context, id string) (distribution
 	}
 
 	path, err := pathFor(uploadDataPathSpec{
-		name: lbs.repository.Name(),
+		name: lbs.repository.Name().String(),
 		id:   id,
 	})
 
@@ -228,7 +228,7 @@ func (lbs *linkedBlobStore) linkBlob(ctx context.Context, canonical distribution
 		}
 		seenDigests[dgst] = struct{}{}
 
-		blobLinkPath, err := linkPathFn(lbs.repository.Name(), dgst)
+		blobLinkPath, err := linkPathFn(lbs.repository.Name().String(), dgst)
 		if err != nil {
 			return err
 		}
@@ -298,7 +298,7 @@ func (lbs *linkedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (dis
 func (lbs *linkedBlobStatter) Clear(ctx context.Context, dgst digest.Digest) (err error) {
 	// clear any possible existence of a link described in linkPathFns
 	for _, linkPathFn := range lbs.linkPathFns {
-		blobLinkPath, err := linkPathFn(lbs.repository.Name(), dgst)
+		blobLinkPath, err := linkPathFn(lbs.repository.Name().String(), dgst)
 		if err != nil {
 			return err
 		}
@@ -321,7 +321,7 @@ func (lbs *linkedBlobStatter) Clear(ctx context.Context, dgst digest.Digest) (er
 // linkPathFuncs to let us try a few different paths before returning not
 // found.
 func (lbs *linkedBlobStatter) resolveWithLinkFunc(ctx context.Context, dgst digest.Digest, linkPathFn linkPathFunc) (digest.Digest, error) {
-	blobLinkPath, err := linkPathFn(lbs.repository.Name(), dgst)
+	blobLinkPath, err := linkPathFn(lbs.repository.Name().String(), dgst)
 	if err != nil {
 		return "", err
 	}

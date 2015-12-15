@@ -9,6 +9,7 @@ import (
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/manifest/schema1"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/proxy/scheduler"
 	"github.com/docker/distribution/registry/storage"
 	"github.com/docker/distribution/registry/storage/cache/memory"
@@ -73,12 +74,17 @@ func (sm statsManifest) Tags() ([]string, error) {
 }
 
 func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestEnv {
+	nameRef, err := reference.ParseNamed(name)
+	if err != nil {
+		t.Fatalf("unable to parse reference: %s", err)
+	}
+
 	ctx := context.Background()
 	truthRegistry, err := storage.NewRegistry(ctx, inmemory.New(), storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()))
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
-	truthRepo, err := truthRegistry.Repository(ctx, name)
+	truthRepo, err := truthRegistry.Repository(ctx, nameRef)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
 	}
@@ -100,7 +106,7 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
-	localRepo, err := localRegistry.Repository(ctx, name)
+	localRepo, err := localRegistry.Repository(ctx, nameRef)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
 	}
