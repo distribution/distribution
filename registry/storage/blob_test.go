@@ -310,6 +310,154 @@ func TestSimpleBlobRead(t *testing.T) {
 	}
 }
 
+// TestBlobMount covers the blob mount process, exercising common
+// error paths that might be seen during a mount.
+func TestBlobMount(t *testing.T) {
+	randomDataReader, dgst, err := testutil.CreateRandomTarFile()
+	if err != nil {
+		t.Fatalf("error creating random reader: %v", err)
+	}
+
+	ctx := context.Background()
+	imageName := "foo/bar"
+	sourceImageName := "foo/source"
+	driver := inmemory.New()
+	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
+	if err != nil {
+		t.Fatalf("error creating registry: %v", err)
+	}
+
+	repository, err := registry.Repository(ctx, imageName)
+	if err != nil {
+		t.Fatalf("unexpected error getting repo: %v", err)
+	}
+	sourceRepository, err := registry.Repository(ctx, sourceImageName)
+	if err != nil {
+		t.Fatalf("unexpected error getting repo: %v", err)
+	}
+
+	sbs := sourceRepository.Blobs(ctx)
+
+	blobUpload, err := sbs.Create(ctx)
+
+	if err != nil {
+		t.Fatalf("unexpected error starting layer upload: %s", err)
+	}
+
+	// Get the size of our random tarfile
+	randomDataSize, err := seekerSize(randomDataReader)
+	if err != nil {
+		t.Fatalf("error getting seeker size of random data: %v", err)
+	}
+
+	nn, err := io.Copy(blobUpload, randomDataReader)
+	if err != nil {
+		t.Fatalf("unexpected error uploading layer data: %v", err)
+	}
+
+	desc, err := blobUpload.Commit(ctx, distribution.Descriptor{Digest: dgst})
+	if err != nil {
+		t.Fatalf("unexpected error finishing layer upload: %v", err)
+	}
+
+	// Test for existence.
+	statDesc, err := sbs.Stat(ctx, desc.Digest)
+	if err != nil {
+		t.Fatalf("unexpected error checking for existence: %v, %#v", err, sbs)
+	}
+
+	if statDesc != desc {
+		t.Fatalf("descriptors not equal: %v != %v", statDesc, desc)
+	}
+
+	bs := repository.Blobs(ctx)
+	// Test destination for existence.
+	statDesc, err = bs.Stat(ctx, desc.Digest)
+	if err == nil {
+		t.Fatalf("unexpected non-error stating unmounted blob: %v", desc)
+	}
+
+	mountDesc, err := bs.Mount(ctx, sourceRepository.Name(), desc.Digest)
+	if err != nil {
+		t.Fatalf("unexpected error mounting layer: %v", err)
+	}
+
+	if mountDesc != desc {
+		t.Fatalf("descriptors not equal: %v != %v", mountDesc, desc)
+	}
+
+	// Test for existence.
+	statDesc, err = bs.Stat(ctx, desc.Digest)
+	if err != nil {
+		t.Fatalf("unexpected error checking for existence: %v, %#v", err, bs)
+	}
+
+	if statDesc != desc {
+		t.Fatalf("descriptors not equal: %v != %v", statDesc, desc)
+	}
+
+	rc, err := bs.Open(ctx, desc.Digest)
+	if err != nil {
+		t.Fatalf("unexpected error opening blob for read: %v", err)
+	}
+	defer rc.Close()
+
+	h := sha256.New()
+	nn, err = io.Copy(h, rc)
+	if err != nil {
+		t.Fatalf("error reading layer: %v", err)
+	}
+
+	if nn != randomDataSize {
+		t.Fatalf("incorrect read length")
+	}
+
+	if digest.NewDigest("sha256", h) != dgst {
+		t.Fatalf("unexpected digest from uploaded layer: %q != %q", digest.NewDigest("sha256", h), dgst)
+	}
+
+	// Delete the blob from the source repo
+	err = sbs.Delete(ctx, desc.Digest)
+	if err != nil {
+		t.Fatalf("Unexpected error deleting blob")
+	}
+
+	d, err := bs.Stat(ctx, desc.Digest)
+	if err != nil {
+		t.Fatalf("unexpected error stating blob deleted from source repository: %v", err)
+	}
+
+	d, err = sbs.Stat(ctx, desc.Digest)
+	if err == nil {
+		t.Fatalf("unexpected non-error stating deleted blob: %v", d)
+	}
+
+	switch err {
+	case distribution.ErrBlobUnknown:
+		break
+	default:
+		t.Errorf("Unexpected error type stat-ing deleted manifest: %#v", err)
+	}
+
+	// Delete the blob from the dest repo
+	err = bs.Delete(ctx, desc.Digest)
+	if err != nil {
+		t.Fatalf("Unexpected error deleting blob")
+	}
+
+	d, err = bs.Stat(ctx, desc.Digest)
+	if err == nil {
+		t.Fatalf("unexpected non-error stating deleted blob: %v", d)
+	}
+
+	switch err {
+	case distribution.ErrBlobUnknown:
+		break
+	default:
+		t.Errorf("Unexpected error type stat-ing deleted manifest: %#v", err)
+	}
+}
+
 // TestLayerUploadZeroLength uploads zero-length
 func TestLayerUploadZeroLength(t *testing.T) {
 	ctx := context.Background()

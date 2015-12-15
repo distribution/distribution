@@ -582,7 +582,7 @@ the uploads endpoint, including the "size" and "digest" parameters:
 POST /v2/<name>/blobs/uploads/?digest=<digest>
 Content-Length: <size of layer>
 Content-Type: application/octet-stream
-  
+
 <Layer Binary Data>
 ```
 
@@ -594,7 +594,7 @@ a place to continue the download.
 
 The single `POST` method is provided for convenience and most clients should
 implement `POST` + `PUT` to support reliable resume of uploads.
-  
+
 ##### Chunked Upload
 
 To carry out an upload of a chunk, the client can specify a range header and
@@ -706,6 +706,34 @@ After this request is issued, the upload uuid will no longer be valid and the
 registry server will dump all intermediate data. While uploads will time out
 if not completed, clients should issue this request if they encounter a fatal
 error but still have the ability to issue an http request.
+
+##### Cross Repository Blob Mount
+
+A blob may be mounted from another repository that the client has read access
+to, removing the need to upload a blob already known to the registry. To issue
+a blob mount instead of an upload, a POST request should be issued in the
+following format:
+
+```
+POST /v2/<name>/blobs/uploads/?mount=<digest>&from=<repository name>
+Content-Length: 0
+```
+
+If the blob is successfully mounted, the client will receive a `201 Created`
+response:
+
+```
+201 Created
+Location: /v2/<name>/blobs/<digest>
+Content-Length: 0
+Docker-Content-Digest: <digest>
+```
+
+The `Location` header will contain the registry URL to access the accepted
+layer file. The `Docker-Content-Digest` header returns the canonical digest of
+the uploaded blob which may differ from the provided digest. Most clients may
+ignore the value but if it is used, the client should verify the value against
+the uploaded blob data.
 
 ##### Errors
 

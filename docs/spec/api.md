@@ -582,7 +582,7 @@ the uploads endpoint, including the "size" and "digest" parameters:
 POST /v2/<name>/blobs/uploads/?digest=<digest>
 Content-Length: <size of layer>
 Content-Type: application/octet-stream
-  
+
 <Layer Binary Data>
 ```
 
@@ -594,7 +594,7 @@ a place to continue the download.
 
 The single `POST` method is provided for convenience and most clients should
 implement `POST` + `PUT` to support reliable resume of uploads.
-  
+
 ##### Chunked Upload
 
 To carry out an upload of a chunk, the client can specify a range header and
@@ -706,6 +706,34 @@ After this request is issued, the upload uuid will no longer be valid and the
 registry server will dump all intermediate data. While uploads will time out
 if not completed, clients should issue this request if they encounter a fatal
 error but still have the ability to issue an http request.
+
+##### Cross Repository Blob Mount
+
+A blob may be mounted from another repository that the client has read access
+to, removing the need to upload a blob already known to the registry. To issue
+a blob mount instead of an upload, a POST request should be issued in the
+following format:
+
+```
+POST /v2/<name>/blobs/uploads/?mount=<digest>&from=<repository name>
+Content-Length: 0
+```
+
+If the blob is successfully mounted, the client will receive a `201 Created`
+response:
+
+```
+201 Created
+Location: /v2/<name>/blobs/<digest>
+Content-Length: 0
+Docker-Content-Digest: <digest>
+```
+
+The `Location` header will contain the registry URL to access the accepted
+layer file. The `Docker-Content-Digest` header returns the canonical digest of
+the uploaded blob which may differ from the provided digest. Most clients may
+ignore the value but if it is used, the client should verify the value against
+the uploaded blob data.
 
 ##### Errors
 
@@ -1023,7 +1051,7 @@ A list of methods and URIs are covered in the table below:
 |------|----|------|-----------|
 | GET | `/v2/` | Base | Check that the endpoint implements Docker Registry API V2. |
 | GET | `/v2/<name>/tags/list` | Tags | Fetch the tags under the repository identified by `name`. |
-| GET | `/v2/<name>/manifests/<reference>` | Manifest | Fetch the manifest identified by `name` and `reference` where `reference` can be a tag or digest. |
+| GET | `/v2/<name>/manifests/<reference>` | Manifest | Fetch the manifest identified by `name` and `reference` where `reference` can be a tag or digest. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data. |
 | PUT | `/v2/<name>/manifests/<reference>` | Manifest | Put the manifest identified by `name` and `reference` where `reference` can be a tag or digest. |
 | DELETE | `/v2/<name>/manifests/<reference>` | Manifest | Delete the manifest identified by `name` and `reference`. Note that a manifest can _only_ be deleted by `digest`. |
 | GET | `/v2/<name>/blobs/<digest>` | Blob | Retrieve the blob from the registry identified by `digest`. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data. |
@@ -1500,7 +1528,7 @@ Create, update, delete and retrieve manifests.
 
 #### GET Manifest
 
-Fetch the manifest identified by `name` and `reference` where `reference` can be a tag or digest.
+Fetch the manifest identified by `name` and `reference` where `reference` can be a tag or digest. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data.
 
 
 
@@ -3197,6 +3225,204 @@ The error codes that may be included in the response body are enumerated below:
 |----|-------|-----------|
 | `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
 | `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
+
+
+
+###### On Failure: Authentication Required
+
+```
+401 Unauthorized
+WWW-Authenticate: <scheme> realm="<realm>", ..."
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The client is not authenticated.
+
+The following headers will be returned on the response:
+
+|Name|Description|
+|----|-----------|
+|`WWW-Authenticate`|An RFC7235 compliant authentication challenge header.|
+|`Content-Length`|Length of the JSON response body.|
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client. Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate. |
+
+
+
+###### On Failure: No Such Repository Error
+
+```
+404 Not Found
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The repository is not known to the registry.
+
+The following headers will be returned on the response:
+
+|Name|Description|
+|----|-----------|
+|`Content-Length`|Length of the JSON response body.|
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
+
+
+
+###### On Failure: Access Denied
+
+```
+403 Forbidden
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The client does not have required access to the repository.
+
+The following headers will be returned on the response:
+
+|Name|Description|
+|----|-----------|
+|`Content-Length`|Length of the JSON response body.|
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `DENIED` | requested access to the resource is denied | The access controller denied access for the operation on a resource. |
+
+
+
+##### Mount Blob
+
+```
+POST /v2/<name>/blobs/uploads/?mount=<digest>&from=<repository name>
+Host: <registry host>
+Authorization: <scheme> <token>
+Content-Length: 0
+```
+
+Mount a blob identified by the `mount` parameter from another repository.
+
+
+The following parameters should be specified on the request:
+
+|Name|Kind|Description|
+|----|----|-----------|
+|`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
+|`Authorization`|header|An RFC7235 compliant authorization header.|
+|`Content-Length`|header|The `Content-Length` header must be zero and the body must be empty.|
+|`name`|path|Name of the target repository.|
+|`mount`|query|Digest of blob to mount from the source repository.|
+|`from`|query|Name of the source repository.|
+
+
+
+
+###### On Success: Created
+
+```
+201 Created
+Location: <blob location>
+Content-Length: 0
+Docker-Upload-UUID: <uuid>
+```
+
+The blob has been mounted in the repository and is available at the provided location.
+
+The following headers will be returned with the response:
+
+|Name|Description|
+|----|-----------|
+|`Location`||
+|`Content-Length`|The `Content-Length` header must be zero and the body must be empty.|
+|`Docker-Upload-UUID`|Identifies the docker upload uuid for the current request.|
+
+
+
+
+###### On Failure: Invalid Name or Digest
+
+```
+400 Bad Request
+```
+
+
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `DIGEST_INVALID` | provided digest did not match uploaded content | When a blob is uploaded, the registry will check that the content matches the digest provided by the client. The error may include a detail structure with the key "digest", including the invalid digest string. This error may also be returned when a manifest includes an invalid layer digest. |
+| `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
+
+
+
+###### On Failure: Not allowed
+
+```
+405 Method Not Allowed
+```
+
+Blob mount is not allowed because the registry is configured as a pull-through cache or for some other reason
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `UNSUPPORTED` | The operation is unsupported. | The operation was unsupported due to a missing implementation or invalid set of parameters. |
 
 
 
