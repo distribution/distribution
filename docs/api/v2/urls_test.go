@@ -35,9 +35,9 @@ func makeURLBuilderTestCases(urlBuilder *URLBuilder) []urlBuilderTestCase {
 		},
 		{
 			description:  "build blob url",
-			expectedPath: "/v2/foo/bar/blobs/tarsum.v1+sha256:abcdef0123456789",
+			expectedPath: "/v2/foo/bar/blobs/sha256:3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5",
 			build: func() (string, error) {
-				return urlBuilder.BuildBlobURL("foo/bar", "tarsum.v1+sha256:abcdef0123456789")
+				return urlBuilder.BuildBlobURL("foo/bar", "sha256:3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5")
 			},
 		},
 		{
@@ -49,11 +49,11 @@ func makeURLBuilderTestCases(urlBuilder *URLBuilder) []urlBuilderTestCase {
 		},
 		{
 			description:  "build blob upload url with digest and size",
-			expectedPath: "/v2/foo/bar/blobs/uploads/?digest=tarsum.v1%2Bsha256%3Aabcdef0123456789&size=10000",
+			expectedPath: "/v2/foo/bar/blobs/uploads/?digest=sha256%3A3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5&size=10000",
 			build: func() (string, error) {
 				return urlBuilder.BuildBlobUploadURL("foo/bar", url.Values{
 					"size":   []string{"10000"},
-					"digest": []string{"tarsum.v1+sha256:abcdef0123456789"},
+					"digest": []string{"sha256:3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5"},
 				})
 			},
 		},
@@ -66,11 +66,11 @@ func makeURLBuilderTestCases(urlBuilder *URLBuilder) []urlBuilderTestCase {
 		},
 		{
 			description:  "build blob upload chunk url with digest and size",
-			expectedPath: "/v2/foo/bar/blobs/uploads/uuid-part?digest=tarsum.v1%2Bsha256%3Aabcdef0123456789&size=10000",
+			expectedPath: "/v2/foo/bar/blobs/uploads/uuid-part?digest=sha256%3A3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5&size=10000",
 			build: func() (string, error) {
 				return urlBuilder.BuildBlobUploadChunkURL("foo/bar", "uuid-part", url.Values{
 					"size":   []string{"10000"},
-					"digest": []string{"tarsum.v1+sha256:abcdef0123456789"},
+					"digest": []string{"sha256:3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5"},
 				})
 			},
 		},

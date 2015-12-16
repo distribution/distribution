@@ -251,22 +251,18 @@ type blobArgs struct {
 	imageName   string
 	layerFile   io.ReadSeeker
 	layerDigest digest.Digest
-	tarSumStr   string
 }
 
 func makeBlobArgs(t *testing.T) blobArgs {
-	layerFile, tarSumStr, err := testutil.CreateRandomTarFile()
+	layerFile, layerDigest, err := testutil.CreateRandomTarFile()
 	if err != nil {
 		t.Fatalf("error creating random layer file: %v", err)
 	}
-
-	layerDigest := digest.Digest(tarSumStr)
 
 	args := blobArgs{
 		imageName:   "foo/bar",
 		layerFile:   layerFile,
 		layerDigest: layerDigest,
-		tarSumStr:   tarSumStr,
 	}
 	return args
 }
@@ -393,7 +389,7 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 
 	// -----------------------------------------
 	// Do layer push with an empty body and correct digest
-	zeroDigest, err := digest.FromTarArchive(bytes.NewReader([]byte{}))
+	zeroDigest, err := digest.FromReader(bytes.NewReader([]byte{}))
 	if err != nil {
 		t.Fatalf("unexpected error digesting empty buffer: %v", err)
 	}
@@ -406,7 +402,7 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 
 	// This is a valid but empty tarfile!
 	emptyTar := bytes.Repeat([]byte("\x00"), 1024)
-	emptyDigest, err := digest.FromTarArchive(bytes.NewReader(emptyTar))
+	emptyDigest, err := digest.FromReader(bytes.NewReader(emptyTar))
 	if err != nil {
 		t.Fatalf("unexpected error digesting empty tar: %v", err)
 	}
@@ -476,7 +472,7 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 
 	// ----------------
 	// Fetch the layer with an invalid digest
-	badURL := strings.Replace(layerURL, "tarsum", "trsum", 1)
+	badURL := strings.Replace(layerURL, "sha256", "sha257", 1)
 	resp, err = http.Get(badURL)
 	if err != nil {
 		t.Fatalf("unexpected error fetching layer: %v", err)
@@ -523,7 +519,7 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 	checkResponse(t, "fetching layer with invalid etag", resp, http.StatusOK)
 
 	// Missing tests:
-	// 	- Upload the same tarsum file under and different repository and
+	// 	- Upload the same tar file under and different repository and
 	//       ensure the content remains uncorrupted.
 	return env
 }
@@ -570,7 +566,7 @@ func testBlobDelete(t *testing.T, env *testEnv, args blobArgs) {
 
 	// ----------------
 	// Attempt to delete a layer with an invalid digest
-	badURL := strings.Replace(layerURL, "tarsum", "trsum", 1)
+	badURL := strings.Replace(layerURL, "sha256", "sha257", 1)
 	resp, err = httpDelete(badURL)
 	if err != nil {
 		t.Fatalf("unexpected error fetching layer: %v", err)
@@ -612,12 +608,11 @@ func TestDeleteDisabled(t *testing.T) {
 
 	imageName := "foo/bar"
 	// "build" our layer file
-	layerFile, tarSumStr, err := testutil.CreateRandomTarFile()
+	layerFile, layerDigest, err := testutil.CreateRandomTarFile()
 	if err != nil {
 		t.Fatalf("error creating random layer file: %v", err)
 	}
 
-	layerDigest := digest.Digest(tarSumStr)
 	layerURL, err := env.builder.BuildBlobURL(imageName, layerDigest)
 	if err != nil {
 		t.Fatalf("Error building blob URL")
@@ -638,12 +633,11 @@ func TestDeleteReadOnly(t *testing.T) {
 
 	imageName := "foo/bar"
 	// "build" our layer file
-	layerFile, tarSumStr, err := testutil.CreateRandomTarFile()
+	layerFile, layerDigest, err := testutil.CreateRandomTarFile()
 	if err != nil {
 		t.Fatalf("error creating random layer file: %v", err)
 	}
 
-	layerDigest := digest.Digest(tarSumStr)
 	layerURL, err := env.builder.BuildBlobURL(imageName, layerDigest)
 	if err != nil {
 		t.Fatalf("Error building blob URL")
