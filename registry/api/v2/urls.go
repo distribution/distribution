@@ -5,7 +5,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/reference"
 	"github.com/gorilla/mux"
 )
@@ -127,10 +126,18 @@ func (ub *URLBuilder) BuildTagsURL(name reference.Named) (string, error) {
 
 // BuildManifestURL constructs a url for the manifest identified by name and
 // reference. The argument reference may be either a tag or digest.
-func (ub *URLBuilder) BuildManifestURL(name reference.Named, reference string) (string, error) {
+func (ub *URLBuilder) BuildManifestURL(ref reference.Named) (string, error) {
 	route := ub.cloneRoute(RouteNameManifest)
 
-	manifestURL, err := route.URL("name", name.Name(), "reference", reference)
+	tagOrDigest := ""
+	switch v := ref.(type) {
+	case reference.Tagged:
+		tagOrDigest = v.Tag()
+	case reference.Digested:
+		tagOrDigest = v.Digest().String()
+	}
+
+	manifestURL, err := route.URL("name", ref.Name(), "reference", tagOrDigest)
 	if err != nil {
 		return "", err
 	}
@@ -139,10 +146,10 @@ func (ub *URLBuilder) BuildManifestURL(name reference.Named, reference string) (
 }
 
 // BuildBlobURL constructs the url for the blob identified by name and dgst.
-func (ub *URLBuilder) BuildBlobURL(name reference.Named, dgst digest.Digest) (string, error) {
+func (ub *URLBuilder) BuildBlobURL(ref reference.Canonical) (string, error) {
 	route := ub.cloneRoute(RouteNameBlob)
 
-	layerURL, err := route.URL("name", name.Name(), "digest", dgst.String())
+	layerURL, err := route.URL("name", ref.Name(), "digest", ref.Digest().String())
 	if err != nil {
 		return "", err
 	}

@@ -100,7 +100,8 @@ func checkCommonManifest(t *testing.T, action string, events ...Event) {
 	}
 
 	repoRef, _ := reference.ParseNamed(repo)
-	u, err := ub.BuildManifestURL(repoRef, dgst.String())
+	ref, _ := reference.WithDigest(repoRef, dgst)
+	u, err := ub.BuildManifestURL(ref)
 	if err != nil {
 		t.Fatalf("error building expected url: %v", err)
 	}
