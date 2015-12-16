@@ -301,7 +301,8 @@ func TestBlobDeleteDisabled(t *testing.T) {
 
 	imageName := args.imageName
 	layerDigest := args.layerDigest
-	layerURL, err := env.builder.BuildBlobURL(imageName, layerDigest)
+	ref, _ := reference.WithDigest(imageName, layerDigest)
+	layerURL, err := env.builder.BuildBlobURL(ref)
 	if err != nil {
 		t.Fatalf("error building url: %v", err)
 	}
@@ -324,7 +325,8 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 
 	// -----------------------------------
 	// Test fetch for non-existent content
-	layerURL, err := env.builder.BuildBlobURL(imageName, layerDigest)
+	ref, _ := reference.WithDigest(imageName, layerDigest)
+	layerURL, err := env.builder.BuildBlobURL(ref)
 	if err != nil {
 		t.Fatalf("error building url: %v", err)
 	}
@@ -534,7 +536,8 @@ func testBlobDelete(t *testing.T, env *testEnv, args blobArgs) {
 	layerFile := args.layerFile
 	layerDigest := args.layerDigest
 
-	layerURL, err := env.builder.BuildBlobURL(imageName, layerDigest)
+	ref, _ := reference.WithDigest(imageName, layerDigest)
+	layerURL, err := env.builder.BuildBlobURL(ref)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -617,7 +620,8 @@ func TestDeleteDisabled(t *testing.T) {
 		t.Fatalf("error creating random layer file: %v", err)
 	}
 
-	layerURL, err := env.builder.BuildBlobURL(imageName, layerDigest)
+	ref, _ := reference.WithDigest(imageName, layerDigest)
+	layerURL, err := env.builder.BuildBlobURL(ref)
 	if err != nil {
 		t.Fatalf("Error building blob URL")
 	}
@@ -642,7 +646,8 @@ func TestDeleteReadOnly(t *testing.T) {
 		t.Fatalf("error creating random layer file: %v", err)
 	}
 
-	layerURL, err := env.builder.BuildBlobURL(imageName, layerDigest)
+	ref, _ := reference.WithDigest(imageName, layerDigest)
+	layerURL, err := env.builder.BuildBlobURL(ref)
 	if err != nil {
 		t.Fatalf("Error building blob URL")
 	}
@@ -737,7 +742,8 @@ func TestManifestDeleteDisabled(t *testing.T) {
 }
 
 func testManifestDeleteDisabled(t *testing.T, env *testEnv, imageName reference.Named) {
-	manifestURL, err := env.builder.BuildManifestURL(imageName, digest.DigestSha256EmptyTar)
+	ref, _ := reference.WithDigest(imageName, digest.DigestSha256EmptyTar)
+	manifestURL, err := env.builder.BuildManifestURL(ref)
 	if err != nil {
 		t.Fatalf("unexpected error getting manifest url: %v", err)
 	}
@@ -755,7 +761,8 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Name
 	tag := "thetag"
 	args := manifestArgs{imageName: imageName}
 
-	manifestURL, err := env.builder.BuildManifestURL(imageName, tag)
+	tagRef, _ := reference.WithTag(imageName, tag)
+	manifestURL, err := env.builder.BuildManifestURL(tagRef)
 	if err != nil {
 		t.Fatalf("unexpected error getting manifest url: %v", err)
 	}
@@ -879,7 +886,8 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Name
 	args.manifest = signedManifest
 	args.dgst = dgst
 
-	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, dgst.String())
+	digestRef, _ := reference.WithDigest(imageName, dgst)
+	manifestDigestURL, err := env.builder.BuildManifestURL(digestRef)
 	checkErr(t, err, "building manifest url")
 
 	resp = putManifest(t, "putting signed manifest no error", manifestURL, "", signedManifest)
@@ -1075,7 +1083,8 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 		mediaType: schema2.MediaTypeManifest,
 	}
 
-	manifestURL, err := env.builder.BuildManifestURL(imageName, tag)
+	tagRef, _ := reference.WithTag(imageName, tag)
+	manifestURL, err := env.builder.BuildManifestURL(tagRef)
 	if err != nil {
 		t.Fatalf("unexpected error getting manifest url: %v", err)
 	}
@@ -1219,7 +1228,8 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 	args.dgst = dgst
 	args.manifest = deserializedManifest
 
-	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, dgst.String())
+	digestRef, _ := reference.WithDigest(imageName, dgst)
+	manifestDigestURL, err := env.builder.BuildManifestURL(digestRef)
 	checkErr(t, err, "building manifest url")
 
 	resp = putManifest(t, "putting manifest no error", manifestURL, schema2.MediaTypeManifest, manifest)
@@ -1415,7 +1425,8 @@ func testManifestAPIManifestList(t *testing.T, env *testEnv, args manifestArgs) 
 	imageName := args.imageName
 	tag := "manifestlisttag"
 
-	manifestURL, err := env.builder.BuildManifestURL(imageName, tag)
+	tagRef, _ := reference.WithTag(imageName, tag)
+	manifestURL, err := env.builder.BuildManifestURL(tagRef)
 	if err != nil {
 		t.Fatalf("unexpected error getting manifest url: %v", err)
 	}
@@ -1468,7 +1479,8 @@ func testManifestAPIManifestList(t *testing.T, env *testEnv, args manifestArgs) 
 	}
 	dgst := digest.FromBytes(canonical)
 
-	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, dgst.String())
+	digestRef, _ := reference.WithDigest(imageName, dgst)
+	manifestDigestURL, err := env.builder.BuildManifestURL(digestRef)
 	checkErr(t, err, "building manifest url")
 
 	resp = putManifest(t, "putting manifest list no error", manifestURL, manifestlist.MediaTypeManifestList, deserializedManifestList)
@@ -1637,8 +1649,9 @@ func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
 	imageName := args.imageName
 	dgst := args.dgst
 	manifest := args.manifest
-	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, dgst.String())
 
+	ref, _ := reference.WithDigest(imageName, dgst)
+	manifestDigestURL, err := env.builder.BuildManifestURL(ref)
 	// ---------------
 	// Delete by digest
 	resp, err := httpDelete(manifestDigestURL)
@@ -1686,8 +1699,9 @@ func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
 
 	// ---------------
 	// Attempt to delete an unknown manifest
-	unknownDigest := "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-	unknownManifestDigestURL, err := env.builder.BuildManifestURL(imageName, unknownDigest)
+	unknownDigest := digest.Digest("sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+	unknownRef, _ := reference.WithDigest(imageName, unknownDigest)
+	unknownManifestDigestURL, err := env.builder.BuildManifestURL(unknownRef)
 	checkErr(t, err, "building unknown manifest url")
 
 	resp, err = httpDelete(unknownManifestDigestURL)
@@ -1695,11 +1709,12 @@ func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
 	checkResponse(t, "fetching deleted manifest", resp, http.StatusNotFound)
 
 	// --------------------
-	// Uupload manifest by tag
+	// Upload manifest by tag
 	tag := "atag"
-	manifestTagURL, err := env.builder.BuildManifestURL(imageName, tag)
-	resp = putManifest(t, "putting signed manifest by tag", manifestTagURL, args.mediaType, manifest)
-	checkResponse(t, "putting signed manifest by tag", resp, http.StatusCreated)
+	tagRef, _ := reference.WithTag(imageName, tag)
+	manifestTagURL, err := env.builder.BuildManifestURL(tagRef)
+	resp = putManifest(t, "putting manifest by tag", manifestTagURL, args.mediaType, manifest)
+	checkResponse(t, "putting manifest by tag", resp, http.StatusCreated)
 	checkHeaders(t, resp, http.Header{
 		"Location":              []string{manifestDigestURL},
 		"Docker-Content-Digest": []string{dgst.String()},
@@ -1943,7 +1958,8 @@ func pushLayer(t *testing.T, ub *v2.URLBuilder, name reference.Named, dgst diges
 
 	sha256Dgst := digester.Digest()
 
-	expectedLayerURL, err := ub.BuildBlobURL(name, sha256Dgst)
+	ref, _ := reference.WithDigest(name, sha256Dgst)
+	expectedLayerURL, err := ub.BuildBlobURL(ref)
 	if err != nil {
 		t.Fatalf("error building expected layer url: %v", err)
 	}
@@ -1966,7 +1982,8 @@ func finishUpload(t *testing.T, ub *v2.URLBuilder, name reference.Named, uploadU
 
 	checkResponse(t, "putting monolithic chunk", resp, http.StatusCreated)
 
-	expectedLayerURL, err := ub.BuildBlobURL(name, dgst)
+	ref, _ := reference.WithDigest(name, dgst)
+	expectedLayerURL, err := ub.BuildBlobURL(ref)
 	if err != nil {
 		t.Fatalf("error building expected layer url: %v", err)
 	}
@@ -2189,10 +2206,12 @@ func createRepository(env *testEnv, t *testing.T, imageName string, tag string) 
 	dgst := digest.FromBytes(signedManifest.Canonical)
 
 	// Create this repository by tag to ensure the tag mapping is made in the registry
-	manifestDigestURL, err := env.builder.BuildManifestURL(imageNameRef, tag)
+	tagRef, _ := reference.WithTag(imageNameRef, tag)
+	manifestDigestURL, err := env.builder.BuildManifestURL(tagRef)
 	checkErr(t, err, "building manifest url")
 
-	location, err := env.builder.BuildManifestURL(imageNameRef, dgst.String())
+	digestRef, _ := reference.WithDigest(imageNameRef, dgst)
+	location, err := env.builder.BuildManifestURL(digestRef)
 	checkErr(t, err, "building location URL")
 
 	resp := putManifest(t, "putting signed manifest", manifestDigestURL, "", signedManifest)
@@ -2212,7 +2231,8 @@ func TestRegistryAsCacheMutationAPIs(t *testing.T) {
 
 	imageName, _ := reference.ParseNamed("foo/bar")
 	tag := "latest"
-	manifestURL, err := env.builder.BuildManifestURL(imageName, tag)
+	tagRef, _ := reference.WithTag(imageName, tag)
+	manifestURL, err := env.builder.BuildManifestURL(tagRef)
 	if err != nil {
 		t.Fatalf("unexpected error building base url: %v", err)
 	}
@@ -2255,7 +2275,8 @@ func TestRegistryAsCacheMutationAPIs(t *testing.T) {
 	checkResponse(t, fmt.Sprintf("starting layer push to cache %v", imageName), resp, errcode.ErrorCodeUnsupported.Descriptor().HTTPStatusCode)
 
 	// Blob Delete
-	blobURL, err := env.builder.BuildBlobURL(imageName, digest.DigestSha256EmptyTar)
+	ref, _ := reference.WithDigest(imageName, digest.DigestSha256EmptyTar)
+	blobURL, err := env.builder.BuildBlobURL(ref)
 	resp, err = httpDelete(blobURL)
 	checkResponse(t, "deleting blob from cache", resp, errcode.ErrorCodeUnsupported.Descriptor().HTTPStatusCode)
 
@@ -2316,14 +2337,16 @@ func TestProxyManifestGetByTag(t *testing.T) {
 
 	proxyEnv := newTestEnvWithConfig(t, &proxyConfig)
 
-	manifestDigestURL, err := proxyEnv.builder.BuildManifestURL(imageName, dgst.String())
+	digestRef, _ := reference.WithDigest(imageName, dgst)
+	manifestDigestURL, err := proxyEnv.builder.BuildManifestURL(digestRef)
 	checkErr(t, err, "building manifest url")
 
 	resp, err := http.Get(manifestDigestURL)
 	checkErr(t, err, "fetching manifest from proxy by digest")
 	defer resp.Body.Close()
 
-	manifestTagURL, err := proxyEnv.builder.BuildManifestURL(imageName, tag)
+	tagRef, _ := reference.WithTag(imageName, tag)
+	manifestTagURL, err := proxyEnv.builder.BuildManifestURL(tagRef)
 	checkErr(t, err, "building manifest url")
 
 	resp, err = http.Get(manifestTagURL)

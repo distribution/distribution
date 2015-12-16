@@ -33,14 +33,16 @@ func makeURLBuilderTestCases(urlBuilder *URLBuilder) []urlBuilderTestCase {
 			description:  "test manifest url",
 			expectedPath: "/v2/foo/bar/manifests/tag",
 			build: func() (string, error) {
-				return urlBuilder.BuildManifestURL(fooBarRef, "tag")
+				ref, _ := reference.WithTag(fooBarRef, "tag")
+				return urlBuilder.BuildManifestURL(ref)
 			},
 		},
 		{
 			description:  "build blob url",
 			expectedPath: "/v2/foo/bar/blobs/sha256:3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5",
 			build: func() (string, error) {
-				return urlBuilder.BuildBlobURL(fooBarRef, "sha256:3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5")
+				ref, _ := reference.WithDigest(fooBarRef, "sha256:3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5")
+				return urlBuilder.BuildBlobURL(ref)
 			},
 		},
 		{

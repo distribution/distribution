@@ -372,7 +372,11 @@ func (buh *blobUploadHandler) createBlobMountOption(fromRepo, mountDigest string
 // created blob. A 201 Created is written as well as the canonical URL and
 // blob digest.
 func (buh *blobUploadHandler) writeBlobCreatedHeaders(w http.ResponseWriter, desc distribution.Descriptor) error {
-	blobURL, err := buh.urlBuilder.BuildBlobURL(buh.Repository.Name(), desc.Digest)
+	ref, err := reference.WithDigest(buh.Repository.Name(), desc.Digest)
+	if err != nil {
+		return err
+	}
+	blobURL, err := buh.urlBuilder.BuildBlobURL(ref)
 	if err != nil {
 		return err
 	}
