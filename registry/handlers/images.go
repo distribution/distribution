@@ -86,7 +86,7 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 	// Only rewrite schema2 manifests when they are being fetched by tag.
 	// If they are being fetched by digest, we can't return something not
 	// matching the digest.
-	if _, isSchema2 := manifest.(*schema2.DeserializedManifest); imh.Tag != "" && isSchema2 {
+	if schema2Manifest, isSchema2 := manifest.(*schema2.DeserializedManifest); imh.Tag != "" && isSchema2 {
 		supportsSchema2 := false
 		if acceptHeaders, ok := r.Header["Accept"]; ok {
 			for _, mediaType := range acceptHeaders {
@@ -101,7 +101,7 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 			// Rewrite manifest in schema1 format
 			ctxu.GetLogger(imh).Infof("rewriting manifest %s in schema1 format to support old client", imh.Digest.String())
 
-			targetDescriptor := manifest.Target()
+			targetDescriptor := schema2Manifest.Target()
 			blobs := imh.Repository.Blobs(imh)
 			configJSON, err := blobs.Get(imh, targetDescriptor.Digest)
 			if err != nil {
