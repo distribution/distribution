@@ -3,7 +3,6 @@
 title = "HTTP API V2"
 description = "Specification for the Registry API."
 keywords = ["registry, on-prem, images, tags, repository, distribution, api, advanced"]
-aliases = ["/registry/spec/"]
 [menu.main]
 parent="smn_registry_ref"
 +++
@@ -302,11 +301,6 @@ Some examples of _digests_ include the following:
 digest                                                                            | description                                   |
 ----------------------------------------------------------------------------------|------------------------------------------------
 sha256:6c3c624b58dbbcd3c0dd82b4c53f04194d1247c6eebdaab7c610cf7d66709b3b           | Common sha256 based digest                    |
-tarsum.v1+sha256:6c3c624b58dbbcd3c0dd82b4c53f04194d1247c6eebdaab7c610cf7d66709b3b | Tarsum digest, used for legacy layer digests. |
-
-> __NOTE:__ While we show an example of using a `tarsum` digest, the security
-> of tarsum has not been verified. It is recommended that most implementations
-> use sha256 for interoperability.
 
 While the _algorithm_ does allow one to implement a wide variety of
 algorithms, compliant implementations should use sha256. Heavy processing of
@@ -364,7 +358,7 @@ the relevant manifest fields for the registry are the following:
 ----------|------------------------------------------------|
 name      | The name of the image.                         |
 tag       | The tag for this version of the image.         |
-fsLayers  | A list of layer descriptors (including tarsum) |
+fsLayers  | A list of layer descriptors (including digest) |
 signature | A JWS used to verify the manifest content      |
 
 For more information about the manifest format, please see
@@ -372,8 +366,8 @@ For more information about the manifest format, please see
 
 When the manifest is in hand, the client must verify the signature to ensure
 the names and layers are valid. Once confirmed, the client will then use the
-tarsums to download the individual layers. Layers are stored in as blobs in
-the V2 registry API, keyed by their tarsum digest.
+digests to download the individual layers. Layers are stored in as blobs in
+the V2 registry API, keyed by their digest.
 
 #### Pulling an Image Manifest
 
@@ -396,7 +390,7 @@ for details):
        "tag": <tag>,
        "fsLayers": [
           {
-             "blobSum": <tarsum>
+             "blobSum": <digest>
           },
           ...
         ]
@@ -410,15 +404,14 @@ before fetching layers.
 
 #### Pulling a Layer
 
-Layers are stored in the blob portion of the registry, keyed by tarsum digest.
+Layers are stored in the blob portion of the registry, keyed by digest.
 Pulling a layer is carried out by a standard http request. The URL is as
 follows:
 
-    GET /v2/<name>/blobs/<tarsum>
+    GET /v2/<name>/blobs/<digest>
 
 Access to a layer will be gated by the `name` of the repository but is
-identified uniquely in the registry by `tarsum`. The `tarsum` parameter is an
-opaque field, to be interpreted by the tarsum library.
+identified uniquely in the registry by `digest`.
 
 This endpoint may issue a 307 (302 for <HTTP 1.1) redirect to another service
 for downloading the layer and clients should be prepared to handle redirects.
@@ -469,7 +462,7 @@ API. The request should be formatted as follows:
 HEAD /v2/<name>/blobs/<digest>
 ```
 
-If the layer with the tarsum specified in `digest` is available, a 200 OK
+If the layer with the digest specified in `digest` is available, a 200 OK
 response will be received, with no actual body content (this is according to
 http specification). The response will look as follows:
 
@@ -482,7 +475,7 @@ Docker-Content-Digest: <digest>
 When this response is received, the client can assume that the layer is
 already available in the registry under the given name and should take no
 further action to upload the layer. Note that the binary digests may differ
-for the existing registry layer, but the tarsums will be guaranteed to match.
+for the existing registry layer, but the digests will be guaranteed to match.
 
 ##### Uploading the Layer
 
@@ -549,7 +542,7 @@ carry out a "monolithic" upload, one can simply put the entire content blob to
 the provided URL:
 
 ```
-PUT /v2/<name>/blobs/uploads/<uuid>?digest=<tarsum>[&digest=sha256:<hex digest>]
+PUT /v2/<name>/blobs/uploads/<uuid>?digest=<digest>
 Content-Length: <size of layer>
 Content-Type: application/octet-stream
 
@@ -564,7 +557,7 @@ Additionally, the upload can be completed with a single `POST` request to
 the uploads endpoint, including the "size" and "digest" parameters:
 
 ```
-POST /v2/<name>/blobs/uploads/?digest=<tarsum>[&digest=sha256:<hex digest>]
+POST /v2/<name>/blobs/uploads/?digest=<digest>
 Content-Length: <size of layer>
 Content-Type: application/octet-stream
   
@@ -635,7 +628,7 @@ the upload will not be considered complete. The format for the final chunk
 will be as follows:
 
 ```
-PUT /v2/<name>/blob/uploads/<uuid>?digest=<tarsum>[&digest=sha256:<hex digest>]
+PUT /v2/<name>/blob/uploads/<uuid>?digest=<digest>
 Content-Length: <size of chunk>
 Content-Range: <start of range>-<end of range>
 Content-Type: application/octet-stream
@@ -654,7 +647,7 @@ will receive a `201 Created` response:
 
 ```
 201 Created
-Location: /v2/<name>/blobs/<tarsum>
+Location: /v2/<name>/blobs/<digest>
 Content-Length: 0
 Docker-Content-Digest: <digest>
 ```
@@ -668,28 +661,15 @@ the uploaded blob data.
 ###### Digest Parameter
 
 The "digest" parameter is designed as an opaque parameter to support
-verification of a successful transfer. The initial version of the registry API
-will support a tarsum digest, in the standard tarsum format. For example, a
-HTTP URI parameter might be as follows:
-
-```
-tarsum.v1+sha256:6c3c624b58dbbcd3c0dd82b4c53f04194d1247c6eebdaab7c610cf7d66709b3b
-```
-
-Given this parameter, the registry will verify that the provided content does
-result in this tarsum. Optionally, the registry can support other other digest
-parameters for non-tarfile content stored as a layer. A regular hash digest
-might be specified as follows:
+verification of a successful transfer. For example, a HTTP URI parameter
+might be as follows:
 
 ```
 sha256:6c3c624b58dbbcd3c0dd82b4c53f04194d1247c6eebdaab7c610cf7d66709b3b
 ```
 
-Such a parameter would be used to verify that the binary content (as opposed
-to the tar content) would be verified at the end of the upload process.
-
-For the initial version, registry servers are only required to support the
-tarsum format.
+Given this parameter, the registry will verify that the provided content does
+match this digest.
 
 ##### Canceling an Upload
 
@@ -751,7 +731,7 @@ image manifest. An image can be pushed using the following request format:
        "tag": <tag>,
        "fsLayers": [
           {
-             "blobSum": <tarsum>
+             "blobSum": <digest>
           },
           ...
         ]
@@ -770,15 +750,15 @@ for details on possible error codes that may be returned.
 
 If one or more layers are unknown to the registry, `BLOB_UNKNOWN` errors are
 returned. The `detail` field of the error response will have a `digest` field
-identifying the missing blob, which will be a tarsum. An error is returned for
-each unknown blob. The response format is as follows:
+identifying the missing blob. An error is returned for each unknown blob. The
+response format is as follows:
 
     {
         "errors:" [{
                 "code": "BLOB_UNKNOWN",
                 "message": "blob unknown to registry",
                 "detail": {
-                    "digest": <tarsum>
+                    "digest": <digest>
                 }
             },
             ...

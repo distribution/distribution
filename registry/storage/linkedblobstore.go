@@ -282,7 +282,7 @@ func (lbs *linkedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (dis
 	}
 
 	if target != dgst {
-		// Track when we are doing cross-digest domain lookups. ie, tarsum to sha256.
+		// Track when we are doing cross-digest domain lookups. ie, sha512 to sha256.
 		context.GetLogger(ctx).Warnf("looking up blob with canonical target: %v -> %v", dgst, target)
 	}
 

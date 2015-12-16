@@ -84,11 +84,6 @@
 			"Rev": "0e0f322d0a54b994dea9d32541050d177edf6aa3"
 		},
 		{
-			"ImportPath": "github.com/docker/docker/pkg/tarsum",
-			"Comment": "v1.4.1-3932-gb63ec6e",
-			"Rev": "b63ec6e4b1f6f5c77a6a74a52fcea9564538c575"
-		},
-		{
 			"ImportPath": "github.com/docker/libtrust",
 			"Rev": "fa567046d9b14f6aa788882a950d69651d230b21"
 		},

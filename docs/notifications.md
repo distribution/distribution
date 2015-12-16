@@ -170,7 +170,7 @@ Content-Type: application/vnd.docker.distribution.events.v1+json
          "target": {
             "mediaType": "application/vnd.docker.container.image.rootfs.diff+x-gtar",
             "length": 2,
-            "digest": "tarsum.v2+sha256:0123456789abcdef1",
+            "digest": "sha256:3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5",
             "repository": "library/test",
             "url": "http://example.com/v2/library/test/manifests/latest"
          },
@@ -195,7 +195,7 @@ Content-Type: application/vnd.docker.distribution.events.v1+json
          "target": {
             "mediaType": "application/vnd.docker.container.image.rootfs.diff+x-gtar",
             "length": 3,
-            "digest": "tarsum.v2+sha256:0123456789abcdef2",
+            "digest": "sha256:3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d6",
             "repository": "library/test",
             "url": "http://example.com/v2/library/test/manifests/latest"
          },

@@ -13,10 +13,9 @@ type Algorithm string
 
 // supported digest types
 const (
-	SHA256         Algorithm = "sha256"           // sha256 with hex encoding
-	SHA384         Algorithm = "sha384"           // sha384 with hex encoding
-	SHA512         Algorithm = "sha512"           // sha512 with hex encoding
-	TarsumV1SHA256 Algorithm = "tarsum+v1+sha256" // supported tarsum version, verification only
+	SHA256 Algorithm = "sha256" // sha256 with hex encoding
+	SHA384 Algorithm = "sha384" // sha384 with hex encoding
+	SHA512 Algorithm = "sha512" // sha512 with hex encoding
 
 	// Canonical is the primary digest algorithm used with the distribution
 	// project. Other digests may be used but this one is the primary storage

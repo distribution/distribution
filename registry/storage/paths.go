@@ -396,9 +396,8 @@ type layerLinkPathSpec struct {
 func (layerLinkPathSpec) pathSpec() {}
 
 // blobAlgorithmReplacer does some very simple path sanitization for user
-// input. Mostly, this is to provide some hierarchy for tarsum digests. Paths
-// should be "safe" before getting this far due to strict digest requirements
-// but we can add further path conversion here, if needed.
+// input. Paths should be "safe" before getting this far due to strict digest
+// requirements but we can add further path conversion here, if needed.
 var blobAlgorithmReplacer = strings.NewReplacer(
 	"+", "/",
 	".", "/",
@@ -468,10 +467,6 @@ func (repositoriesRootPathSpec) pathSpec() {}
 //
 // 	<algorithm>/<hex digest>
 //
-// Most importantly, for tarsum, the layout looks like this:
-//
-// 	tarsum/<version>/<digest algorithm>/<full digest>
-//
 // If multilevel is true, the first two bytes of the digest will separate
 // groups of digest folder. It will be as follows:
 //
@@ -493,20 +488,6 @@ func digestPathComponents(dgst digest.Digest, multilevel bool) ([]string, error)
 	}
 
 	suffix = append(suffix, hex)
-
-	if tsi, err := digest.ParseTarSum(dgst.String()); err == nil {
-		// We have a tarsum!
-		version := tsi.Version
-		if version == "" {
-			version = "v0"
-		}
-
-		prefix = []string{
-			"tarsum",
-			version,
-			tsi.Algorithm,
-		}
-	}
 
 	return append(prefix, suffix...), nil
 }
