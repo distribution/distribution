@@ -29,6 +29,8 @@ type Configuration struct {
 		// include "text", "json" and "logstash".
 		Formatter string `yaml:"formatter,omitempty"`
 
+		NoColors bool `yaml:"nocolor,omitempty"`
+
 		// Fields allows users to specify static string fields to include in
 		// the logger context.
 		Fields map[string]interface{} `yaml:"fields,omitempty"`
