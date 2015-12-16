@@ -90,10 +90,7 @@ func createTestEnv(t *testing.T, fn testSinkFn) Listener {
 		t.Fatalf("error getting manifest payload: %v", err)
 	}
 
-	dgst, err = digest.FromBytes(payload)
-	if err != nil {
-		t.Fatalf("error digesting manifest payload: %v", err)
-	}
+	dgst = digest.FromBytes(payload)
 
 	return NewBridge(ub, source, actor, request, fn)
 }

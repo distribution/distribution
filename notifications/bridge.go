@@ -98,10 +98,7 @@ func (b *bridge) createManifestEvent(action string, repo string, sm *schema1.Sig
 
 	event.Target.Length = int64(len(p))
 	event.Target.Size = int64(len(p))
-	event.Target.Digest, err = digest.FromBytes(p)
-	if err != nil {
-		return nil, err
-	}
+	event.Target.Digest = digest.FromBytes(p)
 
 	event.Target.URL, err = b.ub.BuildManifestURL(sm.Name, event.Target.Digest.String())
 	if err != nil {

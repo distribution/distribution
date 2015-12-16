@@ -137,12 +137,7 @@ func manifestDigest(sm *schema1.SignedManifest) (digest.Digest, error) {
 
 	}
 
-	dgst, err := digest.FromBytes(payload)
-	if err != nil {
-		return "", err
-	}
-
-	return dgst, nil
+	return digest.FromBytes(payload), nil
 }
 
 func (pms proxyManifestStore) Put(manifest *schema1.SignedManifest) error {

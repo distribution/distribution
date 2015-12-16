@@ -177,7 +177,7 @@ func populateRepo(t *testing.T, ctx context.Context, repository distribution.Rep
 	if err != nil {
 		t.Fatal(err)
 	}
-	return digest.FromBytes(pl)
+	return digest.FromBytes(pl), nil
 }
 
 // TestProxyManifests contains basic acceptance tests

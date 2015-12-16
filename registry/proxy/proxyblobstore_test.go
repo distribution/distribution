@@ -298,10 +298,7 @@ func testProxyStoreServe(t *testing.T, te *testEnv, numClients int) {
 				}
 
 				bodyBytes := w.Body.Bytes()
-				localDigest, err := digest.FromBytes(bodyBytes)
-				if err != nil {
-					t.Fatalf("Error making digest from blob")
-				}
+				localDigest := digest.FromBytes(bodyBytes)
 				if localDigest != remoteBlob.Digest {
 					t.Fatalf("Mismatching blob fetch from proxy")
 				}
@@ -335,10 +332,7 @@ func testProxyStoreServe(t *testing.T, te *testEnv, numClients int) {
 			t.Fatalf(err.Error())
 		}
 
-		dl, err := digest.FromBytes(w.Body.Bytes())
-		if err != nil {
-			t.Fatalf("Error making digest from blob")
-		}
+		dl := digest.FromBytes(w.Body.Bytes())
 		if dl != dr.Digest {
 			t.Errorf("Mismatching blob fetch from proxy")
 		}
