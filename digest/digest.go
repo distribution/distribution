@@ -4,17 +4,11 @@ import (
 	"fmt"
 	"hash"
 	"io"
-	"io/ioutil"
 	"regexp"
 	"strings"
-
-	"github.com/docker/docker/pkg/tarsum"
 )
 
 const (
-	// DigestTarSumV1EmptyTar is the digest for the empty tar file.
-	DigestTarSumV1EmptyTar = "tarsum.v1+sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-
 	// DigestSha256EmptyTar is the canonical sha256 digest of empty data
 	DigestSha256EmptyTar = "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 )
@@ -27,11 +21,6 @@ const (
 // The following is an example of the contents of Digest types:
 //
 // 	sha256:7173b809ca12ec5dee4506cd86be934c4596dd234ee82c0662eac04a8c2c71dc
-//
-// More important for this code base, this type is compatible with tarsum
-// digests. For example, the following would be a valid Digest:
-//
-// 	tarsum+sha256:e58fcf7418d4390dec8e8fb69d88c06ec07039d651fedd3aa72af9972e7d046b
 //
 // This allows to abstract the digest behind this type and work only in those
 // terms.
@@ -78,25 +67,6 @@ func FromReader(rd io.Reader) (Digest, error) {
 	return Canonical.FromReader(rd)
 }
 
-// FromTarArchive produces a tarsum digest from reader rd.
-func FromTarArchive(rd io.Reader) (Digest, error) {
-	ts, err := tarsum.NewTarSum(rd, true, tarsum.Version1)
-	if err != nil {
-		return "", err
-	}
-
-	if _, err := io.Copy(ioutil.Discard, ts); err != nil {
-		return "", err
-	}
-
-	d, err := ParseDigest(ts.Sum(nil))
-	if err != nil {
-		return "", err
-	}
-
-	return d, nil
-}
-
 // FromBytes digests the input and returns a Digest.
 func FromBytes(p []byte) Digest {
 	digester := Canonical.New()
@@ -117,13 +87,6 @@ func FromBytes(p []byte) Digest {
 // error if not.
 func (d Digest) Validate() error {
 	s := string(d)
-	// Common case will be tarsum
-	_, err := ParseTarSum(s)
-	if err == nil {
-		return nil
-	}
-
-	// Continue on for general parser
 
 	if !DigestRegexpAnchored.MatchString(s) {
 		return ErrDigestInvalidFormat

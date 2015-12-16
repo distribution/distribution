@@ -2,8 +2,6 @@ package storage
 
 import (
 	"testing"
-
-	"github.com/docker/distribution/digest"
 )
 
 func TestPathMapper(t *testing.T) {
@@ -83,25 +81,6 @@ func TestPathMapper(t *testing.T) {
 				revision: "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
 			},
 			expected: "/docker/registry/v2/repositories/foo/bar/_manifests/tags/thetag/index/sha256/abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789/link",
-		},
-		{
-			spec: layerLinkPathSpec{
-				name:   "foo/bar",
-				digest: "tarsum.v1+test:abcdef",
-			},
-			expected: "/docker/registry/v2/repositories/foo/bar/_layers/tarsum/v1/test/abcdef/link",
-		},
-		{
-			spec: blobDataPathSpec{
-				digest: digest.Digest("tarsum.dev+sha512:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"),
-			},
-			expected: "/docker/registry/v2/blobs/tarsum/dev/sha512/ab/abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789/data",
-		},
-		{
-			spec: blobDataPathSpec{
-				digest: digest.Digest("tarsum.v1+sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"),
-			},
-			expected: "/docker/registry/v2/blobs/tarsum/v1/sha256/ab/abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789/data",
 		},
 
 		{

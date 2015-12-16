@@ -20,14 +20,9 @@ import (
 // TestSimpleBlobUpload covers the blob upload process, exercising common
 // error paths that might be seen during an upload.
 func TestSimpleBlobUpload(t *testing.T) {
-	randomDataReader, tarSumStr, err := testutil.CreateRandomTarFile()
+	randomDataReader, dgst, err := testutil.CreateRandomTarFile()
 	if err != nil {
 		t.Fatalf("error creating random reader: %v", err)
-	}
-
-	dgst := digest.Digest(tarSumStr)
-	if err != nil {
-		t.Fatalf("error allocating upload store: %v", err)
 	}
 
 	ctx := context.Background()
@@ -225,12 +220,10 @@ func TestSimpleBlobRead(t *testing.T) {
 	}
 	bs := repository.Blobs(ctx)
 
-	randomLayerReader, tarSumStr, err := testutil.CreateRandomTarFile() // TODO(stevvooe): Consider using just a random string.
+	randomLayerReader, dgst, err := testutil.CreateRandomTarFile() // TODO(stevvooe): Consider using just a random string.
 	if err != nil {
 		t.Fatalf("error creating random data: %v", err)
 	}
-
-	dgst := digest.Digest(tarSumStr)
 
 	// Test for existence.
 	desc, err := bs.Stat(ctx, dgst)
@@ -358,7 +351,7 @@ func simpleUpload(t *testing.T, bs distribution.BlobIngester, blob []byte, expec
 
 	if dgst != expectedDigest {
 		// sanity check on zero digest
-		t.Fatalf("digest not as expected: %v != %v", dgst, digest.DigestTarSumV1EmptyTar)
+		t.Fatalf("digest not as expected: %v != %v", dgst, expectedDigest)
 	}
 
 	desc, err := wr.Commit(ctx, distribution.Descriptor{Digest: dgst})

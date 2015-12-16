@@ -119,7 +119,7 @@ func (sm *SignedManifest) MarshalJSON() ([]byte, error) {
 
 // FSLayer is a container struct for BlobSums defined in an image manifest
 type FSLayer struct {
-	// BlobSum is the tarsum of the referenced filesystem image layer
+	// BlobSum is the digest of the referenced filesystem image layer
 	BlobSum digest.Digest `json:"blobSum"`
 }
 

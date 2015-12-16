@@ -249,7 +249,7 @@ func (rsrbds *repositoryScopedRedisBlobDescriptorService) setDescriptor(ctx cont
 	}
 
 	// Also set the values for the primary descriptor, if they differ by
-	// algorithm (ie sha256 vs tarsum).
+	// algorithm (ie sha256 vs sha512).
 	if desc.Digest != "" && dgst != desc.Digest && dgst.Algorithm() != desc.Digest.Algorithm() {
 		if err := rsrbds.setDescriptor(ctx, conn, desc.Digest, desc); err != nil {
 			return err

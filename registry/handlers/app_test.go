@@ -103,13 +103,6 @@ func TestAppDispatcher(t *testing.T) {
 			},
 		},
 		{
-			endpoint: v2.RouteNameBlob,
-			vars: []string{
-				"name", "foo/bar",
-				"digest", "tarsum.v1+bogus:abcdef0123456789",
-			},
-		},
-		{
 			endpoint: v2.RouteNameBlobUpload,
 			vars: []string{
 				"name", "foo/bar",

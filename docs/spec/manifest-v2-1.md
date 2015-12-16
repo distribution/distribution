@@ -55,8 +55,8 @@ Manifest provides the base accessible fields for working with V2 image format
    An fsLayer is a struct consisting of the following fields
       - **`blobSum`** *digest.Digest*
       
-      blobSum is the digest of the referenced filesystem image layer.  A 
-      digest can be a tarsum or sha256 hash.
+      blobSum is the digest of the referenced filesystem image layer. A 
+      digest must be a sha256 hash.
  
    
 - **`history`** *array*

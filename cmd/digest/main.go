@@ -4,14 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/version"
-	"github.com/docker/docker/pkg/tarsum"
 )
 
 var (
@@ -80,36 +77,7 @@ func main() {
 	digestFn := algorithm.FromReader
 
 	if !algorithm.Available() {
-		// we cannot digest if is not available. An exception is made for
-		// tarsum.
-		if !strings.HasPrefix(algorithm.String(), "tarsum") {
-			unsupported()
-		}
-
-		var version tarsum.Version
-		if algorithm == "tarsum" {
-			// small hack: if we just have tarsum, use latest
-			version = tarsum.Version1
-		} else {
-			var err error
-			version, err = tarsum.GetVersionFromTarsum(algorithm.String())
-			if err != nil {
-				unsupported()
-			}
-		}
-
-		digestFn = func(rd io.Reader) (digest.Digest, error) {
-			ts, err := tarsum.NewTarSum(rd, true, version)
-			if err != nil {
-				return "", err
-			}
-
-			if _, err := io.Copy(ioutil.Discard, ts); err != nil {
-				return "", err
-			}
-
-			return digest.Digest(ts.Sum(nil)), nil
-		}
+		unsupported()
 	}
 
 	for _, job := range jobs {
