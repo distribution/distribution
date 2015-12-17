@@ -8,6 +8,7 @@ import (
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/manifest/manifestlist"
 	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/manifest/schema2"
 )
@@ -44,8 +45,9 @@ type manifestStore struct {
 
 	skipDependencyVerification bool
 
-	schema1Handler ManifestHandler
-	schema2Handler ManifestHandler
+	schema1Handler      ManifestHandler
+	schema2Handler      ManifestHandler
+	manifestListHandler ManifestHandler
 }
 
 var _ distribution.ManifestService = &manifestStore{}
@@ -92,7 +94,21 @@ func (ms *manifestStore) Get(ctx context.Context, dgst digest.Digest, options ..
 	case 1:
 		return ms.schema1Handler.Unmarshal(ctx, dgst, content)
 	case 2:
-		return ms.schema2Handler.Unmarshal(ctx, dgst, content)
+		// This can be an image manifest or a manifest list
+		var mediaType struct {
+			MediaType string `json:"mediaType"`
+		}
+		if err = json.Unmarshal(content, &mediaType); err != nil {
+			return nil, err
+		}
+		switch mediaType.MediaType {
+		case schema2.MediaTypeManifest:
+			return ms.schema2Handler.Unmarshal(ctx, dgst, content)
+		case manifestlist.MediaTypeManifestList:
+			return ms.manifestListHandler.Unmarshal(ctx, dgst, content)
+		default:
+			return nil, distribution.ErrManifestVerification{fmt.Errorf("unrecognized manifest content type %s", mediaType.MediaType)}
+		}
 	}
 
 	return nil, fmt.Errorf("unrecognized manifest schema version %d", versioned.SchemaVersion)
@@ -106,6 +122,8 @@ func (ms *manifestStore) Put(ctx context.Context, manifest distribution.Manifest
 		return ms.schema1Handler.Put(ctx, manifest, ms.skipDependencyVerification)
 	case *schema2.DeserializedManifest:
 		return ms.schema2Handler.Put(ctx, manifest, ms.skipDependencyVerification)
+	case *manifestlist.DeserializedManifestList:
+		return ms.manifestListHandler.Put(ctx, manifest, ms.skipDependencyVerification)
 	}
 
 	return "", fmt.Errorf("unrecognized manifest type %T", manifest)

@@ -62,9 +62,8 @@ func (ms *schema2ManifestHandler) Put(ctx context.Context, manifest distribution
 }
 
 // verifyManifest ensures that the manifest content is valid from the
-// perspective of the registry. It ensures that the signature is valid for the
-// enclosed payload. As a policy, the registry only tries to store valid
-// content, leaving trust policies of that content up to consumems.
+// perspective of the registry. As a policy, the registry only tries to store
+// valid content, leaving trust policies of that content up to consumers.
 func (ms *schema2ManifestHandler) verifyManifest(ctx context.Context, mnfst schema2.DeserializedManifest, skipDependencyVerification bool) error {
 	var errs distribution.ErrManifestVerification
 

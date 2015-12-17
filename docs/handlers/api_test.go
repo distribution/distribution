@@ -23,6 +23,7 @@ import (
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/manifest/manifestlist"
 	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/manifest/schema2"
 	"github.com/docker/distribution/registry/api/errcode"
@@ -702,12 +703,14 @@ func TestManifestAPI(t *testing.T) {
 	deleteEnabled := false
 	env := newTestEnv(t, deleteEnabled)
 	testManifestAPISchema1(t, env, "foo/schema1")
-	testManifestAPISchema2(t, env, "foo/schema2")
+	schema2Args := testManifestAPISchema2(t, env, "foo/schema2")
+	testManifestAPIManifestList(t, env, schema2Args)
 
 	deleteEnabled = true
 	env = newTestEnv(t, deleteEnabled)
 	testManifestAPISchema1(t, env, "foo/schema1")
-	testManifestAPISchema2(t, env, "foo/schema2")
+	schema2Args = testManifestAPISchema2(t, env, "foo/schema2")
+	testManifestAPIManifestList(t, env, schema2Args)
 }
 
 func TestManifestDelete(t *testing.T) {
@@ -1393,6 +1396,179 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName string) manife
 	return args
 }
 
+func testManifestAPIManifestList(t *testing.T, env *testEnv, args manifestArgs) {
+	imageName := args.imageName
+	tag := "manifestlisttag"
+
+	manifestURL, err := env.builder.BuildManifestURL(imageName, tag)
+	if err != nil {
+		t.Fatalf("unexpected error getting manifest url: %v", err)
+	}
+
+	// --------------------------------
+	// Attempt to push manifest list that refers to an unknown manifest
+	manifestList := &manifestlist.ManifestList{
+		Versioned: manifest.Versioned{
+			SchemaVersion: 2,
+		},
+		MediaType: manifestlist.MediaTypeManifestList,
+		Manifests: []manifestlist.ManifestDescriptor{
+			{
+				Descriptor: distribution.Descriptor{
+					Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
+					Size:      3253,
+					MediaType: schema2.MediaTypeManifest,
+				},
+				Platform: manifestlist.PlatformSpec{
+					Architecture: "amd64",
+					OS:           "linux",
+				},
+			},
+		},
+	}
+
+	resp := putManifest(t, "putting missing manifest manifestlist", manifestURL, manifestlist.MediaTypeManifestList, manifestList)
+	defer resp.Body.Close()
+	checkResponse(t, "putting missing manifest manifestlist", resp, http.StatusBadRequest)
+	_, p, counts := checkBodyHasErrorCodes(t, "putting missing manifest manifestlist", resp, v2.ErrorCodeManifestBlobUnknown)
+
+	expectedCounts := map[errcode.ErrorCode]int{
+		v2.ErrorCodeManifestBlobUnknown: 1,
+	}
+
+	if !reflect.DeepEqual(counts, expectedCounts) {
+		t.Fatalf("unexpected number of error codes encountered: %v\n!=\n%v\n---\n%s", counts, expectedCounts, string(p))
+	}
+
+	// -------------------
+	// Push a manifest list that references an actual manifest
+	manifestList.Manifests[0].Digest = args.dgst
+	deserializedManifestList, err := manifestlist.FromDescriptors(manifestList.Manifests)
+	if err != nil {
+		t.Fatalf("could not create DeserializedManifestList: %v", err)
+	}
+	_, canonical, err := deserializedManifestList.Payload()
+	if err != nil {
+		t.Fatalf("could not get manifest list payload: %v", err)
+	}
+	dgst := digest.FromBytes(canonical)
+
+	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, dgst.String())
+	checkErr(t, err, "building manifest url")
+
+	resp = putManifest(t, "putting manifest list no error", manifestURL, manifestlist.MediaTypeManifestList, deserializedManifestList)
+	checkResponse(t, "putting manifest list no error", resp, http.StatusCreated)
+	checkHeaders(t, resp, http.Header{
+		"Location":              []string{manifestDigestURL},
+		"Docker-Content-Digest": []string{dgst.String()},
+	})
+
+	// --------------------
+	// Push by digest -- should get same result
+	resp = putManifest(t, "putting manifest list by digest", manifestDigestURL, manifestlist.MediaTypeManifestList, deserializedManifestList)
+	checkResponse(t, "putting manifest list by digest", resp, http.StatusCreated)
+	checkHeaders(t, resp, http.Header{
+		"Location":              []string{manifestDigestURL},
+		"Docker-Content-Digest": []string{dgst.String()},
+	})
+
+	// ------------------
+	// Fetch by tag name
+	req, err := http.NewRequest("GET", manifestURL, nil)
+	if err != nil {
+		t.Fatalf("Error constructing request: %s", err)
+	}
+	req.Header.Set("Accept", manifestlist.MediaTypeManifestList)
+	req.Header.Add("Accept", schema1.MediaTypeManifest)
+	req.Header.Add("Accept", schema2.MediaTypeManifest)
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("unexpected error fetching manifest list: %v", err)
+	}
+	defer resp.Body.Close()
+
+	checkResponse(t, "fetching uploaded manifest list", resp, http.StatusOK)
+	checkHeaders(t, resp, http.Header{
+		"Docker-Content-Digest": []string{dgst.String()},
+		"ETag":                  []string{fmt.Sprintf(`"%s"`, dgst)},
+	})
+
+	var fetchedManifestList manifestlist.DeserializedManifestList
+	dec := json.NewDecoder(resp.Body)
+
+	if err := dec.Decode(&fetchedManifestList); err != nil {
+		t.Fatalf("error decoding fetched manifest list: %v", err)
+	}
+
+	_, fetchedCanonical, err := fetchedManifestList.Payload()
+	if err != nil {
+		t.Fatalf("error getting manifest list payload: %v", err)
+	}
+
+	if !bytes.Equal(fetchedCanonical, canonical) {
+		t.Fatalf("manifest lists do not match")
+	}
+
+	// ---------------
+	// Fetch by digest
+	req, err = http.NewRequest("GET", manifestDigestURL, nil)
+	if err != nil {
+		t.Fatalf("Error constructing request: %s", err)
+	}
+	req.Header.Set("Accept", manifestlist.MediaTypeManifestList)
+	resp, err = http.DefaultClient.Do(req)
+	checkErr(t, err, "fetching manifest list by digest")
+	defer resp.Body.Close()
+
+	checkResponse(t, "fetching uploaded manifest list", resp, http.StatusOK)
+	checkHeaders(t, resp, http.Header{
+		"Docker-Content-Digest": []string{dgst.String()},
+		"ETag":                  []string{fmt.Sprintf(`"%s"`, dgst)},
+	})
+
+	var fetchedManifestListByDigest manifestlist.DeserializedManifestList
+	dec = json.NewDecoder(resp.Body)
+	if err := dec.Decode(&fetchedManifestListByDigest); err != nil {
+		t.Fatalf("error decoding fetched manifest: %v", err)
+	}
+
+	_, fetchedCanonical, err = fetchedManifestListByDigest.Payload()
+	if err != nil {
+		t.Fatalf("error getting manifest list payload: %v", err)
+	}
+
+	if !bytes.Equal(fetchedCanonical, canonical) {
+		t.Fatalf("manifests do not match")
+	}
+
+	// Get by name with etag, gives 304
+	etag := resp.Header.Get("Etag")
+	req, err = http.NewRequest("GET", manifestURL, nil)
+	if err != nil {
+		t.Fatalf("Error constructing request: %s", err)
+	}
+	req.Header.Set("If-None-Match", etag)
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("Error constructing request: %s", err)
+	}
+
+	checkResponse(t, "fetching manifest by name with etag", resp, http.StatusNotModified)
+
+	// Get by digest with etag, gives 304
+	req, err = http.NewRequest("GET", manifestDigestURL, nil)
+	if err != nil {
+		t.Fatalf("Error constructing request: %s", err)
+	}
+	req.Header.Set("If-None-Match", etag)
+	resp, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("Error constructing request: %s", err)
+	}
+
+	checkResponse(t, "fetching manifest by dgst with etag", resp, http.StatusNotModified)
+}
+
 func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
 	imageName := args.imageName
 	dgst := args.dgst
@@ -1521,13 +1697,20 @@ func newTestEnvWithConfig(t *testing.T, config *configuration.Configuration) *te
 func putManifest(t *testing.T, msg, url, contentType string, v interface{}) *http.Response {
 	var body []byte
 
-	if sm, ok := v.(*schema1.SignedManifest); ok {
-		_, pl, err := sm.Payload()
+	switch m := v.(type) {
+	case *schema1.SignedManifest:
+		_, pl, err := m.Payload()
 		if err != nil {
 			t.Fatalf("error getting payload: %v", err)
 		}
 		body = pl
-	} else {
+	case *manifestlist.DeserializedManifestList:
+		_, pl, err := m.Payload()
+		if err != nil {
+			t.Fatalf("error getting payload: %v", err)
+		}
+		body = pl
+	default:
 		var err error
 		body, err = json.MarshalIndent(v, "", "   ")
 		if err != nil {

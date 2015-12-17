@@ -200,6 +200,11 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 			repository: repo,
 			blobStore:  blobStore,
 		},
+		manifestListHandler: &manifestListHandler{
+			ctx:        ctx,
+			repository: repo,
+			blobStore:  blobStore,
+		},
 	}
 
 	// Apply options
