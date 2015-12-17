@@ -213,14 +213,31 @@ func (th *tokenHandler) fetchToken(params map[string]string) (token *tokenRespon
 
 	reqParams := req.URL.Query()
 	service := params["service"]
-	scope := th.scope.String()
+	scopes := []tokenScope{th.scope}
+	challengeScopes := params["scope"]
+	// add any scopes requested by the challenge outside of our configured resource
+	for _, challengeScope := range strings.Fields(challengeScopes) {
+		scopeParts := strings.Split(challengeScope, ":")
+		if len(scopeParts) != 3 {
+			// malformed scope
+			continue
+		}
+		scope := tokenScope{
+			Resource: scopeParts[0],
+			Scope:    scopeParts[1],
+			Actions:  strings.Split(scopeParts[2], ","),
+		}
+		if th.scope.Resource != scope.Resource || th.scope.Scope != scope.Scope {
+			scopes = append(scopes, scope)
+		}
+	}
 
 	if service != "" {
 		reqParams.Add("service", service)
 	}
 
-	for _, scopeField := range strings.Fields(scope) {
-		reqParams.Add("scope", scopeField)
+	for _, scope := range scopes {
+		reqParams.Add("scope", scope.String())
 	}
 
 	if th.creds != nil {
