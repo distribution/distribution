@@ -86,7 +86,7 @@ image manifest based on the Content-Type returned in the HTTP response.
 
         - **`os`** *string*
 
-            The architecture field specifies the operating system, for example
+            The os field specifies the operating system, for example
             `linux` or `windows`.
 
         - **`variant`** *string*

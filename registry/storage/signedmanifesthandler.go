@@ -91,7 +91,7 @@ func (ms *signedManifestHandler) Put(ctx context.Context, manifest distribution.
 // verifyManifest ensures that the manifest content is valid from the
 // perspective of the registry. It ensures that the signature is valid for the
 // enclosed payload. As a policy, the registry only tries to store valid
-// content, leaving trust policies of that content up to consumems.
+// content, leaving trust policies of that content up to consumers.
 func (ms *signedManifestHandler) verifyManifest(ctx context.Context, mnfst schema1.SignedManifest, skipDependencyVerification bool) error {
 	var errs distribution.ErrManifestVerification
 
