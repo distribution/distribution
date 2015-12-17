@@ -12,10 +12,10 @@ var (
 	// dashes.
 	separatorRegexp = match(`(?:[._]|__|[-]*)`)
 
-	// nameComponentRegexp restricts registry path component names to start
+	// NameComponentRegexp restricts registry path component names to start
 	// with at least one letter or number, with following parts able to be
 	// separated by one period, one or two underscore and multiple dashes.
-	nameComponentRegexp = expression(
+	NameComponentRegexp = expression(
 		alphaNumericRegexp,
 		optional(repeated(separatorRegexp, alphaNumericRegexp)))
 
@@ -52,15 +52,15 @@ var (
 	// the seperating forward slash from either.
 	NameRegexp = expression(
 		optional(hostnameRegexp, literal(`/`)),
-		nameComponentRegexp,
-		optional(repeated(literal(`/`), nameComponentRegexp)))
+		NameComponentRegexp,
+		optional(repeated(literal(`/`), NameComponentRegexp)))
 
 	// anchoredNameRegexp is used to parse a name value, capturing the
 	// hostname and trailing components.
 	anchoredNameRegexp = anchored(
 		optional(capture(hostnameRegexp), literal(`/`)),
-		capture(nameComponentRegexp,
-			optional(repeated(literal(`/`), nameComponentRegexp))))
+		capture(NameComponentRegexp,
+			optional(repeated(literal(`/`), NameComponentRegexp))))
 
 	// ReferenceRegexp is the full supported format of a reference. The regexp
 	// is anchored and has capturing groups for name, tag, and digest
