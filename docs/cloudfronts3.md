@@ -6,13 +6,13 @@ Adding Cloudfront as a middleware for your registry can dramatically improve pul
 ## Create a Cloudfront distribution
 Defaults can be kept in most areas except:
 
-### Origin:
+#### Origin:
 
 The Cloudfront distribution must be created such that the `Origin Path` is set to the directory level of the root "docker" key in S3. If your registry exists on the root of the bucket, this path should be left blank.
 
 
 
-### Behaviors:
+#### Behaviors:
   - Viewer Protocol Policy: HTTPS Only
   - Allowed HTTP Methods: GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE
   - Cached HTTP Methods: OPTIONS (checked)
