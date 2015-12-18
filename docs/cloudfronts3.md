@@ -1,9 +1,16 @@
 ### Cloudfront as Middleware /w S3 backend
 
-# Create a Cloudfront distribution
-The Cloudfront distribution must be created such that the path is set to the directory level of the root "docker" key in S3.
+# Use Case
+Adding Cloudfront as a middleware for your registry can dramatically improve pull times. Your registry will have access to retrieving your images on edge servers, rather than the geographically limited location of your s3 bucket. The further your registry is from your bucket, the more improvements you will see. See [Amazon Cloudfront](https://aws.amazon.com/cloudfront/details/).
 
+# Create a Cloudfront distribution
 Defaults can be kept in most areas except:
+
+Origin:
+
+The Cloudfront distribution must be created such that the `Origin Path` is set to the directory level of the root "docker" key in S3. If your registry exists on the root of the bucket, this path should be left blank.
+
+
 
 Behaviors:
   - Viewer Protocol Policy: HTTPS Only
