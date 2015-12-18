@@ -1,16 +1,16 @@
 # Cloudfront as Middleware /w S3 backend
 
 ## Use Case
-Adding Cloudfront as a middleware for your registry can dramatically improve pull times. Your registry will have access to retrieving your images on edge servers, rather than the geographically limited location of your s3 bucket. The further your registry is from your bucket, the more improvements you will see. See [Amazon Cloudfront](https://aws.amazon.com/cloudfront/details/).
+Adding Cloudfront as a middleware for your registry can dramatically improve pull times. Your registry will have the ability to retrieve your images from edge servers, rather than the geographically limited location of your s3 bucket. The farther your registry is from your bucket, the more improvements you will see. See [Amazon Cloudfront](https://aws.amazon.com/cloudfront/details/).
 
-## Create a Cloudfront distribution
+## Configuring Cloudfront for Distribution
+If you are unfamiliar with creating a Cloudfront distribution, see [Getting Started with Cloudfront](http://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/GettingStarted.html).
+
 Defaults can be kept in most areas except:
 
 #### Origin:
 
 The Cloudfront distribution must be created such that the `Origin Path` is set to the directory level of the root "docker" key in S3. If your registry exists on the root of the bucket, this path should be left blank.
-
-
 
 #### Behaviors:
   - Viewer Protocol Policy: HTTPS Only
@@ -44,4 +44,4 @@ middleware:
 ```
 
 ## Cloudfront Key-Pair
-A Cloudfront Key-Pair for the AWS accounts needing access is required. For information, please see [Private Content Creating Key Pairs](http://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-trusted-signers.html#private-content-creating-cloudfront-key-pairs).
+A Cloudfront key-pair is required for all AWS accounts needing access to your cloudfront distribution. For information, please see [Private Content Creating Key Pairs](http://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-trusted-signers.html#private-content-creating-cloudfront-key-pairs).
