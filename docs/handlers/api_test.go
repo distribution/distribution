@@ -1567,6 +1567,55 @@ func testManifestAPIManifestList(t *testing.T, env *testEnv, args manifestArgs) 
 	}
 
 	checkResponse(t, "fetching manifest by dgst with etag", resp, http.StatusNotModified)
+
+	// ------------------
+	// Fetch as a schema1 manifest
+	resp, err = http.Get(manifestURL)
+	if err != nil {
+		t.Fatalf("unexpected error fetching manifest list as schema1: %v", err)
+	}
+	defer resp.Body.Close()
+
+	checkResponse(t, "fetching uploaded manifest list as schema1", resp, http.StatusOK)
+	checkHeaders(t, resp, http.Header{
+		"Docker-Content-Digest": []string{dgst.String()},
+		"ETag":                  []string{fmt.Sprintf(`"%s"`, dgst)},
+	})
+
+	var fetchedSchema1Manifest schema1.SignedManifest
+	dec = json.NewDecoder(resp.Body)
+
+	if err := dec.Decode(&fetchedSchema1Manifest); err != nil {
+		t.Fatalf("error decoding fetched schema1 manifest: %v", err)
+	}
+
+	if fetchedSchema1Manifest.Manifest.SchemaVersion != 1 {
+		t.Fatal("wrong schema version")
+	}
+	if fetchedSchema1Manifest.Architecture != "amd64" {
+		t.Fatal("wrong architecture")
+	}
+	if fetchedSchema1Manifest.Name != imageName {
+		t.Fatal("wrong image name")
+	}
+	if fetchedSchema1Manifest.Tag != tag {
+		t.Fatal("wrong tag")
+	}
+	if len(fetchedSchema1Manifest.FSLayers) != 2 {
+		t.Fatal("wrong number of FSLayers")
+	}
+	layers := args.manifest.(*schema2.DeserializedManifest).Layers
+	for i := range layers {
+		if fetchedSchema1Manifest.FSLayers[i].BlobSum != layers[len(layers)-i-1].Digest {
+			t.Fatalf("blob digest mismatch in schema1 manifest for layer %d", i)
+		}
+	}
+	if len(fetchedSchema1Manifest.History) != 2 {
+		t.Fatal("wrong number of History entries")
+	}
+
+	// Don't check V1Compatibility fields becuase we're using randomly-generated
+	// layers.
 }
 
 func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
