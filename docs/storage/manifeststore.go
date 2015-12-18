@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/docker/distribution"
@@ -11,20 +12,21 @@ import (
 	"github.com/docker/libtrust"
 )
 
+// manifestStore is a storage driver based store for storing schema1 manifests.
 type manifestStore struct {
 	repository                 *repository
-	revisionStore              *revisionStore
-	tagStore                   *tagStore
+	blobStore                  *linkedBlobStore
 	ctx                        context.Context
+	signatures                 *signatureStore
 	skipDependencyVerification bool
 }
 
 var _ distribution.ManifestService = &manifestStore{}
 
-func (ms *manifestStore) Exists(dgst digest.Digest) (bool, error) {
+func (ms *manifestStore) Exists(ctx context.Context, dgst digest.Digest) (bool, error) {
 	context.GetLogger(ms.ctx).Debug("(*manifestStore).Exists")
 
-	_, err := ms.revisionStore.blobStore.Stat(ms.ctx, dgst)
+	_, err := ms.blobStore.Stat(ms.ctx, dgst)
 	if err != nil {
 		if err == distribution.ErrBlobUnknown {
 			return false, nil
@@ -36,76 +38,131 @@ func (ms *manifestStore) Exists(dgst digest.Digest) (bool, error) {
 	return true, nil
 }
 
-func (ms *manifestStore) Get(dgst digest.Digest) (*schema1.SignedManifest, error) {
+func (ms *manifestStore) Get(ctx context.Context, dgst digest.Digest, options ...distribution.ManifestServiceOption) (distribution.Manifest, error) {
 	context.GetLogger(ms.ctx).Debug("(*manifestStore).Get")
-	return ms.revisionStore.get(ms.ctx, dgst)
+	// Ensure that this revision is available in this repository.
+	_, err := ms.blobStore.Stat(ctx, dgst)
+	if err != nil {
+		if err == distribution.ErrBlobUnknown {
+			return nil, distribution.ErrManifestUnknownRevision{
+				Name:     ms.repository.Name(),
+				Revision: dgst,
+			}
+		}
+
+		return nil, err
+	}
+
+	// TODO(stevvooe): Need to check descriptor from above to ensure that the
+	// mediatype is as we expect for the manifest store.
+
+	content, err := ms.blobStore.Get(ctx, dgst)
+	if err != nil {
+		if err == distribution.ErrBlobUnknown {
+			return nil, distribution.ErrManifestUnknownRevision{
+				Name:     ms.repository.Name(),
+				Revision: dgst,
+			}
+		}
+
+		return nil, err
+	}
+
+	// Fetch the signatures for the manifest
+	signatures, err := ms.signatures.Get(dgst)
+	if err != nil {
+		return nil, err
+	}
+
+	jsig, err := libtrust.NewJSONSignature(content, signatures...)
+	if err != nil {
+		return nil, err
+	}
+
+	// Extract the pretty JWS
+	raw, err := jsig.PrettySignature("signatures")
+	if err != nil {
+		return nil, err
+	}
+
+	var sm schema1.SignedManifest
+	if err := json.Unmarshal(raw, &sm); err != nil {
+		return nil, err
+	}
+
+	return &sm, nil
 }
 
-// SkipLayerVerification allows a manifest to be Put before it's
+// SkipLayerVerification allows a manifest to be Put before its
 // layers are on the filesystem
-func SkipLayerVerification(ms distribution.ManifestService) error {
-	if ms, ok := ms.(*manifestStore); ok {
+func SkipLayerVerification() distribution.ManifestServiceOption {
+	return skipLayerOption{}
+}
+
+type skipLayerOption struct{}
+
+func (o skipLayerOption) Apply(m distribution.ManifestService) error {
+	if ms, ok := m.(*manifestStore); ok {
 		ms.skipDependencyVerification = true
 		return nil
 	}
 	return fmt.Errorf("skip layer verification only valid for manifestStore")
 }
 
-func (ms *manifestStore) Put(manifest *schema1.SignedManifest) error {
+func (ms *manifestStore) Put(ctx context.Context, manifest distribution.Manifest, options ...distribution.ManifestServiceOption) (digest.Digest, error) {
 	context.GetLogger(ms.ctx).Debug("(*manifestStore).Put")
 
-	if err := ms.verifyManifest(ms.ctx, manifest); err != nil {
-		return err
+	sm, ok := manifest.(*schema1.SignedManifest)
+	if !ok {
+		return "", fmt.Errorf("non-v1 manifest put to signed manifestStore: %T", manifest)
 	}
 
-	// Store the revision of the manifest
-	revision, err := ms.revisionStore.put(ms.ctx, manifest)
+	if err := ms.verifyManifest(ms.ctx, *sm); err != nil {
+		return "", err
+	}
+
+	mt := schema1.MediaTypeManifest
+	payload := sm.Canonical
+
+	revision, err := ms.blobStore.Put(ctx, mt, payload)
 	if err != nil {
-		return err
+		context.GetLogger(ctx).Errorf("error putting payload into blobstore: %v", err)
+		return "", err
 	}
 
-	// Now, tag the manifest
-	return ms.tagStore.tag(manifest.Tag, revision.Digest)
+	// Link the revision into the repository.
+	if err := ms.blobStore.linkBlob(ctx, revision); err != nil {
+		return "", err
+	}
+
+	// Grab each json signature and store them.
+	signatures, err := sm.Signatures()
+	if err != nil {
+		return "", err
+	}
+
+	if err := ms.signatures.Put(revision.Digest, signatures...); err != nil {
+		return "", err
+	}
+
+	return revision.Digest, nil
 }
 
 // Delete removes the revision of the specified manfiest.
-func (ms *manifestStore) Delete(dgst digest.Digest) error {
+func (ms *manifestStore) Delete(ctx context.Context, dgst digest.Digest) error {
 	context.GetLogger(ms.ctx).Debug("(*manifestStore).Delete")
-	return ms.revisionStore.delete(ms.ctx, dgst)
+	return ms.blobStore.Delete(ctx, dgst)
 }
 
-func (ms *manifestStore) Tags() ([]string, error) {
-	context.GetLogger(ms.ctx).Debug("(*manifestStore).Tags")
-	return ms.tagStore.tags()
-}
-
-func (ms *manifestStore) ExistsByTag(tag string) (bool, error) {
-	context.GetLogger(ms.ctx).Debug("(*manifestStore).ExistsByTag")
-	return ms.tagStore.exists(tag)
-}
-
-func (ms *manifestStore) GetByTag(tag string, options ...distribution.ManifestServiceOption) (*schema1.SignedManifest, error) {
-	for _, option := range options {
-		err := option(ms)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	context.GetLogger(ms.ctx).Debug("(*manifestStore).GetByTag")
-	dgst, err := ms.tagStore.resolve(tag)
-	if err != nil {
-		return nil, err
-	}
-
-	return ms.revisionStore.get(ms.ctx, dgst)
+func (ms *manifestStore) Enumerate(ctx context.Context, manifests []distribution.Manifest, last distribution.Manifest) (n int, err error) {
+	return 0, distribution.ErrUnsupported
 }
 
 // verifyManifest ensures that the manifest content is valid from the
 // perspective of the registry. It ensures that the signature is valid for the
 // enclosed payload. As a policy, the registry only tries to store valid
-// content, leaving trust policies of that content up to consumers.
-func (ms *manifestStore) verifyManifest(ctx context.Context, mnfst *schema1.SignedManifest) error {
+// content, leaving trust policies of that content up to consumems.
+func (ms *manifestStore) verifyManifest(ctx context.Context, mnfst schema1.SignedManifest) error {
 	var errs distribution.ErrManifestVerification
 
 	if len(mnfst.Name) > reference.NameTotalLengthMax {
@@ -129,7 +186,7 @@ func (ms *manifestStore) verifyManifest(ctx context.Context, mnfst *schema1.Sign
 			len(mnfst.History), len(mnfst.FSLayers)))
 	}
 
-	if _, err := schema1.Verify(mnfst); err != nil {
+	if _, err := schema1.Verify(&mnfst); err != nil {
 		switch err {
 		case libtrust.ErrMissingSignatureKey, libtrust.ErrInvalidJSONContent, libtrust.ErrMissingSignatureKey:
 			errs = append(errs, distribution.ErrManifestUnverified{})
@@ -143,15 +200,15 @@ func (ms *manifestStore) verifyManifest(ctx context.Context, mnfst *schema1.Sign
 	}
 
 	if !ms.skipDependencyVerification {
-		for _, fsLayer := range mnfst.FSLayers {
-			_, err := ms.repository.Blobs(ctx).Stat(ctx, fsLayer.BlobSum)
+		for _, fsLayer := range mnfst.References() {
+			_, err := ms.repository.Blobs(ctx).Stat(ctx, fsLayer.Digest)
 			if err != nil {
 				if err != distribution.ErrBlobUnknown {
 					errs = append(errs, err)
 				}
 
-				// On error here, we always append unknown blob errors.
-				errs = append(errs, distribution.ErrManifestBlobUnknown{Digest: fsLayer.BlobSum})
+				// On error here, we always append unknown blob erroms.
+				errs = append(errs, distribution.ErrManifestBlobUnknown{Digest: fsLayer.Digest})
 			}
 		}
 	}

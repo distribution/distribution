@@ -6,8 +6,6 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/manifest/schema1"
-	"github.com/docker/distribution/registry/client"
 	"github.com/docker/distribution/registry/proxy/scheduler"
 )
 
@@ -24,8 +22,8 @@ type proxyManifestStore struct {
 
 var _ distribution.ManifestService = &proxyManifestStore{}
 
-func (pms proxyManifestStore) Exists(dgst digest.Digest) (bool, error) {
-	exists, err := pms.localManifests.Exists(dgst)
+func (pms proxyManifestStore) Exists(ctx context.Context, dgst digest.Digest) (bool, error) {
+	exists, err := pms.localManifests.Exists(ctx, dgst)
 	if err != nil {
 		return false, err
 	}
@@ -33,117 +31,56 @@ func (pms proxyManifestStore) Exists(dgst digest.Digest) (bool, error) {
 		return true, nil
 	}
 
-	return pms.remoteManifests.Exists(dgst)
+	return pms.remoteManifests.Exists(ctx, dgst)
 }
 
-func (pms proxyManifestStore) Get(dgst digest.Digest) (*schema1.SignedManifest, error) {
-	sm, err := pms.localManifests.Get(dgst)
-	if err == nil {
-		proxyMetrics.ManifestPush(uint64(len(sm.Raw)))
-		return sm, err
+func (pms proxyManifestStore) Get(ctx context.Context, dgst digest.Digest, options ...distribution.ManifestServiceOption) (distribution.Manifest, error) {
+	// At this point `dgst` was either specified explicitly, or returned by the
+	// tagstore with the most recent association.
+	var fromRemote bool
+	manifest, err := pms.localManifests.Get(ctx, dgst, options...)
+	if err != nil {
+		manifest, err = pms.remoteManifests.Get(ctx, dgst, options...)
+		if err != nil {
+			return nil, err
+		}
+		fromRemote = true
 	}
 
-	sm, err = pms.remoteManifests.Get(dgst)
+	_, payload, err := manifest.Payload()
 	if err != nil {
 		return nil, err
 	}
 
-	proxyMetrics.ManifestPull(uint64(len(sm.Raw)))
-	err = pms.localManifests.Put(sm)
-	if err != nil {
-		return nil, err
+	proxyMetrics.ManifestPush(uint64(len(payload)))
+	if fromRemote {
+		proxyMetrics.ManifestPull(uint64(len(payload)))
+
+		_, err = pms.localManifests.Put(ctx, manifest)
+		if err != nil {
+			return nil, err
+		}
+
+		// Schedule the repo for removal
+		pms.scheduler.AddManifest(pms.repositoryName, repositoryTTL)
+
+		// Ensure the manifest blob is cleaned up
+		pms.scheduler.AddBlob(dgst.String(), repositoryTTL)
 	}
 
-	// Schedule the repo for removal
-	pms.scheduler.AddManifest(pms.repositoryName, repositoryTTL)
-
-	// Ensure the manifest blob is cleaned up
-	pms.scheduler.AddBlob(dgst.String(), repositoryTTL)
-
-	proxyMetrics.ManifestPush(uint64(len(sm.Raw)))
-
-	return sm, err
+	return manifest, err
 }
 
-func (pms proxyManifestStore) Tags() ([]string, error) {
-	return pms.localManifests.Tags()
+func (pms proxyManifestStore) Put(ctx context.Context, manifest distribution.Manifest, options ...distribution.ManifestServiceOption) (digest.Digest, error) {
+	var d digest.Digest
+	return d, distribution.ErrUnsupported
 }
 
-func (pms proxyManifestStore) ExistsByTag(tag string) (bool, error) {
-	exists, err := pms.localManifests.ExistsByTag(tag)
-	if err != nil {
-		return false, err
-	}
-	if exists {
-		return true, nil
-	}
-
-	return pms.remoteManifests.ExistsByTag(tag)
-}
-
-func (pms proxyManifestStore) GetByTag(tag string, options ...distribution.ManifestServiceOption) (*schema1.SignedManifest, error) {
-	var localDigest digest.Digest
-
-	localManifest, err := pms.localManifests.GetByTag(tag, options...)
-	switch err.(type) {
-	case distribution.ErrManifestUnknown, distribution.ErrManifestUnknownRevision:
-		goto fromremote
-	case nil:
-		break
-	default:
-		return nil, err
-	}
-
-	localDigest, err = manifestDigest(localManifest)
-	if err != nil {
-		return nil, err
-	}
-
-fromremote:
-	var sm *schema1.SignedManifest
-	sm, err = pms.remoteManifests.GetByTag(tag, client.AddEtagToTag(tag, localDigest.String()))
-	if err != nil && err != distribution.ErrManifestNotModified {
-		return nil, err
-	}
-
-	if err == distribution.ErrManifestNotModified {
-		context.GetLogger(pms.ctx).Debugf("Local manifest for %q is latest, dgst=%s", tag, localDigest.String())
-		return localManifest, nil
-	}
-	context.GetLogger(pms.ctx).Debugf("Updated manifest for %q, dgst=%s", tag, localDigest.String())
-
-	err = pms.localManifests.Put(sm)
-	if err != nil {
-		return nil, err
-	}
-
-	dgst, err := manifestDigest(sm)
-	if err != nil {
-		return nil, err
-	}
-	pms.scheduler.AddBlob(dgst.String(), repositoryTTL)
-	pms.scheduler.AddManifest(pms.repositoryName, repositoryTTL)
-
-	proxyMetrics.ManifestPull(uint64(len(sm.Raw)))
-	proxyMetrics.ManifestPush(uint64(len(sm.Raw)))
-
-	return sm, err
-}
-
-func manifestDigest(sm *schema1.SignedManifest) (digest.Digest, error) {
-	payload, err := sm.Payload()
-	if err != nil {
-		return "", err
-
-	}
-
-	return digest.FromBytes(payload), nil
-}
-
-func (pms proxyManifestStore) Put(manifest *schema1.SignedManifest) error {
+func (pms proxyManifestStore) Delete(ctx context.Context, dgst digest.Digest) error {
 	return distribution.ErrUnsupported
 }
 
-func (pms proxyManifestStore) Delete(dgst digest.Digest) error {
-	return distribution.ErrUnsupported
+/*func (pms proxyManifestStore) Enumerate(ctx context.Context, manifests []distribution.Manifest, last distribution.Manifest) (n int, err error) {
+	return 0, distribution.ErrUnsupported
 }
+*/
