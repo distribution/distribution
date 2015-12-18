@@ -4,6 +4,7 @@
 The Cloudfront distribution must be created such that the path is set to the directory level of the root "docker" key in S3.
 
 Defaults can be kept in most areas except:
+
 Behaviors:
   - Viewer Protocol Policy: HTTPS Only
   - Allowed HTTP Methods: GET, HEAD, OPTIONS, PUT, POST, PATCH, DELETE
@@ -32,11 +33,10 @@ middleware:
         baseurl: https://abcdefghijklmn.cloudfront.net/
         privatekey: /etc/docker/cloudfront/pk-ABCEDFGHIJKLMNOPQRST.pem
         keypairid: ABCEDFGHIJKLMNOPQRST
-        duration: 3000
 .
 .
 .
 ```
 
 # Cloudfront Key-Pair
-A Cloudfront Key-Pair for the AWS accounts allowed access is required. For information, please see [Private Content Creating Key Pairs](http://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-trusted-signers.html#private-content-creating-cloudfront-key-pairs)
+A Cloudfront Key-Pair for the AWS accounts allowed access is required. For information, please see [Private Content Creating Key Pairs](http://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-trusted-signers.html#private-content-creating-cloudfront-key-pairs).
