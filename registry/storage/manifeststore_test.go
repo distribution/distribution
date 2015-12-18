@@ -30,7 +30,8 @@ type manifestStoreTestEnv struct {
 func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestEnv {
 	ctx := context.Background()
 	driver := inmemory.New()
-	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
+	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(
+		memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -56,24 +57,6 @@ func TestManifestStorage(t *testing.T) {
 	ms, err := env.repository.Manifests(ctx)
 	if err != nil {
 		t.Fatal(err)
-	}
-
-	exists, err := ms.ExistsByTag(env.tag)
-	if err != nil {
-		t.Fatalf("unexpected error checking manifest existence: %v", err)
-	}
-
-	if exists {
-		t.Fatalf("manifest should not exist")
-	}
-
-	if _, err := ms.GetByTag(env.tag); true {
-		switch err.(type) {
-		case distribution.ErrManifestUnknown:
-			break
-		default:
-			t.Fatalf("expected manifest unknown error: %#v", err)
-		}
 	}
 
 	m := schema1.Manifest{
@@ -114,7 +97,7 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("error signing manifest: %v", err)
 	}
 
-	err = ms.Put(sm)
+	_, err = ms.Put(ctx, sm)
 	if err == nil {
 		t.Fatalf("expected errors putting manifest with full verification")
 	}
@@ -150,30 +133,40 @@ func TestManifestStorage(t *testing.T) {
 		}
 	}
 
-	if err = ms.Put(sm); err != nil {
+	var manifestDigest digest.Digest
+	if manifestDigest, err = ms.Put(ctx, sm); err != nil {
 		t.Fatalf("unexpected error putting manifest: %v", err)
 	}
 
-	exists, err = ms.ExistsByTag(env.tag)
+	exists, err := ms.Exists(ctx, manifestDigest)
 	if err != nil {
-		t.Fatalf("unexpected error checking manifest existence: %v", err)
+		t.Fatalf("unexpected error checking manifest existence: %#v", err)
 	}
 
 	if !exists {
 		t.Fatalf("manifest should exist")
 	}
 
-	fetchedManifest, err := ms.GetByTag(env.tag)
-
+	fromStore, err := ms.Get(ctx, manifestDigest)
 	if err != nil {
 		t.Fatalf("unexpected error fetching manifest: %v", err)
+	}
+
+	fetchedManifest, ok := fromStore.(*schema1.SignedManifest)
+	if !ok {
+		t.Fatalf("unexpected manifest type from signedstore")
 	}
 
 	if !reflect.DeepEqual(fetchedManifest, sm) {
 		t.Fatalf("fetched manifest not equal: %#v != %#v", fetchedManifest, sm)
 	}
 
-	fetchedJWS, err := libtrust.ParsePrettySignature(fetchedManifest.Raw, "signatures")
+	_, pl, err := fetchedManifest.Payload()
+	if err != nil {
+		t.Fatalf("error getting payload %#v", err)
+	}
+
+	fetchedJWS, err := libtrust.ParsePrettySignature(pl, "signatures")
 	if err != nil {
 		t.Fatalf("unexpected error parsing jws: %v", err)
 	}
@@ -185,8 +178,9 @@ func TestManifestStorage(t *testing.T) {
 
 	// Now that we have a payload, take a moment to check that the manifest is
 	// return by the payload digest.
+
 	dgst := digest.FromBytes(payload)
-	exists, err = ms.Exists(dgst)
+	exists, err = ms.Exists(ctx, dgst)
 	if err != nil {
 		t.Fatalf("error checking manifest existence by digest: %v", err)
 	}
@@ -195,7 +189,7 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("manifest %s should exist", dgst)
 	}
 
-	fetchedByDigest, err := ms.Get(dgst)
+	fetchedByDigest, err := ms.Get(ctx, dgst)
 	if err != nil {
 		t.Fatalf("unexpected error fetching manifest by digest: %v", err)
 	}
@@ -213,20 +207,6 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("unexpected number of signatures: %d != %d", len(sigs), 1)
 	}
 
-	// Grabs the tags and check that this tagged manifest is present
-	tags, err := ms.Tags()
-	if err != nil {
-		t.Fatalf("unexpected error fetching tags: %v", err)
-	}
-
-	if len(tags) != 1 {
-		t.Fatalf("unexpected tags returned: %v", tags)
-	}
-
-	if tags[0] != env.tag {
-		t.Fatalf("unexpected tag found in tags: %v != %v", tags, []string{env.tag})
-	}
-
 	// Now, push the same manifest with a different key
 	pk2, err := libtrust.GenerateECP256PrivateKey()
 	if err != nil {
@@ -237,8 +217,12 @@ func TestManifestStorage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error signing manifest: %v", err)
 	}
+	_, pl, err = sm2.Payload()
+	if err != nil {
+		t.Fatalf("error getting payload %#v", err)
+	}
 
-	jws2, err := libtrust.ParsePrettySignature(sm2.Raw, "signatures")
+	jws2, err := libtrust.ParsePrettySignature(pl, "signatures")
 	if err != nil {
 		t.Fatalf("error parsing signature: %v", err)
 	}
@@ -252,13 +236,18 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("unexpected number of signatures: %d != %d", len(sigs2), 1)
 	}
 
-	if err = ms.Put(sm2); err != nil {
+	if manifestDigest, err = ms.Put(ctx, sm2); err != nil {
 		t.Fatalf("unexpected error putting manifest: %v", err)
 	}
 
-	fetched, err := ms.GetByTag(env.tag)
+	fromStore, err = ms.Get(ctx, manifestDigest)
 	if err != nil {
 		t.Fatalf("unexpected error fetching manifest: %v", err)
+	}
+
+	fetched, ok := fromStore.(*schema1.SignedManifest)
+	if !ok {
+		t.Fatalf("unexpected type from signed manifeststore : %T", fetched)
 	}
 
 	if _, err := schema1.Verify(fetched); err != nil {
@@ -276,7 +265,12 @@ func TestManifestStorage(t *testing.T) {
 		t.Fatalf("unexpected error getting expected signatures: %v", err)
 	}
 
-	receivedJWS, err := libtrust.ParsePrettySignature(fetched.Raw, "signatures")
+	_, pl, err = fetched.Payload()
+	if err != nil {
+		t.Fatalf("error getting payload %#v", err)
+	}
+
+	receivedJWS, err := libtrust.ParsePrettySignature(pl, "signatures")
 	if err != nil {
 		t.Fatalf("unexpected error parsing jws: %v", err)
 	}
@@ -302,12 +296,12 @@ func TestManifestStorage(t *testing.T) {
 	}
 
 	// Test deleting manifests
-	err = ms.Delete(dgst)
+	err = ms.Delete(ctx, dgst)
 	if err != nil {
 		t.Fatalf("unexpected an error deleting manifest by digest: %v", err)
 	}
 
-	exists, err = ms.Exists(dgst)
+	exists, err = ms.Exists(ctx, dgst)
 	if err != nil {
 		t.Fatalf("Error querying manifest existence")
 	}
@@ -315,7 +309,7 @@ func TestManifestStorage(t *testing.T) {
 		t.Errorf("Deleted manifest should not exist")
 	}
 
-	deletedManifest, err := ms.Get(dgst)
+	deletedManifest, err := ms.Get(ctx, dgst)
 	if err == nil {
 		t.Errorf("Unexpected success getting deleted manifest")
 	}
@@ -331,12 +325,12 @@ func TestManifestStorage(t *testing.T) {
 	}
 
 	// Re-upload should restore manifest to a good state
-	err = ms.Put(sm)
+	_, err = ms.Put(ctx, sm)
 	if err != nil {
 		t.Errorf("Error re-uploading deleted manifest")
 	}
 
-	exists, err = ms.Exists(dgst)
+	exists, err = ms.Exists(ctx, dgst)
 	if err != nil {
 		t.Fatalf("Error querying manifest existence")
 	}
@@ -344,7 +338,7 @@ func TestManifestStorage(t *testing.T) {
 		t.Errorf("Restored manifest should exist")
 	}
 
-	deletedManifest, err = ms.Get(dgst)
+	deletedManifest, err = ms.Get(ctx, dgst)
 	if err != nil {
 		t.Errorf("Unexpected error getting manifest")
 	}
@@ -364,7 +358,7 @@ func TestManifestStorage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = ms.Delete(dgst)
+	err = ms.Delete(ctx, dgst)
 	if err == nil {
 		t.Errorf("Unexpected success deleting while disabled")
 	}

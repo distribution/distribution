@@ -120,7 +120,7 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
 	manifestPush.Target.Digest = "sha256:0123456789abcdef0"
 	manifestPush.Target.Length = 1
 	manifestPush.Target.Size = 1
-	manifestPush.Target.MediaType = schema1.ManifestMediaType
+	manifestPush.Target.MediaType = schema1.MediaTypeManifest
 	manifestPush.Target.Repository = "library/test"
 	manifestPush.Target.URL = "http://example.com/v2/library/test/manifests/latest"
 

@@ -19,15 +19,15 @@ type testEnv struct {
 func TestManifestMarshaling(t *testing.T) {
 	env := genEnv(t)
 
-	// Check that the Raw field is the same as json.MarshalIndent with these
+	// Check that the all field is the same as json.MarshalIndent with these
 	// parameters.
 	p, err := json.MarshalIndent(env.signed, "", "   ")
 	if err != nil {
 		t.Fatalf("error marshaling manifest: %v", err)
 	}
 
-	if !bytes.Equal(p, env.signed.Raw) {
-		t.Fatalf("manifest bytes not equal: %q != %q", string(env.signed.Raw), string(p))
+	if !bytes.Equal(p, env.signed.all) {
+		t.Fatalf("manifest bytes not equal: %q != %q", string(env.signed.all), string(p))
 	}
 }
 
@@ -35,7 +35,7 @@ func TestManifestUnmarshaling(t *testing.T) {
 	env := genEnv(t)
 
 	var signed SignedManifest
-	if err := json.Unmarshal(env.signed.Raw, &signed); err != nil {
+	if err := json.Unmarshal(env.signed.all, &signed); err != nil {
 		t.Fatalf("error unmarshaling signed manifest: %v", err)
 	}
 

@@ -402,6 +402,28 @@ for details):
 The client should verify the returned manifest signature for authenticity
 before fetching layers.
 
+##### Existing Manifests
+
+The image manifest can be checked for existence with the following url:
+
+```
+HEAD /v2/<name>/manifests/<reference>
+```
+
+The `name` and `reference` parameter identify the image and are required. The
+reference may include a tag or digest.
+
+A `404 Not Found` response will be returned if the image is unknown to the
+registry. If the image exists and the response is successful the response will
+be as follows:
+
+```
+200 OK
+Content-Length: <length of manifest>
+Docker-Content-Digest: <digest>
+```
+
+
 #### Pulling a Layer
 
 Layers are stored in the blob portion of the registry, keyed by digest.

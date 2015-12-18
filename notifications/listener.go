@@ -7,18 +7,17 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/manifest/schema1"
 )
 
 // ManifestListener describes a set of methods for listening to events related to manifests.
 type ManifestListener interface {
-	ManifestPushed(repo string, sm *schema1.SignedManifest) error
-	ManifestPulled(repo string, sm *schema1.SignedManifest) error
+	ManifestPushed(repo string, sm distribution.Manifest) error
+	ManifestPulled(repo string, sm distribution.Manifest) error
 
 	// TODO(stevvooe): Please note that delete support is still a little shaky
 	// and we'll need to propagate these in the future.
 
-	ManifestDeleted(repo string, sm *schema1.SignedManifest) error
+	ManifestDeleted(repo string, sm distribution.Manifest) error
 }
 
 // BlobListener describes a listener that can respond to layer related events.
@@ -74,8 +73,8 @@ type manifestServiceListener struct {
 	parent *repositoryListener
 }
 
-func (msl *manifestServiceListener) Get(dgst digest.Digest) (*schema1.SignedManifest, error) {
-	sm, err := msl.ManifestService.Get(dgst)
+func (msl *manifestServiceListener) Get(ctx context.Context, dgst digest.Digest, options ...distribution.ManifestServiceOption) (distribution.Manifest, error) {
+	sm, err := msl.ManifestService.Get(ctx, dgst)
 	if err == nil {
 		if err := msl.parent.listener.ManifestPulled(msl.parent.Repository.Name(), sm); err != nil {
 			logrus.Errorf("error dispatching manifest pull to listener: %v", err)
@@ -85,8 +84,8 @@ func (msl *manifestServiceListener) Get(dgst digest.Digest) (*schema1.SignedMani
 	return sm, err
 }
 
-func (msl *manifestServiceListener) Put(sm *schema1.SignedManifest) error {
-	err := msl.ManifestService.Put(sm)
+func (msl *manifestServiceListener) Put(ctx context.Context, sm distribution.Manifest, options ...distribution.ManifestServiceOption) (digest.Digest, error) {
+	dgst, err := msl.ManifestService.Put(ctx, sm, options...)
 
 	if err == nil {
 		if err := msl.parent.listener.ManifestPushed(msl.parent.Repository.Name(), sm); err != nil {
@@ -94,18 +93,7 @@ func (msl *manifestServiceListener) Put(sm *schema1.SignedManifest) error {
 		}
 	}
 
-	return err
-}
-
-func (msl *manifestServiceListener) GetByTag(tag string, options ...distribution.ManifestServiceOption) (*schema1.SignedManifest, error) {
-	sm, err := msl.ManifestService.GetByTag(tag, options...)
-	if err == nil {
-		if err := msl.parent.listener.ManifestPulled(msl.parent.Repository.Name(), sm); err != nil {
-			logrus.Errorf("error dispatching manifest pull to listener: %v", err)
-		}
-	}
-
-	return sm, err
+	return dgst, err
 }
 
 type blobServiceListener struct {
