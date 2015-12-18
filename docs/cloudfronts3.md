@@ -13,7 +13,7 @@ Behaviors:
     - Trusted Signers: Self (Can add other accounts as long as you have access to Cloudfront Key Pairs for those additional accounts)
 
 # Registry configuration
-Here the Middleware option is used. It is still important to keep the storage option as Cloudfront will only handle 'pull' actions, 'push' actions are still directly written to S3.
+Here the `middleware` option is used. It is still important to keep the `storage` option as Cloudfront will only handle `pull` actions; `push` actions are still directly written to S3.
 
 The following example shows what you will need at minimum:
 
