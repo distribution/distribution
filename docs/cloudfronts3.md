@@ -23,8 +23,6 @@ The Cloudfront distribution must be created such that the `Origin Path` is set t
 Here the `middleware` option is used. It is still important to keep the `storage` option as Cloudfront will only handle `pull` actions; `push` actions are still directly written to S3.
 
 The following example shows what you will need at minimum:
-
-example:
 ```
 .
 .
@@ -46,4 +44,4 @@ middleware:
 ```
 
 ## Cloudfront Key-Pair
-A Cloudfront Key-Pair for the AWS accounts allowed access is required. For information, please see [Private Content Creating Key Pairs](http://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-trusted-signers.html#private-content-creating-cloudfront-key-pairs).
+A Cloudfront Key-Pair for the AWS accounts needing access is required. For information, please see [Private Content Creating Key Pairs](http://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-trusted-signers.html#private-content-creating-cloudfront-key-pairs).
