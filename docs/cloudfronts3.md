@@ -39,4 +39,4 @@ middleware:
 ```
 
 # Cloudfront Key-Pair
-A Cloudfront Key-Pair for the AWS accounts allowed access is required. For information, please see (Private Content Creating Key Pairs)[http://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-trusted-signers.html#private-content-creating-cloudfront-key-pairs]
+A Cloudfront Key-Pair for the AWS accounts allowed access is required. For information, please see [Private Content Creating Key Pairs](http://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/private-content-trusted-signers.html#private-content-creating-cloudfront-key-pairs)
