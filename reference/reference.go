@@ -46,8 +46,7 @@ var (
 	// ErrNameEmpty is returned for empty, invalid repository names.
 	ErrNameEmpty = errors.New("repository name must have at least one component")
 
-	// ErrNameTooLong is returned when a repository name is longer than
-	// RepositoryNameTotalLengthMax
+	// ErrNameTooLong is returned when a repository name is longer than NameTotalLengthMax.
 	ErrNameTooLong = fmt.Errorf("repository name must not be more than %v characters", NameTotalLengthMax)
 )
 
