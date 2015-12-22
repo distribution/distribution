@@ -57,13 +57,19 @@ Read again [the requirements](recipes.md#requirements).
 
 Ready?
 
-Run the following:
+--
+
+Create the required directories
 
 ```
 mkdir -p auth
 mkdir -p data
+```
 
-# This is the main nginx configuration you will use
+Create the main nginx configuration you will use.
+
+```
+
 cat <<EOF > auth/nginx.conf
 upstream docker-registry {
   server registry:5000;
@@ -123,16 +129,24 @@ server {
   }
 }
 EOF
+```
 
-# Now, create a password file for "testuser" and "testpassword"
+Now, create a password file for "testuser" and "testpassword"
+
+```
 docker run --entrypoint htpasswd httpd:2.4 -bn testuser testpassword > auth/nginx.htpasswd
+```
 
-# Copy over your certificate files
+Copy over your certificate files
+
+```
 cp domain.crt auth
 cp domain.key auth
+```
 
-# Now create your compose file
+Now create your compose file
 
+```
 cat <<EOF > docker-compose.yml
 nginx:
   image: "nginx:1.9"
