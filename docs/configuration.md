@@ -384,6 +384,39 @@ If you are deploying a registry on Windows, be aware that a Windows volume mount
 
     mkdir /XXX protocol error and your registry will not function properly.
 
+### Maintenance
+
+Currently upload purging and read-only mode are the only maintenance functions available.
+These and future maintenance functions which are related to storage can be configured under
+the maintenance section.
+
+### Upload Purging
+
+Upload purging is a background process that periodically removes orphaned files from the upload
+directories of the registry.  Upload purging is enabled by default.  To
+configure upload directory purging, the following parameters
+must be set.
+
+
+| Parameter | Required | Description
+  --------- | -------- | -----------
+`enabled` | yes | Set to true to enable upload purging.  Default=true. |
+`age` | yes | Upload directories which are older than this age will be deleted.  Default=168h (1 week)
+`interval` | yes | The interval between upload directory purging.  Default=24h.
+`dryrun` | yes |  dryrun can be set to true to obtain a summary of what directories will be deleted.  Default=false.
+
+Note: `age` and `interval` are strings containing a number with optional fraction and a unit suffix: e.g. 45m, 2h10m, 168h (1 week).
+
+### Read-only mode
+
+If the `readonly` section under `maintenance` has `enabled` set to `true`,
+clients will not be allowed to write to the registry. This mode is useful to
+temporarily prevent writes to the backend storage so a garbage collection pass
+can be run.  Before running garbage collection, the registry should be
+restarted with readonly's `enabled` set to true. After the garbage collection
+pass finishes, the registry may be restarted again, this time with `readonly`
+removed from the configuration (or set to false).
+
 ### delete
 
 Use the `delete` subsection to enable the deletion of image blobs and manifests
@@ -698,39 +731,6 @@ This storage backend uses Amazon's Simple Storage Service (S3).
   </tr>
 </table>
 
-### Maintenance
-
-Currently upload purging and read-only mode are the only maintenance functions available.
-These and future maintenance functions which are related to storage can be configured under
-the maintenance section.
-
-### Upload Purging
-
-Upload purging is a background process that periodically removes orphaned files from the upload
-directories of the registry.  Upload purging is enabled by default.  To
-configure upload directory purging, the following parameters
-must be set.
-
-
-| Parameter | Required | Description
-  --------- | -------- | -----------
-`enabled` | yes | Set to true to enable upload purging.  Default=true. |
-`age` | yes | Upload directories which are older than this age will be deleted.  Default=168h (1 week)
-`interval` | yes | The interval between upload directory purging.  Default=24h.
-`dryrun` | yes |  dryrun can be set to true to obtain a summary of what directories will be deleted.  Default=false.
-
-Note: `age` and `interval` are strings containing a number with optional fraction and a unit suffix: e.g. 45m, 2h10m, 168h (1 week).
-
-### Read-only mode
-
-If the `readonly` section under `maintenance` has `enabled` set to `true`,
-clients will not be allowed to write to the registry. This mode is useful to
-temporarily prevent writes to the backend storage so a garbage collection pass
-can be run.  Before running garbage collection, the registry should be
-restarted with readonly's `enabled` set to true. After the garbage collection
-pass finishes, the registry may be restarted again, this time with `readonly`
-removed from the configuration (or set to false).
-
 ### Openstack Swift
 
 This storage backend uses Openstack Swift object storage.
@@ -793,7 +793,7 @@ This storage backend uses Openstack Swift object storage.
       yes
     </td>
     <td>
-      The container name in which you want to store the registry's data.
+      The name of your Swift container where you wish to store the registry's data. The driver creates the named container during its initialization.
     </td>
   </tr>
   <tr>
@@ -804,7 +804,7 @@ This storage backend uses Openstack Swift object storage.
       no
     </td>
     <td>
-      Your Openstack tenant name.
+      Your Openstack tenant name. You can either use <code>tenant</code> or <code>tenantid</code>.
     </td>
   </tr>
   <tr>
@@ -815,7 +815,7 @@ This storage backend uses Openstack Swift object storage.
       no
     </td>
     <td>
-      Your Openstack tenant id.
+      Your Openstack tenant id. You can either use <code>tenant</code> or <code>tenantid</code>.
     </td>
   </tr>
   <tr>
@@ -826,7 +826,7 @@ This storage backend uses Openstack Swift object storage.
       no
     </td>
     <td>
-      Your Openstack domain name for Identity v3 API.
+      Your Openstack domain name for Identity v3 API. You can either use <code>domain</code> or <code>domainid</code>.
     </td>
   </tr>
   <tr>
@@ -837,7 +837,7 @@ This storage backend uses Openstack Swift object storage.
       no
     </td>
     <td>
-      Your Openstack domain id for Identity v3 API.
+      Your Openstack domain id for Identity v3 API. You can either use <code>domain</code> or <code>domainid</code>.
     </td>
   </tr>
   <tr>
@@ -875,13 +875,35 @@ This storage backend uses Openstack Swift object storage.
   </tr>
   <tr>
     <td>
-      <code>rootdirectory</code>
+      <code>prefix</code>
     </td>
     <td>
       no
     </td>
     <td>
-      This is a prefix that will be applied to all Swift keys to allow you to segment data in your container if necessary.
+      This is a prefix that will be applied to all Swift keys to allow you to segment data in your container if necessary. Defaults to the empty string which is the container's root.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>secretkey</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      The secret key used to generate temporary URLs.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>accesskey</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      The access key to generate temporary URLs. It is used by HP Cloud Object Storage in addition to the `secretkey` parameter.
     </td>
   </tr>
 </table>
