@@ -106,11 +106,10 @@ func TestTagAll(t *testing.T) {
 	env := testTagStore(t)
 	tagStore := env.ts
 	ctx := env.ctx
-
+	desc := distribution.Descriptor{Digest: "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"}
 	alpha := "abcdefghijklmnopqrstuvwxyz"
 	for i := 0; i < len(alpha); i++ {
 		tag := alpha[i]
-		desc := distribution.Descriptor{Digest: "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"}
 		err := tagStore.Tag(ctx, string(tag), desc)
 		if err != nil {
 			t.Error(err)
@@ -121,7 +120,11 @@ func TestTagAll(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	if len(all) != len(alpha) {
+	tagsRefering, err := tagStore.Lookup(ctx, desc)
+	if err != nil {
+		t.Error(err)
+	}
+	if len(all) != len(tagsRefering) {
 		t.Errorf("Unexpected count returned from enumerate")
 	}
 
@@ -146,5 +149,4 @@ func TestTagAll(t *testing.T) {
 			t.Errorf("unexpected tag in enumerate %s", removed)
 		}
 	}
-
 }
