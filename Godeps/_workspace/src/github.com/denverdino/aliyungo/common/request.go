@@ -52,7 +52,7 @@ type ErrorResponse struct {
 	Message string
 }
 
-// An Error represents a custom error for ECS failure response
+// An Error represents a custom error for Aliyun API failure response
 type Error struct {
 	ErrorResponse
 	StatusCode int //Status Code of HTTP Response

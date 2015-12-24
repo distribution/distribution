@@ -1131,7 +1131,7 @@ type Error struct {
 }
 
 func (e *Error) Error() string {
-	return e.Message
+	return fmt.Sprintf("Aliyun API Error: RequestId: %s Status Code: %d Code: %s Message: %s", e.RequestId, e.StatusCode, e.Code, e.Message)
 }
 
 func (client *Client) buildError(r *http.Response) error {
