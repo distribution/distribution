@@ -73,7 +73,7 @@
 		},
 		{
 			"ImportPath": "github.com/bugsnag/panicwrap",
-			"Rev": "e5f9854865b9778a45169fc249e99e338d4d6f27"
+			"Rev": "e2c28503fcd0675329da73bf48b33404db873782"
 		},
 		{
 			"ImportPath": "github.com/denverdino/aliyungo/oss",
