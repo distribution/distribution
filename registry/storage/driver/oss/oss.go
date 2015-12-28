@@ -754,7 +754,7 @@ func (d *driver) ossPath(path string) string {
 }
 
 func parseError(path string, err error) error {
-	if ossErr, ok := err.(*oss.Error); ok && ossErr.Code == "NoSuchKey" {
+	if ossErr, ok := err.(*oss.Error); ok && ossErr.StatusCode == 404 && (ossErr.Code == "NoSuchKey" || ossErr.Code == "") {
 		return storagedriver.PathNotFoundError{Path: path}
 	}
 
