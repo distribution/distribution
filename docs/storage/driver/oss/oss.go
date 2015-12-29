@@ -430,7 +430,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 	if offset > 0 {
 		resp, err := d.Bucket.Head(d.ossPath(path), nil)
 		if err != nil {
-			if ossErr, ok := err.(*oss.Error); !ok || ossErr.StatusCode != 404 {
+			if ossErr, ok := err.(*oss.Error); !ok || ossErr.StatusCode != http.StatusNotFound {
 				return 0, err
 			}
 		}
@@ -729,8 +729,8 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 	method, ok := options["method"]
 	if ok {
 		methodString, ok = method.(string)
-		if !ok || (methodString != "GET" && methodString != "PUT") {
-			return "", storagedriver.ErrUnsupportedMethod{driverName}
+		if !ok || (methodString != "GET") {
+			return "", storagedriver.ErrUnsupportedMethod{}
 		}
 	}
 
@@ -754,7 +754,7 @@ func (d *driver) ossPath(path string) string {
 }
 
 func parseError(path string, err error) error {
-	if ossErr, ok := err.(*oss.Error); ok && ossErr.StatusCode == 404 && (ossErr.Code == "NoSuchKey" || ossErr.Code == "") {
+	if ossErr, ok := err.(*oss.Error); ok && ossErr.StatusCode == http.StatusNotFound && (ossErr.Code == "NoSuchKey" || ossErr.Code == "") {
 		return storagedriver.PathNotFoundError{Path: path}
 	}
 
