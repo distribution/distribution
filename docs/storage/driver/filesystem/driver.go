@@ -135,11 +135,11 @@ func (d *driver) WriteStream(ctx context.Context, subPath string, offset int64, 
 
 	fullPath := d.fullPath(subPath)
 	parentDir := path.Dir(fullPath)
-	if err := os.MkdirAll(parentDir, 0755); err != nil {
+	if err := os.MkdirAll(parentDir, 0777); err != nil {
 		return 0, err
 	}
 
-	fp, err := os.OpenFile(fullPath, os.O_WRONLY|os.O_CREATE, 0644)
+	fp, err := os.OpenFile(fullPath, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		// TODO(stevvooe): A few missing conditions in storage driver:
 		//	1. What if the path is already a directory?
