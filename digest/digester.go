@@ -113,6 +113,22 @@ func (a Algorithm) FromReader(rd io.Reader) (Digest, error) {
 	return digester.Digest(), nil
 }
 
+// FromBytes digests the input and returns a Digest.
+func (a Algorithm) FromBytes(p []byte) Digest {
+	digester := a.New()
+
+	if _, err := digester.Hash().Write(p); err != nil {
+		// Writes to a Hash should never fail. None of the existing
+		// hash implementations in the stdlib or hashes vendored
+		// here can return errors from Write. Having a panic in this
+		// condition instead of having FromBytes return an error value
+		// avoids unnecessary error handling paths in all callers.
+		panic("write to hash function returned error: " + err.Error())
+	}
+
+	return digester.Digest()
+}
+
 // TODO(stevvooe): Allow resolution of verifiers using the digest type and
 // this registration system.
 

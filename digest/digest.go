@@ -69,18 +69,7 @@ func FromReader(rd io.Reader) (Digest, error) {
 
 // FromBytes digests the input and returns a Digest.
 func FromBytes(p []byte) Digest {
-	digester := Canonical.New()
-
-	if _, err := digester.Hash().Write(p); err != nil {
-		// Writes to a Hash should never fail. None of the existing
-		// hash implementations in the stdlib or hashes vendored
-		// here can return errors from Write. Having a panic in this
-		// condition instead of having FromBytes return an error value
-		// avoids unnecessary error handling paths in all callers.
-		panic("write to hash function returned error: " + err.Error())
-	}
-
-	return digester.Digest()
+	return Canonical.FromBytes(p)
 }
 
 // Validate checks that the contents of d is a valid digest, returning an
