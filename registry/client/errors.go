@@ -47,7 +47,8 @@ func parseHTTPErrorResponse(r io.Reader) error {
 	return errors
 }
 
-func handleErrorResponse(resp *http.Response) error {
+// HandleErrorResponse constructs an error according to the HTTP response status code.
+func HandleErrorResponse(resp *http.Response) error {
 	if resp.StatusCode == 401 {
 		err := parseHTTPErrorResponse(resp.Body)
 		if uErr, ok := err.(*UnexpectedHTTPResponseError); ok {
