@@ -2,6 +2,7 @@ package digest
 
 import (
 	"crypto"
+	"fmt"
 	"hash"
 	"io"
 )
@@ -84,11 +85,18 @@ func (a Algorithm) New() Digester {
 	}
 }
 
-// Hash returns a new hash as used by the algorithm. If not available, nil is
-// returned. Make sure to check Available before calling.
+// Hash returns a new hash as used by the algorithm. If not available, the
+// method will panic. Check Algorithm.Available() before calling.
 func (a Algorithm) Hash() hash.Hash {
 	if !a.Available() {
-		return nil
+		// NOTE(stevvooe): A missing hash is usually a programming error that
+		// must be resolved at compile time. We don't import in the digest
+		// package to allow users to choose their hash implementation (such as
+		// when using stevvooe/resumable or a hardware accelerated package).
+		//
+		// Applications that may want to resolve the hash at runtime should
+		// call Algorithm.Available before call Algorithm.Hash().
+		panic(fmt.Sprintf("%v not available (make sure it is imported)", a))
 	}
 
 	return algorithms[a].New()
