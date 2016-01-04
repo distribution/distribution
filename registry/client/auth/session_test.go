@@ -131,11 +131,11 @@ func TestEndpointAuthorizeToken(t *testing.T) {
 		},
 	})
 
-	authenicate := fmt.Sprintf("Bearer realm=%q,service=%q", te+"/token", service)
+	authenticate := fmt.Sprintf("Bearer realm=%q,service=%q", te+"/token", service)
 	validCheck := func(a string) bool {
 		return a == "Bearer statictoken"
 	}
-	e, c := testServerWithAuth(m, authenicate, validCheck)
+	e, c := testServerWithAuth(m, authenticate, validCheck)
 	defer c()
 
 	challengeManager1 := NewSimpleChallengeManager()
@@ -165,7 +165,7 @@ func TestEndpointAuthorizeToken(t *testing.T) {
 	badCheck := func(a string) bool {
 		return a == "Bearer statictoken"
 	}
-	e2, c2 := testServerWithAuth(m, authenicate, badCheck)
+	e2, c2 := testServerWithAuth(m, authenticate, badCheck)
 	defer c2()
 
 	challengeManager2 := NewSimpleChallengeManager()
@@ -553,6 +553,80 @@ func TestEndpointAuthorizeTokenBasicWithExpiresInAndIssuedAt(t *testing.T) {
 	}
 }
 
+func TestEndpointAuthorizeTokenExpandedScope(t *testing.T) {
+	service := "localhost.localdomain"
+	repo1 := "some/registry"
+	repo2 := "other/registry"
+	scope1 := fmt.Sprintf("repository:%s:pull,push", repo1)
+	scope2 := fmt.Sprintf("repository:%s:pull", repo2)
+
+	// ensure that a challenge with a scope outside of the main repo adds to the requested token scope
+	for _, authScope := range []string{
+		scope2,
+		scope1 + " " + scope2,
+		scope2 + " " + scope1,
+	} {
+		tokenMap := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
+			{
+				Request: testutil.Request{
+					Method: "GET",
+					Route:  fmt.Sprintf("/token?scope=%s&scope=%s&service=%s", url.QueryEscape(scope1), url.QueryEscape(scope2), service),
+				},
+				Response: testutil.Response{
+					StatusCode: http.StatusOK,
+					Body:       []byte(`{"token":"statictoken"}`),
+				},
+			},
+		})
+		te, tc := testServer(tokenMap)
+		defer tc()
+
+		m := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
+			{
+				Request: testutil.Request{
+					Method: "GET",
+					Route:  "/v2/hello",
+				},
+				Response: testutil.Response{
+					StatusCode: http.StatusAccepted,
+				},
+			},
+		})
+
+		authenticate := fmt.Sprintf("Bearer realm=%q,service=%q,scope=%q", te+"/token", service, authScope)
+		validCheck := func(a string) bool {
+			return a == "Bearer statictoken"
+		}
+		e, c := testServerWithAuth(m, authenticate, validCheck)
+		defer c()
+
+		challengeManager1 := NewSimpleChallengeManager()
+		versions, err := ping(challengeManager1, e+"/v2/", "x-api-version")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(versions) != 1 {
+			t.Fatalf("Unexpected version count: %d, expected 1", len(versions))
+		}
+		if check := (APIVersion{Type: "registry", Version: "2.0"}); versions[0] != check {
+			t.Fatalf("Unexpected api version: %#v, expected %#v", versions[0], check)
+		}
+		transport1 := transport.NewTransport(nil, NewAuthorizer(challengeManager1, NewTokenHandler(nil, nil, repo1, "pull", "push")))
+		client := &http.Client{Transport: transport1}
+
+		req, _ := http.NewRequest("GET", e+"/v2/hello", nil)
+		resp, err := client.Do(req)
+		if err != nil {
+			t.Fatalf("Error sending get request: %s", err)
+		}
+
+		if resp.StatusCode != http.StatusAccepted {
+			t.Fatalf("Unexpected status code: %d, expected %d", resp.StatusCode, http.StatusAccepted)
+		}
+
+	}
+}
+
 func TestEndpointAuthorizeBasic(t *testing.T) {
 	m := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
 		{
@@ -568,11 +642,11 @@ func TestEndpointAuthorizeBasic(t *testing.T) {
 
 	username := "user1"
 	password := "funSecretPa$$word"
-	authenicate := fmt.Sprintf("Basic realm=localhost")
+	authenticate := fmt.Sprintf("Basic realm=localhost")
 	validCheck := func(a string) bool {
 		return a == fmt.Sprintf("Basic %s", basicAuth(username, password))
 	}
-	e, c := testServerWithAuth(m, authenicate, validCheck)
+	e, c := testServerWithAuth(m, authenticate, validCheck)
 	defer c()
 	creds := &testCredentialStore{
 		username: username,
