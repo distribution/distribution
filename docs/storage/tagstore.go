@@ -116,15 +116,19 @@ func (ts *tagStore) Get(ctx context.Context, tag string) (distribution.Descripto
 	return distribution.Descriptor{Digest: revision}, nil
 }
 
-// delete removes the tag from repository, including the history of all
-// revisions that have the specified tag.
+// Untag removes the tag association
 func (ts *tagStore) Untag(ctx context.Context, tag string) error {
 	tagPath, err := pathFor(manifestTagPathSpec{
 		name: ts.repository.Name(),
 		tag:  tag,
 	})
 
-	if err != nil {
+	switch err.(type) {
+	case storagedriver.PathNotFoundError:
+		return distribution.ErrTagUnknown{Tag: tag}
+	case nil:
+		break
+	default:
 		return err
 	}
 
@@ -153,7 +157,35 @@ func (ts *tagStore) linkedBlobStore(ctx context.Context, tag string) *linkedBlob
 
 // Lookup recovers a list of tags which refer to this digest.  When a manifest is deleted by
 // digest, tag entries which point to it need to be recovered to avoid dangling tags.
-func (ts *tagStore) Lookup(ctx context.Context, digest distribution.Descriptor) ([]string, error) {
-	// An efficient implementation of this will require changes to the S3 driver.
-	return make([]string, 0), nil
+func (ts *tagStore) Lookup(ctx context.Context, desc distribution.Descriptor) ([]string, error) {
+	allTags, err := ts.All(ctx)
+	switch err.(type) {
+	case distribution.ErrRepositoryUnknown:
+		// This tag store has been initialized but not yet populated
+		break
+	case nil:
+		break
+	default:
+		return nil, err
+	}
+
+	var tags []string
+	for _, tag := range allTags {
+		tagLinkPathSpec := manifestTagCurrentPathSpec{
+			name: ts.repository.Name(),
+			tag:  tag,
+		}
+
+		tagLinkPath, err := pathFor(tagLinkPathSpec)
+		tagDigest, err := ts.blobStore.readlink(ctx, tagLinkPath)
+		if err != nil {
+			return nil, err
+		}
+
+		if tagDigest == desc.Digest {
+			tags = append(tags, tag)
+		}
+	}
+
+	return tags, nil
 }

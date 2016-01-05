@@ -1063,6 +1063,7 @@ func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
 	dgst := args.dgst
 	signedManifest := args.signedManifest
 	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, dgst.String())
+
 	// ---------------
 	// Delete by digest
 	resp, err := httpDelete(manifestDigestURL)
@@ -1117,6 +1118,77 @@ func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
 	resp, err = httpDelete(unknownManifestDigestURL)
 	checkErr(t, err, "delting unknown manifest by digest")
 	checkResponse(t, "fetching deleted manifest", resp, http.StatusNotFound)
+
+	// --------------------
+	// Uupload manifest by tag
+	tag := signedManifest.Tag
+	manifestTagURL, err := env.builder.BuildManifestURL(imageName, tag)
+	resp = putManifest(t, "putting signed manifest by tag", manifestTagURL, signedManifest)
+	checkResponse(t, "putting signed manifest by tag", resp, http.StatusCreated)
+	checkHeaders(t, resp, http.Header{
+		"Location":              []string{manifestDigestURL},
+		"Docker-Content-Digest": []string{dgst.String()},
+	})
+
+	tagsURL, err := env.builder.BuildTagsURL(imageName)
+	if err != nil {
+		t.Fatalf("unexpected error building tags url: %v", err)
+	}
+
+	// Ensure that the tag is listed.
+	resp, err = http.Get(tagsURL)
+	if err != nil {
+		t.Fatalf("unexpected error getting unknown tags: %v", err)
+	}
+	defer resp.Body.Close()
+
+	dec := json.NewDecoder(resp.Body)
+	var tagsResponse tagsAPIResponse
+	if err := dec.Decode(&tagsResponse); err != nil {
+		t.Fatalf("unexpected error decoding error response: %v", err)
+	}
+
+	if tagsResponse.Name != imageName {
+		t.Fatalf("tags name should match image name: %v != %v", tagsResponse.Name, imageName)
+	}
+
+	if len(tagsResponse.Tags) != 1 {
+		t.Fatalf("expected some tags in response: %v", tagsResponse.Tags)
+	}
+
+	if tagsResponse.Tags[0] != tag {
+		t.Fatalf("tag not as expected: %q != %q", tagsResponse.Tags[0], tag)
+	}
+
+	// ---------------
+	// Delete by digest
+	resp, err = httpDelete(manifestDigestURL)
+	checkErr(t, err, "deleting manifest by digest")
+
+	checkResponse(t, "deleting manifest with tag", resp, http.StatusAccepted)
+	checkHeaders(t, resp, http.Header{
+		"Content-Length": []string{"0"},
+	})
+
+	// Ensure that the tag is not listed.
+	resp, err = http.Get(tagsURL)
+	if err != nil {
+		t.Fatalf("unexpected error getting unknown tags: %v", err)
+	}
+	defer resp.Body.Close()
+
+	dec = json.NewDecoder(resp.Body)
+	if err := dec.Decode(&tagsResponse); err != nil {
+		t.Fatalf("unexpected error decoding error response: %v", err)
+	}
+
+	if tagsResponse.Name != imageName {
+		t.Fatalf("tags name should match image name: %v != %v", tagsResponse.Name, imageName)
+	}
+
+	if len(tagsResponse.Tags) != 0 {
+		t.Fatalf("expected 0 tags in response: %v", tagsResponse.Tags)
+	}
 
 }
 

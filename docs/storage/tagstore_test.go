@@ -102,7 +102,7 @@ func TestTagStoreUnTag(t *testing.T) {
 	}
 }
 
-func TestTagAll(t *testing.T) {
+func TestTagStoreAll(t *testing.T) {
 	env := testTagStore(t)
 	tagStore := env.ts
 	ctx := env.ctx
@@ -145,6 +145,62 @@ func TestTagAll(t *testing.T) {
 		if tag == removed {
 			t.Errorf("unexpected tag in enumerate %s", removed)
 		}
+	}
+
+}
+
+func TestTagLookup(t *testing.T) {
+	env := testTagStore(t)
+	tagStore := env.ts
+	ctx := env.ctx
+
+	descA := distribution.Descriptor{Digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+	desc0 := distribution.Descriptor{Digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"}
+
+	tags, err := tagStore.Lookup(ctx, descA)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tags) != 0 {
+		t.Fatalf("Lookup returned > 0 tags from empty store")
+	}
+
+	err = tagStore.Tag(ctx, "a", descA)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = tagStore.Tag(ctx, "b", descA)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = tagStore.Tag(ctx, "0", desc0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = tagStore.Tag(ctx, "1", desc0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	tags, err = tagStore.Lookup(ctx, descA)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(tags) != 2 {
+		t.Errorf("Lookup of descA returned %d tags, expected 2", len(tags))
+	}
+
+	tags, err = tagStore.Lookup(ctx, desc0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(tags) != 2 {
+		t.Errorf("Lookup of descB returned %d tags, expected 2", len(tags))
 	}
 
 }
