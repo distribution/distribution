@@ -226,5 +226,19 @@ func (imh *imageManifestHandler) DeleteImageManifest(w http.ResponseWriter, r *h
 		}
 	}
 
+	tagService := imh.Repository.Tags(imh)
+	referencedTags, err := tagService.Lookup(imh, distribution.Descriptor{Digest: imh.Digest})
+	if err != nil {
+		imh.Errors = append(imh.Errors, err)
+		return
+	}
+
+	for _, tag := range referencedTags {
+		if err := tagService.Untag(imh, tag); err != nil {
+			imh.Errors = append(imh.Errors, err)
+			return
+		}
+	}
+
 	w.WriteHeader(http.StatusAccepted)
 }
