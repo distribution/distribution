@@ -11,5 +11,13 @@ echo "$IP localregistry" >> /etc/hosts
 
 sh install_certs.sh localregistry
 
-docker --daemon --log-level=panic \
-	--storage-driver="$DOCKER_GRAPHDRIVER" --exec-driver="$EXEC_DRIVER"
+DOCKER_VERSION=$(docker --version | cut -d ' ' -f3 | cut -d ',' -f1)
+major=$(echo "$DOCKER_VERSION"| cut -d '.' -f1)
+minor=$(echo "$DOCKER_VERSION"| cut -d '.' -f2)
+
+daemonOpts="daemon"
+if [ $major -le 1 ] && [ $minor -lt 9 ]; then
+	daemonOpts="--daemon"
+fi
+
+docker $daemonOpts --log-level=debug --storage-driver="$DOCKER_GRAPHDRIVER"
