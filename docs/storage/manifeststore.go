@@ -95,19 +95,13 @@ func (ms *manifestStore) Get(ctx context.Context, dgst digest.Digest, options ..
 		return ms.schema1Handler.Unmarshal(ctx, dgst, content)
 	case 2:
 		// This can be an image manifest or a manifest list
-		var mediaType struct {
-			MediaType string `json:"mediaType"`
-		}
-		if err = json.Unmarshal(content, &mediaType); err != nil {
-			return nil, err
-		}
-		switch mediaType.MediaType {
+		switch versioned.MediaType {
 		case schema2.MediaTypeManifest:
 			return ms.schema2Handler.Unmarshal(ctx, dgst, content)
 		case manifestlist.MediaTypeManifestList:
 			return ms.manifestListHandler.Unmarshal(ctx, dgst, content)
 		default:
-			return nil, distribution.ErrManifestVerification{fmt.Errorf("unrecognized manifest content type %s", mediaType.MediaType)}
+			return nil, distribution.ErrManifestVerification{fmt.Errorf("unrecognized manifest content type %s", versioned.MediaType)}
 		}
 	}
 
