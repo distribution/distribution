@@ -27,6 +27,7 @@ var (
 	// packages version of the manifest.
 	SchemaVersion = manifest.Versioned{
 		SchemaVersion: 2,
+		MediaType:     MediaTypeManifest,
 	}
 )
 
@@ -50,7 +51,6 @@ func init() {
 // Manifest defines a schema2 manifest.
 type Manifest struct {
 	manifest.Versioned
-	MediaType string `json:"mediaType"`
 
 	// Config references the image configuration as a blob.
 	Config distribution.Descriptor `json:"config"`

@@ -1096,8 +1096,8 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName string) manife
 	manifest := &schema2.Manifest{
 		Versioned: manifest.Versioned{
 			SchemaVersion: 2,
+			MediaType:     schema2.MediaTypeManifest,
 		},
-		MediaType: schema2.MediaTypeManifest,
 		Config: distribution.Descriptor{
 			Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
 			Size:      3253,
@@ -1410,8 +1410,8 @@ func testManifestAPIManifestList(t *testing.T, env *testEnv, args manifestArgs) 
 	manifestList := &manifestlist.ManifestList{
 		Versioned: manifest.Versioned{
 			SchemaVersion: 2,
+			MediaType:     manifestlist.MediaTypeManifestList,
 		},
-		MediaType: manifestlist.MediaTypeManifestList,
 		Manifests: []manifestlist.ManifestDescriptor{
 			{
 				Descriptor: distribution.Descriptor{

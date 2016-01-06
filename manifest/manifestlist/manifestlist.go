@@ -17,6 +17,7 @@ const MediaTypeManifestList = "application/vnd.docker.distribution.manifest.list
 // packages version of the manifest.
 var SchemaVersion = manifest.Versioned{
 	SchemaVersion: 2,
+	MediaType:     MediaTypeManifestList,
 }
 
 func init() {
@@ -68,10 +69,6 @@ type ManifestDescriptor struct {
 type ManifestList struct {
 	manifest.Versioned
 
-	// MediaType is the media type of this document. It should always
-	// be set to MediaTypeManifestList.
-	MediaType string `json:"mediaType"`
-
 	// Config references the image configuration as a blob.
 	Manifests []ManifestDescriptor `json:"manifests"`
 }
@@ -102,7 +99,6 @@ type DeserializedManifestList struct {
 func FromDescriptors(descriptors []ManifestDescriptor) (*DeserializedManifestList, error) {
 	m := ManifestList{
 		Versioned: SchemaVersion,
-		MediaType: MediaTypeManifestList,
 	}
 
 	m.Manifests = make([]ManifestDescriptor, len(descriptors), len(descriptors))

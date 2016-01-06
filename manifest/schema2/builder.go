@@ -4,7 +4,6 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/manifest"
 )
 
 // builder is a type for constructing manifests.
@@ -36,10 +35,7 @@ func NewManifestBuilder(bs distribution.BlobService, configJSON []byte) distribu
 // Build produces a final manifest from the given references.
 func (mb *builder) Build(ctx context.Context) (distribution.Manifest, error) {
 	m := Manifest{
-		Versioned: manifest.Versioned{
-			SchemaVersion: 2,
-		},
-		MediaType: MediaTypeManifest,
+		Versioned: SchemaVersion,
 		Layers:    make([]distribution.Descriptor, len(mb.layers)),
 	}
 	copy(m.Layers, mb.layers)

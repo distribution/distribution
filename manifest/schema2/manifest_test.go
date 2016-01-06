@@ -29,7 +29,6 @@ var expectedManifestSerialization = []byte(`{
 func TestManifest(t *testing.T) {
 	manifest := Manifest{
 		Versioned: SchemaVersion,
-		MediaType: MediaTypeManifest,
 		Config: distribution.Descriptor{
 			Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
 			Size:      985,
