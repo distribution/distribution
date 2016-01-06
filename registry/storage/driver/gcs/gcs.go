@@ -318,13 +318,13 @@ func retry(maxTries int, req request) error {
 	backoff := time.Second
 	var err error
 	for i := 0; i < maxTries; i++ {
-		err := req()
+		err = req()
 		if err == nil {
 			return nil
 		}
 
-		status := err.(*googleapi.Error)
-		if status == nil || (status.Code != 429 && status.Code < http.StatusInternalServerError) {
+		status, ok := err.(*googleapi.Error)
+		if !ok || (status.Code != 429 && status.Code < http.StatusInternalServerError) {
 			return err
 		}
 
