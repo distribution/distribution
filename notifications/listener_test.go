@@ -81,6 +81,11 @@ func (tl *testListener) BlobPulled(repo string, desc distribution.Descriptor) er
 	return nil
 }
 
+func (tl *testListener) BlobMounted(repo string, desc distribution.Descriptor, fromRepo string) error {
+	tl.ops["layer:mount"]++
+	return nil
+}
+
 func (tl *testListener) BlobDeleted(repo string, desc distribution.Descriptor) error {
 	tl.ops["layer:delete"]++
 	return nil
