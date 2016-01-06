@@ -461,6 +461,11 @@ func (d *driver) List(context ctx.Context, path string) ([]string, error) {
 			break
 		}
 	}
+	if path != "/" && len(list) == 0 {
+		// Treat empty response as missing directory, since we don't actually
+		// have directories in Google Cloud Storage.
+		return nil, storagedriver.PathNotFoundError{Path: path}
+	}
 	return list, nil
 }
 
