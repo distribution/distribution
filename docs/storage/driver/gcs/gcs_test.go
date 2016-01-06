@@ -3,9 +3,12 @@
 package gcs
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
+
+	"google.golang.org/api/googleapi"
 
 	ctx "github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
@@ -53,6 +56,43 @@ func init() {
 	testsuites.RegisterSuite(func() (storagedriver.StorageDriver, error) {
 		return gcsDriverConstructor(root)
 	}, skipGCS)
+}
+
+func TestRetry(t *testing.T) {
+	if skipGCS() != "" {
+		t.Skip(skipGCS())
+	}
+
+	assertError := func(expected string, observed error) {
+		observedMsg := "<nil>"
+		if observed != nil {
+			observedMsg = observed.Error()
+		}
+		if observedMsg != expected {
+			t.Fatalf("expected %v, observed %v\n", expected, observedMsg)
+		}
+	}
+
+	err := retry(2, func() error {
+		return &googleapi.Error{
+			Code:    503,
+			Message: "google api error",
+		}
+	})
+	assertError("googleapi: Error 503: google api error", err)
+
+	err = retry(2, func() error {
+		return &googleapi.Error{
+			Code:    404,
+			Message: "google api error",
+		}
+	})
+	assertError("googleapi: Error 404: google api error", err)
+
+	err = retry(2, func() error {
+		return fmt.Errorf("error")
+	})
+	assertError("error", err)
 }
 
 func TestEmptyRootList(t *testing.T) {
