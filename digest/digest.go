@@ -28,7 +28,15 @@ type Digest string
 
 // NewDigest returns a Digest from alg and a hash.Hash object.
 func NewDigest(alg Algorithm, h hash.Hash) Digest {
-	return Digest(fmt.Sprintf("%s:%x", alg, h.Sum(nil)))
+	return NewDigestFromBytes(alg, h.Sum(nil))
+}
+
+// NewDigestFromBytes returns a new digest from the byte contents of p.
+// Typically, this can come from hash.Hash.Sum(...) or xxx.SumXXX(...)
+// functions. This is also useful for rebuilding digests from binary
+// serializations.
+func NewDigestFromBytes(alg Algorithm, p []byte) Digest {
+	return Digest(fmt.Sprintf("%s:%x", alg, p))
 }
 
 // NewDigestFromHex returns a Digest from alg and a the hex encoded digest.
