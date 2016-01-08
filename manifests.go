@@ -25,7 +25,7 @@ type Manifest interface {
 // specific data is passed into the function which creates the builder.
 type ManifestBuilder interface {
 	// Build creates the manifest from his builder.
-	Build() (Manifest, error)
+	Build(ctx context.Context) (Manifest, error)
 
 	// References returns a list of objects which have been added to this
 	// builder. The dependencies are returned in the order they were added,

@@ -165,28 +165,45 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 		blobLinkPath,
 	}
 
+	blobStore := &linkedBlobStore{
+		ctx:           ctx,
+		blobStore:     repo.blobStore,
+		repository:    repo,
+		deleteEnabled: repo.registry.deleteEnabled,
+		blobAccessController: &linkedBlobStatter{
+			blobStore:   repo.blobStore,
+			repository:  repo,
+			linkPathFns: manifestLinkPathFns,
+		},
+
+		// TODO(stevvooe): linkPath limits this blob store to only
+		// manifests. This instance cannot be used for blob checks.
+		linkPathFns: manifestLinkPathFns,
+	}
+
 	ms := &manifestStore{
 		ctx:        ctx,
 		repository: repo,
-		blobStore: &linkedBlobStore{
-			ctx:           ctx,
-			blobStore:     repo.blobStore,
-			repository:    repo,
-			deleteEnabled: repo.registry.deleteEnabled,
-			blobAccessController: &linkedBlobStatter{
-				blobStore:   repo.blobStore,
-				repository:  repo,
-				linkPathFns: manifestLinkPathFns,
-			},
-
-			// TODO(stevvooe): linkPath limits this blob store to only
-			// manifests. This instance cannot be used for blob checks.
-			linkPathFns: manifestLinkPathFns,
-		},
-		signatures: &signatureStore{
+		blobStore:  blobStore,
+		schema1Handler: &signedManifestHandler{
 			ctx:        ctx,
 			repository: repo,
-			blobStore:  repo.blobStore,
+			blobStore:  blobStore,
+			signatures: &signatureStore{
+				ctx:        ctx,
+				repository: repo,
+				blobStore:  repo.blobStore,
+			},
+		},
+		schema2Handler: &schema2ManifestHandler{
+			ctx:        ctx,
+			repository: repo,
+			blobStore:  blobStore,
+		},
+		manifestListHandler: &manifestListHandler{
+			ctx:        ctx,
+			repository: repo,
+			blobStore:  blobStore,
 		},
 	}
 

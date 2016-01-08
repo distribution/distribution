@@ -3,6 +3,7 @@ package schema1
 import (
 	"testing"
 
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/libtrust"
@@ -34,7 +35,7 @@ func makeSignedManifest(t *testing.T, pk libtrust.PrivateKey, refs []Reference) 
 	return signedManifest
 }
 
-func TestBuilder(t *testing.T) {
+func TestReferenceBuilder(t *testing.T) {
 	pk, err := libtrust.GenerateECP256PrivateKey()
 	if err != nil {
 		t.Fatalf("unexpected error generating private key: %v", err)
@@ -53,8 +54,8 @@ func TestBuilder(t *testing.T) {
 
 	handCrafted := makeSignedManifest(t, pk, []Reference{r1, r2})
 
-	b := NewManifestBuilder(pk, handCrafted.Manifest.Name, handCrafted.Manifest.Tag, handCrafted.Manifest.Architecture)
-	_, err = b.Build()
+	b := NewReferenceManifestBuilder(pk, handCrafted.Manifest.Name, handCrafted.Manifest.Tag, handCrafted.Manifest.Architecture)
+	_, err = b.Build(context.Background())
 	if err == nil {
 		t.Fatal("Expected error building zero length manifest")
 	}
@@ -79,7 +80,7 @@ func TestBuilder(t *testing.T) {
 		t.Fatalf("Unexpected reference : %v", refs[0])
 	}
 
-	m, err := b.Build()
+	m, err := b.Build(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}

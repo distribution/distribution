@@ -5,21 +5,23 @@ import (
 
 	"errors"
 	"github.com/docker/distribution"
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/libtrust"
 )
 
-// ManifestBuilder is a type for constructing manifests
-type manifestBuilder struct {
+// referenceManifestBuilder is a type for constructing manifests from schema1
+// dependencies.
+type referenceManifestBuilder struct {
 	Manifest
 	pk libtrust.PrivateKey
 }
 
-// NewManifestBuilder is used to build new manifests for the current schema
-// version.
-func NewManifestBuilder(pk libtrust.PrivateKey, name, tag, architecture string) distribution.ManifestBuilder {
-	return &manifestBuilder{
+// NewReferenceManifestBuilder is used to build new manifests for the current
+// schema version using schema1 dependencies.
+func NewReferenceManifestBuilder(pk libtrust.PrivateKey, name, tag, architecture string) distribution.ManifestBuilder {
+	return &referenceManifestBuilder{
 		Manifest: Manifest{
 			Versioned: manifest.Versioned{
 				SchemaVersion: 1,
@@ -32,8 +34,7 @@ func NewManifestBuilder(pk libtrust.PrivateKey, name, tag, architecture string) 
 	}
 }
 
-// Build produces a final manifest from the given references
-func (mb *manifestBuilder) Build() (distribution.Manifest, error) {
+func (mb *referenceManifestBuilder) Build(ctx context.Context) (distribution.Manifest, error) {
 	m := mb.Manifest
 	if len(m.FSLayers) == 0 {
 		return nil, errors.New("cannot build manifest with zero layers or history")
@@ -47,8 +48,8 @@ func (mb *manifestBuilder) Build() (distribution.Manifest, error) {
 	return Sign(&m, mb.pk)
 }
 
-// AppendReference adds a reference to the current manifestBuilder
-func (mb *manifestBuilder) AppendReference(d distribution.Describable) error {
+// AppendReference adds a reference to the current ManifestBuilder
+func (mb *referenceManifestBuilder) AppendReference(d distribution.Describable) error {
 	r, ok := d.(Reference)
 	if !ok {
 		return fmt.Errorf("Unable to add non-reference type to v1 builder")
@@ -62,7 +63,7 @@ func (mb *manifestBuilder) AppendReference(d distribution.Describable) error {
 }
 
 // References returns the current references added to this builder
-func (mb *manifestBuilder) References() []distribution.Descriptor {
+func (mb *referenceManifestBuilder) References() []distribution.Descriptor {
 	refs := make([]distribution.Descriptor, len(mb.Manifest.FSLayers))
 	for i := range mb.Manifest.FSLayers {
 		layerDigest := mb.Manifest.FSLayers[i].BlobSum
