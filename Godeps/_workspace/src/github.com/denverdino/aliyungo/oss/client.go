@@ -8,7 +8,6 @@ import (
 	"encoding/base64"
 	"encoding/xml"
 	"fmt"
-	"github.com/denverdino/aliyungo/util"
 	"io"
 	"io/ioutil"
 	"log"
@@ -22,6 +21,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/denverdino/aliyungo/common"
+	"github.com/denverdino/aliyungo/util"
 )
 
 const DefaultContentType = "application/octet-stream"
@@ -34,7 +36,6 @@ type Client struct {
 	Internal        bool
 	Secure          bool
 	ConnectTimeout  time.Duration
-	ReadTimeout     time.Duration
 
 	endpoint string
 	debug    bool
@@ -168,6 +169,8 @@ func (client *Client) SetEndpoint(endpoint string) {
 }
 
 // PutBucket creates a new bucket.
+//
+// You can read doc at http://docs.aliyun.com/#/pub/oss/api-reference/bucket&PutBucket
 func (b *Bucket) PutBucket(perm ACL) error {
 	headers := make(http.Header)
 	if perm != "" {
@@ -185,13 +188,16 @@ func (b *Bucket) PutBucket(perm ACL) error {
 
 // DelBucket removes an existing bucket. All objects in the bucket must
 // be removed before the bucket itself can be removed.
+//
+// You can read doc at http://docs.aliyun.com/#/pub/oss/api-reference/bucket&DeleteBucket
 func (b *Bucket) DelBucket() (err error) {
-	req := &request{
-		method: "DELETE",
-		bucket: b.Name,
-		path:   "/",
-	}
 	for attempt := attempts.Start(); attempt.Next(); {
+		req := &request{
+			method: "DELETE",
+			bucket: b.Name,
+			path:   "/",
+		}
+
 		err = b.Client.query(req, nil)
 		if !shouldRetry(err) {
 			break
@@ -201,6 +207,8 @@ func (b *Bucket) DelBucket() (err error) {
 }
 
 // Get retrieves an object from an bucket.
+//
+// You can read doc at http://docs.aliyun.com/#/pub/oss/api-reference/object&GetObject
 func (b *Bucket) Get(path string) (data []byte, err error) {
 	body, err := b.GetReader(path)
 	if err != nil {
@@ -237,16 +245,17 @@ func (b *Bucket) GetResponse(path string) (resp *http.Response, err error) {
 // It is the caller's responsibility to call Close on rc when
 // finished reading
 func (b *Bucket) GetResponseWithHeaders(path string, headers http.Header) (resp *http.Response, err error) {
-	req := &request{
-		bucket:  b.Name,
-		path:    path,
-		headers: headers,
-	}
-	err = b.Client.prepare(req)
-	if err != nil {
-		return nil, err
-	}
 	for attempt := attempts.Start(); attempt.Next(); {
+		req := &request{
+			bucket:  b.Name,
+			path:    path,
+			headers: headers,
+		}
+		err = b.Client.prepare(req)
+		if err != nil {
+			return nil, err
+		}
+
 		resp, err := b.Client.run(req, nil)
 		if shouldRetry(err) && attempt.HasNext() {
 			continue
@@ -271,17 +280,18 @@ func (b *Bucket) GetWithParams(path string, params url.Values) (data []byte, err
 }
 
 func (b *Bucket) GetResponseWithParamsAndHeaders(path string, params url.Values, headers http.Header) (resp *http.Response, err error) {
-	req := &request{
-		bucket:  b.Name,
-		path:    path,
-		params:  params,
-		headers: headers,
-	}
-	err = b.Client.prepare(req)
-	if err != nil {
-		return nil, err
-	}
 	for attempt := attempts.Start(); attempt.Next(); {
+		req := &request{
+			bucket:  b.Name,
+			path:    path,
+			params:  params,
+			headers: headers,
+		}
+		err = b.Client.prepare(req)
+		if err != nil {
+			return nil, err
+		}
+
 		resp, err := b.Client.run(req, nil)
 		if shouldRetry(err) && attempt.HasNext() {
 			continue
@@ -296,16 +306,17 @@ func (b *Bucket) GetResponseWithParamsAndHeaders(path string, params url.Values,
 
 // Exists checks whether or not an object exists on an bucket using a HEAD request.
 func (b *Bucket) Exists(path string) (exists bool, err error) {
-	req := &request{
-		method: "HEAD",
-		bucket: b.Name,
-		path:   path,
-	}
-	err = b.Client.prepare(req)
-	if err != nil {
-		return
-	}
 	for attempt := attempts.Start(); attempt.Next(); {
+		req := &request{
+			method: "HEAD",
+			bucket: b.Name,
+			path:   path,
+		}
+		err = b.Client.prepare(req)
+		if err != nil {
+			return
+		}
+
 		resp, err := b.Client.run(req, nil)
 
 		if shouldRetry(err) && attempt.HasNext() {
@@ -332,19 +343,22 @@ func (b *Bucket) Exists(path string) (exists bool, err error) {
 }
 
 // Head HEADs an object in the bucket, returns the response with
+//
+// You can read doc at http://docs.aliyun.com/#/pub/oss/api-reference/object&HeadObject
 func (b *Bucket) Head(path string, headers http.Header) (*http.Response, error) {
-	req := &request{
-		method:  "HEAD",
-		bucket:  b.Name,
-		path:    path,
-		headers: headers,
-	}
-	err := b.Client.prepare(req)
-	if err != nil {
-		return nil, err
-	}
 
 	for attempt := attempts.Start(); attempt.Next(); {
+		req := &request{
+			method:  "HEAD",
+			bucket:  b.Name,
+			path:    path,
+			headers: headers,
+		}
+		err := b.Client.prepare(req)
+		if err != nil {
+			return nil, err
+		}
+
 		resp, err := b.Client.run(req, nil)
 		if shouldRetry(err) && attempt.HasNext() {
 			continue
@@ -352,18 +366,25 @@ func (b *Bucket) Head(path string, headers http.Header) (*http.Response, error) 
 		if err != nil {
 			return nil, err
 		}
+		if resp != nil && resp.Body != nil {
+			resp.Body.Close()
+		}
 		return resp, err
 	}
 	return nil, fmt.Errorf("OSS Currently Unreachable")
 }
 
 // Put inserts an object into the bucket.
+//
+// You can read doc at http://docs.aliyun.com/#/pub/oss/api-reference/object&PutObject
 func (b *Bucket) Put(path string, data []byte, contType string, perm ACL, options Options) error {
 	body := bytes.NewBuffer(data)
 	return b.PutReader(path, body, int64(len(data)), contType, perm, options)
 }
 
 // PutCopy puts a copy of an object given by the key path into bucket b using b.Path as the target key
+//
+// You can read doc at http://docs.aliyun.com/#/pub/oss/api-reference/object&CopyObject
 func (b *Bucket) PutCopy(path string, perm ACL, options CopyOptions, source string) (*CopyObjectResult, error) {
 	headers := make(http.Header)
 
@@ -376,6 +397,7 @@ func (b *Bucket) PutCopy(path string, perm ACL, options CopyOptions, source stri
 		bucket:  b.Name,
 		path:    path,
 		headers: headers,
+		timeout: 5 * time.Minute,
 	}
 	resp := &CopyObjectResult{}
 	err := b.Client.query(req, resp)
@@ -418,8 +440,8 @@ func (b *Bucket) PutFile(path string, file *os.File, perm ACL, options Options) 
 	}
 	stats, err := file.Stat()
 	if err != nil {
-		log.Panicf("Unable to read file %s stats.", file.Name())
-		return nil
+		log.Printf("Unable to read file %s stats.\n", file.Name())
+		return err
 	}
 
 	return b.PutReader(path, file, stats.Size(), contentType, perm, options)
@@ -502,6 +524,8 @@ type WebsiteConfiguration struct {
 }
 
 // PutBucketWebsite configures a bucket as a website.
+//
+// You can read doc at http://docs.aliyun.com/#/pub/oss/api-reference/bucket&PutBucketWebsite
 func (b *Bucket) PutBucketWebsite(configuration WebsiteConfiguration) error {
 	doc, err := xml.Marshal(configuration)
 	if err != nil {
@@ -530,6 +554,8 @@ func (b *Bucket) PutBucketSubresource(subresource string, r io.Reader, length in
 }
 
 // Del removes an object from the bucket.
+//
+// You can read doc at http://docs.aliyun.com/#/pub/oss/api-reference/object&DeleteObject
 func (b *Bucket) Del(path string) error {
 	req := &request{
 		method: "DELETE",
@@ -550,6 +576,8 @@ type Object struct {
 }
 
 // DelMulti removes up to 1000 objects from the bucket.
+//
+// You can read doc at http://docs.aliyun.com/#/pub/oss/api-reference/object&DeleteMultipleObjects
 func (b *Bucket) DelMulti(objects Delete) error {
 	doc, err := xml.Marshal(objects)
 	if err != nil {
@@ -627,7 +655,7 @@ type Key struct {
 // will return keys alphabetically greater than the marker.
 //
 // The max parameter specifies how many keys + common prefixes to return in
-// the response. The default is 1000.
+// the response, at most 1000. The default is 100.
 //
 // For example, given these keys in a bucket:
 //
@@ -667,6 +695,8 @@ type Key struct {
 //         },
 //     }
 //
+//
+// You can read doc at http://docs.aliyun.com/#/pub/oss/api-reference/bucket&GetBucket
 func (b *Bucket) List(prefix, delim, marker string, max int) (result *ListResp, err error) {
 	params := make(url.Values)
 	params.Set("prefix", prefix)
@@ -675,12 +705,12 @@ func (b *Bucket) List(prefix, delim, marker string, max int) (result *ListResp, 
 	if max != 0 {
 		params.Set("max-keys", strconv.FormatInt(int64(max), 10))
 	}
-	req := &request{
-		bucket: b.Name,
-		params: params,
-	}
 	result = &ListResp{}
 	for attempt := attempts.Start(); attempt.Next(); {
+		req := &request{
+			bucket: b.Name,
+			params: params,
+		}
 		err = b.Client.query(req, result)
 		if !shouldRetry(err) {
 			break
@@ -699,66 +729,6 @@ func (b *Bucket) List(prefix, delim, marker string, max int) (result *ListResp, 
 	}
 	return result, nil
 }
-
-//// The VersionsResp type holds the results of a list bucket Versions operation.
-//type VersionsResp struct {
-//	Name            string
-//	Prefix          string
-//	KeyMarker       string
-//	VersionIdMarker string
-//	MaxKeys         int
-//	Delimiter       string
-//	IsTruncated     bool
-//	Versions        []Version `xml:"Version"`
-//	CommonPrefixes  []string  `xml:">Prefix"`
-//}
-
-//// The Version type represents an object version stored in an bucket.
-//type Version struct {
-//	Key          string
-//	VersionId    string
-//	IsLatest     bool
-//	LastModified string
-//	// ETag gives the hex-encoded MD5 sum of the contents,
-//	// surrounded with double-quotes.
-//	ETag         string
-//	Size         int64
-//	Owner        Owner
-//	StorageClass string
-//}
-
-//func (b *Bucket) Versions(prefix, delim, keyMarker string, versionIdMarker string, max int) (result *VersionsResp, err error) {
-//	params := url.Values{}
-//	params.Set("versions", "")
-//	params.Set("prefix", prefix)
-//	params.Set("delimiter", delim)
-
-//	if len(versionIdMarker) != 0 {
-//		params["version-id-marker"] = []string{versionIdMarker}
-//	}
-//	if len(keyMarker) != 0 {
-//		params["key-marker"] = []string{keyMarker}
-//	}
-
-//	if max != 0 {
-//		params["max-keys"] = []string{strconv.FormatInt(int64(max), 10)}
-//	}
-//	req := &request{
-//		bucket: b.Name,
-//		params: params,
-//	}
-//	result = &VersionsResp{}
-//	for attempt := attempts.Start(); attempt.Next(); {
-//		err = b.Client.query(req, result)
-//		if !shouldRetry(err) {
-//			break
-//		}
-//	}
-//	if err != nil {
-//		return nil, err
-//	}
-//	return result, nil
-//}
 
 type GetLocationResp struct {
 	Location string `xml:",innerxml"`
@@ -942,6 +912,7 @@ type request struct {
 	baseurl  string
 	payload  io.Reader
 	prepared bool
+	timeout  time.Duration
 }
 
 func (req *request) url() (*url.URL, error) {
@@ -1062,6 +1033,8 @@ func (client *Client) setupHttpRequest(req *request) (*http.Request, error) {
 		Form:       req.params,
 	}
 
+	hreq.Header.Set("X-SDK-Client", `AliyunGO/`+common.Version)
+
 	contentLength := req.headers.Get("Content-Length")
 
 	if contentLength != "" {
@@ -1079,28 +1052,11 @@ func (client *Client) setupHttpRequest(req *request) (*http.Request, error) {
 // doHttpRequest sends hreq and returns the http response from the server.
 // If resp is not nil, the XML data contained in the response
 // body will be unmarshalled on it.
-func (client *Client) doHttpRequest(hreq *http.Request, resp interface{}) (*http.Response, error) {
-	c := http.Client{
-		Transport: &http.Transport{
-			Dial: func(netw, addr string) (c net.Conn, err error) {
-				deadline := time.Now().Add(client.ReadTimeout)
-				if client.ConnectTimeout > 0 {
-					c, err = net.DialTimeout(netw, addr, client.ConnectTimeout)
-				} else {
-					c, err = net.Dial(netw, addr)
-				}
-				if err != nil {
-					return
-				}
-				if client.ReadTimeout > 0 {
-					err = c.SetDeadline(deadline)
-				}
-				return
-			},
-			Proxy: http.ProxyFromEnvironment,
-		},
-	}
+func (client *Client) doHttpRequest(c *http.Client, hreq *http.Request, resp interface{}) (*http.Response, error) {
 
+	if true {
+		log.Printf("%s %s ...\n", hreq.Method, hreq.URL.String())
+	}
 	hresp, err := c.Do(hreq)
 	if err != nil {
 		return nil, err
@@ -1110,7 +1066,7 @@ func (client *Client) doHttpRequest(hreq *http.Request, resp interface{}) (*http
 		contentType := hresp.Header.Get("Content-Type")
 		if contentType == "application/xml" || contentType == "text/xml" {
 			dump, _ := httputil.DumpResponse(hresp, true)
-			log.Printf("} -> %s\n", dump)
+			log.Printf("%s\n", dump)
 		} else {
 			log.Printf("Response Content-Type: %s\n", contentType)
 		}
@@ -1143,7 +1099,25 @@ func (client *Client) run(req *request, resp interface{}) (*http.Response, error
 		return nil, err
 	}
 
-	return client.doHttpRequest(hreq, resp)
+	c := &http.Client{
+		Transport: &http.Transport{
+			Dial: func(netw, addr string) (c net.Conn, err error) {
+				if client.ConnectTimeout > 0 {
+					c, err = net.DialTimeout(netw, addr, client.ConnectTimeout)
+				} else {
+					c, err = net.Dial(netw, addr)
+				}
+				if err != nil {
+					return
+				}
+				return
+			},
+			Proxy: http.ProxyFromEnvironment,
+		},
+		Timeout: req.timeout,
+	}
+
+	return client.doHttpRequest(c, hreq, resp)
 }
 
 // Error represents an error in an operation with OSS.
@@ -1157,7 +1131,7 @@ type Error struct {
 }
 
 func (e *Error) Error() string {
-	return e.Message
+	return fmt.Sprintf("Aliyun API Error: RequestId: %s Status Code: %d Code: %s Message: %s", e.RequestId, e.StatusCode, e.Code, e.Message)
 }
 
 func (client *Client) buildError(r *http.Response) error {
@@ -1186,10 +1160,21 @@ func (client *Client) buildError(r *http.Response) error {
 	return &err
 }
 
+type TimeoutError interface {
+	error
+	Timeout() bool // Is the error a timeout?
+}
+
 func shouldRetry(err error) bool {
 	if err == nil {
 		return false
 	}
+
+	_, ok := err.(TimeoutError)
+	if ok {
+		return true
+	}
+
 	switch err {
 	case io.ErrUnexpectedEOF, io.EOF:
 		return true
@@ -1245,6 +1230,8 @@ type AccessControlPolicy struct {
 }
 
 // ACL returns ACL of bucket
+//
+// You can read doc at http://docs.aliyun.com/#/pub/oss/api-reference/bucket&GetBucketAcl
 func (b *Bucket) ACL() (result *AccessControlPolicy, err error) {
 
 	params := make(url.Values)
@@ -1262,4 +1249,76 @@ func (b *Bucket) ACL() (result *AccessControlPolicy, err error) {
 	}
 
 	return &resp, nil
+}
+
+const minChunkSize = 5 << 20
+const defaultChunkSize = 2 * minChunkSize
+
+func (b *Bucket) GetContentLength(sourcePath string) (int64, error) {
+	resp, err := b.Head(sourcePath, nil)
+	if err != nil {
+		return 0, err
+	}
+
+	currentLength := resp.ContentLength
+
+	return currentLength, err
+}
+
+// Copy large file in the same bucket
+func (b *Bucket) CopyLargeFile(sourcePath string, destPath string, contentType string, perm ACL, options Options) error {
+
+	log.Printf("Copy large file from %s to %s\n", sourcePath, destPath)
+
+	currentLength, err := b.GetContentLength(sourcePath)
+
+	if err != nil {
+		return err
+	}
+
+	multi, err := b.InitMulti(destPath, contentType, perm, options)
+	if err != nil {
+		return err
+	}
+
+	parts := []Part{}
+
+	defer func() {
+		if len(parts) > 0 {
+			if multi == nil {
+				// Parts should be empty if the multi is not initialized
+				panic("Unreachable")
+			} else {
+				if multi.Complete(parts) != nil {
+					multi.Abort()
+				}
+			}
+		}
+	}()
+
+	var start int64 = 0
+	var to int64 = 0
+	var partNumber = 0
+	sourcePathForCopy := b.Path(sourcePath)
+
+	for start = 0; start < currentLength; start = to {
+		to = start + defaultChunkSize
+		if to > currentLength {
+			to = currentLength
+		}
+		partNumber++
+
+		rangeStr := fmt.Sprintf("bytes=%d-%d", start, to-1)
+
+		_, part, err := multi.PutPartCopy(partNumber,
+			CopyOptions{CopySourceOptions: rangeStr},
+			sourcePathForCopy)
+
+		if err != nil {
+			return err
+		}
+		parts = append(parts, part)
+	}
+
+	return err
 }
