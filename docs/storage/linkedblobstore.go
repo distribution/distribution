@@ -20,6 +20,7 @@ type linkPathFunc func(name string, dgst digest.Digest) (string, error)
 // that grant access to the global blob store.
 type linkedBlobStore struct {
 	*blobStore
+	registry               *registry
 	blobServer             distribution.BlobServer
 	blobAccessController   distribution.BlobDescriptorService
 	repository             distribution.Repository
@@ -183,6 +184,28 @@ func (lbs *linkedBlobStore) Delete(ctx context.Context, dgst digest.Digest) erro
 	}
 
 	return nil
+}
+
+func (lbs *linkedBlobStore) Mount(ctx context.Context, sourceRepo string, dgst digest.Digest) (distribution.Descriptor, error) {
+	repo, err := lbs.registry.Repository(ctx, sourceRepo)
+	if err != nil {
+		return distribution.Descriptor{}, err
+	}
+	stat, err := repo.Blobs(ctx).Stat(ctx, dgst)
+	if err != nil {
+		return distribution.Descriptor{}, err
+	}
+
+	desc := distribution.Descriptor{
+		Size: stat.Size,
+
+		// NOTE(stevvooe): The central blob store firewalls media types from
+		// other users. The caller should look this up and override the value
+		// for the specific repository.
+		MediaType: "application/octet-stream",
+		Digest:    dgst,
+	}
+	return desc, lbs.linkBlob(ctx, desc)
 }
 
 // newBlobUpload allocates a new upload controller with the given state.

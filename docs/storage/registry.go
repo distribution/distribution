@@ -233,6 +233,7 @@ func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
 	}
 
 	return &linkedBlobStore{
+		registry:             repo.registry,
 		blobStore:            repo.blobStore,
 		blobServer:           repo.blobServer,
 		blobAccessController: statter,
