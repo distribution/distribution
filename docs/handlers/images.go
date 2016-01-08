@@ -8,9 +8,19 @@ import (
 	"github.com/docker/distribution"
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/manifest/manifestlist"
+	"github.com/docker/distribution/manifest/schema1"
+	"github.com/docker/distribution/manifest/schema2"
 	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/gorilla/handlers"
+)
+
+// These constants determine which architecture and OS to choose from a
+// manifest list when downconverting it to a schema1 manifest.
+const (
+	defaultArch = "amd64"
+	defaultOS   = "linux"
 )
 
 // imageManifestDispatcher takes the request context and builds the
@@ -51,8 +61,6 @@ type imageManifestHandler struct {
 }
 
 // GetImageManifest fetches the image manifest from the storage backend, if it exists.
-// todo(richardscothern): this assumes v2 schema 1 manifests for now but in the future
-// get the version from the Accept HTTP header
 func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http.Request) {
 	ctxu.GetLogger(imh).Debug("GetImageManifest")
 	manifests, err := imh.Repository.Manifests(imh)
@@ -83,6 +91,67 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 		return
 	}
 
+	supportsSchema2 := false
+	supportsManifestList := false
+	if acceptHeaders, ok := r.Header["Accept"]; ok {
+		for _, mediaType := range acceptHeaders {
+			if mediaType == schema2.MediaTypeManifest {
+				supportsSchema2 = true
+			}
+			if mediaType == manifestlist.MediaTypeManifestList {
+				supportsManifestList = true
+			}
+		}
+	}
+
+	schema2Manifest, isSchema2 := manifest.(*schema2.DeserializedManifest)
+	manifestList, isManifestList := manifest.(*manifestlist.DeserializedManifestList)
+
+	// Only rewrite schema2 manifests when they are being fetched by tag.
+	// If they are being fetched by digest, we can't return something not
+	// matching the digest.
+	if imh.Tag != "" && isSchema2 && !supportsSchema2 {
+		// Rewrite manifest in schema1 format
+		ctxu.GetLogger(imh).Infof("rewriting manifest %s in schema1 format to support old client", imh.Digest.String())
+
+		manifest, err = imh.convertSchema2Manifest(schema2Manifest)
+		if err != nil {
+			return
+		}
+	} else if imh.Tag != "" && isManifestList && !supportsManifestList {
+		// Rewrite manifest in schema1 format
+		ctxu.GetLogger(imh).Infof("rewriting manifest list %s in schema1 format to support old client", imh.Digest.String())
+
+		// Find the image manifest corresponding to the default
+		// platform
+		var manifestDigest digest.Digest
+		for _, manifestDescriptor := range manifestList.Manifests {
+			if manifestDescriptor.Platform.Architecture == defaultArch && manifestDescriptor.Platform.OS == defaultOS {
+				manifestDigest = manifestDescriptor.Digest
+				break
+			}
+		}
+
+		if manifestDigest == "" {
+			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown)
+			return
+		}
+
+		manifest, err = manifests.Get(imh, manifestDigest)
+		if err != nil {
+			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
+			return
+		}
+
+		// If necessary, convert the image manifest
+		if schema2Manifest, isSchema2 := manifest.(*schema2.DeserializedManifest); isSchema2 && !supportsSchema2 {
+			manifest, err = imh.convertSchema2Manifest(schema2Manifest)
+			if err != nil {
+				return
+			}
+		}
+	}
+
 	ct, p, err := manifest.Payload()
 	if err != nil {
 		return
@@ -93,6 +162,31 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 	w.Header().Set("Docker-Content-Digest", imh.Digest.String())
 	w.Header().Set("Etag", fmt.Sprintf(`"%s"`, imh.Digest))
 	w.Write(p)
+}
+
+func (imh *imageManifestHandler) convertSchema2Manifest(schema2Manifest *schema2.DeserializedManifest) (distribution.Manifest, error) {
+	targetDescriptor := schema2Manifest.Target()
+	blobs := imh.Repository.Blobs(imh)
+	configJSON, err := blobs.Get(imh, targetDescriptor.Digest)
+	if err != nil {
+		imh.Errors = append(imh.Errors, v2.ErrorCodeManifestInvalid.WithDetail(err))
+		return nil, err
+	}
+
+	builder := schema1.NewConfigManifestBuilder(imh.Repository.Blobs(imh), imh.Context.App.trustKey, imh.Repository.Name(), imh.Tag, configJSON)
+	for _, d := range schema2Manifest.References() {
+		if err := builder.AppendReference(d); err != nil {
+			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestInvalid.WithDetail(err))
+			return nil, err
+		}
+	}
+	manifest, err := builder.Build(imh)
+	if err != nil {
+		imh.Errors = append(imh.Errors, v2.ErrorCodeManifestInvalid.WithDetail(err))
+		return nil, err
+	}
+
+	return manifest, nil
 }
 
 func etagMatch(r *http.Request, etag string) bool {

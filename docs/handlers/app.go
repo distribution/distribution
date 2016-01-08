@@ -30,6 +30,7 @@ import (
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/factory"
 	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
+	"github.com/docker/libtrust"
 	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
@@ -67,10 +68,15 @@ type App struct {
 
 	redis *redis.Pool
 
-	// true if this registry is configured as a pull through cache
+	// trustKey is a deprecated key used to sign manifests converted to
+	// schema1 for backward compatibility. It should not be used for any
+	// other purposes.
+	trustKey libtrust.PrivateKey
+
+	// isCache is true if this registry is configured as a pull through cache
 	isCache bool
 
-	// true if the registry is in a read-only maintenance mode
+	// readOnly is true if the registry is in a read-only maintenance mode
 	readOnly bool
 }
 
@@ -138,6 +144,13 @@ func NewApp(ctx context.Context, configuration *configuration.Configuration) *Ap
 	app.configureEvents(configuration)
 	app.configureRedis(configuration)
 	app.configureLogHook(configuration)
+
+	// Generate an ephemeral key to be used for signing converted manifests
+	// for clients that don't support schema2.
+	app.trustKey, err = libtrust.GenerateECP256PrivateKey()
+	if err != nil {
+		panic(err)
+	}
 
 	if configuration.HTTP.Host != "" {
 		u, err := url.Parse(configuration.HTTP.Host)
