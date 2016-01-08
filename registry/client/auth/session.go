@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
+	packagetoken "github.com/docker/distribution/registry/auth/token"
 	"github.com/docker/distribution/registry/client"
 	"github.com/docker/distribution/registry/client/transport"
 )
@@ -148,6 +149,30 @@ func newTokenHandler(transport http.RoundTripper, creds CredentialStore, c clock
 	}
 }
 
+// ProxyNewTokenHandler comparing to NewTokenHandler, just add one more paramter to covey token.
+func ProxyNewTokenHandler(transport http.RoundTripper, creds CredentialStore, token string, scope string, actions ...string) AuthenticationHandler {
+	return proxyNewTokenHandler(transport, creds, realClock{}, token, scope, actions...)
+}
+
+// proxyNewTokenHandler comparing to newTokenHandler, just add modification to cache token.
+func proxyNewTokenHandler(transport http.RoundTripper, creds CredentialStore, c clock, token string, scope string, actions ...string) AuthenticationHandler {
+	tmptoken, _ := packagetoken.NewToken(token)
+	expiration := time.Unix(tmptoken.Claims.Expiration, 0)
+	logrus.Debugf("Enter func proxyNewTokenHandler et time: %v and value: %d", expiration, tmptoken.Claims.Expiration)
+	return &tokenHandler{
+		transport: transport,
+		creds:     creds,
+		clock:     c,
+		scope: tokenScope{
+			Resource: "repository",
+			Scope:    scope,
+			Actions:  actions,
+		},
+		tokenCache:      token,
+		tokenExpiration: expiration,
+	}
+}
+
 func (th *tokenHandler) client() *http.Client {
 	return &http.Client{
 		Transport: th.transport,
@@ -173,6 +198,7 @@ func (th *tokenHandler) refreshToken(params map[string]string) error {
 	th.tokenLock.Lock()
 	defer th.tokenLock.Unlock()
 	now := th.clock.Now()
+	logrus.Debugf("Enter func refreshToken et now: %d and expire: %d", now.Unix(), th.tokenExpiration.Unix())
 	if now.After(th.tokenExpiration) {
 		tr, err := th.fetchToken(params)
 		if err != nil {

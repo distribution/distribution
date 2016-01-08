@@ -3,7 +3,9 @@ package proxy
 import (
 	"net/http"
 	"net/url"
+	"strings"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/configuration"
 	"github.com/docker/distribution/context"
@@ -72,9 +74,24 @@ func (pr *proxyingRegistry) Repositories(ctx context.Context, repos []string, la
 }
 
 func (pr *proxyingRegistry) Repository(ctx context.Context, name string) (distribution.Repository, error) {
-	tr := transport.NewTransport(http.DefaultTransport,
-		auth.NewAuthorizer(pr.challengeManager, auth.NewTokenHandler(http.DefaultTransport, pr.credentialStore, name, "pull")))
+	var tr http.RoundTripper
+	req, err := context.GetRequest(ctx)
+	if err != nil {
+		return nil, err
+	}
 
+	parts := strings.Split(req.Header.Get("Authorization"), " ")
+
+	if (pr.remoteURL != "") && (len(parts) == 2 && strings.ToLower(parts[0]) == "bearer") {
+		rawToken := parts[1]
+
+		logrus.Debugf("Enter func Repository and raw Token = %s", rawToken)
+		tr = transport.NewTransport(http.DefaultTransport,
+			auth.NewAuthorizer(pr.challengeManager, auth.ProxyNewTokenHandler(http.DefaultTransport, pr.credentialStore, rawToken, name, "pull")))
+	} else {
+		tr = transport.NewTransport(http.DefaultTransport,
+			auth.NewAuthorizer(pr.challengeManager, auth.NewTokenHandler(http.DefaultTransport, pr.credentialStore, name, "pull")))
+	}
 	localRepo, err := pr.embedded.Repository(ctx, name)
 	if err != nil {
 		return nil, err
