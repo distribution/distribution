@@ -72,6 +72,15 @@ func (b *bridge) BlobPulled(repo string, desc distribution.Descriptor) error {
 	return b.createBlobEventAndWrite(EventActionPull, repo, desc)
 }
 
+func (b *bridge) BlobMounted(repo string, desc distribution.Descriptor, fromRepo string) error {
+	event, err := b.createBlobEvent(EventActionMount, repo, desc)
+	if err != nil {
+		return err
+	}
+	event.Target.FromRepository = fromRepo
+	return b.sink.Write(*event)
+}
+
 func (b *bridge) BlobDeleted(repo string, desc distribution.Descriptor) error {
 	return b.createBlobEventAndWrite(EventActionDelete, repo, desc)
 }

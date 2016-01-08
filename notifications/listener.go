@@ -24,6 +24,7 @@ type ManifestListener interface {
 type BlobListener interface {
 	BlobPushed(repo string, desc distribution.Descriptor) error
 	BlobPulled(repo string, desc distribution.Descriptor) error
+	BlobMounted(repo string, desc distribution.Descriptor, fromRepo string) error
 
 	// TODO(stevvooe): Please note that delete support is still a little shaky
 	// and we'll need to propagate these in the future.
@@ -167,6 +168,17 @@ func (bsl *blobServiceListener) Create(ctx context.Context) (distribution.BlobWr
 func (bsl *blobServiceListener) Resume(ctx context.Context, id string) (distribution.BlobWriter, error) {
 	wr, err := bsl.BlobStore.Resume(ctx, id)
 	return bsl.decorateWriter(wr), err
+}
+
+func (bsl *blobServiceListener) Mount(ctx context.Context, sourceRepo string, dgst digest.Digest) (distribution.Descriptor, error) {
+	desc, err := bsl.BlobStore.Mount(ctx, sourceRepo, dgst)
+	if err == nil {
+		if err := bsl.parent.listener.BlobMounted(bsl.parent.Repository.Name(), desc, sourceRepo); err != nil {
+			context.GetLogger(ctx).Errorf("error dispatching layer mount to listener: %v", err)
+		}
+	}
+
+	return desc, err
 }
 
 func (bsl *blobServiceListener) decorateWriter(wr distribution.BlobWriter) distribution.BlobWriter {

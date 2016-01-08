@@ -50,6 +50,10 @@ func (bs *mockBlobService) Resume(ctx context.Context, id string) (distribution.
 	panic("not implemented")
 }
 
+func (bs *mockBlobService) Mount(ctx context.Context, sourceRepo string, dgst digest.Digest) (distribution.Descriptor, error) {
+	panic("not implemented")
+}
+
 func TestEmptyTar(t *testing.T) {
 	// Confirm that gzippedEmptyTar expands to 1024 NULL bytes.
 	var decompressed [2048]byte

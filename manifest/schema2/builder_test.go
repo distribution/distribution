@@ -46,6 +46,10 @@ func (bs *mockBlobService) Resume(ctx context.Context, id string) (distribution.
 	panic("not implemented")
 }
 
+func (bs *mockBlobService) Mount(ctx context.Context, sourceRepo string, dgst digest.Digest) (distribution.Descriptor, error) {
+	panic("not implemented")
+}
+
 func TestBuilder(t *testing.T) {
 	imgJSON := []byte(`{
     "architecture": "amd64",
