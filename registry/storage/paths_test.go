@@ -15,7 +15,7 @@ func TestPathMapper(t *testing.T) {
 				name:     "foo/bar",
 				revision: "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
 			},
-			expected: "/v2/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789",
+			expected: "/v2/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
 		},
 		{
 			spec: manifestRevisionLinkPathSpec{
@@ -23,7 +23,7 @@ func TestPathMapper(t *testing.T) {
 				revision: "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
 			},
 
-			expected: "/v2/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789/link",
+			expected: "/v2/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789/link",
 		},
 		{
 			spec: manifestSignatureLinkPathSpec{
@@ -31,14 +31,14 @@ func TestPathMapper(t *testing.T) {
 				revision:  "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
 				signature: "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
 			},
-			expected: "/v2/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789/signatures/sha256/abcdef0123456789/link",
+			expected: "/v2/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789/signatures/sha256/abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789/link",
 		},
 		{
 			spec: manifestSignaturesPathSpec{
 				name:     "foo/bar",
 				revision: "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
 			},
-			expected: "/v2/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789/signatures",
+			expected: "/v2/repositories/foo/bar/_manifests/revisions/sha256/abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789/signatures",
 		},
 		{
 			spec: manifestTagsPathSpec{
@@ -73,7 +73,7 @@ func TestPathMapper(t *testing.T) {
 				tag:      "thetag",
 				revision: "sha256:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
 			},
-			expected: "/v2/repositories/foo/bar/_manifests/tags/thetag/index/sha256/abcdef0123456789",
+			expected: "/v2/repositories/foo/bar/_manifests/tags/thetag/index/sha256/abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
 		},
 		{
 			spec: manifestTagIndexEntryLinkPathSpec{
