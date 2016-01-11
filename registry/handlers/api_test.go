@@ -1681,9 +1681,9 @@ func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
 
 	// --------------------
 	// Uupload manifest by tag
-	tag := signedManifest.Tag
+	tag := "atag"
 	manifestTagURL, err := env.builder.BuildManifestURL(imageName, tag)
-	resp = putManifest(t, "putting signed manifest by tag", manifestTagURL, signedManifest)
+	resp = putManifest(t, "putting signed manifest by tag", manifestTagURL, args.mediaType, manifest)
 	checkResponse(t, "putting signed manifest by tag", resp, http.StatusCreated)
 	checkHeaders(t, resp, http.Header{
 		"Location":              []string{manifestDigestURL},
