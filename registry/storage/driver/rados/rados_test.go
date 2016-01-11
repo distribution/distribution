@@ -24,6 +24,7 @@ func init() {
 			poolname,
 			username,
 			defaultChunkSize,
+			"/registry",
 		}
 
 		return New(parameters)

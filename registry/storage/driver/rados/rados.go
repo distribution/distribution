@@ -100,7 +100,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(pool),
 		fmt.Sprint(username),
 		chunksize,
-		rootdirectory,
+		fmt.Sprint(rootdirectory),
 	}
 
 	return New(params)
@@ -456,7 +456,6 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 func (d *driver) Delete(ctx context.Context, objectPath string) error {
 	// Get oid
 	oid, err := d.getOid(objectPath)
-
 	if err != nil {
 		return err
 	}
@@ -469,7 +468,8 @@ func (d *driver) Delete(ctx context.Context, objectPath string) error {
 		}
 
 		for object := range objects {
-			err = d.Delete(ctx, path.Join(objectPath, object))
+			subPath := path.Join(d.rootdirectory, objectPath, object)
+			err = d.Delete(ctx, subPath)
 			if err != nil {
 				return err
 			}
@@ -514,7 +514,8 @@ func (d *driver) generateOid() string {
 
 // Reference a object and its hierarchy
 func (d *driver) putOid(objectPath string, oid string) error {
-	objectPath = path.Join(d.rootdirectory, objectPath)
+	directory := path.Join(d.rootdirectory, path.Dir(objectPath))
+	base := path.Base(objectPath)
 	createParentReference := true
 
 	// After creating this reference, skip the parents referencing since the
@@ -600,7 +601,7 @@ func (d *driver) deleteOid(objectPath string) error {
 // objectPath maps the path p a directory and base, ensuring to map
 // rootdirectory.
 func (d *driver) objectPath(p string) (directory string, base string) {
-	objectPath = path.Join("/", d.rootdirectory, p)
+	objectPath := path.Join(d.rootdirectory, p)
 	return path.Dir(objectPath), path.Base(objectPath)
 }
 
