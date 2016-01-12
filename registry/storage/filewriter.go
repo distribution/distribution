@@ -176,7 +176,8 @@ func (fw *fileWriter) Close() error {
 		return fw.err
 	}
 
+	err := fw.driver.CloseWriteStream(fw.ctx, fw.path)
 	fw.err = fmt.Errorf("filewriter@%v: closed", fw.path)
 
-	return nil
+	return err
 }
