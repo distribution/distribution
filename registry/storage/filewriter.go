@@ -157,6 +157,8 @@ func (fw *fileWriter) Seek(offset int64, whence int) (int64, error) {
 
 	if newOffset < 0 {
 		err = fmt.Errorf("cannot seek to negative position")
+	} else if newOffset > fw.size {
+		err = fmt.Errorf("cannot seek beyond the end of the file")
 	} else {
 		// No problems, set the offset.
 		fw.offset = newOffset

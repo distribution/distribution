@@ -23,7 +23,7 @@ import (
 // by loading the most recent saved hash state less than or equal to the given
 // offset. Any unhashed bytes remaining less than the given offset are hashed
 // from the content uploaded so far.
-func (bw *blobWriter) resumeDigestAt(ctx context.Context, offset int64) error {
+func (bw *blobWriter) resumeDigestAt(ctx context.Context, offset int64, allowRead bool) error {
 	if !bw.resumableDigestEnabled {
 		return errResumableDigestNotAvailable
 	}
@@ -86,6 +86,9 @@ func (bw *blobWriter) resumeDigestAt(ctx context.Context, offset int64) error {
 
 	// Mind the gap.
 	if gapLen := offset - int64(h.Len()); gapLen > 0 {
+		if !allowRead {
+			return errResumableDigestNotAvailable
+		}
 		// Need to read content from the upload to catch up to the desired offset.
 		fr, err := newFileReader(ctx, bw.driver, bw.path, bw.size)
 		if err != nil {
