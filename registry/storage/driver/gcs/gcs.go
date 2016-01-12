@@ -54,10 +54,10 @@ const (
 var rangeHeader = regexp.MustCompile(`^bytes=([0-9])+-([0-9]+)$`)
 
 type uploadSession struct {
-	name       string
-	sessionURI string
-	offset     int64
-	buffer     []byte
+	sessionURI   string // URI of the upload session, which can be used to append chunks of data with PUT operations
+	uploadedSize int64  // Number of bytes successfully uploaded to the session URI
+	buffer       []byte // PUT operations on the session URI must happen in multiples of 256KB, this buffer
+	// collects the remaining (< 256KB) bytes that need to be uploaded at a later point
 }
 
 // driverParameters is a struct that encapsulates all of the driver parameters after all values have been set
@@ -193,84 +193,57 @@ func (d *driver) PutContent(context ctx.Context, path string, contents []byte) e
 // with a given byte offset.
 // May be used to resume reading a stream by providing a nonzero offset.
 func (d *driver) ReadStream(context ctx.Context, path string, offset int64) (io.ReadCloser, error) {
-	s, rc, err := d.readFile(context, path, offset)
+	res, err := d.getObject(context, path, offset)
 	if err != nil {
+		if res != nil && res.StatusCode == http.StatusRequestedRangeNotSatisfiable {
+			res.Body.Close()
+			obj, err := storage.StatObject(d.context(context), d.bucket, d.pathToKey(path))
+			if err != nil {
+				return nil, err
+			}
+			if offset == int64(obj.Size) {
+				return ioutil.NopCloser(bytes.NewReader([]byte{})), nil
+			}
+			return nil, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
+		}
 		return nil, err
 	}
-	if s != nil {
-		err = d.endUploadSession(context, s)
-		if err != nil {
-			return nil, err
-		}
-		return storage.NewReader(d.context(context), d.bucket, d.pathToKey(path))
+	if res.Header.Get("Content-Type") == uploadSessionContentType {
+		defer res.Body.Close()
+		return nil, storagedriver.PathNotFoundError{Path: path}
 	}
-	return rc, nil
+	return res.Body, nil
 }
 
-func (d *driver) readFile(context ctx.Context, path string, offset int64) (*uploadSession, io.ReadCloser, error) {
-	name := d.pathToKey(path)
-
+func (d *driver) getObject(context ctx.Context, path string, offset int64) (*http.Response, error) {
 	// copied from google.golang.org/cloud/storage#NewReader :
 	// to set the additional "Range" header
 	u := &url.URL{
 		Scheme: "https",
 		Host:   "storage.googleapis.com",
-		Path:   fmt.Sprintf("/%s/%s", d.bucket, name),
+		Path:   fmt.Sprintf("/%s/%s", d.bucket, d.pathToKey(path)),
 	}
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if offset > 0 {
 		req.Header.Set("Range", fmt.Sprintf("bytes=%v-", offset))
 	}
-	res, err := d.client.Do(req)
+	var res *http.Response
+	err = retry(5, func() error {
+		var err error
+		res, err = d.client.Do(req)
+		return err
+	})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	if res.StatusCode == http.StatusNotFound {
 		res.Body.Close()
-		return nil, nil, storagedriver.PathNotFoundError{Path: path}
+		return nil, storagedriver.PathNotFoundError{Path: path}
 	}
-	if res.StatusCode == http.StatusRequestedRangeNotSatisfiable {
-		res.Body.Close()
-		obj, err := storageStatObject(d.context(context), d.bucket, name)
-		if err != nil {
-			return nil, nil, err
-		}
-		if offset == int64(obj.Size) {
-			return nil, ioutil.NopCloser(bytes.NewReader([]byte{})), nil
-		}
-		return nil, nil, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
-	}
-	if res.StatusCode < 200 || res.StatusCode > 299 {
-		res.Body.Close()
-		return nil, nil, googleapi.CheckMediaResponse(res)
-	}
-
-	if res.Header.Get("Content-Type") == uploadSessionContentType {
-		defer res.Body.Close()
-		buffer, err := ioutil.ReadAll(res.Body)
-		if err != nil {
-			return nil, nil, err
-		}
-		offset, err := strconv.ParseInt(res.Header.Get("X-Goog-Meta-Offset"), 10, 64)
-		if err != nil {
-			return nil, nil, err
-		}
-		s := &uploadSession{
-			name:       name,
-			sessionURI: res.Header.Get("X-Goog-Meta-Session-URI"),
-			buffer:     buffer,
-			offset:     offset,
-		}
-		return s, nil, nil
-	}
-	return nil, res.Body, nil
-}
-
-func (d *driver) CloseWriteStream(context ctx.Context, path string) error {
-	return nil
+	return res, googleapi.CheckMediaResponse(res)
 }
 
 // WriteStream stores the contents of the provided io.ReadCloser at a
@@ -290,7 +263,7 @@ func (d *driver) WriteStream(context ctx.Context, path string, offset int64, rea
 		}
 	}
 	if s == nil {
-		s = d.newUploadSession(path)
+		s = newUploadSession()
 	}
 
 	overlap := s.length() - offset
@@ -330,21 +303,21 @@ func (d *driver) WriteStream(context ctx.Context, path string, offset int64, rea
 		chunkSize := start + n - remainder
 		if chunkSize > 0 {
 			if s.sessionURI == "" {
-				s.sessionURI, err = startSession(d.client, d.bucket, s.name)
+				s.sessionURI, err = startSession(d.client, d.bucket, d.pathToKey(path))
 				if err != nil {
 					return totalRead, err
 				}
 			}
-			nn, err := putChunk(d.client, s.sessionURI, chunk[0:chunkSize], s.offset, -1)
+			nn, err := putChunk(d.client, s.sessionURI, chunk[0:chunkSize], s.uploadedSize, -1)
 			// TODO handle nn != int64(chunkSize) case better
 			if err != nil || nn != int64(chunkSize) {
 				return totalRead, err
 			}
-			s.offset += nn
+			s.uploadedSize += nn
 		}
 		s.buffer = s.buffer[:remainder]
 		copy(s.buffer, chunk[chunkSize:chunkSize+remainder])
-		err = d.updateUploadSession(context, s)
+		err = d.updateUploadSession(context, path, s)
 		if err != nil {
 			return totalRead, err
 		}
@@ -352,6 +325,19 @@ func (d *driver) WriteStream(context ctx.Context, path string, offset int64, rea
 		offset += int64(n)
 	}
 	return totalRead, nil
+}
+
+func (d *driver) CloseWriteStream(context ctx.Context, path string) error {
+	s, err := d.getUploadSession(context, path)
+	if err != nil {
+		return err
+	}
+	// no session started yet just perform a simple upload
+	if s.sessionURI == "" {
+		return d.PutContent(context, path, s.buffer)
+	}
+	_, err = putChunk(d.client, s.sessionURI, s.buffer, s.uploadedSize, s.length())
+	return err
 }
 
 type request func() error
@@ -379,35 +365,38 @@ func retry(maxTries int, req request) error {
 }
 
 func (d *driver) getUploadSession(context ctx.Context, path string) (*uploadSession, error) {
-	s, rc, err := d.readFile(context, path, 0)
+	res, err := d.getObject(context, path, 0)
 	if err != nil {
 		return nil, err
 	}
-	if rc != nil {
-		rc.Close()
-		return nil, nil
+	defer res.Body.Close()
+	if res.Header.Get("Content-Type") != uploadSessionContentType {
+		return nil, storagedriver.PathNotFoundError{Path: path}
 	}
-	return s, nil
+	offset, err := strconv.ParseInt(res.Header.Get("X-Goog-Meta-Offset"), 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	buffer, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	return &uploadSession{
+		sessionURI:   res.Header.Get("X-Goog-Meta-Session-URI"),
+		buffer:       buffer,
+		uploadedSize: offset,
+	}, nil
 }
 
-func (d *driver) updateUploadSession(context ctx.Context, s *uploadSession) error {
-	wc := storage.NewWriter(d.context(context), d.bucket, s.name)
+func (d *driver) updateUploadSession(context ctx.Context, path string, s *uploadSession) error {
+	wc := storage.NewWriter(d.context(context), d.bucket, d.pathToKey(path))
 	wc.ContentType = uploadSessionContentType
 	wc.Metadata = map[string]string{
 		"Session-URI": s.sessionURI,
-		"Offset":      fmt.Sprintf("%v", s.offset),
+		"Offset":      strconv.FormatInt(s.uploadedSize, 10),
 	}
 	defer wc.Close()
 	_, err := wc.Write(s.buffer)
-	return err
-}
-
-func (d *driver) endUploadSession(context ctx.Context, s *uploadSession) error {
-	// no session started yet just perform a simple upload
-	if s.sessionURI == "" {
-		return d.PutContent(context, d.keyToPath(s.name), s.buffer)
-	}
-	_, err := putChunk(d.client, s.sessionURI, s.buffer, s.offset, s.length())
 	return err
 }
 
@@ -506,7 +495,7 @@ func (d *driver) List(context ctx.Context, path string) ([]string, error) {
 func (d *driver) Move(context ctx.Context, sourcePath string, destPath string) error {
 	prefix := d.pathToDirKey(sourcePath)
 	gcsContext := d.context(context)
-	keys, err := d.listAll(gcsContext, prefix, true)
+	keys, err := d.listAll(gcsContext, prefix)
 	if err != nil {
 		return err
 	}
@@ -540,11 +529,6 @@ func (d *driver) Move(context ctx.Context, sourcePath string, destPath string) e
 		}
 		return err
 	}
-	rc, err := d.ReadStream(context, sourcePath, 0)
-	if err != nil {
-		return err
-	}
-	rc.Close()
 	_, err = storageCopyObject(gcsContext, d.bucket, d.pathToKey(sourcePath), d.bucket, d.pathToKey(destPath), nil)
 	if err != nil {
 		if status, ok := err.(*googleapi.Error); ok {
@@ -558,7 +542,7 @@ func (d *driver) Move(context ctx.Context, sourcePath string, destPath string) e
 }
 
 // listAll recursively lists all names of objects stored at "prefix" and its subpaths.
-func (d *driver) listAll(context context.Context, prefix string, finishUploads bool) ([]string, error) {
+func (d *driver) listAll(context context.Context, prefix string) ([]string, error) {
 	list := make([]string, 0, 64)
 	query := &storage.Query{}
 	query.Prefix = prefix
@@ -574,13 +558,6 @@ func (d *driver) listAll(context context.Context, prefix string, finishUploads b
 			// so filter out any objects with a non-zero time-deleted
 			if obj.Deleted.IsZero() {
 				list = append(list, obj.Name)
-				if finishUploads && obj.ContentType == uploadSessionContentType {
-					rc, err := d.ReadStream(context, d.keyToPath(obj.Name), 0)
-					if err != nil {
-						return nil, err
-					}
-					rc.Close()
-				}
 			}
 		}
 		query = objects.Next
@@ -595,7 +572,7 @@ func (d *driver) listAll(context context.Context, prefix string, finishUploads b
 func (d *driver) Delete(context ctx.Context, path string) error {
 	prefix := d.pathToDirKey(path)
 	gcsContext := d.context(context)
-	keys, err := d.listAll(gcsContext, prefix, false)
+	keys, err := d.listAll(gcsContext, prefix)
 	if err != nil {
 		return err
 	}
@@ -700,16 +677,15 @@ func (d *driver) URLFor(context ctx.Context, path string, options map[string]int
 	return storage.SignedURL(d.bucket, name, opts)
 }
 
-func (d *driver) newUploadSession(path string) *uploadSession {
+func newUploadSession() *uploadSession {
 	return &uploadSession{
-		name:   d.pathToKey(path),
-		buffer: make([]byte, 0, minChunkSize-1),
-		offset: 0,
+		buffer:       make([]byte, 0, minChunkSize-1),
+		uploadedSize: 0,
 	}
 }
 
 func (s *uploadSession) length() int64 {
-	return s.offset + int64(len(s.buffer))
+	return s.uploadedSize + int64(len(s.buffer))
 }
 
 func startSession(client *http.Client, bucket string, name string) (uri string, err error) {
@@ -752,7 +728,7 @@ func putChunk(client *http.Client, sessionURI string, chunk []byte, from int64, 
 		to := from + length - 1
 		size := "*"
 		if totalSize >= 0 {
-			size = fmt.Sprintf("%v", totalSize)
+			size = strconv.FormatInt(totalSize, 10)
 		}
 		req.Header.Set("Content-Type", "application/octet-stream")
 		if from == to+1 {
@@ -760,7 +736,7 @@ func putChunk(client *http.Client, sessionURI string, chunk []byte, from int64, 
 		} else {
 			req.Header.Set("Content-Range", fmt.Sprintf("bytes %v-%v/%v", from, to, size))
 		}
-		req.Header.Set("Content-Length", fmt.Sprintf("%v", length))
+		req.Header.Set("Content-Length", strconv.FormatInt(length, 10))
 
 		resp, err := client.Do(req)
 		if err != nil {
