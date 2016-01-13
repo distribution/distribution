@@ -9,23 +9,23 @@ keywords = ["registry, on-prem, images, tags, repository, distribution, nginx, p
 # Authenticating proxy with nginx
 
 
-## Use-case
+## Use-case
 
 People already relying on a nginx proxy to authenticate their users to other services might want to leverage it and have Registry communications tunneled through the same pipeline.
 
 Usually, that includes enterprise setups using LDAP/AD on the backend and a SSO mechanism fronting their internal http portal.
 
-### Alternatives
+### Alternatives
 
 If you just want authentication for your registry, and are happy maintaining users access separately, you should really consider sticking with the native [basic auth registry feature](deploying.md#native-basic-auth).
 
-### Solution
+### Solution
 
 With the method presented here, you implement basic authentication for docker engines in a reverse proxy that sits in front of your registry.
 
-While we use a simple htpasswd file as an example, any other nginx authentication backend should be fairly easy to implement once you are done with the exemple.
+While we use a simple htpasswd file as an example, any other nginx authentication backend should be fairly easy to implement once you are done with the example.
 
-We also implement push restriction (to a limited user group) for the sake of the exemple. Again, you should modify this to fit your mileage.
+We also implement push restriction (to a limited user group) for the sake of the example. Again, you should modify this to fit your mileage.
 
 ### Gotchas
 
@@ -49,7 +49,7 @@ X-Forwarded-For   $proxy_add_x_forwarded_for;
 X-Forwarded-Proto $scheme;
 ```
 
-Otherwise nginx will reset the ELB's values, and the requests will not be routed properly. For more informations, see [#970](https://github.com/docker/distribution/issues/970).
+Otherwise nginx will reset the ELB's values, and the requests will not be routed properly. For more information, see [#970](https://github.com/docker/distribution/issues/970).
 
 ## Setting things up
 
@@ -57,13 +57,19 @@ Read again [the requirements](recipes.md#requirements).
 
 Ready?
 
-Run the following:
+--
+
+Create the required directories
 
 ```
 mkdir -p auth
 mkdir -p data
+```
 
-# This is the main nginx configuration you will use
+Create the main nginx configuration you will use.
+
+```
+
 cat <<EOF > auth/nginx.conf
 events {
     worker_connections  1024;
@@ -75,6 +81,16 @@ upstream docker-registry {
   server registry:5000;
 }
 
+## Set a variable to help us decide if we need to add the
+## 'Docker-Distribution-Api-Version' header.
+## The registry always sets this header.
+## In the case of nginx performing auth, the header will be unset
+## since nginx is auth-ing before proxying.
+map \$upstream_http_docker_distribution_api_version \$docker_distribution_api_version {
+  'registry/2.0' '';
+  default registry/2.0;
+}
+
 server {
   listen 443 ssl;
   server_name myregistrydomain.com;
@@ -83,7 +99,7 @@ server {
   ssl_certificate /etc/nginx/conf.d/domain.crt;
   ssl_certificate_key /etc/nginx/conf.d/domain.key;
 
-  # Recommandations from https://raymii.org/s/tutorials/Strong_SSL_Security_On_nginx.html
+  # Recommendations from https://raymii.org/s/tutorials/Strong_SSL_Security_On_nginx.html
   ssl_protocols TLSv1.1 TLSv1.2;
   ssl_ciphers 'EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH';
   ssl_prefer_server_ciphers on;
@@ -102,10 +118,13 @@ server {
       return 404;
     }
 
-    # To add basic authentication to v2 use auth_basic setting plus add_header
+    # To add basic authentication to v2 use auth_basic setting.
     auth_basic "Registry realm";
     auth_basic_user_file /etc/nginx/conf.d/nginx.htpasswd;
-    add_header 'Docker-Distribution-Api-Version' 'registry/2.0' always;
+
+    ## If $docker_distribution_api_version is empty, the header will not be added.
+    ## See the map directive above where this variable is defined.
+    add_header 'Docker-Distribution-Api-Version' \$docker_distribution_api_version always;
 
     proxy_pass                          http://docker-registry;
     proxy_set_header  Host              \$http_host;   # required for docker client's sake
@@ -117,16 +136,22 @@ server {
 }
 }
 EOF
+```
 
 # Now, create a password file for "testuser" and "testpassword"
 docker run --rm --entrypoint htpasswd  registry:2 -bn testuser testpassword > auth/nginx.htpasswd
+```
 
-# Copy over your certificate files
+Copy over your certificate files
+
+```
 cp domain.crt auth
 cp domain.key auth
+```
 
-# Now create your compose file
+Now create your compose file
 
+```
 cat <<EOF > docker-compose.yml
 nginx:
   image: "nginx:1.9"

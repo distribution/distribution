@@ -6,13 +6,13 @@ keywords = ["registry, on-prem, images, tags, repository, distribution, build, r
 +++
 <![end-metadata]-->
 
-# Building the registry source
+# Building the registry source
 
 ## Use-case
 
 This is useful if you intend to actively work on the registry.
 
-### Alternatives
+### Alternatives
 
 Most people should use the [official Registry docker image](https://hub.docker.com/r/library/registry/).
 
@@ -49,7 +49,7 @@ Now create the directory for the registry data (this might require you to set pe
 The `registry`
 binary can then be run with the following:
 
-    $ $GOPATH/bin/registry -version
+    $ $GOPATH/bin/registry --version
     $GOPATH/bin/registry github.com/docker/distribution v2.0.0-alpha.1+unknown
 
 > __NOTE:__ While you do not need to use `go get` to checkout the distribution

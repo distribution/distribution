@@ -2,7 +2,6 @@ package scheduler
 
 import (
 	"encoding/json"
-	"fmt"
 	"testing"
 	"time"
 
@@ -27,13 +26,13 @@ func TestSchedule(t *testing.T) {
 		if !ok {
 			t.Fatalf("Trying to remove nonexistant repo: %s", repoName)
 		}
-		fmt.Println("removing", repoName)
+		t.Log("removing", repoName)
 		delete(remainingRepos, repoName)
 
 		return nil
 	}
 	s.onBlobExpire = deleteFunc
-	err := s.start()
+	err := s.Start()
 	if err != nil {
 		t.Fatalf("Error starting ttlExpirationScheduler: %s", err)
 	}
@@ -97,7 +96,7 @@ func TestRestoreOld(t *testing.T) {
 	}
 	s := New(context.Background(), fs, "/ttl")
 	s.onBlobExpire = deleteFunc
-	err = s.start()
+	err = s.Start()
 	if err != nil {
 		t.Fatalf("Error starting ttlExpirationScheduler: %s", err)
 	}
@@ -124,7 +123,7 @@ func TestStopRestore(t *testing.T) {
 	s := New(context.Background(), fs, pathToStateFile)
 	s.onBlobExpire = deleteFunc
 
-	err := s.start()
+	err := s.Start()
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -133,13 +132,13 @@ func TestStopRestore(t *testing.T) {
 
 	// Start and stop before all operations complete
 	// state will be written to fs
-	s.stop()
+	s.Stop()
 	time.Sleep(10 * time.Millisecond)
 
 	// v2 will restore state from fs
 	s2 := New(context.Background(), fs, pathToStateFile)
 	s2.onBlobExpire = deleteFunc
-	err = s2.start()
+	err = s2.Start()
 	if err != nil {
 		t.Fatalf("Error starting v2: %s", err.Error())
 	}
@@ -153,12 +152,11 @@ func TestStopRestore(t *testing.T) {
 
 func TestDoubleStart(t *testing.T) {
 	s := New(context.Background(), inmemory.New(), "/ttl")
-	err := s.start()
+	err := s.Start()
 	if err != nil {
 		t.Fatalf("Unable to start scheduler")
 	}
-	fmt.Printf("%#v", s)
-	err = s.start()
+	err = s.Start()
 	if err == nil {
 		t.Fatalf("Scheduler started twice without error")
 	}

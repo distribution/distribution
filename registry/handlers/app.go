@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"time"
 
@@ -29,6 +30,7 @@ import (
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/factory"
 	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
+	"github.com/docker/libtrust"
 	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/mux"
 	"golang.org/x/net/context"
@@ -54,6 +56,10 @@ type App struct {
 	registry         distribution.Namespace      // registry is the primary registry backend for the app instance.
 	accessController auth.AccessController       // main access controller for application
 
+	// httpHost is a parsed representation of the http.host parameter from
+	// the configuration. Only the Scheme and Host fields are used.
+	httpHost url.URL
+
 	// events contains notification related configuration.
 	events struct {
 		sink   notifications.Sink
@@ -62,8 +68,16 @@ type App struct {
 
 	redis *redis.Pool
 
-	// true if this registry is configured as a pull through cache
+	// trustKey is a deprecated key used to sign manifests converted to
+	// schema1 for backward compatibility. It should not be used for any
+	// other purposes.
+	trustKey libtrust.PrivateKey
+
+	// isCache is true if this registry is configured as a pull through cache
 	isCache bool
+
+	// readOnly is true if the registry is in a read-only maintenance mode
+	readOnly bool
 }
 
 // NewApp takes a configuration and returns a configured app, ready to serve
@@ -99,13 +113,24 @@ func NewApp(ctx context.Context, configuration *configuration.Configuration) *Ap
 
 	purgeConfig := uploadPurgeDefaultConfig()
 	if mc, ok := configuration.Storage["maintenance"]; ok {
-		for k, v := range mc {
-			switch k {
-			case "uploadpurging":
-				purgeConfig = v.(map[interface{}]interface{})
+		if v, ok := mc["uploadpurging"]; ok {
+			purgeConfig, ok = v.(map[interface{}]interface{})
+			if !ok {
+				panic("uploadpurging config key must contain additional keys")
 			}
 		}
-
+		if v, ok := mc["readonly"]; ok {
+			readOnly, ok := v.(map[interface{}]interface{})
+			if !ok {
+				panic("readonly config key must contain additional keys")
+			}
+			if readOnlyEnabled, ok := readOnly["enabled"]; ok {
+				app.readOnly, ok = readOnlyEnabled.(bool)
+				if !ok {
+					panic("readonly's enabled config key must have a boolean value")
+				}
+			}
+		}
 	}
 
 	startUploadPurger(app, app.driver, ctxu.GetLogger(app), purgeConfig)
@@ -119,6 +144,21 @@ func NewApp(ctx context.Context, configuration *configuration.Configuration) *Ap
 	app.configureEvents(configuration)
 	app.configureRedis(configuration)
 	app.configureLogHook(configuration)
+
+	// Generate an ephemeral key to be used for signing converted manifests
+	// for clients that don't support schema2.
+	app.trustKey, err = libtrust.GenerateECP256PrivateKey()
+	if err != nil {
+		panic(err)
+	}
+
+	if configuration.HTTP.Host != "" {
+		u, err := url.Parse(configuration.HTTP.Host)
+		if err != nil {
+			panic(fmt.Sprintf(`could not parse http "host" parameter: %v`, err))
+		}
+		app.httpHost = *u
+	}
 
 	options := []storage.RegistryOption{}
 
@@ -639,9 +679,17 @@ func (app *App) context(w http.ResponseWriter, r *http.Request) *Context {
 		"vars.uuid"))
 
 	context := &Context{
-		App:        app,
-		Context:    ctx,
-		urlBuilder: v2.NewURLBuilderFromRequest(r),
+		App:     app,
+		Context: ctx,
+	}
+
+	if app.httpHost.Scheme != "" && app.httpHost.Host != "" {
+		// A "host" item in the configuration takes precedence over
+		// X-Forwarded-Proto and X-Forwarded-Host headers, and the
+		// hostname in the request.
+		context.urlBuilder = v2.NewURLBuilder(&app.httpHost)
+	} else {
+		context.urlBuilder = v2.NewURLBuilderFromRequest(r)
 	}
 
 	return context
@@ -662,6 +710,11 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 
 	if repo != "" {
 		accessRecords = appendAccessRecords(accessRecords, r.Method, repo)
+		if fromRepo := r.FormValue("from"); fromRepo != "" {
+			// mounting a blob from one repository to another requires pull (GET)
+			// access to the source repository.
+			accessRecords = appendAccessRecords(accessRecords, "GET", fromRepo)
+		}
 	} else {
 		// Only allow the name not to be set on the base route.
 		if app.nameRequired(r) {

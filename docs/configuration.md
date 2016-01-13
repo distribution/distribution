@@ -33,6 +33,8 @@ To override this value, set an environment variable like this:
 This variable overrides the `/var/lib/registry` value to the `/somewhere`
 directory.
 
+>**NOTE**: It is highly recommended to create a base configuration file with which environment variables can be used to tweak individual values.  Overriding configuration sections with environment variables is not recommended.
+
 ## Overriding the entire configuration file
 
 If the default configuration is not a sound basis for your usage, or if you are having issues overriding keys from the environment, you can specify an alternate YAML configuration file by mounting it as a volume in the container.
@@ -80,6 +82,10 @@ information about each option that appears later in this page.
         accountname: accountname
         accountkey: base64encodedaccountkey
         container: containername
+      gcs:
+        bucket: bucketname
+        keyfile: /path/to/keyfile
+        rootdirectory: /gcs/object/name/prefix
       s3:
         accesskey: awsaccesskey
         secretkey: awssecretkey
@@ -118,6 +124,8 @@ information about each option that appears later in this page.
           age: 168h
           interval: 24h
           dryrun: false
+        readonly:
+          enabled: false
     auth:
       silly:
         realm: silly-realm
@@ -158,6 +166,7 @@ information about each option that appears later in this page.
     http:
       addr: localhost:5000
       prefix: /my/nested/registry/
+      host: https://myregistryaddress.org:5000
       secret: asecretforlocaldevelopment
       tls:
         certificate: /path/to/x509/public
@@ -325,6 +334,10 @@ Permitted values are `error`, `warn`, `info` and `debug`. The default is
         accountname: accountname
         accountkey: base64encodedaccountkey
         container: containername
+      gcs:
+        bucket: bucketname
+        keyfile: /path/to/keyfile
+        rootdirectory: /gcs/object/name/prefix
       s3:
         accesskey: awsaccesskey
         secretkey: awssecretkey
@@ -370,6 +383,39 @@ You must configure one backend; if you configure more, the registry returns an e
 If you are deploying a registry on Windows, be aware that a Windows volume mounted from the host is not recommended. Instead, you can use a S3, or Azure, backing data-store. If you do use a Windows volume, you must ensure that the `PATH` to the mount point is within Windows' `MAX_PATH` limits (typically 255 characters). Failure to do so can result in the following error message:
 
     mkdir /XXX protocol error and your registry will not function properly.
+
+### Maintenance
+
+Currently upload purging and read-only mode are the only maintenance functions available.
+These and future maintenance functions which are related to storage can be configured under
+the maintenance section.
+
+### Upload Purging
+
+Upload purging is a background process that periodically removes orphaned files from the upload
+directories of the registry.  Upload purging is enabled by default.  To
+configure upload directory purging, the following parameters
+must be set.
+
+
+| Parameter | Required | Description
+  --------- | -------- | -----------
+`enabled` | yes | Set to true to enable upload purging.  Default=true. |
+`age` | yes | Upload directories which are older than this age will be deleted.  Default=168h (1 week)
+`interval` | yes | The interval between upload directory purging.  Default=24h.
+`dryrun` | yes |  dryrun can be set to true to obtain a summary of what directories will be deleted.  Default=false.
+
+Note: `age` and `interval` are strings containing a number with optional fraction and a unit suffix: e.g. 45m, 2h10m, 168h (1 week).
+
+### Read-only mode
+
+If the `readonly` section under `maintenance` has `enabled` set to `true`,
+clients will not be allowed to write to the registry. This mode is useful to
+temporarily prevent writes to the backend storage so a garbage collection pass
+can be run.  Before running garbage collection, the registry should be
+restarted with readonly's `enabled` set to true. After the garbage collection
+pass finishes, the registry may be restarted again, this time with `readonly`
+removed from the configuration (or set to false).
 
 ### delete
 
@@ -477,6 +523,50 @@ This storage backend uses Microsoft's Azure Blob Storage.
 
 </table>
 
+### gcs
+
+This storage backend uses Google Cloud Storage.
+
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>bucket</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      Storage bucket name.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>keyfile</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      A private service account key file in JSON format. Instead of a key file <a href="https://developers.google.com/identity/protocols/application-default-credentials">Google Application Default Credentials</a> can be used.
+    </td>
+  </tr>
+   <tr>
+    <td>
+      <code>rootdirectory</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      This is a prefix that will be applied to all Google Cloud Storage keys to allow you to segment data in your bucket if necessary.
+  </tr>
+
+</table>
 
 ### rados
 
@@ -641,28 +731,6 @@ This storage backend uses Amazon's Simple Storage Service (S3).
   </tr>
 </table>
 
-### Maintenance
-
-Currently the registry can perform one maintenance function: upload purging.  This and future
-maintenance functions which are related to storage can be configured under the maintenance section.
-
-### Upload Purging
-
-Upload purging is a background process that periodically removes orphaned files from the upload
-directories of the registry.  Upload purging is enabled by default.  To
- configure upload directory purging, the following parameters
-must be set.
-
-
-| Parameter | Required | Description
-  --------- | -------- | -----------
-`enabled` | yes | Set to true to enable upload purging.  Default=true. |
-`age` | yes | Upload directories which are older than this age will be deleted.  Default=168h (1 week)
-`interval` | yes | The interval between upload directory purging.  Default=24h.
-`dryrun` | yes |  dryrun can be set to true to obtain a summary of what directories will be deleted.  Default=false.
-
-Note: `age` and `interval` are strings containing a number with optional fraction and a unit suffix: e.g. 45m, 2h10m, 168h (1 week).
-
 ### Openstack Swift
 
 This storage backend uses Openstack Swift object storage.
@@ -725,7 +793,7 @@ This storage backend uses Openstack Swift object storage.
       yes
     </td>
     <td>
-      The container name in which you want to store the registry's data.
+      The name of your Swift container where you wish to store the registry's data. The driver creates the named container during its initialization.
     </td>
   </tr>
   <tr>
@@ -736,7 +804,7 @@ This storage backend uses Openstack Swift object storage.
       no
     </td>
     <td>
-      Your Openstack tenant name.
+      Your Openstack tenant name. You can either use <code>tenant</code> or <code>tenantid</code>.
     </td>
   </tr>
   <tr>
@@ -747,7 +815,7 @@ This storage backend uses Openstack Swift object storage.
       no
     </td>
     <td>
-      Your Openstack tenant id.
+      Your Openstack tenant id. You can either use <code>tenant</code> or <code>tenantid</code>.
     </td>
   </tr>
   <tr>
@@ -758,7 +826,7 @@ This storage backend uses Openstack Swift object storage.
       no
     </td>
     <td>
-      Your Openstack domain name for Identity v3 API.
+      Your Openstack domain name for Identity v3 API. You can either use <code>domain</code> or <code>domainid</code>.
     </td>
   </tr>
   <tr>
@@ -769,7 +837,7 @@ This storage backend uses Openstack Swift object storage.
       no
     </td>
     <td>
-      Your Openstack domain id for Identity v3 API.
+      Your Openstack domain id for Identity v3 API. You can either use <code>domain</code> or <code>domainid</code>.
     </td>
   </tr>
   <tr>
@@ -807,13 +875,35 @@ This storage backend uses Openstack Swift object storage.
   </tr>
   <tr>
     <td>
-      <code>rootdirectory</code>
+      <code>prefix</code>
     </td>
     <td>
       no
     </td>
     <td>
-      This is a prefix that will be applied to all Swift keys to allow you to segment data in your container if necessary.
+      This is a prefix that will be applied to all Swift keys to allow you to segment data in your container if necessary. Defaults to the empty string which is the container's root.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>secretkey</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      The secret key used to generate temporary URLs.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>accesskey</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      The access key to generate temporary URLs. It is used by HP Cloud Object Storage in addition to the `secretkey` parameter.
     </td>
   </tr>
 </table>
@@ -948,7 +1038,7 @@ The _htpasswd_ authentication backed allows one to configure basic auth using an
 [Apache HTPasswd File](https://httpd.apache.org/docs/2.4/programs/htpasswd.html).
 Only [`bcrypt`](http://en.wikipedia.org/wiki/Bcrypt) format passwords are
 supported. Entries with other hash types will be ignored. The htpasswd file is
-loaded once, at startup. If the file is invalid, the registry will display and
+loaded once, at startup. If the file is invalid, the registry will display an
 error and will not start.
 
 > __WARNING:__ This authentication scheme should only be used with TLS
@@ -1189,6 +1279,7 @@ configuration may contain both.
       addr: localhost:5000
       net: tcp
       prefix: /my/nested/registry/
+      host: https://myregistryaddress.org:5000
       secret: asecretforlocaldevelopment
       tls:
         certificate: /path/to/x509/public
@@ -1233,7 +1324,7 @@ The `http` option details the configuration for the HTTP server that hosts the r
      The default empty value means tcp.
     </td>
   </tr>
-    <tr>
+  <tr>
     <td>
       <code>prefix</code>
     </td>
@@ -1244,6 +1335,19 @@ The `http` option details the configuration for the HTTP server that hosts the r
 If the server does not run at the root path use this value to specify the
 prefix. The root path is the section before <code>v2</code>. It
 should have both preceding and trailing slashes, for example <code>/path/</code>.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>host</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+This parameter specifies an externally-reachable address for the registry, as a
+fully qualified URL. If present, it is used when creating generated URLs.
+Otherwise, these URLs are derived from client requests.
     </td>
   </tr>
   <tr>
@@ -1957,7 +2061,7 @@ The TCP address to connect to, including a port number.
       username: [username]
       password: [password]
 
-Proxy enables a registry to be configured as a pull through cache to the official Docker Hub.  See [mirror.md](mirror.md) for more information
+Proxy enables a registry to be configured as a pull through cache to the official Docker Hub.  See [mirror](mirror.md) for more information. Pushing to a registry configured as a pull through cache is currently unsupported.
 
 <table>
   <tr>

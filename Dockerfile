@@ -1,4 +1,4 @@
-FROM golang:1.4
+FROM golang:1.5.2
 
 RUN apt-get update && \
     apt-get install -y librados-dev apache2-utils && \
@@ -6,7 +6,7 @@ RUN apt-get update && \
 
 ENV DISTRIBUTION_DIR /go/src/github.com/docker/distribution
 ENV GOPATH $DISTRIBUTION_DIR/Godeps/_workspace:$GOPATH
-ENV DOCKER_BUILDTAGS include_rados include_oss
+ENV DOCKER_BUILDTAGS include_rados include_oss include_gcs
 
 WORKDIR $DISTRIBUTION_DIR
 COPY . $DISTRIBUTION_DIR

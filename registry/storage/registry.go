@@ -3,7 +3,7 @@ package storage
 import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/registry/api/v2"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/cache"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 )
@@ -107,10 +107,10 @@ func (reg *registry) Scope() distribution.Scope {
 // Repository returns an instance of the repository tied to the registry.
 // Instances should not be shared between goroutines but are cheap to
 // allocate. In general, they should be request scoped.
-func (reg *registry) Repository(ctx context.Context, name string) (distribution.Repository, error) {
-	if err := v2.ValidateRepositoryName(name); err != nil {
+func (reg *registry) Repository(ctx context.Context, canonicalName string) (distribution.Repository, error) {
+	if _, err := reference.ParseNamed(canonicalName); err != nil {
 		return nil, distribution.ErrRepositoryNameInvalid{
-			Name:   name,
+			Name:   canonicalName,
 			Reason: err,
 		}
 	}
@@ -118,7 +118,7 @@ func (reg *registry) Repository(ctx context.Context, name string) (distribution.
 	var descriptorCache distribution.BlobDescriptorService
 	if reg.blobDescriptorCacheProvider != nil {
 		var err error
-		descriptorCache, err = reg.blobDescriptorCacheProvider.RepositoryScoped(name)
+		descriptorCache, err = reg.blobDescriptorCacheProvider.RepositoryScoped(canonicalName)
 		if err != nil {
 			return nil, err
 		}
@@ -127,7 +127,7 @@ func (reg *registry) Repository(ctx context.Context, name string) (distribution.
 	return &repository{
 		ctx:             ctx,
 		registry:        reg,
-		name:            name,
+		name:            canonicalName,
 		descriptorCache: descriptorCache,
 	}, nil
 }
@@ -145,6 +145,15 @@ func (repo *repository) Name() string {
 	return repo.name
 }
 
+func (repo *repository) Tags(ctx context.Context) distribution.TagService {
+	tags := &tagStore{
+		repository: repo,
+		blobStore:  repo.registry.blobStore,
+	}
+
+	return tags
+}
+
 // Manifests returns an instance of ManifestService. Instantiation is cheap and
 // may be context sensitive in the future. The instance should be used similar
 // to a request local.
@@ -156,38 +165,51 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 		blobLinkPath,
 	}
 
+	blobStore := &linkedBlobStore{
+		ctx:           ctx,
+		blobStore:     repo.blobStore,
+		repository:    repo,
+		deleteEnabled: repo.registry.deleteEnabled,
+		blobAccessController: &linkedBlobStatter{
+			blobStore:   repo.blobStore,
+			repository:  repo,
+			linkPathFns: manifestLinkPathFns,
+		},
+
+		// TODO(stevvooe): linkPath limits this blob store to only
+		// manifests. This instance cannot be used for blob checks.
+		linkPathFns: manifestLinkPathFns,
+	}
+
 	ms := &manifestStore{
 		ctx:        ctx,
 		repository: repo,
-		revisionStore: &revisionStore{
+		blobStore:  blobStore,
+		schema1Handler: &signedManifestHandler{
 			ctx:        ctx,
 			repository: repo,
-			blobStore: &linkedBlobStore{
-				ctx:           ctx,
-				blobStore:     repo.blobStore,
-				repository:    repo,
-				deleteEnabled: repo.registry.deleteEnabled,
-				blobAccessController: &linkedBlobStatter{
-					blobStore:   repo.blobStore,
-					repository:  repo,
-					linkPathFns: manifestLinkPathFns,
-				},
-
-				// TODO(stevvooe): linkPath limits this blob store to only
-				// manifests. This instance cannot be used for blob checks.
-				linkPathFns: manifestLinkPathFns,
+			blobStore:  blobStore,
+			signatures: &signatureStore{
+				ctx:        ctx,
+				repository: repo,
+				blobStore:  repo.blobStore,
 			},
 		},
-		tagStore: &tagStore{
+		schema2Handler: &schema2ManifestHandler{
 			ctx:        ctx,
 			repository: repo,
-			blobStore:  repo.registry.blobStore,
+			blobStore:  blobStore,
+		},
+		manifestListHandler: &manifestListHandler{
+			ctx:        ctx,
+			repository: repo,
+			blobStore:  blobStore,
 		},
 	}
 
 	// Apply options
 	for _, option := range options {
-		err := option(ms)
+		err := option.Apply(ms)
 		if err != nil {
 			return nil, err
 		}
@@ -211,6 +233,7 @@ func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
 	}
 
 	return &linkedBlobStore{
+		registry:             repo.registry,
 		blobStore:            repo.blobStore,
 		blobServer:           repo.blobServer,
 		blobAccessController: statter,
@@ -219,15 +242,8 @@ func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
 
 		// TODO(stevvooe): linkPath limits this blob store to only layers.
 		// This instance cannot be used for manifest checks.
-		linkPathFns:   []linkPathFunc{blobLinkPath},
-		deleteEnabled: repo.registry.deleteEnabled,
-	}
-}
-
-func (repo *repository) Signatures() distribution.SignatureService {
-	return &signatureStore{
-		repository: repo,
-		blobStore:  repo.blobStore,
-		ctx:        repo.ctx,
+		linkPathFns:            []linkPathFunc{blobLinkPath},
+		deleteEnabled:          repo.registry.deleteEnabled,
+		resumableDigestEnabled: repo.resumableDigestEnabled,
 	}
 }

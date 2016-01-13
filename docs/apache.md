@@ -8,17 +8,17 @@ keywords = ["registry, on-prem, images, tags, repository, distribution, authenti
 
 # Authenticating proxy with apache
 
-## Use-case
+## Use-case
 
 People already relying on an apache proxy to authenticate their users to other services might want to leverage it and have Registry communications tunneled through the same pipeline.
 
 Usually, that includes enterprise setups using LDAP/AD on the backend and a SSO mechanism fronting their internal http portal.
 
-### Alternatives
+### Alternatives
 
 If you just want authentication for your registry, and are happy maintaining users access separately, you should really consider sticking with the native [basic auth registry feature](deploying.md#native-basic-auth). 
 
-### Solution
+### Solution
 
 With the method presented here, you implement basic authentication for docker engines in a reverse proxy that sits in front of your registry.
 

@@ -20,6 +20,7 @@ type linkPathFunc func(name string, dgst digest.Digest) (string, error)
 // that grant access to the global blob store.
 type linkedBlobStore struct {
 	*blobStore
+	registry               *registry
 	blobServer             distribution.BlobServer
 	blobAccessController   distribution.BlobDescriptorService
 	repository             distribution.Repository
@@ -75,10 +76,7 @@ func (lbs *linkedBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter
 }
 
 func (lbs *linkedBlobStore) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
-	dgst, err := digest.FromBytes(p)
-	if err != nil {
-		return distribution.Descriptor{}, err
-	}
+	dgst := digest.FromBytes(p)
 	// Place the data in the blob store first.
 	desc, err := lbs.blobStore.Put(ctx, mediaType, p)
 	if err != nil {
@@ -188,6 +186,28 @@ func (lbs *linkedBlobStore) Delete(ctx context.Context, dgst digest.Digest) erro
 	return nil
 }
 
+func (lbs *linkedBlobStore) Mount(ctx context.Context, sourceRepo string, dgst digest.Digest) (distribution.Descriptor, error) {
+	repo, err := lbs.registry.Repository(ctx, sourceRepo)
+	if err != nil {
+		return distribution.Descriptor{}, err
+	}
+	stat, err := repo.Blobs(ctx).Stat(ctx, dgst)
+	if err != nil {
+		return distribution.Descriptor{}, err
+	}
+
+	desc := distribution.Descriptor{
+		Size: stat.Size,
+
+		// NOTE(stevvooe): The central blob store firewalls media types from
+		// other users. The caller should look this up and override the value
+		// for the specific repository.
+		MediaType: "application/octet-stream",
+		Digest:    dgst,
+	}
+	return desc, lbs.linkBlob(ctx, desc)
+}
+
 // newBlobUpload allocates a new upload controller with the given state.
 func (lbs *linkedBlobStore) newBlobUpload(ctx context.Context, uuid, path string, startedAt time.Time) (distribution.BlobWriter, error) {
 	fw, err := newFileWriter(ctx, lbs.driver, path)
@@ -285,7 +305,7 @@ func (lbs *linkedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (dis
 	}
 
 	if target != dgst {
-		// Track when we are doing cross-digest domain lookups. ie, tarsum to sha256.
+		// Track when we are doing cross-digest domain lookups. ie, sha512 to sha256.
 		context.GetLogger(ctx).Warnf("looking up blob with canonical target: %v -> %v", dgst, target)
 	}
 

@@ -89,14 +89,6 @@ func TestRouter(t *testing.T) {
 		},
 		{
 			RouteName:  RouteNameBlob,
-			RequestURI: "/v2/foo/bar/blobs/tarsum.dev+foo:abcdef0919234",
-			Vars: map[string]string{
-				"name":   "foo/bar",
-				"digest": "tarsum.dev+foo:abcdef0919234",
-			},
-		},
-		{
-			RouteName:  RouteNameBlob,
 			RequestURI: "/v2/foo/bar/blobs/sha256:abcdef0919234",
 			Vars: map[string]string{
 				"name":   "foo/bar",
@@ -168,6 +160,14 @@ func TestRouter(t *testing.T) {
 			RequestURI: "/v2/foo/bar/manifests/tags/list",
 			Vars: map[string]string{
 				"name": "foo/bar/manifests",
+			},
+		},
+		{
+			RouteName:  RouteNameManifest,
+			RequestURI: "/v2/locahost:8080/foo/bar/baz/manifests/tag",
+			Vars: map[string]string{
+				"name":      "locahost:8080/foo/bar/baz",
+				"reference": "tag",
 			},
 		},
 	}

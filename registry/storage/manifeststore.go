@@ -3,27 +3,59 @@ package storage
 import (
 	"fmt"
 
+	"encoding/json"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/manifest/manifestlist"
 	"github.com/docker/distribution/manifest/schema1"
-	"github.com/docker/libtrust"
+	"github.com/docker/distribution/manifest/schema2"
 )
 
+// A ManifestHandler gets and puts manifests of a particular type.
+type ManifestHandler interface {
+	// Unmarshal unmarshals the manifest from a byte slice.
+	Unmarshal(ctx context.Context, dgst digest.Digest, content []byte) (distribution.Manifest, error)
+
+	// Put creates or updates the given manifest returning the manifest digest.
+	Put(ctx context.Context, manifest distribution.Manifest, skipDependencyVerification bool) (digest.Digest, error)
+}
+
+// SkipLayerVerification allows a manifest to be Put before its
+// layers are on the filesystem
+func SkipLayerVerification() distribution.ManifestServiceOption {
+	return skipLayerOption{}
+}
+
+type skipLayerOption struct{}
+
+func (o skipLayerOption) Apply(m distribution.ManifestService) error {
+	if ms, ok := m.(*manifestStore); ok {
+		ms.skipDependencyVerification = true
+		return nil
+	}
+	return fmt.Errorf("skip layer verification only valid for manifestStore")
+}
+
 type manifestStore struct {
-	repository                 *repository
-	revisionStore              *revisionStore
-	tagStore                   *tagStore
-	ctx                        context.Context
+	repository *repository
+	blobStore  *linkedBlobStore
+	ctx        context.Context
+
 	skipDependencyVerification bool
+
+	schema1Handler      ManifestHandler
+	schema2Handler      ManifestHandler
+	manifestListHandler ManifestHandler
 }
 
 var _ distribution.ManifestService = &manifestStore{}
 
-func (ms *manifestStore) Exists(dgst digest.Digest) (bool, error) {
+func (ms *manifestStore) Exists(ctx context.Context, dgst digest.Digest) (bool, error) {
 	context.GetLogger(ms.ctx).Debug("(*manifestStore).Exists")
 
-	_, err := ms.revisionStore.blobStore.Stat(ms.ctx, dgst)
+	_, err := ms.blobStore.Stat(ms.ctx, dgst)
 	if err != nil {
 		if err == distribution.ErrBlobUnknown {
 			return false, nil
@@ -35,110 +67,68 @@ func (ms *manifestStore) Exists(dgst digest.Digest) (bool, error) {
 	return true, nil
 }
 
-func (ms *manifestStore) Get(dgst digest.Digest) (*schema1.SignedManifest, error) {
+func (ms *manifestStore) Get(ctx context.Context, dgst digest.Digest, options ...distribution.ManifestServiceOption) (distribution.Manifest, error) {
 	context.GetLogger(ms.ctx).Debug("(*manifestStore).Get")
-	return ms.revisionStore.get(ms.ctx, dgst)
-}
 
-// SkipLayerVerification allows a manifest to be Put before it's
-// layers are on the filesystem
-func SkipLayerVerification(ms distribution.ManifestService) error {
-	if ms, ok := ms.(*manifestStore); ok {
-		ms.skipDependencyVerification = true
-		return nil
-	}
-	return fmt.Errorf("skip layer verification only valid for manifeststore")
-}
+	// TODO(stevvooe): Need to check descriptor from above to ensure that the
+	// mediatype is as we expect for the manifest store.
 
-func (ms *manifestStore) Put(manifest *schema1.SignedManifest) error {
-	context.GetLogger(ms.ctx).Debug("(*manifestStore).Put")
-
-	if err := ms.verifyManifest(ms.ctx, manifest); err != nil {
-		return err
-	}
-
-	// Store the revision of the manifest
-	revision, err := ms.revisionStore.put(ms.ctx, manifest)
+	content, err := ms.blobStore.Get(ctx, dgst)
 	if err != nil {
-		return err
-	}
-
-	// Now, tag the manifest
-	return ms.tagStore.tag(manifest.Tag, revision.Digest)
-}
-
-// Delete removes the revision of the specified manfiest.
-func (ms *manifestStore) Delete(dgst digest.Digest) error {
-	context.GetLogger(ms.ctx).Debug("(*manifestStore).Delete")
-	return ms.revisionStore.delete(ms.ctx, dgst)
-}
-
-func (ms *manifestStore) Tags() ([]string, error) {
-	context.GetLogger(ms.ctx).Debug("(*manifestStore).Tags")
-	return ms.tagStore.tags()
-}
-
-func (ms *manifestStore) ExistsByTag(tag string) (bool, error) {
-	context.GetLogger(ms.ctx).Debug("(*manifestStore).ExistsByTag")
-	return ms.tagStore.exists(tag)
-}
-
-func (ms *manifestStore) GetByTag(tag string, options ...distribution.ManifestServiceOption) (*schema1.SignedManifest, error) {
-	for _, option := range options {
-		err := option(ms)
-		if err != nil {
-			return nil, err
+		if err == distribution.ErrBlobUnknown {
+			return nil, distribution.ErrManifestUnknownRevision{
+				Name:     ms.repository.Name(),
+				Revision: dgst,
+			}
 		}
-	}
 
-	context.GetLogger(ms.ctx).Debug("(*manifestStore).GetByTag")
-	dgst, err := ms.tagStore.resolve(tag)
-	if err != nil {
 		return nil, err
 	}
 
-	return ms.revisionStore.get(ms.ctx, dgst)
+	var versioned manifest.Versioned
+	if err = json.Unmarshal(content, &versioned); err != nil {
+		return nil, err
+	}
+
+	switch versioned.SchemaVersion {
+	case 1:
+		return ms.schema1Handler.Unmarshal(ctx, dgst, content)
+	case 2:
+		// This can be an image manifest or a manifest list
+		switch versioned.MediaType {
+		case schema2.MediaTypeManifest:
+			return ms.schema2Handler.Unmarshal(ctx, dgst, content)
+		case manifestlist.MediaTypeManifestList:
+			return ms.manifestListHandler.Unmarshal(ctx, dgst, content)
+		default:
+			return nil, distribution.ErrManifestVerification{fmt.Errorf("unrecognized manifest content type %s", versioned.MediaType)}
+		}
+	}
+
+	return nil, fmt.Errorf("unrecognized manifest schema version %d", versioned.SchemaVersion)
 }
 
-// verifyManifest ensures that the manifest content is valid from the
-// perspective of the registry. It ensures that the signature is valid for the
-// enclosed payload. As a policy, the registry only tries to store valid
-// content, leaving trust policies of that content up to consumers.
-func (ms *manifestStore) verifyManifest(ctx context.Context, mnfst *schema1.SignedManifest) error {
-	var errs distribution.ErrManifestVerification
-	if mnfst.Name != ms.repository.Name() {
-		errs = append(errs, fmt.Errorf("repository name does not match manifest name"))
+func (ms *manifestStore) Put(ctx context.Context, manifest distribution.Manifest, options ...distribution.ManifestServiceOption) (digest.Digest, error) {
+	context.GetLogger(ms.ctx).Debug("(*manifestStore).Put")
+
+	switch manifest.(type) {
+	case *schema1.SignedManifest:
+		return ms.schema1Handler.Put(ctx, manifest, ms.skipDependencyVerification)
+	case *schema2.DeserializedManifest:
+		return ms.schema2Handler.Put(ctx, manifest, ms.skipDependencyVerification)
+	case *manifestlist.DeserializedManifestList:
+		return ms.manifestListHandler.Put(ctx, manifest, ms.skipDependencyVerification)
 	}
 
-	if _, err := schema1.Verify(mnfst); err != nil {
-		switch err {
-		case libtrust.ErrMissingSignatureKey, libtrust.ErrInvalidJSONContent, libtrust.ErrMissingSignatureKey:
-			errs = append(errs, distribution.ErrManifestUnverified{})
-		default:
-			if err.Error() == "invalid signature" { // TODO(stevvooe): This should be exported by libtrust
-				errs = append(errs, distribution.ErrManifestUnverified{})
-			} else {
-				errs = append(errs, err)
-			}
-		}
-	}
+	return "", fmt.Errorf("unrecognized manifest type %T", manifest)
+}
 
-	if !ms.skipDependencyVerification {
-		for _, fsLayer := range mnfst.FSLayers {
-			_, err := ms.repository.Blobs(ctx).Stat(ctx, fsLayer.BlobSum)
-			if err != nil {
-				if err != distribution.ErrBlobUnknown {
-					errs = append(errs, err)
-				}
+// Delete removes the revision of the specified manfiest.
+func (ms *manifestStore) Delete(ctx context.Context, dgst digest.Digest) error {
+	context.GetLogger(ms.ctx).Debug("(*manifestStore).Delete")
+	return ms.blobStore.Delete(ctx, dgst)
+}
 
-				// On error here, we always append unknown blob errors.
-				errs = append(errs, distribution.ErrManifestBlobUnknown{Digest: fsLayer.BlobSum})
-			}
-		}
-	}
-	if len(errs) != 0 {
-		return errs
-	}
-
-	return nil
+func (ms *manifestStore) Enumerate(ctx context.Context, manifests []distribution.Manifest, last distribution.Manifest) (n int, err error) {
+	return 0, distribution.ErrUnsupported
 }

@@ -404,7 +404,7 @@ func (d *driver) List(ctx context.Context, dirPath string) ([]string, error) {
 	files, err := d.listDirectoryOid(dirPath)
 
 	if err != nil {
-		return nil, err
+		return nil, storagedriver.PathNotFoundError{Path: dirPath}
 	}
 
 	keys := make([]string, 0, len(files))
@@ -496,7 +496,7 @@ func (d *driver) Delete(ctx context.Context, objectPath string) error {
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 // May return an UnsupportedMethodErr in certain StorageDriver implementations.
 func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
-	return "", storagedriver.ErrUnsupportedMethod
+	return "", storagedriver.ErrUnsupportedMethod{}
 }
 
 // Generate a blob identifier

@@ -94,7 +94,7 @@ func (ch challenge) SetHeaders(w http.ResponseWriter) {
 }
 
 func (ch challenge) Error() string {
-	return fmt.Sprintf("basic authentication challenge: %#v", ch)
+	return fmt.Sprintf("basic authentication challenge for realm %q: %s", ch.realm, ch.err)
 }
 
 func init() {

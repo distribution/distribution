@@ -38,7 +38,7 @@ func TestListener(t *testing.T) {
 
 	expectedOps := map[string]int{
 		"manifest:push": 1,
-		"manifest:pull": 2,
+		"manifest:pull": 1,
 		// "manifest:delete": 0, // deletes not supported for now
 		"layer:push": 2,
 		"layer:pull": 2,
@@ -55,18 +55,18 @@ type testListener struct {
 	ops map[string]int
 }
 
-func (tl *testListener) ManifestPushed(repo string, sm *schema1.SignedManifest) error {
+func (tl *testListener) ManifestPushed(repo string, m distribution.Manifest) error {
 	tl.ops["manifest:push"]++
 
 	return nil
 }
 
-func (tl *testListener) ManifestPulled(repo string, sm *schema1.SignedManifest) error {
+func (tl *testListener) ManifestPulled(repo string, m distribution.Manifest) error {
 	tl.ops["manifest:pull"]++
 	return nil
 }
 
-func (tl *testListener) ManifestDeleted(repo string, sm *schema1.SignedManifest) error {
+func (tl *testListener) ManifestDeleted(repo string, m distribution.Manifest) error {
 	tl.ops["manifest:delete"]++
 	return nil
 }
@@ -78,6 +78,11 @@ func (tl *testListener) BlobPushed(repo string, desc distribution.Descriptor) er
 
 func (tl *testListener) BlobPulled(repo string, desc distribution.Descriptor) error {
 	tl.ops["layer:pull"]++
+	return nil
+}
+
+func (tl *testListener) BlobMounted(repo string, desc distribution.Descriptor, fromRepo string) error {
+	tl.ops["layer:mount"]++
 	return nil
 }
 
@@ -93,8 +98,11 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 	// takes the registry through a common set of operations. This could be
 	// used to make cross-cutting updates by changing internals that affect
 	// update counts. Basically, it would make writing tests a lot easier.
+
 	ctx := context.Background()
 	tag := "thetag"
+	// todo: change this to use Builder
+
 	m := schema1.Manifest{
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
@@ -131,6 +139,9 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 		m.FSLayers = append(m.FSLayers, schema1.FSLayer{
 			BlobSum: dgst,
 		})
+		m.History = append(m.History, schema1.History{
+			V1Compatibility: "",
+		})
 
 		// Then fetch the blobs
 		if rc, err := blobs.Open(ctx, dgst); err != nil {
@@ -155,35 +166,19 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 		t.Fatal(err.Error())
 	}
 
-	if err = manifests.Put(sm); err != nil {
+	var digestPut digest.Digest
+	if digestPut, err = manifests.Put(ctx, sm); err != nil {
 		t.Fatalf("unexpected error putting the manifest: %v", err)
 	}
 
-	p, err := sm.Payload()
-	if err != nil {
-		t.Fatalf("unexpected error getting manifest payload: %v", err)
+	dgst := digest.FromBytes(sm.Canonical)
+	if dgst != digestPut {
+		t.Fatalf("mismatching digest from payload and put")
 	}
 
-	dgst, err := digest.FromBytes(p)
-	if err != nil {
-		t.Fatalf("unexpected error digesting manifest payload: %v", err)
-	}
-
-	fetchedByManifest, err := manifests.Get(dgst)
+	_, err = manifests.Get(ctx, dgst)
 	if err != nil {
 		t.Fatalf("unexpected error fetching manifest: %v", err)
 	}
 
-	if fetchedByManifest.Tag != sm.Tag {
-		t.Fatalf("retrieved unexpected manifest: %v", err)
-	}
-
-	fetched, err := manifests.GetByTag(tag)
-	if err != nil {
-		t.Fatalf("unexpected error fetching manifest: %v", err)
-	}
-
-	if fetched.Tag != fetchedByManifest.Tag {
-		t.Fatalf("retrieved unexpected manifest: %v", err)
-	}
 }

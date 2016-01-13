@@ -3,6 +3,7 @@
 title = "Storage Drivers"
 description = "Explains how to use storage drivers"
 keywords = ["registry, on-prem, images, tags, repository, distribution, storage drivers, advanced"]
+aliases = ["/registry/storage-drivers/"]
 [menu.main]
 parent="smn_registry_ref"
 +++
@@ -24,6 +25,7 @@ This storage driver package comes bundled with several drivers:
 - [rados](storage-drivers/rados.md): A driver storing objects in a [Ceph Object Storage](http://ceph.com/docs/master/rados/) pool.
 - [swift](storage-drivers/swift.md): A driver storing objects in [Openstack Swift](http://docs.openstack.org/developer/swift/).
 - [oss](storage-drivers/oss.md): A driver storing objects in [Aliyun OSS](http://www.aliyun.com/product/oss).
+- [gcs](storage-drivers/gcs.md): A driver storing objects in a [Google Cloud Storage](https://cloud.google.com/storage/) bucket.
 
 ## Storage Driver API
 

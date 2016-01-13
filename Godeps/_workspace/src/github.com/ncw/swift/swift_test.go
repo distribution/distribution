@@ -65,6 +65,7 @@ func makeConnection() (*swift.Connection, error) {
 	UserName := os.Getenv("SWIFT_API_USER")
 	ApiKey := os.Getenv("SWIFT_API_KEY")
 	AuthUrl := os.Getenv("SWIFT_AUTH_URL")
+	Region := os.Getenv("SWIFT_REGION_NAME")
 
 	Insecure := os.Getenv("SWIFT_AUTH_INSECURE")
 	ConnectionChannelTimeout := os.Getenv("SWIFT_CONNECTION_CHANNEL_TIMEOUT")
@@ -96,6 +97,7 @@ func makeConnection() (*swift.Connection, error) {
 		UserName:       UserName,
 		ApiKey:         ApiKey,
 		AuthUrl:        AuthUrl,
+		Region:         Region,
 		Transport:      transport,
 		ConnectTimeout: 60 * time.Second,
 		Timeout:        60 * time.Second,
@@ -591,6 +593,45 @@ func TestObjectPutString(t *testing.T) {
 		t.Error(err)
 	}
 	if info.ContentType != "application/octet-stream" {
+		t.Error("Bad content type", info.ContentType)
+	}
+	if info.Bytes != CONTENT_SIZE {
+		t.Error("Bad length")
+	}
+	if info.Hash != CONTENT_MD5 {
+		t.Error("Bad length")
+	}
+}
+
+func TestObjectPut(t *testing.T) {
+	headers := swift.Headers{}
+
+	// Set content size incorrectly - should produce an error
+	headers["Content-Length"] = strconv.FormatInt(CONTENT_SIZE-1, 10)
+	contents := bytes.NewBufferString(CONTENTS)
+	h, err := c.ObjectPut(CONTAINER, OBJECT, contents, true, CONTENT_MD5, "text/plain", headers)
+	if err == nil {
+		t.Fatal("Expecting error but didn't get one")
+	}
+
+	// Now set content size correctly
+	contents = bytes.NewBufferString(CONTENTS)
+	headers["Content-Length"] = strconv.FormatInt(CONTENT_SIZE, 10)
+	h, err = c.ObjectPut(CONTAINER, OBJECT, contents, true, CONTENT_MD5, "text/plain", headers)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if h["Etag"] != CONTENT_MD5 {
+		t.Errorf("Bad Etag want %q got %q", CONTENT_MD5, h["Etag"])
+	}
+
+	// Fetch object info and compare
+	info, _, err := c.Object(CONTAINER, OBJECT)
+	if err != nil {
+		t.Error(err)
+	}
+	if info.ContentType != "text/plain" {
 		t.Error("Bad content type", info.ContentType)
 	}
 	if info.Bytes != CONTENT_SIZE {
@@ -1493,6 +1534,14 @@ func TestTempUrl(t *testing.T) {
 		if content, err := ioutil.ReadAll(resp.Body); err != nil || string(content) != CONTENTS {
 			t.Error("Bad content", err)
 		}
+
+		resp, err := http.Post(tempUrl, "image/jpeg", bytes.NewReader([]byte(CONTENTS)))
+		if err != nil {
+			t.Fatal("Failed to retrieve file from temporary url")
+		}
+		if resp.StatusCode != 401 {
+			t.Fatal("Expecting server to forbid access to object")
+		}
 	}
 
 	resp.Body.Close()
@@ -1500,7 +1549,17 @@ func TestTempUrl(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
 
+func TestQueryInfo(t *testing.T) {
+	infos, err := c.QueryInfo()
+	if err != nil {
+		t.Log("Server doesn't support querying info")
+		return
+	}
+	if _, ok := infos["swift"]; !ok {
+		t.Fatal("No 'swift' section found in configuration")
+	}
 }
 
 func TestContainerDelete(t *testing.T) {

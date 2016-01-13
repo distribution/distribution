@@ -8,6 +8,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"io"
+	"time"
 	//"log"
 	"net/http"
 	"net/url"
@@ -106,6 +107,8 @@ func (b *Bucket) Multi(key, contType string, perm ACL, options Options) (*Multi,
 // InitMulti initializes a new multipart upload at the provided
 // key inside b and returns a value for manipulating it.
 //
+//
+// You can read doc at http://docs.aliyun.com/#/pub/oss/api-reference/multipart-upload&InitiateMultipartUpload
 func (b *Bucket) InitMulti(key string, contType string, perm ACL, options Options) (*Multi, error) {
 	headers := make(http.Header)
 	headers.Set("Content-Length", "0")
@@ -138,6 +141,8 @@ func (b *Bucket) InitMulti(key string, contType string, perm ACL, options Option
 	return &Multi{Bucket: b, Key: key, UploadId: resp.UploadId}, nil
 }
 
+//
+// You can read doc at http://docs.aliyun.com/#/pub/oss/api-reference/multipart-upload&UploadPartCopy
 func (m *Multi) PutPartCopy(n int, options CopyOptions, source string) (*CopyObjectResult, Part, error) {
 	// TODO source format a /BUCKET/PATH/TO/OBJECT
 	// TODO not a good design. API could be changed to PutPartCopyWithinBucket(..., path) and PutPartCopyFromBucket(bucket, path)
@@ -187,15 +192,25 @@ func (m *Multi) PutPartCopy(n int, options CopyOptions, source string) (*CopyObj
 // PutPart sends part n of the multipart upload, reading all the content from r.
 // Each part, except for the last one, must be at least 5MB in size.
 //
+//
+// You can read doc at http://docs.aliyun.com/#/pub/oss/api-reference/multipart-upload&UploadPart
 func (m *Multi) PutPart(n int, r io.ReadSeeker) (Part, error) {
 	partSize, _, md5b64, err := seekerInfo(r)
 	if err != nil {
 		return Part{}, err
 	}
-	return m.putPart(n, r, partSize, md5b64)
+	return m.putPart(n, r, partSize, md5b64, 0)
 }
 
-func (m *Multi) putPart(n int, r io.ReadSeeker, partSize int64, md5b64 string) (Part, error) {
+func (m *Multi) PutPartWithTimeout(n int, r io.ReadSeeker, timeout time.Duration) (Part, error) {
+	partSize, _, md5b64, err := seekerInfo(r)
+	if err != nil {
+		return Part{}, err
+	}
+	return m.putPart(n, r, partSize, md5b64, timeout)
+}
+
+func (m *Multi) putPart(n int, r io.ReadSeeker, partSize int64, md5b64 string, timeout time.Duration) (Part, error) {
 	headers := make(http.Header)
 	headers.Set("Content-Length", strconv.FormatInt(partSize, 10))
 	headers.Set("Content-MD5", md5b64)
@@ -216,6 +231,7 @@ func (m *Multi) putPart(n int, r io.ReadSeeker, partSize int64, md5b64 string) (
 			headers: headers,
 			params:  params,
 			payload: r,
+			timeout: timeout,
 		}
 		err = m.Bucket.Client.prepare(req)
 		if err != nil {
@@ -370,7 +386,7 @@ NextSection:
 		}
 
 		// Part wasn't found or doesn't match. Send it.
-		part, err := m.putPart(current, section, partSize, md5b64)
+		part, err := m.putPart(current, section, partSize, md5b64, 0)
 		if err != nil {
 			return nil, err
 		}
@@ -443,6 +459,8 @@ func (m *Multi) Complete(parts []Part) error {
 // handled internally, but it's not clear what happens precisely (Is an
 // error returned? Is the issue completely undetectable?).
 //
+//
+// You can read doc at http://docs.aliyun.com/#/pub/oss/api-reference/multipart-upload&AbortMultipartUpload
 func (m *Multi) Abort() error {
 	params := make(url.Values)
 	params.Set("uploadId", m.UploadId)

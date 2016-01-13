@@ -32,11 +32,16 @@ func blobDispatcher(ctx *Context, r *http.Request) http.Handler {
 		Digest:  dgst,
 	}
 
-	return handlers.MethodHandler{
-		"GET":    http.HandlerFunc(blobHandler.GetBlob),
-		"HEAD":   http.HandlerFunc(blobHandler.GetBlob),
-		"DELETE": http.HandlerFunc(blobHandler.DeleteBlob),
+	mhandler := handlers.MethodHandler{
+		"GET":  http.HandlerFunc(blobHandler.GetBlob),
+		"HEAD": http.HandlerFunc(blobHandler.GetBlob),
 	}
+
+	if !ctx.readOnly {
+		mhandler["DELETE"] = http.HandlerFunc(blobHandler.DeleteBlob)
+	}
+
+	return mhandler
 }
 
 // blobHandler serves http blob requests.

@@ -82,7 +82,7 @@ $ rdtest `cat VERSION`
 
 ### Install Docker Compose
 
-[Docker Compose Installation Guide](http://docs.docker.com/compose/install/)
+[Docker Compose Installation Guide](https://docs.docker.com/compose/install/)
 
 ### Start compose setup
 ```

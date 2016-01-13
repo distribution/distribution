@@ -7,7 +7,6 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/uuid"
 )
 
@@ -53,15 +52,15 @@ func NewRequestRecord(id string, r *http.Request) RequestRecord {
 	}
 }
 
-func (b *bridge) ManifestPushed(repo string, sm *schema1.SignedManifest) error {
+func (b *bridge) ManifestPushed(repo string, sm distribution.Manifest) error {
 	return b.createManifestEventAndWrite(EventActionPush, repo, sm)
 }
 
-func (b *bridge) ManifestPulled(repo string, sm *schema1.SignedManifest) error {
+func (b *bridge) ManifestPulled(repo string, sm distribution.Manifest) error {
 	return b.createManifestEventAndWrite(EventActionPull, repo, sm)
 }
 
-func (b *bridge) ManifestDeleted(repo string, sm *schema1.SignedManifest) error {
+func (b *bridge) ManifestDeleted(repo string, sm distribution.Manifest) error {
 	return b.createManifestEventAndWrite(EventActionDelete, repo, sm)
 }
 
@@ -73,11 +72,20 @@ func (b *bridge) BlobPulled(repo string, desc distribution.Descriptor) error {
 	return b.createBlobEventAndWrite(EventActionPull, repo, desc)
 }
 
+func (b *bridge) BlobMounted(repo string, desc distribution.Descriptor, fromRepo string) error {
+	event, err := b.createBlobEvent(EventActionMount, repo, desc)
+	if err != nil {
+		return err
+	}
+	event.Target.FromRepository = fromRepo
+	return b.sink.Write(*event)
+}
+
 func (b *bridge) BlobDeleted(repo string, desc distribution.Descriptor) error {
 	return b.createBlobEventAndWrite(EventActionDelete, repo, desc)
 }
 
-func (b *bridge) createManifestEventAndWrite(action string, repo string, sm *schema1.SignedManifest) error {
+func (b *bridge) createManifestEventAndWrite(action string, repo string, sm distribution.Manifest) error {
 	manifestEvent, err := b.createManifestEvent(action, repo, sm)
 	if err != nil {
 		return err
@@ -86,24 +94,21 @@ func (b *bridge) createManifestEventAndWrite(action string, repo string, sm *sch
 	return b.sink.Write(*manifestEvent)
 }
 
-func (b *bridge) createManifestEvent(action string, repo string, sm *schema1.SignedManifest) (*Event, error) {
+func (b *bridge) createManifestEvent(action string, repo string, sm distribution.Manifest) (*Event, error) {
 	event := b.createEvent(action)
-	event.Target.MediaType = schema1.ManifestMediaType
 	event.Target.Repository = repo
 
-	p, err := sm.Payload()
+	mt, p, err := sm.Payload()
 	if err != nil {
 		return nil, err
 	}
 
+	event.Target.MediaType = mt
 	event.Target.Length = int64(len(p))
 	event.Target.Size = int64(len(p))
-	event.Target.Digest, err = digest.FromBytes(p)
-	if err != nil {
-		return nil, err
-	}
+	event.Target.Digest = digest.FromBytes(p)
 
-	event.Target.URL, err = b.ub.BuildManifestURL(sm.Name, event.Target.Digest.String())
+	event.Target.URL, err = b.ub.BuildManifestURL(repo, event.Target.Digest.String())
 	if err != nil {
 		return nil, err
 	}

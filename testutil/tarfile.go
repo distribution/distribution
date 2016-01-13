@@ -6,17 +6,16 @@ import (
 	"crypto/rand"
 	"fmt"
 	"io"
-	"io/ioutil"
 	mrand "math/rand"
 	"time"
 
-	"github.com/docker/docker/pkg/tarsum"
+	"github.com/docker/distribution/digest"
 )
 
 // CreateRandomTarFile creates a random tarfile, returning it as an
-// io.ReadSeeker along with its tarsum. An error is returned if there is a
+// io.ReadSeeker along with its digest. An error is returned if there is a
 // problem generating valid content.
-func CreateRandomTarFile() (rs io.ReadSeeker, tarSum string, err error) {
+func CreateRandomTarFile() (rs io.ReadSeeker, dgst digest.Digest, err error) {
 	nFiles := mrand.Intn(10) + 10
 	target := &bytes.Buffer{}
 	wr := tar.NewWriter(target)
@@ -73,23 +72,7 @@ func CreateRandomTarFile() (rs io.ReadSeeker, tarSum string, err error) {
 		return nil, "", err
 	}
 
-	reader := bytes.NewReader(target.Bytes())
+	dgst = digest.FromBytes(target.Bytes())
 
-	// A tar builder that supports tarsum inline calculation would be awesome
-	// here.
-	ts, err := tarsum.NewTarSum(reader, true, tarsum.Version1)
-	if err != nil {
-		return nil, "", err
-	}
-
-	nn, err := io.Copy(ioutil.Discard, ts)
-	if nn != int64(len(target.Bytes())) {
-		return nil, "", fmt.Errorf("short copy when getting tarsum of random layer: %v != %v", nn, len(target.Bytes()))
-	}
-
-	if err != nil {
-		return nil, "", err
-	}
-
-	return bytes.NewReader(target.Bytes()), ts.Sum(nil), nil
+	return bytes.NewReader(target.Bytes()), dgst, nil
 }

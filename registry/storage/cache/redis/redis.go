@@ -6,7 +6,7 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/registry/api/v2"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/cache"
 	"github.com/garyburd/redigo/redis"
 )
@@ -41,7 +41,7 @@ func NewRedisBlobDescriptorCacheProvider(pool *redis.Pool) cache.BlobDescriptorC
 
 // RepositoryScoped returns the scoped cache.
 func (rbds *redisBlobDescriptorService) RepositoryScoped(repo string) (distribution.BlobDescriptorService, error) {
-	if err := v2.ValidateRepositoryName(repo); err != nil {
+	if _, err := reference.ParseNamed(repo); err != nil {
 		return nil, err
 	}
 
@@ -249,7 +249,7 @@ func (rsrbds *repositoryScopedRedisBlobDescriptorService) setDescriptor(ctx cont
 	}
 
 	// Also set the values for the primary descriptor, if they differ by
-	// algorithm (ie sha256 vs tarsum).
+	// algorithm (ie sha256 vs sha512).
 	if desc.Digest != "" && dgst != desc.Digest && dgst.Algorithm() != desc.Digest.Algorithm() {
 		if err := rsrbds.setDescriptor(ctx, conn, desc.Digest, desc); err != nil {
 			return err

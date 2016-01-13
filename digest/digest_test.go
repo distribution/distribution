@@ -1,8 +1,6 @@
 package digest
 
 import (
-	"bytes"
-	"io"
 	"testing"
 )
 
@@ -13,21 +11,6 @@ func TestParseDigest(t *testing.T) {
 		algorithm Algorithm
 		hex       string
 	}{
-		{
-			input:     "tarsum+sha256:e58fcf7418d4390dec8e8fb69d88c06ec07039d651fedd3aa72af9972e7d046b",
-			algorithm: "tarsum+sha256",
-			hex:       "e58fcf7418d4390dec8e8fb69d88c06ec07039d651fedd3aa72af9972e7d046b",
-		},
-		{
-			input:     "tarsum.dev+sha256:e58fcf7418d4390dec8e8fb69d88c06ec07039d651fedd3aa72af9972e7d046b",
-			algorithm: "tarsum.dev+sha256",
-			hex:       "e58fcf7418d4390dec8e8fb69d88c06ec07039d651fedd3aa72af9972e7d046b",
-		},
-		{
-			input:     "tarsum.v1+sha256:220a60ecd4a3c32c282622a625a54db9ba0ff55b5ba9c29c7064a2bc358b6a3e",
-			algorithm: "tarsum.v1+sha256",
-			hex:       "220a60ecd4a3c32c282622a625a54db9ba0ff55b5ba9c29c7064a2bc358b6a3e",
-		},
 		{
 			input:     "sha256:e58fcf7418d4390dec8e8fb69d88c06ec07039d651fedd3aa72af9972e7d046b",
 			algorithm: "sha256",
@@ -52,6 +35,16 @@ func TestParseDigest(t *testing.T) {
 			// not hex
 			input: "sha256:d41d8cd98f00b204e9800m98ecf8427e",
 			err:   ErrDigestInvalidFormat,
+		},
+		{
+			// too short
+			input: "sha256:abcdef0123456789",
+			err:   ErrDigestInvalidLength,
+		},
+		{
+			// too short (from different algorithm)
+			input: "sha512:abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+			err:   ErrDigestInvalidLength,
 		},
 		{
 			input: "foo:d41d8cd98f00b204e9800998ecf8427e",
@@ -85,27 +78,5 @@ func TestParseDigest(t *testing.T) {
 		if newParsed != digest {
 			t.Fatalf("expected equal: %q != %q", newParsed, digest)
 		}
-	}
-}
-
-// A few test cases used to fix behavior we expect in storage backend.
-
-func TestFromTarArchiveZeroLength(t *testing.T) {
-	checkTarsumDigest(t, "zero-length archive", bytes.NewReader([]byte{}), DigestTarSumV1EmptyTar)
-}
-
-func TestFromTarArchiveEmptyTar(t *testing.T) {
-	// String of 1024 zeros is a valid, empty tar file.
-	checkTarsumDigest(t, "1024 zero bytes", bytes.NewReader(bytes.Repeat([]byte("\x00"), 1024)), DigestTarSumV1EmptyTar)
-}
-
-func checkTarsumDigest(t *testing.T, msg string, rd io.Reader, expected Digest) {
-	dgst, err := FromTarArchive(rd)
-	if err != nil {
-		t.Fatalf("unexpected error digesting %s: %v", msg, err)
-	}
-
-	if dgst != expected {
-		t.Fatalf("unexpected digest for %s: %q != %q", msg, dgst, expected)
 	}
 }

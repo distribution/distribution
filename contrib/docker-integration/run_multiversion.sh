@@ -23,7 +23,7 @@ fi
 
 # Released versions
 
-versions="1.6.0 1.6.1 1.7.0 1.7.1"
+versions="1.6.1 1.7.1 1.8.3 1.9.1"
 
 for v in $versions; do
 	echo "Extracting Docker $v from dind image"

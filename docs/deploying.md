@@ -125,7 +125,7 @@ and fallback to version 1 registries, if necessary. Confirming this is setup
 correctly can help avoid problems with fallback.
 
 In the same train of thought, you must make sure you are properly sending the
-`X-Forwarded-Proto`, `X-Forwared-For` and `Host` headers to their "client-side"
+`X-Forwarded-Proto`, `X-Forwarded-For` and `Host` headers to their "client-side"
 values. Failure to do so usually makes the registry issue redirects to internal
 hostnames or downgrading from https to http.
 
@@ -148,7 +148,7 @@ Except for registries running on secure local networks, registries should always
 
 The simplest way to achieve access restriction is through basic authentication (this is very similar to other web servers' basic authentication mechanism).
 
-:warning: You **cannot** use authentication with an insecure registry. You have to [configure TLS first](#running-a-domain-registry) for this to work.
+> **Warning**: You **cannot** use authentication with an insecure registry. You have to [configure TLS first](#running-a-domain-registry) for this to work.
 
 First create a password file with one entry for the user "testuser", with password "testpassword":
 
@@ -213,7 +213,7 @@ registry:
     - /path/auth:/auth
 ```
 
-:warning: replace `/path` by whatever directory that holds your `certs` and `auth` folder from above.
+> **Warning**: replace `/path` by whatever directory that holds your `certs` and `auth` folder from above.
 
 You can then start your registry with a simple
 

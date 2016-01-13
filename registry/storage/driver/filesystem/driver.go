@@ -135,11 +135,11 @@ func (d *driver) WriteStream(ctx context.Context, subPath string, offset int64, 
 
 	fullPath := d.fullPath(subPath)
 	parentDir := path.Dir(fullPath)
-	if err := os.MkdirAll(parentDir, 0755); err != nil {
+	if err := os.MkdirAll(parentDir, 0777); err != nil {
 		return 0, err
 	}
 
-	fp, err := os.OpenFile(fullPath, os.O_WRONLY|os.O_CREATE, 0644)
+	fp, err := os.OpenFile(fullPath, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		// TODO(stevvooe): A few missing conditions in storage driver:
 		//	1. What if the path is already a directory?
@@ -184,9 +184,6 @@ func (d *driver) Stat(ctx context.Context, subPath string) (storagedriver.FileIn
 // List returns a list of the objects that are direct descendants of the given
 // path.
 func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
-	if subPath[len(subPath)-1] != '/' {
-		subPath += "/"
-	}
 	fullPath := d.fullPath(subPath)
 
 	dir, err := os.Open(fullPath)
@@ -248,7 +245,7 @@ func (d *driver) Delete(ctx context.Context, subPath string) error {
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 // May return an UnsupportedMethodErr in certain StorageDriver implementations.
 func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
-	return "", storagedriver.ErrUnsupportedMethod
+	return "", storagedriver.ErrUnsupportedMethod{}
 }
 
 // fullPath returns the absolute path of a key within the Driver's storage.

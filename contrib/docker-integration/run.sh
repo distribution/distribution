@@ -38,12 +38,12 @@ docker pull $INTEGRATION_IMAGE
 ID=$(docker run -d -it --privileged $volumeMount $dockerMount \
 	-v ${DISTRIBUTION_ROOT}:/go/src/github.com/docker/distribution \
 	-e "DOCKER_GRAPHDRIVER=$DOCKER_GRAPHDRIVER" \
-	-e "EXEC_DRIVER=$EXEC_DRIVER" \
 	${INTEGRATION_IMAGE} \
 	./run_engine.sh)
 
 # Stop container on exit
 trap "docker rm -f -v $ID" EXIT
+
 
 # Wait for it to become reachable.
 tries=10

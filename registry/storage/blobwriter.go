@@ -227,6 +227,7 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc distribution.Descri
 			if err != nil {
 				return distribution.Descriptor{}, err
 			}
+			defer fr.Close()
 
 			tr := io.TeeReader(fr, digester.Hash())
 
@@ -301,7 +302,7 @@ func (bw *blobWriter) moveBlob(ctx context.Context, desc distribution.Descriptor
 			// get a hash, then the underlying file is deleted, we risk moving
 			// a zero-length blob into a nonzero-length blob location. To
 			// prevent this horrid thing, we employ the hack of only allowing
-			// to this happen for the zero tarsum.
+			// to this happen for the digest of an empty tar.
 			if desc.Digest == digest.DigestSha256EmptyTar {
 				return bw.blobStore.driver.PutContent(ctx, blobPath, []byte{})
 			}

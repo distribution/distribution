@@ -6,7 +6,6 @@ import (
 	"github.com/bugsnag/osext"
 	"os"
 	"os/exec"
-	"syscall"
 )
 
 func monitor(c *WrapConfig) (int, error) {
@@ -54,7 +53,7 @@ func monitor(c *WrapConfig) (int, error) {
 		return -1, err
 	}
 
-	err = syscall.Dup2(int(write.Fd()), int(os.Stderr.Fd()))
+	err = dup2(int(write.Fd()), int(os.Stderr.Fd()))
 	if err != nil {
 		return -1, err
 	}
