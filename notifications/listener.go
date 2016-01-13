@@ -160,25 +160,21 @@ func (bsl *blobServiceListener) Put(ctx context.Context, mediaType string, p []b
 	return desc, err
 }
 
-func (bsl *blobServiceListener) Create(ctx context.Context) (distribution.BlobWriter, error) {
-	wr, err := bsl.BlobStore.Create(ctx)
+func (bsl *blobServiceListener) Create(ctx context.Context, options ...distribution.BlobCreateOption) (distribution.BlobWriter, error) {
+	wr, err := bsl.BlobStore.Create(ctx, options...)
+	switch err := err.(type) {
+	case distribution.ErrBlobMounted:
+		if err := bsl.parent.listener.BlobMounted(bsl.parent.Repository.Name(), err.Descriptor, err.From.Name()); err != nil {
+			context.GetLogger(ctx).Errorf("error dispatching blob mount to listener: %v", err)
+		}
+		return nil, err
+	}
 	return bsl.decorateWriter(wr), err
 }
 
 func (bsl *blobServiceListener) Resume(ctx context.Context, id string) (distribution.BlobWriter, error) {
 	wr, err := bsl.BlobStore.Resume(ctx, id)
 	return bsl.decorateWriter(wr), err
-}
-
-func (bsl *blobServiceListener) Mount(ctx context.Context, sourceRepo string, dgst digest.Digest) (distribution.Descriptor, error) {
-	desc, err := bsl.BlobStore.Mount(ctx, sourceRepo, dgst)
-	if err == nil {
-		if err := bsl.parent.listener.BlobMounted(bsl.parent.Repository.Name(), desc, sourceRepo); err != nil {
-			context.GetLogger(ctx).Errorf("error dispatching layer mount to listener: %v", err)
-		}
-	}
-
-	return desc, err
 }
 
 func (bsl *blobServiceListener) decorateWriter(wr distribution.BlobWriter) distribution.BlobWriter {

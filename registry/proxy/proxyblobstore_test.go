@@ -42,12 +42,12 @@ func (sbs statsBlobStore) Get(ctx context.Context, dgst digest.Digest) ([]byte, 
 	return sbs.blobs.Get(ctx, dgst)
 }
 
-func (sbs statsBlobStore) Create(ctx context.Context) (distribution.BlobWriter, error) {
+func (sbs statsBlobStore) Create(ctx context.Context, options ...distribution.BlobCreateOption) (distribution.BlobWriter, error) {
 	sbsMu.Lock()
 	sbs.stats["create"]++
 	sbsMu.Unlock()
 
-	return sbs.blobs.Create(ctx)
+	return sbs.blobs.Create(ctx, options...)
 }
 
 func (sbs statsBlobStore) Resume(ctx context.Context, id string) (distribution.BlobWriter, error) {
@@ -56,14 +56,6 @@ func (sbs statsBlobStore) Resume(ctx context.Context, id string) (distribution.B
 	sbsMu.Unlock()
 
 	return sbs.blobs.Resume(ctx, id)
-}
-
-func (sbs statsBlobStore) Mount(ctx context.Context, sourceRepo string, dgst digest.Digest) (distribution.Descriptor, error) {
-	sbsMu.Lock()
-	sbs.stats["mount"]++
-	sbsMu.Unlock()
-
-	return sbs.blobs.Mount(ctx, sourceRepo, dgst)
 }
 
 func (sbs statsBlobStore) Open(ctx context.Context, dgst digest.Digest) (distribution.ReadSeekCloser, error) {
