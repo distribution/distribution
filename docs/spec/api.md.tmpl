@@ -1149,7 +1149,7 @@ The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
 |----|-------|-----------|
-{{range $err := .ErrorCodes}}| `{{$err}}` | {{$err.Descriptor.Message}} | {{$err.Descriptor.Description|removenewlines}} |
+{{range $err := .ErrorCodes}}| `{{$err.Descriptor.Value}}` | {{$err.Descriptor.Message}} | {{$err.Descriptor.Description|removenewlines}} |
 {{end}}
 
 {{end}}{{end}}{{end}}{{end}}{{end}}{{end}}
