@@ -177,9 +177,13 @@ func TestReferenceParse(t *testing.T) {
 			if named.Name() != testcase.repository {
 				failf("unexpected repository: got %q, expected %q", named.Name(), testcase.repository)
 			}
-			hostname, _ := SplitHostname(named)
+			hostname, basename := SplitHostname(named)
 			if hostname != testcase.hostname {
 				failf("unexpected hostname: got %q, expected %q", hostname, testcase.hostname)
+			}
+
+			if basename != strings.TrimPrefix(named.Name(), hostname+"/") {
+				failf("basename should be non-hostname portion: %q != %q", basename, strings.TrimPrefix(named.Name(), hostname))
 			}
 		} else if testcase.repository != "" || testcase.hostname != "" {
 			failf("expected named type, got %T", repo)
@@ -216,7 +220,9 @@ func TestReferenceParse(t *testing.T) {
 
 // TestWithNameFailure tests cases where WithName should fail. Cases where it
 // should succeed are covered by TestSplitHostname, below.
-func TestWithNameFailure(t *testing.T) {
+func TestWithName(t *testing.T) {
+	var ref Reference
+
 	testcases := []struct {
 		input string
 		err   error
@@ -245,6 +251,12 @@ func TestWithNameFailure(t *testing.T) {
 			input: "aa/asdf$$^/aa",
 			err:   ErrReferenceInvalidFormat,
 		},
+		{
+			input: "anewgoodname",
+		},
+		{
+			input: "library/anewgoodname",
+		},
 	}
 	for _, testcase := range testcases {
 		failf := func(format string, v ...interface{}) {
@@ -252,9 +264,49 @@ func TestWithNameFailure(t *testing.T) {
 			t.Fail()
 		}
 
-		_, err := WithName(testcase.input)
-		if err == nil {
-			failf("no error parsing name. expected: %s", testcase.err)
+		var err error
+		ref, err = WithName(ref, testcase.input)
+
+		if err != testcase.err {
+			failf("error adding name: %v, expected %v", err, testcase.err)
+		}
+	}
+}
+
+func TestNamedOnly(t *testing.T) {
+	for _, testcase := range []struct {
+		input string
+		named bool
+	}{
+		{
+			input: "foo",
+			named: true,
+		},
+		{
+			input: "foo:tag",
+		},
+		{
+			input: "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+		},
+		{
+			input: "validname@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+		},
+		{
+			input: "validname:tag@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+		},
+	} {
+		failf := func(format string, v ...interface{}) {
+			t.Logf(strconv.Quote(testcase.input)+": "+format, v...)
+			t.Fail()
+		}
+
+		ref, err := ParseNamed(testcase.input)
+		if err != nil {
+			failf("unexpected error parsing reference: %v", err)
+		}
+
+		if NamedOnly(ref) != testcase.named {
+			failf("expected NamedOnly(%s) == %v, got %v", testcase.named, NamedOnly(ref))
 		}
 	}
 }
@@ -302,7 +354,7 @@ func TestSplitHostname(t *testing.T) {
 			t.Fail()
 		}
 
-		named, err := WithName(testcase.input)
+		named, err := ParseNamed(testcase.input)
 		if err != nil {
 			failf("error parsing name: %s", err)
 		}
@@ -478,10 +530,15 @@ func TestWithTag(t *testing.T) {
 			t.Fail()
 		}
 
-		named, err := WithName(testcase.name)
+		named, err := ParseNamed(testcase.name)
 		if err != nil {
 			failf("error parsing name: %s", err)
 		}
+
+		if !NamedOnly(named) {
+			failf("more than just a name: %#v", err)
+		}
+
 		tagged, err := WithTag(named, testcase.tag)
 		if err != nil {
 			failf("WithTag failed: %s", err)
@@ -500,27 +557,26 @@ func TestWithDigest(t *testing.T) {
 	}{
 		{
 			name:     "test.com/foo",
-			digest:   "sha256:1234567890098765432112345667890098765",
-			combined: "test.com/foo@sha256:1234567890098765432112345667890098765",
+			digest:   "sha256:1234567890098765432112345667890098765abcdefabcdefabcdefabcdefabc",
+			combined: "test.com/foo@sha256:1234567890098765432112345667890098765abcdefabcdefabcdefabcdefabc",
 		},
 		{
 			name:     "foo",
-			digest:   "sha256:1234567890098765432112345667890098765",
-			combined: "foo@sha256:1234567890098765432112345667890098765",
+			digest:   "sha256:1234567890098765432112345667890098765abcdefabcdefabcdefabcdefabc",
+			combined: "foo@sha256:1234567890098765432112345667890098765abcdefabcdefabcdefabcdefabc",
 		},
 		{
 			name:     "test.com:8000/foo",
-			digest:   "sha256:1234567890098765432112345667890098765",
-			combined: "test.com:8000/foo@sha256:1234567890098765432112345667890098765",
+			digest:   "sha256:1234567890098765432112345667890098765abcdefabcdefabcdefabcdefabc",
+			combined: "test.com:8000/foo@sha256:1234567890098765432112345667890098765abcdefabcdefabcdefabcdefabc",
 		},
 	}
 	for _, testcase := range testcases {
 		failf := func(format string, v ...interface{}) {
-			t.Logf(strconv.Quote(testcase.name)+": "+format, v...)
-			t.Fail()
+			t.Fatalf(strconv.Quote(testcase.name)+": "+format, v...)
 		}
 
-		named, err := WithName(testcase.name)
+		named, err := ParseNamed(testcase.name)
 		if err != nil {
 			failf("error parsing name: %s", err)
 		}

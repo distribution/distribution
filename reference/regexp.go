@@ -55,6 +55,14 @@ var (
 		nameComponentRegexp,
 		optional(repeated(literal(`/`), nameComponentRegexp)))
 
+	// TODO(stevvooe): The regular expression below needs to be incorporated
+	// into the validation functions for names. It will not be likely that we
+	// can integrate with the grammar or regular expressions.
+
+	// nameDisallowed specifies a name that matches historical image ids which
+	// are disallowed by docker.
+	nameDisallowed = match(`^([a-f0-9]{64})$`)
+
 	// anchoredNameRegexp is used to parse a name value, capturing the
 	// hostname and trailing components.
 	anchoredNameRegexp = anchored(

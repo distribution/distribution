@@ -48,6 +48,21 @@ var (
 
 	// ErrNameTooLong is returned when a repository name is longer than NameTotalLengthMax.
 	ErrNameTooLong = fmt.Errorf("repository name must not be more than %v characters", NameTotalLengthMax)
+
+	// ErrNameDisallowed is returned when a name cannot be added or
+	// replaced on a reference. These references are not associated with
+	// Voldemort.
+	ErrNameDisallowed = errors.New("reference: cannot name reference")
+
+	// ErrTagDisallowed is returned when a reference cannot be tagged.
+	// Usually, this means that the reference does not have a name.
+	ErrTagDisallowed = errors.New("reference: cannot tag reference")
+
+	// ErrDigestDisallowed is returned when adding a digest to a reference
+	// that already has a digest. If encountered, one must first restrict the
+	// reference to only the name then add the digest, which can be done with
+	// the NameOnly function.
+	ErrDigestDisallowed = errors.New("referebce: cannot add digest")
 )
 
 // Reference is an opaque object reference identifier that may include
@@ -101,14 +116,8 @@ type Named interface {
 	Name() string
 }
 
-// Tagged is an object which has a tag
+// Tagged is an object including a name and tag.
 type Tagged interface {
-	Reference
-	Tag() string
-}
-
-// NamedTagged is an object including a name and tag.
-type NamedTagged interface {
 	Named
 	Tag() string
 }
@@ -194,40 +203,137 @@ func ParseNamed(s string) (Named, error) {
 	return named, nil
 }
 
-// WithName returns a named object representing the given string. If the input
-// is invalid ErrReferenceInvalidFormat will be returned.
-func WithName(name string) (Named, error) {
+// NamedOnly returns true if reference only contains a repo name and not
+// other modifiers.
+func NamedOnly(ref Named) bool {
+	switch ref.(type) {
+	case Tagged:
+		return false
+	case Canonical:
+		return false
+	case Digested:
+		return false
+	}
+
+	return true
+}
+
+// NameOnly drops other reference information and only retains the name.
+func NameOnly(ref Named) Named {
+	return repository(ref.Name())
+}
+
+// WithName replaces or sets Name() on the reference with the provided value
+// of name. This is useful for specifying a name for a digest only reference.
+//
+// If the target of named is from another package, any data on the backing
+// type will be lost and replaced with an instance from this package. Simply
+// put, the resulting type will only include information available on the
+// interface.
+func WithName(ref Reference, name string) (Named, error) {
+	if name == "" {
+		return nil, ErrNameEmpty
+	}
+
 	if len(name) > NameTotalLengthMax {
 		return nil, ErrNameTooLong
 	}
+
 	if !anchoredNameRegexp.MatchString(name) {
 		return nil, ErrReferenceInvalidFormat
 	}
-	return repository(name), nil
+
+	if ref == nil {
+		return repository(name), nil
+	}
+
+	switch v := ref.(type) {
+	case repository:
+		return v, nil
+	case reference:
+		v.name = name
+		return v, nil
+	case digestReference:
+		return canonicalReference{
+			name:   name,
+			digest: v.Digest(),
+		}, nil
+	case taggedReference:
+		v.name = name
+		return v, nil
+	case canonicalReference:
+		v.name = name
+		return v, nil
+	}
+
+	return nil, ErrNameDisallowed
 }
 
 // WithTag combines the name from "name" and the tag from "tag" to form a
-// reference incorporating both the name and the tag.
-func WithTag(name Named, tag string) (NamedTagged, error) {
+// reference incorporating both the name and the tag. When the reference
+// cannot be tagged, ErrCannotTagReference is returned.
+//
+// If the target of named is from another package, any data on the backing
+// type will be lost and replaced with an instance from this package. Simply
+// put, the resulting type will only include information available on the
+// interface.
+func WithTag(named Named, tag string) (Tagged, error) {
 	if !anchoredTagRegexp.MatchString(tag) {
 		return nil, ErrTagInvalidFormat
 	}
-	return taggedReference{
-		name: name.Name(),
-		tag:  tag,
-	}, nil
+
+	switch v := named.(type) {
+	case reference:
+		v.tag = tag
+		return v, nil
+	case taggedReference:
+		v.tag = tag
+		return v, nil
+	case Canonical:
+		return reference{
+			name:   v.Name(),
+			tag:    tag,
+			digest: v.Digest(),
+		}, nil
+	case Tagged, Named:
+		return taggedReference{
+			name: v.Name(),
+			tag:  tag,
+		}, nil
+	}
+
+	return nil, ErrTagDisallowed
 }
 
 // WithDigest combines the name from "name" and the digest from "digest" to form
 // a reference incorporating both the name and the digest.
-func WithDigest(name Named, digest digest.Digest) (Canonical, error) {
-	if !anchoredDigestRegexp.MatchString(digest.String()) {
+//
+// A reference with an existing digest cannot have the digest replaced.
+func WithDigest(named Named, digest digest.Digest) (Canonical, error) {
+	if err := digest.Validate(); err != nil {
 		return nil, ErrDigestInvalidFormat
 	}
-	return canonicalReference{
-		name:   name.Name(),
-		digest: digest,
-	}, nil
+
+	if NamedOnly(named) {
+		return canonicalReference{
+			name:   named.Name(),
+			digest: digest,
+		}, nil
+	}
+
+	switch v := named.(type) {
+	case reference:
+		v.digest = digest
+		return v, nil
+	case Tagged:
+		return reference{
+			name:   v.Name(),
+			tag:    v.Tag(),
+			digest: digest,
+		}, nil
+	}
+
+	return nil, ErrDigestDisallowed
 }
 
 func getBestReferenceType(ref reference) Reference {
