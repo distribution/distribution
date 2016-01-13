@@ -12,6 +12,7 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/cache/memory"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/docker/distribution/testutil"
@@ -377,13 +378,27 @@ func TestBlobMount(t *testing.T) {
 		t.Fatalf("unexpected non-error stating unmounted blob: %v", desc)
 	}
 
-	mountDesc, err := bs.Mount(ctx, sourceRepository.Name(), desc.Digest)
+	namedRef, err := reference.ParseNamed(sourceRepository.Name())
 	if err != nil {
+		t.Fatal(err)
+	}
+	canonicalRef, err := reference.WithDigest(namedRef, desc.Digest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bw, err := bs.Create(ctx, WithMountFrom(canonicalRef))
+	if bw != nil {
+		t.Fatal("unexpected blobwriter returned from Create call, should mount instead")
+	}
+
+	ebm, ok := err.(distribution.ErrBlobMounted)
+	if !ok {
 		t.Fatalf("unexpected error mounting layer: %v", err)
 	}
 
-	if mountDesc != desc {
-		t.Fatalf("descriptors not equal: %v != %v", mountDesc, desc)
+	if ebm.Descriptor != desc {
+		t.Fatalf("descriptors not equal: %v != %v", ebm.Descriptor, desc)
 	}
 
 	// Test for existence.

@@ -1,12 +1,14 @@
 package storage
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/uuid"
 )
@@ -95,9 +97,57 @@ func (lbs *linkedBlobStore) Put(ctx context.Context, mediaType string, p []byte)
 	return desc, lbs.linkBlob(ctx, desc)
 }
 
+// CreateOptions is a collection of blob creation modifiers relevant to general
+// blob storage intended to be configured by the BlobCreateOption.Apply method.
+type CreateOptions struct {
+	Mount struct {
+		ShouldMount bool
+		From        reference.Canonical
+	}
+}
+
+type optionFunc func(interface{}) error
+
+func (f optionFunc) Apply(v interface{}) error {
+	return f(v)
+}
+
+// WithMountFrom returns a BlobCreateOption which designates that the blob should be
+// mounted from the given canonical reference.
+func WithMountFrom(ref reference.Canonical) distribution.BlobCreateOption {
+	return optionFunc(func(v interface{}) error {
+		opts, ok := v.(*CreateOptions)
+		if !ok {
+			return fmt.Errorf("unexpected options type: %T", v)
+		}
+
+		opts.Mount.ShouldMount = true
+		opts.Mount.From = ref
+
+		return nil
+	})
+}
+
 // Writer begins a blob write session, returning a handle.
-func (lbs *linkedBlobStore) Create(ctx context.Context) (distribution.BlobWriter, error) {
+func (lbs *linkedBlobStore) Create(ctx context.Context, options ...distribution.BlobCreateOption) (distribution.BlobWriter, error) {
 	context.GetLogger(ctx).Debug("(*linkedBlobStore).Writer")
+
+	var opts CreateOptions
+
+	for _, option := range options {
+		err := option.Apply(&opts)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if opts.Mount.ShouldMount {
+		desc, err := lbs.mount(ctx, opts.Mount.From.Name(), opts.Mount.From.Digest())
+		if err == nil {
+			// Mount successful, no need to initiate an upload session
+			return nil, distribution.ErrBlobMounted{From: opts.Mount.From, Descriptor: desc}
+		}
+	}
 
 	uuid := uuid.Generate().String()
 	startedAt := time.Now().UTC()
@@ -186,7 +236,7 @@ func (lbs *linkedBlobStore) Delete(ctx context.Context, dgst digest.Digest) erro
 	return nil
 }
 
-func (lbs *linkedBlobStore) Mount(ctx context.Context, sourceRepo string, dgst digest.Digest) (distribution.Descriptor, error) {
+func (lbs *linkedBlobStore) mount(ctx context.Context, sourceRepo string, dgst digest.Digest) (distribution.Descriptor, error) {
 	repo, err := lbs.registry.Repository(ctx, sourceRepo)
 	if err != nil {
 		return distribution.Descriptor{}, err
