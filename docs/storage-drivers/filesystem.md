@@ -13,4 +13,6 @@ An implementation of the `storagedriver.StorageDriver` interface which uses the 
 
 ## Parameters
 
-`rootdirectory`: (optional) The root directory tree in which all registry files will be stored. Defaults to `/var/lib/registry`.
+`rootdirectory`: (optional) The absolute path to a root directory tree in which
+to store all registry files. The registry stores all its data here so make sure
+there is adequate space available. Defaults to `/var/lib/registry`.
