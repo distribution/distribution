@@ -58,6 +58,10 @@ func TestReferenceParse(t *testing.T) {
 			tag:        "tag",
 		},
 		{
+			input:  "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+			digest: "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+		},
+		{
 			input:      "test:5000/repo@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
 			hostname:   "test:5000",
 			repository: "test:5000/repo",
@@ -276,23 +280,30 @@ func TestWithName(t *testing.T) {
 func TestNamedOnly(t *testing.T) {
 	for _, testcase := range []struct {
 		input string
+		name  string
 		named bool
+		err   error
 	}{
 		{
 			input: "foo",
+			name:  "foo",
 			named: true,
 		},
 		{
 			input: "foo:tag",
+			name:  "foo",
 		},
 		{
 			input: "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+			err:   ErrNameRequired,
 		},
 		{
 			input: "validname@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+			name:  "validname",
 		},
 		{
 			input: "validname:tag@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+			name:  "validname",
 		},
 	} {
 		failf := func(format string, v ...interface{}) {
@@ -301,12 +312,22 @@ func TestNamedOnly(t *testing.T) {
 		}
 
 		ref, err := ParseNamed(testcase.input)
-		if err != nil {
-			failf("unexpected error parsing reference: %v", err)
+		if err != testcase.err {
+			if testcase.err == nil {
+				failf("unexpected error parsing reference: %v", err)
+			} else {
+				failf("expected error parsing named reference: %v != %v", err, testcase.err)
+			}
+		} else if testcase.err != nil {
+			continue // success
+		}
+
+		if NameOnly(ref).String() != testcase.name {
+			failf("expected NameOnly(%v) == %v", NameOnly(ref), testcase.name)
 		}
 
 		if NamedOnly(ref) != testcase.named {
-			failf("expected NamedOnly(%s) == %v, got %v", testcase.named, NamedOnly(ref))
+			failf("expected NamedOnly(%s) == %v, got %v", testcase.input, testcase.named, NamedOnly(ref))
 		}
 	}
 }

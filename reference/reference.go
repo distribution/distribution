@@ -46,6 +46,13 @@ var (
 	// ErrNameEmpty is returned for empty, invalid repository names.
 	ErrNameEmpty = errors.New("repository name must have at least one component")
 
+	// ErrNameRequired is returned when a name is required.
+	ErrNameRequired = errors.New("reference: name required")
+
+	// ErrNameOnlyAllowed is returned when a reference that should be
+	// restricted to just a name has other components.
+	ErrNameOnlyAllowed = errors.New("reference: only name allowed")
+
 	// ErrNameTooLong is returned when a repository name is longer than
 	// RepositoryNameTotalLengthMax
 	ErrNameTooLong = fmt.Errorf("repository name must not be more than %v characters", NameTotalLengthMax)
@@ -63,7 +70,7 @@ var (
 	// that already has a digest. If encountered, one must first restrict the
 	// reference to only the name then add the digest, which can be done with
 	// the NameOnly function.
-	ErrDigestDisallowed = errors.New("referebce: cannot add digest")
+	ErrDigestDisallowed = errors.New("reference: cannot add digest")
 )
 
 // Reference is an opaque object reference identifier that may include
@@ -154,6 +161,11 @@ func SplitHostname(named Named) (string, string) {
 // If an error was encountered it is returned, along with a nil Reference.
 // NOTE: Parse will not handle short digests.
 func Parse(s string) (Reference, error) {
+	dgst, err := digest.ParseDigest(s)
+	if err == nil {
+		return digestReference(dgst), nil
+	}
+
 	matches := ReferenceRegexp.FindStringSubmatch(s)
 	if matches == nil {
 		if s == "" {
@@ -199,28 +211,39 @@ func ParseNamed(s string) (Named, error) {
 	}
 	named, isNamed := ref.(Named)
 	if !isNamed {
-		return nil, fmt.Errorf("reference %s has no name", ref.String())
+		return nil, ErrNameRequired
 	}
+	return named, nil
+}
+
+// ParseNameOnly is a strict version of ParseNamed that only accepts
+// references that are valid names.
+func ParseNameOnly(name string) (Named, error) {
+	named, err := ParseNamed(name)
+	if err != nil {
+		return nil, err
+	}
+
+	if !NamedOnly(named) {
+		return nil, ErrNameOnlyAllowed
+	}
+
 	return named, nil
 }
 
 // NamedOnly returns true if reference only contains a repo name and not
 // other modifiers.
 func NamedOnly(ref Named) bool {
-	switch ref.(type) {
-	case Tagged:
-		return false
-	case Canonical:
-		return false
-	case Digested:
-		return false
-	}
-
-	return true
+	return ref.Name() == ref.String()
 }
 
 // NameOnly drops other reference information and only retains the name.
 func NameOnly(ref Named) Named {
+	named, ok := ref.(repository)
+	if ok {
+		return named
+	}
+
 	return repository(ref.Name())
 }
 
@@ -399,7 +422,7 @@ func (r repository) Name() string {
 type digestReference digest.Digest
 
 func (d digestReference) String() string {
-	return d.String()
+	return d.Digest().String()
 }
 
 func (d digestReference) Digest() digest.Digest {
