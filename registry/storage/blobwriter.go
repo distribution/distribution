@@ -96,7 +96,7 @@ func (bw *blobWriter) Write(p []byte) (int, error) {
 	// Ensure that the current write offset matches how many bytes have been
 	// written to the digester. If not, we need to update the digest state to
 	// match the current write position.
-	err := bw.resumeDigestAt(bw.blobStore.ctx, bw.offset, false)
+	err := bw.resumeDigest(bw.blobStore.ctx)
 	if err != nil && err != errResumableDigestNotAvailable {
 		return 0, err
 	}
@@ -116,7 +116,7 @@ func (bw *blobWriter) ReadFrom(r io.Reader) (n int64, err error) {
 	// Ensure that the current write offset matches how many bytes have been
 	// written to the digester. If not, we need to update the digest state to
 	// match the current write position.
-	if err = bw.resumeDigestAt(bw.blobStore.ctx, bw.offset, false); err != nil && err != errResumableDigestNotAvailable {
+	if err = bw.resumeDigest(bw.blobStore.ctx); err != nil && err != errResumableDigestNotAvailable {
 		return 0, err
 	}
 
@@ -191,7 +191,7 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc distribution.Descri
 	// TODO(stevvooe): This section is very meandering. Need to be broken down
 	// to be a lot more clear.
 
-	if err := bw.resumeDigestAt(ctx, bw.size, true); err == nil {
+	if err := bw.resumeDigest(ctx); err == nil {
 		canonical = bw.digester.Digest()
 
 		if canonical.Algorithm() == desc.Digest.Algorithm() {
