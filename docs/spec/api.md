@@ -735,6 +735,25 @@ the uploaded blob which may differ from the provided digest. Most clients may
 ignore the value but if it is used, the client should verify the value against
 the uploaded blob data.
 
+If a mount fails due to invalid repository or digest arguments, the registry
+will fall back to the standard upload behavior and return a `202 Accepted` with
+the upload URL in the `Location` header:
+
+```
+202 Accepted
+Location: /v2/<name>/blobs/uploads/<uuid>
+Range: bytes=0-<offset>
+Content-Length: 0
+Docker-Upload-UUID: <uuid>
+```
+
+This behavior is consistent with older versions of the registry, which do not
+recognize the repository mount query parameters.
+
+Note: a client may issue a HEAD request to check existence of a blob in a source
+repository to distinguish between the registry not supporting blob mounts and
+the blob not existing in the expected repository.
+
 ##### Errors
 
 If an 502, 503 or 504 error is received, the client should assume that the

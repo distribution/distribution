@@ -9,8 +9,10 @@ import (
 	"github.com/docker/distribution"
 	ctxu "github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
+	"github.com/docker/distribution/registry/storage"
 	"github.com/gorilla/handlers"
 )
 
@@ -118,19 +120,27 @@ type blobUploadHandler struct {
 // StartBlobUpload begins the blob upload process and allocates a server-side
 // blob writer session, optionally mounting the blob from a separate repository.
 func (buh *blobUploadHandler) StartBlobUpload(w http.ResponseWriter, r *http.Request) {
+	var options []distribution.BlobCreateOption
+
 	fromRepo := r.FormValue("from")
 	mountDigest := r.FormValue("mount")
 
 	if mountDigest != "" && fromRepo != "" {
-		buh.mountBlob(w, fromRepo, mountDigest)
-		return
+		opt, err := buh.createBlobMountOption(fromRepo, mountDigest)
+		if err != nil {
+			options = append(options, opt)
+		}
 	}
 
 	blobs := buh.Repository.Blobs(buh)
-	upload, err := blobs.Create(buh)
+	upload, err := blobs.Create(buh, options...)
 
 	if err != nil {
-		if err == distribution.ErrUnsupported {
+		if ebm, ok := err.(distribution.ErrBlobMounted); ok {
+			if err := buh.writeBlobCreatedHeaders(w, ebm.Descriptor); err != nil {
+				buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+			}
+		} else if err == distribution.ErrUnsupported {
 			buh.Errors = append(buh.Errors, errcode.ErrorCodeUnsupported)
 		} else {
 			buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
@@ -339,27 +349,23 @@ func (buh *blobUploadHandler) blobUploadResponse(w http.ResponseWriter, r *http.
 // mountBlob attempts to mount a blob from another repository by its digest. If
 // successful, the blob is linked into the blob store and 201 Created is
 // returned with the canonical url of the blob.
-func (buh *blobUploadHandler) mountBlob(w http.ResponseWriter, fromRepo, mountDigest string) {
+func (buh *blobUploadHandler) createBlobMountOption(fromRepo, mountDigest string) (distribution.BlobCreateOption, error) {
 	dgst, err := digest.ParseDigest(mountDigest)
 	if err != nil {
-		buh.Errors = append(buh.Errors, v2.ErrorCodeDigestInvalid.WithDetail(err))
-		return
+		return nil, err
 	}
 
-	blobs := buh.Repository.Blobs(buh)
-	desc, err := blobs.Mount(buh, fromRepo, dgst)
+	ref, err := reference.ParseNamed(fromRepo)
 	if err != nil {
-		if err == distribution.ErrBlobUnknown {
-			buh.Errors = append(buh.Errors, v2.ErrorCodeBlobUnknown.WithDetail(dgst))
-		} else {
-			buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
-		}
-		return
+		return nil, err
 	}
-	if err := buh.writeBlobCreatedHeaders(w, desc); err != nil {
-		buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
-		return
+
+	canonical, err := reference.WithDigest(ref, dgst)
+	if err != nil {
+		return nil, err
 	}
+
+	return storage.WithMountFrom(canonical), nil
 }
 
 // writeBlobCreatedHeaders writes the standard headers describing a newly

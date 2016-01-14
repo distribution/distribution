@@ -42,15 +42,11 @@ func (bs *mockBlobService) Put(ctx context.Context, mediaType string, p []byte) 
 	return d, nil
 }
 
-func (bs *mockBlobService) Create(ctx context.Context) (distribution.BlobWriter, error) {
+func (bs *mockBlobService) Create(ctx context.Context, options ...distribution.BlobCreateOption) (distribution.BlobWriter, error) {
 	panic("not implemented")
 }
 
 func (bs *mockBlobService) Resume(ctx context.Context, id string) (distribution.BlobWriter, error) {
-	panic("not implemented")
-}
-
-func (bs *mockBlobService) Mount(ctx context.Context, sourceRepo string, dgst digest.Digest) (distribution.Descriptor, error) {
 	panic("not implemented")
 }
 
