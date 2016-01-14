@@ -97,9 +97,9 @@ func (lbs *linkedBlobStore) Put(ctx context.Context, mediaType string, p []byte)
 	return desc, lbs.linkBlob(ctx, desc)
 }
 
-// CreateOptions is a collection of blob creation modifiers relevant to general
+// createOptions is a collection of blob creation modifiers relevant to general
 // blob storage intended to be configured by the BlobCreateOption.Apply method.
-type CreateOptions struct {
+type createOptions struct {
 	Mount struct {
 		ShouldMount bool
 		From        reference.Canonical
@@ -116,7 +116,7 @@ func (f optionFunc) Apply(v interface{}) error {
 // mounted from the given canonical reference.
 func WithMountFrom(ref reference.Canonical) distribution.BlobCreateOption {
 	return optionFunc(func(v interface{}) error {
-		opts, ok := v.(*CreateOptions)
+		opts, ok := v.(*createOptions)
 		if !ok {
 			return fmt.Errorf("unexpected options type: %T", v)
 		}
@@ -132,7 +132,7 @@ func WithMountFrom(ref reference.Canonical) distribution.BlobCreateOption {
 func (lbs *linkedBlobStore) Create(ctx context.Context, options ...distribution.BlobCreateOption) (distribution.BlobWriter, error) {
 	context.GetLogger(ctx).Debug("(*linkedBlobStore).Writer")
 
-	var opts CreateOptions
+	var opts createOptions
 
 	for _, option := range options {
 		err := option.Apply(&opts)
