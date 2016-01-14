@@ -32,7 +32,7 @@ import (
 	"golang.org/x/net/context"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
-
+	"golang.org/x/oauth2/jwt"
 	"google.golang.org/api/googleapi"
 	storageapi "google.golang.org/api/storage/v1"
 	"google.golang.org/cloud"
@@ -47,10 +47,13 @@ import (
 const driverName = "gcs"
 const dummyProjectID = "<unknown>"
 
-//DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
+// driverParameters is a struct that encapsulates all of the driver parameters after all values have been set
 type driverParameters struct {
 	bucket        string
-	keyfile       string
+	config        *jwt.Config
+	email         string
+	privateKey    []byte
+	client        *http.Client
 	rootDirectory string
 }
 
@@ -80,25 +83,43 @@ type driver struct {
 // Required parameters:
 // - bucket
 func FromParameters(parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
-
 	bucket, ok := parameters["bucket"]
 	if !ok || fmt.Sprint(bucket) == "" {
 		return nil, fmt.Errorf("No bucket parameter provided")
-	}
-
-	keyfile, ok := parameters["keyfile"]
-	if !ok {
-		keyfile = ""
 	}
 
 	rootDirectory, ok := parameters["rootdirectory"]
 	if !ok {
 		rootDirectory = ""
 	}
+
+	var ts oauth2.TokenSource
+	jwtConf := new(jwt.Config)
+	if keyfile, ok := parameters["keyfile"]; ok {
+		jsonKey, err := ioutil.ReadFile(fmt.Sprint(keyfile))
+		if err != nil {
+			return nil, err
+		}
+		jwtConf, err = google.JWTConfigFromJSON(jsonKey, storage.ScopeFullControl)
+		if err != nil {
+			return nil, err
+		}
+		ts = jwtConf.TokenSource(context.Background())
+	} else {
+		var err error
+		ts, err = google.DefaultTokenSource(context.Background(), storage.ScopeFullControl)
+		if err != nil {
+			return nil, err
+		}
+
+	}
+
 	params := driverParameters{
-		fmt.Sprint(bucket),
-		fmt.Sprint(keyfile),
-		fmt.Sprint(rootDirectory),
+		bucket:        fmt.Sprint(bucket),
+		rootDirectory: fmt.Sprint(rootDirectory),
+		email:         jwtConf.Email,
+		privateKey:    jwtConf.PrivateKey,
+		client:        oauth2.NewClient(context.Background(), ts),
 	}
 
 	return New(params)
@@ -106,8 +127,6 @@ func FromParameters(parameters map[string]interface{}) (storagedriver.StorageDri
 
 // New constructs a new driver
 func New(params driverParameters) (storagedriver.StorageDriver, error) {
-	var ts oauth2.TokenSource
-	var err error
 	rootDirectory := strings.Trim(params.rootDirectory, "/")
 	if rootDirectory != "" {
 		rootDirectory += "/"
@@ -115,33 +134,11 @@ func New(params driverParameters) (storagedriver.StorageDriver, error) {
 	d := &driver{
 		bucket:        params.bucket,
 		rootDirectory: rootDirectory,
+		email:         params.email,
+		privateKey:    params.privateKey,
+		client:        params.client,
 	}
-	if params.keyfile == "" {
-		ts, err = google.DefaultTokenSource(context.Background(), storage.ScopeFullControl)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		jsonKey, err := ioutil.ReadFile(params.keyfile)
-		if err != nil {
-			return nil, err
-		}
-		conf, err := google.JWTConfigFromJSON(
-			jsonKey,
-			storage.ScopeFullControl,
-		)
-		if err != nil {
-			return nil, err
-		}
-		ts = conf.TokenSource(context.Background())
-		d.email = conf.Email
-		d.privateKey = conf.PrivateKey
-	}
-	client := oauth2.NewClient(context.Background(), ts)
-	d.client = client
-	if err != nil {
-		return nil, err
-	}
+
 	return &base.Base{
 		StorageDriver: d,
 	}, nil
