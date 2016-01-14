@@ -127,7 +127,7 @@ func (buh *blobUploadHandler) StartBlobUpload(w http.ResponseWriter, r *http.Req
 
 	if mountDigest != "" && fromRepo != "" {
 		opt, err := buh.createBlobMountOption(fromRepo, mountDigest)
-		if err != nil {
+		if opt != nil && err == nil {
 			options = append(options, opt)
 		}
 	}
