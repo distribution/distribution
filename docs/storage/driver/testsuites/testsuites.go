@@ -1144,7 +1144,7 @@ func randomFilename(length int64) string {
 
 // randomBytes pre-allocates all of the memory sizes needed for the test. If
 // anything panics while accessing randomBytes, just make this number bigger.
-var randomBytes = make([]byte, 96<<20)
+var randomBytes = make([]byte, 128<<20)
 
 func init() {
 	// increase the random bytes to the required maximum
