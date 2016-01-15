@@ -444,6 +444,19 @@ func (suite *DriverSuite) testContinueStreamAppend(c *check.C, chunkSize int64) 
 	fullContents = append(fullContents, contentsChunk4...)
 
 	nn, err = suite.StorageDriver.WriteStream(suite.ctx, filename, int64(len(fullContents))-chunkSize, bytes.NewReader(contentsChunk4))
+	// TODO(stevooe): update all storage drivers to return an InvalidOffsetError in case the offset
+	// is larger than the file size, and update the test suite to check that they do.
+	if err != nil {
+		c.Assert(err, check.NotNil)
+		c.Assert(err, check.FitsTypeOf, storagedriver.InvalidOffsetError{})
+		c.Assert(err.(storagedriver.InvalidOffsetError).Path, check.Equals, filename)
+		c.Assert(err.(storagedriver.InvalidOffsetError).Offset, check.Equals, int64(int64(len(fullContents))-chunkSize))
+		c.Assert(strings.Contains(err.Error(), suite.Name()), check.Equals, true)
+		nn, err = suite.StorageDriver.WriteStream(suite.ctx, filename, int64(len(fullContents))-2*chunkSize, bytes.NewReader(zeroChunk))
+		c.Assert(err, check.IsNil)
+		c.Assert(nn, check.Equals, int64(len(zeroChunk)))
+		nn, err = suite.StorageDriver.WriteStream(suite.ctx, filename, int64(len(fullContents))-chunkSize, bytes.NewReader(contentsChunk4))
+	}
 	c.Assert(err, check.IsNil)
 	c.Assert(nn, check.Equals, chunkSize)
 

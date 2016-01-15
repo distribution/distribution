@@ -197,7 +197,7 @@ func (d *driver) ReadStream(context ctx.Context, path string, offset int64) (io.
 	if err != nil {
 		if res != nil && res.StatusCode == http.StatusRequestedRangeNotSatisfiable {
 			res.Body.Close()
-			obj, err := storage.StatObject(d.context(context), d.bucket, d.pathToKey(path))
+			obj, err := storageStatObject(d.context(context), d.bucket, d.pathToKey(path))
 			if err != nil {
 				return nil, err
 			}
@@ -250,81 +250,113 @@ func (d *driver) getObject(context ctx.Context, path string, offset int64) (*htt
 // location designated by the given path.
 // May be used to resume writing a stream by providing a nonzero offset.
 // The offset must be no larger than the CurrentSize for this path.
-func (d *driver) WriteStream(context ctx.Context, path string, offset int64, reader io.Reader) (totalRead int64, err error) {
+func (d *driver) WriteStream(context ctx.Context, path string, offset int64, reader io.Reader) (totalWritten int64, err error) {
 	if offset < 0 {
 		return 0, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
 	}
 
 	var s *uploadSession
-	if offset > 0 {
+	// start new upload session of offset 0
+	if offset == 0 {
+		s = &uploadSession{}
+		// retrieve existing upload session for resuming
+	} else {
 		s, err = d.getUploadSession(context, path)
 		if err != nil {
 			return 0, err
 		}
 	}
-	if s == nil {
-		s = newUploadSession()
+
+	// offset should not be greater than the size of the file to avoid creating 'gaps'
+	if offset > s.length() {
+		return 0, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
 	}
 
-	overlap := s.length() - offset
-	if overlap > 0 {
-		totalRead, err = io.Copy(ioutil.Discard, io.LimitReader(reader, overlap))
-		if err != nil {
-			return totalRead, err
+	// in case offset is less than the current file size, their difference must be skipped
+	// the skipped bytes must be reported to the caller as if they were written
+	skipped := s.length() - offset
+	if skipped > 0 {
+		nn, err := io.Copy(ioutil.Discard, io.LimitReader(reader, skipped))
+		if err != nil || nn < skipped {
+			return nn, err
 		}
-		offset += totalRead
 	}
 
-	chunk := make([]byte, maxChunkSize)
-	more := true
-	for more {
-		copy(chunk, s.buffer)
-		start := len(s.buffer)
-		// add zeros if offset is larger than the current size of the file
-		if offset > s.length() {
-			count := len(chunk)
-			diff := offset - s.length()
-			if diff < int64(count) {
-				count = int(diff)
-			}
-			for i := 0; i < count; i++ {
-				chunk[start] = 0
-				start++
-			}
-		}
+	// write buffer
+	buffer := make([]byte, maxChunkSize)
+	// current size of the write buffer
+	var buffSize int
+	// the number of bytes written by this call to WriteStream
+	var written int64
 
-		n, err := reader.Read(chunk[start:])
+	// copy bytes from the upload session into the buffer
+	copy(buffer, s.buffer)
+	buffSize += len(s.buffer)
+
+	for more := true; more; {
+		// fill the buffer by reading bytes from the reader
+		n, err := reader.Read(buffer[buffSize:])
 		if err == io.EOF {
+			err = nil
 			more = false
-		} else if err != nil {
-			return totalRead, err
 		}
-		remainder := (start + n) % minChunkSize
-		chunkSize := start + n - remainder
-		if chunkSize > 0 {
+		buffSize += n
+
+		// amount of bytes that got succesfully written
+		var chunkWritten int
+		// chunks can be uploaded only in multiples of minChunkSize
+		// chunkSize is a multiple of minChunkSize less than or equal to buffSize
+		if chunkSize := buffSize - (buffSize % minChunkSize); chunkSize > 0 {
+			var err2 error
+			// if their is no sessionURI yet, obtain one by starting the session
 			if s.sessionURI == "" {
-				s.sessionURI, err = startSession(d.client, d.bucket, d.pathToKey(path))
-				if err != nil {
-					return totalRead, err
-				}
+				s.sessionURI, err2 = startSession(d.client, d.bucket, d.pathToKey(path))
 			}
-			nn, err := putChunk(d.client, s.sessionURI, chunk[0:chunkSize], s.uploadedSize, -1)
-			// TODO handle nn != int64(chunkSize) case better
-			if err != nil || nn != int64(chunkSize) {
-				return totalRead, err
+			if err2 != nil {
+				chunkWritten = 0
+			} else {
+				var nn int64
+				nn, err2 = putChunk(d.client, s.sessionURI, buffer[0:chunkSize], s.uploadedSize, -1)
+				chunkWritten = int(nn)
+				s.uploadedSize += nn
+				written += nn
 			}
-			s.uploadedSize += nn
+			// set err to the latest error, if there was no earlier one
+			if err2 != nil && err == nil {
+				err = err2
+			}
 		}
-		s.buffer = s.buffer[:remainder]
-		copy(s.buffer, chunk[chunkSize:chunkSize+remainder])
-		err = d.updateUploadSession(context, path, s)
+		// shift the remaining bytes to the start of the buffer
+		copy(buffer, buffer[chunkWritten:buffSize])
+		buffSize -= chunkWritten
+
+		// do not continue looping if there was an error while reading/writing
 		if err != nil {
-			return totalRead, err
+			more = false
 		}
-		totalRead += int64(n)
-		offset += int64(n)
 	}
-	return totalRead, nil
+
+	previouslyWritten := len(s.buffer)
+
+	// Copy the remaining bytes from the buffer to the upload session
+	// Normally buffSize will be smaller than minChunkSize. However, in the
+	// unlikely event that the upload session failed to start, this number could be higher.
+	// In this case we can safely clip the remaining bytes to the minChunkSize
+	if buffSize > minChunkSize {
+		buffSize = minChunkSize
+	}
+	s.buffer = buffer[0:buffSize]
+	written += int64(buffSize)
+
+	// commit the writes by updating the upload session
+	err2 := d.updateUploadSession(context, path, s)
+	if err2 != nil {
+		// failed to update the upload session, inform the caller that nothing has been written
+		return skipped, err2
+	}
+	// calculate total bytes written: subtract 'previouslyWritten' to avoid double counting,
+	// and pretend that skipped bytes were really written by this WriteStream call
+	return written + skipped - int64(previouslyWritten), err
 }
 
 func (d *driver) CloseWriteStream(context ctx.Context, path string) error {
@@ -675,13 +707,6 @@ func (d *driver) URLFor(context ctx.Context, path string, options map[string]int
 		Expires:        expiresTime,
 	}
 	return storage.SignedURL(d.bucket, name, opts)
-}
-
-func newUploadSession() *uploadSession {
-	return &uploadSession{
-		buffer:       make([]byte, 0, minChunkSize-1),
-		uploadedSize: 0,
-	}
 }
 
 func (s *uploadSession) length() int64 {
