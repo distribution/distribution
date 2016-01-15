@@ -31,7 +31,7 @@ func init() {
 	// Skip GCS storage driver tests if environment variable parameters are not provided
 	skipGCS = func() string {
 		if bucket == "" || credentials == "" {
-			return "The following environment variables must be set to enable these tests: REGISTRY_STORAGE_GCS_BUCKET, REGISTRY_STORAGE_GCS_CREDS"
+			return "The following environment variables must be set to enable these tests: REGISTRY_STORAGE_GCS_BUCKET, GOOGLE_APPLICATION_CREDENTIALS"
 		}
 		return ""
 	}
@@ -45,30 +45,36 @@ func init() {
 		panic(err)
 	}
 	defer os.Remove(root)
+	var ts oauth2.TokenSource
+	var email string
+	var privateKey []byte
 
-	_, err = os.Stat(credentials)
-	if err == nil {
-		jsonKey, err := ioutil.ReadFile(credentials)
-		if err != nil {
-			panic(fmt.Sprintf("Unable to read credentials from file : %s", err))
-		}
-		credentials = string(jsonKey)
-	}
-
-	// Assume that the file contents are within the environment variable since it exists
-	// but does not contain a valid file path
-	jwtConfig, err := google.JWTConfigFromJSON([]byte(credentials), storage.ScopeFullControl)
+	ts, err = google.DefaultTokenSource(ctx.Background(), storage.ScopeFullControl)
 	if err != nil {
-		panic(fmt.Sprintf("Error reading JWT config : %s", err))
+		// Assume that the file contents are within the environment variable since it exists
+		// but does not contain a valid file path
+		jwtConfig, err := google.JWTConfigFromJSON([]byte(credentials), storage.ScopeFullControl)
+		if err != nil {
+			panic(fmt.Sprintf("Error reading JWT config : %s", err))
+		}
+		email = jwtConfig.Email
+		privateKey = []byte(jwtConfig.PrivateKey)
+		if len(privateKey) == 0 {
+			panic("Error reading JWT config : missing private_key property")
+		}
+		if email == "" {
+			panic("Error reading JWT config : missing client_email property")
+		}
+		ts = jwtConfig.TokenSource(ctx.Background())
 	}
 
 	gcsDriverConstructor = func(rootDirectory string) (storagedriver.StorageDriver, error) {
 		parameters := driverParameters{
 			bucket:        bucket,
 			rootDirectory: root,
-			email:         jwtConfig.Email,
-			privateKey:    []byte(jwtConfig.PrivateKey),
-			client:        oauth2.NewClient(ctx.Background(), jwtConfig.TokenSource(ctx.Background())),
+			email:         email,
+			privateKey:    privateKey,
+			client:        oauth2.NewClient(ctx.Background(), ts),
 		}
 
 		return New(parameters)
