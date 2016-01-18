@@ -82,10 +82,18 @@ func (suite *DriverSuite) TearDownSuite(c *check.C) {
 // This causes the suite to abort if any files are left around in the storage
 // driver.
 func (suite *DriverSuite) TearDownTest(c *check.C) {
-	files, _ := suite.StorageDriver.List(suite.ctx, "/")
-	if len(files) > 0 {
-		c.Fatalf("Storage driver did not clean up properly. Offending files: %#v", files)
+	var tries int
+	var files []string
+	for tries < 2 {
+		files, _ = suite.StorageDriver.List(suite.ctx, "/")
+		if len(files) == 0 {
+			return
+
+		}
+		time.Sleep(time.Second * 2)
+		tries++
 	}
+	c.Fatalf("Storage driver did not clean up properly. Offending files: %#v", files)
 }
 
 // TestRootExists ensures that all storage drivers have a root path by default.
