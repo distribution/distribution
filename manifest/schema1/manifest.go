@@ -51,7 +51,7 @@ func init() {
 	if err != nil {
 		panic(fmt.Sprintf("Unable to register manifest: %s", err))
 	}
-	err = distribution.RegisterManifestSchema("application/json; charset=utf-8", schema1Func)
+	err = distribution.RegisterManifestSchema("application/json", schema1Func)
 	if err != nil {
 		panic(fmt.Sprintf("Unable to register manifest: %s", err))
 	}
