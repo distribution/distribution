@@ -125,6 +125,13 @@ reference and shouldn't be used outside the specification other than to
 identify a set of modifications.
 
 <dl>
+  <dt>k</dt>
+  <dd>
+    <ul>
+      <li>Document use of Accept and Content-Type headers in manifests endpoint.</li>
+    </ul>
+  </dd>
+
   <dt>j</dt>
   <dd>
     <ul>
@@ -407,6 +414,11 @@ GET /v2/<name>/manifests/<reference>
 
 The `name` and `reference` parameter identify the image and are required. The
 reference may include a tag or digest.
+
+The client should include an Accept header indicating which manifest content
+types it supports. For more details on the manifest formats and their content
+types, see manifest-v2-1.md and manifest-v2-2.md. In a successful response,
+the Content-Type header will indicate which manifest type is being returned.
 
 A `404 Not Found` response will be returned if the image is unknown to the
 registry. If the image exists and the response is successful, the image
@@ -822,6 +834,7 @@ Once all of the layers for an image are uploaded, the client can upload the
 image manifest. An image can be pushed using the following request format:
 
     PUT /v2/<name>/manifests/<reference>
+    Content-Type: <manifest media type>
 
     {
        "name": <name>,
@@ -839,7 +852,9 @@ image manifest. An image can be pushed using the following request format:
     }
 
 The `name` and `reference` fields of the response body must match those specified in
-the URL. The `reference` field may be a "tag" or a "digest".
+the URL. The `reference` field may be a "tag" or a "digest". The content type
+should match the type of the manifest being uploaded, as specified in
+manifest-v2-1.md and manifest-v2-2.md.
 
 If there is a problem with pushing the manifest, a relevant 4xx response will
 be returned with a JSON error message. Please see the _PUT Manifest section
@@ -1605,7 +1620,7 @@ The following parameters should be specified on the request:
 ```
 200 OK
 Docker-Content-Digest: <digest>
-Content-Type: application/json; charset=utf-8
+Content-Type: <media type of manifest>
 
 {
    "name": <name>,
@@ -1788,7 +1803,7 @@ Put the manifest identified by `name` and `reference` where `reference` can be a
 PUT /v2/<name>/manifests/<reference>
 Host: <registry host>
 Authorization: <scheme> <token>
-Content-Type: application/json; charset=utf-8
+Content-Type: <media type of manifest>
 
 {
    "name": <name>,
