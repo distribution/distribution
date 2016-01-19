@@ -1,6 +1,8 @@
 package storage
 
 import (
+	"path"
+
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
@@ -83,6 +85,36 @@ func (bs *blobStore) Put(ctx context.Context, mediaType string, p []byte) (distr
 		MediaType: "application/octet-stream",
 		Digest:    dgst,
 	}, bs.driver.PutContent(ctx, bp, p)
+}
+
+func (bs *blobStore) Enumerate(ctx context.Context, ingester func(dgst digest.Digest) error) error {
+
+	specPath, err := pathFor(blobsPathSpec{})
+	if err != nil {
+		return err
+	}
+
+	err = Walk(ctx, bs.driver, specPath, func(fileInfo driver.FileInfo) error {
+		// skip directories
+		if fileInfo.IsDir() {
+			return nil
+		}
+
+		currentPath := fileInfo.Path()
+		// we only want to parse paths that end with /data
+		_, fileName := path.Split(currentPath)
+		if fileName != "data" {
+			return nil
+		}
+
+		digest, err := digestFromPath(currentPath)
+		if err != nil {
+			return err
+		}
+
+		return ingester(digest)
+	})
+	return err
 }
 
 // path returns the canonical path for the blob identified by digest. The blob

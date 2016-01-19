@@ -20,5 +20,5 @@ import (
 )
 
 func main() {
-	registry.Cmd.Execute()
+	registry.RootCmd.Execute()
 }
