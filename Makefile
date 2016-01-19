@@ -24,6 +24,9 @@ AUTHORS: .mailmap .git/HEAD
 version/version.go:
 	./version/version.sh > $@
 
+# Package list
+PKGS := $(shell go list -tags "${DOCKER_BUILDTAGS}" ./... | grep -v "/vendor/")
+
 # Resolving binary dependencies for specific targets
 GOLINT_BIN := $(GOPATH)/bin/golint
 GOLINT := $(shell [ -x $(GOLINT_BIN) ] && echo $(GOLINT_BIN) || echo '')
@@ -43,11 +46,9 @@ ${PREFIX}/bin/registry-api-descriptor-template: version/version.go $(shell find 
 docs/spec/api.md: docs/spec/api.md.tmpl ${PREFIX}/bin/registry-api-descriptor-template
 	./bin/registry-api-descriptor-template $< > $@
 
-# Depends on binaries because vet will silently fail if it can't load compiled
-# imports
-vet: binaries
+vet:
 	@echo "+ $@"
-	@go vet ./...
+	@go vet -tags "${DOCKER_BUILDTAGS}" $(PKGS)
 
 fmt:
 	@echo "+ $@"
