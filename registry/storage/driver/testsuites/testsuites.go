@@ -878,8 +878,9 @@ func (suite *DriverSuite) TestConcurrentFileStreams(c *check.C) {
 	wg.Wait()
 }
 
-// TestEventualConsistency checks that if stat says that a file is a certain size, then
-// you can freely read from the file (this is the only guarantee that the driver needs to provide)
+// TestEventualConsistency checks that stat reports the right file size, after
+// appending a chunk to the file, and that the contents of the file can be read after
+// calling CloseStream (these are the only guarantees that the driver needs to provide)
 func (suite *DriverSuite) TestEventualConsistency(c *check.C) {
 	if testing.Short() {
 		c.Skip("Skipping test in short mode")
@@ -891,39 +892,33 @@ func (suite *DriverSuite) TestEventualConsistency(c *check.C) {
 	var offset int64
 	var misswrites int
 	var chunkSize int64 = 32
-
-	for i := 0; i < 1024; i++ {
-		contents := randomContents(chunkSize)
-		read, err := suite.StorageDriver.WriteStream(suite.ctx, filename, offset, bytes.NewReader(contents))
+	contents := randomContents(1024 * chunkSize)
+	for i := 1; i <= 1024; i++ {
+		read, err := suite.StorageDriver.WriteStream(suite.ctx, filename, offset, bytes.NewReader(contents[offset:(int64(i)*chunkSize)]))
 		c.Assert(err, check.IsNil)
 
 		fi, err := suite.StorageDriver.Stat(suite.ctx, filename)
 		c.Assert(err, check.IsNil)
 
-		// We are most concerned with being able to read data as soon as Stat declares
-		// it is uploaded. This is the strongest guarantee that some drivers (that guarantee
-		// at best eventual consistency) absolutely need to provide.
-		if fi.Size() == offset+chunkSize {
-			reader, err := suite.StorageDriver.ReadStream(suite.ctx, filename, offset)
-			c.Assert(err, check.IsNil)
-
-			readContents, err := ioutil.ReadAll(reader)
-			c.Assert(err, check.IsNil)
-
-			c.Assert(readContents, check.DeepEquals, contents)
-
-			reader.Close()
-			offset += read
-		} else {
+		if fi.Size() != offset+read {
 			misswrites++
 		}
+		offset = fi.Size()
 	}
 
 	if misswrites > 0 {
 		c.Log("There were " + string(misswrites) + " occurences of a write not being instantly available.")
 	}
-
 	c.Assert(misswrites, check.Not(check.Equals), 1024)
+
+	reader, err := suite.StorageDriver.ReadStream(suite.ctx, filename, 0)
+	c.Assert(err, check.IsNil)
+
+	readContents, err := ioutil.ReadAll(reader)
+	c.Assert(err, check.IsNil)
+	c.Assert(readContents, check.DeepEquals, contents)
+
+	reader.Close()
 }
 
 // BenchmarkPutGetEmptyFiles benchmarks PutContent/GetContent for 0B files
