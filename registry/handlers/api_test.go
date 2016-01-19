@@ -957,7 +957,7 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName string) manife
 	// Re-push with a few different Content-Types. The official schema1
 	// content type should work, as should application/json with/without a
 	// charset.
-	resp = putManifest(t, "re-putting signed manifest", manifestDigestURL, schema1.MediaTypeManifest, sm2)
+	resp = putManifest(t, "re-putting signed manifest", manifestDigestURL, schema1.MediaTypeSignedManifest, sm2)
 	checkResponse(t, "re-putting signed manifest", resp, http.StatusCreated)
 	resp = putManifest(t, "re-putting signed manifest", manifestDigestURL, "application/json; charset=utf-8", sm2)
 	checkResponse(t, "re-putting signed manifest", resp, http.StatusCreated)
@@ -1486,7 +1486,7 @@ func testManifestAPIManifestList(t *testing.T, env *testEnv, args manifestArgs) 
 		t.Fatalf("Error constructing request: %s", err)
 	}
 	req.Header.Set("Accept", manifestlist.MediaTypeManifestList)
-	req.Header.Add("Accept", schema1.MediaTypeManifest)
+	req.Header.Add("Accept", schema1.MediaTypeSignedManifest)
 	req.Header.Add("Accept", schema2.MediaTypeManifest)
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {

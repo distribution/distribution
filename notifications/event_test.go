@@ -21,7 +21,7 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
          "timestamp": "2006-01-02T15:04:05Z",
          "action": "push",
          "target": {
-            "mediaType": "application/vnd.docker.distribution.manifest.v1+json",
+            "mediaType": "application/vnd.docker.distribution.manifest.v1+prettyjws",
             "size": 1,
             "digest": "sha256:0123456789abcdef0",
             "length": 1,
@@ -120,7 +120,7 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
 	manifestPush.Target.Digest = "sha256:0123456789abcdef0"
 	manifestPush.Target.Length = 1
 	manifestPush.Target.Size = 1
-	manifestPush.Target.MediaType = schema1.MediaTypeManifest
+	manifestPush.Target.MediaType = schema1.MediaTypeSignedManifest
 	manifestPush.Target.Repository = "library/test"
 	manifestPush.Target.URL = "http://example.com/v2/library/test/manifests/latest"
 
