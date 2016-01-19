@@ -24,6 +24,9 @@ AUTHORS: .mailmap .git/HEAD
 version/version.go:
 	./version/version.sh > $@
 
+# Required for go 1.5 to build
+GO15VENDOREXPERIMENT := 1
+
 # Package list
 PKGS := $(shell go list -tags "${DOCKER_BUILDTAGS}" ./... | grep -v "/vendor/")
 
