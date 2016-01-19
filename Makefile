@@ -51,8 +51,8 @@ vet: binaries
 
 fmt:
 	@echo "+ $@"
-	@test -z "$$(gofmt -s -l . | grep -v Godeps/_workspace/src/ | tee /dev/stderr)" || \
-		echo "+ please format Go code with 'gofmt -s'"
+	@test -z "$$(gofmt -s -l . 2>&1 | grep -v vendor/ | tee /dev/stderr)" || \
+		(echo >&2 "+ please format Go code with 'gofmt -s'" && false)
 
 lint:
 	@echo "+ $@"
