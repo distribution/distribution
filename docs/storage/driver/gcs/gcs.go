@@ -555,7 +555,16 @@ func (d *driver) Delete(context ctx.Context, path string) error {
 	if len(keys) > 0 {
 		sort.Sort(sort.Reverse(sort.StringSlice(keys)))
 		for _, key := range keys {
-			if err := storage.DeleteObject(gcsContext, d.bucket, key); err != nil {
+			err := storage.DeleteObject(gcsContext, d.bucket, key)
+			// GCS only guarantees eventual consistency, solistAll might return
+			// paths that no longer exist. If this happens, just ignore any not
+			// found error
+			if status, ok := err.(*googleapi.Error); ok {
+				if status.Code == http.StatusNotFound {
+					err = nil
+				}
+			}
+			if err != nil {
 				return err
 			}
 		}

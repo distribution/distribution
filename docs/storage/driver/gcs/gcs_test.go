@@ -155,8 +155,12 @@ func TestEmptyRootList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error creating content: %v", err)
 	}
-	defer rootedDriver.Delete(ctx, filename)
-
+	defer func() {
+		err := rootedDriver.Delete(ctx, filename)
+		if err != nil {
+			t.Fatalf("failed to remove %v due to %v\n", filename, err)
+		}
+	}()
 	keys, err := emptyRootDriver.List(ctx, "/")
 	for _, path := range keys {
 		if !storagedriver.PathRegexp.MatchString(path) {
