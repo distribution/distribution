@@ -147,6 +147,14 @@ func (reg *registry) Repository(ctx context.Context, canonicalName reference.Nam
 	}, nil
 }
 
+func (reg *registry) Blobs() distribution.BlobEnumerator {
+	return reg.blobStore
+}
+
+func (reg *registry) BlobStatter() distribution.BlobStatter {
+	return reg.statter
+}
+
 // repository provides name-scoped access to various services.
 type repository struct {
 	*registry
@@ -180,6 +188,8 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 		blobLinkPath,
 	}
 
+	manifestDirectoryPathSpec := manifestRevisionsPathSpec{name: repo.name.Name()}
+
 	blobStore := &linkedBlobStore{
 		ctx:           ctx,
 		blobStore:     repo.blobStore,
@@ -193,7 +203,8 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 
 		// TODO(stevvooe): linkPath limits this blob store to only
 		// manifests. This instance cannot be used for blob checks.
-		linkPathFns: manifestLinkPathFns,
+		linkPathFns:           manifestLinkPathFns,
+		linkDirectoryPathSpec: manifestDirectoryPathSpec,
 	}
 
 	ms := &manifestStore{

@@ -9,6 +9,8 @@ import (
 	mrand "math/rand"
 	"time"
 
+	"github.com/docker/distribution"
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 )
 
@@ -75,4 +77,40 @@ func CreateRandomTarFile() (rs io.ReadSeeker, dgst digest.Digest, err error) {
 	dgst = digest.FromBytes(target.Bytes())
 
 	return bytes.NewReader(target.Bytes()), dgst, nil
+}
+
+// CreateRandomLayers returns a map of n digests. We don't particularly care
+// about the order of said digests (since they're all random anyway).
+func CreateRandomLayers(n int) (map[digest.Digest]io.ReadSeeker, error) {
+	digestMap := map[digest.Digest]io.ReadSeeker{}
+	for i := 0; i < n; i++ {
+		rs, ds, err := CreateRandomTarFile()
+		if err != nil {
+			return nil, fmt.Errorf("unexpected error generating test layer file: %v", err)
+		}
+
+		dgst := digest.Digest(ds)
+		digestMap[dgst] = rs
+	}
+	return digestMap, nil
+}
+
+// UploadBlobs lets you upload blobs to a repository
+func UploadBlobs(repository distribution.Repository, layers map[digest.Digest]io.ReadSeeker) error {
+	ctx := context.Background()
+	for digest, rs := range layers {
+		wr, err := repository.Blobs(ctx).Create(ctx)
+		if err != nil {
+			return fmt.Errorf("unexpected error creating upload: %v", err)
+		}
+
+		if _, err := io.Copy(wr, rs); err != nil {
+			return fmt.Errorf("unexpected error copying to upload: %v", err)
+		}
+
+		if _, err := wr.Commit(ctx, distribution.Descriptor{Digest: digest}); err != nil {
+			return fmt.Errorf("unexpected error committinng upload: %v", err)
+		}
+	}
+	return nil
 }
