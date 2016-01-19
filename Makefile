@@ -24,6 +24,10 @@ AUTHORS: .mailmap .git/HEAD
 version/version.go:
 	./version/version.sh > $@
 
+# Resolving binary dependencies for specific targets
+GOLINT_BIN := $(GOPATH)/bin/golint
+GOLINT := $(shell [ -x $(GOLINT_BIN) ] && echo $(GOLINT_BIN) || echo '')
+
 ${PREFIX}/bin/registry: version/version.go $(shell find . -type f -name '*.go')
 	@echo "+ $@"
 	@go build -tags "${DOCKER_BUILDTAGS}" -o $@ ${GO_LDFLAGS}  ${GO_GCFLAGS} ./cmd/registry
@@ -52,7 +56,9 @@ fmt:
 
 lint:
 	@echo "+ $@"
-	@test -z "$$(golint ./... | grep -v Godeps/_workspace/src/ | tee /dev/stderr)"
+	$(if $(GOLINT), , \
+		$(error Please install golint: `go get -u github.com/golang/lint/golint`))
+	@test -z "$$($(GOLINT) ./... 2>&1 | grep -v vendor/ | tee /dev/stderr)"
 
 build:
 	@echo "+ $@"
