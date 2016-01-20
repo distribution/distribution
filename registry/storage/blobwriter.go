@@ -30,7 +30,7 @@ type blobWriter struct {
 
 	// implementes io.WriteSeeker, io.ReaderFrom and io.Closer to satisfy
 	// LayerUpload Interface
-	bufferedFileWriter
+	fileWriter
 
 	resumableDigestEnabled bool
 }
@@ -51,7 +51,7 @@ func (bw *blobWriter) StartedAt() time.Time {
 func (bw *blobWriter) Commit(ctx context.Context, desc distribution.Descriptor) (distribution.Descriptor, error) {
 	context.GetLogger(ctx).Debug("(*blobWriter).Commit")
 
-	if err := bw.bufferedFileWriter.Close(); err != nil {
+	if err := bw.fileWriter.Close(); err != nil {
 		return distribution.Descriptor{}, err
 	}
 
@@ -100,7 +100,7 @@ func (bw *blobWriter) Write(p []byte) (int, error) {
 		return 0, err
 	}
 
-	n, err := io.MultiWriter(&bw.bufferedFileWriter, bw.digester.Hash()).Write(p)
+	n, err := io.MultiWriter(&bw.fileWriter, bw.digester.Hash()).Write(p)
 	bw.written += int64(n)
 
 	return n, err
@@ -114,7 +114,7 @@ func (bw *blobWriter) ReadFrom(r io.Reader) (n int64, err error) {
 		return 0, err
 	}
 
-	nn, err := bw.bufferedFileWriter.ReadFrom(io.TeeReader(r, bw.digester.Hash()))
+	nn, err := bw.fileWriter.ReadFrom(io.TeeReader(r, bw.digester.Hash()))
 	bw.written += nn
 
 	return nn, err
@@ -129,7 +129,7 @@ func (bw *blobWriter) Close() error {
 		return err
 	}
 
-	return bw.bufferedFileWriter.Close()
+	return bw.fileWriter.Close()
 }
 
 // validateBlob checks the data against the digest, returning an error if it
@@ -149,7 +149,7 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc distribution.Descri
 	}
 
 	// Stat the on disk file
-	if fi, err := bw.bufferedFileWriter.driver.Stat(ctx, bw.path); err != nil {
+	if fi, err := bw.fileWriter.driver.Stat(ctx, bw.path); err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
 			// NOTE(stevvooe): We really don't care if the file is
@@ -223,7 +223,7 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc distribution.Descri
 			}
 
 			// Read the file from the backend driver and validate it.
-			fr, err := newFileReader(ctx, bw.bufferedFileWriter.driver, bw.path, desc.Size)
+			fr, err := newFileReader(ctx, bw.fileWriter.driver, bw.path, desc.Size)
 			if err != nil {
 				return distribution.Descriptor{}, err
 			}
@@ -357,7 +357,7 @@ func (bw *blobWriter) Reader() (io.ReadCloser, error) {
 	// todo(richardscothern): Change to exponential backoff, i=0.5, e=2, n=4
 	try := 1
 	for try <= 5 {
-		_, err := bw.bufferedFileWriter.driver.Stat(bw.ctx, bw.path)
+		_, err := bw.fileWriter.driver.Stat(bw.ctx, bw.path)
 		if err == nil {
 			break
 		}
@@ -371,7 +371,7 @@ func (bw *blobWriter) Reader() (io.ReadCloser, error) {
 		}
 	}
 
-	readCloser, err := bw.bufferedFileWriter.driver.ReadStream(bw.ctx, bw.path, 0)
+	readCloser, err := bw.fileWriter.driver.ReadStream(bw.ctx, bw.path, 0)
 	if err != nil {
 		return nil, err
 	}
