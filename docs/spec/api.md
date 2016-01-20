@@ -125,6 +125,34 @@ reference and shouldn't be used outside the specification other than to
 identify a set of modifications.
 
 <dl>
+  <dt>j</dt>
+  <dd>
+    <ul>
+      <li>Add ability to mount blobs across repositories.</li>
+    </ul>
+  </dd>
+
+  <dt>i</dt>
+  <dd>
+    <ul>
+      <li>Clarified expected behavior response to manifest HEAD request.</li>
+    </ul>
+  </dd>
+
+  <dt>h</dt>
+  <dd>
+    <ul>
+      <li>All mention of tarsum removed.</li>
+    </ul>
+  </dd>
+
+  <dt>g</dt>
+  <dd>
+    <ul>
+      <li>Clarify behavior of pagination behavior with unspecified parameters.</li>
+    </ul>
+  </dd>
+
   <dt>f</dt>
   <dd>
     <ul>
