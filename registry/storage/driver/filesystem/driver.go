@@ -16,6 +16,7 @@ import (
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/base"
 	"github.com/docker/distribution/registry/storage/driver/factory"
+	"syscall"
 )
 
 const (
@@ -276,8 +277,8 @@ func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
 	return keys, nil
 }
 
-// Move moves an object stored at sourcePath to destPath, removing the original
-// object.
+// Move moves an object stored at sourcePath to destPath, removing the original object.
+// Fall back to copy then delete when moving across mount points (will not work with directories)
 func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
 	source := d.fullPath(sourcePath)
 	dest := d.fullPath(destPath)
@@ -291,6 +292,54 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 	}
 
 	err := os.Rename(source, dest)
+	if err != nil {
+		// Copy then delete fall back
+		linkErr := err.(*os.LinkError)
+		if errno, ok := linkErr.Err.(syscall.Errno); ok && errno == syscall.EXDEV || os.IsExist(err) {
+			err = d.copyFile(source, dest)
+			// If we just moved an uploaded blob, the PurgeUploads loop probably removed it already,
+			// therefore we must check if the source file still exists before trying to delete it
+			if _, err := os.Stat(source); err == nil {
+				if err = os.RemoveAll(source); err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return err
+}
+
+// Copy a file to another. If dst file exists, it will be overwritten
+func (d *driver) copyFile(src, dst string) (err error) {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	// Allocate tmp file with unique name, otherwise multiple processes may write to the same file
+	out, err := ioutil.TempFile(path.Dir(dst), path.Base(dst))
+	if err != nil {
+		return err
+	}
+	if _, err = io.Copy(out, in); err != nil {
+		return err
+	}
+	if err := out.Sync(); err != nil {
+		return err
+	}
+	err = os.Rename(out.Name(), dst)
+
+	if cerr := out.Close(); err == nil {
+		err = cerr
+	}
+	// In any case, we should remove the tmp file if it's still there
+	if _, serr := os.Stat(out.Name()); serr == nil {
+		rerr := os.Remove(out.Name())
+		if err == nil {
+			err = rerr
+		}
+	}
+
 	return err
 }
 
