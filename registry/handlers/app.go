@@ -103,7 +103,7 @@ func NewApp(ctx context.Context, configuration *configuration.Configuration) *Ap
 	app.register(v2.RouteNameBlobUploadChunk, blobUploadDispatcher)
 
 	var err error
-	app.driver, err = factory.Create(configuration.Storage.Type(), configuration.Storage.Parameters())
+	app.driver, err = factory.Create(app, configuration.Storage.Type(), configuration.Storage.Parameters())
 	if err != nil {
 		// TODO(stevvooe): Move the creation of a service into a protected
 		// method, where this is created lazily. Its status can be queried via
