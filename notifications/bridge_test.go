@@ -4,13 +4,10 @@ import (
 	"testing"
 
 	"github.com/docker/distribution/digest"
-
-	"github.com/docker/libtrust"
-
 	"github.com/docker/distribution/manifest/schema1"
-
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/uuid"
+	"github.com/docker/libtrust"
 )
 
 var (
@@ -85,11 +82,7 @@ func createTestEnv(t *testing.T, fn testSinkFn) Listener {
 		t.Fatalf("error signing manifest: %v", err)
 	}
 
-	_, payload, err = sm.Payload()
-	if err != nil {
-		t.Fatalf("error getting manifest payload: %v", err)
-	}
-
+	payload = sm.Canonical
 	dgst = digest.FromBytes(payload)
 
 	return NewBridge(ub, source, actor, request, fn)
