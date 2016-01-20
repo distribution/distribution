@@ -45,7 +45,6 @@ func TestSimpleWrite(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error writing content: %v", err)
 	}
-	fw.Flush()
 
 	if n != len(content) {
 		t.Fatalf("unexpected write length: %d != %d", n, len(content))
@@ -163,41 +162,6 @@ func TestSimpleWrite(t *testing.T) {
 	}
 }
 
-func TestBufferedFileWriter(t *testing.T) {
-	ctx := context.Background()
-	writer, err := newFileWriter(ctx, inmemory.New(), "/random")
-
-	if err != nil {
-		t.Fatalf("Failed to initialize bufferedFileWriter: %v", err.Error())
-	}
-
-	// write one byte and ensure the offset hasn't been incremented.
-	// offset will only get incremented when the buffer gets flushed
-	short := []byte{byte(1)}
-
-	writer.Write(short)
-
-	if writer.offset > 0 {
-		t.Fatalf("WriteStream called prematurely")
-	}
-
-	// write enough data to cause the buffer to flush and confirm
-	// the offset has been incremented
-	long := make([]byte, fileWriterBufferSize)
-	_, err = rand.Read(long)
-	if err != nil {
-		t.Fatalf("unexpected error building random data: %v", err)
-	}
-	for i := range long {
-		long[i] = byte(i)
-	}
-	writer.Write(long)
-	writer.Close()
-	if writer.offset != (fileWriterBufferSize + 1) {
-		t.Fatalf("WriteStream not called when buffer capacity reached")
-	}
-}
-
 func BenchmarkFileWriter(b *testing.B) {
 	b.StopTimer() // not sure how long setup above will take
 	for i := 0; i < b.N; i++ {
@@ -237,14 +201,14 @@ func BenchmarkFileWriter(b *testing.B) {
 	}
 }
 
-func BenchmarkBufferedFileWriter(b *testing.B) {
+func BenchmarkfileWriter(b *testing.B) {
 	b.StopTimer() // not sure how long setup above will take
 	ctx := context.Background()
 	for i := 0; i < b.N; i++ {
 		bfw, err := newFileWriter(ctx, inmemory.New(), "/random")
 
 		if err != nil {
-			b.Fatalf("Failed to initialize bufferedFileWriter: %v", err.Error())
+			b.Fatalf("Failed to initialize fileWriter: %v", err.Error())
 		}
 
 		randomBytes := make([]byte, 1<<20)
