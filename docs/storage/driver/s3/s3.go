@@ -26,11 +26,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/AdRoll/goamz/aws"
-	"github.com/AdRoll/goamz/s3"
 	"github.com/Sirupsen/logrus"
+	"github.com/docker/goamz/aws"
+	"github.com/docker/goamz/s3"
 
 	"github.com/docker/distribution/context"
+	"github.com/docker/distribution/registry/client/transport"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/base"
 	"github.com/docker/distribution/registry/storage/driver/factory"
@@ -58,6 +59,7 @@ type DriverParameters struct {
 	V4Auth        bool
 	ChunkSize     int64
 	RootDirectory string
+	UserAgent     string
 }
 
 func init() {
@@ -168,7 +170,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		case int, uint, int32, uint32, uint64:
 			chunkSize = reflect.ValueOf(v).Convert(reflect.TypeOf(chunkSize)).Int()
 		default:
-			return nil, fmt.Errorf("invalid valud for chunksize: %#v", chunkSizeParam)
+			return nil, fmt.Errorf("invalid value for chunksize: %#v", chunkSizeParam)
 		}
 
 		if chunkSize < minChunkSize {
@@ -181,6 +183,11 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		rootDirectory = ""
 	}
 
+	userAgent, ok := parameters["useragent"]
+	if !ok {
+		userAgent = ""
+	}
+
 	params := DriverParameters{
 		fmt.Sprint(accessKey),
 		fmt.Sprint(secretKey),
@@ -191,6 +198,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		v4AuthBool,
 		chunkSize,
 		fmt.Sprint(rootDirectory),
+		fmt.Sprint(userAgent),
 	}
 
 	return New(params)
@@ -209,7 +217,16 @@ func New(params DriverParameters) (*Driver, error) {
 	}
 
 	s3obj := s3.New(auth, params.Region)
-	bucket := s3obj.Bucket(params.Bucket)
+
+	if params.UserAgent != "" {
+		s3obj.Client = &http.Client{
+			Transport: transport.NewTransport(http.DefaultTransport,
+				transport.NewHeaderRequestModifier(http.Header{
+					http.CanonicalHeaderKey("User-Agent"): []string{params.UserAgent},
+				}),
+			),
+		}
+	}
 
 	if params.V4Auth {
 		s3obj.Signature = aws.V4Signature
@@ -218,6 +235,8 @@ func New(params DriverParameters) (*Driver, error) {
 			return nil, fmt.Errorf("The eu-central-1 region only works with v4 authentication")
 		}
 	}
+
+	bucket := s3obj.Bucket(params.Bucket)
 
 	// TODO Currently multipart uploads have no timestamps, so this would be unwise
 	// if you initiated a new s3driver while another one is running on the same bucket.
