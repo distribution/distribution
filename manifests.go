@@ -96,7 +96,10 @@ func UnmarshalManifest(ctHeader string, p []byte) (Manifest, Descriptor, error) 
 
 	unmarshalFunc, ok := mappings[mediatype]
 	if !ok {
-		return nil, Descriptor{}, fmt.Errorf("unsupported manifest mediatype: %s", mediatype)
+		unmarshalFunc, ok = mappings[""]
+		if !ok {
+			return nil, Descriptor{}, fmt.Errorf("unsupported manifest mediatype and no default available: %s", mediatype)
+		}
 	}
 
 	return unmarshalFunc(p)
