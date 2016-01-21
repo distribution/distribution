@@ -7,7 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/xml"
 	"fmt"
-	"github.com/AdRoll/goamz/s3"
+	"github.com/docker/goamz/s3"
 	"io"
 	"io/ioutil"
 	"log"
@@ -44,6 +44,17 @@ type action struct {
 	reqId string
 }
 
+// A Clock reports the current time.
+type Clock interface {
+	Now() time.Time
+}
+
+type realClock struct{}
+
+func (c *realClock) Now() time.Time {
+	return time.Now()
+}
+
 // Config controls the internal behaviour of the Server. A nil config is the default
 // and behaves as if all configurations assume their default behaviour. Once passed
 // to NewServer, the configuration must not be modified.
@@ -58,6 +69,10 @@ type Config struct {
 	// Address on which to listen. By default, a random port is assigned by the
 	// operating system and the server listens on localhost.
 	ListenAddress string
+
+	// Clock used to set mtime when updating an object. If nil,
+	// use the real clock.
+	Clock Clock
 }
 
 func (c *Config) send409Conflict() bool {
@@ -76,6 +91,7 @@ type Server struct {
 	mu       sync.Mutex
 	buckets  map[string]*bucket
 	config   *Config
+	closed   bool
 }
 
 type bucket struct {
@@ -129,8 +145,16 @@ type resource interface {
 func NewServer(config *Config) (*Server, error) {
 	listenAddress := "localhost:0"
 
-	if config != nil && config.ListenAddress != "" {
+	if config == nil {
+		config = &Config{}
+	}
+
+	if config.ListenAddress != "" {
 		listenAddress = config.ListenAddress
+	}
+
+	if config.Clock == nil {
+		config.Clock = &realClock{}
 	}
 
 	l, err := net.Listen("tcp", listenAddress)
@@ -151,6 +175,10 @@ func NewServer(config *Config) (*Server, error) {
 
 // Quit closes down the server.
 func (srv *Server) Quit() {
+	srv.mu.Lock()
+	srv.closed = true
+	srv.mu.Unlock()
+
 	srv.listener.Close()
 }
 
@@ -174,6 +202,13 @@ func (srv *Server) serveHTTP(w http.ResponseWriter, req *http.Request) {
 
 	srv.mu.Lock()
 	defer srv.mu.Unlock()
+
+	if srv.closed {
+		hj := w.(http.Hijacker)
+		conn, _, _ := hj.Hijack()
+		conn.Close()
+		return
+	}
 
 	if debug {
 		log.Printf("s3test %q %q", req.Method, req.URL)
@@ -360,15 +395,28 @@ func (r bucketResource) get(a *action) interface{} {
 	if maxKeys <= 0 {
 		maxKeys = 1000
 	}
-	resp := &s3.ListResp{
-		Name:      r.bucket.name,
-		Prefix:    prefix,
-		Delimiter: delimiter,
-		Marker:    marker,
-		MaxKeys:   maxKeys,
+
+	type commonPrefix struct {
+		Prefix string
 	}
 
-	var prefixes []string
+	type serverListResponse struct {
+		s3.ListResp
+		CommonPrefixes []commonPrefix
+	}
+
+	resp := &serverListResponse{
+		ListResp: s3.ListResp{
+			Name:      r.bucket.name,
+			Prefix:    prefix,
+			Delimiter: delimiter,
+			Marker:    marker,
+			MaxKeys:   maxKeys,
+		},
+	}
+
+	var prefixes []commonPrefix
+	var lastName string
 	for _, obj := range objs {
 		if !strings.HasPrefix(obj.name, prefix) {
 			continue
@@ -378,7 +426,7 @@ func (r bucketResource) get(a *action) interface{} {
 		if delimiter != "" {
 			if i := strings.Index(obj.name[len(prefix):], delimiter); i >= 0 {
 				name = obj.name[:len(prefix)+i+len(delimiter)]
-				if prefixes != nil && prefixes[len(prefixes)-1] == name {
+				if prefixes != nil && prefixes[len(prefixes)-1].Prefix == name {
 					continue
 				}
 				isPrefix = true
@@ -389,14 +437,16 @@ func (r bucketResource) get(a *action) interface{} {
 		}
 		if len(resp.Contents)+len(prefixes) >= maxKeys {
 			resp.IsTruncated = true
+			resp.NextMarker = lastName
 			break
 		}
 		if isPrefix {
-			prefixes = append(prefixes, name)
+			prefixes = append(prefixes, commonPrefix{Prefix: name})
 		} else {
 			// Contents contains only keys not found in CommonPrefixes
 			resp.Contents = append(resp.Contents, obj.s3Key())
 		}
+		lastName = name
 	}
 	resp.CommonPrefixes = prefixes
 	return resp
@@ -649,7 +699,7 @@ func (objr objectResource) get(a *action) interface{} {
 	// TODO x-amz-request-id
 	h.Set("Content-Length", fmt.Sprint(len(data)))
 	h.Set("ETag", "\""+hex.EncodeToString(obj.checksum)+"\"")
-	h.Set("Last-Modified", obj.mtime.Format(lastModifiedTimeFormat))
+	h.Set("Last-Modified", obj.mtime.UTC().Format(lastModifiedTimeFormat))
 
 	if status != http.StatusOK {
 		a.w.WriteHeader(status)
@@ -681,6 +731,8 @@ func (objr objectResource) put(a *action) interface{} {
 	// TODO Expires header
 	// TODO x-amz-server-side-encryption
 	// TODO x-amz-storage-class
+
+	var res interface{}
 
 	uploadId := a.req.URL.Query().Get("uploadId")
 	var partNumber uint
@@ -751,6 +803,7 @@ func (objr objectResource) put(a *action) interface{} {
 				obj.meta[key] = values
 			}
 		}
+		obj.mtime = a.srv.config.Clock.Now()
 
 		if copySource := a.req.Header.Get("X-Amz-Copy-Source"); copySource != "" {
 			idx := strings.IndexByte(copySource, '/')
@@ -786,11 +839,15 @@ func (objr objectResource) put(a *action) interface{} {
 				obj.meta[k] = make([]string, len(v))
 				copy(obj.meta[k], v)
 			}
+
+			res = &s3.CopyObjectResult{
+				ETag:         etag,
+				LastModified: obj.mtime.UTC().Format(time.RFC3339),
+			}
 		} else {
 			obj.data = data
 			obj.checksum = gotHash
 		}
-		obj.mtime = time.Now()
 		objr.bucket.objects[objr.name] = obj
 	} else {
 		// For multipart commit
@@ -800,13 +857,13 @@ func (objr objectResource) put(a *action) interface{} {
 			index:        partNumber,
 			data:         data,
 			etag:         etag,
-			lastModified: time.Now(),
+			lastModified: a.srv.config.Clock.Now(),
 		}
 
 		objr.bucket.multipartUploads[uploadId] = append(parts, part)
 	}
 
-	return nil
+	return res
 }
 
 func (objr objectResource) delete(a *action) interface{} {
