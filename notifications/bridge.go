@@ -103,10 +103,16 @@ func (b *bridge) createManifestEvent(action string, repo string, sm distribution
 		return nil, err
 	}
 
+	// Ensure we have the canonical manifest descriptor here
+	_, desc, err := distribution.UnmarshalManifest(mt, p)
+	if err != nil {
+		return nil, err
+	}
+
 	event.Target.MediaType = mt
-	event.Target.Length = int64(len(p))
-	event.Target.Size = int64(len(p))
-	event.Target.Digest = digest.FromBytes(p)
+	event.Target.Length = desc.Size
+	event.Target.Size = desc.Size
+	event.Target.Digest = desc.Digest
 
 	event.Target.URL, err = b.ub.BuildManifestURL(repo, event.Target.Digest.String())
 	if err != nil {
