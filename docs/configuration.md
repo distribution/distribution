@@ -112,6 +112,18 @@ information about each option that appears later in this page.
         region: fr
         container: containername
         rootdirectory: /swift/object/name/prefix
+      oss:
+        accesskeyid: accesskeyid
+        accesskeysecret: accesskeysecret
+        region: OSS region name
+        endpoint: optional endpoints
+        internal: optional internal endpoint
+        bucket: OSS bucket
+        encrypt: optional data encryption setting
+        secure: optional ssl setting
+        chunksize: optional size valye
+        rootdirectory: optional root directory
+      inmemory:  # This driver takes no parameters
       delete:
         enabled: false
       redirect:
@@ -355,7 +367,7 @@ Permitted values are `error`, `warn`, `info` and `debug`. The default is
       swift:
         username: username
         password: password
-        authurl: https://storage.myprovider.com/v2.0 or https://storage.myprovider.com/v3/auth
+        authurl: https://storage.myprovider.com/auth/v1.0 or https://storage.myprovider.com/v2.0 or https://storage.myprovider.com/v3/auth
         tenant: tenantname
         tenantid: tenantid
         domain: domain name for Openstack Identity v3 API
@@ -364,6 +376,18 @@ Permitted values are `error`, `warn`, `info` and `debug`. The default is
         region: fr
         container: containername
         rootdirectory: /swift/object/name/prefix
+      oss:
+        accesskeyid: accesskeyid
+        accesskeysecret: accesskeysecret
+        region: OSS region name
+        endpoint: optional endpoints
+        internal: optional internal endpoint
+        bucket: OSS bucket
+        encrypt: optional data encryption setting
+        secure: optional ssl setting
+        chunksize: optional size valye
+        rootdirectory: optional root directory
+      inmemory:
       delete:
         enabled: false
       cache:
@@ -378,9 +402,63 @@ Permitted values are `error`, `warn`, `info` and `debug`. The default is
         disable: false
 
 The storage option is **required** and defines which storage backend is in use.
-You must configure one backend; if you configure more, the registry returns an error.
+You must configure one backend; if you configure more, the registry returns an error. You can choose any of these backend storage drivers:
 
-If you are deploying a registry on Windows, be aware that a Windows volume mounted from the host is not recommended. Instead, you can use a S3, or Azure, backing data-store. If you do use a Windows volume, you must ensure that the `PATH` to the mount point is within Windows' `MAX_PATH` limits (typically 255 characters). Failure to do so can result in the following error message:
+<table>
+  <tr>
+    <td><code>filesystem</code></td>
+    <td>Uses the local disk to store registry files. It is ideal for development and may be appropriate for some small-scale production applications.
+    See the <a href="../storage-drivers/filesystem/">driver's reference documentation</a>.
+    </td>
+  </tr>
+  <tr>
+    <td><code>azure</code></td>
+    <td>Uses Microsoft's Azure Blob Storage.
+    See the <a href="../storage-drivers/azure/">driver's reference documentation</a>.
+    </td>
+  </tr>
+  <tr>
+    <td><code>gcs</code></td>
+    <td>Uses Google Cloud Storage.
+    See the <a href="../storage-drivers/gcs/">driver's reference documentation</a>.
+    </td>
+  </tr>
+  <tr>
+    <td><code>rados</code></td>
+    <td>Uses Ceph Object Storage.
+    See the <a href="../storage-drivers/rados/">driver's reference documentation</a>.
+    </td>
+  </tr>
+  <tr>
+    <td><code>s3</code></td>
+    <td>Uses Amazon's Simple Storage Service (S3).
+    See the <a href="../storage-drivers/s3/">driver's reference documentation</a>.
+    </td>
+  </tr>
+  <tr>
+    <td><code>swift</code></td>
+    <td>Uses Openstack Swift object storage.
+    See the <a href="../storage-drivers/swift/">driver's reference documentation</a>.
+    </td>
+  </tr>
+  <tr>
+    <td><code>oss</code></td>
+    <td>Uses Aliyun OSS for object storage.
+    See the <a href="../storage-drivers/oss/">driver's reference documentation</a>.
+    </td>
+  </tr>
+</table>
+
+For purely tests purposes, you can use the [`inmemory` storage
+driver](storage-drivers/inmemory.md). If you would like to run a registry from
+volatile memory, use the [`filesystem` driver](storage-drivers/filesystem.md) on
+a ramdisk.
+
+If you are deploying a registry on Windows, be aware that a Windows volume
+mounted from the host is not recommended. Instead, you can use a S3, or Azure,
+backing data-store. If you do use a Windows volume, you must ensure that the
+`PATH` to the mount point is within Windows' `MAX_PATH` limits (typically 255
+characters). Failure to do so can result in the following error message:
 
     mkdir /XXX protocol error and your registry will not function properly.
 
@@ -446,7 +524,7 @@ The `redirect` subsection provides configuration for managing redirects from
 content backends. For backends that support it, redirecting is enabled by
 default. Certain deployment scenarios may prefer to route all data through the
 Registry, rather than redirecting to the backend. This may be more efficient
-when using a backend that is not colocated or when a registry instance is
+when using a backend that is not co-located or when a registry instance is
 doing aggressive caching.
 
 Redirects can be disabled by adding a single flag `disable`, set to `true`
@@ -454,459 +532,6 @@ under the `redirect` section:
 
     redirect:
       disable: true
-
-### filesystem
-
-The `filesystem` storage backend uses the local disk to store registry files. It
-is ideal for development and may be appropriate for some small-scale production
-applications.
-
-This backend has a single, required `rootdirectory` parameter. The parameter
-specifies the absolute path to a directory. The registry stores all its data
-here so make sure there is adequate space available.
-
-### azure
-
-This storage backend uses Microsoft's Azure Blob Storage.
-
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>accountname</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      Azure account name.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>accountkey</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      Azure account key.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>container</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      Name of the Azure container into which to store data.
-    </td>
-  </tr>
-   <tr>
-    <td>
-      <code>realm</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      Domain name suffix for the Storage Service API endpoint. By default, this
-      is <code>core.windows.net</code>.
-    </td>
-  </tr>
-
-</table>
-
-### gcs
-
-This storage backend uses Google Cloud Storage.
-
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>bucket</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      Storage bucket name.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>keyfile</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      A private service account key file in JSON format. Instead of a key file <a href="https://developers.google.com/identity/protocols/application-default-credentials">Google Application Default Credentials</a> can be used.
-    </td>
-  </tr>
-   <tr>
-    <td>
-      <code>rootdirectory</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      This is a prefix that will be applied to all Google Cloud Storage keys to allow you to segment data in your bucket if necessary.
-  </tr>
-
-</table>
-
-### rados
-
-This storage backend uses [Ceph Object Storage](http://ceph.com/docs/master/rados/).
-
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>poolname</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      Ceph pool name.
-    </td>
-  </tr>
-   <tr>
-    <td>
-      <code>username</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      Ceph cluster user to connect as (i.e. admin, not client.admin).
-    </td>
-  </tr>
-   <tr>
-    <td>
-      <code>chunksize</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      Size of the written RADOS objects. Default value is 4MB (4194304).
-    </td>
-  </tr>
-</table>
-
-
-### S3
-
-This storage backend uses Amazon's Simple Storage Service (S3).
-
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>accesskey</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      Your AWS Access Key.
-    </td>
-  </tr>
-    <tr>
-    <td>
-      <code>secretkey</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      Your AWS Secret Key.
-    </td>
-  </tr>
-    <tr>
-    <td>
-      <code>region</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      The AWS region in which your bucket exists. For the moment, the Go AWS
-      library in use does not use the newer DNS based bucket routing.
-    </td>
-  </tr>
-    <tr>
-    <td>
-      <code>bucket</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      The bucket name in which you want to store the registry's data.
-    </td>
-  </tr>
-    <tr>
-    <td>
-      <code>encrypt</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-       Specifies whether the registry stores the image in encrypted format or
-       not. A boolean value. The default is false.
-    </td>
-  </tr>
-    <tr>
-    <td>
-      <code>secure</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      Indicates whether to use HTTPS instead of HTTP. A boolean value. The
-      default is <code>true</code>.
-    </td>
-  </tr>
-    <tr>
-    <td>
-      <code>v4auth</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      Indicates whether the registry uses Version 4 of AWS's authentication.
-      Generally, you should set this to <code>true</code>. By default, this is
-      <code>false</code>.
-    </td>
-  </tr>
-    <tr>
-    <td>
-      <code>chunksize</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      The S3 API requires multipart upload chunks to be at least 5MB. This value
-      should be a number that is larger than 5*1024*1024.
-    </td>
-  </tr>
-   <tr>
-    <td>
-      <code>rootdirectory</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      This is a prefix that will be applied to all S3 keys to allow you to segment data in your bucket if necessary.
-    </td>
-  </tr>
-</table>
-
-### Openstack Swift
-
-This storage backend uses Openstack Swift object storage.
-
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>authurl</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      URL for obtaining an auth token. https://storage.myprovider.com/v2.0 or https://storage.myprovider.com/v3/auth
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>username</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      Your Openstack user name.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>password</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      Your Openstack password.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>region</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      The Openstack region in which your container exists.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>container</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      The name of your Swift container where you wish to store the registry's data. The driver creates the named container during its initialization.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>tenant</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      Your Openstack tenant name. You can either use <code>tenant</code> or <code>tenantid</code>.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>tenantid</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      Your Openstack tenant id. You can either use <code>tenant</code> or <code>tenantid</code>.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>domain</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      Your Openstack domain name for Identity v3 API. You can either use <code>domain</code> or <code>domainid</code>.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>domainid</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      Your Openstack domain id for Identity v3 API. You can either use <code>domain</code> or <code>domainid</code>.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>trustid</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      Your Openstack trust id for Identity v3 API.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>insecureskipverify</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      true to skip TLS verification, false by default.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>chunksize</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      Size of the data segments for the Swift Dynamic Large Objects. This value should be a number (defaults to 5M).
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>prefix</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      This is a prefix that will be applied to all Swift keys to allow you to segment data in your container if necessary. Defaults to the empty string which is the container's root.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>secretkey</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      The secret key used to generate temporary URLs.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>accesskey</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      The access key to generate temporary URLs. It is used by HP Cloud Object Storage in addition to the `secretkey` parameter.
-    </td>
-  </tr>
-</table>
 
 
 ## auth
@@ -1035,11 +660,12 @@ For more information about Token based authentication configuration, see the [sp
 ### htpasswd
 
 The _htpasswd_ authentication backed allows one to configure basic auth using an
-[Apache HTPasswd File](https://httpd.apache.org/docs/2.4/programs/htpasswd.html).
-Only [`bcrypt`](http://en.wikipedia.org/wiki/Bcrypt) format passwords are
-supported. Entries with other hash types will be ignored. The htpasswd file is
-loaded once, at startup. If the file is invalid, the registry will display an
-error and will not start.
+[Apache htpasswd
+file](https://httpd.apache.org/docs/2.4/programs/htpasswd.html). Only
+[`bcrypt`](http://en.wikipedia.org/wiki/Bcrypt) format passwords are supported.
+Entries with other hash types will be ignored. The htpasswd file is loaded once,
+at startup. If the file is invalid, the registry will display an error and will
+not start.
 
 > __WARNING:__ This authentication scheme should only be used with TLS
 > configured, since basic authentication sends passwords as part of the http
@@ -1078,7 +704,7 @@ error and will not start.
 ## middleware
 
 The `middleware` option is **optional**. Use this option to inject middleware at
-named hook points. All middlewares must implement the same interface as the
+named hook points. All middleware must implement the same interface as the
 object they're wrapping. This means a registry middleware must implement the
 `distribution.Namespace` interface, repository middleware must implement
 `distribution.Repository`, and storage middleware must implement

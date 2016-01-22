@@ -13,6 +13,49 @@ An implementation of the `storagedriver.StorageDriver` interface which uses Goog
 
 ## Parameters
 
+
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>bucket</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      Storage bucket name.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>keyfile</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      A private service account key file in JSON format. Instead of a key file <a href="https://developers.google.com/identity/protocols/application-default-credentials">Google Application Default Credentials</a> can be used.
+    </td>
+  </tr>
+   <tr>
+    <td>
+      <code>rootdirectory</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      This is a prefix that will be applied to all Google Cloud Storage keys to allow you to segment data in your bucket if necessary.
+  </tr>
+
+</table>
+
+
 `bucket`: The name of your Google Cloud Storage bucket where you wish to store objects (needs to already be created prior to driver initialization).
 
 `keyfile`: (optional) A private key file in JSON format, used for [Service Account Authentication](https://cloud.google.com/storage/docs/authentication#service_accounts).
