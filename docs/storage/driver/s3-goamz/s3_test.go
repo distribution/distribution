@@ -71,7 +71,7 @@ func init() {
 			minChunkSize,
 			rootDirectory,
 			storageClass,
-			"",
+			driverName + "-test",
 		}
 
 		return New(parameters)
@@ -196,6 +196,6 @@ func TestStorageClass(t *testing.T) {
 	}
 	defer resp.Body.Close()
 	if storageClass := resp.Header.Get("x-amz-storage-class"); storageClass != string(s3.ReducedRedundancy) {
-		t.Fatalf("unexpected storage class for standard file: %v", storageClass)
+		t.Fatalf("unexpected storage class for reduced-redundancy file: %v", storageClass)
 	}
 }
