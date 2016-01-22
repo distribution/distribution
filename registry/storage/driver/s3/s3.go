@@ -53,6 +53,7 @@ type DriverParameters struct {
 	SecretKey     string
 	Bucket        string
 	Region        aws.Region
+	SupportsHead  bool
 	Encrypt       bool
 	Secure        bool
 	V4Auth        bool
@@ -74,6 +75,7 @@ func (factory *s3DriverFactory) Create(parameters map[string]interface{}) (stora
 type driver struct {
 	S3            *s3.S3
 	Bucket        *s3.Bucket
+	SupportsHead  bool
 	ChunkSize     int64
 	Encrypt       bool
 	RootDirectory string
@@ -97,6 +99,8 @@ type Driver struct {
 // - accesskey
 // - secretkey
 // - region
+// - regionendpoint
+// - regionsupportshead
 // - bucket
 // - encrypt
 func FromParameters(parameters map[string]interface{}) (*Driver, error) {
@@ -116,9 +120,28 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	if !ok || fmt.Sprint(regionName) == "" {
 		return nil, fmt.Errorf("No region parameter provided")
 	}
-	region := aws.GetRegion(fmt.Sprint(regionName))
-	if region.Name == "" {
-		return nil, fmt.Errorf("Invalid region provided: %v", region)
+
+	var region aws.Region
+	if fmt.Sprint(regionName) == "generic" {
+		regionEndpoint, ok := parameters["regionendpoint"]
+		if !ok || fmt.Sprint(regionEndpoint) == "" {
+			return nil, fmt.Errorf("No S3 endpoint for generic region")
+		}
+		region = aws.Region{Name: fmt.Sprint(regionName), S3Endpoint: fmt.Sprint(regionEndpoint), S3LocationConstraint: true}
+	} else {
+		region = aws.GetRegion(fmt.Sprint(regionName))
+		if region.Name == "" {
+			return nil, fmt.Errorf("Invalid region provided: %v", region)
+		}
+	}
+
+	regionSupportsHead := true
+	regionsupportshead, ok := parameters["regionsupportshead"]
+	if ok {
+		regionSupportsHead, ok = regionsupportshead.(bool)
+		if !ok {
+			return nil, fmt.Errorf("The secure parameter should be a boolean")
+		}
 	}
 
 	bucket, ok := parameters["bucket"]
@@ -186,6 +209,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(secretKey),
 		fmt.Sprint(bucket),
 		region,
+		regionSupportsHead,
 		encryptBool,
 		secureBool,
 		v4AuthBool,
@@ -237,6 +261,7 @@ func New(params DriverParameters) (*Driver, error) {
 	d := &driver{
 		S3:            s3obj,
 		Bucket:        bucket,
+		SupportsHead:  params.SupportsHead,
 		ChunkSize:     params.ChunkSize,
 		Encrypt:       params.Encrypt,
 		RootDirectory: params.RootDirectory,
@@ -368,6 +393,29 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 		return nil
 	}
 
+	fromLargeCurrent := func(offset, total int64) error {
+		current, err := d.ReadStream(ctx, path, offset)
+		if err != nil {
+			return err
+		}
+
+		bytesRead = 0
+		for int64(bytesRead) < total {
+			//The loop should very rarely enter a second iteration
+			nn, err := current.Read(buf[bytesRead:total])
+			bytesRead += nn
+			if err != nil {
+				if err != io.EOF {
+					return err
+				}
+
+				break
+			}
+
+		}
+		return nil
+	}
+
 	// Fills from parameter to chunkSize from reader
 	fromReader := func(from int64) error {
 		bytesRead = 0
@@ -411,9 +459,14 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 					return // ensure we don't leak the goroutine
 				}
 			}()
-
-			if bytesRead <= 0 {
-				return
+			if d.S3.Region.Name == "generic" {
+				if bytesRead <= 0 && from < d.ChunkSize {
+					return
+				}
+			} else {
+				if bytesRead <= 0 {
+					return
+				}
 			}
 
 			var err error
@@ -498,15 +551,44 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 				}
 			} else {
 				// currentLength >= offset >= chunkSize
-				_, part, err = multi.PutPartCopy(partNumber,
-					s3.CopyOptions{CopySourceOptions: "bytes=0-" + strconv.FormatInt(offset-1, 10)},
-					d.Bucket.Name+"/"+d.s3Path(path))
-				if err != nil {
-					return 0, err
-				}
+				if d.S3.Region.Name == "generic" {
+					alreadyRead := int64(0)
+					for alreadyRead+d.ChunkSize <= offset {
 
-				parts = append(parts, part)
-				partNumber++
+						if err = fromLargeCurrent(alreadyRead, d.ChunkSize); err != nil {
+							return totalRead, err
+						}
+
+						if err = fromReader(d.ChunkSize); err != nil {
+							return totalRead, err
+						}
+
+						alreadyRead += d.ChunkSize
+
+					}
+
+					if offset-alreadyRead > 0 {
+						if err = fromLargeCurrent(alreadyRead, offset-alreadyRead); err != nil {
+							return totalRead, err
+						}
+
+						if err = fromReader(offset - alreadyRead); err != nil {
+							return totalRead, err
+						}
+
+					}
+
+				} else {
+					_, part, err = multi.PutPartCopy(partNumber,
+						s3.CopyOptions{CopySourceOptions: "bytes=0-" + strconv.FormatInt(offset-1, 10)},
+						d.Bucket.Name+"/"+d.s3Path(path))
+					if err != nil {
+						return 0, err
+					}
+
+					parts = append(parts, part)
+					partNumber++
+				}
 			}
 		} else {
 			// Fills between parameters with 0s but only when to - from <= chunkSize
@@ -592,28 +674,123 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 				}
 			} else {
 				// offset > currentLength >= chunkSize
-				_, part, err = multi.PutPartCopy(partNumber,
-					s3.CopyOptions{},
-					d.Bucket.Name+"/"+d.s3Path(path))
-				if err != nil {
-					return 0, err
+				if d.S3.Region.Name == "generic" {
+					alreadyRead := int64(0)
+					for alreadyRead+d.ChunkSize < currentLength {
+
+						if err = fromLargeCurrent(alreadyRead, d.ChunkSize); err != nil {
+							return totalRead, err
+						}
+
+						if err = fromReader(d.ChunkSize); err != nil {
+							return totalRead, err
+						}
+
+						alreadyRead += d.ChunkSize
+
+					}
+
+					// 0 < 	currentLength - alreadyRead < chunksize
+					if currentLength-alreadyRead > 0 {
+
+						if err = fromLargeCurrent(alreadyRead, currentLength-alreadyRead); err != nil {
+							return totalRead, err
+						}
+
+						if offset-alreadyRead >= d.ChunkSize {
+
+							if err = fromZeroFillSmall(currentLength-alreadyRead, d.ChunkSize); err != nil {
+								return totalRead, err
+							}
+
+							if err = fromReader(d.ChunkSize); err != nil {
+								return totalRead, err
+							}
+
+							alreadyRead += d.ChunkSize
+
+							for alreadyRead+d.ChunkSize <= offset {
+								if err = fromZeroFillSmall(0, d.ChunkSize); err != nil {
+									return totalRead, err
+								}
+
+								if err = fromReader(d.ChunkSize); err != nil {
+									return totalRead, err
+								}
+								alreadyRead += d.ChunkSize
+							}
+
+							if err = fromZeroFillSmall(0, offset-alreadyRead); err != nil {
+								return totalRead, err
+							}
+
+							if err = fromReader(offset - alreadyRead); err != nil {
+								return totalRead, err
+							}
+
+						} else {
+							//offset - alreadyRead < chunksize   [offset > currentLength > alreadyRead]
+							if err = fromZeroFillSmall(currentLength-alreadyRead, offset-alreadyRead); err != nil {
+								return totalRead, err
+							}
+
+							if err = fromReader(d.ChunkSize + alreadyRead - offset); err != nil {
+								return totalRead, err
+							}
+						}
+
+					} else {
+
+						for alreadyRead+d.ChunkSize <= offset {
+							if err = fromZeroFillSmall(0, d.ChunkSize); err != nil {
+								return totalRead, err
+							}
+
+							if err = fromReader(d.ChunkSize); err != nil {
+								return totalRead, err
+							}
+							alreadyRead += d.ChunkSize
+						}
+
+						if offset > alreadyRead {
+							if err = fromZeroFillSmall(0, offset-alreadyRead); err != nil {
+								return totalRead, err
+							}
+
+							if err = fromReader(offset - alreadyRead); err != nil {
+								return totalRead, err
+							}
+						}
+
+					}
+
+				} else {
+					_, part, err = multi.PutPartCopy(partNumber,
+						s3.CopyOptions{},
+						d.Bucket.Name+"/"+d.s3Path(path))
+					if err != nil {
+						return 0, err
+					}
+
+					parts = append(parts, part)
+
+					partNumber++
+
+					//Zero fill from currentLength up to offset, then some reader
+					if err = fromZeroFillLarge(currentLength, offset); err != nil {
+						return totalRead, err
+					}
+
+					if err = fromReader((offset - currentLength) % d.ChunkSize); err != nil {
+						return totalRead, err
+					}
+
+					if totalRead+((offset-currentLength)%d.ChunkSize) < d.ChunkSize {
+						return totalRead, nil
+					}
+
 				}
 
-				parts = append(parts, part)
-				partNumber++
-
-				//Zero fill from currentLength up to offset, then some reader
-				if err = fromZeroFillLarge(currentLength, offset); err != nil {
-					return totalRead, err
-				}
-
-				if err = fromReader((offset - currentLength) % d.ChunkSize); err != nil {
-					return totalRead, err
-				}
-
-				if totalRead+((offset-currentLength)%d.ChunkSize) < d.ChunkSize {
-					return totalRead, nil
-				}
 			}
 
 		}
@@ -739,16 +916,24 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		return storagedriver.PathNotFoundError{Path: path}
 	}
 
-	s3Objects := make([]s3.Object, listMax)
-
 	for len(listResponse.Contents) > 0 {
-		for index, key := range listResponse.Contents {
-			s3Objects[index].Key = key.Key
-		}
+		if d.S3.Region.Name == "generic" {
+			for _, key := range listResponse.Contents {
+				err := d.Bucket.Del(key.Key)
+				if err != nil {
+					return nil
+				}
+			}
+		} else {
+			s3Objects := make([]s3.Object, listMax)
+			for index, key := range listResponse.Contents {
+				s3Objects[index].Key = key.Key
+			}
 
-		err := d.Bucket.DelMulti(s3.Delete{Quiet: false, Objects: s3Objects[0:len(listResponse.Contents)]})
-		if err != nil {
-			return nil
+			err := d.Bucket.DelMulti(s3.Delete{Quiet: false, Objects: s3Objects[0:len(listResponse.Contents)]})
+			if err != nil {
+				return nil
+			}
 		}
 
 		listResponse, err = d.Bucket.List(d.s3Path(path), "", "", listMax)
@@ -763,6 +948,9 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 // May return an UnsupportedMethodErr in certain StorageDriver implementations.
 func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
+	if d.SupportsHead == false {
+		return "", storagedriver.ErrUnsupportedMethod
+	}
 	methodString := "GET"
 	method, ok := options["method"]
 	if ok {
