@@ -2,16 +2,14 @@
 // store blobs in Amazon S3 cloud storage.
 //
 // This package leverages the docker/goamz client library for interfacing with
-// s3.
+// S3. It is intended to be deprecated in favor of the s3-aws driver
+// implementation.
 //
-// Because s3 is a key, value store the Stat call does not support last modification
+// Because S3 is a key, value store the Stat call does not support last modification
 // time for directories (directories are an abstraction for key, value stores)
 //
-// Keep in mind that s3 guarantees only eventual consistency, so do not assume
-// that a successful write will mean immediate access to the data written (although
-// in most regions a new object put has guaranteed read after write). The only true
-// guarantee is that once you call Stat and receive a certain file size, that much of
-// the file is already accessible.
+// Keep in mind that S3 guarantees only read-after-write consistency for new
+// objects, but no read-after-update or list-after-write consistency.
 package s3
 
 import (
@@ -37,7 +35,7 @@ import (
 	"github.com/docker/distribution/registry/storage/driver/factory"
 )
 
-const driverName = "s3"
+const driverName = "s3goamz"
 
 // minChunkSize defines the minimum multipart upload chunk size
 // S3 API requires multipart upload chunks to be at least 5MB
