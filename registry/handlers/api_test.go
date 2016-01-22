@@ -26,6 +26,7 @@ import (
 	"github.com/docker/distribution/manifest/manifestlist"
 	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/manifest/schema2"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
 	_ "github.com/docker/distribution/registry/storage/driver/inmemory"
@@ -251,7 +252,7 @@ func TestURLPrefix(t *testing.T) {
 }
 
 type blobArgs struct {
-	imageName   string
+	imageName   reference.Named
 	layerFile   io.ReadSeeker
 	layerDigest digest.Digest
 }
@@ -263,10 +264,10 @@ func makeBlobArgs(t *testing.T) blobArgs {
 	}
 
 	args := blobArgs{
-		imageName:   "foo/bar",
 		layerFile:   layerFile,
 		layerDigest: layerDigest,
 	}
+	args.imageName, _ = reference.ParseNamed("foo/bar")
 	return args
 }
 
@@ -300,7 +301,8 @@ func TestBlobDeleteDisabled(t *testing.T) {
 
 	imageName := args.imageName
 	layerDigest := args.layerDigest
-	layerURL, err := env.builder.BuildBlobURL(imageName, layerDigest)
+	ref, _ := reference.WithDigest(imageName, layerDigest)
+	layerURL, err := env.builder.BuildBlobURL(ref)
 	if err != nil {
 		t.Fatalf("error building url: %v", err)
 	}
@@ -323,7 +325,8 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 
 	// -----------------------------------
 	// Test fetch for non-existent content
-	layerURL, err := env.builder.BuildBlobURL(imageName, layerDigest)
+	ref, _ := reference.WithDigest(imageName, layerDigest)
+	layerURL, err := env.builder.BuildBlobURL(ref)
 	if err != nil {
 		t.Fatalf("error building url: %v", err)
 	}
@@ -533,7 +536,8 @@ func testBlobDelete(t *testing.T, env *testEnv, args blobArgs) {
 	layerFile := args.layerFile
 	layerDigest := args.layerDigest
 
-	layerURL, err := env.builder.BuildBlobURL(imageName, layerDigest)
+	ref, _ := reference.WithDigest(imageName, layerDigest)
+	layerURL, err := env.builder.BuildBlobURL(ref)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -609,14 +613,15 @@ func testBlobDelete(t *testing.T, env *testEnv, args blobArgs) {
 func TestDeleteDisabled(t *testing.T) {
 	env := newTestEnv(t, false)
 
-	imageName := "foo/bar"
+	imageName, _ := reference.ParseNamed("foo/bar")
 	// "build" our layer file
 	layerFile, layerDigest, err := testutil.CreateRandomTarFile()
 	if err != nil {
 		t.Fatalf("error creating random layer file: %v", err)
 	}
 
-	layerURL, err := env.builder.BuildBlobURL(imageName, layerDigest)
+	ref, _ := reference.WithDigest(imageName, layerDigest)
+	layerURL, err := env.builder.BuildBlobURL(ref)
 	if err != nil {
 		t.Fatalf("Error building blob URL")
 	}
@@ -634,14 +639,15 @@ func TestDeleteDisabled(t *testing.T) {
 func TestDeleteReadOnly(t *testing.T) {
 	env := newTestEnv(t, true)
 
-	imageName := "foo/bar"
+	imageName, _ := reference.ParseNamed("foo/bar")
 	// "build" our layer file
 	layerFile, layerDigest, err := testutil.CreateRandomTarFile()
 	if err != nil {
 		t.Fatalf("error creating random layer file: %v", err)
 	}
 
-	layerURL, err := env.builder.BuildBlobURL(imageName, layerDigest)
+	ref, _ := reference.WithDigest(imageName, layerDigest)
+	layerURL, err := env.builder.BuildBlobURL(ref)
 	if err != nil {
 		t.Fatalf("Error building blob URL")
 	}
@@ -662,7 +668,7 @@ func TestStartPushReadOnly(t *testing.T) {
 	env := newTestEnv(t, true)
 	env.app.readOnly = true
 
-	imageName := "foo/bar"
+	imageName, _ := reference.ParseNamed("foo/bar")
 
 	layerUploadURL, err := env.builder.BuildBlobUploadURL(imageName)
 	if err != nil {
@@ -693,43 +699,51 @@ func httpDelete(url string) (*http.Response, error) {
 }
 
 type manifestArgs struct {
-	imageName string
+	imageName reference.Named
 	mediaType string
 	manifest  distribution.Manifest
 	dgst      digest.Digest
 }
 
 func TestManifestAPI(t *testing.T) {
+	schema1Repo, _ := reference.ParseNamed("foo/schema1")
+	schema2Repo, _ := reference.ParseNamed("foo/schema2")
+
 	deleteEnabled := false
 	env := newTestEnv(t, deleteEnabled)
-	testManifestAPISchema1(t, env, "foo/schema1")
-	schema2Args := testManifestAPISchema2(t, env, "foo/schema2")
+	testManifestAPISchema1(t, env, schema1Repo)
+	schema2Args := testManifestAPISchema2(t, env, schema2Repo)
 	testManifestAPIManifestList(t, env, schema2Args)
 
 	deleteEnabled = true
 	env = newTestEnv(t, deleteEnabled)
-	testManifestAPISchema1(t, env, "foo/schema1")
-	schema2Args = testManifestAPISchema2(t, env, "foo/schema2")
+	testManifestAPISchema1(t, env, schema1Repo)
+	schema2Args = testManifestAPISchema2(t, env, schema2Repo)
 	testManifestAPIManifestList(t, env, schema2Args)
 }
 
 func TestManifestDelete(t *testing.T) {
+	schema1Repo, _ := reference.ParseNamed("foo/schema1")
+	schema2Repo, _ := reference.ParseNamed("foo/schema2")
+
 	deleteEnabled := true
 	env := newTestEnv(t, deleteEnabled)
-	schema1Args := testManifestAPISchema1(t, env, "foo/schema1")
+	schema1Args := testManifestAPISchema1(t, env, schema1Repo)
 	testManifestDelete(t, env, schema1Args)
-	schema2Args := testManifestAPISchema2(t, env, "foo/schema2")
+	schema2Args := testManifestAPISchema2(t, env, schema2Repo)
 	testManifestDelete(t, env, schema2Args)
 }
 
 func TestManifestDeleteDisabled(t *testing.T) {
+	schema1Repo, _ := reference.ParseNamed("foo/schema1")
 	deleteEnabled := false
 	env := newTestEnv(t, deleteEnabled)
-	testManifestDeleteDisabled(t, env, "foo/schema1")
+	testManifestDeleteDisabled(t, env, schema1Repo)
 }
 
-func testManifestDeleteDisabled(t *testing.T, env *testEnv, imageName string) {
-	manifestURL, err := env.builder.BuildManifestURL(imageName, digest.DigestSha256EmptyTar)
+func testManifestDeleteDisabled(t *testing.T, env *testEnv, imageName reference.Named) {
+	ref, _ := reference.WithDigest(imageName, digest.DigestSha256EmptyTar)
+	manifestURL, err := env.builder.BuildManifestURL(ref)
 	if err != nil {
 		t.Fatalf("unexpected error getting manifest url: %v", err)
 	}
@@ -743,11 +757,12 @@ func testManifestDeleteDisabled(t *testing.T, env *testEnv, imageName string) {
 	checkResponse(t, "status of disabled delete of manifest", resp, http.StatusMethodNotAllowed)
 }
 
-func testManifestAPISchema1(t *testing.T, env *testEnv, imageName string) manifestArgs {
+func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Named) manifestArgs {
 	tag := "thetag"
 	args := manifestArgs{imageName: imageName}
 
-	manifestURL, err := env.builder.BuildManifestURL(imageName, tag)
+	tagRef, _ := reference.WithTag(imageName, tag)
+	manifestURL, err := env.builder.BuildManifestURL(tagRef)
 	if err != nil {
 		t.Fatalf("unexpected error getting manifest url: %v", err)
 	}
@@ -784,7 +799,7 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName string) manife
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
-		Name: imageName,
+		Name: imageName.Name(),
 		Tag:  tag,
 		FSLayers: []schema1.FSLayer{
 			{
@@ -871,7 +886,8 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName string) manife
 	args.manifest = signedManifest
 	args.dgst = dgst
 
-	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, dgst.String())
+	digestRef, _ := reference.WithDigest(imageName, dgst)
+	manifestDigestURL, err := env.builder.BuildManifestURL(digestRef)
 	checkErr(t, err, "building manifest url")
 
 	resp = putManifest(t, "putting signed manifest no error", manifestURL, "", signedManifest)
@@ -1032,8 +1048,8 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName string) manife
 		t.Fatalf("unexpected error decoding error response: %v", err)
 	}
 
-	if tagsResponse.Name != imageName {
-		t.Fatalf("tags name should match image name: %v != %v", tagsResponse.Name, imageName)
+	if tagsResponse.Name != imageName.Name() {
+		t.Fatalf("tags name should match image name: %v != %v", tagsResponse.Name, imageName.Name())
 	}
 
 	if len(tagsResponse.Tags) != 1 {
@@ -1060,14 +1076,15 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName string) manife
 	return args
 }
 
-func testManifestAPISchema2(t *testing.T, env *testEnv, imageName string) manifestArgs {
+func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Named) manifestArgs {
 	tag := "schema2tag"
 	args := manifestArgs{
 		imageName: imageName,
 		mediaType: schema2.MediaTypeManifest,
 	}
 
-	manifestURL, err := env.builder.BuildManifestURL(imageName, tag)
+	tagRef, _ := reference.WithTag(imageName, tag)
+	manifestURL, err := env.builder.BuildManifestURL(tagRef)
 	if err != nil {
 		t.Fatalf("unexpected error getting manifest url: %v", err)
 	}
@@ -1211,7 +1228,8 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName string) manife
 	args.dgst = dgst
 	args.manifest = deserializedManifest
 
-	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, dgst.String())
+	digestRef, _ := reference.WithDigest(imageName, dgst)
+	manifestDigestURL, err := env.builder.BuildManifestURL(digestRef)
 	checkErr(t, err, "building manifest url")
 
 	resp = putManifest(t, "putting manifest no error", manifestURL, schema2.MediaTypeManifest, manifest)
@@ -1340,7 +1358,7 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName string) manife
 		t.Fatalf("unexpected error decoding error response: %v", err)
 	}
 
-	if tagsResponse.Name != imageName {
+	if tagsResponse.Name != imageName.Name() {
 		t.Fatalf("tags name should match image name: %v != %v", tagsResponse.Name, imageName)
 	}
 
@@ -1379,7 +1397,7 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName string) manife
 	if fetchedSchema1Manifest.Architecture != "amd64" {
 		t.Fatal("wrong architecture")
 	}
-	if fetchedSchema1Manifest.Name != imageName {
+	if fetchedSchema1Manifest.Name != imageName.Name() {
 		t.Fatal("wrong image name")
 	}
 	if fetchedSchema1Manifest.Tag != tag {
@@ -1407,7 +1425,8 @@ func testManifestAPIManifestList(t *testing.T, env *testEnv, args manifestArgs) 
 	imageName := args.imageName
 	tag := "manifestlisttag"
 
-	manifestURL, err := env.builder.BuildManifestURL(imageName, tag)
+	tagRef, _ := reference.WithTag(imageName, tag)
+	manifestURL, err := env.builder.BuildManifestURL(tagRef)
 	if err != nil {
 		t.Fatalf("unexpected error getting manifest url: %v", err)
 	}
@@ -1460,7 +1479,8 @@ func testManifestAPIManifestList(t *testing.T, env *testEnv, args manifestArgs) 
 	}
 	dgst := digest.FromBytes(canonical)
 
-	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, dgst.String())
+	digestRef, _ := reference.WithDigest(imageName, dgst)
+	manifestDigestURL, err := env.builder.BuildManifestURL(digestRef)
 	checkErr(t, err, "building manifest url")
 
 	resp = putManifest(t, "putting manifest list no error", manifestURL, manifestlist.MediaTypeManifestList, deserializedManifestList)
@@ -1602,7 +1622,7 @@ func testManifestAPIManifestList(t *testing.T, env *testEnv, args manifestArgs) 
 	if fetchedSchema1Manifest.Architecture != "amd64" {
 		t.Fatal("wrong architecture")
 	}
-	if fetchedSchema1Manifest.Name != imageName {
+	if fetchedSchema1Manifest.Name != imageName.Name() {
 		t.Fatal("wrong image name")
 	}
 	if fetchedSchema1Manifest.Tag != tag {
@@ -1629,8 +1649,9 @@ func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
 	imageName := args.imageName
 	dgst := args.dgst
 	manifest := args.manifest
-	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, dgst.String())
 
+	ref, _ := reference.WithDigest(imageName, dgst)
+	manifestDigestURL, err := env.builder.BuildManifestURL(ref)
 	// ---------------
 	// Delete by digest
 	resp, err := httpDelete(manifestDigestURL)
@@ -1678,8 +1699,9 @@ func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
 
 	// ---------------
 	// Attempt to delete an unknown manifest
-	unknownDigest := "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-	unknownManifestDigestURL, err := env.builder.BuildManifestURL(imageName, unknownDigest)
+	unknownDigest := digest.Digest("sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+	unknownRef, _ := reference.WithDigest(imageName, unknownDigest)
+	unknownManifestDigestURL, err := env.builder.BuildManifestURL(unknownRef)
 	checkErr(t, err, "building unknown manifest url")
 
 	resp, err = httpDelete(unknownManifestDigestURL)
@@ -1687,11 +1709,12 @@ func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
 	checkResponse(t, "fetching deleted manifest", resp, http.StatusNotFound)
 
 	// --------------------
-	// Uupload manifest by tag
+	// Upload manifest by tag
 	tag := "atag"
-	manifestTagURL, err := env.builder.BuildManifestURL(imageName, tag)
-	resp = putManifest(t, "putting signed manifest by tag", manifestTagURL, args.mediaType, manifest)
-	checkResponse(t, "putting signed manifest by tag", resp, http.StatusCreated)
+	tagRef, _ := reference.WithTag(imageName, tag)
+	manifestTagURL, err := env.builder.BuildManifestURL(tagRef)
+	resp = putManifest(t, "putting manifest by tag", manifestTagURL, args.mediaType, manifest)
+	checkResponse(t, "putting manifest by tag", resp, http.StatusCreated)
 	checkHeaders(t, resp, http.Header{
 		"Location":              []string{manifestDigestURL},
 		"Docker-Content-Digest": []string{dgst.String()},
@@ -1715,7 +1738,7 @@ func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
 		t.Fatalf("unexpected error decoding error response: %v", err)
 	}
 
-	if tagsResponse.Name != imageName {
+	if tagsResponse.Name != imageName.Name() {
 		t.Fatalf("tags name should match image name: %v != %v", tagsResponse.Name, imageName)
 	}
 
@@ -1749,7 +1772,7 @@ func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
 		t.Fatalf("unexpected error decoding error response: %v", err)
 	}
 
-	if tagsResponse.Name != imageName {
+	if tagsResponse.Name != imageName.Name() {
 		t.Fatalf("tags name should match image name: %v != %v", tagsResponse.Name, imageName)
 	}
 
@@ -1863,7 +1886,7 @@ func putManifest(t *testing.T, msg, url, contentType string, v interface{}) *htt
 	return resp
 }
 
-func startPushLayer(t *testing.T, ub *v2.URLBuilder, name string) (location string, uuid string) {
+func startPushLayer(t *testing.T, ub *v2.URLBuilder, name reference.Named) (location string, uuid string) {
 	layerUploadURL, err := ub.BuildBlobUploadURL(name)
 	if err != nil {
 		t.Fatalf("unexpected error building layer upload url: %v", err)
@@ -1875,7 +1898,7 @@ func startPushLayer(t *testing.T, ub *v2.URLBuilder, name string) (location stri
 	}
 	defer resp.Body.Close()
 
-	checkResponse(t, fmt.Sprintf("pushing starting layer push %v", name), resp, http.StatusAccepted)
+	checkResponse(t, fmt.Sprintf("pushing starting layer push %v", name.String()), resp, http.StatusAccepted)
 
 	u, err := url.Parse(resp.Header.Get("Location"))
 	if err != nil {
@@ -1894,7 +1917,7 @@ func startPushLayer(t *testing.T, ub *v2.URLBuilder, name string) (location stri
 
 // doPushLayer pushes the layer content returning the url on success returning
 // the response. If you're only expecting a successful response, use pushLayer.
-func doPushLayer(t *testing.T, ub *v2.URLBuilder, name string, dgst digest.Digest, uploadURLBase string, body io.Reader) (*http.Response, error) {
+func doPushLayer(t *testing.T, ub *v2.URLBuilder, name reference.Named, dgst digest.Digest, uploadURLBase string, body io.Reader) (*http.Response, error) {
 	u, err := url.Parse(uploadURLBase)
 	if err != nil {
 		t.Fatalf("unexpected error parsing pushLayer url: %v", err)
@@ -1918,7 +1941,7 @@ func doPushLayer(t *testing.T, ub *v2.URLBuilder, name string, dgst digest.Diges
 }
 
 // pushLayer pushes the layer content returning the url on success.
-func pushLayer(t *testing.T, ub *v2.URLBuilder, name string, dgst digest.Digest, uploadURLBase string, body io.Reader) string {
+func pushLayer(t *testing.T, ub *v2.URLBuilder, name reference.Named, dgst digest.Digest, uploadURLBase string, body io.Reader) string {
 	digester := digest.Canonical.New()
 
 	resp, err := doPushLayer(t, ub, name, dgst, uploadURLBase, io.TeeReader(body, digester.Hash()))
@@ -1935,7 +1958,8 @@ func pushLayer(t *testing.T, ub *v2.URLBuilder, name string, dgst digest.Digest,
 
 	sha256Dgst := digester.Digest()
 
-	expectedLayerURL, err := ub.BuildBlobURL(name, sha256Dgst)
+	ref, _ := reference.WithDigest(name, sha256Dgst)
+	expectedLayerURL, err := ub.BuildBlobURL(ref)
 	if err != nil {
 		t.Fatalf("error building expected layer url: %v", err)
 	}
@@ -1949,7 +1973,7 @@ func pushLayer(t *testing.T, ub *v2.URLBuilder, name string, dgst digest.Digest,
 	return resp.Header.Get("Location")
 }
 
-func finishUpload(t *testing.T, ub *v2.URLBuilder, name string, uploadURLBase string, dgst digest.Digest) string {
+func finishUpload(t *testing.T, ub *v2.URLBuilder, name reference.Named, uploadURLBase string, dgst digest.Digest) string {
 	resp, err := doPushLayer(t, ub, name, dgst, uploadURLBase, nil)
 	if err != nil {
 		t.Fatalf("unexpected error doing push layer request: %v", err)
@@ -1958,7 +1982,8 @@ func finishUpload(t *testing.T, ub *v2.URLBuilder, name string, uploadURLBase st
 
 	checkResponse(t, "putting monolithic chunk", resp, http.StatusCreated)
 
-	expectedLayerURL, err := ub.BuildBlobURL(name, dgst)
+	ref, _ := reference.WithDigest(name, dgst)
+	expectedLayerURL, err := ub.BuildBlobURL(ref)
 	if err != nil {
 		t.Fatalf("error building expected layer url: %v", err)
 	}
@@ -1997,7 +2022,7 @@ func doPushChunk(t *testing.T, uploadURLBase string, body io.Reader) (*http.Resp
 	return resp, digester.Digest(), err
 }
 
-func pushChunk(t *testing.T, ub *v2.URLBuilder, name string, uploadURLBase string, body io.Reader, length int64) (string, digest.Digest) {
+func pushChunk(t *testing.T, ub *v2.URLBuilder, name reference.Named, uploadURLBase string, body io.Reader, length int64) (string, digest.Digest) {
 	resp, dgst, err := doPushChunk(t, uploadURLBase, body)
 	if err != nil {
 		t.Fatalf("unexpected error doing push layer request: %v", err)
@@ -2133,6 +2158,11 @@ func checkErr(t *testing.T, err error, msg string) {
 }
 
 func createRepository(env *testEnv, t *testing.T, imageName string, tag string) digest.Digest {
+	imageNameRef, err := reference.ParseNamed(imageName)
+	if err != nil {
+		t.Fatalf("unable to parse reference: %v", err)
+	}
+
 	unsignedManifest := &schema1.Manifest{
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
@@ -2164,8 +2194,8 @@ func createRepository(env *testEnv, t *testing.T, imageName string, tag string) 
 		expectedLayers[dgst] = rs
 		unsignedManifest.FSLayers[i].BlobSum = dgst
 
-		uploadURLBase, _ := startPushLayer(t, env.builder, imageName)
-		pushLayer(t, env.builder, imageName, dgst, uploadURLBase, rs)
+		uploadURLBase, _ := startPushLayer(t, env.builder, imageNameRef)
+		pushLayer(t, env.builder, imageNameRef, dgst, uploadURLBase, rs)
 	}
 
 	signedManifest, err := schema1.Sign(unsignedManifest, env.pk)
@@ -2176,10 +2206,12 @@ func createRepository(env *testEnv, t *testing.T, imageName string, tag string) 
 	dgst := digest.FromBytes(signedManifest.Canonical)
 
 	// Create this repository by tag to ensure the tag mapping is made in the registry
-	manifestDigestURL, err := env.builder.BuildManifestURL(imageName, tag)
+	tagRef, _ := reference.WithTag(imageNameRef, tag)
+	manifestDigestURL, err := env.builder.BuildManifestURL(tagRef)
 	checkErr(t, err, "building manifest url")
 
-	location, err := env.builder.BuildManifestURL(imageName, dgst.String())
+	digestRef, _ := reference.WithDigest(imageNameRef, dgst)
+	location, err := env.builder.BuildManifestURL(digestRef)
 	checkErr(t, err, "building location URL")
 
 	resp := putManifest(t, "putting signed manifest", manifestDigestURL, "", signedManifest)
@@ -2197,9 +2229,10 @@ func TestRegistryAsCacheMutationAPIs(t *testing.T) {
 	deleteEnabled := true
 	env := newTestEnvMirror(t, deleteEnabled)
 
-	imageName := "foo/bar"
+	imageName, _ := reference.ParseNamed("foo/bar")
 	tag := "latest"
-	manifestURL, err := env.builder.BuildManifestURL(imageName, tag)
+	tagRef, _ := reference.WithTag(imageName, tag)
+	manifestURL, err := env.builder.BuildManifestURL(tagRef)
 	if err != nil {
 		t.Fatalf("unexpected error building base url: %v", err)
 	}
@@ -2209,7 +2242,7 @@ func TestRegistryAsCacheMutationAPIs(t *testing.T) {
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
-		Name:     imageName,
+		Name:     imageName.Name(),
 		Tag:      tag,
 		FSLayers: []schema1.FSLayer{},
 		History:  []schema1.History{},
@@ -2242,7 +2275,8 @@ func TestRegistryAsCacheMutationAPIs(t *testing.T) {
 	checkResponse(t, fmt.Sprintf("starting layer push to cache %v", imageName), resp, errcode.ErrorCodeUnsupported.Descriptor().HTTPStatusCode)
 
 	// Blob Delete
-	blobURL, err := env.builder.BuildBlobURL(imageName, digest.DigestSha256EmptyTar)
+	ref, _ := reference.WithDigest(imageName, digest.DigestSha256EmptyTar)
+	blobURL, err := env.builder.BuildBlobURL(ref)
 	resp, err = httpDelete(blobURL)
 	checkResponse(t, "deleting blob from cache", resp, errcode.ErrorCodeUnsupported.Descriptor().HTTPStatusCode)
 
@@ -2284,12 +2318,12 @@ func TestProxyManifestGetByTag(t *testing.T) {
 	}
 	truthConfig.HTTP.Headers = headerConfig
 
-	imageName := "foo/bar"
+	imageName, _ := reference.ParseNamed("foo/bar")
 	tag := "latest"
 
 	truthEnv := newTestEnvWithConfig(t, &truthConfig)
 	// create a repository in the truth registry
-	dgst := createRepository(truthEnv, t, imageName, tag)
+	dgst := createRepository(truthEnv, t, imageName.Name(), tag)
 
 	proxyConfig := configuration.Configuration{
 		Storage: configuration.Storage{
@@ -2303,14 +2337,16 @@ func TestProxyManifestGetByTag(t *testing.T) {
 
 	proxyEnv := newTestEnvWithConfig(t, &proxyConfig)
 
-	manifestDigestURL, err := proxyEnv.builder.BuildManifestURL(imageName, dgst.String())
+	digestRef, _ := reference.WithDigest(imageName, dgst)
+	manifestDigestURL, err := proxyEnv.builder.BuildManifestURL(digestRef)
 	checkErr(t, err, "building manifest url")
 
 	resp, err := http.Get(manifestDigestURL)
 	checkErr(t, err, "fetching manifest from proxy by digest")
 	defer resp.Body.Close()
 
-	manifestTagURL, err := proxyEnv.builder.BuildManifestURL(imageName, tag)
+	tagRef, _ := reference.WithTag(imageName, tag)
+	manifestTagURL, err := proxyEnv.builder.BuildManifestURL(tagRef)
 	checkErr(t, err, "building manifest url")
 
 	resp, err = http.Get(manifestTagURL)
@@ -2322,7 +2358,7 @@ func TestProxyManifestGetByTag(t *testing.T) {
 	})
 
 	// Create another manifest in the remote with the same image/tag pair
-	newDigest := createRepository(truthEnv, t, imageName, tag)
+	newDigest := createRepository(truthEnv, t, imageName.Name(), tag)
 	if dgst == newDigest {
 		t.Fatalf("non-random test data")
 	}

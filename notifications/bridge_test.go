@@ -5,6 +5,7 @@ import (
 
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest/schema1"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/uuid"
 	"github.com/docker/libtrust"
@@ -35,14 +36,14 @@ var (
 )
 
 func TestEventBridgeManifestPulled(t *testing.T) {
-
 	l := createTestEnv(t, testSinkFn(func(events ...Event) error {
 		checkCommonManifest(t, EventActionPull, events...)
 
 		return nil
 	}))
 
-	if err := l.ManifestPulled(repo, sm); err != nil {
+	repoRef, _ := reference.ParseNamed(repo)
+	if err := l.ManifestPulled(repoRef, sm); err != nil {
 		t.Fatalf("unexpected error notifying manifest pull: %v", err)
 	}
 }
@@ -54,7 +55,8 @@ func TestEventBridgeManifestPushed(t *testing.T) {
 		return nil
 	}))
 
-	if err := l.ManifestPushed(repo, sm); err != nil {
+	repoRef, _ := reference.ParseNamed(repo)
+	if err := l.ManifestPushed(repoRef, sm); err != nil {
 		t.Fatalf("unexpected error notifying manifest pull: %v", err)
 	}
 }
@@ -66,7 +68,8 @@ func TestEventBridgeManifestDeleted(t *testing.T) {
 		return nil
 	}))
 
-	if err := l.ManifestDeleted(repo, sm); err != nil {
+	repoRef, _ := reference.ParseNamed(repo)
+	if err := l.ManifestDeleted(repoRef, sm); err != nil {
 		t.Fatalf("unexpected error notifying manifest pull: %v", err)
 	}
 }
@@ -96,7 +99,9 @@ func checkCommonManifest(t *testing.T, action string, events ...Event) {
 		t.Fatalf("unexpected event action: %q != %q", event.Action, action)
 	}
 
-	u, err := ub.BuildManifestURL(repo, dgst.String())
+	repoRef, _ := reference.ParseNamed(repo)
+	ref, _ := reference.WithDigest(repoRef, dgst)
+	u, err := ub.BuildManifestURL(ref)
 	if err != nil {
 		t.Fatalf("error building expected url: %v", err)
 	}

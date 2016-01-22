@@ -7,29 +7,30 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/reference"
 )
 
 // ManifestListener describes a set of methods for listening to events related to manifests.
 type ManifestListener interface {
-	ManifestPushed(repo string, sm distribution.Manifest) error
-	ManifestPulled(repo string, sm distribution.Manifest) error
+	ManifestPushed(repo reference.Named, sm distribution.Manifest) error
+	ManifestPulled(repo reference.Named, sm distribution.Manifest) error
 
 	// TODO(stevvooe): Please note that delete support is still a little shaky
 	// and we'll need to propagate these in the future.
 
-	ManifestDeleted(repo string, sm distribution.Manifest) error
+	ManifestDeleted(repo reference.Named, sm distribution.Manifest) error
 }
 
 // BlobListener describes a listener that can respond to layer related events.
 type BlobListener interface {
-	BlobPushed(repo string, desc distribution.Descriptor) error
-	BlobPulled(repo string, desc distribution.Descriptor) error
-	BlobMounted(repo string, desc distribution.Descriptor, fromRepo string) error
+	BlobPushed(repo reference.Named, desc distribution.Descriptor) error
+	BlobPulled(repo reference.Named, desc distribution.Descriptor) error
+	BlobMounted(repo reference.Named, desc distribution.Descriptor, fromRepo reference.Named) error
 
 	// TODO(stevvooe): Please note that delete support is still a little shaky
 	// and we'll need to propagate these in the future.
 
-	BlobDeleted(repo string, desc distribution.Descriptor) error
+	BlobDeleted(repo reference.Named, desc distribution.Descriptor) error
 }
 
 // Listener combines all repository events into a single interface.
@@ -164,7 +165,7 @@ func (bsl *blobServiceListener) Create(ctx context.Context, options ...distribut
 	wr, err := bsl.BlobStore.Create(ctx, options...)
 	switch err := err.(type) {
 	case distribution.ErrBlobMounted:
-		if err := bsl.parent.listener.BlobMounted(bsl.parent.Repository.Name(), err.Descriptor, err.From.Name()); err != nil {
+		if err := bsl.parent.listener.BlobMounted(bsl.parent.Repository.Name(), err.Descriptor, err.From); err != nil {
 			context.GetLogger(ctx).Errorf("error dispatching blob mount to listener: %v", err)
 		}
 		return nil, err

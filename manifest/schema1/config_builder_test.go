@@ -10,6 +10,7 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/libtrust"
 )
 
@@ -194,7 +195,13 @@ func TestConfigBuilder(t *testing.T) {
 	}
 
 	bs := &mockBlobService{descriptors: make(map[digest.Digest]distribution.Descriptor)}
-	builder := NewConfigManifestBuilder(bs, pk, "testrepo", "testtag", []byte(imgJSON))
+
+	ref, err := reference.ParseNamed("testrepo:testtag")
+	if err != nil {
+		t.Fatalf("could not parse reference: %v", err)
+	}
+
+	builder := NewConfigManifestBuilder(bs, pk, ref, []byte(imgJSON))
 
 	for _, d := range descriptors {
 		if err := builder.AppendReference(d); err != nil {

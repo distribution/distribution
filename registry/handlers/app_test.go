@@ -48,7 +48,7 @@ func TestAppDispatcher(t *testing.T) {
 	varCheckingDispatcher := func(expectedVars map[string]string) dispatchFunc {
 		return func(ctx *Context, r *http.Request) http.Handler {
 			// Always checks the same name context
-			if ctx.Repository.Name() != getName(ctx) {
+			if ctx.Repository.Name().Name() != getName(ctx) {
 				t.Fatalf("unexpected name: %q != %q", ctx.Repository.Name(), "foo/bar")
 			}
 

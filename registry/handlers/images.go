@@ -11,6 +11,7 @@ import (
 	"github.com/docker/distribution/manifest/manifestlist"
 	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/manifest/schema2"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/gorilla/handlers"
@@ -173,7 +174,17 @@ func (imh *imageManifestHandler) convertSchema2Manifest(schema2Manifest *schema2
 		return nil, err
 	}
 
-	builder := schema1.NewConfigManifestBuilder(imh.Repository.Blobs(imh), imh.Context.App.trustKey, imh.Repository.Name(), imh.Tag, configJSON)
+	ref := imh.Repository.Name()
+
+	if imh.Tag != "" {
+		ref, err = reference.WithTag(imh.Repository.Name(), imh.Tag)
+		if err != nil {
+			imh.Errors = append(imh.Errors, v2.ErrorCodeTagInvalid.WithDetail(err))
+			return nil, err
+		}
+	}
+
+	builder := schema1.NewConfigManifestBuilder(imh.Repository.Blobs(imh), imh.Context.App.trustKey, ref, configJSON)
 	for _, d := range schema2Manifest.References() {
 		if err := builder.AppendReference(d); err != nil {
 			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestInvalid.WithDetail(err))
@@ -278,7 +289,13 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 	}
 
 	// Construct a canonical url for the uploaded manifest.
-	location, err := imh.urlBuilder.BuildManifestURL(imh.Repository.Name(), imh.Digest.String())
+	ref, err := reference.WithDigest(imh.Repository.Name(), imh.Digest)
+	if err != nil {
+		imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+		return
+	}
+
+	location, err := imh.urlBuilder.BuildManifestURL(ref)
 	if err != nil {
 		// NOTE(stevvooe): Given the behavior above, this absurdly unlikely to
 		// happen. We'll log the error here but proceed as if it worked. Worst

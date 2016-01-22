@@ -6,6 +6,7 @@ import (
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/libtrust"
 )
 
@@ -54,7 +55,16 @@ func TestReferenceBuilder(t *testing.T) {
 
 	handCrafted := makeSignedManifest(t, pk, []Reference{r1, r2})
 
-	b := NewReferenceManifestBuilder(pk, handCrafted.Manifest.Name, handCrafted.Manifest.Tag, handCrafted.Manifest.Architecture)
+	ref, err := reference.ParseNamed(handCrafted.Manifest.Name)
+	if err != nil {
+		t.Fatalf("could not parse reference: %v", err)
+	}
+	ref, err = reference.WithTag(ref, handCrafted.Manifest.Tag)
+	if err != nil {
+		t.Fatalf("could not add tag: %v", err)
+	}
+
+	b := NewReferenceManifestBuilder(pk, ref, handCrafted.Manifest.Architecture)
 	_, err = b.Build(context.Background())
 	if err == nil {
 		t.Fatal("Expected error building zero length manifest")
