@@ -27,7 +27,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	imageName := "foo/bar"
+	imageName, _ := reference.ParseNamed("foo/bar")
 	driver := inmemory.New()
 	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
 	if err != nil {
@@ -209,7 +209,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 // other tests.
 func TestSimpleBlobRead(t *testing.T) {
 	ctx := context.Background()
-	imageName := "foo/bar"
+	imageName, _ := reference.ParseNamed("foo/bar")
 	driver := inmemory.New()
 	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
 	if err != nil {
@@ -320,8 +320,8 @@ func TestBlobMount(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	imageName := "foo/bar"
-	sourceImageName := "foo/source"
+	imageName, _ := reference.ParseNamed("foo/bar")
+	sourceImageName, _ := reference.ParseNamed("foo/source")
 	driver := inmemory.New()
 	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
 	if err != nil {
@@ -378,11 +378,7 @@ func TestBlobMount(t *testing.T) {
 		t.Fatalf("unexpected non-error stating unmounted blob: %v", desc)
 	}
 
-	namedRef, err := reference.ParseNamed(sourceRepository.Name())
-	if err != nil {
-		t.Fatal(err)
-	}
-	canonicalRef, err := reference.WithDigest(namedRef, desc.Digest)
+	canonicalRef, err := reference.WithDigest(sourceRepository.Name(), desc.Digest)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -476,7 +472,7 @@ func TestBlobMount(t *testing.T) {
 // TestLayerUploadZeroLength uploads zero-length
 func TestLayerUploadZeroLength(t *testing.T) {
 	ctx := context.Background()
-	imageName := "foo/bar"
+	imageName, _ := reference.ParseNamed("foo/bar")
 	driver := inmemory.New()
 	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
 	if err != nil {

@@ -26,7 +26,7 @@ func (ts *tagStore) All(ctx context.Context) ([]string, error) {
 	var tags []string
 
 	pathSpec, err := pathFor(manifestTagPathSpec{
-		name: ts.repository.Name(),
+		name: ts.repository.Name().Name(),
 	})
 	if err != nil {
 		return tags, err
@@ -36,7 +36,7 @@ func (ts *tagStore) All(ctx context.Context) ([]string, error) {
 	if err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
-			return tags, distribution.ErrRepositoryUnknown{Name: ts.repository.Name()}
+			return tags, distribution.ErrRepositoryUnknown{Name: ts.repository.Name().Name()}
 		default:
 			return tags, err
 		}
@@ -53,7 +53,7 @@ func (ts *tagStore) All(ctx context.Context) ([]string, error) {
 // exists returns true if the specified manifest tag exists in the repository.
 func (ts *tagStore) exists(ctx context.Context, tag string) (bool, error) {
 	tagPath, err := pathFor(manifestTagCurrentPathSpec{
-		name: ts.repository.Name(),
+		name: ts.repository.Name().Name(),
 		tag:  tag,
 	})
 
@@ -73,7 +73,7 @@ func (ts *tagStore) exists(ctx context.Context, tag string) (bool, error) {
 // the current tag. The digest must point to a manifest.
 func (ts *tagStore) Tag(ctx context.Context, tag string, desc distribution.Descriptor) error {
 	currentPath, err := pathFor(manifestTagCurrentPathSpec{
-		name: ts.repository.Name(),
+		name: ts.repository.Name().Name(),
 		tag:  tag,
 	})
 
@@ -95,7 +95,7 @@ func (ts *tagStore) Tag(ctx context.Context, tag string, desc distribution.Descr
 // resolve the current revision for name and tag.
 func (ts *tagStore) Get(ctx context.Context, tag string) (distribution.Descriptor, error) {
 	currentPath, err := pathFor(manifestTagCurrentPathSpec{
-		name: ts.repository.Name(),
+		name: ts.repository.Name().Name(),
 		tag:  tag,
 	})
 
@@ -119,7 +119,7 @@ func (ts *tagStore) Get(ctx context.Context, tag string) (distribution.Descripto
 // Untag removes the tag association
 func (ts *tagStore) Untag(ctx context.Context, tag string) error {
 	tagPath, err := pathFor(manifestTagPathSpec{
-		name: ts.repository.Name(),
+		name: ts.repository.Name().Name(),
 		tag:  tag,
 	})
 
@@ -172,7 +172,7 @@ func (ts *tagStore) Lookup(ctx context.Context, desc distribution.Descriptor) ([
 	var tags []string
 	for _, tag := range allTags {
 		tagLinkPathSpec := manifestTagCurrentPathSpec{
-			name: ts.repository.Name(),
+			name: ts.repository.Name().Name(),
 			tag:  tag,
 		}
 

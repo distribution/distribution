@@ -18,6 +18,7 @@ import (
 	"github.com/docker/distribution/health"
 	"github.com/docker/distribution/health/checks"
 	"github.com/docker/distribution/notifications"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/registry/auth"
@@ -590,7 +591,19 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 		context.Context = ctxu.WithLogger(context.Context, ctxu.GetLogger(context.Context, "auth.user.name"))
 
 		if app.nameRequired(r) {
-			repository, err := app.registry.Repository(context, getName(context))
+			nameRef, err := reference.ParseNamed(getName(context))
+			if err != nil {
+				ctxu.GetLogger(context).Errorf("error parsing reference from context: %v", err)
+				context.Errors = append(context.Errors, distribution.ErrRepositoryNameInvalid{
+					Name:   getName(context),
+					Reason: err,
+				})
+				if err := errcode.ServeJSON(w, context.Errors); err != nil {
+					ctxu.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
+				}
+				return
+			}
+			repository, err := app.registry.Repository(context, nameRef)
 
 			if err != nil {
 				ctxu.GetLogger(context).Errorf("error resolving repository: %v", err)
