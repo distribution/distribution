@@ -1,0 +1,168 @@
+package main
+
+import (
+	"crypto"
+	"crypto/rand"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"io"
+	"strings"
+	"time"
+
+	"github.com/docker/distribution/registry/auth"
+	"github.com/docker/distribution/registry/auth/token"
+	"github.com/docker/libtrust"
+)
+
+// ResolveScopeSpecifiers converts a list of scope specifiers from a token
+// request's `scope` query parameters into a list of standard access objects.
+func ResolveScopeSpecifiers(scopeSpecs []string) []auth.Access {
+	requestedAccessSet := make(map[auth.Access]struct{}, 2*len(scopeSpecs))
+
+	for _, scopeSpecifier := range scopeSpecs {
+		// There should be 3 parts, separated by a `:` character.
+		parts := strings.SplitN(scopeSpecifier, ":", 3)
+
+		if len(parts) != 3 {
+			// Ignore malformed scope specifiers.
+			continue
+		}
+
+		resourceType, resourceName, actions := parts[0], parts[1], parts[2]
+
+		// Actions should be a comma-separated list of actions.
+		for _, action := range strings.Split(actions, ",") {
+			requestedAccess := auth.Access{
+				Resource: auth.Resource{
+					Type: resourceType,
+					Name: resourceName,
+				},
+				Action: action,
+			}
+
+			// Add this access to the requested access set.
+			requestedAccessSet[requestedAccess] = struct{}{}
+		}
+	}
+
+	requestedAccessList := make([]auth.Access, 0, len(requestedAccessSet))
+	for requestedAccess := range requestedAccessSet {
+		requestedAccessList = append(requestedAccessList, requestedAccess)
+	}
+
+	return requestedAccessList
+}
+
+// TokenIssuer represents an issuer capable of generating JWT tokens
+type TokenIssuer struct {
+	Issuer     string
+	SigningKey libtrust.PrivateKey
+	Expiration time.Duration
+}
+
+// CreateJWT creates and signs a JSON Web Token for the given account and
+// audience with the granted access.
+func (issuer *TokenIssuer) CreateJWT(subject string, audience string, grantedAccessList []auth.Access) (string, error) {
+	// Make a set of access entries to put in the token's claimset.
+	resourceActionSets := make(map[auth.Resource]map[string]struct{}, len(grantedAccessList))
+	for _, access := range grantedAccessList {
+		actionSet, exists := resourceActionSets[access.Resource]
+		if !exists {
+			actionSet = map[string]struct{}{}
+			resourceActionSets[access.Resource] = actionSet
+		}
+		actionSet[access.Action] = struct{}{}
+	}
+
+	accessEntries := make([]token.ResourceActions, 0, len(resourceActionSets))
+	for resource, actionSet := range resourceActionSets {
+		actions := make([]string, 0, len(actionSet))
+		for action := range actionSet {
+			actions = append(actions, action)
+		}
+
+		accessEntries = append(accessEntries, token.ResourceActions{
+			Type:    resource.Type,
+			Name:    resource.Name,
+			Actions: actions,
+		})
+	}
+
+	randomBytes := make([]byte, 15)
+	_, err := io.ReadFull(rand.Reader, randomBytes)
+	if err != nil {
+		return "", err
+	}
+	randomID := base64.URLEncoding.EncodeToString(randomBytes)
+
+	now := time.Now()
+
+	signingHash := crypto.SHA256
+	var alg string
+	switch issuer.SigningKey.KeyType() {
+	case "RSA":
+		alg = "RS256"
+	case "EC":
+		alg = "ES256"
+	default:
+		panic(fmt.Errorf("unsupported signing key type %q", issuer.SigningKey.KeyType()))
+	}
+
+	joseHeader := map[string]interface{}{
+		"typ": "JWT",
+		"alg": alg,
+	}
+
+	if x5c := issuer.SigningKey.GetExtendedField("x5c"); x5c != nil {
+		joseHeader["x5c"] = x5c
+	} else {
+		joseHeader["jwk"] = issuer.SigningKey.PublicKey()
+	}
+
+	exp := issuer.Expiration
+	if exp == 0 {
+		exp = 5 * time.Minute
+	}
+
+	claimSet := map[string]interface{}{
+		"iss": issuer.Issuer,
+		"sub": subject,
+		"aud": audience,
+		"exp": now.Add(exp).Unix(),
+		"nbf": now.Unix(),
+		"iat": now.Unix(),
+		"jti": randomID,
+
+		"access": accessEntries,
+	}
+
+	var (
+		joseHeaderBytes []byte
+		claimSetBytes   []byte
+	)
+
+	if joseHeaderBytes, err = json.Marshal(joseHeader); err != nil {
+		return "", fmt.Errorf("unable to encode jose header: %s", err)
+	}
+	if claimSetBytes, err = json.Marshal(claimSet); err != nil {
+		return "", fmt.Errorf("unable to encode claim set: %s", err)
+	}
+
+	encodedJoseHeader := joseBase64Encode(joseHeaderBytes)
+	encodedClaimSet := joseBase64Encode(claimSetBytes)
+	encodingToSign := fmt.Sprintf("%s.%s", encodedJoseHeader, encodedClaimSet)
+
+	var signatureBytes []byte
+	if signatureBytes, _, err = issuer.SigningKey.Sign(strings.NewReader(encodingToSign), signingHash); err != nil {
+		return "", fmt.Errorf("unable to sign jwt payload: %s", err)
+	}
+
+	signature := joseBase64Encode(signatureBytes)
+
+	return fmt.Sprintf("%s.%s", encodingToSign, signature), nil
+}
+
+func joseBase64Encode(data []byte) string {
+	return strings.TrimRight(base64.URLEncoding.EncodeToString(data), "=")
+}
