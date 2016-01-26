@@ -61,7 +61,7 @@ type TokenIssuer struct {
 	Expiration time.Duration
 }
 
-// CreateJWT creates and signs a JSON Web Token for the given account and
+// CreateJWT creates and signs a JSON Web Token for the given subject and
 // audience with the granted access.
 func (issuer *TokenIssuer) CreateJWT(subject string, audience string, grantedAccessList []auth.Access) (string, error) {
 	// Make a set of access entries to put in the token's claimset.
@@ -75,14 +75,14 @@ func (issuer *TokenIssuer) CreateJWT(subject string, audience string, grantedAcc
 		actionSet[access.Action] = struct{}{}
 	}
 
-	accessEntries := make([]token.ResourceActions, 0, len(resourceActionSets))
+	accessEntries := make([]*token.ResourceActions, 0, len(resourceActionSets))
 	for resource, actionSet := range resourceActionSets {
 		actions := make([]string, 0, len(actionSet))
 		for action := range actionSet {
 			actions = append(actions, action)
 		}
 
-		accessEntries = append(accessEntries, token.ResourceActions{
+		accessEntries = append(accessEntries, &token.ResourceActions{
 			Type:    resource.Type,
 			Name:    resource.Name,
 			Actions: actions,
@@ -109,15 +109,20 @@ func (issuer *TokenIssuer) CreateJWT(subject string, audience string, grantedAcc
 		panic(fmt.Errorf("unsupported signing key type %q", issuer.SigningKey.KeyType()))
 	}
 
-	joseHeader := map[string]interface{}{
-		"typ": "JWT",
-		"alg": alg,
+	joseHeader := token.Header{
+		Type:       "JWT",
+		SigningAlg: alg,
 	}
 
 	if x5c := issuer.SigningKey.GetExtendedField("x5c"); x5c != nil {
-		joseHeader["x5c"] = x5c
+		joseHeader.X5c = x5c.([]string)
 	} else {
-		joseHeader["jwk"] = issuer.SigningKey.PublicKey()
+		var jwkMessage json.RawMessage
+		jwkMessage, err = issuer.SigningKey.PublicKey().MarshalJSON()
+		if err != nil {
+			return "", err
+		}
+		joseHeader.RawJWK = &jwkMessage
 	}
 
 	exp := issuer.Expiration
@@ -125,16 +130,16 @@ func (issuer *TokenIssuer) CreateJWT(subject string, audience string, grantedAcc
 		exp = 5 * time.Minute
 	}
 
-	claimSet := map[string]interface{}{
-		"iss": issuer.Issuer,
-		"sub": subject,
-		"aud": audience,
-		"exp": now.Add(exp).Unix(),
-		"nbf": now.Unix(),
-		"iat": now.Unix(),
-		"jti": randomID,
+	claimSet := token.ClaimSet{
+		Issuer:     issuer.Issuer,
+		Subject:    subject,
+		Audience:   audience,
+		Expiration: now.Add(exp).Unix(),
+		NotBefore:  now.Unix(),
+		IssuedAt:   now.Unix(),
+		JWTID:      randomID,
 
-		"access": accessEntries,
+		Access: accessEntries,
 	}
 
 	var (
