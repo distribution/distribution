@@ -52,11 +52,11 @@ type ClaimSet struct {
 
 // Header describes the header section of a JSON Web Token.
 type Header struct {
-	Type       string          `json:"typ"`
-	SigningAlg string          `json:"alg"`
-	KeyID      string          `json:"kid,omitempty"`
-	X5c        []string        `json:"x5c,omitempty"`
-	RawJWK     json.RawMessage `json:"jwk,omitempty"`
+	Type       string           `json:"typ"`
+	SigningAlg string           `json:"alg"`
+	KeyID      string           `json:"kid,omitempty"`
+	X5c        []string         `json:"x5c,omitempty"`
+	RawJWK     *json.RawMessage `json:"jwk,omitempty"`
 }
 
 // Token describes a JSON Web Token.
@@ -193,7 +193,7 @@ func (t *Token) VerifySigningKey(verifyOpts VerifyOptions) (signingKey libtrust.
 	switch {
 	case len(x5c) > 0:
 		signingKey, err = parseAndVerifyCertChain(x5c, verifyOpts.Roots)
-	case len(rawJWK) > 0:
+	case rawJWK != nil:
 		signingKey, err = parseAndVerifyRawJWK(rawJWK, verifyOpts)
 	case len(keyID) > 0:
 		signingKey = verifyOpts.TrustedKeys[keyID]
@@ -266,8 +266,8 @@ func parseAndVerifyCertChain(x5c []string, roots *x509.CertPool) (leafKey libtru
 	return
 }
 
-func parseAndVerifyRawJWK(rawJWK json.RawMessage, verifyOpts VerifyOptions) (pubKey libtrust.PublicKey, err error) {
-	pubKey, err = libtrust.UnmarshalPublicKeyJWK([]byte(rawJWK))
+func parseAndVerifyRawJWK(rawJWK *json.RawMessage, verifyOpts VerifyOptions) (pubKey libtrust.PublicKey, err error) {
+	pubKey, err = libtrust.UnmarshalPublicKeyJWK([]byte(*rawJWK))
 	if err != nil {
 		return nil, fmt.Errorf("unable to decode raw JWK value: %s", err)
 	}
