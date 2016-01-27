@@ -62,11 +62,17 @@ func (pms proxyManifestStore) Get(ctx context.Context, dgst digest.Digest, optio
 			return nil, err
 		}
 
-		// Schedule the repo for removal
-		pms.scheduler.AddManifest(pms.repositoryName, repositoryTTL)
+		// Schedule the manifest blob for removal
+		repoBlob, err := reference.WithDigest(pms.repositoryName, dgst)
+		if err != nil {
+			context.GetLogger(ctx).Errorf("Error creating reference: %s", err)
+			return nil, err
+		}
 
+		pms.scheduler.AddManifest(repoBlob, repositoryTTL)
 		// Ensure the manifest blob is cleaned up
-		pms.scheduler.AddBlob(dgst, repositoryTTL)
+		//pms.scheduler.AddBlob(blobRef, repositoryTTL)
+
 	}
 
 	return manifest, err

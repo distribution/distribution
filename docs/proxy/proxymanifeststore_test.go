@@ -119,6 +119,7 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 			localManifests:  localManifests,
 			remoteManifests: truthManifests,
 			scheduler:       s,
+			repositoryName:  nameRef,
 		},
 	}
 }
