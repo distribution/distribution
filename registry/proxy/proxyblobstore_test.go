@@ -164,9 +164,10 @@ func makeTestEnv(t *testing.T, name string) *testEnv {
 	s := scheduler.New(ctx, inmemory.New(), "/scheduler-state.json")
 
 	proxyBlobStore := proxyBlobStore{
-		remoteStore: truthBlobs,
-		localStore:  localBlobs,
-		scheduler:   s,
+		repositoryName: nameRef,
+		remoteStore:    truthBlobs,
+		localStore:     localBlobs,
+		scheduler:      s,
 	}
 
 	te := &testEnv{

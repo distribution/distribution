@@ -6,28 +6,49 @@ import (
 	"time"
 
 	"github.com/docker/distribution/context"
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 )
 
+func testRefs(t *testing.T) (reference.Reference, reference.Reference, reference.Reference) {
+	ref1, err := reference.Parse("testrepo@sha256:aaaaeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+	if err != nil {
+		t.Fatalf("could not parse reference: %v", err)
+	}
+
+	ref2, err := reference.Parse("testrepo@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")
+	if err != nil {
+		t.Fatalf("could not parse reference: %v", err)
+	}
+
+	ref3, err := reference.Parse("testrepo@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc")
+	if err != nil {
+		t.Fatalf("could not parse reference: %v", err)
+	}
+
+	return ref1, ref2, ref3
+}
+
 func TestSchedule(t *testing.T) {
+	ref1, ref2, ref3 := testRefs(t)
 	timeUnit := time.Millisecond
 	remainingRepos := map[string]bool{
-		"testBlob1": true,
-		"testBlob2": true,
-		"ch00":      true,
+		ref1.String(): true,
+		ref2.String(): true,
+		ref3.String(): true,
 	}
 
 	s := New(context.Background(), inmemory.New(), "/ttl")
-	deleteFunc := func(repoName string) error {
+	deleteFunc := func(repoName reference.Reference) error {
 		if len(remainingRepos) == 0 {
 			t.Fatalf("Incorrect expiry count")
 		}
-		_, ok := remainingRepos[repoName]
+		_, ok := remainingRepos[repoName.String()]
 		if !ok {
 			t.Fatalf("Trying to remove nonexistant repo: %s", repoName)
 		}
 		t.Log("removing", repoName)
-		delete(remainingRepos, repoName)
+		delete(remainingRepos, repoName.String())
 
 		return nil
 	}
@@ -37,11 +58,11 @@ func TestSchedule(t *testing.T) {
 		t.Fatalf("Error starting ttlExpirationScheduler: %s", err)
 	}
 
-	s.add("testBlob1", 3*timeUnit, entryTypeBlob)
-	s.add("testBlob2", 1*timeUnit, entryTypeBlob)
+	s.add(ref1, 3*timeUnit, entryTypeBlob)
+	s.add(ref2, 1*timeUnit, entryTypeBlob)
 
 	func() {
-		s.add("ch00", 1*timeUnit, entryTypeBlob)
+		s.add(ref3, 1*timeUnit, entryTypeBlob)
 
 	}()
 
@@ -53,33 +74,34 @@ func TestSchedule(t *testing.T) {
 }
 
 func TestRestoreOld(t *testing.T) {
+	ref1, ref2, _ := testRefs(t)
 	remainingRepos := map[string]bool{
-		"testBlob1": true,
-		"oldRepo":   true,
+		ref1.String(): true,
+		ref2.String(): true,
 	}
 
-	deleteFunc := func(repoName string) error {
-		if repoName == "oldRepo" && len(remainingRepos) == 3 {
-			t.Errorf("oldRepo should be removed first")
+	deleteFunc := func(r reference.Reference) error {
+		if r.String() == ref1.String() && len(remainingRepos) == 2 {
+			t.Errorf("ref1 should be removed first")
 		}
-		_, ok := remainingRepos[repoName]
+		_, ok := remainingRepos[r.String()]
 		if !ok {
-			t.Fatalf("Trying to remove nonexistant repo: %s", repoName)
+			t.Fatalf("Trying to remove nonexistant repo: %s", r)
 		}
-		delete(remainingRepos, repoName)
+		delete(remainingRepos, r.String())
 		return nil
 	}
 
 	timeUnit := time.Millisecond
 	serialized, err := json.Marshal(&map[string]schedulerEntry{
-		"testBlob1": {
+		ref1.String(): {
 			Expiry:    time.Now().Add(1 * timeUnit),
-			Key:       "testBlob1",
+			Key:       ref1.String(),
 			EntryType: 0,
 		},
-		"oldRepo": {
+		ref2.String(): {
 			Expiry:    time.Now().Add(-3 * timeUnit), // TTL passed, should be removed first
-			Key:       "oldRepo",
+			Key:       ref2.String(),
 			EntryType: 0,
 		},
 	})
@@ -108,13 +130,16 @@ func TestRestoreOld(t *testing.T) {
 }
 
 func TestStopRestore(t *testing.T) {
+	ref1, ref2, _ := testRefs(t)
+
 	timeUnit := time.Millisecond
 	remainingRepos := map[string]bool{
-		"testBlob1": true,
-		"testBlob2": true,
+		ref1.String(): true,
+		ref2.String(): true,
 	}
-	deleteFunc := func(repoName string) error {
-		delete(remainingRepos, repoName)
+
+	deleteFunc := func(r reference.Reference) error {
+		delete(remainingRepos, r.String())
 		return nil
 	}
 
@@ -127,8 +152,8 @@ func TestStopRestore(t *testing.T) {
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	s.add("testBlob1", 300*timeUnit, entryTypeBlob)
-	s.add("testBlob2", 100*timeUnit, entryTypeBlob)
+	s.add(ref1, 300*timeUnit, entryTypeBlob)
+	s.add(ref2, 100*timeUnit, entryTypeBlob)
 
 	// Start and stop before all operations complete
 	// state will be written to fs

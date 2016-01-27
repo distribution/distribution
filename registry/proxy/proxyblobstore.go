@@ -18,9 +18,10 @@ import (
 const blobTTL = time.Duration(24 * 7 * time.Hour)
 
 type proxyBlobStore struct {
-	localStore  distribution.BlobStore
-	remoteStore distribution.BlobService
-	scheduler   *scheduler.TTLExpirationScheduler
+	localStore     distribution.BlobStore
+	remoteStore    distribution.BlobService
+	scheduler      *scheduler.TTLExpirationScheduler
+	repositoryName reference.Named
 }
 
 var _ distribution.BlobStore = &proxyBlobStore{}
@@ -134,7 +135,14 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 		if err := pbs.storeLocal(ctx, dgst); err != nil {
 			context.GetLogger(ctx).Errorf("Error committing to storage: %s", err.Error())
 		}
-		pbs.scheduler.AddBlob(dgst, repositoryTTL)
+
+		blobRef, err := reference.WithDigest(pbs.repositoryName, dgst)
+		if err != nil {
+			context.GetLogger(ctx).Errorf("Error creating reference: %s", err)
+			return
+		}
+
+		pbs.scheduler.AddBlob(blobRef, repositoryTTL)
 	}(dgst)
 
 	_, err = pbs.copyContent(ctx, dgst, w)
