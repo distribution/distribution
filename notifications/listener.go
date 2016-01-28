@@ -14,11 +14,7 @@ import (
 type ManifestListener interface {
 	ManifestPushed(repo reference.Named, sm distribution.Manifest) error
 	ManifestPulled(repo reference.Named, sm distribution.Manifest) error
-
-	// TODO(stevvooe): Please note that delete support is still a little shaky
-	// and we'll need to propagate these in the future.
-
-	ManifestDeleted(repo reference.Named, sm distribution.Manifest) error
+	ManifestDeleted(repo reference.Named, dgst digest.Digest) error
 }
 
 // BlobListener describes a listener that can respond to layer related events.
@@ -26,11 +22,7 @@ type BlobListener interface {
 	BlobPushed(repo reference.Named, desc distribution.Descriptor) error
 	BlobPulled(repo reference.Named, desc distribution.Descriptor) error
 	BlobMounted(repo reference.Named, desc distribution.Descriptor, fromRepo reference.Named) error
-
-	// TODO(stevvooe): Please note that delete support is still a little shaky
-	// and we'll need to propagate these in the future.
-
-	BlobDeleted(repo reference.Named, desc distribution.Descriptor) error
+	BlobDeleted(repo reference.Named, desc digest.Digest) error
 }
 
 // Listener combines all repository events into a single interface.
@@ -73,6 +65,17 @@ func (rl *repositoryListener) Blobs(ctx context.Context) distribution.BlobStore 
 type manifestServiceListener struct {
 	distribution.ManifestService
 	parent *repositoryListener
+}
+
+func (msl *manifestServiceListener) Delete(ctx context.Context, dgst digest.Digest) error {
+	err := msl.ManifestService.Delete(ctx, dgst)
+	if err == nil {
+		if err := msl.parent.listener.ManifestDeleted(msl.parent.Repository.Named(), dgst); err != nil {
+			logrus.Errorf("error dispatching manifest delete to listener: %v", err)
+		}
+	}
+
+	return err
 }
 
 func (msl *manifestServiceListener) Get(ctx context.Context, dgst digest.Digest, options ...distribution.ManifestServiceOption) (distribution.Manifest, error) {
@@ -171,6 +174,17 @@ func (bsl *blobServiceListener) Create(ctx context.Context, options ...distribut
 		return nil, err
 	}
 	return bsl.decorateWriter(wr), err
+}
+
+func (bsl *blobServiceListener) Delete(ctx context.Context, dgst digest.Digest) error {
+	err := bsl.BlobStore.Delete(ctx, dgst)
+	if err == nil {
+		if err := bsl.parent.listener.BlobDeleted(bsl.parent.Repository.Named(), dgst); err != nil {
+			context.GetLogger(ctx).Errorf("error dispatching layer delete to listener: %v", err)
+		}
+	}
+
+	return err
 }
 
 func (bsl *blobServiceListener) Resume(ctx context.Context, id string) (distribution.BlobWriter, error) {

@@ -39,12 +39,12 @@ func TestListener(t *testing.T) {
 	checkExerciseRepository(t, repository)
 
 	expectedOps := map[string]int{
-		"manifest:push": 1,
-		"manifest:pull": 1,
-		// "manifest:delete": 0, // deletes not supported for now
-		"layer:push": 2,
-		"layer:pull": 2,
-		// "layer:delete":    0, // deletes not supported for now
+		"manifest:push":   1,
+		"manifest:pull":   1,
+		"manifest:delete": 1,
+		"layer:push":      2,
+		"layer:pull":      2,
+		"layer:delete":    2, // deletes not supported for now
 	}
 
 	if !reflect.DeepEqual(tl.ops, expectedOps) {
@@ -68,7 +68,7 @@ func (tl *testListener) ManifestPulled(repo reference.Named, m distribution.Mani
 	return nil
 }
 
-func (tl *testListener) ManifestDeleted(repo reference.Named, m distribution.Manifest) error {
+func (tl *testListener) ManifestDeleted(repo reference.Named, d digest.Digest) error {
 	tl.ops["manifest:delete"]++
 	return nil
 }
@@ -88,7 +88,7 @@ func (tl *testListener) BlobMounted(repo reference.Named, desc distribution.Desc
 	return nil
 }
 
-func (tl *testListener) BlobDeleted(repo reference.Named, desc distribution.Descriptor) error {
+func (tl *testListener) BlobDeleted(repo reference.Named, d digest.Digest) error {
 	tl.ops["layer:delete"]++
 	return nil
 }
@@ -113,6 +113,7 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 		Tag:  tag,
 	}
 
+	var blobDigests []digest.Digest
 	blobs := repository.Blobs(ctx)
 	for i := 0; i < 2; i++ {
 		rs, ds, err := testutil.CreateRandomTarFile()
@@ -120,6 +121,7 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 			t.Fatalf("error creating test layer: %v", err)
 		}
 		dgst := digest.Digest(ds)
+		blobDigests = append(blobDigests, dgst)
 
 		wr, err := blobs.Create(ctx)
 		if err != nil {
@@ -183,4 +185,16 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 		t.Fatalf("unexpected error fetching manifest: %v", err)
 	}
 
+	err = manifests.Delete(ctx, dgst)
+	if err != nil {
+		t.Fatalf("unexpected error deleting blob: %v", err)
+	}
+
+	for _, d := range blobDigests {
+		err = blobs.Delete(ctx, d)
+		if err != nil {
+			t.Fatalf("unexpected error deleting blob: %v", err)
+		}
+
+	}
 }
