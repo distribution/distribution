@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"fmt"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/configuration"
 	"github.com/docker/distribution/context"
@@ -35,13 +36,56 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 	}
 
 	v := storage.NewVacuum(ctx, driver)
-
 	s := scheduler.New(ctx, driver, "/scheduler-state.json")
-	s.OnBlobExpire(func(digest string) error {
-		return v.RemoveBlob(digest)
+	s.OnBlobExpire(func(ref reference.Reference) error {
+		var r reference.Canonical
+		var ok bool
+		if r, ok = ref.(reference.Canonical); !ok {
+			return fmt.Errorf("unexpected reference type : %T", ref)
+		}
+
+		repo, err := registry.Repository(ctx, r)
+		if err != nil {
+			return err
+		}
+
+		blobs := repo.Blobs(ctx)
+
+		// Clear the repository reference and descriptor caches
+		err = blobs.Delete(ctx, r.Digest())
+		if err != nil {
+			return err
+		}
+
+		err = v.RemoveBlob(r.Digest().String())
+		if err != nil {
+			return err
+		}
+
+		return nil
 	})
-	s.OnManifestExpire(func(repoName string) error {
-		return v.RemoveRepository(repoName)
+
+	s.OnManifestExpire(func(ref reference.Reference) error {
+		var r reference.Canonical
+		var ok bool
+		if r, ok = ref.(reference.Canonical); !ok {
+			return fmt.Errorf("unexpected reference type : %T", ref)
+		}
+
+		repo, err := registry.Repository(ctx, r)
+		if err != nil {
+			return err
+		}
+
+		manifests, err := repo.Manifests(ctx)
+		if err != nil {
+			return err
+		}
+		err = manifests.Delete(ctx, r.Digest())
+		if err != nil {
+			return err
+		}
+		return nil
 	})
 
 	err = s.Start()
@@ -97,11 +141,12 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 
 	return &proxiedRepository{
 		blobStore: &proxyBlobStore{
-			localStore:  localRepo.Blobs(ctx),
-			remoteStore: remoteRepo.Blobs(ctx),
-			scheduler:   pr.scheduler,
+			localStore:     localRepo.Blobs(ctx),
+			remoteStore:    remoteRepo.Blobs(ctx),
+			scheduler:      pr.scheduler,
+			repositoryName: name,
 		},
-		manifests: proxyManifestStore{
+		manifests: &proxyManifestStore{
 			repositoryName:  name,
 			localManifests:  localManifests, // Options?
 			remoteManifests: remoteManifests,
@@ -109,7 +154,7 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 			scheduler:       pr.scheduler,
 		},
 		name: name,
-		tags: proxyTagService{
+		tags: &proxyTagService{
 			localTags:  localRepo.Tags(ctx),
 			remoteTags: remoteRepo.Tags(ctx),
 		},
