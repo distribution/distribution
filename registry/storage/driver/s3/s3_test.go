@@ -10,6 +10,7 @@ import (
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/testsuites"
 	"github.com/docker/goamz/aws"
+	"github.com/docker/goamz/s3"
 
 	"gopkg.in/check.v1"
 )
@@ -69,6 +70,7 @@ func init() {
 			v4AuthBool,
 			minChunkSize,
 			rootDirectory,
+			s3.StandardStorage,
 			"",
 		}
 
