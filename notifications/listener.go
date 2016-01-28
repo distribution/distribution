@@ -14,10 +14,6 @@ import (
 type ManifestListener interface {
 	ManifestPushed(repo reference.Named, sm distribution.Manifest) error
 	ManifestPulled(repo reference.Named, sm distribution.Manifest) error
-
-	// TODO(stevvooe): Please note that delete support is still a little shaky
-	// and we'll need to propagate these in the future.
-
 	ManifestDeleted(repo reference.Named, sm distribution.Manifest) error
 }
 
@@ -26,10 +22,6 @@ type BlobListener interface {
 	BlobPushed(repo reference.Named, desc distribution.Descriptor) error
 	BlobPulled(repo reference.Named, desc distribution.Descriptor) error
 	BlobMounted(repo reference.Named, desc distribution.Descriptor, fromRepo reference.Named) error
-
-	// TODO(stevvooe): Please note that delete support is still a little shaky
-	// and we'll need to propagate these in the future.
-
 	BlobDeleted(repo reference.Named, desc distribution.Descriptor) error
 }
 
@@ -75,11 +67,26 @@ type manifestServiceListener struct {
 	parent *repositoryListener
 }
 
+func (msl *manifestServiceListener) Delete(ctx context.Context, dgst digest.Digest) error {
+	sm, err := msl.ManifestService.Get(ctx, dgst)
+	if err != nil {
+		return err
+	}
+	err = msl.ManifestService.Delete(ctx, dgst)
+	if err == nil {
+		if err := msl.parent.listener.ManifestDeleted(msl.parent.Repository.Name(), sm); err != nil {
+			logrus.Errorf("error dispatching manifest delete to listener: %v", err)
+		}
+	}
+
+	return err
+}
+
 func (msl *manifestServiceListener) Get(ctx context.Context, dgst digest.Digest, options ...distribution.ManifestServiceOption) (distribution.Manifest, error) {
 	sm, err := msl.ManifestService.Get(ctx, dgst)
 	if err == nil {
 		if err := msl.parent.listener.ManifestPulled(msl.parent.Repository.Name(), sm); err != nil {
-			logrus.Errorf("error dispatching manifest pull to listener: %v", err)
+			logrus.Errorf("error dispatching manifest get to listener: %v", err)
 		}
 	}
 
@@ -91,7 +98,7 @@ func (msl *manifestServiceListener) Put(ctx context.Context, sm distribution.Man
 
 	if err == nil {
 		if err := msl.parent.listener.ManifestPushed(msl.parent.Repository.Name(), sm); err != nil {
-			logrus.Errorf("error dispatching manifest push to listener: %v", err)
+			logrus.Errorf("error dispatching manifest put to listener: %v", err)
 		}
 	}
 
@@ -171,6 +178,21 @@ func (bsl *blobServiceListener) Create(ctx context.Context, options ...distribut
 		return nil, err
 	}
 	return bsl.decorateWriter(wr), err
+}
+
+func (bsl *blobServiceListener) Delete(ctx context.Context, dgst digest.Digest) error {
+	desc, err := bsl.BlobStore.Stat(ctx, dgst)
+	if err != nil {
+		return err
+	}
+	err = bsl.BlobStore.Delete(ctx, dgst)
+	if err == nil {
+		if err := bsl.parent.listener.BlobDeleted(bsl.parent.Repository.Name(), desc); err != nil {
+			context.GetLogger(ctx).Errorf("error dispatching layer delete to listener: %v", err)
+		}
+	}
+
+	return err
 }
 
 func (bsl *blobServiceListener) Resume(ctx context.Context, id string) (distribution.BlobWriter, error) {
