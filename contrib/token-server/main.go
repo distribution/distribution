@@ -86,7 +86,7 @@ func main() {
 	if cert == "" {
 		err = http.ListenAndServe(addr, router)
 	} else if certKey == "" {
-		logrus.Fatalf("Must provide certficate and key")
+		logrus.Fatalf("Must provide certficate (-tlscert) and key (-tlskey)")
 	} else {
 		err = http.ListenAndServeTLS(addr, cert, certKey, router)
 	}
@@ -134,7 +134,7 @@ func (ts *tokenServer) getToken(ctx context.Context, w http.ResponseWriter, r *h
 	service := params.Get("service")
 	scopeSpecifiers := params["scope"]
 
-	requestedAccessList := ResolveScopeSpecifiers(scopeSpecifiers)
+	requestedAccessList := ResolveScopeSpecifiers(ctx, scopeSpecifiers)
 
 	authorizedCtx, err := ts.accessController.Authorized(ctx, requestedAccessList...)
 	if err != nil {
@@ -150,14 +150,13 @@ func (ts *tokenServer) getToken(ctx context.Context, w http.ResponseWriter, r *h
 		challenge.SetHeaders(w)
 		handleError(ctx, errcode.ErrorCodeUnauthorized.WithDetail(challenge.Error()), w)
 
-		context.GetResponseLogger(ctx).Info("authentication challenged")
+		context.GetResponseLogger(ctx).Info("get token authentication challenge")
 
 		return
 	}
 	ctx = authorizedCtx
 
-	// TODO(dmcgowan): handle case where this could panic?
-	username := ctx.Value("auth.user.name").(string)
+	username := context.GetStringValue(ctx, "auth.user.name")
 
 	ctx = context.WithValue(ctx, "acctSubject", username)
 	ctx = context.WithLogger(ctx, context.GetLogger(ctx, "acctSubject"))
@@ -198,5 +197,5 @@ func (ts *tokenServer) getToken(ctx context.Context, w http.ResponseWriter, r *h
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"token": token})
 
-	context.GetResponseLogger(ctx).Info("getToken complete")
+	context.GetResponseLogger(ctx).Info("get token complete")
 }

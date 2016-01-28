@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/auth"
 	"github.com/docker/distribution/registry/auth/token"
 	"github.com/docker/libtrust"
@@ -17,7 +18,7 @@ import (
 
 // ResolveScopeSpecifiers converts a list of scope specifiers from a token
 // request's `scope` query parameters into a list of standard access objects.
-func ResolveScopeSpecifiers(scopeSpecs []string) []auth.Access {
+func ResolveScopeSpecifiers(ctx context.Context, scopeSpecs []string) []auth.Access {
 	requestedAccessSet := make(map[auth.Access]struct{}, 2*len(scopeSpecs))
 
 	for _, scopeSpecifier := range scopeSpecs {
@@ -25,7 +26,7 @@ func ResolveScopeSpecifiers(scopeSpecs []string) []auth.Access {
 		parts := strings.SplitN(scopeSpecifier, ":", 3)
 
 		if len(parts) != 3 {
-			// Ignore malformed scope specifiers.
+			context.GetLogger(ctx).Infof("ignoring unsupported scope format %s", scopeSpecifier)
 			continue
 		}
 
