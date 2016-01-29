@@ -588,7 +588,7 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 		}
 
 		// Add username to request logging
-		context.Context = ctxu.WithLogger(context.Context, ctxu.GetLogger(context.Context, "auth.user.name"))
+		context.Context = ctxu.WithLogger(context.Context, ctxu.GetLogger(context.Context, auth.UserNameKey))
 
 		if app.nameRequired(r) {
 			nameRef, err := reference.ParseNamed(getName(context))
