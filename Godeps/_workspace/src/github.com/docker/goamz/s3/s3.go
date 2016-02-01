@@ -30,7 +30,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AdRoll/goamz/aws"
+	"github.com/docker/goamz/aws"
 )
 
 const debug = false
@@ -39,10 +39,9 @@ const debug = false
 type S3 struct {
 	aws.Auth
 	aws.Region
-	ConnectTimeout time.Duration
-	ReadTimeout    time.Duration
-	Signature      int
-	private        byte // Reserve the right of using private data.
+	Signature int
+	Client    *http.Client
+	private   byte // Reserve the right of using private data.
 }
 
 // The Bucket type encapsulates operations with an S3 bucket.
@@ -61,6 +60,8 @@ type Owner struct {
 //
 type Options struct {
 	SSE                  bool
+	SSEKMS               bool
+	SSEKMSKeyId          string
 	SSECustomerAlgorithm string
 	SSECustomerKey       string
 	SSECustomerKeyMD5    string
@@ -96,7 +97,13 @@ var attempts = aws.AttemptStrategy{
 
 // New creates a new S3.
 func New(auth aws.Auth, region aws.Region) *S3 {
-	return &S3{auth, region, 0, 0, aws.V2Signature, 0}
+	return &S3{
+		Auth:      auth,
+		Region:    region,
+		Signature: aws.V2Signature,
+		Client:    http.DefaultClient,
+		private:   0,
+	}
 }
 
 // Bucket returns a Bucket with the given name.
@@ -169,6 +176,13 @@ type StorageClass string
 const (
 	ReducedRedundancy = StorageClass("REDUCED_REDUNDANCY")
 	StandardStorage   = StorageClass("STANDARD")
+)
+
+type ServerSideEncryption string
+
+const (
+	S3Managed  = ServerSideEncryption("AES256")
+	KMSManaged = ServerSideEncryption("aws:kms")
 )
 
 // PutBucket creates a new bucket.
@@ -344,7 +358,7 @@ func (b *Bucket) Put(path string, data []byte, contType string, perm ACL, option
 func (b *Bucket) PutCopy(path string, perm ACL, options CopyOptions, source string) (*CopyObjectResult, error) {
 	headers := map[string][]string{
 		"x-amz-acl":         {string(perm)},
-		"x-amz-copy-source": {url.QueryEscape(source)},
+		"x-amz-copy-source": {escapePath(source)},
 	}
 	options.addHeaders(headers)
 	req := &request{
@@ -383,7 +397,12 @@ func (b *Bucket) PutReader(path string, r io.Reader, length int64, contType stri
 // addHeaders adds o's specified fields to headers
 func (o Options) addHeaders(headers map[string][]string) {
 	if o.SSE {
-		headers["x-amz-server-side-encryption"] = []string{"AES256"}
+		headers["x-amz-server-side-encryption"] = []string{string(S3Managed)}
+	} else if o.SSEKMS {
+		headers["x-amz-server-side-encryption"] = []string{string(KMSManaged)}
+		if len(o.SSEKMSKeyId) != 0 {
+			headers["x-amz-server-side-encryption-aws-kms-key-id"] = []string{o.SSEKMSKeyId}
+		}
 	} else if len(o.SSECustomerAlgorithm) != 0 && len(o.SSECustomerKey) != 0 && len(o.SSECustomerKeyMD5) != 0 {
 		// Amazon-managed keys and customer-managed keys are mutually exclusive
 		headers["x-amz-server-side-encryption-customer-algorithm"] = []string{o.SSECustomerAlgorithm}
@@ -886,6 +905,12 @@ func (b *Bucket) PostFormArgsEx(path string, expires time.Time, redirect string,
 		"key":            path,
 	}
 
+	if token := b.S3.Auth.Token(); token != "" {
+		fields["x-amz-security-token"] = token
+		conditions = append(conditions,
+			fmt.Sprintf("{\"x-amz-security-token\": \"%s\"}", token))
+	}
+
 	if conds != nil {
 		conditions = append(conditions, conds...)
 	}
@@ -1123,7 +1148,6 @@ func (s3 *S3) setupHttpRequest(req *request) (*http.Request, error) {
 		Method:     req.method,
 		ProtoMajor: 1,
 		ProtoMinor: 1,
-		Close:      true,
 		Header:     req.headers,
 		Form:       req.params,
 	}
@@ -1143,28 +1167,7 @@ func (s3 *S3) setupHttpRequest(req *request) (*http.Request, error) {
 // If resp is not nil, the XML data contained in the response
 // body will be unmarshalled on it.
 func (s3 *S3) doHttpRequest(hreq *http.Request, resp interface{}) (*http.Response, error) {
-	c := http.Client{
-		Transport: &http.Transport{
-			Dial: func(netw, addr string) (c net.Conn, err error) {
-				deadline := time.Now().Add(s3.ReadTimeout)
-				if s3.ConnectTimeout > 0 {
-					c, err = net.DialTimeout(netw, addr, s3.ConnectTimeout)
-				} else {
-					c, err = net.Dial(netw, addr)
-				}
-				if err != nil {
-					return
-				}
-				if s3.ReadTimeout > 0 {
-					err = c.SetDeadline(deadline)
-				}
-				return
-			},
-			Proxy: http.ProxyFromEnvironment,
-		},
-	}
-
-	hresp, err := c.Do(hreq)
+	hresp, err := s3.Client.Do(hreq)
 	if err != nil {
 		return nil, err
 	}
@@ -1295,4 +1298,8 @@ func shouldRetry(err error) bool {
 func hasCode(err error, code string) bool {
 	s3err, ok := err.(*Error)
 	return ok && s3err.Code == code
+}
+
+func escapePath(s string) string {
+	return (&url.URL{Path: s}).String()
 }
