@@ -78,7 +78,7 @@ type manifestServiceListener struct {
 func (msl *manifestServiceListener) Get(ctx context.Context, dgst digest.Digest, options ...distribution.ManifestServiceOption) (distribution.Manifest, error) {
 	sm, err := msl.ManifestService.Get(ctx, dgst)
 	if err == nil {
-		if err := msl.parent.listener.ManifestPulled(msl.parent.Repository.Name(), sm); err != nil {
+		if err := msl.parent.listener.ManifestPulled(msl.parent.Repository.Named(), sm); err != nil {
 			logrus.Errorf("error dispatching manifest pull to listener: %v", err)
 		}
 	}
@@ -90,7 +90,7 @@ func (msl *manifestServiceListener) Put(ctx context.Context, sm distribution.Man
 	dgst, err := msl.ManifestService.Put(ctx, sm, options...)
 
 	if err == nil {
-		if err := msl.parent.listener.ManifestPushed(msl.parent.Repository.Name(), sm); err != nil {
+		if err := msl.parent.listener.ManifestPushed(msl.parent.Repository.Named(), sm); err != nil {
 			logrus.Errorf("error dispatching manifest push to listener: %v", err)
 		}
 	}
@@ -111,7 +111,7 @@ func (bsl *blobServiceListener) Get(ctx context.Context, dgst digest.Digest) ([]
 		if desc, err := bsl.Stat(ctx, dgst); err != nil {
 			context.GetLogger(ctx).Errorf("error resolving descriptor in ServeBlob listener: %v", err)
 		} else {
-			if err := bsl.parent.listener.BlobPulled(bsl.parent.Repository.Name(), desc); err != nil {
+			if err := bsl.parent.listener.BlobPulled(bsl.parent.Repository.Named(), desc); err != nil {
 				context.GetLogger(ctx).Errorf("error dispatching layer pull to listener: %v", err)
 			}
 		}
@@ -126,7 +126,7 @@ func (bsl *blobServiceListener) Open(ctx context.Context, dgst digest.Digest) (d
 		if desc, err := bsl.Stat(ctx, dgst); err != nil {
 			context.GetLogger(ctx).Errorf("error resolving descriptor in ServeBlob listener: %v", err)
 		} else {
-			if err := bsl.parent.listener.BlobPulled(bsl.parent.Repository.Name(), desc); err != nil {
+			if err := bsl.parent.listener.BlobPulled(bsl.parent.Repository.Named(), desc); err != nil {
 				context.GetLogger(ctx).Errorf("error dispatching layer pull to listener: %v", err)
 			}
 		}
@@ -141,7 +141,7 @@ func (bsl *blobServiceListener) ServeBlob(ctx context.Context, w http.ResponseWr
 		if desc, err := bsl.Stat(ctx, dgst); err != nil {
 			context.GetLogger(ctx).Errorf("error resolving descriptor in ServeBlob listener: %v", err)
 		} else {
-			if err := bsl.parent.listener.BlobPulled(bsl.parent.Repository.Name(), desc); err != nil {
+			if err := bsl.parent.listener.BlobPulled(bsl.parent.Repository.Named(), desc); err != nil {
 				context.GetLogger(ctx).Errorf("error dispatching layer pull to listener: %v", err)
 			}
 		}
@@ -153,7 +153,7 @@ func (bsl *blobServiceListener) ServeBlob(ctx context.Context, w http.ResponseWr
 func (bsl *blobServiceListener) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
 	desc, err := bsl.BlobStore.Put(ctx, mediaType, p)
 	if err == nil {
-		if err := bsl.parent.listener.BlobPushed(bsl.parent.Repository.Name(), desc); err != nil {
+		if err := bsl.parent.listener.BlobPushed(bsl.parent.Repository.Named(), desc); err != nil {
 			context.GetLogger(ctx).Errorf("error dispatching layer pull to listener: %v", err)
 		}
 	}
@@ -165,7 +165,7 @@ func (bsl *blobServiceListener) Create(ctx context.Context, options ...distribut
 	wr, err := bsl.BlobStore.Create(ctx, options...)
 	switch err := err.(type) {
 	case distribution.ErrBlobMounted:
-		if err := bsl.parent.listener.BlobMounted(bsl.parent.Repository.Name(), err.Descriptor, err.From); err != nil {
+		if err := bsl.parent.listener.BlobMounted(bsl.parent.Repository.Named(), err.Descriptor, err.From); err != nil {
 			context.GetLogger(ctx).Errorf("error dispatching blob mount to listener: %v", err)
 		}
 		return nil, err
@@ -193,7 +193,7 @@ type blobWriterListener struct {
 func (bwl *blobWriterListener) Commit(ctx context.Context, desc distribution.Descriptor) (distribution.Descriptor, error) {
 	committed, err := bwl.BlobWriter.Commit(ctx, desc)
 	if err == nil {
-		if err := bwl.parent.parent.listener.BlobPushed(bwl.parent.parent.Repository.Name(), committed); err != nil {
+		if err := bwl.parent.parent.listener.BlobPushed(bwl.parent.parent.Repository.Named(), committed); err != nil {
 			context.GetLogger(ctx).Errorf("error dispatching blob push to listener: %v", err)
 		}
 	}

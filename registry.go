@@ -49,8 +49,8 @@ type ManifestServiceOption interface {
 
 // Repository is a named collection of manifests and layers.
 type Repository interface {
-	// Name returns the name of the repository.
-	Name() reference.Named
+	// Named returns the name of the repository.
+	Named() reference.Named
 
 	// Manifests returns a reference to this repository's manifest service.
 	// with the supplied options applied.
