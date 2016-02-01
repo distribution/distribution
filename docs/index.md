@@ -1,10 +1,11 @@
 <!--[metadata]>
 +++
-title = "Docker Registry"
+title = "Registry"
 description = "High-level overview of the Registry"
 keywords = ["registry, on-prem, images, tags, repository, distribution"]
 [menu.main]
-parent="smn_registry"
+identifier="smn_registry"
+parent="mn_components"
 +++
 <![end-metadata]-->
 
@@ -63,4 +64,3 @@ Now stop your registry and remove all data
 ## Next
 
 You should now read the [detailed introduction about the registry](introduction.md), or jump directly to [deployment instructions](deploying.md).
- 
