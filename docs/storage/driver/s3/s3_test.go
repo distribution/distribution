@@ -6,10 +6,10 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/AdRoll/goamz/aws"
 	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/testsuites"
+	"github.com/docker/goamz/aws"
 
 	"gopkg.in/check.v1"
 )
@@ -69,6 +69,7 @@ func init() {
 			v4AuthBool,
 			minChunkSize,
 			rootDirectory,
+			"",
 		}
 
 		return New(parameters)
