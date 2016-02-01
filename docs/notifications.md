@@ -104,6 +104,17 @@ manifest:
 }
 ```
 
+The target struct of events which are sent when manifests and blobs are deleted
+will contain a subset of the data contained in Get and Put events.  Specifically,
+only the digest and repository will be sent.
+
+```json
+"target": {
+            "digest": "sha256:d89e1bee20d9cb344674e213b581f14fbd8e70274ecf9d10c514bab78a307845",
+            "repository": "library/test"
+},
+```
+
 > __NOTE:__ As of version 2.1, the `length` field for event targets
 > is being deprecated for the `size` field, bringing the target in line with
 > common nomenclature. Both will continue to be set for the foreseeable
