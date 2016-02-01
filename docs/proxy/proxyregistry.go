@@ -179,7 +179,7 @@ func (pr *proxiedRepository) Blobs(ctx context.Context) distribution.BlobStore {
 	return pr.blobStore
 }
 
-func (pr *proxiedRepository) Name() reference.Named {
+func (pr *proxiedRepository) Named() reference.Named {
 	return pr.name
 }
 

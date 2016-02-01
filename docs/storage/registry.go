@@ -134,7 +134,7 @@ type repository struct {
 }
 
 // Name returns the name of the repository.
-func (repo *repository) Name() reference.Named {
+func (repo *repository) Named() reference.Named {
 	return repo.name
 }
 

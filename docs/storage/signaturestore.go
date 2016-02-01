@@ -16,7 +16,7 @@ type signatureStore struct {
 
 func (s *signatureStore) Get(dgst digest.Digest) ([][]byte, error) {
 	signaturesPath, err := pathFor(manifestSignaturesPathSpec{
-		name:     s.repository.Name().Name(),
+		name:     s.repository.Named().Name(),
 		revision: dgst,
 	})
 
