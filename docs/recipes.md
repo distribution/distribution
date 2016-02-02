@@ -5,6 +5,7 @@ description = "Fun stuff to do with your registry"
 keywords = ["registry, on-prem, images, tags, repository, distribution, recipes, advanced"]
 [menu.main]
 parent="smn_registry"
+weight=7
 +++
 <![end-metadata]-->
 
