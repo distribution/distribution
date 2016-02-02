@@ -20,7 +20,7 @@ var (
 	ErrInvalidCredential = errors.New("invalid authorization credential")
 
 	// ErrAuthenticationFailure returned when authentication failure to be presented to agent.
-	ErrAuthenticationFailure = errors.New("authentication failured")
+	ErrAuthenticationFailure = errors.New("authentication failure")
 )
 
 type accessController struct {
