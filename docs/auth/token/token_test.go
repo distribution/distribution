@@ -97,7 +97,8 @@ func makeTestToken(issuer, audience string, access []*ResourceActions, rootKey l
 		return nil, fmt.Errorf("unable to amke signing key with chain: %s", err)
 	}
 
-	rawJWK, err := signingKey.PublicKey().MarshalJSON()
+	var rawJWK json.RawMessage
+	rawJWK, err = signingKey.PublicKey().MarshalJSON()
 	if err != nil {
 		return nil, fmt.Errorf("unable to marshal signing key to JSON: %s", err)
 	}
@@ -105,7 +106,7 @@ func makeTestToken(issuer, audience string, access []*ResourceActions, rootKey l
 	joseHeader := &Header{
 		Type:       "JWT",
 		SigningAlg: "ES256",
-		RawJWK:     json.RawMessage(rawJWK),
+		RawJWK:     &rawJWK,
 	}
 
 	now := time.Now()
