@@ -29,7 +29,7 @@ func TestSillyAccessController(t *testing.T) {
 			}
 		}
 
-		userInfo, ok := authCtx.Value("auth.user").(auth.UserInfo)
+		userInfo, ok := authCtx.Value(auth.UserKey).(auth.UserInfo)
 		if !ok {
 			t.Fatal("silly accessController did not set auth.user context")
 		}
