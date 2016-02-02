@@ -376,7 +376,7 @@ func TestAccessController(t *testing.T) {
 		t.Fatalf("accessController returned unexpected error: %s", err)
 	}
 
-	userInfo, ok := authCtx.Value("auth.user").(auth.UserInfo)
+	userInfo, ok := authCtx.Value(auth.UserKey).(auth.UserInfo)
 	if !ok {
 		t.Fatal("token accessController did not set auth.user context")
 	}

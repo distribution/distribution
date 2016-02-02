@@ -56,7 +56,7 @@ func TestBasicAccessController(t *testing.T) {
 			}
 		}
 
-		userInfo, ok := authCtx.Value("auth.user").(auth.UserInfo)
+		userInfo, ok := authCtx.Value(auth.UserKey).(auth.UserInfo)
 		if !ok {
 			t.Fatal("basic accessController did not set auth.user context")
 		}
