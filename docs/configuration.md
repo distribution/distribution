@@ -408,43 +408,43 @@ You must configure one backend; if you configure more, the registry returns an e
   <tr>
     <td><code>filesystem</code></td>
     <td>Uses the local disk to store registry files. It is ideal for development and may be appropriate for some small-scale production applications.
-    See the <a href="../storage-drivers/filesystem/">driver's reference documentation</a>.
+    See the <a href="storage-drivers/filesystem.md">driver's reference documentation</a>.
     </td>
   </tr>
   <tr>
     <td><code>azure</code></td>
     <td>Uses Microsoft's Azure Blob Storage.
-    See the <a href="../storage-drivers/azure/">driver's reference documentation</a>.
+    See the <a href="storage-drivers/azure.md">driver's reference documentation</a>.
     </td>
   </tr>
   <tr>
     <td><code>gcs</code></td>
     <td>Uses Google Cloud Storage.
-    See the <a href="../storage-drivers/gcs/">driver's reference documentation</a>.
+    See the <a href="storage-drivers/gcs.md">driver's reference documentation</a>.
     </td>
   </tr>
   <tr>
     <td><code>rados</code></td>
     <td>Uses Ceph Object Storage.
-    See the <a href="../storage-drivers/rados/">driver's reference documentation</a>.
+    See the <a href="storage-drivers/rados.md">driver's reference documentation</a>.
     </td>
   </tr>
   <tr>
     <td><code>s3</code></td>
     <td>Uses Amazon's Simple Storage Service (S3).
-    See the <a href="../storage-drivers/s3/">driver's reference documentation</a>.
+    See the <a href="storage-drivers/s3.md">driver's reference documentation</a>.
     </td>
   </tr>
   <tr>
     <td><code>swift</code></td>
     <td>Uses Openstack Swift object storage.
-    See the <a href="../storage-drivers/swift/">driver's reference documentation</a>.
+    See the <a href="storage-drivers/swift.md">driver's reference documentation</a>.
     </td>
   </tr>
   <tr>
     <td><code>oss</code></td>
     <td>Uses Aliyun OSS for object storage.
-    See the <a href="../storage-drivers/oss/">driver's reference documentation</a>.
+    See the <a href="storage-drivers/oss.md">driver's reference documentation</a>.
     </td>
   </tr>
 </table>
