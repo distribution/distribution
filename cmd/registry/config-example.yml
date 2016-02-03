@@ -3,14 +3,14 @@ log:
   fields:
     service: registry
 storage:
-    cache:
-        blobdescriptor: inmemory
-    filesystem:
-        rootdirectory: /var/lib/registry
+  cache:
+    blobdescriptor: inmemory
+  filesystem:
+    rootdirectory: /var/lib/registry
 http:
-    addr: :5000
-    headers:
-        X-Content-Type-Options: [nosniff]
+  addr: :5000
+  headers:
+    X-Content-Type-Options: [nosniff]
 health:
   storagedriver:
     enabled: true
