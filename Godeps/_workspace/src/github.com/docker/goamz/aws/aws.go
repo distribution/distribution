@@ -405,7 +405,13 @@ func EnvAuth() (auth Auth, err error) {
 // http://blogs.aws.amazon.com/security/post/Tx3D6U6WSFGOK2H/A-New-and-Standardized-Way-to-Manage-Credentials-in-the-AWS-SDKs
 func CredentialFileAuth(filePath string, profile string, expiration time.Duration) (auth Auth, err error) {
 	if profile == "" {
-		profile = "default"
+		profile = os.Getenv("AWS_DEFAULT_PROFILE")
+		if profile == "" {
+			profile = os.Getenv("AWS_PROFILE")
+			if profile == "" {
+				profile = "default"
+			}
+		}
 	}
 
 	if filePath == "" {
