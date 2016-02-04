@@ -7,11 +7,8 @@
 // Because gcs is a key, value store the Stat call does not support last modification
 // time for directories (directories are an abstraction for key, value stores)
 //
-// Keep in mind that gcs guarantees only eventual consistency, so do not assume
-// that a successful write will mean immediate access to the data written (although
-// in most regions a new object put has guaranteed read after write). The only true
-// guarantee is that once you call Stat and receive a certain file size, that much of
-// the file is already accessible.
+// Note that the contents of incomplete uploads are not accessible even though
+// Stat returns their length
 //
 // +build include_gcs
 
@@ -25,7 +22,9 @@ import (
 	"math/rand"
 	"net/http"
 	"net/url"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -34,7 +33,6 @@ import (
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 	"google.golang.org/api/googleapi"
-	storageapi "google.golang.org/api/storage/v1"
 	"google.golang.org/cloud"
 	"google.golang.org/cloud/storage"
 
@@ -44,8 +42,23 @@ import (
 	"github.com/docker/distribution/registry/storage/driver/factory"
 )
 
-const driverName = "gcs"
-const dummyProjectID = "<unknown>"
+const (
+	driverName     = "gcs"
+	dummyProjectID = "<unknown>"
+
+	uploadSessionContentType = "application/x-docker-upload-session"
+	minChunkSize             = 256 * 1024
+	maxChunkSize             = 20 * minChunkSize
+)
+
+var rangeHeader = regexp.MustCompile(`^bytes=([0-9])+-([0-9]+)$`)
+
+type uploadSession struct {
+	sessionURI   string // URI of the upload session, which can be used to append chunks of data with PUT operations
+	uploadedSize int64  // Number of bytes successfully uploaded to the session URI
+	buffer       []byte // PUT operations on the session URI must happen in multiples of 256KB, this buffer
+	// collects the remaining (< 256KB) bytes that need to be uploaded at a later point
+}
 
 // driverParameters is a struct that encapsulates all of the driver parameters after all values have been set
 type driverParameters struct {
@@ -180,14 +193,35 @@ func (d *driver) PutContent(context ctx.Context, path string, contents []byte) e
 // with a given byte offset.
 // May be used to resume reading a stream by providing a nonzero offset.
 func (d *driver) ReadStream(context ctx.Context, path string, offset int64) (io.ReadCloser, error) {
-	name := d.pathToKey(path)
+	res, err := d.getObject(context, path, offset)
+	if err != nil {
+		if res != nil && res.StatusCode == http.StatusRequestedRangeNotSatisfiable {
+			res.Body.Close()
+			obj, err := storageStatObject(d.context(context), d.bucket, d.pathToKey(path))
+			if err != nil {
+				return nil, err
+			}
+			if offset == int64(obj.Size) {
+				return ioutil.NopCloser(bytes.NewReader([]byte{})), nil
+			}
+			return nil, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
+		}
+		return nil, err
+	}
+	if res.Header.Get("Content-Type") == uploadSessionContentType {
+		defer res.Body.Close()
+		return nil, storagedriver.PathNotFoundError{Path: path}
+	}
+	return res.Body, nil
+}
 
+func (d *driver) getObject(context ctx.Context, path string, offset int64) (*http.Response, error) {
 	// copied from google.golang.org/cloud/storage#NewReader :
 	// to set the additional "Range" header
 	u := &url.URL{
 		Scheme: "https",
 		Host:   "storage.googleapis.com",
-		Path:   fmt.Sprintf("/%s/%s", d.bucket, name),
+		Path:   fmt.Sprintf("/%s/%s", d.bucket, d.pathToKey(path)),
 	}
 	req, err := http.NewRequest("GET", u.String(), nil)
 	if err != nil {
@@ -196,7 +230,12 @@ func (d *driver) ReadStream(context ctx.Context, path string, offset int64) (io.
 	if offset > 0 {
 		req.Header.Set("Range", fmt.Sprintf("bytes=%v-", offset))
 	}
-	res, err := d.client.Do(req)
+	var res *http.Response
+	err = retry(5, func() error {
+		var err error
+		res, err = d.client.Do(req)
+		return err
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -204,109 +243,133 @@ func (d *driver) ReadStream(context ctx.Context, path string, offset int64) (io.
 		res.Body.Close()
 		return nil, storagedriver.PathNotFoundError{Path: path}
 	}
-	if res.StatusCode == http.StatusRequestedRangeNotSatisfiable {
-		res.Body.Close()
-		obj, err := storageStatObject(d.context(context), d.bucket, name)
-		if err != nil {
-			return nil, err
-		}
-		if offset == int64(obj.Size) {
-			return ioutil.NopCloser(bytes.NewReader([]byte{})), nil
-		}
-		return nil, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
-	}
-	if res.StatusCode < 200 || res.StatusCode > 299 {
-		res.Body.Close()
-		return nil, fmt.Errorf("storage: can't read object %v/%v, status code: %v", d.bucket, name, res.Status)
-	}
-	return res.Body, nil
+	return res, googleapi.CheckMediaResponse(res)
 }
 
 // WriteStream stores the contents of the provided io.ReadCloser at a
 // location designated by the given path.
 // May be used to resume writing a stream by providing a nonzero offset.
 // The offset must be no larger than the CurrentSize for this path.
-func (d *driver) WriteStream(context ctx.Context, path string, offset int64, reader io.Reader) (totalRead int64, err error) {
+func (d *driver) WriteStream(context ctx.Context, path string, offset int64, reader io.Reader) (totalWritten int64, err error) {
 	if offset < 0 {
 		return 0, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
 	}
 
+	var s *uploadSession
+	// start new upload session of offset 0
 	if offset == 0 {
-		return d.writeCompletely(context, path, 0, reader)
-	}
-
-	service, err := storageapi.New(d.client)
-	if err != nil {
-		return 0, err
-	}
-	objService := storageapi.NewObjectsService(service)
-	var obj *storageapi.Object
-	err = retry(5, func() error {
-		o, err := objService.Get(d.bucket, d.pathToKey(path)).Do()
-		obj = o
-		return err
-	})
-	//	obj, err := retry(5, objService.Get(d.bucket, d.pathToKey(path)).Do)
-	if err != nil {
-		return 0, err
-	}
-
-	// cannot append more chunks, so redo from scratch
-	if obj.ComponentCount >= 1023 {
-		return d.writeCompletely(context, path, offset, reader)
-	}
-
-	// skip from reader
-	objSize := int64(obj.Size)
-	nn, err := skip(reader, objSize-offset)
-	if err != nil {
-		return nn, err
-	}
-
-	// Size <= offset
-	partName := fmt.Sprintf("%v#part-%d#", d.pathToKey(path), obj.ComponentCount)
-	gcsContext := d.context(context)
-	wc := storage.NewWriter(gcsContext, d.bucket, partName)
-	wc.ContentType = "application/octet-stream"
-
-	if objSize < offset {
-		err = writeZeros(wc, offset-objSize)
+		s = &uploadSession{}
+		// retrieve existing upload session for resuming
+	} else {
+		s, err = d.getUploadSession(context, path)
 		if err != nil {
-			wc.CloseWithError(err)
+			return 0, err
+		}
+	}
+
+	// offset should not be greater than the size of the file to avoid creating 'gaps'
+	if offset > s.length() {
+		return 0, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
+	}
+
+	// in case offset is less than the current file size, their difference must be skipped
+	// the skipped bytes must be reported to the caller as if they were written
+	skipped := s.length() - offset
+	if skipped > 0 {
+		nn, err := io.Copy(ioutil.Discard, io.LimitReader(reader, skipped))
+		if err != nil || nn < skipped {
 			return nn, err
 		}
 	}
-	n, err := io.Copy(wc, reader)
+
+	// write buffer
+	buffer := make([]byte, maxChunkSize)
+	// current size of the write buffer
+	var buffSize int
+	// the number of bytes written by this call to WriteStream
+	var written int64
+
+	// copy bytes from the upload session into the buffer
+	copy(buffer, s.buffer)
+	buffSize += len(s.buffer)
+
+	for more := true; more; {
+		// fill the buffer by reading bytes from the reader
+		n, err := reader.Read(buffer[buffSize:])
+		if err == io.EOF {
+			err = nil
+			more = false
+		}
+		buffSize += n
+
+		// amount of bytes that got succesfully written
+		var chunkWritten int
+		// chunks can be uploaded only in multiples of minChunkSize
+		// chunkSize is a multiple of minChunkSize less than or equal to buffSize
+		if chunkSize := buffSize - (buffSize % minChunkSize); chunkSize > 0 {
+			var err2 error
+			// if their is no sessionURI yet, obtain one by starting the session
+			if s.sessionURI == "" {
+				s.sessionURI, err2 = startSession(d.client, d.bucket, d.pathToKey(path))
+			}
+			if err2 != nil {
+				chunkWritten = 0
+			} else {
+				var nn int64
+				nn, err2 = putChunk(d.client, s.sessionURI, buffer[0:chunkSize], s.uploadedSize, -1)
+				chunkWritten = int(nn)
+				s.uploadedSize += nn
+				written += nn
+			}
+			// set err to the latest error, if there was no earlier one
+			if err2 != nil && err == nil {
+				err = err2
+			}
+		}
+		// shift the remaining bytes to the start of the buffer
+		copy(buffer, buffer[chunkWritten:buffSize])
+		buffSize -= chunkWritten
+
+		// do not continue looping if there was an error while reading/writing
+		if err != nil {
+			more = false
+		}
+	}
+
+	previouslyWritten := len(s.buffer)
+
+	// Copy the remaining bytes from the buffer to the upload session
+	// Normally buffSize will be smaller than minChunkSize. However, in the
+	// unlikely event that the upload session failed to start, this number could be higher.
+	// In this case we can safely clip the remaining bytes to the minChunkSize
+	if buffSize > minChunkSize {
+		buffSize = minChunkSize
+	}
+	s.buffer = buffer[0:buffSize]
+	written += int64(buffSize)
+
+	// commit the writes by updating the upload session
+	err2 := d.updateUploadSession(context, path, s)
+	if err2 != nil {
+		// failed to update the upload session, inform the caller that nothing has been written
+		return skipped, err2
+	}
+	// calculate total bytes written: subtract 'previouslyWritten' to avoid double counting,
+	// and pretend that skipped bytes were really written by this WriteStream call
+	return written + skipped - int64(previouslyWritten), err
+}
+
+func (d *driver) CloseWriteStream(context ctx.Context, path string) error {
+	s, err := d.getUploadSession(context, path)
 	if err != nil {
-		wc.CloseWithError(err)
-		return nn, err
+		return err
 	}
-	err = wc.Close()
-	if err != nil {
-		return nn, err
+	// no session started yet just perform a simple upload
+	if s.sessionURI == "" {
+		return d.PutContent(context, path, s.buffer)
 	}
-	// wc was closed succesfully, so the temporary part exists, schedule it for deletion at the end
-	// of the function
-	defer storageDeleteObject(gcsContext, d.bucket, partName)
-
-	req := &storageapi.ComposeRequest{
-		Destination: &storageapi.Object{Bucket: obj.Bucket, Name: obj.Name, ContentType: obj.ContentType},
-		SourceObjects: []*storageapi.ComposeRequestSourceObjects{
-			{
-				Name:       obj.Name,
-				Generation: obj.Generation,
-			}, {
-				Name:       partName,
-				Generation: wc.Object().Generation,
-			}},
-	}
-
-	err = retry(5, func() error { _, err := objService.Compose(d.bucket, obj.Name, req).Do(); return err })
-	if err == nil {
-		nn = nn + n
-	}
-
-	return nn, err
+	_, err = putChunk(d.client, s.sessionURI, s.buffer, s.uploadedSize, s.length())
+	return err
 }
 
 type request func() error
@@ -333,64 +396,62 @@ func retry(maxTries int, req request) error {
 	return err
 }
 
-func (d *driver) writeCompletely(context ctx.Context, path string, offset int64, reader io.Reader) (totalRead int64, err error) {
+func (d *driver) getUploadSession(context ctx.Context, path string) (*uploadSession, error) {
+	res, err := d.getObject(context, path, 0)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	if res.Header.Get("Content-Type") != uploadSessionContentType {
+		return nil, storagedriver.PathNotFoundError{Path: path}
+	}
+	offset, err := strconv.ParseInt(res.Header.Get("X-Goog-Meta-Offset"), 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	buffer, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	return &uploadSession{
+		sessionURI:   res.Header.Get("X-Goog-Meta-Session-URI"),
+		buffer:       buffer,
+		uploadedSize: offset,
+	}, nil
+}
+
+func (d *driver) updateUploadSession(context ctx.Context, path string, s *uploadSession) error {
 	wc := storage.NewWriter(d.context(context), d.bucket, d.pathToKey(path))
-	wc.ContentType = "application/octet-stream"
+	wc.ContentType = uploadSessionContentType
+	wc.Metadata = map[string]string{
+		"Session-URI": s.sessionURI,
+		"Offset":      strconv.FormatInt(s.uploadedSize, 10),
+	}
 	defer wc.Close()
-
-	// Copy the first offset bytes of the existing contents
-	// (padded with zeros if needed) into the writer
-	if offset > 0 {
-		existing, err := d.ReadStream(context, path, 0)
-		if err != nil {
-			return 0, err
-		}
-		defer existing.Close()
-		n, err := io.CopyN(wc, existing, offset)
-		if err == io.EOF {
-			err = writeZeros(wc, offset-n)
-		}
-		if err != nil {
-			return 0, err
-		}
-	}
-	return io.Copy(wc, reader)
-}
-
-func skip(reader io.Reader, count int64) (int64, error) {
-	if count <= 0 {
-		return 0, nil
-	}
-	return io.CopyN(ioutil.Discard, reader, count)
-}
-
-func writeZeros(wc io.Writer, count int64) error {
-	buf := make([]byte, 32*1024)
-	for count > 0 {
-		size := cap(buf)
-		if int64(size) > count {
-			size = int(count)
-		}
-		n, err := wc.Write(buf[0:size])
-		if err != nil {
-			return err
-		}
-		count = count - int64(n)
-	}
-	return nil
+	_, err := wc.Write(s.buffer)
+	return err
 }
 
 // Stat retrieves the FileInfo for the given path, including the current
 // size in bytes and the creation time.
 func (d *driver) Stat(context ctx.Context, path string) (storagedriver.FileInfo, error) {
+
 	var fi storagedriver.FileInfoFields
 	//try to get as file
 	gcsContext := d.context(context)
 	obj, err := storageStatObject(gcsContext, d.bucket, d.pathToKey(path))
 	if err == nil {
+		size := obj.Size
+		if obj.ContentType == uploadSessionContentType {
+			offset, err := strconv.ParseInt(obj.Metadata["Offset"], 0, 64)
+			if err != nil {
+				return nil, err
+			}
+			size = size + offset
+		}
 		fi = storagedriver.FileInfoFields{
 			Path:    path,
-			Size:    obj.Size,
+			Size:    size,
 			ModTime: obj.Updated,
 			IsDir:   false,
 		}
@@ -441,12 +502,7 @@ func (d *driver) List(context ctx.Context, path string) ([]string, error) {
 			// DELETE and LIST operationsCheck that the object is not deleted,
 			// so filter out any objects with a non-zero time-deleted
 			if object.Deleted.IsZero() {
-				name := object.Name
-				// Ignore objects with names that end with '#' (these are uploaded parts)
-				if name[len(name)-1] != '#' {
-					name = d.keyToPath(name)
-					list = append(list, name)
-				}
+				list = append(list, d.keyToPath(object.Name))
 			}
 		}
 		for _, subpath := range objects.Prefixes {
@@ -507,7 +563,7 @@ func (d *driver) Move(context ctx.Context, sourcePath string, destPath string) e
 	}
 	_, err = storageCopyObject(gcsContext, d.bucket, d.pathToKey(sourcePath), d.bucket, d.pathToKey(destPath), nil)
 	if err != nil {
-		if status := err.(*googleapi.Error); status != nil {
+		if status, ok := err.(*googleapi.Error); ok {
 			if status.Code == http.StatusNotFound {
 				return storagedriver.PathNotFoundError{Path: sourcePath}
 			}
@@ -572,7 +628,7 @@ func (d *driver) Delete(context ctx.Context, path string) error {
 	}
 	err = storageDeleteObject(gcsContext, d.bucket, d.pathToKey(path))
 	if err != nil {
-		if status := err.(*googleapi.Error); status != nil {
+		if status, ok := err.(*googleapi.Error); ok {
 			if status.Code == http.StatusNotFound {
 				return storagedriver.PathNotFoundError{Path: path}
 			}
@@ -651,6 +707,84 @@ func (d *driver) URLFor(context ctx.Context, path string, options map[string]int
 		Expires:        expiresTime,
 	}
 	return storage.SignedURL(d.bucket, name, opts)
+}
+
+func (s *uploadSession) length() int64 {
+	return s.uploadedSize + int64(len(s.buffer))
+}
+
+func startSession(client *http.Client, bucket string, name string) (uri string, err error) {
+	u := &url.URL{
+		Scheme:   "https",
+		Host:     "www.googleapis.com",
+		Path:     fmt.Sprintf("/upload/storage/v1/b/%v/o", bucket),
+		RawQuery: fmt.Sprintf("uploadType=resumable&name=%v", name),
+	}
+	err = retry(5, func() error {
+		req, err := http.NewRequest("POST", u.String(), nil)
+		if err != nil {
+			return err
+		}
+		req.Header.Set("X-Upload-Content-Type", "application/octet-stream")
+		req.Header.Set("Content-Length", "0")
+		resp, err := client.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		err = googleapi.CheckMediaResponse(resp)
+		if err != nil {
+			return err
+		}
+		uri = resp.Header.Get("Location")
+		return nil
+	})
+	return uri, err
+}
+
+func putChunk(client *http.Client, sessionURI string, chunk []byte, from int64, totalSize int64) (int64, error) {
+	bytesPut := int64(0)
+	err := retry(5, func() error {
+		req, err := http.NewRequest("PUT", sessionURI, bytes.NewReader(chunk))
+		if err != nil {
+			return err
+		}
+		length := int64(len(chunk))
+		to := from + length - 1
+		size := "*"
+		if totalSize >= 0 {
+			size = strconv.FormatInt(totalSize, 10)
+		}
+		req.Header.Set("Content-Type", "application/octet-stream")
+		if from == to+1 {
+			req.Header.Set("Content-Range", fmt.Sprintf("bytes */%v", size))
+		} else {
+			req.Header.Set("Content-Range", fmt.Sprintf("bytes %v-%v/%v", from, to, size))
+		}
+		req.Header.Set("Content-Length", strconv.FormatInt(length, 10))
+
+		resp, err := client.Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		if totalSize < 0 && resp.StatusCode == 308 {
+			groups := rangeHeader.FindStringSubmatch(resp.Header.Get("Range"))
+			end, err := strconv.ParseInt(groups[2], 10, 64)
+			if err != nil {
+				return err
+			}
+			bytesPut = end - from + 1
+			return nil
+		}
+		err = googleapi.CheckMediaResponse(resp)
+		if err != nil {
+			return err
+		}
+		bytesPut = to - from + 1
+		return nil
+	})
+	return bytesPut, err
 }
 
 func (d *driver) context(context ctx.Context) context.Context {

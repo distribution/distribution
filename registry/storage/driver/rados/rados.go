@@ -356,6 +356,10 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 	return totalRead, nil
 }
 
+func (d *driver) CloseWriteStream(ctx context.Context, path string) error {
+	return nil
+}
+
 // Stat retrieves the FileInfo for the given path, including the current size
 func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
 	// get oid from filename

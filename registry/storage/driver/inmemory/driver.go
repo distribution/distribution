@@ -167,6 +167,10 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 	return nn, err
 }
 
+func (d *driver) CloseWriteStream(ctx context.Context, path string) error {
+	return nil
+}
+
 // Stat returns info about the provided path.
 func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
 	d.mutex.RLock()
