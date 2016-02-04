@@ -1184,7 +1184,11 @@ func (rr *randReader) Read(p []byte) (n int, err error) {
 	rr.m.Lock()
 	defer rr.m.Unlock()
 
-	n = copy(p, randomContents(int64(len(p))))
+	toread := int64(len(p))
+	if toread > rr.r {
+		toread = rr.r
+	}
+	n = copy(p, randomContents(toread))
 	rr.r -= int64(n)
 
 	if rr.r <= 0 {
