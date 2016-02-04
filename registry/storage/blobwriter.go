@@ -96,11 +96,17 @@ func (bw *blobWriter) Write(p []byte) (int, error) {
 	// Ensure that the current write offset matches how many bytes have been
 	// written to the digester. If not, we need to update the digest state to
 	// match the current write position.
-	if err := bw.resumeDigestAt(bw.blobStore.ctx, bw.offset); err != nil && err != errResumableDigestNotAvailable {
+	err := bw.resumeDigest(bw.blobStore.ctx)
+	if err != nil && err != errResumableDigestNotAvailable {
 		return 0, err
 	}
-
-	n, err := io.MultiWriter(&bw.bufferedFileWriter, bw.digester.Hash()).Write(p)
+	resumeDigest := err != errResumableDigestNotAvailable
+	n, err := bw.bufferedFileWriter.Write(p)
+	if resumeDigest {
+		// update the Hash with the bytes that have been written succesfully to the
+		// file writer
+		bw.digester.Hash().Write(p[0:n])
+	}
 	bw.written += int64(n)
 
 	return n, err
@@ -110,11 +116,15 @@ func (bw *blobWriter) ReadFrom(r io.Reader) (n int64, err error) {
 	// Ensure that the current write offset matches how many bytes have been
 	// written to the digester. If not, we need to update the digest state to
 	// match the current write position.
-	if err := bw.resumeDigestAt(bw.blobStore.ctx, bw.offset); err != nil && err != errResumableDigestNotAvailable {
+	if err = bw.resumeDigest(bw.blobStore.ctx); err != nil && err != errResumableDigestNotAvailable {
 		return 0, err
 	}
 
-	nn, err := bw.bufferedFileWriter.ReadFrom(io.TeeReader(r, bw.digester.Hash()))
+	reader := r
+	if err != errResumableDigestNotAvailable {
+		reader = io.TeeReader(r, bw.digester.Hash())
+	}
+	nn, err := bw.bufferedFileWriter.ReadFrom(reader)
 	bw.written += nn
 
 	return nn, err
@@ -181,7 +191,7 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc distribution.Descri
 	// TODO(stevvooe): This section is very meandering. Need to be broken down
 	// to be a lot more clear.
 
-	if err := bw.resumeDigestAt(ctx, bw.size); err == nil {
+	if err := bw.resumeDigest(ctx); err == nil {
 		canonical = bw.digester.Digest()
 
 		if canonical.Algorithm() == desc.Digest.Algorithm() {
@@ -351,30 +361,4 @@ func (bw *blobWriter) removeResources(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func (bw *blobWriter) Reader() (io.ReadCloser, error) {
-	// todo(richardscothern): Change to exponential backoff, i=0.5, e=2, n=4
-	try := 1
-	for try <= 5 {
-		_, err := bw.bufferedFileWriter.driver.Stat(bw.ctx, bw.path)
-		if err == nil {
-			break
-		}
-		switch err.(type) {
-		case storagedriver.PathNotFoundError:
-			context.GetLogger(bw.ctx).Debugf("Nothing found on try %d, sleeping...", try)
-			time.Sleep(1 * time.Second)
-			try++
-		default:
-			return nil, err
-		}
-	}
-
-	readCloser, err := bw.bufferedFileWriter.driver.ReadStream(bw.ctx, bw.path, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	return readCloser, nil
 }

@@ -161,6 +161,10 @@ func (d *driver) WriteStream(ctx context.Context, subPath string, offset int64, 
 	return io.Copy(fp, reader)
 }
 
+func (d *driver) CloseWriteStream(ctx context.Context, path string) error {
+	return nil
+}
+
 // Stat retrieves the FileInfo for the given path, including the current size
 // in bytes and the creation time.
 func (d *driver) Stat(ctx context.Context, subPath string) (storagedriver.FileInfo, error) {
