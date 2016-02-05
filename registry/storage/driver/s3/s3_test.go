@@ -10,6 +10,7 @@ import (
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/testsuites"
 	"github.com/docker/goamz/aws"
+	"github.com/docker/goamz/s3"
 
 	"gopkg.in/check.v1"
 )
@@ -17,7 +18,7 @@ import (
 // Hook up gocheck into the "go test" runner.
 func Test(t *testing.T) { check.TestingT(t) }
 
-var s3DriverConstructor func(rootDirectory string) (*Driver, error)
+var s3DriverConstructor func(rootDirectory string, storageClass s3.StorageClass) (*Driver, error)
 var skipS3 func() string
 
 func init() {
@@ -34,7 +35,7 @@ func init() {
 	}
 	defer os.Remove(root)
 
-	s3DriverConstructor = func(rootDirectory string) (*Driver, error) {
+	s3DriverConstructor = func(rootDirectory string, storageClass s3.StorageClass) (*Driver, error) {
 		encryptBool := false
 		if encrypt != "" {
 			encryptBool, err = strconv.ParseBool(encrypt)
@@ -69,6 +70,7 @@ func init() {
 			v4AuthBool,
 			minChunkSize,
 			rootDirectory,
+			storageClass,
 			"",
 		}
 
@@ -84,7 +86,7 @@ func init() {
 	}
 
 	testsuites.RegisterSuite(func() (storagedriver.StorageDriver, error) {
-		return s3DriverConstructor(root)
+		return s3DriverConstructor(root, s3.StandardStorage)
 	}, skipS3)
 }
 
@@ -99,17 +101,17 @@ func TestEmptyRootList(t *testing.T) {
 	}
 	defer os.Remove(validRoot)
 
-	rootedDriver, err := s3DriverConstructor(validRoot)
+	rootedDriver, err := s3DriverConstructor(validRoot, s3.StandardStorage)
 	if err != nil {
 		t.Fatalf("unexpected error creating rooted driver: %v", err)
 	}
 
-	emptyRootDriver, err := s3DriverConstructor("")
+	emptyRootDriver, err := s3DriverConstructor("", s3.StandardStorage)
 	if err != nil {
 		t.Fatalf("unexpected error creating empty root driver: %v", err)
 	}
 
-	slashRootDriver, err := s3DriverConstructor("/")
+	slashRootDriver, err := s3DriverConstructor("/", s3.StandardStorage)
 	if err != nil {
 		t.Fatalf("unexpected error creating slash root driver: %v", err)
 	}
@@ -135,5 +137,65 @@ func TestEmptyRootList(t *testing.T) {
 		if !storagedriver.PathRegexp.MatchString(path) {
 			t.Fatalf("unexpected string in path: %q != %q", path, storagedriver.PathRegexp)
 		}
+	}
+}
+
+func TestStorageClass(t *testing.T) {
+	if skipS3() != "" {
+		t.Skip(skipS3())
+	}
+
+	rootDir, err := ioutil.TempDir("", "driver-")
+	if err != nil {
+		t.Fatalf("unexpected error creating temporary directory: %v", err)
+	}
+	defer os.Remove(rootDir)
+
+	standardDriver, err := s3DriverConstructor(rootDir, s3.StandardStorage)
+	if err != nil {
+		t.Fatalf("unexpected error creating driver with standard storage: %v", err)
+	}
+
+	rrDriver, err := s3DriverConstructor(rootDir, s3.ReducedRedundancy)
+	if err != nil {
+		t.Fatalf("unexpected error creating driver with reduced redundancy storage: %v", err)
+	}
+
+	standardFilename := "/test-standard"
+	rrFilename := "/test-rr"
+	contents := []byte("contents")
+	ctx := context.Background()
+
+	err = standardDriver.PutContent(ctx, standardFilename, contents)
+	if err != nil {
+		t.Fatalf("unexpected error creating content: %v", err)
+	}
+	defer standardDriver.Delete(ctx, standardFilename)
+
+	err = rrDriver.PutContent(ctx, rrFilename, contents)
+	if err != nil {
+		t.Fatalf("unexpected error creating content: %v", err)
+	}
+	defer rrDriver.Delete(ctx, rrFilename)
+
+	standardDriverUnwrapped := standardDriver.Base.StorageDriver.(*driver)
+	resp, err := standardDriverUnwrapped.Bucket.GetResponse(standardDriverUnwrapped.s3Path(standardFilename))
+	if err != nil {
+		t.Fatalf("unexpected error retrieving standard storage file: %v", err)
+	}
+	defer resp.Body.Close()
+	// Amazon only populates this header value for non-standard storage classes
+	if storageClass := resp.Header.Get("x-amz-storage-class"); storageClass != "" {
+		t.Fatalf("unexpected storage class for standard file: %v", storageClass)
+	}
+
+	rrDriverUnwrapped := rrDriver.Base.StorageDriver.(*driver)
+	resp, err = rrDriverUnwrapped.Bucket.GetResponse(rrDriverUnwrapped.s3Path(rrFilename))
+	if err != nil {
+		t.Fatalf("unexpected error retrieving reduced-redundancy storage file: %v", err)
+	}
+	defer resp.Body.Close()
+	if storageClass := resp.Header.Get("x-amz-storage-class"); storageClass != string(s3.ReducedRedundancy) {
+		t.Fatalf("unexpected storage class for standard file: %v", storageClass)
 	}
 }

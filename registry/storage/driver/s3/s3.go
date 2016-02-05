@@ -1,7 +1,7 @@
 // Package s3 provides a storagedriver.StorageDriver implementation to
 // store blobs in Amazon S3 cloud storage.
 //
-// This package leverages the AdRoll/goamz client library for interfacing with
+// This package leverages the docker/goamz client library for interfacing with
 // s3.
 //
 // Because s3 is a key, value store the Stat call does not support last modification
@@ -59,6 +59,7 @@ type DriverParameters struct {
 	V4Auth        bool
 	ChunkSize     int64
 	RootDirectory string
+	StorageClass  s3.StorageClass
 	UserAgent     string
 }
 
@@ -79,6 +80,7 @@ type driver struct {
 	ChunkSize     int64
 	Encrypt       bool
 	RootDirectory string
+	StorageClass  s3.StorageClass
 
 	pool  sync.Pool // pool []byte buffers used for WriteStream
 	zeros []byte    // shared, zero-valued buffer used for WriteStream
@@ -183,6 +185,21 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		rootDirectory = ""
 	}
 
+	storageClass := s3.StandardStorage
+	storageClassParam, ok := parameters["storageclass"]
+	if ok {
+		storageClassString, ok := storageClassParam.(string)
+		if !ok {
+			return nil, fmt.Errorf("The storageclass parameter must be one of %v, %v invalid", []s3.StorageClass{s3.StandardStorage, s3.ReducedRedundancy}, storageClassParam)
+		}
+		// All valid storage class parameters are UPPERCASE, so be a bit more flexible here
+		storageClassCasted := s3.StorageClass(strings.ToUpper(storageClassString))
+		if storageClassCasted != s3.StandardStorage && storageClassCasted != s3.ReducedRedundancy {
+			return nil, fmt.Errorf("The storageclass parameter must be one of %v, %v invalid", []s3.StorageClass{s3.StandardStorage, s3.ReducedRedundancy}, storageClassParam)
+		}
+		storageClass = storageClassCasted
+	}
+
 	userAgent, ok := parameters["useragent"]
 	if !ok {
 		userAgent = ""
@@ -198,6 +215,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		v4AuthBool,
 		chunkSize,
 		fmt.Sprint(rootDirectory),
+		storageClass,
 		fmt.Sprint(userAgent),
 	}
 
@@ -259,6 +277,7 @@ func New(params DriverParameters) (*Driver, error) {
 		ChunkSize:     params.ChunkSize,
 		Encrypt:       params.Encrypt,
 		RootDirectory: params.RootDirectory,
+		StorageClass:  params.StorageClass,
 		zeros:         make([]byte, params.ChunkSize),
 	}
 
@@ -826,7 +845,10 @@ func hasCode(err error, code string) bool {
 }
 
 func (d *driver) getOptions() s3.Options {
-	return s3.Options{SSE: d.Encrypt}
+	return s3.Options{
+		SSE:          d.Encrypt,
+		StorageClass: d.StorageClass,
+	}
 }
 
 func getPermissions() s3.ACL {
