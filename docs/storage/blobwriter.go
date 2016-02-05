@@ -326,7 +326,7 @@ func (bw *blobWriter) moveBlob(ctx context.Context, desc distribution.Descriptor
 // resources are already not present, no error will be returned.
 func (bw *blobWriter) removeResources(ctx context.Context) error {
 	dataPath, err := pathFor(uploadDataPathSpec{
-		name: bw.blobStore.repository.Name().Name(),
+		name: bw.blobStore.repository.Named().Name(),
 		id:   bw.id,
 	})
 

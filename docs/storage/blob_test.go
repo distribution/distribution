@@ -378,7 +378,7 @@ func TestBlobMount(t *testing.T) {
 		t.Fatalf("unexpected non-error stating unmounted blob: %v", desc)
 	}
 
-	canonicalRef, err := reference.WithDigest(sourceRepository.Name(), desc.Digest)
+	canonicalRef, err := reference.WithDigest(sourceRepository.Named(), desc.Digest)
 	if err != nil {
 		t.Fatal(err)
 	}
