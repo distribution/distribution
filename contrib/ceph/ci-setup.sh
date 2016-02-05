@@ -23,6 +23,9 @@ done
 
 retries=0
 until [ $retries -ge 5 ]; do
+    # apt-get can get stuck and hold the lock in some circumstances
+    # so preemptively kill it
+    kill `pgrep apt-get` || true
   ceph-deploy install --release hammer $NODE && break
   retries=$[$retries+1]
   sleep 30
