@@ -22,7 +22,7 @@ import (
 // obtained using Seek
 func TestWriteSeek(t *testing.T) {
 	ctx := context.Background()
-	imageName := "foo/bar"
+	imageName, _ := reference.ParseNamed("foo/bar")
 	driver := inmemory.New()
 	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
 	if err != nil {
