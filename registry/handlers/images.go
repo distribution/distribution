@@ -174,10 +174,10 @@ func (imh *imageManifestHandler) convertSchema2Manifest(schema2Manifest *schema2
 		return nil, err
 	}
 
-	ref := imh.Repository.Name()
+	ref := imh.Repository.Named()
 
 	if imh.Tag != "" {
-		ref, err = reference.WithTag(imh.Repository.Name(), imh.Tag)
+		ref, err = reference.WithTag(ref, imh.Tag)
 		if err != nil {
 			imh.Errors = append(imh.Errors, v2.ErrorCodeTagInvalid.WithDetail(err))
 			return nil, err
@@ -289,7 +289,7 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 	}
 
 	// Construct a canonical url for the uploaded manifest.
-	ref, err := reference.WithDigest(imh.Repository.Name(), imh.Digest)
+	ref, err := reference.WithDigest(imh.Repository.Named(), imh.Digest)
 	if err != nil {
 		imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		return

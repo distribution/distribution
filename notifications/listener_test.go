@@ -109,7 +109,7 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
-		Name: repository.Name().Name(),
+		Name: repository.Named().Name(),
 		Tag:  tag,
 	}
 

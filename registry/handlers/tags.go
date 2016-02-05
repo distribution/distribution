@@ -40,7 +40,7 @@ func (th *tagsHandler) GetTags(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch err := err.(type) {
 		case distribution.ErrRepositoryUnknown:
-			th.Errors = append(th.Errors, v2.ErrorCodeNameUnknown.WithDetail(map[string]string{"name": th.Repository.Name().Name()}))
+			th.Errors = append(th.Errors, v2.ErrorCodeNameUnknown.WithDetail(map[string]string{"name": th.Repository.Named().Name()}))
 		default:
 			th.Errors = append(th.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		}
@@ -51,7 +51,7 @@ func (th *tagsHandler) GetTags(w http.ResponseWriter, r *http.Request) {
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(tagsAPIResponse{
-		Name: th.Repository.Name().Name(),
+		Name: th.Repository.Named().Name(),
 		Tags: tags,
 	}); err != nil {
 		th.Errors = append(th.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
