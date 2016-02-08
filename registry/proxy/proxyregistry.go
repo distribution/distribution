@@ -1,10 +1,11 @@
 package proxy
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
+	"sync"
 
-	"fmt"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/configuration"
 	"github.com/docker/distribution/context"
@@ -26,6 +27,9 @@ type proxyingRegistry struct {
 	remoteURL        string
 	credentialStore  auth.CredentialStore
 	challengeManager auth.ChallengeManager
+
+	o      sync.Once
+	config configuration.Proxy
 }
 
 // NewRegistryPullThroughCache creates a registry acting as a pull through cache
@@ -93,18 +97,13 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 		return nil, err
 	}
 
-	challengeManager := auth.NewSimpleChallengeManager()
-	cs, err := ConfigureAuth(config.RemoteURL, config.Username, config.Password, challengeManager)
-	if err != nil {
-		return nil, err
-	}
-
 	return &proxyingRegistry{
 		embedded:         registry,
 		scheduler:        s,
-		challengeManager: challengeManager,
-		credentialStore:  cs,
+		challengeManager: auth.NewSimpleChallengeManager(),
 		remoteURL:        config.RemoteURL,
+		o:                sync.Once{},
+		config:           config,
 	}, nil
 }
 
@@ -117,6 +116,21 @@ func (pr *proxyingRegistry) Repositories(ctx context.Context, repos []string, la
 }
 
 func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named) (distribution.Repository, error) {
+	var err error
+	pr.o.Do(func() {
+		if pr.credentialStore == nil {
+			var cs auth.CredentialStore
+			cs, err = ConfigureAuth(pr.config.RemoteURL, pr.config.Username, pr.config.Password, pr.challengeManager)
+			if err != nil {
+				return
+			}
+			pr.credentialStore = cs
+		}
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	tr := transport.NewTransport(http.DefaultTransport,
 		auth.NewAuthorizer(pr.challengeManager, auth.NewTokenHandler(http.DefaultTransport, pr.credentialStore, name.Name(), "pull")))
 
