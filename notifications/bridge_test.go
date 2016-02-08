@@ -63,13 +63,12 @@ func TestEventBridgeManifestPushed(t *testing.T) {
 
 func TestEventBridgeManifestDeleted(t *testing.T) {
 	l := createTestEnv(t, testSinkFn(func(events ...Event) error {
-		checkCommonManifest(t, EventActionDelete, events...)
-
+		checkDeleted(t, EventActionDelete, events...)
 		return nil
 	}))
 
 	repoRef, _ := reference.ParseNamed(repo)
-	if err := l.ManifestDeleted(repoRef, sm); err != nil {
+	if err := l.ManifestDeleted(repoRef, dgst); err != nil {
 		t.Fatalf("unexpected error notifying manifest pull: %v", err)
 	}
 }
@@ -89,6 +88,35 @@ func createTestEnv(t *testing.T, fn testSinkFn) Listener {
 	dgst = digest.FromBytes(payload)
 
 	return NewBridge(ub, source, actor, request, fn)
+}
+
+func checkDeleted(t *testing.T, action string, events ...Event) {
+	if len(events) != 1 {
+		t.Fatalf("unexpected number of events: %v != 1", len(events))
+	}
+
+	event := events[0]
+
+	if event.Source != source {
+		t.Fatalf("source not equal: %#v != %#v", event.Source, source)
+	}
+
+	if event.Request != request {
+		t.Fatalf("request not equal: %#v != %#v", event.Request, request)
+	}
+
+	if event.Actor != actor {
+		t.Fatalf("request not equal: %#v != %#v", event.Actor, actor)
+	}
+
+	if event.Target.Digest != dgst {
+		t.Fatalf("unexpected digest on event target: %q != %q", event.Target.Digest, dgst)
+	}
+
+	if event.Target.Repository != repo {
+		t.Fatalf("unexpected repository: %q != %q", event.Target.Repository, repo)
+	}
+
 }
 
 func checkCommonManifest(t *testing.T, action string, events ...Event) {

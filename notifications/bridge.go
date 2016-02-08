@@ -6,6 +6,7 @@ import (
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
+	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/uuid"
 )
@@ -60,8 +61,8 @@ func (b *bridge) ManifestPulled(repo reference.Named, sm distribution.Manifest) 
 	return b.createManifestEventAndWrite(EventActionPull, repo, sm)
 }
 
-func (b *bridge) ManifestDeleted(repo reference.Named, sm distribution.Manifest) error {
-	return b.createManifestEventAndWrite(EventActionDelete, repo, sm)
+func (b *bridge) ManifestDeleted(repo reference.Named, dgst digest.Digest) error {
+	return b.createManifestDeleteEventAndWrite(EventActionDelete, repo, dgst)
 }
 
 func (b *bridge) BlobPushed(repo reference.Named, desc distribution.Descriptor) error {
@@ -81,8 +82,8 @@ func (b *bridge) BlobMounted(repo reference.Named, desc distribution.Descriptor,
 	return b.sink.Write(*event)
 }
 
-func (b *bridge) BlobDeleted(repo reference.Named, desc distribution.Descriptor) error {
-	return b.createBlobEventAndWrite(EventActionDelete, repo, desc)
+func (b *bridge) BlobDeleted(repo reference.Named, dgst digest.Digest) error {
+	return b.createBlobDeleteEventAndWrite(EventActionDelete, repo, dgst)
 }
 
 func (b *bridge) createManifestEventAndWrite(action string, repo reference.Named, sm distribution.Manifest) error {
@@ -92,6 +93,14 @@ func (b *bridge) createManifestEventAndWrite(action string, repo reference.Named
 	}
 
 	return b.sink.Write(*manifestEvent)
+}
+
+func (b *bridge) createManifestDeleteEventAndWrite(action string, repo reference.Named, dgst digest.Digest) error {
+	event := b.createEvent(action)
+	event.Target.Repository = repo.Name()
+	event.Target.Digest = dgst
+
+	return b.sink.Write(*event)
 }
 
 func (b *bridge) createManifestEvent(action string, repo reference.Named, sm distribution.Manifest) (*Event, error) {
@@ -125,6 +134,14 @@ func (b *bridge) createManifestEvent(action string, repo reference.Named, sm dis
 	}
 
 	return event, nil
+}
+
+func (b *bridge) createBlobDeleteEventAndWrite(action string, repo reference.Named, dgst digest.Digest) error {
+	event := b.createEvent(action)
+	event.Target.Digest = dgst
+	event.Target.Repository = repo.Name()
+
+	return b.sink.Write(*event)
 }
 
 func (b *bridge) createBlobEventAndWrite(action string, repo reference.Named, desc distribution.Descriptor) error {
