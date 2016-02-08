@@ -2,4 +2,4 @@
 
 package main
 
-import _ "github.com/docker/distribution/registry/storage/driver/rados"
+// import _ "github.com/docker/distribution/registry/storage/driver/rados"

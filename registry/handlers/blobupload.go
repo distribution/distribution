@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 
 	"github.com/docker/distribution"
 	ctxu "github.com/docker/distribution/context"
@@ -76,28 +75,14 @@ func blobUploadDispatcher(ctx *Context, r *http.Request) http.Handler {
 		}
 		buh.Upload = upload
 
-		if state.Offset > 0 {
-			// Seek the blob upload to the correct spot if it's non-zero.
-			// These error conditions should be rare and demonstrate really
-			// problems. We basically cancel the upload and tell the client to
-			// start over.
-			if nn, err := upload.Seek(buh.State.Offset, os.SEEK_SET); err != nil {
-				defer upload.Close()
-				ctxu.GetLogger(ctx).Infof("error seeking blob upload: %v", err)
-				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					buh.Errors = append(buh.Errors, v2.ErrorCodeBlobUploadInvalid.WithDetail(err))
-					upload.Cancel(buh)
-				})
-			} else if nn != buh.State.Offset {
-				defer upload.Close()
-				ctxu.GetLogger(ctx).Infof("seek to wrong offest: %d != %d", nn, buh.State.Offset)
-				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					buh.Errors = append(buh.Errors, v2.ErrorCodeBlobUploadInvalid.WithDetail(err))
-					upload.Cancel(buh)
-				})
-			}
+		if size := upload.Size(); size != buh.State.Offset {
+			defer upload.Close()
+			ctxu.GetLogger(ctx).Infof("upload resumed at wrong offest: %d != %d", size, buh.State.Offset)
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				buh.Errors = append(buh.Errors, v2.ErrorCodeBlobUploadInvalid.WithDetail(err))
+				upload.Cancel(buh)
+			})
 		}
-
 		return closeResources(handler, buh.Upload)
 	}
 
@@ -239,10 +224,7 @@ func (buh *blobUploadHandler) PutBlobUploadComplete(w http.ResponseWriter, r *ht
 		return
 	}
 
-	size := buh.State.Offset
-	if offset, err := buh.Upload.Seek(0, os.SEEK_CUR); err == nil {
-		size = offset
-	}
+	size := buh.Upload.Size()
 
 	desc, err := buh.Upload.Commit(buh, distribution.Descriptor{
 		Digest: dgst,
@@ -308,21 +290,10 @@ func (buh *blobUploadHandler) CancelBlobUpload(w http.ResponseWriter, r *http.Re
 // uploads always start at a 0 offset. This allows disabling resumable push by
 // always returning a 0 offset on check status.
 func (buh *blobUploadHandler) blobUploadResponse(w http.ResponseWriter, r *http.Request, fresh bool) error {
-
-	var offset int64
-	if !fresh {
-		var err error
-		offset, err = buh.Upload.Seek(0, os.SEEK_CUR)
-		if err != nil {
-			ctxu.GetLogger(buh).Errorf("unable get current offset of blob upload: %v", err)
-			return err
-		}
-	}
-
 	// TODO(stevvooe): Need a better way to manage the upload state automatically.
 	buh.State.Name = buh.Repository.Named().Name()
 	buh.State.UUID = buh.Upload.ID()
-	buh.State.Offset = offset
+	buh.State.Offset = buh.Upload.Size()
 	buh.State.StartedAt = buh.Upload.StartedAt()
 
 	token, err := hmacKey(buh.Config.HTTP.Secret).packUploadState(buh.State)
@@ -341,7 +312,7 @@ func (buh *blobUploadHandler) blobUploadResponse(w http.ResponseWriter, r *http.
 		return err
 	}
 
-	endRange := offset
+	endRange := buh.Upload.Size()
 	if endRange > 0 {
 		endRange = endRange - 1
 	}

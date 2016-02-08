@@ -41,10 +41,7 @@ func TestWriteSeek(t *testing.T) {
 	}
 	contents := []byte{1, 2, 3}
 	blobUpload.Write(contents)
-	offset, err := blobUpload.Seek(0, os.SEEK_CUR)
-	if err != nil {
-		t.Fatalf("unexpected error in blobUpload.Seek: %s", err)
-	}
+	offset := blobUpload.Size()
 	if offset != int64(len(contents)) {
 		t.Fatalf("unexpected value for blobUpload offset:  %v != %v", offset, len(contents))
 	}
@@ -113,11 +110,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 		t.Fatalf("layer data write incomplete")
 	}
 
-	offset, err := blobUpload.Seek(0, os.SEEK_CUR)
-	if err != nil {
-		t.Fatalf("unexpected error seeking layer upload: %v", err)
-	}
-
+	offset := blobUpload.Size()
 	if offset != nn {
 		t.Fatalf("blobUpload not updated with correct offset: %v != %v", offset, nn)
 	}

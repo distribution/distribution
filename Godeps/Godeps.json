@@ -43,7 +43,7 @@
 		},
 		{
 			"ImportPath": "github.com/Azure/azure-sdk-for-go/storage",
-			"Rev": "97d9593768bbbbd316f9c055dfc5f780933cd7fc"
+			"Rev": "95361a2573b1fa92a00c5fc2707a80308483c6f9"
 		},
 		{
 			"ImportPath": "github.com/Sirupsen/logrus",
