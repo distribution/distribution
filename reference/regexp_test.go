@@ -111,6 +111,10 @@ func TestHostRegexp(t *testing.T) {
 			input: "xn--n3h.com", // ☃.com in punycode
 			match: true,
 		},
+		{
+			input: "Asdf.com", // uppercase character
+			match: true,
+		},
 	}
 	r := regexp.MustCompile(`^` + hostnameRegexp.String() + `$`)
 	for i := range hostcases {
@@ -398,6 +402,14 @@ func TestFullNameRegexp(t *testing.T) {
 			input: "registry.io/foo/project--id.module--name.ver---sion--name",
 			match: true,
 			subs:  []string{"registry.io", "foo/project--id.module--name.ver---sion--name"},
+		},
+		{
+			input: "Asdf.com/foo/bar", // uppercase character in hostname
+			match: true,
+		},
+		{
+			input: "Foo/FarB", // uppercase characters in remote name
+			match: false,
 		},
 	}
 	for i := range testcases {
