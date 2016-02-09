@@ -5,7 +5,7 @@ import "regexp"
 var (
 	// alphaNumericRegexp defines the alpha numeric atom, typically a
 	// component of names. This only allows lower case characters and digits.
-	alphaNumericRegexp = match(`[a-z0-9]+`)
+	alphaNumericRegexp = match(`[A-Za-z0-9]+`)
 
 	// separatorRegexp defines the separators allowed to be embedded in name
 	// components. This allow one period, one or two underscore and multiple
@@ -22,7 +22,7 @@ var (
 	// hostnameComponentRegexp restricts the registry hostname component of a
 	// repository name to start with a component as defined by hostnameRegexp
 	// and followed by an optional port.
-	hostnameComponentRegexp = match(`(?:[a-z0-9]|[a-z0-9][a-z0-9-]*[a-z0-9])`)
+	hostnameComponentRegexp = match(`(?:[A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]*[A-Za-z0-9])`)
 
 	// hostnameRegexp defines the structure of potential hostname components
 	// that may be part of image names. This is purposely a subset of what is
