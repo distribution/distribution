@@ -6,10 +6,10 @@
 // 	reference                       := repository [ ":" tag ] [ "@" digest ]
 //	name                            := [hostname '/'] component ['/' component]*
 //	hostname                        := hostcomponent ['.' hostcomponent]* [':' port-number]
-//	hostcomponent                   := /([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])/
+//	hostcomponent                   := /([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9-]*[A-Za-z0-9])/
 //	port-number                     := /[0-9]+/
 //	component                       := alpha-numeric [separator alpha-numeric]*
-// 	alpha-numeric                   := /[a-z0-9]+/
+// 	alpha-numeric                   := /[A-Za-z0-9]+/
 //	separator                       := /[_.]|__|[-]*/
 //
 //	tag                             := /[\w][\w.-]{0,127}/
@@ -24,6 +24,7 @@ package reference
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/docker/distribution/digest"
 )
@@ -158,7 +159,7 @@ func Parse(s string) (Reference, error) {
 	}
 
 	ref := reference{
-		name: matches[1],
+		name: strings.ToLower(matches[1]),
 		tag:  matches[2],
 	}
 	if matches[3] != "" {
@@ -203,7 +204,7 @@ func WithName(name string) (Named, error) {
 	if !anchoredNameRegexp.MatchString(name) {
 		return nil, ErrReferenceInvalidFormat
 	}
-	return repository(name), nil
+	return repository(strings.ToLower(name)), nil
 }
 
 // WithTag combines the name from "name" and the tag from "tag" to form a

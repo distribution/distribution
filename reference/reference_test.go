@@ -150,6 +150,21 @@ func TestReferenceParse(t *testing.T) {
 			repository: "foo/foo_bar.com",
 			tag:        "8080",
 		},
+		{
+			input:      "TEST_REF",
+			repository: "test_ref",
+		},
+		{
+			input:      "Hostname:8080/Name",
+			hostname:   "hostname:8080",
+			repository: "hostname:8080/name",
+		},
+		{
+			input:      "Hostname:8080/Name:TAG",
+			hostname:   "hostname:8080",
+			repository: "hostname:8080/name",
+			tag:        "TAG",
+		},
 	}
 	for _, testcase := range referenceTestcases {
 		failf := func(format string, v ...interface{}) {
@@ -169,7 +184,7 @@ func TestReferenceParse(t *testing.T) {
 			failf("unexpected parse error: %v", err)
 			continue
 		}
-		if repo.String() != testcase.input {
+		if !strings.EqualFold(repo.String(), testcase.input) {
 			failf("mismatched repo: got %q, expected %q", repo.String(), testcase.input)
 		}
 
