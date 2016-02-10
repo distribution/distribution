@@ -75,12 +75,12 @@ When using authentication, some versions of docker also require you to trust the
 
 Usually, on Ubuntu this is done with:
 
-    cp auth/domain.crt /usr/local/share/ca-certificates/myregistrydomain.com.crt
+    cp certs/domain.crt /usr/local/share/ca-certificates/myregistrydomain.com.crt
     update-ca-certificates
 
 ... and on Red Hat (and its derivatives) with:
 
-    cp auth/domain.crt /etc/pki/ca-trust/source/anchors/myregistrydomain.com.crt
+    cp certs/domain.crt /etc/pki/ca-trust/source/anchors/myregistrydomain.com.crt
     update-ca-trust
 
 ... On some distributions, e.g. Oracle Linux 6, the Shared System Certificates feature needs to be manually enabled:
