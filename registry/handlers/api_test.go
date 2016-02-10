@@ -1378,18 +1378,27 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 	}
 	defer resp.Body.Close()
 
-	checkResponse(t, "fetching uploaded manifest as schema1", resp, http.StatusOK)
-	checkHeaders(t, resp, http.Header{
-		"Docker-Content-Digest": []string{dgst.String()},
-		"ETag":                  []string{fmt.Sprintf(`"%s"`, dgst)},
-	})
-
-	var fetchedSchema1Manifest schema1.SignedManifest
-	dec = json.NewDecoder(resp.Body)
-
-	if err := dec.Decode(&fetchedSchema1Manifest); err != nil {
-		t.Fatalf("error decoding fetched schema1 manifest: %v", err)
+	manifestBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("error reading response body: %v", err)
 	}
+
+	checkResponse(t, "fetching uploaded manifest as schema1", resp, http.StatusOK)
+
+	m, desc, err := distribution.UnmarshalManifest(schema1.MediaTypeManifest, manifestBytes)
+	if err != nil {
+		t.Fatalf("unexpected error unmarshalling manifest: %v", err)
+	}
+
+	fetchedSchema1Manifest, ok := m.(*schema1.SignedManifest)
+	if !ok {
+		t.Fatalf("expecting schema1 manifest")
+	}
+
+	checkHeaders(t, resp, http.Header{
+		"Docker-Content-Digest": []string{desc.Digest.String()},
+		"ETag":                  []string{fmt.Sprintf(`"%s"`, desc.Digest)},
+	})
 
 	if fetchedSchema1Manifest.Manifest.SchemaVersion != 1 {
 		t.Fatal("wrong schema version")
@@ -1603,18 +1612,27 @@ func testManifestAPIManifestList(t *testing.T, env *testEnv, args manifestArgs) 
 	}
 	defer resp.Body.Close()
 
-	checkResponse(t, "fetching uploaded manifest list as schema1", resp, http.StatusOK)
-	checkHeaders(t, resp, http.Header{
-		"Docker-Content-Digest": []string{dgst.String()},
-		"ETag":                  []string{fmt.Sprintf(`"%s"`, dgst)},
-	})
-
-	var fetchedSchema1Manifest schema1.SignedManifest
-	dec = json.NewDecoder(resp.Body)
-
-	if err := dec.Decode(&fetchedSchema1Manifest); err != nil {
-		t.Fatalf("error decoding fetched schema1 manifest: %v", err)
+	manifestBytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("error reading response body: %v", err)
 	}
+
+	checkResponse(t, "fetching uploaded manifest list as schema1", resp, http.StatusOK)
+
+	m, desc, err := distribution.UnmarshalManifest(schema1.MediaTypeManifest, manifestBytes)
+	if err != nil {
+		t.Fatalf("unexpected error unmarshalling manifest: %v", err)
+	}
+
+	fetchedSchema1Manifest, ok := m.(*schema1.SignedManifest)
+	if !ok {
+		t.Fatalf("expecting schema1 manifest")
+	}
+
+	checkHeaders(t, resp, http.Header{
+		"Docker-Content-Digest": []string{desc.Digest.String()},
+		"ETag":                  []string{fmt.Sprintf(`"%s"`, desc.Digest)},
+	})
 
 	if fetchedSchema1Manifest.Manifest.SchemaVersion != 1 {
 		t.Fatal("wrong schema version")
