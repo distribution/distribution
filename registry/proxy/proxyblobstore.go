@@ -190,6 +190,10 @@ func (pbs *proxyBlobStore) Get(ctx context.Context, dgst digest.Digest) ([]byte,
 	return nil, distribution.ErrUnsupported
 }
 
+func (pbs *proxyBlobStore) Enumerate(ctx context.Context, ingester func(digest.Digest) error) error {
+	return distribution.ErrUnsupported
+}
+
 func (pbs *proxyBlobStore) Delete(ctx context.Context, dgst digest.Digest) error {
 	return distribution.ErrUnsupported
 }

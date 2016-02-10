@@ -13,6 +13,17 @@ import (
 	"github.com/docker/distribution/manifest/schema2"
 )
 
+type manifestRevisionEnumKind int
+
+const (
+	// TODO(miminar): shall we distinguish more kinds?
+	// m. revision may be unlinked, malformed, failing verification,
+	// dangling (link points to missing blob) ...
+	manifestRevisionEnumValid manifestRevisionEnumKind = iota
+	manifestRevisionEnumOrphaned
+	manifestRevisionEnumAll
+)
+
 // A ManifestHandler gets and puts manifests of a particular type.
 type ManifestHandler interface {
 	// Unmarshal unmarshals the manifest from a byte slice.
@@ -20,6 +31,32 @@ type ManifestHandler interface {
 
 	// Put creates or updates the given manifest returning the manifest digest.
 	Put(ctx context.Context, manifest distribution.Manifest, skipDependencyVerification bool) (digest.Digest, error)
+}
+
+// EnumerateOrphanedManifestRevisions makes manifest service enumerate orphaned
+// (unlinked, deleted) manifest revisions instead of valid ones. Orphaned
+// manifest revision is returned as a manifest schema2 with
+// Manifest.Config.MediaType set to MediaTypeOrphanedManifestRevision.
+func EnumerateOrphanedManifestRevisions() distribution.ManifestServiceOption {
+	return enumerateManifestRevisionKindOption{manifestRevisionEnumOrphaned}
+}
+
+// EnumerateAllManifestRevisions makes manifest service enumerate both valid
+// and orphaned manifest revisions instead of just valid ones.
+func EnumerateAllManifestRevisions() distribution.ManifestServiceOption {
+	return enumerateManifestRevisionKindOption{manifestRevisionEnumAll}
+}
+
+type enumerateManifestRevisionKindOption struct {
+	kind manifestRevisionEnumKind
+}
+
+func (o enumerateManifestRevisionKindOption) Apply(m distribution.ManifestService) error {
+	if ms, ok := m.(*manifestStore); ok {
+		ms.enumerateKind = o.kind
+		return nil
+	}
+	return fmt.Errorf("enumerate manifest revision kind only valid for manifestStore")
 }
 
 // SkipLayerVerification allows a manifest to be Put before its
@@ -38,11 +75,40 @@ func (o skipLayerOption) Apply(m distribution.ManifestService) error {
 	return fmt.Errorf("skip layer verification only valid for manifestStore")
 }
 
+// EnumerateManifestRevisions is an utility function for enumerating manifest
+// revisions of given manifest store. fn callback will be called for any
+// manifest digest found. Kind of digests yielded can be controlled with
+// enumerateManifestRevisionKindOption. If a digest refers to valid blob,
+// callback will be called with manifest object. If it cannot be read, callback
+// will be called with an error. Any error returned from callback will stop the
+// enumeration. If all the digests are processed, io.EOF will be returned.
+func EnumerateManifestRevisions(ms distribution.ManifestService, ctx context.Context, fn func(dgst digest.Digest, manifest distribution.Manifest, err error) error) error {
+	store, ok := ms.(*manifestStore)
+	if !ok {
+		return fmt.Errorf("enumerate manifest revisions only valid for manifestStore")
+	}
+
+	return store.blobStore.Enumerate(ctx, func(dgst digest.Digest) error {
+		m, err := store.Get(ctx, dgst)
+		if err == nil && store.enumerateKind != manifestRevisionEnumOrphaned {
+			if fn(dgst, m, nil) != nil {
+				return ErrFinishedWalk
+			}
+		} else if err != nil && store.enumerateKind != manifestRevisionEnumValid {
+			if fn(dgst, nil, err) != nil {
+				return ErrFinishedWalk
+			}
+		}
+		return nil
+	})
+}
+
 type manifestStore struct {
 	repository *repository
 	blobStore  *linkedBlobStore
 	ctx        context.Context
 
+	enumerateKind              manifestRevisionEnumKind
 	skipDependencyVerification bool
 
 	schema1Handler      ManifestHandler
@@ -129,6 +195,9 @@ func (ms *manifestStore) Delete(ctx context.Context, dgst digest.Digest) error {
 	return ms.blobStore.Delete(ctx, dgst)
 }
 
-func (ms *manifestStore) Enumerate(ctx context.Context, manifests []distribution.Manifest, last distribution.Manifest) (n int, err error) {
-	return 0, distribution.ErrUnsupported
+func (ms *manifestStore) Enumerate(ctx context.Context, ingester func(digest.Digest) error) error {
+	context.GetLogger(ms.ctx).Debug("(*manifestStore).Enumerate")
+	return EnumerateManifestRevisions(ms, ctx, func(dgst digest.Digest, m distribution.Manifest, err error) error {
+		return ingester(dgst)
+	})
 }

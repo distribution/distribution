@@ -51,6 +51,14 @@ func (sbs statsBlobStore) Create(ctx context.Context, options ...distribution.Bl
 	return sbs.blobs.Create(ctx, options...)
 }
 
+func (sbs statsBlobStore) Enumerate(ctx context.Context, ingester func(digest.Digest) error) error {
+	sbsMu.Lock()
+	sbs.stats["enumerate"]++
+	sbsMu.Unlock()
+
+	return sbs.blobs.Enumerate(ctx, ingester)
+}
+
 func (sbs statsBlobStore) Resume(ctx context.Context, id string) (distribution.BlobWriter, error) {
 	sbsMu.Lock()
 	sbs.stats["resume"]++

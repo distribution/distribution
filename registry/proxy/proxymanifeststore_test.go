@@ -58,11 +58,10 @@ func (sm statsManifest) Put(ctx context.Context, manifest distribution.Manifest,
 	return sm.manifests.Put(ctx, manifest)
 }
 
-/*func (sm statsManifest) Enumerate(ctx context.Context, manifests []distribution.Manifest, last distribution.Manifest) (n int, err error) {
+func (sm statsManifest) Enumerate(ctx context.Context, fn func(digest.Digest) error) error {
 	sm.stats["enumerate"]++
-	return sm.manifests.Enumerate(ctx, manifests, last)
+	return sm.manifests.Enumerate(ctx, fn)
 }
-*/
 
 func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestEnv {
 	nameRef, err := reference.ParseNamed(name)
