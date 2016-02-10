@@ -216,6 +216,30 @@ var APNortheast = Region{
 	"https://elasticache.ap-northeast-1.amazonaws.com",
 }
 
+var APNortheast2 = Region{
+	"ap-northeast-2",
+	ServiceInfo{"https://ec2.ap-northeast-2.amazonaws.com", V2Signature},
+	"https://s3-ap-northeast-2.amazonaws.com",
+	"",
+	true,
+	true,
+	"",
+	"https://sns.ap-northeast-2.amazonaws.com",
+	"https://sqs.ap-northeast-2.amazonaws.com",
+	"",
+	"https://iam.amazonaws.com",
+	"https://elasticloadbalancing.ap-northeast-2.amazonaws.com",
+	"https://kms.ap-northeast-2.amazonaws.com",
+	"https://dynamodb.ap-northeast-2.amazonaws.com",
+	ServiceInfo{"https://monitoring.ap-northeast-2.amazonaws.com", V2Signature},
+	"https://autoscaling.ap-northeast-2.amazonaws.com",
+	ServiceInfo{"https://rds.ap-northeast-2.amazonaws.com", V2Signature},
+	"https://kinesis.ap-northeast-2.amazonaws.com",
+	"https://sts.ap-northeast-2.amazonaws.com",
+	"https://cloudformation.ap-northeast-2.amazonaws.com",
+	"https://elasticache.ap-northeast-2.amazonaws.com",
+}
+
 var SAEast = Region{
 	"sa-east-1",
 	ServiceInfo{"https://ec2.sa-east-1.amazonaws.com", V2Signature},
