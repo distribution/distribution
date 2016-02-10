@@ -196,6 +196,7 @@ func (imh *imageManifestHandler) convertSchema2Manifest(schema2Manifest *schema2
 		imh.Errors = append(imh.Errors, v2.ErrorCodeManifestInvalid.WithDetail(err))
 		return nil, err
 	}
+	imh.Digest = digest.FromBytes(manifest.(*schema1.SignedManifest).Canonical)
 
 	return manifest, nil
 }
