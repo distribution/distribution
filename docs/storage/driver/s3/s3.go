@@ -107,17 +107,18 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	// Providing no values for these is valid in case the user is authenticating
 	// with an IAM on an ec2 instance (in which case the instance credentials will
 	// be summoned when GetAuth is called)
-	accessKey, ok := parameters["accesskey"]
-	if !ok {
+	accessKey := parameters["accesskey"]
+	if accessKey == nil {
 		accessKey = ""
 	}
-	secretKey, ok := parameters["secretkey"]
-	if !ok {
+
+	secretKey := parameters["secretkey"]
+	if secretKey == nil {
 		secretKey = ""
 	}
 
-	regionName, ok := parameters["region"]
-	if !ok || fmt.Sprint(regionName) == "" {
+	regionName := parameters["region"]
+	if regionName == nil || fmt.Sprint(regionName) == "" {
 		return nil, fmt.Errorf("No region parameter provided")
 	}
 	region := aws.GetRegion(fmt.Sprint(regionName))
@@ -125,69 +126,93 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		return nil, fmt.Errorf("Invalid region provided: %v", region)
 	}
 
-	bucket, ok := parameters["bucket"]
-	if !ok || fmt.Sprint(bucket) == "" {
+	bucket := parameters["bucket"]
+	if bucket == nil || fmt.Sprint(bucket) == "" {
 		return nil, fmt.Errorf("No bucket parameter provided")
 	}
 
 	encryptBool := false
-	encrypt, ok := parameters["encrypt"]
-	if ok {
-		encryptBool, ok = encrypt.(bool)
-		if !ok {
+	encrypt := parameters["encrypt"]
+	switch encrypt := encrypt.(type) {
+	case string:
+		b, err := strconv.ParseBool(encrypt)
+		if err != nil {
 			return nil, fmt.Errorf("The encrypt parameter should be a boolean")
 		}
+		encryptBool = b
+	case bool:
+		encryptBool = encrypt
+	case nil:
+		// do nothing
+	default:
+		return nil, fmt.Errorf("The encrypt parameter should be a boolean")
 	}
 
 	secureBool := true
-	secure, ok := parameters["secure"]
-	if ok {
-		secureBool, ok = secure.(bool)
-		if !ok {
+	secure := parameters["secure"]
+	switch secure := secure.(type) {
+	case string:
+		b, err := strconv.ParseBool(secure)
+		if err != nil {
 			return nil, fmt.Errorf("The secure parameter should be a boolean")
 		}
+		secureBool = b
+	case bool:
+		secureBool = secure
+	case nil:
+		// do nothing
+	default:
+		return nil, fmt.Errorf("The secure parameter should be a boolean")
 	}
 
 	v4AuthBool := false
-	v4Auth, ok := parameters["v4auth"]
-	if ok {
-		v4AuthBool, ok = v4Auth.(bool)
-		if !ok {
+	v4Auth := parameters["v4auth"]
+	switch v4Auth := v4Auth.(type) {
+	case string:
+		b, err := strconv.ParseBool(v4Auth)
+		if err != nil {
 			return nil, fmt.Errorf("The v4auth parameter should be a boolean")
 		}
+		v4AuthBool = b
+	case bool:
+		v4AuthBool = v4Auth
+	case nil:
+		// do nothing
+	default:
+		return nil, fmt.Errorf("The v4auth parameter should be a boolean")
 	}
 
 	chunkSize := int64(defaultChunkSize)
-	chunkSizeParam, ok := parameters["chunksize"]
-	if ok {
-		switch v := chunkSizeParam.(type) {
-		case string:
-			vv, err := strconv.ParseInt(v, 0, 64)
-			if err != nil {
-				return nil, fmt.Errorf("chunksize parameter must be an integer, %v invalid", chunkSizeParam)
-			}
-			chunkSize = vv
-		case int64:
-			chunkSize = v
-		case int, uint, int32, uint32, uint64:
-			chunkSize = reflect.ValueOf(v).Convert(reflect.TypeOf(chunkSize)).Int()
-		default:
-			return nil, fmt.Errorf("invalid value for chunksize: %#v", chunkSizeParam)
+	chunkSizeParam := parameters["chunksize"]
+	switch v := chunkSizeParam.(type) {
+	case string:
+		vv, err := strconv.ParseInt(v, 0, 64)
+		if err != nil {
+			return nil, fmt.Errorf("chunksize parameter must be an integer, %v invalid", chunkSizeParam)
 		}
-
-		if chunkSize < minChunkSize {
-			return nil, fmt.Errorf("The chunksize %#v parameter should be a number that is larger than or equal to %d", chunkSize, minChunkSize)
-		}
+		chunkSize = vv
+	case int64:
+		chunkSize = v
+	case int, uint, int32, uint32, uint64:
+		chunkSize = reflect.ValueOf(v).Convert(reflect.TypeOf(chunkSize)).Int()
+	case nil:
+		// do nothing
+	default:
+		return nil, fmt.Errorf("invalid value for chunksize: %#v", chunkSizeParam)
 	}
 
-	rootDirectory, ok := parameters["rootdirectory"]
-	if !ok {
+	if chunkSize < minChunkSize {
+		return nil, fmt.Errorf("The chunksize %#v parameter should be a number that is larger than or equal to %d", chunkSize, minChunkSize)
+	}
+
+	rootDirectory := parameters["rootdirectory"]
+	if rootDirectory == nil {
 		rootDirectory = ""
 	}
 
 	storageClass := s3.StandardStorage
-	storageClassParam, ok := parameters["storageclass"]
-	if ok {
+	storageClassParam := parameters["storageclass"]
+	if storageClassParam != nil {
 		storageClassString, ok := storageClassParam.(string)
 		if !ok {
 			return nil, fmt.Errorf("The storageclass parameter must be one of %v, %v invalid", []s3.StorageClass{s3.StandardStorage, s3.ReducedRedundancy}, storageClassParam)
@@ -200,8 +225,8 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		storageClass = storageClassCasted
 	}
 
-	userAgent, ok := parameters["useragent"]
-	if !ok {
+	userAgent := parameters["useragent"]
+	if userAgent == nil {
 		userAgent = ""
 	}
 
