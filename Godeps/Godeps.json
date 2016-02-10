@@ -77,15 +77,15 @@
 		},
 		{
 			"ImportPath": "github.com/docker/goamz/aws",
-			"Rev": "29510ec7eba995a3750f6b38128c5318f8b71592"
+			"Rev": "f0a21f5b2e12f83a505ecf79b633bb2035cf6f85"
 		},
 		{
 			"ImportPath": "github.com/docker/goamz/cloudfront",
-			"Rev": "29510ec7eba995a3750f6b38128c5318f8b71592"
+			"Rev": "f0a21f5b2e12f83a505ecf79b633bb2035cf6f85"
 		},
 		{
 			"ImportPath": "github.com/docker/goamz/s3",
-			"Rev": "29510ec7eba995a3750f6b38128c5318f8b71592"
+			"Rev": "f0a21f5b2e12f83a505ecf79b633bb2035cf6f85"
 		},
 		{
 			"ImportPath": "github.com/docker/libtrust",
