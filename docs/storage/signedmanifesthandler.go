@@ -25,15 +25,30 @@ var _ ManifestHandler = &signedManifestHandler{}
 
 func (ms *signedManifestHandler) Unmarshal(ctx context.Context, dgst digest.Digest, content []byte) (distribution.Manifest, error) {
 	context.GetLogger(ms.ctx).Debug("(*signedManifestHandler).Unmarshal")
-	// Fetch the signatures for the manifest
-	signatures, err := ms.signatures.Get(dgst)
-	if err != nil {
-		return nil, err
+
+	var (
+		signatures [][]byte
+		err        error
+	)
+	if ms.repository.schema1SignaturesEnabled {
+		// Fetch the signatures for the manifest
+		signatures, err = ms.signatures.Get(dgst)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	jsig, err := libtrust.NewJSONSignature(content, signatures...)
 	if err != nil {
 		return nil, err
+	}
+
+	if ms.repository.schema1SigningKey != nil {
+		if err := jsig.Sign(ms.repository.schema1SigningKey); err != nil {
+			return nil, err
+		}
+	} else if !ms.repository.schema1SignaturesEnabled {
+		return nil, fmt.Errorf("missing signing key with signature store disabled")
 	}
 
 	// Extract the pretty JWS
@@ -75,14 +90,16 @@ func (ms *signedManifestHandler) Put(ctx context.Context, manifest distribution.
 		return "", err
 	}
 
-	// Grab each json signature and store them.
-	signatures, err := sm.Signatures()
-	if err != nil {
-		return "", err
-	}
+	if ms.repository.schema1SignaturesEnabled {
+		// Grab each json signature and store them.
+		signatures, err := sm.Signatures()
+		if err != nil {
+			return "", err
+		}
 
-	if err := ms.signatures.Put(revision.Digest, signatures...); err != nil {
-		return "", err
+		if err := ms.signatures.Put(revision.Digest, signatures...); err != nil {
+			return "", err
+		}
 	}
 
 	return revision.Digest, nil
