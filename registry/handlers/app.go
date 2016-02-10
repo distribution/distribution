@@ -155,11 +155,18 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	app.configureRedis(config)
 	app.configureLogHook(config)
 
-	// Generate an ephemeral key to be used for signing converted manifests
-	// for clients that don't support schema2.
-	app.trustKey, err = libtrust.GenerateECP256PrivateKey()
-	if err != nil {
-		panic(err)
+	if config.Compatibility.Schema1.TrustKey != "" {
+		app.trustKey, err = libtrust.LoadKeyFile(config.Compatibility.Schema1.TrustKey)
+		if err != nil {
+			panic(fmt.Sprintf(`could not load schema1 "signingkey" parameter: %v`, err))
+		}
+	} else {
+		// Generate an ephemeral key to be used for signing converted manifests
+		// for clients that don't support schema2.
+		app.trustKey, err = libtrust.GenerateECP256PrivateKey()
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	if config.HTTP.Host != "" {
@@ -174,6 +181,11 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 
 	if app.isCache {
 		options = append(options, storage.DisableDigestResumption)
+	}
+
+	if config.Compatibility.Schema1.DisableSignatureStore {
+		options = append(options, storage.DisableSchema1Signatures)
+		options = append(options, storage.Schema1SigningKey(app.trustKey))
 	}
 
 	// configure deletion
