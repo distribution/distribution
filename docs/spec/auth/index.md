@@ -8,5 +8,6 @@ keywords = ["registry, on-prem, images, tags, repository, distribution, authenti
 
 # Docker Registry v2 authentication
 
-See the [Token Authentication Specification](token.md) and
-[Token Authentication Implementation](jwt.md) for more information.
+See the [Token Authentication Specification](token.md),
+[Token Authentication Implementation](jwt.md), and
+[OAuth2 Token Authentication](oauth.md) for more information.
