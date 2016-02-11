@@ -7,8 +7,9 @@ import (
 
 // proxyTagService supports local and remote lookup of tags.
 type proxyTagService struct {
-	localTags  distribution.TagService
-	remoteTags distribution.TagService
+	localTags      distribution.TagService
+	remoteTags     distribution.TagService
+	authChallenger authChallenger
 }
 
 var _ distribution.TagService = proxyTagService{}
@@ -17,16 +18,19 @@ var _ distribution.TagService = proxyTagService{}
 // tag service first and then caching it locally.  If the remote is unavailable
 // the local association is returned
 func (pt proxyTagService) Get(ctx context.Context, tag string) (distribution.Descriptor, error) {
-	desc, err := pt.remoteTags.Get(ctx, tag)
+	err := pt.authChallenger.tryEstablishChallenges(ctx)
 	if err == nil {
-		err := pt.localTags.Tag(ctx, tag, desc)
-		if err != nil {
-			return distribution.Descriptor{}, err
+		desc, err := pt.remoteTags.Get(ctx, tag)
+		if err == nil {
+			err := pt.localTags.Tag(ctx, tag, desc)
+			if err != nil {
+				return distribution.Descriptor{}, err
+			}
+			return desc, nil
 		}
-		return desc, nil
 	}
 
-	desc, err = pt.localTags.Get(ctx, tag)
+	desc, err := pt.localTags.Get(ctx, tag)
 	if err != nil {
 		return distribution.Descriptor{}, err
 	}
@@ -46,9 +50,12 @@ func (pt proxyTagService) Untag(ctx context.Context, tag string) error {
 }
 
 func (pt proxyTagService) All(ctx context.Context) ([]string, error) {
-	tags, err := pt.remoteTags.All(ctx)
+	err := pt.authChallenger.tryEstablishChallenges(ctx)
 	if err == nil {
-		return tags, err
+		tags, err := pt.remoteTags.All(ctx)
+		if err == nil {
+			return tags, err
+		}
 	}
 	return pt.localTags.All(ctx)
 }

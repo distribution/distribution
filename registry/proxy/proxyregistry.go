@@ -1,10 +1,11 @@
 package proxy
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
+	"sync"
 
-	"fmt"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/configuration"
 	"github.com/docker/distribution/context"
@@ -19,13 +20,10 @@ import (
 
 // proxyingRegistry fetches content from a remote registry and caches it locally
 type proxyingRegistry struct {
-	embedded distribution.Namespace // provides local registry functionality
-
-	scheduler *scheduler.TTLExpirationScheduler
-
-	remoteURL        string
-	credentialStore  auth.CredentialStore
-	challengeManager auth.ChallengeManager
+	embedded       distribution.Namespace // provides local registry functionality
+	scheduler      *scheduler.TTLExpirationScheduler
+	remoteURL      string
+	authChallenger authChallenger
 }
 
 // NewRegistryPullThroughCache creates a registry acting as a pull through cache
@@ -93,18 +91,20 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 		return nil, err
 	}
 
-	challengeManager := auth.NewSimpleChallengeManager()
-	cs, err := ConfigureAuth(config.RemoteURL, config.Username, config.Password, challengeManager)
+	cs, err := configureAuth(config.Username, config.Password)
 	if err != nil {
 		return nil, err
 	}
 
 	return &proxyingRegistry{
-		embedded:         registry,
-		scheduler:        s,
-		challengeManager: challengeManager,
-		credentialStore:  cs,
-		remoteURL:        config.RemoteURL,
+		embedded:  registry,
+		scheduler: s,
+		remoteURL: config.RemoteURL,
+		authChallenger: &remoteAuthChallenger{
+			remoteURL:        config.RemoteURL,
+			challengeManager: auth.NewSimpleChallengeManager(),
+			credentialStore:  cs,
+		},
 	}, nil
 }
 
@@ -117,8 +117,13 @@ func (pr *proxyingRegistry) Repositories(ctx context.Context, repos []string, la
 }
 
 func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named) (distribution.Repository, error) {
+	hcm, ok := pr.authChallenger.(*remoteAuthChallenger)
+	if !ok {
+		return nil, fmt.Errorf("unexpected challenge manager type %T", pr.authChallenger)
+	}
+
 	tr := transport.NewTransport(http.DefaultTransport,
-		auth.NewAuthorizer(pr.challengeManager, auth.NewTokenHandler(http.DefaultTransport, pr.credentialStore, name.Name(), "pull")))
+		auth.NewAuthorizer(hcm.challengeManager, auth.NewTokenHandler(http.DefaultTransport, hcm.credentialStore, name.Name(), "pull")))
 
 	localRepo, err := pr.embedded.Repository(ctx, name)
 	if err != nil {
@@ -145,6 +150,7 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 			remoteStore:    remoteRepo.Blobs(ctx),
 			scheduler:      pr.scheduler,
 			repositoryName: name,
+			authChallenger: pr.authChallenger,
 		},
 		manifests: &proxyManifestStore{
 			repositoryName:  name,
@@ -152,13 +158,51 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 			remoteManifests: remoteManifests,
 			ctx:             ctx,
 			scheduler:       pr.scheduler,
+			authChallenger:  pr.authChallenger,
 		},
 		name: name,
 		tags: &proxyTagService{
-			localTags:  localRepo.Tags(ctx),
-			remoteTags: remoteRepo.Tags(ctx),
+			localTags:      localRepo.Tags(ctx),
+			remoteTags:     remoteRepo.Tags(ctx),
+			authChallenger: pr.authChallenger,
 		},
 	}, nil
+}
+
+// authChallenger encapsulates a request to the upstream to establish credential challenges
+type authChallenger interface {
+	tryEstablishChallenges(context.Context) error
+}
+
+type remoteAuthChallenger struct {
+	remoteURL string
+	sync.Mutex
+	challengeManager auth.ChallengeManager
+	credentialStore  auth.CredentialStore
+}
+
+// tryEstablishChallenges will attempt to get a challenge types for the upstream if none currently exist
+func (hcm *remoteAuthChallenger) tryEstablishChallenges(ctx context.Context) error {
+	hcm.Lock()
+	defer hcm.Unlock()
+
+	remoteURL := hcm.remoteURL + "/v2/"
+	challenges, err := hcm.challengeManager.GetChallenges(remoteURL)
+	if err != nil {
+		return err
+	}
+
+	if len(challenges) > 0 {
+		return nil
+	}
+
+	// establish challenge type with upstream
+	if err := ping(hcm.challengeManager, remoteURL, challengeHeader); err != nil {
+		return err
+	}
+
+	context.GetLogger(ctx).Infof("Challenge established with upstream : %s %s", remoteURL, hcm.challengeManager)
+	return nil
 }
 
 // proxiedRepository uses proxying blob and manifest services to serve content
