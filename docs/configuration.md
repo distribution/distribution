@@ -235,6 +235,10 @@ information about each option that appears later in this page.
       remoteurl: https://registry-1.docker.io
       username: [username]
       password: [password]
+    compatibility:
+      schema1:
+        signingkeyfile: /etc/registry/key.json
+        disablesignaturestore: true
 
 In some instances a configuration option is **optional** but it contains child
 options marked as **required**. This indicates that you can omit the parent with
@@ -1732,6 +1736,55 @@ Proxy enables a registry to be configured as a pull through cache to the officia
 
 To enable pulling private repositories (e.g. `batman/robin`) a username and password for user `batman` must be specified.  Note: These private repositories will be stored in the proxy cache's storage and relevant measures should be taken to protect access to this.
 
+## Compatibility
+
+    compatibility:
+      schema1:
+        signingkeyfile: /etc/registry/key.json
+        disablesignaturestore: true
+
+Configure handling of older and deprecated features. Each subsection
+defines a such a feature with configurable behavior.
+
+### Schema1
+
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>signingkeyfile</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+     The signing private key used for adding signatures to schema1 manifests.
+     If no signing key is provided, a new ECDSA key will be generated on
+     startup.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>disablesignaturestore</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+     Disables storage of signatures attached to schema1 manifests. By default
+     signatures are detached from schema1 manifests, stored, and reattached
+     when the manifest is requested. When this is true, the storage is disabled
+     and a new signature is always generated for schema1 manifests using the
+     schema1 signing key. Disabling signature storage will cause all newly
+     uploaded signatures to be discarded. Existing stored signatures will not
+     be removed but they will not be re-attached to the corresponding manifest.
+    </td>
+  </tr>
+</table>
 
 ## Example: Development configuration
 
