@@ -3,7 +3,7 @@
 //
 // Grammar
 //
-// 	reference                       := repository [ ":" tag ] [ "@" digest ]
+// 	reference                       := name [ ":" tag ] [ "@" digest ]
 //	name                            := [hostname '/'] component ['/' component]*
 //	hostname                        := hostcomponent ['.' hostcomponent]* [':' port-number]
 //	hostcomponent                   := /([a-z0-9]|[a-z0-9][a-z0-9-]*[a-z0-9])/
