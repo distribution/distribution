@@ -53,11 +53,14 @@ Content-Type: application/x-www-form-urlencoded
         this service.
     </dd>
     <dt>
-        <code>client</code>
+        <code>client_id</code>
     </dt>
     <dd>
-        (REQUIRED) The name of the client which is getting accessed. Intended to be human
-        readable for key auditing.
+        (REQUIRED) String identifying the client. This client_id does not need
+        to be registered with the authorization server but should be set to a
+        meaningful value in order to allow auditing keys created by unregistered
+        clients. Accepted syntax is defined in
+        [RFC6749 Appendix A.1](https://tools.ietf.org/html/rfc6749#appendix-A.1)
     </dd>
     <dt>
         <code>access_type</code>
@@ -97,7 +100,7 @@ Host: auth.docker.io
 Authorization: ...
 Content-Type: application/x-www-form-urlencoded
 
-grant_type=password&service=hub.docker.io&client=dockerengine&access_type=offline
+grant_type=password&service=hub.docker.io&client_id=dockerengine&access_type=offline
 
 HTTP/1.1 200 OK
 Content-Type: application/json
@@ -112,7 +115,7 @@ POST /token HTTP/1.1
 Host: auth.docker.io
 Content-Type: application/x-www-form-urlencoded
 
-grant_type=refresh_token&refresh_token=kas9Da81Dfa8&service=registry-1.docker.io&client=dockerengine&scope=repository:samalba/my-app:pull,push
+grant_type=refresh_token&refresh_token=kas9Da81Dfa8&service=registry-1.docker.io&client_id=dockerengine&scope=repository:samalba/my-app:pull,push
 
 HTTP/1.1 200 OK
 Content-Type: application/json
