@@ -1182,7 +1182,7 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 	manifest.Config.Digest = sampleConfigDigest
 	manifest.Config.Size = int64(len(sampleConfig))
 
-	// The manifest should still be invalid, because its layer doesnt exist
+	// The manifest should still be invalid, because its layer doesn't exist
 	resp = putManifest(t, "putting missing layer manifest", manifestURL, schema2.MediaTypeManifest, manifest)
 	defer resp.Body.Close()
 	checkResponse(t, "putting missing layer manifest", resp, http.StatusBadRequest)
@@ -1424,7 +1424,7 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 		t.Fatal("wrong number of History entries")
 	}
 
-	// Don't check V1Compatibility fields becuase we're using randomly-generated
+	// Don't check V1Compatibility fields because we're using randomly-generated
 	// layers.
 
 	return args
@@ -1659,7 +1659,7 @@ func testManifestAPIManifestList(t *testing.T, env *testEnv, args manifestArgs) 
 		t.Fatal("wrong number of History entries")
 	}
 
-	// Don't check V1Compatibility fields becuase we're using randomly-generated
+	// Don't check V1Compatibility fields because we're using randomly-generated
 	// layers.
 }
 

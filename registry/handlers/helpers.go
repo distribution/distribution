@@ -35,7 +35,7 @@ func copyFullPayload(responseWriter http.ResponseWriter, r *http.Request, destWr
 	// Read in the data, if any.
 	copied, err := io.Copy(destWriter, r.Body)
 	if clientClosed != nil && (err != nil || (r.ContentLength > 0 && copied < r.ContentLength)) {
-		// Didn't recieve as much content as expected. Did the client
+		// Didn't receive as much content as expected. Did the client
 		// disconnect during the request? If so, avoid returning a 400
 		// error to keep the logs cleaner.
 		select {

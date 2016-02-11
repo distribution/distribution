@@ -34,7 +34,7 @@ func newSafeMetrics() *safeMetrics {
 }
 
 // httpStatusListener returns the listener for the http sink that updates the
-// relevent counters.
+// relevant counters.
 func (sm *safeMetrics) httpStatusListener() httpStatusListener {
 	return &endpointMetricsHTTPStatusListener{
 		safeMetrics: sm,
@@ -49,7 +49,7 @@ func (sm *safeMetrics) eventQueueListener() eventQueueListener {
 }
 
 // endpointMetricsHTTPStatusListener increments counters related to http sinks
-// for the relevent events.
+// for the relevant events.
 type endpointMetricsHTTPStatusListener struct {
 	*safeMetrics
 }

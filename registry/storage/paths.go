@@ -48,7 +48,7 @@ const (
 // The storage backend layout is broken up into a content-addressable blob
 // store and repositories. The content-addressable blob store holds most data
 // throughout the backend, keyed by algorithm and digests of the underlying
-// content. Access to the blob store is controled through links from the
+// content. Access to the blob store is controlled through links from the
 // repository to blobstore.
 //
 // A repository is made up of layers, manifests and tags. The layers component
@@ -301,7 +301,7 @@ type manifestRevisionLinkPathSpec struct {
 
 func (manifestRevisionLinkPathSpec) pathSpec() {}
 
-// manifestSignaturesPathSpec decribes the path components for the directory
+// manifestSignaturesPathSpec describes the path components for the directory
 // containing all the signatures for the target blob. Entries are named with
 // the underlying key id.
 type manifestSignaturesPathSpec struct {
@@ -311,7 +311,7 @@ type manifestSignaturesPathSpec struct {
 
 func (manifestSignaturesPathSpec) pathSpec() {}
 
-// manifestSignatureLinkPathSpec decribes the path components used to look up
+// manifestSignatureLinkPathSpec describes the path components used to look up
 // a signature file by the hash of its blob.
 type manifestSignatureLinkPathSpec struct {
 	name      string
