@@ -285,7 +285,7 @@ func (d *driver) WriteStream(context ctx.Context, path string, offset int64, rea
 	if err != nil {
 		return nn, err
 	}
-	// wc was closed succesfully, so the temporary part exists, schedule it for deletion at the end
+	// wc was closed successfully, so the temporary part exists, schedule it for deletion at the end
 	// of the function
 	defer storageDeleteObject(gcsContext, d.bucket, partName)
 

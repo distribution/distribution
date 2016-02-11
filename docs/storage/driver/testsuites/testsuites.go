@@ -158,7 +158,7 @@ func (suite *DriverSuite) TestInvalidPaths(c *check.C) {
 
 	for _, filename := range invalidFiles {
 		err := suite.StorageDriver.PutContent(suite.ctx, filename, contents)
-		// only delete if file was succesfully written
+		// only delete if file was successfully written
 		if err == nil {
 			defer suite.deletePath(c, firstPart(filename))
 		}

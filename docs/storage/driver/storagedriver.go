@@ -133,7 +133,7 @@ func (err InvalidOffsetError) Error() string {
 }
 
 // Error is a catch-all error type which captures an error string and
-// the driver type on which it occured.
+// the driver type on which it occurred.
 type Error struct {
 	DriverName string
 	Enclosed   error
