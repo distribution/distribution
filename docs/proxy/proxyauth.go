@@ -8,6 +8,7 @@ import (
 )
 
 const tokenURL = "https://auth.docker.io/token"
+const challengeHeader = "Docker-Distribution-Api-Version"
 
 type userpass struct {
 	username string
@@ -24,12 +25,8 @@ func (c credentials) Basic(u *url.URL) (string, string) {
 	return up.username, up.password
 }
 
-// ConfigureAuth authorizes with the upstream registry
-func ConfigureAuth(remoteURL, username, password string, cm auth.ChallengeManager) (auth.CredentialStore, error) {
-	if err := ping(cm, remoteURL+"/v2/", "Docker-Distribution-Api-Version"); err != nil {
-		return nil, err
-	}
-
+// ConfigureAuth stores credentials for challenge responses
+func configureAuth(username, password string) (auth.CredentialStore, error) {
 	creds := map[string]userpass{
 		tokenURL: {
 			username: username,

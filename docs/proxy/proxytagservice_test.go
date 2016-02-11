@@ -69,8 +69,9 @@ func testProxyTagService(local, remote map[string]distribution.Descriptor) *prox
 		remote = make(map[string]distribution.Descriptor)
 	}
 	return &proxyTagService{
-		localTags:  &mockTagStore{mapping: local},
-		remoteTags: &mockTagStore{mapping: remote},
+		localTags:      &mockTagStore{mapping: local},
+		remoteTags:     &mockTagStore{mapping: remote},
+		authChallenger: &mockChallenger{},
 	}
 }
 
@@ -85,6 +86,10 @@ func TestGet(t *testing.T) {
 	d, err := proxyTags.Get(ctx, remoteTag)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	if proxyTags.authChallenger.(*mockChallenger).count != 1 {
+		t.Fatalf("Expected 1 auth challenge call, got %#v", proxyTags.authChallenger)
 	}
 
 	if d != remoteDesc {
@@ -110,6 +115,10 @@ func TestGet(t *testing.T) {
 	d, err = proxyTags.Get(ctx, remoteTag)
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	if proxyTags.authChallenger.(*mockChallenger).count != 2 {
+		t.Fatalf("Expected 2 auth challenge calls, got %#v", proxyTags.authChallenger)
 	}
 
 	if d != newRemoteDesc {
@@ -142,7 +151,11 @@ func TestGet(t *testing.T) {
 		t.Fatal("untagged tag should be pulled through")
 	}
 
-	// Add another tag.  Ensure both tags appear in enumerate
+	if proxyTags.authChallenger.(*mockChallenger).count != 3 {
+		t.Fatalf("Expected 3 auth challenge calls, got %#v", proxyTags.authChallenger)
+	}
+
+	// Add another tag.  Ensure both tags appear in 'All'
 	err = proxyTags.remoteTags.Tag(ctx, "funtag", distribution.Descriptor{Size: 42})
 	if err != nil {
 		t.Fatal(err)
@@ -160,5 +173,9 @@ func TestGet(t *testing.T) {
 	sort.Strings(all)
 	if all[0] != "funtag" && all[1] != "remote" {
 		t.Fatalf("Unexpected tags returned from All() : %v ", all)
+	}
+
+	if proxyTags.authChallenger.(*mockChallenger).count != 4 {
+		t.Fatalf("Expected 4 auth challenge calls, got %#v", proxyTags.authChallenger)
 	}
 }
