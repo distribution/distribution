@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"io"
+	"sync"
 	"testing"
 
 	"github.com/docker/distribution"
@@ -64,6 +65,20 @@ func (sm statsManifest) Put(ctx context.Context, manifest distribution.Manifest,
 }
 */
 
+type mockChallenger struct {
+	sync.Mutex
+	count int
+}
+
+// Called for remote operations only
+func (mc *mockChallenger) tryEstablishChallenges(context.Context) error {
+	mc.Lock()
+	defer mc.Unlock()
+
+	mc.count++
+	return nil
+}
+
 func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestEnv {
 	nameRef, err := reference.ParseNamed(name)
 	if err != nil {
@@ -120,6 +135,7 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 			remoteManifests: truthManifests,
 			scheduler:       s,
 			repositoryName:  nameRef,
+			authChallenger:  &mockChallenger{},
 		},
 	}
 }
@@ -198,6 +214,10 @@ func TestProxyManifests(t *testing.T) {
 		t.Errorf("Unexpected exists count : \n%v \n%v", localStats, remoteStats)
 	}
 
+	if env.manifests.authChallenger.(*mockChallenger).count != 1 {
+		t.Fatalf("Expected 1 auth challenge, got %#v", env.manifests.authChallenger)
+	}
+
 	// Get - should succeed and pull manifest into local
 	_, err = env.manifests.Get(ctx, env.manifestDigest)
 	if err != nil {
@@ -210,6 +230,10 @@ func TestProxyManifests(t *testing.T) {
 
 	if (*localStats)["put"] != 1 {
 		t.Errorf("Expected local put")
+	}
+
+	if env.manifests.authChallenger.(*mockChallenger).count != 2 {
+		t.Fatalf("Expected 2 auth challenges, got %#v", env.manifests.authChallenger)
 	}
 
 	// Stat - should only go to local
@@ -225,17 +249,18 @@ func TestProxyManifests(t *testing.T) {
 		t.Errorf("Unexpected exists count")
 	}
 
-	// Get - should get from remote, to test freshness
+	if env.manifests.authChallenger.(*mockChallenger).count != 2 {
+		t.Fatalf("Expected 2 auth challenges, got %#v", env.manifests.authChallenger)
+	}
+
+	// Get proxied - won't require another authchallenge
 	_, err = env.manifests.Get(ctx, env.manifestDigest)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if (*remoteStats)["get"] != 2 && (*remoteStats)["exists"] != 1 && (*localStats)["put"] != 1 {
-		t.Errorf("Unexpected get count")
+	if env.manifests.authChallenger.(*mockChallenger).count != 2 {
+		t.Fatalf("Expected 2 auth challenges, got %#v", env.manifests.authChallenger)
 	}
-}
-
-func TestProxyTagService(t *testing.T) {
 
 }
