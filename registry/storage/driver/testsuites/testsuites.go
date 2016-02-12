@@ -412,11 +412,11 @@ func (suite *DriverSuite) testContinueStreamAppend(c *check.C, chunkSize int64) 
 	c.Assert(err, check.IsNil)
 	c.Assert(nn, check.Equals, int64(len(contentsChunk1)))
 
-	curSize := writer.Size()
-	c.Assert(curSize, check.Equals, int64(len(contentsChunk1)))
-
 	err = writer.Close()
 	c.Assert(err, check.IsNil)
+
+	curSize := writer.Size()
+	c.Assert(curSize, check.Equals, int64(len(contentsChunk1)))
 
 	writer, err = suite.StorageDriver.Writer(suite.ctx, filename, true)
 	c.Assert(err, check.IsNil)
@@ -426,11 +426,11 @@ func (suite *DriverSuite) testContinueStreamAppend(c *check.C, chunkSize int64) 
 	c.Assert(err, check.IsNil)
 	c.Assert(nn, check.Equals, int64(len(contentsChunk2)))
 
-	curSize = writer.Size()
-	c.Assert(curSize, check.Equals, 2*chunkSize)
-
 	err = writer.Close()
 	c.Assert(err, check.IsNil)
+
+	curSize = writer.Size()
+	c.Assert(curSize, check.Equals, 2*chunkSize)
 
 	writer, err = suite.StorageDriver.Writer(suite.ctx, filename, true)
 	c.Assert(err, check.IsNil)
