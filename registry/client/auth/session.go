@@ -166,6 +166,16 @@ func (th *tokenHandler) Scheme() string {
 	return "bearer"
 }
 
+func getRealm(req *http.Request, params map[string]string) string {
+	if params["service"] == "docker-trusted-registry" {
+		// The realm key contains the relative path of the auth endpoint
+		return fmt.Sprintf("https://%s%s", req.URL.Host, params["realm"])
+	} else {
+		// Here realm maps to an absolute URL
+		return params["realm"]
+	}
+}
+
 func (th *tokenHandler) AuthorizeRequest(req *http.Request, params map[string]string) error {
 	var additionalScopes []string
 	if fromParam := req.URL.Query().Get("from"); fromParam != "" {
@@ -175,7 +185,9 @@ func (th *tokenHandler) AuthorizeRequest(req *http.Request, params map[string]st
 			Actions:  []string{"pull"},
 		}.String())
 	}
-	if err := th.refreshToken(params, additionalScopes...); err != nil {
+
+	realm := getRealm(req, params)
+	if err := th.refreshToken(params, realm, additionalScopes...); err != nil {
 		return err
 	}
 
@@ -184,7 +196,7 @@ func (th *tokenHandler) AuthorizeRequest(req *http.Request, params map[string]st
 	return nil
 }
 
-func (th *tokenHandler) refreshToken(params map[string]string, additionalScopes ...string) error {
+func (th *tokenHandler) refreshToken(params map[string]string, realm string, additionalScopes ...string) error {
 	th.tokenLock.Lock()
 	defer th.tokenLock.Unlock()
 	var addedScopes bool
@@ -196,7 +208,7 @@ func (th *tokenHandler) refreshToken(params map[string]string, additionalScopes 
 	}
 	now := th.clock.Now()
 	if now.After(th.tokenExpiration) || addedScopes {
-		tr, err := th.fetchToken(params)
+		tr, err := th.fetchToken(params, realm)
 		if err != nil {
 			return err
 		}
@@ -214,15 +226,8 @@ type tokenResponse struct {
 	IssuedAt    time.Time `json:"issued_at"`
 }
 
-func (th *tokenHandler) fetchToken(params map[string]string) (token *tokenResponse, err error) {
+func (th *tokenHandler) fetchToken(params map[string]string, realm string) (token *tokenResponse, err error) {
 	//log.Debugf("Getting bearer token with %s for %s", challenge.Parameters, ta.auth.Username)
-	realm, ok := params["realm"]
-	if !ok {
-		return nil, errors.New("no realm specified for token auth challenge")
-	}
-
-	// TODO(dmcgowan): Handle empty scheme
-
 	realmURL, err := url.Parse(realm)
 	if err != nil {
 		return nil, fmt.Errorf("invalid token auth challenge realm: %s", err)
