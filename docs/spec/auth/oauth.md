@@ -27,7 +27,6 @@ inside the token will not be extracted and presented by clients.
 POST /token
 
 #### Headers
-Authorization headers
 Content-Type: application/x-www-form-urlencoded
 
 #### Post parameters
@@ -39,10 +38,11 @@ Content-Type: application/x-www-form-urlencoded
     <dd>
         (REQUIRED) Type of grant used to get token. When getting a refresh token
         using credentials this type should be set to "password" and have the
-        accompanying basic auth header. Type "authorization_code" is reserved
-        for future use for authenticating to an authorization server without
-        having to send credentials directly from the client. When requesting an
-        access token with a refresh token this should be set to "refresh_token".
+        accompanying username and password paramters. Type "authorization_code"
+        is reserved for future use for authenticating to an authorization server
+        without having to send credentials directly from the client. When
+        requesting an access token with a refresh token this should be set to
+        "refresh_token".
     </dd>
     <dt>
         <code>service</code>
@@ -66,10 +66,10 @@ Content-Type: application/x-www-form-urlencoded
         <code>access_type</code>
     </dt>
     <dd>
-        (OPTIONAL) Access which is being requested. If "offline" is provided then a refresh
-        token will be returned. Otherwise only a short lived access token will
-        be returned. If the grant type is "refresh_token" this will only return
-        the same refresh token and not a new one.
+        (OPTIONAL) Access which is being requested. If "offline" is provided
+        then a refresh token will be returned. The default is "online" only
+        returning short lived access token. If the grant type is "refresh_token"
+        this will only return the same refresh token and not a new one.
     </dd>
     <dt>
         <code>scope</code>
@@ -77,12 +77,15 @@ Content-Type: application/x-www-form-urlencoded
     <dd>
         (OPTIONAL) The resource in question, formatted as one of the space-delimited
         entries from the <code>scope</code> parameters from the <code>WWW-Authenticate</code> header
-        shown above. This query parameter should be specified multiple times if
-        there is more than one <code>scope</code> entry from the <code>WWW-Authenticate</code>
-        header. The above example would be specified as:
-        <code>scope=repository:samalba/my-app:push</code>. When requesting a refresh
-        token the scopes may be empty since the refresh token will not be limited by
-        this scope, only the provided short lived access token.
+        shown above. This query parameter should only be specified once but may
+        contain multiple scopes using the scope list format defined in the scope
+        grammar. If multiple <code>scope</code> is provided from
+        <code>WWW-Authenticate</code> header the scopes should first be
+        converted to a scope list before requesting the token. The above example
+        would be specified as: <code>scope=repository:samalba/my-app:push</code>.
+        When requesting a refresh token the scopes may be empty since the
+        refresh token will not be limited by this scope, only the provided short
+        lived access token will have the scope limitation.
     </dd>
     <dt>
         <code>refresh_token</code>
@@ -90,22 +93,84 @@ Content-Type: application/x-www-form-urlencoded
     <dd>
         (OPTIONAL) The refresh token to use for authentication when grant type "refresh_token" is used.
     </dd>
+    <dt>
+        <code>username</code>
+    </dt>
+    <dd>
+        (OPTIONAL) The username to use for authentication when grant type "password" is used.
+    </dd>
+    <dt>
+        <code>password</code>
+    </dt>
+    <dd>
+        (OPTIONAL) The password to use for authentication when grant type "password" is used.
+    </dd>
 </dl>
+
+#### Response fields
+
+<dl>
+    <dt>
+        <code>access_token</code>
+    </dt>
+    <dd>
+        (REQUIRED) An opaque <code>Bearer</code> token that clients should
+        supply to subsequent requests in the <code>Authorization</code> header.
+        This token should not be attempted to be parsed or understood by the
+        client but treated as opaque string.
+    </dd>
+    <dt>
+        <code>scope</code>
+    </dt>
+    <dd>
+        (REQUIRED) The scope granted inside the access token. This may be the
+        same scope as requested or a subset. This requirement is stronger than
+        specified in [RFC6749 Section 4.2.2](https://tools.ietf.org/html/rfc6749#section-4.2.2)
+        by strictly requiring the scope in the return value.
+    </dd>
+    <dt>
+        <code>expires_in</code>
+    </dt>
+    <dd>
+        (REQUIRED) The duration in seconds since the token was issued that it
+        will remain valid.  When omitted, this defaults to 60 seconds.  For
+        compatibility with older clients, a token should never be returned with
+        less than 60 seconds to live.
+    </dd>
+    <dt>
+        <code>issued_at</code>
+    </dt>
+    <dd>
+        (Optional) The <a href="https://www.ietf.org/rfc/rfc3339.txt">RFC3339</a>-serialized UTC
+        standard time at which a given token was issued. If <code>issued_at</code> is omitted, the
+        expiration is from when the token exchange completed.
+    </dd>
+    <dt>
+        <code>refresh_token</code>
+    </dt>
+    <dd>
+        (Optional) Token which can be used to get additional access tokens for
+        the same subject with different scopes. This token should be kept secure
+        by the client and only sent to the authorization server which issues
+        bearer tokens. This field will only be set when `access_type=offline` is
+        provided in the request.
+    </dd>
+</dl>
+
 
 #### Example getting refresh token
 
 ```
 POST /token HTTP/1.1
 Host: auth.docker.io
-Authorization: ...
 Content-Type: application/x-www-form-urlencoded
 
-grant_type=password&service=hub.docker.io&client_id=dockerengine&access_type=offline
+grant_type=password&username=johndoe&password=A3ddj3w&service=hub.docker.io&client_id=dockerengine&access_type=offline
 
 HTTP/1.1 200 OK
 Content-Type: application/json
 
-{"refresh_token":"xT2s5VFNrbzZTMVExUmpwWVRsSklPbFJMTmtnNlMxUkxOanBCUVV0VU1Ga3d","access_token":"eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsIng1YyI6WyJNSUlDTHpDQ0FkU2dBd0lCQWdJQkFEQUtCZ2dxaGtqT1BRUURBakJHTVVRd1FnWURWUVFERXp0Uk5Gb3pPa2RYTjBrNldGUlFSRHBJVFRSUk9rOVVWRmc2TmtGRlF6cFNUVE5ET2tGU01rTTZUMFkzTnpwQ1ZrVkJPa2xHUlVrNlExazFTekFlRncweE5UQTJNalV4T1RVMU5EWmFGdzB4TmpBMk1qUXhPVFUxTkRaYU1FWXhSREJDQmdOVkJBTVRPMGhHU1UwNldGZFZWam8yUVZkSU9sWlpUVEk2TTFnMVREcFNWREkxT2s5VFNrbzZTMVExUmpwWVRsSklPbFJMTmtnNlMxUkxOanBCUVV0VU1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRXl2UzIvdEI3T3JlMkVxcGRDeFdtS1NqV1N2VmJ2TWUrWGVFTUNVMDByQjI0akNiUVhreFdmOSs0MUxQMlZNQ29BK0RMRkIwVjBGZGdwajlOWU5rL2pxT0JzakNCcnpBT0JnTlZIUThCQWY4RUJBTUNBSUF3RHdZRFZSMGxCQWd3QmdZRVZSMGxBREJFQmdOVkhRNEVQUVE3U0VaSlRUcFlWMVZXT2paQlYwZzZWbGxOTWpveldEVk1PbEpVTWpVNlQxTktTanBMVkRWR09saE9Va2c2VkVzMlNEcExWRXMyT2tGQlMxUXdSZ1lEVlIwakJEOHdQWUE3VVRSYU16cEhWemRKT2xoVVVFUTZTRTAwVVRwUFZGUllPalpCUlVNNlVrMHpRenBCVWpKRE9rOUdOemM2UWxaRlFUcEpSa1ZKT2tOWk5Vc3dDZ1lJS29aSXpqMEVBd0lEU1FBd1JnSWhBTXZiT2h4cHhrTktqSDRhMFBNS0lFdXRmTjZtRDFvMWs4ZEJOVGxuWVFudkFpRUF0YVJGSGJSR2o4ZlVSSzZ4UVJHRURvQm1ZZ3dZelR3Z3BMaGJBZzNOUmFvPSJdfQ.eyJhY2Nlc3MiOlt7InR5cGUiOiJyZXBvc2l0b3J5IiwibmFtZSI6ImRtY2dvd2FuL2hlbGxvLXdvcmxkIiwiYWN0aW9ucyI6WyJwdWxsIl19XSwiYXVkIjoicmVnaXN0cnkuZG9ja2VyLmlvIiwiZXhwIjoxNDU0NDM4Njc1LCJpYXQiOjE0NTQ0MzgzNzUsImlzcyI6ImF1dGguZG9ja2VyLmlvIiwianRpIjoiZXFrVmVsWWJtbW5KSDctNW53SEkiLCJuYmYiOjE0NTQ0MzgzNzUsInN1YiI6ImRtY2dvd2FuIn0"}
+{"refresh_token":"kas9Da81Dfa8","access_token":"eyJhbGciOiJFUzI1NiIsInR5","expires_in":"900","scope":""}
 ````
 
 #### Example refreshing an Access Token
@@ -120,6 +185,6 @@ grant_type=refresh_token&refresh_token=kas9Da81Dfa8&service=registry-1.docker.io
 HTTP/1.1 200 OK
 Content-Type: application/json
 
-{"access_token":"eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCIsIng1YyI6WyJNSUlDTHpDQ0FkU2dBd0lCQWdJQkFEQUtCZ2dxaGtqT1BRUURBakJHTVVRd1FnWURWUVFERXp0Uk5Gb3pPa2RYTjBrNldGUlFSRHBJVFRSUk9rOVVWRmc2TmtGRlF6cFNUVE5ET2tGU01rTTZUMFkzTnpwQ1ZrVkJPa2xHUlVrNlExazFTekFlRncweE5UQTJNalV4T1RVMU5EWmFGdzB4TmpBMk1qUXhPVFUxTkRaYU1FWXhSREJDQmdOVkJBTVRPMGhHU1UwNldGZFZWam8yUVZkSU9sWlpUVEk2TTFnMVREcFNWREkxT2s5VFNrbzZTMVExUmpwWVRsSklPbFJMTmtnNlMxUkxOanBCUVV0VU1Ga3dFd1lIS29aSXpqMENBUVlJS29aSXpqMERBUWNEUWdBRXl2UzIvdEI3T3JlMkVxcGRDeFdtS1NqV1N2VmJ2TWUrWGVFTUNVMDByQjI0akNiUVhreFdmOSs0MUxQMlZNQ29BK0RMRkIwVjBGZGdwajlOWU5rL2pxT0JzakNCcnpBT0JnTlZIUThCQWY4RUJBTUNBSUF3RHdZRFZSMGxCQWd3QmdZRVZSMGxBREJFQmdOVkhRNEVQUVE3U0VaSlRUcFlWMVZXT2paQlYwZzZWbGxOTWpveldEVk1PbEpVTWpVNlQxTktTanBMVkRWR09saE9Va2c2VkVzMlNEcExWRXMyT2tGQlMxUXdSZ1lEVlIwakJEOHdQWUE3VVRSYU16cEhWemRKT2xoVVVFUTZTRTAwVVRwUFZGUllPalpCUlVNNlVrMHpRenBCVWpKRE9rOUdOemM2UWxaRlFUcEpSa1ZKT2tOWk5Vc3dDZ1lJS29aSXpqMEVBd0lEU1FBd1JnSWhBTXZiT2h4cHhrTktqSDRhMFBNS0lFdXRmTjZtRDFvMWs4ZEJOVGxuWVFudkFpRUF0YVJGSGJSR2o4ZlVSSzZ4UVJHRURvQm1ZZ3dZelR3Z3BMaGJBZzNOUmFvPSJdfQ.eyJhY2Nlc3MiOlt7InR5cGUiOiJyZXBvc2l0b3J5IiwibmFtZSI6ImRtY2dvd2FuL2hlbGxvLXdvcmxkIiwiYWN0aW9ucyI6WyJwdWxsIl19XSwiYXVkIjoicmVnaXN0cnkuZG9ja2VyLmlvIiwiZXhwIjoxNDU0NDM4Njc1LCJpYXQiOjE0NTQ0MzgzNzUsImlzcyI6ImF1dGguZG9ja2VyLmlvIiwianRpIjoiZXFrVmVsWWJtbW5KSDctNW53SEkiLCJuYmYiOjE0NTQ0MzgzNzUsInN1YiI6ImRtY2dvd2FuIn0"}
+{"refresh_token":"kas9Da81Dfa8","access_token":"eyJhbGciOiJFUzI1NiIsInR5":"expires_in":"900","scope":"repository:samalba/my-app:pull,repository:samalba/my-app:push"}
 ````
 
