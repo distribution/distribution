@@ -75,6 +75,7 @@ func init() {
 			email:         email,
 			privateKey:    privateKey,
 			client:        oauth2.NewClient(ctx.Background(), ts),
+			chunkSize:     defaultChunkSize,
 		}
 
 		return New(parameters)

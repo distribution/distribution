@@ -86,6 +86,7 @@ information about each option that appears later in this page.
         bucket: bucketname
         keyfile: /path/to/keyfile
         rootdirectory: /gcs/object/name/prefix
+        chunksize: 5242880
       s3:
         accesskey: awsaccesskey
         secretkey: awssecretkey
