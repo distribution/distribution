@@ -157,6 +157,7 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 		tags: &proxyTagService{
 			localTags:  localRepo.Tags(ctx),
 			remoteTags: remoteRepo.Tags(ctx),
+			ctx:        ctx,
 		},
 	}, nil
 }

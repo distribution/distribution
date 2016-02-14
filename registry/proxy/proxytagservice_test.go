@@ -16,7 +16,7 @@ type mockTagStore struct {
 
 var _ distribution.TagService = &mockTagStore{}
 
-func (m *mockTagStore) Get(ctx context.Context, tag string) (distribution.Descriptor, error) {
+func (m *mockTagStore) Get(tag string) (distribution.Descriptor, error) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -26,7 +26,7 @@ func (m *mockTagStore) Get(ctx context.Context, tag string) (distribution.Descri
 	return distribution.Descriptor{}, distribution.ErrTagUnknown{}
 }
 
-func (m *mockTagStore) Tag(ctx context.Context, tag string, desc distribution.Descriptor) error {
+func (m *mockTagStore) Tag(tag string, desc distribution.Descriptor) error {
 	m.Lock()
 	defer m.Unlock()
 
@@ -34,7 +34,7 @@ func (m *mockTagStore) Tag(ctx context.Context, tag string, desc distribution.De
 	return nil
 }
 
-func (m *mockTagStore) Untag(ctx context.Context, tag string) error {
+func (m *mockTagStore) Untag(tag string) error {
 	m.Lock()
 	defer m.Unlock()
 
@@ -45,7 +45,7 @@ func (m *mockTagStore) Untag(ctx context.Context, tag string) error {
 	return distribution.ErrTagUnknown{}
 }
 
-func (m *mockTagStore) All(ctx context.Context) ([]string, error) {
+func (m *mockTagStore) All() ([]string, error) {
 	m.Lock()
 	defer m.Unlock()
 
@@ -57,7 +57,7 @@ func (m *mockTagStore) All(ctx context.Context) ([]string, error) {
 	return tags, nil
 }
 
-func (m *mockTagStore) Lookup(ctx context.Context, digest distribution.Descriptor) ([]string, error) {
+func (m *mockTagStore) Lookup(digest distribution.Descriptor) ([]string, error) {
 	panic("not implemented")
 }
 
@@ -69,6 +69,7 @@ func testProxyTagService(local, remote map[string]distribution.Descriptor) *prox
 		remote = make(map[string]distribution.Descriptor)
 	}
 	return &proxyTagService{
+		ctx:        context.Background(),
 		localTags:  &mockTagStore{mapping: local},
 		remoteTags: &mockTagStore{mapping: remote},
 	}
@@ -79,10 +80,8 @@ func TestGet(t *testing.T) {
 	remoteTag := "remote"
 	proxyTags := testProxyTagService(map[string]distribution.Descriptor{remoteTag: remoteDesc}, nil)
 
-	ctx := context.Background()
-
 	// Get pre-loaded tag
-	d, err := proxyTags.Get(ctx, remoteTag)
+	d, err := proxyTags.Get(remoteTag)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +90,7 @@ func TestGet(t *testing.T) {
 		t.Fatal("unable to get put tag")
 	}
 
-	local, err := proxyTags.localTags.Get(ctx, remoteTag)
+	local, err := proxyTags.localTags.Get(remoteTag)
 	if err != nil {
 		t.Fatal("remote tag not pulled into store")
 	}
@@ -102,12 +101,12 @@ func TestGet(t *testing.T) {
 
 	// Manually overwrite remote tag
 	newRemoteDesc := distribution.Descriptor{Size: 43}
-	err = proxyTags.remoteTags.Tag(ctx, remoteTag, newRemoteDesc)
+	err = proxyTags.remoteTags.Tag(remoteTag, newRemoteDesc)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	d, err = proxyTags.Get(ctx, remoteTag)
+	d, err = proxyTags.Get(remoteTag)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -116,39 +115,39 @@ func TestGet(t *testing.T) {
 		t.Fatal("unable to get put tag")
 	}
 
-	_, err = proxyTags.localTags.Get(ctx, remoteTag)
+	_, err = proxyTags.localTags.Get(remoteTag)
 	if err != nil {
 		t.Fatal("remote tag not pulled into store")
 	}
 
 	// untag, ensure it's removed locally, but present in remote
-	err = proxyTags.Untag(ctx, remoteTag)
+	err = proxyTags.Untag(remoteTag)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	_, err = proxyTags.localTags.Get(ctx, remoteTag)
+	_, err = proxyTags.localTags.Get(remoteTag)
 	if err == nil {
 		t.Fatalf("Expected error getting Untag'd tag")
 	}
 
-	_, err = proxyTags.remoteTags.Get(ctx, remoteTag)
+	_, err = proxyTags.remoteTags.Get(remoteTag)
 	if err != nil {
 		t.Fatalf("remote tag should not be untagged with proxyTag.Untag")
 	}
 
-	_, err = proxyTags.Get(ctx, remoteTag)
+	_, err = proxyTags.Get(remoteTag)
 	if err != nil {
 		t.Fatal("untagged tag should be pulled through")
 	}
 
 	// Add another tag.  Ensure both tags appear in enumerate
-	err = proxyTags.remoteTags.Tag(ctx, "funtag", distribution.Descriptor{Size: 42})
+	err = proxyTags.remoteTags.Tag("funtag", distribution.Descriptor{Size: 42})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	all, err := proxyTags.All(ctx)
+	all, err := proxyTags.All()
 	if err != nil {
 		t.Fatal(err)
 	}

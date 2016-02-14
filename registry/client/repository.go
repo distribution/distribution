@@ -205,7 +205,7 @@ type tags struct {
 }
 
 // All returns all tags
-func (t *tags) All(ctx context.Context) ([]string, error) {
+func (t *tags) All() ([]string, error) {
 	var tags []string
 
 	u, err := t.ub.BuildTagsURL(t.name)
@@ -283,7 +283,7 @@ func descriptorFromResponse(response *http.Response) (distribution.Descriptor, e
 // Get issues a HEAD request for a Manifest against its named endpoint in order
 // to construct a descriptor for the tag.  If the registry doesn't support HEADing
 // a manifest, fallback to GET.
-func (t *tags) Get(ctx context.Context, tag string) (distribution.Descriptor, error) {
+func (t *tags) Get(tag string) (distribution.Descriptor, error) {
 	ref, err := reference.WithTag(t.name, tag)
 	if err != nil {
 		return distribution.Descriptor{}, err
@@ -315,15 +315,15 @@ check:
 	}
 }
 
-func (t *tags) Lookup(ctx context.Context, digest distribution.Descriptor) ([]string, error) {
+func (t *tags) Lookup(digest distribution.Descriptor) ([]string, error) {
 	panic("not implemented")
 }
 
-func (t *tags) Tag(ctx context.Context, tag string, desc distribution.Descriptor) error {
+func (t *tags) Tag(tag string, desc distribution.Descriptor) error {
 	panic("not implemented")
 }
 
-func (t *tags) Untag(ctx context.Context, tag string) error {
+func (t *tags) Untag(tag string) error {
 	panic("not implemented")
 }
 

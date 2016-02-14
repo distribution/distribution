@@ -19,10 +19,11 @@ var _ distribution.TagService = &tagStore{}
 type tagStore struct {
 	repository *repository
 	blobStore  *blobStore
+	ctx        context.Context
 }
 
 // All returns all tags
-func (ts *tagStore) All(ctx context.Context) ([]string, error) {
+func (ts *tagStore) All() ([]string, error) {
 	var tags []string
 
 	pathSpec, err := pathFor(manifestTagPathSpec{
@@ -32,7 +33,7 @@ func (ts *tagStore) All(ctx context.Context) ([]string, error) {
 		return tags, err
 	}
 
-	entries, err := ts.blobStore.driver.List(ctx, pathSpec)
+	entries, err := ts.blobStore.driver.List(ts.ctx, pathSpec)
 	if err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
@@ -51,7 +52,7 @@ func (ts *tagStore) All(ctx context.Context) ([]string, error) {
 }
 
 // exists returns true if the specified manifest tag exists in the repository.
-func (ts *tagStore) exists(ctx context.Context, tag string) (bool, error) {
+func (ts *tagStore) exists(tag string) (bool, error) {
 	tagPath, err := pathFor(manifestTagCurrentPathSpec{
 		name: ts.repository.Named().Name(),
 		tag:  tag,
@@ -61,7 +62,7 @@ func (ts *tagStore) exists(ctx context.Context, tag string) (bool, error) {
 		return false, err
 	}
 
-	exists, err := exists(ctx, ts.blobStore.driver, tagPath)
+	exists, err := exists(ts.ctx, ts.blobStore.driver, tagPath)
 	if err != nil {
 		return false, err
 	}
@@ -71,7 +72,8 @@ func (ts *tagStore) exists(ctx context.Context, tag string) (bool, error) {
 
 // Tag tags the digest with the given tag, updating the the store to point at
 // the current tag. The digest must point to a manifest.
-func (ts *tagStore) Tag(ctx context.Context, tag string, desc distribution.Descriptor) error {
+func (ts *tagStore) Tag(tag string, desc distribution.Descriptor) error {
+	context.GetLogger(ts.ctx).Debug("(*tagStore).Tag")
 	currentPath, err := pathFor(manifestTagCurrentPathSpec{
 		name: ts.repository.Named().Name(),
 		tag:  tag,
@@ -81,19 +83,20 @@ func (ts *tagStore) Tag(ctx context.Context, tag string, desc distribution.Descr
 		return err
 	}
 
-	lbs := ts.linkedBlobStore(ctx, tag)
+	lbs := ts.linkedBlobStore(tag)
 
 	// Link into the index
-	if err := lbs.linkBlob(ctx, desc); err != nil {
+	if err := lbs.linkBlob(ts.ctx, desc); err != nil {
 		return err
 	}
 
 	// Overwrite the current link
-	return ts.blobStore.link(ctx, currentPath, desc.Digest)
+	return ts.blobStore.link(ts.ctx, currentPath, desc.Digest)
 }
 
 // resolve the current revision for name and tag.
-func (ts *tagStore) Get(ctx context.Context, tag string) (distribution.Descriptor, error) {
+func (ts *tagStore) Get(tag string) (distribution.Descriptor, error) {
+	context.GetLogger(ts.ctx).Debug("(*tagStore).Get")
 	currentPath, err := pathFor(manifestTagCurrentPathSpec{
 		name: ts.repository.Named().Name(),
 		tag:  tag,
@@ -103,7 +106,7 @@ func (ts *tagStore) Get(ctx context.Context, tag string) (distribution.Descripto
 		return distribution.Descriptor{}, err
 	}
 
-	revision, err := ts.blobStore.readlink(ctx, currentPath)
+	revision, err := ts.blobStore.readlink(ts.ctx, currentPath)
 	if err != nil {
 		switch err.(type) {
 		case storagedriver.PathNotFoundError:
@@ -117,7 +120,8 @@ func (ts *tagStore) Get(ctx context.Context, tag string) (distribution.Descripto
 }
 
 // Untag removes the tag association
-func (ts *tagStore) Untag(ctx context.Context, tag string) error {
+func (ts *tagStore) Untag(tag string) error {
+	context.GetLogger(ts.ctx).Debug("(*tagStore).Untag")
 	tagPath, err := pathFor(manifestTagPathSpec{
 		name: ts.repository.Named().Name(),
 		tag:  tag,
@@ -132,18 +136,18 @@ func (ts *tagStore) Untag(ctx context.Context, tag string) error {
 		return err
 	}
 
-	return ts.blobStore.driver.Delete(ctx, tagPath)
+	return ts.blobStore.driver.Delete(ts.ctx, tagPath)
 }
 
 // linkedBlobStore returns the linkedBlobStore for the named tag, allowing one
 // to index manifest blobs by tag name. While the tag store doesn't map
 // precisely to the linked blob store, using this ensures the links are
 // managed via the same code path.
-func (ts *tagStore) linkedBlobStore(ctx context.Context, tag string) *linkedBlobStore {
+func (ts *tagStore) linkedBlobStore(tag string) *linkedBlobStore {
 	return &linkedBlobStore{
 		blobStore:  ts.blobStore,
 		repository: ts.repository,
-		ctx:        ctx,
+		ctx:        ts.ctx,
 		linkPathFns: []linkPathFunc{func(name string, dgst digest.Digest) (string, error) {
 			return pathFor(manifestTagIndexEntryLinkPathSpec{
 				name:     name,
@@ -157,8 +161,9 @@ func (ts *tagStore) linkedBlobStore(ctx context.Context, tag string) *linkedBlob
 
 // Lookup recovers a list of tags which refer to this digest.  When a manifest is deleted by
 // digest, tag entries which point to it need to be recovered to avoid dangling tags.
-func (ts *tagStore) Lookup(ctx context.Context, desc distribution.Descriptor) ([]string, error) {
-	allTags, err := ts.All(ctx)
+func (ts *tagStore) Lookup(desc distribution.Descriptor) ([]string, error) {
+	context.GetLogger(ts.ctx).Debug("(*tagStore).Lookup")
+	allTags, err := ts.All()
 	switch err.(type) {
 	case distribution.ErrRepositoryUnknown:
 		// This tag store has been initialized but not yet populated
@@ -177,7 +182,7 @@ func (ts *tagStore) Lookup(ctx context.Context, desc distribution.Descriptor) ([
 		}
 
 		tagLinkPath, err := pathFor(tagLinkPathSpec)
-		tagDigest, err := ts.blobStore.readlink(ctx, tagLinkPath)
+		tagDigest, err := ts.blobStore.readlink(ts.ctx, tagLinkPath)
 		if err != nil {
 			return nil, err
 		}
