@@ -51,6 +51,41 @@
 			"Rev": "55eb11d21d2a31a3cc93838241d04800f52e823d"
 		},
 		{
+			"ImportPath": "github.com/aws/aws-sdk-go/aws",
+			"Comment": "v1.1.0-14-g49c3892",
+			"Rev": "49c3892b61af1d4996292a3025f36e4dfa25eaee"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/private/endpoints",
+			"Comment": "v1.1.0-14-g49c3892",
+			"Rev": "49c3892b61af1d4996292a3025f36e4dfa25eaee"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/private/protocol",
+			"Comment": "v1.1.0-14-g49c3892",
+			"Rev": "49c3892b61af1d4996292a3025f36e4dfa25eaee"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/private/signer/v4",
+			"Comment": "v1.1.0-14-g49c3892",
+			"Rev": "49c3892b61af1d4996292a3025f36e4dfa25eaee"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/private/waiter",
+			"Comment": "v1.1.0-14-g49c3892",
+			"Rev": "49c3892b61af1d4996292a3025f36e4dfa25eaee"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/service/cloudfront/sign",
+			"Comment": "v1.1.0-14-g49c3892",
+			"Rev": "49c3892b61af1d4996292a3025f36e4dfa25eaee"
+		},
+		{
+			"ImportPath": "github.com/aws/aws-sdk-go/service/s3",
+			"Comment": "v1.1.0-14-g49c3892",
+			"Rev": "49c3892b61af1d4996292a3025f36e4dfa25eaee"
+		},
+		{
 			"ImportPath": "github.com/bugsnag/bugsnag-go",
 			"Comment": "v1.0.2-5-gb1d1530",
 			"Rev": "b1d153021fcd90ca3f080db36bec96dc690fb274"
@@ -80,10 +115,6 @@
 			"Rev": "f0a21f5b2e12f83a505ecf79b633bb2035cf6f85"
 		},
 		{
-			"ImportPath": "github.com/docker/goamz/cloudfront",
-			"Rev": "f0a21f5b2e12f83a505ecf79b633bb2035cf6f85"
-		},
-		{
 			"ImportPath": "github.com/docker/goamz/s3",
 			"Rev": "f0a21f5b2e12f83a505ecf79b633bb2035cf6f85"
 		},
@@ -98,6 +129,11 @@
 		{
 			"ImportPath": "github.com/garyburd/redigo/redis",
 			"Rev": "535138d7bcd717d6531c701ef5933d98b1866257"
+		},
+		{
+			"ImportPath": "github.com/go-ini/ini",
+			"Comment": "v1.8.6",
+			"Rev": "afbd495e5aaea13597b5e14fe514ddeaa4d76fc3"
 		},
 		{
 			"ImportPath": "github.com/gorilla/context",
@@ -118,6 +154,11 @@
 		{
 			"ImportPath": "github.com/mitchellh/mapstructure",
 			"Rev": "482a9fd5fa83e8c4e7817413b80f3eb8feec03ef"
+		},
+		{
+			"ImportPath": "github.com/jmespath/go-jmespath",
+			"Comment": "0.2.2-12-g0b12d6b",
+			"Rev": "0b12d6b521d83fc7f755e7cfc1b1fbdd35a01a74"
 		},
 		{
 			"ImportPath": "github.com/ncw/swift",
