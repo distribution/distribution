@@ -186,7 +186,7 @@ func TestStorageClass(t *testing.T) {
 	rrDriverUnwrapped := rrDriver.Base.StorageDriver.(*driver)
 	resp, err = rrDriverUnwrapped.S3.GetObject(&s3.GetObjectInput{
 		Bucket: aws.String(rrDriverUnwrapped.Bucket),
-		Key:    aws.String(rrDriverUnwrapped.s3Path(standardFilename)),
+		Key:    aws.String(rrDriverUnwrapped.s3Path(rrFilename)),
 	})
 	if err != nil {
 		t.Fatalf("unexpected error retrieving reduced-redundancy storage file: %v", err)
