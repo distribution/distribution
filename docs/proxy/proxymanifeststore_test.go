@@ -11,6 +11,7 @@ import (
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/reference"
+	"github.com/docker/distribution/registry/client/auth"
 	"github.com/docker/distribution/registry/proxy/scheduler"
 	"github.com/docker/distribution/registry/storage"
 	"github.com/docker/distribution/registry/storage/cache/memory"
@@ -71,11 +72,19 @@ type mockChallenger struct {
 }
 
 // Called for remote operations only
-func (mc *mockChallenger) tryEstablishChallenges(context.Context) error {
-	mc.Lock()
-	defer mc.Unlock()
+func (m *mockChallenger) tryEstablishChallenges(context.Context) error {
+	m.Lock()
+	defer m.Unlock()
 
-	mc.count++
+	m.count++
+	return nil
+}
+
+func (m *mockChallenger) credentialStore() auth.CredentialStore {
+	return nil
+}
+
+func (m *mockChallenger) challengeManager() auth.ChallengeManager {
 	return nil
 }
 
