@@ -57,7 +57,6 @@ type StorageDriver interface {
 	// WriteStream stores the contents of the provided io.ReadCloser at a
 	// location designated by the given path.
 	// May be used to resume writing a stream by providing a nonzero offset.
-	// The offset must be no larger than the CurrentSize for this path.
 	WriteStream(ctx context.Context, path string, offset int64, reader io.Reader) (nn int64, err error)
 
 	// Stat retrieves the FileInfo for the given path, including the current
