@@ -25,7 +25,7 @@ func (c credentials) Basic(u *url.URL) (string, string) {
 	return up.username, up.password
 }
 
-// ConfigureAuth stores credentials for challenge responses
+// configureAuth stores credentials for challenge responses
 func configureAuth(username, password string) (auth.CredentialStore, error) {
 	creds := map[string]userpass{
 		tokenURL: {

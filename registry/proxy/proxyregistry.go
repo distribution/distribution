@@ -101,9 +101,9 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 		scheduler: s,
 		remoteURL: config.RemoteURL,
 		authChallenger: &remoteAuthChallenger{
-			remoteURL:        config.RemoteURL,
-			challengeManager: auth.NewSimpleChallengeManager(),
-			credentialStore:  cs,
+			remoteURL: config.RemoteURL,
+			cm:        auth.NewSimpleChallengeManager(),
+			cs:        cs,
 		},
 	}, nil
 }
@@ -117,13 +117,10 @@ func (pr *proxyingRegistry) Repositories(ctx context.Context, repos []string, la
 }
 
 func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named) (distribution.Repository, error) {
-	hcm, ok := pr.authChallenger.(*remoteAuthChallenger)
-	if !ok {
-		return nil, fmt.Errorf("unexpected challenge manager type %T", pr.authChallenger)
-	}
+	c := pr.authChallenger
 
 	tr := transport.NewTransport(http.DefaultTransport,
-		auth.NewAuthorizer(hcm.challengeManager, auth.NewTokenHandler(http.DefaultTransport, hcm.credentialStore, name.Name(), "pull")))
+		auth.NewAuthorizer(c.challengeManager(), auth.NewTokenHandler(http.DefaultTransport, c.credentialStore(), name.Name(), "pull")))
 
 	localRepo, err := pr.embedded.Repository(ctx, name)
 	if err != nil {
@@ -172,22 +169,32 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 // authChallenger encapsulates a request to the upstream to establish credential challenges
 type authChallenger interface {
 	tryEstablishChallenges(context.Context) error
+	challengeManager() auth.ChallengeManager
+	credentialStore() auth.CredentialStore
 }
 
 type remoteAuthChallenger struct {
 	remoteURL string
 	sync.Mutex
-	challengeManager auth.ChallengeManager
-	credentialStore  auth.CredentialStore
+	cm auth.ChallengeManager
+	cs auth.CredentialStore
 }
 
-// tryEstablishChallenges will attempt to get a challenge types for the upstream if none currently exist
-func (hcm *remoteAuthChallenger) tryEstablishChallenges(ctx context.Context) error {
-	hcm.Lock()
-	defer hcm.Unlock()
+func (r *remoteAuthChallenger) credentialStore() auth.CredentialStore {
+	return r.cs
+}
 
-	remoteURL := hcm.remoteURL + "/v2/"
-	challenges, err := hcm.challengeManager.GetChallenges(remoteURL)
+func (r *remoteAuthChallenger) challengeManager() auth.ChallengeManager {
+	return r.cm
+}
+
+// tryEstablishChallenges will attempt to get a challenge type for the upstream if none currently exist
+func (r *remoteAuthChallenger) tryEstablishChallenges(ctx context.Context) error {
+	r.Lock()
+	defer r.Unlock()
+
+	remoteURL := r.remoteURL + "/v2/"
+	challenges, err := r.cm.GetChallenges(remoteURL)
 	if err != nil {
 		return err
 	}
@@ -197,11 +204,11 @@ func (hcm *remoteAuthChallenger) tryEstablishChallenges(ctx context.Context) err
 	}
 
 	// establish challenge type with upstream
-	if err := ping(hcm.challengeManager, remoteURL, challengeHeader); err != nil {
+	if err := ping(r.cm, remoteURL, challengeHeader); err != nil {
 		return err
 	}
 
-	context.GetLogger(ctx).Infof("Challenge established with upstream : %s %s", remoteURL, hcm.challengeManager)
+	context.GetLogger(ctx).Infof("Challenge established with upstream : %s %s", remoteURL, r.cm)
 	return nil
 }
 
