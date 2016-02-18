@@ -239,12 +239,18 @@ func (buh *blobUploadHandler) PutBlobUploadComplete(w http.ResponseWriter, r *ht
 		return
 	}
 
+	size := buh.State.Offset
+	if offset, err := buh.Upload.Seek(0, os.SEEK_CUR); err == nil {
+		size = offset
+	}
+
 	desc, err := buh.Upload.Commit(buh, distribution.Descriptor{
 		Digest: dgst,
+		Size:   size,
 
 		// TODO(stevvooe): This isn't wildly important yet, but we should
-		// really set the length and mediatype. For now, we can let the
-		// backend take care of this.
+		// really set the mediatype. For now, we can let the backend take care
+		// of this.
 	})
 
 	if err != nil {
