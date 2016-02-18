@@ -174,6 +174,28 @@ func (pbs *proxyBlobStore) Stat(ctx context.Context, dgst digest.Digest) (distri
 	return pbs.remoteStore.Stat(ctx, dgst)
 }
 
+func (pbs *proxyBlobStore) Get(ctx context.Context, dgst digest.Digest) ([]byte, error) {
+	blob, err := pbs.localStore.Get(ctx, dgst)
+	if err == nil {
+		return blob, nil
+	}
+
+	if err := pbs.authChallenger.tryEstablishChallenges(ctx); err != nil {
+		return []byte{}, err
+	}
+
+	blob, err = pbs.remoteStore.Get(ctx, dgst)
+	if err != nil {
+		return []byte{}, err
+	}
+
+	_, err = pbs.localStore.Put(ctx, "", blob)
+	if err != nil {
+		return []byte{}, err
+	}
+	return blob, nil
+}
+
 // Unsupported functions
 func (pbs *proxyBlobStore) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
 	return distribution.Descriptor{}, distribution.ErrUnsupported
@@ -192,10 +214,6 @@ func (pbs *proxyBlobStore) Mount(ctx context.Context, sourceRepo reference.Named
 }
 
 func (pbs *proxyBlobStore) Open(ctx context.Context, dgst digest.Digest) (distribution.ReadSeekCloser, error) {
-	return nil, distribution.ErrUnsupported
-}
-
-func (pbs *proxyBlobStore) Get(ctx context.Context, dgst digest.Digest) ([]byte, error) {
 	return nil, distribution.ErrUnsupported
 }
 
