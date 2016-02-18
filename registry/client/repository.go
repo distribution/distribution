@@ -257,9 +257,18 @@ func (t *tags) Get(ctx context.Context, tag string) (distribution.Descriptor, er
 	if err != nil {
 		return distribution.Descriptor{}, err
 	}
-	var attempts int
-	resp, err := t.client.Head(u)
 
+	req, err := http.NewRequest("HEAD", u, nil)
+	if err != nil {
+		return distribution.Descriptor{}, err
+	}
+
+	for _, t := range distribution.ManifestMediaTypes() {
+		req.Header.Add("Accept", t)
+	}
+
+	var attempts int
+	resp, err := t.client.Do(req)
 check:
 	if err != nil {
 		return distribution.Descriptor{}, err
@@ -269,7 +278,16 @@ check:
 	case resp.StatusCode >= 200 && resp.StatusCode < 400:
 		return descriptorFromResponse(resp)
 	case resp.StatusCode == http.StatusMethodNotAllowed:
-		resp, err = t.client.Get(u)
+		req, err = http.NewRequest("GET", u, nil)
+		if err != nil {
+			return distribution.Descriptor{}, err
+		}
+
+		for _, t := range distribution.ManifestMediaTypes() {
+			req.Header.Add("Accept", t)
+		}
+
+		resp, err = t.client.Do(req)
 		attempts++
 		if attempts > 1 {
 			return distribution.Descriptor{}, err
