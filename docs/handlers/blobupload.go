@@ -253,6 +253,8 @@ func (buh *blobUploadHandler) PutBlobUploadComplete(w http.ResponseWriter, r *ht
 			buh.Errors = append(buh.Errors, v2.ErrorCodeDigestInvalid.WithDetail(err))
 		default:
 			switch err {
+			case distribution.ErrAccessDenied:
+				buh.Errors = append(buh.Errors, errcode.ErrorCodeDenied)
 			case distribution.ErrUnsupported:
 				buh.Errors = append(buh.Errors, errcode.ErrorCodeUnsupported)
 			case distribution.ErrBlobInvalidLength, distribution.ErrBlobDigestUnsupported:
