@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"io"
+	"sync"
 	"testing"
 
 	"github.com/docker/distribution"
@@ -10,6 +11,7 @@ import (
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/reference"
+	"github.com/docker/distribution/registry/client/auth"
 	"github.com/docker/distribution/registry/proxy/scheduler"
 	"github.com/docker/distribution/registry/storage"
 	"github.com/docker/distribution/registry/storage/cache/memory"
@@ -63,6 +65,28 @@ func (sm statsManifest) Put(ctx context.Context, manifest distribution.Manifest,
 	return sm.manifests.Enumerate(ctx, manifests, last)
 }
 */
+
+type mockChallenger struct {
+	sync.Mutex
+	count int
+}
+
+// Called for remote operations only
+func (m *mockChallenger) tryEstablishChallenges(context.Context) error {
+	m.Lock()
+	defer m.Unlock()
+
+	m.count++
+	return nil
+}
+
+func (m *mockChallenger) credentialStore() auth.CredentialStore {
+	return nil
+}
+
+func (m *mockChallenger) challengeManager() auth.ChallengeManager {
+	return nil
+}
 
 func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestEnv {
 	nameRef, err := reference.ParseNamed(name)
@@ -120,6 +144,7 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 			remoteManifests: truthManifests,
 			scheduler:       s,
 			repositoryName:  nameRef,
+			authChallenger:  &mockChallenger{},
 		},
 	}
 }
@@ -198,6 +223,10 @@ func TestProxyManifests(t *testing.T) {
 		t.Errorf("Unexpected exists count : \n%v \n%v", localStats, remoteStats)
 	}
 
+	if env.manifests.authChallenger.(*mockChallenger).count != 1 {
+		t.Fatalf("Expected 1 auth challenge, got %#v", env.manifests.authChallenger)
+	}
+
 	// Get - should succeed and pull manifest into local
 	_, err = env.manifests.Get(ctx, env.manifestDigest)
 	if err != nil {
@@ -210,6 +239,10 @@ func TestProxyManifests(t *testing.T) {
 
 	if (*localStats)["put"] != 1 {
 		t.Errorf("Expected local put")
+	}
+
+	if env.manifests.authChallenger.(*mockChallenger).count != 2 {
+		t.Fatalf("Expected 2 auth challenges, got %#v", env.manifests.authChallenger)
 	}
 
 	// Stat - should only go to local
@@ -225,17 +258,18 @@ func TestProxyManifests(t *testing.T) {
 		t.Errorf("Unexpected exists count")
 	}
 
-	// Get - should get from remote, to test freshness
+	if env.manifests.authChallenger.(*mockChallenger).count != 2 {
+		t.Fatalf("Expected 2 auth challenges, got %#v", env.manifests.authChallenger)
+	}
+
+	// Get proxied - won't require another authchallenge
 	_, err = env.manifests.Get(ctx, env.manifestDigest)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if (*remoteStats)["get"] != 2 && (*remoteStats)["exists"] != 1 && (*localStats)["put"] != 1 {
-		t.Errorf("Unexpected get count")
+	if env.manifests.authChallenger.(*mockChallenger).count != 2 {
+		t.Fatalf("Expected 2 auth challenges, got %#v", env.manifests.authChallenger)
 	}
-}
-
-func TestProxyTagService(t *testing.T) {
 
 }

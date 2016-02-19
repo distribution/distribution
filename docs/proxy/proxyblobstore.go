@@ -22,6 +22,7 @@ type proxyBlobStore struct {
 	remoteStore    distribution.BlobService
 	scheduler      *scheduler.TTLExpirationScheduler
 	repositoryName reference.Named
+	authChallenger authChallenger
 }
 
 var _ distribution.BlobStore = &proxyBlobStore{}
@@ -121,6 +122,10 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 		return nil
 	}
 
+	if err := pbs.authChallenger.tryEstablishChallenges(ctx); err != nil {
+		return err
+	}
+
 	mu.Lock()
 	_, ok := inflight[dgst]
 	if ok {
@@ -159,6 +164,10 @@ func (pbs *proxyBlobStore) Stat(ctx context.Context, dgst digest.Digest) (distri
 	}
 
 	if err != distribution.ErrBlobUnknown {
+		return distribution.Descriptor{}, err
+	}
+
+	if err := pbs.authChallenger.tryEstablishChallenges(ctx); err != nil {
 		return distribution.Descriptor{}, err
 	}
 

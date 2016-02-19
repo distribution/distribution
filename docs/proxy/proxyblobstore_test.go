@@ -168,6 +168,7 @@ func makeTestEnv(t *testing.T, name string) *testEnv {
 		remoteStore:    truthBlobs,
 		localStore:     localBlobs,
 		scheduler:      s,
+		authChallenger: &mockChallenger{},
 	}
 
 	te := &testEnv{
@@ -242,6 +243,11 @@ func TestProxyStoreStat(t *testing.T) {
 	if (*remoteStats)["stat"] != remoteBlobCount {
 		t.Errorf("Unexpected remote stat count")
 	}
+
+	if te.store.authChallenger.(*mockChallenger).count != len(te.inRemote) {
+		t.Fatalf("Unexpected auth challenge count, got %#v", te.store.authChallenger)
+	}
+
 }
 
 func TestProxyStoreServeHighConcurrency(t *testing.T) {
