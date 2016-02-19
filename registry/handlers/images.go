@@ -73,7 +73,7 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 	var manifest distribution.Manifest
 	if imh.Tag != "" {
 		tags := imh.Repository.Tags(imh)
-		desc, err := tags.Get(imh, imh.Tag)
+		desc, err := tags.Get(imh.Tag)
 		if err != nil {
 			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
 			return
@@ -281,7 +281,7 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 	// Tag this manifest
 	if imh.Tag != "" {
 		tags := imh.Repository.Tags(imh)
-		err = tags.Tag(imh, imh.Tag, desc)
+		err = tags.Tag(imh.Tag, desc)
 		if err != nil {
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 			return
@@ -339,14 +339,14 @@ func (imh *imageManifestHandler) DeleteImageManifest(w http.ResponseWriter, r *h
 	}
 
 	tagService := imh.Repository.Tags(imh)
-	referencedTags, err := tagService.Lookup(imh, distribution.Descriptor{Digest: imh.Digest})
+	referencedTags, err := tagService.Lookup(distribution.Descriptor{Digest: imh.Digest})
 	if err != nil {
 		imh.Errors = append(imh.Errors, err)
 		return
 	}
 
 	for _, tag := range referencedTags {
-		if err := tagService.Untag(imh, tag); err != nil {
+		if err := tagService.Untag(tag); err != nil {
 			imh.Errors = append(imh.Errors, err)
 			return
 		}

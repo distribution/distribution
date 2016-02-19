@@ -162,6 +162,7 @@ func (repo *repository) Named() reference.Named {
 
 func (repo *repository) Tags(ctx context.Context) distribution.TagService {
 	tags := &tagStore{
+		ctx:        ctx,
 		repository: repo,
 		blobStore:  repo.registry.blobStore,
 	}

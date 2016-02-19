@@ -912,7 +912,7 @@ func TestManifestTags(t *testing.T) {
 	ctx := context.Background()
 	tagService := r.Tags(ctx)
 
-	tags, err := tagService.All(ctx)
+	tags, err := tagService.All()
 	if err != nil {
 		t.Fatal(err)
 	}

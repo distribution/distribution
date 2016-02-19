@@ -36,7 +36,7 @@ func (th *tagsHandler) GetTags(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	tagService := th.Repository.Tags(th)
-	tags, err := tagService.All(th)
+	tags, err := tagService.All()
 	if err != nil {
 		switch err := err.(type) {
 		case distribution.ErrRepositoryUnknown:

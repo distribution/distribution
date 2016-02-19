@@ -37,21 +37,20 @@ func testTagStore(t *testing.T) *tagsTestEnv {
 func TestTagStoreTag(t *testing.T) {
 	env := testTagStore(t)
 	tags := env.ts
-	ctx := env.ctx
 
 	d := distribution.Descriptor{}
-	err := tags.Tag(ctx, "latest", d)
+	err := tags.Tag("latest", d)
 	if err == nil {
 		t.Errorf("unexpected error putting malformed descriptor : %s", err)
 	}
 
 	d.Digest = "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-	err = tags.Tag(ctx, "latest", d)
+	err = tags.Tag("latest", d)
 	if err != nil {
 		t.Error(err)
 	}
 
-	d1, err := tags.Get(ctx, "latest")
+	d1, err := tags.Get("latest")
 	if err != nil {
 		t.Error(err)
 	}
@@ -62,12 +61,12 @@ func TestTagStoreTag(t *testing.T) {
 
 	// Overwrite existing
 	d.Digest = "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-	err = tags.Tag(ctx, "latest", d)
+	err = tags.Tag("latest", d)
 	if err != nil {
 		t.Error(err)
 	}
 
-	d1, err = tags.Get(ctx, "latest")
+	d1, err = tags.Get("latest")
 	if err != nil {
 		t.Error(err)
 	}
@@ -80,25 +79,24 @@ func TestTagStoreTag(t *testing.T) {
 func TestTagStoreUnTag(t *testing.T) {
 	env := testTagStore(t)
 	tags := env.ts
-	ctx := env.ctx
 	desc := distribution.Descriptor{Digest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}
 
-	err := tags.Untag(ctx, "latest")
+	err := tags.Untag("latest")
 	if err == nil {
 		t.Errorf("Expected error untagging non-existant tag")
 	}
 
-	err = tags.Tag(ctx, "latest", desc)
+	err = tags.Tag("latest", desc)
 	if err != nil {
 		t.Error(err)
 	}
 
-	err = tags.Untag(ctx, "latest")
+	err = tags.Untag("latest")
 	if err != nil {
 		t.Error(err)
 	}
 
-	_, err = tags.Get(ctx, "latest")
+	_, err = tags.Get("latest")
 	if err == nil {
 		t.Error("Expected error getting untagged tag")
 	}
@@ -107,19 +105,18 @@ func TestTagStoreUnTag(t *testing.T) {
 func TestTagStoreAll(t *testing.T) {
 	env := testTagStore(t)
 	tagStore := env.ts
-	ctx := env.ctx
 
 	alpha := "abcdefghijklmnopqrstuvwxyz"
 	for i := 0; i < len(alpha); i++ {
 		tag := alpha[i]
 		desc := distribution.Descriptor{Digest: "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"}
-		err := tagStore.Tag(ctx, string(tag), desc)
+		err := tagStore.Tag(string(tag), desc)
 		if err != nil {
 			t.Error(err)
 		}
 	}
 
-	all, err := tagStore.All(ctx)
+	all, err := tagStore.All()
 	if err != nil {
 		t.Error(err)
 	}
@@ -134,12 +131,12 @@ func TestTagStoreAll(t *testing.T) {
 	}
 
 	removed := "a"
-	err = tagStore.Untag(ctx, removed)
+	err = tagStore.Untag(removed)
 	if err != nil {
 		t.Error(err)
 	}
 
-	all, err = tagStore.All(ctx)
+	all, err = tagStore.All()
 	if err != nil {
 		t.Error(err)
 	}
@@ -154,12 +151,11 @@ func TestTagStoreAll(t *testing.T) {
 func TestTagLookup(t *testing.T) {
 	env := testTagStore(t)
 	tagStore := env.ts
-	ctx := env.ctx
 
 	descA := distribution.Descriptor{Digest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
 	desc0 := distribution.Descriptor{Digest: "sha256:0000000000000000000000000000000000000000000000000000000000000000"}
 
-	tags, err := tagStore.Lookup(ctx, descA)
+	tags, err := tagStore.Lookup(descA)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -167,27 +163,27 @@ func TestTagLookup(t *testing.T) {
 		t.Fatalf("Lookup returned > 0 tags from empty store")
 	}
 
-	err = tagStore.Tag(ctx, "a", descA)
+	err = tagStore.Tag("a", descA)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = tagStore.Tag(ctx, "b", descA)
+	err = tagStore.Tag("b", descA)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = tagStore.Tag(ctx, "0", desc0)
+	err = tagStore.Tag("0", desc0)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = tagStore.Tag(ctx, "1", desc0)
+	err = tagStore.Tag("1", desc0)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	tags, err = tagStore.Lookup(ctx, descA)
+	tags, err = tagStore.Lookup(descA)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,7 +192,7 @@ func TestTagLookup(t *testing.T) {
 		t.Errorf("Lookup of descA returned %d tags, expected 2", len(tags))
 	}
 
-	tags, err = tagStore.Lookup(ctx, desc0)
+	tags, err = tagStore.Lookup(desc0)
 	if err != nil {
 		t.Fatal(err)
 	}
