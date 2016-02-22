@@ -98,8 +98,9 @@ func TestTagStoreUnTag(t *testing.T) {
 		t.Error(err)
 	}
 
+	errExpect := distribution.ErrTagUnknown{Tag: "latest"}.Error()
 	_, err = tags.Get(ctx, "latest")
-	if err == nil {
+	if err == nil || err.Error() != errExpect {
 		t.Error("Expected error getting untagged tag")
 	}
 }
