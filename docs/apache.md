@@ -22,9 +22,9 @@ If you just want authentication for your registry, and are happy maintaining use
 
 With the method presented here, you implement basic authentication for docker engines in a reverse proxy that sits in front of your registry.
 
-While we use a simple htpasswd file as an example, any other apache authentication backend should be fairly easy to implement once you are done with the exemple.
+While we use a simple htpasswd file as an example, any other apache authentication backend should be fairly easy to implement once you are done with the example.
 
-We also implement push restriction (to a limited user group) for the sake of the exemple. Again, you should modify this to fit your mileage. 
+We also implement push restriction (to a limited user group) for the sake of the example. Again, you should modify this to fit your mileage. 
 
 ### Gotchas
 
