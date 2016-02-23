@@ -218,6 +218,40 @@ func populate(t *testing.T, te *testEnv, blobCount, size, numUnique int) {
 	te.inRemote = inRemote
 	te.numUnique = numUnique
 }
+func TestProxyStoreGet(t *testing.T) {
+	te := makeTestEnv(t, "foo/bar")
+
+	localStats := te.LocalStats()
+	remoteStats := te.RemoteStats()
+
+	populate(t, te, 1, 10, 1)
+	_, err := te.store.Get(te.ctx, te.inRemote[0].Digest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if (*localStats)["get"] != 1 && (*localStats)["put"] != 1 {
+		t.Errorf("Unexpected local counts")
+	}
+
+	if (*remoteStats)["get"] != 1 {
+		t.Errorf("Unexpected remote get count")
+	}
+
+	_, err = te.store.Get(te.ctx, te.inRemote[0].Digest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if (*localStats)["get"] != 2 && (*localStats)["put"] != 1 {
+		t.Errorf("Unexpected local counts")
+	}
+
+	if (*remoteStats)["get"] != 1 {
+		t.Errorf("Unexpected remote get count")
+	}
+
+}
 
 func TestProxyStoreStat(t *testing.T) {
 	te := makeTestEnv(t, "foo/bar")
