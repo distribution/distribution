@@ -213,7 +213,7 @@ func TestProxyManifests(t *testing.T) {
 	// Stat - must check local and remote
 	exists, err := env.manifests.Exists(ctx, env.manifestDigest)
 	if err != nil {
-		t.Fatalf("Error checking existance")
+		t.Fatalf("Error checking existence")
 	}
 	if !exists {
 		t.Errorf("Unexpected non-existant manifest")
