@@ -179,6 +179,7 @@ information about each option that appears later in this page.
       prefix: /my/nested/registry/
       host: https://myregistryaddress.org:5000
       secret: asecretforlocaldevelopment
+      relativeurls: false
       tls:
         certificate: /path/to/x509/public
         key: /path/to/x509/private
@@ -902,6 +903,7 @@ configuration may contain both.
       prefix: /my/nested/registry/
       host: https://myregistryaddress.org:5000
       secret: asecretforlocaldevelopment
+      relativeurls: false
       tls:
         certificate: /path/to/x509/public
         key: /path/to/x509/private
@@ -987,6 +989,19 @@ generate a secret at launch.
 <p />
 <b>WARNING: If you are building a cluster of registries behind a load balancer, you MUST
 ensure the secret is the same for all registries.</b>
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>relativeurls</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+       Specifies that the registry should return relative URLs in Location headers.
+       The client is responsible for resolving the correct URL.  This option is not
+       compatible with Docker 1.7 and earlier.
     </td>
   </tr>
 </table>
