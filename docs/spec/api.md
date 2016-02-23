@@ -78,7 +78,7 @@ A docker engine instance would like to run verified image named
 requesting the manifest for "library/ubuntu:latest". An untrusted registry
 returns a manifest. Before proceeding to download the individual layers, the
 engine verifies the manifest's signature, ensuring that the content was
-produced from a trusted source and no tampering has occured. After each layer
+produced from a trusted source and no tampering has occurred. After each layer
 is downloaded, the engine verifies the digest of the layer, ensuring that the
 content matches that specified by the manifest.
 
@@ -943,7 +943,7 @@ results, the URL for the next block is encoded in an
 relation. The presence of the `Link` header communicates to the client that
 the entire result set has not been returned and another request must be
 issued. If the header is not present, the client can assume that all results
-have been recieved.
+have been received.
 
 > __NOTE:__ In the request template above, note that the brackets
 > are required. For example, if the url is
