@@ -94,7 +94,7 @@ func makeTrustedKeyMap(rootKeys []libtrust.PrivateKey) map[string]libtrust.Publi
 func makeTestToken(issuer, audience string, access []*ResourceActions, rootKey libtrust.PrivateKey, depth int) (*Token, error) {
 	signingKey, err := makeSigningKeyWithChain(rootKey, depth)
 	if err != nil {
-		return nil, fmt.Errorf("unable to amke signing key with chain: %s", err)
+		return nil, fmt.Errorf("unable to make signing key with chain: %s", err)
 	}
 
 	var rawJWK json.RawMessage

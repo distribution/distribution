@@ -45,7 +45,7 @@ func TestSchedule(t *testing.T) {
 		}
 		_, ok := remainingRepos[repoName.String()]
 		if !ok {
-			t.Fatalf("Trying to remove nonexistant repo: %s", repoName)
+			t.Fatalf("Trying to remove nonexistent repo: %s", repoName)
 		}
 		t.Log("removing", repoName)
 		delete(remainingRepos, repoName.String())
@@ -86,7 +86,7 @@ func TestRestoreOld(t *testing.T) {
 		}
 		_, ok := remainingRepos[r.String()]
 		if !ok {
-			t.Fatalf("Trying to remove nonexistant repo: %s", r)
+			t.Fatalf("Trying to remove nonexistent repo: %s", r)
 		}
 		delete(remainingRepos, r.String())
 		return nil

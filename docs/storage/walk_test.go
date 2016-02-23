@@ -73,7 +73,7 @@ func TestWalkErrors(t *testing.T) {
 		}
 	}
 
-	err = Walk(ctx, d, "/nonexistant", func(fileInfo driver.FileInfo) error {
+	err = Walk(ctx, d, "/nonexistent", func(fileInfo driver.FileInfo) error {
 		return nil
 	})
 	if err == nil {

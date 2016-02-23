@@ -924,7 +924,7 @@ func (suite *DriverSuite) TestEventualConsistency(c *check.C) {
 	}
 
 	if misswrites > 0 {
-		c.Log("There were " + string(misswrites) + " occurences of a write not being instantly available.")
+		c.Log("There were " + string(misswrites) + " occurrences of a write not being instantly available.")
 	}
 
 	c.Assert(misswrites, check.Not(check.Equals), 1024)
