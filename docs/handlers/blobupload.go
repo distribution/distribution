@@ -340,6 +340,7 @@ func (buh *blobUploadHandler) blobUploadResponse(w http.ResponseWriter, r *http.
 
 	w.Header().Set("Docker-Upload-UUID", buh.UUID)
 	w.Header().Set("Location", uploadURL)
+
 	w.Header().Set("Content-Length", "0")
 	w.Header().Set("Range", fmt.Sprintf("0-%d", endRange))
 
