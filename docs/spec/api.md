@@ -1013,7 +1013,8 @@ The response will be in the following format:
     }
 
 For repositories with a large number of tags, this response may be quite
-large. If such a response is expected, one should use the pagination.
+large. If such a response is expected, one should use the pagination. By
+default the response is limited to 100 entries.
 
 #### Pagination
 
