@@ -60,12 +60,12 @@ func FromParameters(parameters map[string]interface{}) *Driver {
 
 // New constructs a new Driver with a given rootDirectory
 func New(rootDirectory string) *Driver {
+	fsDriver := &driver{rootDirectory: rootDirectory}
+
 	return &Driver{
 		baseEmbed: baseEmbed{
 			Base: base.Base{
-				StorageDriver: &driver{
-					rootDirectory: rootDirectory,
-				},
+				StorageDriver: base.NewRegulator(fsDriver, 100),
 			},
 		},
 	}
