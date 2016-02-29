@@ -3,6 +3,7 @@ package storage
 import (
 	"fmt"
 	"net/http"
+	"path"
 	"time"
 
 	"github.com/docker/distribution"
@@ -37,6 +38,9 @@ type linkedBlobStore struct {
 	// removed an the blob links folder should be merged. The first entry is
 	// treated as the "canonical" link location and will be used for writes.
 	linkPathFns []linkPathFunc
+
+	// linkDirectoryPathSpec locates the root directories in which one might find links
+	linkDirectoryPathSpec pathSpec
 }
 
 var _ distribution.BlobStore = &linkedBlobStore{}
@@ -229,6 +233,55 @@ func (lbs *linkedBlobStore) Delete(ctx context.Context, dgst digest.Digest) erro
 	}
 
 	err = lbs.blobAccessController.Clear(ctx, dgst)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (lbs *linkedBlobStore) Enumerate(ctx context.Context, ingestor func(digest.Digest) error) error {
+	rootPath, err := pathFor(lbs.linkDirectoryPathSpec)
+	if err != nil {
+		return err
+	}
+	err = Walk(ctx, lbs.blobStore.driver, rootPath, func(fileInfo driver.FileInfo) error {
+		// exit early if directory...
+		if fileInfo.IsDir() {
+			return nil
+		}
+		filePath := fileInfo.Path()
+
+		// check if it's a link
+		_, fileName := path.Split(filePath)
+		if fileName != "link" {
+			return nil
+		}
+
+		// read the digest found in link
+		digest, err := lbs.blobStore.readlink(ctx, filePath)
+		if err != nil {
+			return err
+		}
+
+		// ensure this conforms to the linkPathFns
+		_, err = lbs.Stat(ctx, digest)
+		if err != nil {
+			// we expect this error to occur so we move on
+			if err == distribution.ErrBlobUnknown {
+				return nil
+			}
+			return err
+		}
+
+		err = ingestor(digest)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
 	if err != nil {
 		return err
 	}

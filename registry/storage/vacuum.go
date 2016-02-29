@@ -34,11 +34,13 @@ func (v Vacuum) RemoveBlob(dgst string) error {
 		return err
 	}
 
-	blobPath, err := pathFor(blobDataPathSpec{digest: d})
+	blobPath, err := pathFor(blobPathSpec{digest: d})
 	if err != nil {
 		return err
 	}
+
 	context.GetLogger(v.ctx).Infof("Deleting blob: %s", blobPath)
+
 	err = v.driver.Delete(v.ctx, blobPath)
 	if err != nil {
 		return err

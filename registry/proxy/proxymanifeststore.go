@@ -93,8 +93,3 @@ func (pms proxyManifestStore) Put(ctx context.Context, manifest distribution.Man
 func (pms proxyManifestStore) Delete(ctx context.Context, dgst digest.Digest) error {
 	return distribution.ErrUnsupported
 }
-
-/*func (pms proxyManifestStore) Enumerate(ctx context.Context, manifests []distribution.Manifest, last distribution.Manifest) (n int, err error) {
-	return 0, distribution.ErrUnsupported
-}
-*/

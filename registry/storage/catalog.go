@@ -64,3 +64,34 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 
 	return n, errVal
 }
+
+// Enumerate applies ingester to each repository
+func (reg *registry) Enumerate(ctx context.Context, ingester func(string) error) error {
+	repoNameBuffer := make([]string, 100)
+	var last string
+	for {
+		n, err := reg.Repositories(ctx, repoNameBuffer, last)
+		if err != nil && err != io.EOF {
+			return err
+		}
+
+		if n == 0 {
+			break
+		}
+
+		last = repoNameBuffer[n-1]
+		for i := 0; i < n; i++ {
+			repoName := repoNameBuffer[i]
+			err = ingester(repoName)
+			if err != nil {
+				return err
+			}
+		}
+
+		if err == io.EOF {
+			break
+		}
+	}
+	return nil
+
+}

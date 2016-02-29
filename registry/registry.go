@@ -24,16 +24,12 @@ import (
 	"github.com/yvasiyarov/gorelic"
 )
 
-// Cmd is a cobra command for running the registry.
-var Cmd = &cobra.Command{
-	Use:   "registry <config>",
-	Short: "registry stores and distributes Docker images",
-	Long:  "registry stores and distributes Docker images.",
+// ServeCmd is a cobra command for running the registry.
+var ServeCmd = &cobra.Command{
+	Use:   "serve <config>",
+	Short: "`serve` stores and distributes Docker images",
+	Long:  "`serve` stores and distributes Docker images.",
 	Run: func(cmd *cobra.Command, args []string) {
-		if showVersion {
-			version.PrintVersion()
-			return
-		}
 
 		// setup context
 		ctx := context.WithVersion(context.Background(), version.Version)
@@ -63,12 +59,6 @@ var Cmd = &cobra.Command{
 			log.Fatalln(err)
 		}
 	},
-}
-
-var showVersion bool
-
-func init() {
-	Cmd.PersistentFlags().BoolVarP(&showVersion, "version", "v", false, "show the version and exit")
 }
 
 // A Registry represents a complete instance of the registry.

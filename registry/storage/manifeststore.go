@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"path"
 
 	"encoding/json"
 	"github.com/docker/distribution"
@@ -129,6 +130,52 @@ func (ms *manifestStore) Delete(ctx context.Context, dgst digest.Digest) error {
 	return ms.blobStore.Delete(ctx, dgst)
 }
 
-func (ms *manifestStore) Enumerate(ctx context.Context, manifests []distribution.Manifest, last distribution.Manifest) (n int, err error) {
-	return 0, distribution.ErrUnsupported
+func (ms *manifestStore) Enumerate(ctx context.Context, ingester func(digest.Digest) error) error {
+	err := ms.blobStore.Enumerate(ctx, func(dgst digest.Digest) error {
+		err := ingester(dgst)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	return err
+}
+
+// Only valid for schema1 signed manifests
+func (ms *manifestStore) GetSignatures(ctx context.Context, manifestDigest digest.Digest) ([]digest.Digest, error) {
+	// sanity check that digest refers to a schema1 digest
+	manifest, err := ms.Get(ctx, manifestDigest)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, ok := manifest.(*schema1.SignedManifest); !ok {
+		return nil, fmt.Errorf("digest %v is not for schema1 manifest", manifestDigest)
+	}
+
+	signaturesPath, err := pathFor(manifestSignaturesPathSpec{
+		name:     ms.repository.Named().Name(),
+		revision: manifestDigest,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	signaturesPath = path.Join(signaturesPath, "sha256")
+
+	signaturePaths, err := ms.blobStore.driver.List(ctx, signaturesPath)
+	if err != nil {
+		return nil, err
+	}
+
+	var digests []digest.Digest
+	for _, sigPath := range signaturePaths {
+		sigdigest, err := digest.ParseDigest("sha256:" + path.Base(sigPath))
+		if err != nil {
+			// merely found not a digest
+			continue
+		}
+		digests = append(digests, sigdigest)
+	}
+	return digests, nil
 }
