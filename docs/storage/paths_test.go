@@ -2,6 +2,8 @@ package storage
 
 import (
 	"testing"
+
+	"github.com/docker/distribution/digest"
 )
 
 func TestPathMapper(t *testing.T) {
@@ -119,4 +121,30 @@ func TestPathMapper(t *testing.T) {
 		t.Fatalf("expected an error when mapping an invalid revision: %s", badpath)
 	}
 
+}
+
+func TestDigestFromPath(t *testing.T) {
+	for _, testcase := range []struct {
+		path       string
+		expected   digest.Digest
+		multilevel bool
+		err        error
+	}{
+		{
+			path:       "/docker/registry/v2/blobs/sha256/99/9943fffae777400c0344c58869c4c2619c329ca3ad4df540feda74d291dd7c86/data",
+			multilevel: true,
+			expected:   "sha256:9943fffae777400c0344c58869c4c2619c329ca3ad4df540feda74d291dd7c86",
+			err:        nil,
+		},
+	} {
+		result, err := digestFromPath(testcase.path)
+		if err != testcase.err {
+			t.Fatalf("Unexpected error value %v when we wanted %v", err, testcase.err)
+		}
+
+		if result != testcase.expected {
+			t.Fatalf("Unexpected result value %v when we wanted %v", result, testcase.expected)
+
+		}
+	}
 }
