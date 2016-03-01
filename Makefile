@@ -24,6 +24,16 @@ AUTHORS: .mailmap .git/HEAD
 version/version.go:
 	./version/version.sh > $@
 
+# Required for go 1.5 to build
+GO15VENDOREXPERIMENT := 1
+
+# Package list
+PKGS := $(shell go list -tags "${DOCKER_BUILDTAGS}" ./... | grep -v "/vendor/")
+
+# Resolving binary dependencies for specific targets
+GOLINT_BIN := $(GOPATH)/bin/golint
+GOLINT := $(shell [ -x $(GOLINT_BIN) ] && echo $(GOLINT_BIN) || echo '')
+
 ${PREFIX}/bin/registry: version/version.go $(shell find . -type f -name '*.go')
 	@echo "+ $@"
 	@go build -tags "${DOCKER_BUILDTAGS}" -o $@ ${GO_LDFLAGS}  ${GO_GCFLAGS} ./cmd/registry
@@ -39,20 +49,20 @@ ${PREFIX}/bin/registry-api-descriptor-template: version/version.go $(shell find 
 docs/spec/api.md: docs/spec/api.md.tmpl ${PREFIX}/bin/registry-api-descriptor-template
 	./bin/registry-api-descriptor-template $< > $@
 
-# Depends on binaries because vet will silently fail if it can't load compiled
-# imports
-vet: binaries
+vet:
 	@echo "+ $@"
-	@go vet ./...
+	@go vet -tags "${DOCKER_BUILDTAGS}" $(PKGS)
 
 fmt:
 	@echo "+ $@"
-	@test -z "$$(gofmt -s -l . | grep -v Godeps/_workspace/src/ | tee /dev/stderr)" || \
-		echo "+ please format Go code with 'gofmt -s'"
+	@test -z "$$(gofmt -s -l . 2>&1 | grep -v vendor/ | tee /dev/stderr)" || \
+		(echo >&2 "+ please format Go code with 'gofmt -s'" && false)
 
 lint:
 	@echo "+ $@"
-	@test -z "$$(golint ./... | grep -v Godeps/_workspace/src/ | tee /dev/stderr)"
+	$(if $(GOLINT), , \
+		$(error Please install golint: `go get -u github.com/golang/lint/golint`))
+	@test -z "$$($(GOLINT) ./... 2>&1 | grep -v vendor/ | tee /dev/stderr)"
 
 build:
 	@echo "+ $@"

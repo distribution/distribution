@@ -56,7 +56,7 @@ test:
 
   # First thing: build everything. This will catch compile errors, and it's
   # also necessary for go vet to work properly (see #807).
-    - gvm use stable && godep go install ./...:
+    - gvm use stable && GO15VENDOREXPERIMENT=1 godep go install ./...:
         pwd: $BASE_STABLE
 
   # FMT
