@@ -66,6 +66,8 @@ type DriverParameters struct {
 	RootDirectory string
 	StorageClass  string
 	UserAgent     string
+	Backend       string
+	EndpointURL   string
 }
 
 func init() {
@@ -137,6 +139,14 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	if !ok {
 		secretKey = ""
 	}
+
+	backend, ok := parameters["backend"]
+	if !ok {
+		backend = "aws"
+	}
+
+	regionEndpoint, ok := parameters["regionendpoint"]
+	endpointURL := fmt.Sprint(regionEndpoint)
 
 	regionName, ok := parameters["region"]
 	if !ok || fmt.Sprint(regionName) == "" {
@@ -230,6 +240,8 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(rootDirectory),
 		storageClass,
 		fmt.Sprint(userAgent),
+		fmt.Sprint(backend),
+		endpointURL,
 	}
 
 	return New(params)
@@ -238,31 +250,46 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 // New constructs a new Driver with the given AWS credentials, region, encryption flag, and
 // bucketName
 func New(params DriverParameters) (*Driver, error) {
-	awsConfig := aws.NewConfig()
-	creds := credentials.NewChainCredentials([]credentials.Provider{
-		&credentials.StaticProvider{
-			Value: credentials.Value{
-				AccessKeyID:     params.AccessKey,
-				SecretAccessKey: params.SecretKey,
+	var s3obj *s3.S3
+	if params.Backend == "minio" {
+		newSession := session.New()
+		s3Config := &aws.Config{
+			Credentials:      credentials.NewStaticCredentials(params.AccessKey, params.SecretKey, ""),
+			Endpoint:         aws.String(params.EndpointURL),
+			Region:           aws.String(params.Region),
+			DisableSSL:       aws.Bool(true),
+			S3ForcePathStyle: aws.Bool(true),
+		}
+		// Create an S3 service object in the default region.
+		s3obj = s3.New(newSession, s3Config)
+	} else {
+		awsConfig := aws.NewConfig()
+		creds := credentials.NewChainCredentials([]credentials.Provider{
+			&credentials.StaticProvider{
+				Value: credentials.Value{
+					AccessKeyID:     params.AccessKey,
+					SecretAccessKey: params.SecretKey,
+				},
 			},
-		},
-		&credentials.EnvProvider{},
-		&credentials.SharedCredentialsProvider{},
-		&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(session.New())},
-	})
-
-	awsConfig.WithCredentials(creds)
-	awsConfig.WithRegion(params.Region)
-	awsConfig.WithDisableSSL(!params.Secure)
-	// awsConfig.WithMaxRetries(10)
-
-	if params.UserAgent != "" {
-		awsConfig.WithHTTPClient(&http.Client{
-			Transport: transport.NewTransport(http.DefaultTransport, transport.NewHeaderRequestModifier(http.Header{http.CanonicalHeaderKey("User-Agent"): []string{params.UserAgent}})),
+			&credentials.EnvProvider{},
+			&credentials.SharedCredentialsProvider{},
+			&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(session.New())},
 		})
-	}
 
-	s3obj := s3.New(session.New(awsConfig))
+		awsConfig.WithCredentials(creds)
+		awsConfig.WithRegion(params.Region)
+		awsConfig.WithDisableSSL(!params.Secure)
+
+		// awsConfig.WithMaxRetries(10)
+
+		if params.UserAgent != "" {
+			awsConfig.WithHTTPClient(&http.Client{
+				Transport: transport.NewTransport(http.DefaultTransport, transport.NewHeaderRequestModifier(http.Header{http.CanonicalHeaderKey("User-Agent"): []string{params.UserAgent}})),
+			})
+		}
+
+		s3obj = s3.New(session.New(awsConfig))
+	}
 
 	// TODO Currently multipart uploads have no timestamps, so this would be unwise
 	// if you initiated a new s3driver while another one is running on the same bucket.
@@ -757,7 +784,6 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 	if path != "/" && path[len(path)-1] != '/' {
 		path = path + "/"
 	}
-
 	// This is to cover for the cases when the rootDirectory of the driver is either "" or "/".
 	// In those cases, there is no root prefix to replace and we must actually add a "/" to all
 	// results in order to keep them as valid paths as recognized by storagedriver.PathRegexp
