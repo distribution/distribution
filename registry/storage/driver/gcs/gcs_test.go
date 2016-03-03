@@ -175,3 +175,40 @@ func TestEmptyRootList(t *testing.T) {
 		}
 	}
 }
+
+// TestMoveDirectory checks that moving a directory returns an error.
+func TestMoveDirectory(t *testing.T) {
+	if skipGCS() != "" {
+		t.Skip(skipGCS())
+	}
+
+	validRoot, err := ioutil.TempDir("", "driver-")
+	if err != nil {
+		t.Fatalf("unexpected error creating temporary directory: %v", err)
+	}
+	defer os.Remove(validRoot)
+
+	driver, err := gcsDriverConstructor(validRoot)
+	if err != nil {
+		t.Fatalf("unexpected error creating rooted driver: %v", err)
+	}
+
+	ctx := ctx.Background()
+	contents := []byte("contents")
+	// Create a regular file.
+	err = driver.PutContent(ctx, "/parent/dir/foo", contents)
+	if err != nil {
+		t.Fatalf("unexpected error creating content: %v", err)
+	}
+	defer func() {
+		err := driver.Delete(ctx, "/parent")
+		if err != nil {
+			t.Fatalf("failed to remove /parent due to %v\n", err)
+		}
+	}()
+
+	err = driver.Move(ctx, "/parent/dir", "/parent/other")
+	if err == nil {
+		t.Fatalf("Moving directory /parent/dir /parent/other should have return a non-nil error\n")
+	}
+}
