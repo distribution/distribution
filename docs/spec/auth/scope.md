@@ -74,18 +74,18 @@ a refresh token the passed in audience must match the audience defined for
 the refresh token. The audience (resource provider) is provided using the
 `service` field. Multiple resource scopes may be provided using multiple `scope`
 fields on the `GET` request. The `POST` request only takes in a single
-`scope` field but may use the resource scope list format to specify
-multiple resource scopes.
+`scope` field but may use a space to separate a list of multiple resource
+scopes.
 
 ### Resource Scope Grammar
 
 ```
-resourcescopelist       := resourcescope [ ',' action ]* [ ',' resourcescope]*
-resourcescope           := resourcetype  ":" resourcename  ":" action
+scope                   := resourcescope [ ' ' resourcescope ]*
+resourcescope           := resourcetype  ":" resourcename  ":" action [ ',' action ]*
 resourcetype            := /[a-z]*/
 resourcename            := component [ '/' component ]*
 action                  := /[a-z]*/
-component               := alpha-numeric [separator alpha-numeric]*
+component               := alpha-numeric [ separator alpha-numeric ]*
 alpha-numeric           := /[a-z0-9]+/
 separator               := /[_.]|__|[-]*/
 ```
