@@ -54,7 +54,7 @@ var (
 	// ErrInvalidCredential is returned when the auth token does not authenticate correctly.
 	ErrInvalidCredential = errors.New("invalid authorization credential")
 
-	// ErrAuthenticationFailure returned when authentication failure to be presented to agent.
+	// ErrAuthenticationFailure returned when authentication fails.
 	ErrAuthenticationFailure = errors.New("authentication failure")
 )
 
@@ -106,7 +106,7 @@ type AccessController interface {
 	Authorized(ctx context.Context, access ...Access) (context.Context, error)
 }
 
-// CredentialAuthenticator is an object which is able to validate credentials
+// CredentialAuthenticator is an object which is able to authenticate credentials
 type CredentialAuthenticator interface {
 	AuthenticateUser(username, password string) error
 }
