@@ -30,6 +30,7 @@ func init() {
 	secure := os.Getenv("S3_SECURE")
 	region := os.Getenv("AWS_REGION")
 	root, err := ioutil.TempDir("", "driver-")
+	regionEndpoint := os.Getenv("REGION_ENDPOINT")
 	if err != nil {
 		panic(err)
 	}
@@ -57,6 +58,7 @@ func init() {
 			secretKey,
 			bucket,
 			region,
+			regionEndpoint,
 			encryptBool,
 			secureBool,
 			minChunkSize,
