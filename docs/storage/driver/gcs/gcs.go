@@ -482,7 +482,7 @@ func (d *driver) Move(context ctx.Context, sourcePath string, destPath string) e
 		return err
 	}
 	err = storageDeleteObject(gcsContext, d.bucket, d.pathToKey(sourcePath))
-	// if deleting the file fails, log the error, but do not fail; the file was succesfully copied,
+	// if deleting the file fails, log the error, but do not fail; the file was successfully copied,
 	// and the original should eventually be cleaned when purging the uploads folder.
 	if err != nil {
 		logrus.Infof("error deleting file: %v due to %v", sourcePath, err)
