@@ -62,7 +62,7 @@ type ManifestEnumerator interface {
 }
 
 // SignaturesGetter provides an interface for getting the signatures of a schema1 manifest. If the digest
-// refered to is not a schema1 manifest, an error should be returned.
+// referred to is not a schema1 manifest, an error should be returned.
 type SignaturesGetter interface {
 	GetSignatures(ctx context.Context, manifestDigest digest.Digest) ([]digest.Digest, error)
 }
