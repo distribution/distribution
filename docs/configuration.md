@@ -90,6 +90,7 @@ information about each option that appears later in this page.
         accesskey: awsaccesskey
         secretkey: awssecretkey
         region: us-west-1
+        regionendpoint: http://myobjects.local
         bucket: bucketname
         encrypt: true
         secure: true
@@ -358,6 +359,7 @@ Permitted values are `error`, `warn`, `info` and `debug`. The default is
         accesskey: awsaccesskey
         secretkey: awssecretkey
         region: us-west-1
+        regionendpoint: http://myobjects.local
         bucket: bucketname
         encrypt: true
         secure: true
@@ -435,7 +437,7 @@ You must configure one backend; if you configure more, the registry returns an e
   </tr>
   <tr>
     <td><code>s3</code></td>
-    <td>Uses Amazon's Simple Storage Service (S3).
+    <td>Uses Amazon's Simple Storage Service (S3) and compatible Storage Services.
     See the <a href="storage-drivers/s3.md">driver's reference documentation</a>.
     </td>
   </tr>
