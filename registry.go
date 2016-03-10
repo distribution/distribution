@@ -63,8 +63,10 @@ func WithTag(tag string) ManifestServiceOption {
 	return WithTagOption{tag}
 }
 
+// WithTagOption holds a tag
 type WithTagOption struct{ Tag string }
 
+// Apply conforms to the ManifestServiceOption interface
 func (o WithTagOption) Apply(m ManifestService) error {
 	// no implementation
 	return nil
