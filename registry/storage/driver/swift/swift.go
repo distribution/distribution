@@ -22,11 +22,13 @@ import (
 	"crypto/sha1"
 	"crypto/tls"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	gopath "path"
 	"strconv"
 	"strings"
 	"time"
@@ -84,6 +86,22 @@ type swiftInfo struct {
 	Tempurl struct {
 		Methods []string `mapstructure:"methods"`
 	}
+}
+
+type swiftSegment struct {
+	Path string `json:"path,omitempty"`
+	Hash string `json:"hash,omitempty"`
+	Size int64  `json:"size_bytes,omitempty"`
+	// When uploading a manifest, the attributes must be named `path`, `hash` and `size`
+	// but when querying the JSON content of a manifest with the `multipart-manifest=get`
+	// parameter, Swift names those attributes `name`, `etag` and `bytes`.
+	// We use all the different attributes names in this structure to be able to use
+	// the same structure for both uploading and retrieving.
+	Name         string `json:"name,omitempty"`
+	Etag         string `json:"etag,omitempty"`
+	Bytes        int64  `json:"bytes,omitempty"`
+	ContentType  string `json:"content_type,omitempty"`
+	LastModified string `json:"last_modified,omitempty"`
 }
 
 func init() {
@@ -323,8 +341,10 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 	)
 
 	partNumber := 1
+	totalRead := int64(0)
 	chunkSize := int64(d.ChunkSize)
 	zeroBuf := make([]byte, d.ChunkSize)
+	readers := []io.Reader{}
 	hash := md5.New()
 
 	getSegment := func() string {
@@ -338,11 +358,32 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 		return b
 	}
 
-	createManifest := true
+	min := func(a int64, b int64) int64 {
+		if a < b {
+			return a
+		}
+		return b
+	}
+
+	if offset < 0 {
+		return 0, storagedriver.InvalidOffsetError{
+			Path:   path,
+			Offset: offset,
+		}
+	}
+
 	info, headers, err := d.Conn.Object(d.Container, d.swiftPath(path))
 	if err == nil {
-		manifest, ok := headers["X-Object-Manifest"]
-		if !ok {
+		if isManifest(headers) {
+			segments, err = d.getAllSegments(d.swiftPath(path), headers)
+			if err != nil {
+				return 0, err
+			}
+			if len(segments) > 0 {
+				segmentPath = gopath.Dir(segments[0].Name)
+			}
+		} else {
+			// Convert a standard file to a manifest
 			if segmentPath, err = d.swiftSegmentPath(path); err != nil {
 				return 0, err
 			}
@@ -350,55 +391,39 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 				return 0, err
 			}
 			segments = append(segments, info)
-		} else {
-			_, segmentPath = parseManifest(manifest)
-			if segments, err = d.getAllSegments(segmentPath); err != nil {
-				return 0, err
-			}
-			createManifest = false
 		}
-		currentLength = info.Bytes
 	} else if err == swift.ObjectNotFound {
-		if segmentPath, err = d.swiftSegmentPath(path); err != nil {
-			return 0, err
-		}
+		err = nil
 	} else {
 		return 0, err
 	}
 
+	if segmentPath == "" {
+		if segmentPath, err = d.swiftSegmentPath(path); err != nil {
+			return 0, err
+		}
+	}
+
+	for _, segment := range segments {
+		currentLength += segment.Bytes
+	}
+
 	// First, we skip the existing segments that are not modified by this call
 	for i := range segments {
-		if offset < cursor+segments[i].Bytes {
+		if offset < cursor+segments[i].Bytes || (segments[i].Bytes < minChunkSize) {
 			break
 		}
 		cursor += segments[i].Bytes
-		hash.Write([]byte(segments[i].Hash))
 		partNumber++
+		hash.Write([]byte(segments[i].Hash))
 	}
 
-	// We reached the end of the file but we haven't reached 'offset' yet
-	// Therefore we add blocks of zeros
-	if offset >= currentLength {
-		for offset-currentLength >= chunkSize {
-			// Insert a block a zero
-			headers, err := d.Conn.ObjectPut(d.Container, getSegment(), bytes.NewReader(zeroBuf), false, "", d.getContentType(), nil)
-			if err != nil {
-				if err == swift.ObjectNotFound {
-					return 0, storagedriver.PathNotFoundError{Path: getSegment()}
-				}
-				return 0, err
-			}
-			currentLength += chunkSize
-			partNumber++
-			hash.Write([]byte(headers["Etag"]))
-		}
-
-		cursor = currentLength
-		paddingReader = bytes.NewReader(zeroBuf)
-	} else if offset-cursor > 0 {
+	if offset-cursor > 0 && min(currentLength, offset)-cursor > 0 {
 		// Offset is inside the current segment : we need to read the
 		// data from the beginning of the segment to offset
-		file, _, err := d.Conn.ObjectOpen(d.Container, getSegment(), false, nil)
+		headers := make(swift.Headers)
+		headers["Range"] = "bytes=" + strconv.FormatInt(cursor, 10) + "-" + strconv.FormatInt(min(currentLength, offset)-1, 10)
+		file, _, err := d.Conn.ObjectOpen(d.Container, d.swiftPath(path), false, headers)
 		if err != nil {
 			if err == swift.ObjectNotFound {
 				return 0, storagedriver.PathNotFoundError{Path: getSegment()}
@@ -407,13 +432,18 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 		}
 		defer file.Close()
 		paddingReader = file
+		readers = append(readers, io.LimitReader(paddingReader, min(currentLength, offset)-cursor))
+		totalRead -= min(currentLength, offset) - cursor
 	}
 
-	readers := []io.Reader{}
-	if paddingReader != nil {
-		readers = append(readers, io.LimitReader(paddingReader, offset-cursor))
+	// We reached the end of the file but we haven't reached 'offset' yet
+	// Therefore we add blocks of zeros
+	for zeros := offset - currentLength; zeros > 0; zeros -= chunkSize {
+		readers = append(readers, io.LimitReader(bytes.NewReader(zeroBuf), min(chunkSize, zeros)))
 	}
-	readers = append(readers, io.LimitReader(reader, chunkSize-(offset-cursor)))
+
+	totalRead -= max(0, offset-currentLength)
+	readers = append(readers, reader)
 	multi = io.MultiReader(readers...)
 
 	writeSegment := func(segment string) (finished bool, bytesRead int64, err error) {
@@ -428,7 +458,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 		segmentHash := md5.New()
 		writer := io.MultiWriter(currentSegment, segmentHash)
 
-		n, err := io.Copy(writer, multi)
+		n, err := io.Copy(writer, io.LimitReader(multi, chunkSize))
 		if err != nil {
 			return false, bytesRead, err
 		}
@@ -439,10 +469,19 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 				if err != nil {
 					err = closeError
 				}
+
 				hexHash := hex.EncodeToString(segmentHash.Sum(nil))
 				hash.Write([]byte(hexHash))
+				infos, _, _ := d.Conn.Object(d.Container, segment)
+				if partNumber > len(segments) {
+					segments = append(segments, swift.Object{
+						Name: segment,
+					})
+				}
+				segments[partNumber-1].Bytes = infos.Bytes
+				segments[partNumber-1].Hash = hexHash
 			}()
-			bytesRead += n - max(0, offset-cursor)
+			bytesRead = n
 		}
 
 		if n < chunkSize {
@@ -450,7 +489,7 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 			if cursor+n < currentLength {
 				// Copy the end of the chunk
 				headers := make(swift.Headers)
-				headers["Range"] = "bytes=" + strconv.FormatInt(cursor+n, 10) + "-" + strconv.FormatInt(cursor+chunkSize, 10)
+				headers["Range"] = "bytes=" + strconv.FormatInt(cursor+n, 10) + "-" + strconv.FormatInt(cursor+chunkSize-1, 10)
 				file, _, err := d.Conn.ObjectOpen(d.Container, d.swiftPath(path), false, headers)
 				if err != nil {
 					if err == swift.ObjectNotFound {
@@ -476,37 +515,43 @@ func (d *driver) WriteStream(ctx context.Context, path string, offset int64, rea
 			return true, bytesRead, nil
 		}
 
-		multi = io.LimitReader(reader, chunkSize)
 		cursor += chunkSize
-		partNumber++
-
 		return false, bytesRead, nil
 	}
 
+	err = nil
 	finished := false
 	read := int64(0)
 	bytesRead := int64(0)
-	for finished == false {
+	for ; finished == false; partNumber++ {
 		finished, read, err = writeSegment(getSegment())
-		bytesRead += read
+		totalRead += read
+		bytesRead = max(0, totalRead)
 		if err != nil {
 			return bytesRead, err
 		}
 	}
 
-	for ; partNumber < len(segments); partNumber++ {
-		hash.Write([]byte(segments[partNumber].Hash))
+	for ; partNumber <= len(segments); partNumber++ {
+		hash.Write([]byte(segments[partNumber-1].Hash))
 	}
 
-	if createManifest {
-		if err := d.createManifest(path, d.Container+"/"+segmentPath); err != nil {
+	waitingTime := readAfterWriteWait
+	endTime := time.Now().Add(readAfterWriteTimeout)
+	for {
+		if err = d.createManifest(path, segments); err == nil {
+			break
+		}
+		if time.Now().Add(waitingTime).After(endTime) {
 			return 0, err
 		}
+		time.Sleep(waitingTime)
+		waitingTime *= 2
 	}
 
 	expectedHash := hex.EncodeToString(hash.Sum(nil))
-	waitingTime := readAfterWriteWait
-	endTime := time.Now().Add(readAfterWriteTimeout)
+	waitingTime = readAfterWriteWait
+	endTime = time.Now().Add(readAfterWriteTimeout)
 	for {
 		var infos swift.Object
 		if infos, _, err = d.Conn.Object(d.Container, d.swiftPath(path)); err == nil {
@@ -599,15 +644,15 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 // object.
 func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
 	_, headers, err := d.Conn.Object(d.Container, d.swiftPath(sourcePath))
-	if err == nil {
-		if manifest, ok := headers["X-Object-Manifest"]; ok {
-			if err = d.createManifest(destPath, manifest); err != nil {
-				return err
-			}
-			err = d.Conn.ObjectDelete(d.Container, d.swiftPath(sourcePath))
-		} else {
-			err = d.Conn.ObjectMove(d.Container, d.swiftPath(sourcePath), d.Container, d.swiftPath(destPath))
+	if isManifest(headers) {
+		if segments, err := d.getAllSegments(d.swiftPath(sourcePath), headers); err != nil {
+			return err
+		} else if err := d.createManifest(destPath, segments); err != nil {
+			return err
 		}
+		err = d.Conn.ObjectDelete(d.Container, d.swiftPath(sourcePath))
+	} else {
+		err = d.Conn.ObjectMove(d.Container, d.swiftPath(sourcePath), d.Container, d.swiftPath(destPath))
 	}
 	if err == swift.ObjectNotFound {
 		return storagedriver.PathNotFoundError{Path: sourcePath}
@@ -634,10 +679,8 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 			continue
 		}
 		if _, headers, err := d.Conn.Object(d.Container, obj.Name); err == nil {
-			manifest, ok := headers["X-Object-Manifest"]
-			if ok {
-				_, prefix := parseManifest(manifest)
-				segments, err := d.getAllSegments(prefix)
+			if isManifest(headers) {
+				segments, err := d.getAllSegments(obj.Name, headers)
 				if err != nil {
 					return err
 				}
@@ -767,17 +810,45 @@ func (d *driver) getContentType() string {
 	return "application/octet-stream"
 }
 
-func (d *driver) getAllSegments(path string) ([]swift.Object, error) {
-	segments, err := d.Conn.ObjectsAll(d.Container, &swift.ObjectsOpts{Prefix: path})
-	if err == swift.ContainerNotFound {
-		return nil, storagedriver.PathNotFoundError{Path: path}
+// getAllSegments returns all the segments that compose an object
+// If the object is a Dynamic Large Object (DLO), it just returns the objects
+// that have the prefix as indicated by the manifest.
+// If the object is a Static Large Object (SLO), it retrieves the JSON content
+// of the manifest and return all the segments of it.
+func (d *driver) getAllSegments(path string, headers swift.Headers) (segments []swift.Object, err error) {
+	if manifest, isDLO := headers["X-Object-Manifest"]; isDLO {
+		container, segmentPath := parseFullPath(manifest)
+		segments, err = d.Conn.ObjectsAll(container, &swift.ObjectsOpts{Prefix: segmentPath})
+		if err == swift.ContainerNotFound {
+			return nil, storagedriver.PathNotFoundError{Path: segmentPath}
+		}
+	} else if _, isSLO := headers["X-Static-Large-Object"]; isSLO {
+		var buf bytes.Buffer
+		var segmentList []swiftSegment
+		headers := make(swift.Headers)
+		headers["X-Static-Large-Object"] = "True"
+		if _, err := d.Conn.ObjectGet(d.Container, path, &buf, true, headers); err != nil {
+			return nil, err
+		}
+		json.Unmarshal(buf.Bytes(), &segmentList)
+		for _, segment := range segmentList {
+			_, segPath := parseFullPath(segment.Name[1:])
+			segments = append(segments, swift.Object{
+				Name:  segPath,
+				Bytes: segment.Bytes,
+				Hash:  segment.Hash,
+			})
+		}
 	}
-	return segments, err
+	return segments, nil
 }
 
-func (d *driver) createManifest(path string, segments string) error {
+// createManifest creates a static large object that is composed of the segments
+// passed as arguments. It creates a JSON object of these segments and uploads it
+// with the `X-Static-Large-Object` header set to `True`
+func (d *driver) createManifest(path string, segments []swift.Object) error {
 	headers := make(swift.Headers)
-	headers["X-Object-Manifest"] = segments
+	headers["X-Static-Large-Object"] = "True"
 	manifest, err := d.Conn.ObjectCreate(d.Container, d.swiftPath(path), false, "", d.getContentType(), headers)
 	if err != nil {
 		if err == swift.ObjectNotFound {
@@ -785,17 +856,43 @@ func (d *driver) createManifest(path string, segments string) error {
 		}
 		return err
 	}
+
+	sloSegments := make([]swiftSegment, len(segments))
+	for i, segment := range segments {
+		sloSegments[i].Path = fmt.Sprintf("%s/%s", d.Container, segment.Name)
+		sloSegments[i].Etag = segment.Hash
+		sloSegments[i].Size = segment.Bytes
+	}
+
+	content, err := json.Marshal(sloSegments)
+	if err != nil {
+		return err
+	}
+
+	if _, err = manifest.Write(content); err != nil {
+		return err
+	}
+
 	if err := manifest.Close(); err != nil {
 		if err == swift.ObjectNotFound {
 			return storagedriver.PathNotFoundError{Path: path}
 		}
 		return err
 	}
+
 	return nil
 }
 
-func parseManifest(manifest string) (container string, prefix string) {
-	components := strings.SplitN(manifest, "/", 2)
+// isManifest return true if the object is either a static large object or a dynamic large object
+func isManifest(headers swift.Headers) bool {
+	_, isDLO := headers["X-Object-Manifest"]
+	_, isSLO := headers["X-Static-Large-Object"]
+	return isSLO || isDLO
+}
+
+// parseFullPath splits a container/object path into 2 parts
+func parseFullPath(path string) (container string, prefix string) {
+	components := strings.SplitN(path, "/", 2)
 	container = components[0]
 	if len(components) > 1 {
 		prefix = components[1]
@@ -803,6 +900,7 @@ func parseManifest(manifest string) (container string, prefix string) {
 	return container, prefix
 }
 
+// generateSecret generates a random string to be used as a secret key to generate temporary URLs
 func generateSecret() (string, error) {
 	var secretBytes [32]byte
 	if _, err := rand.Read(secretBytes[:]); err != nil {

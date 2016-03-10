@@ -162,7 +162,7 @@
 		},
 		{
 			"ImportPath": "github.com/ncw/swift",
-			"Rev": "c54732e87b0b283d1baf0a18db689d0aea460ba3"
+			"Rev": "fe65c35e47350c4c4c1e50f1d98a4b27904ff374"
 		},
 		{
 			"ImportPath": "github.com/noahdesu/go-ceph/rados",

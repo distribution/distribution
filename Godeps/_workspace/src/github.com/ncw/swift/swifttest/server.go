@@ -119,6 +119,22 @@ type container struct {
 	bytes   int
 }
 
+type segment struct {
+	Path         string `json:"path,omitempty"`
+	Hash         string `json:"hash,omitempty"`
+	Size         int64  `json:"size_bytes,omitempty"`
+	// When uploading a manifest, the attributes must be named `path`, `hash` and `size`
+	// but when querying the JSON content of a manifest with the `multipart-manifest=get`
+	// parameter, Swift names those attributes `name`, `etag` and `bytes`.
+	// We use all the different attributes names in this structure to be able to use
+	// the same structure for both uploading and retrieving.
+	Name         string `json:"name,omitempty"`
+	Etag         string `json:"etag,omitempty"`
+	Bytes        int64  `json:"bytes,omitempty"`
+	ContentType  string `json:"content_type,omitempty"`
+	LastModified string `json:"last_modified,omitempty"`
+}
+
 // A resource encapsulates the subject of an HTTP request.
 // The resource referred to may or may not exist
 // when the request is made.
@@ -388,10 +404,11 @@ func (obj *object) Key() Key {
 }
 
 var metaHeaders = map[string]bool{
-	"Content-Type":        true,
-	"Content-Encoding":    true,
-	"Content-Disposition": true,
-	"X-Object-Manifest":   true,
+	"Content-Type":          true,
+	"Content-Encoding":      true,
+	"Content-Disposition":   true,
+	"X-Object-Manifest":     true,
+	"X-Static-Large-Object": true,
 }
 
 var rangeRegexp = regexp.MustCompile("(bytes=)?([0-9]*)-([0-9]*)")
@@ -453,18 +470,44 @@ func (objr objectResource) get(a *action) interface{} {
 		}
 		etag = sum.Sum(nil)
 		if end == -1 {
-			end = size
+			end = size-1
 		}
 		reader = io.LimitReader(io.MultiReader(segments...), int64(end-start))
+	} else if value, ok := obj.meta["X-Static-Large-Object"]; ok && value[0] == "True" && a.req.URL.Query().Get("multipart-manifest") != "get" {
+		var segments []io.Reader
+		var segmentList []segment
+		json.Unmarshal(obj.data, &segmentList)
+		cursor := 0
+		size := 0
+		sum := md5.New()
+		for _, segment := range(segmentList) {
+			components := strings.SplitN(segment.Name, "/", 2)
+			segContainer := a.user.Containers[components[0]]
+			objectName := components[1]
+			segObject := segContainer.objects[objectName]
+			length := len(segObject.data)
+			size += length
+			sum.Write([]byte(hex.EncodeToString(segObject.checksum)))
+			if start >= cursor+length {
+				continue
+			}
+			segments = append(segments, bytes.NewReader(segObject.data[max(0, start-cursor):]))
+			cursor += length
+		}
+		etag = sum.Sum(nil)
+		if end == -1 {
+			end = size-1
+		}
+		reader = io.LimitReader(io.MultiReader(segments...), int64(end-start+1))
 	} else {
 		if end == -1 {
-			end = len(obj.data)
+			end = len(obj.data)-1
 		}
 		etag = obj.checksum
-		reader = bytes.NewReader(obj.data[start:end])
+		reader = bytes.NewReader(obj.data[start:end+1])
 	}
 
-	h.Set("Content-Length", fmt.Sprint(end-start))
+	h.Set("Content-Length", fmt.Sprint(end-start+1))
 	h.Set("ETag", hex.EncodeToString(etag))
 	h.Set("Last-Modified", obj.mtime.Format(http.TimeFormat))
 
@@ -526,6 +569,27 @@ func (objr objectResource) put(a *action) interface{} {
 		if content_type == "" {
 			content_type = "application/octet-stream"
 		}
+	}
+
+	if a.req.URL.Query().Get("multipart-manifest") == "put" {
+		// TODO: check the content of the SLO
+		a.req.Header.Set("X-Static-Large-Object", "True")
+
+		var segments []segment
+		json.Unmarshal(data, &segments)
+		for i, _ := range(segments) {
+			segments[i].Name = segments[i].Path
+			segments[i].Path = ""
+			segments[i].Hash = segments[i].Etag
+			segments[i].Etag = ""
+			segments[i].Bytes = segments[i].Size
+			segments[i].Size = 0
+		}
+
+		data, _ = json.Marshal(segments)
+		sum = md5.New()
+		sum.Write(data)
+		gotHash = sum.Sum(nil)
 	}
 
 	// PUT request has been successful - save data and metadata
