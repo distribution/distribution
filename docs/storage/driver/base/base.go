@@ -102,10 +102,10 @@ func (base *Base) PutContent(ctx context.Context, path string, content []byte) e
 	return base.setDriverName(base.StorageDriver.PutContent(ctx, path, content))
 }
 
-// ReadStream wraps ReadStream of underlying storage driver.
-func (base *Base) ReadStream(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
+// Reader wraps Reader of underlying storage driver.
+func (base *Base) Reader(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
 	ctx, done := context.WithTrace(ctx)
-	defer done("%s.ReadStream(%q, %d)", base.Name(), path, offset)
+	defer done("%s.Reader(%q, %d)", base.Name(), path, offset)
 
 	if offset < 0 {
 		return nil, storagedriver.InvalidOffsetError{Path: path, Offset: offset, DriverName: base.StorageDriver.Name()}
@@ -115,25 +115,21 @@ func (base *Base) ReadStream(ctx context.Context, path string, offset int64) (io
 		return nil, storagedriver.InvalidPathError{Path: path, DriverName: base.StorageDriver.Name()}
 	}
 
-	rc, e := base.StorageDriver.ReadStream(ctx, path, offset)
+	rc, e := base.StorageDriver.Reader(ctx, path, offset)
 	return rc, base.setDriverName(e)
 }
 
-// WriteStream wraps WriteStream of underlying storage driver.
-func (base *Base) WriteStream(ctx context.Context, path string, offset int64, reader io.Reader) (nn int64, err error) {
+// Writer wraps Writer of underlying storage driver.
+func (base *Base) Writer(ctx context.Context, path string, append bool) (storagedriver.FileWriter, error) {
 	ctx, done := context.WithTrace(ctx)
-	defer done("%s.WriteStream(%q, %d)", base.Name(), path, offset)
-
-	if offset < 0 {
-		return 0, storagedriver.InvalidOffsetError{Path: path, Offset: offset, DriverName: base.StorageDriver.Name()}
-	}
+	defer done("%s.Writer(%q, %v)", base.Name(), path, append)
 
 	if !storagedriver.PathRegexp.MatchString(path) {
-		return 0, storagedriver.InvalidPathError{Path: path, DriverName: base.StorageDriver.Name()}
+		return nil, storagedriver.InvalidPathError{Path: path, DriverName: base.StorageDriver.Name()}
 	}
 
-	i64, e := base.StorageDriver.WriteStream(ctx, path, offset, reader)
-	return i64, base.setDriverName(e)
+	writer, e := base.StorageDriver.Writer(ctx, path, append)
+	return writer, base.setDriverName(e)
 }
 
 // Stat wraps Stat of underlying storage driver.
