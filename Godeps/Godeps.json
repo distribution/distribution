@@ -165,11 +165,6 @@
 			"Rev": "c54732e87b0b283d1baf0a18db689d0aea460ba3"
 		},
 		{
-			"ImportPath": "github.com/noahdesu/go-ceph/rados",
-			"Comment": "v.0.3.0-29-gb15639c",
-			"Rev": "b15639c44c05368348355229070361395d9152ee"
-		},
-		{
 			"ImportPath": "github.com/spf13/cobra",
 			"Rev": "312092086bed4968099259622145a0c9ae280064"
 		},
