@@ -6,6 +6,13 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
+)
+
+const (
+	// casing is per Golang's http.Header canonicalizing the header names.
+	approximateMessagesCountHeader  = "X-Ms-Approximate-Messages-Count"
+	userDefinedMetadataHeaderPrefix = "X-Ms-Meta-"
 )
 
 // QueueServiceClient contains operations for Microsoft Azure Queue Storage
@@ -111,13 +118,82 @@ type PeekMessageResponse struct {
 	MessageText    string `xml:"MessageText"`
 }
 
+// QueueMetadataResponse represents user defined metadata and queue
+// properties on a specific queue.
+//
+// See https://msdn.microsoft.com/en-us/library/azure/dd179384.aspx
+type QueueMetadataResponse struct {
+	ApproximateMessageCount int
+	UserDefinedMetadata     map[string]string
+}
+
+// SetMetadata operation sets user-defined metadata on the specified queue.
+// Metadata is associated with the queue as name-value pairs.
+//
+// See https://msdn.microsoft.com/en-us/library/azure/dd179348.aspx
+func (c QueueServiceClient) SetMetadata(name string, metadata map[string]string) error {
+	uri := c.client.getEndpoint(queueServiceName, pathForQueue(name), url.Values{"comp": []string{"metadata"}})
+	headers := c.client.getStandardHeaders()
+	for k, v := range metadata {
+		headers[userDefinedMetadataHeaderPrefix+k] = v
+	}
+
+	resp, err := c.client.exec("PUT", uri, headers, nil)
+	if err != nil {
+		return err
+	}
+	defer resp.body.Close()
+
+	return checkRespCode(resp.statusCode, []int{http.StatusNoContent})
+}
+
+// GetMetadata operation retrieves user-defined metadata and queue
+// properties on the specified queue. Metadata is associated with
+// the queue as name-values pairs.
+//
+// See https://msdn.microsoft.com/en-us/library/azure/dd179384.aspx
+//
+// Because the way Golang's http client (and http.Header in particular)
+// canonicalize header names, the returned metadata names would always
+// be all lower case.
+func (c QueueServiceClient) GetMetadata(name string) (QueueMetadataResponse, error) {
+	qm := QueueMetadataResponse{}
+	qm.UserDefinedMetadata = make(map[string]string)
+	uri := c.client.getEndpoint(queueServiceName, pathForQueue(name), url.Values{"comp": []string{"metadata"}})
+	headers := c.client.getStandardHeaders()
+	resp, err := c.client.exec("GET", uri, headers, nil)
+	if err != nil {
+		return qm, err
+	}
+	defer resp.body.Close()
+
+	for k, v := range resp.headers {
+		if len(v) != 1 {
+			return qm, fmt.Errorf("Unexpected number of values (%d) in response header '%s'", len(v), k)
+		}
+
+		value := v[0]
+
+		if k == approximateMessagesCountHeader {
+			qm.ApproximateMessageCount, err = strconv.Atoi(value)
+			if err != nil {
+				return qm, fmt.Errorf("Unexpected value in response header '%s': '%s' ", k, value)
+			}
+		} else if strings.HasPrefix(k, userDefinedMetadataHeaderPrefix) {
+			name := strings.TrimPrefix(k, userDefinedMetadataHeaderPrefix)
+			qm.UserDefinedMetadata[strings.ToLower(name)] = value
+		}
+	}
+
+	return qm, checkRespCode(resp.statusCode, []int{http.StatusOK})
+}
+
 // CreateQueue operation creates a queue under the given account.
 //
 // See https://msdn.microsoft.com/en-us/library/azure/dd179342.aspx
 func (c QueueServiceClient) CreateQueue(name string) error {
 	uri := c.client.getEndpoint(queueServiceName, pathForQueue(name), url.Values{})
 	headers := c.client.getStandardHeaders()
-	headers["Content-Length"] = "0"
 	resp, err := c.client.exec("PUT", uri, headers, nil)
 	if err != nil {
 		return err

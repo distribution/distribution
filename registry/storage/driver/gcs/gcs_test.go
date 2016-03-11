@@ -75,6 +75,7 @@ func init() {
 			email:         email,
 			privateKey:    privateKey,
 			client:        oauth2.NewClient(ctx.Background(), ts),
+			chunkSize:     defaultChunkSize,
 		}
 
 		return New(parameters)
@@ -83,6 +84,102 @@ func init() {
 	testsuites.RegisterSuite(func() (storagedriver.StorageDriver, error) {
 		return gcsDriverConstructor(root)
 	}, skipGCS)
+}
+
+// Test Committing a FileWriter without having called Write
+func TestCommitEmpty(t *testing.T) {
+	if skipGCS() != "" {
+		t.Skip(skipGCS())
+	}
+
+	validRoot, err := ioutil.TempDir("", "driver-")
+	if err != nil {
+		t.Fatalf("unexpected error creating temporary directory: %v", err)
+	}
+	defer os.Remove(validRoot)
+
+	driver, err := gcsDriverConstructor(validRoot)
+	if err != nil {
+		t.Fatalf("unexpected error creating rooted driver: %v", err)
+	}
+
+	filename := "/test"
+	ctx := ctx.Background()
+
+	writer, err := driver.Writer(ctx, filename, false)
+	defer driver.Delete(ctx, filename)
+	if err != nil {
+		t.Fatalf("driver.Writer: unexpected error: %v", err)
+	}
+	err = writer.Commit()
+	if err != nil {
+		t.Fatalf("writer.Commit: unexpected error: %v", err)
+	}
+	err = writer.Close()
+	if err != nil {
+		t.Fatalf("writer.Close: unexpected error: %v", err)
+	}
+	if writer.Size() != 0 {
+		t.Fatalf("writer.Size: %d != 0", writer.Size())
+	}
+	readContents, err := driver.GetContent(ctx, filename)
+	if err != nil {
+		t.Fatalf("driver.GetContent: unexpected error: %v", err)
+	}
+	if len(readContents) != 0 {
+		t.Fatalf("len(driver.GetContent(..)): %d != 0", len(readContents))
+	}
+}
+
+// Test Committing a FileWriter after having written exactly
+// defaultChunksize bytes.
+func TestCommit(t *testing.T) {
+	if skipGCS() != "" {
+		t.Skip(skipGCS())
+	}
+
+	validRoot, err := ioutil.TempDir("", "driver-")
+	if err != nil {
+		t.Fatalf("unexpected error creating temporary directory: %v", err)
+	}
+	defer os.Remove(validRoot)
+
+	driver, err := gcsDriverConstructor(validRoot)
+	if err != nil {
+		t.Fatalf("unexpected error creating rooted driver: %v", err)
+	}
+
+	filename := "/test"
+	ctx := ctx.Background()
+
+	contents := make([]byte, defaultChunkSize)
+	writer, err := driver.Writer(ctx, filename, false)
+	defer driver.Delete(ctx, filename)
+	if err != nil {
+		t.Fatalf("driver.Writer: unexpected error: %v", err)
+	}
+	_, err = writer.Write(contents)
+	if err != nil {
+		t.Fatalf("writer.Write: unexpected error: %v", err)
+	}
+	err = writer.Commit()
+	if err != nil {
+		t.Fatalf("writer.Commit: unexpected error: %v", err)
+	}
+	err = writer.Close()
+	if err != nil {
+		t.Fatalf("writer.Close: unexpected error: %v", err)
+	}
+	if writer.Size() != int64(len(contents)) {
+		t.Fatalf("writer.Size: %d != %d", writer.Size(), len(contents))
+	}
+	readContents, err := driver.GetContent(ctx, filename)
+	if err != nil {
+		t.Fatalf("driver.GetContent: unexpected error: %v", err)
+	}
+	if len(readContents) != len(contents) {
+		t.Fatalf("len(driver.GetContent(..)): %d != %d", len(readContents), len(contents))
+	}
 }
 
 func TestRetry(t *testing.T) {
@@ -100,7 +197,7 @@ func TestRetry(t *testing.T) {
 		}
 	}
 
-	err := retry(2, func() error {
+	err := retry(func() error {
 		return &googleapi.Error{
 			Code:    503,
 			Message: "google api error",
@@ -108,7 +205,7 @@ func TestRetry(t *testing.T) {
 	})
 	assertError("googleapi: Error 503: google api error", err)
 
-	err = retry(2, func() error {
+	err = retry(func() error {
 		return &googleapi.Error{
 			Code:    404,
 			Message: "google api error",
@@ -116,7 +213,7 @@ func TestRetry(t *testing.T) {
 	})
 	assertError("googleapi: Error 404: google api error", err)
 
-	err = retry(2, func() error {
+	err = retry(func() error {
 		return fmt.Errorf("error")
 	})
 	assertError("error", err)

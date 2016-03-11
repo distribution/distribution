@@ -151,8 +151,3 @@ per package, without issue.
 
 Optional [build tags](http://golang.org/pkg/go/build/) can be provided using
 the environment variable `DOCKER_BUILDTAGS`.
-
-To enable the [Ceph RADOS storage driver](storage-drivers/rados.md)
-(librados-dev and librbd-dev will be required to build the bindings):
-
-    export DOCKER_BUILDTAGS='include_rados'

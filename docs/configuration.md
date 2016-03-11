@@ -86,6 +86,7 @@ information about each option that appears later in this page.
         bucket: bucketname
         keyfile: /path/to/keyfile
         rootdirectory: /gcs/object/name/prefix
+        chunksize: 5242880
       s3:
         accesskey: awsaccesskey
         secretkey: awssecretkey
@@ -97,10 +98,6 @@ information about each option that appears later in this page.
         v4auth: true
         chunksize: 5242880
         rootdirectory: /s3/object/name/prefix
-      rados:
-        poolname: radospool
-        username: radosuser
-        chunksize: 4194304
       swift:
         username: username
         password: password
@@ -366,10 +363,6 @@ Permitted values are `error`, `warn`, `info` and `debug`. The default is
         v4auth: true
         chunksize: 5242880
         rootdirectory: /s3/object/name/prefix
-      rados:
-        poolname: radospool
-        username: radosuser
-        chunksize: 4194304
       swift:
         username: username
         password: password
@@ -427,12 +420,6 @@ You must configure one backend; if you configure more, the registry returns an e
     <td><code>gcs</code></td>
     <td>Uses Google Cloud Storage.
     See the <a href="storage-drivers/gcs.md">driver's reference documentation</a>.
-    </td>
-  </tr>
-  <tr>
-    <td><code>rados</code></td>
-    <td>Uses Ceph Object Storage.
-    See the <a href="storage-drivers/rados.md">driver's reference documentation</a>.
     </td>
   </tr>
   <tr>
