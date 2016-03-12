@@ -94,6 +94,7 @@ information about each option that appears later in this page.
         regionendpoint: http://myobjects.local
         bucket: bucketname
         encrypt: true
+        keyid: mykeyid
         secure: true
         v4auth: true
         chunksize: 5242880
@@ -359,6 +360,7 @@ Permitted values are `error`, `warn`, `info` and `debug`. The default is
         regionendpoint: http://myobjects.local
         bucket: bucketname
         encrypt: true
+        keyid: mykeyid
         secure: true
         v4auth: true
         chunksize: 5242880
