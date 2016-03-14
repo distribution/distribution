@@ -382,8 +382,8 @@ func (d *driver) listBlobs(container, virtPath string) ([]string, error) {
 }
 
 func is404(err error) bool {
-	statusCodeErr, ok := err.(azure.UnexpectedStatusCodeError)
-	return ok && statusCodeErr.Got() == http.StatusNotFound
+	statusCodeErr, ok := err.(azure.AzureStorageServiceError)
+	return ok && statusCodeErr.StatusCode == http.StatusNotFound
 }
 
 type writer struct {
