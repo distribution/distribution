@@ -470,7 +470,7 @@ func (bw *blockWriter) Write(p []byte) (int, error) {
 		if offset+chunkSize > len(p) {
 			chunkSize = len(p) - offset
 		}
-		err := bw.client.AppendBlock(bw.container, bw.path, p[offset:offset+chunkSize])
+		err := bw.client.AppendBlock(bw.container, bw.path, p[offset:offset+chunkSize], nil)
 		if err != nil {
 			return n, err
 		}
