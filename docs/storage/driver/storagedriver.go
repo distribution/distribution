@@ -34,7 +34,14 @@ func (version Version) Minor() uint {
 const CurrentVersion Version = "0.1"
 
 // StorageDriver defines methods that a Storage Driver must implement for a
-// filesystem-like key/value object storage.
+// filesystem-like key/value object storage. Storage Drivers are automatically
+// registered via an internal registration mechanism, and generally created
+// via the StorageDriverFactory interface (https://godoc.org/github.com/docker/distribution/registry/storage/driver/factory).
+// See below for an example of how to get a StorageDriver for S3:
+//
+//	import _ "github.com/docker/distribution/registry/storage/driver/s3-aws"
+//	s3Driver, err = factory.Create("s3", storageParams)
+//	// assuming no error, s3Driver is the StorageDriver that communicates with S3 according to storageParams
 type StorageDriver interface {
 	// Name returns the human-readable "name" of the driver, useful in error
 	// messages and logging. By convention, this will just be the registration
