@@ -36,6 +36,9 @@ dependencies:
   # Install dependencies for every copied clone/go version
     - gvm use stable && go get github.com/tools/godep:
         pwd: $BASE_STABLE
+  # Nuke the deps and restore, to ensure we test against "the truth" (being the godeps.json file)
+    - gvm use stable && rm -Rf vendor && rm -Rf Godeps/_workspace && godep restore:
+        pwd: $BASE_STABLE
 
   post:
   # For the stable go version, additionally install linting tools
