@@ -384,8 +384,8 @@ var _ distribution.BlobDescriptorService = &linkedBlobStatter{}
 
 func (lbs *linkedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
 	var (
-		resolveErr error
-		target     digest.Digest
+		found  bool
+		target digest.Digest
 	)
 
 	// try the many link path functions until we get success or an error that
@@ -395,19 +395,20 @@ func (lbs *linkedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (dis
 		target, err = lbs.resolveWithLinkFunc(ctx, dgst, linkPathFn)
 
 		if err == nil {
+			found = true
 			break // success!
 		}
 
 		switch err := err.(type) {
 		case driver.PathNotFoundError:
-			resolveErr = distribution.ErrBlobUnknown // move to the next linkPathFn, saving the error
+			// do nothing, just move to the next linkPathFn
 		default:
 			return distribution.Descriptor{}, err
 		}
 	}
 
-	if resolveErr != nil {
-		return distribution.Descriptor{}, resolveErr
+	if !found {
+		return distribution.Descriptor{}, distribution.ErrBlobUnknown
 	}
 
 	if target != dgst {
