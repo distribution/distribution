@@ -14,7 +14,7 @@
 
 // Package cloud contains Google Cloud Platform APIs related types
 // and common functions.
-package cloud // import "google.golang.org/cloud"
+package cloud
 
 import (
 	"net/http"

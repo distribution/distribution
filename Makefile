@@ -34,6 +34,9 @@ PKGS := $(shell go list -tags "${DOCKER_BUILDTAGS}" ./... | grep -v ^github.com/
 GOLINT_BIN := $(GOPATH)/bin/golint
 GOLINT := $(shell [ -x $(GOLINT_BIN) ] && echo $(GOLINT_BIN) || echo '')
 
+GODEP_BIN := $(GOPATH)/bin/godep
+GODEP := $(shell [ -x $(GODEP_BIN) ] && echo $(GODEP_BIN) || echo '')
+
 ${PREFIX}/bin/registry: $(wildcard **/*.go)
 	@echo "+ $@"
 	@go build -tags "${DOCKER_BUILDTAGS}" -o $@ ${GO_LDFLAGS}  ${GO_GCFLAGS} ./cmd/registry
@@ -82,3 +85,13 @@ binaries: ${PREFIX}/bin/registry ${PREFIX}/bin/digest ${PREFIX}/bin/registry-api
 clean:
 	@echo "+ $@"
 	@rm -rf "${PREFIX}/bin/registry" "${PREFIX}/bin/digest" "${PREFIX}/bin/registry-api-descriptor-template"
+
+dep-save:
+	$(if $(GODEP), , \
+		$(error Please install godep: go get github.com/tools/godep))
+	$(GODEP) save $(PKGS)
+
+dep-restore:
+	$(if $(GODEP), , \
+		$(error Please install godep: go get github.com/tools/godep))
+	$(GODEP) restore -v

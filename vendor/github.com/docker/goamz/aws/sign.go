@@ -23,7 +23,7 @@ func EncodeSorted(values url.Values) string {
 	// preallocate the arrays for perfomance
 	keys := make([]string, 0, len(values))
 	sarray := make([]string, 0, len(values))
-	for k, _ := range values {
+	for k := range values {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
@@ -65,7 +65,7 @@ func (s *V2Signer) Sign(method, path string, params map[string]string) {
 	// from the natural order of the encoded value of key=value.
 	// Percent and gocheck.Equals affect the sorting order.
 	var keys, sarray []string
-	for k, _ := range params {
+	for k := range params {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)
@@ -372,7 +372,7 @@ func (s *V4Signer) canonicalHeaders(h http.Header) string {
 
 func (s *V4Signer) signedHeaders(h http.Header) string {
 	i, a := 0, make([]string, len(h))
-	for k, _ := range h {
+	for k := range h {
 		a[i] = strings.ToLower(k)
 		i++
 	}
