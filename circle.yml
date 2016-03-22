@@ -49,6 +49,10 @@ test:
     # - gvm use old && go version
     - gvm use stable && go version
 
+  # Ensure validation of dependencies
+    - gvm use stable && make dep-validate:
+        pwd: $BASE_STABLE
+
   # First thing: build everything. This will catch compile errors, and it's
   # also necessary for go vet to work properly (see #807).
     - gvm use stable && godep go install $(go list ./... | grep -v "/vendor/"):

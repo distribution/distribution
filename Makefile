@@ -87,11 +87,22 @@ clean:
 	@rm -rf "${PREFIX}/bin/registry" "${PREFIX}/bin/digest" "${PREFIX}/bin/registry-api-descriptor-template"
 
 dep-save:
+	@echo "+ $@"
 	$(if $(GODEP), , \
 		$(error Please install godep: go get github.com/tools/godep))
-	$(GODEP) save $(PKGS)
+	@$(GODEP) save $(PKGS)
 
 dep-restore:
+	@echo "+ $@"
 	$(if $(GODEP), , \
 		$(error Please install godep: go get github.com/tools/godep))
-	$(GODEP) restore -v
+	@$(GODEP) restore -v
+
+dep-validate: dep-restore
+	@echo "+ $@"
+	@rm -Rf .vendor.bak
+	@mv vendor .vendor.bak
+	@rm -Rf Godeps
+	@$(GODEP) save ./...
+	@test -z "$$(diff -r vendor .vendor.bak 2>&1 | tee /dev/stderr)" || \
+		(echo >&2 "+ borked dependencies! what you have in Godeps/Godeps.json does not match with what you have in vendor" && false)
