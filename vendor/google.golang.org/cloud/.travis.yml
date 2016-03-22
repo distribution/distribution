@@ -2,7 +2,7 @@ sudo: false
 language: go
 go:
 - 1.4
-- tip
+- 1.5
 install:
 - go get -v google.golang.org/cloud/...
 script:

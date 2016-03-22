@@ -30,7 +30,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // Protocol buffer deep copy and merge.
-// TODO: MessageSet and RawMessage.
+// TODO: RawMessage.
 
 package proto
 
@@ -120,6 +120,17 @@ func mergeAny(out, in reflect.Value, viaPtr bool, prop *Properties) {
 			return
 		}
 		out.Set(in)
+	case reflect.Interface:
+		// Probably a oneof field; copy non-nil values.
+		if in.IsNil() {
+			return
+		}
+		// Allocate destination if it is not set, or set to a different type.
+		// Otherwise we will merge as normal.
+		if out.IsNil() || out.Elem().Type() != in.Elem().Type() {
+			out.Set(reflect.New(in.Elem().Elem().Type())) // interface -> *T -> T -> new(T)
+		}
+		mergeAny(out.Elem(), in.Elem(), false, nil)
 	case reflect.Map:
 		if in.Len() == 0 {
 			return

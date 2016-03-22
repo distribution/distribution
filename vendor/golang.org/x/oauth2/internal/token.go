@@ -1,4 +1,4 @@
-// Copyright 2014 The oauth2 Authors. All rights reserved.
+// Copyright 2014 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -91,25 +91,35 @@ func (e *expirationTime) UnmarshalJSON(b []byte) error {
 
 var brokenAuthHeaderProviders = []string{
 	"https://accounts.google.com/",
-	"https://www.googleapis.com/",
-	"https://github.com/",
-	"https://api.instagram.com/",
-	"https://www.douban.com/",
 	"https://api.dropbox.com/",
-	"https://api.soundcloud.com/",
-	"https://www.linkedin.com/",
-	"https://api.twitch.tv/",
-	"https://oauth.vk.com/",
+	"https://api.instagram.com/",
+	"https://api.netatmo.net/",
 	"https://api.odnoklassniki.ru/",
-	"https://connect.stripe.com/",
 	"https://api.pushbullet.com/",
+	"https://api.soundcloud.com/",
+	"https://api.twitch.tv/",
+	"https://app.box.com/",
+	"https://connect.stripe.com/",
+	"https://login.microsoftonline.com/",
+	"https://login.salesforce.com/",
 	"https://oauth.sandbox.trainingpeaks.com/",
 	"https://oauth.trainingpeaks.com/",
-	"https://www.strava.com/oauth/",
-	"https://app.box.com/",
+	"https://oauth.vk.com/",
+	"https://openapi.baidu.com/",
+	"https://slack.com/",
 	"https://test-sandbox.auth.corp.google.com",
+	"https://test.salesforce.com/",
 	"https://user.gini.net/",
-	"https://api.netatmo.net/",
+	"https://www.douban.com/",
+	"https://www.googleapis.com/",
+	"https://www.linkedin.com/",
+	"https://www.strava.com/oauth/",
+	"https://www.wunderlist.com/oauth/",
+	"https://api.patreon.com/",
+}
+
+func RegisterBrokenAuthHeaderProvider(tokenURL string) {
+	brokenAuthHeaderProviders = append(brokenAuthHeaderProviders, tokenURL)
 }
 
 // providerAuthHeaderWorks reports whether the OAuth2 server identified by the tokenURL

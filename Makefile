@@ -106,3 +106,4 @@ dep-validate: dep-restore
 	@$(GODEP) save ./...
 	@test -z "$$(diff -r vendor .vendor.bak 2>&1 | tee /dev/stderr)" || \
 		(echo >&2 "+ borked dependencies! what you have in Godeps/Godeps.json does not match with what you have in vendor" && false)
+	@rm -Rf .vendor.bak
