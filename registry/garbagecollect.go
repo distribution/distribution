@@ -13,12 +13,16 @@ import (
 	"github.com/docker/distribution/registry/storage"
 	"github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/factory"
-
 	"github.com/spf13/cobra"
 )
 
+func emit(ctx context.Context, s string) {
+	if dryRun {
+		context.GetLogger(ctx).Infof("gc: %s", s)
+	}
+}
+
 func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver) error {
-	// Construct a registry
 	registry, err := storage.NewRegistry(ctx, storageDriver)
 	if err != nil {
 		return fmt.Errorf("failed to construct registry: %v", err)
@@ -32,6 +36,8 @@ func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver) error
 	// mark
 	markSet := make(map[digest.Digest]struct{})
 	err = repositoryEnumerator.Enumerate(ctx, func(repoName string) error {
+		emit(ctx, fmt.Sprint(repoName))
+
 		var err error
 		named, err := reference.ParseNamed(repoName)
 		if err != nil {
@@ -53,7 +59,8 @@ func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver) error
 		}
 
 		err = manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
-			// Mark the manifest's blob
+			// Mark the manifest's blo
+			emit(ctx, fmt.Sprintf("%s: adding manifest %s ", repoName, dgst))
 			markSet[dgst] = struct{}{}
 
 			manifest, err := manifestService.Get(ctx, dgst)
@@ -64,6 +71,7 @@ func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver) error
 			descriptors := manifest.References()
 			for _, descriptor := range descriptors {
 				markSet[descriptor.Digest] = struct{}{}
+				emit(ctx, fmt.Sprintf("%s: marking blob %v", repoName, descriptor))
 			}
 
 			switch manifest.(type) {
@@ -77,11 +85,13 @@ func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver) error
 					return fmt.Errorf("failed to get signatures for signed manifest: %v", err)
 				}
 				for _, signatureDigest := range signatures {
+					emit(ctx, fmt.Sprintf("%s: marking signature %s", repoName, signatureDigest))
 					markSet[signatureDigest] = struct{}{}
 				}
 				break
 			case *schema2.DeserializedManifest:
 				config := manifest.(*schema2.DeserializedManifest).Config
+				emit(ctx, fmt.Sprintf("%s: marking configuration %s", repoName, config.Digest))
 				markSet[config.Digest] = struct{}{}
 				break
 			}
@@ -113,6 +123,10 @@ func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver) error
 	// Construct vacuum
 	vacuum := storage.NewVacuum(ctx, storageDriver)
 	for dgst := range deleteSet {
+		if dryRun {
+			emit(ctx, fmt.Sprintf("deleting %s", dgst))
+			continue
+		}
 		err = vacuum.RemoveBlob(string(dgst))
 		if err != nil {
 			return fmt.Errorf("failed to delete blob %s: %v\n", dgst, err)
@@ -122,13 +136,18 @@ func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver) error
 	return err
 }
 
+func init() {
+	GCCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "do everything expect remove the blobs")
+}
+
+var dryRun bool
+
 // GCCmd is the cobra command that corresponds to the garbage-collect subcommand
 var GCCmd = &cobra.Command{
 	Use:   "garbage-collect <config>",
-	Short: "`garbage-collects` deletes layers not referenced by any manifests",
-	Long:  "`garbage-collects` deletes layers not referenced by any manifests",
+	Short: "`garbage-collect` deletes layers not referenced by any manifests",
+	Long:  "`garbage-collect` deletes layers not referenced by any manifests",
 	Run: func(cmd *cobra.Command, args []string) {
-
 		config, err := resolveConfiguration(args)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "configuration error: %v\n", err)

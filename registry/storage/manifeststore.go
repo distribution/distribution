@@ -161,16 +161,15 @@ func (ms *manifestStore) GetSignatures(ctx context.Context, manifestDigest diges
 		return nil, err
 	}
 
-	signaturesPath = path.Join(signaturesPath, "sha256")
-
-	signaturePaths, err := ms.blobStore.driver.List(ctx, signaturesPath)
+	alg := string(digest.SHA256)
+	signaturePaths, err := ms.blobStore.driver.List(ctx, path.Join(signaturesPath, alg))
 	if err != nil {
 		return nil, err
 	}
 
 	var digests []digest.Digest
 	for _, sigPath := range signaturePaths {
-		sigdigest, err := digest.ParseDigest("sha256:" + path.Base(sigPath))
+		sigdigest, err := digest.ParseDigest(alg + ":" + path.Base(sigPath))
 		if err != nil {
 			// merely found not a digest
 			continue
