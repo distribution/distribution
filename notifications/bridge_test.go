@@ -3,6 +3,7 @@ package notifications
 import (
 	"testing"
 
+	"github.com/docker/distribution"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/reference"
@@ -57,6 +58,38 @@ func TestEventBridgeManifestPushed(t *testing.T) {
 
 	repoRef, _ := reference.ParseNamed(repo)
 	if err := l.ManifestPushed(repoRef, sm); err != nil {
+		t.Fatalf("unexpected error notifying manifest pull: %v", err)
+	}
+}
+
+func TestEventBridgeManifestPushedWithTag(t *testing.T) {
+	l := createTestEnv(t, testSinkFn(func(events ...Event) error {
+		checkCommonManifest(t, EventActionPush, events...)
+		if events[0].Target.Tag != "latest" {
+			t.Fatalf("missing or unexpected tag: %#v", events[0].Target)
+		}
+
+		return nil
+	}))
+
+	repoRef, _ := reference.ParseNamed(repo)
+	if err := l.ManifestPushed(repoRef, sm, distribution.WithTag(m.Tag)); err != nil {
+		t.Fatalf("unexpected error notifying manifest pull: %v", err)
+	}
+}
+
+func TestEventBridgeManifestPulledWithTag(t *testing.T) {
+	l := createTestEnv(t, testSinkFn(func(events ...Event) error {
+		checkCommonManifest(t, EventActionPull, events...)
+		if events[0].Target.Tag != "latest" {
+			t.Fatalf("missing or unexpected tag: %#v", events[0].Target)
+		}
+
+		return nil
+	}))
+
+	repoRef, _ := reference.ParseNamed(repo)
+	if err := l.ManifestPulled(repoRef, sm, distribution.WithTag(m.Tag)); err != nil {
 		t.Fatalf("unexpected error notifying manifest pull: %v", err)
 	}
 }
