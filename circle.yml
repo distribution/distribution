@@ -50,7 +50,7 @@ test:
     - gvm use stable && go version
 
   # Ensure validation of dependencies
-    - gvm use stable && make dep-validate:
+    - gvm use stable && if test -n "`git diff --stat=1000 master | grep -Ei \"vendor|godeps\"`"; then make dep-validate; fi:
         pwd: $BASE_STABLE
 
   # First thing: build everything. This will catch compile errors, and it's
