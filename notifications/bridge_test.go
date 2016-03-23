@@ -19,7 +19,7 @@ var (
 		Addr:       "remote.test",
 		InstanceID: uuid.Generate().String(),
 	}
-	ub = mustUB(v2.NewURLBuilderFromString("http://test.example.com/"))
+	ub = mustUB(v2.NewURLBuilderFromString("http://test.example.com/", false))
 
 	actor = ActorRecord{
 		Name: "test",

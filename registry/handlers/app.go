@@ -721,9 +721,9 @@ func (app *App) context(w http.ResponseWriter, r *http.Request) *Context {
 		// A "host" item in the configuration takes precedence over
 		// X-Forwarded-Proto and X-Forwarded-Host headers, and the
 		// hostname in the request.
-		context.urlBuilder = v2.NewURLBuilder(&app.httpHost)
+		context.urlBuilder = v2.NewURLBuilder(&app.httpHost, false)
 	} else {
-		context.urlBuilder = v2.NewURLBuilderFromRequest(r)
+		context.urlBuilder = v2.NewURLBuilderFromRequest(r, app.Config.HTTP.RelativeURLs)
 	}
 
 	return context
