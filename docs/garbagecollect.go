@@ -13,20 +13,18 @@ import (
 	"github.com/docker/distribution/registry/storage"
 	"github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/factory"
+	"github.com/docker/libtrust"
 	"github.com/spf13/cobra"
 )
 
-func emit(ctx context.Context, s string) {
+func emit(format string, a ...interface{}) {
 	if dryRun {
-		context.GetLogger(ctx).Infof("gc: %s", s)
+		fmt.Printf(format, a...)
+		fmt.Println("")
 	}
 }
 
-func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver) error {
-	registry, err := storage.NewRegistry(ctx, storageDriver)
-	if err != nil {
-		return fmt.Errorf("failed to construct registry: %v", err)
-	}
+func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver, registry distribution.Namespace) error {
 
 	repositoryEnumerator, ok := registry.(distribution.RepositoryEnumerator)
 	if !ok {
@@ -35,8 +33,8 @@ func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver) error
 
 	// mark
 	markSet := make(map[digest.Digest]struct{})
-	err = repositoryEnumerator.Enumerate(ctx, func(repoName string) error {
-		emit(ctx, fmt.Sprint(repoName))
+	err := repositoryEnumerator.Enumerate(ctx, func(repoName string) error {
+		emit(repoName)
 
 		var err error
 		named, err := reference.ParseNamed(repoName)
@@ -59,8 +57,8 @@ func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver) error
 		}
 
 		err = manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
-			// Mark the manifest's blo
-			emit(ctx, fmt.Sprintf("%s: adding manifest %s ", repoName, dgst))
+			// Mark the manifest's blob
+			emit("%s: marking manifest %s ", repoName, dgst)
 			markSet[dgst] = struct{}{}
 
 			manifest, err := manifestService.Get(ctx, dgst)
@@ -71,7 +69,7 @@ func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver) error
 			descriptors := manifest.References()
 			for _, descriptor := range descriptors {
 				markSet[descriptor.Digest] = struct{}{}
-				emit(ctx, fmt.Sprintf("%s: marking blob %v", repoName, descriptor))
+				emit("%s: marking blob %s", repoName, descriptor.Digest)
 			}
 
 			switch manifest.(type) {
@@ -85,13 +83,13 @@ func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver) error
 					return fmt.Errorf("failed to get signatures for signed manifest: %v", err)
 				}
 				for _, signatureDigest := range signatures {
-					emit(ctx, fmt.Sprintf("%s: marking signature %s", repoName, signatureDigest))
+					emit("%s: marking signature %s", repoName, signatureDigest)
 					markSet[signatureDigest] = struct{}{}
 				}
 				break
 			case *schema2.DeserializedManifest:
 				config := manifest.(*schema2.DeserializedManifest).Config
-				emit(ctx, fmt.Sprintf("%s: marking configuration %s", repoName, config.Digest))
+				emit("%s: marking configuration %s", repoName, config.Digest)
 				markSet[config.Digest] = struct{}{}
 				break
 			}
@@ -120,11 +118,12 @@ func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver) error
 		return fmt.Errorf("error enumerating blobs: %v", err)
 	}
 
+	emit("\n%d blobs marked, %d blobs eligible for deletion", len(markSet), len(deleteSet))
 	// Construct vacuum
 	vacuum := storage.NewVacuum(ctx, storageDriver)
 	for dgst := range deleteSet {
 		if dryRun {
-			emit(ctx, fmt.Sprintf("deleting %s", dgst))
+			emit("deleting %s", dgst)
 			continue
 		}
 		err = vacuum.RemoveBlob(string(dgst))
@@ -168,7 +167,19 @@ var GCCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		err = markAndSweep(ctx, driver)
+		k, err := libtrust.GenerateECP256PrivateKey()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s", err)
+			os.Exit(1)
+		}
+
+		registry, err := storage.NewRegistry(ctx, driver, storage.DisableSchema1Signatures, storage.Schema1SigningKey(k))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "failed to construct registry: %v", err)
+			os.Exit(1)
+		}
+
+		err = markAndSweep(ctx, driver, registry)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to garbage collect: %v", err)
 			os.Exit(1)
