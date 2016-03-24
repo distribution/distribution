@@ -406,44 +406,14 @@ Permitted values are `error`, `warn`, `info` and `debug`. The default is
 The storage option is **required** and defines which storage backend is in use.
 You must configure one backend; if you configure more, the registry returns an error. You can choose any of these backend storage drivers:
 
-<table>
-  <tr>
-    <td><code>filesystem</code></td>
-    <td>Uses the local disk to store registry files. It is ideal for development and may be appropriate for some small-scale production applications.
-    See the <a href="storage-drivers/filesystem.md">driver's reference documentation</a>.
-    </td>
-  </tr>
-  <tr>
-    <td><code>azure</code></td>
-    <td>Uses Microsoft's Azure Blob Storage.
-    See the <a href="storage-drivers/azure.md">driver's reference documentation</a>.
-    </td>
-  </tr>
-  <tr>
-    <td><code>gcs</code></td>
-    <td>Uses Google Cloud Storage.
-    See the <a href="storage-drivers/gcs.md">driver's reference documentation</a>.
-    </td>
-  </tr>
-  <tr>
-    <td><code>s3</code></td>
-    <td>Uses Amazon's Simple Storage Service (S3) and compatible Storage Services.
-    See the <a href="storage-drivers/s3.md">driver's reference documentation</a>.
-    </td>
-  </tr>
-  <tr>
-    <td><code>swift</code></td>
-    <td>Uses Openstack Swift object storage.
-    See the <a href="storage-drivers/swift.md">driver's reference documentation</a>.
-    </td>
-  </tr>
-  <tr>
-    <td><code>oss</code></td>
-    <td>Uses Aliyun OSS for object storage.
-    See the <a href="storage-drivers/oss.md">driver's reference documentation</a>.
-    </td>
-  </tr>
-</table>
+| Storage&nbsp;driver | Description
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `filesystem`        | Uses the local disk to store registry files. It is ideal for development and may be appropriate for some small-scale production applications. See the [driver's reference documentation](storage-drivers/filesystem.md). |
+| `azure`             | Uses Microsoft's Azure Blob Storage. See the [driver's reference documentation](storage-drivers/azure.md).                                                                                                               |
+| `gcs`               | Uses Google Cloud Storage. See the [driver's reference documentation](storage-drivers/gcs.md).                                                                                                                           |
+| `s3`                | Uses Amazon's Simple Storage Service (S3) and compatible Storage Services. See the [driver's reference documentation](storage-drivers/s3.md).                                                                            |
+| `swift`             | Uses Openstack Swift object storage. See the [driver's reference documentation](storage-drivers/swift.md).                                                                                                               |
+| `oss`               | Uses Aliyun OSS for object storage. See the [driver's reference documentation](storage-drivers/oss.md).                                                                                                                  |
 
 For purely tests purposes, you can use the [`inmemory` storage
 driver](storage-drivers/inmemory.md). If you would like to run a registry from
