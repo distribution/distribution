@@ -19,8 +19,7 @@ import (
 
 func emit(format string, a ...interface{}) {
 	if dryRun {
-		fmt.Printf(format, a...)
-		fmt.Println("")
+		fmt.Printf(format+"\n", a...)
 	}
 }
 
@@ -122,8 +121,8 @@ func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 	// Construct vacuum
 	vacuum := storage.NewVacuum(ctx, storageDriver)
 	for dgst := range deleteSet {
+		emit("blob eligible for deletion: %s", dgst)
 		if dryRun {
-			emit("deleting %s", dgst)
 			continue
 		}
 		err = vacuum.RemoveBlob(string(dgst))
@@ -169,7 +168,7 @@ var GCCmd = &cobra.Command{
 
 		k, err := libtrust.GenerateECP256PrivateKey()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s", err)
+			fmt.Fprint(os.Stderr, err)
 			os.Exit(1)
 		}
 
