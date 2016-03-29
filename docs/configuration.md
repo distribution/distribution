@@ -164,7 +164,7 @@ information about each option that appears later in this page.
             baseurl: https://my.cloudfronted.domain.com/
             privatekey: /path/to/pem
             keypairid: cloudfrontkeypairid
-            duration: 3000
+            duration: 3000s
     reporting:
       bugsnag:
         apikey: bugsnagapikey
@@ -694,7 +694,7 @@ in the registry implementation.
             baseurl: https://my.cloudfronted.domain.com/
             privatekey: /path/to/pem
             keypairid: cloudfrontkeypairid
-            duration: 3000
+            duration: 3000s
 
 Each middleware entry has `name` and `options` entries. The `name` must
 correspond to the name under which the middleware registers itself. The
@@ -753,7 +753,7 @@ interpretation of the options.
       no
     </td>
     <td>
-      Duration for which a signed URL should be valid.
+      Specify a `duration` by providing an integer and a unit. Valid time units are `ns`, `us` (or `µs`), `ms`, `s`, `m`, `h`. For example, `3000s` is a valid duration; there should be no space between the integer and unit. If you do not specify a `duration` or specify an integer without a time unit, this defaults to 20 minutes.
     </td>
   </tr>
 </table>
