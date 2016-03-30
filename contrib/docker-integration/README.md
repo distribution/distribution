@@ -121,18 +121,16 @@ bats -p .
 
 ## Configurations
 
-Port | V2 | V1 | TLS | Authentication
---- | --- | --- | --- | ---
-5000 | yes | yes | no | none
-5001 | no | yes | no | none
-5002 | yes | no | no | none
-5011 | no | yes | yes | none
-5440 | yes | yes | yes | none
-5441 | yes | yes | yes | basic (testuser/passpassword)
-5442 | yes | yes | yes | TLS client
-5443 | yes | yes | yes | TLS client (no CA)
-5444 | yes | yes | yes | TLS client + basic (testuser/passpassword)
-5445 | yes | yes | yes (no CA) | none
-5446 | yes | yes | yes (no CA) | basic (testuser/passpassword)
-5447 | yes | yes | yes (no CA) | TLS client
-5448 | yes | yes | yes (SSLv3) | none
+Port | V2 | TLS | Authentication
+--- | --- | --- | ---
+5000 | yes | no | none
+5002 | yes | no | none
+5440 | yes | yes | none
+5441 | yes | yes | basic (testuser/passpassword)
+5442 | yes | yes | TLS client
+5443 | yes | yes | TLS client (no CA)
+5444 | yes | yes | TLS client + basic (testuser/passpassword)
+5445 | yes | yes (no CA) | none
+5446 | yes | yes (no CA) | basic (testuser/passpassword)
+5447 | yes | yes (no CA) | TLS client
+5448 | yes | yes (SSLv3) | none

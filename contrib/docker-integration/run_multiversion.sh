@@ -5,49 +5,52 @@
 set -e
 set -x
 
-source helpers.bash
-
-if [ `uname` = "Linux" ]; then
-	tmpdir_template="$TMPDIR/docker-versions.XXXXX"
-else
-	# /tmp isn't available for mounting in boot2docker
-	tmpdir_template="`pwd`/../../../docker-versions.XXXXX"
-fi
-
-tmpdir=`mktemp -d "$tmpdir_template"`
-trap "rm -rf $tmpdir" EXIT
+DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 
 if [ "$1" == "-d" ]; then
-	start_daemon
+       # Drivers to use for Docker engines the tests are going to create.
+       STORAGE_DRIVER=${STORAGE_DRIVER:-overlay}
+
+       docker daemon --log-level=panic --storage-driver="$STORAGE_DRIVER" &
+       DOCKER_PID=$!
+
+       # Wait for it to become reachable.
+       tries=10
+       until docker version &> /dev/null; do
+               (( tries-- ))
+               if [ $tries -le 0 ]; then
+                       echo >&2 "error: daemon failed to start"
+                       exit 1
+               fi
+               sleep 1
+       done
+
+       trap "kill $DOCKER_PID" EXIT
 fi
 
-# Released versions
+distimage=$(docker build -q $DIR/../..)
+fullversion=$(git describe --match 'v[0-9]*' --dirty='.m' --always)
+distversion=${fullversion:1}
 
-versions="1.6.1 1.7.1 1.8.3 1.9.1"
+echo "Testing image $distimage with distribution version $distversion"
 
-for v in $versions; do
-	echo "Extracting Docker $v from dind image"
-	binpath="$tmpdir/docker-$v/docker"
-	ID=$(docker create dockerswarm/dind:$v)
-	docker cp "$ID:/usr/local/bin/docker" "$tmpdir/docker-$v"
+# Pull needed images before invoking golem to get pull time
+# These images are defined in golem.conf
+time docker pull nginx:1.9
+time docker pull golang:1.6
+time docker pull registry:0.9.1
+time docker pull dmcgowan/token-server:simple
+time docker pull dmcgowan/token-server:oauth
+time docker pull distribution/golem-runner:0.1-bats
 
-	echo "Running tests with Docker $v"
-	DOCKER_BINARY="$binpath" DOCKER_VOLUME="$DOCKER_VOLUME" DOCKER_GRAPHDRIVER="$DOCKER_GRAPHDRIVER" ./run.sh
+time docker pull docker:1.9.1-dind
+time docker pull docker:1.10.3-dind
+time docker pull dockerswarm/dind:1.11.0-rc2
 
-	# Cleanup.
-	docker rm -f "$ID"
-done
+golem \
+	-i "golem-distribution:latest,$distimage,$distversion" \
+	-i "golem-dind:latest,docker:1.9.1-dind,1.9.1" \
+	-i "golem-dind:latest,docker:1.10.3-dind,1.10.3" \
+	-i "golem-dind:latest,dockerswarm/dind:1.11.0-rc2,1.11.0" \
+	$DIR
 
-# Latest experimental version
-
-echo "Extracting Docker master from dind image"
-binpath="$tmpdir/docker-master/docker"
-docker pull dockerswarm/dind-master
-ID=$(docker create dockerswarm/dind-master)
-docker cp "$ID:/usr/local/bin/docker" "$tmpdir/docker-master"
-
-echo "Running tests with Docker master"
-DOCKER_BINARY="$binpath" DOCKER_VOLUME="$DOCKER_VOLUME" ./run.sh
-
-# Cleanup.
-docker rm -f "$ID"
