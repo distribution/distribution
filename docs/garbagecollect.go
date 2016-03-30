@@ -26,7 +26,7 @@ func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver) error
 
 	repositoryEnumerator, ok := registry.(distribution.RepositoryEnumerator)
 	if !ok {
-		return fmt.Errorf("coercion error: unable to convert Namespace to RepositoryEnumerator")
+		return fmt.Errorf("unable to convert Namespace to RepositoryEnumerator")
 	}
 
 	// mark
@@ -49,7 +49,7 @@ func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver) error
 
 		manifestEnumerator, ok := manifestService.(distribution.ManifestEnumerator)
 		if !ok {
-			return fmt.Errorf("coercion error: unable to convert ManifestService into ManifestEnumerator")
+			return fmt.Errorf("unable to convert ManifestService into ManifestEnumerator")
 		}
 
 		err = manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
@@ -70,7 +70,7 @@ func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver) error
 			case *schema1.SignedManifest:
 				signaturesGetter, ok := manifestService.(distribution.SignaturesGetter)
 				if !ok {
-					return fmt.Errorf("coercion error: unable to convert ManifestSErvice into SignaturesGetter")
+					return fmt.Errorf("unable to convert ManifestService into SignaturesGetter")
 				}
 				signatures, err := signaturesGetter.GetSignatures(ctx, dgst)
 				if err != nil {
@@ -106,6 +106,9 @@ func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver) error
 		}
 		return nil
 	})
+	if err != nil {
+		return fmt.Errorf("error enumerating blobs: %v", err)
+	}
 
 	// Construct vacuum
 	vacuum := storage.NewVacuum(ctx, storageDriver)
