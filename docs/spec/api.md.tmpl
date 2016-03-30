@@ -1096,6 +1096,14 @@ issued:
 If the image had already been deleted or did not exist, a `404 Not Found`
 response will be issued instead.
 
+> **Note**  When deleting a manifest from a registry version 2.3 or later, the
+> following header must be used when `HEAD` or `GET`-ing the manifest to obtain
+> the correct digest to delete:
+
+    Accept: application/vnd.docker.distribution.manifest.v2+json
+
+> for more details, see: [compatibility.md](../compatibility.md#content-addressable-storage-cas)
+
 ## Detail
 
 > **Note**: This section is still under construction. For the purposes of
