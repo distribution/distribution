@@ -280,7 +280,7 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 	if err == swift.ObjectNotFound {
 		return nil, storagedriver.PathNotFoundError{Path: path}
 	}
-	return content, nil
+	return content, err
 }
 
 // PutContent stores the []byte content at a location designated by "path".
