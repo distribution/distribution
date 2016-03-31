@@ -12,6 +12,7 @@ import (
 	"github.com/docker/distribution/manifest/manifestlist"
 	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/manifest/schema2"
+	"github.com/docker/distribution/registry/storage/driver"
 )
 
 // A ManifestHandler gets and puts manifests of a particular type.
@@ -161,16 +162,22 @@ func (ms *manifestStore) GetSignatures(ctx context.Context, manifestDigest diges
 		return nil, err
 	}
 
-	signaturesPath = path.Join(signaturesPath, "sha256")
+	var digests []digest.Digest
+	alg := string(digest.SHA256)
+	signaturePaths, err := ms.blobStore.driver.List(ctx, path.Join(signaturesPath, alg))
 
-	signaturePaths, err := ms.blobStore.driver.List(ctx, signaturesPath)
-	if err != nil {
+	switch err.(type) {
+	case nil:
+		break
+	case driver.PathNotFoundError:
+		// Manifest may have been pushed with signature store disabled
+		return digests, nil
+	default:
 		return nil, err
 	}
 
-	var digests []digest.Digest
 	for _, sigPath := range signaturePaths {
-		sigdigest, err := digest.ParseDigest("sha256:" + path.Base(sigPath))
+		sigdigest, err := digest.ParseDigest(alg + ":" + path.Base(sigPath))
 		if err != nil {
 			// merely found not a digest
 			continue
