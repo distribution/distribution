@@ -1,3 +1,5 @@
+// +build include_gcs
+
 // Package gcs provides a storagedriver.StorageDriver implementation to
 // store blobs in Google cloud storage.
 //
@@ -10,8 +12,6 @@
 // Note that the contents of incomplete uploads are not accessible even though
 // Stat returns their length
 //
-// +build include_gcs
-
 package gcs
 
 import (
