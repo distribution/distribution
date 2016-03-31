@@ -31,11 +31,8 @@ GO15VENDOREXPERIMENT := 1
 PKGS := $(shell go list -tags "${DOCKER_BUILDTAGS}" ./... | grep -v ^github.com/docker/distribution/vendor/)
 
 # Resolving binary dependencies for specific targets
-GOLINT_BIN := $(GOPATH)/bin/golint
-GOLINT := $(shell [ -x $(GOLINT_BIN) ] && echo $(GOLINT_BIN) || echo '')
-
-GODEP_BIN := $(GOPATH)/bin/godep
-GODEP := $(shell [ -x $(GODEP_BIN) ] && echo $(GODEP_BIN) || echo '')
+GOLINT := $(shell which golint || echo '')
+GODEP := $(shell which godep || echo '')
 
 ${PREFIX}/bin/registry: $(wildcard **/*.go)
 	@echo "+ $@"
