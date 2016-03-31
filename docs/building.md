@@ -85,7 +85,7 @@ Please install the following into `GOPATH` for it to work:
 Once these commands are available in the `GOPATH`, run `make` to get a full
 build:
 
-    $ GOPATH=`godep path`:$GOPATH make
+    $ make
     + clean
     + fmt
     + vet
@@ -119,33 +119,6 @@ the registry binary generated in the "./bin" directory:
 
     $ ./bin/registry -version
     ./bin/registry github.com/docker/distribution v2.0.0-alpha.2-80-g16d8b2c.m
-
-### Developing
-
-The above approaches are helpful for small experimentation. If more complex
-tasks are at hand, it is recommended to employ the full power of `godep`.
-
-The Makefile is designed to have its `GOPATH` defined externally. This allows
-one to experiment with various development environment setups. This is
-primarily useful when testing upstream bugfixes, by modifying local code. This
-can be demonstrated using `godep` to migrate the `GOPATH` to use the specified
-dependencies. The `GOPATH` can be migrated to the current package versions
-declared in `Godeps` with the following command:
-
-    godep restore
-
-> **WARNING:** This command will checkout versions of the code specified in
-> Godeps/Godeps.json, modifying the contents of `GOPATH`. If this is
-> undesired, it is recommended to create a workspace devoted to work on the
-> _Distribution_ project.
-
-With a successful run of the above command, one can now use `make` without
-specifying the `GOPATH`:
-
-    make
-
-If that is successful, standard `go` commands, such as `go test` should work,
-per package, without issue.
 
 ### Optional build tags
 
