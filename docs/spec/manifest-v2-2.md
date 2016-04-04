@@ -77,12 +77,14 @@ image manifest based on the Content-Type returned in the HTTP response.
     - **`platform`** *object*
 
         The platform object describes the platform which the image in the
-        manifest runs on.
+        manifest runs on. A full list of valid operating system and architecture
+        values are listed in the [Go language documentation for `$GOOS` and
+        `$GOARCH`](https://golang.org/doc/install/source#environment)
 
         - **`architecture`** *string*
 
             The architecture field specifies the CPU architecture, for example
-            `amd64` or `ppc64`.
+            `amd64` or `ppc64le`.
 
         - **`os`** *string*
 
@@ -103,8 +105,7 @@ image manifest based on the Content-Type returned in the HTTP response.
         - **`variant`** *string*
 
             The optional variant field specifies a variant of the CPU, for
-            example `ppc64le` to specify a little-endian version of a PowerPC
-            CPU.
+            example `armv6l` to specify a particular CPU variant of the ARM CPU.
 
         - **`features`** *array*
 
@@ -124,9 +125,8 @@ image manifest based on the Content-Type returned in the HTTP response.
       "size": 7143,
       "digest": "sha256:e692418e4cbaf90ca69d05a66403747baa33ee08806650b51fab815ad7fc331f",
       "platform": {
-        "architecture": "ppc64",
+        "architecture": "ppc64le",
         "os": "linux",
-        "variant": "ppc64le",
       }
     },
     {
@@ -134,7 +134,7 @@ image manifest based on the Content-Type returned in the HTTP response.
       "size": 7682,
       "digest": "sha256:5b0bcabd1ed22e9fb1310cf6c2dec7cdef19f0ad69efa1f392e94a4333501270",
       "platform": {
-        "architecture": "x86-64",
+        "architecture": "amd64",
         "os": "linux",
         "features": [
           "sse4"
@@ -267,7 +267,7 @@ If the manifest being requested uses the new format, and the appropriate media
 type is not present in an `Accept` header, the registry will assume that the
 client cannot handle the manifest as-is, and rewrite it on the fly into the old
 format. If the object that would otherwise be returned is a manifest list, the
-registry will look up the appropriate manifest for the x86-64 platform and
+registry will look up the appropriate manifest for the amd64 platform and
 linux OS, rewrite that manifest into the old format if necessary, and return
 the result to the client. If no suitable manifest is found in the manifest
 list, the registry will return a 404 error.
