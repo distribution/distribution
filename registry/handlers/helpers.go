@@ -46,7 +46,11 @@ func copyFullPayload(responseWriter http.ResponseWriter, r *http.Request, destWr
 			// instead of showing 0 for the HTTP status.
 			responseWriter.WriteHeader(499)
 
-			ctxu.GetLogger(context).Error("client disconnected during " + action)
+			ctxu.GetLoggerWithFields(context, map[interface{}]interface{}{
+				"error":         err,
+				"copied":        copied,
+				"contentLength": r.ContentLength,
+			}, "error", "copied", "contentLength").Error("client disconnected during " + action)
 			return errors.New("client disconnected")
 		default:
 		}
