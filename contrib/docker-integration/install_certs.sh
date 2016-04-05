@@ -1,38 +1,49 @@
 #!/bin/sh
 set -e
 
-hostname=$1
-if [ "$hostname" = "" ]; then
-	hostname="localhost"
-fi
+hostname="localregistry"
+authhostname="auth.$hostname"
 
-mkdir -p /etc/docker/certs.d/$hostname:5011
-cp ./nginx/ssl/registry-ca+ca.pem /etc/docker/certs.d/$hostname:5011/ca.crt
+set_etc_hosts() {
+	hostentry=$1
+	IP=$(ifconfig eth0|grep "inet addr:"| cut -d: -f2 | awk '{ print $1}')
+	echo "$IP $hostentry" >> /etc/hosts
+	# TODO: Check if record already exists in /etc/hosts
+}
 
-mkdir -p /etc/docker/certs.d/$hostname:5440
-cp ./nginx/ssl/registry-ca+ca.pem /etc/docker/certs.d/$hostname:5440/ca.crt
+install_ca() {
+	mkdir -p $1/$hostname:$2
+	cp ./nginx/ssl/registry-ca+ca.pem $1/$hostname:$2/ca.crt
+	if [ "$3" != "" ]; then
+		cp ./nginx/ssl/registry-$3+client-cert.pem $1/$hostname:$2/client.cert
+		cp ./nginx/ssl/registry-$3+client-key.pem $1/$hostname:$2/client.key
+	fi
+}
 
-mkdir -p /etc/docker/certs.d/$hostname:5441
-cp ./nginx/ssl/registry-ca+ca.pem /etc/docker/certs.d/$hostname:5441/ca.crt
+install_test_certs() {
+	install_ca $1 5440
+	install_ca $1 5441
+	install_ca $1 5442 ca
+	install_ca $1 5443 noca
+	install_ca $1 5444 ca
+	install_ca $1 5447 ca
+	# For test remove CA
+	rm $1/${hostname}:5447/ca.crt
+	install_ca $1 5448
+}
 
-mkdir -p /etc/docker/certs.d/$hostname:5442
-cp ./nginx/ssl/registry-ca+ca.pem /etc/docker/certs.d/$hostname:5442/ca.crt
-cp ./nginx/ssl/registry-ca+client-cert.pem /etc/docker/certs.d/$hostname:5442/client.cert
-cp ./nginx/ssl/registry-ca+client-key.pem /etc/docker/certs.d/$hostname:5442/client.key
+set_etc_hosts $hostname
+set_etc_hosts $authhostname
 
-mkdir -p /etc/docker/certs.d/$hostname:5443
-cp ./nginx/ssl/registry-ca+ca.pem /etc/docker/certs.d/$hostname:5443/ca.crt
-cp ./nginx/ssl/registry-noca+client-cert.pem /etc/docker/certs.d/$hostname:5443/client.cert
-cp ./nginx/ssl/registry-noca+client-key.pem /etc/docker/certs.d/$hostname:5443/client.key
+install_test_certs /etc/docker/certs.d
+install_test_certs /root/.docker/tls
 
-mkdir -p /etc/docker/certs.d/$hostname:5444
-cp ./nginx/ssl/registry-ca+ca.pem /etc/docker/certs.d/$hostname:5444/ca.crt
-cp ./nginx/ssl/registry-ca+client-cert.pem /etc/docker/certs.d/$hostname:5444/client.cert
-cp ./nginx/ssl/registry-ca+client-key.pem /etc/docker/certs.d/$hostname:5444/client.key
+# Malevolent server
+mkdir -p /etc/docker/certs.d/$hostname:6666
+cp ./malevolent-certs/ca.pem /etc/docker/certs.d/$hostname:6666/ca.crt
 
-mkdir -p /etc/docker/certs.d/$hostname:5447
-cp ./nginx/ssl/registry-ca+client-cert.pem /etc/docker/certs.d/$hostname:5447/client.cert
-cp ./nginx/ssl/registry-ca+client-key.pem /etc/docker/certs.d/$hostname:5447/client.key
-
-mkdir -p /etc/docker/certs.d/$hostname:5448
-cp ./nginx/ssl/registry-ca+ca.pem /etc/docker/certs.d/$hostname:5448/ca.crt
+# Token server
+install_file ./tokenserver/certs/ca.pem $1 5555
+install_file ./tokenserver/certs/ca.pem $1 5554
+install_file ./tokenserver/certs/ca.pem $1 5557
+install_file ./tokenserver/certs/ca.pem $1 5558
