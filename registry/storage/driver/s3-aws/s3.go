@@ -136,24 +136,26 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		secretKey = ""
 	}
 
+	regionEndpoint := parameters["regionendpoint"]
+	if regionEndpoint == nil {
+		regionEndpoint = ""
+	}
+
 	regionName, ok := parameters["region"]
 	if regionName == nil || fmt.Sprint(regionName) == "" {
 		return nil, fmt.Errorf("No region parameter provided")
 	}
 	region := fmt.Sprint(regionName)
-	_, ok = validRegions[region]
-	if !ok {
-		return nil, fmt.Errorf("Invalid region provided: %v", region)
+	// Don't check the region value if a custom endpoint is provided.
+	if regionEndpoint == "" {
+		if _, ok = validRegions[region]; !ok {
+			return nil, fmt.Errorf("Invalid region provided: %v", region)
+		}
 	}
 
 	bucket := parameters["bucket"]
 	if bucket == nil || fmt.Sprint(bucket) == "" {
 		return nil, fmt.Errorf("No bucket parameter provided")
-	}
-
-	regionEndpoint := parameters["regionendpoint"]
-	if regionEndpoint == nil {
-		regionEndpoint = ""
 	}
 
 	encryptBool := false
