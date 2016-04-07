@@ -243,7 +243,6 @@ information about each option that appears later in this page.
     compatibility:
       schema1:
         signingkeyfile: /etc/registry/key.json
-        disablesignaturestore: true
 
 In some instances a configuration option is **optional** but it contains child
 options marked as **required**. This indicates that you can omit the parent with
@@ -1730,7 +1729,6 @@ To enable pulling private repositories (e.g. `batman/robin`) a username and pass
     compatibility:
       schema1:
         signingkeyfile: /etc/registry/key.json
-        disablesignaturestore: true
 
 Configure handling of older and deprecated features. Each subsection
 defines a such a feature with configurable behavior.
@@ -1754,23 +1752,6 @@ defines a such a feature with configurable behavior.
      The signing private key used for adding signatures to schema1 manifests.
      If no signing key is provided, a new ECDSA key will be generated on
      startup.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>disablesignaturestore</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-     Disables storage of signatures attached to schema1 manifests. By default
-     signatures are detached from schema1 manifests, stored, and reattached
-     when the manifest is requested. When this is true, the storage is disabled
-     and a new signature is always generated for schema1 manifests using the
-     schema1 signing key. Disabling signature storage will cause all newly
-     uploaded signatures to be discarded. Existing stored signatures will not
-     be removed but they will not be re-attached to the corresponding manifest.
     </td>
   </tr>
 </table>

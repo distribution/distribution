@@ -1067,13 +1067,13 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Name
 		t.Fatalf("error decoding fetched manifest: %v", err)
 	}
 
-	// check two signatures were roundtripped
+	// check only 1 signature is returned
 	signatures, err = fetchedManifestByDigest.Signatures()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if len(signatures) != 2 {
+	if len(signatures) != 1 {
 		t.Fatalf("expected 2 signature from manifest, got: %d", len(signatures))
 	}
 
