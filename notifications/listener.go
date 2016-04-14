@@ -157,7 +157,7 @@ func (bsl *blobServiceListener) Put(ctx context.Context, mediaType string, p []b
 	desc, err := bsl.BlobStore.Put(ctx, mediaType, p)
 	if err == nil {
 		if err := bsl.parent.listener.BlobPushed(bsl.parent.Repository.Named(), desc); err != nil {
-			context.GetLogger(ctx).Errorf("error dispatching layer pull to listener: %v", err)
+			context.GetLogger(ctx).Errorf("error dispatching layer push to listener: %v", err)
 		}
 	}
 
