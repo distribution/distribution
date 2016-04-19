@@ -16,6 +16,7 @@ import (
 	"github.com/docker/distribution/registry/storage/cache/memory"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/docker/distribution/testutil"
+	"path"
 )
 
 // TestWriteSeek tests that the current file size can be
@@ -83,6 +84,15 @@ func TestSimpleBlobUpload(t *testing.T) {
 		t.Fatalf("unexpected error during upload cancellation: %v", err)
 	}
 
+	// get the enclosing directory
+	uploadPath := path.Dir(blobUpload.(*blobWriter).path)
+
+	// ensure state was cleaned up
+	_, err = driver.List(ctx, uploadPath)
+	if err == nil {
+		t.Fatal("files in upload path after cleanup")
+	}
+
 	// Do a resume, get unknown upload
 	blobUpload, err = bs.Resume(ctx, blobUpload.ID())
 	if err != distribution.ErrBlobUploadUnknown {
@@ -126,6 +136,13 @@ func TestSimpleBlobUpload(t *testing.T) {
 	desc, err := blobUpload.Commit(ctx, distribution.Descriptor{Digest: dgst})
 	if err != nil {
 		t.Fatalf("unexpected error finishing layer upload: %v", err)
+	}
+
+	// ensure state was cleaned up
+	uploadPath = path.Dir(blobUpload.(*blobWriter).path)
+	_, err = driver.List(ctx, uploadPath)
+	if err == nil {
+		t.Fatal("files in upload path after commit")
 	}
 
 	// After finishing an upload, it should no longer exist.
