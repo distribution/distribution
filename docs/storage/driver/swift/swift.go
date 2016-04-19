@@ -742,6 +742,9 @@ func (w *writer) Close() error {
 		if err := w.driver.createManifest(w.path, w.driver.Container+"/"+w.segmentsPath); err != nil {
 			return err
 		}
+		if err := w.waitForSegmentsToShowUp(); err != nil {
+			return err
+		}
 	}
 	w.closed = true
 
@@ -776,10 +779,14 @@ func (w *writer) Commit() error {
 	}
 
 	w.committed = true
+	return w.waitForSegmentsToShowUp()
+}
 
+func (w *writer) waitForSegmentsToShowUp() error {
 	var err error
 	waitingTime := readAfterWriteWait
 	endTime := time.Now().Add(readAfterWriteTimeout)
+
 	for {
 		var info swift.Object
 		if info, _, err = w.driver.Conn.Object(w.driver.Container, w.driver.swiftPath(w.path)); err == nil {
