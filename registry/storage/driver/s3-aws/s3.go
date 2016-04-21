@@ -80,6 +80,7 @@ func init() {
 		"ap-northeast-1",
 		"ap-northeast-2",
 		"sa-east-1",
+		"cn-north-1",
 	} {
 		validRegions[region] = struct{}{}
 	}
