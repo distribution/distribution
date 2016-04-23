@@ -18,6 +18,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -718,6 +719,12 @@ func (d *driver) newWriter(key, uploadID string, parts []*s3.Part) storagedriver
 	}
 }
 
+type completedParts []*s3.CompletedPart
+
+func (a completedParts) Len() int           { return len(a) }
+func (a completedParts) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a completedParts) Less(i, j int) bool { return *a[i].PartNumber < *a[j].PartNumber }
+
 func (w *writer) Write(p []byte) (int, error) {
 	if w.closed {
 		return 0, fmt.Errorf("already closed")
@@ -730,19 +737,22 @@ func (w *writer) Write(p []byte) (int, error) {
 	// If the last written part is smaller than minChunkSize, we need to make a
 	// new multipart upload :sadface:
 	if len(w.parts) > 0 && int(*w.parts[len(w.parts)-1].Size) < minChunkSize {
-		var completedParts []*s3.CompletedPart
+		var completedUploadedParts completedParts
 		for _, part := range w.parts {
-			completedParts = append(completedParts, &s3.CompletedPart{
+			completedUploadedParts = append(completedUploadedParts, &s3.CompletedPart{
 				ETag:       part.ETag,
 				PartNumber: part.PartNumber,
 			})
 		}
+
+		sort.Sort(completedUploadedParts)
+
 		_, err := w.driver.S3.CompleteMultipartUpload(&s3.CompleteMultipartUploadInput{
 			Bucket:   aws.String(w.driver.Bucket),
 			Key:      aws.String(w.key),
 			UploadId: aws.String(w.uploadID),
 			MultipartUpload: &s3.CompletedMultipartUpload{
-				Parts: completedParts,
+				Parts: completedUploadedParts,
 			},
 		})
 		if err != nil {
@@ -882,19 +892,23 @@ func (w *writer) Commit() error {
 		return err
 	}
 	w.committed = true
-	var completedParts []*s3.CompletedPart
+
+	var completedUploadedParts completedParts
 	for _, part := range w.parts {
-		completedParts = append(completedParts, &s3.CompletedPart{
+		completedUploadedParts = append(completedUploadedParts, &s3.CompletedPart{
 			ETag:       part.ETag,
 			PartNumber: part.PartNumber,
 		})
 	}
+
+	sort.Sort(completedUploadedParts)
+
 	_, err = w.driver.S3.CompleteMultipartUpload(&s3.CompleteMultipartUploadInput{
 		Bucket:   aws.String(w.driver.Bucket),
 		Key:      aws.String(w.key),
 		UploadId: aws.String(w.uploadID),
 		MultipartUpload: &s3.CompletedMultipartUpload{
-			Parts: completedParts,
+			Parts: completedUploadedParts,
 		},
 	})
 	if err != nil {
