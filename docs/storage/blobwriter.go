@@ -56,6 +56,8 @@ func (bw *blobWriter) Commit(ctx context.Context, desc distribution.Descriptor) 
 		return distribution.Descriptor{}, err
 	}
 
+	bw.Close()
+
 	canonical, err := bw.validateBlob(ctx, desc)
 	if err != nil {
 		return distribution.Descriptor{}, err
