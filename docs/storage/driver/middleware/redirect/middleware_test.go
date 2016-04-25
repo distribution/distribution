@@ -17,16 +17,11 @@ func (s *MiddlewareSuite) TestNoConfig(c *check.C) {
 	c.Assert(err, check.ErrorMatches, "no baseurl provided")
 }
 
-func (s *MiddlewareSuite) TestDefaultScheme(c *check.C) {
+func (s *MiddlewareSuite) TestMissingScheme(c *check.C) {
 	options := make(map[string]interface{})
 	options["baseurl"] = "example.com"
-	middleware, err := newRedirectStorageMiddleware(nil, options)
-	c.Assert(err, check.Equals, nil)
-
-	m, ok := middleware.(*redirectStorageMiddleware)
-	c.Assert(ok, check.Equals, true)
-	c.Assert(m.scheme, check.Equals, "https")
-	c.Assert(m.host, check.Equals, "example.com")
+	_, err := newRedirectStorageMiddleware(nil, options)
+	c.Assert(err, check.ErrorMatches, "no scheme specified for redirect baseurl")
 }
 
 func (s *MiddlewareSuite) TestHTTPS(c *check.C) {
