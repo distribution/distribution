@@ -2,11 +2,12 @@ package middleware
 
 import (
 	"fmt"
+	"net/url"
+	"strings"
+
 	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
-	"net/url"
-	"strings"
 )
 
 type redirectStorageMiddleware struct {
