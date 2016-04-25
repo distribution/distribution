@@ -3,7 +3,6 @@ package middleware
 import (
 	"fmt"
 	"net/url"
-	"strings"
 
 	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
@@ -27,12 +26,15 @@ func newRedirectStorageMiddleware(sd storagedriver.StorageDriver, options map[st
 	if !ok {
 		return nil, fmt.Errorf("baseurl must be a string")
 	}
-	if !strings.Contains(b, "://") {
-		b = "https://" + b
-	}
 	u, err := url.Parse(b)
 	if err != nil {
-		return nil, fmt.Errorf("invalid baseurl: %v", err)
+		return nil, fmt.Errorf("unable to parse redirect baseurl: %s", b)
+	}
+	if u.Scheme == "" {
+		return nil, fmt.Errorf("no scheme specified for redirect baseurl")
+	}
+	if u.Host == "" {
+		return nil, fmt.Errorf("no host specified for redirect baseurl")
 	}
 
 	return &redirectStorageMiddleware{StorageDriver: sd, scheme: u.Scheme, host: u.Host}, nil
