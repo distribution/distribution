@@ -55,18 +55,19 @@ var validRegions = map[string]struct{}{}
 
 //DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
 type DriverParameters struct {
-	AccessKey      string
-	SecretKey      string
-	Bucket         string
-	Region         string
-	RegionEndpoint string
-	Encrypt        bool
-	KeyID          string
-	Secure         bool
-	ChunkSize      int64
-	RootDirectory  string
-	StorageClass   string
-	UserAgent      string
+	AccessKey         string
+	SecretKey         string
+	Bucket            string
+	Region            string
+	RegionEndpoint    string
+	Encrypt           bool
+	KeyID             string
+	Secure            bool
+	ChunkSize         int64
+	RootDirectory     string
+	StorageClass      string
+	UserAgent         string
+	s3ForcePathStyle  bool
 }
 
 func init() {
@@ -247,6 +248,26 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		userAgent = ""
 	}
 
+        s3ForcePathStyle := false
+        s3forcepathstyle := parameters["s3forcepathstyle"]
+        switch s3forcepathstyle := s3forcepathstyle.(type) {
+        case string:
+                b, err := strconv.ParseBool(s3forcepathstyle)
+                if err != nil {
+                        return nil, fmt.Errorf("The s3forcepathstyle parameter should be a boolean")
+                }
+                s3ForcePathStyle = b
+        case bool:
+                s3ForcePathStyle = s3forcepathstyle
+        case nil:
+                // Default to true if regionEndpoint is configured but s3forcepathstyle is not specifically set
+	        if regionEndpoint != "" {
+                        s3ForcePathStyle = true
+                }
+        default:
+                return nil, fmt.Errorf("The s3forcepathstyle parameter should be a boolean")
+        }
+
 	params := DriverParameters{
 		fmt.Sprint(accessKey),
 		fmt.Sprint(secretKey),
@@ -260,6 +281,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(rootDirectory),
 		storageClass,
 		fmt.Sprint(userAgent),
+		s3ForcePathStyle,
 	}
 
 	return New(params)
@@ -282,6 +304,7 @@ func New(params DriverParameters) (*Driver, error) {
 			&credentials.SharedCredentialsProvider{},
 			&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(session.New())},
 		})
+		awsConfig.WithS3ForcePathStyle(params.s3ForcePathStyle)
 
 	} else {
 		creds = credentials.NewChainCredentials([]credentials.Provider{
@@ -293,7 +316,7 @@ func New(params DriverParameters) (*Driver, error) {
 			},
 			&credentials.EnvProvider{},
 		})
-		awsConfig.WithS3ForcePathStyle(true)
+		awsConfig.WithS3ForcePathStyle(params.s3ForcePathStyle)
 		awsConfig.WithEndpoint(params.RegionEndpoint)
 	}
 
