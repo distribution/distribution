@@ -49,13 +49,23 @@ func TestFromParametersImpl(t *testing.T) {
 			},
 			pass: true,
 		},
-		// Testing initiation with a string maxThreads
+		// Testing initiation with a string maxThreads which can't be parsed
 		{
 			params: map[string]interface{}{
 				"maxthreads": "fail",
 			},
 			expected: DriverParameters{},
 			pass:     false,
+		},
+		{
+			params: map[string]interface{}{
+				"maxthreads": "100",
+			},
+			expected: DriverParameters{
+				RootDirectory: defaultRootDirectory,
+				MaxThreads:    uint64(100),
+			},
+			pass: true,
 		},
 		{
 			params: map[string]interface{}{
