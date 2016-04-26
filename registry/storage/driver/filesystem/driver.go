@@ -93,7 +93,9 @@ func fromParametersImpl(parameters map[string]interface{}) (*DriverParameters, e
 			}
 		case uint64:
 			maxThreads = v
-		case int, uint, int32, uint32, int64:
+		case int, int32, int64:
+			maxThreads = uint64(reflect.ValueOf(v).Convert(reflect.TypeOf(threads)).Int())
+		case uint, uint32:
 			maxThreads = reflect.ValueOf(v).Convert(reflect.TypeOf(threads)).Uint()
 		case nil:
 			// do nothing
