@@ -248,7 +248,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		userAgent = ""
 	}
 
-	s3ForcePathStyle := false
+	s3ForcePathStyleBool := false
 	s3forcepathstyle := parameters["s3forcepathstyle"]
 	switch s3forcepathstyle := s3forcepathstyle.(type) {
 	case string:
@@ -256,13 +256,13 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		if err != nil {
 			return nil, fmt.Errorf("The s3forcepathstyle parameter should be a boolean")
 		}
-		s3ForcePathStyle = b
+		s3ForcePathStyleBool = b
 	case bool:
-		s3ForcePathStyle = s3forcepathstyle
+		s3ForcePathStyleBool = s3forcepathstyle
 	case nil:
 		// Default to true if regionEndpoint is configured but s3forcepathstyle is not specifically set
 		if regionEndpoint != "" {
-			s3ForcePathStyle = true
+			s3ForcePathStyleBool = true
 		}
 	default:
 		return nil, fmt.Errorf("The s3forcepathstyle parameter should be a boolean")
@@ -281,7 +281,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(rootDirectory),
 		storageClass,
 		fmt.Sprint(userAgent),
-		s3ForcePathStyle,
+		s3ForcePathStyleBool,
 	}
 
 	return New(params)
