@@ -10,46 +10,41 @@ import (
 
 type regulator struct {
 	storagedriver.StorageDriver
-	sync.Cond
+	*sync.Cond
 
-	available uint
+	available uint64
 }
 
 // NewRegulator wraps the given driver and is used to regulate concurrent calls
 // to the given storage driver to a maximum of the given limit. This is useful
 // for storage drivers that would otherwise create an unbounded number of OS
 // threads if allowed to be called unregulated.
-func NewRegulator(driver storagedriver.StorageDriver, limit uint) storagedriver.StorageDriver {
+func NewRegulator(driver storagedriver.StorageDriver, limit uint64) storagedriver.StorageDriver {
 	return &regulator{
 		StorageDriver: driver,
-		Cond: sync.Cond{
-			L: &sync.Mutex{},
-		},
-		available: limit,
+		Cond:          sync.NewCond(&sync.Mutex{}),
+		available:     limit,
 	}
-}
-
-func (r *regulator) condition() bool {
-	return r.available > 0
 }
 
 func (r *regulator) enter() {
 	r.L.Lock()
-	defer r.L.Unlock()
-
-	for !r.condition() {
+	for r.available == 0 {
 		r.Wait()
 	}
-
 	r.available--
+	r.L.Unlock()
 }
 
 func (r *regulator) exit() {
 	r.L.Lock()
-	defer r.Signal()
-	defer r.L.Unlock()
-
+	// We only need to signal to a waiting FS operation if we're already at the
+	// limit of threads used
+	if r.available == 0 {
+		r.Signal()
+	}
 	r.available++
+	r.L.Unlock()
 }
 
 // Name returns the human-readable "name" of the driver, useful in error
@@ -80,25 +75,25 @@ func (r *regulator) PutContent(ctx context.Context, path string, content []byte)
 	return r.StorageDriver.PutContent(ctx, path, content)
 }
 
-// ReadStream retrieves an io.ReadCloser for the content stored at "path"
+// Reader retrieves an io.ReadCloser for the content stored at "path"
 // with a given byte offset.
 // May be used to resume reading a stream by providing a nonzero offset.
-func (r *regulator) ReadStream(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
+func (r *regulator) Reader(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
 	r.enter()
 	defer r.exit()
 
-	return r.StorageDriver.ReadStream(ctx, path, offset)
+	return r.StorageDriver.Reader(ctx, path, offset)
 }
 
-// WriteStream stores the contents of the provided io.ReadCloser at a
+// Writer stores the contents of the provided io.ReadCloser at a
 // location designated by the given path.
 // May be used to resume writing a stream by providing a nonzero offset.
 // The offset must be no larger than the CurrentSize for this path.
-func (r *regulator) WriteStream(ctx context.Context, path string, offset int64, reader io.Reader) (nn int64, err error) {
+func (r *regulator) Writer(ctx context.Context, path string, append bool) (storagedriver.FileWriter, error) {
 	r.enter()
 	defer r.exit()
 
-	return r.StorageDriver.WriteStream(ctx, path, offset, reader)
+	return r.StorageDriver.Writer(ctx, path, append)
 }
 
 // Stat retrieves the FileInfo for the given path, including the current
