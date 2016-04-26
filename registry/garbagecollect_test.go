@@ -77,9 +77,8 @@ func uploadImage(t *testing.T, repository distribution.Repository, im image) dig
 	}
 
 	// upload manifest
-	ctx := context.Background()
 	manifestService := makeManifestService(t, repository)
-	manifestDigest, err := manifestService.Put(ctx, im.manifest)
+	manifestDigest, err := manifestService.Put(context.Background(), im.manifest)
 	if err != nil {
 		t.Fatalf("manifest upload failed: %v", err)
 	}
@@ -274,8 +273,7 @@ func TestDeletionWithSharedLayer(t *testing.T) {
 		t.Fatalf("failed to make manifest: %v", err)
 	}
 
-	sharedKey := getAnyKey(randomLayers1)
-	manifest2, err := testutil.MakeSchema2Manifest(repo, append(getKeys(randomLayers2), sharedKey))
+	manifest2, err := testutil.MakeSchema2Manifest(repo, append(getKeys(randomLayers2), getAnyKey(randomLayers1)))
 	if err != nil {
 		t.Fatalf("failed to make manifest: %v", err)
 	}
@@ -300,9 +298,8 @@ func TestDeletionWithSharedLayer(t *testing.T) {
 	}
 
 	// check that all of the layers in layer 1 are still there
-	blobs := allBlobs(t, registry)
 	for dgst := range randomLayers1 {
-		if _, ok := blobs[dgst]; !ok {
+		if _, ok := allBlobs(t, registry)[dgst]; !ok {
 			t.Fatalf("random layer 1 blob missing: %v", dgst)
 		}
 	}
