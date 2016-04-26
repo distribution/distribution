@@ -29,6 +29,8 @@ const (
 	minThreads = uint64(25)
 )
 
+// DriverParameters represents all configuration options available for the
+// filesystem driver
 type DriverParameters struct {
 	RootDirectory string
 	MaxThreads    uint64
@@ -64,11 +66,11 @@ type Driver struct {
 // - rootdirectory
 // - maxthreads
 func FromParameters(parameters map[string]interface{}) (*Driver, error) {
-	if params, err := fromParametersImpl(parameters); err != nil || params == nil {
+	params, err := fromParametersImpl(parameters)
+	if err != nil || params == nil {
 		return nil, err
-	} else {
-		return New(*params), nil
 	}
+	return New(*params), nil
 }
 
 func fromParametersImpl(parameters map[string]interface{}) (*DriverParameters, error) {
