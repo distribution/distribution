@@ -165,6 +165,10 @@ information about each option that appears later in this page.
             privatekey: /path/to/pem
             keypairid: cloudfrontkeypairid
             duration: 3000s
+      storage:
+        - name: redirect
+          options:
+            baseurl: https://example.com/
     reporting:
       bugsnag:
         apikey: bugsnagapikey
@@ -676,8 +680,7 @@ object they're wrapping. This means a registry middleware must implement the
 `distribution.Repository`, and storage middleware must implement
 `driver.StorageDriver`.
 
-Currently only one middleware, `cloudfront`, a storage middleware, is supported
-in the registry implementation.
+An example configuration of the `cloudfront`  middleware, a storage middleware:
 
     middleware:
       registry:
@@ -758,6 +761,15 @@ interpretation of the options.
   </tr>
 </table>
 
+### redirect
+
+In place of the `cloudfront` storage middleware, the `redirect`
+storage middleware can be used to specify a custom URL to a location
+of a proxy for the layer stored by the S3 storage driver.
+
+| Parameter | Required | Description |
+| --- | --- | --- |
+| baseurl   | yes      | `SCHEME://HOST` at which layers are served. Can also contain port. For example, `https://example.com:5443`. |
 
 ## reporting
 
@@ -1794,7 +1806,7 @@ This example illustrates how to configure storage middleware in a registry.
 Middleware allows the registry to serve layers via a content delivery network
 (CDN). This is useful for reducing requests to the storage layer.
 
-Currently, the registry supports [Amazon
+The registry supports [Amazon
 Cloudfront](http://aws.amazon.com/cloudfront/). You can only use Cloudfront in
 conjunction with the S3 storage driver.
 
