@@ -2,6 +2,7 @@ package storage
 
 import (
 	"io"
+	"path"
 	"testing"
 
 	"github.com/docker/distribution"
@@ -173,6 +174,37 @@ func TestNoDeletionNoEffect(t *testing.T) {
 	totalBlobCount := len(image1.layers) + len(image2.layers) + len(image3.layers) + 1 + 3 + 3
 	if len(blobs) != totalBlobCount {
 		t.Fatalf("Garbage collection affected storage")
+	}
+}
+
+func TestGCWithMissingManifests(t *testing.T) {
+	ctx := context.Background()
+	d := inmemory.New()
+
+	registry := createRegistry(t, d)
+	repo := makeRepository(t, registry, "testrepo")
+	uploadRandomSchema1Image(t, repo)
+
+	// Simulate a missing _manifests directory
+	revPath, err := pathFor(manifestRevisionsPathSpec{"testrepo"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_manifestsPath := path.Dir(revPath)
+	err = d.Delete(ctx, _manifestsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = MarkAndSweep(context.Background(), d, registry, false)
+	if err != nil {
+		t.Fatalf("Failed mark and sweep: %v", err)
+	}
+
+	blobs := allBlobs(t, registry)
+	if len(blobs) > 0 {
+		t.Errorf("unexpected blobs after gc")
 	}
 }
 
