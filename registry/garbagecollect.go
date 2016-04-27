@@ -135,7 +135,7 @@ func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 }
 
 func init() {
-	GCCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "do everything expect remove the blobs")
+	GCCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "do everything except remove the blobs")
 }
 
 var dryRun bool
