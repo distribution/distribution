@@ -1,4 +1,4 @@
-package registry
+package storage
 
 import (
 	"io"
@@ -8,7 +8,6 @@ import (
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/reference"
-	"github.com/docker/distribution/registry/storage"
 	"github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/docker/distribution/testutil"
@@ -22,7 +21,7 @@ type image struct {
 
 func createRegistry(t *testing.T, driver driver.StorageDriver) distribution.Namespace {
 	ctx := context.Background()
-	registry, err := storage.NewRegistry(ctx, driver, storage.EnableDelete)
+	registry, err := NewRegistry(ctx, driver, EnableDelete)
 	if err != nil {
 		t.Fatalf("Failed to construct namespace")
 	}
@@ -161,7 +160,7 @@ func TestNoDeletionNoEffect(t *testing.T) {
 	}
 
 	// Run GC
-	err = markAndSweep(context.Background(), inmemoryDriver, registry)
+	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, false)
 	if err != nil {
 		t.Fatalf("Failed mark and sweep: %v", err)
 	}
@@ -193,7 +192,7 @@ func TestDeletionHasEffect(t *testing.T) {
 	manifests.Delete(ctx, image3.manifestDigest)
 
 	// Run GC
-	err = markAndSweep(context.Background(), inmemoryDriver, registry)
+	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, false)
 	if err != nil {
 		t.Fatalf("Failed mark and sweep: %v", err)
 	}
@@ -327,7 +326,7 @@ func TestOrphanBlobDeleted(t *testing.T) {
 	uploadRandomSchema2Image(t, repo)
 
 	// Run GC
-	err = markAndSweep(context.Background(), inmemoryDriver, registry)
+	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, false)
 	if err != nil {
 		t.Fatalf("Failed mark and sweep: %v", err)
 	}
