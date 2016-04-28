@@ -1,8 +1,7 @@
-package registry
+package storage
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
@@ -10,21 +9,15 @@ import (
 	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/manifest/schema2"
 	"github.com/docker/distribution/reference"
-	"github.com/docker/distribution/registry/storage"
 	"github.com/docker/distribution/registry/storage/driver"
-	"github.com/docker/distribution/registry/storage/driver/factory"
-	"github.com/docker/libtrust"
-	"github.com/spf13/cobra"
 )
 
 func emit(format string, a ...interface{}) {
-	if dryRun {
-		fmt.Printf(format+"\n", a...)
-	}
+	fmt.Printf(format+"\n", a...)
 }
 
-func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver, registry distribution.Namespace) error {
-
+// MarkAndSweep performs a mark and sweep of registry data
+func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, registry distribution.Namespace, dryRun bool) error {
 	repositoryEnumerator, ok := registry.(distribution.RepositoryEnumerator)
 	if !ok {
 		return fmt.Errorf("unable to convert Namespace to RepositoryEnumerator")
@@ -33,7 +26,9 @@ func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 	// mark
 	markSet := make(map[digest.Digest]struct{})
 	err := repositoryEnumerator.Enumerate(ctx, func(repoName string) error {
-		emit(repoName)
+		if dryRun {
+			emit(repoName)
+		}
 
 		var err error
 		named, err := reference.ParseNamed(repoName)
@@ -57,7 +52,9 @@ func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 
 		err = manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
 			// Mark the manifest's blob
-			emit("%s: marking manifest %s ", repoName, dgst)
+			if dryRun {
+				emit("%s: marking manifest %s ", repoName, dgst)
+			}
 			markSet[dgst] = struct{}{}
 
 			manifest, err := manifestService.Get(ctx, dgst)
@@ -68,7 +65,9 @@ func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 			descriptors := manifest.References()
 			for _, descriptor := range descriptors {
 				markSet[descriptor.Digest] = struct{}{}
-				emit("%s: marking blob %s", repoName, descriptor.Digest)
+				if dryRun {
+					emit("%s: marking blob %s", repoName, descriptor.Digest)
+				}
 			}
 
 			switch manifest.(type) {
@@ -82,19 +81,34 @@ func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 					return fmt.Errorf("failed to get signatures for signed manifest: %v", err)
 				}
 				for _, signatureDigest := range signatures {
-					emit("%s: marking signature %s", repoName, signatureDigest)
+					if dryRun {
+						emit("%s: marking signature %s", repoName, signatureDigest)
+					}
 					markSet[signatureDigest] = struct{}{}
 				}
 				break
 			case *schema2.DeserializedManifest:
 				config := manifest.(*schema2.DeserializedManifest).Config
-				emit("%s: marking configuration %s", repoName, config.Digest)
+				if dryRun {
+					emit("%s: marking configuration %s", repoName, config.Digest)
+				}
 				markSet[config.Digest] = struct{}{}
 				break
 			}
 
 			return nil
 		})
+
+		if err != nil {
+			// In certain situations such as unfinished uploads, deleting all
+			// tags in S3 or removing the _manifests folder manually, this
+			// error may be of type PathNotFound.
+			//
+			// In these cases we can continue marking other manifests safely.
+			if _, ok := err.(driver.PathNotFoundError); ok {
+				return nil
+			}
+		}
 
 		return err
 	})
@@ -116,13 +130,14 @@ func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 	if err != nil {
 		return fmt.Errorf("error enumerating blobs: %v", err)
 	}
-
-	emit("\n%d blobs marked, %d blobs eligible for deletion", len(markSet), len(deleteSet))
+	if dryRun {
+		emit("\n%d blobs marked, %d blobs eligible for deletion", len(markSet), len(deleteSet))
+	}
 	// Construct vacuum
-	vacuum := storage.NewVacuum(ctx, storageDriver)
+	vacuum := NewVacuum(ctx, storageDriver)
 	for dgst := range deleteSet {
-		emit("blob eligible for deletion: %s", dgst)
 		if dryRun {
+			emit("blob eligible for deletion: %s", dgst)
 			continue
 		}
 		err = vacuum.RemoveBlob(string(dgst))
@@ -132,56 +147,4 @@ func markAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 	}
 
 	return err
-}
-
-func init() {
-	GCCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "do everything except remove the blobs")
-}
-
-var dryRun bool
-
-// GCCmd is the cobra command that corresponds to the garbage-collect subcommand
-var GCCmd = &cobra.Command{
-	Use:   "garbage-collect <config>",
-	Short: "`garbage-collect` deletes layers not referenced by any manifests",
-	Long:  "`garbage-collect` deletes layers not referenced by any manifests",
-	Run: func(cmd *cobra.Command, args []string) {
-		config, err := resolveConfiguration(args)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "configuration error: %v\n", err)
-			cmd.Usage()
-			os.Exit(1)
-		}
-
-		driver, err := factory.Create(config.Storage.Type(), config.Storage.Parameters())
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to construct %s driver: %v", config.Storage.Type(), err)
-			os.Exit(1)
-		}
-
-		ctx := context.Background()
-		ctx, err = configureLogging(ctx, config)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "unable to configure logging with config: %s", err)
-			os.Exit(1)
-		}
-
-		k, err := libtrust.GenerateECP256PrivateKey()
-		if err != nil {
-			fmt.Fprint(os.Stderr, err)
-			os.Exit(1)
-		}
-
-		registry, err := storage.NewRegistry(ctx, driver, storage.DisableSchema1Signatures, storage.Schema1SigningKey(k))
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to construct registry: %v", err)
-			os.Exit(1)
-		}
-
-		err = markAndSweep(ctx, driver, registry)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "failed to garbage collect: %v", err)
-			os.Exit(1)
-		}
-	},
 }

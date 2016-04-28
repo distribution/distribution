@@ -1,14 +1,14 @@
-package registry
+package storage
 
 import (
 	"io"
+	"path"
 	"testing"
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/reference"
-	"github.com/docker/distribution/registry/storage"
 	"github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/docker/distribution/testutil"
@@ -22,7 +22,7 @@ type image struct {
 
 func createRegistry(t *testing.T, driver driver.StorageDriver) distribution.Namespace {
 	ctx := context.Background()
-	registry, err := storage.NewRegistry(ctx, driver, storage.EnableDelete)
+	registry, err := NewRegistry(ctx, driver, EnableDelete)
 	if err != nil {
 		t.Fatalf("Failed to construct namespace")
 	}
@@ -161,7 +161,7 @@ func TestNoDeletionNoEffect(t *testing.T) {
 	}
 
 	// Run GC
-	err = markAndSweep(context.Background(), inmemoryDriver, registry)
+	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, false)
 	if err != nil {
 		t.Fatalf("Failed mark and sweep: %v", err)
 	}
@@ -174,6 +174,37 @@ func TestNoDeletionNoEffect(t *testing.T) {
 	totalBlobCount := len(image1.layers) + len(image2.layers) + len(image3.layers) + 1 + 3 + 3
 	if len(blobs) != totalBlobCount {
 		t.Fatalf("Garbage collection affected storage")
+	}
+}
+
+func TestGCWithMissingManifests(t *testing.T) {
+	ctx := context.Background()
+	d := inmemory.New()
+
+	registry := createRegistry(t, d)
+	repo := makeRepository(t, registry, "testrepo")
+	uploadRandomSchema1Image(t, repo)
+
+	// Simulate a missing _manifests directory
+	revPath, err := pathFor(manifestRevisionsPathSpec{"testrepo"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_manifestsPath := path.Dir(revPath)
+	err = d.Delete(ctx, _manifestsPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = MarkAndSweep(context.Background(), d, registry, false)
+	if err != nil {
+		t.Fatalf("Failed mark and sweep: %v", err)
+	}
+
+	blobs := allBlobs(t, registry)
+	if len(blobs) > 0 {
+		t.Errorf("unexpected blobs after gc")
 	}
 }
 
@@ -193,7 +224,7 @@ func TestDeletionHasEffect(t *testing.T) {
 	manifests.Delete(ctx, image3.manifestDigest)
 
 	// Run GC
-	err = markAndSweep(context.Background(), inmemoryDriver, registry)
+	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, false)
 	if err != nil {
 		t.Fatalf("Failed mark and sweep: %v", err)
 	}
@@ -327,7 +358,7 @@ func TestOrphanBlobDeleted(t *testing.T) {
 	uploadRandomSchema2Image(t, repo)
 
 	// Run GC
-	err = markAndSweep(context.Background(), inmemoryDriver, registry)
+	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, false)
 	if err != nil {
 		t.Fatalf("Failed mark and sweep: %v", err)
 	}
