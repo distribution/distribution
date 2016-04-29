@@ -18,8 +18,8 @@ var (
 	errResumableDigestNotAvailable = errors.New("resumable digest not available")
 )
 
-// layerWriter is used to control the various aspects of resumable
-// layer upload. It implements the LayerUpload interface.
+// blobWriter is used to control the various aspects of resumable
+// blob upload.
 type blobWriter struct {
 	ctx       context.Context
 	blobStore *linkedBlobStore
@@ -34,6 +34,7 @@ type blobWriter struct {
 	path       string
 
 	resumableDigestEnabled bool
+	committed              bool
 }
 
 var _ distribution.BlobWriter = &blobWriter{}
@@ -80,6 +81,7 @@ func (bw *blobWriter) Commit(ctx context.Context, desc distribution.Descriptor) 
 		return distribution.Descriptor{}, err
 	}
 
+	bw.committed = true
 	return canonical, nil
 }
 
@@ -91,11 +93,14 @@ func (bw *blobWriter) Cancel(ctx context.Context) error {
 		return err
 	}
 
+	if err := bw.Close(); err != nil {
+		context.GetLogger(ctx).Errorf("error closing blobwriter: %s", err)
+	}
+
 	if err := bw.removeResources(ctx); err != nil {
 		return err
 	}
 
-	bw.Close()
 	return nil
 }
 
@@ -132,6 +137,10 @@ func (bw *blobWriter) ReadFrom(r io.Reader) (n int64, err error) {
 }
 
 func (bw *blobWriter) Close() error {
+	if bw.committed {
+		return errors.New("blobwriter close after commit")
+	}
+
 	if err := bw.storeHashState(bw.blobStore.ctx); err != nil {
 		return err
 	}
