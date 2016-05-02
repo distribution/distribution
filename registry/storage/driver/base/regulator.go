@@ -10,7 +10,7 @@ import (
 
 type regulator struct {
 	storagedriver.StorageDriver
-	sync.Cond
+	*sync.Cond
 
 	available uint64
 }
@@ -22,34 +22,29 @@ type regulator struct {
 func NewRegulator(driver storagedriver.StorageDriver, limit uint64) storagedriver.StorageDriver {
 	return &regulator{
 		StorageDriver: driver,
-		Cond: sync.Cond{
-			L: &sync.Mutex{},
-		},
-		available: limit,
+		Cond:          sync.NewCond(&sync.Mutex{}),
+		available:     limit,
 	}
-}
-
-func (r *regulator) condition() bool {
-	return r.available > 0
 }
 
 func (r *regulator) enter() {
 	r.L.Lock()
-	defer r.L.Unlock()
-
-	for !r.condition() {
+	for r.available == 0 {
 		r.Wait()
 	}
-
 	r.available--
+	r.L.Unlock()
 }
 
 func (r *regulator) exit() {
 	r.L.Lock()
-	defer r.Signal()
-	defer r.L.Unlock()
-
+	// We only need to signal to a waiting FS operation if we're already at the
+	// limit of threads used
+	if r.available == 0 {
+		defer r.Signal()
+	}
 	r.available++
+	r.L.Unlock()
 }
 
 // Name returns the human-readable "name" of the driver, useful in error
