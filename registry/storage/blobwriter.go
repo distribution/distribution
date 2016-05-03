@@ -72,15 +72,18 @@ func (bw *blobWriter) Commit(ctx context.Context, desc distribution.Descriptor) 
 		return distribution.Descriptor{}, err
 	}
 
-	if err := bw.removeResources(ctx); err != nil {
-		return distribution.Descriptor{}, err
-	}
-
 	err = bw.blobStore.blobAccessController.SetDescriptor(ctx, canonical.Digest, canonical)
 	if err != nil {
 		return distribution.Descriptor{}, err
 	}
 
+	if err = bw.fileWriter.Close(); err != nil {
+		return distribution.Descriptor{}, err
+	}
+
+	if err := bw.removeResources(ctx); err != nil {
+		return distribution.Descriptor{}, err
+	}
 	bw.committed = true
 	return canonical, nil
 }
@@ -138,7 +141,7 @@ func (bw *blobWriter) ReadFrom(r io.Reader) (n int64, err error) {
 
 func (bw *blobWriter) Close() error {
 	if bw.committed {
-		return errors.New("blobwriter close after commit")
+		return nil
 	}
 
 	if err := bw.storeHashState(bw.blobStore.ctx); err != nil {
