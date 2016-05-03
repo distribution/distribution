@@ -96,7 +96,12 @@ func fromParametersImpl(parameters map[string]interface{}) (*DriverParameters, e
 		case uint64:
 			maxThreads = v
 		case int, int32, int64:
-			maxThreads = uint64(reflect.ValueOf(v).Convert(reflect.TypeOf(threads)).Int())
+			val := reflect.ValueOf(v).Convert(reflect.TypeOf(threads)).Int()
+			// If threads is negative casting to uint64 will wrap around and
+			// give you the hugest thread limit ever. Let's be sensible, here
+			if val > 0 {
+				maxThreads = uint64(val)
+			}
 		case uint, uint32:
 			maxThreads = reflect.ValueOf(v).Convert(reflect.TypeOf(threads)).Uint()
 		case nil:
