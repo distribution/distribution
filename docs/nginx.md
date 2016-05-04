@@ -76,7 +76,7 @@ events {
 }
 
 http {
-  
+
   upstream docker-registry {
     server registry:5000;
   }
@@ -98,34 +98,34 @@ http {
     # SSL
     ssl_certificate /etc/nginx/conf.d/domain.crt;
     ssl_certificate_key /etc/nginx/conf.d/domain.key;
-  
+
     # Recommendations from https://raymii.org/s/tutorials/Strong_SSL_Security_On_nginx.html
     ssl_protocols TLSv1.1 TLSv1.2;
     ssl_ciphers 'EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH';
     ssl_prefer_server_ciphers on;
     ssl_session_cache shared:SSL:10m;
-  
+
     # disable any limits to avoid HTTP 413 for large image uploads
     client_max_body_size 0;
-  
+
     # required to avoid HTTP 411: see Issue #1486 (https://github.com/docker/docker/issues/1486)
     chunked_transfer_encoding on;
-  
+
     location /v2/ {
       # Do not allow connections from docker 1.5 and earlier
       # docker pre-1.6.0 did not properly set the user agent on ping, catch "Go *" user agents
       if (\$http_user_agent ~ "^(docker\/1\.(3|4|5(?!\.[0-9]-dev))|Go ).*\$" ) {
         return 404;
       }
-  
+
       # To add basic authentication to v2 use auth_basic setting.
       auth_basic "Registry realm";
       auth_basic_user_file /etc/nginx/conf.d/nginx.htpasswd;
-  
+
       ## If $docker_distribution_api_version is empty, the header will not be added.
       ## See the map directive above where this variable is defined.
       add_header 'Docker-Distribution-Api-Version' \$docker_distribution_api_version always;
-  
+
       proxy_pass                          http://docker-registry;
       proxy_set_header  Host              \$http_host;   # required for docker client's sake
       proxy_set_header  X-Real-IP         \$remote_addr; # pass on real client's IP
@@ -182,7 +182,7 @@ Now, start your stack:
 
 Login with a "push" authorized user (using `testuser` and `testpassword`), then tag and push your first image:
 
-    docker login -p=testuser -u=testpassword -e=root@example.ch myregistrydomain.com:5043
+    docker login -u=testuser -p=testpassword -e=root@example.ch myregistrydomain.com:5043
     docker tag ubuntu myregistrydomain.com:5043/test
     docker push myregistrydomain.com:5043/test
     docker pull myregistrydomain.com:5043/test
