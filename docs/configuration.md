@@ -78,6 +78,7 @@ information about each option that appears later in this page.
     storage:
       filesystem:
         rootdirectory: /var/lib/registry
+		maxthreads: 100
       azure:
         accountname: accountname
         accountkey: base64encodedaccountkey
