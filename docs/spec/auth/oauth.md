@@ -39,10 +39,10 @@ Content-Type: application/x-www-form-urlencoded
         (REQUIRED) Type of grant used to get token. When getting a refresh token
         using credentials this type should be set to "password" and have the
         accompanying username and password paramters. Type "authorization_code"
-        is reserved for future use for authenticating to an authorization server
-        without having to send credentials directly from the client. When
-        requesting an access token with a refresh token this should be set to
-        "refresh_token".
+        is used for authenticating to an authorization using a code given from
+        directly from a resource owner and without having to send credentials
+        through the client. When requesting an access token with a refresh token
+        this should be set to "refresh_token".
     </dd>
     <dt>
         <code>service</code>
@@ -92,6 +92,13 @@ Content-Type: application/x-www-form-urlencoded
     </dt>
     <dd>
         (OPTIONAL) The refresh token to use for authentication when grant type "refresh_token" is used.
+    </dd>
+    <dt>
+        <code>code</code>
+    </dt>
+    <dd>
+        (OPTIONAL) The authorization to use for authentication when the grant
+        type "authorization_code" is used.
     </dd>
     <dt>
         <code>username</code>
@@ -157,7 +164,6 @@ Content-Type: application/x-www-form-urlencoded
     </dd>
 </dl>
 
-
 #### Example getting refresh token
 
 ```
@@ -188,3 +194,160 @@ Content-Type: application/json
 {"refresh_token":"kas9Da81Dfa8","access_token":"eyJhbGciOiJFUzI1NiIsInR5":"expires_in":"900","scope":"repository:samalba/my-app:pull,repository:samalba/my-app:push"}
 ````
 
+## Getting Authorization Challenge From Token Server
+
+Before authenticating with the token server the client does a `HEAD`
+request to the `/token` endpoint to get any authentication challenges.
+If the token server supports OAuth2, it will return a `WWW-Authenticate`
+with the type `OAuth2` and the parameters needed by the client to
+complete the oauth2 flow. If the client has a username and password,
+then the grant_type `password` will immediately be used. If no credentials
+were provided the daemon will pass the challenge back to the Docker client
+to complete the OAuth2 flow.
+
+### Authentication Parameters
+
+ - *client_id* - OAuth2 client id (cliend id used by provider not necessarily used by token server)
+ - *auth_url* - Authorization endpoint to send client
+ - *redirect_url* - Redirect location after login flow
+ - *landing_url* - Location to redirect after login complete
+ - *scopes* - Space separate list of scopes used by oauth provider, should be list of scopes needed registry and namespace identification.
+
+#### Example Return Value
+
+```
+HEAD /token HTTP/1.1
+Host: tokenserver.example.com
+
+HTTP/1.1 401 Unauthorized
+Www-Authenticate: OAuth2 client_id="93202393-o0asf811.apps.googleusercontent.com",auth_url="https://accounts.google.com/o/oauth2/auth",redirect_url="http://localhost:8082/oauth2callback",scopes="https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile",landing_url="https://docs.docker.com/registry/"
+Date: Fri, 06 May 2016 05:40:23 GMT
+
+```
+
+### 3 Legged OAuth Flow
+
+Client does not prompt the user for a username and password but instead
+immediately hits the login endpoint on the daemon. The daemon will get
+the challenge from the token server and return the challenge back
+to the Docker client. The Docker client is responsible for completing
+the oauth2 flow to get an authorization code and call login again
+with the authorization code.
+
+```
+                   +------+        +------+
+                   |Docker| Login  |Docker|
+                   |Client| Without|Daemon|                           +--------+
+                   |      | Creds  |      |                           | Docker |
+                   |      +-------->      |    GET /v2/ (1)           |Registry|
+                   |      |        |      +--------------------------->        |
+                   |      |        |      |    401 Challenge          |        |
+                   |      |        |      <---------------------------+        |
+                   |      |        |      |                           |        |
+                   |      |        |      |                 +------+  |        |
+                   |      |        |      |  HEAD /token    |Token |  |        |
+                   |      |        |      +----------------->Server|  |        |
++-------+          |      | OAuth2 |      |  401 Challenge  |      |  |        |
+|  Web  | Redirect |      | Config |      <-----------------+      |  |        |
+|Browser| Web login|      <--------+      |                 |      |  |        |
+|       <----------+      | Login  |      |                 |      |  |        |
+|       | Auth Code|      | With   |      |                 |      |  |        |
+|       +---------->      | Code   |      |                 |      |  |        |
+|       |          |      +-------->      |  POST /token    |      |  |        |
+|       |          |      |        |      +----------------->      |  |        |
++-------+          |      |        |      |  Auth Tokens (2)|      |  |        |
+                   |      |        |      <-----------------+      |  |        |
+                   |      |        |      |                 |      |  |        |
+                   |      |        |      |                 +------+  |        |
+                   |      |        |      |  GET /v2/ (3)             |        |
+                   |      |        |      +--------------------------->        |
+                   |      | Login  |      |  OK                       |        |
+                   |      | Success|      <---------------------------+        |
+                   |      <--------+      |                           |        |
+                   |      |        |      |                           +--------+
+                   +------+        +------+
+
+(1) No authorization headers should be included
+(2) May return refresh token if offline access requested, always access token
+(3) Access token from previous request used to validate login
+```
+
+### OAuth2 Flow With Credentials
+
+The Docker client first prompts the user for credentials before
+calling the login endpoint on the daemon. The credentials are
+sent on login and when an oauth2 challenge is received from the
+token server, the credentials are immediately used with the
+`password` grant type.
+
+```
++------+        +------+
+|Docker| Login  |Docker|
+|Client| With   |Daemon|                           +--------+
+|      | Creds  |      |                           |Registry|
+|      +-------->      |    GET /v2/               |        |
+|      |        |      +--------------------------->        |
+|      |        |      |    401 Challenge          |        |
+|      |        |      <---------------------------+        |
+|      |        |      |                           |        |
+|      |        |      |                 +------+  |        |
+|      |        |      |  HEAD /token    |      |  |        |
+|      |        |      +----------------->Token |  |        |
+|      |        |      |  401 Challenge  |Server|  |        |
+|      |        |      <-----------------+      |  |        |
+|      |        |      |                 |      |  |        |
+|      |        |      |  POST /token    |      |  |        |
+|      |        |      +----------------->      |  |        |
+|      |        |      |  Refresh Token  |      |  |        |
+|      |        |      <-----------------+      |  |        |
+|      |        |      |                 |      |  |        |
+|      |        |      |                 +------+  |        |
+|      |        |      |  GET /v2/                 |        |
+|      |        |      +--------------------------->        |
+|      | Login  |      |  OK                       |        |
+|      | Success|      <---------------------------+        |
+|      <--------+      |                           |        |
+|      |        |      |                           +--------+
++------+        +------+
+
+```
+
+## Compatibility With Older Token Servers
+
+A token server which does not support OAuth2 should not
+return a valid challenge and cause the client to fallback
+to using the GET endpoint.
+
+### OAuth2 Incompatible Token Server Flow
+
+```
++------+         +------+
+|Docker| Login   |Docker|
+|Client| With    |Daemon|                           +--------+
+|      | Password|      |                           |Registry|
+|      +--------->      |    GET /v2/               |        |
+|      |         |      +--------------------------->        |
+|      |         |      |    401 Challenge          |        |
+|      |         |      <---------------------------+        |
+|      |         |      |                           |        |
+|      |         |      |                 +------+  |        |
+|      |         |      |  HEAD /token    |Token |  |        |
+|      |         |      +----------------->Server|  |        |
+|      |         |      |  No Challenge   |      |  |        |
+|      |         |      <-----------------+      |  |        |
+|      |         |      |                 |      |  |        |
+|      |         |      |  GET /token     |      |  |        |
+|      |         |      +----------------->      |  |        |
+|      |         |      |  Auth Tokens    |      |  |        |
+|      |         |      <-----------------+      |  |        |
+|      |         |      |                 +------+  |        |
+|      |         |      |                           |        |
+|      |         |      |  GET /v2/                 |        |
+|      |         |      +--------------------------->        |
+|      | Login   |      |  200 OK                   |        |
+|      | Success |      <---------------------------+        |
+|      <---------+      |                           |        |
+|      |         |      |                           +--------+
++------+         +------+
+
+```
