@@ -494,7 +494,7 @@ func (w *writer) Write(p []byte) (int, error) {
 // Size returns the number of bytes written to this FileWriter.
 func (w *writer) Size() int64 {
 	if !w.closed {
-		return w.size + int64(w.buffSize)
+		return w.offset + int64(w.buffSize)
 	}
 	return w.size
 }
