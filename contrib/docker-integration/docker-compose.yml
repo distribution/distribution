@@ -75,7 +75,7 @@ docker:
   environment:
     DOCKER_GRAPHDRIVER:
   volumes:
-    - ./generated_certs.d:/etc/docker/certs.d
+    - /etc/generated_certs.d:/etc/docker/certs.d
     - /var/lib/docker
   links:
     - nginx:localregistry
