@@ -1737,9 +1737,11 @@ func (c *Connection) Object(container string, objectName string) (info Object, h
 			return
 		}
 	}
-	info.ServerLastModified = resp.Header.Get("Last-Modified")
-	if info.LastModified, err = time.Parse(http.TimeFormat, info.ServerLastModified); err != nil {
-		return
+	if resp.Header.Get("Last-Modified") != "" {
+		info.ServerLastModified = resp.Header.Get("Last-Modified")
+		if info.LastModified, err = time.Parse(http.TimeFormat, info.ServerLastModified); err != nil {
+			return
+		}
 	}
 	info.Hash = resp.Header.Get("Etag")
 	return
