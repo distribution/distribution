@@ -20,6 +20,7 @@ type registry struct {
 	resumableDigestEnabled      bool
 	schema1SignaturesEnabled    bool
 	schema1SigningKey           libtrust.PrivateKey
+	blobLinksDisabled           bool
 }
 
 // RegistryOption is the type used for functional options for NewRegistry.
@@ -62,6 +63,13 @@ func Schema1SigningKey(key libtrust.PrivateKey) RegistryOption {
 		registry.schema1SigningKey = key
 		return nil
 	}
+}
+
+// DisableBlobLinks returns a functional option for NewRegistry. It disables
+// blob linking.
+func DisableBlobLinks(registry *registry) error {
+	registry.blobLinksDisabled = true
+	return nil
 }
 
 // BlobDescriptorCacheProvider returns a functional option for
@@ -191,14 +199,16 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 	manifestDirectoryPathSpec := manifestRevisionsPathSpec{name: repo.name.Name()}
 
 	blobStore := &linkedBlobStore{
-		ctx:           ctx,
-		blobStore:     repo.blobStore,
-		repository:    repo,
-		deleteEnabled: repo.registry.deleteEnabled,
+		ctx:               ctx,
+		blobStore:         repo.blobStore,
+		repository:        repo,
+		deleteEnabled:     repo.registry.deleteEnabled,
+		blobLinksDisabled: repo.registry.blobLinksDisabled,
 		blobAccessController: &linkedBlobStatter{
-			blobStore:   repo.blobStore,
-			repository:  repo,
-			linkPathFns: manifestLinkPathFns,
+			blobStore:         repo.blobStore,
+			repository:        repo,
+			blobLinksDisabled: repo.registry.blobLinksDisabled,
+			linkPathFns:       manifestLinkPathFns,
 		},
 
 		// TODO(stevvooe): linkPath limits this blob store to only
@@ -249,9 +259,10 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 // to a request local.
 func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
 	var statter distribution.BlobDescriptorService = &linkedBlobStatter{
-		blobStore:   repo.blobStore,
-		repository:  repo,
-		linkPathFns: []linkPathFunc{blobLinkPath},
+		blobStore:         repo.blobStore,
+		repository:        repo,
+		blobLinksDisabled: repo.registry.blobLinksDisabled,
+		linkPathFns:       []linkPathFunc{blobLinkPath},
 	}
 
 	if repo.descriptorCache != nil {
@@ -271,5 +282,6 @@ func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
 		linkPathFns:            []linkPathFunc{blobLinkPath},
 		deleteEnabled:          repo.registry.deleteEnabled,
 		resumableDigestEnabled: repo.resumableDigestEnabled,
+		blobLinksDisabled:      repo.registry.blobLinksDisabled,
 	}
 }

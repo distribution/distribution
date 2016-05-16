@@ -198,6 +198,15 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		}
 	}
 
+	// configure blob linking
+	if bloblinks, ok := config.Storage["bloblinking"]; ok {
+		if e, ok := bloblinks["disable"]; ok {
+			if disabled, ok := e.(bool); ok && disabled {
+				options = append(options, storage.DisableBlobLinks)
+			}
+		}
+	}
+
 	// configure redirects
 	var redirectDisabled bool
 	if redirectConfig, ok := config.Storage["redirect"]; ok {

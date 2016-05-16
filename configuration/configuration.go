@@ -344,6 +344,8 @@ func (storage Storage) Type() string {
 			// allow configuration of delete
 		case "redirect":
 			// allow configuration of redirect
+		case "bloblinking":
+			// allow configuration of bloblinking
 		default:
 			storageType = append(storageType, k)
 		}
@@ -385,6 +387,8 @@ func (storage *Storage) UnmarshalYAML(unmarshal func(interface{}) error) error {
 					// allow configuration of delete
 				case "redirect":
 					// allow configuration of redirect
+				case "bloblinking":
+					// allow configuration of bloblinking
 				default:
 					types = append(types, k)
 				}

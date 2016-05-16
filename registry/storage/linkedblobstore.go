@@ -30,6 +30,7 @@ type linkedBlobStore struct {
 	ctx                    context.Context // only to be used where context can't come through method args
 	deleteEnabled          bool
 	resumableDigestEnabled bool
+	blobLinksDisabled      bool
 
 	// linkPathFns specifies one or more path functions allowing one to
 	// control the repository blob link set to which the blob store
@@ -336,6 +337,10 @@ func (lbs *linkedBlobStore) newBlobUpload(ctx context.Context, uuid, path string
 // linkBlob links a valid, written blob into the registry under the named
 // repository for the upload controller.
 func (lbs *linkedBlobStore) linkBlob(ctx context.Context, canonical distribution.Descriptor, aliases ...digest.Digest) error {
+	if lbs.blobLinksDisabled {
+		return nil
+	}
+
 	dgsts := append([]digest.Digest{canonical.Digest}, aliases...)
 
 	// TODO(stevvooe): Need to write out mediatype for only canonical hash
@@ -371,6 +376,9 @@ type linkedBlobStatter struct {
 	*blobStore
 	repository distribution.Repository
 
+	// blobLinksDisabled disables blob links.
+	blobLinksDisabled bool
+
 	// linkPathFns specifies one or more path functions allowing one to
 	// control the repository blob link set to which the blob store
 	// dispatches. This is required because manifest and layer blobs have not
@@ -383,6 +391,10 @@ type linkedBlobStatter struct {
 var _ distribution.BlobDescriptorService = &linkedBlobStatter{}
 
 func (lbs *linkedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+	if lbs.blobLinksDisabled {
+		return lbs.blobStore.statter.Stat(ctx, dgst)
+	}
+
 	var (
 		found  bool
 		target digest.Digest
@@ -423,6 +435,10 @@ func (lbs *linkedBlobStatter) Stat(ctx context.Context, dgst digest.Digest) (dis
 }
 
 func (lbs *linkedBlobStatter) Clear(ctx context.Context, dgst digest.Digest) (err error) {
+	if lbs.blobLinksDisabled {
+		return nil
+	}
+
 	// clear any possible existence of a link described in linkPathFns
 	for _, linkPathFn := range lbs.linkPathFns {
 		blobLinkPath, err := linkPathFn(lbs.repository.Named().Name(), dgst)
