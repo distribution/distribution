@@ -304,7 +304,7 @@ An implementation of the `storagedriver.StorageDriver` interface that uses [Open
     </td>
     <td>
     <p>
-    Optionally, specify the OpenStack Auth's version,for example <code>3</code>. The driver use 0 (autodetect) by default.
+    Optionally, specify the OpenStack Auth's version,for example <code>3</code>. By default the driver will autodetect the auth's version from the AuthURL.
     </p>
     </td>
 </tr>
