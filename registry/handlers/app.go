@@ -177,7 +177,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		app.httpHost = *u
 	}
 
-	options := []storage.RegistryOption{}
+	options := registrymiddleware.GetRegistryOptions()
 
 	if app.isCache {
 		options = append(options, storage.DisableDigestResumption)
