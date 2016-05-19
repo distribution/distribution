@@ -5,6 +5,7 @@ description = "Describes the scope and access fields used for registry authoriza
 keywords = ["registry, on-prem, images, tags, repository, distribution, advanced, access, scope"]
 [menu.main]
 parent="smn_registry_ref"
+weight=103
 +++
 <![end-metadata]-->
 
