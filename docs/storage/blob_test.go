@@ -7,6 +7,8 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
+	"reflect"
 	"testing"
 
 	"github.com/docker/distribution"
@@ -16,7 +18,6 @@ import (
 	"github.com/docker/distribution/registry/storage/cache/memory"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/docker/distribution/testutil"
-	"path"
 )
 
 // TestWriteSeek tests that the current file size can be
@@ -156,7 +157,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 		t.Fatalf("unexpected error checking for existence: %v, %#v", err, bs)
 	}
 
-	if statDesc != desc {
+	if !reflect.DeepEqual(statDesc, desc) {
 		t.Fatalf("descriptors not equal: %v != %v", statDesc, desc)
 	}
 
@@ -410,7 +411,7 @@ func TestBlobMount(t *testing.T) {
 		t.Fatalf("unexpected error checking for existence: %v, %#v", err, sbs)
 	}
 
-	if statDesc != desc {
+	if !reflect.DeepEqual(statDesc, desc) {
 		t.Fatalf("descriptors not equal: %v != %v", statDesc, desc)
 	}
 
@@ -436,7 +437,7 @@ func TestBlobMount(t *testing.T) {
 		t.Fatalf("unexpected error mounting layer: %v", err)
 	}
 
-	if ebm.Descriptor != desc {
+	if !reflect.DeepEqual(ebm.Descriptor, desc) {
 		t.Fatalf("descriptors not equal: %v != %v", ebm.Descriptor, desc)
 	}
 
@@ -446,7 +447,7 @@ func TestBlobMount(t *testing.T) {
 		t.Fatalf("unexpected error checking for existence: %v, %#v", err, bs)
 	}
 
-	if statDesc != desc {
+	if !reflect.DeepEqual(statDesc, desc) {
 		t.Fatalf("descriptors not equal: %v != %v", statDesc, desc)
 	}
 
