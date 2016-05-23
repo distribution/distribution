@@ -9,7 +9,7 @@ See here for package docs
 
   http://godoc.org/github.com/ncw/swift
 
-[![Build Status](https://travis-ci.org/ncw/swift.png)](https://travis-ci.org/ncw/swift)
+[![Build Status](https://api.travis-ci.org/ncw/swift.svg?branch=master)](https://travis-ci.org/ncw/swift) [![GoDoc](https://godoc.org/github.com/ncw/swift?status.svg)](https://godoc.org/github.com/ncw/swift) 
 
 Install
 -------
@@ -134,3 +134,6 @@ Contributors
 - Fabian Ruff <fabian@progra.de>
 - Arturo Reuschenbach Puncernau <reuschenbach@gmail.com>
 - Petr Kotek <petr.kotek@bigcommerce.com>
+- Stefan Majewsky <stefan.majewsky@sap.com>
+- Cezar Sa Espinola <cezarsa@gmail.com>
+- Sam Gunaratne <samgzeit@gmail.com>

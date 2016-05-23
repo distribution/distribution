@@ -1,7 +1,7 @@
 {
 	"ImportPath": "github.com/docker/distribution",
 	"GoVersion": "go1.6",
-	"GodepVersion": "v60",
+	"GodepVersion": "v70",
 	"Packages": [
 		"./..."
 	],
@@ -223,11 +223,11 @@
 		},
 		{
 			"ImportPath": "github.com/ncw/swift",
-			"Rev": "c54732e87b0b283d1baf0a18db689d0aea460ba3"
+			"Rev": "ce444d6d47c51d4dda9202cd38f5094dd8e27e86"
 		},
 		{
 			"ImportPath": "github.com/ncw/swift/swifttest",
-			"Rev": "c54732e87b0b283d1baf0a18db689d0aea460ba3"
+			"Rev": "ce444d6d47c51d4dda9202cd38f5094dd8e27e86"
 		},
 		{
 			"ImportPath": "github.com/spf13/cobra",
