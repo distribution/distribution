@@ -12,14 +12,15 @@ import (
 // registry is the top-level implementation of Registry for use in the storage
 // package. All instances should descend from this object.
 type registry struct {
-	blobStore                   *blobStore
-	blobServer                  *blobServer
-	statter                     *blobStatter // global statter service.
-	blobDescriptorCacheProvider cache.BlobDescriptorCacheProvider
-	deleteEnabled               bool
-	resumableDigestEnabled      bool
-	schema1SignaturesEnabled    bool
-	schema1SigningKey           libtrust.PrivateKey
+	blobStore                    *blobStore
+	blobServer                   *blobServer
+	statter                      *blobStatter // global statter service.
+	blobDescriptorCacheProvider  cache.BlobDescriptorCacheProvider
+	deleteEnabled                bool
+	resumableDigestEnabled       bool
+	schema1SignaturesEnabled     bool
+	schema1SigningKey            libtrust.PrivateKey
+	blobDescriptorServiceFactory distribution.BlobDescriptorServiceFactory
 }
 
 // RegistryOption is the type used for functional options for NewRegistry.
@@ -60,6 +61,15 @@ func DisableSchema1Signatures(registry *registry) error {
 func Schema1SigningKey(key libtrust.PrivateKey) RegistryOption {
 	return func(registry *registry) error {
 		registry.schema1SigningKey = key
+		return nil
+	}
+}
+
+// BlobDescriptorServiceFactory returns a functional option for NewRegistry. It sets the
+// factory to create BlobDescriptorServiceFactory middleware.
+func BlobDescriptorServiceFactory(factory distribution.BlobDescriptorServiceFactory) RegistryOption {
+	return func(registry *registry) error {
+		registry.blobDescriptorServiceFactory = factory
 		return nil
 	}
 }
@@ -190,16 +200,22 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 
 	manifestDirectoryPathSpec := manifestRevisionsPathSpec{name: repo.name.Name()}
 
+	var statter distribution.BlobDescriptorService = &linkedBlobStatter{
+		blobStore:   repo.blobStore,
+		repository:  repo,
+		linkPathFns: manifestLinkPathFns,
+	}
+
+	if repo.registry.blobDescriptorServiceFactory != nil {
+		statter = repo.registry.blobDescriptorServiceFactory.BlobAccessController(statter)
+	}
+
 	blobStore := &linkedBlobStore{
-		ctx:           ctx,
-		blobStore:     repo.blobStore,
-		repository:    repo,
-		deleteEnabled: repo.registry.deleteEnabled,
-		blobAccessController: &linkedBlobStatter{
-			blobStore:   repo.blobStore,
-			repository:  repo,
-			linkPathFns: manifestLinkPathFns,
-		},
+		ctx:                  ctx,
+		blobStore:            repo.blobStore,
+		repository:           repo,
+		deleteEnabled:        repo.registry.deleteEnabled,
+		blobAccessController: statter,
 
 		// TODO(stevvooe): linkPath limits this blob store to only
 		// manifests. This instance cannot be used for blob checks.
@@ -256,6 +272,10 @@ func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
 
 	if repo.descriptorCache != nil {
 		statter = cache.NewCachedBlobStatter(repo.descriptorCache, statter)
+	}
+
+	if repo.registry.blobDescriptorServiceFactory != nil {
+		statter = repo.registry.blobDescriptorServiceFactory.BlobAccessController(statter)
 	}
 
 	return &linkedBlobStore{
