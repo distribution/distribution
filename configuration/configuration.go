@@ -221,7 +221,7 @@ type FileChecker struct {
 // HTTPChecker is a type of entry in the health section for checking HTTP URIs.
 type HTTPChecker struct {
 	// Timeout is the duration to wait before timing out the HTTP request
-	Timeout time.Duration `yaml:"interval,omitempty"`
+	Timeout time.Duration `yaml:"timeout,omitempty"`
 	// StatusCode is the expected status code
 	StatusCode int
 	// Interval is the duration in between checks
@@ -238,7 +238,7 @@ type HTTPChecker struct {
 // TCPChecker is a type of entry in the health section for checking TCP servers.
 type TCPChecker struct {
 	// Timeout is the duration to wait before timing out the TCP connection
-	Timeout time.Duration `yaml:"interval,omitempty"`
+	Timeout time.Duration `yaml:"timeout,omitempty"`
 	// Interval is the duration in between checks
 	Interval time.Duration `yaml:"interval,omitempty"`
 	// Addr is the TCP address to check
