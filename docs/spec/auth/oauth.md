@@ -171,11 +171,11 @@ HTTP/1.1 200 OK
 Content-Type: application/json
 
 {"refresh_token":"kas9Da81Dfa8","access_token":"eyJhbGciOiJFUzI1NiIsInR5","expires_in":"900","scope":""}
-````
+```
 
 #### Example refreshing an Access Token
 
-````
+```
 POST /token HTTP/1.1
 Host: auth.docker.io
 Content-Type: application/x-www-form-urlencoded
@@ -186,5 +186,5 @@ HTTP/1.1 200 OK
 Content-Type: application/json
 
 {"refresh_token":"kas9Da81Dfa8","access_token":"eyJhbGciOiJFUzI1NiIsInR5":"expires_in":"900","scope":"repository:samalba/my-app:pull,repository:samalba/my-app:push"}
-````
+```
 
