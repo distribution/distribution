@@ -258,7 +258,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		}
 	}
 
-	app.registry, err = applyRegistryMiddleware(app.Context, app.registry, config.Middleware["registry"])
+	app.registry, err = applyRegistryMiddleware(app, app.registry, config.Middleware["registry"])
 	if err != nil {
 		panic(err)
 	}
@@ -647,7 +647,7 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 				repository,
 				app.eventBridge(context, r))
 
-			context.Repository, err = applyRepoMiddleware(context.Context, context.Repository, app.Config.Middleware["repository"])
+			context.Repository, err = applyRepoMiddleware(app, context.Repository, app.Config.Middleware["repository"])
 			if err != nil {
 				ctxu.GetLogger(context).Errorf("error initializing repository middleware: %v", err)
 				context.Errors = append(context.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
