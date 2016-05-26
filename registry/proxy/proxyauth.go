@@ -29,6 +29,10 @@ func (c credentials) RefreshToken(u *url.URL, service string) string {
 	return ""
 }
 
+func (c credentials) AuthorizationCode(*url.URL) (string, string) {
+	return "", ""
+}
+
 func (c credentials) SetRefreshToken(u *url.URL, service, token string) {
 }
 

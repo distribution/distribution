@@ -42,6 +42,10 @@ type AuthenticationHandler interface {
 // CredentialStore is an interface for getting credentials for
 // a given URL
 type CredentialStore interface {
+	// AuthorizationCode returns an authorization code used
+	// to exchange for a refresh token and the redirect_uri
+	AuthorizationCode(*url.URL) (string, string)
+
 	// Basic returns basic auth for the given URL
 	Basic(*url.URL) (string, string)
 
@@ -286,10 +290,19 @@ func (th *tokenHandler) fetchTokenWithOAuth(realm *url.URL, refreshToken, servic
 		form.Set("grant_type", "refresh_token")
 		form.Set("refresh_token", refreshToken)
 	} else if th.creds != nil {
-		form.Set("grant_type", "password")
-		username, password := th.creds.Basic(realm)
-		form.Set("username", username)
-		form.Set("password", password)
+		code, redirectURI := th.creds.AuthorizationCode(realm)
+		if code != "" {
+			form.Set("grant_type", "authorization_code")
+			form.Set("code", code)
+			if redirectURI != "" {
+				form.Set("redirect_uri", redirectURI)
+			}
+		} else {
+			form.Set("grant_type", "password")
+			username, password := th.creds.Basic(realm)
+			form.Set("username", username)
+			form.Set("password", password)
+		}
 
 		// attempt to get a refresh token
 		form.Set("access_type", "offline")
@@ -343,7 +356,6 @@ type getTokenResponse struct {
 }
 
 func (th *tokenHandler) fetchTokenWithBasicAuth(realm *url.URL, service string, scopes []string) (token string, expiration time.Time, err error) {
-
 	req, err := http.NewRequest("GET", realm.String(), nil)
 	if err != nil {
 		return "", time.Time{}, err
