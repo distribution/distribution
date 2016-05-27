@@ -283,6 +283,8 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 					}
 				}
 			}
+		case errcode.Error:
+			imh.Errors = append(imh.Errors, err)
 		default:
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		}

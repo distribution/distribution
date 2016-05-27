@@ -634,6 +634,8 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 					context.Errors = append(context.Errors, v2.ErrorCodeNameUnknown.WithDetail(err))
 				case distribution.ErrRepositoryNameInvalid:
 					context.Errors = append(context.Errors, v2.ErrorCodeNameInvalid.WithDetail(err))
+				case errcode.Error:
+					context.Errors = append(context.Errors, err)
 				}
 
 				if err := errcode.ServeJSON(w, context.Errors); err != nil {
