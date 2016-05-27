@@ -10,7 +10,7 @@ import (
 
 func TestAuthChallengeParse(t *testing.T) {
 	header := http.Header{}
-	header.Add("WWW-Authenticate", `Bearer realm="https://auth.example.com/token",service="registry.example.com",other=fun,slashed="he\"\l\lo"`)
+	header.Add("WWW-Authenticate", `Bearer realm="https://auth.example.com/token",service="registry.example.com",empty="",other=fun,slashed="he\"\l\lo"`)
 
 	challenges := parseAuthHeader(header)
 	if len(challenges) != 1 {
@@ -30,6 +30,10 @@ func TestAuthChallengeParse(t *testing.T) {
 		t.Fatalf("Unexpected param: %s, expected: %s", challenge.Parameters["service"], expected)
 	}
 
+	if _, ok := challenge.Parameters["empty"]; !ok {
+		t.Fatalf("No empty value in parameters")
+	}
+
 	if expected := "fun"; challenge.Parameters["other"] != expected {
 		t.Fatalf("Unexpected param: %s, expected: %s", challenge.Parameters["other"], expected)
 	}
@@ -37,7 +41,6 @@ func TestAuthChallengeParse(t *testing.T) {
 	if expected := "he\"llo"; challenge.Parameters["slashed"] != expected {
 		t.Fatalf("Unexpected param: %s, expected: %s", challenge.Parameters["slashed"], expected)
 	}
-
 }
 
 func TestAuthChallengeNormalization(t *testing.T) {
