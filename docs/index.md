@@ -6,6 +6,7 @@ keywords = ["registry, on-prem, images, tags, repository, distribution"]
 aliases = ["/registry/overview/"]
 [menu.main]
 parent="smn_registry"
+weight=1
 +++
 <![end-metadata]-->
 
