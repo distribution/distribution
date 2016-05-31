@@ -1,10 +1,12 @@
 <!--[metadata]>
 +++
-title = "Registry Overview"
+title = "Docker Registry"
 description = "High-level overview of the Registry"
 keywords = ["registry, on-prem, images, tags, repository, distribution"]
+type = "menu"
 [menu.main]
-parent="smn_registry"
+identifier="smn_registry"
+parent="mn_components"
 +++
 <![end-metadata]-->
 
@@ -17,5 +19,5 @@ The Docker Registry documentation includes the following topics:
 * [Deploying a registry server](deploying.md)
 * [Registry Configuration Reference](configuration.md)
 * [Notifications](notifications.md)
-* [Recipes](recipes.md)
+* [Recipes](recipes/index.md)
 * [Getting help](help.md)

@@ -5,6 +5,7 @@ description = "Specifies the Docker Registry v2 authentication"
 keywords = ["registry, on-prem, images, tags, repository, distribution, Bearer authentication, advanced"]
 [menu.main]
 parent="smn_registry_ref"
+weight=104
 +++
 <![end-metadata]-->
 

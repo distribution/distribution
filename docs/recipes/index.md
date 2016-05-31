@@ -1,11 +1,11 @@
 <!--[metadata]>
 +++
-title = "Recipes"
+title = "Recipes Overview"
 description = "Fun stuff to do with your registry"
 keywords = ["registry, on-prem, images, tags, repository, distribution, recipes, advanced"]
 [menu.main]
-parent="smn_registry"
-weight=7
+parent="smn_recipes"
+weight=-10
 +++
 <![end-metadata]-->
 
@@ -17,7 +17,7 @@ Most users are not expected to have a use for these.
 
 ## Requirements
 
-You should have followed entirely the basic [deployment guide](deploying.md).
+You should have followed entirely the basic [deployment guide](../deploying.md).
 
 If you have not, please take the time to do so.
 
