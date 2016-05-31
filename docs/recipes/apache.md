@@ -3,6 +3,8 @@
 title = "Authenticating proxy with apache"
 description = "Restricting access to your registry using an apache proxy"
 keywords = ["registry, on-prem, images, tags, repository, distribution, authentication, proxy, apache, httpd, TLS, recipe, advanced"]
+[menu.main]
+parent="smn_recipes"
 +++
 <![end-metadata]-->
 
@@ -16,7 +18,7 @@ Usually, that includes enterprise setups using LDAP/AD on the backend and a SSO 
 
 ### Alternatives
 
-If you just want authentication for your registry, and are happy maintaining users access separately, you should really consider sticking with the native [basic auth registry feature](deploying.md#native-basic-auth). 
+If you just want authentication for your registry, and are happy maintaining users access separately, you should really consider sticking with the native [basic auth registry feature](../deploying.md#native-basic-auth). 
 
 ### Solution
 
@@ -34,7 +36,7 @@ Furthermore, introducing an extra http layer in your communication pipeline will
 
 ## Setting things up
 
-Read again [the requirements](recipes.md#requirements).
+Read again [the requirements](index.md#requirements).
 
 Ready?
 

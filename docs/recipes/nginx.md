@@ -3,6 +3,8 @@
 title = "Authenticating proxy with nginx"
 description = "Restricting access to your registry using a nginx proxy"
 keywords = ["registry, on-prem, images, tags, repository, distribution, nginx, proxy, authentication, TLS, recipe, advanced"]
+[menu.main]
+parent="smn_recipes"
 +++
 <![end-metadata]-->
 
@@ -17,7 +19,7 @@ Usually, that includes enterprise setups using LDAP/AD on the backend and a SSO 
 
 ### Alternatives
 
-If you just want authentication for your registry, and are happy maintaining users access separately, you should really consider sticking with the native [basic auth registry feature](deploying.md#native-basic-auth).
+If you just want authentication for your registry, and are happy maintaining users access separately, you should really consider sticking with the native [basic auth registry feature](../deploying.md#native-basic-auth).
 
 ### Solution
 
@@ -53,7 +55,7 @@ Otherwise nginx will reset the ELB's values, and the requests will not be routed
 
 ## Setting things up
 
-Read again [the requirements](recipes.md#requirements).
+Read again [the requirements](index.md#requirements).
 
 Ready?
 
