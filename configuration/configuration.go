@@ -157,11 +157,6 @@ type Configuration struct {
 			// TrustKey is the signing key to use for adding the signature to
 			// schema1 manifests.
 			TrustKey string `yaml:"signingkeyfile,omitempty"`
-
-			// DisableSignatureStore will cause all signatures attached to schema1 manifests
-			// to be ignored. Signatures will be generated on all schema1 manifest requests
-			// rather than only requests which converted schema2 to schema1.
-			DisableSignatureStore bool `yaml:"disablesignaturestore,omitempty"`
 		} `yaml:"schema1,omitempty"`
 	} `yaml:"compatibility,omitempty"`
 }
