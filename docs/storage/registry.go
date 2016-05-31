@@ -18,7 +18,6 @@ type registry struct {
 	blobDescriptorCacheProvider  cache.BlobDescriptorCacheProvider
 	deleteEnabled                bool
 	resumableDigestEnabled       bool
-	schema1SignaturesEnabled     bool
 	schema1SigningKey            libtrust.PrivateKey
 	blobDescriptorServiceFactory distribution.BlobDescriptorServiceFactory
 }
@@ -47,17 +46,8 @@ func DisableDigestResumption(registry *registry) error {
 	return nil
 }
 
-// DisableSchema1Signatures is a functional option for NewRegistry. It disables
-// signature storage and ensures all schema1 manifests will only be returned
-// with a signature from a provided signing key.
-func DisableSchema1Signatures(registry *registry) error {
-	registry.schema1SignaturesEnabled = false
-	return nil
-}
-
 // Schema1SigningKey returns a functional option for NewRegistry. It sets the
-// signing key for adding a signature to all schema1 manifests. This should be
-// used in conjunction with disabling signature store.
+// key for signing  all schema1 manifests.
 func Schema1SigningKey(key libtrust.PrivateKey) RegistryOption {
 	return func(registry *registry) error {
 		registry.schema1SigningKey = key
@@ -116,9 +106,8 @@ func NewRegistry(ctx context.Context, driver storagedriver.StorageDriver, option
 			statter: statter,
 			pathFn:  bs.path,
 		},
-		statter:                  statter,
-		resumableDigestEnabled:   true,
-		schema1SignaturesEnabled: true,
+		statter:                statter,
+		resumableDigestEnabled: true,
 	}
 
 	for _, option := range options {
@@ -231,11 +220,6 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 			ctx:        ctx,
 			repository: repo,
 			blobStore:  blobStore,
-			signatures: &signatureStore{
-				ctx:        ctx,
-				repository: repo,
-				blobStore:  repo.blobStore,
-			},
 		},
 		schema2Handler: &schema2ManifestHandler{
 			ctx:        ctx,

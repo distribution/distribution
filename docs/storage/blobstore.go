@@ -75,7 +75,6 @@ func (bs *blobStore) Put(ctx context.Context, mediaType string, p []byte) (distr
 	}
 
 	// TODO(stevvooe): Write out mediatype here, as well.
-
 	return distribution.Descriptor{
 		Size: int64(len(p)),
 

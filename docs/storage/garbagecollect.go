@@ -6,7 +6,6 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/manifest/schema2"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/driver"
@@ -71,22 +70,6 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 			}
 
 			switch manifest.(type) {
-			case *schema1.SignedManifest:
-				signaturesGetter, ok := manifestService.(distribution.SignaturesGetter)
-				if !ok {
-					return fmt.Errorf("unable to convert ManifestService into SignaturesGetter")
-				}
-				signatures, err := signaturesGetter.GetSignatures(ctx, dgst)
-				if err != nil {
-					return fmt.Errorf("failed to get signatures for signed manifest: %v", err)
-				}
-				for _, signatureDigest := range signatures {
-					if dryRun {
-						emit("%s: marking signature %s", repoName, signatureDigest)
-					}
-					markSet[signatureDigest] = struct{}{}
-				}
-				break
 			case *schema2.DeserializedManifest:
 				config := manifest.(*schema2.DeserializedManifest).Config
 				if dryRun {
