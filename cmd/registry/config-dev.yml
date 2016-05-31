@@ -24,7 +24,7 @@ storage:
     cache:
         blobdescriptor: redis
     filesystem:
-        rootdirectory: /var/lib/registry-hello-world-clean
+        rootdirectory: /var/lib/registry
     maintenance:
         uploadpurging:
             enabled: false
