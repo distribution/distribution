@@ -76,7 +76,7 @@ image manifest based on the Content-Type returned in the HTTP response.
     - **`digest`** *string*
 
         The digest of the content, as defined by the
-        [Registry V2 HTTP API Specificiation](https://docs.docker.com/registry/spec/api/#digest-parameter).
+        [Registry V2 HTTP API Specificiation](api.md#digest-parameter).
 
     - **`platform`** *object*
 
@@ -191,7 +191,7 @@ image. It's the direct replacement for the schema-1 manifest.
     - **`digest`** *string*
 
         The digest of the content, as defined by the
-        [Registry V2 HTTP API Specificiation](https://docs.docker.com/registry/spec/api/#digest-parameter).
+        [Registry V2 HTTP API Specificiation](api.md#digest-parameter).
 
 - **`layers`** *array*
 
@@ -214,7 +214,7 @@ image. It's the direct replacement for the schema-1 manifest.
     - **`digest`** *string*
 
         The digest of the content, as defined by the
-        [Registry V2 HTTP API Specificiation](https://docs.docker.com/registry/spec/api/#digest-parameter).
+        [Registry V2 HTTP API Specificiation](api.md#digest-parameter).
 
     - **`urls`** *array*
 
