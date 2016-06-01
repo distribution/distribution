@@ -69,6 +69,7 @@ type Parameters struct {
 	DomainID            string
 	TrustID             string
 	Region              string
+	AuthVersion         int
 	Container           string
 	Prefix              string
 	InsecureSkipVerify  bool
@@ -174,6 +175,7 @@ func New(params Parameters) (*Driver, error) {
 		ApiKey:         params.Password,
 		AuthUrl:        params.AuthURL,
 		Region:         params.Region,
+		AuthVersion:    params.AuthVersion,
 		UserAgent:      "distribution/" + version.Version,
 		Tenant:         params.Tenant,
 		TenantId:       params.TenantID,
