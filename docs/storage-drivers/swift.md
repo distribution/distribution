@@ -302,6 +302,16 @@ An implementation of the `storagedriver.StorageDriver` interface that uses [Open
 </tr>
 <tr>
     <td>
+    <code>authversion</code>
+    </td>
+    <td>
+    <p>
+    Optionally, specify the OpenStack Auth's version,for example <code>3</code>. By default the driver will autodetect the auth's version from the AuthURL.
+    </p>
+    </td>
+</tr>
+<tr>
+    <td>
     <code>chunksize</code>
     </td>
     <td>
