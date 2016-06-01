@@ -5,6 +5,7 @@ description = "Describe the reference implementation of the Docker Registry v2 a
 keywords = ["registry, on-prem, images, tags, repository, distribution, JWT authentication, advanced"]
 [menu.main]
 parent="smn_registry_ref"
+weight=101
 +++
 <![end-metadata]-->
 

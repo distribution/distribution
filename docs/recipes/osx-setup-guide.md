@@ -3,6 +3,8 @@
 title = "Running on OS X"
 description = "Explains how to run a registry on OS X"
 keywords = ["registry, on-prem, images, tags, repository, distribution, OS X, recipe, advanced"]
+[menu.main]
+parent="smn_recipes"
 +++
 <![end-metadata]-->
 
@@ -16,7 +18,7 @@ This is useful if you intend to run a registry server natively on OS X.
 
 You can start a VM on OS X, and deploy your registry normally as a container using Docker inside that VM.
 
-The simplest road to get there is traditionally to use the [docker Toolbox](https://www.docker.com/toolbox), or [docker-machine](https://docs.docker.com/machine/), which usually relies on the [boot2docker](http://boot2docker.io/) iso inside a VirtualBox VM.
+The simplest road to get there is traditionally to use the [docker Toolbox](https://www.docker.com/toolbox), or [docker-machine](/machine/index.md), which usually relies on the [boot2docker](http://boot2docker.io/) iso inside a VirtualBox VM.
 
 ### Solution
 
