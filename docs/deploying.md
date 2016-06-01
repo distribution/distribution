@@ -49,7 +49,7 @@ Specifically, you might want to point your volume location to a specific place i
 
 ### Alternatives
 
-You should usually consider using [another storage backend](https://github.com/docker/distribution/blob/master/docs/storagedrivers.md) instead of the local filesystem. Use the [storage configuration options](https://github.com/docker/distribution/blob/master/docs/configuration.md#storage) to configure an alternate storage backend.
+You should usually consider using [another storage backend](./storage-drivers/index.md) instead of the local filesystem. Use the [storage configuration options](./configuration.md#storage) to configure an alternate storage backend.
 
 Using one of these will allow you to more easily scale your registry, and leverage your storage redundancy and availability features. 
 
