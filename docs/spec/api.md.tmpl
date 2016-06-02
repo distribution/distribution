@@ -706,7 +706,7 @@ the uploaded blob data.
 ###### Digest Parameter
 
 The "digest" parameter is designed as an opaque parameter to support
-verification of a successful transfer. For example, a HTTP URI parameter
+verification of a successful transfer. For example, an HTTP URI parameter
 might be as follows:
 
 ```
