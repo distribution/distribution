@@ -35,7 +35,7 @@ type linkedBlobStore struct {
 	// control the repository blob link set to which the blob store
 	// dispatches. This is required because manifest and layer blobs have not
 	// yet been fully merged. At some point, this functionality should be
-	// removed an the blob links folder should be merged. The first entry is
+	// removed the blob links folder should be merged. The first entry is
 	// treated as the "canonical" link location and will be used for writes.
 	linkPathFns []linkPathFunc
 

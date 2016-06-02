@@ -926,7 +926,7 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Name
 	}
 
 	// TODO(stevvooe): Add a test case where we take a mostly valid registry,
-	// tamper with the content and ensure that we get a unverified manifest
+	// tamper with the content and ensure that we get an unverified manifest
 	// error.
 
 	// Push 2 random layers
