@@ -267,7 +267,7 @@ func logLevel(level configuration.Loglevel) log.Level {
 	return l
 }
 
-// panicHandler add a HTTP handler to web app. The handler recover the happening
+// panicHandler add an HTTP handler to web app. The handler recover the happening
 // panic. logrus.Panic transmits panic message to pre-config log hooks, which is
 // defined in config.yml.
 func panicHandler(handler http.Handler) http.Handler {
