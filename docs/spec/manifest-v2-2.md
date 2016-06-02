@@ -57,7 +57,7 @@ image manifest based on the Content-Type returned in the HTTP response.
 
     The manifests field contains a list of manifests for specific platforms.
 
-    Fields of a object in the manifests list are:
+    Fields of an object in the manifests list are:
 
     - **`mediaType`** *string*
 

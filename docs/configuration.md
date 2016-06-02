@@ -1032,7 +1032,7 @@ and proxy connections to the registry server.
       no
     </td>
     <td>
-      An array of absolute paths to a x509 CA file
+      An array of absolute paths to an x509 CA file
     </td>
   </tr>
 </table>
