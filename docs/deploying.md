@@ -39,7 +39,7 @@ To stop your registry, you would:
 
 ## Storage
 
-By default, your registry data is persisted as a [docker volume](/engine/userguide/containers/dockervolumes.md) on the host filesystem. Properly understanding volumes is essential if you want to stick with a local filesystem storage.
+By default, your registry data is persisted as a [docker volume](https://docs.docker.com/engine/userguide/containers/dockervolumes/) on the host filesystem. Properly understanding volumes is essential if you want to stick with a local filesystem storage.
 
 Specifically, you might want to point your volume location to a specific place in order to more easily access your registry data. To do so you can:
 
