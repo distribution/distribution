@@ -32,7 +32,7 @@ func (bs *mockBlobService) Put(ctx context.Context, mediaType string, p []byte) 
 	d := distribution.Descriptor{
 		Digest:    digest.FromBytes(p),
 		Size:      int64(len(p)),
-		MediaType: mediaType,
+		MediaType: "application/octet-stream",
 	}
 	bs.descriptors[d.Digest] = d
 	return d, nil

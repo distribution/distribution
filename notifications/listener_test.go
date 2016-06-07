@@ -20,7 +20,12 @@ import (
 
 func TestListener(t *testing.T) {
 	ctx := context.Background()
-	registry, err := storage.NewRegistry(ctx, inmemory.New(), storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), storage.EnableDelete, storage.EnableRedirect)
+	k, err := libtrust.GenerateECP256PrivateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	registry, err := storage.NewRegistry(ctx, inmemory.New(), storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), storage.EnableDelete, storage.EnableRedirect, storage.Schema1SigningKey(k))
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -44,7 +49,7 @@ func TestListener(t *testing.T) {
 		"manifest:delete": 1,
 		"layer:push":      2,
 		"layer:pull":      2,
-		"layer:delete":    2, // deletes not supported for now
+		"layer:delete":    2,
 	}
 
 	if !reflect.DeepEqual(tl.ops, expectedOps) {
@@ -57,13 +62,13 @@ type testListener struct {
 	ops map[string]int
 }
 
-func (tl *testListener) ManifestPushed(repo reference.Named, m distribution.Manifest) error {
+func (tl *testListener) ManifestPushed(repo reference.Named, m distribution.Manifest, options ...distribution.ManifestServiceOption) error {
 	tl.ops["manifest:push"]++
 
 	return nil
 }
 
-func (tl *testListener) ManifestPulled(repo reference.Named, m distribution.Manifest) error {
+func (tl *testListener) ManifestPulled(repo reference.Named, m distribution.Manifest, options ...distribution.ManifestServiceOption) error {
 	tl.ops["manifest:pull"]++
 	return nil
 }

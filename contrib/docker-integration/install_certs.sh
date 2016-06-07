@@ -1,38 +1,43 @@
 #!/bin/sh
 set -e
 
-hostname=$1
-if [ "$hostname" = "" ]; then
-	hostname="localhost"
-fi
+hostname="localregistry"
+installdir="$1"
 
-mkdir -p /etc/docker/certs.d/$hostname:5011
-cp ./nginx/ssl/registry-ca+ca.pem /etc/docker/certs.d/$hostname:5011/ca.crt
+install_ca() {
+	mkdir -p $1/$hostname:$2
+	cp ./nginx/ssl/registry-ca+ca.pem $1/$hostname:$2/ca.crt
+	if [ "$3" != "" ]; then
+		cp ./nginx/ssl/registry-$3+client-cert.pem $1/$hostname:$2/client.cert
+		cp ./nginx/ssl/registry-$3+client-key.pem $1/$hostname:$2/client.key
+	fi
+}
 
-mkdir -p /etc/docker/certs.d/$hostname:5440
-cp ./nginx/ssl/registry-ca+ca.pem /etc/docker/certs.d/$hostname:5440/ca.crt
+install_test_certs() {
+	install_ca $1 5440
+	install_ca $1 5441
+	install_ca $1 5442 ca
+	install_ca $1 5443 noca
+	install_ca $1 5444 ca
+	install_ca $1 5447 ca
+	# For test remove CA
+	rm $1/${hostname}:5447/ca.crt
+	install_ca $1 5448
+}
 
-mkdir -p /etc/docker/certs.d/$hostname:5441
-cp ./nginx/ssl/registry-ca+ca.pem /etc/docker/certs.d/$hostname:5441/ca.crt
+install_ca_file() {
+	mkdir -p $2
+	cp $1 $2/ca.crt
+}
 
-mkdir -p /etc/docker/certs.d/$hostname:5442
-cp ./nginx/ssl/registry-ca+ca.pem /etc/docker/certs.d/$hostname:5442/ca.crt
-cp ./nginx/ssl/registry-ca+client-cert.pem /etc/docker/certs.d/$hostname:5442/client.cert
-cp ./nginx/ssl/registry-ca+client-key.pem /etc/docker/certs.d/$hostname:5442/client.key
+install_test_certs $installdir
 
-mkdir -p /etc/docker/certs.d/$hostname:5443
-cp ./nginx/ssl/registry-ca+ca.pem /etc/docker/certs.d/$hostname:5443/ca.crt
-cp ./nginx/ssl/registry-noca+client-cert.pem /etc/docker/certs.d/$hostname:5443/client.cert
-cp ./nginx/ssl/registry-noca+client-key.pem /etc/docker/certs.d/$hostname:5443/client.key
+# Malevolent server
+install_ca_file ./malevolent-certs/ca.pem $installdir/$hostname:6666
 
-mkdir -p /etc/docker/certs.d/$hostname:5444
-cp ./nginx/ssl/registry-ca+ca.pem /etc/docker/certs.d/$hostname:5444/ca.crt
-cp ./nginx/ssl/registry-ca+client-cert.pem /etc/docker/certs.d/$hostname:5444/client.cert
-cp ./nginx/ssl/registry-ca+client-key.pem /etc/docker/certs.d/$hostname:5444/client.key
+# Token server
+install_ca_file ./tokenserver/certs/ca.pem $installdir/$hostname:5554
+install_ca_file ./tokenserver/certs/ca.pem $installdir/$hostname:5555
+install_ca_file ./tokenserver/certs/ca.pem $installdir/$hostname:5557
+install_ca_file ./tokenserver/certs/ca.pem $installdir/$hostname:5558
 
-mkdir -p /etc/docker/certs.d/$hostname:5447
-cp ./nginx/ssl/registry-ca+client-cert.pem /etc/docker/certs.d/$hostname:5447/client.cert
-cp ./nginx/ssl/registry-ca+client-key.pem /etc/docker/certs.d/$hostname:5447/client.key
-
-mkdir -p /etc/docker/certs.d/$hostname:5448
-cp ./nginx/ssl/registry-ca+ca.pem /etc/docker/certs.d/$hostname:5448/ca.crt

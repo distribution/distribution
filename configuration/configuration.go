@@ -73,6 +73,10 @@ type Configuration struct {
 		// Secret specifies the secret key which HMAC tokens are created with.
 		Secret string `yaml:"secret,omitempty"`
 
+		// RelativeURLs specifies that relative URLs should be returned in
+		// Location headers
+		RelativeURLs bool `yaml:"relativeurls,omitempty"`
+
 		// TLS instructs the http server to listen with a TLS configuration.
 		// This only support simple tls configuration with a cert and key.
 		// Mostly, this is useful for testing situations or simple deployments
@@ -153,11 +157,6 @@ type Configuration struct {
 			// TrustKey is the signing key to use for adding the signature to
 			// schema1 manifests.
 			TrustKey string `yaml:"signingkeyfile,omitempty"`
-
-			// DisableSignatureStore will cause all signatures attached to schema1 manifests
-			// to be ignored. Signatures will be generated on all schema1 manifest requests
-			// rather than only requests which converted schema2 to schema1.
-			DisableSignatureStore bool `yaml:"disablesignaturestore,omitempty"`
 		} `yaml:"schema1,omitempty"`
 	} `yaml:"compatibility,omitempty"`
 }
@@ -217,7 +216,7 @@ type FileChecker struct {
 // HTTPChecker is a type of entry in the health section for checking HTTP URIs.
 type HTTPChecker struct {
 	// Timeout is the duration to wait before timing out the HTTP request
-	Timeout time.Duration `yaml:"interval,omitempty"`
+	Timeout time.Duration `yaml:"timeout,omitempty"`
 	// StatusCode is the expected status code
 	StatusCode int
 	// Interval is the duration in between checks
@@ -234,7 +233,7 @@ type HTTPChecker struct {
 // TCPChecker is a type of entry in the health section for checking TCP servers.
 type TCPChecker struct {
 	// Timeout is the duration to wait before timing out the TCP connection
-	Timeout time.Duration `yaml:"interval,omitempty"`
+	Timeout time.Duration `yaml:"timeout,omitempty"`
 	// Interval is the duration in between checks
 	Interval time.Duration `yaml:"interval,omitempty"`
 	// Addr is the TCP address to check

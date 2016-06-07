@@ -5,6 +5,7 @@ description = "Specifies the Docker Registry v2 authentication"
 keywords = ["registry, on-prem, images, tags, repository, distribution, Bearer authentication, advanced"]
 [menu.main]
 parent="smn_registry_ref"
+weight=104
 +++
 <![end-metadata]-->
 
@@ -91,6 +92,8 @@ challenge, the client will need to make a `GET` request to the URL
 
 ## Requesting a Token
 
+Defines getting a bearer and refresh token using the token endpoint.
+
 #### Query Parameters
 
 <dl>
@@ -101,6 +104,25 @@ challenge, the client will need to make a `GET` request to the URL
         The name of the service which hosts the resource.
     </dd>
     <dt>
+        <code>offline_token</code>
+    </dt>
+    <dd>
+        Whether to return a refresh token along with the bearer token. A refresh
+        token is capable of getting additional bearer tokens for the same
+        subject with different scopes. The refresh token does not have an
+        expiration and should be considered completely opaque to the client.
+    </dd>
+    <dt>
+        <code>client_id</code>
+    </dt>
+    <dd>
+        String identifying the client. This client_id does not need
+        to be registered with the authorization server but should be set to a
+        meaningful value in order to allow auditing keys created by unregistered
+        clients. Accepted syntax is defined in
+        [RFC6749 Appendix A.1](https://tools.ietf.org/html/rfc6749#appendix-A.1).
+    </dd>
+    <dt>
         <code>scope</code>
     </dt>
     <dd>
@@ -109,7 +131,9 @@ challenge, the client will need to make a `GET` request to the URL
         shown above. This query parameter should be specified multiple times if
         there is more than one <code>scope</code> entry from the <code>WWW-Authenticate</code>
         header. The above example would be specified as:
-        <code>scope=repository:samalba/my-app:push</code>.
+        <code>scope=repository:samalba/my-app:push</code>. The scope field may
+        be empty to request a refresh token without providing any resource
+        permissions to the returned bearer token.
     </dd>
 </dl>
 
@@ -150,6 +174,16 @@ challenge, the client will need to make a `GET` request to the URL
         standard time at which a given token was issued. If <code>issued_at</code> is omitted, the
         expiration is from when the token exchange completed.
     </dd>
+    <dt>
+        <code>refresh_token</code>
+    </dt>
+    <dd>
+        (Optional) Token which can be used to get additional access tokens for
+        the same subject with different scopes. This token should be kept secure
+        by the client and only sent to the authorization server which issues
+        bearer tokens. This field will only be set when `offline_token=true` is
+        provided in the request.
+    </dd>
 </dl>
 
 #### Example
@@ -161,11 +195,12 @@ https://auth.docker.io/token?service=registry.docker.io&scope=repository:samalba
 ```
 
 The token server should first attempt to authenticate the client using any
-authentication credentials provided with the request. As of Docker 1.8, the
-registry client in the Docker Engine only supports Basic Authentication to
-these token servers. If an attempt to authenticate to the token server fails,
-the token server should return a `401 Unauthorized` response indicating that
-the provided credentials are invalid.
+authentication credentials provided with the request. From Docker 1.11 the
+Docker engine supports both Basic Authentication and [OAuth2](oauth.md) for
+getting tokens. Docker 1.10 and before, the registry client in the Docker Engine
+only supports Basic Authentication. If an attempt to authenticate to the token
+server fails, the token server should return a `401 Unauthorized` response
+indicating that the provided credentials are invalid.
 
 Whether the token server requires authentication is up to the policy of that
 access control provider. Some requests may require authentication to determine
@@ -204,7 +239,7 @@ authenticate to the audience service (within the indicated window of time):
 HTTP/1.1 200 OK
 Content-Type: application/json
 
-{"token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiIsImtpZCI6IlBZWU86VEVXVTpWN0pIOjI2SlY6QVFUWjpMSkMzOlNYVko6WEdIQTozNEYyOjJMQVE6WlJNSzpaN1E2In0.eyJpc3MiOiJhdXRoLmRvY2tlci5jb20iLCJzdWIiOiJqbGhhd24iLCJhdWQiOiJyZWdpc3RyeS5kb2NrZXIuY29tIiwiZXhwIjoxNDE1Mzg3MzE1LCJuYmYiOjE0MTUzODcwMTUsImlhdCI6MTQxNTM4NzAxNSwianRpIjoidFlKQ08xYzZjbnl5N2tBbjBjN3JLUGdiVjFIMWJGd3MiLCJhY2Nlc3MiOlt7InR5cGUiOiJyZXBvc2l0b3J5IiwibmFtZSI6InNhbWFsYmEvbXktYXBwIiwiYWN0aW9ucyI6WyJwdXNoIl19XX0.QhflHPfbd6eVF4lM9bwYpFZIV0PfikbyXuLx959ykRTBpe3CYnzs6YBK8FToVb5R47920PVLrh8zuLzdCr9t3w", "expires_in": "3600","issued_at": "2009-11-10T23:00:00Z"}
+{"token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiIsImtpZCI6IlBZWU86VEVXVTpWN0pIOjI2SlY6QVFUWjpMSkMzOlNYVko6WEdIQTozNEYyOjJMQVE6WlJNSzpaN1E2In0.eyJpc3MiOiJhdXRoLmRvY2tlci5jb20iLCJzdWIiOiJqbGhhd24iLCJhdWQiOiJyZWdpc3RyeS5kb2NrZXIuY29tIiwiZXhwIjoxNDE1Mzg3MzE1LCJuYmYiOjE0MTUzODcwMTUsImlhdCI6MTQxNTM4NzAxNSwianRpIjoidFlKQ08xYzZjbnl5N2tBbjBjN3JLUGdiVjFIMWJGd3MiLCJhY2Nlc3MiOlt7InR5cGUiOiJyZXBvc2l0b3J5IiwibmFtZSI6InNhbWFsYmEvbXktYXBwIiwiYWN0aW9ucyI6WyJwdXNoIl19XX0.QhflHPfbd6eVF4lM9bwYpFZIV0PfikbyXuLx959ykRTBpe3CYnzs6YBK8FToVb5R47920PVLrh8zuLzdCr9t3w", "expires_in": 3600,"issued_at": "2009-11-10T23:00:00Z"}
 ```
 
 

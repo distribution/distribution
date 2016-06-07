@@ -3,6 +3,8 @@
 title = "GCS storage driver"
 description = "Explains how to use the Google Cloud Storage drivers"
 keywords = ["registry, service, driver, images, storage,  gcs, google, cloud"]
+[menu.main]
+parent="smn_storagedrivers"
 +++
 <![end-metadata]-->
 
@@ -51,6 +53,17 @@ An implementation of the `storagedriver.StorageDriver` interface which uses Goog
     </td>
     <td>
       This is a prefix that will be applied to all Google Cloud Storage keys to allow you to segment data in your bucket if necessary.
+  </tr>
+  </tr>
+   <tr>
+    <td>
+      <code>chunksize</code>
+    </td>
+    <td>
+      no (default 5242880)
+    </td>
+    <td>
+      This is the chunk size used for uploading large blobs, must be a multiple of 256*1024.
   </tr>
 
 </table>

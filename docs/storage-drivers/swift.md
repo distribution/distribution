@@ -3,6 +3,8 @@
 title = "Swift storage driver"
 description = "Explains how to use the OpenStack swift storage driver"
 keywords = ["registry, service, driver, images, storage,  swift"]
+[menu.main]
+parent="smn_storagedrivers"
 +++
 <![end-metadata]-->
 
@@ -295,6 +297,16 @@ An implementation of the `storagedriver.StorageDriver` interface that uses [Open
     <td>
     <p>
     Optionally, specify the OpenStack region name in which you would like to store objects (for example <code>fr</code>).
+    </p>
+    </td>
+</tr>
+<tr>
+    <td>
+    <code>authversion</code>
+    </td>
+    <td>
+    <p>
+    Optionally, specify the OpenStack Auth's version,for example <code>3</code>. By default the driver will autodetect the auth's version from the AuthURL.
     </p>
     </td>
 </tr>

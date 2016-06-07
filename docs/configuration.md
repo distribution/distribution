@@ -78,6 +78,7 @@ information about each option that appears later in this page.
     storage:
       filesystem:
         rootdirectory: /var/lib/registry
+		maxthreads: 100
       azure:
         accountname: accountname
         accountkey: base64encodedaccountkey
@@ -86,20 +87,19 @@ information about each option that appears later in this page.
         bucket: bucketname
         keyfile: /path/to/keyfile
         rootdirectory: /gcs/object/name/prefix
+        chunksize: 5242880
       s3:
         accesskey: awsaccesskey
         secretkey: awssecretkey
         region: us-west-1
+        regionendpoint: http://myobjects.local
         bucket: bucketname
         encrypt: true
+        keyid: mykeyid
         secure: true
         v4auth: true
         chunksize: 5242880
         rootdirectory: /s3/object/name/prefix
-      rados:
-        poolname: radospool
-        username: radosuser
-        chunksize: 4194304
       swift:
         username: username
         password: password
@@ -165,7 +165,11 @@ information about each option that appears later in this page.
             baseurl: https://my.cloudfronted.domain.com/
             privatekey: /path/to/pem
             keypairid: cloudfrontkeypairid
-            duration: 3000
+            duration: 3000s
+      storage:
+        - name: redirect
+          options:
+            baseurl: https://example.com/
     reporting:
       bugsnag:
         apikey: bugsnagapikey
@@ -180,6 +184,7 @@ information about each option that appears later in this page.
       prefix: /my/nested/registry/
       host: https://myregistryaddress.org:5000
       secret: asecretforlocaldevelopment
+      relativeurls: false
       tls:
         certificate: /path/to/x509/public
         key: /path/to/x509/private
@@ -238,7 +243,6 @@ information about each option that appears later in this page.
     compatibility:
       schema1:
         signingkeyfile: /etc/registry/key.json
-        disablesignaturestore: true
 
 In some instances a configuration option is **optional** but it contains child
 options marked as **required**. This indicates that you can omit the parent with
@@ -358,16 +362,14 @@ Permitted values are `error`, `warn`, `info` and `debug`. The default is
         accesskey: awsaccesskey
         secretkey: awssecretkey
         region: us-west-1
+        regionendpoint: http://myobjects.local
         bucket: bucketname
         encrypt: true
+        keyid: mykeyid
         secure: true
         v4auth: true
         chunksize: 5242880
         rootdirectory: /s3/object/name/prefix
-      rados:
-        poolname: radospool
-        username: radosuser
-        chunksize: 4194304
       swift:
         username: username
         password: password
@@ -408,50 +410,14 @@ Permitted values are `error`, `warn`, `info` and `debug`. The default is
 The storage option is **required** and defines which storage backend is in use.
 You must configure one backend; if you configure more, the registry returns an error. You can choose any of these backend storage drivers:
 
-<table>
-  <tr>
-    <td><code>filesystem</code></td>
-    <td>Uses the local disk to store registry files. It is ideal for development and may be appropriate for some small-scale production applications.
-    See the <a href="storage-drivers/filesystem.md">driver's reference documentation</a>.
-    </td>
-  </tr>
-  <tr>
-    <td><code>azure</code></td>
-    <td>Uses Microsoft's Azure Blob Storage.
-    See the <a href="storage-drivers/azure.md">driver's reference documentation</a>.
-    </td>
-  </tr>
-  <tr>
-    <td><code>gcs</code></td>
-    <td>Uses Google Cloud Storage.
-    See the <a href="storage-drivers/gcs.md">driver's reference documentation</a>.
-    </td>
-  </tr>
-  <tr>
-    <td><code>rados</code></td>
-    <td>Uses Ceph Object Storage.
-    See the <a href="storage-drivers/rados.md">driver's reference documentation</a>.
-    </td>
-  </tr>
-  <tr>
-    <td><code>s3</code></td>
-    <td>Uses Amazon's Simple Storage Service (S3).
-    See the <a href="storage-drivers/s3.md">driver's reference documentation</a>.
-    </td>
-  </tr>
-  <tr>
-    <td><code>swift</code></td>
-    <td>Uses Openstack Swift object storage.
-    See the <a href="storage-drivers/swift.md">driver's reference documentation</a>.
-    </td>
-  </tr>
-  <tr>
-    <td><code>oss</code></td>
-    <td>Uses Aliyun OSS for object storage.
-    See the <a href="storage-drivers/oss.md">driver's reference documentation</a>.
-    </td>
-  </tr>
-</table>
+| Storage&nbsp;driver | Description
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `filesystem`        | Uses the local disk to store registry files. It is ideal for development and may be appropriate for some small-scale production applications. See the [driver's reference documentation](storage-drivers/filesystem.md). |
+| `azure`             | Uses Microsoft's Azure Blob Storage. See the [driver's reference documentation](storage-drivers/azure.md).                                                                                                               |
+| `gcs`               | Uses Google Cloud Storage. See the [driver's reference documentation](storage-drivers/gcs.md).                                                                                                                           |
+| `s3`                | Uses Amazon's Simple Storage Service (S3) and compatible Storage Services. See the [driver's reference documentation](storage-drivers/s3.md).                                                                            |
+| `swift`             | Uses Openstack Swift object storage. See the [driver's reference documentation](storage-drivers/swift.md).                                                                                                               |
+| `oss`               | Uses Aliyun OSS for object storage. See the [driver's reference documentation](storage-drivers/oss.md).                                                                                                                  |
 
 For purely tests purposes, you can use the [`inmemory` storage
 driver](storage-drivers/inmemory.md). If you would like to run a registry from
@@ -714,8 +680,7 @@ object they're wrapping. This means a registry middleware must implement the
 `distribution.Repository`, and storage middleware must implement
 `driver.StorageDriver`.
 
-Currently only one middleware, `cloudfront`, a storage middleware, is supported
-in the registry implementation.
+An example configuration of the `cloudfront`  middleware, a storage middleware:
 
     middleware:
       registry:
@@ -732,7 +697,7 @@ in the registry implementation.
             baseurl: https://my.cloudfronted.domain.com/
             privatekey: /path/to/pem
             keypairid: cloudfrontkeypairid
-            duration: 3000
+            duration: 3000s
 
 Each middleware entry has `name` and `options` entries. The `name` must
 correspond to the name under which the middleware registers itself. The
@@ -791,11 +756,20 @@ interpretation of the options.
       no
     </td>
     <td>
-      Duration for which a signed URL should be valid.
+      Specify a `duration` by providing an integer and a unit. Valid time units are `ns`, `us` (or `µs`), `ms`, `s`, `m`, `h`. For example, `3000s` is a valid duration; there should be no space between the integer and unit. If you do not specify a `duration` or specify an integer without a time unit, this defaults to 20 minutes.
     </td>
   </tr>
 </table>
 
+### redirect
+
+In place of the `cloudfront` storage middleware, the `redirect`
+storage middleware can be used to specify a custom URL to a location
+of a proxy for the layer stored by the S3 storage driver.
+
+| Parameter | Required | Description |
+| --- | --- | --- |
+| baseurl   | yes      | `SCHEME://HOST` at which layers are served. Can also contain port. For example, `https://example.com:5443`. |
 
 ## reporting
 
@@ -911,6 +885,7 @@ configuration may contain both.
       prefix: /my/nested/registry/
       host: https://myregistryaddress.org:5000
       secret: asecretforlocaldevelopment
+      relativeurls: false
       tls:
         certificate: /path/to/x509/public
         key: /path/to/x509/private
@@ -998,6 +973,19 @@ generate a secret at launch.
 ensure the secret is the same for all registries.</b>
     </td>
   </tr>
+  <tr>
+    <td>
+      <code>relativeurls</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+       Specifies that the registry should return relative URLs in Location headers.
+       The client is responsible for resolving the correct URL.  This option is not
+       compatible with Docker 1.7 and earlier.
+    </td>
+  </tr>
 </table>
 
 
@@ -1044,7 +1032,7 @@ and proxy connections to the registry server.
       no
     </td>
     <td>
-      An array of absolute paths to a x509 CA file
+      An array of absolute paths to an x509 CA file
     </td>
   </tr>
 </table>
@@ -1691,7 +1679,7 @@ The TCP address to connect to, including a port number.
       username: [username]
       password: [password]
 
-Proxy enables a registry to be configured as a pull through cache to the official Docker Hub.  See [mirror](mirror.md) for more information. Pushing to a registry configured as a pull through cache is currently unsupported.
+Proxy enables a registry to be configured as a pull through cache to the official Docker Hub.  See [mirror](recipes/mirror.md) for more information. Pushing to a registry configured as a pull through cache is currently unsupported.
 
 <table>
   <tr>
@@ -1741,7 +1729,6 @@ To enable pulling private repositories (e.g. `batman/robin`) a username and pass
     compatibility:
       schema1:
         signingkeyfile: /etc/registry/key.json
-        disablesignaturestore: true
 
 Configure handling of older and deprecated features. Each subsection
 defines a such a feature with configurable behavior.
@@ -1765,23 +1752,6 @@ defines a such a feature with configurable behavior.
      The signing private key used for adding signatures to schema1 manifests.
      If no signing key is provided, a new ECDSA key will be generated on
      startup.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>disablesignaturestore</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-     Disables storage of signatures attached to schema1 manifests. By default
-     signatures are detached from schema1 manifests, stored, and reattached
-     when the manifest is requested. When this is true, the storage is disabled
-     and a new signature is always generated for schema1 manifests using the
-     schema1 signing key. Disabling signature storage will cause all newly
-     uploaded signatures to be discarded. Existing stored signatures will not
-     be removed but they will not be re-attached to the corresponding manifest.
     </td>
   </tr>
 </table>
@@ -1818,7 +1788,7 @@ This example illustrates how to configure storage middleware in a registry.
 Middleware allows the registry to serve layers via a content delivery network
 (CDN). This is useful for reducing requests to the storage layer.
 
-Currently, the registry supports [Amazon
+The registry supports [Amazon
 Cloudfront](http://aws.amazon.com/cloudfront/). You can only use Cloudfront in
 conjunction with the S3 storage driver.
 

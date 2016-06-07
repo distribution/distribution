@@ -3,7 +3,6 @@ package notifications
 import (
 	"net/http"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
@@ -12,8 +11,8 @@ import (
 
 // ManifestListener describes a set of methods for listening to events related to manifests.
 type ManifestListener interface {
-	ManifestPushed(repo reference.Named, sm distribution.Manifest) error
-	ManifestPulled(repo reference.Named, sm distribution.Manifest) error
+	ManifestPushed(repo reference.Named, sm distribution.Manifest, options ...distribution.ManifestServiceOption) error
+	ManifestPulled(repo reference.Named, sm distribution.Manifest, options ...distribution.ManifestServiceOption) error
 	ManifestDeleted(repo reference.Named, dgst digest.Digest) error
 }
 
@@ -71,7 +70,7 @@ func (msl *manifestServiceListener) Delete(ctx context.Context, dgst digest.Dige
 	err := msl.ManifestService.Delete(ctx, dgst)
 	if err == nil {
 		if err := msl.parent.listener.ManifestDeleted(msl.parent.Repository.Named(), dgst); err != nil {
-			logrus.Errorf("error dispatching manifest delete to listener: %v", err)
+			context.GetLogger(ctx).Errorf("error dispatching manifest delete to listener: %v", err)
 		}
 	}
 
@@ -81,8 +80,8 @@ func (msl *manifestServiceListener) Delete(ctx context.Context, dgst digest.Dige
 func (msl *manifestServiceListener) Get(ctx context.Context, dgst digest.Digest, options ...distribution.ManifestServiceOption) (distribution.Manifest, error) {
 	sm, err := msl.ManifestService.Get(ctx, dgst)
 	if err == nil {
-		if err := msl.parent.listener.ManifestPulled(msl.parent.Repository.Named(), sm); err != nil {
-			logrus.Errorf("error dispatching manifest pull to listener: %v", err)
+		if err := msl.parent.listener.ManifestPulled(msl.parent.Repository.Named(), sm, options...); err != nil {
+			context.GetLogger(ctx).Errorf("error dispatching manifest pull to listener: %v", err)
 		}
 	}
 
@@ -93,8 +92,8 @@ func (msl *manifestServiceListener) Put(ctx context.Context, sm distribution.Man
 	dgst, err := msl.ManifestService.Put(ctx, sm, options...)
 
 	if err == nil {
-		if err := msl.parent.listener.ManifestPushed(msl.parent.Repository.Named(), sm); err != nil {
-			logrus.Errorf("error dispatching manifest push to listener: %v", err)
+		if err := msl.parent.listener.ManifestPushed(msl.parent.Repository.Named(), sm, options...); err != nil {
+			context.GetLogger(ctx).Errorf("error dispatching manifest push to listener: %v", err)
 		}
 	}
 
@@ -157,7 +156,7 @@ func (bsl *blobServiceListener) Put(ctx context.Context, mediaType string, p []b
 	desc, err := bsl.BlobStore.Put(ctx, mediaType, p)
 	if err == nil {
 		if err := bsl.parent.listener.BlobPushed(bsl.parent.Repository.Named(), desc); err != nil {
-			context.GetLogger(ctx).Errorf("error dispatching layer pull to listener: %v", err)
+			context.GetLogger(ctx).Errorf("error dispatching layer push to listener: %v", err)
 		}
 	}
 

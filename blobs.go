@@ -69,6 +69,9 @@ type Descriptor struct {
 	// against against this digest.
 	Digest digest.Digest `json:"digest,omitempty"`
 
+	// URLs contains the source URLs of this content.
+	URLs []string `json:"urls,omitempty"`
+
 	// NOTE: Before adding a field here, please ensure that all
 	// other options have been exhausted. Much of the type relationships
 	// depend on the simplicity of this type.
@@ -122,6 +125,11 @@ type BlobDescriptorService interface {
 
 	// Clear enables descriptors to be unlinked
 	Clear(ctx context.Context, dgst digest.Digest) error
+}
+
+// BlobDescriptorServiceFactory creates middleware for BlobDescriptorService.
+type BlobDescriptorServiceFactory interface {
+	BlobAccessController(svc BlobDescriptorService) BlobDescriptorService
 }
 
 // ReadSeekCloser is the primary reader type for blob data, combining
@@ -189,9 +197,11 @@ type BlobCreateOption interface {
 // BlobWriteService.Resume. If supported by the store, a writer can be
 // recovered with the id.
 type BlobWriter interface {
-	io.WriteSeeker
+	io.WriteCloser
 	io.ReaderFrom
-	io.Closer
+
+	// Size returns the number of bytes written to this blob.
+	Size() int64
 
 	// ID returns the identifier for this writer. The ID can be used with the
 	// Blob service to later resume the write.
@@ -216,9 +226,6 @@ type BlobWriter interface {
 	// result in a no-op. This allows use of Cancel in a defer statement,
 	// increasing the assurance that it is correctly called.
 	Cancel(ctx context.Context) error
-
-	// Get a reader to the blob being written by this BlobWriter
-	Reader() (io.ReadCloser, error)
 }
 
 // BlobService combines the operations to access, read and write blobs. This

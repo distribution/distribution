@@ -3,6 +3,7 @@
 package azure
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
@@ -26,6 +27,7 @@ const (
 	paramAccountKey  = "accountkey"
 	paramContainer   = "container"
 	paramRealm       = "realm"
+	maxChunkSize     = 4 * 1024 * 1024
 )
 
 type driver struct {
@@ -117,18 +119,21 @@ func (d *driver) PutContent(ctx context.Context, path string, contents []byte) e
 	if _, err := d.client.DeleteBlobIfExists(d.container, path); err != nil {
 		return err
 	}
-	if err := d.client.CreateBlockBlob(d.container, path); err != nil {
+	writer, err := d.Writer(ctx, path, false)
+	if err != nil {
 		return err
 	}
-	bs := newAzureBlockStorage(d.client)
-	bw := newRandomBlobWriter(&bs, azure.MaxBlobBlockSize)
-	_, err := bw.WriteBlobAt(d.container, path, 0, bytes.NewReader(contents))
-	return err
+	defer writer.Close()
+	_, err = writer.Write(contents)
+	if err != nil {
+		return err
+	}
+	return writer.Commit()
 }
 
-// ReadStream retrieves an io.ReadCloser for the content stored at "path" with a
+// Reader retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
-func (d *driver) ReadStream(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
+func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
 	if ok, err := d.client.BlobExists(d.container, path); err != nil {
 		return nil, err
 	} else if !ok {
@@ -153,25 +158,38 @@ func (d *driver) ReadStream(ctx context.Context, path string, offset int64) (io.
 	return resp, nil
 }
 
-// WriteStream stores the contents of the provided io.ReadCloser at a location
-// designated by the given path.
-func (d *driver) WriteStream(ctx context.Context, path string, offset int64, reader io.Reader) (int64, error) {
-	if blobExists, err := d.client.BlobExists(d.container, path); err != nil {
-		return 0, err
-	} else if !blobExists {
-		err := d.client.CreateBlockBlob(d.container, path)
+// Writer returns a FileWriter which will store the content written to it
+// at the location designated by "path" after the call to Commit.
+func (d *driver) Writer(ctx context.Context, path string, append bool) (storagedriver.FileWriter, error) {
+	blobExists, err := d.client.BlobExists(d.container, path)
+	if err != nil {
+		return nil, err
+	}
+	var size int64
+	if blobExists {
+		if append {
+			blobProperties, err := d.client.GetBlobProperties(d.container, path)
+			if err != nil {
+				return nil, err
+			}
+			size = blobProperties.ContentLength
+		} else {
+			err := d.client.DeleteBlob(d.container, path)
+			if err != nil {
+				return nil, err
+			}
+		}
+	} else {
+		if append {
+			return nil, storagedriver.PathNotFoundError{Path: path}
+		}
+		err := d.client.PutAppendBlob(d.container, path, nil)
 		if err != nil {
-			return 0, err
+			return nil, err
 		}
 	}
-	if offset < 0 {
-		return 0, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
-	}
 
-	bs := newAzureBlockStorage(d.client)
-	bw := newRandomBlobWriter(&bs, azure.MaxBlobBlockSize)
-	zw := newZeroFillWriter(&bw)
-	return zw.Write(d.container, path, offset, reader)
+	return d.newWriter(path, size), nil
 }
 
 // Stat retrieves the FileInfo for the given path, including the current size
@@ -236,6 +254,9 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 	}
 
 	list := directDescendants(blobs, path)
+	if path != "" && len(list) == 0 {
+		return nil, storagedriver.PathNotFoundError{Path: path}
+	}
 	return list, nil
 }
 
@@ -361,6 +382,101 @@ func (d *driver) listBlobs(container, virtPath string) ([]string, error) {
 }
 
 func is404(err error) bool {
-	e, ok := err.(azure.AzureStorageServiceError)
-	return ok && e.StatusCode == http.StatusNotFound
+	statusCodeErr, ok := err.(azure.AzureStorageServiceError)
+	return ok && statusCodeErr.StatusCode == http.StatusNotFound
+}
+
+type writer struct {
+	driver    *driver
+	path      string
+	size      int64
+	bw        *bufio.Writer
+	closed    bool
+	committed bool
+	cancelled bool
+}
+
+func (d *driver) newWriter(path string, size int64) storagedriver.FileWriter {
+	return &writer{
+		driver: d,
+		path:   path,
+		size:   size,
+		bw: bufio.NewWriterSize(&blockWriter{
+			client:    d.client,
+			container: d.container,
+			path:      path,
+		}, maxChunkSize),
+	}
+}
+
+func (w *writer) Write(p []byte) (int, error) {
+	if w.closed {
+		return 0, fmt.Errorf("already closed")
+	} else if w.committed {
+		return 0, fmt.Errorf("already committed")
+	} else if w.cancelled {
+		return 0, fmt.Errorf("already cancelled")
+	}
+
+	n, err := w.bw.Write(p)
+	w.size += int64(n)
+	return n, err
+}
+
+func (w *writer) Size() int64 {
+	return w.size
+}
+
+func (w *writer) Close() error {
+	if w.closed {
+		return fmt.Errorf("already closed")
+	}
+	w.closed = true
+	return w.bw.Flush()
+}
+
+func (w *writer) Cancel() error {
+	if w.closed {
+		return fmt.Errorf("already closed")
+	} else if w.committed {
+		return fmt.Errorf("already committed")
+	}
+	w.cancelled = true
+	return w.driver.client.DeleteBlob(w.driver.container, w.path)
+}
+
+func (w *writer) Commit() error {
+	if w.closed {
+		return fmt.Errorf("already closed")
+	} else if w.committed {
+		return fmt.Errorf("already committed")
+	} else if w.cancelled {
+		return fmt.Errorf("already cancelled")
+	}
+	w.committed = true
+	return w.bw.Flush()
+}
+
+type blockWriter struct {
+	client    azure.BlobStorageClient
+	container string
+	path      string
+}
+
+func (bw *blockWriter) Write(p []byte) (int, error) {
+	n := 0
+	for offset := 0; offset < len(p); offset += maxChunkSize {
+		chunkSize := maxChunkSize
+		if offset+chunkSize > len(p) {
+			chunkSize = len(p) - offset
+		}
+		err := bw.client.AppendBlock(bw.container, bw.path, p[offset:offset+chunkSize])
+		if err != nil {
+			return n, err
+		}
+
+		n += chunkSize
+	}
+
+	return n, nil
 }

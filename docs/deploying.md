@@ -11,7 +11,7 @@ weight=3
 
 # Deploying a registry server
 
-You need to [install Docker version 1.6.0 or newer](https://docs.docker.com/installation/).
+You need to [install Docker version 1.6.0 or newer](/engine/installation/index.md).
 
 ## Running on localhost
 
@@ -39,7 +39,7 @@ To stop your registry, you would:
 
 ## Storage
 
-By default, your registry data is persisted as a [docker volume](https://docs.docker.com/userguide/dockervolumes/) on the host filesystem. Properly understanding volumes is essential if you want to stick with a local filesystem storage.
+By default, your registry data is persisted as a [docker volume](/engine/userguide/containers/dockervolumes.md) on the host filesystem. Properly understanding volumes is essential if you want to stick with a local filesystem storage.
 
 Specifically, you might want to point your volume location to a specific place in order to more easily access your registry data. To do so you can:
 
@@ -49,7 +49,7 @@ Specifically, you might want to point your volume location to a specific place i
 
 ### Alternatives
 
-You should usually consider using [another storage backend](https://github.com/docker/distribution/blob/master/docs/storagedrivers.md) instead of the local filesystem. Use the [storage configuration options](https://github.com/docker/distribution/blob/master/docs/configuration.md#storage) to configure an alternate storage backend.
+You should usually consider using [another storage backend](./storage-drivers/index.md) instead of the local filesystem. Use the [storage configuration options](./configuration.md#storage) to configure an alternate storage backend.
 
 Using one of these will allow you to more easily scale your registry, and leverage your storage redundancy and availability features. 
 
@@ -117,6 +117,7 @@ instances. Configuring different redis instances will work (at the time
 of writing), but will not be optimal if the instances are not shared, causing
 more requests to be directed to the backend.
 
+#### Important/Required HTTP-Headers
 Getting the headers correct is very important. For all responses to any
 request under the "/v2/" url space, the `Docker-Distribution-API-Version`
 header should be set to the value "registry/2.0", even for a 4xx response.
@@ -179,7 +180,7 @@ Seeing X509 errors is usually a sign you are trying to use self-signed certifica
 
 ### Alternatives
 
-1. You may want to leverage more advanced basic auth implementations through a proxy design, in front of the registry. You will find examples of such patterns in the [recipes list](recipes.md).
+1. You may want to leverage more advanced basic auth implementations through a proxy design, in front of the registry. You will find examples of such patterns in the [recipes list](recipes/index.md).
 
 2. Alternatively, the Registry also supports delegated authentication, redirecting users to a specific, trusted token server. That approach requires significantly more investment, and only makes sense if you want to fully configure ACLs and more control over the Registry integration into your global authorization and authentication systems.
 
@@ -191,7 +192,7 @@ Beware that you will have to implement your own authentication service for this 
 
 As your registry configuration grows more complex, dealing with it can quickly become tedious.
 
-It's highly recommended to use [Docker Compose](https://docs.docker.com/compose/) to facilitate operating your registry. 
+It's highly recommended to use [Docker Compose](/compose/index.md) to facilitate operating your registry. 
 
 Here is a simple `docker-compose.yml` example that condenses everything explained so far:
 
@@ -225,7 +226,7 @@ You will find more specific and advanced informations in the following sections:
 
  - [Configuration reference](configuration.md)
  - [Working with notifications](notifications.md)
- - [Advanced "recipes"](recipes.md)
+ - [Advanced "recipes"](recipes/index.md)
  - [Registry API](spec/api.md)
- - [Storage driver model](storagedrivers.md)
+ - [Storage driver model](storage-drivers/index.md)
  - [Token authentication](spec/auth/token.md)

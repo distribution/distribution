@@ -1,12 +1,15 @@
 package filesystem
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path"
+	"reflect"
+	"strconv"
 	"time"
 
 	"github.com/docker/distribution/context"
@@ -15,8 +18,23 @@ import (
 	"github.com/docker/distribution/registry/storage/driver/factory"
 )
 
-const driverName = "filesystem"
-const defaultRootDirectory = "/var/lib/registry"
+const (
+	driverName           = "filesystem"
+	defaultRootDirectory = "/var/lib/registry"
+	defaultMaxThreads    = uint64(100)
+
+	// minThreads is the minimum value for the maxthreads configuration
+	// parameter. If the driver's parameters are less than this we set
+	// the parameters to minThreads
+	minThreads = uint64(25)
+)
+
+// DriverParameters represents all configuration options available for the
+// filesystem driver
+type DriverParameters struct {
+	RootDirectory string
+	MaxThreads    uint64
+}
 
 func init() {
 	factory.Register(driverName, &filesystemDriverFactory{})
@@ -26,7 +44,7 @@ func init() {
 type filesystemDriverFactory struct{}
 
 func (factory *filesystemDriverFactory) Create(parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
-	return FromParameters(parameters), nil
+	return FromParameters(parameters)
 }
 
 type driver struct {
@@ -46,25 +64,72 @@ type Driver struct {
 // FromParameters constructs a new Driver with a given parameters map
 // Optional Parameters:
 // - rootdirectory
-func FromParameters(parameters map[string]interface{}) *Driver {
-	var rootDirectory = defaultRootDirectory
+// - maxthreads
+func FromParameters(parameters map[string]interface{}) (*Driver, error) {
+	params, err := fromParametersImpl(parameters)
+	if err != nil || params == nil {
+		return nil, err
+	}
+	return New(*params), nil
+}
+
+func fromParametersImpl(parameters map[string]interface{}) (*DriverParameters, error) {
+	var (
+		err           error
+		maxThreads    = defaultMaxThreads
+		rootDirectory = defaultRootDirectory
+	)
+
 	if parameters != nil {
-		rootDir, ok := parameters["rootdirectory"]
-		if ok {
+		if rootDir, ok := parameters["rootdirectory"]; ok {
 			rootDirectory = fmt.Sprint(rootDir)
 		}
+
+		// Get maximum number of threads for blocking filesystem operations,
+		// if specified
+		threads := parameters["maxthreads"]
+		switch v := threads.(type) {
+		case string:
+			if maxThreads, err = strconv.ParseUint(v, 0, 64); err != nil {
+				return nil, fmt.Errorf("maxthreads parameter must be an integer, %v invalid", threads)
+			}
+		case uint64:
+			maxThreads = v
+		case int, int32, int64:
+			val := reflect.ValueOf(v).Convert(reflect.TypeOf(threads)).Int()
+			// If threads is negative casting to uint64 will wrap around and
+			// give you the hugest thread limit ever. Let's be sensible, here
+			if val > 0 {
+				maxThreads = uint64(val)
+			}
+		case uint, uint32:
+			maxThreads = reflect.ValueOf(v).Convert(reflect.TypeOf(threads)).Uint()
+		case nil:
+			// do nothing
+		default:
+			return nil, fmt.Errorf("invalid value for maxthreads: %#v", threads)
+		}
+
+		if maxThreads < minThreads {
+			maxThreads = minThreads
+		}
 	}
-	return New(rootDirectory)
+
+	params := &DriverParameters{
+		RootDirectory: rootDirectory,
+		MaxThreads:    maxThreads,
+	}
+	return params, nil
 }
 
 // New constructs a new Driver with a given rootDirectory
-func New(rootDirectory string) *Driver {
+func New(params DriverParameters) *Driver {
+	fsDriver := &driver{rootDirectory: params.RootDirectory}
+
 	return &Driver{
 		baseEmbed: baseEmbed{
 			Base: base.Base{
-				StorageDriver: &driver{
-					rootDirectory: rootDirectory,
-				},
+				StorageDriver: base.NewRegulator(fsDriver, params.MaxThreads),
 			},
 		},
 	}
@@ -78,7 +143,7 @@ func (d *driver) Name() string {
 
 // GetContent retrieves the content stored at "path" as a []byte.
 func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
-	rc, err := d.ReadStream(ctx, path, 0)
+	rc, err := d.Reader(ctx, path, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -94,16 +159,22 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 
 // PutContent stores the []byte content at a location designated by "path".
 func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte) error {
-	if _, err := d.WriteStream(ctx, subPath, 0, bytes.NewReader(contents)); err != nil {
+	writer, err := d.Writer(ctx, subPath, false)
+	if err != nil {
 		return err
 	}
-
-	return os.Truncate(d.fullPath(subPath), int64(len(contents)))
+	defer writer.Close()
+	_, err = io.Copy(writer, bytes.NewReader(contents))
+	if err != nil {
+		writer.Cancel()
+		return err
+	}
+	return writer.Commit()
 }
 
-// ReadStream retrieves an io.ReadCloser for the content stored at "path" with a
+// Reader retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
-func (d *driver) ReadStream(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
+func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
 	file, err := os.OpenFile(d.fullPath(path), os.O_RDONLY, 0644)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -125,40 +196,36 @@ func (d *driver) ReadStream(ctx context.Context, path string, offset int64) (io.
 	return file, nil
 }
 
-// WriteStream stores the contents of the provided io.Reader at a location
-// designated by the given path.
-func (d *driver) WriteStream(ctx context.Context, subPath string, offset int64, reader io.Reader) (nn int64, err error) {
-	// TODO(stevvooe): This needs to be a requirement.
-	// if !path.IsAbs(subPath) {
-	// 	return fmt.Errorf("absolute path required: %q", subPath)
-	// }
-
+func (d *driver) Writer(ctx context.Context, subPath string, append bool) (storagedriver.FileWriter, error) {
 	fullPath := d.fullPath(subPath)
 	parentDir := path.Dir(fullPath)
 	if err := os.MkdirAll(parentDir, 0777); err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	fp, err := os.OpenFile(fullPath, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
-		// TODO(stevvooe): A few missing conditions in storage driver:
-		//	1. What if the path is already a directory?
-		//  2. Should number 1 be exposed explicitly in storagedriver?
-		//	2. Can this path not exist, even if we create above?
-		return 0, err
-	}
-	defer fp.Close()
-
-	nn, err = fp.Seek(offset, os.SEEK_SET)
-	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	if nn != offset {
-		return 0, fmt.Errorf("bad seek to %v, expected %v in fp=%v", offset, nn, fp)
+	var offset int64
+
+	if !append {
+		err := fp.Truncate(0)
+		if err != nil {
+			fp.Close()
+			return nil, err
+		}
+	} else {
+		n, err := fp.Seek(0, os.SEEK_END)
+		if err != nil {
+			fp.Close()
+			return nil, err
+		}
+		offset = int64(n)
 	}
 
-	return io.Copy(fp, reader)
+	return newFileWriter(fp, offset), nil
 }
 
 // Stat retrieves the FileInfo for the given path, including the current size
@@ -285,4 +352,89 @@ func (fi fileInfo) ModTime() time.Time {
 // IsDir returns true if the path is a directory.
 func (fi fileInfo) IsDir() bool {
 	return fi.FileInfo.IsDir()
+}
+
+type fileWriter struct {
+	file      *os.File
+	size      int64
+	bw        *bufio.Writer
+	closed    bool
+	committed bool
+	cancelled bool
+}
+
+func newFileWriter(file *os.File, size int64) *fileWriter {
+	return &fileWriter{
+		file: file,
+		size: size,
+		bw:   bufio.NewWriter(file),
+	}
+}
+
+func (fw *fileWriter) Write(p []byte) (int, error) {
+	if fw.closed {
+		return 0, fmt.Errorf("already closed")
+	} else if fw.committed {
+		return 0, fmt.Errorf("already committed")
+	} else if fw.cancelled {
+		return 0, fmt.Errorf("already cancelled")
+	}
+	n, err := fw.bw.Write(p)
+	fw.size += int64(n)
+	return n, err
+}
+
+func (fw *fileWriter) Size() int64 {
+	return fw.size
+}
+
+func (fw *fileWriter) Close() error {
+	if fw.closed {
+		return fmt.Errorf("already closed")
+	}
+
+	if err := fw.bw.Flush(); err != nil {
+		return err
+	}
+
+	if err := fw.file.Sync(); err != nil {
+		return err
+	}
+
+	if err := fw.file.Close(); err != nil {
+		return err
+	}
+	fw.closed = true
+	return nil
+}
+
+func (fw *fileWriter) Cancel() error {
+	if fw.closed {
+		return fmt.Errorf("already closed")
+	}
+
+	fw.cancelled = true
+	fw.file.Close()
+	return os.Remove(fw.file.Name())
+}
+
+func (fw *fileWriter) Commit() error {
+	if fw.closed {
+		return fmt.Errorf("already closed")
+	} else if fw.committed {
+		return fmt.Errorf("already committed")
+	} else if fw.cancelled {
+		return fmt.Errorf("already cancelled")
+	}
+
+	if err := fw.bw.Flush(); err != nil {
+		return err
+	}
+
+	if err := fw.file.Sync(); err != nil {
+		return err
+	}
+
+	fw.committed = true
+	return nil
 }

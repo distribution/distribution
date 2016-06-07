@@ -22,13 +22,13 @@ import (
 type proxyingRegistry struct {
 	embedded       distribution.Namespace // provides local registry functionality
 	scheduler      *scheduler.TTLExpirationScheduler
-	remoteURL      string
+	remoteURL      url.URL
 	authChallenger authChallenger
 }
 
 // NewRegistryPullThroughCache creates a registry acting as a pull through cache
 func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Namespace, driver driver.StorageDriver, config configuration.Proxy) (distribution.Namespace, error) {
-	_, err := url.Parse(config.RemoteURL)
+	remoteURL, err := url.Parse(config.RemoteURL)
 	if err != nil {
 		return nil, err
 	}
@@ -99,9 +99,9 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 	return &proxyingRegistry{
 		embedded:  registry,
 		scheduler: s,
-		remoteURL: config.RemoteURL,
+		remoteURL: *remoteURL,
 		authChallenger: &remoteAuthChallenger{
-			remoteURL: config.RemoteURL,
+			remoteURL: *remoteURL,
 			cm:        auth.NewSimpleChallengeManager(),
 			cs:        cs,
 		},
@@ -131,7 +131,7 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 		return nil, err
 	}
 
-	remoteRepo, err := client.NewRepository(ctx, name, pr.remoteURL, tr)
+	remoteRepo, err := client.NewRepository(ctx, name, pr.remoteURL.String(), tr)
 	if err != nil {
 		return nil, err
 	}
@@ -182,7 +182,7 @@ type authChallenger interface {
 }
 
 type remoteAuthChallenger struct {
-	remoteURL string
+	remoteURL url.URL
 	sync.Mutex
 	cm auth.ChallengeManager
 	cs auth.CredentialStore
@@ -201,8 +201,9 @@ func (r *remoteAuthChallenger) tryEstablishChallenges(ctx context.Context) error
 	r.Lock()
 	defer r.Unlock()
 
-	remoteURL := r.remoteURL + "/v2/"
-	challenges, err := r.cm.GetChallenges(remoteURL)
+	remoteURL := r.remoteURL
+	remoteURL.Path = "/v2/"
+	challenges, err := r.cm.GetChallenges(r.remoteURL)
 	if err != nil {
 		return err
 	}
@@ -212,7 +213,7 @@ func (r *remoteAuthChallenger) tryEstablishChallenges(ctx context.Context) error
 	}
 
 	// establish challenge type with upstream
-	if err := ping(r.cm, remoteURL, challengeHeader); err != nil {
+	if err := ping(r.cm, remoteURL.String(), challengeHeader); err != nil {
 		return err
 	}
 
