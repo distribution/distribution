@@ -46,7 +46,7 @@ func (htpasswd *htpasswd) authenticateUser(username string, password string) err
 
 // parseHTPasswd parses the contents of htpasswd. This will read all the
 // entries in the file, whether or not they are needed. An error is returned
-// if an syntax errors are encountered or if the reader fails.
+// if a syntax errors are encountered or if the reader fails.
 func parseHTPasswd(rd io.Reader) (map[string][]byte, error) {
 	entries := map[string][]byte{}
 	scanner := bufio.NewScanner(rd)

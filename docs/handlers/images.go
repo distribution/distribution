@@ -86,7 +86,11 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 		return
 	}
 
-	manifest, err = manifests.Get(imh, imh.Digest)
+	var options []distribution.ManifestServiceOption
+	if imh.Tag != "" {
+		options = append(options, distribution.WithTag(imh.Tag))
+	}
+	manifest, err = manifests.Get(imh, imh.Digest, options...)
 	if err != nil {
 		imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
 		return
@@ -245,7 +249,11 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 		return
 	}
 
-	_, err = manifests.Put(imh, manifest)
+	var options []distribution.ManifestServiceOption
+	if imh.Tag != "" {
+		options = append(options, distribution.WithTag(imh.Tag))
+	}
+	_, err = manifests.Put(imh, manifest, options...)
 	if err != nil {
 		// TODO(stevvooe): These error handling switches really need to be
 		// handled by an app global mapper.
@@ -275,6 +283,8 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 					}
 				}
 			}
+		case errcode.Error:
+			imh.Errors = append(imh.Errors, err)
 		default:
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		}
