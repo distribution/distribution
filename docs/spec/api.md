@@ -4765,13 +4765,13 @@ List a set of available repositories in the local registry cluster. Does not pro
 Retrieve a sorted, json list of repositories available in the registry.
 
 
-##### Catalog Fetch Complete
+##### Catalog Fetch
 
 ```
 GET /v2/_catalog
 ```
 
-Request an unabridged list of repositories available.
+Request an unabridged list of repositories available.  The implementation may impose a maximum limit and return a partial set with pagination links.
 
 
 
