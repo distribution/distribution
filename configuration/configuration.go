@@ -414,7 +414,7 @@ func (storage Storage) MarshalYAML() (interface{}, error) {
 // Auth defines the configuration for registry authorization.
 type Auth map[string]Parameters
 
-// Type returns the storage driver type, such as filesystem or s3
+// Type returns the auth type, such as htpasswd or token
 func (auth Auth) Type() string {
 	// Return only key in this map
 	for k := range auth {
