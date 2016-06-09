@@ -33,7 +33,7 @@ func checkRegexp(t *testing.T, r *regexp.Regexp, m regexpMatch) {
 	}
 }
 
-func TestHostRegexp(t *testing.T) {
+func TestDomainRegexp(t *testing.T) {
 	hostcases := []regexpMatch{
 		{
 			input: "test.com",
@@ -116,7 +116,7 @@ func TestHostRegexp(t *testing.T) {
 			match: true,
 		},
 	}
-	r := regexp.MustCompile(`^` + hostnameRegexp.String() + `$`)
+	r := regexp.MustCompile(`^` + domainRegexp.String() + `$`)
 	for i := range hostcases {
 		checkRegexp(t, r, hostcases[i])
 	}
