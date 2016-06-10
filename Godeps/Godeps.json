@@ -271,6 +271,10 @@
 			"Rev": "c10c31b5e94b6f7a0283272dc2bb27163dcea24b"
 		},
 		{
+			"ImportPath": "golang.org/x/crypto/ocsp",
+			"Rev": "c10c31b5e94b6f7a0283272dc2bb27163dcea24b"
+		},
+		{
 			"ImportPath": "golang.org/x/net/context",
 			"Rev": "4876518f9e71663000c348837735820161a42df7"
 		},
@@ -313,6 +317,10 @@
 		{
 			"ImportPath": "golang.org/x/oauth2/jwt",
 			"Rev": "045497edb6234273d67dbc25da3f2ddbc4c4cacf"
+		},
+		{
+			"ImportPath": "golang.org/x/time/rate",
+			"Rev": "a4bde12657593d5e90d0533a3e4fd95e635124cb"
 		},
 		{
 			"ImportPath": "google.golang.org/api/gensupport",
@@ -425,6 +433,10 @@
 		{
 			"ImportPath": "gopkg.in/yaml.v2",
 			"Rev": "bef53efd0c76e49e6de55ead051f886bea7e9420"
+		},
+		{
+			"ImportPath": "rsc.io/letsencrypt",
+			"Rev": "a019c9e6fce0c7132679dea13bd8df7c86ffe26c"
 		}
 	]
 }
