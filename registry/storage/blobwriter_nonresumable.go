@@ -6,8 +6,8 @@ import (
 	"github.com/docker/distribution/context"
 )
 
-// resumeHashAt is a noop when resumable digest support is disabled.
-func (bw *blobWriter) resumeDigestAt(ctx context.Context, offset int64) error {
+// resumeDigest is a noop when resumable digest support is disabled.
+func (bw *blobWriter) resumeDigest(ctx context.Context) error {
 	return errResumableDigestNotAvailable
 }
 
