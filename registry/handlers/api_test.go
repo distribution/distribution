@@ -29,7 +29,7 @@ import (
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
-	_ "github.com/docker/distribution/registry/storage/driver/inmemory"
+	_ "github.com/docker/distribution/registry/storage/driver/testdriver"
 	"github.com/docker/distribution/testutil"
 	"github.com/docker/libtrust"
 	"github.com/gorilla/handlers"
@@ -219,7 +219,7 @@ func contains(elems []string, e string) bool {
 func TestURLPrefix(t *testing.T) {
 	config := configuration.Configuration{
 		Storage: configuration.Storage{
-			"inmemory": configuration.Parameters{},
+			"testdriver": configuration.Parameters{},
 		},
 	}
 	config.HTTP.Prefix = "/test/"
@@ -296,7 +296,7 @@ func TestBlobDelete(t *testing.T) {
 func TestRelativeURL(t *testing.T) {
 	config := configuration.Configuration{
 		Storage: configuration.Storage{
-			"inmemory": configuration.Parameters{},
+			"testdriver": configuration.Parameters{},
 		},
 	}
 	config.HTTP.Headers = headerConfig
@@ -1884,8 +1884,8 @@ type testEnv struct {
 func newTestEnvMirror(t *testing.T, deleteEnabled bool) *testEnv {
 	config := configuration.Configuration{
 		Storage: configuration.Storage{
-			"inmemory": configuration.Parameters{},
-			"delete":   configuration.Parameters{"enabled": deleteEnabled},
+			"testdriver": configuration.Parameters{},
+			"delete":     configuration.Parameters{"enabled": deleteEnabled},
 		},
 		Proxy: configuration.Proxy{
 			RemoteURL: "http://example.com",
@@ -1899,8 +1899,8 @@ func newTestEnvMirror(t *testing.T, deleteEnabled bool) *testEnv {
 func newTestEnv(t *testing.T, deleteEnabled bool) *testEnv {
 	config := configuration.Configuration{
 		Storage: configuration.Storage{
-			"inmemory": configuration.Parameters{},
-			"delete":   configuration.Parameters{"enabled": deleteEnabled},
+			"testdriver": configuration.Parameters{},
+			"delete":     configuration.Parameters{"enabled": deleteEnabled},
 		},
 	}
 
@@ -2413,7 +2413,7 @@ func TestCheckContextNotifier(t *testing.T) {
 func TestProxyManifestGetByTag(t *testing.T) {
 	truthConfig := configuration.Configuration{
 		Storage: configuration.Storage{
-			"inmemory": configuration.Parameters{},
+			"testdriver": configuration.Parameters{},
 		},
 	}
 	truthConfig.HTTP.Headers = headerConfig
@@ -2427,7 +2427,7 @@ func TestProxyManifestGetByTag(t *testing.T) {
 
 	proxyConfig := configuration.Configuration{
 		Storage: configuration.Storage{
-			"inmemory": configuration.Parameters{},
+			"testdriver": configuration.Parameters{},
 		},
 		Proxy: configuration.Proxy{
 			RemoteURL: truthEnv.server.URL,

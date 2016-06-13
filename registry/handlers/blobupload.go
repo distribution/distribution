@@ -134,7 +134,6 @@ func (buh *blobUploadHandler) StartBlobUpload(w http.ResponseWriter, r *http.Req
 	}
 
 	buh.Upload = upload
-	defer buh.Upload.Close()
 
 	if err := buh.blobUploadResponse(w, r, true); err != nil {
 		buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
@@ -224,11 +223,8 @@ func (buh *blobUploadHandler) PutBlobUploadComplete(w http.ResponseWriter, r *ht
 		return
 	}
 
-	size := buh.Upload.Size()
-
 	desc, err := buh.Upload.Commit(buh, distribution.Descriptor{
 		Digest: dgst,
-		Size:   size,
 
 		// TODO(stevvooe): This isn't wildly important yet, but we should
 		// really set the mediatype. For now, we can let the backend take care
@@ -295,6 +291,7 @@ func (buh *blobUploadHandler) blobUploadResponse(w http.ResponseWriter, r *http.
 	// TODO(stevvooe): Need a better way to manage the upload state automatically.
 	buh.State.Name = buh.Repository.Named().Name()
 	buh.State.UUID = buh.Upload.ID()
+	buh.Upload.Close()
 	buh.State.Offset = buh.Upload.Size()
 	buh.State.StartedAt = buh.Upload.StartedAt()
 
