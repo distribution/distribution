@@ -95,6 +95,19 @@ type Configuration struct {
 			// Specifies the CA certs for client authentication
 			// A file may contain multiple CA certificates encoded as PEM
 			ClientCAs []string `yaml:"clientcas,omitempty"`
+
+			// LetsEncrypt is used to configuration setting up TLS through
+			// Let's Encrypt instead of manually specifying certificate and
+			// key. If a TLS certificate is specified, the Let's Encrypt
+			// section will not be used.
+			LetsEncrypt struct {
+				// CacheFile specifies cache file to use for lets encrypt
+				// certificates and keys.
+				CacheFile string `yaml:"cachefile,omitempty"`
+
+				// Email is the email to use during Let's Encrypt registration
+				Email string `yaml:"email,omitempty"`
+			} `yaml:"letsencrypt,omitempty"`
 		} `yaml:"tls,omitempty"`
 
 		// Headers is a set of headers to include in HTTP responses. A common
