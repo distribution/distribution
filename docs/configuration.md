@@ -191,6 +191,9 @@ information about each option that appears later in this page.
         clientcas:
           - /path/to/ca.pem
           - /path/to/another/ca.pem
+        letsencrypt:
+          cachefile: /path/to/cache-file
+          email: emailused@letsencrypt.com
       debug:
         addr: localhost:5001
       headers:
@@ -892,6 +895,9 @@ configuration may contain both.
         clientcas:
           - /path/to/ca.pem
           - /path/to/another/ca.pem
+        letsencrypt:
+          cachefile: /path/to/cache-file
+          email: emailused@letsencrypt.com
       debug:
         addr: localhost:5001
       headers:
@@ -1037,6 +1043,40 @@ and proxy connections to the registry server.
   </tr>
 </table>
 
+### letsencrypt
+
+The `letsencrypt` struct within `tls` is **optional**. Use this to configure TLS
+certificates provided by [Let's Encrypt](https://letsencrypt.org/how-it-works/).
+
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>cachefile</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+       Absolute path to a file for the Let's Encrypt agent to cache data
+    </td>
+  </tr>
+    <tr>
+    <td>
+      <code>email</code>
+    </td>
+    <td>
+      yes
+    </td>
+    <td>
+      Email used to register with Let's Encrypt.
+    </td>
+  </tr>
+</table>
 
 ### debug
 
