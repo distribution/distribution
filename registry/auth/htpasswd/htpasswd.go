@@ -6,6 +6,8 @@ import (
 	"io"
 	"strings"
 
+	"github.com/docker/distribution/registry/auth"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -33,12 +35,12 @@ func (htpasswd *htpasswd) authenticateUser(username string, password string) err
 		// timing attack paranoia
 		bcrypt.CompareHashAndPassword([]byte{}, []byte(password))
 
-		return ErrAuthenticationFailure
+		return auth.ErrAuthenticationFailure
 	}
 
 	err := bcrypt.CompareHashAndPassword([]byte(credentials), []byte(password))
 	if err != nil {
-		return ErrAuthenticationFailure
+		return auth.ErrAuthenticationFailure
 	}
 
 	return nil
