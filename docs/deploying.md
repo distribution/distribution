@@ -88,6 +88,11 @@ A certificate issuer may supply you with an *intermediate* certificate. In this 
 
     cat domain.crt intermediate-certificates.pem > certs/domain.crt
 
+### Let's Encrypt
+
+The registry supports using Let's Encrypt to automatically obtain a browser-trusted certificate.  For more 
+information on Let's Encrypt, see [https://letsencrypt.org/how-it-works/](https://letsencrypt.org/how-it-works/) and the relevant section of the [registry configuration](configuration.md#letsencrypt).
+
 ### Alternatives
 
 While rarely advisable, you may want to use self-signed certificates instead, or use your registry in an insecure fashion. You will find instructions [here](insecure.md).
