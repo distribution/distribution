@@ -1586,8 +1586,8 @@ func testManifestAPIManifestList(t *testing.T, env *testEnv, args manifestArgs) 
 	if err != nil {
 		t.Fatalf("Error constructing request: %s", err)
 	}
-	req.Header.Set("Accept", manifestlist.MediaTypeManifestList)
-	req.Header.Add("Accept", schema1.MediaTypeSignedManifest)
+	// multiple headers in mixed list format to ensure we parse correctly server-side
+	req.Header.Set("Accept", fmt.Sprintf(` %s ; q=0.8 , %s ; q=0.5 `, manifestlist.MediaTypeManifestList, schema1.MediaTypeSignedManifest))
 	req.Header.Add("Accept", schema2.MediaTypeManifest)
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
