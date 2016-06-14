@@ -1,12 +1,3 @@
-<!--[metadata]>
-+++
-title = "Build instructions"
-description = "Explains how to build & hack on the registry"
-keywords = ["registry, on-prem, images, tags, repository, distribution, build, recipe, advanced"]
-[menu.main]
-parent="smn_recipes"
-+++
-<![end-metadata]-->
 
 # Building the registry source
 
