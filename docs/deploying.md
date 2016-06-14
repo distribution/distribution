@@ -39,7 +39,7 @@ To stop your registry, you would:
 
 ## Storage
 
-By default, your registry data is persisted as a [docker volume](/engine/userguide/containers/dockervolumes.md) on the host filesystem. Properly understanding volumes is essential if you want to stick with a local filesystem storage.
+By default, your registry data is persisted as a [docker volume](/engine/tutorials/dockervolumes.md) on the host filesystem. Properly understanding volumes is essential if you want to stick with a local filesystem storage.
 
 Specifically, you might want to point your volume location to a specific place in order to more easily access your registry data. To do so you can:
 
@@ -51,7 +51,7 @@ Specifically, you might want to point your volume location to a specific place i
 
 You should usually consider using [another storage backend](./storage-drivers/index.md) instead of the local filesystem. Use the [storage configuration options](./configuration.md#storage) to configure an alternate storage backend.
 
-Using one of these will allow you to more easily scale your registry, and leverage your storage redundancy and availability features. 
+Using one of these will allow you to more easily scale your registry, and leverage your storage redundancy and availability features.
 
 ## Running a domain registry
 
@@ -84,13 +84,13 @@ You should now be able to access your registry from another docker host:
 
 #### Gotcha
 
-A certificate issuer may supply you with an *intermediate* certificate. In this case, you must combine your certificate with the intermediate's to form a *certificate bundle*. You can do this using the `cat` command: 
+A certificate issuer may supply you with an *intermediate* certificate. In this case, you must combine your certificate with the intermediate's to form a *certificate bundle*. You can do this using the `cat` command:
 
     cat domain.crt intermediate-certificates.pem > certs/domain.crt
 
 ### Let's Encrypt
 
-The registry supports using Let's Encrypt to automatically obtain a browser-trusted certificate.  For more 
+The registry supports using Let's Encrypt to automatically obtain a browser-trusted certificate.  For more
 information on Let's Encrypt, see [https://letsencrypt.org/how-it-works/](https://letsencrypt.org/how-it-works/) and the relevant section of the [registry configuration](configuration.md#letsencrypt).
 
 ### Alternatives
@@ -197,7 +197,7 @@ Beware that you will have to implement your own authentication service for this 
 
 As your registry configuration grows more complex, dealing with it can quickly become tedious.
 
-It's highly recommended to use [Docker Compose](/compose/index.md) to facilitate operating your registry. 
+It's highly recommended to use [Docker Compose](/compose/index.md) to facilitate operating your registry.
 
 Here is a simple `docker-compose.yml` example that condenses everything explained so far:
 
