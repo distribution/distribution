@@ -18,5 +18,4 @@ weight=6
  * [using Apache as an authenticating proxy](apache.md)
  * [using Nginx as an authenticating proxy](nginx.md)
  * [running a Registry on OS X](osx-setup-guide.md)
- * [hacking the registry: build instructions](building.md)
  * [mirror the Docker Hub](mirror.md)
