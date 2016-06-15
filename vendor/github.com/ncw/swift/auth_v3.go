@@ -10,9 +10,6 @@ import (
 const (
 	v3AuthMethodToken        = "token"
 	v3AuthMethodPassword     = "password"
-	v3InterfacePublic        = "public"
-	v3InterfaceInternal      = "internal"
-	v3InterfaceAdmin         = "admin"
 	v3CatalogTypeObjectStore = "object-store"
 )
 
@@ -88,7 +85,8 @@ type v3AuthResponse struct {
 		Catalog []struct {
 			Id, Namem, Type string
 			Endpoints       []struct {
-				Id, Region_Id, Url, Region, Interface string
+				Id, Region_Id, Url, Region string
+				Interface                  EndpointType
 			}
 		}
 
@@ -107,11 +105,13 @@ type v3AuthResponse struct {
 }
 
 type v3Auth struct {
+	Region  string
 	Auth    *v3AuthResponse
 	Headers http.Header
 }
 
 func (auth *v3Auth) Request(c *Connection) (*http.Request, error) {
+	auth.Region = c.Region
 
 	var v3i interface{}
 
@@ -149,13 +149,18 @@ func (auth *v3Auth) Request(c *Connection) (*http.Request, error) {
 			v3.Auth.Scope.Project.Id = c.TenantId
 		} else if c.Tenant != "" {
 			v3.Auth.Scope.Project.Name = c.Tenant
-			var defaultDomain v3Domain
-			if c.Domain != "" {
-				defaultDomain = v3Domain{Name: "Default"}
-			} else if c.DomainId != "" {
-				defaultDomain = v3Domain{Id: "Default"}
+			switch {
+			case c.TenantDomain != "":
+				v3.Auth.Scope.Project.Domain = &v3Domain{Name: c.TenantDomain}
+			case c.TenantDomainId != "":
+				v3.Auth.Scope.Project.Domain = &v3Domain{Id: c.TenantDomainId}
+			case c.Domain != "":
+				v3.Auth.Scope.Project.Domain = &v3Domain{Name: c.Domain}
+			case c.DomainId != "":
+				v3.Auth.Scope.Project.Domain = &v3Domain{Id: c.DomainId}
+			default:
+				v3.Auth.Scope.Project.Domain = &v3Domain{Name: "Default"}
 			}
-			v3.Auth.Scope.Project.Domain = &defaultDomain
 		}
 	}
 
@@ -188,18 +193,12 @@ func (auth *v3Auth) Response(resp *http.Response) error {
 	return err
 }
 
-func (auth *v3Auth) endpointUrl(Type string, Internal bool) string {
+func (auth *v3Auth) endpointUrl(Type string, endpointType EndpointType) string {
 	for _, catalog := range auth.Auth.Token.Catalog {
 		if catalog.Type == Type {
 			for _, endpoint := range catalog.Endpoints {
-				if Internal {
-					if endpoint.Interface == v3InterfaceInternal {
-						return endpoint.Url
-					}
-				} else {
-					if endpoint.Interface == v3InterfacePublic {
-						return endpoint.Url
-					}
+				if endpoint.Interface == endpointType && (auth.Region == "" || (auth.Region == endpoint.Region)) {
+					return endpoint.Url
 				}
 			}
 		}
@@ -208,7 +207,15 @@ func (auth *v3Auth) endpointUrl(Type string, Internal bool) string {
 }
 
 func (auth *v3Auth) StorageUrl(Internal bool) string {
-	return auth.endpointUrl(v3CatalogTypeObjectStore, Internal)
+	endpointType := EndpointTypePublic
+	if Internal {
+		endpointType = EndpointTypeInternal
+	}
+	return auth.StorageUrlForEndpoint(endpointType)
+}
+
+func (auth *v3Auth) StorageUrlForEndpoint(endpointType EndpointType) string {
+	return auth.endpointUrl("object-store", endpointType)
 }
 
 func (auth *v3Auth) Token() string {

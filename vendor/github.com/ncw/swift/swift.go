@@ -92,11 +92,14 @@ type Connection struct {
 	UserAgent      string            // Http User agent (default goswift/1.0)
 	ConnectTimeout time.Duration     // Connect channel timeout (default 10s)
 	Timeout        time.Duration     // Data channel timeout (default 60s)
-	Region         string            // Region to use eg "LON", "ORD" - default is use first region (V2 auth only)
-	AuthVersion    int               // Set to 1 or 2 or leave at 0 for autodetect
+	Region         string            // Region to use eg "LON", "ORD" - default is use first region (v2,v3 auth only)
+	AuthVersion    int               // Set to 1, 2 or 3 or leave at 0 for autodetect
 	Internal       bool              // Set this to true to use the the internal / service network
-	Tenant         string            // Name of the tenant (v2 auth only)
-	TenantId       string            // Id of the tenant (v2 auth only)
+	Tenant         string            // Name of the tenant (v2,v3 auth only)
+	TenantId       string            // Id of the tenant (v2,v3 auth only)
+	EndpointType   EndpointType      // Endpoint type (v2,v3 auth only) (default is public URL unless Internal is set)
+	TenantDomain   string            // Name of the tenant's domain (v3 auth only), only needed if it differs from the user domain
+	TenantDomainId string            // Id of the tenant's domain (v3 auth only), only needed if it differs the from user domain
 	TrustId        string            // Id of the trust (v3 auth only)
 	Transport      http.RoundTripper `json:"-" xml:"-"` // Optional specialised http.Transport (eg. for Google Appengine)
 	// These are filled in after Authenticate is called as are the defaults for above
@@ -300,33 +303,39 @@ again:
 	if err != nil {
 		return
 	}
-	timer := time.NewTimer(c.ConnectTimeout)
-	var resp *http.Response
-	resp, err = c.doTimeoutRequest(timer, req)
-	if err != nil {
-		return
-	}
-	defer func() {
-		checkClose(resp.Body, &err)
-		// Flush the auth connection - we don't want to keep
-		// it open if keepalives were enabled
-		flushKeepaliveConnections(c.Transport)
-	}()
-	if err = c.parseHeaders(resp, authErrorMap); err != nil {
-		// Try again for a limited number of times on
-		// AuthorizationFailed or BadRequest. This allows us
-		// to try some alternate forms of the request
-		if (err == AuthorizationFailed || err == BadRequest) && retries > 0 {
-			retries--
-			goto again
+	if req != nil {
+		timer := time.NewTimer(c.ConnectTimeout)
+		var resp *http.Response
+		resp, err = c.doTimeoutRequest(timer, req)
+		if err != nil {
+			return
 		}
-		return
+		defer func() {
+			checkClose(resp.Body, &err)
+			// Flush the auth connection - we don't want to keep
+			// it open if keepalives were enabled
+			flushKeepaliveConnections(c.Transport)
+		}()
+		if err = c.parseHeaders(resp, authErrorMap); err != nil {
+			// Try again for a limited number of times on
+			// AuthorizationFailed or BadRequest. This allows us
+			// to try some alternate forms of the request
+			if (err == AuthorizationFailed || err == BadRequest) && retries > 0 {
+				retries--
+				goto again
+			}
+			return
+		}
+		err = c.Auth.Response(resp)
+		if err != nil {
+			return
+		}
 	}
-	err = c.Auth.Response(resp)
-	if err != nil {
-		return
+	if customAuth, isCustom := c.Auth.(CustomEndpointAuthenticator); isCustom && c.EndpointType != "" {
+		c.StorageUrl = customAuth.StorageUrlForEndpoint(c.EndpointType)
+	} else {
+		c.StorageUrl = c.Auth.StorageUrl(c.Internal)
 	}
-	c.StorageUrl = c.Auth.StorageUrl(c.Internal)
 	c.AuthToken = c.Auth.Token()
 	if !c.authenticated() {
 		err = newError(0, "Response didn't have storage url and auth token")
@@ -1424,13 +1433,13 @@ var _ io.Seeker = &ObjectOpenFile{}
 // will also check the length returned. No checking will be done if
 // you don't read all the contents.
 //
-// Note that objects with X-Object-Manifest set won't ever have their
-// md5sum's checked as the md5sum reported on the object is actually
-// the md5sum of the md5sums of the parts. This isn't very helpful to
-// detect a corrupted download as the size of the parts aren't known
-// without doing more operations.  If you want to ensure integrity of
-// an object with a manifest then you will need to download everything
-// in the manifest separately.
+// Note that objects with X-Object-Manifest or X-Static-Large-Object
+// set won't ever have their md5sum's checked as the md5sum reported
+// on the object is actually the md5sum of the md5sums of the
+// parts. This isn't very helpful to detect a corrupted download as
+// the size of the parts aren't known without doing more operations.
+// If you want to ensure integrity of an object with a manifest then
+// you will need to download everything in the manifest separately.
 //
 // headers["Content-Type"] will give the content type if desired.
 func (c *Connection) ObjectOpen(container string, objectName string, checkHash bool, h Headers) (file *ObjectOpenFile, headers Headers, err error) {
@@ -1445,8 +1454,8 @@ func (c *Connection) ObjectOpen(container string, objectName string, checkHash b
 	if err != nil {
 		return
 	}
-	// Can't check MD5 on an object with X-Object-Manifest set
-	if checkHash && headers["X-Object-Manifest"] != "" {
+	// Can't check MD5 on an object with X-Object-Manifest or X-Static-Large-Object set
+	if checkHash && (headers["X-Object-Manifest"] != "" || headers["X-Static-Large-Object"] != "") {
 		// log.Printf("swift: turning off md5 checking on object with manifest %v", objectName)
 		checkHash = false
 	}

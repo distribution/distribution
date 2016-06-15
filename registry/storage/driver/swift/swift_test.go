@@ -34,6 +34,7 @@ func init() {
 		container          string
 		region             string
 		AuthVersion        int
+		endpointType       string
 		insecureSkipVerify bool
 		secretKey          string
 		accessKey          string
@@ -54,6 +55,7 @@ func init() {
 	container = os.Getenv("SWIFT_CONTAINER_NAME")
 	region = os.Getenv("SWIFT_REGION_NAME")
 	AuthVersion, _ = strconv.Atoi(os.Getenv("SWIFT_AUTH_VERSION"))
+	endpointType = os.Getenv("SWIFT_ENDPOINT_TYPE")
 	insecureSkipVerify, _ = strconv.ParseBool(os.Getenv("SWIFT_INSECURESKIPVERIFY"))
 	secretKey = os.Getenv("SWIFT_SECRET_KEY")
 	accessKey = os.Getenv("SWIFT_ACCESS_KEY")
@@ -90,6 +92,7 @@ func init() {
 			AuthVersion,
 			container,
 			root,
+			endpointType,
 			insecureSkipVerify,
 			defaultChunkSize,
 			secretKey,
