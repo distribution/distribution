@@ -68,6 +68,25 @@ var (
 	ReferenceRegexp = anchored(capture(NameRegexp),
 		optional(literal(":"), capture(TagRegexp)),
 		optional(literal("@"), capture(DigestRegexp)))
+
+	// IdentifierRegexp is the format for string identifier used as a
+	// content addressable identifier using sha256. These identifiers
+	// are like digests without the algorithm, since sha256 is used.
+	IdentifierRegexp = match(`([a-f0-9]{64})`)
+
+	// ShortIdentifierRegexp is the format used to represent a prefix
+	// of an identifier. A prefix may be used to match a sha256 identifier
+	// within a list of trusted identifiers.
+	ShortIdentifierRegexp = match(`([a-f0-9]{6,64})`)
+
+	// anchoredIdentifierRegexp is used to check or match an
+	// identifier value, anchored at start and end of string.
+	anchoredIdentifierRegexp = anchored(IdentifierRegexp)
+
+	// anchoredShortIdentifierRegexp is used to check if a value
+	// is a possible identifier prefix, anchored at start and end
+	// of string.
+	anchoredShortIdentifierRegexp = anchored(ShortIdentifierRegexp)
 )
 
 // match compiles the string to a regular expression.
