@@ -168,6 +168,10 @@
 			"Rev": "6ffb587da9da6d029d0ce517b85fecc82172d502"
 		},
 		{
+			"ImportPath": "github.com/dmcgowan/letsencrypt",
+			"Rev": "e0e5b91be04a46541f6e68ed96f751699d93a5e7"
+		},
+		{
 			"ImportPath": "github.com/docker/goamz/aws",
 			"Rev": "f0a21f5b2e12f83a505ecf79b633bb2035cf6f85"
 		},
@@ -218,6 +222,10 @@
 			"Rev": "0b12d6b521d83fc7f755e7cfc1b1fbdd35a01a74"
 		},
 		{
+			"ImportPath": "github.com/miekg/dns",
+			"Rev": "5d001d020961ae1c184f9f8152fdc73810481677"
+		},
+		{
 			"ImportPath": "github.com/mitchellh/mapstructure",
 			"Rev": "482a9fd5fa83e8c4e7817413b80f3eb8feec03ef"
 		},
@@ -248,6 +256,11 @@
 		{
 			"ImportPath": "github.com/stevvooe/resumable/sha512",
 			"Rev": "51ad44105773cafcbe91927f70ac68e1bf78f8b4"
+		},
+		{
+			"ImportPath": "github.com/xenolf/lego/acme",
+			"Comment": "v0.3.1-30-gb2fad61",
+			"Rev": "b2fad6198110326662e9e356a97199078a4a775c"
 		},
 		{
 			"ImportPath": "github.com/yvasiyarov/go-metrics",
@@ -292,6 +305,10 @@
 		},
 		{
 			"ImportPath": "golang.org/x/net/internal/timeseries",
+			"Rev": "4876518f9e71663000c348837735820161a42df7"
+		},
+		{
+			"ImportPath": "golang.org/x/net/publicsuffix",
 			"Rev": "4876518f9e71663000c348837735820161a42df7"
 		},
 		{
@@ -431,12 +448,23 @@
 			"Rev": "64131543e7896d5bcc6bd5a76287eb75ea96c673"
 		},
 		{
-			"ImportPath": "gopkg.in/yaml.v2",
-			"Rev": "bef53efd0c76e49e6de55ead051f886bea7e9420"
+			"ImportPath": "gopkg.in/square/go-jose.v1",
+			"Comment": "v1.0.1",
+			"Rev": "40d457b439244b546f023d056628e5184136899b"
 		},
 		{
-			"ImportPath": "rsc.io/letsencrypt",
-			"Rev": "a019c9e6fce0c7132679dea13bd8df7c86ffe26c"
+			"ImportPath": "gopkg.in/square/go-jose.v1/cipher",
+			"Comment": "v1.0.1",
+			"Rev": "40d457b439244b546f023d056628e5184136899b"
+		},
+		{
+			"ImportPath": "gopkg.in/square/go-jose.v1/json",
+			"Comment": "v1.0.1",
+			"Rev": "40d457b439244b546f023d056628e5184136899b"
+		},
+		{
+			"ImportPath": "gopkg.in/yaml.v2",
+			"Rev": "bef53efd0c76e49e6de55ead051f886bea7e9420"
 		}
 	]
 }
