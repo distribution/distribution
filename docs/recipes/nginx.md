@@ -88,7 +88,7 @@ http {
   ## The registry always sets this header.
   ## In the case of nginx performing auth, the header will be unset
   ## since nginx is auth-ing before proxying.
-  map \$upstream_http_docker_distribution_api_version \$docker_distribution_api_version {
+  map $upstream_http_docker_distribution_api_version $docker_distribution_api_version {
     'registry/2.0' '';
     default registry/2.0;
   }
@@ -126,13 +126,13 @@ http {
 
       ## If $docker_distribution_api_version is empty, the header will not be added.
       ## See the map directive above where this variable is defined.
-      add_header 'Docker-Distribution-Api-Version' \$docker_distribution_api_version always;
+      add_header 'Docker-Distribution-Api-Version' $docker_distribution_api_version always;
 
       proxy_pass                          http://docker-registry;
-      proxy_set_header  Host              \$http_host;   # required for docker client's sake
-      proxy_set_header  X-Real-IP         \$remote_addr; # pass on real client's IP
-      proxy_set_header  X-Forwarded-For   \$proxy_add_x_forwarded_for;
-      proxy_set_header  X-Forwarded-Proto \$scheme;
+      proxy_set_header  Host              $http_host;   # required for docker client's sake
+      proxy_set_header  X-Real-IP         $remote_addr; # pass on real client's IP
+      proxy_set_header  X-Forwarded-For   $proxy_add_x_forwarded_for;
+      proxy_set_header  X-Forwarded-Proto $scheme;
       proxy_read_timeout                  900;
     }
   }
