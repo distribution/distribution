@@ -13,7 +13,7 @@ weight=104
 
 This document outlines the v2 Docker registry authentication scheme:
 
-![v2 registry auth](https://docs.google.com/drawings/d/1EHZU9uBLmcH0kytDClBv6jv6WR4xZjE8RKEUw1mARJA/pub?w=480&h=360)
+![v2 registry auth](../../images/v2-registry-auth.png)
 
 1. Attempt to begin a push/pull operation with the registry.
 2. If the registry requires authorization it will return a `401 Unauthorized`
