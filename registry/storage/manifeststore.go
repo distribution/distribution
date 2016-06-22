@@ -123,7 +123,7 @@ func (ms *manifestStore) Put(ctx context.Context, manifest distribution.Manifest
 	return "", fmt.Errorf("unrecognized manifest type %T", manifest)
 }
 
-// Delete removes the revision of the specified manfiest.
+// Delete removes the revision of the specified manifest.
 func (ms *manifestStore) Delete(ctx context.Context, dgst digest.Digest) error {
 	context.GetLogger(ms.ctx).Debug("(*manifestStore).Delete")
 	return ms.blobStore.Delete(ctx, dgst)

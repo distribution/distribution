@@ -33,7 +33,7 @@ type Configuration struct {
 		// the logger context.
 		Fields map[string]interface{} `yaml:"fields,omitempty"`
 
-		// Hooks allows users to configurate the log hooks, to enabling the
+		// Hooks allows users to configure the log hooks, to enabling the
 		// sequent handling behavior, when defined levels of log message emit.
 		Hooks []LogHook `yaml:"hooks,omitempty"`
 	}
@@ -204,7 +204,7 @@ type MailOptions struct {
 		// Password defines password of login user
 		Password string `yaml:"password,omitempty"`
 
-		// Insecure defines if smtp login skips the secure cerification.
+		// Insecure defines if smtp login skips the secure certification.
 		Insecure bool `yaml:"insecure,omitempty"`
 	} `yaml:"smtp,omitempty"`
 
