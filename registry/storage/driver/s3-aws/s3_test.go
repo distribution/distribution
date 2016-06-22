@@ -31,6 +31,7 @@ func init() {
 	encrypt := os.Getenv("S3_ENCRYPT")
 	keyID := os.Getenv("S3_KEY_ID")
 	secure := os.Getenv("S3_SECURE")
+	v4Auth := os.Getenv("S3_V4_AUTH")
 	region := os.Getenv("AWS_REGION")
 	objectAcl := os.Getenv("S3_OBJECT_ACL")
 	root, err := ioutil.TempDir("", "driver-")
@@ -57,6 +58,14 @@ func init() {
 			}
 		}
 
+		v4Bool := true
+		if v4Auth != "" {
+			v4Bool, err = strconv.ParseBool(v4Auth)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		parameters := DriverParameters{
 			accessKey,
 			secretKey,
@@ -66,6 +75,7 @@ func init() {
 			encryptBool,
 			keyID,
 			secureBool,
+			v4Bool,
 			minChunkSize,
 			defaultMultipartCopyChunkSize,
 			defaultMultipartCopyMaxConcurrency,
@@ -161,6 +171,10 @@ func TestStorageClass(t *testing.T) {
 	rrDriver, err := s3DriverConstructor(rootDir, s3.StorageClassReducedRedundancy)
 	if err != nil {
 		t.Fatalf("unexpected error creating driver with reduced redundancy storage: %v", err)
+	}
+
+	if _, err = s3DriverConstructor(rootDir, noStorageClass); err != nil {
+		t.Fatalf("unexpected error creating driver without storage class: %v", err)
 	}
 
 	standardFilename := "/test-standard"
