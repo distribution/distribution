@@ -67,7 +67,7 @@ You will need to pass the `--registry-mirror` option to your Docker daemon on st
 
     docker --registry-mirror=https://<my-docker-mirror-host> daemon
 
-For example, if your mirror is serving on http://10.0.0.2:5000, you would run:
+For example, if your mirror is serving on `http://10.0.0.2:5000`, you would run:
 
     docker --registry-mirror=https://10.0.0.2:5000 daemon
 
