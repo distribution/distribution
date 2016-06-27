@@ -40,14 +40,14 @@ func TestValidateReferenceName(t *testing.T) {
 	}
 
 	for _, name := range invalidRepoNames {
-		_, err := NormalizedName(name)
+		_, err := ParseNormalizedNamed(name)
 		if err == nil {
 			t.Fatalf("Expected invalid repo name for %q", name)
 		}
 	}
 
 	for _, name := range validRepoNames {
-		_, err := NormalizedName(name)
+		_, err := ParseNormalizedNamed(name)
 		if err != nil {
 			t.Fatalf("Error parsing repo name %s, got: %q", name, err)
 		}
@@ -79,7 +79,7 @@ func TestValidateRemoteName(t *testing.T) {
 		"dock__er/docker",
 	}
 	for _, repositoryName := range validRepositoryNames {
-		_, err := NormalizedName(repositoryName)
+		_, err := ParseNormalizedNamed(repositoryName)
 		if err != nil {
 			t.Errorf("Repository name should be valid: %v. Error: %v", repositoryName, err)
 		}
@@ -117,7 +117,7 @@ func TestValidateRemoteName(t *testing.T) {
 		"this_is_not_a_valid_namespace_because_its_lenth_is_greater_than_255_this_is_not_a_valid_namespace_because_its_lenth_is_greater_than_255_this_is_not_a_valid_namespace_because_its_lenth_is_greater_than_255_this_is_not_a_valid_namespace_because_its_lenth_is_greater_than_255/docker",
 	}
 	for _, repositoryName := range invalidRepositoryNames {
-		if _, err := NormalizedName(repositoryName); err == nil {
+		if _, err := ParseNormalizedNamed(repositoryName); err == nil {
 			t.Errorf("Repository name should be invalid: %v", repositoryName)
 		}
 	}
@@ -214,9 +214,9 @@ func TestParseRepositoryInfo(t *testing.T) {
 			refStrings = append(refStrings, tcase.AmbiguousName)
 		}
 
-		var refs []Named
+		var refs []NormalizedNamed
 		for _, r := range refStrings {
-			named, err := NormalizedName(r)
+			named, err := ParseNormalizedNamed(r)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -224,7 +224,7 @@ func TestParseRepositoryInfo(t *testing.T) {
 		}
 
 		for _, r := range refs {
-			if expected, actual := tcase.FamiliarName, FamiliarName(r).Name(); expected != actual {
+			if expected, actual := tcase.FamiliarName, r.Familiar().Name(); expected != actual {
 				t.Fatalf("Invalid normalized reference for %q. Expected %q, got %q", r, expected, actual)
 			}
 			if expected, actual := tcase.FullName, r.String(); expected != actual {
@@ -242,31 +242,32 @@ func TestParseRepositoryInfo(t *testing.T) {
 }
 
 func TestParseReferenceWithTagAndDigest(t *testing.T) {
-	ref, err := NormalizedName("busybox:latest@sha256:86e0e091d0da6bde2456dbb48306f3956bbeb2eae1b5b9a43045843f69fe4aaa")
+	shortRef := "busybox:latest@sha256:86e0e091d0da6bde2456dbb48306f3956bbeb2eae1b5b9a43045843f69fe4aaa"
+	nref, err := ParseNormalizedNamed(shortRef)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if expected, actual := "docker.io/library/busybox:latest@sha256:86e0e091d0da6bde2456dbb48306f3956bbeb2eae1b5b9a43045843f69fe4aaa", ref.String(); actual != expected {
-		t.Fatalf("Invalid parsed reference for %q: expected %q, got %q", ref, expected, actual)
+	if expected, actual := "docker.io/library/"+shortRef, nref.String(); actual != expected {
+		t.Fatalf("Invalid parsed reference for %q: expected %q, got %q", nref, expected, actual)
 	}
 
-	ref = FamiliarName(ref)
-	if _, isTagged := ref.(NamedTagged); isTagged {
-		t.Fatalf("Reference from %q should not support tag", ref)
+	ref := nref.Familiar()
+	if _, isTagged := ref.(NamedTagged); !isTagged {
+		t.Fatalf("Reference from %q should support tag", ref)
 	}
 	if _, isCanonical := ref.(Canonical); !isCanonical {
-		t.Fatalf("Reference from %q should not support digest", ref)
+		t.Fatalf("Reference from %q should support digest", ref)
 	}
-	if expected, actual := "busybox@sha256:86e0e091d0da6bde2456dbb48306f3956bbeb2eae1b5b9a43045843f69fe4aaa", FamiliarName(ref).String(); actual != expected {
+	if expected, actual := shortRef, ref.String(); actual != expected {
 		t.Fatalf("Invalid parsed reference for %q: expected %q, got %q", ref, expected, actual)
 	}
 }
 
 func TestInvalidReferenceComponents(t *testing.T) {
-	if _, err := NormalizedName("-foo"); err == nil {
+	if _, err := ParseNormalizedNamed("-foo"); err == nil {
 		t.Fatal("Expected WithName to detect invalid name")
 	}
-	ref, err := NormalizedName("busybox")
+	ref, err := ParseNormalizedNamed("busybox")
 	if err != nil {
 		t.Fatal(err)
 	}

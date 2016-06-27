@@ -15,11 +15,21 @@ var (
 	defaultTag          = "latest"
 )
 
-// NormalizedName parses a string into a named reference
+// NormalizedNamed represents a name which has been
+// normalized and has a familiar form. A familiar name
+// is what is used in Docker UI. An example normalized
+// name is "docker.io/library/ubuntu" and corresponding
+// familiar name of "ubuntu".
+type NormalizedNamed interface {
+	Named
+	Familiar() Named
+}
+
+// ParseNormalizedNamed parses a string into a named reference
 // transforming a familiar name from Docker UI to a fully
 // qualified reference. If the value may be an identifier
 // use ParseAnyReference.
-func NormalizedName(s string) (Named, error) {
+func ParseNormalizedNamed(s string) (NormalizedNamed, error) {
 	if ok := anchoredIdentifierRegexp.MatchString(s); ok {
 		return nil, fmt.Errorf("invalid repository name (%s), cannot specify 64-byte hexadecimal strings", s)
 	}
@@ -34,7 +44,15 @@ func NormalizedName(s string) (Named, error) {
 		return nil, errors.New("invalid reference format: repository name must be lowercase")
 	}
 
-	return ParseNamed(domain + "/" + remainder)
+	ref, err := Parse(domain + "/" + remainder)
+	if err != nil {
+		return nil, err
+	}
+	named, isNamed := ref.(NormalizedNamed)
+	if !isNamed {
+		return nil, fmt.Errorf("reference %s has no name", ref.String())
+	}
+	return named, nil
 }
 
 // splitDockerDomain splits a repository name to domain and remotename string.
@@ -56,32 +74,49 @@ func splitDockerDomain(name string) (domain, remainder string) {
 	return
 }
 
-// FamiliarName returns a shortened version of the name familiar
+// familiarizeName returns a shortened version of the name familiar
 // to to the Docker UI. Familiar names have the default domain
 // "docker.io" and "library/" repository prefix removed.
 // For example, "docker.io/library/redis" will have the familiar
 // name "redis" and "docker.io/dmcgowan/myapp" will be "dmcgowan/myapp".
-func FamiliarName(named Named) Named {
-	var repo repository
-	repo.domain, repo.path = splitDomain(named.Name())
+// Returns a familiarized named only reference.
+func familiarizeName(named NamedRepository) repository {
+	repo := repository{
+		domain: named.Domain(),
+		path:   named.Path(),
+	}
 
 	if repo.domain == defaultDomain {
 		repo.domain = ""
 		repo.path = strings.TrimPrefix(repo.path, defaultRepoPrefix)
 	}
-	if digested, ok := named.(Digested); ok {
-		return canonicalReference{
-			repository: repo,
-			digest:     digested.Digest(),
-		}
-	}
-	if tagged, ok := named.(Tagged); ok {
-		return taggedReference{
-			repository: repo,
-			tag:        tagged.Tag(),
-		}
-	}
 	return repo
+}
+
+func (r reference) Familiar() Named {
+	return reference{
+		NamedRepository: familiarizeName(r.NamedRepository),
+		tag:             r.tag,
+		digest:          r.digest,
+	}
+}
+
+func (r repository) Familiar() Named {
+	return familiarizeName(r)
+}
+
+func (t taggedReference) Familiar() Named {
+	return taggedReference{
+		NamedRepository: familiarizeName(t.NamedRepository),
+		tag:             t.tag,
+	}
+}
+
+func (c canonicalReference) Familiar() Named {
+	return canonicalReference{
+		NamedRepository: familiarizeName(c.NamedRepository),
+		digest:          c.digest,
+	}
 }
 
 // EnsureTagged adds the default tag "latest" to a reference if it only has
@@ -111,7 +146,7 @@ func ParseAnyReference(ref string) (Reference, error) {
 		return digestReference(dgst), nil
 	}
 
-	return NormalizedName(ref)
+	return ParseNormalizedNamed(ref)
 }
 
 // ParseAnyReferenceWithSet parses a reference string as a possible short
@@ -128,5 +163,5 @@ func ParseAnyReferenceWithSet(ref string, ds *digest.Set) (Reference, error) {
 		}
 	}
 
-	return NormalizedName(ref)
+	return ParseNormalizedNamed(ref)
 }
