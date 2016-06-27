@@ -212,8 +212,8 @@ func Parse(s string) (Reference, error) {
 	}
 
 	ref := reference{
-		repository: repo,
-		tag:        matches[2],
+		NamedRepository: repo,
+		tag:             matches[2],
 	}
 	if matches[3] != "" {
 		var err error
@@ -280,14 +280,14 @@ func WithTag(name Named, tag string) (NamedTagged, error) {
 	}
 	if canonical, ok := name.(Canonical); ok {
 		return reference{
-			repository: repo,
-			tag:    tag,
-			digest: canonical.Digest(),
+			NamedRepository: repo,
+			tag:             tag,
+			digest:          canonical.Digest(),
 		}, nil
 	}
 	return taggedReference{
-		repository: repo,
-		tag:        tag,
+		NamedRepository: repo,
+		tag:             tag,
 	}, nil
 }
 
@@ -306,14 +306,14 @@ func WithDigest(name Named, digest digest.Digest) (Canonical, error) {
 	}
 	if tagged, ok := name.(Tagged); ok {
 		return reference{
-			repository: repo,
-			tag:    tagged.Tag(),
-			digest: digest,
+			NamedRepository: repo,
+			tag:             tagged.Tag(),
+			digest:          digest,
 		}, nil
 	}
 	return canonicalReference{
-		repository: repo,
-		digest:     digest,
+		NamedRepository: repo,
+		digest:          digest,
 	}, nil
 }
 
@@ -329,11 +329,15 @@ func Match(pattern string, ref Reference) (bool, error) {
 
 // TrimNamed removes any tag or digest from the named reference.
 func TrimNamed(ref Named) Named {
-	return repository(ref.Name())
+	domain, path := SplitHostname(ref)
+	return repository{
+		domain: domain,
+		path:   path,
+	}
 }
 
 func getBestReferenceType(ref reference) Reference {
-	if ref.repository.path == "" {
+	if ref.Name() == "" {
 		// Allow digest only references
 		if ref.digest != "" {
 			return digestReference(ref.digest)
@@ -343,16 +347,16 @@ func getBestReferenceType(ref reference) Reference {
 	if ref.tag == "" {
 		if ref.digest != "" {
 			return canonicalReference{
-				repository: ref.repository,
-				digest:     ref.digest,
+				NamedRepository: ref.NamedRepository,
+				digest:          ref.digest,
 			}
 		}
-		return ref.repository
+		return ref.NamedRepository
 	}
 	if ref.digest == "" {
 		return taggedReference{
-			repository: ref.repository,
-			tag:        ref.tag,
+			NamedRepository: ref.NamedRepository,
+			tag:             ref.tag,
 		}
 	}
 
@@ -360,7 +364,7 @@ func getBestReferenceType(ref reference) Reference {
 }
 
 type reference struct {
-	repository
+	NamedRepository
 	tag    string
 	digest digest.Digest
 }
@@ -412,7 +416,7 @@ func (d digestReference) Digest() digest.Digest {
 }
 
 type taggedReference struct {
-	repository
+	NamedRepository
 	tag string
 }
 
@@ -425,7 +429,7 @@ func (t taggedReference) Tag() string {
 }
 
 type canonicalReference struct {
-	repository
+	NamedRepository
 	digest digest.Digest
 }
 
