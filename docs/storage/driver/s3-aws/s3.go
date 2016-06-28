@@ -561,45 +561,62 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 	return d.Delete(ctx, sourcePath)
 }
 
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 // Delete recursively deletes all objects stored at "path" and its subpaths.
+// We must be careful since S3 does not guarantee read after delete consistency
 func (d *driver) Delete(ctx context.Context, path string) error {
-	resp, err := d.S3.ListObjects(&s3.ListObjectsInput{
+	s3Objects := make([]*s3.ObjectIdentifier, 0, listMax)
+	listObjectsInput := &s3.ListObjectsInput{
 		Bucket: aws.String(d.Bucket),
 		Prefix: aws.String(d.s3Path(path)),
-	})
-	if err != nil || len(resp.Contents) == 0 {
-		return storagedriver.PathNotFoundError{Path: path}
 	}
+	for {
+		// list all the objects
+		resp, err := d.S3.ListObjects(listObjectsInput)
 
-	s3Objects := make([]*s3.ObjectIdentifier, 0, listMax)
+		// resp.Contents can only be empty on the first call
+		// if there were no more results to return after the first call, resp.IsTruncated would have been false
+		// and the loop would be exited without recalling ListObjects
+		if err != nil || len(resp.Contents) == 0 {
+			return storagedriver.PathNotFoundError{Path: path}
+		}
 
-	for len(resp.Contents) > 0 {
 		for _, key := range resp.Contents {
 			s3Objects = append(s3Objects, &s3.ObjectIdentifier{
 				Key: key.Key,
 			})
 		}
 
+		// resp.Contents must have at least one element or we would have returned not found
+		listObjectsInput.Marker = resp.Contents[len(resp.Contents)-1].Key
+
+		// from the s3 api docs, IsTruncated "specifies whether (true) or not (false) all of the results were returned"
+		// if everything has been returned, break
+		if resp.IsTruncated == nil || !*resp.IsTruncated {
+			break
+		}
+	}
+
+	// need to chunk objects into groups of 1000 per s3 restrictions
+	total := len(s3Objects)
+	for i := 0; i < total; i += 1000 {
 		_, err := d.S3.DeleteObjects(&s3.DeleteObjectsInput{
 			Bucket: aws.String(d.Bucket),
 			Delete: &s3.Delete{
-				Objects: s3Objects,
+				Objects: s3Objects[i:min(i+1000, total)],
 				Quiet:   aws.Bool(false),
 			},
-		})
-		if err != nil {
-			return nil
-		}
-
-		resp, err = d.S3.ListObjects(&s3.ListObjectsInput{
-			Bucket: aws.String(d.Bucket),
-			Prefix: aws.String(d.s3Path(path)),
 		})
 		if err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
