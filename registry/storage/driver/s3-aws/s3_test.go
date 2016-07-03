@@ -32,6 +32,7 @@ func init() {
 	region := os.Getenv("AWS_REGION")
 	root, err := ioutil.TempDir("", "driver-")
 	regionEndpoint := os.Getenv("REGION_ENDPOINT")
+	s3ForcePathStyle := os.Getenv("S3_FORCE_PATH_STYLE")
 	if err != nil {
 		panic(err)
 	}
@@ -54,6 +55,14 @@ func init() {
 			}
 		}
 
+		s3ForcePathStyleBool := false
+		if s3ForcePathStyle != "" {
+			s3ForcePathStyleBool, err = strconv.ParseBool(s3ForcePathStyle)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		parameters := DriverParameters{
 			accessKey,
 			secretKey,
@@ -67,6 +76,7 @@ func init() {
 			rootDirectory,
 			storageClass,
 			driverName + "-test",
+			s3ForcePathStyleBool,
 		}
 
 		return New(parameters)
