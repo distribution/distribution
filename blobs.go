@@ -192,6 +192,15 @@ type BlobCreateOption interface {
 	Apply(interface{}) error
 }
 
+// CreateOptions is a collection of blob creation modifiers relevant to general
+// blob storage intended to be configured by the BlobCreateOption.Apply method.
+type CreateOptions struct {
+	Mount struct {
+		ShouldMount bool
+		From        reference.Canonical
+	}
+}
+
 // BlobWriter provides a handle for inserting data into a blob store.
 // Instances should be obtained from BlobWriteService.Writer and
 // BlobWriteService.Resume. If supported by the store, a writer can be
