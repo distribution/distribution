@@ -246,6 +246,14 @@ information about each option that appears later in this page.
     compatibility:
       schema1:
         signingkeyfile: /etc/registry/key.json
+    validation:
+      enabled: true
+      manifests:
+        urls:
+          allow:
+            - ^https?://([^/]+\.)*example\.com/
+          deny:
+            - ^https?://www\.example\.com/
 
 In some instances a configuration option is **optional** but it contains child
 options marked as **required**. This indicates that you can omit the parent with
@@ -1771,7 +1779,7 @@ To enable pulling private repositories (e.g. `batman/robin`) a username and pass
         signingkeyfile: /etc/registry/key.json
 
 Configure handling of older and deprecated features. Each subsection
-defines a such a feature with configurable behavior.
+defines such a feature with configurable behavior.
 
 ### Schema1
 
@@ -1795,6 +1803,39 @@ defines a such a feature with configurable behavior.
     </td>
   </tr>
 </table>
+
+## Validation
+
+    validation:
+      enabled: true
+      manifests:
+        urls:
+          allow:
+            - ^https?://([^/]+\.)*example\.com/
+          deny:
+            - ^https?://www\.example\.com/
+
+### Enabled
+
+Use the `enabled` flag to enable the other options in the `validation`
+section. They are disabled by default.
+
+### Manifests
+
+Use the `manifest` subsection to configure manifest validation.
+
+#### URLs
+
+The `allow` and `deny` options are both lists of
+[regular expressions](https://godoc.org/regexp/syntax) that restrict the URLs in
+pushed manifests.
+
+If `allow` is unset, pushing a manifest containing URLs will fail.
+
+If `allow` is set, pushing a manifest will succeed only if all URLs within match
+one of the `allow` regular expressions and one of the following holds:
+1. `deny` is unset.
+2. `deny` is set but no URLs within the manifest match any of the `deny` regular expressions.
 
 ## Example: Development configuration
 

@@ -9,7 +9,9 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"runtime"
+	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -209,6 +211,39 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		ctxu.GetLogger(app).Infof("backend redirection disabled")
 	} else {
 		options = append(options, storage.EnableRedirect)
+	}
+
+	// configure validation
+	if config.Validation.Enabled {
+		if len(config.Validation.Manifests.URLs.Allow) == 0 && len(config.Validation.Manifests.URLs.Deny) == 0 {
+			// If Allow and Deny are empty, allow nothing.
+			options = append(options, storage.ManifestURLsAllowRegexp(regexp.MustCompile("^$")))
+		} else {
+			if len(config.Validation.Manifests.URLs.Allow) > 0 {
+				for i, s := range config.Validation.Manifests.URLs.Allow {
+					// Validate via compilation.
+					if _, err := regexp.Compile(s); err != nil {
+						panic(fmt.Sprintf("validation.manifests.urls.allow: %s", err))
+					}
+					// Wrap with non-capturing group.
+					config.Validation.Manifests.URLs.Allow[i] = fmt.Sprintf("(?:%s)", s)
+				}
+				re := regexp.MustCompile(strings.Join(config.Validation.Manifests.URLs.Allow, "|"))
+				options = append(options, storage.ManifestURLsAllowRegexp(re))
+			}
+			if len(config.Validation.Manifests.URLs.Deny) > 0 {
+				for i, s := range config.Validation.Manifests.URLs.Deny {
+					// Validate via compilation.
+					if _, err := regexp.Compile(s); err != nil {
+						panic(fmt.Sprintf("validation.manifests.urls.deny: %s", err))
+					}
+					// Wrap with non-capturing group.
+					config.Validation.Manifests.URLs.Deny[i] = fmt.Sprintf("(?:%s)", s)
+				}
+				re := regexp.MustCompile(strings.Join(config.Validation.Manifests.URLs.Deny, "|"))
+				options = append(options, storage.ManifestURLsDenyRegexp(re))
+			}
+		}
 	}
 
 	// configure storage caches

@@ -102,10 +102,12 @@ func (ms *schema2ManifestHandler) verifyManifest(ctx context.Context, mnfst sche
 				if len(fsLayer.URLs) == 0 {
 					err = errMissingURL
 				}
+				allow := ms.repository.manifestURLs.allow
+				deny := ms.repository.manifestURLs.deny
 				for _, u := range fsLayer.URLs {
 					var pu *url.URL
 					pu, err = url.Parse(u)
-					if err != nil || (pu.Scheme != "http" && pu.Scheme != "https") || pu.Fragment != "" {
+					if err != nil || (pu.Scheme != "http" && pu.Scheme != "https") || pu.Fragment != "" || (allow != nil && !allow.MatchString(u)) || (deny != nil && deny.MatchString(u)) {
 						err = errInvalidURL
 						break
 					}
