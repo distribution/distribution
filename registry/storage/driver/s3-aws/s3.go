@@ -270,33 +270,21 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 // bucketName
 func New(params DriverParameters) (*Driver, error) {
 	awsConfig := aws.NewConfig()
-	var creds *credentials.Credentials
-	if params.RegionEndpoint == "" {
-		creds = credentials.NewChainCredentials([]credentials.Provider{
-			&credentials.StaticProvider{
-				Value: credentials.Value{
-					AccessKeyID:     params.AccessKey,
-					SecretAccessKey: params.SecretKey,
-				},
-			},
-			&credentials.EnvProvider{},
-			&credentials.SharedCredentialsProvider{},
-			&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(session.New())},
-		})
-
-	} else {
-		creds = credentials.NewChainCredentials([]credentials.Provider{
-			&credentials.StaticProvider{
-				Value: credentials.Value{
-					AccessKeyID:     params.AccessKey,
-					SecretAccessKey: params.SecretKey,
-				},
-			},
-			&credentials.EnvProvider{},
-		})
+	if params.RegionEndpoint != "" {
 		awsConfig.WithS3ForcePathStyle(true)
 		awsConfig.WithEndpoint(params.RegionEndpoint)
 	}
+	creds := credentials.NewChainCredentials([]credentials.Provider{
+		&credentials.StaticProvider{
+			Value: credentials.Value{
+				AccessKeyID:     params.AccessKey,
+				SecretAccessKey: params.SecretKey,
+			},
+		},
+		&credentials.EnvProvider{},
+		&credentials.SharedCredentialsProvider{},
+		&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(session.New())},
+	})
 
 	awsConfig.WithCredentials(creds)
 	awsConfig.WithRegion(params.Region)
