@@ -107,6 +107,7 @@ func (ms *schema2ManifestHandler) verifyManifest(ctx context.Context, mnfst sche
 					pu, err = url.Parse(u)
 					if err != nil || (pu.Scheme != "http" && pu.Scheme != "https") || pu.Fragment != "" {
 						err = errInvalidURL
+						break
 					}
 				}
 			}

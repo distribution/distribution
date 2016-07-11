@@ -80,6 +80,11 @@ func TestVerifyManifestForeignLayer(t *testing.T) {
 		},
 		{
 			foreignLayer,
+			[]string{"", "https://foo/bar"},
+			errInvalidURL,
+		},
+		{
+			foreignLayer,
 			[]string{"http://foo/bar"},
 			nil,
 		},
