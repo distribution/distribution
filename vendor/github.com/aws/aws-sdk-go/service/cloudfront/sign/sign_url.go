@@ -90,19 +90,19 @@ func (s URLSigner) Sign(url string, expires time.Time) (string, error) {
 //     // Sign URL to be valid for 30 minutes from now, expires one hour from now, and
 //     // restricted to the 192.0.2.0/24 IP address range.
 //     policy := &sign.Policy{
-//         Statements: []Statement{
+//         Statements: []sign.Statement{
 //             {
 //                 Resource: rawURL,
-//                 Condition: Condition{
+//                 Condition: sign.Condition{
 //                     // Optional IP source address range
-//                     IPAddress: &IPAddress{SourceIP: "192.0.2.0/24"},
+//                     IPAddress: &sign.IPAddress{SourceIP: "192.0.2.0/24"},
 //                     // Optional date URL is not valid until
-//                     DateGreaterThan: &AWSEpochTime{time.Now().Add(30 * time.Minute)},
+//                     DateGreaterThan: &sign.AWSEpochTime{time.Now().Add(30 * time.Minute)},
 //                     // Required date the URL will expire after
-//                     DateLessThan: &AWSEpochTime{time.Now().Add(1 * time.Hour)},
-//                 }
-//             }
-//         }
+//                     DateLessThan: &sign.AWSEpochTime{time.Now().Add(1 * time.Hour)},
+//                 },
+//             },
+//         },
 //     }
 //
 //     signer := sign.NewURLSigner(keyID, privKey)
