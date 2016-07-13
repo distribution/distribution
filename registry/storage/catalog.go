@@ -25,12 +25,12 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 		return 0, errors.New("no space in slice")
 	}
 
-	root, err := pathFor(repositoriesRootPathSpec{})
-	if err != nil {
-		return 0, err
+	root, errVal := pathFor(repositoriesRootPathSpec{})
+	if errVal != nil {
+		return 0, errVal
 	}
 
-	err = Walk(ctx, reg.blobStore.driver, root, func(fileInfo driver.FileInfo) error {
+	errVal = Walk(ctx, reg.blobStore.driver, root, func(fileInfo driver.FileInfo) error {
 		filePath := fileInfo.Path()
 
 		// lop the base path off
@@ -58,7 +58,7 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 	n = copy(repos, foundRepos)
 
 	// Signal that we have no more entries by setting EOF
-	if len(foundRepos) <= len(repos) && err != ErrFinishedWalk {
+	if len(foundRepos) <= len(repos) && (errVal == nil || errVal == ErrSkipDir) {
 		errVal = io.EOF
 	}
 
