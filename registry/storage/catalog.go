@@ -18,19 +18,19 @@ var ErrFinishedWalk = errors.New("finished walk")
 // Returns a list, or partial list, of repositories in the registry.
 // Because it's a quite expensive operation, it should only be used when building up
 // an initial set of repositories.
-func (reg *registry) Repositories(ctx context.Context, repos []string, last string) (n int, errVal error) {
+func (reg *registry) Repositories(ctx context.Context, repos []string, last string) (n int, err error) {
 	var foundRepos []string
 
 	if len(repos) == 0 {
 		return 0, errors.New("no space in slice")
 	}
 
-	root, errVal := pathFor(repositoriesRootPathSpec{})
-	if errVal != nil {
-		return 0, errVal
+	root, err := pathFor(repositoriesRootPathSpec{})
+	if err != nil {
+		return 0, err
 	}
 
-	errVal = Walk(ctx, reg.blobStore.driver, root, func(fileInfo driver.FileInfo) error {
+	err = Walk(ctx, reg.blobStore.driver, root, func(fileInfo driver.FileInfo) error {
 		filePath := fileInfo.Path()
 
 		// lop the base path off
@@ -58,11 +58,11 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 	n = copy(repos, foundRepos)
 
 	// Signal that we have no more entries by setting EOF
-	if len(foundRepos) <= len(repos) && (errVal == nil || errVal == ErrSkipDir) {
-		errVal = io.EOF
+	if len(foundRepos) <= len(repos) && (err == nil || err == ErrSkipDir) {
+		err = io.EOF
 	}
 
-	return n, errVal
+	return n, err
 }
 
 // Enumerate applies ingester to each repository
