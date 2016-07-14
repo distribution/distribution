@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"reflect"
 	"strconv"
 
 	"github.com/docker/distribution/registry/api/errcode"
@@ -48,8 +47,9 @@ func (ch *catalogHandler) GetCatalog(w http.ResponseWriter, r *http.Request) {
 	repos := make([]string, maxEntries)
 
 	filled, err := ch.App.registry.Repositories(ch.Context, repos, lastEntry)
+	_, pathNotFound := err.(driver.PathNotFoundError)
 
-	if err == io.EOF || reflect.TypeOf(err) == reflect.TypeOf(driver.PathNotFoundError{}) {
+	if err == io.EOF || pathNotFound {
 		moreEntries = false
 	} else if err != nil && err != storage.ErrFinishedWalk {
 		ch.Errors = append(ch.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
