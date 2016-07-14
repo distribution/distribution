@@ -23,11 +23,17 @@ install_test_certs() {
 	# For test remove CA
 	rm $1/${hostname}:5447/ca.crt
 	install_ca $1 5448
+	install_ca $1 5600
 }
 
 install_ca_file() {
 	mkdir -p $2
 	cp $1 $2/ca.crt
+}
+
+append_ca_file() {
+	mkdir -p $2
+	cat $1 >> $2/ca.crt
 }
 
 install_test_certs $installdir
@@ -40,4 +46,5 @@ install_ca_file ./tokenserver/certs/ca.pem $installdir/$hostname:5554
 install_ca_file ./tokenserver/certs/ca.pem $installdir/$hostname:5555
 install_ca_file ./tokenserver/certs/ca.pem $installdir/$hostname:5557
 install_ca_file ./tokenserver/certs/ca.pem $installdir/$hostname:5558
+append_ca_file ./tokenserver/certs/ca.pem $installdir/$hostname:5600
 
