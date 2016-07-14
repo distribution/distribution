@@ -123,6 +123,13 @@ type Configuration struct {
 			// Addr specifies the bind address for the debug server.
 			Addr string `yaml:"addr,omitempty"`
 		} `yaml:"debug,omitempty"`
+
+		// HTTP2 configuration options
+		HTTP2 struct {
+			// Specifies wether the registry should disallow clients attempting
+			// to connect via http2. If set to true, only http/1.1 is supported.
+			Disabled bool `yaml:"disabled,omitempty"`
+		} `yaml:"http2,omitempty"`
 	} `yaml:"http,omitempty"`
 
 	// Notifications specifies configuration about various endpoint to which
