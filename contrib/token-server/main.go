@@ -163,12 +163,19 @@ func filterAccessList(ctx context.Context, scope string, requestedAccessList []a
 	}
 	grantedAccessList := make([]auth.Access, 0, len(requestedAccessList))
 	for _, access := range requestedAccessList {
-		if access.Type != "repository" {
+		if access.Type == "repository" {
+			if !strings.HasPrefix(access.Name, scope) {
+				context.GetLogger(ctx).Debugf("Resource scope not allowed: %s", access.Name)
+				continue
+			}
+		} else if access.Type == "registry" {
+			if access.Name != "catalog" {
+				context.GetLogger(ctx).Debugf("Unknown registry resource: %s", access.Name)
+				continue
+			}
+			// TODO: Limit some actions to "admin" users
+		} else {
 			context.GetLogger(ctx).Debugf("Skipping unsupported resource type: %s", access.Type)
-			continue
-		}
-		if !strings.HasPrefix(access.Name, scope) {
-			context.GetLogger(ctx).Debugf("Resource scope not allowed: %s", access.Name)
 			continue
 		}
 		grantedAccessList = append(grantedAccessList, access)
