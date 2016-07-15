@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"fmt"
 	"io"
 	"testing"
 
@@ -160,4 +161,43 @@ func testEq(a, b []string, size int) bool {
 		}
 	}
 	return true
+}
+
+func setupBadWalkEnv(t *testing.T) *setupEnv {
+	d := newBadListDriver()
+	ctx := context.Background()
+	registry, err := NewRegistry(ctx, d, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableRedirect)
+	if err != nil {
+		t.Fatalf("error creating registry: %v", err)
+	}
+
+	return &setupEnv{
+		ctx:      ctx,
+		driver:   d,
+		registry: registry,
+	}
+}
+
+type badListDriver struct {
+	driver.StorageDriver
+}
+
+var _ driver.StorageDriver = &badListDriver{}
+
+func newBadListDriver() *badListDriver {
+	return &badListDriver{StorageDriver: inmemory.New()}
+}
+
+func (d *badListDriver) List(ctx context.Context, path string) ([]string, error) {
+	return nil, fmt.Errorf("List error")
+}
+
+func TestCatalogWalkError(t *testing.T) {
+	env := setupBadWalkEnv(t)
+	p := make([]string, 1)
+
+	_, err := env.registry.Repositories(env.ctx, p, "")
+	if err == io.EOF {
+		t.Errorf("Expected catalog driver list error")
+	}
 }
