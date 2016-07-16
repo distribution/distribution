@@ -110,7 +110,7 @@ func WithResponseWriter(ctx Context, w http.ResponseWriter) (Context, http.Respo
 
 	if closeNotifier, ok := w.(http.CloseNotifier); ok {
 		irwCN := &instrumentedResponseWriterCN{
-			instrumentedResponseWriter: irw,
+			instrumentedResponseWriter: &irw,
 			CloseNotifier:              closeNotifier,
 		}
 
@@ -271,7 +271,7 @@ func (ctx *muxVarsContext) Value(key interface{}) interface{} {
 // context. It implements http.CloseNotifier so that users can detect
 // early disconnects.
 type instrumentedResponseWriterCN struct {
-	instrumentedResponseWriter
+	*instrumentedResponseWriter
 	http.CloseNotifier
 }
 
