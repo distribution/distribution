@@ -217,9 +217,10 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 		repository: repo,
 		blobStore:  blobStore,
 		schema1Handler: &signedManifestHandler{
-			ctx:        ctx,
-			repository: repo,
-			blobStore:  blobStore,
+			ctx:               ctx,
+			schema1SigningKey: repo.schema1SigningKey,
+			repository:        repo,
+			blobStore:         blobStore,
 		},
 		schema2Handler: &schema2ManifestHandler{
 			ctx:        ctx,

@@ -15,9 +15,10 @@ import (
 // signedManifestHandler is a ManifestHandler that covers schema1 manifests. It
 // can unmarshal and put schema1 manifests that have been signed by libtrust.
 type signedManifestHandler struct {
-	repository *repository
-	blobStore  *linkedBlobStore
-	ctx        context.Context
+	repository        distribution.Repository
+	schema1SigningKey libtrust.PrivateKey
+	blobStore         distribution.BlobStore
+	ctx               context.Context
 }
 
 var _ ManifestHandler = &signedManifestHandler{}
@@ -35,8 +36,8 @@ func (ms *signedManifestHandler) Unmarshal(ctx context.Context, dgst digest.Dige
 		return nil, err
 	}
 
-	if ms.repository.schema1SigningKey != nil {
-		if err := jsig.Sign(ms.repository.schema1SigningKey); err != nil {
+	if ms.schema1SigningKey != nil {
+		if err := jsig.Sign(ms.schema1SigningKey); err != nil {
 			return nil, err
 		}
 	}
@@ -72,11 +73,6 @@ func (ms *signedManifestHandler) Put(ctx context.Context, manifest distribution.
 	revision, err := ms.blobStore.Put(ctx, mt, payload)
 	if err != nil {
 		context.GetLogger(ctx).Errorf("error putting payload into blobstore: %v", err)
-		return "", err
-	}
-
-	// Link the revision into the repository.
-	if err := ms.blobStore.linkBlob(ctx, revision); err != nil {
 		return "", err
 	}
 

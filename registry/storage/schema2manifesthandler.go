@@ -21,8 +21,8 @@ var (
 
 //schema2ManifestHandler is a ManifestHandler that covers schema2 manifests.
 type schema2ManifestHandler struct {
-	repository *repository
-	blobStore  *linkedBlobStore
+	repository distribution.Repository
+	blobStore  distribution.BlobStore
 	ctx        context.Context
 }
 
@@ -59,11 +59,6 @@ func (ms *schema2ManifestHandler) Put(ctx context.Context, manifest distribution
 	revision, err := ms.blobStore.Put(ctx, mt, payload)
 	if err != nil {
 		context.GetLogger(ctx).Errorf("error putting payload into blobstore: %v", err)
-		return "", err
-	}
-
-	// Link the revision into the repository.
-	if err := ms.blobStore.linkBlob(ctx, revision); err != nil {
 		return "", err
 	}
 
