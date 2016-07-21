@@ -137,7 +137,7 @@ func (lbs *linkedBlobStore) Create(ctx context.Context, options ...distribution.
 	}
 
 	if opts.Mount.ShouldMount {
-		desc, err := lbs.mount(ctx, opts.Mount.From, opts.Mount.From.Digest())
+		desc, err := lbs.mount(ctx, opts.Mount.From, opts.Mount.From.Digest(), opts.Mount.Stat)
 		if err == nil {
 			// Mount successful, no need to initiate an upload session
 			return nil, distribution.ErrBlobMounted{From: opts.Mount.From, Descriptor: desc}
@@ -280,14 +280,21 @@ func (lbs *linkedBlobStore) Enumerate(ctx context.Context, ingestor func(digest.
 	return nil
 }
 
-func (lbs *linkedBlobStore) mount(ctx context.Context, sourceRepo reference.Named, dgst digest.Digest) (distribution.Descriptor, error) {
-	repo, err := lbs.registry.Repository(ctx, sourceRepo)
-	if err != nil {
-		return distribution.Descriptor{}, err
-	}
-	stat, err := repo.Blobs(ctx).Stat(ctx, dgst)
-	if err != nil {
-		return distribution.Descriptor{}, err
+func (lbs *linkedBlobStore) mount(ctx context.Context, sourceRepo reference.Named, dgst digest.Digest, sourceStat *distribution.Descriptor) (distribution.Descriptor, error) {
+	var stat distribution.Descriptor
+	if sourceStat == nil {
+		// look up the blob info from the sourceRepo if not already provided
+		repo, err := lbs.registry.Repository(ctx, sourceRepo)
+		if err != nil {
+			return distribution.Descriptor{}, err
+		}
+		stat, err = repo.Blobs(ctx).Stat(ctx, dgst)
+		if err != nil {
+			return distribution.Descriptor{}, err
+		}
+	} else {
+		// use the provided blob info
+		stat = *sourceStat
 	}
 
 	desc := distribution.Descriptor{
