@@ -172,6 +172,24 @@ type Configuration struct {
 			TrustKey string `yaml:"signingkeyfile,omitempty"`
 		} `yaml:"schema1,omitempty"`
 	} `yaml:"compatibility,omitempty"`
+
+	// Validation configures validation options for the registry.
+	Validation struct {
+		// Enabled enables the other options in this section.
+		Enabled bool `yaml:"enabled,omitempty"`
+		// Manifests configures manifest validation.
+		Manifests struct {
+			// URLs configures validation for URLs in pushed manifests.
+			URLs struct {
+				// Allow specifies regular expressions (https://godoc.org/regexp/syntax)
+				// that URLs in pushed manifests must match.
+				Allow []string `yaml:"allow,omitempty"`
+				// Deny specifies regular expressions (https://godoc.org/regexp/syntax)
+				// that URLs in pushed manifests must not match.
+				Deny []string `yaml:"deny,omitempty"`
+			} `yaml:"urls,omitempty"`
+		} `yaml:"manifests,omitempty"`
+	} `yaml:"validation,omitempty"`
 }
 
 // LogHook is composed of hook Level and Type.
