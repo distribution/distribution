@@ -33,9 +33,13 @@ func setupFS(t *testing.T) *setupEnv {
 	repos := []string{
 		"foo/a",
 		"foo/b",
+		"foo-bar/a",
 		"bar/c",
 		"bar/d",
+		"bar/e",
 		"foo/d/in",
+		"foo-bar/b",
+		"test",
 	}
 
 	for _, repo := range repos {
@@ -45,9 +49,13 @@ func setupFS(t *testing.T) *setupEnv {
 	expected := []string{
 		"bar/c",
 		"bar/d",
+		"bar/e",
 		"foo/a",
 		"foo/b",
 		"foo/d/in",
+		"foo-bar/a",
+		"foo-bar/b",
+		"test",
 	}
 
 	return &setupEnv{
@@ -118,7 +126,7 @@ func TestCatalog(t *testing.T) {
 func TestCatalogInParts(t *testing.T) {
 	env := setupFS(t)
 
-	chunkLen := 2
+	chunkLen := 3
 	p := make([]string, chunkLen)
 
 	numFilled, err := env.registry.Repositories(env.ctx, p, "")
@@ -144,12 +152,23 @@ func TestCatalogInParts(t *testing.T) {
 	lastRepo = p[len(p)-1]
 	numFilled, err = env.registry.Repositories(env.ctx, p, lastRepo)
 
+	if err != io.EOF || numFilled != len(p) {
+		t.Errorf("Expected end of catalog")
+	}
+
+	if !testEq(p, env.expected[chunkLen*2:chunkLen*3], numFilled) {
+		t.Errorf("Expected catalog third chunk err")
+	}
+
+	lastRepo = p[len(p)-1]
+	numFilled, err = env.registry.Repositories(env.ctx, p, lastRepo)
+
 	if err != io.EOF {
 		t.Errorf("Catalog has more values which we aren't expecting")
 	}
 
-	if !testEq(p, env.expected[chunkLen*2:chunkLen*3-1], numFilled) {
-		t.Errorf("Expected catalog third chunk err")
+	if numFilled != 0 {
+		t.Errorf("Expected catalog fourth chunk err")
 	}
 
 }
