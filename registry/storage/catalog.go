@@ -39,7 +39,7 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 		_, file := path.Split(repoPath)
 		if file == "_layers" {
 			repoPath = strings.TrimSuffix(repoPath, "/_layers")
-			if repoPath > last {
+			if pathGreaterThan(repoPath, last) {
 				foundRepos = append(foundRepos, repoPath)
 			}
 			return ErrSkipDir
@@ -94,4 +94,24 @@ func (reg *registry) Enumerate(ctx context.Context, ingester func(string) error)
 	}
 	return nil
 
+}
+
+func pathGreaterThan(pathX, pathY string) (b bool) {
+	splitPathX := strings.SplitN(pathX, "/", 2)
+	splitPathY := strings.SplitN(pathY, "/", 2)
+
+	if splitPathX[0] == splitPathY[0] {
+		if len(splitPathX) == 1 && len(splitPathY) == 1 {
+			return false
+		} else if len(splitPathX) == 1 && len(splitPathY) != 1 {
+			return false
+		} else if len(splitPathX) != 1 && len(splitPathY) == 1 {
+			return true
+		}
+
+		return pathGreaterThan(splitPathX[1], splitPathY[1])
+
+	}
+
+	return splitPathX[0] > splitPathY[0]
 }
