@@ -1,11 +1,10 @@
 package storage
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
-
-	"encoding/json"
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
@@ -21,9 +20,10 @@ var (
 
 //schema2ManifestHandler is a ManifestHandler that covers schema2 manifests.
 type schema2ManifestHandler struct {
-	repository distribution.Repository
-	blobStore  distribution.BlobStore
-	ctx        context.Context
+	repository   distribution.Repository
+	blobStore    distribution.BlobStore
+	ctx          context.Context
+	manifestURLs manifestURLs
 }
 
 var _ ManifestHandler = &schema2ManifestHandler{}
@@ -97,8 +97,8 @@ func (ms *schema2ManifestHandler) verifyManifest(ctx context.Context, mnfst sche
 				if len(fsLayer.URLs) == 0 {
 					err = errMissingURL
 				}
-				allow := ms.repository.manifestURLs.allow
-				deny := ms.repository.manifestURLs.deny
+				allow := ms.manifestURLs.allow
+				deny := ms.manifestURLs.deny
 				for _, u := range fsLayer.URLs {
 					var pu *url.URL
 					pu, err = url.Parse(u)

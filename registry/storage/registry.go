@@ -22,10 +22,13 @@ type registry struct {
 	resumableDigestEnabled       bool
 	schema1SigningKey            libtrust.PrivateKey
 	blobDescriptorServiceFactory distribution.BlobDescriptorServiceFactory
-	manifestURLs                 struct {
-		allow *regexp.Regexp
-		deny  *regexp.Regexp
-	}
+	manifestURLs                 manifestURLs
+}
+
+// manifestURLs holds regular expressions for controlling manifest URL whitelisting
+type manifestURLs struct {
+	allow *regexp.Regexp
+	deny  *regexp.Regexp
 }
 
 // RegistryOption is the type used for functional options for NewRegistry.
@@ -245,9 +248,10 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 			blobStore:         blobStore,
 		},
 		schema2Handler: &schema2ManifestHandler{
-			ctx:        ctx,
-			repository: repo,
-			blobStore:  blobStore,
+			ctx:          ctx,
+			repository:   repo,
+			blobStore:    blobStore,
+			manifestURLs: repo.registry.manifestURLs,
 		},
 		manifestListHandler: &manifestListHandler{
 			ctx:        ctx,
