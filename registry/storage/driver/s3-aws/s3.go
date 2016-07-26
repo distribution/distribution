@@ -270,11 +270,11 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	if objectAclParam != nil {
 		objectAclString, ok := objectAclParam.(string)
 		if !ok {
-			return nil, fmt.Errorf("Invalid valid for objectacl parameter: %v", objectAclParam)
+			return nil, fmt.Errorf("Invalid value for objectacl parameter: %v", objectAclParam)
 		}
 
 		if _, ok = validObjectAcls[objectAclString]; !ok {
-			return nil, fmt.Errorf("Invalid valid for objectacl parameter: %v", objectAclParam)
+			return nil, fmt.Errorf("Invalid value for objectacl parameter: %v", objectAclParam)
 		}
 		objectAcl = objectAclString
 	}
