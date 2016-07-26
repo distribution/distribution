@@ -67,6 +67,7 @@ type DriverParameters struct {
 	RootDirectory  string
 	StorageClass   string
 	UserAgent      string
+	ObjectAcl      string
 }
 
 func init() {
@@ -107,6 +108,7 @@ type driver struct {
 	KeyID         string
 	RootDirectory string
 	StorageClass  string
+	ObjectAcl     string
 }
 
 type baseEmbed struct {
@@ -248,6 +250,11 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		userAgent = ""
 	}
 
+	objectAcl := parameters["objectacl"]
+	if objectAcl == nil {
+		objectAcl = "private"
+	}
+
 	params := DriverParameters{
 		fmt.Sprint(accessKey),
 		fmt.Sprint(secretKey),
@@ -261,6 +268,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(rootDirectory),
 		storageClass,
 		fmt.Sprint(userAgent),
+		fmt.Sprint(objectAcl),
 	}
 
 	return New(params)
@@ -321,6 +329,7 @@ func New(params DriverParameters) (*Driver, error) {
 		KeyID:         params.KeyID,
 		RootDirectory: params.RootDirectory,
 		StorageClass:  params.StorageClass,
+		ObjectAcl:     params.ObjectAcl,
 	}
 
 	return &Driver{
@@ -688,7 +697,7 @@ func (d *driver) getContentType() *string {
 }
 
 func (d *driver) getACL() *string {
-	return aws.String("private")
+	return aws.String(d.ObjectAcl)
 }
 
 func (d *driver) getStorageClass() *string {
