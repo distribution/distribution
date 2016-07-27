@@ -53,6 +53,9 @@ const listMax = 1000
 // validRegions maps known s3 region identifiers to region descriptors
 var validRegions = map[string]struct{}{}
 
+// validObjectAcls contains known s3 object Acls
+var validObjectAcls = map[string]struct{}{}
+
 //DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
 type DriverParameters struct {
 	AccessKey      string
@@ -67,6 +70,7 @@ type DriverParameters struct {
 	RootDirectory  string
 	StorageClass   string
 	UserAgent      string
+	ObjectAcl      string
 }
 
 func init() {
@@ -85,6 +89,18 @@ func init() {
 		"us-gov-west-1",
 	} {
 		validRegions[region] = struct{}{}
+	}
+
+	for _, objectAcl := range []string{
+		s3.ObjectCannedACLPrivate,
+		s3.ObjectCannedACLPublicRead,
+		s3.ObjectCannedACLPublicReadWrite,
+		s3.ObjectCannedACLAuthenticatedRead,
+		s3.ObjectCannedACLAwsExecRead,
+		s3.ObjectCannedACLBucketOwnerRead,
+		s3.ObjectCannedACLBucketOwnerFullControl,
+	} {
+		validObjectAcls[objectAcl] = struct{}{}
 	}
 
 	// Register this as the default s3 driver in addition to s3aws
@@ -107,6 +123,7 @@ type driver struct {
 	KeyID         string
 	RootDirectory string
 	StorageClass  string
+	ObjectAcl     string
 }
 
 type baseEmbed struct {
@@ -248,6 +265,20 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		userAgent = ""
 	}
 
+	objectAcl := s3.ObjectCannedACLPrivate
+	objectAclParam := parameters["objectacl"]
+	if objectAclParam != nil {
+		objectAclString, ok := objectAclParam.(string)
+		if !ok {
+			return nil, fmt.Errorf("Invalid value for objectacl parameter: %v", objectAclParam)
+		}
+
+		if _, ok = validObjectAcls[objectAclString]; !ok {
+			return nil, fmt.Errorf("Invalid value for objectacl parameter: %v", objectAclParam)
+		}
+		objectAcl = objectAclString
+	}
+
 	params := DriverParameters{
 		fmt.Sprint(accessKey),
 		fmt.Sprint(secretKey),
@@ -261,6 +292,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(rootDirectory),
 		storageClass,
 		fmt.Sprint(userAgent),
+		objectAcl,
 	}
 
 	return New(params)
@@ -321,6 +353,7 @@ func New(params DriverParameters) (*Driver, error) {
 		KeyID:         params.KeyID,
 		RootDirectory: params.RootDirectory,
 		StorageClass:  params.StorageClass,
+		ObjectAcl:     params.ObjectAcl,
 	}
 
 	return &Driver{
@@ -688,7 +721,7 @@ func (d *driver) getContentType() *string {
 }
 
 func (d *driver) getACL() *string {
-	return aws.String("private")
+	return aws.String(d.ObjectAcl)
 }
 
 func (d *driver) getStorageClass() *string {
