@@ -55,6 +55,8 @@ func (pbs *proxyBlobStore) copyContent(ctx context.Context, dgst digest.Digest, 
 		return distribution.Descriptor{}, err
 	}
 
+	defer remoteReader.Close()
+
 	_, err = io.CopyN(writer, remoteReader, desc.Size)
 	if err != nil {
 		return distribution.Descriptor{}, err
