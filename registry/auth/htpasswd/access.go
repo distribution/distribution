@@ -16,6 +16,7 @@ import (
 
 type accessController struct {
 	realm    string
+	path     string
 	htpasswd *htpasswd
 }
 
@@ -43,7 +44,7 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 		return nil, err
 	}
 
-	return &accessController{realm: realm.(string), htpasswd: h}, nil
+	return &accessController{realm: realm.(string), path: path.(string), htpasswd: h}, nil
 }
 
 func (ac *accessController) Authorized(ctx context.Context, accessRecords ...auth.Access) (context.Context, error) {
@@ -60,7 +61,18 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 		}
 	}
 
-	if err := ac.AuthenticateUser(username, password); err != nil {
+	// Dynamically parsing the latest account list
+	f, err := os.Open(ac.path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	entries, err := parseHTPasswd(f)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := ac.AuthenticateUser(username, password, entries); err != nil {
 		context.GetLogger(ctx).Errorf("error authenticating user %q: %v", username, err)
 		return nil, &challenge{
 			realm: ac.realm,

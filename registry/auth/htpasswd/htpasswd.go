@@ -29,8 +29,8 @@ func newHTPasswd(rd io.Reader) (*htpasswd, error) {
 
 // AuthenticateUser checks a given user:password credential against the
 // receiving HTPasswd's file. If the check passes, nil is returned.
-func (htpasswd *htpasswd) authenticateUser(username string, password string) error {
-	credentials, ok := htpasswd.entries[username]
+func (htpasswd *htpasswd) authenticateUser(username string, password string, entries map[string][]byte) error {
+	credentials, ok := entries[username]
 	if !ok {
 		// timing attack paranoia
 		bcrypt.CompareHashAndPassword([]byte{}, []byte(password))
