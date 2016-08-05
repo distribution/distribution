@@ -16,6 +16,7 @@ import (
 
 type accessController struct {
 	realm    string
+	path     string
 	htpasswd *htpasswd
 }
 
@@ -43,7 +44,7 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 		return nil, err
 	}
 
-	return &accessController{realm: realm.(string), htpasswd: h}, nil
+	return &accessController{realm: realm.(string), path: path.(string), htpasswd: h}, nil
 }
 
 func (ac *accessController) Authorized(ctx context.Context, accessRecords ...auth.Access) (context.Context, error) {
