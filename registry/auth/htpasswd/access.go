@@ -72,7 +72,7 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 		return nil, err
 	}
 
-	if err := ac.AuthenticateUser(username, password, entries); err != nil {
+	if err := ac.htpasswd.authenticateUser(username, password, entries); err != nil {
 		context.GetLogger(ctx).Errorf("error authenticating user %q: %v", username, err)
 		return nil, &challenge{
 			realm: ac.realm,
@@ -81,10 +81,6 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 	}
 
 	return auth.WithUser(ctx, auth.UserInfo{Name: username}), nil
-}
-
-func (ac *accessController) AuthenticateUser(username, password string) error {
-	return ac.htpasswd.authenticateUser(username, password)
 }
 
 // challenge implements the auth.Challenge interface.
