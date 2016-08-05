@@ -16,6 +16,7 @@ import (
 
 type accessController struct {
 	realm    string
+	path     string
 	htpasswd *htpasswd
 }
 
@@ -32,18 +33,12 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 		return nil, fmt.Errorf(`"path" must be set for htpasswd access controller`)
 	}
 
-	f, err := os.Open(path.(string))
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	h, err := newHTPasswd(f)
+	h, err := newHTPasswd()
 	if err != nil {
 		return nil, err
 	}
 
-	return &accessController{realm: realm.(string), htpasswd: h}, nil
+	return &accessController{realm: realm.(string), path: path.(string), htpasswd: h}, nil
 }
 
 func (ac *accessController) Authorized(ctx context.Context, accessRecords ...auth.Access) (context.Context, error) {
@@ -60,7 +55,18 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 		}
 	}
 
-	if err := ac.AuthenticateUser(username, password); err != nil {
+	// Dynamically parsing the latest account list
+	f, err := os.Open(ac.path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	entries, err := parseHTPasswd(f)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := ac.htpasswd.authenticateUser(username, password, entries); err != nil {
 		context.GetLogger(ctx).Errorf("error authenticating user %q: %v", username, err)
 		return nil, &challenge{
 			realm: ac.realm,
@@ -69,10 +75,6 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 	}
 
 	return auth.WithUser(ctx, auth.UserInfo{Name: username}), nil
-}
-
-func (ac *accessController) AuthenticateUser(username, password string) error {
-	return ac.htpasswd.authenticateUser(username, password)
 }
 
 // challenge implements the auth.Challenge interface.
