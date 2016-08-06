@@ -10,11 +10,6 @@ import (
 	"github.com/docker/distribution/registry/storage/driver"
 )
 
-// ErrFinishedWalk is used when the called walk function no longer wants
-// to accept any more values.  This is used for pagination when the
-// required number of repos have been found.
-var ErrFinishedWalk = errors.New("finished walk")
-
 // Returns a list, or partial list, of repositories in the registry.
 // Because it's a quite expensive operation, it should only be used when building up
 // an initial set of repositories.
@@ -29,6 +24,10 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 	if err != nil {
 		return 0, err
 	}
+
+	// errFinishedWalk signals an early exit to the walk when the current query
+	// is satisfied.
+	errFinishedWalk := errors.New("finished walk")
 
 	err = Walk(ctx, reg.blobStore.driver, root, func(fileInfo driver.FileInfo) error {
 		filePath := fileInfo.Path()
@@ -49,7 +48,7 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 
 		// if we've filled our array, no need to walk any further
 		if len(foundRepos) == len(repos) {
-			return ErrFinishedWalk
+			return errFinishedWalk
 		}
 
 		return nil
@@ -57,9 +56,14 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 
 	n = copy(repos, foundRepos)
 
-	// Signal that we have no more entries by setting EOF
-	if len(foundRepos) <= len(repos) && (err == nil || err == ErrSkipDir) {
+	switch err {
+	case nil:
+		// nil means that we completed walk and didn't fill buffer. No more
+		// records are available.
 		err = io.EOF
+	case errFinishedWalk:
+		// more records are available.
+		err = nil
 	}
 
 	return n, err
