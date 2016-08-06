@@ -39,7 +39,7 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 		_, file := path.Split(repoPath)
 		if file == "_layers" {
 			repoPath = strings.TrimSuffix(repoPath, "/_layers")
-			if pathGreaterThan(repoPath, last) {
+			if lessPath(last, repoPath) {
 				foundRepos = append(foundRepos, repoPath)
 			}
 			return ErrSkipDir
@@ -96,22 +96,49 @@ func (reg *registry) Enumerate(ctx context.Context, ingester func(string) error)
 
 }
 
-func pathGreaterThan(pathX, pathY string) (b bool) {
-	splitPathX := strings.SplitN(pathX, "/", 2)
-	splitPathY := strings.SplitN(pathY, "/", 2)
+// lessPath returns true if one path a is less than path b.
+//
+// A component-wise comparison is done, rather than the lexical comparison of
+// strings.
+func lessPath(a, b string) bool {
+	// we provide this behavior by making separator always sort first.
+	return compareReplaceInline(a, b, '/', '\x00') < 0
+}
 
-	if splitPathX[0] == splitPathY[0] {
-		if len(splitPathX) == 1 && len(splitPathY) == 1 {
-			return false
-		} else if len(splitPathX) == 1 && len(splitPathY) != 1 {
-			return false
-		} else if len(splitPathX) != 1 && len(splitPathY) == 1 {
-			return true
-		}
-
-		return pathGreaterThan(splitPathX[1], splitPathY[1])
-
+// compareReplaceInline modifies runtime.cmpstring to replace old with new
+// during a byte-wise comparison.
+func compareReplaceInline(s1, s2 string, old, new byte) int {
+	l := len(s1)
+	if len(s2) < l {
+		l = len(s2)
 	}
 
-	return splitPathX[0] > splitPathY[0]
+	for i := 0; i < l; i++ {
+		c1, c2 := s1[i], s2[i]
+		if c1 == old {
+			c1 = new
+		}
+
+		if c2 == old {
+			c2 = new
+		}
+
+		if c1 < c2 {
+			return -1
+		}
+
+		if c1 > c2 {
+			return +1
+		}
+	}
+
+	if len(s1) < len(s2) {
+		return -1
+	}
+
+	if len(s1) > len(s2) {
+		return +1
+	}
+
+	return 0
 }
