@@ -29,6 +29,10 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 		return 0, err
 	}
 
+	// errFinishedWalk signals an early exit to the walk when the current query
+	// is satisfied.
+	errFinishedWalk := errors.New("finished walk")
+
 	err = Walk(ctx, reg.blobStore.driver, root, func(fileInfo driver.FileInfo) error {
 		err := handleRepository(fileInfo, root, last, func(repoPath string) error {
 			foundRepos = append(foundRepos, repoPath)
