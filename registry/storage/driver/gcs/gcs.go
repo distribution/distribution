@@ -17,6 +17,7 @@ package gcs
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -136,6 +137,27 @@ func FromParameters(parameters map[string]interface{}) (storagedriver.StorageDri
 			return nil, err
 		}
 		jwtConf, err = google.JWTConfigFromJSON(jsonKey, storage.ScopeFullControl)
+		if err != nil {
+			return nil, err
+		}
+		ts = jwtConf.TokenSource(context.Background())
+	} else if credentials, ok := parameters["credentials"]; ok {
+		credentialMap, ok := credentials.(map[interface{}]interface{})
+		if !ok {
+			return nil, fmt.Errorf("The credentials were not specified in the correct format")
+		}
+
+		stringMap := map[string]interface{}{}
+		for k, v := range credentialMap {
+			key, ok := k.(string)
+			if !ok {
+				return nil, fmt.Errorf("One of the credential keys was not a string")
+			}
+			stringMap[key] = v
+		}
+
+		data, err := json.Marshal(stringMap)
+		jwtConf, err := google.JWTConfigFromJSON(data, storage.ScopeFullControl)
 		if err != nil {
 			return nil, err
 		}
