@@ -44,6 +44,17 @@ An implementation of the `storagedriver.StorageDriver` interface which uses Goog
       A private service account key file in JSON format. Instead of a key file <a href="https://developers.google.com/identity/protocols/application-default-credentials">Google Application Default Credentials</a> can be used.
     </td>
   </tr>
+  <tr>
+    <td>
+      <code>credentials</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      The content of the JSON format key file. The keyfile argument has higher priority than the credentials argument if both are specified.
+    </td>
+  </tr>
    <tr>
     <td>
       <code>rootdirectory</code>
@@ -74,5 +85,7 @@ An implementation of the `storagedriver.StorageDriver` interface which uses Goog
 `keyfile`: (optional) A private key file in JSON format, used for [Service Account Authentication](https://cloud.google.com/storage/docs/authentication#service_accounts).
 
 **Note** Instead of a key file you can use [Google Application Default Credentials](https://developers.google.com/identity/protocols/application-default-credentials).
+
+`credentials`: (optional) The content of your JSON format key file.
 
 `rootdirectory`: (optional) The root directory tree in which all registry files will be stored. Defaults to the empty string (bucket root).
