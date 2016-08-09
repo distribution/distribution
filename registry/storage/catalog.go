@@ -108,6 +108,10 @@ func lessPath(a, b string) bool {
 // compareReplaceInline modifies runtime.cmpstring to replace old with new
 // during a byte-wise comparison.
 func compareReplaceInline(s1, s2 string, old, new byte) int {
+	// TODO(stevvooe): We are missing an optimization when the s1 and s2 have
+	// the exact same slice header. It will make the code unsafe but can
+	// provide some extra performance.
+
 	l := len(s1)
 	if len(s2) < l {
 		l = len(s2)
