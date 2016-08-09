@@ -46,17 +46,18 @@ const listMax = 1000
 
 //DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
 type DriverParameters struct {
-	AccessKey     string
-	SecretKey     string
-	Bucket        string
-	Region        aws.Region
-	Encrypt       bool
-	Secure        bool
-	V4Auth        bool
-	ChunkSize     int64
-	RootDirectory string
-	StorageClass  s3.StorageClass
-	UserAgent     string
+	AccessKey      string
+	SecretKey      string
+	Bucket         string
+	RegionName     string
+	RegionEndpoint string
+	Encrypt        bool
+	Secure         bool
+	V4Auth         bool
+	ChunkSize      int64
+	RootDirectory  string
+	StorageClass   s3.StorageClass
+	UserAgent      string
 }
 
 func init() {
@@ -110,13 +111,21 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		secretKey = ""
 	}
 
+	regionEndpoint := parameters["regionendpoint"]
+	if regionEndpoint == nil {
+		regionEndpoint = ""
+	}
+
 	regionName := parameters["region"]
 	if regionName == nil || fmt.Sprint(regionName) == "" {
 		return nil, fmt.Errorf("No region parameter provided")
 	}
-	region := aws.GetRegion(fmt.Sprint(regionName))
-	if region.Name == "" {
-		return nil, fmt.Errorf("Invalid region provided: %v", region)
+
+	// Don't check the region value if a custom endpoint is provided.
+	if regionEndpoint == "" {
+		if region := aws.GetRegion(fmt.Sprint(regionName)); region.Name == "" {
+			return nil, fmt.Errorf("Invalid region provided: %s", regionName)
+		}
 	}
 
 	bucket := parameters["bucket"]
@@ -227,7 +236,8 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(accessKey),
 		fmt.Sprint(secretKey),
 		fmt.Sprint(bucket),
-		region,
+		fmt.Sprint(regionName),
+		fmt.Sprint(regionEndpoint),
 		encryptBool,
 		secureBool,
 		v4AuthBool,
@@ -248,11 +258,21 @@ func New(params DriverParameters) (*Driver, error) {
 		return nil, fmt.Errorf("unable to resolve aws credentials, please ensure that 'accesskey' and 'secretkey' are properly set or the credentials are available in $HOME/.aws/credentials: %v", err)
 	}
 
-	if !params.Secure {
-		params.Region.S3Endpoint = strings.Replace(params.Region.S3Endpoint, "https", "http", 1)
+	var region aws.Region
+	if params.RegionEndpoint == "" {
+		region = aws.GetRegion(params.RegionName)
+	} else {
+		region = aws.Region{
+			Name:       params.RegionName,
+			S3Endpoint: params.RegionEndpoint,
+		}
 	}
 
-	s3obj := s3.New(auth, params.Region)
+	if !params.Secure {
+		region.S3Endpoint = strings.Replace(region.S3Endpoint, "https", "http", 1)
+	}
+
+	s3obj := s3.New(auth, region)
 
 	if params.UserAgent != "" {
 		s3obj.Client = &http.Client{
@@ -267,7 +287,7 @@ func New(params DriverParameters) (*Driver, error) {
 	if params.V4Auth {
 		s3obj.Signature = aws.V4Signature
 	} else {
-		if params.Region.Name == "eu-central-1" {
+		if region.Name == "eu-central-1" {
 			return nil, fmt.Errorf("The eu-central-1 region only works with v4 authentication")
 		}
 	}
