@@ -18,15 +18,19 @@ type htpasswd struct {
 }
 
 // newHTPasswd parses the reader and returns an htpasswd or an error.
-func newHTPasswd() (*htpasswd, error) {
-	entries := map[string][]byte{}
+func newHTPasswd(rd io.Reader) (*htpasswd, error) {
+	entries, err := parseHTPasswd(rd)
+	if err != nil {
+		return nil, err
+	}
+
 	return &htpasswd{entries: entries}, nil
 }
 
 // AuthenticateUser checks a given user:password credential against the
 // receiving HTPasswd's file. If the check passes, nil is returned.
-func (htpasswd *htpasswd) authenticateUser(username string, password string, entries map[string][]byte) error {
-	credentials, ok := entries[username]
+func (htpasswd *htpasswd) authenticateUser(username string, password string) error {
+	credentials, ok := htpasswd.entries[username]
 	if !ok {
 		// timing attack paranoia
 		bcrypt.CompareHashAndPassword([]byte{}, []byte(password))

@@ -17,6 +17,7 @@ import (
 type accessController struct {
 	realm    string
 	path     string
+	modtime  string
 	htpasswd *htpasswd
 }
 
@@ -33,12 +34,7 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 		return nil, fmt.Errorf(`"path" must be set for htpasswd access controller`)
 	}
 
-	h, err := newHTPasswd()
-	if err != nil {
-		return nil, err
-	}
-
-	return &accessController{realm: realm.(string), path: path.(string), htpasswd: h}, nil
+	return &accessController{realm: realm.(string), path: path.(string), modtime: "", htpasswd: nil}, nil
 }
 
 func (ac *accessController) Authorized(ctx context.Context, accessRecords ...auth.Access) (context.Context, error) {
@@ -56,17 +52,29 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 	}
 
 	// Dynamically parsing the latest account list
-	f, err := os.Open(ac.path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	entries, err := parseHTPasswd(f)
+	fstat, err := os.Stat(ac.path)
 	if err != nil {
 		return nil, err
 	}
 
-	if err := ac.htpasswd.authenticateUser(username, password, entries); err != nil {
+	lastModified := fstat.ModTime().String()
+	if ac.modtime != lastModified {
+		ac.modtime = lastModified
+
+		f, err := os.Open(ac.path)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+
+		h, err := newHTPasswd(f)
+		if err != nil {
+			return nil, err
+		}
+		ac.htpasswd = h
+	}
+
+	if err := ac.htpasswd.authenticateUser(username, password); err != nil {
 		context.GetLogger(ctx).Errorf("error authenticating user %q: %v", username, err)
 		return nil, &challenge{
 			realm: ac.realm,
