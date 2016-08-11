@@ -96,6 +96,25 @@ func TestReferenceParse(t *testing.T) {
 			err:   digest.ErrDigestUnsupported,
 		},
 		{
+			input: "Uppercase:tag",
+			err:   ErrNameContainsUppercase,
+		},
+		// FIXME "Uppercase" is incorrectly handled as a domain-name here, therefore passes.
+		// See https://github.com/docker/distribution/pull/1778, and https://github.com/docker/docker/pull/20175
+		//{
+		//	input: "Uppercase/lowercase:tag",
+		//	err:   ErrNameContainsUppercase,
+		//},
+		{
+			input: "test:5000/Uppercase/lowercase:tag",
+			err:   ErrNameContainsUppercase,
+		},
+		{
+			input:      "lowercase:Uppercase",
+			repository: "lowercase",
+			tag:        "Uppercase",
+		},
+		{
 			input: strings.Repeat("a/", 128) + "a:tag",
 			err:   ErrNameTooLong,
 		},
