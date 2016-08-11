@@ -100,6 +100,17 @@ storage:
   gcs:
     bucket: bucketname
     keyfile: /path/to/keyfile
+    credentials:
+      type: service_account
+      project_id: project_id_string
+      private_key_id: private_key_id_string
+      private_key: private_key_string
+      client_email: client@example.com
+      client_id: client_id_string
+      auth_uri: http://example.com/auth_uri
+      token_uri: http://example.com/token_uri
+      auth_provider_x509_cert_url: http://example.com/provider_cert_url
+      client_x509_cert_url: http://example.com/client_cert_url
     rootdirectory: /gcs/object/name/prefix
     chunksize: 5242880
   s3:
@@ -389,6 +400,17 @@ storage:
   gcs:
     bucket: bucketname
     keyfile: /path/to/keyfile
+    credentials:
+      type: service_account
+      project_id: project_id_string
+      private_key_id: private_key_id_string
+      private_key: private_key_string
+      client_email: client@example.com
+      client_id: client_id_string
+      auth_uri: http://example.com/auth_uri
+      token_uri: http://example.com/token_uri
+      auth_provider_x509_cert_url: http://example.com/provider_cert_url
+      client_x509_cert_url: http://example.com/client_cert_url
     rootdirectory: /gcs/object/name/prefix
   s3:
     accesskey: awsaccesskey
