@@ -171,7 +171,28 @@ func TestCatalogInParts(t *testing.T) {
 	if numFilled != 0 {
 		t.Errorf("Expected catalog fourth chunk err")
 	}
+}
 
+func TestCatalogEnumerate(t *testing.T) {
+	env := setupFS(t)
+
+	var repos []string
+	repositoryEnumerator := env.registry.(distribution.RepositoryEnumerator)
+	err := repositoryEnumerator.Enumerate(env.ctx, func(repoName string) error {
+		repos = append(repos, repoName)
+		return nil
+	})
+	if err != nil {
+		t.Errorf("Expected catalog enumerate err")
+	}
+
+	if len(repos) != len(env.expected) {
+		t.Errorf("Expected catalog enumerate doesn't have correct number of values")
+	}
+
+	if !testEq(repos, env.expected, len(env.expected)) {
+		t.Errorf("Expected catalog enumerate not over all values")
+	}
 }
 
 func testEq(a, b []string, size int) bool {
