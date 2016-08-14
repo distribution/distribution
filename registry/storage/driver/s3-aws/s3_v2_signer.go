@@ -26,15 +26,13 @@ import (
 	"crypto/hmac"
 	"crypto/sha1"
 	"encoding/base64"
-	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"sort"
 	"strings"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws"
+	log "github.com/Sirupsen/logrus"
 	"github.com/aws/aws-sdk-go/aws/corehandlers"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -49,12 +47,9 @@ const (
 
 type signer struct {
 	// Values that must be populated from the request
-	Request     *http.Request
-	Time        time.Time
-	Credentials *credentials.Credentials
-	Debug       aws.LogLevelType
-	Logger      aws.Logger
-
+	Request      *http.Request
+	Time         time.Time
+	Credentials  *credentials.Credentials
 	Query        url.Values
 	stringToSign string
 	signature    string
@@ -89,7 +84,7 @@ func setv2Handlers(svc *s3.S3) {
 	svc.Handlers.Build.PushBack(func(r *request.Request) {
 		parsedURL, err := url.Parse(r.HTTPRequest.URL.String())
 		if err != nil {
-			log.Fatal("Failed to parse URL", err)
+			log.Fatalf("Failed to parse URL: %v", err)
 		}
 		r.HTTPRequest.URL.Opaque = parsedURL.Path
 	})
@@ -115,15 +110,8 @@ func Sign(req *request.Request) {
 		Request:     req.HTTPRequest,
 		Time:        req.Time,
 		Credentials: req.Config.Credentials,
-		Debug:       req.Config.LogLevel.Value(),
-		Logger:      req.Config.Logger,
 	}
-
-	req.Error = v2.Sign()
-
-	if req.Error != nil {
-		return
-	}
+	v2.Sign()
 }
 
 func (v2 *signer) Sign() error {
@@ -216,20 +204,9 @@ func (v2 *signer) Sign() error {
 		headers["Authorization"] = []string{"AWS " + accessKey + ":" + string(v2.signature)}
 	}
 
-	if v2.Debug.Matches(aws.LogDebugWithSigning) {
-		v2.logSigningInfo()
-	}
+	log.WithFields(log.Fields{
+		"string-to-sign": v2.stringToSign,
+		"signature":      v2.signature,
+	}).Debugln("request signature")
 	return nil
-}
-
-const logSignInfoMsg = `DEBUG: Request Signature:
----[ STRING TO SIGN ]--------------------------------
-%s
----[ SIGNATURE ]-------------------------------------
-%s
------------------------------------------------------`
-
-func (v2 *signer) logSigningInfo() {
-	msg := fmt.Sprintf(logSignInfoMsg, v2.stringToSign, v2.signature)
-	v2.Logger.Log(msg)
 }
