@@ -134,7 +134,7 @@ func (v2 *signer) Sign() error {
 	}
 	host, canonicalPath := parsedURL.Host, parsedURL.Path
 	v2.Request.Header["Host"] = []string{host}
-	v2.Request.Header["x-amz-date"] = []string{v2.Time.In(time.UTC).Format(time.RFC1123)}
+	v2.Request.Header["date"] = []string{v2.Time.In(time.UTC).Format(time.RFC1123)}
 
 	for k, v := range headers {
 		k = strings.ToLower(k)
