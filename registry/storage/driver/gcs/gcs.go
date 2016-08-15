@@ -154,12 +154,16 @@ func FromParameters(parameters map[string]interface{}) (storagedriver.StorageDri
 		for k, v := range credentialMap {
 			key, ok := k.(string)
 			if !ok {
-				return nil, fmt.Errorf("One of the credential keys was not a string")
+				return nil, fmt.Errorf("One of the credential keys was not a string: %s", fmt.Sprint(k))
 			}
 			stringMap[key] = v
 		}
 
 		data, err := json.Marshal(stringMap)
+		if err != nil {
+			return nil, fmt.Errorf("Failed to marshal gcs credentials to json")
+		}
+
 		jwtConf, err := google.JWTConfigFromJSON(data, storage.ScopeFullControl)
 		if err != nil {
 			return nil, err
