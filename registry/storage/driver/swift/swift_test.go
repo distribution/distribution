@@ -30,6 +30,8 @@ func init() {
 		tenantID           string
 		domain             string
 		domainID           string
+		tenantDomain       string
+		tenantDomainID     string
 		trustID            string
 		container          string
 		region             string
@@ -51,6 +53,8 @@ func init() {
 	tenantID = os.Getenv("SWIFT_TENANT_ID")
 	domain = os.Getenv("SWIFT_DOMAIN_NAME")
 	domainID = os.Getenv("SWIFT_DOMAIN_ID")
+	tenantDomain = os.Getenv("SWIFT_DOMAIN_NAME")
+	tenantDomainID = os.Getenv("SWIFT_DOMAIN_ID")
 	trustID = os.Getenv("SWIFT_TRUST_ID")
 	container = os.Getenv("SWIFT_CONTAINER_NAME")
 	region = os.Getenv("SWIFT_REGION_NAME")
@@ -87,6 +91,8 @@ func init() {
 			tenantID,
 			domain,
 			domainID,
+			tenantDomain,
+			tenantDomainID,
 			trustID,
 			region,
 			AuthVersion,
