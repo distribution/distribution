@@ -67,6 +67,8 @@ type Parameters struct {
 	TenantID            string
 	Domain              string
 	DomainID            string
+	TenantDomain        string
+	TenantDomainID      string
 	TrustID             string
 	Region              string
 	AuthVersion         int
@@ -182,6 +184,8 @@ func New(params Parameters) (*Driver, error) {
 		TenantId:       params.TenantID,
 		Domain:         params.Domain,
 		DomainId:       params.DomainID,
+		TenantDomain:   params.TenantDomain,
+		TenantDomainId: params.TenantDomainID,
 		TrustId:        params.TrustID,
 		EndpointType:   swift.EndpointType(params.EndpointType),
 		Transport:      transport,
