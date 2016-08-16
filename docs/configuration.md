@@ -99,6 +99,9 @@ information about each option that appears later in this page.
         secure: true
         v4auth: true
         chunksize: 5242880
+        multipartcopychunksize: 33554432
+        multipartcopymaxconcurrency: 100
+        multipartcopythresholdsize: 33554432
         rootdirectory: /s3/object/name/prefix
       swift:
         username: username
@@ -380,6 +383,9 @@ Permitted values are `error`, `warn`, `info` and `debug`. The default is
         secure: true
         v4auth: true
         chunksize: 5242880
+        multipartcopychunksize: 33554432
+        multipartcopymaxconcurrency: 100
+        multipartcopythresholdsize: 33554432
         rootdirectory: /s3/object/name/prefix
       swift:
         username: username
