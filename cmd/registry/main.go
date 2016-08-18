@@ -11,6 +11,7 @@ import (
 	_ "github.com/docker/distribution/registry/storage/driver/azure"
 	_ "github.com/docker/distribution/registry/storage/driver/filesystem"
 	_ "github.com/docker/distribution/registry/storage/driver/gcs"
+	_ "github.com/docker/distribution/registry/storage/driver/gdrive"
 	_ "github.com/docker/distribution/registry/storage/driver/inmemory"
 	_ "github.com/docker/distribution/registry/storage/driver/middleware/cloudfront"
 	_ "github.com/docker/distribution/registry/storage/driver/middleware/redirect"

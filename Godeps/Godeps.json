@@ -323,6 +323,10 @@
 			"Rev": "a4bde12657593d5e90d0533a3e4fd95e635124cb"
 		},
 		{
+			"ImportPath": "google.golang.org/api/drive/v3",
+			"Rev": "9bf6e6e569ff057f75d9604a46c52928f17d2b54"
+		},
+		{
 			"ImportPath": "google.golang.org/api/gensupport",
 			"Rev": "9bf6e6e569ff057f75d9604a46c52928f17d2b54"
 		},
