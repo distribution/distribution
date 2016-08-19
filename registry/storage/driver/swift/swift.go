@@ -91,6 +91,9 @@ type swiftInfo struct {
 	Tempurl struct {
 		Methods []string `mapstructure:"methods"`
 	}
+	Bulk_Delete struct {
+		MaxDeletesPerRequest int `mapstructure:"max_deletes_per_request"`
+	}
 }
 
 func init() {
@@ -105,15 +108,16 @@ func (factory *swiftDriverFactory) Create(parameters map[string]interface{}) (st
 }
 
 type driver struct {
-	Conn                swift.Connection
-	Container           string
-	Prefix              string
-	BulkDeleteSupport   bool
-	ChunkSize           int
-	SecretKey           string
-	AccessKey           string
-	TempURLContainerKey bool
-	TempURLMethods      []string
+	Conn                 swift.Connection
+	Container            string
+	Prefix               string
+	BulkDeleteSupport    bool
+	BulkDeleteMaxDeletes int
+	ChunkSize            int
+	SecretKey            string
+	AccessKey            string
+	TempURLContainerKey  bool
+	TempURLMethods       []string
 }
 
 type baseEmbed struct {
@@ -221,6 +225,9 @@ func New(params Parameters) (*Driver, error) {
 		if err := mapstructure.Decode(config, &info); err == nil {
 			d.TempURLContainerKey = info.Swift.Version >= "2.3.0"
 			d.TempURLMethods = info.Tempurl.Methods
+			if d.BulkDeleteSupport {
+				d.BulkDeleteMaxDeletes = info.Bulk_Delete.MaxDeletesPerRequest
+			}
 		}
 	} else {
 		d.TempURLContainerKey = params.TempURLContainerKey
@@ -537,14 +544,21 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		for i, obj := range objects {
 			filenames[i] = obj.Name
 		}
-		_, err = d.Conn.BulkDelete(d.Container, filenames)
-		// Don't fail on ObjectNotFound because eventual consistency
-		// makes this situation normal.
-		if err != nil && err != swift.Forbidden && err != swift.ObjectNotFound {
-			if err == swift.ContainerNotFound {
-				return storagedriver.PathNotFoundError{Path: path}
+
+		for offset := 0; offset < len(filenames); offset += d.BulkDeleteMaxDeletes {
+			chunkSize := d.BulkDeleteMaxDeletes
+			if offset+chunkSize > len(filenames) {
+				chunkSize = len(filenames) - offset
 			}
-			return err
+			_, err := d.Conn.BulkDelete(d.Container, filenames[offset:offset+chunkSize])
+			// Don't fail on ObjectNotFound because eventual consistency
+			// makes this situation normal.
+			if err != nil && err != swift.Forbidden && err != swift.ObjectNotFound {
+				if err == swift.ContainerNotFound {
+					return storagedriver.PathNotFoundError{Path: path}
+				}
+				return err
+			}
 		}
 	} else {
 		for _, obj := range objects {
