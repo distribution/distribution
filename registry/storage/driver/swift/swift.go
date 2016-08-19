@@ -91,9 +91,9 @@ type swiftInfo struct {
 	Tempurl struct {
 		Methods []string `mapstructure:"methods"`
 	}
-	Bulk_Delete struct {
+	BulkDelete struct {
 		MaxDeletesPerRequest int `mapstructure:"max_deletes_per_request"`
-	}
+	} `mapstructure:"bulk_delete"`
 }
 
 func init() {
@@ -226,7 +226,7 @@ func New(params Parameters) (*Driver, error) {
 			d.TempURLContainerKey = info.Swift.Version >= "2.3.0"
 			d.TempURLMethods = info.Tempurl.Methods
 			if d.BulkDeleteSupport {
-				d.BulkDeleteMaxDeletes = info.Bulk_Delete.MaxDeletesPerRequest
+				d.BulkDeleteMaxDeletes = info.BulkDelete.MaxDeletesPerRequest
 			}
 		}
 	} else {
