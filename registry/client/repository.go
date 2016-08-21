@@ -301,43 +301,52 @@ func (t *tags) Get(ctx context.Context, tag string) (distribution.Descriptor, er
 		return distribution.Descriptor{}, err
 	}
 
-	req, err := http.NewRequest("HEAD", u, nil)
-	if err != nil {
-		return distribution.Descriptor{}, err
-	}
-
-	for _, t := range distribution.ManifestMediaTypes() {
-		req.Header.Add("Accept", t)
-	}
-
-	var attempts int
-	resp, err := t.client.Do(req)
-check:
-	if err != nil {
-		return distribution.Descriptor{}, err
-	}
-	defer resp.Body.Close()
-
-	switch {
-	case resp.StatusCode >= 200 && resp.StatusCode < 400:
-		return descriptorFromResponse(resp)
-	case resp.StatusCode == http.StatusMethodNotAllowed:
-		req, err = http.NewRequest("GET", u, nil)
+	newRequest := func(method string) (*http.Response, error) {
+		req, err := http.NewRequest(method, u, nil)
 		if err != nil {
-			return distribution.Descriptor{}, err
+			return nil, err
 		}
 
 		for _, t := range distribution.ManifestMediaTypes() {
 			req.Header.Add("Accept", t)
 		}
+		resp, err := t.client.Do(req)
+		return resp, err
+	}
 
-		resp, err = t.client.Do(req)
+	resp, err := newRequest("HEAD")
+	if err != nil {
+		return distribution.Descriptor{}, err
+	}
+	defer resp.Body.Close()
+	var attempts int
+
+check:
+	switch {
+	case resp.StatusCode >= 200 && resp.StatusCode < 400:
+		return descriptorFromResponse(resp)
+	case resp.StatusCode == http.StatusMethodNotAllowed:
+		resp, err = newRequest("GET")
+		if err != nil {
+			return distribution.Descriptor{}, err
+		}
+
 		attempts++
 		if attempts > 1 {
 			return distribution.Descriptor{}, err
 		}
 		goto check
 	default:
+		// if the response is an error - there will be no body to decode.
+		// Issue a GET request to get error details
+		resp, err = newRequest("GET")
+		if err != nil {
+			return distribution.Descriptor{}, err
+		}
+
+		if resp.StatusCode >= 200 && resp.StatusCode < 400 {
+			return descriptorFromResponse(resp)
+		}
 		return distribution.Descriptor{}, HandleErrorResponse(resp)
 	}
 }
