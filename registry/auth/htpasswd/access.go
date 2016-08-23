@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sync"
 
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/auth"
@@ -18,6 +19,7 @@ type accessController struct {
 	realm    string
 	path     string
 	modtime  string
+	mtx      *sync.Mutex
 	htpasswd *htpasswd
 }
 
@@ -34,7 +36,7 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 		return nil, fmt.Errorf(`"path" must be set for htpasswd access controller`)
 	}
 
-	return &accessController{realm: realm.(string), path: path.(string), modtime: "", htpasswd: nil}, nil
+	return &accessController{realm: realm.(string), path: path.(string), modtime: "", mtx: new(sync.Mutex), htpasswd: nil}, nil
 }
 
 func (ac *accessController) Authorized(ctx context.Context, accessRecords ...auth.Access) (context.Context, error) {
@@ -58,6 +60,7 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 	}
 
 	lastModified := fstat.ModTime().String()
+	ac.mtx.Lock()
 	if ac.modtime != lastModified {
 		ac.modtime = lastModified
 
@@ -73,6 +76,7 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 		}
 		ac.htpasswd = h
 	}
+	ac.mtx.Unlock()
 
 	if err := ac.htpasswd.authenticateUser(username, password); err != nil {
 		context.GetLogger(ctx).Errorf("error authenticating user %q: %v", username, err)
