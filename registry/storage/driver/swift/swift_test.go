@@ -187,31 +187,31 @@ func TestFilenameChunking(t *testing.T) {
 	// Test valid input and sizes
 	input := []string{"a", "b", "c", "d", "e"}
 	expecteds := [][][]string{
-		[][]string{
-			[]string{"a"},
-			[]string{"b"},
-			[]string{"c"},
-			[]string{"d"},
-			[]string{"e"},
+		{
+			{"a"},
+			{"b"},
+			{"c"},
+			{"d"},
+			{"e"},
 		},
-		[][]string{
-			[]string{"a", "b"},
-			[]string{"c", "d"},
-			[]string{"e"},
+		{
+			{"a", "b"},
+			{"c", "d"},
+			{"e"},
 		},
-		[][]string{
-			[]string{"a", "b", "c"},
-			[]string{"d", "e"},
+		{
+			{"a", "b", "c"},
+			{"d", "e"},
 		},
-		[][]string{
-			[]string{"a", "b", "c", "d"},
-			[]string{"e"},
+		{
+			{"a", "b", "c", "d"},
+			{"e"},
 		},
-		[][]string{
-			[]string{"a", "b", "c", "d", "e"},
+		{
+			{"a", "b", "c", "d", "e"},
 		},
-		[][]string{
-			[]string{"a", "b", "c", "d", "e"},
+		{
+			{"a", "b", "c", "d", "e"},
 		},
 	}
 	for i, expected := range expecteds {
