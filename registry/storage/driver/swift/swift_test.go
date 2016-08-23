@@ -3,6 +3,7 @@ package swift
 import (
 	"io/ioutil"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -180,4 +181,66 @@ func TestEmptyRootList(t *testing.T) {
 	if len(keys) != 0 {
 		t.Fatal("delete did not remove nested objects")
 	}
+}
+
+func TestFilenameChunking(t *testing.T) {
+	// Test valid input and sizes
+	input := []string{"a", "b", "c", "d", "e"}
+	expecteds := [][][]string{
+		[][]string{
+			[]string{"a"},
+			[]string{"b"},
+			[]string{"c"},
+			[]string{"d"},
+			[]string{"e"},
+		},
+		[][]string{
+			[]string{"a", "b"},
+			[]string{"c", "d"},
+			[]string{"e"},
+		},
+		[][]string{
+			[]string{"a", "b", "c"},
+			[]string{"d", "e"},
+		},
+		[][]string{
+			[]string{"a", "b", "c", "d"},
+			[]string{"e"},
+		},
+		[][]string{
+			[]string{"a", "b", "c", "d", "e"},
+		},
+		[][]string{
+			[]string{"a", "b", "c", "d", "e"},
+		},
+	}
+	for i, expected := range expecteds {
+		if actual := chunkFilenames(input, i+1); !reflect.DeepEqual(actual, expected) {
+			t.Fatalf("chunk %v didn't match expected value %v", actual, expected)
+		}
+	}
+
+	// Test nil input
+	if actual := chunkFilenames(nil, 5); len(actual) != 0 {
+		t.Fatal("chunks were returned when passed nil")
+	}
+
+	// Test invalid sizes panic
+	func() {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatal("expected panic for max size 0")
+			}
+		}()
+		chunkFilenames(nil, 0)
+	}()
+
+	func() {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatal("expected panic for max size -1")
+			}
+		}()
+		chunkFilenames(nil, -1)
+	}()
 }

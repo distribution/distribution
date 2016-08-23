@@ -545,12 +545,9 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 			filenames[i] = obj.Name
 		}
 
-		for offset := 0; offset < len(filenames); offset += d.BulkDeleteMaxDeletes {
-			chunkSize := d.BulkDeleteMaxDeletes
-			if offset+chunkSize > len(filenames) {
-				chunkSize = len(filenames) - offset
-			}
-			_, err := d.Conn.BulkDelete(d.Container, filenames[offset:offset+chunkSize])
+		chunks := chunkFilenames(filenames, d.BulkDeleteMaxDeletes)
+		for _, chunk := range chunks {
+			_, err := d.Conn.BulkDelete(d.Container, chunk)
 			// Don't fail on ObjectNotFound because eventual consistency
 			// makes this situation normal.
 			if err != nil && err != swift.Forbidden && err != swift.ObjectNotFound {
@@ -724,6 +721,21 @@ func (d *driver) createManifest(path string, segments string) error {
 		return err
 	}
 	return nil
+}
+
+func chunkFilenames(slice []string, maxSize int) (chunks [][]string) {
+	if maxSize > 0 {
+		for offset := 0; offset < len(slice); offset += maxSize {
+			chunkSize := maxSize
+			if offset+chunkSize > len(slice) {
+				chunkSize = len(slice) - offset
+			}
+			chunks = append(chunks, slice[offset:offset+chunkSize])
+		}
+	} else {
+		panic("max size must be > 0")
+	}
+	return
 }
 
 func parseManifest(manifest string) (container string, prefix string) {
