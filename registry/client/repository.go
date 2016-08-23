@@ -319,26 +319,15 @@ func (t *tags) Get(ctx context.Context, tag string) (distribution.Descriptor, er
 		return distribution.Descriptor{}, err
 	}
 	defer resp.Body.Close()
-	var attempts int
 
-check:
 	switch {
 	case resp.StatusCode >= 200 && resp.StatusCode < 400:
 		return descriptorFromResponse(resp)
-	case resp.StatusCode == http.StatusMethodNotAllowed:
-		resp, err = newRequest("GET")
-		if err != nil {
-			return distribution.Descriptor{}, err
-		}
-
-		attempts++
-		if attempts > 1 {
-			return distribution.Descriptor{}, err
-		}
-		goto check
 	default:
 		// if the response is an error - there will be no body to decode.
-		// Issue a GET request to get error details
+		// Issue a GET request:
+		//   - for data from a server that does not handle HEAD
+		//   - to get error details in case of a failure
 		resp, err = newRequest("GET")
 		if err != nil {
 			return distribution.Descriptor{}, err
