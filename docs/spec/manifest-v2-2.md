@@ -252,7 +252,7 @@ image. It's the direct replacement for the schema-1 manifest.
             "size": 73109,
             "digest": "sha256:ec4b8955958665577945c89419d1af06b5f7636b4ac3da7f12184802ad867736"
         }
-    ],
+    ]
 }
 ```
 
