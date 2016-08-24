@@ -19,7 +19,7 @@ type accessController struct {
 	realm    string
 	path     string
 	modtime  string
-	mtx      *sync.Mutex
+	mu       *sync.Mutex
 	htpasswd *htpasswd
 }
 
@@ -36,7 +36,7 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 		return nil, fmt.Errorf(`"path" must be set for htpasswd access controller`)
 	}
 
-	return &accessController{realm: realm.(string), path: path.(string), modtime: "", mtx: new(sync.Mutex), htpasswd: nil}, nil
+	return &accessController{realm: realm.(string), path: path.(string), modtime: "", mu: &sync.Mutex{}, htpasswd: nil}, nil
 }
 
 func (ac *accessController) Authorized(ctx context.Context, accessRecords ...auth.Access) (context.Context, error) {
@@ -60,25 +60,28 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 	}
 
 	lastModified := fstat.ModTime().String()
-	ac.mtx.Lock()
+	ac.mu.Lock()
 	if ac.modtime != lastModified {
 		ac.modtime = lastModified
 
 		f, err := os.Open(ac.path)
 		if err != nil {
+			ac.mu.Unlock()
 			return nil, err
 		}
 		defer f.Close()
 
 		h, err := newHTPasswd(f)
 		if err != nil {
+			ac.mu.Unlock()
 			return nil, err
 		}
 		ac.htpasswd = h
 	}
-	ac.mtx.Unlock()
+	localHTPasswd := ac.htpasswd
+	ac.mu.Unlock()
 
-	if err := ac.htpasswd.authenticateUser(username, password); err != nil {
+	if err := localHTPasswd.authenticateUser(username, password); err != nil {
 		context.GetLogger(ctx).Errorf("error authenticating user %q: %v", username, err)
 		return nil, &challenge{
 			realm: ac.realm,
