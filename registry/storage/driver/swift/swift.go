@@ -545,7 +545,10 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 			filenames[i] = obj.Name
 		}
 
-		chunks := chunkFilenames(filenames, d.BulkDeleteMaxDeletes)
+		chunks, err := chunkFilenames(filenames, d.BulkDeleteMaxDeletes)
+		if err != nil {
+			return err
+		}
 		for _, chunk := range chunks {
 			_, err := d.Conn.BulkDelete(d.Container, chunk)
 			// Don't fail on ObjectNotFound because eventual consistency
@@ -723,7 +726,7 @@ func (d *driver) createManifest(path string, segments string) error {
 	return nil
 }
 
-func chunkFilenames(slice []string, maxSize int) (chunks [][]string) {
+func chunkFilenames(slice []string, maxSize int) (chunks [][]string, err error) {
 	if maxSize > 0 {
 		for offset := 0; offset < len(slice); offset += maxSize {
 			chunkSize := maxSize
@@ -733,7 +736,7 @@ func chunkFilenames(slice []string, maxSize int) (chunks [][]string) {
 			chunks = append(chunks, slice[offset:offset+chunkSize])
 		}
 	} else {
-		panic("max size must be > 0")
+		return nil, fmt.Errorf("Max chunk size must be > 0")
 	}
 	return
 }

@@ -215,32 +215,31 @@ func TestFilenameChunking(t *testing.T) {
 		},
 	}
 	for i, expected := range expecteds {
-		if actual := chunkFilenames(input, i+1); !reflect.DeepEqual(actual, expected) {
+		actual, err := chunkFilenames(input, i+1)
+		if !reflect.DeepEqual(actual, expected) {
 			t.Fatalf("chunk %v didn't match expected value %v", actual, expected)
+		}
+		if err != nil {
+			t.Fatalf("unexpected error chunking filenames: %v", err)
 		}
 	}
 
 	// Test nil input
-	if actual := chunkFilenames(nil, 5); len(actual) != 0 {
+	actual, err := chunkFilenames(nil, 5)
+	if len(actual) != 0 {
 		t.Fatal("chunks were returned when passed nil")
 	}
+	if err != nil {
+		t.Fatalf("unexpected error chunking filenames: %v", err)
+	}
 
-	// Test invalid sizes panic
-	func() {
-		defer func() {
-			if r := recover(); r == nil {
-				t.Fatal("expected panic for max size 0")
-			}
-		}()
-		chunkFilenames(nil, 0)
-	}()
-
-	func() {
-		defer func() {
-			if r := recover(); r == nil {
-				t.Fatal("expected panic for max size -1")
-			}
-		}()
-		chunkFilenames(nil, -1)
-	}()
+	// Test 0 and < 0 sizes
+	actual, err = chunkFilenames(nil, 0)
+	if err == nil {
+		t.Fatal("expected error for size = 0")
+	}
+	actual, err = chunkFilenames(nil, -1)
+	if err == nil {
+		t.Fatal("expected error for size = -1")
+	}
 }
