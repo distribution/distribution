@@ -332,6 +332,7 @@ func (t *tags) Get(ctx context.Context, tag string) (distribution.Descriptor, er
 		if err != nil {
 			return distribution.Descriptor{}, err
 		}
+		defer resp.Body.Close()
 
 		if resp.StatusCode >= 200 && resp.StatusCode < 400 {
 			return descriptorFromResponse(resp)
