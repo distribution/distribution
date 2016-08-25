@@ -19,7 +19,7 @@ type accessController struct {
 	realm    string
 	path     string
 	modtime  string
-	mu       *sync.Mutex
+	mu       sync.Mutex
 	htpasswd *htpasswd
 }
 
@@ -36,7 +36,7 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 		return nil, fmt.Errorf(`"path" must be set for htpasswd access controller`)
 	}
 
-	return &accessController{realm: realm.(string), path: path.(string), modtime: "", mu: &sync.Mutex{}, htpasswd: nil}, nil
+	return &accessController{realm: realm.(string), path: path.(string), modtime: "", mu: sync.Mutex{}, htpasswd: nil}, nil
 }
 
 func (ac *accessController) Authorized(ctx context.Context, accessRecords ...auth.Access) (context.Context, error) {
