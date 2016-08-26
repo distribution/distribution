@@ -38,6 +38,7 @@ func TestAppDispatcher(t *testing.T) {
 		registry: registry,
 	}
 	server := httptest.NewServer(app)
+	defer server.Close()
 	router := v2.Router()
 
 	serverURL, err := url.Parse(server.URL)
@@ -163,6 +164,7 @@ func TestNewApp(t *testing.T) {
 	app := NewApp(ctx, &config)
 
 	server := httptest.NewServer(app)
+	defer server.Close()
 	builder, err := v2.NewURLBuilderFromString(server.URL, false)
 	if err != nil {
 		t.Fatalf("error creating urlbuilder: %v", err)
