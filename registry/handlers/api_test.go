@@ -220,6 +220,9 @@ func TestURLPrefix(t *testing.T) {
 	config := configuration.Configuration{
 		Storage: configuration.Storage{
 			"testdriver": configuration.Parameters{},
+			"maintenance": configuration.Parameters{"uploadpurging": map[interface{}]interface{}{
+				"enabled": false,
+			}},
 		},
 	}
 	config.HTTP.Prefix = "/test/"
@@ -297,6 +300,9 @@ func TestRelativeURL(t *testing.T) {
 	config := configuration.Configuration{
 		Storage: configuration.Storage{
 			"testdriver": configuration.Parameters{},
+			"maintenance": configuration.Parameters{"uploadpurging": map[interface{}]interface{}{
+				"enabled": false,
+			}},
 		},
 	}
 	config.HTTP.Headers = headerConfig
@@ -1886,6 +1892,9 @@ func newTestEnvMirror(t *testing.T, deleteEnabled bool) *testEnv {
 		Storage: configuration.Storage{
 			"testdriver": configuration.Parameters{},
 			"delete":     configuration.Parameters{"enabled": deleteEnabled},
+			"maintenance": configuration.Parameters{"uploadpurging": map[interface{}]interface{}{
+				"enabled": false,
+			}},
 		},
 		Proxy: configuration.Proxy{
 			RemoteURL: "http://example.com",
@@ -1901,6 +1910,9 @@ func newTestEnv(t *testing.T, deleteEnabled bool) *testEnv {
 		Storage: configuration.Storage{
 			"testdriver": configuration.Parameters{},
 			"delete":     configuration.Parameters{"enabled": deleteEnabled},
+			"maintenance": configuration.Parameters{"uploadpurging": map[interface{}]interface{}{
+				"enabled": false,
+			}},
 		},
 	}
 
@@ -2414,6 +2426,9 @@ func TestProxyManifestGetByTag(t *testing.T) {
 	truthConfig := configuration.Configuration{
 		Storage: configuration.Storage{
 			"testdriver": configuration.Parameters{},
+			"maintenance": configuration.Parameters{"uploadpurging": map[interface{}]interface{}{
+				"enabled": false,
+			}},
 		},
 	}
 	truthConfig.HTTP.Headers = headerConfig

@@ -143,6 +143,9 @@ func TestNewApp(t *testing.T) {
 	config := configuration.Configuration{
 		Storage: configuration.Storage{
 			"testdriver": nil,
+			"maintenance": configuration.Parameters{"uploadpurging": map[interface{}]interface{}{
+				"enabled": false,
+			}},
 		},
 		Auth: configuration.Auth{
 			// For now, we simply test that new auth results in a viable
