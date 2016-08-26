@@ -107,7 +107,7 @@ An implementation of the `storagedriver.StorageDriver` interface that uses [Open
       no
     </td>
     <td>
-      Your Openstack domain name for Identity v3 API. You can either use <code>domain</code> or <code>domainid</code>.
+      Your user's Openstack domain name for Identity v3 API. You can either use <code>domain</code> or <code>domainid</code>.
     </td>
   </tr>
   <tr>
@@ -118,7 +118,29 @@ An implementation of the `storagedriver.StorageDriver` interface that uses [Open
       no
     </td>
     <td>
-      Your Openstack domain id for Identity v3 API. You can either use <code>domain</code> or <code>domainid</code>.
+      Your user's Openstack domain id for Identity v3 API. You can either use <code>domain</code> or <code>domainid</code>.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>tenantdomain</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Your tenant's Openstack domain name for Identity v3 API. Only necessary if different from the <code>domain</code>. You can either use <code>tenantdomain</code> or <code>tenantdomainid</code>.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>tenantdomainid</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      Your tenant's Openstack domain id for Identity v3 API. Only necessary if different from the <code>domain</code>. You can either use <code>tenantdomain</code> or <code>tenantdomainid</code>.
     </td>
   </tr>
   <tr>

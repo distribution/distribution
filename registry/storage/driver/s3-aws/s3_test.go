@@ -1,10 +1,14 @@
 package s3
 
 import (
+	"bytes"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"strconv"
 	"testing"
+
+	"gopkg.in/check.v1"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
@@ -12,8 +16,6 @@ import (
 	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/testsuites"
-
-	"gopkg.in/check.v1"
 )
 
 // Hook up gocheck into the "go test" runner.
@@ -65,6 +67,9 @@ func init() {
 			keyID,
 			secureBool,
 			minChunkSize,
+			defaultMultipartCopyChunkSize,
+			defaultMultipartCopyMaxConcurrency,
+			defaultMultipartCopyThresholdSize,
 			rootDirectory,
 			storageClass,
 			driverName + "-test",
@@ -236,5 +241,59 @@ func TestOverThousandBlobs(t *testing.T) {
 	err = standardDriver.Delete(ctx, "/thousandfiletest")
 	if err != nil {
 		t.Fatalf("unexpected error deleting thousand files: %v", err)
+	}
+}
+
+func TestMoveWithMultipartCopy(t *testing.T) {
+	if skipS3() != "" {
+		t.Skip(skipS3())
+	}
+
+	rootDir, err := ioutil.TempDir("", "driver-")
+	if err != nil {
+		t.Fatalf("unexpected error creating temporary directory: %v", err)
+	}
+	defer os.Remove(rootDir)
+
+	d, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
+	if err != nil {
+		t.Fatalf("unexpected error creating driver: %v", err)
+	}
+
+	ctx := context.Background()
+	sourcePath := "/source"
+	destPath := "/dest"
+
+	defer d.Delete(ctx, sourcePath)
+	defer d.Delete(ctx, destPath)
+
+	// An object larger than d's MultipartCopyThresholdSize will cause d.Move() to perform a multipart copy.
+	multipartCopyThresholdSize := d.baseEmbed.Base.StorageDriver.(*driver).MultipartCopyThresholdSize
+	contents := make([]byte, 2*multipartCopyThresholdSize)
+	rand.Read(contents)
+
+	err = d.PutContent(ctx, sourcePath, contents)
+	if err != nil {
+		t.Fatalf("unexpected error creating content: %v", err)
+	}
+
+	err = d.Move(ctx, sourcePath, destPath)
+	if err != nil {
+		t.Fatalf("unexpected error moving file: %v", err)
+	}
+
+	received, err := d.GetContent(ctx, destPath)
+	if err != nil {
+		t.Fatalf("unexpected error getting content: %v", err)
+	}
+	if !bytes.Equal(contents, received) {
+		t.Fatal("content differs")
+	}
+
+	_, err = d.GetContent(ctx, sourcePath)
+	switch err.(type) {
+	case storagedriver.PathNotFoundError:
+	default:
+		t.Fatalf("unexpected error getting content: %v", err)
 	}
 }

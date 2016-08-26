@@ -1168,10 +1168,7 @@ func randomFilename(length int64) string {
 var randomBytes = make([]byte, 128<<20)
 
 func init() {
-	// increase the random bytes to the required maximum
-	for i := range randomBytes {
-		randomBytes[i] = byte(rand.Intn(2 << 8))
-	}
+	_, _ = rand.Read(randomBytes) // always returns len(randomBytes) and nil error
 }
 
 func randomContents(length int64) []byte {

@@ -67,6 +67,8 @@ type Parameters struct {
 	TenantID            string
 	Domain              string
 	DomainID            string
+	TenantDomain        string
+	TenantDomainID      string
 	TrustID             string
 	Region              string
 	AuthVersion         int
@@ -89,6 +91,9 @@ type swiftInfo struct {
 	Tempurl struct {
 		Methods []string `mapstructure:"methods"`
 	}
+	BulkDelete struct {
+		MaxDeletesPerRequest int `mapstructure:"max_deletes_per_request"`
+	} `mapstructure:"bulk_delete"`
 }
 
 func init() {
@@ -103,15 +108,16 @@ func (factory *swiftDriverFactory) Create(parameters map[string]interface{}) (st
 }
 
 type driver struct {
-	Conn                swift.Connection
-	Container           string
-	Prefix              string
-	BulkDeleteSupport   bool
-	ChunkSize           int
-	SecretKey           string
-	AccessKey           string
-	TempURLContainerKey bool
-	TempURLMethods      []string
+	Conn                 swift.Connection
+	Container            string
+	Prefix               string
+	BulkDeleteSupport    bool
+	BulkDeleteMaxDeletes int
+	ChunkSize            int
+	SecretKey            string
+	AccessKey            string
+	TempURLContainerKey  bool
+	TempURLMethods       []string
 }
 
 type baseEmbed struct {
@@ -182,6 +188,8 @@ func New(params Parameters) (*Driver, error) {
 		TenantId:       params.TenantID,
 		Domain:         params.Domain,
 		DomainId:       params.DomainID,
+		TenantDomain:   params.TenantDomain,
+		TenantDomainId: params.TenantDomainID,
 		TrustId:        params.TrustID,
 		EndpointType:   swift.EndpointType(params.EndpointType),
 		Transport:      transport,
@@ -217,6 +225,9 @@ func New(params Parameters) (*Driver, error) {
 		if err := mapstructure.Decode(config, &info); err == nil {
 			d.TempURLContainerKey = info.Swift.Version >= "2.3.0"
 			d.TempURLMethods = info.Tempurl.Methods
+			if d.BulkDeleteSupport {
+				d.BulkDeleteMaxDeletes = info.BulkDelete.MaxDeletesPerRequest
+			}
 		}
 	} else {
 		d.TempURLContainerKey = params.TempURLContainerKey
@@ -528,19 +539,26 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		}
 	}
 
-	if d.BulkDeleteSupport && len(objects) > 0 {
+	if d.BulkDeleteSupport && len(objects) > 0 && d.BulkDeleteMaxDeletes > 0 {
 		filenames := make([]string, len(objects))
 		for i, obj := range objects {
 			filenames[i] = obj.Name
 		}
-		_, err = d.Conn.BulkDelete(d.Container, filenames)
-		// Don't fail on ObjectNotFound because eventual consistency
-		// makes this situation normal.
-		if err != nil && err != swift.Forbidden && err != swift.ObjectNotFound {
-			if err == swift.ContainerNotFound {
-				return storagedriver.PathNotFoundError{Path: path}
-			}
+
+		chunks, err := chunkFilenames(filenames, d.BulkDeleteMaxDeletes)
+		if err != nil {
 			return err
+		}
+		for _, chunk := range chunks {
+			_, err := d.Conn.BulkDelete(d.Container, chunk)
+			// Don't fail on ObjectNotFound because eventual consistency
+			// makes this situation normal.
+			if err != nil && err != swift.Forbidden && err != swift.ObjectNotFound {
+				if err == swift.ContainerNotFound {
+					return storagedriver.PathNotFoundError{Path: path}
+				}
+				return err
+			}
 		}
 	} else {
 		for _, obj := range objects {
@@ -706,6 +724,21 @@ func (d *driver) createManifest(path string, segments string) error {
 		return err
 	}
 	return nil
+}
+
+func chunkFilenames(slice []string, maxSize int) (chunks [][]string, err error) {
+	if maxSize > 0 {
+		for offset := 0; offset < len(slice); offset += maxSize {
+			chunkSize := maxSize
+			if offset+chunkSize > len(slice) {
+				chunkSize = len(slice) - offset
+			}
+			chunks = append(chunks, slice[offset:offset+chunkSize])
+		}
+	} else {
+		return nil, fmt.Errorf("Max chunk size must be > 0")
+	}
+	return
 }
 
 func parseManifest(manifest string) (container string, prefix string) {

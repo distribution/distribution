@@ -99,6 +99,9 @@ information about each option that appears later in this page.
         secure: true
         v4auth: true
         chunksize: 5242880
+        multipartcopychunksize: 33554432
+        multipartcopymaxconcurrency: 100
+        multipartcopythresholdsize: 33554432
         rootdirectory: /s3/object/name/prefix
       swift:
         username: username
@@ -198,6 +201,8 @@ information about each option that appears later in this page.
         addr: localhost:5001
       headers:
         X-Content-Type-Options: [nosniff]
+      http2:
+        disabled: false
     notifications:
       endpoints:
         - name: alistener
@@ -380,6 +385,9 @@ Permitted values are `error`, `warn`, `info` and `debug`. The default is
         secure: true
         v4auth: true
         chunksize: 5242880
+        multipartcopychunksize: 33554432
+        multipartcopymaxconcurrency: 100
+        multipartcopythresholdsize: 33554432
         rootdirectory: /s3/object/name/prefix
       swift:
         username: username
@@ -910,6 +918,8 @@ configuration may contain both.
         addr: localhost:5001
       headers:
         X-Content-Type-Options: [nosniff]
+      http2:
+        disabled: false
 
 The `http` option details the configuration for the HTTP server that hosts the registry.
 
@@ -1112,6 +1122,29 @@ Including `X-Content-Type-Options: [nosniff]` is recommended, so that browsers
 will not interpret content as HTML if they are directed to load a page from the
 registry. This header is included in the example configuration files.
 
+### http2
+
+The `http2` struct within `http` is **optional**. Use this to control http2
+settings for the registry.
+
+<table>
+  <tr>
+    <th>Parameter</th>
+    <th>Required</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>
+      <code>disabled</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+       A boolean that determines if http2 support should be disabled
+    </td>
+  </tr>
+</table>
 
 ## notifications
 
