@@ -78,7 +78,7 @@ test:
          pwd: $BASE_STABLE
 
   # Test stable with race
-     - gvm use stable; export ROOT_PACKAGE=$(go list .); go list -tags "$DOCKER_BUILDTAGS" ./... | grep -v "/vendor/" | grep -v "registry/storage/driver" | xargs -L 1 -I{} bash -c 'export PACKAGE={}; godep go test -race -tags "$DOCKER_BUILDTAGS" -test.short $PACKAGE':
+     - gvm use stable; export ROOT_PACKAGE=$(go list .); go list -tags "$DOCKER_BUILDTAGS" ./... | grep -v "/vendor/" | grep -v "registry/handlers" | grep -v "registry/storage/driver" | xargs -L 1 -I{} bash -c 'export PACKAGE={}; godep go test -race -tags "$DOCKER_BUILDTAGS" -test.short $PACKAGE':
          timeout: 1000
          pwd: $BASE_STABLE
   post:
