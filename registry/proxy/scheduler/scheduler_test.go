@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"encoding/json"
+	"sync"
 	"testing"
 	"time"
 
@@ -38,6 +39,7 @@ func TestSchedule(t *testing.T) {
 		ref3.String(): true,
 	}
 
+	var mu sync.Mutex
 	s := New(context.Background(), inmemory.New(), "/ttl")
 	deleteFunc := func(repoName reference.Reference) error {
 		if len(remainingRepos) == 0 {
@@ -48,7 +50,9 @@ func TestSchedule(t *testing.T) {
 			t.Fatalf("Trying to remove nonexistent repo: %s", repoName)
 		}
 		t.Log("removing", repoName)
+		mu.Lock()
 		delete(remainingRepos, repoName.String())
+		mu.Unlock()
 
 		return nil
 	}
@@ -62,12 +66,17 @@ func TestSchedule(t *testing.T) {
 	s.add(ref2, 1*timeUnit, entryTypeBlob)
 
 	func() {
+		s.Lock()
 		s.add(ref3, 1*timeUnit, entryTypeBlob)
+		s.Unlock()
 
 	}()
 
 	// Ensure all repos are deleted
 	<-time.After(50 * timeUnit)
+
+	mu.Lock()
+	defer mu.Unlock()
 	if len(remainingRepos) != 0 {
 		t.Fatalf("Repositories remaining: %#v", remainingRepos)
 	}
@@ -80,6 +89,7 @@ func TestRestoreOld(t *testing.T) {
 		ref2.String(): true,
 	}
 
+	var mu sync.Mutex
 	deleteFunc := func(r reference.Reference) error {
 		if r.String() == ref1.String() && len(remainingRepos) == 2 {
 			t.Errorf("ref1 should be removed first")
@@ -88,7 +98,9 @@ func TestRestoreOld(t *testing.T) {
 		if !ok {
 			t.Fatalf("Trying to remove nonexistent repo: %s", r)
 		}
+		mu.Lock()
 		delete(remainingRepos, r.String())
+		mu.Unlock()
 		return nil
 	}
 
@@ -124,6 +136,8 @@ func TestRestoreOld(t *testing.T) {
 	}
 
 	<-time.After(50 * timeUnit)
+	mu.Lock()
+	defer mu.Unlock()
 	if len(remainingRepos) != 0 {
 		t.Fatalf("Repositories remaining: %#v", remainingRepos)
 	}
@@ -138,8 +152,11 @@ func TestStopRestore(t *testing.T) {
 		ref2.String(): true,
 	}
 
+	var mu sync.Mutex
 	deleteFunc := func(r reference.Reference) error {
+		mu.Lock()
 		delete(remainingRepos, r.String())
+		mu.Unlock()
 		return nil
 	}
 
@@ -169,6 +186,8 @@ func TestStopRestore(t *testing.T) {
 	}
 
 	<-time.After(500 * timeUnit)
+	mu.Lock()
+	defer mu.Unlock()
 	if len(remainingRepos) != 0 {
 		t.Fatalf("Repositories remaining: %#v", remainingRepos)
 	}
