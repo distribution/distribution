@@ -31,8 +31,9 @@ the resources they reference:
 - `application/vnd.docker.distribution.manifest.v1+json`: schema1 (existing manifest format)
 - `application/vnd.docker.distribution.manifest.v2+json`: New image manifest format (schemaVersion = 2)
 - `application/vnd.docker.distribution.manifest.list.v2+json`: Manifest list, aka "fat manifest"
-- `application/vnd.docker.image.rootfs.diff.tar.gzip`: "Layer", as a gzipped tar
 - `application/vnd.docker.container.image.v1+json`: Container config JSON
+- `application/vnd.docker.image.rootfs.diff.tar.gzip`: "Layer", as a gzipped tar
+- `application/vnd.docker.image.rootfs.foreign.diff.tar.gzip`: "Layer", as a gzipped tar that should never be pushed
 
 ## Manifest List
 
@@ -203,6 +204,9 @@ image. It's the direct replacement for the schema-1 manifest.
 
         The MIME type of the referenced object. This should
         generally be `application/vnd.docker.image.rootfs.diff.tar.gzip`.
+        Layers of type
+        `application/vnd.docker.image.rootfs.foreign.diff.tar.gzip` may be
+        pulled from a remote location but they should never be pushed.
 
     - **`size`** *int*
 
@@ -218,11 +222,9 @@ image. It's the direct replacement for the schema-1 manifest.
 
     - **`urls`** *array*
 
-        For an ordinary layer, this is empty, and the layer contents can be
-        retrieved directly from the registry. For a layer with *`mediatype`* of
-        `application/vnd.docker.image.rootfs.foreign.diff.tar.gzip`, this
-        contains a non-empty list of URLs from which this object can be
-        downloaded.
+        Provides a list of URLs from which the content may be fetched. Content
+        should be verified against the `digest` and `size`. This field is
+        optional and uncommon.
 
 ## Example Image Manifest
 
