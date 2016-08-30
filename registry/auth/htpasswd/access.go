@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"sync"
+	"time"
 
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/auth"
@@ -16,6 +18,9 @@ import (
 
 type accessController struct {
 	realm    string
+	path     string
+	modtime  time.Time
+	mu       sync.Mutex
 	htpasswd *htpasswd
 }
 
@@ -32,18 +37,7 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 		return nil, fmt.Errorf(`"path" must be set for htpasswd access controller`)
 	}
 
-	f, err := os.Open(path.(string))
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	h, err := newHTPasswd(f)
-	if err != nil {
-		return nil, err
-	}
-
-	return &accessController{realm: realm.(string), htpasswd: h}, nil
+	return &accessController{realm: realm.(string), path: path.(string)}, nil
 }
 
 func (ac *accessController) Authorized(ctx context.Context, accessRecords ...auth.Access) (context.Context, error) {
@@ -60,7 +54,35 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 		}
 	}
 
-	if err := ac.AuthenticateUser(username, password); err != nil {
+	// Dynamically parsing the latest account list
+	fstat, err := os.Stat(ac.path)
+	if err != nil {
+		return nil, err
+	}
+
+	lastModified := fstat.ModTime()
+	ac.mu.Lock()
+	if ac.htpasswd == nil || !ac.modtime.Equal(lastModified) {
+		ac.modtime = lastModified
+
+		f, err := os.Open(ac.path)
+		if err != nil {
+			ac.mu.Unlock()
+			return nil, err
+		}
+		defer f.Close()
+
+		h, err := newHTPasswd(f)
+		if err != nil {
+			ac.mu.Unlock()
+			return nil, err
+		}
+		ac.htpasswd = h
+	}
+	localHTPasswd := ac.htpasswd
+	ac.mu.Unlock()
+
+	if err := localHTPasswd.authenticateUser(username, password); err != nil {
 		context.GetLogger(ctx).Errorf("error authenticating user %q: %v", username, err)
 		return nil, &challenge{
 			realm: ac.realm,
@@ -69,10 +91,6 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 	}
 
 	return auth.WithUser(ctx, auth.UserInfo{Name: username}), nil
-}
-
-func (ac *accessController) AuthenticateUser(username, password string) error {
-	return ac.htpasswd.authenticateUser(username, password)
 }
 
 // challenge implements the auth.Challenge interface.
