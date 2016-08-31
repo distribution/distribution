@@ -455,3 +455,56 @@ func TestAccessController(t *testing.T) {
 		t.Fatalf("expected user name %q, got %q", "foo", userInfo.Name)
 	}
 }
+
+// This tests that newAccessController can handle PEM blocks in the certificate
+// file other than certificates, for example a private key.
+func TestNewAccessControllerPemBlock(t *testing.T) {
+	rootKeys, err := makeRootKeys(2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rootCertBundleFilename, err := writeTempRootCerts(rootKeys)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(rootCertBundleFilename)
+
+	// Add something other than a certificate to the rootcertbundle
+	file, err := os.OpenFile(rootCertBundleFilename, os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		t.Fatal(err)
+	}
+	keyBlock, err := rootKeys[0].PEMBlock()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = pem.Encode(file, keyBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = file.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	realm := "https://auth.example.com/token/"
+	issuer := "test-issuer.example.com"
+	service := "test-service.example.com"
+
+	options := map[string]interface{}{
+		"realm":          realm,
+		"issuer":         issuer,
+		"service":        service,
+		"rootcertbundle": rootCertBundleFilename,
+	}
+
+	ac, err := newAccessController(options)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(ac.(*accessController).rootCerts.Subjects()) != 2 {
+		t.Fatal("accessController has the wrong number of certificates")
+	}
+}
