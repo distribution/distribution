@@ -77,13 +77,16 @@ test:
          timeout: 1000
          pwd: $BASE_STABLE
 
+  # Test stable with race
+     - gvm use stable; export ROOT_PACKAGE=$(go list .); go list -tags "$DOCKER_BUILDTAGS" ./... | grep -v "/vendor/" | grep -v "registry/handlers" | grep -v "registry/storage/driver" | xargs -L 1 -I{} bash -c 'export PACKAGE={}; godep go test -race -tags "$DOCKER_BUILDTAGS" -test.short $PACKAGE':
+         timeout: 1000
+         pwd: $BASE_STABLE
   post:
   # Report to codecov
     - bash <(curl -s https://codecov.io/bash):
         pwd: $BASE_STABLE
 
   ## Notes
-  # Disabled the -race detector due to massive memory usage.
   # Do we want these as well?
   # - go get code.google.com/p/go.tools/cmd/goimports
   # - test -z "$(goimports -l -w ./... | tee /dev/stderr)"
