@@ -70,6 +70,9 @@ const (
 // listMax is the largest amount of objects you can request from S3 in a list call
 const listMax = 1000
 
+// noStorageClass defines the value to be used if storage class is not supported by the S3 endpoint
+const noStorageClass = "NONE"
+
 // validRegions maps known s3 region identifiers to region descriptors
 var validRegions = map[string]struct{}{}
 
@@ -86,6 +89,7 @@ type DriverParameters struct {
 	Encrypt                     bool
 	KeyID                       string
 	Secure                      bool
+	V4Auth                      bool
 	ChunkSize                   int64
 	MultipartCopyChunkSize      int64
 	MultipartCopyMaxConcurrency int64
@@ -238,6 +242,23 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		return nil, fmt.Errorf("The secure parameter should be a boolean")
 	}
 
+	v4Bool := true
+	v4auth := parameters["v4auth"]
+	switch v4auth := v4auth.(type) {
+	case string:
+		b, err := strconv.ParseBool(v4auth)
+		if err != nil {
+			return nil, fmt.Errorf("The v4auth parameter should be a boolean")
+		}
+		v4Bool = b
+	case bool:
+		v4Bool = v4auth
+	case nil:
+		// do nothing
+	default:
+		return nil, fmt.Errorf("The v4auth parameter should be a boolean")
+	}
+
 	keyID := parameters["keyid"]
 	if keyID == nil {
 		keyID = ""
@@ -273,12 +294,16 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	if storageClassParam != nil {
 		storageClassString, ok := storageClassParam.(string)
 		if !ok {
-			return nil, fmt.Errorf("The storageclass parameter must be one of %v, %v invalid", []string{s3.StorageClassStandard, s3.StorageClassReducedRedundancy}, storageClassParam)
+			return nil, fmt.Errorf("The storageclass parameter must be one of %v, %v invalid",
+				[]string{s3.StorageClassStandard, s3.StorageClassReducedRedundancy}, storageClassParam)
 		}
 		// All valid storage class parameters are UPPERCASE, so be a bit more flexible here
 		storageClassString = strings.ToUpper(storageClassString)
-		if storageClassString != s3.StorageClassStandard && storageClassString != s3.StorageClassReducedRedundancy {
-			return nil, fmt.Errorf("The storageclass parameter must be one of %v, %v invalid", []string{s3.StorageClassStandard, s3.StorageClassReducedRedundancy}, storageClassParam)
+		if storageClassString != noStorageClass &&
+			storageClassString != s3.StorageClassStandard &&
+			storageClassString != s3.StorageClassReducedRedundancy {
+			return nil, fmt.Errorf("The storageclass parameter must be one of %v, %v invalid",
+				[]string{noStorageClass, s3.StorageClassStandard, s3.StorageClassReducedRedundancy}, storageClassParam)
 		}
 		storageClass = storageClassString
 	}
@@ -311,6 +336,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		encryptBool,
 		fmt.Sprint(keyID),
 		secureBool,
+		v4Bool,
 		chunkSize,
 		multipartCopyChunkSize,
 		multipartCopyMaxConcurrency,
@@ -356,22 +382,39 @@ func getParameterAsInt64(parameters map[string]interface{}, name string, default
 // New constructs a new Driver with the given AWS credentials, region, encryption flag, and
 // bucketName
 func New(params DriverParameters) (*Driver, error) {
+	if !params.V4Auth &&
+		(params.RegionEndpoint == "" ||
+			strings.Contains(params.RegionEndpoint, "s3.amazonaws.com")) {
+		return nil, fmt.Errorf("On Amazon S3 this storage driver can only be used with v4 authentication")
+	}
+
 	awsConfig := aws.NewConfig()
-	if params.RegionEndpoint != "" {
+	var creds *credentials.Credentials
+	if params.RegionEndpoint == "" {
+		creds = credentials.NewChainCredentials([]credentials.Provider{
+			&credentials.StaticProvider{
+				Value: credentials.Value{
+					AccessKeyID:     params.AccessKey,
+					SecretAccessKey: params.SecretKey,
+				},
+			},
+			&credentials.EnvProvider{},
+			&credentials.SharedCredentialsProvider{},
+			&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(session.New())},
+		})
+	} else {
+		creds = credentials.NewChainCredentials([]credentials.Provider{
+			&credentials.StaticProvider{
+				Value: credentials.Value{
+					AccessKeyID:     params.AccessKey,
+					SecretAccessKey: params.SecretKey,
+				},
+			},
+			&credentials.EnvProvider{},
+		})
 		awsConfig.WithS3ForcePathStyle(true)
 		awsConfig.WithEndpoint(params.RegionEndpoint)
 	}
-	creds := credentials.NewChainCredentials([]credentials.Provider{
-		&credentials.StaticProvider{
-			Value: credentials.Value{
-				AccessKeyID:     params.AccessKey,
-				SecretAccessKey: params.SecretKey,
-			},
-		},
-		&credentials.EnvProvider{},
-		&credentials.SharedCredentialsProvider{},
-		&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(session.New())},
-	})
 
 	awsConfig.WithCredentials(creds)
 	awsConfig.WithRegion(params.Region)
@@ -384,6 +427,11 @@ func New(params DriverParameters) (*Driver, error) {
 	}
 
 	s3obj := s3.New(session.New(awsConfig))
+
+	// enable S3 compatible signature v2 signing instead
+	if !params.V4Auth {
+		setv2Handlers(s3obj)
+	}
 
 	// TODO Currently multipart uploads have no timestamps, so this would be unwise
 	// if you initiated a new s3driver while another one is running on the same bucket.
@@ -868,6 +916,9 @@ func (d *driver) getACL() *string {
 }
 
 func (d *driver) getStorageClass() *string {
+	if d.StorageClass == noStorageClass {
+		return nil
+	}
 	return aws.String(d.StorageClass)
 }
 
