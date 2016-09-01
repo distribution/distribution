@@ -246,6 +246,7 @@ information about each option that appears later in this page.
           threshold: 3
     proxy:
       remoteurl: https://registry-1.docker.io
+      authurl:  [https://auth.docker.io/token]
       username: [username]
       password: [password]
     compatibility:
@@ -1757,6 +1758,7 @@ The TCP address to connect to, including a port number.
 
     proxy:
       remoteurl: https://registry-1.docker.io
+      authurl:  [https://auth.docker.io/token]
       username: [username]
       password: [password]
 
@@ -1779,6 +1781,17 @@ Proxy enables a registry to be configured as a pull through cache to the officia
      The URL of the official Docker Hub
     </td>
   </tr>
+  <tr>
+    <td>
+      <code>authurl</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+     The URL of a token Authentication service
+    </td>
+  </tr> 
   <tr>
     <td>
       <code>username</code>

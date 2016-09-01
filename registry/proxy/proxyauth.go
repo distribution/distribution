@@ -33,9 +33,13 @@ func (c credentials) SetRefreshToken(u *url.URL, service, token string) {
 }
 
 // configureAuth stores credentials for challenge responses
-func configureAuth(username, password string) (auth.CredentialStore, error) {
+func configureAuth(username, password, authURL string) (auth.CredentialStore, error) {
+	if authURL == "" {
+		authURL = tokenURL
+	}
+
 	creds := map[string]userpass{
-		tokenURL: {
+		authURL: {
 			username: username,
 			password: password,
 		},
