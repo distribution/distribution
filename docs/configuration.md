@@ -1067,6 +1067,11 @@ and proxy connections to the registry server.
 The `letsencrypt` struct within `tls` is **optional**. Use this to configure TLS
 certificates provided by [Let's Encrypt](https://letsencrypt.org/how-it-works/).
 
+>**NOTE**: When using Let's Encrypt ensure that the outward facing address is
+> accessible on port `443`. The registry defaults to listening on `5000`, if
+> run as a container consider adding the flag `-p 443:5000` to the `docker run`
+> command or similar setting in cloud configuration.
+
 <table>
   <tr>
     <th>Parameter</th>
