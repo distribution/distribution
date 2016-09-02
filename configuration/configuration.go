@@ -574,6 +574,9 @@ type Proxy struct {
 	// RemoteURL is the URL of the remote registry
 	RemoteURL string `yaml:"remoteurl"`
 
+	// Token Authentication URL. Defaults into "https://auth.docker.io/token" if not specified
+	AuthURL string `yaml:"authurl"`
+
 	// Username of the hub user
 	Username string `yaml:"username"`
 
