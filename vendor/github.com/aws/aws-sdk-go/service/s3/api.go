@@ -6089,6 +6089,8 @@ const (
 	// @enum BucketLocationConstraint
 	BucketLocationConstraintUsWest2 = "us-west-2"
 	// @enum BucketLocationConstraint
+	BucketLocationConstraintApSouth1 = "ap-south-1"
+	// @enum BucketLocationConstraint
 	BucketLocationConstraintApSoutheast1 = "ap-southeast-1"
 	// @enum BucketLocationConstraint
 	BucketLocationConstraintApSoutheast2 = "ap-southeast-2"
