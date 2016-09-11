@@ -1893,6 +1893,64 @@ func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
 		t.Fatalf("expected 0 tags in response: %v", tagsResponse.Tags)
 	}
 
+	// --------------------
+	// Re-Upload manifest by a-tag and b-tag
+	tag = "atag"
+	tagRef, _ = reference.WithTag(imageName, tag)
+	manifestTagURL, err = env.builder.BuildManifestURL(tagRef)
+	resp = putManifest(t, "putting manifest by tag", manifestTagURL, args.mediaType, manifest)
+	checkResponse(t, "putting manifest by tag", resp, http.StatusCreated)
+	checkHeaders(t, resp, http.Header{
+		"Location":              []string{manifestDigestURL},
+		"Docker-Content-Digest": []string{dgst.String()},
+	})
+
+	tag = "btag"
+	tagRef, _ = reference.WithTag(imageName, tag)
+	manifestTagURL, err = env.builder.BuildManifestURL(tagRef)
+	resp = putManifest(t, "putting manifest by tag", manifestTagURL, args.mediaType, manifest)
+	checkResponse(t, "putting manifest by tag", resp, http.StatusCreated)
+	checkHeaders(t, resp, http.Header{
+		"Location":              []string{manifestDigestURL},
+		"Docker-Content-Digest": []string{dgst.String()},
+	})
+
+	// --------------------
+	// Delete by b-tag
+	resp, err = httpDelete(manifestTagURL)
+	checkErr(t, err, "deleting manifest by btag")
+	checkResponse(t, "deleting manifest by btag", resp, http.StatusAccepted)
+
+	// Ensure tag gone
+	resp, err = http.Get(manifestTagURL)
+	checkErr(t, err, "retrieveing manifest by btag")
+	checkResponse(t, "retrieveing manifest by btag", resp, http.StatusNotFound)
+
+	// Ensure digest still exists
+	resp, err = http.Get(manifestDigestURL)
+	checkErr(t, err, "retrieveing manifest by digest after deleting by btag")
+	checkResponse(t, "retrieveing manifest by digest after deleting by btag", resp, http.StatusOK)
+
+	// Delete by atag
+	tag = "atag"
+	tagRef, _ = reference.WithTag(imageName, tag)
+	manifestTagURL, err = env.builder.BuildManifestURL(tagRef)
+
+	// --------------------
+	// Delete by b-tag
+	resp, err = httpDelete(manifestTagURL)
+	checkErr(t, err, "deleting manifest by btag")
+	checkResponse(t, "deleting manifest by btag", resp, http.StatusAccepted)
+
+	// Ensure tag gone
+	resp, err = http.Get(manifestTagURL)
+	checkErr(t, err, "retrieveing manifest by atag")
+	checkResponse(t, "retrieveing manifest by atag", resp, http.StatusNotFound)
+
+	// Ensure digest gone
+	resp, err = http.Get(manifestDigestURL)
+	checkErr(t, err, "retrieveing manifest by digest after deleting by atag")
+	checkResponse(t, "retrieveing manifest by digest after deleting by atag", resp, http.StatusNotFound)
 }
 
 type testEnv struct {

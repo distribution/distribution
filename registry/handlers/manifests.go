@@ -415,12 +415,51 @@ func (imh *manifestHandler) applyResourcePolicy(manifest distribution.Manifest) 
 
 // DeleteManifest removes the manifest with the given digest from the registry.
 func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Request) {
-	ctxu.GetLogger(imh).Debug("DeleteImageManifest")
+	ctxu.GetLogger(imh).Debugf("DeleteImageManifest. Tag: %s Digest: %s", imh.Tag, imh.Digest)
 
 	manifests, err := imh.Repository.Manifests(imh)
 	if err != nil {
 		imh.Errors = append(imh.Errors, err)
 		return
+	}
+
+	tagService := imh.Repository.Tags(imh)
+	if imh.Tag != "" {
+		// Proxy supports Untag so it has to be disabled here.
+		if imh.App.isCache {
+			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnsupported)
+			return
+		}
+
+		descriptor, err := tagService.Get(imh.Context, imh.Tag)
+		if err != nil {
+			switch err.(type) {
+			case distribution.ErrTagUnknown:
+				imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown)
+				return
+			default:
+				imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown)
+				return
+			}
+		}
+
+		tags, err := tagService.All(imh.Context)
+		if err != nil {
+			imh.Errors = append(imh.Errors, err)
+			return
+		}
+
+		if len(tags) > 1 {
+			if err := tagService.Untag(imh, imh.Tag); err != nil {
+				imh.Errors = append(imh.Errors, err)
+				return
+			}
+
+			w.WriteHeader(http.StatusAccepted)
+			return
+		}
+
+		imh.Digest = descriptor.Digest
 	}
 
 	err = manifests.Delete(imh, imh.Digest)
@@ -442,7 +481,6 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
-	tagService := imh.Repository.Tags(imh)
 	referencedTags, err := tagService.Lookup(imh, distribution.Descriptor{Digest: imh.Digest})
 	if err != nil {
 		imh.Errors = append(imh.Errors, err)
