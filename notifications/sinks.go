@@ -210,6 +210,44 @@ func (eq *eventQueue) next() []Event {
 	return block
 }
 
+// ignoredMediaTypesSink discards events with ignored target media types and
+// passes the rest along.
+type ignoredMediaTypesSink struct {
+	Sink
+	ignored map[string]bool
+}
+
+func newIgnoredMediaTypesSink(sink Sink, ignored []string) Sink {
+	if len(ignored) == 0 {
+		return sink
+	}
+
+	ignoredMap := make(map[string]bool)
+	for _, mediaType := range ignored {
+		ignoredMap[mediaType] = true
+	}
+
+	return &ignoredMediaTypesSink{
+		Sink:    sink,
+		ignored: ignoredMap,
+	}
+}
+
+// Write discards events with ignored target media types and passes the rest
+// along.
+func (imts *ignoredMediaTypesSink) Write(events ...Event) error {
+	var kept []Event
+	for _, e := range events {
+		if !imts.ignored[e.Target.MediaType] {
+			kept = append(kept, e)
+		}
+	}
+	if len(kept) == 0 {
+		return nil
+	}
+	return imts.Sink.Write(kept...)
+}
+
 // retryingSink retries the write until success or an ErrSinkClosed is
 // returned. Underlying sink must have p > 0 of succeeding or the sink will
 // block. Internally, it is a circuit breaker retries to manage reset.
