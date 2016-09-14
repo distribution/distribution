@@ -203,7 +203,7 @@ func (r *remoteAuthChallenger) tryEstablishChallenges(ctx context.Context) error
 
 	remoteURL := r.remoteURL
 	remoteURL.Path = "/v2/"
-	challenges, err := r.cm.GetChallenges(r.remoteURL)
+	challenges, err := r.cm.GetChallenges(remoteURL)
 	if err != nil {
 		return err
 	}
