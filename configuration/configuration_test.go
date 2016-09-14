@@ -19,6 +19,9 @@ func Test(t *testing.T) { TestingT(t) }
 var configStruct = Configuration{
 	Version: "0.1",
 	Log: struct {
+		AccessLog struct {
+			Disabled bool `yaml:"disabled,omitempty"`
+		} `yaml:"accesslog,omitempty"`
 		Level     Loglevel               `yaml:"level"`
 		Formatter string                 `yaml:"formatter,omitempty"`
 		Fields    map[string]interface{} `yaml:"fields,omitempty"`
