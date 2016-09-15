@@ -91,7 +91,9 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 	handler = alive("/", handler)
 	handler = health.Handler(handler)
 	handler = panicHandler(handler)
-	handler = gorhandlers.CombinedLoggingHandler(os.Stdout, handler)
+	if !config.Log.AccessLog.Disabled {
+		handler = gorhandlers.CombinedLoggingHandler(os.Stdout, handler)
+	}
 
 	server := &http.Server{
 		Handler: handler,

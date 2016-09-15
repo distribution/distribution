@@ -22,6 +22,12 @@ type Configuration struct {
 	// Log supports setting various parameters related to the logging
 	// subsystem.
 	Log struct {
+		// AccessLog configures access logging.
+		AccessLog struct {
+			// Disabled disables access logging.
+			Disabled bool `yaml:"disabled,omitempty"`
+		} `yaml:"accesslog,omitempty"`
+
 		// Level is the granularity at which registry operations are logged.
 		Level Loglevel `yaml:"level"`
 

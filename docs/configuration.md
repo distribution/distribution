@@ -55,6 +55,8 @@ information about each option that appears later in this page.
 
     version: 0.1
     log:
+      accesslog:
+        disabled: true
       level: debug
       formatter: text
       fields:
@@ -280,6 +282,8 @@ system outputs everything to stdout. You can adjust the granularity and format
 with this configuration section.
 
     log:
+      accesslog:
+        disabled: true
       level: debug
       formatter: text
       fields:
@@ -318,7 +322,7 @@ with this configuration section.
       <code>logstash</code>. The default is <code>text</code>.
     </td>
   </tr>
-    <tr>
+  <tr>
     <td>
       <code>fields</code>
     </td>
@@ -330,7 +334,18 @@ with this configuration section.
       the context. This is useful for identifying log messages source after
       being mixed in other systems.
     </td>
+  </tr>
 </table>
+
+### accesslog
+
+    accesslog:
+      disabled: true
+
+Within `log`, `accesslog` configures the behavior of the access logging
+system. By default, the access logging system outputs to stdout in
+[Combined Log Format](https://httpd.apache.org/docs/2.4/logs.html#combined).
+Access logging can be disabled by setting the boolean flag `disabled` to `true`.
 
 ## hooks
 
