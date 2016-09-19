@@ -214,6 +214,8 @@ information about each option that appears later in this page.
           timeout: 500
           threshold: 5
           backoff: 1000
+          ignoredmediatypes:
+            - application/octet-stream
     redis:
       addr: localhost:6379
       password: asecret
@@ -1177,6 +1179,8 @@ settings for the registry.
           timeout: 500
           threshold: 5
           backoff: 1000
+          ignoredmediatypes:
+            - application/octet-stream
 
 The notifications option is **optional** and currently may contain a single
 option, `endpoints`.
@@ -1289,6 +1293,18 @@ The URL to which events should be published.
         <li><code>h</code> (hours)</li>
       </ul>
     If you omit the suffix, the system interprets the value as nanoseconds.
+    </td>
+  </tr>
+  <tr>
+    <td>
+      <code>ignoredmediatypes</code>
+    </td>
+    <td>
+      no
+    </td>
+    <td>
+      List of target media types to ignore. An event whose target media type
+      is present in this list will not be published to the endpoint.
     </td>
   </tr>
 </table>

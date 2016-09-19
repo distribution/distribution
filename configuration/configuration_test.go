@@ -62,6 +62,7 @@ var configStruct = Configuration{
 				Headers: http.Header{
 					"Authorization": []string{"Bearer <example>"},
 				},
+				IgnoredMediaTypes: []string{"application/octet-stream"},
 			},
 		},
 	},
@@ -139,6 +140,8 @@ notifications:
       url:  http://example.com
       headers:
         Authorization: [Bearer <example>]
+      ignoredmediatypes:
+        - application/octet-stream
 reporting:
   bugsnag:
     apikey: BugsnagApiKey
@@ -165,6 +168,8 @@ notifications:
       url:  http://example.com
       headers:
         Authorization: [Bearer <example>]
+      ignoredmediatypes:
+        - application/octet-stream
 http:
   headers:
     X-Content-Type-Options: [nosniff]

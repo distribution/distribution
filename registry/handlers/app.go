@@ -427,10 +427,11 @@ func (app *App) configureEvents(configuration *configuration.Configuration) {
 
 		ctxu.GetLogger(app).Infof("configuring endpoint %v (%v), timeout=%s, headers=%v", endpoint.Name, endpoint.URL, endpoint.Timeout, endpoint.Headers)
 		endpoint := notifications.NewEndpoint(endpoint.Name, endpoint.URL, notifications.EndpointConfig{
-			Timeout:   endpoint.Timeout,
-			Threshold: endpoint.Threshold,
-			Backoff:   endpoint.Backoff,
-			Headers:   endpoint.Headers,
+			Timeout:           endpoint.Timeout,
+			Threshold:         endpoint.Threshold,
+			Backoff:           endpoint.Backoff,
+			Headers:           endpoint.Headers,
+			IgnoredMediaTypes: endpoint.IgnoredMediaTypes,
 		})
 
 		sinks = append(sinks, endpoint)
