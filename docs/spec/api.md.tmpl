@@ -795,7 +795,7 @@ Note that the upload url will not be available forever. If the upload uuid is
 unknown to the registry, a `404 Not Found` response will be returned and the
 client must restart the upload process.
 
-### Deleting a Layer
+#### Deleting a Layer
 
 A layer may be deleted from the registry via its `name` and `digest`. A
 delete may be issued with the following request format:
