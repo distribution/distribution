@@ -1218,7 +1218,7 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 		Config: distribution.Descriptor{
 			Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
 			Size:      3253,
-			MediaType: schema2.MediaTypeConfig,
+			MediaType: schema2.MediaTypeImageConfig,
 		},
 		Layers: []distribution.Descriptor{
 			{

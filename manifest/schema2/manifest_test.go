@@ -32,7 +32,7 @@ func TestManifest(t *testing.T) {
 		Config: distribution.Descriptor{
 			Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
 			Size:      985,
-			MediaType: MediaTypeConfig,
+			MediaType: MediaTypeImageConfig,
 		},
 		Layers: []distribution.Descriptor{
 			{
@@ -82,7 +82,7 @@ func TestManifest(t *testing.T) {
 	if target.Digest != "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b" {
 		t.Fatalf("unexpected digest in target: %s", target.Digest.String())
 	}
-	if target.MediaType != MediaTypeConfig {
+	if target.MediaType != MediaTypeImageConfig {
 		t.Fatalf("unexpected media type in target: %s", target.MediaType)
 	}
 	if target.Size != 985 {
