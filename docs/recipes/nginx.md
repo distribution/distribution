@@ -83,7 +83,7 @@ Create the main nginx configuration you will use.
 
 ```
 
-cat <<EOF > auth/nginx.conf
+cat > auth/nginx.conf << 'EOF'
 events {
     worker_connections  1024;
 }
@@ -99,7 +99,7 @@ http {
   ## The registry always sets this header.
   ## In the case of nginx performing auth, the header will be unset
   ## since nginx is auth-ing before proxying.
-  map \$upstream_http_docker_distribution_api_version \$docker_distribution_api_version {
+  map $upstream_http_docker_distribution_api_version $docker_distribution_api_version {
     'registry/2.0' '';
     default registry/2.0;
   }
@@ -127,7 +127,7 @@ http {
     location /v2/ {
       # Do not allow connections from docker 1.5 and earlier
       # docker pre-1.6.0 did not properly set the user agent on ping, catch "Go *" user agents
-      if (\$http_user_agent ~ "^(docker\/1\.(3|4|5(?!\.[0-9]-dev))|Go ).*\$" ) {
+      if ($http_user_agent ~ "^(docker\/1\.(3|4|5(?!\.[0-9]-dev))|Go ).*$" ) {
         return 404;
       }
 
@@ -137,13 +137,13 @@ http {
 
       ## If $docker_distribution_api_version is empty, the header will not be added.
       ## See the map directive above where this variable is defined.
-      add_header 'Docker-Distribution-Api-Version' \$docker_distribution_api_version always;
+      add_header 'Docker-Distribution-Api-Version' $docker_distribution_api_version always;
 
       proxy_pass                          http://docker-registry;
-      proxy_set_header  Host              \$http_host;   # required for docker client's sake
-      proxy_set_header  X-Real-IP         \$remote_addr; # pass on real client's IP
-      proxy_set_header  X-Forwarded-For   \$proxy_add_x_forwarded_for;
-      proxy_set_header  X-Forwarded-Proto \$scheme;
+      proxy_set_header  Host              $http_host;   # required for docker client's sake
+      proxy_set_header  X-Real-IP         $remote_addr; # pass on real client's IP
+      proxy_set_header  X-Forwarded-For   $proxy_add_x_forwarded_for;
+      proxy_set_header  X-Forwarded-Proto $scheme;
       proxy_read_timeout                  900;
     }
   }
