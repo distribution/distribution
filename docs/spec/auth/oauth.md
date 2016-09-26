@@ -15,6 +15,11 @@ This document describes support for the OAuth2 protocol within the authorization
 server. [RFC6749](https://tools.ietf.org/html/rfc6749) should be used as a
 reference for the protocol and HTTP endpoints described here.
 
+**Note**: Not all token servers implement oauth2. If the request to the endpoint
+returns `404` using the HTTP `POST` method, refer to
+[Token Documentation](token.md) for using the HTTP `GET` method supported by all
+token servers.
+
 ## Refresh token format
 
 The format of the refresh token is completely opaque to the client and should be
