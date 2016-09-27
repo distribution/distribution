@@ -166,7 +166,7 @@ func TestBuilder(t *testing.T) {
 	}
 
 	bs := &mockBlobService{descriptors: make(map[digest.Digest]distribution.Descriptor)}
-	builder := NewManifestBuilder(bs, imgJSON)
+	builder := NewManifestBuilder(bs, imgJSON, DockerImageType)
 
 	for _, d := range descriptors {
 		if err := builder.AppendReference(d); err != nil {

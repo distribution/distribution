@@ -11,7 +11,7 @@ import (
 
 var expectedManifestSerialization = []byte(`{
    "schemaVersion": 2,
-   "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+   "mediaType": "application/vnd.oci.image.manifest.v1+json",
    "config": {
       "mediaType": "application/vnd.docker.container.image.v1+json",
       "size": 985,
@@ -50,7 +50,7 @@ func TestManifest(t *testing.T) {
 
 	mediaType, canonical, err := deserialized.Payload()
 
-	if mediaType != MediaTypeManifest {
+	if mediaType != DefaultMediaTypeManifest {
 		t.Fatalf("unexpected media type: %s", mediaType)
 	}
 

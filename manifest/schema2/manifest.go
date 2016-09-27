@@ -27,6 +27,21 @@ const (
 	// MediaTypeForeignLayer is the mediaType used for layers that must be
 	// downloaded from foreign URLs.
 	MediaTypeForeignLayer = "application/vnd.docker.image.rootfs.foreign.diff.tar.gzip"
+
+	// MediaTypeOCIManifest specifies the mediaType for an image manifest
+	// conforming to the OCI spec.
+	MediaTypeOCIManifest = "application/vnd.oci.image.manifest.v1+json"
+
+	// MediaTypeOCIConfig specifies the mediaType for an image config for an OCI
+	// manifest.
+	MediaTypeOCIConfig = "application/vnd.oci.image.config.v1+json"
+
+	// MediaTypeOCILayer specifies the mediaType for layer for an OCI manifest.
+	MediaTypeOCILayer = "application/vnd.oci.image.layer.v1.tar+gzip"
+
+	// DefaultMediaTypeManifest is the default mediatype used for
+	// deserialized/marshalled manifests.
+	DefaultMediaTypeManifest = MediaTypeOCIManifest
 )
 
 var (
@@ -34,22 +49,29 @@ var (
 	// packages version of the manifest.
 	SchemaVersion = manifest.Versioned{
 		SchemaVersion: 2,
-		MediaType:     MediaTypeManifest,
+		MediaType:     DefaultMediaTypeManifest,
 	}
 )
 
 func init() {
-	schema2Func := func(b []byte) (distribution.Manifest, distribution.Descriptor, error) {
-		m := new(DeserializedManifest)
-		err := m.UnmarshalJSON(b)
-		if err != nil {
-			return nil, distribution.Descriptor{}, err
-		}
+	schema2Func := func(mediaType string) func(b []byte) (distribution.Manifest, distribution.Descriptor, error) {
+		return func(b []byte) (distribution.Manifest, distribution.Descriptor, error) {
 
-		dgst := digest.FromBytes(b)
-		return m, distribution.Descriptor{Digest: dgst, Size: int64(len(b)), MediaType: MediaTypeManifest}, err
+			m := new(DeserializedManifest)
+			err := m.UnmarshalJSON(b)
+			if err != nil {
+				return nil, distribution.Descriptor{}, err
+			}
+
+			dgst := digest.FromBytes(b)
+			return m, distribution.Descriptor{Digest: dgst, Size: int64(len(b)), MediaType: mediaType}, err
+		}
 	}
-	err := distribution.RegisterManifestSchema(MediaTypeManifest, schema2Func)
+	err := distribution.RegisterManifestSchema(MediaTypeManifest, schema2Func(MediaTypeManifest))
+	if err != nil {
+		panic(fmt.Sprintf("Unable to register manifest: %s", err))
+	}
+	err = distribution.RegisterManifestSchema(MediaTypeOCIManifest, schema2Func(MediaTypeOCIManifest))
 	if err != nil {
 		panic(fmt.Sprintf("Unable to register manifest: %s", err))
 	}
