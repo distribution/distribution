@@ -1,3 +1,5 @@
+// +build include_ks3
+
 package ks3
 
 import (

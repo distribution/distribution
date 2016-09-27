@@ -7,6 +7,7 @@
 // Because KS3 is a key, value store the Stat call does not support last modification
 // time for directories (directories are an abstraction for key, value stores)
 //
+// +build include_ks3
 
 package ks3
 
