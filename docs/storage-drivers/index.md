@@ -27,6 +27,7 @@ This storage driver package comes bundled with several drivers:
 - [swift](swift.md): A driver storing objects in [Openstack Swift](http://docs.openstack.org/developer/swift/).
 - [oss](oss.md): A driver storing objects in [Aliyun OSS](http://www.aliyun.com/product/oss).
 - [gcs](gcs.md): A driver storing objects in a [Google Cloud Storage](https://cloud.google.com/storage/) bucket.
+- [ks3](ks3.md): A driver storing objects in [Kingsoft Cloud KS3](http://ks3.ksyun.com/).
 
 ## Storage Driver API
 
