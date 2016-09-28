@@ -25,7 +25,6 @@ import (
 	"github.com/softlns/ks3-sdk-go/ks3"
 
 	"github.com/docker/distribution/context"
-	//	"github.com/docker/distribution/registry/client/transport"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/base"
 	"github.com/docker/distribution/registry/storage/driver/factory"
@@ -267,7 +266,7 @@ func (d *driver) Writer(ctx context.Context, path string, append bool) (storaged
 	key := d.ks3Path(path)
 
 	if !append {
-		// TODO (brianbland): cancel other uploads at this path
+		// TODO (softlns): cancel other uploads at this path
 		multi, err := d.Bucket.InitMulti(key, d.getContentType(), getPermissions(), d.getOptions())
 		if err != nil {
 			return nil, err
