@@ -1,7 +1,7 @@
 FROM golang:1.6-alpine
 
 ENV DISTRIBUTION_DIR /go/src/github.com/docker/distribution
-ENV DOCKER_BUILDTAGS include_oss include_gcs
+ENV DOCKER_BUILDTAGS include_oss include_gcs include_ks3
 
 RUN set -ex \
     && apk add --no-cache make git
