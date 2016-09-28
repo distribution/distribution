@@ -230,6 +230,14 @@
 			"Rev": "ce444d6d47c51d4dda9202cd38f5094dd8e27e86"
 		},
 		{
+			"ImportPath": "github.com/softlns/ks3-sdk-go/ks3",
+			"Rev": "6416a356f4fcb9f7058e7fe66ea9457ff6370dfa"
+		},
+		{
+			"ImportPath": "github.com/softlns/ks3-sdk-go/util",
+			"Rev": "6416a356f4fcb9f7058e7fe66ea9457ff6370dfa"
+		},
+		{
 			"ImportPath": "github.com/spf13/cobra",
 			"Rev": "312092086bed4968099259622145a0c9ae280064"
 		},
