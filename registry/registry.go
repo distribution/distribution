@@ -9,11 +9,10 @@ import (
 	"os"
 	"time"
 
-	"rsc.io/letsencrypt"
-
 	log "github.com/Sirupsen/logrus"
 	"github.com/Sirupsen/logrus/formatters/logstash"
 	"github.com/bugsnag/bugsnag-go"
+	"github.com/dmcgowan/letsencrypt"
 	"github.com/docker/distribution/configuration"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/health"
