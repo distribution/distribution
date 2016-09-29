@@ -1,13 +1,13 @@
-<!--[metadata]>
-+++
-title = "Deprecated Features"
-description = "describes deprecated functionality"
-keywords = ["registry, manifest, images, signatures, repository, distribution, digest"]
-[menu.main]
-parent="smn_registry_ref"
-weight=8
-+++
-<![end-metadata]-->
+---
+description: describes deprecated functionality
+keywords:
+- registry, manifest, images, signatures, repository, distribution, digest
+menu:
+  main:
+    parent: smn_registry_ref
+    weight: 8
+title: Deprecated Features
+---
 
 # Docker Registry Deprecation
 

@@ -1,14 +1,15 @@
-<!--[metadata]>
-+++
-title = "Registry Overview"
-description = "High-level overview of the Registry"
-keywords = ["registry, on-prem, images, tags, repository, distribution"]
-aliases = ["/registry/overview/"]
-[menu.main]
-parent="smn_registry"
-weight=1
-+++
-<![end-metadata]-->
+---
+aliases:
+- /registry/overview/
+description: High-level overview of the Registry
+keywords:
+- registry, on-prem, images, tags, repository, distribution
+menu:
+  main:
+    parent: smn_registry
+    weight: 1
+title: Registry Overview
+---
 
 # Docker Registry
 

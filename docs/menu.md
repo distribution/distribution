@@ -1,14 +1,14 @@
-<!--[metadata]>
-+++
-title = "Docker Registry"
-description = "High-level overview of the Registry"
-keywords = ["registry, on-prem, images, tags, repository, distribution"]
-type = "menu"
-[menu.main]
-identifier="smn_registry"
-parent="mn_components"
-+++
-<![end-metadata]-->
+---
+description: High-level overview of the Registry
+keywords:
+- registry, on-prem, images, tags, repository, distribution
+menu:
+  main:
+    identifier: smn_registry
+    parent: mn_components
+title: Docker Registry
+type: menu
+---
 
 # Overview of Docker Registry Documentation
 

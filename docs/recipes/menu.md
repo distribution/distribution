@@ -1,15 +1,15 @@
-<!--[metadata]>
-+++
-title = "Recipes"
-description = "Registry Recipes"
-keywords = ["registry, on-prem, images, tags, repository, distribution"]
-type = "menu"
-[menu.main]
-identifier="smn_recipes"
-parent="smn_registry"
-weight=6
-+++
-<![end-metadata]-->
+---
+description: Registry Recipes
+keywords:
+- registry, on-prem, images, tags, repository, distribution
+menu:
+  main:
+    identifier: smn_recipes
+    parent: smn_registry
+    weight: 6
+title: Recipes
+type: menu
+---
 
 # Recipes
 

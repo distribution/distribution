@@ -1,12 +1,13 @@
-<!--[metadata]>
-+++
-title = "Authenticating proxy with nginx"
-description = "Restricting access to your registry using a nginx proxy"
-keywords = ["registry, on-prem, images, tags, repository, distribution, nginx, proxy, authentication, TLS, recipe, advanced"]
-[menu.main]
-parent="smn_recipes"
-+++
-<![end-metadata]-->
+---
+description: Restricting access to your registry using a nginx proxy
+keywords:
+- registry, on-prem, images, tags, repository, distribution, nginx, proxy, authentication,
+  TLS, recipe, advanced
+menu:
+  main:
+    parent: smn_recipes
+title: Authenticating proxy with nginx
+---
 
 # Authenticating proxy with nginx
 

@@ -1,16 +1,16 @@
-<!--[metadata]>
-+++
-title = "Storage Driver overview"
-description = "Explains how to use storage drivers"
-keywords = ["registry, on-prem, images, tags, repository, distribution, storage drivers, advanced"]
-aliases = ["/registry/storagedrivers/"]
-[menu.main]
-parent="smn_storagedrivers"
-identifier="storage_index"
-weight=-1
-+++
-<![end-metadata]-->
-
+---
+aliases:
+- /registry/storagedrivers/
+description: Explains how to use storage drivers
+keywords:
+- registry, on-prem, images, tags, repository, distribution, storage drivers, advanced
+menu:
+  main:
+    identifier: storage_index
+    parent: smn_storagedrivers
+    weight: -1
+title: Storage Driver overview
+---
 
 # Docker Registry Storage Driver
 

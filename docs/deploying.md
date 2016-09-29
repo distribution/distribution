@@ -1,13 +1,13 @@
-<!--[metadata]>
-+++
-title = "Deploying a registry server"
-description = "Explains how to deploy a registry"
-keywords = ["registry, on-prem, images, tags, repository, distribution, deployment"]
-[menu.main]
-parent="smn_registry"
-weight=3
-+++
-<![end-metadata]-->
+---
+description: Explains how to deploy a registry
+keywords:
+- registry, on-prem, images, tags, repository, distribution, deployment
+menu:
+  main:
+    parent: smn_registry
+    weight: 3
+title: Deploying a registry server
+---
 
 # Deploying a registry server
 

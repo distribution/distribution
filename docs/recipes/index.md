@@ -1,13 +1,13 @@
-<!--[metadata]>
-+++
-title = "Recipes Overview"
-description = "Fun stuff to do with your registry"
-keywords = ["registry, on-prem, images, tags, repository, distribution, recipes, advanced"]
-[menu.main]
-parent="smn_recipes"
-weight=-10
-+++
-<![end-metadata]-->
+---
+description: Fun stuff to do with your registry
+keywords:
+- registry, on-prem, images, tags, repository, distribution, recipes, advanced
+menu:
+  main:
+    parent: smn_recipes
+    weight: -10
+title: Recipes Overview
+---
 
 # Recipes
 

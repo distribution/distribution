@@ -1,3 +1,7 @@
+---
+{}
+---
+
 FROM docs/base:oss
 MAINTAINER Docker Docs <docs@docker.com>
 

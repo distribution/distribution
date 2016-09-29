@@ -1,13 +1,14 @@
-<!--[metadata]>
-+++
-title = "Token Scope Documentation"
-description = "Describes the scope and access fields used for registry authorization tokens"
-keywords = ["registry, on-prem, images, tags, repository, distribution, advanced, access, scope"]
-[menu.main]
-parent="smn_registry_ref"
-weight=103
-+++
-<![end-metadata]-->
+---
+description: Describes the scope and access fields used for registry authorization
+  tokens
+keywords:
+- registry, on-prem, images, tags, repository, distribution, advanced, access, scope
+menu:
+  main:
+    parent: smn_registry_ref
+    weight: 103
+title: Token Scope Documentation
+---
 
 # Docker Registry Token Scope and Access
 

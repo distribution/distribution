@@ -1,8 +1,6 @@
-<!--[metadata]>
-+++
-draft = true
-+++
-<![end-metadata]-->
+---
+draft: true
+---
 
 # Architecture
 

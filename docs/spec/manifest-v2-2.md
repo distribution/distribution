@@ -1,12 +1,12 @@
-<!--[metadata]>
-+++
-title = "Image Manifest V 2, Schema 2 "
-description = "image manifest for the Registry."
-keywords = ["registry, on-prem, images, tags, repository, distribution, api, advanced, manifest"]
-[menu.main]
-parent="smn_registry_ref"
-+++
-<![end-metadata]-->
+---
+description: image manifest for the Registry.
+keywords:
+- registry, on-prem, images, tags, repository, distribution, api, advanced, manifest
+menu:
+  main:
+    parent: smn_registry_ref
+title: 'Image Manifest V 2, Schema 2 '
+---
 
 # Image Manifest Version 2, Schema 2
 

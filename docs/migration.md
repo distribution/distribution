@@ -1,8 +1,6 @@
-<!--[metadata]>
-+++
-draft = true
-+++
-<![end-metadata]-->
+---
+draft: true
+---
 
 # Migrating a 1.0 registry to 2.0
 

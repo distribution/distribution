@@ -1,13 +1,13 @@
-<!--[metadata]>
-+++
-title = "Oauth2 Token Authentication"
-description = "Specifies the Docker Registry v2 authentication"
-keywords = ["registry, on-prem, images, tags, repository, distribution, oauth2, advanced"]
-[menu.main]
-parent="smn_registry_ref"
-weight=102
-+++
-<![end-metadata]-->
+---
+description: Specifies the Docker Registry v2 authentication
+keywords:
+- registry, on-prem, images, tags, repository, distribution, oauth2, advanced
+menu:
+  main:
+    parent: smn_registry_ref
+    weight: 102
+title: Oauth2 Token Authentication
+---
 
 # Docker Registry v2 authentication using OAuth2
 

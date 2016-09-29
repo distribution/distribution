@@ -1,13 +1,12 @@
-<!--[metadata]>
-+++
-title = "Swift storage driver"
-description = "Explains how to use the OpenStack swift storage driver"
-keywords = ["registry, service, driver, images, storage,  swift"]
-[menu.main]
-parent="smn_storagedrivers"
-+++
-<![end-metadata]-->
-
+---
+description: Explains how to use the OpenStack swift storage driver
+keywords:
+- registry, service, driver, images, storage,  swift
+menu:
+  main:
+    parent: smn_storagedrivers
+title: Swift storage driver
+---
 
 # OpenStack Swift storage driver
 

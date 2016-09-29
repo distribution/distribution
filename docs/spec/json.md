@@ -1,15 +1,13 @@
-<!--[metadata]>
-+++
-draft=true
-title = "Docker Distribution JSON Canonicalization"
-description = "Explains registry JSON objects"
-keywords = ["registry, service, images, repository,  json"]
-[menu.main]
-parent="smn_registry_ref"
-+++
-<![end-metadata]-->
-
-
+---
+description: Explains registry JSON objects
+draft: true
+keywords:
+- registry, service, images, repository,  json
+menu:
+  main:
+    parent: smn_registry_ref
+title: Docker Distribution JSON Canonicalization
+---
 
 # Docker Distribution JSON Canonicalization
 

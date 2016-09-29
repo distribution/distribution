@@ -1,12 +1,12 @@
-<!--[metadata]>
-+++
-title = "Running on OS X"
-description = "Explains how to run a registry on OS X"
-keywords = ["registry, on-prem, images, tags, repository, distribution, OS X, recipe, advanced"]
-[menu.main]
-parent="smn_recipes"
-+++
-<![end-metadata]-->
+---
+description: Explains how to run a registry on OS X
+keywords:
+- registry, on-prem, images, tags, repository, distribution, OS X, recipe, advanced
+menu:
+  main:
+    parent: smn_recipes
+title: Running on OS X
+---
 
 # OS X Setup Guide
 

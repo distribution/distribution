@@ -1,13 +1,13 @@
-<!--[metadata]>
-+++
-title = "Working with notifications"
-description = "Explains how to work with registry notifications"
-keywords = ["registry, on-prem, images, tags, repository, distribution, notifications, advanced"]
-[menu.main]
-parent="smn_registry"
-weight=5
-+++
-<![end-metadata]-->
+---
+description: Explains how to work with registry notifications
+keywords:
+- registry, on-prem, images, tags, repository, distribution, notifications, advanced
+menu:
+  main:
+    parent: smn_registry
+    weight: 5
+title: Working with notifications
+---
 
 # Notifications
 

@@ -1,13 +1,13 @@
-<!--[metadata]>
-+++
-title = "Garbage Collection"
-description = "High level discussion of garbage collection"
-keywords = ["registry, garbage, images, tags, repository, distribution"]
-[menu.main]
-parent="smn_registry_ref"
-weight=4
-+++
-<![end-metadata]-->
+---
+description: High level discussion of garbage collection
+keywords:
+- registry, garbage, images, tags, repository, distribution
+menu:
+  main:
+    parent: smn_registry_ref
+    weight: 4
+title: Garbage Collection
+---
 
 # Garbage Collection
 

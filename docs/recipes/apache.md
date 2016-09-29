@@ -1,12 +1,13 @@
-<!--[metadata]>
-+++
-title = "Authenticating proxy with apache"
-description = "Restricting access to your registry using an apache proxy"
-keywords = ["registry, on-prem, images, tags, repository, distribution, authentication, proxy, apache, httpd, TLS, recipe, advanced"]
-[menu.main]
-parent="smn_recipes"
-+++
-<![end-metadata]-->
+---
+description: Restricting access to your registry using an apache proxy
+keywords:
+- registry, on-prem, images, tags, repository, distribution, authentication, proxy,
+  apache, httpd, TLS, recipe, advanced
+menu:
+  main:
+    parent: smn_recipes
+title: Authenticating proxy with apache
+---
 
 # Authenticating proxy with apache
 

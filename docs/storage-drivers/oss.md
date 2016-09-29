@@ -1,12 +1,12 @@
-<!--[metadata]>
-+++
-title = "Aliyun OSS storage driver"
-description = "Explains how to use the Aliyun OSS storage driver"
-keywords = ["registry, service, driver, images, storage, OSS, aliyun"]
-[menu.main]
-parent="smn_storagedrivers"
-+++
-<![end-metadata]-->
+---
+description: Explains how to use the Aliyun OSS storage driver
+keywords:
+- registry, service, driver, images, storage, OSS, aliyun
+menu:
+  main:
+    parent: smn_storagedrivers
+title: Aliyun OSS storage driver
+---
 
 # Aliyun OSS storage driver
 

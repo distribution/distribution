@@ -1,13 +1,12 @@
-<!--[metadata]>
-+++
-title = "In-memory storage driver"
-description = "Explains how to use the in-memory storage drivers"
-keywords = ["registry, service, driver, images, storage,  in-memory"]
-[menu.main]
-parent="smn_storagedrivers"
-+++
-<![end-metadata]-->
-
+---
+description: Explains how to use the in-memory storage drivers
+keywords:
+- registry, service, driver, images, storage,  in-memory
+menu:
+  main:
+    parent: smn_storagedrivers
+title: In-memory storage driver
+---
 
 # In-memory storage driver (Testing Only)
 

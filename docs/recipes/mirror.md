@@ -1,12 +1,13 @@
-<!--[metadata]>
-+++
-title = "Mirroring Docker Hub"
-description = "Setting-up a local mirror for Docker Hub images"
-keywords = ["registry, on-prem, images, tags, repository, distribution, mirror, Hub, recipe, advanced"]
-[menu.main]
-parent="smn_recipes"
-+++
-<![end-metadata]-->
+---
+description: Setting-up a local mirror for Docker Hub images
+keywords:
+- registry, on-prem, images, tags, repository, distribution, mirror, Hub, recipe,
+  advanced
+menu:
+  main:
+    parent: smn_recipes
+title: Mirroring Docker Hub
+---
 
 # Registry as a pull through cache
 

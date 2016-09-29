@@ -1,13 +1,14 @@
-<!--[metadata]>
-+++
-title = "Token Authentication Implementation"
-description = "Describe the reference implementation of the Docker Registry v2 authentication schema"
-keywords = ["registry, on-prem, images, tags, repository, distribution, JWT authentication, advanced"]
-[menu.main]
-parent="smn_registry_ref"
-weight=101
-+++
-<![end-metadata]-->
+---
+description: Describe the reference implementation of the Docker Registry v2 authentication
+  schema
+keywords:
+- registry, on-prem, images, tags, repository, distribution, JWT authentication, advanced
+menu:
+  main:
+    parent: smn_registry_ref
+    weight: 101
+title: Token Authentication Implementation
+---
 
 # Docker Registry v2 Bearer token specification
 

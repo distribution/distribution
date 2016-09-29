@@ -1,13 +1,13 @@
-<!--[metadata]>
-+++
-title = "Reference Overview"
-description = "Explains registry JSON objects"
-keywords = ["registry, service, images, repository,  json"]
-[menu.main]
-parent="smn_registry_ref"
-weight=-1
-+++
-<![end-metadata]-->
+---
+description: Explains registry JSON objects
+keywords:
+- registry, service, images, repository,  json
+menu:
+  main:
+    parent: smn_registry_ref
+    weight: -1
+title: Reference Overview
+---
 
 # Docker Registry Reference
 

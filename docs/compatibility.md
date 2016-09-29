@@ -1,13 +1,13 @@
-<!--[metadata]>
-+++
-title = "Compatibility"
-description = "describes get by digest pitfall"
-keywords = ["registry, manifest, images, tags, repository, distribution, digest"]
-[menu.main]
-parent="smn_registry_ref"
-weight=9
-+++
-<![end-metadata]-->
+---
+description: describes get by digest pitfall
+keywords:
+- registry, manifest, images, tags, repository, distribution, digest
+menu:
+  main:
+    parent: smn_registry_ref
+    weight: 9
+title: Compatibility
+---
 
 # Registry Compatibility
 
