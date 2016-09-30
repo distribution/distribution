@@ -258,7 +258,7 @@ All endpoints should support aggressive http caching, compression and range
 headers, where appropriate. The new API attempts to leverage HTTP semantics
 where possible but may break from standards to implement targeted features.
 
-For detail on individual endpoints, please see the [_Detail_](#detail)
+For detail on individual endpoints, please see the [_Detail_](api.md#detail)
 section.
 
 ### Errors
@@ -288,7 +288,7 @@ error codes as `UNKNOWN`, allowing future error codes to be added without
 breaking API compatibility. For the purposes of the specification error codes
 will only be added and never removed.
 
-For a complete account of all error codes, please see the [_Errors_](#errors-2)
+For a complete account of all error codes, please see the [_Errors_](api.md#errors-2)
 section.
 
 ### API Version Check
@@ -622,7 +622,7 @@ Content-Type: application/octet-stream
 ```
 
 The "digest" parameter must be included with the PUT request. Please see the
-[_Completed Upload_](#completed-upload) section for details on the parameters
+[_Completed Upload_](api.md#completed-upload) section for details on the parameters
 and expected responses.
 
 ##### Chunked Upload
@@ -848,7 +848,7 @@ in [manifest-v2-1.md](manifest-v2-1.md) and [manifest-v2-2.md](manifest-v2-2.md)
 
 If there is a problem with pushing the manifest, a relevant 4xx response will
 be returned with a JSON error message. Please see the
-[_PUT Manifest_](#put-manifest) section for details on possible error codes that
+[_PUT Manifest_](api.md#put-manifest) section for details on possible error codes that
 may be returned.
 
 If one or more layers are unknown to the registry, `BLOB_UNKNOWN` errors are
@@ -912,7 +912,7 @@ explicitly requested. In this case the `Link` header will be returned along
 with the results, and subsequent results can be obtained by following the link
 as if pagination had been initially requested.
 
-For details of the `Link` header, please see the [_Pagination_](#pagination)
+For details of the `Link` header, please see the [_Pagination_](api.md#pagination)
 section.
 
 #### Pagination
@@ -5482,8 +5482,3 @@ The following headers will be returned with the response:
 |----|-----------|
 |`Content-Length`|Length of the JSON response body.|
 |`Link`|RFC5988 compliant rel='next' with URL to next result set, if available|
-
-
-
-
-

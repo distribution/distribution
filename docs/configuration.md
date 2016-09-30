@@ -341,7 +341,7 @@ Refer to `loglevel` to configure the level of messages printed.
 
 ## loglevel
 
-> **DEPRECATED:** Please use [log](#log) instead.
+> **DEPRECATED:** Please use [log](configuration.md#log) instead.
 
     loglevel: debug
 
@@ -1251,7 +1251,7 @@ Declare parameters for constructing the redis connections. Registry instances
 may use the Redis instance for several applications. The current purpose is
 caching information about immutable blobs. Most of the options below control
 how the registry connects to redis. You can control the pool's behavior
-with the [pool](#pool) subsection.
+with the [pool](configuration.md#pool) subsection.
 
 It's advisable to configure Redis itself with the **allkeys-lru** eviction policy
 as the registry does not set an expire value on keys.
