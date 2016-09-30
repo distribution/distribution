@@ -114,7 +114,7 @@ Garbage collection can be run as follows
 `bin/registry garbage-collect [--dry-run] /path/to/config.yml`
 
 The garbage-collect command accepts a `--dry-run` parameter, which will print the progress
-of the mark and sweep phases without removing any data.  Running with a log leve of `info`
+of the mark and sweep phases without removing any data.  Running with a log level of `info`
 will give a clear indication of what will and will not be deleted.
 
 _Sample output from a dry run garbage collection with registry log level set to `info`_
