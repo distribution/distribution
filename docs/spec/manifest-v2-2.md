@@ -119,6 +119,7 @@ image manifest based on the Content-Type returned in the HTTP response.
 ## Example Manifest List
 
 *Example showing a simple manifest list pointing to image manifests for two platforms:*
+
 ```json
 {
   "schemaVersion": 2,
@@ -227,6 +228,7 @@ image. It's the direct replacement for the schema-1 manifest.
 ## Example Image Manifest
 
 *Example showing an image manifest:*
+
 ```json
 {
     "schemaVersion": 2,

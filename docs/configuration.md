@@ -266,74 +266,63 @@ The `log` subsection configures the behavior of the logging system. The logging
 system outputs everything to stdout. You can adjust the granularity and format
 with this configuration section.
 
-    log:
-      level: debug
-      formatter: text
-      fields:
-        service: registry
-        environment: staging
+```
+log:
+  level: debug
+  formatter: text
+  fields:
+    service: registry
+    environment: staging
+```
 
 <table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>level</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      Sets the sensitivity of logging output. Permitted values are
-      <code>error</code>, <code>warn</code>, <code>info</code> and
-      <code>debug</code>. The default is <code>info</code>.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>formatter</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      This selects the format of logging output. The format primarily affects how keyed
-      attributes for a log line are encoded. Options are <code>text</code>, <code>json</code> or
-      <code>logstash</code>. The default is <code>text</code>.
-    </td>
-  </tr>
-    <tr>
-    <td>
-      <code>fields</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      A map of field names to values. These are added to every log line for
-      the context. This is useful for identifying log messages source after
-      being mixed in other systems.
-    </td>
+<tr>
+<th>Parameter</th>
+<th>Required</th>
+<th>Description</th>
+</tr>
+<tr>
+<td><code>level</code></td>
+<td>no</td>
+<td>Sets the sensitivity of logging output. Permitted values are
+<code>error</code>, <code>warn</code>, <code>info</code> and
+<code>debug</code>. The default is <code>info</code>.
+</td>
+</tr>
+<tr>
+<td><code>formatter</code></td>
+<td>no</td>
+<td>This selects the format of logging output. The format primarily affects how keyed attributes for a log line are encoded. Options are <code>text</code>, <code>json</code> or
+<code>logstash</code>. The default is <code>text</code>.
+</td>
+</tr>
+<tr>
+<td>
+<code>fields</code>
+</td>
+<td>no</td>
+<td>A map of field names to values. These are added to every log line for the context. This is useful for identifying log messages source after being mixed in other systems.
+</td>
+</tr>
 </table>
 
 ## hooks
 
-    hooks:
-      - type: mail
-        levels:
-          - panic
-        options:
-          smtp:
-            addr: smtp.sendhost.com:25
-            username: sendername
-            password: password
-            insecure: true
-          from: name@sendhost.com
-          to:
-            - name@receivehost.com
+```
+hooks:
+  - type: mail
+    levels:
+      - panic
+    options:
+      smtp:
+        addr: smtp.sendhost.com:25
+        username: sendername
+        password: password
+        insecure: true
+      from: name@sendhost.com
+      to:
+        - name@receivehost.com
+```
 
 The `hooks` subsection configures the logging hooks' behavior. This subsection
 includes a sequence handler which you can use for sending mail, for example.
