@@ -183,6 +183,18 @@ func filterAccessList(ctx context.Context, scope string, requestedAccessList []a
 	return grantedAccessList
 }
 
+type acctSubject struct{}
+
+func (acctSubject) String() string { return "acctSubject" }
+
+type requestedAccess struct{}
+
+func (requestedAccess) String() string { return "requestedAccess" }
+
+type grantedAccess struct{}
+
+func (grantedAccess) String() string { return "grantedAccess" }
+
 // getToken handles authenticating the request and authorizing access to the
 // requested scopes.
 func (ts *tokenServer) getToken(ctx context.Context, w http.ResponseWriter, r *http.Request) {
@@ -225,17 +237,17 @@ func (ts *tokenServer) getToken(ctx context.Context, w http.ResponseWriter, r *h
 
 	username := context.GetStringValue(ctx, "auth.user.name")
 
-	ctx = context.WithValue(ctx, "acctSubject", username)
-	ctx = context.WithLogger(ctx, context.GetLogger(ctx, "acctSubject"))
+	ctx = context.WithValue(ctx, acctSubject{}, username)
+	ctx = context.WithLogger(ctx, context.GetLogger(ctx, acctSubject{}))
 
 	context.GetLogger(ctx).Info("authenticated client")
 
-	ctx = context.WithValue(ctx, "requestedAccess", requestedAccessList)
-	ctx = context.WithLogger(ctx, context.GetLogger(ctx, "requestedAccess"))
+	ctx = context.WithValue(ctx, requestedAccess{}, requestedAccessList)
+	ctx = context.WithLogger(ctx, context.GetLogger(ctx, requestedAccess{}))
 
 	grantedAccessList := filterAccessList(ctx, username, requestedAccessList)
-	ctx = context.WithValue(ctx, "grantedAccess", grantedAccessList)
-	ctx = context.WithLogger(ctx, context.GetLogger(ctx, "grantedAccess"))
+	ctx = context.WithValue(ctx, grantedAccess{}, grantedAccessList)
+	ctx = context.WithLogger(ctx, context.GetLogger(ctx, grantedAccess{}))
 
 	token, err := ts.issuer.CreateJWT(username, service, grantedAccessList)
 	if err != nil {
@@ -347,17 +359,17 @@ func (ts *tokenServer) postToken(ctx context.Context, w http.ResponseWriter, r *
 		return
 	}
 
-	ctx = context.WithValue(ctx, "acctSubject", subject)
-	ctx = context.WithLogger(ctx, context.GetLogger(ctx, "acctSubject"))
+	ctx = context.WithValue(ctx, acctSubject{}, subject)
+	ctx = context.WithLogger(ctx, context.GetLogger(ctx, acctSubject{}))
 
 	context.GetLogger(ctx).Info("authenticated client")
 
-	ctx = context.WithValue(ctx, "requestedAccess", requestedAccessList)
-	ctx = context.WithLogger(ctx, context.GetLogger(ctx, "requestedAccess"))
+	ctx = context.WithValue(ctx, requestedAccess{}, requestedAccessList)
+	ctx = context.WithLogger(ctx, context.GetLogger(ctx, requestedAccess{}))
 
 	grantedAccessList := filterAccessList(ctx, subject, requestedAccessList)
-	ctx = context.WithValue(ctx, "grantedAccess", grantedAccessList)
-	ctx = context.WithLogger(ctx, context.GetLogger(ctx, "grantedAccess"))
+	ctx = context.WithValue(ctx, grantedAccess{}, grantedAccessList)
+	ctx = context.WithLogger(ctx, context.GetLogger(ctx, grantedAccess{}))
 
 	token, err := ts.issuer.CreateJWT(subject, service, grantedAccessList)
 	if err != nil {
