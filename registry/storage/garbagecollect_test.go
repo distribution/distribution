@@ -145,7 +145,7 @@ func TestNoDeletionNoEffect(t *testing.T) {
 	ctx := context.Background()
 	inmemoryDriver := inmemory.New()
 
-	registry := createRegistry(t, inmemory.New())
+	registry := createRegistry(t, inmemoryDriver)
 	repo := makeRepository(t, registry, "palailogos")
 	manifestService, err := repo.Manifests(ctx)
 
