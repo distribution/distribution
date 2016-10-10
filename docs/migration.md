@@ -1,5 +1,5 @@
 ---
-draft: true
+published: false
 ---
 
 # Migrating a 1.0 registry to 2.0
