@@ -88,6 +88,18 @@ information about each option that appears later in this page.
       gcs:
         bucket: bucketname
         keyfile: /path/to/keyfile
+        credentials: {
+      "type": "service_account",
+      "project_id": "...",
+      "private_key_id": "...",
+      "private_key": "...",
+      "client_email": "...",
+      "client_id": "...",
+      "auth_uri": "...",
+      "token_uri": "...",
+      "auth_provider_x509_cert_url": "...",
+      "client_x509_cert_url": "..."
+    }
         rootdirectory: /gcs/object/name/prefix
         chunksize: 5242880
       s3:
@@ -390,6 +402,18 @@ Permitted values are `error`, `warn`, `info` and `debug`. The default is
       gcs:
         bucket: bucketname
         keyfile: /path/to/keyfile
+        credentials: {
+      "type": "service_account",
+      "project_id": "...",
+      "private_key_id": "...",
+      "private_key": "...",
+      "client_email": "...",
+      "client_id": "...",
+      "auth_uri": "...",
+      "token_uri": "...",
+      "auth_provider_x509_cert_url": "...",
+      "client_x509_cert_url": "..."
+    }
         rootdirectory: /gcs/object/name/prefix
       s3:
         accesskey: awsaccesskey
