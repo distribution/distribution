@@ -138,7 +138,7 @@ type Canonical interface {
 func SplitHostname(named Named) (string, string) {
 	name := named.Name()
 	match := anchoredNameRegexp.FindStringSubmatch(name)
-	if match == nil || len(match) != 3 {
+	if len(match) != 3 {
 		return "", name
 	}
 	return match[1], match[2]
