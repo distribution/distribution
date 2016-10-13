@@ -6,7 +6,6 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/digest"
-	"github.com/docker/distribution/manifest/schema2"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/driver"
 )
@@ -61,14 +60,6 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 			for _, descriptor := range descriptors {
 				markSet[descriptor.Digest] = struct{}{}
 				emit("%s: marking blob %s", repoName, descriptor.Digest)
-			}
-
-			switch manifest.(type) {
-			case *schema2.DeserializedManifest:
-				config := manifest.(*schema2.DeserializedManifest).Config
-				emit("%s: marking configuration %s", repoName, config.Digest)
-				markSet[config.Digest] = struct{}{}
-				break
 			}
 
 			return nil
