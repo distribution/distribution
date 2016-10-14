@@ -479,7 +479,8 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
 func (d *driver) Delete(ctx context.Context, path string) error {
-	listResponse, err := d.Bucket.List(d.s3Path(path), "", "", listMax)
+	s3Path := d.s3Path(path)
+	listResponse, err := d.Bucket.List(s3Path, "", "", listMax)
 	if err != nil || len(listResponse.Contents) == 0 {
 		return storagedriver.PathNotFoundError{Path: path}
 	}
@@ -487,12 +488,22 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 	s3Objects := make([]s3.Object, listMax)
 
 	for len(listResponse.Contents) > 0 {
+		numS3Objects := len(listResponse.Contents)
 		for index, key := range listResponse.Contents {
+			// Stop if we encounter a key that is not a subpath (so that deleting "/a" does not delete "/ab").
+			if len(key.Key) > len(s3Path) && (key.Key)[len(s3Path)] != '/' {
+				numS3Objects = index
+				break
+			}
 			s3Objects[index].Key = key.Key
 		}
 
-		err := d.Bucket.DelMulti(s3.Delete{Quiet: false, Objects: s3Objects[0:len(listResponse.Contents)]})
+		err := d.Bucket.DelMulti(s3.Delete{Quiet: false, Objects: s3Objects[0:numS3Objects]})
 		if err != nil {
+			return nil
+		}
+
+		if numS3Objects < len(listResponse.Contents) {
 			return nil
 		}
 
