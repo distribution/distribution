@@ -44,7 +44,7 @@ func setupFS(t *testing.T) *setupEnv {
 	}
 
 	for _, repo := range repos {
-		makeRepo(t, ctx, repo, registry)
+		makeRepo(ctx, t, repo, registry)
 	}
 
 	expected := []string{
@@ -67,7 +67,7 @@ func setupFS(t *testing.T) *setupEnv {
 	}
 }
 
-func makeRepo(t *testing.T, ctx context.Context, name string, reg distribution.Namespace) {
+func makeRepo(ctx context.Context, t *testing.T, name string, reg distribution.Namespace) {
 	named, err := reference.ParseNamed(name)
 	if err != nil {
 		t.Fatal(err)

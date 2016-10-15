@@ -111,7 +111,7 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 		stats:     make(map[string]int),
 	}
 
-	manifestDigest, err := populateRepo(t, ctx, truthRepo, name, tag)
+	manifestDigest, err := populateRepo(ctx, t, truthRepo, name, tag)
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
@@ -148,7 +148,7 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 	}
 }
 
-func populateRepo(t *testing.T, ctx context.Context, repository distribution.Repository, name, tag string) (digest.Digest, error) {
+func populateRepo(ctx context.Context, t *testing.T, repository distribution.Repository, name, tag string) (digest.Digest, error) {
 	m := schema1.Manifest{
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
