@@ -25,9 +25,7 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 	// mark
 	markSet := make(map[digest.Digest]struct{})
 	err := repositoryEnumerator.Enumerate(ctx, func(repoName string) error {
-		if dryRun {
-			emit(repoName)
-		}
+		emit(repoName)
 
 		var err error
 		named, err := reference.ParseNamed(repoName)
@@ -51,9 +49,7 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 
 		err = manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
 			// Mark the manifest's blob
-			if dryRun {
-				emit("%s: marking manifest %s ", repoName, dgst)
-			}
+			emit("%s: marking manifest %s ", repoName, dgst)
 			markSet[dgst] = struct{}{}
 
 			manifest, err := manifestService.Get(ctx, dgst)
@@ -64,17 +60,13 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 			descriptors := manifest.References()
 			for _, descriptor := range descriptors {
 				markSet[descriptor.Digest] = struct{}{}
-				if dryRun {
-					emit("%s: marking blob %s", repoName, descriptor.Digest)
-				}
+				emit("%s: marking blob %s", repoName, descriptor.Digest)
 			}
 
 			switch manifest.(type) {
 			case *schema2.DeserializedManifest:
 				config := manifest.(*schema2.DeserializedManifest).Config
-				if dryRun {
-					emit("%s: marking configuration %s", repoName, config.Digest)
-				}
+				emit("%s: marking configuration %s", repoName, config.Digest)
 				markSet[config.Digest] = struct{}{}
 				break
 			}
@@ -113,14 +105,12 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 	if err != nil {
 		return fmt.Errorf("error enumerating blobs: %v", err)
 	}
-	if dryRun {
-		emit("\n%d blobs marked, %d blobs eligible for deletion", len(markSet), len(deleteSet))
-	}
+	emit("\n%d blobs marked, %d blobs eligible for deletion", len(markSet), len(deleteSet))
 	// Construct vacuum
 	vacuum := NewVacuum(ctx, storageDriver)
 	for dgst := range deleteSet {
+		emit("blob eligible for deletion: %s", dgst)
 		if dryRun {
-			emit("blob eligible for deletion: %s", dgst)
 			continue
 		}
 		err = vacuum.RemoveBlob(string(dgst))
