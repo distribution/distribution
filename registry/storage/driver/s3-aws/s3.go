@@ -103,6 +103,7 @@ type DriverParameters struct {
 func init() {
 	for _, region := range []string{
 		"us-east-1",
+		"us-east-2",
 		"us-west-1",
 		"us-west-2",
 		"eu-west-1",
