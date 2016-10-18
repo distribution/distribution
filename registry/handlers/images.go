@@ -205,7 +205,7 @@ func (imh *imageManifestHandler) convertSchema2Manifest(schema2Manifest *schema2
 	}
 
 	builder := schema1.NewConfigManifestBuilder(imh.Repository.Blobs(imh), imh.Context.App.trustKey, ref, configJSON)
-	for _, d := range schema2Manifest.References() {
+	for _, d := range schema2Manifest.Layers {
 		if err := builder.AppendReference(d); err != nil {
 			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestInvalid.WithDetail(err))
 			return nil, err
