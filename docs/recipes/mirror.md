@@ -62,7 +62,7 @@ In order to access private images on the Docker Hub, a username and password can
 
 > :warn: if you specify a username and password, it's very important to understand that private resources that this user has access to on the Hub will be made available on your mirror. It's thus paramount that you secure your mirror by implementing authentication if you expect these resources to stay private!
 
-> :warn: in order for the scheduler to clean up old entries, delete must be enabled in the registry configuration.  See the [Registry Configuration Reference](configuration.md) for more details.
+> :warn: in order for the scheduler to clean up old entries, delete must be enabled in the registry configuration.  See the [Registry Configuration Reference](../configuration.md) for more details.
 
 ### Configuring the Docker daemon
 
