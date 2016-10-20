@@ -701,6 +701,22 @@ func WithMountFrom(ref reference.Canonical) distribution.BlobCreateOption {
 	})
 }
 
+// WithTargetMediaType returns a BlobCreateOption which specifies what the target
+// media type which uses this blob. This value corresponds to the target
+// configuration inside the manifest referencing the blob.
+func WithTargetMediaType(mediaType string) distribution.BlobCreateOption {
+	return optionFunc(func(v interface{}) error {
+		opts, ok := v.(*distribution.CreateOptions)
+		if !ok {
+			return fmt.Errorf("unexpected options type: %T", v)
+		}
+
+		opts.TargetMediaType = mediaType
+
+		return nil
+	})
+}
+
 func (bs *blobs) Create(ctx context.Context, options ...distribution.BlobCreateOption) (distribution.BlobWriter, error) {
 	var opts distribution.CreateOptions
 
@@ -722,7 +738,15 @@ func (bs *blobs) Create(ctx context.Context, options ...distribution.BlobCreateO
 		return nil, err
 	}
 
-	resp, err := bs.client.Post(u, "", nil)
+	req, err := http.NewRequest("POST", u, nil)
+	if err != nil {
+		return nil, err
+	}
+	if opts.TargetMediaType != "" {
+		req.Header.Set("Docker-Target-Media-Type", opts.TargetMediaType)
+	}
+
+	resp, err := bs.client.Do(req)
 	if err != nil {
 		return nil, err
 	}

@@ -74,6 +74,13 @@ var (
 		Format:      "0",
 	}
 
+	targetMediaTypeHeader = ParameterDescriptor{
+		Name:        "Docker-Target-Media-Type",
+		Description: "The media type of the target configuration of the manifest.",
+		Type:        "string",
+		Format:      "<media-type>",
+	}
+
 	dockerUploadUUIDHeader = ParameterDescriptor{
 		Name:        "Docker-Upload-UUID",
 		Description: "Identifies the docker upload uuid for the current request.",
@@ -960,6 +967,7 @@ var routeDescriptors = []RouteDescriptor{
 								Type:   "integer",
 								Format: "<length of blob>",
 							},
+							targetMediaTypeHeader,
 						},
 						PathParameters: []ParameterDescriptor{
 							nameParameterDescriptor,
@@ -1007,6 +1015,13 @@ var routeDescriptors = []RouteDescriptor{
 								StatusCode:  http.StatusMethodNotAllowed,
 								ErrorCodes: []errcode.ErrorCode{
 									errcode.ErrorCodeUnsupported,
+								},
+							},
+							{
+								Name:       "Mismatched target media type",
+								StatusCode: http.StatusBadRequest,
+								ErrorCodes: []errcode.ErrorCode{
+									ErrorCodeBlobUploadInvalid,
 								},
 							},
 							unauthorizedResponseDescriptor,
