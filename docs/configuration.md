@@ -1832,7 +1832,7 @@ conjunction with the S3 storage driver.
     <td>The storage middleware name. Currently <code>cloudfront</code> is an accepted value.</td>
   </tr>
   <tr>
-    <td><code>disabled<code></td>
+    <td><code>disabled</code></td>
     <td>Set to <code>false</code> to easily disable the middleware.</td>
   </tr>
   <tr>
@@ -1860,7 +1860,6 @@ The following example illustrates these values:
                  privatekey: /path/to/asecret.pem
                  keypairid: asecret
                  duration: 60
-
 
 >**Note**: Cloudfront keys exist separately to other AWS keys.  See
 >[the documentation on AWS credentials](http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html)
