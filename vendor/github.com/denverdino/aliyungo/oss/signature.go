@@ -32,6 +32,7 @@ var ossParamsToSign = map[string]bool{
 	"response-cache-control":       true,
 	"response-content-disposition": true,
 	"response-content-encoding":    true,
+	"bucketInfo":                   true,
 }
 
 func (client *Client) signRequest(request *request) {
@@ -101,5 +102,6 @@ func canonicalizeHeader(headers http.Header) (newHeaders http.Header, result str
 	for _, k := range canonicalizedHeaders {
 		canonicalizedHeader += k + ":" + headers.Get(k) + "\n"
 	}
+
 	return newHeaders, canonicalizedHeader
 }
