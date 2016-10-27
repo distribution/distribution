@@ -390,9 +390,8 @@ func TestAccessController(t *testing.T) {
 	if !ok {
 		t.Fatal("accessController did not return a challenge")
 	}
-
-	if challenge.Error() != ErrInvalidToken.Error() {
-		t.Fatalf("accessControler did not get expected error - got %s - expected %s", challenge, ErrTokenRequired)
+	if !strings.Contains(challenge.Error(), "could not verify JWK certificate chain") {
+		t.Fatalf("accessControler did not get expected error - got %s - expected %s", challenge.Error(), "could not verify JWK certificate chain")
 	}
 
 	if authCtx != nil {
