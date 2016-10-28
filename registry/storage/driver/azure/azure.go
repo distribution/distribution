@@ -111,6 +111,7 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 		return nil, err
 	}
 
+	defer blob.Close()
 	return ioutil.ReadAll(blob)
 }
 
