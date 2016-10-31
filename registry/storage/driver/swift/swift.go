@@ -108,7 +108,7 @@ func (factory *swiftDriverFactory) Create(parameters map[string]interface{}) (st
 }
 
 type driver struct {
-	Conn                 swift.Connection
+	Conn                 *swift.Connection
 	Container            string
 	Prefix               string
 	BulkDeleteSupport    bool
@@ -177,7 +177,7 @@ func New(params Parameters) (*Driver, error) {
 		TLSClientConfig:     &tls.Config{InsecureSkipVerify: params.InsecureSkipVerify},
 	}
 
-	ct := swift.Connection{
+	ct := &swift.Connection{
 		UserName:       params.Username,
 		ApiKey:         params.Password,
 		AuthUrl:        params.AuthURL,
@@ -888,7 +888,7 @@ func (w *writer) waitForSegmentsToShowUp() error {
 }
 
 type segmentWriter struct {
-	conn          swift.Connection
+	conn          *swift.Connection
 	container     string
 	segmentsPath  string
 	segmentNumber int
