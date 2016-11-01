@@ -92,6 +92,16 @@ var tlsVersions = map[string]uint16{
 // this channel gets notified when process receives signal. It is global to ease unit testing
 var quit = make(chan os.Signal, 1)
 
+// HandlerFunc defines an http middleware
+type HandlerFunc func(config *configuration.Configuration, handler http.Handler) http.Handler
+
+var handlerMiddlewares []HandlerFunc
+
+// RegisterHandler is used to register http middlewares to the registry service
+func RegisterHandler(handlerFunc HandlerFunc) {
+	handlerMiddlewares = append(handlerMiddlewares, handlerFunc)
+}
+
 // ServeCmd is a cobra command for running the registry.
 var ServeCmd = &cobra.Command{
 	Use:   "serve <config>",
@@ -170,6 +180,10 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 	handler = panicHandler(handler)
 	if !config.Log.AccessLog.Disabled {
 		handler = gorhandlers.CombinedLoggingHandler(os.Stdout, handler)
+	}
+
+	for _, applyHandlerMiddleware := range handlerMiddlewares {
+		handler = applyHandlerMiddleware(config, handler)
 	}
 
 	server := &http.Server{
