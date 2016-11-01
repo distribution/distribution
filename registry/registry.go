@@ -28,6 +28,14 @@ import (
 	"github.com/yvasiyarov/gorelic"
 )
 
+type HandlerFunc func(config *configuration.Configuration, handler http.Handler) http.Handler
+
+var handlerMiddlewares []HandlerFunc
+
+func RegisterHandler(handlerFunc HandlerFunc) {
+	handlerMiddlewares = append(handlerMiddlewares, handlerFunc)
+}
+
 // ServeCmd is a cobra command for running the registry.
 var ServeCmd = &cobra.Command{
 	Use:   "serve <config>",
@@ -104,6 +112,10 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 	handler = panicHandler(handler)
 	if !config.Log.AccessLog.Disabled {
 		handler = gorhandlers.CombinedLoggingHandler(os.Stdout, handler)
+	}
+
+	for _, applyHandlerMiddleware := range handlerMiddlewares {
+		handler = applyHandlerMiddleware(config, handler)
 	}
 
 	server := &http.Server{
