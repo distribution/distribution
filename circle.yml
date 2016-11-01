@@ -8,7 +8,7 @@ machine:
 
   post:
   # go
-    - gvm install go1.6 --prefer-binary --name=stable
+    - gvm install go1.7 --prefer-binary --name=stable
 
   environment:
   # Convenient shortcuts to "common" locations
