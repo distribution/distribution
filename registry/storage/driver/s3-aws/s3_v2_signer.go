@@ -153,7 +153,7 @@ func (v2 *signer) Sign() error {
 		default:
 			if strings.HasPrefix(k, "x-amz-") {
 				vall := strings.Join(v, ",")
-				smap[k] = k+":"+vall
+				smap[k] = k + ":" + vall
 				if k == "x-amz-date" {
 					xamzDate = true
 					date = ""
@@ -164,7 +164,7 @@ func (v2 *signer) Sign() error {
 	}
 	if len(sharray) > 0 {
 		sort.StringSlice(sharray).Sort()
-		for _, h := range(sharray) {
+		for _, h := range sharray {
 			sarray = append(sarray, smap[h])
 		}
 		xamz = strings.Join(sarray, "\n") + "\n"
