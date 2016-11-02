@@ -475,12 +475,14 @@ func min(a, b int) int {
 // Delete recursively deletes all objects stored at "path" and its subpaths.
 func (d *driver) Delete(ctx context.Context, path string) error {
 	keys := make([]string, 0, listMax)
+	bcePath := d.bcePath(path)
 	listObjectsRequest := bos.ListObjectsRequest{
 		BucketName: d.Bucket,
-		Prefix:     d.bcePath(path),
+		Prefix:     bcePath,
 		MaxKeys:    listMax,
 	}
 
+ListLoop:
 	for {
 		// list all the objects
 		resp, err := d.Client.ListObjectsFromRequest(listObjectsRequest, nil)
@@ -493,6 +495,10 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		}
 
 		for _, objectSummary := range resp.Contents {
+			// Stop if we encounter a key that is not a subpath (so that deleting "/a" does not delete "/ab").
+			if len(objectSummary.Key) > len(bcePath) && (objectSummary.Key)[len(bcePath)] != '/' {
+				break ListLoop
+			}
 			keys = append(keys, objectSummary.Key)
 		}
 
