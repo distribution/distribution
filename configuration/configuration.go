@@ -188,8 +188,11 @@ type Configuration struct {
 
 	// Validation configures validation options for the registry.
 	Validation struct {
-		// Enabled enables the other options in this section.
+		// Enabled enables the other options in this section. This field is
+		// deprecated in favor of Disabled.
 		Enabled bool `yaml:"enabled,omitempty"`
+		// Disabled disables the other options in this section.
+		Disabled bool `yaml:"disabled,omitempty"`
 		// Manifests configures manifest validation.
 		Manifests struct {
 			// URLs configures validation for URLs in pushed manifests.
