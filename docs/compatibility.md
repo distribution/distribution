@@ -2,14 +2,8 @@
 description: describes get by digest pitfall
 keywords:
 - registry, manifest, images, tags, repository, distribution, digest
-menu:
-  main:
-    parent: smn_registry_ref
-    weight: 9
-title: Compatibility
+title: Registry compatibility
 ---
-
-# Registry Compatibility
 
 ## Synopsis
 *If a manifest is pulled by _digest_ from a registry 2.3 with Docker Engine 1.9

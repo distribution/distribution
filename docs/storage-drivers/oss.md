@@ -2,15 +2,11 @@
 description: Explains how to use the Aliyun OSS storage driver
 keywords:
 - registry, service, driver, images, storage, OSS, aliyun
-menu:
-  main:
-    parent: smn_storagedrivers
 title: Aliyun OSS storage driver
 ---
 
-# Aliyun OSS storage driver
-
-An implementation of the `storagedriver.StorageDriver` interface which uses [Aliyun OSS](http://www.aliyun.com/product/oss) for object storage.
+An implementation of the `storagedriver.StorageDriver` interface which uses
+[Aliyun OSS](http://www.aliyun.com/product/oss) for object storage.
 
 ## Parameters
 

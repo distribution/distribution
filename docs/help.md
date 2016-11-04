@@ -2,14 +2,8 @@
 description: Getting help with the Registry
 keywords:
 - registry, on-prem, images, tags, repository, distribution, help, 101, TL;DR
-menu:
-  main:
-    parent: smn_registry
-    weight: 9
-title: Getting help
+title: Get help
 ---
-
-# Getting help
 
 If you need help, or just want to chat, you can reach us:
 

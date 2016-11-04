@@ -2,14 +2,8 @@
 description: Explains how to configure a registry
 keywords:
 - registry, on-prem, images, tags, repository, distribution, configuration
-menu:
-  main:
-    parent: smn_registry
-    weight: 4
-title: Configuring a registry
+title: Registry configuration reference
 ---
-
-# Registry Configuration Reference
 
 The Registry configuration is based on a YAML file, detailed below. While it comes with sane default values out of the box, you are heavily encouraged to review it exhaustively before moving your systems to production.
 

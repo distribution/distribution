@@ -2,13 +2,8 @@
 description: image manifest for the Registry.
 keywords:
 - registry, on-prem, images, tags, repository, distribution, api, advanced, manifest
-menu:
-  main:
-    parent: smn_registry_ref
-title: 'Image Manifest V 2, Schema 2 '
+title: Image manifest V2, schema 2
 ---
-
-# Image Manifest Version 2, Schema 2
 
 This document outlines the format of of the V2 image manifest, schema version 2.
 The original (and provisional) image manifest for V2 (schema 1), was introduced

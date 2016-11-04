@@ -1,42 +1,50 @@
 ---
 description: Restricting access to your registry using a nginx proxy
 keywords:
-- registry, on-prem, images, tags, repository, distribution, nginx, proxy, authentication,
-  TLS, recipe, advanced
-menu:
-  main:
-    parent: smn_recipes
-title: Authenticating proxy with nginx
+- registry, on-prem, images, tags, repository, distribution, nginx, proxy, authentication, TLS, recipe, advanced
+title: Authenticate proxy with nginx
 ---
-
-# Authenticating proxy with nginx
-
 
 ## Use-case
 
-People already relying on a nginx proxy to authenticate their users to other services might want to leverage it and have Registry communications tunneled through the same pipeline.
+People already relying on a nginx proxy to authenticate their users to other
+services might want to leverage it and have Registry communications tunneled
+through the same pipeline.
 
-Usually, that includes enterprise setups using LDAP/AD on the backend and a SSO mechanism fronting their internal http portal.
+Usually, that includes enterprise setups using LDAP/AD on the backend and a SSO
+mechanism fronting their internal http portal.
 
 ### Alternatives
 
-If you just want authentication for your registry, and are happy maintaining users access separately, you should really consider sticking with the native [basic auth registry feature](../deploying.md#native-basic-auth).
+If you just want authentication for your registry, and are happy maintaining
+users access separately, you should really consider sticking with the native
+[basic auth registry feature](../deploying.md#native-basic-auth).
 
 ### Solution
 
-With the method presented here, you implement basic authentication for docker engines in a reverse proxy that sits in front of your registry.
+With the method presented here, you implement basic authentication for docker
+engines in a reverse proxy that sits in front of your registry.
 
-While we use a simple htpasswd file as an example, any other nginx authentication backend should be fairly easy to implement once you are done with the example.
+While we use a simple htpasswd file as an example, any other nginx
+authentication backend should be fairly easy to implement once you are done with
+the example.
 
-We also implement push restriction (to a limited user group) for the sake of the example. Again, you should modify this to fit your mileage.
+We also implement push restriction (to a limited user group) for the sake of the
+example. Again, you should modify this to fit your mileage.
 
 ### Gotchas
 
-While this model gives you the ability to use whatever authentication backend you want through the secondary authentication mechanism implemented inside your proxy, it also requires that you move TLS termination from the Registry to the proxy itself.
+While this model gives you the ability to use whatever authentication backend
+you want through the secondary authentication mechanism implemented inside your
+proxy, it also requires that you move TLS termination from the Registry to the
+proxy itself.
 
-Furthermore, introducing an extra http layer in your communication pipeline will make it more complex to deploy, maintain, and debug, and will possibly create issues. Make sure the extra complexity is required.
+Furthermore, introducing an extra http layer in your communication pipeline will
+make it more complex to deploy, maintain, and debug, and will possibly create
+issues. Make sure the extra complexity is required.
 
-For instance, Amazon's Elastic Load Balancer (ELB) in HTTPS mode already sets the following client header:
+For instance, Amazon's Elastic Load Balancer (ELB) in HTTPS mode already sets
+the following client header:
 
 ```
 X-Real-IP
@@ -44,7 +52,8 @@ X-Forwarded-For
 X-Forwarded-Proto
 ```
 
-So if you have an nginx sitting behind it, should remove these lines from the example config below:
+So if you have an nginx sitting behind it, should remove these lines from the
+example config below:
 
 ```
 X-Real-IP         $remote_addr; # pass on real client's IP
@@ -52,7 +61,9 @@ X-Forwarded-For   $proxy_add_x_forwarded_for;
 X-Forwarded-Proto $scheme;
 ```
 
-Otherwise nginx will reset the ELB's values, and the requests will not be routed properly. For more information, see [#970](https://github.com/docker/distribution/issues/970).
+Otherwise nginx will reset the ELB's values, and the requests will not be routed
+properly. For more information, see
+[#970](https://github.com/docker/distribution/issues/970).
 
 ## Setting things up
 
@@ -183,7 +194,8 @@ Now, start your stack:
 
     docker-compose up -d
 
-Login with a "push" authorized user (using `testuser` and `testpassword`), then tag and push your first image:
+Login with a "push" authorized user (using `testuser` and `testpassword`), then
+tag and push your first image:
 
     docker login -u=testuser -p=testpassword -e=root@example.ch myregistrydomain.com:5043
     docker tag ubuntu myregistrydomain.com:5043/test

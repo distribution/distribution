@@ -1,15 +1,9 @@
 ---
 description: Restricting access to your registry using an apache proxy
 keywords:
-- registry, on-prem, images, tags, repository, distribution, authentication, proxy,
-  apache, httpd, TLS, recipe, advanced
-menu:
-  main:
-    parent: smn_recipes
-title: Authenticating proxy with apache
+- registry, on-prem, images, tags, repository, distribution, authentication, proxy, apache, httpd, TLS, recipe, advanced
+title: Authenticate proxy with apache
 ---
-
-# Authenticating proxy with apache
 
 ## Use-case
 
@@ -19,7 +13,7 @@ Usually, that includes enterprise setups using LDAP/AD on the backend and a SSO 
 
 ### Alternatives
 
-If you just want authentication for your registry, and are happy maintaining users access separately, you should really consider sticking with the native [basic auth registry feature](../deploying.md#native-basic-auth). 
+If you just want authentication for your registry, and are happy maintaining users access separately, you should really consider sticking with the native [basic auth registry feature](../deploying.md#native-basic-auth).
 
 ### Solution
 
@@ -27,7 +21,7 @@ With the method presented here, you implement basic authentication for docker en
 
 While we use a simple htpasswd file as an example, any other apache authentication backend should be fairly easy to implement once you are done with the example.
 
-We also implement push restriction (to a limited user group) for the sake of the example. Again, you should modify this to fit your mileage. 
+We also implement push restriction (to a limited user group) for the sake of the example. Again, you should modify this to fit your mileage.
 
 ### Gotchas
 
@@ -200,7 +194,7 @@ Now, start your stack:
 
     docker-compose up -d
 
-Login with a "push" authorized user (using `testuserpush` and `testpasswordpush`), then tag and push your first image: 
+Login with a "push" authorized user (using `testuserpush` and `testpasswordpush`), then tag and push your first image:
 
     docker login myregistrydomain.com:5043
     docker tag ubuntu myregistrydomain.com:5043/test

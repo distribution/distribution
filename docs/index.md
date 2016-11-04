@@ -4,19 +4,14 @@ aliases:
 description: High-level overview of the Registry
 keywords:
 - registry, on-prem, images, tags, repository, distribution
-menu:
-  main:
-    parent: smn_registry
-    weight: 1
-title: Registry Overview
+title: Docker Registry
 ---
-
-# Docker Registry
 
 ## What it is
 
-The Registry is a stateless, highly scalable server side application that stores and lets you distribute Docker images.
-The Registry is open-source, under the permissive [Apache license](http://en.wikipedia.org/wiki/Apache_License).
+The Registry is a stateless, highly scalable server side application that stores
+and lets you distribute Docker images. The Registry is open-source, under the
+permissive [Apache license](http://en.wikipedia.org/wiki/Apache_License).
 
 ## Why use it
 
@@ -28,14 +23,19 @@ You should use the Registry if you want to:
 
 ## Alternatives
 
-Users looking for a zero maintenance, ready-to-go solution are encouraged to head-over to the [Docker Hub](https://hub.docker.com), which provides a free-to-use, hosted Registry, plus additional features (organization accounts, automated builds, and more).
+Users looking for a zero maintenance, ready-to-go solution are encouraged to
+head-over to the [Docker Hub](https://hub.docker.com), which provides a
+free-to-use, hosted Registry, plus additional features (organization accounts,
+automated builds, and more).
 
-Users looking for a commercially supported version of the Registry should look into [Docker Trusted Registry](/docker-trusted-registry/overview/).
+Users looking for a commercially supported version of the Registry should look
+into [Docker Trusted Registry](/docker-trusted-registry/overview/).
 
 ## Requirements
 
-The Registry is compatible with Docker engine **version 1.6.0 or higher**.
-If you really need to work with older Docker versions, you should look into the [old python registry](https://github.com/docker/docker-registry).
+The Registry is compatible with Docker engine **version 1.6.0 or higher**. If
+you really need to work with older Docker versions, you should look into the
+[old python registry](https://github.com/docker/docker-registry).
 
 ## TL;DR
 
@@ -65,4 +65,6 @@ Now stop your registry and remove all data
 
 ## Next
 
-You should now read the [detailed introduction about the registry](introduction.md), or jump directly to [deployment instructions](deploying.md).
+You should now read the [detailed introduction about the
+registry](introduction.md), or jump directly to [deployment
+instructions](deploying.md).

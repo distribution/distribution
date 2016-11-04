@@ -2,15 +2,12 @@
 description: Explains how to use the OpenStack swift storage driver
 keywords:
 - registry, service, driver, images, storage,  swift
-menu:
-  main:
-    parent: smn_storagedrivers
-title: Swift storage driver
+title: OpenStack Swift storage driver
 ---
 
-# OpenStack Swift storage driver
-
-An implementation of the `storagedriver.StorageDriver` interface that uses [OpenStack Swift](http://docs.openstack.org/developer/swift/) for object storage.
+An implementation of the `storagedriver.StorageDriver` interface that uses
+[OpenStack Swift](http://docs.openstack.org/developer/swift/) for object
+storage.
 
 ## Parameters
 
@@ -210,8 +207,9 @@ An implementation of the `storagedriver.StorageDriver` interface that uses [Open
   </tr>
 </table>
 
-The features supported by the Swift server are queried by requesting the `/info` URL on the server. In case the administrator
-disabled that feature, the configuration file can specify the following optional parameters :
+The features supported by the Swift server are queried by requesting the `/info`
+URL on the server. In case the administrator disabled that feature, the
+configuration file can specify the following optional parameters :
 
 <table>
 <tr>
