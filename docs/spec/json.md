@@ -1,6 +1,6 @@
 ---
 description: Explains registry JSON objects
-draft: true
+published: false
 keywords:
 - registry, service, images, repository,  json
 menu:
