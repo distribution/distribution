@@ -1,7 +1,6 @@
 ---
 description: Deploying a Registry in an insecure fashion
-keywords:
-- registry, on-prem, images, tags, repository, distribution, insecure
+keywords: registry, on-prem, images, tags, repository, distribution, insecure
 menu:
   main:
     parent: smn_registry_ref

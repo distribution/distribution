@@ -2,8 +2,7 @@
 aliases:
 - /registry/overview/
 description: High-level overview of the Registry
-keywords:
-- registry, on-prem, images, tags, repository, distribution
+keywords: registry, on-prem, images, tags, repository, distribution
 menu:
   main:
     parent: smn_registry

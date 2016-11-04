@@ -2,8 +2,8 @@
 aliases:
 - /registry/storagedrivers/
 description: Explains how to use storage drivers
-keywords:
-- registry, on-prem, images, tags, repository, distribution, storage drivers, advanced
+keywords: registry, on-prem, images, tags, repository, distribution, storage drivers,
+  advanced
 menu:
   main:
     identifier: storage_index
