@@ -1,6 +1,7 @@
 ---
 description: Explains how to use the in-memory storage drivers
-keywords: registry, service, driver, images, storage,  in-memory
+keywords:
+- registry, service, driver, images, storage,  in-memory
 menu:
   main:
     parent: smn_storagedrivers

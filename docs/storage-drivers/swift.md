@@ -1,6 +1,7 @@
 ---
 description: Explains how to use the OpenStack swift storage driver
-keywords: registry, service, driver, images, storage,  swift
+keywords:
+- registry, service, driver, images, storage,  swift
 menu:
   main:
     parent: smn_storagedrivers

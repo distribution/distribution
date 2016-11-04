@@ -1,6 +1,7 @@
 ---
 description: Getting help with the Registry
-keywords: registry, on-prem, images, tags, repository, distribution, help, 101, TL;DR
+keywords:
+- registry, on-prem, images, tags, repository, distribution, help, 101, TL;DR
 menu:
   main:
     parent: smn_registry
