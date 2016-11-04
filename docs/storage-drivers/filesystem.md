@@ -1,6 +1,7 @@
 ---
 description: Explains how to use the filesystem storage drivers
-keywords: registry, service, driver, images, storage,  filesystem
+keywords:
+- registry, service, driver, images, storage,  filesystem
 menu:
   main:
     parent: smn_storagedrivers

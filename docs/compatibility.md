@@ -1,6 +1,7 @@
 ---
 description: describes get by digest pitfall
-keywords: registry, manifest, images, tags, repository, distribution, digest
+keywords:
+- registry, manifest, images, tags, repository, distribution, digest
 menu:
   main:
     parent: smn_registry_ref
