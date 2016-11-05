@@ -1,5 +1,5 @@
 ---
-aliases:
+redirect_from:
 - /registry/overview/
 description: High-level overview of the Registry
 keywords:

@@ -1,5 +1,5 @@
 ---
-aliases:
+redirect_from:
 - /registry/storagedrivers/
 description: Explains how to use storage drivers
 keywords:
