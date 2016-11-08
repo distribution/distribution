@@ -467,6 +467,7 @@ func TestSerialization(t *testing.T) {
 func TestWithTag(t *testing.T) {
 	testcases := []struct {
 		name     string
+		digest   digest.Digest
 		tag      string
 		combined string
 	}{
@@ -490,6 +491,12 @@ func TestWithTag(t *testing.T) {
 			tag:      "TAG5",
 			combined: "test.com:8000/foo:TAG5",
 		},
+		{
+			name:     "test.com:8000/foo",
+			digest:   "sha256:1234567890098765432112345667890098765",
+			tag:      "TAG5",
+			combined: "test.com:8000/foo:TAG5@sha256:1234567890098765432112345667890098765",
+		},
 	}
 	for _, testcase := range testcases {
 		failf := func(format string, v ...interface{}) {
@@ -501,6 +508,14 @@ func TestWithTag(t *testing.T) {
 		if err != nil {
 			failf("error parsing name: %s", err)
 		}
+		if testcase.digest != "" {
+			canonical, err := WithDigest(named, testcase.digest)
+			if err != nil {
+				failf("error adding digest")
+			}
+			named = canonical
+		}
+
 		tagged, err := WithTag(named, testcase.tag)
 		if err != nil {
 			failf("WithTag failed: %s", err)
@@ -515,6 +530,7 @@ func TestWithDigest(t *testing.T) {
 	testcases := []struct {
 		name     string
 		digest   digest.Digest
+		tag      string
 		combined string
 	}{
 		{
@@ -532,6 +548,12 @@ func TestWithDigest(t *testing.T) {
 			digest:   "sha256:1234567890098765432112345667890098765",
 			combined: "test.com:8000/foo@sha256:1234567890098765432112345667890098765",
 		},
+		{
+			name:     "test.com:8000/foo",
+			digest:   "sha256:1234567890098765432112345667890098765",
+			tag:      "latest",
+			combined: "test.com:8000/foo:latest@sha256:1234567890098765432112345667890098765",
+		},
 	}
 	for _, testcase := range testcases {
 		failf := func(format string, v ...interface{}) {
@@ -542,6 +564,13 @@ func TestWithDigest(t *testing.T) {
 		named, err := WithName(testcase.name)
 		if err != nil {
 			failf("error parsing name: %s", err)
+		}
+		if testcase.tag != "" {
+			tagged, err := WithTag(named, testcase.tag)
+			if err != nil {
+				failf("error adding tag")
+			}
+			named = tagged
 		}
 		digested, err := WithDigest(named, testcase.digest)
 		if err != nil {
