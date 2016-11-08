@@ -167,15 +167,15 @@
 		},
 		{
 			"ImportPath": "github.com/denverdino/aliyungo/common",
-			"Rev": "ce70ed03a598bb3ba258ff9c90a83a257959067c"
+			"Rev": "afedced274aa9a7fcdd47ac97018f0f8db4e5de2"
 		},
 		{
 			"ImportPath": "github.com/denverdino/aliyungo/oss",
-			"Rev": "ce70ed03a598bb3ba258ff9c90a83a257959067c"
+			"Rev": "afedced274aa9a7fcdd47ac97018f0f8db4e5de2"
 		},
 		{
 			"ImportPath": "github.com/denverdino/aliyungo/util",
-			"Rev": "ce70ed03a598bb3ba258ff9c90a83a257959067c"
+			"Rev": "afedced274aa9a7fcdd47ac97018f0f8db4e5de2"
 		},
 		{
 			"ImportPath": "github.com/docker/goamz/aws",

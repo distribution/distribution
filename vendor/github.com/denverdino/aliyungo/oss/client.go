@@ -1313,7 +1313,7 @@ func (b *Bucket) CopyLargeFile(sourcePath string, destPath string, contentType s
 }
 
 const defaultChunkSize = int64(128 * 1024 * 1024) //128MB
-const maxCopytSize = int64(1024 * 1024 * 1024)    //1G
+const maxCopytSize = int64(128 * 1024 * 1024)     //128MB
 
 // Copy large file in the same bucket
 func (b *Bucket) CopyLargeFileInParallel(sourcePath string, destPath string, contentType string, perm ACL, options Options, maxConcurrency int) error {
@@ -1322,10 +1322,10 @@ func (b *Bucket) CopyLargeFileInParallel(sourcePath string, destPath string, con
 		maxConcurrency = 1
 	}
 
-	log.Printf("Copy large file from %s to %s\n", sourcePath, destPath)
-
 	currentLength, err := b.GetContentLength(sourcePath)
-
+	
+	log.Printf("Parallel Copy large file[size: %d] from %s to %s\n",currentLength, sourcePath, destPath)
+	
 	if err != nil {
 		return err
 	}
