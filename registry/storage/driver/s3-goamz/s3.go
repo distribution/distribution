@@ -46,17 +46,18 @@ const listMax = 1000
 
 //DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
 type DriverParameters struct {
-	AccessKey     string
-	SecretKey     string
-	Bucket        string
-	Region        aws.Region
-	Encrypt       bool
-	Secure        bool
-	V4Auth        bool
-	ChunkSize     int64
-	RootDirectory string
-	StorageClass  s3.StorageClass
-	UserAgent     string
+	AccessKey      string
+	SecretKey      string
+	Bucket         string
+	Region         aws.Region
+	RegionEndpoint string
+	Encrypt        bool
+	Secure         bool
+	V4Auth         bool
+	ChunkSize      int64
+	RootDirectory  string
+	StorageClass   s3.StorageClass
+	UserAgent      string
 }
 
 func init() {
@@ -115,7 +116,9 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		return nil, fmt.Errorf("No region parameter provided")
 	}
 	region := aws.GetRegion(fmt.Sprint(regionName))
-	if region.Name == "" {
+	regionEndpoint := parameters["regionendpoint"]
+
+	if region.Name == "" && regionEndpoint == "" {
 		return nil, fmt.Errorf("Invalid region provided: %v", region)
 	}
 
@@ -228,6 +231,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(secretKey),
 		fmt.Sprint(bucket),
 		region,
+		fmt.Sprint(regionEndpoint),
 		encryptBool,
 		secureBool,
 		v4AuthBool,
@@ -248,10 +252,13 @@ func New(params DriverParameters) (*Driver, error) {
 		return nil, fmt.Errorf("unable to resolve aws credentials, please ensure that 'accesskey' and 'secretkey' are properly set or the credentials are available in $HOME/.aws/credentials: %v", err)
 	}
 
-	if !params.Secure {
-		params.Region.S3Endpoint = strings.Replace(params.Region.S3Endpoint, "https", "http", 1)
+	if params.Region.S3Endpoint == "" {
+		params.Region.S3Endpoint = params.RegionEndpoint
+	} else {
+		if !params.Secure {
+			params.Region.S3Endpoint = strings.Replace(params.Region.S3Endpoint, "https", "http", 1)
+		}
 	}
-
 	s3obj := s3.New(auth, params.Region)
 
 	if params.UserAgent != "" {
