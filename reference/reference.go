@@ -24,6 +24,7 @@ package reference
 import (
 	"errors"
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/docker/distribution/digest"
@@ -234,6 +235,16 @@ func WithDigest(name Named, digest digest.Digest) (Canonical, error) {
 		name:   name.Name(),
 		digest: digest,
 	}, nil
+}
+
+// Match reports whether ref matches the specified pattern.
+// See https://godoc.org/path#Match for supported patterns.
+func Match(pattern string, ref Reference) (bool, error) {
+	matched, err := path.Match(pattern, ref.String())
+	if namedRef, isNamed := ref.(Named); isNamed && !matched {
+		matched, _ = path.Match(pattern, namedRef.Name())
+	}
+	return matched, err
 }
 
 func getBestReferenceType(ref reference) Reference {
