@@ -1,10 +1,8 @@
 ---
-title: "Token Authentication Specification"
+title: "Docker Registry v2 authentication via central service"
 description: "Specifies the Docker Registry v2 authentication"
-keywords: ["registry, on-prem, images, tags, repository, distribution, Bearer authentication, advanced"]
+keywords: "registry, on-prem, images, tags, repository, distribution, Bearer authentication, advanced"
 ---
-
-# Docker Registry v2 authentication via central service
 
 This document outlines the v2 Docker registry authentication scheme:
 

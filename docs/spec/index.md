@@ -1,10 +1,8 @@
 ---
-title: "Reference Overview"
+title: "Docker Registry Reference"
 description: "Explains registry JSON objects"
-keywords: ["registry, service, images, repository,  json"]
+keywords: "registry, service, images, repository, json"
 ---
-
-# Docker Registry Reference
 
 * [HTTP API V2](api.md)
 * [Storage Driver](../storage-drivers/index.md)

@@ -1,10 +1,8 @@
 ---
 title: "Image Manifest V 2, Schema 1 "
 description: "image manifest for the Registry."
-keywords: ["registry, on-prem, images, tags, repository, distribution, api, advanced, manifest"]
+keywords: "registry, on-prem, images, tags, repository, distribution, api, advanced, manifest"
 ---
-
-# Image Manifest Version 2, Schema 1
 
 This document outlines the format of of the V2 image manifest. The image
 manifest described herein was introduced in the Docker daemon in the [v1.3.0

@@ -2,12 +2,8 @@
 published: false
 title: "Docker Distribution JSON Canonicalization"
 description: "Explains registry JSON objects"
-keywords: ["registry, service, images, repository,  json"]
+keywords: "registry, service, images, repository, json"
 ---
-
-
-
-# Docker Distribution JSON Canonicalization
 
 To provide consistent content hashing of JSON objects throughout Docker
 Distribution APIs, the specification defines a canonical JSON format. Adopting
