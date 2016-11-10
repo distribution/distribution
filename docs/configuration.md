@@ -443,16 +443,16 @@ You must configure one backend; if you configure more, the registry returns an e
 
 | Storage&nbsp;driver | Description
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `filesystem`        | Uses the local disk to store registry files. It is ideal for development and may be appropriate for some small-scale production applications. See the [driver's reference documentation](storage-drivers/filesystem.md). |
-| `azure`             | Uses Microsoft's Azure Blob Storage. See the [driver's reference documentation](storage-drivers/azure.md).                                                                                                               |
-| `gcs`               | Uses Google Cloud Storage. See the [driver's reference documentation](storage-drivers/gcs.md).                                                                                                                           |
-| `s3`                | Uses Amazon's Simple Storage Service (S3) and compatible Storage Services. See the [driver's reference documentation](storage-drivers/s3.md).                                                                            |
-| `swift`             | Uses Openstack Swift object storage. See the [driver's reference documentation](storage-drivers/swift.md).                                                                                                               |
-| `oss`               | Uses Aliyun OSS for object storage. See the [driver's reference documentation](storage-drivers/oss.md).                                                                                                                  |
+| `filesystem`        | Uses the local disk to store registry files. It is ideal for development and may be appropriate for some small-scale production applications. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/filesystem.md). |
+| `azure`             | Uses Microsoft's Azure Blob Storage. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/azure.md).                                                                                                               |
+| `gcs`               | Uses Google Cloud Storage. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/gcs.md).                                                                                                                           |
+| `s3`                | Uses Amazon's Simple Storage Service (S3) and compatible Storage Services. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/s3.md).                                                                            |
+| `swift`             | Uses Openstack Swift object storage. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/swift.md).                                                                                                               |
+| `oss`               | Uses Aliyun OSS for object storage. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/oss.md).                                                                                                                  |
 
 For purely tests purposes, you can use the [`inmemory` storage
-driver](storage-drivers/inmemory.md). If you would like to run a registry from
-volatile memory, use the [`filesystem` driver](storage-drivers/filesystem.md) on
+driver](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/inmemory.md). If you would like to run a registry from
+volatile memory, use the [`filesystem` driver](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/filesystem.md) on
 a ramdisk.
 
 If you are deploying a registry on Windows, be aware that a Windows volume
@@ -1791,7 +1791,7 @@ The TCP address to connect to, including a port number.
       username: [username]
       password: [password]
 
-Proxy enables a registry to be configured as a pull through cache to the official Docker Hub.  See [mirror](recipes/mirror.md) for more information. Pushing to a registry configured as a pull through cache is currently unsupported.
+Proxy enables a registry to be configured as a pull through cache to the official Docker Hub.  See [mirror](https://github.com/docker/docker.github.io/tree/master/registry/recipes/mirror.md) for more information. Pushing to a registry configured as a pull through cache is currently unsupported.
 
 <table>
   <tr>
