@@ -1,12 +1,8 @@
-<!--[metadata]>
-+++
-title = "HTTP API V2"
-description = "Specification for the Registry API."
-keywords = ["registry, on-prem, images, tags, repository, distribution, api, advanced"]
-[menu.main]
-parent="smn_registry_ref"
-+++
-<![end-metadata]-->
+---
+title: "HTTP API V2"
+description: "Specification for the Registry API."
+keywords: ["registry, on-prem, images, tags, repository, distribution, api, advanced"]
+---
 
 # Docker Registry HTTP API V2
 
@@ -248,7 +244,7 @@ enforce this. The rules for a repository name are as follows:
    must match the regular expression `[a-z0-9]+(?:[._-][a-z0-9]+)*`.
 2. If a repository  name has two or more path components, they must be
    separated by a forward slash ("/").
-3. The total length of a repository name, including slashes, must be less the
+3. The total length of a repository name, including slashes, must be less than
    256 characters.
 
 These name requirements _only_ apply to the registry API and should accept a

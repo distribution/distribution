@@ -37,8 +37,8 @@ func setQueryValues(i interface{}, values *url.Values, prefix string) {
 		elem = elem.Elem()
 	}
 	elemType := elem.Type()
-
 	for i := 0; i < elem.NumField(); i++ {
+
 		fieldName := elemType.Field(i).Name
 		anonymous := elemType.Field(i).Anonymous
 		field := elem.Field(i)

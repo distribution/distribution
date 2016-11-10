@@ -467,6 +467,7 @@ func TestSerialization(t *testing.T) {
 func TestWithTag(t *testing.T) {
 	testcases := []struct {
 		name     string
+		digest   digest.Digest
 		tag      string
 		combined string
 	}{
@@ -490,6 +491,12 @@ func TestWithTag(t *testing.T) {
 			tag:      "TAG5",
 			combined: "test.com:8000/foo:TAG5",
 		},
+		{
+			name:     "test.com:8000/foo",
+			digest:   "sha256:1234567890098765432112345667890098765",
+			tag:      "TAG5",
+			combined: "test.com:8000/foo:TAG5@sha256:1234567890098765432112345667890098765",
+		},
 	}
 	for _, testcase := range testcases {
 		failf := func(format string, v ...interface{}) {
@@ -501,6 +508,14 @@ func TestWithTag(t *testing.T) {
 		if err != nil {
 			failf("error parsing name: %s", err)
 		}
+		if testcase.digest != "" {
+			canonical, err := WithDigest(named, testcase.digest)
+			if err != nil {
+				failf("error adding digest")
+			}
+			named = canonical
+		}
+
 		tagged, err := WithTag(named, testcase.tag)
 		if err != nil {
 			failf("WithTag failed: %s", err)
@@ -515,6 +530,7 @@ func TestWithDigest(t *testing.T) {
 	testcases := []struct {
 		name     string
 		digest   digest.Digest
+		tag      string
 		combined string
 	}{
 		{
@@ -532,6 +548,12 @@ func TestWithDigest(t *testing.T) {
 			digest:   "sha256:1234567890098765432112345667890098765",
 			combined: "test.com:8000/foo@sha256:1234567890098765432112345667890098765",
 		},
+		{
+			name:     "test.com:8000/foo",
+			digest:   "sha256:1234567890098765432112345667890098765",
+			tag:      "latest",
+			combined: "test.com:8000/foo:latest@sha256:1234567890098765432112345667890098765",
+		},
 	}
 	for _, testcase := range testcases {
 		failf := func(format string, v ...interface{}) {
@@ -543,12 +565,97 @@ func TestWithDigest(t *testing.T) {
 		if err != nil {
 			failf("error parsing name: %s", err)
 		}
+		if testcase.tag != "" {
+			tagged, err := WithTag(named, testcase.tag)
+			if err != nil {
+				failf("error adding tag")
+			}
+			named = tagged
+		}
 		digested, err := WithDigest(named, testcase.digest)
 		if err != nil {
 			failf("WithDigest failed: %s", err)
 		}
 		if digested.String() != testcase.combined {
 			failf("unexpected: got %q, expected %q", digested.String(), testcase.combined)
+		}
+	}
+}
+
+func TestMatchError(t *testing.T) {
+	named, err := Parse("foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = Match("[-x]", named)
+	if err == nil {
+		t.Fatalf("expected an error, got nothing")
+	}
+}
+
+func TestMatch(t *testing.T) {
+	matchCases := []struct {
+		reference string
+		pattern   string
+		expected  bool
+	}{
+		{
+			reference: "foo",
+			pattern:   "foo/**/ba[rz]",
+			expected:  false,
+		},
+		{
+			reference: "foo/any/bat",
+			pattern:   "foo/**/ba[rz]",
+			expected:  false,
+		},
+		{
+			reference: "foo/a/bar",
+			pattern:   "foo/**/ba[rz]",
+			expected:  true,
+		},
+		{
+			reference: "foo/b/baz",
+			pattern:   "foo/**/ba[rz]",
+			expected:  true,
+		},
+		{
+			reference: "foo/c/baz:tag",
+			pattern:   "foo/**/ba[rz]",
+			expected:  true,
+		},
+		{
+			reference: "foo/c/baz:tag",
+			pattern:   "foo/*/baz:tag",
+			expected:  true,
+		},
+		{
+			reference: "foo/c/baz:tag",
+			pattern:   "foo/c/baz:tag",
+			expected:  true,
+		},
+		{
+			reference: "example.com/foo/c/baz:tag",
+			pattern:   "*/foo/c/baz",
+			expected:  true,
+		},
+		{
+			reference: "example.com/foo/c/baz:tag",
+			pattern:   "example.com/foo/c/baz",
+			expected:  true,
+		},
+	}
+	for _, c := range matchCases {
+		named, err := Parse(c.reference)
+		if err != nil {
+			t.Fatal(err)
+		}
+		actual, err := Match(c.pattern, named)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if actual != c.expected {
+			t.Fatalf("expected %s match %s to be %v, was %v", c.reference, c.pattern, c.expected, actual)
 		}
 	}
 }

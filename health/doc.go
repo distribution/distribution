@@ -122,6 +122,11 @@
 //  # curl localhost:5001/debug/health
 //  {"fileChecker":"file exists"}
 //
+// FileChecker only accepts absolute or relative file path. It does not work properly with tilde(~).
+// You should make sure that the application has proper permission(read and execute permission
+// for directory along with the specified file path). Otherwise, the FileChecker will report error
+// and file health check is not ok.
+//
 // You could also test the connectivity to a downstream service by using a
 // "HTTPChecker", but ensure that you only mark the test unhealthy if there
 // are a minimum of two failures in a row:

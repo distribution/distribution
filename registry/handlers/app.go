@@ -461,6 +461,8 @@ func (app *App) configureEvents(configuration *configuration.Configuration) {
 	}
 }
 
+type redisStartAtKey struct{}
+
 func (app *App) configureRedis(configuration *configuration.Configuration) {
 	if configuration.Redis.Addr == "" {
 		ctxu.GetLogger(app).Infof("redis not configured")
@@ -470,11 +472,11 @@ func (app *App) configureRedis(configuration *configuration.Configuration) {
 	pool := &redis.Pool{
 		Dial: func() (redis.Conn, error) {
 			// TODO(stevvooe): Yet another use case for contextual timing.
-			ctx := context.WithValue(app, "redis.connect.startedat", time.Now())
+			ctx := context.WithValue(app, redisStartAtKey{}, time.Now())
 
 			done := func(err error) {
 				logger := ctxu.GetLoggerWithField(ctx, "redis.connect.duration",
-					ctxu.Since(ctx, "redis.connect.startedat"))
+					ctxu.Since(ctx, redisStartAtKey{}))
 				if err != nil {
 					logger.Errorf("redis: error connecting: %v", err)
 				} else {
@@ -707,6 +709,18 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 	})
 }
 
+type errCodeKey struct{}
+
+func (errCodeKey) String() string { return "err.code" }
+
+type errMessageKey struct{}
+
+func (errMessageKey) String() string { return "err.message" }
+
+type errDetailKey struct{}
+
+func (errDetailKey) String() string { return "err.detail" }
+
 func (app *App) logError(context context.Context, errors errcode.Errors) {
 	for _, e1 := range errors {
 		var c ctxu.Context
@@ -714,23 +728,23 @@ func (app *App) logError(context context.Context, errors errcode.Errors) {
 		switch e1.(type) {
 		case errcode.Error:
 			e, _ := e1.(errcode.Error)
-			c = ctxu.WithValue(context, "err.code", e.Code)
-			c = ctxu.WithValue(c, "err.message", e.Code.Message())
-			c = ctxu.WithValue(c, "err.detail", e.Detail)
+			c = ctxu.WithValue(context, errCodeKey{}, e.Code)
+			c = ctxu.WithValue(c, errMessageKey{}, e.Code.Message())
+			c = ctxu.WithValue(c, errDetailKey{}, e.Detail)
 		case errcode.ErrorCode:
 			e, _ := e1.(errcode.ErrorCode)
-			c = ctxu.WithValue(context, "err.code", e)
-			c = ctxu.WithValue(c, "err.message", e.Message())
+			c = ctxu.WithValue(context, errCodeKey{}, e)
+			c = ctxu.WithValue(c, errMessageKey{}, e.Message())
 		default:
 			// just normal go 'error'
-			c = ctxu.WithValue(context, "err.code", errcode.ErrorCodeUnknown)
-			c = ctxu.WithValue(c, "err.message", e1.Error())
+			c = ctxu.WithValue(context, errCodeKey{}, errcode.ErrorCodeUnknown)
+			c = ctxu.WithValue(c, errMessageKey{}, e1.Error())
 		}
 
 		c = ctxu.WithLogger(c, ctxu.GetLogger(c,
-			"err.code",
-			"err.message",
-			"err.detail"))
+			errCodeKey{},
+			errMessageKey{},
+			errDetailKey{}))
 		ctxu.GetResponseLogger(c).Errorf("response completed with error")
 	}
 }

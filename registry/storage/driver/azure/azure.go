@@ -111,12 +111,13 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 		return nil, err
 	}
 
+	defer blob.Close()
 	return ioutil.ReadAll(blob)
 }
 
 // PutContent stores the []byte content at a location designated by "path".
 func (d *driver) PutContent(ctx context.Context, path string, contents []byte) error {
-	if _, err := d.client.DeleteBlobIfExists(d.container, path); err != nil {
+	if _, err := d.client.DeleteBlobIfExists(d.container, path, nil); err != nil {
 		return err
 	}
 	writer, err := d.Writer(ctx, path, false)
@@ -151,7 +152,7 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 	}
 
 	bytesRange := fmt.Sprintf("%v-", offset)
-	resp, err := d.client.GetBlobRange(d.container, path, bytesRange)
+	resp, err := d.client.GetBlobRange(d.container, path, bytesRange, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +175,7 @@ func (d *driver) Writer(ctx context.Context, path string, append bool) (storaged
 			}
 			size = blobProperties.ContentLength
 		} else {
-			err := d.client.DeleteBlob(d.container, path)
+			err := d.client.DeleteBlob(d.container, path, nil)
 			if err != nil {
 				return nil, err
 			}
@@ -272,12 +273,12 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 		return err
 	}
 
-	return d.client.DeleteBlob(d.container, sourcePath)
+	return d.client.DeleteBlob(d.container, sourcePath, nil)
 }
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
 func (d *driver) Delete(ctx context.Context, path string) error {
-	ok, err := d.client.DeleteBlobIfExists(d.container, path)
+	ok, err := d.client.DeleteBlobIfExists(d.container, path, nil)
 	if err != nil {
 		return err
 	}
@@ -292,7 +293,7 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 	}
 
 	for _, b := range blobs {
-		if err = d.client.DeleteBlob(d.container, b); err != nil {
+		if err = d.client.DeleteBlob(d.container, b, nil); err != nil {
 			return err
 		}
 	}
@@ -442,7 +443,7 @@ func (w *writer) Cancel() error {
 		return fmt.Errorf("already committed")
 	}
 	w.cancelled = true
-	return w.driver.client.DeleteBlob(w.driver.container, w.path)
+	return w.driver.client.DeleteBlob(w.driver.container, w.path, nil)
 }
 
 func (w *writer) Commit() error {
@@ -470,7 +471,7 @@ func (bw *blockWriter) Write(p []byte) (int, error) {
 		if offset+chunkSize > len(p) {
 			chunkSize = len(p) - offset
 		}
-		err := bw.client.AppendBlock(bw.container, bw.path, p[offset:offset+chunkSize])
+		err := bw.client.AppendBlock(bw.container, bw.path, p[offset:offset+chunkSize], nil)
 		if err != nil {
 			return n, err
 		}

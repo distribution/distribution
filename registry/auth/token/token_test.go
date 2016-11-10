@@ -354,7 +354,7 @@ func TestAccessController(t *testing.T) {
 		Action: "baz",
 	}
 
-	ctx := context.WithValue(nil, "http.request", req)
+	ctx := context.WithRequest(context.Background(), req)
 	authCtx, err := accessController.Authorized(ctx, testAccess)
 	challenge, ok := err.(auth.Challenge)
 	if !ok {

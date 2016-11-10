@@ -1,12 +1,8 @@
-<!--[metadata]>
-+++
-title = "Image Manifest V 2, Schema 2 "
-description = "image manifest for the Registry."
-keywords = ["registry, on-prem, images, tags, repository, distribution, api, advanced, manifest"]
-[menu.main]
-parent="smn_registry_ref"
-+++
-<![end-metadata]-->
+---
+title: "Image Manifest V 2, Schema 2 "
+description: "image manifest for the Registry."
+keywords: ["registry, on-prem, images, tags, repository, distribution, api, advanced, manifest"]
+---
 
 # Image Manifest Version 2, Schema 2
 
@@ -34,6 +30,7 @@ the resources they reference:
 - `application/vnd.docker.container.image.v1+json`: Container config JSON
 - `application/vnd.docker.image.rootfs.diff.tar.gzip`: "Layer", as a gzipped tar
 - `application/vnd.docker.image.rootfs.foreign.diff.tar.gzip`: "Layer", as a gzipped tar that should never be pushed
+- `application/vnd.docker.plugin.v1+json`: Plugin config JSON
 
 ## Manifest List
 
