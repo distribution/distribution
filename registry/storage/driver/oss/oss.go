@@ -389,15 +389,17 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 	return append(files, directories...), nil
 }
 
+const maxConcurrency = 10
+
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
 func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
 	logrus.Infof("Move from %s to %s", d.ossPath(sourcePath), d.ossPath(destPath))
-
-	err := d.Bucket.CopyLargeFile(d.ossPath(sourcePath), d.ossPath(destPath),
+	err := d.Bucket.CopyLargeFileInParallel(d.ossPath(sourcePath), d.ossPath(destPath),
 		d.getContentType(),
 		getPermissions(),
-		oss.Options{})
+		oss.Options{},
+		maxConcurrency)
 	if err != nil {
 		logrus.Errorf("Failed for move from %s to %s: %v", d.ossPath(sourcePath), d.ossPath(destPath), err)
 		return parseError(sourcePath, err)
