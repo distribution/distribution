@@ -30,6 +30,7 @@ the resources they reference:
 - `application/vnd.docker.container.image.v1+json`: Container config JSON
 - `application/vnd.docker.image.rootfs.diff.tar.gzip`: "Layer", as a gzipped tar
 - `application/vnd.docker.image.rootfs.foreign.diff.tar.gzip`: "Layer", as a gzipped tar that should never be pushed
+- `application/vnd.docker.plugin.v1+json`: Plugin config JSON
 
 ## Manifest List
 
