@@ -261,6 +261,11 @@ func Match(pattern string, ref Reference) (bool, error) {
 	return matched, err
 }
 
+// TrimNamed removes any tag or digest from the named reference.
+func TrimNamed(ref Named) Named {
+	return repository(ref.Name())
+}
+
 func getBestReferenceType(ref reference) Reference {
 	if ref.name == "" {
 		// Allow digest only references
