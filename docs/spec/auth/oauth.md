@@ -1,7 +1,6 @@
 ---
 description: Specifies the Docker Registry v2 authentication
-keywords:
-- registry, on-prem, images, tags, repository, distribution, oauth2, advanced
+keywords: registry, on-prem, images, tags, repository, distribution, oauth2, advanced
 title: Docker Registry v2 authentication using OAuth2
 ---
 

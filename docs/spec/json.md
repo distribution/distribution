@@ -1,8 +1,7 @@
 ---
 description: Explains registry JSON objects
+keywords: registry, service, images, repository,  json
 published: false
-keywords:
-- registry, service, images, repository,  json
 title: Docker Distribution JSON canonicalization
 ---
 

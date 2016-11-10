@@ -1,7 +1,6 @@
 ---
 description: Specifies the Docker Registry v2 authentication
-keywords:
-- registry, on-prem, images, tags, repository, distribution, Bearer authentication, advanced
+keywords: registry, on-prem, images, tags, repository, distribution, Bearer authentication, advanced
 title: Docker Registry v2 authentication via central service
 ---
 

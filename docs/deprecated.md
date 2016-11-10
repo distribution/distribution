@@ -1,7 +1,6 @@
 ---
 description: describes deprecated functionality
-keywords:
-- registry, manifest, images, signatures, repository, distribution, digest
+keywords: registry, manifest, images, signatures, repository, distribution, digest
 title: Docker Registry deprecation
 ---
 

@@ -1,7 +1,6 @@
 ---
 description: Describes the scope and access fields used for registry authorization tokens
-keywords:
-- registry, on-prem, images, tags, repository, distribution, advanced, access, scope
+keywords: registry, on-prem, images, tags, repository, distribution, advanced, access, scope
 title: Docker Registry token scope and access
 ---
 

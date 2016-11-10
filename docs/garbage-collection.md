@@ -1,7 +1,6 @@
 ---
 description: High level discussion of garbage collection
-keywords:
-- registry, garbage, images, tags, repository, distribution
+keywords: registry, garbage, images, tags, repository, distribution
 title: Garbage collection
 ---
 

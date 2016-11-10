@@ -1,7 +1,6 @@
 ---
 description: Explains how to configure a registry
-keywords:
-- registry, on-prem, images, tags, repository, distribution, configuration
+keywords: registry, on-prem, images, tags, repository, distribution, configuration
 title: Registry configuration reference
 ---
 

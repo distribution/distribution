@@ -1,7 +1,6 @@
 ---
 description: Explains how to use the Azure storage drivers
-keywords:
-- registry, service, driver, images, storage,  azure
+keywords: registry, service, driver, images, storage,  azure
 title: Microsoft Azure storage driver
 ---
 

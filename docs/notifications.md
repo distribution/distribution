@@ -1,7 +1,6 @@
 ---
 description: Explains how to work with registry notifications
-keywords:
-- registry, on-prem, images, tags, repository, distribution, notifications, advanced
+keywords: registry, on-prem, images, tags, repository, distribution, notifications, advanced
 title: Work with notifications
 ---
 

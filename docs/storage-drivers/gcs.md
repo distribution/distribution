@@ -1,7 +1,6 @@
 ---
 description: Explains how to use the Google Cloud Storage drivers
-keywords:
-- registry, service, driver, images, storage,  gcs, google, cloud
+keywords: registry, service, driver, images, storage,  gcs, google, cloud
 title: Google Cloud Storage driver
 ---
 

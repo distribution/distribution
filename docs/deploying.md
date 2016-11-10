@@ -1,7 +1,6 @@
 ---
 description: Explains how to deploy a registry
-keywords:
-- registry, on-prem, images, tags, repository, distribution, deployment
+keywords: registry, on-prem, images, tags, repository, distribution, deployment
 title: Deploying a registry server
 ---
 

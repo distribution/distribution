@@ -1,7 +1,6 @@
 ---
 description: Explains registry JSON objects
-keywords:
-- registry, service, images, repository,  json
+keywords: registry, service, images, repository,  json
 title: Docker Registry Reference
 ---
 

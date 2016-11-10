@@ -1,7 +1,6 @@
 ---
 description: Fun stuff to do with your registry
-keywords:
-- registry, on-prem, images, tags, repository, distribution, recipes, advanced
+keywords: registry, on-prem, images, tags, repository, distribution, recipes, advanced
 title: Recipes Overview
 ---
 

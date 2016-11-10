@@ -1,7 +1,6 @@
 ---
 description: Docker Registry v2 authentication schema
-keywords:
-- registry, on-prem, images, tags, repository, distribution, authentication, advanced
+keywords: registry, on-prem, images, tags, repository, distribution, authentication, advanced
 title: Docker Registry v2 authentication
 ---
 
