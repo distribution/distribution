@@ -7,6 +7,7 @@ import (
 
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/client/auth"
+	"github.com/docker/distribution/registry/client/auth/challenge"
 )
 
 const challengeHeader = "Docker-Distribution-Api-Version"
@@ -62,7 +63,7 @@ func getAuthURLs(remoteURL string) ([]string, error) {
 	}
 	defer resp.Body.Close()
 
-	for _, c := range auth.ResponseChallenges(resp) {
+	for _, c := range challenge.ResponseChallenges(resp) {
 		if strings.EqualFold(c.Scheme, "bearer") {
 			authURLs = append(authURLs, c.Parameters["realm"])
 		}
@@ -71,7 +72,7 @@ func getAuthURLs(remoteURL string) ([]string, error) {
 	return authURLs, nil
 }
 
-func ping(manager auth.ChallengeManager, endpoint, versionHeader string) error {
+func ping(manager challenge.Manager, endpoint, versionHeader string) error {
 	resp, err := http.Get(endpoint)
 	if err != nil {
 		return err
