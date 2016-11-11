@@ -39,13 +39,23 @@ intended to represent. This type may be specific to a resource provider but must
 be understood by the authorization server in order to validate the subject
 is authorized for a specific resource.
 
+#### Resource Class
+
+The resource type might have a resource class which further classifies the
+the resource name within the resource type. A class is not required and
+is specific to the resource type.
+
 #### Example Resource Types
 
  - `repository` - represents a single repository within a registry. A
 repository may represent many manifest or content blobs, but the resource type
 is considered the collections of those items. Actions which may be performed on
 a `repository` are `pull` for accessing the collection and `push` for adding to
-it.
+it. By default the `repository` type has the class of `image`.
+ - `repository(plugin)` - represents a single repository of plugins within a
+registry. A plugin repository has the same content and actions as a repository.
+ - `registry` - represents the entire registry. Used for administrative actions
+or lookup operations that span an entire registry.
 
 ### Resource Name
 
@@ -78,7 +88,8 @@ scopes.
 ```
 scope                   := resourcescope [ ' ' resourcescope ]*
 resourcescope           := resourcetype  ":" resourcename  ":" action [ ',' action ]*
-resourcetype            := /[a-z]*/
+resourcetype            := resourcetypevalue [ '(' resourcetypevalue ')' ]
+resourcetypevalue       := /[a-z0-9]+/
 resourcename            := [ hostname '/' ] component [ '/' component ]*
 hostname                := hostcomponent ['.' hostcomponent]* [':' port-number]
 hostcomponent           := /([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])/
