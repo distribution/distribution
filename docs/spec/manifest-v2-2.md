@@ -1,14 +1,8 @@
-<!--[metadata]>
-+++
-title = "Image Manifest V 2, Schema 2 "
-description = "image manifest for the Registry."
-keywords = ["registry, on-prem, images, tags, repository, distribution, api, advanced, manifest"]
-[menu.main]
-parent="smn_registry_ref"
-+++
-<![end-metadata]-->
-
-# Image Manifest Version 2, Schema 2
+---
+title: "Image Manifest V 2, Schema 2 "
+description: "image manifest for the Registry."
+keywords: "registry, on-prem, images, tags, repository, distribution, api, advanced, manifest"
+---
 
 This document outlines the format of of the V2 image manifest, schema version 2.
 The original (and provisional) image manifest for V2 (schema 1), was introduced

@@ -1,17 +1,9 @@
-<!--[metadata]>
-+++
-draft=true
-title = "Docker Distribution JSON Canonicalization"
-description = "Explains registry JSON objects"
-keywords = ["registry, service, images, repository,  json"]
-[menu.main]
-parent="smn_registry_ref"
-+++
-<![end-metadata]-->
-
-
-
-# Docker Distribution JSON Canonicalization
+---
+published: false
+title: "Docker Distribution JSON Canonicalization"
+description: "Explains registry JSON objects"
+keywords: "registry, service, images, repository, json"
+---
 
 To provide consistent content hashing of JSON objects throughout Docker
 Distribution APIs, the specification defines a canonical JSON format. Adopting

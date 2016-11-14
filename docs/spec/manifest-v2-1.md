@@ -1,14 +1,8 @@
-<!--[metadata]>
-+++
-title = "Image Manifest V 2, Schema 1 "
-description = "image manifest for the Registry."
-keywords = ["registry, on-prem, images, tags, repository, distribution, api, advanced, manifest"]
-[menu.main]
-parent="smn_registry_ref"
-+++
-<![end-metadata]-->
-
-# Image Manifest Version 2, Schema 1
+---
+title: "Image Manifest V 2, Schema 1 "
+description: "image manifest for the Registry."
+keywords: "registry, on-prem, images, tags, repository, distribution, api, advanced, manifest"
+---
 
 This document outlines the format of of the V2 image manifest. The image
 manifest described herein was introduced in the Docker daemon in the [v1.3.0

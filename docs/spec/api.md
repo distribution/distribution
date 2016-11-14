@@ -1,14 +1,8 @@
-<!--[metadata]>
-+++
-title = "HTTP API V2"
-description = "Specification for the Registry API."
-keywords = ["registry, on-prem, images, tags, repository, distribution, api, advanced"]
-[menu.main]
-parent="smn_registry_ref"
-+++
-<![end-metadata]-->
-
-# Docker Registry HTTP API V2
+---
+title: "Docker Registry HTTP API V2"
+description: "Specification for the Registry API."
+keywords: "registry, on-prem, images, tags, repository, distribution, api, advanced"
+---
 
 ## Introduction
 
@@ -4846,8 +4840,3 @@ The following headers will be returned with the response:
 |----|-----------|
 |`Content-Length`|Length of the JSON response body.|
 |`Link`|RFC5988 compliant rel='next' with URL to next result set, if available|
-
-
-
-
-
