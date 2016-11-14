@@ -80,7 +80,7 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 	})
 
 	if err != nil {
-		return fmt.Errorf("failed to mark: %v\n", err)
+		return fmt.Errorf("failed to mark: %v", err)
 	}
 
 	// sweep
@@ -106,7 +106,7 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 		}
 		err = vacuum.RemoveBlob(string(dgst))
 		if err != nil {
-			return fmt.Errorf("failed to delete blob %s: %v\n", dgst, err)
+			return fmt.Errorf("failed to delete blob %s: %v", dgst, err)
 		}
 	}
 
