@@ -1,15 +1,8 @@
 ---
 description: High level discussion of garbage collection
-keywords:
-- registry, garbage, images, tags, repository, distribution
-menu:
-  main:
-    parent: smn_registry_ref
-    weight: 4
-title: Garbage Collection
+keywords: registry, garbage, images, tags, repository, distribution
+title: Garbage collection
 ---
-
-# Garbage Collection
 
 As of v2.4.0 a garbage collector command is included within the registry binary.
 This document describes what this command does and how and why it should be used.
@@ -134,4 +127,3 @@ blob eligible for deletion: sha256:87192bdbe00f8f2a62527f36bb4c7c7f4eaf9307e4b87
 blob eligible for deletion: sha256:b549a9959a664038fc35c155a95742cf12297672ca0ae35735ec027d55bf4e97
 blob eligible for deletion: sha256:f251d679a7c61455f06d793e43c06786d7766c88b8c24edf242b2c08e3c3f599
 ```
-

@@ -1,15 +1,8 @@
 ---
 description: describes deprecated functionality
-keywords:
-- registry, manifest, images, signatures, repository, distribution, digest
-menu:
-  main:
-    parent: smn_registry_ref
-    weight: 8
-title: Deprecated Features
+keywords: registry, manifest, images, signatures, repository, distribution, digest
+title: Docker Registry deprecation
 ---
-
-# Docker Registry Deprecation
 
 This document details functionality or components which are deprecated within
 the registry.

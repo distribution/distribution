@@ -1,14 +1,8 @@
 ---
 description: Explains how to use the Azure storage drivers
-keywords:
-- registry, service, driver, images, storage,  azure
-menu:
-  main:
-    parent: smn_storagedrivers
+keywords: registry, service, driver, images, storage,  azure
 title: Microsoft Azure storage driver
 ---
-
-# Microsoft Azure storage driver
 
 An implementation of the `storagedriver.StorageDriver` interface which uses [Microsoft Azure Blob Storage](http://azure.microsoft.com/en-us/services/storage/) for object storage.
 

@@ -1,14 +1,8 @@
 ---
 description: Explains how to run a registry on macOS
-keywords:
-- registry, on-prem, images, tags, repository, distribution, macOS, recipe, advanced
-menu:
-  main:
-    parent: smn_recipes
-title: Running on macOS
+keywords: registry, on-prem, images, tags, repository, distribution, macOS, recipe, advanced
+title: macOS Setup Guide
 ---
-
-# macOS Setup Guide
 
 ## Use-case
 

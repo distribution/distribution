@@ -1,14 +1,8 @@
 ---
 description: Explains how to use the in-memory storage drivers
-keywords:
-- registry, service, driver, images, storage,  in-memory
-menu:
-  main:
-    parent: smn_storagedrivers
-title: In-memory storage driver
+keywords: registry, service, driver, images, storage,  in-memory
+title: In-memory storage driver (testing only)
 ---
-
-# In-memory storage driver (Testing Only)
 
 For purely tests purposes, you can use the `inmemory` storage driver. This
 driver is an implementation of the `storagedriver.StorageDriver` interface which

@@ -1,16 +1,8 @@
 ---
 description: Specifies the Docker Registry v2 authentication
-keywords:
-- registry, on-prem, images, tags, repository, distribution, Bearer authentication,
-  advanced
-menu:
-  main:
-    parent: smn_registry_ref
-    weight: 104
-title: Token Authentication Specification
+keywords: registry, on-prem, images, tags, repository, distribution, Bearer authentication, advanced
+title: Docker Registry v2 authentication via central service
 ---
-
-# Docker Registry v2 authentication via central service
 
 This document outlines the v2 Docker registry authentication scheme:
 
@@ -26,7 +18,7 @@ This document outlines the v2 Docker registry authentication scheme:
 5. The client retries the original request with the Bearer token embedded in
    the request's Authorization header.
 6. The Registry authorizes the client by validating the Bearer token and the
-   claim set embedded within it and begins the push/pull session as usual. 
+   claim set embedded within it and begins the push/pull session as usual.
 
 ## Requirements
 
@@ -82,7 +74,8 @@ Note the HTTP Response Header indicating the auth challenge:
 Www-Authenticate: Bearer realm="https://auth.docker.io/token",service="registry.docker.io",scope="repository:samalba/my-app:pull,push"
 ```
 
-This format is documented in [Section 3 of RFC 6750: The OAuth 2.0 Authorization Framework: Bearer Token Usage](https://tools.ietf.org/html/rfc6750#section-3)
+This format is documented in [Section 3 of RFC 6750: The OAuth 2.0 Authorization
+Framework: Bearer Token Usage](https://tools.ietf.org/html/rfc6750#section-3)
 
 This challenge indicates that the registry requires a token issued by the
 specified token server and that the request the client is attempting will
@@ -162,7 +155,7 @@ Defines getting a bearer and refresh token using the token endpoint.
         <code>expires_in</code>
     </dt>
     <dd>
-        (Optional) The duration in seconds since the token was issued that it 
+        (Optional) The duration in seconds since the token was issued that it
         will remain valid.  When omitted, this defaults to 60 seconds.  For
         compatibility with older clients, a token should never be returned with
         less than 60 seconds to live.
@@ -253,4 +246,5 @@ token placed in the HTTP `Authorization` header like so:
 Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJFUzI1NiIsImtpZCI6IkJWM0Q6MkFWWjpVQjVaOktJQVA6SU5QTDo1RU42Ok40SjQ6Nk1XTzpEUktFOkJWUUs6M0ZKTDpQT1RMIn0.eyJpc3MiOiJhdXRoLmRvY2tlci5jb20iLCJzdWIiOiJCQ0NZOk9VNlo6UUVKNTpXTjJDOjJBVkM6WTdZRDpBM0xZOjQ1VVc6NE9HRDpLQUxMOkNOSjU6NUlVTCIsImF1ZCI6InJlZ2lzdHJ5LmRvY2tlci5jb20iLCJleHAiOjE0MTUzODczMTUsIm5iZiI6MTQxNTM4NzAxNSwiaWF0IjoxNDE1Mzg3MDE1LCJqdGkiOiJ0WUpDTzFjNmNueXk3a0FuMGM3cktQZ2JWMUgxYkZ3cyIsInNjb3BlIjoiamxoYXduOnJlcG9zaXRvcnk6c2FtYWxiYS9teS1hcHA6cHVzaCxwdWxsIGpsaGF3bjpuYW1lc3BhY2U6c2FtYWxiYTpwdWxsIn0.Y3zZSwaZPqy4y9oRBVRImZyv3m_S9XDHF1tWwN7mL52C_IiA73SJkWVNsvNqpJIn5h7A2F8biv_S2ppQ1lgkbw
 ```
 
-This is also described in [Section 2.1 of RFC 6750: The OAuth 2.0 Authorization Framework: Bearer Token Usage](https://tools.ietf.org/html/rfc6750#section-2.1)
+This is also described in [Section 2.1 of RFC 6750: The OAuth 2.0 Authorization
+Framework: Bearer Token Usage](https://tools.ietf.org/html/rfc6750#section-2.1)

@@ -1,15 +1,8 @@
 ---
 description: Explains how to work with registry notifications
-keywords:
-- registry, on-prem, images, tags, repository, distribution, notifications, advanced
-menu:
-  main:
-    parent: smn_registry
-    weight: 5
-title: Working with notifications
+keywords: registry, on-prem, images, tags, repository, distribution, notifications, advanced
+title: Work with notifications
 ---
-
-# Notifications
 
 The Registry supports sending webhook notifications in response to events
 happening within the registry. Notifications are sent in response to manifest

@@ -1,14 +1,8 @@
 ---
 description: Specification for the Registry API.
-keywords:
-- registry, on-prem, images, tags, repository, distribution, api, advanced
-menu:
-  main:
-    parent: smn_registry_ref
-title: HTTP API V2
+keywords: registry, on-prem, images, tags, repository, distribution, api, advanced
+title: Docker Registry HTTP API V2
 ---
-
-# Docker Registry HTTP API V2
 
 ## Introduction
 

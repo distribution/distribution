@@ -1,15 +1,8 @@
 ---
 description: Explains registry JSON objects
-keywords:
-- registry, service, images, repository,  json
-menu:
-  main:
-    parent: smn_registry_ref
-    weight: -1
-title: Reference Overview
+keywords: registry, service, images, repository,  json
+title: Docker Registry Reference
 ---
-
-# Docker Registry Reference
 
 * [HTTP API V2](api.md)
 * [Storage Driver](../storage-drivers/index.md)
