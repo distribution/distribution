@@ -34,6 +34,7 @@ var (
 // ResourceActions stores allowed actions on a named and typed resource.
 type ResourceActions struct {
 	Type    string   `json:"type"`
+	Class   string   `json:"class"`
 	Name    string   `json:"name"`
 	Actions []string `json:"actions"`
 }
