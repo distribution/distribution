@@ -1,15 +1,8 @@
 ---
 description: Deploying a Registry in an insecure fashion
-keywords:
-- registry, on-prem, images, tags, repository, distribution, insecure
-menu:
-  main:
-    parent: smn_registry_ref
-    weight: 5
-title: Testing an insecure registry
+keywords: registry, on-prem, images, tags, repository, distribution, insecure
+title: Test an insecure registry
 ---
-
-# Insecure Registry
 
 While it's highly recommended to secure your registry using a TLS certificate
 issued by a known CA, you may alternatively decide to use self-signed

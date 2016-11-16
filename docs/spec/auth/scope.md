@@ -1,16 +1,8 @@
 ---
-description: Describes the scope and access fields used for registry authorization
-  tokens
-keywords:
-- registry, on-prem, images, tags, repository, distribution, advanced, access, scope
-menu:
-  main:
-    parent: smn_registry_ref
-    weight: 103
-title: Token Scope Documentation
+description: Describes the scope and access fields used for registry authorization tokens
+keywords: registry, on-prem, images, tags, repository, distribution, advanced, access, scope
+title: Docker Registry token scope and access
 ---
-
-# Docker Registry Token Scope and Access
 
 Tokens used by the registry are always restricted what resources they may
 be used to access, where those resources may be accessed, and what actions
@@ -141,4 +133,3 @@ done by fetching an access token using the refresh token. Since the refresh
 token is not scoped to specific resources for an audience, extra care should
 be taken to only use the refresh token to negotiate new access tokens directly
 with the authorization server, and never with a resource provider.
-

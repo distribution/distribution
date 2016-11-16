@@ -1,15 +1,8 @@
 ---
 description: Specifies the Docker Registry v2 authentication
-keywords:
-- registry, on-prem, images, tags, repository, distribution, oauth2, advanced
-menu:
-  main:
-    parent: smn_registry_ref
-    weight: 102
-title: Oauth2 Token Authentication
+keywords: registry, on-prem, images, tags, repository, distribution, oauth2, advanced
+title: Docker Registry v2 authentication using OAuth2
 ---
-
-# Docker Registry v2 authentication using OAuth2
 
 This document describes support for the OAuth2 protocol within the authorization
 server. [RFC6749](https://tools.ietf.org/html/rfc6749) should be used as a
@@ -188,4 +181,3 @@ Content-Type: application/json
 
 {"refresh_token":"kas9Da81Dfa8","access_token":"eyJhbGciOiJFUzI1NiIsInR5":"expires_in":900,"scope":"repository:samalba/my-app:pull,repository:samalba/my-app:push"}
 ```
-

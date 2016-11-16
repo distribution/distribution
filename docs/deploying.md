@@ -1,15 +1,8 @@
 ---
 description: Explains how to deploy a registry
-keywords:
-- registry, on-prem, images, tags, repository, distribution, deployment
-menu:
-  main:
-    parent: smn_registry
-    weight: 3
+keywords: registry, on-prem, images, tags, repository, distribution, deployment
 title: Deploying a registry server
 ---
-
-# Deploying a registry server
 
 You need to [install Docker version 1.6.0 or newer](/engine/installation/index.md).
 

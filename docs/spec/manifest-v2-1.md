@@ -1,14 +1,8 @@
 ---
 description: image manifest for the Registry.
-keywords:
-- registry, on-prem, images, tags, repository, distribution, api, advanced, manifest
-menu:
-  main:
-    parent: smn_registry_ref
-title: 'Image Manifest V 2, Schema 1 '
+keywords: registry, on-prem, images, tags, repository, distribution, api, advanced, manifest
+title: Image manifest V2, schema 1
 ---
-
-# Image Manifest Version 2, Schema 1
 
 This document outlines the format of of the V2 image manifest. The image
 manifest described herein was introduced in the Docker daemon in the [v1.3.0
