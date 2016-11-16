@@ -66,8 +66,9 @@ type UserInfo struct {
 
 // Resource describes a resource by type and name.
 type Resource struct {
-	Type string
-	Name string
+	Type  string
+	Class string
+	Name  string
 }
 
 // Access describes a specific action that is
