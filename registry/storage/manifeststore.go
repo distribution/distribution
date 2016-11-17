@@ -9,6 +9,7 @@ import (
 	dcontext "github.com/docker/distribution/context"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/manifest/manifestlist"
+	"github.com/docker/distribution/manifest/ocischema"
 	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/manifest/schema2"
 	"github.com/opencontainers/go-digest"
@@ -48,6 +49,7 @@ type manifestStore struct {
 
 	schema1Handler      ManifestHandler
 	schema2Handler      ManifestHandler
+	ocischemaHandler    ManifestHandler
 	manifestListHandler ManifestHandler
 }
 
@@ -99,7 +101,9 @@ func (ms *manifestStore) Get(ctx context.Context, dgst digest.Digest, options ..
 		switch versioned.MediaType {
 		case schema2.MediaTypeManifest:
 			return ms.schema2Handler.Unmarshal(ctx, dgst, content)
-		case manifestlist.MediaTypeManifestList:
+		case ocischema.MediaTypeManifest:
+			return ms.ocischemaHandler.Unmarshal(ctx, dgst, content)
+		case manifestlist.MediaTypeManifestList, manifestlist.MediaTypeOCIManifestList:
 			return ms.manifestListHandler.Unmarshal(ctx, dgst, content)
 		default:
 			return nil, distribution.ErrManifestVerification{fmt.Errorf("unrecognized manifest content type %s", versioned.MediaType)}

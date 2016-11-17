@@ -9,6 +9,7 @@ import (
 	"github.com/docker/distribution"
 	dcontext "github.com/docker/distribution/context"
 	"github.com/docker/distribution/manifest/manifestlist"
+	"github.com/docker/distribution/manifest/ocischema"
 	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/manifest/schema2"
 	"github.com/docker/distribution/reference"
@@ -72,43 +73,10 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 		imh.Errors = append(imh.Errors, err)
 		return
 	}
-
-	var manifest distribution.Manifest
-	if imh.Tag != "" {
-		tags := imh.Repository.Tags(imh)
-		desc, err := tags.Get(imh, imh.Tag)
-		if err != nil {
-			if _, ok := err.(distribution.ErrTagUnknown); ok {
-				imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
-			} else {
-				imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
-			}
-			return
-		}
-		imh.Digest = desc.Digest
-	}
-
-	if etagMatch(r, imh.Digest.String()) {
-		w.WriteHeader(http.StatusNotModified)
-		return
-	}
-
-	var options []distribution.ManifestServiceOption
-	if imh.Tag != "" {
-		options = append(options, distribution.WithTag(imh.Tag))
-	}
-	manifest, err = manifests.Get(imh, imh.Digest, options...)
-	if err != nil {
-		if _, ok := err.(distribution.ErrManifestUnknownRevision); ok {
-			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
-		} else {
-			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
-		}
-		return
-	}
-
 	supportsSchema2 := false
 	supportsManifestList := false
+	supportsOCISchema := false
+	supportsOCIManifestList := false
 	// this parsing of Accept headers is not quite as full-featured as godoc.org's parser, but we don't care about "q=" values
 	// https://github.com/golang/gddo/blob/e91d4165076d7474d20abda83f92d15c7ebc3e81/httputil/header/header.go#L165-L202
 	for _, acceptHeader := range r.Header["Accept"] {
@@ -132,16 +100,259 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 			if mediaType == manifestlist.MediaTypeManifestList {
 				supportsManifestList = true
 			}
+			if mediaType == ocischema.MediaTypeManifest {
+				supportsOCISchema = true
+			}
+			if mediaType == manifestlist.MediaTypeOCIManifestList {
+				supportsOCIManifestList = true
+			}
 		}
+	}
+	supportsOCI := supportsOCISchema || supportsOCIManifestList
+
+	var manifest distribution.Manifest
+	if imh.Tag != "" {
+		tags := imh.Repository.Tags(imh)
+		var desc distribution.Descriptor
+		if !supportsOCI {
+			desc, err = tags.Get(imh, imh.Tag)
+		} else {
+			desc, err = tags.Get(imh, imh.annotatedTag(false))
+		}
+		if err != nil {
+			if _, ok := err.(distribution.ErrTagUnknown); ok {
+				imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
+			} else {
+				imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+			}
+			return
+		}
+		imh.Digest = desc.Digest
+	}
+
+	if etagMatch(r, imh.Digest.String()) {
+		w.WriteHeader(http.StatusNotModified)
+		return
+	}
+
+	var options []distribution.ManifestServiceOption
+	if imh.Tag != "" {
+		options = append(options, distribution.WithTag(imh.annotatedTag(supportsOCI)))
+	}
+	manifest, err = manifests.Get(imh, imh.Digest, options...)
+	if err != nil {
+		if _, ok := err.(distribution.ErrManifestUnknownRevision); ok {
+			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
+		} else {
+			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+		}
+		return
 	}
 
 	schema2Manifest, isSchema2 := manifest.(*schema2.DeserializedManifest)
 	manifestList, isManifestList := manifest.(*manifestlist.DeserializedManifestList)
+	isAnOCIManifest := isSchema2 && (schema2Manifest.MediaType == ocischema.MediaTypeManifest)
+	isAnOCIManifestList := isManifestList && (manifestList.MediaType == manifestlist.MediaTypeOCIManifestList)
+
+	if (isSchema2 && !isAnOCIManifest) && (supportsOCISchema && !supportsSchema2) {
+		fmt.Printf("\n\nmanifest is schema2, but accept header only supports OCISchema \n\n")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	if (isManifestList && !isAnOCIManifestList) && (supportsOCIManifestList && !supportsManifestList) {
+		fmt.Printf("\n\nmanifestlist is not OCI, but accept header only supports an OCI manifestlist\n\n")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	if isAnOCIManifest && (!supportsOCISchema && supportsSchema2) {
+		fmt.Printf("\n\nmanifest is OCI, but accept header only supports schema2\n\n")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	if isAnOCIManifestList && (!supportsOCIManifestList && supportsManifestList) {
+		fmt.Printf("\n\nmanifestlist is OCI, but accept header only supports non-OCI manifestlists\n\n")
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	// Only rewrite schema2 manifests when they are being fetched by tag.
+	// If they are being fetched by digest, we can't return something not
+	// matching the digest.
+	if imh.Tag != "" && isSchema2 && !(supportsSchema2 || supportsOCISchema) {
+		// Rewrite manifest in schema1 format
+		ctxu.GetLogger(imh).Infof("rewriting manifest %s in schema1 format to support old client", imh.Digest.String())
+
+		manifest, err = imh.convertSchema2Manifest(schema2Manifest)
+		if err != nil {
+			return
+		}
+	} else if imh.Tag != "" && isManifestList && !(supportsManifestList || supportsOCIManifestList) {
+		// Rewrite manifest in schema1 format
+		ctxu.GetLogger(imh).Infof("rewriting manifest list %s in schema1 format to support old client", imh.Digest.String())
+
+		// Find the image manifest corresponding to the default
+		// platform
+		var manifestDigest digest.Digest
+		for _, manifestDescriptor := range manifestList.Manifests {
+			if manifestDescriptor.Platform.Architecture == defaultArch && manifestDescriptor.Platform.OS == defaultOS {
+				manifestDigest = manifestDescriptor.Digest
+				break
+			}
+		}
+
+		if manifestDigest == "" {
+			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown)
+			return
+		}
+
+		manifest, err = manifests.Get(imh, manifestDigest)
+		if err != nil {
+			if _, ok := err.(distribution.ErrManifestUnknownRevision); ok {
+				imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
+			} else {
+				imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+			}
+			return
+		}
+
+		// If necessary, convert the image manifest
+		if schema2Manifest, isSchema2 := manifest.(*schema2.DeserializedManifest); isSchema2 && !(supportsSchema2 || supportsOCISchema) {
+			manifest, err = imh.convertSchema2Manifest(schema2Manifest)
+			if err != nil {
+				return
+			}
+		} else {
+			imh.Digest = manifestDigest
+		}
+	}
+
+	ct, p, err := manifest.Payload()
+	if err != nil {
+		return
+	}
+
+	w.Header().Set("Content-Type", ct)
+	w.Header().Set("Content-Length", fmt.Sprint(len(p)))
+	w.Header().Set("Docker-Content-Digest", imh.Digest.String())
+	w.Header().Set("Etag", fmt.Sprintf(`"%s"`, imh.Digest))
+	w.Write(p)
+}
+
+// GetImageManifest fetches the image manifest from the storage backend, if it exists.
+func (imh *manifestHandler) GetImageManifest(w http.ResponseWriter, r *http.Request) {
+	fmt.Printf("\n\nGetting a manifest!\n\n\n")
+	supportsSchema2 := false
+	supportsManifestList := false
+	supportsOCISchema := false
+	supportsOCIManifestList := false
+
+	// this parsing of Accept headers is not quite as full-featured as godoc.org's parser, but we don't care about "q=" values
+	// https://github.com/golang/gddo/blob/e91d4165076d7474d20abda83f92d15c7ebc3e81/httputil/header/header.go#L165-L202
+	for _, acceptHeader := range r.Header["Accept"] {
+		// r.Header[...] is a slice in case the request contains the same header more than once
+		// if the header isn't set, we'll get the zero value, which "range" will handle gracefully
+
+		// we need to split each header value on "," to get the full list of "Accept" values (per RFC 2616)
+		// https://www.w3.org/Protocols/rfc2616/rfc2616-sec14.html#sec14.1
+		for _, mediaType := range strings.Split(acceptHeader, ",") {
+			// remove "; q=..." if present
+			if i := strings.Index(mediaType, ";"); i >= 0 {
+				mediaType = mediaType[:i]
+			}
+
+			// it's common (but not required) for Accept values to be space separated ("a/b, c/d, e/f")
+			mediaType = strings.TrimSpace(mediaType)
+
+			if mediaType == schema2.MediaTypeManifest {
+				supportsSchema2 = true
+			}
+			if mediaType == manifestlist.MediaTypeManifestList {
+				supportsManifestList = true
+			}
+			if mediaType == ocischema.MediaTypeManifest {
+				supportsOCISchema = true
+			}
+			if mediaType == manifestlist.MediaTypeOCIManifestList {
+				supportsOCIManifestList = true
+			}
+		}
+	}
+	supportsOCI := supportsOCISchema || supportsOCIManifestList
+
+	ctxu.GetLogger(imh).Debug("GetImageManifest")
+	manifests, err := imh.Repository.Manifests(imh)
+	if err != nil {
+		imh.Errors = append(imh.Errors, err)
+		return
+	}
+
+	var manifest distribution.Manifest
+	if imh.Tag != "" {
+		tags := imh.Repository.Tags(imh)
+		var desc distribution.Descriptor
+		if !supportsOCI {
+			desc, err = tags.Get(imh, imh.Tag)
+			if err != nil {
+				imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
+				return
+			}
+		} else {
+			desc, err = tags.Get(imh, imh.annotatedTag(supportsOCI))
+			if err != nil {
+				desc, err = tags.Get(imh, imh.annotatedTag(false))
+				if err != nil {
+					imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
+					return
+				}
+			}
+		}
+		imh.Digest = desc.Digest
+	}
+
+	if etagMatch(r, imh.Digest.String()) {
+		w.WriteHeader(http.StatusNotModified)
+		return
+	}
+
+	var options []distribution.ManifestServiceOption
+	if imh.Tag != "" {
+		options = append(options, distribution.WithTag(imh.annotatedTag(supportsOCI)))
+	}
+	manifest, err = manifests.Get(imh, imh.Digest, options...)
+	if err != nil {
+		imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
+		return
+	}
+
+	schema2Manifest, isSchema2 := manifest.(*schema2.DeserializedManifest)
+	manifestList, isManifestList := manifest.(*manifestlist.DeserializedManifestList)
+	isAnOCIManifest := isSchema2 && (schema2Manifest.MediaType == ocischema.MediaTypeManifest)
+	isAnOCIManifestList := isManifestList && (manifestList.MediaType == manifestlist.MediaTypeOCIManifestList)
+
+	badCombinations := [][]bool{
+		{isSchema2 && !isAnOCIManifest, supportsOCISchema && !supportsSchema2},
+		{isManifestList && !isAnOCIManifestList, supportsOCIManifestList && !supportsManifestList},
+		{isAnOCIManifest, !supportsOCISchema && supportsSchema2},
+		{isAnOCIManifestList, !supportsOCIManifestList && supportsManifestList},
+	}
+	for i, combo := range badCombinations {
+		if combo[0] && combo[1] {
+			fmt.Printf("\n\nbad combo! %d\n\n\n", i)
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+	}
+	if isAnOCIManifest {
+		fmt.Print("\n\nreturning OCI manifest\n\n")
+	} else if isSchema2 {
+		fmt.Print("\n\nreturning schema 2 manifest\n\n")
+	} else {
+		fmt.Print("\n\nreturning schema 1 manifest\n\n")
+	}
 
 	// Only rewrite schema2 manifests when they are being fetched by tag.
 	// If they are being fetched by digest, we can't return something not
 	// matching the digest.
-	if imh.Tag != "" && isSchema2 && !supportsSchema2 {
+	if imh.Tag != "" && isSchema2 && !(supportsSchema2 || supportsOCISchema) {
 		// Rewrite manifest in schema1 format
 		dcontext.GetLogger(imh).Infof("rewriting manifest %s in schema1 format to support old client", imh.Digest.String())
 
@@ -149,7 +360,7 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 		if err != nil {
 			return
 		}
-	} else if imh.Tag != "" && isManifestList && !supportsManifestList {
+	} else if imh.Tag != "" && isManifestList && !(supportsManifestList || supportsOCIManifestList) {
 		// Rewrite manifest in schema1 format
 		dcontext.GetLogger(imh).Infof("rewriting manifest list %s in schema1 format to support old client", imh.Digest.String())
 
@@ -199,6 +410,8 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Docker-Content-Digest", imh.Digest.String())
 	w.Header().Set("Etag", fmt.Sprintf(`"%s"`, imh.Digest))
 	w.Write(p)
+
+	fmt.Printf("\n\nSucceeded in getting the manifest!\n\n\n")
 }
 
 func (imh *manifestHandler) convertSchema2Manifest(schema2Manifest *schema2.DeserializedManifest) (distribution.Manifest, error) {
@@ -286,9 +499,17 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	isAnOCIManifest := mediaType == ocischema.MediaTypeManifest || mediaType == manifestlist.MediaTypeOCIManifestList
+
+	if isAnOCIManifest {
+		fmt.Printf("\n\nPutting an OCI Manifest!\n\n\n")
+	} else {
+		fmt.Printf("\n\nPutting a Docker Manifest!\n\n\n")
+	}
+
 	var options []distribution.ManifestServiceOption
 	if imh.Tag != "" {
-		options = append(options, distribution.WithTag(imh.Tag))
+		options = append(options, distribution.WithTag(imh.annotatedTag(isAnOCIManifest)))
 	}
 
 	if err := imh.applyResourcePolicy(manifest); err != nil {
@@ -301,10 +522,12 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 		// TODO(stevvooe): These error handling switches really need to be
 		// handled by an app global mapper.
 		if err == distribution.ErrUnsupported {
+			fmt.Printf("\n\nXXX 1\n\n\n")
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnsupported)
 			return
 		}
 		if err == distribution.ErrAccessDenied {
+			fmt.Printf("\n\nXXX 2\n\n\n")
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeDenied)
 			return
 		}
@@ -331,15 +554,16 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 		default:
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		}
-
+		fmt.Printf("\n\nXXX 3\n\n\n")
 		return
 	}
 
 	// Tag this manifest
 	if imh.Tag != "" {
 		tags := imh.Repository.Tags(imh)
-		err = tags.Tag(imh, imh.Tag, desc)
+		err = tags.Tag(imh, imh.annotatedTag(isAnOCIManifest), desc)
 		if err != nil {
+			fmt.Printf("\n\nXXX 4: %T: %v\n\n\n", err, err)
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 			return
 		}
@@ -349,6 +573,7 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 	// Construct a canonical url for the uploaded manifest.
 	ref, err := reference.WithDigest(imh.Repository.Named(), imh.Digest)
 	if err != nil {
+		fmt.Printf("\n\nXXX 5\n\n\n")
 		imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		return
 	}
@@ -364,6 +589,8 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Location", location)
 	w.Header().Set("Docker-Content-Digest", imh.Digest.String())
 	w.WriteHeader(http.StatusCreated)
+
+	fmt.Printf("\n\nSucceeded in putting manifest!\n\n\n")
 }
 
 // applyResourcePolicy checks whether the resource class matches what has
@@ -477,4 +704,13 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 	}
 
 	w.WriteHeader(http.StatusAccepted)
+}
+
+// annotatedTag will annotate OCI tags by prepending a string, and leave docker
+// tags unmodified.
+func (imh *manifestHandler) annotatedTag(oci bool) string {
+	if oci {
+		return "oci." + imh.Tag
+	}
+	return imh.Tag
 }

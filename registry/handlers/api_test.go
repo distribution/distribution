@@ -478,7 +478,7 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 
 	// -----------------------------------------
 	// Do layer push with an empty body and different digest
-	uploadURLBase, uploadUUID = startPushLayer(t, env, imageName)
+	uploadURLBase, _ = startPushLayer(t, env, imageName)
 	resp, err = doPushLayer(t, env.builder, imageName, layerDigest, uploadURLBase, bytes.NewReader([]byte{}))
 	if err != nil {
 		t.Fatalf("unexpected error doing bad layer push: %v", err)
@@ -494,7 +494,7 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 		t.Fatalf("unexpected error digesting empty buffer: %v", err)
 	}
 
-	uploadURLBase, uploadUUID = startPushLayer(t, env, imageName)
+	uploadURLBase, _ = startPushLayer(t, env, imageName)
 	pushLayer(t, env.builder, imageName, zeroDigest, uploadURLBase, bytes.NewReader([]byte{}))
 
 	// -----------------------------------------
@@ -507,7 +507,7 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 		t.Fatalf("unexpected error digesting empty tar: %v", err)
 	}
 
-	uploadURLBase, uploadUUID = startPushLayer(t, env, imageName)
+	uploadURLBase, _ = startPushLayer(t, env, imageName)
 	pushLayer(t, env.builder, imageName, emptyDigest, uploadURLBase, bytes.NewReader(emptyTar))
 
 	// ------------------------------------------
@@ -515,7 +515,7 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 	layerLength, _ := layerFile.Seek(0, os.SEEK_END)
 	layerFile.Seek(0, os.SEEK_SET)
 
-	uploadURLBase, uploadUUID = startPushLayer(t, env, imageName)
+	uploadURLBase, _ = startPushLayer(t, env, imageName)
 	pushLayer(t, env.builder, imageName, layerDigest, uploadURLBase, layerFile)
 
 	// ------------------------------------------
@@ -529,7 +529,7 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 	canonicalDigest := canonicalDigester.Digest()
 
 	layerFile.Seek(0, 0)
-	uploadURLBase, uploadUUID = startPushLayer(t, env, imageName)
+	uploadURLBase, _ = startPushLayer(t, env, imageName)
 	uploadURLBase, dgst := pushChunk(t, env.builder, imageName, uploadURLBase, layerFile, layerLength)
 	finishUpload(t, env.builder, imageName, uploadURLBase, dgst)
 
@@ -612,7 +612,7 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 		t.Fatalf("Error constructing request: %s", err)
 	}
 	req.Header.Set("If-None-Match", "")
-	resp, err = http.DefaultClient.Do(req)
+	resp, _ = http.DefaultClient.Do(req)
 	checkResponse(t, "fetching layer with invalid etag", resp, http.StatusOK)
 
 	// Missing tests:
@@ -1874,7 +1874,7 @@ func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
 	manifest := args.manifest
 
 	ref, _ := reference.WithDigest(imageName, dgst)
-	manifestDigestURL, err := env.builder.BuildManifestURL(ref)
+	manifestDigestURL, _ := env.builder.BuildManifestURL(ref)
 	// ---------------
 	// Delete by digest
 	resp, err := httpDelete(manifestDigestURL)
@@ -1935,7 +1935,7 @@ func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
 	// Upload manifest by tag
 	tag := "atag"
 	tagRef, _ := reference.WithTag(imageName, tag)
-	manifestTagURL, err := env.builder.BuildManifestURL(tagRef)
+	manifestTagURL, _ := env.builder.BuildManifestURL(tagRef)
 	resp = putManifest(t, "putting manifest by tag", manifestTagURL, args.mediaType, manifest)
 	checkResponse(t, "putting manifest by tag", resp, http.StatusCreated)
 	checkHeaders(t, resp, http.Header{
@@ -2502,7 +2502,7 @@ func TestRegistryAsCacheMutationAPIs(t *testing.T) {
 	checkResponse(t, "putting signed manifest to cache", resp, errcode.ErrorCodeUnsupported.Descriptor().HTTPStatusCode)
 
 	// Manifest Delete
-	resp, err = httpDelete(manifestURL)
+	resp, _ = httpDelete(manifestURL)
 	checkResponse(t, "deleting signed manifest from cache", resp, errcode.ErrorCodeUnsupported.Descriptor().HTTPStatusCode)
 
 	// Blob upload initialization
@@ -2521,8 +2521,8 @@ func TestRegistryAsCacheMutationAPIs(t *testing.T) {
 
 	// Blob Delete
 	ref, _ := reference.WithDigest(imageName, digestSha256EmptyTar)
-	blobURL, err := env.builder.BuildBlobURL(ref)
-	resp, err = httpDelete(blobURL)
+	blobURL, _ := env.builder.BuildBlobURL(ref)
+	resp, _ = httpDelete(blobURL)
 	checkResponse(t, "deleting blob from cache", resp, errcode.ErrorCodeUnsupported.Descriptor().HTTPStatusCode)
 
 }
@@ -2601,9 +2601,9 @@ func TestProxyManifestGetByTag(t *testing.T) {
 	checkErr(t, err, "building manifest url")
 
 	resp, err = http.Get(manifestTagURL)
-	checkErr(t, err, "fetching manifest from proxy by tag")
+	checkErr(t, err, "fetching manifest from proxy by tag (error check 1)")
 	defer resp.Body.Close()
-	checkResponse(t, "fetching manifest from proxy by tag", resp, http.StatusOK)
+	checkResponse(t, "fetching manifest from proxy by tag (response check 1)", resp, http.StatusOK)
 	checkHeaders(t, resp, http.Header{
 		"Docker-Content-Digest": []string{dgst.String()},
 	})
@@ -2616,9 +2616,9 @@ func TestProxyManifestGetByTag(t *testing.T) {
 
 	// fetch it with the same proxy URL as before.  Ensure the updated content is at the same tag
 	resp, err = http.Get(manifestTagURL)
-	checkErr(t, err, "fetching manifest from proxy by tag")
+	checkErr(t, err, "fetching manifest from proxy by tag (error check 2)")
 	defer resp.Body.Close()
-	checkResponse(t, "fetching manifest from proxy by tag", resp, http.StatusOK)
+	checkResponse(t, "fetching manifest from proxy by tag (response check 2)", resp, http.StatusOK)
 	checkHeaders(t, resp, http.Header{
 		"Docker-Content-Digest": []string{newDigest.String()},
 	})
