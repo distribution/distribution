@@ -136,6 +136,39 @@ func (uic userInfoContext) Value(key interface{}) interface{} {
 	return uic.Context.Value(key)
 }
 
+// WithResources returns a context with the authorized resources.
+func WithResources(ctx context.Context, resources []Resource) context.Context {
+	return resourceContext{
+		Context:   ctx,
+		resources: resources,
+	}
+}
+
+type resourceContext struct {
+	context.Context
+	resources []Resource
+}
+
+type resourceKey struct{}
+
+func (rc resourceContext) Value(key interface{}) interface{} {
+	if key == (resourceKey{}) {
+		return rc.resources
+	}
+
+	return rc.Context.Value(key)
+}
+
+// AuthorizedResources returns the list of resources which have
+// been authorized for this request.
+func AuthorizedResources(ctx context.Context) []Resource {
+	if resources, ok := ctx.Value(resourceKey{}).([]Resource); ok {
+		return resources
+	}
+
+	return nil
+}
+
 // InitFunc is the type of an AccessController factory function and is used
 // to register the constructor for different AccesController backends.
 type InitFunc func(options map[string]interface{}) (AccessController, error)

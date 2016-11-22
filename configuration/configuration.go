@@ -203,6 +203,19 @@ type Configuration struct {
 			} `yaml:"urls,omitempty"`
 		} `yaml:"manifests,omitempty"`
 	} `yaml:"validation,omitempty"`
+
+	// Policy configures registry policy options.
+	Policy struct {
+		// Repository configures policies for repositories
+		Repository struct {
+			// Classes is a list of repository classes which the
+			// registry allows content for. This class is matched
+			// against the configuration media type inside uploaded
+			// manifests. When non-empty, the registry will enforce
+			// the class in authorized resources.
+			Classes []string `yaml:"classes"`
+		} `yaml:"repository,omitempty"`
+	} `yaml:"policy,omitempty"`
 }
 
 // LogHook is composed of hook Level and Type.

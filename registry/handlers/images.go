@@ -15,6 +15,7 @@ import (
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
+	"github.com/docker/distribution/registry/auth"
 	"github.com/gorilla/handlers"
 )
 
@@ -269,6 +270,12 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 	if imh.Tag != "" {
 		options = append(options, distribution.WithTag(imh.Tag))
 	}
+
+	if err := imh.applyResourcePolicy(manifest); err != nil {
+		imh.Errors = append(imh.Errors, err)
+		return
+	}
+
 	_, err = manifests.Put(imh, manifest, options...)
 	if err != nil {
 		// TODO(stevvooe): These error handling switches really need to be
@@ -337,6 +344,73 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 	w.Header().Set("Location", location)
 	w.Header().Set("Docker-Content-Digest", imh.Digest.String())
 	w.WriteHeader(http.StatusCreated)
+}
+
+// applyResourcePolicy checks whether the resource class matches what has
+// been authorized and allowed by the policy configuration.
+func (imh *imageManifestHandler) applyResourcePolicy(manifest distribution.Manifest) error {
+	allowedClasses := imh.App.Config.Policy.Repository.Classes
+	if len(allowedClasses) == 0 {
+		return nil
+	}
+
+	var class string
+	switch m := manifest.(type) {
+	case *schema1.SignedManifest:
+		class = "image"
+	case *schema2.DeserializedManifest:
+		switch m.Config.MediaType {
+		case schema2.MediaTypeConfig:
+			class = "image"
+		case schema2.MediaTypePluginConfig:
+			class = "plugin"
+		default:
+			message := fmt.Sprintf("unknown manifest class for %s", m.Config.MediaType)
+			return errcode.ErrorCodeDenied.WithMessage(message)
+		}
+	}
+
+	if class == "" {
+		return nil
+	}
+
+	// Check to see if class is allowed in registry
+	var allowedClass bool
+	for _, c := range allowedClasses {
+		if class == c {
+			allowedClass = true
+			break
+		}
+	}
+	if !allowedClass {
+		message := fmt.Sprintf("registry does not allow %s manifest", class)
+		return errcode.ErrorCodeDenied.WithMessage(message)
+	}
+
+	resources := auth.AuthorizedResources(imh)
+	n := imh.Repository.Named().Name()
+
+	var foundResource bool
+	for _, r := range resources {
+		if r.Name == n {
+			if r.Class == "" {
+				r.Class = "image"
+			}
+			if r.Class == class {
+				return nil
+			}
+			foundResource = true
+		}
+	}
+
+	// resource was found but no matching class was found
+	if foundResource {
+		message := fmt.Sprintf("repository not authorized for %s manifest", class)
+		return errcode.ErrorCodeDenied.WithMessage(message)
+	}
+
+	return nil
+
 }
 
 // DeleteImageManifest removes the manifest with the given digest from the registry.
