@@ -34,6 +34,7 @@ var (
 // ResourceActions stores allowed actions on a named and typed resource.
 type ResourceActions struct {
 	Type    string   `json:"type"`
+	Class   string   `json:"class,omitempty"`
 	Name    string   `json:"name"`
 	Actions []string `json:"actions"`
 }
@@ -347,6 +348,29 @@ func (t *Token) accessSet() accessSet {
 	}
 
 	return accessSet
+}
+
+func (t *Token) resources() []auth.Resource {
+	if t.Claims == nil {
+		return nil
+	}
+
+	resourceSet := map[auth.Resource]struct{}{}
+	for _, resourceActions := range t.Claims.Access {
+		resource := auth.Resource{
+			Type:  resourceActions.Type,
+			Class: resourceActions.Class,
+			Name:  resourceActions.Name,
+		}
+		resourceSet[resource] = struct{}{}
+	}
+
+	resources := make([]auth.Resource, 0, len(resourceSet))
+	for resource := range resourceSet {
+		resources = append(resources, resource)
+	}
+
+	return resources
 }
 
 func (t *Token) compactRaw() string {

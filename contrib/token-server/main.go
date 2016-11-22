@@ -18,6 +18,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
+var (
+	enforceRepoClass bool
+)
+
 func main() {
 	var (
 		issuer = &TokenIssuer{}
@@ -43,6 +47,8 @@ func main() {
 
 	flag.StringVar(&cert, "tlscert", "", "Certificate file for TLS")
 	flag.StringVar(&certKey, "tlskey", "", "Certificate key for TLS")
+
+	flag.BoolVar(&enforceRepoClass, "enforce-class", false, "Enforce policy for single repository class")
 
 	flag.Parse()
 
@@ -157,6 +163,8 @@ type tokenResponse struct {
 	ExpiresIn    int    `json:"expires_in,omitempty"`
 }
 
+var repositoryClassCache = map[string]string{}
+
 func filterAccessList(ctx context.Context, scope string, requestedAccessList []auth.Access) []auth.Access {
 	if !strings.HasSuffix(scope, "/") {
 		scope = scope + "/"
@@ -167,6 +175,16 @@ func filterAccessList(ctx context.Context, scope string, requestedAccessList []a
 			if !strings.HasPrefix(access.Name, scope) {
 				context.GetLogger(ctx).Debugf("Resource scope not allowed: %s", access.Name)
 				continue
+			}
+			if enforceRepoClass {
+				if class, ok := repositoryClassCache[access.Name]; ok {
+					if class != access.Class {
+						context.GetLogger(ctx).Debugf("Different repository class: %q, previously %q", access.Class, class)
+						continue
+					}
+				} else if strings.EqualFold(access.Action, "push") {
+					repositoryClassCache[access.Name] = access.Class
+				}
 			}
 		} else if access.Type == "registry" {
 			if access.Name != "catalog" {
