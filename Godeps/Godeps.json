@@ -223,11 +223,11 @@
 		},
 		{
 			"ImportPath": "github.com/ncw/swift",
-			"Rev": "ce444d6d47c51d4dda9202cd38f5094dd8e27e86"
+			"Rev": "b964f2ca856aac39885e258ad25aec08d5f64ee6"
 		},
 		{
 			"ImportPath": "github.com/ncw/swift/swifttest",
-			"Rev": "ce444d6d47c51d4dda9202cd38f5094dd8e27e86"
+			"Rev": "b964f2ca856aac39885e258ad25aec08d5f64ee6"
 		},
 		{
 			"ImportPath": "github.com/spf13/cobra",
