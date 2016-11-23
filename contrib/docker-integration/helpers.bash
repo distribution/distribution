@@ -37,13 +37,30 @@ function basic_auth_version_check() {
 # requies bats
 function login() {
 	rm -f /root/.docker/config.json
-	run docker_t login -u $user -p $password -e $email $1
-	if [ "$status" -ne 0 ]; then
+
+	# Only pass email field pre 1.11, no deprecation warning
+	parse_version "$GOLEM_DIND_VERSION"
+	v=$version
+	parse_version "1.11.0"
+	if [ "$v" -lt "$version" ]; then
+		run docker_t login -u $user -p $password -e $email $1
+		if [ "$status" -ne 0 ]; then
+			echo $output
+		fi
+		[ "$status" -eq 0 ]
+		# First line is WARNING about credential save or email deprecation (maybe both)
+		[ "${lines[2]}" = "Login Succeeded" -o "${lines[1]}" = "Login Succeeded" ]
+	else
+		run docker_t login -u $user -p $password $1
+		if [ "$status" -ne 0 ]; then
+			echo $output
+		fi
 		echo $output
+		[ "$status" -eq 0 ]
+		[ "${lines[0]}" = "Login Succeeded" ]
 	fi
-	[ "$status" -eq 0 ]
-	# First line is WARNING about credential save or email deprecation (maybe both)
-	[ "${lines[2]}" = "Login Succeeded" -o "${lines[1]}" = "Login Succeeded" ]
+
+
 }
 
 function login_oauth() {
