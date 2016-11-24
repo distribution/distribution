@@ -65,7 +65,6 @@ func Generate() (u UUID) {
 			if retryOnError(err) && retries < maxretries {
 				count += n
 				retries++
-				Loggerf("error generating version 4 uuid, retrying: %v", err)
 				continue
 			}
 
