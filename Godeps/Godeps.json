@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/docker/distribution",
-	"GoVersion": "go1.6",
+	"GoVersion": "go1.7",
 	"GodepVersion": "v74",
 	"Packages": [
 		"./..."
@@ -178,6 +178,10 @@
 			"Rev": "afedced274aa9a7fcdd47ac97018f0f8db4e5de2"
 		},
 		{
+			"ImportPath": "github.com/dmcgowan/letsencrypt",
+			"Rev": "1847a81d2087eba73081db43989e54dabe0768cd"
+		},
+		{
 			"ImportPath": "github.com/docker/goamz/aws",
 			"Rev": "f0a21f5b2e12f83a505ecf79b633bb2035cf6f85"
 		},
@@ -218,6 +222,10 @@
 			"Rev": "76626ae9c91c4f2a10f34cad8ce83ea42c93bb75"
 		},
 		{
+			"ImportPath": "github.com/miekg/dns",
+			"Rev": "db96a2b759cdef4f11a34506a42eb8d1290c598e"
+		},
+		{
 			"ImportPath": "github.com/mitchellh/mapstructure",
 			"Rev": "482a9fd5fa83e8c4e7817413b80f3eb8feec03ef"
 		},
@@ -248,6 +256,11 @@
 		{
 			"ImportPath": "github.com/stevvooe/resumable/sha512",
 			"Rev": "51ad44105773cafcbe91927f70ac68e1bf78f8b4"
+		},
+		{
+			"ImportPath": "github.com/xenolf/lego/acme",
+			"Comment": "v0.3.1-22-ga9d8cec",
+			"Rev": "a9d8cec0e6563575e5868a005359ac97911b5985"
 		},
 		{
 			"ImportPath": "github.com/yvasiyarov/go-metrics",
@@ -292,6 +305,10 @@
 		},
 		{
 			"ImportPath": "golang.org/x/net/internal/timeseries",
+			"Rev": "4876518f9e71663000c348837735820161a42df7"
+		},
+		{
+			"ImportPath": "golang.org/x/net/publicsuffix",
 			"Rev": "4876518f9e71663000c348837735820161a42df7"
 		},
 		{
@@ -431,28 +448,23 @@
 			"Rev": "64131543e7896d5bcc6bd5a76287eb75ea96c673"
 		},
 		{
+			"ImportPath": "gopkg.in/square/go-jose.v1",
+			"Comment": "v1.0.1",
+			"Rev": "40d457b439244b546f023d056628e5184136899b"
+		},
+		{
+			"ImportPath": "gopkg.in/square/go-jose.v1/cipher",
+			"Comment": "v1.0.1",
+			"Rev": "40d457b439244b546f023d056628e5184136899b"
+		},
+		{
+			"ImportPath": "gopkg.in/square/go-jose.v1/json",
+			"Comment": "v1.0.1",
+			"Rev": "40d457b439244b546f023d056628e5184136899b"
+		},
+		{
 			"ImportPath": "gopkg.in/yaml.v2",
 			"Rev": "bef53efd0c76e49e6de55ead051f886bea7e9420"
-		},
-		{
-			"ImportPath": "rsc.io/letsencrypt",
-			"Rev": "a019c9e6fce0c7132679dea13bd8df7c86ffe26c"
-		},
-		{
-			"ImportPath": "rsc.io/letsencrypt/vendor/github.com/xenolf/lego/acme",
-			"Rev": "a019c9e6fce0c7132679dea13bd8df7c86ffe26c"
-		},
-		{
-			"ImportPath": "rsc.io/letsencrypt/vendor/gopkg.in/square/go-jose.v1",
-			"Rev": "a019c9e6fce0c7132679dea13bd8df7c86ffe26c"
-		},
-		{
-			"ImportPath": "rsc.io/letsencrypt/vendor/gopkg.in/square/go-jose.v1/cipher",
-			"Rev": "a019c9e6fce0c7132679dea13bd8df7c86ffe26c"
-		},
-		{
-			"ImportPath": "rsc.io/letsencrypt/vendor/gopkg.in/square/go-jose.v1/json",
-			"Rev": "a019c9e6fce0c7132679dea13bd8df7c86ffe26c"
 		}
 	]
 }
