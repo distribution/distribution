@@ -6,7 +6,7 @@ keywords: ["registry, on-prem, images, tags, repository, distribution, api, adva
 
 # Image Manifest Version 2, Schema 1
 
-This document outlines the format of of the V2 image manifest. The image
+This document outlines the format of the V2 image manifest. The image
 manifest described herein was introduced in the Docker daemon in the [v1.3.0
 release](https://github.com/docker/docker/commit/9f482a66ab37ec396ac61ed0c00d59122ac07453).
 It is a provisional manifest to provide a compatibility with the [V1 Image
