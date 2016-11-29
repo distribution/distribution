@@ -64,7 +64,7 @@ registryv2tokenoauthnotls:
     - ./tokenserver-oauth/certs/signing.cert:/etc/docker/registry/tokenbundle.pem
 tokenserveroauth:
   build: "tokenserver-oauth"
-  command: "--debug -addr 0.0.0.0:5559 -issuer registry-test -passwd .htpasswd -tlscert tls.cert -tlskey tls.key -key sign.key -realm http://auth.localregistry:5559"
+  command: "--debug -addr 0.0.0.0:5559 -issuer registry-test -passwd .htpasswd -tlscert tls.cert -tlskey tls.key -key sign.key -realm http://auth.localregistry:5559 -enforce-class"
   ports:
     - "5559"
 malevolent:
