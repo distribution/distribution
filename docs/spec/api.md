@@ -14,7 +14,7 @@ of this API, known as _Docker Registry HTTP API V2_.
 
 While the V1 registry protocol is usable, there are several problems with the
 architecture that have led to this new version. The main driver of this
-specification is a set of changes to the docker the image format, covered in
+specification is a set of changes to the docker image format, covered in
 [docker/docker#8093](https://github.com/docker/docker/issues/8093).
 The new, self-contained image manifest simplifies image definition and improves
 security. This specification will build on that work, leveraging new properties
