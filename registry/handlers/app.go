@@ -412,7 +412,11 @@ func (app *App) register(routeName string, dispatch dispatchFunc) {
 	// replace it with manual routing and structure-based dispatch for better
 	// control over the request execution.
 
-	app.router.GetRoute(routeName).Handler(app.dispatcher(dispatch))
+	route := app.router.GetRoute(routeName)
+	if route == nil {
+		panic(fmt.Sprintf("%s is not definded in routeDescriptors", routeName))
+	}
+	route.Handler(app.dispatcher(dispatch))
 }
 
 // configureEvents prepares the event sink for action.
