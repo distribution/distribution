@@ -9,8 +9,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"reflect"
-	"strconv"
 	"time"
 
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
@@ -85,33 +83,9 @@ func fromParametersImpl(parameters map[string]interface{}) (*DriverParameters, e
 			rootDirectory = fmt.Sprint(rootDir)
 		}
 
-		// Get maximum number of threads for blocking filesystem operations,
-		// if specified
-		threads := parameters["maxthreads"]
-		switch v := threads.(type) {
-		case string:
-			if maxThreads, err = strconv.ParseUint(v, 0, 64); err != nil {
-				return nil, fmt.Errorf("maxthreads parameter must be an integer, %v invalid", threads)
-			}
-		case uint64:
-			maxThreads = v
-		case int, int32, int64:
-			val := reflect.ValueOf(v).Convert(reflect.TypeOf(threads)).Int()
-			// If threads is negative casting to uint64 will wrap around and
-			// give you the hugest thread limit ever. Let's be sensible, here
-			if val > 0 {
-				maxThreads = uint64(val)
-			}
-		case uint, uint32:
-			maxThreads = reflect.ValueOf(v).Convert(reflect.TypeOf(threads)).Uint()
-		case nil:
-			// do nothing
-		default:
-			return nil, fmt.Errorf("invalid value for maxthreads: %#v", threads)
-		}
-
-		if maxThreads < minThreads {
-			maxThreads = minThreads
+		maxThreads, err = base.GetLimitFromParameter(parameters["maxthreads"], minThreads, defaultMaxThreads)
+		if err != nil {
+			return nil, fmt.Errorf("maxthreads config error: %s", err.Error())
 		}
 	}
 
