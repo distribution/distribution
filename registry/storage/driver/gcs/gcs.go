@@ -9,8 +9,6 @@
 //
 // Note that the contents of incomplete uploads are not accessible even though
 // Stat returns their length
-//
-// +build include_gcs
 
 package gcs
 
@@ -53,6 +51,8 @@ const (
 	uploadSessionContentType = "application/x-docker-upload-session"
 	minChunkSize             = 256 * 1024
 	defaultChunkSize         = 20 * minChunkSize
+	defaultMaxConcurrency    = 50
+	minConcurrency           = 25
 
 	maxTries = 5
 )
@@ -68,6 +68,12 @@ type driverParameters struct {
 	client        *http.Client
 	rootDirectory string
 	chunkSize     int
+
+	// maxConcurrency limits the number of concurrent driver operations
+	// to GCS, which ultimately increases reliability of many simultaneous
+	// pushes by ensuring we aren't DoSing our own server with many
+	// connections.
+	maxConcurrency uint64
 }
 
 func init() {
@@ -91,6 +97,16 @@ type driver struct {
 	privateKey    []byte
 	rootDirectory string
 	chunkSize     int
+}
+
+// Wrapper wraps `driver` with a throttler, ensuring that no more than N
+// GCS actions can occur concurrently. The default limit is 75.
+type Wrapper struct {
+	baseEmbed
+}
+
+type baseEmbed struct {
+	base.Base
 }
 
 // FromParameters constructs a new Driver with a given parameters map
@@ -177,13 +193,19 @@ func FromParameters(parameters map[string]interface{}) (storagedriver.StorageDri
 		}
 	}
 
+	maxConcurrency, err := base.GetLimitFromParameter(parameters["maxconcurrency"], minConcurrency, defaultMaxConcurrency)
+	if err != nil {
+		return nil, fmt.Errorf("maxconcurrency config error: %s", err)
+	}
+
 	params := driverParameters{
-		bucket:        fmt.Sprint(bucket),
-		rootDirectory: fmt.Sprint(rootDirectory),
-		email:         jwtConf.Email,
-		privateKey:    jwtConf.PrivateKey,
-		client:        oauth2.NewClient(context.Background(), ts),
-		chunkSize:     chunkSize,
+		bucket:         fmt.Sprint(bucket),
+		rootDirectory:  fmt.Sprint(rootDirectory),
+		email:          jwtConf.Email,
+		privateKey:     jwtConf.PrivateKey,
+		client:         oauth2.NewClient(context.Background(), ts),
+		chunkSize:      chunkSize,
+		maxConcurrency: maxConcurrency,
 	}
 
 	return New(params)
@@ -207,8 +229,12 @@ func New(params driverParameters) (storagedriver.StorageDriver, error) {
 		chunkSize:     params.chunkSize,
 	}
 
-	return &base.Base{
-		StorageDriver: d,
+	return &Wrapper{
+		baseEmbed: baseEmbed{
+			Base: base.Base{
+				StorageDriver: base.NewRegulator(d, params.maxConcurrency),
+			},
+		},
 	}, nil
 }
 
@@ -887,7 +913,7 @@ func (d *driver) context(context ctx.Context) context.Context {
 }
 
 func (d *driver) pathToKey(path string) string {
-	return strings.TrimRight(d.rootDirectory+strings.TrimLeft(path, "/"), "/")
+	return strings.TrimSpace(strings.TrimRight(d.rootDirectory+strings.TrimLeft(path, "/"), "/"))
 }
 
 func (d *driver) pathToDirKey(path string) string {
