@@ -251,7 +251,6 @@ information about each option that appears later in this page.
       schema1:
         signingkeyfile: /etc/registry/key.json
     validation:
-      enabled: true
       manifests:
         urls:
           allow:
@@ -1871,7 +1870,6 @@ defines such a feature with configurable behavior.
 ## Validation
 
     validation:
-      enabled: true
       manifests:
         urls:
           allow:
@@ -1879,16 +1877,18 @@ defines such a feature with configurable behavior.
           deny:
             - ^https?://www\.example\.com/
 
-### Enabled
+### disabled
 
-Use the `enabled` flag to enable the other options in the `validation`
-section. They are disabled by default.
+Use the `disabled` flag to disable the other options in the `validation`
+section. They are enabled by default.
+This option deprecates the `enabled` flag.
 
-### Manifests
+### manifests
 
-Use the `manifest` subsection to configure manifest validation.
+Use the `manifests` subsection to configure manifests validation. If `disabled` is
+`false` the validation allows nothing.
 
-#### URLs
+#### urls
 
 The `allow` and `deny` options are both lists of
 [regular expressions](https://godoc.org/regexp/syntax) that restrict the URLs in
