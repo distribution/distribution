@@ -44,7 +44,7 @@ An implementation of the `storagedriver.StorageDriver` interface which uses [Mic
       yes
     </td>
     <td>
-      Name of the Azure root storage container in which all registry data will be stored. Must comply the storage container name [requirements][create-container-api].
+      Name of the Azure root storage container in which all registry data will be stored. Must comply the storage container name <a href='https://docs.microsoft.com/rest/api/storageservices/fileservices/naming-and-referencing-containers--blobs--and-metadata'>requirements</a>.
     </td>
   </tr>
    <tr>
@@ -55,7 +55,7 @@ An implementation of the `storagedriver.StorageDriver` interface which uses [Mic
       no
     </td>
     <td>
-      Domain name suffix for the Storage Service API endpoint. For example realm for "Azure in China" would be `core.chinacloudapi.cn` and realm for "Azure Government" would be `core.usgovcloudapi.net`. By default, this
+      Domain name suffix for the Storage Service API endpoint. For example realm for "Azure in China" would be <code>core.chinacloudapi.cn</code> and realm for "Azure Government" would be <code>core.usgovcloudapi.net</code>. By default, this
       is <code>core.windows.net</code>.
     </td>
   </tr>
@@ -68,4 +68,4 @@ An implementation of the `storagedriver.StorageDriver` interface which uses [Mic
 * To get information about
 [azure-blob-storage](http://azure.microsoft.com/en-us/services/storage/) visit
 the Microsoft website.
-* You can use Microsoft's [Blob Service REST API](https://msdn.microsoft.com/en-us/library/azure/dd135733.aspx) to [create a container] (https://msdn.microsoft.com/en-us/library/azure/dd179468.aspx).
+* You can use Microsoft's [Blob Service REST API](https://msdn.microsoft.com/en-us/library/azure/dd135733.aspx) to [create a storage container](https://msdn.microsoft.com/en-us/library/azure/dd179468.aspx).
