@@ -8,59 +8,12 @@ An implementation of the `storagedriver.StorageDriver` interface which uses [Mic
 
 ## Parameters
 
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>accountname</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      Name of the Azure Storage Account.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>accountkey</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      Primary or Secondary Key for the Storage Account.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>container</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      Name of the Azure root storage container in which all registry data will be stored. Must comply the storage container name <a href='https://docs.microsoft.com/rest/api/storageservices/fileservices/naming-and-referencing-containers--blobs--and-metadata'>requirements</a>.
-    </td>
-  </tr>
-   <tr>
-    <td>
-      <code>realm</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      Domain name suffix for the Storage Service API endpoint. For example realm for "Azure in China" would be <code>core.chinacloudapi.cn</code> and realm for "Azure Government" would be <code>core.usgovcloudapi.net</code>. By default, this
-      is <code>core.windows.net</code>.
-    </td>
-  </tr>
-
-</table>
+| Parameter     | Required | Description                                                                                                                                                                                                                                                         |
+|:--------------|:---------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `accountname` | yes      | Name of the Azure Storage Account.                                                                                                                                                                                                                                  |
+| `accountkey`  | yes      | Primary or Secondary Key for the Storage Account.                                                                                                                                                                                                                   |
+| `container`   | yes      | Name of the Azure root storage container in which all registry data will be stored. Must comply the storage container name [requirements](https://docs.microsoft.com/rest/api/storageservices/fileservices/naming-and-referencing-containers--blobs--and-metadata). |
+| `realm`       | no       | Domain name suffix for the Storage Service API endpoint. For example realm for "Azure in China" would be `core.chinacloudapi.cn` and realm for "Azure Government" would be `core.usgovcloudapi.net`. By default, this is `core.windows.net`.                        |
 
 
 ## Related Information
