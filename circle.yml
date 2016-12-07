@@ -34,7 +34,7 @@ dependencies:
 
   override:
   # Install dependencies for every copied clone/go version
-    - gvm use stable && go get github.com/tools/godep:
+    - gvm use stable && go get github.com/lk4d4/vndr:
         pwd: $BASE_STABLE
 
   post:
@@ -49,14 +49,13 @@ test:
     # - gvm use old && go version
     - gvm use stable && go version
 
-  # todo(richard): replace with a more robust vendoring solution. Removed due to a fundamental disagreement in godep philosophies.
   # Ensure validation of dependencies
-  #    - gvm use stable && if test -n "`git diff --stat=1000 master | grep -Ei \"vendor|godeps\"`"; then make dep-validate; fi:
-  #      pwd: $BASE_STABLE
+    - gvm use stable && if test -n "`git diff --stat=1000 master | grep -E \"^[[:space:]]*vendor\"`"; then make dep-validate; fi:
+        pwd: $BASE_STABLE
 
   # First thing: build everything. This will catch compile errors, and it's
   # also necessary for go vet to work properly (see #807).
-    - gvm use stable && godep go install $(go list ./... | grep -v "/vendor/"):
+    - gvm use stable && go install $(go list ./... | grep -v "/vendor/"):
         pwd: $BASE_STABLE
 
   # FMT
@@ -73,12 +72,12 @@ test:
 
   override:
   # Test stable, and report
-     - gvm use stable; export ROOT_PACKAGE=$(go list .); go list -tags "$DOCKER_BUILDTAGS" ./... | grep -v "/vendor/" | xargs -L 1 -I{} bash -c 'export PACKAGE={}; godep go test -tags "$DOCKER_BUILDTAGS" -test.short -coverprofile=$GOPATH/src/$PACKAGE/coverage.out -coverpkg=$(./coverpkg.sh $PACKAGE $ROOT_PACKAGE) $PACKAGE':
+     - gvm use stable; export ROOT_PACKAGE=$(go list .); go list -tags "$DOCKER_BUILDTAGS" ./... | grep -v "/vendor/" | xargs -L 1 -I{} bash -c 'export PACKAGE={}; go test -tags "$DOCKER_BUILDTAGS" -test.short -coverprofile=$GOPATH/src/$PACKAGE/coverage.out -coverpkg=$(./coverpkg.sh $PACKAGE $ROOT_PACKAGE) $PACKAGE':
          timeout: 1000
          pwd: $BASE_STABLE
 
   # Test stable with race
-     - gvm use stable; export ROOT_PACKAGE=$(go list .); go list -tags "$DOCKER_BUILDTAGS" ./... | grep -v "/vendor/" | grep -v "registry/handlers" | grep -v "registry/storage/driver" | xargs -L 1 -I{} bash -c 'export PACKAGE={}; godep go test -race -tags "$DOCKER_BUILDTAGS" -test.short $PACKAGE':
+     - gvm use stable; export ROOT_PACKAGE=$(go list .); go list -tags "$DOCKER_BUILDTAGS" ./... | grep -v "/vendor/" | grep -v "registry/handlers" | grep -v "registry/storage/driver" | xargs -L 1 -I{} bash -c 'export PACKAGE={}; go test -race -tags "$DOCKER_BUILDTAGS" -test.short $PACKAGE':
          timeout: 1000
          pwd: $BASE_STABLE
   post:
