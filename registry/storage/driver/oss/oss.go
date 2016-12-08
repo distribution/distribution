@@ -351,7 +351,8 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 		prefix = "/"
 	}
 
-	listResponse, err := d.Bucket.List(d.ossPath(path), "/", "", listMax)
+	ossPath := d.ossPath(path)
+	listResponse, err := d.Bucket.List(ossPath, "/", "", listMax)
 	if err != nil {
 		return nil, parseError(opath, err)
 	}
@@ -369,13 +370,18 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 		}
 
 		if listResponse.IsTruncated {
-			listResponse, err = d.Bucket.List(d.ossPath(path), "/", listResponse.NextMarker, listMax)
+			listResponse, err = d.Bucket.List(ossPath, "/", listResponse.NextMarker, listMax)
 			if err != nil {
 				return nil, err
 			}
 		} else {
 			break
 		}
+	}
+
+	// This is to cover for the cases when the first key equal to ossPath.
+	if len(files) > 0 && files[0] == strings.Replace(ossPath, d.ossPath(""), prefix, 1) {
+		files = files[1:]
 	}
 
 	if opath != "/" {

@@ -213,6 +213,10 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		options = append(options, storage.EnableRedirect)
 	}
 
+	if !config.Validation.Enabled {
+		config.Validation.Enabled = !config.Validation.Disabled
+	}
+
 	// configure validation
 	if config.Validation.Enabled {
 		if len(config.Validation.Manifests.URLs.Allow) == 0 && len(config.Validation.Manifests.URLs.Deny) == 0 {
