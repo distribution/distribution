@@ -15,7 +15,7 @@
 // Package storage contains a Google Cloud Storage client.
 //
 // This package is experimental and may make backwards-incompatible changes.
-package storage
+package storage // import "google.golang.org/cloud/storage"
 
 import (
 	"crypto"
