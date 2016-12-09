@@ -11,7 +11,7 @@ import (
 
 var expectedManifestListSerialization = []byte(`{
    "schemaVersion": 2,
-   "mediaType": "application/vnd.docker.distribution.manifest.list.v2+json",
+   "mediaType": "application/vnd.oci.image.manifest.list.v1+json",
    "manifests": [
       {
          "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
@@ -71,7 +71,7 @@ func TestManifestList(t *testing.T) {
 
 	mediaType, canonical, err := deserialized.Payload()
 
-	if mediaType != MediaTypeManifestList {
+	if mediaType != DefaultMediaTypeManifestList {
 		t.Fatalf("unexpected media type: %s", mediaType)
 	}
 

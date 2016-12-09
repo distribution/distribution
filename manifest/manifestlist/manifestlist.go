@@ -10,28 +10,44 @@ import (
 	"github.com/docker/distribution/manifest"
 )
 
-// MediaTypeManifestList specifies the mediaType for manifest lists.
-const MediaTypeManifestList = "application/vnd.docker.distribution.manifest.list.v2+json"
+const (
+	// MediaTypeManifestList specifies the mediaType for manifest lists.
+	MediaTypeManifestList = "application/vnd.docker.distribution.manifest.list.v2+json"
+
+	// MediaTypeOCIManifestList specifies the mediaType for OCI compliant
+	// manifest lists.
+	MediaTypeOCIManifestList = "application/vnd.oci.image.manifest.list.v1+json"
+
+	// DefaultMediaTypeManifestList is the default choice of manifest list type
+	// when marshalling/serving content
+	DefaultMediaTypeManifestList = MediaTypeOCIManifestList
+)
 
 // SchemaVersion provides a pre-initialized version structure for this
 // packages version of the manifest.
 var SchemaVersion = manifest.Versioned{
 	SchemaVersion: 2,
-	MediaType:     MediaTypeManifestList,
+	MediaType:     DefaultMediaTypeManifestList,
 }
 
 func init() {
-	manifestListFunc := func(b []byte) (distribution.Manifest, distribution.Descriptor, error) {
-		m := new(DeserializedManifestList)
-		err := m.UnmarshalJSON(b)
-		if err != nil {
-			return nil, distribution.Descriptor{}, err
-		}
+	manifestListFunc := func(mediaType string) func(b []byte) (distribution.Manifest, distribution.Descriptor, error) {
+		return func(b []byte) (distribution.Manifest, distribution.Descriptor, error) {
+			m := new(DeserializedManifestList)
+			err := m.UnmarshalJSON(b)
+			if err != nil {
+				return nil, distribution.Descriptor{}, err
+			}
 
-		dgst := digest.FromBytes(b)
-		return m, distribution.Descriptor{Digest: dgst, Size: int64(len(b)), MediaType: MediaTypeManifestList}, err
+			dgst := digest.FromBytes(b)
+			return m, distribution.Descriptor{Digest: dgst, Size: int64(len(b)), MediaType: mediaType}, err
+		}
 	}
-	err := distribution.RegisterManifestSchema(MediaTypeManifestList, manifestListFunc)
+	err := distribution.RegisterManifestSchema(MediaTypeManifestList, manifestListFunc(MediaTypeManifestList))
+	if err != nil {
+		panic(fmt.Sprintf("Unable to register manifest: %s", err))
+	}
+	err = distribution.RegisterManifestSchema(MediaTypeOCIManifestList, manifestListFunc(MediaTypeOCIManifestList))
 	if err != nil {
 		panic(fmt.Sprintf("Unable to register manifest: %s", err))
 	}
