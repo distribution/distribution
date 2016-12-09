@@ -1792,6 +1792,14 @@ The TCP address to connect to, including a port number.
 
 Proxy enables a registry to be configured as a pull through cache to the official Docker Hub.  See [mirror](https://github.com/docker/docker.github.io/tree/master/registry/recipes/mirror.md) for more information. Pushing to a registry configured as a pull through cache is currently unsupported.
 
+>**Note**: proxy and
+>```
+storage:
+  cache:
+    blobdescriptor: inmemory/redis
+```
+>can't be both configured, otherwise it will cause a major problem, See [#1356](https://github.com/docker/distribution/issues/1356) for more information.</b>
+
 <table>
   <tr>
     <th>Parameter</th>
