@@ -559,7 +559,16 @@ The `silly` auth is only for development purposes. It simply checks for the
 existence of the `Authorization` header in the HTTP request. It has no regard for
 the header's value. If the header does not exist, the `silly` auth responds with a
 challenge response, echoing back the realm, service, and scope that access was
-denied for.
+denied for.  The silly auth endpoint should return a jwt per https://github.com/docker/distribution/blob/master/docs/spec/auth/token.md in order
+for `docker login` to be successful. Note that the jwt will be accepted as long as
+it is formatted correctly. The signature is not verified by the registry.
+
+For example with nginx:
+
+    location /silly-auth/ {
+        default_type application/json;
+        return 200 '{"token": "silly.auth.token", "expires_in": "3154000000", "issued_at": "2009-11-10T23:00:00Z"}';
+    }
 
 The following values are used to configure the response:
 
