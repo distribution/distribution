@@ -397,14 +397,6 @@ func (d *driver) listBlobs(container, virtPath string) ([]string, error) {
 }
 
 func is404(err error) bool {
-	// handle the case when the request was a HEAD and service error could not
-	// be parsed, such as "storage: service returned without a response body
-	// (404 The specified blob does not exist.)"
-	if strings.Contains(fmt.Sprintf("%v", err), "404 The specified blob does not exist") {
-		return true
-	}
-
-	// common case
 	statusCodeErr, ok := err.(azure.AzureStorageServiceError)
 	return ok && statusCodeErr.StatusCode == http.StatusNotFound
 }
