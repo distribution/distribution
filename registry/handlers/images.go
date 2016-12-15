@@ -33,7 +33,7 @@ func imageManifestDispatcher(ctx *Context, r *http.Request) http.Handler {
 		Context: ctx,
 	}
 	reference := getReference(ctx)
-	dgst, err := digest.ParseDigest(reference)
+	dgst, err := digest.Parse(reference)
 	if err != nil {
 		// We just have a tag
 		imageManifestHandler.Tag = reference
