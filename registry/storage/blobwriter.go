@@ -236,7 +236,7 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc distribution.Descri
 		if !verified {
 			digester := digest.Canonical.New()
 
-			digestVerifier, err := digest.NewDigestVerifier(desc.Digest)
+			digestVerifier, err := desc.Digest.Verifier()
 			if err != nil {
 				return distribution.Descriptor{}, err
 			}

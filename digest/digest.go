@@ -123,6 +123,20 @@ func (d Digest) Algorithm() Algorithm {
 	return Algorithm(d[:d.sepIndex()])
 }
 
+// Verifier returns a writer object that can be used to verify a stream of
+// content against the digest. If the digest is invalid, an error will be
+// returned.
+func (d Digest) Verifier() (Verifier, error) {
+	if err := d.Validate(); err != nil {
+		return nil, err
+	}
+
+	return hashVerifier{
+		hash:   d.Algorithm().Hash(),
+		digest: d,
+	}, nil
+}
+
 // Hex returns the hex digest portion of the digest. This will panic if the
 // underlying digest is not in a valid format.
 func (d Digest) Hex() string {

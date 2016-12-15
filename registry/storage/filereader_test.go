@@ -41,7 +41,7 @@ func TestSimpleRead(t *testing.T) {
 		t.Fatalf("error allocating file reader: %v", err)
 	}
 
-	verifier, err := digest.NewDigestVerifier(dgst)
+	verifier, err := dgst.Verifier()
 	if err != nil {
 		t.Fatalf("error getting digest verifier: %s", err)
 	}
