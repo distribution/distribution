@@ -63,10 +63,14 @@ var (
 
 // ParseDigest parses s and returns the validated digest object. An error will
 // be returned if the format is invalid.
-func ParseDigest(s string) (Digest, error) {
+func Parse(s string) (Digest, error) {
 	d := Digest(s)
-
 	return d, d.Validate()
+}
+
+// ParseDigest is deprecated. Use Parse.
+func ParseDigest(s string) (Digest, error) {
+	return Parse(s)
 }
 
 // FromReader returns the most valid digest for the underlying content using

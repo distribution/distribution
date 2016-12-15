@@ -145,7 +145,7 @@ func (bs *blobStore) readlink(ctx context.Context, path string) (digest.Digest, 
 		return "", err
 	}
 
-	linked, err := digest.ParseDigest(string(content))
+	linked, err := digest.Parse(string(content))
 	if err != nil {
 		return "", err
 	}

@@ -51,7 +51,7 @@ func TestParseDigest(t *testing.T) {
 			err:   ErrDigestUnsupported,
 		},
 	} {
-		digest, err := ParseDigest(testcase.input)
+		digest, err := Parse(testcase.input)
 		if err != testcase.err {
 			t.Fatalf("error differed from expected while parsing %q: %v != %v", testcase.input, err, testcase.err)
 		}
@@ -69,7 +69,7 @@ func TestParseDigest(t *testing.T) {
 		}
 
 		// Parse string return value and check equality
-		newParsed, err := ParseDigest(digest.String())
+		newParsed, err := Parse(digest.String())
 
 		if err != nil {
 			t.Fatalf("unexpected error parsing input %q: %v", testcase.input, err)
