@@ -14,8 +14,8 @@ const (
 	// MediaTypeManifest specifies the mediaType for the current version.
 	MediaTypeManifest = "application/vnd.docker.distribution.manifest.v2+json"
 
-	// MediaTypeConfig specifies the mediaType for the image configuration.
-	MediaTypeConfig = "application/vnd.docker.container.image.v1+json"
+	// MediaTypeImageConfig specifies the mediaType for the image configuration.
+	MediaTypeImageConfig = "application/vnd.docker.container.image.v1+json"
 
 	// MediaTypePluginConfig specifies the mediaType for plugin configuration.
 	MediaTypePluginConfig = "application/vnd.docker.plugin.v1+json"

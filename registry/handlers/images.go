@@ -360,7 +360,7 @@ func (imh *imageManifestHandler) applyResourcePolicy(manifest distribution.Manif
 		class = "image"
 	case *schema2.DeserializedManifest:
 		switch m.Config.MediaType {
-		case schema2.MediaTypeConfig:
+		case schema2.MediaTypeImageConfig:
 			class = "image"
 		case schema2.MediaTypePluginConfig:
 			class = "plugin"
