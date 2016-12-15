@@ -20,7 +20,7 @@ func TestVerifyManifestForeignLayer(t *testing.T) {
 	repo := makeRepository(t, registry, "test")
 	manifestService := makeManifestService(t, repo)
 
-	config, err := repo.Blobs(ctx).Put(ctx, schema2.MediaTypeConfig, nil)
+	config, err := repo.Blobs(ctx).Put(ctx, schema2.MediaTypeImageConfig, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
