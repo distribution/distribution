@@ -27,6 +27,10 @@ const (
 	// MediaTypeForeignLayer is the mediaType used for layers that must be
 	// downloaded from foreign URLs.
 	MediaTypeForeignLayer = "application/vnd.docker.image.rootfs.foreign.diff.tar.gzip"
+
+	// MediaTypeUncompressedLayer is the mediaType used for layers which
+	// are not compressed.
+	MediaTypeUncompressedLayer = "application/vnd.docker.image.rootfs.diff.tar"
 )
 
 var (
