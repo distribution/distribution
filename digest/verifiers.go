@@ -19,14 +19,7 @@ type Verifier interface {
 
 // NewDigestVerifier is deprecated. Please use Digest.Verifier.
 func NewDigestVerifier(d Digest) (Verifier, error) {
-	if err := d.Validate(); err != nil {
-		return nil, err
-	}
-
-	return hashVerifier{
-		hash:   d.Algorithm().Hash(),
-		digest: d,
-	}, nil
+	return d.Verifier(), nil
 }
 
 type hashVerifier struct {

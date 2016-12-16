@@ -94,6 +94,11 @@ func (a Algorithm) New() Digester {
 // method will panic. Check Algorithm.Available() before calling.
 func (a Algorithm) Hash() hash.Hash {
 	if !a.Available() {
+		// Empty algorithm string is invalid
+		if a == "" {
+			panic(fmt.Sprintf("empty digest algorithm, validate before calling Algorithm.Hash()"))
+		}
+
 		// NOTE(stevvooe): A missing hash is usually a programming error that
 		// must be resolved at compile time. We don't import in the digest
 		// package to allow users to choose their hash implementation (such as
