@@ -61,7 +61,7 @@ var (
 	ErrDigestUnsupported = fmt.Errorf("unsupported digest algorithm")
 )
 
-// ParseDigest parses s and returns the validated digest object. An error will
+// Parse parses s and returns the validated digest object. An error will
 // be returned if the format is invalid.
 func Parse(s string) (Digest, error) {
 	d := Digest(s)
