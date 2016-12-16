@@ -94,17 +94,10 @@ func FromString(s string) Digest {
 func (d Digest) Validate() error {
 	s := string(d)
 
-	if !DigestRegexpAnchored.MatchString(s) {
-		return ErrDigestInvalidFormat
-	}
-
 	i := strings.Index(s, ":")
-	if i < 0 {
-		return ErrDigestInvalidFormat
-	}
 
-	// case: "sha256:" with no hex.
-	if i+1 == len(s) {
+	// validate i then run through regexp
+	if i < 0 || i+1 == len(s) || !DigestRegexpAnchored.MatchString(s) {
 		return ErrDigestInvalidFormat
 	}
 

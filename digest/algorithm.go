@@ -72,6 +72,10 @@ func (a *Algorithm) Set(value string) error {
 		*a = Algorithm(value)
 	}
 
+	if !a.Available() {
+		return ErrDigestUnsupported
+	}
+
 	return nil
 }
 
