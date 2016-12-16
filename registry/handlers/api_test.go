@@ -552,7 +552,7 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 	})
 
 	// Verify the body
-	verifier, err := digest.NewDigestVerifier(layerDigest)
+	verifier, err := layerDigest.Verifier()
 	if err != nil {
 		t.Fatalf("unexpected error getting digest verifier: %s", err)
 	}

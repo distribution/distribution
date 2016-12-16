@@ -235,11 +235,7 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc distribution.Descri
 		// guarantee, so this may be defensive.
 		if !verified {
 			digester := digest.Canonical.New()
-
-			digestVerifier, err := digest.NewDigestVerifier(desc.Digest)
-			if err != nil {
-				return distribution.Descriptor{}, err
-			}
+			verifier := desc.Digest.Verifier()
 
 			// Read the file from the backend driver and validate it.
 			fr, err := newFileReader(ctx, bw.driver, bw.path, desc.Size)
@@ -250,12 +246,12 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc distribution.Descri
 
 			tr := io.TeeReader(fr, digester.Hash())
 
-			if _, err := io.Copy(digestVerifier, tr); err != nil {
+			if _, err := io.Copy(verifier, tr); err != nil {
 				return distribution.Descriptor{}, err
 			}
 
 			canonical = digester.Digest()
-			verified = digestVerifier.Verified()
+			verified = verifier.Verified()
 		}
 	}
 
