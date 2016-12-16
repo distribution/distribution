@@ -1,8 +1,6 @@
 package digest
 
 import (
-	_ "crypto/sha256"
-	_ "crypto/sha512"
 	"testing"
 )
 
@@ -26,6 +24,11 @@ func TestParseDigest(t *testing.T) {
 		{
 			// empty hex
 			input: "sha256:",
+			err:   ErrDigestInvalidFormat,
+		},
+		{
+			// empty hex
+			input: ":",
 			err:   ErrDigestInvalidFormat,
 		},
 		{
@@ -79,6 +82,11 @@ func TestParseDigest(t *testing.T) {
 
 		if newParsed != digest {
 			t.Fatalf("expected equal: %q != %q", newParsed, digest)
+		}
+
+		newFromHex := NewDigestFromHex(newParsed.Algorithm().String(), newParsed.Hex())
+		if newFromHex != digest {
+			t.Fatalf("%v != %v", newFromHex, digest)
 		}
 	}
 }
