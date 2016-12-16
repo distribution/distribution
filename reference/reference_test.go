@@ -1,6 +1,8 @@
 package reference
 
 import (
+	_ "crypto/sha256"
+	_ "crypto/sha512"
 	"encoding/json"
 	"strconv"
 	"strings"

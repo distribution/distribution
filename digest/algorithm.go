@@ -79,7 +79,7 @@ func (a *Algorithm) Set(value string) error {
 	return nil
 }
 
-// New returns a new digester for the specified algorithm. If the algorithm
+// Digester returns a new digester for the specified algorithm. If the algorithm
 // does not have a digester implementation, nil will be returned. This can be
 // checked by calling Available before calling New.
 func (a Algorithm) Digester() Digester {
