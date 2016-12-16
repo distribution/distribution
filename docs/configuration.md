@@ -17,13 +17,17 @@ To override a configuration option, create an environment variable named
 and the `_` (underscore) represents indention levels. For example, you can
 configure the `rootdirectory` of the `filesystem` storage backend:
 
-    storage:
-      filesystem:
-        rootdirectory: /var/lib/registry
+```
+storage:
+  filesystem:
+    rootdirectory: /var/lib/registry
+```
 
 To override this value, set an environment variable like this:
 
-    REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/somewhere
+```
+REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/somewhere
+```
 
 This variable overrides the `/var/lib/registry` value to the `/somewhere`
 directory.
@@ -36,9 +40,11 @@ If the default configuration is not a sound basis for your usage, or if you are 
 
 Typically, create a new configuration file from scratch, and call it `config.yml`, then:
 
-    docker run -d -p 5000:5000 --restart=always --name registry \
-      -v `pwd`/config.yml:/etc/docker/registry/config.yml \
-      registry:2
+```
+docker run -d -p 5000:5000 --restart=always --name registry \
+  -v `pwd`/config.yml:/etc/docker/registry/config.yml \
+  registry:2
+```
 
 You can (and probably should) use [this as a starting point](https://github.com/docker/distribution/blob/master/cmd/registry/config-example.yml).
 
@@ -48,215 +54,217 @@ This section lists all the registry configuration options. Some options in
 the list are mutually exclusive. So, make sure to read the detailed reference
 information about each option that appears later in this page.
 
-    version: 0.1
-    log:
-      accesslog:
-        disabled: true
-      level: debug
-      formatter: text
-      fields:
-        service: registry
-        environment: staging
-      hooks:
-        - type: mail
-          disabled: true
-          levels:
-            - panic
-          options:
-            smtp:
-              addr: mail.example.com:25
-              username: mailuser
-              password: password
-              insecure: true
-            from: sender@example.com
-            to:
-              - errors@example.com
-    loglevel: debug # deprecated: use "log"
-    storage:
-      filesystem:
-        rootdirectory: /var/lib/registry
-		maxthreads: 100
-      azure:
-        accountname: accountname
-        accountkey: base64encodedaccountkey
-        container: containername
-      gcs:
-        bucket: bucketname
-        keyfile: /path/to/keyfile
-        rootdirectory: /gcs/object/name/prefix
-        chunksize: 5242880
-      s3:
-        accesskey: awsaccesskey
-        secretkey: awssecretkey
-        region: us-west-1
-        regionendpoint: http://myobjects.local
-        bucket: bucketname
-        encrypt: true
-        keyid: mykeyid
-        secure: true
-        v4auth: true
-        chunksize: 5242880
-        multipartcopychunksize: 33554432
-        multipartcopymaxconcurrency: 100
-        multipartcopythresholdsize: 33554432
-        rootdirectory: /s3/object/name/prefix
-      swift:
-        username: username
-        password: password
-        authurl: https://storage.myprovider.com/auth/v1.0 or https://storage.myprovider.com/v2.0 or https://storage.myprovider.com/v3/auth
-        tenant: tenantname
-        tenantid: tenantid
-        domain: domain name for Openstack Identity v3 API
-        domainid: domain id for Openstack Identity v3 API
-        insecureskipverify: true
-        region: fr
-        container: containername
-        rootdirectory: /swift/object/name/prefix
-      oss:
-        accesskeyid: accesskeyid
-        accesskeysecret: accesskeysecret
-        region: OSS region name
-        endpoint: optional endpoints
-        internal: optional internal endpoint
-        bucket: OSS bucket
-        encrypt: optional data encryption setting
-        secure: optional ssl setting
-        chunksize: optional size valye
-        rootdirectory: optional root directory
-      inmemory:  # This driver takes no parameters
-      delete:
-        enabled: false
-      redirect:
-        disable: false
-      cache:
-        blobdescriptor: redis
-      maintenance:
-        uploadpurging:
-          enabled: true
-          age: 168h
-          interval: 24h
-          dryrun: false
-        readonly:
-          enabled: false
-    auth:
-      silly:
-        realm: silly-realm
-        service: silly-service
-      token:
-        realm: token-realm
-        service: token-service
-        issuer: registry-token-issuer
-        rootcertbundle: /root/certs/bundle
-      htpasswd:
-        realm: basic-realm
-        path: /path/to/htpasswd
-    middleware:
-      registry:
-        - name: ARegistryMiddleware
-          options:
-            foo: bar
-      repository:
-        - name: ARepositoryMiddleware
-          options:
-            foo: bar
-      storage:
-        - name: cloudfront
-          options:
-            baseurl: https://my.cloudfronted.domain.com/
-            privatekey: /path/to/pem
-            keypairid: cloudfrontkeypairid
-            duration: 3000s
-      storage:
-        - name: redirect
-          options:
-            baseurl: https://example.com/
-    reporting:
-      bugsnag:
-        apikey: bugsnagapikey
-        releasestage: bugsnagreleasestage
-        endpoint: bugsnagendpoint
-      newrelic:
-        licensekey: newreliclicensekey
-        name: newrelicname
-        verbose: true
-    http:
-      addr: localhost:5000
-      prefix: /my/nested/registry/
-      host: https://myregistryaddress.org:5000
-      secret: asecretforlocaldevelopment
-      relativeurls: false
-      tls:
-        certificate: /path/to/x509/public
-        key: /path/to/x509/private
-        clientcas:
-          - /path/to/ca.pem
-          - /path/to/another/ca.pem
-        letsencrypt:
-          cachefile: /path/to/cache-file
-          email: emailused@letsencrypt.com
-      debug:
-        addr: localhost:5001
+```
+version: 0.1
+log:
+  accesslog:
+    disabled: true
+  level: debug
+  formatter: text
+  fields:
+    service: registry
+    environment: staging
+  hooks:
+    - type: mail
+      disabled: true
+      levels:
+        - panic
+      options:
+        smtp:
+          addr: mail.example.com:25
+          username: mailuser
+          password: password
+          insecure: true
+        from: sender@example.com
+        to:
+          - errors@example.com
+loglevel: debug # deprecated: use "log"
+storage:
+  filesystem:
+    rootdirectory: /var/lib/registry
+    maxthreads: 100
+  azure:
+    accountname: accountname
+    accountkey: base64encodedaccountkey
+    container: containername
+  gcs:
+    bucket: bucketname
+    keyfile: /path/to/keyfile
+    rootdirectory: /gcs/object/name/prefix
+    chunksize: 5242880
+  s3:
+    accesskey: awsaccesskey
+    secretkey: awssecretkey
+    region: us-west-1
+    regionendpoint: http://myobjects.local
+    bucket: bucketname
+    encrypt: true
+    keyid: mykeyid
+    secure: true
+    v4auth: true
+    chunksize: 5242880
+    multipartcopychunksize: 33554432
+    multipartcopymaxconcurrency: 100
+    multipartcopythresholdsize: 33554432
+    rootdirectory: /s3/object/name/prefix
+  swift:
+    username: username
+    password: password
+    authurl: https://storage.myprovider.com/auth/v1.0 or https://storage.myprovider.com/v2.0 or https://storage.myprovider.com/v3/auth
+    tenant: tenantname
+    tenantid: tenantid
+    domain: domain name for Openstack Identity v3 API
+    domainid: domain id for Openstack Identity v3 API
+    insecureskipverify: true
+    region: fr
+    container: containername
+    rootdirectory: /swift/object/name/prefix
+  oss:
+    accesskeyid: accesskeyid
+    accesskeysecret: accesskeysecret
+    region: OSS region name
+    endpoint: optional endpoints
+    internal: optional internal endpoint
+    bucket: OSS bucket
+    encrypt: optional data encryption setting
+    secure: optional ssl setting
+    chunksize: optional size valye
+    rootdirectory: optional root directory
+  inmemory:  # This driver takes no parameters
+  delete:
+    enabled: false
+  redirect:
+    disable: false
+  cache:
+    blobdescriptor: redis
+  maintenance:
+    uploadpurging:
+      enabled: true
+      age: 168h
+      interval: 24h
+      dryrun: false
+    readonly:
+      enabled: false
+auth:
+  silly:
+    realm: silly-realm
+    service: silly-service
+  token:
+    realm: token-realm
+    service: token-service
+    issuer: registry-token-issuer
+    rootcertbundle: /root/certs/bundle
+  htpasswd:
+    realm: basic-realm
+    path: /path/to/htpasswd
+middleware:
+  registry:
+    - name: ARegistryMiddleware
+      options:
+        foo: bar
+  repository:
+    - name: ARepositoryMiddleware
+      options:
+        foo: bar
+  storage:
+    - name: cloudfront
+      options:
+        baseurl: https://my.cloudfronted.domain.com/
+        privatekey: /path/to/pem
+        keypairid: cloudfrontkeypairid
+        duration: 3000s
+  storage:
+    - name: redirect
+      options:
+        baseurl: https://example.com/
+reporting:
+  bugsnag:
+    apikey: bugsnagapikey
+    releasestage: bugsnagreleasestage
+    endpoint: bugsnagendpoint
+  newrelic:
+    licensekey: newreliclicensekey
+    name: newrelicname
+    verbose: true
+http:
+  addr: localhost:5000
+  prefix: /my/nested/registry/
+  host: https://myregistryaddress.org:5000
+  secret: asecretforlocaldevelopment
+  relativeurls: false
+  tls:
+    certificate: /path/to/x509/public
+    key: /path/to/x509/private
+    clientcas:
+      - /path/to/ca.pem
+      - /path/to/another/ca.pem
+    letsencrypt:
+      cachefile: /path/to/cache-file
+      email: emailused@letsencrypt.com
+  debug:
+    addr: localhost:5001
+  headers:
+    X-Content-Type-Options: [nosniff]
+  http2:
+    disabled: false
+notifications:
+  endpoints:
+    - name: alistener
+      disabled: false
+      url: https://my.listener.com/event
+      headers: <http.Header>
+      timeout: 500
+      threshold: 5
+      backoff: 1000
+      ignoredmediatypes:
+        - application/octet-stream
+redis:
+  addr: localhost:6379
+  password: asecret
+  db: 0
+  dialtimeout: 10ms
+  readtimeout: 10ms
+  writetimeout: 10ms
+  pool:
+    maxidle: 16
+    maxactive: 64
+    idletimeout: 300s
+health:
+  storagedriver:
+    enabled: true
+    interval: 10s
+    threshold: 3
+  file:
+    - file: /path/to/checked/file
+      interval: 10s
+  http:
+    - uri: http://server.to.check/must/return/200
       headers:
-        X-Content-Type-Options: [nosniff]
-      http2:
-        disabled: false
-    notifications:
-      endpoints:
-        - name: alistener
-          disabled: false
-          url: https://my.listener.com/event
-          headers: <http.Header>
-          timeout: 500
-          threshold: 5
-          backoff: 1000
-          ignoredmediatypes:
-            - application/octet-stream
-    redis:
-      addr: localhost:6379
-      password: asecret
-      db: 0
-      dialtimeout: 10ms
-      readtimeout: 10ms
-      writetimeout: 10ms
-      pool:
-        maxidle: 16
-        maxactive: 64
-        idletimeout: 300s
-    health:
-      storagedriver:
-        enabled: true
-        interval: 10s
-        threshold: 3
-      file:
-        - file: /path/to/checked/file
-          interval: 10s
-      http:
-        - uri: http://server.to.check/must/return/200
-          headers:
-            Authorization: [Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==]
-          statuscode: 200
-          timeout: 3s
-          interval: 10s
-          threshold: 3
-      tcp:
-        - addr: redis-server.domain.com:6379
-          timeout: 3s
-          interval: 10s
-          threshold: 3
-    proxy:
-      remoteurl: https://registry-1.docker.io
-      username: [username]
-      password: [password]
-    compatibility:
-      schema1:
-        signingkeyfile: /etc/registry/key.json
-    validation:
-      manifests:
-        urls:
-          allow:
-            - ^https?://([^/]+\.)*example\.com/
-          deny:
-            - ^https?://www\.example\.com/
+        Authorization: [Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==]
+      statuscode: 200
+      timeout: 3s
+      interval: 10s
+      threshold: 3
+  tcp:
+    - addr: redis-server.domain.com:6379
+      timeout: 3s
+      interval: 10s
+      threshold: 3
+proxy:
+  remoteurl: https://registry-1.docker.io
+  username: [username]
+  password: [password]
+compatibility:
+  schema1:
+    signingkeyfile: /etc/registry/key.json
+validation:
+  manifests:
+    urls:
+      allow:
+        - ^https?://([^/]+\.)*example\.com/
+      deny:
+        - ^https?://www\.example\.com/
+```
 
 In some instances a configuration option is **optional** but it contains child
 options marked as **required**. This indicates that you can omit the parent with
@@ -265,7 +273,9 @@ the children marked **required**.
 
 ## version
 
-    version: 0.1
+```
+version: 0.1
+```
 
 The `version` option is **required**. It specifies the configuration's version.
 It is expected to remain a top-level field, to allow for a consistent version
@@ -277,14 +287,16 @@ The `log` subsection configures the behavior of the logging system. The logging
 system outputs everything to stdout. You can adjust the granularity and format
 with this configuration section.
 
-    log:
-      accesslog:
-        disabled: true
-      level: debug
-      formatter: text
-      fields:
-        service: registry
-        environment: staging
+```
+log:
+  accesslog:
+    disabled: true
+  level: debug
+  formatter: text
+  fields:
+    service: registry
+    environment: staging
+```
 
 <table>
   <tr>
@@ -335,8 +347,10 @@ with this configuration section.
 
 ### accesslog
 
-    accesslog:
-      disabled: true
+```
+accesslog:
+  disabled: true
+```
 
 Within `log`, `accesslog` configures the behavior of the access logging
 system. By default, the access logging system outputs to stdout in
@@ -345,19 +359,21 @@ Access logging can be disabled by setting the boolean flag `disabled` to `true`.
 
 ## hooks
 
-    hooks:
-      - type: mail
-        levels:
-          - panic
-        options:
-          smtp:
-            addr: smtp.sendhost.com:25
-            username: sendername
-            password: password
-            insecure: true
-          from: name@sendhost.com
-          to:
-            - name@receivehost.com
+```
+hooks:
+  - type: mail
+    levels:
+      - panic
+    options:
+      smtp:
+        addr: smtp.sendhost.com:25
+        username: sendername
+        password: password
+        insecure: true
+      from: name@sendhost.com
+      to:
+        - name@receivehost.com
+```
 
 The `hooks` subsection configures the logging hooks' behavior. This subsection
 includes a sequence handler which you can use for sending mail, for example.
@@ -367,81 +383,85 @@ Refer to `loglevel` to configure the level of messages printed.
 
 > **DEPRECATED:** Please use [log](#log) instead.
 
-    loglevel: debug
+```
+loglevel: debug
+```
 
 Permitted values are `error`, `warn`, `info` and `debug`. The default is
 `info`.
 
 ## storage
 
-    storage:
-      filesystem:
-        rootdirectory: /var/lib/registry
-      azure:
-        accountname: accountname
-        accountkey: base64encodedaccountkey
-        container: containername
-      gcs:
-        bucket: bucketname
-        keyfile: /path/to/keyfile
-        rootdirectory: /gcs/object/name/prefix
-      s3:
-        accesskey: awsaccesskey
-        secretkey: awssecretkey
-        region: us-west-1
-        regionendpoint: http://myobjects.local
-        bucket: bucketname
-        encrypt: true
-        keyid: mykeyid
-        secure: true
-        v4auth: true
-        chunksize: 5242880
-        multipartcopychunksize: 33554432
-        multipartcopymaxconcurrency: 100
-        multipartcopythresholdsize: 33554432
-        rootdirectory: /s3/object/name/prefix
-      swift:
-        username: username
-        password: password
-        authurl: https://storage.myprovider.com/auth/v1.0 or https://storage.myprovider.com/v2.0 or https://storage.myprovider.com/v3/auth
-        tenant: tenantname
-        tenantid: tenantid
-        domain: domain name for Openstack Identity v3 API
-        domainid: domain id for Openstack Identity v3 API
-        insecureskipverify: true
-        region: fr
-        container: containername
-        rootdirectory: /swift/object/name/prefix
-      oss:
-        accesskeyid: accesskeyid
-        accesskeysecret: accesskeysecret
-        region: OSS region name
-        endpoint: optional endpoints
-        internal: optional internal endpoint
-        bucket: OSS bucket
-        encrypt: optional data encryption setting
-        secure: optional ssl setting
-        chunksize: optional size valye
-        rootdirectory: optional root directory
-      inmemory:
-      delete:
-        enabled: false
-      cache:
-        blobdescriptor: inmemory
-      maintenance:
-        uploadpurging:
-          enabled: true
-          age: 168h
-          interval: 24h
-          dryrun: false
-      redirect:
-        disable: false
+```
+storage:
+  filesystem:
+    rootdirectory: /var/lib/registry
+  azure:
+    accountname: accountname
+    accountkey: base64encodedaccountkey
+    container: containername
+  gcs:
+    bucket: bucketname
+    keyfile: /path/to/keyfile
+    rootdirectory: /gcs/object/name/prefix
+  s3:
+    accesskey: awsaccesskey
+    secretkey: awssecretkey
+    region: us-west-1
+    regionendpoint: http://myobjects.local
+    bucket: bucketname
+    encrypt: true
+    keyid: mykeyid
+    secure: true
+    v4auth: true
+    chunksize: 5242880
+    multipartcopychunksize: 33554432
+    multipartcopymaxconcurrency: 100
+    multipartcopythresholdsize: 33554432
+    rootdirectory: /s3/object/name/prefix
+  swift:
+    username: username
+    password: password
+    authurl: https://storage.myprovider.com/auth/v1.0 or https://storage.myprovider.com/v2.0 or https://storage.myprovider.com/v3/auth
+    tenant: tenantname
+    tenantid: tenantid
+    domain: domain name for Openstack Identity v3 API
+    domainid: domain id for Openstack Identity v3 API
+    insecureskipverify: true
+    region: fr
+    container: containername
+    rootdirectory: /swift/object/name/prefix
+  oss:
+    accesskeyid: accesskeyid
+    accesskeysecret: accesskeysecret
+    region: OSS region name
+    endpoint: optional endpoints
+    internal: optional internal endpoint
+    bucket: OSS bucket
+    encrypt: optional data encryption setting
+    secure: optional ssl setting
+    chunksize: optional size valye
+    rootdirectory: optional root directory
+  inmemory:
+  delete:
+    enabled: false
+  cache:
+    blobdescriptor: inmemory
+  maintenance:
+    uploadpurging:
+      enabled: true
+      age: 168h
+      interval: 24h
+      dryrun: false
+  redirect:
+    disable: false
+```
 
 The storage option is **required** and defines which storage backend is in use.
 You must configure one backend; if you configure more, the registry returns an error. You can choose any of these backend storage drivers:
 
-| Storage&nbsp;driver | Description
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Storage&nbsp;driver | Description                                                                                                                                                                                                                                                                              |
+|:--------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `filesystem`        | Uses the local disk to store registry files. It is ideal for development and may be appropriate for some small-scale production applications. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/filesystem.md). |
 | `azure`             | Uses Microsoft's Azure Blob Storage. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/azure.md).                                                                                                               |
 | `gcs`               | Uses Google Cloud Storage. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/gcs.md).                                                                                                                           |
@@ -460,7 +480,9 @@ backing data-store. If you do use a Windows volume, you must ensure that the
 `PATH` to the mount point is within Windows' `MAX_PATH` limits (typically 255
 characters). Failure to do so can result in the following error message:
 
-    mkdir /XXX protocol error and your registry will not function properly.
+```
+mkdir /XXX protocol error and your registry will not function properly.
+```
 
 ### Maintenance
 
@@ -476,12 +498,12 @@ configure upload directory purging, the following parameters
 must be set.
 
 
-| Parameter | Required | Description
-  --------- | -------- | -----------
-`enabled` | yes | Set to true to enable upload purging.  Default=true. |
-`age` | yes | Upload directories which are older than this age will be deleted.  Default=168h (1 week)
-`interval` | yes | The interval between upload directory purging.  Default=24h.
-`dryrun` | yes |  dryrun can be set to true to obtain a summary of what directories will be deleted.  Default=false.
+| Parameter  | Required | Description                                                                                        |
+|:-----------|:---------|:---------------------------------------------------------------------------------------------------|
+| `enabled`  | yes      | Set to true to enable upload purging.  Default=true.                                               |
+| `age`      | yes      | Upload directories which are older than this age will be deleted.  Default=168h (1 week)           |
+| `interval` | yes      | The interval between upload directory purging.  Default=24h.                                       |
+| `dryrun`   | yes      | dryrun can be set to true to obtain a summary of what directories will be deleted.  Default=false. |
 
 Note: `age` and `interval` are strings containing a number with optional fraction and a unit suffix: e.g. 45m, 2h10m, 168h (1 week).
 
@@ -501,8 +523,10 @@ Use the `delete` subsection to enable the deletion of image blobs and manifests
 by digest. It defaults to false, but it can be enabled by writing the following
 on the configuration file:
 
-    delete:
-      enabled: true
+```
+delete:
+  enabled: true
+```
 
 ### cache
 
@@ -530,24 +554,27 @@ doing aggressive caching.
 Redirects can be disabled by adding a single flag `disable`, set to `true`
 under the `redirect` section:
 
-    redirect:
-      disable: true
-
+```
+redirect:
+  disable: true
+```
 
 ## auth
 
-    auth:
-      silly:
-        realm: silly-realm
-        service: silly-service
-      token:
-        realm: token-realm
-        service: token-service
-        issuer: registry-token-issuer
-        rootcertbundle: /root/certs/bundle
-      htpasswd:
-        realm: basic-realm
-        path: /path/to/htpasswd
+```
+auth:
+  silly:
+    realm: silly-realm
+    service: silly-service
+  token:
+    realm: token-realm
+    service: token-service
+    issuer: registry-token-issuer
+    rootcertbundle: /root/certs/bundle
+  htpasswd:
+    realm: basic-realm
+    path: /path/to/htpasswd
+```
 
 The `auth` option is **optional**. There are
 currently 3 possible auth providers, `silly`, `token` and `htpasswd`. You can configure only
@@ -712,22 +739,24 @@ object they're wrapping. This means a registry middleware must implement the
 
 An example configuration of the `cloudfront`  middleware, a storage middleware:
 
-    middleware:
-      registry:
-        - name: ARegistryMiddleware
-          options:
-            foo: bar
-      repository:
-        - name: ARepositoryMiddleware
-          options:
-            foo: bar
-      storage:
-        - name: cloudfront
-          options:
-            baseurl: https://my.cloudfronted.domain.com/
-            privatekey: /path/to/pem
-            keypairid: cloudfrontkeypairid
-            duration: 3000s
+```
+middleware:
+  registry:
+    - name: ARegistryMiddleware
+      options:
+        foo: bar
+  repository:
+    - name: ARepositoryMiddleware
+      options:
+        foo: bar
+  storage:
+    - name: cloudfront
+      options:
+        baseurl: https://my.cloudfronted.domain.com/
+        privatekey: /path/to/pem
+        keypairid: cloudfrontkeypairid
+        duration: 3000s
+```
 
 Each middleware entry has `name` and `options` entries. The `name` must
 correspond to the name under which the middleware registers itself. The
@@ -797,21 +826,23 @@ In place of the `cloudfront` storage middleware, the `redirect`
 storage middleware can be used to specify a custom URL to a location
 of a proxy for the layer stored by the S3 storage driver.
 
-| Parameter | Required | Description |
-| --- | --- | --- |
+| Parameter | Required | Description                                                                                                 |
+|:----------|:---------|:------------------------------------------------------------------------------------------------------------|
 | baseurl   | yes      | `SCHEME://HOST` at which layers are served. Can also contain port. For example, `https://example.com:5443`. |
 
 ## reporting
 
-    reporting:
-      bugsnag:
-        apikey: bugsnagapikey
-        releasestage: bugsnagreleasestage
-        endpoint: bugsnagendpoint
-      newrelic:
-        licensekey: newreliclicensekey
-        name: newrelicname
-        verbose: true
+```
+reporting:
+  bugsnag:
+    apikey: bugsnagapikey
+    releasestage: bugsnagreleasestage
+    endpoint: bugsnagendpoint
+  newrelic:
+    licensekey: newreliclicensekey
+    name: newrelicname
+    verbose: true
+```
 
 The `reporting` option is **optional** and configures error and metrics
 reporting tools. At the moment only two services are supported, [New
@@ -909,28 +940,30 @@ configuration may contain both.
 
 ## http
 
-    http:
-      addr: localhost:5000
-      net: tcp
-      prefix: /my/nested/registry/
-      host: https://myregistryaddress.org:5000
-      secret: asecretforlocaldevelopment
-      relativeurls: false
-      tls:
-        certificate: /path/to/x509/public
-        key: /path/to/x509/private
-        clientcas:
-          - /path/to/ca.pem
-          - /path/to/another/ca.pem
-        letsencrypt:
-          cachefile: /path/to/cache-file
-          email: emailused@letsencrypt.com
-      debug:
-        addr: localhost:5001
-      headers:
-        X-Content-Type-Options: [nosniff]
-      http2:
-        disabled: false
+```
+http:
+  addr: localhost:5000
+  net: tcp
+  prefix: /my/nested/registry/
+  host: https://myregistryaddress.org:5000
+  secret: asecretforlocaldevelopment
+  relativeurls: false
+  tls:
+    certificate: /path/to/x509/public
+    key: /path/to/x509/private
+    clientcas:
+      - /path/to/ca.pem
+      - /path/to/another/ca.pem
+    letsencrypt:
+      cachefile: /path/to/cache-file
+      email: emailused@letsencrypt.com
+  debug:
+    addr: localhost:5001
+  headers:
+    X-Content-Type-Options: [nosniff]
+  http2:
+    disabled: false
+```
 
 The `http` option details the configuration for the HTTP server that hosts the registry.
 
@@ -1164,17 +1197,19 @@ settings for the registry.
 
 ## notifications
 
-    notifications:
-      endpoints:
-        - name: alistener
-          disabled: false
-          url: https://my.listener.com/event
-          headers: <http.Header>
-          timeout: 500
-          threshold: 5
-          backoff: 1000
-          ignoredmediatypes:
-            - application/octet-stream
+```
+notifications:
+  endpoints:
+    - name: alistener
+      disabled: false
+      url: https://my.listener.com/event
+      headers: <http.Header>
+      timeout: 500
+      threshold: 5
+      backoff: 1000
+      ignoredmediatypes:
+        - application/octet-stream
+```
 
 The notifications option is **optional** and currently may contain a single
 option, `endpoints`.
@@ -1306,17 +1341,19 @@ The URL to which events should be published.
 
 ## redis
 
-    redis:
-      addr: localhost:6379
-      password: asecret
-      db: 0
-      dialtimeout: 10ms
-      readtimeout: 10ms
-      writetimeout: 10ms
-      pool:
-        maxidle: 16
-        maxactive: 64
-        idletimeout: 300s
+```
+redis:
+  addr: localhost:6379
+  password: asecret
+  db: 0
+  dialtimeout: 10ms
+  readtimeout: 10ms
+  writetimeout: 10ms
+  pool:
+    maxidle: 16
+    maxactive: 64
+    idletimeout: 300s
+```
 
 Declare parameters for constructing the redis connections. Registry instances
 may use the Redis instance for several applications. The current purpose is
@@ -1404,10 +1441,12 @@ as the registry does not set an expire value on keys.
 
 ### pool
 
-    pool:
-      maxidle: 16
-      maxactive: 64
-      idletimeout: 300s
+```
+pool:
+  maxidle: 16
+  maxactive: 64
+  idletimeout: 300s
+```
 
 Configure the behavior of the Redis connection pool.
 
@@ -1456,27 +1495,29 @@ Configure the behavior of the Redis connection pool.
 
 ## health
 
-    health:
-      storagedriver:
-        enabled: true
-        interval: 10s
-        threshold: 3
-      file:
-        - file: /path/to/checked/file
-          interval: 10s
-      http:
-        - uri: http://server.to.check/must/return/200
-          headers:
-            Authorization: [Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==]
-          statuscode: 200
-          timeout: 3s
-          interval: 10s
-          threshold: 3
-      tcp:
-        - addr: redis-server.domain.com:6379
-          timeout: 3s
-          interval: 10s
-          threshold: 3
+```
+health:
+  storagedriver:
+    enabled: true
+    interval: 10s
+    threshold: 3
+  file:
+    - file: /path/to/checked/file
+      interval: 10s
+  http:
+    - uri: http://server.to.check/must/return/200
+      headers:
+        Authorization: [Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==]
+      statuscode: 200
+      timeout: 3s
+      interval: 10s
+      threshold: 3
+  tcp:
+    - addr: redis-server.domain.com:6379
+      timeout: 3s
+      interval: 10s
+      threshold: 3
+```
 
 The health option is **optional**. It may contain preferences for a periodic
 health check on the storage driver's backend storage, and optional periodic
@@ -1785,10 +1826,12 @@ The TCP address to connect to, including a port number.
 
 ## Proxy
 
-    proxy:
-      remoteurl: https://registry-1.docker.io
-      username: [username]
-      password: [password]
+```
+proxy:
+  remoteurl: https://registry-1.docker.io
+  username: [username]
+  password: [password]
+```
 
 Proxy enables a registry to be configured as a pull through cache to the official Docker Hub.  See [mirror](https://github.com/docker/docker.github.io/tree/master/registry/recipes/mirror.md) for more information. Pushing to a registry configured as a pull through cache is currently unsupported.
 
@@ -1837,9 +1880,11 @@ To enable pulling private repositories (e.g. `batman/robin`) a username and pass
 
 ## Compatibility
 
-    compatibility:
-      schema1:
-        signingkeyfile: /etc/registry/key.json
+```
+compatibility:
+  schema1:
+    signingkeyfile: /etc/registry/key.json
+```
 
 Configure handling of older and deprecated features. Each subsection
 defines such a feature with configurable behavior.
@@ -1869,13 +1914,15 @@ defines such a feature with configurable behavior.
 
 ## Validation
 
-    validation:
-      manifests:
-        urls:
-          allow:
-            - ^https?://([^/]+\.)*example\.com/
-          deny:
-            - ^https?://www\.example\.com/
+```
+validation:
+  manifests:
+    urls:
+      allow:
+        - ^https?://([^/]+\.)*example\.com/
+      deny:
+        - ^https?://www\.example\.com/
+```
 
 ### disabled
 
@@ -1905,17 +1952,19 @@ one of the `allow` regular expressions and one of the following holds:
 
 The following is a simple example you can use for local development:
 
-    version: 0.1
-    log:
-      level: debug
-    storage:
-        filesystem:
-            rootdirectory: /var/lib/registry
-    http:
-        addr: localhost:5000
-        secret: asecretforlocaldevelopment
-        debug:
-            addr: localhost:5001
+```
+version: 0.1
+log:
+  level: debug
+storage:
+    filesystem:
+        rootdirectory: /var/lib/registry
+http:
+    addr: localhost:5000
+    secret: asecretforlocaldevelopment
+    debug:
+        addr: localhost:5001
+```
 
 The above configures the registry instance to run on port `5000`, binding to
 `localhost`, with the `debug` server enabled. Registry data storage is in the
@@ -1947,7 +1996,7 @@ conjunction with the S3 storage driver.
     <td>The storage middleware name. Currently <code>cloudfront</code> is an accepted value.</td>
   </tr>
   <tr>
-    <td><code>disabled<code></td>
+    <td><code>disabled</code></td>
     <td>Set to <code>false</code> to easily disable the middleware.</td>
   </tr>
   <tr>
@@ -1966,16 +2015,17 @@ conjunction with the S3 storage driver.
 
 The following example illustrates these values:
 
-    middleware:
-        storage:
-            - name: cloudfront
-              disabled: false
-              options:
-                 baseurl: http://d111111abcdef8.cloudfront.net
-                 privatekey: /path/to/asecret.pem
-                 keypairid: asecret
-                 duration: 60
-
+```
+middleware:
+    storage:
+        - name: cloudfront
+          disabled: false
+          options:
+             baseurl: http://d111111abcdef8.cloudfront.net
+             privatekey: /path/to/asecret.pem
+             keypairid: asecret
+             duration: 60
+```
 
 >**Note**: Cloudfront keys exist separately to other AWS keys.  See
 >[the documentation on AWS credentials](http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html)
