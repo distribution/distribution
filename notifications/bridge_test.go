@@ -4,12 +4,12 @@ import (
 	"testing"
 
 	"github.com/docker/distribution"
-	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/uuid"
 	"github.com/docker/libtrust"
+	"github.com/opencontainers/go-digest"
 )
 
 var (

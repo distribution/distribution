@@ -5,12 +5,12 @@ import (
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/manifest/manifestlist"
 	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/manifest/schema2"
 	"github.com/docker/libtrust"
+	"github.com/opencontainers/go-digest"
 )
 
 // MakeManifestList constructs a manifest list out of a list of manifest digests
