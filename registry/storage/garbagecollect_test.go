@@ -7,12 +7,12 @@ import (
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/docker/distribution/testutil"
 	"github.com/docker/libtrust"
+	"github.com/opencontainers/go-digest"
 )
 
 type image struct {

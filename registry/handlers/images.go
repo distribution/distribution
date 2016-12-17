@@ -8,7 +8,6 @@ import (
 
 	"github.com/docker/distribution"
 	ctxu "github.com/docker/distribution/context"
-	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest/manifestlist"
 	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/manifest/schema2"
@@ -17,6 +16,7 @@ import (
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/registry/auth"
 	"github.com/gorilla/handlers"
+	"github.com/opencontainers/go-digest"
 )
 
 // These constants determine which architecture and OS to choose from a

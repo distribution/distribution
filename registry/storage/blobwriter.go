@@ -10,12 +10,17 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/digest"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
+	"github.com/opencontainers/go-digest"
 )
 
 var (
 	errResumableDigestNotAvailable = errors.New("resumable digest not available")
+)
+
+const (
+	// DigestSha256EmptyTar is the canonical sha256 digest of empty data
+	digestSha256EmptyTar = "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 )
 
 // blobWriter is used to control the various aspects of resumable
@@ -234,7 +239,7 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc distribution.Descri
 		// paths. We may be able to make the size-based check a stronger
 		// guarantee, so this may be defensive.
 		if !verified {
-			digester := digest.Canonical.New()
+			digester := digest.Canonical.Digester()
 			verifier := desc.Digest.Verifier()
 
 			// Read the file from the backend driver and validate it.
@@ -318,7 +323,7 @@ func (bw *blobWriter) moveBlob(ctx context.Context, desc distribution.Descriptor
 			// a zero-length blob into a nonzero-length blob location. To
 			// prevent this horrid thing, we employ the hack of only allowing
 			// to this happen for the digest of an empty tar.
-			if desc.Digest == digest.DigestSha256EmptyTar {
+			if desc.Digest == digestSha256EmptyTar {
 				return bw.blobStore.driver.PutContent(ctx, blobPath, []byte{})
 			}
 

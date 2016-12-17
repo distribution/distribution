@@ -7,8 +7,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/version"
+	"github.com/opencontainers/go-digest"
 )
 
 var (

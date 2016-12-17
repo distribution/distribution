@@ -6,10 +6,10 @@ import (
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/libtrust"
+	"github.com/opencontainers/go-digest"
 )
 
 // signedManifestHandler is a ManifestHandler that covers schema1 manifests. It
