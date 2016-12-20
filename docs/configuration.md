@@ -665,6 +665,14 @@ location of a proxy for the layer stored by the S3 storage driver.
 |-----------|----------|-------------------------------------------------------------------------------------------------------------|
 | `baseurl` | yes      | `SCHEME://HOST` at which layers are served. Can also contain port. For example, `https://example.com:5443`. |
 
+### alicdn
+
+The alicdn middleware can be used together with oss storage. It redirects all blob requests to alicdn with oss-style-signed querystring. 
+
+| Parameter | Required | Description                                                                                                 |
+|:----------|:---------|:------------------------------------------------------------------------------------------------------------|
+| baseurl   | yes      | `SCHEME://your-cdn-domain`. Can also contain port. For example, `https://your-cdn-domain:8080`. |
+
 ## `reporting`
 
 ```
