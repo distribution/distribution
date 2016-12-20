@@ -1,5 +1,14 @@
 # Changelog
 
+## 2.6.0-rc2 (2016-12-20)
+
+#### Spec
+ - Authorization: add support for repository classes
+
+#### Registry
+ - Add policy configuration for enforcing repository classes
+
+
 ## 2.6.0-rc1 (2016-10-10)
 
 #### Storage
