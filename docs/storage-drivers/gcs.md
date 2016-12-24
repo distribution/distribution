@@ -57,6 +57,7 @@ An implementation of the `storagedriver.StorageDriver` interface which uses Goog
     </td>
     <td>
       This is the chunk size used for uploading large blobs, must be a multiple of 256*1024.
+    </td>
   </tr>
 
 </table>
