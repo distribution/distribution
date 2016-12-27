@@ -1,23 +1,26 @@
 ---
 title: "Configuring a registry"
 description: "Explains how to configure a registry"
-keywords: ["registry, on-prem, images, tags, repository, distribution, configuration"]
+keywords: registry, on-prem, images, tags, repository, distribution, configuration
 ---
 
-# Registry Configuration Reference
-
-The Registry configuration is based on a YAML file, detailed below. While it comes with sane default values out of the box, you are heavily encouraged to review it exhaustively before moving your systems to production.
+The Registry configuration is based on a YAML file, detailed below. While it
+comes with sane default values out of the box, you should review it exhaustively
+before moving your systems to production.
 
 ## Override specific configuration options
 
-In a typical setup where you run your Registry from the official image, you can specify a configuration variable from the environment by passing `-e` arguments to your `docker run` stanza, or from within a Dockerfile using the `ENV` instruction.
+In a typical setup where you run your Registry from the official image, you can
+specify a configuration variable from the environment by passing `-e` arguments
+to your `docker run` stanza or from within a Dockerfile using the `ENV`
+instruction.
 
 To override a configuration option, create an environment variable named
-`REGISTRY_variable` where *`variable`* is the name of the configuration option
+`REGISTRY_variable` where `variable` is the name of the configuration option
 and the `_` (underscore) represents indention levels. For example, you can
 configure the `rootdirectory` of the `filesystem` storage backend:
 
-```
+```none
 storage:
   filesystem:
     rootdirectory: /var/lib/registry
@@ -25,36 +28,43 @@ storage:
 
 To override this value, set an environment variable like this:
 
-```
+```none
 REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/somewhere
 ```
 
 This variable overrides the `/var/lib/registry` value to the `/somewhere`
 directory.
 
->**NOTE**: It is highly recommended to create a base configuration file with which environment variables can be used to tweak individual values.  Overriding configuration sections with environment variables is not recommended.
+> **Note**: Create a base configuration file with environment variables that can
+> be configured to tweak individual values. Overriding configuration sections
+> with environment variables is not recommended.
 
 ## Overriding the entire configuration file
 
-If the default configuration is not a sound basis for your usage, or if you are having issues overriding keys from the environment, you can specify an alternate YAML configuration file by mounting it as a volume in the container.
+If the default configuration is not a sound basis for your usage, or if you are
+having issues overriding keys from the environment, you can specify an alternate
+YAML configuration file by mounting it as a volume in the container.
 
-Typically, create a new configuration file from scratch, and call it `config.yml`, then:
+Typically, create a new configuration file from scratch,named `config.yml`, then
+specify it in the `docker run` command:
 
+```bash
+$ docker run -d -p 5000:5000 --restart=always --name registry \
+             -v `pwd`/config.yml:/etc/docker/registry/config.yml \
+             registry:2
 ```
-docker run -d -p 5000:5000 --restart=always --name registry \
-  -v `pwd`/config.yml:/etc/docker/registry/config.yml \
-  registry:2
-```
 
-You can (and probably should) use [this as a starting point](https://github.com/docker/distribution/blob/master/cmd/registry/config-example.yml).
+Use this
+[example YAML file](https://github.com/docker/distribution/blob/master/cmd/registry/config-example.yml)
+as a starting point.
 
 ## List of configuration options
 
-This section lists all the registry configuration options. Some options in
-the list are mutually exclusive. So, make sure to read the detailed reference
-information about each option that appears later in this page.
+These are all configuration options for the registry. Some options in the list
+are mutually exclusive. Read the detailed reference information about each
+option before finalizing your configuration.
 
-```
+```none
 version: 0.1
 log:
   accesslog:
@@ -267,13 +277,13 @@ validation:
 ```
 
 In some instances a configuration option is **optional** but it contains child
-options marked as **required**. This indicates that you can omit the parent with
+options marked as **required**. In these cases, you can omit the parent with
 all its children. However, if the parent is included, you must also include all
 the children marked **required**.
 
-## version
+## `version`
 
-```
+```none
 version: 0.1
 ```
 
@@ -281,13 +291,13 @@ The `version` option is **required**. It specifies the configuration's version.
 It is expected to remain a top-level field, to allow for a consistent version
 check before parsing the remainder of the configuration file.
 
-## log
+## `log`
 
 The `log` subsection configures the behavior of the logging system. The logging
 system outputs everything to stdout. You can adjust the granularity and format
 with this configuration section.
 
-```
+```none
 log:
   accesslog:
     disabled: true
@@ -298,56 +308,15 @@ log:
     environment: staging
 ```
 
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>level</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      Sets the sensitivity of logging output. Permitted values are
-      <code>error</code>, <code>warn</code>, <code>info</code> and
-      <code>debug</code>. The default is <code>info</code>.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>formatter</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      This selects the format of logging output. The format primarily affects how keyed
-      attributes for a log line are encoded. Options are <code>text</code>, <code>json</code> or
-      <code>logstash</code>. The default is <code>text</code>.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>fields</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      A map of field names to values. These are added to every log line for
-      the context. This is useful for identifying log messages source after
-      being mixed in other systems.
-    </td>
-  </tr>
-</table>
+| Parameter   | Required | Description |
+|-------------|----------|-------------|
+| `level`     | no       | Sets the sensitivity of logging output. Permitted values are `error`, `warn`, `info`, and `debug`. The default is `info`. |
+| `formatter` | no       | This selects the format of logging output. The format primarily affects how keyed attributes for a log line are encoded. Options are `text`, `json`, and `logstash`. The default is `text`. |
+| `fields`    | no       | A map of field names to values. These are added to every log line for the context. This is useful for identifying log messages source after being mixed in other systems. |
 
-### accesslog
+### `accesslog`
 
-```
+```none
 accesslog:
   disabled: true
 ```
@@ -357,9 +326,9 @@ system. By default, the access logging system outputs to stdout in
 [Combined Log Format](https://httpd.apache.org/docs/2.4/logs.html#combined).
 Access logging can be disabled by setting the boolean flag `disabled` to `true`.
 
-## hooks
+## `hooks`
 
-```
+```none
 hooks:
   - type: mail
     levels:
@@ -379,20 +348,20 @@ The `hooks` subsection configures the logging hooks' behavior. This subsection
 includes a sequence handler which you can use for sending mail, for example.
 Refer to `loglevel` to configure the level of messages printed.
 
-## loglevel
+## `loglevel`
 
 > **DEPRECATED:** Please use [log](#log) instead.
 
-```
+```none
 loglevel: debug
 ```
 
 Permitted values are `error`, `warn`, `info` and `debug`. The default is
 `info`.
 
-## storage
+## `storage`
 
-```
+```none
 storage:
   filesystem:
     rootdirectory: /var/lib/registry
@@ -453,61 +422,65 @@ storage:
       age: 168h
       interval: 24h
       dryrun: false
+    readonly:
+      enabled: false
   redirect:
     disable: false
 ```
 
-The storage option is **required** and defines which storage backend is in use.
-You must configure one backend; if you configure more, the registry returns an error. You can choose any of these backend storage drivers:
+The `storage` option is **required** and defines which storage backend is in
+use. You must configure exactly one backend. If you configure more, the registry
+returns an error. You can choose any of these backend storage drivers:
 
-| Storage&nbsp;driver | Description                                                                                                                                                                                                                                                                              |
-|:--------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Storage driver      | Description                                                                                                                                                                                                                                                                              |
+|---------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `filesystem`        | Uses the local disk to store registry files. It is ideal for development and may be appropriate for some small-scale production applications. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/filesystem.md). |
-| `azure`             | Uses Microsoft's Azure Blob Storage. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/azure.md).                                                                                                               |
+| `azure`             | Uses Microsoft Azure Blob Storage. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/azure.md).                                                                                                               |
 | `gcs`               | Uses Google Cloud Storage. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/gcs.md).                                                                                                                           |
-| `s3`                | Uses Amazon's Simple Storage Service (S3) and compatible Storage Services. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/s3.md).                                                                            |
+| `s3`                | Uses Amazon Simple Storage Service (S3) and compatible Storage Services. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/s3.md).                                                                            |
 | `swift`             | Uses Openstack Swift object storage. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/swift.md).                                                                                                               |
 | `oss`               | Uses Aliyun OSS for object storage. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/oss.md).                                                                                                                  |
 
-For purely tests purposes, you can use the [`inmemory` storage
-driver](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/inmemory.md). If you would like to run a registry from
-volatile memory, use the [`filesystem` driver](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/filesystem.md) on
-a ramdisk.
+For testing only, you can use the [`inmemory` storage
+driver](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/inmemory.md).
+If you would like to run a registry from volatile memory, use the
+[`filesystem` driver](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/filesystem.md)
+on a ramdisk.
 
-If you are deploying a registry on Windows, be aware that a Windows volume
-mounted from the host is not recommended. Instead, you can use a S3, or Azure,
-backing data-store. If you do use a Windows volume, you must ensure that the
-`PATH` to the mount point is within Windows' `MAX_PATH` limits (typically 255
-characters). Failure to do so can result in the following error message:
+If you are deploying a registry on Windows, a Windows volume mounted from the
+host is not recommended. Instead, you can use a S3 or Azure backing
+data-store. If you do use a Windows volume, the length of the `PATH` to
+the mount point must be within the `MAX_PATH` limits (typically 255 characters),
+or this error will occur:
 
-```
+```none
 mkdir /XXX protocol error and your registry will not function properly.
 ```
 
-### Maintenance
+### `maintenance`
 
-Currently upload purging and read-only mode are the only maintenance functions available.
-These and future maintenance functions which are related to storage can be configured under
-the maintenance section.
+Currently, upload purging and read-only mode are the only `maintenance`
+functions available.
 
-### Upload Purging
+### `uploadpurging`
 
-Upload purging is a background process that periodically removes orphaned files from the upload
-directories of the registry.  Upload purging is enabled by default.  To
-configure upload directory purging, the following parameters
-must be set.
+Upload purging is a background process that periodically removes orphaned files
+from the upload directories of the registry. Upload purging is enabled by
+default. To configure upload directory purging, the following parameters must
+be set.
 
 
 | Parameter  | Required | Description                                                                                        |
-|:-----------|:---------|:---------------------------------------------------------------------------------------------------|
-| `enabled`  | yes      | Set to true to enable upload purging.  Default=true.                                               |
-| `age`      | yes      | Upload directories which are older than this age will be deleted.  Default=168h (1 week)           |
-| `interval` | yes      | The interval between upload directory purging.  Default=24h.                                       |
-| `dryrun`   | yes      | dryrun can be set to true to obtain a summary of what directories will be deleted.  Default=false. |
+|------------|----------|----------------------------------------------------------------------------------------------------|
+| `enabled`  | yes      | Set to `true` to enable upload purging. Defaults to `true`.                                        |
+| `age`      | yes      | Upload directories which are older than this age will be deleted.Defaults to `168h` (1 week).      |
+| `interval` | yes      | The interval between upload directory purging. Defaults to `24h`.                                  |
+| `dryrun`   | yes      | Set `dryrun` to `true` to obtain a summary of what directories will be deleted. Defaults to `false`.|
 
-Note: `age` and `interval` are strings containing a number with optional fraction and a unit suffix: e.g. 45m, 2h10m, 168h (1 week).
+> **Note**: `age` and `interval` are strings containing a number with optional
+fraction and a unit suffix. Some examples: `45m`, `2h10m`, `168h`.
 
-### Read-only mode
+### `readonly`
 
 If the `readonly` section under `maintenance` has `enabled` set to `true`,
 clients will not be allowed to write to the registry. This mode is useful to
@@ -517,51 +490,50 @@ restarted with readonly's `enabled` set to true. After the garbage collection
 pass finishes, the registry may be restarted again, this time with `readonly`
 removed from the configuration (or set to false).
 
-### delete
+### `delete`
 
-Use the `delete` subsection to enable the deletion of image blobs and manifests
+Use the `delete` structure to enable the deletion of image blobs and manifests
 by digest. It defaults to false, but it can be enabled by writing the following
 on the configuration file:
 
-```
+```none
 delete:
   enabled: true
 ```
 
-### cache
+### `cache`
 
-Use the `cache` subsection to enable caching of data accessed in the storage
+Use the `cache` structure to enable caching of data accessed in the storage
 backend. Currently, the only available cache provides fast access to layer
-metadata. This, if configured, uses the `blobdescriptor` field.
+metadata, which uses the `blobdescriptor` field if configured.
 
-You can set `blobdescriptor` field to `redis` or `inmemory`.  The `redis` value uses
-a Redis pool to cache layer metadata.  The `inmemory` value uses an in memory
-map.
+You can set `blobdescriptor` field to `redis` or `inmemory`. If set to `redis`,a
+Redis pool caches layer metadata. If set to `inmemory`, an in-memory map caches
+layer metadata.
 
->**NOTE**: Formerly, `blobdescriptor` was known as `layerinfo`. While these
->are equivalent, `layerinfo` has been deprecated, in favor or
->`blobdescriptor`.
+> **NOTE**: Formerly, `blobdescriptor` was known as `layerinfo`. While these
+> are equivalent, `layerinfo` has been deprecated.
 
-### redirect
+### `redirect`
 
 The `redirect` subsection provides configuration for managing redirects from
 content backends. For backends that support it, redirecting is enabled by
-default. Certain deployment scenarios may prefer to route all data through the
-Registry, rather than redirecting to the backend. This may be more efficient
-when using a backend that is not co-located or when a registry instance is
-doing aggressive caching.
+default. In certain deployment scenarios, you may decide to route all data
+through the Registry, rather than redirecting to the backend. This may be more
+efficient when using a backend that is not co-located or when a registry
+instance is aggressively caching.
 
-Redirects can be disabled by adding a single flag `disable`, set to `true`
+To disable redirects, add a single flag `disable`, set to `true`
 under the `redirect` section:
 
-```
+```none
 redirect:
   disable: true
 ```
 
-## auth
+## `auth`
 
-```
+```none
 auth:
   silly:
     realm: silly-realm
@@ -576,170 +548,78 @@ auth:
     path: /path/to/htpasswd
 ```
 
-The `auth` option is **optional**. There are
-currently 3 possible auth providers, `silly`, `token` and `htpasswd`. You can configure only
-one `auth` provider.
+The `auth` option is **optional**. Possible auth providers include:
 
-### silly
+- [`silly`](#silly)
+- [`token`](#token)
+- [`htpasswd`](#token)
 
-The `silly` auth is only for development purposes. It simply checks for the
-existence of the `Authorization` header in the HTTP request. It has no regard for
-the header's value. If the header does not exist, the `silly` auth responds with a
-challenge response, echoing back the realm, service, and scope that access was
-denied for.
+You can configure only one authentication provider.
+
+### `silly`
+
+The `silly` authentication provider is only appropriate for development. It simply checks
+for the existence of the `Authorization` header in the HTTP request. It does not
+check the header's value. If the header does not exist, the `silly` auth
+responds with a challenge response, echoing back the realm, service, and scope
+for which access was denied.
 
 The following values are used to configure the response:
 
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>realm</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      The realm in which the registry server authenticates.
-    </td>
-  </tr>
-    <tr>
-    <td>
-      <code>service</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      The service being authenticated.
-    </td>
-  </tr>
-</table>
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `realm`   | yes      | The realm in which the registry server authenticates. |
+| `service` | yes      | The service being authenticated.                      |
+
+### `token`
+
+Token-based authentication allows you to decouple the authentication system from
+the registry. It is an established authentication paradigm with a high degree of
+security.
+
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `realm`   | yes      | The realm in which the registry server authenticates. |
+| `service` | yes      | The service being authenticated.                      |
+| `issuer`  | yes      | The name of the token issuer. The issuer inserts this into the token so it must match the value configured for the issuer. |
+| `rootcertbundle` | yes | The absolute path to the root certificate bundle. This bundle contains the public part of the certificates used to sign authentication tokens. |
 
 
+For more information about Token based authentication configuration, see the
+[specification](spec/auth/token.md).
 
-### token
+### `htpasswd`
 
-Token based authentication allows the authentication system to be decoupled from
-the registry. It is a well established authentication paradigm with a high
-degree of security.
+The _htpasswd_ authentication backed allows you to configure basic
+authentication using an
+[Apache htpasswd file](https://httpd.apache.org/docs/2.4/programs/htpasswd.html).
+The only supported password format is
+[`bcrypt`](http://en.wikipedia.org/wiki/Bcrypt). Entries with other hash types
+are ignored. The `htpasswd` file is loaded once, at startup. If the file is
+invalid, the registry will display an error and will not start.
 
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>realm</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      The realm in which the registry server authenticates.
-    </td>
-  </tr>
-    <tr>
-    <td>
-      <code>service</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      The service being authenticated.
-    </td>
-  </tr>
-    <tr>
-    <td>
-      <code>issuer</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-The name of the token issuer. The issuer inserts this into
-the token so it must match the value configured for the issuer.
-    </td>
-  </tr>
-    <tr>
-    <td>
-      <code>rootcertbundle</code>
-    </td>
-    <td>
-      yes
-     </td>
-    <td>
-The absolute path to the root certificate bundle. This bundle contains the
-public part of the certificates that is used to sign authentication tokens.
-     </td>
-  </tr>
-</table>
-
-For more information about Token based authentication configuration, see the [specification](spec/auth/token.md).
-
-### htpasswd
-
-The _htpasswd_ authentication backed allows one to configure basic auth using an
-[Apache htpasswd
-file](https://httpd.apache.org/docs/2.4/programs/htpasswd.html). Only
-[`bcrypt`](http://en.wikipedia.org/wiki/Bcrypt) format passwords are supported.
-Entries with other hash types will be ignored. The htpasswd file is loaded once,
-at startup. If the file is invalid, the registry will display an error and will
-not start.
-
-> __WARNING:__ This authentication scheme should only be used with TLS
-> configured, since basic authentication sends passwords as part of the http
+> **Warning**: Only use the `htpasswd` authentication scheme with TLS
+> configured, since basic authentication sends passwords as part of the HTTP
 > header.
 
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>realm</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      The realm in which the registry server authenticates.
-    </td>
-  </tr>
-    <tr>
-    <td>
-      <code>path</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      Path to htpasswd file to load at startup.
-    </td>
-  </tr>
-</table>
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `realm`   | yes      | The realm in which the registry server authenticates. |
+| `path`    | yes      | The path to the `htpasswd` file to load at startup.   |
 
-## middleware
+## `middleware`
 
-The `middleware` option is **optional**. Use this option to inject middleware at
-named hook points. All middleware must implement the same interface as the
-object they're wrapping. This means a registry middleware must implement the
-`distribution.Namespace` interface, repository middleware must implement
-`distribution.Repository`, and storage middleware must implement
+The `middleware` structure is **optional**. Use this option to inject middleware at
+named hook points. Each middleware must implement the same interface as the
+object it is wrapping. For instance, a registry middleware must implement the
+`distribution.Namespace` interface, while a repository middleware must implement
+`distribution.Repository`, and a storage middleware must implement
 `driver.StorageDriver`.
 
-An example configuration of the `cloudfront`  middleware, a storage middleware:
+This is an example configuration of the `cloudfront`  middleware, a storage
+middleware:
 
-```
+```none
 middleware:
   registry:
     - name: ARegistryMiddleware
@@ -766,71 +646,26 @@ it supports any interesting structures desired, leaving it up to the middleware
 initialization function to best determine how to handle the specific
 interpretation of the options.
 
-### cloudfront
+### `cloudfront`
 
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>baseurl</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      <code>SCHEME://HOST[/PATH]</code> at which Cloudfront is served.
-    </td>
-  </tr>
-    <tr>
-    <td>
-      <code>privatekey</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      Private Key for Cloudfront provided by AWS.
-    </td>
-  </tr>
-    <tr>
-    <td>
-      <code>keypairid</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      Key pair ID provided by AWS.
-    </td>
-  </tr>
-    <tr>
-    <td>
-      <code>duration</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      Specify a `duration` by providing an integer and a unit. Valid time units are `ns`, `us` (or `µs`), `ms`, `s`, `m`, `h`. For example, `3000s` is a valid duration; there should be no space between the integer and unit. If you do not specify a `duration` or specify an integer without a time unit, this defaults to 20 minutes.
-    </td>
-  </tr>
-</table>
 
-### redirect
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `baseurl` | yes      | The `SCHEME://HOST[/PATH]` at which Cloudfront is served. |
+| `privatekey` | yes   | The private key for Cloudfront, provided by AWS.        |
+| `keypairid` | yes    | The key pair ID provided by AWS.                         |
+| `duration` | no      | An integer and unit for the duration of the Cloudfront session. Valid time units are `ns`, `us` (or `µs`), `ms`, `s`, `m`, or `h`. For example, `3000s` is valid, but `3000 s` is not. If you do not specify a `duration` or you specify an integer without a time unit, the duration defaults to `20m` (20 minutes).|
 
-In place of the `cloudfront` storage middleware, the `redirect`
-storage middleware can be used to specify a custom URL to a location
-of a proxy for the layer stored by the S3 storage driver.
+### `redirect`
+
+You can use the `redirect` storage middleware to specify a custom URL to a
+location of a proxy for the layer stored by the S3 storage driver.
 
 | Parameter | Required | Description                                                                                                 |
-|:----------|:---------|:------------------------------------------------------------------------------------------------------------|
-| baseurl   | yes      | `SCHEME://HOST` at which layers are served. Can also contain port. For example, `https://example.com:5443`. |
+|-----------|----------|-------------------------------------------------------------------------------------------------------------|
+| `baseurl` | yes      | `SCHEME://HOST` at which layers are served. Can also contain port. For example, `https://example.com:5443`. |
 
-## reporting
+## `reporting`
 
 ```
 reporting:
@@ -845,102 +680,32 @@ reporting:
 ```
 
 The `reporting` option is **optional** and configures error and metrics
-reporting tools. At the moment only two services are supported, [New
-Relic](http://newrelic.com/) and [Bugsnag](http://bugsnag.com), a valid
-configuration may contain both.
+reporting tools. At the moment only two services are supported:
 
-### bugsnag
+- [Bugsnag](#bugsnag)
+- [New Relic](#new-relic)
 
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>apikey</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      API Key provided by Bugsnag
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>releasestage</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      Tracks where the registry is deployed, for example,
-      <code>production</code>,<code>staging</code>, or
-      <code>development</code>.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>endpoint</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      Specify the enterprise Bugsnag endpoint.
-    </td>
-  </tr>
-</table>
+A valid configuration may contain both.
 
+### `bugsnag`
 
-### newrelic
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `apikey`  | yes      | The API Key provided by Bugsnag.                      |
+| `releasestage` | no  | Tracks where the registry is deployed, using a string like `production`, `staging`, or `development`.|
+| `endpoint`| no       | The enterprise Bugsnag endpoint.                      |
 
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>licensekey</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      License key provided by New Relic.
-    </td>
-  </tr>
-   <tr>
-    <td>
-      <code>name</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      New Relic application name.
-    </td>
-  </tr>
-     <tr>
-    <td>
-      <code>verbose</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      Enable New Relic debugging output on stdout.
-    </td>
-  </tr>
-</table>
+### `newrelic`
 
-## http
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `licensekey` | yes   | License key provided by New Relic.                    |
+| `name`    | no       | New Relic application name.                           |
+|  `verbose`| no       | Set to `true` to enable New Relic debugging output on `stdout`. |
 
-```
+## `http`
+
+```none
 http:
   addr: localhost:5000
   net: tcp
@@ -965,187 +730,50 @@ http:
     disabled: false
 ```
 
-The `http` option details the configuration for the HTTP server that hosts the registry.
+The `http` option details the configuration for the HTTP server that hosts the
+registry.
 
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>addr</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-     The address for which the server should accept connections. The form depends on a network type (see <code>net</code> option):
-     <code>HOST:PORT</code> for tcp and <code>FILE</code> for a unix socket.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>net</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-     The network which is used to create a listening socket. Known networks are <code>unix</code> and <code>tcp</code>.
-     The default empty value means tcp.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>prefix</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-If the server does not run at the root path use this value to specify the
-prefix. The root path is the section before <code>v2</code>. It
-should have both preceding and trailing slashes, for example <code>/path/</code>.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>host</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-This parameter specifies an externally-reachable address for the registry, as a
-fully qualified URL. If present, it is used when creating generated URLs.
-Otherwise, these URLs are derived from client requests.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>secret</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-A random piece of data. This is used to sign state that may be stored with the
-client to protect against tampering. For production environments you should generate a
-random piece of data using a cryptographically secure random generator. This
-configuration parameter may be omitted, in which case the registry will automatically
-generate a secret at launch.
-<p />
-<b>WARNING: If you are building a cluster of registries behind a load balancer, you MUST
-ensure the secret is the same for all registries.</b>
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>relativeurls</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-       Specifies that the registry should return relative URLs in Location headers.
-       The client is responsible for resolving the correct URL.  This option is not
-       compatible with Docker 1.7 and earlier.
-    </td>
-  </tr>
-</table>
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `addr`    | yes      | The address for which the server should accept connections. The form depends on a network type (see the `net` option). Use `HOST:PORT` for TCP and `FILE` for a UNIX socket. |
+| `net`     | no       | The network used to create a listening socket. Known networks are `unix` and `tcp`. |
+| `prefix`  | no       | If the server does not run at the root path, set this to the value of the prefix. The root path is the section before `v2`. It requires both preceding and trailing slashes, such as in the example `/path/`. |
+| `host`    | no       | A fully-qualified URL for an externally-reachable address for the registry. If present, it is used when creating generated URLs. Otherwise, these URLs are derived from client requests. |
+| `secret`  | no       | A random piece of data used to sign state that may be stored with the client to protect against tampering. For production environments you should generate a random piece of data using a cryptographically secure random generator. If you omit the secret, the registry will automatically generate a secret when it starts. **If you are building a cluster of registries behind a load balancer, you MUST ensure the secret is the same for all registries.**|
+| `relativeurls`| no    | If `true`,  the registry returns relative URLs in Location headers. The client is responsible for resolving the correct URL. **This option is not compatible with Docker 1.7 and earlier.**|
 
 
-### tls
+### `tls`
 
-The `tls` struct within `http` is **optional**. Use this to configure TLS
-for the server. If you already have a server such as Nginx or Apache running on
-the same host as the registry, you may prefer to configure TLS termination there
+The `tls` structure within `http` is **optional**. Use this to configure TLS
+for the server. If you already have a web server running on
+the same host as the registry, you may prefer to configure TLS on that web server
 and proxy connections to the registry server.
 
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>certificate</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-       Absolute path to x509 cert file
-    </td>
-  </tr>
-    <tr>
-    <td>
-      <code>key</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      Absolute path to x509 private key file.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>clientcas</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      An array of absolute paths to an x509 CA file
-    </td>
-  </tr>
-</table>
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `certificate` | yes  | Absolute path to the x509 certificate file.           |
+| `key`     | yes      | Absolute path to the x509 private key file.           |
+| `clientcas` | no     | An array of absolute paths to x509 CA files.          |
 
-### letsencrypt
+### `letsencrypt`
 
-The `letsencrypt` struct within `tls` is **optional**. Use this to configure TLS
-certificates provided by [Let's Encrypt](https://letsencrypt.org/how-it-works/).
+The `letsencrypt` structure within `tls` is **optional**. Use this to configure
+TLS certificates provided by
+[Let's Encrypt](https://letsencrypt.org/how-it-works/).
 
->**NOTE**: When using Let's Encrypt ensure that the outward facing address is
-> accessible on port `443`. The registry defaults to listening on `5000`, if
-> run as a container consider adding the flag `-p 443:5000` to the `docker run`
-> command or similar setting in cloud configuration.
+>**NOTE**: When using Let's Encrypt, ensure that the outward-facing address is
+> accessible on port `443`. The registry defaults to listening on port `5000`.
+> If you run the registry as a container, consider adding the flag `-p 443:5000`
+> to the `docker run` command or using a similar setting in a cloud
+> configuration.
 
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>cachefile</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-       Absolute path to a file for the Let's Encrypt agent to cache data
-    </td>
-  </tr>
-    <tr>
-    <td>
-      <code>email</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      Email used to register with Let's Encrypt.
-    </td>
-  </tr>
-</table>
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `cachefile` | yes    | Absolute path to a file where the Let's Encrypt agent can cache data. |
+| `email`   | yes      | The email address used to register with Let's Encrypt. |
 
-### debug
+### `debug`
 
 The `debug` option is **optional** . Use it to configure a debug server that
 can be helpful in diagnosing problems. The debug endpoint can be used for
@@ -1153,11 +781,10 @@ monitoring registry metrics and health, as well as profiling. Sensitive
 information may be available via the debug endpoint. Please be certain that
 access to the debug endpoint is locked down in a production environment.
 
-The `debug` section takes a single, required `addr` parameter. This parameter
-specifies the `HOST:PORT` on which the debug server should accept connections.
+The `debug` section takes a single required `addr` parameter, which specifies
+the `HOST:PORT` on which the debug server should accept connections.
 
-
-### headers
+### `headers`
 
 The `headers` option is **optional** . Use it to specify headers that the HTTP
 server should include in responses. This can be used for security headers such
@@ -1169,35 +796,20 @@ header's payload values.
 
 Including `X-Content-Type-Options: [nosniff]` is recommended, so that browsers
 will not interpret content as HTML if they are directed to load a page from the
-registry. This header is included in the example configuration files.
+registry. This header is included in the example configuration file.
 
-### http2
+### `http2`
 
-The `http2` struct within `http` is **optional**. Use this to control http2
+The `http2` structure within `http` is **optional**. Use this to control http2
 settings for the registry.
 
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>disabled</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-       A boolean that determines if http2 support should be disabled
-    </td>
-  </tr>
-</table>
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `disabled` | no      | If `true`, then `http2` support is disabled.          |
 
-## notifications
+## `notifications`
 
-```
+```none
 notifications:
   endpoints:
     - name: alistener
@@ -1214,134 +826,25 @@ notifications:
 The notifications option is **optional** and currently may contain a single
 option, `endpoints`.
 
-### endpoints
+### `endpoints`
 
-Endpoints is a list of named services (URLs) that can accept event notifications.
+The `endpoints` structure contains a list of named services (URLs) that can
+accept event notifications.
 
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>name</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-A human readable name for the service.
-</td>
-  </tr>
-  <tr>
-    <td>
-      <code>disabled</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-A boolean to enable/disable notifications for a service.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>url</code>
-    </td>
-    <td>
-    yes
-    </td>
-    <td>
-The URL to which events should be published.
-    </td>
-  </tr>
-   <tr>
-    <td>
-      <code>headers</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      Static headers to add to each request. Each header's name should be a key
-      underneath headers, and each value is a list of payloads for that
-      header name. Note that values must always be lists.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>timeout</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      An HTTP timeout value. This field takes a positive integer and an optional
-      suffix indicating the unit of time. Possible units are:
-      <ul>
-        <li><code>ns</code> (nanoseconds)</li>
-        <li><code>us</code> (microseconds)</li>
-        <li><code>ms</code> (milliseconds)</li>
-        <li><code>s</code> (seconds)</li>
-        <li><code>m</code> (minutes)</li>
-        <li><code>h</code> (hours)</li>
-      </ul>
-    If you omit the suffix, the system interprets the value as nanoseconds.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>threshold</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      An integer specifying how long to wait before backing off a failure.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>backoff</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      How long the system backs off before retrying. This field takes a positive
-      integer and an optional suffix indicating the unit of time. Possible units
-      are:
-      <ul>
-        <li><code>ns</code> (nanoseconds)</li>
-        <li><code>us</code> (microseconds)</li>
-        <li><code>ms</code> (milliseconds)</li>
-        <li><code>s</code> (seconds)</li>
-        <li><code>m</code> (minutes)</li>
-        <li><code>h</code> (hours)</li>
-      </ul>
-    If you omit the suffix, the system interprets the value as nanoseconds.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>ignoredmediatypes</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      List of target media types to ignore. An event whose target media type
-      is present in this list will not be published to the endpoint.
-    </td>
-  </tr>
-</table>
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `name`    | yes      | A human-readable name for the service.                |
+| `disabled` | no      | If `true`, notifications are disabled for the service.|
+| `url`     | yes      | The URL to which events should be published.          |
+| `headers` | yes      | A list of static headers to add to each request. Each header's name is a key beneath `headers`, and each value is a list of payloads for that header name. Values must always be lists. |
+| `timeout` | yes      | A value for the HTTP timeout. A positive integer and an optional suffix indicating the unit of time, which may be `ns`, `us`, `ms`, `s`, `m`, or `h`. If you omit the unit of time, `ns` is used. |
+| `threshold` | yes    | An integer specifying how long to wait before backing off a failure. |
+| `backoff` | yes      | How long the system backs off before retrying after a failure. A positive integer and an optional suffix indicating the unit of time, which may be `ns`, `us`, `ms`, `s`, `m`, or `h`. If you omit the unit of time, `ns` is used. |
+| `ignoredmediatypes`|no| A list of target media types to ignore. Events with these target media types are not published to the endpoint. |
 
+## `redis`
 
-## redis
-
-```
+```none
 redis:
   addr: localhost:6379
   password: asecret
@@ -1355,147 +858,44 @@ redis:
     idletimeout: 300s
 ```
 
-Declare parameters for constructing the redis connections. Registry instances
-may use the Redis instance for several applications. The current purpose is
-caching information about immutable blobs. Most of the options below control
-how the registry connects to redis. You can control the pool's behavior
-with the [pool](#pool) subsection.
+Declare parameters for constructing the `redis` connections. Registry instances
+may use the Redis instance for several applications. Currently, it caches
+information about immutable blobs. Most of the `redis` options control
+how the registry connects to the `redis` instance. You can control the pool's
+behavior with the [pool](#pool) subsection.
 
-It's advisable to configure Redis itself with the **allkeys-lru** eviction policy
-as the registry does not set an expire value on keys.
+You should configure Redis with the **allkeys-lru** eviction policy, because the
+registry does not set an expiration value on keys.
 
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>addr</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      Address (host and port) of redis instance.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>password</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      A password used to authenticate to the redis instance.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>db</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      Selects the db for each connection.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>dialtimeout</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      Timeout for connecting to a redis instance.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>readtimeout</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      Timeout for reading from redis connections.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>writetimeout</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      Timeout for writing to redis connections.
-    </td>
-  </tr>
-</table>
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `addr`    | yes      | The address (host and port) of the Redis instance.    |
+| `password`| no       | A password used to authenticate to the Redis instance.|
+| `db`      | no       | The name of the database to use for each connection.  |
+| `dialtimeout` | no   | The timeout for connecting to the Redis instance.     |
+| `readtimeout` | no   | The timeout for reading from the Redis instance.      |
+| `writetimeout` | no  | The timeout for writing to the Redis instance.        |
 
+### `pool`
 
-### pool
-
-```
+```none
 pool:
   maxidle: 16
   maxactive: 64
   idletimeout: 300s
 ```
 
-Configure the behavior of the Redis connection pool.
+Use these settings to configure the behavior of the Redis connection pool.
 
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>maxidle</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      Sets the maximum number of idle connections.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>maxactive</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      sets the maximum number of connections that should
-  be opened before blocking a connection request.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>idletimeout</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      sets the amount time to wait before closing
-  inactive connections.
-    </td>
-  </tr>
-</table>
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `maxidle` | no       | The maximum number of idle connections in the pool.   |
+| `maxactive`| no      | The maximum number of connections which can be open before blocking a connection request. |
+| `idletimeout`| no    | How long to wait before closing inactive connections. |
 
-## health
+## `health`
 
-```
+```none
 health:
   storagedriver:
     enabled: true
@@ -1519,312 +919,66 @@ health:
       threshold: 3
 ```
 
-The health option is **optional**. It may contain preferences for a periodic
-health check on the storage driver's backend storage, and optional periodic
-checks on local files, HTTP URIs, and/or TCP servers. The results of the health
-checks are available at /debug/health on the debug HTTP server if the debug
-HTTP server is enabled (see http section).
+The health option is **optional**, and contains preferences for a periodic
+health check on the storage driver's backend storage, as well as optional
+periodic checks on local files, HTTP URIs, and/or TCP servers. The results of
+the health checks are available at the `/debug/health` endpoint on the debug
+HTTP server if the debug HTTP server is enabled (see http section).
 
-### storagedriver
+### `storagedriver`
 
-storagedriver contains options for a health check on the configured storage
-driver's backend storage. enabled must be set to true for this health check to
-be active.
+The `storagedriver` structure contains options for a health check on the
+configured storage driver's backend storage. The health check is only active
+when `enabled` is set to `true`.
 
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>enabled</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-"true" to enable the storage driver health check or "false" to disable it.
-</td>
-  </tr>
-  <tr>
-    <td>
-      <code>interval</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      The length of time to wait between repetitions of the check. This field
-      takes a positive integer and an optional suffix indicating the unit of
-      time. Possible units are:
-      <ul>
-        <li><code>ns</code> (nanoseconds)</li>
-        <li><code>us</code> (microseconds)</li>
-        <li><code>ms</code> (milliseconds)</li>
-        <li><code>s</code> (seconds)</li>
-        <li><code>m</code> (minutes)</li>
-        <li><code>h</code> (hours)</li>
-      </ul>
-    If you omit the suffix, the system interprets the value as nanoseconds.
-    The default value is 10 seconds if this field is omitted.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>threshold</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      An integer specifying the number of times the check must fail before the
-      check triggers an unhealthy state. If this filed is not specified, a
-      single failure will trigger an unhealthy state.
-    </td>
-  </tr>
-</table>
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `enabled` | yes      | Set to `true` to enable storage driver health checks or `false` to disable them. |
+| `interval`| no       | How long to wait between repetitions of the storage driver health check. A positive integer and an optional suffix indicating the unit of time. The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. Defaults to `10s` if the value is omitted. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
+| `threshold`| no      | A positive integer which represents the number of times the check must fail before the state is marked as unhealthy. If not specified, a single failure marks the state as unhealthy. |
 
-### file
+### `file`
 
-file is a list of paths to be periodically checked for the existence of a file.
-If a file exists at the given path, the health check will fail. This can be
-used as a way of bringing a registry out of rotation by creating a file.
+The `file` structure includes a list of paths to be periodically checked for the\
+existence of a file. If a file exists at the given path, the health check will
+fail. You can use this mechanism to bring a registry out of rotation by creating
+a file.
 
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>file</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-The path to check for the existence of a file.
-</td>
-  </tr>
-  <tr>
-    <td>
-      <code>interval</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      The length of time to wait between repetitions of the check. This field
-      takes a positive integer and an optional suffix indicating the unit of
-      time. Possible units are:
-      <ul>
-        <li><code>ns</code> (nanoseconds)</li>
-        <li><code>us</code> (microseconds)</li>
-        <li><code>ms</code> (milliseconds)</li>
-        <li><code>s</code> (seconds)</li>
-        <li><code>m</code> (minutes)</li>
-        <li><code>h</code> (hours)</li>
-      </ul>
-    If you omit the suffix, the system interprets the value as nanoseconds.
-    The default value is 10 seconds if this field is omitted.
-    </td>
-  </tr>
-</table>
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `file`    | yes      | The path to check for existence of a file.            |
+| `interval`| no       | How long to wait before repeating the check. A positive integer and an optional suffix indicating the unit of time. The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. Defaults to `10s` if the value is omitted. |
 
-### http
+### `http`
 
-http is a list of HTTP URIs to be periodically checked with HEAD requests. If
-a HEAD request doesn't complete or returns an unexpected status code, the
-health check will fail.
+The `http` structure includes a list of HTTP URIs to periodically check with
+`HEAD` requests. If a `HEAD` request does not complete or returns an unexpected
+status code, the health check will fail.
 
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>uri</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-The URI to check.
-</td>
-  </tr>
-   <tr>
-    <td>
-      <code>headers</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      Static headers to add to each request. Each header's name should be a key
-      underneath headers, and each value is a list of payloads for that
-      header name. Note that values must always be lists.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>statuscode</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-Expected status code from the HTTP URI. Defaults to 200.
-</td>
-  </tr>
-  <tr>
-    <td>
-      <code>timeout</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      The length of time to wait before timing out the HTTP request. This field
-      takes a positive integer and an optional suffix indicating the unit of
-      time. Possible units are:
-      <ul>
-        <li><code>ns</code> (nanoseconds)</li>
-        <li><code>us</code> (microseconds)</li>
-        <li><code>ms</code> (milliseconds)</li>
-        <li><code>s</code> (seconds)</li>
-        <li><code>m</code> (minutes)</li>
-        <li><code>h</code> (hours)</li>
-      </ul>
-    If you omit the suffix, the system interprets the value as nanoseconds.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>interval</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      The length of time to wait between repetitions of the check. This field
-      takes a positive integer and an optional suffix indicating the unit of
-      time. Possible units are:
-      <ul>
-        <li><code>ns</code> (nanoseconds)</li>
-        <li><code>us</code> (microseconds)</li>
-        <li><code>ms</code> (milliseconds)</li>
-        <li><code>s</code> (seconds)</li>
-        <li><code>m</code> (minutes)</li>
-        <li><code>h</code> (hours)</li>
-      </ul>
-    If you omit the suffix, the system interprets the value as nanoseconds.
-    The default value is 10 seconds if this field is omitted.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>threshold</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      An integer specifying the number of times the check must fail before the
-      check triggers an unhealthy state. If this filed is not specified, a
-      single failure will trigger an unhealthy state.
-    </td>
-  </tr>
-</table>
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `uri`     | yes      | The URI to check.                                     |
+| `headers` | no       | Static headers to add to each request. Each header's name is a key beneath `headers`, and each value is a list of payloads for that header name. Values must always be lists. |
+| `statuscode` | no    | The expected status code from the HTTP URI. Defaults to `200`. |
+| `timeout` | no       | How long to wait before timing out the HTTP request. A positive integer and an optional suffix indicating the unit of time. The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
+| `interval`| no       | How long to wait before repeating the check. A positive integer and an optional suffix indicating the unit of time. The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. Defaults to `10s` if the value is omitted. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
+| `threshold`| no      | The number of times the check must fail before the state is marked as unhealthy. If this field is not specified, a single failure marks the state as unhealthy. |
 
-### tcp
+### `tcp`
 
-tcp is a list of TCP addresses to be periodically checked with connection
-attempts. The addresses must include port numbers. If a connection attempt
-fails, the health check will fail.
+The `tcp` structure includes a list of TCP addresses to periodically check using
+TCP connection attempts. Addresses must include port numbers. If a connection
+attempt fails, the health check will fail.
 
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>addr</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-The TCP address to connect to, including a port number.
-</td>
-  </tr>
-  <tr>
-    <td>
-      <code>timeout</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      The length of time to wait before timing out the TCP connection. This
-      field takes a positive integer and an optional suffix indicating the unit
-      of time. Possible units are:
-      <ul>
-        <li><code>ns</code> (nanoseconds)</li>
-        <li><code>us</code> (microseconds)</li>
-        <li><code>ms</code> (milliseconds)</li>
-        <li><code>s</code> (seconds)</li>
-        <li><code>m</code> (minutes)</li>
-        <li><code>h</code> (hours)</li>
-      </ul>
-    If you omit the suffix, the system interprets the value as nanoseconds.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>interval</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      The length of time to wait between repetitions of the check. This field
-      takes a positive integer and an optional suffix indicating the unit of
-      time. Possible units are:
-      <ul>
-        <li><code>ns</code> (nanoseconds)</li>
-        <li><code>us</code> (microseconds)</li>
-        <li><code>ms</code> (milliseconds)</li>
-        <li><code>s</code> (seconds)</li>
-        <li><code>m</code> (minutes)</li>
-        <li><code>h</code> (hours)</li>
-      </ul>
-    If you omit the suffix, the system interprets the value as nanoseconds.
-    The default value is 10 seconds if this field is omitted.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>threshold</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      An integer specifying the number of times the check must fail before the
-      check triggers an unhealthy state. If this filed is not specified, a
-      single failure will trigger an unhealthy state.
-    </td>
-  </tr>
-</table>
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `addr`    | yes      | The TCP address and port to connect to.               |
+| `timeout` | no       | How long to wait before timing out the TCP connection. A positive integer and an optional suffix indicating the unit of time. The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
+| `interval`| no       | How long to wait between repetitions of the check. A positive integer and an optional suffix indicating the unit of time. The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. Defaults to `10s` if the value is omitted. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
+| `threshold`| no      | The number of times the check must fail before the state is marked as unhealthy. If this field is not specified, a single failure marks the state as unhealthy. |
 
-## Proxy
+
+## `proxy`
 
 ```
 proxy:
@@ -1833,88 +987,45 @@ proxy:
   password: [password]
 ```
 
-Proxy enables a registry to be configured as a pull through cache to the official Docker Hub.  See [mirror](https://github.com/docker/docker.github.io/tree/master/registry/recipes/mirror.md) for more information. Pushing to a registry configured as a pull through cache is currently unsupported.
+The `proxy` structure allows a registry to be configured as a pull-through cache
+to Docker Hub.  See
+[mirror](https://github.com/docker/docker.github.io/tree/master/registry/recipes/mirror.md)
+for more information. Pushing to a registry configured as a pull-through cache
+is unsupported.
 
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>remoteurl</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-     The URL of the official Docker Hub
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>username</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-     The username of the Docker Hub account
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>password</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-     The password for the official Docker Hub account
-    </td>
-  </tr>
-</table>
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `remoteurl`| yes     | The URL for the repository on Docker Hub.             |
+| `username` | no      | The username registered with Docker Hub which has access to the repository. |
+| `password` | no      | The password used to authenticate to Docker Hub using the username specified in `username`. |
 
-To enable pulling private repositories (e.g. `batman/robin`) a username and password for user `batman` must be specified.  Note: These private repositories will be stored in the proxy cache's storage and relevant measures should be taken to protect access to this.
 
-## Compatibility
+To enable pulling private repositories (e.g. `batman/robin`) specify the
+username (such as `batman`) and the password for that username.
 
-```
+> **Note**: These private repositories are stored in the proxy cache's storage.
+> Take appropriate measures to protect access to the proxy cache.
+
+## `compatibility`
+
+```none
 compatibility:
   schema1:
     signingkeyfile: /etc/registry/key.json
 ```
 
-Configure handling of older and deprecated features. Each subsection
-defines such a feature with configurable behavior.
+Use the `compatibility` structure to configure handling of older and deprecated
+features. Each subsection defines such a feature with configurable behavior.
 
-### Schema1
+### `schema1`
 
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>signingkeyfile</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-     The signing private key used for adding signatures to schema1 manifests.
-     If no signing key is provided, a new ECDSA key will be generated on
-     startup.
-    </td>
-  </tr>
-</table>
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `signingkeyfile` | no | The signing private key used to add signatures to `schema1` manifests. If no signing key is provided, a new ECDSA key is generated when the registry starts. |
 
-## Validation
+## `validation`
 
-```
+```none
 validation:
   manifests:
     urls:
@@ -1924,35 +1035,36 @@ validation:
         - ^https?://www\.example\.com/
 ```
 
-### disabled
+### `disabled`
 
-Use the `disabled` flag to disable the other options in the `validation`
-section. They are enabled by default.
-This option deprecates the `enabled` flag.
+The `disabled` flag disables the other options in the `validation`
+section. They are enabled by default. This option deprecates the `enabled` flag.
 
-### manifests
+### `manifests`
 
-Use the `manifests` subsection to configure manifests validation. If `disabled` is
-`false` the validation allows nothing.
+Use the `manifests` subsection to configure validation of manifests. If
+`disabled` is `false`, the validation allows nothing.
 
-#### urls
+#### `urls`
 
-The `allow` and `deny` options are both lists of
+The `allow` and `deny` options are each a list of
 [regular expressions](https://godoc.org/regexp/syntax) that restrict the URLs in
 pushed manifests.
 
-If `allow` is unset, pushing a manifest containing URLs will fail.
+If `allow` is unset, pushing a manifest containing URLs fails.
 
-If `allow` is set, pushing a manifest will succeed only if all URLs within match
-one of the `allow` regular expressions and one of the following holds:
-1. `deny` is unset.
-2. `deny` is set but no URLs within the manifest match any of the `deny` regular expressions.
+If `allow` is set, pushing a manifest succeeds only if all URLs match
+one of the `allow` regular expressions **and** one of the following holds:
+
+1.  `deny` is unset.
+2.  `deny` is set but no URLs within the manifest match any of the `deny` regular
+    expressions.
 
 ## Example: Development configuration
 
-The following is a simple example you can use for local development:
+You can use this simple example for local development:
 
-```
+```none
 version: 0.1
 log:
   level: debug
@@ -1966,67 +1078,43 @@ http:
         addr: localhost:5001
 ```
 
-The above configures the registry instance to run on port `5000`, binding to
-`localhost`, with the `debug` server enabled. Registry data storage is in the
-`/var/lib/registry` directory. Logging is in `debug` mode, which is the most
+This example configures the registry instance to run on port `5000`, binding to
+`localhost`, with the `debug` server enabled. Registry data is stored in the
+`/var/lib/registry` directory. Logging is set to `debug` mode, which is the most
 verbose.
 
-A similar simple configuration is available at
-[config-example.yml](https://github.com/docker/distribution/blob/master/cmd/registry/config-example.yml).
-Both are generally useful for local development.
+See
+[config-example.yml](https://github.com/docker/distribution/blob/master/cmd/registry/config-example.yml)
+for another simple configuration. Both examples are generally useful for local
+development.
 
 
 ## Example: Middleware configuration
 
-This example illustrates how to configure storage middleware in a registry.
-Middleware allows the registry to serve layers via a content delivery network
-(CDN). This is useful for reducing requests to the storage layer.
+This example configures [Amazon Cloudfront](http://aws.amazon.com/cloudfront/)
+as the storage middleware in a registry. Middleware allows the registry to serve
+layers via a content delivery network (CDN). This reduces requests to the
+storage layer.
 
-The registry supports [Amazon
-Cloudfront](http://aws.amazon.com/cloudfront/). You can only use Cloudfront in
-conjunction with the S3 storage driver.
+Cloudfront requires the S3 storage driver.
 
-<table>
-  <tr>
-    <th>Parameter</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td><code>name</code></td>
-    <td>The storage middleware name. Currently <code>cloudfront</code> is an accepted value.</td>
-  </tr>
-  <tr>
-    <td><code>disabled</code></td>
-    <td>Set to <code>false</code> to easily disable the middleware.</td>
-  </tr>
-  <tr>
-    <td><code>options:</code></td>
-    <td>
-    A set of key/value options to configure the middleware.
-    <ul>
-    <li><code>baseurl:</code> The Cloudfront base URL.</li>
-    <li><code>privatekey:</code> The location of your AWS private key on the filesystem. </li>
-    <li><code>keypairid:</code> The ID of your Cloudfront keypair. </li>
-    <li><code>duration:</code> The duration in minutes for which the URL is valid. Default is 20. </li>
-    </ul>
-    </td>
-  </tr>
-</table>
+This is the configuration expressed in YAML:
 
-The following example illustrates these values:
-
-```
+```none
 middleware:
-    storage:
-        - name: cloudfront
-          disabled: false
-          options:
-             baseurl: http://d111111abcdef8.cloudfront.net
-             privatekey: /path/to/asecret.pem
-             keypairid: asecret
-             duration: 60
+  storage:
+  - name: cloudfront
+    disabled: false
+    options:
+      baseurl: http://d111111abcdef8.cloudfront.net
+      privatekey: /path/to/asecret.pem
+      keypairid: asecret
+      duration: 60
 ```
 
->**Note**: Cloudfront keys exist separately to other AWS keys.  See
->[the documentation on AWS credentials](http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html)
->for more information.
+See the configuration reference for [Cloudfront](#cloudfront) for more
+information about configuration options.
+
+> **Note**: Cloudfront keys exist separately from other AWS keys.  See
+> [the documentation on AWS credentials](http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html)
+> for more information.
