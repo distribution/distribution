@@ -901,12 +901,10 @@ func appendAccessRecords(records []auth.Access, method string, repo string) []au
 				Action:   "push",
 			})
 	case "DELETE":
-		// DELETE access requires full admin rights, which is represented
-		// as "*". This may not be ideal.
 		records = append(records,
 			auth.Access{
 				Resource: resource,
-				Action:   "*",
+				Action:   "delete",
 			})
 	}
 	return records
