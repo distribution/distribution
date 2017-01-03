@@ -233,6 +233,13 @@ func TestAppendAccessRecords(t *testing.T) {
 		Resource: expectedResource,
 		Action:   "*",
 	}
+	expectedDeleteRecords := []auth.Access {
+		expectedAllRecord,
+		auth.Access {
+			Resource: expectedResource,
+			Action: "delete",
+		},
+	}
 
 	records := []auth.Access{}
 	result := appendAccessRecords(records, "GET", repo)
@@ -271,7 +278,7 @@ func TestAppendAccessRecords(t *testing.T) {
 
 	records = []auth.Access{}
 	result = appendAccessRecords(records, "DELETE", repo)
-	expectedResult = []auth.Access{expectedAllRecord}
+	expectedResult = expectedDeleteRecords
 	if ok := reflect.DeepEqual(result, expectedResult); !ok {
 		t.Fatalf("Actual access record differs from expected")
 	}
