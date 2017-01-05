@@ -30,6 +30,8 @@ CONFIGJSON
 
 	docker export $cid | tar -x -C $plugindir/rootfs
 
+	docker rm $cid
+
 	daemontmp=$(docker exec dockerdaemon mktemp -d)
 
 	tar -c -C $plugindir . | docker exec -i dockerdaemon tar -x -C $daemontmp
