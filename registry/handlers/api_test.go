@@ -21,7 +21,6 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/configuration"
 	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/manifest/manifestlist"
 	"github.com/docker/distribution/manifest/schema1"
@@ -33,11 +32,17 @@ import (
 	"github.com/docker/distribution/testutil"
 	"github.com/docker/libtrust"
 	"github.com/gorilla/handlers"
+	"github.com/opencontainers/go-digest"
 )
 
 var headerConfig = http.Header{
 	"X-Content-Type-Options": []string{"nosniff"},
 }
+
+const (
+	// digestSha256EmptyTar is the canonical sha256 digest of empty data
+	digestSha256EmptyTar = "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+)
 
 // TestCheckAPI hits the base endpoint (/v2/) ensures we return the specified
 // 200 OK response.
@@ -514,7 +519,7 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 	// Now, push just a chunk
 	layerFile.Seek(0, 0)
 
-	canonicalDigester := digest.Canonical.New()
+	canonicalDigester := digest.Canonical.Digester()
 	if _, err := io.Copy(canonicalDigester.Hash(), layerFile); err != nil {
 		t.Fatalf("error copying to digest: %v", err)
 	}
@@ -672,7 +677,7 @@ func testBlobDelete(t *testing.T, env *testEnv, args blobArgs) {
 	pushLayer(t, env.builder, imageName, layerDigest, uploadURLBase, layerFile)
 
 	layerFile.Seek(0, os.SEEK_SET)
-	canonicalDigester := digest.Canonical.New()
+	canonicalDigester := digest.Canonical.Digester()
 	if _, err := io.Copy(canonicalDigester.Hash(), layerFile); err != nil {
 		t.Fatalf("error copying to digest: %v", err)
 	}
@@ -832,7 +837,7 @@ func TestManifestDeleteDisabled(t *testing.T) {
 }
 
 func testManifestDeleteDisabled(t *testing.T, env *testEnv, imageName reference.Named) {
-	ref, _ := reference.WithDigest(imageName, digest.DigestSha256EmptyTar)
+	ref, _ := reference.WithDigest(imageName, digestSha256EmptyTar)
 	manifestURL, err := env.builder.BuildManifestURL(ref)
 	if err != nil {
 		t.Fatalf("unexpected error getting manifest url: %v", err)
@@ -2072,7 +2077,7 @@ func doPushLayer(t *testing.T, ub *v2.URLBuilder, name reference.Named, dgst dig
 
 // pushLayer pushes the layer content returning the url on success.
 func pushLayer(t *testing.T, ub *v2.URLBuilder, name reference.Named, dgst digest.Digest, uploadURLBase string, body io.Reader) string {
-	digester := digest.Canonical.New()
+	digester := digest.Canonical.Digester()
 
 	resp, err := doPushLayer(t, ub, name, dgst, uploadURLBase, io.TeeReader(body, digester.Hash()))
 	if err != nil {
@@ -2139,7 +2144,7 @@ func doPushChunk(t *testing.T, uploadURLBase string, body io.Reader) (*http.Resp
 
 	uploadURL := u.String()
 
-	digester := digest.Canonical.New()
+	digester := digest.Canonical.Digester()
 
 	req, err := http.NewRequest("PATCH", uploadURL, io.TeeReader(body, digester.Hash()))
 	if err != nil {
@@ -2405,7 +2410,7 @@ func TestRegistryAsCacheMutationAPIs(t *testing.T) {
 	checkResponse(t, fmt.Sprintf("starting layer push to cache %v", imageName), resp, errcode.ErrorCodeUnsupported.Descriptor().HTTPStatusCode)
 
 	// Blob Delete
-	ref, _ := reference.WithDigest(imageName, digest.DigestSha256EmptyTar)
+	ref, _ := reference.WithDigest(imageName, digestSha256EmptyTar)
 	blobURL, err := env.builder.BuildBlobURL(ref)
 	resp, err = httpDelete(blobURL)
 	checkResponse(t, "deleting blob from cache", resp, errcode.ErrorCodeUnsupported.Descriptor().HTTPStatusCode)

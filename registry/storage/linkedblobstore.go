@@ -8,10 +8,10 @@ import (
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/uuid"
+	"github.com/opencontainers/go-digest"
 )
 
 // linkPathFunc describes a function that can resolve a link based on the
@@ -321,7 +321,7 @@ func (lbs *linkedBlobStore) newBlobUpload(ctx context.Context, uuid, path string
 		blobStore:  lbs,
 		id:         uuid,
 		startedAt:  startedAt,
-		digester:   digest.Canonical.New(),
+		digester:   digest.Canonical.Digester(),
 		fileWriter: fw,
 		driver:     lbs.driver,
 		path:       path,

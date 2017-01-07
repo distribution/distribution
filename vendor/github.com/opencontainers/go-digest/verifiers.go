@@ -17,11 +17,6 @@ type Verifier interface {
 	Verified() bool
 }
 
-// NewDigestVerifier is deprecated. Please use Digest.Verifier.
-func NewDigestVerifier(d Digest) (Verifier, error) {
-	return d.Verifier(), nil
-}
-
 type hashVerifier struct {
 	digest Digest
 	hash   hash.Hash

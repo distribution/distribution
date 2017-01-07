@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
+	"github.com/opencontainers/go-digest"
 )
 
 func TestSimpleRead(t *testing.T) {

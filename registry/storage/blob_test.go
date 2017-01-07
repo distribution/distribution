@@ -13,11 +13,11 @@ import (
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/cache/memory"
 	"github.com/docker/distribution/registry/storage/driver/testdriver"
 	"github.com/docker/distribution/testutil"
+	"github.com/opencontainers/go-digest"
 )
 
 // TestWriteSeek tests that the current file size can be
@@ -530,7 +530,7 @@ func TestLayerUploadZeroLength(t *testing.T) {
 	}
 	bs := repository.Blobs(ctx)
 
-	simpleUpload(t, bs, []byte{}, digest.DigestSha256EmptyTar)
+	simpleUpload(t, bs, []byte{}, digestSha256EmptyTar)
 }
 
 func simpleUpload(t *testing.T, bs distribution.BlobIngester, blob []byte, expectedDigest digest.Digest) {

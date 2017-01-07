@@ -39,7 +39,7 @@ var (
 )
 
 // Available returns true if the digest type is available for use. If this
-// returns false, New and Hash will return nil.
+// returns false, Digester and Hash will return nil.
 func (a Algorithm) Available() bool {
 	h, ok := algorithms[a]
 	if !ok {
@@ -81,17 +81,12 @@ func (a *Algorithm) Set(value string) error {
 
 // Digester returns a new digester for the specified algorithm. If the algorithm
 // does not have a digester implementation, nil will be returned. This can be
-// checked by calling Available before calling New.
+// checked by calling Available before calling Digester.
 func (a Algorithm) Digester() Digester {
 	return &digester{
 		alg:  a,
 		hash: a.Hash(),
 	}
-}
-
-// New is deprecated. Use Algorithm.Digester.
-func (a Algorithm) New() Digester {
-	return a.Digester()
 }
 
 // Hash returns a new hash as used by the algorithm. If not available, the
@@ -118,7 +113,7 @@ func (a Algorithm) Hash() hash.Hash {
 
 // FromReader returns the digest of the reader using the algorithm.
 func (a Algorithm) FromReader(rd io.Reader) (Digest, error) {
-	digester := a.New()
+	digester := a.Digester()
 
 	if _, err := io.Copy(digester.Hash(), rd); err != nil {
 		return "", err
@@ -129,7 +124,7 @@ func (a Algorithm) FromReader(rd io.Reader) (Digest, error) {
 
 // FromBytes digests the input and returns a Digest.
 func (a Algorithm) FromBytes(p []byte) Digest {
-	digester := a.New()
+	digester := a.Digester()
 
 	if _, err := digester.Hash().Write(p); err != nil {
 		// Writes to a Hash should never fail. None of the existing

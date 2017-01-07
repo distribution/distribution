@@ -5,8 +5,8 @@ import (
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/reference"
+	"github.com/opencontainers/go-digest"
 )
 
 // ManifestListener describes a set of methods for listening to events related to manifests.
