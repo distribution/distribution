@@ -3,7 +3,8 @@ package reference
 import (
 	"testing"
 
-	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/digestset"
+	"github.com/opencontainers/go-digest"
 )
 
 func TestValidateReferenceName(t *testing.T) {
@@ -410,7 +411,7 @@ func TestParseAnyReference(t *testing.T) {
 		if len(tcase.Digests) == 0 {
 			ref, err = ParseAnyReference(tcase.Reference)
 		} else {
-			ds := digest.NewSet()
+			ds := digestset.NewSet()
 			for _, dgst := range tcase.Digests {
 				if err := ds.Add(dgst); err != nil {
 					t.Fatalf("Error adding digest %s: %v", dgst.String(), err)
