@@ -297,6 +297,11 @@ func TestSplitHostname(t *testing.T) {
 			name:     "test_com/foo",
 		},
 		{
+			input:    "docker/migrator",
+			hostname: "",
+			name:     "docker/migrator",
+		},
+		{
 			input:    "test:8080/foo",
 			hostname: "test:8080",
 			name:     "foo",
