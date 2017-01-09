@@ -21,8 +21,8 @@ func TestReferenceParse(t *testing.T) {
 		err error
 		// repository is the string representation for the reference
 		repository string
-		// hostname is the hostname expected in the reference
-		hostname string
+		// domain is the domain expected in the reference
+		domain string
 		// tag is the tag for the reference
 		tag string
 		// digest is the digest for the reference (enforces digest reference)
@@ -44,37 +44,37 @@ func TestReferenceParse(t *testing.T) {
 		},
 		{
 			input:      "test.com/repo:tag",
-			hostname:   "test.com",
+			domain:     "test.com",
 			repository: "test.com/repo",
 			tag:        "tag",
 		},
 		{
 			input:      "test:5000/repo",
-			hostname:   "test:5000",
+			domain:     "test:5000",
 			repository: "test:5000/repo",
 		},
 		{
 			input:      "test:5000/repo:tag",
-			hostname:   "test:5000",
+			domain:     "test:5000",
 			repository: "test:5000/repo",
 			tag:        "tag",
 		},
 		{
 			input:      "test:5000/repo@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-			hostname:   "test:5000",
+			domain:     "test:5000",
 			repository: "test:5000/repo",
 			digest:     "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
 		},
 		{
 			input:      "test:5000/repo:tag@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-			hostname:   "test:5000",
+			domain:     "test:5000",
 			repository: "test:5000/repo",
 			tag:        "tag",
 			digest:     "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
 		},
 		{
 			input:      "test:5000/repo",
-			hostname:   "test:5000",
+			domain:     "test:5000",
 			repository: "test:5000/repo",
 		},
 		{
@@ -122,7 +122,7 @@ func TestReferenceParse(t *testing.T) {
 		},
 		{
 			input:      strings.Repeat("a/", 127) + "a:tag-puts-this-over-max",
-			hostname:   "a",
+			domain:     "a",
 			repository: strings.Repeat("a/", 127) + "a",
 			tag:        "tag-puts-this-over-max",
 		},
@@ -132,30 +132,30 @@ func TestReferenceParse(t *testing.T) {
 		},
 		{
 			input:      "sub-dom1.foo.com/bar/baz/quux",
-			hostname:   "sub-dom1.foo.com",
+			domain:     "sub-dom1.foo.com",
 			repository: "sub-dom1.foo.com/bar/baz/quux",
 		},
 		{
 			input:      "sub-dom1.foo.com/bar/baz/quux:some-long-tag",
-			hostname:   "sub-dom1.foo.com",
+			domain:     "sub-dom1.foo.com",
 			repository: "sub-dom1.foo.com/bar/baz/quux",
 			tag:        "some-long-tag",
 		},
 		{
 			input:      "b.gcr.io/test.example.com/my-app:test.example.com",
-			hostname:   "b.gcr.io",
+			domain:     "b.gcr.io",
 			repository: "b.gcr.io/test.example.com/my-app",
 			tag:        "test.example.com",
 		},
 		{
 			input:      "xn--n3h.com/myimage:xn--n3h.com", // ☃.com in punycode
-			hostname:   "xn--n3h.com",
+			domain:     "xn--n3h.com",
 			repository: "xn--n3h.com/myimage",
 			tag:        "xn--n3h.com",
 		},
 		{
 			input:      "xn--7o8h.com/myimage:xn--7o8h.com@sha512:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // 🐳.com in punycode
-			hostname:   "xn--7o8h.com",
+			domain:     "xn--7o8h.com",
 			repository: "xn--7o8h.com/myimage",
 			tag:        "xn--7o8h.com",
 			digest:     "sha512:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
@@ -167,7 +167,7 @@ func TestReferenceParse(t *testing.T) {
 		},
 		{
 			input:      "foo/foo_bar.com:8080",
-			hostname:   "foo",
+			domain:     "foo",
 			repository: "foo/foo_bar.com",
 			tag:        "8080",
 		},
@@ -198,11 +198,11 @@ func TestReferenceParse(t *testing.T) {
 			if named.Name() != testcase.repository {
 				failf("unexpected repository: got %q, expected %q", named.Name(), testcase.repository)
 			}
-			hostname, _ := SplitHostname(named)
-			if hostname != testcase.hostname {
-				failf("unexpected hostname: got %q, expected %q", hostname, testcase.hostname)
+			domain, _ := SplitHostname(named)
+			if domain != testcase.domain {
+				failf("unexpected domain: got %q, expected %q", domain, testcase.domain)
 			}
-		} else if testcase.repository != "" || testcase.hostname != "" {
+		} else if testcase.repository != "" || testcase.domain != "" {
 			failf("expected named type, got %T", repo)
 		}
 
@@ -282,39 +282,39 @@ func TestWithNameFailure(t *testing.T) {
 
 func TestSplitHostname(t *testing.T) {
 	testcases := []struct {
-		input    string
-		hostname string
-		name     string
+		input  string
+		domain string
+		name   string
 	}{
 		{
-			input:    "test.com/foo",
-			hostname: "test.com",
-			name:     "foo",
+			input:  "test.com/foo",
+			domain: "test.com",
+			name:   "foo",
 		},
 		{
-			input:    "test_com/foo",
-			hostname: "",
-			name:     "test_com/foo",
+			input:  "test_com/foo",
+			domain: "",
+			name:   "test_com/foo",
 		},
 		{
-			input:    "test:8080/foo",
-			hostname: "test:8080",
-			name:     "foo",
+			input:  "test:8080/foo",
+			domain: "test:8080",
+			name:   "foo",
 		},
 		{
-			input:    "test.com:8080/foo",
-			hostname: "test.com:8080",
-			name:     "foo",
+			input:  "test.com:8080/foo",
+			domain: "test.com:8080",
+			name:   "foo",
 		},
 		{
-			input:    "test-com:8080/foo",
-			hostname: "test-com:8080",
-			name:     "foo",
+			input:  "test-com:8080/foo",
+			domain: "test-com:8080",
+			name:   "foo",
 		},
 		{
-			input:    "xn--n3h.com:18080/foo",
-			hostname: "xn--n3h.com:18080",
-			name:     "foo",
+			input:  "xn--n3h.com:18080/foo",
+			domain: "xn--n3h.com:18080",
+			name:   "foo",
 		},
 	}
 	for _, testcase := range testcases {
@@ -327,9 +327,9 @@ func TestSplitHostname(t *testing.T) {
 		if err != nil {
 			failf("error parsing name: %s", err)
 		}
-		hostname, name := SplitHostname(named)
-		if hostname != testcase.hostname {
-			failf("unexpected hostname: got %q, expected %q", hostname, testcase.hostname)
+		domain, name := SplitHostname(named)
+		if domain != testcase.domain {
+			failf("unexpected domain: got %q, expected %q", domain, testcase.domain)
 		}
 		if name != testcase.name {
 			failf("unexpected name: got %q, expected %q", name, testcase.name)
