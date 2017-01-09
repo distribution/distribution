@@ -135,9 +135,9 @@ type Canonical interface {
 	Digest() digest.Digest
 }
 
-// NamedRepository is a reference to a repository with a name.
-// A NamedRepository has both domain and path components.
-type NamedRepository interface {
+// namedRepository is a reference to a repository with a name.
+// A namedRepository has both domain and path components.
+type namedRepository interface {
 	Named
 	Domain() string
 	Path() string
@@ -145,7 +145,7 @@ type NamedRepository interface {
 
 // Domain returns the domain part of the Named reference
 func Domain(named Named) string {
-	if r, ok := named.(NamedRepository); ok {
+	if r, ok := named.(namedRepository); ok {
 		return r.Domain()
 	}
 	domain, _ := splitDomain(named.Name())
@@ -154,7 +154,7 @@ func Domain(named Named) string {
 
 // Path returns the name without the domain part of the Named reference
 func Path(named Named) (name string) {
-	if r, ok := named.(NamedRepository); ok {
+	if r, ok := named.(namedRepository); ok {
 		return r.Path()
 	}
 	_, path := splitDomain(named.Name())
@@ -175,7 +175,7 @@ func splitDomain(name string) (string, string) {
 // is returned as name
 // DEPRECATED: Use Domain or Path
 func SplitHostname(named Named) (string, string) {
-	if r, ok := named.(NamedRepository); ok {
+	if r, ok := named.(namedRepository); ok {
 		return r.Domain(), r.Path()
 	}
 	return splitDomain(named.Name())
@@ -212,7 +212,7 @@ func Parse(s string) (Reference, error) {
 	}
 
 	ref := reference{
-		NamedRepository: repo,
+		namedRepository: repo,
 		tag:             matches[2],
 	}
 	if matches[3] != "" {
@@ -272,7 +272,7 @@ func WithTag(name Named, tag string) (NamedTagged, error) {
 		return nil, ErrTagInvalidFormat
 	}
 	var repo repository
-	if r, ok := name.(NamedRepository); ok {
+	if r, ok := name.(namedRepository); ok {
 		repo.domain = r.Domain()
 		repo.path = r.Path()
 	} else {
@@ -280,13 +280,13 @@ func WithTag(name Named, tag string) (NamedTagged, error) {
 	}
 	if canonical, ok := name.(Canonical); ok {
 		return reference{
-			NamedRepository: repo,
+			namedRepository: repo,
 			tag:             tag,
 			digest:          canonical.Digest(),
 		}, nil
 	}
 	return taggedReference{
-		NamedRepository: repo,
+		namedRepository: repo,
 		tag:             tag,
 	}, nil
 }
@@ -298,7 +298,7 @@ func WithDigest(name Named, digest digest.Digest) (Canonical, error) {
 		return nil, ErrDigestInvalidFormat
 	}
 	var repo repository
-	if r, ok := name.(NamedRepository); ok {
+	if r, ok := name.(namedRepository); ok {
 		repo.domain = r.Domain()
 		repo.path = r.Path()
 	} else {
@@ -306,13 +306,13 @@ func WithDigest(name Named, digest digest.Digest) (Canonical, error) {
 	}
 	if tagged, ok := name.(Tagged); ok {
 		return reference{
-			NamedRepository: repo,
+			namedRepository: repo,
 			tag:             tagged.Tag(),
 			digest:          digest,
 		}, nil
 	}
 	return canonicalReference{
-		NamedRepository: repo,
+		namedRepository: repo,
 		digest:          digest,
 	}, nil
 }
@@ -347,15 +347,15 @@ func getBestReferenceType(ref reference) Reference {
 	if ref.tag == "" {
 		if ref.digest != "" {
 			return canonicalReference{
-				NamedRepository: ref.NamedRepository,
+				namedRepository: ref.namedRepository,
 				digest:          ref.digest,
 			}
 		}
-		return ref.NamedRepository
+		return ref.namedRepository
 	}
 	if ref.digest == "" {
 		return taggedReference{
-			NamedRepository: ref.NamedRepository,
+			namedRepository: ref.namedRepository,
 			tag:             ref.tag,
 		}
 	}
@@ -364,7 +364,7 @@ func getBestReferenceType(ref reference) Reference {
 }
 
 type reference struct {
-	NamedRepository
+	namedRepository
 	tag    string
 	digest digest.Digest
 }
@@ -416,7 +416,7 @@ func (d digestReference) Digest() digest.Digest {
 }
 
 type taggedReference struct {
-	NamedRepository
+	namedRepository
 	tag string
 }
 
@@ -429,7 +429,7 @@ func (t taggedReference) Tag() string {
 }
 
 type canonicalReference struct {
-	NamedRepository
+	namedRepository
 	digest digest.Digest
 }
 
