@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/docker/distribution/digest"
+	"github.com/docker/distribution/digestset"
+	"github.com/opencontainers/go-digest"
 )
 
 var (
@@ -80,7 +81,7 @@ func splitDockerDomain(name string) (domain, remainder string) {
 // For example, "docker.io/library/redis" will have the familiar
 // name "redis" and "docker.io/dmcgowan/myapp" will be "dmcgowan/myapp".
 // Returns a familiarized named only reference.
-func familiarizeName(named NamedRepository) repository {
+func familiarizeName(named namedRepository) repository {
 	repo := repository{
 		domain: named.Domain(),
 		path:   named.Path(),
@@ -95,7 +96,7 @@ func familiarizeName(named NamedRepository) repository {
 
 func (r reference) Familiar() Named {
 	return reference{
-		NamedRepository: familiarizeName(r.NamedRepository),
+		namedRepository: familiarizeName(r.namedRepository),
 		tag:             r.tag,
 		digest:          r.digest,
 	}
@@ -107,14 +108,14 @@ func (r repository) Familiar() Named {
 
 func (t taggedReference) Familiar() Named {
 	return taggedReference{
-		NamedRepository: familiarizeName(t.NamedRepository),
+		namedRepository: familiarizeName(t.namedRepository),
 		tag:             t.tag,
 	}
 }
 
 func (c canonicalReference) Familiar() Named {
 	return canonicalReference{
-		NamedRepository: familiarizeName(c.NamedRepository),
+		namedRepository: familiarizeName(c.namedRepository),
 		digest:          c.digest,
 	}
 }
@@ -142,7 +143,7 @@ func ParseAnyReference(ref string) (Reference, error) {
 	if ok := anchoredIdentifierRegexp.MatchString(ref); ok {
 		return digestReference("sha256:" + ref), nil
 	}
-	if dgst, err := digest.ParseDigest(ref); err == nil {
+	if dgst, err := digest.Parse(ref); err == nil {
 		return digestReference(dgst), nil
 	}
 
@@ -151,14 +152,14 @@ func ParseAnyReference(ref string) (Reference, error) {
 
 // ParseAnyReferenceWithSet parses a reference string as a possible short
 // identifier to be matched in a digest set, a full digest, or familiar name.
-func ParseAnyReferenceWithSet(ref string, ds *digest.Set) (Reference, error) {
+func ParseAnyReferenceWithSet(ref string, ds *digestset.Set) (Reference, error) {
 	if ok := anchoredShortIdentifierRegexp.MatchString(ref); ok {
 		dgst, err := ds.Lookup(ref)
 		if err == nil {
 			return digestReference(dgst), nil
 		}
 	} else {
-		if dgst, err := digest.ParseDigest(ref); err == nil {
+		if dgst, err := digest.Parse(ref); err == nil {
 			return digestReference(dgst), nil
 		}
 	}
