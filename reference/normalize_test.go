@@ -1,6 +1,7 @@
 package reference
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/docker/distribution/digestset"
@@ -432,6 +433,73 @@ func TestParseAnyReference(t *testing.T) {
 		}
 		if !equalReference(ref, expected) {
 			t.Errorf("Unexpected reference %#v, expected %#v", ref, expected)
+		}
+	}
+}
+
+func TestNormalizedSplitHostname(t *testing.T) {
+	testcases := []struct {
+		input  string
+		domain string
+		name   string
+	}{
+		{
+			input:  "test.com/foo",
+			domain: "test.com",
+			name:   "foo",
+		},
+		{
+			input:  "test_com/foo",
+			domain: "docker.io",
+			name:   "test_com/foo",
+		},
+		{
+			input:  "docker/migrator",
+			domain: "docker.io",
+			name:   "docker/migrator",
+		},
+		{
+			input:  "test.com:8080/foo",
+			domain: "test.com:8080",
+			name:   "foo",
+		},
+		{
+			input:  "test-com:8080/foo",
+			domain: "test-com:8080",
+			name:   "foo",
+		},
+		{
+			input:  "foo",
+			domain: "docker.io",
+			name:   "library/foo",
+		},
+		{
+			input:  "xn--n3h.com/foo",
+			domain: "xn--n3h.com",
+			name:   "foo",
+		},
+		{
+			input:  "xn--n3h.com:18080/foo",
+			domain: "xn--n3h.com:18080",
+			name:   "foo",
+		},
+	}
+	for _, testcase := range testcases {
+		failf := func(format string, v ...interface{}) {
+			t.Logf(strconv.Quote(testcase.input)+": "+format, v...)
+			t.Fail()
+		}
+
+		named, err := ParseNormalizedNamed(testcase.input)
+		if err != nil {
+			failf("error parsing name: %s", err)
+		}
+		domain, name := SplitHostname(named)
+		if domain != testcase.domain {
+			failf("unexpected domain: got %q, expected %q", domain, testcase.domain)
+		}
+		if name != testcase.name {
+			failf("unexpected name: got %q, expected %q", name, testcase.name)
 		}
 	}
 }
