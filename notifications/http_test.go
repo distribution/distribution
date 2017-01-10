@@ -122,7 +122,7 @@ func TestHTTPSink(t *testing.T) {
 		},
 		{
 			// Case where connection never goes through.
-			url:     "http://shoudlntresolve/",
+			url:     "shoudlntresolve",
 			failure: true,
 		},
 	} {
