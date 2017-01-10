@@ -72,6 +72,7 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 		return
 	}
 
+	theDigest := imh.Digest
 	var manifest distribution.Manifest
 	if imh.Tag != "" {
 		tags := imh.Repository.Tags(imh)
@@ -81,6 +82,7 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 			return
 		}
 		imh.Digest = desc.Digest
+		theDigest = desc.Digest
 	}
 
 	if etagMatch(r, imh.Digest.String()) {
@@ -181,7 +183,7 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 
 	w.Header().Set("Content-Type", ct)
 	w.Header().Set("Content-Length", fmt.Sprint(len(p)))
-	w.Header().Set("Docker-Content-Digest", imh.Digest.String())
+	w.Header().Set("Docker-Content-Digest", theDigest.String())
 	w.Header().Set("Etag", fmt.Sprintf(`"%s"`, imh.Digest))
 	w.Write(p)
 }
