@@ -100,7 +100,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	app.register(v2.RouteNameBase, func(ctx *Context, r *http.Request) http.Handler {
 		return http.HandlerFunc(apiBase)
 	})
-	app.register(v2.RouteNameManifest, imageManifestDispatcher)
+	app.register(v2.RouteNameManifest, manifestDispatcher)
 	app.register(v2.RouteNameCatalog, catalogDispatcher)
 	app.register(v2.RouteNameTags, tagsDispatcher)
 	app.register(v2.RouteNameBlob, blobDispatcher)

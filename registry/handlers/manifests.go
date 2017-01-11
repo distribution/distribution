@@ -26,36 +26,36 @@ const (
 	defaultOS   = "linux"
 )
 
-// imageManifestDispatcher takes the request context and builds the
-// appropriate handler for handling image manifest requests.
-func imageManifestDispatcher(ctx *Context, r *http.Request) http.Handler {
-	imageManifestHandler := &imageManifestHandler{
+// manifestDispatcher takes the request context and builds the
+// appropriate handler for handling manifest requests.
+func manifestDispatcher(ctx *Context, r *http.Request) http.Handler {
+	manifestHandler := &manifestHandler{
 		Context: ctx,
 	}
 	reference := getReference(ctx)
 	dgst, err := digest.Parse(reference)
 	if err != nil {
 		// We just have a tag
-		imageManifestHandler.Tag = reference
+		manifestHandler.Tag = reference
 	} else {
-		imageManifestHandler.Digest = dgst
+		manifestHandler.Digest = dgst
 	}
 
 	mhandler := handlers.MethodHandler{
-		"GET":  http.HandlerFunc(imageManifestHandler.GetImageManifest),
-		"HEAD": http.HandlerFunc(imageManifestHandler.GetImageManifest),
+		"GET":  http.HandlerFunc(manifestHandler.GetManifest),
+		"HEAD": http.HandlerFunc(manifestHandler.GetManifest),
 	}
 
 	if !ctx.readOnly {
-		mhandler["PUT"] = http.HandlerFunc(imageManifestHandler.PutImageManifest)
-		mhandler["DELETE"] = http.HandlerFunc(imageManifestHandler.DeleteImageManifest)
+		mhandler["PUT"] = http.HandlerFunc(manifestHandler.PutManifest)
+		mhandler["DELETE"] = http.HandlerFunc(manifestHandler.DeleteManifest)
 	}
 
 	return mhandler
 }
 
-// imageManifestHandler handles http operations on image manifests.
-type imageManifestHandler struct {
+// manifestHandler handles http operations on image manifests.
+type manifestHandler struct {
 	*Context
 
 	// One of tag or digest gets set, depending on what is present in context.
@@ -63,8 +63,8 @@ type imageManifestHandler struct {
 	Digest digest.Digest
 }
 
-// GetImageManifest fetches the image manifest from the storage backend, if it exists.
-func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http.Request) {
+// GetManifest fetches the image manifest from the storage backend, if it exists.
+func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) {
 	ctxu.GetLogger(imh).Debug("GetImageManifest")
 	manifests, err := imh.Repository.Manifests(imh)
 	if err != nil {
@@ -186,7 +186,7 @@ func (imh *imageManifestHandler) GetImageManifest(w http.ResponseWriter, r *http
 	w.Write(p)
 }
 
-func (imh *imageManifestHandler) convertSchema2Manifest(schema2Manifest *schema2.DeserializedManifest) (distribution.Manifest, error) {
+func (imh *manifestHandler) convertSchema2Manifest(schema2Manifest *schema2.DeserializedManifest) (distribution.Manifest, error) {
 	targetDescriptor := schema2Manifest.Target()
 	blobs := imh.Repository.Blobs(imh)
 	configJSON, err := blobs.Get(imh, targetDescriptor.Digest)
@@ -231,8 +231,8 @@ func etagMatch(r *http.Request, etag string) bool {
 	return false
 }
 
-// PutImageManifest validates and stores an image in the registry.
-func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http.Request) {
+// PutManifest validates and stores a manifest in the registry.
+func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) {
 	ctxu.GetLogger(imh).Debug("PutImageManifest")
 	manifests, err := imh.Repository.Manifests(imh)
 	if err != nil {
@@ -348,7 +348,7 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 
 // applyResourcePolicy checks whether the resource class matches what has
 // been authorized and allowed by the policy configuration.
-func (imh *imageManifestHandler) applyResourcePolicy(manifest distribution.Manifest) error {
+func (imh *manifestHandler) applyResourcePolicy(manifest distribution.Manifest) error {
 	allowedClasses := imh.App.Config.Policy.Repository.Classes
 	if len(allowedClasses) == 0 {
 		return nil
@@ -413,8 +413,8 @@ func (imh *imageManifestHandler) applyResourcePolicy(manifest distribution.Manif
 
 }
 
-// DeleteImageManifest removes the manifest with the given digest from the registry.
-func (imh *imageManifestHandler) DeleteImageManifest(w http.ResponseWriter, r *http.Request) {
+// DeleteManifest removes the manifest with the given digest from the registry.
+func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Request) {
 	ctxu.GetLogger(imh).Debug("DeleteImageManifest")
 
 	manifests, err := imh.Repository.Manifests(imh)
