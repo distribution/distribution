@@ -208,6 +208,20 @@ func TestParseRepositoryInfo(t *testing.T) {
 			AmbiguousName: "index.docker.io/library/ubuntu-12.04-base",
 			Domain:        "docker.io",
 		},
+		{
+			RemoteName:    "library/foo/bar",
+			FamiliarName:  "library/foo/bar",
+			FullName:      "docker.io/library/foo/bar",
+			AmbiguousName: "",
+			Domain:        "docker.io",
+		},
+		{
+			RemoteName:    "store/foo/bar",
+			FamiliarName:  "store/foo/bar",
+			FullName:      "docker.io/store/foo/bar",
+			AmbiguousName: "",
+			Domain:        "docker.io",
+		},
 	}
 
 	for _, tcase := range tcases {
@@ -482,6 +496,21 @@ func TestNormalizedSplitHostname(t *testing.T) {
 			input:  "xn--n3h.com:18080/foo",
 			domain: "xn--n3h.com:18080",
 			name:   "foo",
+		},
+		{
+			input:  "docker.io/foo",
+			domain: "docker.io",
+			name:   "library/foo",
+		},
+		{
+			input:  "docker.io/library/foo",
+			domain: "docker.io",
+			name:   "library/foo",
+		},
+		{
+			input:  "docker.io/library/foo/bar",
+			domain: "docker.io",
+			name:   "library/foo/bar",
 		},
 	}
 	for _, testcase := range testcases {

@@ -12,7 +12,7 @@ import (
 var (
 	legacyDefaultDomain = "index.docker.io"
 	defaultDomain       = "docker.io"
-	defaultRepoPrefix   = "library/"
+	officialRepoName    = "library"
 	defaultTag          = "latest"
 )
 
@@ -70,7 +70,7 @@ func splitDockerDomain(name string) (domain, remainder string) {
 		domain = defaultDomain
 	}
 	if domain == defaultDomain && !strings.ContainsRune(remainder, '/') {
-		remainder = defaultRepoPrefix + remainder
+		remainder = officialRepoName + "/" + remainder
 	}
 	return
 }
@@ -89,7 +89,10 @@ func familiarizeName(named namedRepository) repository {
 
 	if repo.domain == defaultDomain {
 		repo.domain = ""
-		repo.path = strings.TrimPrefix(repo.path, defaultRepoPrefix)
+		// Handle official repositories which have the pattern "library/<official repo name>"
+		if split := strings.Split(repo.path, "/"); len(split) == 2 && split[0] == officialRepoName {
+			repo.path = split[1]
+		}
 	}
 	return repo
 }
