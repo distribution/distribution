@@ -216,7 +216,7 @@ func TestParseRepositoryInfo(t *testing.T) {
 			refStrings = append(refStrings, tcase.AmbiguousName)
 		}
 
-		var refs []NormalizedNamed
+		var refs []Named
 		for _, r := range refStrings {
 			named, err := ParseNormalizedNamed(r)
 			if err != nil {
@@ -226,7 +226,7 @@ func TestParseRepositoryInfo(t *testing.T) {
 		}
 
 		for _, r := range refs {
-			if expected, actual := tcase.FamiliarName, r.Familiar().Name(); expected != actual {
+			if expected, actual := tcase.FamiliarName, FamiliarName(r); expected != actual {
 				t.Fatalf("Invalid normalized reference for %q. Expected %q, got %q", r, expected, actual)
 			}
 			if expected, actual := tcase.FullName, r.String(); expected != actual {
@@ -245,22 +245,21 @@ func TestParseRepositoryInfo(t *testing.T) {
 
 func TestParseReferenceWithTagAndDigest(t *testing.T) {
 	shortRef := "busybox:latest@sha256:86e0e091d0da6bde2456dbb48306f3956bbeb2eae1b5b9a43045843f69fe4aaa"
-	nref, err := ParseNormalizedNamed(shortRef)
+	ref, err := ParseNormalizedNamed(shortRef)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if expected, actual := "docker.io/library/"+shortRef, nref.String(); actual != expected {
-		t.Fatalf("Invalid parsed reference for %q: expected %q, got %q", nref, expected, actual)
+	if expected, actual := "docker.io/library/"+shortRef, ref.String(); actual != expected {
+		t.Fatalf("Invalid parsed reference for %q: expected %q, got %q", ref, expected, actual)
 	}
 
-	ref := nref.Familiar()
 	if _, isTagged := ref.(NamedTagged); !isTagged {
 		t.Fatalf("Reference from %q should support tag", ref)
 	}
 	if _, isCanonical := ref.(Canonical); !isCanonical {
 		t.Fatalf("Reference from %q should support digest", ref)
 	}
-	if expected, actual := shortRef, ref.String(); actual != expected {
+	if expected, actual := shortRef, FamiliarString(ref); actual != expected {
 		t.Fatalf("Invalid parsed reference for %q: expected %q, got %q", ref, expected, actual)
 	}
 }
