@@ -17,6 +17,7 @@ import (
 	"github.com/docker/distribution/registry/auth"
 	"github.com/gorilla/handlers"
 	"github.com/opencontainers/go-digest"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"	
 )
 
 // These constants determine which architecture and OS to choose from a
@@ -431,10 +432,11 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 			return
 		}
 
-		descriptor, err := tagService.Get(imh.Context, imh.Tag)
+		err := tagService.Untag(imh.Context, imh.Tag)
 		if err != nil {
 			switch err.(type) {
 			case distribution.ErrTagUnknown:
+			case storagedriver.PathNotFoundError:
 				imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown)
 				return
 			default:
@@ -442,24 +444,9 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 				return
 			}
 		}
-
-		tags, err := tagService.All(imh.Context)
-		if err != nil {
-			imh.Errors = append(imh.Errors, err)
-			return
-		}
-
-		if len(tags) > 1 {
-			if err := tagService.Untag(imh, imh.Tag); err != nil {
-				imh.Errors = append(imh.Errors, err)
-				return
-			}
-
-			w.WriteHeader(http.StatusAccepted)
-			return
-		}
-
-		imh.Digest = descriptor.Digest
+				
+		w.WriteHeader(http.StatusAccepted)
+		return
 	}
 
 	err = manifests.Delete(imh, imh.Digest)

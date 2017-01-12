@@ -1894,63 +1894,52 @@ func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
 	}
 
 	// --------------------
-	// Re-Upload manifest by a-tag and b-tag
-	tag = "atag"
+	// Re-Upload manifest by btag and ctag
+	tag = "btag"
 	tagRef, _ = reference.WithTag(imageName, tag)
-	manifestTagURL, err = env.builder.BuildManifestURL(tagRef)
-	resp = putManifest(t, "putting manifest by tag", manifestTagURL, args.mediaType, manifest)
-	checkResponse(t, "putting manifest by tag", resp, http.StatusCreated)
+	manifestBTagURL, err := env.builder.BuildManifestURL(tagRef)
+	resp = putManifest(t, "putting manifest by btag", manifestBTagURL, args.mediaType, manifest)
+	checkResponse(t, "putting manifest by btag", resp, http.StatusCreated)
 	checkHeaders(t, resp, http.Header{
 		"Location":              []string{manifestDigestURL},
 		"Docker-Content-Digest": []string{dgst.String()},
 	})
 
-	tag = "btag"
+	tag = "ctag"
 	tagRef, _ = reference.WithTag(imageName, tag)
-	manifestTagURL, err = env.builder.BuildManifestURL(tagRef)
-	resp = putManifest(t, "putting manifest by tag", manifestTagURL, args.mediaType, manifest)
-	checkResponse(t, "putting manifest by tag", resp, http.StatusCreated)
+	manifestCTagURL, err := env.builder.BuildManifestURL(tagRef)
+	resp = putManifest(t, "putting manifest by ctag", manifestCTagURL, args.mediaType, manifest)
+	checkResponse(t, "putting manifest by ctag", resp, http.StatusCreated)
 	checkHeaders(t, resp, http.Header{
 		"Location":              []string{manifestDigestURL},
 		"Docker-Content-Digest": []string{dgst.String()},
 	})
 
 	// --------------------
-	// Delete by b-tag
+	// Delete by unknown atag
 	resp, err = httpDelete(manifestTagURL)
+	checkErr(t, err, "deleting manifest by atag")
+	checkResponse(t, "deleting manifest by atag", resp, http.StatusNotFound)
+	
+	// Delete by atag
+	resp, err = httpDelete(manifestBTagURL)
 	checkErr(t, err, "deleting manifest by btag")
 	checkResponse(t, "deleting manifest by btag", resp, http.StatusAccepted)
 
-	// Ensure tag gone
-	resp, err = http.Get(manifestTagURL)
+	// Ensure atag gone
+	resp, err = http.Get(manifestBTagURL)
 	checkErr(t, err, "retrieveing manifest by btag")
 	checkResponse(t, "retrieveing manifest by btag", resp, http.StatusNotFound)
+
+	// Ensure ctag still exists
+	resp, err = http.Get(manifestCTagURL)
+	checkErr(t, err, "retrieveing manifest ay ctag")
+	checkResponse(t, "retrieveing manifest by ctag", resp, http.StatusOK)
 
 	// Ensure digest still exists
 	resp, err = http.Get(manifestDigestURL)
 	checkErr(t, err, "retrieveing manifest by digest after deleting by btag")
 	checkResponse(t, "retrieveing manifest by digest after deleting by btag", resp, http.StatusOK)
-
-	// Delete by atag
-	tag = "atag"
-	tagRef, _ = reference.WithTag(imageName, tag)
-	manifestTagURL, err = env.builder.BuildManifestURL(tagRef)
-
-	// --------------------
-	// Delete by b-tag
-	resp, err = httpDelete(manifestTagURL)
-	checkErr(t, err, "deleting manifest by btag")
-	checkResponse(t, "deleting manifest by btag", resp, http.StatusAccepted)
-
-	// Ensure tag gone
-	resp, err = http.Get(manifestTagURL)
-	checkErr(t, err, "retrieveing manifest by atag")
-	checkResponse(t, "retrieveing manifest by atag", resp, http.StatusNotFound)
-
-	// Ensure digest gone
-	resp, err = http.Get(manifestDigestURL)
-	checkErr(t, err, "retrieveing manifest by digest after deleting by atag")
-	checkResponse(t, "retrieveing manifest by digest after deleting by atag", resp, http.StatusNotFound)
 }
 
 type testEnv struct {
