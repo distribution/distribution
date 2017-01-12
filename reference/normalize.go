@@ -16,12 +16,12 @@ var (
 	defaultTag          = "latest"
 )
 
-// NormalizedNamed represents a name which has been
+// normalizedNamed represents a name which has been
 // normalized and has a familiar form. A familiar name
 // is what is used in Docker UI. An example normalized
 // name is "docker.io/library/ubuntu" and corresponding
 // familiar name of "ubuntu".
-type NormalizedNamed interface {
+type normalizedNamed interface {
 	Named
 	Familiar() Named
 }
@@ -30,7 +30,7 @@ type NormalizedNamed interface {
 // transforming a familiar name from Docker UI to a fully
 // qualified reference. If the value may be an identifier
 // use ParseAnyReference.
-func ParseNormalizedNamed(s string) (NormalizedNamed, error) {
+func ParseNormalizedNamed(s string) (Named, error) {
 	if ok := anchoredIdentifierRegexp.MatchString(s); ok {
 		return nil, fmt.Errorf("invalid repository name (%s), cannot specify 64-byte hexadecimal strings", s)
 	}
@@ -49,7 +49,7 @@ func ParseNormalizedNamed(s string) (NormalizedNamed, error) {
 	if err != nil {
 		return nil, err
 	}
-	named, isNamed := ref.(NormalizedNamed)
+	named, isNamed := ref.(Named)
 	if !isNamed {
 		return nil, fmt.Errorf("reference %s has no name", ref.String())
 	}
