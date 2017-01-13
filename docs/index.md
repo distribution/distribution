@@ -28,7 +28,7 @@ free-to-use, hosted Registry, plus additional features (organization accounts,
 automated builds, and more).
 
 Users looking for a commercially supported version of the Registry should look
-into [Docker Trusted Registry](/datacenter/dtr/2.1/index.md).
+into [Docker Trusted Registry](/datacenter/dtr/2.1/guides/index.md).
 
 ## Requirements
 
