@@ -583,3 +583,77 @@ func TestWithDigest(t *testing.T) {
 		}
 	}
 }
+
+func TestParseNamed(t *testing.T) {
+	testcases := []struct {
+		input  string
+		domain string
+		name   string
+		err    error
+	}{
+		{
+			input:  "test.com/foo",
+			domain: "test.com",
+			name:   "foo",
+		},
+		{
+			input:  "test:8080/foo",
+			domain: "test:8080",
+			name:   "foo",
+		},
+		{
+			input: "test_com/foo",
+			err:   ErrNameNotCanonical,
+		},
+		{
+			input: "test.com",
+			err:   ErrNameNotCanonical,
+		},
+		{
+			input: "foo",
+			err:   ErrNameNotCanonical,
+		},
+		{
+			input: "library/foo",
+			err:   ErrNameNotCanonical,
+		},
+		{
+			input:  "docker.io/library/foo",
+			domain: "docker.io",
+			name:   "library/foo",
+		},
+		// Ambiguous case, parser will add "library/" to foo
+		{
+			input: "docker.io/foo",
+			err:   ErrNameNotCanonical,
+		},
+	}
+	for _, testcase := range testcases {
+		failf := func(format string, v ...interface{}) {
+			t.Logf(strconv.Quote(testcase.input)+": "+format, v...)
+			t.Fail()
+		}
+
+		named, err := ParseNamed(testcase.input)
+		if err != nil && testcase.err == nil {
+			failf("error parsing name: %s", err)
+			continue
+		} else if err == nil && testcase.err != nil {
+			failf("parsing succeded: expected error %v", testcase.err)
+			continue
+		} else if err != testcase.err {
+			failf("unexpected error %v, expected %v", err, testcase.err)
+			continue
+		} else if err != nil {
+			continue
+		}
+
+		domain, name := SplitHostname(named)
+		if domain != testcase.domain {
+			failf("unexpected domain: got %q, expected %q", domain, testcase.domain)
+		}
+		if name != testcase.name {
+			failf("unexpected name: got %q, expected %q", name, testcase.name)
+		}
+	}
+}

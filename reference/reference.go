@@ -55,6 +55,9 @@ var (
 
 	// ErrNameTooLong is returned when a repository name is longer than NameTotalLengthMax.
 	ErrNameTooLong = fmt.Errorf("repository name must not be more than %v characters", NameTotalLengthMax)
+
+	// ErrNameNotCanonical is returned when a name is not canonical.
+	ErrNameNotCanonical = errors.New("repository name must be canonical")
 )
 
 // Reference is an opaque object reference identifier that may include
@@ -231,18 +234,17 @@ func Parse(s string) (Reference, error) {
 }
 
 // ParseNamed parses s and returns a syntactically valid reference implementing
-// the Named interface. The reference must have a name, otherwise an error is
-// returned.
+// the Named interface. The reference must have a name and be in the canonical
+// form, otherwise an error is returned.
 // If an error was encountered it is returned, along with a nil Reference.
 // NOTE: ParseNamed will not handle short digests.
 func ParseNamed(s string) (Named, error) {
-	ref, err := Parse(s)
+	named, err := ParseNormalizedNamed(s)
 	if err != nil {
 		return nil, err
 	}
-	named, isNamed := ref.(Named)
-	if !isNamed {
-		return nil, fmt.Errorf("reference %s has no name", ref.String())
+	if named.String() != s {
+		return nil, ErrNameNotCanonical
 	}
 	return named, nil
 }
