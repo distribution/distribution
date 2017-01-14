@@ -15,9 +15,9 @@ import (
 	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/registry/auth"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/gorilla/handlers"
 	"github.com/opencontainers/go-digest"
-	storagedriver "github.com/docker/distribution/registry/storage/driver"	
 )
 
 // These constants determine which architecture and OS to choose from a
@@ -416,14 +416,18 @@ func (imh *manifestHandler) applyResourcePolicy(manifest distribution.Manifest) 
 
 // DeleteManifest removes the manifest with the given digest from the registry.
 func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Request) {
-	ctxu.GetLogger(imh).Debugf("DeleteImageManifest. Tag: %s Digest: %s", imh.Tag, imh.Digest)
+	ctxu.GetLoggerWithFields(imh,
+		map[interface{}]interface{}{
+			"tag":    imh.Tag,
+			"digest": imh.Digest,
+		}, "tag", "digest").Debugf("DeleteManifest")
 
 	manifests, err := imh.Repository.Manifests(imh)
 	if err != nil {
 		imh.Errors = append(imh.Errors, err)
 		return
 	}
-	
+
 	if imh.Tag != "" {
 		// Proxy supports Untag so it has to be disabled here.
 		if imh.App.isCache {
@@ -444,7 +448,7 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 				return
 			}
 		}
-				
+
 		w.WriteHeader(http.StatusAccepted)
 		return
 	}

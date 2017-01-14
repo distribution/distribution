@@ -1920,7 +1920,7 @@ func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
 	resp, err = httpDelete(manifestTagURL)
 	checkErr(t, err, "deleting manifest by atag")
 	checkResponse(t, "deleting manifest by atag", resp, http.StatusNotFound)
-	
+
 	// Delete by atag
 	resp, err = httpDelete(manifestBTagURL)
 	checkErr(t, err, "deleting manifest by btag")
