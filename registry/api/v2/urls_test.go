@@ -15,7 +15,7 @@ type urlBuilderTestCase struct {
 }
 
 func makeURLBuilderTestCases(urlBuilder *URLBuilder) []urlBuilderTestCase {
-	fooBarRef, _ := reference.ParseNamed("foo/bar")
+	fooBarRef, _ := reference.WithName("foo/bar")
 	return []urlBuilderTestCase{
 		{
 			description:  "test base url",

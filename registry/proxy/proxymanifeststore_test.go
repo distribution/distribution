@@ -83,7 +83,7 @@ func (m *mockChallenger) challengeManager() challenge.Manager {
 }
 
 func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestEnv {
-	nameRef, err := reference.ParseNamed(name)
+	nameRef, err := reference.WithName(name)
 	if err != nil {
 		t.Fatalf("unable to parse reference: %s", err)
 	}

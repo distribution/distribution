@@ -650,7 +650,7 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 		context.Context = ctxu.WithLogger(context.Context, ctxu.GetLogger(context.Context, auth.UserNameKey))
 
 		if app.nameRequired(r) {
-			nameRef, err := reference.ParseNamed(getName(context))
+			nameRef, err := reference.WithName(getName(context))
 			if err != nil {
 				ctxu.GetLogger(context).Errorf("error parsing reference from context: %v", err)
 				context.Errors = append(context.Errors, distribution.ErrRepositoryNameInvalid{

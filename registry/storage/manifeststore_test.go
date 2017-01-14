@@ -60,7 +60,7 @@ func TestManifestStorage(t *testing.T) {
 }
 
 func testManifestStorage(t *testing.T, options ...RegistryOption) {
-	repoName, _ := reference.ParseNamed("foo/bar")
+	repoName, _ := reference.WithName("foo/bar")
 	env := newManifestStoreTestEnv(t, repoName, "thetag", options...)
 	ctx := context.Background()
 	ms, err := env.repository.Manifests(ctx)
