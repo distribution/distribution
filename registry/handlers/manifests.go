@@ -423,8 +423,7 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 		imh.Errors = append(imh.Errors, err)
 		return
 	}
-
-	tagService := imh.Repository.Tags(imh)
+	
 	if imh.Tag != "" {
 		// Proxy supports Untag so it has to be disabled here.
 		if imh.App.isCache {
@@ -432,6 +431,7 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 			return
 		}
 
+		tagService := imh.Repository.Tags(imh)
 		err := tagService.Untag(imh.Context, imh.Tag)
 		if err != nil {
 			switch err.(type) {
@@ -468,6 +468,7 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 		}
 	}
 
+	tagService := imh.Repository.Tags(imh)
 	referencedTags, err := tagService.Lookup(imh, distribution.Descriptor{Digest: imh.Digest})
 	if err != nil {
 		imh.Errors = append(imh.Errors, err)
