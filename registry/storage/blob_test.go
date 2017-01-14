@@ -24,7 +24,7 @@ import (
 // obtained using Seek
 func TestWriteSeek(t *testing.T) {
 	ctx := context.Background()
-	imageName, _ := reference.ParseNamed("foo/bar")
+	imageName, _ := reference.WithName("foo/bar")
 	driver := testdriver.New()
 	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
 	if err != nil {
@@ -60,7 +60,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	imageName, _ := reference.ParseNamed("foo/bar")
+	imageName, _ := reference.WithName("foo/bar")
 	driver := testdriver.New()
 	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
 	if err != nil {
@@ -255,7 +255,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 // other tests.
 func TestSimpleBlobRead(t *testing.T) {
 	ctx := context.Background()
-	imageName, _ := reference.ParseNamed("foo/bar")
+	imageName, _ := reference.WithName("foo/bar")
 	driver := testdriver.New()
 	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
 	if err != nil {
@@ -366,8 +366,8 @@ func TestBlobMount(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	imageName, _ := reference.ParseNamed("foo/bar")
-	sourceImageName, _ := reference.ParseNamed("foo/source")
+	imageName, _ := reference.WithName("foo/bar")
+	sourceImageName, _ := reference.WithName("foo/source")
 	driver := testdriver.New()
 	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
 	if err != nil {
@@ -518,7 +518,7 @@ func TestBlobMount(t *testing.T) {
 // TestLayerUploadZeroLength uploads zero-length
 func TestLayerUploadZeroLength(t *testing.T) {
 	ctx := context.Background()
-	imageName, _ := reference.ParseNamed("foo/bar")
+	imageName, _ := reference.WithName("foo/bar")
 	driver := testdriver.New()
 	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
 	if err != nil {

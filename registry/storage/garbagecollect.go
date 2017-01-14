@@ -27,7 +27,7 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 		emit(repoName)
 
 		var err error
-		named, err := reference.ParseNamed(repoName)
+		named, err := reference.WithName(repoName)
 		if err != nil {
 			return fmt.Errorf("failed to parse repo name %s: %v", repoName, err)
 		}
