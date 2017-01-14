@@ -503,3 +503,81 @@ func TestNormalizedSplitHostname(t *testing.T) {
 		}
 	}
 }
+
+func TestMatchError(t *testing.T) {
+	named, err := ParseAnyReference("foo")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = FamiliarMatch("[-x]", named)
+	if err == nil {
+		t.Fatalf("expected an error, got nothing")
+	}
+}
+
+func TestMatch(t *testing.T) {
+	matchCases := []struct {
+		reference string
+		pattern   string
+		expected  bool
+	}{
+		{
+			reference: "foo",
+			pattern:   "foo/**/ba[rz]",
+			expected:  false,
+		},
+		{
+			reference: "foo/any/bat",
+			pattern:   "foo/**/ba[rz]",
+			expected:  false,
+		},
+		{
+			reference: "foo/a/bar",
+			pattern:   "foo/**/ba[rz]",
+			expected:  true,
+		},
+		{
+			reference: "foo/b/baz",
+			pattern:   "foo/**/ba[rz]",
+			expected:  true,
+		},
+		{
+			reference: "foo/c/baz:tag",
+			pattern:   "foo/**/ba[rz]",
+			expected:  true,
+		},
+		{
+			reference: "foo/c/baz:tag",
+			pattern:   "foo/*/baz:tag",
+			expected:  true,
+		},
+		{
+			reference: "foo/c/baz:tag",
+			pattern:   "foo/c/baz:tag",
+			expected:  true,
+		},
+		{
+			reference: "example.com/foo/c/baz:tag",
+			pattern:   "*/foo/c/baz",
+			expected:  true,
+		},
+		{
+			reference: "example.com/foo/c/baz:tag",
+			pattern:   "example.com/foo/c/baz",
+			expected:  true,
+		},
+	}
+	for _, c := range matchCases {
+		named, err := ParseAnyReference(c.reference)
+		if err != nil {
+			t.Fatal(err)
+		}
+		actual, err := FamiliarMatch(c.pattern, named)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if actual != c.expected {
+			t.Fatalf("expected %s match %s to be %v, was %v", c.reference, c.pattern, c.expected, actual)
+		}
+	}
+}
