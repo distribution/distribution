@@ -24,7 +24,7 @@
 // "manual" checks that allow the service to quickly be brought in/out of
 // rotation.
 //
-//  import _ "github.com/docker/distribution/registry/health/api"
+//  import _ "github.com/docker/distribution/health/api"
 //
 //  # curl localhost:5001/debug/health
 //  {}
