@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"fmt"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/reference"
@@ -65,6 +66,26 @@ func (pbs *proxyBlobStore) copyContent(ctx context.Context, dgst digest.Digest, 
 	proxyMetrics.BlobPush(uint64(desc.Size))
 
 	return desc, nil
+}
+
+// doServeBlobResponse is intended to avoid actual datacopy of Head request.
+// As it serves both Get and Head http request.
+func (pbs *proxyBlobStore) doServeBlobResponse(ctx context.Context, dgst digest.Digest, writer http.ResponseWriter, reqMethod string) error {
+	switch reqMethod {
+	case http.MethodHead:
+		desc, err := pbs.remoteStore.Stat(ctx, dgst)
+		if err != nil {
+			return err
+		}
+		setResponseHeaders(writer, desc.Size, desc.MediaType, dgst)
+	case http.MethodGet:
+		if _, err := pbs.copyContent(ctx, dgst, writer); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("blobstore: unsupported request method[%s]", reqMethod)
+	}
+	return nil
 }
 
 func (pbs *proxyBlobStore) serveLocal(ctx context.Context, w http.ResponseWriter, r *http.Request, dgst digest.Digest) (bool, error) {
@@ -132,8 +153,7 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 	_, ok := inflight[dgst]
 	if ok {
 		mu.Unlock()
-		_, err := pbs.copyContent(ctx, dgst, w)
-		return err
+		return pbs.doServeBlobResponse(ctx, dgst, w, r.Method)
 	}
 	inflight[dgst] = struct{}{}
 	mu.Unlock()
@@ -151,12 +171,7 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 
 		pbs.scheduler.AddBlob(blobRef, repositoryTTL)
 	}(dgst)
-
-	_, err = pbs.copyContent(ctx, dgst, w)
-	if err != nil {
-		return err
-	}
-	return nil
+	return pbs.doServeBlobResponse(ctx, dgst, w, r.Method)
 }
 
 func (pbs *proxyBlobStore) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
