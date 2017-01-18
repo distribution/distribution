@@ -20,8 +20,8 @@
 //	digest-algorithm-component      := /[A-Za-z][A-Za-z0-9]*/
 //	digest-hex                      := /[0-9a-fA-F]{32,}/ ; At least 128 bit digest value
 //
-//      identifier                      := /[a-f0-9]{64}/
-//      short-identifier                := /[a-f0-9]{6,64}/
+//	identifier                      := /[a-f0-9]{64}/
+//	short-identifier                := /[a-f0-9]{6,64}/
 package reference
 
 import (
