@@ -299,10 +299,8 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 			err = d.copyFile(source, dest)
 			// If we just moved an uploaded blob, the PurgeUploads loop probably removed it already,
 			// therefore we must check if the source file still exists before trying to delete it
-			if _, err := os.Stat(source); err == nil {
-				if err = os.RemoveAll(source); err != nil {
-					return err
-				}
+			if err = os.RemoveAll(source); err != nil {
+				return err
 			}
 		}
 	}
@@ -333,11 +331,9 @@ func (d *driver) copyFile(src, dst string) (err error) {
 		err = cerr
 	}
 	// In any case, we should remove the tmp file if it's still there
-	if _, serr := os.Stat(out.Name()); serr == nil {
-		rerr := os.Remove(out.Name())
-		if err == nil {
-			err = rerr
-		}
+	rerr := os.RemoveAll(out.Name())
+	if err == nil {
+		err = rerr
 	}
 
 	return err
