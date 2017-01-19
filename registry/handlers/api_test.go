@@ -892,16 +892,16 @@ func TestGetManifestWithStorageError(t *testing.T) {
 	env1 := newTestEnvWithConfig(t, &config)
 	defer env1.Shutdown()
 
-	repo, _ := reference.ParseNamed(repositoryWithManifestNotFound)
+	repo, _ := reference.WithName(repositoryWithManifestNotFound)
 	testManifestWithStorageError(t, env1, repo, http.StatusNotFound, v2.ErrorCodeManifestUnknown)
 
-	repo, _ = reference.ParseNamed(repositoryWithGenericStorageError)
+	repo, _ = reference.WithName(repositoryWithGenericStorageError)
 	testManifestWithStorageError(t, env1, repo, http.StatusInternalServerError, errcode.ErrorCodeUnknown)
 
-	repo, _ = reference.ParseNamed(repositoryWithManifestInvalidPath)
+	repo, _ = reference.WithName(repositoryWithManifestInvalidPath)
 	testManifestWithStorageError(t, env1, repo, http.StatusInternalServerError, errcode.ErrorCodeUnknown)
 
-	repo, _ = reference.ParseNamed(repositoryWithManifestBadLink)
+	repo, _ = reference.WithName(repositoryWithManifestBadLink)
 	testManifestWithStorageError(t, env1, repo, http.StatusInternalServerError, errcode.ErrorCodeUnknown)
 }
 
