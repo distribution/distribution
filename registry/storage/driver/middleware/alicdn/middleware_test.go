@@ -7,7 +7,9 @@ import (
 	"time"
 )
 
-func Test(t *testing.T) { check.TestingT(t) }
+func Test(t *testing.T) {
+	check.TestingT(t)
+}
 
 type AliCDNMiddlewareSuite struct{}
 
@@ -72,15 +74,20 @@ func (s *AliCDNMiddlewareSuite) TestExpireOf(c *check.C) {
 
 func (s *aliCDNStorageMiddleware) TestReplaceDomain(c *check.C) {
 	options := make(map[string]interface{})
-	options["baseurl"] = "http://example.com"
-	middleware, err := newAliCDNStorageMiddleware(nil, options)
+	for _, baseurl := range []string{"http://example.com", "https://example.com"} {
+		options["baseurl"] = baseurl
 
-	c.Assert(err, check.IsNil)
-	m, ok := middleware.(*aliCDNStorageMiddleware)
-	c.Assert(ok, check.Equals, true)
+		middleware, err := newAliCDNStorageMiddleware(nil, options)
 
-	ossURL := "https://bucket.oss.aliyuncs.com/path/to/file?signature=xxxxxx"
-	cdnURL, err := m.replaceDomain(ossURL)
-	c.Assert(err, check.IsNil)
-	c.Assert(cdnURL, check.Equals, "http://example.com/path/to/file?signature=xxxxxx")
+		c.Assert(err, check.IsNil)
+		m, ok := middleware.(*aliCDNStorageMiddleware)
+		c.Assert(ok, check.Equals, true)
+
+		for _, ossDomain := range []string{"http://bucket.oss.aliyuncs.com", "https://another.oss.aliyuncs.com"} {
+			ossURL := ossDomain + "/path/to/file?signature=xxxxxx"
+			cdnURL, err := m.replaceDomain(ossURL)
+			c.Assert(err, check.IsNil)
+			c.Assert(cdnURL, check.Equals, baseurl+"/path/to/file?signature=xxxxxx")
+		}
+	}
 }
