@@ -209,6 +209,13 @@ func TestParseRepositoryInfo(t *testing.T) {
 			Domain:        "docker.io",
 		},
 		{
+			RemoteName:    "library/foo",
+			FamiliarName:  "foo",
+			FullName:      "docker.io/library/foo",
+			AmbiguousName: "docker.io/foo",
+			Domain:        "docker.io",
+		},
+		{
 			RemoteName:    "library/foo/bar",
 			FamiliarName:  "library/foo/bar",
 			FullName:      "docker.io/library/foo/bar",
