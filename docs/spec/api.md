@@ -544,7 +544,7 @@ with the upload URL in the `Location` header:
 ```
 202 Accepted
 Location: /v2/<name>/blobs/uploads/<uuid>
-Range: bytes=0-<offset>
+Range: 0-<offset>
 Content-Length: 0
 Docker-Upload-UUID: <uuid>
 ```
