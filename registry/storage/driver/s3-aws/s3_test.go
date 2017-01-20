@@ -36,6 +36,7 @@ func init() {
 	objectACL := os.Getenv("S3_OBJECT_ACL")
 	root, err := ioutil.TempDir("", "driver-")
 	regionEndpoint := os.Getenv("REGION_ENDPOINT")
+	s3accelerate := os.Getenv("S3_ACCELERATE")
 	if err != nil {
 		panic(err)
 	}
@@ -66,6 +67,14 @@ func init() {
 			}
 		}
 
+		s3accelerateBool := true
+		if s3accelerate != "" {
+			s3accelerateBool, err = strconv.ParseBool(s3accelerate)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		parameters := DriverParameters{
 			accessKey,
 			secretKey,
@@ -84,6 +93,7 @@ func init() {
 			storageClass,
 			driverName + "-test",
 			objectACL,
+			s3accelerateBool,
 		}
 
 		return New(parameters)

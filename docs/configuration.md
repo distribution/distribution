@@ -107,6 +107,7 @@ storage:
     secretkey: awssecretkey
     region: us-west-1
     regionendpoint: http://myobjects.local
+    s3accelerate: false
     bucket: bucketname
     encrypt: true
     keyid: mykeyid
@@ -378,6 +379,7 @@ storage:
     secretkey: awssecretkey
     region: us-west-1
     regionendpoint: http://myobjects.local
+    s3accelerate: false
     bucket: bucketname
     encrypt: true
     keyid: mykeyid
