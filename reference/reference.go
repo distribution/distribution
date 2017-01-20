@@ -399,7 +399,7 @@ func (r repository) Path() string {
 type digestReference digest.Digest
 
 func (d digestReference) String() string {
-	return d.String()
+	return digest.Digest(d).String()
 }
 
 func (d digestReference) Digest() digest.Digest {
