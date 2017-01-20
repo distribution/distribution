@@ -198,5 +198,14 @@ func GetAccessController(name string, options map[string]interface{}) (AccessCon
 		return initFunc(options)
 	}
 
-	return nil, fmt.Errorf("no access controller registered with name: %s", name)
+	return nil, InvalidAccessControllerError{name}
+}
+
+// InvalidAccessControllerError records an attempt to construct an unregistered storage driver
+type InvalidAccessControllerError struct {
+	Name string
+}
+
+func (err InvalidAccessControllerError) Error() string {
+	return fmt.Sprintf("no access controller registered with name: %s", err.Name)
 }

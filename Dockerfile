@@ -1,10 +1,10 @@
-FROM golang:1.8rc2-alpine
+FROM golang:1.8-alpine
 
 ENV DISTRIBUTION_DIR /go/src/github.com/docker/distribution
 ENV DOCKER_BUILDTAGS include_oss include_gcs
 
 RUN set -ex \
-    && apk add --no-cache make git
+    && apk add --no-cache make git build-base
 
 WORKDIR $DISTRIBUTION_DIR
 COPY . $DISTRIBUTION_DIR

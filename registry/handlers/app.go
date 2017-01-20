@@ -27,6 +27,7 @@ import (
 	"github.com/docker/distribution/registry/auth"
 	registrymiddleware "github.com/docker/distribution/registry/middleware/registry"
 	repositorymiddleware "github.com/docker/distribution/registry/middleware/repository"
+	"github.com/docker/distribution/registry/pluginloader"
 	"github.com/docker/distribution/registry/proxy"
 	"github.com/docker/distribution/registry/storage"
 	memorycache "github.com/docker/distribution/registry/storage/cache/memory"
@@ -117,9 +118,6 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	var err error
 	app.driver, err = factory.Create(config.Storage.Type(), storageParams)
 	if err != nil {
-		// TODO(stevvooe): Move the creation of a service into a protected
-		// method, where this is created lazily. Its status can be queried via
-		// a health check.
 		panic(err)
 	}
 
@@ -156,6 +154,12 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	app.configureEvents(config)
 	app.configureRedis(config)
 	app.configureLogHook(config)
+
+	if len(config.Plugins) != 0 {
+		if err = pluginloader.LoadPlugins(app, config.Plugins); err != nil {
+			ctxu.GetLogger(app).Errorf("could not load plugins from %s: %v", config.Plugins, err)
+		}
+	}
 
 	options := registrymiddleware.GetRegistryOptions()
 	if config.Compatibility.Schema1.TrustKey != "" {
@@ -301,11 +305,10 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	authType := config.Auth.Type()
 
 	if authType != "" {
-		accessController, err := auth.GetAccessController(config.Auth.Type(), config.Auth.Parameters())
+		app.accessController, err = auth.GetAccessController(authType, config.Auth.Parameters())
 		if err != nil {
-			panic(fmt.Sprintf("unable to configure authorization (%s): %v", authType, err))
+			panic(err)
 		}
-		app.accessController = accessController
 		ctxu.GetLogger(app).Debugf("configured %q access controller", authType)
 	}
 

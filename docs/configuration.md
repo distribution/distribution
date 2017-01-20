@@ -89,6 +89,10 @@ log:
         to:
           - errors@example.com
 loglevel: debug # deprecated: use "log"
+plugins:
+ - /plugins/
+ - /plugin/driver1.so
+ - /plugin/auth1.so
 storage:
   filesystem:
     rootdirectory: /var/lib/registry
@@ -358,6 +362,21 @@ loglevel: debug
 
 Permitted values are `error`, `warn`, `info` and `debug`. The default is
 `info`.
+
+## `plugins`
+
+```none
+plugins:
+ - /plugins/
+ - /plugin/driver1.so
+ - /plugin/auth1.so
+```
+
+> Requires golang >= 1.8
+
+Directory with plugins or paths point to plugins. Plugin are loaded before trying to initialize
+any driver or authcontroller. If a path is a directory, it is scanned for plugins loading all files
+with a is common shared library extension on the platform (`.so`, `.dylib`, `dll`).
 
 ## `storage`
 

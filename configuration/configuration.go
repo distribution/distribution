@@ -48,6 +48,9 @@ type Configuration struct {
 	// deprecated. Please use Log.Level in the future.
 	Loglevel Loglevel `yaml:"loglevel,omitempty"`
 
+	// Plugins is a path where plugins are expected to be found
+	Plugins []string `yaml:"plugins,omitempty"`
+
 	// Storage is the configuration for the registry's storage driver
 	Storage Storage `yaml:"storage"`
 
