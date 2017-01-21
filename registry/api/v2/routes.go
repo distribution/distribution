@@ -7,7 +7,8 @@ import "github.com/gorilla/mux"
 const (
 	RouteNameBase            = "base"
 	RouteNameManifest        = "manifest"
-	RouteNameTags            = "tags"
+	RouteNameTag             = "tags"
+	RouteNameTagsList        = "tags-list"
 	RouteNameBlob            = "blob"
 	RouteNameBlobUpload      = "blob-upload"
 	RouteNameBlobUploadChunk = "blob-upload-chunk"
@@ -17,7 +18,8 @@ const (
 var allEndpoints = []string{
 	RouteNameManifest,
 	RouteNameCatalog,
-	RouteNameTags,
+	RouteNameTag,
+	RouteNameTagsList,
 	RouteNameBlob,
 	RouteNameBlobUpload,
 	RouteNameBlobUploadChunk,

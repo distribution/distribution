@@ -127,9 +127,9 @@ func (ub *URLBuilder) BuildCatalogURL(values ...url.Values) (string, error) {
 	return appendValuesURL(catalogURL, values...).String(), nil
 }
 
-// BuildTagsURL constructs a url to list the tags in the named repository.
-func (ub *URLBuilder) BuildTagsURL(name reference.Named) (string, error) {
-	route := ub.cloneRoute(RouteNameTags)
+// BuildTagsListURL constructs a url to list the tags in the named repository.
+func (ub *URLBuilder) BuildTagsListURL(name reference.Named) (string, error) {
+	route := ub.cloneRoute(RouteNameTagsList)
 
 	tagsURL, err := route.URL("name", name.Name())
 	if err != nil {
@@ -137,6 +137,18 @@ func (ub *URLBuilder) BuildTagsURL(name reference.Named) (string, error) {
 	}
 
 	return tagsURL.String(), nil
+}
+
+// BuildTagsURL construct a url for tags indentified by name and tag.
+func (ub *URLBuilder) BuildTagURL(ref reference.NamedTagged) (string, error) {
+	route := ub.cloneRoute(RouteNameTag)
+
+	tagURL, err := route.URL("name", ref.Name(), "reference", ref.Tag())
+	if err != nil {
+		return "", err
+	}
+
+	return tagURL.String(), nil
 }
 
 // BuildManifestURL constructs a url for the manifest identified by name and

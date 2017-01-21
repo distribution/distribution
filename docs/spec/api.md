@@ -1000,8 +1000,8 @@ to last response or be fully omitted, depending on the server implementation.
 It may be necessary to list all of the tags under a given repository. The tags
 for an image repository can be retrieved with the following request:
 
-    GET /v2/<name>/tags/list
-
+    GET /v2/<name>/tags/_list
+    
 The response will be in the following format:
 
     200 OK
@@ -1015,6 +1015,10 @@ The response will be in the following format:
         ]
     }
 
+Note that tags list also can be fetched using legacy URL:
+
+    GET /v2/<name>/tags/list
+    
 For repositories with a large number of tags, this response may be quite
 large. If such a response is expected, one should use the pagination.
 
@@ -1028,7 +1032,7 @@ any differences.
 Starting a paginated flow may begin as follows:
 
 ```
-GET /v2/<name>/tags/list?n=<integer>
+GET /v2/<name>/tags/_list?n=<integer>
 ```
 
 The above specifies that a tags response should be returned, from the start of
@@ -1054,7 +1058,7 @@ the value encoded in the [RFC5988](https://tools.ietf.org/html/rfc5988) `Link`
 header:
 
 ```
-GET /v2/<name>/tags/list?n=<n from the request>&last=<last tag value from previous response>
+GET /v2/<name>/tags/_list?n=<n from the request>&last=<last tag value from previous response>
 ```
 
 The above process should then be repeated until the `Link` header is no longer
@@ -1087,6 +1091,27 @@ response will be issued instead.
 
 > for more details, see: [compatibility.md](../compatibility.md#content-addressable-storage-cas)
 
+
+### Deleting a tag
+
+A tag can be deleted from a repository via its `name` and `tag`. A delete may be issued
+with the following request format:
+
+    DELETE /v2/<name>/tags/<tag>
+    
+It the tag exists and has been successfully deleted, the following response will be
+issued:
+
+    202 Accepted
+    Content-Length: None
+
+If the tag had already been deleted or did not exist, a `404 Not Found`
+response will be issued instead.    
+
+> **Note** Manifests can never be deleted using this call. If you delete all 
+> tags for a given manifest it will be available only by `digest` after that.
+
+
 ## Detail
 
 > **Note**: This section is still under construction. For the purposes of
@@ -1108,7 +1133,7 @@ A list of methods and URIs are covered in the table below:
 |Method|Path|Entity|Description|
 |------|----|------|-----------|
 | GET | `/v2/` | Base | Check that the endpoint implements Docker Registry API V2. |
-| GET | `/v2/<name>/tags/list` | Tags | Fetch the tags under the repository identified by `name`. |
+| GET | `/v2/<name>/tags/_list` | Tags | Fetch the tags under the repository identified by `name`. |
 | GET | `/v2/<name>/manifests/<reference>` | Manifest | Fetch the manifest identified by `name` and `reference` where `reference` can be a tag or digest. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data. |
 | PUT | `/v2/<name>/manifests/<reference>` | Manifest | Put the manifest identified by `name` and `reference` where `reference` can be a tag or digest. |
 | DELETE | `/v2/<name>/manifests/<reference>` | Manifest | Delete the manifest identified by `name` and `reference`. Note that a manifest can _only_ be deleted by `digest`. |
@@ -1290,6 +1315,14 @@ Fetch the tags under the repository identified by `name`.
 
 
 ##### Tags
+
+```
+GET /v2/<name>/tags/_list
+Host: <registry host>
+Authorization: <scheme> <token>
+```
+
+or
 
 ```
 GET /v2/<name>/tags/list
@@ -1491,6 +1524,10 @@ The error codes that may be included in the response body are enumerated below:
 ##### Tags Paginated
 
 ```
+GET /v2/<name>/tags/_list?n=<integer>&last=<integer>
+```
+
+```
 GET /v2/<name>/tags/list?n=<integer>&last=<integer>
 ```
 
@@ -1687,6 +1724,196 @@ The error codes that may be included in the response body are enumerated below:
 
 
 
+#### DELETE Tags
+
+Delete the that identified by `name` and `tag`.
+
+
+
+```
+DELETE /v2/<name>/tags/<tag>
+Host: <registry host>
+Authorization: <scheme> <token>
+```
+
+
+
+
+The following parameters should be specified on the request:
+
+|Name|Kind|Description|
+|----|----|-----------|
+|`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
+|`Authorization`|header|An RFC7235 compliant authorization header.|
+|`name`|path|Name of the target repository.|
+|`tag`|path|Tag.|
+
+
+
+
+###### On Success: Accepted
+
+```
+202 Accepted
+```
+
+###### On Failure: Authentication Required
+
+```
+401 Unauthorized
+WWW-Authenticate: <scheme> realm="<realm>", ..."
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The client is not authenticated.
+
+The following headers will be returned on the response:
+
+|Name|Description|
+|----|-----------|
+|`WWW-Authenticate`|An RFC7235 compliant authentication challenge header.|
+|`Content-Length`|Length of the JSON response body.|
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client. Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate. |
+
+
+###### On Failure: Access Denied
+
+```
+403 Forbidden
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The client does not have required access to the repository.
+
+The following headers will be returned on the response:
+
+|Name|Description|
+|----|-----------|
+|`Content-Length`|Length of the JSON response body.|
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `DENIED` | requested access to the resource is denied | The access controller denied access for the operation on a resource. |
+
+
+
+###### On Failure: Too Many Requests
+
+```
+429 Too Many Requests
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The client made too many requests within a time interval.
+
+The following headers will be returned on the response:
+
+|Name|Description|
+|----|-----------|
+|`Content-Length`|Length of the JSON response body.|
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `TOOMANYREQUESTS` | too many requests | Returned when a client attempts to contact a service too many times |
+
+
+
+###### On Failure: Unknown Manifest
+
+```
+404 Not Found
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The specified `name` or `reference` are unknown to the registry and the delete was unable to proceed. Clients can assume the manifest was already deleted if this response is returned.
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `MANIFEST_UNKNOWN` | manifest unknown | This error is returned when the manifest, identified by name and tag is unknown to the repository. |
+
+
+
+###### On Failure: Not allowed
+
+```
+405 Method Not Allowed
+```
+
+Tag delete is not allowed because the registry is configured as a pull-through cache or `delete` has been disabled.
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `UNSUPPORTED` | The operation is unsupported. | The operation was unsupported due to a missing implementation or invalid set of parameters. |
 
 
 ### Manifest

@@ -98,7 +98,7 @@ func TestAppDispatcher(t *testing.T) {
 			},
 		},
 		{
-			endpoint: v2.RouteNameTags,
+			endpoint: v2.RouteNameTagsList,
 			vars: []string{
 				"name", "foo/bar",
 			},

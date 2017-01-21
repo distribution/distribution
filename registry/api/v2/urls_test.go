@@ -28,10 +28,10 @@ func makeURLBuilderTestCases(urlBuilder *URLBuilder) []urlBuilderTestCase {
 		},
 		{
 			description:  "test tags url",
-			expectedPath: "/v2/foo/bar/tags/list",
+			expectedPath: "/v2/foo/bar/tags/",
 			expectedErr:  nil,
 			build: func() (string, error) {
-				return urlBuilder.BuildTagsURL(fooBarRef)
+				return urlBuilder.BuildTagsListURL(fooBarRef)
 			},
 		},
 		{

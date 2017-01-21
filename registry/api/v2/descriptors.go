@@ -409,8 +409,8 @@ var routeDescriptors = []RouteDescriptor{
 		},
 	},
 	{
-		Name:        RouteNameTags,
-		Path:        "/v2/{name:" + reference.NameRegexp.String() + "}/tags/list",
+		Name:        RouteNameTagsList,
+		Path:        "/v2/{name:" + reference.NameRegexp.String() + "}/tags/_list",
 		Entity:      "Tags",
 		Description: "Retrieve information about tags.",
 		Methods: []MethodDescriptor{
@@ -494,6 +494,107 @@ var routeDescriptors = []RouteDescriptor{
 							repositoryNotFoundResponseDescriptor,
 							deniedResponseDescriptor,
 							tooManyRequestsDescriptor,
+						},
+					},
+				},
+			},
+		},
+	},
+	{
+		Name:        RouteNameTag,
+		Path:        "/v2/{name:" + reference.NameRegexp.String() + "}/tags/{reference:" + reference.TagRegexp.String() + "}",
+		Entity:      "Tags",
+		Description: "Delete tags.",
+		Methods: []MethodDescriptor{
+			{
+				Method:      "GET",
+				Description: "Redirect to tags list.",
+				Requests: []RequestDescriptor{
+					{
+						Headers: []ParameterDescriptor{
+							hostHeader,
+							authHeader,
+						},
+						PathParameters: []ParameterDescriptor{
+							nameParameterDescriptor,
+							referenceParameterDescriptor,
+						},
+						Successes: []ResponseDescriptor{
+							{
+								Description: "Redirect to tags list.",
+								StatusCode:  http.StatusMovedPermanently,
+							},
+						},
+						Failures: []ResponseDescriptor{
+							unauthorizedResponseDescriptor,
+							repositoryNotFoundResponseDescriptor,
+							deniedResponseDescriptor,
+							tooManyRequestsDescriptor,
+							{
+								Description: "Tags support only 'list' in get.",
+								StatusCode:  http.StatusNotFound,
+							},
+						},
+					},
+				},
+			},
+			{
+				Method:      "DELETE",
+				Description: "Delete a tag identified by `name` and `reference`. This method never deletes a manifest.",
+				Requests: []RequestDescriptor{
+					{
+						Headers: []ParameterDescriptor{
+							hostHeader,
+							authHeader,
+						},
+						PathParameters: []ParameterDescriptor{
+							nameParameterDescriptor,
+							referenceParameterDescriptor,
+						},
+						Successes: []ResponseDescriptor{
+							{
+								StatusCode: http.StatusAccepted,
+							},
+						},
+						Failures: []ResponseDescriptor{
+							{
+								Name:        "Invalid Name or Reference",
+								Description: "The specified `name` or `reference` were invalid and the delete was unable to proceed.",
+								StatusCode:  http.StatusBadRequest,
+								ErrorCodes: []errcode.ErrorCode{
+									ErrorCodeNameInvalid,
+									ErrorCodeTagInvalid,
+								},
+								Body: BodyDescriptor{
+									ContentType: "application/json; charset=utf-8",
+									Format:      errorsBody,
+								},
+							},
+							unauthorizedResponseDescriptor,
+							repositoryNotFoundResponseDescriptor,
+							deniedResponseDescriptor,
+							tooManyRequestsDescriptor,
+							{
+								Name:        "Unknown Tag",
+								Description: "The specified `name` or `reference` are unknown to the registry and the delete was unable to proceed. Clients can assume the tag was already deleted if this response is returned.",
+								StatusCode:  http.StatusNotFound,
+								ErrorCodes: []errcode.ErrorCode{
+									ErrorCodeNameUnknown,
+									ErrorCodeManifestUnknown,
+								},
+								Body: BodyDescriptor{
+									ContentType: "application/json; charset=utf-8",
+									Format:      errorsBody,
+								},
+							},
+							{
+								Name:        "Not allowed",
+								Description: "Tag delete is not allowed because the registry is configured as a pull-through cache or `delete` has been disabled.",
+								StatusCode:  http.StatusMethodNotAllowed,
+								ErrorCodes: []errcode.ErrorCode{
+									errcode.ErrorCodeUnsupported,
+								},
+							},
 						},
 					},
 				},

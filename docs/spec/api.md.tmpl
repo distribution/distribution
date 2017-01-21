@@ -1000,8 +1000,12 @@ to last response or be fully omitted, depending on the server implementation.
 It may be necessary to list all of the tags under a given repository. The tags
 for an image repository can be retrieved with the following request:
 
-    GET /v2/<name>/tags/list
+    GET /v2/<name>/tags/_list
 
+or
+
+   GET /v2/<name>/tags/list
+   
 The response will be in the following format:
 
     200 OK
@@ -1054,13 +1058,32 @@ the value encoded in the [RFC5988](https://tools.ietf.org/html/rfc5988) `Link`
 header:
 
 ```
-GET /v2/<name>/tags/list?n=<n from the request>&last=<last tag value from previous response>
+GET /v2/<name>/tags/_list?n=<n from the request>&last=<last tag value from previous response>
 ```
 
 The above process should then be repeated until the `Link` header is no longer
 set in the response. The behavior of the `last` parameter, the provided
 response result, lexical ordering and encoding of the `Link` header are
 identical to that of catalog pagination.
+
+### Deleting a tag
+
+A tag can be deleted from a repository via its `name` and `tag`. A delete may be issued
+with the following request format:
+
+    DELETE /v2/<name>/tags/<tag>
+    
+It the tag exists and has been successfully deleted, the following response will be
+issued:
+
+    202 Accepted
+    Content-Length: None
+
+If the tag had already been deleted or did not exist, a `404 Not Found`
+response will be issued instead.    
+
+> **Note** Manifests can never be deleted using this call. If you delete all 
+> tags for a given manifest it will be available only by `digest` after that.
 
 ### Deleting an Image
 

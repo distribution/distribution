@@ -205,7 +205,7 @@ type tags struct {
 func (t *tags) All(ctx context.Context) ([]string, error) {
 	var tags []string
 
-	u, err := t.ub.BuildTagsURL(t.name)
+	u, err := t.ub.BuildTagsListURL(t.name)
 	if err != nil {
 		return tags, err
 	}

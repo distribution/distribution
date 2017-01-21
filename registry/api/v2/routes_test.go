@@ -60,31 +60,47 @@ func TestRouter(t *testing.T) {
 			},
 		},
 		{
-			RouteName:  RouteNameTags,
-			RequestURI: "/v2/foo/bar/tags/list",
+			RouteName:  RouteNameTagsList,
+			RequestURI: "/v2/foo/bar/tags/_list",
 			Vars: map[string]string{
 				"name": "foo/bar",
 			},
 		},
 		{
-			RouteName:  RouteNameTags,
-			RequestURI: "/v2/docker.com/foo/tags/list",
+			RouteName:  RouteNameTagsList,
+			RequestURI: "/v2/docker.com/foo/tags/_list",
 			Vars: map[string]string{
 				"name": "docker.com/foo",
 			},
 		},
 		{
-			RouteName:  RouteNameTags,
-			RequestURI: "/v2/docker.com/foo/bar/tags/list",
+			RouteName:  RouteNameTagsList,
+			RequestURI: "/v2/docker.com/foo/bar/tags/_list",
 			Vars: map[string]string{
 				"name": "docker.com/foo/bar",
 			},
 		},
 		{
-			RouteName:  RouteNameTags,
-			RequestURI: "/v2/docker.com/foo/bar/baz/tags/list",
+			RouteName:  RouteNameTagsList,
+			RequestURI: "/v2/docker.com/foo/bar/baz/tags/_list",
 			Vars: map[string]string{
 				"name": "docker.com/foo/bar/baz",
+			},
+		},
+		{
+			RouteName:  RouteNameTag,
+			RequestURI: "/v2/foo/tags/bar",
+			Vars: map[string]string{
+				"name":      "foo",
+				"reference": "bar",
+			},
+		},
+		{
+			RouteName:  RouteNameTag,
+			RequestURI: "/v2/foo/bar/tags/tag",
+			Vars: map[string]string{
+				"name":      "foo/bar",
+				"reference": "tag",
 			},
 		},
 		{
@@ -156,8 +172,8 @@ func TestRouter(t *testing.T) {
 		{
 			// This case presents an ambiguity between foo/bar with tag="tags"
 			// and list tags for "foo/bar/manifest"
-			RouteName:  RouteNameTags,
-			RequestURI: "/v2/foo/bar/manifests/tags/list",
+			RouteName:  RouteNameTagsList,
+			RequestURI: "/v2/foo/bar/manifests/tags/_list",
 			Vars: map[string]string{
 				"name": "foo/bar/manifests",
 			},
@@ -186,9 +202,9 @@ func TestRouterWithPathTraversals(t *testing.T) {
 		},
 		{
 			// Testing for path traversal attack handling
-			RouteName:   RouteNameTags,
-			RequestURI:  "/v2/foo/../bar/baz/tags/list",
-			ExpectedURI: "/v2/bar/baz/tags/list",
+			RouteName:   RouteNameTagsList,
+			RequestURI:  "/v2/foo/../bar/baz/tags/_list",
+			ExpectedURI: "/v2/bar/baz/tags/_list",
 			Vars: map[string]string{
 				"name": "bar/baz",
 			},
@@ -207,8 +223,8 @@ func TestRouterWithBadCharacters(t *testing.T) {
 			},
 			{
 				// Testing for path traversal attack handling
-				RouteName:  RouteNameTags,
-				RequestURI: "/v2/foo/不bar/tags/list",
+				RouteName:  RouteNameTagsList,
+				RequestURI: "/v2/foo/不bar/tags/_list",
 				StatusCode: http.StatusNotFound,
 			},
 		}
@@ -222,8 +238,8 @@ func TestRouterWithBadCharacters(t *testing.T) {
 		testCases := make([]routeTestCase, 1000)
 		for idx := range testCases {
 			testCases[idx] = routeTestCase{
-				RouteName:  RouteNameTags,
-				RequestURI: fmt.Sprintf("/v2/%v/%v/tags/list", randomString(10), randomString(10)),
+				RouteName:  RouteNameTagsList,
+				RequestURI: fmt.Sprintf("/v2/%v/%v/tags/_list", randomString(10), randomString(10)),
 				StatusCode: http.StatusNotFound,
 			}
 		}

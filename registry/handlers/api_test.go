@@ -983,7 +983,7 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Name
 	checkResponse(t, "getting non-existent manifest", resp, http.StatusNotFound)
 	checkBodyHasErrorCodes(t, "getting non-existent manifest", resp, v2.ErrorCodeManifestUnknown)
 
-	tagsURL, err := env.builder.BuildTagsURL(imageName)
+	tagsURL, err := env.builder.BuildTagsListURL(imageName)
 	if err != nil {
 		t.Fatalf("unexpected error building tags url: %v", err)
 	}
@@ -1247,7 +1247,7 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Name
 	checkResponse(t, "getting tags", resp, http.StatusOK)
 	dec = json.NewDecoder(resp.Body)
 
-	var tagsResponse tagsAPIResponse
+	var tagsResponse tagsListAPIResponse
 
 	if err := dec.Decode(&tagsResponse); err != nil {
 		t.Fatalf("unexpected error decoding error response: %v", err)
@@ -1305,7 +1305,7 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 	checkResponse(t, "getting non-existent manifest", resp, http.StatusNotFound)
 	checkBodyHasErrorCodes(t, "getting non-existent manifest", resp, v2.ErrorCodeManifestUnknown)
 
-	tagsURL, err := env.builder.BuildTagsURL(imageName)
+	tagsURL, err := env.builder.BuildTagsListURL(imageName)
 	if err != nil {
 		t.Fatalf("unexpected error building tags url: %v", err)
 	}
@@ -1557,7 +1557,7 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 	checkResponse(t, "getting unknown manifest tags", resp, http.StatusOK)
 	dec = json.NewDecoder(resp.Body)
 
-	var tagsResponse tagsAPIResponse
+	var tagsResponse tagsListAPIResponse
 
 	if err := dec.Decode(&tagsResponse); err != nil {
 		t.Fatalf("unexpected error decoding error response: %v", err)
@@ -1943,7 +1943,7 @@ func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
 		"Docker-Content-Digest": []string{dgst.String()},
 	})
 
-	tagsURL, err := env.builder.BuildTagsURL(imageName)
+	tagsURL, err := env.builder.BuildTagsListURL(imageName)
 	if err != nil {
 		t.Fatalf("unexpected error building tags url: %v", err)
 	}
@@ -1956,7 +1956,7 @@ func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
 	defer resp.Body.Close()
 
 	dec := json.NewDecoder(resp.Body)
-	var tagsResponse tagsAPIResponse
+	var tagsResponse tagsListAPIResponse
 	if err := dec.Decode(&tagsResponse); err != nil {
 		t.Fatalf("unexpected error decoding error response: %v", err)
 	}
@@ -2622,4 +2622,85 @@ func TestProxyManifestGetByTag(t *testing.T) {
 	checkHeaders(t, resp, http.Header{
 		"Docker-Content-Digest": []string{newDigest.String()},
 	})
+}
+
+// Test Tags API
+func TestTagsAPI(t *testing.T) {
+	schema1Repo, _ := reference.WithName("foo/schema1")
+	schema2Repo, _ := reference.WithName("foo/schema2")
+
+	deleteEnabled := true
+	env := newTestEnv(t, deleteEnabled)
+	defer env.Shutdown()
+	schema1Args := testManifestAPISchema1(t, env, schema1Repo)
+	testTagsAPI(t, env, schema1Args)
+	schema2Args := testManifestAPISchema2(t, env, schema2Repo)
+	testTagsAPI(t, env, schema2Args)
+}
+
+func testTagsAPI(t *testing.T, env *testEnv, args manifestArgs) {
+	imageName := args.imageName
+	refTagged, _ := reference.WithTag(imageName, "list")
+
+	listUrl, err := env.builder.BuildTagURL(refTagged)
+	if err != nil {
+		t.Fatalf("unexpected error building tag url: %v", err)
+	}
+
+	newListUrl, err := env.builder.BuildTagsListURL(imageName)
+	if err != nil {
+		t.Fatalf("unexpected error building tag list url: %v", err)
+	}
+
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+
+	resp, err := client.Get(listUrl)
+	checkErr(t, err, "fetching tags list using legacy URL")
+	defer resp.Body.Close()
+
+	checkResponse(t, "fetching tags list using legacy URL", resp, http.StatusMovedPermanently)
+	checkHeaders(t, resp, http.Header{
+		"Location": []string{newListUrl},
+	})
+
+	refTagged, _ = reference.WithTag(imageName, "tag")
+	tagUrl, err := env.builder.BuildTagURL(refTagged)
+	if err != nil {
+		t.Fatalf("unexpected error building tag url: %v", err)
+	}
+
+	resp, err = http.Get(tagUrl)
+	checkErr(t, err, "fetching tag using tag URL")
+	defer resp.Body.Close()
+
+	checkResponse(t, "fetching tag using tag URL", resp, http.StatusNotFound)
+	
+	//Delete unknown tag
+	resp, err = httpDelete(tagUrl)
+	checkErr(t, err, "deleting unknown tag")
+	defer resp.Body.Close()
+
+	checkResponse(t, "deleting unknown tag", resp, http.StatusNotFound)
+
+	// --------------------
+	// Upload manifest by tag
+	manifestTagURL, err := env.builder.BuildManifestURL(refTagged)
+	resp = putManifest(t, "putting manifest by tag", manifestTagURL, args.mediaType, args.manifest)
+	checkResponse(t, "putting manifest by tag", resp, http.StatusCreated)
+	
+	resp, err = httpDelete(tagUrl)
+	checkErr(t, err, "deleting tag")
+	defer resp.Body.Close()
+
+	checkResponse(t, "deleting tag", resp, http.StatusAccepted)
+	
+	resp, err = httpDelete(tagUrl)
+	checkErr(t, err, "deleting already deleted tag")
+	defer resp.Body.Close()
+
+	checkResponse(t, "deleting already deleted tag", resp, http.StatusNotFound)
 }
