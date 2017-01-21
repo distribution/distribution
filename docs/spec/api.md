@@ -1134,6 +1134,7 @@ A list of methods and URIs are covered in the table below:
 |------|----|------|-----------|
 | GET | `/v2/` | Base | Check that the endpoint implements Docker Registry API V2. |
 | GET | `/v2/<name>/tags/_list` | Tags | Fetch the tags under the repository identified by `name`. |
+| DELETE | `/v2/<name>/tags/<tag>` | Tags | Delete the tag identified by `name` and `tag`. |
 | GET | `/v2/<name>/manifests/<reference>` | Manifest | Fetch the manifest identified by `name` and `reference` where `reference` can be a tag or digest. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data. |
 | PUT | `/v2/<name>/manifests/<reference>` | Manifest | Put the manifest identified by `name` and `reference` where `reference` can be a tag or digest. |
 | DELETE | `/v2/<name>/manifests/<reference>` | Manifest | Delete the manifest identified by `name` and `reference`. Note that a manifest can _only_ be deleted by `digest`. |
