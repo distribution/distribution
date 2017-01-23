@@ -1,20 +1,3 @@
-/**
- * Copyright (c) 2015 Guoyao Wu, All Rights Reserved
- *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with
- * the License. You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on
- * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the
- * specific language governing permissions and limitations under the License.
- *
- * @file util.go
- * @author guoyao
- */
-
-// Package util implements a set of util functions.
 package util
 
 import (
@@ -42,6 +25,7 @@ import (
 	"time"
 )
 
+// GetURL gets the full URL for a http request.
 func GetURL(protocol, host, uriPath string, params map[string]string) string {
 	if strings.Index(uriPath, "/") == 0 {
 		uriPath = uriPath[1:]
@@ -86,6 +70,8 @@ func HmacSha256Hex(key, message string) string {
 	return hex.EncodeToString(mac.Sum(nil))
 }
 
+// GetMD5 gets the MD5 value from data.
+// Param base64Encode determines whether use Base64Encode meanwhile.
 func GetMD5(data interface{}, base64Encode bool) string {
 	hash := md5.New()
 
@@ -112,6 +98,7 @@ func GetMD5(data interface{}, base64Encode bool) string {
 	return hex.EncodeToString(hash.Sum(nil))
 }
 
+// GetSha256 gets SHA256 value from data.
 func GetSha256(data interface{}) string {
 	hash := sha256.New()
 
@@ -134,6 +121,7 @@ func GetSha256(data interface{}) string {
 	return hex.EncodeToString(hash.Sum(nil))
 }
 
+// Base64Encode gets base64 encoded string from data.
 func Base64Encode(data []byte) string {
 	return base64.StdEncoding.EncodeToString(data)
 }
@@ -304,7 +292,7 @@ func MapKeyToLower(m map[string]string) {
 	}
 }
 
-// Convert anything to map
+// ToMap converts anything to a map instance.
 func ToMap(i interface{}, keys ...string) (map[string]interface{}, error) {
 	var m map[string]interface{}
 	var byteArray []byte
@@ -342,6 +330,7 @@ func ToMap(i interface{}, keys ...string) (map[string]interface{}, error) {
 	return m, nil
 }
 
+// ToJson converts anything to JSON.
 func ToJson(i interface{}, keys ...string) ([]byte, error) {
 	byteArray, err := json.Marshal(i)
 
@@ -362,6 +351,7 @@ func ToJson(i interface{}, keys ...string) ([]byte, error) {
 	return byteArray, err
 }
 
+// CheckFileExists checks if specified file exists.
 func CheckFileExists(filename string) bool {
 	exist := true
 
@@ -372,6 +362,7 @@ func CheckFileExists(filename string) bool {
 	return exist
 }
 
+// TempFileWithSize generates a temp file with specified size.
 func TempFileWithSize(fileSize int64) (*os.File, error) {
 	f, err := TempFile(nil, "", "")
 
@@ -386,6 +377,7 @@ func TempFileWithSize(fileSize int64) (*os.File, error) {
 	return f, nil
 }
 
+// TempFile generates a temp file with separated content.
 func TempFile(content []byte, dir, prefix string) (*os.File, error) {
 	if dir == "" {
 		home, err := HomeDir()
@@ -432,6 +424,7 @@ func TempFile(content []byte, dir, prefix string) (*os.File, error) {
 
 var homeDir string
 
+// HomeDir returns the HOME directory of current login user.
 func HomeDir() (string, error) {
 	if homeDir != "" {
 		return homeDir, nil
@@ -520,6 +513,7 @@ func dirWindows() (string, error) {
 	return home, nil
 }
 
+// Debug generates debug info for debug mode.
 func Debug(title, message string) {
 	if title != "" {
 		log.Println("----------------------------DEBUG: start of " + title + "----------------------------")
@@ -532,7 +526,7 @@ func Debug(title, message string) {
 	}
 }
 
-// FormatTest returns a formatted string.
+// FormatTest returns a formatted string for unit test.
 func FormatTest(funcName, got, expected string) string {
 	return fmt.Sprintf("%s failed. Got %s, expected %s", funcName, got, expected)
 }

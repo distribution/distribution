@@ -17,13 +17,14 @@ import (
 	"github.com/guoyao/baidubce-sdk-go/util"
 )
 
-// Endpoints of baidubce
+// Endpoint contains all endpoints of Baidu Cloud BOS.
 var Endpoint = map[string]string{
 	"bj": "bj.bcebos.com",
 	"gz": "gz.bcebos.com",
 	"hk": "hk.bcebos.com",
 }
 
+// Config contains all options for bos.Client.
 type Config struct {
 	*bce.Config
 }
@@ -32,15 +33,11 @@ func NewConfig(config *bce.Config) *Config {
 	return &Config{config}
 }
 
-// Client is the client for bos.
+// Client is the bos client implemention for Baidu Cloud BOS API.
 type Client struct {
 	*bce.Client
 }
 
-// DefaultClient provided a default `bos.Client` instance.
-//var DefaultClient = NewClient(bce.DefaultConfig)
-
-// NewClient returns an instance of type `bos.Client`.
 func NewClient(config *Config) *Client {
 	bceClient := bce.NewClient(config.Config)
 	return &Client{bceClient}
@@ -66,11 +63,12 @@ func checkObjectKey(objectKey string) {
 	}
 }
 
-// GetBucketName returns the actual name of bucket.
+// GetBucketName returns the actual name of BOS Bucket.
 func (c *Client) GetBucketName(bucketName string) string {
 	return bucketName
 }
 
+// GetURL generates the full URL of http request for Baidu Cloud BOS API.
 func (c *Client) GetURL(bucketName, objectKey string, params map[string]string) string {
 	host := c.Endpoint
 
@@ -87,7 +85,9 @@ func (c *Client) GetURL(bucketName, objectKey string, params map[string]string) 
 	return c.Client.GetURL(host, uriPath, params)
 }
 
-// GetBucketLocation returns the location of a bucket.
+// GetBucketLocation returns the location of a BOS Bucket.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#GetBucketLocation.E6.8E.A5.E5.8F.A3
 func (c *Client) GetBucketLocation(bucketName string, option *bce.SignOption) (*Location, error) {
 	bucketName = c.GetBucketName(bucketName)
 	params := map[string]string{"location": ""}
@@ -120,7 +120,9 @@ func (c *Client) GetBucketLocation(bucketName string, option *bce.SignOption) (*
 	return location, nil
 }
 
-// ListBuckets is for getting a collection of bucket.
+// ListBuckets gets all buckets.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#ListBuckets.E6.8E.A5.E5.8F.A3
 func (c *Client) ListBuckets(option *bce.SignOption) (*BucketSummary, error) {
 	req, err := bce.NewRequest("GET", c.GetURL("", "", nil), nil)
 
@@ -150,7 +152,9 @@ func (c *Client) ListBuckets(option *bce.SignOption) (*BucketSummary, error) {
 	return bucketSummary, nil
 }
 
-// CreateBucket is for creating a bucket.
+// CreateBucket creates a BOS Bucket.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#PutBucket.E6.8E.A5.E5.8F.A3
 func (c *Client) CreateBucket(bucketName string, option *bce.SignOption) error {
 	req, err := bce.NewRequest("PUT", c.GetURL(bucketName, "", nil), nil)
 
@@ -163,6 +167,9 @@ func (c *Client) CreateBucket(bucketName string, option *bce.SignOption) error {
 	return err
 }
 
+// DoesBucketExist checks a BOS Bucket if it is exists.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#HeadBucket.E6.8E.A5.E5.8F.A3
 func (c *Client) DoesBucketExist(bucketName string, option *bce.SignOption) (bool, error) {
 	req, err := bce.NewRequest("HEAD", c.GetURL(bucketName, "", nil), nil)
 
@@ -184,6 +191,9 @@ func (c *Client) DoesBucketExist(bucketName string, option *bce.SignOption) (boo
 	return false, err
 }
 
+// DeleteBucket deletes a BOS Bucket.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#DeleteBucket.E6.8E.A5.E5.8F.A3
 func (c *Client) DeleteBucket(bucketName string, option *bce.SignOption) error {
 	req, err := bce.NewRequest("DELETE", c.GetURL(bucketName, "", nil), nil)
 
@@ -196,18 +206,30 @@ func (c *Client) DeleteBucket(bucketName string, option *bce.SignOption) error {
 	return err
 }
 
+// SetBucketPrivate sets authorization of a BOS Bucket to private.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#PutBucketAcl.E6.8E.A5.E5.8F.A3
 func (c *Client) SetBucketPrivate(bucketName string, option *bce.SignOption) error {
 	return c.setBucketAclFromString(bucketName, CannedAccessControlList["Private"], option)
 }
 
+// SetBucketPublicRead sets authorization of a BOS Bucket to public-read.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#PutBucketAcl.E6.8E.A5.E5.8F.A3
 func (c *Client) SetBucketPublicRead(bucketName string, option *bce.SignOption) error {
 	return c.setBucketAclFromString(bucketName, CannedAccessControlList["PublicRead"], option)
 }
 
+// SetBucketPublicReadWrite sets authorization of a BOS Bucket to public-read-write.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#PutBucketAcl.E6.8E.A5.E5.8F.A3
 func (c *Client) SetBucketPublicReadWrite(bucketName string, option *bce.SignOption) error {
 	return c.setBucketAclFromString(bucketName, CannedAccessControlList["PublicReadWrite"], option)
 }
 
+// GetBucketAcl gets all authorization info of a BOS Bucket.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#GetBucketAcl.E6.8E.A5.E5.8F.A3
 func (c *Client) GetBucketAcl(bucketName string, option *bce.SignOption) (*BucketAcl, error) {
 	params := map[string]string{"acl": ""}
 	req, err := bce.NewRequest("GET", c.GetURL(bucketName, "", params), nil)
@@ -238,6 +260,9 @@ func (c *Client) GetBucketAcl(bucketName string, option *bce.SignOption) (*Bucke
 	return bucketAcl, nil
 }
 
+// SetBucketAcl sets authorization info of a BOS Bucket.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#PutBucketAcl.E6.8E.A5.E5.8F.A3
 func (c *Client) SetBucketAcl(bucketName string, bucketAcl BucketAcl, option *bce.SignOption) error {
 	byteArray, err := util.ToJson(bucketAcl, "accessControlList")
 
@@ -257,6 +282,9 @@ func (c *Client) SetBucketAcl(bucketName string, bucketAcl BucketAcl, option *bc
 	return err
 }
 
+// PutObject creates a BOS Object.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#PutObject.E6.8E.A5.E5.8F.A3
 func (c *Client) PutObject(bucketName, objectKey string, data interface{},
 	metadata *ObjectMetadata, option *bce.SignOption) (PutObjectResponse, error) {
 
@@ -302,6 +330,9 @@ func (c *Client) PutObject(bucketName, objectKey string, data interface{},
 	return putObjectResponse, nil
 }
 
+// DeleteObject deletes a BOS Object.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#DeleteObject.E6.8E.A5.E5.8F.A3
 func (c *Client) DeleteObject(bucketName, objectKey string, option *bce.SignOption) error {
 	checkObjectKey(objectKey)
 
@@ -316,6 +347,9 @@ func (c *Client) DeleteObject(bucketName, objectKey string, option *bce.SignOpti
 	return err
 }
 
+// DeleteMultipleObjects delete multiple BOS Object.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#DeleteMultipleObjects.E6.8E.A5.E5.8F.A3
 func (c *Client) DeleteMultipleObjects(bucketName string, objectKeys []string,
 	option *bce.SignOption) (*DeleteMultipleObjectsResponse, error) {
 
@@ -385,10 +419,16 @@ func (c *Client) DeleteMultipleObjects(bucketName string, objectKeys []string,
 	return nil, nil
 }
 
+// ListObjects get a list of BOS Object for the specified BOS Bucket.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#GetBucket.2FListObjects.E6.8E.A5.E5.8F.A3
 func (c *Client) ListObjects(bucketName string, option *bce.SignOption) (*ListObjectsResponse, error) {
 	return c.ListObjectsFromRequest(ListObjectsRequest{BucketName: bucketName}, option)
 }
 
+// ListObjectsFromRequest get a list of BOS Object for the specified BOS Bucket.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#GetBucket.2FListObjects.E6.8E.A5.E5.8F.A3
 func (c *Client) ListObjectsFromRequest(listObjectsRequest ListObjectsRequest,
 	option *bce.SignOption) (*ListObjectsResponse, error) {
 
@@ -439,6 +479,9 @@ func (c *Client) ListObjectsFromRequest(listObjectsRequest ListObjectsRequest,
 	return listObjectsResponse, nil
 }
 
+// CopyObject copies an existing BOS Object.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#CopyObject.E6.8E.A5.E5.8F.A3
 func (c *Client) CopyObject(srcBucketName, srcKey, destBucketName, destKey string,
 	option *bce.SignOption) (*CopyObjectResponse, error) {
 
@@ -450,6 +493,9 @@ func (c *Client) CopyObject(srcBucketName, srcKey, destBucketName, destKey strin
 	}, option)
 }
 
+// CopyObject copies an existing BOS Object.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#CopyObject.E6.8E.A5.E5.8F.A3
 func (c *Client) CopyObjectFromRequest(copyObjectRequest CopyObjectRequest,
 	option *bce.SignOption) (*CopyObjectResponse, error) {
 
@@ -494,6 +540,9 @@ func (c *Client) CopyObjectFromRequest(copyObjectRequest CopyObjectRequest,
 	return copyObjectResponse, nil
 }
 
+// GetObject gets a BOS Object details.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#GetObject.E6.8E.A5.E5.8F.A3
 func (c *Client) GetObject(bucketName, objectKey string, option *bce.SignOption) (*Object, error) {
 	return c.GetObjectFromRequest(GetObjectRequest{
 		BucketName: bucketName,
@@ -501,6 +550,9 @@ func (c *Client) GetObject(bucketName, objectKey string, option *bce.SignOption)
 	}, option)
 }
 
+// GetObjectFromRequest gets a BOS Object details.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#GetObject.E6.8E.A5.E5.8F.A3
 func (c *Client) GetObjectFromRequest(getObjectRequest GetObjectRequest,
 	option *bce.SignOption) (*Object, error) {
 
@@ -530,6 +582,9 @@ func (c *Client) GetObjectFromRequest(getObjectRequest GetObjectRequest,
 	return object, nil
 }
 
+// GetObjectToFile gets the content of a BOS Object to local file.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#GetObject.E6.8E.A5.E5.8F.A3
 func (c *Client) GetObjectToFile(getObjectRequest *GetObjectRequest, file *os.File,
 	option *bce.SignOption) (*ObjectMetadata, error) {
 
@@ -574,6 +629,9 @@ func (c *Client) GetObjectToFile(getObjectRequest *GetObjectRequest, file *os.Fi
 	return objectMetadata, nil
 }
 
+// GetObjectMetadata gets the metadata details of a BOS Object.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#GetObjectMeta.E6.8E.A5.E5.8F.A3
 func (c *Client) GetObjectMetadata(bucketName, objectKey string, option *bce.SignOption) (*ObjectMetadata, error) {
 	checkBucketName(bucketName)
 	checkObjectKey(objectKey)
@@ -595,6 +653,7 @@ func (c *Client) GetObjectMetadata(bucketName, objectKey string, option *bce.Sig
 	return objectMetadata, nil
 }
 
+// GeneratePresignedUrl generates the full URL of a BOS Object.
 func (c *Client) GeneratePresignedUrl(bucketName, objectKey string, option *bce.SignOption) (string, error) {
 	checkBucketName(bucketName)
 	checkObjectKey(objectKey)
@@ -614,6 +673,9 @@ func (c *Client) GeneratePresignedUrl(bucketName, objectKey string, option *bce.
 	return url, nil
 }
 
+// AppendObject appends some data to an existing BOS Object.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#AppendObject.E6.8E.A5.E5.8F.A3
 func (c *Client) AppendObject(bucketName, objectKey string, offset int, data interface{},
 	metadata *ObjectMetadata, option *bce.SignOption) (AppendObjectResponse, error) {
 
@@ -672,6 +734,9 @@ func (c *Client) AppendObject(bucketName, objectKey string, offset int, data int
 	return appendObjectResponse, nil
 }
 
+// InitiateMultipartUpload is the first step for BOS Object Multipart Upload.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#InitiateMultipartUpload.E6.8E.A5.E5.8F.A3
 func (c *Client) InitiateMultipartUpload(initiateMultipartUploadRequest InitiateMultipartUploadRequest,
 	option *bce.SignOption) (*InitiateMultipartUploadResponse, error) {
 
@@ -718,6 +783,9 @@ func (c *Client) InitiateMultipartUpload(initiateMultipartUploadRequest Initiate
 	return initiateMultipartUploadResponse, nil
 }
 
+// UploadPart is the second step for BOS Object Multipart Upload.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#UploadPart.E6.8E.A5.E5.8F.A3
 func (c *Client) UploadPart(uploadPartRequest UploadPartRequest,
 	option *bce.SignOption) (UploadPartResponse, error) {
 
@@ -767,6 +835,9 @@ func (c *Client) UploadPart(uploadPartRequest UploadPartRequest,
 	return uploadPartResponse, nil
 }
 
+// CompleteMultipartUpload is the last step for BOS Object Multipart Upload.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#CompleteMultipartUpload.E6.8E.A5.E5.8F.A3
 func (c *Client) CompleteMultipartUpload(completeMultipartUploadRequest CompleteMultipartUploadRequest,
 	option *bce.SignOption) (*CompleteMultipartUploadResponse, error) {
 
@@ -812,6 +883,9 @@ func (c *Client) CompleteMultipartUpload(completeMultipartUploadRequest Complete
 	return completeMultipartUploadResponse, nil
 }
 
+// MultipartUploadFromFile creates a BOS Object from local file by BOS Object Multipart Upload.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#MultipartUpload.E7.9B.B8.E5.85.B3.E6.8E.A5.E5.8F.A3
 func (c *Client) MultipartUploadFromFile(bucketName, objectKey, filePath string,
 	partSize int64) (*CompleteMultipartUploadResponse, error) {
 
@@ -930,6 +1004,9 @@ func (c *Client) MultipartUploadFromFile(bucketName, objectKey, filePath string,
 	return completeMultipartUploadResponse, nil
 }
 
+// AbortMultipartUpload aborts the whole process of a BOS Object Multipart Upload.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#AbortMultipartUpload.E6.8E.A5.E5.8F.A3
 func (c *Client) AbortMultipartUpload(abortMultipartUploadRequest AbortMultipartUploadRequest,
 	option *bce.SignOption) error {
 
@@ -951,6 +1028,9 @@ func (c *Client) AbortMultipartUpload(abortMultipartUploadRequest AbortMultipart
 	return err
 }
 
+// ListParts gets a list of parts for a BOS Object Multipart Upload.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#ListParts.E6.8E.A5.E5.8F.A3
 func (c *Client) ListParts(bucketName, objectKey, uploadId string,
 	option *bce.SignOption) (*ListPartsResponse, error) {
 
@@ -961,6 +1041,9 @@ func (c *Client) ListParts(bucketName, objectKey, uploadId string,
 	}, option)
 }
 
+// ListPartsFromRequest gets a list of parts for a BOS Object Multipart Upload.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#ListParts.E6.8E.A5.E5.8F.A3
 func (c *Client) ListPartsFromRequest(listPartsRequest ListPartsRequest,
 	option *bce.SignOption) (*ListPartsResponse, error) {
 
@@ -1006,12 +1089,18 @@ func (c *Client) ListPartsFromRequest(listPartsRequest ListPartsRequest,
 	return listPartsResponse, nil
 }
 
+// ListMultipartUploads lists all BOS Buckets that are not completed under the Multipart Upload process.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#ListMultipartUploads.E6.8E.A5.E5.8F.A3
 func (c *Client) ListMultipartUploads(bucketName string,
 	option *bce.SignOption) (*ListMultipartUploadsResponse, error) {
 
 	return c.ListMultipartUploadsFromRequest(ListMultipartUploadsRequest{BucketName: bucketName}, option)
 }
 
+// ListMultipartUploadsFromRequest lists all BOS Buckets that are not completed under the Multipart Upload process.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#ListMultipartUploads.E6.8E.A5.E5.8F.A3
 func (c *Client) ListMultipartUploadsFromRequest(listMultipartUploadsRequest ListMultipartUploadsRequest,
 	option *bce.SignOption) (*ListMultipartUploadsResponse, error) {
 
@@ -1064,6 +1153,9 @@ func (c *Client) ListMultipartUploadsFromRequest(listMultipartUploadsRequest Lis
 	return listMultipartUploadsResponse, nil
 }
 
+// GetBucketCors get CORS settings of a BOS Bucket.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#GetBucketCors.E6.8E.A5.E5.8F.A3
 func (c *Client) GetBucketCors(bucketName string, option *bce.SignOption) (*BucketCors, error) {
 	params := map[string]string{"cors": ""}
 	req, err := bce.NewRequest("GET", c.GetURL(bucketName, "", params), nil)
@@ -1095,6 +1187,9 @@ func (c *Client) GetBucketCors(bucketName string, option *bce.SignOption) (*Buck
 	return bucketCors, nil
 }
 
+// SetBucketCors sets the CORS settings of a BOS Bucket.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#PutBucketCors.E6.8E.A5.E5.8F.A3
 func (c *Client) SetBucketCors(bucketName string, bucketCors BucketCors, option *bce.SignOption) error {
 	byteArray, err := util.ToJson(bucketCors, "corsConfiguration")
 
@@ -1114,6 +1209,9 @@ func (c *Client) SetBucketCors(bucketName string, bucketCors BucketCors, option 
 	return err
 }
 
+// DeleteBucketCors deletes CORS settings of a BOS Bucket.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#DeleteBucketCors.E6.8E.A5.E5.8F.A3
 func (c *Client) DeleteBucketCors(bucketName string, option *bce.SignOption) error {
 	params := map[string]string{"cors": ""}
 	req, err := bce.NewRequest("DELETE", c.GetURL(bucketName, "", params), nil)
@@ -1127,6 +1225,9 @@ func (c *Client) DeleteBucketCors(bucketName string, option *bce.SignOption) err
 	return err
 }
 
+// OptionsObject sends a http request with method OPTION.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#OPTIONS.20Object.E6.8E.A5.E5.8F.A3
 func (c *Client) OptionsObject(bucketName, objectKey, origin, accessControlRequestMethod,
 	accessControlRequestHeaders string) (*bce.Response, error) {
 
@@ -1147,6 +1248,9 @@ func (c *Client) OptionsObject(bucketName, objectKey, origin, accessControlReque
 	return c.SendRequest(req, option)
 }
 
+// SetBucketLogging sets the log settings of a BOS Bucket.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#PutBucketLogging.E6.8E.A5.E5.8F.A3
 func (c *Client) SetBucketLogging(bucketName, targetBucket, targetPrefix string, option *bce.SignOption) error {
 	params := map[string]string{"logging": ""}
 	body, err := util.ToJson(map[string]string{
@@ -1169,6 +1273,9 @@ func (c *Client) SetBucketLogging(bucketName, targetBucket, targetPrefix string,
 	return err
 }
 
+// GetBucketLogging gets the log settings of a BOS Bucket.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#GetBucketLogging
 func (c *Client) GetBucketLogging(bucketName string, option *bce.SignOption) (*BucketLogging, error) {
 	params := map[string]string{"logging": ""}
 	req, err := bce.NewRequest("GET", c.GetURL(bucketName, "", params), nil)
@@ -1200,8 +1307,83 @@ func (c *Client) GetBucketLogging(bucketName string, option *bce.SignOption) (*B
 	return bucketLogging, nil
 }
 
+// DeleteBucketLogging deletes the log settings of a BOS Bucket.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#DeleteBucketLogging
 func (c *Client) DeleteBucketLogging(bucketName string, option *bce.SignOption) error {
 	params := map[string]string{"logging": ""}
+	req, err := bce.NewRequest("DELETE", c.GetURL(bucketName, "", params), nil)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = c.SendRequest(req, option)
+
+	return err
+}
+
+// SetBucketlifecycle set lifecycle configuration of a bucket
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#PutBucketlifecycle
+func (c *Client) SetBucketLifecycle(bucketName string, bucketLifecycle BucketLifecycle, option *bce.SignOption) error {
+	byteArray, err := util.ToJson(bucketLifecycle, "rule")
+
+	if err != nil {
+		return err
+	}
+
+	params := map[string]string{"lifecycle": ""}
+	req, err := bce.NewRequest("PUT", c.GetURL(bucketName, "", params), bytes.NewReader(byteArray))
+
+	if err != nil {
+		return err
+	}
+
+	_, err = c.SendRequest(req, option)
+
+	return err
+}
+
+// GetBucketLifecycle gets CORS settings of a BOS Bucket.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#GetLifeCycle
+func (c *Client) GetBucketLifecycle(bucketName string, option *bce.SignOption) (*BucketLifecycle, error) {
+	params := map[string]string{"lifecycle": ""}
+	req, err := bce.NewRequest("GET", c.GetURL(bucketName, "", params), nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := c.SendRequest(req, option)
+
+	if err != nil {
+		return nil, err
+	}
+
+	bodyContent, err := resp.GetBodyContent()
+
+	if err != nil {
+		return nil, err
+	}
+
+	var bucketLifecycle *BucketLifecycle
+
+	err = json.Unmarshal(bodyContent, &bucketLifecycle)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return bucketLifecycle, nil
+}
+
+// DeleteBucketLifecycle deletes the lifecycle settings of a BOS Bucket.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#DeleteLifeCycle
+func (c *Client) DeleteBucketLifecycle(bucketName string, option *bce.SignOption) error {
+	params := map[string]string{"lifecycle": ""}
 	req, err := bce.NewRequest("DELETE", c.GetURL(bucketName, "", params), nil)
 
 	if err != nil {

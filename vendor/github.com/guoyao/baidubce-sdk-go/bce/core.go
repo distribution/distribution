@@ -14,7 +14,7 @@
  * @author guoyao
  */
 
-// Package bce define a set of core data structure and functions for baidubce.
+// Package bce defined a set of core data structure and functions for Baidu Cloud API.
 package bce
 
 import (
@@ -35,11 +35,15 @@ import (
 )
 
 const (
-	Version = "1.0.2"
+	Version = "1.0.3"
+
 	// ExpirationPeriodInSeconds 1800s is the default expiration period.
 	ExpirationPeriodInSeconds = 1800
 )
 
+// DefaultUserAgent is the default value of http request UserAgent header.
+//
+// We can change it by specifying the UserAgent field of bce.Config.
 var DefaultUserAgent = strings.Join([]string{
 	"baidubce-sdk-go",
 	Version,
@@ -47,24 +51,23 @@ var DefaultUserAgent = strings.Join([]string{
 	runtime.Version(),
 }, "/")
 
+// Region contains all regions of Baidu Cloud.
 var Region = map[string]string{
 	"bj": "bj",
 	"gz": "gz",
 	"hk": "hk",
 }
 
-// Credentials struct for baidubce.
 type Credentials struct {
 	AccessKeyID     string
 	SecretAccessKey string
 }
 
-// NewCredentials returns an instance of type `Credentials`.
 func NewCredentials(AccessKeyID, secretAccessKey string) *Credentials {
 	return &Credentials{AccessKeyID, secretAccessKey}
 }
 
-// Config contains options for baidubce api.
+// Config contains all options for bce.Client.
 type Config struct {
 	*Credentials
 	Region     string
@@ -88,6 +91,9 @@ func NewConfig(credentials *Credentials) *Config {
 	}
 }
 
+// GetRegion gets region from bce.Config.
+//
+// If no region specified in bce.Config, the bj region will be return.
 func (config *Config) GetRegion() string {
 	region := config.Region
 
@@ -98,6 +104,9 @@ func (config *Config) GetRegion() string {
 	return region
 }
 
+// GetUserAgent gets UserAgent from bce.Config.
+//
+// If no UserAgent specified in bce.Config, the bce.DefaultUserAgent will be return.
 func (config *Config) GetUserAgent() string {
 	userAgent := config.UserAgent
 
@@ -108,12 +117,16 @@ func (config *Config) GetUserAgent() string {
 	return userAgent
 }
 
+// RetryPolicy defined an interface for retrying of bce.Client.
 type RetryPolicy interface {
-	GetMaxErrorRetry() int
-	GetMaxDelay() time.Duration
+	GetMaxErrorRetry() int      // GetMaxErrorRetry specifies the max retry count.
+	GetMaxDelay() time.Duration // GetMaxDelay specifies the max delay time for retrying.
+
+	// GetDelayBeforeNextRetry specifies the delay time for next retry.
 	GetDelayBeforeNextRetry(err error, retriesAttempted int) time.Duration
 }
 
+// DefaultRetryPolicy is the default implemention of interface bce.RetryPolicy.
 type DefaultRetryPolicy struct {
 	MaxErrorRetry int
 	MaxDelay      time.Duration
@@ -123,14 +136,17 @@ func NewDefaultRetryPolicy(maxErrorRetry int, maxDelay time.Duration) *DefaultRe
 	return &DefaultRetryPolicy{maxErrorRetry, maxDelay}
 }
 
+// GetMaxErrorRetry specifies the max retry count.
 func (policy *DefaultRetryPolicy) GetMaxErrorRetry() int {
 	return policy.MaxErrorRetry
 }
 
+// GetMaxDelay specifies the max delay time for retrying.
 func (policy *DefaultRetryPolicy) GetMaxDelay() time.Duration {
 	return policy.MaxDelay
 }
 
+// GetDelayBeforeNextRetry specifies the delay time for next retry.
 func (policy *DefaultRetryPolicy) GetDelayBeforeNextRetry(err error, retriesAttempted int) time.Duration {
 	if !policy.shouldRetry(err, retriesAttempted) {
 		return -1
@@ -165,7 +181,7 @@ func (policy *DefaultRetryPolicy) shouldRetry(err error, retriesAttempted int) b
 	return false
 }
 
-// SignOption contains options for signature of baidubce api.
+// SignOption contains all signature options of Baidu Cloud API.
 type SignOption struct {
 	Timestamp                 string
 	ExpirationPeriodInSeconds int
@@ -176,7 +192,6 @@ type SignOption struct {
 	initialized               bool
 }
 
-// NewSignOption is the instance factory for `SignOption`.
 func NewSignOption(timestamp string, expirationPeriodInSeconds int,
 	headers map[string]string, headersToSign []string) *SignOption {
 
@@ -184,6 +199,7 @@ func NewSignOption(timestamp string, expirationPeriodInSeconds int,
 		headers, headersToSign, nil, len(headersToSign) > 0, false}
 }
 
+// CheckSignOption returns a new empty bce.SignOption instance if no option specified.
 func CheckSignOption(option *SignOption) *SignOption {
 	if option == nil {
 		return &SignOption{}
@@ -192,6 +208,9 @@ func CheckSignOption(option *SignOption) *SignOption {
 	return option
 }
 
+// AddHeadersToSign adds some headers for authentication process of Baidu Cloud API.
+//
+// For details, please refer https://cloud.baidu.com/doc/Reference/AuthenticationMechanism.html#1.1.20.E6.A6.82.E8.BF.B0
 func (option *SignOption) AddHeadersToSign(headers ...string) {
 	if option.HeadersToSign == nil {
 		option.HeadersToSign = []string{}
@@ -205,6 +224,9 @@ func (option *SignOption) AddHeadersToSign(headers ...string) {
 	}
 }
 
+// AddHeader adds a header and it's value for authentication process of Baidu Cloud API.
+//
+// For details, please refer https://cloud.baidu.com/doc/Reference/AuthenticationMechanism.html#1.1.20.E6.A6.82.E8.BF.B0
 func (option *SignOption) AddHeader(key, value string) {
 	if option.Headers == nil {
 		option.Headers = make(map[string]string)
@@ -216,6 +238,9 @@ func (option *SignOption) AddHeader(key, value string) {
 	}
 }
 
+// AddHeaders adds some headers for authentication process of Baidu Cloud API.
+//
+// For details, please refer https://cloud.baidu.com/doc/Reference/AuthenticationMechanism.html#1.1.20.E6.A6.82.E8.BF.B0
 func (option *SignOption) AddHeaders(headers map[string]string) {
 	if headers == nil {
 		return
@@ -293,7 +318,7 @@ func (option *SignOption) signedHeadersToString() string {
 	return strings.Join(headers, ";")
 }
 
-// GenerateAuthorization returns authorization code of baidubce api.
+// GenerateAuthorization generates authorization code for authorization process of Baidu Cloud API.
 func GenerateAuthorization(credentials Credentials, req Request, option *SignOption) string {
 	if option == nil {
 		option = &SignOption{}
@@ -311,7 +336,7 @@ func GenerateAuthorization(credentials Credentials, req Request, option *SignOpt
 	return authorization
 }
 
-// Client is the base client struct for all products of baidubce.
+// Client is the base client implemention for Baidu Cloud API.
 type Client struct {
 	*Config
 	httpClient *http.Client
@@ -322,6 +347,7 @@ func NewClient(config *Config) *Client {
 	return &Client{config, newHttpClient(config), false}
 }
 
+// SetDebug enables debug mode of bce.Client instance.
 func (c *Client) SetDebug(debug bool) {
 	c.debug = debug
 }
@@ -367,6 +393,7 @@ func newHttpClient(config *Config) *http.Client {
 	}
 }
 
+// GetURL generates the full URL of http request for Baidu Cloud API.
 func (c *Client) GetURL(host, uriPath string, params map[string]string) string {
 	if strings.Index(uriPath, "/") == 0 {
 		uriPath = uriPath[1:]
@@ -379,12 +406,18 @@ func (c *Client) GetURL(host, uriPath string, params map[string]string) string {
 	return util.GetURL(c.Protocol, host, uriPath, params)
 }
 
+// SessionTokenRequest contains all options for STS（Security Token Service）of Baidu Cloud API.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#STS.E7.AE.80.E4.BB.8B
 type SessionTokenRequest struct {
 	DurationSeconds   int                     `json:"durationSeconds"`
 	Id                string                  `json:"id"`
 	AccessControlList []AccessControlListItem `json:"accessControlList"`
 }
 
+// AccessControlListItem contains sub options for bce.SessionTokenRequest
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#STS.E7.AE.80.E4.BB.8B
 type AccessControlListItem struct {
 	Eid        string   `json:"eid"`
 	Service    string   `json:"service"`
@@ -394,6 +427,9 @@ type AccessControlListItem struct {
 	Permission []string `json:"permission"`
 }
 
+// SessionTokenResponse contains all response fields for STS（Security Token Service）of Baidu Cloud API.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#STS.E7.AE.80.E4.BB.8B
 type SessionTokenResponse struct {
 	AccessKeyId     string `json:"accessKeyId"`
 	SecretAccessKey string `json:"secretAccessKey"`
@@ -403,6 +439,9 @@ type SessionTokenResponse struct {
 	UserId          string `json:"userId"`
 }
 
+// GetSessionToken gets response for STS（Security Token Service）of Baidu Cloud API.
+//
+// For details, please refer https://cloud.baidu.com/doc/BOS/API.html#STS.E7.AE.80.E4.BB.8B
 func (c *Client) GetSessionToken(sessionTokenRequest SessionTokenRequest,
 	option *SignOption) (*SessionTokenResponse, error) {
 
@@ -455,7 +494,7 @@ func (c *Client) GetSessionToken(sessionTokenRequest SessionTokenRequest,
 	return sessionTokenResponse, nil
 }
 
-// SendRequest sends a http request to the endpoint of baidubce api.
+// SendRequest sends a http request to the endpoint of Baidu Cloud API.
 func (c *Client) SendRequest(req *Request, option *SignOption) (bceResponse *Response, err error) {
 	if option == nil {
 		option = &SignOption{}

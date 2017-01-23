@@ -1014,6 +1014,7 @@ var mimeTypes = map[string]string{
 	"ice":         "x-conference/x-cooltalk",
 }
 
+// GuessMimeType gets the MIME Type of a suffix string.
 func GuessMimeType(s string) string {
 	ext := strings.ToLower(path.Ext(s))
 

@@ -7,11 +7,14 @@ import (
 )
 
 // Error implements the error interface
+//
+// Most methods in the SDK will return bce.Error instance.
 type Error struct {
 	StatusCode               int
 	Code, Message, RequestID string
 }
 
+// Error returns the formatted error message.
 func (err *Error) Error() string {
 	return fmt.Sprintf("Error Message: \"%s\", Error Code: \"%s\", Status Code: %d, Request Id: \"%s\"",
 		err.Message, err.Code, err.StatusCode, err.RequestID)
