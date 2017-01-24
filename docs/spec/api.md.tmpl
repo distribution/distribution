@@ -1004,7 +1004,7 @@ for an image repository can be retrieved with the following request:
 
 or
 
-   GET /v2/<name>/tags/list
+    GET /v2/<name>/tags/list
    
 The response will be in the following format:
 
@@ -1018,6 +1018,9 @@ The response will be in the following format:
             ...
         ]
     }
+
+When called with `GET /v2/<name>/tags/list` then `HTTP 301 MovedPermanently` 
+returned with Location Header set to `/v2/<name>/tags/_list`.
 
 For repositories with a large number of tags, this response may be quite
 large. If such a response is expected, one should use the pagination.
@@ -1073,17 +1076,16 @@ with the following request format:
 
     DELETE /v2/<name>/tags/<tag>
     
-It the tag exists and has been successfully deleted, the following response will be
+If the tag exists and has been successfully deleted, the following response will be
 issued:
 
     202 Accepted
-    Content-Length: None
+    Content-Length: 0
 
 If the tag had already been deleted or did not exist, a `404 Not Found`
 response will be issued instead.    
 
-> **Note** Manifests can never be deleted using this call. If you delete all 
-> tags for a given manifest it will be available only by `digest` after that.
+This call only deletes tag references to manifests and and never deletes manifests themselves. 
 
 ### Deleting an Image
 

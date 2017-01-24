@@ -540,7 +540,7 @@ var routeDescriptors = []RouteDescriptor{
 			},
 			{
 				Method:      "DELETE",
-				Description: "Delete a tag identified by `name` and `reference`. This method never deletes a manifest.",
+				Description: "Delete a tag identified by `name` and `reference`. This method never deletes a manifest the tag references.",
 				Requests: []RequestDescriptor{
 					{
 						Headers: []ParameterDescriptor{

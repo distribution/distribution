@@ -1001,7 +1001,11 @@ It may be necessary to list all of the tags under a given repository. The tags
 for an image repository can be retrieved with the following request:
 
     GET /v2/<name>/tags/_list
-    
+
+or
+
+    GET /v2/<name>/tags/list
+   
 The response will be in the following format:
 
     200 OK
@@ -1015,10 +1019,9 @@ The response will be in the following format:
         ]
     }
 
-Note that tags list also can be fetched using legacy URL:
+When called with `GET /v2/<name>/tags/list` then `HTTP 301 MovedPermanently` 
+returned with Location Header set to `/v2/<name>/tags/_list`.
 
-    GET /v2/<name>/tags/list
-    
 For repositories with a large number of tags, this response may be quite
 large. If such a response is expected, one should use the pagination.
 
@@ -1032,7 +1035,7 @@ any differences.
 Starting a paginated flow may begin as follows:
 
 ```
-GET /v2/<name>/tags/_list?n=<integer>
+GET /v2/<name>/tags/list?n=<integer>
 ```
 
 The above specifies that a tags response should be returned, from the start of
@@ -1066,6 +1069,24 @@ set in the response. The behavior of the `last` parameter, the provided
 response result, lexical ordering and encoding of the `Link` header are
 identical to that of catalog pagination.
 
+### Deleting a tag
+
+A tag can be deleted from a repository via its `name` and `tag`. A delete may be issued
+with the following request format:
+
+    DELETE /v2/<name>/tags/<tag>
+    
+If the tag exists and has been successfully deleted, the following response will be
+issued:
+
+    202 Accepted
+    Content-Length: 0
+
+If the tag had already been deleted or did not exist, a `404 Not Found`
+response will be issued instead.    
+
+This call only deletes tag references to manifests and and never deletes manifests themselves. 
+
 ### Deleting an Image
 
 An image may be deleted from the registry via its `name` and `reference`. A
@@ -1091,27 +1112,6 @@ response will be issued instead.
 
 > for more details, see: [compatibility.md](../compatibility.md#content-addressable-storage-cas)
 
-
-### Deleting a tag
-
-A tag can be deleted from a repository via its `name` and `tag`. A delete may be issued
-with the following request format:
-
-    DELETE /v2/<name>/tags/<tag>
-    
-It the tag exists and has been successfully deleted, the following response will be
-issued:
-
-    202 Accepted
-    Content-Length: None
-
-If the tag had already been deleted or did not exist, a `404 Not Found`
-response will be issued instead.    
-
-> **Note** Manifests can never be deleted using this call. If you delete all 
-> tags for a given manifest it will be available only by `digest` after that.
-
-
 ## Detail
 
 > **Note**: This section is still under construction. For the purposes of
@@ -1134,7 +1134,8 @@ A list of methods and URIs are covered in the table below:
 |------|----|------|-----------|
 | GET | `/v2/` | Base | Check that the endpoint implements Docker Registry API V2. |
 | GET | `/v2/<name>/tags/_list` | Tags | Fetch the tags under the repository identified by `name`. |
-| DELETE | `/v2/<name>/tags/<tag>` | Tags | Delete the tag identified by `name` and `tag`. |
+| GET | `/v2/<name>/tags/<reference>` | Tags | Redirect to tags list. |
+| DELETE | `/v2/<name>/tags/<reference>` | Tags | Delete a tag identified by `name` and `reference`. This method never deletes a manifest the tag references. |
 | GET | `/v2/<name>/manifests/<reference>` | Manifest | Fetch the manifest identified by `name` and `reference` where `reference` can be a tag or digest. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data. |
 | PUT | `/v2/<name>/manifests/<reference>` | Manifest | Put the manifest identified by `name` and `reference` where `reference` can be a tag or digest. |
 | DELETE | `/v2/<name>/manifests/<reference>` | Manifest | Delete the manifest identified by `name` and `reference`. Note that a manifest can _only_ be deleted by `digest`. |
@@ -1319,14 +1320,6 @@ Fetch the tags under the repository identified by `name`.
 
 ```
 GET /v2/<name>/tags/_list
-Host: <registry host>
-Authorization: <scheme> <token>
-```
-
-or
-
-```
-GET /v2/<name>/tags/list
 Host: <registry host>
 Authorization: <scheme> <token>
 ```
@@ -1528,10 +1521,6 @@ The error codes that may be included in the response body are enumerated below:
 GET /v2/<name>/tags/_list?n=<integer>&last=<integer>
 ```
 
-```
-GET /v2/<name>/tags/list?n=<integer>&last=<integer>
-```
-
 Return a portion of the tags for the specified repository.
 
 
@@ -1725,14 +1714,22 @@ The error codes that may be included in the response body are enumerated below:
 
 
 
-#### DELETE Tags
 
-Delete the that identified by `name` and `tag`.
+
+### Tags
+
+Delete tags.
+
+
+
+#### GET Tags
+
+Redirect to tags list.
 
 
 
 ```
-DELETE /v2/<name>/tags/<tag>
+GET /v2/<name>/tags/<reference>
 Host: <registry host>
 Authorization: <scheme> <token>
 ```
@@ -1747,16 +1744,21 @@ The following parameters should be specified on the request:
 |`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
 |`Authorization`|header|An RFC7235 compliant authorization header.|
 |`name`|path|Name of the target repository.|
-|`tag`|path|Tag.|
+|`reference`|path|Tag or digest of the target manifest.|
 
 
 
 
-###### On Success: Accepted
+###### On Success: Moved Permanently
 
 ```
-202 Accepted
+301 Moved Permanently
 ```
+
+Redirect to tags list.
+
+
+
 
 ###### On Failure: Authentication Required
 
@@ -1794,6 +1796,44 @@ The error codes that may be included in the response body are enumerated below:
 |Code|Message|Description|
 |----|-------|-----------|
 | `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client. Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate. |
+
+
+
+###### On Failure: No Such Repository Error
+
+```
+404 Not Found
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The repository is not known to the registry.
+
+The following headers will be returned on the response:
+
+|Name|Description|
+|----|-----------|
+|`Content-Length`|Length of the JSON response body.|
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
+
 
 
 ###### On Failure: Access Denied
@@ -1870,7 +1910,237 @@ The error codes that may be included in the response body are enumerated below:
 
 
 
-###### On Failure: Unknown Manifest
+###### On Failure: Not Found
+
+```
+404 Not Found
+```
+
+Tags support only 'list' in get.
+
+
+
+
+#### DELETE Tags
+
+Delete a tag identified by `name` and `reference`. This method never deletes a manifest the tag references.
+
+
+
+```
+DELETE /v2/<name>/tags/<reference>
+Host: <registry host>
+Authorization: <scheme> <token>
+```
+
+
+
+
+The following parameters should be specified on the request:
+
+|Name|Kind|Description|
+|----|----|-----------|
+|`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
+|`Authorization`|header|An RFC7235 compliant authorization header.|
+|`name`|path|Name of the target repository.|
+|`reference`|path|Tag or digest of the target manifest.|
+
+
+
+
+###### On Success: Accepted
+
+```
+202 Accepted
+```
+
+
+
+
+
+
+###### On Failure: Invalid Name or Reference
+
+```
+400 Bad Request
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The specified `name` or `reference` were invalid and the delete was unable to proceed.
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation. |
+| `TAG_INVALID` | manifest tag did not match URI | During a manifest upload, if the tag in the manifest does not match the uri tag, this error will be returned. |
+
+
+
+###### On Failure: Authentication Required
+
+```
+401 Unauthorized
+WWW-Authenticate: <scheme> realm="<realm>", ..."
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The client is not authenticated.
+
+The following headers will be returned on the response:
+
+|Name|Description|
+|----|-----------|
+|`WWW-Authenticate`|An RFC7235 compliant authentication challenge header.|
+|`Content-Length`|Length of the JSON response body.|
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client. Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate. |
+
+
+
+###### On Failure: No Such Repository Error
+
+```
+404 Not Found
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The repository is not known to the registry.
+
+The following headers will be returned on the response:
+
+|Name|Description|
+|----|-----------|
+|`Content-Length`|Length of the JSON response body.|
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
+
+
+
+###### On Failure: Access Denied
+
+```
+403 Forbidden
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The client does not have required access to the repository.
+
+The following headers will be returned on the response:
+
+|Name|Description|
+|----|-----------|
+|`Content-Length`|Length of the JSON response body.|
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `DENIED` | requested access to the resource is denied | The access controller denied access for the operation on a resource. |
+
+
+
+###### On Failure: Too Many Requests
+
+```
+429 Too Many Requests
+Content-Length: <length>
+Content-Type: application/json; charset=utf-8
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The client made too many requests within a time interval.
+
+The following headers will be returned on the response:
+
+|Name|Description|
+|----|-----------|
+|`Content-Length`|Length of the JSON response body.|
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `TOOMANYREQUESTS` | too many requests | Returned when a client attempts to contact a service too many times |
+
+
+
+###### On Failure: Unknown Tag
 
 ```
 404 Not Found
@@ -1888,7 +2158,7 @@ Content-Type: application/json; charset=utf-8
 }
 ```
 
-The specified `name` or `reference` are unknown to the registry and the delete was unable to proceed. Clients can assume the manifest was already deleted if this response is returned.
+The specified `name` or `reference` are unknown to the registry and the delete was unable to proceed. Clients can assume the tag was already deleted if this response is returned.
 
 
 
@@ -1896,6 +2166,7 @@ The error codes that may be included in the response body are enumerated below:
 
 |Code|Message|Description|
 |----|-------|-----------|
+| `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry. |
 | `MANIFEST_UNKNOWN` | manifest unknown | This error is returned when the manifest, identified by name and tag is unknown to the repository. |
 
 
@@ -1915,6 +2186,9 @@ The error codes that may be included in the response body are enumerated below:
 |Code|Message|Description|
 |----|-------|-----------|
 | `UNSUPPORTED` | The operation is unsupported. | The operation was unsupported due to a missing implementation or invalid set of parameters. |
+
+
+
 
 
 ### Manifest
