@@ -19,8 +19,8 @@ var (
 )
 
 const (
-	// DigestSha256EmptyTar is the canonical sha256 digest of empty data
-	digestSha256EmptyTar = "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+	// digestSha256Empty is the canonical sha256 digest of empty data
+	digestSha256Empty = "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 )
 
 // blobWriter is used to control the various aspects of resumable
@@ -314,7 +314,7 @@ func (bw *blobWriter) moveBlob(ctx context.Context, desc distribution.Descriptor
 	// If no data was received, we may not actually have a file on disk. Check
 	// the size here and write a zero-length file to blobPath if this is the
 	// case. For the most part, this should only ever happen with zero-length
-	// tars.
+	// blobs.
 	if _, err := bw.blobStore.driver.Stat(ctx, bw.path); err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
@@ -322,8 +322,8 @@ func (bw *blobWriter) moveBlob(ctx context.Context, desc distribution.Descriptor
 			// get a hash, then the underlying file is deleted, we risk moving
 			// a zero-length blob into a nonzero-length blob location. To
 			// prevent this horrid thing, we employ the hack of only allowing
-			// to this happen for the digest of an empty tar.
-			if desc.Digest == digestSha256EmptyTar {
+			// to this happen for the digest of an empty blob.
+			if desc.Digest == digestSha256Empty {
 				return bw.blobStore.driver.PutContent(ctx, blobPath, []byte{})
 			}
 
