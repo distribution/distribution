@@ -530,7 +530,7 @@ func TestLayerUploadZeroLength(t *testing.T) {
 	}
 	bs := repository.Blobs(ctx)
 
-	simpleUpload(t, bs, []byte{}, digestSha256EmptyTar)
+	simpleUpload(t, bs, []byte{}, digestSha256Empty)
 }
 
 func simpleUpload(t *testing.T, bs distribution.BlobIngester, blob []byte, expectedDigest digest.Digest) {
