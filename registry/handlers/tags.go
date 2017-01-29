@@ -55,9 +55,11 @@ type tagsListAPIResponse struct {
 	Tags []string `json:"tags"`
 }
 
+// GetTagsCompat handles only 'list' tag to stay compatible with old clients
 func (th *tagsHandler) GetTagsCompat(w http.ResponseWriter, r *http.Request) {
 	ctxu.GetLogger(th).Debug("GetTags")
 
+	// We need to support old tags URL to be compatible with old clients
 	if th.Tag == "list" {
 		listUrl, err := th.urlBuilder.BuildTagsListURL(th.Repository.Named())
 		if err != nil {
