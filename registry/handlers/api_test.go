@@ -2642,12 +2642,12 @@ func testTagsAPI(t *testing.T, env *testEnv, args manifestArgs) {
 	imageName := args.imageName
 	refTagged, _ := reference.WithTag(imageName, "list")
 
-	listUrl, err := env.builder.BuildTagURL(refTagged)
+	listURL, err := env.builder.BuildTagURL(refTagged)
 	if err != nil {
 		t.Fatalf("unexpected error building tag url: %v", err)
 	}
 
-	newListUrl, err := env.builder.BuildTagsListURL(imageName)
+	newListURL, err := env.builder.BuildTagsListURL(imageName)
 	if err != nil {
 		t.Fatalf("unexpected error building tag list url: %v", err)
 	}
@@ -2658,29 +2658,29 @@ func testTagsAPI(t *testing.T, env *testEnv, args manifestArgs) {
 		},
 	}
 
-	resp, err := client.Get(listUrl)
+	resp, err := client.Get(listURL)
 	checkErr(t, err, "fetching tags list using legacy URL")
 	defer resp.Body.Close()
 
 	checkResponse(t, "fetching tags list using legacy URL", resp, http.StatusMovedPermanently)
 	checkHeaders(t, resp, http.Header{
-		"Location": []string{newListUrl},
+		"Location": []string{newListURL},
 	})
 
 	refTagged, _ = reference.WithTag(imageName, "tag")
-	tagUrl, err := env.builder.BuildTagURL(refTagged)
+	tagURL, err := env.builder.BuildTagURL(refTagged)
 	if err != nil {
 		t.Fatalf("unexpected error building tag url: %v", err)
 	}
 
-	resp, err = http.Get(tagUrl)
+	resp, err = http.Get(tagURL)
 	checkErr(t, err, "fetching tag using tag URL")
 	defer resp.Body.Close()
 
 	checkResponse(t, "fetching tag using tag URL", resp, http.StatusNotFound)
-	
+
 	//Delete unknown tag
-	resp, err = httpDelete(tagUrl)
+	resp, err = httpDelete(tagURL)
 	checkErr(t, err, "deleting unknown tag")
 	defer resp.Body.Close()
 
@@ -2691,14 +2691,14 @@ func testTagsAPI(t *testing.T, env *testEnv, args manifestArgs) {
 	manifestTagURL, err := env.builder.BuildManifestURL(refTagged)
 	resp = putManifest(t, "putting manifest by tag", manifestTagURL, args.mediaType, args.manifest)
 	checkResponse(t, "putting manifest by tag", resp, http.StatusCreated)
-	
-	resp, err = httpDelete(tagUrl)
+
+	resp, err = httpDelete(tagURL)
 	checkErr(t, err, "deleting tag")
 	defer resp.Body.Close()
 
 	checkResponse(t, "deleting tag", resp, http.StatusAccepted)
-	
-	resp, err = httpDelete(tagUrl)
+
+	resp, err = httpDelete(tagURL)
 	checkErr(t, err, "deleting already deleted tag")
 	defer resp.Body.Close()
 

@@ -61,13 +61,13 @@ func (th *tagsHandler) GetTagsCompat(w http.ResponseWriter, r *http.Request) {
 
 	// We need to support old tags URL to be compatible with old clients
 	if th.Tag == "list" {
-		listUrl, err := th.urlBuilder.BuildTagsListURL(th.Repository.Named())
+		listURL, err := th.urlBuilder.BuildTagsListURL(th.Repository.Named())
 		if err != nil {
 			th.Errors = append(th.Errors, err)
 			return
 		}
 
-		http.Redirect(w, r, listUrl, http.StatusMovedPermanently)
+		http.Redirect(w, r, listURL, http.StatusMovedPermanently)
 		return
 	}
 

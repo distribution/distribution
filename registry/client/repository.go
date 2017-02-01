@@ -201,16 +201,22 @@ type tags struct {
 	name   reference.Named
 }
 
+type compatTagsURLKey struct{}
+
+func (compatTagsURLKey) String() string {
+	return "tags.url.compat"
+}
+
 // All returns all tags
 func (t *tags) All(ctx context.Context) ([]string, error) {
 	var tags []string
 	var u string
 	var err error
-	var compatUrl bool
+	var compatURL bool
 
 	// This is needed to be compatible with old registries that use "list" instead of "_list"
-	_, compatUrl = ctx.Value("tags.url.compat").(bool)
-	if compatUrl {
+	_, compatURL = ctx.Value(compatTagsURLKey{}).(bool)
+	if compatURL {
 		tagged, err := reference.WithTag(t.name, "list")
 		if err != nil {
 			return tags, err
@@ -230,8 +236,8 @@ func (t *tags) All(ctx context.Context) ([]string, error) {
 		}
 		defer resp.Body.Close()
 
-		if resp.StatusCode == http.StatusNotFound && !compatUrl {
-			return t.All(context.WithValue(ctx, "tags.url.compat", true))
+		if resp.StatusCode == http.StatusNotFound && !compatURL {
+			return t.All(context.WithValue(ctx, compatTagsURLKey{}, true))
 		}
 
 		if SuccessStatus(resp.StatusCode) {

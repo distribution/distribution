@@ -139,7 +139,7 @@ func (ub *URLBuilder) BuildTagsListURL(name reference.Named) (string, error) {
 	return tagsURL.String(), nil
 }
 
-// BuildTagsURL construct a url for tags indentified by name and tag.
+// BuildTagURL construct a url for tags indentified by name and tag.
 func (ub *URLBuilder) BuildTagURL(ref reference.NamedTagged) (string, error) {
 	route := ub.cloneRoute(RouteNameTag)
 
