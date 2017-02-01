@@ -204,8 +204,21 @@ type tags struct {
 // All returns all tags
 func (t *tags) All(ctx context.Context) ([]string, error) {
 	var tags []string
+	var u string
+	var err error
+	var compatUrl bool
 
-	u, err := t.ub.BuildTagsListURL(t.name)
+	// This is needed to be compatible with old registries that use "list" instead of "_list"
+	_, compatUrl = ctx.Value("tags.url.compat").(bool)
+	if compatUrl {
+		tagged, err := reference.WithTag(t.name, "list")
+		if err != nil {
+			return tags, err
+		}
+		u, err = t.ub.BuildTagURL(tagged)
+	} else {
+		u, err = t.ub.BuildTagsListURL(t.name)
+	}
 	if err != nil {
 		return tags, err
 	}
@@ -216,6 +229,10 @@ func (t *tags) All(ctx context.Context) ([]string, error) {
 			return tags, err
 		}
 		defer resp.Body.Close()
+
+		if resp.StatusCode == http.StatusNotFound && !compatUrl {
+			return t.All(context.WithValue(ctx, "tags.url.compat", true))
+		}
 
 		if SuccessStatus(resp.StatusCode) {
 			b, err := ioutil.ReadAll(resp.Body)

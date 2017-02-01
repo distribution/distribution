@@ -982,10 +982,15 @@ func TestManifestPut(t *testing.T) {
 }
 
 func TestManifestTags(t *testing.T) {
-	repo, _ := reference.WithName("test.example.com/repo/tags/list")
+	testManifestTags(t, "_list")
+	testManifestTags(t, "list")
+}
+
+func testManifestTags(t *testing.T, ref string) {
+	repo, _ := reference.WithName("test.example.com/repo")
 	tagsList := []byte(strings.TrimSpace(`
 {
-	"name": "test.example.com/repo/tags/list",
+	"name": "test.example.com/repo",
 	"tags": [
 		"tag1",
 		"tag2",
@@ -998,7 +1003,7 @@ func TestManifestTags(t *testing.T) {
 		m = append(m, testutil.RequestResponseMapping{
 			Request: testutil.Request{
 				Method: "GET",
-				Route:  "/v2/" + repo.Name() + "/tags/list",
+				Route:  "/v2/" + repo.Name() + "/tags/" + ref,
 			},
 			Response: testutil.Response{
 				StatusCode: http.StatusOK,
@@ -1117,15 +1122,20 @@ func TestObtainsManifestForTagWithoutHeaders(t *testing.T) {
 	}
 }
 func TestManifestTagsPaginated(t *testing.T) {
+	testManifestTagsPaginated(t, "_list")
+	testManifestTagsPaginated(t, "list")
+}
+
+func testManifestTagsPaginated(t *testing.T, ref string) {
 	s := httptest.NewServer(http.NotFoundHandler())
 	defer s.Close()
 
-	repo, _ := reference.WithName("test.example.com/repo/tags/list")
+	repo, _ := reference.WithName("test.example.com/repo")
 	tagsList := []string{"tag1", "tag2", "funtag"}
 	var m testutil.RequestResponseMap
 	for i := 0; i < 3; i++ {
 		body, err := json.Marshal(map[string]interface{}{
-			"name": "test.example.com/repo/tags/list",
+			"name": "test.example.com/repo",
 			"tags": []string{tagsList[i]},
 		})
 		if err != nil {
@@ -1141,12 +1151,12 @@ func TestManifestTagsPaginated(t *testing.T) {
 			"Last-Modified":  {time.Now().Add(-1 * time.Second).Format(time.ANSIC)},
 		})
 		if i < 2 {
-			headers.Set("Link", "<"+s.URL+"/v2/"+repo.Name()+"/tags/list?n=1&last="+tagsList[i]+`>; rel="next"`)
+			headers.Set("Link", "<"+s.URL+"/v2/"+repo.Name()+"/tags/"+ref+"?n=1&last="+tagsList[i]+`>; rel="next"`)
 		}
 		m = append(m, testutil.RequestResponseMapping{
 			Request: testutil.Request{
 				Method:      "GET",
-				Route:       "/v2/" + repo.Name() + "/tags/list",
+				Route:       "/v2/" + repo.Name() + "/tags/" + ref,
 				QueryParams: queryParams,
 			},
 			Response: testutil.Response{
