@@ -15,7 +15,7 @@ import (
 func tagsDispatcher(ctx *Context, r *http.Request) http.Handler {
 	tagsHandler := &tagsHandler{
 		Context: ctx,
-		Tag:     getReference(ctx),
+		Tag:     getTag(ctx),
 	}
 
 	thandler := handlers.MethodHandler{

@@ -91,16 +91,16 @@ func TestRouter(t *testing.T) {
 			RouteName:  RouteNameTag,
 			RequestURI: "/v2/foo/tags/bar",
 			Vars: map[string]string{
-				"name":      "foo",
-				"reference": "bar",
+				"name": "foo",
+				"tag":  "bar",
 			},
 		},
 		{
 			RouteName:  RouteNameTag,
 			RequestURI: "/v2/foo/bar/tags/tag",
 			Vars: map[string]string{
-				"name":      "foo/bar",
-				"reference": "tag",
+				"name": "foo/bar",
+				"tag":  "tag",
 			},
 		},
 		{

@@ -209,14 +209,16 @@ func (compatTagsURLKey) String() string {
 
 // All returns all tags
 func (t *tags) All(ctx context.Context) ([]string, error) {
+	return t.all(ctx, false)
+}
+
+func (t *tags) all(ctx context.Context, useCompatURL bool) ([]string, error) {
 	var tags []string
 	var u string
 	var err error
-	var compatURL bool
 
 	// This is needed to be compatible with old registries that use "list" instead of "_list"
-	_, compatURL = ctx.Value(compatTagsURLKey{}).(bool)
-	if compatURL {
+	if useCompatURL {
 		tagged, err := reference.WithTag(t.name, "list")
 		if err != nil {
 			return tags, err
@@ -236,8 +238,8 @@ func (t *tags) All(ctx context.Context) ([]string, error) {
 		}
 		defer resp.Body.Close()
 
-		if resp.StatusCode == http.StatusNotFound && !compatURL {
-			return t.All(context.WithValue(ctx, compatTagsURLKey{}, true))
+		if resp.StatusCode > http.StatusUnauthorized && resp.StatusCode < http.StatusInternalServerError && !useCompatURL {
+			return t.all(ctx, true)
 		}
 
 		if SuccessStatus(resp.StatusCode) {

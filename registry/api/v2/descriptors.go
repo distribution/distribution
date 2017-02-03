@@ -26,6 +26,14 @@ var (
 		Description: `Tag or digest of the target manifest.`,
 	}
 
+	tagParameterDescriptor = ParameterDescriptor{
+		Name:        "tag",
+		Type:        "string",
+		Format:      reference.TagRegexp.String(),
+		Required:    true,
+		Description: `Tag of the target manifest.`,
+	}
+
 	uuidParameterDescriptor = ParameterDescriptor{
 		Name:        "uuid",
 		Type:        "opaque",
@@ -502,7 +510,7 @@ var routeDescriptors = []RouteDescriptor{
 	},
 	{
 		Name:        RouteNameTag,
-		Path:        "/v2/{name:" + reference.NameRegexp.String() + "}/tags/{reference:" + reference.TagRegexp.String() + "}",
+		Path:        "/v2/{name:" + reference.NameRegexp.String() + "}/tags/{tag:" + reference.TagRegexp.String() + "}",
 		Entity:      "Tags",
 		Description: "Delete tags.",
 		Methods: []MethodDescriptor{
@@ -517,7 +525,7 @@ var routeDescriptors = []RouteDescriptor{
 						},
 						PathParameters: []ParameterDescriptor{
 							nameParameterDescriptor,
-							referenceParameterDescriptor,
+							tagParameterDescriptor,
 						},
 						Successes: []ResponseDescriptor{
 							{
@@ -549,7 +557,7 @@ var routeDescriptors = []RouteDescriptor{
 						},
 						PathParameters: []ParameterDescriptor{
 							nameParameterDescriptor,
-							referenceParameterDescriptor,
+							tagParameterDescriptor,
 						},
 						Successes: []ResponseDescriptor{
 							{

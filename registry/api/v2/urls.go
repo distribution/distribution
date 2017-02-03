@@ -143,7 +143,7 @@ func (ub *URLBuilder) BuildTagsListURL(name reference.Named) (string, error) {
 func (ub *URLBuilder) BuildTagURL(ref reference.NamedTagged) (string, error) {
 	route := ub.cloneRoute(RouteNameTag)
 
-	tagURL, err := route.URL("name", ref.Name(), "reference", ref.Tag())
+	tagURL, err := route.URL("name", ref.Name(), "tag", ref.Tag())
 	if err != nil {
 		return "", err
 	}
