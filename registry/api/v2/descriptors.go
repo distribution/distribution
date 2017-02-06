@@ -418,7 +418,7 @@ var routeDescriptors = []RouteDescriptor{
 	},
 	{
 		Name:        RouteNameTagsList,
-		Path:        "/v2/{name:" + reference.NameRegexp.String() + "}/tags/_list",
+		Path:        "/v2/{name:" + reference.NameRegexp.String() + "}/tags/",
 		Entity:      "Tags",
 		Description: "Retrieve information about tags.",
 		Methods: []MethodDescriptor{

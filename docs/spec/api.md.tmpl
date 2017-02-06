@@ -125,7 +125,7 @@ identify a set of modifications.
   <dt>m</dt>
   <dd>
     <ul>
-      <li>Moved tags/list to tags/_list with a redirection to the new URL when old one is used.</li>
+      <li>Moved tags/list to tags/ with a redirection to the new URL when old one is used.</li>
       <li>Added support for tags deletion</li>
     </ul>
   </dd>
@@ -1008,7 +1008,7 @@ to last response or be fully omitted, depending on the server implementation.
 It may be necessary to list all of the tags under a given repository. The tags
 for an image repository can be retrieved with the following request:
 
-    GET /v2/<name>/tags/_list
+    GET /v2/<name>/tags/
 
 or
 
@@ -1028,7 +1028,7 @@ The response will be in the following format:
     }
 
 When called with `GET /v2/<name>/tags/list` then `HTTP 301 MovedPermanently` 
-returned with Location Header set to `/v2/<name>/tags/_list`.
+returned with Location Header set to `/v2/<name>/tags/`.
 
 For repositories with a large number of tags, this response may be quite
 large. If such a response is expected, one should use the pagination.
@@ -1069,7 +1069,7 @@ the value encoded in the [RFC5988](https://tools.ietf.org/html/rfc5988) `Link`
 header:
 
 ```
-GET /v2/<name>/tags/_list?n=<n from the request>&last=<last tag value from previous response>
+GET /v2/<name>/tags/?n=<n from the request>&last=<last tag value from previous response>
 ```
 
 The above process should then be repeated until the `Link` header is no longer

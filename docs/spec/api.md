@@ -125,7 +125,7 @@ identify a set of modifications.
   <dt>m</dt>
   <dd>
     <ul>
-      <li>Moved tags/list to tags/_list with a redirection to the new URL when old one is used.</li>
+      <li>Moved tags/list to tags/ with a redirection to the new URL when old one is used.</li>
       <li>Added support for tags deletion</li>
     </ul>
   </dd>
@@ -1008,7 +1008,7 @@ to last response or be fully omitted, depending on the server implementation.
 It may be necessary to list all of the tags under a given repository. The tags
 for an image repository can be retrieved with the following request:
 
-    GET /v2/<name>/tags/_list
+    GET /v2/<name>/tags/
 
 or
 
@@ -1028,7 +1028,7 @@ The response will be in the following format:
     }
 
 When called with `GET /v2/<name>/tags/list` then `HTTP 301 MovedPermanently` 
-returned with Location Header set to `/v2/<name>/tags/_list`.
+returned with Location Header set to `/v2/<name>/tags/`.
 
 For repositories with a large number of tags, this response may be quite
 large. If such a response is expected, one should use the pagination.
@@ -1069,7 +1069,7 @@ the value encoded in the [RFC5988](https://tools.ietf.org/html/rfc5988) `Link`
 header:
 
 ```
-GET /v2/<name>/tags/_list?n=<n from the request>&last=<last tag value from previous response>
+GET /v2/<name>/tags/?n=<n from the request>&last=<last tag value from previous response>
 ```
 
 The above process should then be repeated until the `Link` header is no longer
@@ -1141,7 +1141,7 @@ A list of methods and URIs are covered in the table below:
 |Method|Path|Entity|Description|
 |------|----|------|-----------|
 | GET | `/v2/` | Base | Check that the endpoint implements Docker Registry API V2. |
-| GET | `/v2/<name>/tags/_list` | Tags | Fetch the tags under the repository identified by `name`. |
+| GET | `/v2/<name>/tags/` | Tags | Fetch the tags under the repository identified by `name`. |
 | GET | `/v2/<name>/tags/<tag>` | Tags | Redirect to tags list. |
 | DELETE | `/v2/<name>/tags/<tag>` | Tags | Delete a tag identified by `name` and `reference`. This method never deletes a manifest the tag references. |
 | GET | `/v2/<name>/manifests/<reference>` | Manifest | Fetch the manifest identified by `name` and `reference` where `reference` can be a tag or digest. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data. |
@@ -1327,7 +1327,7 @@ Fetch the tags under the repository identified by `name`.
 ##### Tags
 
 ```
-GET /v2/<name>/tags/_list
+GET /v2/<name>/tags/
 Host: <registry host>
 Authorization: <scheme> <token>
 ```
@@ -1526,7 +1526,7 @@ The error codes that may be included in the response body are enumerated below:
 ##### Tags Paginated
 
 ```
-GET /v2/<name>/tags/_list?n=<integer>&last=<integer>
+GET /v2/<name>/tags/?n=<integer>&last=<integer>
 ```
 
 Return a portion of the tags for the specified repository.
@@ -1752,7 +1752,7 @@ The following parameters should be specified on the request:
 |`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
 |`Authorization`|header|An RFC7235 compliant authorization header.|
 |`name`|path|Name of the target repository.|
-|`reference`|path|Tag or digest of the target manifest.|
+|`tag`|path|Tag of the target manifest.|
 
 
 
@@ -1951,7 +1951,7 @@ The following parameters should be specified on the request:
 |`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
 |`Authorization`|header|An RFC7235 compliant authorization header.|
 |`name`|path|Name of the target repository.|
-|`reference`|path|Tag or digest of the target manifest.|
+|`tag`|path|Tag of the target manifest.|
 
 
 

@@ -982,11 +982,12 @@ func TestManifestPut(t *testing.T) {
 }
 
 func TestManifestTags(t *testing.T) {
-	testManifestTags(t, "_list")
+	testManifestTags(t, "")
 	testManifestTags(t, "list")
 }
 
 func testManifestTags(t *testing.T, ref string) {
+	t.Logf("Testing tags with %q route", ref)
 	repo, _ := reference.WithName("test.example.com/repo")
 	tagsList := []byte(strings.TrimSpace(`
 {
@@ -1122,11 +1123,12 @@ func TestObtainsManifestForTagWithoutHeaders(t *testing.T) {
 	}
 }
 func TestManifestTagsPaginated(t *testing.T) {
-	testManifestTagsPaginated(t, "_list")
+	testManifestTagsPaginated(t, "")
 	testManifestTagsPaginated(t, "list")
 }
 
 func testManifestTagsPaginated(t *testing.T, ref string) {
+	t.Logf("Testing paginated tags with %q route", ref)
 	s := httptest.NewServer(http.NotFoundHandler())
 	defer s.Close()
 
