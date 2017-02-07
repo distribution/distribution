@@ -266,10 +266,8 @@ func New(params DriverParameters) (*Driver, error) {
 
 	if params.V4Auth {
 		s3obj.Signature = aws.V4Signature
-	} else {
-		if params.Region.Name == "eu-central-1" {
-			return nil, fmt.Errorf("The eu-central-1 region only works with v4 authentication")
-		}
+	} else if mustV4Auth(params.Region.Name) {
+		return nil, fmt.Errorf("The %s region only works with v4 authentication", params.Region.Name)
 	}
 
 	bucket := s3obj.Bucket(params.Bucket)
@@ -571,6 +569,17 @@ func (d *driver) getOptions() s3.Options {
 
 func getPermissions() s3.ACL {
 	return s3.Private
+}
+
+// mustV4Auth checks whether must use v4 auth in specific region.
+// Please see documentation at http://docs.aws.amazon.com/general/latest/gr/signature-version-2.html
+func mustV4Auth(region string) bool {
+	switch region {
+	case "eu-central-1", "cn-north-1", "us-east-2",
+		"ca-central-1", "ap-south-1", "ap-northeast-2", "eu-west-2":
+		return true
+	}
+	return false
 }
 
 func (d *driver) getContentType() string {
