@@ -53,7 +53,7 @@ func TestEventBridgeManifestPulled(t *testing.T) {
 		return nil
 	}))
 
-	repoRef, _ := reference.WithName(repo)
+	repoRef, _ := reference.CreateNamed("", repo)
 	if err := l.ManifestPulled(repoRef, sm); err != nil {
 		t.Fatalf("unexpected error notifying manifest pull: %v", err)
 	}
@@ -66,7 +66,7 @@ func TestEventBridgeManifestPushed(t *testing.T) {
 		return nil
 	}))
 
-	repoRef, _ := reference.WithName(repo)
+	repoRef, _ := reference.CreateNamed("", repo)
 	if err := l.ManifestPushed(repoRef, sm); err != nil {
 		t.Fatalf("unexpected error notifying manifest pull: %v", err)
 	}
@@ -82,7 +82,7 @@ func TestEventBridgeManifestPushedWithTag(t *testing.T) {
 		return nil
 	}))
 
-	repoRef, _ := reference.WithName(repo)
+	repoRef, _ := reference.CreateNamed("", repo)
 	if err := l.ManifestPushed(repoRef, sm, distribution.WithTag(m.Tag)); err != nil {
 		t.Fatalf("unexpected error notifying manifest pull: %v", err)
 	}
@@ -98,7 +98,7 @@ func TestEventBridgeManifestPulledWithTag(t *testing.T) {
 		return nil
 	}))
 
-	repoRef, _ := reference.WithName(repo)
+	repoRef, _ := reference.CreateNamed("", repo)
 	if err := l.ManifestPulled(repoRef, sm, distribution.WithTag(m.Tag)); err != nil {
 		t.Fatalf("unexpected error notifying manifest pull: %v", err)
 	}
@@ -113,7 +113,7 @@ func TestEventBridgeManifestDeleted(t *testing.T) {
 		return nil
 	}))
 
-	repoRef, _ := reference.WithName(repo)
+	repoRef, _ := reference.CreateNamed("", repo)
 	if err := l.ManifestDeleted(repoRef, dgst); err != nil {
 		t.Fatalf("unexpected error notifying manifest pull: %v", err)
 	}
@@ -188,7 +188,7 @@ func checkCommonManifest(t *testing.T, action string, event events.Event) {
 		t.Fatalf("unexpected event action: %q != %q", event.(Event).Action, action)
 	}
 
-	repoRef, _ := reference.WithName(repo)
+	repoRef, _ := reference.CreateNamed("", repo)
 	ref, _ := reference.WithDigest(repoRef, dgst)
 	u, err := ub.BuildManifestURL(ref)
 	if err != nil {

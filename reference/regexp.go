@@ -16,10 +16,10 @@ var (
 	// supported names.
 	separatorRegexp = match(`(?:[._]|__|[-]*)`)
 
-	// nameComponentRegexp restricts registry path component names to start
+	// pathComponentRegexp restricts registry path component names to start
 	// with at least one letter or number, with following parts able to be
 	// separated by one period, one or two underscore and multiple dashes.
-	nameComponentRegexp = expression(
+	pathComponentRegexp = expression(
 		alphaNumericRegexp,
 		optional(repeated(separatorRegexp, alphaNumericRegexp)))
 
@@ -36,6 +36,12 @@ var (
 		domainComponentRegexp,
 		optional(repeated(literal(`.`), domainComponentRegexp)),
 		optional(literal(`:`), match(`[0-9]+`)))
+
+	// pathRegexp defines the structure of path components that must
+	// be part of image names.
+	pathRegexp = expression(
+		pathComponentRegexp,
+		optional(repeated(literal(`/`), pathComponentRegexp)))
 
 	// TagRegexp matches valid tag names. From docker/docker:graph/tags.go.
 	TagRegexp = match(`[\w][\w.-]{0,127}`)
@@ -56,15 +62,19 @@ var (
 	// the separating forward slash from either.
 	NameRegexp = expression(
 		optional(DomainRegexp, literal(`/`)),
-		nameComponentRegexp,
-		optional(repeated(literal(`/`), nameComponentRegexp)))
+		pathRegexp)
 
 	// anchoredNameRegexp is used to parse a name value, capturing the
 	// domain and trailing components.
 	anchoredNameRegexp = anchored(
 		optional(capture(DomainRegexp), literal(`/`)),
-		capture(nameComponentRegexp,
-			optional(repeated(literal(`/`), nameComponentRegexp))))
+		capture(pathRegexp))
+
+	// anchoredDomainRegexp is used to validate a domain value of reference.
+	anchoredDomainRegexp = anchored(DomainRegexp)
+
+	// anchoredPathRegexp is used to validate a path value of reference.
+	anchoredPathRegexp = anchored(pathRegexp)
 
 	// ReferenceRegexp is the full supported format of a reference. The regexp
 	// is anchored and has capturing groups for name, tag, and digest

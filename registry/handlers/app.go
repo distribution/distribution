@@ -675,7 +675,7 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 		r = r.WithContext(context)
 
 		if app.nameRequired(r) {
-			nameRef, err := reference.WithName(getName(context))
+			nameRef, err := reference.CreateNamed("", getName(context))
 			if err != nil {
 				dcontext.GetLogger(context).Errorf("error parsing reference from context: %v", err)
 				context.Errors = append(context.Errors, distribution.ErrRepositoryNameInvalid{

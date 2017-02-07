@@ -341,7 +341,7 @@ func (buh *blobUploadHandler) createBlobMountOption(fromRepo, mountDigest string
 		return nil, err
 	}
 
-	ref, err := reference.WithName(fromRepo)
+	ref, err := reference.CreateNamed("", fromRepo)
 	if err != nil {
 		return nil, err
 	}

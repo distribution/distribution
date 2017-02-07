@@ -235,49 +235,65 @@ func TestReferenceParse(t *testing.T) {
 	}
 }
 
-// TestWithNameFailure tests cases where WithName should fail. Cases where it
+// TestCreateNamedFailure tests cases where CreateNamed should fail. Cases where it
 // should succeed are covered by TestSplitHostname, below.
-func TestWithNameFailure(t *testing.T) {
+func TestCreateNamedFailure(t *testing.T) {
 	testcases := []struct {
-		input string
-		err   error
+		domain string
+		path   string
+		err    error
 	}{
 		{
-			input: "",
-			err:   ErrNameEmpty,
+			err: ErrNameEmpty,
 		},
 		{
-			input: ":justtag",
-			err:   ErrReferenceInvalidFormat,
+			path: ":justtag",
+			err:  ErrReferenceInvalidFormat,
 		},
 		{
-			input: "@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-			err:   ErrReferenceInvalidFormat,
+			path: "@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+			err:  ErrReferenceInvalidFormat,
 		},
 		{
-			input: "validname@invaliddigest:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-			err:   ErrReferenceInvalidFormat,
+			path: "validname@invaliddigest:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+			err:  ErrReferenceInvalidFormat,
 		},
 		{
-			input: strings.Repeat("a/", 128) + "a:tag",
-			err:   ErrNameTooLong,
+			path: strings.Repeat("a/", 128) + "a",
+			err:  ErrNameTooLong,
 		},
 		{
-			input: "aa/asdf$$^/aa",
-			err:   ErrReferenceInvalidFormat,
+			domain: "aaaaaaaaaaaaaaaaaaaa",
+			path:   strings.Repeat("a/", 120) + "a",
+			err:    ErrNameTooLong,
+		},
+		{
+			domain: "aa",
+			path:   "asdf$$^/aa",
+			err:    ErrReferenceInvalidFormat,
 		},
 	}
 	for _, testcase := range testcases {
 		failf := func(format string, v ...interface{}) {
-			t.Logf(strconv.Quote(testcase.input)+": "+format, v...)
+			t.Logf(strconv.Quote(testcase.domain)+" / "+strconv.Quote(testcase.path)+": "+format, v...)
 			t.Fail()
 		}
 
-		_, err := WithName(testcase.input)
+		_, err := CreateNamed(testcase.domain, testcase.path)
 		if err == nil {
 			failf("no error parsing name. expected: %s", testcase.err)
 		}
 	}
+}
+
+type testNamed string
+
+func (n testNamed) String() string {
+	return string(n)
+}
+
+func (n testNamed) Name() string {
+	return string(n)
 }
 
 func TestSplitHostname(t *testing.T) {
@@ -323,11 +339,7 @@ func TestSplitHostname(t *testing.T) {
 			t.Fail()
 		}
 
-		named, err := WithName(testcase.input)
-		if err != nil {
-			failf("error parsing name: %s", err)
-		}
-		domain, name := SplitHostname(named)
+		domain, name := SplitHostname(testNamed(testcase.input))
 		if domain != testcase.domain {
 			failf("unexpected domain: got %q, expected %q", domain, testcase.domain)
 		}
@@ -506,10 +518,7 @@ func TestWithTag(t *testing.T) {
 			t.Fail()
 		}
 
-		named, err := WithName(testcase.name)
-		if err != nil {
-			failf("error parsing name: %s", err)
-		}
+		var named Named = testNamed(testcase.name)
 		if testcase.digest != "" {
 			canonical, err := WithDigest(named, testcase.digest)
 			if err != nil {
@@ -563,10 +572,7 @@ func TestWithDigest(t *testing.T) {
 			t.Fail()
 		}
 
-		named, err := WithName(testcase.name)
-		if err != nil {
-			failf("error parsing name: %s", err)
-		}
+		var named Named = testNamed(testcase.name)
 		if testcase.tag != "" {
 			tagged, err := WithTag(named, testcase.tag)
 			if err != nil {

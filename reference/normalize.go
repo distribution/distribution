@@ -70,7 +70,7 @@ func ParseDockerRef(ref string) (Named, error) {
 		if canonical, ok := named.(Canonical); ok {
 			// The reference is both tagged and digested, only
 			// return digested.
-			newNamed, err := WithName(canonical.Name())
+			newNamed, err := CreateNamed(Domain(canonical), Path(canonical))
 			if err != nil {
 				return nil, err
 			}

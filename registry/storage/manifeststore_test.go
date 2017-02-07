@@ -71,7 +71,7 @@ func TestManifestStorageV1Unsupported(t *testing.T) {
 }
 
 func testManifestStorage(t *testing.T, schema1Enabled bool, options ...RegistryOption) {
-	repoName, _ := reference.WithName("foo/bar")
+	repoName, _ := reference.CreateNamed("", "foo/bar")
 	env := newManifestStoreTestEnv(t, repoName, "thetag", options...)
 	ctx := context.Background()
 	ms, err := env.repository.Manifests(ctx)
