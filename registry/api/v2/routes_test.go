@@ -96,6 +96,27 @@ func TestRouter(t *testing.T) {
 			},
 		},
 		{
+			RouteName:  RouteNameTagsList,
+			RequestURI: "/v2/tags/tags/",
+			Vars: map[string]string{
+				"name": "tags",
+			},
+		},
+		{
+			RouteName:  RouteNameTagsList,
+			RequestURI: "/v2/tags/tags/tags/",
+			Vars: map[string]string{
+				"name": "tags/tags",
+			},
+		},
+		{
+			RouteName:  RouteNameTagsList,
+			RequestURI: "/v2/tags/tags/tags/tags/",
+			Vars: map[string]string{
+				"name": "tags/tags/tags",
+			},
+		},
+		{
 			RouteName:  RouteNameTag,
 			RequestURI: "/v2/foo/tags/bar",
 			Vars: map[string]string{
@@ -116,6 +137,27 @@ func TestRouter(t *testing.T) {
 			RequestURI: "/v2/foo/bar/tags/tags",
 			Vars: map[string]string{
 				"name": "foo/bar",
+				"tag":  "tags",
+			},
+		},
+		{
+			RouteName:  RouteNameTag,
+			RequestURI: "/v2/tags/tags",
+			StatusCode: http.StatusNotFound,
+		},
+		{
+			RouteName:  RouteNameTag,
+			RequestURI: "/v2/tags/tags/tags",
+			Vars: map[string]string{
+				"name": "tags",
+				"tag":  "tags",
+			},
+		},
+		{
+			RouteName:  RouteNameTag,
+			RequestURI: "/v2/tags/tags/tags/tags",
+			Vars: map[string]string{
+				"name": "tags/tags",
 				"tag":  "tags",
 			},
 		},
