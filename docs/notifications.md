@@ -79,7 +79,7 @@ source | [SourceRecord](https://godoc.org/github.com/docker/distribution/notific
 
 
 
-The following is an example of a JSON event, sent in response to the push of a
+The following is an example of a JSON event, sent in response to the pull of a
 manifest:
 
 ```json
