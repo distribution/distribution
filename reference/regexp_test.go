@@ -116,7 +116,7 @@ func TestDomainRegexp(t *testing.T) {
 			match: true,
 		},
 	}
-	r := regexp.MustCompile(`^` + domainRegexp.String() + `$`)
+	r := regexp.MustCompile(`^` + DomainRegexp.String() + `$`)
 	for i := range hostcases {
 		checkRegexp(t, r, hostcases[i])
 	}
