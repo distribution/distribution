@@ -82,7 +82,7 @@ func (b2Factory) Create(p map[string]interface{}) (storagedriver.StorageDriver, 
 	if err != nil {
 		return nil, err
 	}
-	bucket, err := client.Bucket(ctx, bName)
+	bucket, err := client.NewBucket(ctx, bName, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -95,40 +95,42 @@ type driver struct {
 	bucket *b2.Bucket
 }
 
+var noGo = storagedriver.ErrUnsupportedMethod{DriverName: driverName}
+
 func (*driver) Name() string { return driverName }
 
 func (d *driver) GetContent(ctx ctx.Context, path string) ([]byte, error) {
-	return nil, nil
+	return nil, noGo
 }
 
 func (d *driver) Delete(ctx ctx.Context, path string) error {
-	return nil
+	return noGo
 }
 
 func (d *driver) List(ctx ctx.Context, path string) ([]string, error) {
-	return nil, nil
+	return nil, noGo
 }
 
 func (d *driver) Move(ctx ctx.Context, src, dst string) error {
-	return nil
+	return noGo
 }
 
 func (d *driver) PutContent(ctx ctx.Context, path string, data []byte) error {
-	return nil
+	return noGo
 }
 
 func (d *driver) Reader(ctx ctx.Context, path string, off int64) (io.ReadCloser, error) {
-	return nil, nil
+	return nil, noGo
 }
 
 func (d *driver) Writer(ctx ctx.Context, path string, append bool) (storagedriver.FileWriter, error) {
-	return nil, nil
+	return nil, noGo
 }
 
 func (d *driver) Stat(ctx ctx.Context, path string) (storagedriver.FileInfo, error) {
-	return nil, nil
+	return nil, noGo
 }
 
 func (d *driver) URLFor(ctx ctx.Context, path string, m map[string]interface{}) (string, error) {
-	return "", nil
+	return "", noGo
 }
