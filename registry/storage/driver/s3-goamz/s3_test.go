@@ -9,7 +9,6 @@ import (
 	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/testsuites"
-	"github.com/docker/goamz/aws"
 	"github.com/docker/goamz/s3"
 
 	"gopkg.in/check.v1"
@@ -28,7 +27,8 @@ func init() {
 	encrypt := os.Getenv("S3_ENCRYPT")
 	secure := os.Getenv("S3_SECURE")
 	v4auth := os.Getenv("S3_USE_V4_AUTH")
-	region := os.Getenv("AWS_REGION")
+	regionName := os.Getenv("AWS_REGION")
+	regionEndpoint := os.Getenv("AWS_REGION_ENDPOINT")
 	root, err := ioutil.TempDir("", "driver-")
 	if err != nil {
 		panic(err)
@@ -64,7 +64,8 @@ func init() {
 			accessKey,
 			secretKey,
 			bucket,
-			aws.GetRegion(region),
+			regionName,
+			regionEndpoint,
 			encryptBool,
 			secureBool,
 			v4AuthBool,
@@ -79,7 +80,7 @@ func init() {
 
 	// Skip S3 storage driver tests if environment variable parameters are not provided
 	skipS3 = func() string {
-		if accessKey == "" || secretKey == "" || region == "" || bucket == "" || encrypt == "" {
+		if accessKey == "" || secretKey == "" || regionName == "" || bucket == "" || encrypt == "" {
 			return "Must set AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_REGION, S3_BUCKET, and S3_ENCRYPT to run S3 tests"
 		}
 		return ""
