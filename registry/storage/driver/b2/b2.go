@@ -275,12 +275,29 @@ func (d *driver) Reader(ctx ctx.Context, path string, off int64) (io.ReadCloser,
 }
 
 func (d *driver) Writer(ctx ctx.Context, path string, append bool) (storagedriver.FileWriter, error) {
+	// There are a few ways to handle the "append" bool, but they're all awful:
+	// (a) Download the file, then upload it again and return the writer.
+	// (b) Put pieces of the file in B2, and stitch them together with the reader.
+	// (c) Return a not-supported error.
+	//
+	// I'm partial to (c), but that fails tests, so we'll go with (a) until we
+	// get an "append is unreasonably slow" bug.
 	if err := checkPath(path); err != nil {
 		return nil, err
 	}
-	return &fileWriter{
+	w := &fileWriter{
 		wc: d.writer(ctx, path),
-	}, nil
+	}
+	if append {
+		r := d.reader(ctx, path)
+		defer r.Close()
+		if _, err := io.Copy(w, r); err != nil {
+			w.Cancel()
+			return nil, wrapErr(err)
+		}
+		d.bucket.Object(d.fullPath(path)).Delete(ctx)
+	}
+	return w, nil
 }
 
 type info struct {
