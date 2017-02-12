@@ -161,6 +161,7 @@ func (d *driver) Delete(ctx ctx.Context, path string) error {
 		return wrapErr(obj[0].Delete(ctx))
 	}
 	c.Delimiter = ""
+	c.Prefix += "/"
 	for {
 		objs, nc, err := d.bucket.ListCurrentObjects(ctx, 100, c)
 		if err != nil && err != io.EOF {
