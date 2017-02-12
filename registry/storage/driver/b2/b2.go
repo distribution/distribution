@@ -3,25 +3,19 @@
 //
 // This package uses the github.com/kurin/blazer/b2 library.
 //
-// We implement a consistent file system by keeping a pseudo-journal.  The only
-// operation that B2 provides which supports atomicity and consistency is
-// b2_update_bucket.  We therefore (ab)use the bucket info attribute to record the
-// location of an intent file within B2.  This allows us to provide file system
-// semantics while protecting us from multiple reader/writer conflicts (or
-// inconsistent state from crashes / unclean shutdowns).
-//
-// As B2 objects are immutable, and append is (apparently) a required feature,
-// this package does not have a one-to-one mapping between content and objects,
-// and because of this it cannot support StorageDriver.URLFor.
-//
 // +build include_b2
 
 package b2
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"io"
+	"io/ioutil"
+	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/kurin/blazer/b2"
 
@@ -31,9 +25,7 @@ import (
 )
 
 const (
-	driverName     = "b2"
-	dummyProjectID = "<unknown>"
-
+	driverName               = "b2"
 	uploadSessionContentType = "application/x-docker-upload-session"
 )
 
@@ -42,6 +34,14 @@ func init() {
 }
 
 type b2Factory struct{}
+
+func getInt(i interface{}) int {
+	v, ok := i.(int)
+	if !ok {
+		return 0
+	}
+	return v
+}
 
 func getString(i interface{}) string {
 	v, ok := i.(string)
@@ -87,50 +87,247 @@ func (b2Factory) Create(p map[string]interface{}) (storagedriver.StorageDriver, 
 		return nil, err
 	}
 	return &driver{
-		bucket: bucket,
+		bucket:    bucket,
+		downNum:   getInt(p["concurrentdownloads"]),
+		downChunk: getInt(p["downloadchunksize"]),
+		upNum:     getInt(p["concurrentuploads"]),
+		upChunk:   getInt(p["uploadchunksize"]),
+		rootDir:   getString(p["rootdirectory"]),
 	}, nil
 }
 
 type driver struct {
 	bucket *b2.Bucket
+
+	downNum, upNum, downChunk, upChunk int
+	rootDir                            string
 }
 
 var noGo = storagedriver.ErrUnsupportedMethod{DriverName: driverName}
 
 func (*driver) Name() string { return driverName }
 
+func (d *driver) fullPath(path string) string {
+	return strings.TrimPrefix(filepath.Join(d.rootDir, path), "/")
+}
+
+func (d *driver) reader(ctx ctx.Context, path string) io.ReadCloser {
+	return d.readerOffset(ctx, path, 0)
+}
+
+func (d *driver) readerOffset(ctx ctx.Context, path string, off int64) io.ReadCloser {
+	r := d.bucket.Object(d.fullPath(path)).NewRangeReader(ctx, off, -1)
+	r.ConcurrentDownloads = d.downNum
+	r.ChunkSize = d.downChunk
+	return r
+}
+
+func (d *driver) writer(ctx ctx.Context, path string) io.WriteCloser {
+	w := d.bucket.Object(d.fullPath(path)).NewWriter(ctx)
+	w.ConcurrentUploads = d.upNum
+	w.ChunkSize = d.upChunk
+	if w.ChunkSize < 10e8 {
+		w.ChunkSize = 10e8
+	}
+	w.UseFileBuffer = true
+	return w
+}
+
 func (d *driver) GetContent(ctx ctx.Context, path string) ([]byte, error) {
-	return nil, noGo
+	if err := checkPath(path); err != nil {
+		return nil, err
+	}
+	r := d.reader(ctx, path)
+	defer r.Close()
+	b, err := ioutil.ReadAll(r)
+	return b, wrapErr(err)
 }
 
 func (d *driver) Delete(ctx ctx.Context, path string) error {
-	return noGo
+	// Path, apparently, can be a "directory".  So first list the path, and if it
+	// is an object, delete it.  If it is a directory, delete everything under it.
+	c := &b2.Cursor{Prefix: d.fullPath(path), Delimiter: "/"}
+	obj, _, err := d.bucket.ListCurrentObjects(ctx, 1, c)
+	if err != nil && err != io.EOF {
+		return wrapErr(err)
+	}
+	if len(obj) == 0 {
+		return storagedriver.PathNotFoundError{
+			Path:       path,
+			DriverName: driverName,
+		}
+	}
+	if !strings.HasSuffix(obj[0].Name(), "/") {
+		return wrapErr(obj[0].Delete(ctx))
+	}
+	c.Delimiter = ""
+	for {
+		objs, nc, err := d.bucket.ListCurrentObjects(ctx, 100, c)
+		if err != nil && err != io.EOF {
+			return wrapErr(err)
+		}
+		c = nc
+		for _, obj := range objs {
+			if !strings.HasSuffix(obj.Name(), "/") {
+				if err := obj.Delete(ctx); err != nil {
+					return wrapErr(err)
+				}
+			}
+		}
+		if err == io.EOF {
+			return nil
+		}
+	}
 }
 
 func (d *driver) List(ctx ctx.Context, path string) ([]string, error) {
-	return nil, noGo
+	var resp []string
+	// Docker passes paths of the form "/foo/bar", with no trailing slash, but B2
+	// will only return a subdir listing if the request ends with a slash.  We
+	// save a round trip here by assuming that every argument to this function
+	// actually is a directory, and append a slash unconditionally.
+	c := &b2.Cursor{
+		Delimiter: "/",
+		Prefix:    filepath.Clean(d.fullPath(path)) + "/",
+	}
+	// B2 objects cannot start with /, but Docker paths all do.
+	root := strings.TrimPrefix(d.rootDir, "/")
+	for {
+		objs, nc, err := d.bucket.ListCurrentObjects(ctx, 100, c)
+		if err != nil && err != io.EOF {
+			return nil, err
+		}
+		c = nc
+		for _, obj := range objs {
+			// Remove trailing slashes from object names that correspond to
+			// "subdirectories."
+			name := strings.TrimSuffix(obj.Name(), "/")
+			resp = append(resp, strings.TrimPrefix(name, root))
+		}
+		if err == io.EOF {
+			if len(resp) == 0 {
+				return nil, storagedriver.PathNotFoundError{
+					Path:       path,
+					DriverName: driverName,
+				}
+			}
+			return resp, nil
+		}
+	}
 }
 
 func (d *driver) Move(ctx ctx.Context, src, dst string) error {
-	return noGo
+	// This is terrible.
+	if err := checkPath(dst); err != nil {
+		return err
+	}
+	// Check that src exists.  We can't simply do this by trying to read it,
+	// since otherwise we might delete dst erronously.
+	if _, err := d.bucket.Object(d.fullPath(src)).Attrs(ctx); err != nil {
+		return wrapErr(err)
+	}
+	d.bucket.Object(d.fullPath(dst)).Delete(ctx)
+	r := d.reader(ctx, src)
+	w := d.writer(ctx, dst)
+	if _, err := io.Copy(w, r); err != nil {
+		return wrapErr(err)
+	}
+	if err := w.Close(); err != nil {
+		return wrapErr(err)
+	}
+	return d.bucket.Object(d.fullPath(src)).Delete(ctx)
 }
 
 func (d *driver) PutContent(ctx ctx.Context, path string, data []byte) error {
-	return noGo
+	if err := checkPath(path); err != nil {
+		return err
+	}
+	r := bytes.NewReader(data)
+	w := d.writer(ctx, path)
+	if _, err := io.Copy(w, r); err != nil {
+		w.Close()
+		return err
+	}
+	return w.Close()
+}
+
+type fileWriter struct {
+	wc io.WriteCloser
+	n  int64
+}
+
+func (fw *fileWriter) Size() int64   { return fw.n }
+func (fw *fileWriter) Commit() error { return nil }
+func (fw *fileWriter) Close() error  { return fw.wc.Close() }
+func (fw *fileWriter) Cancel() error { return fw.Close() }
+
+func (fw *fileWriter) Write(p []byte) (int, error) {
+	n, err := fw.wc.Write(p)
+	fw.n += int64(n)
+	return n, err
 }
 
 func (d *driver) Reader(ctx ctx.Context, path string, off int64) (io.ReadCloser, error) {
-	return nil, noGo
+	if err := checkPath(path); err != nil {
+		return nil, err
+	}
+	return d.readerOffset(ctx, path, off), nil
 }
 
 func (d *driver) Writer(ctx ctx.Context, path string, append bool) (storagedriver.FileWriter, error) {
-	return nil, noGo
+	if err := checkPath(path); err != nil {
+		return nil, err
+	}
+	return &fileWriter{
+		wc: d.writer(ctx, path),
+	}, nil
 }
 
+type info struct {
+	path string
+	size int64
+	mod  time.Time
+}
+
+func (i info) Path() string       { return i.path }
+func (i info) Size() int64        { return i.size }
+func (i info) ModTime() time.Time { return i.mod }
+func (i info) IsDir() bool        { return strings.HasSuffix(i.path, "/") }
+
 func (d *driver) Stat(ctx ctx.Context, path string) (storagedriver.FileInfo, error) {
-	return nil, noGo
+	attrs, err := d.bucket.Object(d.fullPath(path)).Attrs(ctx)
+	if err != nil {
+		return nil, wrapErr(err)
+	}
+	return info{
+		path: attrs.Name,
+		size: attrs.Size,
+		mod:  attrs.LastModified,
+	}, nil
 }
 
 func (d *driver) URLFor(ctx ctx.Context, path string, m map[string]interface{}) (string, error) {
 	return "", noGo
+}
+
+func wrapErr(err error) error {
+	if b2.IsNotExist(err) {
+		path := strings.Split(err.Error(), ":")[0]
+		err = storagedriver.PathNotFoundError{
+			Path:       path,
+			DriverName: driverName,
+		}
+	}
+	return err
+}
+
+func checkPath(path string) error {
+	// Check for "invalid" paths here.  There's no documentation about what
+	// constitutes an invalid path, so I'm extrapolating from the tests.
+	//
+	// (Why do we care about malformed paths they get cleaned up augh)
+	if !strings.HasPrefix(path, "/") || strings.HasSuffix(path, "/") || path == "" || strings.Contains(path, "//") {
+		return storagedriver.InvalidPathError{Path: path, DriverName: driverName}
+	}
+	return nil
 }
