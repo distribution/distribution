@@ -220,6 +220,10 @@ func (d *driver) List(ctx ctx.Context, path string) ([]string, error) {
 			resp = append(resp, strings.TrimPrefix(name, root))
 		}
 		if err == io.EOF {
+			if len(resp) == 0 && path == "/" {
+				// Emulate the existence of a root dir.
+				return nil, nil
+			}
 			if len(resp) == 0 {
 				return nil, storagedriver.PathNotFoundError{
 					Path:       path,
