@@ -292,6 +292,10 @@ func (d *driver) Reader(ctx ctx.Context, path string, off int64) (io.ReadCloser,
 	if err := checkPath(path); err != nil {
 		return nil, err
 	}
+	// Burn a round trip here to check for object existence just to pass a test.
+	if _, err := d.bucket.Object(d.fullPath(path)).Attrs(ctx); err != nil {
+		return nil, wrapErr(err)
+	}
 	if off < 0 {
 		return nil, storagedriver.InvalidOffsetError{
 			Path:       path,
