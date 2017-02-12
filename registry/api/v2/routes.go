@@ -12,6 +12,7 @@ const (
 	RouteNameBlobUpload      = "blob-upload"
 	RouteNameBlobUploadChunk = "blob-upload-chunk"
 	RouteNameCatalog         = "catalog"
+	RouteNameManifestsList   = "manifests-list"
 )
 
 var allEndpoints = []string{
@@ -38,8 +39,6 @@ func RouterWithPrefix(prefix string) *mux.Router {
 	if prefix != "" {
 		router = router.PathPrefix(prefix).Subrouter()
 	}
-
-	router.StrictSlash(true)
 
 	for _, descriptor := range routeDescriptors {
 		router.Path(descriptor.Path).Name(descriptor.Name)

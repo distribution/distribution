@@ -221,6 +221,19 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 		t.Fatalf("unexpected number of signatures: %d != %d", len(sigs), 1)
 	}
 
+	// Test List digests
+	list, err := ms.All(ctx)
+	if err != nil {
+		t.Fatalf("unexpected error fetching list of digests: %v", err)
+	}
+
+	if len(list) != 1 {
+		t.Fatalf("Wrong length for the digests list: %d", len(list))
+	}
+
+	if list[0].Digest != manifestDigest {
+		t.Fatalf("Got wrong manifest in the list. Expected: %s got %s", manifestDigest.String(), list[0].Digest.String())
+	}
 	// Now, push the same manifest with a different key
 	pk2, err := libtrust.GenerateECP256PrivateKey()
 	if err != nil {

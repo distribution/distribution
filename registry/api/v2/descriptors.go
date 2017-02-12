@@ -706,6 +706,61 @@ var routeDescriptors = []RouteDescriptor{
 	},
 
 	{
+		Name:        RouteNameManifestsList,
+		Path:        "/v2/{name:" + reference.NameRegexp.String() + "}/manifests/",
+		Entity:      "ManifestsList",
+		Description: "Retrieve a list of digests for a given repository.",
+		Methods: []MethodDescriptor{
+			{
+				Method:      "GET",
+				Description: "Retrieve a list of manifest descriptors from a repository identified by `name`.",
+				Requests: []RequestDescriptor{
+					{
+						Name:        "Digests",
+						Description: "Return descriptors for all manifests in the repository",
+						Headers: []ParameterDescriptor{
+							hostHeader,
+							authHeader,
+						},
+						PathParameters: []ParameterDescriptor{
+							nameParameterDescriptor,
+						},
+						Successes: []ResponseDescriptor{
+							{
+								StatusCode:  http.StatusOK,
+								Description: "A list of manifest descriptors for the named repository.",
+								Headers: []ParameterDescriptor{
+									{
+										Name:        "Content-Length",
+										Type:        "integer",
+										Description: "Length of the JSON response body.",
+										Format:      "<length>",
+									},
+								},
+								Body: BodyDescriptor{
+									ContentType: "application/json; charset=utf-8",
+									Format: `{
+    "name": <name>,
+    "descriptors": [
+        <descriptor>,
+        ...
+    ]
+}`,
+								},
+							},
+						},
+						Failures: []ResponseDescriptor{
+							unauthorizedResponseDescriptor,
+							repositoryNotFoundResponseDescriptor,
+							deniedResponseDescriptor,
+							tooManyRequestsDescriptor,
+						},
+					},
+				},
+			},
+		},
+	},
+	{
 		Name:        RouteNameBlob,
 		Path:        "/v2/{name:" + reference.NameRegexp.String() + "}/blobs/{digest:" + digest.DigestRegexp.String() + "}",
 		Entity:      "Blob",

@@ -595,6 +595,46 @@ func (ms *manifests) Delete(ctx context.Context, dgst digest.Digest) error {
 	return HandleErrorResponse(resp)
 }
 
+// All returns digests for all manifests
+func (ms *manifests) All(ctx context.Context) ([]distribution.Descriptor, error) {
+	var descriptors []distribution.Descriptor
+
+	u, err := ms.ub.BuildManifestsListURL(ms.name)
+	if err != nil {
+		return descriptors, err
+	}
+
+	for {
+		resp, err := ms.client.Get(u)
+		if err != nil {
+			return descriptors, err
+		}
+		defer resp.Body.Close()
+
+		if SuccessStatus(resp.StatusCode) {
+			b, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return descriptors, err
+			}
+
+			listResponse := struct {
+				Descriptors []distribution.Descriptor `json:"descriptors"`
+			}{}
+			if err := json.Unmarshal(b, &listResponse); err != nil {
+				return descriptors, err
+			}
+			descriptors = append(descriptors, listResponse.Descriptors...)
+			if link := resp.Header.Get("Link"); link != "" {
+				u = strings.Trim(strings.Split(link, ";")[0], "<>")
+			} else {
+				return descriptors, nil
+			}
+		} else {
+			return descriptors, HandleErrorResponse(resp)
+		}
+	}
+}
+
 // todo(richardscothern): Restore interface and implementation with merge of #1050
 /*func (ms *manifests) Enumerate(ctx context.Context, manifests []distribution.Manifest, last distribution.Manifest) (n int, err error) {
 	panic("not supported")

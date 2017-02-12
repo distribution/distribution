@@ -139,6 +139,19 @@ func (ub *URLBuilder) BuildTagsURL(name reference.Named) (string, error) {
 	return tagsURL.String(), nil
 }
 
+// BuildManifestsListURL constructs a url to list all digests in the name repository.
+func (ub *URLBuilder) BuildManifestsListURL(name reference.Named) (string, error) {
+	route := ub.cloneRoute(RouteNameManifestsList)
+
+	manifestsListURL, err := route.URL("name", name.Name())
+	if err != nil {
+		return "", err
+	}
+
+	return manifestsListURL.String(), nil
+
+}
+
 // BuildManifestURL constructs a url for the manifest identified by name and
 // reference. The argument reference may be either a tag or digest.
 func (ub *URLBuilder) BuildManifestURL(ref reference.Named) (string, error) {

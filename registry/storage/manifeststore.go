@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path"
 
 	"github.com/docker/distribution"
 	dcontext "github.com/docker/distribution/context"
@@ -11,6 +12,7 @@ import (
 	"github.com/docker/distribution/manifest/manifestlist"
 	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/manifest/schema2"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -139,4 +141,67 @@ func (ms *manifestStore) Enumerate(ctx context.Context, ingester func(digest.Dig
 		return nil
 	})
 	return err
+}
+
+// Return list of digests for a given repository
+func (ms *manifestStore) All(ctx context.Context) ([]distribution.Descriptor, error) {
+	var descriptors []distribution.Descriptor
+
+	revisionsPathSpec, err := pathFor(manifestRevisionsPathSpec{
+		name: ms.repository.Named().Name(),
+	})
+	if err != nil {
+		return descriptors, err
+	}
+
+	revisions, err := ms.blobStore.driver.List(ctx, revisionsPathSpec)
+	if err != nil {
+		switch err := err.(type) {
+		case storagedriver.PathNotFoundError:
+			return descriptors, distribution.ErrRepositoryUnknown{Name: ms.repository.Named().Name()}
+		default:
+			return descriptors, err
+		}
+	}
+
+	for _, revision := range revisions {
+		manifests, err := ms.blobStore.driver.List(ctx, revision)
+		if err != nil {
+			return descriptors, err
+		}
+
+		for _, manifest := range manifests {
+			linkPath := path.Join(manifest, "link")
+			digest, err := ms.blobStore.readlink(ctx, manifest+"/link")
+			if err != nil {
+				switch err.(type) {
+				case storagedriver.PathNotFoundError:
+					// Broken storage backend. Skipping
+					context.GetLogger(ms.ctx).Infof("Broken revision path: %s", linkPath)
+					continue
+				default:
+					return descriptors, err
+				}
+			}
+
+			descriptor, err := ms.blobStore.Stat(ctx, digest)
+			if err != nil {
+				return descriptors, err
+			}
+
+			manifest, err := ms.Get(ctx, digest)
+			if err != nil {
+				return descriptors, err
+			}
+			mediaType, _, err := manifest.Payload()
+			if err != nil {
+				return descriptors, err
+			}
+
+			descriptor.MediaType = mediaType
+			descriptors = append(descriptors, descriptor)
+		}
+	}
+
+	return descriptors, nil
 }

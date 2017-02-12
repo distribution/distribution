@@ -36,6 +36,13 @@ func makeURLBuilderTestCases(urlBuilder *URLBuilder) []urlBuilderTestCase {
 		},
 		{
 			description:  "test manifest url tagged ref",
+			expectedPath: "/v2/foo/bar/manifests/",
+			build: func() (string, error) {
+				return urlBuilder.BuildManifestsListURL(fooBarRef)
+			},
+		},
+		{
+			description:  "test manifest url",
 			expectedPath: "/v2/foo/bar/manifests/tag",
 			expectedErr:  nil,
 			build: func() (string, error) {

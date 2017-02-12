@@ -981,6 +981,90 @@ func TestManifestPut(t *testing.T) {
 	// TODO(dmcgowan): Check for invalid input error
 }
 
+func TestManifestAll(t *testing.T) {
+	repo, _ := reference.WithName("test.example.com/repo")
+
+	descriptorsList := []byte(strings.TrimSpace(`
+{
+	"name": "test/t1",
+	"descriptors": [
+		{"mediaType":"application/vnd.docker.distribution.manifest.v2+json",
+		 "size":2805,
+		 "digest":"sha256:899bedd554faf1716d36b310199edae72f348abc8d52ac562cb28cc7998d05e1"},
+		{"mediaType":"application/vnd.docker.distribution.manifest.v1+prettyjws",
+		 "size":3308,
+		 "digest":"sha256:86942f70cd992d0d33d6db048444bc7bb98718c0807a615212346ffada92157f"},
+		{"mediaType":"application/vnd.docker.distribution.manifest.v2+json",
+		 "size":1768,
+		 "digest":"sha256:a27bac78eeee243ce14684870190ad46cefa817bdc046c692a5aed029b5aebf1"}	
+	]
+}
+	`))
+
+	m := testutil.RequestResponseMap{
+		testutil.RequestResponseMapping{
+			Request: testutil.Request{
+				Method: "GET",
+				Route:  "/v2/" + repo.Name() + "/manifests/",
+			},
+			Response: testutil.Response{
+				StatusCode: http.StatusOK,
+				Body:       descriptorsList,
+				Headers: http.Header(map[string][]string{
+					"Content-Length": {fmt.Sprint(len(descriptorsList))},
+					"Last-Modified":  {time.Now().Add(-1 * time.Second).Format(time.ANSIC)},
+				}),
+			},
+		},
+	}
+
+	e, c := testServer(m)
+	defer c()
+
+	r, err := NewRepository(context.Background(), repo, e, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx := context.Background()
+	mService, err := r.Manifests(ctx)
+	if err != nil {
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	descriptors, err := mService.All(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(descriptors) != 3 {
+		t.Fatalf("Wrong number of digests returned: %d, expected 3", len(descriptors))
+	}
+
+	expected := []distribution.Descriptor{
+		{
+			MediaType: "application/vnd.docker.distribution.manifest.v2+json",
+			Size:      2805,
+			Digest:    "sha256:899bedd554faf1716d36b310199edae72f348abc8d52ac562cb28cc7998d05e1",
+		},
+		{
+			MediaType: "application/vnd.docker.distribution.manifest.v1+prettyjws",
+			Size:      3308,
+			Digest:    "sha256:86942f70cd992d0d33d6db048444bc7bb98718c0807a615212346ffada92157f",
+		},
+		{
+			MediaType: "application/vnd.docker.distribution.manifest.v2+json",
+			Size:      1768,
+			Digest:    "sha256:a27bac78eeee243ce14684870190ad46cefa817bdc046c692a5aed029b5aebf1",
+		},
+	}
+
+	for i, d := range descriptors {
+		if d.Digest != expected[i].Digest || d.Size != expected[i].Size || d.MediaType != expected[i].MediaType {
+			t.Fatalf("unexpected descriptor returned: %v", d)
+		}
+	}
+}
+
 func TestManifestTags(t *testing.T) {
 	repo, _ := reference.WithName("test.example.com/repo/tags/list")
 	tagsList := []byte(strings.TrimSpace(`

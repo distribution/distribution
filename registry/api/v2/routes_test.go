@@ -88,6 +88,20 @@ func TestRouter(t *testing.T) {
 			},
 		},
 		{
+			RouteName:  RouteNameManifestsList,
+			RequestURI: "/v2/docker.com/foo/bar/baz/manifests/",
+			Vars: map[string]string{
+				"name": "docker.com/foo/bar/baz",
+			},
+		},
+		{
+			RouteName:  RouteNameManifestsList,
+			RequestURI: "/v2/docker.com/manifests/manifests/",
+			Vars: map[string]string{
+				"name": "docker.com/manifests",
+			},
+		},
+		{
 			RouteName:  RouteNameBlob,
 			RequestURI: "/v2/foo/bar/blobs/sha256:abcdef0919234",
 			Vars: map[string]string{

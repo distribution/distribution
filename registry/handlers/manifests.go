@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -477,4 +478,59 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 	}
 
 	w.WriteHeader(http.StatusAccepted)
+}
+
+// manifestsListDispatcher constructs the manifestsList handler api endpoint.
+func manifestsListDispatcher(ctx *Context, r *http.Request) http.Handler {
+	manifestsListHandler := &manifestsListHandler{
+		Context: ctx,
+	}
+
+	return handlers.MethodHandler{
+		"GET": http.HandlerFunc(manifestsListHandler.GetDescriptors),
+	}
+}
+
+type manifestsListHandler struct {
+	*Context
+}
+
+type manifestsListAPIResponse struct {
+	Name        string                    `json:"name"`
+	Descriptors []distribution.Descriptor `json:"descriptors"`
+}
+
+// GetDescriptors returns a json list of manifest descriptors for a specific repository.
+func (dh *manifestsListHandler) GetDescriptors(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	manifestService, err := dh.Repository.Manifests(dh)
+	if err != nil {
+		dh.Errors = append(dh.Errors, err)
+		return
+	}
+
+	descriptors, err := manifestService.All(dh)
+	if err != nil {
+		switch err := err.(type) {
+		case distribution.ErrRepositoryUnknown:
+			dh.Errors = append(dh.Errors, v2.ErrorCodeNameUnknown.WithDetail(map[string]string{"name": dh.Repository.Named().Name()}))
+		case errcode.Error:
+			dh.Errors = append(dh.Errors, err)
+		default:
+			dh.Errors = append(dh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(manifestsListAPIResponse{
+		Name:        dh.Repository.Named().Name(),
+		Descriptors: descriptors,
+	}); err != nil {
+		dh.Errors = append(dh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+		return
+	}
 }

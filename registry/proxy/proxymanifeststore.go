@@ -94,3 +94,15 @@ func (pms proxyManifestStore) Put(ctx context.Context, manifest distribution.Man
 func (pms proxyManifestStore) Delete(ctx context.Context, dgst digest.Digest) error {
 	return distribution.ErrUnsupported
 }
+
+func (pms proxyManifestStore) All(ctx context.Context) ([]distribution.Descriptor, error) {
+	err := pms.authChallenger.tryEstablishChallenges(ctx)
+	if err == nil {
+		descriptors, err := pms.remoteManifests.All(ctx)
+		if err == nil {
+			return descriptors, err
+		}
+	}
+
+	return pms.localManifests.All(ctx)
+}

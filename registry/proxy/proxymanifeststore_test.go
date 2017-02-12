@@ -61,6 +61,11 @@ func (sm statsManifest) Put(ctx context.Context, manifest distribution.Manifest,
 	return sm.manifests.Put(ctx, manifest)
 }
 
+func (sm statsManifest) All(ctx context.Context) ([]distribution.Descriptor, error) {
+	sm.stats["all"]++
+	return sm.manifests.All(ctx)
+}
+
 type mockChallenger struct {
 	sync.Mutex
 	count int
@@ -272,4 +277,20 @@ func TestProxyManifests(t *testing.T) {
 		t.Fatalf("Expected 2 auth challenges, got %#v", env.manifests.authChallenger)
 	}
 
+	descriptors, err := env.manifests.All(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(descriptors) != 1 {
+		t.Fatalf("Unexpected length of digests list: %d. Expected 1", len(descriptors))
+	}
+
+	if descriptors[0].Digest != env.manifestDigest {
+		t.Fatalf("Got unexpected descriptor in the list. Expected: %s got %s", env.manifestDigest, descriptors[0].Digest)
+	}
+
+	if (*remoteStats)["all"] != 1 || (*localStats)["all"] != 0 {
+		t.Fatalf("Unexpected all counts")
+	}
 }
