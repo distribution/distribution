@@ -37,11 +37,15 @@ func init() {
 	testsuites.RegisterSuite(func() (storagedriver.StorageDriver, error) {
 		f := &b2Factory{}
 		return f.Create(map[string]interface{}{
-			"bucket":        bucket,
-			"id":            b2id,
-			"key":           b2key,
-			"context":       context.Background(),
-			"rootdirectory": "/docker/tests",
+			"bucket":              bucket,
+			"id":                  b2id,
+			"key":                 b2key,
+			"context":             context.Background(),
+			"concurrentuploads":   5,
+			"concurrentdownloads": 5,
+			"uploadchunksize":     1e8,
+			"downloadchunksize":   5e7,
+			"rootdirectory":       "/docker/tests",
 		})
 	}, skipB2)
 }
