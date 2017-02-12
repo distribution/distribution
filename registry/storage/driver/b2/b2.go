@@ -36,11 +36,23 @@ func init() {
 type b2Factory struct{}
 
 func getInt(i interface{}) int {
-	v, ok := i.(int)
-	if !ok {
-		return 0
+	switch i := i.(type) {
+	case int:
+		return i
+	case int32:
+		return int(i)
+	case int64:
+		return int(i)
+	case uint32:
+		return int(i)
+	case uint64:
+		return int(i)
+	case float32:
+		return int(i)
+	case float64:
+		return int(i)
 	}
-	return v
+	return 0
 }
 
 func getString(i interface{}) string {
@@ -123,13 +135,15 @@ func (d *driver) readerOffset(ctx ctx.Context, path string, off int64) io.ReadCl
 }
 
 func (d *driver) writer(ctx ctx.Context, path string) io.WriteCloser {
-	w := d.bucket.Object(d.fullPath(path)).NewWriter(ctx)
+	w := d.bucket.Object(d.fullPath(path)).NewWriter(ctx).WithAttrs(&b2.Attrs{
+		ContentType:  uploadSessionContentType,
+		LastModified: time.Now(),
+	})
 	w.ConcurrentUploads = d.upNum
 	w.ChunkSize = d.upChunk
-	if w.ChunkSize < 10e8 {
-		w.ChunkSize = 10e8
+	if w.ChunkSize < 1e8 {
+		w.ChunkSize = 1e8
 	}
-	w.UseFileBuffer = true
 	return w
 }
 
@@ -314,20 +328,43 @@ type info struct {
 	path string
 	size int64
 	mod  time.Time
+	dir  bool
 }
 
 func (i info) Path() string       { return i.path }
 func (i info) Size() int64        { return i.size }
 func (i info) ModTime() time.Time { return i.mod }
-func (i info) IsDir() bool        { return strings.HasSuffix(i.path, "/") }
+func (i info) IsDir() bool        { return i.dir }
 
 func (d *driver) Stat(ctx ctx.Context, path string) (storagedriver.FileInfo, error) {
 	attrs, err := d.bucket.Object(d.fullPath(path)).Attrs(ctx)
+	if b2.IsNotExist(err) {
+		// May have been a directory.
+		c := &b2.Cursor{
+			Delimiter: "/",
+			Prefix:    filepath.Clean(d.fullPath(path)) + "/",
+		}
+		objs, _, err := d.bucket.ListObjects(ctx, 1, c)
+		if err != nil && err != io.EOF {
+			return nil, wrapErr(err)
+		}
+		if len(objs) == 0 {
+			return nil, storagedriver.PathNotFoundError{
+				Path:       path,
+				DriverName: driverName,
+			}
+		}
+		return info{
+			path: path,
+			dir:  true,
+		}, nil
+	}
 	if err != nil {
 		return nil, wrapErr(err)
 	}
+	root := strings.TrimPrefix(d.rootDir, "/")
 	return info{
-		path: attrs.Name,
+		path: strings.TrimPrefix(attrs.Name, root),
 		size: attrs.Size,
 		mod:  attrs.LastModified,
 	}, nil
