@@ -243,6 +243,8 @@ func (d *driver) PutContent(ctx ctx.Context, path string, data []byte) error {
 	if err := checkPath(path); err != nil {
 		return err
 	}
+	// Remove any pre-existing object.
+	d.bucket.Object(d.fullPath(path)).Delete(ctx)
 	r := bytes.NewReader(data)
 	w := d.writer(ctx, path)
 	if _, err := io.Copy(w, r); err != nil {
@@ -271,6 +273,13 @@ func (fw *fileWriter) Write(p []byte) (int, error) {
 func (d *driver) Reader(ctx ctx.Context, path string, off int64) (io.ReadCloser, error) {
 	if err := checkPath(path); err != nil {
 		return nil, err
+	}
+	if off < 0 {
+		return nil, storagedriver.InvalidOffsetError{
+			Path:       path,
+			Offset:     off,
+			DriverName: driverName,
+		}
 	}
 	return d.readerOffset(ctx, path, off), nil
 }
