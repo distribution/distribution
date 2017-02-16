@@ -441,13 +441,13 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 			directories = append(directories, strings.Replace(commonPrefix[0:len(commonPrefix)-1], d.s3Path(""), prefix, 1))
 		}
 
-		if listResponse.IsTruncated {
-			listResponse, err = d.Bucket.List(d.s3Path(path), "/", listResponse.NextMarker, listMax)
-			if err != nil {
-				return nil, err
-			}
-		} else {
+		if !listResponse.IsTruncated {
 			break
+		}
+
+		listResponse, err = d.Bucket.List(d.s3Path(path), "/", listResponse.NextMarker, listMax)
+		if err != nil {
+			return nil, err
 		}
 	}
 
