@@ -27,8 +27,7 @@ Compliant JSON should conform to the following rules:
 3. Unless a canonical key order is defined for a particular schema, object
    keys shall always appear in lexically sorted order.
 4. All whitespace between tokens should be removed.
-5. No "trailing commas" are allowed in object or array definitions.
-6. The angle brackets "<" and ">" are escaped to "\u003c" and "\u003e".
+5. The angle brackets "<" and ">" are escaped to "\u003c" and "\u003e".
    Ampersand "&" is escaped to "\u0026".
 
 ## Examples
