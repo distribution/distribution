@@ -32,7 +32,7 @@ func init() {
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "usage: %s [files...]\n", os.Args[0])
-	fmt.Fprintf(os.Stderr, `
+	fmt.Fprint(os.Stderr, `
 Calculate the digest of one or more input files, emitting the result
 to standard out. If no files are provided, the digest of stdin will
 be calculated.
