@@ -166,7 +166,7 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc distribution.Descri
 		// if no descriptors are provided, we have nothing to validate
 		// against. We don't really want to support this for the registry.
 		return distribution.Descriptor{}, distribution.ErrBlobInvalidDigest{
-			Reason: fmt.Errorf("cannot validate against empty digest"),
+			Reason: errors.New("cannot validate against empty digest"),
 		}
 	}
 
@@ -269,7 +269,7 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc distribution.Descri
 			Errorf("canonical digest does match provided digest")
 		return distribution.Descriptor{}, distribution.ErrBlobInvalidDigest{
 			Digest: desc.Digest,
-			Reason: fmt.Errorf("content does not match digest"),
+			Reason: errors.New("content does not match digest"),
 		}
 	}
 

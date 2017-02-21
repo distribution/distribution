@@ -3,6 +3,7 @@ package filesystem
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -373,11 +374,11 @@ func newFileWriter(file *os.File, size int64) *fileWriter {
 
 func (fw *fileWriter) Write(p []byte) (int, error) {
 	if fw.closed {
-		return 0, fmt.Errorf("already closed")
+		return 0, errors.New("already closed")
 	} else if fw.committed {
-		return 0, fmt.Errorf("already committed")
+		return 0, errors.New("already committed")
 	} else if fw.cancelled {
-		return 0, fmt.Errorf("already cancelled")
+		return 0, errors.New("already cancelled")
 	}
 	n, err := fw.bw.Write(p)
 	fw.size += int64(n)
@@ -390,7 +391,7 @@ func (fw *fileWriter) Size() int64 {
 
 func (fw *fileWriter) Close() error {
 	if fw.closed {
-		return fmt.Errorf("already closed")
+		return errors.New("already closed")
 	}
 
 	if err := fw.bw.Flush(); err != nil {
@@ -410,7 +411,7 @@ func (fw *fileWriter) Close() error {
 
 func (fw *fileWriter) Cancel() error {
 	if fw.closed {
-		return fmt.Errorf("already closed")
+		return errors.New("already closed")
 	}
 
 	fw.cancelled = true
@@ -420,11 +421,11 @@ func (fw *fileWriter) Cancel() error {
 
 func (fw *fileWriter) Commit() error {
 	if fw.closed {
-		return fmt.Errorf("already closed")
+		return errors.New("already closed")
 	} else if fw.committed {
-		return fmt.Errorf("already committed")
+		return errors.New("already committed")
 	} else if fw.cancelled {
-		return fmt.Errorf("already cancelled")
+		return errors.New("already cancelled")
 	}
 
 	if err := fw.bw.Flush(); err != nil {

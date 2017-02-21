@@ -1,6 +1,7 @@
 package inmemory
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"path"
@@ -10,10 +11,10 @@ import (
 )
 
 var (
-	errExists    = fmt.Errorf("exists")
-	errNotExists = fmt.Errorf("notexists")
-	errIsNotDir  = fmt.Errorf("notdir")
-	errIsDir     = fmt.Errorf("isdir")
+	errExists    = errors.New("exists")
+	errNotExists = errors.New("notexists")
+	errIsNotDir  = errors.New("notdir")
+	errIsDir     = errors.New("isdir")
 )
 
 type node interface {
@@ -177,7 +178,7 @@ func (d *dir) mkdirs(p string) (*dir, error) {
 // mkdir creates a child directory under d with the given name.
 func (d *dir) mkdir(name string) (*dir, error) {
 	if name == "" {
-		return nil, fmt.Errorf("invalid dirname")
+		return nil, errors.New("invalid dirname")
 	}
 
 	_, ok := d.children[name]

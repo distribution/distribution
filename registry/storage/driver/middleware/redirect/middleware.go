@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 
@@ -20,21 +21,21 @@ var _ storagedriver.StorageDriver = &redirectStorageMiddleware{}
 func newRedirectStorageMiddleware(sd storagedriver.StorageDriver, options map[string]interface{}) (storagedriver.StorageDriver, error) {
 	o, ok := options["baseurl"]
 	if !ok {
-		return nil, fmt.Errorf("no baseurl provided")
+		return nil, errors.New("no baseurl provided")
 	}
 	b, ok := o.(string)
 	if !ok {
-		return nil, fmt.Errorf("baseurl must be a string")
+		return nil, errors.New("baseurl must be a string")
 	}
 	u, err := url.Parse(b)
 	if err != nil {
 		return nil, fmt.Errorf("unable to parse redirect baseurl: %s", b)
 	}
 	if u.Scheme == "" {
-		return nil, fmt.Errorf("no scheme specified for redirect baseurl")
+		return nil, errors.New("no scheme specified for redirect baseurl")
 	}
 	if u.Host == "" {
-		return nil, fmt.Errorf("no host specified for redirect baseurl")
+		return nil, errors.New("no host specified for redirect baseurl")
 	}
 
 	return &redirectStorageMiddleware{StorageDriver: sd, scheme: u.Scheme, host: u.Host}, nil

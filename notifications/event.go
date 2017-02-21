@@ -1,8 +1,9 @@
 package notifications
 
 import (
-	"fmt"
 	"time"
+
+	"errors"
 
 	"github.com/docker/distribution"
 )
@@ -143,7 +144,7 @@ var (
 	// ErrSinkClosed is returned if a write is issued to a sink that has been
 	// closed. If encountered, the error should be considered terminal and
 	// retries will not be successful.
-	ErrSinkClosed = fmt.Errorf("sink: closed")
+	ErrSinkClosed = errors.New("sink: closed")
 )
 
 // Sink accepts and sends events.

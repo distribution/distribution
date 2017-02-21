@@ -2,7 +2,6 @@ package health
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -98,7 +97,7 @@ func TestHealthHandler(t *testing.T) {
 	checkUp(t, "initial health check")
 
 	// now, we fail the health check
-	updater.Update(fmt.Errorf("the server is now out of commission"))
+	updater.Update(errors.New("the server is now out of commission"))
 	checkDown(t, "server should be down") // should be down
 
 	// bring server back up

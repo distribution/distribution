@@ -14,6 +14,7 @@ package s3
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -112,7 +113,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 
 	regionName := parameters["region"]
 	if regionName == nil || fmt.Sprint(regionName) == "" {
-		return nil, fmt.Errorf("No region parameter provided")
+		return nil, errors.New("No region parameter provided")
 	}
 	region := aws.GetRegion(fmt.Sprint(regionName))
 	if region.Name == "" {
@@ -121,7 +122,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 
 	bucket := parameters["bucket"]
 	if bucket == nil || fmt.Sprint(bucket) == "" {
-		return nil, fmt.Errorf("No bucket parameter provided")
+		return nil, errors.New("No bucket parameter provided")
 	}
 
 	encryptBool := false
@@ -130,7 +131,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	case string:
 		b, err := strconv.ParseBool(encrypt)
 		if err != nil {
-			return nil, fmt.Errorf("The encrypt parameter should be a boolean")
+			return nil, errors.New("The encrypt parameter should be a boolean")
 		}
 		encryptBool = b
 	case bool:
@@ -138,7 +139,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	case nil:
 		// do nothing
 	default:
-		return nil, fmt.Errorf("The encrypt parameter should be a boolean")
+		return nil, errors.New("The encrypt parameter should be a boolean")
 	}
 
 	secureBool := true
@@ -147,7 +148,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	case string:
 		b, err := strconv.ParseBool(secure)
 		if err != nil {
-			return nil, fmt.Errorf("The secure parameter should be a boolean")
+			return nil, errors.New("The secure parameter should be a boolean")
 		}
 		secureBool = b
 	case bool:
@@ -155,7 +156,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	case nil:
 		// do nothing
 	default:
-		return nil, fmt.Errorf("The secure parameter should be a boolean")
+		return nil, errors.New("The secure parameter should be a boolean")
 	}
 
 	v4AuthBool := false
@@ -164,7 +165,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	case string:
 		b, err := strconv.ParseBool(v4Auth)
 		if err != nil {
-			return nil, fmt.Errorf("The v4auth parameter should be a boolean")
+			return nil, errors.New("The v4auth parameter should be a boolean")
 		}
 		v4AuthBool = b
 	case bool:
@@ -172,7 +173,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	case nil:
 		// do nothing
 	default:
-		return nil, fmt.Errorf("The v4auth parameter should be a boolean")
+		return nil, errors.New("The v4auth parameter should be a boolean")
 	}
 
 	chunkSize := int64(defaultChunkSize)
@@ -619,11 +620,11 @@ func (d *driver) newWriter(key string, multi *s3.Multi, parts []s3.Part) storage
 
 func (w *writer) Write(p []byte) (int, error) {
 	if w.closed {
-		return 0, fmt.Errorf("already closed")
+		return 0, errors.New("already closed")
 	} else if w.committed {
-		return 0, fmt.Errorf("already committed")
+		return 0, errors.New("already committed")
 	} else if w.cancelled {
-		return 0, fmt.Errorf("already cancelled")
+		return 0, errors.New("already cancelled")
 	}
 
 	// If the last written part is smaller than minChunkSize, we need to make a
@@ -703,7 +704,7 @@ func (w *writer) Size() int64 {
 
 func (w *writer) Close() error {
 	if w.closed {
-		return fmt.Errorf("already closed")
+		return errors.New("already closed")
 	}
 	w.closed = true
 	return w.flushPart()
@@ -711,9 +712,9 @@ func (w *writer) Close() error {
 
 func (w *writer) Cancel() error {
 	if w.closed {
-		return fmt.Errorf("already closed")
+		return errors.New("already closed")
 	} else if w.committed {
-		return fmt.Errorf("already committed")
+		return errors.New("already committed")
 	}
 	w.cancelled = true
 	err := w.multi.Abort()
@@ -722,11 +723,11 @@ func (w *writer) Cancel() error {
 
 func (w *writer) Commit() error {
 	if w.closed {
-		return fmt.Errorf("already closed")
+		return errors.New("already closed")
 	} else if w.committed {
-		return fmt.Errorf("already committed")
+		return errors.New("already committed")
 	} else if w.cancelled {
-		return fmt.Errorf("already cancelled")
+		return errors.New("already cancelled")
 	}
 	err := w.flushPart()
 	if err != nil {

@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 	"sync"
 
@@ -52,7 +52,7 @@ func getReference(ctx context.Context) (reference string) {
 	return ctxu.GetStringValue(ctx, "vars.reference")
 }
 
-var errDigestNotAvailable = fmt.Errorf("digest not available in context")
+var errDigestNotAvailable = errors.New("digest not available in context")
 
 func getDigest(ctx context.Context) (dgst digest.Digest, err error) {
 	dgstStr := ctxu.GetStringValue(ctx, "vars.digest")

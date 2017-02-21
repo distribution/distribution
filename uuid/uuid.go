@@ -6,6 +6,7 @@ package uuid
 
 import (
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -25,7 +26,7 @@ const (
 
 var (
 	// ErrUUIDInvalid indicates a parsed string is not a valid uuid.
-	ErrUUIDInvalid = fmt.Errorf("invalid uuid")
+	ErrUUIDInvalid = errors.New("invalid uuid")
 
 	// Loggerf can be used to override the default logging destination. Such
 	// log messages in this library should be logged at warning or higher.

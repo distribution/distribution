@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"fmt"
+	"errors"
 	"sort"
 	"testing"
 
@@ -51,7 +51,7 @@ func TestWalkErrors(t *testing.T) {
 		t.Error("Expected invalid root err")
 	}
 
-	errEarlyExpected := fmt.Errorf("Early termination")
+	errEarlyExpected := errors.New("Early termination")
 
 	err = Walk(ctx, d, "/", func(fileInfo driver.FileInfo) error {
 		// error on the 2nd file

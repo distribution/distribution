@@ -16,6 +16,7 @@ package gcs
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -98,7 +99,7 @@ type driver struct {
 func FromParameters(parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
 	bucket, ok := parameters["bucket"]
 	if !ok || fmt.Sprint(bucket) == "" {
-		return nil, fmt.Errorf("No bucket parameter provided")
+		return nil, errors.New("No bucket parameter provided")
 	}
 
 	rootDirectory, ok := parameters["rootdirectory"]
@@ -435,7 +436,7 @@ func (w *writer) Commit() error {
 
 func (w *writer) checkClosed() error {
 	if w.closed {
-		return fmt.Errorf("Writer already closed")
+		return errors.New("Writer already closed")
 	}
 	return nil
 }

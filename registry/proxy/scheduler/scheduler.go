@@ -2,7 +2,7 @@ package scheduler
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"sync"
 	"time"
 
@@ -86,7 +86,7 @@ func (ttles *TTLExpirationScheduler) AddBlob(blobRef reference.Canonical, ttl ti
 	defer ttles.Unlock()
 
 	if ttles.stopped {
-		return fmt.Errorf("scheduler not started")
+		return errors.New("scheduler not started")
 	}
 
 	ttles.add(blobRef, ttl, entryTypeBlob)
@@ -99,7 +99,7 @@ func (ttles *TTLExpirationScheduler) AddManifest(manifestRef reference.Canonical
 	defer ttles.Unlock()
 
 	if ttles.stopped {
-		return fmt.Errorf("scheduler not started")
+		return errors.New("scheduler not started")
 	}
 
 	ttles.add(manifestRef, ttl, entryTypeManifest)
@@ -117,7 +117,7 @@ func (ttles *TTLExpirationScheduler) Start() error {
 	}
 
 	if !ttles.stopped {
-		return fmt.Errorf("Scheduler already started")
+		return errors.New("Scheduler already started")
 	}
 
 	context.GetLogger(ttles.ctx).Infof("Starting cached object TTL expiration scheduler...")
@@ -186,7 +186,7 @@ func (ttles *TTLExpirationScheduler) startTimer(entry *schedulerEntry, ttl time.
 			f = ttles.onManifestExpire
 		default:
 			f = func(reference.Reference) error {
-				return fmt.Errorf("scheduler entry type")
+				return errors.New("scheduler entry type")
 			}
 		}
 

@@ -320,7 +320,7 @@ func (th *tokenHandler) fetchTokenWithOAuth(realm *url.URL, refreshToken, servic
 		form.Set("access_type", "offline")
 	} else {
 		// refuse to do oauth without a grant type
-		return "", time.Time{}, fmt.Errorf("no supported grant type")
+		return "", time.Time{}, errors.New("no supported grant type")
 	}
 
 	resp, err := th.client().PostForm(realm.String(), form)

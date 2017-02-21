@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/docker/distribution"
@@ -18,7 +19,7 @@ func emit(format string, a ...interface{}) {
 func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, registry distribution.Namespace, dryRun bool) error {
 	repositoryEnumerator, ok := registry.(distribution.RepositoryEnumerator)
 	if !ok {
-		return fmt.Errorf("unable to convert Namespace to RepositoryEnumerator")
+		return errors.New("unable to convert Namespace to RepositoryEnumerator")
 	}
 
 	// mark
@@ -43,7 +44,7 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 
 		manifestEnumerator, ok := manifestService.(distribution.ManifestEnumerator)
 		if !ok {
-			return fmt.Errorf("unable to convert ManifestService into ManifestEnumerator")
+			return errors.New("unable to convert ManifestService into ManifestEnumerator")
 		}
 
 		err = manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {

@@ -398,7 +398,7 @@ func (o etagOption) Apply(ms distribution.ManifestService) error {
 		ms.etags[o.tag] = fmt.Sprintf(`"%s"`, o.etag)
 		return nil
 	}
-	return fmt.Errorf("etag options is a client-only option")
+	return errors.New("etag options is a client-only option")
 }
 
 // ReturnContentDigest allows a client to set a the content digest on
