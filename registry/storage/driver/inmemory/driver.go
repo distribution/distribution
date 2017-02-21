@@ -1,6 +1,7 @@
 package inmemory
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -93,7 +94,7 @@ func (d *driver) PutContent(ctx context.Context, p string, contents []byte) erro
 	if err != nil {
 		// TODO(stevvooe): Again, we need to clarify when this is not a
 		// directory in StorageDriver API.
-		return fmt.Errorf("not a file")
+		return errors.New("not a file")
 	}
 
 	f.truncate()
@@ -136,7 +137,7 @@ func (d *driver) Writer(ctx context.Context, path string, append bool) (storaged
 
 	f, err := d.root.mkfile(normalized)
 	if err != nil {
-		return nil, fmt.Errorf("not a file")
+		return nil, errors.New("not a file")
 	}
 
 	if !append {
@@ -182,7 +183,7 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 	found := d.root.find(normalized)
 
 	if !found.isdir() {
-		return nil, fmt.Errorf("not a directory") // TODO(stevvooe): Need error type for this...
+		return nil, errors.New("not a directory") // TODO(stevvooe): Need error type for this...
 	}
 
 	entries, err := found.(*dir).list(normalized)
@@ -192,7 +193,7 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 		case errNotExists:
 			return nil, storagedriver.PathNotFoundError{Path: path}
 		case errIsNotDir:
-			return nil, fmt.Errorf("not a directory")
+			return nil, errors.New("not a directory")
 		default:
 			return nil, err
 		}
@@ -257,11 +258,11 @@ func (d *driver) newWriter(f *file) storagedriver.FileWriter {
 
 func (w *writer) Write(p []byte) (int, error) {
 	if w.closed {
-		return 0, fmt.Errorf("already closed")
+		return 0, errors.New("already closed")
 	} else if w.committed {
-		return 0, fmt.Errorf("already committed")
+		return 0, errors.New("already committed")
 	} else if w.cancelled {
-		return 0, fmt.Errorf("already cancelled")
+		return 0, errors.New("already cancelled")
 	}
 
 	w.d.mutex.Lock()
@@ -279,7 +280,7 @@ func (w *writer) Size() int64 {
 
 func (w *writer) Close() error {
 	if w.closed {
-		return fmt.Errorf("already closed")
+		return errors.New("already closed")
 	}
 	w.closed = true
 	return nil
@@ -287,9 +288,9 @@ func (w *writer) Close() error {
 
 func (w *writer) Cancel() error {
 	if w.closed {
-		return fmt.Errorf("already closed")
+		return errors.New("already closed")
 	} else if w.committed {
-		return fmt.Errorf("already committed")
+		return errors.New("already committed")
 	}
 	w.cancelled = true
 
@@ -301,11 +302,11 @@ func (w *writer) Cancel() error {
 
 func (w *writer) Commit() error {
 	if w.closed {
-		return fmt.Errorf("already closed")
+		return errors.New("already closed")
 	} else if w.committed {
-		return fmt.Errorf("already committed")
+		return errors.New("already committed")
 	} else if w.cancelled {
-		return fmt.Errorf("already cancelled")
+		return errors.New("already cancelled")
 	}
 	w.committed = true
 	return nil

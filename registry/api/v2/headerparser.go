@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -62,7 +63,7 @@ Loop:
 
 		if len(parse) == 0 {
 			if state != stateElement && state != statePairEnd && state != stateParameter {
-				return nil, parse, fmt.Errorf("unexpected end of input")
+				return nil, parse, errors.New("unexpected end of input")
 			}
 			// terminating
 			break
@@ -121,7 +122,7 @@ Loop:
 			parse = parse[len(match):]
 			switch {
 			case len(parse) == 0:
-				return nil, parse, fmt.Errorf("unterminated quoted string")
+				return nil, parse, errors.New("unterminated quoted string")
 			case parse[0] == '"':
 				res[parameter] = value
 				value = ""

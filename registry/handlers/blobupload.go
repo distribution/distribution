@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -172,7 +173,7 @@ func (buh *blobUploadHandler) PatchBlobData(w http.ResponseWriter, r *http.Reque
 
 	ct := r.Header.Get("Content-Type")
 	if ct != "" && ct != "application/octet-stream" {
-		buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(fmt.Errorf("Bad Content-Type")))
+		buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(errors.New("Bad Content-Type")))
 		// TODO(dmcgowan): encode error
 		return
 	}

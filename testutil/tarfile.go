@@ -3,6 +3,7 @@ package testutil
 import (
 	"archive/tar"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	mrand "math/rand"
@@ -57,7 +58,7 @@ func CreateRandomTarFile() (rs io.ReadSeeker, dgst digest.Digest, err error) {
 
 		nn, err := io.Copy(wr, bytes.NewReader(randomData))
 		if nn != fileSize {
-			return nil, "", fmt.Errorf("short copy writing random file to tar")
+			return nil, "", errors.New("short copy writing random file to tar")
 		}
 
 		if err != nil {

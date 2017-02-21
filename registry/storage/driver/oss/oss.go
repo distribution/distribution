@@ -13,6 +13,7 @@ package oss
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -98,21 +99,21 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 
 	accessKey, ok := parameters["accesskeyid"]
 	if !ok {
-		return nil, fmt.Errorf("No accesskeyid parameter provided")
+		return nil, errors.New("No accesskeyid parameter provided")
 	}
 	secretKey, ok := parameters["accesskeysecret"]
 	if !ok {
-		return nil, fmt.Errorf("No accesskeysecret parameter provided")
+		return nil, errors.New("No accesskeysecret parameter provided")
 	}
 
 	regionName, ok := parameters["region"]
 	if !ok || fmt.Sprint(regionName) == "" {
-		return nil, fmt.Errorf("No region parameter provided")
+		return nil, errors.New("No region parameter provided")
 	}
 
 	bucket, ok := parameters["bucket"]
 	if !ok || fmt.Sprint(bucket) == "" {
-		return nil, fmt.Errorf("No bucket parameter provided")
+		return nil, errors.New("No bucket parameter provided")
 	}
 
 	internalBool := false
@@ -120,7 +121,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	if ok {
 		internalBool, ok = internal.(bool)
 		if !ok {
-			return nil, fmt.Errorf("The internal parameter should be a boolean")
+			return nil, errors.New("The internal parameter should be a boolean")
 		}
 	}
 
@@ -129,7 +130,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	if ok {
 		encryptBool, ok = encrypt.(bool)
 		if !ok {
-			return nil, fmt.Errorf("The encrypt parameter should be a boolean")
+			return nil, errors.New("The encrypt parameter should be a boolean")
 		}
 	}
 
@@ -138,7 +139,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	if ok {
 		secureBool, ok = secure.(bool)
 		if !ok {
-			return nil, fmt.Errorf("The secure parameter should be a boolean")
+			return nil, errors.New("The secure parameter should be a boolean")
 		}
 	}
 
@@ -542,11 +543,11 @@ func (d *driver) newWriter(key string, multi *oss.Multi, parts []oss.Part) stora
 
 func (w *writer) Write(p []byte) (int, error) {
 	if w.closed {
-		return 0, fmt.Errorf("already closed")
+		return 0, errors.New("already closed")
 	} else if w.committed {
-		return 0, fmt.Errorf("already committed")
+		return 0, errors.New("already committed")
 	} else if w.cancelled {
-		return 0, fmt.Errorf("already cancelled")
+		return 0, errors.New("already cancelled")
 	}
 
 	// If the last written part is smaller than minChunkSize, we need to make a
@@ -626,7 +627,7 @@ func (w *writer) Size() int64 {
 
 func (w *writer) Close() error {
 	if w.closed {
-		return fmt.Errorf("already closed")
+		return errors.New("already closed")
 	}
 	w.closed = true
 	return w.flushPart()
@@ -634,9 +635,9 @@ func (w *writer) Close() error {
 
 func (w *writer) Cancel() error {
 	if w.closed {
-		return fmt.Errorf("already closed")
+		return errors.New("already closed")
 	} else if w.committed {
-		return fmt.Errorf("already committed")
+		return errors.New("already committed")
 	}
 	w.cancelled = true
 	err := w.multi.Abort()
@@ -645,11 +646,11 @@ func (w *writer) Cancel() error {
 
 func (w *writer) Commit() error {
 	if w.closed {
-		return fmt.Errorf("already closed")
+		return errors.New("already closed")
 	} else if w.committed {
-		return fmt.Errorf("already committed")
+		return errors.New("already committed")
 	} else if w.cancelled {
-		return fmt.Errorf("already cancelled")
+		return errors.New("already cancelled")
 	}
 	err := w.flushPart()
 	if err != nil {

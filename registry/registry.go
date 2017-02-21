@@ -3,6 +3,7 @@ package registry
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -135,7 +136,7 @@ func (registry *Registry) ListenAndServe() error {
 
 		if config.HTTP.TLS.LetsEncrypt.CacheFile != "" {
 			if config.HTTP.TLS.Certificate != "" {
-				return fmt.Errorf("cannot specify both certificate and Let's Encrypt")
+				return errors.New("cannot specify both certificate and Let's Encrypt")
 			}
 			var m letsencrypt.Manager
 			if err := m.CacheFile(config.HTTP.TLS.LetsEncrypt.CacheFile); err != nil {
@@ -165,7 +166,7 @@ func (registry *Registry) ListenAndServe() error {
 				}
 
 				if ok := pool.AppendCertsFromPEM(caPem); !ok {
-					return fmt.Errorf("Could not add CA to pool")
+					return errors.New("Could not add CA to pool")
 				}
 			}
 
@@ -328,7 +329,7 @@ func resolveConfiguration(args []string) (*configuration.Configuration, error) {
 	}
 
 	if configurationPath == "" {
-		return nil, fmt.Errorf("configuration path unspecified")
+		return nil, errors.New("configuration path unspecified")
 	}
 
 	fp, err := os.Open(configurationPath)

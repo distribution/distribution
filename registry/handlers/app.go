@@ -2,6 +2,7 @@ package handlers
 
 import (
 	cryptorand "crypto/rand"
+	"errors"
 	"expvar"
 	"fmt"
 	"math/rand"
@@ -813,7 +814,7 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 			if err := errcode.ServeJSON(w, errcode.ErrorCodeUnauthorized); err != nil {
 				ctxu.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
 			}
-			return fmt.Errorf("forbidden: no repository name")
+			return errors.New("forbidden: no repository name")
 		}
 		accessRecords = appendCatalogAccessRecord(accessRecords, r)
 	}

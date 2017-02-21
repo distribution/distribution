@@ -1,9 +1,11 @@
 package storage
 
 import (
+	"errors"
 	"fmt"
 
 	"encoding/json"
+
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/manifest"
@@ -35,7 +37,7 @@ func (o skipLayerOption) Apply(m distribution.ManifestService) error {
 		ms.skipDependencyVerification = true
 		return nil
 	}
-	return fmt.Errorf("skip layer verification only valid for manifestStore")
+	return errors.New("skip layer verification only valid for manifestStore")
 }
 
 type manifestStore struct {

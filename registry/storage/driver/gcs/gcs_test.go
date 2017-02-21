@@ -3,11 +3,13 @@
 package gcs
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 	"testing"
 
 	"fmt"
+
 	ctx "github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/testsuites"
@@ -214,7 +216,7 @@ func TestRetry(t *testing.T) {
 	assertError("googleapi: Error 404: google api error", err)
 
 	err = retry(func() error {
-		return fmt.Errorf("error")
+		return errors.New("error")
 	})
 	assertError("error", err)
 }

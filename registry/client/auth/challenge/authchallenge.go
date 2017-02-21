@@ -1,7 +1,7 @@
 package challenge
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 	"net/url"
 	"strings"
@@ -71,7 +71,7 @@ func (m *simpleManager) GetChallenges(endpoint url.URL) ([]Challenge, error) {
 func (m *simpleManager) AddResponse(resp *http.Response) error {
 	challenges := ResponseChallenges(resp)
 	if resp.Request == nil {
-		return fmt.Errorf("missing request reference")
+		return errors.New("missing request reference")
 	}
 	urlCopy := url.URL{
 		Path:   resp.Request.URL.Path,

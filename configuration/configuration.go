@@ -1,6 +1,7 @@
 package configuration
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -627,7 +628,7 @@ func Parse(rd io.Reader) (*Configuration, error) {
 						v0_1.Loglevel = Loglevel("info")
 					}
 					if v0_1.Storage.Type() == "" {
-						return nil, fmt.Errorf("No storage configuration provided")
+						return nil, errors.New("no storage configuration provided")
 					}
 					return (*Configuration)(v0_1), nil
 				}

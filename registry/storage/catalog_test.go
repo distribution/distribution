@@ -1,7 +1,7 @@
 package storage
 
 import (
-	"fmt"
+	"errors"
 	"io"
 	"math/rand"
 	"testing"
@@ -230,7 +230,7 @@ func newBadListDriver() *badListDriver {
 }
 
 func (d *badListDriver) List(ctx context.Context, path string) ([]string, error) {
-	return nil, fmt.Errorf("List error")
+	return nil, errors.New("List error")
 }
 
 func TestCatalogWalkError(t *testing.T) {

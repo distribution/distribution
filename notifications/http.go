@@ -3,6 +3,7 @@ package notifications
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"sync"
@@ -116,7 +117,7 @@ func (hs *httpSink) Close() error {
 	defer hs.mu.Unlock()
 
 	if hs.closed {
-		return fmt.Errorf("httpsink: already closed")
+		return errors.New("httpsink: already closed")
 	}
 
 	hs.closed = true

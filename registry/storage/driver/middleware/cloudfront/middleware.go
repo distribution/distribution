@@ -6,6 +6,7 @@ package middleware
 import (
 	"crypto/x509"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/url"
@@ -36,11 +37,11 @@ var _ storagedriver.StorageDriver = &cloudFrontStorageMiddleware{}
 func newCloudFrontStorageMiddleware(storageDriver storagedriver.StorageDriver, options map[string]interface{}) (storagedriver.StorageDriver, error) {
 	base, ok := options["baseurl"]
 	if !ok {
-		return nil, fmt.Errorf("no baseurl provided")
+		return nil, errors.New("no baseurl provided")
 	}
 	baseURL, ok := base.(string)
 	if !ok {
-		return nil, fmt.Errorf("baseurl must be a string")
+		return nil, errors.New("baseurl must be a string")
 	}
 	if !strings.Contains(baseURL, "://") {
 		baseURL = "https://" + baseURL
@@ -53,19 +54,19 @@ func newCloudFrontStorageMiddleware(storageDriver storagedriver.StorageDriver, o
 	}
 	pk, ok := options["privatekey"]
 	if !ok {
-		return nil, fmt.Errorf("no privatekey provided")
+		return nil, errors.New("no privatekey provided")
 	}
 	pkPath, ok := pk.(string)
 	if !ok {
-		return nil, fmt.Errorf("privatekey must be a string")
+		return nil, errors.New("privatekey must be a string")
 	}
 	kpid, ok := options["keypairid"]
 	if !ok {
-		return nil, fmt.Errorf("no keypairid provided")
+		return nil, errors.New("no keypairid provided")
 	}
 	keypairID, ok := kpid.(string)
 	if !ok {
-		return nil, fmt.Errorf("keypairid must be a string")
+		return nil, errors.New("keypairid must be a string")
 	}
 
 	pkBytes, err := ioutil.ReadFile(pkPath)
@@ -75,7 +76,7 @@ func newCloudFrontStorageMiddleware(storageDriver storagedriver.StorageDriver, o
 
 	block, _ := pem.Decode([]byte(pkBytes))
 	if block == nil {
-		return nil, fmt.Errorf("failed to decode private key as an rsa private key")
+		return nil, errors.New("failed to decode private key as an rsa private key")
 	}
 	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
 	if err != nil {

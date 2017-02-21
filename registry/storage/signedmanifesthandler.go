@@ -2,6 +2,7 @@ package storage
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/docker/distribution"
@@ -98,7 +99,7 @@ func (ms *signedManifestHandler) verifyManifest(ctx context.Context, mnfst schem
 		errs = append(errs,
 			distribution.ErrManifestNameInvalid{
 				Name:   mnfst.Name,
-				Reason: fmt.Errorf("invalid manifest name format"),
+				Reason: errors.New("invalid manifest name format"),
 			})
 	}
 

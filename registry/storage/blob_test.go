@@ -3,6 +3,7 @@ package storage
 import (
 	"bytes"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -589,7 +590,7 @@ func seekerSize(seeker io.ReadSeeker) (int64, error) {
 	}
 
 	if resumed != current {
-		return 0, fmt.Errorf("error returning seeker to original state, could not seek back to original location")
+		return 0, errors.New("error returning seeker to original state, could not seek back to original location")
 	}
 
 	return end, nil

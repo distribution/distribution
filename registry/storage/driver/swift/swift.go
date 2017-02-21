@@ -22,6 +22,7 @@ import (
 	"crypto/sha1"
 	"crypto/tls"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -147,19 +148,19 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	}
 
 	if params.Username == "" {
-		return nil, fmt.Errorf("No username parameter provided")
+		return nil, errors.New("No username parameter provided")
 	}
 
 	if params.Password == "" {
-		return nil, fmt.Errorf("No password parameter provided")
+		return nil, errors.New("No password parameter provided")
 	}
 
 	if params.AuthURL == "" {
-		return nil, fmt.Errorf("No authurl parameter provided")
+		return nil, errors.New("No authurl parameter provided")
 	}
 
 	if params.Container == "" {
-		return nil, fmt.Errorf("No container parameter provided")
+		return nil, errors.New("No container parameter provided")
 	}
 
 	if params.ChunkSize < minChunkSize {
@@ -736,7 +737,7 @@ func chunkFilenames(slice []string, maxSize int) (chunks [][]string, err error) 
 			chunks = append(chunks, slice[offset:offset+chunkSize])
 		}
 	} else {
-		return nil, fmt.Errorf("Max chunk size must be > 0")
+		return nil, errors.New("Max chunk size must be > 0")
 	}
 	return
 }
@@ -795,11 +796,11 @@ func (d *driver) newWriter(path, segmentsPath string, segments []swift.Object) s
 
 func (w *writer) Write(p []byte) (int, error) {
 	if w.closed {
-		return 0, fmt.Errorf("already closed")
+		return 0, errors.New("already closed")
 	} else if w.committed {
-		return 0, fmt.Errorf("already committed")
+		return 0, errors.New("already committed")
 	} else if w.cancelled {
-		return 0, fmt.Errorf("already cancelled")
+		return 0, errors.New("already cancelled")
 	}
 
 	n, err := w.bw.Write(p)
@@ -813,7 +814,7 @@ func (w *writer) Size() int64 {
 
 func (w *writer) Close() error {
 	if w.closed {
-		return fmt.Errorf("already closed")
+		return errors.New("already closed")
 	}
 
 	if err := w.bw.Flush(); err != nil {
@@ -835,9 +836,9 @@ func (w *writer) Close() error {
 
 func (w *writer) Cancel() error {
 	if w.closed {
-		return fmt.Errorf("already closed")
+		return errors.New("already closed")
 	} else if w.committed {
-		return fmt.Errorf("already committed")
+		return errors.New("already committed")
 	}
 	w.cancelled = true
 	return w.driver.Delete(context.Background(), w.path)
@@ -845,11 +846,11 @@ func (w *writer) Cancel() error {
 
 func (w *writer) Commit() error {
 	if w.closed {
-		return fmt.Errorf("already closed")
+		return errors.New("already closed")
 	} else if w.committed {
-		return fmt.Errorf("already committed")
+		return errors.New("already committed")
 	} else if w.cancelled {
-		return fmt.Errorf("already cancelled")
+		return errors.New("already cancelled")
 	}
 
 	if err := w.bw.Flush(); err != nil {

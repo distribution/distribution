@@ -5,6 +5,7 @@ package azure
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -426,11 +427,11 @@ func (d *driver) newWriter(path string, size int64) storagedriver.FileWriter {
 
 func (w *writer) Write(p []byte) (int, error) {
 	if w.closed {
-		return 0, fmt.Errorf("already closed")
+		return 0, errors.New("already closed")
 	} else if w.committed {
-		return 0, fmt.Errorf("already committed")
+		return 0, errors.New("already committed")
 	} else if w.cancelled {
-		return 0, fmt.Errorf("already cancelled")
+		return 0, errors.New("already cancelled")
 	}
 
 	n, err := w.bw.Write(p)
@@ -444,7 +445,7 @@ func (w *writer) Size() int64 {
 
 func (w *writer) Close() error {
 	if w.closed {
-		return fmt.Errorf("already closed")
+		return errors.New("already closed")
 	}
 	w.closed = true
 	return w.bw.Flush()
@@ -452,9 +453,9 @@ func (w *writer) Close() error {
 
 func (w *writer) Cancel() error {
 	if w.closed {
-		return fmt.Errorf("already closed")
+		return errors.New("already closed")
 	} else if w.committed {
-		return fmt.Errorf("already committed")
+		return errors.New("already committed")
 	}
 	w.cancelled = true
 	return w.driver.client.DeleteBlob(w.driver.container, w.path, nil)
@@ -462,11 +463,11 @@ func (w *writer) Cancel() error {
 
 func (w *writer) Commit() error {
 	if w.closed {
-		return fmt.Errorf("already closed")
+		return errors.New("already closed")
 	} else if w.committed {
-		return fmt.Errorf("already committed")
+		return errors.New("already committed")
 	} else if w.cancelled {
-		return fmt.Errorf("already cancelled")
+		return errors.New("already cancelled")
 	}
 	w.committed = true
 	return w.bw.Flush()

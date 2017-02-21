@@ -1,9 +1,8 @@
 package schema1
 
 import (
-	"fmt"
-
 	"errors"
+
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/manifest"
@@ -58,7 +57,7 @@ func (mb *referenceManifestBuilder) Build(ctx context.Context) (distribution.Man
 func (mb *referenceManifestBuilder) AppendReference(d distribution.Describable) error {
 	r, ok := d.(Reference)
 	if !ok {
-		return fmt.Errorf("Unable to add non-reference type to v1 builder")
+		return errors.New("unable to add non-reference type to v1 builder")
 	}
 
 	// Entries need to be prepended

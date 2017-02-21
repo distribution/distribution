@@ -2,7 +2,7 @@ package notifications
 
 import (
 	"container/list"
-	"fmt"
+	"errors"
 	"sync"
 	"time"
 
@@ -61,7 +61,7 @@ func (b *Broadcaster) Close() error {
 	select {
 	case <-b.closed:
 		// already closed
-		return fmt.Errorf("broadcaster: already closed")
+		return errors.New("broadcaster: already closed")
 	default:
 		// do a little chan handoff dance to synchronize closing
 		closed := make(chan struct{})
@@ -157,7 +157,7 @@ func (eq *eventQueue) Close() error {
 	defer eq.mu.Unlock()
 
 	if eq.closed {
-		return fmt.Errorf("eventqueue: already closed")
+		return errors.New("eventqueue: already closed")
 	}
 
 	// set closed flag
@@ -326,7 +326,7 @@ func (rs *retryingSink) Close() error {
 	defer rs.mu.Unlock()
 
 	if rs.closed {
-		return fmt.Errorf("retryingsink: already closed")
+		return errors.New("retryingsink: already closed")
 	}
 
 	rs.closed = true

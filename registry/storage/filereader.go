@@ -3,7 +3,7 @@ package storage
 import (
 	"bufio"
 	"bytes"
-	"fmt"
+	"errors"
 	"io"
 	"io/ioutil"
 	"os"
@@ -90,7 +90,7 @@ func (fr *fileReader) Seek(offset int64, whence int) (int64, error) {
 	}
 
 	if newOffset < 0 {
-		err = fmt.Errorf("cannot seek to negative position")
+		err = errors.New("cannot seek to negative position")
 	} else {
 		if fr.offset != newOffset {
 			fr.reset()
@@ -104,7 +104,7 @@ func (fr *fileReader) Seek(offset int64, whence int) (int64, error) {
 }
 
 func (fr *fileReader) Close() error {
-	return fr.closeWithErr(fmt.Errorf("fileReader: closed"))
+	return fr.closeWithErr(errors.New("fileReader: closed"))
 }
 
 // reader prepares the current reader at the lrs offset, ensuring its buffered

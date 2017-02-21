@@ -5,7 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"time"
 )
 
@@ -26,7 +26,7 @@ type blobUploadState struct {
 
 type hmacKey string
 
-var errInvalidSecret = fmt.Errorf("invalid secret")
+var errInvalidSecret = errors.New("invalid secret")
 
 // unpackUploadState unpacks and validates the blob upload state from the
 // token, using the hmacKey secret.
