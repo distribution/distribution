@@ -1,8 +1,10 @@
 package v2
 
 import (
+	"fmt"
 	"net/http"
 	"net/url"
+	"reflect"
 	"testing"
 
 	"github.com/docker/distribution/reference"
@@ -11,6 +13,7 @@ import (
 type urlBuilderTestCase struct {
 	description  string
 	expectedPath string
+	expectedErr  error
 	build        func() (string, error)
 }
 
@@ -20,26 +23,38 @@ func makeURLBuilderTestCases(urlBuilder *URLBuilder) []urlBuilderTestCase {
 		{
 			description:  "test base url",
 			expectedPath: "/v2/",
+			expectedErr:  nil,
 			build:        urlBuilder.BuildBaseURL,
 		},
 		{
 			description:  "test tags url",
 			expectedPath: "/v2/foo/bar/tags/list",
+			expectedErr:  nil,
 			build: func() (string, error) {
 				return urlBuilder.BuildTagsURL(fooBarRef)
 			},
 		},
 		{
-			description:  "test manifest url",
+			description:  "test manifest url tagged ref",
 			expectedPath: "/v2/foo/bar/manifests/tag",
+			expectedErr:  nil,
 			build: func() (string, error) {
 				ref, _ := reference.WithTag(fooBarRef, "tag")
 				return urlBuilder.BuildManifestURL(ref)
 			},
 		},
 		{
+			description:  "test manifest url bare ref",
+			expectedPath: "",
+			expectedErr:  fmt.Errorf("reference must have a tag or digest"),
+			build: func() (string, error) {
+				return urlBuilder.BuildManifestURL(fooBarRef)
+			},
+		},
+		{
 			description:  "build blob url",
 			expectedPath: "/v2/foo/bar/blobs/sha256:3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5",
+			expectedErr:  nil,
 			build: func() (string, error) {
 				ref, _ := reference.WithDigest(fooBarRef, "sha256:3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5")
 				return urlBuilder.BuildBlobURL(ref)
@@ -48,6 +63,7 @@ func makeURLBuilderTestCases(urlBuilder *URLBuilder) []urlBuilderTestCase {
 		{
 			description:  "build blob upload url",
 			expectedPath: "/v2/foo/bar/blobs/uploads/",
+			expectedErr:  nil,
 			build: func() (string, error) {
 				return urlBuilder.BuildBlobUploadURL(fooBarRef)
 			},
@@ -55,6 +71,7 @@ func makeURLBuilderTestCases(urlBuilder *URLBuilder) []urlBuilderTestCase {
 		{
 			description:  "build blob upload url with digest and size",
 			expectedPath: "/v2/foo/bar/blobs/uploads/?digest=sha256%3A3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5&size=10000",
+			expectedErr:  nil,
 			build: func() (string, error) {
 				return urlBuilder.BuildBlobUploadURL(fooBarRef, url.Values{
 					"size":   []string{"10000"},
@@ -65,6 +82,7 @@ func makeURLBuilderTestCases(urlBuilder *URLBuilder) []urlBuilderTestCase {
 		{
 			description:  "build blob upload chunk url",
 			expectedPath: "/v2/foo/bar/blobs/uploads/uuid-part",
+			expectedErr:  nil,
 			build: func() (string, error) {
 				return urlBuilder.BuildBlobUploadChunkURL(fooBarRef, "uuid-part")
 			},
@@ -72,6 +90,7 @@ func makeURLBuilderTestCases(urlBuilder *URLBuilder) []urlBuilderTestCase {
 		{
 			description:  "build blob upload chunk url with digest and size",
 			expectedPath: "/v2/foo/bar/blobs/uploads/uuid-part?digest=sha256%3A3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5&size=10000",
+			expectedErr:  nil,
 			build: func() (string, error) {
 				return urlBuilder.BuildBlobUploadChunkURL(fooBarRef, "uuid-part", url.Values{
 					"size":   []string{"10000"},
@@ -101,9 +120,14 @@ func TestURLBuilder(t *testing.T) {
 
 			for _, testCase := range makeURLBuilderTestCases(urlBuilder) {
 				url, err := testCase.build()
-				if err != nil {
-					t.Fatalf("%s: error building url: %v", testCase.description, err)
+				expectedErr := testCase.expectedErr
+				if !reflect.DeepEqual(expectedErr, err) {
+					t.Fatalf("%s: Expecting %v but got error %v", testCase.description, expectedErr, err)
 				}
+				if expectedErr != nil {
+					continue
+				}
+
 				expectedURL := testCase.expectedPath
 				if !relative {
 					expectedURL = root + expectedURL
@@ -136,8 +160,12 @@ func TestURLBuilderWithPrefix(t *testing.T) {
 
 			for _, testCase := range makeURLBuilderTestCases(urlBuilder) {
 				url, err := testCase.build()
-				if err != nil {
-					t.Fatalf("%s: error building url: %v", testCase.description, err)
+				expectedErr := testCase.expectedErr
+				if !reflect.DeepEqual(expectedErr, err) {
+					t.Fatalf("%s: Expecting %v but got error %v", testCase.description, expectedErr, err)
+				}
+				if expectedErr != nil {
+					continue
 				}
 
 				expectedURL := testCase.expectedPath
@@ -392,8 +420,12 @@ func TestBuilderFromRequest(t *testing.T) {
 
 			for _, testCase := range makeURLBuilderTestCases(builder) {
 				buildURL, err := testCase.build()
-				if err != nil {
-					t.Fatalf("[relative=%t, request=%q, case=%q]: error building url: %v", relative, tr.name, testCase.description, err)
+				expectedErr := testCase.expectedErr
+				if !reflect.DeepEqual(expectedErr, err) {
+					t.Fatalf("%s: Expecting %v but got error %v", testCase.description, expectedErr, err)
+				}
+				if expectedErr != nil {
+					continue
 				}
 
 				var expectedURL string
@@ -475,8 +507,12 @@ func TestBuilderFromRequestWithPrefix(t *testing.T) {
 
 		for _, testCase := range makeURLBuilderTestCases(builder) {
 			buildURL, err := testCase.build()
-			if err != nil {
-				t.Fatalf("%s: error building url: %v", testCase.description, err)
+			expectedErr := testCase.expectedErr
+			if !reflect.DeepEqual(expectedErr, err) {
+				t.Fatalf("%s: Expecting %v but got error %v", testCase.description, expectedErr, err)
+			}
+			if expectedErr != nil {
+				continue
 			}
 
 			var expectedURL string

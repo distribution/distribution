@@ -1,6 +1,7 @@
 package v2
 
 import (
+	"fmt"
 	"net"
 	"net/http"
 	"net/url"
@@ -175,6 +176,8 @@ func (ub *URLBuilder) BuildManifestURL(ref reference.Named) (string, error) {
 		tagOrDigest = v.Tag()
 	case reference.Digested:
 		tagOrDigest = v.Digest().String()
+	default:
+		return "", fmt.Errorf("reference must have a tag or digest")
 	}
 
 	manifestURL, err := route.URL("name", ref.Name(), "reference", tagOrDigest)
