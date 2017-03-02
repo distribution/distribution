@@ -73,7 +73,7 @@ This sections lists some common failures and how to recover from them.
 Failing to configure the Engine daemon and trying to pull from a registry that is not using
 TLS will results in the following message:
 
-```
+```none
 FATA[0000] Error response from daemon: v1 ping attempt failed with error:
 Get https://myregistrydomain.com:5000/v1/_ping: tls: oversized record received with length 20527.
 If this private registry supports only HTTP or HTTPS with an unknown CA certificate,please add
@@ -84,24 +84,27 @@ simply place the CA certificate at /etc/docker/certs.d/myregistrydomain.com:5000
 
 ### Docker still complains about the certificate when using authentication?
 
-When using authentication, some versions of docker also require you to trust the certificate at the OS level. Usually, on Ubuntu this is done with:
+When using authentication, some versions of Docker also require you to trust the
+certificate at the OS level.
+
+#### Ubuntu
 
 ```bash
 $ cp certs/domain.crt /usr/local/share/ca-certificates/myregistrydomain.com.crt
 update-ca-certificates
 ```
 
-... and on Red Hat (and its derivatives) with:
+#### Red Hat Enterprise Linux
 
 ```bash
 cp certs/domain.crt /etc/pki/ca-trust/source/anchors/myregistrydomain.com.crt
 update-ca-trust
 ```
 
-... On some distributions, e.g. Oracle Linux 6, the Shared System Certificates feature needs to be manually enabled:
+#### Oracle Linux
 
 ```bash
 $ update-ca-trust enable
 ```
 
-Now restart docker (`service docker stop && service docker start`, or any other way you use to restart docker).
+Restart Docker for the  changes to take effect.
