@@ -14,6 +14,7 @@ package s3
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -90,6 +91,7 @@ type DriverParameters struct {
 	Encrypt                     bool
 	KeyID                       string
 	Secure                      bool
+	SkipVerify                  bool
 	V4Auth                      bool
 	ChunkSize                   int64
 	MultipartCopyChunkSize      int64
@@ -248,6 +250,23 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		return nil, fmt.Errorf("The secure parameter should be a boolean")
 	}
 
+	skipVerifyBool := false
+	skipVerify := parameters["skipverify"]
+	switch skipVerify := skipVerify.(type) {
+	case string:
+		b, err := strconv.ParseBool(skipVerify)
+		if err != nil {
+			return nil, fmt.Errorf("The skipVerify parameter should be a boolean")
+		}
+		skipVerifyBool = b
+	case bool:
+		skipVerifyBool = skipVerify
+	case nil:
+		// do nothing
+	default:
+		return nil, fmt.Errorf("The skipVerify parameter should be a boolean")
+	}
+
 	v4Bool := true
 	v4auth := parameters["v4auth"]
 	switch v4auth := v4auth.(type) {
@@ -344,6 +363,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		encryptBool,
 		fmt.Sprint(keyID),
 		secureBool,
+		skipVerifyBool,
 		v4Bool,
 		chunkSize,
 		multipartCopyChunkSize,
@@ -420,10 +440,22 @@ func New(params DriverParameters) (*Driver, error) {
 	awsConfig.WithRegion(params.Region)
 	awsConfig.WithDisableSSL(!params.Secure)
 
-	if params.UserAgent != "" {
-		awsConfig.WithHTTPClient(&http.Client{
-			Transport: transport.NewTransport(http.DefaultTransport, transport.NewHeaderRequestModifier(http.Header{http.CanonicalHeaderKey("User-Agent"): []string{params.UserAgent}})),
-		})
+	if params.UserAgent != "" || params.SkipVerify {
+		httpTransport := http.DefaultTransport
+		if params.SkipVerify {
+			httpTransport = &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			}
+		}
+		if params.UserAgent != "" {
+			awsConfig.WithHTTPClient(&http.Client{
+				Transport: transport.NewTransport(httpTransport, transport.NewHeaderRequestModifier(http.Header{http.CanonicalHeaderKey("User-Agent"): []string{params.UserAgent}})),
+			})
+		} else {
+			awsConfig.WithHTTPClient(&http.Client{
+				Transport: transport.NewTransport(httpTransport),
+			})
+		}
 	}
 
 	s3obj := s3.New(session.New(awsConfig))
