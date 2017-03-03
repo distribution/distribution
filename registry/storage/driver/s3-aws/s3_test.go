@@ -31,6 +31,7 @@ func init() {
 	encrypt := os.Getenv("S3_ENCRYPT")
 	keyID := os.Getenv("S3_KEY_ID")
 	secure := os.Getenv("S3_SECURE")
+	skipVerify := os.Getenv("S3_SKIP_VERIFY")
 	v4Auth := os.Getenv("S3_V4_AUTH")
 	region := os.Getenv("AWS_REGION")
 	objectACL := os.Getenv("S3_OBJECT_ACL")
@@ -58,6 +59,14 @@ func init() {
 			}
 		}
 
+		skipVerifyBool := false
+		if skipVerify != "" {
+			skipVerifyBool, err = strconv.ParseBool(skipVerify)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		v4Bool := true
 		if v4Auth != "" {
 			v4Bool, err = strconv.ParseBool(v4Auth)
@@ -75,6 +84,7 @@ func init() {
 			encryptBool,
 			keyID,
 			secureBool,
+			skipVerifyBool,
 			v4Bool,
 			minChunkSize,
 			defaultMultipartCopyChunkSize,
