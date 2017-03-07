@@ -1,4 +1,4 @@
-FROM golang:1.7-alpine
+FROM golang:1.8-alpine
 
 ENV DISTRIBUTION_DIR /go/src/github.com/docker/distribution
 ENV DOCKER_BUILDTAGS include_oss include_gcs
@@ -9,6 +9,9 @@ RUN set -ex \
 WORKDIR $DISTRIBUTION_DIR
 COPY . $DISTRIBUTION_DIR
 COPY cmd/registry/config-dev.yml /etc/docker/registry/config.yml
+
+ARG GOOS=linux
+ARG GOARCH=amd64
 
 RUN make PREFIX=/go clean binaries
 
