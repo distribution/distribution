@@ -82,7 +82,7 @@ type challenge struct {
 var _ auth.Challenge = challenge{}
 
 // SetHeaders sets a simple bearer challenge on the response.
-func (ch challenge) SetHeaders(w http.ResponseWriter) {
+func (ch challenge) SetHeaders(r *http.Request, w http.ResponseWriter) {
 	header := fmt.Sprintf("Bearer realm=%q,service=%q", ch.realm, ch.service)
 
 	if ch.scope != "" {
