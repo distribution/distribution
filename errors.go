@@ -113,3 +113,13 @@ type ErrManifestNameInvalid struct {
 func (err ErrManifestNameInvalid) Error() string {
 	return fmt.Sprintf("manifest name %q invalid: %v", err.Name, err.Reason)
 }
+
+// ErrTagConflict is returned if a tag cannot be overwritten
+type ErrTagConflict struct {
+	Tag  string
+	Name string
+}
+
+func (err ErrTagConflict) Error() string {
+	return fmt.Sprintf("tag=%s cannot be overwritten because %s is an immutable repository", err.Tag, err.Name)
+}
