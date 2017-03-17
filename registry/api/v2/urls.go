@@ -83,10 +83,10 @@ func NewURLBuilderFromRequest(r *http.Request, relative bool) *URLBuilder {
 		host = h
 	}
 
-	portLessHost, port := host, ""
+	portlessHost, port := host, ""
 	if !isIPv6Address(host) {
 		// with go 1.6, this would treat the last part of IPv6 address as a port
-		portLessHost, port, _ = net.SplitHostPort(host)
+		portlessHost, port, _ = net.SplitHostPort(host)
 	}
 	if forwardedPort := r.Header.Get("X-Forwarded-Port"); len(port) == 0 && len(forwardedPort) > 0 {
 		ports := strings.SplitN(forwardedPort, ",", 2)
@@ -96,8 +96,8 @@ func NewURLBuilderFromRequest(r *http.Request, relative bool) *URLBuilder {
 		}
 	}
 
-	if len(portLessHost) > 0 {
-		host = portLessHost
+	if len(portlessHost) > 0 {
+		host = portlessHost
 	}
 	if len(port) > 0 {
 		// remove enclosing brackets of ipv6 address otherwise they will be duplicated
