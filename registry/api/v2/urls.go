@@ -84,7 +84,7 @@ func NewURLBuilderFromRequest(r *http.Request, relative bool) *URLBuilder {
 	}
 
 	portLessHost, port := host, ""
-	if !isIPv6Address(portLessHost) {
+	if !isIPv6Address(host) {
 		// with go 1.6, this would treat the last part of IPv6 address as a port
 		portLessHost, port, _ = net.SplitHostPort(host)
 	}
