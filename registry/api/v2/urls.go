@@ -46,6 +46,11 @@ func NewURLBuilderFromString(root string, relative bool) (*URLBuilder, error) {
 	return NewURLBuilder(u, relative), nil
 }
 
+var portMap = map[string]string{
+	"http":  "80",
+	"https": "443",
+}
+
 // NewURLBuilderFromRequest uses information from an *http.Request to
 // construct the root url.
 func NewURLBuilderFromRequest(r *http.Request, relative bool) *URLBuilder {
@@ -95,7 +100,9 @@ func NewURLBuilderFromRequest(r *http.Request, relative bool) *URLBuilder {
 		ports := strings.SplitN(forwardedPort, ",", 2)
 		forwardedPort = strings.TrimSpace(ports[0])
 		if _, err := strconv.ParseInt(forwardedPort, 10, 32); err == nil {
-			port = forwardedPort
+			if forwardedPort != portMap[scheme] {
+				port = forwardedPort
+			}
 		}
 	}
 
