@@ -46,6 +46,11 @@ func NewURLBuilderFromString(root string, relative bool) (*URLBuilder, error) {
 	return NewURLBuilder(u, relative), nil
 }
 
+var portMap = map[string]string{
+	"http":  "80",
+	"https": "443",
+}
+
 // NewURLBuilderFromRequest uses information from an *http.Request to
 // construct the root url.
 func NewURLBuilderFromRequest(r *http.Request, relative bool) *URLBuilder {
@@ -83,22 +88,24 @@ func NewURLBuilderFromRequest(r *http.Request, relative bool) *URLBuilder {
 		host = h
 	}
 
-	portLessHost, port := host, ""
-	if !isIPv6Address(portLessHost) {
+	portlessHost, port := host, ""
+	if !isIPv6Address(host) {
 		// with go 1.6, this would treat the last part of IPv6 address as a port
-		portLessHost, port, _ = net.SplitHostPort(host)
+		portlessHost, port, _ = net.SplitHostPort(host)
+		if len(portlessHost) > 0 {
+			host = portlessHost
+		}
 	}
 	if forwardedPort := r.Header.Get("X-Forwarded-Port"); len(port) == 0 && len(forwardedPort) > 0 {
 		ports := strings.SplitN(forwardedPort, ",", 2)
 		forwardedPort = strings.TrimSpace(ports[0])
 		if _, err := strconv.ParseInt(forwardedPort, 10, 32); err == nil {
-			port = forwardedPort
+			if forwardedPort != portMap[scheme] {
+				port = forwardedPort
+			}
 		}
 	}
 
-	if len(portLessHost) > 0 {
-		host = portLessHost
-	}
 	if len(port) > 0 {
 		// remove enclosing brackets of ipv6 address otherwise they will be duplicated
 		if len(host) > 1 && host[0] == '[' && host[len(host)-1] == ']' {
