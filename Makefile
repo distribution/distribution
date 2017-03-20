@@ -95,4 +95,5 @@ dep-validate:
 	@$(VNDR)
 	@test -z "$$(diff -r vendor .vendor.bak 2>&1 | tee /dev/stderr)" || \
 		(echo >&2 "+ inconsistent dependencies! what you have in vendor.conf does not match with what you have in vendor" && false)
-	@rm -Rf .vendor.bak
+	@rm -Rf vendor
+	@mv .vendor.bak vendor
