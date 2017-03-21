@@ -105,7 +105,7 @@ Listen 5043
   SSLCertificateFile /usr/local/apache2/conf/domain.crt
   SSLCertificateKeyFile /usr/local/apache2/conf/domain.key
 
-  ## SSL settings recommandation from: https://raymii.org/s/tutorials/Strong_SSL_Security_On_Apache2.html
+  ## SSL settings recommendation from: https://raymii.org/s/tutorials/Strong_SSL_Security_On_Apache2.html
   # Anti CRIME
   SSLCompression off
 
