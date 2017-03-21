@@ -1,9 +1,10 @@
 # Changelog
 
-## 2.6.1-rc1 (2017-03-21)
+## 2.6.1-rc2 (2017-03-21)
 
 #### Registry
 - Fix `Forwarded` header handling, revert use of `X-Forwarded-Port`
+- Use driver `Stat` for registry health check
 
 ## 2.6.0 (2017-01-18)
 
