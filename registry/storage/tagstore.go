@@ -44,7 +44,22 @@ func (ts *tagStore) All(ctx context.Context) ([]string, error) {
 
 	for _, entry := range entries {
 		_, filename := path.Split(entry)
-		tags = append(tags, filename)
+		if desc, err := ts.Get(ctx, filename); err != nil {
+			return tags, err
+		} else {
+			revisionLinkPathSpec, err := pathFor(manifestRevisionLinkPathSpec{
+				name:     ts.repository.Name(),
+				revision: desc.Digest,
+			})
+			if err != nil {
+				return tags, err
+			}
+			if _, err := ts.blobStore.resolve(ctx, revisionLinkPathSpec); err != nil {
+				continue
+			} else {
+				tags = append(tags, filename)
+			}
+		}
 	}
 
 	return tags, nil
