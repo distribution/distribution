@@ -98,6 +98,7 @@ type DriverParameters struct {
 	StorageClass                string
 	UserAgent                   string
 	ObjectACL                   string
+	SessionToken                string
 }
 
 func init() {
@@ -331,6 +332,8 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		objectACL = objectACLString
 	}
 
+	sessionToken := ""
+
 	params := DriverParameters{
 		fmt.Sprint(accessKey),
 		fmt.Sprint(secretKey),
@@ -349,6 +352,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		storageClass,
 		fmt.Sprint(userAgent),
 		objectACL,
+		fmt.Sprint(sessionToken),
 	}
 
 	return New(params)
@@ -398,6 +402,7 @@ func New(params DriverParameters) (*Driver, error) {
 			Value: credentials.Value{
 				AccessKeyID:     params.AccessKey,
 				SecretAccessKey: params.SecretKey,
+				SessionToken:    params.SessionToken,
 			},
 		},
 		&credentials.EnvProvider{},
