@@ -5,7 +5,7 @@ title: Aliyun OSS storage driver
 ---
 
 An implementation of the `storagedriver.StorageDriver` interface which uses
-[Aliyun OSS](http://www.aliyun.com/product/oss) for object storage.
+[Aliyun OSS](https://intl.aliyun.com/product/oss) for object storage.
 
 ## Parameters
 
@@ -44,7 +44,7 @@ Your access key secret.
 <td>
 yes
 </td>
-<td> The name of the OSS region in which you would like to store objects (for example `oss-cn-beijing`). For a list of regions, you can look at <http://docs.aliyun.com/#/oss/product-documentation/domain-region>
+<td> The name of the OSS region in which you would like to store objects (for example `oss-cn-beijing`). For a list of regions, you can look at [https://docs.aliyun.com/#/oss/product-documentation/domain-region](https://docs.aliyun.com/#/oss/product-documentation/domain-region).
 </td>
 </tr>
 <tr>
@@ -65,7 +65,7 @@ An endpoint which defaults to `<bucket>.<region>.aliyuncs.com` or `<bucket>.<reg
 <td>
 no
 </td>
-<td> An internal endpoint or the public endpoint for OSS access. The default is false. For a list of regions, you can look at <http://docs.aliyun.com/#/oss/product-documentation/domain-region>
+<td> An internal endpoint or the public endpoint for OSS access. The default is false. For a list of regions, you can look at [https://docs.aliyun.com/#/oss/product-documentation/domain-region](https://docs.aliyun.com/#/oss/product-documentation/domain-region).
 </td>
 </tr>
 <tr>
