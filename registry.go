@@ -46,6 +46,9 @@ type Namespace interface {
 
 	// BlobStatter returns a BlobStatter to control
 	BlobStatter() BlobStatter
+
+	// TODO(amidlash): Consider returning notary instead of upstream here.
+	Upstream() string
 }
 
 // RepositoryEnumerator describes an operation to enumerate repositories
