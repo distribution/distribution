@@ -98,7 +98,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 
 	// Register the handler dispatchers.
 	app.register(v2.RouteNameBase, func(ctx *Context, r *http.Request) http.Handler {
-		return http.HandlerFunc(apiBase)
+		return http.HandlerFunc(makeAPIBase(app.registry))
 	})
 	app.register(v2.RouteNameManifest, manifestDispatcher)
 	app.register(v2.RouteNameCatalog, catalogDispatcher)
@@ -865,15 +865,20 @@ func (app *App) nameRequired(r *http.Request) bool {
 	return route == nil || (routeName != v2.RouteNameBase && routeName != v2.RouteNameCatalog)
 }
 
-// apiBase implements a simple yes-man for doing overall checks against the
-// api. This can support auth roundtrips to support docker login.
-func apiBase(w http.ResponseWriter, r *http.Request) {
-	const emptyJSON = "{}"
-	// Provide a simple /v2/ 200 OK response with empty json response.
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.Header().Set("Content-Length", fmt.Sprint(len(emptyJSON)))
+func makeAPIBase(registry distribution.Namespace) func(w http.ResponseWriter, r *http.Request) {
+	// apiBase implements a simple yes-man for doing overall checks against the
+	// api. This can support auth roundtrips to support docker login.
+	return func(w http.ResponseWriter, r *http.Request) {
+		const emptyJSON = "{}"
+		// Provide a simple /v2/ 200 OK response with empty json response.
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set("Content-Length", fmt.Sprint(len(emptyJSON)))
+		if upstream := registry.Upstream(); len(upstream) != 0 {
+			w.Header().Set("Upstream", upstream)
+		}
 
-	fmt.Fprint(w, emptyJSON)
+		fmt.Fprint(w, emptyJSON)
+	}
 }
 
 // appendAccessRecords checks the method and adds the appropriate Access records to the records list.
