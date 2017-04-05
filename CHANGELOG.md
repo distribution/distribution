@@ -1,6 +1,6 @@
 # Changelog
 
-## 2.6.1-rc2 (2017-03-21)
+## 2.6.1 (2017-04-05)
 
 #### Registry
 - Fix `Forwarded` header handling, revert use of `X-Forwarded-Port`
