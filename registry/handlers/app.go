@@ -596,24 +596,19 @@ func (app *App) configureSecret(configuration *configuration.Configuration) {
 func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close() // ensure that request body is always closed.
 
-	// Instantiate an http context here so we can track the error codes
-	// returned by the request router.
-	ctx := defaultContextManager.context(app, w, r)
+	// Prepare the context with our own little decorations.
+	ctx := r.Context()
+	ctx = ctxu.WithRequest(ctx, r)
+	ctx, w = ctxu.WithResponseWriter(ctx, w)
+	ctx = ctxu.WithLogger(ctx, ctxu.GetRequestLogger(ctx))
+	r = r.WithContext(ctx)
 
 	defer func() {
 		status, ok := ctx.Value("http.response.status").(int)
 		if ok && status >= 200 && status <= 399 {
-			ctxu.GetResponseLogger(ctx).Infof("response completed")
+			ctxu.GetResponseLogger(r.Context()).Infof("response completed")
 		}
 	}()
-	defer defaultContextManager.release(ctx)
-
-	// NOTE(stevvooe): Total hack to get instrumented responsewriter from context.
-	var err error
-	w, err = ctxu.GetResponseWriter(ctx)
-	if err != nil {
-		ctxu.GetLogger(ctx).Warnf("response writer not found in context")
-	}
 
 	// Set a header with the Docker Distribution API Version for all responses.
 	w.Header().Add("Docker-Distribution-API-Version", "registry/2.0")
@@ -648,6 +643,9 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 
 		// Add username to request logging
 		context.Context = ctxu.WithLogger(context.Context, ctxu.GetLogger(context.Context, auth.UserNameKey))
+
+		// sync up context on the request.
+		r = r.WithContext(context)
 
 		if app.nameRequired(r) {
 			nameRef, err := reference.WithName(getName(context))
@@ -756,7 +754,7 @@ func (app *App) logError(context context.Context, errors errcode.Errors) {
 // context constructs the context object for the application. This only be
 // called once per request.
 func (app *App) context(w http.ResponseWriter, r *http.Request) *Context {
-	ctx := defaultContextManager.context(app, w, r)
+	ctx := r.Context()
 	ctx = ctxu.WithVars(ctx, r)
 	ctx = ctxu.WithLogger(ctx, ctxu.GetLogger(ctx,
 		"vars.name",
