@@ -103,8 +103,13 @@ func getUserName(ctx context.Context, r *http.Request) string {
 //
 // TODO(stevvooe): Consider making this facility a part of the context package.
 type contextManager struct {
-	contexts map[*http.Request]context.Context
+	contexts map[*http.Request]ctxRef
 	mu       sync.Mutex
+}
+
+type ctxRef struct {
+	refs int
+	ctx  context.Context
 }
 
 // defaultContextManager is just a global instance to register request contexts.
@@ -112,7 +117,7 @@ var defaultContextManager = newContextManager()
 
 func newContextManager() *contextManager {
 	return &contextManager{
-		contexts: make(map[*http.Request]context.Context),
+		contexts: make(map[*http.Request]ctxRef),
 	}
 }
 
@@ -121,10 +126,12 @@ func (cm *contextManager) context(parent context.Context, w http.ResponseWriter,
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 
-	ctx, ok := cm.contexts[r]
+	requestCtxRef, ok := cm.contexts[r]
 	if ok {
-		return ctx
+		cm.contexts[r] = ctxRef{ctx: requestCtxRef.ctx, refs: requestCtxRef.refs + 1}
+		return requestCtxRef.ctx
 	}
+	ctx := requestCtxRef.ctx
 
 	if parent == nil {
 		parent = ctxu.Background()
@@ -133,7 +140,7 @@ func (cm *contextManager) context(parent context.Context, w http.ResponseWriter,
 	ctx = ctxu.WithRequest(parent, r)
 	ctx, w = ctxu.WithResponseWriter(ctx, w)
 	ctx = ctxu.WithLogger(ctx, ctxu.GetRequestLogger(ctx))
-	cm.contexts[r] = ctx
+	cm.contexts[r] = ctxRef{ctx: ctx, refs: 1}
 
 	return ctx
 }
@@ -148,5 +155,14 @@ func (cm *contextManager) release(ctx context.Context) {
 		ctxu.GetLogger(ctx).Errorf("no request found in context during release")
 		return
 	}
-	delete(cm.contexts, r)
+	requestCtxRef, ok := cm.contexts[r]
+	if !ok {
+		ctxu.GetLogger(ctx).Errorf("attempt to release context too many times")
+		return
+	}
+	if requestCtxRef.refs == 1 {
+		delete(cm.contexts, r)
+	} else {
+		cm.contexts[r] = ctxRef{ctx: ctx, refs: cm.contexts[r].refs - 1}
+	}
 }
