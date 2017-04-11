@@ -10,56 +10,59 @@ An implementation of the `storagedriver.StorageDriver` interface which uses Goog
 
 
 <table>
-  <tr>
-    <th>Parameter</th>
-    <th>Required</th>
-    <th>Description</th>
-  </tr>
-  <tr>
-    <td>
-      <code>bucket</code>
-    </td>
-    <td>
-      yes
-    </td>
-    <td>
-      Storage bucket name.
-    </td>
-  </tr>
-  <tr>
-    <td>
-      <code>keyfile</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      A private service account key file in JSON format. Instead of a key file <a href="https://developers.google.com/identity/protocols/application-default-credentials">Google Application Default Credentials</a> can be used.
-    </td>
-  </tr>
-   <tr>
-    <td>
-      <code>rootdirectory</code>
-    </td>
-    <td>
-      no
-    </td>
-    <td>
-      This is a prefix that will be applied to all Google Cloud Storage keys to allow you to segment data in your bucket if necessary.
-  </tr>
-  </tr>
-   <tr>
-    <td>
-      <code>chunksize</code>
-    </td>
-    <td>
-      no (default 5242880)
-    </td>
-    <td>
-      This is the chunk size used for uploading large blobs, must be a multiple of 256*1024.
-    </td>
-  </tr>
-
+  <thead>
+    <tr>
+      <th>Parameter</th>
+      <th>Required</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+        <code>bucket</code>
+      </td>
+      <td>
+        yes
+      </td>
+      <td>
+        Storage bucket name.
+      </td>
+    </tr>
+    <tr>
+      <td>
+        <code>keyfile</code>
+      </td>
+      <td>
+        no
+      </td>
+      <td>
+        A private service account key file in JSON format. Instead of a key file <a href="https://developers.google.com/identity/protocols/application-default-credentials">Google Application Default Credentials</a> can be used.
+      </td>
+    </tr>
+     <tr>
+      <td>
+        <code>rootdirectory</code>
+      </td>
+      <td>
+        no
+      </td>
+      <td>
+        This is a prefix that will be applied to all Google Cloud Storage keys to allow you to segment data in your bucket if necessary.
+      </td>
+    </tr>
+     <tr>
+      <td>
+        <code>chunksize</code>
+      </td>
+      <td>
+        no (default 5242880)
+      </td>
+      <td>
+        This is the chunk size used for uploading large blobs, must be a multiple of 256*1024.
+      </td>
+    </tr>
+  </tbody>
 </table>
 
 
