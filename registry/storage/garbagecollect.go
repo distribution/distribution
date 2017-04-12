@@ -86,17 +86,19 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 	// sweep
 	blobService := registry.Blobs()
 	deleteSet := make(map[digest.Digest]struct{})
+	nbAllBlobs := 0
 	err = blobService.Enumerate(ctx, func(dgst digest.Digest) error {
 		// check if digest is in markSet. If not, delete it!
 		if _, ok := markSet[dgst]; !ok {
 			deleteSet[dgst] = struct{}{}
 		}
+		nbAllBlobs++
 		return nil
 	})
 	if err != nil {
 		return fmt.Errorf("error enumerating blobs: %v", err)
 	}
-	emit("\n%d blobs marked, %d blobs eligible for deletion", len(markSet), len(deleteSet))
+	emit("\n%d blobs marked, %d blobs parsed : %d blobs eligible for deletion", len(markSet), nbAllBlobs, len(deleteSet))
 	// Construct vacuum
 	vacuum := NewVacuum(ctx, storageDriver)
 	for dgst := range deleteSet {
