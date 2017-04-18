@@ -110,6 +110,15 @@ The garbage-collect command accepts a `--dry-run` parameter, which will print th
 of the mark and sweep phases without removing any data.  Running with a log level of `info`
 will give a clear indication of what will and will not be deleted.
 
+The config.yml file should be in the following format:
+
+```
+version: 0.1
+storage:
+  filesystem:
+    rootdirectory: /registry/data
+```
+
 _Sample output from a dry run garbage collection with registry log level set to `info`_
 
 ```
