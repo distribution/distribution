@@ -220,7 +220,7 @@ You can then start your registry with a simple
 
 ## Next
 
-You will find more specific and advanced informations in the following sections:
+You will find more specific and advanced information in the following sections:
 
  - [Configuration reference](configuration.md)
  - [Working with notifications](notifications.md)
