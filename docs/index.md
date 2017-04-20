@@ -34,7 +34,7 @@ into [Docker Trusted Registry](/datacenter/dtr/2.1/guides/index.md).
 
 The Registry is compatible with Docker engine **version 1.6.0 or higher**. If
 you really need to work with older Docker versions, you should look into the
-[old python registry](https://github.com/docker/docker-registry).
+[old python registry](https://github.com/moby/moby-registry).
 
 ## TL;DR
 
