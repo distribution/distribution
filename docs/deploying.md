@@ -147,7 +147,9 @@ Except for registries running on secure local networks, registries should always
 
 The simplest way to achieve access restriction is through basic authentication (this is very similar to other web servers' basic authentication mechanism).
 
-> **Warning**: You **cannot** use authentication with an insecure registry. You have to [configure TLS first](deploying.md#running-a-domain-registry) for this to work.
+> **Warning**:
+> You **cannot** use authentication with an insecure registry. You have to [configure TLS first](deploying.md#running-a-domain-registry) for this to work.
+{:.warning}
 
 First create a password file with one entry for the user "testuser", with password "testpassword":
 
@@ -212,7 +214,9 @@ registry:
     - /path/auth:/auth
 ```
 
-> **Warning**: replace `/path` by whatever directory that holds your `certs` and `auth` folder from above.
+> **Warning**:
+> replace `/path` by whatever directory that holds your `certs` and `auth` folder from above.
+{:.warning}
 
 You can then start your registry with a simple
 

@@ -13,7 +13,9 @@ configuration.
 
 ## Deploying a plain HTTP registry
 
-> **Warning**: it's not possible to use an insecure registry with basic authentication.
+> **Warning**:
+> it's not possible to use an insecure registry with basic authentication.
+{:.warning}
 
 This basically tells Docker to entirely disregard security for your registry.
 While this is relatively easy to configure the daemon in this way, it is
@@ -44,7 +46,9 @@ environment.
 
 ## Using self-signed certificates
 
-> **Warning**: using this along with basic authentication requires to **also** trust the certificate into the OS cert store for some versions of docker (see below)
+> **Warning**:
+> using this along with basic authentication requires to **also** trust the certificate into the OS cert store for some versions of docker (see below)
+{:.warning}
 
 This is more secure than the insecure registry solution.  You must configure every docker daemon that wants to access your registry
 
