@@ -112,3 +112,18 @@ $ update-ca-trust enable
 ```
 
 Restart Docker for the  changes to take effect.
+
+### Windows
+
+Open Windows Explorer, right-click the certificate, and choose
+**Install certificate**.
+
+Then, select the following options:
+
+* Store location: local machine
+* Check 'place all certificates in the following store'
+* Click 'Browser', and select 'Trusted Root Certificate Authorities'
+* Click 'Finish'
+[Learn more about managing TLS certificates](https://technet.microsoft.com/en-us/library/cc754841(v=ws.11).aspx#BKMK_addlocal)
+
+After adding the CA certificate to Windows, restart Docker for Windows.
