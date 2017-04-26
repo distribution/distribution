@@ -339,6 +339,8 @@ func (d *driver) copyFile(src, dst string) (err error) {
 		// If os.Rename passed, consider this function succeeded
 		if mverr == nil {
 			err = nil
+		} else if err == nil {
+			err = mverr
 		}
 	}()
 
