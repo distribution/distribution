@@ -277,7 +277,7 @@ func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
 	return keys, nil
 }
 
-// Move moves an object stored at sourcePath to destPath, removing the original object.
+// Move movmr an object stored at sourcePath to destPath, removing the original object.
 // Fall back to copy then delete when moving across mount points (will not work with directories)
 func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
 	source := d.fullPath(sourcePath)
@@ -297,8 +297,6 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 		linkErr := err.(*os.LinkError)
 		if errno, ok := linkErr.Err.(syscall.Errno); ok && errno == syscall.EXDEV || os.IsExist(err) {
 			err = d.copyFile(source, dest)
-			// If we just moved an uploaded blob, the PurgeUploads loop probably removed it already,
-			// therefore we must check if the source file still exists before trying to delete it
 			if err = os.RemoveAll(source); err != nil {
 				return err
 			}
@@ -313,28 +311,36 @@ func (d *driver) copyFile(src, dst string) (err error) {
 	if err != nil {
 		return err
 	}
-	defer in.Close()
 	// Allocate tmp file with unique name, otherwise multiple processes may write to the same file
 	out, err := ioutil.TempFile(path.Dir(dst), path.Base(dst))
 	if err != nil {
 		return err
 	}
+	defer func() {
+		// In any case, cleanup
+		if cierr := in.Close(); err == nil {
+			err = cierr
+		}
+		if coerr := out.Close(); err == nil {
+			err = coerr
+		}
+		if rmerr := os.RemoveAll(out.Name()); err == nil {
+			err = rmerr
+		}
+	}()
 	if _, err = io.Copy(out, in); err != nil {
 		return err
 	}
 	if err := out.Sync(); err != nil {
 		return err
 	}
-	err = os.Rename(out.Name(), dst)
-
-	if cerr := out.Close(); err == nil {
-		err = cerr
-	}
-	// In any case, we should remove the tmp file if it's still there
-	rerr := os.RemoveAll(out.Name())
-	if err == nil {
-		err = rerr
-	}
+	mverr := os.Rename(out.Name(), dst)
+	defer func() {
+		// If os.Rename passed, consider this function succeeded
+		if mverr == nil {
+			err = nil
+		}
+	}()
 
 	return err
 }
