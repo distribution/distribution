@@ -179,6 +179,12 @@ func (reg *registry) BlobStatter() distribution.BlobStatter {
 	return reg.statter
 }
 
+// Only proxy instances have an upstream. Return "" to indicate that there
+// is no upstream.
+func (reg *registry) Upstream() string {
+	return ""
+}
+
 // repository provides name-scoped access to various services.
 type repository struct {
 	*registry

@@ -175,6 +175,13 @@ func (pr *proxyingRegistry) BlobStatter() distribution.BlobStatter {
 	return pr.embedded.BlobStatter()
 }
 
+// TODO(amidlash): It might be more natural to have the registry return the notary instance.
+// We wouldn't be able to clean up the check in docker/docker however, without breaking
+// docker-content-trust on other distribution instances.
+func (pr *proxyingRegistry) Upstream() string {
+	return pr.remoteURL.String()
+}
+
 // authChallenger encapsulates a request to the upstream to establish credential challenges
 type authChallenger interface {
 	tryEstablishChallenges(context.Context) error
