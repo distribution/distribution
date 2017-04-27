@@ -859,8 +859,11 @@ func (app *App) eventBridge(ctx *Context, r *http.Request) notifications.Listene
 // nameRequired returns true if the route requires a name.
 func (app *App) nameRequired(r *http.Request) bool {
 	route := mux.CurrentRoute(r)
+	if route == nil {
+		return true
+	}
 	routeName := route.GetName()
-	return route == nil || (routeName != v2.RouteNameBase && routeName != v2.RouteNameCatalog)
+	return routeName != v2.RouteNameBase && routeName != v2.RouteNameCatalog
 }
 
 // apiBase implements a simple yes-man for doing overall checks against the
