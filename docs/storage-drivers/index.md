@@ -14,7 +14,7 @@ This storage driver package comes bundled with several drivers:
 
 - [inmemory](inmemory.md): A temporary storage driver using a local inmemory map. This exists solely for reference and testing.
 - [filesystem](filesystem.md): A local storage driver configured to use a directory tree in the local filesystem.
-- [s3](s3.md): A driver storing objects in an Amazon Simple Storage Solution (S3) bucket.
+- [s3](s3.md): A driver storing objects in an Amazon Simple Storage Service (S3) bucket.
 - [azure](azure.md): A driver storing objects in [Microsoft Azure Blob Storage](http://azure.microsoft.com/en-us/services/storage/).
 - [swift](swift.md): A driver storing objects in [Openstack Swift](http://docs.openstack.org/developer/swift/).
 - [oss](oss.md): A driver storing objects in [Aliyun OSS](http://www.aliyun.com/product/oss).
