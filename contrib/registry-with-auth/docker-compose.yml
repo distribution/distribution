@@ -1,0 +1,17 @@
+registry:
+  restart: always
+  image: registry:2
+  ports:
+  environment:
+    REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /var/lib/registry
+  volumes:
+    - ./registry-data:/var/lib/registry
+
+regfront:
+  restart: always
+  build: ./nginx/
+  ports:
+    - 443:443
+  links:
+    - registry:registry
+
