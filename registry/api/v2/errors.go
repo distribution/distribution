@@ -97,7 +97,7 @@ var (
 	// unknown to the registry.
 	ErrorCodeManifestBlobUnknown = errcode.Register(errGroup, errcode.ErrorDescriptor{
 		Value:   "MANIFEST_BLOB_UNKNOWN",
-		Message: "blob unknown to registry",
+		Message: "manifest blob unknown to registry",
 		Description: `This error may be returned when a manifest blob is 
 		unknown to the registry.`,
 		HTTPStatusCode: http.StatusBadRequest,
