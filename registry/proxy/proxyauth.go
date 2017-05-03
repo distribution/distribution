@@ -22,7 +22,7 @@ type credentials struct {
 }
 
 func (c credentials) Basic(u *url.URL) (string, string) {
-	up := c.creds[u.String()]
+	up := c.creds[tokenURL]
 
 	return up.username, up.password
 }
