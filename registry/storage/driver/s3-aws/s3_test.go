@@ -32,6 +32,7 @@ func init() {
 	keyID := os.Getenv("S3_KEY_ID")
 	secure := os.Getenv("S3_SECURE")
 	skipVerify := os.Getenv("S3_SKIP_VERIFY")
+	rootCA := os.Getenv("S3_ROOT_CA")
 	v4Auth := os.Getenv("S3_V4_AUTH")
 	region := os.Getenv("AWS_REGION")
 	objectACL := os.Getenv("S3_OBJECT_ACL")
@@ -85,6 +86,7 @@ func init() {
 			keyID,
 			secureBool,
 			skipVerifyBool,
+			rootCA,
 			v4Bool,
 			minChunkSize,
 			defaultMultipartCopyChunkSize,
