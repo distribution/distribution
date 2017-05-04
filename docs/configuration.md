@@ -223,9 +223,9 @@ notifications:
       disabled: false
       url: https://my.listener.com/event
       headers: <http.Header>
-      timeout: 10s
-      threshold: 5
-      backoff: 20s
+      timeout: 1s
+      threshold: 10
+      backoff: 1s
       ignoredmediatypes:
         - application/octet-stream
 redis:
@@ -816,9 +816,9 @@ notifications:
       disabled: false
       url: https://my.listener.com/event
       headers: <http.Header>
-      timeout: 10s
-      threshold: 5
-      backoff: 20s
+      timeout: 1s
+      threshold: 10
+      backoff: 1s
       ignoredmediatypes:
         - application/octet-stream
 ```
