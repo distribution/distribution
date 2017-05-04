@@ -6,23 +6,17 @@ load helpers
 
 user="testuser"
 password="testpassword"
-email="a@nowhere.com"
 base="hello-world"
 
 @test "Test token server login" {
-	run docker_t login -u $user -p $password -e $email localregistry:5554
-	echo $output
-	[ "$status" -eq 0 ]
-
-	# First line is WARNING about credential save or email deprecation
-	[ "${lines[2]}" = "Login Succeeded" -o "${lines[1]}" = "Login Succeeded" ]
+	login localregistry:5554
 }
 
 @test "Test token server bad login" {
-	run docker_t login -u "testuser" -p "badpassword" -e $email localregistry:5554
+	docker_t_login -u "testuser" -p "badpassword" localregistry:5554
 	[ "$status" -ne 0 ]
 
-	run docker_t login -u "baduser" -p "testpassword" -e $email localregistry:5554
+	docker_t_login -u "baduser" -p "testpassword" localregistry:5554
 	[ "$status" -ne 0 ]
 }
 
@@ -58,10 +52,10 @@ base="hello-world"
 @test "Test oauth token server bad login" {
 	version_check docker "$GOLEM_DIND_VERSION" "1.11.0"
 
-	run docker_t login -u "testuser" -p "badpassword" -e $email localregistry:5557
+	docker_t_login -u "testuser" -p "badpassword" -e $email localregistry:5557
 	[ "$status" -ne 0 ]
 
-	run docker_t login -u "baduser" -p "testpassword" -e $email localregistry:5557
+	docker_t_login -u "baduser" -p "testpassword" -e $email localregistry:5557
 	[ "$status" -ne 0 ]
 }
 

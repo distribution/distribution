@@ -7,12 +7,12 @@ import (
 
 	"github.com/docker/distribution"
 	ctxu "github.com/docker/distribution/context"
-	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/registry/storage"
 	"github.com/gorilla/handlers"
+	"github.com/opencontainers/go-digest"
 )
 
 // blobUploadDispatcher constructs and returns the blob upload handler for the
@@ -211,7 +211,7 @@ func (buh *blobUploadHandler) PutBlobUploadComplete(w http.ResponseWriter, r *ht
 		return
 	}
 
-	dgst, err := digest.ParseDigest(dgstStr)
+	dgst, err := digest.Parse(dgstStr)
 	if err != nil {
 		// no digest? return error, but allow retry.
 		buh.Errors = append(buh.Errors, v2.ErrorCodeDigestInvalid.WithDetail("digest parsing failed"))
@@ -329,12 +329,12 @@ func (buh *blobUploadHandler) blobUploadResponse(w http.ResponseWriter, r *http.
 // successful, the blob is linked into the blob store and 201 Created is
 // returned with the canonical url of the blob.
 func (buh *blobUploadHandler) createBlobMountOption(fromRepo, mountDigest string) (distribution.BlobCreateOption, error) {
-	dgst, err := digest.ParseDigest(mountDigest)
+	dgst, err := digest.Parse(mountDigest)
 	if err != nil {
 		return nil, err
 	}
 
-	ref, err := reference.ParseNamed(fromRepo)
+	ref, err := reference.WithName(fromRepo)
 	if err != nil {
 		return nil, err
 	}

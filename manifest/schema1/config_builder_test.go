@@ -9,9 +9,9 @@ import (
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/libtrust"
+	"github.com/opencontainers/go-digest"
 )
 
 type mockBlobService struct {
@@ -197,9 +197,13 @@ func TestConfigBuilder(t *testing.T) {
 
 	bs := &mockBlobService{descriptors: make(map[digest.Digest]distribution.Descriptor)}
 
-	ref, err := reference.ParseNamed("testrepo:testtag")
+	ref, err := reference.WithName("testrepo")
 	if err != nil {
 		t.Fatalf("could not parse reference: %v", err)
+	}
+	ref, err = reference.WithTag(ref, "testtag")
+	if err != nil {
+		t.Fatalf("could not add tag: %v", err)
 	}
 
 	builder := NewConfigManifestBuilder(bs, pk, ref, []byte(imgJSON))

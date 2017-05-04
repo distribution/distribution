@@ -32,34 +32,43 @@ function basic_auth_version_check() {
 	fi
 }
 
+email="a@nowhere.com"
+
+# docker_t_login calls login with email depending on version
+function docker_t_login() {
+	# Only pass email field pre 1.11, no deprecation warning
+	parse_version "$GOLEM_DIND_VERSION"
+	v=$version
+	parse_version "1.11.0"
+	if [ "$v" -lt "$version" ]; then
+		run docker_t login -e $email $@
+	else
+		run docker_t login $@
+	fi
+}
+
 # login issues a login to docker to the provided server
 # uses user, password, and email variables set outside of function
 # requies bats
 function login() {
 	rm -f /root/.docker/config.json
 
-	# Only pass email field pre 1.11, no deprecation warning
+	docker_t_login -u $user -p $password $1
+	if [ "$status" -ne 0 ]; then
+		echo $output
+	fi
+	[ "$status" -eq 0 ]
+
+	# Handle different deprecation warnings
 	parse_version "$GOLEM_DIND_VERSION"
 	v=$version
 	parse_version "1.11.0"
 	if [ "$v" -lt "$version" ]; then
-		run docker_t login -u $user -p $password -e $email $1
-		if [ "$status" -ne 0 ]; then
-			echo $output
-		fi
-		[ "$status" -eq 0 ]
 		# First line is WARNING about credential save or email deprecation (maybe both)
 		[ "${lines[2]}" = "Login Succeeded" -o "${lines[1]}" = "Login Succeeded" ]
 	else
-		run docker_t login -u $user -p $password $1
-		if [ "$status" -ne 0 ]; then
-			echo $output
-		fi
-		echo $output
-		[ "$status" -eq 0 ]
 		[ "${lines[0]}" = "Login Succeeded" ]
 	fi
-
 
 }
 
@@ -109,7 +118,7 @@ function docker_t() {
 	docker exec dockerdaemon docker $@
 }
 
-# build reates a new docker image id from another image
+# build creates a new docker image id from another image
 function build() {
 	docker exec -i dockerdaemon docker build --no-cache -t $1 - <<DOCKERFILE
 FROM $2

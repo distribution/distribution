@@ -151,7 +151,7 @@ func (eq *eventQueue) Write(events ...Event) error {
 	return nil
 }
 
-// Close shutsdown the event queue, flushing
+// Close shuts down the event queue, flushing
 func (eq *eventQueue) Close() error {
 	eq.mu.Lock()
 	defer eq.mu.Unlock()

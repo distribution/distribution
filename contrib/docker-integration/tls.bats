@@ -12,7 +12,6 @@ image="${base}:latest"
 # Login information, should match values in nginx/test.passwd
 user=${TEST_USER:-"testuser"}
 password=${TEST_PASSWORD:-"passpassword"}
-email="distribution@docker.com"
 
 function setup() {
 	tempImage $image

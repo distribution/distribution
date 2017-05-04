@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
+	"github.com/opencontainers/go-digest"
 )
 
 func TestSimpleRead(t *testing.T) {
@@ -41,11 +41,7 @@ func TestSimpleRead(t *testing.T) {
 		t.Fatalf("error allocating file reader: %v", err)
 	}
 
-	verifier, err := digest.NewDigestVerifier(dgst)
-	if err != nil {
-		t.Fatalf("error getting digest verifier: %s", err)
-	}
-
+	verifier := dgst.Verifier()
 	io.Copy(verifier, fr)
 
 	if !verifier.Verified() {

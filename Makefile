@@ -35,7 +35,7 @@ PKGS=$(shell go list -tags "${DOCKER_BUILDTAGS}" ./... | grep -v ^github.com/doc
 
 # Resolving binary dependencies for specific targets
 GOLINT=$(shell which golint || echo '')
-GODEP=$(shell which godep || echo '')
+VNDR=$(shell which vndr || echo '')
 
 ${PREFIX}/bin/registry: $(GOFILES)
 	@echo "+ $@"
@@ -86,24 +86,14 @@ clean:
 	@echo "+ $@"
 	@rm -rf "${PREFIX}/bin/registry" "${PREFIX}/bin/digest" "${PREFIX}/bin/registry-api-descriptor-template"
 
-dep-save:
+dep-validate:
 	@echo "+ $@"
-	$(if $(GODEP), , \
-		$(error Please install godep: go get github.com/tools/godep))
-	@$(GODEP) save $(PKGS)
-
-dep-restore:
-	@echo "+ $@"
-	$(if $(GODEP), , \
-		$(error Please install godep: go get github.com/tools/godep))
-	@$(GODEP) restore -v
-
-dep-validate: dep-restore
-	@echo "+ $@"
+	$(if $(VNDR), , \
+		$(error Please install vndr: go get github.com/lk4d4/vndr))
 	@rm -Rf .vendor.bak
 	@mv vendor .vendor.bak
-	@rm -Rf Godeps
-	@$(GODEP) save ./...
+	@$(VNDR)
 	@test -z "$$(diff -r vendor .vendor.bak 2>&1 | tee /dev/stderr)" || \
-		(echo >&2 "+ borked dependencies! what you have in Godeps/Godeps.json does not match with what you have in vendor" && false)
-	@rm -Rf .vendor.bak
+		(echo >&2 "+ inconsistent dependencies! what you have in vendor.conf does not match with what you have in vendor" && false)
+	@rm -Rf vendor
+	@mv .vendor.bak vendor

@@ -5,10 +5,10 @@ import (
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/cache"
 	"github.com/garyburd/redigo/redis"
+	"github.com/opencontainers/go-digest"
 )
 
 // redisBlobStatService provides an implementation of
@@ -41,7 +41,7 @@ func NewRedisBlobDescriptorCacheProvider(pool *redis.Pool) cache.BlobDescriptorC
 
 // RepositoryScoped returns the scoped cache.
 func (rbds *redisBlobDescriptorService) RepositoryScoped(repo string) (distribution.BlobDescriptorService, error) {
-	if _, err := reference.ParseNamed(repo); err != nil {
+	if _, err := reference.ParseNormalizedNamed(repo); err != nil {
 		return nil, err
 	}
 

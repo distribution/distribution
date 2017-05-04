@@ -100,7 +100,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	app.register(v2.RouteNameBase, func(ctx *Context, r *http.Request) http.Handler {
 		return http.HandlerFunc(apiBase)
 	})
-	app.register(v2.RouteNameManifest, imageManifestDispatcher)
+	app.register(v2.RouteNameManifest, manifestDispatcher)
 	app.register(v2.RouteNameCatalog, catalogDispatcher)
 	app.register(v2.RouteNameTags, tagsDispatcher)
 	app.register(v2.RouteNameBlob, blobDispatcher)
@@ -345,7 +345,7 @@ func (app *App) RegisterHealthChecks(healthRegistries ...*health.Registry) {
 		}
 
 		storageDriverCheck := func() error {
-			_, err := app.driver.List(app, "/") // "/" should always exist
+			_, err := app.driver.Stat(app, "/") // "/" should always exist
 			return err                          // any error will be treated as failure
 		}
 
@@ -596,24 +596,19 @@ func (app *App) configureSecret(configuration *configuration.Configuration) {
 func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close() // ensure that request body is always closed.
 
-	// Instantiate an http context here so we can track the error codes
-	// returned by the request router.
-	ctx := defaultContextManager.context(app, w, r)
+	// Prepare the context with our own little decorations.
+	ctx := r.Context()
+	ctx = ctxu.WithRequest(ctx, r)
+	ctx, w = ctxu.WithResponseWriter(ctx, w)
+	ctx = ctxu.WithLogger(ctx, ctxu.GetRequestLogger(ctx))
+	r = r.WithContext(ctx)
 
 	defer func() {
 		status, ok := ctx.Value("http.response.status").(int)
 		if ok && status >= 200 && status <= 399 {
-			ctxu.GetResponseLogger(ctx).Infof("response completed")
+			ctxu.GetResponseLogger(r.Context()).Infof("response completed")
 		}
 	}()
-	defer defaultContextManager.release(ctx)
-
-	// NOTE(stevvooe): Total hack to get instrumented responsewriter from context.
-	var err error
-	w, err = ctxu.GetResponseWriter(ctx)
-	if err != nil {
-		ctxu.GetLogger(ctx).Warnf("response writer not found in context")
-	}
 
 	// Set a header with the Docker Distribution API Version for all responses.
 	w.Header().Add("Docker-Distribution-API-Version", "registry/2.0")
@@ -649,8 +644,11 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 		// Add username to request logging
 		context.Context = ctxu.WithLogger(context.Context, ctxu.GetLogger(context.Context, auth.UserNameKey))
 
+		// sync up context on the request.
+		r = r.WithContext(context)
+
 		if app.nameRequired(r) {
-			nameRef, err := reference.ParseNamed(getName(context))
+			nameRef, err := reference.WithName(getName(context))
 			if err != nil {
 				ctxu.GetLogger(context).Errorf("error parsing reference from context: %v", err)
 				context.Errors = append(context.Errors, distribution.ErrRepositoryNameInvalid{
@@ -756,7 +754,7 @@ func (app *App) logError(context context.Context, errors errcode.Errors) {
 // context constructs the context object for the application. This only be
 // called once per request.
 func (app *App) context(w http.ResponseWriter, r *http.Request) *Context {
-	ctx := defaultContextManager.context(app, w, r)
+	ctx := r.Context()
 	ctx = ctxu.WithVars(ctx, r)
 	ctx = ctxu.WithLogger(ctx, ctxu.GetLogger(ctx,
 		"vars.name",
@@ -861,8 +859,11 @@ func (app *App) eventBridge(ctx *Context, r *http.Request) notifications.Listene
 // nameRequired returns true if the route requires a name.
 func (app *App) nameRequired(r *http.Request) bool {
 	route := mux.CurrentRoute(r)
+	if route == nil {
+		return true
+	}
 	routeName := route.GetName()
-	return route == nil || (routeName != v2.RouteNameBase && routeName != v2.RouteNameCatalog)
+	return routeName != v2.RouteNameBase && routeName != v2.RouteNameCatalog
 }
 
 // apiBase implements a simple yes-man for doing overall checks against the
@@ -901,12 +902,10 @@ func appendAccessRecords(records []auth.Access, method string, repo string) []au
 				Action:   "push",
 			})
 	case "DELETE":
-		// DELETE access requires full admin rights, which is represented
-		// as "*". This may not be ideal.
 		records = append(records,
 			auth.Access{
 				Resource: resource,
-				Action:   "*",
+				Action:   "delete",
 			})
 	}
 	return records
