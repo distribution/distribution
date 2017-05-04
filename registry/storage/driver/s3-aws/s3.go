@@ -14,6 +14,7 @@ package s3
 import (
 	"bytes"
 	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -91,6 +92,7 @@ type DriverParameters struct {
 	KeyID                       string
 	Secure                      bool
 	SkipVerify                  bool
+	RootCA                      string
 	V4Auth                      bool
 	ChunkSize                   int64
 	MultipartCopyChunkSize      int64
@@ -265,6 +267,11 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		return nil, fmt.Errorf("The skipVerify parameter should be a boolean")
 	}
 
+	rootCA := parameters["rootca"]
+	if rootCA == nil {
+		rootCA = ""
+	}
+
 	v4Bool := true
 	v4auth := parameters["v4auth"]
 	switch v4auth := v4auth.(type) {
@@ -360,6 +367,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(keyID),
 		secureBool,
 		skipVerifyBool,
+		fmt.Sprint(rootCA),
 		v4Bool,
 		chunkSize,
 		multipartCopyChunkSize,
@@ -433,24 +441,7 @@ func New(params DriverParameters) (*Driver, error) {
 	awsConfig.WithCredentials(creds)
 	awsConfig.WithRegion(params.Region)
 	awsConfig.WithDisableSSL(!params.Secure)
-
-	if params.UserAgent != "" || params.SkipVerify {
-		httpTransport := http.DefaultTransport
-		if params.SkipVerify {
-			httpTransport = &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			}
-		}
-		if params.UserAgent != "" {
-			awsConfig.WithHTTPClient(&http.Client{
-				Transport: transport.NewTransport(httpTransport, transport.NewHeaderRequestModifier(http.Header{http.CanonicalHeaderKey("User-Agent"): []string{params.UserAgent}})),
-			})
-		} else {
-			awsConfig.WithHTTPClient(&http.Client{
-				Transport: transport.NewTransport(httpTransport),
-			})
-		}
-	}
+	awsConfig.WithHTTPClient(createHTTPClient(params.UserAgent, params.RootCA, params.SkipVerify))
 
 	s3obj := s3.New(session.New(awsConfig))
 
@@ -1221,4 +1212,36 @@ func (w *writer) flushPart() error {
 	w.readyPart = w.pendingPart
 	w.pendingPart = nil
 	return nil
+}
+
+func createHTTPClient(userAgent, rootCA string, skipVerify bool) *http.Client {
+	if userAgent == "" && rootCA == "" && skipVerify == false {
+		return nil
+	}
+
+	httpTransport := http.DefaultTransport
+
+	if skipVerify || rootCA != "" {
+		tlsConfig := &tls.Config{}
+		if skipVerify {
+			tlsConfig.InsecureSkipVerify = true
+		}
+		if rootCA != "" {
+			caCertPool := x509.NewCertPool()
+			caCertPool.AppendCertsFromPEM([]byte(rootCA))
+			tlsConfig.RootCAs = caCertPool
+		}
+
+		httpTransport = &http.Transport{TLSClientConfig: tlsConfig}
+	}
+
+	if userAgent == "" {
+		return &http.Client{
+			Transport: transport.NewTransport(httpTransport),
+		}
+	}
+
+	return &http.Client{
+		Transport: transport.NewTransport(httpTransport, transport.NewHeaderRequestModifier(http.Header{http.CanonicalHeaderKey("User-Agent"): []string{userAgent}})),
+	}
 }
