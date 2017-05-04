@@ -552,7 +552,7 @@ The `auth` option is **optional**. Possible auth providers include:
 
 - [`silly`](#silly)
 - [`token`](#token)
-- [`htpasswd`](#token)
+- [`htpasswd`](#htpasswd)
 
 You can configure only one authentication provider.
 
