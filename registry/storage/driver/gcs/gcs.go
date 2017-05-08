@@ -58,8 +58,8 @@ const (
 
 var rangeHeader = regexp.MustCompile(`^bytes=([0-9])+-([0-9]+)$`)
 
-// driverParameters is a struct that encapsulates all of the driver parameters after all values have been set
-type driverParameters struct {
+// DriverParameters is a struct that encapsulates all of the driver parameters after all values have been set. Create a new one of these with NewDriverParameters
+type DriverParameters struct {
 	bucket        string
 	config        *jwt.Config
 	email         string
@@ -67,6 +67,42 @@ type driverParameters struct {
 	client        *http.Client
 	rootDirectory string
 	chunkSize     int
+}
+
+// NewDriverParameters creates and fills in a new DriverParamters struct with the values given. It expects that jsonKey is a byte slice representing the JWT key for the GCS account. If it is specified as nil, this function tries to use the default token source as the token
+func NewDriverParameters(bucket string, rootDir string, jsonKey []byte) (*DriverParameters, error) {
+	params := new(DriverParameters)
+	params.bucket = bucket
+	params.rootDirectory = rootDir
+
+	jwtConf := new(jwt.Config)
+	var ts oauth2.TokenSource
+	var key struct {
+		ProjectID string `json:"project_id"`
+	}
+
+	if jsonKey != nil {
+		jwtConf, err = google.JWTConfigFromJSON(jsonKey, storage.ScopeFullControl)
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(jsonKey, &key); err != nil {
+			return nil, err
+		}
+		ts = jwtConf.TokenSource(context.Background())
+	} else {
+		ts, err = google.DefaultTokenSource(context.Background(), storage.ScopeFullControl)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	params.email = jwtConf.Email
+	params.privateKey = jwtConf.PrivateKey
+	params.client = oauth2.NewClient(context.Background(), ts)
+	params.projectID = fmt.Sprint(key.ProjectID)
+
+	return params, nil
 }
 
 func init() {
@@ -164,7 +200,7 @@ func FromParameters(parameters map[string]interface{}) (storagedriver.StorageDri
 }
 
 // New constructs a new driver
-func New(params driverParameters) (storagedriver.StorageDriver, error) {
+func New(params DriverParameters) (storagedriver.StorageDriver, error) {
 	rootDirectory := strings.Trim(params.rootDirectory, "/")
 	if rootDirectory != "" {
 		rootDirectory += "/"
