@@ -202,6 +202,7 @@ type CreateOptions struct {
 		// Blob access check will be skipped if set.
 		Stat *Descriptor
 	}
+	TargetMediaType string
 }
 
 // BlobWriter provides a handle for inserting data into a blob store.

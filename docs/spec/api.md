@@ -3359,6 +3359,7 @@ POST /v2/<name>/blobs/uploads/?digest=<digest>
 Host: <registry host>
 Authorization: <scheme> <token>
 Content-Length: <length of blob>
+Docker-Target-Media-Type: <media-type>
 Content-Type: application/octect-stream
 
 <binary data>
@@ -3374,6 +3375,7 @@ The following parameters should be specified on the request:
 |`Host`|header|Standard HTTP Host Header. Should be set to the registry host.|
 |`Authorization`|header|An RFC7235 compliant authorization header.|
 |`Content-Length`|header||
+|`Docker-Target-Media-Type`|header|The media type of the target configuration of the manifest.|
 |`name`|path|Name of the target repository.|
 |`digest`|query|Digest of uploaded blob. If present, the upload will be completed, in a single request, with contents of the request body as the resulting blob.|
 
@@ -3436,6 +3438,24 @@ The error codes that may be included in the response body are enumerated below:
 |Code|Message|Description|
 |----|-------|-----------|
 | `UNSUPPORTED` | The operation is unsupported. | The operation was unsupported due to a missing implementation or invalid set of parameters. |
+
+
+
+###### On Failure: Mismatched target media type
+
+```
+400 Bad Request
+```
+
+
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `BLOB_UPLOAD_INVALID` | blob upload invalid | The blob upload encountered an error and can no longer proceed. |
 
 
 
