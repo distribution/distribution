@@ -5,11 +5,9 @@ title: Test an insecure registry
 ---
 
 While it's highly recommended to secure your registry using a TLS certificate
-issued by a known CA, you may alternatively decide to use self-signed
-certificates, or even use your registry over plain http.
-
-You have to understand the downsides in doing so, and the extra burden in
-configuration.
+issued by a known CA, you can choose to use self-signed certificates, or use
+your registry over an unencrypted HTTP connection. Either of these choices
+involves security trade-offs and additional configuration steps.
 
 ## Deploying a plain HTTP registry
 
@@ -17,31 +15,40 @@ configuration.
 > it's not possible to use an insecure registry with basic authentication.
 {:.warning}
 
-This basically tells Docker to entirely disregard security for your registry.
-While this is relatively easy to configure the daemon in this way, it is
-**very** insecure. It does expose your registry to trivial MITM. Only use this
-solution for isolated testing or in a tightly controlled, air-gapped
-environment.
+This procedure configures Docker to entirely disregard security for your
+registry. This is **very** insecure and is not recommended. It exposes your
+registry to trivial man-in-the-middle (MITM) attacks. Only use this solution for
+isolated testing or in a tightly controlled, air-gapped environment.
 
-1. Open the `/etc/default/docker` file or `/etc/sysconfig/docker` for editing.
+1.  Edit the `daemon.json` file, whose default location is
+    `/etc/docker/daemon.json` on Linux or
+    `C:\ProgramData\docker\config\daemon.json` on Windows Server. If you use
+    Docker for Mac or Docker for Windows, click the Docker icon, choose
+    **Preferences**, and choose +**Daemon**.
 
-    Depending on your operating system, your Engine daemon start options.
+    If the `daemon.json` file does not exist, create it. Assuming there are no
+    other settings in the file, it should have the following contents:
 
-2. Edit (or add) the `DOCKER_OPTS` line and add the `--insecure-registry` flag.
+    ```json
+    {
+      "insecure-registries" : ["myregistrydomain.com:5000"]
+    }
+    ```
 
-    This flag takes the URL of your registry, for example.
+    Substitute the address of your insecure registry for the one in the example.
 
-    `DOCKER_OPTS="--insecure-registry myregistrydomain.com:5000"`
+    With insecure registries enabled, Docker goes through the following steps:
 
-3. Close and save the configuration file.
+    - First, try using HTTPS.
+      - If HTTPS is available but the certificate is invalid, ignore the error
+        about the certificate.
+    - If HTTPS is not available, fall back to HTTP.
 
-4. Restart your Docker daemon
 
-    The command you use to restart the daemon depends on your operating system.
-    For example, on Ubuntu, this is usually the `service docker stop` and `service
-    docker start` command.
+2. Restart Docker for the changes to take effect.
 
-5. Repeat this configuration on every Engine host that wants to access your registry.
+
+Repeat these steps on every Engine host that wants to access your registry.
 
 
 ## Using self-signed certificates
@@ -50,23 +57,51 @@ environment.
 > using this along with basic authentication requires to **also** trust the certificate into the OS cert store for some versions of docker (see below)
 {:.warning}
 
-This is more secure than the insecure registry solution.  You must configure every docker daemon that wants to access your registry
+This is more secure than the insecure registry solution.
 
-1. Generate your own certificate:
+1.  Generate your own certificate:
 
-        mkdir -p certs && openssl req \
-          -newkey rsa:4096 -nodes -sha256 -keyout certs/domain.key \
-          -x509 -days 365 -out certs/domain.crt
+    ```bash
+    $ mkdir -p certs
 
-2. Be sure to use the name `myregistrydomain.com` as a CN.
+    $ openssl req \
+      -newkey rsa:4096 -nodes -sha256 -keyout certs/domain.key \
+      -x509 -days 365 -out certs/domain.crt
+    ```
 
-3. Use the result to [start your registry with TLS enabled](./deploying.md#get-a-certificate)
+    Be sure to use the name `myregistrydomain.com` as a CN.
 
-4. Instruct every docker daemon to trust that certificate.
+2.  Use the result to [start your registry with TLS enabled](./deploying.md#get-a-certificate)
 
-    This is done by copying the `domain.crt` file to `/etc/docker/certs.d/myregistrydomain.com:5000/ca.crt`.
+3.  Instruct every Docker daemon to trust that certificate. The way to do this
+    depends on your OS.
 
-5. Don't forget to restart the Engine daemon.
+    - **Linux**: Copy the `domain.crt` file to
+      `/etc/docker/certs.d/myregistrydomain.com:5000/ca.crt` on every Docker
+      host. You do not need to restart Docker.
+
+    - **Windows Server**:
+
+      1.  Open Windows Explorer, right-click the `domain.crt`
+          file, and choose Install certificate. When prompted, select the following
+          options:
+
+          | Store location                                | local machine |
+          | Place all certificates in the following store | selected      |
+
+      2.  Click **Browser** and select **Trusted Root Certificate Authorities**.
+
+      3.  Click **Finish**. Restart Docker.
+
+
+    - **Docker for Mac**: Follow the instructions on
+      [Adding custom CA certificates](/docker-for-mac/faqs.md#how-do-i-add-custom-ca-certificates){: target="_blank" class="_"}.
+      Restart Docker.
+
+    - **Docker for Windows**: Follow the instructions on
+      [Adding custom CA certificates](/docker-for-windows/faqs.md#how-do-i-add-custom-ca-certificates){: target="_blank" class="_"}.
+      Restart Docker.
+
 
 ## Troubleshooting insecure registry
 
