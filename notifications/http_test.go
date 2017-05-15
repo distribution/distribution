@@ -10,10 +10,10 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/docker/distribution/manifest/schema1"
+	"strings"
 )
 
 // TestHTTPSink mocks out an http endpoint and notifies it under a couple of
@@ -70,7 +70,7 @@ func TestHTTPSink(t *testing.T) {
 	// first make sure that the default transport gives x509 untrusted cert error
 	events := []Event{}
 	err := sink.Write(events...)
-	if !strings.Contains(err.Error(), "x509") {
+	if !strings.Contains(err.Error(), "x509") && !strings.Contains(err.Error(), "unknown ca") {
 		t.Fatal("TLS server with default transport should give unknown CA error")
 	}
 	if err := sink.Close(); err != nil {
