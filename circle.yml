@@ -8,7 +8,7 @@ machine:
 
   post:
   # go
-    - gvm install go1.7 --prefer-binary --name=stable
+    - gvm install go1.8 --prefer-binary --name=stable
 
   environment:
   # Convenient shortcuts to "common" locations
@@ -50,7 +50,9 @@ test:
     - gvm use stable && go version
 
   # Ensure validation of dependencies
-    - gvm use stable && if test -n "`git diff --stat=1000 master | grep -E \"^[[:space:]]*vendor\"`"; then make dep-validate; fi:
+    - git fetch origin:
+        pwd: $BASE_STABLE
+    - gvm use stable && if test -n "`git diff --stat=1000 origin/master | grep -E \"^[[:space:]]*vendor\"`"; then make dep-validate; fi:
         pwd: $BASE_STABLE
 
   # First thing: build everything. This will catch compile errors, and it's

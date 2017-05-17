@@ -555,11 +555,6 @@ func parseError(path string, err error) error {
 	return err
 }
 
-func hasCode(err error, code string) bool {
-	s3err, ok := err.(*aws.Error)
-	return ok && s3err.Code == code
-}
-
 func (d *driver) getOptions() s3.Options {
 	return s3.Options{
 		SSE:          d.Encrypt,

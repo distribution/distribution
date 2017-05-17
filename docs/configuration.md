@@ -223,9 +223,9 @@ notifications:
       disabled: false
       url: https://my.listener.com/event
       headers: <http.Header>
-      timeout: 500
-      threshold: 5
-      backoff: 1000
+      timeout: 1s
+      threshold: 10
+      backoff: 1s
       ignoredmediatypes:
         - application/octet-stream
 redis:
@@ -552,7 +552,7 @@ The `auth` option is **optional**. Possible auth providers include:
 
 - [`silly`](#silly)
 - [`token`](#token)
-- [`htpasswd`](#token)
+- [`htpasswd`](#htpasswd)
 
 You can configure only one authentication provider.
 
@@ -816,9 +816,9 @@ notifications:
       disabled: false
       url: https://my.listener.com/event
       headers: <http.Header>
-      timeout: 500
-      threshold: 5
-      backoff: 1000
+      timeout: 1s
+      threshold: 10
+      backoff: 1s
       ignoredmediatypes:
         - application/octet-stream
 ```
@@ -947,7 +947,7 @@ a file.
 | Parameter | Required | Description                                           |
 |-----------|----------|-------------------------------------------------------|
 | `file`    | yes      | The path to check for existence of a file.            |
-| `interval`| no       | How long to wait before repeating the check. A positive integer and an optional suffix indicating the unit of time. The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. Defaults to `10s` if the value is omitted. |
+| `interval`| no       | How long to wait before repeating the check. A positive integer and an optional suffix indicating the unit of time. The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. Defaults to `10s` if the value is omitted. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
 
 ### `http`
 
@@ -1109,7 +1109,7 @@ middleware:
       baseurl: http://d111111abcdef8.cloudfront.net
       privatekey: /path/to/asecret.pem
       keypairid: asecret
-      duration: 60
+      duration: 60s
 ```
 
 See the configuration reference for [Cloudfront](#cloudfront) for more
