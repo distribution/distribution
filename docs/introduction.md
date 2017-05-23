@@ -15,7 +15,7 @@ Users interact with a registry by using docker push and pull commands.
 
 Storage itself is delegated to drivers. The default storage driver is the local
 posix filesystem, which is suitable for development or small deployments.
-Additional cloud-based storage drivers like S3, Microsoft Azure, OpenStack Swift
+Additional cloud-based storage drivers like S3, Microsoft Azure, OpenStack Swift,
 and Aliyun OSS are also supported. People looking into using other storage
 backends may do so by writing their own driver implementing the [Storage
 API](storage-drivers/index.md).
