@@ -378,7 +378,7 @@ func (d *driver) Writer(ctx context.Context, path string, append bool) (storaged
 // Stat retrieves the FileInfo for the given path, including the current size
 // in bytes and the creation time.
 func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
-	listResponse, err := d.Bucket.List(d.s3Path(path), "", "", 1)
+	listResponse, err := d.Bucket.List(d.s3Path(path), "/", "", 1)
 	if err != nil {
 		return nil, err
 	}
