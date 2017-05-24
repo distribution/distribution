@@ -83,7 +83,7 @@ A certificate issuer may supply you with an *intermediate* certificate. In this 
 
 ### Let's Encrypt
 
-The registry supports using Let's Encrypt to automatically obtain a browser-trusted certificate.  For more
+The registry supports using Let's Encrypt to automatically obtain a browser-trusted certificate. For more
 information on Let's Encrypt, see [https://letsencrypt.org/how-it-works/](https://letsencrypt.org/how-it-works/) and the relevant section of the [registry configuration](configuration.md#letsencrypt).
 
 ### Alternatives
@@ -124,7 +124,7 @@ and fallback to version 1 registries, if necessary. Confirming this is setup
 correctly can help avoid problems with fallback.
 
 In the same train of thought, you must make sure you are properly sending the
-`X-Forwarded-Proto`, `X-Forwarded-For` and `Host` headers to their "client-side"
+`X-Forwarded-Proto`, `X-Forwarded-For`, and `Host` headers to their "client-side"
 values. Failure to do so usually makes the registry issue redirects to internal
 hostnames or downgrading from https to http.
 
