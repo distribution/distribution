@@ -330,7 +330,7 @@ type Health struct {
 type v0_1Configuration Configuration
 
 // UnmarshalYAML implements the yaml.Unmarshaler interface
-// Unmarshals a string of the form X.Y into a Version, validating that X and Y can represent uints
+// Unmarshals a string of the form X.Y into a Version, validating that X and Y can represent unsigned integers
 func (version *Version) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var versionString string
 	err := unmarshal(&versionString)
