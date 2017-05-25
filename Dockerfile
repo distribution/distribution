@@ -13,6 +13,9 @@ WORKDIR $DISTRIBUTION_DIR
 COPY . $DISTRIBUTION_DIR
 COPY cmd/registry/config-dev.yml /etc/docker/registry/config.yml
 
+ARG GOOS=linux
+ARG GOARCH=amd64
+
 RUN make PREFIX=/go clean binaries
 
 VOLUME ["/var/lib/registry"]
