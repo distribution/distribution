@@ -45,7 +45,7 @@ If the default configuration is not a sound basis for your usage, or if you are
 having issues overriding keys from the environment, you can specify an alternate
 YAML configuration file by mounting it as a volume in the container.
 
-Typically, create a new configuration file from scratch,named `config.yml`, then
+Typically, create a new configuration file from scratch, named `config.yml`, then
 specify it in the `docker run` command:
 
 ```bash
@@ -326,7 +326,7 @@ Refer to `loglevel` to configure the level of messages printed.
 loglevel: debug
 ```
 
-Permitted values are `error`, `warn`, `info` and `debug`. The default is
+Permitted values are `error`, `warn`, `info`, and `debug`. The default is
 `info`.
 
 ## `storage`
@@ -440,7 +440,7 @@ be set.
 | Parameter  | Required | Description                                                                                        |
 |------------|----------|----------------------------------------------------------------------------------------------------|
 | `enabled`  | yes      | Set to `true` to enable upload purging. Defaults to `true`.                                        |
-| `age`      | yes      | Upload directories which are older than this age will be deleted.Defaults to `168h` (1 week).      |
+| `age`      | yes      | Upload directories which are older than this age will be deleted. Defaults to `168h` (1 week).      |
 | `interval` | yes      | The interval between upload directory purging. Defaults to `24h`.                                  |
 | `dryrun`   | yes      | Set `dryrun` to `true` to obtain a summary of what directories will be deleted. Defaults to `false`.|
 
@@ -452,7 +452,7 @@ fraction and a unit suffix. Some examples: `45m`, `2h10m`, `168h`.
 If the `readonly` section under `maintenance` has `enabled` set to `true`,
 clients will not be allowed to write to the registry. This mode is useful to
 temporarily prevent writes to the backend storage so a garbage collection pass
-can be run.  Before running garbage collection, the registry should be
+can be run. Before running garbage collection, the registry should be
 restarted with readonly's `enabled` set to true. After the garbage collection
 pass finishes, the registry may be restarted again, this time with `readonly`
 removed from the configuration (or set to false).
@@ -583,7 +583,7 @@ object it is wrapping. For instance, a registry middleware must implement the
 `distribution.Repository`, and a storage middleware must implement
 `driver.StorageDriver`.
 
-This is an example configuration of the `cloudfront`  middleware, a storage
+This is an example configuration of the `cloudfront` middleware, a storage
 middleware:
 
 ```none
@@ -705,7 +705,7 @@ registry.
 | `prefix`  | no       | If the server does not run at the root path, set this to the value of the prefix. The root path is the section before `v2`. It requires both preceding and trailing slashes, such as in the example `/path/`. |
 | `host`    | no       | A fully-qualified URL for an externally-reachable address for the registry. If present, it is used when creating generated URLs. Otherwise, these URLs are derived from client requests. |
 | `secret`  | no       | A random piece of data used to sign state that may be stored with the client to protect against tampering. For production environments you should generate a random piece of data using a cryptographically secure random generator. If you omit the secret, the registry will automatically generate a secret when it starts. **If you are building a cluster of registries behind a load balancer, you MUST ensure the secret is the same for all registries.**|
-| `relativeurls`| no    | If `true`,  the registry returns relative URLs in Location headers. The client is responsible for resolving the correct URL. **This option is not compatible with Docker 1.7 and earlier.**|
+| `relativeurls`| no    | If `true`, the registry returns relative URLs in Location headers. The client is responsible for resolving the correct URL. **This option is not compatible with Docker 1.7 and earlier.**|
 
 
 ### `tls`
@@ -944,7 +944,7 @@ proxy:
 ```
 
 The `proxy` structure allows a registry to be configured as a pull-through cache
-to Docker Hub.  See
+to Docker Hub. See
 [mirror](https://github.com/docker/docker.github.io/tree/master/registry/recipes/mirror.md)
 for more information. Pushing to a registry configured as a pull-through cache
 is unsupported.
@@ -1034,6 +1034,6 @@ middleware:
 See the configuration reference for [Cloudfront](#cloudfront) for more
 information about configuration options.
 
-> **Note**: Cloudfront keys exist separately from other AWS keys.  See
+> **Note**: Cloudfront keys exist separately from other AWS keys. See
 > [the documentation on AWS credentials](http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html)
 > for more information.
