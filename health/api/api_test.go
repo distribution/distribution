@@ -43,7 +43,7 @@ func TestGETUpHandlerDoesNotChangeStatus(t *testing.T) {
 }
 
 // TestPOSTDownHandlerChangeStatus ensures the endpoint /debug/health/down changes
-// the status code of the response to 503
+// the status code of the response to 200
 // This test is order dependent, and should come before TestPOSTUpHandlerChangeStatus
 func TestPOSTDownHandlerChangeStatus(t *testing.T) {
 	recorder := httptest.NewRecorder()
