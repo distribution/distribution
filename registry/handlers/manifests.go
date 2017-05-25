@@ -15,6 +15,7 @@ import (
 	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/registry/auth"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/gorilla/handlers"
 	"github.com/opencontainers/go-digest"
 )
@@ -431,11 +432,40 @@ func (imh *manifestHandler) applyResourcePolicy(manifest distribution.Manifest) 
 
 // DeleteManifest removes the manifest with the given digest from the registry.
 func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Request) {
-	ctxu.GetLogger(imh).Debug("DeleteImageManifest")
+	ctxu.GetLoggerWithFields(imh,
+		map[interface{}]interface{}{
+			"tag":    imh.Tag,
+			"digest": imh.Digest,
+		}, "tag", "digest").Debugf("DeleteManifest")
 
 	manifests, err := imh.Repository.Manifests(imh)
 	if err != nil {
 		imh.Errors = append(imh.Errors, err)
+		return
+	}
+
+	if imh.Tag != "" {
+		// Proxy supports Untag so it has to be disabled here.
+		if imh.App.isCache {
+			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnsupported)
+			return
+		}
+
+		tagService := imh.Repository.Tags(imh)
+		err := tagService.Untag(imh.Context, imh.Tag)
+		if err != nil {
+			switch err.(type) {
+			case distribution.ErrTagUnknown:
+			case storagedriver.PathNotFoundError:
+				imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown)
+				return
+			default:
+				imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown)
+				return
+			}
+		}
+
+		w.WriteHeader(http.StatusAccepted)
 		return
 	}
 
