@@ -171,7 +171,7 @@ func (t *Token) Verify(verifyOpts VerifyOptions) error {
 	signingKey, err := t.VerifySigningKey(verifyOpts)
 	if err != nil {
 		log.Info(err)
-		return ErrInvalidToken
+		return err
 	}
 
 	// Finally, verify the signature of the token using the key which signed it.
