@@ -46,10 +46,12 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 			return fmt.Errorf("unable to convert ManifestService into ManifestEnumerator")
 		}
 
+		layerSet := make(map[digest.Digest]struct{})
 		err = manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
 			// Mark the manifest's blob
 			emit("%s: marking manifest %s ", repoName, dgst)
 			markSet[dgst] = struct{}{}
+			layerSet[dgst] = struct{}{}
 
 			manifest, err := manifestService.Get(ctx, dgst)
 			if err != nil {
@@ -59,11 +61,34 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 			descriptors := manifest.References()
 			for _, descriptor := range descriptors {
 				markSet[descriptor.Digest] = struct{}{}
+				layerSet[descriptor.Digest] = struct{}{}
 				emit("%s: marking blob %s", repoName, descriptor.Digest)
 			}
 
 			return nil
 		})
+
+		blobService := repository.Blobs(ctx)
+		layerEnumerator, ok := blobService.(distribution.ManifestEnumerator)
+		if !ok {
+			return fmt.Errorf("failed to construct manifest service: %v", err)
+		}
+
+		deleteLayerSet := make(map[digest.Digest]struct{})
+		err = layerEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
+			if _, ok := layerSet[dgst]; !ok {
+				deleteLayerSet[dgst] = struct{}{}
+			}
+			return nil
+		})
+		// Delete layers
+		vacuum := NewVacuum(ctx, storageDriver)
+		for dgst := range deleteLayerSet {
+			err = vacuum.RemoveLayers(repoName, dgst)
+			if err != nil {
+				return fmt.Errorf("failed to delete layers : %v", err)
+			}
+		}
 
 		if err != nil {
 			// In certain situations such as unfinished uploads, deleting all

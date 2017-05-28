@@ -231,7 +231,7 @@ func (lbs *linkedBlobStore) Delete(ctx context.Context, dgst digest.Digest) erro
 	return nil
 }
 
-func (lbs *linkedBlobStore) Enumerate(ctx context.Context, ingestor func(digest.Digest) error) error {
+func (lbs *linkedBlobStore) Enumerate(ctx context.Context, ingester func(digest.Digest) error) error {
 	rootPath, err := pathFor(lbs.linkDirectoryPathSpec)
 	if err != nil {
 		return err
@@ -265,7 +265,7 @@ func (lbs *linkedBlobStore) Enumerate(ctx context.Context, ingestor func(digest.
 			return err
 		}
 
-		err = ingestor(digest)
+		err = ingester(digest)
 		if err != nil {
 			return err
 		}

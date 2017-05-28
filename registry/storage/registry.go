@@ -289,6 +289,8 @@ func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
 		statter = repo.registry.blobDescriptorServiceFactory.BlobAccessController(statter)
 	}
 
+	LayerDirectoryPathSpec := layerDirectoryPathSpec{name: repo.name.Name()}
+
 	return &linkedBlobStore{
 		registry:             repo.registry,
 		blobStore:            repo.blobStore,
@@ -300,6 +302,7 @@ func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
 		// TODO(stevvooe): linkPath limits this blob store to only layers.
 		// This instance cannot be used for manifest checks.
 		linkPathFns:            []linkPathFunc{blobLinkPath},
+		linkDirectoryPathSpec:  LayerDirectoryPathSpec,
 		deleteEnabled:          repo.registry.deleteEnabled,
 		resumableDigestEnabled: repo.resumableDigestEnabled,
 	}

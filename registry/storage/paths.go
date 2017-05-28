@@ -219,6 +219,8 @@ func pathFor(spec pathSpec) (string, error) {
 		blobLinkPathComponents := append(repoPrefix, v.name, "_layers")
 
 		return path.Join(path.Join(append(blobLinkPathComponents, components...)...), "link"), nil
+	case layerDirectoryPathSpec:
+		return path.Join(append(repoPrefix, v.name, "_layers")...), nil
 	case blobsPathSpec:
 		blobsPathPrefix := append(rootPrefix, "blobs")
 		return path.Join(blobsPathPrefix...), nil
@@ -366,6 +368,12 @@ type layerLinkPathSpec struct {
 }
 
 func (layerLinkPathSpec) pathSpec() {}
+
+type layerDirectoryPathSpec struct {
+	name string
+}
+
+func (layerDirectoryPathSpec) pathSpec() {}
 
 // blobAlgorithmReplacer does some very simple path sanitization for user
 // input. Paths should be "safe" before getting this far due to strict digest
