@@ -169,7 +169,7 @@ func TestNoDeletionNoEffect(t *testing.T) {
 	before := allBlobs(t, registry)
 
 	// Run GC
-	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, false)
+	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, 0, false)
 	if err != nil {
 		t.Fatalf("Failed mark and sweep: %v", err)
 	}
@@ -200,7 +200,7 @@ func TestGCWithMissingManifests(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = MarkAndSweep(context.Background(), d, registry, false)
+	err = MarkAndSweep(context.Background(), d, registry, 0, false)
 	if err != nil {
 		t.Fatalf("Failed mark and sweep: %v", err)
 	}
@@ -227,7 +227,7 @@ func TestDeletionHasEffect(t *testing.T) {
 	manifests.Delete(ctx, image3.manifestDigest)
 
 	// Run GC
-	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, false)
+	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, 0, false)
 	if err != nil {
 		t.Fatalf("Failed mark and sweep: %v", err)
 	}
@@ -361,7 +361,7 @@ func TestOrphanBlobDeleted(t *testing.T) {
 	uploadRandomSchema2Image(t, repo)
 
 	// Run GC
-	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, false)
+	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, 0, false)
 	if err != nil {
 		t.Fatalf("Failed mark and sweep: %v", err)
 	}

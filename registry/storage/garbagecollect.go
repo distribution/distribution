@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
@@ -15,10 +16,15 @@ func emit(format string, a ...interface{}) {
 }
 
 // MarkAndSweep performs a mark and sweep of registry data
-func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, registry distribution.Namespace, dryRun bool) error {
+func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, registry distribution.Namespace, olderThan time.Duration, dryRun bool) error {
 	repositoryEnumerator, ok := registry.(distribution.RepositoryEnumerator)
 	if !ok {
 		return fmt.Errorf("unable to convert Namespace to RepositoryEnumerator")
+	}
+
+	var cutoffTime time.Time
+	if olderThan > 0 {
+		cutoffTime = time.Now().Add(-olderThan)
 	}
 
 	// mark
@@ -87,10 +93,22 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 	blobService := registry.Blobs()
 	deleteSet := make(map[digest.Digest]struct{})
 	err = blobService.Enumerate(ctx, func(dgst digest.Digest) error {
-		// check if digest is in markSet. If not, delete it!
-		if _, ok := markSet[dgst]; !ok {
-			deleteSet[dgst] = struct{}{}
+		// check if digest is in markSet
+		if _, ok := markSet[dgst]; ok {
+			return nil
 		}
+		// check if the layer too young
+		if !cutoffTime.IsZero() {
+			modTime, err := blobService.ModTime(ctx, dgst)
+			if err != nil {
+				return err
+			}
+			if cutoffTime.Before(modTime) {
+				return nil
+			}
+		}
+		// unused old layer, delete it!
+		deleteSet[dgst] = struct{}{}
 		return nil
 	})
 	if err != nil {
