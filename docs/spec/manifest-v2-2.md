@@ -4,11 +4,11 @@ description: "image manifest for the Registry."
 keywords: "registry, on-prem, images, tags, repository, distribution, api, advanced, manifest"
 ---
 
-This document outlines the format of of the V2 image manifest, schema version 2.
+This document outlines the format of the V2 image manifest, schema version 2.
 The original (and provisional) image manifest for V2 (schema 1), was introduced
 in the Docker daemon in the [v1.3.0
 release](https://github.com/docker/docker/commit/9f482a66ab37ec396ac61ed0c00d59122ac07453)
-and is specified in the [schema 1 manifest definition](manifest-v2-1.md)
+and is specified in the [schema 1 manifest definition](manifest-v2-1.md).
 
 This second schema version has two primary goals. The first is to allow
 multi-architecture images, through a "fat manifest" which references image
