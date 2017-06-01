@@ -641,11 +641,11 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 
 		if *resp.IsTruncated {
 			resp, err = d.S3.ListObjectsV2(&s3.ListObjectsV2Input{
-				Bucket:    aws.String(d.Bucket),
-				Prefix:    aws.String(d.s3Path(path)),
-				Delimiter: aws.String("/"),
-				MaxKeys:   aws.Int64(listMax),
-				ContinuationToken:    resp.NextContinuationToken,
+				Bucket:            aws.String(d.Bucket),
+				Prefix:            aws.String(d.s3Path(path)),
+				Delimiter:         aws.String("/"),
+				MaxKeys:           aws.Int64(listMax),
+				ContinuationToken: resp.NextContinuationToken,
 			})
 			if err != nil {
 				return nil, err
