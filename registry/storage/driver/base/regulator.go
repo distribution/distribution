@@ -38,11 +38,7 @@ func (r *regulator) enter() {
 
 func (r *regulator) exit() {
 	r.L.Lock()
-	// We only need to signal to a waiting FS operation if we're already at the
-	// limit of threads used
-	if r.available == 0 {
-		r.Signal()
-	}
+	r.Signal()
 	r.available++
 	r.L.Unlock()
 }
