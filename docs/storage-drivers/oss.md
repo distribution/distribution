@@ -47,7 +47,7 @@ An implementation of the `storagedriver.StorageDriver` interface which uses
       <td>
       yes
       </td>
-      <td> The name of the OSS region in which you would like to store objects (for example `oss-cn-beijing`). For a list of regions, you can look at [https://docs.aliyun.com/#/oss/product-documentation/domain-region](https://docs.aliyun.com/#/oss/product-documentation/domain-region).
+      <td> The name of the OSS region in which you would like to store objects (for example <code>oss-cn-beijing</code>). For a list of regions, you can look at [https://docs.aliyun.com/#/oss/product-documentation/domain-region](https://docs.aliyun.com/#/oss/product-documentation/domain-region).
       </td>
     </tr>
     <tr>
@@ -58,7 +58,7 @@ An implementation of the `storagedriver.StorageDriver` interface which uses
       no
       </td>
       <td>
-      An endpoint which defaults to `[bucket].[region].aliyuncs.com` or `[bucket].[region]-internal.aliyuncs.com` (when `internal=true`). You can change the default endpoint by changing this value.
+      An endpoint which defaults to <code>[bucket].[region].aliyuncs.com</code> or <code>[bucket].[region]-internal.aliyuncs.com</code> (when <code>internal=true</code>). You can change the default endpoint by changing this value.
       </td>
     </tr>
     <tr>
@@ -98,7 +98,7 @@ An implementation of the `storagedriver.StorageDriver` interface which uses
       <td>
       no
       </td>
-      <td> Specifies whether to transfer data to the bucket over ssl or not. If you omit this value, `true` is used.
+      <td> Specifies whether to transfer data to the bucket over ssl or not. If you omit this value, <code>true</code> is used.
       </td>
     </tr>
     <tr>
