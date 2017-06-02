@@ -56,7 +56,7 @@ INFO[0000] configuring endpoint alistener (https://mylistener.example.com/event)
 
 Events have a well-defined JSON structure and are sent as the body of
 notification requests. One or more events are sent in a structure called an
-envelope. Each event has a unique id that can be used to uniquely identify incoming
+envelope. Each event has a unique ID that can be used to uniquely identify incoming
 requests, if required. Along with that, an _action_ is provided with a
 _target_, identifying the object mutated during the event.
 
@@ -117,7 +117,7 @@ manifest:
 
 
 The target struct of events which are sent when manifests and blobs are deleted
-will contain a subset of the data contained in Get and Put events.  Specifically,
+will contain a subset of the data contained in Get and Put events. Specifically,
 only the digest and repository will be sent.
 
 ```json
