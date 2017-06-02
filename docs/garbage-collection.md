@@ -17,41 +17,41 @@ objects that are no longer in use by the program."
 
 In the context of the Docker registry, garbage collection is the process of
 removing blobs from the filesystem which are no longer referenced by a
-manifest.  Blobs can include both layers and manifests.
+manifest. Blobs can include both layers and manifests.
 
 
 ## Why Garbage Collection?
 
 Registry data can occupy considerable amounts of disk space and freeing up
-this disk space is an oft-requested feature.  Additionally for reasons of security it
+this disk space is an oft-requested feature. Additionally for reasons of security it
 can be desirable to ensure that certain layers no longer exist on the filesystem.
 
 
 ## Garbage Collection in the Registry
 
-Filesystem layers are stored by their content address in the Registry.  This
+Filesystem layers are stored by their content address in the Registry. This
 has many advantages, one of which is that data is stored once and referred to by manifests.
 See [here](compatibility.md#content-addressable-storage-cas) for more details.
 
 Layers are therefore shared amongst manifests; each manifest maintains a reference
-to the layer.  As long as a layer is referenced by one manifest, it cannot be garbage
+to the layer. As long as a layer is referenced by one manifest, it cannot be garbage
 collected.
 
-Manifests and layers can be 'deleted` with the registry API (refer to the API
+Manifests and layers can be `deleted` with the registry API (refer to the API
 documentation [here](spec/api.md#deleting-a-layer) and
-[here](spec/api.md#deleting-an-image) for details).  This API removes references
-to the target and makes them eligible for garbage collection.  It also makes them
+[here](spec/api.md#deleting-an-image) for details). This API removes references
+to the target and makes them eligible for garbage collection. It also makes them
 unable to be read via the API.
 
 If a layer is deleted it will be removed from the filesystem when garbage collection
-is run.  If a manifest is deleted the layers to which it refers will be removed from
+is run. If a manifest is deleted the layers to which it refers will be removed from
 the filesystem if no other manifests refers to them.
 
 
 ### Example
 
-In this example manifest A references two layers: `a` and `b`.  Manifest `B` references
-layers `a` and `c`.  In this state, nothing is eligible for garbage collection:
+In this example manifest A references two layers: `a` and `b`. Manifest `B` references
+layers `a` and `c`. In this state, nothing is eligible for garbage collection:
 
 ```
 A -----> a <----- B
@@ -68,8 +68,8 @@ A -----> a     B
 ```
 
 In this state layer `c` no longer has a reference and is eligible for garbage
-collection.  Layer `a` had one reference removed but will not be garbage
-collected as it is still referenced by manifest `A`.  The blob representing
+collection. Layer `a` had one reference removed but will not be garbage
+collected as it is still referenced by manifest `A`. The blob representing
 manifest `B` will also be eligible for garbage collection.
 
 After garbage collection has been run manifest `A` and its blobs remain.
@@ -90,11 +90,11 @@ the blobs and if a blob's content address digest is not in the mark set, the
 process will delete it.
 
 
-> **NOTE** You should ensure that the registry is in read-only mode or not running at
+> **NOTE**: You should ensure that the registry is in read-only mode or not running at
 > all. If you were to upload an image while garbage collection is running, there is the
 > risk that the image's layers will be mistakenly deleted, leading to a corrupted image.
 
-This type of garbage collection is known as stop-the-world garbage collection.  In future
+This type of garbage collection is known as stop-the-world garbage collection. In future
 registry versions the intention is that garbage collection will be an automated background
 action and this manual process will no longer apply.
 
@@ -107,7 +107,7 @@ Garbage collection can be run as follows
 `bin/registry garbage-collect [--dry-run] /path/to/config.yml`
 
 The garbage-collect command accepts a `--dry-run` parameter, which will print the progress
-of the mark and sweep phases without removing any data.  Running with a log level of `info`
+of the mark and sweep phases without removing any data. Running with a log level of `info`
 will give a clear indication of what will and will not be deleted.
 
 The config.yml file should be in the following format:
