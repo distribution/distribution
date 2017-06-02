@@ -9,19 +9,19 @@ fi
 
 cd $REPO_ROOT
 
-GOFMT_ERRORS=$(gofmt -s -l . 2>&1)
+GOFMT_ERRORS=$(gofmt -s -l $(find . -type f -name '*.go' -not -path "*/vendor/*") 2>&1)
 if [ -n "$GOFMT_ERRORS" ]; then
 	printf 'gofmt failed for the following files:\n%s\n\nPlease run "gofmt -s -l ." in the root of your repository before committing\n' "$GOFMT_ERRORS" > /dev/stderr
 	exit 1
 fi
 
-GOLINT_ERRORS=$(golint ./... 2>&1)
+GOLINT_ERRORS=$(golint ./... | grep -v "vendor")
 if [ -n "$GOLINT_ERRORS" ]; then
-	printf "golint failed with the following errors:\n%s\n" "$GOLINT_ERRORS" > /dev/stderr
-	exit 1
-fi
+ 	printf "golint failed with the following errors:\n%s\n" "$GOLINT_ERRORS" > /dev/stderr
+ 	exit 1
+ fi
 
-GOVET_ERRORS=$(go vet ./... 2>&1)
+GOVET_ERRORS=$(go vet $(go list ./... | grep -v "./vendor/*" 2>&1))
 GOVET_STATUS=$?
 if [ "$GOVET_STATUS" -ne "0" ]; then
 	printf "govet failed with the following errors:\n%s\n" "$GOVET_ERRORS" > /dev/stderr
