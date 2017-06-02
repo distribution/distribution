@@ -193,13 +193,13 @@ Now, start your stack:
 
     docker-compose up -d
 
-Login with a "push" authorized user (using `testuserpush` and `testpasswordpush`), then tag and push your first image:
+Log in with a "push" authorized user (using `testuserpush` and `testpasswordpush`), then tag and push your first image:
 
     docker login myregistrydomain.com:5043
     docker tag ubuntu myregistrydomain.com:5043/test
     docker push myregistrydomain.com:5043/test
 
-Now, login with a "pull-only" user (using `testuser` and `testpassword`), then pull back the image:
+Now, log in with a "pull-only" user (using `testuser` and `testpassword`), then pull back the image:
 
     docker login myregistrydomain.com:5043
     docker pull myregistrydomain.com:5043/test
