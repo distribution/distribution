@@ -379,7 +379,10 @@ func (suite *DriverSuite) TestReaderWithOffset(c *check.C) {
 		c.Assert(err, check.Equals, io.EOF)
 	}
 
-	// Any more reads should result in zero bytes and io.EOF
+	// More reads should result in zero bytes and io.EOF
+	n2, err := io.Copy(ioutil.Discard, reader)
+	c.Assert(int(n2), check.Equals, 0)
+
 	n, err = reader.Read(buf)
 	c.Assert(n, check.Equals, 0)
 	c.Assert(err, check.Equals, io.EOF)
