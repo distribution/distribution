@@ -12,6 +12,7 @@ import (
 	"io"
 	"io/ioutil"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -75,7 +76,7 @@ func (b2Factory) Create(p map[string]interface{}) (storagedriver.StorageDriver, 
 	if bName == "" {
 		return nil, errors.New("bucket not provided")
 	}
-	ctx = context.TODO()
+	ctx := context.TODO()
 
 	client, err := b2.NewClient(ctx, id, key)
 	if err != nil {
@@ -110,15 +111,73 @@ func (d *driver) fullPath(path string) string {
 	return strings.TrimPrefix(filepath.Join(d.rootDir, path), "/")
 }
 
-func (d *driver) reader(ctx ctx.Context, path string) io.ReadCloser {
+func (d *driver) reader(ctx ctx.Context, path string) (io.ReadCloser, error) {
+	if _, err := d.bucket.Object(d.fullPath(path)).Attrs(ctx); err != nil {
+		return nil, wrapErr(err)
+	}
 	return d.readerOffset(ctx, path, 0)
 }
 
-func (d *driver) readerOffset(ctx ctx.Context, path string, off int64) io.ReadCloser {
-	r := d.bucket.Object(d.fullPath(path)).NewRangeReader(ctx, off, -1)
-	r.ConcurrentDownloads = d.downNum
-	r.ChunkSize = d.downChunk
-	return r
+type multiReadCloser struct {
+	cs []io.Closer
+	io.Reader
+}
+
+func (mrc *multiReadCloser) Close() error {
+	var err error
+	for _, c := range mrc.cs {
+		if e := c.Close(); e != nil && err != nil {
+			err = e
+		}
+	}
+	return err
+}
+
+func (d *driver) readerOffset(ctx ctx.Context, path string, off int64) (io.ReadCloser, error) {
+	var robjs []*b2.Object
+	cur := &b2.Cursor{Prefix: d.fullPath(path)}
+	for {
+		objs, c, err := d.bucket.ListObjects(ctx, 1000, cur)
+		if err != nil && err != io.EOF {
+			return nil, err
+		}
+		for _, o := range objs {
+			if o.Name() != d.fullPath(path) {
+				break
+			}
+			robjs = append(robjs, o)
+		}
+		if err == io.EOF {
+			break
+		}
+		cur = c
+	}
+	sort.Slice(robjs, func(i, j int) bool {
+		ai, _ := robjs[i].Attrs(ctx) // Attrs is cached from ListObjects, no error
+		aj, _ := robjs[j].Attrs(ctx) // Attrs is cached from ListObjects, no error
+		return ai.UploadTimestamp.Before(aj.UploadTimestamp)
+	})
+	var rs []io.Reader
+	mrc := &multiReadCloser{}
+	for _, o := range robjs {
+		attrs, _ := o.Attrs(ctx)
+		if off > attrs.Size {
+			off -= attrs.Size
+			continue
+		}
+		var rc *b2.Reader
+		if off > 0 {
+			rc = o.NewRangeReader(ctx, off, -1)
+		} else {
+			rc = o.NewReader(ctx)
+		}
+		rc.ConcurrentDownloads = d.downNum
+		rc.ChunkSize = d.downChunk
+		rs = append(rs, rc)
+		mrc.cs = append(mrc.cs, rc)
+	}
+	mrc.Reader = io.MultiReader(rs...)
+	return mrc, nil
 }
 
 func (d *driver) writer(ctx ctx.Context, path string) io.WriteCloser {
@@ -138,10 +197,37 @@ func (d *driver) GetContent(ctx ctx.Context, path string) ([]byte, error) {
 	if err := checkPath(path); err != nil {
 		return nil, err
 	}
-	r := d.reader(ctx, path)
+	r, err := d.reader(ctx, path)
+	if err != nil {
+		return nil, wrapErr(err)
+	}
 	defer r.Close()
 	b, err := ioutil.ReadAll(r)
 	return b, wrapErr(err)
+}
+
+func (d *driver) deleteObject(ctx ctx.Context, path string) error {
+	cur := &b2.Cursor{Prefix: d.fullPath(path)}
+	for {
+		objs, c, err := d.bucket.ListObjects(ctx, 1000, cur)
+		if err != nil && err != io.EOF {
+			return err
+		}
+		for _, o := range objs {
+			if o.Name() != d.fullPath(path) {
+				// We've moved on to some other object.
+				return nil
+			}
+			// TODO: use an errgroup here to collapse all these round trips?
+			if err := o.Delete(ctx); err != nil {
+				return err
+			}
+		}
+		if err == io.EOF {
+			return nil
+		}
+		cur = c
+	}
 }
 
 func (d *driver) Delete(ctx ctx.Context, path string) error {
@@ -159,12 +245,12 @@ func (d *driver) Delete(ctx ctx.Context, path string) error {
 		}
 	}
 	if !strings.HasSuffix(obj[0].Name(), "/") {
-		return wrapErr(obj[0].Delete(ctx))
+		return wrapErr(d.deleteObject(ctx, path))
 	}
 	c.Delimiter = ""
 	c.Prefix += "/"
 	for {
-		objs, nc, err := d.bucket.ListCurrentObjects(ctx, 100, c)
+		objs, nc, err := d.bucket.ListObjects(ctx, 1000, c)
 		if err != nil && err != io.EOF {
 			return wrapErr(err)
 		}
@@ -237,7 +323,10 @@ func (d *driver) Move(ctx ctx.Context, src, dst string) error {
 		return wrapErr(err)
 	}
 	d.bucket.Object(d.fullPath(dst)).Delete(ctx)
-	r := d.reader(ctx, src)
+	r, err := d.reader(ctx, src)
+	if err != nil {
+		return err
+	}
 	w := d.writer(ctx, dst)
 	if _, err := io.Copy(w, r); err != nil {
 		return wrapErr(err)
@@ -283,10 +372,6 @@ func (d *driver) Reader(ctx ctx.Context, path string, off int64) (io.ReadCloser,
 	if err := checkPath(path); err != nil {
 		return nil, err
 	}
-	// Burn a round trip here to check for object existence just to pass a test.
-	if _, err := d.bucket.Object(d.fullPath(path)).Attrs(ctx); err != nil {
-		return nil, wrapErr(err)
-	}
 	if off < 0 {
 		return nil, storagedriver.InvalidOffsetError{
 			Path:       path,
@@ -294,7 +379,7 @@ func (d *driver) Reader(ctx ctx.Context, path string, off int64) (io.ReadCloser,
 			DriverName: driverName,
 		}
 	}
-	return d.readerOffset(ctx, path, off), nil
+	return d.readerOffset(ctx, path, off)
 }
 
 func (d *driver) Writer(ctx ctx.Context, path string, append bool) (storagedriver.FileWriter, error) {
@@ -303,31 +388,46 @@ func (d *driver) Writer(ctx ctx.Context, path string, append bool) (storagedrive
 	// (b) Put pieces of the file in B2, and stitch them together with the reader.
 	// (c) Return a not-supported error.
 	//
-	// I'm partial to (c), but that fails tests, so we'll go with (a) until we
-	// get an "append is unreasonably slow" bug.
+	// This uses B2's weird overwrite semantics to implement (b).  Essentially,
+	// we unconditionally return a writer to the path given.  However, if we're
+	// in an append, we don't bother removing any previous objects at that path.
+	// Then, when reading, we return an io.MultiReader of all the different objects
+	// in order.
 	if err := checkPath(path); err != nil {
 		return nil, err
 	}
-	w := &fileWriter{
-		wc: d.writer(ctx, path),
-	}
-	if append {
-		_, err := d.bucket.Object(d.fullPath(path)).Attrs(ctx)
-		if b2.IsNotExist(err) {
-			return w, nil
-		}
-		if err != nil {
-			return nil, err
-		}
-		r := d.reader(ctx, path)
-		defer r.Close()
-		if _, err := io.Copy(w, r); err != nil {
-			w.Cancel()
+	var fsize int64
+	if !append {
+		// Overwrite whatever's there.
+		if err := d.deleteObject(ctx, path); err != nil {
 			return nil, wrapErr(err)
 		}
-		d.bucket.Object(d.fullPath(path)).Delete(ctx)
+	} else {
+		// Just to get the existing size.
+		cur := &b2.Cursor{Prefix: d.fullPath(path)}
+	getsize:
+		for {
+			objs, c, err := d.bucket.ListObjects(ctx, 1000, cur)
+			if err != nil && err != io.EOF {
+				return nil, err
+			}
+			for _, o := range objs {
+				if o.Name() != d.fullPath(path) {
+					break getsize
+				}
+				attr, _ := o.Attrs(ctx)
+				fsize += attr.Size
+			}
+			if err == io.EOF {
+				break
+			}
+			cur = c
+		}
 	}
-	return w, nil
+	return &fileWriter{
+		wc: d.writer(ctx, path),
+		n:  fsize,
+	}, nil
 }
 
 type info struct {
