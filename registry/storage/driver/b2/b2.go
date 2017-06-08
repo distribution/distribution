@@ -1,8 +1,6 @@
 // Package b2 provides a storagedriver.StorageDriver implementation for saving
 // blobs in Backblaze's B2 object store.
 //
-// This package uses the github.com/kurin/blazer/b2 library.
-//
 // +build include_b2
 
 package b2
@@ -63,14 +61,6 @@ func getString(i interface{}) string {
 	return v
 }
 
-func getContext(i interface{}) context.Context {
-	v, ok := i.(context.Context)
-	if !ok {
-		return nil
-	}
-	return v
-}
-
 // Create StorageDriver from parameters
 func (b2Factory) Create(p map[string]interface{}) (storagedriver.StorageDriver, error) {
 	id := getString(p["id"])
@@ -85,10 +75,7 @@ func (b2Factory) Create(p map[string]interface{}) (storagedriver.StorageDriver, 
 	if bName == "" {
 		return nil, errors.New("bucket not provided")
 	}
-	ctx := getContext(p["context"])
-	if ctx == nil {
-		return nil, errors.New("context not provided")
-	}
+	ctx = context.TODO()
 
 	client, err := b2.NewClient(ctx, id, key)
 	if err != nil {
@@ -217,7 +204,11 @@ func (d *driver) List(ctx ctx.Context, path string) ([]string, error) {
 			// Remove trailing slashes from object names that correspond to
 			// "subdirectories."
 			name := strings.TrimSuffix(obj.Name(), "/")
-			resp = append(resp, strings.TrimPrefix(name, root))
+			name = strings.TrimPrefix(name, root)
+			if !strings.HasPrefix(name, "/") {
+				name = "/" + name
+			}
+			resp = append(resp, name)
 		}
 		if err == io.EOF {
 			if len(resp) == 0 && path == "/" {
@@ -321,6 +312,13 @@ func (d *driver) Writer(ctx ctx.Context, path string, append bool) (storagedrive
 		wc: d.writer(ctx, path),
 	}
 	if append {
+		_, err := d.bucket.Object(d.fullPath(path)).Attrs(ctx)
+		if b2.IsNotExist(err) {
+			return w, nil
+		}
+		if err != nil {
+			return nil, err
+		}
 		r := d.reader(ctx, path)
 		defer r.Close()
 		if _, err := io.Copy(w, r); err != nil {
