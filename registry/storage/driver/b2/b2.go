@@ -119,8 +119,20 @@ func (d *driver) reader(ctx ctx.Context, path string) (io.ReadCloser, error) {
 }
 
 type multiReadCloser struct {
-	cs []io.Closer
-	io.Reader
+	cs  []io.Closer
+	r   io.Reader
+	err error
+}
+
+func (mrc *multiReadCloser) Read(p []byte) (int, error) {
+	if mrc.err != nil {
+		return 0, mrc.err
+	}
+	n, err := mrc.r.Read(p)
+	if err != nil {
+		mrc.err = err
+	}
+	return n, err
 }
 
 func (mrc *multiReadCloser) Close() error {
@@ -139,7 +151,7 @@ func (d *driver) readerOffset(ctx ctx.Context, path string, off int64) (io.ReadC
 	for {
 		objs, c, err := d.bucket.ListObjects(ctx, 1000, cur)
 		if err != nil && err != io.EOF {
-			return nil, err
+			return nil, wrapErr(err)
 		}
 		for _, o := range objs {
 			if o.Name() != d.fullPath(path) {
@@ -151,6 +163,12 @@ func (d *driver) readerOffset(ctx ctx.Context, path string, off int64) (io.ReadC
 			break
 		}
 		cur = c
+	}
+	if len(robjs) == 0 {
+		return nil, storagedriver.PathNotFoundError{
+			Path:       path,
+			DriverName: driverName,
+		}
 	}
 	sort.Slice(robjs, func(i, j int) bool {
 		ai, _ := robjs[i].Attrs(ctx) // Attrs is cached from ListObjects, no error
@@ -176,7 +194,7 @@ func (d *driver) readerOffset(ctx ctx.Context, path string, off int64) (io.ReadC
 		rs = append(rs, rc)
 		mrc.cs = append(mrc.cs, rc)
 	}
-	mrc.Reader = io.MultiReader(rs...)
+	mrc.r = io.MultiReader(rs...)
 	return mrc, nil
 }
 
