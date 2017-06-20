@@ -14,4 +14,4 @@ there is adequate space available. Defaults to `/var/lib/registry`.
 `maxthreads`: (optional) The maximum number of simultaneous blocking filesystem
 operations permitted within the registry. Each operation spawns a new thread and
 may cause thread exhaustion issues if many are done in parallel. Defaults to
-`100`, and can be no lower than `25`.
+`100`, and cannot be lower than `25`.
