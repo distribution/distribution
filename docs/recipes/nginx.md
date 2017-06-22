@@ -154,7 +154,7 @@ EOF
 Now create a password file for "testuser" and "testpassword"
 
 ```
-docker run --rm --entrypoint htpasswd registry:2 -bn testuser testpassword > auth/nginx.htpasswd
+docker run --rm --entrypoint htpasswd registry:2 -Bbn testuser testpassword > auth/nginx.htpasswd
 ```
 
 Copy over your certificate files
