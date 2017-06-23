@@ -1,11 +1,11 @@
-package logrus_logstash
+package logrustash
 
 import (
 	"encoding/json"
 	"fmt"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // Formatter generates json in logstash format.
@@ -44,8 +44,7 @@ func (f *LogstashFormatter) FormatWithPrefix(entry *logrus.Entry, prefix string)
 	timeStampFormat := f.TimestampFormat
 
 	if timeStampFormat == "" {
-		//timeStampFormat = logrus.DefaultTimestampFormat
-		timeStampFormat = "2006-01-02 15:04:05.000"
+		timeStampFormat = logrus.DefaultTimestampFormat
 	}
 
 	fields["@timestamp"] = entry.Time.Format(timeStampFormat)

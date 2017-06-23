@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	log "github.com/Sirupsen/logrus"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/configuration"
 	ctxu "github.com/docker/distribution/context"
@@ -38,6 +37,7 @@ import (
 	"github.com/docker/libtrust"
 	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/mux"
+	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
 )
 
