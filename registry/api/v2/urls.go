@@ -139,6 +139,18 @@ func (ub *URLBuilder) BuildTagsURL(name reference.Named) (string, error) {
 	return tagsURL.String(), nil
 }
 
+// BuildRevisionsURL constructs a url to list the revisions in the named repository.
+func (ub *URLBuilder) BuildRevisionsURL(name reference.Named) (string, error) {
+	route := ub.cloneRoute(RouteNameRevisions)
+
+	revisionsURL, err := route.URL("name", name.Name())
+	if err != nil {
+		return "", err
+	}
+
+	return revisionsURL.String(), nil
+}
+
 // BuildManifestURL constructs a url for the manifest identified by name and
 // reference. The argument reference may be either a tag or digest.
 func (ub *URLBuilder) BuildManifestURL(ref reference.Named) (string, error) {

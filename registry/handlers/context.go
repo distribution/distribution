@@ -21,6 +21,9 @@ type Context struct {
 	*App
 	context.Context
 
+	// Registry is used by the revisions list to use Manifests.Enumerator.
+	Registry distribution.Namespace
+
 	// Repository is the repository for the current request. All requests
 	// should be scoped to a single repository. This field may be nil.
 	Repository distribution.Repository
