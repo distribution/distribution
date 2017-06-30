@@ -308,7 +308,7 @@ $ docker node update --label-add registry=true node1
 Next, create the service, granting it access to the two secrets and constraining
 it to only run on nodes with the label `registry=true`. Besides the constraint,
 you are also specifying that only a single replica should run at a time. The
-exammple bind-mounts `/mnt/registry` on the swarm node to `/var/lib/registry/`
+example bind-mounts `/mnt/registry` on the swarm node to `/var/lib/registry/`
 within the container.
 
 By default, secrets are mounted into a service at `/run/<secret-name>`.
