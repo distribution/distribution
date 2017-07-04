@@ -600,6 +600,7 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	ctx = ctxu.WithRequest(ctx, r)
 	ctx, w = ctxu.WithResponseWriter(ctx, w)
+	ctx = ctxu.WithLogger(ctx, ctxu.GetLogger(app.Context))
 	ctx = ctxu.WithLogger(ctx, ctxu.GetRequestLogger(ctx))
 	r = r.WithContext(ctx)
 
