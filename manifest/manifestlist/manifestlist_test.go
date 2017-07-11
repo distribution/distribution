@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/docker/distribution"
+	"github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 var expectedManifestListSerialization = []byte(`{
@@ -110,9 +111,9 @@ func TestManifestList(t *testing.T) {
 	}
 }
 
-var expectedOCIManifestListSerialization = []byte(`{
+var expectedOCIImageIndexSerialization = []byte(`{
    "schemaVersion": 2,
-   "mediaType": "application/vnd.oci.image.manifest.list.v1+json",
+   "mediaType": "application/vnd.oci.image.index.v1+json",
    "manifests": [
       {
          "mediaType": "application/vnd.oci.image.manifest.v1+json",
@@ -138,7 +139,7 @@ var expectedOCIManifestListSerialization = []byte(`{
    ]
 }`)
 
-func TestOCIManifestList(t *testing.T) {
+func TestOCIImageIndex(t *testing.T) {
 	manifestDescriptors := []ManifestDescriptor{
 		{
 			Descriptor: distribution.Descriptor{
@@ -172,7 +173,7 @@ func TestOCIManifestList(t *testing.T) {
 
 	mediaType, canonical, _ := deserialized.Payload()
 
-	if mediaType != MediaTypeOCIManifestList {
+	if mediaType != v1.MediaTypeImageIndex {
 		t.Fatalf("unexpected media type: %s", mediaType)
 	}
 
@@ -187,8 +188,8 @@ func TestOCIManifestList(t *testing.T) {
 	}
 
 	// Check that the canonical field has the expected value.
-	if !bytes.Equal(expectedOCIManifestListSerialization, canonical) {
-		t.Fatalf("manifest bytes not equal: %q != %q", string(canonical), string(expectedOCIManifestListSerialization))
+	if !bytes.Equal(expectedOCIImageIndexSerialization, canonical) {
+		t.Fatalf("manifest bytes not equal: %q != %q", string(canonical), string(expectedOCIImageIndexSerialization))
 	}
 
 	var unmarshalled DeserializedManifestList

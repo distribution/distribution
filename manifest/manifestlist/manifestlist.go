@@ -7,16 +7,13 @@ import (
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/manifest"
-	"github.com/docker/distribution/manifest/ocischema"
 	"github.com/opencontainers/go-digest"
+	"github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 const (
 	// MediaTypeManifestList specifies the mediaType for manifest lists.
 	MediaTypeManifestList = "application/vnd.docker.distribution.manifest.list.v2+json"
-	// MediaTypeOCIManifestList specifies the mediaType for OCI compliant manifest
-	// lists.
-	MediaTypeOCIManifestList = "application/vnd.oci.image.manifest.list.v1+json"
 )
 
 // SchemaVersion provides a pre-initialized version structure for this
@@ -30,7 +27,7 @@ var SchemaVersion = manifest.Versioned{
 // packages OCIschema version of the manifest.
 var OCISchemaVersion = manifest.Versioned{
 	SchemaVersion: 2,
-	MediaType:     MediaTypeOCIManifestList,
+	MediaType:     v1.MediaTypeImageIndex,
 }
 
 func init() {
@@ -92,6 +89,9 @@ type ManifestList struct {
 
 	// Config references the image configuration as a blob.
 	Manifests []ManifestDescriptor `json:"manifests"`
+
+	// Annotations contains arbitrary metadata for the image index.
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // References returns the distribution descriptors for the referenced image
@@ -119,7 +119,7 @@ type DeserializedManifestList struct {
 // and its JSON representation.
 func FromDescriptors(descriptors []ManifestDescriptor) (*DeserializedManifestList, error) {
 	var m ManifestList
-	if len(descriptors) > 0 && descriptors[0].Descriptor.MediaType == ocischema.MediaTypeManifest {
+	if len(descriptors) > 0 && descriptors[0].Descriptor.MediaType == v1.MediaTypeImageManifest {
 		m = ManifestList{
 			Versioned: OCISchemaVersion,
 		}

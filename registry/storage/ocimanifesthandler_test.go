@@ -9,9 +9,10 @@ import (
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/manifest/ocischema"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
+	"github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-func TestVerifyOCIManifestForeignLayer(t *testing.T) {
+func TestVerifyOCIManifestNonDistributableLayer(t *testing.T) {
 	ctx := context.Background()
 	inmemoryDriver := inmemory.New()
 	registry := createRegistry(t, inmemoryDriver,
@@ -20,26 +21,26 @@ func TestVerifyOCIManifestForeignLayer(t *testing.T) {
 	repo := makeRepository(t, registry, "test")
 	manifestService := makeManifestService(t, repo)
 
-	config, err := repo.Blobs(ctx).Put(ctx, ocischema.MediaTypeConfig, nil)
+	config, err := repo.Blobs(ctx).Put(ctx, v1.MediaTypeImageConfig, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	layer, err := repo.Blobs(ctx).Put(ctx, ocischema.MediaTypeLayer, nil)
+	layer, err := repo.Blobs(ctx).Put(ctx, v1.MediaTypeImageLayerGzip, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	foreignLayer := distribution.Descriptor{
+	nonDistributableLayer := distribution.Descriptor{
 		Digest:    "sha256:463435349086340864309863409683460843608348608934092322395278926a",
 		Size:      6323,
-		MediaType: ocischema.MediaTypeForeignLayer,
+		MediaType: v1.MediaTypeImageLayerNonDistributableGzip,
 	}
 
 	template := ocischema.Manifest{
 		Versioned: manifest.Versioned{
 			SchemaVersion: 2,
-			MediaType:     ocischema.MediaTypeManifest,
+			MediaType:     v1.MediaTypeImageManifest,
 		},
 		Config: config,
 	}
@@ -52,58 +53,58 @@ func TestVerifyOCIManifestForeignLayer(t *testing.T) {
 
 	cases := []testcase{
 		{
-			foreignLayer,
+			nonDistributableLayer,
 			nil,
 			errMissingURL,
 		},
 		{
-			// regular layers may have foreign urls
+			// regular layers may have foreign urls (non-Distributable Layers)
 			layer,
 			[]string{"http://foo/bar"},
 			nil,
 		},
 		{
-			foreignLayer,
+			nonDistributableLayer,
 			[]string{"file:///local/file"},
 			errInvalidURL,
 		},
 		{
-			foreignLayer,
+			nonDistributableLayer,
 			[]string{"http://foo/bar#baz"},
 			errInvalidURL,
 		},
 		{
-			foreignLayer,
+			nonDistributableLayer,
 			[]string{""},
 			errInvalidURL,
 		},
 		{
-			foreignLayer,
+			nonDistributableLayer,
 			[]string{"https://foo/bar", ""},
 			errInvalidURL,
 		},
 		{
-			foreignLayer,
+			nonDistributableLayer,
 			[]string{"", "https://foo/bar"},
 			errInvalidURL,
 		},
 		{
-			foreignLayer,
+			nonDistributableLayer,
 			[]string{"http://nope/bar"},
 			errInvalidURL,
 		},
 		{
-			foreignLayer,
+			nonDistributableLayer,
 			[]string{"http://foo/nope"},
 			errInvalidURL,
 		},
 		{
-			foreignLayer,
+			nonDistributableLayer,
 			[]string{"http://foo/bar"},
 			nil,
 		},
 		{
-			foreignLayer,
+			nonDistributableLayer,
 			[]string{"https://foo/bar"},
 			nil,
 		},

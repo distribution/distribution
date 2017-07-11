@@ -18,6 +18,7 @@ import (
 	"github.com/docker/distribution/registry/auth"
 	"github.com/gorilla/handlers"
 	"github.com/opencontainers/go-digest"
+	"github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // These constants determine which architecture and OS to choose from a
@@ -76,7 +77,7 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 	supportsSchema2 := false
 	supportsManifestList := false
 	supportsOCISchema := false
-	supportsOCIManifestList := false
+	supportsOCIImageIndex := false
 	// this parsing of Accept headers is not quite as full-featured as godoc.org's parser, but we don't care about "q=" values
 	// https://github.com/golang/gddo/blob/e91d4165076d7474d20abda83f92d15c7ebc3e81/httputil/header/header.go#L165-L202
 	for _, acceptHeader := range r.Header["Accept"] {
@@ -100,15 +101,15 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 			if mediaType == manifestlist.MediaTypeManifestList {
 				supportsManifestList = true
 			}
-			if mediaType == ocischema.MediaTypeManifest {
+			if mediaType == v1.MediaTypeImageManifest {
 				supportsOCISchema = true
 			}
-			if mediaType == manifestlist.MediaTypeOCIManifestList {
-				supportsOCIManifestList = true
+			if mediaType == v1.MediaTypeImageIndex {
+				supportsOCIImageIndex = true
 			}
 		}
 	}
-	supportsOCI := supportsOCISchema || supportsOCIManifestList
+	supportsOCI := supportsOCISchema || supportsOCIImageIndex
 
 	var manifest distribution.Manifest
 	if imh.Tag != "" {
@@ -151,15 +152,15 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 
 	schema2Manifest, isSchema2 := manifest.(*schema2.DeserializedManifest)
 	manifestList, isManifestList := manifest.(*manifestlist.DeserializedManifestList)
-	isAnOCIManifest := isSchema2 && (schema2Manifest.MediaType == ocischema.MediaTypeManifest)
-	isAnOCIManifestList := isManifestList && (manifestList.MediaType == manifestlist.MediaTypeOCIManifestList)
+	isAnOCIManifest := isSchema2 && (schema2Manifest.MediaType == v1.MediaTypeImageManifest)
+	isAnOCIImageIndex := isManifestList && (manifestList.MediaType == v1.MediaTypeImageIndex)
 
 	if (isSchema2 && !isAnOCIManifest) && (supportsOCISchema && !supportsSchema2) {
 		fmt.Printf("\n\nmanifest is schema2, but accept header only supports OCISchema \n\n")
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	if (isManifestList && !isAnOCIManifestList) && (supportsOCIManifestList && !supportsManifestList) {
+	if (isManifestList && !isAnOCIImageIndex) && (supportsOCIImageIndex && !supportsManifestList) {
 		fmt.Printf("\n\nmanifestlist is not OCI, but accept header only supports an OCI manifestlist\n\n")
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -169,7 +170,7 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	if isAnOCIManifestList && (!supportsOCIManifestList && supportsManifestList) {
+	if isAnOCIImageIndex && (!supportsOCIImageIndex && supportsManifestList) {
 		fmt.Printf("\n\nmanifestlist is OCI, but accept header only supports non-OCI manifestlists\n\n")
 		w.WriteHeader(http.StatusNotFound)
 		return
@@ -185,7 +186,7 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 		if err != nil {
 			return
 		}
-	} else if imh.Tag != "" && isManifestList && !(supportsManifestList || supportsOCIManifestList) {
+	} else if imh.Tag != "" && isManifestList && !(supportsManifestList || supportsOCIImageIndex) {
 		// Rewrite manifest in schema1 format
 		ctxu.GetLogger(imh).Infof("rewriting manifest list %s in schema1 format to support old client", imh.Digest.String())
 
@@ -243,7 +244,7 @@ func (imh *manifestHandler) GetImageManifest(w http.ResponseWriter, r *http.Requ
 	supportsSchema2 := false
 	supportsManifestList := false
 	supportsOCISchema := false
-	supportsOCIManifestList := false
+	supportsOCIImageIndex := false
 
 	// this parsing of Accept headers is not quite as full-featured as godoc.org's parser, but we don't care about "q=" values
 	// https://github.com/golang/gddo/blob/e91d4165076d7474d20abda83f92d15c7ebc3e81/httputil/header/header.go#L165-L202
@@ -268,15 +269,15 @@ func (imh *manifestHandler) GetImageManifest(w http.ResponseWriter, r *http.Requ
 			if mediaType == manifestlist.MediaTypeManifestList {
 				supportsManifestList = true
 			}
-			if mediaType == ocischema.MediaTypeManifest {
+			if mediaType == v1.MediaTypeImageManifest {
 				supportsOCISchema = true
 			}
-			if mediaType == manifestlist.MediaTypeOCIManifestList {
-				supportsOCIManifestList = true
+			if mediaType == v1.MediaTypeImageIndex {
+				supportsOCIImageIndex = true
 			}
 		}
 	}
-	supportsOCI := supportsOCISchema || supportsOCIManifestList
+	supportsOCI := supportsOCISchema || supportsOCIImageIndex
 
 	ctxu.GetLogger(imh).Debug("GetImageManifest")
 	manifests, err := imh.Repository.Manifests(imh)
@@ -325,14 +326,14 @@ func (imh *manifestHandler) GetImageManifest(w http.ResponseWriter, r *http.Requ
 
 	schema2Manifest, isSchema2 := manifest.(*schema2.DeserializedManifest)
 	manifestList, isManifestList := manifest.(*manifestlist.DeserializedManifestList)
-	isAnOCIManifest := isSchema2 && (schema2Manifest.MediaType == ocischema.MediaTypeManifest)
-	isAnOCIManifestList := isManifestList && (manifestList.MediaType == manifestlist.MediaTypeOCIManifestList)
+	isAnOCIManifest := isSchema2 && (schema2Manifest.MediaType == v1.MediaTypeImageManifest)
+	isAnOCIImageIndex := isManifestList && (manifestList.MediaType == v1.MediaTypeImageIndex)
 
 	badCombinations := [][]bool{
 		{isSchema2 && !isAnOCIManifest, supportsOCISchema && !supportsSchema2},
-		{isManifestList && !isAnOCIManifestList, supportsOCIManifestList && !supportsManifestList},
+		{isManifestList && !isAnOCIImageIndex, supportsOCIImageIndex && !supportsManifestList},
 		{isAnOCIManifest, !supportsOCISchema && supportsSchema2},
-		{isAnOCIManifestList, !supportsOCIManifestList && supportsManifestList},
+		{isAnOCIImageIndex, !supportsOCIImageIndex && supportsManifestList},
 	}
 	for i, combo := range badCombinations {
 		if combo[0] && combo[1] {
@@ -360,7 +361,7 @@ func (imh *manifestHandler) GetImageManifest(w http.ResponseWriter, r *http.Requ
 		if err != nil {
 			return
 		}
-	} else if imh.Tag != "" && isManifestList && !(supportsManifestList || supportsOCIManifestList) {
+	} else if imh.Tag != "" && isManifestList && !(supportsManifestList || supportsOCIImageIndex) {
 		// Rewrite manifest in schema1 format
 		dcontext.GetLogger(imh).Infof("rewriting manifest list %s in schema1 format to support old client", imh.Digest.String())
 
@@ -499,7 +500,7 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	isAnOCIManifest := mediaType == ocischema.MediaTypeManifest || mediaType == manifestlist.MediaTypeOCIManifestList
+	isAnOCIManifest := mediaType == v1.MediaTypeImageManifest || mediaType == v1.MediaTypeImageIndex
 
 	if isAnOCIManifest {
 		fmt.Printf("\n\nPutting an OCI Manifest!\n\n\n")
@@ -611,6 +612,14 @@ func (imh *manifestHandler) applyResourcePolicy(manifest distribution.Manifest) 
 			class = "image"
 		case schema2.MediaTypePluginConfig:
 			class = "plugin"
+		default:
+			message := fmt.Sprintf("unknown manifest class for %s", m.Config.MediaType)
+			return errcode.ErrorCodeDenied.WithMessage(message)
+		}
+	case *ocischema.DeserializedManifest:
+		switch m.Config.MediaType {
+		case v1.MediaTypeImageConfig:
+			class = "image"
 		default:
 			message := fmt.Sprintf("unknown manifest class for %s", m.Config.MediaType)
 			return errcode.ErrorCodeDenied.WithMessage(message)
