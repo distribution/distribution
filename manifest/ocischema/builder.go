@@ -4,6 +4,7 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/opencontainers/go-digest"
+	"github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // builder is a type for constructing manifests.
@@ -48,7 +49,7 @@ func (mb *builder) Build(ctx context.Context) (distribution.Manifest, error) {
 	case nil:
 		// Override MediaType, since Put always replaces the specified media
 		// type with application/octet-stream in the descriptor it returns.
-		m.Config.MediaType = MediaTypeConfig
+		m.Config.MediaType = v1.MediaTypeImageConfig
 		return FromStruct(m)
 	case distribution.ErrBlobUnknown:
 		// nop
@@ -57,10 +58,10 @@ func (mb *builder) Build(ctx context.Context) (distribution.Manifest, error) {
 	}
 
 	// Add config to the blob store
-	m.Config, err = mb.bs.Put(ctx, MediaTypeConfig, mb.configJSON)
+	m.Config, err = mb.bs.Put(ctx, v1.MediaTypeImageConfig, mb.configJSON)
 	// Override MediaType, since Put always replaces the specified media
 	// type with application/octet-stream in the descriptor it returns.
-	m.Config.MediaType = MediaTypeConfig
+	m.Config.MediaType = v1.MediaTypeImageConfig
 	if err != nil {
 		return nil, err
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/manifest/ocischema"
 	"github.com/opencontainers/go-digest"
+	"github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 //ocischemaManifestHandler is a ManifestHandler that covers ocischema manifests.
@@ -79,7 +80,8 @@ func (ms *ocischemaManifestHandler) verifyManifest(ctx context.Context, mnfst oc
 		var err error
 
 		switch descriptor.MediaType {
-		case ocischema.MediaTypeForeignLayer:
+		// TODO: mikebrow/steveoe verify we should treat oci nondistributable like foreign layers?
+		case v1.MediaTypeImageLayerNonDistributable, v1.MediaTypeImageLayerNonDistributableGzip:
 			// Clients download this layer from an external URL, so do not check for
 			// its presense.
 			if len(descriptor.URLs) == 0 {
@@ -95,7 +97,7 @@ func (ms *ocischemaManifestHandler) verifyManifest(ctx context.Context, mnfst oc
 					break
 				}
 			}
-		case ocischema.MediaTypeManifest:
+		case v1.MediaTypeImageManifest:
 			var exists bool
 			exists, err = manifestService.Exists(ctx, descriptor.Digest)
 			if err != nil || !exists {

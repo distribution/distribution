@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/docker/distribution"
+	"github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 var expectedManifestSerialization = []byte(`{
@@ -32,13 +33,13 @@ func TestManifest(t *testing.T) {
 		Config: distribution.Descriptor{
 			Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
 			Size:      985,
-			MediaType: MediaTypeConfig,
+			MediaType: v1.MediaTypeImageConfig,
 		},
 		Layers: []distribution.Descriptor{
 			{
 				Digest:    "sha256:62d8908bee94c202b2d35224a221aaa2058318bfa9879fa541efaecba272331b",
 				Size:      153263,
-				MediaType: MediaTypeLayer,
+				MediaType: v1.MediaTypeImageLayerGzip,
 			},
 		},
 	}
@@ -48,9 +49,9 @@ func TestManifest(t *testing.T) {
 		t.Fatalf("error creating DeserializedManifest: %v", err)
 	}
 
-	mediaType, canonical, err := deserialized.Payload()
+	mediaType, canonical, _ := deserialized.Payload()
 
-	if mediaType != MediaTypeManifest {
+	if mediaType != v1.MediaTypeImageManifest {
 		t.Fatalf("unexpected media type: %s", mediaType)
 	}
 
@@ -82,7 +83,7 @@ func TestManifest(t *testing.T) {
 	if target.Digest != "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b" {
 		t.Fatalf("unexpected digest in target: %s", target.Digest.String())
 	}
-	if target.MediaType != MediaTypeConfig {
+	if target.MediaType != v1.MediaTypeImageConfig {
 		t.Fatalf("unexpected media type in target: %s", target.MediaType)
 	}
 	if target.Size != 985 {
@@ -102,7 +103,7 @@ func TestManifest(t *testing.T) {
 	if references[1].Digest != "sha256:62d8908bee94c202b2d35224a221aaa2058318bfa9879fa541efaecba272331b" {
 		t.Fatalf("unexpected digest in reference: %s", references[0].Digest.String())
 	}
-	if references[1].MediaType != MediaTypeLayer {
+	if references[1].MediaType != v1.MediaTypeImageLayerGzip {
 		t.Fatalf("unexpected media type in reference: %s", references[0].MediaType)
 	}
 	if references[1].Size != 153263 {

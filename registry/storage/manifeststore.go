@@ -13,6 +13,7 @@ import (
 	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/manifest/schema2"
 	"github.com/opencontainers/go-digest"
+	"github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // A ManifestHandler gets and puts manifests of a particular type.
@@ -101,9 +102,9 @@ func (ms *manifestStore) Get(ctx context.Context, dgst digest.Digest, options ..
 		switch versioned.MediaType {
 		case schema2.MediaTypeManifest:
 			return ms.schema2Handler.Unmarshal(ctx, dgst, content)
-		case ocischema.MediaTypeManifest:
+		case v1.MediaTypeImageManifest:
 			return ms.ocischemaHandler.Unmarshal(ctx, dgst, content)
-		case manifestlist.MediaTypeManifestList, manifestlist.MediaTypeOCIManifestList:
+		case manifestlist.MediaTypeManifestList, v1.MediaTypeImageIndex:
 			return ms.manifestListHandler.Unmarshal(ctx, dgst, content)
 		default:
 			return nil, distribution.ErrManifestVerification{fmt.Errorf("unrecognized manifest content type %s", versioned.MediaType)}
