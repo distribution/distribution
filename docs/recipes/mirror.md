@@ -103,6 +103,11 @@ to make the change persistent.
 
 Save the file and restart Docker for the change to take effect.
 
+> **Tip**: If you see a message in the log that reads,
+> `error statting local store, serving from upstream: unknown blob`, this isn't
+> an error in cache functionality. Instead, it's an informational message
+> telling you that the file doesn't exist yet in the local cache.
+
 ## Use case: the China registry mirror
 
 The URL of the registry mirror for China is `registry.docker-cn.com`. You can
