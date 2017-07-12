@@ -79,7 +79,7 @@ func (m Manifest) References() []distribution.Descriptor {
 	return references
 }
 
-// Target returns the target of this signed manifest.
+// Target returns the target of this manifest.
 func (m Manifest) Target() distribution.Descriptor {
 	return m.Config
 }
