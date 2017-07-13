@@ -103,10 +103,18 @@ to make the change persistent.
 
 Save the file and restart Docker for the change to take effect.
 
-> **Tip**: If you see a message in the log that reads,
-> `error statting local store, serving from upstream: unknown blob`, this isn't
-> an error in cache functionality. Instead, it's an informational message
-> telling you that the file doesn't exist yet in the local cache.
+> **Tip**: Some log messages that appear to be errors are actually
+> informational messages. Check the `level` field to determine whether
+> the message is warning you about an error or is giving you information.
+> For example, this log message is informational:
+>
+> ```conf
+> `time="2017-06-02T15:47:37Z" level=info msg="error statting local store, serving from upstream: unknown blob" go.version=go1.7.4`
+> ```
+>
+> It's telling you that the file doesn't exist yet in the local cache and is
+> being pulled from upstream. 
+
 
 ## Use case: the China registry mirror
 
