@@ -103,8 +103,9 @@ to make the change persistent.
 
 Save the file and restart Docker for the change to take effect.
 
-> **Tip**: Some log messages that appear to be errors are actually
-> informational messages. Check the `level` field to determine whether
+> Some log messages that appear to be errors are actually informational messages.
+>
+> Check the `level` field to determine whether
 > the message is warning you about an error or is giving you information.
 > For example, this log message is informational:
 >
