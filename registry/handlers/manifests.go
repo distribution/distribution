@@ -27,6 +27,7 @@ const (
 	defaultArch         = "amd64"
 	defaultOS           = "linux"
 	maxManifestBodySize = 4 << 20
+	imageClass          = "image"
 )
 
 // manifestDispatcher takes the request context and builds the
@@ -109,15 +110,11 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 			}
 		}
 	}
-	supportsOCI := supportsOCISchema || supportsOCIImageIndex
 
 	if imh.Tag != "" {
 		tags := imh.Repository.Tags(imh)
 		var desc distribution.Descriptor
-		desc, err = tags.Get(imh, imh.annotatedTag(supportsOCI))
-		if err != nil && supportsOCI { // in the supportsOCI case fall back to the non OCI image
-			desc, err = tags.Get(imh, imh.annotatedTag(false))
-		}
+		desc, err = tags.Get(imh, imh.Tag)
 		if err != nil {
 			if _, ok := err.(distribution.ErrTagUnknown); ok {
 				imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
@@ -136,14 +133,10 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 
 	var options []distribution.ManifestServiceOption
 	if imh.Tag != "" {
-		options = append(options, distribution.WithTag(imh.annotatedTag(supportsOCI)))
+		options = append(options, distribution.WithTag(imh.Tag))
 	}
 	var manifest distribution.Manifest
 	manifest, err = manifests.Get(imh, imh.Digest, options...)
-	if err != nil && supportsOCI && imh.Tag != "" { // in the supportsOCI case fall back to the non OCI image
-		options = append(options[:0], distribution.WithTag(imh.annotatedTag(false)))
-		manifest, err = manifests.Get(imh, imh.Digest, options...)
-	}
 	if err != nil {
 		if _, ok := err.(distribution.ErrManifestUnknownRevision); ok {
 			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
@@ -266,7 +259,7 @@ func (imh *manifestHandler) convertSchema2Manifest(schema2Manifest *schema2.Dese
 
 	builder := schema1.NewConfigManifestBuilder(imh.Repository.Blobs(imh), imh.Context.App.trustKey, ref, configJSON)
 	for _, d := range schema2Manifest.Layers {
-		if err := builder.AppendReference(d); err != nil {
+		if err = builder.AppendReference(d); err != nil {
 			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestInvalid.WithDetail(err))
 			return nil, err
 		}
@@ -336,10 +329,10 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 
 	var options []distribution.ManifestServiceOption
 	if imh.Tag != "" {
-		options = append(options, distribution.WithTag(imh.annotatedTag(isAnOCIManifest)))
+		options = append(options, distribution.WithTag(imh.Tag))
 	}
 
-	if err := imh.applyResourcePolicy(manifest); err != nil {
+	if err = imh.applyResourcePolicy(manifest); err != nil {
 		imh.Errors = append(imh.Errors, err)
 		return
 	}
@@ -388,7 +381,7 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 	// Tag this manifest
 	if imh.Tag != "" {
 		tags := imh.Repository.Tags(imh)
-		err = tags.Tag(imh, imh.annotatedTag(isAnOCIManifest), desc)
+		err = tags.Tag(imh, imh.Tag, desc)
 		if err != nil {
 			fmt.Printf("\n\nXXX 4: %T: %v\n\n\n", err, err)
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
@@ -431,11 +424,11 @@ func (imh *manifestHandler) applyResourcePolicy(manifest distribution.Manifest) 
 	var class string
 	switch m := manifest.(type) {
 	case *schema1.SignedManifest:
-		class = "image"
+		class = imageClass
 	case *schema2.DeserializedManifest:
 		switch m.Config.MediaType {
 		case schema2.MediaTypeImageConfig:
-			class = "image"
+			class = imageClass
 		case schema2.MediaTypePluginConfig:
 			class = "plugin"
 		default:
@@ -445,7 +438,7 @@ func (imh *manifestHandler) applyResourcePolicy(manifest distribution.Manifest) 
 	case *ocischema.DeserializedManifest:
 		switch m.Config.MediaType {
 		case v1.MediaTypeImageConfig:
-			class = "image"
+			class = imageClass
 		default:
 			message := fmt.Sprintf("unknown manifest class for %s", m.Config.MediaType)
 			return errcode.ErrorCodeDenied.WithMessage(message)
@@ -476,7 +469,7 @@ func (imh *manifestHandler) applyResourcePolicy(manifest distribution.Manifest) 
 	for _, r := range resources {
 		if r.Name == n {
 			if r.Class == "" {
-				r.Class = "image"
+				r.Class = imageClass
 			}
 			if r.Class == class {
 				return nil
@@ -539,13 +532,4 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 	}
 
 	w.WriteHeader(http.StatusAccepted)
-}
-
-// annotatedTag will annotate OCI tags by prepending a string, and leave docker
-// tags unmodified.
-func (imh *manifestHandler) annotatedTag(oci bool) string {
-	if oci {
-		return "oci." + imh.Tag
-	}
-	return imh.Tag
 }
