@@ -676,7 +676,7 @@ the upload will not be considered complete. The format for the final chunk
 will be as follows:
 
 ```
-PUT /v2/<name>/blob/uploads/<uuid>?digest=<digest>
+PUT /v2/<name>/blobs/uploads/<uuid>?digest=<digest>
 Content-Length: <size of chunk>
 Content-Range: <start of range>-<end of range>
 Content-Type: application/octet-stream
