@@ -83,7 +83,7 @@ func (ms *ocischemaManifestHandler) verifyManifest(ctx context.Context, mnfst oc
 		// TODO: mikebrow/steveoe verify we should treat oci nondistributable like foreign layers?
 		case v1.MediaTypeImageLayerNonDistributable, v1.MediaTypeImageLayerNonDistributableGzip:
 			// Clients download this layer from an external URL, so do not check for
-			// its presense.
+			// its presence.
 			if len(descriptor.URLs) == 0 {
 				err = errMissingURL
 			}

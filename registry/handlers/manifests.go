@@ -152,22 +152,22 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 	isAnOCIImageIndex := isManifestList && (manifestList.MediaType == v1.MediaTypeImageIndex)
 
 	if (isSchema2 && !isAnOCIManifest) && (supportsOCISchema && !supportsSchema2) {
-		fmt.Printf("\n\nmanifest is schema2, but accept header only supports OCISchema \n\n")
+		ctxu.GetLogger(imh).Debug("manifest is schema2, but accept header only supports OCISchema")
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	if (isManifestList && !isAnOCIImageIndex) && (supportsOCIImageIndex && !supportsManifestList) {
-		fmt.Printf("\n\nmanifestlist is not OCI, but accept header only supports an OCI manifestlist\n\n")
+		ctxu.GetLogger(imh).Debug("manifestlist is not OCI, but accept header only supports an OCI manifestlist")
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	if isAnOCIManifest && (!supportsOCISchema && supportsSchema2) {
-		fmt.Printf("\n\nmanifest is OCI, but accept header only supports schema2\n\n")
+		ctxu.GetLogger(imh).Debug("manifest is OCI, but accept header only supports schema2")
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	if isAnOCIImageIndex && (!supportsOCIImageIndex && supportsManifestList) {
-		fmt.Printf("\n\nmanifestlist is OCI, but accept header only supports non-OCI manifestlists\n\n")
+		ctxu.GetLogger(imh).Debug("manifestlist is OCI, but accept header only supports non-OCI manifestlists")
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
@@ -322,9 +322,9 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 	isAnOCIManifest := mediaType == v1.MediaTypeImageManifest || mediaType == v1.MediaTypeImageIndex
 
 	if isAnOCIManifest {
-		fmt.Printf("\n\nPutting an OCI Manifest!\n\n\n")
+		ctxu.GetLogger(imh).Debug("Putting an OCI Manifest!")
 	} else {
-		fmt.Printf("\n\nPutting a Docker Manifest!\n\n\n")
+		ctxu.GetLogger(imh).Debug("Putting a Docker Manifest!")
 	}
 
 	var options []distribution.ManifestServiceOption
@@ -342,12 +342,10 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 		// TODO(stevvooe): These error handling switches really need to be
 		// handled by an app global mapper.
 		if err == distribution.ErrUnsupported {
-			fmt.Printf("\n\nXXX 1\n\n\n")
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnsupported)
 			return
 		}
 		if err == distribution.ErrAccessDenied {
-			fmt.Printf("\n\nXXX 2\n\n\n")
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeDenied)
 			return
 		}
@@ -374,7 +372,6 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 		default:
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		}
-		fmt.Printf("\n\nXXX 3\n\n\n")
 		return
 	}
 
@@ -383,7 +380,6 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 		tags := imh.Repository.Tags(imh)
 		err = tags.Tag(imh, imh.Tag, desc)
 		if err != nil {
-			fmt.Printf("\n\nXXX 4: %T: %v\n\n\n", err, err)
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 			return
 		}
@@ -393,7 +389,6 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 	// Construct a canonical url for the uploaded manifest.
 	ref, err := reference.WithDigest(imh.Repository.Named(), imh.Digest)
 	if err != nil {
-		fmt.Printf("\n\nXXX 5\n\n\n")
 		imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		return
 	}
@@ -410,7 +405,7 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Docker-Content-Digest", imh.Digest.String())
 	w.WriteHeader(http.StatusCreated)
 
-	fmt.Printf("\n\nSucceeded in putting manifest!\n\n\n")
+	ctxu.GetLogger(imh).Debug("Succeeded in putting manifest!")
 }
 
 // applyResourcePolicy checks whether the resource class matches what has
@@ -432,16 +427,14 @@ func (imh *manifestHandler) applyResourcePolicy(manifest distribution.Manifest) 
 		case schema2.MediaTypePluginConfig:
 			class = "plugin"
 		default:
-			message := fmt.Sprintf("unknown manifest class for %s", m.Config.MediaType)
-			return errcode.ErrorCodeDenied.WithMessage(message)
+			return errcode.ErrorCodeDenied.WithMessage("unknown manifest class for " + m.Config.MediaType)
 		}
 	case *ocischema.DeserializedManifest:
 		switch m.Config.MediaType {
 		case v1.MediaTypeImageConfig:
 			class = imageClass
 		default:
-			message := fmt.Sprintf("unknown manifest class for %s", m.Config.MediaType)
-			return errcode.ErrorCodeDenied.WithMessage(message)
+			return errcode.ErrorCodeDenied.WithMessage("unknown manifest class for " + m.Config.MediaType)
 		}
 	}
 
@@ -458,8 +451,7 @@ func (imh *manifestHandler) applyResourcePolicy(manifest distribution.Manifest) 
 		}
 	}
 	if !allowedClass {
-		message := fmt.Sprintf("registry does not allow %s manifest", class)
-		return errcode.ErrorCodeDenied.WithMessage(message)
+		return errcode.ErrorCodeDenied.WithMessage(fmt.Sprintf("registry does not allow %s manifest", class))
 	}
 
 	resources := auth.AuthorizedResources(imh)
@@ -480,8 +472,7 @@ func (imh *manifestHandler) applyResourcePolicy(manifest distribution.Manifest) 
 
 	// resource was found but no matching class was found
 	if foundResource {
-		message := fmt.Sprintf("repository not authorized for %s manifest", class)
-		return errcode.ErrorCodeDenied.WithMessage(message)
+		return errcode.ErrorCodeDenied.WithMessage(fmt.Sprintf("repository not authorized for %s manifest", class))
 	}
 
 	return nil
