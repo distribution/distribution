@@ -30,6 +30,17 @@ const (
 	imageClass          = "image"
 )
 
+type storageType int
+
+const (
+	manifestSchema1     storageType = iota // 0
+	manifestSchema2                        // 1
+	manifestlistSchema                     // 2
+	ociSchema                              // 3
+	ociImageIndexSchema                    // 4
+	numStorageTypes                        // 5
+)
+
 // manifestDispatcher takes the request context and builds the
 // appropriate handler for handling manifest requests.
 func manifestDispatcher(ctx *Context, r *http.Request) http.Handler {
@@ -75,10 +86,8 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 		imh.Errors = append(imh.Errors, err)
 		return
 	}
-	supportsSchema2 := false
-	supportsManifestList := false
-	supportsOCISchema := false
-	supportsOCIImageIndex := false
+	var supports [numStorageTypes]bool
+
 	// this parsing of Accept headers is not quite as full-featured as godoc.org's parser, but we don't care about "q=" values
 	// https://github.com/golang/gddo/blob/e91d4165076d7474d20abda83f92d15c7ebc3e81/httputil/header/header.go#L165-L202
 	for _, acceptHeader := range r.Header["Accept"] {
@@ -97,16 +106,16 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 			mediaType = strings.TrimSpace(mediaType)
 
 			if mediaType == schema2.MediaTypeManifest {
-				supportsSchema2 = true
+				supports[manifestSchema2] = true
 			}
 			if mediaType == manifestlist.MediaTypeManifestList {
-				supportsManifestList = true
+				supports[manifestlistSchema] = true
 			}
 			if mediaType == v1.MediaTypeImageManifest {
-				supportsOCISchema = true
+				supports[ociSchema] = true
 			}
 			if mediaType == v1.MediaTypeImageIndex {
-				supportsOCIImageIndex = true
+				supports[ociImageIndexSchema] = true
 			}
 		}
 	}
@@ -145,36 +154,34 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 		}
 		return
 	}
-
+	// determine the type of the returned manifest
+	manifestType := manifestSchema1
 	schema2Manifest, isSchema2 := manifest.(*schema2.DeserializedManifest)
 	manifestList, isManifestList := manifest.(*manifestlist.DeserializedManifestList)
-	isAnOCIManifest := isSchema2 && (schema2Manifest.MediaType == v1.MediaTypeImageManifest)
-	isAnOCIImageIndex := isManifestList && (manifestList.MediaType == v1.MediaTypeImageIndex)
+	if isSchema2 {
+		manifestType = manifestSchema2
+	} else if _, isOCImanifest := manifest.(*ocischema.DeserializedManifest); isOCImanifest {
+		manifestType = ociSchema
+	} else if isManifestList {
+		if manifestList.MediaType == manifestlist.MediaTypeManifestList {
+			manifestType = manifestlistSchema
+		} else if manifestList.MediaType == v1.MediaTypeImageIndex {
+			manifestType = ociImageIndexSchema
+		}
+	}
 
-	if (isSchema2 && !isAnOCIManifest) && (supportsOCISchema && !supportsSchema2) {
-		ctxu.GetLogger(imh).Debug("manifest is schema2, but accept header only supports OCISchema")
-		w.WriteHeader(http.StatusNotFound)
+	if manifestType == ociSchema && !supports[ociSchema] {
+		imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithMessage("OCI manifest found, but accept header does not support OCI manifests"))
 		return
 	}
-	if (isManifestList && !isAnOCIImageIndex) && (supportsOCIImageIndex && !supportsManifestList) {
-		ctxu.GetLogger(imh).Debug("manifestlist is not OCI, but accept header only supports an OCI manifestlist")
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-	if isAnOCIManifest && (!supportsOCISchema && supportsSchema2) {
-		ctxu.GetLogger(imh).Debug("manifest is OCI, but accept header only supports schema2")
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-	if isAnOCIImageIndex && (!supportsOCIImageIndex && supportsManifestList) {
-		ctxu.GetLogger(imh).Debug("manifestlist is OCI, but accept header only supports non-OCI manifestlists")
-		w.WriteHeader(http.StatusNotFound)
+	if manifestType == ociImageIndexSchema && !supports[ociImageIndexSchema] {
+		imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithMessage("OCI index found, but accept header does not support OCI indexes"))
 		return
 	}
 	// Only rewrite schema2 manifests when they are being fetched by tag.
 	// If they are being fetched by digest, we can't return something not
 	// matching the digest.
-	if imh.Tag != "" && isSchema2 && !(supportsSchema2 || supportsOCISchema) {
+	if imh.Tag != "" && manifestType == manifestSchema2 && !supports[manifestSchema2] {
 		// Rewrite manifest in schema1 format
 		ctxu.GetLogger(imh).Infof("rewriting manifest %s in schema1 format to support old client", imh.Digest.String())
 
@@ -182,7 +189,7 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 		if err != nil {
 			return
 		}
-	} else if imh.Tag != "" && isManifestList && !(supportsManifestList || supportsOCIImageIndex) {
+	} else if imh.Tag != "" && manifestType == manifestlistSchema && !supports[manifestlistSchema] {
 		// Rewrite manifest in schema1 format
 		ctxu.GetLogger(imh).Infof("rewriting manifest list %s in schema1 format to support old client", imh.Digest.String())
 
@@ -212,7 +219,7 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 		}
 
 		// If necessary, convert the image manifest
-		if schema2Manifest, isSchema2 := manifest.(*schema2.DeserializedManifest); isSchema2 && !(supportsSchema2 || supportsOCISchema) {
+		if schema2Manifest, isSchema2 := manifest.(*schema2.DeserializedManifest); isSchema2 && !supports[manifestSchema2] {
 			manifest, err = imh.convertSchema2Manifest(schema2Manifest)
 			if err != nil {
 				return

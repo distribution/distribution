@@ -10,6 +10,7 @@ import (
 	"github.com/opencontainers/image-spec/specs-go/v1"
 )
 
+// TODO (mikebrow): add annotations to the test
 var expectedManifestSerialization = []byte(`{
    "schemaVersion": 2,
    "mediaType": "application/vnd.oci.image.manifest.v1+json",
