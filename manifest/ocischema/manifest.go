@@ -57,7 +57,6 @@ func (m Manifest) References() []distribution.Descriptor {
 	references := make([]distribution.Descriptor, 0, 1+len(m.Layers))
 	references = append(references, m.Config)
 	references = append(references, m.Layers...)
-	// TODO: (mikebrow/stevvooe) should we return annotations as references
 	return references
 }
 

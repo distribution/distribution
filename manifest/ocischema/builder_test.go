@@ -10,6 +10,7 @@ import (
 	"github.com/opencontainers/image-spec/specs-go/v1"
 )
 
+// TODO (not assigned): consider making mockBlobService common for ocischema, schema2, and schema1
 type mockBlobService struct {
 	descriptors map[digest.Digest]distribution.Descriptor
 }

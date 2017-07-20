@@ -111,6 +111,7 @@ func TestManifestList(t *testing.T) {
 	}
 }
 
+// TODO (mikebrow): add annotations on the index and individual manifests
 var expectedOCIImageIndexSerialization = []byte(`{
    "schemaVersion": 2,
    "mediaType": "application/vnd.oci.image.index.v1+json",
