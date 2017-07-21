@@ -53,12 +53,6 @@ func TestVerifyOCIManifestNonDistributableLayer(t *testing.T) {
 
 	cases := []testcase{
 		{
-			nonDistributableLayer,
-			nil,
-			errMissingURL,
-		},
-		{
-			// regular layers may have foreign urls (non-Distributable Layers)
 			layer,
 			[]string{"http://foo/bar"},
 			nil,
@@ -66,37 +60,37 @@ func TestVerifyOCIManifestNonDistributableLayer(t *testing.T) {
 		{
 			nonDistributableLayer,
 			[]string{"file:///local/file"},
-			errInvalidURL,
+			nil,
 		},
 		{
 			nonDistributableLayer,
 			[]string{"http://foo/bar#baz"},
-			errInvalidURL,
+			nil,
 		},
 		{
 			nonDistributableLayer,
 			[]string{""},
-			errInvalidURL,
+			nil,
 		},
 		{
 			nonDistributableLayer,
 			[]string{"https://foo/bar", ""},
-			errInvalidURL,
+			nil,
 		},
 		{
 			nonDistributableLayer,
 			[]string{"", "https://foo/bar"},
-			errInvalidURL,
+			nil,
 		},
 		{
 			nonDistributableLayer,
 			[]string{"http://nope/bar"},
-			errInvalidURL,
+			nil,
 		},
 		{
 			nonDistributableLayer,
 			[]string{"http://foo/nope"},
-			errInvalidURL,
+			nil,
 		},
 		{
 			nonDistributableLayer,

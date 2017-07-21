@@ -15,7 +15,7 @@ var (
 	// SchemaVersion provides a pre-initialized version structure for this
 	// packages version of the manifest.
 	SchemaVersion = manifest.Versioned{
-		SchemaVersion: 2, // TODO: (mikebrow/stevvooe) this could be confusing cause oci version 1 is closer to docker 2 than 1
+		SchemaVersion: 2, // historical value here.. does not pertain to OCI or docker version
 		MediaType:     v1.MediaTypeImageManifest,
 	}
 )
