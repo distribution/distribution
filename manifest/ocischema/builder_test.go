@@ -10,7 +10,6 @@ import (
 	"github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-// TODO (not assigned): consider making mockBlobService common for ocischema, schema2, and schema1
 type mockBlobService struct {
 	descriptors map[digest.Digest]distribution.Descriptor
 }
@@ -50,110 +49,65 @@ func (bs *mockBlobService) Resume(ctx context.Context, id string) (distribution.
 
 func TestBuilder(t *testing.T) {
 	imgJSON := []byte(`{
+    "created": "2015-10-31T22:22:56.015925234Z",
+    "author": "Alyssa P. Hacker <alyspdev@example.com>",
     "architecture": "amd64",
-    "config": {
-        "AttachStderr": false,
-        "AttachStdin": false,
-        "AttachStdout": false,
-        "Cmd": [
-            "/bin/sh",
-            "-c",
-            "echo hi"
-        ],
-        "Domainname": "",
-        "Entrypoint": null,
-        "Env": [
-            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-            "derived=true",
-            "asdf=true"
-        ],
-        "Hostname": "23304fc829f9",
-        "Image": "sha256:4ab15c48b859c2920dd5224f92aabcd39a52794c5b3cf088fb3bbb438756c246",
-        "Labels": {},
-        "OnBuild": [],
-        "OpenStdin": false,
-        "StdinOnce": false,
-        "Tty": false,
-        "User": "",
-        "Volumes": null,
-        "WorkingDir": ""
-    },
-    "container": "e91032eb0403a61bfe085ff5a5a48e3659e5a6deae9f4d678daa2ae399d5a001",
-    "container_config": {
-        "AttachStderr": false,
-        "AttachStdin": false,
-        "AttachStdout": false,
-        "Cmd": [
-            "/bin/sh",
-            "-c",
-            "#(nop) CMD [\"/bin/sh\" \"-c\" \"echo hi\"]"
-        ],
-        "Domainname": "",
-        "Entrypoint": null,
-        "Env": [
-            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-            "derived=true",
-            "asdf=true"
-        ],
-        "Hostname": "23304fc829f9",
-        "Image": "sha256:4ab15c48b859c2920dd5224f92aabcd39a52794c5b3cf088fb3bbb438756c246",
-        "Labels": {},
-        "OnBuild": [],
-        "OpenStdin": false,
-        "StdinOnce": false,
-        "Tty": false,
-        "User": "",
-        "Volumes": null,
-        "WorkingDir": ""
-    },
-    "created": "2015-11-04T23:06:32.365666163Z",
-    "docker_version": "1.9.0-dev",
-    "history": [
-        {
-            "created": "2015-10-31T22:22:54.690851953Z",
-            "created_by": "/bin/sh -c #(nop) ADD file:a3bc1e842b69636f9df5256c49c5374fb4eef1e281fe3f282c65fb853ee171c5 in /"
-        },
-        {
-            "created": "2015-10-31T22:22:55.613815829Z",
-            "created_by": "/bin/sh -c #(nop) CMD [\"sh\"]"
-        },
-        {
-            "created": "2015-11-04T23:06:30.934316144Z",
-            "created_by": "/bin/sh -c #(nop) ENV derived=true",
-            "empty_layer": true
-        },
-        {
-            "created": "2015-11-04T23:06:31.192097572Z",
-            "created_by": "/bin/sh -c #(nop) ENV asdf=true",
-            "empty_layer": true
-        },
-        {
-            "created": "2015-11-04T23:06:32.083868454Z",
-            "created_by": "/bin/sh -c dd if=/dev/zero of=/file bs=1024 count=1024"
-        },
-        {
-            "created": "2015-11-04T23:06:32.365666163Z",
-            "created_by": "/bin/sh -c #(nop) CMD [\"/bin/sh\" \"-c\" \"echo hi\"]",
-            "empty_layer": true
-        }
-    ],
     "os": "linux",
-    "rootfs": {
-        "diff_ids": [
-            "sha256:c6f988f4874bb0add23a778f753c65efe992244e148a1d2ec2a8b664fb66bbd1",
-            "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
-            "sha256:13f53e08df5a220ab6d13c58b2bf83a59cbdc2e04d0a3f041ddf4b0ba4112d49"
+    "config": {
+        "User": "alice",
+        "ExposedPorts": {
+            "8080/tcp": {}
+        },
+        "Env": [
+            "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+            "FOO=oci_is_a",
+            "BAR=well_written_spec"
         ],
-        "type": "layers"
-    }
+        "Entrypoint": [
+            "/bin/my-app-binary"
+        ],
+        "Cmd": [
+            "--foreground",
+            "--config",
+            "/etc/my-app.d/default.cfg"
+        ],
+        "Volumes": {
+            "/var/job-result-data": {},
+            "/var/log/my-app-logs": {}
+        },
+        "WorkingDir": "/home/alice",
+        "Labels": {
+            "com.example.project.git.url": "https://example.com/project.git",
+            "com.example.project.git.commit": "45a939b2999782a3f005621a8d0f29aa387e1d6b"
+        }
+    },
+    "rootfs": {
+      "diff_ids": [
+        "sha256:c6f988f4874bb0add23a778f753c65efe992244e148a1d2ec2a8b664fb66bbd1",
+        "sha256:5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef"
+      ],
+      "type": "layers"
+    },
+    "history": [
+      {
+        "created": "2015-10-31T22:22:54.690851953Z",
+        "created_by": "/bin/sh -c #(nop) ADD file:a3bc1e842b69636f9df5256c49c5374fb4eef1e281fe3f282c65fb853ee171c5 in /"
+      },
+      {
+        "created": "2015-10-31T22:22:55.613815829Z",
+        "created_by": "/bin/sh -c #(nop) CMD [\"sh\"]",
+        "empty_layer": true
+      }
+    ]
 }`)
 	configDigest := digest.FromBytes(imgJSON)
 
 	descriptors := []distribution.Descriptor{
 		{
-			Digest:    digest.Digest("sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"),
-			Size:      5312,
-			MediaType: v1.MediaTypeImageLayerGzip,
+			Digest:      digest.Digest("sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"),
+			Size:        5312,
+			MediaType:   v1.MediaTypeImageLayerGzip,
+			Annotations: map[string]string{"apple": "orange", "lettuce": "wrap"},
 		},
 		{
 			Digest:    digest.Digest("sha256:86e0e091d0da6bde2456dbb48306f3956bbeb2eae1b5b9a43045843f69fe4aaa"),
@@ -200,7 +154,7 @@ func TestBuilder(t *testing.T) {
 	if target.MediaType != v1.MediaTypeImageConfig {
 		t.Fatalf("unexpected media type in target: %s", target.MediaType)
 	}
-	if target.Size != 3153 {
+	if target.Size != 1582 {
 		t.Fatalf("unexpected size in target: %d", target.Size)
 	}
 

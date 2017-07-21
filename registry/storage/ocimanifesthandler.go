@@ -3,7 +3,6 @@ package storage
 import (
 	"encoding/json"
 	"fmt"
-	"net/url"
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
@@ -80,23 +79,6 @@ func (ms *ocischemaManifestHandler) verifyManifest(ctx context.Context, mnfst oc
 		var err error
 
 		switch descriptor.MediaType {
-		// TODO: mikebrow/steveoe verify we should treat oci nondistributable like foreign layers?
-		case v1.MediaTypeImageLayerNonDistributable, v1.MediaTypeImageLayerNonDistributableGzip:
-			// Clients download this layer from an external URL, so do not check for
-			// its presence.
-			if len(descriptor.URLs) == 0 {
-				err = errMissingURL
-			}
-			allow := ms.manifestURLs.allow
-			deny := ms.manifestURLs.deny
-			for _, u := range descriptor.URLs {
-				var pu *url.URL
-				pu, err = url.Parse(u)
-				if err != nil || (pu.Scheme != "http" && pu.Scheme != "https") || pu.Fragment != "" || (allow != nil && !allow.MatchString(u)) || (deny != nil && deny.MatchString(u)) {
-					err = errInvalidURL
-					break
-				}
-			}
 		case v1.MediaTypeImageManifest:
 			var exists bool
 			exists, err = manifestService.Exists(ctx, descriptor.Digest)

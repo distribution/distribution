@@ -17,13 +17,19 @@ var expectedManifestSerialization = []byte(`{
    "config": {
       "mediaType": "application/vnd.oci.image.config.v1+json",
       "size": 985,
-      "digest": "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b"
+      "digest": "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
+      "annotations": {
+         "apple": "orange"
+      }
    },
    "layers": [
       {
          "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
          "size": 153263,
-         "digest": "sha256:62d8908bee94c202b2d35224a221aaa2058318bfa9879fa541efaecba272331b"
+         "digest": "sha256:62d8908bee94c202b2d35224a221aaa2058318bfa9879fa541efaecba272331b",
+         "annotations": {
+            "lettuce": "wrap"
+         }
       }
    ]
 }`)
@@ -32,15 +38,17 @@ func TestManifest(t *testing.T) {
 	manifest := Manifest{
 		Versioned: SchemaVersion,
 		Config: distribution.Descriptor{
-			Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
-			Size:      985,
-			MediaType: v1.MediaTypeImageConfig,
+			Digest:      "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
+			Size:        985,
+			MediaType:   v1.MediaTypeImageConfig,
+			Annotations: map[string]string{"apple": "orange"},
 		},
 		Layers: []distribution.Descriptor{
 			{
-				Digest:    "sha256:62d8908bee94c202b2d35224a221aaa2058318bfa9879fa541efaecba272331b",
-				Size:      153263,
-				MediaType: v1.MediaTypeImageLayerGzip,
+				Digest:      "sha256:62d8908bee94c202b2d35224a221aaa2058318bfa9879fa541efaecba272331b",
+				Size:        153263,
+				MediaType:   v1.MediaTypeImageLayerGzip,
+				Annotations: map[string]string{"lettuce": "wrap"},
 			},
 		},
 	}
@@ -90,6 +98,9 @@ func TestManifest(t *testing.T) {
 	if target.Size != 985 {
 		t.Fatalf("unexpected size in target: %d", target.Size)
 	}
+	if target.Annotations["apple"] != "orange" {
+		t.Fatalf("unexpected annotation in target: %s", target.Annotations["apple"])
+	}
 
 	references := deserialized.References()
 	if len(references) != 2 {
@@ -109,5 +120,8 @@ func TestManifest(t *testing.T) {
 	}
 	if references[1].Size != 153263 {
 		t.Fatalf("unexpected size in reference: %d", references[0].Size)
+	}
+	if references[1].Annotations["lettuce"] != "wrap" {
+		t.Fatalf("unexpected annotation in reference: %s", references[1].Annotations["lettuce"])
 	}
 }

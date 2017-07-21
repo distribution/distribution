@@ -122,8 +122,7 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 
 	if imh.Tag != "" {
 		tags := imh.Repository.Tags(imh)
-		var desc distribution.Descriptor
-		desc, err = tags.Get(imh, imh.Tag)
+		desc, err := tags.Get(imh, imh.Tag)
 		if err != nil {
 			if _, ok := err.(distribution.ErrTagUnknown); ok {
 				imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
@@ -144,8 +143,7 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 	if imh.Tag != "" {
 		options = append(options, distribution.WithTag(imh.Tag))
 	}
-	var manifest distribution.Manifest
-	manifest, err = manifests.Get(imh, imh.Digest, options...)
+	manifest, err := manifests.Get(imh, imh.Digest, options...)
 	if err != nil {
 		if _, ok := err.(distribution.ErrManifestUnknownRevision); ok {
 			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
@@ -266,7 +264,7 @@ func (imh *manifestHandler) convertSchema2Manifest(schema2Manifest *schema2.Dese
 
 	builder := schema1.NewConfigManifestBuilder(imh.Repository.Blobs(imh), imh.Context.App.trustKey, ref, configJSON)
 	for _, d := range schema2Manifest.Layers {
-		if err = builder.AppendReference(d); err != nil {
+		if err := builder.AppendReference(d); err != nil {
 			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestInvalid.WithDetail(err))
 			return nil, err
 		}
@@ -339,7 +337,7 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 		options = append(options, distribution.WithTag(imh.Tag))
 	}
 
-	if err = imh.applyResourcePolicy(manifest); err != nil {
+	if err := imh.applyResourcePolicy(manifest); err != nil {
 		imh.Errors = append(imh.Errors, err)
 		return
 	}
