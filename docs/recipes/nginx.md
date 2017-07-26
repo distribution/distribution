@@ -67,125 +67,115 @@ properly. For more information, see
 
 ## Setting things up
 
-Read again [the requirements](index.md#requirements).
+Review the [requirements](../index.md#requirements), then follow ese steps.
 
-Ready?
+1.  Create the required directories
 
---
+    ```bash
+    mkdir -p auth data
+    ```
 
-Create the required directories
+2.  Create the main nginx configuration you will use. Paste this code block into a new file called `auth/nginx.conf`:
 
-```
-mkdir -p auth
-mkdir -p data
-```
+    ```conf
+    events {
+        worker_connections  1024;
+    }
 
-Create the main nginx configuration you will use.
+    http {
 
-```
-
-cat > auth/nginx.conf << 'EOF'
-events {
-    worker_connections  1024;
-}
-
-http {
-
-  upstream docker-registry {
-    server registry:5000;
-  }
-
-  ## Set a variable to help us decide if we need to add the
-  ## 'Docker-Distribution-Api-Version' header.
-  ## The registry always sets this header.
-  ## In the case of nginx performing auth, the header will be unset
-  ## since nginx is auth-ing before proxying.
-  map $upstream_http_docker_distribution_api_version $docker_distribution_api_version {
-    '' 'registry/2.0';
-  }
-
-  server {
-    listen 443 ssl;
-    server_name myregistrydomain.com;
-
-    # SSL
-    ssl_certificate /etc/nginx/conf.d/domain.crt;
-    ssl_certificate_key /etc/nginx/conf.d/domain.key;
-
-    # Recommendations from https://raymii.org/s/tutorials/Strong_SSL_Security_On_nginx.html
-    ssl_protocols TLSv1.1 TLSv1.2;
-    ssl_ciphers 'EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH';
-    ssl_prefer_server_ciphers on;
-    ssl_session_cache shared:SSL:10m;
-
-    # disable any limits to avoid HTTP 413 for large image uploads
-    client_max_body_size 0;
-
-    # required to avoid HTTP 411: see Issue #1486 (https://github.com/moby/moby/issues/1486)
-    chunked_transfer_encoding on;
-
-    location /v2/ {
-      # Do not allow connections from docker 1.5 and earlier
-      # docker pre-1.6.0 did not properly set the user agent on ping, catch "Go *" user agents
-      if ($http_user_agent ~ "^(docker\/1\.(3|4|5(?!\.[0-9]-dev))|Go ).*$" ) {
-        return 404;
+      upstream docker-registry {
+        server registry:5000;
       }
 
-      # To add basic authentication to v2 use auth_basic setting.
-      auth_basic "Registry realm";
-      auth_basic_user_file /etc/nginx/conf.d/nginx.htpasswd;
+      ## Set a variable to help us decide if we need to add the
+      ## 'Docker-Distribution-Api-Version' header.
+      ## The registry always sets this header.
+      ## In the case of nginx performing auth, the header will be unset
+      ## since nginx is auth-ing before proxying.
+      map $upstream_http_docker_distribution_api_version $docker_distribution_api_version {
+        '' 'registry/2.0';
+      }
 
-      ## If $docker_distribution_api_version is empty, the header will not be added.
-      ## See the map directive above where this variable is defined.
-      add_header 'Docker-Distribution-Api-Version' $docker_distribution_api_version always;
+      server {
+        listen 443 ssl;
+        server_name myregistrydomain.com;
 
-      proxy_pass                          http://docker-registry;
-      proxy_set_header  Host              $http_host;   # required for docker client's sake
-      proxy_set_header  X-Real-IP         $remote_addr; # pass on real client's IP
-      proxy_set_header  X-Forwarded-For   $proxy_add_x_forwarded_for;
-      proxy_set_header  X-Forwarded-Proto $scheme;
-      proxy_read_timeout                  900;
+        # SSL
+        ssl_certificate /etc/nginx/conf.d/domain.crt;
+        ssl_certificate_key /etc/nginx/conf.d/domain.key;
+
+        # Recommendations from https://raymii.org/s/tutorials/Strong_SSL_Security_On_nginx.html
+        ssl_protocols TLSv1.1 TLSv1.2;
+        ssl_ciphers 'EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH';
+        ssl_prefer_server_ciphers on;
+        ssl_session_cache shared:SSL:10m;
+
+        # disable any limits to avoid HTTP 413 for large image uploads
+        client_max_body_size 0;
+
+        # required to avoid HTTP 411: see Issue #1486 (https://github.com/moby/moby/issues/1486)
+        chunked_transfer_encoding on;
+
+        location /v2/ {
+          # Do not allow connections from docker 1.5 and earlier
+          # docker pre-1.6.0 did not properly set the user agent on ping, catch "Go *" user agents
+          if ($http_user_agent ~ "^(docker\/1\.(3|4|5(?!\.[0-9]-dev))|Go ).*$" ) {
+            return 404;
+          }
+
+          # To add basic authentication to v2 use auth_basic setting.
+          auth_basic "Registry realm";
+          auth_basic_user_file /etc/nginx/conf.d/nginx.htpasswd;
+
+          ## If $docker_distribution_api_version is empty, the header will not be added.
+          ## See the map directive above where this variable is defined.
+          add_header 'Docker-Distribution-Api-Version' $docker_distribution_api_version always;
+
+          proxy_pass                          http://docker-registry;
+          proxy_set_header  Host              $http_host;   # required for docker client's sake
+          proxy_set_header  X-Real-IP         $remote_addr; # pass on real client's IP
+          proxy_set_header  X-Forwarded-For   $proxy_add_x_forwarded_for;
+          proxy_set_header  X-Forwarded-Proto $scheme;
+          proxy_read_timeout                  900;
+        }
+      }
     }
-  }
-}
-EOF
-```
+    ```
 
-Now create a password file for "testuser" and "testpassword"
+3.  Create a password file `auth/nginx.htpasswd` for "testuser" and "testpassword".
 
-```
-docker run --rm --entrypoint htpasswd registry:2 -Bbn testuser testpassword > auth/nginx.htpasswd
-```
+    ```bash
+    $ docker run --rm --entrypoint htpasswd registry:2 -Bbn testuser testpassword > auth/nginx.htpasswd
+    ```
 
-Copy over your certificate files
+4.  Copy your certificate files to the `auth/` directory.
 
-```
-cp domain.crt auth
-cp domain.key auth
-```
+    ```bash
+    $ cp domain.crt auth
+    $ cp domain.key auth
+    ```
 
-Now create your compose file
+5.  Create the compose file. Paste the following YAML into a new file called `docker-compose.yml`.
 
-```
-cat <<EOF > docker-compose.yml
-nginx:
-  image: "nginx:1.9"
-  ports:
-    - 5043:443
-  links:
-    - registry:registry
-  volumes:
-    - ./auth:/etc/nginx/conf.d
-    - ./auth/nginx.conf:/etc/nginx/nginx.conf:ro
+    ```yaml
+    nginx:
+      image: "nginx:1.9"
+      ports:
+        - 5043:443
+      links:
+        - registry:registry
+      volumes:
+        - ./auth:/etc/nginx/conf.d
+        - ./auth/nginx.conf:/etc/nginx/nginx.conf:ro
 
-registry:
-  image: registry:2
-  ports:
-    - 127.0.0.1:5000:5000
-  volumes:
-    - `pwd`./data:/var/lib/registry
-EOF
-```
+    registry:
+      image: registry:2
+      ports:
+        - 127.0.0.1:5000:5000
+      volumes:
+        - `pwd`./data:/var/lib/registry
+    ```
 
 ## Starting and stopping
 
