@@ -83,7 +83,7 @@ build:
     + lint
     + build
     github.com/docker/docker/vendor/src/code.google.com/p/go/src/pkg/archive/tar
-    github.com/Sirupsen/logrus
+    github.com/sirupsen/logrus
     github.com/docker/libtrust
     ...
     github.com/yvasiyarov/gorelic

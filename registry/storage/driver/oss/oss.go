@@ -24,11 +24,11 @@ import (
 
 	"github.com/docker/distribution/context"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/denverdino/aliyungo/oss"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/base"
 	"github.com/docker/distribution/registry/storage/driver/factory"
+	"github.com/sirupsen/logrus"
 )
 
 const driverName = "oss"
