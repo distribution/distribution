@@ -685,7 +685,7 @@ Content-Type: application/octet-stream
 ```
 
 Optionally, if all chunks have already been uploaded, a `PUT` request with a
-`digest` parameter and zero-length body may be sent to complete and validated
+`digest` parameter and zero-length body may be sent to complete and validate
 the upload. Multiple "digest" parameters may be provided with different
 digests. The server may verify none or all of them but _must_ notify the
 client if the content is rejected.
