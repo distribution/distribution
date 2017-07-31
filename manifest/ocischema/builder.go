@@ -18,15 +18,19 @@ type builder struct {
 	// layers is a list of layer descriptors that gets built by successive
 	// calls to AppendReference.
 	layers []distribution.Descriptor
+
+	// Annotations contains arbitrary metadata relating to the targeted content.
+	annotations map[string]string
 }
 
 // NewManifestBuilder is used to build new manifests for the current schema
 // version. It takes a BlobService so it can publish the configuration blob
-// as part of the Build process.
-func NewManifestBuilder(bs distribution.BlobService, configJSON []byte) distribution.ManifestBuilder {
+// as part of the Build process, and annotations.
+func NewManifestBuilder(bs distribution.BlobService, configJSON []byte, annotations map[string]string) distribution.ManifestBuilder {
 	mb := &builder{
-		bs:         bs,
-		configJSON: make([]byte, len(configJSON)),
+		bs:          bs,
+		configJSON:  make([]byte, len(configJSON)),
+		annotations: annotations,
 	}
 	copy(mb.configJSON, configJSON)
 
@@ -36,8 +40,9 @@ func NewManifestBuilder(bs distribution.BlobService, configJSON []byte) distribu
 // Build produces a final manifest from the given references.
 func (mb *builder) Build(ctx context.Context) (distribution.Manifest, error) {
 	m := Manifest{
-		Versioned: SchemaVersion,
-		Layers:    make([]distribution.Descriptor, len(mb.layers)),
+		Versioned:   SchemaVersion,
+		Layers:      make([]distribution.Descriptor, len(mb.layers)),
+		Annotations: mb.annotations,
 	}
 	copy(m.Layers, mb.layers)
 
