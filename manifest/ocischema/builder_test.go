@@ -88,6 +88,9 @@ func TestBuilder(t *testing.T) {
       ],
       "type": "layers"
     },
+    "annotations": {
+       "hot": "potato"
+    }
     "history": [
       {
         "created": "2015-10-31T22:22:54.690851953Z",
@@ -120,9 +123,10 @@ func TestBuilder(t *testing.T) {
 			MediaType: v1.MediaTypeImageLayerGzip,
 		},
 	}
+	annotations := map[string]string{"hot": "potato"}
 
 	bs := &mockBlobService{descriptors: make(map[digest.Digest]distribution.Descriptor)}
-	builder := NewManifestBuilder(bs, imgJSON)
+	builder := NewManifestBuilder(bs, imgJSON, annotations)
 
 	for _, d := range descriptors {
 		if err := builder.AppendReference(d); err != nil {
@@ -142,6 +146,9 @@ func TestBuilder(t *testing.T) {
 	}
 
 	manifest := built.(*DeserializedManifest).Manifest
+	if manifest.Annotations["hot"] != "potato" {
+		t.Fatalf("unexpected annotation in manifest: %s", manifest.Annotations["hot"])
+	}
 
 	if manifest.Versioned.SchemaVersion != 2 {
 		t.Fatal("SchemaVersion != 2")
@@ -154,7 +161,7 @@ func TestBuilder(t *testing.T) {
 	if target.MediaType != v1.MediaTypeImageConfig {
 		t.Fatalf("unexpected media type in target: %s", target.MediaType)
 	}
-	if target.Size != 1582 {
+	if target.Size != 1632 {
 		t.Fatalf("unexpected size in target: %d", target.Size)
 	}
 

@@ -10,7 +10,6 @@ import (
 	"github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-// TODO (mikebrow): add annotations to the test
 var expectedManifestSerialization = []byte(`{
    "schemaVersion": 2,
    "mediaType": "application/vnd.oci.image.manifest.v1+json",
@@ -31,7 +30,10 @@ var expectedManifestSerialization = []byte(`{
             "lettuce": "wrap"
          }
       }
-   ]
+   ],
+   "annotations": {
+      "hot": "potato"
+   }
 }`)
 
 func TestManifest(t *testing.T) {
@@ -51,6 +53,7 @@ func TestManifest(t *testing.T) {
 				Annotations: map[string]string{"lettuce": "wrap"},
 			},
 		},
+		Annotations: map[string]string{"hot": "potato"},
 	}
 
 	deserialized, err := FromStruct(manifest)
@@ -86,6 +89,9 @@ func TestManifest(t *testing.T) {
 
 	if !reflect.DeepEqual(&unmarshalled, deserialized) {
 		t.Fatalf("manifests are different after unmarshaling: %v != %v", unmarshalled, *deserialized)
+	}
+	if deserialized.Annotations["hot"] != "potato" {
+		t.Fatalf("unexpected annotation in manifest: %s", deserialized.Annotations["hot"])
 	}
 
 	target := deserialized.Target()
