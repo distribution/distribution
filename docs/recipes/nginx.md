@@ -67,7 +67,7 @@ properly. For more information, see
 
 ## Setting things up
 
-Review the [requirements](../index.md#requirements), then follow ese steps.
+Review the [requirements](/registry/recipes/index.md#requirements), then follow ese steps.
 
 1.  Create the required directories
 
