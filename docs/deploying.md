@@ -311,7 +311,7 @@ you are also specifying that only a single replica should run at a time. The
 example bind-mounts `/mnt/registry` on the swarm node to `/var/lib/registry/`
 within the container.
 
-By default, secrets are mounted into a service at `/run/<secret-name>`.
+By default, secrets are mounted into a service at `/run/secrets/<secret-name>`.
 
 ```bash
 $ docker service create \
@@ -321,8 +321,8 @@ $ docker service create \
   --label registry=true \
   -v /mnt/registry:/var/lib/registry \
   -e REGISTRY_HTTP_ADDR=0.0.0.0:80 \
-  -e REGISTRY_HTTP_TLS_CERTIFICATE=/run/domain.crt \
-  -e REGISTRY_HTTP_TLS_KEY=/run/domain.key \
+  -e REGISTRY_HTTP_TLS_CERTIFICATE=/run/secrets/domain.crt \
+  -e REGISTRY_HTTP_TLS_KEY=/run/secrets/domain.key \
   -p 80:80 \
   --replicas 1 \
   registry:2
