@@ -89,9 +89,6 @@ type ManifestList struct {
 
 	// Config references the image configuration as a blob.
 	Manifests []ManifestDescriptor `json:"manifests"`
-
-	// Annotations contains arbitrary metadata for the image index.
-	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // References returns the distribution descriptors for the referenced image

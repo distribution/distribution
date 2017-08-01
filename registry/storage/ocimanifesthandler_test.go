@@ -53,6 +53,11 @@ func TestVerifyOCIManifestNonDistributableLayer(t *testing.T) {
 
 	cases := []testcase{
 		{
+			nonDistributableLayer,
+			nil,
+			distribution.ErrManifestBlobUnknown{Digest: nonDistributableLayer.Digest},
+		},
+		{
 			layer,
 			[]string{"http://foo/bar"},
 			nil,
@@ -60,37 +65,37 @@ func TestVerifyOCIManifestNonDistributableLayer(t *testing.T) {
 		{
 			nonDistributableLayer,
 			[]string{"file:///local/file"},
-			nil,
+			errInvalidURL,
 		},
 		{
 			nonDistributableLayer,
 			[]string{"http://foo/bar#baz"},
-			nil,
+			errInvalidURL,
 		},
 		{
 			nonDistributableLayer,
 			[]string{""},
-			nil,
+			errInvalidURL,
 		},
 		{
 			nonDistributableLayer,
 			[]string{"https://foo/bar", ""},
-			nil,
+			errInvalidURL,
 		},
 		{
 			nonDistributableLayer,
 			[]string{"", "https://foo/bar"},
-			nil,
+			errInvalidURL,
 		},
 		{
 			nonDistributableLayer,
 			[]string{"http://nope/bar"},
-			nil,
+			errInvalidURL,
 		},
 		{
 			nonDistributableLayer,
 			[]string{"http://foo/nope"},
-			nil,
+			errInvalidURL,
 		},
 		{
 			nonDistributableLayer,
@@ -122,6 +127,8 @@ func TestVerifyOCIManifestNonDistributableLayer(t *testing.T) {
 				if _, ok = verr[1].(distribution.ErrManifestBlobUnknown); ok {
 					err = verr[0]
 				}
+			} else if len(verr) == 1 {
+				err = verr[0]
 			}
 		}
 		if err != c.Err {
