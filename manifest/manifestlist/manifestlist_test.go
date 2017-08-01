@@ -111,7 +111,12 @@ func TestManifestList(t *testing.T) {
 	}
 }
 
-// TODO (mikebrow): add annotations on the index and individual manifests
+// TODO (mikebrow): add annotations on the manifest list (index) and support for
+// empty platform structs (move to Platform *Platform `json:"platform,omitempty"`
+// from current Platform PlatformSpec `json:"platform"`) in the manifest descriptor.
+// Requires changes to docker/distribution/manifest/manifestlist.ManifestList and .ManifestDescriptor
+// and associated serialization APIs in manifestlist.go. Or split the OCI index and
+// docker manifest list implementations, which would require a lot of refactoring.
 var expectedOCIImageIndexSerialization = []byte(`{
    "schemaVersion": 2,
    "mediaType": "application/vnd.oci.image.index.v1+json",
@@ -130,8 +135,23 @@ var expectedOCIImageIndexSerialization = []byte(`{
       },
       {
          "mediaType": "application/vnd.oci.image.manifest.v1+json",
+         "size": 985,
+         "digest": "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
+         "annotations": {
+            "platform": "none"
+         },
+         "platform": {
+            "architecture": "",
+            "os": ""
+         }
+      },
+      {
+         "mediaType": "application/vnd.oci.image.manifest.v1+json",
          "size": 2392,
          "digest": "sha256:6346340964309634683409684360934680934608934608934608934068934608",
+         "annotations": {
+            "what": "for"
+         },
          "platform": {
             "architecture": "sun4m",
             "os": "sunos"
@@ -156,9 +176,18 @@ func TestOCIImageIndex(t *testing.T) {
 		},
 		{
 			Descriptor: distribution.Descriptor{
-				Digest:    "sha256:6346340964309634683409684360934680934608934608934608934068934608",
-				Size:      2392,
-				MediaType: "application/vnd.oci.image.manifest.v1+json",
+				Digest:      "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
+				Size:        985,
+				MediaType:   "application/vnd.oci.image.manifest.v1+json",
+				Annotations: map[string]string{"platform": "none"},
+			},
+		},
+		{
+			Descriptor: distribution.Descriptor{
+				Digest:      "sha256:6346340964309634683409684360934680934608934608934608934068934608",
+				Size:        2392,
+				MediaType:   "application/vnd.oci.image.manifest.v1+json",
+				Annotations: map[string]string{"what": "for"},
 			},
 			Platform: PlatformSpec{
 				Architecture: "sun4m",
@@ -190,7 +219,7 @@ func TestOCIImageIndex(t *testing.T) {
 
 	// Check that the canonical field has the expected value.
 	if !bytes.Equal(expectedOCIImageIndexSerialization, canonical) {
-		t.Fatalf("manifest bytes not equal: %q != %q", string(canonical), string(expectedOCIImageIndexSerialization))
+		t.Fatalf("manifest bytes not equal to expected: %q != %q", string(canonical), string(expectedOCIImageIndexSerialization))
 	}
 
 	var unmarshalled DeserializedManifestList
@@ -203,7 +232,7 @@ func TestOCIImageIndex(t *testing.T) {
 	}
 
 	references := deserialized.References()
-	if len(references) != 2 {
+	if len(references) != 3 {
 		t.Fatalf("unexpected number of references: %d", len(references))
 	}
 	for i := range references {

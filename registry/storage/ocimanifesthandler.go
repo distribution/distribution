@@ -3,6 +3,7 @@ package storage
 import (
 	"encoding/json"
 	"fmt"
+	"net/url"
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
@@ -79,6 +80,22 @@ func (ms *ocischemaManifestHandler) verifyManifest(ctx context.Context, mnfst oc
 		var err error
 
 		switch descriptor.MediaType {
+		case v1.MediaTypeImageLayer, v1.MediaTypeImageLayerGzip, v1.MediaTypeImageLayerNonDistributable, v1.MediaTypeImageLayerNonDistributableGzip:
+			allow := ms.manifestURLs.allow
+			deny := ms.manifestURLs.deny
+			for _, u := range descriptor.URLs {
+				var pu *url.URL
+				pu, err = url.Parse(u)
+				if err != nil || (pu.Scheme != "http" && pu.Scheme != "https") || pu.Fragment != "" || (allow != nil && !allow.MatchString(u)) || (deny != nil && deny.MatchString(u)) {
+					err = errInvalidURL
+					break
+				}
+			}
+			if err == nil && len(descriptor.URLs) == 0 {
+				// If no URLs, require that the blob exists
+				_, err = blobsService.Stat(ctx, descriptor.Digest)
+			}
+
 		case v1.MediaTypeImageManifest:
 			var exists bool
 			exists, err = manifestService.Exists(ctx, descriptor.Digest)
