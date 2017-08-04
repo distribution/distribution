@@ -2,12 +2,43 @@ package storage
 
 import (
 	"path"
+	"time"
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/storage/driver"
 	"github.com/opencontainers/go-digest"
 )
+
+func stat(ctx context.Context, storageDriver driver.StorageDriver, dgst digest.Digest) (driver.FileInfo, error) {
+	path, err := pathFor(blobDataPathSpec{
+		digest: dgst,
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	fi, err := storageDriver.Stat(ctx, path)
+	if err != nil {
+		switch err := err.(type) {
+		case driver.PathNotFoundError:
+			return nil, distribution.ErrBlobUnknown
+		default:
+			return nil, err
+		}
+	}
+
+	if fi.IsDir() {
+		// NOTE(stevvooe): This represents a corruption situation. Somehow, we
+		// calculated a blob path and then detected a directory. We log the
+		// error and then error on the side of not knowing about the blob.
+		context.GetLogger(ctx).Warnf("blob path should not be a directory: %q", path)
+		return nil, distribution.ErrBlobUnknown
+	}
+
+	return fi, nil
+}
 
 // blobStore implements the read side of the blob store interface over a
 // driver without enforcing per-repository membership. This object is
@@ -116,6 +147,18 @@ func (bs *blobStore) Enumerate(ctx context.Context, ingester func(dgst digest.Di
 	return err
 }
 
+// ModTime returns the modification time of the blob in the main blob store.
+// If the underlying storage backend doesn't have a modification time, the
+// creation time might be returned.
+func (bs *blobStore) ModTime(ctx context.Context, dgst digest.Digest) (time.Time, error) {
+	fi, err := stat(ctx, bs.driver, dgst)
+	if err != nil {
+		return time.Time{}, err
+	}
+
+	return fi.ModTime(), nil
+}
+
 // path returns the canonical path for the blob identified by digest. The blob
 // may or may not exist.
 func (bs *blobStore) path(dgst digest.Digest) (string, error) {
@@ -173,30 +216,9 @@ var _ distribution.BlobDescriptorService = &blobStatter{}
 // in the main blob store. If this method returns successfully, there is
 // strong guarantee that the blob exists and is available.
 func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
-	path, err := pathFor(blobDataPathSpec{
-		digest: dgst,
-	})
-
+	fi, err := stat(ctx, bs.driver, dgst)
 	if err != nil {
 		return distribution.Descriptor{}, err
-	}
-
-	fi, err := bs.driver.Stat(ctx, path)
-	if err != nil {
-		switch err := err.(type) {
-		case driver.PathNotFoundError:
-			return distribution.Descriptor{}, distribution.ErrBlobUnknown
-		default:
-			return distribution.Descriptor{}, err
-		}
-	}
-
-	if fi.IsDir() {
-		// NOTE(stevvooe): This represents a corruption situation. Somehow, we
-		// calculated a blob path and then detected a directory. We log the
-		// error and then error on the side of not knowing about the blob.
-		context.GetLogger(ctx).Warnf("blob path should not be a directory: %q", path)
-		return distribution.Descriptor{}, distribution.ErrBlobUnknown
 	}
 
 	// TODO(stevvooe): Add method to resolve the mediatype. We can store and

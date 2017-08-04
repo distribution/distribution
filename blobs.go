@@ -103,6 +103,9 @@ type BlobDeleter interface {
 // BlobEnumerator enables iterating over blobs from storage
 type BlobEnumerator interface {
 	Enumerate(ctx context.Context, ingester func(dgst digest.Digest) error) error
+
+	// ModTime returns the modification time of the blob from the storage.
+	ModTime(ctx context.Context, dgst digest.Digest) (time.Time, error)
 }
 
 // BlobDescriptorService manages metadata about a blob by digest. Most

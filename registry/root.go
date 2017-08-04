@@ -3,6 +3,7 @@ package registry
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/storage"
@@ -13,11 +14,13 @@ import (
 )
 
 var showVersion bool
+var olderThan time.Duration
 
 func init() {
 	RootCmd.AddCommand(ServeCmd)
 	RootCmd.AddCommand(GCCmd)
 	GCCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "do everything except remove the blobs")
+	GCCmd.Flags().DurationVarP(&olderThan, "older-than", "t", 0, "remove the blobs only older than the threshold")
 	RootCmd.Flags().BoolVarP(&showVersion, "version", "v", false, "show the version and exit")
 }
 
@@ -75,7 +78,7 @@ var GCCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		err = storage.MarkAndSweep(ctx, driver, registry, dryRun)
+		err = storage.MarkAndSweep(ctx, driver, registry, olderThan, dryRun)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to garbage collect: %v", err)
 			os.Exit(1)
