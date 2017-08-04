@@ -603,13 +603,6 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx = ctxu.WithLogger(ctx, ctxu.GetRequestLogger(ctx))
 	r = r.WithContext(ctx)
 
-	defer func() {
-		status, ok := ctx.Value("http.response.status").(int)
-		if ok && status >= 200 && status <= 399 {
-			ctxu.GetResponseLogger(r.Context()).Infof("response completed")
-		}
-	}()
-
 	// Set a header with the Docker Distribution API Version for all responses.
 	w.Header().Add("Docker-Distribution-API-Version", "registry/2.0")
 	app.router.ServeHTTP(w, r)
@@ -707,7 +700,9 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 			}
 
 			app.logError(context, context.Errors)
+			return
 		}
+		app.logRequest(context)
 	})
 }
 
@@ -722,6 +717,13 @@ func (errMessageKey) String() string { return "err.message" }
 type errDetailKey struct{}
 
 func (errDetailKey) String() string { return "err.detail" }
+
+func (app *App) logRequest(ctx context.Context) {
+	status, ok := ctx.Value("http.response.status").(int)
+	if ok && status >= 200 && status <= 399 {
+		ctxu.GetResponseLogger(ctx).Infof("response completed")
+	}
+}
 
 func (app *App) logError(context context.Context, errors errcode.Errors) {
 	for _, e1 := range errors {
