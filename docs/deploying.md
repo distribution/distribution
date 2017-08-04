@@ -27,7 +27,7 @@ The registry is now ready to use.
 > **Warning**: These first few examples show registry configurations that are
 > only appropriate for testing. A production-ready registry must be protected by
 > TLS and should ideally use an access-control mechanism. Keep reading and then
-> continue to the [configuration guide](confguration.md) to deploy a
+> continue to the [configuration guide](configuration.md) to deploy a
 > production-ready registry.
 
 ## Copy an image from Docker Hub to your registry
