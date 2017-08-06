@@ -18,6 +18,7 @@ import (
 	"gopkg.in/check.v1"
 
 	"github.com/docker/distribution/context"
+	"github.com/docker/distribution/digest"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 )
 
@@ -509,30 +510,61 @@ func (suite *DriverSuite) TestList(c *check.C) {
 	// 3. Ensure that we only respond to directory listings that end with a slash (maybe?).
 }
 
-// TestMove checks that a moved object no longer exists at the source path and
+// TestMoveSmall checks that a moved object no longer exists at the source path and
 // does exist at the destination.
-func (suite *DriverSuite) TestMove(c *check.C) {
-	contents := randomContents(32)
-	sourcePath := randomPath(32)
-	destPath := randomPath(32)
+func (suite *DriverSuite) TestMoveSmall(c *check.C) {
+	suite.testMoveFile(c, 32)
+}
 
-	defer suite.deletePath(c, firstPart(sourcePath))
-	defer suite.deletePath(c, firstPart(destPath))
+// TestMoveLarge tests that a large file is moved to the storage
+// driver safely. By default, we set the size to 6GB, some drivers like s3 has some limitation.
+func (suite *DriverSuite) TestMoveLarge(c *check.C) {
+	if testing.Short() {
+		c.Skip("Skipping test in short mode")
+	}
 
-	err := suite.StorageDriver.PutContent(suite.ctx, sourcePath, contents)
+	suite.testMoveFile(c, 6*1024*1024*1024)
+}
+
+func (suite *DriverSuite) testMoveFile(c *check.C, fileSize int64) {
+	srcFile := randomPath(32)
+	destFile := randomPath(32)
+
+	defer suite.StorageDriver.Delete(suite.ctx, firstPart(srcFile))
+	defer suite.StorageDriver.Delete(suite.ctx, firstPart(destFile))
+
+	srcDigester := digest.Canonical.New()
+
+	contents := newRandReader(fileSize)
+	tr := io.TeeReader(contents, srcDigester.Hash())
+	writer, err := suite.StorageDriver.Writer(suite.ctx, srcFile, false)
+	c.Assert(err, check.IsNil)
+	c.Assert(writer, check.NotNil)
+	nn, err := io.Copy(writer, tr)
+	c.Assert(err, check.IsNil)
+	c.Assert(nn, check.Equals, fileSize)
+	err = writer.Commit()
+	c.Assert(err, check.IsNil)
+	err = writer.Close()
 	c.Assert(err, check.IsNil)
 
-	err = suite.StorageDriver.Move(suite.ctx, sourcePath, destPath)
+	err = suite.StorageDriver.Move(suite.ctx, srcFile, destFile)
 	c.Assert(err, check.IsNil)
 
-	received, err := suite.StorageDriver.GetContent(suite.ctx, destPath)
+	reader, err := suite.StorageDriver.Reader(suite.ctx, destFile, 0)
 	c.Assert(err, check.IsNil)
-	c.Assert(received, check.DeepEquals, contents)
+	defer reader.Close()
 
-	_, err = suite.StorageDriver.GetContent(suite.ctx, sourcePath)
+	destDigester := digest.Canonical.New()
+	written, err := io.Copy(destDigester.Hash(), reader)
+	c.Assert(written, check.Equals, fileSize)
+	c.Assert(srcDigester.Digest() == destDigester.Digest(), check.Equals, true)
+
+	_, err = suite.StorageDriver.Reader(suite.ctx, srcFile, 0)
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
 	c.Assert(strings.Contains(err.Error(), suite.Name()), check.Equals, true)
+
 }
 
 // TestMoveOverwrite checks that a moved object no longer exists at the source
