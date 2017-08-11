@@ -1,6 +1,7 @@
 package token
 
 import (
+	"context"
 	"crypto"
 	"crypto/x509"
 	"encoding/pem"
@@ -11,7 +12,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/docker/distribution/context"
+	dcontext "github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/auth"
 	"github.com/docker/libtrust"
 )
@@ -221,7 +222,7 @@ func (ac *accessController) Authorized(ctx context.Context, accessItems ...auth.
 		accessSet: newAccessSet(accessItems...),
 	}
 
-	req, err := context.GetRequest(ctx)
+	req, err := dcontext.GetRequest(ctx)
 	if err != nil {
 		return nil, err
 	}

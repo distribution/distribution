@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"reflect"
@@ -8,11 +9,9 @@ import (
 	"testing"
 
 	"github.com/docker/distribution"
-	"github.com/docker/distribution/context"
-	"github.com/opencontainers/go-digest"
-
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/testutil"
+	"github.com/opencontainers/go-digest"
 )
 
 func TestLinkedBlobStoreCreateWithMountFrom(t *testing.T) {

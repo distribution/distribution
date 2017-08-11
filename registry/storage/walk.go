@@ -1,11 +1,11 @@
 package storage
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"sort"
 
-	"github.com/docker/distribution/context"
 	storageDriver "github.com/docker/distribution/registry/storage/driver"
 )
 

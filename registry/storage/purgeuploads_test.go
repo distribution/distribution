@@ -1,12 +1,12 @@
 package storage
 
 import (
+	"context"
 	"path"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/docker/distribution/uuid"

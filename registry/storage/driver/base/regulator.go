@@ -1,10 +1,10 @@
 package base
 
 import (
+	"context"
 	"io"
 	"sync"
 
-	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 )
 

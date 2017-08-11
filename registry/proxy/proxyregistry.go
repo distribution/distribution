@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -8,7 +9,7 @@ import (
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/configuration"
-	"github.com/docker/distribution/context"
+	dcontext "github.com/docker/distribution/context"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/client"
 	"github.com/docker/distribution/registry/client/auth"
@@ -218,7 +219,7 @@ func (r *remoteAuthChallenger) tryEstablishChallenges(ctx context.Context) error
 		return err
 	}
 
-	context.GetLogger(ctx).Infof("Challenge established with upstream : %s %s", remoteURL, r.cm)
+	dcontext.GetLogger(ctx).Infof("Challenge established with upstream : %s %s", remoteURL, r.cm)
 	return nil
 }
 

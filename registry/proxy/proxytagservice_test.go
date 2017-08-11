@@ -1,13 +1,13 @@
 package proxy
 
 import (
+	"context"
 	"reflect"
 	"sort"
 	"sync"
 	"testing"
 
 	"github.com/docker/distribution"
-	"github.com/docker/distribution/context"
 )
 
 type mockTagStore struct {

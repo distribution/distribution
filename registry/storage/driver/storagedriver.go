@@ -1,13 +1,12 @@
 package driver
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/docker/distribution/context"
 )
 
 // Version is a string representing the storage driver version, of the form

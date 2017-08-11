@@ -16,6 +16,7 @@ package gcs
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -29,20 +30,16 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/net/context"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/registry/storage/driver/base"
+	"github.com/docker/distribution/registry/storage/driver/factory"
+	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 	"google.golang.org/api/googleapi"
 	"google.golang.org/cloud"
 	"google.golang.org/cloud/storage"
-
-	"github.com/sirupsen/logrus"
-
-	ctx "github.com/docker/distribution/context"
-	storagedriver "github.com/docker/distribution/registry/storage/driver"
-	"github.com/docker/distribution/registry/storage/driver/base"
-	"github.com/docker/distribution/registry/storage/driver/factory"
 )
 
 const (
@@ -194,7 +191,7 @@ func (d *driver) Name() string {
 
 // GetContent retrieves the content stored at "path" as a []byte.
 // This should primarily be used for small objects.
-func (d *driver) GetContent(context ctx.Context, path string) ([]byte, error) {
+func (d *driver) GetContent(context context.Context, path string) ([]byte, error) {
 	gcsContext := d.context(context)
 	name := d.pathToKey(path)
 	var rc io.ReadCloser
@@ -220,7 +217,7 @@ func (d *driver) GetContent(context ctx.Context, path string) ([]byte, error) {
 
 // PutContent stores the []byte content at a location designated by "path".
 // This should primarily be used for small objects.
-func (d *driver) PutContent(context ctx.Context, path string, contents []byte) error {
+func (d *driver) PutContent(context context.Context, path string, contents []byte) error {
 	return retry(func() error {
 		wc := storage.NewWriter(d.context(context), d.bucket, d.pathToKey(path))
 		wc.ContentType = "application/octet-stream"
@@ -231,7 +228,7 @@ func (d *driver) PutContent(context ctx.Context, path string, contents []byte) e
 // Reader retrieves an io.ReadCloser for the content stored at "path"
 // with a given byte offset.
 // May be used to resume reading a stream by providing a nonzero offset.
-func (d *driver) Reader(context ctx.Context, path string, offset int64) (io.ReadCloser, error) {
+func (d *driver) Reader(context context.Context, path string, offset int64) (io.ReadCloser, error) {
 	res, err := getObject(d.client, d.bucket, d.pathToKey(path), offset)
 	if err != nil {
 		if res != nil {
@@ -290,7 +287,7 @@ func getObject(client *http.Client, bucket string, name string, offset int64) (*
 
 // Writer returns a FileWriter which will store the content written to it
 // at the location designated by "path" after the call to Commit.
-func (d *driver) Writer(context ctx.Context, path string, append bool) (storagedriver.FileWriter, error) {
+func (d *driver) Writer(context context.Context, path string, append bool) (storagedriver.FileWriter, error) {
 	writer := &writer{
 		client: d.client,
 		bucket: d.bucket,
@@ -542,7 +539,7 @@ func retry(req request) error {
 
 // Stat retrieves the FileInfo for the given path, including the current
 // size in bytes and the creation time.
-func (d *driver) Stat(context ctx.Context, path string) (storagedriver.FileInfo, error) {
+func (d *driver) Stat(context context.Context, path string) (storagedriver.FileInfo, error) {
 	var fi storagedriver.FileInfoFields
 	//try to get as file
 	gcsContext := d.context(context)
@@ -588,7 +585,7 @@ func (d *driver) Stat(context ctx.Context, path string) (storagedriver.FileInfo,
 
 // List returns a list of the objects that are direct descendants of the
 //given path.
-func (d *driver) List(context ctx.Context, path string) ([]string, error) {
+func (d *driver) List(context context.Context, path string) ([]string, error) {
 	var query *storage.Query
 	query = &storage.Query{}
 	query.Delimiter = "/"
@@ -626,7 +623,7 @@ func (d *driver) List(context ctx.Context, path string) ([]string, error) {
 
 // Move moves an object stored at sourcePath to destPath, removing the
 // original object.
-func (d *driver) Move(context ctx.Context, sourcePath string, destPath string) error {
+func (d *driver) Move(context context.Context, sourcePath string, destPath string) error {
 	gcsContext := d.context(context)
 	_, err := storageCopyObject(gcsContext, d.bucket, d.pathToKey(sourcePath), d.bucket, d.pathToKey(destPath), nil)
 	if err != nil {
@@ -674,7 +671,7 @@ func (d *driver) listAll(context context.Context, prefix string) ([]string, erro
 }
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
-func (d *driver) Delete(context ctx.Context, path string) error {
+func (d *driver) Delete(context context.Context, path string) error {
 	prefix := d.pathToDirKey(path)
 	gcsContext := d.context(context)
 	keys, err := d.listAll(gcsContext, prefix)
@@ -749,7 +746,7 @@ func storageCopyObject(context context.Context, srcBucket, srcName string, destB
 // URLFor returns a URL which may be used to retrieve the content stored at
 // the given path, possibly using the given options.
 // Returns ErrUnsupportedMethod if this driver has no privateKey
-func (d *driver) URLFor(context ctx.Context, path string, options map[string]interface{}) (string, error) {
+func (d *driver) URLFor(context context.Context, path string, options map[string]interface{}) (string, error) {
 	if d.privateKey == nil {
 		return "", storagedriver.ErrUnsupportedMethod{}
 	}
@@ -856,7 +853,7 @@ func putChunk(client *http.Client, sessionURI string, chunk []byte, from int64, 
 	return bytesPut, err
 }
 
-func (d *driver) context(context ctx.Context) context.Context {
+func (d *driver) context(context context.Context) context.Context {
 	return cloud.WithContext(context, dummyProjectID, d.client)
 }
 

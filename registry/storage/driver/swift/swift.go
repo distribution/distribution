@@ -18,6 +18,7 @@ package swift
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/rand"
 	"crypto/sha1"
 	"crypto/tls"
@@ -34,7 +35,6 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/ncw/swift"
 
-	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/base"
 	"github.com/docker/distribution/registry/storage/driver/factory"

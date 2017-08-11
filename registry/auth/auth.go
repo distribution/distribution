@@ -33,11 +33,10 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
-
-	"github.com/docker/distribution/context"
 )
 
 const (

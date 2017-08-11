@@ -1,12 +1,12 @@
 package storage
 
 import (
+	"context"
 	"errors"
 	"io"
 	"path"
 	"strings"
 
-	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/storage/driver"
 )
 
