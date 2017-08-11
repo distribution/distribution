@@ -1,11 +1,11 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"sort"
 	"testing"
 
-	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 )

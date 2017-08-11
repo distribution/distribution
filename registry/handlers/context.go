@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/docker/distribution"
-	ctxu "github.com/docker/distribution/context"
+	dcontext "github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/registry/auth"
@@ -44,26 +44,26 @@ func (ctx *Context) Value(key interface{}) interface{} {
 }
 
 func getName(ctx context.Context) (name string) {
-	return ctxu.GetStringValue(ctx, "vars.name")
+	return dcontext.GetStringValue(ctx, "vars.name")
 }
 
 func getReference(ctx context.Context) (reference string) {
-	return ctxu.GetStringValue(ctx, "vars.reference")
+	return dcontext.GetStringValue(ctx, "vars.reference")
 }
 
 var errDigestNotAvailable = fmt.Errorf("digest not available in context")
 
 func getDigest(ctx context.Context) (dgst digest.Digest, err error) {
-	dgstStr := ctxu.GetStringValue(ctx, "vars.digest")
+	dgstStr := dcontext.GetStringValue(ctx, "vars.digest")
 
 	if dgstStr == "" {
-		ctxu.GetLogger(ctx).Errorf("digest not available")
+		dcontext.GetLogger(ctx).Errorf("digest not available")
 		return "", errDigestNotAvailable
 	}
 
 	d, err := digest.Parse(dgstStr)
 	if err != nil {
-		ctxu.GetLogger(ctx).Errorf("error parsing digest=%q: %v", dgstStr, err)
+		dcontext.GetLogger(ctx).Errorf("error parsing digest=%q: %v", dgstStr, err)
 		return "", err
 	}
 
@@ -71,13 +71,13 @@ func getDigest(ctx context.Context) (dgst digest.Digest, err error) {
 }
 
 func getUploadUUID(ctx context.Context) (uuid string) {
-	return ctxu.GetStringValue(ctx, "vars.uuid")
+	return dcontext.GetStringValue(ctx, "vars.uuid")
 }
 
 // getUserName attempts to resolve a username from the context and request. If
 // a username cannot be resolved, the empty string is returned.
 func getUserName(ctx context.Context, r *http.Request) string {
-	username := ctxu.GetStringValue(ctx, auth.UserNameKey)
+	username := dcontext.GetStringValue(ctx, auth.UserNameKey)
 
 	// Fallback to request user with basic auth
 	if username == "" {

@@ -4,6 +4,7 @@
 package middleware
 
 import (
+	"context"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
@@ -13,7 +14,7 @@ import (
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/cloudfront/sign"
-	"github.com/docker/distribution/context"
+	dcontext "github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
 )
@@ -119,7 +120,7 @@ func (lh *cloudFrontStorageMiddleware) URLFor(ctx context.Context, path string, 
 	// TODO(endophage): currently only supports S3
 	keyer, ok := lh.StorageDriver.(S3BucketKeyer)
 	if !ok {
-		context.GetLogger(ctx).Warn("the CloudFront middleware does not support this backend storage driver")
+		dcontext.GetLogger(ctx).Warn("the CloudFront middleware does not support this backend storage driver")
 		return lh.StorageDriver.URLFor(ctx, path, options)
 	}
 

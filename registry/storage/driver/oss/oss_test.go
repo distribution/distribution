@@ -4,16 +4,14 @@ package oss
 
 import (
 	"io/ioutil"
+	"os"
+	"strconv"
+	"testing"
 
 	alioss "github.com/denverdino/aliyungo/oss"
 	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/testsuites"
-	//"log"
-	"os"
-	"strconv"
-	"testing"
-
 	"gopkg.in/check.v1"
 )
 

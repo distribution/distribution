@@ -1,11 +1,11 @@
 package schema2
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
 	"github.com/docker/distribution"
-	"github.com/docker/distribution/context"
 	"github.com/opencontainers/go-digest"
 )
 

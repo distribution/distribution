@@ -1,10 +1,10 @@
 package storage
 
 import (
+	"context"
 	"path"
 
 	"github.com/docker/distribution"
-	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/opencontainers/go-digest"
 )

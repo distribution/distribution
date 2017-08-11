@@ -6,13 +6,14 @@
 package htpasswd
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
 	"sync"
 	"time"
 
-	"github.com/docker/distribution/context"
+	dcontext "github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/auth"
 )
 
@@ -41,7 +42,7 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 }
 
 func (ac *accessController) Authorized(ctx context.Context, accessRecords ...auth.Access) (context.Context, error) {
-	req, err := context.GetRequest(ctx)
+	req, err := dcontext.GetRequest(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +84,7 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 	ac.mu.Unlock()
 
 	if err := localHTPasswd.authenticateUser(username, password); err != nil {
-		context.GetLogger(ctx).Errorf("error authenticating user %q: %v", username, err)
+		dcontext.GetLogger(ctx).Errorf("error authenticating user %q: %v", username, err)
 		return nil, &challenge{
 			realm: ac.realm,
 			err:   auth.ErrAuthenticationFailure,
