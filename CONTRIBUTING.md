@@ -51,7 +51,7 @@ By following these simple rules you will get better and faster feedback on your 
  2. copy the output of:
    - `docker version`
    - `docker info`
-   - `docker exec <registry-container> registry -version`
+   - `docker exec <registry-container> registry --version`
  3. copy the command line you used to launch your Registry
  4. restart your docker daemon in debug mode (add `-D` to the daemon launch arguments)
  5. reproduce your problem and get your docker daemon logs showing the error
