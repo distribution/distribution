@@ -1,7 +1,7 @@
 ---
 description: Fun stuff to do with your registry
 keywords: registry, on-prem, images, tags, repository, distribution, recipes, advanced
-title: Recipes Overview
+title: Recipes overview
 ---
 
 You will find here a list of "recipes", end-to-end scenarios for exotic or otherwise advanced use-cases.
