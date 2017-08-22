@@ -1,7 +1,7 @@
 ---
 description: Explains how to run a registry on macOS
 keywords: registry, on-prem, images, tags, repository, distribution, macOS, recipe, advanced
-title: macOS Setup Guide
+title: macOS setup guide
 ---
 
 ## Use-case
@@ -53,7 +53,7 @@ Copy the registry configuration file in place:
     mkdir /Users/Shared/Registry
     cp docs/osx/config.yml /Users/Shared/Registry/config.yml
 
-## Running the Docker Registry under launchd
+## Run the Docker Registry under launchd
 
 Copy the Docker registry plist into place:
 
@@ -65,11 +65,11 @@ Start the Docker registry:
 
     launchctl load ~/Library/LaunchAgents/com.docker.registry.plist
 
-### Restarting the docker registry service
+### Restart the docker registry service
 
     launchctl stop com.docker.registry
     launchctl start com.docker.registry
 
-### Unloading the docker registry service
+### Unload the docker registry service
 
     launchctl unload ~/Library/LaunchAgents/com.docker.registry.plist
