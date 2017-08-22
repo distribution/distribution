@@ -8,7 +8,7 @@ title: Docker Registry storage driver
 
 This document describes the registry storage driver model, implementation, and explains how to contribute new storage drivers.
 
-## Provided Drivers
+## Provided drivers
 
 This storage driver package comes bundled with several drivers:
 
@@ -20,7 +20,7 @@ This storage driver package comes bundled with several drivers:
 - [oss](oss.md): A driver storing objects in [Aliyun OSS](http://www.aliyun.com/product/oss).
 - [gcs](gcs.md): A driver storing objects in a [Google Cloud Storage](https://cloud.google.com/storage/) bucket.
 
-## Storage Driver API
+## Storage driver API
 
 The storage driver API is designed to model a filesystem-like key/value storage in a manner abstract enough to support a range of drivers from the local filesystem to Amazon S3 or other distributed object storage systems.
 
@@ -29,7 +29,7 @@ Storage drivers are required to implement the `storagedriver.StorageDriver` inte
 Storage drivers are intended to be written in Go, providing compile-time
 validation of the `storagedriver.StorageDriver` interface.
 
-## Driver Selection and Configuration
+## Driver selection and configuration
 
 The preferred method of selecting a storage driver is using the `StorageDriverFactory` interface in the `storagedriver/factory` package. These factories provide a common interface for constructing storage drivers with a parameters map. The factory model is based off of the [Register](http://golang.org/pkg/database/sql/#Register) and [Open](http://golang.org/pkg/database/sql/#Open) methods in the builtin [database/sql](http://golang.org/pkg/database/sql) package.
 
@@ -38,7 +38,7 @@ Storage driver factories may be registered by name using the
 with a driver name and parameters map. If no such storage driver can be found,
 `factory.Create` will return an `InvalidStorageDriverError`.
 
-## Driver Contribution
+## Driver contribution
 
 ### Writing new storage drivers
 
