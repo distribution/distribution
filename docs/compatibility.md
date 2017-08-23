@@ -9,7 +9,7 @@ title: Registry compatibility
 and older, and the manifest was pushed with Docker Engine 1.10, a security check
 will cause the Engine to receive a manifest it cannot use and the pull will fail.*
 
-## Registry Manifest Support
+## Registry manifest support
 
 Historically, the registry has supported a [single manifest type](./spec/manifest-v2-1.md)
 known as _Schema 1_.
@@ -21,7 +21,7 @@ with older Docker engines will, in certain cases, do an on-the-fly
 transformation of a manifest before serving the JSON in the response.
 
 This conversion has some implications for pulling manifests by digest and this
-document enumerate these implications.
+document enumerates these implications.
 
 
 ## Content Addressable Storage (CAS)
@@ -45,15 +45,7 @@ support the new version.
 
 ## Registry v2.3
 
-### Manifest Push with Docker 1.9 and Older
-
-The Docker Engine will construct a _Schema 1_ manifest which the
-registry will persist to disk.
-
-When the manifest is pulled by digest or tag with any docker version, a
-_Schema 1_ manifest will be returned.
-
-### Manifest Push with Docker 1.10
+### Manifest push with Docker 1.10
 
 The docker engine will construct a _Schema 2_ manifest which the
 registry will persist to disk.
@@ -75,3 +67,12 @@ For this reason if a manifest is pulled by _digest_ from a registry 2.3 with Doc
 Engine 1.9 and older, and the manifest was pushed with Docker Engine 1.10, a
 security check will cause the Engine to receive a manifest it cannot use and the
 pull will fail.
+
+### Manifest push with Docker 1.9 and older
+
+The Docker Engine will construct a _Schema 1_ manifest which the
+registry will persist to disk.
+
+When the manifest is pulled by digest or tag with any docker version, a
+_Schema 1_ manifest will be returned.
+
