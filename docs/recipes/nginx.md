@@ -146,7 +146,7 @@ Review the [requirements](/registry/recipes/index.md#requirements), then follow 
 3.  Create a password file `auth/nginx.htpasswd` for "testuser" and "testpassword".
 
     ```bash
-    $ docker run --rm --entrypoint htpasswd registry:2 -Bbn testuser testpassword > auth/nginx.htpasswd
+    $ docker run --rm --entrypoint htpasswd registry:2 -bn testuser testpassword > auth/nginx.htpasswd
     ```
 
 4.  Copy your certificate files to the `auth/` directory.
