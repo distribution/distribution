@@ -7,27 +7,17 @@ title: Garbage collection
 As of v2.4.0 a garbage collector command is included within the registry binary.
 This document describes what this command does and how and why it should be used.
 
-## What is Garbage Collection?
-
-From [wikipedia](https://en.wikipedia.org/wiki/Garbage_collection_(computer_science)):
-
-"In computer science, garbage collection (GC) is a form of automatic memory management. The
-garbage collector, or just collector, attempts to reclaim garbage, or memory occupied by
-objects that are no longer in use by the program."
+## About garbage collection
 
 In the context of the Docker registry, garbage collection is the process of
-removing blobs from the filesystem which are no longer referenced by a
+removing blobs from the filesystem when they are no longer referenced by a
 manifest. Blobs can include both layers and manifests.
 
+Registry data can occupy considerable amounts of disk space. In addition,
+garbage collection can be a security consideration, when it is desirable to ensure
+that certain layers no longer exist on the filesystem.
 
-## Why Garbage Collection?
-
-Registry data can occupy considerable amounts of disk space and freeing up
-this disk space is an oft-requested feature. Additionally for reasons of security it
-can be desirable to ensure that certain layers no longer exist on the filesystem.
-
-
-## Garbage Collection in the Registry
+## Garbage collection in practice
 
 Filesystem layers are stored by their content address in the Registry. This
 has many advantages, one of which is that data is stored once and referred to by manifests.
@@ -72,7 +62,7 @@ collection. Layer `a` had one reference removed but will not be garbage
 collected as it is still referenced by manifest `A`. The blob representing
 manifest `B` will also be eligible for garbage collection.
 
-After garbage collection has been run manifest `A` and its blobs remain.
+After garbage collection has been run, manifest `A` and its blobs remain.
 
 ```
 A -----> a
@@ -80,7 +70,7 @@ A -----> a
 ```
 
 
-## How Garbage Collection works
+### More details about garbage collection
 
 Garbage collection runs in two phases. First, in the 'mark' phase, the process
 scans all the manifests in the registry. From these manifests, it constructs a
@@ -90,7 +80,7 @@ the blobs and if a blob's content address digest is not in the mark set, the
 process will delete it.
 
 
-> **NOTE**: You should ensure that the registry is in read-only mode or not running at
+> **Note**: You should ensure that the registry is in read-only mode or not running at
 > all. If you were to upload an image while garbage collection is running, there is the
 > risk that the image's layers will be mistakenly deleted, leading to a corrupted image.
 
@@ -100,7 +90,7 @@ action and this manual process will no longer apply.
 
 
 
-# Running garbage collection
+## Run garbage collection
 
 Garbage collection can be run as follows
 
