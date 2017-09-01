@@ -1,11 +1,11 @@
 package storage
 
 import (
+	"context"
 	"regexp"
 	"testing"
 
 	"github.com/docker/distribution"
-	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/manifest/ocischema"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"

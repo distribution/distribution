@@ -181,7 +181,7 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 	// matching the digest.
 	if imh.Tag != "" && manifestType == manifestSchema2 && !supports[manifestSchema2] {
 		// Rewrite manifest in schema1 format
-		ctxu.GetLogger(imh).Infof("rewriting manifest %s in schema1 format to support old client", imh.Digest.String())
+		dcontext.GetLogger(imh).Infof("rewriting manifest %s in schema1 format to support old client", imh.Digest.String())
 
 		manifest, err = imh.convertSchema2Manifest(schema2Manifest)
 		if err != nil {
@@ -189,7 +189,7 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 		}
 	} else if imh.Tag != "" && manifestType == manifestlistSchema && !supports[manifestlistSchema] {
 		// Rewrite manifest in schema1 format
-		ctxu.GetLogger(imh).Infof("rewriting manifest list %s in schema1 format to support old client", imh.Digest.String())
+		dcontext.GetLogger(imh).Infof("rewriting manifest list %s in schema1 format to support old client", imh.Digest.String())
 
 		// Find the image manifest corresponding to the default
 		// platform
@@ -327,9 +327,9 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 	isAnOCIManifest := mediaType == v1.MediaTypeImageManifest || mediaType == v1.MediaTypeImageIndex
 
 	if isAnOCIManifest {
-		ctxu.GetLogger(imh).Debug("Putting an OCI Manifest!")
+		dcontext.GetLogger(imh).Debug("Putting an OCI Manifest!")
 	} else {
-		ctxu.GetLogger(imh).Debug("Putting a Docker Manifest!")
+		dcontext.GetLogger(imh).Debug("Putting a Docker Manifest!")
 	}
 
 	var options []distribution.ManifestServiceOption
@@ -410,7 +410,7 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Docker-Content-Digest", imh.Digest.String())
 	w.WriteHeader(http.StatusCreated)
 
-	ctxu.GetLogger(imh).Debug("Succeeded in putting manifest!")
+	dcontext.GetLogger(imh).Debug("Succeeded in putting manifest!")
 }
 
 // applyResourcePolicy checks whether the resource class matches what has
