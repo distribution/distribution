@@ -1,12 +1,13 @@
 package storage
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
 
 	"github.com/docker/distribution"
-	"github.com/docker/distribution/context"
+	dcontext "github.com/docker/distribution/context"
 	"github.com/docker/distribution/manifest/ocischema"
 	"github.com/opencontainers/go-digest"
 	"github.com/opencontainers/image-spec/specs-go/v1"
@@ -23,7 +24,7 @@ type ocischemaManifestHandler struct {
 var _ ManifestHandler = &ocischemaManifestHandler{}
 
 func (ms *ocischemaManifestHandler) Unmarshal(ctx context.Context, dgst digest.Digest, content []byte) (distribution.Manifest, error) {
-	context.GetLogger(ms.ctx).Debug("(*ocischemaManifestHandler).Unmarshal")
+	dcontext.GetLogger(ms.ctx).Debug("(*ocischemaManifestHandler).Unmarshal")
 
 	var m ocischema.DeserializedManifest
 	if err := json.Unmarshal(content, &m); err != nil {
@@ -34,7 +35,7 @@ func (ms *ocischemaManifestHandler) Unmarshal(ctx context.Context, dgst digest.D
 }
 
 func (ms *ocischemaManifestHandler) Put(ctx context.Context, manifest distribution.Manifest, skipDependencyVerification bool) (digest.Digest, error) {
-	context.GetLogger(ms.ctx).Debug("(*ocischemaManifestHandler).Put")
+	dcontext.GetLogger(ms.ctx).Debug("(*ocischemaManifestHandler).Put")
 
 	m, ok := manifest.(*ocischema.DeserializedManifest)
 	if !ok {
@@ -52,7 +53,7 @@ func (ms *ocischemaManifestHandler) Put(ctx context.Context, manifest distributi
 
 	revision, err := ms.blobStore.Put(ctx, mt, payload)
 	if err != nil {
-		context.GetLogger(ctx).Errorf("error putting payload into blobstore: %v", err)
+		dcontext.GetLogger(ctx).Errorf("error putting payload into blobstore: %v", err)
 		return "", err
 	}
 
