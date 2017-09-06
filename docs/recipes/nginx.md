@@ -146,8 +146,10 @@ Review the [requirements](/registry/recipes/index.md#requirements), then follow 
 3.  Create a password file `auth/nginx.htpasswd` for "testuser" and "testpassword".
 
     ```bash
-    $ docker run --rm --entrypoint htpasswd registry:2 -bn testuser testpassword > auth/nginx.htpasswd
+    $ docker run --rm --entrypoint htpasswd registry:2 -Bbn testuser testpassword > auth/nginx.htpasswd
     ```
+    
+    > **Note**: If you do not want to use `bcrypt`, you can omit the `-B` parameter.
 
 4.  Copy your certificate files to the `auth/` directory.
 
@@ -160,7 +162,10 @@ Review the [requirements](/registry/recipes/index.md#requirements), then follow 
 
     ```yaml
     nginx:
-      image: "nginx:1.9"
+      # Note : Only nginx:alpine supports bcrypt.
+      # If you don't need to use bcrypt, you can use a different tag.
+      # Ref. https://github.com/nginxinc/docker-nginx/issues/29
+      image: "nginx:alpine"
       ports:
         - 5043:443
       links:
@@ -174,7 +179,7 @@ Review the [requirements](/registry/recipes/index.md#requirements), then follow 
       ports:
         - 127.0.0.1:5000:5000
       volumes:
-        - `pwd`./data:/var/lib/registry
+        - ./data:/var/lib/registry
     ```
 
 ## Starting and stopping
