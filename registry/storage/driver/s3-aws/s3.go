@@ -23,6 +23,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -147,6 +148,45 @@ func (factory *s3DriverFactory) Create(parameters map[string]interface{}) (stora
 	return FromParameters(parameters)
 }
 
+// mpInfo holds the upload-id and list of parts for an ongoing
+// multipart upload
+type mpInfo struct {
+	sync.RWMutex
+	parts     map[string][]*s3.Part
+	uploadIDs map[string]string
+}
+
+func newMpInfo() *mpInfo {
+	return &mpInfo{
+		parts:     make(map[string][]*s3.Part),
+		uploadIDs: make(map[string]string),
+	}
+}
+
+func (m *mpInfo) get(key string) (uploadID string, parts []*s3.Part, ok bool) {
+	m.RLock()
+	defer m.RUnlock()
+	uploadID, ok = m.uploadIDs[key]
+	if ok {
+		parts, ok = m.parts[key]
+	}
+	return
+}
+
+func (m *mpInfo) set(key string, uploadID string, parts []*s3.Part) {
+	m.Lock()
+	defer m.Unlock()
+	m.uploadIDs[key] = uploadID
+	m.parts[key] = parts
+}
+
+func (m *mpInfo) del(key string) {
+	m.Lock()
+	defer m.Unlock()
+	delete(m.uploadIDs, key)
+	delete(m.parts, key)
+}
+
 type driver struct {
 	S3                          *s3.S3
 	Bucket                      string
@@ -159,6 +199,7 @@ type driver struct {
 	RootDirectory               string
 	StorageClass                string
 	ObjectACL                   string
+	MpInfo                      *mpInfo
 }
 
 type baseEmbed struct {
@@ -459,6 +500,7 @@ func New(params DriverParameters) (*Driver, error) {
 		RootDirectory:               params.RootDirectory,
 		StorageClass:                params.StorageClass,
 		ObjectACL:                   params.ObjectACL,
+		MpInfo:                      newMpInfo(),
 	}
 
 	return &Driver{
@@ -524,7 +566,6 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 func (d *driver) Writer(ctx context.Context, path string, append bool) (storagedriver.FileWriter, error) {
 	key := d.s3Path(path)
 	if !append {
-		// TODO (brianbland): cancel other uploads at this path
 		resp, err := d.S3.CreateMultipartUpload(&s3.CreateMultipartUploadInput{
 			Bucket:               aws.String(d.Bucket),
 			Key:                  aws.String(key),
@@ -537,33 +578,14 @@ func (d *driver) Writer(ctx context.Context, path string, append bool) (storaged
 		if err != nil {
 			return nil, err
 		}
+		d.MpInfo.set(key, *resp.UploadId, nil)
 		return d.newWriter(key, *resp.UploadId, nil), nil
 	}
-	resp, err := d.S3.ListMultipartUploads(&s3.ListMultipartUploadsInput{
-		Bucket: aws.String(d.Bucket),
-		Prefix: aws.String(key),
-	})
-	if err != nil {
-		return nil, parseError(path, err)
-	}
 
-	for _, multi := range resp.Uploads {
-		if key != *multi.Key {
-			continue
-		}
-		resp, err := d.S3.ListParts(&s3.ListPartsInput{
-			Bucket:   aws.String(d.Bucket),
-			Key:      aws.String(key),
-			UploadId: multi.UploadId,
-		})
-		if err != nil {
-			return nil, parseError(path, err)
-		}
-		var multiSize int64
-		for _, part := range resp.Parts {
-			multiSize += *part.Size
-		}
-		return d.newWriter(key, *multi.UploadId, resp.Parts), nil
+	uploadID, parts, ok := d.MpInfo.get(key)
+
+	if ok {
+		return d.newWriter(key, uploadID, parts), nil
 	}
 	return nil, storagedriver.PathNotFoundError{Path: path}
 }
@@ -990,6 +1012,8 @@ func (w *writer) Write(p []byte) (int, error) {
 				Parts: completedUploadedParts,
 			},
 		})
+		// The upload completed, so update info in the driver
+		w.driver.MpInfo.del(w.key)
 		if err != nil {
 			w.driver.S3.AbortMultipartUpload(&s3.AbortMultipartUploadInput{
 				Bucket:   aws.String(w.driver.Bucket),
@@ -1011,6 +1035,8 @@ func (w *writer) Write(p []byte) (int, error) {
 			return 0, err
 		}
 		w.uploadID = *resp.UploadId
+		// Update info in driver as well
+		w.driver.MpInfo.set(w.key, w.uploadID, nil)
 
 		// If the entire written file is smaller than minChunkSize, we need to make
 		// a new part from scratch :double sad face:
@@ -1047,6 +1073,8 @@ func (w *writer) Write(p []byte) (int, error) {
 					Size:       aws.Int64(w.size),
 				},
 			}
+			// Update info in driver as well
+			w.driver.MpInfo.set(w.key, w.uploadID, w.parts)
 		}
 	}
 
@@ -1111,6 +1139,8 @@ func (w *writer) Cancel() error {
 		Key:      aws.String(w.key),
 		UploadId: aws.String(w.uploadID),
 	})
+	// remove mp upload from the driver's map of on-going uploads
+	w.driver.MpInfo.del(w.key)
 	return err
 }
 
@@ -1146,6 +1176,9 @@ func (w *writer) Commit() error {
 			Parts: completedUploadedParts,
 		},
 	})
+	// defer removal of the mp upload from the driver's map of
+	// on-going uploads.
+	defer w.driver.MpInfo.del(w.key)
 	if err != nil {
 		w.driver.S3.AbortMultipartUpload(&s3.AbortMultipartUploadInput{
 			Bucket:   aws.String(w.driver.Bucket),
@@ -1187,6 +1220,8 @@ func (w *writer) flushPart() error {
 		PartNumber: partNumber,
 		Size:       aws.Int64(int64(len(w.readyPart))),
 	})
+	// update multipart info in driver
+	w.driver.MpInfo.set(w.key, w.uploadID, w.parts)
 	w.readyPart = w.pendingPart
 	w.pendingPart = nil
 	return nil

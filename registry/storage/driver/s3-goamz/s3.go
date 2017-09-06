@@ -22,6 +22,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/docker/distribution/registry/client/transport"
@@ -69,6 +70,43 @@ func (factory *s3DriverFactory) Create(parameters map[string]interface{}) (stora
 	return FromParameters(parameters)
 }
 
+type mpInfo struct {
+	sync.RWMutex
+	parts  map[string][]s3.Part
+	multis map[string]*s3.Multi
+}
+
+func newMpInfo() *mpInfo {
+	return &mpInfo{
+		parts:  make(map[string][]s3.Part),
+		multis: make(map[string]*s3.Multi),
+	}
+}
+
+func (m *mpInfo) get(key string) (multi *s3.Multi, parts []s3.Part, ok bool) {
+	m.RLock()
+	defer m.RUnlock()
+	multi, ok = m.multis[key]
+	if ok {
+		parts, ok = m.parts[key]
+	}
+	return
+}
+
+func (m *mpInfo) set(key string, multi *s3.Multi, parts []s3.Part) {
+	m.Lock()
+	defer m.Unlock()
+	m.multis[key] = multi
+	m.parts[key] = parts
+}
+
+func (m *mpInfo) del(key string) {
+	m.Lock()
+	defer m.Unlock()
+	delete(m.multis, key)
+	delete(m.parts, key)
+}
+
 type driver struct {
 	S3            *s3.S3
 	Bucket        *s3.Bucket
@@ -76,6 +114,7 @@ type driver struct {
 	Encrypt       bool
 	RootDirectory string
 	StorageClass  s3.StorageClass
+	MpInfo        *mpInfo
 }
 
 type baseEmbed struct {
@@ -293,6 +332,7 @@ func New(params DriverParameters) (*Driver, error) {
 		Encrypt:       params.Encrypt,
 		RootDirectory: params.RootDirectory,
 		StorageClass:  params.StorageClass,
+		MpInfo:        newMpInfo(),
 	}
 
 	return &Driver{
@@ -346,29 +386,16 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 func (d *driver) Writer(ctx context.Context, path string, append bool) (storagedriver.FileWriter, error) {
 	key := d.s3Path(path)
 	if !append {
-		// TODO (brianbland): cancel other uploads at this path
 		multi, err := d.Bucket.InitMulti(key, d.getContentType(), getPermissions(), d.getOptions())
 		if err != nil {
 			return nil, err
 		}
+		d.MpInfo.set(key, multi, nil)
 		return d.newWriter(key, multi, nil), nil
 	}
-	multis, _, err := d.Bucket.ListMulti(key, "")
-	if err != nil {
-		return nil, parseError(path, err)
-	}
-	for _, multi := range multis {
-		if key != multi.Key {
-			continue
-		}
-		parts, err := multi.ListParts()
-		if err != nil {
-			return nil, parseError(path, err)
-		}
-		var multiSize int64
-		for _, part := range parts {
-			multiSize += part.Size
-		}
+
+	multi, parts, ok := d.MpInfo.get(key)
+	if ok {
 		return d.newWriter(key, multi, parts), nil
 	}
 	return nil, storagedriver.PathNotFoundError{Path: path}
@@ -624,6 +651,8 @@ func (w *writer) Write(p []byte) (int, error) {
 	// new multipart upload :sadface:
 	if len(w.parts) > 0 && int(w.parts[len(w.parts)-1].Size) < minChunkSize {
 		err := w.multi.Complete(w.parts)
+		// The upload completed, so update info in the driver
+		w.driver.MpInfo.del(w.key)
 		if err != nil {
 			w.multi.Abort()
 			return 0, err
@@ -634,6 +663,8 @@ func (w *writer) Write(p []byte) (int, error) {
 			return 0, err
 		}
 		w.multi = multi
+		// set multipart info in driver
+		w.driver.MpInfo.set(w.key, multi, nil)
 
 		// If the entire written file is smaller than minChunkSize, we need to make
 		// a new part from scratch :double sad face:
@@ -651,6 +682,8 @@ func (w *writer) Write(p []byte) (int, error) {
 				return 0, err
 			}
 			w.parts = []s3.Part{part}
+			// Update info in driver as well
+			w.driver.MpInfo.set(w.key, multi, w.parts)
 		}
 	}
 
@@ -711,6 +744,8 @@ func (w *writer) Cancel() error {
 	}
 	w.cancelled = true
 	err := w.multi.Abort()
+	// remove mp upload from the driver's map of on-going uploads
+	w.driver.MpInfo.del(w.key)
 	return err
 }
 
@@ -728,6 +763,9 @@ func (w *writer) Commit() error {
 	}
 	w.committed = true
 	err = w.multi.Complete(w.parts)
+	// defer removal of the mp upload from the driver's map of
+	// on-going uploads.
+	defer w.driver.MpInfo.del(w.key)
 	if err != nil {
 		w.multi.Abort()
 		return err
@@ -754,6 +792,8 @@ func (w *writer) flushPart() error {
 		return err
 	}
 	w.parts = append(w.parts, part)
+	// update multipart info in driver
+	w.driver.MpInfo.set(w.key, w.multi, w.parts)
 	w.readyPart = w.pendingPart
 	w.pendingPart = nil
 	return nil
