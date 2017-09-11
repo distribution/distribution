@@ -319,7 +319,7 @@ $ docker service create \
   --secret domain.crt \
   --secret domain.key \
   --label registry=true \
-  -v /mnt/registry:/var/lib/registry \
+  --mount src=/mnt/registry,dst=/var/lib/registry \
   -e REGISTRY_HTTP_ADDR=0.0.0.0:80 \
   -e REGISTRY_HTTP_TLS_CERTIFICATE=/run/secrets/domain.crt \
   -e REGISTRY_HTTP_TLS_KEY=/run/secrets/domain.key \
