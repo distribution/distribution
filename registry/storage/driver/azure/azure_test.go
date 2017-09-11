@@ -48,7 +48,7 @@ func init() {
 	}
 
 	azureDriverConstructor := func() (storagedriver.StorageDriver, error) {
-		return New(accountName, accountKey, container, realm)
+		return New(accountName, accountKey, container, realm, defaultMaxIdleConnsToStorage)
 	}
 
 	// Skip Azure storage driver tests if environment variable parameters are not provided

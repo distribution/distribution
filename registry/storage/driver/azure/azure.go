@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -23,11 +24,13 @@ import (
 const driverName = "azure"
 
 const (
-	paramAccountName = "accountname"
-	paramAccountKey  = "accountkey"
-	paramContainer   = "container"
-	paramRealm       = "realm"
-	maxChunkSize     = 4 * 1024 * 1024
+	paramAccountName             = "accountname"
+	paramAccountKey              = "accountkey"
+	paramContainer               = "container"
+	paramRealm                   = "realm"
+	paramMaxIdleConns            = "maxidleconns"
+	maxChunkSize                 = 4 * 1024 * 1024
+	defaultMaxIdleConnsToStorage = 100
 )
 
 type driver struct {
@@ -73,14 +76,46 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		realm = azure.DefaultBaseURL
 	}
 
-	return New(fmt.Sprint(accountName), fmt.Sprint(accountKey), fmt.Sprint(container), fmt.Sprint(realm))
+	maxIdleConnsToStorage := defaultMaxIdleConnsToStorage
+	maxIdleConnsParam := parameters[paramMaxIdleConns]
+	switch maxIdleConnsParam := maxIdleConnsParam.(type) {
+	case int:
+		maxIdleConnsToStorage = maxIdleConnsParam
+	case nil:
+		// do nothing. The default value is used
+	default:
+		return nil, fmt.Errorf("The maxidleconns parameter should be an int")
+	}
+
+	return New(fmt.Sprint(accountName), fmt.Sprint(accountKey), fmt.Sprint(container), fmt.Sprint(realm), maxIdleConnsToStorage)
 }
 
 // New constructs a new Driver with the given Azure Storage Account credentials
-func New(accountName, accountKey, container, realm string) (*Driver, error) {
+func New(accountName, accountKey, container, realm string, maxIdleConnsToStorage int) (*Driver, error) {
 	api, err := azure.NewClient(accountName, accountKey, realm, azure.DefaultAPIVersion, true)
 	if err != nil {
 		return nil, err
+	}
+
+	// Configure the http client for Storage server request since http.DefaultClient does not have optimal configuration
+	// On a busy server, we need to make many concurrent requests to the same storage server. The default MaxIdleConnsPerHost is 2,
+	// causing only 2 storage connections to be cached. As a result, the registry server needs to keep establishing new SSL connections to
+	// the storage server, causing bad perf (related issue: https://github.com/golang/go/issues/13801). Also we explicitly specify
+	// other transport parameters here (for now they are pretty much the same as the default ones) in case the default parameter
+	// changes or doesn't fit our scenarios
+	api.HTTPClient = &http.Client{
+		Transport: &http.Transport{
+			Dial: (&net.Dialer{
+				Timeout:   30 * time.Second, // dial timeout
+				KeepAlive: 30 * time.Second,
+			}).Dial,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ResponseHeaderTimeout: 10 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+			IdleConnTimeout:       90 * time.Second,
+			MaxIdleConnsPerHost:   maxIdleConnsToStorage, // max # of cached idle connections per host.
+			MaxIdleConns:          maxIdleConnsToStorage, // max # of total cached idle connections
+		},
 	}
 
 	blobClient := api.GetBlobService()
