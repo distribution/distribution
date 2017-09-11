@@ -470,7 +470,7 @@ leverage a third-party implementation.
 
 If your registry invocation is advanced, it may be easier to use a Docker
 compose file to deploy it, rather than relying on a specific `docker run`
-invocation. Use the following example `docker-compose-yml` as a template.
+invocation. Use the following example `docker-compose.yml` as a template.
 
 ```yaml
 registry:
