@@ -318,7 +318,7 @@ $ docker service create \
   --name registry \
   --secret domain.crt \
   --secret domain.key \
-  --label registry=true \
+  --constraint 'node.labels.registry==true' \
   --mount src=/mnt/registry,dst=/var/lib/registry \
   -e REGISTRY_HTTP_ADDR=0.0.0.0:80 \
   -e REGISTRY_HTTP_TLS_CERTIFICATE=/run/secrets/domain.crt \
