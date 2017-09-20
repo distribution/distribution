@@ -73,6 +73,21 @@ func (o WithTagOption) Apply(m ManifestService) error {
 	return nil
 }
 
+// WithManifestMediaTypes lists the media types the client wishes
+// the server to provide.
+func WithManifestMediaTypes(mediaTypes []string) ManifestServiceOption {
+	return WithManifestMediaTypesOption{mediaTypes}
+}
+
+// WithManifestMediaTypesOption holds a list of accepted media types
+type WithManifestMediaTypesOption struct{ MediaTypes []string }
+
+// Apply conforms to the ManifestServiceOption interface
+func (o WithManifestMediaTypesOption) Apply(m ManifestService) error {
+	// no implementation
+	return nil
+}
+
 // Repository is a named collection of manifests and layers.
 type Repository interface {
 	// Named returns the name of the repository.
