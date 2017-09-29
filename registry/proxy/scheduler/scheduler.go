@@ -25,7 +25,7 @@ const (
 // fields are exported for serialization
 type schedulerEntry struct {
 	Key       string    `json:"Key"`
-	Expiry    time.Time `json:"ExpiryData"`
+	Expiry    time.Time `json:"ExpiryDate"`
 	EntryType int       `json:"EntryType"`
 
 	timer *time.Timer
