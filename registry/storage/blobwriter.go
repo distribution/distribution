@@ -98,11 +98,7 @@ func (bw *blobWriter) Cancel(ctx context.Context) error {
 		context.GetLogger(ctx).Errorf("error closing blobwriter: %s", err)
 	}
 
-	if err := bw.removeResources(ctx); err != nil {
-		return err
-	}
-
-	return nil
+	return bw.removeResources(ctx)
 }
 
 func (bw *blobWriter) Size() int64 {
