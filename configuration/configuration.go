@@ -591,6 +591,12 @@ type Middleware struct {
 	Disabled bool `yaml:"disabled,omitempty"`
 	// Map of parameters that will be passed to the middleware's initialization function
 	Options Parameters `yaml:"options"`
+	// Type of middleware ("build" or "plugin")
+	Type string `yaml:"type,omitempty"`
+	// Path to the plugin middleware
+	Path string `yaml:"path,omitempty"`
+	// Checksum of the plugin base64 encoded sha512_256
+	Checksum string `yaml:"checksum,omitempty"`
 }
 
 // Proxy configures the registry as a pull through cache

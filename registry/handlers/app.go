@@ -938,11 +938,13 @@ func appendCatalogAccessRecord(accessRecords []auth.Access, r *http.Request) []a
 // applyRegistryMiddleware wraps a registry instance with the configured middlewares
 func applyRegistryMiddleware(ctx context.Context, registry distribution.Namespace, middlewares []configuration.Middleware) (distribution.Namespace, error) {
 	for _, mw := range middlewares {
-		rmw, err := registrymiddleware.Get(ctx, mw.Name, mw.Options, registry)
-		if err != nil {
-			return nil, fmt.Errorf("unable to configure registry middleware (%s): %s", mw.Name, err)
+		if !mw.Disabled {
+			rmw, err := registrymiddleware.Get(ctx, mw.Name, mw.Options, registry)
+			if err != nil {
+				return nil, fmt.Errorf("unable to configure registry middleware (%s): %s", mw.Name, err)
+			}
+			registry = rmw
 		}
-		registry = rmw
 	}
 	return registry, nil
 
@@ -951,11 +953,13 @@ func applyRegistryMiddleware(ctx context.Context, registry distribution.Namespac
 // applyRepoMiddleware wraps a repository with the configured middlewares
 func applyRepoMiddleware(ctx context.Context, repository distribution.Repository, middlewares []configuration.Middleware) (distribution.Repository, error) {
 	for _, mw := range middlewares {
-		rmw, err := repositorymiddleware.Get(ctx, mw.Name, mw.Options, repository)
-		if err != nil {
-			return nil, err
+		if !mw.Disabled {
+			rmw, err := repositorymiddleware.Get(ctx, mw.Name, mw.Options, repository)
+			if err != nil {
+				return nil, err
+			}
+			repository = rmw
 		}
-		repository = rmw
 	}
 	return repository, nil
 }
@@ -963,11 +967,13 @@ func applyRepoMiddleware(ctx context.Context, repository distribution.Repository
 // applyStorageMiddleware wraps a storage driver with the configured middlewares
 func applyStorageMiddleware(driver storagedriver.StorageDriver, middlewares []configuration.Middleware) (storagedriver.StorageDriver, error) {
 	for _, mw := range middlewares {
-		smw, err := storagemiddleware.Get(mw.Name, mw.Options, driver)
-		if err != nil {
-			return nil, fmt.Errorf("unable to configure storage middleware (%s): %v", mw.Name, err)
+		if !mw.Disabled {
+			smw, err := storagemiddleware.Get(mw.Name, mw.Options, driver)
+			if err != nil {
+				return nil, fmt.Errorf("unable to configure storage middleware (%s): %v", mw.Name, err)
+			}
+			driver = smw
 		}
-		driver = smw
 	}
 	return driver, nil
 }

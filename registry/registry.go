@@ -2,12 +2,16 @@ package registry
 
 import (
 	"context"
+	"crypto/sha512"
+	"crypto/subtle"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/base64"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
+	"plugin"
 	"time"
 
 	"rsc.io/letsencrypt"
@@ -19,6 +23,9 @@ import (
 	"github.com/docker/distribution/health"
 	"github.com/docker/distribution/registry/handlers"
 	"github.com/docker/distribution/registry/listener"
+	registrymiddleware "github.com/docker/distribution/registry/middleware/registry"
+	repositorymiddleware "github.com/docker/distribution/registry/middleware/repository"
+	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
 	"github.com/docker/distribution/uuid"
 	"github.com/docker/distribution/version"
 	gorhandlers "github.com/gorilla/handlers"
@@ -79,6 +86,10 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 	if err != nil {
 		return nil, fmt.Errorf("error configuring logger: %v", err)
 	}
+
+	// load up any middleware plugins and register them,
+	// they will be initialized in the app set up.
+	loadMiddleWarePlugins(ctx, config)
 
 	// inject a logger into the uuid library. warns us if there is a problem
 	// with uuid generation under low entropy.
@@ -286,6 +297,106 @@ func logLevel(level configuration.Loglevel) log.Level {
 	}
 
 	return l
+}
+
+func loadMiddleWarePlugins(ctx context.Context, config *configuration.Configuration) {
+	logger := dcontext.GetLogger(ctx)
+	for mtype, mws := range config.Middleware {
+		for _, mw := range mws {
+			if mw.Type == "plugin" {
+				if loadMiddleWarePlugin(logger, mtype, mw) {
+					logger.Infof("successfully loaded middleware plugin %s", mw.Name)
+				} else {
+					logger.Warnf("failed to load middleware plugin %s", mw.Name)
+				}
+			}
+		}
+	}
+}
+
+func loadMiddleWarePlugin(logger dcontext.Logger, mtype string, mw configuration.Middleware) (ret bool) {
+	if mw.Disabled {
+		logger.Infof("middleware plugin %s disabled", mw.Name)
+		return
+	}
+	if len(mw.Path) == 0 {
+		logger.Debugf("middleware plugin %s has no specified file path", mw.Name)
+		return
+	}
+	if len(mw.Checksum) > 0 {
+		err := checkPlugin(mw)
+		if err != nil {
+			logger.Debugf(err.Error())
+			return
+		}
+	}
+	p, err := plugin.Open(mw.Path)
+	if err != nil {
+		logger.Debugf("error loading middleware plugin %s: %s", mw.Name, err)
+		return
+	}
+	initFunc, err := p.Lookup("InitFunc")
+	if err != nil {
+		logger.Debugf("error looking up \"InitFunc\" for middleware plugin %s: %s", mw.Name, err)
+		return
+	}
+	var regErr error
+	var ok bool
+	switch mtype {
+	case "registry":
+		var regCast registrymiddleware.InitFunc
+		regCast, ok = initFunc.(registrymiddleware.InitFunc)
+		if ok {
+			regErr = registrymiddleware.Register(mw.Name, regCast)
+		}
+	case "repository":
+		var repCast repositorymiddleware.InitFunc
+		repCast, ok = initFunc.(repositorymiddleware.InitFunc)
+		if ok {
+			regErr = repositorymiddleware.Register(mw.Name, repCast)
+		}
+	case "storage":
+		var storCast storagemiddleware.InitFunc
+		storCast, ok = initFunc.(storagemiddleware.InitFunc)
+		if ok {
+			regErr = storagemiddleware.Register(mw.Name, storCast)
+		}
+	default:
+		logger.Debugf("unkown middleware plugin type %s", mtype)
+		return
+	}
+	if !ok {
+		logger.Debugf("could not cast \"InitFunc\" for plugin %s to the %s middleware InitFunc type", mw.Name, mtype)
+		return
+	}
+	if regErr != nil {
+		logger.Debugf("could not register middleware plugin %s: %s", mw.Name, regErr)
+		return
+	}
+	ret = true
+	return
+}
+
+func checkPlugin(mw configuration.Middleware) error {
+	verErr := fmt.Sprintf("error verifying middleware plugin %s", mw.Name)
+	f, err := os.Open(mw.Path)
+	if err != nil {
+		return fmt.Errorf("%s: %s", verErr, err)
+	}
+	defer f.Close()
+	buf, err := ioutil.ReadAll(f)
+	if err != nil {
+		return fmt.Errorf("%s: %s", verErr, err)
+	}
+	checksum, err := base64.StdEncoding.DecodeString(mw.Checksum)
+	if err != nil {
+		return fmt.Errorf("%s: %s", verErr, err)
+	}
+	filesum := sha512.Sum512_256(buf)
+	if subtle.ConstantTimeCompare(checksum, filesum[:]) != 1 {
+		return fmt.Errorf("%s: plugin file %s checksum does not match configuration checksum", verErr, mw.Path)
+	}
+	return nil
 }
 
 // panicHandler add an HTTP handler to web app. The handler recover the happening
