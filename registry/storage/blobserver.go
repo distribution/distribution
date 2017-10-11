@@ -1,14 +1,14 @@
 package storage
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/docker/distribution"
+	"github.com/docker/distribution/context"
+	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/registry/storage/driver"
-	"github.com/opencontainers/go-digest"
 )
 
 // TODO(stevvooe): This should configurable in the future.
@@ -35,7 +35,7 @@ func (bs *blobServer) ServeBlob(ctx context.Context, w http.ResponseWriter, r *h
 	}
 
 	if bs.redirect {
-		redirectURL, err := bs.driver.URLFor(ctx, path, map[string]interface{}{"method": r.Method})
+		redirectURL, err := bs.driver.URLFor(ctx, path, map[string]interface{}{"method": r.Method, "host": r.Header.Get("Host")})
 		switch err.(type) {
 		case nil:
 			// Redirect to storage URL.
