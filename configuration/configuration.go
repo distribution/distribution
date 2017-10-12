@@ -43,6 +43,11 @@ type Configuration struct {
 		// Hooks allows users to configure the log hooks, to enabling the
 		// sequent handling behavior, when defined levels of log message emit.
 		Hooks []LogHook `yaml:"hooks,omitempty"`
+
+		// OutputFormat allows users to specify where to output the logs.
+		OutputFormat struct {
+			FileOutput string `yaml:"file,omitempty"`
+		} `yaml:"output,omitempty"`
 	}
 
 	// Loglevel is the level at which registry operations are logged. This is
