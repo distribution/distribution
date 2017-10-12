@@ -74,6 +74,8 @@ log:
   fields:
     service: registry
     environment: staging
+  output:
+    file: /var/log/registry.log
   hooks:
     - type: mail
       disabled: true
@@ -306,6 +308,8 @@ log:
   fields:
     service: registry
     environment: staging
+  output:
+    file: /var/log/registry.log
 ```
 
 | Parameter   | Required | Description |
