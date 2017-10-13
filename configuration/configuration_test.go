@@ -22,10 +22,13 @@ var configStruct = Configuration{
 		AccessLog struct {
 			Disabled bool `yaml:"disabled,omitempty"`
 		} `yaml:"accesslog,omitempty"`
-		Level     Loglevel               `yaml:"level"`
-		Formatter string                 `yaml:"formatter,omitempty"`
-		Fields    map[string]interface{} `yaml:"fields,omitempty"`
-		Hooks     []LogHook              `yaml:"hooks,omitempty"`
+		Level        Loglevel               `yaml:"level"`
+		Formatter    string                 `yaml:"formatter,omitempty"`
+		Fields       map[string]interface{} `yaml:"fields,omitempty"`
+		Hooks        []LogHook              `yaml:"hooks,omitempty"`
+		OutputFormat struct {
+			FileOutput string `yaml:"file,omitempty"`
+		} `yaml:"output,omitempty"`
 	}{
 		Fields: map[string]interface{}{"environment": "test"},
 	},

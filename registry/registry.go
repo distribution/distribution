@@ -227,7 +227,7 @@ func configureReporting(app *handlers.App) http.Handler {
 // configuration.
 func configureLogging(ctx context.Context, config *configuration.Configuration) (context.Context, error) {
 	if config.Log.OutputFormat.FileOutput != "" {
-		f, err := os.OpenFile(config.Log.OutputFormat.FileOutput, os.O_WRONLY | os.O_CREATE, 0644)
+		f, err := os.OpenFile(config.Log.OutputFormat.FileOutput, os.O_WRONLY|os.O_CREATE, 0644)
 		if err != nil {
 			return ctx, fmt.Errorf("logfile could not be opened: %q", config.Log.OutputFormat.FileOutput)
 		}
