@@ -210,17 +210,17 @@ If you have been issued an _intermediate_ certificate instead, see
 3.  Restart the registry, directing it to use the TLS certificate. This command
     bind-mounts the `certs/` directory into the container at `/certs/`, and sets
     environment variables that tell the container where to find the `domain.crt`
-    and `domain.key` file. The registry runs on port 80.
+    and `domain.key` file. The registry runs on port 443, the default HTTPS port.
 
     ```bash
     $ docker run -d \
       --restart=always \
       --name registry \
       -v `pwd`/certs:/certs \
-      -e REGISTRY_HTTP_ADDR=0.0.0.0:80 \
+      -e REGISTRY_HTTP_ADDR=0.0.0.0:443 \
       -e REGISTRY_HTTP_TLS_CERTIFICATE=/certs/domain.crt \
       -e REGISTRY_HTTP_TLS_KEY=/certs/domain.key \
-      -p 80:80 \
+      -p 443:443 \
       registry:2
     ```
 
