@@ -6,7 +6,7 @@ import (
 	"crypto/subtle"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -388,12 +388,12 @@ func checkPlugin(mw configuration.Middleware) error {
 	if err != nil {
 		return fmt.Errorf("%s: %s", verErr, err)
 	}
-	checksum, err := base64.StdEncoding.DecodeString(mw.Checksum)
+	fileSum := sha512.Sum512(buf)
+	checkSum, err := hex.DecodeString(mw.Checksum)
 	if err != nil {
 		return fmt.Errorf("%s: %s", verErr, err)
 	}
-	filesum := sha512.Sum512_256(buf)
-	if subtle.ConstantTimeCompare(checksum, filesum[:]) != 1 {
+	if subtle.ConstantTimeCompare(checkSum, fileSum[:]) != 1 {
 		return fmt.Errorf("%s: plugin file %s checksum does not match configuration checksum", verErr, mw.Path)
 	}
 	return nil
