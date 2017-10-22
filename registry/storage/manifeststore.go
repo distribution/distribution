@@ -177,7 +177,7 @@ func (ms *manifestStore) All(ctx context.Context) ([]distribution.Descriptor, er
 				switch err.(type) {
 				case storagedriver.PathNotFoundError:
 					// Broken storage backend. Skipping
-					context.GetLogger(ms.ctx).Infof("Broken revision path: %s", linkPath)
+					dcontext.GetLogger(ms.ctx).Infof("Broken revision path: %s", linkPath)
 					continue
 				default:
 					return descriptors, err
