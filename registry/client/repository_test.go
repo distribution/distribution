@@ -1021,7 +1021,7 @@ func TestManifestAll(t *testing.T) {
 	e, c := testServer(m)
 	defer c()
 
-	r, err := NewRepository(context.Background(), repo, e, nil)
+	r, err := NewRepository(repo, e, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
