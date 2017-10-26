@@ -1,5 +1,7 @@
-// Package swift provides a storagedriver.StorageDriver implementation to
-// store blobs in Openstack Swift object storage.
+// Package swift provides two storagedriver.StorageDriver implementations to
+// store blobs in Openstack Swift object storage. The one called "swift" uses
+// only Swift for storage, while the one called "swift-plus" employs an
+// additional PostgreSQL database to avoid temporary inconsistency.
 //
 // This package leverages the ncw/swift client library for interfacing with
 // Swift.
@@ -19,10 +21,12 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"crypto/md5"
 	"crypto/rand"
 	"crypto/sha1"
 	"crypto/tls"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -58,7 +62,7 @@ var readAfterWriteTimeout = 15 * time.Second
 // readAfterWriteWait defines the time to sleep between two retries
 var readAfterWriteWait = 200 * time.Millisecond
 
-// Parameters A struct that encapsulates all of the driver parameters after all values have been set
+// Parameters encapsulates all of the driver parameters after all values have been set
 type Parameters struct {
 	Username            string
 	Password            string
@@ -81,6 +85,10 @@ type Parameters struct {
 	AccessKey           string
 	TempURLContainerKey bool
 	TempURLMethods      []string
+	//PostgresURI is only used by the swift-plus driver. The value is a libpq
+	//connection URI (starting with "postgres://") as described here:
+	//https://www.postgresql.org/docs/9.6/static/libpq-connect.html#LIBPQ-CONNSTRING
+	PostgresURI string
 }
 
 // swiftInfo maps the JSON structure returned by Swift /info endpoint
@@ -126,6 +134,9 @@ type baseEmbed struct {
 
 // Driver is a storagedriver.StorageDriver implementation backed by Openstack Swift
 // Objects are stored at absolute keys in the provided container.
+// Metadata will be stored in a PostgreSQL database by instances which are
+// constructed with one of the Plus methods (FromParametersPlus or
+// NewPlusDriver) or via the "swift-plus" driver factory.
 type Driver struct {
 	baseEmbed
 }
@@ -137,40 +148,63 @@ type Driver struct {
 // - authurl
 // - container
 func FromParameters(parameters map[string]interface{}) (*Driver, error) {
+	params, err := parseParameters(parameters)
+	if err != nil {
+		return nil, err
+	}
+	return New(params)
+}
+
+func parseParameters(in map[string]interface{}) (Parameters, error) {
 	params := Parameters{
 		ChunkSize:          defaultChunkSize,
 		InsecureSkipVerify: false,
 	}
 
-	if err := mapstructure.Decode(parameters, &params); err != nil {
-		return nil, err
+	if err := mapstructure.Decode(in, &params); err != nil {
+		return Parameters{}, err
 	}
 
 	if params.Username == "" {
-		return nil, fmt.Errorf("No username parameter provided")
+		return Parameters{}, fmt.Errorf("No username parameter provided")
 	}
 
 	if params.Password == "" {
-		return nil, fmt.Errorf("No password parameter provided")
+		return Parameters{}, fmt.Errorf("No password parameter provided")
 	}
 
 	if params.AuthURL == "" {
-		return nil, fmt.Errorf("No authurl parameter provided")
+		return Parameters{}, fmt.Errorf("No authurl parameter provided")
 	}
 
 	if params.Container == "" {
-		return nil, fmt.Errorf("No container parameter provided")
+		return Parameters{}, fmt.Errorf("No container parameter provided")
 	}
 
 	if params.ChunkSize < minChunkSize {
-		return nil, fmt.Errorf("The chunksize %#v parameter should be a number that is larger than or equal to %d", params.ChunkSize, minChunkSize)
+		return Parameters{}, fmt.Errorf("The chunksize %#v parameter should be a number that is larger than or equal to %d", params.ChunkSize, minChunkSize)
 	}
 
-	return New(params)
+	return params, nil
 }
 
 // New constructs a new Driver with the given Openstack Swift credentials and container name
 func New(params Parameters) (*Driver, error) {
+	d, err := newDriver(params)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Driver{
+		baseEmbed: baseEmbed{
+			Base: base.Base{
+				StorageDriver: d,
+			},
+		},
+	}, nil
+}
+
+func newDriver(params Parameters) (*driver, error) {
 	transport := &http.Transport{
 		Proxy:               http.ProxyFromEnvironment,
 		MaxIdleConnsPerHost: 2048,
@@ -274,13 +308,7 @@ func New(params Parameters) (*Driver, error) {
 		}
 	}
 
-	return &Driver{
-		baseEmbed: baseEmbed{
-			Base: base.Base{
-				StorageDriver: d,
-			},
-		},
-	}, nil
+	return d, nil
 }
 
 // Implement the storagedriver.StorageDriver interface
@@ -591,57 +619,7 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
-	if d.SecretKey == "" {
-		return "", storagedriver.ErrUnsupportedMethod{}
-	}
-
-	methodString := "GET"
-	method, ok := options["method"]
-	if ok {
-		if methodString, ok = method.(string); !ok {
-			return "", storagedriver.ErrUnsupportedMethod{}
-		}
-	}
-
-	if methodString == "HEAD" {
-		// A "HEAD" request on a temporary URL is allowed if the
-		// signature was generated with "GET", "POST" or "PUT"
-		methodString = "GET"
-	}
-
-	supported := false
-	for _, method := range d.TempURLMethods {
-		if method == methodString {
-			supported = true
-			break
-		}
-	}
-
-	if !supported {
-		return "", storagedriver.ErrUnsupportedMethod{}
-	}
-
-	expiresTime := time.Now().Add(20 * time.Minute)
-	expires, ok := options["expiry"]
-	if ok {
-		et, ok := expires.(time.Time)
-		if ok {
-			expiresTime = et
-		}
-	}
-
-	tempURL := d.Conn.ObjectTempUrl(d.Container, d.swiftPath(path), d.SecretKey, methodString, expiresTime)
-
-	if d.AccessKey != "" {
-		// On HP Cloud, the signature must be in the form of tenant_id:access_key:signature
-		url, _ := url.Parse(tempURL)
-		query := url.Query()
-		query.Set("temp_url_sig", fmt.Sprintf("%s:%s:%s", d.Conn.TenantId, d.AccessKey, query.Get("temp_url_sig")))
-		url.RawQuery = query.Encode()
-		tempURL = url.String()
-	}
-
-	return tempURL, nil
+	return d.PlusMakeTempURL(ctx, d.swiftPath(path), options)
 }
 
 func (d *driver) swiftPath(path string) string {
@@ -912,4 +890,161 @@ func (sw *segmentWriter) Write(p []byte) (int, error) {
 	}
 
 	return n, nil
+}
+
+//PlusReader implements the interfaceToSwift for the plusDriver.
+func (d *driver) PlusReader(ctx context.Context, objectName string, offset int64) (io.ReadCloser, error) {
+	headers := make(swift.Headers)
+	if offset > 0 {
+		headers["Range"] = "bytes=" + strconv.FormatInt(offset, 10) + "-"
+	}
+	file, _, err := d.Conn.ObjectOpen(d.Container, objectName, false, headers)
+	if err != nil {
+		if err == swift.ObjectNotFound {
+			return nil, storagedriver.PathNotFoundError{Path: objectName}
+		}
+		if swiftErr, ok := err.(*swift.Error); ok && swiftErr.StatusCode == http.StatusRequestedRangeNotSatisfiable {
+			return ioutil.NopCloser(bytes.NewReader(nil)), nil
+		}
+		return file, err
+	}
+	return file, nil
+}
+
+//PlusWrite implements the interfaceToSwift for the plusDriver.
+func (d *driver) PlusWrite(ctx context.Context, objectName string, data []byte) (hash string, err error) {
+	md5sum := md5.Sum(data)
+	hash = hex.EncodeToString(md5sum[:])
+	_, err = d.Conn.ObjectPut(
+		d.Container, objectName, bytes.NewReader(data),
+		true, hash, contentType,
+		swift.Headers{"Content-Length": strconv.Itoa(len(data))},
+	)
+	if err == swift.ObjectNotFound {
+		err = storagedriver.PathNotFoundError{Path: objectName}
+	}
+	return
+}
+
+//PlusWriteSLO implements the interfaceToSwift for the plusDriver.
+func (d *driver) PlusWriteSLO(ctx context.Context, objectName string, segments []plusSegment) error {
+	type sloSegment struct {
+		Path      string `json:"path"`
+		Hash      string `json:"etag,omitempty"`
+		SizeBytes int64  `json:"size_bytes,omitempty"`
+	}
+
+	manifest := make([]sloSegment, len(segments))
+	for idx, s := range segments {
+		manifest[idx].Path = d.Container + "/" + s.ObjectPath()
+		manifest[idx].SizeBytes = s.SizeBytes
+		manifest[idx].Hash = s.Hash
+	}
+	body, err := json.Marshal(manifest)
+	if err != nil {
+		return err
+	}
+
+	_, _, err = d.Conn.Call(d.Conn.StorageUrl, swift.RequestOpts{
+		Container:  d.Container,
+		ObjectName: objectName,
+		Operation:  "PUT",
+		Parameters: url.Values{"multipart-manifest": {"put"}},
+		NoResponse: true,
+		Body:       bytes.NewReader(body),
+	})
+	return err
+}
+
+//PlusDeleteAll implements the interfaceToSwift for the plusDriver. It deletes
+//all objects below the given prefix.
+func (d *driver) PlusDeleteAll(ctx context.Context, objectPrefix string) error {
+	opts := swift.ObjectsOpts{Prefix: objectPrefix}
+	names, err := d.Conn.ObjectNamesAll(d.Container, &opts)
+	if err != nil {
+		if err == swift.ContainerNotFound {
+			return storagedriver.PathNotFoundError{Path: objectPrefix}
+		}
+		return err
+	}
+	if d.BulkDeleteSupport {
+		chunks, err := chunkFilenames(names, d.BulkDeleteMaxDeletes)
+		if err != nil {
+			return err
+		}
+		for _, chunk := range chunks {
+			_, err := d.Conn.BulkDelete(d.Container, chunk)
+			if err != nil && err != swift.ContainerNotFound && err != swift.ObjectNotFound {
+				return err
+			}
+		}
+	} else {
+		for _, name := range names {
+			err := d.Conn.ObjectDelete(d.Container, name)
+			if err != nil && err != swift.ContainerNotFound && err != swift.ObjectNotFound {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+//PlusGetChunkSize implements the interfaceToSwift for the plusDriver.
+func (d *driver) PlusGetChunkSize() int {
+	return d.ChunkSize
+}
+
+//PlusMakeTempURL implements the interfaceToSwift for the plusDriver.
+func (d *driver) PlusMakeTempURL(ctx context.Context, objectName string, options map[string]interface{}) (string, error) {
+	if d.SecretKey == "" {
+		return "", storagedriver.ErrUnsupportedMethod{}
+	}
+
+	methodString := "GET"
+	method, ok := options["method"]
+	if ok {
+		if methodString, ok = method.(string); !ok {
+			return "", storagedriver.ErrUnsupportedMethod{}
+		}
+	}
+
+	if methodString == "HEAD" {
+		// A "HEAD" request on a temporary URL is allowed if the
+		// signature was generated with "GET", "POST" or "PUT"
+		methodString = "GET"
+	}
+
+	supported := false
+	for _, method := range d.TempURLMethods {
+		if method == methodString {
+			supported = true
+			break
+		}
+	}
+
+	if !supported {
+		return "", storagedriver.ErrUnsupportedMethod{}
+	}
+
+	expiresTime := time.Now().Add(20 * time.Minute)
+	expires, ok := options["expiry"]
+	if ok {
+		et, ok := expires.(time.Time)
+		if ok {
+			expiresTime = et
+		}
+	}
+
+	tempURL := d.Conn.ObjectTempUrl(d.Container, objectName, d.SecretKey, methodString, expiresTime)
+
+	if d.AccessKey != "" {
+		// On HP Cloud, the signature must be in the form of tenant_id:access_key:signature
+		url, _ := url.Parse(tempURL)
+		query := url.Query()
+		query.Set("temp_url_sig", fmt.Sprintf("%s:%s:%s", d.Conn.TenantId, d.AccessKey, query.Get("temp_url_sig")))
+		url.RawQuery = query.Encode()
+		tempURL = url.String()
+	}
+
+	return tempURL, nil
 }
