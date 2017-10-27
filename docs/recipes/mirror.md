@@ -132,7 +132,7 @@ You can configure the Docker daemon with the `--registry-mirror` startup
 parameter:
 
 ```bash
-$ docker --registry-mirror=https://registry.docker-cn.com -d
+$ dockerd --registry-mirror=https://registry.docker-cn.com
 ```
 
 Or you can add "https://registry.docker-cn.com" to the `registry-mirrors`
