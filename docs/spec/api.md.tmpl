@@ -1062,6 +1062,29 @@ set in the response. The behavior of the `last` parameter, the provided
 response result, lexical ordering and encoding of the `Link` header are
 identical to that of catalog pagination.
 
+### Listing Repository Manifests
+
+It may be necessary to list all manifest descriptors under a given repository. The list 
+of all manifest descriptors can be retrieved with the following request:  
+
+    GET /v2/<name>/manifests/
+
+The response will be in the following format:
+
+    200 OK
+    Content-Type: application/json
+
+    {
+        "name": <name>,
+		"descriptors": [
+    		{
+    			"mediaType": <mediaType,
+      		 	"size": <size>,
+      		 	"digest": <digest>
+      		 }
+     	]
+    }
+
 ### Deleting an Image
 
 An image may be deleted from the registry via its `name` and `reference`. A
