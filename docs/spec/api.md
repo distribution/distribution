@@ -1085,7 +1085,7 @@ The response will be in the following format:
         "name": <name>,
 		"descriptors": [
     		{
-    			"mediaType": <mediaType,
+    			"mediaType": <mediaType>,
       		 	"size": <size>,
       		 	"digest": <digest>
       		 }
