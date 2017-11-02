@@ -122,6 +122,13 @@ reference and shouldn't be used outside the specification other than to
 identify a set of modifications.
 
 <dl>
+  <dt>m</dt>
+  <dd>
+    <ul>
+      <li>New API to retrieve manifest descriptors.</li>
+    </ul>
+  </dd>
+
   <dt>l</dt>
   <dd>
     <ul>
