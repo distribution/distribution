@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -261,6 +262,12 @@ func StatusHandler(w http.ResponseWriter, r *http.Request) {
 // disable a web application when the health checks fail.
 func Handler(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// if this is about health endpoint, we pass it through.
+		if strings.HasPrefix(r.URL.Path, "/debug/health") {
+			handler.ServeHTTP(w, r)
+			return
+		}
+
 		checks := CheckStatus()
 		if len(checks) != 0 {
 			errcode.ServeJSON(w, errcode.ErrorCodeUnavailable.
