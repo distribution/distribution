@@ -7,15 +7,22 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net/url"
+	"os"
 	"path"
+	"regexp"
 	"time"
 
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/base"
 	"github.com/docker/distribution/registry/storage/driver/factory"
+	"github.com/mattes/migrate"
+	"github.com/mattes/migrate/database/postgres"
+	bindata "github.com/mattes/migrate/source/go-bindata"
 
 	//sql driver for postgres
 	_ "github.com/lib/pq"
@@ -28,25 +35,34 @@ const (
 	maxInlineSizeBytes = 256
 )
 
-//TODO create this on first connection, preferably in such a way that migrations are possible later
-const schema = `
-	CREATE TABLE files (
-		dirname    TEXT      NOT NULL,
-		basename   TEXT      NOT NULL,
-		size_bytes BIGINT    NOT NULL,
-		mtime      TIMESTAMP NOT NULL,
-		content    BYTEA,
-		location   TEXT,
-		PRIMARY KEY (dirname, basename)
-	);
-	CREATE TABLE segments (
-		location   TEXT   NOT NULL,
-		number     INT    NOT NULL,
-		size_bytes BIGINT NOT NULL,
-		hash       TEXT   NOT NULL,
-		PRIMARY KEY (location, number)
-	);
-`
+var sqlMigrations = map[string]string{
+	"001_initial.up.sql": `
+		BEGIN;
+		CREATE TABLE files (
+			dirname    TEXT      NOT NULL,
+			basename   TEXT      NOT NULL,
+			size_bytes BIGINT    NOT NULL,
+			mtime      TIMESTAMP NOT NULL,
+			content    BYTEA,
+			location   TEXT,
+			PRIMARY KEY (dirname, basename)
+		);
+		CREATE TABLE segments (
+			location   TEXT   NOT NULL,
+			number     INT    NOT NULL,
+			size_bytes BIGINT NOT NULL,
+			hash       TEXT   NOT NULL,
+			PRIMARY KEY (location, number)
+		);
+		COMMIT;
+	`,
+	"001_initial.down.sql": `
+		BEGIN;
+		DROP TABLE files;
+		DROP TABLE segments;
+		COMMIT;
+	`,
+}
 
 func init() {
 	factory.Register(plusDriverName, &swiftPlusDriverFactory{})
@@ -110,12 +126,14 @@ func NewPlusDriver(params Parameters) (*Driver, error) {
 		return nil, err
 	}
 
-	db, err := sql.Open("postgres", params.PostgresURI)
+	db, err := connectToPostgres(params.PostgresURI)
 	if err != nil {
 		return nil, err
 	}
-
-	//TODO initialize DB on first use
+	err = initializeSchema(db)
+	if err != nil {
+		return nil, err
+	}
 
 	return &Driver{
 		baseEmbed: baseEmbed{
@@ -139,6 +157,83 @@ func plusRandLocation() (string, error) {
 func setReportedPath(err error, path string) error {
 	if _, ok := err.(storagedriver.PathNotFoundError); ok {
 		return storagedriver.PathNotFoundError{Path: path}
+	}
+	return err
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+var dbNotExistErrRx = regexp.MustCompile(`^pq: database "(.+?)" does not exist$`)
+
+//connectToPostgres is like sql.Open(), but it also creates the database on the first run.
+func connectToPostgres(uri string) (*sql.DB, error) {
+	db, err := sql.Open("postgres", uri)
+	if err == nil {
+		//apparently the "database does not exist" error only occurs when trying to issue the first statement
+		_, err = db.Exec("SELECT 1")
+	}
+	if err == nil {
+		//database exists
+		return db, nil
+	}
+	match := dbNotExistErrRx.FindStringSubmatch(err.Error())
+	if match == nil {
+		//unexpected error
+		db.Close()
+		return nil, err
+	}
+	dbName := match[1]
+
+	//remove the database name from the connection URL
+	dbURL, err := url.Parse(uri)
+	if err != nil {
+		db.Close()
+		return nil, err
+	}
+	dbURL.Path = "/"
+	db2, err := sql.Open("postgres", dbURL.String())
+	if err != nil {
+		db.Close()
+		return nil, err
+	}
+	defer db2.Close()
+
+	_, err = db2.Exec("CREATE DATABASE " + dbName)
+	return db, err
+}
+
+func initializeSchema(db *sql.DB) error {
+	//use the "go-bindata" driver for github.com/mattes/migrate, but without
+	//actually using go-bindata (go-bindata stubbornly insists on making its
+	//generated functions public, but I don't want to pollute the API)
+	var assetNames []string
+	for name := range sqlMigrations {
+		assetNames = append(assetNames, name)
+	}
+	asset := func(name string) ([]byte, error) {
+		data, ok := sqlMigrations[name]
+		if ok {
+			return []byte(data), nil
+		}
+		return nil, &os.PathError{Op: "open", Path: "<swift-plus>/builtin-sql/" + name, Err: errors.New("not found")}
+	}
+
+	sourceDriver, err := bindata.WithInstance(bindata.Resource(assetNames, asset))
+	if err != nil {
+		return err
+	}
+	dbDriver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		return err
+	}
+	m, err := migrate.NewWithInstance("go-bindata", sourceDriver, "postgres", dbDriver)
+	if err != nil {
+		return err
+	}
+	err = m.Up()
+	if err == migrate.ErrNoChange {
+		//no idea why this is an error
+		return nil
 	}
 	return err
 }
