@@ -98,9 +98,6 @@ image manifest based on the Content-Type returned in the HTTP response.
             The optional os.version field specifies the operating system version,
             for example `10.0.10586`.
 
-            Windows versions are ordered so that the first compatible image is
-            at the top of the list.
-
         - **`os.features`** *array*
 
             The optional os.features field specifies an array of strings,
