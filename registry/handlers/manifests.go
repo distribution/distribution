@@ -443,7 +443,8 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	err = manifests.Delete(imh, imh.Digest)
+	tagService := imh.Repository.Tags(imh)
+	referencedTags, err := tagService.Lookup(imh, distribution.Descriptor{Digest: imh.Digest})
 	if err != nil {
 		switch err {
 		case digest.ErrDigestUnsupported:
@@ -460,18 +461,31 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown)
 			return
 		}
-	}
-
-	tagService := imh.Repository.Tags(imh)
-	referencedTags, err := tagService.Lookup(imh, distribution.Descriptor{Digest: imh.Digest})
-	if err != nil {
-		imh.Errors = append(imh.Errors, err)
 		return
 	}
 
 	for _, tag := range referencedTags {
 		if err := tagService.Untag(imh, tag); err != nil {
 			imh.Errors = append(imh.Errors, err)
+			return
+		}
+	}
+
+	err = manifests.Delete(imh, imh.Digest)
+	if err != nil {
+		switch err {
+		case digest.ErrDigestUnsupported:
+		case digest.ErrDigestInvalidFormat:
+			imh.Errors = append(imh.Errors, v2.ErrorCodeDigestInvalid)
+			return
+		case distribution.ErrBlobUnknown:
+			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown)
+			return
+		case distribution.ErrUnsupported:
+			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnsupported)
+			return
+		default:
+			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown)
 			return
 		}
 	}
