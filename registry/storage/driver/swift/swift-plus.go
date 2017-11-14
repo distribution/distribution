@@ -534,13 +534,7 @@ func (p *plusDriver) Move(ctx context.Context, sourcePath string, destPath strin
 	}
 
 	//create missing directories above target
-	err = p.mkdirAll(ctx, path.Dir(destPath))
-	if err != nil {
-		return err
-	}
-
-	//remove now-empty directories above source
-	return p.deleteUpwards(ctx, fi1.DirName)
+	return p.mkdirAll(ctx, path.Dir(destPath))
 }
 
 //Delete implements the storagedriver.StorageDriver interface.
@@ -553,11 +547,7 @@ func (p *plusDriver) Delete(ctx context.Context, fullPath string) error {
 		return err
 	}
 
-	err = p.deleteDownwards(ctx, fi)
-	if err != nil {
-		return err
-	}
-	return p.deleteUpwards(ctx, fi.DirName)
+	return p.deleteDownwards(ctx, fi)
 }
 
 //deleteDownwards removes all files and directories below `fi` from the DB
@@ -602,13 +592,6 @@ func (p *plusDriver) deleteBlobs(ctx context.Context, fi fileInfo) error {
 		return nil
 	}
 	return p.swift.PlusDeleteAll(ctx, fi.Location+"/")
-}
-
-//deleteUpwards removes the directory at fullPath from the DB if it's empty,
-//then recursing to its parent (similar to `rmdir -p`)
-func (p *plusDriver) deleteUpwards(ctx context.Context, fullPath string) error {
-	//TODO
-	return nil
 }
 
 //URLFor implements the storagedriver.StorageDriver interface.
