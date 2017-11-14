@@ -15,6 +15,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"strings"
 	"time"
 
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
@@ -80,6 +81,9 @@ func (factory *swiftPlusDriverFactory) Create(parameters map[string]interface{})
 type plusDriver struct {
 	swift interfaceToSwift
 	db    *sql.DB
+	//configuration options
+	chunkSize    int
+	objectPrefix string
 }
 
 //The interfaceToSwift contains all the things that the plusDriver needs to do
@@ -90,7 +94,6 @@ type interfaceToSwift interface {
 	PlusWrite(ctx context.Context, objectName string, data []byte) (hash string, err error)
 	PlusWriteSLO(ctx context.Context, objectName string, segments []plusSegment) error
 	PlusDeleteAll(ctx context.Context, objectPrefix string) error
-	PlusGetChunkSize() int
 	//The `options` here are the same as for StorageDriver.URLFor().
 	PlusMakeTempURL(ctx context.Context, objectName string, options map[string]interface{}) (string, error)
 }
@@ -138,10 +141,20 @@ func NewPlusDriver(params Parameters) (*Driver, error) {
 	return &Driver{
 		baseEmbed: baseEmbed{
 			Base: base.Base{
-				StorageDriver: &plusDriver{d, db},
+				StorageDriver: &plusDriver{
+					d, db,
+					d.ChunkSize, strings.Trim(d.Prefix, "/"),
+				},
 			},
 		},
 	}, nil
+}
+
+func prependPrefix(prefix, fullPath string) string {
+	if prefix == "" {
+		return strings.Trim(fullPath, "/")
+	}
+	return prefix + "/" + strings.Trim(fullPath, "/")
 }
 
 //Chooses a new random string for fileInfo.Location.
@@ -312,6 +325,7 @@ func (fi fileInfo) ObjectPath() string {
 ////////////////////////////////////////////////////////////////////////////////
 
 type plusSegment struct {
+	Prefix    string
 	Location  string
 	Number    uint64
 	SizeBytes int64
@@ -319,7 +333,7 @@ type plusSegment struct {
 }
 
 func (s plusSegment) ObjectPath() string {
-	return getSegmentPath(s.Location, int(s.Number))
+	return getSegmentPath(prependPrefix(s.Prefix, s.Location), int(s.Number))
 }
 
 func (p *plusDriver) readSegmentInfo(ctx context.Context, location string) (result []plusSegment, err error) {
@@ -336,7 +350,7 @@ func (p *plusDriver) readSegmentInfo(ctx context.Context, location string) (resu
 	defer rows.Close()
 
 	for rows.Next() {
-		segment := plusSegment{Location: location}
+		segment := plusSegment{Prefix: p.objectPrefix, Location: location}
 		err = rows.Scan(&segment.Number, &segment.SizeBytes, &segment.Hash)
 		if err != nil {
 			return
@@ -372,7 +386,7 @@ func (p *plusDriver) GetContent(ctx context.Context, fullPath string) ([]byte, e
 	}
 
 	//file exists, but contents are too big for the DB -> look in Swift
-	reader, err := p.swift.PlusReader(ctx, fi.ObjectPath(), 0)
+	reader, err := p.swift.PlusReader(ctx, prependPrefix(p.objectPrefix, fi.ObjectPath()), 0)
 	if err != nil {
 		return nil, setReportedPath(err, fi.Path())
 	}
@@ -422,7 +436,7 @@ func (p *plusDriver) PutContent(ctx context.Context, fullPath string, contents [
 		return nil
 	}
 
-	_, err = p.swift.PlusWrite(ctx, fi.ObjectPath(), contents)
+	_, err = p.swift.PlusWrite(ctx, prependPrefix(p.objectPrefix, fi.ObjectPath()), contents)
 	return setReportedPath(err, fullPath)
 }
 
@@ -455,7 +469,7 @@ func (p *plusDriver) Reader(ctx context.Context, fullPath string, offset int64) 
 	}
 
 	//query Swift if necessary
-	r, err := p.swift.PlusReader(ctx, fi.ObjectPath(), offset)
+	r, err := p.swift.PlusReader(ctx, prependPrefix(p.objectPrefix, fi.ObjectPath()), offset)
 	return r, setReportedPath(err, fi.Path())
 }
 
@@ -463,7 +477,7 @@ func (p *plusDriver) Reader(ctx context.Context, fullPath string, offset int64) 
 func (p *plusDriver) Writer(ctx context.Context, fullPath string, append bool) (w storagedriver.FileWriter, err error) {
 	w, err = newPlusWriter(ctx, p, fullPath, append)
 	if w != nil {
-		w = newBufferedWriter(w, p.swift.PlusGetChunkSize())
+		w = newBufferedWriter(w, p.chunkSize)
 	}
 	return
 }
@@ -591,7 +605,7 @@ func (p *plusDriver) deleteBlobs(ctx context.Context, fi fileInfo) error {
 	if fi.Location == "" {
 		return nil
 	}
-	return p.swift.PlusDeleteAll(ctx, fi.Location+"/")
+	return p.swift.PlusDeleteAll(ctx, prependPrefix(p.objectPrefix, fi.Location)+"/")
 }
 
 //URLFor implements the storagedriver.StorageDriver interface.
@@ -608,7 +622,7 @@ func (p *plusDriver) URLFor(ctx context.Context, fullPath string, options map[st
 	if fi.Location == "" {
 		return "", storagedriver.ErrUnsupportedMethod{}
 	}
-	return p.swift.PlusMakeTempURL(ctx, fi.ObjectPath(), options)
+	return p.swift.PlusMakeTempURL(ctx, prependPrefix(p.objectPrefix, fi.ObjectPath()), options)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -677,6 +691,7 @@ func newPlusWriter(ctx context.Context, p *plusDriver, fullPath string, appendFl
 func (w *plusWriter) Write(buf []byte) (int, error) {
 	//choose segment number (this uses that the segments are always ordered)
 	s := plusSegment{
+		Prefix:    w.p.objectPrefix,
 		Location:  w.location,
 		Number:    1,
 		SizeBytes: int64(len(buf)),
@@ -745,7 +760,7 @@ func (w *plusWriter) Commit() error {
 	}
 
 	//save large file in Swift and in the DB
-	err := w.p.swift.PlusWriteSLO(w.ctx, fi.ObjectPath(), w.segments)
+	err := w.p.swift.PlusWriteSLO(w.ctx, prependPrefix(w.p.objectPrefix, fi.ObjectPath()), w.segments)
 	if err != nil {
 		return err
 	}

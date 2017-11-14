@@ -989,11 +989,6 @@ func (d *driver) PlusDeleteAll(ctx context.Context, objectPrefix string) error {
 	return nil
 }
 
-//PlusGetChunkSize implements the interfaceToSwift for the plusDriver.
-func (d *driver) PlusGetChunkSize() int {
-	return d.ChunkSize
-}
-
 //PlusMakeTempURL implements the interfaceToSwift for the plusDriver.
 func (d *driver) PlusMakeTempURL(ctx context.Context, objectName string, options map[string]interface{}) (string, error) {
 	if d.SecretKey == "" {
