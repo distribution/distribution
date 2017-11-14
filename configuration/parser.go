@@ -220,7 +220,7 @@ func (p *Parser) overwriteStruct(v reflect.Value, fullpath string, path []string
 		}
 	case reflect.Ptr:
 		if field.IsNil() {
-			field.Set(reflect.New(sf.Type))
+			field.Set(reflect.New(field.Type().Elem()))
 		}
 	}
 
