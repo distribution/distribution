@@ -213,6 +213,9 @@ http:
       email: emailused@letsencrypt.com
   debug:
     addr: localhost:5001
+    prometheus:
+      enabled: true
+      path: /metrics
   headers:
     X-Content-Type-Options: [nosniff]
   http2:
@@ -783,6 +786,19 @@ access to the debug endpoint is locked down in a production environment.
 
 The `debug` section takes a single required `addr` parameter, which specifies
 the `HOST:PORT` on which the debug server should accept connections.
+
+## `prometheus`
+
+The `prometheus` option defines whether the prometheus metrics is enable, as well
+as the path to access the metrics.
+
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `enabled` | no       | Set `true` to enable the prometheus server            |
+| `path`    | no       | The path to access the metrics, `/metrics` by default |
+
+The url to access the metrics is `HOST:PORT/path`, where `HOST:PORT` is defined
+in `addr` under `debug`.
 
 ### `headers`
 
