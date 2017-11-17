@@ -127,7 +127,7 @@ $ docker run -d \
   registry:2
 ```
 
-If you want to change the port the registry listens on within the container, you 
+If you want to change the port the registry listens on within the container, you
 can use the environment variable `REGISTRY_HTTP_ADDR` to change it. This command
 causes the registry to listen on port 5001 within the container:
 
@@ -325,7 +325,7 @@ $ docker service create \
   -e REGISTRY_HTTP_ADDR=0.0.0.0:80 \
   -e REGISTRY_HTTP_TLS_CERTIFICATE=/run/secrets/domain.crt \
   -e REGISTRY_HTTP_TLS_KEY=/run/secrets/domain.key \
-  -p 80:80 \
+  --publish target=80,port=80 \
   --replicas 1 \
   registry:2
 ```
