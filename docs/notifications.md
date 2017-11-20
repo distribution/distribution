@@ -10,7 +10,7 @@ pushes and pulls and layer pushes and pulls. These actions are serialized into
 events. The events are queued into a registry-internal broadcast system which
 queues and dispatches events to [_Endpoints_](notifications.md#endpoints).
 
-![](images/notifications.png)
+![Workflow of registry notifications](images/notifications.png)
 
 ## Endpoints
 
