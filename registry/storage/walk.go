@@ -2,27 +2,19 @@ package storage
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sort"
 
 	storageDriver "github.com/docker/distribution/registry/storage/driver"
 )
 
-// ErrSkipDir is used as a return value from onFileFunc to indicate that
-// the directory named in the call is to be skipped. It is not returned
-// as an error by any function.
-var ErrSkipDir = errors.New("skip this directory")
-
-// WalkFn is called once per file by Walk
-// If the returned error is ErrSkipDir and fileInfo refers
-// to a directory, the directory will not be entered and Walk
-// will continue the traversal.  Otherwise Walk will return
-type WalkFn func(fileInfo storageDriver.FileInfo) error
-
 // Walk traverses a filesystem defined within driver, starting
 // from the given path, calling f on each file
-func Walk(ctx context.Context, driver storageDriver.StorageDriver, from string, f WalkFn) error {
+// If the returned error from the WalkFn is ErrSkipDir and fileInfo refers
+// to a directory, the directory will not be entered and Walk
+// will continue the traversal.  Otherwise Walk will return
+// the error
+func Walk(ctx context.Context, driver storageDriver.StorageDriver, from string, f storageDriver.WalkFn) error {
 	children, err := driver.List(ctx, from)
 	if err != nil {
 		return err
@@ -38,7 +30,7 @@ func Walk(ctx context.Context, driver storageDriver.StorageDriver, from string, 
 			return err
 		}
 		err = f(fileInfo)
-		skipDir := (err == ErrSkipDir)
+		skipDir := (err == storageDriver.ErrSkipDir)
 		if err != nil && !skipDir {
 			return err
 		}

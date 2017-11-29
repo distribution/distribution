@@ -144,9 +144,9 @@ func handleRepository(fileInfo driver.FileInfo, root, last string, fn func(repoP
 				return err
 			}
 		}
-		return ErrSkipDir
+		return driver.ErrSkipDir
 	} else if strings.HasPrefix(file, "_") {
-		return ErrSkipDir
+		return driver.ErrSkipDir
 	}
 
 	return nil

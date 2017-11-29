@@ -131,7 +131,7 @@ func TestWalkSkipDir(t *testing.T) {
 		filePath := fileInfo.Path()
 		if filePath == "/a/b" {
 			// skip processing /a/b/c and /a/b/c/d
-			return ErrSkipDir
+			return driver.ErrSkipDir
 		}
 		delete(expected, filePath)
 		return nil

@@ -336,6 +336,12 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 	return d.client.GetBlobSASURI(d.container, path, expiresTime, "r")
 }
 
+// Walk traverses a filesystem defined within driver, starting
+// from the given path, calling f on each file
+func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn) error {
+	return storagedriver.WalkFallback(ctx, d, path, f)
+}
+
 // directDescendants will find direct descendants (blobs or virtual containers)
 // of from list of blob paths and will return their full paths. Elements in blobs
 // list must be prefixed with a "/" and
