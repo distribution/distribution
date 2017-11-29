@@ -10,10 +10,6 @@ import (
 	"github.com/docker/distribution/registry/storage/driver"
 )
 
-// errFinishedWalk signals an early exit to the walk when the current query
-// is satisfied.
-var errFinishedWalk = errors.New("finished walk")
-
 // Returns a list, or partial list, of repositories in the registry.
 // Because it's a quite expensive operation, it should only be used when building up
 // an initial set of repositories.
