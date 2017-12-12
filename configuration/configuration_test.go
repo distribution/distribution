@@ -22,11 +22,12 @@ var configStruct = Configuration{
 		AccessLog struct {
 			Disabled bool `yaml:"disabled,omitempty"`
 		} `yaml:"accesslog,omitempty"`
-		Level     Loglevel               `yaml:"level"`
+		Level     Loglevel               `yaml:"level,omitempty"`
 		Formatter string                 `yaml:"formatter,omitempty"`
 		Fields    map[string]interface{} `yaml:"fields,omitempty"`
 		Hooks     []LogHook              `yaml:"hooks,omitempty"`
 	}{
+		Level:  "info",
 		Fields: map[string]interface{}{"environment": "test"},
 	},
 	Loglevel: "info",
@@ -116,6 +117,7 @@ var configStruct = Configuration{
 var configYamlV0_1 = `
 version: 0.1
 log:
+  level: info
   fields:
     environment: test
 loglevel: info
@@ -156,6 +158,8 @@ http:
 // storage driver with no parameters
 var inmemoryConfigYamlV0_1 = `
 version: 0.1
+log:
+  level: info
 loglevel: info
 storage: inmemory
 auth:

@@ -30,7 +30,7 @@ type Configuration struct {
 		} `yaml:"accesslog,omitempty"`
 
 		// Level is the granularity at which registry operations are logged.
-		Level Loglevel `yaml:"level"`
+		Level Loglevel `yaml:"level,omitempty"`
 
 		// Formatter overrides the default formatter with another. Options
 		// include "text", "json" and "logstash".
@@ -626,6 +626,9 @@ func Parse(rd io.Reader) (*Configuration, error) {
 				if v0_1, ok := c.(*v0_1Configuration); ok {
 					if v0_1.Loglevel == Loglevel("") {
 						v0_1.Loglevel = Loglevel("info")
+					}
+					if v0_1.Log.Level == Loglevel("") {
+						v0_1.Log.Level = Loglevel("info")
 					}
 					if v0_1.Storage.Type() == "" {
 						return nil, errors.New("No storage configuration provided")

@@ -2,6 +2,7 @@ package qingstor
 
 import (
 	"bytes"
+	"context"
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
@@ -13,11 +14,10 @@ import (
 	"strings"
 	"time"
 
-	logger "github.com/Sirupsen/logrus"
-	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/base"
 	"github.com/docker/distribution/registry/storage/driver/factory"
+	logger "github.com/sirupsen/logrus"
 
 	"github.com/yunify/qingstor-sdk-go/config"
 	"github.com/yunify/qingstor-sdk-go/request"
@@ -290,7 +290,7 @@ func (d *driver) getContentType() string {
 func (d *driver) newWriter(key, updateID string, parts []*service.ObjectPartType) storagedriver.FileWriter {
 	var size int64
 	for _, part := range parts {
-		size += int64(service.IntValue(part.Size))
+		size += int64(*part.Size)
 	}
 	return &writer{
 		driver:   d,
@@ -323,7 +323,7 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 			fi.IsDir = true
 		} else {
 			fi.IsDir = false
-			fi.Size = int64(service.IntValue(resp.Keys[0].Size))
+			fi.Size = int64(*resp.Keys[0].Size)
 			fi.ModTime = time.Unix(int64(service.IntValue(resp.Keys[0].Modified)), 0)
 		}
 	} else if len(resp.CommonPrefixes) == 1 {
@@ -538,7 +538,7 @@ func (w *writer) Write(p []byte) (int, error) {
 		return 0, fmt.Errorf("already cancelled")
 	}
 
-	if len(w.parts) > 0 && int(service.IntValue(w.parts[len(w.parts)-1].Size)) < minChunkSize {
+	if len(w.parts) > 0 && int(*w.parts[len(w.parts)-1].Size) < minChunkSize {
 
 		var completedUploadedParts []*service.ObjectPartType
 		for _, part := range w.parts {
@@ -672,10 +672,10 @@ func (w *writer) Commit() error {
 		return err
 	}
 	w.committed = true
-	var totalSize int
+	var totalSize int64
 	var completedUploadedParts []*service.ObjectPartType
 	for _, part := range w.parts {
-		totalSize += service.IntValue(part.Size)
+		totalSize += *part.Size
 		completedUploadedParts = append(completedUploadedParts, &service.ObjectPartType{
 			PartNumber: part.PartNumber,
 		})
@@ -709,10 +709,11 @@ func (w *writer) flushPart() error {
 	hashInBytes := md5.Sum(w.readyPart)
 	md5String := hex.EncodeToString(hashInBytes[:16])
 
+	length := int64(len(w.readyPart))
 	output, err := w.driver.qsBucket.UploadMultipart(w.key, &service.UploadMultipartInput{
 		PartNumber:    service.Int(partNumber),
 		UploadID:      service.String(w.uploadID),
-		ContentLength: service.Int(len(w.readyPart)),
+		ContentLength: &length,
 		ContentMD5:    service.String(md5String),
 		Body:          bytes.NewReader(w.readyPart),
 	})
@@ -721,12 +722,12 @@ func (w *writer) flushPart() error {
 	if err != nil {
 		return err
 	}
-
+	length = int64(len(w.readyPart))
 	w.parts = append(w.parts, &service.ObjectPartType{
 		Created:    service.Time(time.Now()),
 		Etag:       service.String(md5String),
 		PartNumber: service.Int(partNumber),
-		Size:       service.Int(len(w.readyPart)),
+		Size:       &length,
 	})
 	w.readyPart = w.pendingPart
 	w.pendingPart = nil
