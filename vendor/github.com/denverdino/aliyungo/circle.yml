@@ -1,0 +1,13 @@
+machine:
+  environment:
+    GODIST: "go1.7.5.linux-amd64.tar.gz"
+  services:
+    - docker
+
+dependencies:
+  override:
+    - go get -t -d -v ./...
+
+test:
+  override:
+    - go vet ./...

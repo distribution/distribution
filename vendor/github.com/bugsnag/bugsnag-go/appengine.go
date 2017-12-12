@@ -41,7 +41,12 @@ func appengineMiddleware(event *Event, config *Configuration) (err error) {
 	}
 
 	// Anything written to stderr/stdout is discarded, so lets log to the request.
-	config.Logger = log.New(appengineWriter{c}, config.Logger.Prefix(), config.Logger.Flags())
+
+	if configuredLogger, ok := config.Logger.(*log.Logger); ok {
+		config.Logger = log.New(appengineWriter{c}, configuredLogger.Prefix(), configuredLogger.Flags())
+	} else {
+		config.Logger = log.New(appengineWriter{c}, log.Prefix(), log.Flags())
+	}
 
 	// Set the releaseStage appropriately
 	if config.ReleaseStage == "" {

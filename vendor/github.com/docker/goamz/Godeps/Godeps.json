@@ -1,0 +1,61 @@
+{
+	"ImportPath": "github.com/docker/goamz",
+	"GoVersion": "devel",
+	"Packages": [
+		"github.com/docker/goamz/autoscaling",
+		"github.com/docker/goamz/autoscaling/astest",
+		"github.com/docker/goamz/aws",
+		"github.com/docker/goamz/cloudfront",
+		"github.com/docker/goamz/cloudwatch",
+		"github.com/docker/goamz/dynamodb",
+		"github.com/docker/goamz/dynamodb/dynamizer",
+		"github.com/docker/goamz/ec2",
+		"github.com/docker/goamz/ec2/ec2test",
+		"github.com/docker/goamz/ecommerce",
+		"github.com/docker/goamz/elasticache",
+		"github.com/docker/goamz/elb",
+		"github.com/docker/goamz/elb/elbtest",
+		"github.com/docker/goamz/exp/mturk",
+		"github.com/docker/goamz/exp/sdb",
+		"github.com/docker/goamz/exp/ses",
+		"github.com/docker/goamz/iam",
+		"github.com/docker/goamz/iam/iamtest",
+		"github.com/docker/goamz/kinesis",
+		"github.com/docker/goamz/kms",
+		"github.com/docker/goamz/rds",
+		"github.com/docker/goamz/route53",
+		"github.com/docker/goamz/s3",
+		"github.com/docker/goamz/s3/s3test",
+		"github.com/docker/goamz/sns",
+		"github.com/docker/goamz/sqs",
+		"github.com/docker/goamz/sts",
+		"github.com/docker/goamz/testutil"
+	],
+	"Deps": [
+		{
+			"ImportPath": "github.com/bitly/go-simplejson",
+			"Comment": "v0.5.0",
+			"Rev": "aabad6e819789e569bd6aabf444c935aa9ba1e44"
+		},
+		{
+			"ImportPath": "github.com/cbroglie/mapstructure",
+			"Rev": "25325b46b67d1c3eb7d58bad37d34d89a31cf9ec"
+		},
+		{
+			"ImportPath": "github.com/feyeleanor/raw",
+			"Rev": "724aedf6e1a5d8971aafec384b6bde3d5608fba4"
+		},
+		{
+			"ImportPath": "github.com/feyeleanor/sets",
+			"Rev": "6c54cb57ea406ff6354256a4847e37298194478f"
+		},
+		{
+			"ImportPath": "github.com/feyeleanor/slices",
+			"Rev": "bb44bb2e4817fe71ba7082d351fd582e7d40e3ea"
+		},
+		{
+			"ImportPath": "gopkg.in/check.v1",
+			"Rev": "4f90aeace3a26ad7021961c297b22c42160c7b25"
+		}
+	]
+}

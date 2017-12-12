@@ -3,6 +3,7 @@ package newrelic_platform_go
 import (
 	"log"
 	"math"
+	"sync"
 )
 
 type ComponentData interface{}
@@ -19,38 +20,49 @@ type PluginComponent struct {
 	Duration      int                     `json:"duration"`
 	Metrics       map[string]MetricaValue `json:"metrics"`
 	MetricaModels []IMetrica              `json:"-"`
+	Verbose       bool                    `json:"-"`
+	mux           sync.Mutex
 }
 
-func NewPluginComponent(name string, guid string) *PluginComponent {
+func NewPluginComponent(name string, guid string, verbose bool) *PluginComponent {
 	c := &PluginComponent{
-		Name: name,
-		GUID: guid,
+		Name:    name,
+		GUID:    guid,
+		Verbose: verbose,
 	}
 	return c
 }
 
 func (component *PluginComponent) AddMetrica(model IMetrica) {
+	component.mux.Lock()
+	defer component.mux.Unlock()
 	component.MetricaModels = append(component.MetricaModels, model)
 }
 
 func (component *PluginComponent) ClearSentData() {
+	component.mux.Lock()
+	defer component.mux.Unlock()
 	component.Metrics = nil
 }
 
 func (component *PluginComponent) SetDuration(duration int) {
+	component.mux.Lock()
+	defer component.mux.Unlock()
 	component.Duration = duration
 }
 
 func (component *PluginComponent) Harvest(plugin INewrelicPlugin) ComponentData {
+	component.mux.Lock()
+	defer component.mux.Unlock()
 	component.Metrics = make(map[string]MetricaValue, len(component.MetricaModels))
 	for i := 0; i < len(component.MetricaModels); i++ {
 		model := component.MetricaModels[i]
 		metricaKey := plugin.GetMetricaKey(model)
 
 		if newValue, err := model.GetValue(); err == nil {
-		        if math.IsInf(newValue, 0) || math.IsNaN(newValue) {
-                                newValue = 0
-                        }
+			if math.IsInf(newValue, 0) || math.IsNaN(newValue) {
+				newValue = 0
+			}
 
 			if existMetric, ok := component.Metrics[metricaKey]; ok {
 				if floatExistVal, ok := existMetric.(float64); ok {
@@ -64,7 +76,9 @@ func (component *PluginComponent) Harvest(plugin INewrelicPlugin) ComponentData 
 				component.Metrics[metricaKey] = newValue
 			}
 		} else {
-			log.Printf("Can not get metrica: %v, got error:%#v", model.GetName(), err)
+			if component.Verbose {
+				log.Printf("Can not get metrica: %v, got error:%v", model.GetName(), err)
+			}
 		}
 	}
 	return component

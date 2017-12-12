@@ -35,7 +35,7 @@ PKGS=$(shell go list -tags "${DOCKER_BUILDTAGS}" ./... | grep -v ^github.com/doc
 
 # Resolving binary dependencies for specific targets
 GOLINT=$(shell which golint || echo '')
-VNDR=$(shell which vndr || echo '')
+GLIDE=$(shell which glide || echo '')
 
 ${PREFIX}/bin/registry: $(GOFILES)
 	@echo "+ $@"
@@ -88,11 +88,11 @@ clean:
 
 dep-validate:
 	@echo "+ $@"
-	$(if $(VNDR), , \
-		$(error Please install vndr: go get github.com/lk4d4/vndr))
+	$(if $(GLIDE), , \
+		$(error Please install glide: curl https://glide.sh/get | sh))
 	@rm -Rf .vendor.bak
 	@mv vendor .vendor.bak
-	@$(VNDR)
+	@$(VNDR) install
 	@test -z "$$(diff -r vendor .vendor.bak 2>&1 | tee /dev/stderr)" || \
 		(echo >&2 "+ inconsistent dependencies! what you have in vendor.conf does not match with what you have in vendor" && false)
 	@rm -Rf vendor

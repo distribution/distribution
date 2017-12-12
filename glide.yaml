@@ -1,0 +1,65 @@
+package: github.com/docker/distribution
+import:
+- package: github.com/Azure/azure-sdk-for-go
+  version: 088007b3b08cc02b27f2eadfdcd870958460ce7e
+  subpackages:
+  - storage
+- package: github.com/aws/aws-sdk-go
+  subpackages:
+  - aws
+  - aws/awserr
+  - aws/corehandlers
+  - aws/credentials
+  - aws/credentials/ec2rolecreds
+  - aws/ec2metadata
+  - aws/request
+  - aws/session
+  - service/cloudfront/sign
+  - service/s3
+- package: github.com/bshuster-repo/logrus-logstash-hook
+  version: dbc1e22735aa6ed7bd9579a407c17bc7c4a4e046
+- package: github.com/bugsnag/bugsnag-go
+- package: github.com/denverdino/aliyungo
+  subpackages:
+  - oss
+- package: github.com/docker/goamz
+  subpackages:
+  - aws
+  - s3
+- package: github.com/docker/libtrust
+- package: github.com/garyburd/redigo
+  subpackages:
+  - redis
+- package: github.com/gorilla/handlers
+- package: github.com/gorilla/mux
+- package: github.com/mitchellh/mapstructure
+- package: github.com/ncw/swift
+- package: github.com/opencontainers/go-digest
+- package: github.com/sirupsen/logrus
+  version: ~1.0.3
+- package: github.com/spf13/cobra
+  version: ~0.0.1
+- package: github.com/stevvooe/resumable
+  subpackages:
+  - sha256
+  - sha512
+- package: github.com/yunify/qingstor-sdk-go
+  subpackages:
+  - config
+  - request
+  - request/errors
+  - service
+- package: github.com/yvasiyarov/gorelic
+- package: golang.org/x/crypto/bcrypt
+- package: golang.org/x/net/context
+- package: golang.org/x/oauth2
+  subpackages:
+  - google
+  - jwt
+- package: google.golang.org/api/googleapi
+- package: google.golang.org/cloud
+  subpackages:
+  - storage
+- package: gopkg.in/check.v1
+- package: gopkg.in/yaml.v2
+- package: rsc.io/letsencrypt

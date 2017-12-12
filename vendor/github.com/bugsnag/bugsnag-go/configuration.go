@@ -20,6 +20,9 @@ type Configuration struct {
 	// The current release stage. This defaults to "production" and is used to
 	// filter errors in the Bugsnag dashboard.
 	ReleaseStage string
+	// A specialized type of the application, such as the worker queue or web
+	// framework used, like "rails", "mailman", or "celery"
+	AppType string
 	// The currently running version of the app. This is used to filter errors
 	// in the Bugsnag dasboard. If you set this then Bugsnag will only re-open
 	// resolved errors if they happen in different app versions.
@@ -39,6 +42,15 @@ type Configuration struct {
 	// filepath.Glob. The default value is []string{"main*"}
 	ProjectPackages []string
 
+	// The SourceRoot is the directory where the application is built, and the
+	// assumed prefix of lines on the stacktrace originating in the parent
+	// application. When set, the prefix is trimmed from callstack file names
+	// before ProjectPackages for better readability and to better group errors
+	// on the Bugsnag dashboard. The default value is $GOPATH/src or $GOROOT/src
+	// if $GOPATH is unset. At runtime, $GOROOT is the root used during the Go
+	// build.
+	SourceRoot string
+
 	// Any meta-data that matches these filters will be marked as [REDACTED]
 	// before sending a Notification to Bugsnag. It defaults to
 	// []string{"password", "secret"} so that request parameters like password,
@@ -53,7 +65,9 @@ type Configuration struct {
 	// The logger that Bugsnag should log to. Uses the same defaults as go's
 	// builtin logging package. bugsnag-go logs whenever it notifies Bugsnag
 	// of an error, and when any error occurs inside the library itself.
-	Logger *log.Logger
+	Logger interface {
+		Printf(format string, v ...interface{}) // limited to the functions used
+	}
 	// The http Transport to use, defaults to the default http Transport. This
 	// can be configured if you are in an environment like Google App Engine
 	// that has stringent conditions on making http requests.
@@ -74,8 +88,14 @@ func (config *Configuration) update(other *Configuration) *Configuration {
 	if other.Hostname != "" {
 		config.Hostname = other.Hostname
 	}
+	if other.AppType != "" {
+		config.AppType = other.AppType
+	}
 	if other.AppVersion != "" {
 		config.AppVersion = other.AppVersion
+	}
+	if other.SourceRoot != "" {
+		config.SourceRoot = other.SourceRoot
 	}
 	if other.ReleaseStage != "" {
 		config.ReleaseStage = other.ReleaseStage
@@ -116,6 +136,12 @@ func (config *Configuration) clone() *Configuration {
 
 func (config *Configuration) isProjectPackage(pkg string) bool {
 	for _, p := range config.ProjectPackages {
+		if d, f := filepath.Split(p); f == "**" {
+			if strings.HasPrefix(pkg, d) {
+				return true
+			}
+		}
+
 		if match, _ := filepath.Match(p, pkg); match {
 			return true
 		}
@@ -124,21 +150,27 @@ func (config *Configuration) isProjectPackage(pkg string) bool {
 }
 
 func (config *Configuration) stripProjectPackages(file string) string {
+	trimmedFile := file
+	if strings.HasPrefix(trimmedFile, config.SourceRoot) {
+		trimmedFile = strings.TrimPrefix(trimmedFile, config.SourceRoot)
+	}
 	for _, p := range config.ProjectPackages {
 		if len(p) > 2 && p[len(p)-2] == '/' && p[len(p)-1] == '*' {
 			p = p[:len(p)-1]
+		} else if p[len(p)-1] == '*' && p[len(p)-2] == '*' {
+			p = p[:len(p)-2]
 		} else {
 			p = p + "/"
 		}
-		if strings.HasPrefix(file, p) {
-			return strings.TrimPrefix(file, p)
+		if strings.HasPrefix(trimmedFile, p) {
+			return strings.TrimPrefix(trimmedFile, p)
 		}
 	}
 
-	return file
+	return trimmedFile
 }
 
-func (config *Configuration) log(fmt string, args ...interface{}) {
+func (config *Configuration) logf(fmt string, args ...interface{}) {
 	if config != nil && config.Logger != nil {
 		config.Logger.Printf(fmt, args...)
 	} else {

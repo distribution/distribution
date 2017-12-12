@@ -13,9 +13,29 @@ type tHTTPHandler struct {
 	originalHandlerFunc tHTTPHandlerFunc
 	isFunc              bool
 	timer               metrics.Timer
+	httpStatusCounters  map[int]metrics.Counter
+}
+
+//A wrapper over a http.ResponseWriter object
+type responseWriterWrapper struct {
+	originalWriter http.ResponseWriter
+	statusCode     int
 }
 
 var httpTimer metrics.Timer
+
+func (reponseWriterWrapper *responseWriterWrapper) Header() http.Header {
+	return reponseWriterWrapper.originalWriter.Header()
+}
+
+func (reponseWriterWrapper *responseWriterWrapper) Write(bytes []byte) (int, error) {
+	return reponseWriterWrapper.originalWriter.Write(bytes)
+}
+
+func (reponseWriterWrapper *responseWriterWrapper) WriteHeader(code int) {
+	reponseWriterWrapper.originalWriter.WriteHeader(code)
+	reponseWriterWrapper.statusCode = code
+}
 
 func newHTTPHandlerFunc(h tHTTPHandlerFunc) *tHTTPHandler {
 	return &tHTTPHandler{
@@ -34,89 +54,17 @@ func (handler *tHTTPHandler) ServeHTTP(w http.ResponseWriter, req *http.Request)
 	startTime := time.Now()
 	defer handler.timer.UpdateSince(startTime)
 
+	responseWriterWrapper := responseWriterWrapper{originalWriter: w, statusCode: http.StatusOK}
+
 	if handler.isFunc {
-		handler.originalHandlerFunc(w, req)
+		handler.originalHandlerFunc(&responseWriterWrapper, req)
 	} else {
-		handler.originalHandler.ServeHTTP(w, req)
+		handler.originalHandler.ServeHTTP(&responseWriterWrapper, req)
 	}
-}
 
-type baseTimerMetrica struct {
-	dataSource metrics.Timer
-	name       string
-	units      string
-}
-
-func (metrica *baseTimerMetrica) GetName() string {
-	return metrica.name
-}
-
-func (metrica *baseTimerMetrica) GetUnits() string {
-	return metrica.units
-}
-
-type timerRate1Metrica struct {
-	*baseTimerMetrica
-}
-
-func (metrica *timerRate1Metrica) GetValue() (float64, error) {
-	return metrica.dataSource.Rate1(), nil
-}
-
-type timerRateMeanMetrica struct {
-	*baseTimerMetrica
-}
-
-func (metrica *timerRateMeanMetrica) GetValue() (float64, error) {
-	return metrica.dataSource.RateMean(), nil
-}
-
-type timerMeanMetrica struct {
-	*baseTimerMetrica
-}
-
-func (metrica *timerMeanMetrica) GetValue() (float64, error) {
-	return metrica.dataSource.Mean() / float64(time.Millisecond), nil
-}
-
-type timerMinMetrica struct {
-	*baseTimerMetrica
-}
-
-func (metrica *timerMinMetrica) GetValue() (float64, error) {
-	return float64(metrica.dataSource.Min()) / float64(time.Millisecond), nil
-}
-
-type timerMaxMetrica struct {
-	*baseTimerMetrica
-}
-
-func (metrica *timerMaxMetrica) GetValue() (float64, error) {
-	return float64(metrica.dataSource.Max()) / float64(time.Millisecond), nil
-}
-
-type timerPercentile75Metrica struct {
-	*baseTimerMetrica
-}
-
-func (metrica *timerPercentile75Metrica) GetValue() (float64, error) {
-	return metrica.dataSource.Percentile(0.75) / float64(time.Millisecond), nil
-}
-
-type timerPercentile90Metrica struct {
-	*baseTimerMetrica
-}
-
-func (metrica *timerPercentile90Metrica) GetValue() (float64, error) {
-	return metrica.dataSource.Percentile(0.90) / float64(time.Millisecond), nil
-}
-
-type timerPercentile95Metrica struct {
-	*baseTimerMetrica
-}
-
-func (metrica *timerPercentile95Metrica) GetValue() (float64, error) {
-	return metrica.dataSource.Percentile(0.95) / float64(time.Millisecond), nil
+	if statusCounter := handler.httpStatusCounters[responseWriterWrapper.statusCode]; statusCounter != nil {
+		statusCounter.Inc(1)
+	}
 }
 
 func addHTTPMericsToComponent(component newrelic_platform_go.IComponent, timer metrics.Timer) {

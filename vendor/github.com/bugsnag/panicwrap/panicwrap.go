@@ -12,7 +12,7 @@ package panicwrap
 import (
 	"bytes"
 	"errors"
-	"github.com/bugsnag/osext"
+	"github.com/kardianos/osext"
 	"io"
 	"os"
 	"os/exec"
@@ -191,7 +191,7 @@ func wrap(c *WrapConfig) (int, error) {
 	// Listen to signals and capture them forever. We allow the child
 	// process to handle them in some way.
 	sigCh := make(chan os.Signal)
-	signal.Notify(sigCh, os.Interrupt)
+	signal.Notify(sigCh, signalsToIgnore...)
 	go func() {
 		defer signal.Stop(sigCh)
 		for {
@@ -211,7 +211,7 @@ func wrap(c *WrapConfig) (int, error) {
 		}
 
 		exitStatus := 1
-		if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
+		if status, ok := exitErr.Sys().(syscall.WaitStatus); ok && status.Exited() {
 			exitStatus = status.ExitStatus()
 		}
 

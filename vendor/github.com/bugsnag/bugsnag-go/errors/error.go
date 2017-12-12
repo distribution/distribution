@@ -19,6 +19,20 @@ type Error struct {
 	frames []StackFrame
 }
 
+// ErrorWithCallers allows passing in error objects that
+// also have caller information attached.
+type ErrorWithCallers interface {
+	Error() string
+	Callers() []uintptr
+}
+
+// ErrorWithStackFrames allows the stack to be rebuilt from the stack frames, thus
+// allowing to use the Error type when the program counter is not available.
+type ErrorWithStackFrames interface {
+	Error() string
+	StackFrames() []StackFrame
+}
+
 // New makes an Error from the given value. If that value is already an
 // error then it will be used directly, if not, it will be passed to
 // fmt.Errorf("%v"). The skip parameter indicates how far up the stack
@@ -29,6 +43,21 @@ func New(e interface{}, skip int) *Error {
 	switch e := e.(type) {
 	case *Error:
 		return e
+	case ErrorWithCallers:
+		return &Error{
+			Err:   e,
+			stack: e.Callers(),
+		}
+	case ErrorWithStackFrames:
+		stack := make([]uintptr, len(e.StackFrames()))
+		for i, frame := range e.StackFrames() {
+			stack[i] = frame.ProgramCounter
+		}
+		return &Error{
+			Err:    e,
+			stack:  stack,
+			frames: e.StackFrames(),
+		}
 	case error:
 		err = e
 	default:
@@ -53,6 +82,11 @@ func Errorf(format string, a ...interface{}) *Error {
 // Error returns the underlying error's message.
 func (err *Error) Error() string {
 	return err.Err.Error()
+}
+
+// Callers returns the raw stack frames as returned by runtime.Callers()
+func (err *Error) Callers() []uintptr {
+	return err.stack[:]
 }
 
 // Stack returns the callstack formatted the same way that go does
@@ -86,5 +120,8 @@ func (err *Error) TypeName() string {
 	if _, ok := err.Err.(uncaughtPanic); ok {
 		return "panic"
 	}
-	return reflect.TypeOf(err.Err).String()
+	if name := reflect.TypeOf(err.Err).String(); len(name) > 0 {
+		return name
+	}
+	return "error"
 }

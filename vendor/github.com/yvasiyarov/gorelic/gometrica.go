@@ -35,7 +35,7 @@ func (ds goMetricaDataSource) GetHistogramValue(key string, statFunction int, pe
 	} else if histogram, ok := valueContainer.(metrics.Histogram); ok {
 		switch statFunction {
 		default:
-			return 0, fmt.Errorf("unsupported stat function for histogram: %s\n", statFunction)
+			return 0, fmt.Errorf("unsupported stat function for histogram: %d\n", statFunction)
 		case histogramMax:
 			return float64(histogram.Max()), nil
 		case histogramMin:
