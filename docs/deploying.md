@@ -325,7 +325,7 @@ $ docker service create \
   -e REGISTRY_HTTP_ADDR=0.0.0.0:80 \
   -e REGISTRY_HTTP_TLS_CERTIFICATE=/run/secrets/domain.crt \
   -e REGISTRY_HTTP_TLS_KEY=/run/secrets/domain.key \
-  --publish target=80,port=80 \
+  --publish published=80,target=80 \
   --replicas 1 \
   registry:2
 ```
