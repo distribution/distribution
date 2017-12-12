@@ -31,6 +31,8 @@ type Route struct {
 	skipClean bool
 	// If true, "/path/foo%2Fbar/to" will match the path "/path/{var}/to"
 	useEncodedPath bool
+	// The scheme used when building URLs.
+	buildScheme string
 	// If true, this route never matches: it is only used to build URLs.
 	buildOnly bool
 	// The name used to build URLs.
@@ -50,12 +52,33 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 	if r.buildOnly || r.err != nil {
 		return false
 	}
+
+	var matchErr error
+
 	// Match everything.
 	for _, m := range r.matchers {
 		if matched := m.Match(req, match); !matched {
+			if _, ok := m.(methodMatcher); ok {
+				matchErr = ErrMethodMismatch
+				continue
+			}
+			matchErr = nil
 			return false
 		}
 	}
+
+	if matchErr != nil {
+		match.MatchErr = matchErr
+		return false
+	}
+
+	if match.MatchErr == ErrMethodMismatch {
+		// We found a route which matches request method, clear MatchErr
+		match.MatchErr = nil
+		// Then override the mis-matched handler
+		match.Handler = r.handler
+	}
+
 	// Yay, we have a match. Let's collect some info about it.
 	if match.Route == nil {
 		match.Route = r
@@ -66,6 +89,7 @@ func (r *Route) Match(req *http.Request, match *RouteMatch) bool {
 	if match.Vars == nil {
 		match.Vars = make(map[string]string)
 	}
+
 	// Set variables.
 	if r.regexp != nil {
 		r.regexp.setMatch(req, match, r)
@@ -234,7 +258,8 @@ func (m headerRegexMatcher) Match(r *http.Request, match *RouteMatch) bool {
 //               "X-Requested-With", "XMLHttpRequest")
 //
 // The above route will only match if both the request header matches both regular expressions.
-// It the value is an empty string, it will match any value if the key is set.
+// If the value is an empty string, it will match any value if the key is set.
+// Use the start and end of string anchors (^ and $) to match an exact value.
 func (r *Route) HeadersRegexp(pairs ...string) *Route {
 	if r.err == nil {
 		var headers map[string]*regexp.Regexp
@@ -394,6 +419,9 @@ func (r *Route) Schemes(schemes ...string) *Route {
 	for k, v := range schemes {
 		schemes[k] = strings.ToLower(v)
 	}
+	if r.buildScheme == "" && len(schemes) > 0 {
+		r.buildScheme = schemes[0]
+	}
 	return r.addMatcher(schemeMatcher(schemes))
 }
 
@@ -477,11 +505,14 @@ func (r *Route) URL(pairs ...string) (*url.URL, error) {
 		return nil, err
 	}
 	var scheme, host, path string
+	queries := make([]string, 0, len(r.regexp.queries))
 	if r.regexp.host != nil {
-		// Set a default scheme.
-		scheme = "http"
 		if host, err = r.regexp.host.url(values); err != nil {
 			return nil, err
+		}
+		scheme = "http"
+		if s := r.getBuildScheme(); s != "" {
+			scheme = s
 		}
 	}
 	if r.regexp.path != nil {
@@ -489,10 +520,18 @@ func (r *Route) URL(pairs ...string) (*url.URL, error) {
 			return nil, err
 		}
 	}
+	for _, q := range r.regexp.queries {
+		var query string
+		if query, err = q.url(values); err != nil {
+			return nil, err
+		}
+		queries = append(queries, query)
+	}
 	return &url.URL{
-		Scheme: scheme,
-		Host:   host,
-		Path:   path,
+		Scheme:   scheme,
+		Host:     host,
+		Path:     path,
+		RawQuery: strings.Join(queries, "&"),
 	}, nil
 }
 
@@ -514,10 +553,14 @@ func (r *Route) URLHost(pairs ...string) (*url.URL, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &url.URL{
+	u := &url.URL{
 		Scheme: "http",
 		Host:   host,
-	}, nil
+	}
+	if s := r.getBuildScheme(); s != "" {
+		u.Scheme = s
+	}
+	return u, nil
 }
 
 // URLPath builds the path part of the URL for a route. See Route.URL().
@@ -556,6 +599,74 @@ func (r *Route) GetPathTemplate() (string, error) {
 		return "", errors.New("mux: route doesn't have a path")
 	}
 	return r.regexp.path.template, nil
+}
+
+// GetPathRegexp returns the expanded regular expression used to match route path.
+// This is useful for building simple REST API documentation and for instrumentation
+// against third-party services.
+// An error will be returned if the route does not define a path.
+func (r *Route) GetPathRegexp() (string, error) {
+	if r.err != nil {
+		return "", r.err
+	}
+	if r.regexp == nil || r.regexp.path == nil {
+		return "", errors.New("mux: route does not have a path")
+	}
+	return r.regexp.path.regexp.String(), nil
+}
+
+// GetQueriesRegexp returns the expanded regular expressions used to match the
+// route queries.
+// This is useful for building simple REST API documentation and for instrumentation
+// against third-party services.
+// An empty list will be returned if the route does not have queries.
+func (r *Route) GetQueriesRegexp() ([]string, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	if r.regexp == nil || r.regexp.queries == nil {
+		return nil, errors.New("mux: route doesn't have queries")
+	}
+	var queries []string
+	for _, query := range r.regexp.queries {
+		queries = append(queries, query.regexp.String())
+	}
+	return queries, nil
+}
+
+// GetQueriesTemplates returns the templates used to build the
+// query matching.
+// This is useful for building simple REST API documentation and for instrumentation
+// against third-party services.
+// An empty list will be returned if the route does not define queries.
+func (r *Route) GetQueriesTemplates() ([]string, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	if r.regexp == nil || r.regexp.queries == nil {
+		return nil, errors.New("mux: route doesn't have queries")
+	}
+	var queries []string
+	for _, query := range r.regexp.queries {
+		queries = append(queries, query.template)
+	}
+	return queries, nil
+}
+
+// GetMethods returns the methods the route matches against
+// This is useful for building simple REST API documentation and for instrumentation
+// against third-party services.
+// An empty list will be returned if route does not have methods.
+func (r *Route) GetMethods() ([]string, error) {
+	if r.err != nil {
+		return nil, r.err
+	}
+	for _, m := range r.matchers {
+		if methods, ok := m.(methodMatcher); ok {
+			return []string(methods), nil
+		}
+	}
+	return nil, nil
 }
 
 // GetHostTemplate returns the template used to build the
@@ -599,9 +710,20 @@ func (r *Route) buildVars(m map[string]string) map[string]string {
 
 // parentRoute allows routes to know about parent host and path definitions.
 type parentRoute interface {
+	getBuildScheme() string
 	getNamedRoutes() map[string]*Route
 	getRegexpGroup() *routeRegexpGroup
 	buildVars(map[string]string) map[string]string
+}
+
+func (r *Route) getBuildScheme() string {
+	if r.buildScheme != "" {
+		return r.buildScheme
+	}
+	if r.parent != nil {
+		return r.parent.getBuildScheme()
+	}
+	return ""
 }
 
 // getNamedRoutes returns the map where named routes are registered.

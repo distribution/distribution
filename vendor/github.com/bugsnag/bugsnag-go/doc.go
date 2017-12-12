@@ -36,8 +36,8 @@ For detailed integration instructions see https://bugsnag.com/docs/notifiers/go.
 Configuration
 
 The only required configuration is the Bugsnag API key which can be obtained by clicking "Settings"
-on the top of https://bugsnag.com/ after signing up. We also recommend you set the ReleaseStage
-and AppVersion if these make sense for your deployment workflow.
+on the top of https://bugsnag.com/ after signing up. We also recommend you set the ReleaseStage,
+AppType, and AppVersion if these make sense for your deployment workflow.
 
 RawData
 

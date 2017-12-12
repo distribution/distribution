@@ -120,7 +120,6 @@ func (p *parser) parse() *node {
 	default:
 		panic("attempted to parse unknown event: " + strconv.Itoa(int(p.event.typ)))
 	}
-	panic("unreachable")
 }
 
 func (p *parser) node(kind int) *node {
@@ -191,6 +190,7 @@ type decoder struct {
 	aliases map[string]bool
 	mapType reflect.Type
 	terrors []string
+	strict  bool
 }
 
 var (
@@ -200,8 +200,8 @@ var (
 	ifaceType      = defaultMapType.Elem()
 )
 
-func newDecoder() *decoder {
-	d := &decoder{mapType: defaultMapType}
+func newDecoder(strict bool) *decoder {
+	d := &decoder{mapType: defaultMapType, strict: strict}
 	d.aliases = make(map[string]bool)
 	return d
 }
@@ -251,7 +251,7 @@ func (d *decoder) callUnmarshaler(n *node, u Unmarshaler) (good bool) {
 //
 // If n holds a null value, prepare returns before doing anything.
 func (d *decoder) prepare(n *node, out reflect.Value) (newout reflect.Value, unmarshaled, good bool) {
-	if n.tag == yaml_NULL_TAG || n.kind == scalarNode && n.tag == "" && (n.value == "null" || n.value == "") {
+	if n.tag == yaml_NULL_TAG || n.kind == scalarNode && n.tag == "" && (n.value == "null" || n.value == "~" || n.value == "" && n.implicit) {
 		return out, false, false
 	}
 	again := true
@@ -607,6 +607,15 @@ func (d *decoder) mappingStruct(n *node, out reflect.Value) (good bool) {
 	}
 	name := settableValueOf("")
 	l := len(n.children)
+
+	var inlineMap reflect.Value
+	var elemType reflect.Type
+	if sinfo.InlineMap != -1 {
+		inlineMap = out.Field(sinfo.InlineMap)
+		inlineMap.Set(reflect.New(inlineMap.Type()).Elem())
+		elemType = inlineMap.Type().Elem()
+	}
+
 	for i := 0; i < l; i += 2 {
 		ni := n.children[i]
 		if isMerge(ni) {
@@ -624,6 +633,15 @@ func (d *decoder) mappingStruct(n *node, out reflect.Value) (good bool) {
 				field = out.FieldByIndex(info.Inline)
 			}
 			d.unmarshal(n.children[i+1], field)
+		} else if sinfo.InlineMap != -1 {
+			if inlineMap.IsNil() {
+				inlineMap.Set(reflect.MakeMap(inlineMap.Type()))
+			}
+			value := reflect.New(elemType).Elem()
+			d.unmarshal(n.children[i+1], value)
+			inlineMap.SetMapIndex(name, value)
+		} else if d.strict {
+			d.terrors = append(d.terrors, fmt.Sprintf("line %d: field %s not found in struct %s", n.line+1, name.String(), out.Type()))
 		}
 	}
 	return true

@@ -1,0 +1,16 @@
+language: go
+
+go:
+  - 1.5
+  - tip
+
+# Bypass implicit godep mess-up
+install:
+  - true
+
+script:
+  - make fmt
+  - make vet
+  - make test-short
+#  - make lint
+#  - make test-long

@@ -18,16 +18,16 @@ import (
 	"unicode/utf8"
 )
 
-// MethodHandler is an http.Handler that dispatches to a handler whose key in the MethodHandler's
-// map matches the name of the HTTP request's method, eg: GET
+// MethodHandler is an http.Handler that dispatches to a handler whose key in the
+// MethodHandler's map matches the name of the HTTP request's method, eg: GET
 //
-// If the request's method is OPTIONS and OPTIONS is not a key in the map then the handler
-// responds with a status of 200 and sets the Allow header to a comma-separated list of
-// available methods.
+// If the request's method is OPTIONS and OPTIONS is not a key in the map then
+// the handler responds with a status of 200 and sets the Allow header to a
+// comma-separated list of available methods.
 //
-// If the request's method doesn't match any of its keys the handler responds with
-// a status of 405, Method not allowed and sets the Allow header to a comma-separated list
-// of available methods.
+// If the request's method doesn't match any of its keys the handler responds
+// with a status of HTTP 405 "Method Not Allowed" and sets the Allow header to a
+// comma-separated list of available methods.
 type MethodHandler map[string]http.Handler
 
 func (h MethodHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
@@ -48,13 +48,15 @@ func (h MethodHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
-// loggingHandler is the http.Handler implementation for LoggingHandlerTo and its friends
+// loggingHandler is the http.Handler implementation for LoggingHandlerTo and its
+// friends
 type loggingHandler struct {
 	writer  io.Writer
 	handler http.Handler
 }
 
-// combinedLoggingHandler is the http.Handler implementation for LoggingHandlerTo and its friends
+// combinedLoggingHandler is the http.Handler implementation for LoggingHandlerTo
+// and its friends
 type combinedLoggingHandler struct {
 	writer  io.Writer
 	handler http.Handler
@@ -77,9 +79,9 @@ func (h combinedLoggingHandler) ServeHTTP(w http.ResponseWriter, req *http.Reque
 }
 
 func makeLogger(w http.ResponseWriter) loggingResponseWriter {
-	var logger loggingResponseWriter = &responseLogger{w: w}
+	var logger loggingResponseWriter = &responseLogger{w: w, status: http.StatusOK}
 	if _, ok := w.(http.Hijacker); ok {
-		logger = &hijackLogger{responseLogger{w: w}}
+		logger = &hijackLogger{responseLogger{w: w, status: http.StatusOK}}
 	}
 	h, ok1 := logger.(http.Hijacker)
 	c, ok2 := w.(http.CloseNotifier)
@@ -92,15 +94,15 @@ func makeLogger(w http.ResponseWriter) loggingResponseWriter {
 	return logger
 }
 
-type loggingResponseWriter interface {
+type commonLoggingResponseWriter interface {
 	http.ResponseWriter
 	http.Flusher
 	Status() int
 	Size() int
 }
 
-// responseLogger is wrapper of http.ResponseWriter that keeps track of its HTTP status
-// code and body size
+// responseLogger is wrapper of http.ResponseWriter that keeps track of its HTTP
+// status code and body size
 type responseLogger struct {
 	w      http.ResponseWriter
 	status int
@@ -112,10 +114,6 @@ func (l *responseLogger) Header() http.Header {
 }
 
 func (l *responseLogger) Write(b []byte) (int, error) {
-	if l.status == 0 {
-		// The status will be StatusOK if WriteHeader has not been called yet
-		l.status = http.StatusOK
-	}
 	size, err := l.w.Write(b)
 	l.size += size
 	return size, err
@@ -149,7 +147,8 @@ func (l *hijackLogger) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	h := l.responseLogger.w.(http.Hijacker)
 	conn, rw, err := h.Hijack()
 	if err == nil && l.responseLogger.status == 0 {
-		// The status will be StatusSwitchingProtocols if there was no error and WriteHeader has not been called yet
+		// The status will be StatusSwitchingProtocols if there was no error and
+		// WriteHeader has not been called yet
 		l.responseLogger.status = http.StatusSwitchingProtocols
 	}
 	return conn, rw, err
@@ -250,7 +249,17 @@ func buildCommonLogLine(req *http.Request, url url.URL, ts time.Time, status int
 		host = req.RemoteAddr
 	}
 
-	uri := url.RequestURI()
+	uri := req.RequestURI
+
+	// Requests using the CONNECT method over HTTP/2.0 must use
+	// the authority field (aka r.Host) to identify the target.
+	// Refer: https://httpwg.github.io/specs/rfc7540.html#CONNECT
+	if req.ProtoMajor == 2 && req.Method == "CONNECT" {
+		uri = req.Host
+	}
+	if uri == "" {
+		uri = url.RequestURI()
+	}
 
 	buf := make([]byte, 0, 3*(len(host)+len(username)+len(req.Method)+len(uri)+len(req.Proto)+50)/2)
 	buf = append(buf, host...)
@@ -309,12 +318,22 @@ func CombinedLoggingHandler(out io.Writer, h http.Handler) http.Handler {
 // See http://httpd.apache.org/docs/2.2/logs.html#common for a description of this format.
 //
 // LoggingHandler always sets the ident field of the log to -
+//
+// Example:
+//
+//  r := mux.NewRouter()
+//  r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+//  	w.Write([]byte("This is a catch-all route"))
+//  })
+//  loggedRouter := handlers.LoggingHandler(os.Stdout, r)
+//  http.ListenAndServe(":1123", loggedRouter)
+//
 func LoggingHandler(out io.Writer, h http.Handler) http.Handler {
 	return loggingHandler{out, h}
 }
 
-// isContentType validates the Content-Type header
-// is contentType. That is, its type and subtype match.
+// isContentType validates the Content-Type header matches the supplied
+// contentType. That is, its type and subtype match.
 func isContentType(h http.Header, contentType string) bool {
 	ct := h.Get("Content-Type")
 	if i := strings.IndexRune(ct, ';'); i != -1 {
@@ -323,9 +342,9 @@ func isContentType(h http.Header, contentType string) bool {
 	return ct == contentType
 }
 
-// ContentTypeHandler wraps and returns a http.Handler, validating the request content type
-// is acompatible with the contentTypes list.
-// It writes a HTTP 415 error if that fails.
+// ContentTypeHandler wraps and returns a http.Handler, validating the request
+// content type is compatible with the contentTypes list. It writes a HTTP 415
+// error if that fails.
 //
 // Only PUT, POST, and PATCH requests are considered.
 func ContentTypeHandler(h http.Handler, contentTypes ...string) http.Handler {
@@ -354,12 +373,14 @@ const (
 	HTTPMethodOverrideFormKey = "_method"
 )
 
-// HTTPMethodOverrideHandler wraps and returns a http.Handler which checks for the X-HTTP-Method-Override header
-// or the _method form key, and overrides (if valid) request.Method with its value.
+// HTTPMethodOverrideHandler wraps and returns a http.Handler which checks for
+// the X-HTTP-Method-Override header or the _method form key, and overrides (if
+// valid) request.Method with its value.
 //
-// This is especially useful for http clients that don't support many http verbs.
-// It isn't secure to override e.g a GET to a POST, so only POST requests are considered.
-// Likewise, the override method can only be a "write" method: PUT, PATCH or DELETE.
+// This is especially useful for HTTP clients that don't support many http verbs.
+// It isn't secure to override e.g a GET to a POST, so only POST requests are
+// considered.  Likewise, the override method can only be a "write" method: PUT,
+// PATCH or DELETE.
 //
 // Form method takes precedence over header method.
 func HTTPMethodOverrideHandler(h http.Handler) http.Handler {

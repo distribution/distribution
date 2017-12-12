@@ -86,6 +86,10 @@ func (s sanitizer) Sanitize(data interface{}) interface{} {
 	t := reflect.TypeOf(data)
 	v := reflect.ValueOf(data)
 
+	if t == nil {
+		return "<nil>"
+	}
+
 	switch t.Kind() {
 	case reflect.Bool,
 		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
@@ -97,6 +101,9 @@ func (s sanitizer) Sanitize(data interface{}) interface{} {
 		return data
 
 	case reflect.Interface, reflect.Ptr:
+		if v.IsNil() {
+			return "<nil>"
+		}
 		return s.Sanitize(v.Elem().Interface())
 
 	case reflect.Array, reflect.Slice:

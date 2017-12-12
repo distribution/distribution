@@ -46,6 +46,15 @@ func (p *payload) deliver() error {
 
 func (p *payload) MarshalJSON() ([]byte, error) {
 
+	severityReason := hash{
+		"type": p.handledState.SeverityReason,
+	}
+	if p.handledState.Framework != "" {
+		severityReason["attributes"] = hash{
+			"framework": p.handledState.Framework,
+		}
+	}
+
 	data := hash{
 		"apiKey": p.APIKey,
 
@@ -65,7 +74,9 @@ func (p *payload) MarshalJSON() ([]byte, error) {
 						"stacktrace": p.Stacktrace,
 					},
 				},
-				"severity": p.Severity.String,
+				"severity":       p.Severity.String,
+				"severityReason": severityReason,
+				"unhandled":      p.handledState.Unhandled,
 				"app": hash{
 					"releaseStage": p.ReleaseStage,
 				},
@@ -87,6 +98,9 @@ func (p *payload) MarshalJSON() ([]byte, error) {
 		event["device"] = hash{
 			"hostname": p.Hostname,
 		}
+	}
+	if p.AppType != "" {
+		event["app"].(hash)["type"] = p.AppType
 	}
 	if p.AppVersion != "" {
 		event["app"].(hash)["version"] = p.AppVersion

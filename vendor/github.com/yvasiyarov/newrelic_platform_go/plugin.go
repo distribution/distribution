@@ -24,6 +24,13 @@ type NewrelicPlugin struct {
 	Agent      *Agent          `json:"agent"`
 	Components []ComponentData `json:"components"`
 
+	// All HTTP requests will be done using this client. Change it if you need
+	// to use a proxy.
+	Client http.Client `json:"-"`
+
+	// The URL to use for New Relic. Can change for testing purposes. Defaults to NERELIC_API_URL
+	URL string
+
 	ComponentModels      []IComponent `json:"-"`
 	LastPollTime         time.Time    `json:"-"`
 	Verbose              bool         `json:"-"`
@@ -39,6 +46,7 @@ func NewNewrelicPlugin(version string, licenseKey string, pollInterval int) *New
 
 	plugin.Agent = NewAgent(version)
 	plugin.Agent.CollectEnvironmentInfo()
+	plugin.URL = NEWRELIC_API_URL
 
 	plugin.ComponentModels = []IComponent{}
 	return plugin
@@ -60,7 +68,7 @@ func (plugin *NewrelicPlugin) Harvest() error {
 	}
 
 	if httpCode, err := plugin.SendMetricas(); err != nil {
-		log.Printf("Can not send metricas to newrelic: %#v\n", err)
+		log.Printf("Can not send metricas to newrelic: %v\n", err)
 		return err
 	} else {
 
@@ -68,7 +76,7 @@ func (plugin *NewrelicPlugin) Harvest() error {
 			log.Printf("Got HTTP response code:%d", httpCode)
 		}
 
-		if err, isFatal := plugin.CheckResponse(httpCode); isFatal {		
+		if err, isFatal := plugin.CheckResponse(httpCode); isFatal {
 			log.Printf("Got fatal error:%v\n", err)
 			return err
 		} else {
@@ -94,7 +102,6 @@ func (plugin *NewrelicPlugin) GetMetricaKey(metrica IMetrica) string {
 }
 
 func (plugin *NewrelicPlugin) SendMetricas() (int, error) {
-	client := &http.Client{}
 	var metricasJson []byte
 	var encodingError error
 
@@ -113,14 +120,14 @@ func (plugin *NewrelicPlugin) SendMetricas() (int, error) {
 		log.Printf("Send data:%s \n", jsonAsString)
 	}
 
-	if httpRequest, err := http.NewRequest("POST", NEWRELIC_API_URL, strings.NewReader(jsonAsString)); err != nil {
+	if httpRequest, err := http.NewRequest("POST", plugin.URL, strings.NewReader(jsonAsString)); err != nil {
 		return 0, err
 	} else {
 		httpRequest.Header.Set("X-License-Key", plugin.LicenseKey)
 		httpRequest.Header.Set("Content-Type", "application/json")
 		httpRequest.Header.Set("Accept", "application/json")
 
-		if httpResponse, err := client.Do(httpRequest); err != nil {
+		if httpResponse, err := plugin.Client.Do(httpRequest); err != nil {
 			return 0, err
 		} else {
 			defer httpResponse.Body.Close()

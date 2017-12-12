@@ -14,7 +14,7 @@ func newGCMetricaDataSource(pollInterval int) goMetricaDataSource {
 	return goMetricaDataSource{r}
 }
 
-func addGCMericsToComponent(component newrelic_platform_go.IComponent, pollInterval int) {
+func addGCMetricsToComponent(component newrelic_platform_go.IComponent, pollInterval int) {
 	metrics := []*baseGoMetrica{
 		&baseGoMetrica{
 			name:          "NumberOfGCCalls",

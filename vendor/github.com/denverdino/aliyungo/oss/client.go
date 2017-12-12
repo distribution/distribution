@@ -366,7 +366,7 @@ func (b *Bucket) Exists(path string) (exists bool, err error) {
 		}
 
 		if err != nil {
-			// We can treat a 403 or 404 as non existance
+			// We can treat a 403 or 404 as non existence
 			if e, ok := err.(*Error); ok && (e.StatusCode == 403 || e.StatusCode == 404) {
 				return false, nil
 			}
@@ -1323,9 +1323,9 @@ func (b *Bucket) CopyLargeFileInParallel(sourcePath string, destPath string, con
 	}
 
 	currentLength, err := b.GetContentLength(sourcePath)
-	
-	log.Printf("Parallel Copy large file[size: %d] from %s to %s\n",currentLength, sourcePath, destPath)
-	
+
+	log.Printf("Parallel Copy large file[size: %d] from %s to %s\n", currentLength, sourcePath, destPath)
+
 	if err != nil {
 		return err
 	}

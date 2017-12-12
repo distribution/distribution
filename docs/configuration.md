@@ -102,6 +102,17 @@ storage:
     keyfile: /path/to/keyfile
     rootdirectory: /gcs/object/name/prefix
     chunksize: 5242880
+  qs:
+    accesskey: accesskey
+    secretkey: secretkey
+    host: (optional)
+    port: (optional)
+    protocol: (optional)
+    bucket: bucketname      
+    zone: pek3a
+    chunksize: (optional)
+    useragent     (optional)
+    rootdirectory (optional)
   s3:
     accesskey: awsaccesskey
     secretkey: awssecretkey
