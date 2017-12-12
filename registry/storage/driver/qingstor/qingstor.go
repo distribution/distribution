@@ -52,6 +52,9 @@ func init() {
 type DriverParameters struct {
 	AccessKey     string
 	SecretKey     string
+	Host          string
+	Port          int
+	Protocol      string
 	Bucket        string
 	Zone          string
 	ChunkSize     int64
@@ -88,6 +91,26 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		return nil, fmt.Errorf("No secretKey provided")
 	}
 
+	host, ok := parameters["host"]
+	if !ok {
+		host = ""
+	}
+
+	protocol, ok := parameters["protocol"]
+	if !ok {
+		protocol = ""
+	}
+
+	portValue, ok := parameters["port"]
+	var port int
+	if !ok {
+		port = -1
+	}
+	port, ok = portValue.(int)
+	if !ok {
+		return nil, fmt.Errorf("Port number is not correct")
+	}
+
 	zone, ok := parameters["zone"]
 	if !ok {
 		return nil, fmt.Errorf("No zone provided")
@@ -116,6 +139,9 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	params := DriverParameters{
 		AccessKey:     fmt.Sprint(accessKey),
 		SecretKey:     fmt.Sprint(secretKey),
+		Host:          fmt.Sprint(host),
+		Protocol:      fmt.Sprint(protocol),
+		Port:          port,
 		Bucket:        fmt.Sprint(bucket),
 		Zone:          fmt.Sprint(zone),
 		ChunkSize:     chunkSize,
@@ -131,6 +157,16 @@ func New(params DriverParameters) (*Driver, error) {
 	if err != nil {
 		return nil, err
 	}
+	if params.Port >= 0 {
+		qsConfig.Port = params.Port
+	}
+	if params.Host != "" {
+		qsConfig.Host = params.Host
+	}
+	if params.Protocol != "" {
+		qsConfig.Protocol = params.Protocol
+	}
+
 	qsService, err := service.Init(qsConfig)
 	if err != nil {
 		return nil, err
