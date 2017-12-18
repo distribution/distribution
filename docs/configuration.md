@@ -267,6 +267,7 @@ proxy:
 compatibility:
   schema1:
     signingkeyfile: /etc/registry/key.json
+    enabled: true
 validation:
   enabled: true
   manifests:
@@ -1013,6 +1014,7 @@ username (such as `batman`) and the password for that username.
 compatibility:
   schema1:
     signingkeyfile: /etc/registry/key.json
+    enabled: true
 ```
 
 Use the `compatibility` structure to configure handling of older and deprecated
@@ -1023,6 +1025,7 @@ features. Each subsection defines such a feature with configurable behavior.
 | Parameter | Required | Description                                           |
 |-----------|----------|-------------------------------------------------------|
 | `signingkeyfile` | no | The signing private key used to add signatures to `schema1` manifests. If no signing key is provided, a new ECDSA key is generated when the registry starts. |
+| `enabled` | no | If this is not set to true, `schema1` manifests cannot be pushed. |
 
 ## `validation`
 

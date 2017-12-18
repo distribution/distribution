@@ -1915,6 +1915,7 @@ func newTestEnvMirror(t *testing.T, deleteEnabled bool) *testEnv {
 			RemoteURL: "http://example.com",
 		},
 	}
+	config.Compatibility.Schema1.Enabled = true
 
 	return newTestEnvWithConfig(t, &config)
 
@@ -1931,6 +1932,7 @@ func newTestEnv(t *testing.T, deleteEnabled bool) *testEnv {
 		},
 	}
 
+	config.Compatibility.Schema1.Enabled = true
 	config.HTTP.Headers = headerConfig
 
 	return newTestEnvWithConfig(t, &config)
@@ -2453,6 +2455,7 @@ func TestProxyManifestGetByTag(t *testing.T) {
 			}},
 		},
 	}
+	truthConfig.Compatibility.Schema1.Enabled = true
 	truthConfig.HTTP.Headers = headerConfig
 
 	imageName, _ := reference.ParseNamed("foo/bar")
@@ -2471,6 +2474,7 @@ func TestProxyManifestGetByTag(t *testing.T) {
 			RemoteURL: truthEnv.server.URL,
 		},
 	}
+	proxyConfig.Compatibility.Schema1.Enabled = true
 	proxyConfig.HTTP.Headers = headerConfig
 
 	proxyEnv := newTestEnvWithConfig(t, &proxyConfig)

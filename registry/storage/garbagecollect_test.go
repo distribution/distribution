@@ -27,7 +27,7 @@ func createRegistry(t *testing.T, driver driver.StorageDriver, options ...Regist
 	if err != nil {
 		t.Fatal(err)
 	}
-	options = append([]RegistryOption{EnableDelete, Schema1SigningKey(k)}, options...)
+	options = append([]RegistryOption{EnableDelete, Schema1SigningKey(k), EnableSchema1}, options...)
 	registry, err := NewRegistry(ctx, driver, options...)
 	if err != nil {
 		t.Fatalf("Failed to construct namespace")
