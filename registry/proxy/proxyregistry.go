@@ -120,22 +120,38 @@ func (pr *proxyingRegistry) Repositories(ctx context.Context, repos []string, la
 
 func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named) (distribution.Repository, error) {
 	c := pr.authChallenger
-
-	tkopts := auth.TokenHandlerOptions{
-		Transport:   http.DefaultTransport,
-		Credentials: c.credentialStore(),
-		Scopes: []auth.Scope{
-			auth.RepositoryScope{
-				Repository: name.Name(),
-				Actions:    []string{"pull"},
-			},
-		},
-		Logger: dcontext.GetLogger(ctx),
+	tr := transport.NewTransport(http.DefaultTransport)
+	Tokenflag := false
+	if ctx.Value("http.request.authorization") != nil {
+		authStr := ctx.Value("http.request.authorization")
+		authToken, ok := authStr.(string)
+		if ok {
+			if authToken != "" {
+				dcontext.GetLogger(ctx).Debugf("registry mirror get client token: %s", authToken)
+				passThruTokenHandler := &existingTokenHandler{token: authToken}
+				tr = transport.NewTransport(tr, auth.NewAuthorizer(c.challengeManager(), passThruTokenHandler))
+				Tokenflag = true
+			}
+		} else {
+			dcontext.GetLogger(ctx).Errorf("registry mirror get client invalid token: %+v", authStr)
+		}
 	}
-
-	tr := transport.NewTransport(http.DefaultTransport,
-		auth.NewAuthorizer(c.challengeManager(),
-			auth.NewTokenHandlerWithOptions(tkopts)))
+	if !Tokenflag {
+		tkopts := auth.TokenHandlerOptions{
+			Transport:   http.DefaultTransport,
+			Credentials: c.credentialStore(),
+			Scopes: []auth.Scope{
+				auth.RepositoryScope{
+					Repository: name.Name(),
+					Actions:    []string{"pull"},
+				},
+			},
+			Logger: dcontext.GetLogger(ctx),
+		}
+		tr = transport.NewTransport(tr,
+			auth.NewAuthorizer(c.challengeManager(),
+				auth.NewTokenHandlerWithOptions(tkopts)))
+	}
 
 	localRepo, err := pr.embedded.Repository(ctx, name)
 	if err != nil {
@@ -260,4 +276,17 @@ func (pr *proxiedRepository) Named() reference.Named {
 
 func (pr *proxiedRepository) Tags(ctx context.Context) distribution.TagService {
 	return pr.tags
+}
+
+type existingTokenHandler struct {
+	token string
+}
+
+func (th *existingTokenHandler) Scheme() string {
+	return "bearer"
+}
+
+func (th *existingTokenHandler) AuthorizeRequest(req *http.Request, params map[string]string) error {
+	req.Header.Set("Authorization", th.token)
+	return nil
 }

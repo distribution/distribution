@@ -235,6 +235,8 @@ func (ctx *httpRequestContext) Value(key interface{}) interface{} {
 			return ctx.id
 		case "startedat":
 			return ctx.startedAt
+		case "authorization":
+			return ctx.r.Header.Get("Authorization")
 		case "contenttype":
 			ct := ctx.r.Header.Get("Content-Type")
 			if ct != "" {
