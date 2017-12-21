@@ -97,6 +97,15 @@ storage:
     accountname: accountname
     accountkey: base64encodedaccountkey
     container: containername
+  bos:
+    accesskeyid: accesskeyid
+    accesskeysecret: accesskeysecret
+    region: region name
+    endpoint: endpoint
+    bucket: bucketname
+    chunksize: 5242880
+    storageclass: storage class
+    rootdirectory: optional root directory
   gcs:
     bucket: bucketname
     keyfile: /path/to/keyfile
@@ -373,6 +382,15 @@ storage:
     accountname: accountname
     accountkey: base64encodedaccountkey
     container: containername
+  bos:
+    accesskeyid: accesskeyid
+    accesskeysecret: accesskeysecret
+    region: region name
+    endpoint: endpoint
+    bucket: bucketname
+    chunksize: 5242880
+    storageclass: storage class
+    rootdirectory: optional root directory
   gcs:
     bucket: bucketname
     keyfile: /path/to/keyfile
