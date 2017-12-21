@@ -1,3 +1,5 @@
+// +build include_bos
+
 package bos
 
 import (
