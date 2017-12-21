@@ -16,7 +16,7 @@ machine:
     BASE_DIR: src/github.com/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME
   # Trick circle brainflat "no absolute path" behavior
     BASE_STABLE: ../../../$HOME/.gvm/pkgsets/stable/global/$BASE_DIR
-    DOCKER_BUILDTAGS: "include_oss include_gcs"
+    DOCKER_BUILDTAGS: "include_bos include_oss include_gcs"
   # Workaround Circle parsing dumb bugs and/or YAML wonkyness
     CIRCLE_PAIN: "mode: set"
 

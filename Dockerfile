@@ -1,7 +1,7 @@
 FROM golang:1.8-alpine
 
 ENV DISTRIBUTION_DIR /go/src/github.com/docker/distribution
-ENV DOCKER_BUILDTAGS include_oss include_gcs
+ENV DOCKER_BUILDTAGS include_bos include_oss include_gcs
 
 ARG GOOS=linux
 ARG GOARCH=amd64
