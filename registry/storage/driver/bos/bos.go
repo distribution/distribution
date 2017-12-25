@@ -437,17 +437,15 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 		path = path + "/"
 	}
 
-	// This is to cover for the cases when the rootDirectory of the driver is either "" or "/".
-	// In those cases, there is no root prefix to replace and we must actually add a "/" to all
-	// results in order to keep them as valid paths as recognized by storagedriver.PathRegexp
 	prefix := ""
 	if d.bosPath("") == "" {
 		prefix = "/"
 	}
 
 	listObjectsResult, err := d.Client.ListObjects(d.Bucket, &api.ListObjectsArgs{
-		Prefix:  d.bosPath(path),
-		MaxKeys: listMax,
+		Prefix:    d.bosPath(path),
+		MaxKeys:   listMax,
+		Delimiter: "/",
 	})
 	if err != nil {
 		logrus.WithFields(logrus.Fields{
@@ -464,18 +462,31 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 	for {
 		for _, key := range listObjectsResult.Contents {
 			files = append(files, strings.Replace(key.Key, d.bosPath(""), prefix, 1))
+			logrus.WithFields(logrus.Fields{
+				"path":  path,
+				"file":  files[len(files)-1:][0],
+				"error": err,
+			}).Debugf("List")
 		}
 
 		for _, commonPrefix := range listObjectsResult.CommonPrefixes {
 			commonPrefix := commonPrefix.Prefix
-			directories = append(directories, strings.Replace(commonPrefix[0:len(commonPrefix)-1], d.bosPath(""), prefix, 1))
+			directories = append(directories,
+				strings.Replace(commonPrefix[0:len(commonPrefix)-1],
+					d.bosPath(""), prefix, 1))
+			logrus.WithFields(logrus.Fields{
+				"path":  path,
+				"dir":   directories[len(directories)-1:][0],
+				"error": err,
+			}).Debugf("List")
 		}
 
 		if listObjectsResult.IsTruncated {
 			listObjectsResult, err = d.Client.ListObjects(d.Bucket, &api.ListObjectsArgs{
-				Prefix:  d.bosPath(path),
-				MaxKeys: listMax,
-				Marker:  listObjectsResult.NextMarker,
+				Prefix:    d.bosPath(path),
+				MaxKeys:   listMax,
+				Marker:    listObjectsResult.NextMarker,
+				Delimiter: "/",
 			})
 			if err != nil {
 				logrus.WithFields(logrus.Fields{
@@ -492,11 +503,23 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 
 	if opath != "/" {
 		if len(files) == 0 && len(directories) == 0 {
+			logrus.WithFields(logrus.Fields{
+				"cause": "empty files and dirs",
+				"path":  path,
+				"error": err,
+			}).Debugf("List fail")
 			// Treat empty response as missing directory, since we don't actually
 			// have directories.
 			return nil, storagedriver.PathNotFoundError{Path: opath}
 		}
 	}
+
+	logrus.WithFields(logrus.Fields{
+		"path":         path,
+		"files":        files,
+		"directories:": directories,
+		"error":        err,
+	}).Debugf("List succ")
 
 	return append(files, directories...), nil
 }
