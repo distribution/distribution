@@ -58,6 +58,9 @@ type ManifestService interface {
 	// Put creates or updates the given manifest returning the manifest digest
 	Put(ctx context.Context, manifest Manifest, options ...ManifestServiceOption) (digest.Digest, error)
 
+	// Deletable returns no error if the manifest can be deleted.
+	Deletable(ctx context.Context, dgst digest.Digest) error
+
 	// Delete removes the manifest specified by the given digest. Deleting
 	// a manifest that doesn't exist will return ErrManifestNotFound
 	Delete(ctx context.Context, dgst digest.Digest) error

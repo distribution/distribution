@@ -91,6 +91,10 @@ func (pms proxyManifestStore) Put(ctx context.Context, manifest distribution.Man
 	return d, distribution.ErrUnsupported
 }
 
+func (pms proxyManifestStore) Deletable(ctx context.Context, dgst digest.Digest) error {
+	return distribution.ErrUnsupported
+}
+
 func (pms proxyManifestStore) Delete(ctx context.Context, dgst digest.Digest) error {
 	return distribution.ErrUnsupported
 }

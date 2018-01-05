@@ -5,6 +5,7 @@ import (
 	"path"
 
 	"github.com/docker/distribution"
+	dcontext "github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/opencontainers/go-digest"
 )
@@ -89,7 +90,19 @@ func (ts *tagStore) Tag(ctx context.Context, tag string, desc distribution.Descr
 	}
 
 	// Overwrite the current link
-	return ts.blobStore.link(ctx, currentPath, desc.Digest)
+	err = ts.blobStore.link(ctx, currentPath, desc.Digest)
+	if err != nil {
+		// Try to clean up: if link is missing delete broken tag
+		_, err := ts.blobStore.readlink(ctx, currentPath)
+		if err != nil {
+			switch err.(type) {
+			case storagedriver.PathNotFoundError:
+				dcontext.GetLogger(ctx).Infof("cleaning up partially created tag: \"%v:%v\"", ts.repository.Named().Name(), tag)
+				ts.Untag(ctx, tag)
+			}
+		}
+	}
+	return err
 }
 
 // resolve the current revision for name and tag.
@@ -178,12 +191,42 @@ func (ts *tagStore) Lookup(ctx context.Context, desc distribution.Descriptor) ([
 
 		tagLinkPath, err := pathFor(tagLinkPathSpec)
 		tagDigest, err := ts.blobStore.readlink(ctx, tagLinkPath)
-		if err != nil {
+		if err == nil {
+			if tagDigest == desc.Digest {
+				tags = append(tags, tag)
+			}
+			continue
+		}
+
+		switch err := err.(type) {
+		case storagedriver.PathNotFoundError:
+		// continue
+		default:
 			return nil, err
 		}
 
-		if tagDigest == desc.Digest {
+		// current/link does not exist, so tag operation must have failed earlier
+		// let's check if matching index entry exists (it should be the only one since current/link is not deleted by itself)
+		tagLinkEntryPathSpec := manifestTagIndexEntryLinkPathSpec{
+			name:     ts.repository.Named().Name(),
+			tag:      tag,
+			revision: desc.Digest,
+		}
+
+		tagLinkPath, err = pathFor(tagLinkEntryPathSpec)
+		_, err = ts.blobStore.readlink(ctx, tagLinkPath)
+		if err == nil {
 			tags = append(tags, tag)
+			dcontext.GetLogger(ctx).Infof("deleting broken tag: \"%v:%v\"", ts.repository.Named().Name(), tag)
+			continue
+		}
+
+		switch err := err.(type) {
+		case storagedriver.PathNotFoundError:
+			// this tag is not related with our digest
+			dcontext.GetLogger(ctx).Warnf("broken tag found, please delete it manually: \"%v:%v\"", ts.repository.Named().Name(), tag)
+		default:
+			return nil, err
 		}
 	}
 

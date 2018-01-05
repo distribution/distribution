@@ -124,6 +124,23 @@ func (ms *manifestStore) Put(ctx context.Context, manifest distribution.Manifest
 	return "", fmt.Errorf("unrecognized manifest type %T", manifest)
 }
 
+func (ms *manifestStore) Deletable(ctx context.Context, dgst digest.Digest) error {
+	if !ms.blobStore.deleteEnabled {
+		return distribution.ErrUnsupported
+	}
+
+	exists, err := ms.Exists(ctx, dgst)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return distribution.ErrBlobUnknown
+	}
+
+	return nil
+}
+
 // Delete removes the revision of the specified manifest.
 func (ms *manifestStore) Delete(ctx context.Context, dgst digest.Digest) error {
 	dcontext.GetLogger(ms.ctx).Debug("(*manifestStore).Delete")

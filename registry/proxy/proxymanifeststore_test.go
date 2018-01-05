@@ -41,6 +41,11 @@ func (te manifestStoreTestEnv) RemoteStats() *map[string]int {
 	return &rs
 }
 
+func (sm statsManifest) Deletable(ctx context.Context, dgst digest.Digest) error {
+	sm.stats["deletable"]++
+	return sm.manifests.Deletable(ctx, dgst)
+}
+
 func (sm statsManifest) Delete(ctx context.Context, dgst digest.Digest) error {
 	sm.stats["delete"]++
 	return sm.manifests.Delete(ctx, dgst)

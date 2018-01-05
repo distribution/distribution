@@ -580,6 +580,19 @@ func (ms *manifests) Put(ctx context.Context, m distribution.Manifest, options .
 	return "", HandleErrorResponse(resp)
 }
 
+func (ms *manifests) Deletable(ctx context.Context, dgst digest.Digest) error {
+	exists, err := ms.Exists(ctx, dgst)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return distribution.ErrBlobUnknown
+	}
+
+	return nil
+}
+
 func (ms *manifests) Delete(ctx context.Context, dgst digest.Digest) error {
 	ref, err := reference.WithDigest(ms.name, dgst)
 	if err != nil {
