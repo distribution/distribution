@@ -61,6 +61,23 @@ func makeManifestService(t *testing.T, repository distribution.Repository) distr
 	return manifestService
 }
 
+func allManifests(t *testing.T, manifestService distribution.ManifestService) map[digest.Digest]struct{} {
+	ctx := context.Background()
+	allManMap := make(map[digest.Digest]struct{})
+	manifestEnumerator, ok := manifestService.(distribution.ManifestEnumerator)
+	if !ok {
+		t.Fatalf("unable to convert ManifestService into ManifestEnumerator")
+	}
+	err := manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
+		allManMap[dgst] = struct{}{}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("Error getting all manifests: %v", err)
+	}
+	return allManMap
+}
+
 func allBlobs(t *testing.T, registry distribution.Namespace) map[digest.Digest]struct{} {
 	ctx := context.Background()
 	blobService := registry.Blobs()
@@ -169,7 +186,10 @@ func TestNoDeletionNoEffect(t *testing.T) {
 	before := allBlobs(t, registry)
 
 	// Run GC
-	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, false)
+	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, GCOpts{
+		DryRun:         false,
+		RemoveUntagged: false,
+	})
 	if err != nil {
 		t.Fatalf("Failed mark and sweep: %v", err)
 	}
@@ -177,6 +197,102 @@ func TestNoDeletionNoEffect(t *testing.T) {
 	after := allBlobs(t, registry)
 	if len(before) != len(after) {
 		t.Fatalf("Garbage collection affected storage: %d != %d", len(before), len(after))
+	}
+}
+
+func TestDeleteManifestIfTagNotFound(t *testing.T) {
+	ctx := context.Background()
+	inmemoryDriver := inmemory.New()
+
+	registry := createRegistry(t, inmemoryDriver)
+	repo := makeRepository(t, registry, "deletemanifests")
+	manifestService, err := repo.Manifests(ctx)
+
+	// Create random layers
+	randomLayers1, err := testutil.CreateRandomLayers(3)
+	if err != nil {
+		t.Fatalf("failed to make layers: %v", err)
+	}
+
+	randomLayers2, err := testutil.CreateRandomLayers(3)
+	if err != nil {
+		t.Fatalf("failed to make layers: %v", err)
+	}
+
+	// Upload all layers
+	err = testutil.UploadBlobs(repo, randomLayers1)
+	if err != nil {
+		t.Fatalf("failed to upload layers: %v", err)
+	}
+
+	err = testutil.UploadBlobs(repo, randomLayers2)
+	if err != nil {
+		t.Fatalf("failed to upload layers: %v", err)
+	}
+
+	// Construct manifests
+	manifest1, err := testutil.MakeSchema1Manifest(getKeys(randomLayers1))
+	if err != nil {
+		t.Fatalf("failed to make manifest: %v", err)
+	}
+
+	manifest2, err := testutil.MakeSchema1Manifest(getKeys(randomLayers2))
+	if err != nil {
+		t.Fatalf("failed to make manifest: %v", err)
+	}
+
+	_, err = manifestService.Put(ctx, manifest1)
+	if err != nil {
+		t.Fatalf("manifest upload failed: %v", err)
+	}
+
+	_, err = manifestService.Put(ctx, manifest2)
+	if err != nil {
+		t.Fatalf("manifest upload failed: %v", err)
+	}
+
+	manifestEnumerator, _ := manifestService.(distribution.ManifestEnumerator)
+	err = manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
+		repo.Tags(ctx).Tag(ctx, "test", distribution.Descriptor{Digest: dgst})
+		return nil
+	})
+
+	before1 := allBlobs(t, registry)
+	before2 := allManifests(t, manifestService)
+
+	// run GC with dry-run (should not remove anything)
+	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, GCOpts{
+		DryRun:         true,
+		RemoveUntagged: true,
+	})
+	if err != nil {
+		t.Fatalf("Failed mark and sweep: %v", err)
+	}
+	afterDry1 := allBlobs(t, registry)
+	afterDry2 := allManifests(t, manifestService)
+	if len(before1) != len(afterDry1) {
+		t.Fatalf("Garbage collection affected blobs storage: %d != %d", len(before1), len(afterDry1))
+	}
+	if len(before2) != len(afterDry2) {
+		t.Fatalf("Garbage collection affected manifest storage: %d != %d", len(before2), len(afterDry2))
+	}
+
+	// Run GC (removes everything because no manifests with tags exist)
+	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, GCOpts{
+		DryRun:         false,
+		RemoveUntagged: true,
+	})
+	if err != nil {
+		t.Fatalf("Failed mark and sweep: %v", err)
+	}
+
+	after1 := allBlobs(t, registry)
+	after2 := allManifests(t, manifestService)
+	if len(before1) == len(after1) {
+		t.Fatalf("Garbage collection affected blobs storage: %d == %d", len(before1), len(after1))
+	}
+	if len(before2) == len(after2) {
+		t.Fatalf("Garbage collection affected manifest storage: %d == %d", len(before2), len(after2))
 	}
 }
 
@@ -200,7 +316,10 @@ func TestGCWithMissingManifests(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = MarkAndSweep(context.Background(), d, registry, false)
+	err = MarkAndSweep(context.Background(), d, registry, GCOpts{
+		DryRun:         false,
+		RemoveUntagged: false,
+	})
 	if err != nil {
 		t.Fatalf("Failed mark and sweep: %v", err)
 	}
@@ -227,7 +346,10 @@ func TestDeletionHasEffect(t *testing.T) {
 	manifests.Delete(ctx, image3.manifestDigest)
 
 	// Run GC
-	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, false)
+	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, GCOpts{
+		DryRun:         false,
+		RemoveUntagged: false,
+	})
 	if err != nil {
 		t.Fatalf("Failed mark and sweep: %v", err)
 	}
@@ -361,7 +483,10 @@ func TestOrphanBlobDeleted(t *testing.T) {
 	uploadRandomSchema2Image(t, repo)
 
 	// Run GC
-	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, false)
+	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, GCOpts{
+		DryRun:         false,
+		RemoveUntagged: false,
+	})
 	if err != nil {
 		t.Fatalf("Failed mark and sweep: %v", err)
 	}

@@ -50,6 +50,40 @@ func (v Vacuum) RemoveBlob(dgst string) error {
 	return nil
 }
 
+// RemoveManifest removes a manifest from the filesystem
+func (v Vacuum) RemoveManifest(name string, dgst digest.Digest, tags []string) error {
+	// remove a tag manifest reference, in case of not found continue to next one
+	for _, tag := range tags {
+
+		tagsPath, err := pathFor(manifestTagIndexEntryPathSpec{name: name, revision: dgst, tag: tag})
+		if err != nil {
+			return err
+		}
+
+		_, err = v.driver.Stat(v.ctx, tagsPath)
+		if err != nil {
+			switch err := err.(type) {
+			case driver.PathNotFoundError:
+				continue
+			default:
+				return err
+			}
+		}
+		dcontext.GetLogger(v.ctx).Infof("deleting manifest tag reference: %s", tagsPath)
+		err = v.driver.Delete(v.ctx, tagsPath)
+		if err != nil {
+			return err
+		}
+	}
+
+	manifestPath, err := pathFor(manifestRevisionPathSpec{name: name, revision: dgst})
+	if err != nil {
+		return err
+	}
+	dcontext.GetLogger(v.ctx).Infof("deleting manifest: %s", manifestPath)
+	return v.driver.Delete(v.ctx, manifestPath)
+}
+
 // RemoveRepository removes a repository directory from the
 // filesystem
 func (v Vacuum) RemoveRepository(repoName string) error {
