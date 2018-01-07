@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/baidubcex/bce-sdk-go/baidubce/services/bos/api"
+	"github.com/baidubce/bce-sdk-go/bos/api"
 
 	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"

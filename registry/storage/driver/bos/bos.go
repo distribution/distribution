@@ -22,9 +22,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/baidubcex/bce-sdk-go/baidubce/bce"
-	"github.com/baidubcex/bce-sdk-go/baidubce/services/bos"
-	"github.com/baidubcex/bce-sdk-go/baidubce/services/bos/api"
+	"github.com/baidubce/bce-sdk-go/bce"
+	"github.com/baidubce/bce-sdk-go/services/bos"
+	"github.com/baidubce/bce-sdk-go/services/bos/api"
 
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/base"
