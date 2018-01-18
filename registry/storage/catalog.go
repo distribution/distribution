@@ -63,7 +63,7 @@ func (reg *registry) Enumerate(ctx context.Context, ingester func(string) error)
 		return err
 	}
 
-	err = Walk(ctx, reg.blobStore.driver, root, func(fileInfo driver.FileInfo) error {
+	err = reg.blobStore.driver.Walk(ctx, root, func(fileInfo driver.FileInfo) error {
 		return handleRepository(fileInfo, root, "", ingester)
 	})
 

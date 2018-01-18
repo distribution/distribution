@@ -203,7 +203,7 @@ func (base *Base) Walk(ctx context.Context, path string, f storagedriver.WalkFn)
 	ctx, done := dcontext.WithTrace(ctx)
 	defer done("%s.Walk(%q)", base.Name(), path)
 
-	if !storagedriver.PathRegexp.MatchString(path) {
+	if !storagedriver.PathRegexp.MatchString(path) && path != "/" {
 		return storagedriver.InvalidPathError{Path: path, DriverName: base.StorageDriver.Name()}
 	}
 
