@@ -1,7 +1,6 @@
 // Package context provides several utilities for working with
-// golang.org/x/net/context in http requests. Primarily, the focus is on
-// logging relevant request information but this package is not limited to
-// that purpose.
+// Go's context in http requests. Primarily, the focus is on logging relevant
+// request information but this package is not limited to that purpose.
 //
 // The easiest way to get started is to get the background context:
 //
