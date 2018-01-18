@@ -63,6 +63,10 @@ var configStruct = Configuration{
 					"Authorization": []string{"Bearer <example>"},
 				},
 				IgnoredMediaTypes: []string{"application/octet-stream"},
+				Ignore: Ignore{
+					MediaTypes: []string{"application/octet-stream"},
+					Actions:    []string{"pull"},
+				},
 			},
 		},
 	},
@@ -142,6 +146,11 @@ notifications:
         Authorization: [Bearer <example>]
       ignoredmediatypes:
         - application/octet-stream
+      ignore:
+        mediatypes:
+           - application/octet-stream
+        actions:
+           - pull
 reporting:
   bugsnag:
     apikey: BugsnagApiKey
@@ -170,6 +179,11 @@ notifications:
         Authorization: [Bearer <example>]
       ignoredmediatypes:
         - application/octet-stream
+      ignore:
+        mediatypes:
+           - application/octet-stream
+        actions:
+           - pull
 http:
   headers:
     X-Content-Type-Options: [nosniff]
