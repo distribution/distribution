@@ -38,9 +38,9 @@ you want through the secondary authentication mechanism implemented inside your
 proxy, it also requires that you move TLS termination from the Registry to the
 proxy itself.
 
-Furthermore, introducing an extra http layer in your communication pipeline will
-make it more complex to deploy, maintain, and debug, and will possibly create
-issues. Make sure the extra complexity is required.
+Furthermore, introducing an extra http layer in your communication pipeline
+makes it more complex to deploy, maintain, and debug. Make sure the extra
+complexity is required.
 
 For instance, Amazon's Elastic Load Balancer (ELB) in HTTPS mode already sets
 the following client header:
@@ -61,7 +61,7 @@ proxy_set_header  X-Forwarded-For   $proxy_add_x_forwarded_for;
 proxy_set_header  X-Forwarded-Proto $scheme;
 ```
 
-Otherwise Nginx will reset the ELB's values, and the requests will not be routed
+Otherwise Nginx resets the ELB's values, and the requests are not routed
 properly. For more information, see
 [#970](https://github.com/docker/distribution/issues/970).
 
@@ -75,7 +75,7 @@ Review the [requirements](/registry/recipes/index.md#requirements), then follow 
     mkdir -p auth data
     ```
 
-2.  Create the main nginx configuration you will use. Paste this code block into a new file called `auth/nginx.conf`:
+2.  Create the main nginx configuration. Paste this code block into a new file called `auth/nginx.conf`:
 
     ```conf
     events {
@@ -91,7 +91,7 @@ Review the [requirements](/registry/recipes/index.md#requirements), then follow 
       ## Set a variable to help us decide if we need to add the
       ## 'Docker-Distribution-Api-Version' header.
       ## The registry always sets this header.
-      ## In the case of nginx performing auth, the header will be unset
+      ## In the case of nginx performing auth, the header is unset
       ## since nginx is auth-ing before proxying.
       map $upstream_http_docker_distribution_api_version $docker_distribution_api_version {
         '' 'registry/2.0';
@@ -128,7 +128,7 @@ Review the [requirements](/registry/recipes/index.md#requirements), then follow 
           auth_basic "Registry realm";
           auth_basic_user_file /etc/nginx/conf.d/nginx.htpasswd;
 
-          ## If $docker_distribution_api_version is empty, the header will not be added.
+          ## If $docker_distribution_api_version is empty, the header is not added.
           ## See the map directive above where this variable is defined.
           add_header 'Docker-Distribution-Api-Version' $docker_distribution_api_version always;
 
@@ -148,7 +148,7 @@ Review the [requirements](/registry/recipes/index.md#requirements), then follow 
     ```bash
     $ docker run --rm --entrypoint htpasswd registry:2 -Bbn testuser testpassword > auth/nginx.htpasswd
     ```
-    
+
     > **Note**: If you do not want to use `bcrypt`, you can omit the `-B` parameter.
 
 4.  Copy your certificate files to the `auth/` directory.

@@ -26,7 +26,7 @@ We also implement push restriction (to a limited user group) for the sake of the
 
 While this model gives you the ability to use whatever authentication backend you want through the secondary authentication mechanism implemented inside your proxy, it also requires that you move TLS termination from the Registry to the proxy itself.
 
-Furthermore, introducing an extra http layer in your communication pipeline will make it more complex to deploy, maintain, and debug, and will possibly create issues.
+Furthermore, introducing an extra http layer in your communication pipeline adds complexity when deploying, maintaining, and debugging.
 
 ## Setting things up
 
@@ -40,7 +40,7 @@ Run the following script:
 mkdir -p auth
 mkdir -p data
 
-# This is the main apache configuration you will use
+# This is the main apache configuration
 cat <<EOF > auth/httpd.conf
 LoadModule headers_module modules/mod_headers.so
 

@@ -36,7 +36,7 @@ The preferred method of selecting a storage driver is using the `StorageDriverFa
 Storage driver factories may be registered by name using the
 `factory.Register` method, and then later invoked by calling `factory.Create`
 with a driver name and parameters map. If no such storage driver can be found,
-`factory.Create` will return an `InvalidStorageDriverError`.
+`factory.Create` returns an `InvalidStorageDriverError`.
 
 ## Driver contribution
 

@@ -157,7 +157,7 @@ storage.
       no
     </td>
     <td>
-      This is a prefix that will be applied to all Swift keys to allow you to segment data in your container if necessary. Defaults to the empty string which is the container's root.
+      This is a prefix that is applied to all Swift keys to allow you to segment data in your container if necessary. Defaults to the empty string which is the container's root.
     </td>
   </tr>
   <tr>
@@ -190,7 +190,7 @@ storage.
       no
     </td>
     <td>
-      Specify the OpenStack Auth's version,for example <code>3</code>. By default the driver will autodetect the auth's version from the AuthURL.
+      Specify the OpenStack Auth's version,for example <code>3</code>. By default the driver autodetects the auth's version from the AuthURL.
     </td>
   </tr>
   <tr>

@@ -183,7 +183,7 @@ service](#run-a-registry-as-a-service) below.
 
 These examples assume the following:
 
-- Your registry will be accessible on `https://myregistry.domain.com/`.
+- Your registry URL is `https://myregistry.domain.com/`.
 - Your DNS, routing, and firewall settings allow access to the registry's host
   on port 5000.
 - You have already obtained a certificate from a certificate authority (CA).
@@ -279,8 +279,8 @@ or a service with either only a single node or a node constraint.
   fully replicated service. Each worker can write to the storage back-end
   without causing write conflicts.
 
-- If you use a local bind mount or volume, each worker node will write to its
-  own storage location, which means that each registry will contain a different
+- If you use a local bind mount or volume, each worker node writes to its
+  own storage location, which means that each registry contains a different
   data set. You can solve this problem by using a single-replica service and a
   node constraint to ensure that only a single worker is writing to the bind
   mount.
@@ -348,15 +348,15 @@ the following must be the same:
   - HTTP Secret
   - Redis Cache (if configured)
 
-If any of these are different, the registry will have trouble serving requests.
+Differences in any of the above cause problems serving requests.
 As an example, if you're using the filesystem driver, all registry instances
-must have access to the same filesystem root, which means they should be in
-the same machine. For other drivers, such as s3 or azure, they should be
-accessing the same resource, and will likely share an identical configuration.
+must have access to the same filesystem root, on
+the same machine. For other drivers, such as S3 or Azure, they should be
+accessing the same resource and share an identical configuration.
 The _HTTP Secret_ coordinates uploads, so also must be the same across
-instances. Configuring different redis instances will work (at the time
-of writing), but will not be optimal if the instances are not shared, causing
-more requests to be directed to the backend.
+instances. Configuring different redis instances works (at the time
+of writing), but is not optimal if the instances are not shared, because
+more requests are directed to the backend.
 
 ### Important/Required HTTP-Headers
 
@@ -377,11 +377,11 @@ without credentials. The response should include a `WWW-Authenticate`
 challenge, providing guidance on how to authenticate, such as with basic auth
 or a token service. If the load balancer has health checks, it is recommended
 to configure it to consider a 401 response as healthy and any other as down.
-This will secure your registry by ensuring that configuration problems with
+This secures your registry by ensuring that configuration problems with
 authentication don't accidentally expose an unprotected registry. If you're
 using a less sophisticated load balancer, such as Amazon's Elastic Load
 Balancer, that doesn't allow one to change the healthy response code, health
-checks can be directed at "/", which will always return a `200 OK` response.
+checks can be directed at "/", which always returns a `200 OK` response.
 
 ## Restricting access
 
@@ -436,7 +436,7 @@ secrets.
       ```
 
 4.  Try to pull an image from the registry, or push an image to the registry.
-    These commands will fail.
+    These commands fail.
 
 5.  Log in to the registry.
 
@@ -518,7 +518,7 @@ following:
   distributable. This means that when you push an image based on one of these
   images to your private registry, the non-distributable layers are **not**
   pushed, but are always fetched from their authorized location. This is fine
-  for internet-connected hosts, but will not work in an air-gapped set-up.
+  for internet-connected hosts, but not in an air-gapped set-up.
 
   In Docker 17.06 and higher, you can configure the Docker daemon to allow
   pushing non-distributable layers to private registries, in this scenario.
@@ -546,7 +546,7 @@ following:
   3.  Restart the registry if it does not start automatically.
 
   4.  When you push images to the registries in the list, their
-      non-distributable layers will be pushed to the registry.
+      non-distributable layers are pushed to the registry.
 
       > **Warning**: Non-distributable artifacts typically have restrictions on
       > how and where they can be distributed and shared. Only use this feature
@@ -557,7 +557,7 @@ following:
 
 ## Next steps
 
-You will find more specific and advanced information in the following sections:
+More specific and advanced information is available in the following sections:
 
  - [Configuration reference](configuration.md)
  - [Working with notifications](notifications.md)

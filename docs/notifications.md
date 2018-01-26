@@ -40,10 +40,10 @@ them to the configuration. A simple example follows:
 The above would configure the registry with an endpoint to send events to
 `https://mylistener.example.com/event`, with the header "Authorization: Bearer
 <your token, if needed>". The request would timeout after 500 milliseconds. If
-5 failures happen consecutively, the registry will backoff for 1 second before
+5 failures happen consecutively, the registry backs off for 1 second before
 trying again.
 
-For details on the fields, please see the [configuration documentation](configuration.md#notifications).
+For details on the fields, see the [configuration documentation](configuration.md#notifications).
 
 A properly configured endpoint should lead to a log message from the registry
 upon startup:
@@ -117,8 +117,8 @@ manifest:
 
 
 The target struct of events which are sent when manifests and blobs are deleted
-will contain a subset of the data contained in Get and Put events. Specifically,
-only the digest and repository will be sent.
+contains a subset of the data contained in Get and Put events. Specifically,
+only the digest and repository are sent.
 
 ```json
 "target": {
@@ -148,7 +148,7 @@ group unrelated events and send them in the same envelope to reduce the total
 number of requests.
 
 The full package has the mediatype
-"application/vnd.docker.distribution.events.v1+json", which will be set on the
+"application/vnd.docker.distribution.events.v1+json", which is set on the
 request coming to an endpoint.
 
 An example of a full event may look as follows:
@@ -244,7 +244,7 @@ Content-Type: application/vnd.docker.distribution.events.v1+json
 
 The registry is fairly accepting of the response codes from endpoints. If an
 endpoint responds with any 2xx or 3xx response code (after following
-redirects), the message will be considered delivered and discarded.
+redirects), the message is considered to have been delivered, and is discarded.
 
 In turn, it is recommended that endpoints are accepting of incoming responses,
 as well. While the format of event envelopes are standardized by media type,
@@ -312,15 +312,15 @@ monitor the size ("Pending" above) of the endpoint queues. If failures or
 queue sizes are increasing, it can indicate a larger problem.
 
 The logs are also a valuable resource for monitoring problems. A failing
-endpoint will lead to messages similar to the following:
+endpoint leads to messages similar to the following:
 
-```
+```none
 ERRO[0340] retryingsink: error writing events: httpSink{http://localhost:5003/callback}: error posting: Post http://localhost:5003/callback: dial tcp 127.0.0.1:5003: connection refused, retrying
 WARN[0340] httpSink{http://localhost:5003/callback} encountered too many errors, backing off
 ```
 
-The above indicates that several errors have led to a backoff and the registry
-will wait before retrying.
+The above indicates that several errors caused a backoff and the registry
+waits before retrying.
 
 ## Considerations
 
@@ -328,7 +328,7 @@ Currently, the queues are inmemory, so endpoints should be _reasonably
 reliable_. They are designed to make a best-effort to send the messages but if
 an instance is lost, messages may be dropped. If an endpoint goes down, care
 should be taken to ensure that the registry instance is not terminated before
-the endpoint comes back up or messages will be lost.
+the endpoint comes back up or messages are lost.
 
 This can be mitigated by running endpoints in close proximity to the registry
 instances. One could run an endpoint that pages to disk and then forwards a
@@ -338,6 +338,6 @@ The notification system is designed around a series of interchangeable _sinks_
 which can be wired up to achieve interesting behavior. If this system doesn't
 provide acceptable guarantees, adding a transactional `Sink` to the registry
 is a possibility, although it may have an effect on request service time.
-Please see the
+See the
 [godoc](http://godoc.org/github.com/docker/distribution/notifications#Sink)
 for more information.

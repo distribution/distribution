@@ -33,8 +33,8 @@ documentation [here](spec/api.md#deleting-a-layer) and
 to the target and makes them eligible for garbage collection. It also makes them
 unable to be read via the API.
 
-If a layer is deleted it will be removed from the filesystem when garbage collection
-is run. If a manifest is deleted the layers to which it refers will be removed from
+If a layer is deleted, it is removed from the filesystem when garbage collection
+is run. If a manifest is deleted the layers to which it refers are removed from
 the filesystem if no other manifests refers to them.
 
 
@@ -58,9 +58,9 @@ A -----> a     B
 ```
 
 In this state layer `c` no longer has a reference and is eligible for garbage
-collection. Layer `a` had one reference removed but will not be garbage
+collection. Layer `a` had one reference removed but not garbage
 collected as it is still referenced by manifest `A`. The blob representing
-manifest `B` will also be eligible for garbage collection.
+manifest `B` is eligible for garbage collection.
 
 After garbage collection has been run, manifest `A` and its blobs remain.
 
@@ -77,18 +77,14 @@ scans all the manifests in the registry. From these manifests, it constructs a
 set of content address digests. This set is the 'mark set' and denotes the set
 of blobs to *not* delete. Secondly, in the 'sweep' phase, the process scans all
 the blobs and if a blob's content address digest is not in the mark set, the
-process will delete it.
+process deletes it.
 
 
 > **Note**: You should ensure that the registry is in read-only mode or not running at
 > all. If you were to upload an image while garbage collection is running, there is the
-> risk that the image's layers will be mistakenly deleted, leading to a corrupted image.
+> risk that the image's layers are mistakenly deleted leading to a corrupted image.
 
-This type of garbage collection is known as stop-the-world garbage collection. In future
-registry versions the intention is that garbage collection will be an automated background
-action and this manual process will no longer apply.
-
-
+This type of garbage collection is known as stop-the-world garbage collection.
 
 ## Run garbage collection
 
@@ -96,9 +92,9 @@ Garbage collection can be run as follows
 
 `bin/registry garbage-collect [--dry-run] /path/to/config.yml`
 
-The garbage-collect command accepts a `--dry-run` parameter, which will print the progress
+The garbage-collect command accepts a `--dry-run` parameter, which prints the progress
 of the mark and sweep phases without removing any data. Running with a log level of `info`
-will give a clear indication of what will and will not be deleted.
+gives a clear indication of items eligible for deletion.
 
 The config.yml file should be in the following format:
 
