@@ -147,6 +147,9 @@ func (registry *Registry) ListenAndServe() error {
 					return err
 				}
 			}
+			if len(config.HTTP.TLS.LetsEncrypt.Hosts) > 0 {
+				m.SetHosts(config.HTTP.TLS.LetsEncrypt.Hosts)
+			}
 			tlsConf.GetCertificate = m.GetCertificate
 		} else {
 			tlsConf.Certificates = make([]tls.Certificate, 1)

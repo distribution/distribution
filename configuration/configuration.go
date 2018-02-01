@@ -114,6 +114,10 @@ type Configuration struct {
 
 				// Email is the email to use during Let's Encrypt registration
 				Email string `yaml:"email,omitempty"`
+
+				// Hosts specifies the hosts which are allowed to obtain Let's
+				// Encrypt certificates.
+				Hosts []string `yaml:"hosts,omitempty"`
 			} `yaml:"letsencrypt,omitempty"`
 		} `yaml:"tls,omitempty"`
 
