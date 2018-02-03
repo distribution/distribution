@@ -142,6 +142,19 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		InsecureSkipVerify: false,
 	}
 
+	// Sanitize some entries before trying to decode parameters with mapstructure
+	// TenantID and Tenant when integers only and passed as ENV variables
+	// are considered as integer and not string. The parser fails in this
+	// case.
+	_, ok := parameters["tenant"]
+	if ok {
+		parameters["tenant"] = fmt.Sprint(parameters["tenant"])
+	}
+	_, ok = parameters["tenantid"]
+	if ok {
+		parameters["tenantid"] = fmt.Sprint(parameters["tenantid"])
+	}
+
 	if err := mapstructure.Decode(parameters, &params); err != nil {
 		return nil, err
 	}
