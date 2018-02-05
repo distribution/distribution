@@ -17,7 +17,7 @@ At this point, it's assumed that:
  * you have installed Docker Compose
  * it's HIGHLY recommended that you get a certificate from a known CA instead of self-signed certificates
  * inside the current directory, you have a X509 `domain.crt` and `domain.key`, for the CN `myregistrydomain.com`
- * be sure you have stopped and removed any previously running registry (typically `docker stop registry && docker rm -v registry`)
+ * be sure you have stopped and removed any previously running registry (typically `docker container stop registry && docker container rm -v registry`)
 
 ## The List
 

@@ -56,7 +56,7 @@ Pull (or build) some image from the hub
 
 Tag the image so that it points to your registry
 
-    docker tag ubuntu localhost:5000/myfirstimage
+    docker image tag ubuntu localhost:5000/myfirstimage
 
 Push it
 
@@ -68,7 +68,7 @@ Pull it back
 
 Now stop your registry and remove all data
 
-    docker stop registry && docker rm -v registry
+    docker container stop registry && docker container rm -v registry
 
 ## Next
 

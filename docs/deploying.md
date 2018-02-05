@@ -75,17 +75,17 @@ as `my-ubuntu`, then pushes it to the local registry. Finally, the
 
 ## Stop a local registry
 
-To stop the registry, use the same `docker stop` command as with any other
+To stop the registry, use the same `docker container stop` command as with any other
 container.
 
 ```bash
-$ docker stop registry
+$ docker container stop registry
 ```
 
-To remove the container, use `docker rm`.
+To remove the container, use `docker container rm`.
 
 ```bash
-$ docker stop registry && docker rm -v registry
+$ docker container stop registry && docker container rm -v registry
 ```
 
 ## Basic configuration
@@ -204,7 +204,7 @@ If you have been issued an _intermediate_ certificate instead, see
 2.  Stop the registry if it is currently running.
 
     ```bash
-    $ docker stop registry
+    $ docker container stop registry
     ```
 
 3.  Restart the registry, directing it to use the TLS certificate. This command
@@ -415,7 +415,7 @@ secrets.
 2.  Stop the registry.
 
     ```bash
-    $ docker stop registry
+    $ docker container stop registry
     ```
 
 3.  Start the registry with basic authentication.
