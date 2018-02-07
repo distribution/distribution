@@ -78,8 +78,9 @@ var configStruct = Configuration{
 			Key         string   `yaml:"key,omitempty"`
 			ClientCAs   []string `yaml:"clientcas,omitempty"`
 			LetsEncrypt struct {
-				CacheFile string `yaml:"cachefile,omitempty"`
-				Email     string `yaml:"email,omitempty"`
+				CacheFile string   `yaml:"cachefile,omitempty"`
+				Email     string   `yaml:"email,omitempty"`
+				Hosts     []string `yaml:"hosts,omitempty"`
 			} `yaml:"letsencrypt,omitempty"`
 		} `yaml:"tls,omitempty"`
 		Headers http.Header `yaml:"headers,omitempty"`
@@ -95,8 +96,9 @@ var configStruct = Configuration{
 			Key         string   `yaml:"key,omitempty"`
 			ClientCAs   []string `yaml:"clientcas,omitempty"`
 			LetsEncrypt struct {
-				CacheFile string `yaml:"cachefile,omitempty"`
-				Email     string `yaml:"email,omitempty"`
+				CacheFile string   `yaml:"cachefile,omitempty"`
+				Email     string   `yaml:"email,omitempty"`
+				Hosts     []string `yaml:"hosts,omitempty"`
 			} `yaml:"letsencrypt,omitempty"`
 		}{
 			ClientCAs: []string{"/path/to/ca.pem"},

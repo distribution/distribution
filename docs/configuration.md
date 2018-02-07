@@ -215,6 +215,7 @@ http:
     letsencrypt:
       cachefile: /path/to/cache-file
       email: emailused@letsencrypt.com
+      hosts: [myregistryaddress.org]
   debug:
     addr: localhost:5001
   headers:
@@ -738,6 +739,7 @@ http:
     letsencrypt:
       cachefile: /path/to/cache-file
       email: emailused@letsencrypt.com
+      hosts: [myregistryaddress.org]
   debug:
     addr: localhost:5001
   headers:
@@ -782,12 +784,15 @@ TLS certificates provided by
 > accessible on port `443`. The registry defaults to listening on port `5000`.
 > If you run the registry as a container, consider adding the flag `-p 443:5000`
 > to the `docker run` command or using a similar setting in a cloud
-> configuration.
+> configuration. You should also set the `hosts` option to the list of hostnames
+> that are valid for this registry to avoid trying to get certificates for random
+> hostnames due to malicious clients connecting with bogus SNI hostnames.
 
 | Parameter | Required | Description                                           |
 |-----------|----------|-------------------------------------------------------|
 | `cachefile` | yes    | Absolute path to a file where the Let's Encrypt agent can cache data. |
 | `email`   | yes      | The email address used to register with Let's Encrypt. |
+| `hosts`   | no       | The hostnames allowed for Let's Encrypt certificates. |
 
 ### `debug`
 
