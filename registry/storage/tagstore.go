@@ -122,17 +122,20 @@ func (ts *tagStore) Untag(ctx context.Context, tag string) error {
 		name: ts.repository.Named().Name(),
 		tag:  tag,
 	})
-
-	switch err.(type) {
-	case storagedriver.PathNotFoundError:
-		return distribution.ErrTagUnknown{Tag: tag}
-	case nil:
-		break
-	default:
+	if err != nil {
 		return err
 	}
 
-	return ts.blobStore.driver.Delete(ctx, tagPath)
+	if err := ts.blobStore.driver.Delete(ctx, tagPath); err != nil {
+		switch err.(type) {
+		case storagedriver.PathNotFoundError:
+			return nil // Untag is idempotent, we don't care if it didn't exist
+		default:
+			return err
+		}
+	}
+
+	return nil
 }
 
 // linkedBlobStore returns the linkedBlobStore for the named tag, allowing one
