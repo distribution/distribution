@@ -182,6 +182,10 @@ func (ts *tagStore) Lookup(ctx context.Context, desc distribution.Descriptor) ([
 		tagLinkPath, err := pathFor(tagLinkPathSpec)
 		tagDigest, err := ts.blobStore.readlink(ctx, tagLinkPath)
 		if err != nil {
+			switch err.(type) {
+			case storagedriver.PathNotFoundError:
+				continue
+			}
 			return nil, err
 		}
 
