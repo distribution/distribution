@@ -185,7 +185,7 @@ These examples assume the following:
 
 - Your registry URL is `https://myregistry.domain.com/`.
 - Your DNS, routing, and firewall settings allow access to the registry's host
-  on port 5000.
+  on port 443.
 - You have already obtained a certificate from a certificate authority (CA).
 
 If you have been issued an _intermediate_ certificate instead, see
