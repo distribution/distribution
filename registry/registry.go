@@ -21,6 +21,7 @@ import (
 	"github.com/docker/distribution/registry/listener"
 	"github.com/docker/distribution/uuid"
 	"github.com/docker/distribution/version"
+	"github.com/docker/go-metrics"
 	gorhandlers "github.com/gorilla/handlers"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -56,6 +57,15 @@ var ServeCmd = &cobra.Command{
 		registry, err := NewRegistry(ctx, config)
 		if err != nil {
 			log.Fatalln(err)
+		}
+
+		if config.HTTP.Debug.Prometheus.Enabled {
+			path := config.HTTP.Debug.Prometheus.Path
+			if path == "" {
+				path = "/metrics"
+			}
+			log.Info("providing prometheus metrics on ", path)
+			http.Handle(path, metrics.Handler())
 		}
 
 		if err = registry.ListenAndServe(); err != nil {

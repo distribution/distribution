@@ -85,7 +85,11 @@ var configStruct = Configuration{
 		} `yaml:"tls,omitempty"`
 		Headers http.Header `yaml:"headers,omitempty"`
 		Debug   struct {
-			Addr string `yaml:"addr,omitempty"`
+			Addr       string `yaml:"addr,omitempty"`
+			Prometheus struct {
+				Enabled bool   `yaml:"enabled,omitempty"`
+				Path    string `yaml:"path,omitempty"`
+			} `yaml:"prometheus,omitempty"`
 		} `yaml:"debug,omitempty"`
 		HTTP2 struct {
 			Disabled bool `yaml:"disabled,omitempty"`

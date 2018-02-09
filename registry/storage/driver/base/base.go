@@ -42,8 +42,20 @@ import (
 	"io"
 
 	dcontext "github.com/docker/distribution/context"
+	prometheus "github.com/docker/distribution/metrics"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/go-metrics"
+	"time"
 )
+
+var (
+	// storageAction is the metrics of blob related operations
+	storageAction = prometheus.StorageNamespace.NewLabeledTimer("action", "The number of seconds that the storage action takes", "driver", "action")
+)
+
+func init() {
+	metrics.Register(prometheus.StorageNamespace)
+}
 
 // Base provides a wrapper around a storagedriver implementation that provides
 // common path and bounds checking.
@@ -87,7 +99,9 @@ func (base *Base) GetContent(ctx context.Context, path string) ([]byte, error) {
 		return nil, storagedriver.InvalidPathError{Path: path, DriverName: base.StorageDriver.Name()}
 	}
 
+	start := time.Now()
 	b, e := base.StorageDriver.GetContent(ctx, path)
+	storageAction.WithValues(base.Name(), "GetContent").UpdateSince(start)
 	return b, base.setDriverName(e)
 }
 
@@ -100,7 +114,10 @@ func (base *Base) PutContent(ctx context.Context, path string, content []byte) e
 		return storagedriver.InvalidPathError{Path: path, DriverName: base.StorageDriver.Name()}
 	}
 
-	return base.setDriverName(base.StorageDriver.PutContent(ctx, path, content))
+	start := time.Now()
+	err := base.setDriverName(base.StorageDriver.PutContent(ctx, path, content))
+	storageAction.WithValues(base.Name(), "PutContent").UpdateSince(start)
+	return err
 }
 
 // Reader wraps Reader of underlying storage driver.
@@ -142,7 +159,9 @@ func (base *Base) Stat(ctx context.Context, path string) (storagedriver.FileInfo
 		return nil, storagedriver.InvalidPathError{Path: path, DriverName: base.StorageDriver.Name()}
 	}
 
+	start := time.Now()
 	fi, e := base.StorageDriver.Stat(ctx, path)
+	storageAction.WithValues(base.Name(), "Stat").UpdateSince(start)
 	return fi, base.setDriverName(e)
 }
 
@@ -155,7 +174,9 @@ func (base *Base) List(ctx context.Context, path string) ([]string, error) {
 		return nil, storagedriver.InvalidPathError{Path: path, DriverName: base.StorageDriver.Name()}
 	}
 
+	start := time.Now()
 	str, e := base.StorageDriver.List(ctx, path)
+	storageAction.WithValues(base.Name(), "List").UpdateSince(start)
 	return str, base.setDriverName(e)
 }
 
@@ -170,7 +191,10 @@ func (base *Base) Move(ctx context.Context, sourcePath string, destPath string) 
 		return storagedriver.InvalidPathError{Path: destPath, DriverName: base.StorageDriver.Name()}
 	}
 
-	return base.setDriverName(base.StorageDriver.Move(ctx, sourcePath, destPath))
+	start := time.Now()
+	err := base.setDriverName(base.StorageDriver.Move(ctx, sourcePath, destPath))
+	storageAction.WithValues(base.Name(), "Move").UpdateSince(start)
+	return err
 }
 
 // Delete wraps Delete of underlying storage driver.
@@ -182,7 +206,10 @@ func (base *Base) Delete(ctx context.Context, path string) error {
 		return storagedriver.InvalidPathError{Path: path, DriverName: base.StorageDriver.Name()}
 	}
 
-	return base.setDriverName(base.StorageDriver.Delete(ctx, path))
+	start := time.Now()
+	err := base.setDriverName(base.StorageDriver.Delete(ctx, path))
+	storageAction.WithValues(base.Name(), "Delete").UpdateSince(start)
+	return err
 }
 
 // URLFor wraps URLFor of underlying storage driver.
@@ -194,7 +221,9 @@ func (base *Base) URLFor(ctx context.Context, path string, options map[string]in
 		return "", storagedriver.InvalidPathError{Path: path, DriverName: base.StorageDriver.Name()}
 	}
 
+	start := time.Now()
 	str, e := base.StorageDriver.URLFor(ctx, path, options)
+	storageAction.WithValues(base.Name(), "URLFor").UpdateSince(start)
 	return str, base.setDriverName(e)
 }
 
