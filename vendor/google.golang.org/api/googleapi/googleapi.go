@@ -421,4 +421,12 @@ type userIP string
 
 func (i userIP) Get() (string, string) { return "userIp", string(i) }
 
+// Trace returns a CallOption that enables diagnostic tracing for a call.
+// traceToken is an ID supplied by Google support.
+func Trace(traceToken string) CallOption { return traceTok(traceToken) }
+
+type traceTok string
+
+func (t traceTok) Get() (string, string) { return "trace", "token:" + string(t) }
+
 // TODO: Fields too
