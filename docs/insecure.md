@@ -105,7 +105,7 @@ This is more secure than the insecure registry solution.
 
 ## Troubleshoot insecure registry
 
-This sections lists some common failures and how to recover from them.
+This section lists some common failures and how to recover from them.
 
 ### Failing...
 
