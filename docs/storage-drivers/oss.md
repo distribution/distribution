@@ -5,7 +5,7 @@ title: Aliyun OSS storage driver
 ---
 
 An implementation of the `storagedriver.StorageDriver` interface which uses
-[Aliyun OSS](https://intl.aliyun.com/product/oss) for object storage.
+[Aliyun OSS](https://www.alibabacloud.com/product/oss) for object storage.
 
 ## Parameters
 
@@ -47,7 +47,7 @@ An implementation of the `storagedriver.StorageDriver` interface which uses
       <td>
       yes
       </td>
-      <td> The name of the OSS region in which you would like to store objects (for example <code>oss-cn-beijing</code>). For a list of regions, you can look at [https://docs.aliyun.com/#/oss/product-documentation/domain-region](https://docs.aliyun.com/#/oss/product-documentation/domain-region).
+      <td> The name of the OSS region in which you would like to store objects (for example <code>oss-cn-beijing</code>). For a list of regions, you can look at <a href="https://www.alibabacloud.com/help/doc-detail/31837.htm">the official documentation</a>.
       </td>
     </tr>
     <tr>
@@ -68,7 +68,8 @@ An implementation of the `storagedriver.StorageDriver` interface which uses
       <td>
       no
       </td>
-      <td> An internal endpoint or the public endpoint for OSS access. The default is false. For a list of regions, you can look at [https://docs.aliyun.com/#/oss/product-documentation/domain-region](https://docs.aliyun.com/#/oss/product-documentation/domain-region).
+      <td> An internal endpoint or the public endpoint for OSS access. The default is false.
+      For a list of regions, you can look at <a href="https://www.alibabacloud.com/help/doc-detail/31837.htm">the official documentation</a>.
       </td>
     </tr>
     <tr>
