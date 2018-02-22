@@ -18,7 +18,7 @@ With the move toward multiple architecture images, the distribution project
 introduced two new manifest types: Schema 2 manifests and manifest lists. Registry
 2.3 supports all three manifest types and sometimes performs an on-the-fly
 transformation of a manifest before serving the JSON in the response, to
-preserve compatibility with older versions of Docker Engine..
+preserve compatibility with older versions of Docker Engine.
 
 This conversion has some implications for pulling manifests by digest and this
 document enumerates these implications.
@@ -73,6 +73,6 @@ pull fails.
 The Docker Engine constructs a _Schema 1_ manifest which the
 registry persists to disk.
 
-When the manifest is pulled by digest or tag with any docker version, a
+When the manifest is pulled by digest or tag with any Docker version, a
 _Schema 1_ manifest is returned.
 
