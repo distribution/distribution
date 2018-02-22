@@ -72,4 +72,4 @@ An implementation of the `storagedriver.StorageDriver` interface which uses Goog
 
 **Note** Instead of a key file you can use [Google Application Default Credentials](https://developers.google.com/identity/protocols/application-default-credentials).
 
-`rootdirectory`: (optional) The root directory tree in which all registry files are stored. Defaults to the empty string (bucket root).
+`rootdirectory`: (optional) The root directory tree in which all registry files are stored. Defaults to the empty string (bucket root). If a prefix is used, the path `bucketname/<prefix>` has to be pre-created before starting the registry. 
