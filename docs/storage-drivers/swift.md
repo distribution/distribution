@@ -1,6 +1,6 @@
 ---
 description: Explains how to use the OpenStack swift storage driver
-keywords: registry, service, driver, images, storage,  swift
+keywords: registry, service, driver, images, storage, swift
 title: OpenStack Swift storage driver
 ---
 
@@ -91,7 +91,7 @@ storage.
       no
     </td>
     <td>
-      Your Openstack tenant id. You can either use <code>tenant</code> or <code>tenantid</code>.
+      Your Openstack tenant ID. You can either use <code>tenant</code> or <code>tenantid</code>.
     </td>
   </tr>
   <tr>
@@ -113,7 +113,7 @@ storage.
       no
     </td>
     <td>
-      Your Openstack domain id for Identity v3 API. You can either use <code>domain</code> or <code>domainid</code>.
+      Your Openstack domain ID for Identity v3 API. You can either use <code>domain</code> or <code>domainid</code>.
     </td>
   </tr>
   <tr>
@@ -124,7 +124,7 @@ storage.
       no
     </td>
     <td>
-      Your Openstack trust id for Identity v3 API.
+      Your Openstack trust ID for Identity v3 API.
     </td>
   </tr>
   <tr>
@@ -135,7 +135,7 @@ storage.
       no
     </td>
     <td>
-      true to skip TLS verification, false by default.
+      <code>true</code> to skip TLS verification, <code>false</code> by default.
     </td>
   </tr>
   <tr>
@@ -179,7 +179,7 @@ storage.
       no
     </td>
     <td>
-      The access key to generate temporary URLs. It is used by HP Cloud Object Storage in addition to the `secretkey` parameter.
+      The access key to generate temporary URLs. It is used by HP Cloud Object Storage in addition to the <code>secretkey</code> parameter.
     </td>
   </tr>
   <tr>
@@ -190,7 +190,7 @@ storage.
       no
     </td>
     <td>
-      Specify the OpenStack Auth's version,for example <code>3</code>. By default the driver autodetects the auth's version from the AuthURL.
+      Specify the OpenStack Auth's version, for example <code>3</code>. By default the driver autodetects the auth's version from the AuthURL.
     </td>
   </tr>
   <tr>
@@ -201,7 +201,7 @@ storage.
       no
     </td>
     <td>
-      The endpoint type used when connecting to swift. Possible values are `public`, `internal` and `admin`. Default is `public`.
+      The endpoint type used when connecting to swift. Possible values are <code>public</code>, <code>internal</code>, and <code>admin</code>. Default is <code>public</code>.
     </td>
   </tr>
 </table>
@@ -218,7 +218,6 @@ configuration file can specify the following optional parameters :
     <td>
     <p>
     Specify whether to use container secret key to generate temporary URL when set to true, or the account secret key otherwise.</p>
-    </p>
     </td>
 </tr>
 <tr>
@@ -236,7 +235,6 @@ configuration file can specify the following optional parameters :
       - POST
       - DELETE
     </code>
-    </p>
     </td>
 </tr>
 </table>
