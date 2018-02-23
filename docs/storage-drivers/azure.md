@@ -16,9 +16,9 @@ An implementation of the `storagedriver.StorageDriver` interface which uses [Mic
 | `realm`       | no       | Domain name suffix for the Storage Service API endpoint. For example realm for "Azure in China" would be `core.chinacloudapi.cn` and realm for "Azure Government" would be `core.usgovcloudapi.net`. By default, this is `core.windows.net`.                        |
 
 
-## Related Information
+## Related information
 
 * To get information about
-[azure-blob-storage](http://azure.microsoft.com/en-us/services/storage/) visit
+[azure-blob-storage](http://azure.microsoft.com/en-us/services/storage/), visit
 the Microsoft website.
 * You can use Microsoft's [Blob Service REST API](https://msdn.microsoft.com/en-us/library/azure/dd135733.aspx) to [create a storage container](https://msdn.microsoft.com/en-us/library/azure/dd179468.aspx).
