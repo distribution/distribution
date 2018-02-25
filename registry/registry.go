@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	"rsc.io/letsencrypt"
+	"golang.org/x/crypto/acme/autocert"
 
 	logstash "github.com/bshuster-repo/logrus-logstash-hook"
 	"github.com/bugsnag/bugsnag-go"
@@ -26,6 +26,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/yvasiyarov/gorelic"
+	"path"
 )
 
 // ServeCmd is a cobra command for running the registry.
@@ -126,7 +127,7 @@ func (registry *Registry) ListenAndServe() error {
 		return err
 	}
 
-	if config.HTTP.TLS.Certificate != "" || config.HTTP.TLS.LetsEncrypt.CacheFile != "" {
+	if config.HTTP.TLS.Certificate != "" || config.HTTP.TLS.LetsEncrypt.CacheFile != "" || config.HTTP.TLS.LetsEncrypt.CacheDir != "" {
 		tlsConf := &tls.Config{
 			ClientAuth:               tls.NoClientCert,
 			NextProtos:               nextProtos(config),
@@ -144,23 +145,31 @@ func (registry *Registry) ListenAndServe() error {
 			},
 		}
 
-		if config.HTTP.TLS.LetsEncrypt.CacheFile != "" {
+		c, err := resolveLetsEncryptCacheDirectory(config.HTTP.TLS.LetsEncrypt.CacheFile, config.HTTP.TLS.LetsEncrypt.CacheDir)
+		if err != nil {
+			return err
+		}
+
+		if c != "" {
 			if config.HTTP.TLS.Certificate != "" {
 				return fmt.Errorf("cannot specify both certificate and Let's Encrypt")
 			}
-			var m letsencrypt.Manager
-			if err := m.CacheFile(config.HTTP.TLS.LetsEncrypt.CacheFile); err != nil {
-				return err
+
+			m := &autocert.Manager{
+				Cache:  autocert.DirCache(c),
+				Prompt: autocert.AcceptTOS,
+				Email:  config.HTTP.TLS.LetsEncrypt.Email,
 			}
-			if !m.Registered() {
-				if err := m.Register(config.HTTP.TLS.LetsEncrypt.Email, nil); err != nil {
-					return err
-				}
-			}
+
 			if len(config.HTTP.TLS.LetsEncrypt.Hosts) > 0 {
-				m.SetHosts(config.HTTP.TLS.LetsEncrypt.Hosts)
+				m.HostPolicy = autocert.HostWhitelist(config.HTTP.TLS.LetsEncrypt.Hosts...)
 			}
+
 			tlsConf.GetCertificate = m.GetCertificate
+
+			if config.HTTP.TLS.LetsEncrypt.HTTPChallengeEnabled {
+				registry.configureLetsEncryptChallenge(m, config.HTTP.TLS.LetsEncrypt.HTTPChallengePort)
+			}
 		} else {
 			tlsConf.Certificates = make([]tls.Certificate, 1)
 			tlsConf.Certificates[0], err = tls.LoadX509KeyPair(config.HTTP.TLS.Certificate, config.HTTP.TLS.Key)
@@ -198,6 +207,44 @@ func (registry *Registry) ListenAndServe() error {
 	}
 
 	return registry.server.Serve(ln)
+}
+
+// configureLetsEncryptChallenge adds a listener on port 80 for a "http-01" challenge.
+// This is required because Let's Encrypt disabled TLS-SNI-01 and TLS-SNI-02 challenges on 09.01.2018.
+// See: https://community.letsencrypt.org/t/important-what-you-need-to-know-about-tls-sni-validation-issues/50811
+func (registry *Registry) configureLetsEncryptChallenge(manager *autocert.Manager, port int) {
+	s := &http.Server{
+		Handler: manager.HTTPHandler(nil),
+	}
+
+	if port == 0 {
+		port = 80
+	}
+
+	s.Addr = fmt.Sprintf(":%d", port)
+
+	go func() {
+		dcontext.GetLogger(registry.app).Infof("listening on %v, letsencrypt", s.Addr)
+		dcontext.GetLogger(registry.app).Fatal(s.ListenAndServe())
+	}()
+}
+
+func resolveLetsEncryptCacheDirectory(cacheFile, cacheDir string) (string, error) {
+	if cacheFile != "" && cacheDir != "" {
+		return "", fmt.Errorf("cachefile and cachedir specified. choose one")
+	}
+
+	if cacheDir != "" {
+		return cacheDir, nil
+	}
+
+	if cacheFile != "" {
+		p := path.Dir(cacheFile)
+		log.Infof("cachefile deprecated. migrate to cachedir instead. using '%v' as cachedir", p)
+		return p, nil
+	}
+
+	return "", fmt.Errorf("cachedir not specified")
 }
 
 func configureReporting(app *handlers.App) http.Handler {

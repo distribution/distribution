@@ -109,8 +109,25 @@ type Configuration struct {
 			// section will not be used.
 			LetsEncrypt struct {
 				// CacheFile specifies cache file to use for lets encrypt
-				// certificates and keys.
+				// certificates and keys. This field is deprecated in favour of
+				// CacheDir.
 				CacheFile string `yaml:"cachefile,omitempty"`
+
+				// CacheDir specifies a cache directory to use for lets encrypt
+				// certificates and keys.
+				CacheDir string `yaml:"cachedir,omitempty"`
+
+				// HTTPChallengeEnabled enables the http-01 challenge functionality.
+				HTTPChallengeEnabled bool `yaml:"httpchallengeenabled,omitempty"`
+
+				// HTTPChallengePort specifies the port at which the challenge
+				// handler will be exposed. Defaults to 80.
+				// Note: Let's Encrypt will always do this challenge over http,
+				// so make sure this port is ultimately exposed at port 80,
+				// e.g. when run inside a docker container -p 80:<challenge port>
+				//
+				// See: https://tools.ietf.org/html/draft-ietf-acme-acme-07#section-8.3
+				HTTPChallengePort int `yaml:"httpchallengeport,omitempty"`
 
 				// Email is the email to use during Let's Encrypt registration
 				Email string `yaml:"email,omitempty"`
