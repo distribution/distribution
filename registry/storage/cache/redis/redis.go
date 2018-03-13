@@ -72,7 +72,7 @@ func (rbds *redisBlobDescriptorService) Clear(ctx context.Context, dgst digest.D
 	defer conn.Close()
 
 	// Not atomic in redis <= 2.3
-	reply, err := conn.Do("HDEL", rbds.blobDescriptorHashKey(dgst), "digest", "length", "mediatype")
+	reply, err := conn.Do("HDEL", rbds.blobDescriptorHashKey(dgst), "digest", "size", "mediatype")
 	if err != nil {
 		return err
 	}
