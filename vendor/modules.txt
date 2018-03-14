@@ -61,6 +61,8 @@ github.com/denverdino/aliyungo/oss
 github.com/denverdino/aliyungo/util
 # github.com/dgrijalva/jwt-go v0.0.0-20170104182250-a601269ab70c
 github.com/dgrijalva/jwt-go
+# github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c
+github.com/docker/go-events
 # github.com/docker/go-metrics v0.0.1
 github.com/docker/go-metrics
 # github.com/docker/libtrust v0.0.0-20150114040149-fa567046d9b1
