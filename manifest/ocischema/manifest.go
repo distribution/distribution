@@ -97,6 +97,11 @@ func (m *DeserializedManifest) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	if manifest.MediaType != v1.MediaTypeImageManifest {
+		return fmt.Errorf("mediaType in manifest should be '%s' not '%s'",
+			v1.MediaTypeImageManifest, manifest.MediaType)
+	}
+
 	m.Manifest = manifest
 
 	return nil
