@@ -38,6 +38,13 @@ func init() {
 			return nil, distribution.Descriptor{}, err
 		}
 
+		if m.MediaType != MediaTypeManifestList {
+			err = fmt.Errorf("mediaType in manifest list should be '%s' not '%s'",
+				MediaTypeManifestList, m.MediaType)
+
+			return nil, distribution.Descriptor{}, err
+		}
+
 		dgst := digest.FromBytes(b)
 		return m, distribution.Descriptor{Digest: dgst, Size: int64(len(b)), MediaType: MediaTypeManifestList}, err
 	}
@@ -50,6 +57,13 @@ func init() {
 		m := new(DeserializedManifestList)
 		err := m.UnmarshalJSON(b)
 		if err != nil {
+			return nil, distribution.Descriptor{}, err
+		}
+
+		if m.MediaType != v1.MediaTypeImageIndex {
+			err = fmt.Errorf("mediaType in image index should be '%s' not '%s'",
+				v1.MediaTypeImageIndex, m.MediaType)
+
 			return nil, distribution.Descriptor{}, err
 		}
 
@@ -130,15 +144,23 @@ type DeserializedManifestList struct {
 // DeserializedManifestList which contains the resulting manifest list
 // and its JSON representation.
 func FromDescriptors(descriptors []ManifestDescriptor) (*DeserializedManifestList, error) {
-	var m ManifestList
+	var mediaType string
 	if len(descriptors) > 0 && descriptors[0].Descriptor.MediaType == v1.MediaTypeImageManifest {
-		m = ManifestList{
-			Versioned: OCISchemaVersion,
-		}
+		mediaType = v1.MediaTypeImageIndex
 	} else {
-		m = ManifestList{
-			Versioned: SchemaVersion,
-		}
+		mediaType = MediaTypeManifestList
+	}
+
+	return FromDescriptorsWithMediaType(descriptors, mediaType)
+}
+
+// For testing purposes, it's useful to be able to specify the media type explicitly
+func FromDescriptorsWithMediaType(descriptors []ManifestDescriptor, mediaType string) (*DeserializedManifestList, error) {
+	m := ManifestList{
+		Versioned: manifest.Versioned{
+			SchemaVersion: 2,
+			MediaType:     mediaType,
+		},
 	}
 
 	m.Manifests = make([]ManifestDescriptor, len(descriptors), len(descriptors))
