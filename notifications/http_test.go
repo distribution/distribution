@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/docker/distribution/manifest/schema1"
+	events "github.com/docker/go-events"
 )
 
 // TestHTTPSink mocks out an http endpoint and notifies it under a couple of
@@ -68,8 +69,8 @@ func TestHTTPSink(t *testing.T) {
 		&endpointMetricsHTTPStatusListener{safeMetrics: metrics})
 
 	// first make sure that the default transport gives x509 untrusted cert error
-	events := []Event{}
-	err := sink.Write(events...)
+	event := Event{}
+	err := sink.Write(event)
 	if !strings.Contains(err.Error(), "x509") {
 		t.Fatal("TLS server with default transport should give unknown CA error")
 	}
@@ -83,9 +84,9 @@ func TestHTTPSink(t *testing.T) {
 	}
 	sink = newHTTPSink(server.URL, 0, nil, tr,
 		&endpointMetricsHTTPStatusListener{safeMetrics: metrics})
-	err = sink.Write(events...)
+	err = sink.Write(event)
 	if err != nil {
-		t.Fatalf("unexpected error writing events: %v", err)
+		t.Fatalf("unexpected error writing event: %v", err)
 	}
 
 	// reset server to standard http server and sink to a basic sink
@@ -111,23 +112,26 @@ func TestHTTPSink(t *testing.T) {
 	}()
 
 	for _, tc := range []struct {
-		events     []Event // events to send
+		event      events.Event // events to send
 		url        string
 		failure    bool // true if there should be a failure.
 		statusCode int  // if not set, no status code should be incremented.
 	}{
 		{
 			statusCode: http.StatusOK,
-			events: []Event{
-				createTestEvent("push", "library/test", schema1.MediaTypeSignedManifest)},
+			event:      createTestEvent("push", "library/test", schema1.MediaTypeSignedManifest),
 		},
 		{
 			statusCode: http.StatusOK,
-			events: []Event{
-				createTestEvent("push", "library/test", schema1.MediaTypeSignedManifest),
-				createTestEvent("push", "library/test", layerMediaType),
-				createTestEvent("push", "library/test", layerMediaType),
-			},
+			event:      createTestEvent("push", "library/test", schema1.MediaTypeSignedManifest),
+		},
+		{
+			statusCode: http.StatusOK,
+			event:      createTestEvent("push", "library/test", layerMediaType),
+		},
+		{
+			statusCode: http.StatusOK,
+			event:      createTestEvent("push", "library/test", layerMediaType),
 		},
 		{
 			statusCode: http.StatusTemporaryRedirect,
@@ -143,14 +147,17 @@ func TestHTTPSink(t *testing.T) {
 		},
 	} {
 
-		if tc.failure {
-			expectedMetrics.Failures += len(tc.events)
-		} else {
-			expectedMetrics.Successes += len(tc.events)
-		}
+		_, ok := tc.event.(Event)
+		if ok {
+			if tc.failure {
+				expectedMetrics.Failures++
+			} else {
+				expectedMetrics.Successes++
+			}
 
-		if tc.statusCode > 0 {
-			expectedMetrics.Statuses[fmt.Sprintf("%d %s", tc.statusCode, http.StatusText(tc.statusCode))] += len(tc.events)
+			if tc.statusCode > 0 {
+				expectedMetrics.Statuses[fmt.Sprintf("%d %s", tc.statusCode, http.StatusText(tc.statusCode))]++
+			}
 		}
 
 		url := tc.url
@@ -163,8 +170,10 @@ func TestHTTPSink(t *testing.T) {
 
 		t.Logf("testcase: %v, fail=%v", url, tc.failure)
 		// Try a simple event emission.
-		err := sink.Write(tc.events...)
-
+		err := sink.Write(tc.event)
+		if err != nil {
+			t.Logf("%v", err)
+		}
 		if !tc.failure {
 			if err != nil {
 				t.Fatalf("unexpected error send event: %v", err)

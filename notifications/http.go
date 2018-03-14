@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	events "github.com/docker/go-events"
 )
 
 // httpSink implements a single-flight, http notification endpoint. This is
@@ -45,15 +47,15 @@ func newHTTPSink(u string, timeout time.Duration, headers http.Header, transport
 
 // httpStatusListener is called on various outcomes of sending notifications.
 type httpStatusListener interface {
-	success(status int, events ...Event)
-	failure(status int, events ...Event)
-	err(err error, events ...Event)
+	success(status int, event events.Event)
+	failure(status int, events events.Event)
+	err(err error, events events.Event)
 }
 
 // Accept makes an attempt to notify the endpoint, returning an error if it
 // fails. It is the caller's responsibility to retry on error. The events are
 // accepted or rejected as a group.
-func (hs *httpSink) Write(events ...Event) error {
+func (hs *httpSink) Write(event events.Event) error {
 	hs.mu.Lock()
 	defer hs.mu.Unlock()
 	defer hs.client.Transport.(*headerRoundTripper).CloseIdleConnections()
@@ -63,7 +65,7 @@ func (hs *httpSink) Write(events ...Event) error {
 	}
 
 	envelope := Envelope{
-		Events: events,
+		Events: []events.Event{event},
 	}
 
 	// TODO(stevvooe): It is not ideal to keep re-encoding the request body on
@@ -73,7 +75,7 @@ func (hs *httpSink) Write(events ...Event) error {
 	p, err := json.MarshalIndent(envelope, "", "   ")
 	if err != nil {
 		for _, listener := range hs.listeners {
-			listener.err(err, events...)
+			listener.err(err, event)
 		}
 		return fmt.Errorf("%v: error marshaling event envelope: %v", hs, err)
 	}
@@ -82,7 +84,7 @@ func (hs *httpSink) Write(events ...Event) error {
 	resp, err := hs.client.Post(hs.url, EventsMediaType, body)
 	if err != nil {
 		for _, listener := range hs.listeners {
-			listener.err(err, events...)
+			listener.err(err, event)
 		}
 
 		return fmt.Errorf("%v: error posting: %v", hs, err)
@@ -94,7 +96,7 @@ func (hs *httpSink) Write(events ...Event) error {
 	switch {
 	case resp.StatusCode >= 200 && resp.StatusCode < 400:
 		for _, listener := range hs.listeners {
-			listener.success(resp.StatusCode, events...)
+			listener.success(resp.StatusCode, event)
 		}
 
 		// TODO(stevvooe): This is a little accepting: we may want to support
@@ -104,7 +106,7 @@ func (hs *httpSink) Write(events ...Event) error {
 		return nil
 	default:
 		for _, listener := range hs.listeners {
-			listener.failure(resp.StatusCode, events...)
+			listener.failure(resp.StatusCode, event)
 		}
 		return fmt.Errorf("%v: response status %v unaccepted", hs, resp.Status)
 	}

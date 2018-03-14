@@ -4,6 +4,8 @@ import (
 	"github.com/docker/distribution/configuration"
 	"net/http"
 	"time"
+
+	events "github.com/docker/go-events"
 )
 
 // EndpointConfig covers the optional configuration parameters for an active
@@ -41,7 +43,7 @@ func (ec *EndpointConfig) defaults() {
 // services when events are written. Writes are non-blocking and always
 // succeed for callers but events may be queued internally.
 type Endpoint struct {
-	Sink
+	events.Sink
 	url  string
 	name string
 
@@ -63,7 +65,7 @@ func NewEndpoint(name, url string, config EndpointConfig) *Endpoint {
 	endpoint.Sink = newHTTPSink(
 		endpoint.url, endpoint.Timeout, endpoint.Headers,
 		endpoint.Transport, endpoint.metrics.httpStatusListener())
-	endpoint.Sink = newRetryingSink(endpoint.Sink, endpoint.Threshold, endpoint.Backoff)
+	endpoint.Sink = events.NewRetryingSink(endpoint.Sink, events.NewBreaker(endpoint.Threshold, endpoint.Backoff))
 	endpoint.Sink = newEventQueue(endpoint.Sink, endpoint.metrics.eventQueueListener())
 	mediaTypes := append(config.Ignore.MediaTypes, config.IgnoredMediaTypes...)
 	endpoint.Sink = newIgnoredSink(endpoint.Sink, mediaTypes, config.Ignore.Actions)

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+
+	events "github.com/docker/go-events"
 )
 
 // EndpointMetrics track various actions taken by the endpoint, typically by
@@ -56,24 +58,36 @@ type endpointMetricsHTTPStatusListener struct {
 
 var _ httpStatusListener = &endpointMetricsHTTPStatusListener{}
 
-func (emsl *endpointMetricsHTTPStatusListener) success(status int, events ...Event) {
+func (emsl *endpointMetricsHTTPStatusListener) success(status int, event events.Event) {
 	emsl.safeMetrics.Lock()
 	defer emsl.safeMetrics.Unlock()
-	emsl.Statuses[fmt.Sprintf("%d %s", status, http.StatusText(status))] += len(events)
-	emsl.Successes += len(events)
+	evt, ok := event.(Event)
+	if !ok || (ok && evt.ID == "") {
+		return
+	}
+	emsl.Statuses[fmt.Sprintf("%d %s", status, http.StatusText(status))]++
+	emsl.Successes++
 }
 
-func (emsl *endpointMetricsHTTPStatusListener) failure(status int, events ...Event) {
+func (emsl *endpointMetricsHTTPStatusListener) failure(status int, event events.Event) {
 	emsl.safeMetrics.Lock()
 	defer emsl.safeMetrics.Unlock()
-	emsl.Statuses[fmt.Sprintf("%d %s", status, http.StatusText(status))] += len(events)
-	emsl.Failures += len(events)
+	evt, ok := event.(Event)
+	if !ok || (ok && evt.ID == "") {
+		return
+	}
+	emsl.Statuses[fmt.Sprintf("%d %s", status, http.StatusText(status))]++
+	emsl.Failures++
 }
 
-func (emsl *endpointMetricsHTTPStatusListener) err(err error, events ...Event) {
+func (emsl *endpointMetricsHTTPStatusListener) err(err error, event events.Event) {
 	emsl.safeMetrics.Lock()
 	defer emsl.safeMetrics.Unlock()
-	emsl.Errors += len(events)
+	evt, ok := event.(Event)
+	if !ok || (ok && evt.ID == "") {
+		return
+	}
+	emsl.Errors++
 }
 
 // endpointMetricsEventQueueListener maintains the incoming events counter and
@@ -82,17 +96,17 @@ type endpointMetricsEventQueueListener struct {
 	*safeMetrics
 }
 
-func (eqc *endpointMetricsEventQueueListener) ingress(events ...Event) {
+func (eqc *endpointMetricsEventQueueListener) ingress(event events.Event) {
 	eqc.Lock()
 	defer eqc.Unlock()
-	eqc.Events += len(events)
-	eqc.Pending += len(events)
+	eqc.Events++
+	eqc.Pending++
 }
 
-func (eqc *endpointMetricsEventQueueListener) egress(events ...Event) {
+func (eqc *endpointMetricsEventQueueListener) egress(event events.Event) {
 	eqc.Lock()
 	defer eqc.Unlock()
-	eqc.Pending -= len(events)
+	eqc.Pending--
 }
 
 // endpoints is global registry of endpoints used to report metrics to expvar

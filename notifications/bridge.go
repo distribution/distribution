@@ -8,6 +8,7 @@ import (
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/uuid"
+	events "github.com/docker/go-events"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -16,7 +17,7 @@ type bridge struct {
 	actor   ActorRecord
 	source  SourceRecord
 	request RequestRecord
-	sink    Sink
+	sink    events.Sink
 }
 
 var _ Listener = &bridge{}
@@ -31,7 +32,7 @@ type URLBuilder interface {
 // using the actor and source. Any urls populated in the events created by
 // this bridge will be created using the URLBuilder.
 // TODO(stevvooe): Update this to simply take a context.Context object.
-func NewBridge(ub URLBuilder, source SourceRecord, actor ActorRecord, request RequestRecord, sink Sink) Listener {
+func NewBridge(ub URLBuilder, source SourceRecord, actor ActorRecord, request RequestRecord, sink events.Sink) Listener {
 	return &bridge{
 		ub:      ub,
 		actor:   actor,
