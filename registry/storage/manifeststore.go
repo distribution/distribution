@@ -106,6 +106,18 @@ func (ms *manifestStore) Get(ctx context.Context, dgst digest.Digest, options ..
 			return ms.ocischemaHandler.Unmarshal(ctx, dgst, content)
 		case manifestlist.MediaTypeManifestList, v1.MediaTypeImageIndex:
 			return ms.manifestListHandler.Unmarshal(ctx, dgst, content)
+		case "":
+			// OCI image or image index - no media type in the content
+
+			// First see if it looks like an image index
+			res, err := ms.manifestListHandler.Unmarshal(ctx, dgst, content)
+			resIndex := res.(*manifestlist.DeserializedManifestList)
+			if err == nil && resIndex.Manifests != nil {
+				return resIndex, nil
+			}
+
+			// Otherwise, assume it must be an image manifest
+			return ms.ocischemaHandler.Unmarshal(ctx, dgst, content)
 		default:
 			return nil, distribution.ErrManifestVerification{fmt.Errorf("unrecognized manifest content type %s", versioned.MediaType)}
 		}
