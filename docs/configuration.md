@@ -236,6 +236,11 @@ notifications:
       backoff: 1s
       ignoredmediatypes:
         - application/octet-stream
+      ignore:
+        mediatypes:
+           - application/octet-stream
+        actions:
+           - pull
 redis:
   addr: localhost:6379
   password: asecret
@@ -858,6 +863,11 @@ notifications:
       backoff: 1s
       ignoredmediatypes:
         - application/octet-stream
+      ignore:
+        mediatypes:
+           - application/octet-stream
+        actions:
+           - pull
 ```
 
 The notifications option is **optional** and currently may contain a single
@@ -878,6 +888,14 @@ accept event notifications.
 | `threshold` | yes    | An integer specifying how long to wait before backing off a failure. |
 | `backoff` | yes      | How long the system backs off before retrying after a failure. A positive integer and an optional suffix indicating the unit of time, which may be `ns`, `us`, `ms`, `s`, `m`, or `h`. If you omit the unit of time, `ns` is used. |
 | `ignoredmediatypes`|no| A list of target media types to ignore. Events with these target media types are not published to the endpoint. |
+| `ignore`  |no| Events with these mediatypes or actions are not published to the endpoint. |
+
+#### `ignore`
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `mediatypes`|no| A list of target media types to ignore. Events with these target media types are not published to the endpoint. |
+| `actions`   |no| A list of actions to ignore. Events with these actions are not published to the endpoint. |
+
 
 ## `redis`
 

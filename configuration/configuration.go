@@ -561,6 +561,13 @@ type Endpoint struct {
 	Threshold         int           `yaml:"threshold"`         // circuit breaker threshold before backing off on failure
 	Backoff           time.Duration `yaml:"backoff"`           // backoff duration
 	IgnoredMediaTypes []string      `yaml:"ignoredmediatypes"` // target media types to ignore
+	Ignore            Ignore        `yaml:"ignore"`            // ignore event types
+}
+
+//Ignore configures mediaTypes and actions of the event, that it won't be propagated
+type Ignore struct {
+	MediaTypes []string `yaml:"mediatypes"` // target media types to ignore
+	Actions    []string `yaml:"actions"`    // ignore action types
 }
 
 // Reporting defines error reporting methods.

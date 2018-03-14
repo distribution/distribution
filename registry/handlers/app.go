@@ -450,6 +450,7 @@ func (app *App) configureEvents(configuration *configuration.Configuration) {
 			Backoff:           endpoint.Backoff,
 			Headers:           endpoint.Headers,
 			IgnoredMediaTypes: endpoint.IgnoredMediaTypes,
+			Ignore:            endpoint.Ignore,
 		})
 
 		sinks = append(sinks, endpoint)
