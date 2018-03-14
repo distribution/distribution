@@ -60,8 +60,8 @@ func init() {
 			return nil, distribution.Descriptor{}, err
 		}
 
-		if m.MediaType != v1.MediaTypeImageIndex {
-			err = fmt.Errorf("mediaType in image index should be '%s' not '%s'",
+		if m.MediaType != "" && m.MediaType != v1.MediaTypeImageIndex {
+			err = fmt.Errorf("if present, mediaType in image index should be '%s' not '%s'",
 				v1.MediaTypeImageIndex, m.MediaType)
 
 			return nil, distribution.Descriptor{}, err
@@ -205,5 +205,12 @@ func (m *DeserializedManifestList) MarshalJSON() ([]byte, error) {
 // Payload returns the raw content of the manifest list. The contents can be
 // used to calculate the content identifier.
 func (m DeserializedManifestList) Payload() (string, []byte, error) {
-	return m.MediaType, m.canonical, nil
+	var mediaType string
+	if m.MediaType == "" {
+		mediaType = v1.MediaTypeImageIndex
+	} else {
+		mediaType = m.MediaType
+	}
+
+	return mediaType, m.canonical, nil
 }

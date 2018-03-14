@@ -178,7 +178,7 @@ func mediaTypeTest(t *testing.T, mediaType string, shouldError bool) {
 }
 
 func TestMediaTypes(t *testing.T) {
-	mediaTypeTest(t, "", true)
+	mediaTypeTest(t, "", false)
 	mediaTypeTest(t, v1.MediaTypeImageManifest, false)
 	mediaTypeTest(t, v1.MediaTypeImageManifest+"XXX", true)
 }
