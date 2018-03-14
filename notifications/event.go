@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/docker/distribution"
+	events "github.com/docker/go-events"
 )
 
 // EventAction constants used in action field of Event.
@@ -30,7 +31,7 @@ const (
 type Envelope struct {
 	// Events make up the contents of the envelope. Events present in a single
 	// envelope are not necessarily related.
-	Events []Event `json:"events,omitempty"`
+	Events []events.Event `json:"events,omitempty"`
 }
 
 // TODO(stevvooe): The event type should be separate from the json format. It
@@ -148,16 +149,3 @@ var (
 	// retries will not be successful.
 	ErrSinkClosed = fmt.Errorf("sink: closed")
 )
-
-// Sink accepts and sends events.
-type Sink interface {
-	// Write writes one or more events to the sink. If no error is returned,
-	// the caller will assume that all events have been committed and will not
-	// try to send them again. If an error is received, the caller may retry
-	// sending the event. The caller should cede the slice of memory to the
-	// sink and not modify it after calling this method.
-	Write(events ...Event) error
-
-	// Close the sink, possibly waiting for pending events to flush.
-	Close() error
-}
