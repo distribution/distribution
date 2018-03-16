@@ -296,7 +296,9 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 		// Copy then delete fall back
 		linkErr := err.(*os.LinkError)
 		if errno, ok := linkErr.Err.(syscall.Errno); ok && errno == syscall.EXDEV || os.IsExist(err) {
-			err = d.copyFile(source, dest)
+			if err = d.copyFile(source, dest); err != nil {
+				return err
+			}
 			if err = os.RemoveAll(source); err != nil {
 				return err
 			}
