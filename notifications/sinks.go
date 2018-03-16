@@ -23,8 +23,8 @@ type eventQueue struct {
 
 // eventQueueListener is called when various events happen on the queue.
 type eventQueueListener interface {
-	ingress(event events.Event)
-	egress(event events.Event)
+	Ingress(event events.Event)
+	Egress(event events.Event)
 }
 
 // newEventQueue returns a queue to the provided sink. If the updater is non-
@@ -52,7 +52,7 @@ func (eq *eventQueue) Write(event events.Event) error {
 	}
 
 	for _, listener := range eq.listeners {
-		listener.ingress(event)
+		listener.Ingress(event)
 	}
 	eq.events.PushBack(event)
 	eq.cond.Signal() // signal waiters
@@ -91,7 +91,7 @@ func (eq *eventQueue) run() {
 		}
 
 		for _, listener := range eq.listeners {
-			listener.egress(event)
+			listener.Egress(event)
 		}
 	}
 }

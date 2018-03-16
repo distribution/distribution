@@ -1,9 +1,10 @@
 package notifications
 
 import (
-	"github.com/docker/distribution/configuration"
 	"net/http"
 	"time"
+
+	"github.com/docker/distribution/configuration"
 
 	events "github.com/docker/go-events"
 )
@@ -66,7 +67,9 @@ func NewEndpoint(name, url string, config EndpointConfig) *Endpoint {
 		endpoint.url, endpoint.Timeout, endpoint.Headers,
 		endpoint.Transport, endpoint.metrics.httpStatusListener())
 	endpoint.Sink = events.NewRetryingSink(endpoint.Sink, events.NewBreaker(endpoint.Threshold, endpoint.Backoff))
+	endpoint.Sink = events.NewListenerSink(endpoint.Sink, endpoint.metrics.eventQueueListener().Egress)
 	endpoint.Sink = newEventQueue(endpoint.Sink, endpoint.metrics.eventQueueListener())
+	endpoint.Sink = events.NewListenerSink(endpoint.Sink, endpoint.metrics.eventQueueListener().Ingress)
 	mediaTypes := append(config.Ignore.MediaTypes, config.IgnoredMediaTypes...)
 	endpoint.Sink = newIgnoredSink(endpoint.Sink, mediaTypes, config.Ignore.Actions)
 

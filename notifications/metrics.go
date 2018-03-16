@@ -96,14 +96,14 @@ type endpointMetricsEventQueueListener struct {
 	*safeMetrics
 }
 
-func (eqc *endpointMetricsEventQueueListener) ingress(event events.Event) {
+func (eqc *endpointMetricsEventQueueListener) Ingress(event events.Event) {
 	eqc.Lock()
 	defer eqc.Unlock()
 	eqc.Events++
 	eqc.Pending++
 }
 
-func (eqc *endpointMetricsEventQueueListener) egress(event events.Event) {
+func (eqc *endpointMetricsEventQueueListener) Egress(event events.Event) {
 	eqc.Lock()
 	defer eqc.Unlock()
 	eqc.Pending--
