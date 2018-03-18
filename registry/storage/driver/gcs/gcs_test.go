@@ -8,13 +8,13 @@ import (
 	"os"
 	"testing"
 
+	"cloud.google.com/go/storage"
 	dcontext "github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/testsuites"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/googleapi"
-	"google.golang.org/cloud/storage"
 	"gopkg.in/check.v1"
 )
 

@@ -1,7 +1,7 @@
 // Package gcs provides a storagedriver.StorageDriver implementation to
 // store blobs in Google cloud storage.
 //
-// This package leverages the google.golang.org/cloud/storage client library
+// This package leverages the cloud.google.com/go/storage client library
 //for interfacing with gcs.
 //
 // Because gcs is a key, value store the Stat call does not support last modification
@@ -30,6 +30,8 @@ import (
 	"strings"
 	"time"
 
+	cloud "cloud.google.com/go"
+	"cloud.google.com/go/storage"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/base"
 	"github.com/docker/distribution/registry/storage/driver/factory"
@@ -38,8 +40,6 @@ import (
 	"golang.org/x/oauth2/google"
 	"golang.org/x/oauth2/jwt"
 	"google.golang.org/api/googleapi"
-	"google.golang.org/cloud"
-	"google.golang.org/cloud/storage"
 )
 
 const (
@@ -259,7 +259,7 @@ func (d *driver) Reader(context context.Context, path string, offset int64) (io.
 }
 
 func getObject(client *http.Client, bucket string, name string, offset int64) (*http.Response, error) {
-	// copied from google.golang.org/cloud/storage#NewReader :
+	// copied from cloud.google.com/go/storage#NewReader :
 	// to set the additional "Range" header
 	u := &url.URL{
 		Scheme: "https",
