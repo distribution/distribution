@@ -15,8 +15,10 @@ import (
 
 	"github.com/aws/aws-sdk-go/service/cloudfront/sign"
 	dcontext "github.com/docker/distribution/context"
+	prometheus "github.com/docker/distribution/metrics"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/middleware"
+	"github.com/docker/go-metrics"
 )
 
 // cloudFrontStorageMiddleware provides a simple implementation of layerHandler that
@@ -31,6 +33,10 @@ type cloudFrontStorageMiddleware struct {
 }
 
 var _ storagedriver.StorageDriver = &cloudFrontStorageMiddleware{}
+
+var (
+	middlewareCounter = prometheus.MiddlewareNamespace.NewLabeledCounter("filter", "The total number of middleware hits", "type")
+)
 
 // newCloudFrontLayerHandler constructs and returns a new CloudFront
 // LayerHandler implementation.
@@ -183,14 +189,17 @@ func (lh *cloudFrontStorageMiddleware) URLFor(ctx context.Context, path string, 
 	keyer, ok := lh.StorageDriver.(S3BucketKeyer)
 	if !ok {
 		dcontext.GetLogger(ctx).Warn("the CloudFront middleware does not support this backend storage driver")
+		middlewareCounter.WithValues(lh.StorageDriver.Name()).Inc(1)
 		return lh.StorageDriver.URLFor(ctx, path, options)
 	}
 
 	if eligibleForS3(ctx, lh.awsIPs) {
+		middlewareCounter.WithValues("s3").Inc(1)
 		return lh.StorageDriver.URLFor(ctx, path, options)
 	}
 
 	// Get signed cloudfront url.
+	middlewareCounter.WithValues("cloudfront").Inc(1)
 	cfURL, err := lh.urlSigner.Sign(lh.baseURL+keyer.S3BucketKey(path), time.Now().Add(lh.duration))
 	if err != nil {
 		return "", err
@@ -201,4 +210,5 @@ func (lh *cloudFrontStorageMiddleware) URLFor(ctx context.Context, path string, 
 // init registers the cloudfront layerHandler backend.
 func init() {
 	storagemiddleware.Register("cloudfront", storagemiddleware.InitFunc(newCloudFrontStorageMiddleware))
+	metrics.Register(prometheus.MiddlewareNamespace)
 }
