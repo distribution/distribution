@@ -176,8 +176,8 @@ Running a registry only accessible on `localhost` has limited usefulness. In
 order to make your registry accessible to external hosts, you must first secure
 it using TLS.
 
-This example is extended in [Run a registry as a
-service](#run-a-registry-as-a-service) below.
+This example is extended in [Run the registry as a
+service](#run-the-registry-as-a-service) below.
 
 ### Get a certificate
 
