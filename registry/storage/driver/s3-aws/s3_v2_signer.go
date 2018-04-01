@@ -29,6 +29,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -82,24 +83,35 @@ var s3ParamsToSign = map[string]bool{
 // setv2Handlers will setup v2 signature signing on the S3 driver
 func setv2Handlers(svc *s3.S3) {
 	svc.Handlers.Build.PushBack(func(r *request.Request) {
-		parsedURL, err := url.Parse(r.HTTPRequest.URL.String())
+		_, err := url.Parse(r.HTTPRequest.URL.String())
 		if err != nil {
 			log.Fatalf("Failed to parse URL: %v", err)
 		}
-		r.HTTPRequest.URL.Opaque = parsedURL.Path
 	})
 
 	svc.Handlers.Sign.Clear()
-	svc.Handlers.Sign.PushBack(Sign)
+	svc.Handlers.Sign.PushBackNamed(SignRequestHandler)
 	svc.Handlers.Sign.PushBackNamed(corehandlers.BuildContentLengthHandler)
 }
 
-// Sign requests with signature version 2.
+// SignRequestHandler is a named request handler the SDK will use to sign
+// service client requests using the V2 signature
+var SignRequestHandler = request.NamedHandler{
+	Name: "v2.SignRequestHandler", Fn: SignSDKRequest,
+}
+
+// SignSDKRequest signs an AWS request with the V2 signature. This request
+// handler is useful when using third-party S3 implementations which don't
+// support V4 signatures.
 //
-// Will sign the requests with the service config's Credentials object
-// Signing is skipped if the credentials is the credentials.AnonymousCredentials
-// object.
-func Sign(req *request.Request) {
+// This function should not be used on its own, but in conjunction with an AWS
+// service client's API operation call. To sign a standalone request not
+// created by a service client's API operation method use the "Sign" or
+// "Presign" functions of the "Signer" type.
+//
+// If the credentials of the request's config are set to
+// credentials.AnonymousCredentials, the request will not be signed.
+func SignSDKRequest(req *request.Request) {
 	// If the request does not need to be signed ignore the signing of the
 	// request if the AnonymousCredentials object is used.
 	if req.Config.Credentials == credentials.AnonymousCredentials {
@@ -111,10 +123,10 @@ func Sign(req *request.Request) {
 		Time:        req.Time,
 		Credentials: req.Config.Credentials,
 	}
-	v2.Sign()
+	v2.Sign(req.ExpireTime)
 }
 
-func (v2 *signer) Sign() error {
+func (v2 *signer) Sign(exp time.Duration) error {
 	credValue, err := v2.Credentials.Get()
 	if err != nil {
 		return err
@@ -136,7 +148,7 @@ func (v2 *signer) Sign() error {
 	}
 	host, canonicalPath := parsedURL.Host, parsedURL.Path
 	v2.Request.Header["Host"] = []string{host}
-	v2.Request.Header["date"] = []string{v2.Time.In(time.UTC).Format(time.RFC1123)}
+	v2.Request.Header["Date"] = []string{v2.Time.In(time.UTC).Format(time.RFC1123)}
 	if credValue.SessionToken != "" {
 		v2.Request.Header["x-amz-security-token"] = []string{credValue.SessionToken}
 	}
@@ -173,10 +185,10 @@ func (v2 *signer) Sign() error {
 		xamz = strings.Join(sarray, "\n") + "\n"
 	}
 
-	expires := false
-	if v, ok := params["Expires"]; ok {
-		expires = true
-		date = v[0]
+	isPresign := exp != 0
+	if isPresign {
+		date = strconv.FormatInt(int64(exp/time.Second)+time.Now().Unix(), 10)
+		params["Expires"] = []string{date}
 		params["AWSAccessKeyId"] = []string{accessKey}
 	}
 
@@ -208,10 +220,11 @@ func (v2 *signer) Sign() error {
 	hash.Write([]byte(v2.stringToSign))
 	v2.signature = base64.StdEncoding.EncodeToString(hash.Sum(nil))
 
-	if expires {
-		params["Signature"] = []string{string(v2.signature)}
+	if isPresign {
+		params["Signature"] = []string{v2.signature}
+		v2.Request.URL.RawQuery = params.Encode()
 	} else {
-		headers["Authorization"] = []string{"AWS " + accessKey + ":" + string(v2.signature)}
+		headers["Authorization"] = []string{"AWS " + accessKey + ":" + v2.signature}
 	}
 
 	log.WithFields(log.Fields{
