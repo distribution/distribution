@@ -13,7 +13,7 @@ type EndpointConfig struct {
 	Threshold         int
 	Backoff           time.Duration
 	IgnoredMediaTypes []string
-	Transport         *http.Transport
+	Transport         *http.Transport `json:"-"`
 }
 
 // defaults set any zero-valued fields to a reasonable default.
