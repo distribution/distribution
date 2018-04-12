@@ -7,6 +7,7 @@ import (
 
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/storage/driver"
+	storageDriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 )
 
@@ -149,4 +150,48 @@ func TestWalkSkipDir(t *testing.T) {
 		t.Errorf("/a/b/c/e not skipped")
 	}
 
+}
+
+type changingFileSystem struct {
+	storageDriver.StorageDriver
+	fileset   []string
+	keptFiles map[string]bool
+}
+
+func (cfs *changingFileSystem) List(ctx context.Context, path string) ([]string, error) {
+	return cfs.fileset, nil
+}
+
+func (cfs *changingFileSystem) Stat(ctx context.Context, path string) (storageDriver.FileInfo, error) {
+	kept, ok := cfs.keptFiles[path]
+	if ok && kept {
+		return &storageDriver.FileInfoInternal{
+			FileInfoFields: storageDriver.FileInfoFields{
+				Path: path,
+			},
+		}, nil
+	}
+	return nil, storageDriver.PathNotFoundError{}
+}
+
+func TestWalkFileRemoved(t *testing.T) {
+	d := &changingFileSystem{
+		fileset: []string{"zoidberg", "bender"},
+		keptFiles: map[string]bool{
+			"zoidberg": true,
+		},
+	}
+	infos := []storageDriver.FileInfo{}
+	err := Walk(context.Background(), d, "", func(fileInfo storageDriver.FileInfo) error {
+		infos = append(infos, fileInfo)
+		return nil
+	})
+
+	if len(infos) != 1 || infos[0].Path() != "zoidberg" {
+		t.Errorf(fmt.Sprintf("unexpected path set during walk: %s", infos))
+	}
+
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
 }
