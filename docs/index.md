@@ -14,7 +14,7 @@ title: Docker Registry
 > offered as an add-on to Docker Enterprise subscriptions of Standard or
 > higher.
 >
-> [Go to Docker Trusted Registry](/datacenter/dtr/{{ site.dtr_version }}/guides/){: class="button outline-btn" }
+> [Go to Docker Trusted Registry](/ee/dtr/){: class="button outline-btn" }
 
 ## What it is
 
