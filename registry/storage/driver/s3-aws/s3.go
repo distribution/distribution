@@ -970,8 +970,16 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 	defer done("s3aws.ListObjectsV2Pages(%s)", path)
 	listObjectErr := d.S3.ListObjectsV2PagesWithContext(ctx, listObjectsInput, func(objects *s3.ListObjectsV2Output, lastPage bool) bool {
 
-		*objectCount += *objects.KeyCount
-		walkInfos := make([]walkInfoContainer, 0, *objects.KeyCount)
+		var count int64
+		if objects.KeyCount != nil {
+			count = *objects.KeyCount
+			*objectCount += *objects.KeyCount
+		} else {
+			count = int64(len(objects.Contents) + len(objects.CommonPrefixes))
+			*objectCount += count
+		}
+
+		walkInfos := make([]walkInfoContainer, 0, count)
 
 		for _, dir := range objects.CommonPrefixes {
 			commonPrefix := *dir.Prefix
