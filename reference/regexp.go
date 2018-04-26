@@ -29,8 +29,18 @@ var (
 	// allowed by DNS to ensure backwards compatibility with Docker image
 	// names.
 	DomainRegexp = expression(
-		domainComponentRegexp,
-		optional(repeated(literal(`.`), domainComponentRegexp)),
+		alternate(
+			expression(
+				expression(literal(`[`),
+					repeated(match(`(?:[[:xdigit:]]|:)`)),
+					optional(match(`%`), match(`[a-zA-Z0-9-._~]+`)),
+					literal(`]`),
+				),
+			),
+			expression(domainComponentRegexp,
+				optional(repeated(literal(`.`), domainComponentRegexp)),
+			),
+		),
 		optional(literal(`:`), match(`[0-9]+`)))
 
 	// TagRegexp matches valid tag names. From docker/docker:graph/tags.go.
@@ -140,4 +150,18 @@ func capture(res ...*regexp.Regexp) *regexp.Regexp {
 // anchored anchors the regular expression by adding start and end delimiters.
 func anchored(res ...*regexp.Regexp) *regexp.Regexp {
 	return match(`^` + expression(res...).String() + `$`)
+}
+
+// alternate wraps the regexp in a non-capturing group with each
+// expression separated by '|'
+func alternate(res ...*regexp.Regexp) *regexp.Regexp {
+	var s string
+	for i, re := range res {
+		if i > 0 {
+			s += `|`
+		}
+		s += re.String()
+	}
+
+	return match(`(?:` + s + `)`)
 }

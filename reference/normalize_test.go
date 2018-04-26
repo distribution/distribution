@@ -22,6 +22,9 @@ func TestValidateReferenceName(t *testing.T) {
 		"127.0.0.1:5000/docker/docker",
 		"127.0.0.1:5000/library/debian",
 		"127.0.0.1:5000/debian",
+		"[fc00::1%eth0]:5000/docker/docker",
+		"[fc00::1%eth0]:5000/library/debian",
+		"[fc00::1%eth0]:5000/debian",
 		"thisisthesongthatneverendsitgoesonandonandonthisisthesongthatnev",
 
 		// This test case was moved from invalid to valid since it is valid input

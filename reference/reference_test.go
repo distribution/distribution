@@ -78,6 +78,68 @@ func TestReferenceParse(t *testing.T) {
 			repository: "test:5000/repo",
 		},
 		{
+			input: "[fc00::1]:tag",
+			err:   ErrReferenceInvalidFormat,
+		},
+		{
+			input: "[fc00::1]:5000",
+			err:   ErrReferenceInvalidFormat,
+		},
+		{
+			input:      "[fc00::1]/repo",
+			domain:     "[fc00::1]",
+			repository: "[fc00::1]/repo",
+		},
+		{
+			input:      "[fc00::1]/repo:tag",
+			domain:     "[fc00::1]",
+			repository: "[fc00::1]/repo",
+			tag:        "tag",
+		},
+		{
+			input:      "[fc00::1]:5000/repo",
+			domain:     "[fc00::1]:5000",
+			repository: "[fc00::1]:5000/repo",
+		},
+		{
+			input:      "[fc00::1]:5000/repo:tag",
+			domain:     "[fc00::1]:5000",
+			repository: "[fc00::1]:5000/repo",
+			tag:        "tag",
+		},
+		{
+			input:      "[fc00::1]:5000/repo@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+			domain:     "[fc00::1]:5000",
+			repository: "[fc00::1]:5000/repo",
+			digest:     "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+		},
+		{
+			input:      "[fc00::1]:5000/repo:tag@sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+			domain:     "[fc00::1]:5000",
+			repository: "[fc00::1]:5000/repo",
+			tag:        "tag",
+			digest:     "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+		},
+		{
+			input:      "[fc00::]:5000/repo",
+			domain:     "[fc00::]:5000",
+			repository: "[fc00::]:5000/repo",
+		},
+		{
+			input:      "[::1]:5000/repo",
+			domain:     "[::1]:5000",
+			repository: "[::1]:5000/repo",
+		},
+		{
+			input:      "[fc00::1%eth0]:5000/repo",
+			domain:     "[fc00::1%eth0]:5000",
+			repository: "[fc00::1%eth0]:5000/repo",
+		},
+		{
+			input: "[fc00::1%@invalidzone]:5000/repo",
+			err:   ErrReferenceInvalidFormat,
+		},
+		{
 			input: "",
 			err:   ErrNameEmpty,
 		},
