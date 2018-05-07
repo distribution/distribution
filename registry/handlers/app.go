@@ -31,6 +31,7 @@ import (
 	"github.com/docker/distribution/registry/proxy"
 	"github.com/docker/distribution/registry/storage"
 	memorycache "github.com/docker/distribution/registry/storage/cache/memory"
+	cacheprovider "github.com/docker/distribution/registry/storage/cache/provider"
 	rediscache "github.com/docker/distribution/registry/storage/cache/redis"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/factory"
@@ -282,7 +283,20 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 			dcontext.GetLogger(app).Infof("using inmemory blob descriptor cache")
 		default:
 			if v != "" {
-				dcontext.GetLogger(app).Warnf("unknown cache type %q, caching disabled", config.Storage["cache"])
+				name, ok := v.(string)
+				if !ok {
+					panic(fmt.Sprintf("unexpected type of value %T (string expected)", v))
+				}
+				cacheProvider, err := cacheprovider.Get(app, name, cc)
+				if err != nil {
+					panic("unable to initialize cache provider: " + err.Error())
+				}
+				localOptions := append(options, storage.BlobDescriptorCacheProvider(cacheProvider))
+				app.registry, err = storage.NewRegistry(app, app.driver, localOptions...)
+				if err != nil {
+					panic("could not create registry: " + err.Error())
+				}
+				dcontext.GetLogger(app).Infof("using %s blob descriptor cache", name)
 			}
 		}
 	}
