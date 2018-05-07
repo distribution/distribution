@@ -177,7 +177,7 @@ func FromParameters(parameters map[string]interface{}) (storagedriver.StorageDri
 			return nil, fmt.Errorf("Failed to marshal gcs credentials to json")
 		}
 
-		jwtConf, err := google.JWTConfigFromJSON(data, storage.ScopeFullControl)
+		jwtConf, err = google.JWTConfigFromJSON(data, storage.ScopeFullControl)
 		if err != nil {
 			return nil, err
 		}
