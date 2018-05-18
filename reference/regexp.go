@@ -1,6 +1,9 @@
 package reference
 
-import "regexp"
+import (
+	"regexp"
+	"strconv"
+)
 
 var (
 	// alphaNumericRegexp defines the alpha numeric atom, typically a
@@ -24,18 +27,52 @@ var (
 	// and followed by an optional port.
 	domainComponentRegexp = match(`(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])`)
 
+	// ipv6Regexp restricts the registry domain component of a repository
+	// name to valid IPv6 addresses
+	ipv6Regexp = alternate(
+		expression(exactly(6, h16Regexp, match(`:`)), ls32Regexp),
+		expression(match(`::`), exactly(5, h16Regexp, match(`:`)), ls32Regexp),
+		expression(optional(h16Regexp), match(`::`), exactly(4, h16Regexp, match(`:`)), ls32Regexp),
+		expression(optional(between(0, 1, h16Regexp, match(`:`)), h16Regexp), match(`::`), exactly(3, h16Regexp, match(`:`)), ls32Regexp),
+		expression(optional(between(0, 2, h16Regexp, match(`:`)), h16Regexp), match(`::`), exactly(2, h16Regexp, match(`:`)), ls32Regexp),
+		expression(optional(between(0, 3, h16Regexp, match(`:`)), h16Regexp), match(`::`), h16Regexp, match(`:`), ls32Regexp),
+		expression(optional(between(0, 4, h16Regexp, match(`:`)), h16Regexp), match(`::`), ls32Regexp),
+		expression(optional(between(0, 5, h16Regexp, match(`:`)), h16Regexp), match(`::`), h16Regexp),
+		expression(optional(between(0, 6, h16Regexp, match(`:`)), h16Regexp), match(`::`)),
+	)
+
+	// ls32Regexp represents the lowest 32 bits of an ipv6 address
+	ls32Regexp = alternate(
+		expression(h16Regexp, literal(`:`), h16Regexp),
+		ipv4Regexp,
+	)
+
+	// h16Regexp represents 1 to 4 hexadecimal numbers used in ipv6 addresses
+	h16Regexp = match(`[[:xdigit:]]{1,4}`)
+
+	// ipv4Regex matches ipv4 addresses
+	ipv4Regexp = expression(
+		d8Regexp, literal(`.`),
+		d8Regexp, literal(`.`),
+		d8Regexp, literal(`.`),
+		d8Regexp,
+	)
+
+	// d8Regexp matches the textual representation of one octet in ipv4 addresses
+	d8Regexp = match(`(?:[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])`)
+
 	// DomainRegexp defines the structure of potential domain components
 	// that may be part of image names. This is purposely a subset of what is
 	// allowed by DNS to ensure backwards compatibility with Docker image
-	// names.
+	// names. In additon to matching potential domain components, it also supports
+	// matching IPv6 addresses with an optional zone id for registries without
+	// domain name resolution.
 	DomainRegexp = expression(
 		alternate(
-			expression(
-				expression(literal(`[`),
-					repeated(match(`(?:[[:xdigit:]]|:)`)),
-					optional(match(`%`), match(`[a-zA-Z0-9-._~]+`)),
-					literal(`]`),
-				),
+			expression(literal(`[`),
+				ipv6Regexp,
+				optional(literal(`%`), match(`[a-zA-Z0-9-._~]+`)),
+				literal(`]`),
 			),
 			expression(domainComponentRegexp,
 				optional(repeated(literal(`.`), domainComponentRegexp)),
@@ -150,6 +187,30 @@ func capture(res ...*regexp.Regexp) *regexp.Regexp {
 // anchored anchors the regular expression by adding start and end delimiters.
 func anchored(res ...*regexp.Regexp) *regexp.Regexp {
 	return match(`^` + expression(res...).String() + `$`)
+}
+
+// exactly wraps the regexp in a non-capturing group to match
+// exactly n number of times
+func exactly(n int, res ...*regexp.Regexp) *regexp.Regexp {
+	return match(`(?:` + expression(res...).String() + `){` + strconv.Itoa(n) + `}`)
+}
+
+// atLeast wraps the regexp in a non-capturing group to match
+// at least n number of times
+func atLeast(n int, res ...*regexp.Regexp) *regexp.Regexp {
+	return match(`(?:` + expression(res...).String() + `){` + strconv.Itoa(n) + `,}`)
+}
+
+// atMost wraps the regexp in a non-capturing group to match
+// at most m number of times
+func atMost(m int, res ...*regexp.Regexp) *regexp.Regexp {
+	return match(`(?:` + expression(res...).String() + `){,` + strconv.Itoa(m) + `}`)
+}
+
+// between wraps the regexp in a non-capturing group to match
+// between n and m number of times
+func between(n, m int, res ...*regexp.Regexp) *regexp.Regexp {
+	return match(`(?:` + expression(res...).String() + `){` + strconv.Itoa(n) + `,` + strconv.Itoa(m) + `}`)
 }
 
 // alternate wraps the regexp in a non-capturing group with each

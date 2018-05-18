@@ -5,12 +5,26 @@
 //
 // 	reference                       := name [ ":" tag ] [ "@" digest ]
 //	name                            := [domain '/'] path-component ['/' path-component]*
-//	domain                          := domain-component ['.' domain-component]* [':' port-number]
+//	domain                          := ( '[' ipv6 [ '%' zone-id ] ']' | domain-component ['.' domain-component]*) [':' port-number]
 //	domain-component                := /([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])/
 //	port-number                     := /[0-9]+/
 //	path-component                  := alpha-numeric [separator alpha-numeric]*
 // 	alpha-numeric                   := /[a-z0-9]+/
 //	separator                       := /[_.]|__|[-]*/
+//	ipv6                            :=                               ( h16 ':' ){6} ls32 |
+//	                                :=                          '::' ( h16 ':' ){5} ls32 |
+//	                                := [                  h16 ] '::' ( h16 ':' ){4} ls32 |
+//	                                := [ ( h16 ':' ){0,1} h16 ] '::' ( h16 ':' ){3} ls32 |
+//	                                := [ ( h16 ':' ){0,2} h16 ] '::' ( h16 ':' ){2} ls32 |
+//	                                := [ ( h16 ':' ){0,3} h16 ] '::'   h16 ':'      ls32 |
+//	                                := [ ( h16 ':' ){0,4} h16 ] '::'                ls32 |
+//	                                := [ ( h16 ':' ){0,5} h16 ] '::'                 h16 |
+//	                                := [ ( h16 ':' ){0,6} h16 ] '::'
+//	ls32                            := h16 ':' h16 | ipv4
+//	h16                             := /[a-fA-F0-9]{1,4}/
+//	ipv4                            := d8 '.' d8 '.' d8 '.' d8
+//	d8                              := /[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5]/
+//	zone-id                         := /[a-zA-Z0-9-._~]+/
 //
 //	tag                             := /[\w][\w.-]{0,127}/
 //

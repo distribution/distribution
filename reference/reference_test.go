@@ -86,6 +86,64 @@ func TestReferenceParse(t *testing.T) {
 			err:   ErrReferenceInvalidFormat,
 		},
 		{
+			input: "[fc00::1::1]/repo",
+			err:   ErrReferenceInvalidFormat,
+		},
+		{
+			input: "[::fc00:1:1::]/repo",
+			err:   ErrReferenceInvalidFormat,
+		},
+		{
+			input: "[fc00::00001]/repo",
+			err:   ErrReferenceInvalidFormat,
+		},
+		{
+			input: "[fc00]/repo",
+			err:   ErrReferenceInvalidFormat,
+		},
+		{
+			input: "[someinvalidstring]/repo",
+			err:   ErrReferenceInvalidFormat,
+		},
+		{
+			input: "[:::]/repo",
+			err:   ErrReferenceInvalidFormat,
+		},
+		{
+			input: "[fc00::300.168.134.145]/repo",
+			err:   ErrReferenceInvalidFormat,
+		},
+		{
+			input:      "[2001:0db8:85a3:0000:0000:8a2e:0370:7334]/repo",
+			domain:     "[2001:0db8:85a3:0000:0000:8a2e:0370:7334]",
+			repository: "[2001:0db8:85a3:0000:0000:8a2e:0370:7334]/repo",
+		},
+		{
+			input:      "[2001:0db8:85a3:0:0:8a2e:0370:7334]/repo",
+			domain:     "[2001:0db8:85a3:0:0:8a2e:0370:7334]",
+			repository: "[2001:0db8:85a3:0:0:8a2e:0370:7334]/repo",
+		},
+		{
+			input:      "[2001:0db8:85a3::8a2e:0370:7334]/repo",
+			domain:     "[2001:0db8:85a3::8a2e:0370:7334]",
+			repository: "[2001:0db8:85a3::8a2e:0370:7334]/repo",
+		},
+		{
+			input:      "[fc00::192.168.134.145]/repo",
+			domain:     "[fc00::192.168.134.145]",
+			repository: "[fc00::192.168.134.145]/repo",
+		},
+		{
+			input:      "[fc00::192.168.134.145%eth0]/repo",
+			domain:     "[fc00::192.168.134.145%eth0]",
+			repository: "[fc00::192.168.134.145%eth0]/repo",
+		},
+		{
+			input:      "[::]/repo",
+			domain:     "[::]",
+			repository: "[::]/repo",
+		},
+		{
 			input:      "[fc00::1]/repo",
 			domain:     "[fc00::1]",
 			repository: "[fc00::1]/repo",
@@ -376,6 +434,11 @@ func TestSplitHostname(t *testing.T) {
 		{
 			input:  "xn--n3h.com:18080/foo",
 			domain: "xn--n3h.com:18080",
+			name:   "foo",
+		},
+		{
+			input:  "[fc00::1%eth0]:8080/foo",
+			domain: "[fc00::1%eth0]:8080",
 			name:   "foo",
 		},
 	}
