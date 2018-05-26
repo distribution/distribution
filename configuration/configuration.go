@@ -9,6 +9,8 @@ import (
 	"reflect"
 	"strings"
 	"time"
+
+	yaml "gopkg.in/yaml.v2"
 )
 
 // Configuration is a versioned registry configuration, intended to be provided by a yaml file, and
@@ -481,6 +483,22 @@ func (storage Storage) MarshalYAML() (interface{}, error) {
 	return map[string]Parameters(storage), nil
 }
 
+// Fix issue #2464
+func (storage Storage) combineWith(newStorage Storage) {
+	for k, v := range newStorage {
+		// use origin config by default
+		if _, ok := storage[k]; ok {
+			continue
+		}
+		// keep the new type
+		if k == newStorage.Type() {
+			continue
+		}
+		// append newStorage keys
+		storage.setParameter(k, v)
+	}
+}
+
 // Auth defines the configuration for registry authorization.
 type Auth map[string]Parameters
 
@@ -658,6 +676,14 @@ func Parse(rd io.Reader) (*Configuration, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	fileConfig := new(Configuration)
+	// Since `p.Parse` handled the unmarshal error
+	// We don't have to handle it twice
+	yaml.Unmarshal(in, &fileConfig)
+
+	// Combine parsed config with file config
+	config.Storage.combineWith(fileConfig.Storage)
 
 	return config, nil
 }
