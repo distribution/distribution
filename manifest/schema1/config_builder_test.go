@@ -3,15 +3,16 @@ package schema1
 import (
 	"bytes"
 	"compress/gzip"
+	"context"
 	"io"
 	"reflect"
 	"testing"
 
 	"github.com/docker/distribution"
-	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/digest"
+	dcontext "github.com/docker/distribution/context"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/libtrust"
+	"github.com/opencontainers/go-digest"
 )
 
 type mockBlobService struct {
@@ -197,9 +198,13 @@ func TestConfigBuilder(t *testing.T) {
 
 	bs := &mockBlobService{descriptors: make(map[digest.Digest]distribution.Descriptor)}
 
-	ref, err := reference.ParseNamed("testrepo:testtag")
+	ref, err := reference.WithName("testrepo")
 	if err != nil {
 		t.Fatalf("could not parse reference: %v", err)
+	}
+	ref, err = reference.WithTag(ref, "testtag")
+	if err != nil {
+		t.Fatalf("could not add tag: %v", err)
 	}
 
 	builder := NewConfigManifestBuilder(bs, pk, ref, []byte(imgJSON))
@@ -210,13 +215,13 @@ func TestConfigBuilder(t *testing.T) {
 		}
 	}
 
-	signed, err := builder.Build(context.Background())
+	signed, err := builder.Build(dcontext.Background())
 	if err != nil {
 		t.Fatalf("Build returned error: %v", err)
 	}
 
 	// Check that the gzipped empty layer tar was put in the blob store
-	_, err = bs.Stat(context.Background(), digestSHA256GzippedEmptyTar)
+	_, err = bs.Stat(dcontext.Background(), digestSHA256GzippedEmptyTar)
 	if err != nil {
 		t.Fatal("gzipped empty tar was not put in the blob store")
 	}

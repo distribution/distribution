@@ -1,18 +1,19 @@
 package storage
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"math/rand"
 	"testing"
 
 	"github.com/docker/distribution"
-	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/digest"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/cache/memory"
 	"github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/docker/distribution/testutil"
+	"github.com/opencontainers/go-digest"
 )
 
 type setupEnv struct {
@@ -43,7 +44,7 @@ func setupFS(t *testing.T) *setupEnv {
 	}
 
 	for _, repo := range repos {
-		makeRepo(t, ctx, repo, registry)
+		makeRepo(ctx, t, repo, registry)
 	}
 
 	expected := []string{
@@ -66,8 +67,8 @@ func setupFS(t *testing.T) *setupEnv {
 	}
 }
 
-func makeRepo(t *testing.T, ctx context.Context, name string, reg distribution.Namespace) {
-	named, err := reference.ParseNamed(name)
+func makeRepo(ctx context.Context, t *testing.T, name string, reg distribution.Namespace) {
+	named, err := reference.WithName(name)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -170,7 +171,28 @@ func TestCatalogInParts(t *testing.T) {
 	if numFilled != 0 {
 		t.Errorf("Expected catalog fourth chunk err")
 	}
+}
 
+func TestCatalogEnumerate(t *testing.T) {
+	env := setupFS(t)
+
+	var repos []string
+	repositoryEnumerator := env.registry.(distribution.RepositoryEnumerator)
+	err := repositoryEnumerator.Enumerate(env.ctx, func(repoName string) error {
+		repos = append(repos, repoName)
+		return nil
+	})
+	if err != nil {
+		t.Errorf("Expected catalog enumerate err")
+	}
+
+	if len(repos) != len(env.expected) {
+		t.Errorf("Expected catalog enumerate doesn't have correct number of values")
+	}
+
+	if !testEq(repos, env.expected, len(env.expected)) {
+		t.Errorf("Expected catalog enumerate not over all values")
+	}
 }
 
 func testEq(a, b []string, size int) bool {
@@ -219,4 +241,84 @@ func TestCatalogWalkError(t *testing.T) {
 	if err == io.EOF {
 		t.Errorf("Expected catalog driver list error")
 	}
+}
+
+func BenchmarkPathCompareEqual(B *testing.B) {
+	B.StopTimer()
+	pp := randomPath(100)
+	// make a real copy
+	ppb := append([]byte{}, []byte(pp)...)
+	a, b := pp, string(ppb)
+
+	B.StartTimer()
+	for i := 0; i < B.N; i++ {
+		lessPath(a, b)
+	}
+}
+
+func BenchmarkPathCompareNotEqual(B *testing.B) {
+	B.StopTimer()
+	a, b := randomPath(100), randomPath(100)
+	B.StartTimer()
+
+	for i := 0; i < B.N; i++ {
+		lessPath(a, b)
+	}
+}
+
+func BenchmarkPathCompareNative(B *testing.B) {
+	B.StopTimer()
+	a, b := randomPath(100), randomPath(100)
+	B.StartTimer()
+
+	for i := 0; i < B.N; i++ {
+		c := a < b
+		c = c && false
+	}
+}
+
+func BenchmarkPathCompareNativeEqual(B *testing.B) {
+	B.StopTimer()
+	pp := randomPath(100)
+	a, b := pp, pp
+	B.StartTimer()
+
+	for i := 0; i < B.N; i++ {
+		c := a < b
+		c = c && false
+	}
+}
+
+var filenameChars = []byte("abcdefghijklmnopqrstuvwxyz0123456789")
+var separatorChars = []byte("._-")
+
+func randomPath(length int64) string {
+	path := "/"
+	for int64(len(path)) < length {
+		chunkLength := rand.Int63n(length-int64(len(path))) + 1
+		chunk := randomFilename(chunkLength)
+		path += chunk
+		remaining := length - int64(len(path))
+		if remaining == 1 {
+			path += randomFilename(1)
+		} else if remaining > 1 {
+			path += "/"
+		}
+	}
+	return path
+}
+
+func randomFilename(length int64) string {
+	b := make([]byte, length)
+	wasSeparator := true
+	for i := range b {
+		if !wasSeparator && i < len(b)-1 && rand.Intn(4) == 0 {
+			b[i] = separatorChars[rand.Intn(len(separatorChars))]
+			wasSeparator = true
+		} else {
+			b[i] = filenameChars[rand.Intn(len(filenameChars))]
+			wasSeparator = false
+		}
+	}
+	return string(b)
 }

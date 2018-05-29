@@ -1,10 +1,10 @@
 package storage
 
 import (
+	"context"
 	"testing"
 
 	"github.com/docker/distribution"
-	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 )
@@ -22,7 +22,7 @@ func testTagStore(t *testing.T) *tagsTestEnv {
 		t.Fatal(err)
 	}
 
-	repoRef, _ := reference.ParseNamed("a/b")
+	repoRef, _ := reference.WithName("a/b")
 	repo, err := reg.Repository(ctx, repoRef)
 	if err != nil {
 		t.Fatal(err)
@@ -84,8 +84,8 @@ func TestTagStoreUnTag(t *testing.T) {
 	desc := distribution.Descriptor{Digest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}
 
 	err := tags.Untag(ctx, "latest")
-	if err == nil {
-		t.Errorf("Expected error untagging non-existant tag")
+	if err != nil {
+		t.Error(err)
 	}
 
 	err = tags.Tag(ctx, "latest", desc)

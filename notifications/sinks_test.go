@@ -3,10 +3,11 @@ package notifications
 import (
 	"fmt"
 	"math/rand"
+	"reflect"
 	"sync"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	"testing"
 )
@@ -109,6 +110,42 @@ func TestEventQueue(t *testing.T) {
 
 	if metrics.Pending != 0 {
 		t.Fatalf("unexpected egress count: %d != %d", metrics.Pending, 0)
+	}
+}
+
+func TestIgnoredSink(t *testing.T) {
+	blob := createTestEvent("push", "library/test", "blob")
+	manifest := createTestEvent("pull", "library/test", "manifest")
+
+	type testcase struct {
+		ignoreMediaTypes []string
+		ignoreActions    []string
+		expected         []Event
+	}
+
+	cases := []testcase{
+		{nil, nil, []Event{blob, manifest}},
+		{[]string{"other"}, []string{"other"}, []Event{blob, manifest}},
+		{[]string{"blob"}, []string{"other"}, []Event{manifest}},
+		{[]string{"blob", "manifest"}, []string{"other"}, nil},
+		{[]string{"other"}, []string{"push"}, []Event{manifest}},
+		{[]string{"other"}, []string{"pull"}, []Event{blob}},
+		{[]string{"other"}, []string{"pull", "push"}, nil},
+	}
+
+	for _, c := range cases {
+		ts := &testSink{}
+		s := newIgnoredSink(ts, c.ignoreMediaTypes, c.ignoreActions)
+
+		if err := s.Write(blob, manifest); err != nil {
+			t.Fatalf("error writing event: %v", err)
+		}
+
+		ts.mu.Lock()
+		if !reflect.DeepEqual(ts.events, c.expected) {
+			t.Fatalf("unexpected events: %#v != %#v", ts.events, c.expected)
+		}
+		ts.mu.Unlock()
 	}
 }
 

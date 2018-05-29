@@ -1,24 +1,20 @@
 package storage
 
 import (
+	"context"
 	"errors"
 	"io"
 	"path"
 	"strings"
 
-	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/storage/driver"
 )
-
-// ErrFinishedWalk is used when the called walk function no longer wants
-// to accept any more values.  This is used for pagination when the
-// required number of repos have been found.
-var ErrFinishedWalk = errors.New("finished walk")
 
 // Returns a list, or partial list, of repositories in the registry.
 // Because it's a quite expensive operation, it should only be used when building up
 // an initial set of repositories.
 func (reg *registry) Repositories(ctx context.Context, repos []string, last string) (n int, err error) {
+	var finishedWalk bool
 	var foundRepos []string
 
 	if len(repos) == 0 {
@@ -30,26 +26,19 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 		return 0, err
 	}
 
-	err = Walk(ctx, reg.blobStore.driver, root, func(fileInfo driver.FileInfo) error {
-		filePath := fileInfo.Path()
-
-		// lop the base path off
-		repoPath := filePath[len(root)+1:]
-
-		_, file := path.Split(repoPath)
-		if file == "_layers" {
-			repoPath = strings.TrimSuffix(repoPath, "/_layers")
-			if pathGreaterThan(repoPath, last) {
-				foundRepos = append(foundRepos, repoPath)
-			}
-			return ErrSkipDir
-		} else if strings.HasPrefix(file, "_") {
-			return ErrSkipDir
+	err = reg.blobStore.driver.Walk(ctx, root, func(fileInfo driver.FileInfo) error {
+		err := handleRepository(fileInfo, root, last, func(repoPath string) error {
+			foundRepos = append(foundRepos, repoPath)
+			return nil
+		})
+		if err != nil {
+			return err
 		}
 
 		// if we've filled our array, no need to walk any further
 		if len(foundRepos) == len(repos) {
-			return ErrFinishedWalk
+			finishedWalk = true
+			return driver.ErrSkipDir
 		}
 
 		return nil
@@ -57,9 +46,11 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 
 	n = copy(repos, foundRepos)
 
-	// Signal that we have no more entries by setting EOF
-	if len(foundRepos) <= len(repos) && (err == nil || err == ErrSkipDir) {
-		err = io.EOF
+	if err != nil {
+		return n, err
+	} else if !finishedWalk {
+		// We didn't fill buffer. No more records are available.
+		return n, io.EOF
 	}
 
 	return n, err
@@ -67,51 +58,91 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 
 // Enumerate applies ingester to each repository
 func (reg *registry) Enumerate(ctx context.Context, ingester func(string) error) error {
-	repoNameBuffer := make([]string, 100)
-	var last string
-	for {
-		n, err := reg.Repositories(ctx, repoNameBuffer, last)
-		if err != nil && err != io.EOF {
-			return err
+	root, err := pathFor(repositoriesRootPathSpec{})
+	if err != nil {
+		return err
+	}
+
+	err = reg.blobStore.driver.Walk(ctx, root, func(fileInfo driver.FileInfo) error {
+		return handleRepository(fileInfo, root, "", ingester)
+	})
+
+	return err
+}
+
+// lessPath returns true if one path a is less than path b.
+//
+// A component-wise comparison is done, rather than the lexical comparison of
+// strings.
+func lessPath(a, b string) bool {
+	// we provide this behavior by making separator always sort first.
+	return compareReplaceInline(a, b, '/', '\x00') < 0
+}
+
+// compareReplaceInline modifies runtime.cmpstring to replace old with new
+// during a byte-wise comparison.
+func compareReplaceInline(s1, s2 string, old, new byte) int {
+	// TODO(stevvooe): We are missing an optimization when the s1 and s2 have
+	// the exact same slice header. It will make the code unsafe but can
+	// provide some extra performance.
+
+	l := len(s1)
+	if len(s2) < l {
+		l = len(s2)
+	}
+
+	for i := 0; i < l; i++ {
+		c1, c2 := s1[i], s2[i]
+		if c1 == old {
+			c1 = new
 		}
 
-		if n == 0 {
-			break
+		if c2 == old {
+			c2 = new
 		}
 
-		last = repoNameBuffer[n-1]
-		for i := 0; i < n; i++ {
-			repoName := repoNameBuffer[i]
-			err = ingester(repoName)
-			if err != nil {
+		if c1 < c2 {
+			return -1
+		}
+
+		if c1 > c2 {
+			return +1
+		}
+	}
+
+	if len(s1) < len(s2) {
+		return -1
+	}
+
+	if len(s1) > len(s2) {
+		return +1
+	}
+
+	return 0
+}
+
+// handleRepository calls function fn with a repository path if fileInfo
+// has a path of a repository under root and that it is lexographically
+// after last. Otherwise, it will return ErrSkipDir. This should be used
+// with Walk to do handling with repositories in a storage.
+func handleRepository(fileInfo driver.FileInfo, root, last string, fn func(repoPath string) error) error {
+	filePath := fileInfo.Path()
+
+	// lop the base path off
+	repo := filePath[len(root)+1:]
+
+	_, file := path.Split(repo)
+	if file == "_layers" {
+		repo = strings.TrimSuffix(repo, "/_layers")
+		if lessPath(last, repo) {
+			if err := fn(repo); err != nil {
 				return err
 			}
 		}
-
-		if err == io.EOF {
-			break
-		}
+		return driver.ErrSkipDir
+	} else if strings.HasPrefix(file, "_") {
+		return driver.ErrSkipDir
 	}
+
 	return nil
-
-}
-
-func pathGreaterThan(pathX, pathY string) (b bool) {
-	splitPathX := strings.SplitN(pathX, "/", 2)
-	splitPathY := strings.SplitN(pathY, "/", 2)
-
-	if splitPathX[0] == splitPathY[0] {
-		if len(splitPathX) == 1 && len(splitPathY) == 1 {
-			return false
-		} else if len(splitPathX) == 1 && len(splitPathY) != 1 {
-			return false
-		} else if len(splitPathX) != 1 && len(splitPathY) == 1 {
-			return true
-		}
-
-		return pathGreaterThan(splitPathX[1], splitPathY[1])
-
-	}
-
-	return splitPathX[0] > splitPathY[0]
 }

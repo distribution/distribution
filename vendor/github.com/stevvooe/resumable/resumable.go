@@ -26,7 +26,15 @@
 // functions.
 package resumable
 
-import "hash"
+import (
+	"fmt"
+	"hash"
+)
+
+var (
+	// ErrBadState is returned if Restore fails post-unmarshaling validation.
+	ErrBadState = fmt.Errorf("bad hash state")
+)
 
 // Hash is the common interface implemented by all resumable hash functions.
 type Hash interface {

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"mime"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -94,6 +95,21 @@ func TestHTTPSink(t *testing.T) {
 	var expectedMetrics EndpointMetrics
 	expectedMetrics.Statuses = make(map[string]int)
 
+	closeL, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		t.Fatalf("unexpected error creating listener: %v", err)
+	}
+	defer closeL.Close()
+	go func() {
+		for {
+			c, err := closeL.Accept()
+			if err != nil {
+				return
+			}
+			c.Close()
+		}
+	}()
+
 	for _, tc := range []struct {
 		events     []Event // events to send
 		url        string
@@ -121,8 +137,8 @@ func TestHTTPSink(t *testing.T) {
 			failure:    true,
 		},
 		{
-			// Case where connection never goes through.
-			url:     "http://shoudlntresolve/",
+			// Case where connection is immediately closed
+			url:     closeL.Addr().String(),
 			failure: true,
 		},
 	} {
