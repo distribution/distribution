@@ -213,8 +213,20 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 	if file == nil {
 		return nil, storagedriver.PathNotFoundError{Path: path}
 	}
-	httpRes, _ := d.driveService.Files.Get(file.Id).Download()
-	byteData, _ := ioutil.ReadAll(httpRes.Body)
+	httpRes, err := d.driveService.Files.Get(file.Id).Download()
+	if err != nil {
+		return nil, storagedriver.Error{
+			DriverName: driverName,
+			Enclosed:   err,
+		}
+	}
+	byteData, err := ioutil.ReadAll(httpRes.Body)
+	if err != nil {
+		return nil, storagedriver.Error{
+			DriverName: driverName,
+			Enclosed:   err,
+		}
+	}
 	byteData = byteData[offset:]
 	return &bytesBuffer{bytes.NewBuffer(byteData)}, nil
 }
