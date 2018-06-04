@@ -40,7 +40,7 @@ func init() {
 			RootDirectory: rootDirectory,
 		}
 
-		return New(parameters), nil
+		return New(parameters)
 	}
 
 	testsuites.RegisterSuite(func() (storagedriver.StorageDriver, error) {

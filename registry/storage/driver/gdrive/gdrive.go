@@ -6,7 +6,7 @@
 //
 // Parameters :
 //
-// keyFile : A private service account key file in JSON file format that can be downloaded
+// keyfile : A private service account key file in JSON file format that can be downloaded
 //           from google api console.
 // rootdirectory : Folder name in google drive to store all registry files.
 //
@@ -16,6 +16,7 @@ package gdrive
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -23,7 +24,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/base"
 	"github.com/docker/distribution/registry/storage/driver/factory"
@@ -78,14 +78,14 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 
 func fromParametersImpl(parameters map[string]interface{}) (*DriverParameters, error) {
 
-	keyFile, ok := parameters["keyFile"]
+	keyFile, ok := parameters["keyfile"]
 	if !ok || fmt.Sprint(keyFile) == "" {
-		return nil, fmt.Errorf("No keyFile parameter provided")
+		return nil, fmt.Errorf("No keyfile parameter provided")
 	}
 
 	rootDirectory, ok := parameters["rootdirectory"]
 	if !ok || fmt.Sprint(rootDirectory) == "" {
-		return nil, fmt.Errorf("No rootDirectory parameter provided")
+		return nil, fmt.Errorf("No rootdirectory parameter provided")
 	}
 
 	params := &DriverParameters{
@@ -353,6 +353,12 @@ func (d *driver) Delete(ctx context.Context, subPath string) error {
 // May return an UnsupportedMethodErr in certain StorageDriver implementations.
 func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
 	return "", storagedriver.ErrUnsupportedMethod{}
+}
+
+// Walk traverses a filesystem defined within driver, starting
+// from the given path, calling f on each file
+func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn) error {
+	return storagedriver.WalkFallback(ctx, d, path, f)
 }
 
 type fileInfo struct {
