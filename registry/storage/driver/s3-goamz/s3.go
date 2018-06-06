@@ -576,7 +576,7 @@ func getPermissions() s3.ACL {
 func mustV4Auth(region string) bool {
 	switch region {
 	case "eu-central-1", "cn-north-1", "us-east-2",
-		"ca-central-1", "ap-south-1", "ap-northeast-2", "eu-west-2":
+		"ca-central-1", "ap-south-1", "ap-northeast-2", "eu-west-2", "eu-west-3":
 		return true
 	}
 	return false
