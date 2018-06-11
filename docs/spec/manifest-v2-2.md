@@ -128,7 +128,7 @@ image manifest based on the Content-Type returned in the HTTP response.
       "digest": "sha256:e692418e4cbaf90ca69d05a66403747baa33ee08806650b51fab815ad7fc331f",
       "platform": {
         "architecture": "ppc64le",
-        "os": "linux",
+        "os": "linux"
       }
     },
     {
