@@ -45,6 +45,21 @@ func init() {
 	if err != nil {
 		panic(fmt.Sprintf("Unable to register manifest: %s", err))
 	}
+
+	imageIndexFunc := func(b []byte) (distribution.Manifest, distribution.Descriptor, error) {
+		m := new(DeserializedManifestList)
+		err := m.UnmarshalJSON(b)
+		if err != nil {
+			return nil, distribution.Descriptor{}, err
+		}
+
+		dgst := digest.FromBytes(b)
+		return m, distribution.Descriptor{Digest: dgst, Size: int64(len(b)), MediaType: v1.MediaTypeImageIndex}, err
+	}
+	err = distribution.RegisterManifestSchema(v1.MediaTypeImageIndex, imageIndexFunc)
+	if err != nil {
+		panic(fmt.Sprintf("Unable to register OCI Image Index: %s", err))
+	}
 }
 
 // PlatformSpec specifies a platform where a particular image manifest is
