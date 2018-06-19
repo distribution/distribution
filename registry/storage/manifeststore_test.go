@@ -440,7 +440,7 @@ func testOCIManifestStorage(t *testing.T, testname string, includeMediaTypes boo
 	}
 
 	manifestDescriptors := []manifestlist.ManifestDescriptor{
-		manifestlist.ManifestDescriptor{
+		{
 			Descriptor: descriptor,
 			Platform:   platformSpec,
 		},

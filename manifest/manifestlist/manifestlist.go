@@ -154,7 +154,7 @@ func FromDescriptors(descriptors []ManifestDescriptor) (*DeserializedManifestLis
 	return FromDescriptorsWithMediaType(descriptors, mediaType)
 }
 
-// For testing purposes, it's useful to be able to specify the media type explicitly
+// FromDescriptorsWithMediaType is for testing purposes, it's useful to be able to specify the media type explicitly
 func FromDescriptorsWithMediaType(descriptors []ManifestDescriptor, mediaType string) (*DeserializedManifestList, error) {
 	m := ManifestList{
 		Versioned: manifest.Versioned{

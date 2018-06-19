@@ -9,7 +9,7 @@ import (
 	"github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-// builder is a type for constructing manifests.
+// Builder is a type for constructing manifests.
 type Builder struct {
 	// bs is a BlobService used to publish the configuration blob.
 	bs distribution.BlobService
@@ -43,8 +43,8 @@ func NewManifestBuilder(bs distribution.BlobService, configJSON []byte, annotati
 	return mb
 }
 
-// For testing purposes, we want to be able to create an OCI image with
-// either an MediaType either empty, or with the OCI image value
+// SetMediaType assigns the passed mediatype or error if the mediatype is not a
+// valid media type for oci image manifests currently: "" or "application/vnd.oci.image.manifest.v1+json"
 func (mb *Builder) SetMediaType(mediaType string) {
 	if mediaType != "" && mediaType != v1.MediaTypeImageManifest {
 		panic("Invalid media type for OCI image manifest")
