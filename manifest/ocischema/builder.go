@@ -4,12 +4,13 @@ import (
 	"context"
 
 	"github.com/docker/distribution"
+	"github.com/docker/distribution/manifest"
 	"github.com/opencontainers/go-digest"
 	"github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // builder is a type for constructing manifests.
-type builder struct {
+type Builder struct {
 	// bs is a BlobService used to publish the configuration blob.
 	bs distribution.BlobService
 
@@ -22,26 +23,43 @@ type builder struct {
 
 	// Annotations contains arbitrary metadata relating to the targeted content.
 	annotations map[string]string
+
+	// For testing purposes
+	mediaType string
 }
 
 // NewManifestBuilder is used to build new manifests for the current schema
 // version. It takes a BlobService so it can publish the configuration blob
 // as part of the Build process, and annotations.
 func NewManifestBuilder(bs distribution.BlobService, configJSON []byte, annotations map[string]string) distribution.ManifestBuilder {
-	mb := &builder{
+	mb := &Builder{
 		bs:          bs,
 		configJSON:  make([]byte, len(configJSON)),
 		annotations: annotations,
+		mediaType:   v1.MediaTypeImageManifest,
 	}
 	copy(mb.configJSON, configJSON)
 
 	return mb
 }
 
+// For testing purposes, we want to be able to create an OCI image with
+// either an MediaType either empty, or with the OCI image value
+func (mb *Builder) SetMediaType(mediaType string) {
+	if mediaType != "" && mediaType != v1.MediaTypeImageManifest {
+		panic("Invalid media type for OCI image manifest")
+	}
+
+	mb.mediaType = mediaType
+}
+
 // Build produces a final manifest from the given references.
-func (mb *builder) Build(ctx context.Context) (distribution.Manifest, error) {
+func (mb *Builder) Build(ctx context.Context) (distribution.Manifest, error) {
 	m := Manifest{
-		Versioned:   SchemaVersion,
+		Versioned: manifest.Versioned{
+			SchemaVersion: 2,
+			MediaType:     mb.mediaType,
+		},
 		Layers:      make([]distribution.Descriptor, len(mb.layers)),
 		Annotations: mb.annotations,
 	}
@@ -76,12 +94,12 @@ func (mb *builder) Build(ctx context.Context) (distribution.Manifest, error) {
 }
 
 // AppendReference adds a reference to the current ManifestBuilder.
-func (mb *builder) AppendReference(d distribution.Describable) error {
+func (mb *Builder) AppendReference(d distribution.Describable) error {
 	mb.layers = append(mb.layers, d.Descriptor())
 	return nil
 }
 
 // References returns the current references added to this builder.
-func (mb *builder) References() []distribution.Descriptor {
+func (mb *Builder) References() []distribution.Descriptor {
 	return mb.layers
 }

@@ -97,6 +97,11 @@ func (m *DeserializedManifest) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
+	if manifest.MediaType != "" && manifest.MediaType != v1.MediaTypeImageManifest {
+		return fmt.Errorf("if present, mediaType in manifest should be '%s' not '%s'",
+			v1.MediaTypeImageManifest, manifest.MediaType)
+	}
+
 	m.Manifest = manifest
 
 	return nil
@@ -115,5 +120,5 @@ func (m *DeserializedManifest) MarshalJSON() ([]byte, error) {
 // Payload returns the raw content of the manifest. The contents can be used to
 // calculate the content identifier.
 func (m DeserializedManifest) Payload() (string, []byte, error) {
-	return m.MediaType, m.canonical, nil
+	return v1.MediaTypeImageManifest, m.canonical, nil
 }

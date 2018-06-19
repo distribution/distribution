@@ -38,7 +38,7 @@ var expectedManifestListSerialization = []byte(`{
    ]
 }`)
 
-func TestManifestList(t *testing.T) {
+func makeTestManifestList(t *testing.T, mediaType string) ([]ManifestDescriptor, *DeserializedManifestList) {
 	manifestDescriptors := []ManifestDescriptor{
 		{
 			Descriptor: distribution.Descriptor{
@@ -65,11 +65,16 @@ func TestManifestList(t *testing.T) {
 		},
 	}
 
-	deserialized, err := FromDescriptors(manifestDescriptors)
+	deserialized, err := FromDescriptorsWithMediaType(manifestDescriptors, mediaType)
 	if err != nil {
 		t.Fatalf("error creating DeserializedManifestList: %v", err)
 	}
 
+	return manifestDescriptors, deserialized
+}
+
+func TestManifestList(t *testing.T) {
+	manifestDescriptors, deserialized := makeTestManifestList(t, MediaTypeManifestList)
 	mediaType, canonical, _ := deserialized.Payload()
 
 	if mediaType != MediaTypeManifestList {
@@ -160,7 +165,7 @@ var expectedOCIImageIndexSerialization = []byte(`{
    ]
 }`)
 
-func TestOCIImageIndex(t *testing.T) {
+func makeTestOCIImageIndex(t *testing.T, mediaType string) ([]ManifestDescriptor, *DeserializedManifestList) {
 	manifestDescriptors := []ManifestDescriptor{
 		{
 			Descriptor: distribution.Descriptor{
@@ -196,10 +201,16 @@ func TestOCIImageIndex(t *testing.T) {
 		},
 	}
 
-	deserialized, err := FromDescriptors(manifestDescriptors)
+	deserialized, err := FromDescriptorsWithMediaType(manifestDescriptors, mediaType)
 	if err != nil {
 		t.Fatalf("error creating DeserializedManifestList: %v", err)
 	}
+
+	return manifestDescriptors, deserialized
+}
+
+func TestOCIImageIndex(t *testing.T) {
+	manifestDescriptors, deserialized := makeTestOCIImageIndex(t, v1.MediaTypeImageIndex)
 
 	mediaType, canonical, _ := deserialized.Payload()
 
@@ -240,4 +251,55 @@ func TestOCIImageIndex(t *testing.T) {
 			t.Fatalf("unexpected value %d returned by References: %v", i, references[i])
 		}
 	}
+}
+
+func mediaTypeTest(t *testing.T, contentType string, mediaType string, shouldError bool) {
+	var m *DeserializedManifestList
+	if contentType == MediaTypeManifestList {
+		_, m = makeTestManifestList(t, mediaType)
+	} else {
+		_, m = makeTestOCIImageIndex(t, mediaType)
+	}
+
+	_, canonical, err := m.Payload()
+	if err != nil {
+		t.Fatalf("error getting payload, %v", err)
+	}
+
+	unmarshalled, descriptor, err := distribution.UnmarshalManifest(
+		contentType,
+		canonical)
+
+	if shouldError {
+		if err == nil {
+			t.Fatalf("bad content type should have produced error")
+		}
+	} else {
+		if err != nil {
+			t.Fatalf("error unmarshaling manifest, %v", err)
+		}
+
+		asManifest := unmarshalled.(*DeserializedManifestList)
+		if asManifest.MediaType != mediaType {
+			t.Fatalf("Bad media type '%v' as unmarshalled", asManifest.MediaType)
+		}
+
+		if descriptor.MediaType != contentType {
+			t.Fatalf("Bad media type '%v' for descriptor", descriptor.MediaType)
+		}
+
+		unmarshalledMediaType, _, _ := unmarshalled.Payload()
+		if unmarshalledMediaType != contentType {
+			t.Fatalf("Bad media type '%v' for payload", unmarshalledMediaType)
+		}
+	}
+}
+
+func TestMediaTypes(t *testing.T) {
+	mediaTypeTest(t, MediaTypeManifestList, "", true)
+	mediaTypeTest(t, MediaTypeManifestList, MediaTypeManifestList, false)
+	mediaTypeTest(t, MediaTypeManifestList, MediaTypeManifestList+"XXX", true)
+	mediaTypeTest(t, v1.MediaTypeImageIndex, "", false)
+	mediaTypeTest(t, v1.MediaTypeImageIndex, v1.MediaTypeImageIndex, false)
+	mediaTypeTest(t, v1.MediaTypeImageIndex, v1.MediaTypeImageIndex+"XXX", true)
 }
