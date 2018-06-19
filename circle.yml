@@ -34,7 +34,7 @@ dependencies:
 
   override:
   # Install dependencies for every copied clone/go version
-    - gvm use stable && go get github.com/lk4d4/vndr:
+    - gvm use stable && mkdir -p ~/.gvm/pkgsets/stable/global/bin && curl -s https://raw.githubusercontent.com/golang/dep/master/install.sh | sh:
         pwd: $BASE_STABLE
 
   post:
