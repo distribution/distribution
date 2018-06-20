@@ -57,6 +57,10 @@
   name = "rsc.io/letsencrypt"
   source = "https://github.com/dmcgowan/letsencrypt.git"
 
+[[constraint]]
+  name = "github.com/ncw/swift"
+  version = ">=1.0.0, < 2.0.0"
+
 [prune]
   go-tests = true
   unused-packages = true

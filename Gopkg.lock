@@ -199,7 +199,8 @@
     ".",
     "swifttest"
   ]
-  revision = "b964f2ca856aac39885e258ad25aec08d5f64ee6"
+  revision = "b2a7479cf26fa841ff90dd932d0221cb5c50782d"
+  version = "v1.0.39"
 
 [[projects]]
   name = "github.com/opencontainers/go-digest"
@@ -417,6 +418,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a9684b44437e9b2ec27fd083bdce3d03a01d0dff91aa3440dea9932af1c04979"
+  inputs-digest = "2c9e77cabdb3affb804055428bb84216d24022d470e1b839327136f2668c5a5c"
   solver-name = "gps-cdcl"
   solver-version = 1
