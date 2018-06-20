@@ -62,8 +62,8 @@
 [[projects]]
   name = "github.com/bshuster-repo/logrus-logstash-hook"
   packages = ["."]
-  revision = "d2c0ecc1836d91814e15e23bb5dc309c3ef51f4a"
-  version = "0.4"
+  revision = "dbc1e22735aa6ed7bd9579a407c17bc7c4a4e046"
+  version = "v0.4.1"
 
 [[projects]]
   name = "github.com/bugsnag/bugsnag-go"
