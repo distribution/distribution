@@ -61,6 +61,10 @@
   name = "github.com/ncw/swift"
   version = ">=1.0.0, < 2.0.0"
 
+[[constraint]]
+  name = "github.com/denverdino/aliyungo"
+  branch = "master"
+
 [prune]
   go-tests = true
   unused-packages = true
