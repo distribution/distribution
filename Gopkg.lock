@@ -106,15 +106,6 @@
   revision = "399ea8c73916000c64c2c76e8da00ca82f8387ab"
 
 [[projects]]
-  branch = "master"
-  name = "github.com/docker/goamz"
-  packages = [
-    "aws",
-    "s3"
-  ]
-  revision = "f0a21f5b2e12f83a505ecf79b633bb2035cf6f85"
-
-[[projects]]
   name = "github.com/docker/libtrust"
   packages = ["."]
   revision = "fa567046d9b14f6aa788882a950d69651d230b21"
@@ -411,6 +402,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "8c4acfa32e94b83da0c0548abd8a75edb813ddbacb12ddb40ab685effde9e034"
+  inputs-digest = "2268e1649bfb61e2b5d17e63c86819f5f18424cd9aedb2439abccf59893dfb03"
   solver-name = "gps-cdcl"
   solver-version = 1

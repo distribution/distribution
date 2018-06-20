@@ -43,10 +43,6 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/docker/goamz"
-
-[[constraint]]
-  branch = "master"
   name = "github.com/stevvooe/resumable"
 
 [[constraint]]
