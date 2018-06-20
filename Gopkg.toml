@@ -65,6 +65,10 @@
   name = "github.com/denverdino/aliyungo"
   branch = "master"
 
+[[constraint]]
+  name = "github.com/opencontainers/go-digest"
+  version = ">=1.0.0-rc1, < 2.0.0"
+
 [prune]
   go-tests = true
   unused-packages = true

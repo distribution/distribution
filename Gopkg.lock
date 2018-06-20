@@ -206,7 +206,8 @@
 [[projects]]
   name = "github.com/opencontainers/go-digest"
   packages = ["."]
-  revision = "a6d0ee40d4207ea02364bd3b9e8e77b9159ba1eb"
+  revision = "279bed98673dd5bef374d3b6e4b09e2af76183bf"
+  version = "v1.0.0-rc1"
 
 [[projects]]
   name = "github.com/prometheus/client_golang"
@@ -419,6 +420,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4ebd4a11905f1ae6cbd9df71ccceecbbeb9b2ea795321b13ac0c25deb03d4134"
+  inputs-digest = "b79b5880a04ab68339dca7c23e667c4c0f7c29ca74126dfadee132e852ba1f96"
   solver-name = "gps-cdcl"
   solver-version = 1
