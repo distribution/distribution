@@ -35,7 +35,7 @@ PKGS=$(shell go list -tags "${DOCKER_BUILDTAGS}" ./... | grep -v ^github.com/doc
 
 # Resolving binary dependencies for specific targets
 GOLINT=$(shell which golint || echo '')
-VNDR=$(shell which vndr || echo '')
+DEP=$(shell which dep || echo '')
 
 ${PREFIX}/bin/registry: $(GOFILES)
 	@echo "+ $@"
@@ -88,12 +88,8 @@ clean:
 
 dep-validate:
 	@echo "+ $@"
-	$(if $(VNDR), , \
-		$(error Please install vndr: go get github.com/lk4d4/vndr))
-	@rm -Rf .vendor.bak
-	@mv vendor .vendor.bak
-	@$(VNDR)
-	@test -z "$$(diff -r vendor .vendor.bak 2>&1 | tee /dev/stderr)" || \
-		(echo >&2 "+ inconsistent dependencies! what you have in vendor.conf does not match with what you have in vendor" && false)
-	@rm -Rf vendor
-	@mv .vendor.bak vendor
+	$(if $(DEP), , \
+		$(error Please install dep: go get github.com/golang/dep))
+	@$(DEP) ensure
+	@test -z "$$(git status --porcelain 2>&1 | tee /dev/stderr)" || \
+		(echo >&2 "+ inconsistent dependencies! you need to run 'dep ensure' and commit changes" && false)

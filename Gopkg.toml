@@ -1,0 +1,74 @@
+# Gopkg.toml example
+#
+# Refer to https://github.com/golang/dep/blob/master/docs/Gopkg.toml.md
+# for detailed Gopkg.toml documentation.
+#
+# required = ["github.com/user/thing/cmd/thing"]
+# ignored = ["github.com/user/project/pkgX", "bitbucket.org/user/project/pkgA/pkgY"]
+#
+# [[constraint]]
+#   name = "github.com/user/project"
+#   version = "1.0.0"
+#
+# [[constraint]]
+#   name = "github.com/user/project2"
+#   branch = "dev"
+#   source = "github.com/myfork/project2"
+#
+# [[override]]
+#   name = "github.com/x/y"
+#   version = "2.4.0"
+#
+# [prune]
+#   non-go = false
+#   go-tests = true
+#   unused-packages = true
+
+[[constraint]]
+  name = "github.com/Azure/azure-sdk-for-go"
+  version = ">=17.0.0, < 18.0.0"
+
+[[constraint]]
+  name = "github.com/aws/aws-sdk-go"
+  version = ">=1.0.0, < 2.0.0"
+
+[[constraint]]
+  name = "github.com/bshuster-repo/logrus-logstash-hook"
+  version = ">=0.4.0, < 0.5.0"
+
+[[constraint]]
+  name = "github.com/bugsnag/bugsnag-go"
+  version = ">=1.0.0, < 2.0.0"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/docker/go-metrics"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/docker/goamz"
+
+[[constraint]]
+  branch = "master"
+  name = "github.com/stevvooe/resumable"
+
+[[constraint]]
+  branch = "update-acme-tls-sni-challenge"
+  name = "rsc.io/letsencrypt"
+  source = "https://github.com/dmcgowan/letsencrypt.git"
+
+[[constraint]]
+  name = "github.com/ncw/swift"
+  version = ">=1.0.0, < 2.0.0"
+
+[[constraint]]
+  name = "github.com/denverdino/aliyungo"
+  branch = "master"
+
+[[constraint]]
+  name = "github.com/opencontainers/go-digest"
+  version = ">=1.0.0-rc1, < 2.0.0"
+
+[prune]
+  go-tests = true
+  unused-packages = true

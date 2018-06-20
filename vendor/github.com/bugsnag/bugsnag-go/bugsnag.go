@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
+	"runtime"
 	"sync"
 
 	// Fixes a bug with SHA-384 intermediate certs on some platforms.
@@ -13,7 +15,7 @@ import (
 )
 
 // The current version of bugsnag-go.
-const VERSION = "1.0.2"
+const VERSION = "1.3.1"
 
 var once sync.Once
 var middleware middlewareStack
@@ -42,13 +44,20 @@ func Notify(err error, rawData ...interface{}) error {
 
 // AutoNotify logs a panic on a goroutine and then repanics.
 // It should only be used in places that have existing panic handlers further
-// up the stack. See bugsnag.Recover().  The rawData is used to send extra
-// information along with any panics that are handled this way.
-// Usage: defer bugsnag.AutoNotify()
+// up the stack. The rawData is used to send extra information along with any
+// panics that are handled this way.
+// Usage:
+//  go func() {
+//		defer bugsnag.AutoNotify()
+//      // (possibly crashy code)
+//  }()
+// See also: bugsnag.Recover()
 func AutoNotify(rawData ...interface{}) {
 	if err := recover(); err != nil {
-		rawData = defaultNotifier.addDefaultSeverity(rawData, SeverityError)
-		defaultNotifier.Notify(errors.New(err, 2), rawData...)
+		severity := defaultNotifier.getDefaultSeverity(rawData, SeverityError)
+		state := HandledState{SeverityReasonHandledPanic, severity, true, ""}
+		rawData = append([]interface{}{state}, rawData...)
+		defaultNotifier.NotifySync(errors.New(err, 2), true, rawData...)
 		panic(err)
 	}
 }
@@ -59,7 +68,9 @@ func AutoNotify(rawData ...interface{}) {
 // Usage: defer bugsnag.Recover()
 func Recover(rawData ...interface{}) {
 	if err := recover(); err != nil {
-		rawData = defaultNotifier.addDefaultSeverity(rawData, SeverityWarning)
+		severity := defaultNotifier.getDefaultSeverity(rawData, SeverityWarning)
+		state := HandledState{SeverityReasonHandledPanic, severity, false, ""}
+		rawData = append([]interface{}{state}, rawData...)
 		defaultNotifier.Notify(errors.New(err, 2), rawData...)
 	}
 }
@@ -109,13 +120,21 @@ func init() {
 	OnBeforeNotify(httpRequestMiddleware)
 
 	// Default configuration
+	sourceRoot := ""
+	if gopath := os.Getenv("GOPATH"); len(gopath) > 0 {
+		sourceRoot = filepath.Join(gopath, "src") + "/"
+	} else {
+		sourceRoot = filepath.Join(runtime.GOROOT(), "src") + "/"
+	}
 	Config.update(&Configuration{
 		APIKey:        "",
 		Endpoint:      "https://notify.bugsnag.com/",
 		Hostname:      "",
+		AppType:       "",
 		AppVersion:    "",
 		ReleaseStage:  "",
 		ParamsFilters: []string{"password", "secret"},
+		SourceRoot:    sourceRoot,
 		// * for app-engine
 		ProjectPackages:     []string{"main*"},
 		NotifyReleaseStages: nil,
