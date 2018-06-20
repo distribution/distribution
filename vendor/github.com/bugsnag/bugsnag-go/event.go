@@ -21,6 +21,12 @@ type User struct {
 	Email string `json:"email,omitempty"`
 }
 
+// ErrorClass overrides the error class in Bugsnag.
+// This struct enables you to group errors as you like.
+type ErrorClass struct {
+	Name string
+}
+
 // Sets the severity of the error on Bugsnag. These values can be
 // passed to Notify, Recover or AutoNotify as rawData.
 var (
@@ -40,6 +46,25 @@ type stackFrame struct {
 	File       string `json:"file"`
 	LineNumber int    `json:"lineNumber"`
 	InProject  bool   `json:"inProject,omitempty"`
+}
+
+type SeverityReason string
+
+const (
+	SeverityReasonCallbackSpecified        SeverityReason = "userCallbackSetSeverity"
+	SeverityReasonHandledError                            = "handledError"
+	SeverityReasonHandledPanic                            = "handledPanic"
+	SeverityReasonUnhandledError                          = "unhandledError"
+	SeverityReasonUnhandledMiddlewareError                = "unhandledErrorMiddleware"
+	SeverityReasonUnhandledPanic                          = "unhandledPanic"
+	SeverityReasonUserSpecified                           = "userSpecifiedSeverity"
+)
+
+type HandledState struct {
+	SeverityReason   SeverityReason
+	OriginalSeverity severity
+	Unhandled        bool
+	Framework        string
 }
 
 // Event represents a payload of data that gets sent to Bugsnag.
@@ -73,6 +98,8 @@ type Event struct {
 	User *User
 	// Other MetaData to send to Bugsnag. Appears as a set of tabbed tables in the dashboard.
 	MetaData MetaData
+	// The reason for the severity and original value
+	handledState HandledState
 }
 
 func newEvent(err *errors.Error, rawData []interface{}, notifier *Notifier) (*Event, *Configuration) {
@@ -89,12 +116,21 @@ func newEvent(err *errors.Error, rawData []interface{}, notifier *Notifier) (*Ev
 		Severity: SeverityWarning,
 
 		MetaData: make(MetaData),
+
+		handledState: HandledState{
+			SeverityReasonHandledError,
+			SeverityWarning,
+			false,
+			"",
+		},
 	}
 
 	for _, datum := range event.RawData {
 		switch datum := datum.(type) {
 		case severity:
 			event.Severity = datum
+			event.handledState.OriginalSeverity = datum
+			event.handledState.SeverityReason = SeverityReasonUserSpecified
 
 		case Context:
 			event.Context = datum.String
@@ -107,6 +143,13 @@ func newEvent(err *errors.Error, rawData []interface{}, notifier *Notifier) (*Ev
 
 		case User:
 			event.User = &datum
+
+		case ErrorClass:
+			event.ErrorClass = datum.Name
+
+		case HandledState:
+			event.handledState = datum
+			event.Severity = datum.OriginalSeverity
 		}
 	}
 

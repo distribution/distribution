@@ -38,6 +38,10 @@
   version = "0.4.0"
 
 [[constraint]]
+  name = "github.com/bugsnag/bugsnag-go"
+  version = ">=1.0.0, < 2.0.0"
+
+[[constraint]]
   branch = "master"
   name = "github.com/docker/go-metrics"
 
