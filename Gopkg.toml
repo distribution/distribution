@@ -30,7 +30,7 @@
 
 [[constraint]]
   name = "github.com/aws/aws-sdk-go"
-  version = "1.12.36"
+  version = ">=1.0.0, < 2.0.0"
 
 [[constraint]]
   name = "github.com/bshuster-repo/logrus-logstash-hook"

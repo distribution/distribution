@@ -34,14 +34,19 @@
     "aws/credentials/ec2rolecreds",
     "aws/credentials/endpointcreds",
     "aws/credentials/stscreds",
+    "aws/csm",
     "aws/defaults",
     "aws/ec2metadata",
     "aws/endpoints",
     "aws/request",
     "aws/session",
     "aws/signer/v4",
+    "internal/sdkio",
+    "internal/sdkrand",
     "internal/shareddefaults",
     "private/protocol",
+    "private/protocol/eventstream",
+    "private/protocol/eventstream/eventstreamapi",
     "private/protocol/query",
     "private/protocol/query/queryutil",
     "private/protocol/rest",
@@ -51,8 +56,8 @@
     "service/s3",
     "service/sts"
   ]
-  revision = "5bcc0a238d880469f949fc7cd24e35f32ab80cbd"
-  version = "v1.12.36"
+  revision = "e4805606f5138247510183050abe642344275ebd"
+  version = "v1.14.10"
 
 [[projects]]
   name = "github.com/beorn7/perks"
@@ -412,6 +417,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a1c5a6f21579e9e0865d94630fa6dc11a970c54e1ec89f2e14587bc093a8b9d7"
+  inputs-digest = "a9684b44437e9b2ec27fd083bdce3d03a01d0dff91aa3440dea9932af1c04979"
   solver-name = "gps-cdcl"
   solver-version = 1
