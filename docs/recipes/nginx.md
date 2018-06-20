@@ -38,6 +38,12 @@ you want through the secondary authentication mechanism implemented inside your
 proxy, it also requires that you move TLS termination from the Registry to the
 proxy itself.
 
+> Another important thing to note is that by binding your registry to
+> `localhost:5000` without authentication, you open up a potential loophole in
+> your Docker Registry security - anyone who can log on to the server where your
+> Docker Registry is running can push images to your registry, without
+> authentication. This could have potentially devastating effects.
+
 Furthermore, introducing an extra http layer in your communication pipeline
 makes it more complex to deploy, maintain, and debug. Make sure the extra
 complexity is required.
