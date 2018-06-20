@@ -7,8 +7,8 @@
     "storage",
     "version"
   ]
-  revision = "4650843026a7fdec254a8d9cf893693a254edd0b"
-  version = "v16.2.1"
+  revision = "7971189ecf5a584b9211f2527737f94bb979644e"
+  version = "v17.4.0"
 
 [[projects]]
   name = "github.com/Azure/go-autorest"
@@ -18,8 +18,8 @@
     "autorest/azure",
     "autorest/date"
   ]
-  revision = "eaa7994b2278094c904d31993d26f56324db3052"
-  version = "v10.8.1"
+  revision = "f04d503958a4fe854c1b41667c73f8813c9dd9c3"
+  version = "v10.11.2"
 
 [[projects]]
   name = "github.com/aws/aws-sdk-go"
@@ -412,6 +412,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "a835f66faaaae11f64e5537319fedfae3e8a49f073421e7b4c07a2dcab015a93"
+  inputs-digest = "a1c5a6f21579e9e0865d94630fa6dc11a970c54e1ec89f2e14587bc093a8b9d7"
   solver-name = "gps-cdcl"
   solver-version = 1

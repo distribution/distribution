@@ -24,10 +24,9 @@
 #   go-tests = true
 #   unused-packages = true
 
-
 [[constraint]]
   name = "github.com/Azure/azure-sdk-for-go"
-  version = "16.2.1"
+  version = ">=17.0.0, < 18.0.0"
 
 [[constraint]]
   name = "github.com/aws/aws-sdk-go"
