@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/docker/distribution/context"
 	storageDriver "github.com/docker/distribution/registry/storage/driver"
 )
@@ -35,7 +36,14 @@ func Walk(ctx context.Context, driver storageDriver.StorageDriver, from string, 
 		// performance bottleneck.
 		fileInfo, err := driver.Stat(ctx, child)
 		if err != nil {
-			return err
+			switch err.(type) {
+			case storageDriver.PathNotFoundError:
+				// repository was removed in between listing and enumeration. Ignore it.
+				logrus.WithField("path", child).Infof("ignoring deleted path")
+				continue
+			default:
+				return err
+			}
 		}
 		err = f(fileInfo)
 		skipDir := (err == ErrSkipDir)
