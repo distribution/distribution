@@ -73,6 +73,16 @@ var (
 		service too many times`,
 		HTTPStatusCode: http.StatusTooManyRequests,
 	})
+
+	// ErrorCodeConflictUnresolvable is returned if the request would overwrite
+	// an existing immutable resource.
+	ErrorCodeConflictUnresolvable = Register("errcode", ErrorDescriptor{
+		Value:   "CONFLICTUNRESOLVABLE",
+		Message: "conflict cannot be resolved",
+		Description: `Returned when a client attempts to overwrite
+		an immutable resource`,
+		HTTPStatusCode: http.StatusConflict,
+	})
 )
 
 var nextCode = 1000

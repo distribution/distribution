@@ -322,7 +322,12 @@ func (imh *imageManifestHandler) PutImageManifest(w http.ResponseWriter, r *http
 		tags := imh.Repository.Tags(imh)
 		err = tags.Tag(imh, imh.Tag, desc)
 		if err != nil {
-			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+			switch tagError := err.(type) {
+			case distribution.ErrTagConflict:
+				imh.Errors = append(imh.Errors, errcode.ErrorCodeConflictUnresolvable.WithMessage(tagError.Error()))
+			default:
+				imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(tagError))
+			}
 			return
 		}
 
