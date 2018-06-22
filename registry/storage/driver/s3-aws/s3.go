@@ -13,6 +13,8 @@ package s3
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -89,6 +91,8 @@ type DriverParameters struct {
 	Encrypt                     bool
 	KeyID                       string
 	Secure                      bool
+	SkipVerify                  bool
+	RootCA                      string
 	V4Auth                      bool
 	ChunkSize                   int64
 	MultipartCopyChunkSize      int64
@@ -107,7 +111,9 @@ func init() {
 		"us-west-1",
 		"us-west-2",
 		"eu-west-1",
+		"eu-west-2",
 		"eu-central-1",
+		"ap-south-1",
 		"ap-southeast-1",
 		"ap-southeast-2",
 		"ap-northeast-1",
@@ -115,6 +121,7 @@ func init() {
 		"sa-east-1",
 		"cn-north-1",
 		"us-gov-west-1",
+		"ca-central-1",
 	} {
 		validRegions[region] = struct{}{}
 	}
@@ -243,6 +250,28 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		return nil, fmt.Errorf("The secure parameter should be a boolean")
 	}
 
+	skipVerifyBool := false
+	skipVerify := parameters["skipverify"]
+	switch skipVerify := skipVerify.(type) {
+	case string:
+		b, err := strconv.ParseBool(skipVerify)
+		if err != nil {
+			return nil, fmt.Errorf("The skipVerify parameter should be a boolean")
+		}
+		skipVerifyBool = b
+	case bool:
+		skipVerifyBool = skipVerify
+	case nil:
+		// do nothing
+	default:
+		return nil, fmt.Errorf("The skipVerify parameter should be a boolean")
+	}
+
+	rootCA := parameters["rootca"]
+	if rootCA == nil {
+		rootCA = ""
+	}
+
 	v4Bool := true
 	v4auth := parameters["v4auth"]
 	switch v4auth := v4auth.(type) {
@@ -337,6 +366,8 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		encryptBool,
 		fmt.Sprint(keyID),
 		secureBool,
+		skipVerifyBool,
+		fmt.Sprint(rootCA),
 		v4Bool,
 		chunkSize,
 		multipartCopyChunkSize,
@@ -410,12 +441,7 @@ func New(params DriverParameters) (*Driver, error) {
 	awsConfig.WithCredentials(creds)
 	awsConfig.WithRegion(params.Region)
 	awsConfig.WithDisableSSL(!params.Secure)
-
-	if params.UserAgent != "" {
-		awsConfig.WithHTTPClient(&http.Client{
-			Transport: transport.NewTransport(http.DefaultTransport, transport.NewHeaderRequestModifier(http.Header{http.CanonicalHeaderKey("User-Agent"): []string{params.UserAgent}})),
-		})
-	}
+	awsConfig.WithHTTPClient(createHTTPClient(params.UserAgent, params.RootCA, params.SkipVerify))
 
 	s3obj := s3.New(session.New(awsConfig))
 
@@ -1186,4 +1212,36 @@ func (w *writer) flushPart() error {
 	w.readyPart = w.pendingPart
 	w.pendingPart = nil
 	return nil
+}
+
+func createHTTPClient(userAgent, rootCA string, skipVerify bool) *http.Client {
+	if userAgent == "" && rootCA == "" && skipVerify == false {
+		return nil
+	}
+
+	httpTransport := http.DefaultTransport
+
+	if skipVerify || rootCA != "" {
+		tlsConfig := &tls.Config{}
+		if skipVerify {
+			tlsConfig.InsecureSkipVerify = true
+		}
+		if rootCA != "" {
+			caCertPool := x509.NewCertPool()
+			caCertPool.AppendCertsFromPEM([]byte(rootCA))
+			tlsConfig.RootCAs = caCertPool
+		}
+
+		httpTransport = &http.Transport{TLSClientConfig: tlsConfig}
+	}
+
+	if userAgent == "" {
+		return &http.Client{
+			Transport: transport.NewTransport(httpTransport),
+		}
+	}
+
+	return &http.Client{
+		Transport: transport.NewTransport(httpTransport, transport.NewHeaderRequestModifier(http.Header{http.CanonicalHeaderKey("User-Agent"): []string{userAgent}})),
+	}
 }
