@@ -1,0 +1,36 @@
+{
+  "Vendor": true,
+  "Deadline": "2m",
+  "Sort": ["linter", "severity", "path", "line"],
+  "Exclude": [
+    ".*\\.pb\\.go",
+    "fetch\\.go:.*::error: unrecognized printf verb 'r'"
+  ],
+  "EnableGC": true,
+
+  "Enable": [
+    "gotype",
+    "safesql"
+  ],
+
+  "Disabled": [
+    "deadcode",
+    "errcheck",
+    "goconst",
+    "goimports",
+    "gas",
+    "ineffassign",
+    "interfacer",
+    "maligned",
+    "megacheck",
+    "misspell",
+    "nakedret",
+    "structcheck",
+    "unparam",
+    "varcheck",
+    "unconvert",
+    "lll <- 'long lines' - just too annoying",
+    "gocyclo <- ",
+    "dupl <- "
+  ]
+}
