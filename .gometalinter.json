@@ -10,7 +10,8 @@
 
   "Enable": [
     "gotype",
-    "safesql"
+    "safesql",
+    "unconvert"
   ],
 
   "Disabled": [
@@ -28,7 +29,6 @@
     "structcheck",
     "unparam",
     "varcheck",
-    "unconvert",
     "lll <- 'long lines' - just too annoying",
     "gocyclo <- ",
     "dupl <- "

@@ -184,11 +184,11 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 		return nil, err
 	}
 
-	seekPos, err := file.Seek(int64(offset), os.SEEK_SET)
+	seekPos, err := file.Seek(offset, os.SEEK_SET)
 	if err != nil {
 		file.Close()
 		return nil, err
-	} else if seekPos < int64(offset) {
+	} else if seekPos < offset {
 		file.Close()
 		return nil, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
 	}
@@ -222,7 +222,7 @@ func (d *driver) Writer(ctx context.Context, subPath string, append bool) (stora
 			fp.Close()
 			return nil, err
 		}
-		offset = int64(n)
+		offset = n
 	}
 
 	return newFileWriter(fp, offset), nil

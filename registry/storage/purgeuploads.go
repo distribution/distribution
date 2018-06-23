@@ -22,7 +22,7 @@ func newUploadData() uploadData {
 	return uploadData{
 		containingDir: "",
 		// default to far in future to protect against missing startedat
-		startedAt: time.Now().Add(time.Duration(10000 * time.Hour)),
+		startedAt: time.Now().Add(10000 * time.Hour),
 	}
 }
 

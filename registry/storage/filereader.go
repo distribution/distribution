@@ -82,11 +82,11 @@ func (fr *fileReader) Seek(offset int64, whence int) (int64, error) {
 
 	switch whence {
 	case os.SEEK_CUR:
-		newOffset += int64(offset)
+		newOffset += offset
 	case os.SEEK_END:
-		newOffset = fr.size + int64(offset)
+		newOffset = fr.size + offset
 	case os.SEEK_SET:
-		newOffset = int64(offset)
+		newOffset = offset
 	}
 
 	if newOffset < 0 {

@@ -29,7 +29,7 @@ func (bw *blobWriter) resumeDigest(ctx context.Context) error {
 		return errResumableDigestNotAvailable
 	}
 	offset := bw.fileWriter.Size()
-	if offset == int64(h.Len()) {
+	if offset == h.Len() {
 		// State of digester is already at the requested offset.
 		return nil
 	}
@@ -65,7 +65,7 @@ func (bw *blobWriter) resumeDigest(ctx context.Context) error {
 	}
 
 	// Mind the gap.
-	if gapLen := offset - int64(h.Len()); gapLen > 0 {
+	if gapLen := offset - h.Len(); gapLen > 0 {
 		return errResumableDigestNotAvailable
 	}
 
@@ -129,7 +129,7 @@ func (bw *blobWriter) storeHashState(ctx context.Context) error {
 		name:   bw.blobStore.repository.Named().String(),
 		id:     bw.id,
 		alg:    bw.digester.Digest().Algorithm(),
-		offset: int64(h.Len()),
+		offset: h.Len(),
 	})
 
 	if err != nil {
