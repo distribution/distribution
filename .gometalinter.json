@@ -10,6 +10,7 @@
 
   "Enable": [
     "gotype",
+    "nakedret",
     "safesql",
     "unconvert"
   ],
@@ -25,7 +26,6 @@
     "maligned",
     "megacheck",
     "misspell",
-    "nakedret",
     "structcheck",
     "unparam",
     "varcheck",

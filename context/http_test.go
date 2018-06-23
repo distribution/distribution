@@ -117,7 +117,7 @@ func (trw *testResponseWriter) Write(p []byte) (n int, err error) {
 
 	n = len(p)
 	trw.written += int64(n)
-	return
+	return n, nil
 }
 
 func (trw *testResponseWriter) WriteHeader(status int) {
