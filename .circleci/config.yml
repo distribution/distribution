@@ -1,0 +1,114 @@
+version: 2
+jobs:
+  tooling:
+    docker:
+      - image: circleci/golang:1.10
+    environment:
+      - GOPATH: /go
+    steps:
+      - restore_cache:
+          keys:
+            - pkg-cache
+      - DEP_RELEASE_TAG=v0.4.1 curl -s https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+      - go get github.com/golang/lint/golint
+      - go get gopkg.in/alecthomas/gometalinter.v2
+      - gometalinter.v2 --install
+      - save_cache:
+          key: pkg-cache
+          paths:
+            - "/go/pkg"
+            - "/go/bin"
+      - checkout
+      - persist_to_workspace:
+        root: "/go"
+        paths:
+          - "src"
+          - "pkg"
+          - "bin"
+
+  validate:
+    docker:
+      - image: circleci/golang:1.10
+    steps:
+      - attach_workspace:
+          at: "/go"
+      - make dep-validate fmt vet lint meta coverage-generate
+      - make coverage-send
+
+  dep-validate:
+    docker:
+      - image: circleci/golang:1.10
+    steps:
+      - attach_workspace:
+          at: "/go"
+      - make dep-validate
+
+  fmt:
+    docker:
+      - image: circleci/golang:1.10
+    steps:
+      - attach_workspace:
+          at: "/go"
+      - make fmt
+
+  vet:
+    docker:
+      - image: circleci/golang:1.10
+    steps:
+      - attach_workspace:
+          at: "/go"
+      - make vet
+
+  lint:
+    docker:
+      - image: circleci/golang:1.10
+    steps:
+      - attach_workspace:
+          at: "/go"
+      - make lint
+
+  meta:
+    docker:
+      - image: circleci/golang:1.10
+    steps:
+      - attach_workspace:
+          at: "/go"
+      - make meta
+
+  coverage:
+    docker:
+      - image: circleci/golang:1.10
+    steps:
+      - attach_workspace:
+          at: "/go"
+      - make coverage-generate
+      - make coverage-send
+
+workflows:
+  version: 2
+  analyze:
+    jobs:
+      - tooling
+      - validate:
+        requires:
+          - tooling
+      - dep-validate:
+        requires:
+          - tooling
+      - fmt:
+        requires:
+          - tooling
+      - lint:
+        requires:
+          - tooling
+      - vet:
+        requires:
+          - tooling
+      - meta:
+        requires:
+          - tooling
+      - coverage:
+        requires:
+          - tooling
+
+#     - gvm use stable; export ROOT_PACKAGE=$(go list .); go list -tags "$BUILDTAGS" ./... | grep -v "registry/handlers" | grep -v "registry/storage/driver" | xargs -L 1 -I{} bash -c 'export PACKAGE={}; go test -race -tags "$BUILDTAGS" -test.short $PACKAGE':
