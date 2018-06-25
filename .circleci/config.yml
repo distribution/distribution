@@ -1,0 +1,124 @@
+version: 2
+
+jobs:
+  tooling:
+    docker:
+      - image: circleci/golang:1.10
+    environment:
+      - GOPATH: /go
+    steps:
+#      - restore_cache:
+#          keys:
+#            - pkg-cache
+      - run: DEP_RELEASE_TAG=v0.4.1 curl -s https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
+      - run: go get github.com/golang/lint/golint
+      - run: go get gopkg.in/alecthomas/gometalinter.v2
+      - run: gometalinter.v2 --install
+#      - save_cache:
+#          key: pkg-cache
+#          paths:
+#            - "/go/pkg"
+#            - "/go/bin"
+      - checkout
+      - persist_to_workspace:
+          root: "/go"
+          paths:
+            - "src"
+            - "pkg"
+            - "bin"
+
+  validate:
+    docker:
+      - image: circleci/golang:1.10
+    steps:
+      - attach_workspace:
+          at: "/go"
+      - run: make dep-validate fmt vet lint meta coverage-generate
+      - run: make coverage-send
+
+  dep-validate:
+    docker:
+      - image: circleci/golang:1.10
+    steps:
+      - attach_workspace:
+          at: "/go"
+      - run: make dep-validate
+
+  fmt:
+    docker:
+      - image: circleci/golang:1.10
+    steps:
+      - attach_workspace:
+          at: "/go"
+      - run: make fmt
+
+  vet:
+    docker:
+      - image: circleci/golang:1.10
+    steps:
+      - attach_workspace:
+          at: "/go"
+      - run: make vet
+
+  lint:
+    docker:
+      - image: circleci/golang:1.10
+    steps:
+      - attach_workspace:
+          at: "/go"
+      - run: make lint
+
+  meta:
+    docker:
+      - image: circleci/golang:1.10
+    steps:
+      - attach_workspace:
+          at: "/go"
+      - run: make meta
+
+  coverage:
+    docker:
+      - image: circleci/golang:1.10
+    steps:
+      - attach_workspace:
+          at: "/go"
+      - run: make coverage-generate
+      - run: make coverage-send
+
+  build:
+    docker:
+      - image: circleci/golang:1.10
+    steps:
+      - attach_workspace:
+          at: "/go"
+      - run: make binaries
+
+workflows:
+  version: 2
+  circle:
+    jobs:
+      - tooling
+      - validate:
+          requires:
+            - tooling
+      - dep-validate:
+          requires:
+            - tooling
+      - fmt:
+          requires:
+            - tooling
+      - lint:
+          requires:
+            - tooling
+      - vet:
+          requires:
+            - tooling
+      - meta:
+          requires:
+            - tooling
+      - coverage:
+          requires:
+            - tooling
+      - build:
+          requires:
+            - tooling

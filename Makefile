@@ -1,5 +1,5 @@
-# Set to true to disable fancy / colored output
-NON_INTERACTIVE ?=
+# Build tags
+BUILDTAGS ?=
 
 # Set an output prefix, which is the local directory if not specified
 PREFIX ?= $(shell pwd)
@@ -12,6 +12,9 @@ VERBOSE_GO :=
 ifeq ($(VERBOSE),true)
 	VERBOSE_GO := -v
 endif
+
+# Set to true to disable fancy / colored output
+NON_INTERACTIVE ?=
 
 # Fancy output if interactive
 ifndef NON_INTERACTIVE
@@ -29,17 +32,17 @@ define title
 endef
 
 # Used to populate version variable in main package.
-VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always)
+VERSION := $(shell git describe --match 'v[0-9]*' --dirty='.m' --always)
 
 # Allow turning off function inlining and variable registerization
 ifeq (${DISABLE_OPTIMIZATION},true)
-	GO_GCFLAGS=-gcflags "-N -l"
-	VERSION:="$(VERSION)-noopt"
+	GO_GCFLAGS := -gcflags "-N -l"
+	VERSION := "$(VERSION)-noopt"
 endif
 
-GO_LDFLAGS=-ldflags "-X `go list ./version`.Version=$(VERSION)"
+GO_LDFLAGS := -ldflags "-X `go list ./version`.Version=$(VERSION)"
 
-.PHONY: all build-clean clean dep-validate fmt vet lint meta test test-full build binaries
+.PHONY: all build-clean clean dep-validate fmt vet lint meta test test-full build binaries coverage-generate coverage-send
 .DEFAULT: all
 all: fmt vet lint meta test test-full build binaries
 
@@ -61,12 +64,16 @@ GOMETA=$(shell which gometalinter.v2 || echo '')
 
 $(PREFIX)/bin/%: ./cmd/%/main.go $(shell find . -type f -name '*.go')
 	$(call title, $@)
-	go build $(VERBOSE_GO) -tags "${DOCKER_BUILDTAGS}" -o $@$(call extension,$(GOOS)) ${GO_LDFLAGS} ${GO_GCFLAGS} $<
+	go build $(VERBOSE_GO) -tags "$(BUILDTAGS)" -o $@$(call extension,$(GOOS)) $(GO_LDFLAGS) $(GO_GCFLAGS) $<
 
 docs/spec/api.md: docs/spec/api.md.tmpl ${PREFIX}/bin/registry-api-descriptor-template
 	./bin/registry-api-descriptor-template $< > $@
 
 binaries: $(patsubst ./cmd/%/main.go,$(PREFIX)/bin/%,$(wildcard ./cmd/*/main.go))
+
+build:
+	$(call title, $@)
+	go build $(VERBOSE_GO) -tags "$(BUILDTAGS)" -v $(GO_LDFLAGS) ./...
 
 build-clean:
 	$(call title, $@)
@@ -79,10 +86,10 @@ clean: build-clean
 ############################
 
 # XXX Shadow doesn't pass right now
-#	go vet $(VERBOSE_GO) -tags "${DOCKER_BUILDTAGS}" -shadow=true ./...
-vet: build
+#	go vet $(VERBOSE_GO) -tags "$(BUILDTAGS)" -shadow=true ./...
+vet:
 	$(call title, $@)
-	go vet $(VERBOSE_GO) -tags "${DOCKER_BUILDTAGS}" ./...
+	go vet $(VERBOSE_GO) -tags "$(BUILDTAGS)" ./...
 
 fmt:
 	$(call title, $@)
@@ -101,17 +108,37 @@ meta:
 		$(error Please install gometa: `go get -u gopkg.in/alecthomas/gometalinter.v2`))
 	test -z "$$($(GOMETA) --config .gometalinter.json ./... 2>&1 | tee /dev/stderr)"
 
-build:
-	$(call title, $@)
-	go build $(VERBOSE_GO) -tags "${DOCKER_BUILDTAGS}" -v ${GO_LDFLAGS} ./...
-
 test:
 	$(call title, $@)
-	go test $(VERBOSE_GO) -tags "${DOCKER_BUILDTAGS}" -cpu=1 -parallel 1 -vet=off -test.short ./...
+	go test $(VERBOSE_GO) -tags "$(BUILDTAGS)" -cpu=1 -parallel 1 -vet=off -test.short ./...
 
 test-full:
 	$(call title, $@)
-	go test $(VERBOSE_GO) -tags "${DOCKER_BUILDTAGS}" -cpu=1,2,4 -parallel 4 -vet=off -race -bench . ./...
+	go test $(VERBOSE_GO) -tags "$(BUILDTAGS)" -cpu=1,2,4 -parallel 4 -vet=off -race -bench . ./...
+
+# Coverage output directory
+COVERAGE_OUTPUT     := $(PREFIX)/.cover
+
+# Final cover file, html, and mode
+COVERAGE_PROFILE    := $(COVERAGE_OUTPUT)/profile.txt
+COVERAGE_MODE       := atomic
+
+# Profile generation (depends on all go files)
+$(COVERAGE_PROFILE): $(shell find . -type f -name '*.go')
+	$(call title, $@)
+	mkdir -p "$(COVERAGE_OUTPUT)"
+	go test $(VERBOSE_GO) -tags "$(BUILDTAGS)" -covermode=$(COVERAGE_MODE) -coverprofile="$(COVERAGE_PROFILE)" -coverpkg=./... ./...
+
+# High-level task to send report to codecov
+# Use local copy of codecov script retrieved on 06/16/18
+# Switch to below if you REALLY want to use the remote one
+# curl -s https://codecov.io/bash | bash -s -f "$(COVERAGE_PROFILE)
+coverage-send:
+	$(call title, $@)
+	./codecov.sh -f "$(COVERAGE_PROFILE)"
+
+# Generate coverage profile
+coverage-generate: $(COVERAGE_PROFILE)
 
 ############################
 # Dependencies helpers
@@ -131,4 +158,4 @@ dep-status:
 
 dep-update:
 	$(call title, $@)
-	$(DEP) ensure -update $(VERBOSE_GO)
+	$(DEP) ensure $(VERBOSE_GO) -update
