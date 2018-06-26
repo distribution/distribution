@@ -102,7 +102,7 @@ func Parse(s string) (u UUID, err error) {
 	copy(u[8:10], p[3])
 	copy(u[10:16], p[4])
 
-	return
+	return u, nil
 }
 
 func (u UUID) String() string {

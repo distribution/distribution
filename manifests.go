@@ -81,7 +81,7 @@ func ManifestMediaTypes() (mediaTypes []string) {
 			mediaTypes = append(mediaTypes, t)
 		}
 	}
-	return
+	return mediaTypes
 }
 
 // UnmarshalFunc implements manifest unmarshalling a given MediaType

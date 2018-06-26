@@ -169,7 +169,7 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 		return nil, err
 	}
 	info := blobRef.Properties
-	size := int64(info.ContentLength)
+	size := info.ContentLength
 	if offset >= size {
 		return ioutil.NopCloser(bytes.NewReader(nil)), nil
 	}
@@ -238,7 +238,7 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 
 		return storagedriver.FileInfoInternal{FileInfoFields: storagedriver.FileInfoFields{
 			Path:    path,
-			Size:    int64(blobProperties.ContentLength),
+			Size:    blobProperties.ContentLength,
 			ModTime: time.Time(blobProperties.LastModified),
 			IsDir:   false,
 		}}, nil

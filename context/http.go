@@ -303,7 +303,7 @@ func (irw *instrumentedResponseWriter) Write(p []byte) (n int, err error) {
 
 	irw.mu.Unlock()
 
-	return
+	return n, err
 }
 
 func (irw *instrumentedResponseWriter) WriteHeader(status int) {

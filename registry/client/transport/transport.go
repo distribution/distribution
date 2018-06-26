@@ -130,7 +130,7 @@ func (r *onEOFReader) Read(p []byte) (n int, err error) {
 	if err == io.EOF {
 		r.runFunc()
 	}
-	return
+	return n, err
 }
 
 func (r *onEOFReader) Close() error {

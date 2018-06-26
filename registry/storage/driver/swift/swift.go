@@ -754,10 +754,9 @@ func chunkFilenames(slice []string, maxSize int) (chunks [][]string, err error) 
 			}
 			chunks = append(chunks, slice[offset:offset+chunkSize])
 		}
-	} else {
-		return nil, fmt.Errorf("Max chunk size must be > 0")
+		return chunks, err
 	}
-	return
+	return nil, fmt.Errorf("Max chunk size must be > 0")
 }
 
 func parseManifest(manifest string) (container string, prefix string) {

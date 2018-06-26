@@ -86,7 +86,7 @@ func newCloudFrontStorageMiddleware(storageDriver storagedriver.StorageDriver, o
 		return nil, fmt.Errorf("failed to read privatekey file: %s", err)
 	}
 
-	block, _ := pem.Decode([]byte(pkBytes))
+	block, _ := pem.Decode(pkBytes)
 	if block == nil {
 		return nil, fmt.Errorf("failed to decode private key as an rsa private key")
 	}

@@ -6,8 +6,6 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
-	"time"
-
 	"github.com/docker/distribution"
 	dcontext "github.com/docker/distribution/context"
 	"github.com/docker/distribution/reference"
@@ -16,7 +14,7 @@ import (
 )
 
 // todo(richardscothern): from cache control header or config file
-const blobTTL = time.Duration(24 * 7 * time.Hour)
+// const blobTTL = time.Duration(24 * 7 * time.Hour)
 
 type proxyBlobStore struct {
 	localStore     distribution.BlobStore
