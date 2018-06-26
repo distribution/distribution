@@ -1241,7 +1241,7 @@ func (rr *randReader) Read(p []byte) (n int, err error) {
 		err = io.EOF
 	}
 
-	return
+	return n, err
 }
 
 func newRandReader(n int64) *randReader {

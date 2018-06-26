@@ -178,7 +178,7 @@ func parseValueAndParams(header string) (value string, params map[string]string)
 		params[pkey] = pvalue
 		s = skipSpace(s)
 	}
-	return
+	return value, params
 }
 
 func skipSpace(s string) (rest string) {

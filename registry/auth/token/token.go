@@ -216,7 +216,7 @@ func (t *Token) VerifySigningKey(verifyOpts VerifyOptions) (signingKey libtrust.
 		err = errors.New("unable to get token signing key")
 	}
 
-	return
+	return signingKey, err
 }
 
 func parseAndVerifyCertChain(x5c []string, roots *x509.CertPool) (leafKey libtrust.PublicKey, err error) {
@@ -275,7 +275,7 @@ func parseAndVerifyCertChain(x5c []string, roots *x509.CertPool) (leafKey libtru
 		return nil, fmt.Errorf("unable to make libtrust public key from leaf certificate: %s", err)
 	}
 
-	return
+	return leafKey, nil
 }
 
 func parseAndVerifyRawJWK(rawJWK *json.RawMessage, verifyOpts VerifyOptions) (pubKey libtrust.PublicKey, err error) {
@@ -318,7 +318,7 @@ func parseAndVerifyRawJWK(rawJWK *json.RawMessage, verifyOpts VerifyOptions) (pu
 		return nil, errors.New("leaf certificate public key ID does not match JWK key ID")
 	}
 
-	return
+	return pubKey, nil
 }
 
 // accessSet returns a set of actions available for the resource
