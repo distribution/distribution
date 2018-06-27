@@ -1,15 +1,18 @@
 // Package gdrive provides a storagedriver.StorageDriver implementation to
-// store blobs in Google drive storage.
+// store blobs in Google Drive storage.
 //
 // This package leverages the google.golang.org/api/drive/v3 client library
-// for interfacing with google drive.
+// for interfacing with Google Drive. Due to limitations Google places on
+// on rapid/concurrent API requests for the free tier, consider limiting
+// your Docker daemon's `max-concurrent-uploads` and `max-concurrent-downloads`.
 //
 // Parameters :
 //
-// keyfile : A private service account key file in JSON file format that can be downloaded
-//           from google api console.
-// rootdirectory : Folder name in google drive to store all registry files.
-//
+// keyfile : A private service account key file in JSON file format that can be
+// 		downloaded from the Google API console.
+// rootdirectory : Folder name in the service account's Google Drive to store
+// 		all registry files. If no folder with a matching name is found, one is
+// 		created.
 // +build include_gdrive
 
 package gdrive
