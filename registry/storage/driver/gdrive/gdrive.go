@@ -24,6 +24,7 @@ import (
 	"strings"
 	"time"
 
+	dcontext "github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/base"
 	"github.com/docker/distribution/registry/storage/driver/factory"
@@ -69,15 +70,6 @@ type Driver struct {
 
 // FromParameters constructs a new Driver with a given parameters map
 func FromParameters(parameters map[string]interface{}) (*Driver, error) {
-	params, err := fromParametersImpl(parameters)
-	if err != nil || params == nil {
-		return nil, err
-	}
-	return New(*params)
-}
-
-func fromParametersImpl(parameters map[string]interface{}) (*DriverParameters, error) {
-
 	keyFile, ok := parameters["keyfile"]
 	if !ok || fmt.Sprint(keyFile) == "" {
 		return nil, fmt.Errorf("No keyfile parameter provided")
@@ -92,7 +84,8 @@ func fromParametersImpl(parameters map[string]interface{}) (*DriverParameters, e
 		KeyFile:       fmt.Sprint(keyFile),
 		RootDirectory: fmt.Sprint(rootDirectory),
 	}
-	return params, nil
+
+	return New(*params)
 }
 
 // New constructs a new Driver with a given rootDirectory
@@ -107,19 +100,19 @@ func New(params DriverParameters) (*Driver, error) {
 
 	jwtConf, err = google.JWTConfigFromJSON(jsonKey, drive.DriveFileScope)
 	if err != nil {
-		return nil, fmt.Errorf("JWTConfigFromJSON failed:%v", err)
+		return nil, fmt.Errorf("JWTConfigFromJSON failed: %v", err)
 	}
 
 	// get the root directory id or create it if not present
 	client := jwtConf.Client(oauth2.NoContext)
 	driveService, err := drive.New(client)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to initialize the google drive client.")
+		return nil, fmt.Errorf("Failed to initialize the Google Drive client.")
 	}
 	rootID := ""
 	r, err := driveService.Files.List().Fields("files(id, name)").Do()
 	if err != nil {
-		return nil, fmt.Errorf("Cannot retrieve file details:%v", err)
+		return nil, fmt.Errorf("Cannot retrieve file details: %v", err)
 	}
 	if r != nil && len(r.Files) > 0 {
 		for _, i := range r.Files {
@@ -242,7 +235,10 @@ func (d *driver) Writer(ctx context.Context, subPath string, append bool) (stora
 			if err != nil {
 				log.Fatalf("Unable to retrieve the file in drive: %s", err)
 			}
-			newText, _ := ioutil.ReadAll(httpRes.Body)
+			newText, err := ioutil.ReadAll(httpRes.Body)
+			if err != nil {
+				return nil, err
+			}
 			size = len(newText)
 			bytes = newText
 		}
@@ -266,7 +262,10 @@ func (d *driver) Stat(ctx context.Context, subPath string) (storagedriver.FileIn
 		}, nil
 	}
 
-	r, _ := d.driveService.Files.List().Q(`"` + d.rootID + `" in parents`).Do()
+	r, err := d.driveService.Files.List().Q(`"` + d.rootID + `" in parents`).Do()
+	if err != nil {
+		return nil, err
+	}
 
 	if r != nil && len(r.Files) > 0 {
 		for _, i := range r.Files {
@@ -287,13 +286,15 @@ func (d *driver) Stat(ctx context.Context, subPath string) (storagedriver.FileIn
 // List returns a list of the objects that are direct descendants of the given
 // path.
 func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
-	r, _ := d.driveService.Files.List().Q(`"` + d.rootID + `" in parents`).Do()
+	r, err := d.driveService.Files.List().Q(`"` + d.rootID + `" in parents`).Do()
+	if err != nil {
+		return nil, err
+	}
 
 	keys := []string{}
 	checkMap := make(map[string]bool)
 	if r != nil && len(r.Files) > 0 {
 		for _, i := range r.Files {
-
 			if subPath == "/" {
 				index := strings.IndexByte(i.Name[1:], '/')
 				if _, ok := checkMap[i.Name[:index+1]]; !ok {
@@ -341,8 +342,11 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
 func (d *driver) Delete(ctx context.Context, subPath string) error {
-	r, _ := d.driveService.Files.List().
+	r, err := d.driveService.Files.List().
 		Q(`"` + d.rootID + `" in parents`).Do()
+	if err != nil {
+		return err
+	}
 	pathFound := false
 	if r != nil && len(r.Files) > 0 {
 		for _, i := range r.Files {
@@ -350,7 +354,7 @@ func (d *driver) Delete(ctx context.Context, subPath string) error {
 				pathFound = true
 				err := d.driveService.Files.Delete(i.Id).Do()
 				if err != nil {
-					log.Fatalf("Cannot delete the file:%s %s", i.Name, err)
+					log.Fatalf("Cannot delete the file: %s %s", i.Name, err)
 				}
 			}
 		}
@@ -459,7 +463,8 @@ func (fw *fileWriter) Close() error {
 		_, err := fw.driver.driveService.Files.Update(file.Id, dstFile).
 			Media(strings.NewReader(string(fw.bytes))).Do()
 		if err != nil {
-			fmt.Println("Close:unable to update")
+			dcontext.GetLogger(dcontext.Background()).WithError(err).Error("Close: unable to update file")
+			return err
 		}
 		return nil
 	}
@@ -469,7 +474,8 @@ func (fw *fileWriter) Close() error {
 	_, err := fw.driver.driveService.Files.Create(newFile).
 		Media(bytes.NewReader(fw.bytes)).Do()
 	if err != nil {
-		fmt.Println("Create file in drive failed", err)
+		dcontext.GetLogger(dcontext.Background()).WithError(err).Error("Close: unable to create file")
+		return err
 	}
 	return nil
 }
@@ -506,8 +512,8 @@ func (fw *fileWriter) Commit() error {
 	_, err := fw.driver.driveService.Files.Create(newFile).
 		Media(bytes.NewReader(fw.bytes)).Do()
 	if err != nil {
-		fmt.Println("Commit:Create file in drive failed", err)
-		return nil
+		dcontext.GetLogger(dcontext.Background()).WithError(err).Error("Commit: unable to create file")
+		return err
 	}
 	fw.committed = true
 
