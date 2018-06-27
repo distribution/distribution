@@ -71,7 +71,7 @@ type Manifest struct {
 	Layers []distribution.Descriptor `json:"layers"`
 }
 
-// References returnes the descriptors of this manifests references.
+// References returns the descriptors of this manifests references.
 func (m Manifest) References() []distribution.Descriptor {
 	references := make([]distribution.Descriptor, 0, 1+len(m.Layers))
 	references = append(references, m.Config)

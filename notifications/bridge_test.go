@@ -26,9 +26,18 @@ var (
 		Name: "test",
 	}
 	request = RequestRecord{}
-	m       = schema1.Manifest{
-		Name: repo,
-		Tag:  "latest",
+	layers  = []schema1.FSLayer{
+		{
+			BlobSum: "asdf",
+		},
+		{
+			BlobSum: "qwer",
+		},
+	}
+	m = schema1.Manifest{
+		Name:     repo,
+		Tag:      "latest",
+		FSLayers: layers,
 	}
 
 	sm      *schema1.SignedManifest
@@ -120,7 +129,7 @@ func createTestEnv(t *testing.T, fn testSinkFn) Listener {
 	payload = sm.Canonical
 	dgst = digest.FromBytes(payload)
 
-	return NewBridge(ub, source, actor, request, fn)
+	return NewBridge(ub, source, actor, request, fn, true)
 }
 
 func checkDeleted(t *testing.T, action string, events ...Event) {
@@ -169,6 +178,15 @@ func checkCommonManifest(t *testing.T, action string, events ...Event) {
 
 	if event.Target.URL != u {
 		t.Fatalf("incorrect url passed: \n%q != \n%q", event.Target.URL, u)
+	}
+
+	if len(event.Target.Layers) != len(layers) {
+		t.Fatalf("unexpected number of layers %v != %v", len(event.Target.Layers), len(layers))
+	}
+	for i, layer := range event.Target.Layers {
+		if layer.Digest != layers[i].BlobSum {
+			t.Fatalf("unexpected layer: %q != %q", layer.Digest, layers[i].BlobSum)
+		}
 	}
 }
 

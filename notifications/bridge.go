@@ -12,11 +12,12 @@ import (
 )
 
 type bridge struct {
-	ub      URLBuilder
-	actor   ActorRecord
-	source  SourceRecord
-	request RequestRecord
-	sink    Sink
+	ub             URLBuilder
+	manfiestLayers bool
+	actor          ActorRecord
+	source         SourceRecord
+	request        RequestRecord
+	sink           Sink
 }
 
 var _ Listener = &bridge{}
@@ -31,13 +32,14 @@ type URLBuilder interface {
 // using the actor and source. Any urls populated in the events created by
 // this bridge will be created using the URLBuilder.
 // TODO(stevvooe): Update this to simply take a context.Context object.
-func NewBridge(ub URLBuilder, source SourceRecord, actor ActorRecord, request RequestRecord, sink Sink) Listener {
+func NewBridge(ub URLBuilder, source SourceRecord, actor ActorRecord, request RequestRecord, sink Sink, manifestLayers bool) Listener {
 	return &bridge{
-		ub:      ub,
-		actor:   actor,
-		source:  source,
-		request: request,
-		sink:    sink,
+		ub:             ub,
+		manfiestLayers: manifestLayers,
+		actor:          actor,
+		source:         source,
+		request:        request,
+		sink:           sink,
 	}
 }
 
@@ -135,7 +137,7 @@ func (b *bridge) createManifestEvent(action string, repo reference.Named, sm dis
 	}
 
 	// Ensure we have the canonical manifest descriptor here
-	_, desc, err := distribution.UnmarshalManifest(mt, p)
+	manifest, desc, err := distribution.UnmarshalManifest(mt, p)
 	if err != nil {
 		return nil, err
 	}
@@ -144,6 +146,9 @@ func (b *bridge) createManifestEvent(action string, repo reference.Named, sm dis
 	event.Target.Length = desc.Size
 	event.Target.Size = desc.Size
 	event.Target.Digest = desc.Digest
+	if b.manfiestLayers {
+		event.Target.Layers = append(event.Target.Layers, manifest.References()...)
+	}
 
 	ref, err := reference.WithDigest(repo, event.Target.Digest)
 	if err != nil {

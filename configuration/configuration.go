@@ -544,6 +544,8 @@ func (auth Auth) MarshalYAML() (interface{}, error) {
 
 // Notifications configures multiple http endpoints.
 type Notifications struct {
+	// EventConfig is the configuration for the event format that is sent to each Endpoint.
+	EventConfig Events `yaml:"events,omitempty"`
 	// Endpoints is a list of http configurations for endpoints that
 	// respond to webhook notifications. In the future, we may allow other
 	// kinds of endpoints, such as external queues.
@@ -562,6 +564,11 @@ type Endpoint struct {
 	Backoff           time.Duration `yaml:"backoff"`           // backoff duration
 	IgnoredMediaTypes []string      `yaml:"ignoredmediatypes"` // target media types to ignore
 	Ignore            Ignore        `yaml:"ignore"`            // ignore event types
+}
+
+// Events configures notification events.
+type Events struct {
+	ManifestLayers bool `yaml:"manifestlayers"` // include layer data in manifest events
 }
 
 //Ignore configures mediaTypes and actions of the event, that it won't be propagated

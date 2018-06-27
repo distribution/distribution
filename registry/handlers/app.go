@@ -869,7 +869,7 @@ func (app *App) eventBridge(ctx *Context, r *http.Request) notifications.Listene
 	}
 	request := notifications.NewRequestRecord(dcontext.GetRequestID(ctx), r)
 
-	return notifications.NewBridge(ctx.urlBuilder, app.events.source, actor, request, app.events.sink)
+	return notifications.NewBridge(ctx.urlBuilder, app.events.source, actor, request, app.events.sink, app.Config.Notifications.EventConfig.ManifestLayers)
 }
 
 // nameRequired returns true if the route requires a name.
