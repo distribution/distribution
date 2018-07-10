@@ -77,6 +77,8 @@ type Parameters struct {
 	EndpointType        string
 	InsecureSkipVerify  bool
 	ChunkSize           int
+	PageSize            int
+	Retries             int
 	SecretKey           string
 	AccessKey           string
 	TempURLContainerKey bool
@@ -114,6 +116,7 @@ type driver struct {
 	BulkDeleteSupport    bool
 	BulkDeleteMaxDeletes int
 	ChunkSize            int
+	PageSize             int
 	SecretKey            string
 	AccessKey            string
 	TempURLContainerKey  bool
@@ -179,6 +182,14 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		return nil, fmt.Errorf("The chunksize %#v parameter should be a number that is larger than or equal to %d", params.ChunkSize, minChunkSize)
 	}
 
+	if params.PageSize < 0 {
+		return nil, fmt.Errorf("The pagesize %#v parameter must not be negative", params.PageSize)
+	}
+
+	if params.Retries < 0 {
+		return nil, fmt.Errorf("The retries %#v parameter must not be negative", params.Retries)
+	}
+
 	return New(params)
 }
 
@@ -208,6 +219,7 @@ func New(params Parameters) (*Driver, error) {
 		Transport:      transport,
 		ConnectTimeout: 60 * time.Second,
 		Timeout:        15 * 60 * time.Second,
+		Retries:        params.Retries,
 	}
 	err := ct.Authenticate()
 	if err != nil {
@@ -227,6 +239,7 @@ func New(params Parameters) (*Driver, error) {
 		Container:      params.Container,
 		Prefix:         params.Prefix,
 		ChunkSize:      params.ChunkSize,
+		PageSize:       params.PageSize,
 		TempURLMethods: make([]string, 0),
 		AccessKey:      params.AccessKey,
 	}
@@ -411,6 +424,7 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 	opts := &swift.ObjectsOpts{
 		Prefix:    swiftPath,
 		Delimiter: '/',
+		Limit:     d.PageSize,
 	}
 
 	objects, err := d.Conn.ObjectsAll(d.Container, opts)
@@ -483,6 +497,7 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 	opts := &swift.ObjectsOpts{
 		Prefix:    prefix,
 		Delimiter: '/',
+		Limit:     d.PageSize,
 	}
 
 	objects, err := d.Conn.ObjectsAll(d.Container, opts)
@@ -520,6 +535,7 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 func (d *driver) Delete(ctx context.Context, path string) error {
 	opts := swift.ObjectsOpts{
 		Prefix: d.swiftPath(path) + "/",
+		Limit:  d.PageSize,
 	}
 
 	objects, err := d.Conn.ObjectsAll(d.Container, &opts)
@@ -660,7 +676,53 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 // Walk traverses a filesystem defined within driver, starting
 // from the given path, calling f on each file
 func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn) error {
-	return storagedriver.WalkFallback(ctx, d, path, f)
+	prefix := d.swiftPath(path)
+	if prefix != "" {
+		prefix += "/"
+	}
+
+	opts := &swift.ObjectsOpts{
+		Prefix:    prefix,
+		Delimiter: '/',
+		Limit:     d.PageSize,
+	}
+
+	objects, err := d.Conn.ObjectsAll(d.Container, opts)
+	if err == swift.ContainerNotFound || (len(objects) == 0 && path != "/") {
+		return storagedriver.PathNotFoundError{Path: path}
+	}
+
+	for _, obj := range objects {
+		fi := storagedriver.FileInfoFields{
+			Path:    strings.TrimPrefix(strings.TrimSuffix(obj.Name, "/"), d.swiftPath("/")),
+			Size:    obj.Bytes,
+			ModTime: obj.LastModified,
+		}
+
+		swiftPath := d.swiftPath(fi.Path)
+
+		if obj.PseudoDirectory && obj.Name == swiftPath+"/" {
+			fi.IsDir = true
+		}
+
+		fileInfo := storagedriver.FileInfoInternal{FileInfoFields: fi}
+
+		err = f(fileInfo)
+		if err == nil && fileInfo.IsDir() {
+			if err := d.Walk(ctx, fileInfo.Path(), f); err != nil {
+				return err
+			}
+		} else if err == storagedriver.ErrSkipDir {
+			// Stop iteration if it's a file, otherwise noop if it's a directory
+			if !fileInfo.IsDir() {
+				return nil
+			}
+		} else if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (d *driver) swiftPath(path string) string {
@@ -679,7 +741,11 @@ func (d *driver) swiftSegmentPath(path string) (string, error) {
 
 func (d *driver) getAllSegments(path string) ([]swift.Object, error) {
 	//a simple container listing works 99.9% of the time
-	segments, err := d.Conn.ObjectsAll(d.Container, &swift.ObjectsOpts{Prefix: path})
+	opts := &swift.ObjectsOpts{
+		Prefix: path,
+		Limit:  d.PageSize,
+	}
+	segments, err := d.Conn.ObjectsAll(d.Container, opts)
 	if err != nil {
 		if err == swift.ContainerNotFound {
 			return nil, storagedriver.PathNotFoundError{Path: path}

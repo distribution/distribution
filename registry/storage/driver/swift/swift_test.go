@@ -102,6 +102,8 @@ func init() {
 			endpointType,
 			insecureSkipVerify,
 			defaultChunkSize,
+			0, // default page size
+			0, // default number of retries
 			secretKey,
 			accessKey,
 			containerKey,

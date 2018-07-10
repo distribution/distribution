@@ -129,6 +129,8 @@ storage:
     region: fr
     container: containername
     rootdirectory: /swift/object/name/prefix
+    pagesize: page size for object listing
+    retries: number of retries on error
   oss:
     accesskeyid: accesskeyid
     accesskeysecret: accesskeysecret
@@ -413,6 +415,8 @@ storage:
     region: fr
     container: containername
     rootdirectory: /swift/object/name/prefix
+    pagesize: page size for object listing
+    retries: number of retries on error
   oss:
     accesskeyid: accesskeyid
     accesskeysecret: accesskeysecret
