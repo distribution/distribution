@@ -331,9 +331,11 @@ digest. The _hex_ portion is the hex-encoded result of the hash.
 
 We define a _digest_ string to match the following grammar:
 ```
-digest      := algorithm ":" hex
-algorithm   := /[A-Fa-f0-9_+.-]+/
-hex         := /[A-Fa-f0-9]+/
+digest                     := digest-algorithm ":" digest-hex
+digest-algorithm           := digest-algorithm-component [ digest-algorithm-separator digest-algorithm-component ]*
+digest-algorithm-separator := /[+.-_]/
+digest-algorithm-component := /[A-Za-z][A-Za-z0-9]*/
+digest-hex                 := /[0-9a-fA-F]{32,}/ ; At least 128 bit digest value
 ```
 
 Some examples of _digests_ include the following:
