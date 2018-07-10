@@ -106,6 +106,7 @@ func init() {
 			accessKey,
 			containerKey,
 			tempURLMethods,
+			"", //PostgresURI only used by swift-plus
 		}
 
 		return New(parameters)

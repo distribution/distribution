@@ -625,6 +625,12 @@ func (p *plusDriver) URLFor(ctx context.Context, fullPath string, options map[st
 	return p.swift.PlusMakeTempURL(ctx, prependPrefix(p.objectPrefix, fi.ObjectPath()), options)
 }
 
+// Walk traverses a filesystem defined within driver, starting
+// from the given path, calling f on each file
+func (p *plusDriver) Walk(ctx context.Context, path string, f storagedriver.WalkFn) error {
+	return storagedriver.WalkFallback(ctx, p, path, f)
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 //plusWriter is the storagedriver.FileWriter implementation used by the plusDriver.
