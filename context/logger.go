@@ -39,6 +39,8 @@ type Logger interface {
 	Warn(args ...interface{})
 	Warnf(format string, args ...interface{})
 	Warnln(args ...interface{})
+
+	WithError(err error) *logrus.Entry
 }
 
 type loggerKey struct{}

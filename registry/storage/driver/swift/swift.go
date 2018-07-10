@@ -161,6 +161,19 @@ func parseParameters(in map[string]interface{}) (Parameters, error) {
 		InsecureSkipVerify: false,
 	}
 
+	// Sanitize some entries before trying to decode parameters with mapstructure
+	// TenantID and Tenant when integers only and passed as ENV variables
+	// are considered as integer and not string. The parser fails in this
+	// case.
+	_, ok := in["tenant"]
+	if ok {
+		in["tenant"] = fmt.Sprint(in["tenant"])
+	}
+	_, ok = in["tenantid"]
+	if ok {
+		in["tenantid"] = fmt.Sprint(in["tenantid"])
+	}
+
 	if err := mapstructure.Decode(in, &params); err != nil {
 		return Parameters{}, err
 	}
@@ -620,6 +633,12 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
 	return d.PlusMakeTempURL(ctx, d.swiftPath(path), options)
+}
+
+// Walk traverses a filesystem defined within driver, starting
+// from the given path, calling f on each file
+func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn) error {
+	return storagedriver.WalkFallback(ctx, d, path, f)
 }
 
 func (d *driver) swiftPath(path string) string {

@@ -183,6 +183,10 @@ middleware:
         privatekey: /path/to/pem
         keypairid: cloudfrontkeypairid
         duration: 3000s
+        ipfilteredby: awsregion
+        awsregion: us-east-1, use-east-2
+        updatefrenquency: 12h
+        iprangesurl: https://ip-ranges.amazonaws.com/ip-ranges.json
   storage:
     - name: redirect
       options:
@@ -211,8 +215,12 @@ http:
     letsencrypt:
       cachefile: /path/to/cache-file
       email: emailused@letsencrypt.com
+      hosts: [myregistryaddress.org]
   debug:
     addr: localhost:5001
+    prometheus:
+      enabled: true
+      path: /metrics
   headers:
     X-Content-Type-Options: [nosniff]
   http2:
@@ -228,6 +236,11 @@ notifications:
       backoff: 1s
       ignoredmediatypes:
         - application/octet-stream
+      ignore:
+        mediatypes:
+           - application/octet-stream
+        actions:
+           - pull
 redis:
   addr: localhost:6379
   password: asecret
@@ -636,6 +649,10 @@ middleware:
         privatekey: /path/to/pem
         keypairid: cloudfrontkeypairid
         duration: 3000s
+        ipfilteredby: awsregion
+        awsregion: us-east-1, use-east-2
+        updatefrenquency: 12h
+        iprangesurl: https://ip-ranges.amazonaws.com/ip-ranges.json
 ```
 
 Each middleware entry has `name` and `options` entries. The `name` must
@@ -655,6 +672,14 @@ interpretation of the options.
 | `privatekey` | yes   | The private key for Cloudfront, provided by AWS.        |
 | `keypairid` | yes    | The key pair ID provided by AWS.                         |
 | `duration` | no      | An integer and unit for the duration of the Cloudfront session. Valid time units are `ns`, `us` (or `µs`), `ms`, `s`, `m`, or `h`. For example, `3000s` is valid, but `3000 s` is not. If you do not specify a `duration` or you specify an integer without a time unit, the duration defaults to `20m` (20 minutes).|
+|`ipfilteredby`|no     | A string with the following value `none|aws|awsregion`. |
+|`awsregion`|no        | A comma separated string of AWS regions, only available when `ipfilteredby` is `awsregion`. For example, `us-east-1, us-west-2`|
+|`updatefrenquency`|no | The frequency to update AWS IP regions, default: `12h`|
+|`iprangesurl`|no      | The URL contains the AWS IP ranges information, default: `https://ip-ranges.amazonaws.com/ip-ranges.json`|
+Then value of ipfilteredby:
+`none`: default, do not filter by IP
+`aws`: IP from AWS goes to S3 directly
+`awsregion`: IP from certain AWS regions goes to S3 directly, use together with `awsregion`
 
 ### `redirect`
 
@@ -722,6 +747,7 @@ http:
     letsencrypt:
       cachefile: /path/to/cache-file
       email: emailused@letsencrypt.com
+      hosts: [myregistryaddress.org]
   debug:
     addr: localhost:5001
   headers:
@@ -766,12 +792,15 @@ TLS certificates provided by
 > accessible on port `443`. The registry defaults to listening on port `5000`.
 > If you run the registry as a container, consider adding the flag `-p 443:5000`
 > to the `docker run` command or using a similar setting in a cloud
-> configuration.
+> configuration. You should also set the `hosts` option to the list of hostnames
+> that are valid for this registry to avoid trying to get certificates for random
+> hostnames due to malicious clients connecting with bogus SNI hostnames.
 
 | Parameter | Required | Description                                           |
 |-----------|----------|-------------------------------------------------------|
 | `cachefile` | yes    | Absolute path to a file where the Let's Encrypt agent can cache data. |
 | `email`   | yes      | The email address used to register with Let's Encrypt. |
+| `hosts`   | no       | The hostnames allowed for Let's Encrypt certificates. |
 
 ### `debug`
 
@@ -783,6 +812,19 @@ access to the debug endpoint is locked down in a production environment.
 
 The `debug` section takes a single required `addr` parameter, which specifies
 the `HOST:PORT` on which the debug server should accept connections.
+
+## `prometheus`
+
+The `prometheus` option defines whether the prometheus metrics is enable, as well
+as the path to access the metrics.
+
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `enabled` | no       | Set `true` to enable the prometheus server            |
+| `path`    | no       | The path to access the metrics, `/metrics` by default |
+
+The url to access the metrics is `HOST:PORT/path`, where `HOST:PORT` is defined
+in `addr` under `debug`.
 
 ### `headers`
 
@@ -821,6 +863,11 @@ notifications:
       backoff: 1s
       ignoredmediatypes:
         - application/octet-stream
+      ignore:
+        mediatypes:
+           - application/octet-stream
+        actions:
+           - pull
 ```
 
 The notifications option is **optional** and currently may contain a single
@@ -841,6 +888,14 @@ accept event notifications.
 | `threshold` | yes    | An integer specifying how long to wait before backing off a failure. |
 | `backoff` | yes      | How long the system backs off before retrying after a failure. A positive integer and an optional suffix indicating the unit of time, which may be `ns`, `us`, `ms`, `s`, `m`, or `h`. If you omit the unit of time, `ns` is used. |
 | `ignoredmediatypes`|no| A list of target media types to ignore. Events with these target media types are not published to the endpoint. |
+| `ignore`  |no| Events with these mediatypes or actions are not published to the endpoint. |
+
+#### `ignore`
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `mediatypes`|no| A list of target media types to ignore. Events with these target media types are not published to the endpoint. |
+| `actions`   |no| A list of actions to ignore. Events with these actions are not published to the endpoint. |
+
 
 ## `redis`
 

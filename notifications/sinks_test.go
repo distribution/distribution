@@ -113,25 +113,29 @@ func TestEventQueue(t *testing.T) {
 	}
 }
 
-func TestIgnoredMediaTypesSink(t *testing.T) {
+func TestIgnoredSink(t *testing.T) {
 	blob := createTestEvent("push", "library/test", "blob")
-	manifest := createTestEvent("push", "library/test", "manifest")
+	manifest := createTestEvent("pull", "library/test", "manifest")
 
 	type testcase struct {
-		ignored  []string
-		expected []Event
+		ignoreMediaTypes []string
+		ignoreActions    []string
+		expected         []Event
 	}
 
 	cases := []testcase{
-		{nil, []Event{blob, manifest}},
-		{[]string{"other"}, []Event{blob, manifest}},
-		{[]string{"blob"}, []Event{manifest}},
-		{[]string{"blob", "manifest"}, nil},
+		{nil, nil, []Event{blob, manifest}},
+		{[]string{"other"}, []string{"other"}, []Event{blob, manifest}},
+		{[]string{"blob"}, []string{"other"}, []Event{manifest}},
+		{[]string{"blob", "manifest"}, []string{"other"}, nil},
+		{[]string{"other"}, []string{"push"}, []Event{manifest}},
+		{[]string{"other"}, []string{"pull"}, []Event{blob}},
+		{[]string{"other"}, []string{"pull", "push"}, nil},
 	}
 
 	for _, c := range cases {
 		ts := &testSink{}
-		s := newIgnoredMediaTypesSink(ts, c.ignored)
+		s := newIgnoredSink(ts, c.ignoreMediaTypes, c.ignoreActions)
 
 		if err := s.Write(blob, manifest); err != nil {
 			t.Fatalf("error writing event: %v", err)

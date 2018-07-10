@@ -114,6 +114,10 @@ type Configuration struct {
 
 				// Email is the email to use during Let's Encrypt registration
 				Email string `yaml:"email,omitempty"`
+
+				// Hosts specifies the hosts which are allowed to obtain Let's
+				// Encrypt certificates.
+				Hosts []string `yaml:"hosts,omitempty"`
 			} `yaml:"letsencrypt,omitempty"`
 		} `yaml:"tls,omitempty"`
 
@@ -129,6 +133,11 @@ type Configuration struct {
 		Debug struct {
 			// Addr specifies the bind address for the debug server.
 			Addr string `yaml:"addr,omitempty"`
+			// Prometheus configures the Prometheus telemetry endpoint.
+			Prometheus struct {
+				Enabled bool   `yaml:"enabled,omitempty"`
+				Path    string `yaml:"path,omitempty"`
+			} `yaml:"prometheus,omitempty"`
 		} `yaml:"debug,omitempty"`
 
 		// HTTP2 configuration options
@@ -552,6 +561,13 @@ type Endpoint struct {
 	Threshold         int           `yaml:"threshold"`         // circuit breaker threshold before backing off on failure
 	Backoff           time.Duration `yaml:"backoff"`           // backoff duration
 	IgnoredMediaTypes []string      `yaml:"ignoredmediatypes"` // target media types to ignore
+	Ignore            Ignore        `yaml:"ignore"`            // ignore event types
+}
+
+//Ignore configures mediaTypes and actions of the event, that it won't be propagated
+type Ignore struct {
+	MediaTypes []string `yaml:"mediatypes"` // target media types to ignore
+	Actions    []string `yaml:"actions"`    // ignore action types
 }
 
 // Reporting defines error reporting methods.

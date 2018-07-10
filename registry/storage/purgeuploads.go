@@ -67,7 +67,7 @@ func getOutstandingUploads(ctx context.Context, driver storageDriver.StorageDriv
 		return uploads, append(errors, err)
 	}
 
-	err = Walk(ctx, driver, root, func(fileInfo storageDriver.FileInfo) error {
+	err = driver.Walk(ctx, root, func(fileInfo storageDriver.FileInfo) error {
 		filePath := fileInfo.Path()
 		_, file := path.Split(filePath)
 		if file[0] == '_' {
@@ -75,7 +75,7 @@ func getOutstandingUploads(ctx context.Context, driver storageDriver.StorageDriv
 			inUploadDir = (file == "_uploads")
 
 			if fileInfo.IsDir() && !inUploadDir {
-				return ErrSkipDir
+				return storageDriver.ErrSkipDir
 			}
 
 		}

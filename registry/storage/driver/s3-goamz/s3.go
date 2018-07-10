@@ -546,6 +546,12 @@ func (d *Driver) S3BucketKey(path string) string {
 	return d.StorageDriver.(*driver).s3Path(path)
 }
 
+// Walk traverses a filesystem defined within driver, starting
+// from the given path, calling f on each file
+func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn) error {
+	return storagedriver.WalkFallback(ctx, d, path, f)
+}
+
 func parseError(path string, err error) error {
 	if s3Err, ok := err.(*s3.Error); ok && s3Err.Code == "NoSuchKey" {
 		return storagedriver.PathNotFoundError{Path: path}

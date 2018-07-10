@@ -20,6 +20,7 @@ import (
 	dcontext "github.com/docker/distribution/context"
 	"github.com/docker/distribution/health"
 	"github.com/docker/distribution/health/checks"
+	prometheus "github.com/docker/distribution/metrics"
 	"github.com/docker/distribution/notifications"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/api/errcode"
@@ -35,6 +36,7 @@ import (
 	"github.com/docker/distribution/registry/storage/driver/factory"
 	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
 	"github.com/docker/distribution/version"
+	"github.com/docker/go-metrics"
 	"github.com/docker/libtrust"
 	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/mux"
@@ -412,6 +414,15 @@ func (app *App) RegisterHealthChecks(healthRegistries ...*health.Registry) {
 // passed through the application filters and context will be constructed at
 // request time.
 func (app *App) register(routeName string, dispatch dispatchFunc) {
+	handler := app.dispatcher(dispatch)
+
+	// Chain the handler with prometheus instrumented handler
+	if app.Config.HTTP.Debug.Prometheus.Enabled {
+		namespace := metrics.NewNamespace(prometheus.NamespacePrefix, "http", nil)
+		httpMetrics := namespace.NewDefaultHttpMetrics(strings.Replace(routeName, "-", "_", -1))
+		metrics.Register(namespace)
+		handler = metrics.InstrumentHandler(httpMetrics, handler)
+	}
 
 	// TODO(stevvooe): This odd dispatcher/route registration is by-product of
 	// some limitations in the gorilla/mux router. We are using it to keep
@@ -419,7 +430,7 @@ func (app *App) register(routeName string, dispatch dispatchFunc) {
 	// replace it with manual routing and structure-based dispatch for better
 	// control over the request execution.
 
-	app.router.GetRoute(routeName).Handler(app.dispatcher(dispatch))
+	app.router.GetRoute(routeName).Handler(handler)
 }
 
 // configureEvents prepares the event sink for action.
@@ -439,6 +450,7 @@ func (app *App) configureEvents(configuration *configuration.Configuration) {
 			Backoff:           endpoint.Backoff,
 			Headers:           endpoint.Headers,
 			IgnoredMediaTypes: endpoint.IgnoredMediaTypes,
+			Ignore:            endpoint.Ignore,
 		})
 
 		sinks = append(sinks, endpoint)
