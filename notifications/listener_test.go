@@ -50,12 +50,12 @@ func TestListener(t *testing.T) {
 		"layer:push":      2,
 		"layer:pull":      2,
 		"layer:delete":    2,
+		"tag:delete":      1,
 	}
 
 	if !reflect.DeepEqual(tl.ops, expectedOps) {
 		t.Fatalf("counts do not match:\n%v\n !=\n%v", tl.ops, expectedOps)
 	}
-
 }
 
 type testListener struct {
@@ -64,7 +64,6 @@ type testListener struct {
 
 func (tl *testListener) ManifestPushed(repo reference.Named, m distribution.Manifest, options ...distribution.ManifestServiceOption) error {
 	tl.ops["manifest:push"]++
-
 	return nil
 }
 
@@ -95,6 +94,11 @@ func (tl *testListener) BlobMounted(repo reference.Named, desc distribution.Desc
 
 func (tl *testListener) BlobDeleted(repo reference.Named, d digest.Digest) error {
 	tl.ops["layer:delete"]++
+	return nil
+}
+
+func (tl *testListener) TagDeleted(repo reference.Named, tag string) error {
+	tl.ops["tag:delete"]++
 	return nil
 }
 
@@ -200,6 +204,10 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 		if err != nil {
 			t.Fatalf("unexpected error deleting blob: %v", err)
 		}
+	}
 
+	err = repository.Tags(ctx).Untag(ctx, m.Tag)
+	if err != nil {
+		t.Fatalf("unexpected error deleting tag: %v", err)
 	}
 }

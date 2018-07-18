@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/docker/distribution"
+
 	dcontext "github.com/docker/distribution/context"
 	"github.com/docker/distribution/reference"
 	"github.com/opencontainers/go-digest"
@@ -25,10 +26,16 @@ type BlobListener interface {
 	BlobDeleted(repo reference.Named, desc digest.Digest) error
 }
 
+// RepoListener describes a listener that can respond to repository related events.
+type RepoListener interface {
+	TagDeleted(repo reference.Named, tag string) error
+}
+
 // Listener combines all repository events into a single interface.
 type Listener interface {
 	ManifestListener
 	BlobListener
+	RepoListener
 }
 
 type repositoryListener struct {
@@ -213,4 +220,27 @@ func (bwl *blobWriterListener) Commit(ctx context.Context, desc distribution.Des
 	}
 
 	return committed, err
+}
+
+type tagServiceListener struct {
+	distribution.TagService
+	parent *repositoryListener
+}
+
+func (rl *repositoryListener) Tags(ctx context.Context) distribution.TagService {
+	return &tagServiceListener{
+		TagService: rl.Repository.Tags(ctx),
+		parent:     rl,
+	}
+}
+
+func (tagSL *tagServiceListener) Untag(ctx context.Context, tag string) error {
+	if err := tagSL.TagService.Untag(ctx, tag); err != nil {
+		return err
+	}
+	if err := tagSL.parent.listener.TagDeleted(tagSL.parent.Repository.Named(), tag); err != nil {
+		dcontext.GetLogger(ctx).Errorf("error dispatching tag deleted to listener: %v", err)
+		return err
+	}
+	return nil
 }

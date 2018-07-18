@@ -108,6 +108,14 @@ func (b *bridge) BlobDeleted(repo reference.Named, dgst digest.Digest) error {
 	return b.createBlobDeleteEventAndWrite(EventActionDelete, repo, dgst)
 }
 
+func (b *bridge) TagDeleted(repo reference.Named, tag string) error {
+	event := b.createEvent(EventActionDelete)
+	event.Target.Repository = repo.Name()
+	event.Target.Tag = tag
+
+	return b.sink.Write(*event)
+}
+
 func (b *bridge) createManifestEventAndWrite(action string, repo reference.Named, sm distribution.Manifest) error {
 	manifestEvent, err := b.createManifestEvent(action, repo, sm)
 	if err != nil {
