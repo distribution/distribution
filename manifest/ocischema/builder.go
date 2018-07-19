@@ -2,6 +2,7 @@ package ocischema
 
 import (
 	"context"
+	"errors"
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/manifest"
@@ -45,12 +46,13 @@ func NewManifestBuilder(bs distribution.BlobService, configJSON []byte, annotati
 
 // SetMediaType assigns the passed mediatype or error if the mediatype is not a
 // valid media type for oci image manifests currently: "" or "application/vnd.oci.image.manifest.v1+json"
-func (mb *Builder) SetMediaType(mediaType string) {
+func (mb *Builder) SetMediaType(mediaType string) error {
 	if mediaType != "" && mediaType != v1.MediaTypeImageManifest {
-		panic("Invalid media type for OCI image manifest")
+		return errors.New("Invalid media type for OCI image manifest")
 	}
 
 	mb.mediaType = mediaType
+	return nil
 }
 
 // Build produces a final manifest from the given references.

@@ -390,7 +390,10 @@ func testOCIManifestStorage(t *testing.T, testname string, includeMediaTypes boo
 
 	blobStore := env.repository.Blobs(ctx)
 	builder := ocischema.NewManifestBuilder(blobStore, []byte{}, map[string]string{})
-	builder.(*ocischema.Builder).SetMediaType(imageMediaType)
+	err = builder.(*ocischema.Builder).SetMediaType(imageMediaType)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	// Add some layers
 	for i := 0; i < 2; i++ {
