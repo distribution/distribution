@@ -258,6 +258,12 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 			repository: repo,
 			blobStore:  blobStore,
 		},
+		ocischemaHandler: &ocischemaManifestHandler{
+			ctx:          ctx,
+			repository:   repo,
+			blobStore:    blobStore,
+			manifestURLs: repo.registry.manifestURLs,
+		},
 	}
 
 	// Apply options
