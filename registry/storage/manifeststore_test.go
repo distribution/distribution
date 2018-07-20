@@ -475,6 +475,10 @@ func testOCIManifestStorage(t *testing.T, testname string, includeMediaTypes boo
 		t.Fatalf("%s: unexpected MediaType for result, %s", testname, fetchedManifest.MediaType)
 	}
 
+	if fetchedManifest.SchemaVersion != ocischema.SchemaVersion.SchemaVersion {
+		t.Fatalf("%s: unexpected schema version for result, %d", testname, fetchedManifest.SchemaVersion)
+	}
+
 	payloadMediaType, _, err := fromStore.Payload()
 	if err != nil {
 		t.Fatalf("%s: error getting payload %v", testname, err)
