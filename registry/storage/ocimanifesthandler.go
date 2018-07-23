@@ -66,6 +66,10 @@ func (ms *ocischemaManifestHandler) Put(ctx context.Context, manifest distributi
 func (ms *ocischemaManifestHandler) verifyManifest(ctx context.Context, mnfst ocischema.DeserializedManifest, skipDependencyVerification bool) error {
 	var errs distribution.ErrManifestVerification
 
+	if mnfst.Manifest.SchemaVersion != 2 {
+		return fmt.Errorf("unrecognized manifest schema version %d", mnfst.Manifest.SchemaVersion)
+	}
+
 	if skipDependencyVerification {
 		return nil
 	}

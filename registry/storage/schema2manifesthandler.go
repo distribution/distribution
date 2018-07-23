@@ -73,6 +73,10 @@ func (ms *schema2ManifestHandler) Put(ctx context.Context, manifest distribution
 func (ms *schema2ManifestHandler) verifyManifest(ctx context.Context, mnfst schema2.DeserializedManifest, skipDependencyVerification bool) error {
 	var errs distribution.ErrManifestVerification
 
+	if mnfst.Manifest.SchemaVersion != 2 {
+		return fmt.Errorf("unrecognized manifest schema version %d", mnfst.Manifest.SchemaVersion)
+	}
+
 	if skipDependencyVerification {
 		return nil
 	}

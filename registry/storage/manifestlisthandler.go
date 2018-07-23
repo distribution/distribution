@@ -64,6 +64,10 @@ func (ms *manifestListHandler) Put(ctx context.Context, manifestList distributio
 func (ms *manifestListHandler) verifyManifest(ctx context.Context, mnfst manifestlist.DeserializedManifestList, skipDependencyVerification bool) error {
 	var errs distribution.ErrManifestVerification
 
+	if mnfst.SchemaVersion != 2 {
+		return fmt.Errorf("unrecognized manifest list schema version %d", mnfst.SchemaVersion)
+	}
+
 	if !skipDependencyVerification {
 		// This manifest service is different from the blob service
 		// returned by Blob. It uses a linked blob store to ensure that
