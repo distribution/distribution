@@ -13,7 +13,7 @@ import (
 
 type bridge struct {
 	ub             URLBuilder
-	manfiestLayers bool
+	manifestLayers bool
 	actor          ActorRecord
 	source         SourceRecord
 	request        RequestRecord
@@ -35,7 +35,7 @@ type URLBuilder interface {
 func NewBridge(ub URLBuilder, source SourceRecord, actor ActorRecord, request RequestRecord, sink Sink, manifestLayers bool) Listener {
 	return &bridge{
 		ub:             ub,
-		manfiestLayers: manifestLayers,
+		manifestLayers: manifestLayers,
 		actor:          actor,
 		source:         source,
 		request:        request,
@@ -146,7 +146,7 @@ func (b *bridge) createManifestEvent(action string, repo reference.Named, sm dis
 	event.Target.Length = desc.Size
 	event.Target.Size = desc.Size
 	event.Target.Digest = desc.Digest
-	if b.manfiestLayers {
+	if b.manifestLayers {
 		event.Target.Layers = append(event.Target.Layers, manifest.References()...)
 	}
 
