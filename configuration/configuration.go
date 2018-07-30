@@ -84,6 +84,10 @@ type Configuration struct {
 		// Location headers
 		RelativeURLs bool `yaml:"relativeurls,omitempty"`
 
+		// Amount of time to wait for connection to drain before shutting down when registry
+		// receives a stop signal
+		DrainTimeout time.Duration `yaml:"draintimeout,omitempty"`
+
 		// TLS instructs the http server to listen with a TLS configuration.
 		// This only support simple tls configuration with a cert and key.
 		// Mostly, this is useful for testing situations or simple deployments

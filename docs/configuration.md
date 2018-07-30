@@ -206,6 +206,7 @@ http:
   host: https://myregistryaddress.org:5000
   secret: asecretforlocaldevelopment
   relativeurls: false
+  draintimeout: 60s
   tls:
     certificate: /path/to/x509/public
     key: /path/to/x509/private
@@ -738,6 +739,7 @@ http:
   host: https://myregistryaddress.org:5000
   secret: asecretforlocaldevelopment
   relativeurls: false
+  draintimeout: 60s
   tls:
     certificate: /path/to/x509/public
     key: /path/to/x509/private
@@ -767,6 +769,7 @@ registry.
 | `host`    | no       | A fully-qualified URL for an externally-reachable address for the registry. If present, it is used when creating generated URLs. Otherwise, these URLs are derived from client requests. |
 | `secret`  | no       | A random piece of data used to sign state that may be stored with the client to protect against tampering. For production environments you should generate a random piece of data using a cryptographically secure random generator. If you omit the secret, the registry will automatically generate a secret when it starts. **If you are building a cluster of registries behind a load balancer, you MUST ensure the secret is the same for all registries.**|
 | `relativeurls`| no    | If `true`,  the registry returns relative URLs in Location headers. The client is responsible for resolving the correct URL. **This option is not compatible with Docker 1.7 and earlier.**|
+| `draintimeout`| no    | Amount of time to wait for HTTP connections to drain before shutting after registry receives SIGTERM signal|
 
 
 ### `tls`
