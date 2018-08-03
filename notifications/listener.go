@@ -26,6 +26,7 @@ type BlobListener interface {
 	BlobDeleted(repo reference.Named, desc digest.Digest) error
 }
 
+// RepoListener provides repository methods that respond to repository lifecycle
 type RepoListener interface {
 	TagDeleted(repo reference.Named, tag string) error
 	RepoDeleted(repo reference.Named) error
