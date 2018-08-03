@@ -124,6 +124,18 @@ func TestEventBridgeTagDeleted(t *testing.T) {
 	}
 }
 
+func TestEventBridgeRepoDeleted(t *testing.T) {
+	l := createTestEnv(t, testSinkFn(func(events ...Event) error {
+		checkDeleted(t, EventActionDelete, events...)
+		return nil
+	}))
+
+	repoRef, _ := reference.WithName(repo)
+	if err := l.RepoDeleted(repoRef); err != nil {
+		t.Fatalf("unexpected error notifying repo deletion: %v", err)
+	}
+}
+
 func createTestEnv(t *testing.T, fn testSinkFn) Listener {
 	pk, err := libtrust.GenerateECP256PrivateKey()
 	if err != nil {

@@ -38,10 +38,15 @@ func TestListener(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
 	}
-	repository = Listen(repository, tl)
+
+	remover, ok := registry.(distribution.RepositoryRemover)
+	if !ok {
+		t.Fatal("registry does not implement RepositoryRemover")
+	}
+	repository, remover = Listen(repository, remover, tl)
 
 	// Now take the registry through a number of operations
-	checkExerciseRepository(t, repository)
+	checkExerciseRepository(t, repository, remover)
 
 	expectedOps := map[string]int{
 		"manifest:push":   1,
@@ -51,6 +56,7 @@ func TestListener(t *testing.T) {
 		"layer:pull":      2,
 		"layer:delete":    2,
 		"tag:delete":      1,
+		"repo:delete":     1,
 	}
 
 	if !reflect.DeepEqual(tl.ops, expectedOps) {
@@ -102,9 +108,14 @@ func (tl *testListener) TagDeleted(repo reference.Named, tag string) error {
 	return nil
 }
 
+func (tl *testListener) RepoDeleted(repo reference.Named) error {
+	tl.ops["repo:delete"]++
+	return nil
+}
+
 // checkExerciseRegistry takes the registry through all of its operations,
 // carrying out generic checks.
-func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
+func checkExerciseRepository(t *testing.T, repository distribution.Repository, remover distribution.RepositoryRemover) {
 	// TODO(stevvooe): This would be a nice testutil function. Basically, it
 	// takes the registry through a common set of operations. This could be
 	// used to make cross-cutting updates by changing internals that affect
@@ -209,5 +220,10 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 	err = repository.Tags(ctx).Untag(ctx, m.Tag)
 	if err != nil {
 		t.Fatalf("unexpected error deleting tag: %v", err)
+	}
+
+	err = remover.Remove(ctx, repository.Named())
+	if err != nil {
+		t.Fatalf("unexpected error deleting repo: %v", err)
 	}
 }

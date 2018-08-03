@@ -26,9 +26,9 @@ type BlobListener interface {
 	BlobDeleted(repo reference.Named, desc digest.Digest) error
 }
 
-// RepoListener describes a listener that can respond to repository related events.
 type RepoListener interface {
 	TagDeleted(repo reference.Named, tag string) error
+	RepoDeleted(repo reference.Named) error
 }
 
 // Listener combines all repository events into a single interface.
@@ -43,12 +43,28 @@ type repositoryListener struct {
 	listener Listener
 }
 
+type removerListener struct {
+	distribution.RepositoryRemover
+	listener Listener
+}
+
 // Listen dispatches events on the repository to the listener.
-func Listen(repo distribution.Repository, listener Listener) distribution.Repository {
+func Listen(repo distribution.Repository, remover distribution.RepositoryRemover, listener Listener) (distribution.Repository, distribution.RepositoryRemover) {
 	return &repositoryListener{
-		Repository: repo,
-		listener:   listener,
+			Repository: repo,
+			listener:   listener,
+		}, &removerListener{
+			RepositoryRemover: remover,
+			listener:          listener,
+		}
+}
+
+func (nl *removerListener) Remove(ctx context.Context, name reference.Named) error {
+	err := nl.RepositoryRemover.Remove(ctx, name)
+	if err != nil {
+		return err
 	}
+	return nl.listener.RepoDeleted(name)
 }
 
 func (rl *repositoryListener) Manifests(ctx context.Context, options ...distribution.ManifestServiceOption) (distribution.ManifestService, error) {

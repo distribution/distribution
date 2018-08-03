@@ -116,6 +116,13 @@ func (b *bridge) TagDeleted(repo reference.Named, tag string) error {
 	return b.sink.Write(*event)
 }
 
+func (b *bridge) RepoDeleted(repo reference.Named) error {
+	event := b.createEvent(EventActionDelete)
+	event.Target.Repository = repo.Name()
+
+	return b.sink.Write(*event)
+}
+
 func (b *bridge) createManifestEventAndWrite(action string, repo reference.Named, sm distribution.Manifest) error {
 	manifestEvent, err := b.createManifestEvent(action, repo, sm)
 	if err != nil {
