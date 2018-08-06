@@ -88,8 +88,7 @@ func CreateRandomLayers(n int) (map[digest.Digest]io.ReadSeeker, error) {
 			return nil, fmt.Errorf("unexpected error generating test layer file: %v", err)
 		}
 
-		dgst := digest.Digest(ds)
-		digestMap[dgst] = rs
+		digestMap[ds] = rs
 	}
 	return digestMap, nil
 }

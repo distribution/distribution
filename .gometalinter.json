@@ -5,6 +5,8 @@
   "EnableGC": true,
   "Enable": [
     "structcheck",
+    "staticcheck",
+    "unconvert",
 
     "gofmt",
     "golint",

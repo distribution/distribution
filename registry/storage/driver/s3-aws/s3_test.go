@@ -139,14 +139,14 @@ func TestEmptyRootList(t *testing.T) {
 	}
 	defer rootedDriver.Delete(ctx, filename)
 
-	keys, err := emptyRootDriver.List(ctx, "/")
+	keys, _ := emptyRootDriver.List(ctx, "/")
 	for _, path := range keys {
 		if !storagedriver.PathRegexp.MatchString(path) {
 			t.Fatalf("unexpected string in path: %q != %q", path, storagedriver.PathRegexp)
 		}
 	}
 
-	keys, err = slashRootDriver.List(ctx, "/")
+	keys, _ = slashRootDriver.List(ctx, "/")
 	for _, path := range keys {
 		if !storagedriver.PathRegexp.MatchString(path) {
 			t.Fatalf("unexpected string in path: %q != %q", path, storagedriver.PathRegexp)

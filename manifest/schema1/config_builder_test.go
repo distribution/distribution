@@ -59,7 +59,7 @@ func TestEmptyTar(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewReader returned error: %v", err)
 	}
-	n, err := gzipReader.Read(decompressed[:])
+	n, _ := gzipReader.Read(decompressed[:])
 	if n != 1024 {
 		t.Fatalf("read returned %d bytes; expected 1024", n)
 	}

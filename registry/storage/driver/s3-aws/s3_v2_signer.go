@@ -209,9 +209,9 @@ func (v2 *signer) Sign() error {
 	v2.signature = base64.StdEncoding.EncodeToString(hash.Sum(nil))
 
 	if expires {
-		params["Signature"] = []string{string(v2.signature)}
+		params["Signature"] = []string{v2.signature}
 	} else {
-		headers["Authorization"] = []string{"AWS " + accessKey + ":" + string(v2.signature)}
+		headers["Authorization"] = []string{"AWS " + accessKey + ":" + v2.signature}
 	}
 
 	log.WithFields(log.Fields{

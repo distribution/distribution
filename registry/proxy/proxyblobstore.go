@@ -16,7 +16,7 @@ import (
 )
 
 // todo(richardscothern): from cache control header or config file
-const blobTTL = time.Duration(24 * 7 * time.Hour)
+const blobTTL = 24 * 7 * time.Hour
 
 type proxyBlobStore struct {
 	localStore     distribution.BlobStore
