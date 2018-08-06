@@ -72,13 +72,13 @@ func (reg *registry) Enumerate(ctx context.Context, ingester func(string) error)
 }
 
 // Remove removes a repository from storage
-func (r *registry) Remove(ctx context.Context, name reference.Named) error {
+func (reg *registry) Remove(ctx context.Context, name reference.Named) error {
 	root, err := pathFor(repositoriesRootPathSpec{})
 	if err != nil {
 		return err
 	}
 	repoDir := path.Join(root, name.Name())
-	return r.driver.Delete(ctx, repoDir)
+	return reg.driver.Delete(ctx, repoDir)
 }
 
 // lessPath returns true if one path a is less than path b.
