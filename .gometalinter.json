@@ -4,6 +4,8 @@
   "Sort": ["linter", "severity", "path", "line"],
   "EnableGC": true,
   "Enable": [
+    "structcheck",
+
     "gofmt",
     "golint",
     "vet"
