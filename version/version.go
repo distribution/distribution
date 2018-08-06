@@ -9,3 +9,7 @@ var Package = "github.com/docker/distribution"
 // build, it will be replaced by the actual version. The value here will be
 // used if the registry is run after a go get based install.
 var Version = "v2.6.0+unknown"
+
+// Revision is filled with the VCS (e.g. git) revision being used to build
+// the program at linking time.
+var Revision = ""
