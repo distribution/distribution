@@ -5,6 +5,7 @@
   "EnableGC": true,
   "Enable": [
     "gofmt",
+    "goimports",
     "golint",
     "vet"
   ]

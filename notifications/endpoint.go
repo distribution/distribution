@@ -1,9 +1,10 @@
 package notifications
 
 import (
-	"github.com/docker/distribution/configuration"
 	"net/http"
 	"time"
+
+	"github.com/docker/distribution/configuration"
 )
 
 // EndpointConfig covers the optional configuration parameters for an active
