@@ -38,10 +38,15 @@ func TestListener(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
 	}
-	repository = Listen(repository, tl)
+
+	remover, ok := registry.(distribution.RepositoryRemover)
+	if !ok {
+		t.Fatal("registry does not implement RepositoryRemover")
+	}
+	repository, remover = Listen(repository, remover, tl)
 
 	// Now take the registry through a number of operations
-	checkExerciseRepository(t, repository)
+	checkExerciseRepository(t, repository, remover)
 
 	expectedOps := map[string]int{
 		"manifest:push":   1,
@@ -50,12 +55,13 @@ func TestListener(t *testing.T) {
 		"layer:push":      2,
 		"layer:pull":      2,
 		"layer:delete":    2,
+		"tag:delete":      1,
+		"repo:delete":     1,
 	}
 
 	if !reflect.DeepEqual(tl.ops, expectedOps) {
 		t.Fatalf("counts do not match:\n%v\n !=\n%v", tl.ops, expectedOps)
 	}
-
 }
 
 type testListener struct {
@@ -64,7 +70,6 @@ type testListener struct {
 
 func (tl *testListener) ManifestPushed(repo reference.Named, m distribution.Manifest, options ...distribution.ManifestServiceOption) error {
 	tl.ops["manifest:push"]++
-
 	return nil
 }
 
@@ -98,9 +103,19 @@ func (tl *testListener) BlobDeleted(repo reference.Named, d digest.Digest) error
 	return nil
 }
 
+func (tl *testListener) TagDeleted(repo reference.Named, tag string) error {
+	tl.ops["tag:delete"]++
+	return nil
+}
+
+func (tl *testListener) RepoDeleted(repo reference.Named) error {
+	tl.ops["repo:delete"]++
+	return nil
+}
+
 // checkExerciseRegistry takes the registry through all of its operations,
 // carrying out generic checks.
-func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
+func checkExerciseRepository(t *testing.T, repository distribution.Repository, remover distribution.RepositoryRemover) {
 	// TODO(stevvooe): This would be a nice testutil function. Basically, it
 	// takes the registry through a common set of operations. This could be
 	// used to make cross-cutting updates by changing internals that affect
@@ -200,6 +215,15 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository) {
 		if err != nil {
 			t.Fatalf("unexpected error deleting blob: %v", err)
 		}
+	}
 
+	err = repository.Tags(ctx).Untag(ctx, m.Tag)
+	if err != nil {
+		t.Fatalf("unexpected error deleting tag: %v", err)
+	}
+
+	err = remover.Remove(ctx, repository.Named())
+	if err != nil {
+		t.Fatalf("unexpected error deleting repo: %v", err)
 	}
 }

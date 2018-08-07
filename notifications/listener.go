@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/docker/distribution"
+
 	dcontext "github.com/docker/distribution/context"
 	"github.com/docker/distribution/reference"
 	"github.com/opencontainers/go-digest"
@@ -25,10 +26,17 @@ type BlobListener interface {
 	BlobDeleted(repo reference.Named, desc digest.Digest) error
 }
 
+// RepoListener provides repository methods that respond to repository lifecycle
+type RepoListener interface {
+	TagDeleted(repo reference.Named, tag string) error
+	RepoDeleted(repo reference.Named) error
+}
+
 // Listener combines all repository events into a single interface.
 type Listener interface {
 	ManifestListener
 	BlobListener
+	RepoListener
 }
 
 type repositoryListener struct {
@@ -36,12 +44,28 @@ type repositoryListener struct {
 	listener Listener
 }
 
+type removerListener struct {
+	distribution.RepositoryRemover
+	listener Listener
+}
+
 // Listen dispatches events on the repository to the listener.
-func Listen(repo distribution.Repository, listener Listener) distribution.Repository {
+func Listen(repo distribution.Repository, remover distribution.RepositoryRemover, listener Listener) (distribution.Repository, distribution.RepositoryRemover) {
 	return &repositoryListener{
-		Repository: repo,
-		listener:   listener,
+			Repository: repo,
+			listener:   listener,
+		}, &removerListener{
+			RepositoryRemover: remover,
+			listener:          listener,
+		}
+}
+
+func (nl *removerListener) Remove(ctx context.Context, name reference.Named) error {
+	err := nl.RepositoryRemover.Remove(ctx, name)
+	if err != nil {
+		return err
 	}
+	return nl.listener.RepoDeleted(name)
 }
 
 func (rl *repositoryListener) Manifests(ctx context.Context, options ...distribution.ManifestServiceOption) (distribution.ManifestService, error) {
@@ -213,4 +237,27 @@ func (bwl *blobWriterListener) Commit(ctx context.Context, desc distribution.Des
 	}
 
 	return committed, err
+}
+
+type tagServiceListener struct {
+	distribution.TagService
+	parent *repositoryListener
+}
+
+func (rl *repositoryListener) Tags(ctx context.Context) distribution.TagService {
+	return &tagServiceListener{
+		TagService: rl.Repository.Tags(ctx),
+		parent:     rl,
+	}
+}
+
+func (tagSL *tagServiceListener) Untag(ctx context.Context, tag string) error {
+	if err := tagSL.TagService.Untag(ctx, tag); err != nil {
+		return err
+	}
+	if err := tagSL.parent.listener.TagDeleted(tagSL.parent.Repository.Named(), tag); err != nil {
+		dcontext.GetLogger(ctx).Errorf("error dispatching tag deleted to listener: %v", err)
+		return err
+	}
+	return nil
 }

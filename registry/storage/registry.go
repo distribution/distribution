@@ -23,6 +23,7 @@ type registry struct {
 	schema1SigningKey            libtrust.PrivateKey
 	blobDescriptorServiceFactory distribution.BlobDescriptorServiceFactory
 	manifestURLs                 manifestURLs
+	driver                       storagedriver.StorageDriver
 }
 
 // manifestURLs holds regular expressions for controlling manifest URL whitelisting
@@ -133,6 +134,7 @@ func NewRegistry(ctx context.Context, driver storagedriver.StorageDriver, option
 		},
 		statter:                statter,
 		resumableDigestEnabled: true,
+		driver:                 driver,
 	}
 
 	for _, option := range options {
