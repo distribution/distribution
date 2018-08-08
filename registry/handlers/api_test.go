@@ -512,8 +512,8 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 
 	// ------------------------------------------
 	// Now, actually do successful upload.
-	layerLength, _ := layerFile.Seek(0, os.SEEK_END)
-	layerFile.Seek(0, os.SEEK_SET)
+	layerLength, _ := layerFile.Seek(0, io.SeekEnd)
+	layerFile.Seek(0, io.SeekStart)
 
 	uploadURLBase, _ = startPushLayer(t, env, imageName)
 	pushLayer(t, env.builder, imageName, layerDigest, uploadURLBase, layerFile)
@@ -674,12 +674,12 @@ func testBlobDelete(t *testing.T, env *testEnv, args blobArgs) {
 
 	// ----------------
 	// Reupload previously deleted blob
-	layerFile.Seek(0, os.SEEK_SET)
+	layerFile.Seek(0, io.SeekStart)
 
 	uploadURLBase, _ := startPushLayer(t, env, imageName)
 	pushLayer(t, env.builder, imageName, layerDigest, uploadURLBase, layerFile)
 
-	layerFile.Seek(0, os.SEEK_SET)
+	layerFile.Seek(0, io.SeekStart)
 	canonicalDigester := digest.Canonical.Digester()
 	if _, err := io.Copy(canonicalDigester.Hash(), layerFile); err != nil {
 		t.Fatalf("error copying to digest: %v", err)
@@ -693,7 +693,7 @@ func testBlobDelete(t *testing.T, env *testEnv, args blobArgs) {
 		t.Fatalf("unexpected error checking head on existing layer: %v", err)
 	}
 
-	layerLength, _ := layerFile.Seek(0, os.SEEK_END)
+	layerLength, _ := layerFile.Seek(0, io.SeekEnd)
 	checkResponse(t, "checking head on reuploaded layer", resp, http.StatusOK)
 	checkHeaders(t, resp, http.Header{
 		"Content-Length":        []string{fmt.Sprint(layerLength)},

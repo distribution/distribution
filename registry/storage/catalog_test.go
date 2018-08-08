@@ -273,7 +273,7 @@ func BenchmarkPathCompareNative(B *testing.B) {
 
 	for i := 0; i < B.N; i++ {
 		c := a < b
-		c = c && false
+		_ = c && false
 	}
 }
 
@@ -285,7 +285,7 @@ func BenchmarkPathCompareNativeEqual(B *testing.B) {
 
 	for i := 0; i < B.N; i++ {
 		c := a < b
-		c = c && false
+		_ = c && false
 	}
 }
 

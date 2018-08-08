@@ -197,14 +197,14 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		regionEndpoint = ""
 	}
 
-	regionName, ok := parameters["region"]
+	regionName := parameters["region"]
 	if regionName == nil || fmt.Sprint(regionName) == "" {
 		return nil, fmt.Errorf("No region parameter provided")
 	}
 	region := fmt.Sprint(regionName)
 	// Don't check the region value if a custom endpoint is provided.
 	if regionEndpoint == "" {
-		if _, ok = validRegions[region]; !ok {
+		if _, ok := validRegions[region]; !ok {
 			return nil, fmt.Errorf("Invalid region provided: %v", region)
 		}
 	}
@@ -398,6 +398,10 @@ func New(params DriverParameters) (*Driver, error) {
 	}
 
 	awsConfig := aws.NewConfig()
+	sess, err := session.NewSession()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create new session: %v", err)
+	}
 	creds := credentials.NewChainCredentials([]credentials.Provider{
 		&credentials.StaticProvider{
 			Value: credentials.Value{
@@ -408,7 +412,7 @@ func New(params DriverParameters) (*Driver, error) {
 		},
 		&credentials.EnvProvider{},
 		&credentials.SharedCredentialsProvider{},
-		&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(session.New())},
+		&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(sess)},
 	})
 
 	if params.RegionEndpoint != "" {
@@ -426,7 +430,11 @@ func New(params DriverParameters) (*Driver, error) {
 		})
 	}
 
-	s3obj := s3.New(session.New(awsConfig))
+	sess, err = session.NewSession(awsConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create new session with aws config: %v", err)
+	}
+	s3obj := s3.New(sess)
 
 	// enable S3 compatible signature v2 signing instead
 	if !params.V4Auth {
@@ -1150,10 +1158,10 @@ func (w *writer) Write(p []byte) (int, error) {
 				Bucket: aws.String(w.driver.Bucket),
 				Key:    aws.String(w.key),
 			})
-			defer resp.Body.Close()
 			if err != nil {
 				return 0, err
 			}
+			defer resp.Body.Close()
 			w.parts = nil
 			w.readyPart, err = ioutil.ReadAll(resp.Body)
 			if err != nil {

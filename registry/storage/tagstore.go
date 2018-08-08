@@ -179,7 +179,7 @@ func (ts *tagStore) Lookup(ctx context.Context, desc distribution.Descriptor) ([
 			tag:  tag,
 		}
 
-		tagLinkPath, err := pathFor(tagLinkPathSpec)
+		tagLinkPath, _ := pathFor(tagLinkPathSpec)
 		tagDigest, err := ts.blobStore.readlink(ctx, tagLinkPath)
 		if err != nil {
 			switch err.(type) {
