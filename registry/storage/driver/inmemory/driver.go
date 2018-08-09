@@ -73,7 +73,7 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
-	rc, err := d.Reader(ctx, path, 0)
+	rc, err := d.reader(ctx, path, 0)
 	if err != nil {
 		return nil, err
 	}
@@ -108,6 +108,10 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 	d.mutex.RLock()
 	defer d.mutex.RUnlock()
 
+	return d.reader(ctx, path, offset)
+}
+
+func (d *driver) reader(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
 	if offset < 0 {
 		return nil, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
 	}
