@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"sort"
+
+	"github.com/sirupsen/logrus"
 )
 
 // ErrSkipDir is used as a return value from onFileFunc to indicate that
@@ -32,7 +34,14 @@ func WalkFallback(ctx context.Context, driver StorageDriver, from string, f Walk
 		// performance bottleneck.
 		fileInfo, err := driver.Stat(ctx, child)
 		if err != nil {
-			return err
+			switch err.(type) {
+			case PathNotFoundError:
+				// repository was removed in between listing and enumeration. Ignore it.
+				logrus.WithField("path", child).Infof("ignoring deleted path")
+				continue
+			default:
+				return err
+			}
 		}
 		err = f(fileInfo)
 		if err == nil && fileInfo.IsDir() {
