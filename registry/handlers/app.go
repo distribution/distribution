@@ -702,7 +702,7 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 			}
 
 			// assign and decorate the authorized repository with an event bridge.
-			context.Repository, context.App.repoRemover = notifications.Listen(
+			context.Repository, context.RepositoryRemover = notifications.Listen(
 				repository,
 				context.App.repoRemover,
 				app.eventBridge(context, r))
