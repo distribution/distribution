@@ -30,7 +30,7 @@ type Configuration struct {
 		} `yaml:"accesslog,omitempty"`
 
 		// Level is the granularity at which registry operations are logged.
-		Level Loglevel `yaml:"level"`
+		Level Loglevel `yaml:"level,omitempty"`
 
 		// Formatter overrides the default formatter with another. Options
 		// include "text", "json" and "logstash".
@@ -45,8 +45,9 @@ type Configuration struct {
 		Hooks []LogHook `yaml:"hooks,omitempty"`
 	}
 
-	// Loglevel is the level at which registry operations are logged. This is
-	// deprecated. Please use Log.Level in the future.
+	// Loglevel is the level at which registry operations are logged.
+	//
+	// Deprecated: Use Log.Level instead.
 	Loglevel Loglevel `yaml:"loglevel,omitempty"`
 
 	// Storage is the configuration for the registry's storage driver
@@ -640,8 +641,15 @@ func Parse(rd io.Reader) (*Configuration, error) {
 			ParseAs: reflect.TypeOf(v0_1Configuration{}),
 			ConversionFunc: func(c interface{}) (interface{}, error) {
 				if v0_1, ok := c.(*v0_1Configuration); ok {
-					if v0_1.Loglevel == Loglevel("") {
-						v0_1.Loglevel = Loglevel("info")
+					if v0_1.Log.Level == Loglevel("") {
+						if v0_1.Loglevel != Loglevel("") {
+							v0_1.Log.Level = v0_1.Loglevel
+						} else {
+							v0_1.Log.Level = Loglevel("info")
+						}
+					}
+					if v0_1.Loglevel != Loglevel("") {
+						v0_1.Loglevel = Loglevel("")
 					}
 					if v0_1.Storage.Type() == "" {
 						return nil, errors.New("No storage configuration provided")
