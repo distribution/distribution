@@ -568,7 +568,7 @@ type Endpoint struct {
 
 // Events configures notification events.
 type Events struct {
-	ManifestLayers bool `yaml:"manifestlayers"` // include layer data in manifest events
+	IncludeReferences bool `yaml:"includereferences"` // include reference data in manifest events
 }
 
 //Ignore configures mediaTypes and actions of the event, that it won't be propagated

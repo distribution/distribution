@@ -180,12 +180,12 @@ func checkCommonManifest(t *testing.T, action string, events ...Event) {
 		t.Fatalf("incorrect url passed: \n%q != \n%q", event.Target.URL, u)
 	}
 
-	if len(event.Target.Layers) != len(layers) {
-		t.Fatalf("unexpected number of layers %v != %v", len(event.Target.Layers), len(layers))
+	if len(event.Target.References) != len(layers) {
+		t.Fatalf("unexpected number of references %v != %v", len(event.Target.References), len(layers))
 	}
-	for i, layer := range event.Target.Layers {
-		if layer.Digest != layers[i].BlobSum {
-			t.Fatalf("unexpected layer: %q != %q", layer.Digest, layers[i].BlobSum)
+	for i, targetReference := range event.Target.References {
+		if targetReference.Digest != layers[i].BlobSum {
+			t.Fatalf("unexpected reference: %q != %q", targetReference.Digest, layers[i].BlobSum)
 		}
 	}
 }

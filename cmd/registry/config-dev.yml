@@ -48,7 +48,7 @@ redis:
   writetimeout: 10ms
 notifications:
     events:
-        manifestlayers: true
+        includereferences: true
     endpoints:
         - name: local-5003
           url: http://localhost:5003/callback

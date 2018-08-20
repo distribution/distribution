@@ -227,7 +227,7 @@ http:
     disabled: false
 notifications:
   events:
-    manifestlayers: true
+    includereferences: true
   endpoints:
     - name: alistener
       disabled: false
@@ -856,7 +856,7 @@ settings for the registry.
 ```none
 notifications:
   events:
-    manifestlayers: true
+    includereferences: true
   endpoints:
     - name: alistener
       disabled: false
@@ -906,7 +906,7 @@ The `events` structure configures the information provided in event notification
 
 | Parameter | Required | Description                                           |
 |-----------|----------|-------------------------------------------------------|
-| `manifestlayers` | no | If `true`, include layer information in manifest events. |
+| `includereferences` | no | If `true`, include reference information in manifest events. |
 
 ## `redis`
 

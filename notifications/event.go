@@ -72,8 +72,8 @@ type Event struct {
 		// Tag provides the tag
 		Tag string `json:"tag,omitempty"`
 
-		// Layers provides the layers descriptors.
-		Layers []distribution.Descriptor `json:"layers,omitempty"`
+		// References provides the references descriptors.
+		References []distribution.Descriptor `json:"references,omitempty"`
 	} `json:"target,omitempty"`
 
 	// Request covers the request that generated the event.
