@@ -192,7 +192,12 @@ distribution defers to the [Technical Steering Committee](https://github.com/mob
 			"stevvooe",
 		]
 	[Org.Reviewers]
-		people = []
+		people = [
+			"manishtomar",
+			"caervs",
+			"davidswu",
+			"RobbKistler"
+		]
 
 [people]
 
@@ -201,6 +206,16 @@ distribution defers to the [Technical Steering Committee](https://github.com/mob
 # in the people section.
 
 	# ADD YOURSELF HERE IN ALPHABETICAL ORDER
+
+	[people.caervs]
+	Name = "Ryan Abrams"
+	Email = "rdabrams@gmail.com"
+	GitHub = "caervs"
+
+	[people.davidswu]
+	Name = "David Wu"
+	Email = "dwu7401@gmail.com"
+	GitHub = "davidswu"
 
 	[people.dmcgowan]
 	Name = "Derek McGowan"
@@ -211,6 +226,16 @@ distribution defers to the [Technical Steering Committee](https://github.com/mob
 	Name = "Olivier Gambier"
 	Email = "olivier@docker.com"
 	GitHub = "dmp42"
+
+	[people.manishtomar]
+	Name = "Manish Tomar"
+	Email = "manish.tomar@docker.com"
+	GitHub = "manishtomar"
+
+	[people.RobbKistler]
+	Name = "Robb Kistler"
+	Email = "robb.kistler@docker.com"
+	GitHub = "RobbKistler"
 
 	[people.stevvooe]
 	Name = "Stephen Day"
