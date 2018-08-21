@@ -9,7 +9,7 @@ A registry is an instance of the `registry` image, and runs within Docker.
 
 This topic provides basic information about deploying and configuring a
 registry. For an exhaustive list of configuration options, see the
-[configuration reference](https://github.com/docker/distribution/blob/master/docs/configuration.md).
+[configuration reference](configuration.md).
 
 If you have an air-gapped datacenter, see
 [Considerations for air-gapped registries](#considerations-for-air-gapped-registries).
