@@ -38,6 +38,7 @@ func TestAppDispatcher(t *testing.T) {
 		registry: registry,
 	}
 	server := httptest.NewServer(app)
+	defer server.Close()
 	router := v2.Router()
 
 	serverURL, err := url.Parse(server.URL)
@@ -143,6 +144,9 @@ func TestNewApp(t *testing.T) {
 	config := configuration.Configuration{
 		Storage: configuration.Storage{
 			"testdriver": nil,
+			"maintenance": configuration.Parameters{"uploadpurging": map[interface{}]interface{}{
+				"enabled": false,
+			}},
 		},
 		Auth: configuration.Auth{
 			// For now, we simply test that new auth results in a viable
@@ -160,6 +164,7 @@ func TestNewApp(t *testing.T) {
 	app := NewApp(ctx, &config)
 
 	server := httptest.NewServer(app)
+	defer server.Close()
 	builder, err := v2.NewURLBuilderFromString(server.URL, false)
 	if err != nil {
 		t.Fatalf("error creating urlbuilder: %v", err)
@@ -224,9 +229,9 @@ func TestAppendAccessRecords(t *testing.T) {
 		Resource: expectedResource,
 		Action:   "push",
 	}
-	expectedAllRecord := auth.Access{
+	expectedDeleteRecord := auth.Access{
 		Resource: expectedResource,
-		Action:   "*",
+		Action:   "delete",
 	}
 
 	records := []auth.Access{}
@@ -266,7 +271,7 @@ func TestAppendAccessRecords(t *testing.T) {
 
 	records = []auth.Access{}
 	result = appendAccessRecords(records, "DELETE", repo)
-	expectedResult = []auth.Access{expectedAllRecord}
+	expectedResult = []auth.Access{expectedDeleteRecord}
 	if ok := reflect.DeepEqual(result, expectedResult); !ok {
 		t.Fatalf("Actual access record differs from expected")
 	}

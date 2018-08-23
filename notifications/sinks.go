@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 // NOTE(stevvooe): This file contains definitions for several utility sinks.
@@ -151,7 +151,7 @@ func (eq *eventQueue) Write(events ...Event) error {
 	return nil
 }
 
-// Close shutsdown the event queue, flushing
+// Close shuts down the event queue, flushing
 func (eq *eventQueue) Close() error {
 	eq.mu.Lock()
 	defer eq.mu.Unlock()
@@ -208,6 +208,61 @@ func (eq *eventQueue) next() []Event {
 	eq.events.Remove(front)
 
 	return block
+}
+
+// ignoredSink discards events with ignored target media types and actions.
+// passes the rest along.
+type ignoredSink struct {
+	Sink
+	ignoreMediaTypes map[string]bool
+	ignoreActions    map[string]bool
+}
+
+func newIgnoredSink(sink Sink, ignored []string, ignoreActions []string) Sink {
+	if len(ignored) == 0 {
+		return sink
+	}
+
+	ignoredMap := make(map[string]bool)
+	for _, mediaType := range ignored {
+		ignoredMap[mediaType] = true
+	}
+
+	ignoredActionsMap := make(map[string]bool)
+	for _, action := range ignoreActions {
+		ignoredActionsMap[action] = true
+	}
+
+	return &ignoredSink{
+		Sink:             sink,
+		ignoreMediaTypes: ignoredMap,
+		ignoreActions:    ignoredActionsMap,
+	}
+}
+
+// Write discards events with ignored target media types and passes the rest
+// along.
+func (imts *ignoredSink) Write(events ...Event) error {
+	var kept []Event
+	for _, e := range events {
+		if !imts.ignoreMediaTypes[e.Target.MediaType] {
+			kept = append(kept, e)
+		}
+	}
+	if len(kept) == 0 {
+		return nil
+	}
+
+	var results []Event
+	for _, e := range kept {
+		if !imts.ignoreActions[e.Action] {
+			results = append(results, e)
+		}
+	}
+	if len(results) == 0 {
+		return nil
+	}
+	return imts.Sink.Write(results...)
 }
 
 // retryingSink retries the write until success or an ErrSinkClosed is

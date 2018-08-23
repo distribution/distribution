@@ -1,15 +1,17 @@
 package storage
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
 
 	"github.com/docker/distribution"
-	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/digest"
+	dcontext "github.com/docker/distribution/context"
+	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/manifest/schema2"
+	"github.com/opencontainers/go-digest"
 )
 
 var (
@@ -29,7 +31,7 @@ type schema2ManifestHandler struct {
 var _ ManifestHandler = &schema2ManifestHandler{}
 
 func (ms *schema2ManifestHandler) Unmarshal(ctx context.Context, dgst digest.Digest, content []byte) (distribution.Manifest, error) {
-	context.GetLogger(ms.ctx).Debug("(*schema2ManifestHandler).Unmarshal")
+	dcontext.GetLogger(ms.ctx).Debug("(*schema2ManifestHandler).Unmarshal")
 
 	var m schema2.DeserializedManifest
 	if err := json.Unmarshal(content, &m); err != nil {
@@ -40,7 +42,7 @@ func (ms *schema2ManifestHandler) Unmarshal(ctx context.Context, dgst digest.Dig
 }
 
 func (ms *schema2ManifestHandler) Put(ctx context.Context, manifest distribution.Manifest, skipDependencyVerification bool) (digest.Digest, error) {
-	context.GetLogger(ms.ctx).Debug("(*schema2ManifestHandler).Put")
+	dcontext.GetLogger(ms.ctx).Debug("(*schema2ManifestHandler).Put")
 
 	m, ok := manifest.(*schema2.DeserializedManifest)
 	if !ok {
@@ -58,7 +60,7 @@ func (ms *schema2ManifestHandler) Put(ctx context.Context, manifest distribution
 
 	revision, err := ms.blobStore.Put(ctx, mt, payload)
 	if err != nil {
-		context.GetLogger(ctx).Errorf("error putting payload into blobstore: %v", err)
+		dcontext.GetLogger(ctx).Errorf("error putting payload into blobstore: %v", err)
 		return "", err
 	}
 
@@ -71,53 +73,62 @@ func (ms *schema2ManifestHandler) Put(ctx context.Context, manifest distribution
 func (ms *schema2ManifestHandler) verifyManifest(ctx context.Context, mnfst schema2.DeserializedManifest, skipDependencyVerification bool) error {
 	var errs distribution.ErrManifestVerification
 
-	if !skipDependencyVerification {
-		target := mnfst.Target()
-		_, err := ms.repository.Blobs(ctx).Stat(ctx, target.Digest)
+	if skipDependencyVerification {
+		return nil
+	}
+
+	manifestService, err := ms.repository.Manifests(ctx)
+	if err != nil {
+		return err
+	}
+
+	blobsService := ms.repository.Blobs(ctx)
+
+	for _, descriptor := range mnfst.References() {
+		var err error
+
+		switch descriptor.MediaType {
+		case schema2.MediaTypeForeignLayer:
+			// Clients download this layer from an external URL, so do not check for
+			// its presense.
+			if len(descriptor.URLs) == 0 {
+				err = errMissingURL
+			}
+			allow := ms.manifestURLs.allow
+			deny := ms.manifestURLs.deny
+			for _, u := range descriptor.URLs {
+				var pu *url.URL
+				pu, err = url.Parse(u)
+				if err != nil || (pu.Scheme != "http" && pu.Scheme != "https") || pu.Fragment != "" || (allow != nil && !allow.MatchString(u)) || (deny != nil && deny.MatchString(u)) {
+					err = errInvalidURL
+					break
+				}
+			}
+		case schema2.MediaTypeManifest, schema1.MediaTypeManifest:
+			var exists bool
+			exists, err = manifestService.Exists(ctx, descriptor.Digest)
+			if err != nil || !exists {
+				err = distribution.ErrBlobUnknown // just coerce to unknown.
+			}
+
+			fallthrough // double check the blob store.
+		default:
+			// forward all else to blob storage
+			if len(descriptor.URLs) == 0 {
+				_, err = blobsService.Stat(ctx, descriptor.Digest)
+			}
+		}
+
 		if err != nil {
 			if err != distribution.ErrBlobUnknown {
 				errs = append(errs, err)
 			}
 
 			// On error here, we always append unknown blob errors.
-			errs = append(errs, distribution.ErrManifestBlobUnknown{Digest: target.Digest})
-		}
-
-		for _, fsLayer := range mnfst.References() {
-			var err error
-			if fsLayer.MediaType != schema2.MediaTypeForeignLayer {
-				if len(fsLayer.URLs) == 0 {
-					_, err = ms.repository.Blobs(ctx).Stat(ctx, fsLayer.Digest)
-				} else {
-					err = errUnexpectedURL
-				}
-			} else {
-				// Clients download this layer from an external URL, so do not check for
-				// its presense.
-				if len(fsLayer.URLs) == 0 {
-					err = errMissingURL
-				}
-				allow := ms.manifestURLs.allow
-				deny := ms.manifestURLs.deny
-				for _, u := range fsLayer.URLs {
-					var pu *url.URL
-					pu, err = url.Parse(u)
-					if err != nil || (pu.Scheme != "http" && pu.Scheme != "https") || pu.Fragment != "" || (allow != nil && !allow.MatchString(u)) || (deny != nil && deny.MatchString(u)) {
-						err = errInvalidURL
-						break
-					}
-				}
-			}
-			if err != nil {
-				if err != distribution.ErrBlobUnknown {
-					errs = append(errs, err)
-				}
-
-				// On error here, we always append unknown blob errors.
-				errs = append(errs, distribution.ErrManifestBlobUnknown{Digest: fsLayer.Digest})
-			}
+			errs = append(errs, distribution.ErrManifestBlobUnknown{Digest: descriptor.Digest})
 		}
 	}
+
 	if len(errs) != 0 {
 		return errs
 	}

@@ -1,16 +1,18 @@
 package main
 
 import (
+	"context"
 	"crypto"
 	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"regexp"
 	"strings"
 	"time"
 
-	"github.com/docker/distribution/context"
+	dcontext "github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/auth"
 	"github.com/docker/distribution/registry/auth/token"
 	"github.com/docker/libtrust"
@@ -26,18 +28,24 @@ func ResolveScopeSpecifiers(ctx context.Context, scopeSpecs []string) []auth.Acc
 		parts := strings.SplitN(scopeSpecifier, ":", 3)
 
 		if len(parts) != 3 {
-			context.GetLogger(ctx).Infof("ignoring unsupported scope format %s", scopeSpecifier)
+			dcontext.GetLogger(ctx).Infof("ignoring unsupported scope format %s", scopeSpecifier)
 			continue
 		}
 
 		resourceType, resourceName, actions := parts[0], parts[1], parts[2]
 
+		resourceType, resourceClass := splitResourceClass(resourceType)
+		if resourceType == "" {
+			continue
+		}
+
 		// Actions should be a comma-separated list of actions.
 		for _, action := range strings.Split(actions, ",") {
 			requestedAccess := auth.Access{
 				Resource: auth.Resource{
-					Type: resourceType,
-					Name: resourceName,
+					Type:  resourceType,
+					Class: resourceClass,
+					Name:  resourceName,
 				},
 				Action: action,
 			}
@@ -55,6 +63,19 @@ func ResolveScopeSpecifiers(ctx context.Context, scopeSpecs []string) []auth.Acc
 	return requestedAccessList
 }
 
+var typeRegexp = regexp.MustCompile(`^([a-z0-9]+)(\([a-z0-9]+\))?$`)
+
+func splitResourceClass(t string) (string, string) {
+	matches := typeRegexp.FindStringSubmatch(t)
+	if len(matches) < 2 {
+		return "", ""
+	}
+	if len(matches) == 2 || len(matches[2]) < 2 {
+		return matches[1], ""
+	}
+	return matches[1], matches[2][1 : len(matches[2])-1]
+}
+
 // ResolveScopeList converts a scope list from a token request's
 // `scope` parameter into a list of standard access objects.
 func ResolveScopeList(ctx context.Context, scopeList string) []auth.Access {
@@ -62,12 +83,19 @@ func ResolveScopeList(ctx context.Context, scopeList string) []auth.Access {
 	return ResolveScopeSpecifiers(ctx, scopes)
 }
 
+func scopeString(a auth.Access) string {
+	if a.Class != "" {
+		return fmt.Sprintf("%s(%s):%s:%s", a.Type, a.Class, a.Name, a.Action)
+	}
+	return fmt.Sprintf("%s:%s:%s", a.Type, a.Name, a.Action)
+}
+
 // ToScopeList converts a list of access to a
 // scope list string
 func ToScopeList(access []auth.Access) string {
 	var s []string
 	for _, a := range access {
-		s = append(s, fmt.Sprintf("%s:%s:%s", a.Type, a.Name, a.Action))
+		s = append(s, scopeString(a))
 	}
 	return strings.Join(s, ",")
 }
@@ -102,6 +130,7 @@ func (issuer *TokenIssuer) CreateJWT(subject string, audience string, grantedAcc
 
 		accessEntries = append(accessEntries, &token.ResourceActions{
 			Type:    resource.Type,
+			Class:   resource.Class,
 			Name:    resource.Name,
 			Actions: actions,
 		})

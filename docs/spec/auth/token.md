@@ -1,19 +1,14 @@
-<!--[metadata]>
-+++
-title = "Token Authentication Specification"
-description = "Specifies the Docker Registry v2 authentication"
-keywords = ["registry, on-prem, images, tags, repository, distribution, Bearer authentication, advanced"]
-[menu.main]
-parent="smn_registry_ref"
-weight=104
-+++
-<![end-metadata]-->
+---
+title: "Token Authentication Specification"
+description: "Specifies the Docker Registry v2 authentication"
+keywords: registry, on-prem, images, tags, repository, distribution, Bearer authentication, advanced
+---
 
 # Docker Registry v2 authentication via central service
 
 This document outlines the v2 Docker registry authentication scheme:
 
-![v2 registry auth](../../images/v2-registry-auth.png)
+![v2 registry auth](../images/v2-registry-auth.png)
 
 1. Attempt to begin a push/pull operation with the registry.
 2. If the registry requires authorization it will return a `401 Unauthorized`
@@ -25,7 +20,7 @@ This document outlines the v2 Docker registry authentication scheme:
 5. The client retries the original request with the Bearer token embedded in
    the request's Authorization header.
 6. The Registry authorizes the client by validating the Bearer token and the
-   claim set embedded within it and begins the push/pull session as usual. 
+   claim set embedded within it and begins the push/pull session as usual.
 
 ## Requirements
 
@@ -161,7 +156,7 @@ Defines getting a bearer and refresh token using the token endpoint.
         <code>expires_in</code>
     </dt>
     <dd>
-        (Optional) The duration in seconds since the token was issued that it 
+        (Optional) The duration in seconds since the token was issued that it
         will remain valid.  When omitted, this defaults to 60 seconds.  For
         compatibility with older clients, a token should never be returned with
         less than 60 seconds to live.

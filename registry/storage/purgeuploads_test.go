@@ -1,12 +1,12 @@
 package storage
 
 import (
+	"context"
 	"path"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/docker/distribution/uuid"
@@ -142,7 +142,7 @@ func TestPurgeMissingStartedAt(t *testing.T) {
 	oneHourAgo := time.Now().Add(-1 * time.Hour)
 	fs, ctx := testUploadFS(t, 1, "test-repo", oneHourAgo)
 
-	err := Walk(ctx, fs, "/", func(fileInfo driver.FileInfo) error {
+	err := fs.Walk(ctx, "/", func(fileInfo driver.FileInfo) error {
 		filePath := fileInfo.Path()
 		_, file := path.Split(filePath)
 

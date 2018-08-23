@@ -31,7 +31,10 @@ storage:
 http:
     addr: :5000
     debug:
-        addr: localhost:5001
+        addr: :5001
+        prometheus:
+            enabled: true
+            path: /metrics
     headers:
         X-Content-Type-Options: [nosniff]
 redis:

@@ -1,12 +1,8 @@
-<!--[metadata]>
-+++
-title = "HTTP API V2"
-description = "Specification for the Registry API."
-keywords = ["registry, on-prem, images, tags, repository, distribution, api, advanced"]
-[menu.main]
-parent="smn_registry_ref"
-+++
-<![end-metadata]-->
+---
+title: "HTTP API V2"
+description: "Specification for the Registry API."
+keywords: registry, on-prem, images, tags, repository, distribution, api, advanced
+---
 
 # Docker Registry HTTP API V2
 
@@ -20,7 +16,7 @@ of this API, known as _Docker Registry HTTP API V2_.
 
 While the V1 registry protocol is usable, there are several problems with the
 architecture that have led to this new version. The main driver of this
-specification is a set of changes to the docker the image format, covered in
+specification is a set of changes to the Docker image format, covered in
 [docker/docker#8093](https://github.com/docker/docker/issues/8093).
 The new, self-contained image manifest simplifies image definition and improves
 security. This specification will build on that work, leveraging new properties
@@ -248,7 +244,7 @@ enforce this. The rules for a repository name are as follows:
    must match the regular expression `[a-z0-9]+(?:[._-][a-z0-9]+)*`.
 2. If a repository  name has two or more path components, they must be
    separated by a forward slash ("/").
-3. The total length of a repository name, including slashes, must be less the
+3. The total length of a repository name, including slashes, must be less than
    256 characters.
 
 These name requirements _only_ apply to the registry API and should accept a
@@ -680,7 +676,7 @@ the upload will not be considered complete. The format for the final chunk
 will be as follows:
 
 ```
-PUT /v2/<name>/blob/uploads/<uuid>?digest=<digest>
+PUT /v2/<name>/blobs/uploads/<uuid>?digest=<digest>
 Content-Length: <size of chunk>
 Content-Range: <start of range>-<end of range>
 Content-Type: application/octet-stream
@@ -689,7 +685,7 @@ Content-Type: application/octet-stream
 ```
 
 Optionally, if all chunks have already been uploaded, a `PUT` request with a
-`digest` parameter and zero-length body may be sent to complete and validated
+`digest` parameter and zero-length body may be sent to complete and validate
 the upload. Multiple "digest" parameters may be provided with different
 digests. The server may verify none or all of them but _must_ notify the
 client if the content is rejected.
@@ -799,7 +795,7 @@ Note that the upload url will not be available forever. If the upload uuid is
 unknown to the registry, a `404 Not Found` response will be returned and the
 client must restart the upload process.
 
-### Deleting a Layer
+#### Deleting a Layer
 
 A layer may be deleted from the registry via its `name` and `digest`. A
 delete may be issued with the following request format:

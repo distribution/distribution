@@ -15,6 +15,7 @@ const (
 	Hongkong     = Region("oss-cn-hongkong")
 	Shenzhen     = Region("oss-cn-shenzhen")
 	USWest1      = Region("oss-us-west-1")
+	USEast1      = Region("oss-us-east-1")
 	APSouthEast1 = Region("oss-ap-southeast-1")
 	Shanghai     = Region("oss-cn-shanghai")
 
@@ -53,4 +54,17 @@ func (r Region) GetInternalEndpoint(bucket string, secure bool) string {
 		return fmt.Sprintf("%s://oss-internal.aliyuncs.com", protocol)
 	}
 	return fmt.Sprintf("%s://%s.%s-internal.aliyuncs.com", protocol, bucket, string(r))
+}
+
+// GetInternalEndpoint returns internal endpoint of region
+func (r Region) GetVPCInternalEndpoint(bucket string, secure bool) string {
+	protocol := getProtocol(secure)
+	if bucket == "" {
+		return fmt.Sprintf("%s://vpc100-oss-cn-hangzhou.aliyuncs.com", protocol)
+	}
+	if r == USEast1 {
+		return r.GetInternalEndpoint(bucket, secure)
+	} else {
+		return fmt.Sprintf("%s://%s.vpc100-%s.aliyuncs.com", protocol, bucket, string(r))
+	}
 }

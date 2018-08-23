@@ -1,6 +1,7 @@
 package notifications
 
 import (
+	"github.com/docker/distribution/configuration"
 	"net/http"
 	"time"
 )
@@ -8,11 +9,13 @@ import (
 // EndpointConfig covers the optional configuration parameters for an active
 // endpoint.
 type EndpointConfig struct {
-	Headers   http.Header
-	Timeout   time.Duration
-	Threshold int
-	Backoff   time.Duration
-	Transport *http.Transport
+	Headers           http.Header
+	Timeout           time.Duration
+	Threshold         int
+	Backoff           time.Duration
+	IgnoredMediaTypes []string
+	Transport         *http.Transport `json:"-"`
+	Ignore            configuration.Ignore
 }
 
 // defaults set any zero-valued fields to a reasonable default.
@@ -62,6 +65,8 @@ func NewEndpoint(name, url string, config EndpointConfig) *Endpoint {
 		endpoint.Transport, endpoint.metrics.httpStatusListener())
 	endpoint.Sink = newRetryingSink(endpoint.Sink, endpoint.Threshold, endpoint.Backoff)
 	endpoint.Sink = newEventQueue(endpoint.Sink, endpoint.metrics.eventQueueListener())
+	mediaTypes := append(config.Ignore.MediaTypes, config.IgnoredMediaTypes...)
+	endpoint.Sink = newIgnoredSink(endpoint.Sink, mediaTypes, config.Ignore.Actions)
 
 	register(&endpoint)
 	return &endpoint
