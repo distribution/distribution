@@ -59,10 +59,18 @@ func TestManifestStorage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	testManifestStorage(t, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect, Schema1SigningKey(k))
+	testManifestStorage(t, true, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect, Schema1SigningKey(k), EnableSchema1)
 }
 
-func testManifestStorage(t *testing.T, options ...RegistryOption) {
+func TestManifestStorageV1Unsupported(t *testing.T) {
+	k, err := libtrust.GenerateECP256PrivateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	testManifestStorage(t, false, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect, Schema1SigningKey(k))
+}
+
+func testManifestStorage(t *testing.T, schema1Enabled bool, options ...RegistryOption) {
 	repoName, _ := reference.WithName("foo/bar")
 	env := newManifestStoreTestEnv(t, repoName, "thetag", options...)
 	ctx := context.Background()
@@ -112,6 +120,15 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 	_, err = ms.Put(ctx, sm)
 	if err == nil {
 		t.Fatalf("expected errors putting manifest with full verification")
+	}
+
+	// If schema1 is not enabled, do a short version of this test, just checking
+	// if we get the right error when we Put
+	if !schema1Enabled {
+		if err != distribution.ErrSchemaV1Unsupported {
+			t.Fatalf("got the wrong error when schema1 is disabled: %s", err)
+		}
+		return
 	}
 
 	switch err := err.(type) {

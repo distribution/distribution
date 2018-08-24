@@ -177,6 +177,10 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 
 	options = append(options, storage.Schema1SigningKey(app.trustKey))
 
+	if config.Compatibility.Schema1.Enabled {
+		options = append(options, storage.EnableSchema1)
+	}
+
 	if config.HTTP.Host != "" {
 		u, err := url.Parse(config.HTTP.Host)
 		if err != nil {

@@ -19,6 +19,7 @@ type registry struct {
 	statter                      *blobStatter // global statter service.
 	blobDescriptorCacheProvider  cache.BlobDescriptorCacheProvider
 	deleteEnabled                bool
+	schema1Enabled               bool
 	resumableDigestEnabled       bool
 	schema1SigningKey            libtrust.PrivateKey
 	blobDescriptorServiceFactory distribution.BlobDescriptorServiceFactory
@@ -46,6 +47,13 @@ func EnableRedirect(registry *registry) error {
 // the registry.
 func EnableDelete(registry *registry) error {
 	registry.deleteEnabled = true
+	return nil
+}
+
+// EnableSchema1 is a functional option for NewRegistry. It enables pushing of
+// schema1 manifests.
+func EnableSchema1(registry *registry) error {
+	registry.schema1Enabled = true
 	return nil
 }
 
@@ -239,16 +247,30 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 		linkDirectoryPathSpec: manifestDirectoryPathSpec,
 	}
 
-	ms := &manifestStore{
-		ctx:        ctx,
-		repository: repo,
-		blobStore:  blobStore,
-		schema1Handler: &signedManifestHandler{
+	var v1Handler ManifestHandler
+	if repo.schema1Enabled {
+		v1Handler = &signedManifestHandler{
 			ctx:               ctx,
 			schema1SigningKey: repo.schema1SigningKey,
 			repository:        repo,
 			blobStore:         blobStore,
-		},
+		}
+	} else {
+		v1Handler = &v1UnsupportedHandler{
+			innerHandler: &signedManifestHandler{
+				ctx:               ctx,
+				schema1SigningKey: repo.schema1SigningKey,
+				repository:        repo,
+				blobStore:         blobStore,
+			},
+		}
+	}
+
+	ms := &manifestStore{
+		ctx:            ctx,
+		repository:     repo,
+		blobStore:      blobStore,
+		schema1Handler: v1Handler,
 		schema2Handler: &schema2ManifestHandler{
 			ctx:          ctx,
 			repository:   repo,

@@ -194,6 +194,8 @@ type Configuration struct {
 			// TrustKey is the signing key to use for adding the signature to
 			// schema1 manifests.
 			TrustKey string `yaml:"signingkeyfile,omitempty"`
+			// Enabled determines if schema1 manifests should be pullable
+			Enabled bool `yaml:"enabled,omitempty"`
 		} `yaml:"schema1,omitempty"`
 	} `yaml:"compatibility,omitempty"`
 
