@@ -515,6 +515,12 @@ delete:
   enabled: true
 ```
 
+To override this value, set an environment variable like this:
+
+```none
+REGISTRY_STORAGE_DELETE_ENABLED=true
+```
+
 ### `cache`
 
 Use the `cache` structure to enable caching of data accessed in the storage
