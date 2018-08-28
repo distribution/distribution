@@ -227,6 +227,8 @@ http:
   http2:
     disabled: false
 notifications:
+  events:
+    includereferences: true
   endpoints:
     - name: alistener
       disabled: false
@@ -857,6 +859,8 @@ settings for the registry.
 
 ```none
 notifications:
+  events:
+    includereferences: true
   endpoints:
     - name: alistener
       disabled: false
@@ -900,6 +904,13 @@ accept event notifications.
 | `mediatypes`|no| A list of target media types to ignore. Events with these target media types are not published to the endpoint. |
 | `actions`   |no| A list of actions to ignore. Events with these actions are not published to the endpoint. |
 
+### `events`
+
+The `events` structure configures the information provided in event notifications.
+
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `includereferences` | no | If `true`, include reference information in manifest events. |
 
 ## `redis`
 
