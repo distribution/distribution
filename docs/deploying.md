@@ -322,15 +322,15 @@ $ docker service create \
   --secret domain.key \
   --constraint 'node.labels.registry==true' \
   --mount type=bind,src=/mnt/registry,dst=/var/lib/registry \
-  -e REGISTRY_HTTP_ADDR=0.0.0.0:443 \
+  -e REGISTRY_HTTP_ADDR=0.0.0.0:80 \
   -e REGISTRY_HTTP_TLS_CERTIFICATE=/run/secrets/domain.crt \
   -e REGISTRY_HTTP_TLS_KEY=/run/secrets/domain.key \
-  --publish published=443,target=443 \
+  --publish published=80,target=80 \
   --replicas 1 \
   registry:2
 ```
 
-You can access the service on port 443 of any swarm node. Docker sends the
+You can access the service on port 80 of any swarm node. Docker sends the
 requests to the node which is running the service.
 
 ## Load balancing considerations
@@ -458,8 +458,8 @@ secrets.
 You may want to leverage more advanced basic auth implementations by using a
 proxy in front of the registry. See the [recipes list](recipes/index.md).
 
-The registry also supports delegated authentication which redirects users to a
-specific trusted token server. This approach is more complicated to set up, and
+The registry also supports delegated authentiation, which redirects users to a
+specific, trusted token server. This approach is more complicated to set up, and
 only makes sense if you need to fully configure ACLs and need more control over
 the registry's integration into your global authorization and authentication
 systems. Refer to the following [background information](spec/auth/token.md) and
