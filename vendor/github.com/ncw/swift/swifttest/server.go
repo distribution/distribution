@@ -21,6 +21,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"path"
 	"regexp"
@@ -28,6 +29,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -39,21 +41,28 @@ const (
 	TEST_ACCOUNT = "swifttest"
 )
 
+type HandlerOverrideFunc func(w http.ResponseWriter, r *http.Request, recorder *httptest.ResponseRecorder)
+
 type SwiftServer struct {
+	// `sync/atomic` expects the first word in an allocated struct to be 64-bit
+	// aligned on both ARM and x86-32.
+	// See https://golang.org/pkg/sync/atomic/#pkg-note-BUG for more details.
+	reqId int64
+	sync.RWMutex
 	t        *testing.T
-	reqId    int
 	mu       sync.Mutex
 	Listener net.Listener
 	AuthURL  string
 	URL      string
 	Accounts map[string]*account
 	Sessions map[string]*session
+	override map[string]HandlerOverrideFunc
 }
 
 // The Folder type represents a container stored in an account
 type Folder struct {
-	Count int    `json:"count"`
-	Bytes int    `json:"bytes"`
+	Count int64  `json:"count"`
+	Bytes int64  `json:"bytes"`
 	Name  string `json:"name"`
 }
 
@@ -96,13 +105,16 @@ type metadata struct {
 }
 
 type account struct {
+	sync.RWMutex
 	swift.Account
 	metadata
-	password   string
-	Containers map[string]*container
+	password       string
+	ContainersLock sync.RWMutex
+	Containers     map[string]*container
 }
 
 type object struct {
+	sync.RWMutex
 	metadata
 	name         string
 	mtime        time.Time
@@ -112,11 +124,31 @@ type object struct {
 }
 
 type container struct {
+	// `sync/atomic` expects the first word in an allocated struct to be 64-bit
+	// aligned on both ARM and x86-32.
+	// See https://golang.org/pkg/sync/atomic/#pkg-note-BUG for more details.
+	bytes int64
+	sync.RWMutex
 	metadata
 	name    string
 	ctime   time.Time
 	objects map[string]*object
-	bytes   int
+}
+
+type segment struct {
+	Path string `json:"path,omitempty"`
+	Hash string `json:"hash,omitempty"`
+	Size int64  `json:"size_bytes,omitempty"`
+	// When uploading a manifest, the attributes must be named `path`, `hash` and `size`
+	// but when querying the JSON content of a manifest with the `multipart-manifest=get`
+	// parameter, Swift names those attributes `name`, `etag` and `bytes`.
+	// We use all the different attributes names in this structure to be able to use
+	// the same structure for both uploading and retrieving.
+	Name         string `json:"name,omitempty"`
+	Etag         string `json:"etag,omitempty"`
+	Bytes        int64  `json:"bytes,omitempty"`
+	ContentType  string `json:"content_type,omitempty"`
+	LastModified string `json:"last_modified,omitempty"`
 }
 
 // A resource encapsulates the subject of an HTTP request.
@@ -179,8 +211,11 @@ func (m metadata) getMetadata(a *action) {
 	}
 }
 
-func (c container) list(delimiter string, marker string, prefix string, parent string) (resp []interface{}) {
+func (c *container) list(delimiter string, marker string, prefix string, parent string) (resp []interface{}) {
 	var tmp orderedObjects
+
+	c.RLock()
+	defer c.RUnlock()
 
 	// first get all matching objects and arrange them in alphabetical order.
 	for _, obj := range c.objects {
@@ -236,19 +271,23 @@ func (r containerResource) get(a *action) interface{} {
 		fatalf(404, "NoSuchContainer", "The specified container does not exist")
 	}
 
+	r.container.RLock()
+
 	delimiter := a.req.Form.Get("delimiter")
 	marker := a.req.Form.Get("marker")
 	prefix := a.req.Form.Get("prefix")
 	format := a.req.URL.Query().Get("format")
 	parent := a.req.Form.Get("path")
 
-	a.w.Header().Set("X-Container-Bytes-Used", strconv.Itoa(r.container.bytes))
+	a.w.Header().Set("X-Container-Bytes-Used", strconv.Itoa(int(r.container.bytes)))
 	a.w.Header().Set("X-Container-Object-Count", strconv.Itoa(len(r.container.objects)))
 	r.container.getMetadata(a)
 
 	if a.req.Method == "HEAD" {
+		r.container.RUnlock()
 		return nil
 	}
+	r.container.RUnlock()
 
 	objects := r.container.list(delimiter, marker, prefix, parent)
 
@@ -297,8 +336,10 @@ func (r containerResource) delete(a *action) interface{} {
 	if len(b.objects) > 0 {
 		fatalf(409, "Conflict", "The container you tried to delete is not empty")
 	}
+	a.user.Lock()
 	delete(a.user.Containers, b.name)
 	a.user.Account.Containers--
+	a.user.Unlock()
 	return nil
 }
 
@@ -319,8 +360,11 @@ func (r containerResource) put(a *action) interface{} {
 			},
 		}
 		r.container.setMetadata(a, "container")
+
+		a.user.Lock()
 		a.user.Containers[r.name] = r.container
 		a.user.Account.Containers++
+		a.user.Unlock()
 	}
 
 	return nil
@@ -330,10 +374,13 @@ func (r containerResource) post(a *action) interface{} {
 	if r.container == nil {
 		fatalf(400, "Method", "The resource could not be found.")
 	} else {
+		r.container.RLock()
+		defer r.container.RUnlock()
+
 		r.container.setMetadata(a, "container")
 		a.w.WriteHeader(201)
 		jsonMarshal(a.w, Folder{
-			Count: len(r.container.objects),
+			Count: int64(len(r.container.objects)),
 			Bytes: r.container.bytes,
 			Name:  r.container.name,
 		})
@@ -388,10 +435,11 @@ func (obj *object) Key() Key {
 }
 
 var metaHeaders = map[string]bool{
-	"Content-Type":        true,
-	"Content-Encoding":    true,
-	"Content-Disposition": true,
-	"X-Object-Manifest":   true,
+	"Content-Type":          true,
+	"Content-Encoding":      true,
+	"Content-Disposition":   true,
+	"X-Object-Manifest":     true,
+	"X-Static-Large-Object": true,
 }
 
 var rangeRegexp = regexp.MustCompile("(bytes=)?([0-9]*)-([0-9]*)")
@@ -408,6 +456,9 @@ func (objr objectResource) get(a *action) interface{} {
 	if obj == nil {
 		fatalf(404, "Not Found", "The resource could not be found.")
 	}
+
+	obj.RLock()
+	defer obj.RUnlock()
 
 	h := a.w.Header()
 	// add metadata
@@ -433,7 +484,9 @@ func (objr objectResource) get(a *action) interface{} {
 	if manifest, ok := obj.meta["X-Object-Manifest"]; ok {
 		var segments []io.Reader
 		components := strings.SplitN(manifest[0], "/", 2)
+		a.user.RLock()
 		segContainer := a.user.Containers[components[0]]
+		a.user.RUnlock()
 		prefix := components[1]
 		resp := segContainer.list("", "", prefix, "")
 		sum := md5.New()
@@ -453,19 +506,54 @@ func (objr objectResource) get(a *action) interface{} {
 		}
 		etag = sum.Sum(nil)
 		if end == -1 {
-			end = size
+			end = size - 1
 		}
-		reader = io.LimitReader(io.MultiReader(segments...), int64(end-start))
+		reader = io.LimitReader(io.MultiReader(segments...), int64(end-start+1))
+	} else if value, ok := obj.meta["X-Static-Large-Object"]; ok && value[0] == "True" && a.req.URL.Query().Get("multipart-manifest") != "get" {
+		var segments []io.Reader
+		var segmentList []segment
+		json.Unmarshal(obj.data, &segmentList)
+		cursor := 0
+		size := 0
+		sum := md5.New()
+		for _, segment := range segmentList {
+			components := strings.SplitN(segment.Name[1:], "/", 2)
+			a.user.RLock()
+			segContainer := a.user.Containers[components[0]]
+			a.user.RUnlock()
+			objectName := components[1]
+			segObject := segContainer.objects[objectName]
+			length := len(segObject.data)
+			size += length
+			sum.Write([]byte(hex.EncodeToString(segObject.checksum)))
+			if start >= cursor+length {
+				continue
+			}
+			segments = append(segments, bytes.NewReader(segObject.data[max(0, start-cursor):]))
+			cursor += length
+		}
+		etag = sum.Sum(nil)
+		if end == -1 {
+			end = size - 1
+		}
+		reader = io.LimitReader(io.MultiReader(segments...), int64(end-start+1))
 	} else {
 		if end == -1 {
-			end = len(obj.data)
+			end = len(obj.data) - 1
 		}
 		etag = obj.checksum
-		reader = bytes.NewReader(obj.data[start:end])
+		reader = bytes.NewReader(obj.data[start : end+1])
 	}
 
-	h.Set("Content-Length", fmt.Sprint(end-start))
-	h.Set("ETag", hex.EncodeToString(etag))
+	etagHex := hex.EncodeToString(etag)
+
+	if a.req.Header.Get("If-None-Match") == etagHex {
+		a.w.WriteHeader(http.StatusNotModified)
+		return nil
+	}
+
+	h.Set("Content-Length", fmt.Sprint(end-start+1))
+	h.Set("ETag", etagHex)
 	h.Set("Last-Modified", obj.mtime.Format(http.TimeFormat))
 
 	if a.req.Method == "HEAD" {
@@ -514,10 +602,10 @@ func (objr objectResource) put(a *action) interface{} {
 				meta: make(http.Header),
 			},
 		}
-		a.user.Objects++
+		atomic.AddInt64(&a.user.Objects, 1)
 	} else {
-		objr.container.bytes -= len(obj.data)
-		a.user.BytesUsed -= int64(len(obj.data))
+		atomic.AddInt64(&objr.container.bytes, -int64(len(obj.data)))
+		atomic.AddInt64(&a.user.BytesUsed, -int64(len(obj.data)))
 	}
 
 	var content_type string
@@ -528,15 +616,39 @@ func (objr objectResource) put(a *action) interface{} {
 		}
 	}
 
+	if a.req.URL.Query().Get("multipart-manifest") == "put" {
+		// TODO: check the content of the SLO
+		a.req.Header.Set("X-Static-Large-Object", "True")
+
+		var segments []segment
+		json.Unmarshal(data, &segments)
+		for i := range segments {
+			segments[i].Name = "/" + segments[i].Path
+			segments[i].Path = ""
+			segments[i].Hash = segments[i].Etag
+			segments[i].Etag = ""
+			segments[i].Bytes = segments[i].Size
+			segments[i].Size = 0
+		}
+
+		data, _ = json.Marshal(segments)
+		sum = md5.New()
+		sum.Write(data)
+		gotHash = sum.Sum(nil)
+	}
+
 	// PUT request has been successful - save data and metadata
 	obj.setMetadata(a, "object")
 	obj.content_type = content_type
 	obj.data = data
 	obj.checksum = gotHash
 	obj.mtime = time.Now().UTC()
+	objr.container.Lock()
 	objr.container.objects[objr.name] = obj
-	objr.container.bytes += len(data)
-	a.user.BytesUsed += int64(len(data))
+	objr.container.bytes += int64(len(data))
+	objr.container.Unlock()
+
+	atomic.AddInt64(&a.user.BytesUsed, int64(len(data)))
 
 	h := a.w.Header()
 	h.Set("ETag", hex.EncodeToString(obj.checksum))
@@ -549,14 +661,25 @@ func (objr objectResource) delete(a *action) interface{} {
 		fatalf(404, "NoSuchKey", "The specified key does not exist.")
 	}
 
-	objr.container.bytes -= len(objr.object.data)
-	a.user.BytesUsed -= int64(len(objr.object.data))
+	objr.container.Lock()
+	defer objr.container.Unlock()
+
+	objr.object.Lock()
+	defer objr.object.Unlock()
+
+	objr.container.bytes -= int64(len(objr.object.data))
 	delete(objr.container.objects, objr.name)
-	a.user.Objects--
+
+	atomic.AddInt64(&a.user.BytesUsed, -int64(len(objr.object.data)))
+	atomic.AddInt64(&a.user.Objects, -1)
+
 	return nil
 }
 
 func (objr objectResource) post(a *action) interface{} {
+	objr.object.Lock()
+	defer objr.object.Unlock()
+
 	obj := objr.object
 	obj.setMetadata(a, "object")
 	return nil
@@ -568,6 +691,9 @@ func (objr objectResource) copy(a *action) interface{} {
 	}
 
 	obj := objr.object
+	obj.RLock()
+	defer obj.RUnlock()
+
 	destination := a.req.Header.Get("Destination")
 	if destination == "" {
 		fatalf(400, "Bad Request", "You must provide a Destination header")
@@ -590,28 +716,37 @@ func (objr objectResource) copy(a *action) interface{} {
 					meta: make(http.Header),
 				},
 			}
-			a.user.Objects++
+			atomic.AddInt64(&a.user.Objects, 1)
 		} else {
 			obj2 = objr2.object
-			objr2.container.bytes -= len(obj2.data)
-			a.user.BytesUsed -= int64(len(obj2.data))
+			atomic.AddInt64(&objr2.container.bytes, -int64(len(obj2.data)))
+			atomic.AddInt64(&a.user.BytesUsed, -int64(len(obj2.data)))
 		}
 	default:
 		fatalf(400, "Bad Request", "Destination must point to a valid object path")
+	}
+
+	if objr2.container.name != objr2.container.name && obj2.name != obj.name {
+		obj2.Lock()
+		defer obj2.Unlock()
 	}
 
 	obj2.content_type = obj.content_type
 	obj2.data = obj.data
 	obj2.checksum = obj.checksum
 	obj2.mtime = time.Now()
-	objr2.container.objects[objr2.name] = obj2
-	objr2.container.bytes += len(obj.data)
-	a.user.BytesUsed += int64(len(obj.data))
 
 	for key, values := range obj.metadata.meta {
 		obj2.metadata.meta[key] = values
 	}
 	obj2.setMetadata(a, "object")
+
+	objr2.container.Lock()
+	objr2.container.objects[objr2.name] = obj2
+	objr2.container.bytes += int64(len(obj.data))
+	objr2.container.Unlock()
+
+	atomic.AddInt64(&a.user.BytesUsed, int64(len(obj.data)))
 
 	return nil
 }
@@ -620,8 +755,14 @@ func (s *SwiftServer) serveHTTP(w http.ResponseWriter, req *http.Request) {
 	// ignore error from ParseForm as it's usually spurious.
 	req.ParseForm()
 
-	s.mu.Lock()
-	defer s.mu.Unlock()
+	if fn := s.override[req.URL.Path]; fn != nil {
+		originalRW := w
+		recorder := httptest.NewRecorder()
+		w = recorder
+		defer func() {
+			fn(originalRW, req, recorder)
+		}()
+	}
 
 	if DEBUG {
 		log.Printf("swifttest %q %q", req.Method, req.URL)
@@ -630,9 +771,9 @@ func (s *SwiftServer) serveHTTP(w http.ResponseWriter, req *http.Request) {
 		srv:   s,
 		w:     w,
 		req:   req,
-		reqId: fmt.Sprintf("%09X", s.reqId),
+		reqId: fmt.Sprintf("%09X", atomic.LoadInt64(&s.reqId)),
 	}
-	s.reqId++
+	atomic.AddInt64(&s.reqId, 1)
 
 	var r resource
 	defer func() {
@@ -651,6 +792,8 @@ func (s *SwiftServer) serveHTTP(w http.ResponseWriter, req *http.Request) {
 	if req.URL.String() == "/v1.0" {
 		username := req.Header.Get("x-auth-user")
 		key := req.Header.Get("x-auth-key")
+		s.Lock()
+		defer s.Unlock()
 		if acct, ok := s.Accounts[username]; ok {
 			if acct.password == key {
 				r := make([]byte, 16)
@@ -676,6 +819,11 @@ func (s *SwiftServer) serveHTTP(w http.ResponseWriter, req *http.Request) {
 			"tempurl": map[string]interface{}{
 				"methods": []string{"GET", "HEAD", "PUT"},
 			},
+			"slo": map[string]interface{}{
+				"max_manifest_segments": 1000,
+				"max_manifest_size":     2097152,
+				"min_segment_size":      1,
+			},
 		})
 		return
 	}
@@ -688,9 +836,11 @@ func (s *SwiftServer) serveHTTP(w http.ResponseWriter, req *http.Request) {
 	if key == "" && signature != "" && expires != "" {
 		accountName, _, _, _ := s.parseURL(req.URL)
 		secretKey := ""
+		s.RLock()
 		if account, ok := s.Accounts[accountName]; ok {
 			secretKey = account.meta.Get("X-Account-Meta-Temp-Url-Key")
 		}
+		s.RUnlock()
 
 		get_hmac := func(method string) string {
 			mac := hmac.New(sha1.New, []byte(secretKey))
@@ -707,12 +857,16 @@ func (s *SwiftServer) serveHTTP(w http.ResponseWriter, req *http.Request) {
 			panic(notAuthorized())
 		}
 	} else {
+		s.RLock()
 		session, ok := s.Sessions[key[7:]]
 		if !ok {
+			s.RUnlock()
 			panic(notAuthorized())
+			return
 		}
 
 		a.user = s.Accounts[session.username]
+		s.RUnlock()
 	}
 
 	switch req.Method {
@@ -746,6 +900,14 @@ func (s *SwiftServer) serveHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func (s *SwiftServer) SetOverride(path string, fn HandlerOverrideFunc) {
+	s.override[path] = fn
+}
+
+func (s *SwiftServer) UnsetOverride(path string) {
+	delete(s.override, path)
+}
+
 func jsonMarshal(w io.Writer, x interface{}) {
 	if err := json.NewEncoder(w).Encode(x); err != nil {
 		panic(fmt.Errorf("error marshalling %#v: %v", x, err))
@@ -773,14 +935,21 @@ func (srv *SwiftServer) resourceForURL(u *url.URL) (r resource) {
 		fatalf(404, "InvalidURI", err.Error())
 	}
 
+	srv.RLock()
 	account, ok := srv.Accounts[accountName]
 	if !ok {
+		//srv.RUnlock()
 		fatalf(404, "NoSuchAccount", "The specified account does not exist")
 	}
+	srv.RUnlock()
 
+	account.RLock()
 	if containerName == "" {
+		account.RUnlock()
 		return rootResource{}
 	}
+	account.RUnlock()
+
 	b := containerResource{
 		name:      containerName,
 		container: account.Containers[containerName],
@@ -800,6 +969,8 @@ func (srv *SwiftServer) resourceForURL(u *url.URL) (r resource) {
 		container: b.container,
 	}
 
+	objr.container.RLock()
+	defer objr.container.RUnlock()
 	if obj := objr.container.objects[objr.name]; obj != nil {
 		objr.object = obj
 	}
@@ -835,9 +1006,12 @@ func (rootResource) get(a *action) interface{} {
 
 	h := a.w.Header()
 
-	h.Set("X-Account-Bytes-Used", strconv.Itoa(int(a.user.BytesUsed)))
-	h.Set("X-Account-Container-Count", strconv.Itoa(int(a.user.Account.Containers)))
-	h.Set("X-Account-Object-Count", strconv.Itoa(int(a.user.Objects)))
+	h.Set("X-Account-Bytes-Used", strconv.Itoa(int(atomic.LoadInt64(&a.user.BytesUsed))))
+	h.Set("X-Account-Container-Count", strconv.Itoa(int(atomic.LoadInt64(&a.user.Account.Containers))))
+	h.Set("X-Account-Object-Count", strconv.Itoa(int(atomic.LoadInt64(&a.user.Objects))))
+
+	a.user.RLock()
+	defer a.user.RUnlock()
 
 	// add metadata
 	a.user.metadata.getMetadata(a)
@@ -862,7 +1036,7 @@ func (rootResource) get(a *action) interface{} {
 		}
 		if format == "json" {
 			resp = append(resp, Folder{
-				Count: len(container.objects),
+				Count: int64(len(container.objects)),
 				Bytes: container.bytes,
 				Name:  container.name,
 			})
@@ -879,7 +1053,9 @@ func (rootResource) get(a *action) interface{} {
 }
 
 func (r rootResource) post(a *action) interface{} {
+	a.user.Lock()
 	a.user.metadata.setMetadata(a, "account")
+	a.user.Unlock()
 	return nil
 }
 
@@ -894,21 +1070,10 @@ func (rootResource) delete(a *action) interface{} {
 func (rootResource) copy(a *action) interface{} { return notAllowed() }
 
 func NewSwiftServer(address string) (*SwiftServer, error) {
-	var (
-		l   net.Listener
-		err error
-	)
 	if strings.Index(address, ":") == -1 {
-		for port := 1024; port < 65535; port++ {
-			addr := fmt.Sprintf("%s:%d", address, port)
-			if l, err = net.Listen("tcp", addr); err == nil {
-				address = addr
-				break
-			}
-		}
-	} else {
-		l, err = net.Listen("tcp", address)
+		address += ":0"
 	}
+	l, err := net.Listen("tcp", address)
 	if err != nil {
 		return nil, fmt.Errorf("cannot listen on %s: %v", address, err)
 	}
@@ -919,6 +1084,7 @@ func NewSwiftServer(address string) (*SwiftServer, error) {
 		URL:      "http://" + l.Addr().String() + "/v1",
 		Accounts: make(map[string]*account),
 		Sessions: make(map[string]*session),
+		override: make(map[string]HandlerOverrideFunc),
 	}
 
 	server.Accounts[TEST_ACCOUNT] = &account{
