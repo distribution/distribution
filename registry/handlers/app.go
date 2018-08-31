@@ -307,7 +307,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 
 	authType := config.Auth.Type()
 
-	if authType != "" {
+	if authType != "" && !strings.EqualFold(authType, "none") {
 		accessController, err := auth.GetAccessController(config.Auth.Type(), config.Auth.Parameters())
 		if err != nil {
 			panic(fmt.Sprintf("unable to configure authorization (%s): %v", authType, err))

@@ -570,6 +570,7 @@ The `auth` option is **optional**. Possible auth providers include:
 - [`silly`](#silly)
 - [`token`](#token)
 - [`htpasswd`](#htpasswd)
+- [`none`]
 
 You can configure only one authentication provider.
 
@@ -614,6 +615,9 @@ The only supported password format is
 [`bcrypt`](http://en.wikipedia.org/wiki/Bcrypt). Entries with other hash types
 are ignored. The `htpasswd` file is loaded once, at startup. If the file is
 invalid, the registry will display an error and will not start.
+
+> **Warning**: If the `htpasswd` file is missing, the file will be created and provisioned with a default user and automatically generated password.
+> The password will be printed to stdout.
 
 > **Warning**: Only use the `htpasswd` authentication scheme with TLS
 > configured, since basic authentication sends passwords as part of the HTTP
