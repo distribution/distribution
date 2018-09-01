@@ -69,6 +69,9 @@ A -----> a
     \--> b
 ```
 
+### Online garbage collection
+As of v2.6.0, the registry no longer has to be in read-only mode during garbage collection. This means 
+that you can push images while a garbage collection job is running.
 
 ### More details about garbage collection
 
@@ -122,3 +125,6 @@ blob eligible for deletion: sha256:87192bdbe00f8f2a62527f36bb4c7c7f4eaf9307e4b87
 blob eligible for deletion: sha256:b549a9959a664038fc35c155a95742cf12297672ca0ae35735ec027d55bf4e97
 blob eligible for deletion: sha256:f251d679a7c61455f06d793e43c06786d7766c88b8c24edf242b2c08e3c3f599
 ```
+## Known limitation
+There is an issue with the "Do Not Repeat" setting which if selected will cause garbage collection to not be run.
+
