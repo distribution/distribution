@@ -10,12 +10,13 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"golang.org/x/crypto/bcrypt"
 	"net/http"
 	"os"
 	"path/filepath"
 	"sync"
 	"time"
+
+	"golang.org/x/crypto/bcrypt"
 
 	dcontext "github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/auth"
