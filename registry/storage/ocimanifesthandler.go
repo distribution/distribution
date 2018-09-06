@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/url"
 
@@ -26,12 +25,12 @@ var _ ManifestHandler = &ocischemaManifestHandler{}
 func (ms *ocischemaManifestHandler) Unmarshal(ctx context.Context, dgst digest.Digest, content []byte) (distribution.Manifest, error) {
 	dcontext.GetLogger(ms.ctx).Debug("(*ocischemaManifestHandler).Unmarshal")
 
-	var m ocischema.DeserializedManifest
-	if err := json.Unmarshal(content, &m); err != nil {
+	m := &ocischema.DeserializedManifest{}
+	if err := m.UnmarshalJSON(content); err != nil {
 		return nil, err
 	}
 
-	return &m, nil
+	return m, nil
 }
 
 func (ms *ocischemaManifestHandler) Put(ctx context.Context, manifest distribution.Manifest, skipDependencyVerification bool) (digest.Digest, error) {

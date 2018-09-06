@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
@@ -33,12 +32,12 @@ var _ ManifestHandler = &schema2ManifestHandler{}
 func (ms *schema2ManifestHandler) Unmarshal(ctx context.Context, dgst digest.Digest, content []byte) (distribution.Manifest, error) {
 	dcontext.GetLogger(ms.ctx).Debug("(*schema2ManifestHandler).Unmarshal")
 
-	var m schema2.DeserializedManifest
-	if err := json.Unmarshal(content, &m); err != nil {
+	m := &schema2.DeserializedManifest{}
+	if err := m.UnmarshalJSON(content); err != nil {
 		return nil, err
 	}
 
-	return &m, nil
+	return m, nil
 }
 
 func (ms *schema2ManifestHandler) Put(ctx context.Context, manifest distribution.Manifest, skipDependencyVerification bool) (digest.Digest, error) {
