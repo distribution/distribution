@@ -52,7 +52,7 @@ type Manifest struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
-// References returnes the descriptors of this manifests references.
+// References returns the descriptors of this manifests references.
 func (m Manifest) References() []distribution.Descriptor {
 	references := make([]distribution.Descriptor, 0, 1+len(m.Layers))
 	references = append(references, m.Config)

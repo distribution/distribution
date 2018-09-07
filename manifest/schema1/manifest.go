@@ -138,7 +138,7 @@ func (sm *SignedManifest) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// References returnes the descriptors of this manifests references
+// References returns the descriptors of this manifests references
 func (sm SignedManifest) References() []distribution.Descriptor {
 	dependencies := make([]distribution.Descriptor, len(sm.FSLayers))
 	for i, fsLayer := range sm.FSLayers {
