@@ -4,17 +4,14 @@ package storage
 
 import (
 	"context"
+	"encoding"
 	"fmt"
+	"hash"
 	"path"
 	"strconv"
 
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/sirupsen/logrus"
-	"github.com/stevvooe/resumable"
-
-	// register resumable hashes with import
-	_ "github.com/stevvooe/resumable/sha256"
-	_ "github.com/stevvooe/resumable/sha512"
 )
 
 // resumeDigest attempts to restore the state of the internal hash function
@@ -24,12 +21,18 @@ func (bw *blobWriter) resumeDigest(ctx context.Context) error {
 		return errResumableDigestNotAvailable
 	}
 
-	h, ok := bw.digester.Hash().(resumable.Hash)
+	h, ok := bw.digester.Hash().(encoding.BinaryMarshaler)
 	if !ok {
 		return errResumableDigestNotAvailable
 	}
+
+	state, err := h.MarshalBinary()
+	if err != nil {
+		return err
+	}
+
 	offset := bw.fileWriter.Size()
-	if offset == h.Len() {
+	if offset == int64(len(state)) {
 		// State of digester is already at the requested offset.
 		return nil
 	}
@@ -52,20 +55,26 @@ func (bw *blobWriter) resumeDigest(ctx context.Context) error {
 
 	if hashStateMatch.offset == 0 {
 		// No need to load any state, just reset the hasher.
-		h.Reset()
+		h.(hash.Hash).Reset()
 	} else {
 		storedState, err := bw.driver.GetContent(ctx, hashStateMatch.path)
 		if err != nil {
 			return err
 		}
 
-		if err = h.Restore(storedState); err != nil {
+		// This type assertion is safe since we already did an assertion at the beginning
+		if err = h.(encoding.BinaryUnmarshaler).UnmarshalBinary(storedState); err != nil {
+			return err
+		}
+
+		state, err = h.(encoding.BinaryMarshaler).MarshalBinary()
+		if err != nil {
 			return err
 		}
 	}
 
 	// Mind the gap.
-	if gapLen := offset - h.Len(); gapLen > 0 {
+	if gapLen := offset - int64(len(state)); gapLen > 0 {
 		return errResumableDigestNotAvailable
 	}
 
@@ -120,26 +129,26 @@ func (bw *blobWriter) storeHashState(ctx context.Context) error {
 		return errResumableDigestNotAvailable
 	}
 
-	h, ok := bw.digester.Hash().(resumable.Hash)
+	h, ok := bw.digester.Hash().(encoding.BinaryMarshaler)
 	if !ok {
 		return errResumableDigestNotAvailable
+	}
+
+	state, err := h.MarshalBinary()
+	if err != nil {
+		return fmt.Errorf("could not marshal: %v", err)
 	}
 
 	uploadHashStatePath, err := pathFor(uploadHashStatePathSpec{
 		name:   bw.blobStore.repository.Named().String(),
 		id:     bw.id,
 		alg:    bw.digester.Digest().Algorithm(),
-		offset: h.Len(),
+		offset: int64(len(state)),
 	})
 
 	if err != nil {
 		return err
 	}
 
-	hashState, err := h.State()
-	if err != nil {
-		return err
-	}
-
-	return bw.driver.PutContent(ctx, uploadHashStatePath, hashState)
+	return bw.driver.PutContent(ctx, uploadHashStatePath, state)
 }
