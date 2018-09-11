@@ -162,8 +162,8 @@ type mockBlobDescriptorServiceFactory struct {
 func (f *mockBlobDescriptorServiceFactory) BlobAccessController(svc distribution.BlobDescriptorService) distribution.BlobDescriptorService {
 	return &mockBlobDescriptorService{
 		BlobDescriptorService: svc,
-		t:     f.t,
-		stats: f.stats,
+		t:                     f.t,
+		stats:                 f.stats,
 	}
 }
 

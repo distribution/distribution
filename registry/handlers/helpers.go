@@ -27,13 +27,7 @@ func closeResources(handler http.Handler, closers ...io.Closer) http.Handler {
 // The copy will be limited to `limit` bytes, if limit is greater than zero.
 func copyFullPayload(ctx context.Context, responseWriter http.ResponseWriter, r *http.Request, destWriter io.Writer, limit int64, action string) error {
 	// Get a channel that tells us if the client disconnects
-	var clientClosed <-chan bool
-	if notifier, ok := responseWriter.(http.CloseNotifier); ok {
-		clientClosed = notifier.CloseNotify()
-	} else {
-		dcontext.GetLogger(ctx).Warnf("the ResponseWriter does not implement CloseNotifier (type: %T)", responseWriter)
-	}
-
+	clientClosed := r.Context().Done()
 	var body = r.Body
 	if limit > 0 {
 		body = http.MaxBytesReader(responseWriter, body, limit)
