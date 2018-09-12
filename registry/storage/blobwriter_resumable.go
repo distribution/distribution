@@ -21,18 +21,13 @@ func (bw *blobWriter) resumeDigest(ctx context.Context) error {
 		return errResumableDigestNotAvailable
 	}
 
-	h, ok := bw.digester.Hash().(encoding.BinaryMarshaler)
+	h, ok := bw.digester.Hash().(encoding.BinaryUnmarshaler)
 	if !ok {
 		return errResumableDigestNotAvailable
 	}
 
-	state, err := h.MarshalBinary()
-	if err != nil {
-		return err
-	}
-
 	offset := bw.fileWriter.Size()
-	if offset == int64(len(state)) {
+	if offset == bw.written {
 		// State of digester is already at the requested offset.
 		return nil
 	}
@@ -62,19 +57,14 @@ func (bw *blobWriter) resumeDigest(ctx context.Context) error {
 			return err
 		}
 
-		// This type assertion is safe since we already did an assertion at the beginning
-		if err = h.(encoding.BinaryUnmarshaler).UnmarshalBinary(storedState); err != nil {
+		if err = h.UnmarshalBinary(storedState); err != nil {
 			return err
 		}
-
-		state, err = h.(encoding.BinaryMarshaler).MarshalBinary()
-		if err != nil {
-			return err
-		}
+		bw.written = hashStateMatch.offset
 	}
 
 	// Mind the gap.
-	if gapLen := offset - int64(len(state)); gapLen > 0 {
+	if gapLen := offset - bw.written; gapLen > 0 {
 		return errResumableDigestNotAvailable
 	}
 
@@ -136,14 +126,14 @@ func (bw *blobWriter) storeHashState(ctx context.Context) error {
 
 	state, err := h.MarshalBinary()
 	if err != nil {
-		return fmt.Errorf("could not marshal: %v", err)
+		return err
 	}
 
 	uploadHashStatePath, err := pathFor(uploadHashStatePathSpec{
 		name:   bw.blobStore.repository.Named().String(),
 		id:     bw.id,
 		alg:    bw.digester.Digest().Algorithm(),
-		offset: int64(len(state)),
+		offset: bw.written,
 	})
 
 	if err != nil {
