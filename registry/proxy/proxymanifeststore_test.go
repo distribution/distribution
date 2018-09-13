@@ -217,7 +217,7 @@ func TestProxyManifests(t *testing.T) {
 		t.Fatalf("Error checking existence")
 	}
 	if !exists {
-		t.Errorf("Unexpected non-existant manifest")
+		t.Errorf("Unexpected non-existent manifest")
 	}
 
 	if (*localStats)["exists"] != 1 && (*remoteStats)["exists"] != 1 {
@@ -252,7 +252,7 @@ func TestProxyManifests(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !exists {
-		t.Errorf("Unexpected non-existant manifest")
+		t.Errorf("Unexpected non-existent manifest")
 	}
 
 	if (*localStats)["exists"] != 2 && (*remoteStats)["exists"] != 1 {
