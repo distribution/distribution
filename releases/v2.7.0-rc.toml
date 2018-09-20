@@ -1,0 +1,48 @@
+# commit to be tagged for new release
+commit = "HEAD"
+
+project_name = "registry"
+github_repo = "docker/distribution"
+
+# previous release
+previous = "v2.6.0"
+
+pre_release = true
+
+preface = """\
+The 2.7 registry release has been a long time coming and represents both
+a long gap since the previous release and a renewed effort to release
+regularly. The maintainers were committed to get OCI support into the
+next release and thanks to much effort in the community that has
+been accomplished.
+
+## OCI Support
+
+### Push and Pull of OCI Images
+
+The registry now allows pushing and pulling OCI images. OCI images will always
+be preserved exactly without conversion to older types. With this change,
+clients which implement OCI can feel comfortable creating OCI images as part of
+their container image build process.
+
+## Specification Donation
+
+The Distribution specification which has had 4 years of review, implementation,
+and production use is now part of OCI. As part of that move, specification
+changes will no longer be accepted in the open source registry and should
+instead go to [OCI's distribution-spec](https://github.com/opencontainers/distribution-spec/issues).
+
+## Bug fixes
+
+Many many fixes and improvements, see the change log below
+"""
+
+# notable prs to include in the release notes, 1234 is the pr number
+[notes]
+
+[breaking]
+
+[rename_deps]
+	[rename_deps.logrus]
+	old = "github.com/Sirupsen/logrus"
+	new = "github.com/sirupsen/logrus"
