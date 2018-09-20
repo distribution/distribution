@@ -245,7 +245,7 @@ func (ts *tokenServer) getToken(ctx context.Context, w http.ResponseWriter, r *h
 		// Get response context.
 		ctx, w = dcontext.WithResponseWriter(ctx, w)
 
-		challenge.SetHeaders(w)
+		challenge.SetHeaders(r, w)
 		handleError(ctx, errcode.ErrorCodeUnauthorized.WithDetail(challenge.Error()), w)
 
 		dcontext.GetResponseLogger(ctx).Info("get token authentication challenge")
