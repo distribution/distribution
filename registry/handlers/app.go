@@ -555,7 +555,7 @@ func (app *App) configureRedis(configuration *configuration.Configuration) {
 			_, err := c.Do("PING")
 			return err
 		},
-		Wait: false, // if a connection is not avialable, proceed without cache.
+		Wait: false, // if a connection is not available, proceed without cache.
 	}
 
 	app.redis = pool
@@ -997,7 +997,7 @@ func applyStorageMiddleware(driver storagedriver.StorageDriver, middlewares []co
 
 // uploadPurgeDefaultConfig provides a default configuration for upload
 // purging to be used in the absence of configuration in the
-// confifuration file
+// configuration file
 func uploadPurgeDefaultConfig() map[interface{}]interface{} {
 	config := map[interface{}]interface{}{}
 	config["enabled"] = true
