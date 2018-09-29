@@ -70,7 +70,7 @@ to the 1.0 registry. Requests from newer clients will route to the 2.0 registry.
 		Removing intermediate container edb84c2b40cb
 		Successfully built 74acc70fa106
 		
-	The commmand outputs its progress until it completes.
+	The command outputs its progress until it completes.
 
 4. Start your configuration with compose.
 
