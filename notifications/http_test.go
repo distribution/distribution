@@ -63,7 +63,7 @@ func TestHTTPSink(t *testing.T) {
 	})
 	server := httptest.NewTLSServer(serverHandler)
 
-	metrics := newSafeMetrics()
+	metrics := newSafeMetrics("")
 	sink := newHTTPSink(server.URL, 0, nil, nil,
 		&endpointMetricsHTTPStatusListener{safeMetrics: metrics})
 
