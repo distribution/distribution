@@ -66,7 +66,7 @@ func TestBroadcaster(t *testing.T) {
 func TestEventQueue(t *testing.T) {
 	const nevents = 1000
 	var ts testSink
-	metrics := newSafeMetrics()
+	metrics := newSafeMetrics("")
 	eq := newEventQueue(
 		// delayed sync simulates destination slower than channel comms
 		&delayedSink{
