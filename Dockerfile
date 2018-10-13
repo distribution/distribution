@@ -7,7 +7,7 @@ ARG GOOS=linux
 ARG GOARCH=amd64
 
 RUN set -ex \
-    && apk add --no-cache make git
+    && apk add --no-cache make git build-base
 
 WORKDIR $DISTRIBUTION_DIR
 COPY . $DISTRIBUTION_DIR
