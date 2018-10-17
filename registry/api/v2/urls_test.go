@@ -219,6 +219,13 @@ func TestBuilderFromRequest(t *testing.T) {
 			base: "https://example.com",
 		},
 		{
+			name: "forwarded protocol with multiple schema hop",
+			request: &http.Request{URL: u, Host: u.Host, Header: http.Header{
+				"X-Forwarded-Proto": []string{"http,https"},
+			}},
+			base: "https://example.com",
+		},
+		{
 			name: "forwarded host with a non-standard header",
 			request: &http.Request{URL: u, Host: u.Host, Header: http.Header{
 				"X-Forwarded-Host": []string{"first.example.com"},

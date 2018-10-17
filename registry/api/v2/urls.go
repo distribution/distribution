@@ -73,7 +73,9 @@ func NewURLBuilderFromRequest(r *http.Request, relative bool) *URLBuilder {
 		}
 	} else {
 		if forwardedProto := r.Header.Get("X-Forwarded-Proto"); len(forwardedProto) > 0 {
-			scheme = forwardedProto
+			ss := strings.Split(forwardedProto, ",")
+			scheme = ss[len(ss)-1]
+
 		}
 		if forwardedHost := r.Header.Get("X-Forwarded-Host"); len(forwardedHost) > 0 {
 			// According to the Apache mod_proxy docs, X-Forwarded-Host can be a
