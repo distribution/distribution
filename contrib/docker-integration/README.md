@@ -35,7 +35,7 @@ the [release page](https://github.com/docker/golem/releases/tag/v0.1).
 
 #### Running golem with docker
 
-Additionally golem can be run as a docker image requiring no additonal
+Additionally golem can be run as a docker image requiring no additional
 installation.
 
 `docker run --privileged -v "$GOPATH/src/github.com/docker/distribution/contrib/docker-integration:/test" -w /test distribution/golem golem -rundaemon .`
