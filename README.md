@@ -52,7 +52,7 @@ The new registry implementation provides the following benefits:
 - simplified deployment
 - pluggable storage backend
 - webhook notifications
-
+con
 For information on upcoming functionality, please see [ROADMAP.md](ROADMAP.md).
 
 ### Who needs to deploy a registry?
@@ -67,7 +67,7 @@ others, it is not.
 
 For example, users with their own software products may want to maintain a
 registry for private, company images. Also, you may wish to deploy your own
-image repository for images used to test or in continuous integration. For these
+image repository for images used to test or in continious integration. For these
 use cases and others, [deploying your own registry instance](https://github.com/docker/docker.github.io/blob/master/registry/deploying.md)
 may be the better choice.
 
