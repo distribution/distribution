@@ -196,3 +196,37 @@ func (ts *tagStore) Lookup(ctx context.Context, desc distribution.Descriptor) ([
 
 	return tags, nil
 }
+
+func (ts *tagStore) Indexes(ctx context.Context, tag string) ([]digest.Digest, error) {
+	var tagLinkPath = func(name string, dgst digest.Digest) (string, error) {
+		return pathFor(manifestTagIndexEntryLinkPathSpec{
+			name:     name,
+			tag:      tag,
+			revision: dgst,
+		})
+	}
+	lbs := &linkedBlobStore{
+		blobStore: ts.blobStore,
+		blobAccessController: &linkedBlobStatter{
+			blobStore:   ts.blobStore,
+			repository:  ts.repository,
+			linkPathFns: []linkPathFunc{manifestRevisionLinkPath},
+		},
+		repository:  ts.repository,
+		ctx:         ctx,
+		linkPathFns: []linkPathFunc{tagLinkPath},
+		linkDirectoryPathSpec: manifestTagIndexPathSpec{
+			name: ts.repository.Named().Name(),
+			tag:  tag,
+		},
+	}
+	var dgsts []digest.Digest
+	err := lbs.Enumerate(ctx, func(dgst digest.Digest) error {
+		dgsts = append(dgsts, dgst)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return dgsts, nil
+}
