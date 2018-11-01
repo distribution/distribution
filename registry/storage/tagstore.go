@@ -197,7 +197,7 @@ func (ts *tagStore) Lookup(ctx context.Context, desc distribution.Descriptor) ([
 	return tags, nil
 }
 
-func (ts *tagStore) Indexes(ctx context.Context, tag string) ([]digest.Digest, error) {
+func (ts *tagStore) ManifestDigests(ctx context.Context, tag string) ([]digest.Digest, error) {
 	var tagLinkPath = func(name string, dgst digest.Digest) (string, error) {
 		return pathFor(manifestTagIndexEntryLinkPathSpec{
 			name:     name,
