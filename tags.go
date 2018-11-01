@@ -28,9 +28,10 @@ type TagService interface {
 	Lookup(ctx context.Context, digest Descriptor) ([]string, error)
 }
 
-// TagIndexes proves method to retreive all the digests that a tag historically pointed to
-type TagIndexes interface {
-	// Indexes returns set of digests that this tag historically pointed to. This also includes
-	// currently linked digest. There is no ordering guaranteed
-	Indexes(ctx context.Context, tag string) ([]digest.Digest, error)
+// TagManifestsProvider provides method to retreive the digests of manifests that a tag historically
+// pointed to
+type TagManifestsProvider interface {
+	// ManifestDigests returns set of digests that this tag historically pointed to. This also
+	// includes currently linked digest. There is no ordering guaranteed
+	ManifestDigests(ctx context.Context, tag string) ([]digest.Digest, error)
 }

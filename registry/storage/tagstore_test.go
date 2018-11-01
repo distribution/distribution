@@ -226,9 +226,9 @@ func TestTagIndexes(t *testing.T) {
 	tagStore := env.ts
 	ctx := env.ctx
 
-	indexes, ok := tagStore.(distribution.TagIndexes)
+	md, ok := tagStore.(distribution.TagManifestsProvider)
 	if !ok {
-		t.Fatal("tagStore does not implement TagIndexes interface")
+		t.Fatal("tagStore does not implement TagManifestDigests interface")
 	}
 
 	conf, err := env.bs.Put(ctx, "application/octet-stream", []byte{0})
@@ -236,8 +236,9 @@ func TestTagIndexes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dgstsSet := make(map[digest.Digest]bool)
-	for i := 0; i < 3; i++ {
+	t1Dgsts := make(map[digest.Digest]struct{})
+	t2Dgsts := make(map[digest.Digest]struct{})
+	for i := 0; i < 5; i++ {
 		layer, err := env.bs.Put(ctx, "application/octet-stream", []byte{byte(i + 1)})
 		if err != nil {
 			t.Fatal(err)
@@ -272,22 +273,44 @@ func TestTagIndexes(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		err = tagStore.Tag(ctx, "t", desc)
-		if err != nil {
-			t.Fatal(err)
+		if i < 3 {
+			// tag first 3 manifests as "t1"
+			err = tagStore.Tag(ctx, "t1", desc)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t1Dgsts[dgst] = struct{}{}
+		} else {
+			// the last two under "t2"
+			err = tagStore.Tag(ctx, "t2", desc)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t2Dgsts[dgst] = struct{}{}
 		}
-		dgstsSet[dgst] = true
 	}
 
-	gotDgsts, err := indexes.Indexes(ctx, "t")
+	gotT1Dgsts, err := md.ManifestDigests(ctx, "t1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	gotDgstsSet := make(map[digest.Digest]bool)
-	for _, dgst := range gotDgsts {
-		gotDgstsSet[dgst] = true
+	if !reflect.DeepEqual(t1Dgsts, digestMap(gotT1Dgsts)) {
+		t.Fatalf("Expected digests: %v but got digests: %v", t1Dgsts, digestMap(gotT1Dgsts))
 	}
-	if !reflect.DeepEqual(dgstsSet, gotDgstsSet) {
-		t.Fatalf("Expected digests: %v but got digests: %v", dgstsSet, gotDgstsSet)
+
+	gotT2Dgsts, err := md.ManifestDigests(ctx, "t2")
+	if err != nil {
+		t.Fatal(err)
 	}
+	if !reflect.DeepEqual(t2Dgsts, digestMap(gotT2Dgsts)) {
+		t.Fatalf("Expected digests: %v but got digests: %v", t2Dgsts, digestMap(gotT2Dgsts))
+	}
+}
+
+func digestMap(dgsts []digest.Digest) map[digest.Digest]struct{} {
+	set := make(map[digest.Digest]struct{})
+	for _, dgst := range dgsts {
+		set[dgst] = struct{}{}
+	}
+	return set
 }
