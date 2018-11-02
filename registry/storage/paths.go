@@ -87,6 +87,7 @@ const (
 // 	Blobs:
 //
 // 	layerLinkPathSpec:            <root>/v2/repositories/<name>/_layers/<algorithm>/<hex digest>/link
+// 	layersPathSpec:               <root>/v2/repositories/<name>/_layers
 //
 //	Uploads:
 //
@@ -206,6 +207,8 @@ func pathFor(spec pathSpec) (string, error) {
 		blobLinkPathComponents := append(repoPrefix, v.name, "_layers")
 
 		return path.Join(path.Join(append(blobLinkPathComponents, components...)...), "link"), nil
+	case layersPathSpec:
+		return append(repoPrefix, v.repo, "_layers")
 	case blobsPathSpec:
 		blobsPathPrefix := append(rootPrefix, "blobs")
 		return path.Join(blobsPathPrefix...), nil
@@ -334,6 +337,13 @@ type manifestTagIndexEntryLinkPathSpec struct {
 }
 
 func (manifestTagIndexEntryLinkPathSpec) pathSpec() {}
+
+// layersPathSpec contains the path for the layers inside a repo
+type layersPathSpec struct {
+	repo string
+}
+
+func (layersPathSpec) pathSpec() {}
 
 // blobLinkPathSpec specifies a path for a blob link, which is a file with a
 // blob id. The blob link will contain a content addressable blob id reference
