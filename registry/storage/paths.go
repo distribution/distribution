@@ -208,7 +208,7 @@ func pathFor(spec pathSpec) (string, error) {
 
 		return path.Join(path.Join(append(blobLinkPathComponents, components...)...), "link"), nil
 	case layersPathSpec:
-		return append(repoPrefix, v.repo, "_layers")
+		return path.Join(append(repoPrefix, v.name, "_layers")...), nil
 	case blobsPathSpec:
 		blobsPathPrefix := append(rootPrefix, "blobs")
 		return path.Join(blobsPathPrefix...), nil
@@ -340,7 +340,7 @@ func (manifestTagIndexEntryLinkPathSpec) pathSpec() {}
 
 // layersPathSpec contains the path for the layers inside a repo
 type layersPathSpec struct {
-	repo string
+	name string
 }
 
 func (layersPathSpec) pathSpec() {}
