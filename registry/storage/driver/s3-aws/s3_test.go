@@ -33,6 +33,7 @@ func init() {
 	secure := os.Getenv("S3_SECURE")
 	skipVerify := os.Getenv("S3_SKIP_VERIFY")
 	v4Auth := os.Getenv("S3_V4_AUTH")
+	logS3Request := os.Getenv("LOG_S3_REQUEST")
 	region := os.Getenv("AWS_REGION")
 	objectACL := os.Getenv("S3_OBJECT_ACL")
 	root, err := ioutil.TempDir("", "driver-")
@@ -76,6 +77,14 @@ func init() {
 			}
 		}
 
+		logReqBool := true
+		if logS3Request != "" {
+			logReqBool, err = strconv.ParseBool(logS3Request)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		parameters := DriverParameters{
 			accessKey,
 			secretKey,
@@ -87,6 +96,7 @@ func init() {
 			secureBool,
 			skipVerifyBool,
 			v4Bool,
+			logReqBool,
 			minChunkSize,
 			defaultMultipartCopyChunkSize,
 			defaultMultipartCopyMaxConcurrency,
