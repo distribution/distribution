@@ -16,7 +16,7 @@ import (
 	_ "github.com/distribution/distribution/v3/registry/auth/silly"
 	"github.com/distribution/distribution/v3/registry/storage"
 	memorycache "github.com/distribution/distribution/v3/registry/storage/cache/memory"
-	"github.com/distribution/distribution/v3/registry/storage/driver/testdriver"
+	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 )
 
 // TestAppDispatcher builds an application with a test dispatcher and ensures
@@ -24,7 +24,7 @@ import (
 // This only tests the dispatch mechanism. The underlying dispatchers must be
 // tested individually.
 func TestAppDispatcher(t *testing.T) {
-	driver := testdriver.New()
+	driver := inmemory.New()
 	ctx := context.Background()
 	registry, err := storage.NewRegistry(ctx, driver, storage.BlobDescriptorCacheProvider(memorycache.NewInMemoryBlobDescriptorCacheProvider(0)), storage.EnableDelete, storage.EnableRedirect)
 	if err != nil {
@@ -141,7 +141,7 @@ func TestNewApp(t *testing.T) {
 	ctx := context.Background()
 	config := configuration.Configuration{
 		Storage: configuration.Storage{
-			"testdriver": nil,
+			"inmemory": nil,
 			"maintenance": configuration.Parameters{"uploadpurging": map[interface{}]interface{}{
 				"enabled": false,
 			}},
