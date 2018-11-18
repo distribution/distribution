@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -359,11 +360,14 @@ func (th *tokenHandler) fetchTokenWithOAuth(realm *url.URL, refreshToken, servic
 		return "", time.Time{}, err
 	}
 
-	decoder := json.NewDecoder(resp.Body)
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", time.Time{}, err
+	}
 
 	var tr postTokenResponse
-	if err = decoder.Decode(&tr); err != nil {
-		return "", time.Time{}, fmt.Errorf("unable to decode token response: %s", err)
+	if err = json.Unmarshal(b, &tr); err != nil {
+		return "", time.Time{}, fmt.Errorf("unable to decode token response: %s (%s)", b, err)
 	}
 
 	if tr.RefreshToken != "" && tr.RefreshToken != refreshToken {
@@ -439,11 +443,14 @@ func (th *tokenHandler) fetchTokenWithBasicAuth(realm *url.URL, service string, 
 		return "", time.Time{}, err
 	}
 
-	decoder := json.NewDecoder(resp.Body)
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", time.Time{}, err
+	}
 
 	var tr getTokenResponse
-	if err = decoder.Decode(&tr); err != nil {
-		return "", time.Time{}, fmt.Errorf("unable to decode token response: %s", err)
+	if err = json.Unmarshal(b, &tr); err != nil {
+		return "", time.Time{}, fmt.Errorf("unable to decode token response: %s (%s)", b, err)
 	}
 
 	if tr.RefreshToken != "" && th.creds != nil {
