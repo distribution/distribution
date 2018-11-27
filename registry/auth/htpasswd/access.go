@@ -111,7 +111,7 @@ type challenge struct {
 var _ auth.Challenge = challenge{}
 
 // SetHeaders sets the basic challenge header on the response.
-func (ch challenge) SetHeaders(w http.ResponseWriter) {
+func (ch challenge) SetHeaders(r *http.Request, w http.ResponseWriter) {
 	w.Header().Set("WWW-Authenticate", fmt.Sprintf("Basic realm=%q", ch.realm))
 }
 
