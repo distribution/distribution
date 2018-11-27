@@ -14,6 +14,7 @@ import (
 
 	"rsc.io/letsencrypt"
 
+	"github.com/Shopify/logrus-bugsnag"
 	logstash "github.com/bshuster-repo/logrus-logstash-hook"
 	"github.com/bugsnag/bugsnag-go"
 	"github.com/docker/distribution/configuration"
@@ -94,6 +95,8 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 	if err != nil {
 		return nil, fmt.Errorf("error configuring logger: %v", err)
 	}
+
+	configureBugsnag(config)
 
 	// inject a logger into the uuid library. warns us if there is a problem
 	// with uuid generation under low entropy.
@@ -229,19 +232,6 @@ func configureReporting(app *handlers.App) http.Handler {
 	var handler http.Handler = app
 
 	if app.Config.Reporting.Bugsnag.APIKey != "" {
-		bugsnagConfig := bugsnag.Configuration{
-			APIKey: app.Config.Reporting.Bugsnag.APIKey,
-			// TODO(brianbland): provide the registry version here
-			// AppVersion: "2.0",
-		}
-		if app.Config.Reporting.Bugsnag.ReleaseStage != "" {
-			bugsnagConfig.ReleaseStage = app.Config.Reporting.Bugsnag.ReleaseStage
-		}
-		if app.Config.Reporting.Bugsnag.Endpoint != "" {
-			bugsnagConfig.Endpoint = app.Config.Reporting.Bugsnag.Endpoint
-		}
-		bugsnag.Configure(bugsnagConfig)
-
 		handler = bugsnag.Handler(handler)
 	}
 
@@ -317,6 +307,32 @@ func logLevel(level configuration.Loglevel) log.Level {
 	}
 
 	return l
+}
+
+// configureBugsnag configures bugsnag reporting, if enabled
+func configureBugsnag(config *configuration.Configuration) {
+	if config.Reporting.Bugsnag.APIKey == "" {
+		return
+	}
+
+	bugsnagConfig := bugsnag.Configuration{
+		APIKey: config.Reporting.Bugsnag.APIKey,
+	}
+	if config.Reporting.Bugsnag.ReleaseStage != "" {
+		bugsnagConfig.ReleaseStage = config.Reporting.Bugsnag.ReleaseStage
+	}
+	if config.Reporting.Bugsnag.Endpoint != "" {
+		bugsnagConfig.Endpoint = config.Reporting.Bugsnag.Endpoint
+	}
+	bugsnag.Configure(bugsnagConfig)
+
+	// configure logrus bugsnag hook
+	hook, err := logrus_bugsnag.NewBugsnagHook()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	log.AddHook(hook)
 }
 
 // panicHandler add an HTTP handler to web app. The handler recover the happening
