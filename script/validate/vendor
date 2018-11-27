@@ -2,8 +2,9 @@
 
 set -eu -o pipefail
 
+go mod tidy
 rm -rf vendor/
-vndr |& grep -v -i clone
+go mod vendor
 
 DIFF_PATH="vendor/"
 DIFF=$(git status --porcelain -- "$DIFF_PATH")

@@ -12,11 +12,10 @@ import (
 	"syscall"
 	"time"
 
-	"rsc.io/letsencrypt"
-
 	"github.com/Shopify/logrus-bugsnag"
 	logstash "github.com/bshuster-repo/logrus-logstash-hook"
 	"github.com/bugsnag/bugsnag-go"
+	"github.com/dmcgowan/letsencrypt"
 	"github.com/docker/distribution/configuration"
 	dcontext "github.com/docker/distribution/context"
 	"github.com/docker/distribution/health"

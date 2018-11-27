@@ -18,26 +18,23 @@ addons:
 
 
 env:
-  - TRAVIS_GOOS=linux DOCKER_BUILDTAGS="include_oss include_gcs" TRAVIS_CGO_ENABLED=1
+  - GO111MODULE=on TRAVIS_GOOS=linux DOCKER_BUILDTAGS="include_oss include_gcs" TRAVIS_CGO_ENABLED=1
 
 before_install:
   - uname -r
   - sudo apt-get -q update
 
 install:
-  - go get -u github.com/vbatts/git-validation
-    # TODO: Add enforcement of license
-    # - go get -u github.com/kunalkushwaha/ltag
+  - GOOS=linux $TRAVIS_BUILD_DIR/script/setup/install-dev-tools
   - cd $TRAVIS_BUILD_DIR
 
 script:
   - export GOOS=$TRAVIS_GOOS
   - export CGO_ENABLED=$TRAVIS_CGO_ENABLED
   - DCO_VERBOSITY=-q script/validate/dco
-  - GOOS=linux script/setup/install-dev-tools
   - script/validate/vendor
   - go build -i .
-  - make check
+  #- make check
   - make build
   - make binaries
     # Currently takes too long

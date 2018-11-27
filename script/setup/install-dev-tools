@@ -5,7 +5,12 @@
 #
 set -eu -o pipefail
 
-go get -u github.com/alecthomas/gometalinter
-gometalinter --install >/dev/null
-go get -u github.com/LK4D4/vndr
-go get -u github.com/cpuguy83/go-md2man
+go get -u github.com/vbatts/git-validation
+go get github.com/cpuguy83/go-md2man@v1.0.10
+
+gometalinter='https://github.com/alecthomas/gometalinter/releases/download/v3.0.0/gometalinter-3.0.0-linux-amd64.tar.gz'
+
+curl -s -L "${gometalinter}" \
+  | tar --strip-components=1 -C "${GOPATH}/bin/" -zvx
+
+go mod tidy

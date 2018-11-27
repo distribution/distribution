@@ -5,6 +5,38 @@ ROOTDIR=$(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always)
 REVISION=$(shell git rev-parse HEAD)$(shell if ! git diff --no-ext-diff --quiet --exit-code; then echo .m; fi)
 
+# Go 11.x vendoring
+GO                ?= go
+GOOPTS            ?=
+GO_ROOT           ?= $(shell $(GO) env GOROOT)
+GO_VERSION        ?= $(shell $(GO) version)
+GO_VERSION_NUMBER ?= $(word 3, $(GO_VERSION))
+PRE_GO_111        ?= $(shell echo $(GO_VERSION_NUMBER) | grep -E 'go1\.(10|[0-9])\.')
+
+unexport GOVENDOR
+ifeq (, $(PRE_GO_111))
+  ifneq (,$(wildcard go.mod))
+    # Enforce Go modules support just in case the directory is inside GOPATH (and for Travis CI).
+    GO111MODULE := on
+
+    ifneq (,$(wildcard vendor))
+      # Always use the local vendor/ directory to satisfy the dependencies.
+      GOOPTS := $(GOOPTS) -mod=vendor
+    endif
+  endif
+else
+  ifneq (,$(wildcard go.mod))
+    ifneq (,$(wildcard vendor))
+$(warning This repository requires Go >= 1.11 because of Go modules)
+$(warning Some recipes may not work as expected as the current Go runtime is '$(GO_VERSION_NUMBER)')
+    endif
+  else
+    # This repository isn't using Go modules (yet).
+    GOVENDOR := $(FIRST_GOPATH)/bin/govendor
+  endif
+
+  unexport GO111MODULE
+endif
 
 PKG=github.com/docker/distribution
 
@@ -50,30 +82,30 @@ version/version.go:
 
 check: ## run all linters (TODO: enable "unused", "varcheck", "ineffassign", "unconvert", "staticheck", "goimports", "structcheck")
 	@echo "$(WHALE) $@"
-	gometalinter --config .gometalinter.json ./...
+	gometalinter --config .gometalinter.json -e "(\.\./|$(GO_ROOT))" ./...
 
 test: ## run tests, except integration test with test.short
 	@echo "$(WHALE) $@"
-	@go test ${GO_TAGS} -test.short ${TESTFLAGS} $(filter-out ${INTEGRATION_PACKAGE},${PACKAGES})
+	@go test $(GOOPTS) ${GO_TAGS} -test.short ${TESTFLAGS} $(filter-out ${INTEGRATION_PACKAGE},${PACKAGES})
 
 test-race: ## run tests, except integration test with test.short and race
 	@echo "$(WHALE) $@"
-	@go test ${GO_TAGS} -race -test.short ${TESTFLAGS} $(filter-out ${INTEGRATION_PACKAGE},${PACKAGES})
+	@go test $(GOOPTS) ${GO_TAGS} -race -test.short ${TESTFLAGS} $(filter-out ${INTEGRATION_PACKAGE},${PACKAGES})
 
 test-full: ## run tests, except integration tests
 	@echo "$(WHALE) $@"
-	@go test ${GO_TAGS} ${TESTFLAGS} $(filter-out ${INTEGRATION_PACKAGE},${PACKAGES})
+	@go test $(GOOPTS) ${GO_TAGS} ${TESTFLAGS} $(filter-out ${INTEGRATION_PACKAGE},${PACKAGES})
 
 integration: ## run integration tests
 	@echo "$(WHALE) $@"
-	@go test ${TESTFLAGS} -parallel ${TESTFLAGS_PARALLEL} ${INTEGRATION_PACKAGE}
+	@go test $(GOOPTS) ${TESTFLAGS} -parallel ${TESTFLAGS_PARALLEL} ${INTEGRATION_PACKAGE}
 
 coverage: ## generate coverprofiles from the unit tests
 	@echo "$(WHALE) $@"
 	@rm -f coverage.txt
 	@go test ${GO_TAGS} -i ${TESTFLAGS} $(filter-out ${INTEGRATION_PACKAGE},${COVERAGE_PACKAGES}) 2> /dev/null
 	@( for pkg in $(filter-out ${INTEGRATION_PACKAGE},${COVERAGE_PACKAGES}); do \
-		go test ${GO_TAGS} ${TESTFLAGS} \
+		go test $(GOOPTS) ${GO_TAGS} ${TESTFLAGS} \
 			-cover \
 			-coverprofile=profile.out \
 			-covermode=atomic $$pkg || exit; \
@@ -88,14 +120,14 @@ FORCE:
 # Build a binary from a cmd.
 bin/%: cmd/% FORCE
 	@echo "$(WHALE) $@${BINARY_SUFFIX}"
-	@go build ${GO_GCFLAGS} ${GO_BUILD_FLAGS} -o $@${BINARY_SUFFIX} ${GO_LDFLAGS} ${GO_TAGS}  ./$<
+	@go build $(GOOPTS) ${GO_GCFLAGS} ${GO_BUILD_FLAGS} -o $@${BINARY_SUFFIX} ${GO_LDFLAGS} ${GO_TAGS}  ./$<
 
 binaries: $(BINARIES) ## build binaries
 	@echo "$(WHALE) $@"
 
 build:
 	@echo "$(WHALE) $@"
-	@go build ${GO_GCFLAGS} ${GO_BUILD_FLAGS} ${GO_LDFLAGS} ${GO_TAGS} $(PACKAGES)
+	@go build $(GOOPTS) ${GO_GCFLAGS} ${GO_BUILD_FLAGS} ${GO_LDFLAGS} ${GO_TAGS} $(PACKAGES)
 
 clean: ## clean up binaries
 	@echo "$(WHALE) $@"
