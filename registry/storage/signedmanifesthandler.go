@@ -110,7 +110,7 @@ func (ms *signedManifestHandler) verifyManifest(ctx context.Context, mnfst schem
 
 	if _, err := schema1.Verify(&mnfst); err != nil {
 		switch err {
-		case libtrust.ErrMissingSignatureKey, libtrust.ErrInvalidJSONContent, libtrust.ErrMissingSignatureKey:
+		case libtrust.ErrMissingSignatureKey, libtrust.ErrInvalidJSONContent:
 			errs = append(errs, distribution.ErrManifestUnverified{})
 		default:
 			if err.Error() == "invalid signature" { // TODO(stevvooe): This should be exported by libtrust
