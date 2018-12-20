@@ -77,7 +77,7 @@ func (ch *catalogHandler) GetCatalog(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Use the original URL from the request to create a new URL for
+// createLinkEntry; Use the original URL from the request to create a new URL for
 // the link header
 func createLinkEntry(origURL string, maxEntries int, lastEntry string) (string, error) {
 	calledURL, err := url.Parse(origURL)

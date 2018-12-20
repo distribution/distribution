@@ -13,7 +13,7 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// Hook up gocheck into the "go test" runner
+// Test; Hook up gocheck into the "go test" runner
 func Test(t *testing.T) { TestingT(t) }
 
 // configStruct is a canonical example configuration, which should map to configYamlV0_1

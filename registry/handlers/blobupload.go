@@ -325,7 +325,7 @@ func (buh *blobUploadHandler) blobUploadResponse(w http.ResponseWriter, r *http.
 	return nil
 }
 
-// mountBlob attempts to mount a blob from another repository by its digest. If
+// createBlobMountOption attempts to mount a blob from another repository by its digest. If
 // successful, the blob is linked into the blob store and 201 Created is
 // returned with the canonical url of the blob.
 func (buh *blobUploadHandler) createBlobMountOption(fromRepo, mountDigest string) (distribution.BlobCreateOption, error) {

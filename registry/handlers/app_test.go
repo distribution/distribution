@@ -212,7 +212,7 @@ func TestNewApp(t *testing.T) {
 	}
 }
 
-// Test the access record accumulator
+// TestAppendAccessRecords tests the access record accumulator
 func TestAppendAccessRecords(t *testing.T) {
 	repo := "testRepo"
 

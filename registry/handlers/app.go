@@ -938,7 +938,7 @@ func appendAccessRecords(records []auth.Access, method string, repo string) []au
 	return records
 }
 
-// Add the access record for the catalog if it's our current route
+// appendCatalogAccessRecord; Add the access record for the catalog if it's our current route
 func appendCatalogAccessRecord(accessRecords []auth.Access, r *http.Request) []auth.Access {
 	route := mux.CurrentRoute(r)
 	routeName := route.GetName()

@@ -2372,7 +2372,7 @@ func maybeDumpResponse(t *testing.T, resp *http.Response) {
 	}
 }
 
-// matchHeaders checks that the response has at least the headers. If not, the
+// checkHeaders checks that the response has at least the headers. If not, the
 // test will fail. If a passed in header value is "*", any non-zero value will
 // suffice as a match.
 func checkHeaders(t *testing.T, resp *http.Response, headers http.Header) {
@@ -2469,7 +2469,7 @@ func createRepository(env *testEnv, t *testing.T, imageName string, tag string) 
 	return dgst
 }
 
-// Test mutation operations on a registry configured as a cache.  Ensure that they return
+// TestRegistryAsCacheMutationAPIs tests mutation operations on a registry configured as a cache.  Ensure that they return
 // appropriate errors.
 func TestRegistryAsCacheMutationAPIs(t *testing.T) {
 	deleteEnabled := true

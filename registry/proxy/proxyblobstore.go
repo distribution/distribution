@@ -199,7 +199,7 @@ func (pbs *proxyBlobStore) Get(ctx context.Context, dgst digest.Digest) ([]byte,
 	return blob, nil
 }
 
-// Unsupported functions
+// Put; Unsupported functions
 func (pbs *proxyBlobStore) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
 	return distribution.Descriptor{}, distribution.ErrUnsupported
 }

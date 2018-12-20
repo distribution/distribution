@@ -66,7 +66,7 @@ type mockChallenger struct {
 	count int
 }
 
-// Called for remote operations only
+// tryEstablishChallenges; Called for remote operations only
 func (m *mockChallenger) tryEstablishChallenges(context.Context) error {
 	m.Lock()
 	defer m.Unlock()

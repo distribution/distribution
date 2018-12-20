@@ -220,7 +220,7 @@ func TestWithVars(t *testing.T) {
 	}
 }
 
-// SingleHostReverseProxy will insert an X-Forwarded-For header, and can be used to test
+// TestRemoteAddr will insert an X-Forwarded-For header, and can be used to test
 // RemoteAddr().  A fake RemoteAddr cannot be set on the HTTP request - it is overwritten
 // at the transport layer to 127.0.0.1:<port> .  However, as the X-Forwarded-For header
 // just contains the IP address, it is different enough for testing.

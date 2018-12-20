@@ -9,7 +9,7 @@ import (
 	"github.com/docker/distribution/manifest/schema1"
 )
 
-// TestEventJSONFormat provides silly test to detect if the event format or
+// TestEventEnvelopeJSONFormat provides silly test to detect if the event format or
 // envelope has changed. If this code fails, the revision of the protocol may
 // need to be incremented.
 func TestEventEnvelopeJSONFormat(t *testing.T) {

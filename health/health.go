@@ -110,7 +110,7 @@ func (tu *thresholdUpdater) Check() error {
 	return nil
 }
 
-// thresholdUpdater implements the Updater interface, allowing asynchronous
+// Update implements the Updater interface, allowing asynchronous
 // access to the status of a Checker.
 func (tu *thresholdUpdater) Update(status error) {
 	tu.mu.Lock()
@@ -299,7 +299,7 @@ func statusResponse(w http.ResponseWriter, r *http.Request, status int, checks m
 	}
 }
 
-// Registers global /debug/health api endpoint, creates default registry
+// init registers global /debug/health api endpoint, creates default registry
 func init() {
 	DefaultRegistry = NewRegistry()
 	http.HandleFunc("/debug/health", StatusHandler)

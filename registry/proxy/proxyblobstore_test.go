@@ -113,7 +113,7 @@ func (te *testEnv) RemoteStats() *map[string]int {
 	return &rs
 }
 
-// Populate remote store and record the digests
+// makeTestEnv; Populate remote store and record the digests
 func makeTestEnv(t *testing.T, name string) *testEnv {
 	nameRef, err := reference.WithName(name)
 	if err != nil {

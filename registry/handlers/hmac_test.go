@@ -60,7 +60,7 @@ func TestLayerUploadTokens(t *testing.T) {
 	}
 }
 
-// TestHMACValidate ensures that any HMAC token providers are compatible if and
+// TestHMACValidation ensures that any HMAC token providers are compatible if and
 // only if they share the same secret.
 func TestHMACValidation(t *testing.T) {
 	for _, secret := range secrets {

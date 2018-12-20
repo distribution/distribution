@@ -113,7 +113,7 @@ func (tl *testListener) RepoDeleted(repo reference.Named) error {
 	return nil
 }
 
-// checkExerciseRegistry takes the registry through all of its operations,
+// checkExerciseRepository takes the registry through all of its operations,
 // carrying out generic checks.
 func checkExerciseRepository(t *testing.T, repository distribution.Repository, remover distribution.RepositoryRemover) {
 	// TODO(stevvooe): This would be a nice testutil function. Basically, it
