@@ -31,6 +31,7 @@ func init() {
 	encrypt := os.Getenv("OSS_ENCRYPT")
 	secure := os.Getenv("OSS_SECURE")
 	endpoint := os.Getenv("OSS_ENDPOINT")
+	encryptionKeyID := os.Getenv("OSS_ENCRYPTIONKEYID")
 	root, err := ioutil.TempDir("", "driver-")
 	if err != nil {
 		panic(err)
@@ -73,6 +74,7 @@ func init() {
 			Encrypt:         encryptBool,
 			Secure:          secureBool,
 			Endpoint:        endpoint,
+			EncryptionKeyID: encryptionKeyID,
 		}
 
 		return New(parameters)
