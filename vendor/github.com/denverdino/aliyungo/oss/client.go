@@ -57,12 +57,14 @@ type Owner struct {
 // Options struct
 //
 type Options struct {
-	ServerSideEncryption bool
-	Meta                 map[string][]string
-	ContentEncoding      string
-	CacheControl         string
-	ContentMD5           string
-	ContentDisposition   string
+	ServerSideEncryption      bool
+	ServerSideEncryptionKeyID string
+
+	Meta               map[string][]string
+	ContentEncoding    string
+	CacheControl       string
+	ContentMD5         string
+	ContentDisposition string
 	//Range              string
 	//Expires int
 }
@@ -72,6 +74,9 @@ type CopyOptions struct {
 	CopySourceOptions string
 	MetadataDirective string
 	//ContentType       string
+
+	ServerSideEncryption      bool
+	ServerSideEncryptionKeyID string
 }
 
 // CopyObjectResult is the output from a Copy request
@@ -366,7 +371,7 @@ func (b *Bucket) Exists(path string) (exists bool, err error) {
 		}
 
 		if err != nil {
-			// We can treat a 403 or 404 as non existance
+			// We can treat a 403 or 404 as non existence
 			if e, ok := err.(*Error); ok && (e.StatusCode == 403 || e.StatusCode == 404) {
 				return false, nil
 			}
@@ -430,7 +435,7 @@ func (b *Bucket) Put(path string, data []byte, contType string, perm ACL, option
 func (b *Bucket) PutCopy(path string, perm ACL, options CopyOptions, source string) (*CopyObjectResult, error) {
 	headers := make(http.Header)
 
-	headers.Set("x-oss-acl", string(perm))
+	headers.Set("x-oss-object-acl", string(perm))
 	headers.Set("x-oss-copy-source", source)
 
 	options.addHeaders(headers)
@@ -455,7 +460,7 @@ func (b *Bucket) PutReader(path string, r io.Reader, length int64, contType stri
 	headers := make(http.Header)
 	headers.Set("Content-Length", strconv.FormatInt(length, 10))
 	headers.Set("Content-Type", contType)
-	headers.Set("x-oss-acl", string(perm))
+	headers.Set("x-oss-object-acl", string(perm))
 
 	options.addHeaders(headers)
 	req := &request{
@@ -491,7 +496,10 @@ func (b *Bucket) PutFile(path string, file *os.File, perm ACL, options Options) 
 
 // addHeaders adds o's specified fields to headers
 func (o Options) addHeaders(headers http.Header) {
-	if o.ServerSideEncryption {
+	if len(o.ServerSideEncryptionKeyID) != 0 {
+		headers.Set("x-oss-server-side-encryption", "KMS")
+		headers.Set("x-oss-server-side-encryption-key-id", o.ServerSideEncryptionKeyID)
+	} else if o.ServerSideEncryption {
 		headers.Set("x-oss-server-side-encryption", "AES256")
 	}
 	if len(o.ContentEncoding) != 0 {
@@ -516,6 +524,13 @@ func (o Options) addHeaders(headers http.Header) {
 
 // addHeaders adds o's specified fields to headers
 func (o CopyOptions) addHeaders(headers http.Header) {
+	if len(o.ServerSideEncryptionKeyID) != 0 {
+		headers.Set("x-oss-server-side-encryption", "KMS")
+		headers.Set("x-oss-server-side-encryption-key-id", o.ServerSideEncryptionKeyID)
+	} else if o.ServerSideEncryption {
+		headers.Set("x-oss-server-side-encryption", "AES256")
+	}
+
 	if len(o.MetadataDirective) != 0 {
 		headers.Set("x-oss-metadata-directive", o.MetadataDirective)
 	}
@@ -1100,7 +1115,7 @@ func (client *Client) setupHttpRequest(req *request) (*http.Request, error) {
 // body will be unmarshalled on it.
 func (client *Client) doHttpRequest(c *http.Client, hreq *http.Request, resp interface{}) (*http.Response, error) {
 
-	if true {
+	if client.debug {
 		log.Printf("%s %s ...\n", hreq.Method, hreq.URL.String())
 	}
 	hresp, err := c.Do(hreq)
@@ -1323,9 +1338,9 @@ func (b *Bucket) CopyLargeFileInParallel(sourcePath string, destPath string, con
 	}
 
 	currentLength, err := b.GetContentLength(sourcePath)
-	
-	log.Printf("Parallel Copy large file[size: %d] from %s to %s\n",currentLength, sourcePath, destPath)
-	
+
+	log.Printf("Parallel Copy large file[size: %d] from %s to %s\n", currentLength, sourcePath, destPath)
+
 	if err != nil {
 		return err
 	}
