@@ -147,7 +147,8 @@ storage:
     endpoint: optional endpoints
     internal: optional internal endpoint
     bucket: OSS bucket
-    encrypt: optional data encryption setting
+    encrypt: optional enable server-side encryption
+    encryptionkeyid: optional KMS key id for encryption
     secure: optional ssl setting
     chunksize: optional size valye
     rootdirectory: optional root directory
@@ -447,7 +448,8 @@ storage:
     endpoint: optional endpoints
     internal: optional internal endpoint
     bucket: OSS bucket
-    encrypt: optional data encryption setting
+    encrypt: optional enable server-side encryption
+    encryptionkeyid: optional KMS key id for encryption
     secure: optional ssl setting
     chunksize: optional size valye
     rootdirectory: optional root directory
