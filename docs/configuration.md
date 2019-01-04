@@ -171,6 +171,7 @@ auth:
     realm: silly-realm
     service: silly-service
   token:
+    autoredirect: true
     realm: token-realm
     service: token-service
     issuer: registry-token-issuer
@@ -623,6 +624,7 @@ security.
 | `service` | yes      | The service being authenticated.                      |
 | `issuer`  | yes      | The name of the token issuer. The issuer inserts this into the token so it must match the value configured for the issuer. |
 | `rootcertbundle` | yes | The absolute path to the root certificate bundle. This bundle contains the public part of the certificates used to sign authentication tokens. |
+| `autoredirect`   | no      | When set to `true`, `realm` will automatically be set using the Host header of the request as the domain and a path of `/auth/token/`|
 
 
 For more information about Token based authentication configuration, see the
