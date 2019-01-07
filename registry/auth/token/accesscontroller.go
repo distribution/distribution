@@ -162,11 +162,14 @@ func checkOptions(options map[string]interface{}) (tokenAccessOptions, error) {
 
 	opts.realm, opts.issuer, opts.service, opts.rootCertBundle = vals[0], vals[1], vals[2], vals[3]
 
-	autoRedirect, ok := options["autoredirect"].(bool)
-	if !ok {
-		return opts, fmt.Errorf("token auth requires a valid option bool: autoredirect")
+	autoRedirectVal, ok := options["autoredirect"]
+	if ok {
+		autoRedirect, ok := autoRedirectVal.(bool)
+		if !ok {
+			return opts, fmt.Errorf("token auth requires a valid option bool: autoredirect")
+		}
+		opts.autoRedirect = autoRedirect
 	}
-	opts.autoRedirect = autoRedirect
 
 	return opts, nil
 }
