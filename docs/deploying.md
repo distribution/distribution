@@ -562,6 +562,6 @@ More specific and advanced information is available in the following sections:
  - [Configuration reference](configuration.md)
  - [Working with notifications](notifications.md)
  - [Advanced "recipes"](recipes/index.md)
- - [Registry API](spec/api.md)
+ - [Registry API](/registry/spec/api.md)
  - [Storage driver model](storage-drivers/index.md)
  - [Token authentication](spec/auth/token.md)
