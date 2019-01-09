@@ -777,6 +777,7 @@ http:
     clientcas:
       - /path/to/ca.pem
       - /path/to/another/ca.pem
+    minimumtls: tls1.0
     letsencrypt:
       cachefile: /path/to/cache-file
       email: emailused@letsencrypt.com
@@ -813,8 +814,9 @@ and proxy connections to the registry server.
 | Parameter | Required | Description                                           |
 |-----------|----------|-------------------------------------------------------|
 | `certificate` | yes  | Absolute path to the x509 certificate file.           |
-| `key`     | yes      | Absolute path to the x509 private key file.           |
-| `clientcas` | no     | An array of absolute paths to x509 CA files.          |
+| `key`         | yes  | Absolute path to the x509 private key file.           |
+| `clientcas`   | no   | An array of absolute paths to x509 CA files.          |
+| `minimumtls`  | no   | Minimum TLS version allowed (tls1.0, tls1.1, tls1.2). Defaults to tls1.0 |
 
 ### `letsencrypt`
 
