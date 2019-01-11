@@ -23,7 +23,7 @@ isolated testing or in a tightly controlled, air-gapped environment.
 1.  Edit the `daemon.json` file, whose default location is
     `/etc/docker/daemon.json` on Linux or
     `C:\ProgramData\docker\config\daemon.json` on Windows Server. If you use
-    Docker for Mac or Docker for Windows, click the Docker icon, choose
+    Docker Desktop for Mac or Docker Desktop for Windows, click the Docker icon, choose
     **Preferences**, and choose +**Daemon**.
 
     If the `daemon.json` file does not exist, create it. Assuming there are no
@@ -94,11 +94,11 @@ This is more secure than the insecure registry solution.
       3.  Click **Finish**. Restart Docker.
 
 
-    - **Docker for Mac**: Follow the instructions on
+    - **Docker Desktop for Mac**: Follow the instructions on
       [Adding custom CA certificates](/docker-for-mac/faqs.md#how-do-i-add-custom-ca-certificates){: target="_blank" class="_"}.
       Restart Docker.
 
-    - **Docker for Windows**: Follow the instructions on
+    - **Docker Desktop for Windows**: Follow the instructions on
       [Adding custom CA certificates](/docker-for-windows/faqs.md#how-do-i-add-custom-ca-certificates){: target="_blank" class="_"}.
       Restart Docker.
 
@@ -162,4 +162,4 @@ Then, select the following options:
 
 [Learn more about managing TLS certificates](https://technet.microsoft.com/en-us/library/cc754841(v=ws.11).aspx#BKMK_addlocal).
 
-After adding the CA certificate to Windows, restart Docker for Windows.
+After adding the CA certificate to Windows, restart Docker Desktop for Windows.
