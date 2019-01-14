@@ -65,7 +65,7 @@ func TestCheckAPI(t *testing.T) {
 
 	checkResponse(t, "issuing api base check", resp, http.StatusOK)
 	checkHeaders(t, resp, http.Header{
-		"Content-Type":   []string{"application/json; charset=utf-8"},
+		"Content-Type":   []string{"application/json"},
 		"Content-Length": []string{"2"},
 	})
 
@@ -259,7 +259,7 @@ func TestURLPrefix(t *testing.T) {
 
 	checkResponse(t, "issuing api base check", resp, http.StatusOK)
 	checkHeaders(t, resp, http.Header{
-		"Content-Type":   []string{"application/json; charset=utf-8"},
+		"Content-Type":   []string{"application/json"},
 		"Content-Length": []string{"2"},
 	})
 }
@@ -1180,7 +1180,7 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Name
 	// charset.
 	resp = putManifest(t, "re-putting signed manifest", manifestDigestURL, schema1.MediaTypeSignedManifest, sm2)
 	checkResponse(t, "re-putting signed manifest", resp, http.StatusCreated)
-	resp = putManifest(t, "re-putting signed manifest", manifestDigestURL, "application/json; charset=utf-8", sm2)
+	resp = putManifest(t, "re-putting signed manifest", manifestDigestURL, "application/json", sm2)
 	checkResponse(t, "re-putting signed manifest", resp, http.StatusCreated)
 	resp = putManifest(t, "re-putting signed manifest", manifestDigestURL, "application/json", sm2)
 	checkResponse(t, "re-putting signed manifest", resp, http.StatusCreated)
@@ -2329,7 +2329,7 @@ func checkBodyHasErrorCodes(t *testing.T, msg string, resp *http.Response, error
 
 	// TODO(stevvooe): Shoot. The error setup is not working out. The content-
 	// type headers are being set after writing the status code.
-	// if resp.Header.Get("Content-Type") != "application/json; charset=utf-8" {
+	// if resp.Header.Get("Content-Type") != "application/json" {
 	// 	t.Fatalf("unexpected content type: %v != 'application/json'",
 	// 		resp.Header.Get("Content-Type"))
 	// }

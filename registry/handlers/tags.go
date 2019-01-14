@@ -49,7 +49,7 @@ func (th *tagsHandler) GetTags(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Content-Type", "application/json")
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(tagsAPIResponse{

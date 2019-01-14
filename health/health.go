@@ -291,7 +291,7 @@ func statusResponse(w http.ResponseWriter, r *http.Request, status int, checks m
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Content-Length", fmt.Sprint(len(p)))
 	w.WriteHeader(status)
 	if _, err := w.Write(p); err != nil {
