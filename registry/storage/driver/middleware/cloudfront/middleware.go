@@ -138,7 +138,7 @@ func newCloudFrontStorageMiddleware(storageDriver storagedriver.StorageDriver, o
 
 	// parse ipfilteredby
 	var awsIPs *awsIPs
-	if ipFilteredBy := options["ipfilteredby"].(string); ok {
+	if ipFilteredBy, ok := options["ipfilteredby"].(string); ok {
 		switch strings.ToLower(strings.TrimSpace(ipFilteredBy)) {
 		case "", "none":
 			awsIPs = nil
