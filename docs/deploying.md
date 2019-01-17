@@ -64,7 +64,6 @@ as `my-ubuntu`, then pushes it to the local registry. Finally, the
 
     ```bash
     $ docker image remove ubuntu:16.04
-    $ docker image remove localhost:5000/my-ubuntu
     ```
 
 5.  Pull the `localhost:5000/my-ubuntu` image from your local registry.
