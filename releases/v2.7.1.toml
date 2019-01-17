@@ -1,0 +1,26 @@
+# commit to be tagged for new release
+commit = "HEAD"
+
+project_name = "registry"
+github_repo = "docker/distribution"
+
+# previous release
+previous = "v2.7.0"
+
+pre_release = false
+
+preface = """\
+The first patch release of 2.7 addresses an upgrade issue when
+using configurations from pre-2.7 registries. When upgrading from
+2.6 or earlier use this patch release or newer to avoid a failure
+on startup from not updating the configuration file.
+
+- Set default for new `autoredirect` option
+- GCS driver is now included in binary builds using Dockerfile"""
+
+# notable prs to include in the release notes, 1234 is the pr number
+[notes]
+
+[breaking]
+
+[rename_deps]
