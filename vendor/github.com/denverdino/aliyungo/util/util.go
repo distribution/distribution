@@ -9,6 +9,8 @@ import (
 	"net/url"
 	"sort"
 	"time"
+	"fmt"
+	"encoding/json"
 )
 
 const dictionary = "_0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
@@ -144,4 +146,13 @@ func GenerateRandomECSPassword() string {
 
 	return string(s)
 
+}
+
+
+func PrettyJson(object interface{}) string {
+	b,err := json.MarshalIndent(object,"", "    ")
+	if err != nil {
+		fmt.Printf("ERROR: PrettyJson, %v\n %s\n",err,b)
+	}
+	return string(b)
 }
