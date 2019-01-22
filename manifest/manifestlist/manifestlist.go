@@ -118,6 +118,10 @@ type ManifestList struct {
 
 	// Config references the image configuration as a blob.
 	Manifests []ManifestDescriptor `json:"manifests"`
+
+	// Annotations contain arbitrary metadata for the ManifestList
+	// For backwards compatibility and compatibility with OCI indices, annotations are optional
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // References returns the distribution descriptors for the referenced image
