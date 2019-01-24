@@ -765,7 +765,7 @@ func (app *App) logError(ctx context.Context, errors errcode.Errors) {
 			// just normal go 'error'
 			c = context.WithValue(ctx, errCodeKey{}, errcode.ErrorCodeUnknown)
 			c = context.WithValue(c, errMessageKey{}, e1.Error())
-		}registry/handlers: remove extra type assertions 
+		}
 
 		c = dcontext.WithLogger(c, dcontext.GetLogger(c,
 			errCodeKey{},
