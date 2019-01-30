@@ -704,14 +704,19 @@ interpretation of the options.
 | `privatekey` | yes   | The private key for Cloudfront, provided by AWS.        |
 | `keypairid` | yes    | The key pair ID provided by AWS.                         |
 | `duration` | no      | An integer and unit for the duration of the Cloudfront session. Valid time units are `ns`, `us` (or `µs`), `ms`, `s`, `m`, or `h`. For example, `3000s` is valid, but `3000 s` is not. If you do not specify a `duration` or you specify an integer without a time unit, the duration defaults to `20m` (20 minutes).|
-|`ipfilteredby`|no     | A string with the following value `none|aws|awsregion`. |
+|`ipfilteredby`|no     | A string with the following value `none`, `aws` or `awsregion`. |
 |`awsregion`|no        | A comma separated string of AWS regions, only available when `ipfilteredby` is `awsregion`. For example, `us-east-1, us-west-2`|
 |`updatefrenquency`|no | The frequency to update AWS IP regions, default: `12h`|
 |`iprangesurl`|no      | The URL contains the AWS IP ranges information, default: `https://ip-ranges.amazonaws.com/ip-ranges.json`|
-Then value of ipfilteredby:
-`none`: default, do not filter by IP
-`aws`: IP from AWS goes to S3 directly
-`awsregion`: IP from certain AWS regions goes to S3 directly, use together with `awsregion`
+
+
+Value of `ipfilteredby` can be:
+
+| Value       | Description                        |
+|-------------|------------------------------------|
+| `none`      | default, do not filter by IP       |
+| `aws`       | IP from AWS goes to S3 directly    |
+| `awsregion` | IP from certain AWS regions goes to S3 directly, use together with `awsregion`. |
 
 ### `redirect`
 
