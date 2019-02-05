@@ -182,11 +182,6 @@ func TestURLBuilderWithPrefix(t *testing.T) {
 	doTest(false)
 }
 
-type builderFromRequestTestCase struct {
-	request *http.Request
-	base    string
-}
-
 func TestBuilderFromRequest(t *testing.T) {
 	u, err := url.Parse("http://example.com")
 	if err != nil {

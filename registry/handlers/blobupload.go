@@ -172,7 +172,7 @@ func (buh *blobUploadHandler) PatchBlobData(w http.ResponseWriter, r *http.Reque
 
 	ct := r.Header.Get("Content-Type")
 	if ct != "" && ct != "application/octet-stream" {
-		buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(fmt.Errorf("Bad Content-Type")))
+		buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(fmt.Errorf("bad Content-Type")))
 		// TODO(dmcgowan): encode error
 		return
 	}

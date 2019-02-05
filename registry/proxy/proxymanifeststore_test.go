@@ -165,11 +165,10 @@ func populateRepo(ctx context.Context, t *testing.T, repository distribution.Rep
 			t.Fatalf("unexpected error creating test upload: %v", err)
 		}
 
-		rs, ts, err := testutil.CreateRandomTarFile()
+		rs, dgst, err := testutil.CreateRandomTarFile()
 		if err != nil {
 			t.Fatalf("unexpected error generating test layer file")
 		}
-		dgst := digest.Digest(ts)
 		if _, err := io.Copy(wr, rs); err != nil {
 			t.Fatalf("unexpected error copying to upload: %v", err)
 		}

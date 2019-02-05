@@ -14,7 +14,7 @@ var (
 // DownHandler registers a manual_http_status that always returns an Error
 func DownHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
-		updater.Update(errors.New("Manual Check"))
+		updater.Update(errors.New("manual Check"))
 	} else {
 		w.WriteHeader(http.StatusNotFound)
 	}
