@@ -12,7 +12,7 @@ import (
 	dcontext "github.com/docker/distribution/context"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/libtrust"
-	"github.com/opencontainers/go-digest"
+	digest "github.com/opencontainers/go-digest"
 )
 
 type mockBlobService struct {
@@ -79,8 +79,8 @@ func TestEmptyTar(t *testing.T) {
 
 	// Confirm that digestSHA256EmptyTar is the digest of gzippedEmptyTar.
 	dgst := digest.FromBytes(gzippedEmptyTar)
-	if dgst != digestSHA256GzippedEmptyTar {
-		t.Fatalf("digest mismatch for empty tar: expected %s got %s", digestSHA256GzippedEmptyTar, dgst)
+	if dgst != DigestSHA256GzippedEmptyTar {
+		t.Fatalf("digest mismatch for empty tar: expected %s got %s", DigestSHA256GzippedEmptyTar, dgst)
 	}
 }
 
@@ -221,7 +221,7 @@ func TestConfigBuilder(t *testing.T) {
 	}
 
 	// Check that the gzipped empty layer tar was put in the blob store
-	_, err = bs.Stat(dcontext.Background(), digestSHA256GzippedEmptyTar)
+	_, err = bs.Stat(dcontext.Background(), DigestSHA256GzippedEmptyTar)
 	if err != nil {
 		t.Fatal("gzipped empty tar was not put in the blob store")
 	}

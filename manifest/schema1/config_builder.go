@@ -12,7 +12,7 @@ import (
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/libtrust"
-	"github.com/opencontainers/go-digest"
+	digest "github.com/opencontainers/go-digest"
 )
 
 type diffID digest.Digest
@@ -24,9 +24,9 @@ var gzippedEmptyTar = []byte{
 	0, 8, 0, 0, 255, 255, 46, 175, 181, 239, 0, 4, 0, 0,
 }
 
-// digestSHA256GzippedEmptyTar is the canonical sha256 digest of
+// DigestSHA256GzippedEmptyTar is the canonical sha256 digest of
 // gzippedEmptyTar
-const digestSHA256GzippedEmptyTar = digest.Digest("sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4")
+const DigestSHA256GzippedEmptyTar = digest.Digest("sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4")
 
 // configManifestBuilder is a type for constructing manifests from an image
 // configuration and generic descriptors.
@@ -216,7 +216,7 @@ func (mb *configManifestBuilder) emptyTar(ctx context.Context) (digest.Digest, e
 		return mb.emptyTarDigest, nil
 	}
 
-	descriptor, err := mb.bs.Stat(ctx, digestSHA256GzippedEmptyTar)
+	descriptor, err := mb.bs.Stat(ctx, DigestSHA256GzippedEmptyTar)
 	switch err {
 	case nil:
 		mb.emptyTarDigest = descriptor.Digest
