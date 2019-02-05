@@ -136,11 +136,10 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository, r
 	var blobDigests []digest.Digest
 	blobs := repository.Blobs(ctx)
 	for i := 0; i < 2; i++ {
-		rs, ds, err := testutil.CreateRandomTarFile()
+		rs, dgst, err := testutil.CreateRandomTarFile()
 		if err != nil {
 			t.Fatalf("error creating test layer: %v", err)
 		}
-		dgst := digest.Digest(ds)
 		blobDigests = append(blobDigests, dgst)
 
 		wr, err := blobs.Create(ctx)
