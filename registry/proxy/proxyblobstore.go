@@ -9,9 +9,10 @@ import (
 
 	"github.com/docker/distribution"
 	dcontext "github.com/docker/distribution/context"
+	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/proxy/scheduler"
-	"github.com/opencontainers/go-digest"
+	digest "github.com/opencontainers/go-digest"
 )
 
 type proxyBlobStore struct {
@@ -35,6 +36,17 @@ func setResponseHeaders(w http.ResponseWriter, length int64, mediaType string, d
 	w.Header().Set("Content-Type", mediaType)
 	w.Header().Set("Docker-Content-Digest", digest.String())
 	w.Header().Set("Etag", digest.String())
+}
+
+func emptyTarDescriptor() distribution.Descriptor {
+	return distribution.Descriptor{
+		MediaType:   "application/octect-stream",
+		Size:        32,
+		Digest:      schema1.DigestSHA256GzippedEmptyTar,
+		URLs:        []string{},
+		Annotations: make(map[string]string, 0),
+		Platform:    nil,
+	}
 }
 
 func (pbs *proxyBlobStore) copyContent(ctx context.Context, dgst digest.Digest, writer io.Writer) (distribution.Descriptor, error) {
@@ -157,6 +169,10 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 }
 
 func (pbs *proxyBlobStore) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+	if dgst.String() == schema1.DigestSHA256GzippedEmptyTar.String() {
+		return emptyTarDescriptor(), nil
+	}
+
 	desc, err := pbs.localStore.Stat(ctx, dgst)
 	if err == nil {
 		return desc, err
