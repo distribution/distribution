@@ -118,7 +118,7 @@ func TestPurgeOnlyUploads(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 	nonUploadPath := strings.Replace(dataPath, "_upload", "_important", -1)
-	if strings.Index(nonUploadPath, "_upload") != -1 {
+	if strings.Contains(nonUploadPath, "_upload") {
 		t.Fatalf("Non-upload path not created correctly")
 	}
 
@@ -132,7 +132,7 @@ func TestPurgeOnlyUploads(t *testing.T) {
 		t.Error("Unexpected errors", errs)
 	}
 	for _, file := range deleted {
-		if strings.Index(file, "_upload") == -1 {
+		if !strings.Contains(file, "_upload") {
 			t.Errorf("Non-upload file deleted")
 		}
 	}

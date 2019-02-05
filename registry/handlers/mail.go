@@ -17,7 +17,7 @@ type mailer struct {
 func (mail *mailer) sendMail(subject, message string) error {
 	addr := strings.Split(mail.Addr, ":")
 	if len(addr) != 2 {
-		return errors.New("Invalid Mail Address")
+		return errors.New("invalid Mail Address")
 	}
 	host := addr[0]
 	msg := []byte("To:" + strings.Join(mail.To, ";") +

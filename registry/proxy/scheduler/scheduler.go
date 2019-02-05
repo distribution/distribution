@@ -118,7 +118,7 @@ func (ttles *TTLExpirationScheduler) Start() error {
 	}
 
 	if !ttles.stopped {
-		return fmt.Errorf("Scheduler already started")
+		return fmt.Errorf("scheduler already started")
 	}
 
 	dcontext.GetLogger(ttles.ctx).Infof("Starting cached object TTL expiration scheduler...")
@@ -126,7 +126,7 @@ func (ttles *TTLExpirationScheduler) Start() error {
 
 	// Start timer for each deserialized entry
 	for _, entry := range ttles.entries {
-		entry.timer = ttles.startTimer(entry, entry.Expiry.Sub(time.Now()))
+		entry.timer = ttles.startTimer(entry, time.Until(entry.Expiry))
 	}
 
 	// Start a ticker to periodically save the entries index
@@ -164,7 +164,7 @@ func (ttles *TTLExpirationScheduler) add(r reference.Reference, ttl time.Duratio
 		Expiry:    time.Now().Add(ttl),
 		EntryType: eType,
 	}
-	dcontext.GetLogger(ttles.ctx).Infof("Adding new scheduler entry for %s with ttl=%s", entry.Key, entry.Expiry.Sub(time.Now()))
+	dcontext.GetLogger(ttles.ctx).Infof("Adding new scheduler entry for %s with ttl=%s", entry.Key, time.Until(entry.Expiry))
 	if oldEntry, present := ttles.entries[entry.Key]; present && oldEntry.timer != nil {
 		oldEntry.timer.Stop()
 	}

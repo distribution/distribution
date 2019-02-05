@@ -188,19 +188,19 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 
 	regionName := parameters["region"]
 	if regionName == nil || fmt.Sprint(regionName) == "" {
-		return nil, fmt.Errorf("No region parameter provided")
+		return nil, fmt.Errorf("no region parameter provided")
 	}
 	region := fmt.Sprint(regionName)
 	// Don't check the region value if a custom endpoint is provided.
 	if regionEndpoint == "" {
 		if _, ok := validRegions[region]; !ok {
-			return nil, fmt.Errorf("Invalid region provided: %v", region)
+			return nil, fmt.Errorf("invalid region provided: %v", region)
 		}
 	}
 
 	bucket := parameters["bucket"]
 	if bucket == nil || fmt.Sprint(bucket) == "" {
-		return nil, fmt.Errorf("No bucket parameter provided")
+		return nil, fmt.Errorf("no bucket parameter provided")
 	}
 
 	encryptBool := false
@@ -209,7 +209,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	case string:
 		b, err := strconv.ParseBool(encrypt)
 		if err != nil {
-			return nil, fmt.Errorf("The encrypt parameter should be a boolean")
+			return nil, fmt.Errorf("the encrypt parameter should be a boolean")
 		}
 		encryptBool = b
 	case bool:
@@ -217,7 +217,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	case nil:
 		// do nothing
 	default:
-		return nil, fmt.Errorf("The encrypt parameter should be a boolean")
+		return nil, fmt.Errorf("the encrypt parameter should be a boolean")
 	}
 
 	secureBool := true
@@ -226,7 +226,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	case string:
 		b, err := strconv.ParseBool(secure)
 		if err != nil {
-			return nil, fmt.Errorf("The secure parameter should be a boolean")
+			return nil, fmt.Errorf("the secure parameter should be a boolean")
 		}
 		secureBool = b
 	case bool:
@@ -234,7 +234,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	case nil:
 		// do nothing
 	default:
-		return nil, fmt.Errorf("The secure parameter should be a boolean")
+		return nil, fmt.Errorf("the secure parameter should be a boolean")
 	}
 
 	skipVerifyBool := false
@@ -243,7 +243,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	case string:
 		b, err := strconv.ParseBool(skipVerify)
 		if err != nil {
-			return nil, fmt.Errorf("The skipVerify parameter should be a boolean")
+			return nil, fmt.Errorf("the skipVerify parameter should be a boolean")
 		}
 		skipVerifyBool = b
 	case bool:
@@ -251,7 +251,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	case nil:
 		// do nothing
 	default:
-		return nil, fmt.Errorf("The skipVerify parameter should be a boolean")
+		return nil, fmt.Errorf("the skipVerify parameter should be a boolean")
 	}
 
 	v4Bool := true
@@ -260,7 +260,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	case string:
 		b, err := strconv.ParseBool(v4auth)
 		if err != nil {
-			return nil, fmt.Errorf("The v4auth parameter should be a boolean")
+			return nil, fmt.Errorf("the v4auth parameter should be a boolean")
 		}
 		v4Bool = b
 	case bool:
@@ -268,7 +268,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	case nil:
 		// do nothing
 	default:
-		return nil, fmt.Errorf("The v4auth parameter should be a boolean")
+		return nil, fmt.Errorf("the v4auth parameter should be a boolean")
 	}
 
 	keyID := parameters["keyid"]
@@ -306,7 +306,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	if storageClassParam != nil {
 		storageClassString, ok := storageClassParam.(string)
 		if !ok {
-			return nil, fmt.Errorf("The storageclass parameter must be one of %v, %v invalid",
+			return nil, fmt.Errorf("the storageclass parameter must be one of %v, %v invalid",
 				[]string{s3.StorageClassStandard, s3.StorageClassReducedRedundancy}, storageClassParam)
 		}
 		// All valid storage class parameters are UPPERCASE, so be a bit more flexible here
@@ -314,7 +314,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		if storageClassString != noStorageClass &&
 			storageClassString != s3.StorageClassStandard &&
 			storageClassString != s3.StorageClassReducedRedundancy {
-			return nil, fmt.Errorf("The storageclass parameter must be one of %v, %v invalid",
+			return nil, fmt.Errorf("the storageclass parameter must be one of %v, %v invalid",
 				[]string{noStorageClass, s3.StorageClassStandard, s3.StorageClassReducedRedundancy}, storageClassParam)
 		}
 		storageClass = storageClassString
@@ -330,11 +330,11 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	if objectACLParam != nil {
 		objectACLString, ok := objectACLParam.(string)
 		if !ok {
-			return nil, fmt.Errorf("Invalid value for objectacl parameter: %v", objectACLParam)
+			return nil, fmt.Errorf("invalid value for objectacl parameter: %v", objectACLParam)
 		}
 
 		if _, ok = validObjectACLs[objectACLString]; !ok {
-			return nil, fmt.Errorf("Invalid value for objectacl parameter: %v", objectACLParam)
+			return nil, fmt.Errorf("invalid value for objectacl parameter: %v", objectACLParam)
 		}
 		objectACL = objectACLString
 	}
@@ -389,7 +389,7 @@ func getParameterAsInt64(parameters map[string]interface{}, name string, default
 	}
 
 	if rv < min || rv > max {
-		return 0, fmt.Errorf("The %s %#v parameter should be a number between %d and %d (inclusive)", name, rv, min, max)
+		return 0, fmt.Errorf("the %s %#v parameter should be a number between %d and %d (inclusive)", name, rv, min, max)
 	}
 
 	return rv, nil
@@ -401,7 +401,7 @@ func New(params DriverParameters) (*Driver, error) {
 	if !params.V4Auth &&
 		(params.RegionEndpoint == "" ||
 			strings.Contains(params.RegionEndpoint, "s3.amazonaws.com")) {
-		return nil, fmt.Errorf("On Amazon S3 this storage driver can only be used with v4 authentication")
+		return nil, fmt.Errorf("on Amazon S3 this storage driver can only be used with v4 authentication")
 	}
 
 	awsConfig := aws.NewConfig()
@@ -878,7 +878,7 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 	if ok {
 		et, ok := expires.(time.Time)
 		if ok {
-			expiresIn = et.Sub(time.Now())
+			expiresIn = time.Until(et)
 		}
 	}
 
