@@ -105,6 +105,33 @@ func TestSyncBroadcaster(t *testing.T) {
 	}
 }
 
+func TestSyncBroadcasterFailure(t *testing.T) {
+	t.Parallel()
+	good := &testSink{}
+	failingDestination := testSink{}
+	failing := &flakySink{
+		rate: 1.0, // always failing
+		Sink: &failingDestination,
+	}
+	sinks := []Sink{good, failing}
+	b := NewSyncBroadcaster(sinks...)
+	events := []Event{
+		createTestEvent("push", "library/test", "blob"),
+		createTestEvent("pull", "library/another", "blob"),
+	}
+	err := b.Write(events...)
+	if err == nil {
+		t.Fatalf("Write should've failed")
+	}
+	// event was added to first sink but not second one
+	if len(good.events) != 2 {
+		t.Fatalf("sink should've 2 events")
+	}
+	if len(failingDestination.events) != 0 {
+		t.Fatalf("sink should not have events")
+	}
+}
+
 func TestEventQueue(t *testing.T) {
 	const nevents = 1000
 	var ts testSink
