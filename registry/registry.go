@@ -201,7 +201,7 @@ func (registry *Registry) ListenAndServe() error {
 				}
 
 				if ok := pool.AppendCertsFromPEM(caPem); !ok {
-					return fmt.Errorf("Could not add CA to pool")
+					return fmt.Errorf("could not add CA to pool")
 				}
 			}
 

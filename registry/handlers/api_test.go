@@ -959,7 +959,6 @@ func testManifestWithStorageError(t *testing.T, env *testEnv, imageName referenc
 	defer resp.Body.Close()
 	checkResponse(t, "getting non-existent manifest", resp, expectedStatusCode)
 	checkBodyHasErrorCodes(t, "getting non-existent manifest", resp, expectedErrorCode)
-	return
 }
 
 func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Named) manifestArgs {
@@ -1066,12 +1065,11 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Name
 	expectedLayers := make(map[digest.Digest]io.ReadSeeker)
 
 	for i := range unsignedManifest.FSLayers {
-		rs, dgstStr, err := testutil.CreateRandomTarFile()
+		rs, dgst, err := testutil.CreateRandomTarFile()
 
 		if err != nil {
 			t.Fatalf("error creating random layer %d: %v", i, err)
 		}
-		dgst := digest.Digest(dgstStr)
 
 		expectedLayers[dgst] = rs
 		unsignedManifest.FSLayers[i].BlobSum = dgst
@@ -1405,12 +1403,11 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 	expectedLayers := make(map[digest.Digest]io.ReadSeeker)
 
 	for i := range manifest.Layers {
-		rs, dgstStr, err := testutil.CreateRandomTarFile()
+		rs, dgst, err := testutil.CreateRandomTarFile()
 
 		if err != nil {
 			t.Fatalf("error creating random layer %d: %v", i, err)
 		}
-		dgst := digest.Digest(dgstStr)
 
 		expectedLayers[dgst] = rs
 		manifest.Layers[i].Digest = dgst
@@ -2432,11 +2429,10 @@ func createRepository(env *testEnv, t *testing.T, imageName string, tag string) 
 	expectedLayers := make(map[digest.Digest]io.ReadSeeker)
 
 	for i := range unsignedManifest.FSLayers {
-		rs, dgstStr, err := testutil.CreateRandomTarFile()
+		rs, dgst, err := testutil.CreateRandomTarFile()
 		if err != nil {
 			t.Fatalf("error creating random layer %d: %v", i, err)
 		}
-		dgst := digest.Digest(dgstStr)
 
 		expectedLayers[dgst] = rs
 		unsignedManifest.FSLayers[i].BlobSum = dgst
