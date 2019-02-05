@@ -574,6 +574,7 @@ type Endpoint struct {
 	Backoff           time.Duration `yaml:"backoff"`           // backoff duration
 	IgnoredMediaTypes []string      `yaml:"ignoredmediatypes"` // target media types to ignore
 	Ignore            Ignore        `yaml:"ignore"`            // ignore event types
+	Sync              bool          `yaml:"sync"`              // If true then operation related to this event succeeds only after this event is processed
 }
 
 // Events configures notification events.

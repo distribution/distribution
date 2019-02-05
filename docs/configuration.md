@@ -257,6 +257,7 @@ notifications:
            - application/octet-stream
         actions:
            - pull
+      sync: false
 redis:
   addr: localhost:6379
   password: asecret
@@ -908,6 +909,7 @@ notifications:
            - application/octet-stream
         actions:
            - pull
+      sync: false
 ```
 
 The notifications option is **optional** and currently may contain a single
@@ -929,6 +931,7 @@ accept event notifications.
 | `backoff` | yes      | How long the system backs off before retrying after a failure. A positive integer and an optional suffix indicating the unit of time, which may be `ns`, `us`, `ms`, `s`, `m`, or `h`. If you omit the unit of time, `ns` is used. |
 | `ignoredmediatypes`|no| A list of target media types to ignore. Events with these target media types are not published to the endpoint. |
 | `ignore`  |no| Events with these mediatypes or actions are not published to the endpoint. |
+| `sync`    |no| Bool specifying if event related to HTTP request should be sent synchrounously to this endpoint. For example, if true then `POST /v2/repo/blobs/digest` request will not return until its associated event has been sent to this endpoint. Multiple synchrounous endpoints are processed serially in order provided in config. |
 
 #### `ignore`
 | Parameter | Required | Description                                           |

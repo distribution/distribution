@@ -1,14 +1,16 @@
 package notifications
 
 import (
+	"fmt"
 	"io"
 	"reflect"
 	"testing"
 
 	"github.com/docker/distribution"
-	"github.com/docker/distribution/context"
+	dcontext "github.com/docker/distribution/context"
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/manifest/schema1"
+	"github.com/docker/distribution/manifest/schema2"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage"
 	"github.com/docker/distribution/registry/storage/cache/memory"
@@ -18,14 +20,36 @@ import (
 	"github.com/opencontainers/go-digest"
 )
 
+// Return repository used for testing
+func testRepo(t *testing.T) distribution.Repository {
+	ctx := dcontext.Background()
+	k, err := libtrust.GenerateECP256PrivateKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+	registry, err := storage.NewRegistry(ctx, inmemory.New(), storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), storage.EnableDelete, storage.EnableRedirect, storage.Schema1SigningKey(k))
+	if err != nil {
+		t.Fatalf("error creating registry: %v", err)
+	}
+	repoRef, _ := reference.WithName("foo/bar")
+	repository, err := registry.Repository(ctx, repoRef)
+	if err != nil {
+		t.Fatalf("unexpected error getting repo: %v", err)
+	}
+	return repository
+}
+
 func TestListener(t *testing.T) {
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	k, err := libtrust.GenerateECP256PrivateKey()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	registry, err := storage.NewRegistry(ctx, inmemory.New(), storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), storage.EnableDelete, storage.EnableRedirect, storage.Schema1SigningKey(k), storage.EnableSchema1)
+	registry, err := storage.NewRegistry(
+		ctx, inmemory.New(),
+		storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()),
+		storage.EnableDelete, storage.EnableRedirect, storage.Schema1SigningKey(k), storage.EnableSchema1)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -66,11 +90,48 @@ func TestListener(t *testing.T) {
 
 type testListener struct {
 	ops map[string]int
+	err error
+}
+
+// A failure to send event will result in put operation failing
+func TestManifestPushFailed(t *testing.T) {
+	t.Parallel()
+	tl := &testListener{
+		ops: make(map[string]int),
+		err: fmt.Errorf("some problem pushing"),
+	}
+	ctx := dcontext.Background()
+	repo, _ := Listen(testRepo(t), nil, tl)
+	ms, _ := repo.Manifests(ctx)
+	dgst, err := ms.Put(ctx, &schema2.DeserializedManifest{})
+	if err == nil {
+		t.Fatalf("Should've got error but got digest: %v", dgst)
+	}
+}
+
+func TestBlobPutCommitFailure(t *testing.T) {
+	t.Parallel()
+	ctx := dcontext.Background()
+	tl := &testListener{
+		ops: make(map[string]int),
+		err: fmt.Errorf("some problem pushing"),
+	}
+	repo, _ := Listen(testRepo(t), nil, tl)
+	bs := repo.Blobs(ctx)
+	descp, err := bs.Put(ctx, "", nil)
+	if err == nil {
+		t.Fatalf("Should've got error but got Descriptor: %v", descp)
+	}
+	writer, _ := bs.Create(ctx)
+	descp, err = writer.Commit(ctx, distribution.Descriptor{})
+	if err == nil {
+		t.Fatalf("Should've got error but got Descriptor: %v", descp)
+	}
 }
 
 func (tl *testListener) ManifestPushed(repo reference.Named, m distribution.Manifest, options ...distribution.ManifestServiceOption) error {
 	tl.ops["manifest:push"]++
-	return nil
+	return tl.err
 }
 
 func (tl *testListener) ManifestPulled(repo reference.Named, m distribution.Manifest, options ...distribution.ManifestServiceOption) error {
@@ -80,12 +141,12 @@ func (tl *testListener) ManifestPulled(repo reference.Named, m distribution.Mani
 
 func (tl *testListener) ManifestDeleted(repo reference.Named, d digest.Digest) error {
 	tl.ops["manifest:delete"]++
-	return nil
+	return tl.err
 }
 
 func (tl *testListener) BlobPushed(repo reference.Named, desc distribution.Descriptor) error {
 	tl.ops["layer:push"]++
-	return nil
+	return tl.err
 }
 
 func (tl *testListener) BlobPulled(repo reference.Named, desc distribution.Descriptor) error {
@@ -95,12 +156,12 @@ func (tl *testListener) BlobPulled(repo reference.Named, desc distribution.Descr
 
 func (tl *testListener) BlobMounted(repo reference.Named, desc distribution.Descriptor, fromRepo reference.Named) error {
 	tl.ops["layer:mount"]++
-	return nil
+	return tl.err
 }
 
 func (tl *testListener) BlobDeleted(repo reference.Named, d digest.Digest) error {
 	tl.ops["layer:delete"]++
-	return nil
+	return tl.err
 }
 
 func (tl *testListener) TagDeleted(repo reference.Named, tag string) error {
@@ -121,7 +182,7 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository, r
 	// used to make cross-cutting updates by changing internals that affect
 	// update counts. Basically, it would make writing tests a lot easier.
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	tag := "thetag"
 	// todo: change this to use Builder
 

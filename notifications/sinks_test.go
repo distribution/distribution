@@ -63,6 +63,48 @@ func TestBroadcaster(t *testing.T) {
 
 }
 
+// SyncBroadcaster writes events to all the sinks and closes them too
+func TestSyncBroadcaster(t *testing.T) {
+	t.Parallel()
+	testSinks := []*testSink{{}, {}}
+	sinks := []Sink{testSinks[0], testSinks[1]}
+	b := NewSyncBroadcaster(sinks...)
+	events := []Event{
+		createTestEvent("push", "library/test", "blob"),
+		createTestEvent("pull", "library/another", "blob"),
+	}
+	err := b.Write(events...)
+	if err != nil {
+		t.Fatalf("Write failed: %v", err)
+	}
+	// check if all sinks got the same events
+	for _, sink := range testSinks {
+		if len(sink.events) != 2 {
+			t.Fatalf("unexpected number of events: %d", len(sink.events))
+		}
+		for i, event := range sink.events {
+			if !reflect.DeepEqual(event, events[i]) {
+				t.Fatalf("Event %d don't match; actual: %v, exp: %v", i, event, events[i])
+			}
+		}
+	}
+	// close broadcaster and ensure all sinks are closed
+	err = b.Close()
+	if err != nil {
+		t.Fatalf("Write failed: %v", err)
+	}
+	for _, sink := range testSinks {
+		if !sink.closed {
+			t.Fatalf("Sink %v not closed", sink)
+		}
+	}
+	// close again and see if it errors with ErrSinkClosed
+	err = b.Close()
+	if err != ErrSinkClosed {
+		t.Fatal("Close() should return ErrSinkClosed")
+	}
+}
+
 func TestEventQueue(t *testing.T) {
 	const nevents = 1000
 	var ts testSink

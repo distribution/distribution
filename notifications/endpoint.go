@@ -10,13 +10,15 @@ import (
 // EndpointConfig covers the optional configuration parameters for an active
 // endpoint.
 type EndpointConfig struct {
-	Headers           http.Header
-	Timeout           time.Duration
-	Threshold         int
-	Backoff           time.Duration
-	IgnoredMediaTypes []string
-	Transport         *http.Transport `json:"-"`
-	Ignore            configuration.Ignore
+	Headers               http.Header
+	Timeout               time.Duration
+	Threshold             int
+	Backoff               time.Duration
+	IgnoredMediaTypes     []string
+	Transport             *http.Transport `json:"-"`
+	Ignore                configuration.Ignore
+	Sync                  bool
+	testOnlyDoNotRegister bool //  if true, does not register the `Endpoint` globally. This should only be used for testing.
 }
 
 // defaults set any zero-valued fields to a reasonable default.
@@ -65,11 +67,17 @@ func NewEndpoint(name, url string, config EndpointConfig) *Endpoint {
 		endpoint.url, endpoint.Timeout, endpoint.Headers,
 		endpoint.Transport, endpoint.metrics.httpStatusListener())
 	endpoint.Sink = newRetryingSink(endpoint.Sink, endpoint.Threshold, endpoint.Backoff)
-	endpoint.Sink = newEventQueue(endpoint.Sink, endpoint.metrics.eventQueueListener())
 	mediaTypes := append(config.Ignore.MediaTypes, config.IgnoredMediaTypes...)
 	endpoint.Sink = newIgnoredSink(endpoint.Sink, mediaTypes, config.Ignore.Actions)
 
-	register(&endpoint)
+	if !config.Sync {
+		endpoint.Sink = newEventQueue(endpoint.Sink, endpoint.metrics.eventQueueListener())
+	}
+
+	if !config.testOnlyDoNotRegister {
+		register(&endpoint)
+	}
+
 	return &endpoint
 }
 

@@ -94,7 +94,7 @@ type manifestServiceListener struct {
 func (msl *manifestServiceListener) Delete(ctx context.Context, dgst digest.Digest) error {
 	err := msl.ManifestService.Delete(ctx, dgst)
 	if err == nil {
-		if err := msl.parent.listener.ManifestDeleted(msl.parent.Repository.Named(), dgst); err != nil {
+		if err = msl.parent.listener.ManifestDeleted(msl.parent.Repository.Named(), dgst); err != nil {
 			dcontext.GetLogger(ctx).Errorf("error dispatching manifest delete to listener: %v", err)
 		}
 	}
@@ -117,7 +117,7 @@ func (msl *manifestServiceListener) Put(ctx context.Context, sm distribution.Man
 	dgst, err := msl.ManifestService.Put(ctx, sm, options...)
 
 	if err == nil {
-		if err := msl.parent.listener.ManifestPushed(msl.parent.Repository.Named(), sm, options...); err != nil {
+		if err = msl.parent.listener.ManifestPushed(msl.parent.Repository.Named(), sm, options...); err != nil {
 			dcontext.GetLogger(ctx).Errorf("error dispatching manifest push to listener: %v", err)
 		}
 	}
@@ -180,7 +180,7 @@ func (bsl *blobServiceListener) ServeBlob(ctx context.Context, w http.ResponseWr
 func (bsl *blobServiceListener) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
 	desc, err := bsl.BlobStore.Put(ctx, mediaType, p)
 	if err == nil {
-		if err := bsl.parent.listener.BlobPushed(bsl.parent.Repository.Named(), desc); err != nil {
+		if err = bsl.parent.listener.BlobPushed(bsl.parent.Repository.Named(), desc); err != nil {
 			dcontext.GetLogger(ctx).Errorf("error dispatching layer push to listener: %v", err)
 		}
 	}
@@ -194,6 +194,7 @@ func (bsl *blobServiceListener) Create(ctx context.Context, options ...distribut
 	case distribution.ErrBlobMounted:
 		if err := bsl.parent.listener.BlobMounted(bsl.parent.Repository.Named(), err.Descriptor, err.From); err != nil {
 			dcontext.GetLogger(ctx).Errorf("error dispatching blob mount to listener: %v", err)
+			return nil, err
 		}
 		return nil, err
 	}
@@ -203,7 +204,7 @@ func (bsl *blobServiceListener) Create(ctx context.Context, options ...distribut
 func (bsl *blobServiceListener) Delete(ctx context.Context, dgst digest.Digest) error {
 	err := bsl.BlobStore.Delete(ctx, dgst)
 	if err == nil {
-		if err := bsl.parent.listener.BlobDeleted(bsl.parent.Repository.Named(), dgst); err != nil {
+		if err = bsl.parent.listener.BlobDeleted(bsl.parent.Repository.Named(), dgst); err != nil {
 			dcontext.GetLogger(ctx).Errorf("error dispatching layer delete to listener: %v", err)
 		}
 	}
@@ -231,7 +232,7 @@ type blobWriterListener struct {
 func (bwl *blobWriterListener) Commit(ctx context.Context, desc distribution.Descriptor) (distribution.Descriptor, error) {
 	committed, err := bwl.BlobWriter.Commit(ctx, desc)
 	if err == nil {
-		if err := bwl.parent.parent.listener.BlobPushed(bwl.parent.parent.Repository.Named(), committed); err != nil {
+		if err = bwl.parent.parent.listener.BlobPushed(bwl.parent.parent.Repository.Named(), committed); err != nil {
 			dcontext.GetLogger(ctx).Errorf("error dispatching blob push to listener: %v", err)
 		}
 	}

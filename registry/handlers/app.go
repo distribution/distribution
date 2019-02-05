@@ -461,6 +461,7 @@ func (app *App) configureEvents(configuration *configuration.Configuration) {
 			Headers:           endpoint.Headers,
 			IgnoredMediaTypes: endpoint.IgnoredMediaTypes,
 			Ignore:            endpoint.Ignore,
+			Sync:              endpoint.Sync,
 		})
 
 		sinks = append(sinks, endpoint)
@@ -470,7 +471,9 @@ func (app *App) configureEvents(configuration *configuration.Configuration) {
 	// replacing broadcaster with a rabbitmq implementation. It's recommended
 	// that the registry instances also act as the workers to keep deployment
 	// simple.
-	app.events.sink = notifications.NewBroadcaster(sinks...)
+	// NOTE(jmwong): Always use SyncBroadcaster here and delegate whether or not the events a processed asynchronously
+	// to the underlying `sinks`
+	app.events.sink = notifications.NewSyncBroadcaster(sinks...)
 
 	// Populate registry event source
 	hostname, err := os.Hostname()

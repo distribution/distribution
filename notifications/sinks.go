@@ -14,6 +14,51 @@ import (
 // externally, but others are suitable for export if the need arises. Albeit,
 // the tight integration with endpoint metrics should be removed.
 
+// SyncBroadcaster will synchronously send events to multiple sinks in serial order
+// If one of the sinks fail the overall operation fails
+type SyncBroadcaster struct {
+	sinks  []Sink
+	closed bool
+}
+
+// NewSyncBroadcaster creates a sink that will write to all the given sinks synchronously in serial order
+func NewSyncBroadcaster(sinks ...Sink) *SyncBroadcaster {
+	return &SyncBroadcaster{
+		sinks: sinks,
+	}
+}
+
+// Write writes the given events synchronously in serial order
+func (b *SyncBroadcaster) Write(events ...Event) error {
+	for _, sink := range b.sinks {
+		if err := sink.Write(events...); err != nil {
+			logrus.WithField("events", events).Errorf(
+				"syncbroadcaster: error writing events to %v, these events will be lost: %v", sink, err)
+			return err
+		}
+	}
+	return nil
+}
+
+// Close closes all the sinks in the broadcaster
+func (b *SyncBroadcaster) Close() error {
+	if b.closed {
+		return ErrSinkClosed
+	}
+	var errs []error
+	for _, sink := range b.sinks {
+		if err := sink.Close(); err != nil {
+			logrus.Errorf("syncbroadcaster: error closing sink %v: %v", sink, err)
+			errs = append(errs, err)
+		}
+	}
+	if len(errs) > 0 {
+		return fmt.Errorf("failed to close %d sinks", len(errs))
+	}
+	b.closed = true
+	return nil
+}
+
 // Broadcaster sends events to multiple, reliable Sinks. The goal of this
 // component is to dispatch events to configured endpoints. Reliability can be
 // provided by wrapping incoming sinks.
