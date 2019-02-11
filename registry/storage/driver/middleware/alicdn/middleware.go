@@ -13,23 +13,23 @@ import (
 	"github.com/denverdino/aliyungo/cdn/auth"
 )
 
-// aliCdnStorageMiddleware provides a simple implementation of layerHandler that
+// aliCDNStorageMiddleware provides a simple implementation of layerHandler that
 // constructs temporary signed AliCDN URLs from the storagedriver layer URL,
 // then issues HTTP Temporary Redirects to this AliCDN content URL.
-type aliCdnStorageMiddleware struct {
+type aliCDNStorageMiddleware struct {
 	storagedriver.StorageDriver
 	baseURL   string
 	urlSigner *auth.URLSigner
 	duration  time.Duration
 }
 
-var _ storagedriver.StorageDriver = &aliCdnStorageMiddleware{}
+var _ storagedriver.StorageDriver = &aliCDNStorageMiddleware{}
 
-// newAliCdnLayerHandler constructs and returns a new AliCDN
-// LayerHandler implementation.
+// newAliCDNStorageMiddleware constructs and returns a new AliCDN
+// layerHandler implementation.
 // Required options: baseurl, authtype, privatekey
 // Optional options: duration
-func newAliCdnStorageMiddleware(storageDriver storagedriver.StorageDriver, options map[string]interface{}) (storagedriver.StorageDriver, error) {
+func newAliCDNStorageMiddleware(storageDriver storagedriver.StorageDriver, options map[string]interface{}) (storagedriver.StorageDriver, error) {
 	// parse baseurl
 	base, ok := options["baseurl"]
 	if !ok {
@@ -87,7 +87,7 @@ func newAliCdnStorageMiddleware(storageDriver storagedriver.StorageDriver, optio
 		}
 	}
 
-	return &aliCdnStorageMiddleware{
+	return &aliCDNStorageMiddleware{
 		StorageDriver: storageDriver,
 		baseURL:       baseURL,
 		urlSigner:     urlSigner,
@@ -96,11 +96,10 @@ func newAliCdnStorageMiddleware(storageDriver storagedriver.StorageDriver, optio
 }
 
 // URLFor attempts to find a url which may be used to retrieve the file at the given path.
-// Returns an error if the file cannot be found.
-func (ac *aliCdnStorageMiddleware) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
+func (ac *aliCDNStorageMiddleware) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
 
 	if ac.StorageDriver.Name() != "oss" {
-		context.GetLogger(ctx).Warn("the AliCdn middleware does not support this backend storage driver")
+		context.GetLogger(ctx).Warn("the AliCDN middleware does not support this backend storage driver")
 		return ac.StorageDriver.URLFor(ctx, path, options)
 	}
 	acURL, err := ac.urlSigner.Sign(ac.baseURL+path, time.Now().Add(ac.duration))
@@ -112,5 +111,5 @@ func (ac *aliCdnStorageMiddleware) URLFor(ctx context.Context, path string, opti
 
 // init registers the alicdn layerHandler backend.
 func init() {
-	storagemiddleware.Register("alicdn", storagemiddleware.InitFunc(newAliCdnStorageMiddleware))
+	storagemiddleware.Register("alicdn", storagemiddleware.InitFunc(newAliCDNStorageMiddleware))
 }
