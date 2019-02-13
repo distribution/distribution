@@ -931,7 +931,7 @@ accept event notifications.
 | `backoff` | yes      | How long the system backs off before retrying after a failure. A positive integer and an optional suffix indicating the unit of time, which may be `ns`, `us`, `ms`, `s`, `m`, or `h`. If you omit the unit of time, `ns` is used. |
 | `ignoredmediatypes`|no| A list of target media types to ignore. Events with these target media types are not published to the endpoint. |
 | `ignore`  |no| Events with these mediatypes or actions are not published to the endpoint. |
-| `sync`    |no| Bool specifying if event related to HTTP request should be sent synchrounously to this endpoint. For example, if true then `POST /v2/repo/blobs/digest` request will not return until its associated event has been sent to this endpoint. Multiple synchrounous endpoints are processed serially in order provided in config. |
+| `sync`    |no| Bool specifying if event related to HTTP request should be sent synchrounously to this endpoint. For example, if true then `POST /v2/repo/blobs/digest` request will not return until its associated event has been sent to this endpoint. Multiple synchrounous endpoints are processed serially in order provided in config. Note that in situation where HTTP request fails (500) due to notification failure the original operation (eg inserting blob) has in fact succeeded. |
 
 #### `ignore`
 | Parameter | Required | Description                                           |
