@@ -471,8 +471,8 @@ func (app *App) configureEvents(configuration *configuration.Configuration) {
 	// replacing broadcaster with a rabbitmq implementation. It's recommended
 	// that the registry instances also act as the workers to keep deployment
 	// simple.
-	// NOTE(jmwong): Always use SyncBroadcaster here and delegate whether or not the events a processed asynchronously
-	// to the underlying `sinks`
+	// NOTE(manishtomar): Always use SyncBroadcaster here and delegate whether or not the events are
+	// processed asynchronously to the underlying `sinks`
 	app.events.sink = notifications.NewSyncBroadcaster(sinks...)
 
 	// Populate registry event source

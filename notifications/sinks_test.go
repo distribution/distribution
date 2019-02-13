@@ -125,7 +125,7 @@ func TestSyncBroadcasterFailure(t *testing.T) {
 	}
 	// event was added to first sink but not second one
 	if len(good.events) != 2 {
-		t.Fatalf("sink should've 2 events")
+		t.Fatalf("sink should have 2 events")
 	}
 	if len(failingDestination.events) != 0 {
 		t.Fatalf("sink should not have events")
