@@ -32,8 +32,8 @@ func NewSyncBroadcaster(sinks ...Sink) *SyncBroadcaster {
 func (b *SyncBroadcaster) Write(events ...Event) error {
 	for _, sink := range b.sinks {
 		if err := sink.Write(events...); err != nil {
-			logrus.WithField("events", events).Errorf(
-				"syncbroadcaster: error writing events to %v, these events will be lost: %v", sink, err)
+			logrus.WithError(err).WithField("events", events).Errorf(
+				"syncbroadcaster: error writing events to %v, these events will be lost", sink)
 			return err
 		}
 	}
