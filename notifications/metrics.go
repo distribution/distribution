@@ -77,7 +77,7 @@ func (emsl *endpointMetricsHTTPStatusListener) success(status int, events ...Eve
 	emsl.Successes += len(events)
 
 	statusCounter.WithValues(fmt.Sprintf("%d %s", status, http.StatusText(status)), emsl.EndpointName).Inc(1)
-	eventsCounter.WithValues("Successes", emsl.EndpointName).Inc(1)
+	eventsCounter.WithValues("Successes", emsl.EndpointName).Inc(float64(len(events)))
 }
 
 func (emsl *endpointMetricsHTTPStatusListener) failure(status int, events ...Event) {
@@ -87,7 +87,7 @@ func (emsl *endpointMetricsHTTPStatusListener) failure(status int, events ...Eve
 	emsl.Failures += len(events)
 
 	statusCounter.WithValues(fmt.Sprintf("%d %s", status, http.StatusText(status)), emsl.EndpointName).Inc(1)
-	eventsCounter.WithValues("Failures", emsl.EndpointName).Inc(1)
+	eventsCounter.WithValues("Failures", emsl.EndpointName).Inc(float64(len(events)))
 }
 
 func (emsl *endpointMetricsHTTPStatusListener) err(err error, events ...Event) {
@@ -95,7 +95,7 @@ func (emsl *endpointMetricsHTTPStatusListener) err(err error, events ...Event) {
 	defer emsl.safeMetrics.Unlock()
 	emsl.Errors += len(events)
 
-	eventsCounter.WithValues("Errors", emsl.EndpointName).Inc(1)
+	eventsCounter.WithValues("Errors", emsl.EndpointName).Inc(float64(len(events)))
 }
 
 // endpointMetricsEventQueueListener maintains the incoming events counter and
@@ -111,7 +111,7 @@ func (eqc *endpointMetricsEventQueueListener) ingress(events ...Event) {
 	eqc.Pending += len(events)
 
 	eventsCounter.WithValues("Events", eqc.EndpointName).Inc()
-	pendingGauge.WithValues(eqc.EndpointName).Inc(1)
+	pendingGauge.WithValues(eqc.EndpointName).Inc(float64(len(events)))
 }
 
 func (eqc *endpointMetricsEventQueueListener) egress(events ...Event) {
