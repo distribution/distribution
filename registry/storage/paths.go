@@ -227,6 +227,27 @@ func pathFor(spec pathSpec) (string, error) {
 		blobPathPrefix := append(rootPrefix, "blobs")
 		return path.Join(append(blobPathPrefix, components...)...), nil
 
+	case localBlobsPathSpec:
+		blobsPathPrefix := append(repoPrefix, v.name, "_blobs")
+		return path.Join(blobsPathPrefix...), nil
+	case localBlobPathSpec:
+		components, err := digestPathComponents(v.digest, true)
+		if err != nil {
+			return "", err
+		}
+
+		blobPathPrefix := append(repoPrefix, v.name, "_blobs")
+		return path.Join(append(blobPathPrefix, components...)...), nil
+	case localBlobDataPathSpec:
+		components, err := digestPathComponents(v.digest, true)
+		if err != nil {
+			return "", err
+		}
+
+		components = append(components, "data")
+		blobPathPrefix := append(repoPrefix, v.name, "_blobs")
+		return path.Join(append(blobPathPrefix, components...)...), nil
+
 	case uploadDataPathSpec:
 		return path.Join(append(repoPrefix, v.name, "_uploads", v.id, "data")...), nil
 	case uploadStartedAtPathSpec:
@@ -382,6 +403,30 @@ type blobDataPathSpec struct {
 }
 
 func (blobDataPathSpec) pathSpec() {}
+
+// localBlobsPathSpec contains the path for the blobs directory
+type localBlobsPathSpec struct {
+	name string
+}
+
+func (localBlobsPathSpec) pathSpec() {}
+
+// localBlobPathSpec contains the path for the registry global blob store.
+type localBlobPathSpec struct {
+	name   string
+	digest digest.Digest
+}
+
+func (localBlobPathSpec) pathSpec() {}
+
+// localBlobDataPathSpec contains the path for the registry global blob store. For
+// now, this contains layer data, exclusively.
+type localBlobDataPathSpec struct {
+	name   string
+	digest digest.Digest
+}
+
+func (localBlobDataPathSpec) pathSpec() {}
 
 // uploadDataPathSpec defines the path parameters of the data file for
 // uploads.
