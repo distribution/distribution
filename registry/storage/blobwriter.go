@@ -41,6 +41,8 @@ type blobWriter struct {
 
 	resumableDigestEnabled bool
 	committed              bool
+
+	name string
 }
 
 var _ distribution.BlobWriter = &blobWriter{}
@@ -293,7 +295,8 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc distribution.Descri
 // identified by dgst. The layer should be validated before commencing the
 // move.
 func (bw *blobWriter) moveBlob(ctx context.Context, desc distribution.Descriptor) error {
-	blobPath, err := pathFor(blobDataPathSpec{
+	blobPath, err := pathFor(localBlobDataPathSpec{
+		name:   bw.name,
 		digest: desc.Digest,
 	})
 

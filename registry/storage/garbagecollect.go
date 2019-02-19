@@ -124,7 +124,8 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 			}
 		}
 	}
-	blobService := registry.Blobs()
+
+	blobService := registry.GlobalBlobs()
 	deleteSet := make(map[digest.Digest]struct{})
 	err = blobService.Enumerate(ctx, func(dgst digest.Digest) error {
 		// check if digest is in markSet. If not, delete it!

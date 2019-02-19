@@ -14,17 +14,18 @@ import (
 // registry is the top-level implementation of Registry for use in the storage
 // package. All instances should descend from this object.
 type registry struct {
-	blobStore                    *blobStore
-	blobServer                   *blobServer
-	statter                      *blobStatter // global statter service.
-	blobDescriptorCacheProvider  cache.BlobDescriptorCacheProvider
-	deleteEnabled                bool
-	schema1Enabled               bool
-	resumableDigestEnabled       bool
-	schema1SigningKey            libtrust.PrivateKey
-	blobDescriptorServiceFactory distribution.BlobDescriptorServiceFactory
-	manifestURLs                 manifestURLs
-	driver                       storagedriver.StorageDriver
+	globalBlobStore                   *blobStore
+	globalBlobServer                  *blobServer
+	globalStatter                     *blobStatter // global statter service.
+	globalBlobDescriptorCacheProvider cache.BlobDescriptorCacheProvider
+	redirect                          bool
+	deleteEnabled                     bool
+	schema1Enabled                    bool
+	resumableDigestEnabled            bool
+	schema1SigningKey                 libtrust.PrivateKey
+	blobDescriptorServiceFactory      distribution.BlobDescriptorServiceFactory
+	manifestURLs                      manifestURLs
+	driver                            storagedriver.StorageDriver
 }
 
 // manifestURLs holds regular expressions for controlling manifest URL whitelisting
@@ -39,7 +40,7 @@ type RegistryOption func(*registry) error
 // EnableRedirect is a functional option for NewRegistry. It causes the backend
 // blob server to attempt using (StorageDriver).URLFor to serve all blobs.
 func EnableRedirect(registry *registry) error {
-	registry.blobServer.redirect = true
+	registry.redirect = true
 	return nil
 }
 
@@ -109,10 +110,10 @@ func BlobDescriptorCacheProvider(blobDescriptorCacheProvider cache.BlobDescripto
 	// blobDescriptorCacheProvider.
 	return func(registry *registry) error {
 		if blobDescriptorCacheProvider != nil {
-			statter := cache.NewCachedBlobStatter(blobDescriptorCacheProvider, registry.statter)
-			registry.blobStore.statter = statter
-			registry.blobServer.statter = statter
-			registry.blobDescriptorCacheProvider = blobDescriptorCacheProvider
+			statter := cache.NewCachedBlobStatter(blobDescriptorCacheProvider, registry.globalStatter)
+			registry.globalBlobStore.statter = statter
+			registry.globalBlobServer.statter = statter
+			registry.globalBlobDescriptorCacheProvider = blobDescriptorCacheProvider
 		}
 		return nil
 	}
@@ -123,24 +124,7 @@ func BlobDescriptorCacheProvider(blobDescriptorCacheProvider cache.BlobDescripto
 // allocate. If the Redirect option is specified, the backend blob server will
 // attempt to use (StorageDriver).URLFor to serve all blobs.
 func NewRegistry(ctx context.Context, driver storagedriver.StorageDriver, options ...RegistryOption) (distribution.Namespace, error) {
-	// create global statter
-	statter := &blobStatter{
-		driver: driver,
-	}
-
-	bs := &blobStore{
-		driver:  driver,
-		statter: statter,
-	}
-
 	registry := &registry{
-		blobStore: bs,
-		blobServer: &blobServer{
-			driver:  driver,
-			statter: statter,
-			pathFn:  bs.path,
-		},
-		statter:                statter,
 		resumableDigestEnabled: true,
 		driver:                 driver,
 	}
@@ -165,9 +149,9 @@ func (reg *registry) Scope() distribution.Scope {
 // allocate. In general, they should be request scoped.
 func (reg *registry) Repository(ctx context.Context, canonicalName reference.Named) (distribution.Repository, error) {
 	var descriptorCache distribution.BlobDescriptorService
-	if reg.blobDescriptorCacheProvider != nil {
+	if reg.globalBlobDescriptorCacheProvider != nil {
 		var err error
-		descriptorCache, err = reg.blobDescriptorCacheProvider.RepositoryScoped(canonicalName.Name())
+		descriptorCache, err = reg.globalBlobDescriptorCacheProvider.RepositoryScoped(canonicalName.Name())
 		if err != nil {
 			return nil, err
 		}
@@ -181,12 +165,12 @@ func (reg *registry) Repository(ctx context.Context, canonicalName reference.Nam
 	}, nil
 }
 
-func (reg *registry) Blobs() distribution.BlobEnumerator {
-	return reg.blobStore
+func (reg *registry) GlobalBlobs() distribution.BlobEnumerator {
+	return reg.globalBlobStore
 }
 
-func (reg *registry) BlobStatter() distribution.BlobStatter {
-	return reg.statter
+func (reg *registry) GlobalBlobStatter() distribution.BlobStatter {
+	return reg.globalStatter
 }
 
 // repository provides name-scoped access to various services.
@@ -197,6 +181,21 @@ type repository struct {
 	descriptorCache distribution.BlobDescriptorService
 }
 
+func (repo *repository) createBlobStore() *blobStore {
+	statter := &blobStatter{
+		driver: repo.driver,
+		name:   repo.name.Name(),
+	}
+
+	bs := &blobStore{
+		driver:  repo.driver,
+		statter: statter,
+		name:    repo.name.Name(),
+	}
+
+	return bs
+}
+
 // Name returns the name of the repository.
 func (repo *repository) Named() reference.Named {
 	return repo.name
@@ -205,7 +204,7 @@ func (repo *repository) Named() reference.Named {
 func (repo *repository) Tags(ctx context.Context) distribution.TagService {
 	tags := &tagStore{
 		repository: repo,
-		blobStore:  repo.registry.blobStore,
+		blobStore:  repo.createBlobStore(),
 	}
 
 	return tags
@@ -224,8 +223,10 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 
 	manifestDirectoryPathSpec := manifestRevisionsPathSpec{name: repo.name.Name()}
 
+	bs := repo.createBlobStore()
+
 	var statter distribution.BlobDescriptorService = &linkedBlobStatter{
-		blobStore:   repo.blobStore,
+		blobStore:   bs,
 		repository:  repo,
 		linkPathFns: manifestLinkPathFns,
 	}
@@ -236,7 +237,7 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 
 	blobStore := &linkedBlobStore{
 		ctx:                  ctx,
-		blobStore:            repo.blobStore,
+		blobStore:            bs,
 		repository:           repo,
 		deleteEnabled:        repo.registry.deleteEnabled,
 		blobAccessController: statter,
@@ -305,8 +306,17 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 // may be context sensitive in the future. The instance should be used similar
 // to a request local.
 func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
+	bs := repo.createBlobStore()
+
+	blobServer := &blobServer{
+		driver:   repo.driver,
+		redirect: repo.redirect,
+		statter:  bs.statter,
+		pathFn:   bs.path,
+	}
+
 	var statter distribution.BlobDescriptorService = &linkedBlobStatter{
-		blobStore:   repo.blobStore,
+		blobStore:   bs,
 		repository:  repo,
 		linkPathFns: []linkPathFunc{blobLinkPath},
 	}
@@ -321,8 +331,8 @@ func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
 
 	return &linkedBlobStore{
 		registry:             repo.registry,
-		blobStore:            repo.blobStore,
-		blobServer:           repo.blobServer,
+		blobStore:            bs,
+		blobServer:           blobServer,
 		blobAccessController: statter,
 		repository:           repo,
 		ctx:                  ctx,
