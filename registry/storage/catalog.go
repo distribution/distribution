@@ -27,7 +27,7 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 		return 0, err
 	}
 
-	err = reg.blobStore.driver.Walk(ctx, root, func(fileInfo driver.FileInfo) error {
+	err = reg.driver.Walk(ctx, root, func(fileInfo driver.FileInfo) error {
 		err := handleRepository(fileInfo, root, last, func(repoPath string) error {
 			foundRepos = append(foundRepos, repoPath)
 			return nil
@@ -64,7 +64,7 @@ func (reg *registry) Enumerate(ctx context.Context, ingester func(string) error)
 		return err
 	}
 
-	err = reg.blobStore.driver.Walk(ctx, root, func(fileInfo driver.FileInfo) error {
+	err = reg.driver.Walk(ctx, root, func(fileInfo driver.FileInfo) error {
 		return handleRepository(fileInfo, root, "", ingester)
 	})
 
