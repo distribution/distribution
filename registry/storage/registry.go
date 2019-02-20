@@ -11,6 +11,12 @@ import (
 	"github.com/docker/libtrust"
 )
 
+type registryOptions struct {
+	repositoryBlobStoreEnabled bool
+	globalBlobStoreEnabled     bool
+	redirect                   bool
+}
+
 // registry is the top-level implementation of Registry for use in the storage
 // package. All instances should descend from this object.
 type registry struct {
@@ -18,9 +24,7 @@ type registry struct {
 	globalBlobServer                  *blobServer
 	globalStatter                     *blobStatter // global statter service.
 	globalBlobDescriptorCacheProvider cache.BlobDescriptorCacheProvider
-	repositoryBlobStoreEnabled        bool
-	globalBlobStoreEnabled            bool
-	redirect                          bool
+	options                           *registryOptions
 	deleteEnabled                     bool
 	schema1Enabled                    bool
 	resumableDigestEnabled            bool
@@ -42,7 +46,7 @@ type RegistryOption func(*registry) error
 // EnableRedirect is a functional option for NewRegistry. It causes the backend
 // blob server to attempt using (StorageDriver).URLFor to serve all blobs.
 func EnableRedirect(registry *registry) error {
-	registry.redirect = true
+	registry.options.redirect = true
 	return nil
 }
 
@@ -55,13 +59,13 @@ func EnableDelete(registry *registry) error {
 
 // EnableRepositoryBlobsStorage is a functional option for NewRegistry.
 func EnableRepositoryBlobsStorage(registry *registry) error {
-	registry.repositoryBlobStoreEnabled = true
+	registry.options.repositoryBlobStoreEnabled = true
 	return nil
 }
 
 // DisableGlobalBlobsStorage is a functional option for NewRegistry.
 func DisableGlobalBlobsStorage(registry *registry) error {
-	registry.globalBlobStoreEnabled = false
+	registry.options.globalBlobStoreEnabled = false
 	return nil
 }
 
@@ -138,20 +142,27 @@ func BlobDescriptorCacheProvider(blobDescriptorCacheProvider cache.BlobDescripto
 // allocate. If the Redirect option is specified, the backend blob server will
 // attempt to use (StorageDriver).URLFor to serve all blobs.
 func NewRegistry(ctx context.Context, driver storagedriver.StorageDriver, options ...RegistryOption) (distribution.Namespace, error) {
+	registryOptions := &registryOptions{
+		globalBlobStoreEnabled: true,
+	}
+
 	// create global statter
 	statter := &blobStatter{
-		driver: driver,
+		driver:  driver,
+		options: registryOptions,
 	}
 
 	bs := &blobStore{
 		driver:  driver,
 		statter: statter,
+		options: registryOptions,
 	}
 
 	registry := &registry{
-		globalBlobStoreEnabled: true,
-		globalBlobStore:        bs,
+		options:         registryOptions,
+		globalBlobStore: bs,
 		globalBlobServer: &blobServer{
+			options: registryOptions,
 			driver:  driver,
 			statter: statter,
 			pathFn:  bs.path,
@@ -214,9 +225,10 @@ type repository struct {
 }
 
 func (repo *repository) scopedBlobStatter() *blobStatter {
-	if repo.repositoryBlobStoreEnabled {
+	if repo.options.repositoryBlobStoreEnabled {
 		return &blobStatter{
 			driver:          repo.driver,
+			options:         repo.options,
 			repositoryScope: repo.name.Name(),
 		}
 	}
@@ -225,9 +237,10 @@ func (repo *repository) scopedBlobStatter() *blobStatter {
 }
 
 func (repo *repository) scopedBlobStore() *blobStore {
-	if repo.repositoryBlobStoreEnabled {
+	if repo.options.repositoryBlobStoreEnabled {
 		return &blobStore{
 			driver:          repo.driver,
+			options:         repo.options,
 			statter:         repo.scopedBlobStatter(),
 			repositoryScope: repo.name.Name(),
 		}
@@ -237,14 +250,14 @@ func (repo *repository) scopedBlobStore() *blobStore {
 }
 
 func (repo *repository) scopedBlobServer() *blobServer {
-	if repo.repositoryBlobStoreEnabled {
+	if repo.options.repositoryBlobStoreEnabled {
 		bs := repo.scopedBlobStore()
 
 		return &blobServer{
-			driver:   repo.driver,
-			redirect: repo.redirect,
-			statter:  bs.statter,
-			pathFn:   bs.path,
+			driver:  repo.driver,
+			options: repo.options,
+			statter: bs.statter,
+			pathFn:  bs.path,
 		}
 	}
 

@@ -18,6 +18,7 @@ type blobStore struct {
 	driver  driver.StorageDriver
 	statter distribution.BlobStatter
 
+	options         *registryOptions
 	repositoryScope string
 }
 
@@ -159,6 +160,7 @@ type blobStatter struct {
 	driver driver.StorageDriver
 
 	repositoryScope string
+	options         *registryOptions
 }
 
 var _ distribution.BlobDescriptorService = &blobStatter{}
@@ -166,16 +168,7 @@ var _ distribution.BlobDescriptorService = &blobStatter{}
 // Stat implements BlobStatter.Stat by returning the descriptor for the blob
 // in the main blob store. If this method returns successfully, there is
 // strong guarantee that the blob exists and is available.
-func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
-	path, err := pathFor(repositoryBlobDataPathSpec{
-		digest: dgst,
-		name:   bs.repositoryScope,
-	})
-
-	if err != nil {
-		return distribution.Descriptor{}, err
-	}
-
+func (bs *blobStatter) stat(ctx context.Context, dgst digest.Digest, path string) (distribution.Descriptor, error) {
 	fi, err := bs.driver.Stat(ctx, path)
 	if err != nil {
 		switch err := err.(type) {
@@ -206,7 +199,21 @@ func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (distributi
 		// for the specific repository.
 		MediaType: "application/octet-stream",
 		Digest:    dgst,
+		Location:  path,
 	}, nil
+}
+
+func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+	path, err := pathFor(repositoryBlobDataPathSpec{
+		digest: dgst,
+		name:   bs.repositoryScope,
+	})
+
+	if err != nil {
+		return distribution.Descriptor{}, err
+	}
+
+	return bs.stat(ctx, dgst, path)
 }
 
 func (bs *blobStatter) Clear(ctx context.Context, dgst digest.Digest) error {
