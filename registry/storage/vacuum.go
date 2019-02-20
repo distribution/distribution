@@ -35,7 +35,7 @@ func (v Vacuum) RemoveLocalBlob(name string, dgst string) error {
 		return err
 	}
 
-	blobPath, err := pathFor(localBlobPathSpec{name: name, digest: d})
+	blobPath, err := pathFor(repositoryBlobPathSpec{name: name, digest: d})
 	if err != nil {
 		return err
 	}

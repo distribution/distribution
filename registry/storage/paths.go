@@ -227,10 +227,10 @@ func pathFor(spec pathSpec) (string, error) {
 		blobPathPrefix := append(rootPrefix, "blobs")
 		return path.Join(append(blobPathPrefix, components...)...), nil
 
-	case localBlobsPathSpec:
+	case repositoryBlobsPathSpec:
 		blobsPathPrefix := append(repoPrefix, v.name, "_blobs")
 		return path.Join(blobsPathPrefix...), nil
-	case localBlobPathSpec:
+	case repositoryBlobPathSpec:
 		components, err := digestPathComponents(v.digest, true)
 		if err != nil {
 			return "", err
@@ -238,7 +238,7 @@ func pathFor(spec pathSpec) (string, error) {
 
 		blobPathPrefix := append(repoPrefix, v.name, "_blobs")
 		return path.Join(append(blobPathPrefix, components...)...), nil
-	case localBlobDataPathSpec:
+	case repositoryBlobDataPathSpec:
 		components, err := digestPathComponents(v.digest, true)
 		if err != nil {
 			return "", err
@@ -404,29 +404,29 @@ type blobDataPathSpec struct {
 
 func (blobDataPathSpec) pathSpec() {}
 
-// localBlobsPathSpec contains the path for the blobs directory
-type localBlobsPathSpec struct {
+// repositoryBlobsPathSpec contains the path for the blobs directory
+type repositoryBlobsPathSpec struct {
 	name string
 }
 
-func (localBlobsPathSpec) pathSpec() {}
+func (repositoryBlobsPathSpec) pathSpec() {}
 
-// localBlobPathSpec contains the path for the registry global blob store.
-type localBlobPathSpec struct {
+// repositoryBlobPathSpec contains the path for the registry global blob store.
+type repositoryBlobPathSpec struct {
 	name   string
 	digest digest.Digest
 }
 
-func (localBlobPathSpec) pathSpec() {}
+func (repositoryBlobPathSpec) pathSpec() {}
 
-// localBlobDataPathSpec contains the path for the registry global blob store. For
+// repositoryBlobDataPathSpec contains the path for the registry global blob store. For
 // now, this contains layer data, exclusively.
-type localBlobDataPathSpec struct {
+type repositoryBlobDataPathSpec struct {
 	name   string
 	digest digest.Digest
 }
 
-func (localBlobDataPathSpec) pathSpec() {}
+func (repositoryBlobDataPathSpec) pathSpec() {}
 
 // uploadDataPathSpec defines the path parameters of the data file for
 // uploads.

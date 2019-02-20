@@ -293,7 +293,7 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc distribution.Descri
 
 func (bw *blobWriter) storePath(dgst digest.Digest) (string, error) {
 	if bw.repositoryScope != "" {
-		return pathFor(localBlobDataPathSpec{
+		return pathFor(repositoryBlobDataPathSpec{
 			name:   bw.repositoryScope,
 			digest: dgst,
 		})

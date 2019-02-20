@@ -90,7 +90,7 @@ func (bs *blobStore) Put(ctx context.Context, mediaType string, p []byte) (distr
 }
 
 func (bs *blobStore) Enumerate(ctx context.Context, ingester func(dgst digest.Digest) error) error {
-	specPath, err := pathFor(localBlobsPathSpec{name: bs.repositoryScope})
+	specPath, err := pathFor(repositoryBlobsPathSpec{name: bs.repositoryScope})
 	if err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ func (bs *blobStore) Enumerate(ctx context.Context, ingester func(dgst digest.Di
 // path returns the canonical path for the blob identified by digest. The blob
 // may or may not exist.
 func (bs *blobStore) path(dgst digest.Digest) (string, error) {
-	bp, err := pathFor(localBlobDataPathSpec{
+	bp, err := pathFor(repositoryBlobDataPathSpec{
 		name:   bs.repositoryScope,
 		digest: dgst,
 	})
@@ -167,7 +167,7 @@ var _ distribution.BlobDescriptorService = &blobStatter{}
 // in the main blob store. If this method returns successfully, there is
 // strong guarantee that the blob exists and is available.
 func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
-	path, err := pathFor(localBlobDataPathSpec{
+	path, err := pathFor(repositoryBlobDataPathSpec{
 		digest: dgst,
 		name:   bs.repositoryScope,
 	})
