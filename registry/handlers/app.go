@@ -207,8 +207,15 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	if d, ok := config.Storage["blobs"]; ok {
 		e, ok := d["repository"]
 		if ok {
-			if repositoryStorageEnabled, ok := e.(bool); ok && repositoryStorageEnabled {
-				options = append(options, storage.EnableRepositoryStorage)
+			if repositoryBlobsStorageEnabled, ok := e.(bool); ok && repositoryBlobsStorageEnabled {
+				options = append(options, storage.EnableRepositoryBlobsStorage)
+			}
+		}
+
+		e, ok = d["global"]
+		if ok {
+			if globalBlobsStorageEnabled, ok := e.(bool); ok && !globalBlobsStorageEnabled {
+				options = append(options, storage.DisableGlobalBlobsStorage)
 			}
 		}
 	}

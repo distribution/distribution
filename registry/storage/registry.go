@@ -18,7 +18,8 @@ type registry struct {
 	globalBlobServer                  *blobServer
 	globalStatter                     *blobStatter // global statter service.
 	globalBlobDescriptorCacheProvider cache.BlobDescriptorCacheProvider
-	repositoryBlobStore               bool
+	repositoryBlobStoreEnabled        bool
+	globalBlobStoreEnabled            bool
 	redirect                          bool
 	deleteEnabled                     bool
 	schema1Enabled                    bool
@@ -52,10 +53,15 @@ func EnableDelete(registry *registry) error {
 	return nil
 }
 
-// EnableRepositoryStorage is a functional option for NewRegistry. It enables deletion on
-// the registry.
-func EnableRepositoryStorage(registry *registry) error {
-	registry.repositoryBlobStore = true
+// EnableRepositoryBlobsStorage is a functional option for NewRegistry.
+func EnableRepositoryBlobsStorage(registry *registry) error {
+	registry.repositoryBlobStoreEnabled = true
+	return nil
+}
+
+// DisableGlobalBlobsStorage is a functional option for NewRegistry.
+func DisableGlobalBlobsStorage(registry *registry) error {
+	registry.globalBlobStoreEnabled = false
 	return nil
 }
 
@@ -143,7 +149,8 @@ func NewRegistry(ctx context.Context, driver storagedriver.StorageDriver, option
 	}
 
 	registry := &registry{
-		globalBlobStore: bs,
+		globalBlobStoreEnabled: true,
+		globalBlobStore:        bs,
 		globalBlobServer: &blobServer{
 			driver:  driver,
 			statter: statter,
@@ -207,7 +214,7 @@ type repository struct {
 }
 
 func (repo *repository) scopedBlobStatter() *blobStatter {
-	if repo.repositoryBlobStore {
+	if repo.repositoryBlobStoreEnabled {
 		return &blobStatter{
 			driver:          repo.driver,
 			repositoryScope: repo.name.Name(),
@@ -218,7 +225,7 @@ func (repo *repository) scopedBlobStatter() *blobStatter {
 }
 
 func (repo *repository) scopedBlobStore() *blobStore {
-	if repo.repositoryBlobStore {
+	if repo.repositoryBlobStoreEnabled {
 		return &blobStore{
 			driver:          repo.driver,
 			statter:         repo.scopedBlobStatter(),
@@ -230,7 +237,7 @@ func (repo *repository) scopedBlobStore() *blobStore {
 }
 
 func (repo *repository) scopedBlobServer() *blobServer {
-	if repo.repositoryBlobStore {
+	if repo.repositoryBlobStoreEnabled {
 		bs := repo.scopedBlobStore()
 
 		return &blobServer{
