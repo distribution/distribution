@@ -92,7 +92,7 @@ func (bs *blobStore) Put(ctx context.Context, mediaType string, p []byte) (distr
 }
 
 func (bs *blobStore) Enumerate(ctx context.Context, ingester func(dgst digest.Digest) error) error {
-	specPath, err := pathFor(repositoryBlobsPathSpec{name: bs.repositoryScope})
+	specPath, err := bs.rootPath()
 	if err != nil {
 		return err
 	}
@@ -121,35 +121,41 @@ func (bs *blobStore) Enumerate(ctx context.Context, ingester func(dgst digest.Di
 
 // path returns the canonical path for the blob identified by digest. The blob
 // may or may not exist.
-func (bs *blobStore) path(dgst digest.Digest) (string, error) {
+func (bs *blobStore) rootPath() (string, error) {
 	// get repository blob store path
 	if bs.options.repositoryBlobStoreEnabled && bs.repositoryScope != "" {
-		bp, err := pathFor(repositoryBlobDataPathSpec{
-			name:   bs.repositoryScope,
-			digest: dgst,
+		return pathFor(repositoryBlobsPathSpec{
+			name: bs.repositoryScope,
 		})
-
-		if err != nil {
-			return "", err
-		}
-
-		return bp, nil
 	}
 
 	// get global blob store path
 	if bs.options.globalBlobStoreEnabled {
-		bp, err := pathFor(blobDataPathSpec{
-			digest: dgst,
-		})
-
-		if err != nil {
-			return "", err
-		}
-
-		return bp, nil
+		return pathFor(blobsPathSpec{})
 	}
 
-	return nil, errors.New("unknown blob store")
+	return "", errors.New("unknown blob store")
+}
+
+// path returns the canonical path for the blob identified by digest. The blob
+// may or may not exist.
+func (bs *blobStore) path(dgst digest.Digest) (string, error) {
+	// get repository blob store path
+	if bs.options.repositoryBlobStoreEnabled && bs.repositoryScope != "" {
+		return pathFor(repositoryBlobDataPathSpec{
+			name:   bs.repositoryScope,
+			digest: dgst,
+		})
+	}
+
+	// get global blob store path
+	if bs.options.globalBlobStoreEnabled {
+		return pathFor(blobDataPathSpec{
+			digest: dgst,
+		})
+	}
+
+	return "", errors.New("unknown blob store")
 }
 
 // link links the path to the provided digest by writing the digest into the
