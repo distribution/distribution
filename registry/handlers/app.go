@@ -203,6 +203,16 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		}
 	}
 
+	// configure deletion
+	if d, ok := config.Storage["blobs"]; ok {
+		e, ok := d["repository"]
+		if ok {
+			if repositoryStorageEnabled, ok := e.(bool); ok && repositoryStorageEnabled {
+				options = append(options, storage.EnableRepositoryStorage)
+			}
+		}
+	}
+
 	// configure redirects
 	var redirectDisabled bool
 	if redirectConfig, ok := config.Storage["redirect"]; ok {

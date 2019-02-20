@@ -52,6 +52,13 @@ func EnableDelete(registry *registry) error {
 	return nil
 }
 
+// EnableRepositoryStorage is a functional option for NewRegistry. It enables deletion on
+// the registry.
+func EnableRepositoryStorage(registry *registry) error {
+	registry.repositoryBlobStore = true
+	return nil
+}
+
 // EnableSchema1 is a functional option for NewRegistry. It enables pushing of
 // schema1 manifests.
 func EnableSchema1(registry *registry) error {
@@ -125,7 +132,24 @@ func BlobDescriptorCacheProvider(blobDescriptorCacheProvider cache.BlobDescripto
 // allocate. If the Redirect option is specified, the backend blob server will
 // attempt to use (StorageDriver).URLFor to serve all blobs.
 func NewRegistry(ctx context.Context, driver storagedriver.StorageDriver, options ...RegistryOption) (distribution.Namespace, error) {
+	// create global statter
+	statter := &blobStatter{
+		driver: driver,
+	}
+
+	bs := &blobStore{
+		driver:  driver,
+		statter: statter,
+	}
+
 	registry := &registry{
+		globalBlobStore: bs,
+		globalBlobServer: &blobServer{
+			driver:  driver,
+			statter: statter,
+			pathFn:  bs.path,
+		},
+		globalStatter:          statter,
 		resumableDigestEnabled: true,
 		driver:                 driver,
 	}
@@ -182,36 +206,42 @@ type repository struct {
 	descriptorCache distribution.BlobDescriptorService
 }
 
+func (repo *repository) scopedBlobStatter() *blobStatter {
+	if repo.repositoryBlobStore {
+		return &blobStatter{
+			driver: repo.driver,
+			name:   repo.name.Name(),
+		}
+	}
+
+	return repo.globalStatter
+}
+
 func (repo *repository) scopedBlobStore() *blobStore {
-	if !repo.repositoryBlobStore {
-		return repo.globalBlobStore
+	if repo.repositoryBlobStore {
+		return &blobStore{
+			driver:  repo.driver,
+			statter: repo.scopedBlobStatter(),
+			name:    repo.name.Name(),
+		}
 	}
 
-	statter := &blobStatter{
-		driver: repo.driver,
-		name:   repo.name.Name(),
-	}
-
-	return &blobStore{
-		driver:  repo.driver,
-		statter: statter,
-		name:    repo.name.Name(),
-	}
+	return repo.globalBlobStore
 }
 
 func (repo *repository) scopedBlobServer() *blobServer {
-	if !repo.repositoryBlobStore {
-		return repo.globalBlobServer
+	if repo.repositoryBlobStore {
+		bs := repo.scopedBlobStore()
+
+		return &blobServer{
+			driver:   repo.driver,
+			redirect: repo.redirect,
+			statter:  bs.statter,
+			pathFn:   bs.path,
+		}
 	}
 
-	bs := repo.scopedBlobStore()
-
-	return &blobServer{
-		driver:   repo.driver,
-		redirect: repo.redirect,
-		statter:  bs.statter,
-		pathFn:   bs.path,
-	}
+	return repo.globalBlobServer
 }
 
 // Name returns the name of the repository.
