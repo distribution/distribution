@@ -27,12 +27,12 @@ var _ distribution.BlobProvider = &blobStore{}
 
 // Get implements the BlobReadService.Get call.
 func (bs *blobStore) Get(ctx context.Context, dgst digest.Digest) ([]byte, error) {
-	bp, err := bs.path(dgst)
+	desc, err := bs.statter.Stat(ctx, dgst)
 	if err != nil {
 		return nil, err
 	}
 
-	p, err := getContent(ctx, bs.driver, bp)
+	p, err := getContent(ctx, bs.driver, desc.Location)
 	if err != nil {
 		switch err.(type) {
 		case driver.PathNotFoundError:
@@ -83,6 +83,7 @@ func (bs *blobStore) Put(ctx context.Context, mediaType string, p []byte) (distr
 		// for the specific repository.
 		MediaType: "application/octet-stream",
 		Digest:    dgst,
+		Location:  bp,
 	}, bs.driver.PutContent(ctx, bp, p)
 }
 
