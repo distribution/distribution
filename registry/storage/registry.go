@@ -226,6 +226,7 @@ type repository struct {
 
 func (repo *repository) scopedBlobStatter() *blobStatter {
 	if repo.options.repositoryBlobStoreEnabled {
+		// TODO: store locally
 		return &blobStatter{
 			driver:          repo.driver,
 			options:         repo.options,
@@ -238,6 +239,7 @@ func (repo *repository) scopedBlobStatter() *blobStatter {
 
 func (repo *repository) scopedBlobStore() *blobStore {
 	if repo.options.repositoryBlobStoreEnabled {
+		// TODO: store locally
 		return &blobStore{
 			driver:          repo.driver,
 			options:         repo.options,
@@ -253,6 +255,7 @@ func (repo *repository) scopedBlobServer() *blobServer {
 	if repo.options.repositoryBlobStoreEnabled {
 		bs := repo.scopedBlobStore()
 
+		// TODO: store locally
 		return &blobServer{
 			driver:  repo.driver,
 			options: repo.options,
