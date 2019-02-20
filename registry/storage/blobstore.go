@@ -204,16 +204,42 @@ func (bs *blobStatter) stat(ctx context.Context, dgst digest.Digest, path string
 }
 
 func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
-	path, err := pathFor(repositoryBlobDataPathSpec{
-		digest: dgst,
-		name:   bs.repositoryScope,
-	})
+	// check repository blob path
+	if bs.options.repositoryBlobStoreEnabled && bs.repositoryScope != "" {
+		path, err := pathFor(repositoryBlobDataPathSpec{
+			digest: dgst,
+			name:   bs.repositoryScope,
+		})
 
-	if err != nil {
-		return distribution.Descriptor{}, err
+		if err != nil {
+			return distribution.Descriptor{}, err
+		}
+
+		descriptor, err := bs.stat(ctx, dgst, path)
+		if err == distribution.ErrBlobUnknown {
+			return descriptor, err
+		}
 	}
 
-	return bs.stat(ctx, dgst, path)
+	// check global blob path
+	if bs.options.globalBlobStoreEnabled {
+		path, err := pathFor(blobDataPathSpec{
+			digest: dgst,
+		})
+
+		if err != nil {
+			return distribution.Descriptor{}, err
+		}
+
+		descriptor, err := bs.stat(ctx, dgst, path)
+		if err == distribution.ErrBlobUnknown {
+			return descriptor, err
+		}
+
+		return bs.stat(ctx, dgst, path)
+	}
+
+	return distribution.Descriptor{}, distribution.ErrBlobUnknown
 }
 
 func (bs *blobStatter) Clear(ctx context.Context, dgst digest.Digest) error {
