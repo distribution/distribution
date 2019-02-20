@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"path"
 
 	"github.com/docker/distribution"
@@ -121,16 +122,34 @@ func (bs *blobStore) Enumerate(ctx context.Context, ingester func(dgst digest.Di
 // path returns the canonical path for the blob identified by digest. The blob
 // may or may not exist.
 func (bs *blobStore) path(dgst digest.Digest) (string, error) {
-	bp, err := pathFor(repositoryBlobDataPathSpec{
-		name:   bs.repositoryScope,
-		digest: dgst,
-	})
+	// get repository blob store path
+	if bs.options.repositoryBlobStoreEnabled && bs.repositoryScope != "" {
+		bp, err := pathFor(repositoryBlobDataPathSpec{
+			name:   bs.repositoryScope,
+			digest: dgst,
+		})
 
-	if err != nil {
-		return "", err
+		if err != nil {
+			return "", err
+		}
+
+		return bp, nil
 	}
 
-	return bp, nil
+	// get global blob store path
+	if bs.options.globalBlobStoreEnabled {
+		bp, err := pathFor(blobDataPathSpec{
+			digest: dgst,
+		})
+
+		if err != nil {
+			return "", err
+		}
+
+		return bp, nil
+	}
+
+	return nil, errors.New("unknown blob store")
 }
 
 // link links the path to the provided digest by writing the digest into the
