@@ -18,6 +18,7 @@ type registry struct {
 	globalBlobServer                  *blobServer
 	globalStatter                     *blobStatter // global statter service.
 	globalBlobDescriptorCacheProvider cache.BlobDescriptorCacheProvider
+	repositoryBlobStore               bool
 	redirect                          bool
 	deleteEnabled                     bool
 	schema1Enabled                    bool
@@ -181,19 +182,36 @@ type repository struct {
 	descriptorCache distribution.BlobDescriptorService
 }
 
-func (repo *repository) createBlobStore() *blobStore {
+func (repo *repository) scopedBlobStore() *blobStore {
+	if !repo.repositoryBlobStore {
+		return repo.globalBlobStore
+	}
+
 	statter := &blobStatter{
 		driver: repo.driver,
 		name:   repo.name.Name(),
 	}
 
-	bs := &blobStore{
+	return &blobStore{
 		driver:  repo.driver,
 		statter: statter,
 		name:    repo.name.Name(),
 	}
+}
 
-	return bs
+func (repo *repository) scopedBlobServer() *blobServer {
+	if !repo.repositoryBlobStore {
+		return repo.globalBlobServer
+	}
+
+	bs := repo.scopedBlobStore()
+
+	return &blobServer{
+		driver:   repo.driver,
+		redirect: repo.redirect,
+		statter:  bs.statter,
+		pathFn:   bs.path,
+	}
 }
 
 // Name returns the name of the repository.
@@ -204,7 +222,7 @@ func (repo *repository) Named() reference.Named {
 func (repo *repository) Tags(ctx context.Context) distribution.TagService {
 	tags := &tagStore{
 		repository: repo,
-		blobStore:  repo.createBlobStore(),
+		blobStore:  repo.scopedBlobStore(),
 	}
 
 	return tags
@@ -223,7 +241,7 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 
 	manifestDirectoryPathSpec := manifestRevisionsPathSpec{name: repo.name.Name()}
 
-	bs := repo.createBlobStore()
+	bs := repo.scopedBlobStore()
 
 	var statter distribution.BlobDescriptorService = &linkedBlobStatter{
 		blobStore:   bs,
@@ -306,14 +324,8 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 // may be context sensitive in the future. The instance should be used similar
 // to a request local.
 func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
-	bs := repo.createBlobStore()
-
-	blobServer := &blobServer{
-		driver:   repo.driver,
-		redirect: repo.redirect,
-		statter:  bs.statter,
-		pathFn:   bs.path,
-	}
+	bs := repo.scopedBlobStore()
+	blobServer := repo.scopedBlobServer()
 
 	var statter distribution.BlobDescriptorService = &linkedBlobStatter{
 		blobStore:   bs,
