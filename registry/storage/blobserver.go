@@ -29,13 +29,12 @@ func (bs *blobServer) ServeBlob(ctx context.Context, w http.ResponseWriter, r *h
 		return err
 	}
 
-	path, err := bs.pathFn(desc.Digest)
-	if err != nil {
-		return err
+	if desc.Location == "" {
+		return distribution.ErrBlobLocationNotFound
 	}
 
 	if bs.redirect {
-		redirectURL, err := bs.driver.URLFor(ctx, path, map[string]interface{}{"method": r.Method})
+		redirectURL, err := bs.driver.URLFor(ctx, desc.Location, map[string]interface{}{"method": r.Method})
 		switch err.(type) {
 		case nil:
 			// Redirect to storage URL.
@@ -50,7 +49,7 @@ func (bs *blobServer) ServeBlob(ctx context.Context, w http.ResponseWriter, r *h
 		}
 	}
 
-	br, err := newFileReader(ctx, bs.driver, path, desc.Size)
+	br, err := newFileReader(ctx, bs.driver, desc.Location, desc.Size)
 	if err != nil {
 		return err
 	}
