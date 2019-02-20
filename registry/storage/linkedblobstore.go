@@ -322,6 +322,7 @@ func (lbs *linkedBlobStore) newBlobUpload(ctx context.Context, uuid, path string
 		path:       path,
 		resumableDigestEnabled: lbs.resumableDigestEnabled,
 
+		// inherit where to store blobs by default
 		repositoryScope: lbs.repositoryScope,
 	}
 

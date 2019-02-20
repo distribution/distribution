@@ -291,14 +291,24 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc distribution.Descri
 	return desc, nil
 }
 
+func (bw *blobWriter) storePath(dgst digest.Digest) (string, error) {
+	if bw.repositoryScope != "" {
+		return pathFor(localBlobDataPathSpec{
+			name:   bw.repositoryScope,
+			digest: dgst,
+		})
+	} else {
+		return pathFor(blobDataPathSpec{
+			digest: dgst,
+		})
+	}
+}
+
 // moveBlob moves the data into its final, hash-qualified destination,
 // identified by dgst. The layer should be validated before commencing the
 // move.
 func (bw *blobWriter) moveBlob(ctx context.Context, desc distribution.Descriptor) error {
-	blobPath, err := pathFor(localBlobDataPathSpec{
-		name:   bw.repositoryScope,
-		digest: desc.Digest,
-	})
+	blobPath, err := bw.storePath(desc.Digest)
 
 	if err != nil {
 		return err
