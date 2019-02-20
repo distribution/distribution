@@ -322,7 +322,7 @@ func (lbs *linkedBlobStore) newBlobUpload(ctx context.Context, uuid, path string
 		path:       path,
 		resumableDigestEnabled: lbs.resumableDigestEnabled,
 
-		name: lbs.name,
+		repositoryScope: lbs.repositoryScope,
 	}
 
 	return bw, nil

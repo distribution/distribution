@@ -42,7 +42,7 @@ type blobWriter struct {
 	resumableDigestEnabled bool
 	committed              bool
 
-	name string
+	repositoryScope string
 }
 
 var _ distribution.BlobWriter = &blobWriter{}
@@ -296,7 +296,7 @@ func (bw *blobWriter) validateBlob(ctx context.Context, desc distribution.Descri
 // move.
 func (bw *blobWriter) moveBlob(ctx context.Context, desc distribution.Descriptor) error {
 	blobPath, err := pathFor(localBlobDataPathSpec{
-		name:   bw.name,
+		name:   bw.repositoryScope,
 		digest: desc.Digest,
 	})
 

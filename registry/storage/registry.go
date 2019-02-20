@@ -209,8 +209,8 @@ type repository struct {
 func (repo *repository) scopedBlobStatter() *blobStatter {
 	if repo.repositoryBlobStore {
 		return &blobStatter{
-			driver: repo.driver,
-			name:   repo.name.Name(),
+			driver:          repo.driver,
+			repositoryScope: repo.name.Name(),
 		}
 	}
 
@@ -220,9 +220,9 @@ func (repo *repository) scopedBlobStatter() *blobStatter {
 func (repo *repository) scopedBlobStore() *blobStore {
 	if repo.repositoryBlobStore {
 		return &blobStore{
-			driver:  repo.driver,
-			statter: repo.scopedBlobStatter(),
-			name:    repo.name.Name(),
+			driver:          repo.driver,
+			statter:         repo.scopedBlobStatter(),
+			repositoryScope: repo.name.Name(),
 		}
 	}
 

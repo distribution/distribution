@@ -18,7 +18,7 @@ type blobStore struct {
 	driver  driver.StorageDriver
 	statter distribution.BlobStatter
 
-	name string
+	repositoryScope string
 }
 
 var _ distribution.BlobProvider = &blobStore{}
@@ -90,7 +90,7 @@ func (bs *blobStore) Put(ctx context.Context, mediaType string, p []byte) (distr
 }
 
 func (bs *blobStore) Enumerate(ctx context.Context, ingester func(dgst digest.Digest) error) error {
-	specPath, err := pathFor(localBlobsPathSpec{name: bs.name})
+	specPath, err := pathFor(localBlobsPathSpec{name: bs.repositoryScope})
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func (bs *blobStore) Enumerate(ctx context.Context, ingester func(dgst digest.Di
 // may or may not exist.
 func (bs *blobStore) path(dgst digest.Digest) (string, error) {
 	bp, err := pathFor(localBlobDataPathSpec{
-		name:   bs.name,
+		name:   bs.repositoryScope,
 		digest: dgst,
 	})
 
@@ -158,7 +158,7 @@ func (bs *blobStore) readlink(ctx context.Context, path string) (digest.Digest, 
 type blobStatter struct {
 	driver driver.StorageDriver
 
-	name string
+	repositoryScope string
 }
 
 var _ distribution.BlobDescriptorService = &blobStatter{}
@@ -169,7 +169,7 @@ var _ distribution.BlobDescriptorService = &blobStatter{}
 func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
 	path, err := pathFor(localBlobDataPathSpec{
 		digest: dgst,
-		name:   bs.name,
+		name:   bs.repositoryScope,
 	})
 
 	if err != nil {
