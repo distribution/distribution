@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"testing"
 
 	check "gopkg.in/check.v1"
@@ -36,7 +37,7 @@ func (s *MiddlewareSuite) TestHttpsPort(c *check.C) {
 	c.Assert(m.scheme, check.Equals, "https")
 	c.Assert(m.host, check.Equals, "example.com:5443")
 
-	url, err := middleware.URLFor(nil, "/rick/data", nil)
+	url, err := middleware.URLFor(context.TODO(), "/rick/data", nil)
 	c.Assert(err, check.Equals, nil)
 	c.Assert(url, check.Equals, "https://example.com:5443/rick/data")
 }
@@ -52,7 +53,7 @@ func (s *MiddlewareSuite) TestHTTP(c *check.C) {
 	c.Assert(m.scheme, check.Equals, "http")
 	c.Assert(m.host, check.Equals, "example.com")
 
-	url, err := middleware.URLFor(nil, "morty/data", nil)
+	url, err := middleware.URLFor(context.TODO(), "morty/data", nil)
 	c.Assert(err, check.Equals, nil)
 	c.Assert(url, check.Equals, "http://example.com/morty/data")
 }

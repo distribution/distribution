@@ -29,6 +29,8 @@ redis:
   readtimeout: 10ms
   writetimeout: 10ms
 notifications:
+    events:
+        includereferences: true
     endpoints:
         - name: local-8082
           url: http://localhost:5003/callback

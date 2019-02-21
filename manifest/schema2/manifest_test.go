@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/docker/distribution"
+	"github.com/docker/distribution/manifest"
 )
 
 var expectedManifestSerialization = []byte(`{
@@ -26,9 +27,12 @@ var expectedManifestSerialization = []byte(`{
    ]
 }`)
 
-func TestManifest(t *testing.T) {
-	manifest := Manifest{
-		Versioned: SchemaVersion,
+func makeTestManifest(mediaType string) Manifest {
+	return Manifest{
+		Versioned: manifest.Versioned{
+			SchemaVersion: 2,
+			MediaType:     mediaType,
+		},
 		Config: distribution.Descriptor{
 			Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
 			Size:      985,
@@ -42,13 +46,17 @@ func TestManifest(t *testing.T) {
 			},
 		},
 	}
+}
+
+func TestManifest(t *testing.T) {
+	manifest := makeTestManifest(MediaTypeManifest)
 
 	deserialized, err := FromStruct(manifest)
 	if err != nil {
 		t.Fatalf("error creating DeserializedManifest: %v", err)
 	}
 
-	mediaType, canonical, err := deserialized.Payload()
+	mediaType, canonical, _ := deserialized.Payload()
 
 	if mediaType != MediaTypeManifest {
 		t.Fatalf("unexpected media type: %s", mediaType)
@@ -108,4 +116,47 @@ func TestManifest(t *testing.T) {
 	if references[1].Size != 153263 {
 		t.Fatalf("unexpected size in reference: %d", references[0].Size)
 	}
+}
+
+func mediaTypeTest(t *testing.T, mediaType string, shouldError bool) {
+	manifest := makeTestManifest(mediaType)
+
+	deserialized, err := FromStruct(manifest)
+	if err != nil {
+		t.Fatalf("error creating DeserializedManifest: %v", err)
+	}
+
+	unmarshalled, descriptor, err := distribution.UnmarshalManifest(
+		MediaTypeManifest,
+		deserialized.canonical)
+
+	if shouldError {
+		if err == nil {
+			t.Fatalf("bad content type should have produced error")
+		}
+	} else {
+		if err != nil {
+			t.Fatalf("error unmarshaling manifest, %v", err)
+		}
+
+		asManifest := unmarshalled.(*DeserializedManifest)
+		if asManifest.MediaType != mediaType {
+			t.Fatalf("Bad media type '%v' as unmarshalled", asManifest.MediaType)
+		}
+
+		if descriptor.MediaType != MediaTypeManifest {
+			t.Fatalf("Bad media type '%v' for descriptor", descriptor.MediaType)
+		}
+
+		unmarshalledMediaType, _, _ := unmarshalled.Payload()
+		if unmarshalledMediaType != MediaTypeManifest {
+			t.Fatalf("Bad media type '%v' for payload", unmarshalledMediaType)
+		}
+	}
+}
+
+func TestMediaTypes(t *testing.T) {
+	mediaTypeTest(t, "", true)
+	mediaTypeTest(t, MediaTypeManifest, false)
+	mediaTypeTest(t, MediaTypeManifest+"XXX", true)
 }

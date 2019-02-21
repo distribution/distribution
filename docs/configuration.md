@@ -100,6 +100,17 @@ storage:
   gcs:
     bucket: bucketname
     keyfile: /path/to/keyfile
+    credentials:
+      type: service_account
+      project_id: project_id_string
+      private_key_id: private_key_id_string
+      private_key: private_key_string
+      client_email: client@example.com
+      client_id: client_id_string
+      auth_uri: http://example.com/auth_uri
+      token_uri: http://example.com/token_uri
+      auth_provider_x509_cert_url: http://example.com/provider_cert_url
+      client_x509_cert_url: http://example.com/client_cert_url
     rootdirectory: /gcs/object/name/prefix
     chunksize: 5242880
   s3:
@@ -136,7 +147,8 @@ storage:
     endpoint: optional endpoints
     internal: optional internal endpoint
     bucket: OSS bucket
-    encrypt: optional data encryption setting
+    encrypt: optional enable server-side encryption
+    encryptionkeyid: optional KMS key id for encryption
     secure: optional ssl setting
     chunksize: optional size valye
     rootdirectory: optional root directory
@@ -160,6 +172,7 @@ auth:
     realm: silly-realm
     service: silly-service
   token:
+    autoredirect: true
     realm: token-realm
     service: token-service
     issuer: registry-token-issuer
@@ -206,6 +219,7 @@ http:
   host: https://myregistryaddress.org:5000
   secret: asecretforlocaldevelopment
   relativeurls: false
+  draintimeout: 60s
   tls:
     certificate: /path/to/x509/public
     key: /path/to/x509/private
@@ -226,6 +240,8 @@ http:
   http2:
     disabled: false
 notifications:
+  events:
+    includereferences: true
   endpoints:
     - name: alistener
       disabled: false
@@ -280,6 +296,7 @@ proxy:
 compatibility:
   schema1:
     signingkeyfile: /etc/registry/key.json
+    enabled: true
 validation:
   manifests:
     urls:
@@ -385,6 +402,17 @@ storage:
   gcs:
     bucket: bucketname
     keyfile: /path/to/keyfile
+    credentials:
+      type: service_account
+      project_id: project_id_string
+      private_key_id: private_key_id_string
+      private_key: private_key_string
+      client_email: client@example.com
+      client_id: client_id_string
+      auth_uri: http://example.com/auth_uri
+      token_uri: http://example.com/token_uri
+      auth_provider_x509_cert_url: http://example.com/provider_cert_url
+      client_x509_cert_url: http://example.com/client_cert_url
     rootdirectory: /gcs/object/name/prefix
   s3:
     accesskey: awsaccesskey
@@ -420,7 +448,8 @@ storage:
     endpoint: optional endpoints
     internal: optional internal endpoint
     bucket: OSS bucket
-    encrypt: optional data encryption setting
+    encrypt: optional enable server-side encryption
+    encryptionkeyid: optional KMS key id for encryption
     secure: optional ssl setting
     chunksize: optional size valye
     rootdirectory: optional root directory
@@ -566,6 +595,7 @@ The `auth` option is **optional**. Possible auth providers include:
 - [`silly`](#silly)
 - [`token`](#token)
 - [`htpasswd`](#htpasswd)
+- [`none`]
 
 You can configure only one authentication provider.
 
@@ -596,6 +626,7 @@ security.
 | `service` | yes      | The service being authenticated.                      |
 | `issuer`  | yes      | The name of the token issuer. The issuer inserts this into the token so it must match the value configured for the issuer. |
 | `rootcertbundle` | yes | The absolute path to the root certificate bundle. This bundle contains the public part of the certificates used to sign authentication tokens. |
+| `autoredirect`   | no      | When set to `true`, `realm` will automatically be set using the Host header of the request as the domain and a path of `/auth/token/`|
 
 
 For more information about Token based authentication configuration, see the
@@ -610,6 +641,9 @@ The only supported password format is
 [`bcrypt`](http://en.wikipedia.org/wiki/Bcrypt). Entries with other hash types
 are ignored. The `htpasswd` file is loaded once, at startup. If the file is
 invalid, the registry will display an error and will not start.
+
+> **Warning**: If the `htpasswd` file is missing, the file will be created and provisioned with a default user and automatically generated password.
+> The password will be printed to stdout.
 
 > **Warning**: Only use the `htpasswd` authentication scheme with TLS
 > configured, since basic authentication sends passwords as part of the HTTP
@@ -738,12 +772,14 @@ http:
   host: https://myregistryaddress.org:5000
   secret: asecretforlocaldevelopment
   relativeurls: false
+  draintimeout: 60s
   tls:
     certificate: /path/to/x509/public
     key: /path/to/x509/private
     clientcas:
       - /path/to/ca.pem
       - /path/to/another/ca.pem
+    minimumtls: tls1.0
     letsencrypt:
       cachefile: /path/to/cache-file
       email: emailused@letsencrypt.com
@@ -767,6 +803,7 @@ registry.
 | `host`    | no       | A fully-qualified URL for an externally-reachable address for the registry. If present, it is used when creating generated URLs. Otherwise, these URLs are derived from client requests. |
 | `secret`  | no       | A random piece of data used to sign state that may be stored with the client to protect against tampering. For production environments you should generate a random piece of data using a cryptographically secure random generator. If you omit the secret, the registry will automatically generate a secret when it starts. **If you are building a cluster of registries behind a load balancer, you MUST ensure the secret is the same for all registries.**|
 | `relativeurls`| no    | If `true`,  the registry returns relative URLs in Location headers. The client is responsible for resolving the correct URL. **This option is not compatible with Docker 1.7 and earlier.**|
+| `draintimeout`| no    | Amount of time to wait for HTTP connections to drain before shutting down after registry receives SIGTERM signal|
 
 
 ### `tls`
@@ -779,8 +816,9 @@ and proxy connections to the registry server.
 | Parameter | Required | Description                                           |
 |-----------|----------|-------------------------------------------------------|
 | `certificate` | yes  | Absolute path to the x509 certificate file.           |
-| `key`     | yes      | Absolute path to the x509 private key file.           |
-| `clientcas` | no     | An array of absolute paths to x509 CA files.          |
+| `key`         | yes  | Absolute path to the x509 private key file.           |
+| `clientcas`   | no   | An array of absolute paths to x509 CA files.          |
+| `minimumtls`  | no   | Minimum TLS version allowed (tls1.0, tls1.1, tls1.2). Defaults to tls1.0 |
 
 ### `letsencrypt`
 
@@ -853,6 +891,8 @@ settings for the registry.
 
 ```none
 notifications:
+  events:
+    includereferences: true
   endpoints:
     - name: alistener
       disabled: false
@@ -896,6 +936,13 @@ accept event notifications.
 | `mediatypes`|no| A list of target media types to ignore. Events with these target media types are not published to the endpoint. |
 | `actions`   |no| A list of actions to ignore. Events with these actions are not published to the endpoint. |
 
+### `events`
+
+The `events` structure configures the information provided in event notifications.
+
+| Parameter | Required | Description                                           |
+|-----------|----------|-------------------------------------------------------|
+| `includereferences` | no | If `true`, include reference information in manifest events. |
 
 ## `redis`
 
@@ -1067,6 +1114,7 @@ username (such as `batman`) and the password for that username.
 compatibility:
   schema1:
     signingkeyfile: /etc/registry/key.json
+    enabled: true
 ```
 
 Use the `compatibility` structure to configure handling of older and deprecated
@@ -1077,6 +1125,7 @@ features. Each subsection defines such a feature with configurable behavior.
 | Parameter | Required | Description                                           |
 |-----------|----------|-------------------------------------------------------|
 | `signingkeyfile` | no | The signing private key used to add signatures to `schema1` manifests. If no signing key is provided, a new ECDSA key is generated when the registry starts. |
+| `enabled` | no | If this is not set to true, `schema1` manifests cannot be pushed. |
 
 ## `validation`
 

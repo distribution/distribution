@@ -41,7 +41,7 @@ func TestLookup(t *testing.T) {
 	}
 	assertEqualDigests(t, dgst, digests[3])
 
-	dgst, err = dset.Lookup("1234")
+	_, err = dset.Lookup("1234")
 	if err == nil {
 		t.Fatal("Expected ambiguous error looking up: 1234")
 	}
@@ -49,7 +49,7 @@ func TestLookup(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dgst, err = dset.Lookup("9876")
+	_, err = dset.Lookup("9876")
 	if err == nil {
 		t.Fatal("Expected not found error looking up: 9876")
 	}
@@ -57,7 +57,7 @@ func TestLookup(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	dgst, err = dset.Lookup("sha256:1234")
+	_, err = dset.Lookup("sha256:1234")
 	if err == nil {
 		t.Fatal("Expected ambiguous error looking up: sha256:1234")
 	}

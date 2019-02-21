@@ -7,6 +7,7 @@ import (
 	"path"
 	"strings"
 
+	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/driver"
 )
 
@@ -68,6 +69,16 @@ func (reg *registry) Enumerate(ctx context.Context, ingester func(string) error)
 	})
 
 	return err
+}
+
+// Remove removes a repository from storage
+func (reg *registry) Remove(ctx context.Context, name reference.Named) error {
+	root, err := pathFor(repositoriesRootPathSpec{})
+	if err != nil {
+		return err
+	}
+	repoDir := path.Join(root, name.Name())
+	return reg.driver.Delete(ctx, repoDir)
 }
 
 // lessPath returns true if one path a is less than path b.

@@ -152,7 +152,7 @@ func TestBlobFetch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if bytes.Compare(b, b1) != 0 {
+	if !bytes.Equal(b, b1) {
 		t.Fatalf("Wrong bytes values fetched: [%d]byte != [%d]byte", len(b), len(b1))
 	}
 
@@ -1336,7 +1336,7 @@ func TestSanitizeLocation(t *testing.T) {
 			expected:    "http://blahalaja.com/v2/foo/baasdf?_state=asdfasfdasdfasdf&digest=foo",
 		},
 		{
-			description: "ensure new hostname overidden",
+			description: "ensure new hostname overridden",
 			location:    "https://mwhahaha.com/v2/foo/baasdf?_state=asdfasfdasdfasdf",
 			source:      "http://blahalaja.com/v1",
 			expected:    "https://mwhahaha.com/v2/foo/baasdf?_state=asdfasfdasdfasdf",

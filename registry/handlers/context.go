@@ -25,6 +25,9 @@ type Context struct {
 	// should be scoped to a single repository. This field may be nil.
 	Repository distribution.Repository
 
+	// RepositoryRemover provides method to delete a repository
+	RepositoryRemover distribution.RepositoryRemover
+
 	// Errors is a collection of errors encountered during the request to be
 	// returned to the client API. If errors are added to the collection, the
 	// handler *must not* start the response via http.ResponseWriter.

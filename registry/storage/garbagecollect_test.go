@@ -27,7 +27,7 @@ func createRegistry(t *testing.T, driver driver.StorageDriver, options ...Regist
 	if err != nil {
 		t.Fatal(err)
 	}
-	options = append([]RegistryOption{EnableDelete, Schema1SigningKey(k)}, options...)
+	options = append([]RegistryOption{EnableDelete, Schema1SigningKey(k), EnableSchema1}, options...)
 	registry, err := NewRegistry(ctx, driver, options...)
 	if err != nil {
 		t.Fatalf("Failed to construct namespace")
@@ -164,7 +164,7 @@ func TestNoDeletionNoEffect(t *testing.T) {
 
 	registry := createRegistry(t, inmemoryDriver)
 	repo := makeRepository(t, registry, "palailogos")
-	manifestService, err := repo.Manifests(ctx)
+	manifestService, _ := repo.Manifests(ctx)
 
 	image1 := uploadRandomSchema1Image(t, repo)
 	image2 := uploadRandomSchema1Image(t, repo)
@@ -206,7 +206,7 @@ func TestDeleteManifestIfTagNotFound(t *testing.T) {
 
 	registry := createRegistry(t, inmemoryDriver)
 	repo := makeRepository(t, registry, "deletemanifests")
-	manifestService, err := repo.Manifests(ctx)
+	manifestService, _ := repo.Manifests(ctx)
 
 	// Create random layers
 	randomLayers1, err := testutil.CreateRandomLayers(3)
@@ -252,7 +252,7 @@ func TestDeleteManifestIfTagNotFound(t *testing.T) {
 	}
 
 	manifestEnumerator, _ := manifestService.(distribution.ManifestEnumerator)
-	err = manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
+	manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
 		repo.Tags(ctx).Tag(ctx, "test", distribution.Descriptor{Digest: dgst})
 		return nil
 	})
@@ -336,7 +336,7 @@ func TestDeletionHasEffect(t *testing.T) {
 
 	registry := createRegistry(t, inmemoryDriver)
 	repo := makeRepository(t, registry, "komnenos")
-	manifests, err := repo.Manifests(ctx)
+	manifests, _ := repo.Manifests(ctx)
 
 	image1 := uploadRandomSchema1Image(t, repo)
 	image2 := uploadRandomSchema1Image(t, repo)
@@ -346,7 +346,7 @@ func TestDeletionHasEffect(t *testing.T) {
 	manifests.Delete(ctx, image3.manifestDigest)
 
 	// Run GC
-	err = MarkAndSweep(context.Background(), inmemoryDriver, registry, GCOpts{
+	err := MarkAndSweep(context.Background(), inmemoryDriver, registry, GCOpts{
 		DryRun:         false,
 		RemoveUntagged: false,
 	})

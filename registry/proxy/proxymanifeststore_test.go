@@ -95,7 +95,8 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 	ctx := context.Background()
 	truthRegistry, err := storage.NewRegistry(ctx, inmemory.New(),
 		storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()),
-		storage.Schema1SigningKey(k))
+		storage.Schema1SigningKey(k),
+		storage.EnableSchema1)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -117,7 +118,7 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 		t.Fatalf(err.Error())
 	}
 
-	localRegistry, err := storage.NewRegistry(ctx, inmemory.New(), storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), storage.EnableRedirect, storage.DisableDigestResumption, storage.Schema1SigningKey(k))
+	localRegistry, err := storage.NewRegistry(ctx, inmemory.New(), storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), storage.EnableRedirect, storage.DisableDigestResumption, storage.Schema1SigningKey(k), storage.EnableSchema1)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -164,11 +165,10 @@ func populateRepo(ctx context.Context, t *testing.T, repository distribution.Rep
 			t.Fatalf("unexpected error creating test upload: %v", err)
 		}
 
-		rs, ts, err := testutil.CreateRandomTarFile()
+		rs, dgst, err := testutil.CreateRandomTarFile()
 		if err != nil {
 			t.Fatalf("unexpected error generating test layer file")
 		}
-		dgst := digest.Digest(ts)
 		if _, err := io.Copy(wr, rs); err != nil {
 			t.Fatalf("unexpected error copying to upload: %v", err)
 		}
@@ -216,7 +216,7 @@ func TestProxyManifests(t *testing.T) {
 		t.Fatalf("Error checking existence")
 	}
 	if !exists {
-		t.Errorf("Unexpected non-existant manifest")
+		t.Errorf("Unexpected non-existent manifest")
 	}
 
 	if (*localStats)["exists"] != 1 && (*remoteStats)["exists"] != 1 {
@@ -251,7 +251,7 @@ func TestProxyManifests(t *testing.T) {
 		t.Fatal(err)
 	}
 	if !exists {
-		t.Errorf("Unexpected non-existant manifest")
+		t.Errorf("Unexpected non-existent manifest")
 	}
 
 	if (*localStats)["exists"] != 2 && (*remoteStats)["exists"] != 1 {

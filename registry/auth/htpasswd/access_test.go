@@ -1,9 +1,11 @@
 package htpasswd
 
 import (
+	"bytes"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 
 	"github.com/docker/distribution/context"
@@ -48,7 +50,7 @@ func TestBasicAccessController(t *testing.T) {
 		if err != nil {
 			switch err := err.(type) {
 			case auth.Challenge:
-				err.SetHeaders(w)
+				err.SetHeaders(r, w)
 				w.WriteHeader(http.StatusUnauthorized)
 				return
 			default:
@@ -119,4 +121,42 @@ func TestBasicAccessController(t *testing.T) {
 		}
 	}
 
+}
+
+func TestCreateHtpasswdFile(t *testing.T) {
+	tempFile, err := ioutil.TempFile("", "htpasswd-test")
+	if err != nil {
+		t.Fatalf("could not create temporary htpasswd file %v", err)
+	}
+	defer tempFile.Close()
+	options := map[string]interface{}{
+		"realm": "/auth/htpasswd",
+		"path":  tempFile.Name(),
+	}
+	// Ensure file is not populated
+	if _, err := newAccessController(options); err != nil {
+		t.Fatalf("error creating access controller %v", err)
+	}
+	content, err := ioutil.ReadAll(tempFile)
+	if err != nil {
+		t.Fatalf("failed to read file %v", err)
+	}
+	if !bytes.Equal([]byte{}, content) {
+		t.Fatalf("htpasswd file should not be populated %v", string(content))
+	}
+	if err := os.Remove(tempFile.Name()); err != nil {
+		t.Fatalf("failed to remove temp file %v", err)
+	}
+
+	// Ensure htpasswd file is populated
+	if _, err := newAccessController(options); err != nil {
+		t.Fatalf("error creating access controller %v", err)
+	}
+	content, err = ioutil.ReadFile(tempFile.Name())
+	if err != nil {
+		t.Fatalf("failed to read file %v", err)
+	}
+	if !bytes.HasPrefix(content, []byte("docker:$2a$")) {
+		t.Fatalf("failed to find default user in file %s", string(content))
+	}
 }

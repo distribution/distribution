@@ -31,7 +31,7 @@ func TestBroadcaster(t *testing.T) {
 			wg.Add(1)
 			go func(block ...Event) {
 				if err := b.Write(block...); err != nil {
-					t.Fatalf("error writing block of length %d: %v", len(block), err)
+					t.Errorf("error writing block of length %d: %v", len(block), err)
 				}
 				wg.Done()
 			}(block...)
@@ -41,6 +41,9 @@ func TestBroadcaster(t *testing.T) {
 	}
 
 	wg.Wait() // Wait until writes complete
+	if t.Failed() {
+		t.FailNow()
+	}
 	checkClose(t, b)
 
 	// Iterate through the sinks and check that they all have the expected length.
@@ -79,7 +82,7 @@ func TestEventQueue(t *testing.T) {
 			wg.Add(1)
 			go func(block ...Event) {
 				if err := eq.Write(block...); err != nil {
-					t.Fatalf("error writing event block: %v", err)
+					t.Errorf("error writing event block: %v", err)
 				}
 				wg.Done()
 			}(block...)
@@ -89,6 +92,9 @@ func TestEventQueue(t *testing.T) {
 	}
 
 	wg.Wait()
+	if t.Failed() {
+		t.FailNow()
+	}
 	checkClose(t, eq)
 
 	ts.mu.Lock()
@@ -177,7 +183,7 @@ func TestRetryingSink(t *testing.T) {
 			go func(block ...Event) {
 				defer wg.Done()
 				if err := s.Write(block...); err != nil {
-					t.Fatalf("error writing event block: %v", err)
+					t.Errorf("error writing event block: %v", err)
 				}
 			}(block...)
 
@@ -186,6 +192,9 @@ func TestRetryingSink(t *testing.T) {
 	}
 
 	wg.Wait()
+	if t.Failed() {
+		t.FailNow()
+	}
 	checkClose(t, s)
 
 	ts.mu.Lock()

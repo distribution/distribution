@@ -58,10 +58,11 @@ type App struct {
 
 	Config *configuration.Configuration
 
-	router           *mux.Router                 // main application router, configured with dispatchers
-	driver           storagedriver.StorageDriver // driver maintains the app global storage driver instance.
-	registry         distribution.Namespace      // registry is the primary registry backend for the app instance.
-	accessController auth.AccessController       // main access controller for application
+	router           *mux.Router                    // main application router, configured with dispatchers
+	driver           storagedriver.StorageDriver    // driver maintains the app global storage driver instance.
+	registry         distribution.Namespace         // registry is the primary registry backend for the app instance.
+	repoRemover      distribution.RepositoryRemover // repoRemover provides ability to delete repos
+	accessController auth.AccessController          // main access controller for application
 
 	// httpHost is a parsed representation of the http.host parameter from
 	// the configuration. Only the Scheme and Host fields are used.
@@ -175,6 +176,10 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	}
 
 	options = append(options, storage.Schema1SigningKey(app.trustKey))
+
+	if config.Compatibility.Schema1.Enabled {
+		options = append(options, storage.EnableSchema1)
+	}
 
 	if config.HTTP.Host != "" {
 		u, err := url.Parse(config.HTTP.Host)
@@ -302,7 +307,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 
 	authType := config.Auth.Type()
 
-	if authType != "" {
+	if authType != "" && !strings.EqualFold(authType, "none") {
 		accessController, err := auth.GetAccessController(config.Auth.Type(), config.Auth.Parameters())
 		if err != nil {
 			panic(fmt.Sprintf("unable to configure authorization (%s): %v", authType, err))
@@ -319,6 +324,11 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		}
 		app.isCache = true
 		dcontext.GetLogger(app).Info("Registry configured as a proxy cache to ", config.Proxy.RemoteURL)
+	}
+	var ok bool
+	app.repoRemover, ok = app.registry.(distribution.RepositoryRemover)
+	if !ok {
+		dcontext.GetLogger(app).Warnf("Registry does not implement RempositoryRemover. Will not be able to delete repos and tags")
 	}
 
 	return app
@@ -545,7 +555,7 @@ func (app *App) configureRedis(configuration *configuration.Configuration) {
 			_, err := c.Do("PING")
 			return err
 		},
-		Wait: false, // if a connection is not avialable, proceed without cache.
+		Wait: false, // if a connection is not available, proceed without cache.
 	}
 
 	app.redis = pool
@@ -696,8 +706,9 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 			}
 
 			// assign and decorate the authorized repository with an event bridge.
-			context.Repository = notifications.Listen(
+			context.Repository, context.RepositoryRemover = notifications.Listen(
 				repository,
+				context.App.repoRemover,
 				app.eventBridge(context, r))
 
 			context.Repository, err = applyRepoMiddleware(app, context.Repository, app.Config.Middleware["repository"])
@@ -742,20 +753,18 @@ func (app *App) logError(ctx context.Context, errors errcode.Errors) {
 	for _, e1 := range errors {
 		var c context.Context
 
-		switch e1.(type) {
+		switch e := e1.(type) {
 		case errcode.Error:
-			e, _ := e1.(errcode.Error)
 			c = context.WithValue(ctx, errCodeKey{}, e.Code)
-			c = context.WithValue(c, errMessageKey{}, e.Code.Message())
+			c = context.WithValue(c, errMessageKey{}, e.Message)
 			c = context.WithValue(c, errDetailKey{}, e.Detail)
 		case errcode.ErrorCode:
-			e, _ := e1.(errcode.ErrorCode)
 			c = context.WithValue(ctx, errCodeKey{}, e)
 			c = context.WithValue(c, errMessageKey{}, e.Message())
 		default:
 			// just normal go 'error'
 			c = context.WithValue(ctx, errCodeKey{}, errcode.ErrorCodeUnknown)
-			c = context.WithValue(c, errMessageKey{}, e1.Error())
+			c = context.WithValue(c, errMessageKey{}, e.Error())
 		}
 
 		c = dcontext.WithLogger(c, dcontext.GetLogger(c,
@@ -836,7 +845,7 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 		switch err := err.(type) {
 		case auth.Challenge:
 			// Add the appropriate WWW-Auth header
-			err.SetHeaders(w)
+			err.SetHeaders(r, w)
 
 			if err := errcode.ServeJSON(w, errcode.ErrorCodeUnauthorized.WithDetail(accessRecords)); err != nil {
 				dcontext.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
@@ -869,7 +878,7 @@ func (app *App) eventBridge(ctx *Context, r *http.Request) notifications.Listene
 	}
 	request := notifications.NewRequestRecord(dcontext.GetRequestID(ctx), r)
 
-	return notifications.NewBridge(ctx.urlBuilder, app.events.source, actor, request, app.events.sink)
+	return notifications.NewBridge(ctx.urlBuilder, app.events.source, actor, request, app.events.sink, app.Config.Notifications.EventConfig.IncludeReferences)
 }
 
 // nameRequired returns true if the route requires a name.
@@ -986,7 +995,7 @@ func applyStorageMiddleware(driver storagedriver.StorageDriver, middlewares []co
 
 // uploadPurgeDefaultConfig provides a default configuration for upload
 // purging to be used in the absence of configuration in the
-// confifuration file
+// configuration file
 func uploadPurgeDefaultConfig() map[interface{}]interface{} {
 	config := map[interface{}]interface{}{}
 	config["enabled"] = true

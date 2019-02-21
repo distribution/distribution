@@ -5,12 +5,13 @@ import (
 	"crypto/rand"
 	"encoding/json"
 	"fmt"
-	dcontext "github.com/docker/distribution/context"
 	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	dcontext "github.com/docker/distribution/context"
 
 	"reflect" // used as a replacement for testify
 )

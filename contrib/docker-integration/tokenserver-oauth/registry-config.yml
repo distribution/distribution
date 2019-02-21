@@ -10,6 +10,9 @@ http:
     tls:
         certificate: "/etc/docker/registry/localregistry.cert"
         key: "/etc/docker/registry/localregistry.key"
+compatibility:
+    schema1:
+        enabled: true
 auth:
     token:
         realm: "https://auth.localregistry:5559/token/"

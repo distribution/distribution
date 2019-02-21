@@ -623,3 +623,83 @@ func TestMatch(t *testing.T) {
 		}
 	}
 }
+
+func TestParseDockerRef(t *testing.T) {
+	testcases := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "nothing",
+			input:    "busybox",
+			expected: "docker.io/library/busybox:latest",
+		},
+		{
+			name:     "tag only",
+			input:    "busybox:latest",
+			expected: "docker.io/library/busybox:latest",
+		},
+		{
+			name:     "digest only",
+			input:    "busybox@sha256:e6693c20186f837fc393390135d8a598a96a833917917789d63766cab6c59582",
+			expected: "docker.io/library/busybox@sha256:e6693c20186f837fc393390135d8a598a96a833917917789d63766cab6c59582",
+		},
+		{
+			name:     "path only",
+			input:    "library/busybox",
+			expected: "docker.io/library/busybox:latest",
+		},
+		{
+			name:     "hostname only",
+			input:    "docker.io/busybox",
+			expected: "docker.io/library/busybox:latest",
+		},
+		{
+			name:     "no tag",
+			input:    "docker.io/library/busybox",
+			expected: "docker.io/library/busybox:latest",
+		},
+		{
+			name:     "no path",
+			input:    "docker.io/busybox:latest",
+			expected: "docker.io/library/busybox:latest",
+		},
+		{
+			name:     "no hostname",
+			input:    "library/busybox:latest",
+			expected: "docker.io/library/busybox:latest",
+		},
+		{
+			name:     "full reference with tag",
+			input:    "docker.io/library/busybox:latest",
+			expected: "docker.io/library/busybox:latest",
+		},
+		{
+			name:     "gcr reference without tag",
+			input:    "gcr.io/library/busybox",
+			expected: "gcr.io/library/busybox:latest",
+		},
+		{
+			name:     "both tag and digest",
+			input:    "gcr.io/library/busybox:latest@sha256:e6693c20186f837fc393390135d8a598a96a833917917789d63766cab6c59582",
+			expected: "gcr.io/library/busybox@sha256:e6693c20186f837fc393390135d8a598a96a833917917789d63766cab6c59582",
+		},
+	}
+	for _, test := range testcases {
+		t.Run(test.name, func(t *testing.T) {
+			normalized, err := ParseDockerRef(test.input)
+			if err != nil {
+				t.Fatal(err)
+			}
+			output := normalized.String()
+			if output != test.expected {
+				t.Fatalf("expected %q to be parsed as %v, got %v", test.input, test.expected, output)
+			}
+			_, err = Parse(output)
+			if err != nil {
+				t.Fatalf("%q should be a valid reference, but got an error: %v", output, err)
+			}
+		})
+	}
+}

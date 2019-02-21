@@ -1,0 +1,74 @@
+# commit to be tagged for new release
+commit = "HEAD"
+
+project_name = "registry"
+github_repo = "docker/distribution"
+
+# previous release
+previous = "v2.6.0"
+
+pre_release = false
+
+preface = """\
+The 2.7 registry release has been a long time coming and represents both
+a long gap since the previous release and a renewed effort to release
+regularly. The maintainers were committed to get OCI support into the
+next release and thanks to much effort in the community that has
+been accomplished.
+
+## OCI Support
+
+### Push and Pull of OCI Images
+
+The registry now allows pushing and pulling OCI images. OCI images will always
+be preserved exactly without conversion to older types. With this change,
+clients which implement OCI can feel comfortable creating OCI images as part of
+their container image build process.
+
+### Specification Donation
+
+The Distribution specification which has had 4 years of review, implementation,
+and production use is now part of OCI. As part of that move, specification
+changes will no longer be accepted in the open source registry and should
+instead go to [OCI's distribution-spec](https://github.com/opencontainers/distribution-spec/issues).
+
+## Bug Fixes and Improvements
+
+### General
+* Update Go version to 1.11
+* Switch to multi-stage Dockerfile
+* Validations enabled by default with new `disabled` config option
+* Optimize health check performance
+* Create separate permission for deleting objects in a repo
+* Fix storage driver error propagation for manifest GETs
+* Fix forwarded header resolution
+* Add prometheus metrics
+* Disable schema1 manifest by default (this affects docker versions `1.9` and older)
+* Graceful shutdown
+* TLS: remove ciphers that do not support perfect forward secrecy
+* Fix registry stripping newlines from manifests
+* Add bugsnag logrus hook
+* Support ARM builds
+
+### Storage Driver
+* OSS: fix current directory showing up in OSS driver.List()
+* Azure: fix race condition in PutContent()
+* Azure: update vendor
+* S3: update AWS SDK and use AWS SDK to validate regions
+* S3: remove expiration tag on multi-part uploads
+* S3: improve `Walk` performance
+* S3: allow bypassing cloudfront when in the same region
+* S3: remove s3-goamz driver in favor of s3-aws
+* Swift: update vendor
+
+See changelog below for full list of changes"""
+
+# notable prs to include in the release notes, 1234 is the pr number
+[notes]
+
+[breaking]
+
+[rename_deps]
+	[rename_deps.logrus]
+	old = "github.com/Sirupsen/logrus"
+	new = "github.com/sirupsen/logrus"

@@ -50,25 +50,6 @@ func (ts *tagStore) All(ctx context.Context) ([]string, error) {
 	return tags, nil
 }
 
-// exists returns true if the specified manifest tag exists in the repository.
-func (ts *tagStore) exists(ctx context.Context, tag string) (bool, error) {
-	tagPath, err := pathFor(manifestTagCurrentPathSpec{
-		name: ts.repository.Named().Name(),
-		tag:  tag,
-	})
-
-	if err != nil {
-		return false, err
-	}
-
-	exists, err := exists(ctx, ts.blobStore.driver, tagPath)
-	if err != nil {
-		return false, err
-	}
-
-	return exists, nil
-}
-
 // Tag tags the digest with the given tag, updating the the store to point at
 // the current tag. The digest must point to a manifest.
 func (ts *tagStore) Tag(ctx context.Context, tag string, desc distribution.Descriptor) error {
@@ -179,7 +160,7 @@ func (ts *tagStore) Lookup(ctx context.Context, desc distribution.Descriptor) ([
 			tag:  tag,
 		}
 
-		tagLinkPath, err := pathFor(tagLinkPathSpec)
+		tagLinkPath, _ := pathFor(tagLinkPathSpec)
 		tagDigest, err := ts.blobStore.readlink(ctx, tagLinkPath)
 		if err != nil {
 			switch err.(type) {

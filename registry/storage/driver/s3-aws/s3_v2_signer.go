@@ -39,12 +39,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const (
-	signatureVersion = "2"
-	signatureMethod  = "HmacSHA1"
-	timeFormat       = "2006-01-02T15:04:05Z"
-)
-
 type signer struct {
 	// Values that must be populated from the request
 	Request      *http.Request
@@ -209,9 +203,9 @@ func (v2 *signer) Sign() error {
 	v2.signature = base64.StdEncoding.EncodeToString(hash.Sum(nil))
 
 	if expires {
-		params["Signature"] = []string{string(v2.signature)}
+		params["Signature"] = []string{v2.signature}
 	} else {
-		headers["Authorization"] = []string{"AWS " + accessKey + ":" + string(v2.signature)}
+		headers["Authorization"] = []string{"AWS " + accessKey + ":" + v2.signature}
 	}
 
 	log.WithFields(log.Fields{

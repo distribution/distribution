@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"io"
 	mrand "math/rand"
-	"os"
 	"testing"
 
 	"github.com/docker/distribution/context"
@@ -72,7 +71,7 @@ func TestFileReaderSeek(t *testing.T) {
 	for _, repitition := range mrand.Perm(repititions - 1) {
 		targetOffset := int64(len(pattern) * repitition)
 		// Seek to a multiple of pattern size and read pattern size bytes
-		offset, err := fr.Seek(targetOffset, os.SEEK_SET)
+		offset, err := fr.Seek(targetOffset, io.SeekStart)
 		if err != nil {
 			t.Fatalf("unexpected error seeking: %v", err)
 		}
@@ -97,7 +96,7 @@ func TestFileReaderSeek(t *testing.T) {
 		}
 
 		// Check offset
-		current, err := fr.Seek(0, os.SEEK_CUR)
+		current, err := fr.Seek(0, io.SeekCurrent)
 		if err != nil {
 			t.Fatalf("error checking current offset: %v", err)
 		}
@@ -107,7 +106,7 @@ func TestFileReaderSeek(t *testing.T) {
 		}
 	}
 
-	start, err := fr.Seek(0, os.SEEK_SET)
+	start, err := fr.Seek(0, io.SeekStart)
 	if err != nil {
 		t.Fatalf("error seeking to start: %v", err)
 	}
@@ -116,7 +115,7 @@ func TestFileReaderSeek(t *testing.T) {
 		t.Fatalf("expected to seek to start: %v != 0", start)
 	}
 
-	end, err := fr.Seek(0, os.SEEK_END)
+	end, err := fr.Seek(0, io.SeekEnd)
 	if err != nil {
 		t.Fatalf("error checking current offset: %v", err)
 	}
@@ -128,13 +127,13 @@ func TestFileReaderSeek(t *testing.T) {
 	// 4. Seek before start, ensure error.
 
 	// seek before start
-	before, err := fr.Seek(-1, os.SEEK_SET)
+	before, err := fr.Seek(-1, io.SeekStart)
 	if err == nil {
 		t.Fatalf("error expected, returned offset=%v", before)
 	}
 
 	// 5. Seek after end,
-	after, err := fr.Seek(1, os.SEEK_END)
+	after, err := fr.Seek(1, io.SeekEnd)
 	if err != nil {
 		t.Fatalf("unexpected error expected, returned offset=%v", after)
 	}

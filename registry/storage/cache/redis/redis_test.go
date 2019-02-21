@@ -39,7 +39,7 @@ func TestRedisBlobDescriptorCacheProvider(t *testing.T) {
 			_, err := c.Do("PING")
 			return err
 		},
-		Wait: false, // if a connection is not avialable, proceed without cache.
+		Wait: false, // if a connection is not available, proceed without cache.
 	}
 
 	// Clear the database

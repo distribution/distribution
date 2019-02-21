@@ -193,7 +193,7 @@ func makeTestEnv(t *testing.T, name string) *testEnv {
 }
 
 func makeBlob(size int) []byte {
-	blob := make([]byte, size, size)
+	blob := make([]byte, size)
 	for i := 0; i < size; i++ {
 		blob[i] = byte('A' + rand.Int()%48)
 	}
@@ -202,16 +202,6 @@ func makeBlob(size int) []byte {
 
 func init() {
 	rand.Seed(42)
-}
-
-func perm(m []distribution.Descriptor) []distribution.Descriptor {
-	for i := 0; i < len(m); i++ {
-		j := rand.Intn(i + 1)
-		tmp := m[i]
-		m[i] = m[j]
-		m[j] = tmp
-	}
-	return m
 }
 
 func populate(t *testing.T, te *testEnv, blobCount, size, numUnique int) {
@@ -350,24 +340,30 @@ func testProxyStoreServe(t *testing.T, te *testEnv, numClients int) {
 				w := httptest.NewRecorder()
 				r, err := http.NewRequest("GET", "", nil)
 				if err != nil {
-					t.Fatal(err)
+					t.Error(err)
+					return
 				}
 
 				err = te.store.ServeBlob(te.ctx, w, r, remoteBlob.Digest)
 				if err != nil {
-					t.Fatalf(err.Error())
+					t.Errorf(err.Error())
+					return
 				}
 
 				bodyBytes := w.Body.Bytes()
 				localDigest := digest.FromBytes(bodyBytes)
 				if localDigest != remoteBlob.Digest {
-					t.Fatalf("Mismatching blob fetch from proxy")
+					t.Errorf("Mismatching blob fetch from proxy")
+					return
 				}
 			}
 		}()
 	}
 
 	wg.Wait()
+	if t.Failed() {
+		t.FailNow()
+	}
 
 	remoteBlobCount := len(te.inRemote)
 	sbsMu.Lock()
@@ -404,7 +400,6 @@ func testProxyStoreServe(t *testing.T, te *testEnv, numClients int) {
 		}
 	}
 
-	localStats = te.LocalStats()
 	remoteStats = te.RemoteStats()
 
 	// Ensure remote unchanged
