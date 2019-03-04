@@ -851,6 +851,17 @@ func (b *Bucket) SignedURLWithArgs(path string, expires time.Time, params url.Va
 	return b.SignedURLWithMethod("GET", path, expires, params, headers)
 }
 
+func (b *Bucket) SignedURLWithMethodForAssumeRole(method, path string, expires time.Time, params url.Values, headers http.Header) string {
+	var uv = url.Values{}
+	if params != nil {
+		uv = params
+	}
+	if len(b.Client.SecurityToken) != 0 {
+		uv.Set("security-token", b.Client.SecurityToken)
+	}
+	return b.SignedURLWithMethod(method, path, expires, params, headers)
+}
+
 // SignedURLWithMethod returns a signed URL that allows anyone holding the URL
 // to either retrieve the object at path or make a HEAD request against it. The signature is valid until expires.
 func (b *Bucket) SignedURLWithMethod(method, path string, expires time.Time, params url.Values, headers http.Header) string {
@@ -1039,7 +1050,8 @@ func partiallyEscapedPath(path string) string {
 func (client *Client) prepare(req *request) error {
 	// Copy so they can be mutated without affecting on retries.
 	headers := copyHeader(req.headers)
-	if len(client.SecurityToken) != 0 {
+	// security-token should be in either Params or Header, cannot be in both
+	if len(req.params.Get("security-token")) == 0 && len(client.SecurityToken) != 0 {
 		headers.Set("x-oss-security-token", client.SecurityToken)
 	}
 

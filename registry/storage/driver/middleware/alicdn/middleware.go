@@ -1,12 +1,13 @@
 package middleware
 
 import (
+	"context"
 	"fmt"
 	"net/url"
 	"strings"
 	"time"
 
-	"github.com/docker/distribution/context"
+	dcontext "github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
 
@@ -99,7 +100,7 @@ func newAliCDNStorageMiddleware(storageDriver storagedriver.StorageDriver, optio
 func (ac *aliCDNStorageMiddleware) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
 
 	if ac.StorageDriver.Name() != "oss" {
-		context.GetLogger(ctx).Warn("the AliCDN middleware does not support this backend storage driver")
+		dcontext.GetLogger(ctx).Warn("the AliCDN middleware does not support this backend storage driver")
 		return ac.StorageDriver.URLFor(ctx, path, options)
 	}
 	acURL, err := ac.urlSigner.Sign(ac.baseURL+path, time.Now().Add(ac.duration))
