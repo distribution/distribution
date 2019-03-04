@@ -837,7 +837,7 @@ image manifest. An image can be pushed using the following request format:
        ...
     }
 
-The `name` and `reference` fields of the response body must match those
+The `name` and `reference` fields of the request body must match those
 specified in the URL. The `reference` field may be a "tag" or a "digest". The
 content type should match the type of the manifest being uploaded, as specified
 in [manifest-v2-1.md](manifest-v2-1.md) and [manifest-v2-2.md](manifest-v2-2.md).
