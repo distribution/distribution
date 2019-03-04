@@ -72,7 +72,7 @@ func newAliCDNStorageMiddleware(storageDriver storagedriver.StorageDriver, optio
 	urlSigner := auth.NewURLSigner(authType, privateKey)
 
 	// parse duration
-	duration := 60 * time.Minute
+	duration := 20 * time.Minute
 	d, ok := options["duration"]
 	if ok {
 		switch d := d.(type) {
