@@ -420,11 +420,11 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 		return parseError(sourcePath, err)
 	}
 
-	return d.Delete(ctx, sourcePath)
+	return d.Delete(ctx, sourcePath, false)
 }
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
-func (d *driver) Delete(ctx context.Context, path string) error {
+func (d *driver) Delete(ctx context.Context, path string, committing bool) error {
 	ossPath := d.ossPath(path)
 	listResponse, err := d.Bucket.List(ossPath, "", "", listMax)
 	if err != nil || len(listResponse.Contents) == 0 {

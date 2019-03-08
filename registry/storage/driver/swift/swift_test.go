@@ -168,7 +168,7 @@ func TestEmptyRootList(t *testing.T) {
 		t.Fatalf("unexpected error creating content: %v", err)
 	}
 
-	err = rootedDriver.Delete(ctx, filename)
+	err = rootedDriver.Delete(ctx, filename, false)
 	if err != nil {
 		t.Fatalf("failed to delete: %v", err)
 	}

@@ -151,7 +151,7 @@ func TestEmptyRootList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error creating content: %v", err)
 	}
-	defer rootedDriver.Delete(ctx, filename)
+	defer rootedDriver.Delete(ctx, filename, false)
 
 	keys, _ := emptyRootDriver.List(ctx, "/")
 	for _, path := range keys {
@@ -235,13 +235,13 @@ func TestStorageClass(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error creating content: %v", err)
 	}
-	defer standardDriver.Delete(ctx, standardFilename)
+	defer standardDriver.Delete(ctx, standardFilename, false)
 
 	err = rrDriver.PutContent(ctx, rrFilename, contents)
 	if err != nil {
 		t.Fatalf("unexpected error creating content: %v", err)
 	}
-	defer rrDriver.Delete(ctx, rrFilename)
+	defer rrDriver.Delete(ctx, rrFilename, false)
 
 	standardDriverUnwrapped := standardDriver.Base.StorageDriver.(*driver)
 	resp, err := standardDriverUnwrapped.S3.GetObject(&s3.GetObjectInput{
@@ -683,7 +683,7 @@ func TestOverThousandBlobs(t *testing.T) {
 	}
 
 	// cant actually verify deletion because read-after-delete is inconsistent, but can ensure no errors
-	err = standardDriver.Delete(ctx, "/thousandfiletest")
+	err = standardDriver.Delete(ctx, "/thousandfiletest", false)
 	if err != nil {
 		t.Fatalf("unexpected error deleting thousand files: %v", err)
 	}
@@ -709,8 +709,8 @@ func TestMoveWithMultipartCopy(t *testing.T) {
 	sourcePath := "/source"
 	destPath := "/dest"
 
-	defer d.Delete(ctx, sourcePath)
-	defer d.Delete(ctx, destPath)
+	defer d.Delete(ctx, sourcePath, false)
+	defer d.Delete(ctx, destPath, false)
 
 	// An object larger than d's MultipartCopyThresholdSize will cause d.Move() to perform a multipart copy.
 	multipartCopyThresholdSize := d.baseEmbed.Base.StorageDriver.(*driver).MultipartCopyThresholdSize

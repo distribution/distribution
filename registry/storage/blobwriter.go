@@ -79,7 +79,7 @@ func (bw *blobWriter) Commit(ctx context.Context, desc distribution.Descriptor) 
 		return distribution.Descriptor{}, err
 	}
 
-	if err := bw.removeResources(ctx); err != nil {
+	if err := bw.removeResources(ctx, true); err != nil {
 		return distribution.Descriptor{}, err
 	}
 
@@ -104,7 +104,7 @@ func (bw *blobWriter) Cancel(ctx context.Context) error {
 		dcontext.GetLogger(ctx).Errorf("error closing blobwriter: %s", err)
 	}
 
-	return bw.removeResources(ctx)
+	return bw.removeResources(ctx, false)
 }
 
 func (bw *blobWriter) Size() int64 {
@@ -350,7 +350,7 @@ func (bw *blobWriter) moveBlob(ctx context.Context, desc distribution.Descriptor
 // removeResources should clean up all resources associated with the upload
 // instance. An error will be returned if the clean up cannot proceed. If the
 // resources are already not present, no error will be returned.
-func (bw *blobWriter) removeResources(ctx context.Context) error {
+func (bw *blobWriter) removeResources(ctx context.Context, committing bool) error {
 	dataPath, err := pathFor(uploadDataPathSpec{
 		name: bw.blobStore.repository.Named().Name(),
 		id:   bw.id,
@@ -363,7 +363,7 @@ func (bw *blobWriter) removeResources(ctx context.Context) error {
 	// Resolve and delete the containing directory, which should include any
 	// upload related files.
 	dirPath := path.Dir(dataPath)
-	if err := bw.blobStore.driver.Delete(ctx, dirPath); err != nil {
+	if err := bw.blobStore.driver.Delete(ctx, dirPath, committing); err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
 			break // already gone!

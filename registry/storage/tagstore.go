@@ -112,7 +112,7 @@ func (ts *tagStore) Untag(ctx context.Context, tag string) error {
 		return err
 	}
 
-	return ts.blobStore.driver.Delete(ctx, tagPath)
+	return ts.blobStore.driver.Delete(ctx, tagPath, false)
 }
 
 // linkedBlobStore returns the linkedBlobStore for the named tag, allowing one

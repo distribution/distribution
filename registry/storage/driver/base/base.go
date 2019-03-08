@@ -198,7 +198,7 @@ func (base *Base) Move(ctx context.Context, sourcePath string, destPath string) 
 }
 
 // Delete wraps Delete of underlying storage driver.
-func (base *Base) Delete(ctx context.Context, path string) error {
+func (base *Base) Delete(ctx context.Context, path string, committing bool) error {
 	ctx, done := dcontext.WithTrace(ctx)
 	defer done("%s.Delete(%q)", base.Name(), path)
 
@@ -207,7 +207,7 @@ func (base *Base) Delete(ctx context.Context, path string) error {
 	}
 
 	start := time.Now()
-	err := base.setDriverName(base.StorageDriver.Delete(ctx, path))
+	err := base.setDriverName(base.StorageDriver.Delete(ctx, path, committing))
 	storageAction.WithValues(base.Name(), "Delete").UpdateSince(start)
 	return err
 }

@@ -423,7 +423,7 @@ func (lbs *linkedBlobStatter) Clear(ctx context.Context, dgst digest.Digest) (er
 			return err
 		}
 
-		err = lbs.blobStore.driver.Delete(ctx, blobLinkPath)
+		err = lbs.blobStore.driver.Delete(ctx, blobLinkPath, false)
 		if err != nil {
 			switch err := err.(type) {
 			case driver.PathNotFoundError:

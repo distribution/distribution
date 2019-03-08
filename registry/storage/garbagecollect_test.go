@@ -311,7 +311,7 @@ func TestGCWithMissingManifests(t *testing.T) {
 	}
 
 	_manifestsPath := path.Dir(revPath)
-	err = d.Delete(ctx, _manifestsPath)
+	err = d.Delete(ctx, _manifestsPath, false)
 	if err != nil {
 		t.Fatal(err)
 	}

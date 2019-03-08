@@ -39,7 +39,7 @@ func PurgeUploads(ctx context.Context, driver storageDriver.StorageDriver, older
 			logrus.Infof("Upload files in %s have older date (%s) than purge date (%s).  Removing upload directory.",
 				uploadData.containingDir, uploadData.startedAt, olderThan)
 			if actuallyDelete {
-				err = driver.Delete(ctx, uploadData.containingDir)
+				err = driver.Delete(ctx, uploadData.containingDir, false)
 			}
 			if err == nil {
 				deleted = append(deleted, uploadData.containingDir)

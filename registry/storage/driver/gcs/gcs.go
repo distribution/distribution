@@ -727,7 +727,7 @@ func (d *driver) listAll(context context.Context, prefix string) ([]string, erro
 }
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
-func (d *driver) Delete(context context.Context, path string) error {
+func (d *driver) Delete(context context.Context, path string, committing bool) error {
 	prefix := d.pathToDirKey(path)
 	gcsContext := d.context(context)
 	keys, err := d.listAll(gcsContext, prefix)

@@ -269,7 +269,7 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 }
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
-func (d *driver) Delete(ctx context.Context, subPath string) error {
+func (d *driver) Delete(ctx context.Context, subPath string, committing bool) error {
 	fullPath := d.fullPath(subPath)
 
 	_, err := os.Stat(fullPath)

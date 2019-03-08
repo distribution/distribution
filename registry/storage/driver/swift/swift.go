@@ -516,8 +516,13 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 	return err
 }
 
-// Delete recursively deletes all objects stored at "path" and its subpaths.
-func (d *driver) Delete(ctx context.Context, path string) error {
+// Delete deletes all objects stored at "path" and its subpaths,
+// and any segments to which they refer, unless we're committing.
+// In the commit case, we expect the segments to be also referenced
+// by a blob that was created by swift.Move, so we must keep them.
+// The reason we may see the old temporary copy of the blob object,
+// which swift.Move already deleted, is Swift's eventual consistency.
+func (d *driver) Delete(ctx context.Context, path string, committing bool) error {
 	opts := swift.ObjectsOpts{
 		Prefix: d.swiftPath(path) + "/",
 	}
@@ -536,7 +541,7 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		}
 		if _, headers, err := d.Conn.Object(d.Container, obj.Name); err == nil {
 			manifest, ok := headers["X-Object-Manifest"]
-			if ok {
+			if !committing && ok {
 				_, prefix := parseManifest(manifest)
 				segments, err := d.getAllSegments(prefix)
 				if err != nil {
@@ -862,7 +867,7 @@ func (w *writer) Cancel() error {
 		return fmt.Errorf("already committed")
 	}
 	w.cancelled = true
-	return w.driver.Delete(context.Background(), w.path)
+	return w.driver.Delete(context.Background(), w.path, false)
 }
 
 func (w *writer) Commit() error {

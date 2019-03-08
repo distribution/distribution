@@ -78,7 +78,7 @@ func (reg *registry) Remove(ctx context.Context, name reference.Named) error {
 		return err
 	}
 	repoDir := path.Join(root, name.Name())
-	return reg.driver.Delete(ctx, repoDir)
+	return reg.driver.Delete(ctx, repoDir, false)
 }
 
 // lessPath returns true if one path a is less than path b.

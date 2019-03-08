@@ -701,7 +701,7 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 	if err := d.copy(ctx, sourcePath, destPath); err != nil {
 		return err
 	}
-	return d.Delete(ctx, sourcePath)
+	return d.Delete(ctx, sourcePath, false)
 }
 
 // copy copies an object stored at sourcePath to destPath.
@@ -805,7 +805,7 @@ func min(a, b int) int {
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
 // We must be careful since S3 does not guarantee read after delete consistency
-func (d *driver) Delete(ctx context.Context, path string) error {
+func (d *driver) Delete(ctx context.Context, path string, committing bool) error {
 	s3Objects := make([]*s3.ObjectIdentifier, 0, listMax)
 
 	// manually add the given path if it's a file

@@ -42,7 +42,7 @@ func (v Vacuum) RemoveBlob(dgst string) error {
 
 	dcontext.GetLogger(v.ctx).Infof("Deleting blob: %s", blobPath)
 
-	err = v.driver.Delete(v.ctx, blobPath)
+	err = v.driver.Delete(v.ctx, blobPath, false)
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func (v Vacuum) RemoveManifest(name string, dgst digest.Digest, tags []string) e
 			}
 		}
 		dcontext.GetLogger(v.ctx).Infof("deleting manifest tag reference: %s", tagsPath)
-		err = v.driver.Delete(v.ctx, tagsPath)
+		err = v.driver.Delete(v.ctx, tagsPath, false)
 		if err != nil {
 			return err
 		}
@@ -81,7 +81,7 @@ func (v Vacuum) RemoveManifest(name string, dgst digest.Digest, tags []string) e
 		return err
 	}
 	dcontext.GetLogger(v.ctx).Infof("deleting manifest: %s", manifestPath)
-	return v.driver.Delete(v.ctx, manifestPath)
+	return v.driver.Delete(v.ctx, manifestPath, false)
 }
 
 // RemoveRepository removes a repository directory from the
@@ -93,7 +93,7 @@ func (v Vacuum) RemoveRepository(repoName string) error {
 	}
 	repoDir := path.Join(rootForRepository, repoName)
 	dcontext.GetLogger(v.ctx).Infof("Deleting repo: %s", repoDir)
-	err = v.driver.Delete(v.ctx, repoDir)
+	err = v.driver.Delete(v.ctx, repoDir, false)
 	if err != nil {
 		return err
 	}

@@ -147,7 +147,7 @@ func TestPurgeMissingStartedAt(t *testing.T) {
 		_, file := path.Split(filePath)
 
 		if file == "startedat" {
-			if err := fs.Delete(ctx, filePath); err != nil {
+			if err := fs.Delete(ctx, filePath, false); err != nil {
 				t.Fatalf("Unable to delete startedat file: %s", filePath)
 			}
 		}

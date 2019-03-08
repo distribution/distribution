@@ -165,11 +165,11 @@ func (r *regulator) Move(ctx context.Context, sourcePath string, destPath string
 }
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
-func (r *regulator) Delete(ctx context.Context, path string) error {
+func (r *regulator) Delete(ctx context.Context, path string, committing bool) error {
 	r.enter()
 	defer r.exit()
 
-	return r.StorageDriver.Delete(ctx, path)
+	return r.StorageDriver.Delete(ctx, path, committing)
 }
 
 // URLFor returns a URL which may be used to retrieve the content stored at

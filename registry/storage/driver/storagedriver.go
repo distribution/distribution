@@ -76,7 +76,7 @@ type StorageDriver interface {
 	Move(ctx context.Context, sourcePath string, destPath string) error
 
 	// Delete recursively deletes all objects stored at "path" and its subpaths.
-	Delete(ctx context.Context, path string) error
+	Delete(ctx context.Context, path string, committing bool) error
 
 	// URLFor returns a URL which may be used to retrieve the content stored at
 	// the given path, possibly using the given options.

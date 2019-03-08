@@ -223,7 +223,7 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 }
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
-func (d *driver) Delete(ctx context.Context, path string) error {
+func (d *driver) Delete(ctx context.Context, path string, committing bool) error {
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
 

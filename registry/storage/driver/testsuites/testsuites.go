@@ -131,7 +131,7 @@ func (suite *DriverSuite) TestValidPaths(c *check.C) {
 
 func (suite *DriverSuite) deletePath(c *check.C, path string) {
 	for tries := 2; tries > 0; tries-- {
-		err := suite.StorageDriver.Delete(suite.ctx, path)
+		err := suite.StorageDriver.Delete(suite.ctx, path, false)
 		if _, ok := err.(storagedriver.PathNotFoundError); ok {
 			err = nil
 		}
@@ -611,7 +611,7 @@ func (suite *DriverSuite) TestDelete(c *check.C) {
 	err := suite.StorageDriver.PutContent(suite.ctx, filename, contents)
 	c.Assert(err, check.IsNil)
 
-	err = suite.StorageDriver.Delete(suite.ctx, filename)
+	err = suite.StorageDriver.Delete(suite.ctx, filename, false)
 	c.Assert(err, check.IsNil)
 
 	_, err = suite.StorageDriver.GetContent(suite.ctx, filename)
@@ -659,7 +659,7 @@ func (suite *DriverSuite) TestURLFor(c *check.C) {
 // TestDeleteNonexistent checks that removing a nonexistent key fails.
 func (suite *DriverSuite) TestDeleteNonexistent(c *check.C) {
 	filename := randomPath(32)
-	err := suite.StorageDriver.Delete(suite.ctx, filename)
+	err := suite.StorageDriver.Delete(suite.ctx, filename, false)
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
 	c.Assert(strings.Contains(err.Error(), suite.Name()), check.Equals, true)
@@ -684,7 +684,7 @@ func (suite *DriverSuite) TestDeleteFolder(c *check.C) {
 	err = suite.StorageDriver.PutContent(suite.ctx, path.Join(dirname, filename3), contents)
 	c.Assert(err, check.IsNil)
 
-	err = suite.StorageDriver.Delete(suite.ctx, path.Join(dirname, filename1))
+	err = suite.StorageDriver.Delete(suite.ctx, path.Join(dirname, filename1), false)
 	c.Assert(err, check.IsNil)
 
 	_, err = suite.StorageDriver.GetContent(suite.ctx, path.Join(dirname, filename1))
@@ -698,7 +698,7 @@ func (suite *DriverSuite) TestDeleteFolder(c *check.C) {
 	_, err = suite.StorageDriver.GetContent(suite.ctx, path.Join(dirname, filename3))
 	c.Assert(err, check.IsNil)
 
-	err = suite.StorageDriver.Delete(suite.ctx, dirname)
+	err = suite.StorageDriver.Delete(suite.ctx, dirname, false)
 	c.Assert(err, check.IsNil)
 
 	_, err = suite.StorageDriver.GetContent(suite.ctx, path.Join(dirname, filename1))
@@ -740,7 +740,7 @@ func (suite *DriverSuite) TestDeleteOnlyDeletesSubpaths(c *check.C) {
 	err = suite.StorageDriver.PutContent(suite.ctx, path.Join(dirname, dirname+"suffix", filename), contents)
 	c.Assert(err, check.IsNil)
 
-	err = suite.StorageDriver.Delete(suite.ctx, path.Join(dirname, filename))
+	err = suite.StorageDriver.Delete(suite.ctx, path.Join(dirname, filename), false)
 	c.Assert(err, check.IsNil)
 
 	_, err = suite.StorageDriver.GetContent(suite.ctx, path.Join(dirname, filename))
@@ -751,7 +751,7 @@ func (suite *DriverSuite) TestDeleteOnlyDeletesSubpaths(c *check.C) {
 	_, err = suite.StorageDriver.GetContent(suite.ctx, path.Join(dirname, filename+"suffix"))
 	c.Assert(err, check.IsNil)
 
-	err = suite.StorageDriver.Delete(suite.ctx, path.Join(dirname, dirname))
+	err = suite.StorageDriver.Delete(suite.ctx, path.Join(dirname, dirname), false)
 	c.Assert(err, check.IsNil)
 
 	_, err = suite.StorageDriver.GetContent(suite.ctx, path.Join(dirname, dirname, filename))
@@ -983,7 +983,7 @@ func (suite *DriverSuite) benchmarkPutGetFiles(c *check.C, size int64) {
 	parentDir := randomPath(8)
 	defer func() {
 		c.StopTimer()
-		suite.StorageDriver.Delete(suite.ctx, firstPart(parentDir))
+		suite.StorageDriver.Delete(suite.ctx, firstPart(parentDir), false)
 	}()
 
 	for i := 0; i < c.N; i++ {
@@ -1021,7 +1021,7 @@ func (suite *DriverSuite) benchmarkStreamFiles(c *check.C, size int64) {
 	parentDir := randomPath(8)
 	defer func() {
 		c.StopTimer()
-		suite.StorageDriver.Delete(suite.ctx, firstPart(parentDir))
+		suite.StorageDriver.Delete(suite.ctx, firstPart(parentDir), false)
 	}()
 
 	for i := 0; i < c.N; i++ {
@@ -1057,7 +1057,7 @@ func (suite *DriverSuite) benchmarkListFiles(c *check.C, numFiles int64) {
 	parentDir := randomPath(8)
 	defer func() {
 		c.StopTimer()
-		suite.StorageDriver.Delete(suite.ctx, firstPart(parentDir))
+		suite.StorageDriver.Delete(suite.ctx, firstPart(parentDir), false)
 	}()
 
 	for i := int64(0); i < numFiles; i++ {
@@ -1096,7 +1096,7 @@ func (suite *DriverSuite) benchmarkDeleteFiles(c *check.C, numFiles int64) {
 		c.StartTimer()
 
 		// This is the operation we're benchmarking
-		err := suite.StorageDriver.Delete(suite.ctx, firstPart(parentDir))
+		err := suite.StorageDriver.Delete(suite.ctx, firstPart(parentDir), false)
 		c.Assert(err, check.IsNil)
 	}
 }
