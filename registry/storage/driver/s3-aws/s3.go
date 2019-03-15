@@ -971,6 +971,9 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 	listObjectErr := d.S3.ListObjectsV2PagesWithContext(ctx, listObjectsInput, func(objects *s3.ListObjectsV2Output, lastPage bool) bool {
 
 		var count int64
+		// KeyCount was introduced with version 2 of the GET Bucket operation in S3.
+		// Some S3 implementations don't support V2 now, so we fall back to manual
+		// calculation of the key count if required
 		if objects.KeyCount != nil {
 			count = *objects.KeyCount
 			*objectCount += *objects.KeyCount
