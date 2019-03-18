@@ -724,12 +724,12 @@ Value of `ipfilteredby` can be:
 
 `alicdn` storage middleware allows the registry to serve layers via a content delivery network provided by Alibaba Cloud. Alicdn requires the OSS storage driver.
 
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `baseurl` | yes      | The `SCHEME://HOST` at which Alicdn is served. |
-| `authtype` | yes   | The URL authentication type for Alicdn, which should be `a`, `b` or `c`.     |
-| `privatekey` | yes   | The URL authentication key for Alicdn.     |
-| `duration` | no      | An integer and unit for the duration of the Alicdn session. Valid time units are `ns`, `us` (or `µs`), `ms`, `s`, `m`, or `h`.|
+| Parameter    | Required | Description                                                             |
+|--------------|----------|-------------------------------------------------------------------------|
+| `baseurl`    | yes      | The `SCHEME://HOST` at which Alicdn is served.                          |
+| `authtype`   | yes      | The URL authentication type for Alicdn, which should be `a`, `b` or `c`. See the [Authentication configuration](https://www.alibabacloud.com/help/doc-detail/85117.htm).|
+| `privatekey` | yes      | The URL authentication key for Alicdn.                                  |
+| `duration`   | no       | An integer and unit for the duration of the Alicdn session. Valid time units are `ns`, `us` (or `µs`), `ms`, `s`, `m`, or `h`.|
 
 ### `redirect`
 

@@ -1,4 +1,4 @@
-package middleware
+package alicdn
 
 import (
 	"context"
@@ -27,7 +27,7 @@ type aliCDNStorageMiddleware struct {
 var _ storagedriver.StorageDriver = &aliCDNStorageMiddleware{}
 
 // newAliCDNStorageMiddleware constructs and returns a new AliCDN
-// layerHandler implementation.
+// StorageDriver implementation.
 // Required options: baseurl, authtype, privatekey
 // Optional options: duration
 func newAliCDNStorageMiddleware(storageDriver storagedriver.StorageDriver, options map[string]interface{}) (storagedriver.StorageDriver, error) {
