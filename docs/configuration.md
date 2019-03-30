@@ -180,6 +180,7 @@ auth:
   htpasswd:
     realm: basic-realm
     path: /path/to/htpasswd
+    authenticatepulls: true
 middleware:
   registry:
     - name: ARegistryMiddleware
@@ -588,6 +589,7 @@ auth:
   htpasswd:
     realm: basic-realm
     path: /path/to/htpasswd
+    authenticatepulls: true
 ```
 
 The `auth` option is **optional**. Possible auth providers include:
@@ -649,10 +651,11 @@ invalid, the registry will display an error and will not start.
 > configured, since basic authentication sends passwords as part of the HTTP
 > header.
 
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `realm`   | yes      | The realm in which the registry server authenticates. |
-| `path`    | yes      | The path to the `htpasswd` file to load at startup.   |
+| Parameter             | Required | Description                                           |
+|-----------------------|----------|-------------------------------------------------------|
+| `realm`               | yes      | The realm in which the registry server authenticates. |
+| `path`                | yes      | The path to the `htpasswd` file to load at startup.   |
+| `authenticatepulls`   | no       | Default is `true`, if `false` pulls will not be authenticated. Other commands will be authenticated as usual. This is convenient for small deployments wherever everybody can read the containers but very few people can create/update them  |
 
 ## `middleware`
 

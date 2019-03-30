@@ -23,11 +23,12 @@ import (
 )
 
 type accessController struct {
-	realm    string
-	path     string
-	modtime  time.Time
-	mu       sync.Mutex
-	htpasswd *htpasswd
+	realm             string
+	path              string
+	modtime           time.Time
+	mu                sync.Mutex
+	htpasswd          *htpasswd
+	authenticatepulls bool
 }
 
 var _ auth.AccessController = &accessController{}
@@ -46,10 +47,37 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 	if err := createHtpasswdFile(path); err != nil {
 		return nil, err
 	}
-	return &accessController{realm: realm.(string), path: path}, nil
+
+	authenticatepulls, present := options["authenticatepulls"]
+	if present {
+		if _, ok := authenticatepulls.(bool); !ok {
+			return nil, fmt.Errorf(`"authenticatepulls" must be either true or false`)
+		}
+	} else {
+		authenticatepulls = true
+	}
+
+	return &accessController{realm: realm.(string), path: path, authenticatepulls: authenticatepulls.(bool)}, nil
+}
+
+func onlyPull(accessRecords ...auth.Access) bool {
+	for _, access := range accessRecords {
+		if access.Action != "pull" {
+			return false
+		}
+	}
+	return true
 }
 
 func (ac *accessController) Authorized(ctx context.Context, accessRecords ...auth.Access) (context.Context, error) {
+
+	dcontext.GetLogger(ctx).Debugf("HtPasswd Authentication: authenticatepulls=%v", ac.authenticatepulls)
+	if !ac.authenticatepulls && onlyPull(accessRecords...) {
+		dcontext.GetLogger(ctx).Debugf("Bypassing authentication because authenticatepulls=false and there are only pulls in this HTTP request")
+		return auth.WithUser(ctx, auth.UserInfo{Name: "anonymous_pull"}), nil
+	}
+
+
 	req, err := dcontext.GetRequest(ctx)
 	if err != nil {
 		return nil, err
