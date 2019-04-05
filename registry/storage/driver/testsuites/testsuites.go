@@ -345,7 +345,7 @@ func (suite *DriverSuite) TestReaderWithOffset(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(readContents, check.DeepEquals, contentsChunk3)
 
-	// Ensure we get invalid offest for negative offsets.
+	// Ensure we get invalid offset for negative offsets.
 	reader, err = suite.StorageDriver.Reader(suite.ctx, filename, -1)
 	c.Assert(err, check.FitsTypeOf, storagedriver.InvalidOffsetError{})
 	c.Assert(err.(storagedriver.InvalidOffsetError).Offset, check.Equals, int64(-1))
