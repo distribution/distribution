@@ -24,13 +24,20 @@ var (
 	// and followed by an optional port.
 	domainComponentRegexp = match(`(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])`)
 
+	// DomainRegexpInner defines the inner structure of a domain without
+	// any ip address escaping or port specification.
+	DomainRegexpInner = expression(
+		domainComponentRegexp,
+		optional(repeated(literal(`.`), domainComponentRegexp)))
+
 	// DomainRegexp defines the structure of potential domain components
 	// that may be part of image names. This is purposely a subset of what is
 	// allowed by DNS to ensure backwards compatibility with Docker image
 	// names.
 	DomainRegexp = expression(
-		domainComponentRegexp,
-		optional(repeated(literal(`.`), domainComponentRegexp)),
+		either(
+			DomainRegexpInner,
+			expression(literal(`[`), DomainRegexpInner, literal(`]`))),
 		optional(literal(`:`), match(`[0-9]+`)))
 
 	// TagRegexp matches valid tag names. From docker/docker:graph/tags.go.
@@ -140,4 +147,9 @@ func capture(res ...*regexp.Regexp) *regexp.Regexp {
 // anchored anchors the regular expression by adding start and end delimiters.
 func anchored(res ...*regexp.Regexp) *regexp.Regexp {
 	return match(`^` + expression(res...).String() + `$`)
+}
+
+// either takes two regexes and branches them in a non capturing group
+func either(re1 *regexp.Regexp, re2 *regexp.Regexp) *regexp.Regexp {
+	return match(`(?:` + expression(re1).String() + `|` + expression(re2).String() + `)`)
 }
