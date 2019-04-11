@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
@@ -14,6 +15,7 @@ import (
 	"io/ioutil"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const driverName = "mongodb"
@@ -67,6 +69,12 @@ type driverMode struct {
 	refresh         bool
 }
 
+type sessionConfig struct {
+	mode          *driverMode
+	socketTimeout time.Duration
+	safe          *mgo.Safe
+}
+
 var _ storagedriver.StorageDriver = &Driver{}
 
 func (factory *mongodbDriverFactory) Create(parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
@@ -84,6 +92,23 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		databaseName = "docker"
 	}
 
+	socketTimeout := 1 * time.Minute
+	socketTimeoutAsString, ok := parameters["sockettimeout"]
+	if ok {
+		socketTimeoutAsInt, err := strconv.Atoi(fmt.Sprint(socketTimeoutAsString))
+		if err == nil {
+			socketTimeout = time.Duration(socketTimeoutAsInt) * time.Second
+		}
+	}
+
+	return New(fmt.Sprint(url), fmt.Sprint(databaseName), &sessionConfig{
+		mode:          getDriverMode(parameters),
+		socketTimeout: socketTimeout,
+		safe:          getSafe(parameters),
+	})
+}
+
+func getDriverMode(parameters map[string]interface{}) *driverMode {
 	mode, ok := parameters["dbmode"]
 	if ok {
 		dbMode := 2
@@ -100,25 +125,44 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 				dbRefresh = refreshAsBool
 			}
 		}
-		return New(fmt.Sprint(url), fmt.Sprint(databaseName), &driverMode{
+		return &driverMode{
 			consistencyMode: dbMode,
 			refresh:         dbRefresh,
-		})
+		}
 	}
-	return New(fmt.Sprint(url), fmt.Sprint(databaseName), nil)
+	return nil
+}
+
+func getSafe(parameters map[string]interface{}) *mgo.Safe {
+	safeAsString, ok := parameters["safe"]
+	if ok {
+		safe := &mgo.Safe{}
+		err := json.Unmarshal([]byte(fmt.Sprint(safeAsString)), safe)
+		if err != nil {
+			logrus.Warnf("unable to parse \"safe\" config param, using default values. Error: %v", err)
+		} else {
+			return safe
+		}
+	}
+	return &mgo.Safe{
+		W:        1,
+		WTimeout: 0,
+		FSync:    false,
+		J:        false,
+	}
 }
 
 // New constructs a new Driver.
-func New(url, databaseName string, mode *driverMode) (*Driver, error) {
+func New(url, databaseName string, config *sessionConfig) (*Driver, error) {
 	session, err := mgo.Dial(url)
 	if err != nil {
 		return nil, err
 	}
-
-	if mode != nil {
-		session.SetMode(mgo.Mode(mode.consistencyMode), mode.refresh)
+	session.SetSocketTimeout(config.socketTimeout)
+	if config.mode != nil {
+		session.SetMode(mgo.Mode(config.mode.consistencyMode), config.mode.refresh)
 	}
-
+	session.SetSafe(config.safe)
 	d := &driver{
 		session: session,
 		db:      session.DB(databaseName),

@@ -5,9 +5,11 @@ import (
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/testsuites"
 	"gopkg.in/check.v1"
+	"gopkg.in/mgo.v2"
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 const (
@@ -38,7 +40,10 @@ func init() {
 	}
 
 	mongodbDriverConstructor := func() (storagedriver.StorageDriver, error) {
-		return New(mongodbURL, "docker_registry_test", nil)
+		return New(mongodbURL, "docker_registry_test", &sessionConfig{
+			socketTimeout: 1 * time.Minute,
+			safe:          &mgo.Safe{W: 1},
+		})
 	}
 
 	// Skip MongoDB storage driver tests if environment variable parameters are not provided
