@@ -720,6 +720,17 @@ Value of `ipfilteredby` can be:
 | `aws`       | IP from AWS goes to S3 directly    |
 | `awsregion` | IP from certain AWS regions goes to S3 directly, use together with `awsregion`. |
 
+### `alicdn`
+
+`alicdn` storage middleware allows the registry to serve layers via a content delivery network provided by Alibaba Cloud. Alicdn requires the OSS storage driver.
+
+| Parameter    | Required | Description                                                             |
+|--------------|----------|-------------------------------------------------------------------------|
+| `baseurl`    | yes      | The `SCHEME://HOST` at which Alicdn is served.                          |
+| `authtype`   | yes      | The URL authentication type for Alicdn, which should be `a`, `b` or `c`. See the [Authentication configuration](https://www.alibabacloud.com/help/doc-detail/85117.htm).|
+| `privatekey` | yes      | The URL authentication key for Alicdn.                                  |
+| `duration`   | no       | An integer and unit for the duration of the Alicdn session. Valid time units are `ns`, `us` (or `µs`), `ms`, `s`, `m`, or `h`.|
+
 ### `redirect`
 
 You can use the `redirect` storage middleware to specify a custom URL to a
