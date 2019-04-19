@@ -98,7 +98,7 @@ func (r *registry) Repositories(ctx context.Context, entries []string, last stri
 		return 0, err
 	}
 
-	resp, err := r.client.Get(u)
+	resp, err := getWithContext(ctx, r.client, u)
 	if err != nil {
 		return 0, err
 	}
@@ -214,7 +214,7 @@ func (t *tags) All(ctx context.Context) ([]string, error) {
 	}
 
 	for {
-		resp, err := t.client.Get(listURL.String())
+		resp, err := getWithContext(ctx, t.client, listURL.String())
 		if err != nil {
 			return tags, err
 		}
@@ -307,7 +307,7 @@ func (t *tags) Get(ctx context.Context, tag string) (distribution.Descriptor, er
 	}
 
 	newRequest := func(method string) (*http.Response, error) {
-		req, err := http.NewRequest(method, u, nil)
+		req, err := newRequestWithContext(ctx, method, u, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -376,7 +376,7 @@ func (ms *manifests) Exists(ctx context.Context, dgst digest.Digest) (bool, erro
 		return false, err
 	}
 
-	resp, err := ms.client.Head(u)
+	resp, err := headWithContext(ctx, ms.client, u)
 	if err != nil {
 		return false, err
 	}
@@ -467,7 +467,7 @@ func (ms *manifests) Get(ctx context.Context, dgst digest.Digest, options ...dis
 		return nil, err
 	}
 
-	req, err := http.NewRequest("GET", u, nil)
+	req, err := newRequestWithContext(ctx, "GET", u, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -552,7 +552,7 @@ func (ms *manifests) Put(ctx context.Context, m distribution.Manifest, options .
 		return "", err
 	}
 
-	putRequest, err := http.NewRequest("PUT", manifestURL, bytes.NewReader(p))
+	putRequest, err := newRequestWithContext(ctx, "PUT", manifestURL, bytes.NewReader(p))
 	if err != nil {
 		return "", err
 	}
@@ -587,7 +587,7 @@ func (ms *manifests) Delete(ctx context.Context, dgst digest.Digest) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("DELETE", u, nil)
+	req, err := newRequestWithContext(ctx, "DELETE", u, nil)
 	if err != nil {
 		return err
 	}
@@ -657,7 +657,7 @@ func (bs *blobs) Open(ctx context.Context, dgst digest.Digest) (distribution.Rea
 		return nil, err
 	}
 
-	return transport.NewHTTPReadSeeker(bs.client, blobURL,
+	return transport.NewHTTPReadSeeker(ctx, bs.client, blobURL,
 		func(resp *http.Response) error {
 			if resp.StatusCode == http.StatusNotFound {
 				return distribution.ErrBlobUnknown
@@ -833,7 +833,7 @@ func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (distributi
 		return distribution.Descriptor{}, err
 	}
 
-	resp, err := bs.client.Head(u)
+	resp, err := headWithContext(ctx, bs.client, u)
 	if err != nil {
 		return distribution.Descriptor{}, err
 	}
@@ -885,7 +885,7 @@ func (bs *blobStatter) Clear(ctx context.Context, dgst digest.Digest) error {
 		return err
 	}
 
-	req, err := http.NewRequest("DELETE", blobURL, nil)
+	req, err := newRequestWithContext(ctx, "DELETE", blobURL, nil)
 	if err != nil {
 		return err
 	}
@@ -904,4 +904,28 @@ func (bs *blobStatter) Clear(ctx context.Context, dgst digest.Digest) error {
 
 func (bs *blobStatter) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
 	return nil
+}
+
+func newRequestWithContext(ctx context.Context, method, url string, body io.Reader) (*http.Request, error) {
+	req, err := http.NewRequest(method, url, body)
+	if err != nil {
+		return nil, err
+	}
+	return req.WithContext(ctx), nil
+}
+
+func headWithContext(ctx context.Context, client *http.Client, url string) (resp *http.Response, err error) {
+	req, err := newRequestWithContext(ctx, "HEAD", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	return client.Do(req)
+}
+
+func getWithContext(ctx context.Context, client *http.Client, url string) (resp *http.Response, err error) {
+	req, err := newRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	return client.Do(req)
 }
