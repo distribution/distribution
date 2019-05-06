@@ -671,7 +671,7 @@ func (m *Manager) verify(host string) (cert *tls.Certificate, refreshTime time.T
 	}
 	c.SetChallengeProvider(acme.TLSSNI01, tlsProvider{m})
 	c.ExcludeChallenges([]acme.Challenge{acme.HTTP01})
-	acmeCert, errmap := c.ObtainCertificate([]string{host}, true, nil)
+	acmeCert, errmap := c.ObtainCertificate([]string{host}, true, nil, false)
 	if len(errmap) > 0 {
 		if debug {
 			log.Printf("ObtainCertificate %v => %v", host, errmap)
