@@ -799,7 +799,18 @@ func (bs *blobs) Create(ctx context.Context, options ...distribution.BlobCreateO
 }
 
 func (bs *blobs) Resume(ctx context.Context, id string) (distribution.BlobWriter, error) {
-	panic("not implemented")
+	location, err := bs.ub.BuildBlobUploadChunkURL(bs.name, id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &httpBlobUpload{
+		statter:   bs.statter,
+		client:    bs.client,
+		uuid:      id,
+		startedAt: time.Now(),
+		location:  location,
+	}, nil
 }
 
 func (bs *blobs) Delete(ctx context.Context, dgst digest.Digest) error {
