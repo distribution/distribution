@@ -1,6 +1,7 @@
 package token
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/x509"
@@ -11,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"text/template"
 
 	dcontext "github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/auth"
@@ -105,7 +107,18 @@ func (ac authChallenge) challengeParams(r *http.Request) string {
 	} else {
 		realm = ac.realm
 	}
-	str := fmt.Sprintf("Bearer realm=%q,service=%q", realm, ac.service)
+
+	t := template.Must(template.New("realm").Parse(realm))
+
+	var parsedRealm bytes.Buffer
+
+	err := t.Execute(&parsedRealm, map[string]string{"Host": r.Host})
+
+	if err != nil {
+		panic(fmt.Errorf("execute token realm template error: %s", err))
+	}
+
+	str := fmt.Sprintf("Bearer realm=%q,service=%q", parsedRealm.String(), ac.service)
 
 	if scope := ac.accessSet.scopeParam(); scope != "" {
 		str = fmt.Sprintf("%s,scope=%q", str, scope)
