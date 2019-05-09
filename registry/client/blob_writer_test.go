@@ -209,3 +209,91 @@ func TestUploadReadFrom(t *testing.T) {
 		t.Fatalf("Unexpected response status: %s, expected %s", uploadErr.Status, expected)
 	}
 }
+
+func TestUploadSize(t *testing.T) {
+	_, b := newRandomBlob(64)
+	readFromLocationPath := "/v2/test/upload/readfrom/uploads/testid"
+	writeLocationPath := "/v2/test/upload/readfrom/uploads/testid"
+
+	m := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
+		{
+			Request: testutil.Request{
+				Method: "GET",
+				Route:  "/v2/",
+			},
+			Response: testutil.Response{
+				StatusCode: http.StatusOK,
+				Headers: http.Header(map[string][]string{
+					"Docker-Distribution-API-Version": {"registry/2.0"},
+				}),
+			},
+		},
+		{
+			Request: testutil.Request{
+				Method: "PATCH",
+				Route:  readFromLocationPath,
+				Body:   b,
+			},
+			Response: testutil.Response{
+				StatusCode: http.StatusAccepted,
+				Headers: http.Header(map[string][]string{
+					"Docker-Upload-UUID": {"46603072-7a1b-4b41-98f9-fd8a7da89f9b"},
+					"Location":           {readFromLocationPath},
+					"Range":              {"0-63"},
+				}),
+			},
+		},
+		{
+			Request: testutil.Request{
+				Method: "PATCH",
+				Route:  writeLocationPath,
+				Body:   b,
+			},
+			Response: testutil.Response{
+				StatusCode: http.StatusAccepted,
+				Headers: http.Header(map[string][]string{
+					"Docker-Upload-UUID": {"46603072-7a1b-4b41-98f9-fd8a7da89f9b"},
+					"Location":           {writeLocationPath},
+					"Range":              {"0-63"},
+				}),
+			},
+		},
+	})
+
+	e, c := testServer(m)
+	defer c()
+
+	// Writing with ReadFrom
+	blobUpload := &httpBlobUpload{
+		client:   &http.Client{},
+		location: e + readFromLocationPath,
+	}
+
+	if blobUpload.Size() != 0 {
+		t.Fatalf("Wrong size returned from Size: %d, expected 0", blobUpload.Size())
+	}
+
+	_, err := blobUpload.ReadFrom(bytes.NewReader(b))
+	if err != nil {
+		t.Fatalf("Error calling ReadFrom: %s", err)
+	}
+
+	if blobUpload.Size() != 64 {
+		t.Fatalf("Wrong size returned from Size: %d, expected 64", blobUpload.Size())
+	}
+
+	// Writing with Write
+	blobUpload = &httpBlobUpload{
+		client:   &http.Client{},
+		location: e + writeLocationPath,
+	}
+
+	_, err = blobUpload.Write(b)
+	if err != nil {
+		t.Fatalf("Error calling Write: %s", err)
+	}
+
+	if blobUpload.Size() != 64 {
+		t.Fatalf("Wrong size returned from Size: %d, expected 64", blobUpload.Size())
+	}
+}
