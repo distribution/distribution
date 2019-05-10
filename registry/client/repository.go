@@ -667,7 +667,24 @@ func (bs *blobs) Open(ctx context.Context, dgst digest.Digest) (distribution.Rea
 }
 
 func (bs *blobs) ServeBlob(ctx context.Context, w http.ResponseWriter, r *http.Request, dgst digest.Digest) error {
-	panic("not implemented")
+	desc, err := bs.statter.Stat(ctx, dgst)
+	if err != nil {
+		return err
+	}
+
+	blob, err := bs.Open(ctx, dgst)
+	if err != nil {
+		return err
+	}
+	defer blob.Close()
+
+	w.Header().Set("Content-Length", strconv.FormatInt(desc.Size, 10))
+	w.Header().Set("Content-Type", desc.MediaType)
+	w.Header().Set("Docker-Content-Digest", dgst.String())
+	w.Header().Set("Etag", dgst.String())
+
+	_, err = io.CopyN(w, blob, desc.Size)
+	return err
 }
 
 func (bs *blobs) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
