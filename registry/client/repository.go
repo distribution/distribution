@@ -672,16 +672,20 @@ func (bs *blobs) ServeBlob(ctx context.Context, w http.ResponseWriter, r *http.R
 		return err
 	}
 
+	w.Header().Set("Content-Length", strconv.FormatInt(desc.Size, 10))
+	w.Header().Set("Content-Type", desc.MediaType)
+	w.Header().Set("Docker-Content-Digest", dgst.String())
+	w.Header().Set("Etag", dgst.String())
+
+	if r.Method == http.MethodHead {
+		return nil
+	}
+
 	blob, err := bs.Open(ctx, dgst)
 	if err != nil {
 		return err
 	}
 	defer blob.Close()
-
-	w.Header().Set("Content-Length", strconv.FormatInt(desc.Size, 10))
-	w.Header().Set("Content-Type", desc.MediaType)
-	w.Header().Set("Docker-Content-Digest", dgst.String())
-	w.Header().Set("Etag", dgst.String())
 
 	_, err = io.CopyN(w, blob, desc.Size)
 	return err
