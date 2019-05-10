@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -57,6 +58,7 @@ func addTestFetch(repo string, dgst digest.Digest, content []byte, m *testutil.R
 			Body:       content,
 			Headers: http.Header(map[string][]string{
 				"Content-Length": {fmt.Sprint(len(content))},
+				"Content-Type":   {"application/octet-stream"},
 				"Last-Modified":  {time.Now().Add(-1 * time.Second).Format(time.ANSIC)},
 			}),
 		},
@@ -71,6 +73,7 @@ func addTestFetch(repo string, dgst digest.Digest, content []byte, m *testutil.R
 			StatusCode: http.StatusOK,
 			Headers: http.Header(map[string][]string{
 				"Content-Length": {fmt.Sprint(len(content))},
+				"Content-Type":   {"application/octet-stream"},
 				"Last-Modified":  {time.Now().Add(-1 * time.Second).Format(time.ANSIC)},
 			}),
 		},
@@ -97,6 +100,56 @@ func addTestCatalog(route string, content []byte, link string, m *testutil.Reque
 			Headers:    http.Header(headers),
 		},
 	})
+}
+
+func TestBlobServeBlob(t *testing.T) {
+	dgst, blob := newRandomBlob(1024)
+	var m testutil.RequestResponseMap
+	addTestFetch("test.example.com/repo1", dgst, blob, &m)
+
+	e, c := testServer(m)
+	defer c()
+
+	ctx := context.Background()
+	repo, _ := reference.WithName("test.example.com/repo1")
+	r, err := NewRepository(repo, e, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	l := r.Blobs(ctx)
+
+	resp := httptest.NewRecorder()
+	req := httptest.NewRequest("GET", "/", nil)
+
+	err = l.ServeBlob(ctx, resp, req, dgst)
+	if err != nil {
+		t.Errorf("Error serving blob: %s", err.Error())
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		t.Errorf("Error reading response body: %s", err.Error())
+	}
+	if string(body) != string(blob) {
+		t.Errorf("Unexpected response body. Got %q, expected %q", string(body), string(blob))
+	}
+
+	expectedHeaders := []struct {
+		Name  string
+		Value string
+	}{
+		{Name: "Content-Length", Value: "1024"},
+		{Name: "Content-Type", Value: "application/octet-stream"},
+		{Name: "Docker-Content-Digest", Value: dgst.String()},
+		{Name: "Etag", Value: dgst.String()},
+	}
+
+	for _, h := range expectedHeaders {
+		if resp.Header().Get(h.Name) != h.Value {
+			t.Errorf("Unexpected %s. Got %s, expected %s", h.Name, resp.Header().Get(h.Name), h.Value)
+		}
+	}
+
 }
 
 func TestBlobDelete(t *testing.T) {
