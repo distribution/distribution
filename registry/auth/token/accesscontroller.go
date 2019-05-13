@@ -101,7 +101,7 @@ func (ac authChallenge) Status() int {
 // the WWW-Authenticate response challenge header.
 // See https://tools.ietf.org/html/rfc6750#section-3
 func (ac authChallenge) challengeParams(r *http.Request) string {
-	var realm string
+	var realm, str string
 	if ac.autoRedirect {
 		realm = fmt.Sprintf("https://%s/auth/token", r.Host)
 	} else {
@@ -115,10 +115,13 @@ func (ac authChallenge) challengeParams(r *http.Request) string {
 	err := t.Execute(&parsedRealm, map[string]string{"Host": r.Host})
 
 	if err != nil {
-		panic(fmt.Errorf("execute token realm template error: %s", err))
-	}
+		fmt.Println("[ERROR] execute token realm template error: %s", err)
+		str = fmt.Sprintf("Bearer realm=%q,service=%q", parsedRealm.String(), ac.service)
 
-	str := fmt.Sprintf("Bearer realm=%q,service=%q", parsedRealm.String(), ac.service)
+	} else {
+		str = fmt.Sprintf("Bearer realm=%q,service=%q", realm, ac.service)
+
+	}
 
 	if scope := ac.accessSet.scopeParam(); scope != "" {
 		str = fmt.Sprintf("%s,scope=%q", str, scope)

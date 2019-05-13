@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package storagepath;
+
+service StoragePath {
+  rpc GetDockerStoragePath (DockerStoragePathRequest) returns (DockerStoragePathReply) {}
+}
+
+message DockerStoragePathRequest {
+  string host = 1;
+  string subPath = 2;
+}
+
+message DockerStoragePathReply {
+  string path = 1;
+}
