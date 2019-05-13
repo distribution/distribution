@@ -89,6 +89,10 @@ type Configuration struct {
 		// receives a stop signal
 		DrainTimeout time.Duration `yaml:"draintimeout,omitempty"`
 
+		// URL to 302 Redirect in case a browser accesses / of the repository
+		// If this setting is missing, it will return an empty HTTP 200 message
+		RootRedirectURL string `yaml:"rootredirecturl,omitempty"`
+
 		// TLS instructs the http server to listen with a TLS configuration.
 		// This only support simple tls configuration with a cert and key.
 		// Mostly, this is useful for testing situations or simple deployments

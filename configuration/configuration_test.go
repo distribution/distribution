@@ -72,14 +72,15 @@ var configStruct = Configuration{
 		},
 	},
 	HTTP: struct {
-		Addr         string        `yaml:"addr,omitempty"`
-		Net          string        `yaml:"net,omitempty"`
-		Host         string        `yaml:"host,omitempty"`
-		Prefix       string        `yaml:"prefix,omitempty"`
-		Secret       string        `yaml:"secret,omitempty"`
-		RelativeURLs bool          `yaml:"relativeurls,omitempty"`
-		DrainTimeout time.Duration `yaml:"draintimeout,omitempty"`
-		TLS          struct {
+		Addr            string        `yaml:"addr,omitempty"`
+		Net             string        `yaml:"net,omitempty"`
+		Host            string        `yaml:"host,omitempty"`
+		Prefix          string        `yaml:"prefix,omitempty"`
+		Secret          string        `yaml:"secret,omitempty"`
+		RelativeURLs    bool          `yaml:"relativeurls,omitempty"`
+		DrainTimeout    time.Duration `yaml:"draintimeout,omitempty"`
+		RootRedirectURL string        `yaml:"rootredirecturl,omitempty"`
+		TLS             struct {
 			Certificate string   `yaml:"certificate,omitempty"`
 			Key         string   `yaml:"key,omitempty"`
 			ClientCAs   []string `yaml:"clientcas,omitempty"`

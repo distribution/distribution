@@ -88,6 +88,17 @@ type App struct {
 	readOnly bool
 }
 
+func rootRedirectURLHandler(w http.ResponseWriter, r *http.Request, url string) {
+	if url != "" {
+		http.Redirect(w, r, url, http.StatusFound)
+	} else {
+		// if there is no RootRedirectURL in the settings, we return the plain, boring
+		// empty http 200 OK that we had before this setting existed
+		w.Header().Set("Cache-Control", "no-cache")
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
 // NewApp takes a configuration and returns a configured app, ready to serve
 // requests. The app only implements ServeHTTP and can be wrapped in other
 // handlers accordingly.
@@ -98,6 +109,10 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		router:  v2.RouterWithPrefix(config.HTTP.Prefix),
 		isCache: config.Proxy.RemoteURL != "",
 	}
+
+	app.router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		rootRedirectURLHandler(w, r, app.Config.HTTP.RootRedirectURL)
+	})
 
 	// Register the handler dispatchers.
 	app.register(v2.RouteNameBase, func(ctx *Context, r *http.Request) http.Handler {
