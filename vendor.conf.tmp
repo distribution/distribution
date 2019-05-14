@@ -8,6 +8,7 @@ github.com/bugsnag/bugsnag-go b1d153021fcd90ca3f080db36bec96dc690fb274
 github.com/bugsnag/osext 0dd3f918b21bec95ace9dc86c7e70266cfc5c702
 github.com/bugsnag/panicwrap e2c28503fcd0675329da73bf48b33404db873782
 github.com/denverdino/aliyungo a747050bb1baf06cdd65de7cddc281a2b1c2fde5
+github.com/Coding/cos-go-sdk-v5 6b68e9421ecfd2ebb4084b9bcf35f5ce6ad5754d
 github.com/dgrijalva/jwt-go a601269ab70c205d26370c16f7c81e9017c14e04
 github.com/docker/go-metrics 399ea8c73916000c64c2c76e8da00ca82f8387ab
 github.com/docker/libtrust fa567046d9b14f6aa788882a950d69651d230b21
@@ -36,9 +37,10 @@ github.com/yvasiyarov/go-metrics 57bccd1ccd43f94bb17fdd8bf3007059b802f85e
 github.com/yvasiyarov/gorelic a9bba5b9ab508a086f9a12b8c51fab68478e2128
 github.com/yvasiyarov/newrelic_platform_go b21fdbd4370f3717f3bbd2bf41c223bc273068e6
 golang.org/x/crypto c10c31b5e94b6f7a0283272dc2bb27163dcea24b
-golang.org/x/net 4876518f9e71663000c348837735820161a42df7
+golang.org/x/net a4d6f7feada510cc50e69a37b484cb0fdc6b7876
 golang.org/x/oauth2 045497edb6234273d67dbc25da3f2ddbc4c4cacf
 golang.org/x/time a4bde12657593d5e90d0533a3e4fd95e635124cb
+golang.org/x/text 342b2e1fbaa52c93f31447ad2c6abc048c63e475
 google.golang.org/api 9bf6e6e569ff057f75d9604a46c52928f17d2b54
 google.golang.org/appengine 12d5545dc1cfa6047a286d5e853841b6471f4c19
 google.golang.org/cloud 975617b05ea8a58727e6c1a06b6161ff4185a9f2
@@ -50,3 +52,6 @@ rsc.io/letsencrypt e770c10b0f1a64775ae91d240407ce00d1a5bdeb
 github.com/opencontainers/go-digest a6d0ee40d4207ea02364bd3b9e8e77b9159ba1eb
 github.com/opencontainers/image-spec ab7389ef9f50030c9b245bc16b981c7ddf192882
 golang.org/x/sys a5b02f93d862f065920dd6a40dddc66b60d0dec4
+google.golang.org/genproto b515fa19cec88c32f305a962f34ae60068947aea
+github.com/google/go-querystring c8c88dbee036db4e4808d1f2ec8c2e15e11c3f80
+github.com/mozillazg/go-httpheader 61f2392c3317b60616c9dcb10d0a4cfef131fe62
