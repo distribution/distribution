@@ -1,21 +1,15 @@
-package filesystemmc
+package manager
 
 import (
 	"context"
 	"fmt"
 	"log"
 
-	pb "github.com/docker/distribution/registry/storage/driver/filesystemmc/storage-path"
+	pb "github.com/docker/distribution/registry/storage/manager/storage-path"
 	"google.golang.org/grpc"
 )
 
-var address string
-
-func initGRPC(ad string) {
-	address = ad
-}
-
-func getDockerStoragePath(host string, subpath string) (string, error) {
+func GetDockerStoragePath(address string, host string, subpath string) (string, error) {
 
 	conn, err := grpc.Dial(address, grpc.WithInsecure())
 

@@ -16,13 +16,14 @@ import (
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/base"
 	"github.com/docker/distribution/registry/storage/driver/factory"
+	"github.com/docker/distribution/registry/storage/manager"
 )
 
 const (
-	driverName           = "filesystemmc"
-	defaultRootDirectory = "/var/lib/registry"
-	defaultMaxThreads    = uint64(100)
-	defaultGRPCAddress   = ""
+	driverName                   = "filesystemmc"
+	defaultRootDirectory         = "/var/lib/registry"
+	defaultMaxThreads            = uint64(100)
+	defaultStorageManagerAddress = ""
 
 	// minThreads is the minimum value for the maxthreads configuration
 	// parameter. If the driver's parameters are less than this we set
@@ -33,9 +34,9 @@ const (
 // DriverParameters represents all configuration options available for the
 // filesystem driver
 type DriverParameters struct {
-	RootDirectory string
-	MaxThreads    uint64
-	GRPCAddress   string
+	RootDirectory         string
+	MaxThreads            uint64
+	StorageManagerAddress string
 }
 
 func init() {
@@ -50,8 +51,8 @@ func (factory *filesystemDriverFactory) Create(parameters map[string]interface{}
 }
 
 type driver struct {
-	rootDirectory string
-	grpcAddress   string
+	rootDirectory         string
+	storageManagerAddress string
 }
 
 type baseEmbed struct {
@@ -78,10 +79,10 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 
 func fromParametersImpl(parameters map[string]interface{}) (*DriverParameters, error) {
 	var (
-		err           error
-		maxThreads    = defaultMaxThreads
-		rootDirectory = defaultRootDirectory
-		address       = defaultGRPCAddress
+		err                   error
+		maxThreads            = defaultMaxThreads
+		rootDirectory         = defaultRootDirectory
+		storageManagerAddress = defaultStorageManagerAddress
 	)
 
 	if parameters != nil {
@@ -94,23 +95,22 @@ func fromParametersImpl(parameters map[string]interface{}) (*DriverParameters, e
 			return nil, fmt.Errorf("maxthreads config error: %s", err.Error())
 		}
 
-		if ad, ok := parameters["address"]; ok {
-			address = fmt.Sprint(ad)
-			initGRPC(address)
+		if ad, ok := parameters["smaddress"]; ok {
+			storageManagerAddress = fmt.Sprint(ad)
 		}
 	}
 
 	params := &DriverParameters{
-		RootDirectory: rootDirectory,
-		MaxThreads:    maxThreads,
-		GRPCAddress:   address,
+		RootDirectory:         rootDirectory,
+		MaxThreads:            maxThreads,
+		StorageManagerAddress: storageManagerAddress,
 	}
 	return params, nil
 }
 
 // New constructs a new Driver with a given rootDirectory
 func New(params DriverParameters) *Driver {
-	fsDriver := &driver{rootDirectory: params.RootDirectory, grpcAddress: params.GRPCAddress}
+	fsDriver := &driver{rootDirectory: params.RootDirectory, storageManagerAddress: params.StorageManagerAddress}
 
 	return &Driver{
 		baseEmbed: baseEmbed{
@@ -161,7 +161,6 @@ func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte
 // Reader retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
 func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
-	fmt.Println("reader")
 
 	fullPath, err := d.fullPath(path, ctx)
 
@@ -191,7 +190,6 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 }
 
 func (d *driver) Writer(ctx context.Context, subPath string, append bool) (storagedriver.FileWriter, error) {
-	fmt.Println("write")
 	fullPath, err := d.fullPath(subPath, ctx)
 
 	if err != nil {
@@ -231,7 +229,6 @@ func (d *driver) Writer(ctx context.Context, subPath string, append bool) (stora
 // Stat retrieves the FileInfo for the given path, including the current size
 // in bytes and the creation time.
 func (d *driver) Stat(ctx context.Context, subPath string) (storagedriver.FileInfo, error) {
-	fmt.Println("stat")
 	fullPath, err := d.fullPath(subPath, ctx)
 
 	if err != nil {
@@ -256,7 +253,6 @@ func (d *driver) Stat(ctx context.Context, subPath string) (storagedriver.FileIn
 // List returns a list of the objects that are direct descendants of the given
 // path.
 func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
-	fmt.Println("list")
 	fullPath, err := d.fullPath(subPath, ctx)
 
 	if err != nil {
@@ -289,7 +285,6 @@ func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
 func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
-	fmt.Println("move")
 	source, err := d.fullPath(sourcePath, ctx)
 
 	if err != nil {
@@ -316,7 +311,6 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
 func (d *driver) Delete(ctx context.Context, subPath string) error {
-	fmt.Println("delete")
 
 	fullPath, err := d.fullPath(subPath, ctx)
 
@@ -398,12 +392,11 @@ func getPrefix(ctx context.Context) string {
 // fullPath returns the absolute path of a key within the Driver's storage.
 func (d *driver) fullPath(subPath string, ctx context.Context) (string, error) {
 
-	if d.grpcAddress != "" {
-		finalPath, err := getDockerStoragePath(dcontext.GetStringValue(ctx, "http.request.host"), subPath)
+	if d.storageManagerAddress != "" {
+		finalPath, err := manager.GetDockerStoragePath(d.storageManagerAddress, dcontext.GetStringValue(ctx, "http.request.host"), subPath)
 		if err != nil {
 			return "", nil
 		}
-		fmt.Println("[INFO] GRPC final path:", path.Join(d.rootDirectory, finalPath))
 		return path.Join(d.rootDirectory, finalPath), nil
 	}
 

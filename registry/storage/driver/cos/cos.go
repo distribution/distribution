@@ -5,9 +5,11 @@ import (
 	"context"
 	"fmt"
 	"github.com/Coding/cos-go-sdk-v5"
+	dcontext "github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/base"
 	"github.com/docker/distribution/registry/storage/driver/factory"
+	"github.com/docker/distribution/registry/storage/manager"
 	"github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
@@ -49,22 +51,24 @@ type Driver struct {
 }
 
 type driver struct {
-	Client        *cos.Client
-	SecretID      string
-	SecretKey     string
-	RootDirectory string
-	ChunkSize     int64
+	Client                *cos.Client
+	SecretID              string
+	SecretKey             string
+	RootDirectory         string
+	ChunkSize             int64
+	StorageManagerAddress string
 }
 
 //DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
 type DriverParameters struct {
-	SecretID      string
-	SecretKey     string
-	Bucket        string
-	Region        string
-	Secure        bool
-	ChunkSize     int64
-	RootDirectory string
+	SecretID              string
+	SecretKey             string
+	Bucket                string
+	Region                string
+	Secure                bool
+	ChunkSize             int64
+	RootDirectory         string
+	StorageManagerAddress string
 }
 
 func init() {
@@ -109,6 +113,10 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	if !ok {
 		rootDir = ""
 	}
+	storageManagerAddress, ok := parameters["smaddress"]
+	if !ok {
+		storageManagerAddress = ""
+	}
 
 	secureBool := true
 	secure := parameters["secure"]
@@ -151,13 +159,14 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	}
 
 	params := DriverParameters{
-		SecretID:      fmt.Sprint(secretID),
-		SecretKey:     fmt.Sprint(secretKey),
-		Bucket:        fmt.Sprint(bucket),
-		Region:        fmt.Sprint(regionName),
-		ChunkSize:     chunkSize,
-		Secure:        secureBool,
-		RootDirectory: fmt.Sprint(rootDir),
+		SecretID:              fmt.Sprint(secretID),
+		SecretKey:             fmt.Sprint(secretKey),
+		Bucket:                fmt.Sprint(bucket),
+		Region:                fmt.Sprint(regionName),
+		ChunkSize:             chunkSize,
+		Secure:                secureBool,
+		RootDirectory:         fmt.Sprint(rootDir),
+		StorageManagerAddress: fmt.Sprint(storageManagerAddress),
 	}
 
 	return New(params)
@@ -174,11 +183,12 @@ func New(params DriverParameters) (*Driver, error) {
 		},
 	})
 	d := &driver{
-		Client:        client,
-		SecretID:      params.SecretID,
-		SecretKey:     params.SecretKey,
-		RootDirectory: params.RootDirectory,
-		ChunkSize:     params.ChunkSize,
+		Client:                client,
+		SecretID:              params.SecretID,
+		SecretKey:             params.SecretKey,
+		RootDirectory:         params.RootDirectory,
+		ChunkSize:             params.ChunkSize,
+		StorageManagerAddress: params.StorageManagerAddress,
 	}
 	return &Driver{
 		baseEmbed: baseEmbed{
@@ -202,7 +212,12 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 }
 
 func (d *driver) PutContent(ctx context.Context, subPath string, content []byte) error {
-	subPath = d.fullPath(subPath)
+	subPath, err := d.fullPath(subPath, ctx)
+
+	if err != nil {
+		return err
+	}
+
 	body := bytes.NewBuffer(content)
 	opt := &cos.ObjectPutOptions{
 		ACLHeaderOptions: &cos.ACLHeaderOptions{
@@ -213,7 +228,7 @@ func (d *driver) PutContent(ctx context.Context, subPath string, content []byte)
 			ContentLength: len(content),
 		},
 	}
-	_, err := d.Client.Object.Put(ctx, d.cosKey(subPath), body, opt)
+	_, err = d.Client.Object.Put(ctx, d.cosKey(subPath), body, opt)
 	if err != nil {
 		return parseError(subPath, err)
 	}
@@ -223,24 +238,34 @@ func (d *driver) PutContent(ctx context.Context, subPath string, content []byte)
 // Reader retrieves an io.ReadCloser for the content stored at "path"
 // with a given byte offset.
 // May be used to resume reading a stream by providing a nonzero offset.
-func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
+func (d *driver) Reader(ctx context.Context, subPath string, offset int64) (io.ReadCloser, error) {
 	//if (!strings.HasPrefix(path, "/hello")) && (!strings.HasPrefix(path, "hello")) {
 	//	fmt.Println("with prefix")
-	path = d.fullPath(path)
+	subPath, err := d.fullPath(subPath, ctx)
+
+	if err != nil {
+		return nil, err
+	}
 	//}
 
 	opt := &cos.ObjectGetOptions{
 		Range: "bytes=" + strconv.FormatInt(offset, 10) + "-",
 	}
-	resp, err := d.Client.Object.Get(ctx, d.cosKey(path), opt)
+	resp, err := d.Client.Object.Get(ctx, d.cosKey(subPath), opt)
 	if err != nil {
-		return nil, parseError(path, err)
+		return nil, parseError(subPath, err)
 	}
 	return resp.Body, nil
 }
 
 func (d *driver) Writer(ctx context.Context, subPath string, append bool) (storagedriver.FileWriter, error) {
-	subPath = d.fullPath(subPath)
+
+	subPath, err := d.fullPath(subPath, ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
 	key := d.cosKey(subPath)
 	if !append {
 		multi, _, err := d.Client.Object.InitiateMultipartUpload(ctx, key, nil)
@@ -274,7 +299,12 @@ func (d *driver) Writer(ctx context.Context, subPath string, append bool) (stora
 }
 
 func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
-	subPath = d.fullPath(subPath)
+	subPath, err := d.fullPath(subPath, ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
 	if subPath != "/" && subPath[len(subPath)-1] != '/' {
 		subPath = subPath + "/"
 	}
@@ -341,9 +371,18 @@ func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
 	return append(files, directories...), nil
 }
 
-func (d *driver) innerStat(ctx context.Context, subPath string, withRootPrefix bool) (storagedriver.FileInfo, error) {
+func (d *driver) innerStat(ctx context.Context, p string, withRootPrefix bool) (storagedriver.FileInfo, error) {
+
+	subPath := p
+
 	if withRootPrefix {
-		subPath = d.fullPath(subPath)
+		fp, err := d.fullPath(subPath, ctx)
+
+		if err != nil {
+			return nil, err
+		}
+
+		subPath = fp
 	}
 	opt := &cos.BucketGetOptions{
 		Prefix:  d.cosKey(subPath),
@@ -385,10 +424,21 @@ func (d *driver) Stat(ctx context.Context, subPath string) (storagedriver.FileIn
 }
 
 func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
-	sourcePath = d.fullPath(sourcePath)
-	destPath = d.fullPath(destPath)
+
+	sourcePath, err := d.fullPath(sourcePath, ctx)
+
+	if err != nil {
+		return err
+	}
+
+	destPath, err = d.fullPath(destPath, ctx)
+
+	if err != nil {
+		return err
+	}
+
 	// need to implement multi-part upload
-	err := d.copy(ctx, d.cosKey(sourcePath), d.cosKey(destPath))
+	err = d.copy(ctx, d.cosKey(sourcePath), d.cosKey(destPath))
 	if err != nil {
 		return parseError(sourcePath, err)
 	}
@@ -400,7 +450,11 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 }
 
 func (d *driver) Delete(ctx context.Context, path string) error {
-	path = d.fullPath(path)
+	path, err := d.fullPath(path, ctx)
+
+	if err != nil {
+		return err
+	}
 	cosPath := d.cosKey(path)
 	opt := &cos.BucketGetOptions{
 		Prefix:  cosPath,
@@ -455,8 +509,13 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 	return nil
 }
 
-func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
-	path = d.fullPath(path)
+func (d *driver) URLFor(ctx context.Context, subPath string, options map[string]interface{}) (string, error) {
+	subPath, err := d.fullPath(subPath, ctx)
+
+	if err != nil {
+		return "", err
+	}
+
 	methodString := "GET"
 	method, ok := options["method"]
 	if ok {
@@ -475,7 +534,7 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 		}
 	}
 	duration := expiresTime.Sub(now)
-	url, err := d.Client.Object.GetPresignedURL(ctx, methodString, d.cosKey(path), d.SecretID, d.SecretKey, duration, nil)
+	url, err := d.Client.Object.GetPresignedURL(ctx, methodString, d.cosKey(subPath), d.SecretID, d.SecretKey, duration, nil)
 	if err != nil {
 		return "", err
 	}
@@ -484,9 +543,15 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 	return signedURL, nil
 }
 
-func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn) error {
-	path = d.fullPath(path)
-	return storagedriver.WalkFallback(ctx, d, path, f)
+func (d *driver) Walk(ctx context.Context, subPath string, f storagedriver.WalkFn) error {
+
+	subPath, err := d.fullPath(subPath, ctx)
+
+	if err != nil {
+		return err
+	}
+
+	return storagedriver.WalkFallback(ctx, d, subPath, f)
 }
 
 func (d *driver) newWriter(key, uploadID string, parts []cos.Object) storagedriver.FileWriter {
@@ -692,8 +757,17 @@ func (w *writer) flushPart() error {
 	return nil
 }
 
-func (d *driver) fullPath(subPath string) string {
-	return path.Join(d.RootDirectory, subPath)
+func (d *driver) fullPath(subPath string, ctx context.Context) (string, error) {
+
+	if d.StorageManagerAddress != "" {
+		finalPath, err := manager.GetDockerStoragePath(d.StorageManagerAddress, dcontext.GetStringValue(ctx, "http.request.host"), subPath)
+		if err != nil {
+			return "", nil
+		}
+		return path.Join(d.RootDirectory, finalPath), nil
+	}
+
+	return path.Join(d.RootDirectory, subPath), nil
 }
 
 //func (d *driver) cosPath(p string) string {
