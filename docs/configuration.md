@@ -848,7 +848,9 @@ TLS certificates provided by
 > to the `docker run` command or using a similar setting in a cloud
 > configuration. You should also set the `hosts` option to the list of hostnames
 > that are valid for this registry to avoid trying to get certificates for random
-> hostnames due to malicious clients connecting with bogus SNI hostnames.
+> hostnames due to malicious clients connecting with bogus SNI hostnames. Please
+> ensure that you have the `ca-certificates` package installed in order to verify
+> letsencrypt certificates.
 
 | Parameter | Required | Description                                           |
 |-----------|----------|-------------------------------------------------------|
