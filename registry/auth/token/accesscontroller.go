@@ -116,11 +116,9 @@ func (ac authChallenge) challengeParams(r *http.Request) string {
 
 	if err != nil {
 		fmt.Println("[ERROR] execute token realm template error: %s", err)
-		str = fmt.Sprintf("Bearer realm=%q,service=%q", parsedRealm.String(), ac.service)
-
-	} else {
 		str = fmt.Sprintf("Bearer realm=%q,service=%q", realm, ac.service)
-
+	} else {
+		str = fmt.Sprintf("Bearer realm=%q,service=%q", parsedRealm.String(), ac.service)
 	}
 
 	if scope := ac.accessSet.scopeParam(); scope != "" {
