@@ -384,9 +384,7 @@ func getPrefix(ctx context.Context) string {
 
 	chunks := strings.Split(host, ".")
 
-	teamGK := chunks[0]
-
-	return teamGK
+	return chunks[0]
 }
 
 // fullPath returns the absolute path of a key within the Driver's storage.

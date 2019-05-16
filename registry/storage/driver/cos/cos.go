@@ -4,13 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/Coding/cos-go-sdk-v5"
-	dcontext "github.com/docker/distribution/context"
-	storagedriver "github.com/docker/distribution/registry/storage/driver"
-	"github.com/docker/distribution/registry/storage/driver/base"
-	"github.com/docker/distribution/registry/storage/driver/factory"
 	"github.com/docker/distribution/registry/storage/manager"
-	"github.com/sirupsen/logrus"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -20,13 +14,22 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/Coding/cos-go-sdk-v5"
+	dcontext "github.com/docker/distribution/context"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/registry/storage/driver/base"
+	"github.com/docker/distribution/registry/storage/driver/factory"
+	"github.com/sirupsen/logrus"
 )
 
 const (
-	driverName       = "cos"
-	listMax          = 1000
-	minChunkSize     = 1 << 20
-	defaultChunkSize = 2 * minChunkSize
+	driverName                   = "cos"
+	listMax                      = 1000
+	minChunkSize                 = 1 << 20
+	defaultChunkSize             = 2 * minChunkSize
+	defaultRootDirectory         = ""
+	defaultStorageManagerAddress = ""
 )
 
 const (
@@ -111,11 +114,12 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 
 	rootDir, ok := parameters["rootdir"]
 	if !ok {
-		rootDir = ""
+		rootDir = defaultRootDirectory
 	}
-	storageManagerAddress, ok := parameters["smaddress"]
+
+	smAdress, ok := parameters["smaddress"]
 	if !ok {
-		storageManagerAddress = ""
+		smAdress = defaultStorageManagerAddress
 	}
 
 	secureBool := true
@@ -166,7 +170,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		ChunkSize:             chunkSize,
 		Secure:                secureBool,
 		RootDirectory:         fmt.Sprint(rootDir),
-		StorageManagerAddress: fmt.Sprint(storageManagerAddress),
+		StorageManagerAddress: fmt.Sprint(smAdress),
 	}
 
 	return New(params)
@@ -204,20 +208,23 @@ func (d *driver) getContentType() string {
 }
 
 func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
-	reader, err := d.Reader(ctx, path, 0)
+
+	cosPath, err := d.cosPath(path, ctx)
+
 	if err != nil {
-		return nil, parseError(path, err)
+		return nil, err
 	}
-	return ioutil.ReadAll(reader)
+
+	resp, err := d.Client.Object.Get(ctx, cosPath, nil)
+	if err != nil {
+		return nil, parseError(cosPath, err)
+	}
+	bs, _ := ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	return bs, nil
 }
 
-func (d *driver) PutContent(ctx context.Context, subPath string, content []byte) error {
-	subPath, err := d.fullPath(subPath, ctx)
-
-	if err != nil {
-		return err
-	}
-
+func (d *driver) PutContent(ctx context.Context, path string, content []byte) error {
 	body := bytes.NewBuffer(content)
 	opt := &cos.ObjectPutOptions{
 		ACLHeaderOptions: &cos.ACLHeaderOptions{
@@ -228,9 +235,16 @@ func (d *driver) PutContent(ctx context.Context, subPath string, content []byte)
 			ContentLength: len(content),
 		},
 	}
-	_, err = d.Client.Object.Put(ctx, d.cosKey(subPath), body, opt)
+
+	cosPath, err := d.cosPath(path, ctx)
+
 	if err != nil {
-		return parseError(subPath, err)
+		return err
+	}
+
+	_, err = d.Client.Object.Put(ctx, cosPath, body, opt)
+	if err != nil {
+		return parseError(cosPath, err)
 	}
 	return nil
 }
@@ -238,39 +252,36 @@ func (d *driver) PutContent(ctx context.Context, subPath string, content []byte)
 // Reader retrieves an io.ReadCloser for the content stored at "path"
 // with a given byte offset.
 // May be used to resume reading a stream by providing a nonzero offset.
-func (d *driver) Reader(ctx context.Context, subPath string, offset int64) (io.ReadCloser, error) {
-	//if (!strings.HasPrefix(path, "/hello")) && (!strings.HasPrefix(path, "hello")) {
-	//	fmt.Println("with prefix")
-	subPath, err := d.fullPath(subPath, ctx)
+func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
+	opt := &cos.ObjectGetOptions{
+		Range: "bytes=" + strconv.FormatInt(offset, 10) + "-",
+	}
+
+	cosPath, err := d.cosPath(path, ctx)
 
 	if err != nil {
 		return nil, err
 	}
-	//}
 
-	opt := &cos.ObjectGetOptions{
-		Range: "bytes=" + strconv.FormatInt(offset, 10) + "-",
-	}
-	resp, err := d.Client.Object.Get(ctx, d.cosKey(subPath), opt)
+	resp, err := d.Client.Object.Get(ctx, cosPath, opt)
 	if err != nil {
-		return nil, parseError(subPath, err)
+		return nil, parseError(cosPath, err)
 	}
 	return resp.Body, nil
 }
 
-func (d *driver) Writer(ctx context.Context, subPath string, append bool) (storagedriver.FileWriter, error) {
+func (d *driver) Writer(ctx context.Context, path string, append bool) (storagedriver.FileWriter, error) {
 
-	subPath, err := d.fullPath(subPath, ctx)
+	key, err := d.cosPath(path, ctx)
 
 	if err != nil {
 		return nil, err
 	}
 
-	key := d.cosKey(subPath)
 	if !append {
 		multi, _, err := d.Client.Object.InitiateMultipartUpload(ctx, key, nil)
 		if err != nil {
-			return nil, parseError(subPath, err)
+			return nil, parseError(key, err)
 		}
 		uploadID := multi.UploadID
 		return d.newWriter(key, uploadID, nil), nil
@@ -281,7 +292,7 @@ func (d *driver) Writer(ctx context.Context, subPath string, append bool) (stora
 	// list parts on uploading
 	v, _, err := d.Client.Bucket.ListMultipartUploads(ctx, opt)
 	if err != nil {
-		return nil, parseError(subPath, err)
+		return nil, parseError(key, err)
 	}
 	for _, upload := range v.Uploads {
 		if key != upload.Key {
@@ -290,34 +301,40 @@ func (d *driver) Writer(ctx context.Context, subPath string, append bool) (stora
 		uploadID := upload.UploadID
 		v, _, err := d.Client.Object.ListParts(ctx, key, uploadID)
 		if err != nil {
-			return nil, parseError(subPath, err)
+			return nil, parseError(key, err)
 		}
 		parts := v.Parts
 		return d.newWriter(key, uploadID, parts), nil
 	}
-	return nil, storagedriver.PathNotFoundError{Path: subPath}
+
+	return nil, storagedriver.PathNotFoundError{Path: key}
 }
 
-func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
-	subPath, err := d.fullPath(subPath, ctx)
+func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
+	subPath := opath
+	if subPath != "/" && opath[len(subPath)-1] != '/' {
+		subPath = subPath + "/"
+	}
+
+	rootCOSPath, err := d.cosPath("", ctx)
 
 	if err != nil {
 		return nil, err
-	}
-
-	if subPath != "/" && subPath[len(subPath)-1] != '/' {
-		subPath = subPath + "/"
 	}
 
 	// This is to cover for the cases when the rootDirectory of the driver is either "" or "/".
 	// In those cases, there is no root prefix to replace and we must actually add a "/" to all
 	// results in order to keep them as valid paths as recognized by storagedriver.PathRegexp
 	prefix := ""
-	if d.cosKey("") == "" {
+	if rootCOSPath == "" {
 		prefix = "/"
 	}
 
-	cosPath := d.cosKey(subPath)
+	cosPath, err := d.cosPath(subPath, ctx)
+
+	if err != nil {
+		return nil, err
+	}
 
 	listResponse, _, err := d.Client.Bucket.Get(ctx, &cos.BucketGetOptions{
 		Prefix:    cosPath,
@@ -325,7 +342,7 @@ func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
 		MaxKeys:   listMax,
 	})
 	if err != nil {
-		return nil, parseError(subPath, err)
+		return nil, parseError(cosPath, err)
 	}
 
 	files := []string{}
@@ -333,11 +350,13 @@ func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
 
 	for {
 		for _, key := range listResponse.Contents {
-			files = append(files, strings.Replace(key.Key, d.cosKey(""), prefix, 1))
+
+			f := path.Base(key.Key)
+			files = append(files, path.Join(opath, f))
 		}
 
 		for _, commonPrefix := range listResponse.CommonPrefixes {
-			directories = append(directories, strings.Replace(commonPrefix[0:len(commonPrefix)-1], d.cosKey(""), prefix, 1))
+			directories = append(directories, path.Join(subPath, path.Base(commonPrefix)))
 		}
 
 		if listResponse.IsTruncated {
@@ -356,36 +375,31 @@ func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
 	}
 
 	// This is to cover for the cases when the first key equal to cosPath.
-	if len(files) > 0 && files[0] == strings.Replace(cosPath, d.cosKey(""), prefix, 1) {
+	if len(files) > 0 && files[0] == strings.Replace(cosPath, rootCOSPath, prefix, 1) {
 		files = files[1:]
 	}
 
-	if subPath != "/" {
+	if opath != "/" {
 		if len(files) == 0 && len(directories) == 0 {
 			// Treat empty response as missing directory, since we don't actually
 			// have directories in s3.
-			return nil, storagedriver.PathNotFoundError{Path: subPath}
+			return nil, storagedriver.PathNotFoundError{Path: cosPath}
 		}
 	}
 
 	return append(files, directories...), nil
 }
 
-func (d *driver) innerStat(ctx context.Context, p string, withRootPrefix bool) (storagedriver.FileInfo, error) {
+func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
 
-	subPath := p
+	cosPath, err := d.cosPath(path, ctx)
 
-	if withRootPrefix {
-		fp, err := d.fullPath(subPath, ctx)
-
-		if err != nil {
-			return nil, err
-		}
-
-		subPath = fp
+	if err != nil {
+		return nil, err
 	}
+
 	opt := &cos.BucketGetOptions{
-		Prefix:  d.cosKey(subPath),
+		Prefix:  cosPath,
 		MaxKeys: 1,
 	}
 	listResponse, _, err := d.Client.Bucket.Get(ctx, opt)
@@ -394,11 +408,11 @@ func (d *driver) innerStat(ctx context.Context, p string, withRootPrefix bool) (
 	}
 
 	fi := storagedriver.FileInfoFields{
-		Path: subPath,
+		Path: path,
 	}
 
 	if len(listResponse.Contents) == 1 {
-		if listResponse.Contents[0].Key != d.cosKey(subPath) {
+		if listResponse.Contents[0].Key != cosPath {
 			fi.IsDir = true
 		} else {
 			fi.IsDir = false
@@ -413,36 +427,26 @@ func (d *driver) innerStat(ctx context.Context, p string, withRootPrefix bool) (
 	} else if len(listResponse.CommonPrefixes) == 1 {
 		fi.IsDir = true
 	} else {
-		return nil, storagedriver.PathNotFoundError{Path: subPath}
+		return nil, storagedriver.PathNotFoundError{Path: cosPath}
 	}
 
 	return storagedriver.FileInfoInternal{FileInfoFields: fi}, nil
 }
 
-func (d *driver) Stat(ctx context.Context, subPath string) (storagedriver.FileInfo, error) {
-	return d.innerStat(ctx, subPath, true)
-}
-
 func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
-
-	sourcePath, err := d.fullPath(sourcePath, ctx)
-
-	if err != nil {
-		return err
-	}
-
-	destPath, err = d.fullPath(destPath, ctx)
-
-	if err != nil {
-		return err
-	}
-
 	// need to implement multi-part upload
-	err = d.copy(ctx, d.cosKey(sourcePath), d.cosKey(destPath))
+	err := d.copy(ctx, sourcePath, destPath)
 	if err != nil {
 		return parseError(sourcePath, err)
 	}
-	_, err = d.Client.Object.Delete(ctx, d.cosKey(sourcePath))
+
+	cosPath, err := d.cosPath(sourcePath, ctx)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = d.Client.Object.Delete(ctx, cosPath)
 	if err != nil {
 		return parseError(sourcePath, err)
 	}
@@ -450,12 +454,12 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 }
 
 func (d *driver) Delete(ctx context.Context, path string) error {
-	path, err := d.fullPath(path, ctx)
+	cosPath, err := d.cosPath(path, ctx)
 
 	if err != nil {
 		return err
 	}
-	cosPath := d.cosKey(path)
+
 	opt := &cos.BucketGetOptions{
 		Prefix:  cosPath,
 		MaxKeys: listMax,
@@ -463,7 +467,7 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 	// list max objects
 	listResponse, _, err := d.Client.Bucket.Get(ctx, opt)
 	if err != nil || len(listResponse.Contents) == 0 {
-		return storagedriver.PathNotFoundError{Path: path}
+		return storagedriver.PathNotFoundError{Path: cosPath}
 	}
 
 	cosObjects := make([]cos.Object, listMax)
@@ -497,7 +501,7 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 
 		// fetch objects again
 		listResponse, _, err = d.Client.Bucket.Get(ctx, &cos.BucketGetOptions{
-			Prefix:    d.cosKey(path),
+			Prefix:    cosPath,
 			Delimiter: "",
 			Marker:    "",
 			MaxKeys:   listMax,
@@ -509,13 +513,7 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 	return nil
 }
 
-func (d *driver) URLFor(ctx context.Context, subPath string, options map[string]interface{}) (string, error) {
-	subPath, err := d.fullPath(subPath, ctx)
-
-	if err != nil {
-		return "", err
-	}
-
+func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
 	methodString := "GET"
 	method, ok := options["method"]
 	if ok {
@@ -534,7 +532,14 @@ func (d *driver) URLFor(ctx context.Context, subPath string, options map[string]
 		}
 	}
 	duration := expiresTime.Sub(now)
-	url, err := d.Client.Object.GetPresignedURL(ctx, methodString, d.cosKey(subPath), d.SecretID, d.SecretKey, duration, nil)
+
+	cosPath, err := d.cosPath(path, ctx)
+
+	if err != nil {
+		return "", err
+	}
+
+	url, err := d.Client.Object.GetPresignedURL(ctx, methodString, cosPath, d.SecretID, d.SecretKey, duration, nil)
 	if err != nil {
 		return "", err
 	}
@@ -543,15 +548,8 @@ func (d *driver) URLFor(ctx context.Context, subPath string, options map[string]
 	return signedURL, nil
 }
 
-func (d *driver) Walk(ctx context.Context, subPath string, f storagedriver.WalkFn) error {
-
-	subPath, err := d.fullPath(subPath, ctx)
-
-	if err != nil {
-		return err
-	}
-
-	return storagedriver.WalkFallback(ctx, d, subPath, f)
+func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn) error {
+	return storagedriver.WalkFallback(ctx, d, path, f)
 }
 
 func (d *driver) newWriter(key, uploadID string, parts []cos.Object) storagedriver.FileWriter {
@@ -757,37 +755,81 @@ func (w *writer) flushPart() error {
 	return nil
 }
 
-func (d *driver) fullPath(subPath string, ctx context.Context) (string, error) {
+func isDir(s string) bool {
+	return strings.HasSuffix(s, "/")
+}
+
+func toDir(s string) string {
+
+	if s != "/" && s[len(s)-1] != '/' {
+		return s + "/"
+	}
+
+	return s
+
+}
+
+func getPrefix(ctx context.Context) string {
+	host := dcontext.GetStringValue(ctx, "http.request.host")
+
+	chunks := strings.Split(host, ".")
+
+	return chunks[0]
+}
+
+func (d *driver) resolvePath(before, after string) string {
+
+	after = path.Join(d.RootDirectory, after)
+
+	if isDir(before) {
+		after = toDir(after)
+	}
+
+	return strings.TrimLeft(after, "/")
+
+}
+
+func (d *driver) cosPath(subPath string, ctx context.Context) (string, error) {
 
 	if d.StorageManagerAddress != "" {
-		finalPath, err := manager.GetDockerStoragePath(d.StorageManagerAddress, dcontext.GetStringValue(ctx, "http.request.host"), subPath)
+
+		hashPath, err := manager.GetDockerStoragePath(d.StorageManagerAddress, dcontext.GetStringValue(ctx, "http.request.host"), subPath)
+
 		if err != nil {
 			return "", nil
 		}
-		return path.Join(d.RootDirectory, finalPath), nil
+
+		return d.resolvePath(subPath, hashPath), nil
+
 	}
 
-	return path.Join(d.RootDirectory, subPath), nil
-}
+	return d.resolvePath(subPath, path.Join(subPath, getPrefix(ctx))), nil
 
-//func (d *driver) cosPath(p string) string {
-//	return strings.TrimLeft(strings.TrimRight(d.RootDirectory, "/")+p, "/")
-//}
-
-func (d *driver) cosKey(fullPath string) string {
-	return strings.TrimLeft(strings.TrimRight(fullPath, "/"), "/")
 }
 
 // copy copies an object stored at sourcePath to destPath.
 func (d *driver) copy(ctx context.Context, sourcePath string, destPath string) error {
-	fileInfo, err := d.innerStat(ctx, sourcePath, false)
+	fileInfo, err := d.Stat(ctx, sourcePath)
 	if err != nil {
 		return err
 	}
-	soruceURL := fmt.Sprintf("%s/%s", d.Client.BaseURL.BucketURL.Host, sourcePath)
+
+	parsedSourcePath, err := d.cosPath(sourcePath, ctx)
+
+	if err != nil {
+		return err
+	}
+
+	parsedDestPath, err := d.cosPath(destPath, ctx)
+
+	if err != nil {
+		return err
+	}
+
+	sourceURL := fmt.Sprintf("%s/%s", d.Client.BaseURL.BucketURL.Host, parsedSourcePath)
 
 	if fileInfo.Size() <= multipartCopyThresholdSize {
-		_, _, err := d.Client.Object.Copy(ctx, d.cosKey(destPath), soruceURL, nil)
+		_, _, err := d.Client.Object.Copy(ctx, parsedDestPath, sourceURL, nil)
 		if err != nil {
 			return err
 		}
@@ -795,7 +837,7 @@ func (d *driver) copy(ctx context.Context, sourcePath string, destPath string) e
 	}
 
 	// upload parts
-	createResp, _, err := d.Client.Object.InitiateMultipartUpload(ctx, d.cosKey(destPath), &cos.InitiateMultipartUploadOptions{
+	createResp, _, err := d.Client.Object.InitiateMultipartUpload(ctx, parsedDestPath, &cos.InitiateMultipartUploadOptions{
 		ACLHeaderOptions: &cos.ACLHeaderOptions{
 			XCosACL: "private",
 		},
@@ -829,8 +871,8 @@ func (d *driver) copy(ctx context.Context, sourcePath string, destPath string) e
 			if lastByte >= fileInfo.Size() {
 				lastByte = fileInfo.Size() - 1
 			}
-			uploadResp, _, err := d.Client.Object.UploadPartCopy(ctx, d.cosKey(destPath), d.cosKey(sourcePath), createResp.UploadID, int(i+1), &cos.CopyPartHeaderOptions{
-				XCosCopySource:      fmt.Sprintf("%s/%s", d.Client.BaseURL.BucketURL.Host, d.cosKey(sourcePath)),
+			uploadResp, _, err := d.Client.Object.UploadPartCopy(ctx, parsedDestPath, parsedSourcePath, createResp.UploadID, int(i+1), &cos.CopyPartHeaderOptions{
+				XCosCopySource:      fmt.Sprintf("%s/%s", d.Client.BaseURL.BucketURL.Host, parsedSourcePath),
 				XCosCopySourceRange: fmt.Sprintf("bytes=%d-%d", firstByte, lastByte),
 			})
 
@@ -854,11 +896,11 @@ func (d *driver) copy(ctx context.Context, sourcePath string, destPath string) e
 	}
 
 	if fullyCompleted {
-		_, _, err = d.Client.Object.CompleteMultipartUpload(ctx, d.cosKey(destPath), createResp.UploadID, &cos.CompleteMultipartUploadOptions{
+		_, _, err = d.Client.Object.CompleteMultipartUpload(ctx, parsedDestPath, createResp.UploadID, &cos.CompleteMultipartUploadOptions{
 			Parts: parts,
 		})
 	} else {
-		_, err = d.Client.Object.AbortMultipartUpload(ctx, d.cosKey(destPath), createResp.UploadID)
+		_, err = d.Client.Object.AbortMultipartUpload(ctx, parsedDestPath, createResp.UploadID)
 	}
 	return err
 }
