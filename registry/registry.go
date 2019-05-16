@@ -13,12 +13,17 @@ import (
 	"syscall"
 	"time"
 
-	"rsc.io/letsencrypt"
-
 	logrus_bugsnag "github.com/Shopify/logrus-bugsnag"
-
 	logstash "github.com/bshuster-repo/logrus-logstash-hook"
 	"github.com/bugsnag/bugsnag-go"
+	"github.com/docker/go-metrics"
+	gorhandlers "github.com/gorilla/handlers"
+	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+	"github.com/yvasiyarov/gorelic"
+	"golang.org/x/crypto/acme"
+	"golang.org/x/crypto/acme/autocert"
+
 	"github.com/docker/distribution/configuration"
 	dcontext "github.com/docker/distribution/context"
 	"github.com/docker/distribution/health"
@@ -26,11 +31,6 @@ import (
 	"github.com/docker/distribution/registry/listener"
 	"github.com/docker/distribution/uuid"
 	"github.com/docker/distribution/version"
-	"github.com/docker/go-metrics"
-	gorhandlers "github.com/gorilla/handlers"
-	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
-	"github.com/yvasiyarov/gorelic"
 )
 
 // a map of TLS cipher suite names to constants in https://golang.org/pkg/crypto/tls/#pkg-constants
@@ -247,19 +247,14 @@ func (registry *Registry) ListenAndServe() error {
 			if config.HTTP.TLS.Certificate != "" {
 				return fmt.Errorf("cannot specify both certificate and Let's Encrypt")
 			}
-			var m letsencrypt.Manager
-			if err := m.CacheFile(config.HTTP.TLS.LetsEncrypt.CacheFile); err != nil {
-				return err
-			}
-			if !m.Registered() {
-				if err := m.Register(config.HTTP.TLS.LetsEncrypt.Email, nil); err != nil {
-					return err
-				}
-			}
-			if len(config.HTTP.TLS.LetsEncrypt.Hosts) > 0 {
-				m.SetHosts(config.HTTP.TLS.LetsEncrypt.Hosts)
+			m := &autocert.Manager{
+				HostPolicy: autocert.HostWhitelist(config.HTTP.TLS.LetsEncrypt.Hosts...),
+				Cache:      autocert.DirCache(config.HTTP.TLS.LetsEncrypt.CacheFile),
+				Email:      config.HTTP.TLS.LetsEncrypt.Email,
+				Prompt:     autocert.AcceptTOS,
 			}
 			tlsConf.GetCertificate = m.GetCertificate
+			tlsConf.NextProtos = append(tlsConf.NextProtos, acme.ALPNProto)
 		} else {
 			tlsConf.Certificates = make([]tls.Certificate, 1)
 			tlsConf.Certificates[0], err = tls.LoadX509KeyPair(config.HTTP.TLS.Certificate, config.HTTP.TLS.Key)
