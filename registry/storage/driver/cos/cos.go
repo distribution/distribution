@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"path"
 	"reflect"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -38,7 +37,7 @@ const (
 	// multipartCopyThresholdSize defines the default object size
 	// above which multipart copy will be used. (PUT Object - Copy is used
 	// for objects at or below this size.)  Empirically, 32 MB is optimal.
-	multipartCopyThresholdSize = 128 << 20 //128MB
+	multipartCopyThresholdSize = 1024 * 5 << 20 //128MB
 	// multipartCopyChunkSize defines the default chunk size for all
 	// but the last Upload Part - Copy operation of a multipart copy.
 	multipartCopyChunkSize = 128 << 20
@@ -197,7 +196,7 @@ func New(params DriverParameters) (*Driver, error) {
 	return &Driver{
 		baseEmbed: baseEmbed{
 			Base: base.Base{
-				StorageDriver: d,
+				StorageDriver: base.NewRegulator(d, 100),
 			},
 		},
 	}, nil
@@ -518,7 +517,9 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 	method, ok := options["method"]
 	if ok {
 		methodString, ok = method.(string)
-		if !ok || (methodString != "GET" && methodString != "HEAD") {
+		// FIXME: https://github.com/docker/distribution/issues/2649
+		// ignore HEAD method
+		if !ok || (methodString != "GET") {
 			return "", storagedriver.ErrUnsupportedMethod{}
 		}
 	}
@@ -567,16 +568,17 @@ func (d *driver) newWriter(key, uploadID string, parts []cos.Object) storagedriv
 }
 
 type writer struct {
-	driver      *driver
-	key         string
-	uploadID    string
-	parts       []cos.Object
-	size        int64
-	readyPart   []byte
-	pendingPart []byte
-	closed      bool
-	committed   bool
-	cancelled   bool
+	driver        *driver
+	key           string
+	uploadID      string
+	parts         []cos.Object
+	size          int64
+	readyPart     []byte
+	lastReadyPart []byte
+	//pendingPart     []byte
+	closed    bool
+	committed bool
+	cancelled bool
 }
 
 func (w *writer) Write(p []byte) (int, error) {
@@ -588,88 +590,38 @@ func (w *writer) Write(p []byte) (int, error) {
 		return 0, fmt.Errorf("already cancelled")
 	}
 
-	// If the last written part is smaller than minChunkSize, we need to make a
-	// new multipart upload :sadface:
-	if len(w.parts) > 0 && int(w.parts[len(w.parts)-1].Size) < minChunkSize {
-		opt := &cos.CompleteMultipartUploadOptions{}
-		for _, p := range w.parts {
-			opt.Parts = append(opt.Parts, cos.Object{
-				PartNumber: p.PartNumber,
-				ETag:       p.ETag,
-			})
-		}
-		sort.Sort(cos.ObjectList(opt.Parts))
-		_, _, err := w.driver.Client.Object.CompleteMultipartUpload(context.Background(), w.key, w.uploadID, opt)
+	content := p
+
+	chunkNumber := len(w.parts) + 1
+
+	chunkSize := len(content)
+
+	// 不为空 且 满足大小，开始上传
+	if w.readyPart != nil && len(w.readyPart) > minChunkSize {
+		content = append(w.readyPart, p...)
+
+		resp, err := w.driver.Client.Object.UploadPart(
+			context.Background(), w.key, w.uploadID, chunkNumber, bytes.NewReader(content), nil,
+		)
 
 		if err != nil {
-			w.driver.Client.Object.AbortMultipartUpload(context.Background(), w.key, w.uploadID)
 			return 0, err
 		}
 
-		v, _, err := w.driver.Client.Object.InitiateMultipartUpload(context.Background(), w.key, nil)
-		if err != nil {
-			return 0, err
-		}
-		w.uploadID = v.UploadID
+		w.parts = append(w.parts, cos.Object{
+			ETag:       resp.Header.Get("Etag"),
+			PartNumber: chunkNumber,
+		})
+		w.size += int64(len(content))
+		w.lastReadyPart = content
+		w.readyPart = nil
 
-		// If the entire written file is smaller than minChunkSize, we need to make
-		// a new part from scratch :double sad face:
-		if w.size < minChunkSize {
-			resp, err := w.driver.Client.Object.Get(context.Background(), w.key, nil)
-			if err != nil {
-				return 0, err
-			}
-			defer resp.Body.Close()
-			w.parts = nil
-			w.readyPart, err = ioutil.ReadAll(resp.Body)
-			if err != nil {
-				return 0, err
-			}
-		} else {
-			// Otherwise we can use the old file as the new first part
-			part, _, err := w.driver.Client.Object.UploadPartCopy(context.Background(), v.Key, w.key, v.UploadID, 1, nil)
-			if err != nil {
-				return 0, err
-			}
-			w.parts = []cos.Object{part}
-		}
+		return chunkSize, nil
 	}
+	// add to ready list
+	w.readyPart = append(w.readyPart, p...)
 
-	var n int
-
-	for len(p) > 0 {
-		// If no parts are ready to write, fill up the first part
-		if neededBytes := int(w.driver.ChunkSize) - len(w.readyPart); neededBytes > 0 {
-			if len(p) >= neededBytes {
-				w.readyPart = append(w.readyPart, p[:neededBytes]...)
-				n += neededBytes
-				p = p[neededBytes:]
-			} else {
-				w.readyPart = append(w.readyPart, p...)
-				n += len(p)
-				p = nil
-			}
-		}
-
-		if neededBytes := int(w.driver.ChunkSize) - len(w.pendingPart); neededBytes > 0 {
-			if len(p) >= neededBytes {
-				w.pendingPart = append(w.pendingPart, p[:neededBytes]...)
-				n += neededBytes
-				p = p[neededBytes:]
-				err := w.flushPart()
-				if err != nil {
-					w.size += int64(n)
-					return n, err
-				}
-			} else {
-				w.pendingPart = append(w.pendingPart, p...)
-				n += len(p)
-				p = nil
-			}
-		}
-	}
-	w.size += int64(n)
-	return n, nil
+	return chunkSize, nil
 }
 
 func (w *writer) Size() int64 {
@@ -708,6 +660,7 @@ func (w *writer) Commit() error {
 		return err
 	}
 	w.committed = true
+
 	opt := &cos.CompleteMultipartUploadOptions{
 		Parts: w.parts,
 	}
@@ -722,36 +675,40 @@ func (w *writer) Commit() error {
 // flushPart flushes buffers to write a part to cos.
 // Only called by Write (with both buffers full) and Close/Commit (always)
 func (w *writer) flushPart() error {
-	if len(w.readyPart) == 0 && len(w.pendingPart) == 0 {
-		// nothing to write
-		return nil
-	}
-	if len(w.pendingPart) < int(w.driver.ChunkSize) {
-		// closing with a small pending part
-		// combine ready and pending to avoid writing a small part
-		w.readyPart = append(w.readyPart, w.pendingPart...)
-		w.pendingPart = nil
-	}
 
-	partNumber := len(w.parts) + 1
-	resp, err := w.driver.Client.Object.UploadPart(
-		context.Background(),
-		w.key,
-		w.uploadID,
-		partNumber,
-		bytes.NewReader(w.readyPart),
-		nil,
-	)
-	if err != nil {
-		return err
+	if len(w.readyPart) != 0 {
+		// 覆盖掉最后一次上传的 chunk
+		chunkNumber := len(w.parts)
+
+		if chunkNumber == 0 {
+			chunkNumber = 1
+		}
+
+		content := append(w.lastReadyPart, w.readyPart...)
+
+		resp, err := w.driver.Client.Object.UploadPart(
+			context.Background(), w.key, w.uploadID, chunkNumber, bytes.NewReader(content), nil,
+		)
+
+		if err != nil {
+			return err
+		}
+
+		end := 0
+
+		if len(w.parts) > 0 {
+			end = len(w.parts) - 1
+		}
+
+		w.parts = append(w.parts[0:end], cos.Object{
+			ETag:       resp.Header.Get("Etag"),
+			PartNumber: chunkNumber,
+		})
+		w.size += int64(len(w.readyPart))
+		w.lastReadyPart = content
+		w.readyPart = nil
+
 	}
-	etag := resp.Header.Get("Etag")
-	w.parts = append(w.parts, cos.Object{
-		ETag:       etag,
-		PartNumber: partNumber,
-	})
-	w.readyPart = w.pendingPart
-	w.pendingPart = nil
 	return nil
 }
 
