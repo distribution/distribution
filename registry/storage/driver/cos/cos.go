@@ -753,7 +753,7 @@ func (d *driver) cosPath(subPath string, ctx context.Context) (string, error) {
 		hashPath, err := manager.GetDockerStoragePath(d.StorageManagerAddress, dcontext.GetStringValue(ctx, "http.request.host"), subPath)
 
 		if err != nil {
-			return "", nil
+			return "", err
 		}
 
 		return d.resolvePath(subPath, hashPath), nil

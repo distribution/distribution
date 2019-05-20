@@ -31,9 +31,9 @@ func GetDockerStoragePath(address string, host string, subpath string) (string, 
 
 	if err != nil {
 
-		finalError := fmt.Errorf("[ERROR] getDockerStoragePath: %v", err)
+		fmt.Println(err)
 
-		return "", finalError
+		return "", err
 	}
 
 	return r.Path, nil
