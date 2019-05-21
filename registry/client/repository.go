@@ -756,6 +756,9 @@ func (bs *blobs) Create(ctx context.Context, options ...distribution.BlobCreateO
 			parts := strings.Split(resp.Header.Get("Location"), "/")
 			uuid = parts[len(parts)-1]
 		}
+		if uuid == "" {
+			return nil, errors.New("cannot retrieve docker upload UUID")
+		}
 
 		location, err := sanitizeLocation(resp.Header.Get("Location"), u)
 		if err != nil {
