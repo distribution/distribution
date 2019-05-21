@@ -16,8 +16,8 @@ RUN CGO_ENABLED=0 make PREFIX=/go clean binaries && file ./bin/registry | grep "
 
 FROM alpine
 COPY cmd/registry/config-dev.yml /etc/docker/registry/config.yml
+COPY start-server.sh /etc/docker/registry/start-server.sh
 COPY --from=build /go/src/github.com/docker/distribution/bin/registry /bin/registry
 VOLUME ["/var/lib/registry"]
 EXPOSE 5000
-ENTRYPOINT ["registry"]
-CMD ["serve", "/etc/docker/registry/config.yml"]
+CMD ["/etc/docker/registry/start-server.sh"]
