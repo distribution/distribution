@@ -752,6 +752,11 @@ func (bs *blobs) Create(ctx context.Context, options ...distribution.BlobCreateO
 	case http.StatusAccepted:
 		// TODO(dmcgowan): Check for invalid UUID
 		uuid := resp.Header.Get("Docker-Upload-UUID")
+		if uuid == "" {
+			parts := strings.Split(resp.Header.Get("Location"), "/")
+			uuid = parts[len(parts)-1]
+		}
+
 		location, err := sanitizeLocation(resp.Header.Get("Location"), u)
 		if err != nil {
 			return nil, err
