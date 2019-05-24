@@ -748,14 +748,6 @@ func toDir(s string) string {
 
 }
 
-func getPrefix(ctx context.Context) string {
-	host := dcontext.GetStringValue(ctx, "http.request.host")
-
-	chunks := strings.Split(host, ".")
-
-	return chunks[0]
-}
-
 func (d *driver) resolvePath(before, after string) string {
 
 	after = path.Join(d.RootDirectory, after)
@@ -782,7 +774,7 @@ func (d *driver) cosPath(subPath string, ctx context.Context) (string, error) {
 
 	}
 
-	return d.resolvePath(subPath, path.Join(subPath, getPrefix(ctx))), nil
+	return d.resolvePath(subPath, path.Join(subPath)), nil
 
 }
 
