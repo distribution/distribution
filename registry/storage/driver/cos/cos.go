@@ -29,6 +29,7 @@ const (
 	defaultChunkSize             = 2 * minChunkSize
 	defaultRootDirectory         = ""
 	defaultStorageManagerAddress = ""
+	defaultRedirectDarwin        = false
 )
 
 const (
@@ -59,6 +60,7 @@ type driver struct {
 	RootDirectory         string
 	ChunkSize             int64
 	StorageManagerAddress string
+	RedirectDarwin        bool
 }
 
 //DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
@@ -71,6 +73,7 @@ type DriverParameters struct {
 	ChunkSize             int64
 	RootDirectory         string
 	StorageManagerAddress string
+	RedirectDarwin        bool
 }
 
 func init() {
@@ -160,6 +163,16 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 			return nil, fmt.Errorf("The chunksize %#v parameter should be a number that is larger than or equal to %d", chunkSize, minChunkSize)
 		}
 	}
+	redirectDarwinBool := false
+	redirectDarwin, ok := parameters["redirectdarwin"]
+	if ok {
+		redirectDarwinBool, ok = redirectDarwin.(bool)
+		if !ok {
+			return nil, fmt.Errorf("The redirectdarwin parameter should be a boolean")
+		}
+	} else {
+		redirectDarwinBool = defaultRedirectDarwin
+	}
 
 	params := DriverParameters{
 		SecretID:              fmt.Sprint(secretID),
@@ -170,6 +183,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		Secure:                secureBool,
 		RootDirectory:         fmt.Sprint(rootDir),
 		StorageManagerAddress: fmt.Sprint(smAdress),
+		RedirectDarwin:        redirectDarwinBool,
 	}
 
 	return New(params)
@@ -192,6 +206,7 @@ func New(params DriverParameters) (*Driver, error) {
 		RootDirectory:         params.RootDirectory,
 		ChunkSize:             params.ChunkSize,
 		StorageManagerAddress: params.StorageManagerAddress,
+		RedirectDarwin:        params.RedirectDarwin,
 	}
 	return &Driver{
 		baseEmbed: baseEmbed{
@@ -513,6 +528,13 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 }
 
 func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
+
+	// FIXME: docker-for-mac will replace "%3d" to "=" , "/sign=a%3Db"  -> "/sign=a=b" , so sad :!
+	isMac := strings.Index(dcontext.GetStringValue(ctx, "http.request.useragent"), "darwin") != -1
+	if isMac && !d.RedirectDarwin {
+		return "", storagedriver.ErrUnsupportedMethod{}
+	}
+
 	methodString := "GET"
 	method, ok := options["method"]
 	if ok {
