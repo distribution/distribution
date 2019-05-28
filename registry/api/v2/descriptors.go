@@ -637,6 +637,19 @@ var routeDescriptors = []RouteDescriptor{
 									errcode.ErrorCodeUnsupported,
 								},
 							},
+							{
+								Name:        "Forbidden MediaType(s)",
+								Description: "The client is attempting to upload a manifest containing disallowed mediaType(s).",
+								StatusCode:  http.StatusForbidden,
+								Body: BodyDescriptor{
+									ContentType: "application/json",
+									Format:      errorsBody,
+								},
+								ErrorCodes: []errcode.ErrorCode{
+									ErrorCodeConfigMediaTypeForbidden,
+									ErrorCodeLayerMediaTypeForbidden,
+								},
+							},
 						},
 					},
 				},

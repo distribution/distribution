@@ -117,3 +117,24 @@ type ErrManifestNameInvalid struct {
 func (err ErrManifestNameInvalid) Error() string {
 	return fmt.Sprintf("manifest name %q invalid: %v", err.Name, err.Reason)
 }
+
+// ErrManifestConfigMediaTypeForbidden returned when a mediaType on a
+// manifest config is disallowed.
+type ErrManifestConfigMediaTypeForbidden struct {
+	ConfigMediaType string
+}
+
+func (err ErrManifestConfigMediaTypeForbidden) Error() string {
+	return fmt.Sprintf("manifest config mediaType %s forbidden", err.ConfigMediaType)
+}
+
+// ErrManifestLayerMediaTypeForbidden returned when a mediaType on a
+// manifest layer is disallowed.
+type ErrManifestLayerMediaTypeForbidden struct {
+	LayerIndex     int
+	LayerMediaType string
+}
+
+func (err ErrManifestLayerMediaTypeForbidden) Error() string {
+	return fmt.Sprintf("manifest layer at index %d mediaType %s forbidden", err.LayerIndex, err.LayerMediaType)
+}

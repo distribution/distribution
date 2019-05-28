@@ -133,4 +133,26 @@ var (
 		longer proceed.`,
 		HTTPStatusCode: http.StatusNotFound,
 	})
+
+	// ErrorCodeConfigMediaTypeForbidden returned when an the mediaType of a manifest
+	// config is unsupported, typically during a PUT operation.
+	ErrorCodeConfigMediaTypeForbidden = errcode.Register(errGroup, errcode.ErrorDescriptor{
+		Value:   "CONFIG_MEDIATYPE_FORBIDDEN",
+		Message: "manifest config mediaType forbidden",
+		Description: `During upload, manifest config mediaType is validated
+		against a list of allowed values setup in configuration. If that
+        validation fails, this error will be returned.`,
+		HTTPStatusCode: http.StatusForbidden,
+	})
+
+	// ErrorCodeLayerMediaTypeForbidden returned when an the mediaType of a manifest
+	// layer is unsupported, typically during a PUT operation.
+	ErrorCodeLayerMediaTypeForbidden = errcode.Register(errGroup, errcode.ErrorDescriptor{
+		Value:   "LAYER_MEDIATYPE_FORBIDDEN",
+		Message: "manifest layer mediaType forbidden",
+		Description: `During upload, manifest layer mediaType is validated
+		against a list of allowed values setup in configuration. If that
+        validation fails, this error will be returned.`,
+		HTTPStatusCode: http.StatusForbidden,
+	})
 )

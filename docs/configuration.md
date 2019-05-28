@@ -304,6 +304,16 @@ validation:
         - ^https?://([^/]+\.)*example\.com/
       deny:
         - ^https?://www\.example\.com/
+    configMediaTypes:
+      allow:
+        - ^.*$
+      deny:
+        - ^application\/vnd\.bad\.config\.v1\+json$
+    layerMediaTypes:
+      allow:
+        - ^.*$
+      deny:
+        - ^application\/vnd\.bad\.content\.v1\+tar$
 ```
 
 In some instances a configuration option is **optional** but it contains child
@@ -1153,6 +1163,16 @@ validation:
         - ^https?://([^/]+\.)*example\.com/
       deny:
         - ^https?://www\.example\.com/
+    configMediaTypes:
+      allow:
+        - ^.*$
+      deny:
+        - ^application\/vnd\.bad\.config\.v1\+json$
+    layerMediaTypes:
+      allow:
+        - ^.*$
+      deny:
+        - ^application\/vnd\.bad\.content\.v1\+tar$
 ```
 
 ### `disabled`
@@ -1165,11 +1185,11 @@ section. They are enabled by default. This option deprecates the `enabled` flag.
 Use the `manifests` subsection to configure validation of manifests. If
 `disabled` is `false`, the validation allows nothing.
 
-#### `urls`
-
-The `allow` and `deny` options are each a list of
-[regular expressions](https://godoc.org/regexp/syntax) that restrict the URLs in
+Note: each of the `allow` and `deny` options listed in the subsections below are each a list of
+[regular expressions](https://godoc.org/regexp/syntax) that restrict certain fields in
 pushed manifests.
+
+#### `urls`
 
 If `allow` is unset, pushing a manifest containing URLs fails.
 
@@ -1179,6 +1199,30 @@ one of the `allow` regular expressions **and** one of the following holds:
 1.  `deny` is unset.
 2.  `deny` is set but no URLs within the manifest match any of the `deny` regular
     expressions.
+
+#### `configMediaTypes`
+
+If `allow` is unset, pushing a manifest containing **any** mediaType in the config succeeds
+(all config mediaTypes allowed).
+
+If `allow` is set, pushing a manifest succeeds only if the mediaType in the config matches
+one of the `allow` regular expressions **and** one of the following holds:
+
+1.  `deny` is unset.
+2.  `deny` is set but the mediaType in the manifest config does not match any of
+    the `deny` regular expressions.
+
+#### `layerMediaTypes`
+
+If `allow` is unset, pushing a manifest containing **any** mediaType in any of its layers succeeds
+(all layer mediaTypes allowed).
+
+If `allow` is set, pushing a manifest succeeds only if each layer's mediaType matches
+one of the `allow` regular expressions **and** one of the following holds:
+
+1.  `deny` is unset.
+2.  `deny` is set but no layers within the manifest contains a mediaType which matches any of
+    the `deny` regular expressions.
 
 ## Example: Development configuration
 

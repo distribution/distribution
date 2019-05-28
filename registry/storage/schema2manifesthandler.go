@@ -20,10 +20,12 @@ var (
 
 //schema2ManifestHandler is a ManifestHandler that covers schema2 manifests.
 type schema2ManifestHandler struct {
-	repository   distribution.Repository
-	blobStore    distribution.BlobStore
-	ctx          context.Context
-	manifestURLs manifestURLs
+	repository               distribution.Repository
+	blobStore                distribution.BlobStore
+	ctx                      context.Context
+	manifestURLs             manifestURLs
+	manifestConfigMediaTypes manifestConfigMediaTypes
+	manifestLayerMediaTypes  manifestLayerMediaTypes
 }
 
 var _ ManifestHandler = &schema2ManifestHandler{}
@@ -86,7 +88,14 @@ func (ms *schema2ManifestHandler) verifyManifest(ctx context.Context, mnfst sche
 
 	blobsService := ms.repository.Blobs(ctx)
 
-	for _, descriptor := range mnfst.References() {
+	for i, descriptor := range mnfst.References() {
+
+		// validate the mediaType
+		invalidMediaTypeError := validateMediaType(i, descriptor.MediaType, ms.manifestConfigMediaTypes, ms.manifestLayerMediaTypes)
+		if invalidMediaTypeError != nil {
+			return invalidMediaTypeError
+		}
+
 		var err error
 
 		switch descriptor.MediaType {

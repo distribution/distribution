@@ -134,3 +134,7 @@ func TestVerifyManifestForeignLayer(t *testing.T) {
 		}
 	}
 }
+
+func TestVerifyManifestForbiddenMediaTypes(t *testing.T) {
+	testForbiddenMediaTypes(t, false)
+}

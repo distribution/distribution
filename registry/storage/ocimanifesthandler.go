@@ -14,10 +14,12 @@ import (
 
 //ocischemaManifestHandler is a ManifestHandler that covers ocischema manifests.
 type ocischemaManifestHandler struct {
-	repository   distribution.Repository
-	blobStore    distribution.BlobStore
-	ctx          context.Context
-	manifestURLs manifestURLs
+	repository               distribution.Repository
+	blobStore                distribution.BlobStore
+	ctx                      context.Context
+	manifestURLs             manifestURLs
+	manifestConfigMediaTypes manifestConfigMediaTypes
+	manifestLayerMediaTypes  manifestLayerMediaTypes
 }
 
 var _ ManifestHandler = &ocischemaManifestHandler{}
@@ -80,7 +82,14 @@ func (ms *ocischemaManifestHandler) verifyManifest(ctx context.Context, mnfst oc
 
 	blobsService := ms.repository.Blobs(ctx)
 
-	for _, descriptor := range mnfst.References() {
+	for i, descriptor := range mnfst.References() {
+
+		// validate the mediaType
+		invalidMediaTypeError := validateMediaType(i, descriptor.MediaType, ms.manifestConfigMediaTypes, ms.manifestLayerMediaTypes)
+		if invalidMediaTypeError != nil {
+			return invalidMediaTypeError
+		}
+
 		var err error
 
 		switch descriptor.MediaType {

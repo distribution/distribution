@@ -1138,6 +1138,8 @@ The error codes encountered via the API are enumerated in the following table:
  `MANIFEST_INVALID` | manifest invalid | During upload, manifests undergo several checks ensuring validity. If those checks fail, this error may be returned, unless a more specific error is included. The detail will contain information the failed validation.
  `MANIFEST_UNKNOWN` | manifest unknown | This error is returned when the manifest, identified by name and tag is unknown to the repository.
  `MANIFEST_UNVERIFIED` | manifest failed signature verification | During manifest upload, if the manifest fails signature verification, this error will be returned.
+ `CONFIG_MEDIATYPE_FORBIDDEN` | manifest config mediaType forbidden | During upload, manifest config mediaType is validated against a list of allowed values setup in configuration. If that validation fails, this error will be returned.
+ `LAYER_MEDIATYPE_FORBIDDEN` | manifest layer mediaType forbidden | During upload, manifest layer mediaType is validated against a list of allowed values setup in configuration. If that validation fails, this error will be returned.
  `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation.
  `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry.
  `SIZE_INVALID` | provided length did not match content length | When a layer is uploaded, the provided size will be checked against the uploaded content. If they do not match, this error will be returned.
@@ -2146,6 +2148,40 @@ The error codes that may be included in the response body are enumerated below:
 |----|-------|-----------|
 | `DENIED` | requested access to the resource is denied | The access controller denied access for the operation on a resource. |
 
+
+###### On Failure: Forbidden MediaType(s)
+
+```
+403 Forbidden
+Content-Length: <length>
+Content-Type: application/json
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The client is attempting to upload a manifest containing disallowed mediaType(s).
+
+The following headers will be returned on the response:
+
+|Name|Description|
+|----|-----------|
+|`Content-Length`|Length of the JSON response body.|
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `CONFIG_MEDIATYPE_FORBIDDEN` | manifest config mediaType forbidden | During upload, manifest config mediaType is validated against a list of allowed values setup in configuration. If that validation fails, this error will be returned. |
+| `LAYER_MEDIATYPE_FORBIDDEN` | manifest layer mediaType forbidden | During upload, manifest layer mediaType is validated against a list of allowed values setup in configuration. If that validation fails, this error will be returned. |
 
 
 ###### On Failure: Too Many Requests

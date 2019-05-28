@@ -226,35 +226,21 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 
 	// configure validation
 	if config.Validation.Enabled {
-		if len(config.Validation.Manifests.URLs.Allow) == 0 && len(config.Validation.Manifests.URLs.Deny) == 0 {
-			// If Allow and Deny are empty, allow nothing.
-			options = append(options, storage.ManifestURLsAllowRegexp(regexp.MustCompile("^$")))
-		} else {
-			if len(config.Validation.Manifests.URLs.Allow) > 0 {
-				for i, s := range config.Validation.Manifests.URLs.Allow {
-					// Validate via compilation.
-					if _, err := regexp.Compile(s); err != nil {
-						panic(fmt.Sprintf("validation.manifests.urls.allow: %s", err))
-					}
-					// Wrap with non-capturing group.
-					config.Validation.Manifests.URLs.Allow[i] = fmt.Sprintf("(?:%s)", s)
-				}
-				re := regexp.MustCompile(strings.Join(config.Validation.Manifests.URLs.Allow, "|"))
-				options = append(options, storage.ManifestURLsAllowRegexp(re))
-			}
-			if len(config.Validation.Manifests.URLs.Deny) > 0 {
-				for i, s := range config.Validation.Manifests.URLs.Deny {
-					// Validate via compilation.
-					if _, err := regexp.Compile(s); err != nil {
-						panic(fmt.Sprintf("validation.manifests.urls.deny: %s", err))
-					}
-					// Wrap with non-capturing group.
-					config.Validation.Manifests.URLs.Deny[i] = fmt.Sprintf("(?:%s)", s)
-				}
-				re := regexp.MustCompile(strings.Join(config.Validation.Manifests.URLs.Deny, "|"))
-				options = append(options, storage.ManifestURLsDenyRegexp(re))
-			}
-		}
+
+		// validation of manifest URLs (allow nothing if not specified)
+		options = append(options, buildRegexValidationOptions("validation.manifests.urls", false,
+			config.Validation.Manifests.URLs.Allow, config.Validation.Manifests.URLs.Deny,
+			storage.ManifestURLsAllowRegexp, storage.ManifestURLsDenyRegexp)...)
+
+		// validation of manifest config mediaTypes (allow everything if not specified)
+		options = append(options, buildRegexValidationOptions("validation.manifests.configMediaTypes", true,
+			config.Validation.Manifests.ConfigMediaTypes.Allow, config.Validation.Manifests.ConfigMediaTypes.Deny,
+			storage.ManifestConfigMediaTypesAllowRegexp, storage.ManifestConfigMediaTypesDenyRegexp)...)
+
+		// validation of manifest layer mediaTypes (allow everything if not specified)
+		options = append(options, buildRegexValidationOptions("validation.manifests.layerMediaTypes", true,
+			config.Validation.Manifests.LayerMediaTypes.Allow, config.Validation.Manifests.LayerMediaTypes.Deny,
+			storage.ManifestLayerMediaTypesAllowRegexp, storage.ManifestLayerMediaTypesDenyRegexp)...)
 	}
 
 	// configure storage caches
@@ -1071,4 +1057,43 @@ func startUploadPurger(ctx context.Context, storageDriver storagedriver.StorageD
 			time.Sleep(intervalDuration)
 		}
 	}()
+}
+
+// buildRegexValidationOptions returns a slice of registry options containing
+// rules for regex validation of a certain field (using allow/deny sections)
+func buildRegexValidationOptions(sectionName string, defaultAllowAll bool, allow []string, deny []string, allowOptFunc, denyOptFunc func(r *regexp.Regexp) storage.RegistryOption) []storage.RegistryOption {
+	var options []storage.RegistryOption
+	if len(allow) == 0 && len(deny) == 0 {
+		if defaultAllowAll {
+			options = append(options, storage.ManifestURLsAllowRegexp(regexp.MustCompile("^.*$"))) // allow everything by default
+		} else {
+			options = append(options, storage.ManifestURLsAllowRegexp(regexp.MustCompile("^$"))) // allow nothing by default
+		}
+	} else {
+		if len(allow) > 0 {
+			for i, s := range allow {
+				// Validate via compilation.
+				if _, err := regexp.Compile(s); err != nil {
+					panic(fmt.Sprintf("%s.allow: %s", sectionName, err))
+				}
+				// Wrap with non-capturing group.
+				allow[i] = fmt.Sprintf("(?:%s)", s)
+			}
+			re := regexp.MustCompile(strings.Join(allow, "|"))
+			options = append(options, allowOptFunc(re))
+		}
+		if len(deny) > 0 {
+			for i, s := range deny {
+				// Validate via compilation.
+				if _, err := regexp.Compile(s); err != nil {
+					panic(fmt.Sprintf("%s.deny: %s", sectionName, err))
+				}
+				// Wrap with non-capturing group.
+				deny[i] = fmt.Sprintf("(?:%s)", s)
+			}
+			re := regexp.MustCompile(strings.Join(deny, "|"))
+			options = append(options, denyOptFunc(re))
+		}
+	}
+	return options
 }

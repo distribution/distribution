@@ -362,8 +362,6 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 					imh.Errors = append(imh.Errors, v2.ErrorCodeManifestBlobUnknown.WithDetail(verificationError.Digest))
 				case distribution.ErrManifestNameInvalid:
 					imh.Errors = append(imh.Errors, v2.ErrorCodeNameInvalid.WithDetail(err))
-				case distribution.ErrManifestUnverified:
-					imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnverified)
 				default:
 					if verificationError == digest.ErrDigestInvalidFormat {
 						imh.Errors = append(imh.Errors, v2.ErrorCodeDigestInvalid)
@@ -372,6 +370,12 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 					}
 				}
 			}
+		case distribution.ErrManifestConfigMediaTypeForbidden:
+			dcontext.GetLogger(imh).Debug(err.Error())
+			imh.Errors = append(imh.Errors, v2.ErrorCodeConfigMediaTypeForbidden)
+		case distribution.ErrManifestLayerMediaTypeForbidden:
+			dcontext.GetLogger(imh).Debug(err.Error())
+			imh.Errors = append(imh.Errors, v2.ErrorCodeLayerMediaTypeForbidden)
 		case errcode.Error:
 			imh.Errors = append(imh.Errors, err)
 		default:
