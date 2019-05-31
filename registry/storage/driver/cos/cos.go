@@ -241,9 +241,6 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 func (d *driver) PutContent(ctx context.Context, path string, content []byte) error {
 	body := bytes.NewBuffer(content)
 	opt := &cos.ObjectPutOptions{
-		ACLHeaderOptions: &cos.ACLHeaderOptions{
-			XCosACL: "private",
-		},
 		ObjectPutHeaderOptions: &cos.ObjectPutHeaderOptions{
 			ContentType:   d.getContentType(),
 			ContentLength: len(content),
@@ -809,9 +806,6 @@ func (d *driver) copy(ctx context.Context, sourcePath string, destPath string) e
 
 	// upload parts
 	createResp, _, err := d.Client.Object.InitiateMultipartUpload(ctx, parsedDestPath, &cos.InitiateMultipartUploadOptions{
-		ACLHeaderOptions: &cos.ACLHeaderOptions{
-			XCosACL: "private",
-		},
 		ObjectPutHeaderOptions: &cos.ObjectPutHeaderOptions{
 			ContentType: d.getContentType(),
 		},
