@@ -2,19 +2,11 @@
 
 set -eu -o pipefail
 
-rm -rf vendor/
-vndr |& grep -v -i clone
+echo "- Checking for any unused/missing packages in go.mod..."
+GO111MODULE=on go mod tidy
+echo "- Checking for unused packages in vendor..."
+GO111MODULE=on go mod vendor
+git diff --exit-code -- go.sum go.mod vendor/
 
-DIFF_PATH="vendor/"
-DIFF=$(git status --porcelain -- "$DIFF_PATH")
-
-if [ "$DIFF" ]; then
-    echo
-    echo "These files were modified:"
-    echo
-    echo "$DIFF"
-    echo
-    exit 1
-else
-    echo "$DIFF_PATH is correct"
-fi
+untracked=$(git ls-files --others vendor | wc -l | awk '{ print $1 }')
+[[ "${untracked}" == "0" ]]
