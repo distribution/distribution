@@ -14,7 +14,7 @@ WORKDIR $DISTRIBUTION_DIR
 COPY . $DISTRIBUTION_DIR
 RUN CGO_ENABLED=0 make PREFIX=/go clean binaries && file ./bin/registry | grep "statically linked"
 
-FROM alpine:3.8
+FROM alpine:3.9
 
 RUN set -ex \
     && apk add --no-cache ca-certificates apache2-utils
