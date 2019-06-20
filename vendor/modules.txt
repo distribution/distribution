@@ -1,3 +1,5 @@
+# cloud.google.com/go v0.34.0
+cloud.google.com/go/compute/metadata
 # github.com/Azure/azure-sdk-for-go v16.2.1+incompatible
 github.com/Azure/azure-sdk-for-go/storage
 github.com/Azure/azure-sdk-for-go/version
@@ -43,7 +45,7 @@ github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil
 github.com/aws/aws-sdk-go/private/protocol/query/queryutil
 # github.com/beorn7/perks v0.0.0-20160804104726-4c0e84591b9a
 github.com/beorn7/perks/quantile
-# github.com/bshuster-repo/logrus-logstash-hook v0.0.0-20170517171303-d2c0ecc1836d
+# github.com/bshuster-repo/logrus-logstash-hook v0.4.1
 github.com/bshuster-repo/logrus-logstash-hook
 # github.com/bugsnag/bugsnag-go v0.0.0-20141110184014-b1d153021fcd
 github.com/bugsnag/bugsnag-go
@@ -68,25 +70,25 @@ github.com/garyburd/redigo/redis
 github.com/garyburd/redigo/internal
 # github.com/go-ini/ini v1.25.4
 github.com/go-ini/ini
-# github.com/golang/protobuf v0.0.0-20160321223353-8d92cf5fc15a
+# github.com/golang/protobuf v1.2.0
 github.com/golang/protobuf/proto
-# github.com/gorilla/context v1.1.1
-github.com/gorilla/context
 # github.com/gorilla/handlers v0.0.0-20150720190736-60c7bfde3e33
 github.com/gorilla/handlers
-# github.com/gorilla/mux v0.0.0-20170228224354-599cba5e7b61
+# github.com/gorilla/mux v1.7.2
 github.com/gorilla/mux
 # github.com/inconshreveable/mousetrap v1.0.0
 github.com/inconshreveable/mousetrap
 # github.com/jmespath/go-jmespath v0.0.0-20160803190731-bd40a432e4c7
 github.com/jmespath/go-jmespath
+# github.com/konsorten/go-windows-terminal-sequences v1.0.1
+github.com/konsorten/go-windows-terminal-sequences
 # github.com/marstr/guid v1.1.0
 github.com/marstr/guid
 # github.com/matttproud/golang_protobuf_extensions v1.0.1
 github.com/matttproud/golang_protobuf_extensions/pbutil
-# github.com/mitchellh/mapstructure v0.0.0-20150528213339-482a9fd5fa83
+# github.com/mitchellh/mapstructure v1.1.2
 github.com/mitchellh/mapstructure
-# github.com/ncw/swift v1.0.40
+# github.com/ncw/swift v1.0.47
 github.com/ncw/swift
 github.com/ncw/swift/swifttest
 # github.com/opencontainers/go-digest v0.0.0-20170106003457-a6d0ee40d420
@@ -110,11 +112,11 @@ github.com/prometheus/procfs/xfs
 github.com/prometheus/procfs/internal/util
 # github.com/satori/go.uuid v1.2.0
 github.com/satori/go.uuid
-# github.com/sirupsen/logrus v0.0.0-20170620144510-3d4380f53a34
+# github.com/sirupsen/logrus v1.4.2
 github.com/sirupsen/logrus
-# github.com/spf13/cobra v0.0.0-20150605180824-312092086bed
+# github.com/spf13/cobra v0.0.3
 github.com/spf13/cobra
-# github.com/spf13/pflag v0.0.0-20150601220040-564482062245
+# github.com/spf13/pflag v1.0.3
 github.com/spf13/pflag
 # github.com/yvasiyarov/go-metrics v0.0.0-20140926110328-57bccd1ccd43
 github.com/yvasiyarov/go-metrics
@@ -127,16 +129,16 @@ golang.org/x/crypto/acme
 golang.org/x/crypto/acme/autocert
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blowfish
-# golang.org/x/net v0.0.0-20190311183353-d8887717615a
+# golang.org/x/net v0.0.0-20190619014844-b5b0513f8c1b
 golang.org/x/net/context
+golang.org/x/net/context/ctxhttp
 golang.org/x/net/http2
 golang.org/x/net/trace
-golang.org/x/net/context/ctxhttp
 golang.org/x/net/http/httpguts
 golang.org/x/net/http2/hpack
 golang.org/x/net/idna
 golang.org/x/net/internal/timeseries
-# golang.org/x/oauth2 v0.0.0-20160304213135-045497edb623
+# golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 golang.org/x/oauth2
 golang.org/x/oauth2/google
 golang.org/x/oauth2/jwt
@@ -154,13 +156,13 @@ google.golang.org/api/googleapi
 google.golang.org/api/googleapi/internal/uritemplates
 google.golang.org/api/storage/v1
 google.golang.org/api/gensupport
-# google.golang.org/appengine v0.0.0-20160301025000-12d5545dc1cf
-google.golang.org/appengine/urlfetch
+# google.golang.org/appengine v1.4.0
 google.golang.org/appengine
+google.golang.org/appengine/urlfetch
 google.golang.org/appengine/internal
-google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/internal/app_identity
 google.golang.org/appengine/internal/modules
+google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/internal/base
 google.golang.org/appengine/internal/datastore
 google.golang.org/appengine/internal/log
@@ -168,7 +170,6 @@ google.golang.org/appengine/internal/remote_api
 # google.golang.org/cloud v0.0.0-20151119220103-975617b05ea8
 google.golang.org/cloud
 google.golang.org/cloud/storage
-google.golang.org/cloud/compute/metadata
 google.golang.org/cloud/internal
 google.golang.org/cloud/internal/opts
 # google.golang.org/grpc v0.0.0-20160317175043-d3ddb4469d5a
@@ -183,5 +184,5 @@ google.golang.org/grpc/transport
 google.golang.org/grpc/peer
 # gopkg.in/check.v1 v1.0.0-20141024133853-64131543e789
 gopkg.in/check.v1
-# gopkg.in/yaml.v2 v2.2.1
+# gopkg.in/yaml.v2 v2.2.2
 gopkg.in/yaml.v2
