@@ -366,6 +366,10 @@ func (th *tokenHandler) fetchTokenWithOAuth(realm *url.URL, refreshToken, servic
 		return "", time.Time{}, fmt.Errorf("unable to decode token response: %s", err)
 	}
 
+	if tr.AccessToken == "" {
+		return "", time.Time{}, ErrNoToken
+	}
+
 	if tr.RefreshToken != "" && tr.RefreshToken != refreshToken {
 		th.creds.SetRefreshToken(realm, service, tr.RefreshToken)
 	}
