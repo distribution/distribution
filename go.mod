@@ -53,5 +53,6 @@ require (
 	google.golang.org/cloud v0.0.0-20151119220103-975617b05ea8
 	google.golang.org/grpc v0.0.0-20160317175043-d3ddb4469d5a // indirect
 	gopkg.in/check.v1 v1.0.0-20141024133853-64131543e789
+	gopkg.in/mgo.v2 v2.0.0-20160801194620-b6121c6199b7
 	gopkg.in/yaml.v2 v2.2.2
 )

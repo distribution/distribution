@@ -299,6 +299,9 @@ func (d *driver) Name() string {
 func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 	rc, err := d.Reader(ctx, path, 0)
 	if err != nil {
+		if err == mgo.ErrNotFound {
+			return nil, storagedriver.PathNotFoundError{Path: path}
+		}
 		return nil, err
 	}
 	result, err := ioutil.ReadAll(rc)
