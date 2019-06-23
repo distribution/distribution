@@ -243,3 +243,39 @@ func TestFilenameChunking(t *testing.T) {
 		t.Fatal("expected error for size = -1")
 	}
 }
+
+func TestSwiftSegmentPath(t *testing.T) {
+	d := &driver{
+		Prefix: "/test/segment/path",
+	}
+
+	s1, err := d.swiftSegmentPath("foo-baz")
+	if err != nil {
+		t.Fatalf("unexpected error generating segment path: %v", err)
+	}
+
+	s2, err := d.swiftSegmentPath("foo-baz")
+	if err != nil {
+		t.Fatalf("unexpected error generating segment path: %v", err)
+	}
+
+	if !strings.HasPrefix(s1, "test/segment/path/segments/") {
+		t.Fatalf("expected to be prefixed: %s", s1)
+	}
+
+	if !strings.HasPrefix(s1, "test/segment/path/segments/") {
+		t.Fatalf("expected to be prefixed: %s", s2)
+	}
+
+	if len(s1) != 68 {
+		t.Fatalf("unexpected segment path length, %d != %d", len(s1), 68)
+	}
+
+	if len(s2) != 68 {
+		t.Fatalf("unexpected segment path length, %d != %d", len(s2), 68)
+	}
+
+	if s1 == s2 {
+		t.Fatalf("expected segment paths to differ, %s == %s", s1, s2)
+	}
+}
