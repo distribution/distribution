@@ -667,13 +667,16 @@ func (d *driver) swiftPath(path string) string {
 	return strings.TrimLeft(strings.TrimRight(d.Prefix+"/files"+path, "/"), "/")
 }
 
+// swiftSegmentPath returns a randomly generated path in the segments directory.
 func (d *driver) swiftSegmentPath(path string) (string, error) {
 	checksum := sha1.New()
-	random := make([]byte, 32)
-	if _, err := rand.Read(random); err != nil {
+	checksum.Write([]byte(path))
+
+	if _, err := io.CopyN(checksum, rand.Reader, 32); err != nil {
 		return "", err
 	}
-	path = hex.EncodeToString(checksum.Sum(append([]byte(path), random...)))
+
+	path = hex.EncodeToString(checksum.Sum(nil))
 	return strings.TrimLeft(strings.TrimRight(d.Prefix+"/segments/"+path[0:3]+"/"+path[3:], "/"), "/"), nil
 }
 
