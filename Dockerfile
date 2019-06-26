@@ -6,6 +6,8 @@ ENV BUILDTAGS include_oss include_gcs
 ARG GOOS=linux
 ARG GOARCH=amd64
 ARG GOARM=6
+ARG VERSION
+ARG REVISION
 
 RUN set -ex \
     && apk add --no-cache make git file
