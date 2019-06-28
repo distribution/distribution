@@ -58,7 +58,7 @@ func NewEndpoint(name, url string, config EndpointConfig) *Endpoint {
 	endpoint.url = url
 	endpoint.EndpointConfig = config
 	endpoint.defaults()
-	endpoint.metrics = newSafeMetrics()
+	endpoint.metrics = newSafeMetrics(name)
 
 	// Configures the inmemory queue, retry, http pipeline.
 	endpoint.Sink = newHTTPSink(
