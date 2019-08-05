@@ -29,8 +29,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
+	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -404,12 +403,8 @@ func New(params DriverParameters) (*Driver, error) {
 		return nil, fmt.Errorf("on Amazon S3 this storage driver can only be used with v4 authentication")
 	}
 
-	awsConfig := aws.NewConfig()
-	sess, err := session.NewSession()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create new session: %v", err)
-	}
-	creds := credentials.NewChainCredentials([]credentials.Provider{
+	awsConfig := defaults.Config()
+	providers := []credentials.Provider{
 		&credentials.StaticProvider{
 			Value: credentials.Value{
 				AccessKeyID:     params.AccessKey,
@@ -417,10 +412,9 @@ func New(params DriverParameters) (*Driver, error) {
 				SessionToken:    params.SessionToken,
 			},
 		},
-		&credentials.EnvProvider{},
-		&credentials.SharedCredentialsProvider{},
-		&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(sess)},
-	})
+	}
+	providers = append(providers, defaults.CredProviders(awsConfig, defaults.Handlers())...)
+	creds := credentials.NewChainCredentials(providers)
 
 	if params.RegionEndpoint != "" {
 		awsConfig.WithS3ForcePathStyle(true)
@@ -449,7 +443,7 @@ func New(params DriverParameters) (*Driver, error) {
 		}
 	}
 
-	sess, err = session.NewSession(awsConfig)
+	sess, err := session.NewSession(awsConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new session with aws config: %v", err)
 	}
