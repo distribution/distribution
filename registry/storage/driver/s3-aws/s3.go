@@ -98,6 +98,7 @@ type DriverParameters struct {
 	StorageClass                string
 	UserAgent                   string
 	ObjectACL                   string
+	CephCompatible              bool
 }
 
 func init() {
@@ -155,6 +156,7 @@ type driver struct {
 	RootDirectory               string
 	StorageClass                string
 	ObjectACL                   string
+	CephCompatible              bool
 }
 
 type baseEmbed struct {
@@ -241,6 +243,23 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		// do nothing
 	default:
 		return nil, fmt.Errorf("The secure parameter should be a boolean")
+	}
+
+	cephCompatibleBool := false
+	cephcompatible := parameters["cephcompatible"]
+	switch cephcompatible := cephcompatible.(type) {
+	case string:
+		b, err := strconv.ParseBool(cephcompatible)
+		if err != nil {
+			return nil, fmt.Errorf("the ceph compatible parameter should be a boolean")
+		}
+		cephCompatibleBool = b
+	case bool:
+		cephCompatibleBool = cephcompatible
+	case nil:
+		// do nothing
+	default:
+		return nil, fmt.Errorf("the ceph compatible parameter should be a boolean")
 	}
 
 	v4Bool := true
@@ -346,6 +365,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		storageClass,
 		fmt.Sprint(userAgent),
 		objectACL,
+		cephCompatibleBool,
 	}
 
 	return New(params)
@@ -451,6 +471,7 @@ func New(params DriverParameters) (*Driver, error) {
 		RootDirectory:               params.RootDirectory,
 		StorageClass:                params.StorageClass,
 		ObjectACL:                   params.ObjectACL,
+		CephCompatible:              params.CephCompatible,
 	}
 
 	return &Driver{
@@ -832,6 +853,9 @@ ListLoop:
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 // May return an UnsupportedMethodErr in certain StorageDriver implementations.
 func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
+	if d.CephCompatible {
+		return "", storagedriver.ErrUnsupportedMethod{}
+	}
 	methodString := "GET"
 	method, ok := options["method"]
 	if ok {
