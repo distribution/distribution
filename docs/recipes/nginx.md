@@ -181,8 +181,6 @@ Review the [requirements](/registry/recipes/index.md#requirements), then follow 
 
     registry:
       image: registry:2
-      ports:
-        - 127.0.0.1:5000:5000
       volumes:
         - ./data:/var/lib/registry
     ```
