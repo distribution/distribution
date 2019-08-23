@@ -10,7 +10,7 @@ github.com/Azure/go-autorest/autorest/adal
 github.com/Azure/go-autorest/autorest/date
 # github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d
 github.com/Shopify/logrus-bugsnag
-# github.com/aws/aws-sdk-go v1.15.11
+# github.com/aws/aws-sdk-go v1.23.7
 github.com/aws/aws-sdk-go/service/cloudfront/sign
 github.com/aws/aws-sdk-go/aws
 github.com/aws/aws-sdk-go/aws/awserr
