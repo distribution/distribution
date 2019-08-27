@@ -116,35 +116,3 @@ Save the file and reload Docker for the change to take effect.
 >
 > It's telling you that the file doesn't exist yet in the local cache and is
 > being pulled from upstream.
-
-
-## Use case: the China registry mirror
-
-The URL of the registry mirror for China is `registry.docker-cn.com`. You can
-pull images from this mirror just like you do for other registries by
-specifying the full path, including the registry, in your `docker pull`
-command, for example:
-
-```bash
-$ docker pull registry.docker-cn.com/library/ubuntu
-```
-
-You can add `"https://registry.docker-cn.com"` to the `registry-mirrors` array
-in [`/etc/docker/daemon.json`](/engine/reference/commandline/dockerd.md#daemon-configuration-file)
-to pull from the China registry mirror by default.
-
-```json
-{
-  "registry-mirrors": ["https://registry.docker-cn.com"]
-}
-```
-
-Save the file and reload Docker for the change to take effect.
-
-Or, you can configure the Docker daemon with the `--registry-mirror` startup
-parameter:
-
-```bash
-$ dockerd --registry-mirror=https://registry.docker-cn.com
-```
-
