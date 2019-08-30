@@ -720,26 +720,46 @@ func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (sto
 // Stat retrieves the FileInfo for the given path, including the current size
 // in bytes and the creation time.
 func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
-	resp, err := d.S3.HeadObjectWithContext(ctx, &s3.HeadObjectInput{
+	fi := storagedriver.FileInfoFields{
+		Path: path,
+	}
+
+	headResp, err := d.S3.HeadObjectWithContext(ctx, &s3.HeadObjectInput{
 		Bucket: aws.String(d.Bucket),
 		Key:    aws.String(d.s3Path(path)),
 	})
-	if err != nil {
-		if err, ok := err.(awserr.Error); ok && err.Code() == s3.ErrCodeNoSuchKey {
-			return nil, storagedriver.PathNotFoundError{Path: path}
+	if err == nil {
+		if headResp.ContentLength != nil {
+			fi.Size = *headResp.ContentLength
 		}
+		if headResp.LastModified != nil {
+			fi.ModTime = *headResp.LastModified
+		}
+
+		return storagedriver.FileInfoInternal{FileInfoFields: fi}, nil
+	}
+
+	resp, err := d.S3.ListObjectsWithContext(ctx, &s3.ListObjectsInput{
+		Bucket:  aws.String(d.Bucket),
+		Prefix:  aws.String(d.s3Path(path)),
+		MaxKeys: aws.Int64(1),
+	})
+	if err != nil {
 		return nil, err
 	}
 
-	fi := storagedriver.FileInfoFields{
-		Path:  path,
-		IsDir: false,
-	}
-	if resp.ContentLength != nil {
-		fi.Size = *resp.ContentLength
-	}
-	if resp.LastModified != nil {
-		fi.ModTime = *resp.LastModified
+	if len(resp.Contents) == 1 {
+		if *resp.Contents[0].Key != d.s3Path(path) {
+			fi.IsDir = true
+		} else {
+			fi.IsDir = false
+			fi.Size = *resp.Contents[0].Size
+			fi.ModTime = *resp.Contents[0].LastModified
+		}
+	} else if len(resp.CommonPrefixes) == 1 {
+		fi.IsDir = true
+	} else {
+		return nil, storagedriver.PathNotFoundError{Path: path}
 	}
 
 	return storagedriver.FileInfoInternal{FileInfoFields: fi}, nil
