@@ -77,6 +77,7 @@ func init() {
 		}
 
 		parameters := DriverParameters{
+			nil,
 			accessKey,
 			secretKey,
 			bucket,
