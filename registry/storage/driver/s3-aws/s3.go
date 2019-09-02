@@ -504,15 +504,6 @@ func (d *driver) Name() string {
 	return driverName
 }
 
-// GetContent retrieves the content stored at "path" as a []byte.
-func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
-	reader, err := d.Reader(ctx, path, 0)
-	if err != nil {
-		return nil, err
-	}
-	return ioutil.ReadAll(reader)
-}
-
 // PutContent stores the []byte content at a location designated by "path".
 func (d *driver) PutContent(ctx context.Context, path string, contents []byte) error {
 	_, err := d.S3.PutObject(&s3.PutObjectInput{

@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"time"
@@ -113,22 +112,6 @@ func New(params DriverParameters) *Driver {
 
 func (d *driver) Name() string {
 	return driverName
-}
-
-// GetContent retrieves the content stored at "path" as a []byte.
-func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
-	rc, err := d.Reader(ctx, path, 0)
-	if err != nil {
-		return nil, err
-	}
-	defer rc.Close()
-
-	p, err := ioutil.ReadAll(rc)
-	if err != nil {
-		return nil, err
-	}
-
-	return p, nil
 }
 
 // PutContent stores the []byte content at a location designated by "path".

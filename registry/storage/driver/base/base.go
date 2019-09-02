@@ -90,21 +90,6 @@ func (base *Base) setDriverName(e error) error {
 	}
 }
 
-// GetContent wraps GetContent of underlying storage driver.
-func (base *Base) GetContent(ctx context.Context, path string) ([]byte, error) {
-	ctx, done := dcontext.WithTrace(ctx)
-	defer done("%s.GetContent(%q)", base.Name(), path)
-
-	if !storagedriver.PathRegexp.MatchString(path) {
-		return nil, storagedriver.InvalidPathError{Path: path, DriverName: base.StorageDriver.Name()}
-	}
-
-	start := time.Now()
-	b, e := base.StorageDriver.GetContent(ctx, path)
-	storageAction.WithValues(base.Name(), "GetContent").UpdateSince(start)
-	return b, base.setDriverName(e)
-}
-
 // PutContent wraps PutContent of underlying storage driver.
 func (base *Base) PutContent(ctx context.Context, path string, content []byte) error {
 	ctx, done := dcontext.WithTrace(ctx)

@@ -308,7 +308,7 @@ func TestMoveWithMultipartCopy(t *testing.T) {
 		t.Fatalf("unexpected error moving file: %v", err)
 	}
 
-	received, err := d.GetContent(ctx, destPath)
+	received, err := storagedriver.GetContent(ctx, d, destPath)
 	if err != nil {
 		t.Fatalf("unexpected error getting content: %v", err)
 	}
@@ -316,7 +316,7 @@ func TestMoveWithMultipartCopy(t *testing.T) {
 		t.Fatal("content differs")
 	}
 
-	_, err = d.GetContent(ctx, sourcePath)
+	_, err = storagedriver.GetContent(ctx, d, sourcePath)
 	switch err.(type) {
 	case storagedriver.PathNotFoundError:
 	default:

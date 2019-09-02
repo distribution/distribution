@@ -44,10 +44,6 @@ type StorageDriver interface {
 	// name, but drivers may provide other information here.
 	Name() string
 
-	// GetContent retrieves the content stored at "path" as a []byte.
-	// This should primarily be used for small objects.
-	GetContent(ctx context.Context, path string) ([]byte, error)
-
 	// PutContent stores the []byte content at a location designated by "path".
 	// This should primarily be used for small objects.
 	PutContent(ctx context.Context, path string, content []byte) error
@@ -106,8 +102,7 @@ type FileWriter interface {
 	Cancel() error
 
 	// Commit flushes all content written to this FileWriter and makes it
-	// available for future calls to StorageDriver.GetContent and
-	// StorageDriver.Reader.
+	// available for future calls to StorageDriver.Reader.
 	Commit() error
 }
 

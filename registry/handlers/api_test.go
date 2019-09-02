@@ -869,15 +869,6 @@ type mockErrorDriver struct {
 	returnErrs []mockErrorMapping
 }
 
-func (dr *mockErrorDriver) GetContent(ctx context.Context, path string) ([]byte, error) {
-	for _, returns := range dr.returnErrs {
-		if strings.Contains(path, returns.pathMatch) {
-			return returns.content, returns.err
-		}
-	}
-	return nil, errors.New("Unknown storage error")
-}
-
 func TestGetManifestWithStorageError(t *testing.T) {
 	factory.Register("storagemanifesterror", &storageManifestErrDriverFactory{})
 	config := configuration.Configuration{

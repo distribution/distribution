@@ -102,21 +102,6 @@ func (d *driver) Name() string {
 	return driverName
 }
 
-// GetContent retrieves the content stored at "path" as a []byte.
-func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
-	blobRef := d.client.GetContainerReference(d.container).GetBlobReference(path)
-	blob, err := blobRef.Get(nil)
-	if err != nil {
-		if is404(err) {
-			return nil, storagedriver.PathNotFoundError{Path: path}
-		}
-		return nil, err
-	}
-
-	defer blob.Close()
-	return ioutil.ReadAll(blob)
-}
-
 // PutContent stores the []byte content at a location designated by "path".
 func (d *driver) PutContent(ctx context.Context, path string, contents []byte) error {
 	// max size for block blobs uploaded via single "Put Blob" for version after "2016-05-31"

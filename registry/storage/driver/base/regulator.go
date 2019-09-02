@@ -96,15 +96,6 @@ func (r *regulator) Name() string {
 	return r.StorageDriver.Name()
 }
 
-// GetContent retrieves the content stored at "path" as a []byte.
-// This should primarily be used for small objects.
-func (r *regulator) GetContent(ctx context.Context, path string) ([]byte, error) {
-	r.enter()
-	defer r.exit()
-
-	return r.StorageDriver.GetContent(ctx, path)
-}
-
 // PutContent stores the []byte content at a location designated by "path".
 // This should primarily be used for small objects.
 func (r *regulator) PutContent(ctx context.Context, path string, content []byte) error {

@@ -52,7 +52,7 @@ func (bw *blobWriter) resumeDigest(ctx context.Context) error {
 		// No need to load any state, just reset the hasher.
 		h.(hash.Hash).Reset()
 	} else {
-		storedState, err := bw.driver.GetContent(ctx, hashStateMatch.path)
+		storedState, err := storagedriver.GetContent(ctx, bw.driver, hashStateMatch.path)
 		if err != nil {
 			return err
 		}

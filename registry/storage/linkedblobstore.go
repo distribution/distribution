@@ -186,7 +186,7 @@ func (lbs *linkedBlobStore) Resume(ctx context.Context, id string) (distribution
 		return nil, err
 	}
 
-	startedAtBytes, err := lbs.blobStore.driver.GetContent(ctx, startedAtPath)
+	startedAtBytes, err := driver.GetContent(ctx, lbs.blobStore.driver, startedAtPath)
 	if err != nil {
 		switch err := err.(type) {
 		case driver.PathNotFoundError:

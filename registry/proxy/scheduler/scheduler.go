@@ -247,7 +247,7 @@ func (ttles *TTLExpirationScheduler) readState() error {
 		}
 	}
 
-	bytes, err := ttles.driver.GetContent(ttles.ctx, ttles.pathToStateFile)
+	bytes, err := driver.GetContent(ttles.ctx, ttles.driver, ttles.pathToStateFile)
 	if err != nil {
 		return err
 	}

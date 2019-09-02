@@ -122,12 +122,12 @@ func TestCommitEmpty(t *testing.T) {
 	if writer.Size() != 0 {
 		t.Fatalf("writer.Size: %d != 0", writer.Size())
 	}
-	readContents, err := driver.GetContent(ctx, filename)
+	readContents, err := storagedriver.GetContent(ctx, driver, filename)
 	if err != nil {
-		t.Fatalf("driver.GetContent: unexpected error: %v", err)
+		t.Fatalf("GetContent: unexpected error: %v", err)
 	}
 	if len(readContents) != 0 {
-		t.Fatalf("len(driver.GetContent(..)): %d != 0", len(readContents))
+		t.Fatalf("len(GetContent(..)): %d != 0", len(readContents))
 	}
 }
 
@@ -173,12 +173,12 @@ func TestCommit(t *testing.T) {
 	if writer.Size() != int64(len(contents)) {
 		t.Fatalf("writer.Size: %d != %d", writer.Size(), len(contents))
 	}
-	readContents, err := driver.GetContent(ctx, filename)
+	readContents, err := storagedriver.GetContent(ctx, driver, filename)
 	if err != nil {
-		t.Fatalf("driver.GetContent: unexpected error: %v", err)
+		t.Fatalf("GetContent: unexpected error: %v", err)
 	}
 	if len(readContents) != len(contents) {
-		t.Fatalf("len(driver.GetContent(..)): %d != %d", len(readContents), len(contents))
+		t.Fatalf("len(GetContent(..)): %d != %d", len(readContents), len(contents))
 	}
 }
 

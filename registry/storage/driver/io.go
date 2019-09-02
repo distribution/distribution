@@ -1,19 +1,18 @@
-package storage
+package driver
 
 import (
 	"context"
 	"errors"
 	"io"
 	"io/ioutil"
-
-	"github.com/docker/distribution/registry/storage/driver"
 )
 
 const (
 	maxBlobGetSize = 4 << 20
 )
 
-func getContent(ctx context.Context, driver driver.StorageDriver, p string) ([]byte, error) {
+// GetContent reads the content at p with a limit
+func GetContent(ctx context.Context, driver StorageDriver, p string) ([]byte, error) {
 	r, err := driver.Reader(ctx, p, 0)
 	if err != nil {
 		return nil, err

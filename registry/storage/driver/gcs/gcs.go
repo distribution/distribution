@@ -243,32 +243,6 @@ func (d *driver) Name() string {
 	return driverName
 }
 
-// GetContent retrieves the content stored at "path" as a []byte.
-// This should primarily be used for small objects.
-func (d *driver) GetContent(context context.Context, path string) ([]byte, error) {
-	gcsContext := d.context(context)
-	name := d.pathToKey(path)
-	var rc io.ReadCloser
-	err := retry(func() error {
-		var err error
-		rc, err = storage.NewReader(gcsContext, d.bucket, name)
-		return err
-	})
-	if err == storage.ErrObjectNotExist {
-		return nil, storagedriver.PathNotFoundError{Path: path}
-	}
-	if err != nil {
-		return nil, err
-	}
-	defer rc.Close()
-
-	p, err := ioutil.ReadAll(rc)
-	if err != nil {
-		return nil, err
-	}
-	return p, nil
-}
-
 // PutContent stores the []byte content at a location designated by "path".
 // This should primarily be used for small objects.
 func (d *driver) PutContent(context context.Context, path string, contents []byte) error {
@@ -440,8 +414,7 @@ func putContentsClose(wc *storage.Writer, contents []byte) error {
 }
 
 // Commit flushes all content written to this FileWriter and makes it
-// available for future calls to StorageDriver.GetContent and
-// StorageDriver.Reader.
+// available for future calls to StorageDriver.Reader.
 func (w *writer) Commit() error {
 
 	if err := w.checkClosed(); err != nil {

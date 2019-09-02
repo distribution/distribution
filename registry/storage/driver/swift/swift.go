@@ -302,15 +302,6 @@ func (d *driver) Name() string {
 	return driverName
 }
 
-// GetContent retrieves the content stored at "path" as a []byte.
-func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
-	content, err := d.Conn.ObjectGetBytes(d.Container, d.swiftPath(path))
-	if err == swift.ObjectNotFound {
-		return nil, storagedriver.PathNotFoundError{Path: path}
-	}
-	return content, err
-}
-
 // PutContent stores the []byte content at a location designated by "path".
 func (d *driver) PutContent(ctx context.Context, path string, contents []byte) error {
 	err := d.Conn.ObjectPutBytes(d.Container, d.swiftPath(path), contents, contentType)

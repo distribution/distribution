@@ -127,7 +127,7 @@ func uuidFromPath(path string) (string, bool) {
 // readStartedAtFile reads the date from an upload's startedAtFile
 func readStartedAtFile(driver storageDriver.StorageDriver, path string) (time.Time, error) {
 	// todo:(richardscothern) - pass in a context
-	startedAtBytes, err := driver.GetContent(context.Background(), path)
+	startedAtBytes, err := storageDriver.GetContent(context.Background(), driver, path)
 	if err != nil {
 		return time.Now(), err
 	}

@@ -28,7 +28,7 @@ func (bs *blobStore) Get(ctx context.Context, dgst digest.Digest) ([]byte, error
 		return nil, err
 	}
 
-	p, err := getContent(ctx, bs.driver, bp)
+	p, err := driver.GetContent(ctx, bs.driver, bp)
 	if err != nil {
 		switch err.(type) {
 		case driver.PathNotFoundError:
@@ -139,7 +139,7 @@ func (bs *blobStore) link(ctx context.Context, path string, dgst digest.Digest) 
 
 // readlink returns the linked digest at path.
 func (bs *blobStore) readlink(ctx context.Context, path string) (digest.Digest, error) {
-	content, err := bs.driver.GetContent(ctx, path)
+	content, err := driver.GetContent(ctx, bs.driver, path)
 	if err != nil {
 		return "", err
 	}
