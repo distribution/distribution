@@ -24,10 +24,6 @@ type httpBlobUpload struct {
 	closed   bool
 }
 
-func (hbu *httpBlobUpload) Reader() (io.ReadCloser, error) {
-	panic("Not implemented")
-}
-
 func (hbu *httpBlobUpload) handleErrorResponse(resp *http.Response) error {
 	if resp.StatusCode == http.StatusNotFound {
 		return distribution.ErrBlobUploadUnknown

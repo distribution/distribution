@@ -378,29 +378,3 @@ func (bw *blobWriter) removeResources(ctx context.Context) error {
 
 	return nil
 }
-
-func (bw *blobWriter) Reader() (io.ReadCloser, error) {
-	// todo(richardscothern): Change to exponential backoff, i=0.5, e=2, n=4
-	try := 1
-	for try <= 5 {
-		_, err := bw.driver.Stat(bw.ctx, bw.path)
-		if err == nil {
-			break
-		}
-		switch err.(type) {
-		case storagedriver.PathNotFoundError:
-			dcontext.GetLogger(bw.ctx).Debugf("Nothing found on try %d, sleeping...", try)
-			time.Sleep(1 * time.Second)
-			try++
-		default:
-			return nil, err
-		}
-	}
-
-	readCloser, err := bw.driver.Reader(bw.ctx, bw.path, 0)
-	if err != nil {
-		return nil, err
-	}
-
-	return readCloser, nil
-}
