@@ -94,6 +94,10 @@ var validObjectACLs = map[string]struct{}{}
 
 // DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
 type DriverParameters struct {
+	// S3 is an optional parameter. If specified, it will use the existing session
+	// to construct the Driver.
+	S3 *s3.S3
+
 	AccessKey                   string
 	SecretKey                   string
 	Bucket                      string
@@ -436,6 +440,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	}
 
 	params := DriverParameters{
+		nil,
 		fmt.Sprint(accessKey),
 		fmt.Sprint(secretKey),
 		fmt.Sprint(bucket),
@@ -496,58 +501,61 @@ func getParameterAsInt64(parameters map[string]interface{}, name string, default
 // New constructs a new Driver with the given AWS credentials, region, encryption flag, and
 // bucketName
 func New(params DriverParameters) (*Driver, error) {
-	if !params.V4Auth &&
-		(params.RegionEndpoint == "" ||
-			strings.Contains(params.RegionEndpoint, "s3.amazonaws.com")) {
-		return nil, fmt.Errorf("on Amazon S3 this storage driver can only be used with v4 authentication")
-	}
-
-	awsConfig := aws.NewConfig()
-
-	if params.AccessKey != "" && params.SecretKey != "" {
-		creds := credentials.NewStaticCredentials(
-			params.AccessKey,
-			params.SecretKey,
-			params.SessionToken,
-		)
-		awsConfig.WithCredentials(creds)
-	}
-
-	if params.RegionEndpoint != "" {
-		awsConfig.WithEndpoint(params.RegionEndpoint)
-		awsConfig.WithS3ForcePathStyle(params.ForcePathStyle)
-	}
-
-	awsConfig.WithS3UseAccelerate(params.Accelerate)
-	awsConfig.WithRegion(params.Region)
-	awsConfig.WithDisableSSL(!params.Secure)
-	if params.UseDualStack {
-		awsConfig.UseDualStackEndpoint = endpoints.DualStackEndpointStateEnabled
-	}
-
-	if params.SkipVerify {
-		httpTransport := &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	s3obj := params.S3
+	if s3obj == nil {
+		if !params.V4Auth &&
+			(params.RegionEndpoint == "" ||
+				strings.Contains(params.RegionEndpoint, "s3.amazonaws.com")) {
+			return nil, fmt.Errorf("on Amazon S3 this storage driver can only be used with v4 authentication")
 		}
-		awsConfig.WithHTTPClient(&http.Client{
-			Transport: httpTransport,
-		})
-	}
 
-	sess, err := session.NewSession(awsConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create new session with aws config: %v", err)
-	}
+		awsConfig := aws.NewConfig()
 
-	if params.UserAgent != "" {
-		sess.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler(params.UserAgent))
-	}
+		if params.AccessKey != "" && params.SecretKey != "" {
+			creds := credentials.NewStaticCredentials(
+				params.AccessKey,
+				params.SecretKey,
+				params.SessionToken,
+			)
+			awsConfig.WithCredentials(creds)
+		}
 
-	s3obj := s3.New(sess)
+		if params.RegionEndpoint != "" {
+			awsConfig.WithEndpoint(params.RegionEndpoint)
+			awsConfig.WithS3ForcePathStyle(params.ForcePathStyle)
+		}
 
-	// enable S3 compatible signature v2 signing instead
-	if !params.V4Auth {
-		setv2Handlers(s3obj)
+		awsConfig.WithS3UseAccelerate(params.Accelerate)
+		awsConfig.WithRegion(params.Region)
+		awsConfig.WithDisableSSL(!params.Secure)
+		if params.UseDualStack {
+			awsConfig.UseDualStackEndpoint = endpoints.DualStackEndpointStateEnabled
+		}
+
+		if params.SkipVerify {
+			httpTransport := &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			}
+			awsConfig.WithHTTPClient(&http.Client{
+				Transport: httpTransport,
+			})
+		}
+
+		sess, err := session.NewSession(awsConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create new session with aws config: %v", err)
+		}
+
+		if params.UserAgent != "" {
+			sess.Handlers.Build.PushBack(request.MakeAddToUserAgentFreeFormHandler(params.UserAgent))
+		}
+
+		s3obj := s3.New(sess)
+
+		// enable S3 compatible signature v2 signing instead
+		if !params.V4Auth {
+			setv2Handlers(s3obj)
+		}
 	}
 
 	// TODO Currently multipart uploads have no timestamps, so this would be unwise
