@@ -23,13 +23,13 @@ require (
 	github.com/gorilla/handlers v0.0.0-20150720190736-60c7bfde3e33
 	github.com/gorilla/mux v1.7.2
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
-	github.com/kr/pretty v0.1.0 // indirect
 	github.com/marstr/guid v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/mitchellh/osext v0.0.0-20151018003038-5e2d6d41470f // indirect
 	github.com/ncw/swift v1.0.47
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.0.1
+	github.com/prometheus/client_golang v1.7.1 // indirect
 	github.com/satori/go.uuid v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.6.0
 	github.com/spf13/cobra v0.0.3
@@ -42,6 +42,6 @@ require (
 	google.golang.org/api v0.0.0-20160322025152-9bf6e6e569ff
 	google.golang.org/cloud v0.0.0-20151119220103-975617b05ea8
 	google.golang.org/grpc v0.0.0-20160317175043-d3ddb4469d5a // indirect
-	gopkg.in/check.v1 v1.0.0-20141024133853-64131543e789
-	gopkg.in/yaml.v2 v2.2.2
+	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15
+	gopkg.in/yaml.v2 v2.2.5
 )
