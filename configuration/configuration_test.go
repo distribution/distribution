@@ -83,8 +83,8 @@ var configStruct = Configuration{
 			Certificate string   `yaml:"certificate,omitempty"`
 			Key         string   `yaml:"key,omitempty"`
 			ClientCAs   []string `yaml:"clientcas,omitempty"`
-                        MinimumTLS  string   `yaml:"minimumtls,omitempty"`
-                        Ciphers     []string `yaml:"ciphers,omitempty"`
+			MinimumTLS  string   `yaml:"minimumtls,omitempty"`
+			Ciphers     []string `yaml:"ciphers,omitempty"`
 			LetsEncrypt struct {
 				CacheFile string   `yaml:"cachefile,omitempty"`
 				Email     string   `yaml:"email,omitempty"`
@@ -107,8 +107,8 @@ var configStruct = Configuration{
 			Certificate string   `yaml:"certificate,omitempty"`
 			Key         string   `yaml:"key,omitempty"`
 			ClientCAs   []string `yaml:"clientcas,omitempty"`
-                        MinimumTLS  string   `yaml:"minimumtls,omitempty"`
-                        Ciphers     []string `yaml:"ciphers,omitempty"`
+			MinimumTLS  string   `yaml:"minimumtls,omitempty"`
+			Ciphers     []string `yaml:"ciphers,omitempty"`
 			LetsEncrypt struct {
 				CacheFile string   `yaml:"cachefile,omitempty"`
 				Email     string   `yaml:"email,omitempty"`

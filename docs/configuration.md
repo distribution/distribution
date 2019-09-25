@@ -777,11 +777,14 @@ http:
     clientcas:
       - /path/to/ca.pem
       - /path/to/another/ca.pem
-    minimumtls: tls1.0
+    minimumtls: tls1.2
     ciphers: 
-      - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
-      - TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA
-      - TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA
+    - TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+    - TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+    - TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA
+    - TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA
+    - TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
+    - TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA    
     letsencrypt:
       cachefile: /path/to/cache-file
       email: emailused@letsencrypt.com
@@ -821,6 +824,7 @@ and proxy connections to the registry server.
 | `key`     | yes      | Absolute path to the x509 private key file.           |
 | `clientcas` | no     | An array of absolute paths to x509 CA files.          |
 | `minimumtls`  | no   | Minimum TLS version allowed (tls1.0, tls1.1, tls1.2). Defaults to tls1.0 |
+| `ciphers` | no   | Allowed ciphers. Defaults to TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA  |
 
 ### `letsencrypt`
 

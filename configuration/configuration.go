@@ -108,10 +108,10 @@ type Configuration struct {
 			// A file may contain multiple CA certificates encoded as PEM
 			ClientCAs []string `yaml:"clientcas,omitempty"`
 
-                        // Specifies the lowest TLS version allowed
+			// Specifies the lowest TLS version allowed
 			MinimumTLS string `yaml:"minimumtls,omitempty"`
 
-                        // Specifies the allowed TLS Ciphers
+			// Specifies the allowed TLS Ciphers
 			Ciphers   []string `yaml:"ciphers,omitempty"`
 
 			// LetsEncrypt is used to configuration setting up TLS through
