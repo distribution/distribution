@@ -134,21 +134,132 @@ func (registry *Registry) ListenAndServe() error {
 		return err
 	}
 
-	if config.HTTP.TLS.Certificate != "" || config.HTTP.TLS.LetsEncrypt.CacheFile != "" {
-		tlsConf := &tls.Config{
-			ClientAuth:               tls.NoClientCert,
-			NextProtos:               nextProtos(config),
-			MinVersion:               tls.VersionTLS10,
-			PreferServerCipherSuites: true,
-			CipherSuites: []uint16{
-				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
-				tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
-				tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
-				tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-			},
-		}
+    if config.HTTP.TLS.Certificate != "" || config.HTTP.TLS.LetsEncrypt.CacheFile != "" {
+        var tlsMinVersion uint16
+        if config.HTTP.TLS.MinimumTLS == "" {
+            tlsMinVersion = tls.VersionTLS10
+        } else {
+            switch config.HTTP.TLS.MinimumTLS {
+            case "tls1.0":
+                tlsMinVersion = tls.VersionTLS10
+            case "tls1.1":
+                tlsMinVersion = tls.VersionTLS11
+            case "tls1.2":
+                tlsMinVersion = tls.VersionTLS12
+            default:
+                return fmt.Errorf("unknown minimum TLS level '%s' specified for http.tls.minimumtls", config.HTTP.TLS.MinimumTLS)
+            }
+            dcontext.GetLogger(registry.app).Infof("restricting TLS to %s or higher", config.HTTP.TLS.MinimumTLS)
+        }
+
+        var ciphers [100]uint16
+        cipherSize := 0
+        if len(config.HTTP.TLS.Ciphers) == 0 {
+            ciphers =[100]uint16 { 
+                tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+                tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+                tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
+                tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
+                tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+                tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+            }
+            cipherSize = 6
+            dcontext.GetLogger(registry.app).Infof("empty ciphers, Take the default ciphers: TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA")
+        } else {
+           dcontext.GetLogger(registry.app).Infof("Ciphers: %+q", config.HTTP.TLS.Ciphers) 
+           
+           for i := 0; i < len(config.HTTP.TLS.Ciphers); i++ {
+               switch config.HTTP.TLS.Ciphers[i] {
+                  case "TLS_RSA_WITH_RC4_128_SHA":
+                     ciphers[cipherSize] = tls.TLS_RSA_WITH_RC4_128_SHA
+                     cipherSize++
+                   case "TLS_RSA_WITH_3DES_EDE_CBC_SHA":
+                     ciphers[cipherSize] = tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA
+                     cipherSize++
+                   case "TLS_RSA_WITH_AES_128_CBC_SHA":
+                     ciphers[cipherSize] = tls.TLS_RSA_WITH_AES_128_CBC_SHA
+                     cipherSize++
+                   case "TLS_RSA_WITH_AES_256_CBC_SHA":
+                     ciphers[cipherSize] = tls.TLS_RSA_WITH_AES_256_CBC_SHA
+                     cipherSize++
+                   case "TLS_RSA_WITH_AES_128_CBC_SHA256":
+                     ciphers[cipherSize] = tls.TLS_RSA_WITH_AES_128_CBC_SHA256
+                     cipherSize++
+                   case "TLS_RSA_WITH_AES_128_GCM_SHA256":
+                     ciphers[cipherSize] = tls.TLS_RSA_WITH_AES_128_GCM_SHA256
+                     cipherSize++
+                   case "TLS_RSA_WITH_AES_256_GCM_SHA384":
+                     ciphers[cipherSize] = tls.TLS_RSA_WITH_AES_256_GCM_SHA384
+                     cipherSize++
+                   case "TLS_ECDHE_ECDSA_WITH_RC4_128_SHA":
+                     ciphers[cipherSize] = tls.TLS_ECDHE_ECDSA_WITH_RC4_128_SHA
+                     cipherSize++
+                   case "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA":
+                     ciphers[cipherSize] = tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA
+                     cipherSize++
+                   case "TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA":
+                     ciphers[cipherSize] = tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA
+                     cipherSize++
+                   case "TLS_ECDHE_RSA_WITH_RC4_128_SHA":
+                     ciphers[cipherSize] = tls.TLS_ECDHE_RSA_WITH_RC4_128_SHA
+                     cipherSize++
+                   case "TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA":
+                     ciphers[cipherSize] = tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA
+                     cipherSize++
+                   case "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA":
+                     ciphers[cipherSize] = tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
+                     cipherSize++
+                   case "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA":
+                     ciphers[cipherSize] = tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA
+                     cipherSize++
+                   case "TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256":
+                     ciphers[cipherSize] = tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256
+                     cipherSize++
+                   case "TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256":
+                     ciphers[cipherSize] = tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256
+                     cipherSize++
+                   case "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256":
+                     ciphers[cipherSize] = tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+                     cipherSize++
+                   case "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256":
+                     ciphers[cipherSize] = tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256
+                     cipherSize++  
+                   case "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384":
+                     ciphers[cipherSize] = tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384
+                     cipherSize++
+                   case "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384":
+                     ciphers[cipherSize] = tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384
+                     cipherSize++
+                   case "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305":
+                     ciphers[cipherSize] = tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305
+                     cipherSize++
+                   case "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305":
+                     ciphers[cipherSize] = tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305
+                     cipherSize++
+                   case "TLS_AES_128_GCM_SHA256":
+                     ciphers[cipherSize] = tls.TLS_AES_128_GCM_SHA256
+                     cipherSize++
+                   case "TLS_AES_256_GCM_SHA384":
+                     ciphers[cipherSize] = tls.TLS_AES_256_GCM_SHA384
+                     cipherSize++
+                   case "TLS_CHACHA20_POLY1305_SHA256":
+                     ciphers[cipherSize] = tls.TLS_CHACHA20_POLY1305_SHA256
+                     cipherSize++
+                   case "TLS_FALLBACK_SCSV":
+                     ciphers[cipherSize] = tls.TLS_FALLBACK_SCSV
+                     cipherSize++
+                   default:
+                     dcontext.GetLogger(registry.app).Infof("Unsupported cipher %s will be ignored", config.HTTP.TLS.Ciphers[i])
+                }
+           }           
+        }
+        tlsConf := &tls.Config{
+            ClientAuth:               tls.NoClientCert,
+            NextProtos:               nextProtos(config),
+            MinVersion:               tlsMinVersion,
+            PreferServerCipherSuites: true,
+            CipherSuites: ciphers[0:cipherSize],
+        }
 
 		if config.HTTP.TLS.LetsEncrypt.CacheFile != "" {
 			if config.HTTP.TLS.Certificate != "" {
