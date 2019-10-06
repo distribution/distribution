@@ -3,6 +3,8 @@ module github.com/docker/distribution
 go 1.12
 
 require (
+	cloud.google.com/go v0.46.3
+	cloud.google.com/go/storage v1.1.0
 	github.com/Azure/azure-sdk-for-go v16.2.1+incompatible
 	github.com/Azure/go-autorest v10.8.1+incompatible // indirect
 	github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d
@@ -20,11 +22,12 @@ require (
 	github.com/docker/go-metrics v0.0.0-20180209012529-399ea8c73916
 	github.com/docker/libtrust v0.0.0-20150114040149-fa567046d9b1
 	github.com/garyburd/redigo v0.0.0-20150301180006-535138d7bcd7
+	github.com/golang/groupcache v0.0.0-20191002201903-404acd9df4cc // indirect
+	github.com/google/go-cmp v0.3.1 // indirect
 	github.com/gorilla/handlers v0.0.0-20150720190736-60c7bfde3e33
 	github.com/gorilla/mux v1.7.2
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jmespath/go-jmespath v0.0.0-20160803190731-bd40a432e4c7 // indirect
-	github.com/kr/pretty v0.1.0 // indirect
 	github.com/marstr/guid v1.1.0 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/mitchellh/mapstructure v1.1.2
@@ -45,13 +48,15 @@ require (
 	github.com/yvasiyarov/go-metrics v0.0.0-20140926110328-57bccd1ccd43 // indirect
 	github.com/yvasiyarov/gorelic v0.0.0-20141212073537-a9bba5b9ab50
 	github.com/yvasiyarov/newrelic_platform_go v0.0.0-20140908184405-b21fdbd4370f // indirect
-	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
-	golang.org/x/net v0.0.0-20190619014844-b5b0513f8c1b // indirect
+	go.opencensus.io v0.22.1 // indirect
+	golang.org/x/crypto v0.0.0-20191002192127-34f69633bfdc
+	golang.org/x/net v0.0.0-20191003171128-d98b1b443823 // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
-	golang.org/x/sys v0.0.0-20190602015325-4c4f7f33c9ed // indirect
-	google.golang.org/api v0.0.0-20160322025152-9bf6e6e569ff
-	google.golang.org/cloud v0.0.0-20151119220103-975617b05ea8
-	google.golang.org/grpc v0.0.0-20160317175043-d3ddb4469d5a // indirect
-	gopkg.in/check.v1 v1.0.0-20141024133853-64131543e789
+	golang.org/x/sys v0.0.0-20191003212358-c178f38b412c // indirect
+	google.golang.org/api v0.10.0
+	google.golang.org/appengine v1.6.4 // indirect
+	google.golang.org/genproto v0.0.0-20191002211648-c459b9ce5143 // indirect
+	google.golang.org/grpc v1.24.0 // indirect
+	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15
 	gopkg.in/yaml.v2 v2.2.2
 )
