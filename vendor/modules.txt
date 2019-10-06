@@ -83,14 +83,14 @@ github.com/go-ini/ini
 # github.com/golang/groupcache v0.0.0-20191002201903-404acd9df4cc
 github.com/golang/groupcache/lru
 # github.com/golang/protobuf v1.3.2
-github.com/golang/protobuf/protoc-gen-go
 github.com/golang/protobuf/proto
+github.com/golang/protobuf/protoc-gen-go
 github.com/golang/protobuf/protoc-gen-go/generator
 github.com/golang/protobuf/protoc-gen-go/grpc
+github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/protoc-gen-go/descriptor
 github.com/golang/protobuf/protoc-gen-go/generator/internal/remap
 github.com/golang/protobuf/protoc-gen-go/plugin
-github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
 github.com/golang/protobuf/ptypes/timestamp
@@ -246,9 +246,6 @@ google.golang.org/appengine/internal/base
 google.golang.org/appengine/internal/datastore
 google.golang.org/appengine/internal/log
 google.golang.org/appengine/internal/remote_api
-# google.golang.org/cloud v0.0.0-20151119220103-975617b05ea8
-google.golang.org/cloud/storage
-google.golang.org/cloud/internal
 # google.golang.org/genproto v0.0.0-20191002211648-c459b9ce5143
 google.golang.org/genproto/googleapis/iam/v1
 google.golang.org/genproto/googleapis/rpc/code

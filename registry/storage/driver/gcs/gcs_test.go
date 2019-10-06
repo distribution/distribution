@@ -6,15 +6,17 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"reflect"
+	"sort"
 	"testing"
 
+	"cloud.google.com/go/storage"
 	dcontext "github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/testsuites"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/googleapi"
-	"google.golang.org/cloud/storage"
 	"gopkg.in/check.v1"
 )
 
@@ -23,6 +25,8 @@ func Test(t *testing.T) { check.TestingT(t) }
 
 var gcsDriverConstructor func(rootDirectory string) (storagedriver.StorageDriver, error)
 var skipGCS func() string
+
+const maxConcurrency = 10
 
 func init() {
 	bucket := os.Getenv("REGISTRY_STORAGE_GCS_BUCKET")
@@ -70,12 +74,13 @@ func init() {
 
 	gcsDriverConstructor = func(rootDirectory string) (storagedriver.StorageDriver, error) {
 		parameters := driverParameters{
-			bucket:        bucket,
-			rootDirectory: root,
-			email:         email,
-			privateKey:    privateKey,
-			client:        oauth2.NewClient(dcontext.Background(), ts),
-			chunkSize:     defaultChunkSize,
+			bucket:         bucket,
+			rootDirectory:  root,
+			email:          email,
+			privateKey:     privateKey,
+			client:         oauth2.NewClient(dcontext.Background(), ts),
+			chunkSize:      defaultChunkSize,
+			maxConcurrency: maxConcurrency,
 		}
 
 		return New(parameters)
@@ -129,6 +134,13 @@ func TestCommitEmpty(t *testing.T) {
 	if len(readContents) != 0 {
 		t.Fatalf("len(driver.GetContent(..)): %d != 0", len(readContents))
 	}
+	fileInfo, err := driver.Stat(ctx, filename)
+	if err != nil {
+		t.Fatalf("driver.Stat: unexpected error: %v", err)
+	}
+	if fileInfo.Size() != 0 {
+		t.Fatalf("stat.Size: %d != 0", fileInfo.Size())
+	}
 }
 
 // Test Committing a FileWriter after having written exactly
@@ -179,6 +191,13 @@ func TestCommit(t *testing.T) {
 	}
 	if len(readContents) != len(contents) {
 		t.Fatalf("len(driver.GetContent(..)): %d != %d", len(readContents), len(contents))
+	}
+	fileInfo, err := driver.Stat(ctx, filename)
+	if err != nil {
+		t.Fatalf("driver.Stat: unexpected error: %v", err)
+	}
+	if fileInfo.Size() != int64(len(contents)) {
+		t.Fatalf("driver.Stat.Size: %d != %d", fileInfo.Size(), len(contents))
 	}
 }
 
@@ -270,6 +289,57 @@ func TestEmptyRootList(t *testing.T) {
 		if !storagedriver.PathRegexp.MatchString(path) {
 			t.Fatalf("unexpected string in path: %q != %q", path, storagedriver.PathRegexp)
 		}
+	}
+}
+
+// Test subpaths are included properly
+func TestSubpathList(t *testing.T) {
+	if skipGCS() != "" {
+		t.Skip(skipGCS())
+	}
+
+	validRoot, err := ioutil.TempDir("", "driver-")
+	if err != nil {
+		t.Fatalf("unexpected error creating temporary directory: %v", err)
+	}
+	defer os.Remove(validRoot)
+
+	rootedDriver, err := gcsDriverConstructor(validRoot)
+	if err != nil {
+		t.Fatalf("unexpected error creating rooted driver: %v", err)
+	}
+
+	filenames := []string{
+		"/test/test1.txt",
+		"/test/test2.txt",
+		"/test/subpath/test3.txt",
+		"/test/subpath/test4.txt",
+		"/test/subpath/path/test5.txt"}
+	contents := []byte("contents")
+	ctx := dcontext.Background()
+
+	for _, filename := range filenames {
+		err = rootedDriver.PutContent(ctx, filename, contents)
+		if err != nil {
+			t.Fatalf("unexpected error creating content: %v", err)
+		}
+	}
+	defer func() {
+		for _, filename := range filenames {
+			err := rootedDriver.Delete(ctx, filename)
+			if err != nil {
+				t.Fatalf("failed to remove %v due to %v\n", filename, err)
+			}
+		}
+	}()
+
+	keys, err := rootedDriver.List(ctx, "/test")
+	expected := []string{"/test/test1.txt", "/test/test2.txt", "/test/subpath"}
+	sort.Strings(expected)
+	sort.Strings(keys)
+
+	if !reflect.DeepEqual(expected, keys) {
+		t.Fatalf("list %v does not match %v", keys, expected)
 	}
 }
 

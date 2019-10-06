@@ -3,7 +3,6 @@ module github.com/docker/distribution
 go 1.12
 
 require (
-	cloud.google.com/go v0.46.3
 	cloud.google.com/go/storage v1.1.0
 	github.com/Azure/azure-sdk-for-go v16.2.1+incompatible
 	github.com/Azure/go-autorest v10.8.1+incompatible // indirect
