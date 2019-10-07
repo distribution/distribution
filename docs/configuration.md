@@ -198,7 +198,7 @@ middleware:
         duration: 3000s
         ipfilteredby: awsregion
         awsregion: us-east-1, use-east-2
-        updatefrenquency: 12h
+        updatefrequency: 12h
         iprangesurl: https://ip-ranges.amazonaws.com/ip-ranges.json
   storage:
     - name: redirect
@@ -685,7 +685,7 @@ middleware:
         duration: 3000s
         ipfilteredby: awsregion
         awsregion: us-east-1, use-east-2
-        updatefrenquency: 12h
+        updatefrequency: 12h
         iprangesurl: https://ip-ranges.amazonaws.com/ip-ranges.json
 ```
 
@@ -708,7 +708,7 @@ interpretation of the options.
 | `duration` | no      | An integer and unit for the duration of the Cloudfront session. Valid time units are `ns`, `us` (or `µs`), `ms`, `s`, `m`, or `h`. For example, `3000s` is valid, but `3000 s` is not. If you do not specify a `duration` or you specify an integer without a time unit, the duration defaults to `20m` (20 minutes). |
 | `ipfilteredby` | no     | A string with the following value `none`, `aws` or `awsregion`. |
 | `awsregion` | no        | A comma separated string of AWS regions, only available when `ipfilteredby` is `awsregion`. For example, `us-east-1, us-west-2` |
-| `updatefrenquency` | no | The frequency to update AWS IP regions, default: `12h` |
+| `updatefrequency`  | no | The frequency to update AWS IP regions, default: `12h` |
 | `iprangesurl` | no      | The URL contains the AWS IP ranges information, default: `https://ip-ranges.amazonaws.com/ip-ranges.json` |
 
 
