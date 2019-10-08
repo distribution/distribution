@@ -2,15 +2,22 @@ package storage
 
 import (
 	"context"
+	"reflect"
 	"testing"
 
 	"github.com/docker/distribution"
+	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/manifest/schema2"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
+	digest "github.com/opencontainers/go-digest"
 )
 
 type tagsTestEnv struct {
 	ts  distribution.TagService
+	bs  distribution.BlobStore
+	ms  distribution.ManifestService
+	gbs distribution.BlobStatter
 	ctx context.Context
 }
 
@@ -27,10 +34,17 @@ func testTagStore(t *testing.T) *tagsTestEnv {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ms, err := repo.Manifests(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	return &tagsTestEnv{
 		ctx: ctx,
 		ts:  repo.Tags(ctx),
+		bs:  repo.Blobs(ctx),
+		gbs: reg.BlobStatter(),
+		ms:  ms,
 	}
 }
 
@@ -205,5 +219,98 @@ func TestTagLookup(t *testing.T) {
 	if len(tags) != 2 {
 		t.Errorf("Lookup of descB returned %d tags, expected 2", len(tags))
 	}
+}
 
+func TestTagIndexes(t *testing.T) {
+	env := testTagStore(t)
+	tagStore := env.ts
+	ctx := env.ctx
+
+	md, ok := tagStore.(distribution.TagManifestsProvider)
+	if !ok {
+		t.Fatal("tagStore does not implement TagManifestDigests interface")
+	}
+
+	conf, err := env.bs.Put(ctx, "application/octet-stream", []byte{0})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t1Dgsts := make(map[digest.Digest]struct{})
+	t2Dgsts := make(map[digest.Digest]struct{})
+	for i := 0; i < 5; i++ {
+		layer, err := env.bs.Put(ctx, "application/octet-stream", []byte{byte(i + 1)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		m := schema2.Manifest{
+			Versioned: manifest.Versioned{
+				SchemaVersion: 2,
+				MediaType:     schema2.MediaTypeManifest,
+			},
+			Config: distribution.Descriptor{
+				Digest:    conf.Digest,
+				Size:      1,
+				MediaType: schema2.MediaTypeImageConfig,
+			},
+			Layers: []distribution.Descriptor{
+				{
+					Digest:    layer.Digest,
+					Size:      1,
+					MediaType: schema2.MediaTypeLayer,
+				},
+			},
+		}
+		dm, err := schema2.FromStruct(m)
+		if err != nil {
+			t.Fatal(err)
+		}
+		dgst, err := env.ms.Put(ctx, dm)
+		if err != nil {
+			t.Fatal(err)
+		}
+		desc, err := env.gbs.Stat(ctx, dgst)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if i < 3 {
+			// tag first 3 manifests as "t1"
+			err = tagStore.Tag(ctx, "t1", desc)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t1Dgsts[dgst] = struct{}{}
+		} else {
+			// the last two under "t2"
+			err = tagStore.Tag(ctx, "t2", desc)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t2Dgsts[dgst] = struct{}{}
+		}
+	}
+
+	gotT1Dgsts, err := md.ManifestDigests(ctx, "t1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(t1Dgsts, digestMap(gotT1Dgsts)) {
+		t.Fatalf("Expected digests: %v but got digests: %v", t1Dgsts, digestMap(gotT1Dgsts))
+	}
+
+	gotT2Dgsts, err := md.ManifestDigests(ctx, "t2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(t2Dgsts, digestMap(gotT2Dgsts)) {
+		t.Fatalf("Expected digests: %v but got digests: %v", t2Dgsts, digestMap(gotT2Dgsts))
+	}
+}
+
+func digestMap(dgsts []digest.Digest) map[digest.Digest]struct{} {
+	set := make(map[digest.Digest]struct{})
+	for _, dgst := range dgsts {
+		set[dgst] = struct{}{}
+	}
+	return set
 }
