@@ -14,7 +14,8 @@ import (
 
 	"rsc.io/letsencrypt"
 
-	"github.com/Shopify/logrus-bugsnag"
+	logrus_bugsnag "github.com/Shopify/logrus-bugsnag"
+
 	logstash "github.com/bshuster-repo/logrus-logstash-hook"
 	"github.com/bugsnag/bugsnag-go"
 	"github.com/docker/distribution/configuration"
