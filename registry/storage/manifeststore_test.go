@@ -19,7 +19,7 @@ import (
 	"github.com/docker/distribution/testutil"
 	"github.com/docker/libtrust"
 	"github.com/opencontainers/go-digest"
-	"github.com/opencontainers/image-spec/specs-go/v1"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type manifestStoreTestEnv struct {

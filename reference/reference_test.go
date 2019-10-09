@@ -639,7 +639,7 @@ func TestParseNamed(t *testing.T) {
 			failf("error parsing name: %s", err)
 			continue
 		} else if err == nil && testcase.err != nil {
-			failf("parsing succeded: expected error %v", testcase.err)
+			failf("parsing succeeded: expected error %v", testcase.err)
 			continue
 		} else if err != testcase.err {
 			failf("unexpected error %v, expected %v", err, testcase.err)
