@@ -24,7 +24,7 @@ import (
 	"github.com/docker/distribution/notifications"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/api/errcode"
-	"github.com/docker/distribution/registry/api/v2"
+	v2 "github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/registry/auth"
 	registrymiddleware "github.com/docker/distribution/registry/middleware/registry"
 	repositorymiddleware "github.com/docker/distribution/registry/middleware/repository"
