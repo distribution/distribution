@@ -181,7 +181,7 @@ func (base *Base) List(ctx context.Context, path string) ([]string, error) {
 }
 
 // Move wraps Move of underlying storage driver.
-func (base *Base) Move(ctx context.Context, sourcePath string, destPath string) error {
+func (base *Base) Move(ctx context.Context, sourcePath string, destPath string, sourceFileInfo storagedriver.FileInfo) error {
 	ctx, done := dcontext.WithTrace(ctx)
 	defer done("%s.Move(%q, %q", base.Name(), sourcePath, destPath)
 
@@ -192,7 +192,7 @@ func (base *Base) Move(ctx context.Context, sourcePath string, destPath string) 
 	}
 
 	start := time.Now()
-	err := base.setDriverName(base.StorageDriver.Move(ctx, sourcePath, destPath))
+	err := base.setDriverName(base.StorageDriver.Move(ctx, sourcePath, destPath, sourceFileInfo))
 	storageAction.WithValues(base.Name(), "Move").UpdateSince(start)
 	return err
 }

@@ -252,7 +252,7 @@ func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
 
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
-func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
+func (d *driver) Move(ctx context.Context, sourcePath string, destPath string, sourceFileInfo storagedriver.FileInfo) error {
 	source := d.fullPath(sourcePath)
 	dest := d.fullPath(destPath)
 

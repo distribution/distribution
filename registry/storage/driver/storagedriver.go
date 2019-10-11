@@ -73,7 +73,10 @@ type StorageDriver interface {
 	// original object.
 	// Note: This may be no more efficient than a copy followed by a delete for
 	// many implementations.
-	Move(ctx context.Context, sourcePath string, destPath string) error
+	// We will pass along the source file info so the driver can verify the
+	// parity of the moved object.
+	// Note: the source file info can be nil in the case the source path is not found.
+	Move(ctx context.Context, sourcePath string, destPath string, sourceFileInfo FileInfo) error
 
 	// Delete recursively deletes all objects stored at "path" and its subpaths.
 	Delete(ctx context.Context, path string) error

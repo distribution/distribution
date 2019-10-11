@@ -291,11 +291,18 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
-func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
+func (d *driver) Move(ctx context.Context, sourcePath string, destPath string, sourceFileInfo storagedriver.FileInfo) error {
 	srcBlobRef := d.client.GetContainerReference(d.container).GetBlobReference(sourcePath)
 	sourceBlobURL := srcBlobRef.GetURL()
 	destBlobRef := d.client.GetContainerReference(d.container).GetBlobReference(destPath)
-	err := destBlobRef.Copy(sourceBlobURL, nil)
+	options := &azure.CopyOptions{}
+	// sourceFileInfo can be nil if the source path is not found. If the file info is available
+	// we will ensure it is unmodified during the move operation.
+	if sourceFileInfo != nil {
+		lastModTime := sourceFileInfo.ModTime()
+		options.Source.IfUnmodifiedSince = &lastModTime
+	}
+	err := destBlobRef.Copy(sourceBlobURL, options)
 	if err != nil {
 		if is404(err) {
 			return storagedriver.PathNotFoundError{Path: sourcePath}
