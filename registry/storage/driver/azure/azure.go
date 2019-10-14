@@ -6,10 +6,11 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -17,7 +18,7 @@ import (
 	"github.com/docker/distribution/registry/storage/driver/base"
 	"github.com/docker/distribution/registry/storage/driver/factory"
 
-	azure "github.com/Azure/azure-sdk-for-go/storage"
+	"github.com/Azure/azure-storage-blob-go/azblob"
 )
 
 const driverName = "azure"
@@ -31,8 +32,9 @@ const (
 )
 
 type driver struct {
-	client    azure.BlobStorageClient
-	container string
+	client     azblob.ContainerURL
+	credential azblob.StorageAccountCredential
+	container  string
 }
 
 type baseEmbed struct{ base.Base }
@@ -70,7 +72,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 
 	realm, ok := parameters[paramRealm]
 	if !ok || fmt.Sprint(realm) == "" {
-		realm = azure.DefaultBaseURL
+		realm = "core.windows.net"
 	}
 
 	return New(fmt.Sprint(accountName), fmt.Sprint(accountKey), fmt.Sprint(container), fmt.Sprint(realm))
@@ -78,23 +80,38 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 
 // New constructs a new Driver with the given Azure Storage Account credentials
 func New(accountName, accountKey, container, realm string) (*Driver, error) {
-	api, err := azure.NewClient(accountName, accountKey, realm, azure.DefaultAPIVersion, true)
+	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
 	if err != nil {
 		return nil, err
 	}
-
-	blobClient := api.GetBlobService()
+	pipeline := azblob.NewPipeline(credential, azblob.PipelineOptions{})
+	containerRef := fmt.Sprintf("https://%s.blob.%s/%s", accountName, realm, container)
+	containerURL, err := url.Parse(containerRef)
+	if err != nil {
+		return nil, err
+	}
+	client := azblob.NewContainerURL(*containerURL, pipeline)
 
 	// Create registry container
-	containerRef := blobClient.GetContainerReference(container)
-	if _, err = containerRef.CreateIfNotExists(nil); err != nil {
+	if err := createContainerIfNotExists(context.Background(), client); err != nil {
 		return nil, err
 	}
 
 	d := &driver{
-		client:    blobClient,
-		container: container}
+		client:     client,
+		credential: credential,
+		container:  container}
 	return &Driver{baseEmbed: baseEmbed{Base: base.Base{StorageDriver: d}}}, nil
+}
+
+func createContainerIfNotExists(ctx context.Context, containerURL azblob.ContainerURL) error {
+	if _, err := containerURL.Create(ctx, nil, azblob.PublicAccessNone); err != nil {
+		if err, ok := err.(azblob.StorageError); ok && err.ServiceCode() == azblob.ServiceCodeContainerAlreadyExists {
+			return nil
+		}
+		return err
+	}
+	return nil
 }
 
 // Implement the storagedriver.StorageDriver interface.
@@ -104,14 +121,15 @@ func (d *driver) Name() string {
 
 // GetContent retrieves the content stored at "path" as a []byte.
 func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
-	blobRef := d.client.GetContainerReference(d.container).GetBlobReference(path)
-	blob, err := blobRef.Get(nil)
+	blobURL := d.client.NewBlobURL(path)
+	resp, err := blobURL.Download(ctx, 0, 0, azblob.BlobAccessConditions{}, false)
 	if err != nil {
 		if is404(err) {
 			return nil, storagedriver.PathNotFoundError{Path: path}
 		}
 		return nil, err
 	}
+	blob := resp.Body(azblob.RetryReaderOptions{})
 
 	defer blob.Close()
 	return ioutil.ReadAll(blob)
@@ -137,74 +155,63 @@ func (d *driver) PutContent(ctx context.Context, path string, contents []byte) e
 	// losing the existing data while migrating it to BlockBlob type. However,
 	// expectation is the clients pushing will be retrying when they get an error
 	// response.
-	blobRef := d.client.GetContainerReference(d.container).GetBlobReference(path)
-	err := blobRef.GetProperties(nil)
+	blobURL := d.client.NewBlockBlobURL(path)
+	properties, err := blobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
 	if err != nil && !is404(err) {
 		return fmt.Errorf("failed to get blob properties: %v", err)
 	}
-	if err == nil && blobRef.Properties.BlobType != azure.BlobTypeBlock {
-		if err := blobRef.Delete(nil); err != nil {
-			return fmt.Errorf("failed to delete legacy blob (%s): %v", blobRef.Properties.BlobType, err)
+	if err == nil {
+		if blobType := properties.BlobType(); blobType != azblob.BlobBlockBlob {
+			if _, err := blobURL.Delete(ctx, azblob.DeleteSnapshotsOptionNone, azblob.BlobAccessConditions{}); err != nil {
+				return fmt.Errorf("failed to delete legacy blob (%s): %v", blobType, err)
+			}
 		}
 	}
 
 	r := bytes.NewReader(contents)
-	// reset properties to empty before doing overwrite
-	blobRef.Properties = azure.BlobProperties{}
-	return blobRef.CreateBlockBlobFromReader(r, nil)
+	_, err = blobURL.Upload(ctx, r, azblob.BlobHTTPHeaders{}, nil, azblob.BlobAccessConditions{})
+	return err
 }
 
 // Reader retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
 func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
-	blobRef := d.client.GetContainerReference(d.container).GetBlobReference(path)
-	if ok, err := blobRef.Exists(); err != nil {
-		return nil, err
-	} else if !ok {
-		return nil, storagedriver.PathNotFoundError{Path: path}
-	}
-
-	err := blobRef.GetProperties(nil)
+	blobURL := d.client.NewBlobURL(path)
+	properties, err := blobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
 	if err != nil {
+		if is404(err) {
+			return nil, storagedriver.PathNotFoundError{Path: path}
+		}
 		return nil, err
 	}
-	info := blobRef.Properties
-	size := info.ContentLength
+	size := properties.ContentLength()
 	if offset >= size {
 		return ioutil.NopCloser(bytes.NewReader(nil)), nil
 	}
 
-	resp, err := blobRef.GetRange(&azure.GetBlobRangeOptions{
-		Range: &azure.BlobRange{
-			Start: uint64(offset),
-			End:   0,
-		},
-	})
+	resp, err := blobURL.Download(ctx, offset, 0, azblob.BlobAccessConditions{}, false)
 	if err != nil {
 		return nil, err
 	}
-	return resp, nil
+	return resp.Body(azblob.RetryReaderOptions{}), nil
 }
 
 // Writer returns a FileWriter which will store the content written to it
 // at the location designated by "path" after the call to Commit.
 func (d *driver) Writer(ctx context.Context, path string, append bool) (storagedriver.FileWriter, error) {
-	blobRef := d.client.GetContainerReference(d.container).GetBlobReference(path)
-	blobExists, err := blobRef.Exists()
-	if err != nil {
+	blobURL := d.client.NewAppendBlobURL(path)
+	properties, err := blobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
+	if err != nil && !is404(err) {
 		return nil, err
 	}
+	blobExists := err == nil
+
 	var size int64
 	if blobExists {
 		if append {
-			err = blobRef.GetProperties(nil)
-			if err != nil {
-				return nil, err
-			}
-			blobProperties := blobRef.Properties
-			size = blobProperties.ContentLength
+			size = properties.ContentLength()
 		} else {
-			err = blobRef.Delete(nil)
+			_, err = blobURL.Delete(ctx, azblob.DeleteSnapshotsOptionNone, azblob.BlobAccessConditions{})
 			if err != nil {
 				return nil, err
 			}
@@ -213,33 +220,31 @@ func (d *driver) Writer(ctx context.Context, path string, append bool) (storaged
 		if append {
 			return nil, storagedriver.PathNotFoundError{Path: path}
 		}
-		err = blobRef.PutAppendBlob(nil)
+		_, err = blobURL.Create(ctx, azblob.BlobHTTPHeaders{}, nil, azblob.BlobAccessConditions{})
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	return d.newWriter(path, size), nil
+	return d.newWriter(ctx, path, size), nil
 }
 
 // Stat retrieves the FileInfo for the given path, including the current size
 // in bytes and the creation time.
 func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
-	blobRef := d.client.GetContainerReference(d.container).GetBlobReference(path)
-	// Check if the path is a blob
-	if ok, err := blobRef.Exists(); err != nil {
-		return nil, err
-	} else if ok {
-		err = blobRef.GetProperties(nil)
-		if err != nil {
-			return nil, err
-		}
-		blobProperties := blobRef.Properties
+	blobURL := d.client.NewAppendBlobURL(path)
 
+	// Check if the path is a blob
+	properties, err := blobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
+	if err != nil && !is404(err) {
+		return nil, err
+	}
+	blobExists := err == nil
+	if blobExists {
 		return storagedriver.FileInfoInternal{FileInfoFields: storagedriver.FileInfoFields{
 			Path:    path,
-			Size:    blobProperties.ContentLength,
-			ModTime: time.Time(blobProperties.LastModified),
+			Size:    properties.ContentLength(),
+			ModTime: properties.LastModified(),
 			IsDir:   false,
 		}}, nil
 	}
@@ -250,15 +255,14 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 		virtContainerPath += "/"
 	}
 
-	containerRef := d.client.GetContainerReference(d.container)
-	blobs, err := containerRef.ListBlobs(azure.ListBlobsParameters{
+	blobs, err := d.client.ListBlobsFlatSegment(ctx, azblob.Marker{}, azblob.ListBlobsSegmentOptions{
 		Prefix:     virtContainerPath,
 		MaxResults: 1,
 	})
 	if err != nil {
 		return nil, err
 	}
-	if len(blobs.Blobs) > 0 {
+	if len(blobs.Segment.BlobItems) > 0 {
 		// path is a virtual container
 		return storagedriver.FileInfoInternal{FileInfoFields: storagedriver.FileInfoFields{
 			Path:  path,
@@ -277,7 +281,7 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 		path = ""
 	}
 
-	blobs, err := d.listBlobs(d.container, path)
+	blobs, err := d.listBlobs(ctx, path)
 	if err != nil {
 		return blobs, err
 	}
@@ -292,10 +296,9 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
 func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
-	srcBlobRef := d.client.GetContainerReference(d.container).GetBlobReference(sourcePath)
-	sourceBlobURL := srcBlobRef.GetURL()
-	destBlobRef := d.client.GetContainerReference(d.container).GetBlobReference(destPath)
-	err := destBlobRef.Copy(sourceBlobURL, nil)
+	srcBlobURL := d.client.NewBlobURL(sourcePath)
+	destBlobURL := d.client.NewBlobURL(destPath)
+	err := copyBlob(ctx, srcBlobURL, destBlobURL)
 	if err != nil {
 		if is404(err) {
 			return storagedriver.PathNotFoundError{Path: sourcePath}
@@ -303,13 +306,49 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 		return err
 	}
 
-	return srcBlobRef.Delete(nil)
+	_, err = srcBlobURL.Delete(ctx, azblob.DeleteSnapshotsOptionNone, azblob.BlobAccessConditions{})
+	return err
+}
+
+func copyBlob(ctx context.Context, src, dst azblob.BlobURL) error {
+	resp, err := dst.StartCopyFromURL(ctx, src.URL(), nil, azblob.ModifiedAccessConditions{}, azblob.BlobAccessConditions{})
+	if err != nil {
+		return err
+	}
+
+	return waitForBlobCopy(ctx, dst, resp.CopyID())
+}
+
+func waitForBlobCopy(ctx context.Context, blobURL azblob.BlobURL, copyID string) error {
+	for {
+		properties, err := blobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
+		if err != nil {
+			return err
+		}
+
+		if properties.CopyID() != copyID {
+			return errors.New("azure: blob copy id is a mismatch")
+		}
+
+		switch properties.CopyStatus() {
+		case azblob.CopyStatusSuccess:
+			return nil
+		case azblob.CopyStatusPending:
+			continue
+		case azblob.CopyStatusAborted:
+			return errors.New("azure: blob copy is aborted")
+		case azblob.CopyStatusFailed:
+			return fmt.Errorf("azure: blob copy failed. Id=%s Description=%s", copyID, properties.CopyStatusDescription())
+		default:
+			return fmt.Errorf("azure: unhandled blob copy status: '%s'", properties.CopyStatus())
+		}
+	}
 }
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
 func (d *driver) Delete(ctx context.Context, path string) error {
-	blobRef := d.client.GetContainerReference(d.container).GetBlobReference(path)
-	ok, err := blobRef.DeleteIfExists(nil)
+	blobURL := d.client.NewBlobURL(path)
+	ok, err := deleteBlobIfNotExists(ctx, blobURL)
 	if err != nil {
 		return err
 	}
@@ -318,14 +357,14 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 	}
 
 	// Not a blob, see if path is a virtual container with blobs
-	blobs, err := d.listBlobs(d.container, path)
+	blobs, err := d.listBlobs(ctx, path)
 	if err != nil {
 		return err
 	}
 
 	for _, b := range blobs {
-		blobRef = d.client.GetContainerReference(d.container).GetBlobReference(b)
-		if err = blobRef.Delete(nil); err != nil {
+		blobURL = d.client.NewBlobURL(b)
+		if _, err := blobURL.Delete(ctx, azblob.DeleteSnapshotsOptionNone, azblob.BlobAccessConditions{}); err != nil {
 			return err
 		}
 	}
@@ -334,6 +373,16 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		return storagedriver.PathNotFoundError{Path: path}
 	}
 	return nil
+}
+
+func deleteBlobIfNotExists(ctx context.Context, blobURL azblob.BlobURL) (bool, error) {
+	if _, err := blobURL.Delete(ctx, azblob.DeleteSnapshotsOptionNone, azblob.BlobAccessConditions{}); err != nil {
+		if err, ok := err.(azblob.StorageError); ok && err.ServiceCode() == azblob.ServiceCodeBlobNotFound {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 // URLFor returns a publicly accessible URL for the blob stored at given path
@@ -348,15 +397,19 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 			expiresTime = t
 		}
 	}
-	blobRef := d.client.GetContainerReference(d.container).GetBlobReference(path)
-	return blobRef.GetSASURI(azure.BlobSASOptions{
-		BlobServiceSASPermissions: azure.BlobServiceSASPermissions{
-			Read: true,
-		},
-		SASOptions: azure.SASOptions{
-			Expiry: expiresTime,
-		},
-	})
+	blobURL := d.client.NewBlobURL(path)
+	sasQuery, err := azblob.BlobSASSignatureValues{
+		Protocol:      azblob.SASProtocolHTTPS,
+		ExpiryTime:    expiresTime,
+		ContainerName: d.container,
+		BlobName:      path,
+		Permissions:   azblob.BlobSASPermissions{Read: true}.String(),
+	}.NewSASQueryParameters(d.credential)
+	if err != nil {
+		return "", err
+	}
+	sasURL := blobURL.String() + "?" + sasQuery.Encode()
+	return sasURL, nil
 }
 
 // Walk traverses a filesystem defined within driver, starting
@@ -399,17 +452,15 @@ func directDescendants(blobs []string, prefix string) []string {
 	return keys
 }
 
-func (d *driver) listBlobs(container, virtPath string) ([]string, error) {
+func (d *driver) listBlobs(ctx context.Context, virtPath string) ([]string, error) {
 	if virtPath != "" && !strings.HasSuffix(virtPath, "/") { // containerify the path
 		virtPath += "/"
 	}
 
 	out := []string{}
-	marker := ""
-	containerRef := d.client.GetContainerReference(d.container)
+	var marker azblob.Marker
 	for {
-		resp, err := containerRef.ListBlobs(azure.ListBlobsParameters{
-			Marker: marker,
+		resp, err := d.client.ListBlobsFlatSegment(ctx, marker, azblob.ListBlobsSegmentOptions{
 			Prefix: virtPath,
 		})
 
@@ -417,11 +468,11 @@ func (d *driver) listBlobs(container, virtPath string) ([]string, error) {
 			return out, err
 		}
 
-		for _, b := range resp.Blobs {
+		for _, b := range resp.Segment.BlobItems {
 			out = append(out, b.Name)
 		}
 
-		if len(resp.Blobs) == 0 || resp.NextMarker == "" {
+		if len(resp.Segment.BlobItems) == 0 || !resp.NextMarker.NotDone() {
 			break
 		}
 		marker = resp.NextMarker
@@ -430,8 +481,8 @@ func (d *driver) listBlobs(container, virtPath string) ([]string, error) {
 }
 
 func is404(err error) bool {
-	statusCodeErr, ok := err.(azure.AzureStorageServiceError)
-	return ok && statusCodeErr.StatusCode == http.StatusNotFound
+	storageErr, ok := err.(azblob.StorageError)
+	return ok && storageErr.ServiceCode() == azblob.ServiceCodeBlobNotFound
 }
 
 type writer struct {
@@ -444,26 +495,26 @@ type writer struct {
 	cancelled bool
 }
 
-func (d *driver) newWriter(path string, size int64) storagedriver.FileWriter {
+func (d *driver) newWriter(ctx context.Context, path string, size int64) storagedriver.FileWriter {
 	return &writer{
 		driver: d,
 		path:   path,
 		size:   size,
 		bw: bufio.NewWriterSize(&blockWriter{
-			client:    d.client,
-			container: d.container,
-			path:      path,
+			context: ctx,
+			client:  d.client,
+			path:    path,
 		}, maxChunkSize),
 	}
 }
 
 func (w *writer) Write(p []byte) (int, error) {
 	if w.closed {
-		return 0, fmt.Errorf("already closed")
+		return 0, errors.New("already closed")
 	} else if w.committed {
-		return 0, fmt.Errorf("already committed")
+		return 0, errors.New("already committed")
 	} else if w.cancelled {
-		return 0, fmt.Errorf("already cancelled")
+		return 0, errors.New("already cancelled")
 	}
 
 	n, err := w.bw.Write(p)
@@ -477,7 +528,7 @@ func (w *writer) Size() int64 {
 
 func (w *writer) Close() error {
 	if w.closed {
-		return fmt.Errorf("already closed")
+		return errors.New("already closed")
 	}
 	w.closed = true
 	return w.bw.Flush()
@@ -485,42 +536,45 @@ func (w *writer) Close() error {
 
 func (w *writer) Cancel() error {
 	if w.closed {
-		return fmt.Errorf("already closed")
+		return errors.New("already closed")
 	} else if w.committed {
-		return fmt.Errorf("already committed")
+		return errors.New("already committed")
 	}
 	w.cancelled = true
-	blobRef := w.driver.client.GetContainerReference(w.driver.container).GetBlobReference(w.path)
-	return blobRef.Delete(nil)
+	blobURL := w.driver.client.NewBlobURL(w.path)
+	// Delete canceled blob even if the context is cancelled
+	_, err := blobURL.Delete(context.Background(), azblob.DeleteSnapshotsOptionNone, azblob.BlobAccessConditions{})
+	return err
 }
 
 func (w *writer) Commit() error {
 	if w.closed {
-		return fmt.Errorf("already closed")
+		return errors.New("already closed")
 	} else if w.committed {
-		return fmt.Errorf("already committed")
+		return errors.New("already committed")
 	} else if w.cancelled {
-		return fmt.Errorf("already cancelled")
+		return errors.New("already cancelled")
 	}
 	w.committed = true
 	return w.bw.Flush()
 }
 
 type blockWriter struct {
-	client    azure.BlobStorageClient
-	container string
-	path      string
+	context context.Context
+	client  azblob.ContainerURL
+	path    string
 }
 
 func (bw *blockWriter) Write(p []byte) (int, error) {
 	n := 0
-	blobRef := bw.client.GetContainerReference(bw.container).GetBlobReference(bw.path)
+	blobURL := bw.client.NewAppendBlobURL(bw.path)
 	for offset := 0; offset < len(p); offset += maxChunkSize {
 		chunkSize := maxChunkSize
 		if offset+chunkSize > len(p) {
 			chunkSize = len(p) - offset
 		}
-		err := blobRef.AppendBlock(p[offset:offset+chunkSize], nil)
+		chunk := bytes.NewReader(p[offset : offset+chunkSize])
+		_, err := blobURL.AppendBlock(bw.context, chunk, azblob.AppendBlobAccessConditions{}, nil)
 		if err != nil {
 			return n, err
 		}
