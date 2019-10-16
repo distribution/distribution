@@ -55,14 +55,14 @@ https://code.googlesource.com, clicking "Generate Password" at the top-right,
 and following the directions. Otherwise, `git codereview mail` in the next step
 will fail.
 
-1. Make changes then use `git codereview` to create a commit and create a Gerrit
-CL:
+1. Now you are ready to make changes. Don't create a new branch or make commits in the traditional
+way. Use the following`git codereview` commands to create a commit and create a Gerrit CL:
 
     ```
-    git codereview change <name>
+    git codereview change <branch-name> # Use this instead of git checkout -b <branch-name>
     # Make changes.
     git add ...
-    git codereview change
+    git codereview change # Use this instead of git commit
     git codereview mail # If this fails, the error message will contain instructions to fix it.
     ```
 
@@ -75,7 +75,7 @@ change:
     ```
     # Make more changes.
     git add ...
-    git codereview change <name>
+    git codereview change
     git codereview mail
     ```
 
@@ -93,6 +93,11 @@ change:
     in some way, add a `BREAKING_CHANGE_ACCEPTABLE=<reason>` line to the commit
     message to cause the detector not to be run and to make it clear why that is
     acceptable.
+
+1. Finally, add reviewers to your CL when it's ready for review. Reviewers will
+not be added automatically. If you're not sure who to add for your code review,
+add deklerk@, tbp@, cbro@, and codyoss@.
+
 
 ## Integration Tests
 

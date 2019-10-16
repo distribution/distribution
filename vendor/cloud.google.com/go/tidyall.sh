@@ -16,8 +16,8 @@
 # Run at repo root.
 
 go mod tidy
-for m in logging datastore bigquery bigtable; do
-    pushd $m
-    go mod tidy
-    popd
+for i in `find . -name go.mod`; do
+pushd `dirname $i`;
+    go mod tidy;
+popd;
 done

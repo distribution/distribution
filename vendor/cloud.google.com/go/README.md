@@ -8,11 +8,19 @@ Go packages for [Google Cloud Platform](https://cloud.google.com) services.
 import "cloud.google.com/go"
 ```
 
-To install the packages on your system, *do not clone the repo*. Instead use
+To install the packages on your system, *do not clone the repo*. Instead:
 
-```
-$ go get -u cloud.google.com/go/...
-```
+1. Change to your project directory:
+
+   ```
+   cd /my/cloud/project
+   ```
+1. Get the package you want to use. Some products have their own module, so it's
+   best to `go get` the package(s) you want to use:
+
+   ```
+   $ go get cloud.google.com/go/firestore # Replace with the package you want to use.
+   ```
 
 **NOTE:** Some of these packages are under development, and may occasionally
 make backwards-incompatible changes.

@@ -1,6 +1,6 @@
 module cloud.google.com/go/storage
 
-go 1.9
+go 1.11
 
 require (
 	cloud.google.com/go v0.46.3

@@ -1,4 +1,4 @@
-# cloud.google.com/go v0.46.3
+# cloud.google.com/go v0.47.0
 cloud.google.com/go
 cloud.google.com/go/iam
 cloud.google.com/go/internal
@@ -6,7 +6,7 @@ cloud.google.com/go/internal/optional
 cloud.google.com/go/internal/trace
 cloud.google.com/go/internal/version
 cloud.google.com/go/compute/metadata
-# cloud.google.com/go/storage v1.1.0
+# cloud.google.com/go/storage v1.1.1
 cloud.google.com/go/storage
 # github.com/Azure/azure-sdk-for-go v16.2.1+incompatible
 github.com/Azure/azure-sdk-for-go/storage
@@ -104,7 +104,7 @@ github.com/gorilla/mux
 github.com/inconshreveable/mousetrap
 # github.com/jmespath/go-jmespath v0.0.0-20160803190731-bd40a432e4c7
 github.com/jmespath/go-jmespath
-# github.com/jstemmer/go-junit-report v0.0.0-20190106144839-af01ea7f8024
+# github.com/jstemmer/go-junit-report v0.9.1
 github.com/jstemmer/go-junit-report
 github.com/jstemmer/go-junit-report/formatter
 github.com/jstemmer/go-junit-report/parser
@@ -173,18 +173,18 @@ go.opencensus.io/stats/internal
 go.opencensus.io/internal/tagencoding
 go.opencensus.io/metric/metricproducer
 go.opencensus.io/resource
-# golang.org/x/crypto v0.0.0-20191002192127-34f69633bfdc
+# golang.org/x/crypto v0.0.0-20191011191535-87dc89f01550
 golang.org/x/crypto/acme
 golang.org/x/crypto/acme/autocert
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blowfish
-# golang.org/x/exp v0.0.0-20190912063710-ac5d2bfcbfe0
+# golang.org/x/exp v0.0.0-20191014171548-69215a2ee97e
 golang.org/x/exp/cmd/apidiff
 golang.org/x/exp/apidiff
-# golang.org/x/lint v0.0.0-20190909230951-414d861bb4ac
+# golang.org/x/lint v0.0.0-20190930215403-16217165b5de
 golang.org/x/lint/golint
 golang.org/x/lint
-# golang.org/x/net v0.0.0-20191003171128-d98b1b443823
+# golang.org/x/net v0.0.0-20191014212845-da9a3fd4c582
 golang.org/x/net/idna
 golang.org/x/net/context/ctxhttp
 golang.org/x/net/context
@@ -199,14 +199,14 @@ golang.org/x/oauth2/google
 golang.org/x/oauth2/jwt
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
-# golang.org/x/sys v0.0.0-20191003212358-c178f38b412c
+# golang.org/x/sys v0.0.0-20191010194322-b09406accb47
 golang.org/x/sys/unix
 # golang.org/x/text v0.3.2
 golang.org/x/text/secure/bidirule
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
 golang.org/x/text/transform
-# golang.org/x/tools v0.0.0-20190917162342-3b4f30a44f3b
+# golang.org/x/tools v0.0.0-20191016194801-f0068bd333b2
 golang.org/x/tools/cmd/goimports
 golang.org/x/tools/go/gcexportdata
 golang.org/x/tools/go/packages
@@ -224,7 +224,7 @@ golang.org/x/tools/go/analysis/passes/inspect
 golang.org/x/tools/go/ast/inspector
 golang.org/x/tools/go/types/typeutil
 golang.org/x/tools/internal/fastwalk
-# google.golang.org/api v0.10.0
+# google.golang.org/api v0.11.0
 google.golang.org/api/googleapi
 google.golang.org/api/iterator
 google.golang.org/api/option
@@ -232,10 +232,10 @@ google.golang.org/api/storage/v1
 google.golang.org/api/transport/http
 google.golang.org/api/googleapi/internal/uritemplates
 google.golang.org/api/internal
-google.golang.org/api/gensupport
+google.golang.org/api/internal/gensupport
 google.golang.org/api/googleapi/transport
 google.golang.org/api/transport/http/internal/propagation
-# google.golang.org/appengine v1.6.4
+# google.golang.org/appengine v1.6.5
 google.golang.org/appengine
 google.golang.org/appengine/urlfetch
 google.golang.org/appengine/internal
@@ -246,7 +246,7 @@ google.golang.org/appengine/internal/base
 google.golang.org/appengine/internal/datastore
 google.golang.org/appengine/internal/log
 google.golang.org/appengine/internal/remote_api
-# google.golang.org/genproto v0.0.0-20191002211648-c459b9ce5143
+# google.golang.org/genproto v0.0.0-20191009194640-548a555dbc03
 google.golang.org/genproto/googleapis/iam/v1
 google.golang.org/genproto/googleapis/rpc/code
 google.golang.org/genproto/googleapis/api/annotations

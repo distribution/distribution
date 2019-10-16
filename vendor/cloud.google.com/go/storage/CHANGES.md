@@ -1,5 +1,9 @@
 # Changes
 
+## v1.1.1
+
+- Send BucketPolicyOnly even when it's disabled.
+
 ## v1.1.0
 
 - Performance improvements for ObjectIterator and BucketIterator.
