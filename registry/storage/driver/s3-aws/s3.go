@@ -616,9 +616,17 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 		if *resp.Contents[0].Key != d.s3Path(path) {
 			fi.IsDir = true
 		} else {
+			// HEAD object to get accurate size for swift DLO
+			headResp, err := d.S3.HeadObject(&s3.HeadObjectInput{
+				Bucket: aws.String(d.Bucket),
+				Key:    aws.String(d.s3Path(path)),
+			})
+			if err != nil {
+				return nil, storagedriver.InvalidPathError{Path: path}
+			}
 			fi.IsDir = false
-			fi.Size = *resp.Contents[0].Size
-			fi.ModTime = *resp.Contents[0].LastModified
+			fi.Size = *headResp.ContentLength
+			fi.ModTime = *headResp.LastModified
 		}
 	} else if len(resp.CommonPrefixes) == 1 {
 		fi.IsDir = true
