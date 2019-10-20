@@ -766,10 +766,8 @@ func (d *driver) Delete(context context.Context, path string) error {
 			// GCS only guarantees eventual consistency, so listAll might return
 			// paths that no longer exist. If this happens, just ignore any not
 			// found error
-			if status, ok := err.(*googleapi.Error); ok {
-				if status.Code == http.StatusNotFound {
-					err = nil
-				}
+			if err == storage.ErrObjectNotExist {
+				err = nil
 			}
 			if err != nil {
 				return err
@@ -778,12 +776,8 @@ func (d *driver) Delete(context context.Context, path string) error {
 		return nil
 	}
 	err = storageDeleteObject(d.storageClient, context, d.bucket, d.pathToKey(path))
-	if err != nil {
-		if status, ok := err.(*googleapi.Error); ok {
-			if status.Code == http.StatusNotFound {
-				return storagedriver.PathNotFoundError{Path: path}
-			}
-		}
+	if err == storage.ErrObjectNotExist {
+		return storagedriver.PathNotFoundError{Path: path}
 	}
 	return err
 }
