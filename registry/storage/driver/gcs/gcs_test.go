@@ -17,6 +17,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/googleapi"
+	"google.golang.org/api/option"
 	"gopkg.in/check.v1"
 )
 
@@ -72,6 +73,11 @@ func init() {
 		ts = jwtConfig.TokenSource(dcontext.Background())
 	}
 
+	storageClient, err := storage.NewClient(dcontext.Background(), option.WithTokenSource(ts))
+	if err != nil {
+		panic(fmt.Sprintf("Error creating storage client: %s", err))
+	}
+
 	gcsDriverConstructor = func(rootDirectory string) (storagedriver.StorageDriver, error) {
 		parameters := driverParameters{
 			bucket:         bucket,
@@ -79,6 +85,7 @@ func init() {
 			email:          email,
 			privateKey:     privateKey,
 			client:         oauth2.NewClient(dcontext.Background(), ts),
+			storageClient:  storageClient,
 			chunkSize:      defaultChunkSize,
 			maxConcurrency: maxConcurrency,
 		}
