@@ -19,7 +19,7 @@ func init() {
 	RootCmd.AddCommand(GCCmd)
 	GCCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "do everything except remove the blobs")
 	GCCmd.Flags().BoolVarP(&removeUntagged, "delete-untagged", "m", false, "delete manifests that are not currently referenced via tag")
-	GCCmd.Flags().StringVarP(&excludeFile, "exclude-file", "e", "", "when delete-untagged, keep digests that are present in this file (one digest per line)")
+	GCCmd.Flags().StringVarP(&excludeFile, "exclude-file", "e", "", "exclude digests from being deleted (one digest per line)")
 	RootCmd.Flags().BoolVarP(&showVersion, "version", "v", false, "show the version and exit")
 }
 
