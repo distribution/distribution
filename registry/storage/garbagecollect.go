@@ -1,8 +1,10 @@
 package storage
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"os"
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/reference"
@@ -14,10 +16,20 @@ func emit(format string, a ...interface{}) {
 	fmt.Printf(format+"\n", a...)
 }
 
+func stringInSlice(a string, list []string) bool {
+	for _, b := range list {
+		if b == a {
+			return true
+		}
+	}
+	return false
+}
+
 // GCOpts contains options for garbage collector
 type GCOpts struct {
 	DryRun         bool
 	RemoveUntagged bool
+	ExcludeFile    string
 }
 
 // ManifestDel contains manifest structure which will be deleted
@@ -37,6 +49,19 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 	// mark
 	markSet := make(map[digest.Digest]struct{})
 	manifestArr := make([]ManifestDel, 0)
+	// fill excludeDigests with the exclude file content
+	var excludeDigests []string
+	if opts.ExcludeFile != "" {
+		excludeFile, err := os.Open(opts.ExcludeFile)
+		if err != nil {
+			return fmt.Errorf("unable to open exlude file")
+		}
+		defer excludeFile.Close()
+		scanner := bufio.NewScanner(excludeFile)
+		for scanner.Scan() {
+			excludeDigests = append(excludeDigests, scanner.Text())
+		}
+	}
 	err := repositoryEnumerator.Enumerate(ctx, func(repoName string) error {
 		emit(repoName)
 
@@ -61,38 +86,44 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 		}
 
 		err = manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
-			if opts.RemoveUntagged {
-				// fetch all tags where this manifest is the latest one
-				tags, err := repository.Tags(ctx).Lookup(ctx, distribution.Descriptor{Digest: dgst})
-				if err != nil {
-					return fmt.Errorf("failed to retrieve tags for digest %v: %v", dgst, err)
-				}
-				if len(tags) == 0 {
-					emit("manifest eligible for deletion: %s", dgst)
-					// fetch all tags from repository
-					// all of these tags could contain manifest in history
-					// which means that we need check (and delete) those references when deleting manifest
-					allTags, err := repository.Tags(ctx).All(ctx)
+			// TODO TKO: If dgst in ignore_list, don't do that => return nil
+			if !stringInSlice(string(dgst), excludeDigests) {
+				if opts.RemoveUntagged {
+					// fetch all tags where this manifest is the latest one
+					tags, err := repository.Tags(ctx).Lookup(ctx, distribution.Descriptor{Digest: dgst})
 					if err != nil {
-						return fmt.Errorf("failed to retrieve tags %v", err)
+						return fmt.Errorf("failed to retrieve tags for digest %v: %v", dgst, err)
 					}
-					manifestArr = append(manifestArr, ManifestDel{Name: repoName, Digest: dgst, Tags: allTags})
-					return nil
+					if len(tags) == 0 {
+						emit("manifest eligible for deletion: %s", dgst)
+						// fetch all tags from repository
+						// all of these tags could contain manifest in history
+						// which means that we need check (and delete) those references when deleting manifest
+						allTags, err := repository.Tags(ctx).All(ctx)
+						if err != nil {
+							return fmt.Errorf("failed to retrieve tags %v", err)
+						}
+						manifestArr = append(manifestArr, ManifestDel{Name: repoName, Digest: dgst, Tags: allTags})
+						return nil
+					}
 				}
-			}
-			// Mark the manifest's blob
-			emit("%s: marking manifest %s ", repoName, dgst)
-			markSet[dgst] = struct{}{}
+				// Mark the manifest's blob
+				emit("%s: marking manifest %s ", repoName, dgst)
+				markSet[dgst] = struct{}{}
 
-			manifest, err := manifestService.Get(ctx, dgst)
-			if err != nil {
-				return fmt.Errorf("failed to retrieve manifest for digest %v: %v", dgst, err)
-			}
+				manifest, err := manifestService.Get(ctx, dgst)
+				if err != nil {
+					return fmt.Errorf("failed to retrieve manifest for digest %v: %v", dgst, err)
+				}
 
-			descriptors := manifest.References()
-			for _, descriptor := range descriptors {
-				markSet[descriptor.Digest] = struct{}{}
-				emit("%s: marking blob %s", repoName, descriptor.Digest)
+				descriptors := manifest.References()
+				for _, descriptor := range descriptors {
+					markSet[descriptor.Digest] = struct{}{}
+					emit("%s: marking blob %s", repoName, descriptor.Digest)
+				}
+
+			} else {
+				emit("manifest excluded from deletion: %s", dgst)
 			}
 
 			return nil
