@@ -54,7 +54,7 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 	if opts.ExcludeFile != "" {
 		excludeFile, err := os.Open(opts.ExcludeFile)
 		if err != nil {
-			return fmt.Errorf("unable to open exlude file")
+			return fmt.Errorf("unable to open exclude file")
 		}
 		defer excludeFile.Close()
 		scanner := bufio.NewScanner(excludeFile)
