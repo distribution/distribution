@@ -86,7 +86,6 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 		}
 
 		err = manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
-			// TODO TKO: If dgst in ignore_list, don't do that => return nil
 			if !stringInSlice(string(dgst), excludeDigests) {
 				if opts.RemoveUntagged {
 					// fetch all tags where this manifest is the latest one
@@ -110,20 +109,26 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 				// Mark the manifest's blob
 				emit("%s: marking manifest %s ", repoName, dgst)
 				markSet[dgst] = struct{}{}
-
-				manifest, err := manifestService.Get(ctx, dgst)
-				if err != nil {
-					return fmt.Errorf("failed to retrieve manifest for digest %v: %v", dgst, err)
-				}
-
-				descriptors := manifest.References()
-				for _, descriptor := range descriptors {
-					markSet[descriptor.Digest] = struct{}{}
-					emit("%s: marking blob %s", repoName, descriptor.Digest)
-				}
-
 			} else {
 				emit("manifest excluded from deletion: %s", dgst)
+			}
+
+			manifest, err := manifestService.Get(ctx, dgst)
+			if err != nil {
+				return fmt.Errorf("failed to retrieve manifest for digest %v: %v", dgst, err)
+			}
+
+			descriptors := manifest.References()
+			for _, descriptor := range descriptors {
+				if !stringInSlice(string(dgst), excludeDigests) {
+					// Mark it
+					markSet[descriptor.Digest] = struct{}{}
+					emit("%s: marking blob %s", repoName, descriptor.Digest)
+				} else {
+					// Exclude it
+					excludeDigests = append(excludeDigests, string(descriptor.Digest))
+					emit("%s: excluding blob %s", repoName, descriptor.Digest)
+				}
 			}
 
 			return nil
@@ -159,8 +164,10 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 	deleteSet := make(map[digest.Digest]struct{})
 	err = blobService.Enumerate(ctx, func(dgst digest.Digest) error {
 		// check if digest is in markSet. If not, delete it!
-		if _, ok := markSet[dgst]; !ok {
-			deleteSet[dgst] = struct{}{}
+		if !stringInSlice(string(dgst), excludeDigests) {
+			if _, ok := markSet[dgst]; !ok {
+				deleteSet[dgst] = struct{}{}
+			}
 		}
 		return nil
 	})
