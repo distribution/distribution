@@ -41,6 +41,7 @@ import (
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/base"
 	"github.com/docker/distribution/registry/storage/driver/factory"
+	log "github.com/sirupsen/logrus"
 )
 
 const driverName = "s3aws"
@@ -103,6 +104,7 @@ type DriverParameters struct {
 	UserAgent                   string
 	ObjectACL                   string
 	SessionToken                string
+	LogLevel                    aws.LogLevelType
 }
 
 func init() {
@@ -341,6 +343,37 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 
 	sessionToken := ""
 
+	logLevel := aws.LogOff
+	logLevelParam := parameters["loglevel"]
+	if logLevelParam != nil {
+		switch strings.ToLower(logLevelParam.(string)) {
+		case "logoff":
+			log.Info("S3 logging level set to LogOff")
+			logLevel = aws.LogOff
+		case "logdebug":
+			log.Info("S3 logging level set to LogDebug")
+			logLevel = aws.LogDebug
+		case "logdebugwithsigning":
+			log.Info("S3 logging level set to LogDebugWithSigning")
+			logLevel = aws.LogDebugWithSigning
+		case "logdebugwithhttpbody":
+			log.Info("S3 logging level set to LogDebugWithHTTPBody")
+			logLevel = aws.LogDebugWithHTTPBody
+		case "logdebugwithrequestretries":
+			log.Info("S3 logging level set to LogDebugWithRequestRetries")
+			logLevel = aws.LogDebugWithRequestRetries
+		case "logdebugwithrequesterrors":
+			log.Info("S3 logging level set to LogDebugWithRequestErrors")
+			logLevel = aws.LogDebugWithRequestErrors
+		case "logdebugwitheventstreambody":
+			log.Info("S3 logging level set to LogDebugWithEventStreamBody")
+			logLevel = aws.LogDebugWithEventStreamBody
+		default:
+			log.Infof("unknown log level %v, S3 logging level set to LogOff", logLevelParam)
+			logLevel = aws.LogOff
+		}
+	}
+
 	params := DriverParameters{
 		fmt.Sprint(accessKey),
 		fmt.Sprint(secretKey),
@@ -361,6 +394,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(userAgent),
 		objectACL,
 		fmt.Sprint(sessionToken),
+		logLevel,
 	}
 
 	return New(params)
@@ -404,7 +438,7 @@ func New(params DriverParameters) (*Driver, error) {
 		return nil, fmt.Errorf("on Amazon S3 this storage driver can only be used with v4 authentication")
 	}
 
-	awsConfig := aws.NewConfig()
+	awsConfig := aws.NewConfig().WithLogLevel(params.LogLevel)
 	sess, err := session.NewSession()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new session: %v", err)
