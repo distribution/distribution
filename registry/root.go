@@ -19,6 +19,7 @@ func init() {
 	RootCmd.AddCommand(GCCmd)
 	GCCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "do everything except remove the blobs")
 	GCCmd.Flags().BoolVarP(&removeUntagged, "delete-untagged", "m", false, "delete manifests that are not currently referenced via tag")
+	GCCmd.Flags().IntVarP(&parallel, "parallel", "p", 1024, "number of parallel mark goroutines")
 	RootCmd.Flags().BoolVarP(&showVersion, "version", "v", false, "show the version and exit")
 }
 
@@ -38,6 +39,7 @@ var RootCmd = &cobra.Command{
 
 var dryRun bool
 var removeUntagged bool
+var parallel int
 
 // GCCmd is the cobra command that corresponds to the garbage-collect subcommand
 var GCCmd = &cobra.Command{
@@ -80,6 +82,7 @@ var GCCmd = &cobra.Command{
 		err = storage.MarkAndSweep(ctx, driver, registry, storage.GCOpts{
 			DryRun:         dryRun,
 			RemoveUntagged: removeUntagged,
+			Parallel:       parallel,
 		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to garbage collect: %v", err)
