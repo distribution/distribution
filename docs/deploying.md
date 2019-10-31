@@ -229,9 +229,9 @@ If you have been issued an _intermediate_ certificate instead, see
 
     ```bash
     $ docker pull ubuntu:16.04
-    $ docker tag ubuntu:16.04 myregistrydomain.com/my-ubuntu
-    $ docker push myregistrydomain.com/my-ubuntu
-    $ docker pull myregistrydomain.com/my-ubuntu
+    $ docker tag ubuntu:16.04 myregistry.domain.com/my-ubuntu
+    $ docker push myregistry.domain.com/my-ubuntu
+    $ docker pull myregistry.domain.com/my-ubuntu
     ```
 
 #### Use an intermediate certificate
