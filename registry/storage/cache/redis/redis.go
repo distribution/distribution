@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"fmt"
+	"github.com/docker/distribution/registry/storage/cache/metrics"
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/reference"
@@ -34,9 +35,13 @@ type redisBlobDescriptorService struct {
 // NewRedisBlobDescriptorCacheProvider returns a new redis-based
 // BlobDescriptorCacheProvider using the provided redis connection pool.
 func NewRedisBlobDescriptorCacheProvider(pool *redis.Pool) cache.BlobDescriptorCacheProvider {
-	return &redisBlobDescriptorService{
-		pool: pool,
-	}
+	return metrics.NewPrometheusCacheProvider(
+		&redisBlobDescriptorService{
+			pool: pool,
+		},
+		"cache_redis",
+		"Number of seconds taken by redis",
+	)
 }
 
 // RepositoryScoped returns the scoped cache.
