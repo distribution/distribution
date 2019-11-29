@@ -96,6 +96,7 @@ func init() {
 			driverName + "-test",
 			objectACL,
 			sessionToken,
+			aws.LogOff,
 		}
 
 		return New(parameters)
