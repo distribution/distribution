@@ -369,7 +369,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 			log.Info("S3 logging level set to LogDebugWithEventStreamBody")
 			logLevel = aws.LogDebugWithEventStreamBody
 		default:
-			log.Infof("unknown log level %v, S3 logging level set to LogOff", logLevelParam)
+			log.Infof("unknown loglevel %v, S3 logging level set to LogOff", logLevelParam)
 			logLevel = aws.LogOff
 		}
 	}
