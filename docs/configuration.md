@@ -128,6 +128,7 @@ storage:
     multipartcopymaxconcurrency: 100
     multipartcopythresholdsize: 33554432
     rootdirectory: /s3/object/name/prefix
+    loglevel: logdebug
   swift:
     username: username
     password: password
@@ -429,6 +430,7 @@ storage:
     multipartcopymaxconcurrency: 100
     multipartcopythresholdsize: 33554432
     rootdirectory: /s3/object/name/prefix
+    loglevel: logdebug
   swift:
     username: username
     password: password
