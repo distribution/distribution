@@ -148,14 +148,3 @@ func (ms *manifestStore) Delete(ctx context.Context, dgst digest.Digest) error {
 	dcontext.GetLogger(ms.ctx).Debug("(*manifestStore).Delete")
 	return ms.blobStore.Delete(ctx, dgst)
 }
-
-func (ms *manifestStore) Enumerate(ctx context.Context, ingester func(digest.Digest) error) error {
-	err := ms.blobStore.Enumerate(ctx, func(dgst digest.Digest) error {
-		err := ingester(dgst)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	return err
-}
