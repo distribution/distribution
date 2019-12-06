@@ -330,6 +330,7 @@ func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
 		// TODO(stevvooe): linkPath limits this blob store to only layers.
 		// This instance cannot be used for manifest checks.
 		linkPathFns:            []linkPathFunc{blobLinkPath},
+		linkDirectoryPathSpec:  layersPathSpec{name: repo.name.Name()},
 		deleteEnabled:          repo.registry.deleteEnabled,
 		resumableDigestEnabled: repo.resumableDigestEnabled,
 	}
