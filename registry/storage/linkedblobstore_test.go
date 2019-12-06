@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"sort"
 	"strconv"
 	"testing"
 
@@ -13,6 +14,54 @@ import (
 	"github.com/docker/distribution/testutil"
 	"github.com/opencontainers/go-digest"
 )
+
+func TestLinkedBlobStoreEnumerator(t *testing.T) {
+	fooRepoName, _ := reference.WithName("nm/foo")
+	fooEnv := newManifestStoreTestEnv(t, fooRepoName, "thetag")
+	ctx := context.Background()
+
+	var expected []string
+	for i := 0; i < 2; i++ {
+		rs, dgst, err := testutil.CreateRandomTarFile()
+		if err != nil {
+			t.Fatalf("unexpected error generating test layer file")
+		}
+
+		expected = append(expected, dgst.String())
+
+		wr, err := fooEnv.repository.Blobs(fooEnv.ctx).Create(fooEnv.ctx)
+		if err != nil {
+			t.Fatalf("unexpected error creating test upload: %v", err)
+		}
+
+		if _, err := io.Copy(wr, rs); err != nil {
+			t.Fatalf("unexpected error copying to upload: %v", err)
+		}
+
+		if _, err := wr.Commit(fooEnv.ctx, distribution.Descriptor{Digest: dgst}); err != nil {
+			t.Fatalf("unexpected error finishing upload: %v", err)
+		}
+	}
+
+	enumerator, ok := fooEnv.repository.Blobs(fooEnv.ctx).(distribution.BlobEnumerator)
+	if !ok {
+		t.Fatalf("Blobs is not a BlobEnumerator")
+	}
+
+	var actual []string
+	if err := enumerator.Enumerate(ctx, func(dgst digest.Digest) error {
+		actual = append(actual, dgst.String())
+		return nil
+	}); err != nil {
+		t.Fatalf("cannot enumerate on repository: %v", err)
+	}
+
+	sort.Strings(actual)
+	sort.Strings(expected)
+	if !reflect.DeepEqual(expected, actual) {
+		t.Fatalf("unexpected array difference (expected: %v actual: %v)", expected, actual)
+	}
+}
 
 func TestLinkedBlobStoreCreateWithMountFrom(t *testing.T) {
 	fooRepoName, _ := reference.WithName("nm/foo")
