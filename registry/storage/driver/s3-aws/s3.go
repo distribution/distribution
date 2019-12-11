@@ -102,6 +102,7 @@ type DriverParameters struct {
 	UserAgent                   string
 	ObjectACL                   string
 	SessionToken                string
+	UseDualStack                bool
 }
 
 func init() {
@@ -338,6 +339,23 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		objectACL = objectACLString
 	}
 
+	useDualStackBool := false
+	useDualStack := parameters["usedualstack"]
+	switch useDualStack := useDualStack.(type) {
+	case string:
+		b, err := strconv.ParseBool(useDualStack)
+		if err != nil {
+			return nil, fmt.Errorf("the useDualStack parameter should be a boolean")
+		}
+		useDualStackBool = b
+	case bool:
+		useDualStackBool = useDualStack
+	case nil:
+		// do nothing
+	default:
+		return nil, fmt.Errorf("the useDualStack parameter should be a boolean")
+	}
+
 	sessionToken := ""
 
 	params := DriverParameters{
@@ -360,6 +378,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(userAgent),
 		objectACL,
 		fmt.Sprint(sessionToken),
+		useDualStackBool,
 	}
 
 	return New(params)
@@ -421,6 +440,9 @@ func New(params DriverParameters) (*Driver, error) {
 
 	awsConfig.WithRegion(params.Region)
 	awsConfig.WithDisableSSL(!params.Secure)
+	if params.UseDualStack {
+		awsConfig.UseDualStackEndpoint = endpoints.DualStackEndpointStateEnabled
+	}
 
 	if params.UserAgent != "" || params.SkipVerify {
 		httpTransport := http.DefaultTransport
