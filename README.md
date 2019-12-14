@@ -2,10 +2,11 @@
 
 The Docker toolset to pack, ship, store, and deliver content.
 
-This repository's main product is the Docker Registry 2.0 implementation
-for storing and distributing Docker images. It supersedes the
-[docker/docker-registry](https://github.com/docker/docker-registry)
-project with a new API design, focused around security and performance.
+This repository's main product is the Open Source Docker Registry implementation
+for storing and distributing Docker and OCI images using the
+[OCI Distribution Specification](https://github.com/opencontainers/distribution-spec).
+The goal of this project is to provide a simple, secure, and scalable base
+for building a registry solution or running a simple private registry.
 
 <img src="https://www.docker.com/sites/default/files/oyster-registry-3.png" width=200px/>
 
@@ -16,17 +17,17 @@ This repository contains the following components:
 
 |**Component**       |Description                                                                                                                                                                                         |
 |--------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **registry**       | An implementation of the [Docker Registry HTTP API V2](docs/spec/api.md) for use with docker 1.6+.                                                                                                  |
-| **libraries**      | A rich set of libraries for interacting with distribution components. Please see [godoc](https://godoc.org/github.com/docker/distribution) for details. **Note**: These libraries are **unstable**. |
-| **specifications** | _Distribution_ related specifications are available in [docs/spec](docs/spec)                                                                                                                        |
+| **registry**       | An implementation of the [OCI Distribution Specification](https://github.com/opencontainers/distribution-spec).                                                                                                 |
+| **libraries**      | A rich set of libraries for interacting with distribution components. Please see [godoc](https://godoc.org/github.com/docker/distribution) for details. **Note**: The interfaces for these libraries are **unstable**. |
 | **documentation**  | Docker's full documentation set is available at [docs.docker.com](https://docs.docker.com). This repository [contains the subset](docs/) related just to the registry.                                                                                                                                          |
 
-### How does this integrate with Docker engine?
+### How does this integrate with Docker, containerd, and other OCI client?
 
-This project should provide an implementation to a V2 API for use in the [Docker
-core project](https://github.com/docker/docker). The API should be embeddable
-and simplify the process of securely pulling and pushing content from `docker`
-daemons.
+Clients implement against the OCI specification and communicate with the
+registry using HTTP. This project contains an client implementation which
+is currently in use by Docker, however, it is deprecated for the
+[implementation in containerd](https://github.com/containerd/containerd/tree/master/remotes/docker)
+and will not support new features.
 
 ### What are the long term goals of the Distribution project?
 
@@ -42,18 +43,6 @@ system that allow users to:
 * Hack/roll their own on top of healthy open-source components
 * Implement their own home made solution through good specs, and solid
   extensions mechanism.
-
-## More about Registry 2.0
-
-The new registry implementation provides the following benefits:
-
-- faster push and pull
-- new, more efficient implementation
-- simplified deployment
-- pluggable storage backend
-- webhook notifications
-
-For information on upcoming functionality, please see [ROADMAP.md](ROADMAP.md).
 
 ### Who needs to deploy a registry?
 
@@ -78,53 +67,25 @@ For those who have previously deployed their own registry based on the Registry
 data migration is required. A tool to assist with migration efforts has been
 created. For more information see [docker/migrator](https://github.com/docker/migrator).
 
-## Contribute
+## Contribution
 
 Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute
 issues, fixes, and patches to this project. If you are contributing code, see
 the instructions for [building a development environment](BUILDING.md).
 
-## Support
+## Communication
 
-If any issues are encountered while using the _Distribution_ project, several
-avenues are available for support:
+For async communication and long running discussions please use issues and pull requests on the github repo.
+This will be the best place to discuss design and implementation.
 
-<table>
-<tr>
-	<th align="left">
-	IRC
-	</th>
-	<td>
-	#docker-distribution on FreeNode
-	</td>
-</tr>
-<tr>
-	<th align="left">
-	Issue Tracker
-	</th>
-	<td>
-	github.com/docker/distribution/issues
-	</td>
-</tr>
-<tr>
-	<th align="left">
-	Google Groups
-	</th>
-	<td>
-	https://groups.google.com/a/dockerproject.org/forum/#!forum/distribution
-	</td>
-</tr>
-<tr>
-	<th align="left">
-	Mailing List
-	</th>
-	<td>
-	docker@dockerproject.org
-	</td>
-</tr>
-</table>
+For sync communication we have a community slack with a #distribution channel that everyone is welcome to join and chat about development.
 
+**Slack:** Catch us in the #distribution channels on dockercommunity.slack.com.
+[Click here for an invite to Docker community slack.](https://dockr.ly/slack)
 
-## License
+## Licenses
 
-This project is distributed under [Apache License, Version 2.0](LICENSE).
+The distribution codebase is released under the [Apache 2.0 license](LICENSE).
+The README.md file, and files in the "docs" folder are licensed under the
+Creative Commons Attribution 4.0 International License. You may obtain a
+copy of the license, titled CC-BY-4.0, at http://creativecommons.org/licenses/by/4.0/.
