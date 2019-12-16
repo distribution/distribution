@@ -2012,6 +2012,7 @@ type testEnv struct {
 }
 
 func newTestEnvMirror(t *testing.T, deleteEnabled bool) *testEnv {
+	upstreamEnv := newTestEnv(t, deleteEnabled)
 	config := configuration.Configuration{
 		Storage: configuration.Storage{
 			"testdriver": configuration.Parameters{},
@@ -2021,7 +2022,7 @@ func newTestEnvMirror(t *testing.T, deleteEnabled bool) *testEnv {
 			}},
 		},
 		Proxy: configuration.Proxy{
-			RemoteURL: "http://example.com",
+			RemoteURL: upstreamEnv.server.URL,
 		},
 	}
 	config.Compatibility.Schema1.Enabled = true
