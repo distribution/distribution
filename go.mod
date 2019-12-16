@@ -48,6 +48,7 @@ require (
 	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
 	golang.org/x/net v0.0.0-20190619014844-b5b0513f8c1b // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
+	golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4
 	golang.org/x/sys v0.0.0-20190602015325-4c4f7f33c9ed // indirect
 	google.golang.org/api v0.0.0-20160322025152-9bf6e6e569ff
 	google.golang.org/cloud v0.0.0-20151119220103-975617b05ea8
