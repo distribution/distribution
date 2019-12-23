@@ -61,7 +61,6 @@ func getOutstandingUploads(ctx context.Context, driver storageDriver.StorageDriv
 	var errors []error
 	uploads := make(map[string]uploadData)
 
-	inUploadDir := false
 	root, err := pathFor(repositoriesRootPathSpec{})
 	if err != nil {
 		return uploads, append(errors, err)
@@ -70,14 +69,9 @@ func getOutstandingUploads(ctx context.Context, driver storageDriver.StorageDriv
 	err = driver.Walk(ctx, root, func(fileInfo storageDriver.FileInfo) error {
 		filePath := fileInfo.Path()
 		_, file := path.Split(filePath)
-		if file[0] == '_' {
+		if strings.HasPrefix(file, "_") && fileInfo.IsDir() && file != "_uploads" {
 			// Reserved directory
-			inUploadDir = (file == "_uploads")
-
-			if fileInfo.IsDir() && !inUploadDir {
-				return storageDriver.ErrSkipDir
-			}
-
+			return storageDriver.ErrSkipDir
 		}
 
 		uuid, isContainingDir := uuidFromPath(filePath)
