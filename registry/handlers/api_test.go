@@ -2355,7 +2355,7 @@ func checkBodyHasErrorCodes(t *testing.T, msg string, resp *http.Response, error
 	// Ensure that counts of expected errors were all non-zero
 	for code := range expected {
 		if counts[code] == 0 {
-			t.Fatalf("expected error code %v not encounterd during %s: %s", code, msg, string(p))
+			t.Fatalf("expected error code %v not encountered during %s: %s", code, msg, string(p))
 		}
 	}
 

@@ -366,7 +366,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	return New(params)
 }
 
-// getParameterAsInt64 converts paramaters[name] to an int64 value (using
+// getParameterAsInt64 converts parameters[name] to an int64 value (using
 // defaultt if nil), verifies it is no smaller than min, and returns it.
 func getParameterAsInt64(parameters map[string]interface{}, name string, defaultt int64, min int64, max int64) (int64, error) {
 	rv := defaultt

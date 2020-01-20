@@ -68,7 +68,7 @@ func NewAPIKeyAuthorizer(headers map[string]interface{}, queryParameters map[str
 	return &APIKeyAuthorizer{headers: headers, queryParameters: queryParameters}
 }
 
-// WithAuthorization returns a PrepareDecorator that adds an HTTP headers and Query Paramaters
+// WithAuthorization returns a PrepareDecorator that adds an HTTP headers and Query Parameters
 func (aka *APIKeyAuthorizer) WithAuthorization() PrepareDecorator {
 	return func(p Preparer) Preparer {
 		return DecoratePreparer(p, WithHeaders(aka.headers), WithQueryParameters(aka.queryParameters))
