@@ -1,4 +1,6 @@
-FROM golang:1.13.4-alpine AS build
+ARG GO_VERSION=1.13.7
+
+FROM golang:${GO_VERSION}-alpine AS build
 
 ENV DISTRIBUTION_DIR /go/src/github.com/docker/distribution
 ENV BUILDTAGS include_oss include_gcs
