@@ -1,6 +1,6 @@
 ARG GO_VERSION=1.13.7
 
-FROM golang:${GO_VERSION}-alpine AS build
+FROM golang:${GO_VERSION}-alpine3.11 AS build
 
 ENV DISTRIBUTION_DIR /go/src/github.com/docker/distribution
 ENV BUILDTAGS include_oss include_gcs
@@ -18,7 +18,7 @@ WORKDIR $DISTRIBUTION_DIR
 COPY . $DISTRIBUTION_DIR
 RUN CGO_ENABLED=0 make PREFIX=/go clean binaries && file ./bin/registry | grep "statically linked"
 
-FROM alpine:3.10
+FROM alpine:3.11
 
 RUN set -ex \
     && apk add --no-cache ca-certificates apache2-utils
