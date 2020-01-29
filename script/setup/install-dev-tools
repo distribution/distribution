@@ -5,5 +5,7 @@
 #
 set -eu -o pipefail
 
+# prevent updating go.mod of the project
+cd /tmp
 go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
 go get -u github.com/cpuguy83/go-md2man

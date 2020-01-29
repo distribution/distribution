@@ -25,7 +25,7 @@ before_install:
   - sudo apt-get -q update
 
 install:
-  - go get -u github.com/vbatts/git-validation
+  - cd /tmp && go get -u github.com/vbatts/git-validation
     # TODO: Add enforcement of license
     # - go get -u github.com/kunalkushwaha/ltag
   - cd $TRAVIS_BUILD_DIR
