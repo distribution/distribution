@@ -5,44 +5,44 @@ github.com/Azure/azure-sdk-for-go/storage
 github.com/Azure/azure-sdk-for-go/version
 # github.com/Azure/go-autorest v10.8.1+incompatible
 github.com/Azure/go-autorest/autorest
-github.com/Azure/go-autorest/autorest/azure
 github.com/Azure/go-autorest/autorest/adal
+github.com/Azure/go-autorest/autorest/azure
 github.com/Azure/go-autorest/autorest/date
 # github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d
 github.com/Shopify/logrus-bugsnag
 # github.com/aws/aws-sdk-go v1.15.11
-github.com/aws/aws-sdk-go/service/cloudfront/sign
 github.com/aws/aws-sdk-go/aws
 github.com/aws/aws-sdk-go/aws/awserr
+github.com/aws/aws-sdk-go/aws/awsutil
+github.com/aws/aws-sdk-go/aws/client
+github.com/aws/aws-sdk-go/aws/client/metadata
 github.com/aws/aws-sdk-go/aws/corehandlers
 github.com/aws/aws-sdk-go/aws/credentials
 github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds
+github.com/aws/aws-sdk-go/aws/credentials/endpointcreds
+github.com/aws/aws-sdk-go/aws/credentials/stscreds
+github.com/aws/aws-sdk-go/aws/csm
+github.com/aws/aws-sdk-go/aws/defaults
 github.com/aws/aws-sdk-go/aws/ec2metadata
 github.com/aws/aws-sdk-go/aws/endpoints
 github.com/aws/aws-sdk-go/aws/request
 github.com/aws/aws-sdk-go/aws/session
-github.com/aws/aws-sdk-go/service/s3
-github.com/aws/aws-sdk-go/internal/sdkio
-github.com/aws/aws-sdk-go/internal/shareddefaults
-github.com/aws/aws-sdk-go/aws/client
-github.com/aws/aws-sdk-go/internal/sdkuri
-github.com/aws/aws-sdk-go/aws/client/metadata
-github.com/aws/aws-sdk-go/aws/awsutil
-github.com/aws/aws-sdk-go/aws/credentials/stscreds
-github.com/aws/aws-sdk-go/aws/csm
-github.com/aws/aws-sdk-go/aws/defaults
 github.com/aws/aws-sdk-go/aws/signer/v4
+github.com/aws/aws-sdk-go/internal/sdkio
+github.com/aws/aws-sdk-go/internal/sdkrand
+github.com/aws/aws-sdk-go/internal/sdkuri
+github.com/aws/aws-sdk-go/internal/shareddefaults
 github.com/aws/aws-sdk-go/private/protocol
 github.com/aws/aws-sdk-go/private/protocol/eventstream
 github.com/aws/aws-sdk-go/private/protocol/eventstream/eventstreamapi
+github.com/aws/aws-sdk-go/private/protocol/query
+github.com/aws/aws-sdk-go/private/protocol/query/queryutil
 github.com/aws/aws-sdk-go/private/protocol/rest
 github.com/aws/aws-sdk-go/private/protocol/restxml
-github.com/aws/aws-sdk-go/internal/sdkrand
-github.com/aws/aws-sdk-go/service/sts
-github.com/aws/aws-sdk-go/aws/credentials/endpointcreds
-github.com/aws/aws-sdk-go/private/protocol/query
 github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil
-github.com/aws/aws-sdk-go/private/protocol/query/queryutil
+github.com/aws/aws-sdk-go/service/cloudfront/sign
+github.com/aws/aws-sdk-go/service/s3
+github.com/aws/aws-sdk-go/service/sts
 # github.com/beorn7/perks v0.0.0-20160804104726-4c0e84591b9a
 github.com/beorn7/perks/quantile
 # github.com/bshuster-repo/logrus-logstash-hook v0.4.1
@@ -56,8 +56,8 @@ github.com/bugsnag/osext
 github.com/bugsnag/panicwrap
 # github.com/denverdino/aliyungo v0.0.0-20190125010748-a747050bb1ba
 github.com/denverdino/aliyungo/cdn/auth
-github.com/denverdino/aliyungo/oss
 github.com/denverdino/aliyungo/common
+github.com/denverdino/aliyungo/oss
 github.com/denverdino/aliyungo/util
 # github.com/dgrijalva/jwt-go v0.0.0-20170104182250-a601269ab70c
 github.com/dgrijalva/jwt-go
@@ -66,8 +66,8 @@ github.com/docker/go-metrics
 # github.com/docker/libtrust v0.0.0-20150114040149-fa567046d9b1
 github.com/docker/libtrust
 # github.com/garyburd/redigo v0.0.0-20150301180006-535138d7bcd7
-github.com/garyburd/redigo/redis
 github.com/garyburd/redigo/internal
+github.com/garyburd/redigo/redis
 # github.com/go-ini/ini v1.25.4
 github.com/go-ini/ini
 # github.com/golang/protobuf v1.2.0
@@ -94,8 +94,8 @@ github.com/ncw/swift/swifttest
 # github.com/opencontainers/go-digest v0.0.0-20170106003457-a6d0ee40d420
 github.com/opencontainers/go-digest
 # github.com/opencontainers/image-spec v1.0.0
-github.com/opencontainers/image-spec/specs-go/v1
 github.com/opencontainers/image-spec/specs-go
+github.com/opencontainers/image-spec/specs-go/v1
 # github.com/prometheus/client_golang v0.0.0-20180209125602-c332b6f63c06
 github.com/prometheus/client_golang/prometheus
 github.com/prometheus/client_golang/prometheus/promhttp
@@ -103,13 +103,13 @@ github.com/prometheus/client_golang/prometheus/promhttp
 github.com/prometheus/client_model/go
 # github.com/prometheus/common v0.0.0-20180110214958-89604d197083
 github.com/prometheus/common/expfmt
-github.com/prometheus/common/model
 github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
+github.com/prometheus/common/model
 # github.com/prometheus/procfs v0.0.0-20180125133057-cb4147076ac7
 github.com/prometheus/procfs
+github.com/prometheus/procfs/internal/util
 github.com/prometheus/procfs/nfs
 github.com/prometheus/procfs/xfs
-github.com/prometheus/procfs/internal/util
 # github.com/satori/go.uuid v1.2.0
 github.com/satori/go.uuid
 # github.com/sirupsen/logrus v1.4.2
@@ -132,46 +132,46 @@ golang.org/x/crypto/blowfish
 # golang.org/x/net v0.0.0-20190619014844-b5b0513f8c1b
 golang.org/x/net/context
 golang.org/x/net/context/ctxhttp
-golang.org/x/net/http2
-golang.org/x/net/trace
 golang.org/x/net/http/httpguts
+golang.org/x/net/http2
 golang.org/x/net/http2/hpack
 golang.org/x/net/idna
 golang.org/x/net/internal/timeseries
+golang.org/x/net/trace
 # golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 golang.org/x/oauth2
 golang.org/x/oauth2/google
-golang.org/x/oauth2/jwt
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
+golang.org/x/oauth2/jwt
 # golang.org/x/sys v0.0.0-20190602015325-4c4f7f33c9ed
 golang.org/x/sys/unix
 # golang.org/x/text v0.3.0
 golang.org/x/text/secure/bidirule
+golang.org/x/text/transform
 golang.org/x/text/unicode/bidi
 golang.org/x/text/unicode/norm
-golang.org/x/text/transform
 # google.golang.org/api v0.0.0-20160322025152-9bf6e6e569ff
+google.golang.org/api/gensupport
 google.golang.org/api/googleapi
 google.golang.org/api/googleapi/internal/uritemplates
 google.golang.org/api/storage/v1
-google.golang.org/api/gensupport
 # google.golang.org/appengine v1.4.0
 google.golang.org/appengine
-google.golang.org/appengine/urlfetch
 google.golang.org/appengine/internal
 google.golang.org/appengine/internal/app_identity
-google.golang.org/appengine/internal/modules
-google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/internal/base
 google.golang.org/appengine/internal/datastore
 google.golang.org/appengine/internal/log
+google.golang.org/appengine/internal/modules
 google.golang.org/appengine/internal/remote_api
+google.golang.org/appengine/internal/urlfetch
+google.golang.org/appengine/urlfetch
 # google.golang.org/cloud v0.0.0-20151119220103-975617b05ea8
 google.golang.org/cloud
-google.golang.org/cloud/storage
 google.golang.org/cloud/internal
 google.golang.org/cloud/internal/opts
+google.golang.org/cloud/storage
 # google.golang.org/grpc v0.0.0-20160317175043-d3ddb4469d5a
 google.golang.org/grpc
 google.golang.org/grpc/codes
@@ -180,8 +180,8 @@ google.golang.org/grpc/grpclog
 google.golang.org/grpc/internal
 google.golang.org/grpc/metadata
 google.golang.org/grpc/naming
-google.golang.org/grpc/transport
 google.golang.org/grpc/peer
+google.golang.org/grpc/transport
 # gopkg.in/check.v1 v1.0.0-20141024133853-64131543e789
 gopkg.in/check.v1
 # gopkg.in/yaml.v2 v2.2.2
