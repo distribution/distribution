@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/Azure/azure-sdk-for-go v16.2.1+incompatible
-	github.com/Azure/go-autorest v10.8.1+incompatible // indirect
+	github.com/Azure/go-autorest/autorest v0.9.4 // indirect
 	github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d
 	github.com/aws/aws-sdk-go v1.15.11
 	github.com/beorn7/perks v0.0.0-20160804104726-4c0e84591b9a // indirect
@@ -15,7 +15,6 @@ require (
 	github.com/bugsnag/osext v0.0.0-20130617224835-0dd3f918b21b // indirect
 	github.com/bugsnag/panicwrap v0.0.0-20151223152923-e2c28503fcd0 // indirect
 	github.com/denverdino/aliyungo v0.0.0-20190125010748-a747050bb1ba
-	github.com/dgrijalva/jwt-go v0.0.0-20170104182250-a601269ab70c // indirect
 	github.com/dnaeon/go-vcr v1.0.1 // indirect
 	github.com/docker/go-metrics v0.0.0-20180209012529-399ea8c73916
 	github.com/docker/libtrust v0.0.0-20150114040149-fa567046d9b1
@@ -45,7 +44,7 @@ require (
 	github.com/yvasiyarov/go-metrics v0.0.0-20140926110328-57bccd1ccd43 // indirect
 	github.com/yvasiyarov/gorelic v0.0.0-20141212073537-a9bba5b9ab50
 	github.com/yvasiyarov/newrelic_platform_go v0.0.0-20140908184405-b21fdbd4370f // indirect
-	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
+	golang.org/x/crypto v0.0.0-20191206172530-e9b2fee46413
 	golang.org/x/net v0.0.0-20190619014844-b5b0513f8c1b // indirect
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	golang.org/x/sys v0.0.0-20190602015325-4c4f7f33c9ed // indirect

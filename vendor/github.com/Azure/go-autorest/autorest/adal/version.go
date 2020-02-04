@@ -1,4 +1,9 @@
-package autorest
+package adal
+
+import (
+	"fmt"
+	"runtime"
+)
 
 // Copyright 2017 Microsoft Corporation
 //
@@ -14,15 +19,10 @@ package autorest
 //  See the License for the specific language governing permissions and
 //  limitations under the License.
 
-import (
-	"fmt"
-	"runtime"
-)
-
-const number = "v13.3.2"
+const number = "v1.0.0"
 
 var (
-	userAgent = fmt.Sprintf("Go/%s (%s-%s) go-autorest/%s",
+	ua = fmt.Sprintf("Go/%s (%s-%s) go-autorest/adal/%s",
 		runtime.Version(),
 		runtime.GOARCH,
 		runtime.GOOS,
@@ -30,12 +30,16 @@ var (
 	)
 )
 
-// UserAgent returns a string containing the Go version, system architecture and OS, and the go-autorest version.
+// UserAgent returns a string containing the Go version, system architecture and OS, and the adal version.
 func UserAgent() string {
-	return userAgent
+	return ua
 }
 
-// Version returns the semantic version (see http://semver.org).
-func Version() string {
-	return number
+// AddToUserAgent adds an extension to the current user agent
+func AddToUserAgent(extension string) error {
+	if extension != "" {
+		ua = fmt.Sprintf("%s %s", ua, extension)
+		return nil
+	}
+	return fmt.Errorf("Extension was empty, User Agent remained as '%s'", ua)
 }

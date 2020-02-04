@@ -140,24 +140,24 @@ func MapToValues(m map[string]interface{}) url.Values {
 	return v
 }
 
-// AsStringSlice method converts interface{} to []string. This expects a
-//that the parameter passed to be a slice or array of a type that has the underlying
-//type a string.
+// AsStringSlice method converts interface{} to []string.
+// s must be of type slice or array or an error is returned.
+// Each element of s will be converted to its string representation.
 func AsStringSlice(s interface{}) ([]string, error) {
 	v := reflect.ValueOf(s)
 	if v.Kind() != reflect.Slice && v.Kind() != reflect.Array {
-		return nil, NewError("autorest", "AsStringSlice", "the value's type is not an array.")
+		return nil, NewError("autorest", "AsStringSlice", "the value's type is not a slice or array.")
 	}
 	stringSlice := make([]string, 0, v.Len())
 
 	for i := 0; i < v.Len(); i++ {
-		stringSlice = append(stringSlice, v.Index(i).String())
+		stringSlice = append(stringSlice, fmt.Sprintf("%v", v.Index(i)))
 	}
 	return stringSlice, nil
 }
 
 // String method converts interface v to string. If interface is a list, it
-// joins list elements using the seperator. Note that only sep[0] will be used for
+// joins list elements using the separator. Note that only sep[0] will be used for
 // joining if any separator is specified.
 func String(v interface{}, sep ...string) string {
 	if len(sep) == 0 {
@@ -218,9 +218,10 @@ func IsTokenRefreshError(err error) bool {
 	return false
 }
 
-// IsTemporaryNetworkError returns true if the specified error is a temporary network error.
+// IsTemporaryNetworkError returns true if the specified error is a temporary network error or false
+// if it's not.  If the error doesn't implement the net.Error interface the return value is true.
 func IsTemporaryNetworkError(err error) bool {
-	if netErr, ok := err.(net.Error); ok && netErr.Temporary() {
+	if netErr, ok := err.(net.Error); !ok || (ok && netErr.Temporary()) {
 		return true
 	}
 	return false
