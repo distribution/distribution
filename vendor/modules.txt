@@ -26,9 +26,6 @@ github.com/Azure/go-autorest/logger
 # github.com/Azure/go-autorest/tracing v0.6.0
 ## explicit; go 1.12
 github.com/Azure/go-autorest/tracing
-# github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d
-## explicit
-github.com/Shopify/logrus-bugsnag
 # github.com/aws/aws-sdk-go v1.43.16
 ## explicit; go 1.11
 github.com/aws/aws-sdk-go/aws
@@ -84,21 +81,6 @@ github.com/aws/aws-sdk-go/service/sts/stsiface
 # github.com/beorn7/perks v1.0.1
 ## explicit; go 1.11
 github.com/beorn7/perks/quantile
-# github.com/bitly/go-simplejson v0.5.0
-## explicit
-# github.com/bshuster-repo/logrus-logstash-hook v1.0.0
-## explicit
-github.com/bshuster-repo/logrus-logstash-hook
-# github.com/bugsnag/bugsnag-go v0.0.0-20141110184014-b1d153021fcd
-## explicit
-github.com/bugsnag/bugsnag-go
-github.com/bugsnag/bugsnag-go/errors
-# github.com/bugsnag/osext v0.0.0-20130617224835-0dd3f918b21b
-## explicit
-github.com/bugsnag/osext
-# github.com/bugsnag/panicwrap v0.0.0-20151223152923-e2c28503fcd0
-## explicit
-github.com/bugsnag/panicwrap
 # github.com/cespare/xxhash/v2 v2.1.2
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
@@ -172,8 +154,6 @@ github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/mitchellh/mapstructure v1.1.2
 ## explicit
 github.com/mitchellh/mapstructure
-# github.com/mitchellh/osext v0.0.0-20151018003038-5e2d6d41470f
-## explicit
 # github.com/ncw/swift v1.0.47
 ## explicit
 github.com/ncw/swift
@@ -213,15 +193,6 @@ github.com/spf13/cobra
 # github.com/spf13/pflag v1.0.5
 ## explicit; go 1.12
 github.com/spf13/pflag
-# github.com/yvasiyarov/go-metrics v0.0.0-20140926110328-57bccd1ccd43
-## explicit
-github.com/yvasiyarov/go-metrics
-# github.com/yvasiyarov/gorelic v0.0.0-20141212073537-a9bba5b9ab50
-## explicit
-github.com/yvasiyarov/gorelic
-# github.com/yvasiyarov/newrelic_platform_go v0.0.0-20140908184405-b21fdbd4370f
-## explicit
-github.com/yvasiyarov/newrelic_platform_go
 # go.opencensus.io v0.22.4
 ## explicit; go 1.13
 go.opencensus.io
@@ -242,8 +213,6 @@ go.opencensus.io/trace/propagation
 go.opencensus.io/trace/tracestate
 # golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3
 ## explicit; go 1.17
-golang.org/x/crypto/acme
-golang.org/x/crypto/acme/autocert
 golang.org/x/crypto/bcrypt
 golang.org/x/crypto/blowfish
 golang.org/x/crypto/pkcs12
