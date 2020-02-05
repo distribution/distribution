@@ -242,8 +242,9 @@ func New(params Parameters) (*Driver, error) {
 				d.BulkDeleteMaxDeletes = info.BulkDelete.MaxDeletesPerRequest
 			}
 		}
-	} else {
-		d.TempURLContainerKey = params.TempURLContainerKey
+	} 
+	d.TempURLContainerKey = params.TempURLContainerKey	
+	if params.TempURLMethods != nil {
 		d.TempURLMethods = params.TempURLMethods
 	}
 
