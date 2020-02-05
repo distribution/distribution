@@ -243,11 +243,11 @@ func New(params Parameters) (*Driver, error) {
 			}
 		}
 	} 
-	d.TempURLContainerKey = params.TempURLContainerKey	
+	d.TempURLContainerKey = params.TempURLContainerKey
 	if params.TempURLMethods != nil {
 		d.TempURLMethods = params.TempURLMethods
 	}
-
+	
 	if len(d.TempURLMethods) > 0 {
 		secretKey := params.SecretKey
 		if secretKey == "" {
