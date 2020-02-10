@@ -186,6 +186,10 @@ func (rsrbds *repositoryScopedRedisBlobDescriptorService) Stat(ctx context.Conte
 	// We allow a per repository mediatype, let's look it up here.
 	mediatype, err := redis.String(conn.Do("HGET", rsrbds.blobDescriptorHashKey(dgst), "mediatype"))
 	if err != nil {
+		if err == redis.ErrNil {
+			return distribution.Descriptor{}, distribution.ErrBlobUnknown
+		}
+
 		return distribution.Descriptor{}, err
 	}
 

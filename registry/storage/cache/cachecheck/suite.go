@@ -54,6 +54,10 @@ func checkBlobDescriptorCacheEmptyRepository(ctx context.Context, t *testing.T, 
 		t.Fatalf("expected error checking for cache item with empty digest: %v", err)
 	}
 
+	if _, err := cache.Stat(ctx, "sha384:cba111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"); err != distribution.ErrBlobUnknown {
+		t.Fatalf("expected unknown blob error with uncached repo: %v", err)
+	}
+
 	if _, err := cache.Stat(ctx, "sha384:abc111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"); err != distribution.ErrBlobUnknown {
 		t.Fatalf("expected unknown blob error with empty repo: %v", err)
 	}
