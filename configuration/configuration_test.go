@@ -81,6 +81,7 @@ var configStruct = Configuration{
 		DrainTimeout time.Duration `yaml:"draintimeout,omitempty"`
 		TLS          struct {
 			Certificate string   `yaml:"certificate,omitempty"`
+			CipherSuites string  `yaml:"ciphersuites,omitempty"`
 			Key         string   `yaml:"key,omitempty"`
 			ClientCAs   []string `yaml:"clientcas,omitempty"`
 			MinimumTLS  string   `yaml:"minimumtls,omitempty"`
@@ -104,6 +105,7 @@ var configStruct = Configuration{
 	}{
 		TLS: struct {
 			Certificate string   `yaml:"certificate,omitempty"`
+			CipherSuites string  `yaml:"ciphersuites,omitempty"`
 			Key         string   `yaml:"key,omitempty"`
 			ClientCAs   []string `yaml:"clientcas,omitempty"`
 			MinimumTLS  string   `yaml:"minimumtls,omitempty"`

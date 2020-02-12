@@ -165,7 +165,6 @@ func (registry *Registry) ListenAndServe() error {
                                 tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
                                 tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
                                 tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA)
-
 		} else {
 			dcontext.GetLogger(registry.app).Infof("Cipher set %s", config.HTTP.TLS.CipherSuites)
 			for _, cipher := range strings.Split(config.HTTP.TLS.CipherSuites, ",") {
@@ -190,13 +189,12 @@ func (registry *Registry) ListenAndServe() error {
 			}
 		}
 		dcontext.GetLogger(registry.app).Infof("Cipher in use %i", tlsCipherSuites)
-
 		tlsConf := &tls.Config{
 			ClientAuth:               tls.NoClientCert,
 			NextProtos:               nextProtos(config),
 			MinVersion:               tlsMinVersion,
 			PreferServerCipherSuites: true,
-			CipherSuites: 		  tlsCipherSuites,
+			CipherSuites:		  tlsCipherSuites,
 		}
 
 		if config.HTTP.TLS.LetsEncrypt.CacheFile != "" {
