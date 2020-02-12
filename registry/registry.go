@@ -168,8 +168,8 @@ func (registry *Registry) ListenAndServe() error {
 		} else {
 			dcontext.GetLogger(registry.app).Infof("Cipher set %s", config.HTTP.TLS.CipherSuites)
 			for _, cipher := range strings.Split(config.HTTP.TLS.CipherSuites, ",") {
-				dcontext.GetLogger(registry.app).Infof("Cipher-string %s", string(cipher))
-				switch string(cipher) {
+				dcontext.GetLogger(registry.app).Infof("Cipher-string %s", cipher)
+				switch cipher {
 				case "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256":
 					tlsCipherSuites = append(tlsCipherSuites, tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256)
 				case "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256":
