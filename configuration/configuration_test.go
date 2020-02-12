@@ -80,12 +80,12 @@ var configStruct = Configuration{
 		RelativeURLs bool          `yaml:"relativeurls,omitempty"`
 		DrainTimeout time.Duration `yaml:"draintimeout,omitempty"`
 		TLS          struct {
-			Certificate string   `yaml:"certificate,omitempty"`
-			CipherSuites string  `yaml:"ciphersuites,omitempty"`
-			Key         string   `yaml:"key,omitempty"`
-			ClientCAs   []string `yaml:"clientcas,omitempty"`
-			MinimumTLS  string   `yaml:"minimumtls,omitempty"`
-			LetsEncrypt struct {
+			Certificate  string   `yaml:"certificate,omitempty"`
+			CipherSuites string   `yaml:"ciphersuites,omitempty"`
+			Key          string   `yaml:"key,omitempty"`
+			ClientCAs    []string `yaml:"clientcas,omitempty"`
+			MinimumTLS   string   `yaml:"minimumtls,omitempty"`
+			LetsEncrypt  struct {
 				CacheFile string   `yaml:"cachefile,omitempty"`
 				Email     string   `yaml:"email,omitempty"`
 				Hosts     []string `yaml:"hosts,omitempty"`
@@ -104,12 +104,12 @@ var configStruct = Configuration{
 		} `yaml:"http2,omitempty"`
 	}{
 		TLS: struct {
-			Certificate string   `yaml:"certificate,omitempty"`
-			CipherSuites string  `yaml:"ciphersuites,omitempty"`
-			Key         string   `yaml:"key,omitempty"`
-			ClientCAs   []string `yaml:"clientcas,omitempty"`
-			MinimumTLS  string   `yaml:"minimumtls,omitempty"`
-			LetsEncrypt struct {
+			Certificate  string   `yaml:"certificate,omitempty"`
+			CipherSuites string   `yaml:"ciphersuites,omitempty"`
+			Key          string   `yaml:"key,omitempty"`
+			ClientCAs    []string `yaml:"clientcas,omitempty"`
+			MinimumTLS   string   `yaml:"minimumtls,omitempty"`
+			LetsEncrypt  struct {
 				CacheFile string   `yaml:"cachefile,omitempty"`
 				Email     string   `yaml:"email,omitempty"`
 				Hosts     []string `yaml:"hosts,omitempty"`

@@ -99,8 +99,8 @@ type Configuration struct {
 			// be used for TLS.
 			Certificate string `yaml:"certificate,omitempty"`
 
-                        // Specifies the allowed Ciphers
-                        CipherSuites string `yaml:"ciphersuites,omitempty"`
+			// Specifies the allowed Ciphers
+			CipherSuites string `yaml:"ciphersuites,omitempty"`
 
 			// Key specifies the path to the x509 key file, which should
 			// contain the private portion for the file specified in
