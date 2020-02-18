@@ -940,6 +940,40 @@ var routeDescriptors = []RouteDescriptor{
 	},
 
 	{
+		Name:        RouteNameRecipe,
+		Path:        "/v2/{name:" + reference.NameRegexp.String() + "}/blobs/{digest:" + digest.DigestRegexp.String() + "}/recipe",
+		Entity:      "Recipe",
+		Description: "Get the recipe for the blob",
+		Methods: []MethodDescriptor{
+			{
+				Method:      "GET",
+				Description: "Retrieve the blob from the registry identified by `digest`. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data.",
+				Requests: []RequestDescriptor{
+					{
+						Name:    "Fetch Recipe",
+						Headers: []ParameterDescriptor{},
+						PathParameters: []ParameterDescriptor{
+							nameParameterDescriptor,
+							digestPathParameter,
+						},
+						Successes: []ResponseDescriptor{
+							{
+								Description: "",
+								StatusCode:  http.StatusOK,
+								Headers:     []ParameterDescriptor{},
+								Body: BodyDescriptor{
+									ContentType: "application/json",
+									Format:      `{"Recipe":"[]"}`,
+								},
+							},
+						},
+						Failures: []ResponseDescriptor{},
+					},
+				},
+			},
+		},
+	},
+	{
 		Name:        RouteNameBlobUpload,
 		Path:        "/v2/{name:" + reference.NameRegexp.String() + "}/blobs/uploads/",
 		Entity:      "Initiate Blob Upload",
