@@ -8,7 +8,7 @@ import (
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/manifest"
-	"github.com/opencontainers/image-spec/specs-go/v1"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 var expectedManifestSerialization = []byte(`{
