@@ -61,9 +61,9 @@ func (tfw *testFileWriter) Close() error {
 	return tfw.FileWriter.Close()
 }
 
-func (tfw *testFileWriter) Cancel() error {
+func (tfw *testFileWriter) Cancel(ctx context.Context) error {
 	tfw.Write(nil)
-	return tfw.FileWriter.Cancel()
+	return tfw.FileWriter.Cancel(ctx)
 }
 
 func (tfw *testFileWriter) Commit() error {

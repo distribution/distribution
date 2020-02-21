@@ -103,7 +103,7 @@ type FileWriter interface {
 	Size() int64
 
 	// Cancel removes any written content from this FileWriter.
-	Cancel() error
+	Cancel(context.Context) error
 
 	// Commit flushes all content written to this FileWriter and makes it
 	// available for future calls to StorageDriver.GetContent and

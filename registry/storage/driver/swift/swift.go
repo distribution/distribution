@@ -850,14 +850,14 @@ func (w *writer) Close() error {
 	return nil
 }
 
-func (w *writer) Cancel() error {
+func (w *writer) Cancel(ctx context.Context) error {
 	if w.closed {
 		return fmt.Errorf("already closed")
 	} else if w.committed {
 		return fmt.Errorf("already committed")
 	}
 	w.cancelled = true
-	return w.driver.Delete(context.Background(), w.path)
+	return w.driver.Delete(ctx, w.path)
 }
 
 func (w *writer) Commit() error {

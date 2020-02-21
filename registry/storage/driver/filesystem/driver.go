@@ -139,7 +139,7 @@ func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte
 	defer writer.Close()
 	_, err = io.Copy(writer, bytes.NewReader(contents))
 	if err != nil {
-		writer.Cancel()
+		writer.Cancel(ctx)
 		return err
 	}
 	return writer.Commit()
@@ -387,7 +387,7 @@ func (fw *fileWriter) Close() error {
 	return nil
 }
 
-func (fw *fileWriter) Cancel() error {
+func (fw *fileWriter) Cancel(ctx context.Context) error {
 	if fw.closed {
 		return fmt.Errorf("already closed")
 	}
