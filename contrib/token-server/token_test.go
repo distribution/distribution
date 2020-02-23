@@ -8,9 +8,10 @@ import (
 	"testing"
 	"time"
 
+	"strings"
+
 	"github.com/docker/distribution/registry/auth"
 	"github.com/docker/libtrust"
-	"strings"
 )
 
 func TestCreateJWTSuccessWithEmptyACL(t *testing.T) {
@@ -28,8 +29,11 @@ func TestCreateJWTSuccessWithEmptyACL(t *testing.T) {
 		SigningKey: pk,
 	}
 
-	grantedAccessList := make([]auth.Access, 0, 0)
+	grantedAccessList := make([]auth.Access, 0)
 	token, err := tokenIssuer.CreateJWT("test", "test", grantedAccessList)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	tokens := strings.Split(token, ".")
 
