@@ -10,10 +10,10 @@ import (
 	"net/http/httptest"
 	"reflect"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/docker/distribution/manifest/schema1"
-	"strings"
 )
 
 // TestHTTPSink mocks out an http endpoint and notifies it under a couple of
