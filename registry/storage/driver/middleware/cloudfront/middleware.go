@@ -138,27 +138,33 @@ func newCloudFrontStorageMiddleware(storageDriver storagedriver.StorageDriver, o
 
 	// parse ipfilteredby
 	var awsIPs *awsIPs
-	if ipFilteredBy := options["ipfilteredby"].(string); ok {
-		switch strings.ToLower(strings.TrimSpace(ipFilteredBy)) {
-		case "", "none":
-			awsIPs = nil
-		case "aws":
-			newAWSIPs(ipRangesURL, updateFrequency, nil)
-		case "awsregion":
-			var awsRegion []string
-			if regions, ok := options["awsregion"].(string); ok {
-				for _, awsRegions := range strings.Split(regions, ",") {
-					awsRegion = append(awsRegion, strings.ToLower(strings.TrimSpace(awsRegions)))
+	if i, ok := options["ipfilteredby"]; ok {
+		if ipFilteredBy, ok := i.(string); ok {
+			switch strings.ToLower(strings.TrimSpace(ipFilteredBy)) {
+			case "", "none":
+				awsIPs = nil
+			case "aws":
+				awsIPs = newAWSIPs(ipRangesURL, updateFrequency, nil)
+			case "awsregion":
+				var awsRegion []string
+				if i, ok := options["awsregion"]; ok {
+					if regions, ok := i.(string); ok {
+						for _, awsRegions := range strings.Split(regions, ",") {
+							awsRegion = append(awsRegion, strings.ToLower(strings.TrimSpace(awsRegions)))
+						}
+						awsIPs = newAWSIPs(ipRangesURL, updateFrequency, awsRegion)
+					} else {
+						return nil, fmt.Errorf("awsRegion must be a comma separated string of valid aws regions")
+					}
+				} else {
+					return nil, fmt.Errorf("awsRegion is not defined")
 				}
-				awsIPs = newAWSIPs(ipRangesURL, updateFrequency, awsRegion)
-			} else {
-				return nil, fmt.Errorf("awsRegion must be a comma separated string of valid aws regions")
+			default:
+				return nil, fmt.Errorf("ipfilteredby only allows a string the following value: none|aws|awsregion")
 			}
-		default:
-			return nil, fmt.Errorf("ipfilteredby only allows a string the following value: none|aws|awsregion")
+		} else {
+			return nil, fmt.Errorf("ipfilteredby only allows a string with the following value: none|aws|awsregion")
 		}
-	} else {
-		return nil, fmt.Errorf("ipfilteredby only allows a string with the following value: none|aws|awsregion")
 	}
 
 	return &cloudFrontStorageMiddleware{
