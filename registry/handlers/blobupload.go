@@ -187,6 +187,19 @@ func (buh *blobUploadHandler) PutBlobUploadComplete(w http.ResponseWriter, r *ht
 		// of this.
 	})
 
+	//Nikhil: Here is where the blob upload proceedure is completed.
+	//So we fetch the complete chunk, create the recipe and insert it into the db
+	blobStore := buh.Repository.Blobs(buh)
+	blob, err := blobStore.Get(buh, dgst)
+	if err != nil {
+		for err != nil {
+			fmt.Println("Refetching blob:", dgst)
+		}
+	}
+	recipeManager := buh.RecipeManager
+	recipe, _ := recipeManager.GetRecipeForLayer(dgst, blob)
+	recipeManager.InsertRecipeInDB(recipe)
+
 	if err != nil {
 		switch err := err.(type) {
 		case distribution.ErrBlobInvalidDigest:
@@ -297,6 +310,7 @@ func (buh *blobUploadHandler) ResumeBlobUpload(ctx *Context, r *http.Request) ht
 func (buh *blobUploadHandler) blobUploadResponse(w http.ResponseWriter, r *http.Request, fresh bool) error {
 	// TODO(stevvooe): Need a better way to manage the upload state automatically.
 	buh.State.Name = buh.Repository.Named().Name()
+
 	buh.State.UUID = buh.Upload.ID()
 	buh.Upload.Close()
 	buh.State.Offset = buh.Upload.Size()

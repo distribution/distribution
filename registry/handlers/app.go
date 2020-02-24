@@ -23,8 +23,11 @@ import (
 	prometheus "github.com/docker/distribution/metrics"
 	"github.com/docker/distribution/notifications"
 	"github.com/docker/distribution/reference"
-	"github.com/docker/distribution/registry/api/v2"
+	v2 "github.com/docker/distribution/registry/api/v2"
+
 	"github.com/docker/distribution/registry/api/errcode"
+
+	"github.com/docker/distribution/encode"
 	"github.com/docker/distribution/registry/auth"
 	registrymiddleware "github.com/docker/distribution/registry/middleware/registry"
 	repositorymiddleware "github.com/docker/distribution/registry/middleware/repository"
@@ -56,7 +59,8 @@ const defaultCheckInterval = 10 * time.Second
 type App struct {
 	context.Context
 
-	Config *configuration.Configuration
+	RecipeManager encode.RecipeManager
+	Config        *configuration.Configuration
 
 	router           *mux.Router                    // main application router, configured with dispatchers
 	driver           storagedriver.StorageDriver    // driver maintains the app global storage driver instance.
@@ -332,6 +336,8 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		dcontext.GetLogger(app).Warnf("Registry does not implement RepositoryRemover. Will not be able to delete repos and tags")
 	}
 
+	//Add the recipe generator
+	app.RecipeManager = encode.NewRecipeManager(app.redis)
 	return app
 }
 
