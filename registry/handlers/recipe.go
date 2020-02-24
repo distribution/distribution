@@ -2,15 +2,9 @@ package handlers
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 
-	//"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/encode"
-
-	//"github.com/docker/distribution/registry/api/errcode"
-	//"github.com/docker/distribution/registry/api/v2"
 	"github.com/gorilla/handlers"
 	"github.com/opencontainers/go-digest"
 )
@@ -41,12 +35,20 @@ type recipeHandler struct {
 //GetRecipe returns the recipe for the given digest
 func (rh *recipeHandler) GetRecipe(w http.ResponseWriter, r *http.Request) {
 	context.GetLogger(rh).Debug("GetRecipe")
-	blobStore := rh.Repository.Blobs(rh)
-	blob, _ := blobStore.Get(rh, rh.Digest)
-	recipePayload, _ := encode.GetRecipeForImage(blob)
-	fmt.Print(len(blob))
+	// blobStore := rh.Repository.Blobs(rh)
+	// blob, _ := blobStore.Get(rh, rh.Digest)
+
+	recipeManager := rh.RecipeManager
+	// recipe, _ := recipeManager.GetRecipeForLayer(rh.Digest, blob)
+
+	// recipeManager.InsertRecipeInDB(recipe)
+	recipe, err := recipeManager.GetRecipeFromDB(rh.Digest)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
 
 	//Add code to fetch and generate the handler
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(recipePayload)
+	json.NewEncoder(w).Encode(recipe)
 }
