@@ -98,7 +98,11 @@ func (r *registry) Repositories(ctx context.Context, entries []string, last stri
 		return 0, err
 	}
 
-	resp, err := getWithContext(ctx, r.client, u)
+	req, err := http.NewRequestWithContext(ctx, "GET", u, nil)
+	if err != nil {
+		return 0, err
+	}
+	resp, err := r.client.Do(req)
 	if err != nil {
 		return 0, err
 	}
@@ -214,7 +218,11 @@ func (t *tags) All(ctx context.Context) ([]string, error) {
 	}
 
 	for {
-		resp, err := getWithContext(ctx, t.client, listURL.String())
+		req, err := http.NewRequestWithContext(ctx, "GET", listURL.String(), nil)
+		if err != nil {
+			return nil, err
+		}
+		resp, err := t.client.Do(req)
 		if err != nil {
 			return tags, err
 		}
@@ -376,7 +384,11 @@ func (ms *manifests) Exists(ctx context.Context, dgst digest.Digest) (bool, erro
 		return false, err
 	}
 
-	resp, err := headWithContext(ctx, ms.client, u)
+	req, err := http.NewRequestWithContext(ctx, "HEAD", u, nil)
+	if err != nil {
+		return false, err
+	}
+	resp, err := ms.client.Do(req)
 	if err != nil {
 		return false, err
 	}
@@ -833,7 +845,11 @@ func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (distributi
 		return distribution.Descriptor{}, err
 	}
 
-	resp, err := headWithContext(ctx, bs.client, u)
+	req, err := http.NewRequestWithContext(ctx, "HEAD", u, nil)
+	if err != nil {
+		return distribution.Descriptor{}, err
+	}
+	resp, err := bs.client.Do(req)
 	if err != nil {
 		return distribution.Descriptor{}, err
 	}
@@ -904,20 +920,4 @@ func (bs *blobStatter) Clear(ctx context.Context, dgst digest.Digest) error {
 
 func (bs *blobStatter) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
 	return nil
-}
-
-func headWithContext(ctx context.Context, client *http.Client, url string) (resp *http.Response, err error) {
-	req, err := http.NewRequestWithContext(ctx, "HEAD", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	return client.Do(req)
-}
-
-func getWithContext(ctx context.Context, client *http.Client, url string) (resp *http.Response, err error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
-	if err != nil {
-		return nil, err
-	}
-	return client.Do(req)
 }
