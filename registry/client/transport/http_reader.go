@@ -171,11 +171,10 @@ func (hrs *httpReadSeeker) reader() (io.Reader, error) {
 		return hrs.rc, nil
 	}
 
-	req, err := http.NewRequest("GET", hrs.url, nil)
+	req, err := http.NewRequestWithContext(hrs.ctx, "GET", hrs.url, nil)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(hrs.ctx)
 
 	if hrs.readerOffset > 0 {
 		// If we are at different offset, issue a range request from there.

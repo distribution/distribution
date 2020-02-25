@@ -307,7 +307,7 @@ func (t *tags) Get(ctx context.Context, tag string) (distribution.Descriptor, er
 	}
 
 	newRequest := func(method string) (*http.Response, error) {
-		req, err := newRequestWithContext(ctx, method, u, nil)
+		req, err := http.NewRequestWithContext(ctx, method, u, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -467,7 +467,7 @@ func (ms *manifests) Get(ctx context.Context, dgst digest.Digest, options ...dis
 		return nil, err
 	}
 
-	req, err := newRequestWithContext(ctx, "GET", u, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", u, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -552,7 +552,7 @@ func (ms *manifests) Put(ctx context.Context, m distribution.Manifest, options .
 		return "", err
 	}
 
-	putRequest, err := newRequestWithContext(ctx, "PUT", manifestURL, bytes.NewReader(p))
+	putRequest, err := http.NewRequestWithContext(ctx, "PUT", manifestURL, bytes.NewReader(p))
 	if err != nil {
 		return "", err
 	}
@@ -587,7 +587,7 @@ func (ms *manifests) Delete(ctx context.Context, dgst digest.Digest) error {
 	if err != nil {
 		return err
 	}
-	req, err := newRequestWithContext(ctx, "DELETE", u, nil)
+	req, err := http.NewRequestWithContext(ctx, "DELETE", u, nil)
 	if err != nil {
 		return err
 	}
@@ -885,7 +885,7 @@ func (bs *blobStatter) Clear(ctx context.Context, dgst digest.Digest) error {
 		return err
 	}
 
-	req, err := newRequestWithContext(ctx, "DELETE", blobURL, nil)
+	req, err := http.NewRequestWithContext(ctx, "DELETE", blobURL, nil)
 	if err != nil {
 		return err
 	}
@@ -906,16 +906,8 @@ func (bs *blobStatter) SetDescriptor(ctx context.Context, dgst digest.Digest, de
 	return nil
 }
 
-func newRequestWithContext(ctx context.Context, method, url string, body io.Reader) (*http.Request, error) {
-	req, err := http.NewRequest(method, url, body)
-	if err != nil {
-		return nil, err
-	}
-	return req.WithContext(ctx), nil
-}
-
 func headWithContext(ctx context.Context, client *http.Client, url string) (resp *http.Response, err error) {
-	req, err := newRequestWithContext(ctx, "HEAD", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "HEAD", url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -923,7 +915,7 @@ func headWithContext(ctx context.Context, client *http.Client, url string) (resp
 }
 
 func getWithContext(ctx context.Context, client *http.Client, url string) (resp *http.Response, err error) {
-	req, err := newRequestWithContext(ctx, "GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
