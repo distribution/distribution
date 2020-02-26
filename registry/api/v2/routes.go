@@ -9,6 +9,7 @@ const (
 	RouteNameManifest        = "manifest"
 	RouteNameTags            = "tags"
 	RouteNameBlob            = "blob"
+	RouteNameRecipe          = "recipe"
 	RouteNameBlobUpload      = "blob-upload"
 	RouteNameBlobUploadChunk = "blob-upload-chunk"
 	RouteNameCatalog         = "catalog"

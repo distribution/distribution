@@ -16,7 +16,7 @@ import (
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/reference"
-	"github.com/docker/distribution/registry/api/v2"
+	v2 "github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/registry/client/transport"
 	"github.com/docker/distribution/registry/storage/cache"
 	"github.com/docker/distribution/registry/storage/cache/memory"
@@ -182,6 +182,14 @@ func (r *repository) Manifests(ctx context.Context, options ...distribution.Mani
 		client: r.client,
 		etags:  make(map[string]string),
 	}, nil
+}
+
+func (r *repository) Recipe(ctx context.Context) RecipeClient {
+	return RecipeClient{
+		name:   r.name,
+		client: r.client,
+		ub:     r.ub,
+	}
 }
 
 func (r *repository) Tags(ctx context.Context) distribution.TagService {
@@ -430,6 +438,7 @@ func (ms *manifests) Get(ctx context.Context, dgst digest.Digest, options ...dis
 		mediaTypes  []string
 	)
 
+	//Nikhil:Fetch manifest from registry
 	for _, option := range options {
 		switch opt := option.(type) {
 		case distribution.WithTagOption:
