@@ -111,6 +111,8 @@ type Repository interface {
 
 	// Tags returns a reference to this repositories tag service
 	Tags(ctx context.Context) TagService
+
+	Recipe(ctx context.Context) RecipeService
 }
 
 // TODO(stevvooe): Must add close methods to all these. May want to change the

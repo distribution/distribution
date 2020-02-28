@@ -184,8 +184,8 @@ func (r *repository) Manifests(ctx context.Context, options ...distribution.Mani
 	}, nil
 }
 
-func (r *repository) Recipe(ctx context.Context) RecipeClient {
-	return RecipeClient{
+func (r *repository) Recipe(ctx context.Context) distribution.RecipeService {
+	return &recipeClient{
 		name:   r.name,
 		client: r.client,
 		ub:     r.ub,
