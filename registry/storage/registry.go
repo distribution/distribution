@@ -202,6 +202,11 @@ func (repo *repository) Named() reference.Named {
 	return repo.name
 }
 
+// Name returns the name of the repository.
+func (repo *repository) Recipe(ctx context.Context) distribution.RecipeService {
+	return nil
+}
+
 func (repo *repository) Tags(ctx context.Context) distribution.TagService {
 	tags := &tagStore{
 		repository: repo,
