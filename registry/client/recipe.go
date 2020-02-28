@@ -13,23 +13,16 @@ import (
 	"github.com/opencontainers/go-digest"
 )
 
-// RecipeFetcher holds the interface to the additional methods in relation
-// to the communication of the recipe
-type RecipeFetcher interface {
-	//Get will fetch the image from the tag
-	Get(ctx context.Context, tag string)
-}
-
 //RecipeClient is a client object to fetch the recipe
 //from distribution
-type RecipeClient struct {
+type recipeClient struct {
 	name   reference.Named
 	ub     *v2.URLBuilder
 	client *http.Client
 }
 
 //Get will fetch the recipe for the tag which provides the digest value
-func (r *RecipeClient) Get(ctx context.Context, tag digest.Digest) (encode.Recipe, error) {
+func (r *recipeClient) Get(ctx context.Context, tag digest.Digest) (encode.Recipe, error) {
 	ref, _ := reference.WithDigest(r.name, tag)
 	url, _ := r.ub.BuildRecipeURL(ref)
 
