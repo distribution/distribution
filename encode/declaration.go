@@ -5,7 +5,7 @@ import "strings"
 //Declaration represents the class which tells
 //if the block at index i actually exists
 type Declaration struct {
-	encodings []bool
+	Encodings []bool
 }
 
 // String will fecth the declaration as a string
