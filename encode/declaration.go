@@ -11,7 +11,7 @@ type Declaration struct {
 // String will fecth the declaration as a string
 func (d *Declaration) String() string {
 	var str strings.Builder
-	for _, exist := range d.encodings {
+	for _, exist := range d.Encodings {
 		if exist {
 			str.WriteString("1")
 		} else {
