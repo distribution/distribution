@@ -4,11 +4,12 @@
 
 ### If your problem is with...
 
- - automated builds
- - your account on the [Docker Hub](https://hub.docker.com/)
- - any other [Docker Hub](https://hub.docker.com/) issue
-
-Then please do not report your issue here - you should instead report it to [https://support.docker.com](https://support.docker.com)
+ - automated builds or your [Docker Hub](https://hub.docker.com/) account
+   - Report it to [Hub Support](https://hub.docker.com/support/)
+ - Distributions of Docker for desktop or Linux
+    - Report [Mac Desktop issues](https://github.com/docker/for-mac)
+    - Report [Windows Desktop issues](https://github.com/docker/for-win)
+    - Report [Linux issues](https://github.com/docker/for-linux)
 
 ### If you...
 
