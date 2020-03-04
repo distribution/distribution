@@ -16,6 +16,7 @@ require (
 	github.com/denverdino/aliyungo v0.0.0-20190125010748-a747050bb1ba
 	github.com/dgrijalva/jwt-go v0.0.0-20170104182250-a601269ab70c // indirect
 	github.com/dnaeon/go-vcr v1.0.1 // indirect
+	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c
 	github.com/docker/go-metrics v0.0.1
 	github.com/docker/libtrust v0.0.0-20150114040149-fa567046d9b1
 	github.com/garyburd/redigo v0.0.0-20150301180006-535138d7bcd7

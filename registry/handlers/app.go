@@ -36,6 +36,7 @@ import (
 	"github.com/docker/distribution/registry/storage/driver/factory"
 	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
 	"github.com/docker/distribution/version"
+	events "github.com/docker/go-events"
 	"github.com/docker/go-metrics"
 	"github.com/docker/libtrust"
 	"github.com/garyburd/redigo/redis"
@@ -70,7 +71,7 @@ type App struct {
 
 	// events contains notification related configuration.
 	events struct {
-		sink   notifications.Sink
+		sink   events.Sink
 		source notifications.SourceRecord
 	}
 
@@ -446,7 +447,7 @@ func (app *App) register(routeName string, dispatch dispatchFunc) {
 // configureEvents prepares the event sink for action.
 func (app *App) configureEvents(configuration *configuration.Configuration) {
 	// Configure all of the endpoint sinks.
-	var sinks []notifications.Sink
+	var sinks []events.Sink
 	for _, endpoint := range configuration.Notifications.Endpoints {
 		if endpoint.Disabled {
 			dcontext.GetLogger(app).Infof("endpoint %s disabled, skipping", endpoint.Name)
@@ -470,7 +471,7 @@ func (app *App) configureEvents(configuration *configuration.Configuration) {
 	// replacing broadcaster with a rabbitmq implementation. It's recommended
 	// that the registry instances also act as the workers to keep deployment
 	// simple.
-	app.events.sink = notifications.NewBroadcaster(sinks...)
+	app.events.sink = events.NewBroadcaster(sinks...)
 
 	// Populate registry event source
 	hostname, err := os.Hostname()
