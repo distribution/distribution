@@ -2,12 +2,13 @@ package metrics
 
 import (
 	"context"
+	"time"
+
 	"github.com/docker/distribution"
+	prometheus "github.com/docker/distribution/metrics"
 	"github.com/docker/distribution/registry/storage/cache"
 	"github.com/docker/go-metrics"
 	"github.com/opencontainers/go-digest"
-	prometheus "github.com/docker/distribution/metrics"
-	"time"
 )
 
 type prometheusCacheProvider struct {
