@@ -39,7 +39,7 @@ import (
 	events "github.com/docker/go-events"
 	"github.com/docker/go-metrics"
 	"github.com/docker/libtrust"
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 )
@@ -514,11 +514,11 @@ func (app *App) configureRedis(configuration *configuration.Configuration) {
 				}
 			}
 
-			conn, err := redis.DialTimeout("tcp",
+			conn, err := redis.Dial("tcp",
 				configuration.Redis.Addr,
-				configuration.Redis.DialTimeout,
-				configuration.Redis.ReadTimeout,
-				configuration.Redis.WriteTimeout)
+				redis.DialConnectTimeout(configuration.Redis.DialTimeout),
+				redis.DialReadTimeout(configuration.Redis.ReadTimeout),
+				redis.DialWriteTimeout(configuration.Redis.WriteTimeout))
 			if err != nil {
 				dcontext.GetLogger(app).Errorf("error connecting to redis instance %s: %v",
 					configuration.Redis.Addr, err)
