@@ -115,7 +115,9 @@ storage:
     chunksize: 5242880
   s3:
     accesskey: awsaccesskey
+    accesskeysecret: awsaccesskeysecret
     secretkey: awssecretkey
+    secretkeysecret: awssecretkeysecret
     region: us-west-1
     regionendpoint: http://myobjects.local
     bucket: bucketname
@@ -416,7 +418,9 @@ storage:
     rootdirectory: /gcs/object/name/prefix
   s3:
     accesskey: awsaccesskey
+    accesskeysecret: awsaccesskeysecret
     secretkey: awssecretkey
+    secretkeysecret: awssecretkeysecret
     region: us-west-1
     regionendpoint: http://myobjects.local
     bucket: bucketname

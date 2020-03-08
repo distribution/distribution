@@ -20,6 +20,7 @@ import (
 	"io/ioutil"
 	"math"
 	"net/http"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strconv"
@@ -68,6 +69,10 @@ const (
 	// above which multipart copy will be used. (PUT Object - Copy is used
 	// for objects at or below this size.)  Empirically, 32 MB is optimal.
 	defaultMultipartCopyThresholdSize = 32 << 20
+
+	// swarmSecretBasePath defines the base path on which Docker Swarm
+	// secrets are mounted
+	swarmSecretBasePath = "/run/secrets"
 )
 
 // listMax is the largest amount of objects you can request from S3 in a list call
@@ -85,7 +90,9 @@ var validObjectACLs = map[string]struct{}{}
 //DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
 type DriverParameters struct {
 	AccessKey                   string
+	AccessKeySecret             string
 	SecretKey                   string
+	SecretKeySecret             string
 	Bucket                      string
 	Region                      string
 	RegionEndpoint              string
@@ -163,8 +170,8 @@ type Driver struct {
 
 // FromParameters constructs a new Driver with a given parameters map
 // Required parameters:
-// - accesskey
-// - secretkey
+// - accesskey/accesskeysecret
+// - secretkey/secretkeysecret
 // - region
 // - bucket
 // - encrypt
@@ -176,9 +183,18 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	if accessKey == nil {
 		accessKey = ""
 	}
+	accessKeySecret := parameters["accesskeysecret"]
+	if accessKeySecret == nil {
+		accessKeySecret = ""
+	}
+
 	secretKey := parameters["secretkey"]
 	if secretKey == nil {
 		secretKey = ""
+	}
+	secretKeySecret := parameters["secretkeysecret"]
+	if secretKeySecret == nil {
+		secretKeySecret = ""
 	}
 
 	regionEndpoint := parameters["regionendpoint"]
@@ -343,7 +359,9 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 
 	params := DriverParameters{
 		fmt.Sprint(accessKey),
+		fmt.Sprint(accessKeySecret),
 		fmt.Sprint(secretKey),
+		fmt.Sprint(secretKeySecret),
 		fmt.Sprint(bucket),
 		region,
 		fmt.Sprint(regionEndpoint),
@@ -395,6 +413,35 @@ func getParameterAsInt64(parameters map[string]interface{}, name string, default
 	return rv, nil
 }
 
+// readSecretFile retrieves the contents of a provided secret name as a string
+func readSecretFile(name string) (string, error) {
+	secretPath := filepath.Join(swarmSecretBasePath, name)
+
+	contents, err := ioutil.ReadFile(secretPath)
+	if err != nil {
+		return "", err
+	}
+
+	return string(contents), nil
+}
+
+// getSecretOrDefault reads a value from a secret if provided or returns provided defaultValue
+func getSecretOrDefault(secretName string, defaultValue string) (string, error) {
+	value := defaultValue
+
+	if secretName != "" {
+		secretValue, err := readSecretFile(secretName)
+
+		if err != nil {
+			return "", fmt.Errorf("failed to read secret %s: %v", secretName, err)
+		}
+
+		value = secretValue
+	}
+
+	return value, nil
+}
+
 // New constructs a new Driver with the given AWS credentials, region, encryption flag, and
 // bucketName
 func New(params DriverParameters) (*Driver, error) {
@@ -409,11 +456,19 @@ func New(params DriverParameters) (*Driver, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new session: %v", err)
 	}
+	accessKeyID, err := getSecretOrDefault(params.AccessKeySecret, params.AccessKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get S3 accessKeyID: %v", err)
+	}
+	secretAccessKey, err := getSecretOrDefault(params.SecretKeySecret, params.SecretKey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get S3 secretAccessKey: %v", err)
+	}
 	creds := credentials.NewChainCredentials([]credentials.Provider{
 		&credentials.StaticProvider{
 			Value: credentials.Value{
-				AccessKeyID:     params.AccessKey,
-				SecretAccessKey: params.SecretKey,
+				AccessKeyID:     accessKeyID,
+				SecretAccessKey: secretAccessKey,
 				SessionToken:    params.SessionToken,
 			},
 		},
