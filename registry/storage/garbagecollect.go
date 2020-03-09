@@ -25,6 +25,7 @@ type ManifestDel struct {
 	Name   string
 	Digest digest.Digest
 	Tags   []string
+	Layers []digest.Digest
 }
 
 // MarkAndSweep performs a mark and sweep of registry data
@@ -61,6 +62,11 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 		}
 
 		err = manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
+			manifest, err := manifestService.Get(ctx, dgst)
+			if err != nil {
+				return fmt.Errorf("failed to retrieve manifest for digest %v: %v", dgst, err)
+			}
+
 			if opts.RemoveUntagged {
 				// fetch all tags where this manifest is the latest one
 				tags, err := repository.Tags(ctx).Lookup(ctx, distribution.Descriptor{Digest: dgst})
@@ -76,18 +82,29 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 					if err != nil {
 						return fmt.Errorf("failed to retrieve tags %v", err)
 					}
-					manifestArr = append(manifestArr, ManifestDel{Name: repoName, Digest: dgst, Tags: allTags})
+
+					manifestDel := ManifestDel{
+						Name:   repoName,
+						Digest: dgst,
+						Tags:   allTags,
+						Layers: []digest.Digest{},
+					}
+
+					for _, ref := range manifest.References() {
+						if ref.MediaType == schema2.MediaTypeLayer ||
+							ref.MediaType == schema2.MediaTypeImageConfig {
+							manifestDel.Layers = append(manifestDel.Layers, ref.Digest)
+						}
+					}
+
+					manifestArr = append(manifestArr, manifestDel)
+
 					return nil
 				}
 			}
 			// Mark the manifest's blob
 			emit("%s: marking manifest %s ", repoName, dgst)
 			markSet[dgst] = struct{}{}
-
-			manifest, err := manifestService.Get(ctx, dgst)
-			if err != nil {
-				return fmt.Errorf("failed to retrieve manifest for digest %v: %v", dgst, err)
-			}
 
 			descriptors := manifest.References()
 			for _, descriptor := range descriptors {
@@ -120,6 +137,14 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 			err = vacuum.RemoveManifest(obj.Name, obj.Digest, obj.Tags)
 			if err != nil {
 				return fmt.Errorf("failed to delete manifest %s: %v", obj.Digest, err)
+			}
+			for _, layerDgst := range obj.Layers {
+				if _, ok := markSet[layerDgst]; !ok {
+					err := vacuum.RemoveLayerLink(obj.Name, string(layerDgst))
+					if err != nil {
+						return fmt.Errorf("failed to delete layer link %s for manifest %s: %v", layerDgst, obj.Name, err)
+					}
+				}
 			}
 		}
 	}
