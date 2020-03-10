@@ -17,6 +17,14 @@ import (
 // io.ReadSeeker along with its digest. An error is returned if there is a
 // problem generating valid content.
 func CreateRandomTarFile() (rs io.ReadSeeker, dgst digest.Digest, err error) {
+	fileSize := mrand.Int63n(1<<20) + 1<<20
+	return CreateFixedSizeRandomTarFile(fileSize)
+}
+
+// CreateFixedSizeRandomTarFile creates a random tarfile of fixed size,
+// returning it as an io.ReadSeeker along with its digest. An error is
+// returned if there is a problem generating valid content.
+func CreateFixedSizeRandomTarFile(fileSize int64) (rs io.ReadSeeker, dgst digest.Digest, err error) {
 	nFiles := mrand.Intn(10) + 10
 	target := &bytes.Buffer{}
 	wr := tar.NewWriter(target)
@@ -33,8 +41,6 @@ func CreateRandomTarFile() (rs io.ReadSeeker, dgst digest.Digest, err error) {
 	}
 
 	for fileNumber := 0; fileNumber < nFiles; fileNumber++ {
-		fileSize := mrand.Int63n(1<<20) + 1<<20
-
 		header.Name = fmt.Sprint(fileNumber)
 		header.Size = fileSize
 

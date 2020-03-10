@@ -70,10 +70,11 @@ func (err ErrManifestUnknown) Error() string {
 type ErrManifestUnknownRevision struct {
 	Name     string
 	Revision digest.Digest
+	Reason   error `json:"-"`
 }
 
 func (err ErrManifestUnknownRevision) Error() string {
-	return fmt.Sprintf("unknown manifest name=%s revision=%s", err.Name, err.Revision)
+	return fmt.Sprintf("unknown manifest name=%s revision=%s reason=%s", err.Name, err.Revision, err.Reason)
 }
 
 // ErrManifestUnverified is returned when the registry is unable to verify

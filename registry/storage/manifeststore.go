@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/docker/distribution"
@@ -83,6 +84,7 @@ func (ms *manifestStore) Get(ctx context.Context, dgst digest.Digest, options ..
 			return nil, distribution.ErrManifestUnknownRevision{
 				Name:     ms.repository.Named().Name(),
 				Revision: dgst,
+				Reason:   errors.New("no object found"),
 			}
 		}
 
@@ -91,10 +93,21 @@ func (ms *manifestStore) Get(ctx context.Context, dgst digest.Digest, options ..
 
 	var versioned manifest.Versioned
 	if err = json.Unmarshal(content, &versioned); err != nil {
-		return nil, err
+		return nil, distribution.ErrManifestUnknownRevision{
+			Name:     ms.repository.Named().Name(),
+			Revision: dgst,
+			Reason:   fmt.Errorf("object found is not a manifest: %s", err),
+		}
 	}
 
 	switch versioned.SchemaVersion {
+	case 0:
+		// Not a manifest, maybe a config blob
+		return nil, distribution.ErrManifestUnknownRevision{
+			Name:     ms.repository.Named().Name(),
+			Revision: dgst,
+			Reason:   errors.New("object found is not a manifest: no schema version"),
+		}
 	case 1:
 		return ms.schema1Handler.Unmarshal(ctx, dgst, content)
 	case 2:

@@ -3,8 +3,10 @@ package storage
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/docker/distribution"
@@ -12,6 +14,7 @@ import (
 	"github.com/docker/distribution/manifest/manifestlist"
 	"github.com/docker/distribution/manifest/ocischema"
 	"github.com/docker/distribution/manifest/schema1"
+	"github.com/docker/distribution/manifest/schema2"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/cache/memory"
 	"github.com/docker/distribution/registry/storage/driver"
@@ -372,6 +375,107 @@ func testManifestStorage(t *testing.T, schema1Enabled bool, options ...RegistryO
 	err = ms.Delete(ctx, dgst)
 	if err == nil {
 		t.Errorf("Unexpected success deleting while disabled")
+	}
+}
+
+func TestGetBlobsAsManifest(t *testing.T) {
+	// Make a v2 manifest with a config and a layer and upload it all
+	repoName, _ := reference.WithName("repo/name")
+	env := newManifestStoreTestEnv(t, repoName, "v2",
+		BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()),
+		EnableDelete, EnableRedirect)
+	ms, err := env.repository.Manifests(env.ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bs := env.repository.Blobs(env.ctx)
+
+	config, _ := json.Marshal(v1.Image{
+		Config: v1.ImageConfig{
+			Labels: map[string]string{
+				"identity": "testconfig1",
+			},
+		},
+	})
+	configDigest := digest.FromBytes(config)
+
+	mb := schema2.NewManifestBuilder(bs, v1.MediaTypeImageConfig, config)
+
+	layer, layerDigest, err := testutil.CreateFixedSizeRandomTarFile(128)
+	if err != nil {
+		t.Fatalf("unexpected error generating test layer file: %s", err)
+	}
+	err = mb.AppendReference(distribution.Descriptor{Digest: layerDigest})
+	if err != nil {
+		t.Fatalf("unexpected error appending layer to manifest: %s", err)
+	}
+
+	m, err := mb.Build(env.ctx)
+	if err != nil {
+		t.Fatalf("unexpected error building manifest: %s", err)
+	}
+
+	{
+		wr, err := bs.Create(env.ctx)
+		if err != nil {
+			t.Fatalf("unexpected error creating blobwriter: %s", err)
+		}
+		if _, err := io.Copy(wr, layer); err != nil {
+			t.Fatalf("unexpected error copying to upload: %s", err)
+		}
+		if _, err := wr.Commit(env.ctx, distribution.Descriptor{Digest: layerDigest}); err != nil {
+			t.Fatalf("unexpected error finishing upload: %s", err)
+		}
+	}
+	{
+		wr, err := bs.Create(env.ctx)
+		if err != nil {
+			t.Fatalf("unexpected error creating blobwriter: %s", err)
+		}
+		if _, err := io.Copy(wr, bytes.NewReader(config)); err != nil {
+			t.Fatalf("unexpected error copying to upload: %s", err)
+		}
+		if _, err := wr.Commit(env.ctx, distribution.Descriptor{Digest: configDigest}); err != nil {
+			t.Fatalf("unexpected error finishing upload: %s", err)
+		}
+	}
+	mDigest, err := ms.Put(env.ctx, m)
+	if err != nil {
+		t.Fatalf("unexpected error uploading manifest: %s", err)
+	}
+
+	// Getting the manifest works
+	_, err = ms.Get(env.ctx, mDigest)
+	if err != nil {
+		t.Errorf("Error getting manifest: %s, expected: nil", err)
+	}
+
+	// Getting the config as a manifest fails
+	_, err = ms.Get(env.ctx, configDigest)
+	if mErr, ok := err.(distribution.ErrManifestUnknownRevision); !ok ||
+		mErr.Reason.Error() != "object found is not a manifest: no schema version" {
+		t.Errorf(`Incorrect error getting config as manifest
+			got:
+				type: %T
+				err: '%s'
+			expected:
+				type: digest.ErrManifestUnknownRevision
+				err: 'unknown manifest name=repo/name revision=sha256:917483afcffa9e731f8d68780118f3f4939f5c2a8143607fcaa8b92ffdf5f7f7 reason=object found is not a manifest: no schema version'`,
+			err, err)
+	}
+
+	// Getting the layer as a manifest fails
+	_, err = ms.Get(env.ctx, layerDigest)
+	if mErr, ok := err.(distribution.ErrManifestUnknownRevision); !ok ||
+		!strings.HasPrefix(mErr.Reason.Error(), "object found is not a manifest: invalid character") {
+		t.Errorf(`Incorrect error getting layer as manifest
+			got:
+				type: %T
+				err: '%s'
+			expected:
+				type: digest.ErrManifestUnknownRevision
+				err: 'unknown manifest name=repo/name revision=sha256:917483afcffa9e731f8d68780118f3f4939f5c2a8143607fcaa8b92ffdf5f7f7 reason=object found is not a manifest: invalid character...'`,
+			err, err)
 	}
 }
 
