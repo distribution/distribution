@@ -11,6 +11,7 @@ import (
 	_ "github.com/docker/distribution/registry/storage/driver/azure"
 	_ "github.com/docker/distribution/registry/storage/driver/filesystem"
 	_ "github.com/docker/distribution/registry/storage/driver/gcs"
+	_ "github.com/docker/distribution/registry/storage/driver/hdfs"
 	_ "github.com/docker/distribution/registry/storage/driver/inmemory"
 	_ "github.com/docker/distribution/registry/storage/driver/middleware/alicdn"
 	_ "github.com/docker/distribution/registry/storage/driver/middleware/cloudfront"
