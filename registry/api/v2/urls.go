@@ -186,6 +186,18 @@ func (ub *URLBuilder) BuildRecipeURL(ref reference.Canonical) (string, error) {
 	return layerURL.String(), nil
 }
 
+// BuildTransferURL constructs the url for the recipe identified by name and dgst.
+func (ub *URLBuilder) BuildTransferURL(ref reference.Canonical) (string, error) {
+	route := ub.cloneRoute(RouteNameTransfer)
+
+	layerURL, err := route.URL("name", ref.Name(), "digest", ref.Digest().String())
+	if err != nil {
+		return "", err
+	}
+
+	return layerURL.String(), nil
+}
+
 // BuildBlobUploadURL constructs a url to begin a blob upload in the
 // repository identified by name.
 func (ub *URLBuilder) BuildBlobUploadURL(name reference.Named, values ...url.Values) (string, error) {
