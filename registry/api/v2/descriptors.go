@@ -975,16 +975,16 @@ var routeDescriptors = []RouteDescriptor{
 	},
 	{
 		Name:        RouteNameTransfer,
-		Path:        "/v2/{name:" + reference.NameRegexp.String() + "}/blobs/{digest:" + digest.DigestRegexp.String() + "}/transfer",
-		Entity:      "Transfer",
-		Description: "Transfer the contents from the the blob",
+		Path:        "/v2/{name:" + reference.NameRegexp.String() + "}/blobs/{digest:" + digest.DigestRegexp.String() + "}/blocks",
+		Entity:      "Blocks",
+		Description: "Blocks the contents from the the blob",
 		Methods: []MethodDescriptor{
 			{
 				Method:      "POST",
 				Description: "Retrieve the blob from the registry identified by `digest`. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data.",
 				Requests: []RequestDescriptor{
 					{
-						Name:    "Transfer Contents",
+						Name:    "Blocks Contents",
 						Headers: []ParameterDescriptor{},
 						PathParameters: []ParameterDescriptor{
 							nameParameterDescriptor,

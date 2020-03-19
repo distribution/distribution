@@ -9,29 +9,29 @@ import (
 	"github.com/opencontainers/go-digest"
 )
 
-// transferDispatcher responds to posting a request containing
-func transferDispatcher(ctx *Context, r *http.Request) http.Handler {
+// blocksDispatcher responds to posting a request containing
+func blocksDispatcher(ctx *Context, r *http.Request) http.Handler {
 	dgst, _ := getDigest(ctx)
-	transferHandler := &transferHandler{
+	blocksHandler := &blocksHandler{
 		Context: ctx,
 		Digest:  dgst,
 	}
 
 	mhandler := handlers.MethodHandler{
-		"POST": http.HandlerFunc(transferHandler.RequestBlocks),
+		"POST": http.HandlerFunc(blocksHandler.RequestBlocks),
 	}
 
 	return mhandler
 }
 
-// transferHandler serves http blob requests.
-type transferHandler struct {
+// blocksHandler serves http blob requests.
+type blocksHandler struct {
 	*Context
 	Digest digest.Digest
 }
 
 //PostDeclaration returns the recipe for the given digest
-func (th *transferHandler) RequestBlocks(w http.ResponseWriter, r *http.Request) {
+func (th *blocksHandler) RequestBlocks(w http.ResponseWriter, r *http.Request) {
 	context.GetLogger(th).Debug("RequestBlocks")
 
 	var data [1024]byte

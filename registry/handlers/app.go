@@ -112,7 +112,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	app.register(v2.RouteNameTags, tagsDispatcher)
 	app.register(v2.RouteNameBlob, blobDispatcher)
 	app.register(v2.RouteNameRecipe, recipeDispatcher)
-	app.register(v2.RouteNameTransfer, transferDispatcher)
+	app.register(v2.RouteNameBlocks, blocksDispatcher)
 	app.register(v2.RouteNameBlobUpload, blobUploadDispatcher)
 	app.register(v2.RouteNameBlobUploadChunk, blobUploadDispatcher)
 
