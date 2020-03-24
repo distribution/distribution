@@ -11,6 +11,15 @@ import (
 	"github.com/opencontainers/go-digest"
 )
 
+// SizeOfWindow give the size of the sliding window
+const SizeOfWindow = 1024
+
+// ShiftOfWindow give the size of the sliding window
+const ShiftOfWindow = 256
+
+// ScaleFactor gives the factor by which the size and shift of window is sclaed
+const ScaleFactor = SizeOfWindow / ShiftOfWindow
+
 //RecipeManager of the image to be generated for comparision
 type RecipeManager struct {
 	redisPool *redis.Pool
@@ -33,30 +42,28 @@ func NewRecipeManager(redis *redis.Pool) RecipeManager {
 func (rg *RecipeManager) GetRecipeForLayer(digest digest.Digest, data []byte) (Recipe, error) {
 
 	const (
-		beginIndex    = 0
-		sizeOfWindow  = 1024
-		shiftOfWindow = 256
+		beginIndex = 0
 	)
 
 	dataLength := len(data)
 
-	recipeLength := (dataLength / shiftOfWindow)
-	if dataLength%shiftOfWindow != 0 {
+	recipeLength := (dataLength / ShiftOfWindow)
+	if dataLength%ShiftOfWindow != 0 {
 		//For the last block which may be smaller than shiftOfWindow size
 		recipeLength = recipeLength + 1
 	}
 	recipe := make([]string, recipeLength)
 
-	for i := beginIndex; i < dataLength; i = i + shiftOfWindow {
+	for i := beginIndex; i < dataLength; i = i + ShiftOfWindow {
 
-		limit := i + sizeOfWindow
+		limit := i + SizeOfWindow
 		if limit >= dataLength {
 			limit = dataLength - 1
 		}
 		chunk := data[i:limit]
 		hashOfChunk := sha256.Sum256(chunk)
 
-		recipe[i/shiftOfWindow] = hex.EncodeToString(hashOfChunk[:])
+		recipe[i/ShiftOfWindow] = hex.EncodeToString(hashOfChunk[:])
 	}
 
 	return Recipe{

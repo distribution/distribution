@@ -10,6 +10,7 @@ const (
 	RouteNameTags            = "tags"
 	RouteNameBlob            = "blob"
 	RouteNameRecipe          = "recipe"
+	RouteNameBlocks          = "blocks"
 	RouteNameBlobUpload      = "blob-upload"
 	RouteNameBlobUploadChunk = "blob-upload-chunk"
 	RouteNameCatalog         = "catalog"
