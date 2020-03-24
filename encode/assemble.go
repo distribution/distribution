@@ -22,6 +22,8 @@ func AssembleBlockResponse(d Declaration, blob []byte) BlockResponse {
 
 			if coveredIndex < endIndex {
 				b.AddBlock(blob[coveredIndex:endIndex])
+			} else {
+				b.AddBlock([]byte{})
 			}
 		}
 		coveredIndex = startIndex + SizeOfWindow //Covered index cannot be greater than this value anyways
