@@ -2,9 +2,12 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/docker/distribution/context"
+	"github.com/docker/distribution/encode"
 	"github.com/gorilla/handlers"
 	"github.com/opencontainers/go-digest"
 )
@@ -34,8 +37,24 @@ type blocksHandler struct {
 func (th *blocksHandler) RequestBlocks(w http.ResponseWriter, r *http.Request) {
 	context.GetLogger(th).Debug("RequestBlocks")
 
-	var data [1024]byte
+	rawDeclaration, _ := ioutil.ReadAll(r.Body)
+	declaration := encode.NewDeclarationFromString(string(rawDeclaration))
+	fmt.Println(declaration)
 
-	w.Header().Set("Content-Type", "application/json")
+	blobStore := th.Repository.Blobs(th)
+	blob, _ := blobStore.Get(th, th.Digest)
+
+	recipeManager := th.RecipeManager
+	recipe, err := recipeManager.GetRecipeFromDB(th.Digest)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	fmt.Println(recipe)
+	fmt.Println(blob)
+
+	blockResponse := GetBlockResponse()
+	encode.
+		w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(data)
 }

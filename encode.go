@@ -11,3 +11,8 @@ import (
 type RecipeService interface {
 	Get(ctx context.Context, tag digest.Digest) (encode.Recipe, error)
 }
+
+//BlockService fetches the blocks from the service
+type BlockService interface {
+	Exchange(ctx context.Context, tag digest.Digest, d encode.Declaration) (encode.BlockResponse, error)
+}

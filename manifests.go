@@ -91,6 +91,7 @@ var mappings = make(map[string]UnmarshalFunc)
 
 // UnmarshalManifest looks up manifest unmarshal functions based on
 // MediaType
+// Nikhil:
 func UnmarshalManifest(ctHeader string, p []byte) (Manifest, Descriptor, error) {
 	// Need to look up by the actual media type, not the raw contents of
 	// the header. Strip semicolons and anything following them.

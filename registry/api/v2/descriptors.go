@@ -974,7 +974,7 @@ var routeDescriptors = []RouteDescriptor{
 		},
 	},
 	{
-		Name:        RouteNameTransfer,
+		Name:        RouteNameBlocks,
 		Path:        "/v2/{name:" + reference.NameRegexp.String() + "}/blobs/{digest:" + digest.DigestRegexp.String() + "}/blocks",
 		Entity:      "Blocks",
 		Description: "Blocks the contents from the the blob",

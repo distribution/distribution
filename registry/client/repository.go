@@ -192,6 +192,14 @@ func (r *repository) Recipe(ctx context.Context) distribution.RecipeService {
 	}
 }
 
+func (r *repository) Blocks(ctx context.Context) distribution.BlockService {
+	return &blocksClient{
+		name:   r.name,
+		client: r.client,
+		ub:     r.ub,
+	}
+}
+
 func (r *repository) Tags(ctx context.Context) distribution.TagService {
 	return &tags{
 		client: r.client,
