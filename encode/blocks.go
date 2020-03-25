@@ -9,14 +9,14 @@ import (
 //BlockResponse is a set of blocks of response
 type BlockResponse struct {
 	header         strings.Builder
-	blocks         [][]byte
+	Blocks         [][]byte
 	lengthOfBlocks int
 }
 
 //GetNewBlockResponse will generate a block response
 func GetNewBlockResponse(length int) BlockResponse {
 	var b BlockResponse
-	b.blocks = make([][]byte, length)
+	b.Blocks = make([][]byte, length)
 	return b
 }
 
@@ -27,7 +27,7 @@ func (b *BlockResponse) HeaderLength() int {
 
 //AddBlock will add a block to an array of blocks
 func (b *BlockResponse) AddBlock(block []byte) {
-	b.blocks = append(b.blocks, block)
+	b.Blocks = append(b.Blocks, block)
 	b.lengthOfBlocks += len(block)
 
 	b.header.WriteString("-")
@@ -46,7 +46,7 @@ func GetBlockResponseFromByteStream(headerlength int, byteStream []byte) BlockRe
 	blockLengths := strings.Split(string(header), "-")
 	fmt.Println(blockLengths)
 
-	b.blocks = make([][]byte, len(blockLengths))
+	b.Blocks = make([][]byte, len(blockLengths))
 	blockCodeStream := byteStream[headerlength:]
 
 	runningIndex := 0
@@ -67,7 +67,7 @@ func ConvertBlockResponseToByteStream(b BlockResponse) ([]byte, int) {
 	copy(byteStream[:b.HeaderLength()], []byte(b.header.String()))
 
 	startingIndex := 0
-	for _, block := range b.blocks {
+	for _, block := range b.Blocks {
 		endingIndex := startingIndex + len(block)
 		copy(byteStream[startingIndex:endingIndex], []byte(b.header.String()))
 		startingIndex = endingIndex
