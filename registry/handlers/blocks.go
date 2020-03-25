@@ -45,6 +45,7 @@ func (th *blocksHandler) RequestBlocks(w http.ResponseWriter, r *http.Request) {
 	blockResponse := encode.AssembleBlockResponse(declaration, blob)
 	data, headerLength := encode.ConvertBlockResponseToByteStream(blockResponse)
 
-	w.Header().Set("length", string(headerLength))
+	w.Header().Set("header-length", string(headerLength))
+	w.Header().Set("block-length", string(len(blob)))
 	json.NewEncoder(w).Encode(data)
 }
