@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -41,11 +42,13 @@ func (th *blocksHandler) RequestBlocks(w http.ResponseWriter, r *http.Request) {
 
 	blobStore := th.Repository.Blobs(th)
 	blob, _ := blobStore.Get(th, th.Digest)
+	checksum := sha256.Sum256(blob)
 
 	blockResponse := encode.AssembleBlockResponse(declaration, blob)
 	data, headerLength := encode.ConvertBlockResponseToByteStream(blockResponse)
 
 	w.Header().Set("header-length", string(headerLength))
 	w.Header().Set("block-length", string(len(blob)))
+	w.Header().Set("hash-length", string(checksum[:]))
 	json.NewEncoder(w).Encode(data)
 }

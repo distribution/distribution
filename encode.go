@@ -14,5 +14,5 @@ type RecipeService interface {
 
 //BlockService fetches the blocks from the service
 type BlockService interface {
-	Exchange(ctx context.Context, tag digest.Digest, d encode.Declaration) (encode.BlockResponse, int, error)
+	Exchange(ctx context.Context, tag digest.Digest, d encode.Declaration) (encode.BlockResponse, int, string, error)
 }
