@@ -38,6 +38,7 @@ func init() {
 	root, err := ioutil.TempDir("", "driver-")
 	regionEndpoint := os.Getenv("REGION_ENDPOINT")
 	sessionToken := os.Getenv("AWS_SESSION_TOKEN")
+	virtualHostedStyle := os.Getenv("S3_VIRTUAL_HOSTED_STYLE")
 	if err != nil {
 		panic(err)
 	}
@@ -76,6 +77,14 @@ func init() {
 			}
 		}
 
+		virtualHostedStyleBool := true
+		if virtualHostedStyle != "" {
+			virtualHostedStyleBool, err = strconv.ParseBool(virtualHostedStyle)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		parameters := DriverParameters{
 			accessKey,
 			secretKey,
@@ -96,6 +105,7 @@ func init() {
 			driverName + "-test",
 			objectACL,
 			sessionToken,
+			virtualHostedStyleBool,
 		}
 
 		return New(parameters)

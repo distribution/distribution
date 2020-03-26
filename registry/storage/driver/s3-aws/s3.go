@@ -103,6 +103,7 @@ type DriverParameters struct {
 	UserAgent                   string
 	ObjectACL                   string
 	SessionToken                string
+	VirtualHostedStyle          bool
 }
 
 func init() {
@@ -339,6 +340,23 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		objectACL = objectACLString
 	}
 
+	virtualHostedStyleBool := false
+	virtualHostedStyle := parameters["virtualhostedstyle"]
+	switch virtualHostedStyle := virtualHostedStyle.(type) {
+	case string:
+		b, err := strconv.ParseBool(virtualHostedStyle)
+		if err != nil {
+			return nil, fmt.Errorf("the virtualHostedStyle parameter should be a boolean")
+		}
+		virtualHostedStyleBool = b
+	case bool:
+		virtualHostedStyleBool = virtualHostedStyle
+	case nil:
+		// do nothing
+	default:
+		return nil, fmt.Errorf("the virtualHostedStyle parameter should be a boolean")
+	}
+
 	sessionToken := ""
 
 	params := DriverParameters{
@@ -361,6 +379,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(userAgent),
 		objectACL,
 		fmt.Sprint(sessionToken),
+		virtualHostedStyleBool,
 	}
 
 	return New(params)
@@ -423,7 +442,9 @@ func New(params DriverParameters) (*Driver, error) {
 	})
 
 	if params.RegionEndpoint != "" {
-		awsConfig.WithS3ForcePathStyle(true)
+		if !params.VirtualHostedStyle {
+			awsConfig.WithS3ForcePathStyle(true)
+		}
 		awsConfig.WithEndpoint(params.RegionEndpoint)
 	}
 
