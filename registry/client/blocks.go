@@ -26,7 +26,8 @@ func (b *blocksClient) Exchange(ctx context.Context, tag digest.Digest, d encode
 	headerLength, _ := strconv.Atoi(httpResponse.Header.Get("header-length"))
 	blockLength, _ := strconv.Atoi(httpResponse.Header.Get("block-length"))
 	checksum := httpResponse.Header.Get("hash-length")
+
 	var byteStream []byte
-	_, _ = httpResponse.Body.Read(byteStream) //Qn: ? Is it
+	httpResponse.Body.Read(byteStream) //Qn: ? Is it
 	return encode.GetBlockResponseFromByteStream(headerLength, byteStream), blockLength, checksum, nil
 }

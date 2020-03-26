@@ -38,7 +38,8 @@ func (b *BlockResponse) AddBlock(block []byte) {
 	}
 }
 
-// GetBlockResponseFromByteStream will generate a block response from a byte[]
+// GetBlockResponseFromByteStream will generate
+// a block response from a byte[]
 func GetBlockResponseFromByteStream(headerlength int, byteStream []byte) BlockResponse {
 	var b BlockResponse
 
