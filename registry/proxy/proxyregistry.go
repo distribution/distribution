@@ -269,3 +269,7 @@ func (pr *proxiedRepository) Tags(ctx context.Context) distribution.TagService {
 func (pr *proxiedRepository) Recipe(ctx context.Context) distribution.RecipeService {
 	return nil
 }
+
+func (pr *proxiedRepository) Blocks(ctx context.Context) distribution.BlockService {
+	return nil
+}

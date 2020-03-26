@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
@@ -49,6 +50,6 @@ func (th *blocksHandler) RequestBlocks(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("header-length", string(headerLength))
 	w.Header().Set("block-length", string(len(blob)))
-	w.Header().Set("hash-length", string(checksum[:]))
+	w.Header().Set("hash-length", hex.EncodeToString(checksum[:]))
 	json.NewEncoder(w).Encode(data)
 }
