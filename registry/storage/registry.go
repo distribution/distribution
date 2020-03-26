@@ -206,6 +206,9 @@ func (repo *repository) Named() reference.Named {
 func (repo *repository) Recipe(ctx context.Context) distribution.RecipeService {
 	return nil
 }
+func (repo *repository) Blocks(ctx context.Context) distribution.BlockService {
+	return nil
+}
 
 func (repo *repository) Tags(ctx context.Context) distribution.TagService {
 	tags := &tagStore{
