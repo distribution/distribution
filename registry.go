@@ -113,6 +113,8 @@ type Repository interface {
 	Tags(ctx context.Context) TagService
 
 	Recipe(ctx context.Context) RecipeService
+
+	Blocks(ctx context.Context) BlockService
 }
 
 // TODO(stevvooe): Must add close methods to all these. May want to change the
