@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 
 	"github.com/docker/distribution/context"
 	"github.com/docker/distribution/encode"
@@ -48,8 +49,8 @@ func (th *blocksHandler) RequestBlocks(w http.ResponseWriter, r *http.Request) {
 	blockResponse := encode.AssembleBlockResponse(declaration, blob)
 	data, headerLength := encode.ConvertBlockResponseToByteStream(blockResponse)
 
-	w.Header().Set("header-length", string(headerLength))
-	w.Header().Set("block-length", string(len(blob)))
+	w.Header().Set("header-length", strconv.Itoa(headerLength))
+	w.Header().Set("block-length", strconv.Itoa(len(blob)))
 	w.Header().Set("hash-length", hex.EncodeToString(checksum[:]))
 	json.NewEncoder(w).Encode(data)
 }
