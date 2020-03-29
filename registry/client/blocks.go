@@ -2,6 +2,8 @@ package client
 
 import (
 	"context"
+	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
@@ -27,7 +29,10 @@ func (b *blocksClient) Exchange(ctx context.Context, tag digest.Digest, d encode
 	blockLength, _ := strconv.Atoi(httpResponse.Header.Get("block-length"))
 	checksum := httpResponse.Header.Get("hash-length")
 
-	var byteStream []byte
-	httpResponse.Body.Read(byteStream) //Qn: ? Is it
+	fmt.Println("Header-length: ", headerLength)
+	fmt.Println("block-length: ", blockLength)
+	fmt.Println("block-checksum: ", checksum)
+
+	byteStream, _ := ioutil.ReadAll(httpResponse.Body)
 	return encode.GetBlockResponseFromByteStream(headerLength, byteStream), blockLength, checksum, nil
 }
