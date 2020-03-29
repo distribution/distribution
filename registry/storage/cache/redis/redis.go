@@ -7,6 +7,7 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/cache"
+	"github.com/docker/distribution/registry/storage/cache/metrics"
 	"github.com/garyburd/redigo/redis"
 	"github.com/opencontainers/go-digest"
 )
@@ -34,9 +35,13 @@ type redisBlobDescriptorService struct {
 // NewRedisBlobDescriptorCacheProvider returns a new redis-based
 // BlobDescriptorCacheProvider using the provided redis connection pool.
 func NewRedisBlobDescriptorCacheProvider(pool *redis.Pool) cache.BlobDescriptorCacheProvider {
-	return &redisBlobDescriptorService{
-		pool: pool,
-	}
+	return metrics.NewPrometheusCacheProvider(
+		&redisBlobDescriptorService{
+			pool: pool,
+		},
+		"cache_redis",
+		"Number of seconds taken by redis",
+	)
 }
 
 // RepositoryScoped returns the scoped cache.
@@ -181,6 +186,10 @@ func (rsrbds *repositoryScopedRedisBlobDescriptorService) Stat(ctx context.Conte
 	// We allow a per repository mediatype, let's look it up here.
 	mediatype, err := redis.String(conn.Do("HGET", rsrbds.blobDescriptorHashKey(dgst), "mediatype"))
 	if err != nil {
+		if err == redis.ErrNil {
+			return distribution.Descriptor{}, distribution.ErrBlobUnknown
+		}
+
 		return distribution.Descriptor{}, err
 	}
 

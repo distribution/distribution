@@ -418,7 +418,7 @@ func TestBlobMount(t *testing.T) {
 
 	bs := repository.Blobs(ctx)
 	// Test destination for existence.
-	statDesc, err = bs.Stat(ctx, desc.Digest)
+	_, err = bs.Stat(ctx, desc.Digest)
 	if err == nil {
 		t.Fatalf("unexpected non-error stating unmounted blob: %v", desc)
 	}
@@ -478,12 +478,12 @@ func TestBlobMount(t *testing.T) {
 		t.Fatalf("Unexpected error deleting blob")
 	}
 
-	d, err := bs.Stat(ctx, desc.Digest)
+	_, err = bs.Stat(ctx, desc.Digest)
 	if err != nil {
 		t.Fatalf("unexpected error stating blob deleted from source repository: %v", err)
 	}
 
-	d, err = sbs.Stat(ctx, desc.Digest)
+	d, err := sbs.Stat(ctx, desc.Digest)
 	if err == nil {
 		t.Fatalf("unexpected non-error stating deleted blob: %v", d)
 	}
