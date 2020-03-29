@@ -45,7 +45,8 @@ func GetBlockResponseFromByteStream(headerlength int, byteStream []byte) BlockRe
 
 	header := byteStream[:headerlength]
 	blockLengths := strings.Split(string(header), "-")
-	fmt.Println("Block-lengths:-", blockLengths)
+	fmt.Println("Received header:-", header)
+	fmt.Println("Block Lengths:-", blockLengths)
 
 	b.Blocks = make([][]byte, len(blockLengths))
 	blockCodeStream := byteStream[headerlength:]
@@ -66,7 +67,7 @@ func GetBlockResponseFromByteStream(headerlength int, byteStream []byte) BlockRe
 func ConvertBlockResponseToByteStream(b BlockResponse) ([]byte, int) {
 	byteStream := make([]byte, b.HeaderLength()+b.lengthOfBlocks)
 	copy(byteStream[:b.HeaderLength()], []byte(b.header.String()))
-
+	fmt.Println("Sending header:", b.header.String())
 	startingIndex := 0
 	for _, block := range b.Blocks {
 		endingIndex := startingIndex + len(block)

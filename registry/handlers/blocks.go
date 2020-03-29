@@ -52,5 +52,6 @@ func (th *blocksHandler) RequestBlocks(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("header-length", strconv.Itoa(headerLength))
 	w.Header().Set("block-length", strconv.Itoa(len(blob)))
 	w.Header().Set("hash-length", hex.EncodeToString(checksum[:]))
+
 	json.NewEncoder(w).Encode(data)
 }
