@@ -34,7 +34,7 @@ func (b *BlockResponse) AddBlock(block []byte) {
 	if block == nil {
 		b.header.WriteString("0")
 	} else {
-		b.header.WriteString(string(len(block)))
+		b.header.WriteString(strconv.Itoa(len(block)))
 	}
 }
 
