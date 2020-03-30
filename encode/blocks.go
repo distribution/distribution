@@ -1,10 +1,13 @@
 package encode
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strconv"
 	"strings"
 )
+
+const seperator string = "F"
 
 //BlockResponse is a set of blocks of response
 type BlockResponse struct {
@@ -22,7 +25,7 @@ func GetNewBlockResponse(length int) BlockResponse {
 
 //HeaderLength gives the length of the header of the body
 func (b *BlockResponse) HeaderLength() int {
-	return b.header.Len()
+	return hex.DecodedLen(len(b.header.String()))
 }
 
 //AddBlock will add a block to an array of blocks
@@ -30,7 +33,7 @@ func (b *BlockResponse) AddBlock(block []byte) {
 	b.Blocks = append(b.Blocks, block)
 	b.lengthOfBlocks += len(block)
 
-	b.header.WriteString("-")
+	b.header.WriteString(seperator)
 	if block == nil {
 		b.header.WriteString("0")
 	} else {
@@ -43,8 +46,8 @@ func (b *BlockResponse) AddBlock(block []byte) {
 func GetBlockResponseFromByteStream(headerlength int, byteStream []byte) BlockResponse {
 	var b BlockResponse
 
-	header := byteStream[:headerlength]
-	blockLengths := strings.Split(string(header), "-")
+	header := hex.EncodeToString(byteStream[:headerlength])
+	blockLengths := strings.Split(header, seperator)
 	fmt.Println("Received header: ", string(header))
 	fmt.Println("Block Lengths: ", blockLengths)
 
@@ -66,12 +69,15 @@ func GetBlockResponseFromByteStream(headerlength int, byteStream []byte) BlockRe
 // Returns byte stream and length of header
 func ConvertBlockResponseToByteStream(b BlockResponse) ([]byte, int) {
 	byteStream := make([]byte, b.HeaderLength()+b.lengthOfBlocks)
-	copy(byteStream[:b.HeaderLength()], []byte(b.header.String()))
+	headerBytes, _ := hex.DecodeString(b.header.String())
+	copy(byteStream[:b.HeaderLength()], headerBytes)
+
 	fmt.Println("Sending header:", b.header.String())
+
 	startingIndex := 0
 	for _, block := range b.Blocks {
 		endingIndex := startingIndex + len(block)
-		copy(byteStream[startingIndex:endingIndex], []byte(b.header.String()))
+		copy(byteStream[startingIndex:endingIndex], block)
 		startingIndex = endingIndex
 	}
 
