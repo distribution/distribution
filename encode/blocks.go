@@ -25,7 +25,7 @@ func GetNewBlockResponse(length int) BlockResponse {
 
 //HeaderLength gives the length of the header of the body
 func (b *BlockResponse) HeaderLength() int {
-	return b.header.Len()
+	return hex.DecodedLen(len(b.header.String()))
 }
 
 //AddBlock will add a block to an array of blocks
@@ -77,7 +77,7 @@ func ConvertBlockResponseToByteStream(b BlockResponse) ([]byte, int) {
 	startingIndex := 0
 	for _, block := range b.Blocks {
 		endingIndex := startingIndex + len(block)
-		copy(byteStream[startingIndex:endingIndex], []byte(b.header.String()))
+		copy(byteStream[startingIndex:endingIndex], block)
 		startingIndex = endingIndex
 	}
 
