@@ -13,10 +13,6 @@ import (
 	"time"
 
 	logrus_bugsnag "github.com/Shopify/logrus-bugsnag"
-<<<<<<< HEAD
-
-=======
->>>>>>> ea2f1c07 (Leave logging alone if no logger is specified)
 	logstash "github.com/bshuster-repo/logrus-logstash-hook"
 	"github.com/bugsnag/bugsnag-go"
 	"github.com/docker/go-metrics"
