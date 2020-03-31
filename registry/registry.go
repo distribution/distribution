@@ -386,6 +386,7 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 		ctx = dcontext.WithLogger(ctx, dcontext.GetLogger(ctx, fields...))
 	}
 
+	dcontext.SetDefaultLogger(dcontext.GetLogger(ctx))
 	return ctx, nil
 }
 

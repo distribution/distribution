@@ -4,8 +4,14 @@ import (
 	"context"
 	"fmt"
 	"runtime"
+	"sync"
 
 	"github.com/sirupsen/logrus"
+)
+
+var (
+	defaultLogger   *logrus.Entry = logrus.StandardLogger().WithField("go.version", runtime.Version())
+	defaultLoggerMu sync.RWMutex
 )
 
 // Logger provides a leveled-logging interface.
@@ -80,6 +86,18 @@ func GetLogger(ctx context.Context, keys ...interface{}) Logger {
 	return getLogrusLogger(ctx, keys...)
 }
 
+// SetDefaultLogger sets the default logger upon which to base new loggers.
+func SetDefaultLogger(logger Logger) {
+	entry, ok := logger.(*logrus.Entry)
+	if !ok {
+		return
+	}
+
+	defaultLoggerMu.Lock()
+	defaultLogger = entry
+	defaultLoggerMu.Unlock()
+}
+
 // GetLogrusLogger returns the logrus logger for the context. If one more keys
 // are provided, they will be resolved on the context and included in the
 // logger. Only use this function if specific logrus functionality is
@@ -104,9 +122,9 @@ func getLogrusLogger(ctx context.Context, keys ...interface{}) *logrus.Entry {
 			fields["instance.id"] = instanceID
 		}
 
-		fields["go.version"] = runtime.Version()
-		// If no logger is found, just return the standard logger.
-		logger = logrus.StandardLogger().WithFields(fields)
+		defaultLoggerMu.RLock()
+		logger = defaultLogger.WithFields(fields)
+		defaultLoggerMu.RUnlock()
 	}
 
 	fields := logrus.Fields{}
