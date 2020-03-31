@@ -31,7 +31,7 @@ require (
 	github.com/ncw/swift v1.0.47
 	github.com/opencontainers/go-digest v1.0.0-rc1
 	github.com/opencontainers/image-spec v1.0.1
-	github.com/satori/go.uuid v1.2.0 // indirect
+	github.com/satori/go.uuid v0.0.0-20181028125025-b2ce2384e17b // indirect; v1.2.0-12-gb2ce238 to include 75cca531 (WS-2018-0594), which is not in a tagged release
 	github.com/sirupsen/logrus v1.4.2
 	github.com/smartystreets/goconvey v0.0.0-20190330032615-68dc04aab96a // indirect
 	github.com/spf13/cobra v0.0.3
