@@ -72,6 +72,5 @@ Now stop your registry and remove all data
 
 ## Next
 
-You should now read the [detailed introduction about the
-registry](introduction.md), or jump directly to [deployment
-instructions](deploying.md).
+You should now read the [detailed introduction about the registry](introduction.md),
+or jump directly to [deployment instructions](deploying.md).

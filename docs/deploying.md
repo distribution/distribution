@@ -144,14 +144,13 @@ $ docker run -d \
 
 ### Customize the storage location
 
-By default, your registry data is persisted as a [docker
-volume](/engine/tutorials/dockervolumes.md) on the host filesystem. If you want
-to store your registry contents at a specific location on your host filesystem,
-such as if you have an SSD or SAN mounted into a particular directory, you might
-decide to use a bind mount instead. A bind mount is more dependent on the
-filesystem layout of the Docker host, but more performant in many situations.
-The following example bind-mounts the host directory `/mnt/registry` into the
-registry container at `/var/lib/registry/`.
+By default, your registry data is persisted as a [docker volume](/storage/volumes.md)
+on the host filesystem. If you want to store your registry contents at a specific
+location on your host filesystem, such as if you have an SSD or SAN mounted into
+a particular directory, you might decide to use a bind mount instead. A bind mount
+is more dependent on the filesystem layout of the Docker host, but more performant
+in many situations. The following example bind-mounts the host directory
+`/mnt/registry` into the registry container at `/var/lib/registry/`.
 
 ```bash
 $ docker run -d \
@@ -166,9 +165,9 @@ $ docker run -d \
 
 By default, the registry stores its data on the local filesystem, whether you
 use a bind mount or a volume. You can store the registry data in an Amazon S3
-bucket, Google Cloud Platform, or on another storage back-end by using [storage
-drivers](./storage-drivers/index.md). For more information, see [storage
-configuration options](./configuration.md#storage).
+bucket, Google Cloud Platform, or on another storage back-end by using
+[storage drivers](./storage-drivers/index.md). For more information, see
+[storage configuration options](./configuration.md#storage).
 
 ## Run an externally-accessible registry
 
@@ -259,8 +258,7 @@ and the relevant section of the
 
 It is possible to use a self-signed certificate, or to use our registry
 insecurely. Unless you have set up verification for your self-signed
-certificate, this is for testing only. See [run an insecure
-registry](insecure.md).
+certificate, this is for testing only. See [run an insecure registry](insecure.md).
 
 ## Run the registry as a service
 

@@ -17,8 +17,8 @@ Storage itself is delegated to drivers. The default storage driver is the local
 posix filesystem, which is suitable for development or small deployments.
 Additional cloud-based storage drivers like S3, Microsoft Azure, OpenStack Swift,
 and Aliyun OSS are also supported. People looking into using other storage
-backends may do so by writing their own driver implementing the [Storage
-API](storage-drivers/index.md).
+backends may do so by writing their own driver implementing the
+[Storage API](storage-drivers/index.md).
 
 Since securing access to your hosted images is paramount, the Registry natively
 supports TLS and basic authentication.
@@ -27,10 +27,9 @@ The Registry GitHub repository includes additional information about advanced
 authentication and authorization methods. Only very large or public deployments
 are expected to extend the Registry in this way.
 
-Finally, the Registry ships with a robust [notification
-system](notifications.md), calling webhooks in response to activity, and both
-extensive logging and reporting, mostly useful for large installations that want
-to collect metrics.
+Finally, the Registry ships with a robust [notification system](notifications.md),
+calling webhooks in response to activity, and both extensive logging and reporting,
+mostly useful for large installations that want to collect metrics.
 
 ## Understanding image naming
 
@@ -40,8 +39,7 @@ Image names as used in typical docker commands reflect their origin:
  * `docker pull myregistrydomain:port/foo/bar` instructs docker to contact the registry located at `myregistrydomain:port` to find the image `foo/bar`
 
 You can find out more about the various Docker commands dealing with images in
-the [official Docker engine
-documentation](/engine/reference/commandline/cli.md).
+the [official Docker engine documentation](/engine/reference/commandline/cli.md).
 
 ## Use cases
 
