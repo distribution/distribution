@@ -4,6 +4,12 @@ sudo: required
 services:
   - docker
 
+jobs:
+  include:
+   - arch: amd64
+   - arch: s390x
+     dist: bionic
+
 language: go
 
 go:
