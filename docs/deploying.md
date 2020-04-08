@@ -144,7 +144,7 @@ $ docker run -d \
 
 ### Customize the storage location
 
-By default, your registry data is persisted as a [docker volume](/storage/volumes.md)
+By default, your registry data is persisted as a [docker volume](../storage/volumes.md)
 on the host filesystem. If you want to store your registry contents at a specific
 location on your host filesystem, such as if you have an SSD or SAN mounted into
 a particular directory, you might decide to use a bind mount instead. A bind mount
@@ -262,13 +262,13 @@ certificate, this is for testing only. See [run an insecure registry](insecure.m
 
 ## Run the registry as a service
 
-[Swarm services](/engine/swarm/services.md) provide several advantages over
+[Swarm services](../engine/swarm/services.md) provide several advantages over
 standalone containers. They use a declarative model, which means that you define
 the desired state and Docker works to keep your service in that state. Services
 provide automatic load balancing scaling, and the ability to control the
 distribution of your service, among other advantages. Services also allow you to
 store sensitive data such as TLS certificates in
-[secrets](/engine/swarm/secrets.md).
+[secrets](../engine/swarm/secrets.md).
 
 The storage back-end you use determines whether you use a fully scaled service
 or a service with either only a single node or a node constraint.
@@ -560,6 +560,6 @@ More specific and advanced information is available in the following sections:
  - [Configuration reference](configuration.md)
  - [Working with notifications](notifications.md)
  - [Advanced "recipes"](recipes/index.md)
- - [Registry API](/registry/spec/api.md)
+ - [Registry API](spec/api.md)
  - [Storage driver model](storage-drivers/index.md)
  - [Token authentication](spec/auth/token.md)

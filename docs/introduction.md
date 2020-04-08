@@ -39,7 +39,7 @@ Image names as used in typical docker commands reflect their origin:
  * `docker pull myregistrydomain:port/foo/bar` instructs docker to contact the registry located at `myregistrydomain:port` to find the image `foo/bar`
 
 You can find out more about the various Docker commands dealing with images in
-the [official Docker engine documentation](/engine/reference/commandline/cli.md).
+the [official Docker engine documentation](../engine/reference/commandline/cli.md).
 
 ## Use cases
 

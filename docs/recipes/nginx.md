@@ -74,7 +74,7 @@ properly. For more information, see
 
 ## Setting things up
 
-Review the [requirements](/registry/recipes/index.md#requirements), then follow these steps.
+Review the [requirements](index.md#requirements), then follow these steps.
 
 1.  Create the required directories
 
