@@ -76,7 +76,7 @@ func ConvertBlockResponseToByteStream(b BlockResponse) ([]byte, int) {
 	fmt.Println("Sending header:", b.header.String())
 	fmt.Println("Header bytes:", headerBytes)
 
-	startingIndex := 0
+	startingIndex := b.HeaderLength()
 	for _, block := range b.Blocks {
 		endingIndex := startingIndex + len(block)
 		copy(byteStream[startingIndex:endingIndex], block)
