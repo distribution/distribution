@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-const seperator string = "F"
+const seperator string = "f"
 
 //BlockResponse is a set of blocks of response
 type BlockResponse struct {
