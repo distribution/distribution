@@ -46,7 +46,7 @@ func GetBlockResponseFromByteStream(headerlength int, byteStream []byte) BlockRe
 	var b BlockResponse
 
 	header := string(byteStream[:headerlength])
-	blockLengths := strings.Split(header, seperator)
+	blockLengths := strings.Split(header, seperator)[1:] //We have to get rid of empty character at beginning introduced by split
 	fmt.Println("Received byte stream: ", byteStream)
 	fmt.Println("Received header: ", header)
 	fmt.Println("Receive header Bytes:", byteStream[:headerlength])
