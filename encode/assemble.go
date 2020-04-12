@@ -5,6 +5,9 @@ package encode
 func AssembleBlockResponse(d Declaration, blob []byte) BlockResponse {
 	var b BlockResponse
 
+	if len(blob) == 0 {
+		return GetNewBlockResponse(0)
+	}
 	// O in declaration implies client doesn't have the block
 	// 1 implies client has block
 	coveredIndex := 0
