@@ -72,7 +72,7 @@ func GetBlockResponseFromByteStream(headerlength int, byteStream []byte) BlockRe
 // Returns byte stream and length of header
 func ConvertBlockResponseToByteStream(b BlockResponse) ([]byte, int) {
 	byteStream := make([]byte, b.HeaderLength()+b.lengthOfBlocks)
-	headerBytes, _ := []byte{b.header.String()}
+	headerBytes := []byte{b.header.String()}
 	copy(byteStream[:b.HeaderLength()], headerBytes)
 
 	fmt.Println("Sending header:", b.header.String())
