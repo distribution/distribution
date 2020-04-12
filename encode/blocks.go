@@ -48,14 +48,14 @@ func GetBlockResponseFromByteStream(headerlength int, byteStream []byte) BlockRe
 
 	header := hex.EncodeToString(byteStream[:headerlength])
 	blockLengths := strings.Split(header, seperator)
-
 	fmt.Println("Received byte stream: ", byteStream)
 	fmt.Println("Received header: ", header)
 	fmt.Println("Receive header Bytes:", byteStream[:headerlength])
+
 	fmt.Println("Block Lengths: ", blockLengths)
 	fmt.Println("Length of Block Lengths: ", len(blockLengths))
+	// b.Blocks = make([][]byte, len(blockLengths))	//TODO: Can be optimized
 
-	b.Blocks = make([][]byte, len(blockLengths))
 	blockCodeStream := byteStream[headerlength:]
 
 	runningIndex := 0
@@ -85,6 +85,6 @@ func ConvertBlockResponseToByteStream(b BlockResponse) ([]byte, int) {
 		copy(byteStream[startingIndex:endingIndex], block)
 		startingIndex = endingIndex
 	}
-	fmt.Println("Sent byte stream: ", byteStream)
+	//fmt.Println("Sent byte stream: ", byteStream)
 	return byteStream, b.HeaderLength()
 }
