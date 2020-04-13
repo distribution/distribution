@@ -12,10 +12,10 @@ import (
 )
 
 // SizeOfWindow give the size of the sliding window
-const SizeOfWindow = 1024
+const SizeOfWindow = 8192
 
 // ShiftOfWindow give the size of the sliding window
-const ShiftOfWindow = 256
+const ShiftOfWindow = 2048
 
 // ScaleFactor gives the factor by which the size and shift of window is sclaed
 const ScaleFactor = SizeOfWindow / ShiftOfWindow
