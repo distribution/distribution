@@ -58,7 +58,7 @@ func (rg *RecipeManager) GetRecipeForLayer(digest digest.Digest, data []byte) (R
 
 		limit := i + SizeOfWindow
 		if limit >= dataLength {
-			limit = dataLength - 1
+			limit = dataLength
 		}
 		chunk := data[i:limit]
 		hashOfChunk := sha256.Sum256(chunk)

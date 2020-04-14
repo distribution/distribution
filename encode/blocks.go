@@ -47,13 +47,15 @@ func GetBlockResponseFromByteStream(headerlength int, byteStream []byte) BlockRe
 
 	header := string(byteStream[:headerlength])
 	blockLengths := strings.Split(header, seperator)[1:] //We have to get rid of empty character at beginning introduced by split
-	fmt.Println("Received byte stream: ", byteStream)
-	fmt.Println("Received header: ", header)
-	fmt.Println("Receive header Bytes:", byteStream[:headerlength])
+	if Debug == true {
+		fmt.Println("Received byte stream: ", byteStream)
+		fmt.Println("Received header: ", header)
+		fmt.Println("Receive header Bytes:", byteStream[:headerlength])
 
-	fmt.Println("Block Lengths: ", blockLengths)
-	fmt.Println("Length of Block Lengths: ", len(blockLengths))
-	// b.Blocks = make([][]byte, len(blockLengths))	//TODO: Can be optimized
+		fmt.Println("Block Lengths: ", blockLengths)
+		fmt.Println("Length of Block Lengths: ", len(blockLengths))
+		// b.Blocks = make([][]byte, len(blockLengths))	//TODO: Can be optimized
+	}
 
 	blockCodeStream := byteStream[headerlength:]
 
@@ -75,8 +77,10 @@ func ConvertBlockResponseToByteStream(b BlockResponse) ([]byte, int) {
 	headerBytes := []byte(b.header.String())
 	copy(byteStream[:b.HeaderLength()], headerBytes)
 
-	fmt.Println("Sending header:", b.header.String())
-	fmt.Println("Header bytes:", headerBytes)
+	if Debug == true {
+		fmt.Println("Sending header:", b.header.String())
+		fmt.Println("Header bytes:", headerBytes)
+	}
 
 	startingIndex := b.HeaderLength()
 	for _, block := range b.Blocks {
@@ -84,6 +88,5 @@ func ConvertBlockResponseToByteStream(b BlockResponse) ([]byte, int) {
 		copy(byteStream[startingIndex:endingIndex], block)
 		startingIndex = endingIndex
 	}
-	//fmt.Println("Sent byte stream: ", byteStream)
 	return byteStream, b.HeaderLength()
 }
