@@ -33,7 +33,7 @@ func (r *recipeClient) Get(ctx context.Context, tag digest.Digest) (encode.Recip
 	defer httpResponse.Body.Close()
 
 	if httpResponse.StatusCode != http.StatusOK {
-		fmt.Println("Did not receive OK response from Http Server. Received: ", httpResponse.StatusCode)
+		fmt.Println("Did not receive OK response from Http Server to fetch recipe for digest :%v. Received: %v", tag, httpResponse.StatusCode)
 		return encode.Recipe{}, nil
 	}
 
