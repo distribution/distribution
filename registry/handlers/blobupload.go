@@ -189,13 +189,17 @@ func (buh *blobUploadHandler) PutBlobUploadComplete(w http.ResponseWriter, r *ht
 
 	//Nikhil: Here is where the blob upload proceedure is completed.
 	//So we fetch the complete chunk, create the recipe and insert it into the db
+	fmt.Println("Got request to upload:", dgst)
 	blobStore := buh.Repository.Blobs(buh)
-	blob, err := blobStore.Get(buh, dgst)
-	if err != nil {
-		for err != nil {
-			fmt.Println("Refetching blob:", dgst)
-		}
+	blob, myerr := blobStore.Get(buh, dgst)
+	if myerr != nil {
+		fmt.Println("Error uploading blob:", dgst)
 	}
+	// if err != nil {
+	// 	for err != nil {
+	// 		fmt.Println("Refetching blob:", dgst)
+	// 	}
+	// }
 	recipeManager := buh.RecipeManager
 	recipe, _ := recipeManager.GetRecipeForLayer(dgst, blob)
 	recipeManager.InsertRecipeInDB(recipe)
