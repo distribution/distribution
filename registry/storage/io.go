@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	maxBlobGetSize = 4 << 20
+	maxBlobGetSize = 4 << 50
 )
 
 func getContent(ctx context.Context, driver driver.StorageDriver, p string) ([]byte, error) {
