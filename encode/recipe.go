@@ -39,7 +39,7 @@ type RecipeManager struct {
 //Recipe of the recipe structure
 type Recipe struct {
 	digest digest.Digest
-	Recipe []string
+	Keys   []string
 }
 
 //NewRecipeManager generates the RecipeGenerator struct
@@ -63,7 +63,7 @@ func (rg *RecipeManager) GetRecipeForLayer(digest digest.Digest, data []byte) (R
 		//For the last block which may be smaller than shiftOfWindow size
 		recipeLength = recipeLength + 1
 	}
-	recipe := make([]string, recipeLength)
+	recipeKeys := make([]string, recipeLength)
 
 	for i := beginIndex; i < dataLength; i = i + ShiftOfWindow {
 
@@ -74,12 +74,12 @@ func (rg *RecipeManager) GetRecipeForLayer(digest digest.Digest, data []byte) (R
 		chunk := data[i:limit]
 		hashOfChunk := sha256.Sum256(chunk)
 
-		recipe[i/ShiftOfWindow] = hex.EncodeToString(hashOfChunk[:])
+		recipeKeys[i/ShiftOfWindow] = hex.EncodeToString(hashOfChunk[:])
 	}
 
 	return Recipe{
 		digest: digest,
-		Recipe: recipe,
+		Keys:   recipeKeys,
 	}, nil
 }
 
