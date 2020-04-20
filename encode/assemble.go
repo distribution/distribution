@@ -14,15 +14,10 @@ func AssembleBlockResponse(d Declaration, blob []byte) BlockResponse {
 	startIndex := 0
 	endIndex := 0
 	for i, v := range d.Encodings {
-		startIndex = i * ShiftOfWindow
+		startIndex, endIndex = BlockIndices(i, blob)
 		if v == true {
 			b.AddBlock([]byte{})
 		} else {
-			endIndex = startIndex + SizeOfWindow
-			if endIndex > len(blob) {
-				endIndex = len(blob)
-			}
-
 			if coveredIndex < endIndex {
 				b.AddBlock(blob[coveredIndex:endIndex])
 			} else {

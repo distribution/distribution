@@ -20,6 +20,17 @@ const ShiftOfWindow = 2048
 // ScaleFactor gives the factor by which the size and shift of window is sclaed
 const ScaleFactor = SizeOfWindow / ShiftOfWindow
 
+//BlockIndices returns the start and end index of the block
+func BlockIndices(i int, blob []byte) (int, int) {
+	startIndex := i * ShiftOfWindow
+	endIndex := startIndex + SizeOfWindow
+	if endIndex > len(blob) {
+		endIndex = len(blob)
+	}
+	return startIndex, endIndex
+
+}
+
 //RecipeManager of the image to be generated for comparision
 type RecipeManager struct {
 	redisPool *redis.Pool
