@@ -14,7 +14,7 @@ func AssembleBlockResponse(d Declaration, blob []byte) BlockResponse {
 	startIndex := 0
 	endIndex := 0
 	for i, v := range d.Encodings {
-		startIndex, endIndex = BlockIndices(i, blob)
+		startIndex, endIndex = BlockIndices(i, len(blob))
 		if v == true {
 			b.AddBlock([]byte{})
 		} else {

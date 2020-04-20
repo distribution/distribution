@@ -21,11 +21,11 @@ const ShiftOfWindow = 2048
 const ScaleFactor = SizeOfWindow / ShiftOfWindow
 
 //BlockIndices returns the start and end index of the block
-func BlockIndices(i int, blob []byte) (int, int) {
+func BlockIndices(i int, blobLength int) (int, int) {
 	startIndex := i * ShiftOfWindow
 	endIndex := startIndex + SizeOfWindow
-	if endIndex > len(blob) {
-		endIndex = len(blob)
+	if endIndex > blobLength {
+		endIndex = blobLength
 	}
 	return startIndex, endIndex
 
