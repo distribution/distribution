@@ -88,12 +88,12 @@ proxy:
 
 > **Warning**: For the scheduler to clean up old entries, `delete` must
 > be enabled in the registry configuration. See
-> [Registry Configuration](/registry/configuration.md) for more details.
+> [Registry Configuration](../configuration.md) for more details.
 
 ### Configure the Docker daemon
 
 Either pass the `--registry-mirror` option when starting `dockerd` manually,
-or edit [`/etc/docker/daemon.json`](/engine/reference/commandline/dockerd.md#daemon-configuration-file)
+or edit [`/etc/docker/daemon.json`](../../engine/reference/commandline/dockerd.md#daemon-configuration-file)
 and add the `registry-mirrors` key and value, to make the change persistent.
 
 ```json

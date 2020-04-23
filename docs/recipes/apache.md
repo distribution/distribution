@@ -30,7 +30,7 @@ Furthermore, introducing an extra http layer in your communication pipeline adds
 
 ## Setting things up
 
-Read again [the requirements](/registry/recipes/index.md#requirements).
+Read again [the requirements](index.md#requirements).
 
 Ready?
 
