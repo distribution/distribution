@@ -133,4 +133,14 @@ var (
 		longer proceed.`,
 		HTTPStatusCode: http.StatusNotFound,
 	})
+
+	// ErrorCodePaginationNumberInvalid is returned when the `n` parameter is
+	// not an integer, or `n` is negative.
+	ErrorCodePaginationNumberInvalid = errcode.Register(errGroup, errcode.ErrorDescriptor{
+		Value:   "PAGINATION_NUMBER_INVALID",
+		Message: "invalid number of results requested",
+		Description: `Returned when the "n" parameter (number of results
+		to return) is not an integer, or "n" is negative.`,
+		HTTPStatusCode: http.StatusBadRequest,
+	})
 )
