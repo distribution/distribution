@@ -243,7 +243,8 @@ func ParseNamed(s string) (Named, error) {
 	if err != nil {
 		return nil, err
 	}
-	if named.String() != s {
+	realUri := named.String()
+	if !strings.HasSuffix(realUri, s) {
 		return nil, ErrNameNotCanonical
 	}
 	return named, nil
