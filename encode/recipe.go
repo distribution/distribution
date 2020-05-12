@@ -90,9 +90,10 @@ func (rg *RecipeManager) InsertRecipeInDB(recipe Recipe) error {
 
 	serialized, _ := json.Marshal(recipe)
 	i, err := conn.Do("SET", rg.generateKeyForLayer(recipe.digest), serialized)
-	fmt.Println(i)
-	fmt.Println(err)
-
+	if Debug == true {
+		fmt.Println(i)
+		fmt.Println(err)
+	}
 	return nil
 }
 
