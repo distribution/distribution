@@ -1586,6 +1586,38 @@ var routeDescriptors = []RouteDescriptor{
 		},
 	},
 	{
+		Name:        RouteNameRecipes,
+		Path:        "/v2/_recipes",
+		Entity:      "Recipes",
+		Description: "Get the recipes for the blob",
+		Methods: []MethodDescriptor{
+			{
+				Method:      "POST",
+				Description: "Retrieve the blob from the registry identified by `digest`. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data.",
+				Requests: []RequestDescriptor{
+					{
+						Name: "Fetch Recipes",
+						Body: BodyDescriptor{
+							ContentType: "application/json",
+							Format:      "",
+						},
+						Successes: []ResponseDescriptor{
+							{
+								Description: "",
+								StatusCode:  http.StatusOK,
+								Headers:     []ParameterDescriptor{},
+								Body: BodyDescriptor{
+									ContentType: "application/json",
+									Format:      `["Recipe":[]]`,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	},
+	{
 		Name:        RouteNameCatalog,
 		Path:        "/v2/_catalog",
 		Entity:      "Catalog",

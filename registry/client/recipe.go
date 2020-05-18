@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -33,13 +34,38 @@ func (r *recipeClient) Get(ctx context.Context, tag digest.Digest) (encode.Recip
 	defer httpResponse.Body.Close()
 
 	if httpResponse.StatusCode != http.StatusOK {
-		fmt.Println("Did not receive OK response from Http Server to fetch recipe for digest :%v. Received: %v", tag, httpResponse.StatusCode)
+		fmt.Printf("Did not receive OK response from Http Server to fetch recipe for digest :%v. Received: %v\n", tag, httpResponse.StatusCode)
 		return encode.Recipe{}, nil
 	}
 
 	rawRecipeByteStream, _ := ioutil.ReadAll(httpResponse.Body)
 
 	var rcp encode.Recipe
+	json.Unmarshal(rawRecipeByteStream, &rcp)
+
+	return rcp, nil
+}
+
+//Get will fetch the recipe for the tag which provides the digest value
+func (r *recipeClient) MGet(ctx context.Context, tags []digest.Digest) (map[digest.Digest]encode.Recipe, error) {
+	url, _ := r.ub.BuildRecipesURL()
+
+	body, _ := json.Marshal(tags)
+
+	httpResponse, err := r.client.Post(url, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return map[digest.Digest]encode.Recipe{}, err
+	}
+	defer httpResponse.Body.Close()
+
+	if httpResponse.StatusCode != http.StatusOK {
+		fmt.Println("Did not receive OK response from Http Server to fetch recipes", httpResponse.StatusCode)
+		return map[digest.Digest]encode.Recipe{}, nil
+	}
+
+	rawRecipeByteStream, _ := ioutil.ReadAll(httpResponse.Body)
+
+	var rcp map[digest.Digest]encode.Recipe
 	json.Unmarshal(rawRecipeByteStream, &rcp)
 
 	return rcp, nil

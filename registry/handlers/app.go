@@ -25,8 +25,8 @@ import (
 	"github.com/docker/distribution/reference"
 	v2 "github.com/docker/distribution/registry/api/v2"
 
+	"github.com/docker/distribution/encode"
 	"github.com/docker/distribution/registry/api/errcode"
-  "github.com/docker/distribution/encode"
 	"github.com/docker/distribution/registry/auth"
 	registrymiddleware "github.com/docker/distribution/registry/middleware/registry"
 	repositorymiddleware "github.com/docker/distribution/registry/middleware/repository"
@@ -112,6 +112,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	app.register(v2.RouteNameTags, tagsDispatcher)
 	app.register(v2.RouteNameBlob, blobDispatcher)
 	app.register(v2.RouteNameRecipe, recipeDispatcher)
+	app.register(v2.RouteNameRecipes, recipesDispatcher)
 	app.register(v2.RouteNameBlocks, blocksDispatcher)
 	app.register(v2.RouteNameBlobUpload, blobUploadDispatcher)
 	app.register(v2.RouteNameBlobUploadChunk, blobUploadDispatcher)
@@ -896,7 +897,7 @@ func (app *App) nameRequired(r *http.Request) bool {
 		return true
 	}
 	routeName := route.GetName()
-	return routeName != v2.RouteNameBase && routeName != v2.RouteNameCatalog
+	return routeName != v2.RouteNameBase && routeName != v2.RouteNameCatalog && routeName != v2.RouteNameRecipes
 }
 
 // apiBase implements a simple yes-man for doing overall checks against the
