@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/encode"
 	"github.com/gorilla/handlers"
 	"github.com/opencontainers/go-digest"
 )
@@ -39,16 +38,7 @@ func (rh *recipesHandler) GetRecipes(w http.ResponseWriter, r *http.Request) {
 	rawListOfDigests, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(rawListOfDigests, &listOfDigests)
 
-	recipes := make(map[digest.Digest]encode.Recipe)
-	for _, digest := range listOfDigests {
-		recipe, err := recipeManager.GetRecipeFromDB(digest)
-		if err != nil {
-			w.WriteHeader(http.StatusNotFound)
-			continue
-		}
-		recipes[digest] = recipe
-	}
-	// recipeManager.InsertRecipeInDB(recipe)
+	recipes, _ := recipeManager.GetRecipesFromDB(listOfDigests)
 
 	//Add code to fetch and generate the handler
 	w.Header().Set("Content-Type", "application/json")

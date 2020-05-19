@@ -116,6 +116,33 @@ func (rg *RecipeManager) GetRecipeFromDB(digest digest.Digest) (Recipe, error) {
 	return r, err
 }
 
+//GetRecipesFromDB will get a map of recipes from the db
+func (rg *RecipeManager) GetRecipesFromDB(digests []digest.Digest) (map[digest.Digest]Recipe, error) {
+	conn := rg.redisPool.Get()
+	defer conn.Close()
+
+	keys := make([]interface{}, len(digests))
+	for i, digest := range digests {
+		keys[i] = rg.generateKeyForLayer(digest)
+	}
+	serializedValues, err := redis.Values(conn.Do("MGET", keys...))
+	if err != nil {
+		return map[digest.Digest]Recipe{}, err
+	}
+
+	if serializedValues == nil {
+		return map[digest.Digest]Recipe{}, errors.New("Key not found")
+	}
+
+	recipes := make(map[digest.Digest]Recipe)
+	for i, digest := range digests {
+		var r Recipe
+		json.Unmarshal(serializedValues[i].([]byte), &r)
+		recipes[digest] = r
+	}
+	return recipes, err
+}
+
 func (rg *RecipeManager) generateKeyForLayer(digest digest.Digest) string {
 	return "recipe:blob:" + string(digest)
 }
