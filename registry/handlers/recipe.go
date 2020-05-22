@@ -38,11 +38,11 @@ func (rh *recipeHandler) GetRecipe(w http.ResponseWriter, r *http.Request) {
 	// blobStore := rh.Repository.Blobs(rh)
 	// blob, _ := blobStore.Get(rh, rh.Digest)
 
-	recipeManager := rh.RecipeManager
-	// recipe, _ := recipeManager.GetRecipeForLayer(rh.Digest, blob)
+	encodeManager := rh.EncodeManager
+	// recipe, _ := encodeManager.GetRecipeForLayer(rh.Digest, blob)
 
-	// recipeManager.InsertRecipeInDB(recipe)
-	recipe, err := recipeManager.GetRecipeFromDB(rh.Digest)
+	// encodeManager.InsertRecipeInDB(recipe)
+	recipe, err := encodeManager.GetRecipeFromDB(rh.Digest)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return

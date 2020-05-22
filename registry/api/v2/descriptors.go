@@ -1618,6 +1618,18 @@ var routeDescriptors = []RouteDescriptor{
 		},
 	},
 	{
+		Name:        RouteNameNode,
+		Path:        "/v2/node/{name:" + reference.NameRegexp.String() + "}",
+		Entity:      "Node",
+		Description: "Update a node as the state",
+		Methods: []MethodDescriptor{
+			{
+				Method:      "POST",
+				Description: "Update the keys present in the node",
+			},
+		},
+	},
+	{
 		Name:        RouteNameCatalog,
 		Path:        "/v2/_catalog",
 		Entity:      "Catalog",

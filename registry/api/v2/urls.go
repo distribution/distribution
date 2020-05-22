@@ -198,6 +198,18 @@ func (ub *URLBuilder) BuildRecipesURL() (string, error) {
 	return layerURL.String(), nil
 }
 
+// BuildNodeURL constructs the url for the node
+func (ub *URLBuilder) BuildNodeURL(nodeID string) (string, error) {
+	route := ub.cloneRoute(RouteNameNode)
+
+	layerURL, err := route.URL("name", nodeID)
+	if err != nil {
+		return "", err
+	}
+
+	return layerURL.String(), nil
+}
+
 // BuildBlocksURL constructs the url for the recipe identified by name and dgst.
 func (ub *URLBuilder) BuildBlocksURL(ref reference.Canonical) (string, error) {
 	route := ub.cloneRoute(RouteNameBlocks)

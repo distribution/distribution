@@ -32,13 +32,13 @@ type recipesHandler struct {
 //GetRecipe returns the recipe for the given digest
 func (rh *recipesHandler) GetRecipes(w http.ResponseWriter, r *http.Request) {
 	context.GetLogger(rh).Debug("GetRecipes")
-	recipeManager := rh.RecipeManager
+	encodeManager := rh.EncodeManager
 
 	var listOfDigests []digest.Digest
 	rawListOfDigests, _ := ioutil.ReadAll(r.Body)
 	json.Unmarshal(rawListOfDigests, &listOfDigests)
 
-	recipes, _ := recipeManager.GetRecipesFromDB(listOfDigests)
+	recipes, _ := encodeManager.GetRecipesFromDB(listOfDigests)
 
 	//Add code to fetch and generate the handler
 	w.Header().Set("Content-Type", "application/json")

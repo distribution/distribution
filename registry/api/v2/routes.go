@@ -11,6 +11,7 @@ const (
 	RouteNameBlob            = "blob"
 	RouteNameRecipe          = "recipe"
 	RouteNameRecipes         = "recipes"
+	RouteNameNode            = "node"
 	RouteNameBlocks          = "blocks"
 	RouteNameBlobUpload      = "blob-upload"
 	RouteNameBlobUploadChunk = "blob-upload-chunk"
