@@ -20,11 +20,15 @@ type blocksClient struct {
 	client *http.Client
 }
 
-func (b *blocksClient) Exchange(ctx context.Context, tag digest.Digest, d encode.Declaration) (encode.BlockResponse, int, string, error) {
+func (b *blocksClient) Exchange(ctx context.Context, tag digest.Digest) (encode.BlockResponse, []string, int, string, error) {
 	ref, _ := reference.WithDigest(b.name, tag)
 	url, _ := b.ub.BuildBlocksURL(ref)
 
-	httpResponse, _ := b.client.Post(url, "application/text", strings.NewReader(d.String()))
+	r, _ := http.NewRequest("POST", url, strings.NewReader("")) // URL-encoded payload
+	r.Header.Add("Content-Type", "application/text")
+	r.Header.Add("node-id", "node-x")
+
+	httpResponse, _ := b.client.Do(r)
 	headerLength, _ := strconv.Atoi(httpResponse.Header.Get("header-length"))
 	blockLength, _ := strconv.Atoi(httpResponse.Header.Get("block-length"))
 	checksum := httpResponse.Header.Get("hash-length")
@@ -38,5 +42,6 @@ func (b *blocksClient) Exchange(ctx context.Context, tag digest.Digest, d encode
 		fmt.Println("Block-checksum: ", checksum)
 	}
 
-	return encode.GetBlockResponseFromByteStream(headerLength, byteStream), blockLength, checksum, nil
+	blockResponse, blockKeys := encode.GetBlockResponseFromByteStream(headerLength, byteStream)
+	return blockResponse, blockKeys, blockLength, checksum, nil
 }

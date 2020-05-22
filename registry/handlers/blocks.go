@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"io/ioutil"
 	"net/http"
 	"strconv"
 
@@ -40,16 +39,24 @@ type blocksHandler struct {
 func (th *blocksHandler) RequestBlocks(w http.ResponseWriter, r *http.Request) {
 	context.GetLogger(th).Debug("RequestBlocks")
 
-	rawDeclaration, _ := ioutil.ReadAll(r.Body)
-	declaration := encode.NewDeclarationFromString(string(rawDeclaration))
+	nodeID := r.Header.Get("node-id")
 
-	blobStore := th.Repository.Blobs(th)
-	blob, _ := blobStore.Get(th, th.Digest)
-	checksum := sha256.Sum256(blob)
+	getBlob := make(chan []byte)
+	go func() {
+		blobStore := th.Repository.Blobs(th)
+		blob, _ := blobStore.Get(th, th.Digest)
+		getBlob <- blob
+	}()
 
-	blockResponse := encode.AssembleBlockResponse(declaration, blob)
+	emgr := th.EncodeManager
+	recipe, _ := emgr.GetRecipeFromDB(th.Digest)
+	setOfBlocks, _ := emgr.GetAvailableBlocksFromNode(nodeID, th.Digest)
+	declaration := encode.NewDeclarationForNode(recipe, setOfBlocks)
+
+	blob := <-getBlob
+	blockResponse := encode.AssembleBlockResponse(declaration, recipe, blob)
 	data, headerLength := encode.ConvertBlockResponseToByteStream(blockResponse)
-
+	checksum := sha256.Sum256(blob)
 	w.Header().Set("header-length", strconv.Itoa(headerLength))
 	w.Header().Set("block-length", strconv.Itoa(len(blob)))
 	w.Header().Set("hash-length", hex.EncodeToString(checksum[:]))

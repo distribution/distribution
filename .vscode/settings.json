@@ -17,5 +17,6 @@
         "statusBar.border": "#663399",
         "titleBar.border": "#663399"
     },
-    "peacock.remoteColor": "#663399"
+    "peacock.remoteColor": "#663399",
+    "python.pythonPath": "/usr/bin/python3"
 }

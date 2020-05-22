@@ -59,7 +59,7 @@ const defaultCheckInterval = 10 * time.Second
 type App struct {
 	context.Context
 
-	RecipeManager encode.RecipeManager
+	EncodeManager encode.EncodeManager
 	Config        *configuration.Configuration
 
 	router           *mux.Router                    // main application router, configured with dispatchers
@@ -113,6 +113,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	app.register(v2.RouteNameBlob, blobDispatcher)
 	app.register(v2.RouteNameRecipe, recipeDispatcher)
 	app.register(v2.RouteNameRecipes, recipesDispatcher)
+	app.register(v2.RouteNameNode, nodeDispatcher)
 	app.register(v2.RouteNameBlocks, blocksDispatcher)
 	app.register(v2.RouteNameBlobUpload, blobUploadDispatcher)
 	app.register(v2.RouteNameBlobUploadChunk, blobUploadDispatcher)
@@ -339,7 +340,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	}
 
 	//Add the recipe generator
-	app.RecipeManager = encode.NewRecipeManager(app.redis)
+	app.EncodeManager = encode.NewEncodeManager(app.redis)
 	return app
 }
 
@@ -897,7 +898,7 @@ func (app *App) nameRequired(r *http.Request) bool {
 		return true
 	}
 	routeName := route.GetName()
-	return routeName != v2.RouteNameBase && routeName != v2.RouteNameCatalog && routeName != v2.RouteNameRecipes
+	return routeName != v2.RouteNameBase && routeName != v2.RouteNameCatalog && routeName != v2.RouteNameRecipes && routeName != v2.RouteNameNode
 }
 
 // apiBase implements a simple yes-man for doing overall checks against the

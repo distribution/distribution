@@ -1,6 +1,10 @@
 package encode
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/golang-collections/collections/set"
+)
 
 //Declaration represents the class which tells
 //if the block at index i actually exists
@@ -28,11 +32,17 @@ func NewDeclarationFromString(rawDeclaration string) Declaration {
 	var d Declaration
 	d.Encodings = make([]bool, len(rawDeclaration))
 	for i, v := range rawDeclaration {
-		if v == '1' {
-			d.Encodings[i] = true
-		} else {
-			d.Encodings[i] = false
-		}
+		d.Encodings[i] = (v == '1')
+	}
+	return d
+}
+
+//NewDeclarationForNode Will generate a declaration from a recipe and the list of blocks in Set
+func NewDeclarationForNode(recipe Recipe, blocksInNode set.Set) Declaration {
+	var d Declaration
+	d.Encodings = make([]bool, len(recipe.Keys))
+	for i, v := range recipe.Keys {
+		d.Encodings[i] = blocksInNode.Has(interface{}(v))
 	}
 	return d
 }

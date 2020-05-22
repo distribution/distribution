@@ -2,7 +2,6 @@ package encode
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 )
 
@@ -28,45 +27,51 @@ func (b *BlockResponse) HeaderLength() int {
 }
 
 //AddBlock will add a block to an array of blocks
-func (b *BlockResponse) AddBlock(block []byte) {
+func (b *BlockResponse) AddBlock(block []byte, digest string) {
 	b.Blocks = append(b.Blocks, block)
 	b.lengthOfBlocks += len(block)
 
 	b.header.WriteString(seperator)
 	if block == nil {
-		b.header.WriteString("0")
+		b.header.WriteString(digest)
 	} else {
-		b.header.WriteString(strconv.Itoa(len(block)))
+		b.header.WriteString("0")
 	}
 }
 
 // GetBlockResponseFromByteStream will generate
 // a block response from a byte[]
-func GetBlockResponseFromByteStream(headerlength int, byteStream []byte) BlockResponse {
+func GetBlockResponseFromByteStream(headerlength int, byteStream []byte) (BlockResponse, []string) {
 	var b BlockResponse
 
 	header := string(byteStream[:headerlength])
-	blockLengths := strings.Split(header, seperator)[1:] //We have to get rid of empty character at beginning introduced by split
+	blockKeys := strings.Split(header, seperator)[1:] //We have to get rid of empty character at beginning introduced by split
 	if Debug == true {
 		fmt.Println("Received byte stream: ", byteStream)
 		fmt.Println("Received header: ", header)
 		fmt.Println("Receive header Bytes:", byteStream[:headerlength])
 
-		fmt.Println("Block Lengths: ", blockLengths)
-		fmt.Println("Length of Block Lengths: ", len(blockLengths))
+		fmt.Println("Block Lengths: ", blockKeys)
+		fmt.Println("Length of Block Lengths: ", len(blockKeys))
 		// b.Blocks = make([][]byte, len(blockLengths))	//TODO: Can be optimized
 	}
 
 	blockCodeStream := byteStream[headerlength:]
 
-	runningIndex := 0
-	for _, lengthAsString := range blockLengths {
-		length, _ := strconv.Atoi(lengthAsString)
-		b.AddBlock(blockCodeStream[runningIndex : runningIndex+length])
-		runningIndex += length
+	counter := 0
+	for _, blockKey := range blockKeys {
+		if blockKey == "0" {
+			fmt.Println("Got block key zero")
+			startIndex, endIndex := BlockIndices(counter, len(blockCodeStream))
+			b.AddBlock(blockCodeStream[startIndex:endIndex], "0")
+			counter++
+		} else {
+			fmt.Println("Got block key:", blockKey)
+			b.AddBlock(nil, blockKey)
+		}
 	}
 
-	return b
+	return b, blockKeys
 }
 
 // ConvertBlockResponseToByteStream will convert a
@@ -84,9 +89,11 @@ func ConvertBlockResponseToByteStream(b BlockResponse) ([]byte, int) {
 
 	startingIndex := b.HeaderLength()
 	for _, block := range b.Blocks {
-		endingIndex := startingIndex + len(block)
-		copy(byteStream[startingIndex:endingIndex], block)
-		startingIndex = endingIndex
+		if block != nil {
+			endingIndex := startingIndex + len(block)
+			copy(byteStream[startingIndex:endingIndex], block)
+			startingIndex = endingIndex
+		}
 	}
 	return byteStream, b.HeaderLength()
 }

@@ -195,14 +195,10 @@ func (buh *blobUploadHandler) PutBlobUploadComplete(w http.ResponseWriter, r *ht
 	if myerr != nil {
 		fmt.Println("Error uploading blob:", dgst)
 	}
-	// if err != nil {
-	// 	for err != nil {
-	// 		fmt.Println("Refetching blob:", dgst)
-	// 	}
-	// }
-	recipeManager := buh.RecipeManager
-	recipe, _ := recipeManager.GetRecipeForLayer(dgst, blob)
-	recipeManager.InsertRecipeInDB(recipe)
+
+	encodeManager := buh.EncodeManager
+	recipe, _ := encodeManager.GetRecipeForLayer(dgst, blob)
+	encodeManager.InsertRecipeInDB(recipe)
 
 	if err != nil {
 		switch err := err.(type) {

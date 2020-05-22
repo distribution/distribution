@@ -14,15 +14,9 @@ import (
 // SizeOfWindow give the size of the sliding window
 const SizeOfWindow = 512
 
-// ShiftOfWindow give the size of the sliding window
-const ShiftOfWindow = 512
-
-// ScaleFactor gives the factor by which the size and shift of window is sclaed
-const ScaleFactor = SizeOfWindow / ShiftOfWindow
-
 //BlockIndices returns the start and end index of the block
 func BlockIndices(i int, blobLength int) (int, int) {
-	startIndex := i * ShiftOfWindow
+	startIndex := i * SizeOfWindow
 	endIndex := startIndex + SizeOfWindow
 	if endIndex > blobLength {
 		endIndex = blobLength
@@ -31,8 +25,8 @@ func BlockIndices(i int, blobLength int) (int, int) {
 
 }
 
-//RecipeManager of the image to be generated for comparision
-type RecipeManager struct {
+//EncodeManager of the image to be generated for comparision
+type EncodeManager struct {
 	redisPool *redis.Pool
 }
 
@@ -42,15 +36,15 @@ type Recipe struct {
 	Keys   []string
 }
 
-//NewRecipeManager generates the RecipeGenerator struct
-func NewRecipeManager(redis *redis.Pool) RecipeManager {
-	return RecipeManager{
+//NewEncodeManager generates the RecipeGenerator struct
+func NewEncodeManager(redis *redis.Pool) EncodeManager {
+	return EncodeManager{
 		redisPool: redis,
 	}
 }
 
 //GetRecipeForLayer generates a recipe and returns as Payload
-func (rg *RecipeManager) GetRecipeForLayer(digest digest.Digest, data []byte) (Recipe, error) {
+func (emngr *EncodeManager) GetRecipeForLayer(digest digest.Digest, data []byte) (Recipe, error) {
 
 	const (
 		beginIndex = 0
@@ -58,14 +52,14 @@ func (rg *RecipeManager) GetRecipeForLayer(digest digest.Digest, data []byte) (R
 
 	dataLength := len(data)
 
-	recipeLength := (dataLength / ShiftOfWindow)
-	if dataLength%ShiftOfWindow != 0 {
+	recipeLength := (dataLength / SizeOfWindow)
+	if dataLength%SizeOfWindow != 0 {
 		//For the last block which may be smaller than shiftOfWindow size
 		recipeLength = recipeLength + 1
 	}
 	recipeKeys := make([]string, recipeLength)
 
-	for i := beginIndex; i < dataLength; i = i + ShiftOfWindow {
+	for i := beginIndex; i < dataLength; i = i + SizeOfWindow {
 
 		limit := i + SizeOfWindow
 		if limit >= dataLength {
@@ -74,7 +68,7 @@ func (rg *RecipeManager) GetRecipeForLayer(digest digest.Digest, data []byte) (R
 		chunk := data[i:limit]
 		hashOfChunk := sha256.Sum256(chunk)
 
-		recipeKeys[i/ShiftOfWindow] = hex.EncodeToString(hashOfChunk[:])
+		recipeKeys[i/SizeOfWindow] = hex.EncodeToString(hashOfChunk[:])
 	}
 
 	return Recipe{
@@ -84,25 +78,34 @@ func (rg *RecipeManager) GetRecipeForLayer(digest digest.Digest, data []byte) (R
 }
 
 //InsertRecipeInDB will insert the recipe in the db
-func (rg *RecipeManager) InsertRecipeInDB(recipe Recipe) error {
-	conn := rg.redisPool.Get()
+func (emngr *EncodeManager) InsertRecipeInDB(recipe Recipe) error {
+	conn := emngr.redisPool.Get()
 	defer conn.Close()
 
 	serialized, _ := json.Marshal(recipe)
-	i, err := conn.Do("SET", rg.generateKeyForLayer(recipe.digest), serialized)
+	i, err := conn.Do("SET", generateKeyForLayer(recipe.digest), serialized)
 	if Debug == true {
 		fmt.Println(i)
 		fmt.Println(err)
+
 	}
+
+	recipeSetArgs := make([]interface{}, len(recipe.Keys)+1)
+	recipeSetArgs[0] = getRecipeSetKey(recipe.digest)
+	for i, v := range recipe.Keys {
+		recipeSetArgs[i+1] = v
+	}
+
+	conn.Do("SADD", recipeSetArgs...)
 	return nil
 }
 
 //GetRecipeFromDB will insert the recipe in the db
-func (rg *RecipeManager) GetRecipeFromDB(digest digest.Digest) (Recipe, error) {
-	conn := rg.redisPool.Get()
+func (emngr *EncodeManager) GetRecipeFromDB(digest digest.Digest) (Recipe, error) {
+	conn := emngr.redisPool.Get()
 	defer conn.Close()
 
-	serialized, err := conn.Do("GET", rg.generateKeyForLayer(digest))
+	serialized, err := conn.Do("GET", generateKeyForLayer(digest))
 	if err != nil {
 		return Recipe{}, err
 	}
@@ -117,13 +120,13 @@ func (rg *RecipeManager) GetRecipeFromDB(digest digest.Digest) (Recipe, error) {
 }
 
 //GetRecipesFromDB will get a map of recipes from the db
-func (rg *RecipeManager) GetRecipesFromDB(digests []digest.Digest) (map[digest.Digest]Recipe, error) {
-	conn := rg.redisPool.Get()
+func (emngr *EncodeManager) GetRecipesFromDB(digests []digest.Digest) (map[digest.Digest]Recipe, error) {
+	conn := emngr.redisPool.Get()
 	defer conn.Close()
 
 	keys := make([]interface{}, len(digests))
 	for i, digest := range digests {
-		keys[i] = rg.generateKeyForLayer(digest)
+		keys[i] = generateKeyForLayer(digest)
 	}
 	serializedValues, err := redis.Values(conn.Do("MGET", keys...))
 	if err != nil {
@@ -143,6 +146,10 @@ func (rg *RecipeManager) GetRecipesFromDB(digests []digest.Digest) (map[digest.D
 	return recipes, err
 }
 
-func (rg *RecipeManager) generateKeyForLayer(digest digest.Digest) string {
+func generateKeyForLayer(digest digest.Digest) string {
 	return "recipe:blob:" + string(digest)
+}
+
+func getRecipeSetKey(digest digest.Digest) string {
+	return "recipe-set:" + string(digest)
 }

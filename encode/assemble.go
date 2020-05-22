@@ -2,7 +2,7 @@ package encode
 
 // AssembleBlockResponse will generate a block response
 // from the declaration and the encodings in the db
-func AssembleBlockResponse(d Declaration, blob []byte) BlockResponse {
+func AssembleBlockResponse(d Declaration, r Recipe, blob []byte) BlockResponse {
 	var b BlockResponse
 
 	if len(blob) == 0 {
@@ -10,21 +10,15 @@ func AssembleBlockResponse(d Declaration, blob []byte) BlockResponse {
 	}
 	// O in declaration implies client doesn't have the block
 	// 1 implies client has block
-	coveredIndex := 0
 	startIndex := 0
 	endIndex := 0
 	for i, v := range d.Encodings {
 		startIndex, endIndex = BlockIndices(i, len(blob))
 		if v == true {
-			b.AddBlock([]byte{})
+			b.AddBlock(nil, r.Keys[i])
 		} else {
-			if coveredIndex < endIndex {
-				b.AddBlock(blob[coveredIndex:endIndex])
-			} else {
-				b.AddBlock([]byte{})
-			}
+			b.AddBlock(blob[startIndex:endIndex], r.Keys[i])
 		}
-		coveredIndex = startIndex + SizeOfWindow //Covered index cannot be greater than this value anyways
 	}
 
 	return b
