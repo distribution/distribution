@@ -61,12 +61,10 @@ func GetBlockResponseFromByteStream(headerlength int, byteStream []byte) (BlockR
 	counter := 0
 	for _, blockKey := range blockKeys {
 		if blockKey == "0" {
-			fmt.Println("Got block key zero")
 			startIndex, endIndex := BlockIndices(counter, len(blockCodeStream))
 			b.AddBlock(blockCodeStream[startIndex:endIndex], "0")
 			counter++
 		} else {
-			fmt.Println("Got block key:", blockKey)
 			b.AddBlock(nil, blockKey)
 		}
 	}
