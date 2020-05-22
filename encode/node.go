@@ -37,8 +37,17 @@ func (emngr *EncodeManager) GetAvailableBlocksFromNode(nodeID string, digest dig
 
 	recipeSetKey := getRecipeSetKey(digest)
 
-	values, _ := redis.Values(conn.Do("SINTER", nodeSetKey, recipeSetKey))
-	return *set.New(values), nil
+	values, _ := redis.Strings(conn.Do("SINTER", nodeSetKey, recipeSetKey))
+	if values == nil {
+		return set.Set{}, nil
+	}
+
+	setValues := make([]interface{}, len(values))
+	for i, v := range values {
+		setValues[i] = v
+	}
+
+	return *set.New(setValues...), nil
 }
 
 func getNodeSetKey(nodeID string) string {
