@@ -1,4 +1,4 @@
 package encode
 
 //Debug flag
-const Debug bool = true
+const Debug bool = false
