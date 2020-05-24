@@ -63,5 +63,6 @@ func (th *blocksHandler) RequestBlocks(w http.ResponseWriter, r *http.Request) {
 	if encode.Debug == true {
 		fmt.Println("Blob", blob)
 	}
+	fmt.Printf("serverless==> Sending blob for layer %s with size %d. Header length: %d.\n", th.Digest, len(data), headerLength)
 	w.Write(data)
 }

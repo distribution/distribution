@@ -93,5 +93,6 @@ func ConvertBlockResponseToByteStream(b BlockResponse) ([]byte, int) {
 			startingIndex = endingIndex
 		}
 	}
+
 	return byteStream, b.HeaderLength()
 }

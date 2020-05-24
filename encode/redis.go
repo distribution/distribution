@@ -21,7 +21,7 @@ func (emngr *EncodeManager) BulkInsertSet(key string, values []string) error {
 			args[i+1] = v
 		}
 		result, _ := conn.Do("SADD", args...)
-		fmt.Println(result)
+		fmt.Println("serverless==> Added batch of nodes:", result)
 		i = i + BatchSize
 	}
 	return nil

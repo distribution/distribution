@@ -32,8 +32,11 @@ func (emngr *EncodeManager) GetAvailableBlocksFromNode(nodeID string, digest dig
 
 	recipeSetKey := getRecipeSetKey(digest)
 
-	values, _ := redis.Strings(conn.Do("SINTER", nodeSetKey, recipeSetKey))
-	if values == nil {
+	sum := recipeSetKey + "+" + nodeSetKey
+	conn.Do("SINTERSTORE", sum, nodeSetKey, recipeSetKey)
+	values, _ := redis.Strings(conn.Do("SMEMBERS", sum))
+	if values == nil || len(values) == 0 {
+		fmt.Printf("Result of SINTER for digest %s is EMPTY\n", digest)
 		return set.Set{}, nil
 	}
 
@@ -42,6 +45,7 @@ func (emngr *EncodeManager) GetAvailableBlocksFromNode(nodeID string, digest dig
 		setValues[i] = v
 	}
 
+	fmt.Printf("serverless==> For digest: %s Result of SINTER: %d \n", digest, len(setValues))
 	return *set.New(setValues...), nil
 }
 
