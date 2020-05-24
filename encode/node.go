@@ -15,13 +15,8 @@ func (emngr *EncodeManager) InsertNodeAsSet(nodeID string, keys []string) {
 
 	nodeSetKey := getNodeSetKey(nodeID)
 	conn.Do("DEL", nodeSetKey)
+	emngr.BulkInsertSet(nodeSetKey, keys)
 
-	nodeSetArgs := make([]interface{}, len(keys)+1)
-	nodeSetArgs[0] = nodeSetKey
-	for i, v := range keys {
-		nodeSetArgs[i+1] = v
-	}
-	conn.Do("SADD", nodeSetArgs...)
 }
 
 //GetAvailableBlocksFromNode will get the instersection of the node and the recipe

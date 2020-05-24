@@ -89,14 +89,7 @@ func (emngr *EncodeManager) InsertRecipeInDB(recipe Recipe) error {
 		fmt.Println(err)
 
 	}
-
-	recipeSetArgs := make([]interface{}, len(recipe.Keys)+1)
-	recipeSetArgs[0] = getRecipeSetKey(recipe.digest)
-	for i, v := range recipe.Keys {
-		recipeSetArgs[i+1] = v
-	}
-
-	conn.Do("SADD", recipeSetArgs...)
+	emngr.BulkInsertSet(getRecipeSetKey(recipe.digest), recipe.Keys)
 	return nil
 }
 
