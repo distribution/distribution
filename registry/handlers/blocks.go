@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	"net/http"
 	"strconv"
@@ -37,8 +38,8 @@ type blocksHandler struct {
 
 // RequestBlocks returns the recipe for the given digest
 func (th *blocksHandler) RequestBlocks(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
 	context.GetLogger(th).Debug("RequestBlocks")
-
 	nodeID := r.Header.Get("node-id")
 
 	getBlob := make(chan []byte)
@@ -50,10 +51,13 @@ func (th *blocksHandler) RequestBlocks(w http.ResponseWriter, r *http.Request) {
 
 	emgr := th.EncodeManager
 	recipe, _ := emgr.GetRecipeFromDB(th.Digest)
-	setOfBlocks, _ := emgr.GetAvailableBlocksFromNode(nodeID, th.Digest)
-	declaration := encode.NewDeclarationForNode(recipe, setOfBlocks)
+	declaration, _ := emgr.GetAvailableBlocksFromNode(nodeID, recipe, th.Digest)
+	encode.PerfLog(fmt.Sprintf("Handled request to request for layer: %s in time %s", th.Digest, time.Since(start)))
 
 	blob := <-getBlob
+
+	encode.PerfLog(fmt.Sprintf("Handled request to get blob for layer: %s in time %s", th.Digest, time.Since(start)))
+
 	blockResponse := encode.AssembleBlockResponse(declaration, recipe, blob)
 	data, headerLength := encode.ConvertBlockResponseToByteStream(blockResponse)
 	checksum := sha256.Sum256(blob)
@@ -65,4 +69,5 @@ func (th *blocksHandler) RequestBlocks(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Printf("serverless==> Sending blob for layer %s with size %d. Header length: %d.\n", th.Digest, len(data), headerLength)
 	w.Write(data)
+	encode.PerfLog(fmt.Sprintf("Handled request to fetch layer: %s in time %s", th.Digest, time.Since(start)))
 }

@@ -89,7 +89,6 @@ func (emngr *EncodeManager) InsertRecipeInDB(recipe Recipe) error {
 		fmt.Println(err)
 
 	}
-	emngr.BulkInsertSet(getRecipeSetKey(recipe.digest), recipe.Keys)
 	return nil
 }
 
