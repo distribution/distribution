@@ -1,8 +1,8 @@
 package encode
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
+	"crypto/md5"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -66,9 +66,9 @@ func (emngr *EncodeManager) GetRecipeForLayer(digest digest.Digest, data []byte)
 			limit = dataLength
 		}
 		chunk := data[i:limit]
-		hashOfChunk := sha256.Sum256(chunk)
-
-		recipeKeys[i/SizeOfWindow] = hex.EncodeToString(hashOfChunk[:])
+		hashOfChunk := md5.Sum(chunk)
+		hashOfChunkBase64 := base64.StdEncoding.EncodeToString(hashOfChunk[:])
+		recipeKeys[i/SizeOfWindow] = hashOfChunkBase64[0 : len(hashOfChunkBase64)-2]
 	}
 
 	return Recipe{
