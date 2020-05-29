@@ -20,7 +20,7 @@ type blocksClient struct {
 	client *http.Client
 }
 
-func (b *blocksClient) Exchange(ctx context.Context, tag digest.Digest) (encode.BlockResponse, []string, int, string, error) {
+func (b *blocksClient) Exchange(ctx context.Context, tag digest.Digest) (encode.BlockResponse, []string, int, error) {
 	ref, _ := reference.WithDigest(b.name, tag)
 	url, _ := b.ub.BuildBlocksURL(ref)
 
@@ -31,17 +31,14 @@ func (b *blocksClient) Exchange(ctx context.Context, tag digest.Digest) (encode.
 	httpResponse, _ := b.client.Do(r)
 	headerLength, _ := strconv.Atoi(httpResponse.Header.Get("header-length"))
 	blockLength, _ := strconv.Atoi(httpResponse.Header.Get("block-length"))
-	checksum := httpResponse.Header.Get("hash-length")
-
 	byteStream, _ := ioutil.ReadAll(httpResponse.Body)
 
 	if encode.Debug == true {
 		fmt.Println("Header-length: ", headerLength)
 		fmt.Println("Amount of bytes received: ", len(byteStream))
 		fmt.Println("Block-length: ", blockLength)
-		fmt.Println("Block-checksum: ", checksum)
 	}
 
 	blockResponse, blockKeys := encode.GetBlockResponseFromByteStream(headerLength, byteStream)
-	return blockResponse, blockKeys, blockLength, checksum, nil
+	return blockResponse, blockKeys, blockLength, nil
 }

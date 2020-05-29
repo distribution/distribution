@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
@@ -54,6 +56,8 @@ type blobHandler struct {
 // GetBlob fetches the binary data from backend storage returns it in the
 // response.
 func (bh *blobHandler) GetBlob(w http.ResponseWriter, r *http.Request) {
+
+	start := time.Now()
 	context.GetLogger(bh).Debug("GetBlob")
 	blobs := bh.Repository.Blobs(bh)
 	desc, err := blobs.Stat(bh, bh.Digest)
@@ -71,6 +75,7 @@ func (bh *blobHandler) GetBlob(w http.ResponseWriter, r *http.Request) {
 		bh.Errors = append(bh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		return
 	}
+	fmt.Printf("perf. Time to serve for layer: %s is %s\n", desc.Digest, time.Since(start))
 }
 
 // DeleteBlob deletes a layer blob
