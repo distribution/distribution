@@ -143,8 +143,8 @@ func handleRepository(fileInfo driver.FileInfo, root, last string, fn func(repoP
 	repo := filePath[len(root)+1:]
 
 	_, file := path.Split(repo)
-	if file == "_layers" {
-		repo = strings.TrimSuffix(repo, "/_layers")
+	if file == "_manifests" {
+		repo = strings.TrimSuffix(repo, "/_manifests")
 		if lessPath(last, repo) {
 			if err := fn(repo); err != nil {
 				return err
