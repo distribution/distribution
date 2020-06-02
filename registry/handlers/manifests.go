@@ -7,6 +7,10 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/gorilla/handlers"
+	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+
 	"github.com/distribution/distribution/v3"
 	dcontext "github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
@@ -18,9 +22,6 @@ import (
 	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	"github.com/distribution/distribution/v3/registry/auth"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
-	"github.com/gorilla/handlers"
-	"github.com/opencontainers/go-digest"
-	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // These constants determine which architecture and OS to choose from a
@@ -485,7 +486,7 @@ func (imh *manifestHandler) applyResourcePolicy(manifest distribution.Manifest) 
 func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Request) {
 	dcontext.GetLogger(imh).Debug("DeleteImageManifest")
 
-	if imh.App.isCache {
+	if imh.Tag != "" {
 		imh.Errors = append(imh.Errors, errcode.ErrorCodeUnsupported)
 		return
 	}
@@ -505,7 +506,7 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 		w.WriteHeader(http.StatusAccepted)
 		return
 	}
-
+	
 	manifests, err := imh.Repository.Manifests(imh)
 	if err != nil {
 		imh.Errors = append(imh.Errors, err)
