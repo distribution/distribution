@@ -1,11 +1,17 @@
 #!/usr/bin/env bash
 
+GOLANGCI_LINT_VERSION="v1.27.0"
+GO_MD2MAN_VERSION="v1.0.10"
+
 #
 # Install developer tools to $GOBIN (or $GOPATH/bin if unset)
 #
 set -eu -o pipefail
 
+# Enable Go modules
+export GO111MODULE=on
+
 # prevent updating go.mod of the project
 cd /tmp
-go get -u github.com/golangci/golangci-lint/cmd/golangci-lint
-go get -u github.com/cpuguy83/go-md2man
+go get "github.com/golangci/golangci-lint/cmd/golangci-lint@${GOLANGCI_LINT_VERSION}"
+go get "github.com/cpuguy83/go-md2man@${GO_MD2MAN_VERSION}"
