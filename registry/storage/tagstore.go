@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"path"
+	"sort"
 
 	"github.com/distribution/distribution/v3"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
@@ -46,6 +47,10 @@ func (ts *tagStore) All(ctx context.Context) ([]string, error) {
 		_, filename := path.Split(entry)
 		tags = append(tags, filename)
 	}
+
+	// there is no guarantee for the order,
+	// therefore sort before return.
+	sort.Strings(tags)
 
 	return tags, nil
 }
