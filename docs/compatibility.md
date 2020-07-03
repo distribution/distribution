@@ -4,6 +4,8 @@ keywords: registry, manifest, images, tags, repository, distribution, digest
 title: Registry compatibility
 ---
 
+{% include registry.md %}
+
 ## Synopsis
 If a manifest is pulled by _digest_ from a registry 2.3 with Docker Engine 1.9
 and older, and the manifest was pushed with Docker Engine 1.10, a security check

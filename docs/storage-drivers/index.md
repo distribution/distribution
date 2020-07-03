@@ -6,6 +6,8 @@ redirect_from:
 title: Docker Registry storage driver
 ---
 
+{% include registry.md %}
+
 This document describes the registry storage driver model, implementation, and explains how to contribute new storage drivers.
 
 ## Provided drivers

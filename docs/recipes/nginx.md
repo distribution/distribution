@@ -6,6 +6,8 @@ redirect_from:
 - /registry/nginx/
 ---
 
+{% include registry.md %}
+
 ## Use-case
 
 People already relying on a nginx proxy to authenticate their users to other

@@ -4,6 +4,8 @@ keywords: registry, service, driver, images, storage,  azure
 title: Microsoft Azure storage driver
 ---
 
+{% include registry.md %}
+
 An implementation of the `storagedriver.StorageDriver` interface which uses [Microsoft Azure Blob Storage](http://azure.microsoft.com/en-us/services/storage/) for object storage.
 
 ## Parameters

@@ -6,6 +6,8 @@ redirect_from:
 title: Docker Registry
 ---
 
+{% include registry.md %}
+
 ## What it is
 
 The Registry is a stateless, highly scalable server side application that stores

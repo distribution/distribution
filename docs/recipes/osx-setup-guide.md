@@ -4,6 +4,8 @@ keywords: registry, on-prem, images, tags, repository, distribution, macOS, reci
 title: macOS setup guide
 ---
 
+{% include registry.md %}
+
 ## Use-case
 
 This is useful if you intend to run a registry server natively on macOS.
