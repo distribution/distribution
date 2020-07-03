@@ -6,16 +6,6 @@ redirect_from:
 title: Docker Registry
 ---
 
-> Looking for Docker Trusted Registry?
->
-> Docker Trusted Registry (DTR) is a commercial product that enables complete
-> image management workflow, featuring LDAP integration, image signing,
-> security scanning, and integration with Universal Control Plane. DTR is
-> offered as an add-on to Docker Enterprise subscriptions of Standard or
-> higher.
->
-> [Go to Docker Trusted Registry](/ee/dtr/){: class="button outline-btn" }
-
 ## What it is
 
 The Registry is a stateless, highly scalable server side application that stores
@@ -36,9 +26,6 @@ Users looking for a zero maintenance, ready-to-go solution are encouraged to
 head-over to the [Docker Hub](https://hub.docker.com), which provides a
 free-to-use, hosted Registry, plus additional features (organization accounts,
 automated builds, and more).
-
-Users looking for a commercially supported version of the Registry should look
-into [Docker Trusted Registry](/ee/dtr/).
 
 ## Requirements
 
