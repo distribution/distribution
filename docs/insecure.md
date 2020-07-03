@@ -4,6 +4,8 @@ keywords: registry, on-prem, images, tags, repository, distribution, insecure
 title: Test an insecure registry
 ---
 
+{% include registry.md %}
+
 While it's highly recommended to secure your registry using a TLS certificate
 issued by a known CA, you can choose to use self-signed certificates, or use
 your registry over an unencrypted HTTP connection. Either of these choices

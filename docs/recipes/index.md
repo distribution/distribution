@@ -4,6 +4,8 @@ keywords: registry, on-prem, images, tags, repository, distribution, recipes, ad
 title: Recipes overview
 ---
 
+{% include registry.md %}
+
 This list of "recipes" provides end-to-end scenarios for exotic or otherwise advanced use-cases.
 These recipes are not useful for most standard set-ups.
 

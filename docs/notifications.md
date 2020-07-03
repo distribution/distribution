@@ -4,6 +4,8 @@ keywords: registry, on-prem, images, tags, repository, distribution, notificatio
 title: Work with notifications
 ---
 
+{% include registry.md %}
+
 The Registry supports sending webhook notifications in response to events
 happening within the registry. Notifications are sent in response to manifest
 pushes and pulls and layer pushes and pulls. These actions are serialized into
