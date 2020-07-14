@@ -477,10 +477,7 @@ func New(params DriverParameters) (*Driver, error) {
 		awsConfig.WithEndpoint(params.RegionEndpoint)
 	}
 
-	if params.S3Accelerate {
-		awsConfig.WithS3UseAccelerate(true)
-	}
-
+	awsConfig.WithS3UseAccelerate(params.S3Accelerate)
 	awsConfig.WithRegion(params.Region)
 	awsConfig.WithDisableSSL(!params.Secure)
 	if params.UseDualStack {
