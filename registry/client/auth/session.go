@@ -122,6 +122,7 @@ type clock interface {
 type tokenHandler struct {
 	creds     CredentialStore
 	transport http.RoundTripper
+	jar       http.CookieJar
 	clock     clock
 
 	offlineAccess bool
@@ -190,6 +191,7 @@ func logDebugf(logger Logger, format string, args ...interface{}) {
 // TokenHandlerOptions is used to configure a new token handler
 type TokenHandlerOptions struct {
 	Transport   http.RoundTripper
+	Jar         http.CookieJar
 	Credentials CredentialStore
 
 	OfflineAccess bool
@@ -226,6 +228,7 @@ func NewTokenHandler(transport http.RoundTripper, creds CredentialStore, scope s
 func NewTokenHandlerWithOptions(options TokenHandlerOptions) AuthenticationHandler {
 	handler := &tokenHandler{
 		transport:     options.Transport,
+		jar:           options.Jar,
 		creds:         options.Credentials,
 		offlineAccess: options.OfflineAccess,
 		forceOAuth:    options.ForceOAuth,
@@ -241,6 +244,7 @@ func NewTokenHandlerWithOptions(options TokenHandlerOptions) AuthenticationHandl
 func (th *tokenHandler) client() *http.Client {
 	return &http.Client{
 		Transport: th.transport,
+		Jar:       th.jar,
 		Timeout:   15 * time.Second,
 	}
 }
