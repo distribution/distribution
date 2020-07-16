@@ -146,7 +146,7 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 		return nil, err
 	}
 
-	remoteRepo, err := client.NewRepository(name, pr.remoteURL.String(), tr)
+	remoteRepo, err := client.NewRepository(name, pr.remoteURL.String(), tr, nil)
 	if err != nil {
 		return nil, err
 	}

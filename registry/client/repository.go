@@ -22,6 +22,7 @@ import (
 	"github.com/docker/distribution/registry/storage/cache"
 	"github.com/docker/distribution/registry/storage/cache/memory"
 	"github.com/opencontainers/go-digest"
+	"golang.org/x/net/publicsuffix"
 )
 
 // Registry provides an interface for calling Repositories, which returns a catalog of repositories.
@@ -69,7 +70,7 @@ func NewRegistry(baseURL string, transport http.RoundTripper) (Registry, error) 
 		return nil, err
 	}
 
-	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: nil})
+	jar, err := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
 	if err != nil {
 		return nil, err
 	}
