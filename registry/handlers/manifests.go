@@ -506,7 +506,7 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 		w.WriteHeader(http.StatusAccepted)
 		return
 	}
-	
+
 	manifests, err := imh.Repository.Manifests(imh)
 	if err != nil {
 		imh.Errors = append(imh.Errors, err)

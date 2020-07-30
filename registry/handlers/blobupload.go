@@ -6,14 +6,15 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/gorilla/handlers"
+	"github.com/opencontainers/go-digest"
+
 	"github.com/distribution/distribution/v3"
 	dcontext "github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
 	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	"github.com/distribution/distribution/v3/registry/storage"
-	"github.com/gorilla/handlers"
-	"github.com/opencontainers/go-digest"
 )
 
 // blobUploadDispatcher constructs and returns the blob upload handler for the
@@ -32,7 +33,7 @@ func blobUploadDispatcher(ctx *Context, r *http.Request) http.Handler {
 	if !ctx.readOnly {
 		handler[http.MethodPost] = http.HandlerFunc(buh.StartBlobUpload)
 		handler[http.MethodPatch] = http.HandlerFunc(buh.PatchBlobData)
-		handler[http.MethodPut] = http.HandlerFunc(buh.PutBlobUploadComplete)
+		handler[http.MethodPut] = http.HandlerFunc(buh.BlobUploadComplete)
 		handler[http.MethodDelete] = http.HandlerFunc(buh.CancelBlobUpload)
 	}
 
@@ -100,6 +101,7 @@ func (buh *blobUploadHandler) StartBlobUpload(w http.ResponseWriter, r *http.Req
 	}
 
 	w.Header().Set("Docker-Upload-UUID", buh.Upload.ID())
+
 	w.WriteHeader(http.StatusAccepted)
 }
 
@@ -179,15 +181,24 @@ func (buh *blobUploadHandler) PatchBlobData(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusAccepted)
 }
 
-// PutBlobUploadComplete takes the final request of a blob upload. The
-// request may include all the blob data or no blob data. Any data
-// provided is received and verified. If successful, the blob is linked
-// into the blob store and 201 Created is returned with the canonical
-// url of the blob.
-func (buh *blobUploadHandler) PutBlobUploadComplete(w http.ResponseWriter, r *http.Request) {
+// PostBlobData writes upload data to a blob.
+func (buh *blobUploadHandler) PostBlobData(w http.ResponseWriter, r *http.Request) {
+	if r.FormValue("digest") != "" && r.ContentLength > 0 {
+		buh.BlobUploadComplete(w, r)
+	} else {
+		buh.StartBlobUpload(w, r)
+	}
+}
+
+// BlobUploadComplete takes the final request of a blob upload. The request may
+// include all the blob data or no blob data. Any data provided is received and
+// verified. If successful, the blob is linked into the blob store and 201
+// Created is returned with the canonical url of the blob.
+func (buh *blobUploadHandler) BlobUploadComplete(w http.ResponseWriter, r *http.Request) {
+	var err error
 	if buh.Upload == nil {
-		buh.Errors = append(buh.Errors, v2.ErrorCodeBlobUploadUnknown)
-		return
+		blobs := buh.Repository.Blobs(buh)
+		buh.Upload, err = blobs.Create(buh)
 	}
 	defer buh.Upload.Close()
 
