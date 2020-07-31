@@ -270,10 +270,6 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 	log.SetLevel(logLevel(config.Log.Level))
 
 	formatter := config.Log.Formatter
-	if formatter == "" {
-		formatter = "text" // default formatter
-	}
-
 	switch formatter {
 	case "json":
 		log.SetFormatter(&log.JSONFormatter{
@@ -309,6 +305,7 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 		ctx = dcontext.WithLogger(ctx, dcontext.GetLogger(ctx, fields...))
 	}
 
+	dcontext.SetDefaultLogger(dcontext.GetLogger(ctx))
 	return ctx, nil
 }
 
