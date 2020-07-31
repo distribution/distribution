@@ -9,7 +9,7 @@ import (
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/manifest/ocischema"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
-	"github.com/opencontainers/image-spec/specs-go/v1"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 func TestVerifyOCIManifestNonDistributableLayer(t *testing.T) {

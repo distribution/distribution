@@ -54,6 +54,10 @@ func checkBlobDescriptorCacheEmptyRepository(ctx context.Context, t *testing.T, 
 		t.Fatalf("expected error checking for cache item with empty digest: %v", err)
 	}
 
+	if _, err := cache.Stat(ctx, "sha384:cba111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"); err != distribution.ErrBlobUnknown {
+		t.Fatalf("expected unknown blob error with uncached repo: %v", err)
+	}
+
 	if _, err := cache.Stat(ctx, "sha384:abc111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"); err != distribution.ErrBlobUnknown {
 		t.Fatalf("expected unknown blob error with empty repo: %v", err)
 	}
@@ -173,8 +177,7 @@ func checkBlobDescriptorCacheClear(ctx context.Context, t *testing.T, provider c
 		t.Error(err)
 	}
 
-	desc, err = cache.Stat(ctx, localDigest)
-	if err == nil {
+	if _, err = cache.Stat(ctx, localDigest); err == nil {
 		t.Fatalf("expected error statting deleted blob: %v", err)
 	}
 }

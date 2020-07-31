@@ -16,7 +16,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/cloudfront/sign"
 	dcontext "github.com/docker/distribution/context"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
-	"github.com/docker/distribution/registry/storage/driver/middleware"
+	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
 )
 
 // cloudFrontStorageMiddleware provides a simple implementation of layerHandler that
@@ -111,16 +111,21 @@ func newCloudFrontStorageMiddleware(storageDriver storagedriver.StorageDriver, o
 		}
 	}
 
-	// parse updatefrenquency
+	// parse updatefrequency
 	updateFrequency := defaultUpdateFrequency
-	if u, ok := options["updatefrenquency"]; ok {
+	// #2447 introduced a typo. Support it for backward compatibility.
+	if _, ok := options["updatefrenquency"]; ok {
+		options["updatefrequency"] = options["updatefrenquency"]
+		dcontext.GetLogger(context.Background()).Warn("cloudfront updatefrenquency is deprecated. Please use updatefrequency")
+	}
+	if u, ok := options["updatefrequency"]; ok {
 		switch u := u.(type) {
 		case time.Duration:
 			updateFrequency = u
 		case string:
 			updateFreq, err := time.ParseDuration(u)
 			if err != nil {
-				return nil, fmt.Errorf("invalid updatefrenquency: %s", err)
+				return nil, fmt.Errorf("invalid updatefrequency: %s", err)
 			}
 			duration = updateFreq
 		}

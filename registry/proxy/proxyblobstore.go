@@ -72,13 +72,8 @@ func (pbs *proxyBlobStore) serveLocal(ctx context.Context, w http.ResponseWriter
 		return false, nil
 	}
 
-	if err == nil {
-		proxyMetrics.BlobPush(uint64(localDesc.Size))
-		return true, pbs.localStore.ServeBlob(ctx, w, r, dgst)
-	}
-
-	return false, nil
-
+	proxyMetrics.BlobPush(uint64(localDesc.Size))
+	return true, pbs.localStore.ServeBlob(ctx, w, r, dgst)
 }
 
 func (pbs *proxyBlobStore) storeLocal(ctx context.Context, dgst digest.Digest) error {

@@ -3,7 +3,7 @@ package distribution
 import (
 	"context"
 
-	digest "github.com/opencontainers/go-digest"
+	"github.com/opencontainers/go-digest"
 )
 
 // TagService provides access to information about tagged objects.
@@ -28,7 +28,7 @@ type TagService interface {
 	Lookup(ctx context.Context, digest Descriptor) ([]string, error)
 }
 
-// TagManifestsProvider provides method to retreive the digests of manifests that a tag historically
+// TagManifestsProvider provides method to retrieve the digests of manifests that a tag historically
 // pointed to
 type TagManifestsProvider interface {
 	// ManifestDigests returns set of digests that this tag historically pointed to. This also

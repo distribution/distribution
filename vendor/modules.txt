@@ -3,17 +3,11 @@ cloud.google.com/go/compute/metadata
 # github.com/Azure/azure-sdk-for-go v16.2.1+incompatible
 github.com/Azure/azure-sdk-for-go/storage
 github.com/Azure/azure-sdk-for-go/version
-# github.com/Azure/go-autorest/autorest v0.9.4
+# github.com/Azure/go-autorest v10.8.1+incompatible
 github.com/Azure/go-autorest/autorest
-github.com/Azure/go-autorest/autorest/azure
-# github.com/Azure/go-autorest/autorest/adal v0.8.0
 github.com/Azure/go-autorest/autorest/adal
-# github.com/Azure/go-autorest/autorest/date v0.2.0
+github.com/Azure/go-autorest/autorest/azure
 github.com/Azure/go-autorest/autorest/date
-# github.com/Azure/go-autorest/logger v0.1.0
-github.com/Azure/go-autorest/logger
-# github.com/Azure/go-autorest/tracing v0.5.0
-github.com/Azure/go-autorest/tracing
 # github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d
 github.com/Shopify/logrus-bugsnag
 # github.com/aws/aws-sdk-go v1.15.11
@@ -49,7 +43,7 @@ github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil
 github.com/aws/aws-sdk-go/service/cloudfront/sign
 github.com/aws/aws-sdk-go/service/s3
 github.com/aws/aws-sdk-go/service/sts
-# github.com/beorn7/perks v0.0.0-20160804104726-4c0e84591b9a
+# github.com/beorn7/perks v1.0.1
 github.com/beorn7/perks/quantile
 # github.com/bshuster-repo/logrus-logstash-hook v0.4.1
 github.com/bshuster-repo/logrus-logstash-hook
@@ -65,9 +59,11 @@ github.com/denverdino/aliyungo/cdn/auth
 github.com/denverdino/aliyungo/common
 github.com/denverdino/aliyungo/oss
 github.com/denverdino/aliyungo/util
-# github.com/dgrijalva/jwt-go v3.2.0+incompatible
+# github.com/dgrijalva/jwt-go v0.0.0-20170104182250-a601269ab70c
 github.com/dgrijalva/jwt-go
-# github.com/docker/go-metrics v0.0.0-20180209012529-399ea8c73916
+# github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c
+github.com/docker/go-events
+# github.com/docker/go-metrics v0.0.1
 github.com/docker/go-metrics
 # github.com/docker/libtrust v0.0.0-20150114040149-fa567046d9b1
 github.com/docker/libtrust
@@ -76,7 +72,7 @@ github.com/garyburd/redigo/internal
 github.com/garyburd/redigo/redis
 # github.com/go-ini/ini v1.25.4
 github.com/go-ini/ini
-# github.com/golang/protobuf v1.2.0
+# github.com/golang/protobuf v1.3.2
 github.com/golang/protobuf/proto
 # github.com/gorilla/handlers v0.0.0-20150720190736-60c7bfde3e33
 github.com/gorilla/handlers
@@ -97,25 +93,24 @@ github.com/mitchellh/mapstructure
 # github.com/ncw/swift v1.0.47
 github.com/ncw/swift
 github.com/ncw/swift/swifttest
-# github.com/opencontainers/go-digest v0.0.0-20170106003457-a6d0ee40d420
+# github.com/opencontainers/go-digest v1.0.0-rc1
 github.com/opencontainers/go-digest
-# github.com/opencontainers/image-spec v1.0.0
+# github.com/opencontainers/image-spec v1.0.1
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
-# github.com/prometheus/client_golang v0.0.0-20180209125602-c332b6f63c06
+# github.com/prometheus/client_golang v1.1.0
 github.com/prometheus/client_golang/prometheus
+github.com/prometheus/client_golang/prometheus/internal
 github.com/prometheus/client_golang/prometheus/promhttp
-# github.com/prometheus/client_model v0.0.0-20171117100541-99fa1f4be8e5
+# github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90
 github.com/prometheus/client_model/go
-# github.com/prometheus/common v0.0.0-20180110214958-89604d197083
+# github.com/prometheus/common v0.6.0
 github.com/prometheus/common/expfmt
 github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg
 github.com/prometheus/common/model
-# github.com/prometheus/procfs v0.0.0-20180125133057-cb4147076ac7
+# github.com/prometheus/procfs v0.0.3
 github.com/prometheus/procfs
-github.com/prometheus/procfs/internal/util
-github.com/prometheus/procfs/nfs
-github.com/prometheus/procfs/xfs
+github.com/prometheus/procfs/internal/fs
 # github.com/satori/go.uuid v1.2.0
 github.com/satori/go.uuid
 # github.com/sirupsen/logrus v1.4.2
@@ -130,7 +125,7 @@ github.com/yvasiyarov/go-metrics
 github.com/yvasiyarov/gorelic
 # github.com/yvasiyarov/newrelic_platform_go v0.0.0-20140908184405-b21fdbd4370f
 github.com/yvasiyarov/newrelic_platform_go
-# golang.org/x/crypto v0.0.0-20191206172530-e9b2fee46413
+# golang.org/x/crypto v0.0.0-20200128174031-69ecbb4d6d5d
 golang.org/x/crypto/acme
 golang.org/x/crypto/acme/autocert
 golang.org/x/crypto/bcrypt
@@ -150,8 +145,9 @@ golang.org/x/oauth2/google
 golang.org/x/oauth2/internal
 golang.org/x/oauth2/jws
 golang.org/x/oauth2/jwt
-# golang.org/x/sys v0.0.0-20190602015325-4c4f7f33c9ed
+# golang.org/x/sys v0.0.0-20190801041406-cbf593c0f2f3
 golang.org/x/sys/unix
+golang.org/x/sys/windows
 # golang.org/x/text v0.3.0
 golang.org/x/text/secure/bidirule
 golang.org/x/text/transform
