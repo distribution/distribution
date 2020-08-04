@@ -151,7 +151,7 @@ func (buh *blobUploadHandler) PatchBlobData(w http.ResponseWriter, r *http.Reque
 
 // PostBlobData writes upload data to a blob.
 func (buh *blobUploadHandler) PostBlobData(w http.ResponseWriter, r *http.Request) {
-	if r.FormValue("digest") != "" && r.ContentLength > 0 {
+	if r.FormValue("digest") != "" {
 		buh.BlobUploadComplete(w, r)
 	} else {
 		buh.StartBlobUpload(w, r)
