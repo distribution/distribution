@@ -167,6 +167,18 @@ func (buh *blobUploadHandler) BlobUploadComplete(w http.ResponseWriter, r *http.
 	if buh.Upload == nil {
 		blobs := buh.Repository.Blobs(buh)
 		buh.Upload, err = blobs.Create(buh)
+		if err != nil {
+			if ebm, ok := err.(distribution.ErrBlobMounted); ok {
+				if err := buh.writeBlobCreatedHeaders(w, ebm.Descriptor); err != nil {
+					buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+				}
+			} else if err == distribution.ErrUnsupported {
+				buh.Errors = append(buh.Errors, errcode.ErrorCodeUnsupported)
+			} else {
+				buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+			}
+			return
+		}
 	}
 
 	dgstStr := r.FormValue("digest") // TODO(stevvooe): Support multiple digest parameters!
