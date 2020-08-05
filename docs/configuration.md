@@ -139,6 +139,9 @@ storage:
     multipartcopythresholdsize: 33554432
     rootdirectory: /s3/object/name/prefix
     usedualstack: false
+    logs3apirequests: true
+    logs3apiresponseheaders:
+      s3_http_response_header_x-do-spaces-error: x-do-spaces-error
   oss:
     accesskeyid: accesskeyid
     accesskeysecret: accesskeysecret
@@ -435,6 +438,24 @@ storage:
     multipartcopymaxconcurrency: 100
     multipartcopythresholdsize: 33554432
     rootdirectory: /s3/object/name/prefix
+<<<<<<< HEAD
+=======
+    logs3apirequests: true
+    logs3apiresponseheaders:
+      s3_http_response_header_x-do-spaces-error: x-do-spaces-error
+  swift:
+    username: username
+    password: password
+    authurl: https://storage.myprovider.com/auth/v1.0 or https://storage.myprovider.com/v2.0 or https://storage.myprovider.com/v3/auth
+    tenant: tenantname
+    tenantid: tenantid
+    domain: domain name for Openstack Identity v3 API
+    domainid: domain id for Openstack Identity v3 API
+    insecureskipverify: true
+    region: fr
+    container: containername
+    rootdirectory: /swift/object/name/prefix
+>>>>>>> f3d61f10 (s3: log S3 api requests)
   oss:
     accesskeyid: accesskeyid
     accesskeysecret: accesskeysecret
