@@ -1,13 +1,18 @@
-dist: trusty
+dist: bionic
 sudo: required
 # setup travis so that we can run containers for integration tests
 services:
   - docker
 
+jobs:
+  include:
+   - arch: amd64
+   - arch: s390x
+
 language: go
 
 go:
-  - "1.12.x"
+  - "1.14.x"
 
 go_import_path: github.com/docker/distribution
 
@@ -25,7 +30,7 @@ before_install:
   - sudo apt-get -q update
 
 install:
-  - go get -u github.com/vbatts/git-validation
+  - cd /tmp && go get -u github.com/vbatts/git-validation
     # TODO: Add enforcement of license
     # - go get -u github.com/kunalkushwaha/ltag
   - cd $TRAVIS_BUILD_DIR
@@ -34,7 +39,7 @@ script:
   - export GOOS=$TRAVIS_GOOS
   - export CGO_ENABLED=$TRAVIS_CGO_ENABLED
   - DCO_VERBOSITY=-q script/validate/dco
-  - GOOS=linux GO111MODULE=off script/setup/install-dev-tools
+  - GOOS=linux GO111MODULE=on script/setup/install-dev-tools
   - script/validate/vendor
   - go build -i .
   - make check

@@ -6,8 +6,9 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/manifest/schema1"
 	"github.com/docker/distribution/reference"
-	"github.com/docker/distribution/registry/api/v2"
+	v2 "github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/uuid"
+	events "github.com/docker/go-events"
 	"github.com/docker/libtrust"
 	"github.com/opencontainers/go-digest"
 )
@@ -46,8 +47,8 @@ var (
 )
 
 func TestEventBridgeManifestPulled(t *testing.T) {
-	l := createTestEnv(t, testSinkFn(func(events ...Event) error {
-		checkCommonManifest(t, EventActionPull, events...)
+	l := createTestEnv(t, testSinkFn(func(event events.Event) error {
+		checkCommonManifest(t, EventActionPull, event)
 
 		return nil
 	}))
@@ -59,8 +60,8 @@ func TestEventBridgeManifestPulled(t *testing.T) {
 }
 
 func TestEventBridgeManifestPushed(t *testing.T) {
-	l := createTestEnv(t, testSinkFn(func(events ...Event) error {
-		checkCommonManifest(t, EventActionPush, events...)
+	l := createTestEnv(t, testSinkFn(func(event events.Event) error {
+		checkCommonManifest(t, EventActionPush, event)
 
 		return nil
 	}))
@@ -72,10 +73,10 @@ func TestEventBridgeManifestPushed(t *testing.T) {
 }
 
 func TestEventBridgeManifestPushedWithTag(t *testing.T) {
-	l := createTestEnv(t, testSinkFn(func(events ...Event) error {
-		checkCommonManifest(t, EventActionPush, events...)
-		if events[0].Target.Tag != "latest" {
-			t.Fatalf("missing or unexpected tag: %#v", events[0].Target)
+	l := createTestEnv(t, testSinkFn(func(event events.Event) error {
+		checkCommonManifest(t, EventActionPush, event)
+		if event.(Event).Target.Tag != "latest" {
+			t.Fatalf("missing or unexpected tag: %#v", event.(Event).Target)
 		}
 
 		return nil
@@ -88,10 +89,10 @@ func TestEventBridgeManifestPushedWithTag(t *testing.T) {
 }
 
 func TestEventBridgeManifestPulledWithTag(t *testing.T) {
-	l := createTestEnv(t, testSinkFn(func(events ...Event) error {
-		checkCommonManifest(t, EventActionPull, events...)
-		if events[0].Target.Tag != "latest" {
-			t.Fatalf("missing or unexpected tag: %#v", events[0].Target)
+	l := createTestEnv(t, testSinkFn(func(event events.Event) error {
+		checkCommonManifest(t, EventActionPull, event)
+		if event.(Event).Target.Tag != "latest" {
+			t.Fatalf("missing or unexpected tag: %#v", event.(Event).Target)
 		}
 
 		return nil
@@ -104,10 +105,10 @@ func TestEventBridgeManifestPulledWithTag(t *testing.T) {
 }
 
 func TestEventBridgeManifestDeleted(t *testing.T) {
-	l := createTestEnv(t, testSinkFn(func(events ...Event) error {
-		checkDeleted(t, EventActionDelete, events...)
-		if events[0].Target.Digest != dgst {
-			t.Fatalf("unexpected digest on event target: %q != %q", events[0].Target.Digest, dgst)
+	l := createTestEnv(t, testSinkFn(func(event events.Event) error {
+		checkDeleted(t, EventActionDelete, event)
+		if event.(Event).Target.Digest != dgst {
+			t.Fatalf("unexpected digest on event target: %q != %q", event.(Event).Target.Digest, dgst)
 		}
 		return nil
 	}))
@@ -119,10 +120,10 @@ func TestEventBridgeManifestDeleted(t *testing.T) {
 }
 
 func TestEventBridgeTagDeleted(t *testing.T) {
-	l := createTestEnv(t, testSinkFn(func(events ...Event) error {
-		checkDeleted(t, EventActionDelete, events...)
-		if events[0].Target.Tag != m.Tag {
-			t.Fatalf("unexpected tag on event target: %q != %q", events[0].Target.Tag, m.Tag)
+	l := createTestEnv(t, testSinkFn(func(event events.Event) error {
+		checkDeleted(t, EventActionDelete, event)
+		if event.(Event).Target.Tag != m.Tag {
+			t.Fatalf("unexpected tag on event target: %q != %q", event.(Event).Target.Tag, m.Tag)
 		}
 		return nil
 	}))
@@ -134,8 +135,8 @@ func TestEventBridgeTagDeleted(t *testing.T) {
 }
 
 func TestEventBridgeRepoDeleted(t *testing.T) {
-	l := createTestEnv(t, testSinkFn(func(events ...Event) error {
-		checkDeleted(t, EventActionDelete, events...)
+	l := createTestEnv(t, testSinkFn(func(event events.Event) error {
+		checkDeleted(t, EventActionDelete, event)
 		return nil
 	}))
 
@@ -162,36 +163,29 @@ func createTestEnv(t *testing.T, fn testSinkFn) Listener {
 	return NewBridge(ub, source, actor, request, fn, true)
 }
 
-func checkDeleted(t *testing.T, action string, events ...Event) {
-	if len(events) != 1 {
-		t.Fatalf("unexpected number of events: %v != 1", len(events))
+func checkDeleted(t *testing.T, action string, event events.Event) {
+	if event.(Event).Source != source {
+		t.Fatalf("source not equal: %#v != %#v", event.(Event).Source, source)
 	}
 
-	event := events[0]
-
-	if event.Source != source {
-		t.Fatalf("source not equal: %#v != %#v", event.Source, source)
+	if event.(Event).Request != request {
+		t.Fatalf("request not equal: %#v != %#v", event.(Event).Request, request)
 	}
 
-	if event.Request != request {
-		t.Fatalf("request not equal: %#v != %#v", event.Request, request)
+	if event.(Event).Actor != actor {
+		t.Fatalf("request not equal: %#v != %#v", event.(Event).Actor, actor)
 	}
 
-	if event.Actor != actor {
-		t.Fatalf("request not equal: %#v != %#v", event.Actor, actor)
-	}
-
-	if event.Target.Repository != repo {
-		t.Fatalf("unexpected repository: %q != %q", event.Target.Repository, repo)
+	if event.(Event).Target.Repository != repo {
+		t.Fatalf("unexpected repository: %q != %q", event.(Event).Target.Repository, repo)
 	}
 }
 
-func checkCommonManifest(t *testing.T, action string, events ...Event) {
-	checkCommon(t, events...)
+func checkCommonManifest(t *testing.T, action string, event events.Event) {
+	checkCommon(t, event)
 
-	event := events[0]
-	if event.Action != action {
-		t.Fatalf("unexpected event action: %q != %q", event.Action, action)
+	if event.(Event).Action != action {
+		t.Fatalf("unexpected event action: %q != %q", event.(Event).Action, action)
 	}
 
 	repoRef, _ := reference.WithName(repo)
@@ -201,57 +195,51 @@ func checkCommonManifest(t *testing.T, action string, events ...Event) {
 		t.Fatalf("error building expected url: %v", err)
 	}
 
-	if event.Target.URL != u {
-		t.Fatalf("incorrect url passed: \n%q != \n%q", event.Target.URL, u)
+	if event.(Event).Target.URL != u {
+		t.Fatalf("incorrect url passed: \n%q != \n%q", event.(Event).Target.URL, u)
 	}
 
-	if len(event.Target.References) != len(layers) {
-		t.Fatalf("unexpected number of references %v != %v", len(event.Target.References), len(layers))
+	if len(event.(Event).Target.References) != len(layers) {
+		t.Fatalf("unexpected number of references %v != %v", len(event.(Event).Target.References), len(layers))
 	}
-	for i, targetReference := range event.Target.References {
+	for i, targetReference := range event.(Event).Target.References {
 		if targetReference.Digest != layers[i].BlobSum {
 			t.Fatalf("unexpected reference: %q != %q", targetReference.Digest, layers[i].BlobSum)
 		}
 	}
 }
 
-func checkCommon(t *testing.T, events ...Event) {
-	if len(events) != 1 {
-		t.Fatalf("unexpected number of events: %v != 1", len(events))
+func checkCommon(t *testing.T, event events.Event) {
+	if event.(Event).Source != source {
+		t.Fatalf("source not equal: %#v != %#v", event.(Event).Source, source)
 	}
 
-	event := events[0]
-
-	if event.Source != source {
-		t.Fatalf("source not equal: %#v != %#v", event.Source, source)
+	if event.(Event).Request != request {
+		t.Fatalf("request not equal: %#v != %#v", event.(Event).Request, request)
 	}
 
-	if event.Request != request {
-		t.Fatalf("request not equal: %#v != %#v", event.Request, request)
+	if event.(Event).Actor != actor {
+		t.Fatalf("request not equal: %#v != %#v", event.(Event).Actor, actor)
 	}
 
-	if event.Actor != actor {
-		t.Fatalf("request not equal: %#v != %#v", event.Actor, actor)
+	if event.(Event).Target.Digest != dgst {
+		t.Fatalf("unexpected digest on event target: %q != %q", event.(Event).Target.Digest, dgst)
 	}
 
-	if event.Target.Digest != dgst {
-		t.Fatalf("unexpected digest on event target: %q != %q", event.Target.Digest, dgst)
+	if event.(Event).Target.Length != int64(len(payload)) {
+		t.Fatalf("unexpected target length: %v != %v", event.(Event).Target.Length, len(payload))
 	}
 
-	if event.Target.Length != int64(len(payload)) {
-		t.Fatalf("unexpected target length: %v != %v", event.Target.Length, len(payload))
-	}
-
-	if event.Target.Repository != repo {
-		t.Fatalf("unexpected repository: %q != %q", event.Target.Repository, repo)
+	if event.(Event).Target.Repository != repo {
+		t.Fatalf("unexpected repository: %q != %q", event.(Event).Target.Repository, repo)
 	}
 
 }
 
-type testSinkFn func(events ...Event) error
+type testSinkFn func(event events.Event) error
 
-func (tsf testSinkFn) Write(events ...Event) error {
-	return tsf(events...)
+func (tsf testSinkFn) Write(event events.Event) error {
+	return tsf(event)
 }
 
 func (tsf testSinkFn) Close() error { return nil }

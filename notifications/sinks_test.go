@@ -1,67 +1,16 @@
 package notifications
 
 import (
-	"fmt"
-	"math/rand"
 	"reflect"
 	"sync"
 	"time"
+
+	events "github.com/docker/go-events"
 
 	"github.com/sirupsen/logrus"
 
 	"testing"
 )
-
-func TestBroadcaster(t *testing.T) {
-	const nEvents = 1000
-	var sinks []Sink
-
-	for i := 0; i < 10; i++ {
-		sinks = append(sinks, &testSink{})
-	}
-
-	b := NewBroadcaster(sinks...)
-
-	var block []Event
-	var wg sync.WaitGroup
-	for i := 1; i <= nEvents; i++ {
-		block = append(block, createTestEvent("push", "library/test", "blob"))
-
-		if i%10 == 0 && i > 0 {
-			wg.Add(1)
-			go func(block ...Event) {
-				if err := b.Write(block...); err != nil {
-					t.Errorf("error writing block of length %d: %v", len(block), err)
-				}
-				wg.Done()
-			}(block...)
-
-			block = nil
-		}
-	}
-
-	wg.Wait() // Wait until writes complete
-	if t.Failed() {
-		t.FailNow()
-	}
-	checkClose(t, b)
-
-	// Iterate through the sinks and check that they all have the expected length.
-	for _, sink := range sinks {
-		ts := sink.(*testSink)
-		ts.mu.Lock()
-		defer ts.mu.Unlock()
-
-		if len(ts.events) != nEvents {
-			t.Fatalf("not all events ended up in testsink: len(testSink) == %d, not %d", len(ts.events), nEvents)
-		}
-
-		if !ts.closed {
-			t.Fatalf("sink should have been closed")
-		}
-	}
-
-}
 
 func TestEventQueue(t *testing.T) {
 	const nevents = 1000
@@ -75,20 +24,16 @@ func TestEventQueue(t *testing.T) {
 		}, metrics.eventQueueListener())
 
 	var wg sync.WaitGroup
-	var block []Event
+	var event events.Event
 	for i := 1; i <= nevents; i++ {
-		block = append(block, createTestEvent("push", "library/test", "blob"))
-		if i%10 == 0 && i > 0 {
-			wg.Add(1)
-			go func(block ...Event) {
-				if err := eq.Write(block...); err != nil {
-					t.Errorf("error writing event block: %v", err)
-				}
-				wg.Done()
-			}(block...)
-
-			block = nil
-		}
+		event = createTestEvent("push", "library/test", "blob")
+		wg.Add(1)
+		go func(event events.Event) {
+			if err := eq.Write(event); err != nil {
+				t.Errorf("error writing event block: %v", err)
+			}
+			wg.Done()
+		}(event)
 	}
 
 	wg.Wait()
@@ -102,8 +47,8 @@ func TestEventQueue(t *testing.T) {
 	metrics.Lock()
 	defer metrics.Unlock()
 
-	if len(ts.events) != nevents {
-		t.Fatalf("events did not make it to the sink: %d != %d", len(ts.events), 1000)
+	if ts.count != nevents {
+		t.Fatalf("events did not make it to the sink: %d != %d", ts.count, 1000)
 	}
 
 	if !ts.closed {
@@ -126,16 +71,14 @@ func TestIgnoredSink(t *testing.T) {
 	type testcase struct {
 		ignoreMediaTypes []string
 		ignoreActions    []string
-		expected         []Event
+		expected         events.Event
 	}
 
 	cases := []testcase{
-		{nil, nil, []Event{blob, manifest}},
-		{[]string{"other"}, []string{"other"}, []Event{blob, manifest}},
-		{[]string{"blob"}, []string{"other"}, []Event{manifest}},
+		{nil, nil, blob},
+		{[]string{"other"}, []string{"other"}, blob},
 		{[]string{"blob", "manifest"}, []string{"other"}, nil},
-		{[]string{"other"}, []string{"push"}, []Event{manifest}},
-		{[]string{"other"}, []string{"pull"}, []Event{blob}},
+		{[]string{"other"}, []string{"pull"}, blob},
 		{[]string{"other"}, []string{"pull", "push"}, nil},
 	}
 
@@ -143,78 +86,54 @@ func TestIgnoredSink(t *testing.T) {
 		ts := &testSink{}
 		s := newIgnoredSink(ts, c.ignoreMediaTypes, c.ignoreActions)
 
-		if err := s.Write(blob, manifest); err != nil {
+		if err := s.Write(blob); err != nil {
 			t.Fatalf("error writing event: %v", err)
 		}
 
 		ts.mu.Lock()
-		if !reflect.DeepEqual(ts.events, c.expected) {
-			t.Fatalf("unexpected events: %#v != %#v", ts.events, c.expected)
+		if !reflect.DeepEqual(ts.event, c.expected) {
+			t.Fatalf("unexpected event: %#v != %#v", ts.event, c.expected)
+		}
+		ts.mu.Unlock()
+	}
+
+	cases = []testcase{
+		{nil, nil, manifest},
+		{[]string{"other"}, []string{"other"}, manifest},
+		{[]string{"blob"}, []string{"other"}, manifest},
+		{[]string{"blob", "manifest"}, []string{"other"}, nil},
+		{[]string{"other"}, []string{"push"}, manifest},
+		{[]string{"other"}, []string{"pull", "push"}, nil},
+	}
+
+	for _, c := range cases {
+		ts := &testSink{}
+		s := newIgnoredSink(ts, c.ignoreMediaTypes, c.ignoreActions)
+
+		if err := s.Write(manifest); err != nil {
+			t.Fatalf("error writing event: %v", err)
+		}
+
+		ts.mu.Lock()
+		if !reflect.DeepEqual(ts.event, c.expected) {
+			t.Fatalf("unexpected event: %#v != %#v", ts.event, c.expected)
 		}
 		ts.mu.Unlock()
 	}
 }
 
-func TestRetryingSink(t *testing.T) {
-
-	// Make a sync that fails most of the time, ensuring that all the events
-	// make it through.
-	var ts testSink
-	flaky := &flakySink{
-		rate: 1.0, // start out always failing.
-		Sink: &ts,
-	}
-	s := newRetryingSink(flaky, 3, 10*time.Millisecond)
-
-	var wg sync.WaitGroup
-	var block []Event
-	for i := 1; i <= 100; i++ {
-		block = append(block, createTestEvent("push", "library/test", "blob"))
-
-		// Above 50, set the failure rate lower
-		if i > 50 {
-			s.mu.Lock()
-			flaky.rate = 0.90
-			s.mu.Unlock()
-		}
-
-		if i%10 == 0 && i > 0 {
-			wg.Add(1)
-			go func(block ...Event) {
-				defer wg.Done()
-				if err := s.Write(block...); err != nil {
-					t.Errorf("error writing event block: %v", err)
-				}
-			}(block...)
-
-			block = nil
-		}
-	}
-
-	wg.Wait()
-	if t.Failed() {
-		t.FailNow()
-	}
-	checkClose(t, s)
-
-	ts.mu.Lock()
-	defer ts.mu.Unlock()
-
-	if len(ts.events) != 100 {
-		t.Fatalf("events not propagated: %d != %d", len(ts.events), 100)
-	}
-}
-
 type testSink struct {
-	events []Event
+	event  events.Event
+	count  int
 	mu     sync.Mutex
 	closed bool
 }
 
-func (ts *testSink) Write(events ...Event) error {
+func (ts *testSink) Write(event events.Event) error {
 	ts.mu.Lock()
 	defer ts.mu.Unlock()
-	ts.events = append(ts.events, events...)
+	ts.event = event
+	ts.count++
 	return nil
 }
 
@@ -228,29 +147,16 @@ func (ts *testSink) Close() error {
 }
 
 type delayedSink struct {
-	Sink
+	events.Sink
 	delay time.Duration
 }
 
-func (ds *delayedSink) Write(events ...Event) error {
+func (ds *delayedSink) Write(event events.Event) error {
 	time.Sleep(ds.delay)
-	return ds.Sink.Write(events...)
+	return ds.Sink.Write(event)
 }
 
-type flakySink struct {
-	Sink
-	rate float64
-}
-
-func (fs *flakySink) Write(events ...Event) error {
-	if rand.Float64() < fs.rate {
-		return fmt.Errorf("error writing %d events", len(events))
-	}
-
-	return fs.Sink.Write(events...)
-}
-
-func checkClose(t *testing.T, sink Sink) {
+func checkClose(t *testing.T, sink events.Sink) {
 	if err := sink.Close(); err != nil {
 		t.Fatalf("unexpected error closing: %v", err)
 	}
@@ -261,7 +167,7 @@ func checkClose(t *testing.T, sink Sink) {
 	}
 
 	// Write after closed should be an error
-	if err := sink.Write([]Event{}...); err == nil {
+	if err := sink.Write(Event{}); err == nil {
 		t.Fatalf("write after closed did not have an error")
 	} else if err != ErrSinkClosed {
 		t.Fatalf("error should be ErrSinkClosed")

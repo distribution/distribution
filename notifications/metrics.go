@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	prometheus "github.com/docker/distribution/metrics"
+	events "github.com/docker/go-events"
 	"github.com/docker/go-metrics"
 )
 
@@ -70,32 +71,32 @@ type endpointMetricsHTTPStatusListener struct {
 
 var _ httpStatusListener = &endpointMetricsHTTPStatusListener{}
 
-func (emsl *endpointMetricsHTTPStatusListener) success(status int, events ...Event) {
+func (emsl *endpointMetricsHTTPStatusListener) success(status int, event events.Event) {
 	emsl.safeMetrics.Lock()
 	defer emsl.safeMetrics.Unlock()
-	emsl.Statuses[fmt.Sprintf("%d %s", status, http.StatusText(status))] += len(events)
-	emsl.Successes += len(events)
+	emsl.Statuses[fmt.Sprintf("%d %s", status, http.StatusText(status))]++
+	emsl.Successes++
 
 	statusCounter.WithValues(fmt.Sprintf("%d %s", status, http.StatusText(status)), emsl.EndpointName).Inc(1)
-	eventsCounter.WithValues("Successes", emsl.EndpointName).Inc(float64(len(events)))
+	eventsCounter.WithValues("Successes", emsl.EndpointName).Inc(1)
 }
 
-func (emsl *endpointMetricsHTTPStatusListener) failure(status int, events ...Event) {
+func (emsl *endpointMetricsHTTPStatusListener) failure(status int, event events.Event) {
 	emsl.safeMetrics.Lock()
 	defer emsl.safeMetrics.Unlock()
-	emsl.Statuses[fmt.Sprintf("%d %s", status, http.StatusText(status))] += len(events)
-	emsl.Failures += len(events)
+	emsl.Statuses[fmt.Sprintf("%d %s", status, http.StatusText(status))]++
+	emsl.Failures++
 
 	statusCounter.WithValues(fmt.Sprintf("%d %s", status, http.StatusText(status)), emsl.EndpointName).Inc(1)
-	eventsCounter.WithValues("Failures", emsl.EndpointName).Inc(float64(len(events)))
+	eventsCounter.WithValues("Failures", emsl.EndpointName).Inc(1)
 }
 
-func (emsl *endpointMetricsHTTPStatusListener) err(err error, events ...Event) {
+func (emsl *endpointMetricsHTTPStatusListener) err(err error, event events.Event) {
 	emsl.safeMetrics.Lock()
 	defer emsl.safeMetrics.Unlock()
-	emsl.Errors += len(events)
+	emsl.Errors++
 
-	eventsCounter.WithValues("Errors", emsl.EndpointName).Inc(float64(len(events)))
+	eventsCounter.WithValues("Errors", emsl.EndpointName).Inc(1)
 }
 
 // endpointMetricsEventQueueListener maintains the incoming events counter and
@@ -104,20 +105,20 @@ type endpointMetricsEventQueueListener struct {
 	*safeMetrics
 }
 
-func (eqc *endpointMetricsEventQueueListener) ingress(events ...Event) {
+func (eqc *endpointMetricsEventQueueListener) ingress(event events.Event) {
 	eqc.Lock()
 	defer eqc.Unlock()
-	eqc.Events += len(events)
-	eqc.Pending += len(events)
+	eqc.Events++
+	eqc.Pending++
 
 	eventsCounter.WithValues("Events", eqc.EndpointName).Inc()
-	pendingGauge.WithValues(eqc.EndpointName).Inc(float64(len(events)))
+	pendingGauge.WithValues(eqc.EndpointName).Inc(1)
 }
 
-func (eqc *endpointMetricsEventQueueListener) egress(events ...Event) {
+func (eqc *endpointMetricsEventQueueListener) egress(event events.Event) {
 	eqc.Lock()
 	defer eqc.Unlock()
-	eqc.Pending -= len(events)
+	eqc.Pending--
 
 	pendingGauge.WithValues(eqc.EndpointName).Dec(1)
 }
