@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	pathutil "path"
 
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
@@ -11,9 +12,9 @@ import (
 
 type redirectStorageMiddleware struct {
 	storagedriver.StorageDriver
-	scheme string
-	host   string
-	path   string
+	scheme   string
+	host     string
+	basePath string
 }
 
 var _ storagedriver.StorageDriver = &redirectStorageMiddleware{}
@@ -38,12 +39,12 @@ func newRedirectStorageMiddleware(sd storagedriver.StorageDriver, options map[st
 		return nil, fmt.Errorf("no host specified for redirect baseurl")
 	}
 
-	return &redirectStorageMiddleware{StorageDriver: sd, scheme: u.Scheme, host: u.Host, path: u.Path}, nil
+	return &redirectStorageMiddleware{StorageDriver: sd, scheme: u.Scheme, host: u.Host, basePath: u.Path}, nil
 }
 
 func (r *redirectStorageMiddleware) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
-	if r.path != "" {
-		path = r.path + path
+	if r.basePath != "" {
+		path = pathutil.Join(r.basePath, path)
 	}
 	u := &url.URL{Scheme: r.scheme, Host: r.host, Path: path}
 	return u.String(), nil
