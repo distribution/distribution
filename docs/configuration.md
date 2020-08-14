@@ -128,6 +128,9 @@ storage:
     multipartcopymaxconcurrency: 100
     multipartcopythresholdsize: 33554432
     rootdirectory: /s3/object/name/prefix
+    logs3apirequests: true
+    logs3apiresponseheaders:
+      s3_http_response_header_x-do-spaces-error: x-do-spaces-error
   swift:
     username: username
     password: password
@@ -429,6 +432,9 @@ storage:
     multipartcopymaxconcurrency: 100
     multipartcopythresholdsize: 33554432
     rootdirectory: /s3/object/name/prefix
+    logs3apirequests: true
+    logs3apiresponseheaders:
+      s3_http_response_header_x-do-spaces-error: x-do-spaces-error
   swift:
     username: username
     password: password

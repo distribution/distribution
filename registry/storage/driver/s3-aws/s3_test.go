@@ -97,6 +97,8 @@ func init() {
 			driverName + "-test",
 			objectACL,
 			sessionToken,
+			false,
+			map[string]string{},
 		}
 
 		return New(parameters)
