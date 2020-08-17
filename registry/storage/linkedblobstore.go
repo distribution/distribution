@@ -46,7 +46,7 @@ type linkedBlobStore struct {
 var _ distribution.BlobStore = &linkedBlobStore{}
 
 func (lbs *linkedBlobStore) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
-	return lbs.blobAccessController.Stat(ctx, dgst)
+	return lbs.blobStore.statter.Stat(ctx, dgst)
 }
 
 func (lbs *linkedBlobStore) Get(ctx context.Context, dgst digest.Digest) ([]byte, error) {
