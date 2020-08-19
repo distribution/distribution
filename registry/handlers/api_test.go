@@ -533,6 +533,32 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 	uploadURLBase, dgst := pushChunk(t, env.builder, imageName, uploadURLBase, layerFile, layerLength)
 	finishUpload(t, env.builder, imageName, uploadURLBase, dgst)
 
+	// -----------------------------------------
+	// Do layer push with invalid content range
+	layerFile.Seek(0, io.SeekStart)
+	uploadURLBase, _ = startPushLayer(t, env, imageName)
+	sizeInvalid := chunkOptions{
+		contentRange: "0-20",
+	}
+	resp, err = doPushChunk(t, uploadURLBase, layerFile, sizeInvalid)
+	if err != nil {
+		t.Fatalf("unexpected error doing push layer request: %v", err)
+	}
+	defer resp.Body.Close()
+	checkResponse(t, "putting size invalid chunk", resp, http.StatusBadRequest)
+
+	layerFile.Seek(0, io.SeekStart)
+	uploadURLBase, _ = startPushLayer(t, env, imageName)
+	outOfOrder := chunkOptions{
+		contentRange: "3-22",
+	}
+	resp, err = doPushChunk(t, uploadURLBase, layerFile, outOfOrder)
+	if err != nil {
+		t.Fatalf("unexpected error doing push layer request: %v", err)
+	}
+	defer resp.Body.Close()
+	checkResponse(t, "putting range out of order chunk", resp, http.StatusRequestedRangeNotSatisfiable)
+
 	// ------------------------
 	// Use a head request to see if the layer exists.
 	resp, err = http.Head(layerURL)
@@ -2242,7 +2268,12 @@ func finishUpload(t *testing.T, ub *v2.URLBuilder, name reference.Named, uploadU
 	return resp.Header.Get("Location")
 }
 
-func doPushChunk(t *testing.T, uploadURLBase string, body io.Reader) (*http.Response, digest.Digest, error) {
+type chunkOptions struct {
+	// Content-Range header to set when pushing chunks
+	contentRange string
+}
+
+func doPushChunk(t *testing.T, uploadURLBase string, body io.Reader, options chunkOptions) (*http.Response, error) {
 	u, err := url.Parse(uploadURLBase)
 	if err != nil {
 		t.Fatalf("unexpected error parsing pushLayer url: %v", err)
@@ -2254,21 +2285,24 @@ func doPushChunk(t *testing.T, uploadURLBase string, body io.Reader) (*http.Resp
 
 	uploadURL := u.String()
 
-	digester := digest.Canonical.Digester()
-
-	req, err := http.NewRequest("PATCH", uploadURL, io.TeeReader(body, digester.Hash()))
+	req, err := http.NewRequest("PATCH", uploadURL, body)
 	if err != nil {
 		t.Fatalf("unexpected error creating new request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/octet-stream")
+	if options.contentRange != "" {
+		req.Header.Set("Content-Range", options.contentRange)
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 
-	return resp, digester.Digest(), err
+	return resp, err
 }
 
 func pushChunk(t *testing.T, ub *v2.URLBuilder, name reference.Named, uploadURLBase string, body io.Reader, length int64) (string, digest.Digest) {
-	resp, dgst, err := doPushChunk(t, uploadURLBase, body)
+	digester := digest.Canonical.Digester()
+
+	resp, err := doPushChunk(t, uploadURLBase, io.TeeReader(body, digester.Hash()), chunkOptions{})
 	if err != nil {
 		t.Fatalf("unexpected error doing push layer request: %v", err)
 	}
@@ -2285,7 +2319,7 @@ func pushChunk(t *testing.T, ub *v2.URLBuilder, name reference.Named, uploadURLB
 		"Content-Length": []string{"0"},
 	})
 
-	return resp.Header.Get("Location"), dgst
+	return resp.Header.Get("Location"), digester.Digest()
 }
 
 func checkResponse(t *testing.T, msg string, resp *http.Response, expectedStatus int) {
