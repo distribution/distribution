@@ -210,7 +210,17 @@ func (lbs *linkedBlobStore) Resume(ctx context.Context, id string) (distribution
 		return nil, err
 	}
 
-	return lbs.newBlobUpload(ctx, id, path, startedAt, true)
+	bw, err := lbs.newBlobUpload(ctx, id, path, startedAt, true)
+	if err != nil {
+		switch err := err.(type) {
+		case driver.PathNotFoundError:
+			return nil, distribution.ErrBlobUploadUnknown
+		default:
+			return nil, err
+		}
+	}
+
+	return bw, nil
 }
 
 func (lbs *linkedBlobStore) Delete(ctx context.Context, dgst digest.Digest) error {
