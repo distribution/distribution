@@ -10,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/distribution/registry/client"
-	"github.com/docker/distribution/registry/client/auth/challenge"
-	"github.com/docker/distribution/registry/client/transport"
+	"github.com/distribution/distribution/v3/registry/client"
+	"github.com/distribution/distribution/v3/registry/client/auth/challenge"
+	"github.com/distribution/distribution/v3/registry/client/transport"
 )
 
 var (

@@ -12,7 +12,7 @@ release](https://github.com/docker/docker/commit/9f482a66ab37ec396ac61ed0c00d591
 It is a provisional manifest to provide a compatibility with the [V1 Image
 format](https://github.com/docker/docker/blob/master/image/spec/v1.md), as the
 requirements are defined for the [V2 Schema 2
-image](https://github.com/docker/distribution/pull/62).
+image](https://github.com/distribution/distribution/pull/62).
 
 
 Image manifests describe the various constituents of a docker image.  Image

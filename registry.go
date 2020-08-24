@@ -3,7 +3,7 @@ package distribution
 import (
 	"context"
 
-	"github.com/docker/distribution/reference"
+	"github.com/distribution/distribution/v3/reference"
 )
 
 // Scope defines the set of items that match a namespace.

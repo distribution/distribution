@@ -1,4 +1,4 @@
-# docker/distribution Project Governance
+# distribution/distribution Project Governance
 
 Docker distribution abides by the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md).
 

@@ -6,7 +6,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/docker/distribution"
+	"github.com/distribution/distribution/v3"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -119,7 +119,7 @@ func TestManifestList(t *testing.T) {
 // TODO (mikebrow): add annotations on the manifest list (index) and support for
 // empty platform structs (move to Platform *Platform `json:"platform,omitempty"`
 // from current Platform PlatformSpec `json:"platform"`) in the manifest descriptor.
-// Requires changes to docker/distribution/manifest/manifestlist.ManifestList and .ManifestDescriptor
+// Requires changes to distribution/distribution/manifest/manifestlist.ManifestList and .ManifestDescriptor
 // and associated serialization APIs in manifestlist.go. Or split the OCI index and
 // docker manifest list implementations, which would require a lot of refactoring.
 var expectedOCIImageIndexSerialization = []byte(`{

@@ -6,8 +6,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/manifest"
+	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/manifest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
