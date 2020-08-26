@@ -23,15 +23,13 @@ require (
 	github.com/gomodule/redigo v1.8.2
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
-	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/mitchellh/osext v0.0.0-20151018003038-5e2d6d41470f // indirect
 	github.com/ncw/swift v1.0.47
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.0.2
 	github.com/sirupsen/logrus v1.8.1
-	github.com/spf13/cobra v0.0.3
-	github.com/spf13/pflag v1.0.3 // indirect
+	github.com/spf13/cobra v1.0.0
 	github.com/yvasiyarov/go-metrics v0.0.0-20140926110328-57bccd1ccd43 // indirect
 	github.com/yvasiyarov/gorelic v0.0.0-20141212073537-a9bba5b9ab50
 	github.com/yvasiyarov/newrelic_platform_go v0.0.0-20140908184405-b21fdbd4370f // indirect
@@ -41,8 +39,7 @@ require (
 	// when updating google.golang.org/cloud, update (or remove) the replace
 	// rule for google.golang.org/grpc accordingly.
 	google.golang.org/cloud v0.0.0-20151119220103-975617b05ea8
-	google.golang.org/grpc v0.0.0-20160317175043-d3ddb4469d5a // indirect
-	gopkg.in/check.v1 v1.0.0-20141024133853-64131543e789
+	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127
 	gopkg.in/yaml.v2 v2.4.0
 )
 

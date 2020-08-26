@@ -129,10 +129,13 @@ github.com/gorilla/handlers
 ## explicit
 github.com/gorilla/mux
 # github.com/inconshreveable/mousetrap v1.0.0
-## explicit
 github.com/inconshreveable/mousetrap
 # github.com/jmespath/go-jmespath v0.4.0
 github.com/jmespath/go-jmespath
+# github.com/kr/pretty v0.1.0
+github.com/kr/pretty
+# github.com/kr/text v0.1.0
+github.com/kr/text
 # github.com/matttproud/golang_protobuf_extensions v1.0.1
 github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/mitchellh/mapstructure v1.1.2
@@ -167,11 +170,10 @@ github.com/prometheus/procfs/internal/fs
 # github.com/sirupsen/logrus v1.8.1
 ## explicit
 github.com/sirupsen/logrus
-# github.com/spf13/cobra v0.0.3
+# github.com/spf13/cobra v1.0.0
 ## explicit
 github.com/spf13/cobra
 # github.com/spf13/pflag v1.0.3
-## explicit
 github.com/spf13/pflag
 # github.com/yvasiyarov/go-metrics v0.0.0-20140926110328-57bccd1ccd43
 ## explicit
@@ -238,8 +240,7 @@ google.golang.org/cloud
 google.golang.org/cloud/internal
 google.golang.org/cloud/internal/opts
 google.golang.org/cloud/storage
-# google.golang.org/grpc v0.0.0-20160317175043-d3ddb4469d5a => google.golang.org/grpc v0.0.0-20160317175043-d3ddb4469d5a
-## explicit
+# google.golang.org/grpc v1.21.0 => google.golang.org/grpc v0.0.0-20160317175043-d3ddb4469d5a
 google.golang.org/grpc
 google.golang.org/grpc/codes
 google.golang.org/grpc/credentials
@@ -249,7 +250,7 @@ google.golang.org/grpc/metadata
 google.golang.org/grpc/naming
 google.golang.org/grpc/peer
 google.golang.org/grpc/transport
-# gopkg.in/check.v1 v1.0.0-20141024133853-64131543e789
+# gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127
 ## explicit
 gopkg.in/check.v1
 # gopkg.in/yaml.v2 v2.4.0
