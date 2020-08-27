@@ -21,7 +21,7 @@ require (
 	github.com/docker/libtrust v0.0.0-20150114040149-fa567046d9b1
 	github.com/garyburd/redigo v0.0.0-20150301180006-535138d7bcd7
 	github.com/gorilla/handlers v0.0.0-20150720190736-60c7bfde3e33
-	github.com/gorilla/mux v1.7.2
+	github.com/gorilla/mux v1.8.0
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/marstr/guid v1.1.0 // indirect
