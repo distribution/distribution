@@ -11,15 +11,13 @@ import (
 	"github.com/opencontainers/go-digest"
 )
 
-// todo(richardscothern): from cache control header or config
-const repositoryTTL = 24 * 7 * time.Hour
-
 type proxyManifestStore struct {
 	ctx             context.Context
 	localManifests  distribution.ManifestService
 	remoteManifests distribution.ManifestService
 	repositoryName  reference.Named
 	scheduler       *scheduler.TTLExpirationScheduler
+	ttl             time.Duration
 	authChallenger  authChallenger
 }
 
@@ -77,7 +75,10 @@ func (pms proxyManifestStore) Get(ctx context.Context, dgst digest.Digest, optio
 			return nil, err
 		}
 
-		pms.scheduler.AddManifest(repoBlob, repositoryTTL)
+		if pms.scheduler != nil {
+			pms.scheduler.AddManifest(repoBlob, pms.ttl)
+		}
+
 		// Ensure the manifest blob is cleaned up
 		//pms.scheduler.AddBlob(blobRef, repositoryTTL)
 

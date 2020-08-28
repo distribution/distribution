@@ -1118,6 +1118,7 @@ is unsupported.
 | `remoteurl`| yes     | The URL for the repository on Docker Hub.             |
 | `username` | no      | The username registered with Docker Hub which has access to the repository. |
 | `password` | no      | The password used to authenticate to Docker Hub using the username specified in `username`. |
+| `ttl`      | no      | Expire proxy cache configured in "storage" after this time. Cache expiration is disabled if not provided.  |
 
 
 To enable pulling private repositories (e.g. `batman/robin`) specify the

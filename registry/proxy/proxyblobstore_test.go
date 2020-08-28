@@ -222,6 +222,7 @@ func populate(t *testing.T, te *testEnv, blobCount, size, numUnique int) {
 	te.inRemote = inRemote
 	te.numUnique = numUnique
 }
+
 func TestProxyStoreGet(t *testing.T) {
 	te := makeTestEnv(t, "foo/bar")
 
@@ -254,7 +255,18 @@ func TestProxyStoreGet(t *testing.T) {
 	if (*remoteStats)["get"] != 1 {
 		t.Errorf("Unexpected remote get count")
 	}
+}
 
+func TestProxyStoreGetWithoutScheduler(t *testing.T) {
+	te := makeTestEnv(t, "foo/bar")
+	te.store.scheduler = nil
+
+	populate(t, te, 1, 10, 1)
+
+	_, err := te.store.Get(te.ctx, te.inRemote[0].Digest)
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestProxyStoreStat(t *testing.T) {

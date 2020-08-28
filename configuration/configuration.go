@@ -636,6 +636,9 @@ type Proxy struct {
 
 	// Password of the hub user
 	Password string `yaml:"password"`
+
+	// Remove cached manifest or blob from storage after this time expires. Removal is disabled if this is 0.
+	TTL time.Duration `yaml:"ttl"`
 }
 
 // Parse parses an input configuration yaml document into a Configuration struct
