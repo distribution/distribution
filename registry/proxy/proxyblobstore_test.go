@@ -251,6 +251,18 @@ func TestProxyStoreGet(t *testing.T) {
 	}
 }
 
+func TestProxyStoreGetWithoutScheduler(t *testing.T) {
+	te := makeTestEnv(t, "foo/bar")
+	te.store.scheduler = nil
+
+	populate(t, te, 1, 10, 1)
+
+	_, err := te.store.Get(te.ctx, te.inRemote[0].Digest)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestProxyStoreStat(t *testing.T) {
 	te := makeTestEnv(t, "foo/bar")
 

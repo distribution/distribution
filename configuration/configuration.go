@@ -655,6 +655,11 @@ type Proxy struct {
 
 	// Password of the hub user
 	Password string `yaml:"password"`
+
+	// TTL is the expiry time of the content and will be cleaned up when it expires
+	// if not set, defaults to 7 * 24 hours
+	// If set to zero, will never expire cache
+	TTL *time.Duration `yaml:"ttl,omitempty"`
 }
 
 // Parse parses an input configuration yaml document into a Configuration struct
