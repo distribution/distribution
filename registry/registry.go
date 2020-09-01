@@ -18,6 +18,7 @@ import (
 	"github.com/bugsnag/bugsnag-go"
 	"github.com/docker/go-metrics"
 	gorhandlers "github.com/gorilla/handlers"
+	"github.com/sirupsen/logrus"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/yvasiyarov/gorelic"
@@ -285,7 +286,7 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 		})
 	case "logstash":
 		log.SetFormatter(&logstash.LogstashFormatter{
-			TimestampFormat: time.RFC3339Nano,
+			Formatter: &logrus.JSONFormatter{TimestampFormat: time.RFC3339Nano},
 		})
 	default:
 		// just let the library use default on empty string.

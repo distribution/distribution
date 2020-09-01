@@ -57,7 +57,7 @@ github.com/aws/aws-sdk-go/service/sts
 github.com/aws/aws-sdk-go/service/sts/stsiface
 # github.com/beorn7/perks v1.0.1
 github.com/beorn7/perks/quantile
-# github.com/bshuster-repo/logrus-logstash-hook v0.4.1
+# github.com/bshuster-repo/logrus-logstash-hook v1.0.0
 github.com/bshuster-repo/logrus-logstash-hook
 # github.com/bugsnag/bugsnag-go v0.0.0-20141110184014-b1d153021fcd
 github.com/bugsnag/bugsnag-go

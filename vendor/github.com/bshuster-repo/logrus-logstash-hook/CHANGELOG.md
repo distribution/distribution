@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0
+
+ * Remove the old API: `NewConnWith`, `WithPrefix` and etc and move to a simple `New` function.
+ * Prefix is no longer supported in this package.
+ * Change the Hook structure to have only two members: `logrus.Formatter` and `io.Writer`.
+
 ## 0.4
 
  * Update the name of the package from `logrus_logstash` to `logrustash`
