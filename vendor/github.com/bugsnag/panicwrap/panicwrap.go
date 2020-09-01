@@ -12,7 +12,6 @@ package panicwrap
 import (
 	"bytes"
 	"errors"
-	"github.com/bugsnag/osext"
 	"io"
 	"os"
 	"os/exec"
@@ -143,7 +142,7 @@ func wrap(c *WrapConfig) (int, error) {
 	}
 
 	// Get the path to our current executable
-	exePath, err := osext.Executable()
+	exePath, err := Executable()
 	if err != nil {
 		return -1, err
 	}
@@ -191,7 +190,7 @@ func wrap(c *WrapConfig) (int, error) {
 	// Listen to signals and capture them forever. We allow the child
 	// process to handle them in some way.
 	sigCh := make(chan os.Signal)
-	signal.Notify(sigCh, os.Interrupt)
+	signal.Notify(sigCh, signalsToIgnore...)
 	go func() {
 		defer signal.Stop(sigCh)
 		for {
@@ -211,7 +210,7 @@ func wrap(c *WrapConfig) (int, error) {
 		}
 
 		exitStatus := 1
-		if status, ok := exitErr.Sys().(syscall.WaitStatus); ok {
+		if status, ok := exitErr.Sys().(syscall.WaitStatus); ok && status.Exited() {
 			exitStatus = status.ExitStatus()
 		}
 
@@ -261,20 +260,24 @@ func trackPanic(r io.Reader, w io.Writer, dur time.Duration, result chan<- strin
 
 	var panicTimer <-chan time.Time
 	panicBuf := new(bytes.Buffer)
-	panicHeader := []byte("panic:")
+	panicHeaders := [][]byte{
+		[]byte("panic:"),
+		[]byte("fatal error:"),
+	}
+	panicType := -1
 
 	tempBuf := make([]byte, 2048)
 	for {
 		var buf []byte
 		var n int
 
-		if panicTimer == nil && panicBuf.Len() > 0 {
+		if panicType >= 0 && panicTimer == nil && panicBuf.Len() > 0 {
 			// We're not tracking a panic but the buffer length is
 			// greater than 0. We need to clear out that buffer, but
 			// look for another panic along the way.
 
 			// First, remove the previous panic header so we don't loop
-			w.Write(panicBuf.Next(len(panicHeader)))
+			w.Write(panicBuf.Next(len(panicHeaders[panicType])))
 
 			// Next, assume that this is our new buffer to inspect
 			n = panicBuf.Len()
@@ -318,22 +321,28 @@ func trackPanic(r io.Reader, w io.Writer, dur time.Duration, result chan<- strin
 			continue
 		}
 
+		// Check if the contents of buf starts with a header
+		panicType = -1
 		flushIdx := n
-		idx := bytes.Index(buf[0:n], panicHeader)
-		if idx >= 0 {
-			flushIdx = idx
+		for i, header := range panicHeaders {
+			idx := bytes.Index(buf[0:n], header)
+			if idx >= 0 {
+				panicType = i
+				flushIdx = idx
+				break
+			}
 		}
 
 		// Flush to stderr what isn't a panic
 		w.Write(buf[0:flushIdx])
 
-		if idx < 0 {
+		if panicType == -1 {
 			// Not a panic so just continue along
 			continue
 		}
 
 		// We have a panic header. Write we assume is a panic os far.
-		panicBuf.Write(buf[idx:n])
+		panicBuf.Write(buf[flushIdx:n])
 		panicTimer = time.After(dur)
 	}
 }

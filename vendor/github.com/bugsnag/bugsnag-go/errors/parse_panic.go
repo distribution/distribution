@@ -5,7 +5,10 @@ import (
 	"strings"
 )
 
-type uncaughtPanic struct{ message string }
+type uncaughtPanic struct {
+	typeName string
+	message  string
+}
 
 func (p uncaughtPanic) Error() string {
 	return p.message
@@ -15,20 +18,27 @@ func (p uncaughtPanic) Error() string {
 // that panicked. This is particularly useful with https://github.com/mitchellh/panicwrap.
 func ParsePanic(text string) (*Error, error) {
 	lines := strings.Split(text, "\n")
+	prefixes := []string{"panic:", "fatal error:"}
 
 	state := "start"
 
 	var message string
+	var typeName string
 	var stack []StackFrame
 
 	for i := 0; i < len(lines); i++ {
 		line := lines[i]
 
 		if state == "start" {
-			if strings.HasPrefix(line, "panic: ") {
-				message = strings.TrimPrefix(line, "panic: ")
-				state = "seek"
-			} else {
+			for _, prefix := range prefixes {
+				if strings.HasPrefix(line, prefix) {
+					message = strings.TrimSpace(strings.TrimPrefix(line, prefix))
+					typeName = prefix[:len(prefix) - 1]
+					state = "seek"
+					break
+				}
+			}
+			if state == "start" {
 				return nil, Errorf("bugsnag.panicParser: Invalid line (no prefix): %s", line)
 			}
 
@@ -68,7 +78,7 @@ func ParsePanic(text string) (*Error, error) {
 	}
 
 	if state == "done" || state == "parsing" {
-		return &Error{Err: uncaughtPanic{message}, frames: stack}, nil
+		return &Error{Err: uncaughtPanic{typeName, message}, frames: stack}, nil
 	}
 	return nil, Errorf("could not parse panic: %v", text)
 }

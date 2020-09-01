@@ -68,14 +68,14 @@ github.com/beorn7/perks/quantile
 # github.com/bshuster-repo/logrus-logstash-hook v1.0.0
 ## explicit
 github.com/bshuster-repo/logrus-logstash-hook
-# github.com/bugsnag/bugsnag-go v0.0.0-20141110184014-b1d153021fcd
+# github.com/bugsnag/bugsnag-go v1.9.0
 ## explicit
 github.com/bugsnag/bugsnag-go
+github.com/bugsnag/bugsnag-go/device
 github.com/bugsnag/bugsnag-go/errors
-# github.com/bugsnag/osext v0.0.0-20130617224835-0dd3f918b21b
-## explicit
-github.com/bugsnag/osext
-# github.com/bugsnag/panicwrap v0.0.0-20151223152923-e2c28503fcd0
+github.com/bugsnag/bugsnag-go/headers
+github.com/bugsnag/bugsnag-go/sessions
+# github.com/bugsnag/panicwrap v1.3.1
 ## explicit
 github.com/bugsnag/panicwrap
 # github.com/denverdino/aliyungo v0.0.0-20190125010748-a747050bb1ba
@@ -100,6 +100,9 @@ github.com/docker/go-metrics
 github.com/docker/libtrust
 # github.com/felixge/httpsnoop v1.0.1
 github.com/felixge/httpsnoop
+# github.com/gofrs/uuid v4.0.0+incompatible
+## explicit
+github.com/gofrs/uuid
 # github.com/golang/protobuf v1.3.2
 github.com/golang/protobuf/proto
 # github.com/gomodule/redigo v1.8.2
@@ -116,6 +119,9 @@ github.com/gorilla/mux
 github.com/inconshreveable/mousetrap
 # github.com/jmespath/go-jmespath v0.3.0
 github.com/jmespath/go-jmespath
+# github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
+## explicit
+github.com/kardianos/osext
 # github.com/kr/pretty v0.1.0
 ## explicit
 # github.com/marstr/guid v1.1.0
@@ -126,8 +132,6 @@ github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/mitchellh/mapstructure v1.1.2
 ## explicit
 github.com/mitchellh/mapstructure
-# github.com/mitchellh/osext v0.0.0-20151018003038-5e2d6d41470f
-## explicit
 # github.com/ncw/swift v1.0.47
 ## explicit
 github.com/ncw/swift
@@ -139,6 +143,8 @@ github.com/opencontainers/go-digest
 ## explicit
 github.com/opencontainers/image-spec/specs-go
 github.com/opencontainers/image-spec/specs-go/v1
+# github.com/pkg/errors v0.9.1
+github.com/pkg/errors
 # github.com/prometheus/client_golang v1.1.0
 github.com/prometheus/client_golang/prometheus
 github.com/prometheus/client_golang/prometheus/internal

@@ -17,7 +17,7 @@ when you call ListenAndServer:
 
 	http.ListenAndServe(":8080", bugsnag.Handler(nil))
 
-If that's not possible, for example because you're using Google App Engine, you can also wrap each
+If that's not possible, you can also wrap each
 HTTP handler manually:
 
 	http.HandleFunc("/" bugsnag.HandlerFunc(func (w http.ResponseWriter, r *http.Request) {
@@ -36,8 +36,8 @@ For detailed integration instructions see https://bugsnag.com/docs/notifiers/go.
 Configuration
 
 The only required configuration is the Bugsnag API key which can be obtained by clicking "Settings"
-on the top of https://bugsnag.com/ after signing up. We also recommend you set the ReleaseStage
-and AppVersion if these make sense for your deployment workflow.
+on the top of https://bugsnag.com/ after signing up. We also recommend you set the ReleaseStage,
+AppType, and AppVersion if these make sense for your deployment workflow.
 
 RawData
 

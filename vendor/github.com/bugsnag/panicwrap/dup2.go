@@ -1,4 +1,4 @@
-// +build darwin dragonfly freebsd linux,!arm64 netbsd openbsd
+// +build !arm64,!windows
 
 package panicwrap
 

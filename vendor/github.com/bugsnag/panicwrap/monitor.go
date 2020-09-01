@@ -3,7 +3,6 @@
 package panicwrap
 
 import (
-	"github.com/bugsnag/osext"
 	"os"
 	"os/exec"
 )
@@ -29,7 +28,7 @@ func monitor(c *WrapConfig) (int, error) {
 		os.Exit(0)
 	}
 
-	exePath, err := osext.Executable()
+	exePath, err := Executable()
 	if err != nil {
 		return -1, err
 	}

@@ -2,7 +2,6 @@ package bugsnag
 
 import (
 	"net/http"
-	"strings"
 )
 
 type (
@@ -30,9 +29,13 @@ func (stack *middlewareStack) Run(event *Event, config *Configuration, next func
 	for i := range stack.before {
 		before := stack.before[len(stack.before)-i-1]
 
+		severity := event.Severity
 		err := stack.runBeforeFilter(before, event, config)
 		if err != nil {
 			return err
+		}
+		if event.Severity != severity {
+			event.handledState.SeverityReason = SeverityReasonCallbackSpecified
 		}
 	}
 
@@ -42,7 +45,7 @@ func (stack *middlewareStack) Run(event *Event, config *Configuration, next func
 func (stack *middlewareStack) runBeforeFilter(f beforeFunc, event *Event, config *Configuration) error {
 	defer func() {
 		if err := recover(); err != nil {
-			config.log("bugsnag/middleware: unexpected panic: %v", err)
+			config.logf("bugsnag/middleware: unexpected panic: %v", err)
 		}
 	}()
 
@@ -60,36 +63,11 @@ func catchMiddlewarePanic(event *Event, config *Configuration, next func() error
 func httpRequestMiddleware(event *Event, config *Configuration) error {
 	for _, datum := range event.RawData {
 		if request, ok := datum.(*http.Request); ok {
-			proto := "http://"
-			if request.TLS != nil {
-				proto = "https://"
-			}
-
 			event.MetaData.Update(MetaData{
-				"Request": {
-					"RemoteAddr": request.RemoteAddr,
-					"Method":     request.Method,
-					"Url":        proto + request.Host + request.RequestURI,
-					"Params":     request.URL.Query(),
+				"request": {
+					"params": request.URL.Query(),
 				},
 			})
-
-			// Add headers as a separate tab.
-			event.MetaData.AddStruct("Headers", request.Header)
-
-			// Default context to Path
-			if event.Context == "" {
-				event.Context = request.URL.Path
-			}
-
-			// Default user.id to IP so that users-affected works.
-			if event.User == nil {
-				ip := request.RemoteAddr
-				if idx := strings.LastIndex(ip, ":"); idx != -1 {
-					ip = ip[:idx]
-				}
-				event.User = &User{Id: ip}
-			}
 		}
 	}
 	return nil
