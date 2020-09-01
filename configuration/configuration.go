@@ -610,8 +610,16 @@ type BugsnagReporting struct {
 	// ReleaseStage tracks where the registry is deployed.
 	// Examples: production, staging, development
 	ReleaseStage string `yaml:"releasestage,omitempty"`
-	// Endpoint is used for specifying an enterprise Bugsnag endpoint.
-	Endpoint string `yaml:"endpoint,omitempty"`
+	// Endpoints is used for specifying an enterprise / on-premise Bugsnag endpoint.
+	Endpoints BugsnagEndpointsReporting `yaml:"endpoints,omitempty"`
+}
+
+// BugsnagEndpointsReporting configures the Event Server and Session Server endpoints.
+type BugsnagEndpointsReporting struct {
+	// Notify is hostname/port for the Bugsnag Event Server endpoint.
+	Notify string `yaml:"notify,omitempty"`
+	// Sessions is hostname/port for the Bugsnag Sessions Server endpoint.
+	Sessions string `yaml:"sessions,omitempty"`
 }
 
 // NewRelicReporting configures error reporting for NewRelic (newrelic.com)

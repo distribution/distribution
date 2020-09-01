@@ -208,7 +208,9 @@ reporting:
   bugsnag:
     apikey: bugsnagapikey
     releasestage: bugsnagreleasestage
-    endpoint: bugsnagendpoint
+    endpoints:
+      notify: https://notify-bugsnag.internal.example.com
+      sessions: https://sessions-bugsnag.internal.example.com
   newrelic:
     licensekey: newreliclicensekey
     name: newrelicname
@@ -749,7 +751,9 @@ reporting:
   bugsnag:
     apikey: bugsnagapikey
     releasestage: bugsnagreleasestage
-    endpoint: bugsnagendpoint
+    endpoints:
+      notify: https://notify-bugsnag.internal.example.com
+      sessions: https://sessions-bugsnag.internal.example.com
   newrelic:
     licensekey: newreliclicensekey
     name: newrelicname
@@ -766,11 +770,19 @@ A valid configuration may contain both.
 
 ### `bugsnag`
 
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `apikey`  | yes      | The API Key provided by Bugsnag.                      |
+| Parameter   | Required | Description                                           |
+|-------------|----------|-------------------------------------------------------|
+| `apikey`    | yes      | The API Key provided by Bugsnag.                      |
 | `releasestage` | no  | Tracks where the registry is deployed, using a string like `production`, `staging`, or `development`.|
-| `endpoint`| no       | The enterprise Bugsnag endpoint.                      |
+| `endpoints` | no       | The enterprise / on-premise Bugsnag endpoint.         |
+
+Value of `endpoints` must include:
+
+| Parameter  | Required | Description                                                 |
+|------------|----------|-------------------------------------------------------------|
+| `notify`   | yes      | The hostname/port for the Bugsnag Event Server endpoint.    |
+| `sessions` | yes      | The hostname/port for the Bugsnag Sessions Server endpoint. |
+
 
 ### `newrelic`
 
@@ -778,7 +790,7 @@ A valid configuration may contain both.
 |-----------|----------|-------------------------------------------------------|
 | `licensekey` | yes   | License key provided by New Relic.                    |
 | `name`    | no       | New Relic application name.                           |
-|  `verbose`| no       | Set to `true` to enable New Relic debugging output on `stdout`. |
+| `verbose` | no       | Set to `true` to enable New Relic debugging output on `stdout`. |
 
 ## `http`
 

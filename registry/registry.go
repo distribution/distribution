@@ -413,8 +413,11 @@ func configureBugsnag(config *configuration.Configuration) {
 	if config.Reporting.Bugsnag.ReleaseStage != "" {
 		bugsnagConfig.ReleaseStage = config.Reporting.Bugsnag.ReleaseStage
 	}
-	if config.Reporting.Bugsnag.Endpoint != "" {
-		bugsnagConfig.Endpoint = config.Reporting.Bugsnag.Endpoint
+	if config.Reporting.Bugsnag.Endpoints.Notify != "" && config.Reporting.Bugsnag.Endpoints.Sessions != "" {
+		bugsnagConfig.Endpoints = bugsnag.Endpoints{
+			Notify:   config.Reporting.Bugsnag.Endpoints.Notify,
+			Sessions: config.Reporting.Bugsnag.Endpoints.Sessions,
+		}
 	}
 	bugsnag.Configure(bugsnagConfig)
 
