@@ -403,25 +403,29 @@ func New(params DriverParameters) (*Driver, error) {
 		return nil, fmt.Errorf("on Amazon S3 this storage driver can only be used with v4 authentication")
 	}
 
-	awsConfig := defaults.Config()
-	providers := []credentials.Provider{
-		&credentials.StaticProvider{
-			Value: credentials.Value{
-				AccessKeyID:     params.AccessKey,
-				SecretAccessKey: params.SecretKey,
-				SessionToken:    params.SessionToken,
+	awsConfig := &aws.Config{}
+
+	if params.AccessKey != "" || params.SecretKey != "" || params.SessionToken != "" {
+		providers := []credentials.Provider{
+			&credentials.StaticProvider{
+				Value: credentials.Value{
+					AccessKeyID:     params.AccessKey,
+					SecretAccessKey: params.SecretKey,
+					SessionToken:    params.SessionToken,
+				},
 			},
-		},
+		}
+
+		providers = append(providers, defaults.CredProviders(awsConfig, defaults.Handlers())...)
+		creds := credentials.NewChainCredentials(providers)
+		awsConfig.WithCredentials(creds)
 	}
-	providers = append(providers, defaults.CredProviders(awsConfig, defaults.Handlers())...)
-	creds := credentials.NewChainCredentials(providers)
 
 	if params.RegionEndpoint != "" {
 		awsConfig.WithS3ForcePathStyle(true)
 		awsConfig.WithEndpoint(params.RegionEndpoint)
 	}
 
-	awsConfig.WithCredentials(creds)
 	awsConfig.WithRegion(params.Region)
 	awsConfig.WithDisableSSL(!params.Secure)
 
