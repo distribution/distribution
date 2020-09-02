@@ -103,12 +103,7 @@ func (v Vacuum) RemoveLayerLink(manifestName string, dgst digest.Digest) error {
 		}
 	}
 
-	err = v.driver.Delete(v.ctx, layerLinkPath)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return v.driver.Delete(v.ctx, layerLinkPath)
 }
 
 // RemoveRepository removes a repository directory from the
