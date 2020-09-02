@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/docker/distribution"
+	"github.com/docker/distribution/manifest/schema2"
 	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/driver"
 	"github.com/opencontainers/go-digest"
