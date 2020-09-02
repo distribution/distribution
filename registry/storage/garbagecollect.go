@@ -143,7 +143,7 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 			}
 			for _, layerDgst := range obj.Layers {
 				if _, ok := markSet[layerDgst]; !ok {
-					err := vacuum.RemoveLayerLink(obj.Name, string(layerDgst))
+					err := vacuum.RemoveLayerLink(obj.Name, layerDgst)
 					if err != nil {
 						return fmt.Errorf("failed to delete layer link %s for manifest %s: %v", layerDgst, obj.Name, err)
 					}
