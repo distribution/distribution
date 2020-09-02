@@ -85,13 +85,8 @@ func (v Vacuum) RemoveManifest(name string, dgst digest.Digest, tags []string) e
 }
 
 // RemoveLayerLink removes a layer link from the filesystem
-func (v Vacuum) RemoveLayerLink(manifestName, dgst string) error {
-	d, err := digest.Parse(dgst)
-	if err != nil {
-		return err
-	}
-
-	layerLinkPath, err := pathFor(layerLinkPathSpec{name: manifestName, digest: d})
+func (v Vacuum) RemoveLayerLink(manifestName string, dgst digest.Digest) error {
+	layerLinkPath, err := pathFor(layerLinkPathSpec{name: manifestName, digest: dgst})
 	if err != nil {
 		return err
 	}
