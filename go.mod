@@ -4,7 +4,7 @@ go 1.12
 
 require (
 	github.com/Azure/azure-sdk-for-go v16.2.1+incompatible
-	github.com/Azure/go-autorest v10.8.1+incompatible // indirect
+	github.com/Azure/go-autorest/autorest v0.9.4 // indirect
 	github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d
 	github.com/aws/aws-sdk-go v1.15.11
 	github.com/bitly/go-simplejson v0.5.0 // indirect
@@ -14,7 +14,6 @@ require (
 	github.com/bugsnag/osext v0.0.0-20130617224835-0dd3f918b21b // indirect
 	github.com/bugsnag/panicwrap v0.0.0-20151223152923-e2c28503fcd0 // indirect
 	github.com/denverdino/aliyungo v0.0.0-20190125010748-a747050bb1ba
-	github.com/dgrijalva/jwt-go v0.0.0-20170104182250-a601269ab70c // indirect
 	github.com/dnaeon/go-vcr v1.0.1 // indirect
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c
 	github.com/docker/go-metrics v0.0.1
