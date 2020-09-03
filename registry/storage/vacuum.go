@@ -84,6 +84,28 @@ func (v Vacuum) RemoveManifest(name string, dgst digest.Digest, tags []string) e
 	return v.driver.Delete(v.ctx, manifestPath)
 }
 
+// RemoveLayerLink removes a layer link from the filesystem
+func (v Vacuum) RemoveLayerLink(manifestName string, dgst digest.Digest) error {
+	layerLinkPath, err := pathFor(layerLinkPathSpec{name: manifestName, digest: dgst})
+	if err != nil {
+		return err
+	}
+
+	dcontext.GetLogger(v.ctx).Infof("Deleting layer link path : %s", layerLinkPath)
+
+	_, err = v.driver.Stat(v.ctx, layerLinkPath)
+	if err != nil {
+		switch err := err.(type) {
+		case driver.PathNotFoundError:
+			return nil
+		default:
+			return err
+		}
+	}
+
+	return v.driver.Delete(v.ctx, layerLinkPath)
+}
+
 // RemoveRepository removes a repository directory from the
 // filesystem
 func (v Vacuum) RemoveRepository(repoName string) error {
