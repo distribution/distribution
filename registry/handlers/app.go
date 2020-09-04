@@ -75,7 +75,7 @@ type App struct {
 		source notifications.SourceRecord
 	}
 
-	redis *redis.Pool
+	layerInfoCache *redis.Pool
 
 	// trustKey is a deprecated key used to sign manifests converted to
 	// schema1 for backward compatibility. It should not be used for any
@@ -158,7 +158,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 
 	app.configureSecret(config)
 	app.configureEvents(config)
-	app.configureRedis(config)
+	app.configureLayerInfoCache(config)
 	app.configureLogHook(config)
 
 	options := registrymiddleware.GetRegistryOptions()
@@ -268,10 +268,10 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 
 		switch v {
 		case "redis":
-			if app.redis == nil {
+			if app.layerInfoCache == nil {
 				panic("redis configuration required to use for layerinfo cache")
 			}
-			cacheProvider := rediscache.NewRedisBlobDescriptorCacheProvider(app.redis)
+			cacheProvider := rediscache.NewRedisBlobDescriptorCacheProvider(app.layerInfoCache)
 			localOptions := append(options, storage.BlobDescriptorCacheProvider(cacheProvider))
 			app.registry, err = storage.NewRegistry(app, app.driver, localOptions...)
 			if err != nil {
@@ -493,12 +493,7 @@ func (app *App) configureEvents(configuration *configuration.Configuration) {
 
 type redisStartAtKey struct{}
 
-func (app *App) configureRedis(configuration *configuration.Configuration) {
-	if configuration.Redis.Addr == "" {
-		dcontext.GetLogger(app).Infof("redis not configured")
-		return
-	}
-
+func (app *App) configureRedis(config *configuration.Redis) *redis.Pool {
 	pool := &redis.Pool{
 		Dial: func() (redis.Conn, error) {
 			// TODO(stevvooe): Yet another use case for contextual timing.
@@ -510,25 +505,25 @@ func (app *App) configureRedis(configuration *configuration.Configuration) {
 				if err != nil {
 					logger.Errorf("redis: error connecting: %v", err)
 				} else {
-					logger.Infof("redis: connect %v", configuration.Redis.Addr)
+					logger.Infof("redis: connect %v", config.Addr)
 				}
 			}
 
 			conn, err := redis.DialTimeout("tcp",
-				configuration.Redis.Addr,
-				configuration.Redis.DialTimeout,
-				configuration.Redis.ReadTimeout,
-				configuration.Redis.WriteTimeout)
+				config.Addr,
+				config.DialTimeout,
+				config.ReadTimeout,
+				config.WriteTimeout)
 			if err != nil {
 				dcontext.GetLogger(app).Errorf("error connecting to redis instance %s: %v",
-					configuration.Redis.Addr, err)
+					config.Addr, err)
 				done(err)
 				return nil, err
 			}
 
 			// authorize the connection
-			if configuration.Redis.Password != "" {
-				if _, err = conn.Do("AUTH", configuration.Redis.Password); err != nil {
+			if config.Password != "" {
+				if _, err = conn.Do("AUTH", config.Password); err != nil {
 					defer conn.Close()
 					done(err)
 					return nil, err
@@ -536,20 +531,18 @@ func (app *App) configureRedis(configuration *configuration.Configuration) {
 			}
 
 			// select the database to use
-			if configuration.Redis.DB != 0 {
-				if _, err = conn.Do("SELECT", configuration.Redis.DB); err != nil {
-					defer conn.Close()
-					done(err)
-					return nil, err
-				}
+			if _, err = conn.Do("SELECT", config.DB); err != nil {
+				defer conn.Close()
+				done(err)
+				return nil, err
 			}
 
 			done(nil)
 			return conn, nil
 		},
-		MaxIdle:     configuration.Redis.Pool.MaxIdle,
-		MaxActive:   configuration.Redis.Pool.MaxActive,
-		IdleTimeout: configuration.Redis.Pool.IdleTimeout,
+		MaxIdle:     config.Pool.MaxIdle,
+		MaxActive:   config.Pool.MaxActive,
+		IdleTimeout: config.Pool.IdleTimeout,
 		TestOnBorrow: func(c redis.Conn, t time.Time) error {
 			// TODO(stevvooe): We can probably do something more interesting
 			// here with the health package.
@@ -559,7 +552,16 @@ func (app *App) configureRedis(configuration *configuration.Configuration) {
 		Wait: false, // if a connection is not available, proceed without cache.
 	}
 
-	app.redis = pool
+	return pool
+}
+
+func (app *App) configureLayerInfoCache(config *configuration.Configuration) {
+	if config.RedisDBs.LayerInfoCache.Addr == "" {
+		dcontext.GetLogger(app).Infof("redis not configured")
+		return
+	}
+
+	app.layerInfoCache = app.configureRedis(&config.RedisDBs.LayerInfoCache)
 
 	// setup expvar
 	registry := expvar.Get("registry")
@@ -567,10 +569,10 @@ func (app *App) configureRedis(configuration *configuration.Configuration) {
 		registry = expvar.NewMap("registry")
 	}
 
-	registry.(*expvar.Map).Set("redis", expvar.Func(func() interface{} {
+	registry.(*expvar.Map).Set("layerInfoCache", expvar.Func(func() interface{} {
 		return map[string]interface{}{
-			"Config": configuration.Redis,
-			"Active": app.redis.ActiveCount(),
+			"Config": config,
+			"Active": app.layerInfoCache.ActiveCount(),
 		}
 	}))
 }
