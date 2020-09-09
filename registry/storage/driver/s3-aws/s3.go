@@ -990,6 +990,10 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 		}
 
 		for _, file := range objects.Contents {
+			// empty prefixes are listed as objects inside its own prefix.
+			if strings.HasSuffix(*file.Key, "/") {
+				continue
+			}
 			walkInfos = append(walkInfos, walkInfoContainer{
 				FileInfoFields: storagedriver.FileInfoFields{
 					IsDir:   false,
