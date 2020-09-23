@@ -135,7 +135,8 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 
 	tr := transport.NewTransport(http.DefaultTransport,
 		auth.NewAuthorizer(c.challengeManager(),
-			auth.NewTokenHandlerWithOptions(tkopts)))
+			auth.NewTokenHandlerWithOptions(tkopts),
+			auth.NewBasicHandler(c.credentialStore())))
 
 	localRepo, err := pr.embedded.Repository(ctx, name)
 	if err != nil {
