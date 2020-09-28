@@ -8,6 +8,7 @@ jobs:
   include:
    - arch: amd64
    - arch: s390x
+   - arch: ppc64le
 
 language: go
 
