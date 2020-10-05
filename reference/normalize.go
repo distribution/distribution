@@ -1,7 +1,6 @@
 package reference
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -42,7 +41,7 @@ func ParseNormalizedNamed(s string) (Named, error) {
 		remoteName = remainder
 	}
 	if strings.ToLower(remoteName) != remoteName {
-		return nil, errors.New("invalid reference format: repository name must be lowercase")
+		return nil, fmt.Errorf("invalid reference format: repository name (%s) must be lowercase", remoteName)
 	}
 
 	ref, err := Parse(domain + "/" + remainder)
