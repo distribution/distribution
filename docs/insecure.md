@@ -97,11 +97,11 @@ This is more secure than the insecure registry solution.
 
 
     - **Docker Desktop for Mac**: Follow the instructions on
-      [Adding custom CA certificates](../docker-for-mac/faqs.md#how-do-i-add-custom-ca-certificates){: target="_blank" class="_"}.
+      [Adding custom CA certificates](../docker-for-mac/faqs.md#how-do-i-add-custom-ca-certificates){: target="_blank" rel="noopener" class="_"}.
       Restart Docker.
 
     - **Docker Desktop for Windows**: Follow the instructions on
-      [Adding custom CA certificates](../docker-for-windows/faqs.md#how-do-i-add-custom-ca-certificates){: target="_blank" class="_"}.
+      [Adding custom CA certificates](../docker-for-windows/faqs.md#how-do-i-add-custom-ca-certificates){: target="_blank" rel="noopener" class="_"}.
       Restart Docker.
 
 
