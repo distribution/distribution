@@ -87,7 +87,11 @@ func (ms *schema2ManifestHandler) verifyManifest(ctx context.Context, mnfst sche
 	blobsService := ms.repository.Blobs(ctx)
 
 	for _, descriptor := range mnfst.References() {
-		var err error
+		err := descriptor.Digest.Validate()
+		if err != nil {
+			errs = append(errs, err, distribution.ErrManifestBlobUnknown{Digest: descriptor.Digest})
+			continue
+		}
 
 		switch descriptor.MediaType {
 		case schema2.MediaTypeForeignLayer:

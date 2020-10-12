@@ -9,6 +9,7 @@ import (
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/manifest/schema2"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
+	"github.com/opencontainers/go-digest"
 )
 
 func TestVerifyManifestForeignLayer(t *testing.T) {
@@ -34,6 +35,10 @@ func TestVerifyManifestForeignLayer(t *testing.T) {
 		Digest:    "sha256:463435349086340864309863409683460843608348608934092322395278926a",
 		Size:      6323,
 		MediaType: schema2.MediaTypeForeignLayer,
+	}
+
+	emptyLayer := distribution.Descriptor{
+		Digest: "",
 	}
 
 	template := schema2.Manifest{
@@ -106,6 +111,16 @@ func TestVerifyManifestForeignLayer(t *testing.T) {
 			foreignLayer,
 			[]string{"https://foo/bar"},
 			nil,
+		},
+		{
+			emptyLayer,
+			[]string{"https://foo/empty"},
+			digest.ErrDigestInvalidFormat,
+		},
+		{
+			emptyLayer,
+			[]string{},
+			digest.ErrDigestInvalidFormat,
 		},
 	}
 

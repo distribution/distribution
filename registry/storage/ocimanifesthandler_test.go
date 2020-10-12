@@ -9,6 +9,7 @@ import (
 	"github.com/docker/distribution/manifest"
 	"github.com/docker/distribution/manifest/ocischema"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
+	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -35,6 +36,15 @@ func TestVerifyOCIManifestNonDistributableLayer(t *testing.T) {
 		Digest:    "sha256:463435349086340864309863409683460843608348608934092322395278926a",
 		Size:      6323,
 		MediaType: v1.MediaTypeImageLayerNonDistributableGzip,
+	}
+
+	emptyLayer := distribution.Descriptor{
+		Digest: "",
+	}
+
+	emptyGzipLayer := distribution.Descriptor{
+		Digest:    "",
+		MediaType: v1.MediaTypeImageLayerGzip,
 	}
 
 	template := ocischema.Manifest{
@@ -106,6 +116,26 @@ func TestVerifyOCIManifestNonDistributableLayer(t *testing.T) {
 			nonDistributableLayer,
 			[]string{"https://foo/bar"},
 			nil,
+		},
+		{
+			emptyLayer,
+			[]string{"https://foo/empty"},
+			digest.ErrDigestInvalidFormat,
+		},
+		{
+			emptyLayer,
+			[]string{},
+			digest.ErrDigestInvalidFormat,
+		},
+		{
+			emptyGzipLayer,
+			[]string{"https://foo/empty"},
+			digest.ErrDigestInvalidFormat,
+		},
+		{
+			emptyGzipLayer,
+			[]string{},
+			digest.ErrDigestInvalidFormat,
 		},
 	}
 

@@ -81,7 +81,11 @@ func (ms *ocischemaManifestHandler) verifyManifest(ctx context.Context, mnfst oc
 	blobsService := ms.repository.Blobs(ctx)
 
 	for _, descriptor := range mnfst.References() {
-		var err error
+		err := descriptor.Digest.Validate()
+		if err != nil {
+			errs = append(errs, err, distribution.ErrManifestBlobUnknown{Digest: descriptor.Digest})
+			continue
+		}
 
 		switch descriptor.MediaType {
 		case v1.MediaTypeImageLayer, v1.MediaTypeImageLayerGzip, v1.MediaTypeImageLayerNonDistributable, v1.MediaTypeImageLayerNonDistributableGzip:
