@@ -6,7 +6,7 @@ title: Microsoft Azure storage driver
 
 {% include registry.md %}
 
-An implementation of the `storagedriver.StorageDriver` interface which uses [Microsoft Azure Blob Storage](http://azure.microsoft.com/en-us/services/storage/) for object storage.
+An implementation of the `storagedriver.StorageDriver` interface which uses [Microsoft Azure Blob Storage](https://azure.microsoft.com/en-us/services/storage/) for object storage.
 
 ## Parameters
 
@@ -21,6 +21,6 @@ An implementation of the `storagedriver.StorageDriver` interface which uses [Mic
 ## Related information
 
 * To get information about
-[azure-blob-storage](http://azure.microsoft.com/en-us/services/storage/), visit
+[azure-blob-storage](https://azure.microsoft.com/en-us/services/storage/), visit
 the Microsoft website.
-* You can use Microsoft's [Blob Service REST API](https://msdn.microsoft.com/en-us/library/azure/dd135733.aspx) to [create a storage container](https://msdn.microsoft.com/en-us/library/azure/dd179468.aspx).
+* You can use Microsoft's [Blob Service REST API](https://docs.microsoft.com/en-us/rest/api/storageservices/Blob-Service-REST-API) to [create a storage container](https://docs.microsoft.com/en-us/rest/api/storageservices/Create-Container).
