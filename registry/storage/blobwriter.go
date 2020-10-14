@@ -66,7 +66,19 @@ func (bw *blobWriter) Commit(ctx context.Context, desc distribution.Descriptor) 
 	bw.Close()
 	desc.Size = bw.Size()
 
-	canonical, err := bw.validateBlob(ctx, desc)
+	attempt := 30
+	attemptRelay := 1000 // relay 500ms before next attempt
+	var canonical distribution.Descriptor
+	var err error
+	for i := 0; i < attempt; i++ {
+		canonical, err = bw.validateBlob(ctx, desc)
+		if err != nil {
+			time.Sleep(time.Duration(attemptRelay))
+			continue
+		} else {
+			break
+		}
+	}
 	if err != nil {
 		return distribution.Descriptor{}, err
 	}
