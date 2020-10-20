@@ -14,8 +14,6 @@ This is useful if you intend to run a registry server natively on macOS.
 
 You can start a VM on macOS, and deploy your registry normally as a container using Docker inside that VM.
 
-The simplest road to get there is traditionally to use the [docker Toolbox](https://www.docker.com/toolbox), or [docker-machine](../../machine/index.md), which usually relies on the [boot2docker](http://boot2docker.io/) ISO inside a VirtualBox VM.
-
 ### Solution
 
 Using the method described here, you install and compile your own from the git repository and run it as an macOS agent.
