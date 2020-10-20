@@ -60,27 +60,29 @@ var readAfterWriteWait = 200 * time.Millisecond
 
 // Parameters A struct that encapsulates all of the driver parameters after all values have been set
 type Parameters struct {
-	Username            string
-	Password            string
-	AuthURL             string
-	Tenant              string
-	TenantID            string
-	Domain              string
-	DomainID            string
-	TenantDomain        string
-	TenantDomainID      string
-	TrustID             string
-	Region              string
-	AuthVersion         int
-	Container           string
-	Prefix              string
-	EndpointType        string
-	InsecureSkipVerify  bool
-	ChunkSize           int
-	SecretKey           string
-	AccessKey           string
-	TempURLContainerKey bool
-	TempURLMethods      []string
+	Username                    string
+	Password                    string
+	AuthURL                     string
+	Tenant                      string
+	TenantID                    string
+	Domain                      string
+	DomainID                    string
+	TenantDomain                string
+	TenantDomainID              string
+	TrustID                     string
+	Region                      string
+	AuthVersion                 int
+	Container                   string
+	Prefix                      string
+	EndpointType                string
+	InsecureSkipVerify          bool
+	ChunkSize                   int
+	SecretKey                   string
+	AccessKey                   string
+	TempURLContainerKey         bool
+	TempURLMethods              []string
+	ApplicationCredentialID     string
+	ApplicationCredentialSecret string
 }
 
 // swiftInfo maps the JSON structure returned by Swift /info endpoint
@@ -132,8 +134,7 @@ type Driver struct {
 
 // FromParameters constructs a new Driver with a given parameters map
 // Required parameters:
-// - username
-// - password
+// - (username and password) or (application_credential_id and application_credential_secret)
 // - authurl
 // - container
 func FromParameters(parameters map[string]interface{}) (*Driver, error) {
@@ -159,12 +160,8 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		return nil, err
 	}
 
-	if params.Username == "" {
-		return nil, fmt.Errorf("no username parameter provided")
-	}
-
-	if params.Password == "" {
-		return nil, fmt.Errorf("no password parameter provided")
+	if (params.Username == "" || params.Password == "") && (params.ApplicationCredentialID == "" || params.ApplicationCredentialSecret == "") {
+		return nil, fmt.Errorf("no valid authentication parameters provided")
 	}
 
 	if params.AuthURL == "" {
@@ -191,23 +188,25 @@ func New(params Parameters) (*Driver, error) {
 	}
 
 	ct := &swift.Connection{
-		UserName:       params.Username,
-		ApiKey:         params.Password,
-		AuthUrl:        params.AuthURL,
-		Region:         params.Region,
-		AuthVersion:    params.AuthVersion,
-		UserAgent:      "distribution/" + version.Version,
-		Tenant:         params.Tenant,
-		TenantId:       params.TenantID,
-		Domain:         params.Domain,
-		DomainId:       params.DomainID,
-		TenantDomain:   params.TenantDomain,
-		TenantDomainId: params.TenantDomainID,
-		TrustId:        params.TrustID,
-		EndpointType:   swift.EndpointType(params.EndpointType),
-		Transport:      transport,
-		ConnectTimeout: 60 * time.Second,
-		Timeout:        15 * 60 * time.Second,
+		UserName:                    params.Username,
+		ApiKey:                      params.Password,
+		AuthUrl:                     params.AuthURL,
+		Region:                      params.Region,
+		AuthVersion:                 params.AuthVersion,
+		UserAgent:                   "distribution/" + version.Version,
+		Tenant:                      params.Tenant,
+		TenantId:                    params.TenantID,
+		Domain:                      params.Domain,
+		DomainId:                    params.DomainID,
+		TenantDomain:                params.TenantDomain,
+		TenantDomainId:              params.TenantDomainID,
+		TrustId:                     params.TrustID,
+		EndpointType:                swift.EndpointType(params.EndpointType),
+		Transport:                   transport,
+		ConnectTimeout:              60 * time.Second,
+		Timeout:                     15 * 60 * time.Second,
+		ApplicationCredentialId:     params.ApplicationCredentialID,
+		ApplicationCredentialSecret: params.ApplicationCredentialSecret,
 	}
 	err := ct.Authenticate()
 	if err != nil {

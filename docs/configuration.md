@@ -131,6 +131,8 @@ storage:
   swift:
     username: username
     password: password
+    applicationcredentialid: applicationcredentialid
+    applicationcredentialsecret: applicationcredentialsecret
     authurl: https://storage.myprovider.com/auth/v1.0 or https://storage.myprovider.com/v2.0 or https://storage.myprovider.com/v3/auth
     tenant: tenantname
     tenantid: tenantid

@@ -24,25 +24,27 @@ var swiftDriverConstructor func(prefix string) (*Driver, error)
 
 func init() {
 	var (
-		username           string
-		password           string
-		authURL            string
-		tenant             string
-		tenantID           string
-		domain             string
-		domainID           string
-		tenantDomain       string
-		tenantDomainID     string
-		trustID            string
-		container          string
-		region             string
-		AuthVersion        int
-		endpointType       string
-		insecureSkipVerify bool
-		secretKey          string
-		accessKey          string
-		containerKey       bool
-		tempURLMethods     []string
+		username                    string
+		password                    string
+		authURL                     string
+		tenant                      string
+		tenantID                    string
+		domain                      string
+		domainID                    string
+		tenantDomain                string
+		tenantDomainID              string
+		trustID                     string
+		container                   string
+		region                      string
+		AuthVersion                 int
+		endpointType                string
+		insecureSkipVerify          bool
+		secretKey                   string
+		accessKey                   string
+		containerKey                bool
+		tempURLMethods              []string
+		applicationCredentialID     string
+		applicationCredentialSecret string
 
 		swiftServer *swifttest.SwiftServer
 		err         error
@@ -66,8 +68,11 @@ func init() {
 	accessKey = os.Getenv("SWIFT_ACCESS_KEY")
 	containerKey, _ = strconv.ParseBool(os.Getenv("SWIFT_TEMPURL_CONTAINERKEY"))
 	tempURLMethods = strings.Split(os.Getenv("SWIFT_TEMPURL_METHODS"), ",")
+	applicationCredentialID = os.Getenv("SWIFT_APPLICATION_CREDENTIALS_ID")
+	applicationCredentialSecret = os.Getenv("SWIFT_APPLICATION_CREDENTIALS_SECRET")
 
-	if username == "" || password == "" || authURL == "" || container == "" {
+	if (username == "" || password == "") && (applicationCredentialID == "" || applicationCredentialSecret == "") ||
+		authURL == "" || container == "" {
 		if swiftServer, err = swifttest.NewSwiftServer("localhost"); err != nil {
 			panic(err)
 		}
@@ -106,6 +111,8 @@ func init() {
 			accessKey,
 			containerKey,
 			tempURLMethods,
+			applicationCredentialID,
+			applicationCredentialSecret,
 		}
 
 		return New(parameters)
