@@ -1291,15 +1291,17 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 
 		var count int64
 		// KeyCount was introduced with version 2 of the GET Bucket operation in S3.
-		// Some S3 implementations don't support V2 now, so we fall back to manual
-		// calculation of the key count if required
-		if objects.KeyCount != nil {
-			count = *objects.KeyCount
-			*objectCount += *objects.KeyCount
-		} else {
-			count = int64(len(objects.Contents) + len(objects.CommonPrefixes))
-			*objectCount += count
-		}
+		// Some s3 implementations (looking at you ceph/rgw) have a buggy
+		// implementation so we intionally avoid ever using it, preferring instead
+		// to calculate the count from the Contents and CommonPrefixes fields of
+		// the s3.ListObjectsV2Output. we retain the commented out KeyCount code
+		// and this comment so as not to forget this problem moving forward.
+		//
+		// count = *objects.KeyCount
+		// *objectCount += *objects.KeyCount
+
+		count = int64(len(objects.Contents) + len(objects.CommonPrefixes))
+		*objectCount += count
 
 		walkInfos = make([]storagedriver.FileInfoInternal, 0, count)
 
