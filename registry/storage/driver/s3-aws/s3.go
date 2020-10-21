@@ -695,7 +695,19 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 	if err := d.copy(ctx, sourcePath, destPath); err != nil {
 		return err
 	}
-	return d.Delete(ctx, sourcePath)
+	attempt := 30
+	attemptRelay := 1000 // relay 500ms before next attempt
+	var err error
+	for i := 0; i < attempt; i++ {
+		err = d.Delete(ctx, sourcePath)
+		if err != nil {
+			time.Sleep(time.Duration(attemptRelay))
+			continue
+		} else {
+			break
+		}
+	}
+	return err
 }
 
 // copy copies an object stored at sourcePath to destPath.
