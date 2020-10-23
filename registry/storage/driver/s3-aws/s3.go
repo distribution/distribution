@@ -1544,7 +1544,7 @@ func (w *writer) Write(p []byte) (int, error) {
 				Key:      aws.String(w.key),
 				UploadId: aws.String(w.uploadID),
 			})
-			return 0, err
+			return 0, parseError(w.key, err)
 		}
 
 		resp, err := w.driver.S3.CreateMultipartUpload(&s3.CreateMultipartUploadInput{
@@ -1556,7 +1556,7 @@ func (w *writer) Write(p []byte) (int, error) {
 			StorageClass:         w.driver.getStorageClass(),
 		})
 		if err != nil {
-			return 0, err
+			return 0, parseError(w.key, err)
 		}
 		w.uploadID = *resp.UploadId
 
@@ -1568,7 +1568,7 @@ func (w *writer) Write(p []byte) (int, error) {
 				Key:    aws.String(w.key),
 			})
 			if err != nil {
-				return 0, err
+				return 0, parseError(w.key, err)
 			}
 			defer resp.Body.Close()
 			w.parts = nil
@@ -1586,7 +1586,7 @@ func (w *writer) Write(p []byte) (int, error) {
 				UploadId:   resp.UploadId,
 			})
 			if err != nil {
-				return 0, err
+				return 0, parseError(w.key, err)
 			}
 			w.parts = []*s3.Part{
 				{
@@ -1659,7 +1659,7 @@ func (w *writer) Cancel() error {
 		Key:      aws.String(w.key),
 		UploadId: aws.String(w.uploadID),
 	})
-	return err
+	return parseError(w.key, err)
 }
 
 func (w *writer) Commit() error {
@@ -1700,7 +1700,7 @@ func (w *writer) Commit() error {
 			Key:      aws.String(w.key),
 			UploadId: aws.String(w.uploadID),
 		})
-		return err
+		return parseError(w.key, err)
 	}
 	return nil
 }
@@ -1728,7 +1728,7 @@ func (w *writer) flushPart() error {
 		Body:       bytes.NewReader(w.readyPart),
 	})
 	if err != nil {
-		return err
+		return parseError(w.key, err)
 	}
 	w.parts = append(w.parts, &s3.Part{
 		ETag:       resp.ETag,
