@@ -159,6 +159,16 @@ func (err InvalidOffsetError) Error() string {
 	return fmt.Sprintf("%s: invalid offset: %d for path: %s", err.DriverName, err.Offset, err.Path)
 }
 
+// QuotaExceededError is returned when a storage quota is exceeded during a
+// write.
+type QuotaExceededError struct {
+	DriverName string
+}
+
+func (err QuotaExceededError) Error() string {
+	return fmt.Sprintf("%s: quota exceeded", err.DriverName)
+}
+
 // Error is a catch-all error type which captures an error string and
 // the driver type on which it occurred.
 type Error struct {
