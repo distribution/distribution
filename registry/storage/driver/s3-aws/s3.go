@@ -1337,8 +1337,13 @@ func (d *Driver) S3BucketKey(path string) string {
 }
 
 func parseError(path string, err error) error {
-	if s3Err, ok := err.(awserr.Error); ok && s3Err.Code() == "NoSuchKey" {
-		return storagedriver.PathNotFoundError{Path: path}
+	if s3Err, ok := err.(awserr.Error); ok {
+		switch s3Err.Code() {
+		case "NoSuchKey":
+			return storagedriver.PathNotFoundError{Path: path}
+		case "QuotaExceeded":
+			return storagedriver.QuotaExceededError{}
+		}
 	}
 
 	return err
