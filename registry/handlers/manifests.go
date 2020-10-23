@@ -21,7 +21,8 @@ import (
 	"github.com/distribution/distribution/v3/registry/api/errcode"
 	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	"github.com/distribution/distribution/v3/registry/auth"
-	"github.com/distribution/distribution/v3/registry/storage/driver"
+
+	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 )
 
 // These constants determine which architecture and OS to choose from a
@@ -371,6 +372,8 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 					}
 				}
 			}
+		case storagedriver.QuotaExceededError:
+			imh.Errors = append(imh.Errors, errcode.ErrorCodeDenied.WithMessage("quota exceeded"))
 		case errcode.Error:
 			imh.Errors = append(imh.Errors, err)
 		default:
@@ -496,7 +499,7 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 		tagService := imh.Repository.Tags(imh.Context)
 		if err := tagService.Untag(imh.Context, imh.Tag); err != nil {
 			switch err.(type) {
-			case distribution.ErrTagUnknown, driver.PathNotFoundError:
+			case distribution.ErrTagUnknown, storagedriver.PathNotFoundError:
 				imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
 			default:
 				imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
