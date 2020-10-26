@@ -80,6 +80,9 @@ func (base *Base) setDriverName(e error) error {
 	case storagedriver.InvalidOffsetError:
 		actual.DriverName = base.StorageDriver.Name()
 		return actual
+	case storagedriver.QuotaExceededError:
+		actual.DriverName = base.StorageDriver.Name()
+		return actual
 	default:
 		storageError := storagedriver.Error{
 			DriverName: base.StorageDriver.Name(),

@@ -17,6 +17,7 @@ import (
 	"github.com/docker/distribution/registry/api/errcode"
 	v2 "github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/registry/auth"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/gorilla/handlers"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -369,6 +370,8 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 					}
 				}
 			}
+		case storagedriver.QuotaExceededError:
+			imh.Errors = append(imh.Errors, errcode.ErrorCodeDenied.WithMessage("quota exceeded"))
 		case errcode.Error:
 			imh.Errors = append(imh.Errors, err)
 		default:
