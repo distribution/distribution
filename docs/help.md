@@ -9,7 +9,7 @@ title: Get help
 If you need help, or just want to chat, you can reach us:
 
 - on the [Docker forums](https://forums.docker.com/c/open-source-projects/opensrcreg).
-- on the [Docker community Slack channel](http://dockr.ly/slack){: target="_blank" rel="noopener" class="_"}
+- on the [Docker community Slack channel](https://dockr.ly/slack){: target="_blank" rel="noopener" class="_"}
 - on the [mailing list](https://groups.google.com/a/dockerproject.org/forum/#!forum/distribution) (mail at <distribution@dockerproject.org>).
 
 If you want to report a bug:
