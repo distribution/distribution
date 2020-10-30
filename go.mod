@@ -39,6 +39,7 @@ require (
 	github.com/yvasiyarov/newrelic_platform_go v0.0.0-20140908184405-b21fdbd4370f // indirect
 	golang.org/x/crypto v0.0.0-20200128174031-69ecbb4d6d5d
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
+	golang.org/x/text v0.3.4 // indirect
 	google.golang.org/api v0.0.0-20160322025152-9bf6e6e569ff
 	google.golang.org/cloud v0.0.0-20151119220103-975617b05ea8
 	google.golang.org/grpc v0.0.0-20160317175043-d3ddb4469d5a // indirect
