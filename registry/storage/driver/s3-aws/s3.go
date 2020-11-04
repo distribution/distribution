@@ -676,6 +676,24 @@ func (d *driver) logS3Operation(ctx context.Context) request.NamedHandler {
 	}
 }
 
+// setContentLengthHandlerHame is used to identify the handler used set the
+// ContentLength field on request data output types that support it.
+const setContentLengthHandlerName = "docker.storage-driver.s3.set-content-length"
+
+// setContentLength is used to set the ContentLength field on request data
+// output types that support it.
+var setContentLength = request.NamedHandler{
+	Name: setContentLengthHandlerName,
+	Fn: func(r *request.Request) {
+		switch v := r.Data.(type) {
+		case *s3.HeadObjectOutput:
+			if r.HTTPResponse.ContentLength > 0 {
+				v.SetContentLength(r.HTTPResponse.ContentLength)
+			}
+		}
+	},
+}
+
 func (d *driver) s3Client(ctx context.Context) *s3.S3 {
 	s := d.S3
 
@@ -684,6 +702,7 @@ func (d *driver) s3Client(ctx context.Context) *s3.S3 {
 		r := d.logS3Operation(ctx)
 		s.Client.Handlers.Complete.PushBackNamed(r)
 	}
+	s.Client.Handlers.Complete.PushBackNamed(setContentLength)
 
 	return s
 }
