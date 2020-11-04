@@ -879,7 +879,7 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 		Bucket: aws.String(d.Bucket),
 		Key:    aws.String(d.s3Path(path)),
 	})
-	if err == nil {
+	if err == nil && headResp.ContentLength != nil {
 		if headResp.ContentLength != nil {
 			fi.Size = *headResp.ContentLength
 		}
