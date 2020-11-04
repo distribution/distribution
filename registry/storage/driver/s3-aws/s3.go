@@ -690,6 +690,10 @@ var setContentLength = request.NamedHandler{
 			if r.HTTPResponse.ContentLength > 0 {
 				v.SetContentLength(r.HTTPResponse.ContentLength)
 			}
+		case *s3.GetObjectOutput:
+			if r.HTTPResponse.ContentLength > 0 {
+				v.SetContentLength(r.HTTPResponse.ContentLength)
+			}
 		}
 	},
 }
