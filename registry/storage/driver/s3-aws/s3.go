@@ -24,6 +24,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -364,7 +365,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	return New(params)
 }
 
-// getParameterAsInt64 converts parameters[name] to an int64 value (using
+// getParameterAsInt64 converts paramaters[name] to an int64 value (using
 // defaultt if nil), verifies it is no smaller than min, and returns it.
 func getParameterAsInt64(parameters map[string]interface{}, name string, defaultt int64, min int64, max int64) (int64, error) {
 	rv := defaultt
@@ -500,6 +501,8 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer reader.Close()
+
 	return ioutil.ReadAll(reader)
 }
 
@@ -532,8 +535,9 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 			return ioutil.NopCloser(bytes.NewReader(nil)), nil
 		}
 
-		return nil, parseError(path, err)
+		return ioutil.NopCloser(bytes.NewReader(nil)), parseError(path, err)
 	}
+
 	return resp.Body, nil
 }
 
@@ -555,6 +559,7 @@ func (d *driver) Writer(ctx context.Context, path string, append bool) (storaged
 		if err != nil {
 			return nil, err
 		}
+
 		return d.newWriter(key, *resp.UploadId, nil), nil
 	}
 	resp, err := d.S3.ListMultipartUploads(&s3.ListMultipartUploadsInput{
@@ -577,12 +582,10 @@ func (d *driver) Writer(ctx context.Context, path string, append bool) (storaged
 		if err != nil {
 			return nil, parseError(path, err)
 		}
-		var multiSize int64
-		for _, part := range resp.Parts {
-			multiSize += *part.Size
-		}
+
 		return d.newWriter(key, *multi.UploadId, resp.Parts), nil
 	}
+
 	return nil, storagedriver.PathNotFoundError{Path: path}
 }
 
@@ -739,43 +742,93 @@ func (d *driver) copy(ctx context.Context, sourcePath string, destPath string) e
 
 	numParts := (fileInfo.Size() + d.MultipartCopyChunkSize - 1) / d.MultipartCopyChunkSize
 	completedParts := make([]*s3.CompletedPart, numParts)
-	errChan := make(chan error, numParts)
-	limiter := make(chan struct{}, d.MultipartCopyMaxConcurrency)
 
-	for i := range completedParts {
-		i := int64(i)
+	poolSize := numParts
+	if poolSize > d.MultipartCopyMaxConcurrency {
+		poolSize = d.MultipartCopyMaxConcurrency
+	}
+
+	partsChan := make(chan int64, poolSize)
+	errChan := make(chan error, numParts)
+	done := make(chan struct{})
+
+	var wg sync.WaitGroup
+	for i := int64(0); i < poolSize; i++ {
+		wg.Add(1)
 		go func() {
-			limiter <- struct{}{}
-			firstByte := i * d.MultipartCopyChunkSize
-			lastByte := firstByte + d.MultipartCopyChunkSize - 1
-			if lastByte >= fileInfo.Size() {
-				lastByte = fileInfo.Size() - 1
-			}
-			uploadResp, err := d.S3.UploadPartCopy(&s3.UploadPartCopyInput{
-				Bucket:          aws.String(d.Bucket),
-				CopySource:      aws.String(d.Bucket + "/" + d.s3Path(sourcePath)),
-				Key:             aws.String(d.s3Path(destPath)),
-				PartNumber:      aws.Int64(i + 1),
-				UploadId:        createResp.UploadId,
-				CopySourceRange: aws.String(fmt.Sprintf("bytes=%d-%d", firstByte, lastByte)),
-			})
-			if err == nil {
-				completedParts[i] = &s3.CompletedPart{
-					ETag:       uploadResp.CopyPartResult.ETag,
-					PartNumber: aws.Int64(i + 1),
+			defer wg.Done()
+			for {
+				select {
+				case i, ok := <-partsChan:
+					if !ok {
+						return
+					}
+
+					firstByte := i * d.MultipartCopyChunkSize
+					lastByte := firstByte + d.MultipartCopyChunkSize - 1
+					if lastByte >= fileInfo.Size() {
+						lastByte = fileInfo.Size() - 1
+					}
+
+					uploadResp, err := d.S3.UploadPartCopy(&s3.UploadPartCopyInput{
+						Bucket:          aws.String(d.Bucket),
+						CopySource:      aws.String(d.Bucket + "/" + d.s3Path(sourcePath)),
+						Key:             aws.String(d.s3Path(destPath)),
+						PartNumber:      aws.Int64(i + 1),
+						UploadId:        createResp.UploadId,
+						CopySourceRange: aws.String(fmt.Sprintf("bytes=%d-%d", firstByte, lastByte)),
+					})
+
+					if err == nil {
+						completedParts[i] = &s3.CompletedPart{
+							ETag:       uploadResp.CopyPartResult.ETag,
+							PartNumber: aws.Int64(i + 1),
+						}
+					}
+
+					select {
+					case errChan <- err:
+					case <-done:
+						return
+					}
+
+				case <-done:
+					return
 				}
 			}
-			errChan <- err
-			<-limiter
 		}()
 	}
 
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		defer close(partsChan)
+
+		for i := range completedParts {
+			select {
+			case partsChan <- int64(i):
+			case <-done:
+				return
+			}
+		}
+	}()
+
+	// close all channels and
+	// wait for all goroutines to finish
+	cleanup := func() {
+		close(done)
+		wg.Wait()
+		close(errChan)
+	}
+
 	for range completedParts {
-		err := <-errChan
-		if err != nil {
+		if err := <-errChan; err != nil {
+			cleanup()
 			return err
 		}
 	}
+
+	cleanup()
 
 	_, err = d.S3.CompleteMultipartUpload(&s3.CompleteMultipartUploadInput{
 		Bucket:          aws.String(d.Bucket),
@@ -783,6 +836,7 @@ func (d *driver) copy(ctx context.Context, sourcePath string, destPath string) e
 		UploadId:        createResp.UploadId,
 		MultipartUpload: &s3.CompletedMultipartUpload{Parts: completedParts},
 	})
+
 	return err
 }
 
@@ -1082,21 +1136,46 @@ func (d *driver) getStorageClass() *string {
 	return aws.String(d.StorageClass)
 }
 
+// buf is a data buffer
+type buf struct {
+	data []byte
+	pos  int
+}
+
+func newBuf(size int64) *buf {
+	return &buf{
+		data: make([]byte, size),
+		pos:  0,
+	}
+}
+
+// readFillBuf tries to read as much data as possible from r into buffer b.
+// It returns the number of bytes successfully read from r or error.
+func (b *buf) readFill(r io.Reader) (offset int, err error) {
+	for (offset+b.pos) < len(b.data) && err == nil {
+		var n int
+		n, err = r.Read(b.data[(b.pos + offset):])
+		offset += n
+	}
+
+	return offset, err
+}
+
 // writer attempts to upload parts to S3 in a buffered fashion where the last
 // part is at least as large as the chunksize, so the multipart upload could be
 // cleanly resumed in the future. This is violated if Close is called after less
 // than a full chunk is written.
 type writer struct {
-	driver      *driver
-	key         string
-	uploadID    string
-	parts       []*s3.Part
-	size        int64
-	readyPart   []byte
-	pendingPart []byte
-	closed      bool
-	committed   bool
-	cancelled   bool
+	driver    *driver
+	key       string
+	uploadID  string
+	parts     []*s3.Part
+	size      int64
+	ready     *buf
+	pending   *buf
+	closed    bool
+	committed bool
+	cancelled bool
 }
 
 func (d *driver) newWriter(key, uploadID string, parts []*s3.Part) storagedriver.FileWriter {
@@ -1110,6 +1189,8 @@ func (d *driver) newWriter(key, uploadID string, parts []*s3.Part) storagedriver
 		uploadID: uploadID,
 		parts:    parts,
 		size:     size,
+		ready:    newBuf(d.ChunkSize),
+		pending:  newBuf(d.ChunkSize),
 	}
 }
 
@@ -1150,11 +1231,13 @@ func (w *writer) Write(p []byte) (int, error) {
 			},
 		})
 		if err != nil {
-			w.driver.S3.AbortMultipartUpload(&s3.AbortMultipartUploadInput{
+			if _, aErr := w.driver.S3.AbortMultipartUpload(&s3.AbortMultipartUploadInput{
 				Bucket:   aws.String(w.driver.Bucket),
 				Key:      aws.String(w.key),
 				UploadId: aws.String(w.uploadID),
-			})
+			}); aerr != nil {
+				return 0, fmt.Errorf("failed to complete upload: %v: abort error: %v", err, aerr)
+			}
 			return 0, err
 		}
 
@@ -1182,11 +1265,16 @@ func (w *writer) Write(p []byte) (int, error) {
 				return 0, err
 			}
 			defer resp.Body.Close()
+
+			// reset uploaded parts
 			w.parts = nil
-			w.readyPart, err = ioutil.ReadAll(resp.Body)
-			if err != nil {
+			w.ready.pos = 0
+
+			n, err := io.ReadFull(resp.Body, w.ready.data[w.ready.pos:])
+			if err != nil && err != io.ErrUnexpectedEOF {
 				return 0, err
 			}
+			w.ready.pos = n
 		} else {
 			// Otherwise we can use the old file as the new first part
 			copyPartResp, err := w.driver.S3.UploadPartCopy(&s3.UploadPartCopyInput{
@@ -1211,38 +1299,45 @@ func (w *writer) Write(p []byte) (int, error) {
 
 	var n int
 
-	for len(p) > 0 {
-		// If no parts are ready to write, fill up the first part
-		if neededBytes := int(w.driver.ChunkSize) - len(w.readyPart); neededBytes > 0 {
-			if len(p) >= neededBytes {
-				w.readyPart = append(w.readyPart, p[:neededBytes]...)
-				n += neededBytes
-				p = p[neededBytes:]
-			} else {
-				w.readyPart = append(w.readyPart, p...)
-				n += len(p)
-				p = nil
+	reader := bytes.NewReader(p)
+
+	for {
+		// fill in the buffer
+		offset, err := w.ready.readFill(reader)
+		if err != nil && err != io.EOF {
+			return 0, err
+		}
+		w.ready.pos += offset
+		n += offset
+
+		// we've read all bytes and stil havent filled the ready buffer
+		if err == io.EOF {
+			break
+		}
+
+		// try filling in pending buffer
+		offset, err = w.pending.readFill(reader)
+		if err != nil && err != io.EOF {
+			return 0, err
+		}
+		w.pending.pos += offset
+		n += offset
+
+		if w.pending.pos == len(w.pending.data) {
+			if err := w.flushPart(); err != nil {
+				w.size += int64(n)
+				return n, err
 			}
 		}
 
-		if neededBytes := int(w.driver.ChunkSize) - len(w.pendingPart); neededBytes > 0 {
-			if len(p) >= neededBytes {
-				w.pendingPart = append(w.pendingPart, p[:neededBytes]...)
-				n += neededBytes
-				p = p[neededBytes:]
-				err := w.flushPart()
-				if err != nil {
-					w.size += int64(n)
-					return n, err
-				}
-			} else {
-				w.pendingPart = append(w.pendingPart, p...)
-				n += len(p)
-				p = nil
-			}
+		// we've read all bytes and stil havent filled the pending buffer
+		if err == io.EOF {
+			break
 		}
 	}
+
 	w.size += int64(n)
+
 	return n, nil
 }
 
@@ -1281,18 +1376,20 @@ func (w *writer) Commit() error {
 	} else if w.cancelled {
 		return fmt.Errorf("already cancelled")
 	}
+
 	err := w.flushPart()
 	if err != nil {
 		return err
 	}
+
 	w.committed = true
 
-	var completedUploadedParts completedParts
-	for _, part := range w.parts {
-		completedUploadedParts = append(completedUploadedParts, &s3.CompletedPart{
+	completedUploadedParts := make(completedParts, len(w.parts))
+	for i, part := range w.parts {
+		completedUploadedParts[i] = &s3.CompletedPart{
 			ETag:       part.ETag,
 			PartNumber: part.PartNumber,
-		})
+		}
 	}
 
 	sort.Sort(completedUploadedParts)
@@ -1306,11 +1403,13 @@ func (w *writer) Commit() error {
 		},
 	})
 	if err != nil {
-		w.driver.S3.AbortMultipartUpload(&s3.AbortMultipartUploadInput{
+		if _, aerr := w.driver.S3.AbortMultipartUpload(&s3.AbortMultipartUploadInput{
 			Bucket:   aws.String(w.driver.Bucket),
 			Key:      aws.String(w.key),
 			UploadId: aws.String(w.uploadID),
-		})
+		}); aerr != nil {
+			return fmt.Errorf("failed to complete upload: %v: abort error: %v", err, aerr)
+		}
 		return err
 	}
 	return nil
@@ -1319,15 +1418,16 @@ func (w *writer) Commit() error {
 // flushPart flushes buffers to write a part to S3.
 // Only called by Write (with both buffers full) and Close/Commit (always)
 func (w *writer) flushPart() error {
-	if len(w.readyPart) == 0 && len(w.pendingPart) == 0 {
-		// nothing to write
+	if w.ready.pos == 0 && w.pending.pos == 0 {
 		return nil
 	}
-	if len(w.pendingPart) < int(w.driver.ChunkSize) {
-		// closing with a small pending part
-		// combine ready and pending to avoid writing a small part
-		w.readyPart = append(w.readyPart, w.pendingPart...)
-		w.pendingPart = nil
+
+	buf := bytes.NewBuffer(w.ready.data[:w.ready.pos])
+	if w.pending.pos < int(w.driver.ChunkSize) {
+		if _, err := buf.Write(w.pending.data[:w.pending.pos]); err != nil {
+			return err
+		}
+		w.pending.pos = 0
 	}
 
 	partNumber := aws.Int64(int64(len(w.parts) + 1))
@@ -1336,17 +1436,21 @@ func (w *writer) flushPart() error {
 		Key:        aws.String(w.key),
 		PartNumber: partNumber,
 		UploadId:   aws.String(w.uploadID),
-		Body:       bytes.NewReader(w.readyPart),
+		Body:       bytes.NewReader(buf.Bytes()),
 	})
 	if err != nil {
 		return err
 	}
+
 	w.parts = append(w.parts, &s3.Part{
 		ETag:       resp.ETag,
 		PartNumber: partNumber,
-		Size:       aws.Int64(int64(len(w.readyPart))),
+		Size:       aws.Int64(int64(w.ready.pos)),
 	})
-	w.readyPart = w.pendingPart
-	w.pendingPart = nil
+
+	// swap buffers and reset pending position
+	w.ready, w.pending = w.pending, w.ready
+	w.pending.pos = 0
+
 	return nil
 }
