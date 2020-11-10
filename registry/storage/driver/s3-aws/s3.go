@@ -1235,8 +1235,8 @@ func (w *writer) Write(p []byte) (int, error) {
 				Bucket:   aws.String(w.driver.Bucket),
 				Key:      aws.String(w.key),
 				UploadId: aws.String(w.uploadID),
-			}); aerr != nil {
-				return 0, fmt.Errorf("failed to complete upload: %v: abort error: %v", err, aerr)
+			}); aErr != nil {
+				return 0, fmt.Errorf("failed to complete upload: %v: abort error: %v", err, aErr)
 			}
 			return 0, err
 		}
