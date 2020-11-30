@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"reflect"
 	"strconv"
 	"testing"
 
@@ -161,6 +162,39 @@ func TestEmptyRootList(t *testing.T) {
 		if !storagedriver.PathRegexp.MatchString(path) {
 			t.Fatalf("unexpected string in path: %q != %q", path, storagedriver.PathRegexp)
 		}
+	}
+}
+
+// TestWalkEmptySubDirectory assures we list an empty sub directory only once when walking
+// through its parent directory.
+func TestWalkEmptySubDirectory(t *testing.T) {
+	if skipS3() != "" {
+		t.Skip(skipS3())
+	}
+
+	drv, err := s3DriverConstructor("", s3.StorageClassStandard)
+	if err != nil {
+		t.Fatalf("unexpected error creating rooted driver: %v", err)
+	}
+
+	// create an empty sub directory.
+	s3driver := drv.StorageDriver.(*driver)
+	if _, err := s3driver.S3.PutObject(&s3.PutObjectInput{
+		Bucket: aws.String(os.Getenv("S3_BUCKET")),
+		Key:    aws.String("/testdir/emptydir/"),
+	}); err != nil {
+		t.Fatalf("error creating empty directory: %s", err)
+	}
+
+	bucketFiles := []string{}
+	s3driver.Walk(context.Background(), "/testdir", func(fileInfo storagedriver.FileInfo) error {
+		bucketFiles = append(bucketFiles, fileInfo.Path())
+		return nil
+	})
+
+	expected := []string{"/testdir/emptydir"}
+	if !reflect.DeepEqual(bucketFiles, expected) {
+		t.Errorf("expecting files %+v, found %+v instead", expected, bucketFiles)
 	}
 }
 
