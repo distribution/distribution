@@ -1,16 +1,21 @@
-# Docker distribution project maintainers & reviewers
+# Distribution project maintainers & reviewers
 #
 # See GOVERNANCE.md for maintainer versus reviewer roles
 #
 # MAINTAINERS
 # GitHub ID, Name, Email address
-"dmcgowan","Derek McGowan","derek@mcgstyle.net"
-"manishtomar","Manish Tomar","manish.tomar@docker.com"
-"stevvooe","Stephen Day","stevvooe@gmail.com"
+"arkodg","Arko Dasgupta","arko.dasgupta@docker.com"
+"chrispat","Chris Patterson","chrispat@github.com"
+"clarkbw","Bryan Clark","clarkbw@github.com"
+"deleteriousEffect","Hayley Swimelar","hswimelar@gitlab.com"
+"heww","He Weiwei","hweiwei@vmware.com"
+"joaodrp","João Pereira","jpereira@gitlab.com"
+"justincormack”,“Justin Cormack”,“justin.cormack@docker.com"
+"waynr","Wayne Warren","wwarren@digitalocean.com"
+"wy65701436","Wang Yan","wangyan@vmware.com"
 #
 # REVIEWERS
 # GitHub ID, Name, Email address
-"caervs","Ryan Abrams","rdabrams@gmail.com"
-"davidswu","David Wu","dwu7401@gmail.com"
-"RobbKistler","Robb Kistler","robb.kistler@docker.com"
+"dmcgowan","Derek McGowan","derek@mcgstyle.net"
+"stevvooe","Stephen Day","stevvooe@gmail.com"
 "thajeztah","Sebastiaan van Stijn","github@gone.nl"
