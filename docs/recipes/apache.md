@@ -1,12 +1,8 @@
-<!--[metadata]>
-+++
-title = "Authenticating proxy with apache"
-description = "Restricting access to your registry using an apache proxy"
-keywords = ["registry, on-prem, images, tags, repository, distribution, authentication, proxy, apache, httpd, TLS, recipe, advanced"]
-[menu.main]
-parent="smn_recipes"
-+++
-<![end-metadata]-->
+---
+description: Restricting access to your registry using an apache proxy
+keywords: registry, on-prem, images, tags, repository, distribution, authentication, proxy, apache, httpd, TLS, recipe, advanced
+title: Authenticate proxy with apache
+---
 
 # Authenticating proxy with apache
 
@@ -18,7 +14,7 @@ Usually, that includes enterprise setups using LDAP/AD on the backend and a SSO 
 
 ### Alternatives
 
-If you just want authentication for your registry, and are happy maintaining users access separately, you should really consider sticking with the native [basic auth registry feature](../deploying.md#native-basic-auth). 
+If you just want authentication for your registry, and are happy maintaining users access separately, you should really consider sticking with the native [basic auth registry feature](../deploying.md#native-basic-auth).
 
 ### Solution
 
@@ -26,13 +22,13 @@ With the method presented here, you implement basic authentication for docker en
 
 While we use a simple htpasswd file as an example, any other apache authentication backend should be fairly easy to implement once you are done with the example.
 
-We also implement push restriction (to a limited user group) for the sake of the example. Again, you should modify this to fit your mileage. 
+We also implement push restriction (to a limited user group) for the sake of the example. Again, you should modify this to fit your mileage.
 
 ### Gotchas
 
 While this model gives you the ability to use whatever authentication backend you want through the secondary authentication mechanism implemented inside your proxy, it also requires that you move TLS termination from the Registry to the proxy itself.
 
-Furthermore, introducing an extra http layer in your communication pipeline will make it more complex to deploy, maintain, and debug, and will possibly create issues.
+Furthermore, introducing an extra http layer in your communication pipeline adds complexity when deploying, maintaining, and debugging.
 
 ## Setting things up
 
@@ -46,7 +42,7 @@ Run the following script:
 mkdir -p auth
 mkdir -p data
 
-# This is the main apache configuration you will use
+# This is the main apache configuration
 cat <<EOF > auth/httpd.conf
 LoadModule headers_module modules/mod_headers.so
 
@@ -111,7 +107,7 @@ Listen 5043
   SSLCertificateFile /usr/local/apache2/conf/domain.crt
   SSLCertificateKeyFile /usr/local/apache2/conf/domain.key
 
-  ## SSL settings recommandation from: https://raymii.org/s/tutorials/Strong_SSL_Security_On_Apache2.html
+  ## SSL settings recommendation from: https://raymii.org/s/tutorials/Strong_SSL_Security_On_Apache2.html
   # Anti CRIME
   SSLCompression off
 
@@ -199,13 +195,13 @@ Now, start your stack:
 
     docker-compose up -d
 
-Login with a "push" authorized user (using `testuserpush` and `testpasswordpush`), then tag and push your first image: 
+Log in with a "push" authorized user (using `testuserpush` and `testpasswordpush`), then tag and push your first image:
 
     docker login myregistrydomain.com:5043
     docker tag ubuntu myregistrydomain.com:5043/test
     docker push myregistrydomain.com:5043/test
 
-Now, login with a "pull-only" user (using `testuser` and `testpassword`), then pull back the image:
+Now, log in with a "pull-only" user (using `testuser` and `testpassword`), then pull back the image:
 
     docker login myregistrydomain.com:5043
     docker pull myregistrydomain.com:5043/test

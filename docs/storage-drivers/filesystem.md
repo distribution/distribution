@@ -1,13 +1,8 @@
-<!--[metadata]>
-+++
-title = "Filesystem storage driver"
-description = "Explains how to use the filesystem storage drivers"
-keywords = ["registry, service, driver, images, storage,  filesystem"]
-[menu.main]
-parent="smn_storagedrivers"
-+++
-<![end-metadata]-->
-
+---
+description: Explains how to use the filesystem storage drivers
+keywords: registry, service, driver, images, storage,  filesystem
+title: Filesystem storage driver
+---
 
 # Filesystem storage driver
 
@@ -15,10 +10,12 @@ An implementation of the `storagedriver.StorageDriver` interface which uses the 
 
 ## Parameters
 
-`rootdirectory`: (optional) The absolute path to a root directory tree in which
+* `rootdirectory`: (optional) The absolute path to a root directory tree in which
 to store all registry files. The registry stores all its data here so make sure
-there is adequate space available. Defaults to `/var/lib/registry`.
-`maxthreads`: (optional) The maximum number of simultaneous blocking filesystem
+there is adequate space available. Defaults to `/var/lib/registry`. If the directory
+does not exist, it will be created honoring [`umask`](https://man7.org/linux/man-pages/man2/umask.2.html)
+bits. If `umask` bits are not set, the resulting permission will be `0777`.
+* `maxthreads`: (optional) The maximum number of simultaneous blocking filesystem
 operations permitted within the registry. Each operation spawns a new thread and
 may cause thread exhaustion issues if many are done in parallel. Defaults to
-`100`, and can be no lower than `25`.
+`100`, and cannot be lower than `25`.

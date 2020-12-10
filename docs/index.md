@@ -1,21 +1,18 @@
-<!--[metadata]>
-+++
-title = "Registry Overview"
-description = "High-level overview of the Registry"
-keywords = ["registry, on-prem, images, tags, repository, distribution"]
-aliases = ["/registry/overview/"]
-[menu.main]
-parent="smn_registry"
-weight=1
-+++
-<![end-metadata]-->
+---
+description: High-level overview of the Registry
+keywords: registry, on-prem, images, tags, repository, distribution
+redirect_from:
+- /registry/overview/
+title: Docker Registry
+---
 
 # Docker Registry
 
 ## What it is
 
-The Registry is a stateless, highly scalable server side application that stores and lets you distribute Docker images.
-The Registry is open-source, under the permissive [Apache license](http://en.wikipedia.org/wiki/Apache_License).
+The Registry is a stateless, highly scalable server side application that stores
+and lets you distribute Docker images. The Registry is open-source, under the
+permissive [Apache license](https://en.wikipedia.org/wiki/Apache_License).
 
 ## Why use it
 
@@ -27,16 +24,16 @@ You should use the Registry if you want to:
 
 ## Alternatives
 
-Users looking for a zero maintenance, ready-to-go solution are encouraged to head-over to the [Docker Hub](https://hub.docker.com), which provides a free-to-use, hosted Registry, plus additional features (organization accounts, automated builds, and more).
-
-Users looking for a commercially supported version of the Registry should look into [Docker Trusted Registry](https://docs.docker.com/docker-trusted-registry/overview/).
+Users looking for a zero maintenance, ready-to-go solution are encouraged to
+head-over to the [Docker Hub](https://hub.docker.com), which provides a
+free-to-use, hosted Registry, plus additional features (organization accounts,
+automated builds, and more).
 
 ## Requirements
 
 The Registry is compatible with Docker engine **version 1.6.0 or higher**.
-If you really need to work with older Docker versions, you should look into the [old python registry](https://github.com/docker/docker-registry).
 
-## TL;DR
+## Basic commands
 
 Start your registry
 
@@ -48,7 +45,7 @@ Pull (or build) some image from the hub
 
 Tag the image so that it points to your registry
 
-    docker tag ubuntu localhost:5000/myfirstimage
+    docker image tag ubuntu localhost:5000/myfirstimage
 
 Push it
 
@@ -60,8 +57,9 @@ Pull it back
 
 Now stop your registry and remove all data
 
-    docker stop registry && docker rm -v registry
+    docker container stop registry && docker container rm -v registry
 
 ## Next
 
-You should now read the [detailed introduction about the registry](introduction.md), or jump directly to [deployment instructions](deploying.md).
+You should now read the [detailed introduction about the registry](introduction.md),
+or jump directly to [deployment instructions](deploying.md).

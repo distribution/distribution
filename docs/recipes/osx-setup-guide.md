@@ -1,32 +1,26 @@
-<!--[metadata]>
-+++
-title = "Running on OS X"
-description = "Explains how to run a registry on OS X"
-keywords = ["registry, on-prem, images, tags, repository, distribution, OS X, recipe, advanced"]
-[menu.main]
-parent="smn_recipes"
-+++
-<![end-metadata]-->
+---
+description: Explains how to run a registry on macOS
+keywords: registry, on-prem, images, tags, repository, distribution, macOS, recipe, advanced
+title: macOS setup guide
+---
 
-# OS X Setup Guide
+# macOS setup guide
 
 ## Use-case
 
-This is useful if you intend to run a registry server natively on OS X.
+This is useful if you intend to run a registry server natively on macOS.
 
 ### Alternatives
 
-You can start a VM on OS X, and deploy your registry normally as a container using Docker inside that VM.
-
-The simplest road to get there is traditionally to use the [docker Toolbox](https://www.docker.com/toolbox), or [docker-machine](/machine/index.md), which usually relies on the [boot2docker](http://boot2docker.io/) iso inside a VirtualBox VM.
+You can start a VM on macOS, and deploy your registry normally as a container using Docker inside that VM.
 
 ### Solution
 
-Using the method described here, you install and compile your own from the git repository and run it as an OS X agent.
+Using the method described here, you install and compile your own from the git repository and run it as an macOS agent.
 
 ### Gotchas
 
-Production services operation on OS X is out of scope of this document. Be sure you understand well these aspects before considering going to production with this.
+Production services operation on macOS is out of scope of this document. Be sure you understand well these aspects before considering going to production with this.
 
 ## Setup golang on your machine
 
@@ -50,6 +44,7 @@ If you want to understand, you should read [How to Write Go Code](https://golang
 ## Build the binary
 
     GOPATH=$(PWD)/Godeps/_workspace:$GOPATH make binaries
+    sudo mkdir -p /usr/local/libexec
     sudo cp bin/registry /usr/local/libexec/registry
 
 ## Setup
@@ -59,7 +54,7 @@ Copy the registry configuration file in place:
     mkdir /Users/Shared/Registry
     cp docs/osx/config.yml /Users/Shared/Registry/config.yml
 
-## Running the Docker Registry under launchd
+## Run the Docker Registry under launchd
 
 Copy the Docker registry plist into place:
 
@@ -71,11 +66,11 @@ Start the Docker registry:
 
     launchctl load ~/Library/LaunchAgents/com.docker.registry.plist
 
-### Restarting the docker registry service
+### Restart the docker registry service
 
     launchctl stop com.docker.registry
     launchctl start com.docker.registry
 
-### Unloading the docker registry service
+### Unload the docker registry service
 
     launchctl unload ~/Library/LaunchAgents/com.docker.registry.plist
