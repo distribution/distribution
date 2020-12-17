@@ -1,0 +1,80 @@
+name: Build and test a pull request
+
+on:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  ci:
+    name: Run CI build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Set up Go 1.14
+        uses: actions/setup-go@v2
+        with:
+          go-version: ^1.14
+
+      - name: Install github.com/vbatts/git-validation
+        working-directory: /tmp
+        run: go get -u github.com/vbatts/git-validation
+
+      - name: Validate DCO
+        env:
+          DCO_VERBOSITY: "-q"
+          GIT_CHECK_EXCLUDE: "./vendor:./script/validate/template"
+        run: git-validation "${DCO_VERBOSITY}" -run DCO,short-subject,dangling-whitespace
+
+      - name: Install github.com/cpuguy83/go-md2man
+        env:
+          VERSION: "v1.0.10"
+        working-directory: /tmp
+        run: go get "github.com/cpuguy83/go-md2man@${VERSION}"
+
+      - name: Check out source code
+        uses: actions/checkout@v2
+
+      - name: Check go.mod matches the source code in the module
+        run: go mod tidy
+
+      - name: Vendor go modules
+        run: go mod vendor
+
+      - name: Checking for unused packages in vendor
+        run: |
+          git diff --exit-code -- go.sum go.mod vendor/
+          untracked=$(git ls-files --others vendor | wc -l | awk '{ print $1 }')
+          [[ "${untracked}" == "0" ]]
+
+      - name: Cache go modules
+        uses: actions/cache@v2
+        with:
+          path: vendor
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Lint checks
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.33
+
+      - name: Build and install binary
+        run: go build -i .
+
+      - name: Unit test
+        run: make test
+
+      - name: Run build
+        run: make build
+
+      - name: Make binaries
+        run: make binaries
+
+      - name: Make coverage
+        run: make coverage
+
+      - name: Update code coverage
+        if: ${{ success() }}
+        run: bash <(curl -s https://codecov.io/bash) -F linux
