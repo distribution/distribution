@@ -986,6 +986,11 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 		}
 
 		for _, file := range objects.Contents {
+			// empty prefixes are listed as objects inside its own prefix.
+			// https://docs.aws.amazon.com/AmazonS3/latest/user-guide/using-folders.html
+			if strings.HasSuffix(*file.Key, "/") {
+				continue
+			}
 			walkInfos = append(walkInfos, walkInfoContainer{
 				FileInfoFields: storagedriver.FileInfoFields{
 					IsDir:   false,
