@@ -24,7 +24,11 @@ jobs:
         env:
           VERSION: "v1.0.10"
         working-directory: /tmp
-        run: go get "github.com/cpuguy83/go-md2man@${VERSION}"
+        run: |
+          # https://github.com/golang/go/wiki/Modules#why-does-installing-a-tool-via-go-get-fail-with-error-cannot-find-main-module
+          go mod init foo
+          go get "github.com/cpuguy83/go-md2man@${VERSION}"
+          rm go.mod go.sum
 
       - name: Check out source code
         uses: actions/checkout@v2
