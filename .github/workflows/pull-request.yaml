@@ -20,12 +20,6 @@ jobs:
         working-directory: /tmp
         run: go get -u github.com/vbatts/git-validation
 
-      - name: Validate DCO
-        env:
-          DCO_VERBOSITY: "-q"
-          GIT_CHECK_EXCLUDE: "./vendor:./script/validate/template"
-        run: git-validation "${DCO_VERBOSITY}" -run DCO,short-subject,dangling-whitespace
-
       - name: Install github.com/cpuguy83/go-md2man
         env:
           VERSION: "v1.0.10"
@@ -34,6 +28,12 @@ jobs:
 
       - name: Check out source code
         uses: actions/checkout@v2
+
+      - name: Validate DCO
+        env:
+          DCO_VERBOSITY: "-q"
+          GIT_CHECK_EXCLUDE: "./vendor:./script/validate/template"
+        run: git-validation "${DCO_VERBOSITY}" -run DCO,short-subject,dangling-whitespace
 
       - name: Check go.mod matches the source code in the module
         run: go mod tidy
