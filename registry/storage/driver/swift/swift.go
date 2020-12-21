@@ -616,12 +616,6 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 		}
 	}
 
-	if methodString == "HEAD" {
-		// A "HEAD" request on a temporary URL is allowed if the
-		// signature was generated with "GET", "POST" or "PUT"
-		methodString = "GET"
-	}
-
 	supported := false
 	for _, method := range d.TempURLMethods {
 		if method == methodString {
@@ -641,6 +635,12 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 		if ok {
 			expiresTime = et
 		}
+	}
+
+	if methodString == "HEAD" {
+		// A "HEAD" request on a temporary URL is allowed if the
+		// signature was generated with "GET", "POST" or "PUT"
+		methodString = "GET"
 	}
 
 	tempURL := d.Conn.ObjectTempUrl(d.Container, d.swiftPath(path), d.SecretKey, methodString, expiresTime)
