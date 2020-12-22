@@ -132,7 +132,15 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		if v, ok := mc["uploadpurging"]; ok {
 			purgeConfig, ok = v.(map[interface{}]interface{})
 			if !ok {
-				panic("uploadpurging config key must contain additional keys")
+				tmpPurgeConfig, ok := v.(map[string]interface{})
+				if !ok {
+					panic("uploadpurging config key must contain additional keys")
+				}
+
+				purgeConfig = map[interface{}]interface{}{}
+				for k, v := range tmpPurgeConfig {
+					purgeConfig[k] = v
+				}
 			}
 		}
 		if v, ok := mc["readonly"]; ok {
