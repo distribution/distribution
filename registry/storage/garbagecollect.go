@@ -27,6 +27,17 @@ type ManifestDel struct {
 	Tags   []string
 }
 
+func getTags(manifest distribution.Descriptor, tagsDescriptors []distribution.Descriptor) []distribution.Descriptor {
+	var result []distribution.Descriptor
+	for _, tag := range tagsDescriptors {
+		if tag.Digest == manifest.Digest {
+			result = append(result, tag)
+		}
+	}
+
+	return result
+}
+
 // MarkAndSweep performs a mark and sweep of registry data
 func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, registry distribution.Namespace, opts GCOpts) error {
 	repositoryEnumerator, ok := registry.(distribution.RepositoryEnumerator)
@@ -60,22 +71,39 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 			return fmt.Errorf("unable to convert ManifestService into ManifestEnumerator")
 		}
 
+		allTags, err := repository.Tags(ctx).All(ctx)
+		switch err.(type) {
+		case distribution.ErrRepositoryUnknown:
+			// This tag store has been initialized but not yet populated
+			break
+		case nil:
+			break
+		default:
+			return fmt.Errorf("failed to get tags for repository %s: %v", repoName, err)
+		}
+
+		var tagsDescriptors []distribution.Descriptor
+		for _, tagName := range allTags {
+			tagDescriptor, err := repository.Tags(ctx).Get(ctx, tagName)
+			switch err.(type) {
+			case distribution.ErrTagUnknown:
+				continue
+			case nil:
+				break
+			default:
+				return fmt.Errorf("failed to get tag %s in repository %s: %v", tagName, repoName, err)
+			}
+			tagsDescriptors = append(tagsDescriptors, tagDescriptor)
+		}
 		err = manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
 			if opts.RemoveUntagged {
 				// fetch all tags where this manifest is the latest one
-				tags, err := repository.Tags(ctx).Lookup(ctx, distribution.Descriptor{Digest: dgst})
-				if err != nil {
-					return fmt.Errorf("failed to retrieve tags for digest %v: %v", dgst, err)
-				}
+				tags := getTags(distribution.Descriptor{Digest: dgst}, tagsDescriptors)
 				if len(tags) == 0 {
 					emit("manifest eligible for deletion: %s", dgst)
 					// fetch all tags from repository
 					// all of these tags could contain manifest in history
 					// which means that we need check (and delete) those references when deleting manifest
-					allTags, err := repository.Tags(ctx).All(ctx)
-					if err != nil {
-						return fmt.Errorf("failed to retrieve tags %v", err)
-					}
 					manifestArr = append(manifestArr, ManifestDel{Name: repoName, Digest: dgst, Tags: allTags})
 					return nil
 				}
