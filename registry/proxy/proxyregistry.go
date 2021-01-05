@@ -8,6 +8,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/distribution/reference"
+
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/internal/client"
@@ -18,7 +20,6 @@ import (
 	"github.com/distribution/distribution/v3/registry/proxy/scheduler"
 	"github.com/distribution/distribution/v3/registry/storage"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
-	"github.com/distribution/reference"
 )
 
 var repositoryTTL = 24 * 7 * time.Hour
@@ -39,7 +40,7 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 		return nil, err
 	}
 
-	v := storage.NewVacuum(ctx, driver)
+	v := storage.NewVacuum(ctx, registry, driver)
 
 	var s *scheduler.TTLExpirationScheduler
 	var ttl *time.Duration

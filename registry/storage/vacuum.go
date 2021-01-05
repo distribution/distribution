@@ -4,9 +4,12 @@ import (
 	"context"
 	"path"
 
-	"github.com/distribution/distribution/v3/internal/dcontext"
-	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/opencontainers/go-digest"
+
+	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/internal/dcontext"
+	"github.com/distribution/distribution/v3/registry/storage/cache"
+	"github.com/distribution/distribution/v3/registry/storage/driver"
 )
 
 // vacuum contains functions for cleaning up repositories and blobs
@@ -15,17 +18,26 @@ import (
 // https://en.wikipedia.org/wiki/Consistency_model
 
 // NewVacuum creates a new Vacuum
-func NewVacuum(ctx context.Context, driver driver.StorageDriver) Vacuum {
+func NewVacuum(ctx context.Context, reg distribution.Namespace, driver driver.StorageDriver) Vacuum {
+	r, ok := reg.(*registry)
+	if ok {
+		return Vacuum{
+			blobDescriptorCacheProvider: r.blobDescriptorCacheProvider,
+			driver:                      driver,
+			ctx:                         ctx,
+		}
+	}
 	return Vacuum{
-		ctx:    ctx,
 		driver: driver,
+		ctx:    ctx,
 	}
 }
 
 // Vacuum removes content from the filesystem
 type Vacuum struct {
-	driver driver.StorageDriver
-	ctx    context.Context
+	blobDescriptorCacheProvider cache.BlobDescriptorCacheProvider
+	driver                      driver.StorageDriver
+	ctx                         context.Context
 }
 
 // RemoveBlob removes a blob from the filesystem
@@ -42,6 +54,11 @@ func (v Vacuum) RemoveBlob(dgst string) error {
 
 	dcontext.GetLogger(v.ctx).Infof("Deleting blob: %s", blobPath)
 
+	if v.blobDescriptorCacheProvider != nil {
+		if err = v.blobDescriptorCacheProvider.Clear(v.ctx, d); err != nil {
+			return err
+		}
+	}
 	err = v.driver.Delete(v.ctx, blobPath)
 	if err != nil {
 		return err
@@ -81,6 +98,12 @@ func (v Vacuum) RemoveManifest(name string, dgst digest.Digest, tags []string) e
 		return err
 	}
 	dcontext.GetLogger(v.ctx).Infof("deleting manifest: %s", manifestPath)
+
+	if v.blobDescriptorCacheProvider != nil {
+		if err = v.blobDescriptorCacheProvider.Clear(v.ctx, dgst); err != nil {
+			return err
+		}
+	}
 	return v.driver.Delete(v.ctx, manifestPath)
 }
 
