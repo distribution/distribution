@@ -26,7 +26,7 @@ isolated testing or in a tightly controlled, air-gapped environment.
     `/etc/docker/daemon.json` on Linux or
     `C:\ProgramData\docker\config\daemon.json` on Windows Server. If you use
     Docker Desktop for Mac or Docker Desktop for Windows, click the Docker icon, choose
-    **Preferences**, and choose +**Daemon**.
+    **Preferences** (Mac) or **Settings** (Windows), and choose **Docker Engine**.
 
     If the `daemon.json` file does not exist, create it. Assuming there are no
     other settings in the file, it should have the following contents:
