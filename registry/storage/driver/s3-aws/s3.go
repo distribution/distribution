@@ -337,7 +337,10 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		objectACL = objectACLString
 	}
 
-	sessionToken := ""
+	sessionToken := parameters["sessiontoken"]
+	if sessionToken == nil {
+		sessionToken = ""
+	}
 
 	params := DriverParameters{
 		fmt.Sprint(accessKey),
