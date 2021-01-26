@@ -1,6 +1,6 @@
 # Distribution
 
-The Docker toolset to pack, ship, store, and deliver content.
+The toolset to pack, ship, store, and deliver content.
 
 This repository's main product is the Open Source Docker Registry implementation
 for storing and distributing Docker and OCI images using the
