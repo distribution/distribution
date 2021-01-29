@@ -18,7 +18,7 @@ jobs:
       GO111MODULE: "auto"
       GOPATH: ${{ github.workspace }}
       GOOS: linux
-      COMMIT_RANGE: ${{ github.event_name == 'pull_request' && format('{0}..{1}',github.event.pull_request.base.sha, github.event.pull_request.head.sha) || github.sha }}
+      COMMIT_RANGE: ${{ github.event_name == 'pull_request' && format('{0}..{1}',github.event.pull_request.base.sha, github.event.pull_request.head.sha) || format('{0}..{1}', github.event.before, github.event.after) }}
 
     steps:
     - uses: actions/checkout@v2
