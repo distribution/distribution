@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    env:
+      DOCKER_BUILDTAGS: "include_oss include_gcs"
+      CGO_ENABLED: 1
+      GO111MODULE: "auto"
+      GOPATH: ${{ github.workspace }}
+      GOOS: linux
+      COMMIT_RANGE: ${{ github.event_name == 'pull_request' && format('{0}..{1}',github.event.pull_request.base.sha, github.event.pull_request.head.sha) || github.sha }}
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        path: src/github.com/docker/distribution
+        fetch-depth: 50
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: 1.14.*
+
+    - name: Dependencies
+      run: |
+          sudo apt-get -q update
+          sudo -E apt-get -yq --no-install-suggests --no-install-recommends install python-minimal
+          cd /tmp && go get -u github.com/vbatts/git-validation
+
+    - name: Build
+      working-directory: ./src/github.com/docker/distribution
+      run: |
+        DCO_VERBOSITY=-q script/validate/dco
+        GO111MODULE=on script/setup/install-dev-tools
+        script/validate/vendor
+        go build -i .
+        make check
+        make build
+        make binaries
+        if [ "$GOOS" = "linux" ]; then make coverage ; fi
+
+    - uses: codecov/codecov-action@v1
+      with:
+        directory: ./src/github.com/docker/distribution
