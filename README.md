@@ -75,13 +75,13 @@ the instructions for [building a development environment](BUILDING.md).
 
 ## Communication
 
-For async communication and long running discussions please use issues and pull
-requests on the GitHub repo. This will be the best place to discuss design and
-implementation.
+For async communication and long running discussions please use issues and pull requests on the github repo.
+This will be the best place to discuss design and implementation.
 
-For sync communication catch us in the `#distribution` slack channels on Cloud
-Native Computing Foundation's (CNCF) slack - `cloud-native.slack.com`. Everyone
-is welcome to join and chat about development. [Get Invite to CNCF slack.](https://slack.cncf.io)
+For sync communication we have a community slack with a #distribution channel that everyone is welcome to join and chat about development.
+
+**Slack:** Catch us in the #distribution channels on dockercommunity.slack.com.
+[Click here for an invite to Docker community slack.](https://dockr.ly/slack)
 
 ## Licenses
 

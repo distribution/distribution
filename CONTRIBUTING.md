@@ -17,9 +17,8 @@
  - can't figure out something
  - are not sure what's going on or what your problem is
 
-Please ask first in the `#distribution` channel on Cloud Native Computing
-Foundation's (CNCF) slack - `cloud-native.slack.com`. 
-[Get Invite to CNCF slack.](https://slack.cncf.io)
+Please ask first in the #distribution channel on Docker community slack.
+[Click here for an invite to Docker community slack](https://dockr.ly/slack)
 
 ### Reporting security issues
 
