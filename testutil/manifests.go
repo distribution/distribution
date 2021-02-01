@@ -3,12 +3,12 @@ package testutil
 import (
 	"fmt"
 
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/manifest"
-	"github.com/docker/distribution/manifest/manifestlist"
-	"github.com/docker/distribution/manifest/schema1"
-	"github.com/docker/distribution/manifest/schema2"
+	"github.com/distribution/distribution"
+	"github.com/distribution/distribution/context"
+	"github.com/distribution/distribution/manifest"
+	"github.com/distribution/distribution/manifest/manifestlist"
+	"github.com/distribution/distribution/manifest/schema1"
+	"github.com/distribution/distribution/manifest/schema2"
 	"github.com/docker/libtrust"
 	"github.com/opencontainers/go-digest"
 )

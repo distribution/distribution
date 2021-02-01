@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/manifest"
-	"github.com/docker/distribution/reference"
+	"github.com/distribution/distribution"
+	"github.com/distribution/distribution/manifest"
+	"github.com/distribution/distribution/reference"
 	"github.com/docker/libtrust"
 	"github.com/opencontainers/go-digest"
 )

@@ -1,4 +1,4 @@
-module github.com/docker/distribution
+module github.com/distribution/distribution
 
 go 1.12
 

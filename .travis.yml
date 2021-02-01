@@ -14,7 +14,7 @@ language: go
 go:
   - "1.14.x"
 
-go_import_path: github.com/docker/distribution
+go_import_path: github.com/distribution/distribution
 
 addons:
   apt:

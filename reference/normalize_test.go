@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/docker/distribution/digestset"
+	"github.com/distribution/distribution/digestset"
 	"github.com/opencontainers/go-digest"
 )
 

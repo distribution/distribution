@@ -55,7 +55,7 @@ $ docker run -d -p 5000:5000 --restart=always --name registry \
 ```
 
 Use this
-[example YAML file](https://github.com/docker/distribution/blob/master/cmd/registry/config-example.yml)
+[example YAML file](https://github.com/distribution/distribution/blob/master/cmd/registry/config-example.yml)
 as a starting point.
 
 ## List of configuration options
@@ -1206,7 +1206,7 @@ This example configures the registry instance to run on port `5000`, binding to
 verbose.
 
 See
-[config-example.yml](https://github.com/docker/distribution/blob/master/cmd/registry/config-example.yml)
+[config-example.yml](https://github.com/distribution/distribution/blob/master/cmd/registry/config-example.yml)
 for another simple configuration. Both examples are generally useful for local
 development.
 

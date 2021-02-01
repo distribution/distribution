@@ -3,9 +3,9 @@ package cache
 import (
 	"context"
 
-	"github.com/docker/distribution"
-	dcontext "github.com/docker/distribution/context"
-	prometheus "github.com/docker/distribution/metrics"
+	"github.com/distribution/distribution"
+	dcontext "github.com/distribution/distribution/context"
+	prometheus "github.com/distribution/distribution/metrics"
 	"github.com/opencontainers/go-digest"
 )
 

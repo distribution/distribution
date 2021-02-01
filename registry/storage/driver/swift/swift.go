@@ -35,10 +35,10 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/ncw/swift"
 
-	storagedriver "github.com/docker/distribution/registry/storage/driver"
-	"github.com/docker/distribution/registry/storage/driver/base"
-	"github.com/docker/distribution/registry/storage/driver/factory"
-	"github.com/docker/distribution/version"
+	storagedriver "github.com/distribution/distribution/registry/storage/driver"
+	"github.com/distribution/distribution/registry/storage/driver/base"
+	"github.com/distribution/distribution/registry/storage/driver/factory"
+	"github.com/distribution/distribution/version"
 )
 
 const driverName = "swift"

@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	storagedriver "github.com/docker/distribution/registry/storage/driver"
-	"github.com/docker/distribution/registry/storage/driver/base"
-	"github.com/docker/distribution/registry/storage/driver/factory"
+	storagedriver "github.com/distribution/distribution/registry/storage/driver"
+	"github.com/distribution/distribution/registry/storage/driver/base"
+	"github.com/distribution/distribution/registry/storage/driver/factory"
 )
 
 const driverName = "inmemory"

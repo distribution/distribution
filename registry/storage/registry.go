@@ -4,10 +4,10 @@ import (
 	"context"
 	"regexp"
 
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/reference"
-	"github.com/docker/distribution/registry/storage/cache"
-	storagedriver "github.com/docker/distribution/registry/storage/driver"
+	"github.com/distribution/distribution"
+	"github.com/distribution/distribution/reference"
+	"github.com/distribution/distribution/registry/storage/cache"
+	storagedriver "github.com/distribution/distribution/registry/storage/driver"
 	"github.com/docker/libtrust"
 )
 

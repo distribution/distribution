@@ -17,14 +17,14 @@
 //
 // To install health, just import it in your application:
 //
-//  import "github.com/docker/distribution/health"
+//  import "github.com/distribution/distribution/health"
 //
 // You can also (optionally) import "health/api" that will add two convenience
 // endpoints: "/debug/health/down" and "/debug/health/up". These endpoints add
 // "manual" checks that allow the service to quickly be brought in/out of
 // rotation.
 //
-//  import _ "github.com/docker/distribution/health/api"
+//  import _ "github.com/distribution/distribution/health/api"
 //
 //  # curl localhost:5001/debug/health
 //  {}
@@ -105,7 +105,7 @@
 // You can also use the predefined Checkers that come included with the health
 // package. First, import the checks:
 //
-//  import "github.com/docker/distribution/health/checks
+//  import "github.com/distribution/distribution/health/checks
 //
 // After that you can make use of any of the provided checks. An example of
 // using a `FileChecker` to take the application out of rotation if a certain

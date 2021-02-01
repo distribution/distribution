@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/registry/api/errcode"
-	v2 "github.com/docker/distribution/registry/api/v2"
-	"github.com/docker/distribution/testutil"
+	"github.com/distribution/distribution"
+	"github.com/distribution/distribution/registry/api/errcode"
+	v2 "github.com/distribution/distribution/registry/api/v2"
+	"github.com/distribution/distribution/testutil"
 )
 
 // Test implements distribution.BlobWriter

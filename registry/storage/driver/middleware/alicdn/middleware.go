@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	dcontext "github.com/docker/distribution/context"
-	storagedriver "github.com/docker/distribution/registry/storage/driver"
-	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
+	dcontext "github.com/distribution/distribution/context"
+	storagedriver "github.com/distribution/distribution/registry/storage/driver"
+	storagemiddleware "github.com/distribution/distribution/registry/storage/driver/middleware"
 
 	"github.com/denverdino/aliyungo/cdn/auth"
 )

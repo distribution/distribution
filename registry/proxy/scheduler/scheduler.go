@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
-	dcontext "github.com/docker/distribution/context"
-	"github.com/docker/distribution/reference"
-	"github.com/docker/distribution/registry/storage/driver"
+	dcontext "github.com/distribution/distribution/context"
+	"github.com/distribution/distribution/reference"
+	"github.com/distribution/distribution/registry/storage/driver"
 )
 
 // onTTLExpiryFunc is called when a repository's TTL expires

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/distribution/registry/storage/cache/cachecheck"
+	"github.com/distribution/distribution/registry/storage/cache/cachecheck"
 	"github.com/gomodule/redigo/redis"
 )
 

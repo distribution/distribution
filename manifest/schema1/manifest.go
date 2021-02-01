@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/manifest"
+	"github.com/distribution/distribution"
+	"github.com/distribution/distribution/manifest"
 	"github.com/docker/libtrust"
 	"github.com/opencontainers/go-digest"
 )

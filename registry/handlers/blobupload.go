@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/docker/distribution"
-	dcontext "github.com/docker/distribution/context"
-	"github.com/docker/distribution/reference"
-	"github.com/docker/distribution/registry/api/errcode"
-	v2 "github.com/docker/distribution/registry/api/v2"
-	"github.com/docker/distribution/registry/storage"
+	"github.com/distribution/distribution"
+	dcontext "github.com/distribution/distribution/context"
+	"github.com/distribution/distribution/reference"
+	"github.com/distribution/distribution/registry/api/errcode"
+	v2 "github.com/distribution/distribution/registry/api/v2"
+	"github.com/distribution/distribution/registry/storage"
 	"github.com/gorilla/handlers"
 	"github.com/opencontainers/go-digest"
 )

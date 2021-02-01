@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/reference"
-	"github.com/docker/distribution/registry/storage/cache"
-	"github.com/docker/distribution/registry/storage/cache/metrics"
+	"github.com/distribution/distribution"
+	"github.com/distribution/distribution/reference"
+	"github.com/distribution/distribution/registry/storage/cache"
+	"github.com/distribution/distribution/registry/storage/cache/metrics"
 	"github.com/gomodule/redigo/redis"
 	"github.com/opencontainers/go-digest"
 )
