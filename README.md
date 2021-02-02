@@ -10,15 +10,16 @@ for building a registry solution or running a simple private registry.
 
 <img src="https://www.docker.com/sites/default/files/oyster-registry-3.png" width=200px/>
 
-[![Build Status](https://travis-ci.org/docker/distribution.svg?branch=master)](https://travis-ci.org/docker/distribution)
-[![GoDoc](https://godoc.org/github.com/docker/distribution?status.svg)](https://godoc.org/github.com/docker/distribution)
+[![Build Status](https://github.com/distribution/distribution/workflows/CI/badge.svg)](https://github.com/distribution/distribution/actions?query=workflow%3ACI)
+[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/distribution/distribution)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 
 This repository contains the following components:
 
 |**Component**       |Description                                                                                                                                                                                         |
 |--------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **registry**       | An implementation of the [OCI Distribution Specification](https://github.com/opencontainers/distribution-spec).                                                                                                 |
-| **libraries**      | A rich set of libraries for interacting with distribution components. Please see [godoc](https://godoc.org/github.com/docker/distribution) for details. **Note**: The interfaces for these libraries are **unstable**. |
+| **libraries**      | A rich set of libraries for interacting with distribution components. Please see [godoc](https://pkg.go.dev/github.com/distribution/distribution) for details. **Note**: The interfaces for these libraries are **unstable**. |
 | **documentation**  | Docker's full documentation set is available at [docs.docker.com](https://docs.docker.com). This repository [contains the subset](docs/) related just to the registry.                                                                                                                                          |
 
 ### How does this integrate with Docker, containerd, and other OCI client?
