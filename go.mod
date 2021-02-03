@@ -20,7 +20,7 @@ require (
 	github.com/docker/go-metrics v0.0.1
 	github.com/docker/libtrust v0.0.0-20150114040149-fa567046d9b1
 	github.com/gomodule/redigo v1.8.2
-	github.com/gorilla/handlers v0.0.0-20150720190736-60c7bfde3e33
+	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
