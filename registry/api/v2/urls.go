@@ -32,7 +32,7 @@ func NewURLBuilder(root *url.URL, relative bool) *URLBuilder {
 	}
 }
 
-// NewURLBuilderFromString workes identically to NewURLBuilder except it takes
+// NewURLBuilderFromString works identically to NewURLBuilder except it takes
 // a string argument for the root, returning an error if it is not a valid
 // url.
 func NewURLBuilderFromString(root string, relative bool) (*URLBuilder, error) {
@@ -58,7 +58,7 @@ func NewURLBuilderFromRequest(r *http.Request, relative bool) *URLBuilder {
 		scheme = r.URL.Scheme
 	}
 
-	// Handle fowarded headers
+	// Handle forwarded headers
 	// Prefer "Forwarded" header as defined by rfc7239 if given
 	// see https://tools.ietf.org/html/rfc7239
 	if forwarded := r.Header.Get("Forwarded"); len(forwarded) > 0 {
