@@ -260,7 +260,7 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 		return storagedriver.PathNotFoundError{Path: sourcePath}
 	}
 
-	if err := os.MkdirAll(path.Dir(dest), 0755); err != nil {
+	if err := os.MkdirAll(path.Dir(dest), 0777); err != nil {
 		return err
 	}
 
