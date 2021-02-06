@@ -16,7 +16,7 @@ import (
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/reference"
-	"github.com/docker/distribution/registry/api/v2"
+	v2 "github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/registry/client/transport"
 	"github.com/docker/distribution/registry/storage/cache"
 	"github.com/docker/distribution/registry/storage/cache/memory"
@@ -63,21 +63,68 @@ func checkHTTPRedirect(req *http.Request, via []*http.Request) error {
 
 // NewRegistry creates a registry namespace which can be used to get a listing of repositories
 func NewRegistry(baseURL string, transport http.RoundTripper) (Registry, error) {
+	return NewRegistryWithOptions(baseURL, WithHTTPRoundTripper(transport))
+}
+
+// NewRegistryWithOptions creates a registry namespace which can be used to get a listing of repositories with options
+func NewRegistryWithOptions(baseURL string, options ...RegistryOption) (Registry, error) {
 	ub, err := v2.NewURLBuilderFromString(baseURL, false)
 	if err != nil {
 		return nil, err
 	}
 
 	client := &http.Client{
-		Transport:     transport,
 		Timeout:       1 * time.Minute,
 		CheckRedirect: checkHTTPRedirect,
 	}
 
-	return &registry{
+	r := &registry{
 		client: client,
 		ub:     ub,
-	}, nil
+	}
+
+	for _, o := range options {
+		err = o.Apply(r)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return r, nil
+}
+
+type RegistryOption interface {
+	Apply(r *registry) error
+}
+
+// WithHTTPRoundTripper allows for a custom HTTP transport to be used with the given registry
+func WithHTTPRoundTripper(transport http.RoundTripper) RegistryOption {
+	return withHTTPRoundTripperOption{transport: transport}
+}
+
+type withHTTPRoundTripperOption struct {
+	transport http.RoundTripper
+}
+
+// Apply conforms to the ManifestServiceOption interface
+func (o withHTTPRoundTripperOption) Apply(r *registry) error {
+	r.client.Transport = o.transport
+	return nil
+}
+
+// WithHTTPTimeout sets an HTTP timeout to be used with the given registry
+func WithHTTPTimeout(duration time.Duration) RegistryOption {
+	return withHTTPTimeoutOption{duration: duration}
+}
+
+type withHTTPTimeoutOption struct {
+	duration time.Duration
+}
+
+// Apply conforms to the ManifestServiceOption interface
+func (o withHTTPTimeoutOption) Apply(r *registry) error {
+	r.client.Timeout = o.duration
+	return nil
 }
 
 type registry struct {
