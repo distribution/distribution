@@ -2,11 +2,14 @@
 
 The toolset to pack, ship, store, and deliver content.
 
-This repository's main product is the Open Source Docker Registry implementation
-for storing and distributing Docker and OCI images using the
+This repository's main product is the Open Source Registry implementation
+for storing and distributing container images using the
 [OCI Distribution Specification](https://github.com/opencontainers/distribution-spec).
 The goal of this project is to provide a simple, secure, and scalable base
-for building a registry solution or running a simple private registry.
+for building a large scale registry solution or running a simple private registry.
+It is a core library for many registry operators including Docker Hub, GitHub Container Registry,
+GitLab Container Registry and DigitalOcean Container Registry, as well as the CNCF Harbor
+Project, and VMware Harbor Registry.
 
 <img src="https://www.docker.com/sites/default/files/oyster-registry-3.png" width=200px/>
 
@@ -45,29 +48,6 @@ system that allow users to:
 * Implement their own home made solution through good specs, and solid
   extensions mechanism.
 
-### Who needs to deploy a registry?
-
-By default, Docker users pull images from Docker's public registry instance.
-[Installing Docker](https://docs.docker.com/engine/installation/) gives users this
-ability. Users can also push images to a repository on Docker's public registry,
-if they have a [Docker Hub](https://hub.docker.com/) account.
-
-For some users and even companies, this default behavior is sufficient. For
-others, it is not.
-
-For example, users with their own software products may want to maintain a
-registry for private, company images. Also, you may wish to deploy your own
-image repository for images used to test or in continuous integration. For these
-use cases and others, [deploying your own registry instance](https://github.com/docker/docker.github.io/blob/master/registry/deploying.md)
-may be the better choice.
-
-### Migration to Registry 2.0
-
-For those who have previously deployed their own registry based on the Registry
-1.0 implementation and wish to deploy a Registry 2.0 while retaining images,
-data migration is required. A tool to assist with migration efforts has been
-created. For more information see [docker/migrator](https://github.com/docker/migrator).
-
 ## Contribution
 
 Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute
@@ -79,10 +59,8 @@ the instructions for [building a development environment](BUILDING.md).
 For async communication and long running discussions please use issues and pull requests on the github repo.
 This will be the best place to discuss design and implementation.
 
-For sync communication we have a community slack with a #distribution channel that everyone is welcome to join and chat about development.
-
-**Slack:** Catch us in the #distribution channels on dockercommunity.slack.com.
-[Click here for an invite to Docker community slack.](https://dockr.ly/slack)
+For sync communication we have a #distribution channel in the [CNCF Slack](https://slack.cncf.io/)
+that everyone is welcome to join and chat about development.
 
 ## Licenses
 
