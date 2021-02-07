@@ -192,7 +192,7 @@ func TestWalkEmptySubDirectory(t *testing.T) {
 	s3driver.Walk(context.Background(), "/testdir", func(fileInfo storagedriver.FileInfo) error {
 		bucketFiles = append(bucketFiles, fileInfo.Path())
 		return nil
-	})
+	}, "")
 
 	expected := []string{"/testdir/emptydir"}
 	if !reflect.DeepEqual(bucketFiles, expected) {

@@ -89,7 +89,18 @@ type StorageDriver interface {
 	// If the returned error from the WalkFn is ErrSkipDir and fileInfo refers
 	// to a directory, the directory will not be entered and Walk
 	// will continue the traversal.  If fileInfo refers to a normal file, processing stops
-	Walk(ctx context.Context, path string, f WalkFn) error
+	//
+	// If offset is specified, Walk will try to start listing starting from the offset,
+	// but it is not guaranteed it will resume at the offset, and may start at an earlier
+	// point.
+	//
+	// Offset should be specified as relative to the path, for example:
+	// In the hierarchy:
+	// /files/apple/alpha
+	// /files/apple/beta
+	// /files/apple/charlie
+	// If path is /files, and you want the listing to be (beta, ...], then offset should be apple/beta.
+	Walk(ctx context.Context, path string, f WalkFn, offset string) error
 }
 
 // FileWriter provides an abstraction for an opened writable file-like object in

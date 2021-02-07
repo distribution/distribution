@@ -43,7 +43,7 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 		}
 
 		return nil
-	})
+	}, last)
 
 	n = copy(repos, foundRepos)
 
@@ -66,7 +66,7 @@ func (reg *registry) Enumerate(ctx context.Context, ingester func(string) error)
 
 	err = reg.blobStore.driver.Walk(ctx, root, func(fileInfo driver.FileInfo) error {
 		return handleRepository(fileInfo, root, "", ingester)
-	})
+	}, "")
 
 	return err
 }

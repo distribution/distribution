@@ -21,7 +21,7 @@ type WalkFn func(fileInfo FileInfo) error
 // If the returned error from the WalkFn is ErrSkipDir and fileInfo refers
 // to a directory, the directory will not be entered and Walk
 // will continue the traversal.  If fileInfo refers to a normal file, processing stops
-func WalkFallback(ctx context.Context, driver StorageDriver, from string, f WalkFn) error {
+func WalkFallback(ctx context.Context, driver StorageDriver, from string, f WalkFn, offset string) error {
 	children, err := driver.List(ctx, from)
 	if err != nil {
 		return err
@@ -43,9 +43,15 @@ func WalkFallback(ctx context.Context, driver StorageDriver, from string, f Walk
 				return err
 			}
 		}
+		// TODO(Sargun): We still need to run stat because we need to determine is this is a dir. Given that we
+		// expect drivers to present a POSIX-like file system this can be optimized further.
+		// For example:
+		// If the current path if : /alpha/beta/charlie/delta,
+		// but the offset is /alpha/british, we didn't need descend to delta and could have skipped iterating over
+		// /alpha/beta's "subdirectories"
 		err = f(fileInfo)
 		if err == nil && fileInfo.IsDir() {
-			if err := WalkFallback(ctx, driver, child, f); err != nil {
+			if err := WalkFallback(ctx, driver, child, f, offset); err != nil {
 				return err
 			}
 		} else if err == ErrSkipDir {
