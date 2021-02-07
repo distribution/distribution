@@ -14,6 +14,7 @@ import (
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/base"
 	"github.com/docker/distribution/registry/storage/driver/factory"
+	"syscall"
 )
 
 const (
@@ -250,8 +251,8 @@ func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
 	return keys, nil
 }
 
-// Move moves an object stored at sourcePath to destPath, removing the original
-// object.
+// Move movmr an object stored at sourcePath to destPath, removing the original object.
+// Fall back to copy then delete when moving across mount points (will not work with directories)
 func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
 	source := d.fullPath(sourcePath)
 	dest := d.fullPath(destPath)
@@ -265,6 +266,60 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 	}
 
 	err := os.Rename(source, dest)
+	if err != nil {
+		// Copy then delete fall back
+		linkErr := err.(*os.LinkError)
+		if errno, ok := linkErr.Err.(syscall.Errno); ok && errno == syscall.EXDEV || os.IsExist(err) {
+			if err = d.copyFile(source, dest); err != nil {
+				return err
+			}
+			if err = os.RemoveAll(source); err != nil {
+				return err
+			}
+		}
+	}
+	return err
+}
+
+// Copy a file to another. If dst file exists, it will be overwritten
+func (d *driver) copyFile(src, dst string) (err error) {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	// Allocate tmp file with unique name, otherwise multiple processes may write to the same file
+	out, err := ioutil.TempFile(path.Dir(dst), path.Base(dst))
+	if err != nil {
+		return err
+	}
+	defer func() {
+		// In any case, cleanup
+		if cierr := in.Close(); err == nil {
+			err = cierr
+		}
+		if coerr := out.Close(); err == nil {
+			err = coerr
+		}
+		if rmerr := os.RemoveAll(out.Name()); err == nil {
+			err = rmerr
+		}
+	}()
+	if _, err = io.Copy(out, in); err != nil {
+		return err
+	}
+	if err := out.Sync(); err != nil {
+		return err
+	}
+	mverr := os.Rename(out.Name(), dst)
+	defer func() {
+		// If os.Rename passed, consider this function succeeded
+		if mverr == nil {
+			err = nil
+		} else if err == nil {
+			err = mverr
+		}
+	}()
+
 	return err
 }
 
