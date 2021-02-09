@@ -6,9 +6,9 @@ keywords: registry, on-prem, images, tags, repository, distribution, JWT authent
 
 # Docker Registry v2 Bearer token specification
 
-This specification covers the `docker/distribution` implementation of the
+This specification covers the `distribution/distribution` implementation of the
 v2 Registry's authentication schema.  Specifically, it describes the JSON
-Web Token schema that `docker/distribution` has adopted to implement the
+Web Token schema that `distribution/distribution` has adopted to implement the
 client-opaque Bearer token issued by an authentication service and
 understood by the registry.
 

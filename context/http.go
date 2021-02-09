@@ -9,7 +9,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/distribution/uuid"
+	"github.com/distribution/distribution/v3/uuid"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 )

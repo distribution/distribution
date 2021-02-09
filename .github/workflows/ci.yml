@@ -24,7 +24,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
       with:
-        path: src/github.com/docker/distribution
+        path: src/github.com/distribution/distribution
         fetch-depth: 50
 
     - name: Set up Go
@@ -39,7 +39,7 @@ jobs:
           cd /tmp && go get -u github.com/vbatts/git-validation
 
     - name: Build
-      working-directory: ./src/github.com/docker/distribution
+      working-directory: ./src/github.com/distribution/distribution
       run: |
         DCO_VERBOSITY=-q script/validate/dco
         GO111MODULE=on script/setup/install-dev-tools
@@ -52,4 +52,4 @@ jobs:
 
     - uses: codecov/codecov-action@v1
       with:
-        directory: ./src/github.com/docker/distribution
+        directory: ./src/github.com/distribution/distribution
