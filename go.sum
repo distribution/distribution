@@ -20,8 +20,10 @@ github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869 h1:DDGfHa7BWjL4Yn
 github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869/go.mod h1:Ekp36dRnpXw/yCqJaO+ZrUyxD+3VXMFFr56k5XYrpB4=
 github.com/bshuster-repo/logrus-logstash-hook v1.0.0 h1:e+C0SB5R1pu//O4MQ3f9cFuPGoOVeF2fE4Og9otCc70=
 github.com/bshuster-repo/logrus-logstash-hook v1.0.0/go.mod h1:zsTqEiSzDgAa/8GZR7E1qaXrhYNDKBYy5/dWPTIflbk=
-github.com/bugsnag/bugsnag-go v1.9.0 h1:9XNqa3y5Ftr/GRW7J1AnOFgflY8PtNJT6xSyNdQPqUk=
-github.com/bugsnag/bugsnag-go v1.9.0/go.mod h1:2oa8nejYd4cQ/b0hMIopN0lCRxU0bueqREvZLWFrtK8=
+github.com/bugsnag/bugsnag-go v2.1.1+incompatible h1:tH4xLcWFBWTsri11ZSQnmPLVLn0IDvx9716veesAuW8=
+github.com/bugsnag/bugsnag-go v2.1.1+incompatible/go.mod h1:2oa8nejYd4cQ/b0hMIopN0lCRxU0bueqREvZLWFrtK8=
+github.com/bugsnag/bugsnag-go/v2 v2.1.0 h1:FayfqFarduf69zUvCR0DEzOq3TfWUOGlayK785YrzfA=
+github.com/bugsnag/bugsnag-go/v2 v2.1.0/go.mod h1:udxiFmsyx0VRKB5D/z8aiUKpq0ecSRWVgsAS9K1Nd/4=
 github.com/bugsnag/panicwrap v1.3.1 h1:pmuhHlhbUV4OOrGDvoiMjHSZzwRcL+I9cIzYKiW4lII=
 github.com/bugsnag/panicwrap v1.3.1/go.mod h1:D/8v3kj0zr8ZAKg1AQ6crr+5VwKN5eIywRkfhyM/+dE=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

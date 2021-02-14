@@ -61,22 +61,26 @@ github.com/aws/aws-sdk-go/service/sts
 github.com/aws/aws-sdk-go/service/sts/stsiface
 # github.com/beorn7/perks v1.0.1
 github.com/beorn7/perks/quantile
-# github.com/bitly/go-simplejson v0.5.0
-## explicit
 # github.com/bmizerany/assert v0.0.0-20160611221934-b7ed37b82869
 ## explicit
 # github.com/bshuster-repo/logrus-logstash-hook v1.0.0
 ## explicit
 github.com/bshuster-repo/logrus-logstash-hook
-# github.com/bugsnag/bugsnag-go v1.9.0
+# github.com/bugsnag/bugsnag-go v2.1.1+incompatible
 ## explicit
 github.com/bugsnag/bugsnag-go
 github.com/bugsnag/bugsnag-go/device
 github.com/bugsnag/bugsnag-go/errors
 github.com/bugsnag/bugsnag-go/headers
 github.com/bugsnag/bugsnag-go/sessions
-# github.com/bugsnag/panicwrap v1.3.1
+# github.com/bugsnag/bugsnag-go/v2 v2.1.0
 ## explicit
+github.com/bugsnag/bugsnag-go/v2
+github.com/bugsnag/bugsnag-go/v2/device
+github.com/bugsnag/bugsnag-go/v2/errors
+github.com/bugsnag/bugsnag-go/v2/headers
+github.com/bugsnag/bugsnag-go/v2/sessions
+# github.com/bugsnag/panicwrap v1.3.1
 github.com/bugsnag/panicwrap
 # github.com/denverdino/aliyungo v0.0.0-20190125010748-a747050bb1ba
 ## explicit
@@ -101,7 +105,6 @@ github.com/docker/libtrust
 # github.com/felixge/httpsnoop v1.0.1
 github.com/felixge/httpsnoop
 # github.com/gofrs/uuid v4.0.0+incompatible
-## explicit
 github.com/gofrs/uuid
 # github.com/golang/protobuf v1.3.2
 github.com/golang/protobuf/proto

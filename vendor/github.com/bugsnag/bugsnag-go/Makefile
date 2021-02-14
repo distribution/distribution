@@ -1,5 +1,7 @@
 TEST?=./...
 
+export GO111MODULE=auto
+
 default: alldeps test
 
 deps:

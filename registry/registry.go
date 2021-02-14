@@ -16,7 +16,7 @@ import (
 	logrus_bugsnag "github.com/Shopify/logrus-bugsnag"
 
 	logstash "github.com/bshuster-repo/logrus-logstash-hook"
-	"github.com/bugsnag/bugsnag-go"
+	"github.com/bugsnag/bugsnag-go/v2"
 	"github.com/docker/go-metrics"
 	gorhandlers "github.com/gorilla/handlers"
 	"github.com/sirupsen/logrus"

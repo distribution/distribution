@@ -36,7 +36,7 @@ Downloading the code
 You can download the code and its dependencies using
 
 ```
-go get -t github.com/bugsnag/bugsnag-go
+go get -t github.com/bugsnag/bugsnag-go/v2
 ```
 
 It will be put into "$GOPATH/src/github.com/bugsnag/bugsnag-go"
@@ -50,7 +50,7 @@ Running Tests
 You can run the tests with
 
 ```shell
-go test
+go test ./...
 ```
 
 Making PRs
@@ -73,7 +73,7 @@ If you are a project maintainer, you can build and release a new version of
 1. Decide on a version number and date for this release
 1. Add an entry (or update the `TBD` entry if it exists) for this release in `CHANGELOG.md` so that it includes the version number, release date and granular description of what changed
 1. Update the README if necessary
-1. Update the version number in `bugsnag.go` and verify that tests pass.
+1. Update the version number in `v2/bugsnag.go` and verify that tests pass.
 1. Commit these changes `git commit -am "Preparing release"`
 1. Create a PR from `next` -> `master` titled `Release vX.X.X`, adding a description to help the reviewer understand the scope of the release
 1. Await PR approval and CI pass

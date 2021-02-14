@@ -1,0 +1,55 @@
+GIT
+  remote: https://github.com/bugsnag/maze-runner
+  revision: 7377529a77eb7585afc66cd2080fcdc4eea3306a
+  branch: v1
+  specs:
+    bugsnag-maze-runner (1.1.0)
+      cucumber (~> 3.1.0)
+      cucumber-expressions (= 5.0.15)
+      minitest (~> 5.0)
+      os (~> 1.0.0)
+      rack (~> 2.0.0)
+      rake (~> 12.3.3)
+      test-unit (~> 3.2.0)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    backports (3.21.0)
+    builder (3.2.4)
+    cucumber (3.1.0)
+      builder (>= 2.1.2)
+      cucumber-core (~> 3.1.0)
+      cucumber-expressions (~> 5.0.4)
+      cucumber-wire (~> 0.0.1)
+      diff-lcs (~> 1.3)
+      gherkin (~> 5.0)
+      multi_json (>= 1.7.5, < 2.0)
+      multi_test (>= 0.1.2)
+    cucumber-core (3.1.0)
+      backports (>= 3.8.0)
+      cucumber-tag_expressions (~> 1.1.0)
+      gherkin (>= 5.0.0)
+    cucumber-expressions (5.0.15)
+    cucumber-tag_expressions (1.1.1)
+    cucumber-wire (0.0.1)
+    diff-lcs (1.4.4)
+    gherkin (5.1.0)
+    minitest (5.14.4)
+    multi_json (1.15.0)
+    multi_test (0.1.2)
+    os (1.0.1)
+    power_assert (2.0.0)
+    rack (2.0.9)
+    rake (12.3.3)
+    test-unit (3.2.9)
+      power_assert
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  bugsnag-maze-runner!
+
+BUNDLED WITH
+   2.1.4
