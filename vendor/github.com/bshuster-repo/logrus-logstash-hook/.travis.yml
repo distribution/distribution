@@ -1,13 +1,10 @@
 language: go
 sudo: false
 
-matrix:
-  include:
-    - go: 1.3
-    - go: 1.4
-    - go: 1.5
-    - go: 1.6
-    - go: tip
+go:
+  - "1.11.x"
+  - "1.12.x"
+  - "tip"
 
 install:
   - # Skip
@@ -15,5 +12,5 @@ install:
 script:
   - go get -t -v ./...
   - diff -u <(echo -n) <(gofmt -d .)
-  - go tool vet .
+  - go vet .
   - go test -v -race ./...
