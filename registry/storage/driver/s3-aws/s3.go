@@ -104,7 +104,7 @@ type DriverParameters struct {
 	ObjectACL                   string
 	SessionToken                string
 	UseDualStack                bool
-	S3Accelerate                bool
+	Accelerate                  bool
 }
 
 func init() {
@@ -378,21 +378,21 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 
 	sessionToken := ""
 
-	s3accelerateBool := false
-	s3accelerate := parameters["s3accelerate"]
-	switch s3accelerate := s3accelerate.(type) {
+	accelerateBool := false
+	accelerate := parameters["accelerate"]
+	switch accelerate := accelerate.(type) {
 	case string:
-		b, err := strconv.ParseBool(s3accelerate)
+		b, err := strconv.ParseBool(accelerate)
 		if err != nil {
-			return nil, fmt.Errorf("The s3accelerate parameter should be a boolean")
+			return nil, fmt.Errorf("the accelerate parameter should be a boolean")
 		}
-		s3accelerateBool = b
+		accelerateBool = b
 	case bool:
-		s3accelerateBool = s3accelerate
+		accelerateBool = accelerate
 	case nil:
 		// do nothing
 	default:
-		return nil, fmt.Errorf("The s3accelerate parameter should be a boolean")
+		return nil, fmt.Errorf("the accelerate parameter should be a boolean")
 	}
 
 	params := DriverParameters{
@@ -417,7 +417,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		objectACL,
 		fmt.Sprint(sessionToken),
 		useDualStackBool,
-		s3accelerateBool,
+		accelerateBool,
 	}
 
 	return New(params)
@@ -477,7 +477,7 @@ func New(params DriverParameters) (*Driver, error) {
 		awsConfig.WithEndpoint(params.RegionEndpoint)
 	}
 
-	awsConfig.WithS3UseAccelerate(params.S3Accelerate)
+	awsConfig.WithS3UseAccelerate(params.Accelerate)
 	awsConfig.WithRegion(params.Region)
 	awsConfig.WithDisableSSL(!params.Secure)
 	if params.UseDualStack {
