@@ -107,7 +107,7 @@ image manifest based on the Content-Type returned in the HTTP response.
         - **`variant`** *string*
 
             The optional variant field specifies a variant of the CPU, for
-            example `armv6l` to specify a particular CPU variant of the ARM CPU.
+            example `v6` to specify a particular CPU variant of the ARM CPU.
 
         - **`features`** *array*
 
