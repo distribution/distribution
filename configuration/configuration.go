@@ -111,6 +111,9 @@ type Configuration struct {
 			// Specifies the lowest TLS version allowed
 			MinimumTLS string `yaml:"minimumtls,omitempty"`
 
+			// Specifies a list of cipher suites allowed
+			CipherSuites []string `yaml:"ciphersuites,omitempty"`
+
 			// LetsEncrypt is used to configuration setting up TLS through
 			// Let's Encrypt instead of manually specifying certificate and
 			// key. If a TLS certificate is specified, the Let's Encrypt

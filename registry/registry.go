@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -33,6 +34,60 @@ import (
 	"github.com/distribution/distribution/v3/uuid"
 	"github.com/distribution/distribution/v3/version"
 )
+
+// a map of TLS cipher suite names to constants in https://golang.org/pkg/crypto/tls/#pkg-constants
+var cipherSuites = map[string]uint16{
+	// TLS 1.0 - 1.2 cipher suites
+	"TLS_RSA_WITH_RC4_128_SHA":                      tls.TLS_RSA_WITH_RC4_128_SHA,
+	"TLS_RSA_WITH_3DES_EDE_CBC_SHA":                 tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
+	"TLS_RSA_WITH_AES_128_CBC_SHA":                  tls.TLS_RSA_WITH_AES_128_CBC_SHA,
+	"TLS_RSA_WITH_AES_256_CBC_SHA":                  tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+	"TLS_RSA_WITH_AES_128_CBC_SHA256":               tls.TLS_RSA_WITH_AES_128_CBC_SHA256,
+	"TLS_RSA_WITH_AES_128_GCM_SHA256":               tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
+	"TLS_RSA_WITH_AES_256_GCM_SHA384":               tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+	"TLS_ECDHE_ECDSA_WITH_RC4_128_SHA":              tls.TLS_ECDHE_ECDSA_WITH_RC4_128_SHA,
+	"TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA":          tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
+	"TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA":          tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
+	"TLS_ECDHE_RSA_WITH_RC4_128_SHA":                tls.TLS_ECDHE_RSA_WITH_RC4_128_SHA,
+	"TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA":           tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
+	"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA":            tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+	"TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA":            tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+	"TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256":       tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,
+	"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256":         tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
+	"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256":         tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+	"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256":       tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+	"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384":         tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+	"TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384":       tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+	"TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256":   tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+	"TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256": tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+	// TLS 1.3 cipher suites
+	"TLS_AES_128_GCM_SHA256":       tls.TLS_AES_128_GCM_SHA256,
+	"TLS_AES_256_GCM_SHA384":       tls.TLS_AES_256_GCM_SHA384,
+	"TLS_CHACHA20_POLY1305_SHA256": tls.TLS_CHACHA20_POLY1305_SHA256,
+}
+
+// a list of default ciphersuites to utilize
+var defaultCipherSuites = []uint16{
+	tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+	tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+	tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+	tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+	tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+	tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+	tls.TLS_AES_128_GCM_SHA256,
+	tls.TLS_CHACHA20_POLY1305_SHA256,
+	tls.TLS_AES_256_GCM_SHA384,
+}
+
+// maps tls version strings to constants
+var defaultTLSVersionStr = "tls1.2"
+var tlsVersions = map[string]uint16{
+	// user specified values
+	"tls1.0": tls.VersionTLS10,
+	"tls1.1": tls.VersionTLS11,
+	"tls1.2": tls.VersionTLS12,
+	"tls1.3": tls.VersionTLS13,
+}
 
 // this channel gets notified when process receives signal. It is global to ease unit testing
 var quit = make(chan os.Signal, 1)
@@ -128,6 +183,35 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 	}, nil
 }
 
+// takes a list of cipher suites and converts it to a list of respective tls constants
+// if an empty list is provided, then the defaults will be used
+func getCipherSuites(names []string) ([]uint16, error) {
+	if len(names) == 0 {
+		return defaultCipherSuites, nil
+	}
+	cipherSuiteConsts := make([]uint16, len(names))
+	for i, name := range names {
+		cipherSuiteConst, ok := cipherSuites[name]
+		if !ok {
+			return nil, fmt.Errorf("unknown TLS cipher suite '%s' specified for http.tls.cipherSuites", name)
+		}
+		cipherSuiteConsts[i] = cipherSuiteConst
+	}
+	return cipherSuiteConsts, nil
+}
+
+// takes a list of cipher suite ids and converts it to a list of respective names
+func getCipherSuiteNames(ids []uint16) []string {
+	if len(ids) == 0 {
+		return nil
+	}
+	names := make([]string, len(ids))
+	for i, id := range ids {
+		names[i] = tls.CipherSuiteName(id)
+	}
+	return names
+}
+
 // ListenAndServe runs the registry's HTTP server.
 func (registry *Registry) ListenAndServe() error {
 	config := registry.config
@@ -138,35 +222,27 @@ func (registry *Registry) ListenAndServe() error {
 	}
 
 	if config.HTTP.TLS.Certificate != "" || config.HTTP.TLS.LetsEncrypt.CacheFile != "" {
-		var tlsMinVersion uint16
 		if config.HTTP.TLS.MinimumTLS == "" {
-			tlsMinVersion = tls.VersionTLS10
-		} else {
-			switch config.HTTP.TLS.MinimumTLS {
-			case "tls1.0":
-				tlsMinVersion = tls.VersionTLS10
-			case "tls1.1":
-				tlsMinVersion = tls.VersionTLS11
-			case "tls1.2":
-				tlsMinVersion = tls.VersionTLS12
-			default:
-				return fmt.Errorf("unknown minimum TLS level '%s' specified for http.tls.minimumtls", config.HTTP.TLS.MinimumTLS)
-			}
-			dcontext.GetLogger(registry.app).Infof("restricting TLS to %s or higher", config.HTTP.TLS.MinimumTLS)
+			config.HTTP.TLS.MinimumTLS = defaultTLSVersionStr
 		}
+		tlsMinVersion, ok := tlsVersions[config.HTTP.TLS.MinimumTLS]
+		if !ok {
+			return fmt.Errorf("unknown minimum TLS level '%s' specified for http.tls.minimumtls", config.HTTP.TLS.MinimumTLS)
+		}
+		dcontext.GetLogger(registry.app).Infof("restricting TLS version to %s or higher", config.HTTP.TLS.MinimumTLS)
+
+		tlsCipherSuites, err := getCipherSuites(config.HTTP.TLS.CipherSuites)
+		if err != nil {
+			return err
+		}
+		dcontext.GetLogger(registry.app).Infof("restricting TLS cipher suites to: %s", strings.Join(getCipherSuiteNames(tlsCipherSuites), ","))
+
 		tlsConf := &tls.Config{
 			ClientAuth:               tls.NoClientCert,
 			NextProtos:               nextProtos(config),
 			MinVersion:               tlsMinVersion,
 			PreferServerCipherSuites: true,
-			CipherSuites: []uint16{
-				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
-				tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
-				tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
-				tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-			},
+			CipherSuites:             tlsCipherSuites,
 		}
 
 		if config.HTTP.TLS.LetsEncrypt.CacheFile != "" {
