@@ -7,7 +7,9 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"os"
+	"path"
 	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -778,5 +780,90 @@ func compareWalked(t *testing.T, expected, walked []string) {
 		if walked[i] != expected[i] {
 			t.Fatalf("walked in unexpected order: expected %s; walked %s", expected, walked)
 		}
+	}
+}
+
+func TestListObjectsV2(t *testing.T) {
+	if skipS3() != "" {
+		t.Skip(skipS3())
+	}
+
+	rootDir, err := ioutil.TempDir("", "driver-")
+	if err != nil {
+		t.Fatalf("unexpected error creating temporary directory: %v", err)
+	}
+	defer os.Remove(rootDir)
+
+	d, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
+	if err != nil {
+		t.Fatalf("unexpected error creating driver: %v", err)
+	}
+
+	ctx := context.Background()
+	n := 6
+	prefix := "/test-list-objects-v2"
+	var filePaths []string
+	for i := 0; i < n; i++ {
+		filePaths = append(filePaths, fmt.Sprintf("%s/%d", prefix, i))
+	}
+	for _, path := range filePaths {
+		if err := d.PutContent(ctx, path, []byte(path)); err != nil {
+			t.Fatalf("unexpected error putting content: %v", err)
+		}
+	}
+
+	info, err := d.Stat(ctx, filePaths[0])
+	if err != nil {
+		t.Fatalf("unexpected error stating: %v", err)
+	}
+
+	if info.IsDir() || info.Size() != int64(len(filePaths[0])) || info.Path() != filePaths[0] {
+		t.Fatal("unexcepted state info")
+	}
+
+	subDirPath := prefix + "/sub/0"
+	if err := d.PutContent(ctx, subDirPath, []byte(subDirPath)); err != nil {
+		t.Fatalf("unexpected error putting content: %v", err)
+	}
+
+	subPaths := append(filePaths, path.Dir(subDirPath))
+
+	result, err := d.List(ctx, prefix)
+	if err != nil {
+		t.Fatalf("unexpected error listing: %v", err)
+	}
+
+	sort.Strings(subPaths)
+	sort.Strings(result)
+	if !reflect.DeepEqual(subPaths, result) {
+		t.Fatalf("unexpected list result")
+	}
+
+	var walkPaths []string
+	if err := d.Walk(ctx, prefix, func(fileInfo storagedriver.FileInfo) error {
+		walkPaths = append(walkPaths, fileInfo.Path())
+		if fileInfo.Path() == path.Dir(subDirPath) {
+			if !fileInfo.IsDir() {
+				t.Fatalf("unexpected walking file info")
+			}
+		} else {
+			if fileInfo.IsDir() || fileInfo.Size() != int64(len(fileInfo.Path())) {
+				t.Fatalf("unexpected walking file info")
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("unexpected error walking: %v", err)
+	}
+
+	subPaths = append(subPaths, subDirPath)
+	sort.Strings(walkPaths)
+	sort.Strings(subPaths)
+	if !reflect.DeepEqual(subPaths, walkPaths) {
+		t.Fatalf("unexpected walking pathes")
+	}
+
+	if err := d.Delete(ctx, prefix); err != nil {
+		t.Fatalf("unexpected error deleting: %v", err)
 	}
 }

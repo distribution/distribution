@@ -684,7 +684,7 @@ func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (sto
 // Stat retrieves the FileInfo for the given path, including the current size
 // in bytes and the creation time.
 func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
-	resp, err := d.S3.ListObjects(&s3.ListObjectsInput{
+	resp, err := d.S3.ListObjectsV2(&s3.ListObjectsV2Input{
 		Bucket:  aws.String(d.Bucket),
 		Prefix:  aws.String(d.s3Path(path)),
 		MaxKeys: aws.Int64(1),
@@ -729,7 +729,7 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 		prefix = "/"
 	}
 
-	resp, err := d.S3.ListObjects(&s3.ListObjectsInput{
+	resp, err := d.S3.ListObjectsV2(&s3.ListObjectsV2Input{
 		Bucket:    aws.String(d.Bucket),
 		Prefix:    aws.String(d.s3Path(path)),
 		Delimiter: aws.String("/"),
@@ -752,13 +752,13 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 			directories = append(directories, strings.Replace(commonPrefix[0:len(commonPrefix)-1], d.s3Path(""), prefix, 1))
 		}
 
-		if *resp.IsTruncated {
-			resp, err = d.S3.ListObjects(&s3.ListObjectsInput{
-				Bucket:    aws.String(d.Bucket),
-				Prefix:    aws.String(d.s3Path(path)),
-				Delimiter: aws.String("/"),
-				MaxKeys:   aws.Int64(listMax),
-				Marker:    resp.NextMarker,
+		if resp.IsTruncated != nil && *resp.IsTruncated {
+			resp, err = d.S3.ListObjectsV2(&s3.ListObjectsV2Input{
+				Bucket:            aws.String(d.Bucket),
+				Prefix:            aws.String(d.s3Path(path)),
+				Delimiter:         aws.String("/"),
+				MaxKeys:           aws.Int64(listMax),
+				ContinuationToken: resp.NextContinuationToken,
 			})
 			if err != nil {
 				return nil, err
@@ -907,14 +907,14 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 
 	// list objects under the given path as a subpath (suffix with slash "/")
 	s3Path := d.s3Path(path) + "/"
-	listObjectsInput := &s3.ListObjectsInput{
+	listObjectsInput := &s3.ListObjectsV2Input{
 		Bucket: aws.String(d.Bucket),
 		Prefix: aws.String(s3Path),
 	}
 ListLoop:
 	for {
 		// list all the objects
-		resp, err := d.S3.ListObjects(listObjectsInput)
+		resp, err := d.S3.ListObjectsV2(listObjectsInput)
 
 		// resp.Contents can only be empty on the first call
 		// if there were no more results to return after the first call, resp.IsTruncated would have been false
@@ -929,8 +929,7 @@ ListLoop:
 			})
 		}
 
-		// resp.Contents must have at least one element or we would have returned not found
-		listObjectsInput.Marker = resp.Contents[len(resp.Contents)-1].Key
+		listObjectsInput.ContinuationToken = resp.NextContinuationToken
 
 		// from the s3 api docs, IsTruncated "specifies whether (true) or not (false) all of the results were returned"
 		// if everything has been returned, break
