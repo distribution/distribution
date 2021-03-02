@@ -110,6 +110,18 @@ func TestManifestList(t *testing.T) {
 		t.Fatalf("unexpected number of references: %d", len(references))
 	}
 	for i := range references {
+		platform := manifestDescriptors[i].Platform
+		expectedPlatform := &v1.Platform{
+			Architecture: platform.Architecture,
+			OS:           platform.OS,
+			OSFeatures:   platform.OSFeatures,
+			OSVersion:    platform.OSVersion,
+			Variant:      platform.Variant,
+		}
+		if !reflect.DeepEqual(references[i].Platform, expectedPlatform) {
+			t.Fatalf("unexpected value %d returned by References: %v", i, references[i])
+		}
+		references[i].Platform = nil
 		if !reflect.DeepEqual(references[i], manifestDescriptors[i].Descriptor) {
 			t.Fatalf("unexpected value %d returned by References: %v", i, references[i])
 		}
@@ -247,6 +259,18 @@ func TestOCIImageIndex(t *testing.T) {
 		t.Fatalf("unexpected number of references: %d", len(references))
 	}
 	for i := range references {
+		platform := manifestDescriptors[i].Platform
+		expectedPlatform := &v1.Platform{
+			Architecture: platform.Architecture,
+			OS:           platform.OS,
+			OSFeatures:   platform.OSFeatures,
+			OSVersion:    platform.OSVersion,
+			Variant:      platform.Variant,
+		}
+		if !reflect.DeepEqual(references[i].Platform, expectedPlatform) {
+			t.Fatalf("unexpected value %d returned by References: %v", i, references[i])
+		}
+		references[i].Platform = nil
 		if !reflect.DeepEqual(references[i], manifestDescriptors[i].Descriptor) {
 			t.Fatalf("unexpected value %d returned by References: %v", i, references[i])
 		}

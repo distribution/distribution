@@ -126,6 +126,13 @@ func (m ManifestList) References() []distribution.Descriptor {
 	dependencies := make([]distribution.Descriptor, len(m.Manifests))
 	for i := range m.Manifests {
 		dependencies[i] = m.Manifests[i].Descriptor
+		dependencies[i].Platform = &v1.Platform{
+			Architecture: m.Manifests[i].Platform.Architecture,
+			OS:           m.Manifests[i].Platform.OS,
+			OSVersion:    m.Manifests[i].Platform.OSVersion,
+			OSFeatures:   m.Manifests[i].Platform.OSFeatures,
+			Variant:      m.Manifests[i].Platform.Variant,
+		}
 	}
 
 	return dependencies
