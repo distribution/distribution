@@ -1,0 +1,25 @@
+# Workflow used to make a request to proxy.golang.org to refresh cache on https://pkg.go.dev/github.com/distribution/distribution
+# when a released of distribution is produced
+name: godev
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.15
+      -
+        name: Call pkg.go.dev
+        run: |
+          go get github.com/${GITHUB_REPOSITORY}@${GITHUB_REF#refs/tags/}
+        env:
+          GO111MODULE: on
+          GOPROXY: https://proxy.golang.org
