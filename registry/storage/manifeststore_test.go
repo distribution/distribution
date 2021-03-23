@@ -19,7 +19,7 @@ import (
 	"github.com/docker/distribution/testutil"
 	"github.com/docker/libtrust"
 	"github.com/opencontainers/go-digest"
-	"github.com/opencontainers/image-spec/specs-go/v1"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 type manifestStoreTestEnv struct {
@@ -91,13 +91,12 @@ func testManifestStorage(t *testing.T, schema1Enabled bool, options ...RegistryO
 	// readseekers for upload later.
 	testLayers := map[digest.Digest]io.ReadSeeker{}
 	for i := 0; i < 2; i++ {
-		rs, ds, err := testutil.CreateRandomTarFile()
+		rs, dgst, err := testutil.CreateRandomTarFile()
 		if err != nil {
 			t.Fatalf("unexpected error generating test layer file")
 		}
-		dgst := digest.Digest(ds)
 
-		testLayers[digest.Digest(dgst)] = rs
+		testLayers[dgst] = rs
 		m.FSLayers = append(m.FSLayers, schema1.FSLayer{
 			BlobSum: dgst,
 		})
@@ -414,11 +413,10 @@ func testOCIManifestStorage(t *testing.T, testname string, includeMediaTypes boo
 
 	// Add some layers
 	for i := 0; i < 2; i++ {
-		rs, ds, err := testutil.CreateRandomTarFile()
+		rs, dgst, err := testutil.CreateRandomTarFile()
 		if err != nil {
 			t.Fatalf("%s: unexpected error generating test layer file", testname)
 		}
-		dgst := digest.Digest(ds)
 
 		wr, err := env.repository.Blobs(env.ctx).Create(env.ctx)
 		if err != nil {

@@ -14,7 +14,8 @@ import (
 
 	"rsc.io/letsencrypt"
 
-	"github.com/Shopify/logrus-bugsnag"
+	logrus_bugsnag "github.com/Shopify/logrus-bugsnag"
+
 	logstash "github.com/bshuster-repo/logrus-logstash-hook"
 	"github.com/bugsnag/bugsnag-go"
 	"github.com/docker/distribution/configuration"
@@ -185,7 +186,7 @@ func (registry *Registry) ListenAndServe() error {
 				}
 
 				if ok := pool.AppendCertsFromPEM(caPem); !ok {
-					return fmt.Errorf("Could not add CA to pool")
+					return fmt.Errorf("could not add CA to pool")
 				}
 			}
 
