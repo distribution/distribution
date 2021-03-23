@@ -26,16 +26,21 @@ See changelog below for full list of changes
 
 * First draft of actions based ci [#3347](https://github.com/distribution/distribution/pull/3347)
 * Fix vndr and check [#3001](https://github.com/distribution/distribution/pull/3001)
+* Improve code quality by adding linter checks [#3385](https://github.com/distribution/distribution/pull/3385)
 
 ### Documentation
 
 * Add redirect for old URL [#3197](https://github.com/distribution/distribution/pull/3197)
 * Fix broken table [#3073](https://github.com/distribution/distribution/pull/3073)
-* Adding deprecated schema instructions  [#2987](https://github.com/distribution/distribution/pull/2987)
+* Adding deprecated schema instructions [#2987](https://github.com/distribution/distribution/pull/2987)
 
 ### Storage drivers
 
 * S3 Driver: add support for ceph radosgw [#3119](https://github.com/distribution/distribution/pull/3119)
+
+### Security
+
+* Added flag for user configurable cipher suites [#3384](https://github.com/distribution/distribution/pull/3384)
 
 ### Dependency Changes
 
