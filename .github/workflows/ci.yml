@@ -35,7 +35,7 @@ jobs:
     - name: Dependencies
       run: |
           sudo apt-get -q update
-          sudo -E apt-get -yq --no-install-suggests --no-install-recommends install python-minimal
+          sudo -E apt-get -yq --no-install-suggests --no-install-recommends install python2-minimal
           cd /tmp && go get -u github.com/vbatts/git-validation
 
     - name: Build
