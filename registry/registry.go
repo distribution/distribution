@@ -354,7 +354,8 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 	switch formatter {
 	case "json":
 		log.SetFormatter(&log.JSONFormatter{
-			TimestampFormat: time.RFC3339Nano,
+			TimestampFormat:   time.RFC3339Nano,
+			DisableHTMLEscape: true,
 		})
 	case "text":
 		log.SetFormatter(&log.TextFormatter{
