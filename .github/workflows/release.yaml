@@ -1,4 +1,4 @@
-name: Build release image and push to hub
+name: Release docker image
 
 on:
   push:
