@@ -731,6 +731,16 @@ Value of `ipfilteredby` can be:
 | `privatekey` | yes      | The URL authentication key for Alicdn.                                  |
 | `duration`   | no       | An integer and unit for the duration of the Alicdn session. Valid time units are `ns`, `us` (or `µs`), `ms`, `s`, `m`, or `h`.|
 
+### `bunnycdn`
+
+`bunnycdn` storage middleware allows the registry to serve layers via a content delivery network provided by [BunnyCDN](https://bunnycdn.com/). BunnyCDN requires the s3 storage driver.
+
+| Parameter    | Required | Description                                                             |
+|--------------|----------|-------------------------------------------------------------------------|
+| `baseurl`    | yes      | The `SCHEME://HOST` at which BunnyCDN is served.                        |
+| `token` | yes      | The URL authentication token for BunnyCDN.  See the [CDN URL Token Authentication](https://support.bunnycdn.com/hc/en-us/articles/208517745-How-to-set-up-CDN-Url-Token-Authentication) documentation for more details |
+| `duration`   | no       | An integer and unit for the duration of the BunnyCDN URL. Valid time units are `ns`, `us` (or `µs`), `ms`, `s`, `m`, or `h`.|
+
 ### `redirect`
 
 You can use the `redirect` storage middleware to specify a custom URL to a
