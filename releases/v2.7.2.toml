@@ -20,7 +20,10 @@ See changelog below for full list of changes
 
 * Close the io.ReadCloser from storage driver [#3370](https://github.com/distribution/distribution/pull/3370)
 * Remove empty Content-Type header [#3297](https://github.com/distribution/distribution/pull/3297)
-* Make ipfilteredby not required  [#3088](https://github.com/distribution/distribution/pull/3088)
+* Make ipfilteredby not required [#3088](https://github.com/distribution/distribution/pull/3088)
+
+### Features
+* Add reference.ParseDockerRef utility function [#3002](https://github.com/distribution/distribution/pull/3002)
 
 ### CI build
 
@@ -32,7 +35,7 @@ See changelog below for full list of changes
 
 * Add redirect for old URL [#3197](https://github.com/distribution/distribution/pull/3197)
 * Fix broken table [#3073](https://github.com/distribution/distribution/pull/3073)
-* Adding deprecated schema instructions [#2987](https://github.com/distribution/distribution/pull/2987)
+* Adding deprecated schema v1 instructions [#2987](https://github.com/distribution/distribution/pull/2987)
 
 ### Storage drivers
 
