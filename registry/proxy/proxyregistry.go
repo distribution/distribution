@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"time"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/configuration"
@@ -19,6 +20,9 @@ import (
 	"github.com/distribution/distribution/v3/registry/storage"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
 )
+
+// defaultTtl is the default time of expiring the pull through caches
+const defaultTTL = 24 * 7
 
 // proxyingRegistry fetches content from a remote registry and caches it locally
 type proxyingRegistry struct {
@@ -35,8 +39,14 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 		return nil, err
 	}
 
+	ttlInt := config.TTL
+	if ttlInt <= 0 {
+		ttlInt = defaultTTL
+	}
+	ttl := time.Duration(ttlInt) * time.Hour
+
 	v := storage.NewVacuum(ctx, driver)
-	s := scheduler.New(ctx, driver, "/scheduler-state.json")
+	s := scheduler.New(ctx, driver, "/scheduler-state.json", ttl)
 	s.OnBlobExpire(func(ref reference.Reference) error {
 		var r reference.Canonical
 		var ok bool

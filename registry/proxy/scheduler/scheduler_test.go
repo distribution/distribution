@@ -40,7 +40,7 @@ func TestSchedule(t *testing.T) {
 	}
 
 	var mu sync.Mutex
-	s := New(context.Background(), inmemory.New(), "/ttl")
+	s := New(context.Background(), inmemory.New(), "/ttl", 24*7*time.Hour)
 	deleteFunc := func(repoName reference.Reference) error {
 		if len(remainingRepos) == 0 {
 			t.Fatalf("Incorrect expiry count")
@@ -131,7 +131,7 @@ func TestRestoreOld(t *testing.T) {
 	if err != nil {
 		t.Fatal("Unable to write serialized data to fs")
 	}
-	s := New(context.Background(), fs, "/ttl")
+	s := New(context.Background(), fs, "/ttl", 24*7*time.Hour)
 	s.OnBlobExpire(deleteFunc)
 	err = s.Start()
 	if err != nil {
@@ -166,7 +166,7 @@ func TestStopRestore(t *testing.T) {
 
 	fs := inmemory.New()
 	pathToStateFile := "/ttl"
-	s := New(context.Background(), fs, pathToStateFile)
+	s := New(context.Background(), fs, pathToStateFile, 24*7*time.Hour)
 	s.onBlobExpire = deleteFunc
 
 	err := s.Start()
@@ -182,7 +182,7 @@ func TestStopRestore(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 
 	// v2 will restore state from fs
-	s2 := New(context.Background(), fs, pathToStateFile)
+	s2 := New(context.Background(), fs, pathToStateFile, 24*7*time.Hour)
 	s2.onBlobExpire = deleteFunc
 	err = s2.Start()
 	if err != nil {
@@ -199,7 +199,7 @@ func TestStopRestore(t *testing.T) {
 }
 
 func TestDoubleStart(t *testing.T) {
-	s := New(context.Background(), inmemory.New(), "/ttl")
+	s := New(context.Background(), inmemory.New(), "/ttl", 24*7*time.Hour)
 	err := s.Start()
 	if err != nil {
 		t.Fatalf("Unable to start scheduler")

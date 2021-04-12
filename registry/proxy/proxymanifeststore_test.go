@@ -5,6 +5,7 @@ import (
 	"io"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/manifest"
@@ -136,7 +137,7 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 		stats:     make(map[string]int),
 	}
 
-	s := scheduler.New(ctx, inmemory.New(), "/scheduler-state.json")
+	s := scheduler.New(ctx, inmemory.New(), "/scheduler-state.json", 24*7*time.Hour)
 	return &manifestStoreTestEnv{
 		manifestDigest: manifestDigest,
 		manifests: proxyManifestStore{

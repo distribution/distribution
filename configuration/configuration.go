@@ -639,6 +639,9 @@ type Proxy struct {
 
 	// Password of the hub user
 	Password string `yaml:"password"`
+
+	// TTL of a pull through cache
+	TTL int `yaml:"ttl,omitempty"`
 }
 
 // Parse parses an input configuration yaml document into a Configuration struct
