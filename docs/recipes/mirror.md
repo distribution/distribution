@@ -16,6 +16,10 @@ to the internet and fetches an image it doesn't have locally, from the Docker
 repository. You can run a local registry mirror and point all your daemons
 there, to avoid this extra internet traffic.
 
+> **Note**
+>
+> Docker Official Images are an intellectual property of Docker. Distributing Docker Official Images to third parties without a prior agreement can constitute a violation of [Docker Terms of Service](https://www.docker.com/legal/docker-terms-service){: target="blank" rel="noopener" class=“”}.
+
 ### Alternatives
 
 Alternatively, if the set of images you are using is well delimited, you can
@@ -28,6 +32,10 @@ relying entirely on your local registry is the simplest scenario.
 
 It's currently not possible to mirror another private registry. Only the central
 Hub can be mirrored.
+
+> **Note**
+>
+> Mirrors of Docker Hub are still subject to Docker's [fair usage policy](https://www.docker.com/pricing/resource-consumption-updates){: target="blank" rel="noopener" class=“”}. 
 
 ### Solution
 
