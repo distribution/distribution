@@ -4,8 +4,6 @@ keywords: registry, service, driver, images, storage,  gcs, google, cloud
 title: Google Cloud Storage driver
 ---
 
-{% include registry.md %}
-
 An implementation of the `storagedriver.StorageDriver` interface which uses Google Cloud for object storage.
 
 ## Parameters

@@ -4,8 +4,6 @@ keywords: registry, on-prem, images, tags, repository, distribution, deployment
 title: Deploy a registry server
 ---
 
-{% include registry.md %}
-
 Before you can deploy a registry, you need to install Docker on the host.
 A registry is an instance of the `registry` image, and runs within Docker.
 

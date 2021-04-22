@@ -6,8 +6,6 @@ redirect_from:
 - /engine/admin/registry_mirror/
 ---
 
-{% include registry.md %}
-
 ## Use-case
 
 If you have multiple instances of Docker running in your environment, such as

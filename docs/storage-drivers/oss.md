@@ -4,8 +4,6 @@ keywords: registry, service, driver, images, storage, OSS, aliyun
 title: Aliyun OSS storage driver
 ---
 
-{% include registry.md %}
-
 An implementation of the `storagedriver.StorageDriver` interface which uses
 [Aliyun OSS](https://www.alibabacloud.com/product/oss) for object storage.
 

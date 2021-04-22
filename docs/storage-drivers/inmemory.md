@@ -4,8 +4,6 @@ keywords: registry, service, driver, images, storage,  in-memory
 title: In-memory storage driver (testing only)
 ---
 
-{% include registry.md %}
-
 For purely tests purposes, you can use the `inmemory` storage driver. This
 driver is an implementation of the `storagedriver.StorageDriver` interface which
 uses local memory for object storage. If you would like to run a registry from

@@ -4,8 +4,6 @@ keywords: registry, on-prem, images, tags, repository, distribution, authenticat
 title: Authenticate proxy with apache
 ---
 
-{% include registry.md %}
-
 ## Use-case
 
 People already relying on an apache proxy to authenticate their users to other services might want to leverage it and have Registry communications tunneled through the same pipeline.
