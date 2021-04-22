@@ -242,6 +242,6 @@ google.golang.org/grpc/transport
 # gopkg.in/check.v1 v1.0.0-20141024133853-64131543e789
 ## explicit
 gopkg.in/check.v1
-# gopkg.in/yaml.v2 v2.2.2
+# gopkg.in/yaml.v2 v2.4.0
 ## explicit
 gopkg.in/yaml.v2
