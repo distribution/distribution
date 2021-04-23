@@ -268,6 +268,8 @@ redis:
     maxidle: 16
     maxactive: 64
     idletimeout: 300s
+  tls:
+    enabled: false
 health:
   storagedriver:
     enabled: true
@@ -1018,13 +1020,16 @@ redis:
     maxidle: 16
     maxactive: 64
     idletimeout: 300s
+  tls:
+    enabled: false
 ```
 
 Declare parameters for constructing the `redis` connections. Registry instances
 may use the Redis instance for several applications. Currently, it caches
 information about immutable blobs. Most of the `redis` options control
 how the registry connects to the `redis` instance. You can control the pool's
-behavior with the [pool](#pool) subsection.
+behavior with the [pool](#pool) subsection. Additionally, you can control
+TLS connection settings with the [tls](#tls) subsection (in-transit encryption).
 
 You should configure Redis with the **allkeys-lru** eviction policy, because the
 registry does not set an expiration value on keys.
@@ -1054,6 +1059,20 @@ Use these settings to configure the behavior of the Redis connection pool.
 | `maxidle` | no       | The maximum number of idle connections in the pool.   |
 | `maxactive`| no      | The maximum number of connections which can be open before blocking a connection request. |
 | `idletimeout`| no    | How long to wait before closing inactive connections. |
+
+### `tls`
+
+```none
+tls:
+  enabled: false
+```
+
+Use these settings to configure Redis TLS.
+
+| Parameter | Required | Description                           |
+|-----------|----------|-------------------------------------- |
+| `enabled` | no       | Whether or not to use TLS in-transit. |
+
 
 ## `health`
 

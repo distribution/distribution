@@ -518,7 +518,8 @@ func (app *App) configureRedis(configuration *configuration.Configuration) {
 				configuration.Redis.Addr,
 				redis.DialConnectTimeout(configuration.Redis.DialTimeout),
 				redis.DialReadTimeout(configuration.Redis.ReadTimeout),
-				redis.DialWriteTimeout(configuration.Redis.WriteTimeout))
+				redis.DialWriteTimeout(configuration.Redis.WriteTimeout),
+				redis.DialUseTLS(configuration.Redis.TLS.Enabled))
 			if err != nil {
 				dcontext.GetLogger(app).Errorf("error connecting to redis instance %s: %v",
 					configuration.Redis.Addr, err)
