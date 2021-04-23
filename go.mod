@@ -38,8 +38,21 @@ require (
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
 	google.golang.org/api v0.0.0-20160322025152-9bf6e6e569ff
+	// when updating google.golang.org/cloud, update (or remove) the replace
+	// rule for google.golang.org/grpc accordingly.
 	google.golang.org/cloud v0.0.0-20151119220103-975617b05ea8
 	google.golang.org/grpc v0.0.0-20160317175043-d3ddb4469d5a // indirect
 	gopkg.in/check.v1 v1.0.0-20141024133853-64131543e789
 	gopkg.in/yaml.v2 v2.4.0
 )
+
+// Prevent unwanted updates of grpc. In our codebase, it's a dependency of
+// google.golang.org/cloud. However, github.com/spf13/viper (which is an indirect
+// dependency of github.com/spf13/cobra) declares a more recent version. Viper
+// is not used in the codebase, but go modules uses the go.mod of *all* dependen-
+// cies to determine the minimum version of a module, but does *not* check if that
+// depdendency's code using the dependency is actually used.
+//
+// In our case, github.com/spf13/viper occurs as a dependency, but is unused,
+// so we can ignore the minimum versions of grpc and jwt-go that it specifies.
+replace google.golang.org/grpc => google.golang.org/grpc v0.0.0-20160317175043-d3ddb4469d5a

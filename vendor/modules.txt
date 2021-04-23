@@ -238,7 +238,7 @@ google.golang.org/cloud
 google.golang.org/cloud/internal
 google.golang.org/cloud/internal/opts
 google.golang.org/cloud/storage
-# google.golang.org/grpc v0.0.0-20160317175043-d3ddb4469d5a
+# google.golang.org/grpc v0.0.0-20160317175043-d3ddb4469d5a => google.golang.org/grpc v0.0.0-20160317175043-d3ddb4469d5a
 ## explicit
 google.golang.org/grpc
 google.golang.org/grpc/codes
@@ -255,3 +255,4 @@ gopkg.in/check.v1
 # gopkg.in/yaml.v2 v2.4.0
 ## explicit
 gopkg.in/yaml.v2
+# google.golang.org/grpc => google.golang.org/grpc v0.0.0-20160317175043-d3ddb4469d5a
