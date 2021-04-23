@@ -23,25 +23,28 @@ var swiftDriverConstructor func(prefix string) (*Driver, error)
 
 func init() {
 	var (
-		username              = os.Getenv("SWIFT_USERNAME")
-		password              = os.Getenv("SWIFT_PASSWORD")
-		authURL               = os.Getenv("SWIFT_AUTH_URL")
-		tenant                = os.Getenv("SWIFT_TENANT_NAME")
-		tenantID              = os.Getenv("SWIFT_TENANT_ID")
-		domain                = os.Getenv("SWIFT_DOMAIN_NAME")
-		domainID              = os.Getenv("SWIFT_DOMAIN_ID")
-		tenantDomain          = os.Getenv("SWIFT_DOMAIN_NAME")
-		tenantDomainID        = os.Getenv("SWIFT_DOMAIN_ID")
-		trustID               = os.Getenv("SWIFT_TRUST_ID")
-		container             = os.Getenv("SWIFT_CONTAINER_NAME")
-		region                = os.Getenv("SWIFT_REGION_NAME")
-		AuthVersion, _        = strconv.Atoi(os.Getenv("SWIFT_AUTH_VERSION"))
-		endpointType          = os.Getenv("SWIFT_ENDPOINT_TYPE")
-		insecureSkipVerify, _ = strconv.ParseBool(os.Getenv("SWIFT_INSECURESKIPVERIFY"))
-		secretKey             = os.Getenv("SWIFT_SECRET_KEY")
-		accessKey             = os.Getenv("SWIFT_ACCESS_KEY")
-		containerKey, _       = strconv.ParseBool(os.Getenv("SWIFT_TEMPURL_CONTAINERKEY"))
-		tempURLMethods        = strings.Split(os.Getenv("SWIFT_TEMPURL_METHODS"), ",")
+		username                    = os.Getenv("SWIFT_USERNAME")
+		password                    = os.Getenv("SWIFT_PASSWORD")
+		applicationCredentialID     = os.Getenv("SWIFT_APPLICATIONCREDENTIALID")
+		applicationCredentialName   = os.Getenv("SWIFT_APPLICATIONCREDENTIALNAME")
+		applicationCredentialSecret = os.Getenv("SWIFT_APPLICATIONCREDENTIALSECRET")
+		authURL                     = os.Getenv("SWIFT_AUTH_URL")
+		tenant                      = os.Getenv("SWIFT_TENANT_NAME")
+		tenantID                    = os.Getenv("SWIFT_TENANT_ID")
+		domain                      = os.Getenv("SWIFT_DOMAIN_NAME")
+		domainID                    = os.Getenv("SWIFT_DOMAIN_ID")
+		tenantDomain                = os.Getenv("SWIFT_DOMAIN_NAME")
+		tenantDomainID              = os.Getenv("SWIFT_DOMAIN_ID")
+		trustID                     = os.Getenv("SWIFT_TRUST_ID")
+		container                   = os.Getenv("SWIFT_CONTAINER_NAME")
+		region                      = os.Getenv("SWIFT_REGION_NAME")
+		AuthVersion, _              = strconv.Atoi(os.Getenv("SWIFT_AUTH_VERSION"))
+		endpointType                = os.Getenv("SWIFT_ENDPOINT_TYPE")
+		insecureSkipVerify, _       = strconv.ParseBool(os.Getenv("SWIFT_INSECURESKIPVERIFY"))
+		secretKey                   = os.Getenv("SWIFT_SECRET_KEY")
+		accessKey                   = os.Getenv("SWIFT_ACCESS_KEY")
+		containerKey, _             = strconv.ParseBool(os.Getenv("SWIFT_TEMPURL_CONTAINERKEY"))
+		tempURLMethods              = strings.Split(os.Getenv("SWIFT_TEMPURL_METHODS"), ",")
 
 		swiftServer *swifttest.SwiftServer
 		err         error
@@ -67,6 +70,9 @@ func init() {
 		parameters := Parameters{
 			username,
 			password,
+			applicationCredentialID,
+			applicationCredentialName,
+			applicationCredentialSecret,
 			authURL,
 			tenant,
 			tenantID,
