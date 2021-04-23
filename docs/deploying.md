@@ -409,7 +409,13 @@ secrets.
     $ mkdir auth
     $ docker run \
       --entrypoint htpasswd \
-      registry:2 -Bbn testuser testpassword > auth/htpasswd
+      httpd:2 -Bbn testuser testpassword > auth/htpasswd
+    ```
+    
+    On Windows, make sure the output file is correctly encoded:
+
+    ```powershell
+    docker run --rm --entrypoint htpasswd httpd:2 -Bbn testuser testpassword | Set-Content -Encoding ASCII auth/htpasswd
     ```
 
 2.  Stop the registry.
