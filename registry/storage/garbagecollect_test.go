@@ -209,53 +209,71 @@ func TestDeleteManifestIfTagNotFound(t *testing.T) {
 	manifestService, _ := repo.Manifests(ctx)
 
 	// Create random layers
-	randomLayers1, err := testutil.CreateRandomLayers(3)
+	randomLayers, err := testutil.CreateRandomLayers(12)
 	if err != nil {
 		t.Fatalf("failed to make layers: %v", err)
 	}
-
-	randomLayers2, err := testutil.CreateRandomLayers(3)
-	if err != nil {
-		t.Fatalf("failed to make layers: %v", err)
+	layerDigests := make([]digest.Digest, 0, len(randomLayers))
+	for digest, _ := range randomLayers {
+		layerDigests = append(layerDigests, digest)
 	}
 
 	// Upload all layers
-	err = testutil.UploadBlobs(repo, randomLayers1)
+	err = testutil.UploadBlobs(repo, randomLayers)
 	if err != nil {
 		t.Fatalf("failed to upload layers: %v", err)
 	}
 
-	err = testutil.UploadBlobs(repo, randomLayers2)
-	if err != nil {
-		t.Fatalf("failed to upload layers: %v", err)
+	putManifest := func(manifest distribution.Manifest, tag string) digest.Digest {
+		digest, err := manifestService.Put(ctx, manifest)
+		if err != nil {
+			t.Fatalf("manifest upload failed: %v", err)
+		}
+		if tag != "" {
+			repo.Tags(ctx).Tag(ctx, tag, distribution.Descriptor{Digest: digest})
+		}
+		return digest
 	}
 
-	// Construct manifests
-	manifest1, err := testutil.MakeSchema1Manifest(getKeys(randomLayers1))
+	// Construct and tag manifests
+	manifest1, err := testutil.MakeSchema1Manifest(layerDigests[3:7])
 	if err != nil {
 		t.Fatalf("failed to make manifest: %v", err)
 	}
+	manifest1Digest := putManifest(manifest1, "test")
 
-	manifest2, err := testutil.MakeSchema1Manifest(getKeys(randomLayers2))
+	manifest2, err := testutil.MakeSchema1Manifest(layerDigests[0:4])
 	if err != nil {
 		t.Fatalf("failed to make manifest: %v", err)
 	}
+	manifest2Digest := putManifest(manifest2, "test")
 
-	_, err = manifestService.Put(ctx, manifest1)
+	subManifest1, err := testutil.MakeSchema1Manifest(layerDigests[6:8])
 	if err != nil {
-		t.Fatalf("manifest upload failed: %v", err)
+		t.Fatalf("failed to make manifest: %v", err)
 	}
+	subManifest1Digest := putManifest(subManifest1, "")
 
-	_, err = manifestService.Put(ctx, manifest2)
+	subManifest2, err := testutil.MakeSchema1Manifest(layerDigests[6:8])
 	if err != nil {
-		t.Fatalf("manifest upload failed: %v", err)
+		t.Fatalf("failed to make manifest: %v", err)
 	}
+	subManifest2Digest := putManifest(subManifest2, "")
 
-	manifestEnumerator, _ := manifestService.(distribution.ManifestEnumerator)
-	manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
-		repo.Tags(ctx).Tag(ctx, "test", distribution.Descriptor{Digest: dgst})
-		return nil
-	})
+	subManifest3, err := testutil.MakeSchema1Manifest(layerDigests[10:12])
+	if err != nil {
+		t.Fatalf("failed to make manifest: %v", err)
+	}
+	subManifest3Digest := putManifest(subManifest3, "")
+
+	blobstatter := registry.BlobStatter()
+	manifestList1, err := testutil.MakeManifestList(blobstatter, []digest.Digest{
+		subManifest1Digest, subManifest2Digest})
+	manifestList1Digest := putManifest(manifestList1, "mytag")
+
+	manifestList2, err := testutil.MakeManifestList(blobstatter, []digest.Digest{
+		subManifest3Digest, manifest1Digest})
+	manifestList2Digest := putManifest(manifestList2, "")
 
 	before1 := allBlobs(t, registry)
 	before2 := allManifests(t, manifestService)
@@ -288,12 +306,34 @@ func TestDeleteManifestIfTagNotFound(t *testing.T) {
 
 	after1 := allBlobs(t, registry)
 	after2 := allManifests(t, manifestService)
+	println(len(before1), len(after1), len(before2), len(after2))
 	if len(before1) == len(after1) {
-		t.Fatalf("Garbage collection affected blobs storage: %d == %d", len(before1), len(after1))
+		t.Fatalf("Garbage collection did not affect blobs storage: %d == %d", len(before1), len(after1))
 	}
 	if len(before2) == len(after2) {
-		t.Fatalf("Garbage collection affected manifest storage: %d == %d", len(before2), len(after2))
+		t.Fatalf("Garbage collection did not affect manifest storage: %d == %d", len(before2), len(after2))
 	}
+
+	assertManifestExists := func(digest digest.Digest, expected bool, name string) {
+		actual, err := manifestService.Exists(ctx, digest)
+		if err != nil {
+			t.Fatalf("manifest exist check failed for %s: %v", name, err)
+		}
+		if expected && !actual {
+			t.Fatalf("expected manifest to still exist for %s", name)
+		}
+		if !expected && actual {
+			t.Fatalf("expected manifest to no longer exist %s", name)
+		}
+	}
+
+	assertManifestExists(manifest1Digest, false, "manifest1")
+	assertManifestExists(manifest2Digest, true, "manifest2")
+	assertManifestExists(subManifest1Digest, true, "subManifest1")
+	assertManifestExists(subManifest2Digest, true, "subManifest2")
+	assertManifestExists(subManifest3Digest, false, "subManifest3")
+	assertManifestExists(manifestList1Digest, true, "manifestList1")
+	assertManifestExists(manifestList2Digest, false, "manifestList2")
 }
 
 func TestGCWithMissingManifests(t *testing.T) {
