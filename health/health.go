@@ -135,6 +135,7 @@ func PeriodicChecker(check Checker, period time.Duration) Checker {
 	u := NewStatusUpdater()
 	go func() {
 		t := time.NewTicker(period)
+		defer t.Stop()
 		for {
 			<-t.C
 			u.Update(check.Check())
@@ -150,6 +151,7 @@ func PeriodicThresholdChecker(check Checker, period time.Duration, threshold int
 	tu := NewThresholdStatusUpdater(threshold)
 	go func() {
 		t := time.NewTicker(period)
+		defer t.Stop()
 		for {
 			<-t.C
 			tu.Update(check.Check())
