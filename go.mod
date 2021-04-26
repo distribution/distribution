@@ -31,7 +31,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.0.1
 	github.com/satori/go.uuid v1.2.0 // indirect
-	github.com/sirupsen/logrus v1.6.0
+	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v0.0.3
 	github.com/spf13/pflag v1.0.3 // indirect
 	github.com/yvasiyarov/go-metrics v0.0.0-20140926110328-57bccd1ccd43 // indirect
@@ -43,5 +43,5 @@ require (
 	google.golang.org/cloud v0.0.0-20151119220103-975617b05ea8
 	google.golang.org/grpc v0.0.0-20160317175043-d3ddb4469d5a // indirect
 	gopkg.in/check.v1 v1.0.0-20141024133853-64131543e789
-	gopkg.in/yaml.v2 v2.2.2
+	gopkg.in/yaml.v2 v2.4.0
 )
