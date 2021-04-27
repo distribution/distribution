@@ -11,15 +11,21 @@ import (
 // Manifest represents a registry object specifying a set of
 // references and an optional target
 type Manifest interface {
-	// References returns a list of objects which make up this manifest.
-	// A reference is anything which can be represented by a
-	// distribution.Descriptor. These can consist of layers, resources or other
-	// manifests.
+	// References returns a list of all objects that make up this
+	// manifest. New code should prefer to use BlobReferences() or
+	// ManifestReferences() as appropriate.
+	References() []Descriptor
+
+	// BlobReferences returns a list of blob objects which make up this manifest.
 	//
 	// While no particular order is required, implementations should return
 	// them from highest to lowest priority. For example, one might want to
 	// return the base layer before the top layer.
-	References() []Descriptor
+	BlobReferences() []Descriptor
+
+	// ManifestReferences returns a list of manifest directly referenced by this
+	// manifest.
+	ManifestReferences() []Descriptor
 
 	// Payload provides the serialized format of the manifest, in addition to
 	// the media type.
@@ -33,18 +39,39 @@ type ManifestBuilder interface {
 	// Build creates the manifest from his builder.
 	Build(ctx context.Context) (Manifest, error)
 
-	// References returns a list of objects which have been added to this
-	// builder. The dependencies are returned in the order they were added,
-	// which should be from base to head.
+	// References returns a list of all objects which have been added to this
+	// builder. New code should prefer to use BlobReferences() or
+	// ManifestReferences().
 	References() []Descriptor
 
+	// BlobReferences returns a list of objects which have been added to this
+	// builder as blobs. The dependencies are returned in the order they were added,
+	// which should be from base to head.
+	BlobReferences() []Descriptor
+
+	// ManifestReferences returns a list of objects which have been added to this
+	// builder as manifests. The dependencies are returned in the order they were
+	// added.
+	ManifestReferences() []Descriptor
+
 	// AppendReference includes the given object in the manifest after any
+	// existing dependencies. Wether the dependency is interpretted as a blob or a
+	// manifest depends on the manifest type. New code should prefer using
+	// AppendBlobReference or AppendManifestReference as appropriate.
+	AppendReference(dependency Describable) error
+
+	// AppendBlobReference includes the given blob object in the manifest after any
 	// existing dependencies. If the add fails, such as when adding an
 	// unsupported dependency, an error may be returned.
 	//
 	// The destination of the reference is dependent on the manifest type and
 	// the dependency type.
-	AppendReference(dependency Describable) error
+	AppendBlobReference(dependency Describable) error
+
+	// AppendManifestReference includes the given manifest object as a reference
+	// to the manifest being built. If the add fails, such as when adding an
+	// unsupported dependency, an error may be returned.
+	AppendManifestReference(dependency Describable) error
 }
 
 // ManifestService describes operations on image manifests.
