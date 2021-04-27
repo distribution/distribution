@@ -116,13 +116,13 @@ func TestManifest(t *testing.T) {
 		t.Fatalf("unexpected annotation in target: %s", target.Annotations["apple"])
 	}
 
-	references := deserialized.References()
+	references := deserialized.BlobReferences()
 	if len(references) != 2 {
-		t.Fatalf("unexpected number of references: %d", len(references))
+		t.Fatalf("unexpected number of blob references: %d", len(references))
 	}
 
 	if !reflect.DeepEqual(references[0], target) {
-		t.Fatalf("first reference should be target: %v != %v", references[0], target)
+		t.Fatalf("first blob reference should be target: %v != %v", references[0], target)
 	}
 
 	// Test the second reference
@@ -137,6 +137,11 @@ func TestManifest(t *testing.T) {
 	}
 	if references[1].Annotations["lettuce"] != "wrap" {
 		t.Fatalf("unexpected annotation in reference: %s", references[1].Annotations["lettuce"])
+	}
+
+	references = deserialized.ManifestReferences()
+	if len(references) != 0 {
+		t.Fatal("ManifetReferences() did not return empty array")
 	}
 }
 

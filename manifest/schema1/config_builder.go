@@ -41,15 +41,15 @@ type configManifestBuilder struct {
 	configJSON []byte
 	// ref contains the name and optional tag provided to NewConfigManifestBuilder.
 	ref reference.Named
-	// descriptors is the set of descriptors referencing the layers.
-	descriptors []distribution.Descriptor
+	// layers is the set of descriptors referencing the layer blobs.
+	layers []distribution.Descriptor
 	// emptyTarDigest is set to a valid digest if an empty tar has been
 	// put in the blob store; otherwise it is empty.
 	emptyTarDigest digest.Digest
 }
 
 // NewConfigManifestBuilder is used to build new manifests for the current
-// schema version from an image configuration and a set of descriptors.
+// schema version from an image configuration and a set of layer descriptors.
 // It takes a BlobService so that it can add an empty tar to the blob store
 // if the resulting manifest needs empty layers.
 func NewConfigManifestBuilder(bs distribution.BlobService, pk libtrust.PrivateKey, ref reference.Named, configJSON []byte) distribution.ManifestBuilder {
@@ -93,8 +93,8 @@ func (mb *configManifestBuilder) Build(ctx context.Context) (m distribution.Mani
 		return nil, errors.New("empty history when trying to create schema1 manifest")
 	}
 
-	if len(img.RootFS.DiffIDs) != len(mb.descriptors) {
-		return nil, fmt.Errorf("number of descriptors and number of layers in rootfs must match: len(%v) != len(%v)", img.RootFS.DiffIDs, mb.descriptors)
+	if len(img.RootFS.DiffIDs) != len(mb.layers) {
+		return nil, fmt.Errorf("number of layer descriptors and number of layers in rootfs must match: len(%v) != len(%v)", img.RootFS.DiffIDs, mb.layers)
 	}
 
 	// Generate IDs for each layer
@@ -128,7 +128,7 @@ func (mb *configManifestBuilder) Build(ctx context.Context) (m distribution.Mani
 			if len(img.RootFS.DiffIDs) <= layerCounter {
 				return nil, errors.New("too many non-empty layers in History section")
 			}
-			blobsum = mb.descriptors[layerCounter].Digest
+			blobsum = mb.layers[layerCounter].Digest
 			layerCounter++
 		}
 
@@ -174,7 +174,7 @@ func (mb *configManifestBuilder) Build(ctx context.Context) (m distribution.Mani
 		if len(img.RootFS.DiffIDs) <= layerCounter {
 			return nil, errors.New("too many non-empty layers in History section")
 		}
-		blobsum = mb.descriptors[layerCounter].Digest
+		blobsum = mb.layers[layerCounter].Digest
 	}
 
 	fsLayerList[0] = FSLayer{BlobSum: blobsum}
@@ -240,19 +240,39 @@ func (mb *configManifestBuilder) emptyTar(ctx context.Context) (digest.Digest, e
 
 // AppendReference adds a reference to the current ManifestBuilder
 func (mb *configManifestBuilder) AppendReference(d distribution.Describable) error {
+	return mb.AppendBlobReference(d)
+}
+
+// AppendBlobReference adds a blob reference to the current ManifestBuilder
+func (mb *configManifestBuilder) AppendBlobReference(d distribution.Describable) error {
 	descriptor := d.Descriptor()
 
 	if err := descriptor.Digest.Validate(); err != nil {
 		return err
 	}
 
-	mb.descriptors = append(mb.descriptors, descriptor)
+	mb.layers = append(mb.layers, descriptor)
 	return nil
+}
+
+// AppendManifestReference adds a reference to the current ManifestBuilder
+func (mb *configManifestBuilder) AppendManifestReference(d distribution.Describable) error {
+	return errors.New("cannot add manifest reference to schema1 manifest")
 }
 
 // References returns the current references added to this builder
 func (mb *configManifestBuilder) References() []distribution.Descriptor {
-	return mb.descriptors
+	return mb.BlobReferences()
+}
+
+// BlobReferences returns the current blob references added to this builder
+func (mb *configManifestBuilder) BlobReferences() []distribution.Descriptor {
+	return mb.layers
+}
+
+// ManifestReferences returns the current manifest references added to this builder
+func (mb *configManifestBuilder) ManifestReferences() []distribution.Descriptor {
+	return nil
 }
 
 // MakeV1ConfigFromConfig creates an legacy V1 image config from image config JSON

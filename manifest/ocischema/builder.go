@@ -97,11 +97,31 @@ func (mb *Builder) Build(ctx context.Context) (distribution.Manifest, error) {
 
 // AppendReference adds a reference to the current ManifestBuilder.
 func (mb *Builder) AppendReference(d distribution.Describable) error {
+	return mb.AppendBlobReference(d)
+}
+
+// AppendBlobReference adds a blob reference to the current ManifestBuilder
+func (mb *Builder) AppendBlobReference(d distribution.Describable) error {
 	mb.layers = append(mb.layers, d.Descriptor())
 	return nil
 }
 
+// AppendManifestReference adds a reference to the current ManifestBuilder
+func (mb *Builder) AppendManifestReference(d distribution.Describable) error {
+	return errors.New("cannot add manifest reference to ocischema manifest")
+}
+
 // References returns the current references added to this builder.
 func (mb *Builder) References() []distribution.Descriptor {
+	return mb.BlobReferences()
+}
+
+// BlobReferences returns the current blob references added to this builder
+func (mb *Builder) BlobReferences() []distribution.Descriptor {
 	return mb.layers
+}
+
+// ManifestReferences returns the current manifest references added to this builder
+func (mb *Builder) ManifestReferences() []distribution.Descriptor {
+	return nil
 }

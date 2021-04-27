@@ -210,8 +210,8 @@ func TestConfigBuilder(t *testing.T) {
 	builder := NewConfigManifestBuilder(bs, pk, ref, []byte(imgJSON))
 
 	for _, d := range descriptors {
-		if err := builder.AppendReference(d); err != nil {
-			t.Fatalf("AppendReference returned error: %v", err)
+		if err := builder.AppendBlobReference(d); err != nil {
+			t.Fatalf("AppendBlobReference returned error: %v", err)
 		}
 	}
 

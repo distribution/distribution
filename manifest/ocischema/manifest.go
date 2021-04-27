@@ -54,10 +54,20 @@ type Manifest struct {
 
 // References returns the descriptors of this manifests references.
 func (m Manifest) References() []distribution.Descriptor {
+	return m.BlobReferences()
+}
+
+// BlobReferences returns blob descriptors referenced by this manifest.
+func (m Manifest) BlobReferences() []distribution.Descriptor {
 	references := make([]distribution.Descriptor, 0, 1+len(m.Layers))
 	references = append(references, m.Config)
 	references = append(references, m.Layers...)
 	return references
+}
+
+// ManifestReferences returns manifest descriptors referenced by this manifest.
+func (m Manifest) ManifestReferences() []distribution.Descriptor {
+	return nil
 }
 
 // Target returns the target of this manifest.

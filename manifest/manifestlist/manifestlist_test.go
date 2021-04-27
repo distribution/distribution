@@ -105,9 +105,9 @@ func TestManifestList(t *testing.T) {
 		t.Fatalf("manifests are different after unmarshaling: %v != %v", unmarshalled, *deserialized)
 	}
 
-	references := deserialized.References()
+	references := deserialized.ManifestReferences()
 	if len(references) != 2 {
-		t.Fatalf("unexpected number of references: %d", len(references))
+		t.Fatalf("unexpected number of manifest references: %d", len(references))
 	}
 	for i := range references {
 		platform := manifestDescriptors[i].Platform
@@ -119,12 +119,17 @@ func TestManifestList(t *testing.T) {
 			Variant:      platform.Variant,
 		}
 		if !reflect.DeepEqual(references[i].Platform, expectedPlatform) {
-			t.Fatalf("unexpected value %d returned by References: %v", i, references[i])
+			t.Fatalf("unexpected value %d returned by ManifestReferences: %v", i, references[i])
 		}
 		references[i].Platform = nil
 		if !reflect.DeepEqual(references[i], manifestDescriptors[i].Descriptor) {
-			t.Fatalf("unexpected value %d returned by References: %v", i, references[i])
+			t.Fatalf("unexpected value %d returned by ManifestReferences: %v", i, references[i])
 		}
+	}
+
+	references = deserialized.BlobReferences()
+	if len(references) != 0 {
+		t.Fatal("BlobReferences() did not return empty array")
 	}
 }
 
@@ -254,9 +259,9 @@ func TestOCIImageIndex(t *testing.T) {
 		t.Fatalf("manifests are different after unmarshaling: %v != %v", unmarshalled, *deserialized)
 	}
 
-	references := deserialized.References()
+	references := deserialized.ManifestReferences()
 	if len(references) != 3 {
-		t.Fatalf("unexpected number of references: %d", len(references))
+		t.Fatalf("unexpected number of manifest references: %d", len(references))
 	}
 	for i := range references {
 		platform := manifestDescriptors[i].Platform
@@ -268,12 +273,17 @@ func TestOCIImageIndex(t *testing.T) {
 			Variant:      platform.Variant,
 		}
 		if !reflect.DeepEqual(references[i].Platform, expectedPlatform) {
-			t.Fatalf("unexpected value %d returned by References: %v", i, references[i])
+			t.Fatalf("unexpected value %d returned by ManifestReferences: %v", i, references[i])
 		}
 		references[i].Platform = nil
 		if !reflect.DeepEqual(references[i], manifestDescriptors[i].Descriptor) {
-			t.Fatalf("unexpected value %d returned by References: %v", i, references[i])
+			t.Fatalf("unexpected value %d returned by ManifestReferences: %v", i, references[i])
 		}
+	}
+
+	references = deserialized.BlobReferences()
+	if len(references) != 0 {
+		t.Fatal("BlobReferences() did not return empty array")
 	}
 }
 

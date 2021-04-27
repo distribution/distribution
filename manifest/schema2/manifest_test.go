@@ -97,13 +97,13 @@ func TestManifest(t *testing.T) {
 		t.Fatalf("unexpected size in target: %d", target.Size)
 	}
 
-	references := deserialized.References()
+	references := deserialized.BlobReferences()
 	if len(references) != 2 {
-		t.Fatalf("unexpected number of references: %d", len(references))
+		t.Fatalf("unexpected number of blob references: %d", len(references))
 	}
 
 	if !reflect.DeepEqual(references[0], target) {
-		t.Fatalf("first reference should be target: %v != %v", references[0], target)
+		t.Fatalf("first blob reference should be target: %v != %v", references[0], target)
 	}
 
 	// Test the second reference
@@ -115,6 +115,11 @@ func TestManifest(t *testing.T) {
 	}
 	if references[1].Size != 153263 {
 		t.Fatalf("unexpected size in reference: %d", references[0].Size)
+	}
+
+	references = deserialized.ManifestReferences()
+	if len(references) != 0 {
+		t.Fatalf("manifest references should be empty")
 	}
 }
 

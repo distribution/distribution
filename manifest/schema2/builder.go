@@ -2,6 +2,7 @@ package schema2
 
 import (
 	"context"
+	"errors"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/opencontainers/go-digest"
@@ -18,9 +19,9 @@ type builder struct {
 	// configJSON references
 	configJSON []byte
 
-	// dependencies is a list of descriptors that gets built by successive
+	// layers is a list of descriptors that gets built by successive
 	// calls to AppendReference. In case of image configuration these are layers.
-	dependencies []distribution.Descriptor
+	layers []distribution.Descriptor
 }
 
 // NewManifestBuilder is used to build new manifests for the current schema
@@ -41,9 +42,9 @@ func NewManifestBuilder(bs distribution.BlobService, configMediaType string, con
 func (mb *builder) Build(ctx context.Context) (distribution.Manifest, error) {
 	m := Manifest{
 		Versioned: SchemaVersion,
-		Layers:    make([]distribution.Descriptor, len(mb.dependencies)),
+		Layers:    make([]distribution.Descriptor, len(mb.layers)),
 	}
-	copy(m.Layers, mb.dependencies)
+	copy(m.Layers, mb.layers)
 
 	configDigest := digest.FromBytes(mb.configJSON)
 
@@ -73,13 +74,32 @@ func (mb *builder) Build(ctx context.Context) (distribution.Manifest, error) {
 	return FromStruct(m)
 }
 
-// AppendReference adds a reference to the current ManifestBuilder.
 func (mb *builder) AppendReference(d distribution.Describable) error {
-	mb.dependencies = append(mb.dependencies, d.Descriptor())
+	return mb.AppendBlobReference(d)
+}
+
+// AppendReference adds a reference to the current ManifestBuilder.
+func (mb *builder) AppendBlobReference(d distribution.Describable) error {
+	mb.layers = append(mb.layers, d.Descriptor())
 	return nil
+}
+
+// AppendManifestReference adds a reference to the current ManifestBuilder
+func (mb *builder) AppendManifestReference(d distribution.Describable) error {
+	return errors.New("cannot add manifest reference to schema2 manifest")
 }
 
 // References returns the current references added to this builder.
 func (mb *builder) References() []distribution.Descriptor {
-	return mb.dependencies
+	return mb.BlobReferences()
+}
+
+// BlobReferences returns the current blob references added to this builder.
+func (mb *builder) BlobReferences() []distribution.Descriptor {
+	return mb.layers
+}
+
+// ManifestReferences returns the current manifest references added to this builder.
+func (mb *builder) ManifestReferences() []distribution.Descriptor {
+	return nil
 }

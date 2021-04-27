@@ -70,24 +70,29 @@ func TestReferenceBuilder(t *testing.T) {
 		t.Fatal("Expected error building zero length manifest")
 	}
 
-	err = b.AppendReference(r1)
+	err = b.AppendBlobReference(r1)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	err = b.AppendReference(r2)
+	err = b.AppendBlobReference(r2)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	refs := b.References()
+	refs := b.BlobReferences()
 	if len(refs) != 2 {
-		t.Fatalf("Unexpected reference count : %d != %d", 2, len(refs))
+		t.Fatalf("Unexpected blob reference count : %d != %d", 2, len(refs))
 	}
 
 	// Ensure ordering
 	if refs[0].Digest != r2.Digest {
 		t.Fatalf("Unexpected reference : %v", refs[0])
+	}
+
+	refs = b.ManifestReferences()
+	if len(refs) != 0 {
+		t.Fatalf("Manifest reference array not empty")
 	}
 
 	m, err := b.Build(context.Background())

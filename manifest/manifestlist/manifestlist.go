@@ -123,6 +123,16 @@ type ManifestList struct {
 // References returns the distribution descriptors for the referenced image
 // manifests.
 func (m ManifestList) References() []distribution.Descriptor {
+	return m.ManifestReferences()
+}
+
+// BlobReferences returns blob descriptors referenced by this manifest.
+func (sm ManifestList) BlobReferences() []distribution.Descriptor {
+	return nil
+}
+
+// ManifestReferences returns manifest descriptors referenced by this manifest.
+func (m ManifestList) ManifestReferences() []distribution.Descriptor {
 	dependencies := make([]distribution.Descriptor, len(m.Manifests))
 	for i := range m.Manifests {
 		dependencies[i] = m.Manifests[i].Descriptor

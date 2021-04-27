@@ -56,6 +56,11 @@ func (mb *referenceManifestBuilder) Build(ctx context.Context) (distribution.Man
 
 // AppendReference adds a reference to the current ManifestBuilder
 func (mb *referenceManifestBuilder) AppendReference(d distribution.Describable) error {
+	return mb.AppendBlobReference(d)
+}
+
+// AppendBlobReference adds a blob reference to the current ManifestBuilder
+func (mb *referenceManifestBuilder) AppendBlobReference(d distribution.Describable) error {
 	r, ok := d.(Reference)
 	if !ok {
 		return fmt.Errorf("unable to add non-reference type to v1 builder")
@@ -68,8 +73,18 @@ func (mb *referenceManifestBuilder) AppendReference(d distribution.Describable) 
 
 }
 
+// AppendManifestReference adds a reference to the current ManifestBuilder
+func (mb *referenceManifestBuilder) AppendManifestReference(d distribution.Describable) error {
+	return errors.New("cannot add manifest reference to schema1 manifest")
+}
+
 // References returns the current references added to this builder
 func (mb *referenceManifestBuilder) References() []distribution.Descriptor {
+	return mb.BlobReferences()
+}
+
+// BlobReferences returns the current blob references added to this builder
+func (mb *referenceManifestBuilder) BlobReferences() []distribution.Descriptor {
 	refs := make([]distribution.Descriptor, len(mb.Manifest.FSLayers))
 	for i := range mb.Manifest.FSLayers {
 		layerDigest := mb.Manifest.FSLayers[i].BlobSum
@@ -78,6 +93,11 @@ func (mb *referenceManifestBuilder) References() []distribution.Descriptor {
 		refs[i] = ref.Descriptor()
 	}
 	return refs
+}
+
+// ManifestReferences returns the current manifest references added to this builder
+func (mb *referenceManifestBuilder) ManifestReferences() []distribution.Descriptor {
+	return nil
 }
 
 // Reference describes a manifest v2, schema version 1 dependency.

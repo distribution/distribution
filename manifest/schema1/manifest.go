@@ -140,6 +140,11 @@ func (sm *SignedManifest) UnmarshalJSON(b []byte) error {
 
 // References returns the descriptors of this manifests references
 func (sm SignedManifest) References() []distribution.Descriptor {
+	return sm.BlobReferences()
+}
+
+// BlobReferences returns blob descriptors referenced by this manifest.
+func (sm SignedManifest) BlobReferences() []distribution.Descriptor {
 	dependencies := make([]distribution.Descriptor, len(sm.FSLayers))
 	for i, fsLayer := range sm.FSLayers {
 		dependencies[i] = distribution.Descriptor{
@@ -150,6 +155,11 @@ func (sm SignedManifest) References() []distribution.Descriptor {
 
 	return dependencies
 
+}
+
+// ManifestReferences returns manifest descriptors referenced by this manifest.
+func (sm SignedManifest) ManifestReferences() []distribution.Descriptor {
+	return nil
 }
 
 // MarshalJSON returns the contents of raw. If Raw is nil, marshals the inner

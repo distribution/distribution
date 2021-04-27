@@ -129,8 +129,8 @@ func TestBuilder(t *testing.T) {
 	builder := NewManifestBuilder(bs, imgJSON, annotations)
 
 	for _, d := range descriptors {
-		if err := builder.AppendReference(d); err != nil {
-			t.Fatalf("AppendReference returned error: %v", err)
+		if err := builder.AppendBlobReference(d); err != nil {
+			t.Fatalf("AppendBlobReference returned error: %v", err)
 		}
 	}
 
@@ -165,9 +165,14 @@ func TestBuilder(t *testing.T) {
 		t.Fatalf("unexpected size in target: %d", target.Size)
 	}
 
-	references := manifest.References()
+	references := manifest.BlobReferences()
 	expected := append([]distribution.Descriptor{manifest.Target()}, descriptors...)
 	if !reflect.DeepEqual(references, expected) {
-		t.Fatal("References() does not match the descriptors added")
+		t.Fatal("BlobReferences() does not match the descriptors added")
+	}
+
+	references = manifest.ManifestReferences()
+	if len(references) != 0 {
+		t.Fatal("ManifestReferences() did not return empty array")
 	}
 }
