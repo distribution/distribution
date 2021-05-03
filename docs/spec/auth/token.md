@@ -114,8 +114,8 @@ Defines getting a bearer and refresh token using the token endpoint.
         String identifying the client. This client_id does not need
         to be registered with the authorization server but should be set to a
         meaningful value in order to allow auditing keys created by unregistered
-        clients. Accepted syntax is defined in
-        [RFC6749 Appendix A.1](https://tools.ietf.org/html/rfc6749#appendix-A.1).
+        clients. Accepted syntax is defined in 
+       <a href="https://tools.ietf.org/html/rfc6749#appendix-A.1" rel="noopener noreferrer nofollow" target="_blank">RFC6749 Appendix A.1</a>
     </dd>
     <dt>
         <code>scope</code>
