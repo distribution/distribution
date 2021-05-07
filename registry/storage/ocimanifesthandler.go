@@ -81,7 +81,11 @@ func (ms *ocischemaManifestHandler) verifyManifest(ctx context.Context, mnfst oc
 	blobsService := ms.repository.Blobs(ctx)
 
 	for _, descriptor := range mnfst.References() {
-		var err error
+		err := descriptor.Digest.Validate()
+		if err != nil {
+			errs = append(errs, err, distribution.ErrManifestBlobUnknown{Digest: descriptor.Digest})
+			continue
+		}
 
 		switch descriptor.MediaType {
 		case v1.MediaTypeImageLayer, v1.MediaTypeImageLayerGzip, v1.MediaTypeImageLayerNonDistributable, v1.MediaTypeImageLayerNonDistributableGzip:
@@ -95,9 +99,14 @@ func (ms *ocischemaManifestHandler) verifyManifest(ctx context.Context, mnfst oc
 					break
 				}
 			}
-			if err == nil && len(descriptor.URLs) == 0 {
-				// If no URLs, require that the blob exists
-				_, err = blobsService.Stat(ctx, descriptor.Digest)
+			if err == nil {
+				// check the presence if it is normal layer or
+				// there is no urls for non-distributable
+				if len(descriptor.URLs) == 0 ||
+					(descriptor.MediaType == v1.MediaTypeImageLayer || descriptor.MediaType == v1.MediaTypeImageLayerGzip) {
+
+					_, err = blobsService.Stat(ctx, descriptor.Digest)
+				}
 			}
 
 		case v1.MediaTypeImageManifest:
@@ -107,12 +116,13 @@ func (ms *ocischemaManifestHandler) verifyManifest(ctx context.Context, mnfst oc
 				err = distribution.ErrBlobUnknown // just coerce to unknown.
 			}
 
+			if err != nil {
+				dcontext.GetLogger(ms.ctx).WithError(err).Debugf("failed to ensure exists of %v in manifest service", descriptor.Digest)
+			}
 			fallthrough // double check the blob store.
 		default:
-			// forward all else to blob storage
-			if len(descriptor.URLs) == 0 {
-				_, err = blobsService.Stat(ctx, descriptor.Digest)
-			}
+			// check the presence
+			_, err = blobsService.Stat(ctx, descriptor.Digest)
 		}
 
 		if err != nil {
