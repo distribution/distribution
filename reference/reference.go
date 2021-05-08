@@ -269,7 +269,7 @@ func WithName(name string) (Named, error) {
 // WithTag combines the name from "name" and the tag from "tag" to form a
 // reference incorporating both the name and the tag.
 func WithTag(name Named, tag string) (NamedTagged, error) {
-	if !anchoredTagRegexp.MatchString(tag) {
+	if !AnchoredTagRegexp.MatchString(tag) {
 		return nil, ErrTagInvalidFormat
 	}
 	var repo repository
@@ -295,7 +295,7 @@ func WithTag(name Named, tag string) (NamedTagged, error) {
 // WithDigest combines the name from "name" and the digest from "digest" to form
 // a reference incorporating both the name and the digest.
 func WithDigest(name Named, digest digest.Digest) (Canonical, error) {
-	if !anchoredDigestRegexp.MatchString(digest.String()) {
+	if !AnchoredDigestRegexp.MatchString(digest.String()) {
 		return nil, ErrDigestInvalidFormat
 	}
 	var repo repository
