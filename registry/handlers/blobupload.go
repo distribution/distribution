@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/distribution/distribution/v3"
 	dcontext "github.com/distribution/distribution/v3/context"
@@ -133,7 +134,29 @@ func (buh *blobUploadHandler) PatchBlobData(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// TODO(dmcgowan): support Content-Range header to seek and write range
+	cr := r.Header.Get("Content-Range")
+	cl := r.Header.Get("Content-Length")
+	if cr != "" && cl != "" {
+		start, end, err := parseContentRange(cr)
+		if err != nil {
+			buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err.Error()))
+			return
+		}
+		if start > end || start != buh.Upload.Size() {
+			buh.Errors = append(buh.Errors, v2.ErrorCodeRangeInvalid)
+			return
+		}
+
+		clInt, err := strconv.ParseInt(cl, 10, 64)
+		if err != nil {
+			buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err.Error()))
+			return
+		}
+		if clInt != (end-start)+1 {
+			buh.Errors = append(buh.Errors, v2.ErrorCodeSizeInvalid)
+			return
+		}
+	}
 
 	if err := copyFullPayload(buh, w, r, buh.Upload, -1, "blob PATCH"); err != nil {
 		buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err.Error()))
