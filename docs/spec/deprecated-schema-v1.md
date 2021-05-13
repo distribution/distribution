@@ -14,7 +14,7 @@ This page contains information on how to update from image manifest version 2,
 schema 1. However, these instructions will not ensure your new image will run
 successfully. There may be several other issues to troubleshoot that are
 associated with  the deprecated image manifest that will block your image from
-running succesfully. A list of possible methods to help update your image is
+running successfully. A list of possible methods to help update your image is
 also included below.
 
 ### Update to image manifest version 2, schema 2
