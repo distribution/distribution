@@ -913,10 +913,16 @@ access to the debug endpoint is locked down in a production environment.
 The `debug` section takes a single required `addr` parameter, which specifies
 the `HOST:PORT` on which the debug server should accept connections.
 
+If the registry is configured as a pull-through cache, the `debug` server can be used
+to access proxy statistics. These statistics are exposed at `/debug/vars` in JSON format.
+
 ## `prometheus`
 
 The `prometheus` option defines whether the prometheus metrics is enable, as well
 as the path to access the metrics.
+
+>**NOTE**: The prometheus metrics do **not** cover pull-through cache statistics.
+> Proxy statistics are exposed via `expvar` only.
 
 | Parameter | Required | Description                                           |
 |-----------|----------|-------------------------------------------------------|
