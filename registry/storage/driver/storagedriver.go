@@ -3,6 +3,7 @@ package driver
 import (
 	"context"
 	"fmt"
+	"github.com/fsnotify/fsnotify"
 	"io"
 	"regexp"
 	"strconv"
@@ -90,6 +91,10 @@ type StorageDriver interface {
 	// to a directory, the directory will not be entered and Walk
 	// will continue the traversal.  If fileInfo refers to a normal file, processing stops
 	Walk(ctx context.Context, path string, f WalkFn) error
+
+	// Watch creates a channel where events related to the driver managed file system like
+	// resources are sent.
+	Watch(ctx context.Context, paths ...string) (io.Closer, chan fsnotify.Event, error)
 }
 
 // FileWriter provides an abstraction for an opened writable file-like object in

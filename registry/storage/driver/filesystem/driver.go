@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/fsnotify/fsnotify"
 	"io"
 	"io/ioutil"
 	"os"
@@ -298,6 +299,20 @@ func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn) 
 // fullPath returns the absolute path of a key within the Driver's storage.
 func (d *driver) fullPath(subPath string) string {
 	return path.Join(d.rootDirectory, subPath)
+}
+
+func (d *driver) Watch(ctx context.Context, paths ...string) (io.Closer, chan fsnotify.Event, error) {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		return nil, nil, err
+	}
+	for _, p := range paths {
+		fullPath := d.fullPath(p)
+		if err = watcher.Add(fullPath); err != nil {
+			return nil, nil, err
+		}
+	}
+	return watcher, watcher.Events, nil
 }
 
 type fileInfo struct {

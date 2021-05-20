@@ -2,6 +2,8 @@ package proxy
 
 import (
 	"context"
+	"errors"
+	"github.com/distribution/distribution/v3/registry/storage"
 	"io"
 	"net/http"
 	"strconv"
@@ -24,11 +26,26 @@ type proxyBlobStore struct {
 
 var _ distribution.BlobStore = &proxyBlobStore{}
 
+type BlobFetch struct {
+	completeCond   *sync.Cond
+	readableWriter storage.ReadableWriter
+	mutex          sync.Mutex
+}
+
+func newBlobFetch(w storage.ReadableWriter) *BlobFetch {
+	res := &BlobFetch{
+		readableWriter: w,
+	}
+	res.completeCond = sync.NewCond(&res.mutex)
+	return res
+}
+
 // inflight tracks currently downloading blobs
-var inflight = make(map[digest.Digest]struct{})
+var inflight = make(map[digest.Digest]*BlobFetch)
 
 // mu protects inflight
 var mu sync.Mutex
+var cond = sync.NewCond(&mu)
 
 func setResponseHeaders(w http.ResponseWriter, length int64, mediaType string, digest digest.Digest) {
 	w.Header().Set("Content-Length", strconv.FormatInt(length, 10))
@@ -64,89 +81,115 @@ func (pbs *proxyBlobStore) copyContent(ctx context.Context, dgst digest.Digest, 
 	return desc, nil
 }
 
-func (pbs *proxyBlobStore) serveLocal(ctx context.Context, w http.ResponseWriter, r *http.Request, dgst digest.Digest) (bool, error) {
-	localDesc, err := pbs.localStore.Stat(ctx, dgst)
-	if err != nil {
-		// Stat can report a zero sized file here if it's checked between creation
-		// and population.  Return nil error, and continue
-		return false, nil
-	}
-
-	proxyMetrics.BlobPush(uint64(localDesc.Size))
-	return true, pbs.localStore.ServeBlob(ctx, w, r, dgst)
-}
-
-func (pbs *proxyBlobStore) storeLocal(ctx context.Context, dgst digest.Digest) error {
-	defer func() {
-		mu.Lock()
-		delete(inflight, dgst)
-		mu.Unlock()
-	}()
-
-	var desc distribution.Descriptor
-	var err error
-	var bw distribution.BlobWriter
-
-	bw, err = pbs.localStore.Create(ctx)
+func (pbs *proxyBlobStore) doServeFromLocalStore(ctx context.Context, w http.ResponseWriter, r *http.Request, dgst digest.Digest) error {
+	_, err := pbs.localStore.Stat(ctx, dgst)
 	if err != nil {
 		return err
 	}
 
-	desc, err = pbs.copyContent(ctx, dgst, bw)
+	return pbs.localStore.ServeBlob(ctx, w, r, dgst)
+
+}
+
+func (pbs *proxyBlobStore) IsPresentLocally(ctx context.Context, dgst digest.Digest) bool {
+	_, err := pbs.localStore.Stat(ctx, dgst)
+	// Stat can report a zero sized file here if it's checked between creation
+	// and population. Continue as if it did not exist.
+	return err == nil
+}
+
+func (pbs *proxyBlobStore) fetchFromRemote(dgst digest.Digest, ctx context.Context, fetcher *BlobFetch) {
+	err := pbs.doFetchFromRemote(dgst, ctx, fetcher.readableWriter)
 	if err != nil {
+		dcontext.GetLogger(ctx).Errorf("Failed to fetch layer %s, error: %s", dgst, err)
+	}
+}
+
+func (pbs *proxyBlobStore) doFetchFromRemote(dgst digest.Digest, ctx context.Context, bw storage.ReadableWriter) error {
+	if err := pbs.authChallenger.tryEstablishChallenges(ctx); err != nil {
+		bw.CancelWithError(ctx, err)
+		return err
+	}
+
+	desc, err := pbs.copyContent(ctx, dgst, bw)
+	mu.Lock()
+	delete(inflight, dgst)
+	defer mu.Unlock()
+	if err != nil {
+		bw.CancelWithError(ctx, err)
+		dcontext.GetLogger(ctx).Errorf("Error copying to storage: %s", err.Error())
 		return err
 	}
 
 	_, err = bw.Commit(ctx, desc)
 	if err != nil {
+		dcontext.GetLogger(ctx).Errorf("Error committing to storage: %s", err.Error())
 		return err
 	}
 
+	blobRef, err := reference.WithDigest(pbs.repositoryName, dgst)
+	if err != nil {
+		dcontext.GetLogger(ctx).Errorf("Error creating reference: %s", err)
+		return err
+	}
+
+	pbs.scheduler.AddBlob(blobRef, repositoryTTL)
 	return nil
 }
 
 func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter, r *http.Request, dgst digest.Digest) error {
-	served, err := pbs.serveLocal(ctx, w, r, dgst)
-	if err != nil {
-		dcontext.GetLogger(ctx).Errorf("Error serving blob from local storage: %s", err.Error())
-		return err
-	}
-
-	if served {
-		return nil
-	}
-
-	if err := pbs.authChallenger.tryEstablishChallenges(ctx); err != nil {
-		return err
-	}
-
 	mu.Lock()
-	_, ok := inflight[dgst]
-	if ok {
-		mu.Unlock()
-		_, err := pbs.copyContent(ctx, dgst, w)
-		return err
-	}
-	inflight[dgst] = struct{}{}
-	mu.Unlock()
+	fetch, ok := inflight[dgst]
+	isPresent := pbs.IsPresentLocally(ctx, dgst)
 
-	go func(dgst digest.Digest) {
-		if err := pbs.storeLocal(ctx, dgst); err != nil {
-			dcontext.GetLogger(ctx).Errorf("Error committing to storage: %s", err.Error())
-		}
-
-		blobRef, err := reference.WithDigest(pbs.repositoryName, dgst)
+	dcontext.GetLogger(ctx).Debugf("digest %s present: %t, in flight: %t, in flight object: %v", dgst, isPresent, ok, fetch)
+	isNew := !isPresent && (!ok || ok && !fetch.readableWriter.IsInProgress())
+	if isNew {
+		writer, err := pbs.localStore.Create(ctx)
 		if err != nil {
-			dcontext.GetLogger(ctx).Errorf("Error creating reference: %s", err)
-			return
+			mu.Unlock()
+			return err
 		}
+		rWriter, _ := writer.(storage.ReadableWriter)
+		fetch = newBlobFetch(rWriter)
+		inflight[dgst] = fetch
+		go pbs.fetchFromRemote(dgst, ctx, fetch)
+	}
 
-		pbs.scheduler.AddBlob(blobRef, repositoryTTL)
-	}(dgst)
-
-	_, err = pbs.copyContent(ctx, dgst, w)
+	inflightReader := io.ReadCloser(nil)
+	var err error
+	if fetch != nil {
+		inflightReader, err = fetch.readableWriter.Reader()
+	}
+	mu.Unlock()
 	if err != nil {
 		return err
+	}
+	if isPresent {
+		err := pbs.doServeFromLocalStore(ctx, w, r, dgst)
+		if err != nil {
+			dcontext.GetLogger(ctx).Errorf("Error serving blob from local storage: %s", err.Error())
+			return err
+		}
+		dcontext.GetLogger(ctx).Debugf("Served %s from local storage, repo: %s", dgst, pbs.repositoryName)
+	} else {
+		if inflightReader == nil {
+			// this should not be reached, local stream should always be readable
+			return errors.New("unable to read blob being written")
+		}
+		size, err := io.Copy(w, inflightReader)
+		if err != nil {
+			dcontext.GetLogger(ctx).Errorf("Error occurred while fetching from in-flight reader: %s", err)
+			return err
+		}
+		desc, err := pbs.localStore.Stat(ctx, dgst)
+		if err != nil {
+			return err
+		}
+		if desc.Size != size {
+			dcontext.GetLogger(ctx).Errorf("Size did not match for %s. Expected: %d, downloaded: %d", dgst, desc.Size, size)
+			return io.EOF
+		}
 	}
 	return nil
 }

@@ -4,8 +4,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/fsnotify/fsnotify"
 	"io"
 	"path"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/distribution/distribution/v3"
@@ -41,6 +44,12 @@ type blobWriter struct {
 
 	resumableDigestEnabled bool
 	committed              bool
+	cancelled              bool
+	mutex                  *sync.Mutex
+	finished               chan struct{}
+	refCount               int32
+	lastError              error
+	finishedClosed         bool
 }
 
 var _ distribution.BlobWriter = &blobWriter{}
@@ -57,6 +66,24 @@ func (bw *blobWriter) StartedAt() time.Time {
 // Commit marks the upload as completed, returning a valid descriptor. The
 // final size and digest are checked against the first descriptor provided.
 func (bw *blobWriter) Commit(ctx context.Context, desc distribution.Descriptor) (distribution.Descriptor, error) {
+	bw.mutex.Lock()
+	defer bw.mutex.Unlock()
+	defer bw.closeChannel()
+	res, err := bw.doCommit(ctx, desc)
+	if err != nil {
+		bw.lastError = err
+	}
+	return res, err
+}
+
+func (bw *blobWriter) closeChannel() {
+	if bw.finishedClosed {
+		close(bw.finished)
+		bw.finishedClosed = true
+	}
+}
+
+func (bw *blobWriter) doCommit(ctx context.Context, desc distribution.Descriptor) (distribution.Descriptor, error) {
 	dcontext.GetLogger(ctx).Debug("(*blobWriter).Commit")
 
 	if err := bw.fileWriter.Commit(); err != nil {
@@ -79,7 +106,7 @@ func (bw *blobWriter) Commit(ctx context.Context, desc distribution.Descriptor) 
 		return distribution.Descriptor{}, err
 	}
 
-	if err := bw.removeResources(ctx); err != nil {
+	if err := bw.ReleaseResources(); err != nil {
 		return distribution.Descriptor{}, err
 	}
 
@@ -89,12 +116,18 @@ func (bw *blobWriter) Commit(ctx context.Context, desc distribution.Descriptor) 
 	}
 
 	bw.committed = true
+
 	return canonical, nil
 }
 
 // Cancel the blob upload process, releasing any resources associated with
 // the writer and canceling the operation.
 func (bw *blobWriter) Cancel(ctx context.Context) error {
+	bw.mutex.Lock()
+	defer bw.mutex.Unlock()
+	defer bw.closeChannel()
+
+	bw.cancelled = true
 	dcontext.GetLogger(ctx).Debug("(*blobWriter).Cancel")
 	if err := bw.fileWriter.Cancel(); err != nil {
 		return err
@@ -104,7 +137,12 @@ func (bw *blobWriter) Cancel(ctx context.Context) error {
 		dcontext.GetLogger(ctx).Errorf("error closing blobwriter: %s", err)
 	}
 
-	return bw.removeResources(ctx)
+	return bw.ReleaseResources()
+}
+
+func (bw *blobWriter) CancelWithError(ctx context.Context, err error) error {
+	bw.lastError = err
+	return bw.Cancel(ctx)
 }
 
 func (bw *blobWriter) Size() int64 {
@@ -347,6 +385,13 @@ func (bw *blobWriter) moveBlob(ctx context.Context, desc distribution.Descriptor
 	return bw.blobStore.driver.Move(ctx, bw.path, blobPath)
 }
 
+func (bw *blobWriter) ReleaseResources() error {
+	if atomic.AddInt32(&bw.refCount, -1) == 0 {
+		return bw.removeResources(bw.ctx)
+	}
+	return nil
+}
+
 // removeResources should clean up all resources associated with the upload
 // instance. An error will be returned if the clean up cannot proceed. If the
 // resources are already not present, no error will be returned.
@@ -379,28 +424,98 @@ func (bw *blobWriter) removeResources(ctx context.Context) error {
 	return nil
 }
 
-func (bw *blobWriter) Reader() (io.ReadCloser, error) {
-	// todo(richardscothern): Change to exponential backoff, i=0.5, e=2, n=4
-	try := 1
-	for try <= 5 {
-		_, err := bw.driver.Stat(bw.ctx, bw.path)
-		if err == nil {
-			break
-		}
-		switch err.(type) {
-		case storagedriver.PathNotFoundError:
-			dcontext.GetLogger(bw.ctx).Debugf("Nothing found on try %d, sleeping...", try)
-			time.Sleep(1 * time.Second)
-			try++
-		default:
-			return nil, err
-		}
-	}
+type blobWriterReader struct {
+	path       string
+	events     chan fsnotify.Event
+	blobWriter *blobWriter
+	driver     storagedriver.StorageDriver
+	ctx        context.Context
+	reader     io.ReadCloser
+	watcher    io.Closer
+	finished   chan struct{}
+}
 
-	readCloser, err := bw.driver.Reader(bw.ctx, bw.path, 0)
+func (reader *blobWriterReader) Read(buff []byte) (int, error) {
+	reader.blobWriter.mutex.Lock()
+	defer reader.blobWriter.mutex.Unlock()
+	for true {
+		inProgress := reader.blobWriter.IsInProgress()
+		reader.blobWriter.mutex.Unlock()
+		count, err := reader.reader.Read(buff)
+		reader.blobWriter.mutex.Lock()
+		if err != nil && err != io.EOF {
+			return count, err
+		}
+		if count != 0 {
+			return count, nil
+		}
+		if err == io.EOF && !inProgress {
+			if reader.blobWriter.lastError != nil {
+				err = reader.blobWriter.lastError
+			}
+			return count, err
+		}
+		// At this point we have returned all the data we have available, we need to wait for
+		// further data to arrive or the download to be interrupted.
+		reader.blobWriter.mutex.Unlock()
+		select {
+		case <-reader.events:
+		case <-reader.finished:
+		case <-time.After(60 * time.Second):
+			logrus.Debugf("Timed out waiting for events ...")
+		}
+		reader.blobWriter.mutex.Lock()
+	}
+	return 0, io.EOF
+
+}
+
+func (reader *blobWriterReader) Close() error {
+	return reader.blobWriter.ReleaseResources()
+}
+
+var _ io.ReadCloser = &blobWriterReader{}
+var _ ReadableWriter = &blobWriter{}
+
+type ReadableWriter interface {
+	distribution.BlobWriter
+	Reader() (io.ReadCloser, error)
+
+	// CancelWithError does the same as Cancel plus delegates the error to any readers that are reading the writer
+	CancelWithError(ctx context.Context, err error) error
+	IsInProgress() bool
+}
+
+func (bw *blobWriter) IsInProgress() bool {
+	return !bw.cancelled && !bw.committed
+}
+
+func (bw *blobWriter) Reader() (io.ReadCloser, error) {
+	bw.mutex.Lock()
+	defer bw.mutex.Unlock()
+	if bw.refCount == 0 {
+		return nil, io.EOF //just finished
+	}
+	bw.refCount = bw.refCount + 1
+	watcher, events, err := bw.driver.Watch(bw.ctx, bw.path)
 	if err != nil {
 		return nil, err
 	}
 
-	return readCloser, nil
+	reader, err := bw.driver.Reader(bw.ctx, bw.path, 0)
+	if err != nil {
+		return nil, err
+	}
+	wReader := blobWriterReader{
+		driver:     bw.driver,
+		ctx:        bw.ctx,
+		path:       bw.path,
+		blobWriter: bw,
+		watcher:    watcher,
+		finished:   bw.finished,
+		events:     events,
+		reader:     reader,
+	}
+
+	return &wReader, nil
 }

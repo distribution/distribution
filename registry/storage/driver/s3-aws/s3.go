@@ -16,6 +16,7 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"github.com/fsnotify/fsnotify"
 	"io"
 	"io/ioutil"
 	"math"
@@ -925,6 +926,10 @@ func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn) 
 	}
 
 	return nil
+}
+
+func (d *driver) Watch(ctx context.Context, paths ...string) (io.Closer, chan fsnotify.Event, error) {
+	return nil, nil, storagedriver.ErrUnsupportedMethod{}
 }
 
 type walkInfoContainer struct {
