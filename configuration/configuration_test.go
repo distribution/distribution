@@ -80,10 +80,12 @@ var configStruct = Configuration{
 		RelativeURLs bool          `yaml:"relativeurls,omitempty"`
 		DrainTimeout time.Duration `yaml:"draintimeout,omitempty"`
 		TLS          struct {
-			Certificate string   `yaml:"certificate,omitempty"`
-			Key         string   `yaml:"key,omitempty"`
-			ClientCAs   []string `yaml:"clientcas,omitempty"`
-			LetsEncrypt struct {
+			Certificate  string   `yaml:"certificate,omitempty"`
+			Key          string   `yaml:"key,omitempty"`
+			ClientCAs    []string `yaml:"clientcas,omitempty"`
+			MinimumTLS   string   `yaml:"minimumtls,omitempty"`
+			CipherSuites []string `yaml:"ciphersuites,omitempty"`
+			LetsEncrypt  struct {
 				CacheFile string   `yaml:"cachefile,omitempty"`
 				Email     string   `yaml:"email,omitempty"`
 				Hosts     []string `yaml:"hosts,omitempty"`
@@ -102,10 +104,12 @@ var configStruct = Configuration{
 		} `yaml:"http2,omitempty"`
 	}{
 		TLS: struct {
-			Certificate string   `yaml:"certificate,omitempty"`
-			Key         string   `yaml:"key,omitempty"`
-			ClientCAs   []string `yaml:"clientcas,omitempty"`
-			LetsEncrypt struct {
+			Certificate  string   `yaml:"certificate,omitempty"`
+			Key          string   `yaml:"key,omitempty"`
+			ClientCAs    []string `yaml:"clientcas,omitempty"`
+			MinimumTLS   string   `yaml:"minimumtls,omitempty"`
+			CipherSuites []string `yaml:"ciphersuites,omitempty"`
+			LetsEncrypt  struct {
 				CacheFile string   `yaml:"cachefile,omitempty"`
 				Email     string   `yaml:"email,omitempty"`
 				Hosts     []string `yaml:"hosts,omitempty"`
@@ -540,9 +544,7 @@ func copyConfig(config Configuration) *Configuration {
 	}
 
 	configCopy.Notifications = Notifications{Endpoints: []Endpoint{}}
-	for _, v := range config.Notifications.Endpoints {
-		configCopy.Notifications.Endpoints = append(configCopy.Notifications.Endpoints, v)
-	}
+	configCopy.Notifications.Endpoints = append(configCopy.Notifications.Endpoints, config.Notifications.Endpoints...)
 
 	configCopy.HTTP.Headers = make(http.Header)
 	for k, v := range config.HTTP.Headers {

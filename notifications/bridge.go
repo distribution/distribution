@@ -125,15 +125,6 @@ func (b *bridge) RepoDeleted(repo reference.Named) error {
 	return b.sink.Write(*event)
 }
 
-func (b *bridge) createManifestEventAndWrite(action string, repo reference.Named, sm distribution.Manifest) error {
-	manifestEvent, err := b.createManifestEvent(action, repo, sm)
-	if err != nil {
-		return err
-	}
-
-	return b.sink.Write(*manifestEvent)
-}
-
 func (b *bridge) createManifestDeleteEventAndWrite(action string, repo reference.Named, dgst digest.Digest) error {
 	event := b.createEvent(action)
 	event.Target.Repository = repo.Name()

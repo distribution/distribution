@@ -193,7 +193,7 @@ func makeTestEnv(t *testing.T, name string) *testEnv {
 }
 
 func makeBlob(size int) []byte {
-	blob := make([]byte, size, size)
+	blob := make([]byte, size)
 	for i := 0; i < size; i++ {
 		blob[i] = byte('A' + rand.Int()%48)
 	}
@@ -202,16 +202,6 @@ func makeBlob(size int) []byte {
 
 func init() {
 	rand.Seed(42)
-}
-
-func perm(m []distribution.Descriptor) []distribution.Descriptor {
-	for i := 0; i < len(m); i++ {
-		j := rand.Intn(i + 1)
-		tmp := m[i]
-		m[i] = m[j]
-		m[j] = tmp
-	}
-	return m
 }
 
 func populate(t *testing.T, te *testEnv, blobCount, size, numUnique int) {

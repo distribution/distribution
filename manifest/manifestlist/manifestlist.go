@@ -8,7 +8,7 @@ import (
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/manifest"
 	"github.com/opencontainers/go-digest"
-	"github.com/opencontainers/image-spec/specs-go/v1"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 const (
@@ -163,7 +163,7 @@ func FromDescriptorsWithMediaType(descriptors []ManifestDescriptor, mediaType st
 		},
 	}
 
-	m.Manifests = make([]ManifestDescriptor, len(descriptors), len(descriptors))
+	m.Manifests = make([]ManifestDescriptor, len(descriptors))
 	copy(m.Manifests, descriptors)
 
 	deserialized := DeserializedManifestList{
@@ -177,7 +177,7 @@ func FromDescriptorsWithMediaType(descriptors []ManifestDescriptor, mediaType st
 
 // UnmarshalJSON populates a new ManifestList struct from JSON data.
 func (m *DeserializedManifestList) UnmarshalJSON(b []byte) error {
-	m.canonical = make([]byte, len(b), len(b))
+	m.canonical = make([]byte, len(b))
 	// store manifest list in canonical
 	copy(m.canonical, b)
 
