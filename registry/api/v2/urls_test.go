@@ -35,6 +35,26 @@ func makeURLBuilderTestCases(urlBuilder *URLBuilder) []urlBuilderTestCase {
 			},
 		},
 		{
+			description:  "test tags url with n query parameter",
+			expectedPath: "/v2/foo/bar/tags/list?n=10",
+			expectedErr:  nil,
+			build: func() (string, error) {
+				return urlBuilder.BuildTagsURL(fooBarRef, url.Values{
+					"n": []string{"10"},
+				})
+			},
+		},
+		{
+			description:  "test tags url with last query parameter",
+			expectedPath: "/v2/foo/bar/tags/list?last=abc-def",
+			expectedErr:  nil,
+			build: func() (string, error) {
+				return urlBuilder.BuildTagsURL(fooBarRef, url.Values{
+					"last": []string{"abc-def"},
+				})
+			},
+		},
+		{
 			description:  "test manifest url tagged ref",
 			expectedPath: "/v2/foo/bar/manifests/tag",
 			expectedErr:  nil,
