@@ -5450,7 +5450,7 @@ The following parameters should be specified on the request:
 
 |Name|Kind|Description|
 |----|----|-----------|
-|`n`|query|Limit the number of entries in each response. It not present, all entries will be returned.|
+|`n`|query|Limit the number of entries in each response. It not present, 100 entries will be returned.|
 |`last`|query|Result set will include values lexically after last.|
 
 
