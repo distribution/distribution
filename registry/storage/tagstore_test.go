@@ -98,8 +98,8 @@ func TestTagStoreUnTag(t *testing.T) {
 	desc := distribution.Descriptor{Digest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}
 
 	err := tags.Untag(ctx, "latest")
-	if err != nil {
-		t.Error(err)
+	if err == nil {
+		t.Error("expected error removing unknown tag")
 	}
 
 	err = tags.Tag(ctx, "latest", desc)

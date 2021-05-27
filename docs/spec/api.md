@@ -1113,7 +1113,7 @@ A list of methods and URIs are covered in the table below:
 | GET | `/v2/<name>/tags/list` | Tags | Fetch the tags under the repository identified by `name`. |
 | GET | `/v2/<name>/manifests/<reference>` | Manifest | Fetch the manifest identified by `name` and `reference` where `reference` can be a tag or digest. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data. |
 | PUT | `/v2/<name>/manifests/<reference>` | Manifest | Put the manifest identified by `name` and `reference` where `reference` can be a tag or digest. |
-| DELETE | `/v2/<name>/manifests/<reference>` | Manifest | Delete the manifest identified by `name` and `reference`. Note that a manifest can _only_ be deleted by `digest`. |
+| DELETE | `/v2/<name>/manifests/<reference>` | Manifest | Delete the manifest or tag identified by `name` and `reference` where `reference` can be a tag or digest. Note that a manifest can _only_ be deleted by digest. |
 | GET | `/v2/<name>/blobs/<digest>` | Blob | Retrieve the blob from the registry identified by `digest`. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data. |
 | DELETE | `/v2/<name>/blobs/<digest>` | Blob | Delete the blob identified by `name` and `digest` |
 | POST | `/v2/<name>/blobs/uploads/` | Initiate Blob Upload | Initiate a resumable blob upload. If successful, an upload location will be provided to complete the upload. Optionally, if the `digest` parameter is present, the request body will be used to complete the upload in a single request. |
@@ -1142,7 +1142,8 @@ The error codes encountered via the API are enumerated in the following table:
  `MANIFEST_UNVERIFIED` | manifest failed signature verification | During manifest upload, if the manifest fails signature verification, this error will be returned.
  `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation.
  `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry.
- `PAGINATION_NUMBER_INVALID` | invalid number of results requested | Returned when the `n` parameter (number of results to return) is not an integer, or `n` is negative.
+ `PAGINATION_NUMBER_INVALID` | invalid number of results requested | Returned when the "n" parameter (number of results to return) is not an integer, or "n" is negative.
+ `RANGE_INVALID` | invalid content range | When a layer is uploaded, the provided range is checked against the uploaded chunk. This error is returned if the range is out of order.
  `SIZE_INVALID` | provided length did not match content length | When a layer is uploaded, the provided size will be checked against the uploaded content. If they do not match, this error will be returned.
  `TAG_INVALID` | manifest tag did not match URI | During a manifest upload, if the tag in the manifest does not match the uri tag, this error will be returned.
  `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client. Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate.
@@ -2240,7 +2241,7 @@ The error codes that may be included in the response body are enumerated below:
 
 #### DELETE Manifest
 
-Delete the manifest identified by `name` and `reference`. Note that a manifest can _only_ be deleted by `digest`.
+Delete the manifest or tag identified by `name` and `reference` where `reference` can be a tag or digest. Note that a manifest can _only_ be deleted by digest.
 
 
 
@@ -2475,7 +2476,7 @@ Content-Type: application/json
 }
 ```
 
-The specified `name` or `reference` are unknown to the registry and the delete was unable to proceed. Clients can assume the manifest was already deleted if this response is returned.
+The specified `name` or `reference` are unknown to the registry and the delete was unable to proceed. Clients can assume the manifest or tag was already deleted if this response is returned.
 
 
 
@@ -2494,7 +2495,7 @@ The error codes that may be included in the response body are enumerated below:
 405 Method Not Allowed
 ```
 
-Manifest delete is not allowed because the registry is configured as a pull-through cache or `delete` has been disabled.
+Manifest or tag delete is not allowed because the registry is configured as a pull-through cache or `delete` has been disabled.
 
 
 

@@ -844,6 +844,93 @@ func TestManifestAPI(t *testing.T) {
 	testManifestAPIManifestList(t, env2, schema2Args)
 }
 
+func TestManifestAPI_DeleteTag(t *testing.T) {
+	env := newTestEnv(t, false)
+	defer env.Shutdown()
+
+	imageName, err := reference.WithName("foo/bar")
+	checkErr(t, err, "building image name")
+
+	tag := "latest"
+	dgst := createRepository(env, t, imageName.Name(), tag)
+
+	ref, err := reference.WithTag(imageName, tag)
+	checkErr(t, err, "building tag reference")
+
+	u, err := env.builder.BuildManifestURL(ref)
+	checkErr(t, err, "building tag URL")
+
+	resp, err := httpDelete(u)
+	m := "deleting tag"
+	checkErr(t, err, m)
+	defer resp.Body.Close()
+
+	checkResponse(t, m, resp, http.StatusAccepted)
+	if resp.Body != http.NoBody {
+		t.Fatal("unexpected response body")
+	}
+
+	msg := "checking tag no longer exists"
+	resp, err = http.Get(u)
+	checkErr(t, err, msg)
+	checkResponse(t, msg, resp, http.StatusNotFound)
+
+	digestRef, err := reference.WithDigest(imageName, dgst)
+	checkErr(t, err, "building manifest digest reference")
+
+	u, err = env.builder.BuildManifestURL(digestRef)
+	checkErr(t, err, "building manifest URL")
+
+	msg = "checking manifest still exists"
+	resp, err = http.Head(u)
+	checkErr(t, err, msg)
+	checkResponse(t, msg, resp, http.StatusOK)
+}
+
+func TestManifestAPI_DeleteTag_Unknown(t *testing.T) {
+	env := newTestEnv(t, false)
+	defer env.Shutdown()
+
+	imageName, err := reference.WithName("foo/bar")
+	checkErr(t, err, "building named object")
+
+	ref, err := reference.WithTag(imageName, "latest")
+	checkErr(t, err, "building tag reference")
+
+	u, err := env.builder.BuildManifestURL(ref)
+	checkErr(t, err, "building tag URL")
+
+	resp, err := httpDelete(u)
+	msg := "deleting unknown tag"
+	checkErr(t, err, msg)
+	defer resp.Body.Close()
+
+	checkResponse(t, msg, resp, http.StatusNotFound)
+	checkBodyHasErrorCodes(t, msg, resp, v2.ErrorCodeManifestUnknown)
+}
+
+func TestManifestAPI_DeleteTag_ReadOnly(t *testing.T) {
+	env := newTestEnv(t, false)
+	defer env.Shutdown()
+	env.app.readOnly = true
+
+	imageName, err := reference.WithName("foo/bar")
+	checkErr(t, err, "building named object")
+
+	ref, err := reference.WithTag(imageName, "latest")
+	checkErr(t, err, "building tag reference")
+
+	u, err := env.builder.BuildManifestURL(ref)
+	checkErr(t, err, "building URL")
+
+	resp, err := httpDelete(u)
+	msg := "deleting tag"
+	checkErr(t, err, msg)
+	defer resp.Body.Close()
+
+	checkResponse(t, msg, resp, http.StatusMethodNotAllowed)
+}
+
 // storageManifestErrDriverFactory implements the factory.StorageDriverFactory interface.
 type storageManifestErrDriverFactory struct{}
 
