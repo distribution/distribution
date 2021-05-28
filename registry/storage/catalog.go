@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"path"
 	"sort"
@@ -13,10 +14,12 @@ import (
 )
 
 var (
-	ErrStopRec = errors.New("Stopped the recursion for getting repositories")
+	// ErrStopReposWalk is used as a return value to indicate that the repository path walk
+	// should be stopped. It's not returned as an error by any function.
+	ErrStopReposWalk = errors.New("stop repos walk")
 )
 
-// Returns a list, or partial list, of repositories in the registry.
+// Returns a list or a partial list of repositories in the registry.
 // Because it's a quite expensive operation, it should only be used when building up
 // an initial set of repositories.
 func (reg *registry) Repositories(ctx context.Context, repos []string, last string) (n int, err error) {
@@ -24,7 +27,7 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 	var foundRepos []string
 
 	if len(repos) == 0 {
-		return 0, errors.New("no space in slice")
+		return -1, errors.New("no repos requested")
 	}
 
 	root, err := pathFor(repositoriesRootPathSpec{})
@@ -32,14 +35,14 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 		return 0, err
 	}
 
-	err = reg.getRepositories(ctx, root, last, func(repoPath string) error {
+	err = reg.walkRepos(ctx, root, last, func(repoPath string) error {
 		// this is placed before the append,
-		// so that we will get a extra repo if
-		// any. This assures that we do not return
+		// so that we will get an extra repo if
+		// any. This ensures that we do not return
 		// io.EOF without it being the last record.
 		if len(foundRepos) == len(repos) {
 			finishedWalk = true
-			return ErrStopRec
+			return ErrStopReposWalk
 		}
 
 		foundRepos = append(foundRepos, repoPath)
@@ -66,7 +69,7 @@ func (reg *registry) Enumerate(ctx context.Context, ingester func(string) error)
 		return err
 	}
 
-	return reg.getRepositories(ctx, root, "", ingester)
+	return reg.walkRepos(ctx, root, "", ingester)
 }
 
 // Remove removes a repository from storage
@@ -79,12 +82,11 @@ func (reg *registry) Remove(ctx context.Context, name reference.Named) error {
 	return reg.driver.Delete(ctx, repoDir)
 }
 
-// getRepositories is a helper function for getRepositoriesRec calls
-// the function fn with a repository path, if the current path looked
-// at is a repository and is lexicographically after last. It is possible
-// to return driver.ErrSkipDir, if there is no interest in any repositories
-// under the given `repoPath`, or call ErrStopRec if the recursion should stop.
-func (reg *registry) getRepositories(ctx context.Context, root, last string, fn func(repoPath string) error) error {
+// walkRepos walks paths rooted in root calling fn for each found repo path.
+// Paths are walked in a lexical order which makes the output deterministic.
+// If last is not an empty string it walks all repo paths. Otherwise
+// it returns when last repoPath is found.
+func (reg *registry) walkRepos(ctx context.Context, root, last string, fn func(repoPath string) error) error {
 	midFn := fn
 
 	// middleware func to exclude the `last` repo
@@ -100,16 +102,16 @@ func (reg *registry) getRepositories(ctx context.Context, root, last string, fn 
 
 	// call our recursive func, with the midFn and the start path
 	// of where we want to find repositories.
-	err := reg.getRepositoriesRec(ctx, root, root, last, midFn)
-	if err == ErrStopRec {
+	err := reg.walkReposPath(ctx, root, root, last, midFn)
+	if err == ErrStopReposWalk {
 		return nil
 	}
 	return err
 }
 
-// getRepositoriesRec recurse through all folders it the `lookPath`,
-// there it will try to find repositories. See getRepositories for more.
-func (reg *registry) getRepositoriesRec(ctx context.Context, root, lookPath, last string, fn func(repoPath string) error) error {
+// walkReposPath walks through all folders in `lookPath`,
+// looking for repositories. See walkRepos for more detailed description.
+func (reg *registry) walkReposPath(ctx context.Context, root, lookPath, last string, fn func(repoPath string) error) error {
 	// ensure that the current path is a dir, otherwise we just return
 	if f, err := reg.blobStore.driver.Stat(ctx, lookPath); err != nil || !f.IsDir() {
 		if err != nil {
@@ -128,25 +130,25 @@ func (reg *registry) getRepositoriesRec(ctx context.Context, root, lookPath, las
 	sort.Strings(children)
 
 	if last != "" {
-		splitLasts := strings.Split(last, "/")
+		splitLast := strings.Split(last, "/")
 
-		// call the next iteration of getRepositoriesRec if any, but
+		// call the next iteration of walkReposPath if any, but
 		// exclude the current one.
-		if len(splitLasts) > 1 {
-			if err := reg.getRepositoriesRec(ctx, root, lookPath+"/"+splitLasts[0], strings.Join(splitLasts[1:], "/"), fn); err != nil {
+		if len(splitLast) > 1 {
+			if err := reg.walkReposPath(ctx, root, lookPath+"/"+splitLast[0], strings.Join(splitLast[1:], "/"), fn); err != nil {
 				return err
 			}
 		}
 
 		// find current last path in our children
-		n := sort.SearchStrings(children, lookPath+"/"+splitLasts[0])
-		if n == len(children) || children[n] != lookPath+"/"+splitLasts[0] {
-			return errors.New("the provided 'last' repositories does not exists")
+		n := sort.SearchStrings(children, lookPath+"/"+splitLast[0])
+		if n == len(children) || children[n] != lookPath+"/"+splitLast[0] {
+			return fmt.Errorf("%q repository not found", last)
 		}
 
 		// if this is not a final `last` (there are more `/` left)
 		// then exclude the current index, else include it
-		if len(splitLasts) > 1 {
+		if len(splitLast) > 1 {
 			children = children[n+1:]
 		} else {
 			children = children[n:]
@@ -156,15 +158,15 @@ func (reg *registry) getRepositoriesRec(ctx context.Context, root, lookPath, las
 	for _, child := range children {
 		_, file := path.Split(child)
 
-		if file == "_manifest" {
+		if file == "_manifests" {
 			if err := fn(strings.TrimPrefix(lookPath, root+"/")); err != nil {
 				if err == driver.ErrSkipDir {
 					break
 				}
 				return err
 			}
-		} else if file[0] != '_' {
-			if err := reg.getRepositoriesRec(ctx, root, child, "", fn); err != nil {
+		} else if !strings.HasPrefix(file, "_") {
+			if err := reg.walkReposPath(ctx, root, child, "", fn); err != nil {
 				return err
 			}
 		}
