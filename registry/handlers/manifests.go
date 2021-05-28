@@ -495,8 +495,7 @@ func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Reques
 		tagService := imh.Repository.Tags(imh.Context)
 		if err := tagService.Untag(imh.Context, imh.Tag); err != nil {
 			switch err.(type) {
-			case distribution.ErrTagUnknown:
-			case driver.PathNotFoundError:
+			case distribution.ErrTagUnknown, driver.PathNotFoundError:
 				imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown)
 			default:
 				imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown)
