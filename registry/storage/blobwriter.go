@@ -50,6 +50,8 @@ type blobWriter struct {
 	refCount               int32
 	lastError              error
 	finishedClosed         bool
+	desc                   *distribution.Descriptor
+	descNotify             *sync.Cond
 }
 
 var _ distribution.BlobWriter = &blobWriter{}
@@ -126,6 +128,7 @@ func (bw *blobWriter) Cancel(ctx context.Context) error {
 	bw.mutex.Lock()
 	defer bw.mutex.Unlock()
 	defer bw.closeChannel()
+	defer bw.descNotify.Broadcast()
 
 	bw.cancelled = true
 	dcontext.GetLogger(ctx).Debug("(*blobWriter).Cancel")
@@ -435,6 +438,18 @@ type blobWriterReader struct {
 	finished   chan struct{}
 }
 
+func (reader *blobWriterReader) GetDescriptor() (distribution.Descriptor, error) {
+	reader.blobWriter.mutex.Lock()
+	defer reader.blobWriter.mutex.Unlock()
+	if reader.blobWriter.desc == nil {
+		reader.blobWriter.descNotify.Wait()
+	}
+	if reader.blobWriter.lastError != nil {
+		return distribution.Descriptor{}, reader.blobWriter.lastError
+	}
+	return *reader.blobWriter.desc, nil
+}
+
 func (reader *blobWriterReader) Read(buff []byte) (int, error) {
 	reader.blobWriter.mutex.Lock()
 	defer reader.blobWriter.mutex.Unlock()
@@ -477,26 +492,39 @@ func (reader *blobWriterReader) Close() error {
 var _ io.ReadCloser = &blobWriterReader{}
 var _ ReadableWriter = &blobWriter{}
 
+type BlobReader interface {
+	io.ReadCloser
+	GetDescriptor() (distribution.Descriptor, error)
+}
+
 type ReadableWriter interface {
 	distribution.BlobWriter
-	Reader() (io.ReadCloser, error)
+	Reader() (BlobReader, error)
 
 	// CancelWithError does the same as Cancel plus delegates the error to any readers that are reading the writer
 	CancelWithError(ctx context.Context, err error) error
 	IsInProgress() bool
+	SetDescriptor(desc distribution.Descriptor)
 }
 
 func (bw *blobWriter) IsInProgress() bool {
 	return !bw.cancelled && !bw.committed
 }
 
-func (bw *blobWriter) Reader() (io.ReadCloser, error) {
+func (bw *blobWriter) SetDescriptor(desc distribution.Descriptor) {
+	bw.mutex.Lock()
+	bw.desc = &desc
+	bw.descNotify.Broadcast()
+	bw.mutex.Unlock()
+}
+
+func (bw *blobWriter) Reader() (BlobReader, error) {
 	bw.mutex.Lock()
 	defer bw.mutex.Unlock()
 	if bw.refCount == 0 {
 		return nil, io.EOF //just finished
 	}
-	bw.refCount = bw.refCount + 1
+	atomic.AddInt32(&bw.refCount, +1)
 	watcher, events, err := bw.driver.Watch(bw.ctx, bw.path)
 	if err != nil {
 		return nil, err

@@ -54,31 +54,22 @@ func setResponseHeaders(w http.ResponseWriter, length int64, mediaType string, d
 	w.Header().Set("Etag", digest.String())
 }
 
-func (pbs *proxyBlobStore) copyContent(ctx context.Context, dgst digest.Digest, writer io.Writer) (distribution.Descriptor, error) {
-	desc, err := pbs.remoteStore.Stat(ctx, dgst)
-	if err != nil {
-		return distribution.Descriptor{}, err
-	}
-
-	if w, ok := writer.(http.ResponseWriter); ok {
-		setResponseHeaders(w, desc.Size, desc.MediaType, dgst)
-	}
-
+func (pbs *proxyBlobStore) copyContent(ctx context.Context, dgst digest.Digest, writer io.Writer, desc distribution.Descriptor) error {
 	remoteReader, err := pbs.remoteStore.Open(ctx, dgst)
 	if err != nil {
-		return distribution.Descriptor{}, err
+		return err
 	}
 
 	defer remoteReader.Close()
 
 	_, err = io.CopyN(writer, remoteReader, desc.Size)
 	if err != nil {
-		return distribution.Descriptor{}, err
+		return err
 	}
 
 	proxyMetrics.BlobPush(uint64(desc.Size))
 
-	return desc, nil
+	return nil
 }
 
 func (pbs *proxyBlobStore) doServeFromLocalStore(ctx context.Context, w http.ResponseWriter, r *http.Request, dgst digest.Digest) error {
@@ -99,7 +90,7 @@ func (pbs *proxyBlobStore) IsPresentLocally(ctx context.Context, dgst digest.Dig
 }
 
 func (pbs *proxyBlobStore) fetchFromRemote(dgst digest.Digest, ctx context.Context, fetcher *BlobFetch) {
-	err := pbs.doFetchFromRemote(dgst, ctx, fetcher.readableWriter)
+	err := pbs.doFetchFromRemote(dgst, context.Background(), fetcher.readableWriter)
 	if err != nil {
 		dcontext.GetLogger(ctx).Errorf("Failed to fetch layer %s, error: %s", dgst, err)
 	}
@@ -110,8 +101,13 @@ func (pbs *proxyBlobStore) doFetchFromRemote(dgst digest.Digest, ctx context.Con
 		bw.CancelWithError(ctx, err)
 		return err
 	}
-
-	desc, err := pbs.copyContent(ctx, dgst, bw)
+	desc, err := pbs.remoteStore.Stat(ctx, dgst)
+	if err != nil {
+		bw.CancelWithError(ctx, err)
+		return err
+	}
+	bw.SetDescriptor(desc)
+	err = pbs.copyContent(ctx, dgst, bw, desc)
 	mu.Lock()
 	delete(inflight, dgst)
 	defer mu.Unlock()
@@ -156,7 +152,7 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 		go pbs.fetchFromRemote(dgst, ctx, fetch)
 	}
 
-	inflightReader := io.ReadCloser(nil)
+	inflightReader := storage.BlobReader(nil)
 	var err error
 	if fetch != nil {
 		inflightReader, err = fetch.readableWriter.Reader()
@@ -177,12 +173,18 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 			// this should not be reached, local stream should always be readable
 			return errors.New("unable to read blob being written")
 		}
+		desc, err := inflightReader.GetDescriptor()
+		if err != nil {
+			dcontext.GetLogger(ctx).Errorf("Error occurred while waiting descriptor from in-flight reader: %s", err)
+			return err
+		}
+		setResponseHeaders(w, desc.Size, desc.MediaType, dgst)
 		size, err := io.Copy(w, inflightReader)
 		if err != nil {
 			dcontext.GetLogger(ctx).Errorf("Error occurred while fetching from in-flight reader: %s", err)
 			return err
 		}
-		desc, err := pbs.localStore.Stat(ctx, dgst)
+		desc, err = pbs.localStore.Stat(ctx, dgst)
 		if err != nil {
 			return err
 		}

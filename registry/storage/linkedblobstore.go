@@ -328,6 +328,8 @@ func (lbs *linkedBlobStore) newBlobUpload(ctx context.Context, uuid, path string
 		resumableDigestEnabled: lbs.resumableDigestEnabled,
 		cancelled:              false,
 		refCount:               1,
+		desc:                   nil,
+		descNotify:             sync.NewCond(mutex),
 	}
 
 	return bw, nil
