@@ -196,6 +196,162 @@ func TestCatalogAPI(t *testing.T) {
 	}
 }
 
+// TestTagsAPI tests the /v2/<name>/tags/list endpoint
+func TestTagsAPI(t *testing.T) {
+	env := newTestEnv(t, false)
+	defer env.Shutdown()
+
+	imageName, err := reference.WithName("test")
+	if err != nil {
+		t.Fatalf("unable to parse reference: %v", err)
+	}
+
+	tags := []string{
+		"2j2ar",
+		"asj9e",
+		"jyi7b",
+		"kb0j5",
+		"sb71y",
+	}
+
+	for _, tag := range tags {
+		createRepository(env, t, imageName.Name(), tag)
+	}
+
+	tt := []struct {
+		name               string
+		queryParams        url.Values
+		expectedStatusCode int
+		expectedBody       tagsAPIResponse
+		expectedBodyErr    *errcode.ErrorCode
+		expectedLinkHeader string
+	}{
+		{
+			name:               "no query parameters",
+			expectedStatusCode: http.StatusOK,
+			expectedBody:       tagsAPIResponse{Name: imageName.Name(), Tags: tags},
+		},
+		{
+			name:               "empty last query parameter",
+			queryParams:        url.Values{"last": []string{""}},
+			expectedStatusCode: http.StatusOK,
+			expectedBody:       tagsAPIResponse{Name: imageName.Name(), Tags: tags},
+		},
+		{
+			name:               "empty n query parameter",
+			queryParams:        url.Values{"n": []string{""}},
+			expectedStatusCode: http.StatusOK,
+			expectedBody:       tagsAPIResponse{Name: imageName.Name(), Tags: tags},
+		},
+		{
+			name:               "empty last and n query parameters",
+			queryParams:        url.Values{"last": []string{""}, "n": []string{""}},
+			expectedStatusCode: http.StatusOK,
+			expectedBody:       tagsAPIResponse{Name: imageName.Name(), Tags: tags},
+		},
+		{
+			name:               "negative n query parameter",
+			queryParams:        url.Values{"n": []string{"-1"}},
+			expectedStatusCode: http.StatusBadRequest,
+			expectedBodyErr:    &v2.ErrorCodePaginationNumberInvalid,
+		},
+		{
+			name:               "non integer n query parameter",
+			queryParams:        url.Values{"n": []string{"foo"}},
+			expectedStatusCode: http.StatusBadRequest,
+			expectedBodyErr:    &v2.ErrorCodePaginationNumberInvalid,
+		},
+		{
+			name:               "1st page",
+			queryParams:        url.Values{"n": []string{"2"}},
+			expectedStatusCode: http.StatusOK,
+			expectedBody: tagsAPIResponse{Name: imageName.Name(), Tags: []string{
+				"2j2ar",
+				"asj9e",
+			}},
+			expectedLinkHeader: `</v2/test/tags/list?last=asj9e&n=2>; rel="next"`,
+		},
+		{
+			name:               "nth page",
+			queryParams:        url.Values{"last": []string{"asj9e"}, "n": []string{"1"}},
+			expectedStatusCode: http.StatusOK,
+			expectedBody: tagsAPIResponse{Name: imageName.Name(), Tags: []string{
+				"jyi7b",
+			}},
+			expectedLinkHeader: `</v2/test/tags/list?last=jyi7b&n=1>; rel="next"`,
+		},
+		{
+			name:               "last page",
+			queryParams:        url.Values{"last": []string{"jyi7b"}, "n": []string{"3"}},
+			expectedStatusCode: http.StatusOK,
+			expectedBody: tagsAPIResponse{Name: imageName.Name(), Tags: []string{
+				"kb0j5",
+				"sb71y",
+			}},
+		},
+		{
+			name:               "page size bigger than full list",
+			queryParams:        url.Values{"n": []string{"100"}},
+			expectedStatusCode: http.StatusOK,
+			expectedBody:       tagsAPIResponse{Name: imageName.Name(), Tags: tags},
+		},
+		{
+			name:               "after marker",
+			queryParams:        url.Values{"last": []string{"jyi7b"}},
+			expectedStatusCode: http.StatusOK,
+			expectedBody: tagsAPIResponse{Name: imageName.Name(), Tags: []string{
+				"kb0j5",
+				"sb71y",
+			}},
+		},
+		{
+			name:               "after non existent marker",
+			queryParams:        url.Values{"last": []string{"does-not-exist"}, "n": []string{"3"}},
+			expectedStatusCode: http.StatusOK,
+			expectedBody: tagsAPIResponse{Name: imageName.Name(), Tags: []string{
+				"kb0j5",
+				"sb71y",
+			}},
+		},
+	}
+
+	for _, test := range tt {
+		t.Run(test.name, func(t *testing.T) {
+			tagsURL, err := env.builder.BuildTagsURL(imageName, test.queryParams)
+			if err != nil {
+				t.Fatalf("unexpected error building tags URL: %v", err)
+			}
+
+			resp, err := http.Get(tagsURL)
+			if err != nil {
+				t.Fatalf("unexpected error issuing request: %v", err)
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode != test.expectedStatusCode {
+				t.Fatalf("expected response status code to be %d, got %d", test.expectedStatusCode, resp.StatusCode)
+			}
+
+			if test.expectedBodyErr != nil {
+				checkBodyHasErrorCodes(t, "invalid number of results requested", resp, *test.expectedBodyErr)
+			} else {
+				var body tagsAPIResponse
+				dec := json.NewDecoder(resp.Body)
+				if err := dec.Decode(&body); err != nil {
+					t.Fatalf("unexpected error decoding response body: %v", err)
+				}
+				if !reflect.DeepEqual(body, test.expectedBody) {
+					t.Fatalf("expected response body to be:\n%+v\ngot:\n%+v", test.expectedBody, body)
+				}
+			}
+
+			if resp.Header.Get("Link") != test.expectedLinkHeader {
+				t.Fatalf("expected response Link header to be %q, got %q", test.expectedLinkHeader, resp.Header.Get("Link"))
+			}
+		})
+	}
+}
+
 func checkLink(t *testing.T, urlStr string, numEntries int, last string) url.Values {
 	re := regexp.MustCompile("<(/v2/_catalog.*)>; rel=\"next\"")
 	matches := re.FindStringSubmatch(urlStr)
