@@ -440,10 +440,12 @@ func TestBlobMount(t *testing.T) {
 	}
 
 	source := createSource(ctx, t, registry)
+	source2 := createSource(ctx, t, registry)
 	canonicalRef, err := reference.WithDigest(source.repository.Named(), source.desc.Digest)
 	if err != nil {
 		t.Fatal(err)
 	}
+
 	imageName, _ := reference.WithName("foo/bar")
 	repository, err := registry.Repository(ctx, imageName)
 	if err != nil {
@@ -463,6 +465,20 @@ func TestBlobMount(t *testing.T) {
 
 	if !reflect.DeepEqual(ebm.Descriptor, source.desc) {
 		t.Fatalf("descriptors not equal: %v != %v", ebm.Descriptor, source.desc)
+	}
+
+	// Test the negative case
+	// This uses the source repo from the first repo, but the digest from the second
+	wrongCanonicalRef, err := reference.WithDigest(source.repository.Named(), source2.desc.Digest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bw2, err := bs.Create(ctx, WithMountFrom(wrongCanonicalRef))
+	if err != nil {
+		t.Fatalf("Received unexpected non-error, when uploading with cross-mount from \"wrong\" repository")
+	}
+	if bw2 == nil {
+		t.Fatalf("Did not start upload upon failed cross mount")
 	}
 
 	// Test for existence.
