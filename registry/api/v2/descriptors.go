@@ -655,7 +655,7 @@ var routeDescriptors = []RouteDescriptor{
 			},
 			{
 				Method:      "DELETE",
-				Description: "Delete the manifest identified by `name` and `reference`. Note that a manifest can _only_ be deleted by `digest`.",
+				Description: "Delete the manifest or tag identified by `name` and `reference` where `reference` can be a tag or digest. Note that a manifest can _only_ be deleted by digest.",
 				Requests: []RequestDescriptor{
 					{
 						Headers: []ParameterDescriptor{
@@ -691,7 +691,7 @@ var routeDescriptors = []RouteDescriptor{
 							tooManyRequestsDescriptor,
 							{
 								Name:        "Unknown Manifest",
-								Description: "The specified `name` or `reference` are unknown to the registry and the delete was unable to proceed. Clients can assume the manifest was already deleted if this response is returned.",
+								Description: "The specified `name` or `reference` are unknown to the registry and the delete was unable to proceed. Clients can assume the manifest or tag was already deleted if this response is returned.",
 								StatusCode:  http.StatusNotFound,
 								ErrorCodes: []errcode.ErrorCode{
 									ErrorCodeNameUnknown,
@@ -704,7 +704,7 @@ var routeDescriptors = []RouteDescriptor{
 							},
 							{
 								Name:        "Not allowed",
-								Description: "Manifest delete is not allowed because the registry is configured as a pull-through cache or `delete` has been disabled.",
+								Description: "Manifest or tag delete is not allowed because the registry is configured as a pull-through cache or `delete` has been disabled.",
 								StatusCode:  http.StatusMethodNotAllowed,
 								ErrorCodes: []errcode.ErrorCode{
 									errcode.ErrorCodeUnsupported,

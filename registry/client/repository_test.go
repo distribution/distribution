@@ -1425,6 +1425,43 @@ func TestManifestTags(t *testing.T) {
 	// TODO(dmcgowan): Check for error cases
 }
 
+func TestTagDelete(t *testing.T) {
+	tag := "latest"
+	repo, _ := reference.WithName("test.example.com/repo/delete")
+	newRandomSchemaV1Manifest(repo, tag, 1)
+
+	var m testutil.RequestResponseMap
+	m = append(m, testutil.RequestResponseMapping{
+		Request: testutil.Request{
+			Method: "DELETE",
+			Route:  "/v2/" + repo.Name() + "/manifests/" + tag,
+		},
+		Response: testutil.Response{
+			StatusCode: http.StatusAccepted,
+			Headers: map[string][]string{
+				"Content-Length": {"0"},
+			},
+		},
+	})
+
+	e, c := testServer(m)
+	defer c()
+
+	r, err := NewRepository(repo, e, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	ts := r.Tags(ctx)
+
+	if err := ts.Untag(ctx, tag); err != nil {
+		t.Fatal(err)
+	}
+	if err := ts.Untag(ctx, tag); err == nil {
+		t.Fatal("expected error deleting unknown tag")
+	}
+}
+
 func TestObtainsErrorForMissingTag(t *testing.T) {
 	repo, _ := reference.WithName("test.example.com/repo")
 
