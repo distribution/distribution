@@ -395,6 +395,18 @@ func (bw *blobWriter) ReleaseResources() error {
 	return nil
 }
 
+func (bw *blobWriter) GetDescriptor() (distribution.Descriptor, error) {
+	bw.mutex.Lock()
+	defer bw.mutex.Unlock()
+	if bw.desc == nil && bw.lastError == nil {
+		bw.descNotify.Wait()
+	}
+	if bw.lastError != nil {
+		return distribution.Descriptor{}, bw.lastError
+	}
+	return *bw.desc, nil
+}
+
 // removeResources should clean up all resources associated with the upload
 // instance. An error will be returned if the clean up cannot proceed. If the
 // resources are already not present, no error will be returned.
@@ -439,15 +451,7 @@ type blobWriterReader struct {
 }
 
 func (reader *blobWriterReader) GetDescriptor() (distribution.Descriptor, error) {
-	reader.blobWriter.mutex.Lock()
-	defer reader.blobWriter.mutex.Unlock()
-	if reader.blobWriter.desc == nil {
-		reader.blobWriter.descNotify.Wait()
-	}
-	if reader.blobWriter.lastError != nil {
-		return distribution.Descriptor{}, reader.blobWriter.lastError
-	}
-	return *reader.blobWriter.desc, nil
+	return reader.blobWriter.GetDescriptor()
 }
 
 func (reader *blobWriterReader) Read(buff []byte) (int, error) {
@@ -486,6 +490,7 @@ func (reader *blobWriterReader) Read(buff []byte) (int, error) {
 }
 
 func (reader *blobWriterReader) Close() error {
+	reader.watcher.Close()
 	return reader.blobWriter.ReleaseResources()
 }
 
@@ -505,6 +510,7 @@ type ReadableWriter interface {
 	CancelWithError(ctx context.Context, err error) error
 	IsInProgress() bool
 	SetDescriptor(desc distribution.Descriptor)
+	GetDescriptor() (distribution.Descriptor, error)
 }
 
 func (bw *blobWriter) IsInProgress() bool {
@@ -524,16 +530,15 @@ func (bw *blobWriter) Reader() (BlobReader, error) {
 	if bw.refCount == 0 {
 		return nil, io.EOF //just finished
 	}
-	atomic.AddInt32(&bw.refCount, +1)
 	watcher, events, err := bw.driver.Watch(bw.ctx, bw.path)
 	if err != nil {
 		return nil, err
 	}
-
 	reader, err := bw.driver.Reader(bw.ctx, bw.path, 0)
 	if err != nil {
 		return nil, err
 	}
+	atomic.AddInt32(&bw.refCount, +1)
 	wReader := blobWriterReader{
 		driver:     bw.driver,
 		ctx:        bw.ctx,

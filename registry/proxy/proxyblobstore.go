@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/distribution/distribution/v3/registry/storage"
+	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"io"
 	"net/http"
 	"strconv"
@@ -45,7 +46,6 @@ var inflight = make(map[digest.Digest]*BlobFetch)
 
 // mu protects inflight
 var mu sync.Mutex
-var cond = sync.NewCond(&mu)
 
 func setResponseHeaders(w http.ResponseWriter, length int64, mediaType string, digest digest.Digest) {
 	w.Header().Set("Content-Length", strconv.FormatInt(length, 10))
@@ -94,6 +94,13 @@ func (pbs *proxyBlobStore) fetchFromRemote(dgst digest.Digest, ctx context.Conte
 	if err != nil {
 		dcontext.GetLogger(ctx).Errorf("Failed to fetch layer %s, error: %s", dgst, err)
 	}
+	mu.Lock()
+	if inflight[dgst].completeCond != nil {
+		cond := inflight[dgst].completeCond
+		cond.Broadcast()
+	}
+	delete(inflight, dgst)
+	mu.Unlock()
 }
 
 func (pbs *proxyBlobStore) doFetchFromRemote(dgst digest.Digest, ctx context.Context, bw storage.ReadableWriter) error {
@@ -109,7 +116,6 @@ func (pbs *proxyBlobStore) doFetchFromRemote(dgst digest.Digest, ctx context.Con
 	bw.SetDescriptor(desc)
 	err = pbs.copyContent(ctx, dgst, bw, desc)
 	mu.Lock()
-	delete(inflight, dgst)
 	defer mu.Unlock()
 	if err != nil {
 		bw.CancelWithError(ctx, err)
@@ -158,6 +164,17 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 		inflightReader, err = fetch.readableWriter.Reader()
 	}
 	mu.Unlock()
+	switch err.(type) {
+	case storagedriver.ErrUnsupportedMethod:
+		if fetch != nil && fetch.readableWriter.IsInProgress() {
+			fetch.mutex.Lock()
+			fetch.completeCond.Wait()
+			fetch.mutex.Unlock()
+			// propagate error
+			_, err = fetch.readableWriter.GetDescriptor()
+			isPresent = pbs.IsPresentLocally(ctx, dgst)
+		}
+	}
 	if err != nil {
 		return err
 	}

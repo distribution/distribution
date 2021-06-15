@@ -2,6 +2,9 @@ package proxy
 
 import (
 	"context"
+	"github.com/distribution/distribution/v3/registry/storage/driver"
+	"github.com/fsnotify/fsnotify"
+	"io"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -25,6 +28,58 @@ var sbsMu sync.Mutex
 type statsBlobStore struct {
 	stats map[string]int
 	blobs distribution.BlobStore
+}
+
+type nonWatchingDriver struct {
+	delegate driver.StorageDriver
+}
+
+func (nw nonWatchingDriver) Name() string {
+	return nw.delegate.Name()
+}
+
+func (nw *nonWatchingDriver) GetContent(ctx context.Context, path string) ([]byte, error) {
+	return nw.delegate.GetContent(ctx, path)
+}
+
+func (nw *nonWatchingDriver) PutContent(ctx context.Context, path string, content []byte) error {
+	return nw.delegate.PutContent(ctx, path, content)
+}
+
+func (nw *nonWatchingDriver) Reader(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
+	return nw.delegate.Reader(ctx, path, offset)
+}
+
+func (nw *nonWatchingDriver) Writer(ctx context.Context, path string, append bool) (driver.FileWriter, error) {
+	return nw.delegate.Writer(ctx, path, append)
+}
+
+func (nw *nonWatchingDriver) Stat(ctx context.Context, path string) (driver.FileInfo, error) {
+	return nw.delegate.Stat(ctx, path)
+}
+
+func (nw *nonWatchingDriver) List(ctx context.Context, path string) ([]string, error) {
+	return nw.delegate.List(ctx, path)
+}
+
+func (nw *nonWatchingDriver) Move(ctx context.Context, sourcePath string, destPath string) error {
+	return nw.delegate.Move(ctx, sourcePath, destPath)
+}
+
+func (nw *nonWatchingDriver) Delete(ctx context.Context, path string) error {
+	return nw.delegate.Delete(ctx, path)
+}
+
+func (nw *nonWatchingDriver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
+	return nw.delegate.URLFor(ctx, path, options)
+}
+
+func (nw *nonWatchingDriver) Walk(ctx context.Context, path string, f driver.WalkFn) error {
+	return nw.delegate.Walk(ctx, path, f)
+}
+
+func (nw nonWatchingDriver) Watch(ctx context.Context, paths ...string) (io.Closer, chan fsnotify.Event, error) {
+	return nil, nil, driver.ErrUnsupportedMethod{}
 }
 
 func (sbs statsBlobStore) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
@@ -114,7 +169,11 @@ func (te *testEnv) RemoteStats() *map[string]int {
 }
 
 // Populate remote store and record the digests
-func makeTestEnv(t *testing.T, name string) *testEnv {
+func makeTestEnvDefault(t *testing.T, name string) *testEnv {
+	return makeTestEnv(t, name, false)
+}
+
+func makeTestEnv(t *testing.T, name string, useNonWatchingDriver bool) *testEnv {
 	nameRef, err := reference.WithName(name)
 	if err != nil {
 		t.Fatalf("unable to parse reference: %s", err)
@@ -132,11 +191,19 @@ func makeTestEnv(t *testing.T, name string) *testEnv {
 		t.Fatalf("unable to create tempdir: %s", err)
 	}
 
-	localDriver, err := filesystem.FromParameters(map[string]interface{}{
+	localDriver := driver.StorageDriver(nil)
+	localDriver, err = filesystem.FromParameters(map[string]interface{}{
 		"rootdirectory": truthDir,
 	})
-	if err != nil {
-		t.Fatalf("unable to create filesystem driver: %s", err)
+	if useNonWatchingDriver {
+		localDriver = &nonWatchingDriver{
+			delegate: localDriver,
+		}
+		_, _, err := localDriver.Watch(nil, "")
+		_, ok := err.(driver.ErrUnsupportedMethod)
+		if !ok {
+			t.Fatal("nonWatchingDriver is not supposed to be watchable")
+		}
 	}
 
 	// todo: create a tempfile area here
@@ -223,7 +290,7 @@ func populate(t *testing.T, te *testEnv, blobCount, size, numUnique int) {
 	te.numUnique = numUnique
 }
 func TestProxyStoreGet(t *testing.T) {
-	te := makeTestEnv(t, "foo/bar")
+	te := makeTestEnvDefault(t, "foo/bar")
 
 	localStats := te.LocalStats()
 	remoteStats := te.RemoteStats()
@@ -258,7 +325,7 @@ func TestProxyStoreGet(t *testing.T) {
 }
 
 func TestProxyStoreStat(t *testing.T) {
-	te := makeTestEnv(t, "foo/bar")
+	te := makeTestEnvDefault(t, "foo/bar")
 
 	remoteBlobCount := 1
 	populate(t, te, remoteBlobCount, 10, 1)
@@ -289,7 +356,18 @@ func TestProxyStoreStat(t *testing.T) {
 }
 
 func TestProxyStoreServeHighConcurrency(t *testing.T) {
-	te := makeTestEnv(t, "foo/bar")
+	te := makeTestEnvDefault(t, "foo/bar")
+	blobSize := 200
+	blobCount := 10
+	numUnique := 1
+	populate(t, te, blobCount, blobSize, numUnique)
+
+	numClients := 16
+	testProxyStoreServe(t, te, numClients)
+}
+
+func TestProxyStoreServeHighConcurrencyNonWatching(t *testing.T) {
+	te := makeTestEnv(t, "foo/bar", true)
 	blobSize := 200
 	blobCount := 10
 	numUnique := 1
@@ -300,7 +378,7 @@ func TestProxyStoreServeHighConcurrency(t *testing.T) {
 }
 
 func TestProxyStoreServeMany(t *testing.T) {
-	te := makeTestEnv(t, "foo/bar")
+	te := makeTestEnvDefault(t, "foo/bar")
 	blobSize := 200
 	blobCount := 10
 	numUnique := 4
@@ -312,7 +390,7 @@ func TestProxyStoreServeMany(t *testing.T) {
 
 // todo(richardscothern): blobCount must be smaller than num clients
 func TestProxyStoreServeBig(t *testing.T) {
-	te := makeTestEnv(t, "foo/bar")
+	te := makeTestEnvDefault(t, "foo/bar")
 
 	blobSize := 2 << 20
 	blobCount := 4
@@ -324,7 +402,25 @@ func TestProxyStoreServeBig(t *testing.T) {
 }
 
 func TestProxyStoreServeNotFound(t *testing.T) {
-	te := makeTestEnv(t, "foo/bar")
+	te := makeTestEnvDefault(t, "foo/bar")
+	blobSize := 200
+	blobCount := 10
+	numUnique := 4
+	populate(t, te, blobCount, blobSize, numUnique)
+
+	w := httptest.NewRecorder()
+	r, err := http.NewRequest("GET", "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = te.store.ServeBlob(te.ctx, w, r, "sha256:1234567890123456789012345678901234567890123456789012345678901234")
+	if err != distribution.ErrBlobUnknown {
+		t.Fatalf("Not found expected, got: %v", err)
+	}
+}
+
+func TestProxyStoreServeNotFoundNonWatching(t *testing.T) {
+	te := makeTestEnv(t, "foo/bar", true)
 	blobSize := 200
 	blobCount := 10
 	numUnique := 4
