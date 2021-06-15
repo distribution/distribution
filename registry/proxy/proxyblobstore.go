@@ -95,8 +95,9 @@ func (pbs *proxyBlobStore) fetchFromRemote(dgst digest.Digest, ctx context.Conte
 		dcontext.GetLogger(ctx).Errorf("Failed to fetch layer %s, error: %s", dgst, err)
 	}
 	mu.Lock()
-	if inflight[dgst].completeCond != nil {
-		cond := inflight[dgst].completeCond
+	blobFetch := inflight[dgst]
+	if blobFetch != nil && blobFetch.completeCond != nil {
+		cond := blobFetch.completeCond
 		cond.Broadcast()
 	}
 	delete(inflight, dgst)
