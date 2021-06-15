@@ -1142,7 +1142,8 @@ The error codes encountered via the API are enumerated in the following table:
  `MANIFEST_UNVERIFIED` | manifest failed signature verification | During manifest upload, if the manifest fails signature verification, this error will be returned.
  `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation.
  `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry.
- `PAGINATION_NUMBER_INVALID` | invalid number of results requested | Returned when the `n` parameter (number of results to return) is not an integer, or `n` is negative.
+ `PAGINATION_NUMBER_INVALID` | invalid number of results requested | Returned when the "n" parameter (number of results to return) is not an integer, or "n" is negative.
+ `RANGE_INVALID` | invalid content range | When a layer is uploaded, the provided range is checked against the uploaded chunk. This error is returned if the range is out of order.
  `SIZE_INVALID` | provided length did not match content length | When a layer is uploaded, the provided size will be checked against the uploaded content. If they do not match, this error will be returned.
  `TAG_INVALID` | manifest tag did not match URI | During a manifest upload, if the tag in the manifest does not match the uri tag, this error will be returned.
  `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client. Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate.
@@ -1537,6 +1538,36 @@ The following headers will be returned with the response:
 |`Content-Length`|Length of the JSON response body.|
 |`Link`|RFC5988 compliant rel='next' with URL to next result set, if available|
 
+
+
+
+###### On Failure: Invalid pagination number
+
+```
+400 Bad Request
+Content-Type: application/json
+
+{
+	"errors:" [
+	    {
+            "code": <error code>,
+            "message": "<error message>",
+            "detail": ...
+        },
+        ...
+    ]
+}
+```
+
+The received parameter n was invalid in some way, as described by the error code. The client should resolve the issue and retry the request.
+
+
+
+The error codes that may be included in the response body are enumerated below:
+
+|Code|Message|Description|
+|----|-------|-----------|
+| `PAGINATION_NUMBER_INVALID` | invalid number of results requested | Returned when the "n" parameter (number of results to return) is not an integer, or "n" is negative. |
 
 
 
