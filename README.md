@@ -11,7 +11,7 @@ It is a core library for many registry operators including Docker Hub, GitHub Co
 GitLab Container Registry and DigitalOcean Container Registry, as well as the CNCF Harbor
 Project, and VMware Harbor Registry.
 
-<img src="https://www.docker.com/sites/default/files/oyster-registry-3.png" width=200px/>
+<img src="distribution-logo.svg" width=200px/>
 
 [![Build Status](https://github.com/distribution/distribution/workflows/CI/badge.svg?branch=main&event=push)](https://github.com/distribution/distribution/actions?query=workflow%3ACI)
 [![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/distribution/distribution)
