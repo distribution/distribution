@@ -384,7 +384,7 @@ func TestProxyStoreServeMany(t *testing.T) {
 	numUnique := 4
 	populate(t, te, blobCount, blobSize, numUnique)
 
-	numClients := 4
+	numClients := 400
 	testProxyStoreServe(t, te, numClients)
 }
 

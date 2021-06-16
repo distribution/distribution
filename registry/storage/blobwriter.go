@@ -524,9 +524,21 @@ func (bw *blobWriter) SetDescriptor(desc distribution.Descriptor) {
 	bw.mutex.Unlock()
 }
 
+type AlreadyClosedError struct {
+	path string
+}
+
+func (err AlreadyClosedError) Error() string {
+	return fmt.Sprintf("Already closed upload at %s", err.path)
+}
 func (bw *blobWriter) Reader() (BlobReader, error) {
 	bw.mutex.Lock()
 	defer bw.mutex.Unlock()
+	if !bw.IsInProgress() {
+		return nil, AlreadyClosedError{
+			path: bw.path,
+		}
+	}
 	if bw.refCount == 0 {
 		return nil, io.EOF //just finished
 	}

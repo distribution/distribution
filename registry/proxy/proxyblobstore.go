@@ -175,6 +175,16 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 			_, err = fetch.readableWriter.GetDescriptor()
 			isPresent = pbs.IsPresentLocally(ctx, dgst)
 		}
+	case storage.AlreadyClosedError:
+		if fetch != nil {
+			fetch.mutex.Lock()
+		}
+		isPresent = pbs.IsPresentLocally(ctx, dgst)
+		if fetch != nil {
+			fetch.mutex.Unlock()
+		}
+		inflightReader = nil
+		err = nil
 	}
 	if err != nil {
 		return err
