@@ -3,8 +3,11 @@ package handlers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"strconv"
+	"strings"
 
 	dcontext "github.com/distribution/distribution/v3/context"
 )
@@ -63,4 +66,21 @@ func copyFullPayload(ctx context.Context, responseWriter http.ResponseWriter, r 
 	}
 
 	return nil
+}
+
+func parseContentRange(cr string) (int64, int64, error) {
+	ranges := strings.Split(cr, "-")
+	if len(ranges) != 2 {
+		return -1, -1, fmt.Errorf("invalid content range format, %s", cr)
+	}
+	start, err := strconv.ParseInt(ranges[0], 10, 64)
+	if err != nil {
+		return -1, -1, err
+	}
+	end, err := strconv.ParseInt(ranges[1], 10, 64)
+	if err != nil {
+		return -1, -1, err
+	}
+
+	return start, end, nil
 }

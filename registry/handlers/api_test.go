@@ -196,6 +196,162 @@ func TestCatalogAPI(t *testing.T) {
 	}
 }
 
+// TestTagsAPI tests the /v2/<name>/tags/list endpoint
+func TestTagsAPI(t *testing.T) {
+	env := newTestEnv(t, false)
+	defer env.Shutdown()
+
+	imageName, err := reference.WithName("test")
+	if err != nil {
+		t.Fatalf("unable to parse reference: %v", err)
+	}
+
+	tags := []string{
+		"2j2ar",
+		"asj9e",
+		"jyi7b",
+		"kb0j5",
+		"sb71y",
+	}
+
+	for _, tag := range tags {
+		createRepository(env, t, imageName.Name(), tag)
+	}
+
+	tt := []struct {
+		name               string
+		queryParams        url.Values
+		expectedStatusCode int
+		expectedBody       tagsAPIResponse
+		expectedBodyErr    *errcode.ErrorCode
+		expectedLinkHeader string
+	}{
+		{
+			name:               "no query parameters",
+			expectedStatusCode: http.StatusOK,
+			expectedBody:       tagsAPIResponse{Name: imageName.Name(), Tags: tags},
+		},
+		{
+			name:               "empty last query parameter",
+			queryParams:        url.Values{"last": []string{""}},
+			expectedStatusCode: http.StatusOK,
+			expectedBody:       tagsAPIResponse{Name: imageName.Name(), Tags: tags},
+		},
+		{
+			name:               "empty n query parameter",
+			queryParams:        url.Values{"n": []string{""}},
+			expectedStatusCode: http.StatusOK,
+			expectedBody:       tagsAPIResponse{Name: imageName.Name(), Tags: tags},
+		},
+		{
+			name:               "empty last and n query parameters",
+			queryParams:        url.Values{"last": []string{""}, "n": []string{""}},
+			expectedStatusCode: http.StatusOK,
+			expectedBody:       tagsAPIResponse{Name: imageName.Name(), Tags: tags},
+		},
+		{
+			name:               "negative n query parameter",
+			queryParams:        url.Values{"n": []string{"-1"}},
+			expectedStatusCode: http.StatusBadRequest,
+			expectedBodyErr:    &v2.ErrorCodePaginationNumberInvalid,
+		},
+		{
+			name:               "non integer n query parameter",
+			queryParams:        url.Values{"n": []string{"foo"}},
+			expectedStatusCode: http.StatusBadRequest,
+			expectedBodyErr:    &v2.ErrorCodePaginationNumberInvalid,
+		},
+		{
+			name:               "1st page",
+			queryParams:        url.Values{"n": []string{"2"}},
+			expectedStatusCode: http.StatusOK,
+			expectedBody: tagsAPIResponse{Name: imageName.Name(), Tags: []string{
+				"2j2ar",
+				"asj9e",
+			}},
+			expectedLinkHeader: `</v2/test/tags/list?last=asj9e&n=2>; rel="next"`,
+		},
+		{
+			name:               "nth page",
+			queryParams:        url.Values{"last": []string{"asj9e"}, "n": []string{"1"}},
+			expectedStatusCode: http.StatusOK,
+			expectedBody: tagsAPIResponse{Name: imageName.Name(), Tags: []string{
+				"jyi7b",
+			}},
+			expectedLinkHeader: `</v2/test/tags/list?last=jyi7b&n=1>; rel="next"`,
+		},
+		{
+			name:               "last page",
+			queryParams:        url.Values{"last": []string{"jyi7b"}, "n": []string{"3"}},
+			expectedStatusCode: http.StatusOK,
+			expectedBody: tagsAPIResponse{Name: imageName.Name(), Tags: []string{
+				"kb0j5",
+				"sb71y",
+			}},
+		},
+		{
+			name:               "page size bigger than full list",
+			queryParams:        url.Values{"n": []string{"100"}},
+			expectedStatusCode: http.StatusOK,
+			expectedBody:       tagsAPIResponse{Name: imageName.Name(), Tags: tags},
+		},
+		{
+			name:               "after marker",
+			queryParams:        url.Values{"last": []string{"jyi7b"}},
+			expectedStatusCode: http.StatusOK,
+			expectedBody: tagsAPIResponse{Name: imageName.Name(), Tags: []string{
+				"kb0j5",
+				"sb71y",
+			}},
+		},
+		{
+			name:               "after non existent marker",
+			queryParams:        url.Values{"last": []string{"does-not-exist"}, "n": []string{"3"}},
+			expectedStatusCode: http.StatusOK,
+			expectedBody: tagsAPIResponse{Name: imageName.Name(), Tags: []string{
+				"kb0j5",
+				"sb71y",
+			}},
+		},
+	}
+
+	for _, test := range tt {
+		t.Run(test.name, func(t *testing.T) {
+			tagsURL, err := env.builder.BuildTagsURL(imageName, test.queryParams)
+			if err != nil {
+				t.Fatalf("unexpected error building tags URL: %v", err)
+			}
+
+			resp, err := http.Get(tagsURL)
+			if err != nil {
+				t.Fatalf("unexpected error issuing request: %v", err)
+			}
+			defer resp.Body.Close()
+
+			if resp.StatusCode != test.expectedStatusCode {
+				t.Fatalf("expected response status code to be %d, got %d", test.expectedStatusCode, resp.StatusCode)
+			}
+
+			if test.expectedBodyErr != nil {
+				checkBodyHasErrorCodes(t, "invalid number of results requested", resp, *test.expectedBodyErr)
+			} else {
+				var body tagsAPIResponse
+				dec := json.NewDecoder(resp.Body)
+				if err := dec.Decode(&body); err != nil {
+					t.Fatalf("unexpected error decoding response body: %v", err)
+				}
+				if !reflect.DeepEqual(body, test.expectedBody) {
+					t.Fatalf("expected response body to be:\n%+v\ngot:\n%+v", test.expectedBody, body)
+				}
+			}
+
+			if resp.Header.Get("Link") != test.expectedLinkHeader {
+				t.Fatalf("expected response Link header to be %q, got %q", test.expectedLinkHeader, resp.Header.Get("Link"))
+			}
+		})
+	}
+}
+
 func checkLink(t *testing.T, urlStr string, numEntries int, last string) url.Values {
 	re := regexp.MustCompile("<(/v2/_catalog.*)>; rel=\"next\"")
 	matches := re.FindStringSubmatch(urlStr)
@@ -533,6 +689,32 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 	uploadURLBase, dgst := pushChunk(t, env.builder, imageName, uploadURLBase, layerFile, layerLength)
 	finishUpload(t, env.builder, imageName, uploadURLBase, dgst)
 
+	// -----------------------------------------
+	// Do layer push with invalid content range
+	layerFile.Seek(0, io.SeekStart)
+	uploadURLBase, _ = startPushLayer(t, env, imageName)
+	sizeInvalid := chunkOptions{
+		contentRange: "0-20",
+	}
+	resp, err = doPushChunk(t, uploadURLBase, layerFile, sizeInvalid)
+	if err != nil {
+		t.Fatalf("unexpected error doing push layer request: %v", err)
+	}
+	defer resp.Body.Close()
+	checkResponse(t, "putting size invalid chunk", resp, http.StatusBadRequest)
+
+	layerFile.Seek(0, io.SeekStart)
+	uploadURLBase, _ = startPushLayer(t, env, imageName)
+	outOfOrder := chunkOptions{
+		contentRange: "3-22",
+	}
+	resp, err = doPushChunk(t, uploadURLBase, layerFile, outOfOrder)
+	if err != nil {
+		t.Fatalf("unexpected error doing push layer request: %v", err)
+	}
+	defer resp.Body.Close()
+	checkResponse(t, "putting range out of order chunk", resp, http.StatusRequestedRangeNotSatisfiable)
+
 	// ------------------------
 	// Use a head request to see if the layer exists.
 	resp, err = http.Head(layerURL)
@@ -816,6 +998,93 @@ func TestManifestAPI(t *testing.T) {
 	testManifestAPISchema1(t, env2, schema1Repo)
 	schema2Args = testManifestAPISchema2(t, env2, schema2Repo)
 	testManifestAPIManifestList(t, env2, schema2Args)
+}
+
+func TestManifestAPI_DeleteTag(t *testing.T) {
+	env := newTestEnv(t, false)
+	defer env.Shutdown()
+
+	imageName, err := reference.WithName("foo/bar")
+	checkErr(t, err, "building image name")
+
+	tag := "latest"
+	dgst := createRepository(env, t, imageName.Name(), tag)
+
+	ref, err := reference.WithTag(imageName, tag)
+	checkErr(t, err, "building tag reference")
+
+	u, err := env.builder.BuildManifestURL(ref)
+	checkErr(t, err, "building tag URL")
+
+	resp, err := httpDelete(u)
+	m := "deleting tag"
+	checkErr(t, err, m)
+	defer resp.Body.Close()
+
+	checkResponse(t, m, resp, http.StatusAccepted)
+	if resp.Body != http.NoBody {
+		t.Fatal("unexpected response body")
+	}
+
+	msg := "checking tag no longer exists"
+	resp, err = http.Get(u)
+	checkErr(t, err, msg)
+	checkResponse(t, msg, resp, http.StatusNotFound)
+
+	digestRef, err := reference.WithDigest(imageName, dgst)
+	checkErr(t, err, "building manifest digest reference")
+
+	u, err = env.builder.BuildManifestURL(digestRef)
+	checkErr(t, err, "building manifest URL")
+
+	msg = "checking manifest still exists"
+	resp, err = http.Head(u)
+	checkErr(t, err, msg)
+	checkResponse(t, msg, resp, http.StatusOK)
+}
+
+func TestManifestAPI_DeleteTag_Unknown(t *testing.T) {
+	env := newTestEnv(t, false)
+	defer env.Shutdown()
+
+	imageName, err := reference.WithName("foo/bar")
+	checkErr(t, err, "building named object")
+
+	ref, err := reference.WithTag(imageName, "latest")
+	checkErr(t, err, "building tag reference")
+
+	u, err := env.builder.BuildManifestURL(ref)
+	checkErr(t, err, "building tag URL")
+
+	resp, err := httpDelete(u)
+	msg := "deleting unknown tag"
+	checkErr(t, err, msg)
+	defer resp.Body.Close()
+
+	checkResponse(t, msg, resp, http.StatusNotFound)
+	checkBodyHasErrorCodes(t, msg, resp, v2.ErrorCodeManifestUnknown)
+}
+
+func TestManifestAPI_DeleteTag_ReadOnly(t *testing.T) {
+	env := newTestEnv(t, false)
+	defer env.Shutdown()
+	env.app.readOnly = true
+
+	imageName, err := reference.WithName("foo/bar")
+	checkErr(t, err, "building named object")
+
+	ref, err := reference.WithTag(imageName, "latest")
+	checkErr(t, err, "building tag reference")
+
+	u, err := env.builder.BuildManifestURL(ref)
+	checkErr(t, err, "building URL")
+
+	resp, err := httpDelete(u)
+	msg := "deleting tag"
+	checkErr(t, err, msg)
+	defer resp.Body.Close()
+
+	checkResponse(t, msg, resp, http.StatusMethodNotAllowed)
 }
 
 // storageManifestErrDriverFactory implements the factory.StorageDriverFactory interface.
@@ -2242,7 +2511,12 @@ func finishUpload(t *testing.T, ub *v2.URLBuilder, name reference.Named, uploadU
 	return resp.Header.Get("Location")
 }
 
-func doPushChunk(t *testing.T, uploadURLBase string, body io.Reader) (*http.Response, digest.Digest, error) {
+type chunkOptions struct {
+	// Content-Range header to set when pushing chunks
+	contentRange string
+}
+
+func doPushChunk(t *testing.T, uploadURLBase string, body io.Reader, options chunkOptions) (*http.Response, error) {
 	u, err := url.Parse(uploadURLBase)
 	if err != nil {
 		t.Fatalf("unexpected error parsing pushLayer url: %v", err)
@@ -2254,21 +2528,24 @@ func doPushChunk(t *testing.T, uploadURLBase string, body io.Reader) (*http.Resp
 
 	uploadURL := u.String()
 
-	digester := digest.Canonical.Digester()
-
-	req, err := http.NewRequest("PATCH", uploadURL, io.TeeReader(body, digester.Hash()))
+	req, err := http.NewRequest("PATCH", uploadURL, body)
 	if err != nil {
 		t.Fatalf("unexpected error creating new request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/octet-stream")
+	if options.contentRange != "" {
+		req.Header.Set("Content-Range", options.contentRange)
+	}
 
 	resp, err := http.DefaultClient.Do(req)
 
-	return resp, digester.Digest(), err
+	return resp, err
 }
 
 func pushChunk(t *testing.T, ub *v2.URLBuilder, name reference.Named, uploadURLBase string, body io.Reader, length int64) (string, digest.Digest) {
-	resp, dgst, err := doPushChunk(t, uploadURLBase, body)
+	digester := digest.Canonical.Digester()
+
+	resp, err := doPushChunk(t, uploadURLBase, io.TeeReader(body, digester.Hash()), chunkOptions{})
 	if err != nil {
 		t.Fatalf("unexpected error doing push layer request: %v", err)
 	}
@@ -2285,7 +2562,7 @@ func pushChunk(t *testing.T, ub *v2.URLBuilder, name reference.Named, uploadURLB
 		"Content-Length": []string{"0"},
 	})
 
-	return resp.Header.Get("Location"), dgst
+	return resp.Header.Get("Location"), digester.Digest()
 }
 
 func checkResponse(t *testing.T, msg string, resp *http.Response, expectedStatus int) {

@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"path"
+	"sort"
 
 	"github.com/distribution/distribution/v3"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
@@ -46,6 +47,10 @@ func (ts *tagStore) All(ctx context.Context) ([]string, error) {
 		_, filename := path.Split(entry)
 		tags = append(tags, filename)
 	}
+
+	// there is no guarantee for the order,
+	// therefore sort before return.
+	sort.Strings(tags)
 
 	return tags, nil
 }
@@ -107,16 +112,7 @@ func (ts *tagStore) Untag(ctx context.Context, tag string) error {
 		return err
 	}
 
-	if err := ts.blobStore.driver.Delete(ctx, tagPath); err != nil {
-		switch err.(type) {
-		case storagedriver.PathNotFoundError:
-			return nil // Untag is idempotent, we don't care if it didn't exist
-		default:
-			return err
-		}
-	}
-
-	return nil
+	return ts.blobStore.driver.Delete(ctx, tagPath)
 }
 
 // linkedBlobStore returns the linkedBlobStore for the named tag, allowing one

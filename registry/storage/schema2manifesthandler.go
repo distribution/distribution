@@ -87,7 +87,11 @@ func (ms *schema2ManifestHandler) verifyManifest(ctx context.Context, mnfst sche
 	blobsService := ms.repository.Blobs(ctx)
 
 	for _, descriptor := range mnfst.References() {
-		var err error
+		err := descriptor.Digest.Validate()
+		if err != nil {
+			errs = append(errs, err, distribution.ErrManifestBlobUnknown{Digest: descriptor.Digest})
+			continue
+		}
 
 		switch descriptor.MediaType {
 		case schema2.MediaTypeForeignLayer:
@@ -113,12 +117,13 @@ func (ms *schema2ManifestHandler) verifyManifest(ctx context.Context, mnfst sche
 				err = distribution.ErrBlobUnknown // just coerce to unknown.
 			}
 
+			if err != nil {
+				dcontext.GetLogger(ms.ctx).WithError(err).Debugf("failed to ensure exists of %v in manifest service", descriptor.Digest)
+			}
 			fallthrough // double check the blob store.
 		default:
-			// forward all else to blob storage
-			if len(descriptor.URLs) == 0 {
-				_, err = blobsService.Stat(ctx, descriptor.Digest)
-			}
+			// check its presence
+			_, err = blobsService.Stat(ctx, descriptor.Digest)
 		}
 
 		if err != nil {

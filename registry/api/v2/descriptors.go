@@ -490,6 +490,18 @@ var routeDescriptors = []RouteDescriptor{
 							},
 						},
 						Failures: []ResponseDescriptor{
+							{
+								Name:        "Invalid pagination number",
+								Description: "The received parameter n was invalid in some way, as described by the error code. The client should resolve the issue and retry the request.",
+								StatusCode:  http.StatusBadRequest,
+								Body: BodyDescriptor{
+									ContentType: "application/json",
+									Format:      errorsBody,
+								},
+								ErrorCodes: []errcode.ErrorCode{
+									ErrorCodePaginationNumberInvalid,
+								},
+							},
 							unauthorizedResponseDescriptor,
 							repositoryNotFoundResponseDescriptor,
 							deniedResponseDescriptor,
@@ -643,7 +655,7 @@ var routeDescriptors = []RouteDescriptor{
 			},
 			{
 				Method:      "DELETE",
-				Description: "Delete the manifest identified by `name` and `reference`. Note that a manifest can _only_ be deleted by `digest`.",
+				Description: "Delete the manifest or tag identified by `name` and `reference` where `reference` can be a tag or digest. Note that a manifest can _only_ be deleted by digest.",
 				Requests: []RequestDescriptor{
 					{
 						Headers: []ParameterDescriptor{
@@ -679,7 +691,7 @@ var routeDescriptors = []RouteDescriptor{
 							tooManyRequestsDescriptor,
 							{
 								Name:        "Unknown Manifest",
-								Description: "The specified `name` or `reference` are unknown to the registry and the delete was unable to proceed. Clients can assume the manifest was already deleted if this response is returned.",
+								Description: "The specified `name` or `reference` are unknown to the registry and the delete was unable to proceed. Clients can assume the manifest or tag was already deleted if this response is returned.",
 								StatusCode:  http.StatusNotFound,
 								ErrorCodes: []errcode.ErrorCode{
 									ErrorCodeNameUnknown,
@@ -692,7 +704,7 @@ var routeDescriptors = []RouteDescriptor{
 							},
 							{
 								Name:        "Not allowed",
-								Description: "Manifest delete is not allowed because the registry is configured as a pull-through cache or `delete` has been disabled.",
+								Description: "Manifest or tag delete is not allowed because the registry is configured as a pull-through cache or `delete` has been disabled.",
 								StatusCode:  http.StatusMethodNotAllowed,
 								ErrorCodes: []errcode.ErrorCode{
 									errcode.ErrorCodeUnsupported,

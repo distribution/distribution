@@ -199,9 +199,18 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository, r
 		t.Fatalf("mismatching digest from payload and put")
 	}
 
+	if err := repository.Tags(ctx).Tag(ctx, tag, distribution.Descriptor{Digest: dgst}); err != nil {
+		t.Fatalf("unexpected error tagging manifest: %v", err)
+	}
+
 	_, err = manifests.Get(ctx, dgst)
 	if err != nil {
 		t.Fatalf("unexpected error fetching manifest: %v", err)
+	}
+
+	err = repository.Tags(ctx).Untag(ctx, m.Tag)
+	if err != nil {
+		t.Fatalf("unexpected error deleting tag: %v", err)
 	}
 
 	err = manifests.Delete(ctx, dgst)
@@ -214,11 +223,6 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository, r
 		if err != nil {
 			t.Fatalf("unexpected error deleting blob: %v", err)
 		}
-	}
-
-	err = repository.Tags(ctx).Untag(ctx, m.Tag)
-	if err != nil {
-		t.Fatalf("unexpected error deleting tag: %v", err)
 	}
 
 	err = remover.Remove(ctx, repository.Named())

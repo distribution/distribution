@@ -32,6 +32,17 @@ var (
 		HTTPStatusCode: http.StatusBadRequest,
 	})
 
+	// ErrorCodeRangeInvalid is returned when uploading a blob if the provided
+	// content range is invalid.
+	ErrorCodeRangeInvalid = errcode.Register(errGroup, errcode.ErrorDescriptor{
+		Value:   "RANGE_INVALID",
+		Message: "invalid content range",
+		Description: `When a layer is uploaded, the provided range is checked
+		against the uploaded chunk. This error is returned if the range is
+		out of order.`,
+		HTTPStatusCode: http.StatusRequestedRangeNotSatisfiable,
+	})
+
 	// ErrorCodeNameInvalid is returned when the name in the manifest does not
 	// match the provided name.
 	ErrorCodeNameInvalid = errcode.Register(errGroup, errcode.ErrorDescriptor{
@@ -132,5 +143,15 @@ var (
 		Description: `The blob upload encountered an error and can no
 		longer proceed.`,
 		HTTPStatusCode: http.StatusNotFound,
+	})
+
+	// ErrorCodePaginationNumberInvalid is returned when the `n` parameter is
+	// not an integer, or `n` is negative.
+	ErrorCodePaginationNumberInvalid = errcode.Register(errGroup, errcode.ErrorDescriptor{
+		Value:   "PAGINATION_NUMBER_INVALID",
+		Message: "invalid number of results requested",
+		Description: `Returned when the "n" parameter (number of results
+		to return) is not an integer, or "n" is negative.`,
+		HTTPStatusCode: http.StatusBadRequest,
 	})
 )

@@ -364,7 +364,30 @@ func (t *tags) Tag(ctx context.Context, tag string, desc distribution.Descriptor
 }
 
 func (t *tags) Untag(ctx context.Context, tag string) error {
-	panic("not implemented")
+	ref, err := reference.WithTag(t.name, tag)
+	if err != nil {
+		return err
+	}
+	u, err := t.ub.BuildManifestURL(ref)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("DELETE", u, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := t.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if SuccessStatus(resp.StatusCode) {
+		return nil
+	}
+	return HandleErrorResponse(resp)
 }
 
 type manifests struct {

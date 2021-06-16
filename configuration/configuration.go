@@ -174,6 +174,11 @@ type Configuration struct {
 		// DB specifies the database to connect to on the redis instance.
 		DB int `yaml:"db,omitempty"`
 
+		// TLS configures settings for redis in-transit encryption
+		TLS struct {
+			Enabled bool `yaml:"enabled,omitempty"`
+		} `yaml:"tls,omitempty"`
+
 		DialTimeout  time.Duration `yaml:"dialtimeout,omitempty"`  // timeout for connect
 		ReadTimeout  time.Duration `yaml:"readtimeout,omitempty"`  // timeout for reads of data
 		WriteTimeout time.Duration `yaml:"writetimeout,omitempty"` // timeout for writes of data
