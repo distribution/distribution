@@ -99,7 +99,7 @@ var (
 		{
 			Name:        "n",
 			Type:        "integer",
-			Description: "Limit the number of entries in each response. It not present, all entries will be returned.",
+			Description: "Limit the number of entries in each response. It not present, 100 entries will be returned.",
 			Format:      "<integer>",
 			Required:    false,
 		},
