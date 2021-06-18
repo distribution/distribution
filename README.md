@@ -30,7 +30,7 @@ This repository contains the following components:
 ### How does this integrate with Docker, containerd, and other OCI client?
 
 Clients implement against the OCI specification and communicate with the
-registry using HTTP. This project contains an client implementation which
+registry using HTTP. This project contains a client implementation which
 is currently in use by Docker, however, it is deprecated for the
 [implementation in containerd](https://github.com/containerd/containerd/tree/master/remotes/docker)
 and will not support new features.
