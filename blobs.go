@@ -63,6 +63,10 @@ type Descriptor struct {
 	// encoded as utf-8.
 	MediaType string `json:"mediaType,omitempty"`
 
+	// ModTime modification time for the file. For backends that
+	// don't have a modification time this may represent the creation time
+	ModTime time.Time
+
 	// Digest uniquely identifies the content. A byte stream can be verified
 	// against this digest.
 	Digest digest.Digest `json:"digest,omitempty"`
