@@ -93,12 +93,7 @@ func (bs *blobStore) Enumerate(ctx context.Context, ingester func(dgst digest.Di
 		return err
 	}
 
-	return bs.driver.Walk(ctx, specPath, func(fileInfo driver.FileInfo) error {
-		// skip directories
-		if fileInfo.IsDir() {
-			return nil
-		}
-
+	return bs.driver.WalkFiles(ctx, specPath, func(fileInfo driver.FileInfo) error {
 		currentPath := fileInfo.Path()
 		// we only want to parse paths that end with /data
 		_, fileName := path.Split(currentPath)
