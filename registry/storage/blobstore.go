@@ -200,6 +200,7 @@ func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (distributi
 		// for the specific repository.
 		MediaType: "application/octet-stream",
 		Digest:    dgst,
+		ModTime:   fi.ModTime(),
 	}, nil
 }
 
