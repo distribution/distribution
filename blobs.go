@@ -8,9 +8,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/distribution/distribution/v3/reference"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+
+	"github.com/distribution/distribution/v3/reference"
 )
 
 var (
@@ -62,6 +63,13 @@ type Descriptor struct {
 	// MediaType describe the type of the content. All text based formats are
 	// encoded as utf-8.
 	MediaType string `json:"mediaType,omitempty"`
+
+	// Size in bytes of content.
+	Size int64 `json:"size,omitempty"`
+
+	// ModTime modification time for the file. For backends that
+	// don't have a modification time this may represent the creation time
+	ModTime time.Time
 
 	// Digest uniquely identifies the content. A byte stream can be verified
 	// against this digest.
