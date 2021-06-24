@@ -1210,12 +1210,10 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 				return false
 			}
 
-			if walkDirectories {
-				if walkInfo.IsDir() {
-					if err := d.doWalk(ctx, objectCount, *walkInfo.prefix, prefix, walkDirectories, f); err != nil {
-						retError = err
-						return false
-					}
+			if walkInfo.IsDir() && walkDirectories {
+				if err := d.doWalk(ctx, objectCount, *walkInfo.prefix, prefix, walkDirectories, f); err != nil {
+					retError = err
+					return false
 				}
 			}
 		}
