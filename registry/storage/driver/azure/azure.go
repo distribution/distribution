@@ -365,6 +365,12 @@ func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn) 
 	return storagedriver.WalkFallback(ctx, d, path, f)
 }
 
+// WalkFiles traverses a filesystem defined within driver, starting
+// from the given path, calling f on each file
+func (d *driver) WalkFiles(ctx context.Context, path string, f storagedriver.WalkFn) error {
+	return storagedriver.WalkFilesFallback(ctx, d, path, f)
+}
+
 // directDescendants will find direct descendants (blobs or virtual containers)
 // of from list of blob paths and will return their full paths. Elements in blobs
 // list must be prefixed with a "/" and

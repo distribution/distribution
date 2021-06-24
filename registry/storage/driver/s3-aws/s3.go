@@ -1185,7 +1185,7 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 }
 
 // Walk traverses a filesystem defined within driver, starting
-// from the given path, calling f on each file
+// from the given path, calling f on each file and directory
 func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn) error {
 	path := from
 	if !strings.HasSuffix(path, "/") {
@@ -1198,7 +1198,33 @@ func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn) 
 	}
 
 	var objectCount int64
-	if err := d.doWalk(ctx, &objectCount, d.s3Path(path), prefix, f); err != nil {
+	if err := d.doWalk(ctx, &objectCount, d.s3Path(path), prefix, true, f); err != nil {
+		return err
+	}
+
+	// S3 doesn't have the concept of empty directories, so it'll return path not found if there are no objects
+	if objectCount == 0 {
+		return storagedriver.PathNotFoundError{Path: from}
+	}
+
+	return nil
+}
+
+// WalkFiles traverses a filesystem defined within driver, starting
+// from the given path, calling f on each file
+func (d *driver) WalkFiles(ctx context.Context, from string, f storagedriver.WalkFn) error {
+	path := from
+	if !strings.HasSuffix(path, "/") {
+		path = path + "/"
+	}
+
+	prefix := ""
+	if d.s3Path("") == "" {
+		prefix = "/"
+	}
+
+	var objectCount int64
+	if err := d.doWalk(ctx, &objectCount, d.s3Path(path), prefix, false, f); err != nil {
 		return err
 	}
 
@@ -1220,6 +1246,10 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 	)
 	prevDir = prefix + path
 
+	delimiter := ""
+	if walkDirectories {
+		delimiter = "/"
+	}
 	listObjectsInput := &s3.ListObjectsV2Input{
 		Bucket:  aws.String(d.Bucket),
 		Prefix:  aws.String(path),

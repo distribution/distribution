@@ -90,6 +90,11 @@ type StorageDriver interface {
 	// to a directory, the directory will not be entered and Walk
 	// will continue the traversal.  If fileInfo refers to a normal file, processing stops
 	Walk(ctx context.Context, path string, f WalkFn) error
+
+	// WalkFiles traverses a filesystem defined within driver, starting
+	// from the given path, calling f on each file but does not call f with directories.
+	// If an error is returned from the WalkFn, processing stops
+	WalkFiles(ctx context.Context, path string, f WalkFn) error
 }
 
 // FileWriter provides an abstraction for an opened writable file-like object in
