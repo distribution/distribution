@@ -79,7 +79,7 @@ type Parameters struct {
 	ChunkSize           int
 	SecretKey           string
 	AccessKey           string
-	TempURLContainerKey bool
+	TempURLContainerKey *bool
 	TempURLMethods      []string
 }
 
@@ -243,8 +243,19 @@ func New(params Parameters) (*Driver, error) {
 			}
 		}
 	} else {
-		d.TempURLContainerKey = params.TempURLContainerKey
 		d.TempURLMethods = params.TempURLMethods
+	}
+
+	// always accept the user-provided tempurlmethods option
+	if params.TempURLMethods != nil {
+		d.TempURLMethods = params.TempURLMethods
+	}
+
+	// always accept the user-provided tempurlcontainerkey option
+	if params.TempURLContainerKey != nil {
+		d.TempURLContainerKey = *params.TempURLContainerKey
+	} else {
+		d.TempURLContainerKey = false
 	}
 
 	if len(d.TempURLMethods) > 0 {

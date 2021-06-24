@@ -104,7 +104,7 @@ func init() {
 			defaultChunkSize,
 			secretKey,
 			accessKey,
-			containerKey,
+			&containerKey,
 			tempURLMethods,
 		}
 
