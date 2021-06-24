@@ -2,6 +2,7 @@ package s3
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -496,6 +497,165 @@ func TestDelete(t *testing.T) {
 	}
 }
 
+func TestWalk(t *testing.T) {
+	if skipS3() != "" {
+		t.Skip(skipS3())
+	}
+
+	rootDir, err := ioutil.TempDir("", "driver-")
+	if err != nil {
+		t.Fatalf("unexpected error creating temporary directory: %v", err)
+	}
+	defer os.Remove(rootDir)
+
+	driver, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
+	if err != nil {
+		t.Fatalf("unexpected error creating driver with standard storage: %v", err)
+	}
+
+	var fileset = []string{
+		"/file1",
+		"/folder1/file1",
+		"/folder2/file1",
+		"/folder3/subfolder1/subfolder1/file1",
+		"/folder3/subfolder2/subfolder1/file1",
+		"/folder4/file1",
+	}
+
+	// create file structure matching fileset above
+	var created []string
+	for _, path := range fileset {
+		err := driver.PutContent(context.Background(), path, []byte("content "+path))
+		if err != nil {
+			fmt.Printf("unable to create file %s: %s\n", path, err)
+			continue
+		}
+		created = append(created, path)
+	}
+
+	// cleanup
+	defer func() {
+		var lastErr error
+		for _, path := range created {
+			err := driver.Delete(context.Background(), path)
+			if err != nil {
+				_ = fmt.Errorf("cleanup failed for path %s: %s", path, err)
+				lastErr = err
+			}
+		}
+		if lastErr != nil {
+			t.Fatalf("cleanup failed: %s", err)
+		}
+	}()
+
+	tcs := []struct {
+		name     string
+		fn       storagedriver.WalkFn
+		from     string
+		expected []string
+		err      bool
+	}{
+		{
+			name: "walk all",
+			fn:   func(fileInfo storagedriver.FileInfo) error { return nil },
+			expected: []string{
+				"/file1",
+				"/folder1",
+				"/folder1/file1",
+				"/folder2",
+				"/folder2/file1",
+				"/folder3",
+				"/folder3/subfolder1",
+				"/folder3/subfolder1/subfolder1",
+				"/folder3/subfolder1/subfolder1/file1",
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+				"/folder4",
+				"/folder4/file1",
+			},
+		},
+		{
+			name: "skip directory",
+			fn: func(fileInfo storagedriver.FileInfo) error {
+				if fileInfo.Path() == "/folder3" {
+					return storagedriver.ErrSkipDir
+				}
+				if strings.Contains(fileInfo.Path(), "/folder3") {
+					t.Fatalf("skipped dir %s and should not walk %s", "/folder3", fileInfo.Path())
+				}
+				return nil
+			},
+			expected: []string{
+				"/file1",
+				"/folder1",
+				"/folder1/file1",
+				"/folder2",
+				"/folder2/file1",
+				"/folder3",
+				// folder 3 contents skipped
+				"/folder4",
+				"/folder4/file1",
+			},
+		},
+		{
+			name: "stop early",
+			fn: func(fileInfo storagedriver.FileInfo) error {
+				if fileInfo.Path() == "/folder1/file1" {
+					return storagedriver.ErrSkipDir
+				}
+				return nil
+			},
+			expected: []string{
+				"/file1",
+				"/folder1",
+				"/folder1/file1",
+				// stop early
+			},
+			err: false,
+		},
+		{
+			name: "error",
+			fn: func(fileInfo storagedriver.FileInfo) error {
+				return errors.New("foo")
+			},
+			expected: []string{
+				"/file1",
+			},
+			err: true,
+		},
+		{
+			name: "from folder",
+			fn:   func(fileInfo storagedriver.FileInfo) error { return nil },
+			expected: []string{
+				"/folder1",
+				"/folder1/file1",
+			},
+			from: "/folder1",
+		},
+	}
+
+	for _, tc := range tcs {
+		var walked []string
+		if tc.from == "" {
+			tc.from = "/"
+		}
+		t.Run(tc.name, func(t *testing.T) {
+			err := driver.Walk(context.Background(), tc.from, func(fileInfo storagedriver.FileInfo) error {
+				walked = append(walked, fileInfo.Path())
+				return tc.fn(fileInfo)
+			})
+			if tc.err && err == nil {
+				t.Fatalf("expected err")
+			}
+			if !tc.err && err != nil {
+				t.Fatalf(err.Error())
+			}
+			compareWalked(t, tc.expected, walked)
+		})
+	}
+}
+
 func TestOverThousandBlobs(t *testing.T) {
 	if skipS3() != "" {
 		t.Skip(skipS3())
@@ -580,5 +740,16 @@ func TestMoveWithMultipartCopy(t *testing.T) {
 	case storagedriver.PathNotFoundError:
 	default:
 		t.Fatalf("unexpected error getting content: %v", err)
+	}
+}
+
+func compareWalked(t *testing.T, expected, walked []string) {
+	if len(walked) != len(expected) {
+		t.Fatalf("Mismatch number of fileInfo walked %d expected %d; walked %s; expected %s;", len(walked), len(expected), walked, expected)
+	}
+	for i := range walked {
+		if walked[i] != expected[i] {
+			t.Fatalf("walked in unexpected order: expected %s; walked %s", expected, walked)
+		}
 	}
 }

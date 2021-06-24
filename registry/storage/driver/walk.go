@@ -22,9 +22,14 @@ type WalkFn func(fileInfo FileInfo) error
 // to a directory, the directory will not be entered and Walk
 // will continue the traversal.  If fileInfo refers to a normal file, processing stops
 func WalkFallback(ctx context.Context, driver StorageDriver, from string, f WalkFn) error {
+	_, err := doWalkFallback(ctx, driver, from, f)
+	return err
+}
+
+func doWalkFallback(ctx context.Context, driver StorageDriver, from string, f WalkFn) (bool, error) {
 	children, err := driver.List(ctx, from)
 	if err != nil {
-		return err
+		return false, err
 	}
 	sort.Stable(sort.StringSlice(children))
 	for _, child := range children {
@@ -40,22 +45,22 @@ func WalkFallback(ctx context.Context, driver StorageDriver, from string, f Walk
 				logrus.WithField("path", child).Infof("ignoring deleted path")
 				continue
 			default:
-				return err
+				return false, err
 			}
 		}
 		err = f(fileInfo)
 		if err == nil && fileInfo.IsDir() {
-			if err := WalkFallback(ctx, driver, child, f); err != nil {
-				return err
+			if ok, err := doWalkFallback(ctx, driver, child, f); err != nil || !ok {
+				return ok, err
 			}
 		} else if err == ErrSkipDir {
-			// Stop iteration if it's a file, otherwise noop if it's a directory
+			// noop for folders, will just skip
 			if !fileInfo.IsDir() {
-				return nil
+				return false, nil // no error but stop iteration
 			}
 		} else if err != nil {
-			return err
+			return false, err
 		}
 	}
-	return nil
+	return true, nil
 }
