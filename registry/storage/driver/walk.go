@@ -49,6 +49,7 @@ func doWalkFallback(ctx context.Context, driver StorageDriver, from string, f Wa
 			}
 		}
 		err = f(fileInfo)
+
 		if err == nil && fileInfo.IsDir() {
 			if ok, err := doWalkFallback(ctx, driver, child, f); err != nil || !ok {
 				return ok, err
