@@ -241,3 +241,15 @@ func (base *Base) Walk(ctx context.Context, path string, f storagedriver.WalkFn)
 
 	return base.setDriverName(base.StorageDriver.Walk(ctx, path, f))
 }
+
+// WalkFiles wraps WalkFiles of underlying storage driver.
+func (base *Base) WalkFiles(ctx context.Context, path string, f storagedriver.WalkFn) error {
+	ctx, done := dcontext.WithTrace(ctx)
+	defer done("%s.WalkFiles(%q)", base.Name(), path)
+
+	if !storagedriver.PathRegexp.MatchString(path) && path != "/" {
+		return storagedriver.InvalidPathError{Path: path, DriverName: base.StorageDriver.Name()}
+	}
+
+	return base.setDriverName(base.StorageDriver.WalkFiles(ctx, path, f))
+}

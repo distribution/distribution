@@ -59,3 +59,41 @@ func WalkFallback(ctx context.Context, driver StorageDriver, from string, f Walk
 	}
 	return nil
 }
+
+// WalkFilesFallback traverses a filesystem defined within driver, starting
+// from the given path, calling f on each file. It uses the List method and Stat to drive itself.
+// If an error is returned from WalkFn, processing stops
+func WalkFilesFallback(ctx context.Context, driver StorageDriver, from string, f WalkFn) error {
+	children, err := driver.List(ctx, from)
+	if err != nil {
+		return err
+	}
+	sort.Stable(sort.StringSlice(children))
+	for _, child := range children {
+		// TODO(stevvooe): Calling driver.Stat for every entry is quite
+		// expensive when running against backends with a slow Stat
+		// implementation, such as s3. This is very likely a serious
+		// performance bottleneck.
+		fileInfo, err := driver.Stat(ctx, child)
+		if err != nil {
+			switch err.(type) {
+			case PathNotFoundError:
+				// repository was removed in between listing and enumeration. Ignore it.
+				logrus.WithField("path", child).Infof("ignoring deleted path")
+				continue
+			default:
+				return err
+			}
+		}
+		if !fileInfo.IsDir() {
+			err = f(fileInfo)
+			if err != nil {
+				return err
+			}
+		}
+		if err := WalkFallback(ctx, driver, child, f); err != nil {
+			return err
+		}
+	}
+	return nil
+}
