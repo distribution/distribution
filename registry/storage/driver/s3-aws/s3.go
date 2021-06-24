@@ -1411,11 +1411,17 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 						continue
 					}
 					// is file, stop gracefully
-					return false
+					if walkInfo.IsDir() && walkDirectories {
+						if err := d.doWalk(ctx, objectCount, prefix, walkDirectories, f); err != nil {
+							retError = err
+							return false
+						}
+						retError = err
+						return false
+					}
 				}
-				retError = err
-				return false
 			}
+
 		}
 		return true
 	})
