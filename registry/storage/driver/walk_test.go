@@ -96,32 +96,31 @@ func TestWalkFilesFileRemoved(t *testing.T) {
 func TestWalkFallback(t *testing.T) {
 	d := &fileSystem{
 		fileset: map[string][]string{
-			"/":    {"/a", "/b", "/c"},
-			"/a":   {"/a/1"},
-			"/b":   {"/b/1", "/b/2"},
-			"/c":   {"/c/1", "/c/2"},
-			"/a/1": {"/a/1/a", "/a/1/b"},
+			"/":        {"/file1", "/folder1", "/folder2"},
+			"/folder1": {"/folder1/file1"},
+			"/folder2": {"/folder2/file1"},
 		},
 	}
-	var expected int
-	for _, list := range d.fileset {
-		expected += len(list)
+	expected := []string{
+		"/file1",
+		"/folder1", // return ErrSkipDir, skip anything under /folder1
+		"/folder1/file1",
+		"/folder2",
+		"/folder2/file1",
 	}
 
-	var walked []FileInfo
+	var walked []string
 	err := WalkFallback(context.Background(), d, "/", func(fileInfo FileInfo) error {
 		if fileInfo.IsDir() != d.isDir(fileInfo.Path()) {
 			t.Fatalf("fileInfo isDir not matching file system: expected %t actual %t", d.isDir(fileInfo.Path()), fileInfo.IsDir())
 		}
-		walked = append(walked, fileInfo)
+		walked = append(walked, fileInfo.Path())
 		return nil
 	})
 	if err != nil {
 		t.Fatalf(err.Error())
 	}
-	if expected != len(walked) {
-		t.Fatalf("mismatch number of fileInfo walked, expected %d", expected)
-	}
+	compareWalked(t, expected, walked)
 }
 
 // Walk is expected to skip directory on ErrSkipDir
