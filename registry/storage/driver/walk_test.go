@@ -45,3 +45,23 @@ func TestWalkFileRemoved(t *testing.T) {
 		t.Fatalf(err.Error())
 	}
 }
+
+func TestWalkFilesFileRemoved(t *testing.T) {
+	d := &changingFileSystem{
+		fileset: []string{"zoidberg", "bender"},
+		keptFiles: map[string]bool{
+			"zoidberg": true,
+		},
+	}
+	infos := []FileInfo{}
+	err := WalkFilesFallback(context.Background(), d, "", func(fileInfo FileInfo) error {
+		infos = append(infos, fileInfo)
+		return nil
+	})
+	if len(infos) != 1 || infos[0].Path() != "zoidberg" {
+		t.Errorf(fmt.Sprintf("unexpected path set during walk: %s", infos))
+	}
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+}
