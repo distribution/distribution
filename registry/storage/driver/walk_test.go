@@ -2,6 +2,7 @@ package driver
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -128,7 +129,7 @@ func TestWalkFallbackSkipDirOnDir(t *testing.T) {
 	d := &fileSystem{
 		fileset: map[string][]string{
 			"/":        {"/file1", "/folder1", "/folder2"},
-			"/folder1": {"/folder1/file1"}, // should not be walked
+			"/folder1": {"/folder1/file1"},
 			"/folder2": {"/folder2/file1"},
 		},
 	}
@@ -184,6 +185,34 @@ func TestWalkFallbackSkipDirOnFile(t *testing.T) {
 	compareWalked(t, expected, walked)
 }
 
+// Walk is expected to skip directory on ErrSkipDir
+func TestWalkFallbackErr(t *testing.T) {
+	d := &fileSystem{
+		fileset: map[string][]string{
+			"/": {"/file1", "/file2", "/file3"},
+		},
+	}
+	errFile := "/file2"
+	expected := []string{
+		"/file1",
+		"/file2", // return ErrSkipDir, stop early
+	}
+	expectedErr := errors.New("foo")
+
+	var walked []string
+	err := WalkFallback(context.Background(), d, "/", func(fileInfo FileInfo) error {
+		walked = append(walked, fileInfo.Path())
+		if fileInfo.Path() == errFile {
+			return expectedErr
+		}
+		return nil
+	})
+	if err != expectedErr {
+		t.Fatalf("unexpected err %v", err)
+	}
+	compareWalked(t, expected, walked)
+}
+
 // WalkFiles is expected to only walk files, not directories
 func TestWalkFilesFallback(t *testing.T) {
 	d := &fileSystem{
@@ -220,7 +249,7 @@ func TestWalkFilesFallback(t *testing.T) {
 }
 
 // WalkFiles is expected to stop when any error is given
-func TestWalkFilesFallbackSkipDir(t *testing.T) {
+func TestWalkFilesFallbackErr(t *testing.T) {
 	d := &fileSystem{
 		fileset: map[string][]string{
 			"/":        {"/file1", "/folder1", "/folder2"},
