@@ -103,7 +103,7 @@ func TestWalkFallback(t *testing.T) {
 	}
 	expected := []string{
 		"/file1",
-		"/folder1", // return ErrSkipDir, skip anything under /folder1
+		"/folder1",
 		"/folder1/file1",
 		"/folder2",
 		"/folder2/file1",
