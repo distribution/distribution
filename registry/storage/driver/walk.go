@@ -27,6 +27,20 @@ func WalkFallback(ctx context.Context, driver StorageDriver, from string, f Walk
 }
 
 func doWalkFallback(ctx context.Context, driver StorageDriver, from string, f WalkFn) (bool, error) {
+	return doWalk(ctx, driver, from, true, f)
+}
+
+// WalkFilesFallback traverses a filesystem defined within driver, starting
+// from the given path, calling f on each file. It uses the List method and Stat to drive itself.
+// If an error is returned from WalkFn, processing stops
+func WalkFilesFallback(ctx context.Context, driver StorageDriver, from string, f WalkFn) (bool, error) {
+	return doWalk(ctx, driver, from, false, f)
+}
+
+// WalkFilesFallback traverses a filesystem defined within driver, starting
+// from the given path, calling f on each file. It uses the List method and Stat to drive itself.
+// If an error is returned from WalkFn, processing stops
+func doWalk(ctx context.Context, driver StorageDriver, from string, walkDir bool, f WalkFn) (bool, error) {
 	children, err := driver.List(ctx, from)
 	if err != nil {
 		return false, err
@@ -48,13 +62,16 @@ func doWalkFallback(ctx context.Context, driver StorageDriver, from string, f Wa
 				return false, err
 			}
 		}
-		err = f(fileInfo)
+		err = nil
+		if !fileInfo.IsDir() || walkDir {
+			err = f(fileInfo)
+		}
 		if err == nil && fileInfo.IsDir() {
 			if ok, err := doWalkFallback(ctx, driver, child, f); err != nil || !ok {
 				return ok, err
 			}
-		} else if err == ErrSkipDir {
-			// noop for folders, will just skip
+		} else if err == ErrSkipDir && walkDir {
+			// Stop iteration if it's a file, otherwise noop if it's a directory
 			if !fileInfo.IsDir() {
 				return false, nil // no error but stop iteration
 			}
@@ -63,42 +80,4 @@ func doWalkFallback(ctx context.Context, driver StorageDriver, from string, f Wa
 		}
 	}
 	return true, nil
-}
-
-// WalkFilesFallback traverses a filesystem defined within driver, starting
-// from the given path, calling f on each file. It uses the List method and Stat to drive itself.
-// If an error is returned from WalkFn, processing stops
-func WalkFilesFallback(ctx context.Context, driver StorageDriver, from string, f WalkFn) error {
-	children, err := driver.List(ctx, from)
-	if err != nil {
-		return err
-	}
-	sort.Stable(sort.StringSlice(children))
-	for _, child := range children {
-		// TODO(stevvooe): Calling driver.Stat for every entry is quite
-		// expensive when running against backends with a slow Stat
-		// implementation, such as s3. This is very likely a serious
-		// performance bottleneck.
-		fileInfo, err := driver.Stat(ctx, child)
-		if err != nil {
-			switch err.(type) {
-			case PathNotFoundError:
-				// repository was removed in between listing and enumeration. Ignore it.
-				logrus.WithField("path", child).Infof("ignoring deleted path")
-				continue
-			default:
-				return err
-			}
-		}
-		if !fileInfo.IsDir() {
-			err = f(fileInfo)
-			if err != nil {
-				return err
-			}
-		}
-		if err := WalkFallback(ctx, driver, child, f); err != nil {
-			return err
-		}
-	}
-	return nil
 }
