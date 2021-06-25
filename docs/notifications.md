@@ -35,7 +35,7 @@ notifications:
     - name: alistener
       url: https://mylistener.example.com/event
       headers:
-      Authorization: [Bearer <your token, if needed>]
+        Authorization: [Bearer <your token, if needed>]
       timeout: 500ms
       threshold: 5
       backoff: 1s
