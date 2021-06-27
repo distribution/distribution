@@ -18,7 +18,7 @@ Project, and VMware Harbor Registry.
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
 [![codecov](https://codecov.io/gh/distribution/distribution/branch/main/graph/badge.svg)](https://codecov.io/gh/distribution/distribution)
 [![FOSSA Status](https://app.fossa.com/api/projects/custom%2B162%2Fgithub.com%2Fdistribution%2Fdistribution.svg?type=shield)](https://app.fossa.com/projects/custom%2B162%2Fgithub.com%2Fdistribution%2Fdistribution?ref=badge_shield)
-[![Conformance_Status](https://github.com/distribution/distribution/workflows/CONFORMANCE/badge.svg?branch=main&event=push)](https://github.com/distribution/distribution/actions?query=workflow%3Aconformance)
+[![OCI Conformance](https://github.com/distribution/distribution/workflows/conformance/badge.svg)](https://github.com/distribution/distribution/actions?query=workflow%3Aconformance)
 
 This repository contains the following components:
 

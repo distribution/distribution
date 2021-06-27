@@ -26,7 +26,7 @@ jobs:
           echo "OCI_ROOT_URL=http://$IP:5000" >> $GITHUB_ENV
           DISTRIBUTION_REF="local-distribution:v$(date +%Y%m%d%H%M%S)"
           docker build -f ./Dockerfile -t "${DISTRIBUTION_REF}" .
-          docker run --rm -p 5000:5000 -idt "${DISTRIBUTION_REF}"
+          docker run --rm -p 5000:5000 -e REGISTRY_STORAGE_DELETE_ENABLED=true -idt "${DISTRIBUTION_REF}"
 
       - name: Run OCI Distribution Spec conformance tests
         uses: opencontainers/distribution-spec@main
