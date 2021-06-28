@@ -551,6 +551,7 @@ func TestWalk(t *testing.T) {
 		}
 	}
 
+	// cleanup
 	defer func() {
 		var lastErr error
 		for _, path := range created {
@@ -565,8 +566,6 @@ func TestWalk(t *testing.T) {
 		}
 	}()
 
-	noopFn := func(fileInfo storagedriver.FileInfo) error { return nil }
-
 	tcs := []struct {
 		name     string
 		fn       storagedriver.WalkFn
@@ -576,7 +575,7 @@ func TestWalk(t *testing.T) {
 	}{
 		{
 			name: "walk all",
-			fn:   noopFn,
+			fn:   func(fileInfo storagedriver.FileInfo) error { return nil },
 			expected: []string{
 				"/",
 				"/file1",
@@ -624,7 +623,7 @@ func TestWalk(t *testing.T) {
 		},
 		{
 			name: "from folder",
-			fn:   noopFn,
+			fn:   func(fileInfo storagedriver.FileInfo) error { return nil },
 			expected: []string{
 				"/folder1",
 				"/folder1/file1",
