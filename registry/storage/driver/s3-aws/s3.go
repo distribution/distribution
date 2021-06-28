@@ -766,6 +766,8 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 // Writer returns a FileWriter which will store the content written to it
 // at the location designated by "path" after the call to Commit.
 func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (storagedriver.FileWriter, error) {
+	s := d.s3Client(ctx)
+
 	key := d.s3Path(path)
 	if !appendParam {
 		// TODO (brianbland): cancel other uploads at this path
@@ -911,7 +913,7 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 		prefix = "/"
 	}
 
-	resp, err := d.S3.ListObjectsV2(&s3.ListObjectsV2Input{
+	resp, err := s.ListObjectsV2(&s3.ListObjectsV2Input{
 		Bucket:    aws.String(d.Bucket),
 		Prefix:    aws.String(d.s3Path(path)),
 		Delimiter: aws.String("/"),
@@ -935,7 +937,7 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 		}
 
 		if *resp.IsTruncated {
-			resp, err = d.S3.ListObjectsV2(&s3.ListObjectsV2Input{
+			resp, err = s.ListObjectsV2(&s3.ListObjectsV2Input{
 				Bucket:            aws.String(d.Bucket),
 				Prefix:            aws.String(d.s3Path(path)),
 				Delimiter:         aws.String("/"),
@@ -1218,39 +1220,8 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 		// the most recent skip directory to avoid walking over undesirable files
 		prevSkipDir string
 	)
-
-	prefix := ""
-	if d.s3Path("") == "" {
-		prefix = "/"
-	}
-
-	var objectCount int64
-	if err := d.doWalk(ctx, &objectCount, d.s3Path(path), prefix, false, f); err != nil {
-		return err
-	}
-
-	// S3 doesn't have the concept of empty directories, so it'll return path not found if there are no objects
-	if objectCount == 0 {
-		return storagedriver.PathNotFoundError{Path: from}
-	}
-
-	return nil
-}
-
-func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, prefix string, f storagedriver.WalkFn) error {
-	var (
-		retError error
-		// the most recent directory walked for de-duping
-		prevDir string
-		// the most recent skip directory to avoid walking over undesirable files
-		prevSkipDir string
-	)
 	prevDir = prefix + path
 
-	delimiter := ""
-	if walkDirectories {
-		delimiter = "/"
-	}
 	listObjectsInput := &s3.ListObjectsV2Input{
 		Bucket:  aws.String(d.Bucket),
 		Prefix:  aws.String(path),
@@ -1271,7 +1242,7 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 	// ErrSkipDir is handled by explicitly skipping over any files under the skipped directory. This may be sub-optimal
 	// for extreme edge cases but for the general use case in a registry, this is orders of magnitude
 	// faster than a more explicit recursive implementation.
-	listObjectErr := d.S3.ListObjectsV2PagesWithContext(ctx, listObjectsInput, func(objects *s3.ListObjectsV2Output, lastPage bool) bool {
+	listObjectErr := s.ListObjectsV2PagesWithContext(ctx, listObjectsInput, func(objects *s3.ListObjectsV2Output, lastPage bool) bool {
 		walkInfos := make([]storagedriver.FileInfoInternal, 0, len(objects.Contents))
 
 		for _, file := range objects.Contents {
@@ -1318,17 +1289,6 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 					}
 					// is file, stop gracefully
 					return false
-				}
-				retError = err
-				return false
-			}
-
-			err := f(walkInfo)
-			*objectCount++
-
-			if err != nil {
-				if err == storagedriver.ErrSkipDir {
-					break
 				}
 				retError = err
 				return false
