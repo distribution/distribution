@@ -241,7 +241,7 @@ func TestStorageClass(t *testing.T) {
 
 }
 
-func TestConformance(t *testing.T) {
+func TestWalk(t *testing.T) {
 	if skipS3() != "" {
 		t.Skip(skipS3())
 	}
@@ -257,7 +257,7 @@ func TestConformance(t *testing.T) {
 		t.Fatalf("unexpected error creating driver with standard storage: %v", err)
 	}
 
-	err = conformance.Run(standardDriver, t)
+	err = conformance.TestWalk(standardDriver, t)
 	if err != nil {
 		t.Fatalf("conformance failed: %v", err)
 	}
