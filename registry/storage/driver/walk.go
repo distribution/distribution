@@ -22,20 +22,6 @@ type WalkFn func(fileInfo FileInfo) error
 // to a directory, the directory will not be entered and Walk
 // will continue the traversal.  If fileInfo refers to a normal file, processing stops
 func WalkFallback(ctx context.Context, driver StorageDriver, from string, f WalkFn) error {
-	return doWalk(ctx, driver, from, true, f)
-}
-
-// WalkFilesFallback traverses a filesystem defined within driver, starting
-// from the given path, calling f on each file. It uses the List method and Stat to drive itself.
-// If an error is returned from WalkFn, processing stops
-func WalkFilesFallback(ctx context.Context, driver StorageDriver, from string, f WalkFn) error {
-	return doWalk(ctx, driver, from, false, f)
-}
-
-// WalkFilesFallback traverses a filesystem defined within driver, starting
-// from the given path, calling f on each file. It uses the List method and Stat to drive itself.
-// If an error is returned from WalkFn, processing stops
-func doWalk(ctx context.Context, driver StorageDriver, from string, walkDir bool, f WalkFn) error {
 	children, err := driver.List(ctx, from)
 	if err != nil {
 		return err
@@ -57,15 +43,12 @@ func doWalk(ctx context.Context, driver StorageDriver, from string, walkDir bool
 				return err
 			}
 		}
-		err = nil
-		if !fileInfo.IsDir() || walkDir {
-			err = f(fileInfo)
-		}
+		err = f(fileInfo)
 		if err == nil && fileInfo.IsDir() {
-			if err := doWalk(ctx, driver, child, walkDir, f); err != nil {
+			if err := WalkFallback(ctx, driver, child, f); err != nil {
 				return err
 			}
-		} else if err == ErrSkipDir && walkDir {
+		} else if err == ErrSkipDir {
 			// Stop iteration if it's a file, otherwise noop if it's a directory
 			if !fileInfo.IsDir() {
 				return nil

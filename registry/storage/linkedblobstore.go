@@ -247,7 +247,7 @@ func (lbs *linkedBlobStore) Enumerate(ctx context.Context, ingestor func(digest.
 	if err != nil {
 		return err
 	}
-	return lbs.driver.WalkFiles(ctx, rootPath, func(fileInfo driver.FileInfo) error {
+	return lbs.driver.Walk(ctx, rootPath, func(fileInfo driver.FileInfo) error {
 		filePath := fileInfo.Path()
 
 		// check if it's a link
