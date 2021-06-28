@@ -2,19 +2,14 @@ package s3
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
 	"os"
-	"path"
 	"reflect"
-	"sort"
 	"strconv"
 	"strings"
 	"testing"
-
-	"github.com/distribution/distribution/v3/registry/storage/driver/conformance"
 
 	"gopkg.in/check.v1"
 
@@ -521,40 +516,47 @@ func TestWalk(t *testing.T) {
 		t.Skip(skipS3())
 	}
 
-	rootDir := t.TempDir()
+	rootDir, err := ioutil.TempDir("", "driver-")
+	if err != nil {
+		t.Fatalf("unexpected error creating temporary directory: %v", err)
+	}
+	defer os.Remove(rootDir)
 
-	drvr, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
+	driver, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
 	if err != nil {
 		t.Fatalf("unexpected error creating driver with standard storage: %v", err)
 	}
 
-	fileset := []string{
-		"/file1",
-		"/folder1/file1",
-		"/folder2/file1",
-		"/folder3/subfolder1/subfolder1/file1",
-		"/folder3/subfolder2/subfolder1/file1",
-		"/folder4/file1",
+	var fileset = map[string][]string{
+		"/":        {"/file1", "/folder1", "/folder2"},
+		"/folder1": {"/folder1/file1"},
+		"/folder2": {"/folder2/file1"},
+	}
+	isDir := func(path string) bool {
+		_, isDir := fileset[path]
+		return isDir
 	}
 
-	// create file structure matching fileset above
 	var created []string
-	for _, p := range fileset {
-		err := drvr.PutContent(context.Background(), p, []byte("content "+p))
-		if err != nil {
-			fmt.Printf("unable to create file %s: %s\n", p, err)
-			continue
+	for _, paths := range fileset {
+		for _, path := range paths {
+			if _, isDir := fileset[path]; isDir {
+				continue // skip directories
+			}
+			err := driver.PutContent(context.Background(), path, []byte("content "+path))
+			if err != nil {
+				fmt.Printf("unable to create file %s: %s\n", path, err)
+			}
+			created = append(created, path)
 		}
-		created = append(created, p)
 	}
 
-	// cleanup
 	defer func() {
 		var lastErr error
-		for _, p := range created {
-			err := drvr.Delete(context.Background(), p)
+		for _, path := range created {
+			err := driver.Delete(context.Background(), path)
 			if err != nil {
-				_ = fmt.Errorf("cleanup failed for path %s: %s", p, err)
+				_ = fmt.Errorf("cleanup failed for path %s: %s", path, err)
 				lastErr = err
 			}
 		}
@@ -562,6 +564,8 @@ func TestWalk(t *testing.T) {
 			t.Fatalf("cleanup failed: %s", err)
 		}
 	}()
+
+	noopFn := func(fileInfo storagedriver.FileInfo) error { return nil }
 
 	tcs := []struct {
 		name     string
@@ -572,45 +576,34 @@ func TestWalk(t *testing.T) {
 	}{
 		{
 			name: "walk all",
-			fn:   func(fileInfo storagedriver.FileInfo) error { return nil },
+			fn:   noopFn,
 			expected: []string{
+				"/",
 				"/file1",
 				"/folder1",
 				"/folder1/file1",
 				"/folder2",
 				"/folder2/file1",
-				"/folder3",
-				"/folder3/subfolder1",
-				"/folder3/subfolder1/subfolder1",
-				"/folder3/subfolder1/subfolder1/file1",
-				"/folder3/subfolder2",
-				"/folder3/subfolder2/subfolder1",
-				"/folder3/subfolder2/subfolder1/file1",
-				"/folder4",
-				"/folder4/file1",
 			},
 		},
 		{
 			name: "skip directory",
 			fn: func(fileInfo storagedriver.FileInfo) error {
-				if fileInfo.Path() == "/folder3" {
+				if fileInfo.Path() == "/folder1" {
 					return storagedriver.ErrSkipDir
 				}
-				if strings.Contains(fileInfo.Path(), "/folder3") {
-					t.Fatalf("skipped dir %s and should not walk %s", "/folder3", fileInfo.Path())
+				if strings.Contains(fileInfo.Path(), "/folder1") {
+					t.Fatalf("skipped dir %s and should not walk %s", "/folder1", fileInfo.Path())
 				}
 				return nil
 			},
 			expected: []string{
+				"/",
 				"/file1",
-				"/folder1",
-				"/folder1/file1",
+				"/folder1", // return ErrSkipDir, skip anything under /folder1
+				// skip /folder1/file1
 				"/folder2",
 				"/folder2/file1",
-				"/folder3",
-				// folder 3 contents skipped
-				"/folder4",
-				"/folder4/file1",
 			},
 		},
 		{
@@ -622,26 +615,16 @@ func TestWalk(t *testing.T) {
 				return nil
 			},
 			expected: []string{
+				"/",
 				"/file1",
 				"/folder1",
 				"/folder1/file1",
 				// stop early
 			},
-			err: false,
-		},
-		{
-			name: "error",
-			fn: func(fileInfo storagedriver.FileInfo) error {
-				return errors.New("foo")
-			},
-			expected: []string{
-				"/file1",
-			},
-			err: true,
 		},
 		{
 			name: "from folder",
-			fn:   func(fileInfo storagedriver.FileInfo) error { return nil },
+			fn:   noopFn,
 			expected: []string{
 				"/folder1",
 				"/folder1/file1",
@@ -656,8 +639,11 @@ func TestWalk(t *testing.T) {
 			tc.from = "/"
 		}
 		t.Run(tc.name, func(t *testing.T) {
-			err := drvr.Walk(context.Background(), tc.from, func(fileInfo storagedriver.FileInfo) error {
+			err := driver.Walk(context.Background(), tc.from, func(fileInfo storagedriver.FileInfo) error {
 				walked = append(walked, fileInfo.Path())
+				if fileInfo.IsDir() != isDir(fileInfo.Path()) {
+					t.Fatalf("fileInfo isDir not matching file system: expected %t actual %t", isDir(fileInfo.Path()), fileInfo.IsDir())
+				}
 				return tc.fn(fileInfo)
 			})
 			if tc.err && err == nil {
@@ -668,28 +654,6 @@ func TestWalk(t *testing.T) {
 			}
 			compareWalked(t, tc.expected, walked)
 		})
-	}
-}
-
-func TestWalk(t *testing.T) {
-	if skipS3() != "" {
-		t.Skip(skipS3())
-	}
-
-	rootDir, err := ioutil.TempDir("", "driver-")
-	if err != nil {
-		t.Fatalf("unexpected error creating temporary directory: %v", err)
-	}
-	defer os.Remove(rootDir)
-
-	standardDriver, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
-	if err != nil {
-		t.Fatalf("unexpected error creating driver with standard storage: %v", err)
-	}
-
-	err = conformance.TestWalk(standardDriver, t)
-	if err != nil {
-		t.Fatalf("conformance failed: %v", err)
 	}
 }
 
@@ -770,93 +734,13 @@ func TestMoveWithMultipartCopy(t *testing.T) {
 	}
 }
 
-func TestListObjectsV2(t *testing.T) {
-	if skipS3() != "" {
-		t.Skip(skipS3())
-	}
-
-	rootDir := t.TempDir()
-	d, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
-	if err != nil {
-		t.Fatalf("unexpected error creating driver: %v", err)
-	}
-
-	ctx := context.Background()
-	n := 6
-	prefix := "/test-list-objects-v2"
-	var filePaths []string
-	for i := 0; i < n; i++ {
-		filePaths = append(filePaths, fmt.Sprintf("%s/%d", prefix, i))
-	}
-	for _, p := range filePaths {
-		if err := d.PutContent(ctx, p, []byte(p)); err != nil {
-			t.Fatalf("unexpected error putting content: %v", err)
-		}
-	}
-
-	info, err := d.Stat(ctx, filePaths[0])
-	if err != nil {
-		t.Fatalf("unexpected error stating: %v", err)
-	}
-
-	if info.IsDir() || info.Size() != int64(len(filePaths[0])) || info.Path() != filePaths[0] {
-		t.Fatal("unexcepted state info")
-	}
-
-	subDirPath := prefix + "/sub/0"
-	if err := d.PutContent(ctx, subDirPath, []byte(subDirPath)); err != nil {
-		t.Fatalf("unexpected error putting content: %v", err)
-	}
-
-	subPaths := append(filePaths, path.Dir(subDirPath))
-
-	result, err := d.List(ctx, prefix)
-	if err != nil {
-		t.Fatalf("unexpected error listing: %v", err)
-	}
-
-	sort.Strings(subPaths)
-	sort.Strings(result)
-	if !reflect.DeepEqual(subPaths, result) {
-		t.Fatalf("unexpected list result")
-	}
-
-	var walkPaths []string
-	if err := d.Walk(ctx, prefix, func(fileInfo storagedriver.FileInfo) error {
-		walkPaths = append(walkPaths, fileInfo.Path())
-		if fileInfo.Path() == path.Dir(subDirPath) {
-			if !fileInfo.IsDir() {
-				t.Fatalf("unexpected walking file info")
-			}
-		} else {
-			if fileInfo.IsDir() || fileInfo.Size() != int64(len(fileInfo.Path())) {
-				t.Fatalf("unexpected walking file info")
-			}
-		}
-		return nil
-	}); err != nil {
-		t.Fatalf("unexpected error walking: %v", err)
-	}
-
-	subPaths = append(subPaths, subDirPath)
-	sort.Strings(walkPaths)
-	sort.Strings(subPaths)
-	if !reflect.DeepEqual(subPaths, walkPaths) {
-		t.Fatalf("unexpected walking paths")
-	}
-
-	if err := d.Delete(ctx, prefix); err != nil {
-		t.Fatalf("unexpected error deleting: %v", err)
-	}
-}
-
 func compareWalked(t *testing.T, expected, walked []string) {
 	if len(walked) != len(expected) {
 		t.Fatalf("Mismatch number of fileInfo walked %d expected %d; walked %s; expected %s;", len(walked), len(expected), walked, expected)
 	}
 	for i := range walked {
 		if walked[i] != expected[i] {
-			t.Fatalf("walked in unexpected order: expected %s; walked %s", expected, walked)
+			t.Fatalf("expected walked to come in order expected: walked %s", walked)
 		}
 	}
 }
