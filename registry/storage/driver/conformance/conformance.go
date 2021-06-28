@@ -53,7 +53,7 @@ func (wc *walkConformance) isDir(path string) bool {
 	return isDir
 }
 
-func Run(driver storagedriver.StorageDriver, t *testing.T) error {
+func TestWalk(driver storagedriver.StorageDriver, t *testing.T) error {
 	wc := walkConformance{driver: driver}
 	defer func() {
 		err := wc.cleanup()
