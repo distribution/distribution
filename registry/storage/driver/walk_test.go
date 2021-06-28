@@ -2,7 +2,6 @@ package driver
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -17,7 +16,10 @@ type changingFileSystem struct {
 func (cfs *changingFileSystem) List(_ context.Context, _ string) ([]string, error) {
 	return cfs.fileset, nil
 }
+<<<<<<< HEAD
 
+=======
+>>>>>>> aea873cc (storagedriver/s3: test refactor. fixed a bug in WalkFallback preventing ErrSkipDir from stopping gracefully)
 func (cfs *changingFileSystem) Stat(_ context.Context, path string) (FileInfo, error) {
 	kept, ok := cfs.keptFiles[path]
 	if ok && kept {
@@ -198,112 +200,96 @@ func TestWalkFallback(t *testing.T) {
 		"/folder2/file1",
 	}
 
-	var walked []string
-	err := WalkFallback(context.Background(), d, "/", func(fileInfo FileInfo) error {
-		if fileInfo.IsDir() != d.isDir(fileInfo.Path()) {
-			t.Fatalf("fileInfo isDir not matching file system: expected %t actual %t", d.isDir(fileInfo.Path()), fileInfo.IsDir())
-		}
-		walked = append(walked, fileInfo.Path())
-		return nil
-	})
-	if err != nil {
-		t.Fatalf(err.Error())
-	}
-	compareWalked(t, expected, walked)
-}
-
-// Walk is expected to skip directory on ErrSkipDir
-func TestWalkFallbackSkipDirOnDir(t *testing.T) {
-	d := &fileSystem{
-		fileset: map[string][]string{
-			"/":        {"/file1", "/folder1", "/folder2"},
-			"/folder1": {"/folder1/file1"},
-			"/folder2": {"/folder2/file1"},
+	tcs := []struct {
+		name     string
+		fn       WalkFn
+		from     string
+		expected []string
+		err      bool
+	}{
+		{
+			name: "walk all",
+			fn:   noopFn,
+			expected: []string{
+				"/file1",
+				"/folder1",
+				"/folder1/file1",
+				"/folder2",
+				"/folder2/file1",
+			},
+		},
+		{
+			name: "skip directory",
+			fn: func(fileInfo FileInfo) error {
+				if fileInfo.Path() == "/folder1" {
+					return ErrSkipDir
+				}
+				if strings.Contains(fileInfo.Path(), "/folder1") {
+					t.Fatalf("skipped dir %s and should not walk %s", "/folder1", fileInfo.Path())
+				}
+				return nil
+			},
+			expected: []string{
+				"/file1",
+				"/folder1", // return ErrSkipDir, skip anything under /folder1
+				// skip /folder1/file1
+				"/folder2",
+				"/folder2/file1",
+			},
+		},
+		{
+			name: "stop early",
+			fn: func(fileInfo FileInfo) error {
+				if fileInfo.Path() == "/folder1/file1" {
+					return ErrSkipDir
+				}
+				return nil
+			},
+			expected: []string{
+				"/file1",
+				"/folder1",
+				"/folder1/file1",
+				// stop early
+			},
+		},
+		{
+			name: "from folder",
+			fn:   noopFn,
+			expected: []string{
+				"/folder1/file1",
+			},
+			from: "/folder1",
 		},
 	}
-	skipDir := "/folder1"
-	expected := []string{
-		"/file1",
-		"/folder1", // return ErrSkipDir, skip anything under /folder1
-		// skip /folder1/file1
-		"/folder2",
-		"/folder2/file1",
-	}
 
-	var walked []string
-	err := WalkFallback(context.Background(), d, "/", func(fileInfo FileInfo) error {
-		walked = append(walked, fileInfo.Path())
-		if fileInfo.Path() == skipDir {
-			return ErrSkipDir
+	for _, tc := range tcs {
+		var walked []string
+		if tc.from == "" {
+			tc.from = "/"
 		}
-		if strings.Contains(fileInfo.Path(), skipDir) {
-			t.Fatalf("skipped dir %s and should not walk %s", skipDir, fileInfo.Path())
-		}
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("expected Walk to not error %v", err)
-	}
-	compareWalked(t, expected, walked)
-}
-
-func TestWalkFallbackSkipDirOnFile(t *testing.T) {
-	d := &fileSystem{
-		fileset: map[string][]string{
-			"/": {"/file1", "/file2", "/file3"},
-		},
-	}
-	skipFile := "/file2"
-	expected := []string{
-		"/file1",
-		"/file2", // return ErrSkipDir, stop early
+		t.Run(tc.name, func(t *testing.T) {
+			err := WalkFallback(context.Background(), d, tc.from, func(fileInfo FileInfo) error {
+				walked = append(walked, fileInfo.Path())
+				if fileInfo.IsDir() != d.isDir(fileInfo.Path()) {
+					t.Fatalf("fileInfo isDir not matching file system: expected %t actual %t", d.isDir(fileInfo.Path()), fileInfo.IsDir())
+				}
+				return tc.fn(fileInfo)
+			})
+			if tc.err && err == nil {
+				t.Fatalf("expected err")
+			}
+			if !tc.err && err != nil {
+				t.Fatalf(err.Error())
+			}
+			compareWalked(t, tc.expected, walked)
+		})
 	}
 
-	var walked []string
-	err := WalkFallback(context.Background(), d, "/", func(fileInfo FileInfo) error {
-		walked = append(walked, fileInfo.Path())
-		if fileInfo.Path() == skipFile {
-			return ErrSkipDir
-		}
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("expected Walk to not error %v", err)
-	}
-	compareWalked(t, expected, walked)
-}
-
-// Walk is expected to skip directory on ErrSkipDir
-func TestWalkFallbackErr(t *testing.T) {
-	d := &fileSystem{
-		fileset: map[string][]string{
-			"/": {"/file1", "/file2", "/file3"},
-		},
-	}
-	errFile := "/file2"
-	expected := []string{
-		"/file1",
-		"/file2", // return ErrSkipDir, stop early
-	}
-	expectedErr := errors.New("foo")
-
-	var walked []string
-	err := WalkFallback(context.Background(), d, "/", func(fileInfo FileInfo) error {
-		walked = append(walked, fileInfo.Path())
-		if fileInfo.Path() == errFile {
-			return expectedErr
-		}
-		return nil
-	})
-	if err != expectedErr {
-		t.Fatalf("unexpected err %v", err)
-	}
-	compareWalked(t, expected, walked)
 }
 
 func compareWalked(t *testing.T, expected, walked []string) {
 	if len(walked) != len(expected) {
-		t.Fatalf("Mismatch number of fileInfo walked %d expected %d", len(walked), len(expected))
+		t.Fatalf("Mismatch number of fileInfo walked %d expected %d; walked %s; expected %s;", len(walked), len(expected), walked, expected)
 	}
 	for i := range walked {
 		if walked[i] != expected[i] {
