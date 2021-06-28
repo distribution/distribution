@@ -1122,6 +1122,7 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 				continue
 			}
 
+			// walk over file's parent directory if not a duplicate
 			dir := filepath.Dir(walkInfo.Path())
 			if dir != prevDir {
 				prevDir = dir
@@ -1149,7 +1150,8 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 
 			if err != nil {
 				if err == storagedriver.ErrSkipDir {
-					break
+					// stop early without return error
+					return false
 				}
 				retError = err
 				return false
