@@ -2,6 +2,7 @@ package s3
 
 import (
 	"bytes"
+	"github.com/docker/distribution/registry/storage/driver/conformance"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -106,7 +107,7 @@ func init() {
 
 	// Skip S3 storage driver tests if environment variable parameters are not provided
 	skipS3 = func() string {
-		if accessKey == "" || secretKey == "" || region == "" || bucket == "" || encrypt == "" {
+		if accessKey == "" || secretKey == "" || bucket == "" || encrypt == "" {
 			return "Must set AWS_ACCESS_KEY, AWS_SECRET_KEY, AWS_REGION, S3_BUCKET, and S3_ENCRYPT to run S3 tests"
 		}
 		return ""
@@ -238,6 +239,28 @@ func TestStorageClass(t *testing.T) {
 		t.Fatalf("unexpected storage class for reduced-redundancy file: %v", *resp.StorageClass)
 	}
 
+}
+
+func TestConformance(t *testing.T) {
+	if skipS3() != "" {
+		t.Skip(skipS3())
+	}
+
+	rootDir, err := ioutil.TempDir("", "driver-")
+	if err != nil {
+		t.Fatalf("unexpected error creating temporary directory: %v", err)
+	}
+	defer os.Remove(rootDir)
+
+	standardDriver, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
+	if err != nil {
+		t.Fatalf("unexpected error creating driver with standard storage: %v", err)
+	}
+
+	err = conformance.Run(standardDriver, t)
+	if err != nil {
+		t.Fatalf("conformance failed: %v", err)
+	}
 }
 
 func TestOverThousandBlobs(t *testing.T) {
