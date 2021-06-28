@@ -3651,9 +3651,9 @@ The following parameters should be specified on the request:
 
 ```
 202 Accepted
-Content-Length: 0
 Location: /v2/<name>/blobs/uploads/<uuid>
-Range: 0-0
+Range: bytes=0-<offset>
+Content-Length: 0
 Docker-Upload-UUID: <uuid>
 ```
 
@@ -4379,7 +4379,7 @@ The following parameters should be specified on the request:
 ###### On Success: Data Accepted
 
 ```
-204 No Content
+202 Accepted
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: 0-<offset>
 Content-Length: 0
@@ -4645,7 +4645,7 @@ The following parameters should be specified on the request:
 ###### On Success: Chunk Accepted
 
 ```
-204 No Content
+202 Accepted
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: 0-<offset>
 Content-Length: 0
@@ -4925,7 +4925,7 @@ The following parameters should be specified on the request:
 ###### On Success: Upload Complete
 
 ```
-204 No Content
+201 Created
 Location: <blob location>
 Content-Range: <start of range>-<end of range, inclusive>
 Content-Length: 0
