@@ -1227,7 +1227,7 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 }
 
 // Walk traverses a filesystem defined within driver, starting
-// from the given path, calling f on each file and directory
+// from the given path, calling f on each file
 func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn) error {
 	path := from
 	if !strings.HasSuffix(path, "/") {
@@ -1241,32 +1241,6 @@ func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn) 
 
 	var objectCount int64
 	if err := d.doWalk(ctx, &objectCount, d.s3Path(path), prefix, true, f); err != nil {
-		return err
-	}
-
-	// S3 doesn't have the concept of empty directories, so it'll return path not found if there are no objects
-	if objectCount == 0 {
-		return storagedriver.PathNotFoundError{Path: from}
-	}
-
-	return nil
-}
-
-// WalkFiles traverses a filesystem defined within driver, starting
-// from the given path, calling f on each file
-func (d *driver) WalkFiles(ctx context.Context, from string, f storagedriver.WalkFn) error {
-	path := from
-	if !strings.HasSuffix(path, "/") {
-		path = path + "/"
-	}
-
-	prefix := ""
-	if d.s3Path("") == "" {
-		prefix = "/"
-	}
-
-	var objectCount int64
-	if err := d.doWalk(ctx, &objectCount, d.s3Path(path), prefix, false, f); err != nil {
 		return err
 	}
 
@@ -1323,68 +1297,16 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 	listObjectsInput := &s3.ListObjectsV2Input{
 		Bucket:    aws.String(d.Bucket),
 		Prefix:    aws.String(path),
-		Delimiter: aws.String(delimiter),
 		MaxKeys:   aws.Int64(listMax),
+		Delimiter: aws.String(delimiter),
 	}
 
 	ctx, done := dcontext.WithTrace(parentCtx)
 	defer done("s3aws.ListObjectsV2Pages(%s)", path)
-
-	// When the "delimiter" argument is omitted, the S3 list API will list all objects in the bucket
-	// recursively, omitting directory paths. Objects are listed in sorted, depth-first order so we
-	// can infer all the directories by comparing each object path to the last one we saw.
-	// See: https://docs.aws.amazon.com/AmazonS3/latest/userguide/ListingKeysUsingAPIs.html
-
-	// With files returned in sorted depth-first order, directories are inferred in the same order.
-	// ErrSkipDir is handled by explicitly skipping over any files under the skipped directory. This may be sub-optimal
-	// for extreme edge cases but for the general use case in a registry, this is orders of magnitude
-	// faster than a more explicit recursive implementation.
 	listObjectErr := d.S3.ListObjectsV2PagesWithContext(ctx, listObjectsInput, func(objects *s3.ListObjectsV2Output, lastPage bool) bool {
 		walkInfos := make([]storagedriver.FileInfoInternal, 0, len(objects.Contents))
-
-		var count int64
-		// KeyCount was introduced with version 2 of the GET Bucket operation in S3.
-		// Some s3 implementations (looking at you ceph/rgw) have a buggy
-		// implementation so we intionally avoid ever using it, preferring instead
-		// to calculate the count from the Contents and CommonPrefixes fields of
-		// the s3.ListObjectsV2Output. we retain the commented out KeyCount code
-		// and this comment so as not to forget this problem moving forward.
-		//
-		// count = *objects.KeyCount
-		// *objectCount += *objects.KeyCount
-
-		count = int64(len(objects.Contents) + len(objects.CommonPrefixes))
-		*objectCount += count
-
-		walkInfos = make([]storagedriver.FileInfoInternal, 0, count)
-
-		for _, dir := range objects.CommonPrefixes {
-			commonPrefix := *dir.Prefix
-			walkInfos = append(walkInfos, storagedriver.FileInfoInternal{
-				FileInfoFields: storagedriver.FileInfoFields{
-					IsDir: true,
-					Path:  strings.Replace(commonPrefix[:len(commonPrefix)-1], d.s3Path(""), prefix, 1),
-				},
-			})
-		}
-
 		for _, file := range objects.Contents {
 			filePath := strings.Replace(*file.Key, d.s3Path(""), prefix, 1)
-
-			// get a list of all inferred directories between the previous directory and this file
-			dirs := directoryDiff(prevDir, filePath)
-			if len(dirs) > 0 {
-				for _, dir := range dirs {
-					walkInfos = append(walkInfos, storagedriver.FileInfoInternal{
-						FileInfoFields: storagedriver.FileInfoFields{
-							IsDir: true,
-							Path:  dir,
-						},
-					})
-					prevDir = dir
-				}
-			}
-
 			walkInfos = append(walkInfos, storagedriver.FileInfoInternal{
 				FileInfoFields: storagedriver.FileInfoFields{
 					IsDir:   false,
@@ -1401,27 +1323,38 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 				continue
 			}
 
+			dir := filepath.Dir(walkInfo.Path())
+			if dir != prevDir {
+				prevDir = dir
+				walkDirInfo := storagedriver.FileInfoInternal{
+					FileInfoFields: storagedriver.FileInfoFields{
+						IsDir: true,
+						Path:  dir,
+					},
+				}
+				err := f(walkDirInfo)
+				*objectCount++
+
+				if err != nil {
+					if err == storagedriver.ErrSkipDir {
+						prevSkipDir = dir
+						continue
+					}
+					retError = err
+					return false
+				}
+			}
+
 			err := f(walkInfo)
 			*objectCount++
 
 			if err != nil {
 				if err == storagedriver.ErrSkipDir {
-					if walkInfo.IsDir() {
-						prevSkipDir = walkInfo.Path()
-						continue
-					}
-					// is file, stop gracefully
-					if walkInfo.IsDir() && walkDirectories {
-						if err := d.doWalk(ctx, objectCount, prefix, prefix, walkDirectories, f); err != nil {
-							retError = err
-							return false
-						}
-						retError = err
-						return false
-					}
+					break
 				}
+				retError = err
+				return false
 			}
-
 		}
 		return true
 	})
