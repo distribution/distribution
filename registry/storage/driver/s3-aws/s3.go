@@ -1185,7 +1185,7 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 }
 
 // Walk traverses a filesystem defined within driver, starting
-// from the given path, calling f on each file and directory
+// from the given path, calling f on each file
 func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn) error {
 	path := from
 	if !strings.HasSuffix(path, "/") {
@@ -1198,7 +1198,7 @@ func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn) 
 	}
 
 	var objectCount int64
-	if err := d.doWalk(ctx, &objectCount, d.s3Path(path), prefix, true, f); err != nil {
+	if err := d.doWalk(ctx, &objectCount, d.s3Path(path), prefix, f); err != nil {
 		return err
 	}
 
@@ -1210,13 +1210,14 @@ func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn) 
 	return nil
 }
 
-// WalkFiles traverses a filesystem defined within driver, starting
-// from the given path, calling f on each file
-func (d *driver) WalkFiles(ctx context.Context, from string, f storagedriver.WalkFn) error {
-	path := from
-	if !strings.HasSuffix(path, "/") {
-		path = path + "/"
-	}
+func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, prefix string, f storagedriver.WalkFn) error {
+	var (
+		retError error
+		// the most recent directory walked for de-duping
+		prevDir string
+		// the most recent skip directory to avoid walking over undesirable files
+		prevSkipDir string
+	)
 
 	prefix := ""
 	if d.s3Path("") == "" {
@@ -1317,6 +1318,17 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 					}
 					// is file, stop gracefully
 					return false
+				}
+				retError = err
+				return false
+			}
+
+			err := f(walkInfo)
+			*objectCount++
+
+			if err != nil {
+				if err == storagedriver.ErrSkipDir {
+					break
 				}
 				retError = err
 				return false
