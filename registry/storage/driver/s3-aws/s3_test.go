@@ -2,6 +2,7 @@ package s3
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/rand"
@@ -268,6 +269,7 @@ func TestWalk(t *testing.T) {
 		return isDir
 	}
 
+	// create file structure matching fileset above
 	var created []string
 	for _, paths := range fileset {
 		for _, path := range paths {
@@ -351,6 +353,17 @@ func TestWalk(t *testing.T) {
 				"/folder1/file1",
 				// stop early
 			},
+			err: false,
+		},
+		{
+			name: "error",
+			fn: func(fileInfo storagedriver.FileInfo) error {
+				return errors.New("foo")
+			},
+			expected: []string{
+				"/",
+			},
+			err: true,
 		},
 		{
 			name: "from folder",
