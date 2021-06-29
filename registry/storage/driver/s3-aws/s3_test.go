@@ -685,29 +685,24 @@ func TestWalk(t *testing.T) {
 		t.Fatalf("unexpected error creating driver with standard storage: %v", err)
 	}
 
-	var fileset = map[string][]string{
-		"/":        {"/file1", "/folder1", "/folder2"},
-		"/folder1": {"/folder1/file1"},
-		"/folder2": {"/folder2/file1"},
-	}
-	isDir := func(path string) bool {
-		_, isDir := fileset[path]
-		return isDir
+	var fileset = []string{
+		"/file1",
+		"/folder1/file1",
+		"/folder2/file1",
+		"/folder3/subfolder1/subfolder1/file1",
+		"/folder3/subfolder2/subfolder1/file1",
+		"/folder4/file1",
 	}
 
 	// create file structure matching fileset above
 	var created []string
-	for _, paths := range fileset {
-		for _, path := range paths {
-			if _, isDir := fileset[path]; isDir {
-				continue // skip directories
-			}
-			err := driver.PutContent(context.Background(), path, []byte("content "+path))
-			if err != nil {
-				fmt.Printf("unable to create file %s: %s\n", path, err)
-			}
-			created = append(created, path)
+	for _, path := range fileset {
+		err := driver.PutContent(context.Background(), path, []byte("content "+path))
+		if err != nil {
+			fmt.Printf("unable to create file %s: %s\n", path, err)
+			continue
 		}
+		created = append(created, path)
 	}
 
 	// cleanup
@@ -736,32 +731,43 @@ func TestWalk(t *testing.T) {
 			name: "walk all",
 			fn:   func(fileInfo storagedriver.FileInfo) error { return nil },
 			expected: []string{
-				"/",
 				"/file1",
 				"/folder1",
 				"/folder1/file1",
 				"/folder2",
 				"/folder2/file1",
+				"/folder3",
+				"/folder3/subfolder1",
+				"/folder3/subfolder1/subfolder1",
+				"/folder3/subfolder1/subfolder1/file1",
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+				"/folder4",
+				"/folder4/file1",
 			},
 		},
 		{
 			name: "skip directory",
 			fn: func(fileInfo storagedriver.FileInfo) error {
-				if fileInfo.Path() == "/folder1" {
+				if fileInfo.Path() == "/folder3" {
 					return storagedriver.ErrSkipDir
 				}
-				if strings.Contains(fileInfo.Path(), "/folder1") {
-					t.Fatalf("skipped dir %s and should not walk %s", "/folder1", fileInfo.Path())
+				if strings.Contains(fileInfo.Path(), "/folder3") {
+					t.Fatalf("skipped dir %s and should not walk %s", "/folder3", fileInfo.Path())
 				}
 				return nil
 			},
 			expected: []string{
-				"/",
 				"/file1",
-				"/folder1", // return ErrSkipDir, skip anything under /folder1
-				// skip /folder1/file1
+				"/folder1",
+				"/folder1/file1",
 				"/folder2",
 				"/folder2/file1",
+				"/folder3",
+				// folder 3 contents skipped
+				"/folder4",
+				"/folder4/file1",
 			},
 		},
 		{
@@ -773,7 +779,6 @@ func TestWalk(t *testing.T) {
 				return nil
 			},
 			expected: []string{
-				"/",
 				"/file1",
 				"/folder1",
 				"/folder1/file1",
@@ -787,7 +792,7 @@ func TestWalk(t *testing.T) {
 				return errors.New("foo")
 			},
 			expected: []string{
-				"/",
+				"/file1",
 			},
 			err: true,
 		},
@@ -810,9 +815,6 @@ func TestWalk(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			err := driver.Walk(context.Background(), tc.from, func(fileInfo storagedriver.FileInfo) error {
 				walked = append(walked, fileInfo.Path())
-				if fileInfo.IsDir() != isDir(fileInfo.Path()) {
-					t.Fatalf("fileInfo isDir not matching file system: expected %t actual %t", isDir(fileInfo.Path()), fileInfo.IsDir())
-				}
 				return tc.fn(fileInfo)
 			})
 			if tc.err && err == nil {
