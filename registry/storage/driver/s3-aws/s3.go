@@ -1303,6 +1303,15 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 
 	ctx, done := dcontext.WithTrace(parentCtx)
 	defer done("s3aws.ListObjectsV2Pages(%s)", path)
+	// The s3 list object API will list all objects under the starting path recursively, in sorted,
+	// depth-first ordering https://docs.aws.amazon.com/AmazonS3/latest/userguide/ListingKeysUsingAPIs.html
+	// S3 does not return directory without the "delimiter":"/" argument passed, but they can to be
+	// inferred from object paths and then de-duplicated to avoid calling the walk fn redundantly.
+	// With files returned in sorted depth-first order, directories are inferred in the same order,
+	// so avoiding redundant directories is a matter of not passing the same directory to the walk fn twice in a row.
+	// ErrSkipDir is handled by explicitly skipping over any files under the skipped directory. This may sub-optimal
+	// for extreme edge cases but for the general use case in a registry, this is orders of magnitude
+	// faster than a more explicit recursive implementation.
 	listObjectErr := d.S3.ListObjectsV2PagesWithContext(ctx, listObjectsInput, func(objects *s3.ListObjectsV2Output, lastPage bool) bool {
 		walkInfos := make([]storagedriver.FileInfoInternal, 0, len(objects.Contents))
 		for _, file := range objects.Contents {
