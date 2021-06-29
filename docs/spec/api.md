@@ -3652,7 +3652,7 @@ The following parameters should be specified on the request:
 ```
 202 Accepted
 Location: /v2/<name>/blobs/uploads/<uuid>
-Range: bytes=0-<offset>
+Range: 0-<offset>
 Content-Length: 0
 Docker-Upload-UUID: <uuid>
 ```
@@ -3663,9 +3663,9 @@ The following headers will be returned with the response:
 
 |Name|Description|
 |----|-----------|
-|`Content-Length`|The `Content-Length` header must be zero and the body must be empty.|
 |`Location`|The location of the created upload. Clients should use the contents verbatim to complete the upload, adding parameters where required.|
 |`Range`|Range header indicating the progress of the upload. When starting an upload, it will return an empty range, since no content has been received.|
+|`Content-Length`|The `Content-Length` header must be zero and the body must be empty.|
 |`Docker-Upload-UUID`|Identifies the docker upload uuid for the current request.|
 
 

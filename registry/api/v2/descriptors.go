@@ -1043,7 +1043,6 @@ var routeDescriptors = []RouteDescriptor{
 								Description: "The upload has been created. The `Location` header must be used to complete the upload. The response should be identical to a `GET` request on the contents of the returned `Location` header.",
 								StatusCode:  http.StatusAccepted,
 								Headers: []ParameterDescriptor{
-									contentLengthZeroHeader,
 									{
 										Name:        "Location",
 										Type:        "url",
@@ -1052,9 +1051,10 @@ var routeDescriptors = []RouteDescriptor{
 									},
 									{
 										Name:        "Range",
-										Format:      "0-0",
+										Format:      "0-<offset>",
 										Description: "Range header indicating the progress of the upload. When starting an upload, it will return an empty range, since no content has been received.",
 									},
+									contentLengthZeroHeader,
 									dockerUploadUUIDHeader,
 								},
 							},
@@ -1237,7 +1237,7 @@ var routeDescriptors = []RouteDescriptor{
 							{
 								Name:        "Data Accepted",
 								Description: "The stream of data has been accepted and the current progress is available in the range header. The updated upload location is available in the `Location` header.",
-								StatusCode:  http.StatusNoContent,
+								StatusCode:  http.StatusAccepted,
 								Headers: []ParameterDescriptor{
 									{
 										Name:        "Location",
@@ -1319,7 +1319,7 @@ var routeDescriptors = []RouteDescriptor{
 							{
 								Name:        "Chunk Accepted",
 								Description: "The chunk of data has been accepted and the current progress is available in the range header. The updated upload location is available in the `Location` header.",
-								StatusCode:  http.StatusNoContent,
+								StatusCode:  http.StatusAccepted,
 								Headers: []ParameterDescriptor{
 									{
 										Name:        "Location",
@@ -1413,7 +1413,7 @@ var routeDescriptors = []RouteDescriptor{
 							{
 								Name:        "Upload Complete",
 								Description: "The upload has been completed and accepted by the registry. The canonical location will be available in the `Location` header.",
-								StatusCode:  http.StatusNoContent,
+								StatusCode:  http.StatusCreated,
 								Headers: []ParameterDescriptor{
 									{
 										Name:        "Location",
