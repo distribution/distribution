@@ -1193,10 +1193,10 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 // Eg 5 directoryDiff("/", "/path/to/folder/folder/file")
 //   => [ "/path", "/path/to", "/path/to/folder", "/path/to/folder/folder" ],
 func directoryDiff(prev, current string) []string {
-	var parents []string
+	var paths []string
 
 	if prev == "" || current == "" {
-		return parents
+		return paths
 	}
 
 	parent := current
@@ -1205,10 +1205,16 @@ func directoryDiff(prev, current string) []string {
 		if parent == "/" || parent == prev || strings.HasPrefix(prev, parent) {
 			break
 		}
-		parents = append(parents, parent)
+		paths = append(paths, parent)
 	}
-	sort.Sort(sort.StringSlice(parents))
-	return parents
+	reverse(paths)
+	return paths
+}
+
+func reverse(s []string) {
+	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
+		s[i], s[j] = s[j], s[i]
+	}
 }
 
 func (d *driver) s3Path(path string) string {
