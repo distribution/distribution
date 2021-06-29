@@ -1316,6 +1316,20 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 		walkInfos := make([]storagedriver.FileInfoInternal, 0, len(objects.Contents))
 		for _, file := range objects.Contents {
 			filePath := strings.Replace(*file.Key, d.s3Path(""), prefix, 1)
+			// get a list of all inferred directories skipped between the previous directory and this file
+			dirs := directoryDiff(prevDir, filePath)
+			if len(dirs) > 0 {
+				for _, dir := range dirs {
+					walkInfos = append(walkInfos, storagedriver.FileInfoInternal{
+						FileInfoFields: storagedriver.FileInfoFields{
+							IsDir: true,
+							Path:  dir,
+						},
+					})
+					prevDir = dir
+				}
+			}
+
 			walkInfos = append(walkInfos, storagedriver.FileInfoInternal{
 				FileInfoFields: storagedriver.FileInfoFields{
 					IsDir:   false,
@@ -1332,35 +1346,16 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 				continue
 			}
 
-			// walk over file's parent directory if not a duplicate
-			dir := filepath.Dir(walkInfo.Path())
-			if dir != prevDir {
-				prevDir = dir
-				walkDirInfo := storagedriver.FileInfoInternal{
-					FileInfoFields: storagedriver.FileInfoFields{
-						IsDir: true,
-						Path:  dir,
-					},
-				}
-				err := f(walkDirInfo)
-				*objectCount++
-
-				if err != nil {
-					if err == storagedriver.ErrSkipDir {
-						prevSkipDir = dir
-						continue
-					}
-					retError = err
-					return false
-				}
-			}
-
 			err := f(walkInfo)
 			*objectCount++
 
 			if err != nil {
 				if err == storagedriver.ErrSkipDir {
-					// stop early without return error
+					if walkInfo.IsDir() {
+						prevSkipDir = walkInfo.Path()
+						continue
+					}
+					// is file, stop gracefully
 					return false
 				}
 				retError = err
@@ -1400,11 +1395,31 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 //
 //	directoryDiff("/", "/path/to/folder/folder/file")
 //	// => [ "/path", "/path/to", "/path/to/folder", "/path/to/folder/folder" ]
+//
+// Eg 1 directoryDiff("/path/to/folder", "/path/to/folder/folder/file")
+//
+//	=> [ "/path/to/folder/folder" ],
+//
+// Eg 2 directoryDiff("/path/to/folder/folder1", "/path/to/folder/folder2/file")
+//
+//	=> [ "/path/to/folder/folder2" ]
+//
+// Eg 3 directoryDiff("/path/to/folder/folder1/file", "/path/to/folder/folder2/file")
+//
+//	=> [ "/path/to/folder/folder2" ]
+//
+// Eg 4 directoryDiff("/path/to/folder/folder1/file", "/path/to/folder/folder2/folder1/file")
+//
+//	=> [ "/path/to/folder/folder2", "/path/to/folder/folder2/folder1" ]
+//
+// Eg 5 directoryDiff("/", "/path/to/folder/folder/file")
+//
+//	=> [ "/path", "/path/to", "/path/to/folder", "/path/to/folder/folder" ],
 func directoryDiff(prev, current string) []string {
-	var paths []string
+	var parents []string
 
 	if prev == "" || current == "" {
-		return paths
+		return parents
 	}
 
 	parent := current
@@ -1413,16 +1428,10 @@ func directoryDiff(prev, current string) []string {
 		if parent == "/" || parent == prev || strings.HasPrefix(prev, parent) {
 			break
 		}
-		paths = append(paths, parent)
+		parents = append(parents, parent)
 	}
-	reverse(paths)
-	return paths
-}
-
-func reverse(s []string) {
-	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
-		s[i], s[j] = s[j], s[i]
-	}
+	sort.Sort(sort.StringSlice(parents))
+	return parents
 }
 
 func (d *driver) s3Path(path string) string {
