@@ -1104,13 +1104,13 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 	ctx, done := dcontext.WithTrace(parentCtx)
 	defer done("s3aws.ListObjectsV2Pages(%s)", path)
 
-	// The s3 list object API will list all objects under the starting path recursively, in sorted,
-	// depth-first ordering https://docs.aws.amazon.com/AmazonS3/latest/userguide/ListingKeysUsingAPIs.html
-	// S3 does not return directory without the "delimiter":"/" argument passed, but they can to be
-	// inferred from object paths and then de-duplicated to avoid calling the walk fn redundantly.
-	// With files returned in sorted depth-first order, directories are inferred in the same order,
-	// so avoiding redundant directories is a matter of not passing the same directory to the walk fn twice in a row.
-	// ErrSkipDir is handled by explicitly skipping over any files under the skipped directory. This may sub-optimal
+	// When the "delimiter" argument is omitted, the S3 list API will list all objects in the bucket
+	// recursively, omitting directory paths. Objects are listed in sorted, depth-first order so we
+	// can infer all the directories by comparing each object path to the last one we saw.
+	// See: https://docs.aws.amazon.com/AmazonS3/latest/userguide/ListingKeysUsingAPIs.html
+
+	// With files returned in sorted depth-first order, directories are inferred in the same order.
+	// ErrSkipDir is handled by explicitly skipping over any files under the skipped directory. This may be sub-optimal
 	// for extreme edge cases but for the general use case in a registry, this is orders of magnitude
 	// faster than a more explicit recursive implementation.
 	listObjectErr := s.ListObjectsV2PagesWithContext(ctx, listObjectsInput, func(objects *s3.ListObjectsV2Output, lastPage bool) bool {
@@ -1119,7 +1119,7 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 		for _, file := range objects.Contents {
 			filePath := strings.Replace(*file.Key, d.s3Path(""), prefix, 1)
 
-			// get a list of all inferred directories skipped between the previous directory and this file
+			// get a list of all inferred directories between the previous directory and this file
 			dirs := directoryDiff(prevDir, filePath)
 			if len(dirs) > 0 {
 				for _, dir := range dirs {
