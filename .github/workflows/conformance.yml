@@ -5,7 +5,7 @@ on:
   push:
 
 jobs:
-  run:
+  run-conformance-test:
     runs-on: ubuntu-latest
     steps:
       - name: set up docker
