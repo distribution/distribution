@@ -5,7 +5,7 @@ on:
   - push
 
 jobs:
-  build:
+  scan-license:
     runs-on: ubuntu-latest
 
     steps:

@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  run:
+  run-e2e-test:
     runs-on: ubuntu-latest
     steps:
       - name: set up docker
