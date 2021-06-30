@@ -114,7 +114,14 @@ func (e Error) ErrorCode() ErrorCode {
 
 // Error returns a human readable representation of the error.
 func (e Error) Error() string {
-	return fmt.Sprintf("%s: %s", e.Code.Error(), e.Message)
+	var retstr string
+	retstr = fmt.Sprintf("%s: %s", e.Code.Error(), e.Message)
+	if e.Detail != nil {
+		if m, ok := e.Detail.(map[string]interface{}); ok {
+			retstr += fmt.Sprintf(": %s", m["message"])
+		}
+	}
+	return retstr
 }
 
 // WithDetail will return a new Error, based on the current one, but with
