@@ -9,9 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/distribution/distribution/v3/uuid"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/distribution/distribution/v3/uuid"
 )
 
 // Common errors used with this package.
