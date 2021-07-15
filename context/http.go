@@ -9,9 +9,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/distribution/distribution/v3/uuid"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
+
+	"github.com/distribution/distribution/v3/uuid"
 )
 
 // Common errors used with this package.
@@ -151,7 +152,8 @@ func GetRequestLogger(ctx context.Context) Logger {
 		"http.request.referer",
 		"http.request.useragent",
 		"http.request.remoteaddr",
-		"http.request.contenttype")
+		"http.request.contenttype",
+		"http.request.cf-ray")
 }
 
 // GetResponseLogger reads the current response stats and builds a logger.
@@ -211,6 +213,11 @@ func (ctx *httpRequestContext) Value(key interface{}) interface{} {
 			return ctx.startedAt
 		case "http.request.contenttype":
 			if ct := ctx.r.Header.Get("Content-Type"); ct != "" {
+				return ct
+			}
+		case "cf-ray":
+			ct := ctx.r.Header.Get("CF-RAY")
+			if ct != "" {
 				return ct
 			}
 		default:
