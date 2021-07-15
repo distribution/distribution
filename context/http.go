@@ -151,7 +151,8 @@ func GetRequestLogger(ctx context.Context) Logger {
 		"http.request.referer",
 		"http.request.useragent",
 		"http.request.remoteaddr",
-		"http.request.contenttype")
+		"http.request.contenttype",
+		"http.request.cf-ray")
 }
 
 // GetResponseLogger reads the current response stats and builds a logger.
@@ -213,9 +214,15 @@ func (ctx *httpRequestContext) Value(key interface{}) interface{} {
 			if ct := ctx.r.Header.Get("Content-Type"); ct != "" {
 				return ct
 			}
+		case "cf-ray":
+			ct := ctx.r.Header.Get("CF-RAY")
+			if ct != "" {
+				return ct
+			}
 		default:
 			// no match; fall back to standard behavior below
 		}
+
 	}
 
 	return ctx.Context.Value(key)
