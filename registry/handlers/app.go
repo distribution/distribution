@@ -5,6 +5,8 @@ import (
 	cryptorand "crypto/rand"
 	"expvar"
 	"fmt"
+	"github.com/distribution/distribution/v3/registry/handlers/trace"
+	"github.com/opentracing/opentracing-go/ext"
 	"math/rand"
 	"net"
 	"net/http"
@@ -13,6 +15,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/distribution/distribution/v3"
@@ -41,6 +44,7 @@ import (
 	"github.com/docker/libtrust"
 	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/mux"
+	"github.com/opentracing/opentracing-go"
 	"github.com/sirupsen/logrus"
 )
 
@@ -87,6 +91,10 @@ type App struct {
 
 	// readOnly is true if the registry is in a read-only maintenance mode
 	readOnly bool
+
+	// tracer is a global tracer
+	tracer opentracing.Tracer
+	once   sync.Once
 }
 
 // NewApp takes a configuration and returns a configured app, ready to serve
@@ -111,6 +119,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	app.register(v2.RouteNameBlobUpload, blobUploadDispatcher)
 	app.register(v2.RouteNameBlobUploadChunk, blobUploadDispatcher)
 
+	app.traceMiddleware()
 	// override the storage driver's UA string for registry outbound HTTP requests
 	storageParams := config.Storage.Parameters()
 	if storageParams == nil {
@@ -442,6 +451,46 @@ func (app *App) register(routeName string, dispatch dispatchFunc) {
 	// control over the request execution.
 
 	app.router.GetRoute(routeName).Handler(handler)
+}
+
+// traceMiddleware
+func (app *App) traceMiddleware() {
+	if !app.Config.Trace.Enable {
+		return
+	}
+	onceFn := func() {
+		dcontext.GetLogger(app).Infof("traceMiddleware init %s", app.Config.Trace.Type)
+		trace.InitTrace(app.Config)
+		app.tracer = trace.GlobalTrace
+		fn := func(handler http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				spanContext, err := app.tracer.Extract(opentracing.HTTPHeaders, opentracing.HTTPHeadersCarrier(r.Header))
+				if err != nil && err != opentracing.ErrSpanContextNotFound {
+					return
+				}
+				dcontext.GetLogger(app).Infof("tracer.StartSpan url %s", r.RequestURI)
+				var span opentracing.Span
+				if spanContext != nil {
+					span = app.tracer.StartSpan(r.RequestURI, ext.RPCServerOption(spanContext))
+
+				} else {
+					span = app.tracer.StartSpan(r.RequestURI)
+				}
+				defer span.Finish()
+				span.SetTag("Method", r.Method)
+				span.SetTag("Host", r.Host)
+				if r.Form != nil {
+					span.SetTag("Param", r.Form.Encode())
+				}
+				ctx := opentracing.ContextWithSpan(r.Context(), span)
+				r = r.WithContext(ctx)
+				handler.ServeHTTP(w, r)
+			})
+		}
+		app.router.Use(fn)
+	}
+
+	app.once.Do(onceFn)
 }
 
 // configureEvents prepares the event sink for action.

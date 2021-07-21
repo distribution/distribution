@@ -247,6 +247,16 @@ type Configuration struct {
 			Classes []string `yaml:"classes"`
 		} `yaml:"repository,omitempty"`
 	} `yaml:"policy,omitempty"`
+
+	// Trace configures add server trace
+	Trace struct {
+		// Enable configures enable trace
+		Enable bool `yaml:"enable"`
+		// Type configures user trace project,eg: jaeger、zipkin、skywalking
+		Type string `yaml:"type"`
+		// Config configures options config for user type
+		Config interface{} `yaml:"config"`
+	} `yaml:"trace,omitempty"`
 }
 
 // LogHook is composed of hook Level and Type.
