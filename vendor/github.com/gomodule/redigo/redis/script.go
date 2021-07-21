@@ -36,7 +36,7 @@ type Script struct {
 // SendHash methods.
 func NewScript(keyCount int, src string) *Script {
 	h := sha1.New()
-	io.WriteString(h, src)
+	io.WriteString(h, src) // nolint: errcheck
 	return &Script{keyCount, src, hex.EncodeToString(h.Sum(nil))}
 }
 

@@ -7,7 +7,10 @@
 package swifttest
 
 import (
+	"archive/tar"
 	"bytes"
+	"compress/bzip2"
+	"compress/gzip"
 	"crypto/hmac"
 	"crypto/md5"
 	"crypto/rand"
@@ -24,6 +27,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"path"
+	"reflect"
 	"regexp"
 	"sort"
 	"strconv"
@@ -32,11 +36,9 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
-
-	"github.com/ncw/swift"
 )
 
-const (
+var (
 	DEBUG        = false
 	TEST_ACCOUNT = "swifttest"
 )
@@ -82,6 +84,12 @@ type Subdir struct {
 	Subdir string `json:"subdir"`
 }
 
+type AutoExtractResponse struct {
+	CreatedFiles int64      `json:"Number Files Created"`
+	Status       string     `json:"Response Status"`
+	Errors       [][]string `json:"Errors"`
+}
+
 type swiftError struct {
 	statusCode int
 	Code       string
@@ -104,9 +112,15 @@ type metadata struct {
 	meta http.Header // metadata to return with requests.
 }
 
+type swiftaccount struct {
+	BytesUsed  int64 // total number of bytes used
+	Containers int64 // total number of containers
+	Objects    int64 // total number of objects
+}
+
 type account struct {
 	sync.RWMutex
-	swift.Account
+	swiftaccount
 	metadata
 	password       string
 	ContainersLock sync.RWMutex
@@ -338,16 +352,12 @@ func (r containerResource) delete(a *action) interface{} {
 	}
 	a.user.Lock()
 	delete(a.user.Containers, b.name)
-	a.user.Account.Containers--
+	a.user.swiftaccount.Containers--
 	a.user.Unlock()
 	return nil
 }
 
 func (r containerResource) put(a *action) interface{} {
-	if a.req.URL.Query().Get("extract-archive") != "" {
-		fatalf(403, "Operation forbidden", "Bulk upload is not supported")
-	}
-
 	if r.container == nil {
 		if !validContainerName(r.name) {
 			fatalf(400, "InvalidContainerName", "The specified container is not valid")
@@ -363,8 +373,129 @@ func (r containerResource) put(a *action) interface{} {
 
 		a.user.Lock()
 		a.user.Containers[r.name] = r.container
-		a.user.Account.Containers++
+		a.user.swiftaccount.Containers++
 		a.user.Unlock()
+	}
+
+	if format := a.req.URL.Query().Get("extract-archive"); format != "" {
+		_, _, objectName, _ := a.srv.parseURL(a.req.URL)
+
+		data, err := ioutil.ReadAll(a.req.Body)
+		if err != nil {
+			fatalf(400, "TODO", "read error")
+		}
+		if a.req.ContentLength >= 0 && int64(len(data)) != a.req.ContentLength {
+			fatalf(400, "IncompleteBody", "You did not provide the number of bytes specified by the Content-Length HTTP header")
+		}
+
+		dataReader := bytes.NewReader(data)
+		var reader *tar.Reader
+		switch format {
+		case "tar":
+			reader = tar.NewReader(dataReader)
+		case "tar.gz":
+			gzr, err := gzip.NewReader(dataReader)
+			if err != nil {
+				fatalf(400, "TODO", "Invalid tar.gz")
+			}
+			defer gzr.Close()
+			reader = tar.NewReader(gzr)
+		case "tar.bz2":
+			bzr := bzip2.NewReader(dataReader)
+			reader = tar.NewReader(bzr)
+		default:
+			fatalf(400, "TODO", "Invalid format %s", format)
+		}
+
+		resp := AutoExtractResponse{}
+		for {
+			header, err := reader.Next()
+			if err == io.EOF {
+				break
+			} else if err != nil {
+				//return location, err
+			}
+			if header == nil {
+				continue
+			}
+
+			if header.Typeflag == tar.TypeDir {
+				continue
+			}
+
+			var fullPath string
+			if objectName != "" {
+				fullPath = objectName + "/" + header.Name
+			} else {
+				fullPath = header.Name
+			}
+
+			obj := r.container.objects[fullPath]
+			if obj == nil {
+				// new object
+				obj = &object{
+					name: fullPath,
+					metadata: metadata{
+						meta: make(http.Header),
+					},
+				}
+				atomic.AddInt64(&a.user.Objects, 1)
+			} else {
+				atomic.AddInt64(&r.container.bytes, -header.Size)
+				atomic.AddInt64(&a.user.BytesUsed, -header.Size)
+			}
+
+			// Default content_type
+			obj.content_type = "application/octet-stream"
+
+			// handle extended attributes
+			records := getPAXRecords(header)
+			for k, v := range records {
+				ks := strings.SplitN(k, "SCHILY.xattr.user.", 2)
+				if len(ks) < 2 {
+					continue
+				}
+
+				if ks[1] == "mime_type" {
+					obj.content_type = v
+				}
+
+				if strings.HasPrefix(ks[1], "meta.") {
+					meta := strings.TrimLeft(ks[1], "meta.")
+					obj.meta["X-Object-Meta-"+strings.Title(meta)] = []string{v}
+				}
+			}
+
+			sum := md5.New()
+			objData, err := ioutil.ReadAll(io.TeeReader(reader, sum))
+			if err != nil {
+				errArr := []string{fullPath, fmt.Sprintf("read error: %v", err)}
+				resp.Errors = append(resp.Errors, errArr)
+				continue
+			}
+			gotHash := sum.Sum(nil)
+
+			obj.data = objData
+			obj.checksum = gotHash
+			obj.mtime = time.Now().UTC()
+			r.container.Lock()
+			r.container.objects[fullPath] = obj
+			r.container.bytes += header.Size
+			r.container.Unlock()
+
+			atomic.AddInt64(&a.user.BytesUsed, header.Size)
+			atomic.AddInt64(&resp.CreatedFiles, 1)
+		}
+
+		resp.Status = "201 Accepted"
+		status := 201
+		if len(resp.Errors) > 0 {
+			resp.Status = "400 Error"
+			status = 400
+		}
+		a.w.Header().Set("Content-Type", "application/json")
+		a.w.WriteHeader(status)
+		jsonMarshal(a.w, resp)
 	}
 
 	return nil
@@ -389,6 +520,23 @@ func (r containerResource) post(a *action) interface{} {
 }
 
 func (containerResource) copy(a *action) interface{} { return notAllowed() }
+
+func getPAXRecords(h *tar.Header) map[string]string {
+	rHeader := reflect.ValueOf(h)
+
+	// Try PAXRecords - go 1.10
+	paxField := rHeader.Elem().FieldByName("PAXRecords")
+	if paxField.IsValid() {
+		return paxField.Interface().(map[string]string)
+	}
+
+	// Try Xattrs - go 1.3
+	xAttrsField := rHeader.Elem().FieldByName("Xattrs")
+	if xAttrsField.IsValid() {
+		return xAttrsField.Interface().(map[string]string)
+	}
+	return map[string]string{}
+}
 
 // validContainerName returns whether name is a valid bucket name.
 // Here are the rules, from:
@@ -779,10 +927,16 @@ func (s *SwiftServer) serveHTTP(w http.ResponseWriter, req *http.Request) {
 	defer func() {
 		switch err := recover().(type) {
 		case *swiftError:
+			if DEBUG {
+				fmt.Printf("\t%d - %s\n", err.statusCode, err.Message)
+			}
 			w.Header().Set("Content-Type", `text/plain; charset=utf-8`)
 			http.Error(w, err.Message, err.statusCode)
 		case nil:
 		default:
+			if DEBUG {
+				fmt.Printf("\tpanic %s\n", err)
+			}
 			panic(err)
 		}
 	}()
@@ -812,7 +966,7 @@ func (s *SwiftServer) serveHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if req.URL.String() == "/info" {
-		jsonMarshal(w, &swift.SwiftInfo{
+		jsonMarshal(w, &map[string]interface{}{
 			"swift": map[string]interface{}{
 				"version": "1.2",
 			},
@@ -1007,7 +1161,7 @@ func (rootResource) get(a *action) interface{} {
 	h := a.w.Header()
 
 	h.Set("X-Account-Bytes-Used", strconv.Itoa(int(atomic.LoadInt64(&a.user.BytesUsed))))
-	h.Set("X-Account-Container-Count", strconv.Itoa(int(atomic.LoadInt64(&a.user.Account.Containers))))
+	h.Set("X-Account-Container-Count", strconv.Itoa(int(atomic.LoadInt64(&a.user.swiftaccount.Containers))))
 	h.Set("X-Account-Object-Count", strconv.Itoa(int(atomic.LoadInt64(&a.user.Objects))))
 
 	a.user.RLock()
@@ -1059,9 +1213,70 @@ func (r rootResource) post(a *action) interface{} {
 	return nil
 }
 
-func (rootResource) delete(a *action) interface{} {
+func (r rootResource) delete(a *action) interface{} {
 	if a.req.URL.Query().Get("bulk-delete") == "1" {
-		fatalf(403, "Operation forbidden", "Bulk delete is not supported")
+		data, err := ioutil.ReadAll(a.req.Body)
+		if err != nil {
+			fatalf(400, "Bad Request", "read error")
+		}
+		var nb, notFound int
+		for _, obj := range strings.Fields(string(data)) {
+			parts := strings.SplitN(obj, "/", 3)
+			if len(parts) < 3 {
+				fatalf(403, "Operation forbidden", "Bulk delete is not supported for containers")
+			}
+			b := containerResource{
+				name:      parts[1],
+				container: a.user.Containers[parts[1]],
+			}
+			if b.container == nil {
+				notFound++
+				continue
+			}
+
+			objr := objectResource{
+				name:      parts[2],
+				container: b.container,
+			}
+			objr.container.RLock()
+			if obj := objr.container.objects[objr.name]; obj != nil {
+				objr.object = obj
+			}
+			objr.container.RUnlock()
+			if objr.object == nil {
+				notFound++
+				continue
+			}
+
+			objr.container.Lock()
+			objr.object.Lock()
+			objr.container.bytes -= int64(len(objr.object.data))
+			delete(objr.container.objects, objr.name)
+			objr.object.Unlock()
+			objr.container.Unlock()
+
+			atomic.AddInt64(&a.user.BytesUsed, -int64(len(objr.object.data)))
+			atomic.AddInt64(&a.user.Objects, -1)
+			nb++
+		}
+
+		accept := a.req.Header.Get("Accept")
+		if strings.HasPrefix(accept, "application/json") {
+			a.w.Header().Set("Content-Type", "application/json")
+			resp := map[string]interface{}{
+				"Number Deleted":   nb,
+				"Number Not Found": notFound,
+				"Errors":           []string{},
+				"Response Status":  "200 OK",
+				"Response Body":    "",
+			}
+			jsonMarshal(a.w, resp)
+			return nil
+		}
+
+		resp := fmt.Sprintf("Number Deleted: %d\nNumber Not Found: %d\nErrors: \nResponse Status: 200 OK\n", nb, notFound)
+		a.w.Write([]byte(resp))
+		return nil
 	}
 
 	return notAllowed()

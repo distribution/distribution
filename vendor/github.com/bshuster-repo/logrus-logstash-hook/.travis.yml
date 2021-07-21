@@ -14,3 +14,7 @@ script:
   - diff -u <(echo -n) <(gofmt -d .)
   - go vet .
   - go test -v -race ./...
+
+arch:
+  - amd64
+  - ppc64le

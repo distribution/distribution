@@ -50,6 +50,6 @@ jobs:
         make binaries
         if [ "$GOOS" = "linux" ]; then make coverage ; fi
 
-    - uses: codecov/codecov-action@v1
+    - uses: codecov/codecov-action@v2.0.2
       with:
         directory: ./src/github.com/distribution/distribution

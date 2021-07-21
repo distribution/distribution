@@ -356,6 +356,7 @@ func (ss *structSpec) fieldSpec(name []byte) *fieldSpec {
 }
 
 func compileStructSpec(t reflect.Type, depth map[string]int, index []int, ss *structSpec) {
+LOOP:
 	for i := 0; i < t.NumField(); i++ {
 		f := t.Field(i)
 		switch {
@@ -374,20 +375,30 @@ func compileStructSpec(t reflect.Type, depth map[string]int, index []int, ss *st
 		default:
 			fs := &fieldSpec{name: f.Name}
 			tag := f.Tag.Get("redis")
-			p := strings.Split(tag, ",")
-			if len(p) > 0 {
-				if p[0] == "-" {
-					continue
+
+			var (
+				p string
+			)
+			first := true
+			for len(tag) > 0 {
+				i := strings.IndexByte(tag, ',')
+				if i < 0 {
+					p, tag = tag, ""
+				} else {
+					p, tag = tag[:i], tag[i+1:]
 				}
-				if len(p[0]) > 0 {
-					fs.name = p[0]
+				if p == "-" {
+					continue LOOP
 				}
-				for _, s := range p[1:] {
-					switch s {
+				if first && len(p) > 0 {
+					fs.name = p
+					first = false
+				} else {
+					switch p {
 					case "omitempty":
 						fs.omitEmpty = true
 					default:
-						panic(fmt.Errorf("redigo: unknown field tag %s for type %s", s, t.Name()))
+						panic(fmt.Errorf("redigo: unknown field tag %s for type %s", p, t.Name()))
 					}
 				}
 			}
@@ -420,9 +431,8 @@ func compileStructSpec(t reflect.Type, depth map[string]int, index []int, ss *st
 }
 
 var (
-	structSpecMutex  sync.RWMutex
-	structSpecCache  = make(map[reflect.Type]*structSpec)
-	defaultFieldSpec = &fieldSpec{}
+	structSpecMutex sync.RWMutex
+	structSpecCache = make(map[reflect.Type]*structSpec)
 )
 
 func structSpecForType(t reflect.Type) *structSpec {

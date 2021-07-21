@@ -23,7 +23,6 @@ import (
 	"io"
 	"strconv"
 	"sync"
-	"sync/atomic"
 	"time"
 )
 
@@ -40,7 +39,6 @@ var nowFunc = time.Now // for testing
 var ErrPoolExhausted = errors.New("redigo: connection pool exhausted")
 
 var (
-	errPoolClosed = errors.New("redigo: connection pool closed")
 	errConnClosed = errors.New("redigo: connection closed")
 )
 
@@ -161,11 +159,10 @@ type Pool struct {
 	// the pool does not close connections based on age.
 	MaxConnLifetime time.Duration
 
-	chInitialized uint32 // set to 1 when field ch is initialized
-
 	mu           sync.Mutex    // mu protects the following fields
 	closed       bool          // set to true when the pool is closed.
 	active       int           // the number of open connections in the pool
+	initOnce     sync.Once     // the init ch once func
 	ch           chan struct{} // limits open connections when p.Wait is true
 	idle         idleList      // idle connections
 	waitCount    int64         // total number of connections waited for.
@@ -202,7 +199,7 @@ func (p *Pool) GetContext(ctx context.Context) (Conn, error) {
 	// Wait until there is a vacant connection in the pool.
 	waited, err := p.waitVacantConn(ctx)
 	if err != nil {
-		return nil, err
+		return errorConn{err}, err
 	}
 
 	p.mu.Lock()
@@ -256,7 +253,6 @@ func (p *Pool) GetContext(ctx context.Context) (Conn, error) {
 	p.mu.Unlock()
 	c, err := p.dial(ctx)
 	if err != nil {
-		c = nil
 		p.mu.Lock()
 		p.active--
 		if p.ch != nil && !p.closed {
@@ -339,13 +335,7 @@ func (p *Pool) Close() error {
 }
 
 func (p *Pool) lazyInit() {
-	// Fast path.
-	if atomic.LoadUint32(&p.chInitialized) == 1 {
-		return
-	}
-	// Slow path.
-	p.mu.Lock()
-	if p.chInitialized == 0 {
+	p.initOnce.Do(func() {
 		p.ch = make(chan struct{}, p.MaxActive)
 		if p.closed {
 			close(p.ch)
@@ -354,9 +344,7 @@ func (p *Pool) lazyInit() {
 				p.ch <- struct{}{}
 			}
 		}
-		atomic.StoreUint32(&p.chInitialized, 1)
-	}
-	p.mu.Unlock()
+	})
 }
 
 // waitVacantConn waits for a vacant connection in pool if waiting
@@ -381,21 +369,18 @@ func (p *Pool) waitVacantConn(ctx context.Context) (waited time.Duration, err er
 		start = time.Now()
 	}
 
-	if ctx == nil {
-		<-p.ch
-	} else {
+	select {
+	case <-p.ch:
+		// Additionally check that context hasn't expired while we were waiting,
+		// because `select` picks a random `case` if several of them are "ready".
 		select {
-		case <-p.ch:
-			// Additionally check that context hasn't expired while we were waiting,
-			// because `select` picks a random `case` if several of them are "ready".
-			select {
-			case <-ctx.Done():
-				return 0, ctx.Err()
-			default:
-			}
 		case <-ctx.Done():
+			p.ch <- struct{}{}
 			return 0, ctx.Err()
+		default:
 		}
+	case <-ctx.Done():
+		return 0, ctx.Err()
 	}
 
 	if wait {
@@ -458,13 +443,22 @@ func initSentinel() {
 		sentinel = p
 	} else {
 		h := sha1.New()
-		io.WriteString(h, "Oops, rand failed. Use time instead.")
-		io.WriteString(h, strconv.FormatInt(time.Now().UnixNano(), 10))
+		io.WriteString(h, "Oops, rand failed. Use time instead.")       // nolint: errcheck
+		io.WriteString(h, strconv.FormatInt(time.Now().UnixNano(), 10)) // nolint: errcheck
 		sentinel = h.Sum(nil)
 	}
 }
 
-func (ac *activeConn) Close() error {
+func (ac *activeConn) firstError(errs ...error) error {
+	for _, err := range errs[:len(errs)-1] {
+		if err != nil {
+			return err
+		}
+	}
+	return errs[len(errs)-1]
+}
+
+func (ac *activeConn) Close() (err error) {
 	pc := ac.pc
 	if pc == nil {
 		return nil
@@ -472,23 +466,28 @@ func (ac *activeConn) Close() error {
 	ac.pc = nil
 
 	if ac.state&connectionMultiState != 0 {
-		pc.c.Send("DISCARD")
+		err = pc.c.Send("DISCARD")
 		ac.state &^= (connectionMultiState | connectionWatchState)
 	} else if ac.state&connectionWatchState != 0 {
-		pc.c.Send("UNWATCH")
+		err = pc.c.Send("UNWATCH")
 		ac.state &^= connectionWatchState
 	}
 	if ac.state&connectionSubscribeState != 0 {
-		pc.c.Send("UNSUBSCRIBE")
-		pc.c.Send("PUNSUBSCRIBE")
+		err = ac.firstError(err,
+			pc.c.Send("UNSUBSCRIBE"),
+			pc.c.Send("PUNSUBSCRIBE"),
+		)
 		// To detect the end of the message stream, ask the server to echo
 		// a sentinel value and read until we see that value.
 		sentinelOnce.Do(initSentinel)
-		pc.c.Send("ECHO", sentinel)
-		pc.c.Flush()
+		err = ac.firstError(err,
+			pc.c.Send("ECHO", sentinel),
+			pc.c.Flush(),
+		)
 		for {
-			p, err := pc.c.Receive()
-			if err != nil {
+			p, err2 := pc.c.Receive()
+			if err2 != nil {
+				err = ac.firstError(err, err2)
 				break
 			}
 			if p, ok := p.([]byte); ok && bytes.Equal(p, sentinel) {
@@ -497,9 +496,12 @@ func (ac *activeConn) Close() error {
 			}
 		}
 	}
-	pc.c.Do("")
-	ac.p.put(pc, ac.state != 0 || pc.c.Err() != nil)
-	return nil
+	_, err2 := pc.c.Do("")
+	return ac.firstError(
+		err,
+		err2,
+		ac.p.put(pc, ac.state != 0 || pc.c.Err() != nil),
+	)
 }
 
 func (ac *activeConn) Err() error {
@@ -607,7 +609,6 @@ func (l *idleList) pushFront(pc *poolConn) {
 	}
 	l.front = pc
 	l.count++
-	return
 }
 
 func (l *idleList) popFront() {

@@ -52,7 +52,7 @@ func (c *loggingConn) Close() error {
 	err := c.Conn.Close()
 	var buf bytes.Buffer
 	fmt.Fprintf(&buf, "%sClose() -> (%v)", c.prefix, err)
-	c.logger.Output(2, buf.String())
+	c.logger.Output(2, buf.String()) // nolint: errcheck
 	return err
 }
 
@@ -112,7 +112,7 @@ func (c *loggingConn) print(method, commandName string, args []interface{}, repl
 		buf.WriteString(", ")
 	}
 	fmt.Fprintf(&buf, "%v)", err)
-	c.logger.Output(3, buf.String())
+	c.logger.Output(3, buf.String()) // nolint: errcheck
 }
 
 func (c *loggingConn) Do(commandName string, args ...interface{}) (interface{}, error) {

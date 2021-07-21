@@ -1,6 +1,7 @@
 package logrustash
 
 import (
+	"fmt"
 	"io"
 	"sync"
 
@@ -64,6 +65,12 @@ func copyEntry(e *logrus.Entry, fields logrus.Fields) *logrus.Entry {
 	ne.Level = e.Level
 	ne.Time = e.Time
 	ne.Data = logrus.Fields{}
+
+	if e.HasCaller() {
+		ne.Data["function"] = e.Caller.Function
+		ne.Data["file"] = fmt.Sprintf("%s:%d", e.Caller.File, e.Caller.Line)
+	}
+
 	for k, v := range fields {
 		ne.Data[k] = v
 	}
