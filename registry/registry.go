@@ -212,6 +212,15 @@ func getCipherSuiteNames(ids []uint16) []string {
 	return names
 }
 
+// set ACME-server/DirectoryURL, if provided
+func setDirectoryURL(directoryurl string) *acme.Client {
+	if len(directoryurl) > 0 {
+		return &acme.Client{DirectoryURL: directoryurl}
+	}
+	return nil
+}
+
+
 // ListenAndServe runs the registry's HTTP server.
 func (registry *Registry) ListenAndServe() error {
 	config := registry.config
@@ -254,6 +263,7 @@ func (registry *Registry) ListenAndServe() error {
 				Cache:      autocert.DirCache(config.HTTP.TLS.LetsEncrypt.CacheFile),
 				Email:      config.HTTP.TLS.LetsEncrypt.Email,
 				Prompt:     autocert.AcceptTOS,
+				Client:     setDirectoryURL(config.HTTP.TLS.LetsEncrypt.DirectoryURL),
 			}
 			tlsConf.GetCertificate = m.GetCertificate
 			tlsConf.NextProtos = append(tlsConf.NextProtos, acme.ALPNProto)
