@@ -240,6 +240,7 @@ http:
       cachefile: /path/to/cache-file
       email: emailused@letsencrypt.com
       hosts: [myregistryaddress.org]
+      directoryurl: https://acme-v02.api.letsencrypt.org/directory
   debug:
     addr: localhost:5001
     prometheus:
@@ -823,6 +824,7 @@ http:
       cachefile: /path/to/cache-file
       email: emailused@letsencrypt.com
       hosts: [myregistryaddress.org]
+      directoryurl: https://acme-v02.api.letsencrypt.org/directory
   debug:
     addr: localhost:5001
   headers:
@@ -914,11 +916,12 @@ TLS certificates provided by
 > ensure that you have the `ca-certificates` package installed in order to verify
 > letsencrypt certificates.
 
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `cachefile` | yes    | Absolute path to a file where the Let's Encrypt agent can cache data. |
-| `email`   | yes      | The email address used to register with Let's Encrypt. |
-| `hosts`   | no       | The hostnames allowed for Let's Encrypt certificates. |
+| Parameter      | Required | Description                                                           |
+|----------------|----------|-----------------------------------------------------------------------|
+| `cachefile`    | yes      | Absolute path to a file where the Let's Encrypt agent can cache data. |
+| `email`        | yes      | The email address used to register with Let's Encrypt.                |
+| `hosts`        | no       | The hostnames allowed for Let's Encrypt certificates.                 |
+| `directoryurl` | no       | The url to use for the ACME server.                                   |
 
 ### `debug`
 

@@ -131,6 +131,10 @@ type Configuration struct {
 				// Hosts specifies the hosts which are allowed to obtain Let's
 				// Encrypt certificates.
 				Hosts []string `yaml:"hosts,omitempty"`
+
+				// DirectoryURL points to the CA directory endpoint.
+				// If empty, LetsEncrypt is used.
+				DirectoryURL string `yaml:"directoryurl,omitempty"`
 			} `yaml:"letsencrypt,omitempty"`
 		} `yaml:"tls,omitempty"`
 
