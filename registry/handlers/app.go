@@ -460,8 +460,8 @@ func (app *App) traceMiddleware() {
 	}
 	onceFn := func() {
 		dcontext.GetLogger(app).Infof("traceMiddleware init %s", app.Config.Trace.Type)
-		trace.InitTrace(app.Config)
-		app.tracer = trace.GlobalTrace
+
+		app.tracer = trace.InitTrace(app.Config)
 		fn := func(handler http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				spanContext, err := app.tracer.Extract(opentracing.HTTPHeaders, opentracing.HTTPHeadersCarrier(r.Header))

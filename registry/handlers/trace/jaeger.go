@@ -10,9 +10,8 @@ import (
 	"time"
 )
 
-var GlobalTrace opentracing.Tracer
-
-func InitTrace(c *configuration.Configuration) {
+// InitTrace init race
+func InitTrace(c *configuration.Configuration) opentracing.Tracer {
 	// TODO
 	cfg, err := config.FromEnv()
 	if err != nil {
@@ -30,5 +29,5 @@ func InitTrace(c *configuration.Configuration) {
 	if err != nil {
 		panic(fmt.Sprintf("ERROR: cannot init Jaeger :%v\n", err))
 	}
-	GlobalTrace = tracer
+	return tracer
 }
