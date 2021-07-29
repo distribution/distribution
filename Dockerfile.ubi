@@ -8,9 +8,10 @@ ARG VERSION
 ARG REVISION
 USER 0
 RUN dnf -y install make git file
-USER 1001
 WORKDIR $DISTRIBUTION_DIR
 COPY --chown=1001 . $DISTRIBUTION_DIR
+RUN chown -R 1001:1001 $DISTRIBUTION_DIR #For Quay...
+USER 1001
 RUN CGO_ENABLED=0 make PREFIX=/go clean binaries && file ./bin/registry | grep "statically linked"
 
 FROM registry.access.redhat.com/ubi8-minimal
