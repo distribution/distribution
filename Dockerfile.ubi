@@ -1,4 +1,4 @@
-FROM openshift/origin-release:golang-1.13 AS builder
+FROM openshift/origin-release:golang-1.15 AS builder
 ENV DISTRIBUTION_DIR /go/src/github.com/docker/distribution
 ENV BUILDTAGS include_oss include_gcs
 ARG GOOS=linux
