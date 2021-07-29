@@ -1,20 +1,22 @@
-FROM openshift/origin-release:golang-1.15 AS builder
-ENV DISTRIBUTION_DIR /go/src/github.com/docker/distribution
+FROM registry.access.redhat.com/ubi8/go-toolset:1.14.7 AS builder
+ENV DISTRIBUTION_DIR $APP_ROOT/src/go/src/github.com/docker/distribution
 ENV BUILDTAGS include_oss include_gcs
 ARG GOOS=linux
 ARG GOARCH=amd64
 ARG GOARM=6
 ARG VERSION
 ARG REVISION
-RUN yum -y install make git file
+USER 0
+RUN dnf -y install make git file
+USER 1001
 WORKDIR $DISTRIBUTION_DIR
-COPY . $DISTRIBUTION_DIR
+COPY --chown=1001 . $DISTRIBUTION_DIR
 RUN CGO_ENABLED=0 make PREFIX=/go clean binaries && file ./bin/registry | grep "statically linked"
 
 FROM registry.access.redhat.com/ubi8-minimal
 RUN microdnf -y install  ca-certificates httpd-tools
 COPY cmd/registry/config-dev.yml /etc/docker/registry/config.yml
-COPY --from=builder /go/src/github.com/docker/distribution/bin/registry /bin/registry
+COPY --from=builder /opt/app-root/src/go/src/github.com/docker/distribution/bin/registry /bin/registry
 VOLUME ["/var/lib/registry"]
 EXPOSE 5000
 ENTRYPOINT ["registry"]
