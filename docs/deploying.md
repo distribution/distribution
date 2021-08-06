@@ -20,7 +20,7 @@ If you have an air-gapped datacenter, see
 
 Use a command like the following to start the registry container:
 
-```bash
+```console
 $ docker run -d -p 5000:5000 --restart=always --name registry registry:2
 ```
 
@@ -42,7 +42,7 @@ as `my-ubuntu`, then pushes it to the local registry. Finally, the
 
 1.  Pull the `ubuntu:16.04` image from Docker Hub.
 
-    ```bash
+    ```console
     $ docker pull ubuntu:16.04
     ```
 
@@ -50,13 +50,13 @@ as `my-ubuntu`, then pushes it to the local registry. Finally, the
     for the existing image. When the first part of the tag is a hostname and
     port, Docker interprets this as the location of a registry, when pushing.
 
-    ```bash
+    ```console
     $ docker tag ubuntu:16.04 localhost:5000/my-ubuntu
     ```
 
 3.  Push the image to the local registry running at `localhost:5000`:
 
-    ```bash
+    ```console
     $ docker push localhost:5000/my-ubuntu
     ```
 
@@ -64,14 +64,14 @@ as `my-ubuntu`, then pushes it to the local registry. Finally, the
     images, so that you can test pulling the image from your registry. This
     does not remove the `localhost:5000/my-ubuntu` image from your registry.
 
-    ```bash
+    ```console
     $ docker image remove ubuntu:16.04
     $ docker image remove localhost:5000/my-ubuntu
     ```
 
 5.  Pull the `localhost:5000/my-ubuntu` image from your local registry.
 
-    ```bash
+    ```console
     $ docker pull localhost:5000/my-ubuntu
     ```
 
@@ -80,13 +80,13 @@ as `my-ubuntu`, then pushes it to the local registry. Finally, the
 To stop the registry, use the same `docker container stop` command as with any other
 container.
 
-```bash
+```console
 $ docker container stop registry
 ```
 
 To remove the container, use `docker container rm`.
 
-```bash
+```console
 $ docker container stop registry && docker container rm -v registry
 ```
 
@@ -105,7 +105,7 @@ should set it to restart automatically when Docker restarts or if it exits.
 This example uses the `--restart always` flag to set a restart policy for the
 registry.
 
-```bash
+```console
 $ docker run -d \
   -p 5000:5000 \
   --restart=always \
@@ -122,7 +122,7 @@ port settings. This example runs the registry on port 5001 and also names it
 and the second part is the port within the container. Within the container, the
 registry listens on port `5000` by default.
 
-```bash
+```console
 $ docker run -d \
   -p 5001:5000 \
   --name registry-test \
@@ -133,7 +133,7 @@ If you want to change the port the registry listens on within the container, you
 can use the environment variable `REGISTRY_HTTP_ADDR` to change it. This command
 causes the registry to listen on port 5001 within the container:
 
-```bash
+```console
 $ docker run -d \
   -e REGISTRY_HTTP_ADDR=0.0.0.0:5001 \
   -p 5001:5001 \
@@ -154,7 +154,7 @@ is more dependent on the filesystem layout of the Docker host, but more performa
 in many situations. The following example bind-mounts the host directory
 `/mnt/registry` into the registry container at `/var/lib/registry/`.
 
-```bash
+```console
 $ docker run -d \
   -p 5000:5000 \
   --restart=always \
@@ -194,7 +194,7 @@ If you have been issued an _intermediate_ certificate instead, see
 
 1.  Create a `certs` directory.
 
-    ```bash
+    ```console
     $ mkdir -p certs
     ```
 
@@ -204,7 +204,7 @@ If you have been issued an _intermediate_ certificate instead, see
 
 2.  Stop the registry if it is currently running.
 
-    ```bash
+    ```console
     $ docker container stop registry
     ```
 
@@ -213,7 +213,7 @@ If you have been issued an _intermediate_ certificate instead, see
     environment variables that tell the container where to find the `domain.crt`
     and `domain.key` file. The registry runs on port 443, the default HTTPS port.
 
-    ```bash
+    ```console
     $ docker run -d \
       --restart=always \
       --name registry \
@@ -228,7 +228,7 @@ If you have been issued an _intermediate_ certificate instead, see
 4.  Docker clients can now pull from and push to your registry using its
     external address. The following commands demonstrate this:
 
-    ```bash
+    ```console
     $ docker pull ubuntu:16.04
     $ docker tag ubuntu:16.04 myregistry.domain.com/my-ubuntu
     $ docker push myregistry.domain.com/my-ubuntu
@@ -241,7 +241,7 @@ A certificate issuer may supply you with an *intermediate* certificate. In this
 case, you must concatenate your certificate with the intermediate certificate to
 form a *certificate bundle*. You can do this using the `cat` command:
 
-```bash
+```console
 cat domain.crt intermediate-certificates.pem > certs/domain.crt
 ```
 
@@ -291,7 +291,7 @@ TLS certificates as in the previous examples.
 
 First, save the TLS certificate and key as secrets:
 
-```bash
+```console
 $ docker secret create domain.crt certs/domain.crt
 
 $ docker secret create domain.key certs/domain.key
@@ -301,7 +301,7 @@ Next, add a label to the node where you want to run the registry.
 To get the node's name, use `docker node ls`. Substitute your node's name for
 `node1` below.
 
-```bash
+```console
 $ docker node update --label-add registry=true node1
 ```
 
@@ -315,7 +315,7 @@ running the following `docker service create` command.
 
 By default, secrets are mounted into a service at `/run/secrets/<secret-name>`.
 
-```bash
+```console
 $ docker service create \
   --name registry \
   --secret domain.crt \
@@ -405,7 +405,7 @@ secrets.
 1.  Create a password file with one entry for the user `testuser`, with password
     `testpassword`:
 
-    ```bash
+    ```console
     $ mkdir auth
     $ docker run \
       --entrypoint htpasswd \
@@ -420,13 +420,13 @@ secrets.
 
 2.  Stop the registry.
 
-    ```bash
+    ```console
     $ docker container stop registry
     ```
 
 3.  Start the registry with basic authentication.
 
-    ```bash
+    ```console
     $ docker run -d \
       -p 5000:5000 \
       --restart=always \
@@ -446,7 +446,7 @@ secrets.
 
 5.  Log in to the registry.
 
-    ```bash
+    ```console
     $ docker login myregistrydomain.com:5000
     ```
 
@@ -505,7 +505,7 @@ directories.
 Start your registry by issuing the following command in the directory containing
 the `docker-compose.yml` file:
 
-```bash
+```console
 $ docker-compose up -d
 ```
 

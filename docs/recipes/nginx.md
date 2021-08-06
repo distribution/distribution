@@ -80,8 +80,8 @@ Review the [requirements](index.md#requirements), then follow these steps.
 
 1.  Create the required directories
 
-    ```bash
-    mkdir -p auth data
+    ```console
+    $ mkdir -p auth data
     ```
 
 2.  Create the main nginx configuration. Paste this code block into a new file called `auth/nginx.conf`:
@@ -154,7 +154,7 @@ Review the [requirements](index.md#requirements), then follow these steps.
 
 3.  Create a password file `auth/nginx.htpasswd` for "testuser" and "testpassword".
 
-    ```bash
+    ```console
     $ docker run --rm --entrypoint htpasswd registry:2 -Bbn testuser testpassword > auth/nginx.htpasswd
     ```
 
@@ -162,7 +162,7 @@ Review the [requirements](index.md#requirements), then follow these steps.
 
 4.  Copy your certificate files to the `auth/` directory.
 
-    ```bash
+    ```console
     $ cp domain.crt auth
     $ cp domain.key auth
     ```

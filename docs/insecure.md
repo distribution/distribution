@@ -63,7 +63,7 @@ This is more secure than the insecure registry solution.
 
 1.  Generate your own certificate:
 
-    ```bash
+    ```console
     $ mkdir -p certs
 
     $ openssl req \
@@ -130,21 +130,21 @@ certificate at the OS level.
 
 #### Ubuntu
 
-```bash
+```console
 $ cp certs/domain.crt /usr/local/share/ca-certificates/myregistrydomain.com.crt
 update-ca-certificates
 ```
 
 #### Red Hat Enterprise Linux
 
-```bash
-cp certs/domain.crt /etc/pki/ca-trust/source/anchors/myregistrydomain.com.crt
+```console
+$ cp certs/domain.crt /etc/pki/ca-trust/source/anchors/myregistrydomain.com.crt
 update-ca-trust
 ```
 
 #### Oracle Linux
 
-```bash
+```console
 $ update-ca-trust enable
 ```
 
