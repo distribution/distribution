@@ -1183,7 +1183,7 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 			// ideally all errors would be returned in some way
 			// until then, at least pass back the first error message and code
 			oErr := output.Errors[0]
-			return errors.New(fmt.Sprintf("%s (%s)", *oErr.Message, *oErr.Code))
+			return errors.New(*oErr.Code)
 		}
 	}
 	return nil
