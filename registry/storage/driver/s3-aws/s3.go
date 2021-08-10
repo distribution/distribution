@@ -1181,7 +1181,7 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		}
 		if output.Errors != nil && len(output.Errors) > 0 {
 			// ideally all errors would be returned in some way
-			// until then, at least pass back the first error message and code
+			// until then, at least pass back the first error code
 			oErr := output.Errors[0]
 			return errors.New(*oErr.Code)
 		}
