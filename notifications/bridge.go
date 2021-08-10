@@ -1,15 +1,25 @@
 package notifications
 
 import (
+	"encoding/json"
+	"fmt"
+	"github.com/distribution/distribution/v3/tracing"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"net/http"
 	"time"
 
+	gocontext "context"
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/uuid"
 	events "github.com/docker/go-events"
 	"github.com/opencontainers/go-digest"
+)
+
+const (
+	ComponentName = "notifications"
 )
 
 type bridge struct {
@@ -56,7 +66,11 @@ func NewRequestRecord(id string, r *http.Request) RequestRecord {
 	}
 }
 
-func (b *bridge) ManifestPushed(repo reference.Named, sm distribution.Manifest, options ...distribution.ManifestServiceOption) error {
+func (b *bridge) ManifestPushed(ctx gocontext.Context, repo reference.Named, sm distribution.Manifest, options ...distribution.ManifestServiceOption) error {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "ManifestPushed"),
+		trace.WithAttributes(attribute.String("repo", repo.String())))
+	defer tracing.StopSpan(span)
+
 	manifestEvent, err := b.createManifestEvent(EventActionPush, repo, sm)
 	if err != nil {
 		return err
@@ -68,10 +82,17 @@ func (b *bridge) ManifestPushed(repo reference.Named, sm distribution.Manifest, 
 			break
 		}
 	}
+
+	addSpanEvent(span, manifestEvent)
+
 	return b.sink.Write(*manifestEvent)
 }
 
-func (b *bridge) ManifestPulled(repo reference.Named, sm distribution.Manifest, options ...distribution.ManifestServiceOption) error {
+func (b *bridge) ManifestPulled(ctx gocontext.Context, repo reference.Named, sm distribution.Manifest, options ...distribution.ManifestServiceOption) error {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "ManifestPulled"),
+		trace.WithAttributes(attribute.String("repo", repo.String())))
+	defer tracing.StopSpan(span)
+
 	manifestEvent, err := b.createManifestEvent(EventActionPull, repo, sm)
 	if err != nil {
 		return err
@@ -83,53 +104,99 @@ func (b *bridge) ManifestPulled(repo reference.Named, sm distribution.Manifest, 
 			break
 		}
 	}
+
+	addSpanEvent(span, manifestEvent)
+
 	return b.sink.Write(*manifestEvent)
 }
 
-func (b *bridge) ManifestDeleted(repo reference.Named, dgst digest.Digest) error {
-	return b.createManifestDeleteEventAndWrite(EventActionDelete, repo, dgst)
+func (b *bridge) ManifestDeleted(ctx gocontext.Context, repo reference.Named, dgst digest.Digest) error {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "ManifestDeleted"),
+		trace.WithAttributes(attribute.String("repo", repo.String()),
+			attribute.String("dgst", dgst.String())))
+	defer tracing.StopSpan(span)
+
+	return b.createManifestDeleteEventAndWrite(EventActionDelete, repo, dgst, span)
 }
 
-func (b *bridge) BlobPushed(repo reference.Named, desc distribution.Descriptor) error {
-	return b.createBlobEventAndWrite(EventActionPush, repo, desc)
+func (b *bridge) BlobPushed(ctx gocontext.Context, repo reference.Named, desc distribution.Descriptor) error {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "BlobPushed"),
+		trace.WithAttributes(attribute.String("repo", repo.String()),
+			attribute.String("desc.digest", desc.Digest.String())))
+	defer tracing.StopSpan(span)
+
+	return b.createBlobEventAndWrite(EventActionPush, repo, desc, span)
 }
 
-func (b *bridge) BlobPulled(repo reference.Named, desc distribution.Descriptor) error {
-	return b.createBlobEventAndWrite(EventActionPull, repo, desc)
+func (b *bridge) BlobPulled(ctx gocontext.Context, repo reference.Named, desc distribution.Descriptor) error {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "BlobPulled"),
+		trace.WithAttributes(attribute.String("repo", repo.String()),
+			attribute.String("desc.digest", desc.Digest.String())))
+	defer tracing.StopSpan(span)
+
+	return b.createBlobEventAndWrite(EventActionPull, repo, desc, span)
 }
 
-func (b *bridge) BlobMounted(repo reference.Named, desc distribution.Descriptor, fromRepo reference.Named) error {
+func (b *bridge) BlobMounted(ctx gocontext.Context, repo reference.Named, desc distribution.Descriptor, fromRepo reference.Named) error {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "BlobMounted"),
+		trace.WithAttributes(attribute.String("repo", repo.String()),
+			attribute.String("desc.digest", desc.Digest.String())))
+	defer tracing.StopSpan(span)
+
 	event, err := b.createBlobEvent(EventActionMount, repo, desc)
 	if err != nil {
 		return err
 	}
 	event.Target.FromRepository = fromRepo.Name()
+
+	addSpanEvent(span, event)
+
 	return b.sink.Write(*event)
 }
 
-func (b *bridge) BlobDeleted(repo reference.Named, dgst digest.Digest) error {
-	return b.createBlobDeleteEventAndWrite(EventActionDelete, repo, dgst)
+func (b *bridge) BlobDeleted(ctx gocontext.Context, repo reference.Named, dgst digest.Digest) error {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "BlobDeleted"),
+		trace.WithAttributes(attribute.String("repo", repo.String()),
+			attribute.String("dgst", dgst.String())))
+	defer tracing.StopSpan(span)
+
+	return b.createBlobDeleteEventAndWrite(EventActionDelete, repo, dgst, span)
 }
 
-func (b *bridge) TagDeleted(repo reference.Named, tag string) error {
+func (b *bridge) TagDeleted(ctx gocontext.Context, repo reference.Named, tag string) error {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "TagDeleted"),
+		trace.WithAttributes(attribute.String("repo", repo.String()),
+			attribute.String("tag", tag)))
+	defer tracing.StopSpan(span)
+
 	event := b.createEvent(EventActionDelete)
 	event.Target.Repository = repo.Name()
 	event.Target.Tag = tag
 
+	addSpanEvent(span, event)
+
 	return b.sink.Write(*event)
 }
 
-func (b *bridge) RepoDeleted(repo reference.Named) error {
+func (b *bridge) RepoDeleted(ctx gocontext.Context, repo reference.Named) error {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "RepoDeleted"),
+		trace.WithAttributes(attribute.String("repo", repo.String())))
+	defer tracing.StopSpan(span)
+
 	event := b.createEvent(EventActionDelete)
 	event.Target.Repository = repo.Name()
 
+	addSpanEvent(span, event)
+
 	return b.sink.Write(*event)
 }
 
-func (b *bridge) createManifestDeleteEventAndWrite(action string, repo reference.Named, dgst digest.Digest) error {
+func (b *bridge) createManifestDeleteEventAndWrite(action string, repo reference.Named, dgst digest.Digest, span trace.Span) error {
 	event := b.createEvent(action)
 	event.Target.Repository = repo.Name()
 	event.Target.Digest = dgst
+
+	addSpanEvent(span, event)
 
 	return b.sink.Write(*event)
 }
@@ -170,19 +237,23 @@ func (b *bridge) createManifestEvent(action string, repo reference.Named, sm dis
 	return event, nil
 }
 
-func (b *bridge) createBlobDeleteEventAndWrite(action string, repo reference.Named, dgst digest.Digest) error {
+func (b *bridge) createBlobDeleteEventAndWrite(action string, repo reference.Named, dgst digest.Digest, span trace.Span) error {
 	event := b.createEvent(action)
 	event.Target.Digest = dgst
 	event.Target.Repository = repo.Name()
 
+	addSpanEvent(span, event)
+
 	return b.sink.Write(*event)
 }
 
-func (b *bridge) createBlobEventAndWrite(action string, repo reference.Named, desc distribution.Descriptor) error {
+func (b *bridge) createBlobEventAndWrite(action string, repo reference.Named, desc distribution.Descriptor, span trace.Span) error {
 	event, err := b.createBlobEvent(action, repo, desc)
 	if err != nil {
 		return err
 	}
+
+	addSpanEvent(span, event)
 
 	return b.sink.Write(*event)
 }
@@ -223,4 +294,14 @@ func createEvent(action string) *Event {
 		Timestamp: time.Now(),
 		Action:    action,
 	}
+}
+
+// addSpanEvent for every event add to span
+func addSpanEvent(span trace.Span, event *Event) {
+	bytes, err := json.Marshal(event)
+	if err != nil {
+		return
+	}
+	span.AddEvent("manifestEvent", trace.WithAttributes(
+		attribute.String("content", string(bytes))))
 }

@@ -1,190 +1,74 @@
 /*
  *
- * Copyright 2014, Google Inc.
- * All rights reserved.
+ * Copyright 2014 gRPC authors.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     * Redistributions of source code must retain the above copyright
- * notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above
- * copyright notice, this list of conditions and the following disclaimer
- * in the documentation and/or other materials provided with the
- * distribution.
- *     * Neither the name of Google Inc. nor the names of its
- * contributors may be used to endorse or promote products derived from
- * this software without specific prior written permission.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  */
 
 package grpc
 
 import (
-	"bytes"
-	"io"
-	"time"
-
-	"golang.org/x/net/context"
-	"golang.org/x/net/trace"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/transport"
+	"context"
 )
 
-// recvResponse receives and parses an RPC response.
-// On error, it returns the error and indicates whether the call should be retried.
+// Invoke sends the RPC request on the wire and returns after response is
+// received.  This is typically called by generated code.
 //
-// TODO(zhaoq): Check whether the received message sequence is valid.
-func recvResponse(dopts dialOptions, t transport.ClientTransport, c *callInfo, stream *transport.Stream, reply interface{}) error {
-	// Try to acquire header metadata from the server if there is any.
-	var err error
-	c.headerMD, err = stream.Header()
+// All errors returned by Invoke are compatible with the status package.
+func (cc *ClientConn) Invoke(ctx context.Context, method string, args, reply interface{}, opts ...CallOption) error {
+	// allow interceptor to see all applicable call options, which means those
+	// configured as defaults from dial option as well as per-call options
+	opts = combine(cc.dopts.callOptions, opts)
+
+	if cc.dopts.unaryInt != nil {
+		return cc.dopts.unaryInt(ctx, method, args, reply, cc, invoke, opts...)
+	}
+	return invoke(ctx, method, args, reply, cc, opts...)
+}
+
+func combine(o1 []CallOption, o2 []CallOption) []CallOption {
+	// we don't use append because o1 could have extra capacity whose
+	// elements would be overwritten, which could cause inadvertent
+	// sharing (and race conditions) between concurrent calls
+	if len(o1) == 0 {
+		return o2
+	} else if len(o2) == 0 {
+		return o1
+	}
+	ret := make([]CallOption, len(o1)+len(o2))
+	copy(ret, o1)
+	copy(ret[len(o1):], o2)
+	return ret
+}
+
+// Invoke sends the RPC request on the wire and returns after response is
+// received.  This is typically called by generated code.
+//
+// DEPRECATED: Use ClientConn.Invoke instead.
+func Invoke(ctx context.Context, method string, args, reply interface{}, cc *ClientConn, opts ...CallOption) error {
+	return cc.Invoke(ctx, method, args, reply, opts...)
+}
+
+var unaryStreamDesc = &StreamDesc{ServerStreams: false, ClientStreams: false}
+
+func invoke(ctx context.Context, method string, req, reply interface{}, cc *ClientConn, opts ...CallOption) error {
+	cs, err := newClientStream(ctx, unaryStreamDesc, cc, method, opts...)
 	if err != nil {
 		return err
 	}
-	p := &parser{r: stream}
-	for {
-		if err = recv(p, dopts.codec, stream, dopts.dc, reply); err != nil {
-			if err == io.EOF {
-				break
-			}
-			return err
-		}
+	if err := cs.SendMsg(req); err != nil {
+		return err
 	}
-	c.trailerMD = stream.Trailer()
-	return nil
-}
-
-// sendRequest writes out various information of an RPC such as Context and Message.
-func sendRequest(ctx context.Context, codec Codec, compressor Compressor, callHdr *transport.CallHdr, t transport.ClientTransport, args interface{}, opts *transport.Options) (_ *transport.Stream, err error) {
-	stream, err := t.NewStream(ctx, callHdr)
-	if err != nil {
-		return nil, err
-	}
-	defer func() {
-		if err != nil {
-			if _, ok := err.(transport.ConnectionError); !ok {
-				t.CloseStream(stream, err)
-			}
-		}
-	}()
-	var cbuf *bytes.Buffer
-	if compressor != nil {
-		cbuf = new(bytes.Buffer)
-	}
-	outBuf, err := encode(codec, args, compressor, cbuf)
-	if err != nil {
-		return nil, transport.StreamErrorf(codes.Internal, "grpc: %v", err)
-	}
-	err = t.Write(stream, outBuf, opts)
-	if err != nil {
-		return nil, err
-	}
-	// Sent successfully.
-	return stream, nil
-}
-
-// Invoke is called by the generated code. It sends the RPC request on the
-// wire and returns after response is received.
-func Invoke(ctx context.Context, method string, args, reply interface{}, cc *ClientConn, opts ...CallOption) (err error) {
-	var c callInfo
-	for _, o := range opts {
-		if err := o.before(&c); err != nil {
-			return toRPCErr(err)
-		}
-	}
-	defer func() {
-		for _, o := range opts {
-			o.after(&c)
-		}
-	}()
-	if EnableTracing {
-		c.traceInfo.tr = trace.New("grpc.Sent."+methodFamily(method), method)
-		defer c.traceInfo.tr.Finish()
-		c.traceInfo.firstLine.client = true
-		if deadline, ok := ctx.Deadline(); ok {
-			c.traceInfo.firstLine.deadline = deadline.Sub(time.Now())
-		}
-		c.traceInfo.tr.LazyLog(&c.traceInfo.firstLine, false)
-		// TODO(dsymonds): Arrange for c.traceInfo.firstLine.remoteAddr to be set.
-		defer func() {
-			if err != nil {
-				c.traceInfo.tr.LazyLog(&fmtStringer{"%v", []interface{}{err}}, true)
-				c.traceInfo.tr.SetError()
-			}
-		}()
-	}
-	topts := &transport.Options{
-		Last:  true,
-		Delay: false,
-	}
-	var (
-		lastErr error // record the error that happened
-	)
-	for {
-		var (
-			err    error
-			t      transport.ClientTransport
-			stream *transport.Stream
-		)
-		// TODO(zhaoq): Need a formal spec of retry strategy for non-failfast rpcs.
-		if lastErr != nil && c.failFast {
-			return toRPCErr(lastErr)
-		}
-		callHdr := &transport.CallHdr{
-			Host:   cc.authority,
-			Method: method,
-		}
-		if cc.dopts.cp != nil {
-			callHdr.SendCompress = cc.dopts.cp.Type()
-		}
-		t, err = cc.dopts.picker.Pick(ctx)
-		if err != nil {
-			if lastErr != nil {
-				// This was a retry; return the error from the last attempt.
-				return toRPCErr(lastErr)
-			}
-			return toRPCErr(err)
-		}
-		if c.traceInfo.tr != nil {
-			c.traceInfo.tr.LazyLog(&payload{sent: true, msg: args}, true)
-		}
-		stream, err = sendRequest(ctx, cc.dopts.codec, cc.dopts.cp, callHdr, t, args, topts)
-		if err != nil {
-			if _, ok := err.(transport.ConnectionError); ok {
-				lastErr = err
-				continue
-			}
-			if lastErr != nil {
-				return toRPCErr(lastErr)
-			}
-			return toRPCErr(err)
-		}
-		// Receive the response
-		lastErr = recvResponse(cc.dopts, t, &c, stream, reply)
-		if _, ok := lastErr.(transport.ConnectionError); ok {
-			continue
-		}
-		if c.traceInfo.tr != nil {
-			c.traceInfo.tr.LazyLog(&payload{sent: false, msg: reply}, true)
-		}
-		t.CloseStream(stream, lastErr)
-		if lastErr != nil {
-			return toRPCErr(lastErr)
-		}
-		return Errorf(stream.StatusCode(), stream.StatusDesc())
-	}
+	return cs.RecvMsg(reply)
 }

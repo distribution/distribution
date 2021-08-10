@@ -1,10 +1,7 @@
 package notifications
 
 import (
-	"io"
-	"reflect"
-	"testing"
-
+	gocontext "context"
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/manifest"
@@ -16,6 +13,9 @@ import (
 	"github.com/distribution/distribution/v3/testutil"
 	"github.com/docker/libtrust"
 	"github.com/opencontainers/go-digest"
+	"io"
+	"reflect"
+	"testing"
 )
 
 func TestListener(t *testing.T) {
@@ -68,47 +68,47 @@ type testListener struct {
 	ops map[string]int
 }
 
-func (tl *testListener) ManifestPushed(repo reference.Named, m distribution.Manifest, options ...distribution.ManifestServiceOption) error {
+func (tl *testListener) ManifestPushed(ctx gocontext.Context, repo reference.Named, m distribution.Manifest, options ...distribution.ManifestServiceOption) error {
 	tl.ops["manifest:push"]++
 	return nil
 }
 
-func (tl *testListener) ManifestPulled(repo reference.Named, m distribution.Manifest, options ...distribution.ManifestServiceOption) error {
+func (tl *testListener) ManifestPulled(ctx gocontext.Context, repo reference.Named, m distribution.Manifest, options ...distribution.ManifestServiceOption) error {
 	tl.ops["manifest:pull"]++
 	return nil
 }
 
-func (tl *testListener) ManifestDeleted(repo reference.Named, d digest.Digest) error {
+func (tl *testListener) ManifestDeleted(ctx gocontext.Context, repo reference.Named, d digest.Digest) error {
 	tl.ops["manifest:delete"]++
 	return nil
 }
 
-func (tl *testListener) BlobPushed(repo reference.Named, desc distribution.Descriptor) error {
+func (tl *testListener) BlobPushed(ctx gocontext.Context, repo reference.Named, desc distribution.Descriptor) error {
 	tl.ops["layer:push"]++
 	return nil
 }
 
-func (tl *testListener) BlobPulled(repo reference.Named, desc distribution.Descriptor) error {
+func (tl *testListener) BlobPulled(ctx gocontext.Context, repo reference.Named, desc distribution.Descriptor) error {
 	tl.ops["layer:pull"]++
 	return nil
 }
 
-func (tl *testListener) BlobMounted(repo reference.Named, desc distribution.Descriptor, fromRepo reference.Named) error {
+func (tl *testListener) BlobMounted(ctx gocontext.Context, repo reference.Named, desc distribution.Descriptor, fromRepo reference.Named) error {
 	tl.ops["layer:mount"]++
 	return nil
 }
 
-func (tl *testListener) BlobDeleted(repo reference.Named, d digest.Digest) error {
+func (tl *testListener) BlobDeleted(ctx gocontext.Context, repo reference.Named, d digest.Digest) error {
 	tl.ops["layer:delete"]++
 	return nil
 }
 
-func (tl *testListener) TagDeleted(repo reference.Named, tag string) error {
+func (tl *testListener) TagDeleted(ctx gocontext.Context, repo reference.Named, tag string) error {
 	tl.ops["tag:delete"]++
 	return nil
 }
 
-func (tl *testListener) RepoDeleted(repo reference.Named) error {
+func (tl *testListener) RepoDeleted(ctx gocontext.Context, repo reference.Named) error {
 	tl.ops["repo:delete"]++
 	return nil
 }

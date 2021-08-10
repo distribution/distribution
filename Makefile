@@ -100,3 +100,7 @@ build:
 clean: ## clean up binaries
 	@echo "$(WHALE) $@"
 	@rm -f $(BINARIES)
+
+docker-build:
+	@echo "$(WHALE) $@"
+	@docker build -t registry:$(VERSION) -f Dockerfile .

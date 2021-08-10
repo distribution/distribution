@@ -7,6 +7,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/distribution/distribution/v3/tracing"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -104,6 +107,10 @@ func (d *driver) Name() string {
 
 // GetContent retrieves the content stored at "path" as a []byte.
 func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "GetContent"),
+		trace.WithAttributes(attribute.String("Path", path)))
+	defer tracing.StopSpan(span)
+
 	blobRef := d.client.GetContainerReference(d.container).GetBlobReference(path)
 	blob, err := blobRef.Get(nil)
 	if err != nil {
@@ -119,6 +126,11 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 
 // PutContent stores the []byte content at a location designated by "path".
 func (d *driver) PutContent(ctx context.Context, path string, contents []byte) error {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "PutContent"),
+		trace.WithAttributes(attribute.String("path", path),
+			attribute.Int("contentsLen", len(contents))))
+	defer tracing.StopSpan(span)
+
 	// max size for block blobs uploaded via single "Put Blob" for version after "2016-05-31"
 	// https://docs.microsoft.com/en-us/rest/api/storageservices/put-blob#remarks
 	const limit = 256 * 1024 * 1024
@@ -157,6 +169,11 @@ func (d *driver) PutContent(ctx context.Context, path string, contents []byte) e
 // Reader retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
 func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Reader"),
+		trace.WithAttributes(attribute.String("path", path),
+			attribute.Int64("offset", offset)))
+	defer tracing.StopSpan(span)
+
 	blobRef := d.client.GetContainerReference(d.container).GetBlobReference(path)
 	if ok, err := blobRef.Exists(); err != nil {
 		return nil, err
@@ -189,6 +206,11 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 // Writer returns a FileWriter which will store the content written to it
 // at the location designated by "path" after the call to Commit.
 func (d *driver) Writer(ctx context.Context, path string, append bool) (storagedriver.FileWriter, error) {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Writer"),
+		trace.WithAttributes(attribute.String("path", path),
+			attribute.Bool("append", append)))
+	defer tracing.StopSpan(span)
+
 	blobRef := d.client.GetContainerReference(d.container).GetBlobReference(path)
 	blobExists, err := blobRef.Exists()
 	if err != nil {
@@ -225,6 +247,10 @@ func (d *driver) Writer(ctx context.Context, path string, append bool) (storaged
 // Stat retrieves the FileInfo for the given path, including the current size
 // in bytes and the creation time.
 func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Stat"),
+		trace.WithAttributes(attribute.String("path", path)))
+	defer tracing.StopSpan(span)
+
 	blobRef := d.client.GetContainerReference(d.container).GetBlobReference(path)
 	// Check if the path is a blob
 	if ok, err := blobRef.Exists(); err != nil {
@@ -273,6 +299,10 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 // List returns a list of the objects that are direct descendants of the given
 // path.
 func (d *driver) List(ctx context.Context, path string) ([]string, error) {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "List"),
+		trace.WithAttributes(attribute.String("path", path)))
+	defer tracing.StopSpan(span)
+
 	if path == "/" {
 		path = ""
 	}
@@ -292,6 +322,11 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
 func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Move"),
+		trace.WithAttributes(attribute.String("sourcePath", sourcePath),
+			attribute.String("destPath", destPath)))
+	defer tracing.StopSpan(span)
+
 	srcBlobRef := d.client.GetContainerReference(d.container).GetBlobReference(sourcePath)
 	sourceBlobURL := srcBlobRef.GetURL()
 	destBlobRef := d.client.GetContainerReference(d.container).GetBlobReference(destPath)
@@ -308,6 +343,10 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
 func (d *driver) Delete(ctx context.Context, path string) error {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Delete"),
+		trace.WithAttributes(attribute.String("path", path)))
+	defer tracing.StopSpan(span)
+
 	blobRef := d.client.GetContainerReference(d.container).GetBlobReference(path)
 	ok, err := blobRef.DeleteIfExists(nil)
 	if err != nil {
@@ -340,6 +379,10 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 // for specified duration by making use of Azure Storage Shared Access Signatures (SAS).
 // See https://msdn.microsoft.com/en-us/library/azure/ee395415.aspx for more info.
 func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "URLFor"),
+		trace.WithAttributes(attribute.String("path", path)))
+	defer tracing.StopSpan(span)
+
 	expiresTime := time.Now().UTC().Add(20 * time.Minute) // default expiration
 	expires, ok := options["expiry"]
 	if ok {
@@ -362,6 +405,10 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 // Walk traverses a filesystem defined within driver, starting
 // from the given path, calling f on each file
 func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn) error {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Walk"),
+		trace.WithAttributes(attribute.String("path", path)))
+	defer tracing.StopSpan(span)
+
 	return storagedriver.WalkFallback(ctx, d, path, f)
 }
 

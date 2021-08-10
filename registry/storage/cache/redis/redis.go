@@ -3,6 +3,9 @@ package redis
 import (
 	"context"
 	"fmt"
+	"github.com/distribution/distribution/v3/tracing"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/reference"
@@ -10,6 +13,10 @@ import (
 	"github.com/distribution/distribution/v3/registry/storage/cache/metrics"
 	"github.com/gomodule/redigo/redis"
 	"github.com/opencontainers/go-digest"
+)
+
+const (
+	CacheType = "redis"
 )
 
 // redisBlobStatService provides an implementation of
@@ -58,6 +65,10 @@ func (rbds *redisBlobDescriptorService) RepositoryScoped(repo string) (distribut
 
 // Stat retrieves the descriptor data from the redis hash entry.
 func (rbds *redisBlobDescriptorService) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "Stat"),
+		trace.WithAttributes(attribute.String("dgst", dgst.String())))
+	defer tracing.StopSpan(span)
+
 	if err := dgst.Validate(); err != nil {
 		return distribution.Descriptor{}, err
 	}
@@ -69,12 +80,19 @@ func (rbds *redisBlobDescriptorService) Stat(ctx context.Context, dgst digest.Di
 }
 
 func (rbds *redisBlobDescriptorService) Clear(ctx context.Context, dgst digest.Digest) error {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "Clear"),
+		trace.WithAttributes(attribute.String("dgst", dgst.String())))
+	defer tracing.StopSpan(span)
+
 	if err := dgst.Validate(); err != nil {
 		return err
 	}
 
 	conn := rbds.pool.Get()
 	defer conn.Close()
+
+	span.SetAttributes(attribute.String("Command", fmt.Sprintf("%s %s %s %s %s",
+		"HDEL", rbds.blobDescriptorHashKey(dgst), "digest", "size", "mediatype")))
 
 	// Not atomic in redis <= 2.3
 	reply, err := conn.Do("HDEL", rbds.blobDescriptorHashKey(dgst), "digest", "size", "mediatype")
@@ -92,6 +110,10 @@ func (rbds *redisBlobDescriptorService) Clear(ctx context.Context, dgst digest.D
 // stat provides an internal stat call that takes a connection parameter. This
 // allows some internal management of the connection scope.
 func (rbds *redisBlobDescriptorService) stat(ctx context.Context, conn redis.Conn, dgst digest.Digest) (distribution.Descriptor, error) {
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(attribute.String("Command1", fmt.Sprintf("%s %s %s %s %s",
+		"HMGET", rbds.blobDescriptorHashKey(dgst), "digest", "size", "mediatype")))
+
 	reply, err := redis.Values(conn.Do("HMGET", rbds.blobDescriptorHashKey(dgst), "digest", "size", "mediatype"))
 	if err != nil {
 		return distribution.Descriptor{}, err
@@ -103,6 +125,9 @@ func (rbds *redisBlobDescriptorService) stat(ctx context.Context, conn redis.Con
 	if len(reply) < 3 || reply[0] == nil || reply[1] == nil { // don't care if mediatype is nil
 		return distribution.Descriptor{}, distribution.ErrBlobUnknown
 	}
+
+	span.SetAttributes(attribute.String("Command2", fmt.Sprintf("%s %+v",
+		"Scan", reply)))
 
 	var desc distribution.Descriptor
 	if _, err := redis.Scan(reply, &desc.Digest, &desc.Size, &desc.MediaType); err != nil {
@@ -116,6 +141,11 @@ func (rbds *redisBlobDescriptorService) stat(ctx context.Context, conn redis.Con
 // hash. A hash is used here since we may store unrelated fields about a layer
 // in the future.
 func (rbds *redisBlobDescriptorService) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "SetDescriptor"),
+		trace.WithAttributes(attribute.String("dgst", dgst.String()),
+			attribute.String("MediaType", desc.MediaType)))
+	defer tracing.StopSpan(span)
+
 	if err := dgst.Validate(); err != nil {
 		return err
 	}
@@ -131,11 +161,18 @@ func (rbds *redisBlobDescriptorService) SetDescriptor(ctx context.Context, dgst 
 }
 
 func (rbds *redisBlobDescriptorService) setDescriptor(ctx context.Context, conn redis.Conn, dgst digest.Digest, desc distribution.Descriptor) error {
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(attribute.String("Command1", fmt.Sprintf("%s %s %s %s %s %d",
+		"HMSET", rbds.blobDescriptorHashKey(dgst), "digest", desc.Digest, "size", desc.Size)))
+
 	if _, err := conn.Do("HMSET", rbds.blobDescriptorHashKey(dgst),
 		"digest", desc.Digest,
 		"size", desc.Size); err != nil {
 		return err
 	}
+
+	span.SetAttributes(attribute.String("Command2", fmt.Sprintf("%s %s %s %s",
+		"HSETNX", rbds.blobDescriptorHashKey(dgst), "mediatype", desc.MediaType)))
 
 	// Only set mediatype if not already set.
 	if _, err := conn.Do("HSETNX", rbds.blobDescriptorHashKey(dgst),
@@ -161,6 +198,10 @@ var _ distribution.BlobDescriptorService = &repositoryScopedRedisBlobDescriptorS
 // forwards the descriptor request to the global blob store. If the media type
 // differs for the repository, we override it.
 func (rsrbds *repositoryScopedRedisBlobDescriptorService) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "Stat"),
+		trace.WithAttributes(attribute.String("dgst", dgst.String())))
+	defer tracing.StopSpan(span)
+
 	if err := dgst.Validate(); err != nil {
 		return distribution.Descriptor{}, err
 	}
@@ -183,6 +224,8 @@ func (rsrbds *repositoryScopedRedisBlobDescriptorService) Stat(ctx context.Conte
 		return distribution.Descriptor{}, err
 	}
 
+	span.SetAttributes(attribute.String("Command3", fmt.Sprintf("%s %s %s", "HGET", rsrbds.blobDescriptorHashKey(dgst), "mediatype")))
+
 	// We allow a per repository mediatype, let's look it up here.
 	mediatype, err := redis.String(conn.Do("HGET", rsrbds.blobDescriptorHashKey(dgst), "mediatype"))
 	if err != nil {
@@ -202,12 +245,18 @@ func (rsrbds *repositoryScopedRedisBlobDescriptorService) Stat(ctx context.Conte
 
 // Clear removes the descriptor from the cache and forwards to the upstream descriptor store
 func (rsrbds *repositoryScopedRedisBlobDescriptorService) Clear(ctx context.Context, dgst digest.Digest) error {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "Clear"),
+		trace.WithAttributes(attribute.String("dgst", dgst.String())))
+	defer tracing.StopSpan(span)
+
 	if err := dgst.Validate(); err != nil {
 		return err
 	}
 
 	conn := rsrbds.upstream.pool.Get()
 	defer conn.Close()
+
+	span.SetAttributes(attribute.String("Command", fmt.Sprintf("%s %s %s", "SISMEMBER", rsrbds.repositoryBlobSetKey(rsrbds.repo), dgst)))
 
 	// Check membership to repository first
 	member, err := redis.Bool(conn.Do("SISMEMBER", rsrbds.repositoryBlobSetKey(rsrbds.repo), dgst))
@@ -223,6 +272,11 @@ func (rsrbds *repositoryScopedRedisBlobDescriptorService) Clear(ctx context.Cont
 }
 
 func (rsrbds *repositoryScopedRedisBlobDescriptorService) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "SetDescriptor"),
+		trace.WithAttributes(attribute.String("dgst", dgst.String()),
+			attribute.String("MediaType", desc.MediaType)))
+	defer tracing.StopSpan(span)
+
 	if err := dgst.Validate(); err != nil {
 		return err
 	}
@@ -244,6 +298,9 @@ func (rsrbds *repositoryScopedRedisBlobDescriptorService) SetDescriptor(ctx cont
 }
 
 func (rsrbds *repositoryScopedRedisBlobDescriptorService) setDescriptor(ctx context.Context, conn redis.Conn, dgst digest.Digest, desc distribution.Descriptor) error {
+	span := trace.SpanFromContext(ctx)
+	span.SetAttributes(attribute.String("Command1", fmt.Sprintf("%s %s %s", "SADD", rsrbds.repositoryBlobSetKey(rsrbds.repo), dgst)))
+
 	if _, err := conn.Do("SADD", rsrbds.repositoryBlobSetKey(rsrbds.repo), dgst); err != nil {
 		return err
 	}
@@ -251,6 +308,8 @@ func (rsrbds *repositoryScopedRedisBlobDescriptorService) setDescriptor(ctx cont
 	if err := rsrbds.upstream.setDescriptor(ctx, conn, dgst, desc); err != nil {
 		return err
 	}
+
+	span.SetAttributes(attribute.String("Command2", fmt.Sprintf("%s %s %s %s", "HSET", rsrbds.blobDescriptorHashKey(dgst), "mediatype", desc.MediaType)))
 
 	// Override repository mediatype.
 	if _, err := conn.Do("HSET", rsrbds.blobDescriptorHashKey(dgst), "mediatype", desc.MediaType); err != nil {

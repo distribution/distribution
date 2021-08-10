@@ -2,12 +2,20 @@ package memory
 
 import (
 	"context"
+	"fmt"
+	"github.com/distribution/distribution/v3/tracing"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"sync"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/storage/cache"
 	"github.com/opencontainers/go-digest"
+)
+
+const (
+	CacheType = "memory"
 )
 
 type inMemoryBlobDescriptorCacheProvider struct {
@@ -41,14 +49,27 @@ func (imbdcp *inMemoryBlobDescriptorCacheProvider) RepositoryScoped(repo string)
 }
 
 func (imbdcp *inMemoryBlobDescriptorCacheProvider) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "Stat"),
+		trace.WithAttributes(attribute.String("dgst", dgst.String())))
+	defer tracing.StopSpan(span)
+
 	return imbdcp.global.Stat(ctx, dgst)
 }
 
 func (imbdcp *inMemoryBlobDescriptorCacheProvider) Clear(ctx context.Context, dgst digest.Digest) error {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "Clear"),
+		trace.WithAttributes(attribute.String("dgst", dgst.String())))
+	defer tracing.StopSpan(span)
+
 	return imbdcp.global.Clear(ctx, dgst)
 }
 
 func (imbdcp *inMemoryBlobDescriptorCacheProvider) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "SetDescriptor"),
+		trace.WithAttributes(attribute.String("dgst", dgst.String()),
+			attribute.String("MediaType", desc.MediaType)))
+	defer tracing.StopSpan(span)
+
 	_, err := imbdcp.Stat(ctx, dgst)
 	if err == distribution.ErrBlobUnknown {
 

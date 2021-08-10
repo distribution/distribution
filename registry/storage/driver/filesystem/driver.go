@@ -5,6 +5,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/distribution/distribution/v3/tracing"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"io"
 	"io/ioutil"
 	"os"
@@ -117,6 +120,10 @@ func (d *driver) Name() string {
 
 // GetContent retrieves the content stored at "path" as a []byte.
 func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "GetContent"),
+		trace.WithAttributes(attribute.String("Path", path)))
+	defer tracing.StopSpan(span)
+
 	rc, err := d.Reader(ctx, path, 0)
 	if err != nil {
 		return nil, err
@@ -133,6 +140,11 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 
 // PutContent stores the []byte content at a location designated by "path".
 func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte) error {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "PutContent"),
+		trace.WithAttributes(attribute.String("subPath", subPath),
+			attribute.Int("contentsLen", len(contents))))
+	defer tracing.StopSpan(span)
+
 	writer, err := d.Writer(ctx, subPath, false)
 	if err != nil {
 		return err
@@ -149,6 +161,11 @@ func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte
 // Reader retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
 func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Reader"),
+		trace.WithAttributes(attribute.String("path", path),
+			attribute.Int64("offset", offset)))
+	defer tracing.StopSpan(span)
+
 	file, err := os.OpenFile(d.fullPath(path), os.O_RDONLY, 0644)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -171,6 +188,11 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 }
 
 func (d *driver) Writer(ctx context.Context, subPath string, append bool) (storagedriver.FileWriter, error) {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Writer"),
+		trace.WithAttributes(attribute.String("subPath", subPath),
+			attribute.Bool("append", append)))
+	defer tracing.StopSpan(span)
+
 	fullPath := d.fullPath(subPath)
 	parentDir := path.Dir(fullPath)
 	if err := os.MkdirAll(parentDir, 0777); err != nil {
@@ -205,6 +227,10 @@ func (d *driver) Writer(ctx context.Context, subPath string, append bool) (stora
 // Stat retrieves the FileInfo for the given path, including the current size
 // in bytes and the creation time.
 func (d *driver) Stat(ctx context.Context, subPath string) (storagedriver.FileInfo, error) {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Stat"),
+		trace.WithAttributes(attribute.String("subPath", subPath)))
+	defer tracing.StopSpan(span)
+
 	fullPath := d.fullPath(subPath)
 
 	fi, err := os.Stat(fullPath)
@@ -225,6 +251,10 @@ func (d *driver) Stat(ctx context.Context, subPath string) (storagedriver.FileIn
 // List returns a list of the objects that are direct descendants of the given
 // path.
 func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "List"),
+		trace.WithAttributes(attribute.String("subPath", subPath)))
+	defer tracing.StopSpan(span)
+
 	fullPath := d.fullPath(subPath)
 
 	dir, err := os.Open(fullPath)
@@ -253,6 +283,11 @@ func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
 func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Move"),
+		trace.WithAttributes(attribute.String("sourcePath", sourcePath),
+			attribute.String("destPath", destPath)))
+	defer tracing.StopSpan(span)
+
 	source := d.fullPath(sourcePath)
 	dest := d.fullPath(destPath)
 
@@ -270,6 +305,10 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
 func (d *driver) Delete(ctx context.Context, subPath string) error {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Delete"),
+		trace.WithAttributes(attribute.String("subPath", subPath)))
+	defer tracing.StopSpan(span)
+
 	fullPath := d.fullPath(subPath)
 
 	_, err := os.Stat(fullPath)
@@ -286,12 +325,20 @@ func (d *driver) Delete(ctx context.Context, subPath string) error {
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 // May return an UnsupportedMethodErr in certain StorageDriver implementations.
 func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "URLFor"),
+		trace.WithAttributes(attribute.String("path", path)))
+	defer tracing.StopSpan(span)
+
 	return "", storagedriver.ErrUnsupportedMethod{}
 }
 
 // Walk traverses a filesystem defined within driver, starting
 // from the given path, calling f on each file
 func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn) error {
+	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Walk"),
+		trace.WithAttributes(attribute.String("path", path)))
+	defer tracing.StopSpan(span)
+
 	return storagedriver.WalkFallback(ctx, d, path, f)
 }
 

@@ -1,6 +1,7 @@
 package notifications
 
 import (
+	"context"
 	"testing"
 
 	"github.com/distribution/distribution/v3"
@@ -52,9 +53,8 @@ func TestEventBridgeManifestPulled(t *testing.T) {
 
 		return nil
 	}))
-
 	repoRef, _ := reference.WithName(repo)
-	if err := l.ManifestPulled(repoRef, sm); err != nil {
+	if err := l.ManifestPulled(context.Background(), repoRef, sm); err != nil {
 		t.Fatalf("unexpected error notifying manifest pull: %v", err)
 	}
 }
@@ -67,7 +67,7 @@ func TestEventBridgeManifestPushed(t *testing.T) {
 	}))
 
 	repoRef, _ := reference.WithName(repo)
-	if err := l.ManifestPushed(repoRef, sm); err != nil {
+	if err := l.ManifestPushed(context.Background(), repoRef, sm); err != nil {
 		t.Fatalf("unexpected error notifying manifest pull: %v", err)
 	}
 }
@@ -83,7 +83,7 @@ func TestEventBridgeManifestPushedWithTag(t *testing.T) {
 	}))
 
 	repoRef, _ := reference.WithName(repo)
-	if err := l.ManifestPushed(repoRef, sm, distribution.WithTag(m.Tag)); err != nil {
+	if err := l.ManifestPushed(context.Background(), repoRef, sm, distribution.WithTag(m.Tag)); err != nil {
 		t.Fatalf("unexpected error notifying manifest pull: %v", err)
 	}
 }
@@ -99,7 +99,7 @@ func TestEventBridgeManifestPulledWithTag(t *testing.T) {
 	}))
 
 	repoRef, _ := reference.WithName(repo)
-	if err := l.ManifestPulled(repoRef, sm, distribution.WithTag(m.Tag)); err != nil {
+	if err := l.ManifestPulled(context.Background(), repoRef, sm, distribution.WithTag(m.Tag)); err != nil {
 		t.Fatalf("unexpected error notifying manifest pull: %v", err)
 	}
 }
@@ -114,7 +114,7 @@ func TestEventBridgeManifestDeleted(t *testing.T) {
 	}))
 
 	repoRef, _ := reference.WithName(repo)
-	if err := l.ManifestDeleted(repoRef, dgst); err != nil {
+	if err := l.ManifestDeleted(context.Background(), repoRef, dgst); err != nil {
 		t.Fatalf("unexpected error notifying manifest pull: %v", err)
 	}
 }
@@ -129,7 +129,7 @@ func TestEventBridgeTagDeleted(t *testing.T) {
 	}))
 
 	repoRef, _ := reference.WithName(repo)
-	if err := l.TagDeleted(repoRef, m.Tag); err != nil {
+	if err := l.TagDeleted(context.Background(), repoRef, m.Tag); err != nil {
 		t.Fatalf("unexpected error notifying tag deletion: %v", err)
 	}
 }
@@ -141,7 +141,7 @@ func TestEventBridgeRepoDeleted(t *testing.T) {
 	}))
 
 	repoRef, _ := reference.WithName(repo)
-	if err := l.RepoDeleted(repoRef); err != nil {
+	if err := l.RepoDeleted(context.Background(), repoRef); err != nil {
 		t.Fatalf("unexpected error notifying repo deletion: %v", err)
 	}
 }

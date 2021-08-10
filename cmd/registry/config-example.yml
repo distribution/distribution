@@ -20,3 +20,6 @@ health:
     enabled: true
     interval: 10s
     threshold: 3
+otel:
+  exporter_name: otlp
+  exporter_endpoint: 127.0.0.1:4317

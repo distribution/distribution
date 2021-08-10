@@ -1,8 +1,8 @@
 package configuration
 
 import (
-	"errors"
 	"fmt"
+	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -248,15 +248,21 @@ type Configuration struct {
 		} `yaml:"repository,omitempty"`
 	} `yaml:"policy,omitempty"`
 
-	// Trace configures add server trace
-	Trace struct {
-		// Enable configures enable trace
-		Enable bool `yaml:"enable"`
-		// Type configures user trace project,eg: jaeger、zipkin、skywalking
-		Type string `yaml:"type"`
-		// Config configures options config for user type
-		Config interface{} `yaml:"config"`
-	} `yaml:"trace,omitempty"`
+	// OpenTelemetry configuration
+	OpenTelemetry *OpenTelemetryConfig `yaml:"otel,omitempty"`
+}
+
+// OpenTelemetryConfig provides open telemetry configuration
+type OpenTelemetryConfig struct {
+	ServiceName        string  `yaml:"service_name"`
+	ExporterName       string  `yaml:"exporter_name"`
+	ExporterEndpoint   string  `yaml:"exporter_endpoint"`
+	TraceSamplingRatio float64 `yaml:"trace_sampling_ratio"`
+}
+
+func (otel OpenTelemetryConfig) String() string {
+	return fmt.Sprintf("ServiceName=[%s],ExporterName=[%s],ExporterEndpoint=[%s],TraceSamplingRatio=[%+v]",
+		otel.ServiceName, otel.ExporterName, otel.ExporterEndpoint, otel.TraceSamplingRatio)
 }
 
 // LogHook is composed of hook Level and Type.
@@ -702,4 +708,31 @@ func Parse(rd io.Reader) (*Configuration, error) {
 	}
 
 	return config, nil
+}
+
+const (
+	// ExporterTypeOTLP represents the open telemetry exporter OTLP
+	ExporterTypeOTLP = "otlp"
+
+	// ServiceName is trace service name
+	ServiceName = "distribution"
+
+	// DefaultSampleRatio default sample ratio
+	DefaultSampleRatio = 1
+)
+
+// Validate OpenTelemetry config
+func (otel *OpenTelemetryConfig) Validate() error {
+	switch otel.ExporterName {
+	case ExporterTypeOTLP:
+		if otel.ServiceName == "" {
+			otel.ServiceName = ServiceName
+		}
+		if otel.TraceSamplingRatio == 0 {
+			otel.TraceSamplingRatio = DefaultSampleRatio
+		}
+		return nil
+	default:
+		return errors.Wrapf(errors.New("invalid argument"), "unsupported exporter: %+v", otel)
+	}
 }

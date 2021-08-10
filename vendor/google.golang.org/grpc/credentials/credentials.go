@@ -1,33 +1,18 @@
 /*
  *
- * Copyright 2014, Google Inc.
- * All rights reserved.
+ * Copyright 2014 gRPC authors.
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- *     * Redistributions of source code must retain the above copyright
- * notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above
- * copyright notice, this list of conditions and the following disclaimer
- * in the documentation and/or other materials provided with the
- * distribution.
- *     * Neither the name of Google Inc. nor the names of its
- * contributors may be used to endorse or promote products derived from
- * this software without specific prior written permission.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  */
 
@@ -38,189 +23,250 @@
 package credentials // import "google.golang.org/grpc/credentials"
 
 import (
-	"crypto/tls"
-	"crypto/x509"
+	"context"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
-	"strings"
-	"time"
 
-	"golang.org/x/net/context"
+	"github.com/golang/protobuf/proto"
+	"google.golang.org/grpc/attributes"
+	icredentials "google.golang.org/grpc/internal/credentials"
 )
 
-var (
-	// alpnProtoStr are the specified application level protocols for gRPC.
-	alpnProtoStr = []string{"h2"}
-)
-
-// Credentials defines the common interface all supported credentials must
-// implement.
-type Credentials interface {
+// PerRPCCredentials defines the common interface for the credentials which need to
+// attach security information to every RPC (e.g., oauth2).
+type PerRPCCredentials interface {
 	// GetRequestMetadata gets the current request metadata, refreshing
 	// tokens if required. This should be called by the transport layer on
 	// each request, and the data should be populated in headers or other
-	// context. uri is the URI of the entry point for the request. When
-	// supported by the underlying implementation, ctx can be used for
-	// timeout and cancellation.
+	// context. If a status code is returned, it will be used as the status
+	// for the RPC. uri is the URI of the entry point for the request.
+	// When supported by the underlying implementation, ctx can be used for
+	// timeout and cancellation. Additionally, RequestInfo data will be
+	// available via ctx to this call.
 	// TODO(zhaoq): Define the set of the qualified keys instead of leaving
 	// it as an arbitrary string.
 	GetRequestMetadata(ctx context.Context, uri ...string) (map[string]string, error)
-	// RequireTransportSecurity indicates whether the credentails requires
+	// RequireTransportSecurity indicates whether the credentials requires
 	// transport security.
 	RequireTransportSecurity() bool
 }
 
+// SecurityLevel defines the protection level on an established connection.
+//
+// This API is experimental.
+type SecurityLevel int
+
+const (
+	// InvalidSecurityLevel indicates an invalid security level.
+	// The zero SecurityLevel value is invalid for backward compatibility.
+	InvalidSecurityLevel SecurityLevel = iota
+	// NoSecurity indicates a connection is insecure.
+	NoSecurity
+	// IntegrityOnly indicates a connection only provides integrity protection.
+	IntegrityOnly
+	// PrivacyAndIntegrity indicates a connection provides both privacy and integrity protection.
+	PrivacyAndIntegrity
+)
+
+// String returns SecurityLevel in a string format.
+func (s SecurityLevel) String() string {
+	switch s {
+	case NoSecurity:
+		return "NoSecurity"
+	case IntegrityOnly:
+		return "IntegrityOnly"
+	case PrivacyAndIntegrity:
+		return "PrivacyAndIntegrity"
+	}
+	return fmt.Sprintf("invalid SecurityLevel: %v", int(s))
+}
+
+// CommonAuthInfo contains authenticated information common to AuthInfo implementations.
+// It should be embedded in a struct implementing AuthInfo to provide additional information
+// about the credentials.
+//
+// This API is experimental.
+type CommonAuthInfo struct {
+	SecurityLevel SecurityLevel
+}
+
+// GetCommonAuthInfo returns the pointer to CommonAuthInfo struct.
+func (c CommonAuthInfo) GetCommonAuthInfo() CommonAuthInfo {
+	return c
+}
+
 // ProtocolInfo provides information regarding the gRPC wire protocol version,
-// security protocol, security protocol version in use, etc.
+// security protocol, security protocol version in use, server name, etc.
 type ProtocolInfo struct {
 	// ProtocolVersion is the gRPC wire protocol version.
 	ProtocolVersion string
 	// SecurityProtocol is the security protocol in use.
 	SecurityProtocol string
-	// SecurityVersion is the security protocol version.
+	// SecurityVersion is the security protocol version.  It is a static version string from the
+	// credentials, not a value that reflects per-connection protocol negotiation.  To retrieve
+	// details about the credentials used for a connection, use the Peer's AuthInfo field instead.
+	//
+	// Deprecated: please use Peer.AuthInfo.
 	SecurityVersion string
+	// ServerName is the user-configured server name.
+	ServerName string
 }
 
 // AuthInfo defines the common interface for the auth information the users are interested in.
+// A struct that implements AuthInfo should embed CommonAuthInfo by including additional
+// information about the credentials in it.
 type AuthInfo interface {
 	AuthType() string
 }
 
-// TransportAuthenticator defines the common interface for all the live gRPC wire
+// ErrConnDispatched indicates that rawConn has been dispatched out of gRPC
+// and the caller should not close rawConn.
+var ErrConnDispatched = errors.New("credentials: rawConn is dispatched out of gRPC")
+
+// TransportCredentials defines the common interface for all the live gRPC wire
 // protocols and supported transport security protocols (e.g., TLS, SSL).
-type TransportAuthenticator interface {
-	// ClientHandshake does the authentication handshake specified by the corresponding
-	// authentication protocol on rawConn for clients. It returns the authenticated
-	// connection and the corresponding auth information about the connection.
-	ClientHandshake(addr string, rawConn net.Conn, timeout time.Duration) (net.Conn, AuthInfo, error)
+type TransportCredentials interface {
+	// ClientHandshake does the authentication handshake specified by the
+	// corresponding authentication protocol on rawConn for clients. It returns
+	// the authenticated connection and the corresponding auth information
+	// about the connection.  The auth information should embed CommonAuthInfo
+	// to return additional information about the credentials. Implementations
+	// must use the provided context to implement timely cancellation.  gRPC
+	// will try to reconnect if the error returned is a temporary error
+	// (io.EOF, context.DeadlineExceeded or err.Temporary() == true).  If the
+	// returned error is a wrapper error, implementations should make sure that
+	// the error implements Temporary() to have the correct retry behaviors.
+	// Additionally, ClientHandshakeInfo data will be available via the context
+	// passed to this call.
+	//
+	// If the returned net.Conn is closed, it MUST close the net.Conn provided.
+	ClientHandshake(context.Context, string, net.Conn) (net.Conn, AuthInfo, error)
 	// ServerHandshake does the authentication handshake for servers. It returns
 	// the authenticated connection and the corresponding auth information about
-	// the connection.
-	ServerHandshake(rawConn net.Conn) (net.Conn, AuthInfo, error)
-	// Info provides the ProtocolInfo of this TransportAuthenticator.
+	// the connection. The auth information should embed CommonAuthInfo to return additional information
+	// about the credentials.
+	//
+	// If the returned net.Conn is closed, it MUST close the net.Conn provided.
+	ServerHandshake(net.Conn) (net.Conn, AuthInfo, error)
+	// Info provides the ProtocolInfo of this TransportCredentials.
 	Info() ProtocolInfo
-	Credentials
+	// Clone makes a copy of this TransportCredentials.
+	Clone() TransportCredentials
+	// OverrideServerName overrides the server name used to verify the hostname on the returned certificates from the server.
+	// gRPC internals also use it to override the virtual hosting name if it is set.
+	// It must be called before dialing. Currently, this is only used by grpclb.
+	OverrideServerName(string) error
 }
 
-// TLSInfo contains the auth information for a TLS authenticated connection.
-// It implements the AuthInfo interface.
-type TLSInfo struct {
-	State tls.ConnectionState
+// Bundle is a combination of TransportCredentials and PerRPCCredentials.
+//
+// It also contains a mode switching method, so it can be used as a combination
+// of different credential policies.
+//
+// Bundle cannot be used together with individual TransportCredentials.
+// PerRPCCredentials from Bundle will be appended to other PerRPCCredentials.
+//
+// This API is experimental.
+type Bundle interface {
+	TransportCredentials() TransportCredentials
+	PerRPCCredentials() PerRPCCredentials
+	// NewWithMode should make a copy of Bundle, and switch mode. Modifying the
+	// existing Bundle may cause races.
+	//
+	// NewWithMode returns nil if the requested mode is not supported.
+	NewWithMode(mode string) (Bundle, error)
 }
 
-func (t TLSInfo) AuthType() string {
-	return "tls"
+// RequestInfo contains request data attached to the context passed to GetRequestMetadata calls.
+//
+// This API is experimental.
+type RequestInfo struct {
+	// The method passed to Invoke or NewStream for this RPC. (For proto methods, this has the format "/some.Service/Method")
+	Method string
+	// AuthInfo contains the information from a security handshake (TransportCredentials.ClientHandshake, TransportCredentials.ServerHandshake)
+	AuthInfo AuthInfo
 }
 
-// tlsCreds is the credentials required for authenticating a connection using TLS.
-type tlsCreds struct {
-	// TLS configuration
-	config tls.Config
+// RequestInfoFromContext extracts the RequestInfo from the context if it exists.
+//
+// This API is experimental.
+func RequestInfoFromContext(ctx context.Context) (ri RequestInfo, ok bool) {
+	ri, ok = icredentials.RequestInfoFromContext(ctx).(RequestInfo)
+	return ri, ok
 }
 
-func (c tlsCreds) Info() ProtocolInfo {
-	return ProtocolInfo{
-		SecurityProtocol: "tls",
-		SecurityVersion:  "1.2",
+// ClientHandshakeInfo holds data to be passed to ClientHandshake. This makes
+// it possible to pass arbitrary data to the handshaker from gRPC, resolver,
+// balancer etc. Individual credential implementations control the actual
+// format of the data that they are willing to receive.
+//
+// This API is experimental.
+type ClientHandshakeInfo struct {
+	// Attributes contains the attributes for the address. It could be provided
+	// by the gRPC, resolver, balancer etc.
+	Attributes *attributes.Attributes
+}
+
+// ClientHandshakeInfoFromContext returns the ClientHandshakeInfo struct stored
+// in ctx.
+//
+// This API is experimental.
+func ClientHandshakeInfoFromContext(ctx context.Context) ClientHandshakeInfo {
+	chi, _ := icredentials.ClientHandshakeInfoFromContext(ctx).(ClientHandshakeInfo)
+	return chi
+}
+
+// CheckSecurityLevel checks if a connection's security level is greater than or equal to the specified one.
+// It returns success if 1) the condition is satisified or 2) AuthInfo struct does not implement GetCommonAuthInfo() method
+// or 3) CommonAuthInfo.SecurityLevel has an invalid zero value. For 2) and 3), it is for the purpose of backward-compatibility.
+//
+// This API is experimental.
+func CheckSecurityLevel(ai AuthInfo, level SecurityLevel) error {
+	type internalInfo interface {
+		GetCommonAuthInfo() CommonAuthInfo
 	}
-}
-
-// GetRequestMetadata returns nil, nil since TLS credentials does not have
-// metadata.
-func (c *tlsCreds) GetRequestMetadata(ctx context.Context, uri ...string) (map[string]string, error) {
-	return nil, nil
-}
-
-func (c *tlsCreds) RequireTransportSecurity() bool {
-	return true
-}
-
-type timeoutError struct{}
-
-func (timeoutError) Error() string   { return "credentials: Dial timed out" }
-func (timeoutError) Timeout() bool   { return true }
-func (timeoutError) Temporary() bool { return true }
-
-func (c *tlsCreds) ClientHandshake(addr string, rawConn net.Conn, timeout time.Duration) (_ net.Conn, _ AuthInfo, err error) {
-	// borrow some code from tls.DialWithDialer
-	var errChannel chan error
-	if timeout != 0 {
-		errChannel = make(chan error, 2)
-		time.AfterFunc(timeout, func() {
-			errChannel <- timeoutError{}
-		})
+	if ai == nil {
+		return errors.New("AuthInfo is nil")
 	}
-	if c.config.ServerName == "" {
-		colonPos := strings.LastIndex(addr, ":")
-		if colonPos == -1 {
-			colonPos = len(addr)
+	if ci, ok := ai.(internalInfo); ok {
+		// CommonAuthInfo.SecurityLevel has an invalid value.
+		if ci.GetCommonAuthInfo().SecurityLevel == InvalidSecurityLevel {
+			return nil
 		}
-		c.config.ServerName = addr[:colonPos]
+		if ci.GetCommonAuthInfo().SecurityLevel < level {
+			return fmt.Errorf("requires SecurityLevel %v; connection has %v", level, ci.GetCommonAuthInfo().SecurityLevel)
+		}
 	}
-	conn := tls.Client(rawConn, &c.config)
-	if timeout == 0 {
-		err = conn.Handshake()
-	} else {
-		go func() {
-			errChannel <- conn.Handshake()
-		}()
-		err = <-errChannel
-	}
-	if err != nil {
-		rawConn.Close()
-		return nil, nil, err
-	}
-	// TODO(zhaoq): Omit the auth info for client now. It is more for
-	// information than anything else.
-	return conn, nil, nil
+	// The condition is satisfied or AuthInfo struct does not implement GetCommonAuthInfo() method.
+	return nil
 }
 
-func (c *tlsCreds) ServerHandshake(rawConn net.Conn) (net.Conn, AuthInfo, error) {
-	conn := tls.Server(rawConn, &c.config)
-	if err := conn.Handshake(); err != nil {
-		rawConn.Close()
-		return nil, nil, err
-	}
-	return conn, TLSInfo{conn.ConnectionState()}, nil
+// ChannelzSecurityInfo defines the interface that security protocols should implement
+// in order to provide security info to channelz.
+//
+// This API is experimental.
+type ChannelzSecurityInfo interface {
+	GetSecurityValue() ChannelzSecurityValue
 }
 
-// NewTLS uses c to construct a TransportAuthenticator based on TLS.
-func NewTLS(c *tls.Config) TransportAuthenticator {
-	tc := &tlsCreds{*c}
-	tc.config.NextProtos = alpnProtoStr
-	return tc
+// ChannelzSecurityValue defines the interface that GetSecurityValue() return value
+// should satisfy. This interface should only be satisfied by *TLSChannelzSecurityValue
+// and *OtherChannelzSecurityValue.
+//
+// This API is experimental.
+type ChannelzSecurityValue interface {
+	isChannelzSecurityValue()
 }
 
-// NewClientTLSFromCert constructs a TLS from the input certificate for client.
-func NewClientTLSFromCert(cp *x509.CertPool, serverName string) TransportAuthenticator {
-	return NewTLS(&tls.Config{ServerName: serverName, RootCAs: cp})
-}
-
-// NewClientTLSFromFile constructs a TLS from the input certificate file for client.
-func NewClientTLSFromFile(certFile, serverName string) (TransportAuthenticator, error) {
-	b, err := ioutil.ReadFile(certFile)
-	if err != nil {
-		return nil, err
-	}
-	cp := x509.NewCertPool()
-	if !cp.AppendCertsFromPEM(b) {
-		return nil, fmt.Errorf("credentials: failed to append certificates")
-	}
-	return NewTLS(&tls.Config{ServerName: serverName, RootCAs: cp}), nil
-}
-
-// NewServerTLSFromCert constructs a TLS from the input certificate for server.
-func NewServerTLSFromCert(cert *tls.Certificate) TransportAuthenticator {
-	return NewTLS(&tls.Config{Certificates: []tls.Certificate{*cert}})
-}
-
-// NewServerTLSFromFile constructs a TLS from the input certificate file and key
-// file for server.
-func NewServerTLSFromFile(certFile, keyFile string) (TransportAuthenticator, error) {
-	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-	if err != nil {
-		return nil, err
-	}
-	return NewTLS(&tls.Config{Certificates: []tls.Certificate{cert}}), nil
+// OtherChannelzSecurityValue defines the struct that non-TLS protocol should return
+// from GetSecurityValue(), which contains protocol specific security info. Note
+// the Value field will be sent to users of channelz requesting channel info, and
+// thus sensitive info should better be avoided.
+//
+// This API is experimental.
+type OtherChannelzSecurityValue struct {
+	ChannelzSecurityValue
+	Name  string
+	Value proto.Message
 }
