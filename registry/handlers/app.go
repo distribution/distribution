@@ -467,8 +467,7 @@ func (app *App) traceHTTPMiddleware() error {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			span, traceContext := tracing.StartSpan(r.Context(), r.URL.Path, trace.WithAttributes(
 				attribute.String("Method", r.Method),
-				attribute.String("Host", r.Host),
-			))
+				attribute.String("Host", r.Host)))
 
 			defer tracing.StopSpan(span)
 			dcontext.GetLogger(app).Infof("tracer.StartSpan url %s", r.RequestURI)
