@@ -48,9 +48,9 @@ func (component *PluginComponent) Harvest(plugin INewrelicPlugin) ComponentData 
 		metricaKey := plugin.GetMetricaKey(model)
 
 		if newValue, err := model.GetValue(); err == nil {
-		        if math.IsInf(newValue, 0) || math.IsNaN(newValue) {
-                                newValue = 0
-                        }
+			if math.IsInf(newValue, 0) || math.IsNaN(newValue) {
+				newValue = 0
+			}
 
 			if existMetric, ok := component.Metrics[metricaKey]; ok {
 				if floatExistVal, ok := existMetric.(float64); ok {

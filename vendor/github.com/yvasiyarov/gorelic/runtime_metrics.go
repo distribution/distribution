@@ -2,13 +2,14 @@ package gorelic
 
 import (
 	"fmt"
-	"github.com/yvasiyarov/newrelic_platform_go"
 	"io/ioutil"
 	"os"
 	"runtime"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/yvasiyarov/newrelic_platform_go"
 )
 
 const linuxSystemQueryInterval = 60

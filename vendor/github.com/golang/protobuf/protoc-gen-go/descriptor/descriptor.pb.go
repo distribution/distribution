@@ -4,10 +4,11 @@
 package descriptor
 
 import (
+	reflect "reflect"
+
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	descriptorpb "google.golang.org/protobuf/types/descriptorpb"
-	reflect "reflect"
 )
 
 // Symbols defined in public import of google/protobuf/descriptor.proto.

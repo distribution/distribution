@@ -3,12 +3,13 @@
 package bugsnag
 
 import (
-	"appengine"
-	"appengine/urlfetch"
-	"appengine/user"
 	"fmt"
 	"log"
 	"net/http"
+
+	"appengine"
+	"appengine/urlfetch"
+	"appengine/user"
 )
 
 func defaultPanicHandler() {}

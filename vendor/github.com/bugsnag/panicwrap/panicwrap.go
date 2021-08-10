@@ -12,7 +12,6 @@ package panicwrap
 import (
 	"bytes"
 	"errors"
-	"github.com/bugsnag/osext"
 	"io"
 	"os"
 	"os/exec"
@@ -20,6 +19,8 @@ import (
 	"runtime"
 	"syscall"
 	"time"
+
+	"github.com/bugsnag/osext"
 )
 
 const (

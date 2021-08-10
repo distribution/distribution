@@ -1,9 +1,10 @@
 package gorelic
 
 import (
+	"time"
+
 	metrics "github.com/yvasiyarov/go-metrics"
 	"github.com/yvasiyarov/newrelic_platform_go"
-	"time"
 )
 
 func newMemoryMetricaDataSource(pollInterval int) goMetricaDataSource {

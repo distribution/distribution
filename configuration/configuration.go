@@ -2,13 +2,14 @@ package configuration
 
 import (
 	"fmt"
-	"github.com/pkg/errors"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"reflect"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 // Configuration is a versioned registry configuration, intended to be provided by a yaml file, and

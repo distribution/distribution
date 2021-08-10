@@ -1,11 +1,12 @@
 package bugsnag
 
 import (
-	"github.com/bugsnag/bugsnag-go/errors"
 	"log"
 	"net/http"
 	"os"
 	"sync"
+
+	"github.com/bugsnag/bugsnag-go/errors"
 
 	// Fixes a bug with SHA-384 intermediate certs on some platforms.
 	// - https://github.com/bugsnag/bugsnag-go/issues/9

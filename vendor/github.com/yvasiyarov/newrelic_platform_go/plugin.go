@@ -68,7 +68,7 @@ func (plugin *NewrelicPlugin) Harvest() error {
 			log.Printf("Got HTTP response code:%d", httpCode)
 		}
 
-		if err, isFatal := plugin.CheckResponse(httpCode); isFatal {		
+		if err, isFatal := plugin.CheckResponse(httpCode); isFatal {
 			log.Printf("Got fatal error:%v\n", err)
 			return err
 		} else {

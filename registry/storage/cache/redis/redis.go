@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	"fmt"
+
 	"github.com/distribution/distribution/v3/tracing"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
@@ -65,7 +66,7 @@ func (rbds *redisBlobDescriptorService) RepositoryScoped(repo string) (distribut
 
 // Stat retrieves the descriptor data from the redis hash entry.
 func (rbds *redisBlobDescriptorService) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "Stat"),
+	span, spanCtx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "Stat"),
 		trace.WithAttributes(attribute.String("dgst", dgst.String())))
 	defer tracing.StopSpan(span)
 
@@ -76,11 +77,11 @@ func (rbds *redisBlobDescriptorService) Stat(ctx context.Context, dgst digest.Di
 	conn := rbds.pool.Get()
 	defer conn.Close()
 
-	return rbds.stat(ctx, conn, dgst)
+	return rbds.stat(spanCtx, conn, dgst)
 }
 
 func (rbds *redisBlobDescriptorService) Clear(ctx context.Context, dgst digest.Digest) error {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "Clear"),
+	span, _ := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "Clear"),
 		trace.WithAttributes(attribute.String("dgst", dgst.String())))
 	defer tracing.StopSpan(span)
 
@@ -141,7 +142,7 @@ func (rbds *redisBlobDescriptorService) stat(ctx context.Context, conn redis.Con
 // hash. A hash is used here since we may store unrelated fields about a layer
 // in the future.
 func (rbds *redisBlobDescriptorService) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "SetDescriptor"),
+	span, spanCtx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "SetDescriptor"),
 		trace.WithAttributes(attribute.String("dgst", dgst.String()),
 			attribute.String("MediaType", desc.MediaType)))
 	defer tracing.StopSpan(span)
@@ -157,7 +158,7 @@ func (rbds *redisBlobDescriptorService) SetDescriptor(ctx context.Context, dgst 
 	conn := rbds.pool.Get()
 	defer conn.Close()
 
-	return rbds.setDescriptor(ctx, conn, dgst, desc)
+	return rbds.setDescriptor(spanCtx, conn, dgst, desc)
 }
 
 func (rbds *redisBlobDescriptorService) setDescriptor(ctx context.Context, conn redis.Conn, dgst digest.Digest, desc distribution.Descriptor) error {
@@ -198,7 +199,7 @@ var _ distribution.BlobDescriptorService = &repositoryScopedRedisBlobDescriptorS
 // forwards the descriptor request to the global blob store. If the media type
 // differs for the repository, we override it.
 func (rsrbds *repositoryScopedRedisBlobDescriptorService) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "Stat"),
+	span, _ := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "Stat"),
 		trace.WithAttributes(attribute.String("dgst", dgst.String())))
 	defer tracing.StopSpan(span)
 
@@ -245,7 +246,7 @@ func (rsrbds *repositoryScopedRedisBlobDescriptorService) Stat(ctx context.Conte
 
 // Clear removes the descriptor from the cache and forwards to the upstream descriptor store
 func (rsrbds *repositoryScopedRedisBlobDescriptorService) Clear(ctx context.Context, dgst digest.Digest) error {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "Clear"),
+	span, spanCtx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "Clear"),
 		trace.WithAttributes(attribute.String("dgst", dgst.String())))
 	defer tracing.StopSpan(span)
 
@@ -268,11 +269,11 @@ func (rsrbds *repositoryScopedRedisBlobDescriptorService) Clear(ctx context.Cont
 		return distribution.ErrBlobUnknown
 	}
 
-	return rsrbds.upstream.Clear(ctx, dgst)
+	return rsrbds.upstream.Clear(spanCtx, dgst)
 }
 
 func (rsrbds *repositoryScopedRedisBlobDescriptorService) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "SetDescriptor"),
+	span, spanCtx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "SetDescriptor"),
 		trace.WithAttributes(attribute.String("dgst", dgst.String()),
 			attribute.String("MediaType", desc.MediaType)))
 	defer tracing.StopSpan(span)
@@ -294,7 +295,7 @@ func (rsrbds *repositoryScopedRedisBlobDescriptorService) SetDescriptor(ctx cont
 	conn := rsrbds.upstream.pool.Get()
 	defer conn.Close()
 
-	return rsrbds.setDescriptor(ctx, conn, dgst, desc)
+	return rsrbds.setDescriptor(spanCtx, conn, dgst, desc)
 }
 
 func (rsrbds *repositoryScopedRedisBlobDescriptorService) setDescriptor(ctx context.Context, conn redis.Conn, dgst digest.Digest, desc distribution.Descriptor) error {

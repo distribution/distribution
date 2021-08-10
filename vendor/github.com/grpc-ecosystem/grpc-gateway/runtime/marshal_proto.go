@@ -4,8 +4,9 @@ import (
 	"io"
 
 	"errors"
-	"github.com/golang/protobuf/proto"
 	"io/ioutil"
+
+	"github.com/golang/protobuf/proto"
 )
 
 // ProtoMarshaller is a Marshaller which marshals/unmarshals into/from serialize proto bytes

@@ -132,6 +132,9 @@ github.com/inconshreveable/mousetrap
 github.com/jmespath/go-jmespath
 # github.com/kr/pretty v0.1.0
 ## explicit
+# github.com/kr/text v0.2.0
+## explicit
+github.com/kr/text
 # github.com/marstr/guid v1.1.0
 ## explicit
 github.com/marstr/guid
@@ -146,6 +149,9 @@ github.com/mitchellh/mapstructure
 ## explicit
 github.com/ncw/swift
 github.com/ncw/swift/swifttest
+# github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e
+## explicit
+github.com/niemeyer/pretty
 # github.com/opencontainers/go-digest v1.0.0
 ## explicit
 github.com/opencontainers/go-digest
@@ -366,7 +372,7 @@ google.golang.org/protobuf/types/known/durationpb
 google.golang.org/protobuf/types/known/fieldmaskpb
 google.golang.org/protobuf/types/known/timestamppb
 google.golang.org/protobuf/types/known/wrapperspb
-# gopkg.in/check.v1 v1.0.0-20141024133853-64131543e789
+# gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f
 ## explicit
 gopkg.in/check.v1
 # gopkg.in/yaml.v2 v2.4.0

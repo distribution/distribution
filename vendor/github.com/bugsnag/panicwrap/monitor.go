@@ -3,9 +3,10 @@
 package panicwrap
 
 import (
-	"github.com/bugsnag/osext"
 	"os"
 	"os/exec"
+
+	"github.com/bugsnag/osext"
 )
 
 func monitor(c *WrapConfig) (int, error) {

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
+	"strings"
 	"time"
-    "os"
-    "strings"
 )
 
 var shortHostName string = ""
@@ -46,19 +46,19 @@ func OpenTSDBWithConfig(c OpenTSDBConfig) {
 }
 
 func getShortHostname() string {
-    if shortHostName == "" {
-        host, _ := os.Hostname()
-        if index := strings.Index(host, "."); index > 0 {
-            shortHostName = host[:index]
-        } else {
-            shortHostName = host
-        }
-    }
-    return shortHostName
+	if shortHostName == "" {
+		host, _ := os.Hostname()
+		if index := strings.Index(host, "."); index > 0 {
+			shortHostName = host[:index]
+		} else {
+			shortHostName = host
+		}
+	}
+	return shortHostName
 }
 
 func openTSDB(c *OpenTSDBConfig) error {
-    shortHostname := getShortHostname()
+	shortHostname := getShortHostname()
 	now := time.Now().Unix()
 	du := float64(c.DurationUnit)
 	conn, err := net.DialTCP("tcp", nil, c.Addr)

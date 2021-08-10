@@ -2,6 +2,7 @@ package tracing
 
 import (
 	"context"
+
 	"github.com/distribution/distribution/v3/configuration"
 
 	"github.com/pkg/errors"

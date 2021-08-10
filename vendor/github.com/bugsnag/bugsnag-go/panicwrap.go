@@ -3,8 +3,8 @@
 package bugsnag
 
 import (
-	"github.com/bugsnag/panicwrap"
 	"github.com/bugsnag/bugsnag-go/errors"
+	"github.com/bugsnag/panicwrap"
 )
 
 // NOTE: this function does not return when you call it, instead it

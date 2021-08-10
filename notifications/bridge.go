@@ -3,13 +3,15 @@ package notifications
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/distribution/distribution/v3/tracing"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
 	"net/http"
 	"time"
 
+	"github.com/distribution/distribution/v3/tracing"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+
 	gocontext "context"
+
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/reference"
@@ -67,7 +69,7 @@ func NewRequestRecord(id string, r *http.Request) RequestRecord {
 }
 
 func (b *bridge) ManifestPushed(ctx gocontext.Context, repo reference.Named, sm distribution.Manifest, options ...distribution.ManifestServiceOption) error {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "ManifestPushed"),
+	span, _ := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "ManifestPushed"),
 		trace.WithAttributes(attribute.String("repo", repo.String())))
 	defer tracing.StopSpan(span)
 
@@ -89,7 +91,7 @@ func (b *bridge) ManifestPushed(ctx gocontext.Context, repo reference.Named, sm 
 }
 
 func (b *bridge) ManifestPulled(ctx gocontext.Context, repo reference.Named, sm distribution.Manifest, options ...distribution.ManifestServiceOption) error {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "ManifestPulled"),
+	span, _ := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "ManifestPulled"),
 		trace.WithAttributes(attribute.String("repo", repo.String())))
 	defer tracing.StopSpan(span)
 
@@ -111,7 +113,7 @@ func (b *bridge) ManifestPulled(ctx gocontext.Context, repo reference.Named, sm 
 }
 
 func (b *bridge) ManifestDeleted(ctx gocontext.Context, repo reference.Named, dgst digest.Digest) error {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "ManifestDeleted"),
+	span, _ := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "ManifestDeleted"),
 		trace.WithAttributes(attribute.String("repo", repo.String()),
 			attribute.String("dgst", dgst.String())))
 	defer tracing.StopSpan(span)
@@ -120,7 +122,7 @@ func (b *bridge) ManifestDeleted(ctx gocontext.Context, repo reference.Named, dg
 }
 
 func (b *bridge) BlobPushed(ctx gocontext.Context, repo reference.Named, desc distribution.Descriptor) error {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "BlobPushed"),
+	span, _ := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "BlobPushed"),
 		trace.WithAttributes(attribute.String("repo", repo.String()),
 			attribute.String("desc.digest", desc.Digest.String())))
 	defer tracing.StopSpan(span)
@@ -129,7 +131,7 @@ func (b *bridge) BlobPushed(ctx gocontext.Context, repo reference.Named, desc di
 }
 
 func (b *bridge) BlobPulled(ctx gocontext.Context, repo reference.Named, desc distribution.Descriptor) error {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "BlobPulled"),
+	span, _ := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "BlobPulled"),
 		trace.WithAttributes(attribute.String("repo", repo.String()),
 			attribute.String("desc.digest", desc.Digest.String())))
 	defer tracing.StopSpan(span)
@@ -138,7 +140,7 @@ func (b *bridge) BlobPulled(ctx gocontext.Context, repo reference.Named, desc di
 }
 
 func (b *bridge) BlobMounted(ctx gocontext.Context, repo reference.Named, desc distribution.Descriptor, fromRepo reference.Named) error {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "BlobMounted"),
+	span, _ := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "BlobMounted"),
 		trace.WithAttributes(attribute.String("repo", repo.String()),
 			attribute.String("desc.digest", desc.Digest.String())))
 	defer tracing.StopSpan(span)
@@ -155,7 +157,7 @@ func (b *bridge) BlobMounted(ctx gocontext.Context, repo reference.Named, desc d
 }
 
 func (b *bridge) BlobDeleted(ctx gocontext.Context, repo reference.Named, dgst digest.Digest) error {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "BlobDeleted"),
+	span, _ := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "BlobDeleted"),
 		trace.WithAttributes(attribute.String("repo", repo.String()),
 			attribute.String("dgst", dgst.String())))
 	defer tracing.StopSpan(span)
@@ -164,7 +166,7 @@ func (b *bridge) BlobDeleted(ctx gocontext.Context, repo reference.Named, dgst d
 }
 
 func (b *bridge) TagDeleted(ctx gocontext.Context, repo reference.Named, tag string) error {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "TagDeleted"),
+	span, _ := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "TagDeleted"),
 		trace.WithAttributes(attribute.String("repo", repo.String()),
 			attribute.String("tag", tag)))
 	defer tracing.StopSpan(span)
@@ -179,7 +181,7 @@ func (b *bridge) TagDeleted(ctx gocontext.Context, repo reference.Named, tag str
 }
 
 func (b *bridge) RepoDeleted(ctx gocontext.Context, repo reference.Named) error {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "RepoDeleted"),
+	span, _ := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", ComponentName, "RepoDeleted"),
 		trace.WithAttributes(attribute.String("repo", repo.String())))
 	defer tracing.StopSpan(span)
 

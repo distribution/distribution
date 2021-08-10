@@ -2,7 +2,7 @@
 
 set +e
 
-TIMEOUT=5
+TIMEOUT=12
 while [ $TIMEOUT -gt 0 ]; do
     STATUS=$(curl --insecure -s -o /dev/null -w '%{http_code}' http://localhost:5001/debug/health)
     echo $STATUS

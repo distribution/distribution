@@ -2,6 +2,10 @@ package notifications
 
 import (
 	gocontext "context"
+	"io"
+	"reflect"
+	"testing"
+
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/manifest"
@@ -13,9 +17,6 @@ import (
 	"github.com/distribution/distribution/v3/testutil"
 	"github.com/docker/libtrust"
 	"github.com/opencontainers/go-digest"
-	"io"
-	"reflect"
-	"testing"
 )
 
 func TestListener(t *testing.T) {

@@ -4,10 +4,11 @@
 package wrappers
 
 import (
+	reflect "reflect"
+
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	wrapperspb "google.golang.org/protobuf/types/known/wrapperspb"
-	reflect "reflect"
 )
 
 // Symbols defined in public import of google/protobuf/wrappers.proto.

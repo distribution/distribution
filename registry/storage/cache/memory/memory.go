@@ -3,10 +3,11 @@ package memory
 import (
 	"context"
 	"fmt"
+	"sync"
+
 	"github.com/distribution/distribution/v3/tracing"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-	"sync"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/reference"
@@ -49,39 +50,39 @@ func (imbdcp *inMemoryBlobDescriptorCacheProvider) RepositoryScoped(repo string)
 }
 
 func (imbdcp *inMemoryBlobDescriptorCacheProvider) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "Stat"),
+	span, spanCtx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "Stat"),
 		trace.WithAttributes(attribute.String("dgst", dgst.String())))
 	defer tracing.StopSpan(span)
 
-	return imbdcp.global.Stat(ctx, dgst)
+	return imbdcp.global.Stat(spanCtx, dgst)
 }
 
 func (imbdcp *inMemoryBlobDescriptorCacheProvider) Clear(ctx context.Context, dgst digest.Digest) error {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "Clear"),
+	span, spanCtx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "Clear"),
 		trace.WithAttributes(attribute.String("dgst", dgst.String())))
 	defer tracing.StopSpan(span)
 
-	return imbdcp.global.Clear(ctx, dgst)
+	return imbdcp.global.Clear(spanCtx, dgst)
 }
 
 func (imbdcp *inMemoryBlobDescriptorCacheProvider) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "SetDescriptor"),
+	span, spanCtx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", CacheType, "SetDescriptor"),
 		trace.WithAttributes(attribute.String("dgst", dgst.String()),
 			attribute.String("MediaType", desc.MediaType)))
 	defer tracing.StopSpan(span)
 
-	_, err := imbdcp.Stat(ctx, dgst)
+	_, err := imbdcp.Stat(spanCtx, dgst)
 	if err == distribution.ErrBlobUnknown {
 
 		if dgst.Algorithm() != desc.Digest.Algorithm() && dgst != desc.Digest {
 			// if the digests differ, set the other canonical mapping
-			if err := imbdcp.global.SetDescriptor(ctx, desc.Digest, desc); err != nil {
+			if err := imbdcp.global.SetDescriptor(spanCtx, desc.Digest, desc); err != nil {
 				return err
 			}
 		}
 
 		// unknown, just set it
-		return imbdcp.global.SetDescriptor(ctx, dgst, desc)
+		return imbdcp.global.SetDescriptor(spanCtx, dgst, desc)
 	}
 
 	// we already know it, do nothing

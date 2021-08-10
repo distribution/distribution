@@ -5,9 +5,6 @@ import (
 	cryptorand "crypto/rand"
 	"expvar"
 	"fmt"
-	"github.com/distribution/distribution/v3/tracing"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
 	"math/rand"
 	"net"
 	"net/http"
@@ -17,6 +14,10 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/distribution/distribution/v3/tracing"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/configuration"
@@ -459,6 +460,9 @@ func (app *App) traceHTTPMiddleware() error {
 	shutdown, err := tracing.InitOpenTelemetry(app.Config)
 	if err != nil {
 		return err
+	}
+	if shutdown == nil {
+		return nil
 	}
 	app.Shutdown = shutdown
 

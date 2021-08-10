@@ -24,9 +24,6 @@ import (
 	"crypto/tls"
 	"encoding/hex"
 	"fmt"
-	"github.com/distribution/distribution/v3/tracing"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/trace"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -34,6 +31,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/distribution/distribution/v3/tracing"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/mitchellh/mapstructure"
 	"github.com/ncw/swift"
@@ -307,7 +308,7 @@ func (d *driver) Name() string {
 
 // GetContent retrieves the content stored at "path" as a []byte.
 func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "GetContent"),
+	span, _ := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "GetContent"),
 		trace.WithAttributes(attribute.String("Path", path)))
 	defer tracing.StopSpan(span)
 
@@ -320,7 +321,7 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 
 // PutContent stores the []byte content at a location designated by "path".
 func (d *driver) PutContent(ctx context.Context, path string, contents []byte) error {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "PutContent"),
+	span, _ := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "PutContent"),
 		trace.WithAttributes(attribute.String("path", path),
 			attribute.Int("contentsLen", len(contents))))
 	defer tracing.StopSpan(span)
@@ -335,7 +336,7 @@ func (d *driver) PutContent(ctx context.Context, path string, contents []byte) e
 // Reader retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
 func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Reader"),
+	span, _ := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Reader"),
 		trace.WithAttributes(attribute.String("path", path),
 			attribute.Int64("offset", offset)))
 	defer tracing.StopSpan(span)
@@ -382,7 +383,7 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 // Writer returns a FileWriter which will store the content written to it
 // at the location designated by "path" after the call to Commit.
 func (d *driver) Writer(ctx context.Context, path string, append bool) (storagedriver.FileWriter, error) {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Writer"),
+	span, _ := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Writer"),
 		trace.WithAttributes(attribute.String("path", path),
 			attribute.Bool("append", append)))
 	defer tracing.StopSpan(span)
@@ -429,7 +430,7 @@ func (d *driver) Writer(ctx context.Context, path string, append bool) (storaged
 // Stat retrieves the FileInfo for the given path, including the current size
 // in bytes and the creation time.
 func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Stat"),
+	span, _ := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Stat"),
 		trace.WithAttributes(attribute.String("path", path)))
 	defer tracing.StopSpan(span)
 
@@ -499,7 +500,7 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 
 // List returns a list of the objects that are direct descendants of the given path.
 func (d *driver) List(ctx context.Context, path string) ([]string, error) {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "List"),
+	span, _ := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "List"),
 		trace.WithAttributes(attribute.String("path", path)))
 	defer tracing.StopSpan(span)
 
@@ -529,7 +530,7 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
 func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Move"),
+	span, _ := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Move"),
 		trace.WithAttributes(attribute.String("sourcePath", sourcePath),
 			attribute.String("destPath", destPath)))
 	defer tracing.StopSpan(span)
@@ -553,7 +554,7 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
 func (d *driver) Delete(ctx context.Context, path string) error {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Delete"),
+	span, _ := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Delete"),
 		trace.WithAttributes(attribute.String("path", path)))
 	defer tracing.StopSpan(span)
 
@@ -643,7 +644,7 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "URLFor"),
+	span, _ := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "URLFor"),
 		trace.WithAttributes(attribute.String("path", path)))
 	defer tracing.StopSpan(span)
 
@@ -703,11 +704,11 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 // Walk traverses a filesystem defined within driver, starting
 // from the given path, calling f on each file
 func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn) error {
-	span, ctx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Walk"),
+	span, spanCtx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", driverName, "Walk"),
 		trace.WithAttributes(attribute.String("path", path)))
 	defer tracing.StopSpan(span)
-	
-	return storagedriver.WalkFallback(ctx, d, path, f)
+
+	return storagedriver.WalkFallback(spanCtx, d, path, f)
 }
 
 func (d *driver) swiftPath(path string) string {

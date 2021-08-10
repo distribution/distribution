@@ -2,6 +2,7 @@ package gorelic
 
 import (
 	"fmt"
+
 	metrics "github.com/yvasiyarov/go-metrics"
 )
 
