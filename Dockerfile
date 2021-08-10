@@ -1,7 +1,8 @@
-ARG GO_VERSION=1.15
+ARG GO_VERSION=1.16
 
-FROM golang:${GO_VERSION}-alpine3.12 AS build
+FROM golang:${GO_VERSION}-alpine3.14 AS build
 
+ENV GO111MODULE=auto
 ENV DISTRIBUTION_DIR /go/src/github.com/distribution/distribution
 ENV BUILDTAGS include_oss include_gcs
 
@@ -18,7 +19,7 @@ WORKDIR $DISTRIBUTION_DIR
 COPY . $DISTRIBUTION_DIR
 RUN CGO_ENABLED=0 make PREFIX=/go clean binaries && file ./bin/registry | grep "statically linked"
 
-FROM alpine:3.12
+FROM alpine:3.14
 
 RUN set -ex \
     && apk add --no-cache ca-certificates
