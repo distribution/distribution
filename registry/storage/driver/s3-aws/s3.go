@@ -1081,7 +1081,7 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		// if there were no more results to return after the first call, resp.IsTruncated would have been false
 		// and the loop would exit without recalling ListObjects
 		if err != nil || len(resp.Contents) == 0 {
-			return storagedriver.PathNotFoundError{Path: path}
+			break ListLoop
 		}
 
 		for _, key := range resp.Contents {
