@@ -575,25 +575,6 @@ func TestDelete(t *testing.T) {
 		t.Fatalf("unexpected error creating driver with standard storage: %v", err)
 	}
 
-	var objs = []string{
-		"/file1",
-		"/file1-2",
-		"/file1/2",
-		"/folder1/file1",
-		"/folder2/file1",
-		"/folder3/file1",
-		"/folder3/subfolder1/subfolder1/file1",
-		"/folder3/subfolder2/subfolder1/file1",
-		"/folder4/file1",
-		"/folder1-v2/file1",
-		"/folder1-v2/subfolder1/file1",
-	}
-	// objects to skip auto-created test case
-	var skipCase = map[string]bool{
-		// special case where deleting "/file1" also deletes "/file1/2" is tested explicitly
-		"/file1": true,
-	}
-
 	type errFn func(error) bool
 	type testCase struct {
 		name     string
@@ -622,6 +603,20 @@ func TestDelete(t *testing.T) {
 			return true
 		}
 		return false
+	}
+
+	var objs = []string{
+		"/file1",
+		"/file1-2",
+		"/file1/2",
+		"/folder1/file1",
+		"/folder2/file1",
+		"/folder3/file1",
+		"/folder3/subfolder1/subfolder1/file1",
+		"/folder3/subfolder2/subfolder1/file1",
+		"/folder4/file1",
+		"/folder1-v2/file1",
+		"/folder1-v2/subfolder1/file1",
 	}
 
 	tcs := []testCase{
@@ -677,7 +672,12 @@ func TestDelete(t *testing.T) {
 		},
 	}
 
-	// init a test case for each file
+	// objects to skip auto-created test case
+	var skipCase = map[string]bool{
+		// special case where deleting "/file1" also deletes "/file1/2" is tested explicitly
+		"/file1": true,
+	}
+	// create a test case for each file
 	for _, path := range objs {
 		if skipCase[path] {
 			continue
@@ -776,7 +776,7 @@ func TestDelete(t *testing.T) {
 			}
 
 			if len(issues) > 0 {
-				t.Fatalf(strings.Join(issues, "; "))
+				t.Fatalf(strings.Join(issues, "; \n\t"))
 			}
 		})
 	}
