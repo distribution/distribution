@@ -512,53 +512,6 @@ func TestDelete(t *testing.T) {
 	}
 }
 
-func TestPopulate(t *testing.T) {
-
-	if skipS3() != "" {
-		t.Skip(skipS3())
-	}
-
-	rootDir, err := ioutil.TempDir("", "driver-")
-	if err != nil {
-		t.Fatalf("unexpected error creating temporary directory: %v", err)
-	}
-	defer os.Remove(rootDir)
-
-	driver, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
-	if err != nil {
-		t.Fatalf("unexpected error creating driver with standard storage: %v", err)
-	}
-
-	var objs = []string{
-		"/file1",
-		"/file1-2",
-		"/file1/2",
-		"/folder1/file1",
-		"/folder2/file1",
-		"/folder3/file1",
-		"/folder3/subfolder1/subfolder1/file1",
-		"/folder3/subfolder2/subfolder1/file1",
-		"/folder4/file1",
-		"/folder1-v2/file1",
-		"/folder1-v2/subfolder1/file1",
-	}
-
-	init := func() []string {
-		// init file structure matching objs above
-		var created []string
-		for _, path := range objs {
-			err := driver.PutContent(context.Background(), path, []byte("content "+path))
-			if err != nil {
-				fmt.Printf("unable to init file %s: %s\n", path, err)
-				continue
-			}
-			created = append(created, path)
-		}
-		return created
-	}
-	init()
-}
-
 func TestDelete(t *testing.T) {
 	if skipS3() != "" {
 		t.Skip(skipS3())
