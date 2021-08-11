@@ -1095,6 +1095,19 @@ func (d *driver) copy(ctx context.Context, sourcePath string, destPath string) e
 func (d *driver) Delete(ctx context.Context, path string) error {
 	s := d.s3Client(ctx)
 	s3Objects := make([]*s3.ObjectIdentifier, 0, listMax)
+	// manually add the given path if it's a file
+	stat, err := d.Stat(ctx, path)
+	if err != nil {
+		return err
+	}
+	if stat != nil && !stat.IsDir() {
+		path := d.s3Path(path)
+		s3Objects = append(s3Objects, &s3.ObjectIdentifier{
+			Key: &path,
+		})
+	}
+
+	// list objects under the given path as a subpath (suffix with slash "/")
 	s3Path := d.s3Path(path)
 	listObjectsInput := &s3.ListObjectsV2Input{
 		Bucket: aws.String(d.Bucket),
@@ -1108,14 +1121,10 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		// if there were no more results to return after the first call, resp.IsTruncated would have been false
 		// and the loop would exit without recalling ListObjects
 		if err != nil || len(resp.Contents) == 0 {
-			return storagedriver.PathNotFoundError{Path: path}
+			break
 		}
 
 		for _, key := range resp.Contents {
-			// Skip if we encounter a key that is not a subpath (so that deleting "/a" does not delete "/ab").
-			if len(*key.Key) > len(s3Path) && (*key.Key)[len(s3Path)] != '/' {
-				continue
-			}
 			s3Objects = append(s3Objects, &s3.ObjectIdentifier{
 				Key: key.Key,
 			})
@@ -1165,8 +1174,12 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		}
 	}
 
-	// need to chunk objects into groups of 1000 per s3 restrictions
 	total := len(s3Objects)
+	if total == 0 {
+		return storagedriver.PathNotFoundError{Path: path}
+	}
+
+	// need to chunk objects into groups of 1000 per s3 restrictions
 	for i := 0; i < total; i += 1000 {
 		r := math.Min(float64(i+1000), float64(total))
 		output, err := s.DeleteObjects(&s3.DeleteObjectsInput{
