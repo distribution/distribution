@@ -243,6 +243,229 @@ func TestStorageClass(t *testing.T) {
 
 }
 
+func TestDelete(t *testing.T) {
+	if skipS3() != "" {
+		t.Skip(skipS3())
+	}
+
+	rootDir, err := ioutil.TempDir("", "driver-")
+	if err != nil {
+		t.Fatalf("unexpected error creating temporary directory: %v", err)
+	}
+	defer os.Remove(rootDir)
+
+	driver, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
+	if err != nil {
+		t.Fatalf("unexpected error creating driver with standard storage: %v", err)
+	}
+
+	type errFn func(error) bool
+	type testCase struct {
+		name     string
+		delete   string
+		expected []string
+		// error validation function
+		err errFn
+	}
+
+	errPathNotFound := func(err error) bool {
+		if err == nil {
+			return false
+		}
+		switch err.(type) {
+		case storagedriver.PathNotFoundError:
+			return true
+		}
+		return false
+	}
+	errInvalidPath := func(err error) bool {
+		if err == nil {
+			return false
+		}
+		switch err.(type) {
+		case storagedriver.InvalidPathError:
+			return true
+		}
+		return false
+	}
+
+	var objs = []string{
+		"/file1",
+		"/file1-2",
+		"/file1/2",
+		"/folder1/file1",
+		"/folder2/file1",
+		"/folder3/file1",
+		"/folder3/subfolder1/subfolder1/file1",
+		"/folder3/subfolder2/subfolder1/file1",
+		"/folder4/file1",
+		"/folder1-v2/file1",
+		"/folder1-v2/subfolder1/file1",
+	}
+
+	tcs := []testCase{
+		{
+			// special case where a given path is a file and has subpaths
+			name:   "delete file1",
+			delete: "/file1",
+			expected: []string{
+				"/file1",
+				"/file1/2",
+			},
+		},
+		{
+			name:   "delete folder1",
+			delete: "/folder1",
+			expected: []string{
+				"/folder1/file1",
+			},
+		},
+		{
+			name:   "delete folder2",
+			delete: "/folder2",
+			expected: []string{
+				"/folder2/file1",
+			},
+		},
+		{
+			name:   "delete folder3",
+			delete: "/folder3",
+			expected: []string{
+				"/folder3/file1",
+				"/folder3/subfolder1/subfolder1/file1",
+				"/folder3/subfolder2/subfolder1/file1",
+			},
+		},
+		{
+			name:     "delete path that doesn't exist",
+			delete:   "/path/does/not/exist",
+			expected: []string{},
+			err:      errPathNotFound,
+		},
+		{
+			name:     "delete path invalid: trailing slash",
+			delete:   "/path/is/invalid/",
+			expected: []string{},
+			err:      errInvalidPath,
+		},
+		{
+			name:     "delete path invalid: trailing special character",
+			delete:   "/path/is/invalid*",
+			expected: []string{},
+			err:      errInvalidPath,
+		},
+	}
+
+	// objects to skip auto-created test case
+	var skipCase = map[string]bool{
+		// special case where deleting "/file1" also deletes "/file1/2" is tested explicitly
+		"/file1": true,
+	}
+	// create a test case for each file
+	for _, path := range objs {
+		if skipCase[path] {
+			continue
+		}
+		tcs = append(tcs, testCase{
+			name:     fmt.Sprintf("delete path:'%s'", path),
+			delete:   path,
+			expected: []string{path},
+		})
+	}
+
+	init := func() []string {
+		// init file structure matching objs
+		var created []string
+		for _, path := range objs {
+			err := driver.PutContent(context.Background(), path, []byte("content "+path))
+			if err != nil {
+				fmt.Printf("unable to init file %s: %s\n", path, err)
+				continue
+			}
+			created = append(created, path)
+		}
+		return created
+	}
+
+	cleanup := func(objs []string) {
+		var lastErr error
+		for _, path := range objs {
+			err := driver.Delete(context.Background(), path)
+			if err != nil {
+				switch err.(type) {
+				case storagedriver.PathNotFoundError:
+					continue
+				}
+				lastErr = err
+			}
+		}
+		if lastErr != nil {
+			t.Fatalf("cleanup failed: %s", lastErr)
+		}
+	}
+	defer cleanup(objs)
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			objs := init()
+
+			err := driver.Delete(context.Background(), tc.delete)
+
+			if tc.err != nil {
+				if err == nil {
+					t.Fatalf("expected error")
+				}
+				if !tc.err(err) {
+					t.Fatalf("error does not match expected: %s", err)
+				}
+			}
+			if tc.err == nil && err != nil {
+				t.Fatalf("unexpected error: %s", err)
+			}
+
+			var issues []string
+
+			// validate all files expected to be deleted are deleted
+			// and all files not marked for deletion still remain
+			expected := tc.expected
+			isExpected := func(path string) bool {
+				for _, epath := range expected {
+					if epath == path {
+						return true
+					}
+				}
+				return false
+			}
+			for _, path := range objs {
+				stat, err := driver.Stat(context.Background(), path)
+				if err != nil {
+					switch err.(type) {
+					case storagedriver.PathNotFoundError:
+						if !isExpected(path) {
+							issues = append(issues, fmt.Sprintf("unexpected path was deleted: %s", path))
+						}
+						// path was deleted & was supposed to be
+						continue
+					}
+					t.Fatalf("stat: %s", err)
+				}
+				if stat.IsDir() {
+					// for special cases where an object path has subpaths (eg /file1)
+					// once /file1 is deleted it's now a directory according to stat
+					continue
+				}
+				if isExpected(path) {
+					issues = append(issues, fmt.Sprintf("expected path was not deleted: %s", path))
+				}
+			}
+
+			if len(issues) > 0 {
+				t.Fatalf(strings.Join(issues, "; \n\t"))
+			}
+		})
+	}
+}
+
 func TestWalk(t *testing.T) {
 	if skipS3() != "" {
 		t.Skip(skipS3())
