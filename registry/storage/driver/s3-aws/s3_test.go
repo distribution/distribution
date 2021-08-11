@@ -719,11 +719,11 @@ func TestDelete(t *testing.T) {
 			t.Fatalf("cleanup failed: %s", lastErr)
 		}
 	}
+	defer cleanup(objs)
 
 	for _, tc := range tcs {
 		t.Run(tc.name, func(t *testing.T) {
 			objs := init()
-			defer cleanup(objs)
 
 			err := driver.Delete(context.Background(), tc.delete)
 
