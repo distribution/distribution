@@ -100,7 +100,7 @@ gives a clear indication of items eligible for deletion.
 
 The config.yml file should be in the following format:
 
-```
+```yaml
 version: 0.1
 storage:
   filesystem:
