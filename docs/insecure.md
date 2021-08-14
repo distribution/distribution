@@ -101,7 +101,7 @@ This is more secure than the insecure registry solution.
       Restart Docker.
 
     - **Docker Desktop for Windows**: Follow the instructions in
-      [Adding custom CA certificates](../docker-for-windows/index.md#adding-tls-certificates){: target="_blank" rel="noopener" class="_"}.
+      [Adding custom CA certificates](../desktop/windows/index.md#adding-tls-certificates){: target="_blank" rel="noopener" class="_"}.
       Restart Docker.
 
 
