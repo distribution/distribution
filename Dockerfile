@@ -1,7 +1,8 @@
-ARG GO_VERSION=1.15
+ARG GO_VERSION=1.16
 
-FROM golang:${GO_VERSION}-alpine3.12 AS build
+FROM golang:${GO_VERSION}-alpine3.14 AS build
 
+ENV GO111MODULE=auto
 ENV DISTRIBUTION_DIR /go/src/github.com/distribution/distribution
 ENV BUILDTAGS include_oss include_gcs
 
