@@ -928,8 +928,9 @@ func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn, 
 		prefix = "/"
 	}
 
+	path = d.s3Path(path)
 	var objectCount int64
-	if err := d.doWalk(ctx, &objectCount, d.s3Path(path), prefix, f); err != nil {
+	if err := d.doWalk(ctx, &objectCount, path, prefix, f, strings.Split(offset, "/"), 0); err != nil {
 		return err
 	}
 
@@ -944,6 +945,7 @@ func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn, 
 type walkInfoContainer struct {
 	storagedriver.FileInfoFields
 	prefix *string
+	rawKey string
 }
 
 // Path provides the full path of the target of this file info.
@@ -969,7 +971,7 @@ func (wi walkInfoContainer) IsDir() bool {
 	return wi.FileInfoFields.IsDir
 }
 
-func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, prefix string, f storagedriver.WalkFn) error {
+func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, prefix string, f storagedriver.WalkFn, offset []string, offsetIndex int) error {
 	var retError error
 
 	listObjectsInput := &s3.ListObjectsV2Input{
@@ -979,10 +981,42 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 		MaxKeys:   aws.Int64(listMax),
 	}
 
-	ctx, done := dcontext.WithTrace(parentCtx)
-	defer done("s3aws.ListObjectsV2Pages(%s)", path)
-	listObjectErr := d.S3.ListObjectsV2PagesWithContext(ctx, listObjectsInput, func(objects *s3.ListObjectsV2Output, lastPage bool) bool {
+	/*
+		There is an interesting issue we have to workaround because of the way delimited are handled. For example, let's
+		say we have the following paths:
 
+		netflix/ubuntu
+		netflix/x11
+		netflix-cat
+		netflixui
+
+
+		And you specify your offset as netflix/u, it will start at "netflix-cat" and not netflix/x11. We break it
+		into components and compare it component by component. When the current component has strictly passed the
+		value (for example, when you've moved from netflix/x11, to netflixui, you know you are "passed" netflix,
+		and no longer need to compare.
+
+		Because we do not want to skip the netflix prefix, we start by rewriting that prefix as "netfliw"
+	*/
+	currentOffsetComponent := ""
+	// Something weird is going on here, and we cannot handle this case if it is 0 bytes
+	if len(offset) > offsetIndex && len(offset[offsetIndex]) > 0 {
+		currentOffsetComponent = offset[offsetIndex]
+		currentOffsetComponentBytes := []byte(currentOffsetComponent)
+		// \t is the "lowest" allowed value in a S3 file, but shouldn't be in any of our file paths.
+		if currentOffsetComponentBytes[len(currentOffsetComponentBytes)-1] == '\t' {
+			currentOffsetComponentBytes = currentOffsetComponentBytes[:len(currentOffsetComponentBytes)-1]
+		} else {
+			currentOffsetComponentBytes[len(currentOffsetComponentBytes)-1]--
+			// ~ is the "highest" character allowed
+			currentOffsetComponentBytes = append(currentOffsetComponentBytes, '~')
+		}
+		listObjectsInput.StartAfter = aws.String(path + string(currentOffsetComponentBytes))
+	}
+
+	ctx, done := dcontext.WithTrace(parentCtx)
+	defer done("s3aws.ListObjectsV2Pages(%s, %q)", path, currentOffsetComponent)
+	listObjectErr := d.S3.ListObjectsV2PagesWithContext(ctx, listObjectsInput, func(objects *s3.ListObjectsV2Output, lastPage bool) bool {
 		var count int64
 		// KeyCount was introduced with version 2 of the GET Bucket operation in S3.
 		// Some S3 implementations don't support V2 now, so we fall back to manual
@@ -999,7 +1033,9 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 
 		for _, dir := range objects.CommonPrefixes {
 			commonPrefix := *dir.Prefix
+			pathComponents := strings.Split(strings.TrimSuffix(commonPrefix, "/"), "/")
 			walkInfos = append(walkInfos, walkInfoContainer{
+				rawKey: pathComponents[len(pathComponents)-1],
 				prefix: dir.Prefix,
 				FileInfoFields: storagedriver.FileInfoFields{
 					IsDir: true,
@@ -1014,7 +1050,9 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 			if strings.HasSuffix(*file.Key, "/") {
 				continue
 			}
+			pathComponents := strings.Split(strings.TrimSuffix(*file.Key, "/"), "/")
 			walkInfos = append(walkInfos, walkInfoContainer{
+				rawKey: pathComponents[len(pathComponents)-1],
 				FileInfoFields: storagedriver.FileInfoFields{
 					IsDir:   false,
 					Size:    *file.Size,
@@ -1027,21 +1065,28 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 		sort.SliceStable(walkInfos, func(i, j int) bool { return walkInfos[i].FileInfoFields.Path < walkInfos[j].FileInfoFields.Path })
 
 		for _, walkInfo := range walkInfos {
-			err := f(walkInfo)
+			// Once the current key _exceeds_ the index, then future values do not need to be checked,
+			// and we can begin calling the callback function.
+			if walkInfo.rawKey > currentOffsetComponent {
+				offset = []string{}
 
-			if err == storagedriver.ErrSkipDir {
-				if walkInfo.IsDir() {
-					continue
-				} else {
-					break
+				err := f(walkInfo)
+
+				if err == storagedriver.ErrSkipDir {
+					if walkInfo.IsDir() {
+						continue
+					} else {
+						break
+					}
+				} else if err != nil {
+					retError = err
+					return false
 				}
-			} else if err != nil {
-				retError = err
-				return false
+
 			}
 
 			if walkInfo.IsDir() {
-				if err := d.doWalk(ctx, objectCount, *walkInfo.prefix, prefix, f); err != nil {
+				if err := d.doWalk(ctx, objectCount, *walkInfo.prefix, prefix, f, offset, offsetIndex+1); err != nil {
 					retError = err
 					return false
 				}

@@ -582,3 +582,116 @@ func TestMoveWithMultipartCopy(t *testing.T) {
 		t.Fatalf("unexpected error getting content: %v", err)
 	}
 }
+
+// TestIncrementalWalkDir assures we don't accidentally skip over directories
+func TestIncrementalWalkDir(t *testing.T) {
+	if skipS3() != "" {
+		t.Skip(skipS3())
+	}
+
+	drv, err := s3DriverConstructor("", s3.StorageClassStandard)
+	if err != nil {
+		t.Fatalf("unexpected error creating rooted driver: %v", err)
+	}
+
+	// create an empty sub directory.
+	s3driver := drv.StorageDriver.(*driver)
+
+	dirnames := []string{"aaa", "bbb", "ccc"}
+	for _, l1 := range dirnames {
+		for _, l2 := range dirnames {
+			for _, l3 := range dirnames {
+				key := fmt.Sprintf("/testdir/incrementalwalkdir/%s/%s/%s", l1, l2, l3)
+				if _, err := s3driver.S3.PutObject(&s3.PutObjectInput{
+					Bucket: aws.String(os.Getenv("S3_BUCKET")),
+					Key:    aws.String(key),
+				}); err != nil {
+					t.Fatalf("error creating directory (%s): %s", key, err)
+				}
+			}
+		}
+	}
+
+	bucketFiles := []string{}
+	err = s3driver.Walk(context.Background(), "/testdir/incrementalwalkdir", func(fileInfo storagedriver.FileInfo) error {
+		bucketFiles = append(bucketFiles, fileInfo.Path())
+		return nil
+	}, "bbb/bbb")
+	if err != nil {
+		t.Fatalf("Unexpected error: %s", err)
+	}
+
+	expectedFiles := []string{
+		"/testdir/incrementalwalkdir/bbb/bbb/aaa",
+		"/testdir/incrementalwalkdir/bbb/bbb/bbb",
+		"/testdir/incrementalwalkdir/bbb/bbb/ccc",
+		"/testdir/incrementalwalkdir/bbb/ccc",
+		"/testdir/incrementalwalkdir/bbb/ccc/aaa",
+		"/testdir/incrementalwalkdir/bbb/ccc/bbb",
+		"/testdir/incrementalwalkdir/bbb/ccc/ccc",
+		"/testdir/incrementalwalkdir/ccc",
+		"/testdir/incrementalwalkdir/ccc/aaa",
+		"/testdir/incrementalwalkdir/ccc/aaa/aaa",
+		"/testdir/incrementalwalkdir/ccc/aaa/bbb",
+		"/testdir/incrementalwalkdir/ccc/aaa/ccc",
+		"/testdir/incrementalwalkdir/ccc/bbb",
+		"/testdir/incrementalwalkdir/ccc/bbb/aaa",
+		"/testdir/incrementalwalkdir/ccc/bbb/bbb",
+		"/testdir/incrementalwalkdir/ccc/bbb/ccc",
+		"/testdir/incrementalwalkdir/ccc/ccc",
+		"/testdir/incrementalwalkdir/ccc/ccc/aaa",
+		"/testdir/incrementalwalkdir/ccc/ccc/bbb",
+		"/testdir/incrementalwalkdir/ccc/ccc/ccc",
+	}
+
+	if !reflect.DeepEqual(bucketFiles, expectedFiles) {
+		t.Errorf("expecting files %+v, found %+v instead", expectedFiles, bucketFiles)
+	}
+}
+
+// TestIncrementalWalkFile assures we don't accidentally skip over files
+func TestIncrementalWalkFile(t *testing.T) {
+	if skipS3() != "" {
+		t.Skip(skipS3())
+	}
+
+	drv, err := s3DriverConstructor("", s3.StorageClassStandard)
+	if err != nil {
+		t.Fatalf("unexpected error creating rooted driver: %v", err)
+	}
+
+	// create an empty sub directory.
+	s3driver := drv.StorageDriver.(*driver)
+
+	if _, err := s3driver.S3.PutObject(&s3.PutObjectInput{
+		Bucket: aws.String(os.Getenv("S3_BUCKET")),
+		Key:    aws.String("/testdir/incrementalwalkfiles/bbb/bbb/aaa"),
+	}); err != nil {
+		t.Fatalf("error creating file: %s", err)
+	}
+
+	if _, err := s3driver.S3.PutObject(&s3.PutObjectInput{
+		Bucket: aws.String(os.Getenv("S3_BUCKET")),
+		Key:    aws.String("/testdir/incrementalwalkfiles/bbb/bbb/ccc"),
+	}); err != nil {
+		t.Fatalf("error creating file: %s", err)
+	}
+
+	bucketFiles := []string{}
+	err = s3driver.Walk(context.Background(), "/testdir/incrementalwalkfiles", func(fileInfo storagedriver.FileInfo) error {
+		bucketFiles = append(bucketFiles, fileInfo.Path())
+		return nil
+	}, "bbb/bbb")
+	if err != nil {
+		t.Fatalf("Unexpected error: %s", err)
+	}
+
+	expectedFiles := []string{
+		"/testdir/incrementalwalkfiles/bbb/bbb/aaa",
+		"/testdir/incrementalwalkfiles/bbb/bbb/ccc",
+	}
+
+	if !reflect.DeepEqual(bucketFiles, expectedFiles) {
+		t.Errorf("expecting files %+v, found %+v instead", expectedFiles, bucketFiles)
+	}
+}
