@@ -7,7 +7,7 @@
 //	name                            := [domain '/'] path-component ['/' path-component]*
 //	domain                          := domain-component ['.' domain-component]* [':' port-number]
 //	domain-component                := /([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])/
-//	port-number                     := /[0-9]+/
+//	port-number                     := /[0-9]{1,5}/
 //	path-component                  := alpha-numeric [separator alpha-numeric]*
 // 	alpha-numeric                   := /[a-z0-9]+/
 //	separator                       := /[_.]|__|[-]*/

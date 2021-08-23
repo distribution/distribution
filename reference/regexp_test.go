@@ -115,6 +115,14 @@ func TestDomainRegexp(t *testing.T) {
 			input: "Asdf.com", // uppercase character
 			match: true,
 		},
+		{
+			input: "192.168.1.1:75050", // ipv4
+			match: true,
+		},
+		{
+			input: "192.168.1.1:750050", // port with more than 5 digits
+			match: false,
+		},
 	}
 	r := regexp.MustCompile(`^` + DomainRegexp.String() + `$`)
 	for i := range hostcases {

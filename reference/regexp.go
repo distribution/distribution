@@ -31,7 +31,7 @@ var (
 	domain = expression(
 		domainComponent,
 		optional(repeated(literal(`.`), domainComponent)),
-		optional(literal(`:`), `[0-9]+`))
+		optional(literal(`:`), `[0-9]{1,5}`))
 	// DomainRegexp defines the structure of potential domain components
 	// that may be part of image names. This is purposely a subset of what is
 	// allowed by DNS to ensure backwards compatibility with Docker image
