@@ -5,7 +5,7 @@
   Add release template file to `releases/` directory. The template is defined
 by containerd's release tool. Name the file using the version, for rc add
 an `-rc` suffix.
-See https://github.com/containerd/containerd/tree/master/cmd/containerd-release
+See https://github.com/containerd/release-tool
 
 20. Update the `.mailmap` files.
 
@@ -18,7 +18,7 @@ and expects tags to be formatted as `vx.y.z[-rc.n]`. Run the release tool using
 the release template file and tag to generate the release notes for the tag
 and Github release. To create the tag, you will need PGP installed and a PGP
 key which has been added to your Github account. The comment for the tag will
-be the generate release notes, always compare with previous tags to ensure
+be the generated release notes, always compare with previous tags to ensure
 the output is expected and consistent.
 Run `git tag --cleanup=whitespace -s vx.y.z[-rc.n] -F release-notes` to create
 tag and `git -v vx.y.z[-rc.n]` to verify tag, check comment and correct commit
