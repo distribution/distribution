@@ -100,6 +100,9 @@ github.com/docker/go-metrics
 github.com/docker/libtrust
 # github.com/felixge/httpsnoop v1.0.1
 github.com/felixge/httpsnoop
+# github.com/fsnotify/fsnotify v1.4.9
+## explicit
+github.com/fsnotify/fsnotify
 # github.com/golang/protobuf v1.3.2
 github.com/golang/protobuf/proto
 # github.com/gomodule/redigo v1.8.2

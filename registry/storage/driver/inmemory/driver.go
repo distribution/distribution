@@ -3,6 +3,7 @@ package inmemory
 import (
 	"context"
 	"fmt"
+	"github.com/fsnotify/fsnotify"
 	"io"
 	"io/ioutil"
 	"sync"
@@ -248,6 +249,10 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 // from the given path, calling f on each file
 func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn) error {
 	return storagedriver.WalkFallback(ctx, d, path, f)
+}
+
+func (d *driver) Watch(ctx context.Context, paths ...string) (io.Closer, chan fsnotify.Event, error) {
+	return nil, nil, storagedriver.ErrUnsupportedMethod{}
 }
 
 type writer struct {

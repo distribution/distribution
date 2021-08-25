@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"path"
+	"sync"
 	"time"
 
 	"github.com/distribution/distribution/v3"
@@ -305,12 +306,13 @@ func (lbs *linkedBlobStore) mount(ctx context.Context, sourceRepo reference.Name
 }
 
 // newBlobUpload allocates a new upload controller with the given state.
-func (lbs *linkedBlobStore) newBlobUpload(ctx context.Context, uuid, path string, startedAt time.Time, append bool) (distribution.BlobWriter, error) {
+func (lbs *linkedBlobStore) newBlobUpload(ctx context.Context, uuid, path string, startedAt time.Time, append bool) (*blobWriter, error) {
 	fw, err := lbs.driver.Writer(ctx, path, append)
 	if err != nil {
 		return nil, err
 	}
 
+	mutex := &sync.Mutex{}
 	bw := &blobWriter{
 		ctx:                    ctx,
 		blobStore:              lbs,
@@ -320,7 +322,14 @@ func (lbs *linkedBlobStore) newBlobUpload(ctx context.Context, uuid, path string
 		fileWriter:             fw,
 		driver:                 lbs.driver,
 		path:                   path,
+		mutex:                  mutex,
+		finished:               make(chan struct{}),
+		finishedClosed:         false,
 		resumableDigestEnabled: lbs.resumableDigestEnabled,
+		cancelled:              false,
+		refCount:               1,
+		desc:                   nil,
+		descNotify:             sync.NewCond(mutex),
 	}
 
 	return bw, nil

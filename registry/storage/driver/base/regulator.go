@@ -3,6 +3,7 @@ package base
 import (
 	"context"
 	"fmt"
+	"github.com/fsnotify/fsnotify"
 	"io"
 	"reflect"
 	"strconv"
@@ -181,4 +182,8 @@ func (r *regulator) URLFor(ctx context.Context, path string, options map[string]
 	defer r.exit()
 
 	return r.StorageDriver.URLFor(ctx, path, options)
+}
+
+func (r *regulator) Watch(ctx context.Context, paths ...string) (io.Closer, chan fsnotify.Event, error) {
+	return r.StorageDriver.Watch(ctx, paths...)
 }
