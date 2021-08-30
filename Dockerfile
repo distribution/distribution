@@ -4,7 +4,7 @@ FROM golang:${GO_VERSION}-alpine3.14 AS build
 
 ENV GO111MODULE=auto
 ENV DISTRIBUTION_DIR /go/src/github.com/distribution/distribution
-ENV BUILDTAGS include_oss include_gcs
+ENV BUILDTAGS include_oss include_gcs include_bos
 
 ARG GOOS=linux
 ARG GOARCH=amd64

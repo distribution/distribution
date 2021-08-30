@@ -124,6 +124,11 @@ github.com/gorilla/handlers
 # github.com/gorilla/mux v1.8.0
 ## explicit
 github.com/gorilla/mux
+# github.com/guoyao/baidubce-sdk-go v1.0.5
+## explicit
+github.com/guoyao/baidubce-sdk-go/bce
+github.com/guoyao/baidubce-sdk-go/bos
+github.com/guoyao/baidubce-sdk-go/util
 # github.com/inconshreveable/mousetrap v1.0.0
 ## explicit
 github.com/inconshreveable/mousetrap

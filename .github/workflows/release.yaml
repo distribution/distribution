@@ -10,7 +10,7 @@ jobs:
     name: Build and publish docker image
     runs-on: ubuntu-latest
     env:
-      DOCKER_BUILDTAGS: "include_oss include_gcs"
+      DOCKER_BUILDTAGS: "include_oss include_gcs include_bos"
       CGO_ENABLED: 1
       GO111MODULE: "auto"
       GOPATH: ${{ github.workspace }}
