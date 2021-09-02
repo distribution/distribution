@@ -76,10 +76,6 @@ Multiple registry caches can be deployed over the same back-end. A single
 registry cache ensures that concurrent requests do not pull duplicate data,
 but this property does not hold true for a registry cache cluster.
 
-> **Note**
->
-> Service accounts included in the Team plan are limited to 5,000 pulls per day. See [Service Accounts](/docker-hub/service-accounts/) for more details.
-
 ### Configure the cache
 
 To configure a Registry to run as a pull through cache, the addition of a
