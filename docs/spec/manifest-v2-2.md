@@ -220,7 +220,7 @@ image. It's the direct replacement for the schema-1 manifest.
     - **`urls`** *array*
 
         Provides a list of URLs from which the content may be fetched. Content
-        should be verified against the `digest` and `size`. This field is
+        must be verified against the `digest` and `size`. This field is
         optional and uncommon.
 
 ## Example Image Manifest
