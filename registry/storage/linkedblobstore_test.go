@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"reflect"
@@ -115,7 +116,11 @@ func TestLinkedBlobStoreCreateWithMountFrom(t *testing.T) {
 		if err := option.Apply(&createOpts); err != nil {
 			t.Fatalf("failed to apply MountFrom option: %v", err)
 		}
-		if !createOpts.Mount.ShouldMount || createOpts.Mount.From.String() != fooCanonical.String() {
+		mount, ok := createOpts.Mount.(distribution.FromMount)
+		if !ok {
+			t.Fatalf("Expected mount to be FromMount")
+		}
+		if mount.From.String() != fooCanonical.String() {
 			t.Fatalf("unexpected create options: %#+v", createOpts.Mount)
 		}
 
@@ -123,7 +128,7 @@ func TestLinkedBlobStoreCreateWithMountFrom(t *testing.T) {
 		if err == nil {
 			t.Fatalf("unexpected non-error while mounting from %q: %v", fooRepoName.String(), err)
 		}
-		if _, ok := err.(distribution.ErrBlobMounted); !ok {
+		if !errors.As(err, &distribution.ErrBlobMounted{}) {
 			t.Fatalf("expected ErrMountFrom error, not %T: %v", err, err)
 		}
 	}

@@ -23,6 +23,7 @@ type BlobListener interface {
 	BlobPushed(repo reference.Named, desc distribution.Descriptor) error
 	BlobPulled(repo reference.Named, desc distribution.Descriptor) error
 	BlobMounted(repo reference.Named, desc distribution.Descriptor, fromRepo reference.Named) error
+	BlobMountedAutomaticContentDiscovery(repo reference.Named, desc distribution.Descriptor) error
 	BlobDeleted(repo reference.Named, desc digest.Digest) error
 }
 
@@ -191,8 +192,13 @@ func (bsl *blobServiceListener) Put(ctx context.Context, mediaType string, p []b
 func (bsl *blobServiceListener) Create(ctx context.Context, options ...distribution.BlobCreateOption) (distribution.BlobWriter, error) {
 	wr, err := bsl.BlobStore.Create(ctx, options...)
 	switch err := err.(type) {
-	case distribution.ErrBlobMounted:
+	case distribution.ErrBlobMountedFrom:
 		if err := bsl.parent.listener.BlobMounted(bsl.parent.Repository.Named(), err.Descriptor, err.From); err != nil {
+			dcontext.GetLogger(ctx).Errorf("error dispatching blob mount to listener: %v", err)
+		}
+		return nil, err
+	case distribution.ErrBlobMounted:
+		if err := bsl.parent.listener.BlobMountedAutomaticContentDiscovery(bsl.parent.Repository.Named(), err.Descriptor); err != nil {
 			dcontext.GetLogger(ctx).Errorf("error dispatching blob mount to listener: %v", err)
 		}
 		return nil, err

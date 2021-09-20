@@ -67,6 +67,10 @@ type Event struct {
 		// from if appropriate.
 		FromRepository string `json:"fromRepository,omitempty"`
 
+		// AutomaticContentDiscovery identifies that the blob was mounted via
+		// automatic content discovery, and thus the "source" repo is unspecified
+		AutomaticContentDiscovery *bool `json:"automaticContentDiscovery,omitempty"`
+
 		// URL provides a direct link to the content.
 		URL string `json:"url,omitempty"`
 

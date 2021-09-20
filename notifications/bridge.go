@@ -107,6 +107,18 @@ func (b *bridge) BlobMounted(repo reference.Named, desc distribution.Descriptor,
 	return b.sink.Write(*event)
 }
 
+func (b *bridge) BlobMountedAutomaticContentDiscovery(repo reference.Named, desc distribution.Descriptor) error {
+	event, err := b.createBlobEvent(EventActionMount, repo, desc)
+	if err != nil {
+		return err
+	}
+
+	t := true
+	event.Target.AutomaticContentDiscovery = &t
+
+	return b.sink.Write(*event)
+}
+
 func (b *bridge) BlobDeleted(repo reference.Named, dgst digest.Digest) error {
 	return b.createBlobDeleteEventAndWrite(EventActionDelete, repo, dgst)
 }

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -67,8 +68,9 @@ func (buh *blobUploadHandler) StartBlobUpload(w http.ResponseWriter, r *http.Req
 	fromRepo := r.FormValue("from")
 	mountDigest := r.FormValue("mount")
 
-	if mountDigest != "" && fromRepo != "" {
+	if mountDigest != "" {
 		opt, err := buh.createBlobMountOption(fromRepo, mountDigest)
+		// We ignore errors here because this is supposed to (always) fail open according to the spec.
 		if opt != nil && err == nil {
 			options = append(options, opt)
 		}
@@ -78,7 +80,8 @@ func (buh *blobUploadHandler) StartBlobUpload(w http.ResponseWriter, r *http.Req
 	upload, err := blobs.Create(buh, options...)
 
 	if err != nil {
-		if ebm, ok := err.(distribution.ErrBlobMounted); ok {
+		var ebm distribution.ErrBlobMounted
+		if errors.As(err, &ebm) {
 			if err := buh.writeBlobCreatedHeaders(w, ebm.Descriptor); err != nil {
 				buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 			}
@@ -362,6 +365,10 @@ func (buh *blobUploadHandler) createBlobMountOption(fromRepo, mountDigest string
 	dgst, err := digest.Parse(mountDigest)
 	if err != nil {
 		return nil, err
+	}
+
+	if fromRepo == "" {
+		return storage.WithMount(dgst), nil
 	}
 
 	ref, err := reference.WithName(fromRepo)

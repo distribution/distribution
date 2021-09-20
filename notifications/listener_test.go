@@ -98,6 +98,11 @@ func (tl *testListener) BlobMounted(repo reference.Named, desc distribution.Desc
 	return nil
 }
 
+func (tl *testListener) BlobMountedAutomaticContentDiscovery(repo reference.Named, desc distribution.Descriptor) error {
+	tl.ops["layer:automount"]++
+	return nil
+}
+
 func (tl *testListener) BlobDeleted(repo reference.Named, d digest.Digest) error {
 	tl.ops["layer:delete"]++
 	return nil

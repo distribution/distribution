@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -428,13 +429,28 @@ func createSource(ctx context.Context, t *testing.T, registry distribution.Names
 	}
 }
 
-// TestBlobMount covers the blob mount process, exercising common
+func TestBlobMountAutomaticContentDiscovery(t *testing.T) {
+	t.Run("testBlobMountAutomaticContent", func(t *testing.T) {
+		testBlobMountAutomaticContentDiscovery(t, false)
+	})
+	t.Run("testBlobMountAutomaticContentDiscoveryEnabled", func(t *testing.T) {
+		testBlobMountAutomaticContentDiscovery(t, true)
+	})
+}
+
+// testBlobMountAutomaticContentDiscovery covers the blob mount process, exercising common
 // error paths that might be seen during a mount.
-func TestBlobMount(t *testing.T) {
+func testBlobMountAutomaticContentDiscovery(t *testing.T, enableAutomaticContentDiscovery bool) {
 	ctx := context.Background()
 
 	driver := testdriver.New()
-	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
+	var registry distribution.Namespace
+	var err error
+	if enableAutomaticContentDiscovery {
+		registry, err = NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect, EnableAutomaticContentDiscovery)
+	} else {
+		registry, err = NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
+	}
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -453,22 +469,48 @@ func TestBlobMount(t *testing.T) {
 	}
 	bs := repository.Blobs(ctx)
 
-	bw, err := bs.Create(ctx, WithMountFrom(canonicalRef))
+	var bw distribution.BlobWriter
+	if enableAutomaticContentDiscovery {
+		bw, err = bs.Create(ctx, WithMount(source.digest))
+	} else {
+		// Make sure without automatic content discovery this fails gracefully
+		bw, err = bs.Create(ctx, WithMount(source.digest))
+		if err != nil {
+			t.Fatalf("Received unexpected non-error, when cross-mounting without canonical reference and automatic content discovery disabled")
+		}
+		if bw == nil {
+			t.Fatalf("Did not start upload upon failed cross mount with automatic content discovery disabled")
+		}
+
+		bw, err = bs.Create(ctx, WithMountFrom(canonicalRef))
+	}
 	if bw != nil {
 		t.Fatal("unexpected blobwriter returned from Create call, should mount instead")
 	}
 
-	ebm, ok := err.(distribution.ErrBlobMounted)
-	if !ok {
-		t.Fatalf("unexpected error mounting layer: %v", err)
+	var mountedDescriptor distribution.Descriptor
+	if enableAutomaticContentDiscovery {
+		ebm := distribution.ErrBlobMounted{}
+		if !errors.As(err, &ebm) {
+			t.Fatalf("unexpected error mounting layer: %v", err)
+		}
+		mountedDescriptor = ebm.Descriptor
+	} else {
+		ebmf := distribution.ErrBlobMountedFrom{}
+		if !errors.As(err, &ebmf) {
+			t.Fatalf("unexpected error mounting layer: %v", err)
+		}
+		mountedDescriptor = ebmf.Descriptor
 	}
 
-	if !reflect.DeepEqual(ebm.Descriptor, source.desc) {
-		t.Fatalf("descriptors not equal: %v != %v", ebm.Descriptor, source.desc)
+	if !reflect.DeepEqual(mountedDescriptor, source.desc) {
+		t.Fatalf("descriptors not equal: %v != %v", mountedDescriptor, source.desc)
 	}
 
 	// Test the negative case
 	// This uses the source repo from the first repo, but the digest from the second
+	// Even in automatic content discovery, it is stated that the from *MAY* be ignored, but
+	// is not required to be ignored.
 	wrongCanonicalRef, err := reference.WithDigest(source.repository.Named(), source2.desc.Digest)
 	if err != nil {
 		t.Fatal(err)
