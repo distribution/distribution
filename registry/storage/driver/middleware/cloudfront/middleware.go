@@ -127,7 +127,7 @@ func newCloudFrontStorageMiddleware(storageDriver storagedriver.StorageDriver, o
 			if err != nil {
 				return nil, fmt.Errorf("invalid updatefrequency: %s", err)
 			}
-			duration = updateFreq
+			updateFrequency = updateFreq
 		}
 	}
 
