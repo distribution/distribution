@@ -37,7 +37,7 @@ func TestWalkFileRemoved(t *testing.T) {
 	err := WalkFallback(context.Background(), d, "", func(fileInfo FileInfo) error {
 		infos = append(infos, fileInfo)
 		return nil
-	})
+	}, "")
 	if len(infos) != 1 || infos[0].Path() != "zoidberg" {
 		t.Errorf(fmt.Sprintf("unexpected path set during walk: %s", infos))
 	}

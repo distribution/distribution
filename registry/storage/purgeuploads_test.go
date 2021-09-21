@@ -152,7 +152,7 @@ func TestPurgeMissingStartedAt(t *testing.T) {
 			}
 		}
 		return nil
-	})
+	}, "")
 	if err != nil {
 		t.Fatalf("Unexpected error during Walk: %s ", err.Error())
 	}
