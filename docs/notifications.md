@@ -346,5 +346,5 @@ which can be wired up to achieve interesting behavior. If this system doesn't
 provide acceptable guarantees, adding a transactional `Sink` to the registry
 is a possibility, although it may have an effect on request service time.
 See the
-[godoc](http://godoc.org/github.com/docker/distribution/notifications#Sink)
+[godoc](https://godoc.org/github.com/docker/distribution/notifications#Sink)
 for more information.
