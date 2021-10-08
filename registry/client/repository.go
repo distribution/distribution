@@ -196,6 +196,14 @@ func (r *repository) Tags(ctx context.Context) distribution.TagService {
 	}
 }
 
+func (r *repository) Extensions(ctx context.Context) distribution.ExtensionService {
+	return &extensions{
+		client: r.client,
+		ub:     r.ub,
+		name:   r.Named(),
+	}
+}
+
 // tags implements remote tagging operations.
 type tags struct {
 	client *http.Client
@@ -948,4 +956,56 @@ func (bs *blobStatter) Clear(ctx context.Context, dgst digest.Digest) error {
 
 func (bs *blobStatter) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
 	return nil
+}
+
+// extensions implements remote extension operations.
+type extensions struct {
+	client *http.Client
+	ub     *v2.URLBuilder
+	name   reference.Named
+}
+
+func (es *extensions) Get(ctx context.Context, name string) (interface{}, error) {
+	return nil, fmt.Errorf("extension %q is not supported by this client", name)
+}
+
+func (es *extensions) All(ctx context.Context) ([]string, error) {
+	listURLStr, err := es.ub.BuildExtensionsURL(es.name)
+	if err != nil {
+		return nil, err
+	}
+
+	listURL, err := url.Parse(listURLStr)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, listURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := es.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if SuccessStatus(resp.StatusCode) {
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		extensionsResponse := struct {
+			Extensions []string `json:"extensions"`
+		}{}
+		if err := json.Unmarshal(b, &extensionsResponse); err != nil {
+			return nil, err
+		}
+		return extensionsResponse.Extensions, nil
+	}
+
+	// TODO(shizh): pagination support.
+
+	return nil, HandleErrorResponse(resp)
 }
