@@ -2,6 +2,12 @@ package distribution
 
 import "context"
 
+// ExtensionProvider provides extension services.
+type ExtensionProvider interface {
+	// Extensions returns a reference to the extension service
+	Extensions(ctx context.Context) ExtensionService
+}
+
 // ExtensionService provices access to extensions.
 type ExtensionService interface {
 	// Get returns the extended service identified by its project name.

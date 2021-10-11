@@ -189,11 +189,6 @@ func (reg *registry) BlobStatter() distribution.BlobStatter {
 	return reg.statter
 }
 
-func (reg *registry) Extensions(ctx context.Context) distribution.ExtensionService {
-	// TODO(shizh): implement registry level extension.
-	panic("registry extensions not implemented")
-}
-
 // repository provides name-scoped access to various services.
 type repository struct {
 	*registry

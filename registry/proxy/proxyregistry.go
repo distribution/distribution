@@ -157,7 +157,6 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 	}
 
 	return &proxiedRepository{
-		embedded: localRepo,
 		blobStore: &proxyBlobStore{
 			localStore:     localRepo.Blobs(ctx),
 			remoteStore:    remoteRepo.Blobs(ctx),
@@ -188,10 +187,6 @@ func (pr *proxyingRegistry) Blobs() distribution.BlobEnumerator {
 
 func (pr *proxyingRegistry) BlobStatter() distribution.BlobStatter {
 	return pr.embedded.BlobStatter()
-}
-
-func (pr *proxyingRegistry) Extensions(ctx context.Context) distribution.ExtensionService {
-	return pr.embedded.Extensions(ctx)
 }
 
 // authChallenger encapsulates a request to the upstream to establish credential challenges
@@ -245,7 +240,6 @@ func (r *remoteAuthChallenger) tryEstablishChallenges(ctx context.Context) error
 // locally, or pulling it through from a remote and caching it locally if it doesn't
 // already exist
 type proxiedRepository struct {
-	embedded  distribution.Repository // provides local repository functionality
 	blobStore distribution.BlobStore
 	manifests distribution.ManifestService
 	name      reference.Named
@@ -266,8 +260,4 @@ func (pr *proxiedRepository) Named() reference.Named {
 
 func (pr *proxiedRepository) Tags(ctx context.Context) distribution.TagService {
 	return pr.tags
-}
-
-func (pr *proxiedRepository) Extensions(ctx context.Context) distribution.ExtensionService {
-	return pr.embedded.Extensions(ctx)
 }
