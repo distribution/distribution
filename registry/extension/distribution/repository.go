@@ -4,7 +4,9 @@ import (
 	"net/http"
 
 	"github.com/distribution/distribution/v3/registry/api/errcode"
+	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	"github.com/distribution/distribution/v3/registry/extension"
+	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/gorilla/handlers"
 )
 
@@ -34,7 +36,12 @@ func (rh *repositoryHandler) DeleteRepository(w http.ResponseWriter, r *http.Req
 	}
 
 	if err := repo.Remove(rh.Context, rh.Repository.Named()); err != nil {
-		rh.Errors = append(rh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+		switch err := err.(type) {
+		case driver.PathNotFoundError:
+			rh.Errors = append(rh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
+		default:
+			rh.Errors = append(rh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+		}
 		return
 	}
 
