@@ -102,10 +102,12 @@ type App struct {
 // handlers accordingly.
 func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	app := &App{
-		Config:  config,
-		Context: ctx,
-		router:  v2.RouterWithPrefix(config.HTTP.Prefix),
-		isCache: config.Proxy.RemoteURL != "",
+		Config:               config,
+		Context:              ctx,
+		router:               v2.RouterWithPrefix(config.HTTP.Prefix),
+		isCache:              config.Proxy.RemoteURL != "",
+		registryExtensions:   []string{},
+		repositoryExtensions: []string{},
 	}
 
 	// Register the handler dispatchers.

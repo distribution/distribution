@@ -37,15 +37,19 @@ func (eh *extensionsHandler) GetExtensions(w http.ResponseWriter, r *http.Reques
 
 	w.Header().Set("Content-Type", "application/json")
 
-	var name string
+	var resp extensionsAPIResponse
 	if eh.Repository != nil {
-		name = eh.Repository.Named().Name()
+		resp = extensionsAPIResponse{
+			Name:       eh.Repository.Named().Name(),
+			Extensions: eh.repositoryExtensions,
+		}
+	} else {
+		resp = extensionsAPIResponse{
+			Extensions: eh.registryExtensions,
+		}
 	}
 	enc := json.NewEncoder(w)
-	if err := enc.Encode(extensionsAPIResponse{
-		Name:       name,
-		Extensions: eh.repositoryExtensions,
-	}); err != nil {
+	if err := enc.Encode(resp); err != nil {
 		eh.Errors = append(eh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		return
 	}
