@@ -12,6 +12,7 @@ import (
 	"os"
 	"regexp"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -88,6 +89,12 @@ type App struct {
 
 	// readOnly is true if the registry is in a read-only maintenance mode
 	readOnly bool
+
+	// registryExtensions records applied registry extensions
+	registryExtensions []string
+
+	// repositoryExtensions records applied repository extensions
+	repositoryExtensions []string
 }
 
 // NewApp takes a configuration and returns a configured app, ready to serve
@@ -111,6 +118,8 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	app.register(v2.RouteNameBlob, blobDispatcher)
 	app.register(v2.RouteNameBlobUpload, blobUploadDispatcher)
 	app.register(v2.RouteNameBlobUploadChunk, blobUploadDispatcher)
+	app.register(v2.RouteNameExtensionsRegistry, extensionsDispatcher)
+	app.register(v2.RouteNameExtensionsRepository, extensionsDispatcher)
 
 	// override the storage driver's UA string for registry outbound HTTP requests
 	storageParams := config.Storage.Parameters()
@@ -935,8 +944,21 @@ func (app *App) applyExtension(ctx context.Context, extensions []configuration.M
 				}
 			}(route.Dispatcher)
 			app.register(desc.Name, dispatch)
+			extName := fmt.Sprintf(
+				"_%s/%s/%s",
+				route.Namespace,
+				route.Extension,
+				route.Component,
+			)
+			if route.NameRequired {
+				app.repositoryExtensions = append(app.repositoryExtensions, extName)
+			} else {
+				app.registryExtensions = append(app.registryExtensions, extName)
+			}
 		}
 	}
+	sort.Strings(app.registryExtensions)
+	sort.Strings(app.repositoryExtensions)
 	return nil
 }
 
