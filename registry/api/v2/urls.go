@@ -141,7 +141,7 @@ func (ub *URLBuilder) BuildTagsURL(name reference.Named, values ...url.Values) (
 
 // BuildRegistryExtensionsURL constructs a url to list the extensions in the named repository.
 func (ub *URLBuilder) BuildRegistryExtensionsURL(values ...url.Values) (string, error) {
-	route := ub.cloneRoute(RouteNameExtensionsRepository)
+	route := ub.cloneRoute(RouteNameExtensionsRegistry)
 
 	extensionsURL, err := route.URL()
 	if err != nil {
