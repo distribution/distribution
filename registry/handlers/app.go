@@ -26,6 +26,7 @@ import (
 	"github.com/distribution/distribution/v3/registry/api/errcode"
 	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	"github.com/distribution/distribution/v3/registry/auth"
+	"github.com/distribution/distribution/v3/registry/extension"
 	registrymiddleware "github.com/distribution/distribution/v3/registry/middleware/registry"
 	repositorymiddleware "github.com/distribution/distribution/v3/registry/middleware/repository"
 	"github.com/distribution/distribution/v3/registry/proxy"
@@ -330,6 +331,12 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	app.repoRemover, ok = app.registry.(distribution.RepositoryRemover)
 	if !ok {
 		dcontext.GetLogger(app).Warnf("Registry does not implement RepositoryRemover. Will not be able to delete repos and tags")
+	}
+
+	// extend registry server
+	err = app.applyExtension(app, config.Extension["http"])
+	if err != nil {
+		panic(err)
 	}
 
 	return app
@@ -890,7 +897,47 @@ func (app *App) nameRequired(r *http.Request) bool {
 		return true
 	}
 	routeName := route.GetName()
-	return routeName != v2.RouteNameBase && routeName != v2.RouteNameCatalog
+	return routeName != v2.RouteNameBase && routeName != v2.RouteNameCatalog &&
+		!strings.HasPrefix(routeName, v2.RouteNameExtensionsRegistry)
+}
+
+// applyExtension extends a server instance with the configured extensions
+func (app *App) applyExtension(ctx context.Context, extensions []configuration.Middleware) error {
+	for _, ext := range extensions {
+		routes, err := extension.Get(ctx, ext.Name, ext.Options)
+		if err != nil {
+			return fmt.Errorf("unable to configure server extension (%s): %s", ext.Name, err)
+		}
+		for _, route := range routes {
+			desc, ok := v2.ExtendRoute(
+				route.Namespace,
+				route.Extension,
+				route.Component,
+				route.Descriptor,
+				route.NameRequired,
+			)
+			if !ok {
+				return fmt.Errorf("duplicated route: %s", desc.Name)
+			}
+			app.router.Path(desc.Path).Name(desc.Name)
+			dispatch := func(dispatch extension.DispatchFunc) dispatchFunc {
+				return func(ctx *Context, r *http.Request) http.Handler {
+					return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+						extCtx := &extension.Context{
+							Context:           ctx.Context,
+							Repository:        ctx.Repository,
+							RepositoryRemover: ctx.RepositoryRemover,
+							Errors:            ctx.Errors,
+						}
+						dispatch(extCtx, r).ServeHTTP(rw, r)
+						ctx.Errors = extCtx.Errors
+					})
+				}
+			}(route.Dispatcher)
+			app.register(desc.Name, dispatch)
+		}
+	}
+	return nil
 }
 
 // apiBase implements a simple yes-man for doing overall checks against the

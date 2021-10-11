@@ -247,6 +247,9 @@ type Configuration struct {
 			Classes []string `yaml:"classes"`
 		} `yaml:"repository,omitempty"`
 	} `yaml:"policy,omitempty"`
+
+	// Extension lists all extensions to be used by the registry.
+	Extension map[string][]Middleware `yaml:"extension,omitempty"`
 }
 
 // LogHook is composed of hook Level and Type.

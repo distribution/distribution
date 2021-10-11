@@ -134,6 +134,13 @@ func (r *registry) Repositories(ctx context.Context, entries []string, last stri
 	return numFilled, returnErr
 }
 
+func (r *registry) Extensions(ctx context.Context) distribution.ExtensionService {
+	return &extensions{
+		client: r.client,
+		ub:     r.ub,
+	}
+}
+
 // NewRepository creates a new Repository for the given repository name and base URL.
 func NewRepository(name reference.Named, baseURL string, transport http.RoundTripper) (distribution.Repository, error) {
 	ub, err := v2.NewURLBuilderFromString(baseURL, false)
@@ -970,7 +977,13 @@ func (es *extensions) Get(ctx context.Context, name string) (interface{}, error)
 }
 
 func (es *extensions) All(ctx context.Context) ([]string, error) {
-	listURLStr, err := es.ub.BuildExtensionsURL(es.name)
+	var listURLStr string
+	var err error
+	if es.name == nil {
+		listURLStr, err = es.ub.BuildRegistryExtensionsURL()
+	} else {
+		listURLStr, err = es.ub.BuildRepositoryExtensionsURL(es.name)
+	}
 	if err != nil {
 		return nil, err
 	}

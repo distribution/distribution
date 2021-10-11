@@ -1596,7 +1596,7 @@ var routeDescriptors = []RouteDescriptor{
 		},
 	},
 	{
-		Name:        RouteNameExtensions,
+		Name:        RouteNameExtensionsRepository,
 		Path:        "/v2/{name:" + reference.NameRegexp.String() + "}/_ext",
 		Entity:      "Extensions",
 		Description: "Retrieve information about extensions.",
