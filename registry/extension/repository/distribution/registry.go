@@ -4,7 +4,8 @@ import (
 	"context"
 
 	v2 "github.com/distribution/distribution/v3/registry/api/v2"
-	"github.com/distribution/distribution/v3/registry/extension"
+	extension "github.com/distribution/distribution/v3/registry/extension"
+	repositoryextension "github.com/distribution/distribution/v3/registry/extension/repository"
 )
 
 func newRegistryExtension(ctx context.Context, options map[string]interface{}) ([]extension.Route, error) {
@@ -12,10 +13,9 @@ func newRegistryExtension(ctx context.Context, options map[string]interface{}) (
 	ext := "registry"
 	return []extension.Route{
 		{
-			Namespace:    ns,
-			Extension:    ext,
-			Component:    "repository",
-			NameRequired: true,
+			Namespace: ns,
+			Extension: ext,
+			Component: "repository",
 			Descriptor: v2.RouteDescriptor{
 				Entity: "Repository",
 				Methods: []v2.MethodDescriptor{
@@ -28,10 +28,9 @@ func newRegistryExtension(ctx context.Context, options map[string]interface{}) (
 			Dispatcher: repositoryDispatcher,
 		},
 		{
-			Namespace:    ns,
-			Extension:    ext,
-			Component:    "manifests",
-			NameRequired: true,
+			Namespace: ns,
+			Extension: ext,
+			Component: "manifests",
 			Descriptor: v2.RouteDescriptor{
 				Entity: "Manifest",
 				Methods: []v2.MethodDescriptor{
@@ -58,5 +57,5 @@ func newRegistryExtension(ctx context.Context, options map[string]interface{}) (
 }
 
 func init() {
-	extension.Register("distribution", newRegistryExtension)
+	repositoryextension.Register("distribution", newRegistryExtension)
 }

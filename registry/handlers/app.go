@@ -28,6 +28,8 @@ import (
 	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	"github.com/distribution/distribution/v3/registry/auth"
 	"github.com/distribution/distribution/v3/registry/extension"
+	registryextension "github.com/distribution/distribution/v3/registry/extension/registry"
+	repositoryextension "github.com/distribution/distribution/v3/registry/extension/repository"
 	registrymiddleware "github.com/distribution/distribution/v3/registry/middleware/registry"
 	repositorymiddleware "github.com/distribution/distribution/v3/registry/middleware/repository"
 	"github.com/distribution/distribution/v3/registry/proxy"
@@ -102,12 +104,10 @@ type App struct {
 // handlers accordingly.
 func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	app := &App{
-		Config:               config,
-		Context:              ctx,
-		router:               v2.RouterWithPrefix(config.HTTP.Prefix),
-		isCache:              config.Proxy.RemoteURL != "",
-		registryExtensions:   []string{},
-		repositoryExtensions: []string{},
+		Config:  config,
+		Context: ctx,
+		router:  v2.RouterWithPrefix(config.HTTP.Prefix),
+		isCache: config.Proxy.RemoteURL != "",
 	}
 
 	// Register the handler dispatchers.
@@ -345,7 +345,11 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	}
 
 	// extend registry server
-	err = app.applyExtension(app, config.Extension["http"])
+	err = app.applyRegistryExtension(app, config.Extension.Registry["http"])
+	if err != nil {
+		panic(err)
+	}
+	err = app.applyRepositoryExtension(app, config.Extension.Repository["http"])
 	if err != nil {
 		panic(err)
 	}
@@ -912,65 +916,89 @@ func (app *App) nameRequired(r *http.Request) bool {
 		!strings.HasPrefix(routeName, v2.RouteNameExtensionsRegistry)
 }
 
+// applyRegistryExtension extends a server instance with the configured extensions for registry-level paths.
+func (app *App) applyRegistryExtension(ctx context.Context, extensions []configuration.Extension) error {
+	extensionNames, err := app.applyExtension(ctx, extensions, false)
+	if err != nil {
+		return err
+	}
+	app.registryExtensions = extensionNames
+	return nil
+}
+
+// applyRepositoryExtension extends a server instance with the configured extensions for repository-level paths.
+func (app *App) applyRepositoryExtension(ctx context.Context, extensions []configuration.Extension) error {
+	extensionNames, err := app.applyExtension(ctx, extensions, true)
+	if err != nil {
+		return err
+	}
+	app.repositoryExtensions = extensionNames
+	return nil
+}
+
 // applyExtension extends a server instance with the configured extensions
-func (app *App) applyExtension(ctx context.Context, extensions []configuration.Extension) error {
+func (app *App) applyExtension(ctx context.Context, extensions []configuration.Extension, nameRequired bool) ([]string, error) {
+	level := "registry"
+	getExtension := registryextension.Get
+	if nameRequired {
+		level = "repository"
+		getExtension = repositoryextension.Get
+	}
+
+	extensionNames := []string{}
 	for _, ext := range extensions {
 		if ext.Disabled {
-			dcontext.GetLogger(app).Infof("server extension (%s) disabled", ext.Name)
+			dcontext.GetLogger(app).Infof("server %s extension (%s) disabled", level, ext.Name)
 			continue
 		}
 
-		routes, err := extension.Get(ctx, ext.Name, ext.Options)
+		routes, err := getExtension(ctx, ext.Name, ext.Options)
 		if err != nil {
-			return fmt.Errorf("unable to configure server extension (%s): %s", ext.Name, err)
+			return nil, fmt.Errorf("unable to configure server %s extension (%s): %s", level, ext.Name, err)
 		}
 		for _, route := range routes {
+			if err := app.registerExtendedRoute(route, nameRequired); err != nil {
+				return nil, err
+			}
 			extName := fmt.Sprintf(
 				"_%s/%s/%s",
 				route.Namespace,
 				route.Extension,
 				route.Component,
 			)
-			if ext.RepositoryOnly && !route.NameRequired {
-				dcontext.GetLogger(app).Warnf("skipped non-repository server extension route (%s): %s", ext.Name, extName)
-				continue
-			}
-
-			desc, ok := v2.ExtendRoute(
-				route.Namespace,
-				route.Extension,
-				route.Component,
-				route.Descriptor,
-				route.NameRequired,
-			)
-			if !ok {
-				return fmt.Errorf("duplicated route: %s", desc.Name)
-			}
-			app.router.Path(desc.Path).Name(desc.Name)
-			dispatch := func(dispatch extension.DispatchFunc) dispatchFunc {
-				return func(ctx *Context, r *http.Request) http.Handler {
-					return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-						extCtx := &extension.Context{
-							Context:           ctx.Context,
-							Repository:        ctx.Repository,
-							RepositoryRemover: ctx.RepositoryRemover,
-							Errors:            ctx.Errors,
-						}
-						dispatch(extCtx, r).ServeHTTP(rw, r)
-						ctx.Errors = extCtx.Errors
-					})
-				}
-			}(route.Dispatcher)
-			app.register(desc.Name, dispatch)
-			if route.NameRequired {
-				app.repositoryExtensions = append(app.repositoryExtensions, extName)
-			} else {
-				app.registryExtensions = append(app.registryExtensions, extName)
-			}
+			extensionNames = append(extensionNames, extName)
 		}
 	}
-	sort.Strings(app.registryExtensions)
-	sort.Strings(app.repositoryExtensions)
+	sort.Strings(extensionNames)
+	return extensionNames, nil
+}
+
+// registerExtendedRoute registers extended route to the application
+func (app *App) registerExtendedRoute(route extension.Route, nameRequired bool) error {
+	desc, ok := v2.ExtendRoute(
+		route.Namespace,
+		route.Extension,
+		route.Component,
+		route.Descriptor,
+		nameRequired,
+	)
+	if !ok {
+		return fmt.Errorf("duplicated route: %s", desc.Name)
+	}
+	app.router.Path(desc.Path).Name(desc.Name)
+	dispatch := route.Dispatcher
+	app.register(desc.Name, func(ctx *Context, r *http.Request) http.Handler {
+		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			extCtx := &extension.Context{
+				Context:           ctx.Context,
+				Repository:        ctx.Repository,
+				RepositoryRemover: ctx.RepositoryRemover,
+				Errors:            ctx.Errors,
+			}
+			dispatch(extCtx, r).ServeHTTP(rw, r)
+			ctx.Errors = extCtx.Errors
+		})
+	})
 	return nil
 }
 

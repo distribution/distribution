@@ -249,7 +249,12 @@ type Configuration struct {
 	} `yaml:"policy,omitempty"`
 
 	// Extension lists all extensions to be used by the registry.
-	Extension map[string][]Extension `yaml:"extension,omitempty"`
+	Extension struct {
+		// Registry configures registry-level extensions.
+		Registry map[string][]Extension `yaml:"registry,omitempty"`
+		// Repository configures repository-level extensions.
+		Repository map[string][]Extension `yaml:"repository,omitempty"`
+	} `yaml:"extension,omitempty"`
 }
 
 // LogHook is composed of hook Level and Type.
@@ -637,6 +642,9 @@ type Middleware struct {
 	Options Parameters `yaml:"options"`
 }
 
+// Extension configures named extensions to be applied at desired components.
+type Extension = Middleware
+
 // Proxy configures the registry as a pull through cache
 type Proxy struct {
 	// RemoteURL is the URL of the remote registry
@@ -647,14 +655,6 @@ type Proxy struct {
 
 	// Password of the hub user
 	Password string `yaml:"password"`
-}
-
-// Extension configures named extensions to be applied at desired components.
-type Extension struct {
-	Middleware `yaml:",inline"`
-
-	// RepositoryOnly applies the extension to repository paths only if set to true.
-	RepositoryOnly bool `yaml:"repositoryonly"`
 }
 
 // Parse parses an input configuration yaml document into a Configuration struct
