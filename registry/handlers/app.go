@@ -913,13 +913,29 @@ func (app *App) nameRequired(r *http.Request) bool {
 }
 
 // applyExtension extends a server instance with the configured extensions
-func (app *App) applyExtension(ctx context.Context, extensions []configuration.Middleware) error {
+func (app *App) applyExtension(ctx context.Context, extensions []configuration.Extension) error {
 	for _, ext := range extensions {
+		if ext.Disabled {
+			dcontext.GetLogger(app).Infof("server extension (%s) disabled", ext.Name)
+			continue
+		}
+
 		routes, err := extension.Get(ctx, ext.Name, ext.Options)
 		if err != nil {
 			return fmt.Errorf("unable to configure server extension (%s): %s", ext.Name, err)
 		}
 		for _, route := range routes {
+			extName := fmt.Sprintf(
+				"_%s/%s/%s",
+				route.Namespace,
+				route.Extension,
+				route.Component,
+			)
+			if ext.RepositoryOnly && !route.NameRequired {
+				dcontext.GetLogger(app).Warnf("skipped non-repository server extension route (%s): %s", ext.Name, extName)
+				continue
+			}
+
 			desc, ok := v2.ExtendRoute(
 				route.Namespace,
 				route.Extension,
@@ -946,12 +962,6 @@ func (app *App) applyExtension(ctx context.Context, extensions []configuration.M
 				}
 			}(route.Dispatcher)
 			app.register(desc.Name, dispatch)
-			extName := fmt.Sprintf(
-				"_%s/%s/%s",
-				route.Namespace,
-				route.Extension,
-				route.Component,
-			)
 			if route.NameRequired {
 				app.repositoryExtensions = append(app.repositoryExtensions, extName)
 			} else {
