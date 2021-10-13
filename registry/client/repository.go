@@ -973,7 +973,7 @@ type extensions struct {
 }
 
 func (es *extensions) Get(ctx context.Context, name string) (interface{}, error) {
-	return nil, fmt.Errorf("extension %q is not supported by this client", name)
+	return nil, fmt.Errorf("extension %q is not supported", name)
 }
 
 func (es *extensions) All(ctx context.Context) ([]string, error) {
