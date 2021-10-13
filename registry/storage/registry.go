@@ -8,6 +8,8 @@ import (
 	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/storage/cache"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
+	registryextension "github.com/distribution/distribution/v3/registry/storage/extension/registry"
+	repositoryextension "github.com/distribution/distribution/v3/registry/storage/extension/repository"
 	"github.com/docker/libtrust"
 )
 
@@ -25,6 +27,8 @@ type registry struct {
 	blobDescriptorServiceFactory distribution.BlobDescriptorServiceFactory
 	manifestURLs                 manifestURLs
 	driver                       storagedriver.StorageDriver
+	registryExtensions           map[string]registryextension.RegistryExtension
+	repositoryExtensions         map[string]repositoryextension.RepositoryExtension
 }
 
 // manifestURLs holds regular expressions for controlling manifest URL whitelisting
@@ -189,6 +193,13 @@ func (reg *registry) BlobStatter() distribution.BlobStatter {
 	return reg.statter
 }
 
+func (reg *registry) Extensions(ctx context.Context) distribution.ExtensionService {
+	return &registryExtension{
+		registry:   reg,
+		extensions: reg.registryExtensions,
+	}
+}
+
 // repository provides name-scoped access to various services.
 type repository struct {
 	*registry
@@ -333,5 +344,12 @@ func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
 		linkDirectoryPathSpec:  layersPathSpec{name: repo.name.Name()},
 		deleteEnabled:          repo.registry.deleteEnabled,
 		resumableDigestEnabled: repo.resumableDigestEnabled,
+	}
+}
+
+func (repo *repository) Extensions(ctx context.Context) distribution.ExtensionService {
+	return &repositoryExtension{
+		repository: repo,
+		extensions: repo.registry.repositoryExtensions,
 	}
 }
