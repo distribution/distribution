@@ -12,6 +12,7 @@ import (
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/manifest/schema1"
 	"github.com/distribution/distribution/v3/manifest/schema2"
+	repositoryextension "github.com/distribution/distribution/v3/registry/storage/extension/repository"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -52,6 +53,7 @@ type manifestStore struct {
 	schema2Handler      ManifestHandler
 	ocischemaHandler    ManifestHandler
 	manifestListHandler ManifestHandler
+	extensionHandlers   []repositoryextension.ManifestHandler
 }
 
 var _ distribution.ManifestService = &manifestStore{}
@@ -89,8 +91,22 @@ func (ms *manifestStore) Get(ctx context.Context, dgst digest.Digest, options ..
 		return nil, err
 	}
 
+	// Fallback to extension handlers if necessary.
+	fallback := func() (bool, distribution.Manifest, error) {
+		for _, extensionHandler := range ms.extensionHandlers {
+			if extensionHandler.CanUnmarshal(content) {
+				m, err := extensionHandler.Unmarshal(ctx, dgst, content)
+				return true, m, err
+			}
+		}
+		return false, nil, nil
+	}
+
 	var versioned manifest.Versioned
 	if err = json.Unmarshal(content, &versioned); err != nil {
+		if ok, m, err := fallback(); ok {
+			return m, err
+		}
 		return nil, err
 	}
 
@@ -119,10 +135,16 @@ func (ms *manifestStore) Get(ctx context.Context, dgst digest.Digest, options ..
 			// Otherwise, assume it must be an image manifest
 			return ms.ocischemaHandler.Unmarshal(ctx, dgst, content)
 		default:
+			if ok, m, err := fallback(); ok {
+				return m, err
+			}
 			return nil, distribution.ErrManifestVerification{fmt.Errorf("unrecognized manifest content type %s", versioned.MediaType)}
 		}
 	}
 
+	if ok, m, err := fallback(); ok {
+		return m, err
+	}
 	return nil, fmt.Errorf("unrecognized manifest schema version %d", versioned.SchemaVersion)
 }
 
@@ -138,6 +160,13 @@ func (ms *manifestStore) Put(ctx context.Context, manifest distribution.Manifest
 		return ms.ocischemaHandler.Put(ctx, manifest, ms.skipDependencyVerification)
 	case *manifestlist.DeserializedManifestList:
 		return ms.manifestListHandler.Put(ctx, manifest, ms.skipDependencyVerification)
+	}
+
+	// Fallback to extension handlers if necessary.
+	for _, extensionHandler := range ms.extensionHandlers {
+		if extensionHandler.CanPut(manifest) {
+			return extensionHandler.Put(ctx, manifest, ms.skipDependencyVerification)
+		}
 	}
 
 	return "", fmt.Errorf("unrecognized manifest type %T", manifest)

@@ -277,6 +277,20 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 		}
 	}
 
+	var extensionHandlers []repositoryextension.ManifestHandler
+	for _, ext := range repo.registry.repositoryExtensions {
+		handler, err := ext.ManifestHandler(ctx, repo, &storeExtension{
+			repository: repo,
+			driver:     repo.driver,
+		})
+		if err != nil {
+			return nil, err
+		}
+		if handler != nil {
+			extensionHandlers = append(extensionHandlers, handler)
+		}
+	}
+
 	ms := &manifestStore{
 		ctx:            ctx,
 		repository:     repo,
@@ -299,6 +313,7 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 			blobStore:    blobStore,
 			manifestURLs: repo.registry.manifestURLs,
 		},
+		extensionHandlers: extensionHandlers,
 	}
 
 	// Apply options

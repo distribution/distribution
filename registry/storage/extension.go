@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/registry/storage/cache"
+	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/extension"
 	registryextension "github.com/distribution/distribution/v3/registry/storage/extension/registry"
 	repositoryextension "github.com/distribution/distribution/v3/registry/storage/extension/repository"
@@ -41,7 +44,9 @@ func (re *registryExtension) Get(ctx context.Context, name string) (interface{},
 		return nil, fmt.Errorf("extension %q is not supported", name)
 	}
 
-	return ext.RegistryExtension(ctx)
+	return ext.RegistryExtension(ctx, re.registry, &storeExtension{
+		driver: re.driver,
+	})
 }
 
 func (re *registryExtension) All(ctx context.Context) ([]string, error) {
@@ -84,7 +89,10 @@ func (re *repositoryExtension) Get(ctx context.Context, name string) (interface{
 		return nil, fmt.Errorf("extension %q is not supported", name)
 	}
 
-	return ext.RepositoryExtension(ctx)
+	return ext.RepositoryExtension(ctx, re.repository, &storeExtension{
+		repository: re.repository,
+		driver:     re.repository.driver,
+	})
 }
 
 func (re *repositoryExtension) All(ctx context.Context) ([]string, error) {
@@ -103,4 +111,52 @@ func composeExtensionName(ext extension.Extension) []string {
 		extNames = append(extNames, fmt.Sprintf("_%s/%s", name, component))
 	}
 	return extNames
+}
+
+type storeExtension struct {
+	*repository
+	driver storagedriver.StorageDriver
+}
+
+func (se *storeExtension) StorageDriver() storagedriver.StorageDriver {
+	return se.driver
+}
+
+func (se *storeExtension) LinkedBlobStore(ctx context.Context, opts repositoryextension.LinkedBlobStoreOptions) (repositoryextension.LinkedBlobStore, error) {
+	linkPathFns := []linkPathFunc{
+		linkPathFunc(opts.ResolvePath),
+	}
+	var statter distribution.BlobDescriptorService = &linkedBlobStatter{
+		blobStore:   se.repository.blobStore,
+		repository:  se.repository,
+		linkPathFns: linkPathFns,
+	}
+	if opts.UseCache && se.repository.descriptorCache != nil {
+		statter = cache.NewCachedBlobStatter(se.repository.descriptorCache, statter)
+	}
+	if opts.UseMiddleware && se.repository.registry.blobDescriptorServiceFactory != nil {
+		statter = se.repository.registry.blobDescriptorServiceFactory.BlobAccessController(statter)
+	}
+	return &linkedBlobStoreExtention{
+		linkedBlobStore: &linkedBlobStore{
+			ctx:                    ctx,
+			blobStore:              se.repository.blobStore,
+			repository:             se.repository,
+			deleteEnabled:          se.repository.registry.deleteEnabled,
+			resumableDigestEnabled: se.repository.resumableDigestEnabled,
+			blobAccessController:   statter,
+			linkPathFns:            linkPathFns,
+			linkDirectoryPathSpec: extensionPathSpec{
+				path: opts.RootPath,
+			},
+		},
+	}, nil
+}
+
+type linkedBlobStoreExtention struct {
+	*linkedBlobStore
+}
+
+func (lbs *linkedBlobStoreExtention) LinkBlob(ctx context.Context, desc distribution.Descriptor) error {
+	return lbs.linkBlob(ctx, desc)
 }

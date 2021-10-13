@@ -4,12 +4,17 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/registry/storage/extension"
 )
 
+type RegistryStore interface {
+	extension.Store
+}
+
 type RegistryExtension interface {
 	extension.Extension
-	RegistryExtension(ctx context.Context) (interface{}, error)
+	RegistryExtension(ctx context.Context, reg distribution.Namespace, store RegistryStore) (interface{}, error)
 }
 
 type InitFunc func(ctx context.Context, options map[string]interface{}) (RegistryExtension, error)
