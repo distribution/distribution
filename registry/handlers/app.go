@@ -270,6 +270,10 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		}
 	}
 
+	// configure storage extensions
+	options = applyStorageExtension(app, options, config.Extension.Registry["storage"], false)
+	options = applyStorageExtension(app, options, config.Extension.Repository["storage"], true)
+
 	// configure storage caches
 	if cc, ok := config.Storage["cache"]; ok {
 		v, ok := cc["blobdescriptor"]
@@ -1182,4 +1186,23 @@ func startUploadPurger(ctx context.Context, storageDriver storagedriver.StorageD
 			time.Sleep(intervalDuration)
 		}
 	}()
+}
+
+// applyStorageExtension extends a storage instance with the configured extensions
+func applyStorageExtension(ctx context.Context, options []storage.RegistryOption, extensions []configuration.Extension, isRepository bool) []storage.RegistryOption {
+	level := "registry"
+	applyExtension := storage.ApplyRegistryExtension
+	if isRepository {
+		level = "repository"
+		applyExtension = storage.ApplyRepositoryExtension
+	}
+
+	for _, ext := range extensions {
+		if ext.Disabled {
+			dcontext.GetLogger(ctx).Infof("storage %s extension (%s) disabled", level, ext.Name)
+			continue
+		}
+		options = append(options, applyExtension(ctx, ext.Name, ext.Options))
+	}
+	return options
 }
