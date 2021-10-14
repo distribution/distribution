@@ -28,6 +28,12 @@ type Registry interface {
 	Repositories(ctx context.Context, repos []string, last string) (n int, err error)
 }
 
+// ExtendedRegistry provides an interface for repository listing and access to registry-level extensions.
+type ExtendedRegistry interface {
+	Registry
+	distribution.ExtensionProvider
+}
+
 // checkHTTPRedirect is a callback that can manipulate redirected HTTP
 // requests. It is used to preserve Accept and Range headers.
 func checkHTTPRedirect(req *http.Request, via []*http.Request) error {
@@ -62,7 +68,7 @@ func checkHTTPRedirect(req *http.Request, via []*http.Request) error {
 }
 
 // NewRegistry creates a registry namespace which can be used to get a listing of repositories
-func NewRegistry(baseURL string, transport http.RoundTripper) (Registry, error) {
+func NewRegistry(baseURL string, transport http.RoundTripper) (ExtendedRegistry, error) {
 	ub, err := v2.NewURLBuilderFromString(baseURL, false)
 	if err != nil {
 		return nil, err
