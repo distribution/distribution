@@ -189,6 +189,10 @@ func (pr *proxyingRegistry) BlobStatter() distribution.BlobStatter {
 	return pr.embedded.BlobStatter()
 }
 
+func (pr *proxyingRegistry) Extensions(ctx context.Context) (distribution.ExtensionService, error) {
+	return nil, distribution.ErrUnsupported
+}
+
 // authChallenger encapsulates a request to the upstream to establish credential challenges
 type authChallenger interface {
 	tryEstablishChallenges(context.Context) error
@@ -260,4 +264,8 @@ func (pr *proxiedRepository) Named() reference.Named {
 
 func (pr *proxiedRepository) Tags(ctx context.Context) distribution.TagService {
 	return pr.tags
+}
+
+func (pr *proxiedRepository) Extensions(ctx context.Context) (distribution.ExtensionService, error) {
+	return nil, distribution.ErrUnsupported
 }

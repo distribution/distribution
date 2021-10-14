@@ -193,11 +193,11 @@ func (reg *registry) BlobStatter() distribution.BlobStatter {
 	return reg.statter
 }
 
-func (reg *registry) Extensions(ctx context.Context) distribution.ExtensionService {
+func (reg *registry) Extensions(ctx context.Context) (distribution.ExtensionService, error) {
 	return &registryExtension{
 		registry:   reg,
 		extensions: reg.registryExtensions,
-	}
+	}, nil
 }
 
 // repository provides name-scoped access to various services.
@@ -362,9 +362,9 @@ func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
 	}
 }
 
-func (repo *repository) Extensions(ctx context.Context) distribution.ExtensionService {
+func (repo *repository) Extensions(ctx context.Context) (distribution.ExtensionService, error) {
 	return &repositoryExtension{
 		repository: repo,
 		extensions: repo.registry.repositoryExtensions,
-	}
+	}, nil
 }

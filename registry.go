@@ -47,6 +47,9 @@ type Namespace interface {
 
 	// BlobStatter returns a BlobStatter to control
 	BlobStatter() BlobStatter
+
+	// Extensions returns a reference to the registry-level extension service
+	Extensions(ctx context.Context) (ExtensionService, error)
 }
 
 // RepositoryEnumerator describes an operation to enumerate repositories
@@ -111,6 +114,9 @@ type Repository interface {
 
 	// Tags returns a reference to this repositories tag service
 	Tags(ctx context.Context) TagService
+
+	// Extensions returns a reference to the repository-level extension service
+	Extensions(ctx context.Context) (ExtensionService, error)
 }
 
 // TODO(stevvooe): Must add close methods to all these. May want to change the

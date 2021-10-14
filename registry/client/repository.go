@@ -134,11 +134,11 @@ func (r *registry) Repositories(ctx context.Context, entries []string, last stri
 	return numFilled, returnErr
 }
 
-func (r *registry) Extensions(ctx context.Context) distribution.ExtensionService {
+func (r *registry) Extensions(ctx context.Context) (distribution.ExtensionService, error) {
 	return &extensions{
 		client: r.client,
 		ub:     r.ub,
-	}
+	}, nil
 }
 
 // NewRepository creates a new Repository for the given repository name and base URL.
@@ -203,12 +203,12 @@ func (r *repository) Tags(ctx context.Context) distribution.TagService {
 	}
 }
 
-func (r *repository) Extensions(ctx context.Context) distribution.ExtensionService {
+func (r *repository) Extensions(ctx context.Context) (distribution.ExtensionService, error) {
 	return &extensions{
 		client: r.client,
 		ub:     r.ub,
 		name:   r.Named(),
-	}
+	}, nil
 }
 
 // tags implements remote tagging operations.
