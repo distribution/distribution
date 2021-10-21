@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/manifest/ocischema"
+
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -326,4 +328,34 @@ func TestMediaTypes(t *testing.T) {
 	mediaTypeTest(t, v1.MediaTypeImageIndex, "", false)
 	mediaTypeTest(t, v1.MediaTypeImageIndex, v1.MediaTypeImageIndex, false)
 	mediaTypeTest(t, v1.MediaTypeImageIndex, v1.MediaTypeImageIndex+"XXX", true)
+}
+
+func TestValidateManifest(t *testing.T) {
+	manifest := ocischema.Manifest{
+		Config: distribution.Descriptor{Size: 1},
+		Layers: []distribution.Descriptor{{Size: 2}},
+	}
+	index := ManifestList{
+		Manifests: []ManifestDescriptor{
+			{Descriptor: distribution.Descriptor{Size: 3}},
+		},
+	}
+	t.Run("valid", func(t *testing.T) {
+		b, err := json.Marshal(index)
+		if err != nil {
+			t.Fatal("unexpected error marshaling index", err)
+		}
+		if err := validateIndex(b); err != nil {
+			t.Error("index should be valid", err)
+		}
+	})
+	t.Run("invalid", func(t *testing.T) {
+		b, err := json.Marshal(manifest)
+		if err != nil {
+			t.Fatal("unexpected error marshaling manifest", err)
+		}
+		if err := validateIndex(b); err == nil {
+			t.Error("manifest should not be valid")
+		}
+	})
 }

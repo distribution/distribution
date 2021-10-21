@@ -8,6 +8,8 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/manifest"
+	"github.com/distribution/distribution/v3/manifest/manifestlist"
+
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -181,4 +183,34 @@ func TestMediaTypes(t *testing.T) {
 	mediaTypeTest(t, "", false)
 	mediaTypeTest(t, v1.MediaTypeImageManifest, false)
 	mediaTypeTest(t, v1.MediaTypeImageManifest+"XXX", true)
+}
+
+func TestValidateManifest(t *testing.T) {
+	manifest := Manifest{
+		Config: distribution.Descriptor{Size: 1},
+		Layers: []distribution.Descriptor{{Size: 2}},
+	}
+	index := manifestlist.ManifestList{
+		Manifests: []manifestlist.ManifestDescriptor{
+			{Descriptor: distribution.Descriptor{Size: 3}},
+		},
+	}
+	t.Run("valid", func(t *testing.T) {
+		b, err := json.Marshal(manifest)
+		if err != nil {
+			t.Fatal("unexpected error marshaling manifest", err)
+		}
+		if err := validateManifest(b); err != nil {
+			t.Error("manifest should be valid", err)
+		}
+	})
+	t.Run("invalid", func(t *testing.T) {
+		b, err := json.Marshal(index)
+		if err != nil {
+			t.Fatal("unexpected error marshaling index", err)
+		}
+		if err := validateManifest(b); err == nil {
+			t.Error("index should not be valid")
+		}
+	})
 }
