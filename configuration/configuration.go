@@ -247,7 +247,13 @@ type Configuration struct {
 			Classes []string `yaml:"classes"`
 		} `yaml:"repository,omitempty"`
 	} `yaml:"policy,omitempty"`
+
+	// Extensions configures options for the distribution extensions
+	Extensions map[string]ExtensionConfig `yaml:"extensions,omitempty"`
 }
+
+// ExtensionConfig is the configuration of an extension namespace. It can comprise of extension and components.
+type ExtensionConfig interface{}
 
 // LogHook is composed of hook Level and Type.
 // After hooks configuration, it can execute the next handling automatically,
