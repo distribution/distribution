@@ -50,6 +50,9 @@ jobs:
         script/validate/vendor
         go build -i .
         make check
+        make test-full
+        make test-race
+        make integration
         make build
         make binaries
         if [ "$GOOS" = "linux" ]; then make coverage ; fi
