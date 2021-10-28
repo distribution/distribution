@@ -30,7 +30,7 @@ type distributionOptions struct {
 }
 
 // newDistNamespace creates a new extension namespace with the name "distribution"
-func newDistNamespace(ctx context.Context, storageDriver driver.StorageDriver, options configuration.ExtensionConfig) (extension.ExtensionNamespace, error) {
+func newDistNamespace(ctx context.Context, storageDriver driver.StorageDriver, options configuration.ExtensionConfig) (extension.Namespace, error) {
 
 	optionsYaml, err := yaml.Marshal(options)
 	if err != nil {
@@ -67,11 +67,11 @@ func init() {
 }
 
 // GetRepositoryRoutes returns a list of extension routes scoped at a repository level
-func (d *distributionNamespace) GetRepositoryRoutes() []extension.ExtensionRoute {
-	var routes []extension.ExtensionRoute
+func (d *distributionNamespace) GetRepositoryRoutes() []extension.Route {
+	var routes []extension.Route
 
 	if d.manifestsEnabled {
-		routes = append(routes, extension.ExtensionRoute{
+		routes = append(routes, extension.Route{
 			Namespace: namespaceName,
 			Extension: extensionName,
 			Component: manifestsComponentName,
@@ -89,7 +89,7 @@ func (d *distributionNamespace) GetRepositoryRoutes() []extension.ExtensionRoute
 	}
 
 	if d.tagHistoryEnabled {
-		routes = append(routes, extension.ExtensionRoute{
+		routes = append(routes, extension.Route{
 			Namespace: namespaceName,
 			Extension: extensionName,
 			Component: tagHistoryComponentName,
@@ -122,7 +122,7 @@ func (d *distributionNamespace) GetRepositoryRoutes() []extension.ExtensionRoute
 
 // GetRegistryRoutes returns a list of extension routes scoped at a registry level
 // There are no registry scoped routes exposed by this namespace
-func (d *distributionNamespace) GetRegistryRoutes() []extension.ExtensionRoute {
+func (d *distributionNamespace) GetRegistryRoutes() []extension.Route {
 	return nil
 }
 

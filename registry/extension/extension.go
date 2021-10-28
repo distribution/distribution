@@ -28,10 +28,10 @@ type Context struct {
 type RouteDispatchFunc func(extContext *Context, r *http.Request) http.Handler
 
 // Route describes an extension route.
-type ExtensionRoute struct {
+type Route struct {
 	// Namespace is the name of the extension namespace
 	Namespace string
-	// Extension is the name of the extention under the namespace
+	// Extension is the name of the extension under the namespace
 	Extension string
 	// Component is the name of the component under the extension
 	Component string
@@ -41,16 +41,16 @@ type ExtensionRoute struct {
 	Dispatcher RouteDispatchFunc
 }
 
-// ExtensionNamespace is the namespace that is used to define extensions to the distribution.
-type ExtensionNamespace interface {
+// Namespace is the namespace that is used to define extensions to the distribution.
+type Namespace interface {
 	// GetRepositoryRoutes returns a list of extension routes scoped at a repository level
-	GetRepositoryRoutes() []ExtensionRoute
+	GetRepositoryRoutes() []Route
 	// GetRegistryRoutes returns a list of extension routes scoped at a registry level
-	GetRegistryRoutes() []ExtensionRoute
+	GetRegistryRoutes() []Route
 }
 
 // InitExtensionNamespace is the initialize function for creating the extension namespace
-type InitExtensionNamespace func(ctx c.Context, storageDriver driver.StorageDriver, options configuration.ExtensionConfig) (ExtensionNamespace, error)
+type InitExtensionNamespace func(ctx c.Context, storageDriver driver.StorageDriver, options configuration.ExtensionConfig) (Namespace, error)
 
 var extensions map[string]InitExtensionNamespace
 
@@ -71,7 +71,7 @@ func Register(name string, initFunc InitExtensionNamespace) error {
 }
 
 // Get constructs an extension namespace with the given options using the given named.
-func Get(ctx c.Context, name string, storageDriver driver.StorageDriver, options configuration.ExtensionConfig) (ExtensionNamespace, error) {
+func Get(ctx c.Context, name string, storageDriver driver.StorageDriver, options configuration.ExtensionConfig) (Namespace, error) {
 	if extensions != nil {
 		if initFunc, exists := extensions[name]; exists {
 			return initFunc(ctx, storageDriver, options)
