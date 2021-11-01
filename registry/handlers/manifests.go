@@ -311,7 +311,7 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 
 	if imh.Digest != "" {
 		if desc.Digest != imh.Digest {
-			dcontext.GetLogger(imh).Errorf("payload digest does match: %q != %q", desc.Digest, imh.Digest)
+			dcontext.GetLogger(imh).Errorf("payload digest does not match: %q != %q", desc.Digest, imh.Digest)
 			imh.Errors = append(imh.Errors, v2.ErrorCodeDigestInvalid)
 			return
 		}
