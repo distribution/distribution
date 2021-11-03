@@ -313,7 +313,7 @@ implement V2 of the API.
 When a `200 OK` or `401 Unauthorized` response is returned, the
 "Docker-Distribution-API-Version" header should be set to "registry/2.0".
 Clients may require this header value to determine if the endpoint serves this
-API. When this header is omitted, clients may fallback to an older API version.
+API. When this header is omitted, clients may fall back to an older API version.
 
 ### Content Digests
 
@@ -366,12 +366,12 @@ comparing it with identifier `ID(C)`.
 
 #### Digest Header
 
-To provide verification of http content, any response may include a
+To provide verification of HTTP content, any response may include a
 `Docker-Content-Digest` header. This will include the digest of the target
 entity returned in the response. For blobs, this is the entire blob content. For
 manifests, this is the manifest body without the signature content, also known
 as the JWS payload. Note that the commonly used canonicalization for digest
-calculation may be dependent on the mediatype of the content, such as with
+calculation may be dependent on the media type of the content, such as with
 manifests.
 
 The client may choose to ignore the header or may verify it to ensure content
@@ -408,7 +408,7 @@ For more information about the manifest format, please see
 
 When the manifest is in hand, the client must verify the signature to ensure
 the names and layers are valid. Once confirmed, the client will then use the
-digests to download the individual layers. Layers are stored in as blobs in
+digests to download the individual layers. Layers are stored as blobs in
 the V2 registry API, keyed by their digest.
 
 #### Pulling an Image Manifest
