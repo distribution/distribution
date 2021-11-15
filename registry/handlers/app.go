@@ -2,10 +2,11 @@ package handlers
 
 import (
 	"context"
-	cryptorand "crypto/rand"
+	"crypto/rand"
 	"expvar"
 	"fmt"
-	"math/rand"
+	"math"
+	"math/big"
 	"net"
 	"net/http"
 	"net/url"
@@ -612,7 +613,7 @@ func (app *App) configureLogHook(configuration *configuration.Configuration) {
 func (app *App) configureSecret(configuration *configuration.Configuration) {
 	if configuration.HTTP.Secret == "" {
 		var secretBytes [randomSecretSize]byte
-		if _, err := cryptorand.Read(secretBytes[:]); err != nil {
+		if _, err := rand.Read(secretBytes[:]); err != nil {
 			panic(fmt.Sprintf("could not generate random bytes for HTTP secret: %v", err))
 		}
 		configuration.HTTP.Secret = string(secretBytes[:])
@@ -1062,8 +1063,13 @@ func startUploadPurger(ctx context.Context, storageDriver storagedriver.StorageD
 	}
 
 	go func() {
-		rand.Seed(time.Now().Unix())
-		jitter := time.Duration(rand.Int()%60) * time.Minute
+		randInt, err := rand.Int(rand.Reader, new(big.Int).SetInt64(math.MaxInt64))
+		if err != nil {
+			log.Infof("Failed to generate random jitter: %v", err)
+			// sleep 30min for failure case
+			randInt = big.NewInt(30)
+		}
+		jitter := time.Duration(randInt.Int64()%60) * time.Minute
 		log.Infof("Starting upload purge in %s", jitter)
 		time.Sleep(jitter)
 
