@@ -2,9 +2,10 @@ package main
 
 import (
 	"context"
+	"crypto/rand"
 	"encoding/json"
 	"flag"
-	"math/rand"
+	"math/big"
 	"net/http"
 	"strconv"
 	"strings"
@@ -141,8 +142,15 @@ const refreshTokenLength = 15
 
 func newRefreshToken() string {
 	s := make([]rune, refreshTokenLength)
+	max := int64(len(refreshCharacters))
 	for i := range s {
-		s[i] = refreshCharacters[rand.Intn(len(refreshCharacters))]
+		randInt, err := rand.Int(rand.Reader, big.NewInt(max))
+		// let '0' serves the failure case
+		if err != nil {
+			logrus.Infof("Error on making refersh token: %v", err)
+			randInt = big.NewInt(0)
+		}
+		s[i] = refreshCharacters[randInt.Int64()]
 	}
 	return string(s)
 }
