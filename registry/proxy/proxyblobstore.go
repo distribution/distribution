@@ -190,11 +190,11 @@ func (pbs *proxyBlobStore) Get(ctx context.Context, dgst digest.Digest) ([]byte,
 	return blob, nil
 }
 
-// Unsupported functions
 func (pbs *proxyBlobStore) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
-	return distribution.Descriptor{}, distribution.ErrUnsupported
+	return pbs.localStore.Put(ctx, mediaType, p)
 }
 
+// Unsupported functions
 func (pbs *proxyBlobStore) Create(ctx context.Context, options ...distribution.BlobCreateOption) (distribution.BlobWriter, error) {
 	return nil, distribution.ErrUnsupported
 }
