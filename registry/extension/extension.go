@@ -12,6 +12,8 @@ import (
 	"github.com/distribution/distribution/v3/registry/storage/driver"
 )
 
+var reservedNamespaces = []string{"oci", "ext"}
+
 // Context contains the request specific context for use in across handlers.
 type Context struct {
 	c.Context
@@ -56,18 +58,20 @@ var extensions map[string]InitExtensionNamespace
 
 // Register is used to register an InitExtensionNamespace for
 // an extension namespace with the given name.
-func Register(name string, initFunc InitExtensionNamespace) error {
+func Register(name string, initFunc InitExtensionNamespace) {
 	if extensions == nil {
 		extensions = make(map[string]InitExtensionNamespace)
 	}
 
+	if isReserved(name) {
+		panic(fmt.Sprintf("namespace name %s is reserved", name))
+	}
+
 	if _, exists := extensions[name]; exists {
-		return fmt.Errorf("namespace name already registered: %s", name)
+		panic(fmt.Sprintf("namespace name already registered: %s", name))
 	}
 
 	extensions[name] = initFunc
-
-	return nil
 }
 
 // Get constructs an extension namespace with the given options using the given named.
@@ -79,4 +83,13 @@ func Get(ctx c.Context, name string, storageDriver driver.StorageDriver, options
 	}
 
 	return nil, fmt.Errorf("no extension registered with name: %s", name)
+}
+
+func isReserved(name string) bool {
+	for _, r := range reservedNamespaces {
+		if r == name {
+			return true
+		}
+	}
+	return false
 }

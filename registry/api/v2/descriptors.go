@@ -1597,7 +1597,7 @@ var routeDescriptors = []RouteDescriptor{
 	},
 	{
 		Name:        RouteNameExtensionsRegistry,
-		Path:        "/v2/_ext",
+		Path:        "/v2/_ext/discover",
 		Entity:      "Extensions",
 		Description: "Retrieve information about extensions.",
 		Methods: []MethodDescriptor{
@@ -1631,7 +1631,7 @@ var routeDescriptors = []RouteDescriptor{
 									ContentType: "application/json",
 									Format: `{
     "extensions": [
-        _<ns>/<ext>/<component>,
+        {"name": "_<ns>/<ext>/<component>"},
         ...
     ]
 }`,
@@ -1651,7 +1651,7 @@ var routeDescriptors = []RouteDescriptor{
 	},
 	{
 		Name:        RouteNameExtensionsRepository,
-		Path:        "/v2/{name:" + reference.NameRegexp.String() + "}/_ext",
+		Path:        "/v2/{name:" + reference.NameRegexp.String() + "}/_ext/discover",
 		Entity:      "Extensions",
 		Description: "Retrieve information about extensions.",
 		Methods: []MethodDescriptor{
@@ -1686,7 +1686,7 @@ var routeDescriptors = []RouteDescriptor{
 									Format: `{
     "name": <name>,
     "extensions": [
-        _<ns>/<ext>/<component>,
+        {"name": "_<ns>/<ext>/<component>"},
         ...
     ]
 }`,
