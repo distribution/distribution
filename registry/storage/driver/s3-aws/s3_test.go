@@ -38,6 +38,7 @@ func init() {
 	root, err := ioutil.TempDir("", "driver-")
 	regionEndpoint := os.Getenv("REGION_ENDPOINT")
 	sessionToken := os.Getenv("AWS_SESSION_TOKEN")
+	credentialsConfigPath := os.Getenv("AWS_SHARED_CREDENTIALS_FILE")
 	if err != nil {
 		panic(err)
 	}
@@ -96,6 +97,7 @@ func init() {
 			driverName + "-test",
 			objectACL,
 			sessionToken,
+			credentialsConfigPath,
 		}
 
 		return New(parameters)

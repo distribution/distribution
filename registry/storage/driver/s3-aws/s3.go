@@ -103,6 +103,7 @@ type DriverParameters struct {
 	UserAgent                   string
 	ObjectACL                   string
 	SessionToken                string
+	CredentialsConfigPath       string
 }
 
 func init() {
@@ -179,6 +180,11 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	secretKey := parameters["secretkey"]
 	if secretKey == nil {
 		secretKey = ""
+	}
+
+	credentialsConfigPath := parameters["credentialsconfigpath"]
+	if credentialsConfigPath == nil {
+		credentialsConfigPath = ""
 	}
 
 	regionEndpoint := parameters["regionendpoint"]
@@ -361,6 +367,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(userAgent),
 		objectACL,
 		fmt.Sprint(sessionToken),
+		fmt.Sprint(credentialsConfigPath),
 	}
 
 	return New(params)
@@ -405,7 +412,23 @@ func New(params DriverParameters) (*Driver, error) {
 	}
 
 	awsConfig := aws.NewConfig()
-	sess, err := session.NewSession()
+
+	// Makes no sense to provide access/secret keys and the location of a
+	// config file with credentials.
+	if (params.AccessKey != "" || params.SecretKey != "") && params.CredentialsConfigPath != "" {
+		return nil, fmt.Errorf("cannot set both access/secret key and credentials file path")
+	}
+
+	sessionOptions := session.Options{
+		Config: *awsConfig,
+	}
+	if params.CredentialsConfigPath != "" {
+		sessionOptions.SharedConfigState = session.SharedConfigEnable
+		sessionOptions.SharedConfigFiles = []string{
+			params.CredentialsConfigPath,
+		}
+	}
+	sess, err := session.NewSessionWithOptions(sessionOptions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new session: %v", err)
 	}
