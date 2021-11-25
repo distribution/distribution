@@ -206,6 +206,7 @@ func (p *Parser) overwriteStruct(v reflect.Value, fullpath string, path []string
 		fieldVal := reflect.New(sf.Type)
 		err := yaml.Unmarshal([]byte(payload), fieldVal.Interface())
 		if err != nil {
+			logrus.Warnf("Error parsing environment variable %s: %s", fullpath, err)
 			return err
 		}
 		field.Set(reflect.Indirect(fieldVal))
