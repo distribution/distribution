@@ -1045,7 +1045,7 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 
 // Walk traverses a filesystem defined within driver, starting
 // from the given path, calling f on each file
-func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn) error {
+func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn, opts ...storagedriver.WalkOpt) error {
 	path := from
 	if !strings.HasSuffix(path, "/") {
 		path = path + "/"
@@ -1057,7 +1057,7 @@ func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn) 
 	}
 
 	var objectCount int64
-	if err := d.doWalk(ctx, &objectCount, d.s3Path(path), prefix, f); err != nil {
+	if err := d.doWalk(ctx, &objectCount, d.s3Path(path), prefix, f, opts...); err != nil {
 		return err
 	}
 
@@ -1069,7 +1069,143 @@ func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn) 
 	return nil
 }
 
-func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, prefix string, f storagedriver.WalkFn) error {
+func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, prefix string, f storagedriver.WalkFn, opts ...storagedriver.WalkOpt) error {
+	options := storagedriver.ToWalkOptions(opts...)
+	if options.StopOnErrSkipDir {
+		return d.doWalkWithoutSkipDir(parentCtx, objectCount, path, prefix, f)
+	}
+	_, err := d.doWalkRecursive(parentCtx, objectCount, path, prefix, f)
+	return err
+}
+
+type walkInfoContainer struct {
+	storagedriver.FileInfoFields
+	prefix *string
+}
+
+// Path provides the full path of the target of this file info.
+func (wi walkInfoContainer) Path() string {
+	return wi.FileInfoFields.Path
+}
+
+// Size returns current length in bytes of the file. The return value can
+// be used to write to the end of the file at path. The value is
+// meaningless if IsDir returns true.
+func (wi walkInfoContainer) Size() int64 {
+	return wi.FileInfoFields.Size
+}
+
+// ModTime returns the modification time for the file. For backends that
+// don't have a modification time, the creation time should be returned.
+func (wi walkInfoContainer) ModTime() time.Time {
+	return wi.FileInfoFields.ModTime
+}
+
+// IsDir returns true if the path is a directory.
+func (wi walkInfoContainer) IsDir() bool {
+	return wi.FileInfoFields.IsDir
+}
+
+// doWalkRecursive is an implementation of Walk that is optimized for listing high level directories, such as repositories,
+// where storagedriver.ErrSkipDir is utilized to skip over large numbers of keys.
+func (d *driver) doWalkRecursive(parentCtx context.Context, objectCount *int64, path, prefix string, f storagedriver.WalkFn) (bool, error) {
+	var retError error
+	var retStop bool
+
+	listObjectsInput := &s3.ListObjectsV2Input{
+		Bucket:    aws.String(d.Bucket),
+		Prefix:    aws.String(path),
+		Delimiter: aws.String("/"),
+		MaxKeys:   aws.Int64(listMax),
+	}
+
+	ctx, done := dcontext.WithTrace(parentCtx)
+	defer done("s3aws.ListObjectsV2Pages(%s)", path)
+	listObjectErr := d.S3.ListObjectsV2PagesWithContext(ctx, listObjectsInput, func(objects *s3.ListObjectsV2Output, lastPage bool) bool {
+		// KeyCount was introduced with version 2 of the GET Bucket operation in S3.
+		// Some s3 implementations (looking at you ceph/rgw) have a buggy
+		// implementation so we intionally avoid ever using it, preferring instead
+		// to calculate the count from the Contents and CommonPrefixes fields of
+		// the s3.ListObjectsV2Output. we retain the commented out KeyCount code
+		// and this comment so as not to forget this problem moving forward.
+		//
+		// count = *objects.KeyCount
+		// *objectCount += *objects.KeyCount
+		count := int64(len(objects.Contents) + len(objects.CommonPrefixes))
+		*objectCount += count
+
+		walkInfos := make([]walkInfoContainer, 0, count)
+
+		for _, dir := range objects.CommonPrefixes {
+			commonPrefix := *dir.Prefix
+			walkInfos = append(walkInfos, walkInfoContainer{
+				prefix: dir.Prefix,
+				FileInfoFields: storagedriver.FileInfoFields{
+					IsDir: true,
+					Path:  strings.Replace(commonPrefix[:len(commonPrefix)-1], d.s3Path(""), prefix, 1),
+				},
+			})
+		}
+
+		for _, file := range objects.Contents {
+			// empty prefixes are listed as objects inside its own prefix.
+			// https://docs.aws.amazon.com/AmazonS3/latest/user-guide/using-folders.html
+			if strings.HasSuffix(*file.Key, "/") {
+				continue
+			}
+			walkInfos = append(walkInfos, walkInfoContainer{
+				FileInfoFields: storagedriver.FileInfoFields{
+					IsDir:   false,
+					Size:    *file.Size,
+					ModTime: *file.LastModified,
+					Path:    strings.Replace(*file.Key, d.s3Path(""), prefix, 1),
+				},
+			})
+		}
+
+		sort.SliceStable(walkInfos, func(i, j int) bool { return walkInfos[i].FileInfoFields.Path < walkInfos[j].FileInfoFields.Path })
+
+		for _, walkInfo := range walkInfos {
+			err := f(walkInfo)
+
+			if err == storagedriver.ErrSkipDir {
+				if walkInfo.IsDir() {
+					continue
+				} else {
+					// is file, stop gracefully
+					retStop = true
+					return false
+				}
+			} else if err != nil {
+				retError = err
+				return false
+			}
+
+			if walkInfo.IsDir() {
+				if stop, err := d.doWalkRecursive(ctx, objectCount, *walkInfo.prefix, prefix, f); err != nil || stop {
+					retError = err
+					retStop = stop
+					return false
+				}
+			}
+		}
+		return true
+	})
+
+	if retError != nil {
+		return retStop, retError
+	}
+
+	if listObjectErr != nil {
+		return retStop, listObjectErr
+	}
+
+	return retStop, nil
+}
+
+// doWalkWithoutSkipDir is an implementation of Walk that is optimized for listing objects and suboptimal for contexts
+// where storagedriver.ErrSkipDir is utilized to skip over large numbers of keys.
+func (d *driver) doWalkWithoutSkipDir(parentCtx context.Context, objectCount *int64, path, prefix string, f storagedriver.WalkFn) error {
 	var (
 		retError error
 		// the most recent directory walked for de-duping
@@ -1077,7 +1213,8 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 		// the most recent skip directory to avoid walking over undesirable files
 		prevSkipDir string
 	)
-	prevDir = prefix + path
+
+	prevDir = strings.Replace(prefix+path, d.s3Path(""), prefix, 1)
 
 	listObjectsInput := &s3.ListObjectsV2Input{
 		Bucket:  aws.String(d.Bucket),
@@ -1138,11 +1275,7 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 
 			if err != nil {
 				if err == storagedriver.ErrSkipDir {
-					if walkInfo.IsDir() {
-						prevSkipDir = walkInfo.Path()
-						continue
-					}
-					// is file, stop gracefully
+					// stop gracefully
 					return false
 				}
 				retError = err

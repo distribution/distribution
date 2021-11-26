@@ -272,7 +272,7 @@ func (lbs *linkedBlobStore) Enumerate(ctx context.Context, ingestor func(digest.
 		}
 
 		return nil
-	})
+	}, driver.WalkWithStopOnErrSkipDir(true))
 }
 
 func (lbs *linkedBlobStore) mount(ctx context.Context, sourceRepo reference.Named, dgst digest.Digest, sourceStat *distribution.Descriptor) (distribution.Descriptor, error) {

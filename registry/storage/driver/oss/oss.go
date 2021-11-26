@@ -491,8 +491,8 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 
 // Walk traverses a filesystem defined within driver, starting
 // from the given path, calling f on each file
-func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn) error {
-	return storagedriver.WalkFallback(ctx, d, path, f)
+func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn, opts ...storagedriver.WalkOpt) error {
+	return storagedriver.WalkFallback(ctx, d, path, f, opts...)
 }
 
 func (d *driver) ossPath(path string) string {

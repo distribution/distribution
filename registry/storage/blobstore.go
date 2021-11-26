@@ -112,7 +112,7 @@ func (bs *blobStore) Enumerate(ctx context.Context, ingester func(dgst digest.Di
 		}
 
 		return ingester(digest)
-	})
+	}, driver.WalkWithStopOnErrSkipDir(true))
 }
 
 // path returns the canonical path for the blob identified by digest. The blob

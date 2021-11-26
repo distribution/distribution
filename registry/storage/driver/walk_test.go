@@ -86,6 +86,7 @@ func TestWalkFallback(t *testing.T) {
 	tcs := []struct {
 		name     string
 		fn       WalkFn
+		opts     []WalkOpt
 		from     string
 		expected []string
 		err      bool
@@ -118,6 +119,22 @@ func TestWalkFallback(t *testing.T) {
 				// skip /folder1/file1
 				"/folder2",
 				"/folder2/file1",
+			},
+		},
+		{
+			name: "stop on directory with opt WalkWithStopOnErrSkipDir(true)",
+			fn: func(fileInfo FileInfo) error {
+				if fileInfo.Path() == "/folder1" {
+					return ErrSkipDir
+				}
+				return nil
+			},
+			opts: []WalkOpt{
+				WalkWithStopOnErrSkipDir(true),
+			},
+			expected: []string{
+				"/file1",
+				"/folder1", // return ErrSkipDir, stop gracefully with WalkWithStopOnErrSkipDir(true)
 			},
 		},
 		{
@@ -157,7 +174,7 @@ func TestWalkFallback(t *testing.T) {
 					t.Fatalf("fileInfo isDir not matching file system: expected %t actual %t", d.isDir(fileInfo.Path()), fileInfo.IsDir())
 				}
 				return tc.fn(fileInfo)
-			})
+			}, tc.opts...)
 			if tc.err && err == nil {
 				t.Fatalf("expected err")
 			}

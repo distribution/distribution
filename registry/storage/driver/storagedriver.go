@@ -32,6 +32,32 @@ func (version Version) Minor() uint {
 // CurrentVersion is the current storage driver Version.
 const CurrentVersion Version = "0.1"
 
+// WalkOptions are options for Walk
+type WalkOptions struct {
+	// StopOnErrSkipDir mutates the default Walk behavior to stop whenever ErrSkipDir is returned
+	// by the callback fn, regardless if the callback fileInfo is a directory.
+	StopOnErrSkipDir bool
+}
+
+// WalkOpt is a functional setter for WalkOptions
+type WalkOpt func(*WalkOptions)
+
+// ToWalkOptions converts a slice of WalkOpt to WalkOptions
+func ToWalkOptions(opts ...WalkOpt) WalkOptions {
+	walkOpts := WalkOptions{}
+	for _, opt := range opts {
+		opt(&walkOpts)
+	}
+	return walkOpts
+}
+
+// WalkWithStopOnErrSkipDir functionally sets WalkOptions.StopOnErrSkipDir
+func WalkWithStopOnErrSkipDir(b bool) WalkOpt {
+	return func(options *WalkOptions) {
+		options.StopOnErrSkipDir = b
+	}
+}
+
 // StorageDriver defines methods that a Storage Driver must implement for a
 // filesystem-like key/value object storage. Storage Drivers are automatically
 // registered via an internal registration mechanism, and generally created
@@ -89,7 +115,7 @@ type StorageDriver interface {
 	// If the returned error from the WalkFn is ErrSkipDir and fileInfo refers
 	// to a directory, the directory will not be entered and Walk
 	// will continue the traversal.  If fileInfo refers to a normal file, processing stops
-	Walk(ctx context.Context, path string, f WalkFn) error
+	Walk(ctx context.Context, path string, f WalkFn, opts ...WalkOpt) error
 }
 
 // FileWriter provides an abstraction for an opened writable file-like object in

@@ -574,6 +574,7 @@ func TestWalk(t *testing.T) {
 	tcs := []struct {
 		name     string
 		fn       storagedriver.WalkFn
+		opts     []storagedriver.WalkOpt
 		from     string
 		expected []string
 		err      bool
@@ -622,6 +623,26 @@ func TestWalk(t *testing.T) {
 			},
 		},
 		{
+			name: "stop on directory with opt WalkWithStopOnErrSkipDir(true)",
+			fn: func(fileInfo storagedriver.FileInfo) error {
+				if fileInfo.Path() == "/folder3" {
+					return storagedriver.ErrSkipDir
+				}
+				return nil
+			},
+			opts: []storagedriver.WalkOpt{
+				storagedriver.WalkWithStopOnErrSkipDir(true),
+			},
+			expected: []string{
+				"/file1",
+				"/folder1",
+				"/folder1/file1",
+				"/folder2",
+				"/folder2/file1",
+				"/folder3", // return ErrSkipDir, stop with WalkWithStopOnErrSkipDir(true)
+			},
+		},
+		{
 			name: "stop early",
 			fn: func(fileInfo storagedriver.FileInfo) error {
 				if fileInfo.Path() == "/folder1/file1" {
@@ -651,7 +672,6 @@ func TestWalk(t *testing.T) {
 			name: "from folder",
 			fn:   func(fileInfo storagedriver.FileInfo) error { return nil },
 			expected: []string{
-				"/folder1",
 				"/folder1/file1",
 			},
 			from: "/folder1",
@@ -659,15 +679,15 @@ func TestWalk(t *testing.T) {
 	}
 
 	for _, tc := range tcs {
-		var walked []string
 		if tc.from == "" {
 			tc.from = "/"
 		}
 		t.Run(tc.name, func(t *testing.T) {
+			var walked []string
 			err := driver.Walk(context.Background(), tc.from, func(fileInfo storagedriver.FileInfo) error {
 				walked = append(walked, fileInfo.Path())
 				return tc.fn(fileInfo)
-			})
+			}, tc.opts...)
 			if tc.err && err == nil {
 				t.Fatalf("expected err")
 			}
@@ -848,6 +868,7 @@ func TestListObjectsV2(t *testing.T) {
 }
 
 func compareWalked(t *testing.T, expected, walked []string) {
+	t.Helper()
 	if len(walked) != len(expected) {
 		t.Fatalf("Mismatch number of fileInfo walked %d expected %d; walked %s; expected %s;", len(walked), len(expected), walked, expected)
 	}
