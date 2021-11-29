@@ -1506,7 +1506,7 @@ The following parameters should be specified on the request:
 |Name|Kind|Description|
 |----|----|-----------|
 |`name`|path|Name of the target repository.|
-|`n`|query|Limit the number of entries in each response. It not present, all entries will be returned.|
+|`n`|query|Limit the number of entries in each response. If not present, all entries will be returned.|
 |`last`|query|Result set will include values lexically after last.|
 
 
