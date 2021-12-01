@@ -143,7 +143,6 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 			deleteSet[dgst] = struct{}{}
 		}
 	}
-
 	emit("\n%d blobs marked, %d blobs and %d manifests eligible for deletion", len(markSet), len(deleteSet), len(manifestArr))
 	for dgst := range deleteSet {
 		emit("blob eligible for deletion: %s", dgst)
