@@ -138,6 +138,7 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 	}
 	deleteSet := make(map[digest.Digest]struct{})
 	for dgst := range blobSet {
+		// check if digest is in markSet. If not, delete it!
 		if _, ok := markSet[dgst]; !ok {
 			deleteSet[dgst] = struct{}{}
 		}
