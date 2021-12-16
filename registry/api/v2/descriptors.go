@@ -1597,7 +1597,7 @@ var routeDescriptors = []RouteDescriptor{
 	},
 	{
 		Name:        RouteNameExtensionsRegistry,
-		Path:        "/v2/_ext/discover",
+		Path:        "/v2/_oci/ext/discover",
 		Entity:      "Extensions",
 		Description: "Retrieve information about extensions.",
 		Methods: []MethodDescriptor{
@@ -1651,7 +1651,7 @@ var routeDescriptors = []RouteDescriptor{
 	},
 	{
 		Name:        RouteNameExtensionsRepository,
-		Path:        "/v2/{name:" + reference.NameRegexp.String() + "}/_ext/discover",
+		Path:        "/v2/{name:" + reference.NameRegexp.String() + "}/_oci/ext/discover",
 		Entity:      "Extensions",
 		Description: "Retrieve information about extensions.",
 		Methods: []MethodDescriptor{

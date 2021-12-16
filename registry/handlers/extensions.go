@@ -24,11 +24,11 @@ type extensionsHandler struct {
 	*Context
 }
 type extensionResponse struct {
-	Name string `json:"name,omitempty"`
+	Path string `json:"path,omitempty"`
 }
 
 type extensionsAPIResponse struct {
-	Name       string              `json:"name,omitempty"`
+	Repository string              `json:"repository,omitempty"`
 	Extensions []extensionResponse `json:"extensions"`
 }
 
@@ -47,16 +47,21 @@ func (eh *extensionsHandler) GetExtensions(w http.ResponseWriter, r *http.Reques
 
 	var extensions []extensionResponse
 	for _, ext := range extensionNames {
-		extensions = append(extensions, extensionResponse{Name: ext})
+		extensions = append(extensions, extensionResponse{Path: ext})
+	}
+
+	if len(extensions) == 0 {
+		extensions = make([]extensionResponse, 0)
 	}
 
 	var resp extensionsAPIResponse
 	if eh.Repository != nil {
 		resp = extensionsAPIResponse{
-			Name:       eh.Repository.Named().Name(),
+			Repository: eh.Repository.Named().Name(),
 			Extensions: extensions,
 		}
 	} else {
+
 		resp = extensionsAPIResponse{
 			Extensions: extensions,
 		}
