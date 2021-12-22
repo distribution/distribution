@@ -13,8 +13,8 @@ preface = """\
 The 2.8.0 registry release has been a long time overdue.
 This is the last 2.x release. No further active development will continue on
 2.x branch. Security vulnerability patches to 2.x might be considered, but
-all active development will be focussed on v3 release due next year.
-This release thus includes a security vulnerability fix along
+all active development will be focussed on v3 release due in 2022.
+This release includes a security vulnerability fix along
 with a few minor bug fixes and improvemnts in documentation and CI.
 
 See changelog below for full list of changes.
