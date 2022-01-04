@@ -8,7 +8,7 @@ require (
 	github.com/Azure/go-autorest/autorest/adal v0.9.15 // indirect
 	github.com/Azure/go-autorest/autorest/to v0.4.0 // indirect
 	github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d
-	github.com/aws/aws-sdk-go v1.34.9
+	github.com/aws/aws-sdk-go v1.42.27
 	github.com/bitly/go-simplejson v0.5.0 // indirect
 	github.com/bshuster-repo/logrus-logstash-hook v1.0.0
 	github.com/bugsnag/bugsnag-go v0.0.0-20141110184014-b1d153021fcd
