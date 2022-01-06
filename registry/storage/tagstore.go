@@ -36,7 +36,7 @@ func (ts *tagStore) All(ctx context.Context) ([]string, error) {
 	if err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
-			return tags, distribution.ErrRepositoryUnknown{Name: ts.repository.Named().Name()}
+			return tags, nil
 		default:
 			return tags, err
 		}
