@@ -8,27 +8,26 @@ jobs:
   run-conformance-test:
     runs-on: ubuntu-latest
     steps:
-      - name: set up docker
-        uses: docker-practice/actions-setup-docker@0.0.1
+      -
+        name: Checkout
+        uses: actions/checkout@v2
         with:
-          docker_version: 18.09
-          docker_channel: stable
-
-      - uses: actions/checkout@v2
+          fetch-depth: 0
+      -
+        name: Build image
+        uses: docker/bake-action@v1
         with:
-          path: src/github.com/distribution/distribution
-
-      - name: start distribution server
-        working-directory: ./src/github.com/distribution/distribution
+          targets: image-local
+      -
+        name: Start distribution server
         run: |
           IP=`hostname -I | awk '{print $1}'`
           echo "IP=$IP" >> $GITHUB_ENV
           echo "OCI_ROOT_URL=http://$IP:5000" >> $GITHUB_ENV
-          DISTRIBUTION_REF="local-distribution:v$(date +%Y%m%d%H%M%S)"
-          docker build -f ./Dockerfile -t "${DISTRIBUTION_REF}" .
-          docker run --rm -p 5000:5000 -e REGISTRY_STORAGE_DELETE_ENABLED=true -idt "${DISTRIBUTION_REF}"
-
-      - name: Run OCI Distribution Spec conformance tests
+          DISTRIBUTION_REF="registry:local"
+          docker run --rm -p 5000:5000 -e REGISTRY_STORAGE_DELETE_ENABLED=true -idt "registry:local"
+      -
+        name: Run OCI Distribution Spec conformance tests
         uses: opencontainers/distribution-spec@main
         env:
           OCI_ROOT_URL: ${{ env.OCI_ROOT_URL }}
@@ -38,3 +37,13 @@ jobs:
           OCI_TEST_CONTENT_DISCOVERY: 1
           OCI_TEST_CONTENT_MANAGEMENT: 1
           OCI_HIDE_SKIPPED_WORKFLOWS: 1
+      -
+        name: Move test results
+        run: mkdir -p .out/ && mv {report.html,junit.xml} .out/
+      -
+        name: Upload test results
+        uses: actions/upload-artifact@v2
+        with:
+          name: oci-test-results-${{ github.sha }}
+          path: .out/
+          if-no-files-found: error
