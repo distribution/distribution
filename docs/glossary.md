@@ -1,8 +1,6 @@
-<!--[metadata]>
-+++
-draft = true
-+++
-<![end-metadata]-->
+---
+published: false
+---
 
 # Glossary
 
@@ -21,7 +19,7 @@ This page contains definitions for distribution related terms.
 	<dd>
       <blockquote>An image is a named set of immutable data from which a Docker container can be created.</blockquote>
       <p>
-      An image is represented by a json file called a <a href="#manifest">manifest</a>, and is conceptually a set of <a hred="#layer">layers</a>.
+      An image is represented by a json file called a <a href="#manifest">manifest</a>, and is conceptually a set of <a href="#layer">layers</a>.
 
       Image names indicate the location where they can be pulled from and pushed to, as they usually start with a <a href="#registry">registry</a> domain name and port.
 
@@ -63,8 +61,8 @@ This page contains definitions for distribution related terms.
 	<p>
 	Example: `docker pull myimage:latest` instructs docker to pull the image "myimage" in version "latest".
 	</p>
-	
+
 	</dd>
-	
+
 
 </dl>

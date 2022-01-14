@@ -1,34 +1,28 @@
-<!--[metadata]>
-+++
-title = "Storage Driver overview"
-description = "Explains how to use storage drivers"
-keywords = ["registry, on-prem, images, tags, repository, distribution, storage drivers, advanced"]
-aliases = ["/registry/storagedrivers/"]
-[menu.main]
-parent="smn_storagedrivers"
-identifier="storage_index"
-weight=-1
-+++
-<![end-metadata]-->
+---
+description: Explains how to use storage drivers
+keywords: registry, on-prem, images, tags, repository, distribution, storage drivers, advanced
+redirect_from:
+- /registry/storagedrivers/
+title: Docker Registry storage driver
+---
 
-
-# Docker Registry Storage Driver
+{% include registry.md %}
 
 This document describes the registry storage driver model, implementation, and explains how to contribute new storage drivers.
 
-## Provided Drivers
+## Provided drivers
 
 This storage driver package comes bundled with several drivers:
 
 - [inmemory](inmemory.md): A temporary storage driver using a local inmemory map. This exists solely for reference and testing.
 - [filesystem](filesystem.md): A local storage driver configured to use a directory tree in the local filesystem.
-- [s3](s3.md): A driver storing objects in an Amazon Simple Storage Solution (S3) bucket.
-- [azure](azure.md): A driver storing objects in [Microsoft Azure Blob Storage](http://azure.microsoft.com/en-us/services/storage/).
-- [swift](swift.md): A driver storing objects in [Openstack Swift](http://docs.openstack.org/developer/swift/).
-- [oss](oss.md): A driver storing objects in [Aliyun OSS](http://www.aliyun.com/product/oss).
+- [s3](s3.md): A driver storing objects in an Amazon Simple Storage Service (S3) bucket.
+- [azure](azure.md): A driver storing objects in [Microsoft Azure Blob Storage](https://azure.microsoft.com/en-us/services/storage/).
+- [swift](swift.md): A driver storing objects in [Openstack Swift](https://docs.openstack.org/swift/latest/).
+- [oss](oss.md): A driver storing objects in [Aliyun OSS](https://www.aliyun.com/product/oss).
 - [gcs](gcs.md): A driver storing objects in a [Google Cloud Storage](https://cloud.google.com/storage/) bucket.
 
-## Storage Driver API
+## Storage driver API
 
 The storage driver API is designed to model a filesystem-like key/value storage in a manner abstract enough to support a range of drivers from the local filesystem to Amazon S3 or other distributed object storage systems.
 
@@ -37,16 +31,16 @@ Storage drivers are required to implement the `storagedriver.StorageDriver` inte
 Storage drivers are intended to be written in Go, providing compile-time
 validation of the `storagedriver.StorageDriver` interface.
 
-## Driver Selection and Configuration
+## Driver selection and configuration
 
-The preferred method of selecting a storage driver is using the `StorageDriverFactory` interface in the `storagedriver/factory` package. These factories provide a common interface for constructing storage drivers with a parameters map. The factory model is based off of the [Register](http://golang.org/pkg/database/sql/#Register) and [Open](http://golang.org/pkg/database/sql/#Open) methods in the builtin [database/sql](http://golang.org/pkg/database/sql) package.
+The preferred method of selecting a storage driver is using the `StorageDriverFactory` interface in the `storagedriver/factory` package. These factories provide a common interface for constructing storage drivers with a parameters map. The factory model is based on the [Register](https://golang.org/pkg/database/sql/#Register) and [Open](https://golang.org/pkg/database/sql/#Open) methods in the builtin [database/sql](https://golang.org/pkg/database/sql) package.
 
 Storage driver factories may be registered by name using the
 `factory.Register` method, and then later invoked by calling `factory.Create`
 with a driver name and parameters map. If no such storage driver can be found,
-`factory.Create` will return an `InvalidStorageDriverError`.
+`factory.Create` returns an `InvalidStorageDriverError`.
 
-## Driver Contribution
+## Driver contribution
 
 ### Writing new storage drivers
 
