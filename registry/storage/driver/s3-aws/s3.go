@@ -97,6 +97,7 @@ type DriverParameters struct {
 	MultipartCopyChunkSize      int64
 	MultipartCopyMaxConcurrency int64
 	MultipartCopyThresholdSize  int64
+	MultipartCombineSmallPart   bool
 	RootDirectory               string
 	StorageClass                string
 	UserAgent                   string
@@ -146,6 +147,7 @@ type driver struct {
 	MultipartCopyChunkSize      int64
 	MultipartCopyMaxConcurrency int64
 	MultipartCopyThresholdSize  int64
+	MultipartCombineSmallPart   bool
 	RootDirectory               string
 	StorageClass                string
 	ObjectACL                   string
@@ -356,6 +358,23 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		return nil, fmt.Errorf("the useDualStack parameter should be a boolean")
 	}
 
+	mutlipartCombineSmallPart := true
+	combine := parameters["multipartcombinesmallpart"]
+	switch combine := combine.(type) {
+	case string:
+		b, err := strconv.ParseBool(combine)
+		if err != nil {
+			return nil, fmt.Errorf("the multipartcombinesmallpart parameter should be a boolean")
+		}
+		mutlipartCombineSmallPart = b
+	case bool:
+		mutlipartCombineSmallPart = combine
+	case nil:
+		// do nothing
+	default:
+		return nil, fmt.Errorf("the multipartcombinesmallpart parameter should be a boolean")
+	}
+
 	sessionToken := ""
 
 	params := DriverParameters{
@@ -373,6 +392,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		multipartCopyChunkSize,
 		multipartCopyMaxConcurrency,
 		multipartCopyThresholdSize,
+		mutlipartCombineSmallPart,
 		fmt.Sprint(rootDirectory),
 		storageClass,
 		fmt.Sprint(userAgent),
@@ -497,6 +517,7 @@ func New(params DriverParameters) (*Driver, error) {
 		MultipartCopyChunkSize:      params.MultipartCopyChunkSize,
 		MultipartCopyMaxConcurrency: params.MultipartCopyMaxConcurrency,
 		MultipartCopyThresholdSize:  params.MultipartCopyThresholdSize,
+		MultipartCombineSmallPart:   params.MultipartCombineSmallPart,
 		RootDirectory:               params.RootDirectory,
 		StorageClass:                params.StorageClass,
 		ObjectACL:                   params.ObjectACL,
@@ -1386,7 +1407,7 @@ func (w *writer) flushPart() error {
 		// nothing to write
 		return nil
 	}
-	if len(w.pendingPart) < int(w.driver.ChunkSize) {
+	if w.driver.MultipartCombineSmallPart && len(w.pendingPart) < int(w.driver.ChunkSize) {
 		// closing with a small pending part
 		// combine ready and pending to avoid writing a small part
 		w.readyPart = append(w.readyPart, w.pendingPart...)

@@ -43,6 +43,7 @@ func init() {
 	regionEndpoint := os.Getenv("REGION_ENDPOINT")
 	sessionToken := os.Getenv("AWS_SESSION_TOKEN")
 	useDualStack := os.Getenv("S3_USE_DUALSTACK")
+	combineSmallPart := os.Getenv("MULTIPART_COMBINE_SMALL_PART")
 	if err != nil {
 		panic(err)
 	}
@@ -84,6 +85,10 @@ func init() {
 		useDualStackBool := false
 		if useDualStack != "" {
 			useDualStackBool, err = strconv.ParseBool(useDualStack)
+		}
+		multipartCombineSmallPart := true
+		if combineSmallPart != "" {
+			multipartCombineSmallPart, err = strconv.ParseBool(combineSmallPart)
 			if err != nil {
 				return nil, err
 			}
@@ -104,6 +109,7 @@ func init() {
 			defaultMultipartCopyChunkSize,
 			defaultMultipartCopyMaxConcurrency,
 			defaultMultipartCopyThresholdSize,
+			multipartCombineSmallPart,
 			rootDirectory,
 			storageClass,
 			driverName + "-test",
