@@ -28,6 +28,11 @@ RUN --mount=type=bind,rw \
     --files="LICENSE" \
     --files="README.md"
 
+FROM scratch AS artifacts
+COPY --from=build /out/*.tar.gz /
+COPY --from=build /out/*.zip /
+COPY --from=build /out/*.sha256 /
+
 FROM scratch AS binary
 COPY --from=build /usr/local/bin/registry* /
 
