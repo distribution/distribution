@@ -40,9 +40,9 @@ you want through the secondary authentication mechanism implemented inside your
 proxy, it also requires that you move TLS termination from the Registry to the
 proxy itself.
 
-> **Note**: Docker does not recommend binding your registry to `localhost:5000` without
-> authentication. This creates a potential loophole in your Docker Registry security.
-> As a result, anyone who can log on to the server where your Docker Registry is running
+> **Note**: It is not recommended to bind your registry to `localhost:5000` without
+> authentication. This creates a potential loophole in your registry security.
+> As a result, anyone who can log on to the server where your registry is running
 > can push images without authentication.
 
 Furthermore, introducing an extra http layer in your communication pipeline
@@ -70,7 +70,7 @@ proxy_set_header  X-Forwarded-Proto $scheme;
 
 Otherwise Nginx resets the ELB's values, and the requests are not routed
 properly. For more information, see
-[#970](https://github.com/docker/distribution/issues/970).
+[#970](https://github.com/distribution/distribution/issues/970).
 
 ## Setting things up
 

@@ -1238,7 +1238,7 @@ Use the `manifests` subsection to configure validation of manifests. If
 #### `urls`
 
 The `allow` and `deny` options are each a list of
-[regular expressions](https://godoc.org/regexp/syntax) that restrict the URLs in
+[regular expressions](https://pkg.go.dev/regexp/syntax) that restrict the URLs in
 pushed manifests.
 
 If `allow` is unset, pushing a manifest containing URLs fails.

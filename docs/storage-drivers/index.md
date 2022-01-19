@@ -3,7 +3,7 @@ description: Explains how to use storage drivers
 keywords: registry, on-prem, images, tags, repository, distribution, storage drivers, advanced
 redirect_from:
 - /registry/storagedrivers/
-title: Docker Registry storage driver
+title: Registry storage driver
 ---
 
 This document describes the registry storage driver model, implementation, and explains how to contribute new storage drivers.

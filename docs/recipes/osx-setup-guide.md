@@ -33,11 +33,11 @@ If you don't, the TLDR is:
 
 If you want to understand, you should read [How to Write Go Code](https://golang.org/doc/code.html).
 
-## Checkout the Docker Distribution source tree
+## Checkout the source tree
 
-    mkdir -p $GOPATH/src/github.com/docker
-    git clone https://github.com/docker/distribution.git $GOPATH/src/github.com/docker/distribution
-    cd $GOPATH/src/github.com/docker/distribution
+    mkdir -p $GOPATH/src/github.com/distribution
+    git clone https://github.com/distribution/distribution.git $GOPATH/src/github.com/distribution/distribution
+    cd $GOPATH/src/github.com/distribution/distribution
 
 ## Build the binary
 
@@ -52,23 +52,23 @@ Copy the registry configuration file in place:
     mkdir /Users/Shared/Registry
     cp docs/osx/config.yml /Users/Shared/Registry/config.yml
 
-## Run the Docker Registry under launchd
+## Run the registry under launchd
 
-Copy the Docker registry plist into place:
+Copy the registry plist into place:
 
     plutil -lint docs/recipes/osx/com.docker.registry.plist
     cp docs/recipes/osx/com.docker.registry.plist ~/Library/LaunchAgents/
     chmod 644 ~/Library/LaunchAgents/com.docker.registry.plist
 
-Start the Docker registry:
+Start the registry:
 
     launchctl load ~/Library/LaunchAgents/com.docker.registry.plist
 
-### Restart the docker registry service
+### Restart the registry service
 
     launchctl stop com.docker.registry
     launchctl start com.docker.registry
 
-### Unload the docker registry service
+### Unload the registry service
 
     launchctl unload ~/Library/LaunchAgents/com.docker.registry.plist
