@@ -20,10 +20,7 @@ target "artifact" {
 target "artifact-all" {
   inherits = ["artifact"]
   platforms = [
-    "darwin/amd64",
-    "darwin/arm64",
     "linux/amd64",
-    "linux/arm/v5",
     "linux/arm/v6",
     "linux/arm/v7",
     "linux/arm64",
