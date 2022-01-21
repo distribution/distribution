@@ -12,6 +12,23 @@ target "binary" {
   output = ["./bin"]
 }
 
+target "artifact" {
+  target = "artifacts"
+  output = ["./bin"]
+}
+
+target "artifact-all" {
+  inherits = ["artifact"]
+  platforms = [
+    "linux/amd64",
+    "linux/arm/v6",
+    "linux/arm/v7",
+    "linux/arm64",
+    "linux/ppc64le",
+    "linux/s390x"
+  ]
+}
+
 target "image" {
   inherits = ["docker-metadata-action"]
 }
