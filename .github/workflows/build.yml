@@ -30,8 +30,20 @@ jobs:
         with:
           images: |
             ${{ env.DOCKERHUB_SLUG }}
+          ### versioning strategy
+          ### push semver tag v3.2.1 on main (default branch)
+          # distribution/distribution:3.2.1
+          # distribution/distribution:3.2
+          # distribution/distribution:3
+          # distribution/distribution:latest
+          ### push semver prelease tag v3.0.0-beta.1 on main (default branch)
+          # distribution/distribution:3.0.0-beta.1
+          ### push on main
+          # distribution/distribution:edge
           tags: |
             type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
             type=ref,event=pr
             type=edge
           labels: |
@@ -81,5 +93,6 @@ jobs:
           files: |
             bin/*.tar.gz
             bin/*.zip
+            bin/*.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
