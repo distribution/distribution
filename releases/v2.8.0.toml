@@ -1,0 +1,55 @@
+# commit to be tagged for new release
+commit = "HEAD"
+
+project_name = "registry"
+github_repo = "distribution/distribution"
+
+# previous release
+previous = "v2.7.1"
+
+pre_release = false
+
+preface = """\
+The 2.8.0 registry release has been a long time overdue.
+This is the last 2.x release. No further active development will continue on
+2.x branch. Security vulnerability patches to 2.x might be considered, but
+all active development will be focussed on v3 release due in 2022.
+This release includes a security vulnerability fix along
+with a few minor bug fixes and improvemnts in documentation and CI.
+
+See changelog below for full list of changes.
+
+### Bugfixes
+* Close the io.ReadCloser from storage driver [#3370](https://github.com/distribution/distribution/pull/3370)
+* Remove empty Content-Type header [#3297](https://github.com/distribution/distribution/pull/3297)
+* Make ipfilteredby not required in cloudfront storage middleware [#3088](https://github.com/distribution/distribution/pull/3088)
+
+### Features
+* Add reference.ParseDockerRef utility function [#3002](https://github.com/distribution/distribution/pull/3002)
+
+### CI build
+* First draft of actions based ci [#3347](https://github.com/distribution/distribution/pull/3347)
+* Fix vndr and check [#3001](https://github.com/distribution/distribution/pull/3001)
+* Improve code quality by adding linter checks [#3385](https://github.com/distribution/distribution/pull/3385)
+
+### Documentation
+* Add redirect for old URL [#3197](https://github.com/distribution/distribution/pull/3197)
+* Fix broken table [#3073](https://github.com/distribution/distribution/pull/3073)
+* Adding deprecated schema v1 instructions [#2987](https://github.com/distribution/distribution/pull/2987)
+* Change should to must in v2 spec ([#3495](https://github.com/distribution/distribution/pull/3495))
+
+### Storage drivers
+* S3 Driver: add support for ceph radosgw [#3119](https://github.com/distribution/distribution/pull/3119)
+
+### Security
+* Added flag for user configurable cipher suites [#3384](https://github.com/distribution/distribution/pull/3384)
+* Address [CVE-2020-26160](https://github.com/advisories/GHSA-w73w-5m7g-f7qc) by replacing vulnerable third-party depedency[#3466](https://github.com/distribution/distribution/pull/3466)
+* Replace math rand with crypto rand [#3531](https://github.com/distribution/distribution/pull/3531)
+* Address [CVE-2021-41190](https://github.com/advisories/GHSA-mc8v-mgrf-8f4m) by validating document type before unmarshal [GHSA-77vh-xpmg-72qh](https://github.com/distribution/distribution-ghsa-qq97-vm5h-rrhg/pull/2)
+
+### Dependency Changes
+* github.com/dgrijalva/jwt-go           -> github.com/golang-jwt/jwt.git # v3.2.2        (a601269ab70c -> 4bbdd8ac624f)
+* github.com/opencontainers/image-spec  -> github.com/opencontainers/image-spec # v1.0.2 (ab7389ef9f50 -> 67d2d5658fe0)
+
+Previous release can be found at [v2.7.1](https://github.com/distribution/distribution/releases/tag/v2.7.1)
+"""
