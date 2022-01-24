@@ -135,7 +135,10 @@ func TestGetCipherSuite(t *testing.T) {
 		)
 	}
 
-	resp, err = getCipherSuites([]string{"TLS_RSA_WITH_AES_128_CBC_SHA", "TLS_AES_128_GCM_SHA256"})
+	resp, err = getCipherSuites([]string{
+		"TLS_RSA_WITH_AES_128_CBC_SHA",
+		"TLS_AES_128_GCM_SHA256",
+	})
 	if err != nil || len(resp) != 2 ||
 		resp[0] != tls.TLS_RSA_WITH_AES_128_CBC_SHA || resp[1] != tls.TLS_AES_128_GCM_SHA256 {
 		t.Errorf("expected cipher suites %q, got %q",
@@ -147,6 +150,22 @@ func TestGetCipherSuite(t *testing.T) {
 	_, err = getCipherSuites([]string{"TLS_RSA_WITH_AES_128_CBC_SHA", "bad_input"})
 	if err == nil {
 		t.Error("did not return expected error about unknown cipher suite")
+	}
+
+	var insecureCipherSuites = []string{
+		"TLS_RSA_WITH_RC4_128_SHA",
+		"TLS_RSA_WITH_AES_128_CBC_SHA256",
+		"TLS_ECDHE_ECDSA_WITH_RC4_128_SHA",
+		"TLS_ECDHE_RSA_WITH_RC4_128_SHA",
+		"TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256",
+		"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256",
+	}
+
+	for _, suite := range insecureCipherSuites {
+		_, err = getCipherSuites([]string{suite})
+		if err == nil {
+			t.Errorf("Unexpected insecure cipher suite: %s", suite)
+		}
 	}
 }
 
