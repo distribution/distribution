@@ -16,6 +16,12 @@ registry, which is a service to manage information about docker images and
 enable their distribution. The specification covers the operation of version 2
 of this API, known as _Docker Registry HTTP API V2_.
 
+The primary endpoint URI for The Docker Registry API is `https://registry.hub.docker.com/v2/`. The OpenAPI specification may be found here: <https://docs.docker.com/docker-hub/api/latest.yaml>
+
+| Endpoint URI |
+|---|
+| `https://registry.hub.docker.com/v2/` |
+
 While the V1 registry protocol is usable, there are several problems with the
 architecture that have led to this new version. The main driver of this
 specification is a set of changes to the Docker image format, covered in
@@ -118,11 +124,15 @@ This section should be updated when changes are made to the specification,
 indicating what is different. Optionally, we may start marking parts of the
 specification to correspond with the versions enumerated here.
 
+<div class="panel panel-default">
+    <div class="panel-heading collapsed" data-toggle="collapse" data-target="#collapseChanges1" style="cursor: pointer">
+    Coallated list of changes to the API specification
+    <i class="chevron fa fa-fw"></i></div>
+    <div class="collapse block" id="collapseChanges1">
 Each set of changes is given a letter corresponding to a set of modifications
 that were applied to the baseline specification. These are merely for
 reference and shouldn't be used outside the specification other than to
 identify a set of modifications.
-
 <dl>
   <dt>l</dt>
   <dd>
@@ -217,7 +227,11 @@ identify a set of modifications.
     </ul>
   </dd>
 </dl>
+	</div>
+</div>
 
+    
+	
 ## Overview
 
 This section covers client flows and details of the API endpoints. The URI
