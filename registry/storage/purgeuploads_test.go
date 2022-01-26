@@ -46,7 +46,7 @@ func TestPurgeGather(t *testing.T) {
 	fs, ctx := testUploadFS(t, uploadCount, "test-repo", time.Now())
 	uploadData, errs := getOutstandingUploads(ctx, fs)
 	if len(errs) != 0 {
-		t.Errorf("Unexepected errors: %q", errs)
+		t.Errorf("Unexpected errors: %q", errs)
 	}
 	if len(uploadData) != uploadCount {
 		t.Errorf("Unexpected upload file count: %d != %d", uploadCount, len(uploadData))

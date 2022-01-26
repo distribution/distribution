@@ -76,7 +76,6 @@ func (sbs statsBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter, 
 }
 
 func (sbs statsBlobStore) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
-
 	sbsMu.Lock()
 	sbs.stats["stat"]++
 	sbsMu.Unlock()
