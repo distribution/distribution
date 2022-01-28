@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-GOLANGCI_LINT_VERSION="v1.27.0"
+GOLANGCI_LINT_VERSION="v1.44.0"
 
 #
 # Install developer tools to $GOBIN (or $GOPATH/bin if unset)
