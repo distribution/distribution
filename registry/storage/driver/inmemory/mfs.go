@@ -244,11 +244,16 @@ func (d *dir) delete(p string) error {
 		return errNotExists
 	}
 
-	if _, ok := parent.(*dir).children[filename]; !ok {
+	parentDir, ok := parent.(*dir)
+	if !ok {
+		return errIsNotDir
+	}
+
+	if _, ok := parentDir.children[filename]; !ok {
 		return errNotExists
 	}
 
-	delete(parent.(*dir).children, filename)
+	delete(parentDir.children, filename)
 	return nil
 }
 
