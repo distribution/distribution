@@ -10,6 +10,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -23,16 +24,30 @@ import (
 const driverName = "azure"
 
 const (
-	paramAccountName = "accountname"
-	paramAccountKey  = "accountkey"
-	paramContainer   = "container"
-	paramRealm       = "realm"
-	maxChunkSize     = 4 * 1024 * 1024
+	paramAccountName     = "accountname"
+	paramAccountKey      = "accountkey"
+	paramContainer       = "container"
+	paramRealm           = "realm"
+	paramRootDirectory   = "rootdirectory"
+	paramFixLeadingSlash = "fixleadingslash"
+	maxChunkSize         = 4 * 1024 * 1024
 )
 
+//DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
+type DriverParameters struct {
+	AccountName     string
+	AccountKey      string
+	Container       string
+	Realm           string
+	RootDirectory   string
+	FixLeadingSlash bool
+}
+
 type driver struct {
-	client    azure.BlobStorageClient
-	container string
+	client          azure.BlobStorageClient
+	container       string
+	rootdirectory   string
+	fixleadingslash bool
 }
 
 type baseEmbed struct{ base.Base }
@@ -73,12 +88,46 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		realm = azure.DefaultBaseURL
 	}
 
-	return New(fmt.Sprint(accountName), fmt.Sprint(accountKey), fmt.Sprint(container), fmt.Sprint(realm))
+	rootdirectory, ok := parameters[paramRootDirectory]
+	if !ok || rootdirectory == nil {
+		rootdirectory = ""
+	}
+
+	fixleadingslashBool := false
+	fixleadingslash, ok := parameters[paramFixLeadingSlash]
+	if !ok {
+		fixleadingslash = false
+	}
+	switch fixleadingslash := fixleadingslash.(type) {
+	case string:
+		b, err := strconv.ParseBool(fixleadingslash)
+		if err != nil {
+			return nil, fmt.Errorf("the fixleadingslash parameter should be a boolean")
+		}
+		fixleadingslashBool = b
+	case bool:
+		fixleadingslashBool = fixleadingslash
+	case nil:
+		// do nothing
+	default:
+		return nil, fmt.Errorf("the fixleadingslash parameter should be a boolean")
+	}
+
+	params := DriverParameters{
+		fmt.Sprint(accountName),
+		fmt.Sprint(accountKey),
+		fmt.Sprint(container),
+		fmt.Sprint(realm),
+		fmt.Sprint(rootdirectory),
+		fixleadingslashBool,
+	}
+
+	return New(params)
 }
 
 // New constructs a new Driver with the given Azure Storage Account credentials
-func New(accountName, accountKey, container, realm string) (*Driver, error) {
-	api, err := azure.NewClient(accountName, accountKey, realm, azure.DefaultAPIVersion, true)
+func New(params DriverParameters) (*Driver, error) {
+	api, err := azure.NewClient(params.AccountName, params.AccountKey, params.Realm, azure.DefaultAPIVersion, true)
 	if err != nil {
 		return nil, err
 	}
@@ -86,14 +135,16 @@ func New(accountName, accountKey, container, realm string) (*Driver, error) {
 	blobClient := api.GetBlobService()
 
 	// Create registry container
-	containerRef := blobClient.GetContainerReference(container)
+	containerRef := blobClient.GetContainerReference(params.Container)
 	if _, err = containerRef.CreateIfNotExists(nil); err != nil {
 		return nil, err
 	}
 
 	d := &driver{
-		client:    blobClient,
-		container: container}
+		client:          blobClient,
+		container:       params.Container,
+		rootdirectory:   params.RootDirectory,
+		fixleadingslash: params.FixLeadingSlash}
 	return &Driver{baseEmbed: baseEmbed{Base: base.Base{StorageDriver: d}}}, nil
 }
 
@@ -102,8 +153,18 @@ func (d *driver) Name() string {
 	return driverName
 }
 
+func (d *driver) azurePath(path string) string {
+	path = d.rootdirectory + path
+	path = strings.TrimRight(path, "/")
+	if d.fixleadingslash || len(d.rootdirectory) > 0 {
+		path = strings.TrimLeft(path, "/")
+	}
+	return path
+}
+
 // GetContent retrieves the content stored at "path" as a []byte.
 func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
+	path = d.azurePath(path)
 	blobRef := d.client.GetContainerReference(d.container).GetBlobReference(path)
 	blob, err := blobRef.Get(nil)
 	if err != nil {
@@ -119,6 +180,7 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 
 // PutContent stores the []byte content at a location designated by "path".
 func (d *driver) PutContent(ctx context.Context, path string, contents []byte) error {
+	path = d.azurePath(path)
 	// max size for block blobs uploaded via single "Put Blob" for version after "2016-05-31"
 	// https://docs.microsoft.com/en-us/rest/api/storageservices/put-blob#remarks
 	const limit = 256 * 1024 * 1024
@@ -157,6 +219,7 @@ func (d *driver) PutContent(ctx context.Context, path string, contents []byte) e
 // Reader retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
 func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
+	path = d.azurePath(path)
 	blobRef := d.client.GetContainerReference(d.container).GetBlobReference(path)
 	if ok, err := blobRef.Exists(); err != nil {
 		return nil, err
@@ -189,6 +252,7 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 // Writer returns a FileWriter which will store the content written to it
 // at the location designated by "path" after the call to Commit.
 func (d *driver) Writer(ctx context.Context, path string, append bool) (storagedriver.FileWriter, error) {
+	path = d.azurePath(path)
 	blobRef := d.client.GetContainerReference(d.container).GetBlobReference(path)
 	blobExists, err := blobRef.Exists()
 	if err != nil {
@@ -225,6 +289,7 @@ func (d *driver) Writer(ctx context.Context, path string, append bool) (storaged
 // Stat retrieves the FileInfo for the given path, including the current size
 // in bytes and the creation time.
 func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
+	path = d.azurePath(path)
 	blobRef := d.client.GetContainerReference(d.container).GetBlobReference(path)
 	// Check if the path is a blob
 	if ok, err := blobRef.Exists(); err != nil {
@@ -273,6 +338,7 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 // List returns a list of the objects that are direct descendants of the given
 // path.
 func (d *driver) List(ctx context.Context, path string) ([]string, error) {
+	path = d.azurePath(path)
 	if path == "/" {
 		path = ""
 	}
@@ -292,6 +358,8 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
 func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
+	sourcePath = d.azurePath(sourcePath)
+	destPath = d.azurePath(destPath)
 	srcBlobRef := d.client.GetContainerReference(d.container).GetBlobReference(sourcePath)
 	sourceBlobURL := srcBlobRef.GetURL()
 	destBlobRef := d.client.GetContainerReference(d.container).GetBlobReference(destPath)
@@ -308,6 +376,7 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 
 // Delete recursively deletes all objects stored at "path" and its subpaths.
 func (d *driver) Delete(ctx context.Context, path string) error {
+	path = d.azurePath(path)
 	blobRef := d.client.GetContainerReference(d.container).GetBlobReference(path)
 	ok, err := blobRef.DeleteIfExists(nil)
 	if err != nil {
@@ -340,6 +409,7 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 // for specified duration by making use of Azure Storage Shared Access Signatures (SAS).
 // See https://msdn.microsoft.com/en-us/library/azure/ee395415.aspx for more info.
 func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
+	path = d.azurePath(path)
 	expiresTime := time.Now().UTC().Add(20 * time.Minute) // default expiration
 	expires, ok := options["expiry"]
 	if ok {
@@ -362,6 +432,7 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 // Walk traverses a filesystem defined within driver, starting
 // from the given path, calling f on each file and directory
 func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn) error {
+	path = d.azurePath(path)
 	return storagedriver.WalkFallback(ctx, d, path, f)
 }
 
