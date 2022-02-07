@@ -88,11 +88,6 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		realm = azure.DefaultBaseURL
 	}
 
-	rootdirectory, ok := parameters[paramRootDirectory]
-	if !ok || rootdirectory == nil {
-		rootdirectory = ""
-	}
-
 	fixleadingslashBool := false
 	fixleadingslash, ok := parameters[paramFixLeadingSlash]
 	if !ok {
@@ -111,6 +106,19 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		// do nothing
 	default:
 		return nil, fmt.Errorf("the fixleadingslash parameter should be a boolean")
+	}
+
+	rootdirectory, ok := parameters[paramRootDirectory]
+	if !ok || rootdirectory == nil {
+		rootdirectory = ""
+	}
+
+	if rootdirectory != "/" {
+		rootdirectory = strings.TrimRight(fmt.Sprint(rootdirectory), "/")
+	}
+
+	if len(fmt.Sprint(rootdirectory)) > 0 {
+		fixleadingslashBool = true
 	}
 
 	params := DriverParameters{
@@ -154,9 +162,11 @@ func (d *driver) Name() string {
 }
 
 func (d *driver) azurePath(path string) string {
+	if path != "/" {
+		path = strings.TrimRight(path, "/")
+	}
 	path = d.rootdirectory + path
-	path = strings.TrimRight(path, "/")
-	if d.fixleadingslash || len(d.rootdirectory) > 0 {
+	if d.fixleadingslash {
 		path = strings.TrimLeft(path, "/")
 	}
 	return path
@@ -352,7 +362,15 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 	if path != "" && len(list) == 0 {
 		return nil, storagedriver.PathNotFoundError{Path: path}
 	}
-	return list, nil
+
+	objects := []string{}
+	for _, s := range list {
+		s = strings.Replace(s, d.azurePath(""), "", 1)
+		s = strings.TrimPrefix(s, "/")
+		s = "/" + s
+		objects = append(objects, s)
+	}
+	return objects, nil
 }
 
 // Move moves an object stored at sourcePath to destPath, removing the original
@@ -443,9 +461,6 @@ func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn) 
 // Example: direct descendants of "/" in {"/foo", "/bar/1", "/bar/2"} is
 // {"/foo", "/bar"} and direct descendants of "bar" is {"/bar/1", "/bar/2"}
 func directDescendants(blobs []string, prefix string) []string {
-	if !strings.HasPrefix(prefix, "/") { // add trailing '/'
-		prefix = "/" + prefix
-	}
 	if !strings.HasSuffix(prefix, "/") { // containerify the path
 		prefix += "/"
 	}
