@@ -100,7 +100,7 @@ alpha-numeric           := /[a-z0-9]+/
 separator               := /[_.]|__|[-]*/
 ```
 Full reference grammar is defined
-[here](https://godoc.org/github.com/distribution/distribution/reference). Currently
+[here](https://pkg.go.dev/github.com/distribution/distribution/reference). Currently
 the scope name grammar is a subset of the reference grammar.
 
 > **NOTE:** that the `resourcename` may contain one `:` due to a possible port
