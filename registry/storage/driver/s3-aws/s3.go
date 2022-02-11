@@ -15,6 +15,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -1014,7 +1015,7 @@ ListLoop:
 
 	// need to chunk objects into groups of 1000 per s3 restrictions
 	for i := 0; i < total; i += 1000 {
-		_, err := s.DeleteObjects(&s3.DeleteObjectsInput{
+		output, err := s.DeleteObjects(&s3.DeleteObjectsInput{
 			Bucket: aws.String(d.Bucket),
 			Delete: &s3.Delete{
 				Objects: s3Objects[i:min(i+1000, total)],
@@ -1023,6 +1024,12 @@ ListLoop:
 		})
 		if err != nil {
 			return err
+		}
+		if output.Errors != nil && len(output.Errors) > 0 {
+			// ideally all errors would be returned in some way
+			// until then, at least pass back the first error code
+			oErr := output.Errors[0]
+			return errors.New(*oErr.Code)
 		}
 	}
 	return nil
