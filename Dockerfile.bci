@@ -4,7 +4,7 @@ ARG GO_VERSION=1.17
 ARG GORELEASER_XX_VERSION=1.2.5
 
 FROM crazymax/goreleaser-xx:${GORELEASER_XX_VERSION} AS goreleaser-xx
-FROM registry.suse.com/bci/golang:1.17 AS base
+FROM registry.suse.com/bci/golang:${GO_VERSION} AS base
 COPY --from=goreleaser-xx / /
 RUN zypper --non-interactive install -y file git
 WORKDIR /src
