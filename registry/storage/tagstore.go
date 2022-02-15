@@ -4,6 +4,7 @@ import (
 	"context"
 	"path"
 	"sort"
+	"sync"
 
 	"github.com/distribution/distribution/v3"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
@@ -149,26 +150,82 @@ func (ts *tagStore) Lookup(ctx context.Context, desc distribution.Descriptor) ([
 		return nil, err
 	}
 
+	limiter := make(chan struct{}, 10)
+	errChan := make(chan error, len(allTags))
+	tagChan := make(chan string, len(allTags))
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	var tags []string
+	wg := sync.WaitGroup{}
+	wg.Add(len(allTags))
 	for _, tag := range allTags {
-		tagLinkPathSpec := manifestTagCurrentPathSpec{
-			name: ts.repository.Named().Name(),
-			tag:  tag,
-		}
-
-		tagLinkPath, _ := pathFor(tagLinkPathSpec)
-		tagDigest, err := ts.blobStore.readlink(ctx, tagLinkPath)
-		if err != nil {
-			switch err.(type) {
-			case storagedriver.PathNotFoundError:
-				continue
+		limiter <- struct{}{}
+		go func(tag string) {
+			defer wg.Done()
+			defer func() {
+				<-limiter
+			}()
+			tagLinkPathSpec := manifestTagCurrentPathSpec{
+				name: ts.repository.Named().Name(),
+				tag:  tag,
 			}
-			return nil, err
-		}
 
-		if tagDigest == desc.Digest {
+			tagLinkPath, _ := pathFor(tagLinkPathSpec)
+			// If context is done stop short as the parent has exited with an error
+			if ctx.Err() != nil {
+				return
+			}
+			tagDigest, err := ts.blobStore.readlink(ctx, tagLinkPath)
+			if err != nil {
+				switch err.(type) {
+				case storagedriver.PathNotFoundError:
+					return
+				}
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+				errChan <- err
+				return
+			}
+
+			if tagDigest == desc.Digest {
+
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+				tagChan <- tag
+				return
+			}
+		}(tag)
+	}
+
+	go func() {
+		wg.Wait()
+		close(tagChan)
+
+	}()
+read:
+	for {
+		select {
+		case err, workRemaining := <-errChan:
+			if !workRemaining {
+				break read
+			}
+			cancel()
+			return nil, err
+		case tag, workRemaining := <-tagChan:
+			if !workRemaining {
+				close(errChan)
+				break read
+			}
 			tags = append(tags, tag)
 		}
+
 	}
 
 	return tags, nil

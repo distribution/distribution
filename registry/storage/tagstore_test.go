@@ -2,29 +2,78 @@ package storage
 
 import (
 	"context"
+	"errors"
+	"io"
 	"reflect"
+	"strconv"
 	"testing"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/manifest"
 	"github.com/distribution/distribution/v3/manifest/schema2"
 	"github.com/distribution/distribution/v3/reference"
+	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
+	"github.com/distribution/distribution/v3/registry/storage/driver/base"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	digest "github.com/opencontainers/go-digest"
 )
 
 type tagsTestEnv struct {
-	ts  distribution.TagService
-	bs  distribution.BlobStore
-	ms  distribution.ManifestService
-	gbs distribution.BlobStatter
-	ctx context.Context
+	ts         distribution.TagService
+	bs         distribution.BlobStore
+	ms         distribution.ManifestService
+	gbs        distribution.BlobStatter
+	ctx        context.Context
+	mockDriver *mockInMemory
+}
+
+type mockInMemory struct {
+	base.Base
+	driver          *inmemory.Driver
+	GetContentError error
+}
+
+var _ storagedriver.StorageDriver = &mockInMemory{}
+
+func (m *mockInMemory) Name() string {
+	return m.driver.Name()
+}
+func (m *mockInMemory) GetContent(ctx context.Context, path string) ([]byte, error) {
+	if m.GetContentError != nil {
+		return nil, m.GetContentError
+	}
+	return m.driver.GetContent(ctx, path)
+}
+func (m *mockInMemory) PutContent(ctx context.Context, path string, content []byte) error {
+	return m.driver.PutContent(ctx, path, content)
+}
+func (m *mockInMemory) Reader(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
+	return m.driver.Reader(ctx, path, offset)
+}
+func (m *mockInMemory) Writer(ctx context.Context, path string, append bool) (storagedriver.FileWriter, error) {
+	return m.driver.Writer(ctx, path, append)
+}
+func (m *mockInMemory) List(ctx context.Context, path string) ([]string, error) {
+	return m.driver.List(ctx, path)
+}
+func (m *mockInMemory) Move(ctx context.Context, sourcePath string, destPath string) error {
+	return m.driver.Move(ctx, sourcePath, destPath)
+}
+func (m *mockInMemory) Delete(ctx context.Context, path string) error {
+	return m.driver.Delete(ctx, path)
+}
+func (m *mockInMemory) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
+	return m.driver.URLFor(ctx, path, options)
+}
+func (m *mockInMemory) Walk(ctx context.Context, path string, f storagedriver.WalkFn) error {
+	return m.driver.Walk(ctx, path, f)
 }
 
 func testTagStore(t *testing.T) *tagsTestEnv {
 	ctx := context.Background()
 	d := inmemory.New()
-	reg, err := NewRegistry(ctx, d)
+	mockDriver := mockInMemory{driver: d, Base: d.Base}
+	reg, err := NewRegistry(ctx, &mockDriver)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,11 +89,12 @@ func testTagStore(t *testing.T) *tagsTestEnv {
 	}
 
 	return &tagsTestEnv{
-		ctx: ctx,
-		ts:  repo.Tags(ctx),
-		bs:  repo.Blobs(ctx),
-		gbs: reg.BlobStatter(),
-		ms:  ms,
+		ctx:        ctx,
+		ts:         repo.Tags(ctx),
+		bs:         repo.Blobs(ctx),
+		gbs:        reg.BlobStatter(),
+		ms:         ms,
+		mockDriver: &mockDriver,
 	}
 }
 
@@ -218,6 +268,34 @@ func TestTagLookup(t *testing.T) {
 
 	if len(tags) != 2 {
 		t.Errorf("Lookup of descB returned %d tags, expected 2", len(tags))
+	}
+	/// Should handle error looking up tag
+	env.mockDriver.GetContentError = errors.New("Lookup failure")
+
+	for i := 2; i < 15; i++ {
+		err = tagStore.Tag(ctx, strconv.Itoa(i), desc0)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	tags, err = tagStore.Lookup(ctx, desc0)
+	if err == nil {
+		t.Fatal("Expected error but none retrieved")
+	}
+	if len(tags) > 0 {
+		t.Errorf("Expected 0 tags on an error but got %d tags", len(tags))
+	}
+
+	// Should not error for a path not found
+	env.mockDriver.GetContentError = storagedriver.PathNotFoundError{}
+
+	tags, err = tagStore.Lookup(ctx, desc0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(tags) > 0 {
+		t.Errorf("Expected 0 tags on path not found but got %d tags", len(tags))
 	}
 }
 
