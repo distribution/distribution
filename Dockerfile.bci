@@ -32,12 +32,12 @@ RUN --mount=type=bind,target=/src,rw \
     --files="LICENSE" \
     --files="README.md"
 
-FROM registry.suse.com/bci/bci-micro AS artifact
+FROM scratch AS artifact
 COPY --from=build /out/*.tar.gz /
 COPY --from=build /out/*.zip /
 COPY --from=build /out/*.sha256 /
 
-FROM registry.suse.com/bci/bci-micro AS binary
+FROM scratch AS binary
 COPY --from=build /usr/local/bin/registry* /
 
 FROM registry.suse.com/bci/bci-micro
