@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strconv"
 	"sync"
 	"time"
 
@@ -39,8 +40,16 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 
 	v := storage.NewVacuum(ctx, driver)
 
+
+	ttl, err := strconv.Atoi(config.TTL)
+	if err != nil {
+		return nil, err
+	}
+
+
+
 	var s *scheduler.TTLExpirationScheduler
-	if config.TTL != 0 {
+	if ttl != 0 {
 		s = scheduler.New(ctx, driver, "/scheduler-state.json")
 		s.OnBlobExpire(func(ref reference.Reference) error {
 			var r reference.Canonical
@@ -107,7 +116,7 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 	return &proxyingRegistry{
 		embedded:  registry,
 		scheduler: s,
-		ttl:       config.TTL,
+		ttl:       time.Hour * 24 * time.Duration(ttl),
 		remoteURL: *remoteURL,
 		authChallenger: &remoteAuthChallenger{
 			remoteURL: *remoteURL,
