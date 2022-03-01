@@ -1,0 +1,27 @@
+# commit to be tagged for new release
+commit = "HEAD"
+
+project_name = "registry"
+github_repo = "distribution/distribution"
+
+# previous release
+previous = "v2.8.0"
+
+pre_release = false
+
+preface = """\
+The 2.8.1 registry release fixes the Go module issues that have popped up in the v2.8.0
+
+There have been no chages made in the released binaries.
+
+See changelog below for full list of changes.
+
+### CI
+* ci: use proper git ref for versioning [#3595](https://github.com/distribution/distribution/pull/3595)
+
+### Dependency Changes
+
+This release has no dependency changes
+
+Previous release can be found at [v2.8.0](https://github.com/distribution/distribution/releases/tag/v2.8.0)
+"""
