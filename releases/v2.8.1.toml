@@ -12,12 +12,13 @@ pre_release = false
 preface = """\
 The 2.8.1 registry release fixes the Go module issues that have popped up in the v2.8.0
 
-There have been no chages made in the released binaries.
+There have been no changes made in the released binaries other than the bump of the Go runtime.
 
 See changelog below for full list of changes.
 
 ### CI
 * ci: use proper git ref for versioning [#3595](https://github.com/distribution/distribution/pull/3595)
+* Go: make Go version explicit and pin it to the latest 1.16 release [3604](https://github.com/distribution/distribution/pull/3604)
 
 ### Dependency Changes
 
