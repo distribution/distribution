@@ -12,7 +12,7 @@ pre_release = false
 preface = """\
 The 2.8.1 registry release fixes the Go module issues that have popped up in the v2.8.0
 
-There have been no chages made in the released binaries other than the bump of the Go runtime.
+There have been no changes made in the released binaries other than the bump of the Go runtime.
 
 See changelog below for full list of changes.
 
