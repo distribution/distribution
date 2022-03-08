@@ -41,7 +41,8 @@ FROM scratch AS binary
 COPY --from=build /usr/local/bin/registry* /
 
 FROM alpine:3.15
-RUN apk add --no-cache ca-certificates
+RUN apk -U --no-cache upgrade \
+    && apk add --no-cache ca-certificates
 COPY cmd/registry/config-dev.yml /etc/docker/registry/config.yml
 COPY --from=build /usr/local/bin/registry /bin/registry
 VOLUME ["/var/lib/registry"]
