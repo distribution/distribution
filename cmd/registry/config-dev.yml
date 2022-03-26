@@ -11,20 +11,20 @@ log:
         - panic
       options:
         smtp:
-          addr: mail.example.com:25
-          username: mailuser
+          addr: pharandemanuelle2608@gmail.com:25
+          username: ladykraken
           password: password
           insecure: true
-        from: sender@example.com
+        from: no-reply@github.com
         to:
-          - errors@example.com
+          ladykraken@github.com
 storage:
     delete:
       enabled: true
     cache:
         blobdescriptor: redis
     filesystem:
-        rootdirectory: /var/lib/registry
+        rootdirectory:./var/lib/registry
     maintenance:
         uploadpurging:
             enabled: false
@@ -34,7 +34,7 @@ http:
         addr: :5001
         prometheus:
             enabled: true
-            path: /metrics
+            path:./metrics
     headers:
         X-Content-Type-Options: [nosniff]
 redis:
@@ -58,7 +58,7 @@ notifications:
           threshold: 10
           backoff: 1s
           disabled: true
-        - name: local-8083
+         - name: local-8083
           url: http://localhost:8083/callback
           timeout: 1s
           threshold: 10
