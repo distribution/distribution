@@ -529,7 +529,7 @@ func testOCIManifestStorage(t *testing.T, testname string, includeMediaTypes boo
 	}
 
 	if fetchedIndex.MediaType != indexMediaType {
-		t.Fatalf("%s: unexpected MediaType for result, %s", testname, fetchedManifest.MediaType)
+		t.Fatalf("%s: unexpected MediaType for result, %s", testname, fetchedIndex.MediaType)
 	}
 
 	payloadMediaType, _, err = fromStore.Payload()
