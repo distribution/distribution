@@ -308,16 +308,45 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	if storageClassParam != nil {
 		storageClassString, ok := storageClassParam.(string)
 		if !ok {
-			return nil, fmt.Errorf("the storageclass parameter must be one of %v, %v invalid",
-				[]string{s3.StorageClassStandard, s3.StorageClassReducedRedundancy}, storageClassParam)
+			return nil, fmt.Errorf(
+				"the storageclass parameter must be one of %v, %v invalid",
+				[]string{
+					noStorageClass,
+					s3.StorageClassStandard,
+					s3.StorageClassReducedRedundancy,
+					s3.StorageClassStandardIa,
+					s3.StorageClassOnezoneIa,
+					s3.StorageClassIntelligentTiering,
+					s3.StorageClassOutposts,
+					s3.StorageClassGlacierIr,
+				},
+				storageClassParam,
+			)
 		}
 		// All valid storage class parameters are UPPERCASE, so be a bit more flexible here
 		storageClassString = strings.ToUpper(storageClassString)
 		if storageClassString != noStorageClass &&
 			storageClassString != s3.StorageClassStandard &&
-			storageClassString != s3.StorageClassReducedRedundancy {
-			return nil, fmt.Errorf("the storageclass parameter must be one of %v, %v invalid",
-				[]string{noStorageClass, s3.StorageClassStandard, s3.StorageClassReducedRedundancy}, storageClassParam)
+			storageClassString != s3.StorageClassReducedRedundancy &&
+			storageClassString != s3.StorageClassStandardIa &&
+			storageClassString != s3.StorageClassOnezoneIa &&
+			storageClassString != s3.StorageClassIntelligentTiering &&
+			storageClassString != s3.StorageClassOutposts &&
+			storageClassString != s3.StorageClassGlacierIr {
+			return nil, fmt.Errorf(
+				"the storageclass parameter must be one of %v, %v invalid",
+				[]string{
+					noStorageClass,
+					s3.StorageClassStandard,
+					s3.StorageClassReducedRedundancy,
+					s3.StorageClassStandardIa,
+					s3.StorageClassOnezoneIa,
+					s3.StorageClassIntelligentTiering,
+					s3.StorageClassOutposts,
+					s3.StorageClassGlacierIr,
+				},
+				storageClassParam,
+			)
 		}
 		storageClass = storageClassString
 	}
