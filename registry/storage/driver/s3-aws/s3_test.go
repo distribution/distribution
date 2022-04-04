@@ -44,6 +44,7 @@ func init() {
 	sessionToken := os.Getenv("AWS_SESSION_TOKEN")
 	useDualStack := os.Getenv("S3_USE_DUALSTACK")
 	combineSmallPart := os.Getenv("MULTIPART_COMBINE_SMALL_PART")
+	accelerate := os.Getenv("S3_ACCELERATE")
 	if err != nil {
 		panic(err)
 	}
@@ -86,9 +87,18 @@ func init() {
 		if useDualStack != "" {
 			useDualStackBool, err = strconv.ParseBool(useDualStack)
 		}
+
 		multipartCombineSmallPart := true
 		if combineSmallPart != "" {
 			multipartCombineSmallPart, err = strconv.ParseBool(combineSmallPart)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		accelerateBool := true
+		if accelerate != "" {
+			accelerateBool, err = strconv.ParseBool(accelerate)
 			if err != nil {
 				return nil, err
 			}
@@ -116,6 +126,7 @@ func init() {
 			objectACL,
 			sessionToken,
 			useDualStackBool,
+			accelerateBool,
 		}
 
 		return New(parameters)
