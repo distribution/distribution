@@ -75,6 +75,18 @@ const listMax = 1000
 // noStorageClass defines the value to be used if storage class is not supported by the S3 endpoint
 const noStorageClass = "NONE"
 
+// s3StorageClasses lists all compatible (instant retrieval) S3 storage classes
+var s3StorageClasses = []string{
+	noStorageClass,
+	s3.StorageClassStandard,
+	s3.StorageClassReducedRedundancy,
+	s3.StorageClassStandardIa,
+	s3.StorageClassOnezoneIa,
+	s3.StorageClassIntelligentTiering,
+	s3.StorageClassOutposts,
+	s3.StorageClassGlacierIr,
+}
+
 // validRegions maps known s3 region identifiers to region descriptors
 var validRegions = map[string]struct{}{}
 
@@ -310,16 +322,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		if !ok {
 			return nil, fmt.Errorf(
 				"the storageclass parameter must be one of %v, %v invalid",
-				[]string{
-					noStorageClass,
-					s3.StorageClassStandard,
-					s3.StorageClassReducedRedundancy,
-					s3.StorageClassStandardIa,
-					s3.StorageClassOnezoneIa,
-					s3.StorageClassIntelligentTiering,
-					s3.StorageClassOutposts,
-					s3.StorageClassGlacierIr,
-				},
+				s3StorageClasses,
 				storageClassParam,
 			)
 		}
@@ -335,16 +338,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 			storageClassString != s3.StorageClassGlacierIr {
 			return nil, fmt.Errorf(
 				"the storageclass parameter must be one of %v, %v invalid",
-				[]string{
-					noStorageClass,
-					s3.StorageClassStandard,
-					s3.StorageClassReducedRedundancy,
-					s3.StorageClassStandardIa,
-					s3.StorageClassOnezoneIa,
-					s3.StorageClassIntelligentTiering,
-					s3.StorageClassOutposts,
-					s3.StorageClassGlacierIr,
-				},
+				s3StorageClasses,
 				storageClassParam,
 			)
 		}

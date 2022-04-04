@@ -228,66 +228,51 @@ func TestStorageClass(t *testing.T) {
 	}
 	defer os.Remove(rootDir)
 
-	standardDriver, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
-	if err != nil {
-		t.Fatalf("unexpected error creating driver with standard storage: %v", err)
-	}
-
-	rrDriver, err := s3DriverConstructor(rootDir, s3.StorageClassReducedRedundancy)
-	if err != nil {
-		t.Fatalf("unexpected error creating driver with reduced redundancy storage: %v", err)
-	}
-
-	if _, err = s3DriverConstructor(rootDir, noStorageClass); err != nil {
-		t.Fatalf("unexpected error creating driver without storage class: %v", err)
-	}
-
-	standardFilename := "/test-standard"
-	rrFilename := "/test-rr"
 	contents := []byte("contents")
 	ctx := context.Background()
+	for _, storageClass := range s3StorageClasses {
+		filename := "/test-" + storageClass
+		s3Driver, err := s3DriverConstructor(rootDir, storageClass)
+		if err != nil {
+			t.Fatalf("unexpected error creating driver with storage class %v: %v", storageClass, err)
+		}
 
-	err = standardDriver.PutContent(ctx, standardFilename, contents)
-	if err != nil {
-		t.Fatalf("unexpected error creating content: %v", err)
-	}
-	defer standardDriver.Delete(ctx, standardFilename)
+		err = s3Driver.PutContent(ctx, filename, contents)
+		if err != nil {
+			t.Fatalf("unexpected error creating content with storage class %v: %v", storageClass, err)
+		}
+		defer s3Driver.Delete(ctx, filename)
 
-	err = rrDriver.PutContent(ctx, rrFilename, contents)
-	if err != nil {
-		t.Fatalf("unexpected error creating content: %v", err)
+		driverUnwrapped := s3Driver.Base.StorageDriver.(*driver)
+		resp, err := driverUnwrapped.S3.GetObject(&s3.GetObjectInput{
+			Bucket: aws.String(driverUnwrapped.Bucket),
+			Key:    aws.String(driverUnwrapped.s3Path(filename)),
+		})
+		if err != nil {
+			t.Fatalf("unexpected error retrieving file with storage class %v: %v", storageClass, err)
+		}
+		defer resp.Body.Close()
+		// Amazon only populates this header value for non-standard storage classes
+		if storageClass == s3.StorageClassStandard && resp.StorageClass != nil {
+			t.Fatalf(
+				"unexpected response storage class for file with storage class %v: %v",
+				storageClass,
+				*resp.StorageClass,
+			)
+		} else if storageClass != s3.StorageClassStandard && resp.StorageClass == nil {
+			t.Fatalf(
+				"unexpected response storage class for file with storage class %v: %v",
+				storageClass,
+				s3.StorageClassStandard,
+			)
+		} else if storageClass != s3.StorageClassStandard && storageClass != *resp.StorageClass {
+			t.Fatalf(
+				"unexpected response storage class for file with storage class %v: %v",
+				storageClass,
+				*resp.StorageClass,
+			)
+		}
 	}
-	defer rrDriver.Delete(ctx, rrFilename)
-
-	standardDriverUnwrapped := standardDriver.Base.StorageDriver.(*driver)
-	resp, err := standardDriverUnwrapped.S3.GetObject(&s3.GetObjectInput{
-		Bucket: aws.String(standardDriverUnwrapped.Bucket),
-		Key:    aws.String(standardDriverUnwrapped.s3Path(standardFilename)),
-	})
-	if err != nil {
-		t.Fatalf("unexpected error retrieving standard storage file: %v", err)
-	}
-	defer resp.Body.Close()
-	// Amazon only populates this header value for non-standard storage classes
-	if resp.StorageClass != nil {
-		t.Fatalf("unexpected storage class for standard file: %v", resp.StorageClass)
-	}
-
-	rrDriverUnwrapped := rrDriver.Base.StorageDriver.(*driver)
-	resp, err = rrDriverUnwrapped.S3.GetObject(&s3.GetObjectInput{
-		Bucket: aws.String(rrDriverUnwrapped.Bucket),
-		Key:    aws.String(rrDriverUnwrapped.s3Path(rrFilename)),
-	})
-	if err != nil {
-		t.Fatalf("unexpected error retrieving reduced-redundancy storage file: %v", err)
-	}
-	defer resp.Body.Close()
-	if resp.StorageClass == nil {
-		t.Fatalf("unexpected storage class for reduced-redundancy file: %v", s3.StorageClassStandard)
-	} else if *resp.StorageClass != s3.StorageClassReducedRedundancy {
-		t.Fatalf("unexpected storage class for reduced-redundancy file: %v", *resp.StorageClass)
-	}
-
 }
 
 func TestDelete(t *testing.T) {
