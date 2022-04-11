@@ -168,19 +168,23 @@ func (t *Token) Verify(verifyOpts VerifyOptions) error {
 	}
 
 	// Verify that the signing key is trusted.
-	signingKey, err := t.VerifySigningKey(verifyOpts)
+	signingKeys, err := t.VerifySigningKey(verifyOpts)
 	if err != nil {
 		log.Info(err)
 		return ErrInvalidToken
 	}
 
-	// Finally, verify the signature of the token using the key which signed it.
-	if err := signingKey.Verify(strings.NewReader(t.Raw), t.Header.SigningAlg, t.Signature); err != nil {
-		log.Infof("unable to verify token signature: %s", err)
-		return ErrInvalidToken
+	for _, key := range signingKeys {
+		// Finally, verify the signature of the token using the key which signed it.
+		err := key.Verify(strings.NewReader(t.Raw), t.Header.SigningAlg, t.Signature)
+		if err != nil {
+			log.Infof("unable to verify token signature: %s", err)
+			continue
+		}
+		return nil
 	}
 
-	return nil
+	return ErrInvalidToken
 }
 
 // VerifySigningKey attempts to get the key which was used to sign this token.
@@ -194,7 +198,7 @@ func (t *Token) Verify(verifyOpts VerifyOptions) error {
 //              the trustedKeys field of the given verify options.
 // Each of these methods are tried in that order of preference until the
 // signing key is found or an error is returned.
-func (t *Token) VerifySigningKey(verifyOpts VerifyOptions) (signingKey libtrust.PublicKey, err error) {
+func (t *Token) VerifySigningKey(verifyOpts VerifyOptions) ([]libtrust.PublicKey, error) {
 	// First attempt to get an x509 certificate chain from the header.
 	var (
 		x5c    = t.Header.X5c
@@ -204,19 +208,20 @@ func (t *Token) VerifySigningKey(verifyOpts VerifyOptions) (signingKey libtrust.
 
 	switch {
 	case len(x5c) > 0:
-		signingKey, err = parseAndVerifyCertChain(x5c, verifyOpts.Roots)
+		signingKey, err := parseAndVerifyCertChain(x5c, verifyOpts.Roots)
+		return []libtrust.PublicKey{signingKey}, err
 	case rawJWK != nil:
-		signingKey, err = parseAndVerifyRawJWK(rawJWK, verifyOpts)
+		signingKey, err := parseAndVerifyRawJWK(rawJWK, verifyOpts)
+		return []libtrust.PublicKey{signingKey}, err
 	case len(keyID) > 0:
-		signingKey = verifyOpts.TrustedKeys[keyID]
-		if signingKey == nil {
-			err = fmt.Errorf("token signed by untrusted key with ID: %q", keyID)
+		keys := make([]libtrust.PublicKey, 0)
+		for _, key := range verifyOpts.TrustedKeys {
+			keys = append(keys, key)
 		}
+		return keys, nil
 	default:
-		err = errors.New("unable to get token signing key")
+		return nil, errors.New("unable to get token signing key")
 	}
-
-	return
 }
 
 func parseAndVerifyCertChain(x5c []string, roots *x509.CertPool) (leafKey libtrust.PublicKey, err error) {
