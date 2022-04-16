@@ -400,6 +400,12 @@ secrets.
 > authentication to work.
 {:.warning}
 
+> **Warning**
+> The official registry image **only** supports htpasswd credentials in
+> bcrypt format, so if you omit the `-B` option when generating the credential
+> using htpasswd, all authentication attempts will fail.
+{:.warning}
+
 1.  Create a password file with one entry for the user `testuser`, with password
     `testpassword`:
 
