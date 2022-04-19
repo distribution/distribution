@@ -323,7 +323,13 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 		tags := imh.Repository.Tags(imh)
 		err = tags.Tag(imh, imh.Tag, desc)
 		if err != nil {
-			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+			switch err := err.(type) {
+			case errcode.Error:
+				imh.Errors = append(imh.Errors, err)
+			default:
+				imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+			}
+
 			return
 		}
 

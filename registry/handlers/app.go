@@ -847,6 +847,10 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 			if err := errcode.ServeJSON(w, errcode.ErrorCodeUnauthorized.WithDetail(accessRecords)); err != nil {
 				dcontext.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
 			}
+		case errcode.Error:
+			if err := errcode.ServeJSON(w, err); err != nil {
+				dcontext.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
+			}
 		default:
 			// This condition is a potential security problem either in
 			// the configuration or whatever is backing the access
