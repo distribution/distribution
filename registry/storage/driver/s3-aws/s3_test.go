@@ -41,6 +41,7 @@ func init() {
 	objectACL := os.Getenv("S3_OBJECT_ACL")
 	root, err := ioutil.TempDir("", "driver-")
 	regionEndpoint := os.Getenv("REGION_ENDPOINT")
+	forcePathStyle := os.Getenv("AWS_S3_FORCE_PATH_STYLE")
 	sessionToken := os.Getenv("AWS_SESSION_TOKEN")
 	useDualStack := os.Getenv("S3_USE_DUALSTACK")
 	combineSmallPart := os.Getenv("MULTIPART_COMBINE_SMALL_PART")
@@ -82,6 +83,13 @@ func init() {
 				return nil, err
 			}
 		}
+		forcePathStyleBool := true
+		if forcePathStyle != "" {
+			forcePathStyleBool, err = strconv.ParseBool(forcePathStyle)
+			if err != nil {
+				return nil, err
+			}
+		}
 
 		useDualStackBool := false
 		if useDualStack != "" {
@@ -110,6 +118,7 @@ func init() {
 			bucket,
 			region,
 			regionEndpoint,
+			forcePathStyleBool,
 			encryptBool,
 			keyID,
 			secureBool,
