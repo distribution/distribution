@@ -1,0 +1,29 @@
+name: validate
+
+on:
+  push:
+    branches:
+      - 'main'
+      - 'release/*'
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - validate-vendor
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v2
+      -
+        name: Run
+        run: |
+          make ${{ matrix.target }}

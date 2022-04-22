@@ -19,6 +19,22 @@ target "docker-metadata-action" {
   tags = ["registry:local"]
 }
 
+group "validate" {
+  targets = ["validate-vendor"]
+}
+
+target "validate-vendor" {
+  dockerfile = "./dockerfiles/vendor.Dockerfile"
+  target = "validate"
+  output = ["type=cacheonly"]
+}
+
+target "update-vendor" {
+  dockerfile = "./dockerfiles/vendor.Dockerfile"
+  target = "update"
+  output = ["."]
+}
+
 target "binary" {
   inherits = ["_common"]
   target = "binary"
