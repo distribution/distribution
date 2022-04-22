@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
 
 ARG GO_VERSION=1.17
+ARG MODOUTDATED_VERSION=v0.8.0
 
 FROM golang:${GO_VERSION}-alpine AS base
 RUN apk add --no-cache git rsync
@@ -35,3 +36,11 @@ if [ -n "$(git status --porcelain -- go.mod go.sum vendor)" ]; then
   exit 1
 fi
 EOT
+
+FROM psampaz/go-mod-outdated:${MODOUTDATED_VERSION} AS go-mod-outdated
+FROM base AS outdated
+ARG _RANDOM
+RUN --mount=target=.,ro \
+  --mount=target=/go/pkg/mod,type=cache \
+  --mount=from=go-mod-outdated,source=/home/go-mod-outdated,target=/usr/bin/go-mod-outdated \
+  go list -mod=readonly -u -m -json all | go-mod-outdated -update -direct
