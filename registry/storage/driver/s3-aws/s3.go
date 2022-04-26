@@ -75,6 +75,18 @@ const listMax = 1000
 // noStorageClass defines the value to be used if storage class is not supported by the S3 endpoint
 const noStorageClass = "NONE"
 
+// s3StorageClasses lists all compatible (instant retrieval) S3 storage classes
+var s3StorageClasses = []string{
+	noStorageClass,
+	s3.StorageClassStandard,
+	s3.StorageClassReducedRedundancy,
+	s3.StorageClassStandardIa,
+	s3.StorageClassOnezoneIa,
+	s3.StorageClassIntelligentTiering,
+	s3.StorageClassOutposts,
+	s3.StorageClassGlacierIr,
+}
+
 // validRegions maps known s3 region identifiers to region descriptors
 var validRegions = map[string]struct{}{}
 
@@ -327,16 +339,27 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	if storageClassParam != nil {
 		storageClassString, ok := storageClassParam.(string)
 		if !ok {
-			return nil, fmt.Errorf("the storageclass parameter must be one of %v, %v invalid",
-				[]string{s3.StorageClassStandard, s3.StorageClassReducedRedundancy}, storageClassParam)
+			return nil, fmt.Errorf(
+				"the storageclass parameter must be one of %v, %v invalid",
+				s3StorageClasses,
+				storageClassParam,
+			)
 		}
 		// All valid storage class parameters are UPPERCASE, so be a bit more flexible here
 		storageClassString = strings.ToUpper(storageClassString)
 		if storageClassString != noStorageClass &&
 			storageClassString != s3.StorageClassStandard &&
-			storageClassString != s3.StorageClassReducedRedundancy {
-			return nil, fmt.Errorf("the storageclass parameter must be one of %v, %v invalid",
-				[]string{noStorageClass, s3.StorageClassStandard, s3.StorageClassReducedRedundancy}, storageClassParam)
+			storageClassString != s3.StorageClassReducedRedundancy &&
+			storageClassString != s3.StorageClassStandardIa &&
+			storageClassString != s3.StorageClassOnezoneIa &&
+			storageClassString != s3.StorageClassIntelligentTiering &&
+			storageClassString != s3.StorageClassOutposts &&
+			storageClassString != s3.StorageClassGlacierIr {
+			return nil, fmt.Errorf(
+				"the storageclass parameter must be one of %v, %v invalid",
+				s3StorageClasses,
+				storageClassParam,
+			)
 		}
 		storageClass = storageClassString
 	}
