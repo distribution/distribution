@@ -19,6 +19,33 @@ target "docker-metadata-action" {
   tags = ["registry:local"]
 }
 
+group "validate" {
+  targets = ["validate-vendor"]
+}
+
+target "validate-vendor" {
+  dockerfile = "./dockerfiles/vendor.Dockerfile"
+  target = "validate"
+  output = ["type=cacheonly"]
+}
+
+target "update-vendor" {
+  dockerfile = "./dockerfiles/vendor.Dockerfile"
+  target = "update"
+  output = ["."]
+}
+
+target "mod-outdated" {
+  dockerfile = "./dockerfiles/vendor.Dockerfile"
+  target = "outdated"
+  args = {
+    // used to invalidate cache for outdated run stage
+    // can be dropped when https://github.com/moby/buildkit/issues/1213 fixed
+    _RANDOM = uuidv4()
+  }
+  output = ["type=cacheonly"]
+}
+
 target "binary" {
   inherits = ["_common"]
   target = "binary"

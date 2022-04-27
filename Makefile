@@ -38,7 +38,7 @@ BINARIES=$(addprefix bin/,$(COMMANDS))
 TESTFLAGS ?= -v $(TESTFLAGS_RACE)
 TESTFLAGS_PARALLEL ?= 8
 
-.PHONY: all build binaries check clean test test-race test-full integration coverage
+.PHONY: all build binaries check clean test test-race test-full integration coverage validate-vendor vendor mod-outdated
 .DEFAULT: all
 
 all: binaries
@@ -100,3 +100,16 @@ build:
 clean: ## clean up binaries
 	@echo "$(WHALE) $@"
 	@rm -f $(BINARIES)
+
+validate-vendor: ## validate vendor
+	docker buildx bake validate-vendor
+
+vendor: ## update vendor
+	$(eval $@_TMP_OUT := $(shell mktemp -d -t buildx-output.XXXXXXXXXX))
+	docker buildx bake --set "*.output=$($@_TMP_OUT)" update-vendor
+	rm -rf ./vendor
+	cp -R "$($@_TMP_OUT)"/out/* .
+	rm -rf $($@_TMP_OUT)/*
+
+mod-outdated: ## check outdated dependencies
+	docker buildx bake mod-outdated
