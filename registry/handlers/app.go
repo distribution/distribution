@@ -3,6 +3,7 @@ package handlers
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"expvar"
 	"fmt"
 	"math"
@@ -15,6 +16,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/FZambia/sentinel"
 
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/configuration"
@@ -499,6 +502,44 @@ func (app *App) configureRedis(configuration *configuration.Configuration) {
 		return
 	}
 
+	var getRedisAddr func() (string, error)
+	var testOnBorrow func(c redis.Conn, t time.Time) error
+	if configuration.Redis.SentinelMasterSet != "" {
+		sntnl := &sentinel.Sentinel{
+			Addrs:      strings.Split(configuration.Redis.Addr, ","),
+			MasterName: configuration.Redis.SentinelMasterSet,
+			Dial: func(addr string) (redis.Conn, error) {
+				c, err := redis.DialTimeout("tcp", addr,
+					configuration.Redis.DialTimeout,
+					configuration.Redis.ReadTimeout,
+					configuration.Redis.WriteTimeout)
+				if err != nil {
+					return nil, err
+				}
+				return c, nil
+			},
+		}
+		getRedisAddr = func() (string, error) {
+			return sntnl.MasterAddr()
+		}
+		testOnBorrow = func(c redis.Conn, t time.Time) error {
+			if !sentinel.TestRole(c, "master") {
+				return errors.New("role check failed")
+			}
+			return nil
+		}
+
+	} else {
+		getRedisAddr = func() (string, error) {
+			return configuration.Redis.Addr, nil
+		}
+		testOnBorrow = func(c redis.Conn, t time.Time) error {
+			// TODO(stevvooe): We can probably do something more interesting
+			// here with the health package.
+			_, err := c.Do("PING")
+			return err
+		}
+	}
 	pool := &redis.Pool{
 		Dial: func() (redis.Conn, error) {
 			// TODO(stevvooe): Yet another use case for contextual timing.
@@ -514,8 +555,11 @@ func (app *App) configureRedis(configuration *configuration.Configuration) {
 				}
 			}
 
-			conn, err := redis.DialTimeout("tcp",
-				configuration.Redis.Addr,
+			redisAddr, err := getRedisAddr()
+			if err != nil {
+				return nil, err
+			}
+			conn, err := redis.DialTimeout("tcp", redisAddr,
 				configuration.Redis.DialTimeout,
 				configuration.Redis.ReadTimeout,
 				configuration.Redis.WriteTimeout)
@@ -547,16 +591,11 @@ func (app *App) configureRedis(configuration *configuration.Configuration) {
 			done(nil)
 			return conn, nil
 		},
-		MaxIdle:     configuration.Redis.Pool.MaxIdle,
-		MaxActive:   configuration.Redis.Pool.MaxActive,
-		IdleTimeout: configuration.Redis.Pool.IdleTimeout,
-		TestOnBorrow: func(c redis.Conn, t time.Time) error {
-			// TODO(stevvooe): We can probably do something more interesting
-			// here with the health package.
-			_, err := c.Do("PING")
-			return err
-		},
-		Wait: false, // if a connection is not available, proceed without cache.
+		MaxIdle:      configuration.Redis.Pool.MaxIdle,
+		MaxActive:    configuration.Redis.Pool.MaxActive,
+		IdleTimeout:  configuration.Redis.Pool.IdleTimeout,
+		TestOnBorrow: testOnBorrow,
+		Wait:         false, // if a connection is not available, proceed without cache.
 	}
 
 	app.redis = pool
