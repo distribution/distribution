@@ -17,6 +17,7 @@ import (
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/middleware/redirect"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/oss"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/s3-aws"
+	_ "github.com/distribution/distribution/v3/registry/storage/driver/storj"
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/swift"
 )
 

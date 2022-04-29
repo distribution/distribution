@@ -118,8 +118,6 @@ storage:
     secretkey: awssecretkey
     region: us-west-1
     regionendpoint: http://myobjects.local
-    forcepathstyle: true
-    accelerate: false
     bucket: bucketname
     encrypt: true
     keyid: mykeyid
@@ -131,6 +129,9 @@ storage:
     multipartcopythresholdsize: 33554432
     rootdirectory: /s3/object/name/prefix
     usedualstack: false
+  s3:
+    accessgrant: accessgrant
+    bucket: bucketname
   swift:
     username: username
     password: password
@@ -424,8 +425,6 @@ storage:
     secretkey: awssecretkey
     region: us-west-1
     regionendpoint: http://myobjects.local
-    forcepathstyle: true
-    accelerate: false
     bucket: bucketname
     encrypt: true
     keyid: mykeyid
