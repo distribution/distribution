@@ -46,9 +46,7 @@ jobs:
       working-directory: ./src/github.com/distribution/distribution
       run: |
         DCO_VERBOSITY=-q script/validate/dco
-        GO111MODULE=on script/setup/install-dev-tools
         go build -i .
-        make check
         make build
         make binaries
         if [ "$GOOS" = "linux" ]; then make coverage ; fi
