@@ -2,9 +2,12 @@
 
 ARG GO_VERSION=1.17
 ARG GORELEASER_XX_VERSION=1.2.5
+ARG XX_VERSION=1.1.0
 
+FROM --platform=$BUILDPLATFORM tonistiigi/xx:${XX_VERSION} AS xx
 FROM --platform=$BUILDPLATFORM crazymax/goreleaser-xx:${GORELEASER_XX_VERSION} AS goreleaser-xx
 FROM --platform=$BUILDPLATFORM golang:${GO_VERSION}-alpine AS base
+COPY --from=xx / /
 COPY --from=goreleaser-xx / /
 RUN apk add --no-cache file git
 WORKDIR /src
@@ -20,17 +23,19 @@ ARG TARGETPLATFORM
 ARG PKG="github.com/distribution/distribution/v3"
 ARG BUILDTAGS="include_oss include_gcs"
 RUN --mount=type=bind,target=/src,rw \
-  --mount=type=cache,target=/root/.cache/go-build \
+  --mount=type=cache,target=/root/.cache \
   --mount=target=/go/pkg/mod,type=cache \
   goreleaser-xx --debug \
     --name="registry" \
     --dist="/out" \
     --main="./cmd/registry" \
     --flags="-v" \
+    --flags="-trimpath" \
     --ldflags="-s -w -X '$PKG/version.Version={{.Version}}' -X '$PKG/version.Revision={{.Commit}}' -X '$PKG/version.Package=$PKG'" \
     --tags="$BUILDTAGS" \
     --files="LICENSE" \
-    --files="README.md"
+    --files="README.md" \
+  && xx-verify --static /usr/local/bin/registry
 
 FROM scratch AS artifact
 COPY --from=build /out/*.tar.gz /
