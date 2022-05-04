@@ -3,7 +3,12 @@ group "default" {
 }
 
 group "validate" {
-  targets = ["validate-vendor"]
+  targets = ["lint", "validate-vendor"]
+}
+
+target "lint" {
+  dockerfile = "./dockerfiles/lint.Dockerfile"
+  output = ["type=cacheonly"]
 }
 
 target "validate-vendor" {

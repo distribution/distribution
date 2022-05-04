@@ -38,7 +38,7 @@ BINARIES=$(addprefix bin/,$(COMMANDS))
 TESTFLAGS ?= -v $(TESTFLAGS_RACE)
 TESTFLAGS_PARALLEL ?= 8
 
-.PHONY: all build binaries check clean test test-race test-full integration coverage validate-vendor vendor mod-outdated
+.PHONY: all build binaries clean test test-race test-full integration coverage validate lint validate-vendor vendor mod-outdated
 .DEFAULT: all
 
 all: binaries
@@ -47,10 +47,6 @@ all: binaries
 version/version.go:
 	@echo "$(WHALE) $@"
 	./version/version.sh > $@
-
-check: ## run all linters (TODO: enable "unused", "varcheck", "ineffassign", "unconvert", "staticheck", "goimports", "structcheck")
-	@echo "$(WHALE) $@"
-	@golangci-lint run
 
 test: ## run tests, except integration test with test.short
 	@echo "$(WHALE) $@"
@@ -101,8 +97,14 @@ clean: ## clean up binaries
 	@echo "$(WHALE) $@"
 	@rm -f $(BINARIES)
 
+validate: ## run all validators
+	docker buildx bake $@
+
+lint: ## run all linters
+	docker buildx bake $@
+
 validate-vendor: ## validate vendor
-	docker buildx bake validate-vendor
+	docker buildx bake $@
 
 vendor: ## update vendor
 	$(eval $@_TMP_OUT := $(shell mktemp -d -t buildx-output.XXXXXXXXXX))
@@ -112,4 +114,4 @@ vendor: ## update vendor
 	rm -rf $($@_TMP_OUT)/*
 
 mod-outdated: ## check outdated dependencies
-	docker buildx bake mod-outdated
+	docker buildx bake $@
