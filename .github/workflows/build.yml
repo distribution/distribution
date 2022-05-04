@@ -92,7 +92,6 @@ jobs:
           draft: true
           files: |
             bin/*.tar.gz
-            bin/*.zip
             bin/*.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
