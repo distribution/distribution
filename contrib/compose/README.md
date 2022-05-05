@@ -60,7 +60,7 @@ to the 1.0 registry. Requests from newer clients will route to the 2.0 registry.
 		$ docker-compose build
 		registryv1 uses an image, skipping
 		Building registryv2...
-		Step 0 : FROM golang:1.17
+		Step 0 : FROM golang:1.18
 		
 		...
 		
