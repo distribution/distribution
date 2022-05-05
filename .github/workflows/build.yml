@@ -15,8 +15,37 @@ env:
   DOCKERHUB_SLUG: distribution/distribution
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go:
+          - 1.17
+          - 1.18
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v3
+      -
+        name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go }}
+      -
+        name: Test
+        run: |
+          make coverage
+      -
+        name: Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          directory: ./
+
   build:
     runs-on: ubuntu-latest
+    needs:
+      - test
     steps:
       -
         name: Checkout
