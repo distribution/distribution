@@ -36,16 +36,9 @@ jobs:
       with:
         go-version: ${{ matrix.go-version }}
 
-    - name: Dependencies
-      run: |
-          sudo apt-get -q update
-          sudo -E apt-get -yq --no-install-suggests --no-install-recommends install python2-minimal
-          cd /tmp && go install github.com/vbatts/git-validation@latest
-
     - name: Build
       working-directory: ./src/github.com/distribution/distribution
       run: |
-        DCO_VERBOSITY=-q script/validate/dco
         go build -i .
         make build
         make binaries
