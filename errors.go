@@ -24,6 +24,10 @@ var ErrUnsupported = errors.New("operation unsupported")
 // manifest but the registry is configured to reject it
 var ErrSchemaV1Unsupported = errors.New("manifest schema v1 unsupported")
 
+// ErrManifestFormatUnsupported is returned when a manifest handler doesn't support a
+// specific manifest format
+var ErrManifestFormatUnsupported = errors.New("manifest format not supported by this handler")
+
 // ErrTagUnknown is returned if the given tag is not known by the tag service
 type ErrTagUnknown struct {
 	Tag string

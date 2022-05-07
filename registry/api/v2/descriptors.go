@@ -1595,6 +1595,115 @@ var routeDescriptors = []RouteDescriptor{
 			},
 		},
 	},
+	{
+		Name:        RouteNameExtensionsRegistry,
+		Path:        "/v2/_ext/discover",
+		Entity:      "Extensions",
+		Description: "Retrieve information about extensions.",
+		Methods: []MethodDescriptor{
+			{
+				Method:      "GET",
+				Description: "Retrieve a sorted, json list of extensions available at the registry level.",
+				Requests: []RequestDescriptor{
+					{
+						Name:        "Extensions",
+						Description: "Return all extensions for the registry",
+						Headers: []ParameterDescriptor{
+							hostHeader,
+							authHeader,
+						},
+						PathParameters: []ParameterDescriptor{
+							nameParameterDescriptor,
+						},
+						Successes: []ResponseDescriptor{
+							{
+								StatusCode:  http.StatusOK,
+								Description: "A list of extensions for the registry.",
+								Headers: []ParameterDescriptor{
+									{
+										Name:        "Content-Length",
+										Type:        "integer",
+										Description: "Length of the JSON response body.",
+										Format:      "<length>",
+									},
+								},
+								Body: BodyDescriptor{
+									ContentType: "application/json",
+									Format: `{
+    "extensions": [
+        {"name": "_<ns>/<ext>/<component>"},
+        ...
+    ]
+}`,
+								},
+							},
+						},
+						Failures: []ResponseDescriptor{
+							unauthorizedResponseDescriptor,
+							repositoryNotFoundResponseDescriptor,
+							deniedResponseDescriptor,
+							tooManyRequestsDescriptor,
+						},
+					},
+				},
+			},
+		},
+	},
+	{
+		Name:        RouteNameExtensionsRepository,
+		Path:        "/v2/{name:" + reference.NameRegexp.String() + "}/_ext/discover",
+		Entity:      "Extensions",
+		Description: "Retrieve information about extensions.",
+		Methods: []MethodDescriptor{
+			{
+				Method:      "GET",
+				Description: "Fetch the extensions under the repository identified by `name`.",
+				Requests: []RequestDescriptor{
+					{
+						Name:        "Extensions",
+						Description: "Return all extensions for the repository",
+						Headers: []ParameterDescriptor{
+							hostHeader,
+							authHeader,
+						},
+						PathParameters: []ParameterDescriptor{
+							nameParameterDescriptor,
+						},
+						Successes: []ResponseDescriptor{
+							{
+								StatusCode:  http.StatusOK,
+								Description: "A list of extensions for the named repository.",
+								Headers: []ParameterDescriptor{
+									{
+										Name:        "Content-Length",
+										Type:        "integer",
+										Description: "Length of the JSON response body.",
+										Format:      "<length>",
+									},
+								},
+								Body: BodyDescriptor{
+									ContentType: "application/json",
+									Format: `{
+    "name": <name>,
+    "extensions": [
+        {"name": "_<ns>/<ext>/<component>"},
+        ...
+    ]
+}`,
+								},
+							},
+						},
+						Failures: []ResponseDescriptor{
+							unauthorizedResponseDescriptor,
+							repositoryNotFoundResponseDescriptor,
+							deniedResponseDescriptor,
+							tooManyRequestsDescriptor,
+						},
+					},
+				},
+			},
+		},
+	},
 }
 
 var routeDescriptorsMap map[string]RouteDescriptor
