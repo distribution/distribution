@@ -8,6 +8,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/kr/text"
+	"github.com/rogpeppe/go-internal/fmtsort"
 )
 
 type formatter struct {
@@ -37,7 +38,7 @@ func (fo formatter) passThrough(f fmt.State, c rune) {
 	s := "%"
 	for i := 0; i < 128; i++ {
 		if f.Flag(i) {
-			s += string(i)
+			s += string(rune(i))
 		}
 	}
 	if w, ok := f.Width(); ok {
@@ -97,6 +98,14 @@ func (p *printer) printValue(v reflect.Value, showType, quote bool) {
 		return
 	}
 
+	if v.IsValid() && v.CanInterface() {
+		i := v.Interface()
+		if goStringer, ok := i.(fmt.GoStringer); ok {
+			io.WriteString(p, goStringer.GoString())
+			return
+		}
+	}
+
 	switch v.Kind() {
 	case reflect.Bool:
 		p.printInline(v, v.Bool(), showType)
@@ -123,17 +132,16 @@ func (p *printer) printValue(v reflect.Value, showType, quote bool) {
 				writeByte(p, '\n')
 				pp = p.indent()
 			}
-			keys := v.MapKeys()
+			sm := fmtsort.Sort(v)
 			for i := 0; i < v.Len(); i++ {
-				showTypeInStruct := true
-				k := keys[i]
-				mv := v.MapIndex(k)
+				k := sm.Key[i]
+				mv := sm.Value[i]
 				pp.printValue(k, false, true)
 				writeByte(pp, ':')
 				if expand {
 					writeByte(pp, '\t')
 				}
-				showTypeInStruct = t.Elem().Kind() == reflect.Interface
+				showTypeInStruct := t.Elem().Kind() == reflect.Interface
 				pp.printValue(mv, showTypeInStruct, true)
 				if expand {
 					io.WriteString(pp, ",\n")

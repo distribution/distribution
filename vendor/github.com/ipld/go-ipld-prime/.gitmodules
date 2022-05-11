@@ -1,0 +1,3 @@
+[submodule ".ipld"]
+	path = .ipld
+	url = https://github.com/ipld/ipld/
