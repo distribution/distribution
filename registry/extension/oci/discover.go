@@ -10,7 +10,6 @@ import (
 )
 
 type discoverGetAPIResponse struct {
-	Name       string                         `json:"name"`
 	Extensions []extension.EnumerateExtension `json:"extensions"`
 }
 
@@ -20,13 +19,13 @@ type extensionHandler struct {
 	storageDriver driver.StorageDriver
 }
 
-func (th *extensionHandler) getExtensions(w http.ResponseWriter, r *http.Request) {
+func (eh *extensionHandler) getExtensions(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	w.Header().Set("Content-Type", "application/json")
 
 	// get list of extension information seperated at the namespace level
-	enumeratedExtensions := extension.EnumerateRegistered(r.Context())
+	enumeratedExtensions := extension.EnumerateRegistered(*eh.Context)
 
 	// // remove the oci extension so it's not returned by discover
 	// for i, e := range enumeratedExtensions {
@@ -37,10 +36,9 @@ func (th *extensionHandler) getExtensions(w http.ResponseWriter, r *http.Request
 
 	enc := json.NewEncoder(w)
 	if err := enc.Encode(discoverGetAPIResponse{
-		Name:       th.Repository.Named().Name(),
 		Extensions: enumeratedExtensions,
 	}); err != nil {
-		th.Errors = append(th.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+		eh.Errors = append(eh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		return
 	}
 }

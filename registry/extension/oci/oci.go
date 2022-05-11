@@ -97,10 +97,10 @@ func (o *ociNamespace) GetManifestHandlers(repo distribution.Repository, blobSto
 }
 
 // GetRepositoryRoutes returns a list of extension routes scoped at a repository level
-func (d *ociNamespace) GetRepositoryRoutes() []extension.Route {
+func (o *ociNamespace) GetRepositoryRoutes() []extension.Route {
 	var routes []extension.Route
 
-	if d.discoverEnabled {
+	if o.discoverEnabled {
 		routes = append(routes, extension.Route{
 			Namespace: namespaceName,
 			Extension: extensionName,
@@ -114,11 +114,11 @@ func (d *ociNamespace) GetRepositoryRoutes() []extension.Route {
 					},
 				},
 			},
-			Dispatcher: d.discoverDispatcher,
+			Dispatcher: o.discoverDispatcher,
 		})
 	}
 
-	if d.referrersEnabled {
+	if o.referrersEnabled {
 		routes = append(routes, extension.Route{
 			Namespace: namespaceName,
 			Extension: artifactsExtensiontName,
@@ -132,7 +132,7 @@ func (d *ociNamespace) GetRepositoryRoutes() []extension.Route {
 					},
 				},
 			},
-			Dispatcher: d.referrersDispatcher,
+			Dispatcher: o.referrersDispatcher,
 		})
 	}
 
@@ -141,29 +141,49 @@ func (d *ociNamespace) GetRepositoryRoutes() []extension.Route {
 
 // GetRegistryRoutes returns a list of extension routes scoped at a registry level
 // There are no registry scoped routes exposed by this namespace
-func (d *ociNamespace) GetRegistryRoutes() []extension.Route {
-	return nil
+func (o *ociNamespace) GetRegistryRoutes() []extension.Route {
+	var routes []extension.Route
+
+	if o.discoverEnabled {
+		routes = append(routes, extension.Route{
+			Namespace: namespaceName,
+			Extension: extensionName,
+			Component: discoverComponentName,
+			Descriptor: v2.RouteDescriptor{
+				Entity: "Extension",
+				Methods: []v2.MethodDescriptor{
+					{
+						Method:      "GET",
+						Description: "Get all extensions enabled for a registry.",
+					},
+				},
+			},
+			Dispatcher: o.discoverDispatcher,
+		})
+	}
+
+	return routes
 }
 
 // GetNamespaceName returns the name associated with the namespace
-func (d *ociNamespace) GetNamespaceName() string {
+func (o *ociNamespace) GetNamespaceName() string {
 	return namespaceName
 }
 
 // GetNamespaceUrl returns the url link to the documentation where the namespace's extension and endpoints are defined
-func (d *ociNamespace) GetNamespaceUrl() string {
+func (o *ociNamespace) GetNamespaceUrl() string {
 	return namespaceUrl
 }
 
 // GetNamespaceDescription returns the description associated with the namespace
-func (d *ociNamespace) GetNamespaceDescription() string {
+func (o *ociNamespace) GetNamespaceDescription() string {
 	return namespaceDescription
 }
 
-func (d *ociNamespace) discoverDispatcher(ctx *extension.Context, r *http.Request) http.Handler {
+func (o *ociNamespace) discoverDispatcher(ctx *extension.Context, r *http.Request) http.Handler {
 	extensionHandler := &extensionHandler{
 		Context:       ctx,
-		storageDriver: d.storageDriver,
+		storageDriver: o.storageDriver,
 	}
 
 	return handlers.MethodHandler{

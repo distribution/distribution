@@ -18,10 +18,10 @@ func ExtendRoute(ns, ext, component string, template RouteDescriptor, nameRequir
 	path := routeDescriptorsMap[RouteNameBase].Path
 	if nameRequired {
 		name = RouteNameExtensionsRepository
-		path += "{name:" + reference.NameRegexp.String() + "}"
+		path += "{name:" + reference.NameRegexp.String() + "}/"
 	}
 	name = fmt.Sprintf("%s-%s-%s-%s", name, ns, ext, component)
-	path = fmt.Sprintf("%s/_%s/%s/%s", path, ns, ext, component)
+	path = fmt.Sprintf("%s_%s/%s/%s", path, ns, ext, component)
 
 	desc := template
 	desc.Name = name

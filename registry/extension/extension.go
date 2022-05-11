@@ -1,7 +1,6 @@
 package extension
 
 import (
-	"context"
 	c "context"
 	"fmt"
 	"net/http"
@@ -72,27 +71,31 @@ type EnumerateExtension struct {
 var extensions map[string]InitExtensionNamespace
 var extensionsNamespaces map[string]Namespace
 
-func EnumerateRegistered(ctx context.Context) (enumeratedExtensions []EnumerateExtension) {
+func EnumerateRegistered(ctx Context) (enumeratedExtensions []EnumerateExtension) {
 	for _, namespace := range extensionsNamespaces {
 		enumerateExtension := EnumerateExtension{
 			Name:        namespace.GetNamespaceName(),
 			Url:         namespace.GetNamespaceUrl(),
 			Description: namespace.GetNamespaceDescription(),
+			Endpoints:   []string{},
 		}
 
-		registryScoped := namespace.GetRegistryRoutes()
-		for _, regScoped := range registryScoped {
-			path := fmt.Sprintf("_%s/%s/%s", regScoped.Namespace, regScoped.Extension, regScoped.Component)
+		scopedRoutes := namespace.GetRepositoryRoutes()
+
+		// if the repository is not set in the context, scope is registry wide
+		if ctx.Repository == nil {
+			scopedRoutes = namespace.GetRegistryRoutes()
+		}
+
+		for _, route := range scopedRoutes {
+			path := fmt.Sprintf("_%s/%s/%s", route.Namespace, route.Extension, route.Component)
 			enumerateExtension.Endpoints = append(enumerateExtension.Endpoints, path)
 		}
 
-		repositoryScoped := namespace.GetRepositoryRoutes()
-		for _, repScoped := range repositoryScoped {
-			path := fmt.Sprintf("_%s/%s/%s", repScoped.Namespace, repScoped.Extension, repScoped.Component)
-			enumerateExtension.Endpoints = append(enumerateExtension.Endpoints, path)
+		// add extension to list if endpoints exist
+		if len(enumerateExtension.Endpoints) > 0 {
+			enumeratedExtensions = append(enumeratedExtensions, enumerateExtension)
 		}
-
-		enumeratedExtensions = append(enumeratedExtensions, enumerateExtension)
 	}
 
 	return enumeratedExtensions
