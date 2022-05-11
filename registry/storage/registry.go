@@ -25,6 +25,7 @@ type registry struct {
 	blobDescriptorServiceFactory distribution.BlobDescriptorServiceFactory
 	manifestURLs                 manifestURLs
 	driver                       storagedriver.StorageDriver
+	extendedStorages             []ExtendedStorage
 }
 
 // manifestURLs holds regular expressions for controlling manifest URL whitelisting
@@ -35,6 +36,15 @@ type manifestURLs struct {
 
 // RegistryOption is the type used for functional options for NewRegistry.
 type RegistryOption func(*registry) error
+
+// AddExtendedStorage is a functional option for NewRegistry. It adds the given
+// extended storage to the list of extended storages in the registry.
+func AddExtendedStorage(extendedStorage ExtendedStorage) RegistryOption {
+	return func(registry *registry) error {
+		registry.extendedStorages = append(registry.extendedStorages, extendedStorage)
+		return nil
+	}
+}
 
 // EnableRedirect is a functional option for NewRegistry. It causes the backend
 // blob server to attempt using (StorageDriver).URLFor to serve all blobs.
@@ -266,6 +276,14 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 		}
 	}
 
+	var extensionManifestHandlers []ManifestHandler
+	for _, ext := range repo.registry.extendedStorages {
+		handlers := ext.GetManifestHandlers(repo, blobStore)
+		if len(handlers) > 0 {
+			extensionManifestHandlers = append(extensionManifestHandlers, handlers...)
+		}
+	}
+
 	ms := &manifestStore{
 		ctx:            ctx,
 		repository:     repo,
@@ -288,6 +306,7 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 			blobStore:    blobStore,
 			manifestURLs: repo.registry.manifestURLs,
 		},
+		extensionManifestHandlers: extensionManifestHandlers,
 	}
 
 	// Apply options

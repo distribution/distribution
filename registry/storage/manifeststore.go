@@ -52,6 +52,8 @@ type manifestStore struct {
 	schema2Handler      ManifestHandler
 	ocischemaHandler    ManifestHandler
 	manifestListHandler ManifestHandler
+
+	extensionManifestHandlers []ManifestHandler
 }
 
 var _ distribution.ManifestService = &manifestStore{}
@@ -89,6 +91,16 @@ func (ms *manifestStore) Get(ctx context.Context, dgst digest.Digest, options ..
 		return nil, err
 	}
 
+	// Fallback to extension handlers if necessary.
+	fallback := func() (bool, distribution.Manifest, error) {
+		for _, extensionHandler := range ms.extensionManifestHandlers {
+			if m, err := extensionHandler.Unmarshal(ctx, dgst, content); err != distribution.ErrManifestFormatUnsupported {
+				return true, m, err
+			}
+		}
+		return false, nil, nil
+	}
+
 	var versioned manifest.Versioned
 	if err = json.Unmarshal(content, &versioned); err != nil {
 		return nil, err
@@ -119,10 +131,17 @@ func (ms *manifestStore) Get(ctx context.Context, dgst digest.Digest, options ..
 			// Otherwise, assume it must be an image manifest
 			return ms.ocischemaHandler.Unmarshal(ctx, dgst, content)
 		default:
+			if ok, m, err := fallback(); ok {
+				return m, err
+			}
 			return nil, distribution.ErrManifestVerification{fmt.Errorf("unrecognized manifest content type %s", versioned.MediaType)}
 		}
 	}
 
+	// certain manifests doesn't have schema version
+	if ok, m, err := fallback(); ok {
+		return m, err
+	}
 	return nil, fmt.Errorf("unrecognized manifest schema version %d", versioned.SchemaVersion)
 }
 
@@ -138,6 +157,12 @@ func (ms *manifestStore) Put(ctx context.Context, manifest distribution.Manifest
 		return ms.ocischemaHandler.Put(ctx, manifest, ms.skipDependencyVerification)
 	case *manifestlist.DeserializedManifestList:
 		return ms.manifestListHandler.Put(ctx, manifest, ms.skipDependencyVerification)
+	}
+
+	for _, extensionHandler := range ms.extensionManifestHandlers {
+		if m, err := extensionHandler.Put(ctx, manifest, ms.skipDependencyVerification); err != distribution.ErrManifestFormatUnsupported {
+			return m, err
+		}
 	}
 
 	return "", fmt.Errorf("unrecognized manifest type %T", manifest)

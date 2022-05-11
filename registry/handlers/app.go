@@ -13,6 +13,7 @@ import (
 	"os"
 	"regexp"
 	"runtime"
+	"sort"
 	"strings"
 	"time"
 
@@ -27,6 +28,7 @@ import (
 	"github.com/distribution/distribution/v3/registry/api/errcode"
 	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	"github.com/distribution/distribution/v3/registry/auth"
+	"github.com/distribution/distribution/v3/registry/extension"
 	registrymiddleware "github.com/distribution/distribution/v3/registry/middleware/registry"
 	repositorymiddleware "github.com/distribution/distribution/v3/registry/middleware/repository"
 	"github.com/distribution/distribution/v3/registry/proxy"
@@ -88,6 +90,15 @@ type App struct {
 
 	// readOnly is true if the registry is in a read-only maintenance mode
 	readOnly bool
+
+	// registryExtensions is a list of registry scoped extension names
+	registryExtensions []string
+
+	// repositoryExtensions is a list of repository scoped extension names
+	repositoryExtensions []string
+
+	// extensionNamespaces is a list of namespaces that are configured as extensions to the distribution
+	extensionNamespaces []extension.Namespace
 }
 
 // NewApp takes a configuration and returns a configured app, ready to serve
@@ -111,6 +122,8 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	app.register(v2.RouteNameBlob, blobDispatcher)
 	app.register(v2.RouteNameBlobUpload, blobUploadDispatcher)
 	app.register(v2.RouteNameBlobUploadChunk, blobUploadDispatcher)
+	app.register(v2.RouteNameExtensionsRegistry, extensionsDispatcher)
+	app.register(v2.RouteNameExtensionsRepository, extensionsDispatcher)
 
 	// override the storage driver's UA string for registry outbound HTTP requests
 	storageParams := config.Storage.Parameters()
@@ -259,6 +272,17 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		}
 	}
 
+	// initialize the extension namespaces based on the configuration
+	err = app.initializeExtensionNamespaces(app, config.Extensions)
+	if err != nil {
+		panic(err)
+	}
+
+	// add the extended storage for every namespace to the new registry options
+	for _, ns := range app.extensionNamespaces {
+		options = append(options, storage.AddExtendedStorage(ns))
+	}
+
 	// configure storage caches
 	if cc, ok := config.Storage["cache"]; ok {
 		v, ok := cc["blobdescriptor"]
@@ -331,6 +355,12 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	app.repoRemover, ok = app.registry.(distribution.RepositoryRemover)
 	if !ok {
 		dcontext.GetLogger(app).Warnf("Registry does not implement RepositoryRemover. Will not be able to delete repos and tags")
+	}
+
+	// register the routes exposed by the extension in the app.
+	err = app.registerExtensionRoutes(app)
+	if err != nil {
+		panic(err)
 	}
 
 	return app
@@ -891,7 +921,93 @@ func (app *App) nameRequired(r *http.Request) bool {
 		return true
 	}
 	routeName := route.GetName()
-	return routeName != v2.RouteNameBase && routeName != v2.RouteNameCatalog
+	return routeName != v2.RouteNameBase && routeName != v2.RouteNameCatalog &&
+		!strings.HasPrefix(routeName, v2.RouteNameExtensionsRegistry)
+}
+
+func (app *App) initializeExtensionNamespaces(ctx context.Context, extensions map[string]configuration.ExtensionConfig) error {
+
+	extensionNamespaces := []extension.Namespace{}
+	for key, options := range extensions {
+		ns, err := extension.Get(ctx, key, app.driver, options)
+		if err != nil {
+			return fmt.Errorf("unable to configure extension namespace (%s): %s", key, err)
+		}
+		extensionNamespaces = append(extensionNamespaces, ns)
+	}
+
+	app.extensionNamespaces = extensionNamespaces
+	return nil
+}
+
+func (app *App) registerExtensionRoutes(ctx context.Context) error {
+	var repositoryExtensions []string
+	var registryExtensions []string
+	for _, ns := range app.extensionNamespaces {
+		for _, route := range ns.GetRepositoryRoutes() {
+			// if the route has dispatcher, register the route
+			if err := app.registerExtensionRoute(route, true); err != nil {
+				return err
+			}
+			extName := fmt.Sprintf(
+				"_%s/%s/%s",
+				route.Namespace,
+				route.Extension,
+				route.Component,
+			)
+			repositoryExtensions = append(repositoryExtensions, extName)
+		}
+
+		for _, route := range ns.GetRegistryRoutes() {
+			// if the route has dispatcher, register the route
+			if err := app.registerExtensionRoute(route, false); err != nil {
+				return err
+			}
+			extName := fmt.Sprintf(
+				"_%s/%s/%s",
+				route.Namespace,
+				route.Extension,
+				route.Component,
+			)
+			registryExtensions = append(registryExtensions, extName)
+		}
+	}
+	sort.Strings(repositoryExtensions)
+	app.repositoryExtensions = repositoryExtensions
+	sort.Strings(registryExtensions)
+	app.registryExtensions = registryExtensions
+	return nil
+}
+
+func (app *App) registerExtensionRoute(route extension.Route, nameRequired bool) error {
+	if route.Dispatcher == nil {
+		return nil
+	}
+	desc, ok := v2.ExtendRoute(
+		route.Namespace,
+		route.Extension,
+		route.Component,
+		route.Descriptor,
+		nameRequired,
+	)
+	if !ok {
+		return fmt.Errorf("duplicated route: %s", desc.Name)
+	}
+	app.router.Path(desc.Path).Name(desc.Name)
+	dispatch := route.Dispatcher
+	app.register(desc.Name, func(ctx *Context, r *http.Request) http.Handler {
+		return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
+			extCtx := &extension.Context{
+				Context:    ctx.Context,
+				Repository: ctx.Repository,
+				Errors:     ctx.Errors,
+				Registry:   app.registry,
+			}
+			dispatch(extCtx, r).ServeHTTP(rw, r)
+			ctx.Errors = extCtx.Errors
+		})
+	})
+	return nil
 }
 
 // apiBase implements a simple yes-man for doing overall checks against the

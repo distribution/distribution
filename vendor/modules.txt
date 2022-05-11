@@ -161,6 +161,9 @@ github.com/mitchellh/mapstructure
 ## explicit
 github.com/ncw/swift
 github.com/ncw/swift/swifttest
+# github.com/oci-playground/artifact-spec v0.0.0-20220506233500-8fed0a29d06f
+## explicit; go 1.17
+github.com/oci-playground/artifact-spec/specs-go/v1
 # github.com/opencontainers/go-digest v1.0.0
 ## explicit; go 1.13
 github.com/opencontainers/go-digest

@@ -1,0 +1,35 @@
+version: 0.1
+log:
+  fields:
+    service: registry
+storage:
+  cache:
+    blobdescriptor: inmemory
+  filesystem:
+    rootdirectory: /opt/data/registry-root-dir
+http:
+  addr: :5000
+  headers:
+    X-Content-Type-Options: [nosniff]
+health:
+  storagedriver:
+    enabled: true
+    interval: 10s
+    threshold: 3
+# Configuration for extensions. It follows the below schema
+# extensions
+#   namespace:
+#     configuration for the extension and its components in any schema specific to that namespace
+extensions:
+  oci: 
+    ext:
+      - discover # enable the discovery extension
+    artifacts: 
+      - referrers
+  # "distribution" is the namespace
+  distribution:
+    # "registry" is the extension under the namespace
+    registry:
+      # "taghistory" & "manifests" are the components under the extension
+      - taghistory
+      - manifests

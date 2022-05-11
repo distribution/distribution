@@ -5,13 +5,15 @@ import "github.com/gorilla/mux"
 // The following are definitions of the name under which all V2 routes are
 // registered. These symbols can be used to look up a route based on the name.
 const (
-	RouteNameBase            = "base"
-	RouteNameManifest        = "manifest"
-	RouteNameTags            = "tags"
-	RouteNameBlob            = "blob"
-	RouteNameBlobUpload      = "blob-upload"
-	RouteNameBlobUploadChunk = "blob-upload-chunk"
-	RouteNameCatalog         = "catalog"
+	RouteNameBase                 = "base"
+	RouteNameManifest             = "manifest"
+	RouteNameTags                 = "tags"
+	RouteNameBlob                 = "blob"
+	RouteNameBlobUpload           = "blob-upload"
+	RouteNameBlobUploadChunk      = "blob-upload-chunk"
+	RouteNameCatalog              = "catalog"
+	RouteNameExtensionsRegistry   = "extensions-registry"
+	RouteNameExtensionsRepository = "extensions-repository"
 )
 
 // Router builds a gorilla router with named routes for the various API
