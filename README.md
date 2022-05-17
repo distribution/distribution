@@ -1,3 +1,34 @@
+# OCI Playground
+
+[View diff](https://github.com/distribution/distribution/compare/main...oci-playground:main)
+
+To build:
+
+```
+make
+```
+
+To run:
+
+```
+./bin/registry serve cmd/registry/config-example-with-extensions.yml
+```
+
+To test:
+
+```
+http -b :5000/v2/reftype-test/_distribution/registry/manifests
+{
+    "digests": [
+        "sha256:28ffe613ed468b4aa3b60061f529ef676144d47bfc7067bd465d58e370f07718",
+        "sha256:65b3a80ebe7471beecbc090c5b2cdd0aafeaefa0715f8f12e40dc918a3a70e32"
+    ],
+    "name": "reftype-test"
+}
+```
+
+- [reftype](https://github.com/sajayantony/reftype) is a test client that can be used to push the new oci reference type manifest. 
+
 # Distribution
 
 The toolset to pack, ship, store, and deliver content.
