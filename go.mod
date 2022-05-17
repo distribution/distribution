@@ -32,6 +32,8 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
+require github.com/oci-playground/artifact-spec v0.0.0-20220506233500-8fed0a29d06f
+
 require (
 	cloud.google.com/go v0.34.0 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect
@@ -56,7 +58,6 @@ require (
 	github.com/kr/text v0.1.0 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/mitchellh/osext v0.0.0-20151018003038-5e2d6d41470f // indirect
-	github.com/oci-playground/artifact-spec v0.0.0-20220506233500-8fed0a29d06f // indirect
 	github.com/prometheus/client_golang v1.1.0 // indirect
 	github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90 // indirect
 	github.com/prometheus/common v0.6.0 // indirect
@@ -81,3 +82,5 @@ require (
 // In our case, github.com/spf13/viper occurs as a dependency, but is unused,
 // so we can ignore the minimum versions of grpc and jwt-go that it specifies.
 replace google.golang.org/grpc => google.golang.org/grpc v0.0.0-20160317175043-d3ddb4469d5a
+
+replace github.com/opencontainers/image-spec => github.com/oci-playground/image-spec v1.0.3-0.20220502203203-687ae397e329
