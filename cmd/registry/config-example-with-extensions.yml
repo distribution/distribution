@@ -6,7 +6,7 @@ storage:
   cache:
     blobdescriptor: inmemory
   filesystem:
-    rootdirectory: /opt/data/registry-root-dir
+    rootdirectory: /tmp/registry-root-dir
 http:
   addr: :5000
   headers:
