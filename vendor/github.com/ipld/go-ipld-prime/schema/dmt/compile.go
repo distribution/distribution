@@ -43,12 +43,6 @@ func Compile(ts *schema.TypeSystem, node *Schema) error {
 		ts.Accumulate(typ)
 	}
 
-	// TODO: if this fails and the user forgot to check Compile's returned error,
-	// we can leave the TypeSystem in an unfortunate broken state:
-	// they can obtain types out of the TypeSystem and they are non-nil,
-	// but trying to use them in any way may result in panics.
-	// Consider making that less prone to misuse, such as making it illegal to
-	// call TypeByName until ValidateGraph is happy.
 	if errs := ts.ValidateGraph(); errs != nil {
 		// Return the first error.
 		for _, err := range errs {
@@ -238,22 +232,6 @@ func spawnType(ts *schema.TypeSystem, name schema.TypeName, defn TypeDefn) (sche
 				panic("TODO: inline union members")
 			}
 		}
-		remainingMembers := make(map[string]bool)
-		for _, memberName := range members {
-			remainingMembers[memberName] = true
-		}
-		validMember := func(memberName string) error {
-			switch remaining, known := remainingMembers[memberName]; {
-			case remaining:
-				remainingMembers[memberName] = false
-				return nil
-			case !known:
-				return fmt.Errorf("%q is not a valid member of union %q", memberName, name)
-			default:
-				return fmt.Errorf("%q is duplicate in the union repr of %q", memberName, name)
-			}
-		}
-
 		var repr schema.UnionRepresentation
 		switch {
 		case typ.Representation.UnionRepresentation_Kinded != nil:
@@ -264,9 +242,7 @@ func spawnType(ts *schema.TypeSystem, name schema.TypeName, defn TypeDefn) (sche
 				member := rp.Values[kindStr]
 				switch {
 				case member.TypeName != nil:
-					memberName := *member.TypeName
-					validMember(memberName)
-					table[kind] = memberName
+					table[kind] = *member.TypeName
 				case member.UnionMemberInlineDefn != nil:
 					panic("TODO: inline defn support")
 				}
@@ -279,9 +255,7 @@ func spawnType(ts *schema.TypeSystem, name schema.TypeName, defn TypeDefn) (sche
 				member := rp.Values[key]
 				switch {
 				case member.TypeName != nil:
-					memberName := *member.TypeName
-					validMember(memberName)
-					table[key] = memberName
+					table[key] = *member.TypeName
 				case member.UnionMemberInlineDefn != nil:
 					panic("TODO: inline defn support")
 				}
@@ -290,11 +264,6 @@ func spawnType(ts *schema.TypeSystem, name schema.TypeName, defn TypeDefn) (sche
 		default:
 			return nil, fmt.Errorf("TODO: support other union repr in schema package")
 		}
-		for memberName, remaining := range remainingMembers {
-			if remaining {
-				return nil, fmt.Errorf("%q is not present in the union repr of %q", memberName, name)
-			}
-		}
 		return schema.SpawnUnion(name,
 			members,
 			repr,
@@ -302,32 +271,12 @@ func spawnType(ts *schema.TypeSystem, name schema.TypeName, defn TypeDefn) (sche
 	case defn.TypeDefnEnum != nil:
 		typ := defn.TypeDefnEnum
 		var repr schema.EnumRepresentation
-
-		// TODO: we should probably also reject duplicates.
-		validMember := func(name string) bool {
-			for _, memberName := range typ.Members {
-				if memberName == name {
-					return true
-				}
-			}
-			return false
-		}
 		switch {
 		case typ.Representation.EnumRepresentation_String != nil:
 			rp := typ.Representation.EnumRepresentation_String
-			for memberName := range rp.Values {
-				if !validMember(memberName) {
-					return nil, fmt.Errorf("%q is not a valid member of enum %q", memberName, name)
-				}
-			}
 			repr = schema.EnumRepresentation_String(rp.Values)
 		case typ.Representation.EnumRepresentation_Int != nil:
 			rp := typ.Representation.EnumRepresentation_Int
-			for memberName := range rp.Values {
-				if !validMember(memberName) {
-					return nil, fmt.Errorf("%q is not a valid member of enum %q", memberName, name)
-				}
-			}
 			repr = schema.EnumRepresentation_Int(rp.Values)
 		default:
 			return nil, fmt.Errorf("TODO: support other enum repr in schema package")

@@ -2,7 +2,6 @@ package bindnode
 
 import (
 	"fmt"
-	"go/token"
 	"reflect"
 	"strings"
 
@@ -206,30 +205,7 @@ func verifyCompatibility(seen map[seenEntry]bool, goType reflect.Type, schemaTyp
 	}
 }
 
-// If we recurse past a large number of levels, we're mostly stuck in a loop.
-// Prevent burning CPU or causing OOM crashes.
-// If a user really wrote an IPLD schema or Go type with such deep nesting,
-// it's likely they are trying to abuse the system as well.
-const maxRecursionLevel = 1 << 10
-
-type inferredStatus int
-
-const (
-	_ inferredStatus = iota
-	inferringInProcess
-	inferringDone
-)
-
-func inferGoType(typ schema.Type, status map[schema.TypeName]inferredStatus, level int) reflect.Type {
-	if level > maxRecursionLevel {
-		panic(fmt.Sprintf("inferGoType: refusing to recurse past %d levels", maxRecursionLevel))
-	}
-	name := typ.Name()
-	if status[name] == inferringInProcess {
-		panic("bindnode: inferring Go types from cyclic schemas is not supported since Go reflection does not support creating named types")
-	}
-	status[name] = inferringInProcess
-	defer func() { status[name] = inferringDone }()
+func inferGoType(typ schema.Type) reflect.Type {
 	switch typ := typ.(type) {
 	case *schema.TypeBool:
 		return goTypeBool
@@ -245,7 +221,7 @@ func inferGoType(typ schema.Type, status map[schema.TypeName]inferredStatus, lev
 		fields := typ.Fields()
 		fieldsGo := make([]reflect.StructField, len(fields))
 		for i, field := range fields {
-			ftypGo := inferGoType(field.Type(), status, level+1)
+			ftypGo := inferGoType(field.Type())
 			if field.IsNullable() {
 				ftypGo = reflect.PtrTo(ftypGo)
 			}
@@ -259,8 +235,8 @@ func inferGoType(typ schema.Type, status map[schema.TypeName]inferredStatus, lev
 		}
 		return reflect.StructOf(fieldsGo)
 	case *schema.TypeMap:
-		ktyp := inferGoType(typ.KeyType(), status, level+1)
-		vtyp := inferGoType(typ.ValueType(), status, level+1)
+		ktyp := inferGoType(typ.KeyType())
+		vtyp := inferGoType(typ.ValueType())
 		if typ.ValueIsNullable() {
 			vtyp = reflect.PtrTo(vtyp)
 		}
@@ -285,7 +261,7 @@ func inferGoType(typ schema.Type, status map[schema.TypeName]inferredStatus, lev
 		}
 		return reflect.StructOf(fieldsGo)
 	case *schema.TypeList:
-		etyp := inferGoType(typ.ValueType(), status, level+1)
+		etyp := inferGoType(typ.ValueType())
 		if typ.ValueIsNullable() {
 			etyp = reflect.PtrTo(etyp)
 		}
@@ -299,7 +275,7 @@ func inferGoType(typ schema.Type, status map[schema.TypeName]inferredStatus, lev
 		members := typ.Members()
 		fieldsGo := make([]reflect.StructField, len(members))
 		for i, ftyp := range members {
-			ftypGo := inferGoType(ftyp, status, level+1)
+			ftypGo := inferGoType(ftyp)
 			fieldsGo[i] = reflect.StructField{
 				Name: fieldNameFromSchema(ftyp.Name()),
 				Type: reflect.PtrTo(ftypGo),
@@ -313,19 +289,13 @@ func inferGoType(typ schema.Type, status map[schema.TypeName]inferredStatus, lev
 		return goTypeString
 	case *schema.TypeAny:
 		return goTypeNode
-	case nil:
-		panic("bindnode: unexpected nil schema.Type")
 	}
 	panic(fmt.Sprintf("%T", typ))
 }
 
 // from IPLD Schema field names like "foo" to Go field names like "Foo".
 func fieldNameFromSchema(name string) string {
-	fieldName := strings.Title(name)
-	if !token.IsIdentifier(fieldName) {
-		panic(fmt.Sprintf("bindnode: inferred field name %q is not a valid Go identifier", fieldName))
-	}
-	return fieldName
+	return strings.Title(name)
 }
 
 var defaultTypeSystem schema.TypeSystem
@@ -349,10 +319,7 @@ func init() {
 // TODO: we should probably avoid re-spawning the same types if the TypeSystem
 // has them, and test that that works as expected
 
-func inferSchema(typ reflect.Type, level int) schema.Type {
-	if level > maxRecursionLevel {
-		panic(fmt.Sprintf("inferSchema: refusing to recurse past %d levels", maxRecursionLevel))
-	}
+func inferSchema(typ reflect.Type) schema.Type {
 	// TODO: support Link and Any
 	switch typ.Kind() {
 	case reflect.Bool:
@@ -368,7 +335,7 @@ func inferSchema(typ reflect.Type, level int) schema.Type {
 		for i := range fieldsSchema {
 			field := typ.Field(i)
 			ftyp := field.Type
-			ftypSchema := inferSchema(ftyp, level+1)
+			ftypSchema := inferSchema(ftyp)
 			fieldsSchema[i] = schema.SpawnStructField(
 				field.Name, // TODO: allow configuring the name with tags
 				ftypSchema.Name(),
@@ -397,7 +364,7 @@ func inferSchema(typ reflect.Type, level int) schema.Type {
 			etyp = etyp.Elem()
 			nullable = true
 		}
-		etypSchema := inferSchema(typ.Elem(), level+1)
+		etypSchema := inferSchema(typ.Elem())
 		name := typ.Name()
 		if name == "" {
 			name = "List_" + etypSchema.Name()

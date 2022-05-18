@@ -1034,10 +1034,6 @@ func (w *_unionAssembler) AssembleEntry(k string) (datamodel.NodeAssembler, erro
 }
 
 func (w *_unionAssembler) Finish() error {
-	haveIdx, _ := unionMember(w.val)
-	if haveIdx < 0 {
-		return schema.ErrNotUnionStructure{TypeName: w.schemaType.Name(), Detail: "a union must have exactly one entry"}
-	}
 	if w.finish != nil {
 		if err := w.finish(); err != nil {
 			return err

@@ -98,7 +98,7 @@ func DecodeBytes(na ipld.NodeAssembler, src []byte) error {
 			haveData = true
 
 		case 2:
-			chunk, n := protowire.ConsumeBytes(remaining)
+			bytesLen, n := protowire.ConsumeVarint(remaining)
 			if n < 0 {
 				return protowire.ParseError(n)
 			}
@@ -123,9 +123,10 @@ func DecodeBytes(na ipld.NodeAssembler, src []byte) error {
 			if err != nil {
 				return err
 			}
-			if err := unmarshalLink(chunk, curLink); err != nil {
+			if err := unmarshalLink(remaining[:bytesLen], curLink); err != nil {
 				return err
 			}
+			remaining = remaining[bytesLen:]
 			if err := curLink.Finish(); err != nil {
 				return err
 			}

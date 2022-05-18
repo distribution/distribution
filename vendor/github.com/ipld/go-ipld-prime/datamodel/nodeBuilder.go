@@ -149,14 +149,6 @@ type NodeBuilder interface {
 	// all responsibility for validating the assembled data and returning
 	// any errors from that process.
 	// (Correspondingly, there is no error return from this method.)
-	//
-	// Note that building via a representation-level NodePrototype or NodeBuilder
-	// returns a node at the type level which implements schema.TypedNode.
-	// To obtain the representation-level node, you can do:
-	//
-	//    // builder is at the representation level, so it returns typed nodes
-	//    node := builder.Build().(schema.TypedNode)
-	//    reprNode := node.Representation()
 	Build() Node
 
 	// Resets the builder.  It can hereafter be used again.

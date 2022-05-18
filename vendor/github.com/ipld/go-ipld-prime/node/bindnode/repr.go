@@ -778,13 +778,6 @@ func (w *_assemblerRepr) AssignString(s string) error {
 			}
 		}
 		return fmt.Errorf("AssignString: %q is not a valid member of enum %s", s, w.schemaType.Name())
-	case schema.EnumRepresentation_Int:
-		return datamodel.ErrWrongKind{
-			TypeName:        w.schemaType.Name(),
-			MethodName:      "AssignString",
-			AppropriateKind: datamodel.KindSet_JustInt,
-			ActualKind:      datamodel.Kind_String,
-		}
 	default:
 		return (*_assembler)(w).AssignString(s)
 	}

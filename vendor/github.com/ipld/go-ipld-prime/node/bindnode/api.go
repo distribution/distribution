@@ -36,7 +36,7 @@ func Prototype(ptrType interface{}, schemaType schema.Type) schema.TypedPrototyp
 
 	var goType reflect.Type
 	if ptrType == nil {
-		goType = inferGoType(schemaType, make(map[schema.TypeName]inferredStatus), 0)
+		goType = inferGoType(schemaType)
 	} else {
 		goPtrType := reflect.TypeOf(ptrType)
 		if goPtrType.Kind() != reflect.Ptr {
@@ -45,7 +45,7 @@ func Prototype(ptrType interface{}, schemaType schema.Type) schema.TypedPrototyp
 		goType = goPtrType.Elem()
 
 		if schemaType == nil {
-			schemaType = inferSchema(goType, 0)
+			schemaType = inferSchema(goType)
 		} else {
 			verifyCompatibility(make(map[seenEntry]bool), goType, schemaType)
 		}
@@ -76,7 +76,7 @@ func Wrap(ptrVal interface{}, schemaType schema.Type) schema.TypedNode {
 	}
 	goVal := goPtrVal.Elem()
 	if schemaType == nil {
-		schemaType = inferSchema(goVal.Type(), 0)
+		schemaType = inferSchema(goVal.Type())
 	} else {
 		verifyCompatibility(make(map[seenEntry]bool), goVal.Type(), schemaType)
 	}

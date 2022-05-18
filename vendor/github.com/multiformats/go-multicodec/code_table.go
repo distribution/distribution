@@ -378,9 +378,6 @@ const (
 	// Messagepack is a draft code tagged "serialization" and described by: MessagePack.
 	Messagepack Code = 0x0201 // messagepack
 
-	// Car is a draft code tagged "serialization" and described by: Content Addressable aRchive (CAR).
-	Car Code = 0x0202 // car
-
 	// Libp2pPeerRecord is a permanent code tagged "libp2p" and described by: libp2p peer record type.
 	Libp2pPeerRecord Code = 0x0301 // libp2p-peer-record
 
@@ -392,12 +389,6 @@ const (
 
 	// CarMultihashIndexSorted is a draft code tagged "serialization" and described by: CARv2 MultihashIndexSorted index format.
 	CarMultihashIndexSorted Code = 0x0401 // car-multihash-index-sorted
-
-	// TransportBitswap is a draft code tagged "transport" and described by: Bitswap datatransfer.
-	TransportBitswap Code = 0x0900 // transport-bitswap
-
-	// TransportGraphsyncFilecoinv1 is a draft code tagged "transport" and described by: Filecoin graphsync datatransfer.
-	TransportGraphsyncFilecoinv1 Code = 0x0910 // transport-graphsync-filecoinv1
 
 	// Sha2_256Trunc254Padded is a permanent code tagged "multihash" and described by: SHA2-256 with the two most significant bits from the last byte zeroed (as via a mask with 0b00111111) - used for proving trees as in Filecoin.
 	Sha2_256Trunc254Padded Code = 0x1012 // sha2-256-trunc254-padded
@@ -1463,9 +1454,6 @@ const (
 
 	// ArweaveNs is a draft code tagged "namespace" and described by: Arweave Namespace.
 	ArweaveNs Code = 0xb29910 // arweave-ns
-
-	// SubspaceNs is a draft code tagged "namespace" and described by: Subspace Network Namespace.
-	SubspaceNs Code = 0xb39910 // subspace-ns
 )
 
 var knownCodes = []Code{
@@ -1594,13 +1582,10 @@ var knownCodes = []Code{
 	Swhid1Snp,
 	Json,
 	Messagepack,
-	Car,
 	Libp2pPeerRecord,
 	Libp2pRelayRsvp,
 	CarIndexSorted,
 	CarMultihashIndexSorted,
-	TransportBitswap,
-	TransportGraphsyncFilecoinv1,
 	Sha2_256Trunc254Padded,
 	Sha2_224,
 	Sha2_512_224,
@@ -1956,7 +1941,6 @@ var knownCodes = []Code{
 	HolochainSigV1,
 	SkynetNs,
 	ArweaveNs,
-	SubspaceNs,
 }
 
 func (c Code) Tag() string {
@@ -2454,22 +2438,16 @@ func (c Code) Tag() string {
 		IpnsNs,
 		Zeronet,
 		SkynetNs,
-		ArweaveNs,
-		SubspaceNs:
+		ArweaveNs:
 		return "namespace"
 
 	case Protobuf,
 		Rlp,
 		Bencode,
 		Messagepack,
-		Car,
 		CarIndexSorted,
 		CarMultihashIndexSorted:
 		return "serialization"
-
-	case TransportBitswap,
-		TransportGraphsyncFilecoinv1:
-		return "transport"
 
 	case ZeroxcertImprint256:
 		return "zeroxcert"

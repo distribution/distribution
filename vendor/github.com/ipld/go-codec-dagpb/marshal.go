@@ -75,6 +75,9 @@ func AppendEncode(enc []byte, inNode ipld.Node) ([]byte, error) {
 				if err != nil {
 					return enc, err
 				}
+				if err != nil {
+					return enc, err
+				}
 				cl, ok := l.(cidlink.Link)
 				if !ok {
 					// this _should_ be taken care of by the Typed conversion above with
