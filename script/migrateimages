@@ -25,10 +25,6 @@ fi
 original_image="$1"
 target_acr="$2"
 
-minimum_version="3.11.7"
-grep_filter="deps|nanoserver|bionic|latest"
-#grep_filter=""
-
 # Download all images
 docker pull $original_image --all-tags
 
@@ -39,7 +35,5 @@ docker pull $original_image --all-tags
 # then filter the result, removing any entries containing words defined on $grep_filter (i.e. rc, beta, alpha, etc)
 # finally, execute those as commands
 docker images $original_image \
-  --filter "since=$original_image:$minimum_version" \
   --format "docker tag {{.Repository}}:{{.Tag}} $target_acr/{{.Repository}}:{{.Tag}} | docker push $target_acr/{{.Repository}}:{{.Tag}}" | 
-  grep -vE $grep_filter | 
   bash
