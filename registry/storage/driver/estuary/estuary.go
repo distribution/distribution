@@ -152,8 +152,6 @@ func (d *driver) Name() string {
 
 // GetContent retrieves the content stored at "path" as a []byte.
 func (d *driver) GetContent(ctx context.Context, contentPath string) ([]byte, error) {
-	fmt.Printf("GetContent: %s\n", contentPath)
-
 	rc, err := d.Reader(ctx, contentPath, 0)
 	if err != nil {
 		return nil, err
@@ -170,15 +168,10 @@ func (d *driver) GetContent(ctx context.Context, contentPath string) ([]byte, er
 
 // PutContent stores the []byte content at a location designated by "path".
 func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte) error {
-	fmt.Printf("PutContent: %s\n", subPath)
-
 	if path.Base(subPath) == "data" {
-		fmt.Printf("PutContent[data]: %s\n", subPath)
 		// add and register content
 		d.registerContent(subPath, contents)
-
 	} else {
-
 		writer, err := d.Writer(ctx, subPath, false)
 		if err != nil {
 			return err
@@ -201,8 +194,6 @@ func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte
 // Reader retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
 func (d *driver) Reader(ctx context.Context, inPath string, offset int64) (io.ReadCloser, error) {
-	fmt.Printf("Reader: %s\n", inPath)
-
 	if path.Base(inPath) == "data" {
 		cidHash, err := d.getCidHash(inPath)
 		if err != nil {
@@ -238,8 +229,6 @@ func (d *driver) Reader(ctx context.Context, inPath string, offset int64) (io.Re
 }
 
 func (d *driver) Writer(ctx context.Context, subPath string, append bool) (storagedriver.FileWriter, error) {
-	fmt.Printf("Writer: %s\n", subPath)
-
 	fullPath := d.fullPath(subPath)
 	parentDir := path.Dir(fullPath)
 	if err := os.MkdirAll(parentDir, 0777); err != nil {
@@ -276,7 +265,6 @@ func (d *driver) Writer(ctx context.Context, subPath string, append bool) (stora
 // in bytes and the creation time.
 func (d *driver) Stat(ctx context.Context, subPath string) (storagedriver.FileInfo, error) {
 	fullPath := d.fullPath(subPath)
-
 	if path.Base(subPath) == "data" && !strings.Contains(subPath, "/_uploads/") {
 		cidHash, err := d.getCidHash(subPath)
 		if err != nil {
@@ -286,7 +274,6 @@ func (d *driver) Stat(ctx context.Context, subPath string) (storagedriver.FileIn
 		if err != nil {
 			return nil, storagedriver.PathNotFoundError{Path: subPath}
 		}
-
 		fi := storagedriver.FileInfoFields{
 			Path:    subPath,
 			Size:    int64(contentElement.Content.Size),
@@ -341,21 +328,17 @@ func (d *driver) List(ctx context.Context, subPath string) ([]string, error) {
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
 func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
-	fmt.Printf("Move: src: %s dest: %s\n", sourcePath, destPath)
-
 	source := d.fullPath(sourcePath)
 	contents, err := ioutil.ReadFile(source)
 	if err != nil {
 		return err
 	}
 	d.registerContent(destPath, contents)
-
 	// clean up the source file
 	err = os.RemoveAll(source)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -377,8 +360,6 @@ func (d *driver) Delete(ctx context.Context, subPath string) error {
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 // May return an UnsupportedMethodErr in certain StorageDriver implementations.
 func (d *driver) URLFor(ctx context.Context, subPath string, options map[string]interface{}) (string, error) {
-	fmt.Printf("URLFor: %s\n", subPath)
-
 	cidHash, err := d.getCidHash(subPath)
 	if err != nil {
 		return "", err
@@ -402,7 +383,6 @@ func (d *driver) fullPath(subPath string) string {
 func (d *driver) getCidHash(path string) (string, error) {
 	parts := strings.Split(path, "/")
 	sha256Digest := parts[len(parts)-2]
-	//val, err := d.db.Get([]byte(sha256Digest))
 	pin, err := d.client.GetContentByName(sha256Digest)
 	if err != nil {
 		return "", err
