@@ -9,16 +9,17 @@ import (
 	"io"
 	"io/ioutil"
 	"mime/multipart"
-	"net/http"
 	"os"
 	"path/filepath"
+
+	"github.com/hashicorp/go-retryablehttp"
 )
 
 type EstuaryClient struct {
 	baseUrl    string
 	shuttleUrl string
 	token      string
-	client     *http.Client
+	client     *retryablehttp.Client
 }
 
 func NewEstuaryClient(baseUrl, shuttleUrl, token string) *EstuaryClient {
@@ -26,7 +27,7 @@ func NewEstuaryClient(baseUrl, shuttleUrl, token string) *EstuaryClient {
 		baseUrl:    baseUrl,
 		shuttleUrl: shuttleUrl,
 		token:      token,
-		client:     &http.Client{},
+		client:     retryablehttp.NewClient(),
 	}
 }
 
@@ -60,7 +61,7 @@ func (e *EstuaryClient) AddContentToCollection(fp, collectionId, collectionPath 
 		return "", err
 	}
 
-	req, err := http.NewRequest(method, url, payload)
+	req, err := retryablehttp.NewRequest(method, url, payload)
 
 	if err != nil {
 		fmt.Println(err)
@@ -118,7 +119,7 @@ func (e *EstuaryClient) AddContent(contents []byte) (AddContentResponse, error) 
 		return AddContentResponse{}, err
 	}
 
-	req, err := http.NewRequest(method, url, payload)
+	req, err := retryablehttp.NewRequest(method, url, payload)
 
 	if err != nil {
 		fmt.Println(err)
@@ -153,7 +154,7 @@ func (e *EstuaryClient) CreateCollection(name, description string) (string, erro
 	values := map[string]string{"name": name, "description": description}
 	jsonValue, _ := json.Marshal(values)
 
-	req, err := http.NewRequest(method, url, bytes.NewBuffer(jsonValue))
+	req, err := retryablehttp.NewRequest(method, url, bytes.NewBuffer(jsonValue))
 
 	if err != nil {
 		fmt.Println(err)
@@ -193,8 +194,7 @@ func (e *EstuaryClient) GetContentByCid(cid string) (ContentElement, error) {
 		return ContentElement{}, err
 	}
 
-	client := &http.Client{}
-	req, err := http.NewRequest(method, url, payload)
+	req, err := retryablehttp.NewRequest(method, url, payload)
 
 	if err != nil {
 		fmt.Println(err)
@@ -203,7 +203,7 @@ func (e *EstuaryClient) GetContentByCid(cid string) (ContentElement, error) {
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", e.token))
-	res, err := client.Do(req)
+	res, err := e.client.Do(req)
 	if err != nil {
 		fmt.Println(err)
 		return ContentElement{}, err
@@ -236,8 +236,7 @@ func (e *EstuaryClient) GetContentByName(name string) (PinnedElement, error) {
 		return PinnedElement{}, err
 	}
 
-	client := &http.Client{}
-	req, err := http.NewRequest(method, url, payload)
+	req, err := retryablehttp.NewRequest(method, url, payload)
 
 	if err != nil {
 		fmt.Println(err)
@@ -246,7 +245,7 @@ func (e *EstuaryClient) GetContentByName(name string) (PinnedElement, error) {
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", e.token))
-	res, err := client.Do(req)
+	res, err := e.client.Do(req)
 	if err != nil {
 		fmt.Println(err)
 		return PinnedElement{}, err

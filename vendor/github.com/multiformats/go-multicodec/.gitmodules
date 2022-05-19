@@ -1,4 +1,0 @@
-[submodule "multicodec"]
-	path = multicodec
-	url = https://github.com/multiformats/multicodec
-	branch = master

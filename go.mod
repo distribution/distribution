@@ -27,7 +27,7 @@ require (
 	github.com/ipfs/go-unixfs v0.3.1
 	github.com/ipld/go-car/v2 v2.1.1 // indirect
 	github.com/ipld/go-ipld-prime v0.16.0 // indirect
-	github.com/multiformats/go-multicodec v0.3.1-0.20211210143421-a526f306ed2c
+	github.com/multiformats/go-multicodec v0.3.1-0.20211210143421-a526f306ed2c // indirect
 	github.com/multiformats/go-multihash v0.1.0
 	github.com/ncw/swift v1.0.47
 	github.com/opencontainers/go-digest v1.0.0
@@ -46,7 +46,7 @@ require (
 )
 
 require (
-	github.com/dgraph-io/badger/v2 v2.2007.4
+	github.com/hashicorp/go-retryablehttp v0.7.1
 	github.com/mitchellh/mapstructure v1.1.2
 )
 
@@ -66,6 +66,7 @@ require (
 	github.com/bugsnag/panicwrap v0.0.0-20151223152923-e2c28503fcd0 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.1 // indirect
+	github.com/dgraph-io/badger/v2 v2.2007.4 // indirect
 	github.com/dgraph-io/badger/v3 v3.2103.2 // indirect
 	github.com/dgraph-io/ristretto v0.1.0 // indirect
 	github.com/dgryski/go-farm v0.0.0-20190423205320-6a90982ecee2 // indirect
@@ -81,6 +82,7 @@ require (
 	github.com/golang/snappy v0.0.3 // indirect
 	github.com/google/flatbuffers v1.12.1 // indirect
 	github.com/google/uuid v1.2.0 // indirect
+	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/ipfs/bbloom v0.0.4 // indirect
