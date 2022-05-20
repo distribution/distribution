@@ -37,3 +37,6 @@ docker pull $original_image --all-tags
 docker images $original_image \
   --format "docker tag {{.Repository}}:{{.Tag}} $target_acr/{{.Repository}}:{{.Tag}} | docker push $target_acr/{{.Repository}}:{{.Tag}}" | 
   bash
+
+# clean up the local images
+docker rmi -f $(docker images --format '{{.Repository}}:{{.Tag}}' --filter=reference=$original_image:*)
