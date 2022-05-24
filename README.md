@@ -11,7 +11,7 @@ It is a core library for many registry operators including Docker Hub, GitHub Co
 GitLab Container Registry and DigitalOcean Container Registry, as well as the CNCF Harbor
 Project, and VMware Harbor Registry.
 
-<img src="/lighthouse-componments.png" />
+<img src="lighthouse-componments.png" />
 
 <img src="/distribution-logo.svg" width="200px" />
 
