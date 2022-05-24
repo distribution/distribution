@@ -1,6 +1,6 @@
 # Lighthouse, a decentralized fork of Distribution
 
-The toolset to pack, ship, store, and deliver content over IPFS.
+The toolset to pack, ship, store, and deliver content over IPFS / Filecoin.
 
 This repository's main product is the Open Source Registry implementation
 for storing and distributing container images using the
