@@ -1,6 +1,6 @@
-# Distribution
+# Lighthouse, a decentralized fork of Distribution
 
-The toolset to pack, ship, store, and deliver content.
+The toolset to pack, ship, store, and deliver content over IPFS.
 
 This repository's main product is the Open Source Registry implementation
 for storing and distributing container images using the
@@ -10,6 +10,8 @@ for building a large scale registry solution or running a simple private registr
 It is a core library for many registry operators including Docker Hub, GitHub Container Registry,
 GitLab Container Registry and DigitalOcean Container Registry, as well as the CNCF Harbor
 Project, and VMware Harbor Registry.
+
+<img src="/lighthouse-componments.png" />
 
 <img src="/distribution-logo.svg" width="200px" />
 
