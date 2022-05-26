@@ -6,11 +6,7 @@
 
 // Register allocation:
 // AX	h
-<<<<<<< HEAD
-// CX	pointer to advance through b
-=======
 // SI	pointer to advance through b
->>>>>>> main
 // DX	n
 // BX	loop end
 // R8	v1, k1
@@ -20,15 +16,6 @@
 // R12	tmp
 // R13	prime1v
 // R14	prime2v
-<<<<<<< HEAD
-// R15	prime4v
-
-// round reads from and advances the buffer pointer in CX.
-// It assumes that R13 has prime1v and R14 has prime2v.
-#define round(r) \
-	MOVQ  (CX), R12 \
-	ADDQ  $8, CX    \
-=======
 // DI	prime4v
 
 // round reads from and advances the buffer pointer in SI.
@@ -36,50 +23,32 @@
 #define round(r) \
 	MOVQ  (SI), R12 \
 	ADDQ  $8, SI    \
->>>>>>> main
 	IMULQ R14, R12  \
 	ADDQ  R12, r    \
 	ROLQ  $31, r    \
 	IMULQ R13, r
 
 // mergeRound applies a merge round on the two registers acc and val.
-<<<<<<< HEAD
-// It assumes that R13 has prime1v, R14 has prime2v, and R15 has prime4v.
-=======
 // It assumes that R13 has prime1v, R14 has prime2v, and DI has prime4v.
->>>>>>> main
 #define mergeRound(acc, val) \
 	IMULQ R14, val \
 	ROLQ  $31, val \
 	IMULQ R13, val \
 	XORQ  val, acc \
 	IMULQ R13, acc \
-<<<<<<< HEAD
-	ADDQ  R15, acc
-=======
 	ADDQ  DI, acc
->>>>>>> main
 
 // func Sum64(b []byte) uint64
 TEXT ·Sum64(SB), NOSPLIT, $0-32
 	// Load fixed primes.
 	MOVQ ·prime1v(SB), R13
 	MOVQ ·prime2v(SB), R14
-<<<<<<< HEAD
-	MOVQ ·prime4v(SB), R15
-
-	// Load slice.
-	MOVQ b_base+0(FP), CX
-	MOVQ b_len+8(FP), DX
-	LEAQ (CX)(DX*1), BX
-=======
 	MOVQ ·prime4v(SB), DI
 
 	// Load slice.
 	MOVQ b_base+0(FP), SI
 	MOVQ b_len+8(FP), DX
 	LEAQ (SI)(DX*1), BX
->>>>>>> main
 
 	// The first loop limit will be len(b)-32.
 	SUBQ $32, BX
@@ -96,22 +65,14 @@ TEXT ·Sum64(SB), NOSPLIT, $0-32
 	XORQ R11, R11
 	SUBQ R13, R11
 
-<<<<<<< HEAD
-	// Loop until CX > BX.
-=======
 	// Loop until SI > BX.
->>>>>>> main
 blockLoop:
 	round(R8)
 	round(R9)
 	round(R10)
 	round(R11)
 
-<<<<<<< HEAD
-	CMPQ CX, BX
-=======
 	CMPQ SI, BX
->>>>>>> main
 	JLE  blockLoop
 
 	MOVQ R8, AX
@@ -139,28 +100,16 @@ noBlocks:
 afterBlocks:
 	ADDQ DX, AX
 
-<<<<<<< HEAD
-	// Right now BX has len(b)-32, and we want to loop until CX > len(b)-8.
-	ADDQ $24, BX
-
-	CMPQ CX, BX
-=======
 	// Right now BX has len(b)-32, and we want to loop until SI > len(b)-8.
 	ADDQ $24, BX
 
 	CMPQ SI, BX
->>>>>>> main
 	JG   fourByte
 
 wordLoop:
 	// Calculate k1.
-<<<<<<< HEAD
-	MOVQ  (CX), R8
-	ADDQ  $8, CX
-=======
 	MOVQ  (SI), R8
 	ADDQ  $8, SI
->>>>>>> main
 	IMULQ R14, R8
 	ROLQ  $31, R8
 	IMULQ R13, R8
@@ -168,32 +117,18 @@ wordLoop:
 	XORQ  R8, AX
 	ROLQ  $27, AX
 	IMULQ R13, AX
-<<<<<<< HEAD
-	ADDQ  R15, AX
-
-	CMPQ CX, BX
-=======
 	ADDQ  DI, AX
 
 	CMPQ SI, BX
->>>>>>> main
 	JLE  wordLoop
 
 fourByte:
 	ADDQ $4, BX
-<<<<<<< HEAD
-	CMPQ CX, BX
-	JG   singles
-
-	MOVL  (CX), R8
-	ADDQ  $4, CX
-=======
 	CMPQ SI, BX
 	JG   singles
 
 	MOVL  (SI), R8
 	ADDQ  $4, SI
->>>>>>> main
 	IMULQ R13, R8
 	XORQ  R8, AX
 
@@ -203,32 +138,19 @@ fourByte:
 
 singles:
 	ADDQ $4, BX
-<<<<<<< HEAD
-	CMPQ CX, BX
-	JGE  finalize
-
-singlesLoop:
-	MOVBQZX (CX), R12
-	ADDQ    $1, CX
-=======
 	CMPQ SI, BX
 	JGE  finalize
 
 singlesLoop:
 	MOVBQZX (SI), R12
 	ADDQ    $1, SI
->>>>>>> main
 	IMULQ   ·prime5v(SB), R12
 	XORQ    R12, AX
 
 	ROLQ  $11, AX
 	IMULQ R13, AX
 
-<<<<<<< HEAD
-	CMPQ CX, BX
-=======
 	CMPQ SI, BX
->>>>>>> main
 	JL   singlesLoop
 
 finalize:
@@ -257,15 +179,9 @@ TEXT ·writeBlocks(SB), NOSPLIT, $0-40
 	MOVQ ·prime2v(SB), R14
 
 	// Load slice.
-<<<<<<< HEAD
-	MOVQ b_base+8(FP), CX
-	MOVQ b_len+16(FP), DX
-	LEAQ (CX)(DX*1), BX
-=======
 	MOVQ b_base+8(FP), SI
 	MOVQ b_len+16(FP), DX
 	LEAQ (SI)(DX*1), BX
->>>>>>> main
 	SUBQ $32, BX
 
 	// Load vN from d.
@@ -283,11 +199,7 @@ blockLoop:
 	round(R10)
 	round(R11)
 
-<<<<<<< HEAD
-	CMPQ CX, BX
-=======
 	CMPQ SI, BX
->>>>>>> main
 	JLE  blockLoop
 
 	// Copy vN back to d.
@@ -296,14 +208,8 @@ blockLoop:
 	MOVQ R10, 16(AX)
 	MOVQ R11, 24(AX)
 
-<<<<<<< HEAD
-	// The number of bytes written is CX minus the old base pointer.
-	SUBQ b_base+8(FP), CX
-	MOVQ CX, ret+32(FP)
-=======
 	// The number of bytes written is SI minus the old base pointer.
 	SUBQ b_base+8(FP), SI
 	MOVQ SI, ret+32(FP)
->>>>>>> main
 
 	RET

@@ -54,11 +54,7 @@ const (
 
 	// DefaultUploadChunkSize is the default chunk size to use for resumable
 	// uploads if not specified by the user.
-<<<<<<< HEAD
-	DefaultUploadChunkSize = 8 * 1024 * 1024
-=======
 	DefaultUploadChunkSize = 16 * 1024 * 1024
->>>>>>> main
 
 	// MinUploadChunkSize is the minimum chunk size that can be used for
 	// resumable uploads.  All user-specified chunk sizes must be multiple of
@@ -272,10 +268,6 @@ func ProcessMediaOptions(opts []MediaOption) *MediaOptions {
 // "http://www.golang.org/topics/myproject/mytopic". It strips all parent
 // references (e.g. ../..) as well as anything after the host
 // (e.g. /bar/gaz gets stripped out of foo.com/bar/gaz).
-<<<<<<< HEAD
-func ResolveRelative(basestr, relstr string) string {
-	u, _ := url.Parse(basestr)
-=======
 //
 // ResolveRelative panics if either basestr or relstr is not able to be parsed.
 func ResolveRelative(basestr, relstr string) string {
@@ -283,20 +275,15 @@ func ResolveRelative(basestr, relstr string) string {
 	if err != nil {
 		panic(fmt.Sprintf("failed to parse %q", basestr))
 	}
->>>>>>> main
 	afterColonPath := ""
 	if i := strings.IndexRune(relstr, ':'); i > 0 {
 		afterColonPath = relstr[i+1:]
 		relstr = relstr[:i]
 	}
-<<<<<<< HEAD
-	rel, _ := url.Parse(relstr)
-=======
 	rel, err := url.Parse(relstr)
 	if err != nil {
 		panic(fmt.Sprintf("failed to parse %q", relstr))
 	}
->>>>>>> main
 	u = u.ResolveReference(rel)
 	us := u.String()
 	if afterColonPath != "" {

@@ -12,10 +12,6 @@ import (
 	"net/http"
 	"sync"
 	"time"
-<<<<<<< HEAD:vendor/google.golang.org/api/gensupport/resumable.go
-)
-
-=======
 
 	gax "github.com/googleapis/gax-go/v2"
 )
@@ -36,7 +32,6 @@ var (
 	syscallRetryable func(error) bool = func(err error) bool { return false }
 )
 
->>>>>>> main:vendor/google.golang.org/api/internal/gensupport/resumable.go
 const (
 	// statusTooManyRequests is returned by the storage API if the
 	// per-project limits have been temporarily exceeded. The request
@@ -224,11 +219,6 @@ func (rx *ResumableUpload) Upload(ctx context.Context) (resp *http.Response, err
 		// If the chunk was uploaded successfully, but there's still
 		// more to go, upload the next chunk without any delay.
 		if statusResumeIncomplete(resp) {
-<<<<<<< HEAD:vendor/google.golang.org/api/gensupport/resumable.go
-			pause = 0
-			backoff.Reset()
-=======
->>>>>>> main:vendor/google.golang.org/api/internal/gensupport/resumable.go
 			resp.Body.Close()
 			continue
 		}

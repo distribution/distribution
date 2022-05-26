@@ -296,17 +296,12 @@ func (c *Client) getETag(suffix string) (value, etag string, err error) {
 		// being stable anyway.
 		host = metadataIP
 	}
-<<<<<<< HEAD
-	u := "http://" + host + "/computeMetadata/v1/" + suffix
-	req, _ := http.NewRequest("GET", u, nil)
-=======
 	suffix = strings.TrimLeft(suffix, "/")
 	u := "http://" + host + "/computeMetadata/v1/" + suffix
 	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
 		return "", "", err
 	}
->>>>>>> main
 	req.Header.Set("Metadata-Flavor", "Google")
 	req.Header.Set("User-Agent", userAgent)
 	res, err := c.hc.Do(req)

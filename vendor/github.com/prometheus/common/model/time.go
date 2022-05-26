@@ -203,19 +203,12 @@ func ParseDuration(durationStr string) (Duration, error) {
 
 	// Parse the match at pos `pos` in the regex and use `mult` to turn that
 	// into ms, then add that value to the total parsed duration.
-<<<<<<< HEAD
-=======
 	var overflowErr error
->>>>>>> main
 	m := func(pos int, mult time.Duration) {
 		if matches[pos] == "" {
 			return
 		}
 		n, _ := strconv.Atoi(matches[pos])
-<<<<<<< HEAD
-		d := time.Duration(n) * time.Millisecond
-		dur += d * mult
-=======
 
 		// Check if the provided duration overflows time.Duration (> ~ 290years).
 		if n > int((1<<63-1)/mult/time.Millisecond) {
@@ -227,7 +220,6 @@ func ParseDuration(durationStr string) (Duration, error) {
 		if dur < 0 {
 			overflowErr = errors.New("duration out of range")
 		}
->>>>>>> main
 	}
 
 	m(2, 1000*60*60*24*365) // y
@@ -238,11 +230,7 @@ func ParseDuration(durationStr string) (Duration, error) {
 	m(12, 1000)             // s
 	m(14, 1)                // ms
 
-<<<<<<< HEAD
-	return Duration(dur), nil
-=======
 	return Duration(dur), overflowErr
->>>>>>> main
 }
 
 func (d Duration) String() string {
@@ -253,31 +241,6 @@ func (d Duration) String() string {
 	if ms == 0 {
 		return "0s"
 	}
-<<<<<<< HEAD
-
-	f := func(unit string, mult int64, exact bool) {
-		if exact && ms%mult != 0 {
-			return
-		}
-		if v := ms / mult; v > 0 {
-			r += fmt.Sprintf("%d%s", v, unit)
-			ms -= v * mult
-		}
-	}
-
-	// Only format years and weeks if the remainder is zero, as it is often
-	// easier to read 90d than 12w6d.
-	f("y", 1000*60*60*24*365, true)
-	f("w", 1000*60*60*24*7, true)
-
-	f("d", 1000*60*60*24, false)
-	f("h", 1000*60*60, false)
-	f("m", 1000*60, false)
-	f("s", 1000, false)
-	f("ms", 1, false)
-
-	return r
-=======
 
 	f := func(unit string, mult int64, exact bool) {
 		if exact && ms%mult != 0 {
@@ -320,7 +283,6 @@ func (d *Duration) UnmarshalJSON(bytes []byte) error {
 	}
 	*d = dur
 	return nil
->>>>>>> main
 }
 
 // MarshalText implements the encoding.TextMarshaler interface.

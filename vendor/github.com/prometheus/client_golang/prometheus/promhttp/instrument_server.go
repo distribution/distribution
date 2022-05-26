@@ -45,14 +45,10 @@ func InstrumentHandlerInFlight(g prometheus.Gauge, next http.Handler) http.Handl
 // http.Handler to observe the request duration with the provided ObserverVec.
 // The ObserverVec must have valid metric and label names and must have zero,
 // one, or two non-const non-curried labels. For those, the only allowed label
-<<<<<<< HEAD
-// names are "code" and "method". The function panics otherwise. The Observe
-=======
 // names are "code" and "method". The function panics otherwise. For the "method"
 // label a predefined default label value set is used to filter given values.
 // Values besides predefined values will count as `unknown` method.
 //`WithExtraMethods` can be used to add more methods to the set. The Observe
->>>>>>> main
 // method of the Observer in the ObserverVec is called with the request duration
 // in seconds. Partitioning happens by HTTP status code and/or HTTP method if
 // the respective instance label names are present in the ObserverVec. For
@@ -94,14 +90,10 @@ func InstrumentHandlerDuration(obs prometheus.ObserverVec, next http.Handler, op
 // to observe the request result with the provided CounterVec. The CounterVec
 // must have valid metric and label names and must have zero, one, or two
 // non-const non-curried labels. For those, the only allowed label names are
-<<<<<<< HEAD
-// "code" and "method". The function panics otherwise. Partitioning of the
-=======
 // "code" and "method". The function panics otherwise. For the "method"
 // label a predefined default label value set is used to filter given values.
 // Values besides predefined values will count as `unknown` method.
 // `WithExtraMethods` can be used to add more methods to the set. Partitioning of the
->>>>>>> main
 // CounterVec happens by HTTP status code and/or HTTP method if the respective
 // instance label names are present in the CounterVec. For unpartitioned
 // counting, use a CounterVec with zero labels.
@@ -138,14 +130,10 @@ func InstrumentHandlerCounter(counter *prometheus.CounterVec, next http.Handler,
 // until the response headers are written. The ObserverVec must have valid
 // metric and label names and must have zero, one, or two non-const non-curried
 // labels. For those, the only allowed label names are "code" and "method". The
-<<<<<<< HEAD
-// function panics otherwise. The Observe method of the Observer in the
-=======
 // function panics otherwise. For the "method" label a predefined default label
 // value set is used to filter given values. Values besides predefined values
 // will count as `unknown` method.`WithExtraMethods` can be used to add more
 // methods to the set. The Observe method of the Observer in the
->>>>>>> main
 // ObserverVec is called with the request duration in seconds. Partitioning
 // happens by HTTP status code and/or HTTP method if the respective instance
 // label names are present in the ObserverVec. For unpartitioned observations,
@@ -180,16 +168,11 @@ func InstrumentHandlerTimeToWriteHeader(obs prometheus.ObserverVec, next http.Ha
 // http.Handler to observe the request size with the provided ObserverVec. The
 // ObserverVec must have valid metric and label names and must have zero, one,
 // or two non-const non-curried labels. For those, the only allowed label names
-<<<<<<< HEAD
-// are "code" and "method". The function panics otherwise. The Observe method of
-// the Observer in the ObserverVec is called with the request size in
-=======
 // are "code" and "method". The function panics otherwise. For the "method"
 // label a predefined default label value set is used to filter given values.
 // Values besides predefined values will count as `unknown` method.
 // `WithExtraMethods` can be used to add more methods to the set. The Observe
 // method of the Observer in the ObserverVec is called with the request size in
->>>>>>> main
 // bytes. Partitioning happens by HTTP status code and/or HTTP method if the
 // respective instance label names are present in the ObserverVec. For
 // unpartitioned observations, use an ObserverVec with zero labels. Note that
@@ -228,16 +211,11 @@ func InstrumentHandlerRequestSize(obs prometheus.ObserverVec, next http.Handler,
 // http.Handler to observe the response size with the provided ObserverVec. The
 // ObserverVec must have valid metric and label names and must have zero, one,
 // or two non-const non-curried labels. For those, the only allowed label names
-<<<<<<< HEAD
-// are "code" and "method". The function panics otherwise. The Observe method of
-// the Observer in the ObserverVec is called with the response size in
-=======
 // are "code" and "method". The function panics otherwise. For the "method"
 // label a predefined default label value set is used to filter given values.
 // Values besides predefined values will count as `unknown` method.
 // `WithExtraMethods` can be used to add more methods to the set. The Observe
 // method of the Observer in the ObserverVec is called with the response size in
->>>>>>> main
 // bytes. Partitioning happens by HTTP status code and/or HTTP method if the
 // respective instance label names are present in the ObserverVec. For
 // unpartitioned observations, use an ObserverVec with zero labels. Note that

@@ -1,31 +1,12 @@
-<<<<<<< HEAD
-// Copyright 2017 Google LLC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-=======
 // Copyright 2017 Google LLC.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
->>>>>>> main
 
 // Package internal supports the options and transport packages.
 package internal
 
 import (
-<<<<<<< HEAD
-=======
 	"crypto/tls"
->>>>>>> main
 	"errors"
 	"net/http"
 
@@ -37,21 +18,6 @@ import (
 // DialSettings holds information needed to establish a connection with a
 // Google API service.
 type DialSettings struct {
-<<<<<<< HEAD
-	Endpoint        string
-	Scopes          []string
-	TokenSource     oauth2.TokenSource
-	Credentials     *google.Credentials
-	CredentialsFile string // if set, Token Source is ignored.
-	CredentialsJSON []byte
-	UserAgent       string
-	APIKey          string
-	Audiences       []string
-	HTTPClient      *http.Client
-	GRPCDialOpts    []grpc.DialOption
-	GRPCConn        *grpc.ClientConn
-	NoAuth          bool
-=======
 	Endpoint            string
 	DefaultEndpoint     string
 	DefaultMTLSEndpoint string
@@ -73,7 +39,6 @@ type DialSettings struct {
 	ClientCertSource    func(*tls.CertificateRequestInfo) (*tls.Certificate, error)
 	CustomClaims        map[string]interface{}
 	SkipValidation      bool
->>>>>>> main
 
 	// Google API system parameters. For more information please read:
 	// https://cloud.google.com/apis/docs/system-parameters
@@ -83,12 +48,9 @@ type DialSettings struct {
 
 // Validate reports an error if ds is invalid.
 func (ds *DialSettings) Validate() error {
-<<<<<<< HEAD
-=======
 	if ds.SkipValidation {
 		return nil
 	}
->>>>>>> main
 	hasCreds := ds.APIKey != "" || ds.TokenSource != nil || ds.CredentialsFile != "" || ds.Credentials != nil
 	if ds.NoAuth && hasCreds {
 		return errors.New("options.WithoutAuthentication is incompatible with any option that provides credentials")
@@ -119,15 +81,12 @@ func (ds *DialSettings) Validate() error {
 	if nCreds > 1 && !(nCreds == 2 && ds.TokenSource != nil && ds.CredentialsFile != "") {
 		return errors.New("multiple credential options provided")
 	}
-<<<<<<< HEAD
-=======
 	if ds.GRPCConn != nil && ds.GRPCConnPool != nil {
 		return errors.New("WithGRPCConn is incompatible with WithConnPool")
 	}
 	if ds.HTTPClient != nil && ds.GRPCConnPool != nil {
 		return errors.New("WithHTTPClient is incompatible with WithConnPool")
 	}
->>>>>>> main
 	if ds.HTTPClient != nil && ds.GRPCConn != nil {
 		return errors.New("WithHTTPClient is incompatible with WithGRPCConn")
 	}
@@ -140,15 +99,12 @@ func (ds *DialSettings) Validate() error {
 	if ds.HTTPClient != nil && ds.RequestReason != "" {
 		return errors.New("WithHTTPClient is incompatible with RequestReason")
 	}
-<<<<<<< HEAD
-=======
 	if ds.HTTPClient != nil && ds.ClientCertSource != nil {
 		return errors.New("WithHTTPClient is incompatible with WithClientCertSource")
 	}
 	if ds.ClientCertSource != nil && (ds.GRPCConn != nil || ds.GRPCConnPool != nil || ds.GRPCConnPoolSize != 0 || ds.GRPCDialOpts != nil) {
 		return errors.New("WithClientCertSource is currently only supported for HTTP. gRPC settings are incompatible")
 	}
->>>>>>> main
 
 	return nil
 }

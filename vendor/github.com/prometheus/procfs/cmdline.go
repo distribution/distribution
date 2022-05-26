@@ -1,8 +1,4 @@
-<<<<<<< HEAD:vendor/github.com/prometheus/procfs/cpuinfo_armx.go
-// Copyright 2020 The Prometheus Authors
-=======
 // Copyright 2021 The Prometheus Authors
->>>>>>> main:vendor/github.com/prometheus/procfs/cmdline.go
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -15,14 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-<<<<<<< HEAD:vendor/github.com/prometheus/procfs/cpuinfo_armx.go
-// +build linux
-// +build arm arm64
-
-package procfs
-
-var parseCPUInfo = parseCPUInfoARM
-=======
 package procfs
 
 import (
@@ -40,4 +28,3 @@ func (fs FS) CmdLine() ([]string, error) {
 
 	return strings.Fields(string(data)), nil
 }
->>>>>>> main:vendor/github.com/prometheus/procfs/cmdline.go

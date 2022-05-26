@@ -90,11 +90,7 @@ func parseCgroups(data []byte) ([]Cgroup, error) {
 // control hierarchy running on this system. On every system (v1 and v2), all hierarchies contain all processes,
 // so the len of the returned struct is equal to the number of active hierarchies on this system
 func (p Proc) Cgroups() ([]Cgroup, error) {
-<<<<<<< HEAD
-	data, err := util.ReadFileNoStat(fmt.Sprintf("/proc/%d/cgroup", p.PID))
-=======
 	data, err := util.ReadFileNoStat(p.path("cgroup"))
->>>>>>> main
 	if err != nil {
 		return nil, err
 	}

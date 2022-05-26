@@ -1,22 +1,6 @@
-<<<<<<< HEAD
-// Copyright 2015 Google LLC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-=======
 // Copyright 2015 Google LLC.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
->>>>>>> main
 
 // Package http supports network connections to HTTP servers.
 // This package is not intended for use by end developers. Use the
@@ -25,10 +9,6 @@ package http
 
 import (
 	"context"
-<<<<<<< HEAD
-	"errors"
-	"net/http"
-=======
 	"crypto/tls"
 	"errors"
 	"net"
@@ -37,18 +17,12 @@ import (
 	"os"
 	"strings"
 	"time"
->>>>>>> main
 
 	"go.opencensus.io/plugin/ochttp"
 	"golang.org/x/oauth2"
 	"google.golang.org/api/googleapi/transport"
 	"google.golang.org/api/internal"
 	"google.golang.org/api/option"
-<<<<<<< HEAD
-	"google.golang.org/api/transport/http/internal/propagation"
-)
-
-=======
 	"google.golang.org/api/transport/cert"
 	"google.golang.org/api/transport/http/internal/propagation"
 )
@@ -59,7 +33,6 @@ const (
 	mTLSModeAuto   = "auto"
 )
 
->>>>>>> main
 // NewClient returns an HTTP client for use communicating with a Google cloud
 // service, configured with the given ClientOptions. It also returns the endpoint
 // for the service as specified in the options.
@@ -68,17 +41,6 @@ func NewClient(ctx context.Context, opts ...option.ClientOption) (*http.Client, 
 	if err != nil {
 		return nil, "", err
 	}
-<<<<<<< HEAD
-	// TODO(cbro): consider injecting the User-Agent even if an explicit HTTP client is provided?
-	if settings.HTTPClient != nil {
-		return settings.HTTPClient, settings.Endpoint, nil
-	}
-	trans, err := newTransport(ctx, defaultBaseTransport(ctx), settings)
-	if err != nil {
-		return nil, "", err
-	}
-	return &http.Client{Transport: trans}, settings.Endpoint, nil
-=======
 	clientCertSource, err := getClientCertificateSource(settings)
 	if err != nil {
 		return nil, "", err
@@ -96,7 +58,6 @@ func NewClient(ctx context.Context, opts ...option.ClientOption) (*http.Client, 
 		return nil, "", err
 	}
 	return &http.Client{Transport: trans}, endpoint, nil
->>>>>>> main
 }
 
 // NewTransport creates an http.RoundTripper for use communicating with a Google
@@ -113,24 +74,14 @@ func NewTransport(ctx context.Context, base http.RoundTripper, opts ...option.Cl
 }
 
 func newTransport(ctx context.Context, base http.RoundTripper, settings *internal.DialSettings) (http.RoundTripper, error) {
-<<<<<<< HEAD
-	trans := base
-	trans = parameterTransport{
-		base:          trans,
-=======
 	paramTransport := &parameterTransport{
 		base:          base,
->>>>>>> main
 		userAgent:     settings.UserAgent,
 		quotaProject:  settings.QuotaProject,
 		requestReason: settings.RequestReason,
 	}
-<<<<<<< HEAD
-	trans = addOCTransport(trans)
-=======
 	var trans http.RoundTripper = paramTransport
 	trans = addOCTransport(trans, settings)
->>>>>>> main
 	switch {
 	case settings.NoAuth:
 		// Do nothing.
@@ -144,11 +95,6 @@ func newTransport(ctx context.Context, base http.RoundTripper, settings *interna
 		if err != nil {
 			return nil, err
 		}
-<<<<<<< HEAD
-		trans = &oauth2.Transport{
-			Base:   trans,
-			Source: creds.TokenSource,
-=======
 		if paramTransport.quotaProject == "" {
 			paramTransport.quotaProject = internal.QuotaProjectFromCreds(creds)
 		}
@@ -160,7 +106,6 @@ func newTransport(ctx context.Context, base http.RoundTripper, settings *interna
 		trans = &oauth2.Transport{
 			Base:   trans,
 			Source: ts,
->>>>>>> main
 		}
 	}
 	return trans, nil
@@ -188,35 +133,20 @@ type parameterTransport struct {
 	base http.RoundTripper
 }
 
-<<<<<<< HEAD
-func (t parameterTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-=======
 func (t *parameterTransport) RoundTrip(req *http.Request) (*http.Response, error) {
->>>>>>> main
 	rt := t.base
 	if rt == nil {
 		return nil, errors.New("transport: no Transport specified")
 	}
-<<<<<<< HEAD
-	if t.userAgent == "" {
-		return rt.RoundTrip(req)
-	}
-=======
->>>>>>> main
 	newReq := *req
 	newReq.Header = make(http.Header)
 	for k, vv := range req.Header {
 		newReq.Header[k] = vv
 	}
-<<<<<<< HEAD
-	// TODO(cbro): append to existing User-Agent header?
-	newReq.Header.Set("User-Agent", t.userAgent)
-=======
 	if t.userAgent != "" {
 		// TODO(cbro): append to existing User-Agent header?
 		newReq.Header.Set("User-Agent", t.userAgent)
 	}
->>>>>>> main
 
 	// Attach system parameters into the header
 	if t.quotaProject != "" {
@@ -233,17 +163,6 @@ func (t *parameterTransport) RoundTrip(req *http.Request) (*http.Response, error
 var appengineUrlfetchHook func(context.Context) http.RoundTripper
 
 // defaultBaseTransport returns the base HTTP transport.
-<<<<<<< HEAD
-// On App Engine, this is urlfetch.Transport, otherwise it's http.DefaultTransport.
-func defaultBaseTransport(ctx context.Context) http.RoundTripper {
-	if appengineUrlfetchHook != nil {
-		return appengineUrlfetchHook(ctx)
-	}
-	return http.DefaultTransport
-}
-
-func addOCTransport(trans http.RoundTripper) http.RoundTripper {
-=======
 // On App Engine, this is urlfetch.Transport.
 // Otherwise, use a default transport, taking most defaults from
 // http.DefaultTransport.
@@ -294,14 +213,11 @@ func addOCTransport(trans http.RoundTripper, settings *internal.DialSettings) ht
 	if settings.TelemetryDisabled {
 		return trans
 	}
->>>>>>> main
 	return &ochttp.Transport{
 		Base:        trans,
 		Propagation: &propagation.HTTPFormat{},
 	}
 }
-<<<<<<< HEAD
-=======
 
 // getClientCertificateSource returns a default client certificate source, if
 // not provided by the user.
@@ -386,4 +302,3 @@ func mergeEndpoints(base, newHost string) (string, error) {
 	u.Host = newHost
 	return u.String(), nil
 }
->>>>>>> main

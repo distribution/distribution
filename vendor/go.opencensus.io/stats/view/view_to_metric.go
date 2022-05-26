@@ -119,7 +119,6 @@ func toLabelValues(row *Row, expectedKeys []metricdata.LabelKey) []metricdata.La
 	return labelValues
 }
 
-<<<<<<< HEAD
 func rowToTimeseries(v *viewInternal, row *Row, now time.Time) *metricdata.TimeSeries {
 	return &metricdata.TimeSeries{
 		Points:      []metricdata.Point{row.Data.toPoint(v.metricDescriptor.Type, now)},
@@ -129,22 +128,6 @@ func rowToTimeseries(v *viewInternal, row *Row, now time.Time) *metricdata.TimeS
 }
 
 func viewToMetric(v *viewInternal, r *resource.Resource, now time.Time) *metricdata.Metric {
-=======
-func rowToTimeseries(v *viewInternal, row *Row, now time.Time, startTime time.Time) *metricdata.TimeSeries {
-	return &metricdata.TimeSeries{
-		Points:      []metricdata.Point{row.Data.toPoint(v.metricDescriptor.Type, now)},
-		LabelValues: toLabelValues(row, v.metricDescriptor.LabelKeys),
-		StartTime:   startTime,
-	}
-}
-
-func viewToMetric(v *viewInternal, r *resource.Resource, now time.Time, startTime time.Time) *metricdata.Metric {
-	if v.metricDescriptor.Type == metricdata.TypeGaugeInt64 ||
-		v.metricDescriptor.Type == metricdata.TypeGaugeFloat64 {
-		startTime = time.Time{}
-	}
-
->>>>>>> main
 	rows := v.collectedRows()
 	if len(rows) == 0 {
 		return nil
@@ -152,11 +135,7 @@ func viewToMetric(v *viewInternal, r *resource.Resource, now time.Time, startTim
 
 	ts := []*metricdata.TimeSeries{}
 	for _, row := range rows {
-<<<<<<< HEAD
 		ts = append(ts, rowToTimeseries(v, row, now))
-=======
-		ts = append(ts, rowToTimeseries(v, row, now, startTime))
->>>>>>> main
 	}
 
 	m := &metricdata.Metric{

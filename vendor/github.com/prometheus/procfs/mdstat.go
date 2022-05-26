@@ -22,18 +22,12 @@ import (
 )
 
 var (
-<<<<<<< HEAD
-	statusLineRE      = regexp.MustCompile(`(\d+) blocks .*\[(\d+)/(\d+)\] \[[U_]+\]`)
-	recoveryLineRE    = regexp.MustCompile(`\((\d+)/\d+\)`)
-	componentDeviceRE = regexp.MustCompile(`(.*)\[\d+\]`)
-=======
 	statusLineRE         = regexp.MustCompile(`(\d+) blocks .*\[(\d+)/(\d+)\] \[([U_]+)\]`)
 	recoveryLineBlocksRE = regexp.MustCompile(`\((\d+)/\d+\)`)
 	recoveryLinePctRE    = regexp.MustCompile(`= (.+)%`)
 	recoveryLineFinishRE = regexp.MustCompile(`finish=(.+)min`)
 	recoveryLineSpeedRE  = regexp.MustCompile(`speed=(.+)[A-Z]`)
 	componentDeviceRE    = regexp.MustCompile(`(.*)\[\d+\]`)
->>>>>>> main
 )
 
 // MDStat holds info parsed from /proc/mdstat.
@@ -56,15 +50,12 @@ type MDStat struct {
 	BlocksTotal int64
 	// Number of blocks on the device that are in sync.
 	BlocksSynced int64
-<<<<<<< HEAD
-=======
 	// progress percentage of current sync
 	BlocksSyncedPct float64
 	// estimated finishing time for current sync (in minutes)
 	BlocksSyncedFinishTime float64
 	// current sync speed (in Kilobytes/sec)
 	BlocksSyncedSpeed float64
->>>>>>> main
 	// Name of md component devices
 	Devices []string
 }
@@ -155,17 +146,6 @@ func parseMDStat(mdStatData []byte) ([]MDStat, error) {
 		}
 
 		mdStats = append(mdStats, MDStat{
-<<<<<<< HEAD
-			Name:          mdName,
-			ActivityState: state,
-			DisksActive:   active,
-			DisksFailed:   fail,
-			DisksSpare:    spare,
-			DisksTotal:    total,
-			BlocksTotal:   size,
-			BlocksSynced:  syncedBlocks,
-			Devices:       evalComponentDevices(deviceFields),
-=======
 			Name:                   mdName,
 			ActivityState:          state,
 			DisksActive:            active,
@@ -179,7 +159,6 @@ func parseMDStat(mdStatData []byte) ([]MDStat, error) {
 			BlocksSyncedFinishTime: finish,
 			BlocksSyncedSpeed:      speed,
 			Devices:                evalComponentDevices(deviceFields),
->>>>>>> main
 		})
 	}
 
@@ -191,11 +170,7 @@ func evalStatusLine(deviceLine, statusLine string) (active, total, down, size in
 	sizeStr := strings.Fields(statusLine)[0]
 	size, err = strconv.ParseInt(sizeStr, 10, 64)
 	if err != nil {
-<<<<<<< HEAD
-		return 0, 0, 0, fmt.Errorf("unexpected statusLine %q: %w", statusLine, err)
-=======
 		return 0, 0, 0, 0, fmt.Errorf("unexpected statusLine %q: %w", statusLine, err)
->>>>>>> main
 	}
 
 	if strings.Contains(deviceLine, "raid0") || strings.Contains(deviceLine, "linear") {
@@ -215,20 +190,12 @@ func evalStatusLine(deviceLine, statusLine string) (active, total, down, size in
 
 	total, err = strconv.ParseInt(matches[2], 10, 64)
 	if err != nil {
-<<<<<<< HEAD
-		return 0, 0, 0, fmt.Errorf("unexpected statusLine %q: %w", statusLine, err)
-=======
 		return 0, 0, 0, 0, fmt.Errorf("unexpected statusLine %q: %w", statusLine, err)
->>>>>>> main
 	}
 
 	active, err = strconv.ParseInt(matches[3], 10, 64)
 	if err != nil {
-<<<<<<< HEAD
-		return 0, 0, 0, fmt.Errorf("unexpected statusLine %q: %w", statusLine, err)
-=======
 		return 0, 0, 0, 0, fmt.Errorf("unexpected statusLine %q: %w", statusLine, err)
->>>>>>> main
 	}
 	down = int64(strings.Count(matches[4], "_"))
 
@@ -243,11 +210,7 @@ func evalRecoveryLine(recoveryLine string) (syncedBlocks int64, pct float64, fin
 
 	syncedBlocks, err = strconv.ParseInt(matches[1], 10, 64)
 	if err != nil {
-<<<<<<< HEAD
-		return 0, fmt.Errorf("error parsing int from recoveryLine %q: %w", recoveryLine, err)
-=======
 		return 0, 0, 0, 0, fmt.Errorf("error parsing int from recoveryLine %q: %w", recoveryLine, err)
->>>>>>> main
 	}
 
 	// Get percentage complete
@@ -281,21 +244,6 @@ func evalRecoveryLine(recoveryLine string) (syncedBlocks int64, pct float64, fin
 	}
 
 	return syncedBlocks, pct, finish, speed, nil
-}
-
-func evalComponentDevices(deviceFields []string) []string {
-	mdComponentDevices := make([]string, 0)
-	if len(deviceFields) > 3 {
-		for _, field := range deviceFields[4:] {
-			match := componentDeviceRE.FindStringSubmatch(field)
-			if match == nil {
-				continue
-			}
-			mdComponentDevices = append(mdComponentDevices, match[1])
-		}
-	}
-
-	return mdComponentDevices
 }
 
 func evalComponentDevices(deviceFields []string) []string {

@@ -99,10 +99,6 @@ func parseZoneinfo(zoneinfoData []byte) ([]Zoneinfo, error) {
 				continue
 			}
 			if strings.HasPrefix(strings.TrimSpace(line), "per-node stats") {
-<<<<<<< HEAD
-				zoneinfoElement.Zone = ""
-=======
->>>>>>> main
 				continue
 			}
 			parts := strings.Fields(strings.TrimSpace(line))

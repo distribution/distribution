@@ -1,31 +1,12 @@
-<<<<<<< HEAD
-// Copyright 2017 Google LLC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-=======
 // Copyright 2017 Google LLC.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
->>>>>>> main
 
 // Package option contains options for Google API clients.
 package option
 
 import (
-<<<<<<< HEAD
-=======
 	"crypto/tls"
->>>>>>> main
 	"net/http"
 
 	"golang.org/x/oauth2"
@@ -134,11 +115,7 @@ func (w withHTTPClient) Apply(o *internal.DialSettings) {
 }
 
 // WithGRPCConn returns a ClientOption that specifies the gRPC client
-<<<<<<< HEAD
-// connection to use as the basis of communications. This option many only be
-=======
 // connection to use as the basis of communications. This option may only be
->>>>>>> main
 // used with services that support gRPC as their communication transport. When
 // used, the WithGRPCConn option takes precedent over all other supplied
 // options.
@@ -166,10 +143,7 @@ func (w withGRPCDialOption) Apply(o *internal.DialSettings) {
 
 // WithGRPCConnectionPool returns a ClientOption that creates a pool of gRPC
 // connections that requests will be balanced between.
-<<<<<<< HEAD
-=======
 //
->>>>>>> main
 // This is an EXPERIMENTAL API and may be changed or removed in the future.
 func WithGRPCConnectionPool(size int) ClientOption {
 	return withGRPCConnectionPool(size)
@@ -178,12 +152,7 @@ func WithGRPCConnectionPool(size int) ClientOption {
 type withGRPCConnectionPool int
 
 func (w withGRPCConnectionPool) Apply(o *internal.DialSettings) {
-<<<<<<< HEAD
-	balancer := grpc.RoundRobin(internal.NewPoolResolver(int(w), o))
-	o.GRPCDialOpts = append(o.GRPCDialOpts, grpc.WithBalancer(balancer))
-=======
 	o.GRPCConnPoolSize = int(w)
->>>>>>> main
 }
 
 // WithAPIKey returns a ClientOption that specifies an API key to be used
@@ -255,8 +224,6 @@ type withRequestReason string
 func (w withRequestReason) Apply(o *internal.DialSettings) {
 	o.RequestReason = string(w)
 }
-<<<<<<< HEAD
-=======
 
 // WithTelemetryDisabled returns a ClientOption that disables default telemetry (OpenCensus)
 // settings on gRPC and HTTP clients.
@@ -302,4 +269,3 @@ type withClientCertSource struct{ s ClientCertSource }
 func (w withClientCertSource) Apply(o *internal.DialSettings) {
 	o.ClientCertSource = w.s
 }
->>>>>>> main
