@@ -744,6 +744,12 @@ func (d decoder) skipValue() error {
 				// Skip items. This will not validate whether skipped values are
 				// of the same type or not, same behavior as C++
 				// TextFormat::Parser::AllowUnknownField(true) version 3.8.0.
+<<<<<<< HEAD
+=======
+				if err := d.skipValue(); err != nil {
+					return err
+				}
+>>>>>>> main
 			}
 		}
 	}

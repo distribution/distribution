@@ -35,7 +35,11 @@ type collector struct {
 func (c *collector) addSample(s string, v float64, attachments map[string]interface{}, t time.Time) {
 	aggregator, ok := c.signatures[s]
 	if !ok {
+<<<<<<< HEAD
 		aggregator = c.a.newData(t)
+=======
+		aggregator = c.a.newData()
+>>>>>>> main
 		c.signatures[s] = aggregator
 	}
 	aggregator.addSample(v, attachments, t)

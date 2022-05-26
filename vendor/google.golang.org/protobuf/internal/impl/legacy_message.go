@@ -440,6 +440,7 @@ func legacyMerge(in piface.MergeInput) piface.MergeOutput {
 	if !ok {
 		return piface.MergeOutput{}
 	}
+<<<<<<< HEAD
 	if !in.Source.IsValid() {
 		// Legacy Marshal methods may not function on nil messages.
 		// Check for a typed nil source only after we confirm that
@@ -447,6 +448,8 @@ func legacyMerge(in piface.MergeInput) piface.MergeOutput {
 		// consistency.
 		return piface.MergeOutput{Flags: piface.MergeComplete}
 	}
+=======
+>>>>>>> main
 	b, err := marshaler.Marshal()
 	if err != nil {
 		return piface.MergeOutput{}

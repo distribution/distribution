@@ -15,8 +15,11 @@
 
 package view
 
+<<<<<<< HEAD
 import "time"
 
+=======
+>>>>>>> main
 // AggType represents the type of aggregation function used on a View.
 type AggType int
 
@@ -47,20 +50,34 @@ type Aggregation struct {
 	Type    AggType   // Type is the AggType of this Aggregation.
 	Buckets []float64 // Buckets are the bucket endpoints if this Aggregation represents a distribution, see Distribution.
 
+<<<<<<< HEAD
 	newData func(time.Time) AggregationData
+=======
+	newData func() AggregationData
+>>>>>>> main
 }
 
 var (
 	aggCount = &Aggregation{
 		Type: AggTypeCount,
+<<<<<<< HEAD
 		newData: func(t time.Time) AggregationData {
 			return &CountData{Start: t}
+=======
+		newData: func() AggregationData {
+			return &CountData{}
+>>>>>>> main
 		},
 	}
 	aggSum = &Aggregation{
 		Type: AggTypeSum,
+<<<<<<< HEAD
 		newData: func(t time.Time) AggregationData {
 			return &SumData{Start: t}
+=======
+		newData: func() AggregationData {
+			return &SumData{}
+>>>>>>> main
 		},
 	}
 )
@@ -105,8 +122,13 @@ func Distribution(bounds ...float64) *Aggregation {
 		Type:    AggTypeDistribution,
 		Buckets: bounds,
 	}
+<<<<<<< HEAD
 	agg.newData = func(t time.Time) AggregationData {
 		return newDistributionData(agg, t)
+=======
+	agg.newData = func() AggregationData {
+		return newDistributionData(agg)
+>>>>>>> main
 	}
 	return agg
 }
@@ -116,7 +138,11 @@ func Distribution(bounds ...float64) *Aggregation {
 func LastValue() *Aggregation {
 	return &Aggregation{
 		Type: AggTypeLastValue,
+<<<<<<< HEAD
 		newData: func(_ time.Time) AggregationData {
+=======
+		newData: func() AggregationData {
+>>>>>>> main
 			return &LastValueData{}
 		},
 	}

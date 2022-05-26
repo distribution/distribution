@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Copyright 2017 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,6 +12,11 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+=======
+// Copyright 2017 Google LLC.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+>>>>>>> main
 
 package internal
 
@@ -100,3 +106,19 @@ func selfSignedJWTTokenSource(data []byte, endpoint string, audiences []string) 
 	}
 	return google.JWTAccessTokenSourceFromJSON(data, audience)
 }
+<<<<<<< HEAD
+=======
+
+// QuotaProjectFromCreds returns the quota project from the JSON blob in the provided credentials.
+//
+// NOTE(cbro): consider promoting this to a field on google.Credentials.
+func QuotaProjectFromCreds(cred *google.Credentials) string {
+	var v struct {
+		QuotaProject string `json:"quota_project_id"`
+	}
+	if err := json.Unmarshal(cred.JSON, &v); err != nil {
+		return ""
+	}
+	return v.QuotaProject
+}
+>>>>>>> main

@@ -49,6 +49,7 @@ type Attribute struct {
 	value interface{}
 }
 
+<<<<<<< HEAD
 // Key returns the attribute's key
 func (a *Attribute) Key() string {
 	return a.key
@@ -59,6 +60,8 @@ func (a *Attribute) Value() interface{} {
 	return a.value
 }
 
+=======
+>>>>>>> main
 // BoolAttribute returns a bool-valued attribute.
 func BoolAttribute(key string, value bool) Attribute {
 	return Attribute{key: key, value: value}
