@@ -26,8 +26,6 @@ require (
 	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3
 	golang.org/x/oauth2 v0.0.0-20210514164344-f6687ab2804c
 	google.golang.org/api v0.30.0
-	// when updating google.golang.org/cloud, update (or remove) the replace
-	// rule for google.golang.org/grpc accordingly.
 	google.golang.org/cloud v0.0.0-20151119220103-975617b05ea8
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15
 	gopkg.in/yaml.v2 v2.4.0
