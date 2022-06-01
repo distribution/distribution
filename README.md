@@ -1,6 +1,6 @@
-# Lighthouse, a decentralized fork of Distribution
+# Lighthouse, a Decentralized Docker Repository
 
-The toolset to pack, ship, store, and deliver content over IPFS / Filecoin.
+The toolset to pack, ship, store, and deliver container images over IPFS / Filecoin via Estuary.
 
 This repository's main product is the Open Source Registry implementation
 for storing and distributing container images using the
