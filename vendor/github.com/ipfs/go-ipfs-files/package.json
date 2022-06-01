@@ -1,0 +1,24 @@
+{
+  "author": "magik6k",
+  "bugs": {
+    "url": "https://github.com/ipfs/go-ipfs-files"
+  },
+  "gx": {
+    "dvcsimport": "github.com/ipfs/go-ipfs-files"
+  },
+  "gxDependencies": [
+    {
+      "author": "The Go Authors",
+      "hash": "QmVGjyM9i2msKvLXwh9VosCTgP4mL91kC7hDmqnwTTx6Hu",
+      "name": "sys",
+      "version": "0.2.0"
+    }
+  ],
+  "gxVersion": "0.11.0",
+  "language": "go",
+  "license": "",
+  "name": "go-ipfs-files",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "2.0.7"
+}
+

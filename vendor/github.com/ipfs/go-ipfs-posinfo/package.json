@@ -1,0 +1,24 @@
+{
+  "author": "hector",
+  "bugs": {
+    "url": "https://github.com/ipfs/go-ipfs-posinfo"
+  },
+  "gx": {
+    "dvcsimport": "github.com/ipfs/go-ipfs-posinfo"
+  },
+  "gxDependencies": [
+    {
+      "author": "whyrusleeping",
+      "hash": "QmZ6nzCLwGLVfRzYLpD7pW6UNuBDKEcA2imJtVpbEx2rxy",
+      "name": "go-ipld-format",
+      "version": "0.8.1"
+    }
+  ],
+  "gxVersion": "0.12.1",
+  "language": "go",
+  "license": "MIT",
+  "name": "go-ipfs-posinfo",
+  "releaseCmd": "git commit -a -m \"gx publish $VERSION\"",
+  "version": "0.1.5"
+}
+
