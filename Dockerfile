@@ -49,7 +49,7 @@ RUN --mount=from=binary,target=/build \
 FROM scratch AS artifact
 COPY --from=releaser /out /
 
-FROM alpine:3.15
+FROM alpine:3.16
 RUN apk add --no-cache ca-certificates
 COPY cmd/registry/config-dev.yml /etc/docker/registry/config.yml
 COPY --from=binary /registry /bin/registry
