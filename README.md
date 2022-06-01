@@ -1,4 +1,4 @@
-# Lighthouse, a Decentralized Docker Repository
+# Lighthouse, a Decentralized Docker Registry
 
 The toolset to pack, ship, store, and deliver container images over IPFS / Filecoin via Estuary.
 
