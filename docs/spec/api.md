@@ -266,7 +266,7 @@ are reported as part of 4xx responses, in a json response body. One or more
 errors will be returned in the following format:
 
     {
-        "errors:" [{
+        "errors": [{
                 "code": <error identifier>,
                 "message": <message describing condition>,
                 "detail": <unstructured>
