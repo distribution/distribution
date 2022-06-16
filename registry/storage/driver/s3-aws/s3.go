@@ -725,32 +725,31 @@ func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (sto
 
 // Stat retrieves the FileInfo for the given path, including the current size
 // in bytes and the creation time.
-func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
-	resp, err := d.S3.ListObjectsV2(&s3.ListObjectsV2Input{
-		Bucket:  aws.String(d.Bucket),
-		Prefix:  aws.String(d.s3Path(path)),
-		MaxKeys: aws.Int64(1),
+func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {	
+	
+	respHead, err := d.S3.HeadObject(&s3.HeadObjectInput{
+		Bucket:                aws.String(d.Bucket),
+		Key:                   aws.String(d.s3Path(path)),
 	})
 	if err != nil {
+		if aErr, ok := err.(awserr.RequestFailure); ok {
+			if aErr.StatusCode() == http.StatusNotFound{
+				return nil, storagedriver.PathNotFoundError{Path: path}
+			}
+		}
 		return nil, err
 	}
-
+	
 	fi := storagedriver.FileInfoFields{
 		Path: path,
 	}
-
-	if len(resp.Contents) == 1 {
-		if *resp.Contents[0].Key != d.s3Path(path) {
-			fi.IsDir = true
-		} else {
-			fi.IsDir = false
-			fi.Size = *resp.Contents[0].Size
-			fi.ModTime = *resp.Contents[0].LastModified
-		}
-	} else if len(resp.CommonPrefixes) == 1 {
+	
+	if respHead.LastModified == nil {
 		fi.IsDir = true
 	} else {
-		return nil, storagedriver.PathNotFoundError{Path: path}
+		fi.IsDir = false
+		fi.Size = *respHead.ContentLength
+		fi.ModTime = *respHead.LastModified
 	}
 
 	return storagedriver.FileInfoInternal{FileInfoFields: fi}, nil
