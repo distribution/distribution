@@ -51,7 +51,7 @@ COPY --from=releaser /out /
 
 FROM alpine:3.16
 RUN apk add --no-cache ca-certificates
-COPY cmd/registry/config-dev.yml /etc/docker/registry/config.yml
+COPY cmd/registry/config-lighthouse.yml /etc/docker/registry/config.yml
 COPY --from=binary /registry /bin/registry
 VOLUME ["/var/lib/registry"]
 EXPOSE 5000
