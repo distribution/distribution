@@ -14,9 +14,9 @@ storage:
     rootdirectory: /Users/satoshi/registries/estuary-prod
 
 http:
-  addr: :5005
-  headers:
-    X-Content-Type-Options: [nosniff]
+    addr: :5000
+    headers:
+        X-Content-Type-Options: [nosniff]
 health:
   storagedriver:
     enabled: true
