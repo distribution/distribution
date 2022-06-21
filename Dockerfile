@@ -50,9 +50,10 @@ FROM scratch AS artifact
 COPY --from=releaser /out /
 
 FROM alpine:3.16
+ARG ESTUARY_TOKEN
+CMD echo "token is: ${ESTUARY_TOKEN}"
 RUN apk add --no-cache ca-certificates
 COPY cmd/registry/config-lighthouse.yml /etc/docker/registry/config.yml
-CMD echo "token is: ${ESTUARY_TOKEN}"
 RUN sed -i 's/TOKEN_GOES_HERE/${ESTUARY_TOKEN}/' /etc/docker/registry/config.yml 
 COPY --from=binary /registry /bin/registry
 VOLUME ["/var/lib/registry"]
