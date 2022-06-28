@@ -345,7 +345,7 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 	logrus.SetLevel(logLevel(config.Log.Level))
 
 	formatter := config.Log.Formatter
-	if formatter == "" {
+	if formatter == "" { //just let the library use default on empty string.
 		formatter = "text" // default formatter
 	}
 
@@ -364,7 +364,7 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 			Formatter: &logrus.JSONFormatter{TimestampFormat: time.RFC3339Nano},
 		})
 	default:
-		// just let the library use default on empty string.
+		// unsupported formatter
 		if config.Log.Formatter != "" {
 			return ctx, fmt.Errorf("unsupported logging formatter: %q", config.Log.Formatter)
 		}
