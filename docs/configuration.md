@@ -1004,6 +1004,9 @@ accept event notifications.
 | `ignore`  |no| Events with these mediatypes or actions are not published to the endpoint. |
 
 #### `ignore`
+
+The `ignore` contains the media types or actions to ignore. Either `ignoredmediatypes` or `mediatypes` must be given.
+
 | Parameter | Required | Description                                           |
 |-----------|----------|-------------------------------------------------------|
 | `mediatypes` |no| A list of target media types to ignore. Events with these target media types are not published to the endpoint. |
