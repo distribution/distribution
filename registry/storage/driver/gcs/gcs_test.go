@@ -4,18 +4,20 @@
 package gcs
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
 
+	"cloud.google.com/go/storage"
 	dcontext "github.com/distribution/distribution/v3/context"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/testsuites"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/googleapi"
-	"google.golang.org/cloud/storage"
+	"google.golang.org/api/option"
 	"gopkg.in/check.v1"
 )
 
@@ -69,14 +71,21 @@ func init() {
 		ts = jwtConfig.TokenSource(dcontext.Background())
 	}
 
+	sClient, err := storage.NewClient(context.Background(), option.WithCredentialsJSON([]byte(credentials)))
+	if err != nil {
+		panic(err)
+	}
+
 	gcsDriverConstructor = func(rootDirectory string) (storagedriver.StorageDriver, error) {
 		parameters := driverParameters{
-			bucket:        bucket,
-			rootDirectory: root,
-			email:         email,
-			privateKey:    privateKey,
-			client:        oauth2.NewClient(dcontext.Background(), ts),
-			chunkSize:     defaultChunkSize,
+			bucket:         bucket,
+			rootDirectory:  root,
+			email:          email,
+			privateKey:     privateKey,
+			client:         oauth2.NewClient(dcontext.Background(), ts),
+			chunkSize:      defaultChunkSize,
+			sClient:        sClient,
+			maxConcurrency: uint64(8),
 		}
 
 		return New(parameters)

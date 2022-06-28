@@ -767,6 +767,10 @@ func TestMoveWithMultipartCopy(t *testing.T) {
 }
 
 func TestListObjectsV2(t *testing.T) {
+	if skipS3() != "" {
+		t.Skip(skipS3())
+	}
+
 	rootDir, err := ioutil.TempDir("", "driver-")
 	if err != nil {
 		t.Fatalf("unexpected error creating temporary directory: %v", err)

@@ -14,97 +14,45 @@ package cert
 
 import (
 	"crypto/tls"
-	"encoding/json"
 	"errors"
-	"fmt"
-	"io/ioutil"
-	"os"
-	"os/exec"
-	"os/user"
-	"path/filepath"
 	"sync"
 )
 
-const (
-	metadataPath = ".secureConnect"
-	metadataFile = "context_aware_metadata.json"
-)
+// defaultCertData holds all the variables pertaining to
+// the default certficate source created by DefaultSource.
+//
+// A singleton model is used to allow the source to be reused
+// by the transport layer.
+type defaultCertData struct {
+	once   sync.Once
+	source Source
+	err    error
+}
 
 var (
-	defaultSourceOnce sync.Once
-	defaultSource     Source
-	defaultSourceErr  error
+	defaultCert defaultCertData
 )
 
 // Source is a function that can be passed into crypto/tls.Config.GetClientCertificate.
 type Source func(*tls.CertificateRequestInfo) (*tls.Certificate, error)
 
-// DefaultSource returns a certificate source that execs the command specified
-// in the file at ~/.secureConnect/context_aware_metadata.json
+// errSourceUnavailable is a sentinel error to indicate certificate source is unavailable.
+var errSourceUnavailable = errors.New("certificate source is unavailable")
+
+// DefaultSource returns a certificate source using the preferred EnterpriseCertificateProxySource.
+// If EnterpriseCertificateProxySource is not available, fall back to the legacy SecureConnectSource.
 //
-// If that file does not exist, a nil source is returned.
+// If neither source is available (due to missing configurations), a nil Source and a nil Error are
+// returned to indicate that a default certificate source is unavailable.
 func DefaultSource() (Source, error) {
-	defaultSourceOnce.Do(func() {
-		defaultSource, defaultSourceErr = newSecureConnectSource()
+	defaultCert.once.Do(func() {
+		defaultCert.source, defaultCert.err = NewEnterpriseCertificateProxySource("")
+		if errors.Is(defaultCert.err, errSourceUnavailable) {
+			defaultCert.source, defaultCert.err = NewSecureConnectSource("")
+			if errors.Is(defaultCert.err, errSourceUnavailable) {
+				defaultCert.source, defaultCert.err = nil, nil
+			}
+		}
 	})
-	return defaultSource, defaultSourceErr
-}
-
-type secureConnectSource struct {
-	metadata secureConnectMetadata
-}
-
-type secureConnectMetadata struct {
-	Cmd []string `json:"cert_provider_command"`
-}
-
-// newSecureConnectSource creates a secureConnectSource by reading the well-known file.
-func newSecureConnectSource() (Source, error) {
-	user, err := user.Current()
-	if err != nil {
-		// Ignore.
-		return nil, nil
-	}
-	filename := filepath.Join(user.HomeDir, metadataPath, metadataFile)
-	file, err := ioutil.ReadFile(filename)
-	if os.IsNotExist(err) {
-		// Ignore.
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	var metadata secureConnectMetadata
-	if err := json.Unmarshal(file, &metadata); err != nil {
-		return nil, fmt.Errorf("cert: could not parse JSON in %q: %v", filename, err)
-	}
-	if err := validateMetadata(metadata); err != nil {
-		return nil, fmt.Errorf("cert: invalid config in %q: %v", filename, err)
-	}
-	return (&secureConnectSource{
-		metadata: metadata,
-	}).getClientCertificate, nil
-}
-
-func validateMetadata(metadata secureConnectMetadata) error {
-	if len(metadata.Cmd) == 0 {
-		return errors.New("empty cert_provider_command")
-	}
-	return nil
-}
-
-func (s *secureConnectSource) getClientCertificate(info *tls.CertificateRequestInfo) (*tls.Certificate, error) {
-	// TODO(cbro): consider caching valid certificates rather than exec'ing every time.
-	command := s.metadata.Cmd
-	data, err := exec.Command(command[0], command[1:]...).Output()
-	if err != nil {
-		// TODO(cbro): read stderr for error message? Might contain sensitive info.
-		return nil, err
-	}
-	cert, err := tls.X509KeyPair(data, data)
-	if err != nil {
-		return nil, err
-	}
-	return &cert, nil
+	return defaultCert.source, defaultCert.err
 }
