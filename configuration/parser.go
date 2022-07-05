@@ -138,7 +138,7 @@ func (p *Parser) Parse(in []byte, v interface{}) error {
 
 			err = p.overwriteFields(parseAs, pathStr, path[1:], envVar.value)
 			if err != nil {
-				return err
+				return fmt.Errorf("parsing environment variable %s: %v", pathStr, err)
 			}
 		}
 	}
@@ -206,7 +206,6 @@ func (p *Parser) overwriteStruct(v reflect.Value, fullpath string, path []string
 		fieldVal := reflect.New(sf.Type)
 		err := yaml.Unmarshal([]byte(payload), fieldVal.Interface())
 		if err != nil {
-			logrus.Warnf("Error parsing environment variable %s: %s", fullpath, err)
 			return err
 		}
 		field.Set(reflect.Indirect(fieldVal))
