@@ -119,7 +119,7 @@ type ManifestDescriptor struct {
 type ManifestList struct {
 	manifest.Versioned
 
-	// Config references the image configuration as a blob.
+	// Manifests references a list of manifests
 	Manifests []ManifestDescriptor `json:"manifests"`
 }
 
