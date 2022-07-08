@@ -10,8 +10,6 @@
 // Note that the contents of incomplete uploads are not accessible even though
 // Stat returns their length
 //
-//go:build include_gcs
-// +build include_gcs
 
 package gcs
 
