@@ -79,7 +79,8 @@ const (
 //
 //	Manifests:
 //
-//	manifestRevisionsPathSpec:      <root>/v2/repositories/<name>/_manifests/revisions/
+//	manifestsPathSpec:             <root>/v2/repositories/<name>/_manifests
+//	manifestRevisionsPathSpec:     <root>/v2/repositories/<name>/_manifests/revisions/
 //	manifestRevisionPathSpec:      <root>/v2/repositories/<name>/_manifests/revisions/<algorithm>/<hex digest>/
 //	manifestRevisionLinkPathSpec:  <root>/v2/repositories/<name>/_manifests/revisions/<algorithm>/<hex digest>/link
 //
@@ -129,6 +130,9 @@ func pathFor(spec pathSpec) (string, error) {
 	repoPrefix := append(rootPrefix, "repositories")
 
 	switch v := spec.(type) {
+
+	case manifestsPathSpec:
+		return path.Join(append(repoPrefix, v.name, "_manifests")...), nil
 
 	case manifestRevisionsPathSpec:
 		return path.Join(append(repoPrefix, v.name, "_manifests", "revisions")...), nil
@@ -255,6 +259,13 @@ func pathFor(spec pathSpec) (string, error) {
 type pathSpec interface {
 	pathSpec()
 }
+
+// manifestPathSpec describes the directory path for a manifest.
+type manifestsPathSpec struct {
+	name string
+}
+
+func (manifestsPathSpec) pathSpec() {}
 
 // manifestRevisionsPathSpec describes the directory path for
 // a manifest revision.

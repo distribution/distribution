@@ -1040,21 +1040,21 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 
 // Walk traverses a filesystem defined within driver, starting
 // from the given path, calling f on each file
-func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn) error {
-	var objectCount int64
-	if err := d.doWalk(ctx, &objectCount, from, f); err != nil {
-		return err
+func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn, options ...func(*storagedriver.WalkOptions)) error {
+	walkOptions := &storagedriver.WalkOptions{}
+	for _, o := range options {
+		o(walkOptions)
 	}
 
-	// S3 doesn't have the concept of empty directories, so it'll return path not found if there are no objects
-	if objectCount == 0 {
-		return storagedriver.PathNotFoundError{Path: from}
+	var objectCount int64
+	if err := d.doWalk(ctx, &objectCount, from, walkOptions.StartAfterHint, f); err != nil {
+		return err
 	}
 
 	return nil
 }
 
-func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, from string, f storagedriver.WalkFn) error {
+func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, from string, startAfter string, f storagedriver.WalkFn) error {
 	var (
 		retError error
 		// the most recent directory walked for de-duping
@@ -1075,13 +1075,14 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, from stri
 	}
 
 	listObjectsInput := &s3.ListObjectsV2Input{
-		Bucket:  aws.String(d.Bucket),
-		Prefix:  aws.String(d.s3Path(path)),
-		MaxKeys: aws.Int64(listMax),
+		Bucket:     aws.String(d.Bucket),
+		Prefix:     aws.String(d.s3Path(path)),
+		MaxKeys:    aws.Int64(listMax),
+		StartAfter: aws.String(d.s3Path(startAfter)),
 	}
 
 	ctx, done := dcontext.WithTrace(parentCtx)
-	defer done("s3aws.ListObjectsV2Pages(%s)", path)
+	defer done("s3aws.ListObjectsV2PagesWithContext(%s)", listObjectsInput)
 
 	// When the "delimiter" argument is omitted, the S3 list API will list all objects in the bucket
 	// recursively, omitting directory paths. Objects are listed in sorted, depth-first order so we
@@ -1133,11 +1134,10 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, from stri
 
 			if err != nil {
 				if err == storagedriver.ErrSkipDir {
-					if walkInfo.IsDir() {
-						prevSkipDir = walkInfo.Path()
-						continue
-					}
-					// is file, stop gracefully
+					prevSkipDir = walkInfo.Path()
+					continue
+				}
+				if err == storagedriver.ErrFilledBuffer {
 					return false
 				}
 				retError = err
@@ -1187,7 +1187,7 @@ func directoryDiff(prev, current string) []string {
 	parent := current
 	for {
 		parent = filepath.Dir(parent)
-		if parent == "/" || parent == prev || strings.HasPrefix(prev, parent) {
+		if parent == "/" || parent == prev || strings.HasPrefix(prev+"/", parent+"/") {
 			break
 		}
 		paths = append(paths, parent)

@@ -491,6 +491,7 @@ func TestWalk(t *testing.T) {
 
 	fileset := []string{
 		"/file1",
+		"/folder1-suffix/file1",
 		"/folder1/file1",
 		"/folder2/file1",
 		"/folder3/subfolder1/subfolder1/file1",
@@ -524,18 +525,23 @@ func TestWalk(t *testing.T) {
 		}
 	}()
 
+	noopFn := func(fileInfo storagedriver.FileInfo) error { return nil }
+
 	tcs := []struct {
 		name     string
 		fn       storagedriver.WalkFn
 		from     string
+		options  []func(*storagedriver.WalkOptions)
 		expected []string
 		err      bool
 	}{
 		{
 			name: "walk all",
-			fn:   func(fileInfo storagedriver.FileInfo) error { return nil },
+			fn:   noopFn,
 			expected: []string{
 				"/file1",
+				"/folder1-suffix",
+				"/folder1-suffix/file1",
 				"/folder1",
 				"/folder1/file1",
 				"/folder2",
@@ -564,6 +570,8 @@ func TestWalk(t *testing.T) {
 			},
 			expected: []string{
 				"/file1",
+				"/folder1-suffix",
+				"/folder1-suffix/file1",
 				"/folder1",
 				"/folder1/file1",
 				"/folder2",
@@ -575,21 +583,100 @@ func TestWalk(t *testing.T) {
 			},
 		},
 		{
+			name: "start late without from",
+			fn:   noopFn,
+			options: []func(*storagedriver.WalkOptions){
+				storagedriver.WithStartAfterHint("/folder3/subfolder1/subfolder1/file1"),
+			},
+			expected: []string{
+				// start late
+				"/folder3",
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+				"/folder4",
+				"/folder4/file1",
+			},
+			err: false,
+		},
+		{
+			name: "start late with from",
+			fn:   noopFn,
+			from: "/folder3",
+			options: []func(*storagedriver.WalkOptions){
+				storagedriver.WithStartAfterHint("/folder3/subfolder1/subfolder1/file1"),
+			},
+			expected: []string{
+				// start late
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+			},
+			err: false,
+		},
+		{
+			name: "start after from",
+			fn:   noopFn,
+			from: "/folder1",
+			options: []func(*storagedriver.WalkOptions){
+				storagedriver.WithStartAfterHint("/folder2"),
+			},
+			expected: []string{},
+			err:      false,
+		},
+		{
+			name: "start matches from",
+			fn:   noopFn,
+			from: "/folder3",
+			options: []func(*storagedriver.WalkOptions){
+				storagedriver.WithStartAfterHint("/folder3"),
+			},
+			expected: []string{
+				"/folder3/subfolder1",
+				"/folder3/subfolder1/subfolder1",
+				"/folder3/subfolder1/subfolder1/file1",
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+			},
+			err: false,
+		},
+		{
+			name: "start doesn't exist",
+			fn:   noopFn,
+			from: "/folder3",
+			options: []func(*storagedriver.WalkOptions){
+				storagedriver.WithStartAfterHint("/folder3/notafolder/notafile"),
+			},
+			expected: []string{
+				"/folder3/subfolder1",
+				"/folder3/subfolder1/subfolder1",
+				"/folder3/subfolder1/subfolder1/file1",
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+			},
+			err: false,
+		},
+		{
 			name: "stop early",
 			fn: func(fileInfo storagedriver.FileInfo) error {
 				if fileInfo.Path() == "/folder1/file1" {
-					return storagedriver.ErrSkipDir
+					return storagedriver.ErrFilledBuffer
 				}
 				return nil
 			},
 			expected: []string{
 				"/file1",
+				"/folder1-suffix",
+				"/folder1-suffix/file1",
 				"/folder1",
 				"/folder1/file1",
 				// stop early
 			},
 			err: false,
 		},
+
 		{
 			name: "error",
 			fn: func(fileInfo storagedriver.FileInfo) error {
@@ -602,7 +689,7 @@ func TestWalk(t *testing.T) {
 		},
 		{
 			name: "from folder",
-			fn:   func(fileInfo storagedriver.FileInfo) error { return nil },
+			fn:   noopFn,
 			expected: []string{
 				"/folder1/file1",
 			},
@@ -619,7 +706,7 @@ func TestWalk(t *testing.T) {
 			err := drvr.Walk(context.Background(), tc.from, func(fileInfo storagedriver.FileInfo) error {
 				walked = append(walked, fileInfo.Path())
 				return tc.fn(fileInfo)
-			})
+			}, tc.options...)
 			if tc.err && err == nil {
 				t.Fatalf("expected err")
 			}
