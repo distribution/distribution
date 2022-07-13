@@ -923,7 +923,7 @@ to access proxy statistics. These statistics are exposed at `/debug/vars` in JSO
 
 ## `prometheus`
 
-The `prometheus` option defines whether the prometheus metrics is enable, as well
+The `prometheus` option defines whether the prometheus metrics are enabled, as well
 as the path to access the metrics.
 
 >**NOTE**: The prometheus metrics do **not** cover pull-through cache statistics.
