@@ -15,6 +15,7 @@ require (
 	github.com/gomodule/redigo v1.8.2
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
+	github.com/hashicorp/golang-lru v0.5.4
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/ncw/swift v1.0.47
 	github.com/opencontainers/go-digest v1.0.0

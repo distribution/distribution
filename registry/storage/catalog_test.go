@@ -26,7 +26,7 @@ type setupEnv struct {
 func setupFS(t *testing.T) *setupEnv {
 	d := inmemory.New()
 	ctx := context.Background()
-	registry, err := NewRegistry(ctx, d, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableRedirect, EnableSchema1)
+	registry, err := NewRegistry(ctx, d, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableRedirect, EnableSchema1)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -207,7 +207,7 @@ func testEq(a, b []string, size int) bool {
 func setupBadWalkEnv(t *testing.T) *setupEnv {
 	d := newBadListDriver()
 	ctx := context.Background()
-	registry, err := NewRegistry(ctx, d, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableRedirect, EnableSchema1)
+	registry, err := NewRegistry(ctx, d, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableRedirect, EnableSchema1)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}

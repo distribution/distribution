@@ -59,7 +59,7 @@ func TestManifestStorage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	testManifestStorage(t, true, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect, Schema1SigningKey(k), EnableSchema1)
+	testManifestStorage(t, true, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect, Schema1SigningKey(k), EnableSchema1)
 }
 
 func TestManifestStorageV1Unsupported(t *testing.T) {
@@ -67,7 +67,7 @@ func TestManifestStorageV1Unsupported(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	testManifestStorage(t, false, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect, Schema1SigningKey(k))
+	testManifestStorage(t, false, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect, Schema1SigningKey(k))
 }
 
 func testManifestStorage(t *testing.T, schema1Enabled bool, options ...RegistryOption) {
@@ -357,7 +357,7 @@ func testManifestStorage(t *testing.T, schema1Enabled bool, options ...RegistryO
 		t.Errorf("Deleted manifest get returned non-nil")
 	}
 
-	r, err := NewRegistry(ctx, env.driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableRedirect)
+	r, err := NewRegistry(ctx, env.driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -393,7 +393,7 @@ func testOCIManifestStorage(t *testing.T, testname string, includeMediaTypes boo
 
 	repoName, _ := reference.WithName("foo/bar")
 	env := newManifestStoreTestEnv(t, repoName, "thetag",
-		BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()),
+		BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)),
 		EnableDelete, EnableRedirect)
 
 	ctx := context.Background()

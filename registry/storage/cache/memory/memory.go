@@ -2,26 +2,46 @@ package memory
 
 import (
 	"context"
-	"sync"
+	"math"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/storage/cache"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/opencontainers/go-digest"
 )
 
+const (
+	// DefaultSize is the default cache size to use if no size is explicitly
+	// configured.
+	DefaultSize = 10000
+
+	// UnlimitedSize indicates the cache size should not be limited.
+	UnlimitedSize = math.MaxInt
+)
+
+type descriptorCacheKey struct {
+	digest digest.Digest
+	repo   string
+}
+
 type inMemoryBlobDescriptorCacheProvider struct {
-	global       *mapBlobDescriptorCache
-	repositories map[string]*mapBlobDescriptorCache
-	mu           sync.RWMutex
+	lru *lru.ARCCache
 }
 
 // NewInMemoryBlobDescriptorCacheProvider returns a new mapped-based cache for
 // storing blob descriptor data.
-func NewInMemoryBlobDescriptorCacheProvider() cache.BlobDescriptorCacheProvider {
+func NewInMemoryBlobDescriptorCacheProvider(size int) cache.BlobDescriptorCacheProvider {
+	if size <= 0 {
+		size = math.MaxInt
+	}
+	lruCache, err := lru.NewARC(size)
+	if err != nil {
+		// NewARC can only fail if size is <= 0, so this unreachable
+		panic(err)
+	}
 	return &inMemoryBlobDescriptorCacheProvider{
-		global:       newMapBlobDescriptorCache(),
-		repositories: make(map[string]*mapBlobDescriptorCache),
+		lru: lruCache,
 	}
 }
 
@@ -30,39 +50,63 @@ func (imbdcp *inMemoryBlobDescriptorCacheProvider) RepositoryScoped(repo string)
 		return nil, err
 	}
 
-	imbdcp.mu.RLock()
-	defer imbdcp.mu.RUnlock()
-
 	return &repositoryScopedInMemoryBlobDescriptorCache{
-		repo:       repo,
-		parent:     imbdcp,
-		repository: imbdcp.repositories[repo],
+		repo:   repo,
+		parent: imbdcp,
 	}, nil
 }
 
 func (imbdcp *inMemoryBlobDescriptorCacheProvider) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
-	return imbdcp.global.Stat(ctx, dgst)
+	if err := dgst.Validate(); err != nil {
+		return distribution.Descriptor{}, err
+	}
+
+	key := descriptorCacheKey{
+		digest: dgst,
+	}
+	descriptor, ok := imbdcp.lru.Get(key)
+	if ok {
+		// Type assertion not really necessary, but included in case
+		// it's necessary for the fuzzer
+		if desc, ok := descriptor.(distribution.Descriptor); ok {
+			return desc, nil
+		}
+	}
+	return distribution.Descriptor{}, distribution.ErrBlobUnknown
 }
 
 func (imbdcp *inMemoryBlobDescriptorCacheProvider) Clear(ctx context.Context, dgst digest.Digest) error {
-	return imbdcp.global.Clear(ctx, dgst)
+	key := descriptorCacheKey{
+		digest: dgst,
+	}
+	imbdcp.lru.Remove(key)
+	return nil
 }
 
 func (imbdcp *inMemoryBlobDescriptorCacheProvider) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
 	_, err := imbdcp.Stat(ctx, dgst)
 	if err == distribution.ErrBlobUnknown {
-
 		if dgst.Algorithm() != desc.Digest.Algorithm() && dgst != desc.Digest {
 			// if the digests differ, set the other canonical mapping
-			if err := imbdcp.global.SetDescriptor(ctx, desc.Digest, desc); err != nil {
+			if err := imbdcp.SetDescriptor(ctx, desc.Digest, desc); err != nil {
 				return err
 			}
 		}
 
-		// unknown, just set it
-		return imbdcp.global.SetDescriptor(ctx, dgst, desc)
-	}
+		if err := dgst.Validate(); err != nil {
+			return err
+		}
 
+		if err := cache.ValidateDescriptor(desc); err != nil {
+			return err
+		}
+
+		key := descriptorCacheKey{
+			digest: dgst,
+		}
+		imbdcp.lru.Add(key, desc)
+		return nil
+	}
 	// we already know it, do nothing
 	return err
 }
@@ -71,98 +115,40 @@ func (imbdcp *inMemoryBlobDescriptorCacheProvider) SetDescriptor(ctx context.Con
 // repository cache. Instances are not thread-safe but the delegated
 // operations are.
 type repositoryScopedInMemoryBlobDescriptorCache struct {
-	repo       string
-	parent     *inMemoryBlobDescriptorCacheProvider // allows lazy allocation of repo's map
-	repository *mapBlobDescriptorCache
+	repo   string
+	parent *inMemoryBlobDescriptorCacheProvider // allows lazy allocation of repo's map
 }
 
 func (rsimbdcp *repositoryScopedInMemoryBlobDescriptorCache) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
-	rsimbdcp.parent.mu.Lock()
-	repo := rsimbdcp.repository
-	rsimbdcp.parent.mu.Unlock()
-
-	if repo == nil {
-		return distribution.Descriptor{}, distribution.ErrBlobUnknown
-	}
-
-	return repo.Stat(ctx, dgst)
-}
-
-func (rsimbdcp *repositoryScopedInMemoryBlobDescriptorCache) Clear(ctx context.Context, dgst digest.Digest) error {
-	rsimbdcp.parent.mu.Lock()
-	repo := rsimbdcp.repository
-	rsimbdcp.parent.mu.Unlock()
-
-	if repo == nil {
-		return distribution.ErrBlobUnknown
-	}
-
-	return repo.Clear(ctx, dgst)
-}
-
-func (rsimbdcp *repositoryScopedInMemoryBlobDescriptorCache) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
-	rsimbdcp.parent.mu.Lock()
-	repo := rsimbdcp.repository
-	if repo == nil {
-		// allocate map since we are setting it now.
-		var ok bool
-		// have to read back value since we may have allocated elsewhere.
-		repo, ok = rsimbdcp.parent.repositories[rsimbdcp.repo]
-		if !ok {
-			repo = newMapBlobDescriptorCache()
-			rsimbdcp.parent.repositories[rsimbdcp.repo] = repo
-		}
-		rsimbdcp.repository = repo
-	}
-	rsimbdcp.parent.mu.Unlock()
-
-	if err := repo.SetDescriptor(ctx, dgst, desc); err != nil {
-		return err
-	}
-
-	return rsimbdcp.parent.SetDescriptor(ctx, dgst, desc)
-}
-
-// mapBlobDescriptorCache provides a simple map-based implementation of the
-// descriptor cache.
-type mapBlobDescriptorCache struct {
-	descriptors map[digest.Digest]distribution.Descriptor
-	mu          sync.RWMutex
-}
-
-var _ distribution.BlobDescriptorService = &mapBlobDescriptorCache{}
-
-func newMapBlobDescriptorCache() *mapBlobDescriptorCache {
-	return &mapBlobDescriptorCache{
-		descriptors: make(map[digest.Digest]distribution.Descriptor),
-	}
-}
-
-func (mbdc *mapBlobDescriptorCache) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
 	if err := dgst.Validate(); err != nil {
 		return distribution.Descriptor{}, err
 	}
 
-	mbdc.mu.RLock()
-	defer mbdc.mu.RUnlock()
-
-	desc, ok := mbdc.descriptors[dgst]
-	if !ok {
-		return distribution.Descriptor{}, distribution.ErrBlobUnknown
+	key := descriptorCacheKey{
+		digest: dgst,
+		repo:   rsimbdcp.repo,
 	}
-
-	return desc, nil
+	descriptor, ok := rsimbdcp.parent.lru.Get(key)
+	if ok {
+		// Type assertion not really necessary, but included in case
+		// it's necessary for the fuzzer
+		if desc, ok := descriptor.(distribution.Descriptor); ok {
+			return desc, nil
+		}
+	}
+	return distribution.Descriptor{}, distribution.ErrBlobUnknown
 }
 
-func (mbdc *mapBlobDescriptorCache) Clear(ctx context.Context, dgst digest.Digest) error {
-	mbdc.mu.Lock()
-	defer mbdc.mu.Unlock()
-
-	delete(mbdc.descriptors, dgst)
+func (rsimbdcp *repositoryScopedInMemoryBlobDescriptorCache) Clear(ctx context.Context, dgst digest.Digest) error {
+	key := descriptorCacheKey{
+		digest: dgst,
+		repo:   rsimbdcp.repo,
+	}
+	rsimbdcp.parent.lru.Remove(key)
 	return nil
 }
 
-func (mbdc *mapBlobDescriptorCache) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
+func (rsimbdcp *repositoryScopedInMemoryBlobDescriptorCache) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
 	if err := dgst.Validate(); err != nil {
 		return err
 	}
@@ -171,9 +157,10 @@ func (mbdc *mapBlobDescriptorCache) SetDescriptor(ctx context.Context, dgst dige
 		return err
 	}
 
-	mbdc.mu.Lock()
-	defer mbdc.mu.Unlock()
-
-	mbdc.descriptors[dgst] = desc
-	return nil
+	key := descriptorCacheKey{
+		digest: dgst,
+		repo:   rsimbdcp.repo,
+	}
+	rsimbdcp.parent.lru.Add(key, desc)
+	return rsimbdcp.parent.SetDescriptor(ctx, dgst, desc)
 }

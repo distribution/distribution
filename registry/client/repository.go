@@ -172,7 +172,7 @@ func (r *repository) Blobs(ctx context.Context) distribution.BlobStore {
 		name:    r.name,
 		ub:      r.ub,
 		client:  r.client,
-		statter: cache.NewCachedBlobStatter(memory.NewInMemoryBlobDescriptorCacheProvider(), statter),
+		statter: cache.NewCachedBlobStatter(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize), statter),
 	}
 }
 
