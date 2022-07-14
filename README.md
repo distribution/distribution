@@ -1,5 +1,13 @@
 # Lighthouse, a Decentralized Docker Registry
 
+tlwr;
+```
+$ docker tag example/helloworld ipcr.io/helloworld:v1
+$ docker push ipcr.io/helloworld:v1
+...
+$ docker pull ipcr.io/helloworld:v1
+```
+
 The toolset to pack, ship, store, and deliver container images over IPFS / Filecoin via Estuary.
 
 This repository's main product is the Open Source Registry implementation
@@ -86,8 +94,8 @@ INFO[0000] listening on [::]:5005                        go.version=go1.17.3 ins
 
     Tag and push
     ```
-    $ docker tag example/helloworld 127.0.0.1:5005/helloworld:v1
-    $ docker push 127.0.0.1:5005/helloworld:v1
+    $ docker tag example/helloworld ipcr.io/helloworld:v1
+    $ docker push ipcr.io/helloworld:v1
     The push refers to repository [127.0.0.1:5005/helloworld]
     eb6b01329ebe: Pushed 
     v1: digest: sha256:8c061639004b9506a38e11fad10ce1a6270207e80c4a50858fa22cd2c115b955 size: 526
@@ -95,7 +103,7 @@ INFO[0000] listening on [::]:5005                        go.version=go1.17.3 ins
     
 - Pull image from lighthouse registry
     ```bash
-    $ docker pull 127.0.0.1:5005/helloworld:v1
+    $ docker pull ipcr.io/helloworld:v1
     v1: Pulling from helloworld
     Digest: sha256:8c061639004b9506a38e11fad10ce1a6270207e80c4a50858fa22cd2c115b955
     Status: Image is up to date for 127.0.0.1:5005/helloworld:v1
@@ -104,7 +112,7 @@ INFO[0000] listening on [::]:5005                        go.version=go1.17.3 ins
 - Run image pulled from Lighthouse:
 
     ```bash
-    $ docker run 127.0.0.1:5005/helloworld:v1
+    $ docker run ipcr.io/helloworld:v1
     hello world
     ```
 
