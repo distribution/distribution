@@ -1,4 +1,4 @@
-# Lighthouse, a Decentralized Docker Registry
+# Interplanetary Container Registry
 
 tlwr;
 ```
