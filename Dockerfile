@@ -24,11 +24,11 @@ ARG TARGETPLATFORM
 ARG LDFLAGS="-s -w"
 ARG BUILDTAGS="include_oss include_gcs"
 RUN --mount=type=bind,target=/go/src/github.com/docker/distribution,rw \
-  --mount=type=cache,target=/root/.cache/go-build \
-  --mount=target=/go/pkg/mod,type=cache \
-  --mount=type=bind,source=/tmp/.ldflags,target=/tmp/.ldflags,from=version \
-  set -x ; xx-go build -trimpath -ldflags "$(cat /tmp/.ldflags) ${LDFLAGS}" -o /usr/bin/registry ./cmd/registry \
-  && xx-verify --static /usr/bin/registry
+    --mount=type=cache,target=/root/.cache/go-build \
+    --mount=target=/go/pkg/mod,type=cache \
+    --mount=type=bind,source=/tmp/.ldflags,target=/tmp/.ldflags,from=version \
+      set -x ; xx-go build -trimpath -ldflags "$(cat /tmp/.ldflags) ${LDFLAGS}" -o /usr/bin/registry ./cmd/registry \
+      && xx-verify --static /usr/bin/registry
 
 FROM scratch AS binary
 COPY --from=build /usr/bin/registry /
@@ -39,13 +39,13 @@ ARG TARGETARCH
 ARG TARGETVARIANT
 WORKDIR /work
 RUN --mount=from=binary,target=/build \
-  --mount=type=bind,target=/src \
-  --mount=type=bind,source=/tmp/.version,target=/tmp/.version,from=version \
-  VERSION=$(cat /tmp/.version) \
-  && mkdir -p /out \
-  && cp /build/registry /src/README.md /src/LICENSE . \
-  && tar -czvf "/out/registry_${VERSION#v}_${TARGETOS}_${TARGETARCH}${TARGETVARIANT}.tar.tgz" * \
-  && sha256sum -z "/out/registry_${VERSION#v}_${TARGETOS}_${TARGETARCH}${TARGETVARIANT}.tar.tgz" | awk '{ print $1 }' > "/out/registry_${VERSION#v}_${TARGETOS}_${TARGETARCH}${TARGETVARIANT}.tar.tgz.sha256"
+    --mount=type=bind,target=/src \
+    --mount=type=bind,source=/tmp/.version,target=/tmp/.version,from=version \
+      VERSION=$(cat /tmp/.version) \
+      && mkdir -p /out \
+      && cp /build/registry /src/README.md /src/LICENSE . \
+      && tar -czvf "/out/registry_${VERSION#v}_${TARGETOS}_${TARGETARCH}${TARGETVARIANT}.tar.tgz" * \
+      && sha256sum -z "/out/registry_${VERSION#v}_${TARGETOS}_${TARGETARCH}${TARGETVARIANT}.tar.tgz" | awk '{ print $1 }' > "/out/registry_${VERSION#v}_${TARGETOS}_${TARGETARCH}${TARGETVARIANT}.tar.tgz.sha256"
 
 FROM scratch AS artifact
 COPY --from=releaser /out /
