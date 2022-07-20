@@ -38,7 +38,7 @@ BINARIES=$(addprefix bin/,$(COMMANDS))
 TESTFLAGS ?= -v $(TESTFLAGS_RACE)
 TESTFLAGS_PARALLEL ?= 8
 
-.PHONY: all build binaries clean test test-race test-full integration coverage validate lint validate-vendor vendor mod-outdated
+.PHONY: all build binaries clean test test-race test-full integration coverage validate lint validate-git validate-vendor vendor mod-outdated
 .DEFAULT: all
 
 all: binaries
@@ -101,6 +101,9 @@ validate: ## run all validators
 	docker buildx bake $@
 
 lint: ## run all linters
+	docker buildx bake $@
+
+validate-git: ## validate git
 	docker buildx bake $@
 
 validate-vendor: ## validate vendor

@@ -3,11 +3,24 @@ group "default" {
 }
 
 group "validate" {
-  targets = ["lint", "validate-vendor"]
+  targets = ["lint", "validate-git", "validate-vendor"]
 }
 
 target "lint" {
   dockerfile = "./dockerfiles/lint.Dockerfile"
+  output = ["type=cacheonly"]
+}
+
+variable "COMMIT_RANGE" {
+  default = ""
+}
+target "validate-git" {
+  dockerfile = "./dockerfiles/git.Dockerfile"
+  target = "validate"
+  args = {
+    COMMIT_RANGE = COMMIT_RANGE
+    BUILDKIT_CONTEXT_KEEP_GIT_DIR = 1
+  }
   output = ["type=cacheonly"]
 }
 
