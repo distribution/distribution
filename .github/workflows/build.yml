@@ -95,3 +95,11 @@ jobs:
             bin/*.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      -
+        name: GitHub Release Commenter
+        uses: apexskier/github-release-commenter@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          comment-template: |
+            Released {release_link}
