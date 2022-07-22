@@ -11,7 +11,7 @@ storage:
     url: https://api.estuary.tech
     shuttle-url: https://shuttle-4.estuary.tech
     auth-token: TOKEN_GOES_HERE
-    # rootdirectory: /Users/satoshi/registries/estuary-prod
+    rootdirectory: /var/lib/registry
 
 http:
     addr: :5000
