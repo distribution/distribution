@@ -20,7 +20,7 @@ import (
 
 const (
 	driverName           = "estuary"
-	defaultRootDirectory = "/var/lib/estuary"
+	defaultRootDirectory = "/var/lib/registry"
 	defaultBaseUrl       = "https://api.estuary.tech"
 	defaultShuttleUrl    = "https://shuttle-4.estuary.tech"
 	defaultMaxThreads    = uint64(100)
