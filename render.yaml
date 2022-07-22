@@ -1,0 +1,8 @@
+services:
+  - type: pserv
+    name: ipcr
+    env: docker
+    disk:
+      name: data
+      mountPath: /var/lib/registry
+      sizeGB: 10
