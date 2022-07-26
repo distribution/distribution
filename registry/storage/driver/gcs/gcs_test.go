@@ -8,13 +8,14 @@ import (
 	"os"
 	"testing"
 
+	"cloud.google.com/go/storage"
 	dcontext "github.com/distribution/distribution/v3/context"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/testsuites"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 	"google.golang.org/api/googleapi"
-	"google.golang.org/cloud/storage"
+	"google.golang.org/api/option"
 	"gopkg.in/check.v1"
 )
 
@@ -42,6 +43,11 @@ func init() {
 		return
 	}
 
+	jsonKey, err := os.ReadFile(credentials)
+	if err != nil {
+		panic(fmt.Sprintf("Error reading JSON key : %v", err))
+	}
+
 	root, err := os.MkdirTemp("", "driver-")
 	if err != nil {
 		panic(err)
@@ -55,7 +61,7 @@ func init() {
 	if err != nil {
 		// Assume that the file contents are within the environment variable since it exists
 		// but does not contain a valid file path
-		jwtConfig, err := google.JWTConfigFromJSON([]byte(credentials), storage.ScopeFullControl)
+		jwtConfig, err := google.JWTConfigFromJSON(jsonKey, storage.ScopeFullControl)
 		if err != nil {
 			panic(fmt.Sprintf("Error reading JWT config : %s", err))
 		}
@@ -70,14 +76,21 @@ func init() {
 		ts = jwtConfig.TokenSource(dcontext.Background())
 	}
 
+	gcs, err := storage.NewClient(dcontext.Background(), option.WithCredentialsJSON(jsonKey))
+	if err != nil {
+		panic(fmt.Sprintf("Error initializing gcs client : %v", err))
+	}
+
 	gcsDriverConstructor = func(rootDirectory string) (storagedriver.StorageDriver, error) {
 		parameters := driverParameters{
-			bucket:        bucket,
-			rootDirectory: root,
-			email:         email,
-			privateKey:    privateKey,
-			client:        oauth2.NewClient(dcontext.Background(), ts),
-			chunkSize:     defaultChunkSize,
+			bucket:         bucket,
+			rootDirectory:  root,
+			email:          email,
+			privateKey:     privateKey,
+			client:         oauth2.NewClient(dcontext.Background(), ts),
+			chunkSize:      defaultChunkSize,
+			gcs:            gcs,
+			maxConcurrency: 8,
 		}
 
 		return New(parameters)
