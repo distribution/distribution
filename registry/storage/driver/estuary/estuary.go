@@ -27,8 +27,7 @@ const (
 	defaultGatewayPattern = "https://api.estuary.tech/gw/ipfs/%s"
 
 	// minThreads is the minimum value for the maxthreads configuration
-	// parameter. If the driver's parameters are less than
-	// this we set the parameters to minThreads
+	// parameter. If the driver's parameters are less than this we set the parameters to minThreads
 	minThreads = uint64(25)
 )
 
