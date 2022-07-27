@@ -21,7 +21,7 @@ Project, and VMware Harbor Registry.
 
 <img src="lighthouse-components.png" />
 
-### Build and Run lighthouse registry
+### Build and Run IPCR registry
 
 1. Build the binary
 
@@ -101,7 +101,7 @@ INFO[0000] listening on [::]:5005                        go.version=go1.17.3 ins
     v1: digest: sha256:8c061639004b9506a38e11fad10ce1a6270207e80c4a50858fa22cd2c115b955 size: 526
     ```
     
-- Pull image from lighthouse registry
+- Pull image from IPCR registry
     ```bash
     $ docker pull ipcr.io/helloworld:v1
     v1: Pulling from helloworld
@@ -109,7 +109,7 @@ INFO[0000] listening on [::]:5005                        go.version=go1.17.3 ins
     Status: Image is up to date for 127.0.0.1:5005/helloworld:v1
     ```
 
-- Run image pulled from Lighthouse:
+- Run image pulled from IPCR:
 
     ```bash
     $ docker run ipcr.io/helloworld:v1
@@ -118,7 +118,7 @@ INFO[0000] listening on [::]:5005                        go.version=go1.17.3 ins
 
 ### Transferring images from dockerhub to registry
 
-Included is a helper script to move all tagged images from dockerhub, quay.io, etc. to the lighthouse
+Included is a helper script to move all tagged images from dockerhub, quay.io, etc. to the IPCR
 decentralized registry.
 
 Below is an example call to pull and transfer all tagged alpine images
