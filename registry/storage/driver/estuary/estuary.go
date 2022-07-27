@@ -19,11 +19,12 @@ import (
 )
 
 const (
-	driverName           = "estuary"
-	defaultRootDirectory = "/var/lib/registry"
-	defaultBaseUrl       = "https://api.estuary.tech"
-	defaultShuttleUrl    = "https://shuttle-4.estuary.tech"
-	defaultMaxThreads    = uint64(100)
+	driverName            = "estuary"
+	defaultRootDirectory  = "/var/lib/registry"
+	defaultBaseUrl        = "https://api.estuary.tech"
+	defaultShuttleUrl     = "https://shuttle-4.estuary.tech"
+	defaultMaxThreads     = uint64(100)
+	defaultGatewayPattern = "https://api.estuary.tech/gw/ipfs/%s"
 
 	// minThreads is the minimum value for the maxthreads configuration
 	// parameter. If the driver's parameters are less than this we set
@@ -34,11 +35,12 @@ const (
 // DriverParameters represents all configuration options available for the
 // estuary driver
 type DriverParameters struct {
-	RootDirectory string
-	MaxThreads    uint64
-	AuthToken     string
-	BaseUrl       string
-	ShuttleUrl    string
+	RootDirectory  string
+	MaxThreads     uint64
+	AuthToken      string
+	BaseUrl        string
+	ShuttleUrl     string
+	GatewayPattern string
 }
 
 func init() {
@@ -53,10 +55,11 @@ func (factory *estuaryDriverFactory) Create(parameters map[string]interface{}) (
 }
 
 type driver struct {
-	rootDirectory string
-	authToken     string
-	baseUrl       string
-	client        *EstuaryClient
+	rootDirectory  string
+	authToken      string
+	baseUrl        string
+	gatewayPattern string
+	client         *EstuaryClient
 }
 
 type baseEmbed struct {
@@ -83,12 +86,13 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 
 func fromParametersImpl(parameters map[string]interface{}) (*DriverParameters, error) {
 	var (
-		err           error
-		maxThreads    = defaultMaxThreads
-		rootDirectory = defaultRootDirectory
-		authToken     = ""
-		baseUrl       = defaultBaseUrl
-		shuttleUrl    = defaultShuttleUrl
+		err            error
+		maxThreads     = defaultMaxThreads
+		rootDirectory  = defaultRootDirectory
+		authToken      = ""
+		baseUrl        = defaultBaseUrl
+		shuttleUrl     = defaultShuttleUrl
+		gatewayPattern = defaultGatewayPattern
 	)
 
 	if parameters != nil {
@@ -112,14 +116,19 @@ func fromParametersImpl(parameters map[string]interface{}) (*DriverParameters, e
 		if url, ok := parameters["shuttle-url"]; ok {
 			shuttleUrl = fmt.Sprint(url)
 		}
+
+		if url, ok := parameters["gateway-pattern"]; ok {
+			gatewayPattern = fmt.Sprint(url)
+		}
 	}
 
 	params := &DriverParameters{
-		RootDirectory: rootDirectory,
-		MaxThreads:    maxThreads,
-		AuthToken:     authToken,
-		BaseUrl:       baseUrl,
-		ShuttleUrl:    shuttleUrl,
+		RootDirectory:  rootDirectory,
+		MaxThreads:     maxThreads,
+		AuthToken:      authToken,
+		BaseUrl:        baseUrl,
+		ShuttleUrl:     shuttleUrl,
+		GatewayPattern: gatewayPattern,
 	}
 	return params, nil
 }
@@ -129,10 +138,11 @@ func New(params DriverParameters) *Driver {
 	client := NewEstuaryClient(params.BaseUrl, params.ShuttleUrl, params.AuthToken)
 
 	fsDriver := &driver{
-		rootDirectory: params.RootDirectory,
-		authToken:     params.AuthToken,
-		baseUrl:       params.BaseUrl,
-		client:        client,
+		rootDirectory:  params.RootDirectory,
+		authToken:      params.AuthToken,
+		baseUrl:        params.BaseUrl,
+		gatewayPattern: params.GatewayPattern,
+		client:         client,
 	}
 
 	return &Driver{
@@ -199,7 +209,7 @@ func (d *driver) Reader(ctx context.Context, inPath string, offset int64) (io.Re
 		if err != nil {
 			return nil, err
 		}
-		url := fmt.Sprintf("https://%s.ipfs.dweb.link", cidHash)
+		url := fmt.Sprintf(d.gatewayPattern, cidHash)
 		fmt.Println(url)
 
 		resp, err := http.Get(url)
@@ -364,7 +374,7 @@ func (d *driver) URLFor(ctx context.Context, subPath string, options map[string]
 	if err != nil {
 		return "", err
 	}
-	url := fmt.Sprintf("https://%s.ipfs.dweb.link", cidHash)
+	url := fmt.Sprintf(d.gatewayPattern, cidHash)
 	fmt.Println(url)
 	return url, nil
 }
