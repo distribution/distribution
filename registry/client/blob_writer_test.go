@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
@@ -126,6 +127,7 @@ func TestUploadReadFrom(t *testing.T) {
 	defer c()
 
 	blobUpload := &httpBlobUpload{
+		ctx:    context.Background(),
 		client: &http.Client{},
 	}
 
@@ -265,6 +267,7 @@ func TestUploadSize(t *testing.T) {
 
 	// Writing with ReadFrom
 	blobUpload := &httpBlobUpload{
+		ctx:      context.Background(),
 		client:   &http.Client{},
 		location: e + readFromLocationPath,
 	}
@@ -284,6 +287,7 @@ func TestUploadSize(t *testing.T) {
 
 	// Writing with Write
 	blobUpload = &httpBlobUpload{
+		ctx:      context.Background(),
 		client:   &http.Client{},
 		location: e + writeLocationPath,
 	}
@@ -409,6 +413,7 @@ func TestUploadWrite(t *testing.T) {
 	defer c()
 
 	blobUpload := &httpBlobUpload{
+		ctx:    context.Background(),
 		client: &http.Client{},
 	}
 

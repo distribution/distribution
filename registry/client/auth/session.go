@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -258,7 +259,7 @@ func (th *tokenHandler) AuthorizeRequest(req *http.Request, params map[string]st
 		}.String())
 	}
 
-	token, err := th.getToken(params, additionalScopes...)
+	token, err := th.getToken(req.Context(), params, additionalScopes...)
 	if err != nil {
 		return err
 	}
@@ -268,7 +269,7 @@ func (th *tokenHandler) AuthorizeRequest(req *http.Request, params map[string]st
 	return nil
 }
 
-func (th *tokenHandler) getToken(params map[string]string, additionalScopes ...string) (string, error) {
+func (th *tokenHandler) getToken(ctx context.Context, params map[string]string, additionalScopes ...string) (string, error) {
 	th.tokenLock.Lock()
 	defer th.tokenLock.Unlock()
 	scopes := make([]string, 0, len(th.scopes)+len(additionalScopes))
@@ -286,7 +287,7 @@ func (th *tokenHandler) getToken(params map[string]string, additionalScopes ...s
 
 	now := th.clock.Now()
 	if now.After(th.tokenExpiration) || addedScopes {
-		token, expiration, err := th.fetchToken(params, scopes)
+		token, expiration, err := th.fetchToken(ctx, params, scopes)
 		if err != nil {
 			return "", err
 		}
@@ -320,7 +321,7 @@ type postTokenResponse struct {
 	Scope        string    `json:"scope"`
 }
 
-func (th *tokenHandler) fetchTokenWithOAuth(realm *url.URL, refreshToken, service string, scopes []string) (token string, expiration time.Time, err error) {
+func (th *tokenHandler) fetchTokenWithOAuth(ctx context.Context, realm *url.URL, refreshToken, service string, scopes []string) (token string, expiration time.Time, err error) {
 	form := url.Values{}
 	form.Set("scope", strings.Join(scopes, " "))
 	form.Set("service", service)
@@ -348,7 +349,12 @@ func (th *tokenHandler) fetchTokenWithOAuth(realm *url.URL, refreshToken, servic
 		return "", time.Time{}, fmt.Errorf("no supported grant type")
 	}
 
-	resp, err := th.client().PostForm(realm.String(), form)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, realm.String(), strings.NewReader(form.Encode()))
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := th.client().Do(req)
 	if err != nil {
 		return "", time.Time{}, err
 	}
@@ -396,9 +402,8 @@ type getTokenResponse struct {
 	RefreshToken string    `json:"refresh_token"`
 }
 
-func (th *tokenHandler) fetchTokenWithBasicAuth(realm *url.URL, service string, scopes []string) (token string, expiration time.Time, err error) {
-
-	req, err := http.NewRequest("GET", realm.String(), nil)
+func (th *tokenHandler) fetchTokenWithBasicAuth(ctx context.Context, realm *url.URL, service string, scopes []string) (token string, expiration time.Time, err error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, realm.String(), nil)
 	if err != nil {
 		return "", time.Time{}, err
 	}
@@ -479,7 +484,7 @@ func (th *tokenHandler) fetchTokenWithBasicAuth(realm *url.URL, service string, 
 	return tr.Token, tr.IssuedAt.Add(time.Duration(tr.ExpiresIn) * time.Second), nil
 }
 
-func (th *tokenHandler) fetchToken(params map[string]string, scopes []string) (token string, expiration time.Time, err error) {
+func (th *tokenHandler) fetchToken(ctx context.Context, params map[string]string, scopes []string) (token string, expiration time.Time, err error) {
 	realm, ok := params["realm"]
 	if !ok {
 		return "", time.Time{}, errors.New("no realm specified for token auth challenge")
@@ -500,10 +505,10 @@ func (th *tokenHandler) fetchToken(params map[string]string, scopes []string) (t
 	}
 
 	if refreshToken != "" || th.forceOAuth {
-		return th.fetchTokenWithOAuth(realmURL, refreshToken, service, scopes)
+		return th.fetchTokenWithOAuth(ctx, realmURL, refreshToken, service, scopes)
 	}
 
-	return th.fetchTokenWithBasicAuth(realmURL, service, scopes)
+	return th.fetchTokenWithBasicAuth(ctx, realmURL, service, scopes)
 }
 
 type basicHandler struct {
