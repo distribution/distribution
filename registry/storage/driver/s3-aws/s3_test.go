@@ -13,8 +13,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/check.v1"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 
@@ -23,13 +21,8 @@ import (
 	"github.com/distribution/distribution/v3/registry/storage/driver/testsuites"
 )
 
-// Hook up gocheck into the "go test" runner.
-func Test(t *testing.T) { check.TestingT(t) }
-
-var (
-	s3DriverConstructor func(rootDirectory, storageClass string) (*Driver, error)
-	skipS3              func() string
-)
+var s3DriverConstructor func(rootDirectory, storageClass string) (*Driver, error)
+var skipS3 func() string
 
 func init() {
 	var (
