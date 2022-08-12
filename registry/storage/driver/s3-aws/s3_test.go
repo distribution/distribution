@@ -229,7 +229,9 @@ func TestStorageClass(t *testing.T) {
 		}
 		defer resp.Body.Close()
 		// Amazon only populates this header value for non-standard storage classes
-		if storageClass == s3.StorageClassStandard && resp.StorageClass != nil {
+		if storageClass == noStorageClass {
+			// We haven't specified a storage class so we can't confirm what it is
+		} else if storageClass == s3.StorageClassStandard && resp.StorageClass != nil {
 			t.Fatalf(
 				"unexpected response storage class for file with storage class %v: %v",
 				storageClass,
