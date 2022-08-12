@@ -604,7 +604,6 @@ func TestWalk(t *testing.T) {
 			name: "from folder",
 			fn:   func(fileInfo storagedriver.FileInfo) error { return nil },
 			expected: []string{
-				"/folder1",
 				"/folder1/file1",
 			},
 			from: "/folder1",
