@@ -213,6 +213,11 @@ func TestStorageClass(t *testing.T) {
 			t.Fatalf("unexpected error creating driver with storage class %v: %v", storageClass, err)
 		}
 
+		// Can only test outposts if using s3 outposts
+		if storageClass == s3.StorageClassOutposts {
+			continue
+		}
+
 		err = s3Driver.PutContent(ctx, filename, contents)
 		if err != nil {
 			t.Fatalf("unexpected error creating content with storage class %v: %v", storageClass, err)
