@@ -118,9 +118,7 @@ func (r *registry) Repositories(ctx context.Context, entries []string, last stri
 			return 0, err
 		}
 
-		for cnt := range ctlg.Repositories {
-			entries[cnt] = ctlg.Repositories[cnt]
-		}
+		copy(entries, ctlg.Repositories)
 		numFilled = len(ctlg.Repositories)
 
 		link := resp.Header.Get("Link")
@@ -373,7 +371,7 @@ func (t *tags) Untag(ctx context.Context, tag string) error {
 		return err
 	}
 
-	req, err := http.NewRequest("DELETE", u, nil)
+	req, err := http.NewRequestWithContext(ctx, "DELETE", u, nil)
 	if err != nil {
 		return err
 	}
@@ -792,7 +790,7 @@ func (bs *blobs) Create(ctx context.Context, options ...distribution.BlobCreateO
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", u, nil)
+	req, err := http.NewRequestWithContext(ctx, "POST", u, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -827,6 +825,7 @@ func (bs *blobs) Create(ctx context.Context, options ...distribution.BlobCreateO
 		}
 
 		return &httpBlobUpload{
+			ctx:       ctx,
 			statter:   bs.statter,
 			client:    bs.client,
 			uuid:      uuid,
@@ -845,6 +844,7 @@ func (bs *blobs) Resume(ctx context.Context, id string) (distribution.BlobWriter
 	}
 
 	return &httpBlobUpload{
+		ctx:       ctx,
 		statter:   bs.statter,
 		client:    bs.client,
 		uuid:      id,
