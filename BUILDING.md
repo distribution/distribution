@@ -115,3 +115,12 @@ the registry binary generated in the "./bin" directory:
 
 Optional [build tags](http://golang.org/pkg/go/build/) can be provided using
 the environment variable `DOCKER_BUILDTAGS`.
+
+<dl>
+<dt>noresumabledigest</dt>
+<dd>Compiles without resumable digest support</dd>
+<dt>include_gcs</dt>
+<dd>Adds support for <a href="https://cloud.google.com/storage">Google Cloud Storage</a></dd>
+<dt>include_oss</dt>
+<dd>Adds support for <a href="https://www.alibabacloud.com/product/object-storage-service">Alibaba Cloud Object Storage Service (OSS)</a></dd>
+</dl>
