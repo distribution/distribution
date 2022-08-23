@@ -762,8 +762,9 @@ func WithMountFrom(ref reference.Canonical) distribution.BlobCreateOption {
 			return fmt.Errorf("unexpected options type: %T", v)
 		}
 
-		opts.Mount.ShouldMount = true
-		opts.Mount.From = ref
+		opts.Mount = distribution.FromMount{
+			From: ref,
+		}
 
 		return nil
 	})
@@ -781,8 +782,14 @@ func (bs *blobs) Create(ctx context.Context, options ...distribution.BlobCreateO
 
 	var values []url.Values
 
-	if opts.Mount.ShouldMount {
-		values = append(values, url.Values{"from": {opts.Mount.From.Name()}, "mount": {opts.Mount.From.Digest().String()}})
+	switch v := opts.Mount.(type) {
+	case distribution.FromMount:
+		values = append(values, url.Values{"from": {v.From.Name()}, "mount": {v.Digest().String()}})
+	case distribution.DigestMount:
+		values = append(values, url.Values{"mount": {v.Digest().String()}})
+	case nil:
+	default:
+		return nil, fmt.Errorf("Unknown mount type: %T", v)
 	}
 
 	u, err := bs.ub.BuildBlobUploadURL(bs.name, values...)
@@ -803,11 +810,20 @@ func (bs *blobs) Create(ctx context.Context, options ...distribution.BlobCreateO
 
 	switch resp.StatusCode {
 	case http.StatusCreated:
-		desc, err := bs.statter.Stat(ctx, opts.Mount.From.Digest())
+		desc, err := bs.statter.Stat(ctx, opts.Mount.Digest())
 		if err != nil {
 			return nil, err
 		}
-		return nil, distribution.ErrBlobMounted{From: opts.Mount.From, Descriptor: desc}
+
+		switch v := opts.Mount.(type) {
+		case distribution.FromMount:
+			return nil, distribution.ErrBlobMountedFrom{ErrBlobMounted: distribution.ErrBlobMounted{Descriptor: desc}, From: v.From}
+		case distribution.DigestMount:
+			// We shouldn't expose the from.
+			return nil, distribution.ErrBlobMounted{Descriptor: desc}
+		default:
+			panic("Unexpected state")
+		}
 	case http.StatusAccepted:
 		// TODO(dmcgowan): Check for invalid UUID
 		uuid := resp.Header.Get("Docker-Upload-UUID")

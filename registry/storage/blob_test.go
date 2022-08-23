@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"path"
 	"reflect"
 	"testing"
@@ -356,103 +358,182 @@ func TestSimpleBlobRead(t *testing.T) {
 	}
 }
 
-// TestBlobMount covers the blob mount process, exercising common
-// error paths that might be seen during a mount.
-func TestBlobMount(t *testing.T) {
-	randomDataReader, dgst, err := testutil.CreateRandomTarFile()
+type source struct {
+	digest     digest.Digest
+	imageName  reference.Named
+	repository distribution.Repository
+	blobs      distribution.BlobStore
+	desc       distribution.Descriptor
+}
+
+func createSource(ctx context.Context, t *testing.T, registry distribution.Namespace) *source {
+	reader, digest, err := testutil.CreateRandomTarFile()
 	if err != nil {
 		t.Fatalf("error creating random reader: %v", err)
 	}
 
-	ctx := context.Background()
-	imageName, _ := reference.WithName("foo/bar")
-	sourceImageName, _ := reference.WithName("foo/source")
-	driver := testdriver.New()
-	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
-	if err != nil {
-		t.Fatalf("error creating registry: %v", err)
-	}
+	imageName, _ := reference.WithName(fmt.Sprintf("foo/source-%d", rand.Int()))
 
 	repository, err := registry.Repository(ctx, imageName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
 	}
-	sourceRepository, err := registry.Repository(ctx, sourceImageName)
-	if err != nil {
-		t.Fatalf("unexpected error getting repo: %v", err)
-	}
 
-	sbs := sourceRepository.Blobs(ctx)
+	blobs := repository.Blobs(ctx)
 
-	blobUpload, err := sbs.Create(ctx)
-
+	upload, err := blobs.Create(ctx)
 	if err != nil {
 		t.Fatalf("unexpected error starting layer upload: %s", err)
 	}
 
 	// Get the size of our random tarfile
-	randomDataSize, err := seekerSize(randomDataReader)
+	randomDataSize, err := seekerSize(reader)
 	if err != nil {
 		t.Fatalf("error getting seeker size of random data: %v", err)
 	}
 
-	_, err = io.Copy(blobUpload, randomDataReader)
+	_, err = io.Copy(upload, reader)
 	if err != nil {
 		t.Fatalf("unexpected error uploading layer data: %v", err)
 	}
 
-	desc, err := blobUpload.Commit(ctx, distribution.Descriptor{Digest: dgst})
+	desc, err := upload.Commit(ctx, distribution.Descriptor{Digest: digest})
 	if err != nil {
 		t.Fatalf("unexpected error finishing layer upload: %v", err)
 	}
 
+	if desc.Size != randomDataSize {
+		t.Fatalf("Committed data size %d does not match uploaded expected data size %d", desc.Size, randomDataSize)
+	}
+
+	if desc.Digest != digest {
+		t.Fatalf("Committed digest %s does not match expected digest %s", desc.Digest, digest)
+	}
+
 	// Test for existence.
-	statDesc, err := sbs.Stat(ctx, desc.Digest)
+	statDesc, err := blobs.Stat(ctx, desc.Digest)
 	if err != nil {
-		t.Fatalf("unexpected error checking for existence: %v, %#v", err, sbs)
+		t.Fatalf("unexpected error checking for existence: %v, %#v", err, blobs)
 	}
 
 	if !reflect.DeepEqual(statDesc, desc) {
 		t.Fatalf("descriptors not equal: %v != %v", statDesc, desc)
 	}
 
-	bs := repository.Blobs(ctx)
-	// Test destination for existence.
-	_, err = bs.Stat(ctx, desc.Digest)
-	if err == nil {
-		t.Fatalf("unexpected non-error stating unmounted blob: %v", desc)
+	return &source{
+		digest:     digest,
+		imageName:  imageName,
+		repository: repository,
+		blobs:      blobs,
+		desc:       desc,
+	}
+}
+
+func TestBlobMountAutomaticContentDiscovery(t *testing.T) {
+	t.Run("testBlobMountAutomaticContent", func(t *testing.T) {
+		testBlobMountAutomaticContentDiscovery(t, false)
+	})
+	t.Run("testBlobMountAutomaticContentDiscoveryEnabled", func(t *testing.T) {
+		testBlobMountAutomaticContentDiscovery(t, true)
+	})
+}
+
+// testBlobMountAutomaticContentDiscovery covers the blob mount process, exercising common
+// error paths that might be seen during a mount.
+func testBlobMountAutomaticContentDiscovery(t *testing.T, enableAutomaticContentDiscovery bool) {
+	ctx := context.Background()
+
+	driver := testdriver.New()
+	var registry distribution.Namespace
+	var err error
+	if enableAutomaticContentDiscovery {
+		registry, err = NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect, EnableAutomaticContentDiscovery)
+	} else {
+		registry, err = NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
+	}
+	if err != nil {
+		t.Fatalf("error creating registry: %v", err)
 	}
 
-	canonicalRef, err := reference.WithDigest(sourceRepository.Named(), desc.Digest)
+	source := createSource(ctx, t, registry)
+	source2 := createSource(ctx, t, registry)
+	canonicalRef, err := reference.WithDigest(source.repository.Named(), source.desc.Digest)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	bw, err := bs.Create(ctx, WithMountFrom(canonicalRef))
+	imageName, _ := reference.WithName("foo/bar")
+	repository, err := registry.Repository(ctx, imageName)
+	if err != nil {
+		t.Fatalf("unexpected error getting repo: %v", err)
+	}
+	bs := repository.Blobs(ctx)
+
+	var bw distribution.BlobWriter
+	if enableAutomaticContentDiscovery {
+		bw, err = bs.Create(ctx, WithMount(source.digest))
+	} else {
+		// Make sure without automatic content discovery this fails gracefully
+		bw, err = bs.Create(ctx, WithMount(source.digest))
+		if err != nil {
+			t.Fatalf("Received unexpected non-error, when cross-mounting without canonical reference and automatic content discovery disabled")
+		}
+		if bw == nil {
+			t.Fatalf("Did not start upload upon failed cross mount with automatic content discovery disabled")
+		}
+
+		bw, err = bs.Create(ctx, WithMountFrom(canonicalRef))
+	}
 	if bw != nil {
 		t.Fatal("unexpected blobwriter returned from Create call, should mount instead")
 	}
 
-	ebm, ok := err.(distribution.ErrBlobMounted)
-	if !ok {
-		t.Fatalf("unexpected error mounting layer: %v", err)
+	var mountedDescriptor distribution.Descriptor
+	if enableAutomaticContentDiscovery {
+		ebm := distribution.ErrBlobMounted{}
+		if !errors.As(err, &ebm) {
+			t.Fatalf("unexpected error mounting layer: %v", err)
+		}
+		mountedDescriptor = ebm.Descriptor
+	} else {
+		ebmf := distribution.ErrBlobMountedFrom{}
+		if !errors.As(err, &ebmf) {
+			t.Fatalf("unexpected error mounting layer: %v", err)
+		}
+		mountedDescriptor = ebmf.Descriptor
 	}
 
-	if !reflect.DeepEqual(ebm.Descriptor, desc) {
-		t.Fatalf("descriptors not equal: %v != %v", ebm.Descriptor, desc)
+	if !reflect.DeepEqual(mountedDescriptor, source.desc) {
+		t.Fatalf("descriptors not equal: %v != %v", mountedDescriptor, source.desc)
+	}
+
+	// Test the negative case
+	// This uses the source repo from the first repo, but the digest from the second
+	// Even in automatic content discovery, it is stated that the from *MAY* be ignored, but
+	// is not required to be ignored.
+	wrongCanonicalRef, err := reference.WithDigest(source.repository.Named(), source2.desc.Digest)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bw2, err := bs.Create(ctx, WithMountFrom(wrongCanonicalRef))
+	if err != nil {
+		t.Fatalf("Received unexpected non-error, when uploading with cross-mount from \"wrong\" repository")
+	}
+	if bw2 == nil {
+		t.Fatalf("Did not start upload upon failed cross mount")
 	}
 
 	// Test for existence.
-	statDesc, err = bs.Stat(ctx, desc.Digest)
+	statDesc, err := bs.Stat(ctx, source.desc.Digest)
 	if err != nil {
 		t.Fatalf("unexpected error checking for existence: %v, %#v", err, bs)
 	}
 
-	if !reflect.DeepEqual(statDesc, desc) {
-		t.Fatalf("descriptors not equal: %v != %v", statDesc, desc)
+	if !reflect.DeepEqual(statDesc, source.desc) {
+		t.Fatalf("descriptors not equal: %v != %v", statDesc, source.desc)
 	}
 
-	rc, err := bs.Open(ctx, desc.Digest)
+	rc, err := bs.Open(ctx, source.digest)
 	if err != nil {
 		t.Fatalf("unexpected error opening blob for read: %v", err)
 	}
@@ -464,26 +545,26 @@ func TestBlobMount(t *testing.T) {
 		t.Fatalf("error reading layer: %v", err)
 	}
 
-	if nn != randomDataSize {
+	if nn != source.desc.Size {
 		t.Fatalf("incorrect read length")
 	}
 
-	if digest.NewDigest("sha256", h) != dgst {
-		t.Fatalf("unexpected digest from uploaded layer: %q != %q", digest.NewDigest("sha256", h), dgst)
+	if digest.NewDigest("sha256", h) != source.digest {
+		t.Fatalf("unexpected digest from uploaded layer: %q != %q", digest.NewDigest("sha256", h), source.digest)
 	}
 
 	// Delete the blob from the source repo
-	err = sbs.Delete(ctx, desc.Digest)
+	err = source.blobs.Delete(ctx, source.digest)
 	if err != nil {
 		t.Fatalf("Unexpected error deleting blob")
 	}
 
-	_, err = bs.Stat(ctx, desc.Digest)
+	_, err = bs.Stat(ctx, source.digest)
 	if err != nil {
 		t.Fatalf("unexpected error stating blob deleted from source repository: %v", err)
 	}
 
-	d, err := sbs.Stat(ctx, desc.Digest)
+	d, err := source.blobs.Stat(ctx, source.desc.Digest)
 	if err == nil {
 		t.Fatalf("unexpected non-error stating deleted blob: %v", d)
 	}
@@ -496,12 +577,12 @@ func TestBlobMount(t *testing.T) {
 	}
 
 	// Delete the blob from the dest repo
-	err = bs.Delete(ctx, desc.Digest)
+	err = bs.Delete(ctx, source.digest)
 	if err != nil {
 		t.Fatalf("Unexpected error deleting blob")
 	}
 
-	d, err = bs.Stat(ctx, desc.Digest)
+	d, err = bs.Stat(ctx, source.digest)
 	if err == nil {
 		t.Fatalf("unexpected non-error stating deleted blob: %v", d)
 	}

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/distribution/distribution/v3/reference"
+
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -45,13 +46,27 @@ func (err ErrBlobInvalidDigest) Error() string {
 // ErrBlobMounted returned when a blob is mounted from another repository
 // instead of initiating an upload session.
 type ErrBlobMounted struct {
-	From       reference.Canonical
 	Descriptor Descriptor
 }
 
 func (err ErrBlobMounted) Error() string {
+	return fmt.Sprintf("blob mounted to: %v", err.Descriptor)
+}
+
+// ErrBlobMountedFrom returned when a blob is mounted from another repository
+// instead of initiating an upload session.type ErrBlobMounted struct {
+type ErrBlobMountedFrom struct {
+	ErrBlobMounted
+	From reference.Canonical
+}
+
+func (err ErrBlobMountedFrom) Error() string {
 	return fmt.Sprintf("blob mounted from: %v to: %v",
 		err.From, err.Descriptor)
+}
+
+func (err ErrBlobMountedFrom) Unwrap() error {
+	return err.ErrBlobMounted
 }
 
 // Descriptor describes targeted content. Used in conjunction with a blob
@@ -203,13 +218,29 @@ type BlobCreateOption interface {
 // CreateOptions is a collection of blob creation modifiers relevant to general
 // blob storage intended to be configured by the BlobCreateOption.Apply method.
 type CreateOptions struct {
-	Mount struct {
-		ShouldMount bool
-		From        reference.Canonical
-		// Stat allows to pass precalculated descriptor to link and return.
-		// Blob access check will be skipped if set.
-		Stat *Descriptor
-	}
+	Mount Mount
+}
+
+type DigestMount struct {
+	// BlobDigest is only checked if automatic content discovery is enabled
+	BlobDigest digest.Digest
+}
+
+func (d DigestMount) Digest() digest.Digest {
+	return d.BlobDigest
+}
+
+type FromMount struct {
+	// From is optional if automatic content discovery is enabled
+	From reference.Canonical
+}
+
+func (f FromMount) Digest() digest.Digest {
+	return f.From.Digest()
+}
+
+type Mount interface {
+	Digest() digest.Digest
 }
 
 // BlobWriter provides a handle for inserting data into a blob store.

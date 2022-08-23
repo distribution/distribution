@@ -259,6 +259,24 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		}
 	}
 
+	authType := config.Auth.Type()
+
+	if authType != "" && !strings.EqualFold(authType, "none") {
+		accessController, err := auth.GetAccessController(config.Auth.Type(), config.Auth.Parameters())
+		if err != nil {
+			panic(fmt.Sprintf("unable to configure authorization (%s): %v", authType, err))
+		}
+
+		if config.AutomaticContentDiscovery {
+			dcontext.GetLogger(app).Warn("Not enabling automatic content discovery because auth is enabled")
+		}
+
+		app.accessController = accessController
+		dcontext.GetLogger(app).Debugf("configured %q access controller", authType)
+	} else if config.AutomaticContentDiscovery {
+		options = append(options, storage.EnableAutomaticContentDiscovery)
+	}
+
 	// configure storage caches
 	if cc, ok := config.Storage["cache"]; ok {
 		v, ok := cc["blobdescriptor"]
@@ -305,17 +323,6 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	app.registry, err = applyRegistryMiddleware(app, app.registry, config.Middleware["registry"])
 	if err != nil {
 		panic(err)
-	}
-
-	authType := config.Auth.Type()
-
-	if authType != "" && !strings.EqualFold(authType, "none") {
-		accessController, err := auth.GetAccessController(config.Auth.Type(), config.Auth.Parameters())
-		if err != nil {
-			panic(fmt.Sprintf("unable to configure authorization (%s): %v", authType, err))
-		}
-		app.accessController = accessController
-		dcontext.GetLogger(app).Debugf("configured %q access controller", authType)
 	}
 
 	// configure as a pull through cache

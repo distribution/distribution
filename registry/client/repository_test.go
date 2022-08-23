@@ -908,15 +908,12 @@ func TestBlobMount(t *testing.T) {
 		t.Fatalf("Expected blob writer to be nil, was %v", bw)
 	}
 
-	if ebm, ok := err.(distribution.ErrBlobMounted); ok {
-		if ebm.From.Digest() != dgst {
-			t.Fatalf("Unexpected digest: %s, expected %s", ebm.From.Digest(), dgst)
-		}
-		if ebm.From.Name() != sourceRepo.Name() {
-			t.Fatalf("Unexpected from: %s, expected %s", ebm.From.Name(), sourceRepo)
+	if ebm, ok := err.(distribution.ErrBlobMountedFrom); ok {
+		if ebm.Descriptor.Digest != dgst {
+			t.Fatalf("Unexpected digest: %s, expected %s", ebm.Descriptor.Digest, dgst)
 		}
 	} else {
-		t.Fatalf("Unexpected error: %v, expected an ErrBlobMounted", err)
+		t.Fatalf("Unexpected error: %v, expected an ErrBlobMountedFrom", err)
 	}
 }
 

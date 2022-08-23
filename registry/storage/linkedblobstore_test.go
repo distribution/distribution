@@ -2,11 +2,11 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"reflect"
 	"sort"
-	"strconv"
 	"testing"
 
 	"github.com/distribution/distribution/v3"
@@ -116,7 +116,11 @@ func TestLinkedBlobStoreCreateWithMountFrom(t *testing.T) {
 		if err := option.Apply(&createOpts); err != nil {
 			t.Fatalf("failed to apply MountFrom option: %v", err)
 		}
-		if !createOpts.Mount.ShouldMount || createOpts.Mount.From.String() != fooCanonical.String() {
+		mount, ok := createOpts.Mount.(distribution.FromMount)
+		if !ok {
+			t.Fatalf("Expected mount to be FromMount")
+		}
+		if mount.From.String() != fooCanonical.String() {
 			t.Fatalf("unexpected create options: %#+v", createOpts.Mount)
 		}
 
@@ -124,7 +128,7 @@ func TestLinkedBlobStoreCreateWithMountFrom(t *testing.T) {
 		if err == nil {
 			t.Fatalf("unexpected non-error while mounting from %q: %v", fooRepoName.String(), err)
 		}
-		if _, ok := err.(distribution.ErrBlobMounted); !ok {
+		if !errors.As(err, &distribution.ErrBlobMounted{}) {
 			t.Fatalf("expected ErrMountFrom error, not %T: %v", err, err)
 		}
 	}
@@ -136,50 +140,6 @@ func TestLinkedBlobStoreCreateWithMountFrom(t *testing.T) {
 		} else if count != 1 {
 			t.Errorf("expected exactly one stat call for entry %q, not %d", fooCanonical.String(), count)
 		}
-	}
-
-	clearStats(stats)
-
-	// create yet another repository nm/baz
-	bazRepoName, _ := reference.WithName("nm/baz")
-	bazRepo, err := fooEnv.registry.Repository(ctx, bazRepoName)
-	if err != nil {
-		t.Fatalf("unexpected error getting repo: %v", err)
-	}
-
-	// cross-repo mount them into a nm/baz and provide a prepopulated blob descriptor
-	for dgst := range testLayers {
-		fooCanonical, _ := reference.WithDigest(fooRepoName, dgst)
-		size, err := strconv.ParseInt("0x"+dgst.Hex()[:8], 0, 64)
-		if err != nil {
-			t.Fatal(err)
-		}
-		prepolutatedDescriptor := distribution.Descriptor{
-			Digest:    dgst,
-			Size:      size,
-			MediaType: "application/octet-stream",
-		}
-		_, err = bazRepo.Blobs(ctx).Create(ctx, WithMountFrom(fooCanonical), &statCrossMountCreateOption{
-			desc: prepolutatedDescriptor,
-		})
-		blobMounted, ok := err.(distribution.ErrBlobMounted)
-		if !ok {
-			t.Errorf("expected ErrMountFrom error, not %T: %v", err, err)
-			continue
-		}
-		if !reflect.DeepEqual(blobMounted.Descriptor, prepolutatedDescriptor) {
-			t.Errorf("unexpected descriptor: %#+v != %#+v", blobMounted.Descriptor, prepolutatedDescriptor)
-		}
-	}
-	// this time no stat calls will be made
-	if len(stats) != 0 {
-		t.Errorf("unexpected number of stats made: %d != %d", len(stats), len(testLayers))
-	}
-}
-
-func clearStats(stats map[string]int) {
-	for k := range stats {
-		delete(stats, k)
 	}
 }
 
@@ -239,26 +199,4 @@ func (bs *mockBlobDescriptorService) Stat(ctx context.Context, dgst digest.Diges
 	bs.t.Logf("calling Stat on %s", canonical.String())
 
 	return bs.BlobDescriptorService.Stat(ctx, dgst)
-}
-
-// statCrossMountCreateOptions ensures the expected options type is passed, and optionally pre-fills the cross-mount stat info
-type statCrossMountCreateOption struct {
-	desc distribution.Descriptor
-}
-
-var _ distribution.BlobCreateOption = statCrossMountCreateOption{}
-
-func (f statCrossMountCreateOption) Apply(v interface{}) error {
-	opts, ok := v.(*distribution.CreateOptions)
-	if !ok {
-		return fmt.Errorf("Unexpected create options: %#v", v)
-	}
-
-	if !opts.Mount.ShouldMount {
-		return nil
-	}
-
-	opts.Mount.Stat = &f.desc
-
-	return nil
 }

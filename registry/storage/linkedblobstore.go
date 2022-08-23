@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"path"
@@ -15,6 +16,8 @@ import (
 	"github.com/opencontainers/go-digest"
 )
 
+var errNoDiscoveryMechanism = errors.New("No discovery mechanism for blob cross mount available")
+
 // linkPathFunc describes a function that can resolve a link based on the
 // repository name and digest.
 type linkPathFunc func(name string, dgst digest.Digest) (string, error)
@@ -24,13 +27,14 @@ type linkPathFunc func(name string, dgst digest.Digest) (string, error)
 // that grant access to the global blob store.
 type linkedBlobStore struct {
 	*blobStore
-	registry               *registry
-	blobServer             distribution.BlobServer
-	blobAccessController   distribution.BlobDescriptorService
-	repository             distribution.Repository
-	ctx                    context.Context // only to be used where context can't come through method args
-	deleteEnabled          bool
-	resumableDigestEnabled bool
+	registry                  *registry
+	blobServer                distribution.BlobServer
+	blobAccessController      distribution.BlobDescriptorService
+	repository                distribution.Repository
+	ctx                       context.Context // only to be used where context can't come through method args
+	deleteEnabled             bool
+	resumableDigestEnabled    bool
+	automaticContentDiscovery bool
 
 	// linkPathFns specifies one or more path functions allowing one to
 	// control the repository blob link set to which the blob store
@@ -117,8 +121,26 @@ func WithMountFrom(ref reference.Canonical) distribution.BlobCreateOption {
 			return fmt.Errorf("unexpected options type: %T", v)
 		}
 
-		opts.Mount.ShouldMount = true
-		opts.Mount.From = ref
+		opts.Mount = distribution.FromMount{
+			From: ref,
+		}
+
+		return nil
+	})
+}
+
+// WithMount returns a BlobCreateOption which designates that the blob should be
+// mounted, and omits the from repository.
+func WithMount(digest digest.Digest) distribution.BlobCreateOption {
+	return optionFunc(func(v interface{}) error {
+		opts, ok := v.(*distribution.CreateOptions)
+		if !ok {
+			return fmt.Errorf("unexpected options type: %T", v)
+		}
+
+		opts.Mount = distribution.DigestMount{
+			BlobDigest: digest,
+		}
 
 		return nil
 	})
@@ -137,11 +159,14 @@ func (lbs *linkedBlobStore) Create(ctx context.Context, options ...distribution.
 		}
 	}
 
-	if opts.Mount.ShouldMount {
-		desc, err := lbs.mount(ctx, opts.Mount.From, opts.Mount.From.Digest(), opts.Mount.Stat)
+	if opts.Mount != nil {
+		desc, ref, err := lbs.mount(ctx, opts.Mount)
 		if err == nil {
 			// Mount successful, no need to initiate an upload session
-			return nil, distribution.ErrBlobMounted{From: opts.Mount.From, Descriptor: desc}
+			if ref != nil {
+				return nil, distribution.ErrBlobMountedFrom{ErrBlobMounted: distribution.ErrBlobMounted{Descriptor: desc}, From: ref}
+			}
+			return nil, distribution.ErrBlobMounted{Descriptor: desc}
 		}
 	}
 
@@ -275,21 +300,34 @@ func (lbs *linkedBlobStore) Enumerate(ctx context.Context, ingestor func(digest.
 	})
 }
 
-func (lbs *linkedBlobStore) mount(ctx context.Context, sourceRepo reference.Named, dgst digest.Digest, sourceStat *distribution.Descriptor) (distribution.Descriptor, error) {
+func (lbs *linkedBlobStore) mount(ctx context.Context, mount distribution.Mount) (distribution.Descriptor, reference.Canonical, error) {
 	var stat distribution.Descriptor
-	if sourceStat == nil {
+	var from reference.Canonical
+	switch v := mount.(type) {
+	case distribution.FromMount:
 		// look up the blob info from the sourceRepo if not already provided
-		repo, err := lbs.registry.Repository(ctx, sourceRepo)
+		repo, err := lbs.registry.Repository(ctx, v.From)
 		if err != nil {
-			return distribution.Descriptor{}, err
+			return distribution.Descriptor{}, nil, err
 		}
-		stat, err = repo.Blobs(ctx).Stat(ctx, dgst)
+		stat, err = repo.Blobs(ctx).Stat(ctx, v.Digest())
 		if err != nil {
-			return distribution.Descriptor{}, err
+			return distribution.Descriptor{}, nil, err
 		}
-	} else {
-		// use the provided blob info
-		stat = *sourceStat
+		from = v.From
+	case distribution.DigestMount:
+		if lbs.automaticContentDiscovery {
+			// We need to perform this enumeration because internally, there's a bunch of stuff that requires
+			// "from". This could be optimized, specifically if the bloblistener did not need to have the
+			// from information.
+			var err error
+			stat, err = lbs.registry.statter.Stat(ctx, v.Digest())
+			if err != nil {
+				return distribution.Descriptor{}, nil, err
+			}
+		} else {
+			return distribution.Descriptor{}, nil, errNoDiscoveryMechanism
+		}
 	}
 
 	desc := distribution.Descriptor{
@@ -299,9 +337,9 @@ func (lbs *linkedBlobStore) mount(ctx context.Context, sourceRepo reference.Name
 		// other users. The caller should look this up and override the value
 		// for the specific repository.
 		MediaType: "application/octet-stream",
-		Digest:    dgst,
+		Digest:    mount.Digest(),
 	}
-	return desc, lbs.linkBlob(ctx, desc)
+	return desc, from, lbs.linkBlob(ctx, desc)
 }
 
 // newBlobUpload allocates a new upload controller with the given state.

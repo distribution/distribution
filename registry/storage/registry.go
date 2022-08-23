@@ -21,6 +21,7 @@ type registry struct {
 	deleteEnabled                bool
 	schema1Enabled               bool
 	resumableDigestEnabled       bool
+	automaticContentDiscovery    bool
 	schema1SigningKey            libtrust.PrivateKey
 	blobDescriptorServiceFactory distribution.BlobDescriptorServiceFactory
 	manifestURLs                 manifestURLs
@@ -61,6 +62,13 @@ func EnableSchema1(registry *registry) error {
 // used if the registry is acting as a caching proxy.
 func DisableDigestResumption(registry *registry) error {
 	registry.resumableDigestEnabled = false
+	return nil
+}
+
+// EnableAutomaticContentDiscovery is a functional option for NewRegistry. It should be
+// used if the user is not expected to specify the from parameter on a mount.
+func EnableAutomaticContentDiscovery(registry *registry) error {
+	registry.automaticContentDiscovery = true
 	return nil
 }
 
@@ -329,9 +337,10 @@ func (repo *repository) Blobs(ctx context.Context) distribution.BlobStore {
 
 		// TODO(stevvooe): linkPath limits this blob store to only layers.
 		// This instance cannot be used for manifest checks.
-		linkPathFns:            []linkPathFunc{blobLinkPath},
-		linkDirectoryPathSpec:  layersPathSpec{name: repo.name.Name()},
-		deleteEnabled:          repo.registry.deleteEnabled,
-		resumableDigestEnabled: repo.resumableDigestEnabled,
+		linkPathFns:               []linkPathFunc{blobLinkPath},
+		linkDirectoryPathSpec:     layersPathSpec{name: repo.name.Name()},
+		deleteEnabled:             repo.registry.deleteEnabled,
+		automaticContentDiscovery: repo.registry.automaticContentDiscovery,
+		resumableDigestEnabled:    repo.resumableDigestEnabled,
 	}
 }
