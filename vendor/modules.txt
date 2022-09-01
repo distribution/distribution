@@ -208,6 +208,9 @@ github.com/spf13/cobra
 # github.com/spf13/pflag v1.0.3
 ## explicit
 github.com/spf13/pflag
+# github.com/ufilesdk-dev/ufile-gosdk v1.0.2
+## explicit
+github.com/ufilesdk-dev/ufile-gosdk
 # github.com/yvasiyarov/go-metrics v0.0.0-20140926110328-57bccd1ccd43
 ## explicit
 github.com/yvasiyarov/go-metrics
