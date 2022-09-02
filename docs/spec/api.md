@@ -855,7 +855,7 @@ identifying the missing blob. An error is returned for each unknown blob. The
 response format is as follows:
 
     {
-        "errors:" [{
+        "errors": [{
                 "code": "BLOB_UNKNOWN",
                 "message": "blob unknown to registry",
                 "detail": {
@@ -1213,7 +1213,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1251,7 +1251,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1351,7 +1351,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1389,7 +1389,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1426,7 +1426,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1463,7 +1463,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1548,7 +1548,7 @@ The following headers will be returned with the response:
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1580,7 +1580,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1618,7 +1618,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1655,7 +1655,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1692,7 +1692,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1796,7 +1796,7 @@ The following headers will be returned with the response:
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1829,7 +1829,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1867,7 +1867,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1904,7 +1904,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1941,7 +1941,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2042,7 +2042,7 @@ The following headers will be returned with the response:
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2078,7 +2078,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2116,7 +2116,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2153,7 +2153,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2190,7 +2190,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2226,7 +2226,7 @@ The error codes that may be included in the response body are enumerated below:
 Content-Type: application/json
 
 {
-    "errors:" [{
+    "errors": [{
             "code": "BLOB_UNKNOWN",
             "message": "blob unknown to registry",
             "detail": {
@@ -2314,7 +2314,7 @@ The following parameters should be specified on the request:
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2347,7 +2347,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2385,7 +2385,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2422,7 +2422,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2459,7 +2459,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2495,7 +2495,7 @@ The error codes that may be included in the response body are enumerated below:
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2620,7 +2620,7 @@ The following headers will be returned with the response:
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2651,7 +2651,7 @@ The error codes that may be included in the response body are enumerated below:
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2684,7 +2684,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2722,7 +2722,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2759,7 +2759,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2796,7 +2796,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2880,7 +2880,7 @@ The following headers will be returned with the response:
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2911,7 +2911,7 @@ The error codes that may be included in the response body are enumerated below:
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2954,7 +2954,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2992,7 +2992,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3029,7 +3029,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3066,7 +3066,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3169,7 +3169,7 @@ The error codes that may be included in the response body are enumerated below:
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3200,7 +3200,7 @@ The error codes that may be included in the response body are enumerated below:
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3232,7 +3232,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3270,7 +3270,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3307,7 +3307,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3344,7 +3344,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3482,7 +3482,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3520,7 +3520,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3557,7 +3557,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3594,7 +3594,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3699,7 +3699,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3737,7 +3737,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3774,7 +3774,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3811,7 +3811,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3934,7 +3934,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3972,7 +3972,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4009,7 +4009,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4046,7 +4046,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4139,7 +4139,7 @@ The following headers will be returned with the response:
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4171,7 +4171,7 @@ The error codes that may be included in the response body are enumerated below:
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4203,7 +4203,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4241,7 +4241,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4278,7 +4278,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4315,7 +4315,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4407,7 +4407,7 @@ The following headers will be returned with the response:
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4439,7 +4439,7 @@ The error codes that may be included in the response body are enumerated below:
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4471,7 +4471,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4509,7 +4509,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4546,7 +4546,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4583,7 +4583,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4673,7 +4673,7 @@ The following headers will be returned with the response:
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4705,7 +4705,7 @@ The error codes that may be included in the response body are enumerated below:
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4747,7 +4747,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4785,7 +4785,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4822,7 +4822,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4859,7 +4859,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4953,7 +4953,7 @@ The following headers will be returned with the response:
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4986,7 +4986,7 @@ The error codes that may be included in the response body are enumerated below:
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -5018,7 +5018,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -5056,7 +5056,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -5093,7 +5093,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -5130,7 +5130,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -5214,7 +5214,7 @@ The following headers will be returned with the response:
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -5245,7 +5245,7 @@ The error codes that may be included in the response body are enumerated below:
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -5277,7 +5277,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -5315,7 +5315,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -5352,7 +5352,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -5389,7 +5389,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors:" [
+	"errors": [
 	    {
             "code": <error code>,
             "message": "<error message>",
