@@ -202,6 +202,30 @@ func (ub *URLBuilder) BuildBlobUploadChunkURL(name reference.Named, uuid string,
 	return appendValuesURL(uploadURL, values...).String(), nil
 }
 
+// BuildRegistryExtensionsURL constructs a url to list the extensions in the named repository.
+func (ub *URLBuilder) BuildRegistryExtensionsURL(values ...url.Values) (string, error) {
+	route := ub.cloneRoute(RouteNameExtensionsRegistry)
+
+	extensionsURL, err := route.URL()
+	if err != nil {
+		return "", err
+	}
+
+	return appendValuesURL(extensionsURL, values...).String(), nil
+}
+
+// BuildRepositoryExtensionsURL constructs a url to list the extensions in the named repository.
+func (ub *URLBuilder) BuildRepositoryExtensionsURL(name reference.Named, values ...url.Values) (string, error) {
+	route := ub.cloneRoute(RouteNameExtensionsRepository)
+
+	extensionsURL, err := route.URL("name", name.Name())
+	if err != nil {
+		return "", err
+	}
+
+	return appendValuesURL(extensionsURL, values...).String(), nil
+}
+
 // clondedRoute returns a clone of the named route from the router. Routes
 // must be cloned to avoid modifying them during url generation.
 func (ub *URLBuilder) cloneRoute(name string) clonedRoute {
