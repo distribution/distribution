@@ -1007,14 +1007,17 @@ accept event notifications.
 | `timeout` | yes      | A value for the HTTP timeout. A positive integer and an optional suffix indicating the unit of time, which may be `ns`, `us`, `ms`, `s`, `m`, or `h`. If you omit the unit of time, `ns` is used. |
 | `threshold` | yes    | An integer specifying how long to wait before backing off a failure. |
 | `backoff` | yes      | How long the system backs off before retrying after a failure. A positive integer and an optional suffix indicating the unit of time, which may be `ns`, `us`, `ms`, `s`, `m`, or `h`. If you omit the unit of time, `ns` is used. |
-| `ignoredmediatypes`|no| A list of target media types to ignore. Events with these target media types are not published to the endpoint. |
+| `ignoredmediatypes` |no| A list of target media types to ignore. Events with these target media types are not published to the endpoint. |
 | `ignore`  |no| Events with these mediatypes or actions are not published to the endpoint. |
 
 #### `ignore`
+
+The `ignore` contains the media types or actions to ignore. Either `ignoredmediatypes` or `mediatypes` must be given.
+
 | Parameter | Required | Description                                           |
 |-----------|----------|-------------------------------------------------------|
-| `mediatypes`|no| A list of target media types to ignore. Events with these target media types are not published to the endpoint. |
-| `actions`   |no| A list of actions to ignore. Events with these actions are not published to the endpoint. |
+| `mediatypes` |no| A list of target media types to ignore. Events with these target media types are not published to the endpoint. |
+| `actions`    |no| A list of actions to ignore. Events with these actions are not published to the endpoint. |
 
 ### `events`
 
