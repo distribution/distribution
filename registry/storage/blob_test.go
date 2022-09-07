@@ -25,7 +25,7 @@ func TestWriteSeek(t *testing.T) {
 	ctx := context.Background()
 	imageName, _ := reference.WithName("foo/bar")
 	driver := testdriver.New()
-	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
+	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -61,7 +61,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 	ctx := context.Background()
 	imageName, _ := reference.WithName("foo/bar")
 	driver := testdriver.New()
-	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
+	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -234,7 +234,7 @@ func TestSimpleBlobUpload(t *testing.T) {
 	}
 
 	// Reuse state to test delete with a delete-disabled registry
-	registry, err = NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableRedirect)
+	registry, err = NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -256,7 +256,7 @@ func TestSimpleBlobRead(t *testing.T) {
 	ctx := context.Background()
 	imageName, _ := reference.WithName("foo/bar")
 	driver := testdriver.New()
-	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
+	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -368,7 +368,7 @@ func TestBlobMount(t *testing.T) {
 	imageName, _ := reference.WithName("foo/bar")
 	sourceImageName, _ := reference.WithName("foo/source")
 	driver := testdriver.New()
-	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
+	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -519,7 +519,7 @@ func TestLayerUploadZeroLength(t *testing.T) {
 	ctx := context.Background()
 	imageName, _ := reference.WithName("foo/bar")
 	driver := testdriver.New()
-	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect)
+	registry, err := NewRegistry(ctx, driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}

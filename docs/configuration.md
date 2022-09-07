@@ -162,6 +162,7 @@ storage:
     disable: false
   cache:
     blobdescriptor: redis
+    blobdescriptorsize: 10000
   maintenance:
     uploadpurging:
       enabled: true
@@ -465,6 +466,7 @@ storage:
     enabled: false
   cache:
     blobdescriptor: inmemory
+    blobdescriptorsize: 10000
   maintenance:
     uploadpurging:
       enabled: true
@@ -562,6 +564,11 @@ layer metadata.
 
 > **NOTE**: Formerly, `blobdescriptor` was known as `layerinfo`. While these
 > are equivalent, `layerinfo` has been deprecated.
+
+If `blobdescriptor` is set to `inmemory`, the optional `blobdescriptorsize`
+parameter sets a limit on the number of descriptors to store in the cache.
+The default value is 10000. If this parameter is set to 0, the cache is allowed
+to grow with no size limit.
 
 ### `redirect`
 

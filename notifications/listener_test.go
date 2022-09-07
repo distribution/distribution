@@ -25,7 +25,7 @@ func TestListener(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	registry, err := storage.NewRegistry(ctx, inmemory.New(), storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), storage.EnableDelete, storage.EnableRedirect, storage.Schema1SigningKey(k), storage.EnableSchema1)
+	registry, err := storage.NewRegistry(ctx, inmemory.New(), storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), storage.EnableDelete, storage.EnableRedirect, storage.Schema1SigningKey(k), storage.EnableSchema1)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}

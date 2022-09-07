@@ -13,6 +13,7 @@ import (
 	"os"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -272,6 +273,9 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 			if app.redis == nil {
 				panic("redis configuration required to use for layerinfo cache")
 			}
+			if _, ok := cc["blobdescriptorsize"]; ok {
+				dcontext.GetLogger(app).Warnf("blobdescriptorsize parameter is not supported with redis cache")
+			}
 			cacheProvider := rediscache.NewRedisBlobDescriptorCacheProvider(app.redis)
 			localOptions := append(options, storage.BlobDescriptorCacheProvider(cacheProvider))
 			app.registry, err = storage.NewRegistry(app, app.driver, localOptions...)
@@ -280,7 +284,17 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 			}
 			dcontext.GetLogger(app).Infof("using redis blob descriptor cache")
 		case "inmemory":
-			cacheProvider := memorycache.NewInMemoryBlobDescriptorCacheProvider()
+			blobDescriptorSize := memorycache.DefaultSize
+			configuredSize, ok := cc["blobdescriptorsize"]
+			if ok {
+				// Since Parameters is not strongly typed, render to a string and convert back
+				blobDescriptorSize, err = strconv.Atoi(fmt.Sprint(configuredSize))
+				if err != nil {
+					panic(fmt.Sprintf("invalid blobdescriptorsize value %s: %s", configuredSize, err))
+				}
+			}
+
+			cacheProvider := memorycache.NewInMemoryBlobDescriptorCacheProvider(blobDescriptorSize)
 			localOptions := append(options, storage.BlobDescriptorCacheProvider(cacheProvider))
 			app.registry, err = storage.NewRegistry(app, app.driver, localOptions...)
 			if err != nil {

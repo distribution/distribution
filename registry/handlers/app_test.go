@@ -26,7 +26,7 @@ import (
 func TestAppDispatcher(t *testing.T) {
 	driver := testdriver.New()
 	ctx := context.Background()
-	registry, err := storage.NewRegistry(ctx, driver, storage.BlobDescriptorCacheProvider(memorycache.NewInMemoryBlobDescriptorCacheProvider()), storage.EnableDelete, storage.EnableRedirect)
+	registry, err := storage.NewRegistry(ctx, driver, storage.BlobDescriptorCacheProvider(memorycache.NewInMemoryBlobDescriptorCacheProvider(0)), storage.EnableDelete, storage.EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
