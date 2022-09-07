@@ -312,15 +312,18 @@ func (lbs *linkedBlobStore) newBlobUpload(ctx context.Context, uuid, path string
 	}
 
 	bw := &blobWriter{
-		ctx:                    ctx,
-		blobStore:              lbs,
-		id:                     uuid,
-		startedAt:              startedAt,
-		digester:               digest.Canonical.Digester(),
-		fileWriter:             fw,
-		driver:                 lbs.driver,
-		path:                   path,
+		ctx:        ctx,
+		blobStore:  lbs,
+		id:         uuid,
+		startedAt:  startedAt,
+		digester:   digest.Canonical.Digester(),
+		fileWriter: fw,
+		driver:     lbs.driver,
+		path:       path,
 		resumableDigestEnabled: lbs.resumableDigestEnabled,
+
+		// inherit where to store blobs by default
+		repositoryScope: lbs.repositoryScope,
 	}
 
 	return bw, nil

@@ -17,10 +17,10 @@ const blobCacheControlMaxAge = 365 * 24 * time.Hour
 // blobServer simply serves blobs from a driver instance using a path function
 // to identify paths and a descriptor service to fill in metadata.
 type blobServer struct {
-	driver   driver.StorageDriver
-	statter  distribution.BlobStatter
-	pathFn   func(dgst digest.Digest) (string, error)
-	redirect bool // allows disabling URLFor redirects
+	driver  driver.StorageDriver
+	statter distribution.BlobStatter
+	pathFn  func(dgst digest.Digest) (string, error)
+	options *registryOptions // allows disabling URLFor redirects
 }
 
 func (bs *blobServer) ServeBlob(ctx context.Context, w http.ResponseWriter, r *http.Request, dgst digest.Digest) error {
@@ -29,13 +29,12 @@ func (bs *blobServer) ServeBlob(ctx context.Context, w http.ResponseWriter, r *h
 		return err
 	}
 
-	path, err := bs.pathFn(desc.Digest)
-	if err != nil {
-		return err
+	if desc.Location == "" {
+		return distribution.ErrBlobLocationNotFound
 	}
 
-	if bs.redirect {
-		redirectURL, err := bs.driver.URLFor(ctx, path, map[string]interface{}{"method": r.Method})
+	if bs.options.redirect {
+		redirectURL, err := bs.driver.URLFor(ctx, desc.Location, map[string]interface{}{"method": r.Method})
 		switch err.(type) {
 		case nil:
 			// Redirect to storage URL.
@@ -50,7 +49,7 @@ func (bs *blobServer) ServeBlob(ctx context.Context, w http.ResponseWriter, r *h
 		}
 	}
 
-	br, err := newFileReader(ctx, bs.driver, path, desc.Size)
+	br, err := newFileReader(ctx, bs.driver, desc.Location, desc.Size)
 	if err != nil {
 		return err
 	}

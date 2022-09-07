@@ -181,12 +181,12 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 	}, nil
 }
 
-func (pr *proxyingRegistry) Blobs() distribution.BlobEnumerator {
-	return pr.embedded.Blobs()
+func (pr *proxyingRegistry) GlobalBlobs() distribution.BlobEnumerator {
+	return pr.embedded.GlobalBlobs()
 }
 
-func (pr *proxyingRegistry) BlobStatter() distribution.BlobStatter {
-	return pr.embedded.BlobStatter()
+func (pr *proxyingRegistry) GlobalBlobStatter() distribution.BlobStatter {
+	return pr.embedded.GlobalBlobStatter()
 }
 
 // authChallenger encapsulates a request to the upstream to establish credential challenges

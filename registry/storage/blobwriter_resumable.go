@@ -90,7 +90,7 @@ func (bw *blobWriter) getStoredHashStates(ctx context.Context) ([]hashStateEntry
 		return nil, err
 	}
 
-	paths, err := bw.blobStore.driver.List(ctx, uploadHashStatePathPrefix)
+	paths, err := bw.driver.List(ctx, uploadHashStatePathPrefix)
 	if err != nil {
 		if _, ok := err.(storagedriver.PathNotFoundError); !ok {
 			return nil, err

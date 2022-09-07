@@ -23,6 +23,9 @@ var (
 	// ErrBlobUnknown when blob is not found.
 	ErrBlobUnknown = errors.New("unknown blob")
 
+	// ErrBlobLocationNotFound when blob is not found.
+	ErrBlobLocationNotFound = errors.New("location not found")
+
 	// ErrBlobUploadUnknown returned when upload is not found.
 	ErrBlobUploadUnknown = errors.New("blob upload unknown")
 
@@ -59,6 +62,8 @@ func (err ErrBlobMounted) Error() string {
 // blob. The struct also describes the wire protocol format. Fields should
 // only be added but never changed.
 type Descriptor struct {
+	Location string `json:"-"`
+
 	// MediaType describe the type of the content. All text based formats are
 	// encoded as utf-8.
 	MediaType string `json:"mediaType,omitempty"`

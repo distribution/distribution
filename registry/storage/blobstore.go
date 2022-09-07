@@ -2,6 +2,7 @@ package storage
 
 import (
 	"context"
+	"errors"
 	"path"
 
 	"github.com/distribution/distribution/v3"
@@ -17,18 +18,21 @@ import (
 type blobStore struct {
 	driver  driver.StorageDriver
 	statter distribution.BlobStatter
+
+	options         *registryOptions
+	repositoryScope string
 }
 
 var _ distribution.BlobProvider = &blobStore{}
 
 // Get implements the BlobReadService.Get call.
 func (bs *blobStore) Get(ctx context.Context, dgst digest.Digest) ([]byte, error) {
-	bp, err := bs.path(dgst)
+	desc, err := bs.statter.Stat(ctx, dgst)
 	if err != nil {
 		return nil, err
 	}
 
-	p, err := getContent(ctx, bs.driver, bp)
+	p, err := getContent(ctx, bs.driver, desc.Location)
 	if err != nil {
 		switch err.(type) {
 		case driver.PathNotFoundError:
@@ -47,12 +51,7 @@ func (bs *blobStore) Open(ctx context.Context, dgst digest.Digest) (distribution
 		return nil, err
 	}
 
-	path, err := bs.path(desc.Digest)
-	if err != nil {
-		return nil, err
-	}
-
-	return newFileReader(ctx, bs.driver, path, desc.Size)
+	return newFileReader(ctx, bs.driver, desc.Location, desc.Size)
 }
 
 // Put stores the content p in the blob store, calculating the digest. If the
@@ -84,11 +83,12 @@ func (bs *blobStore) Put(ctx context.Context, mediaType string, p []byte) (distr
 		// for the specific repository.
 		MediaType: "application/octet-stream",
 		Digest:    dgst,
+		Location:  bp,
 	}, bs.driver.PutContent(ctx, bp, p)
 }
 
 func (bs *blobStore) Enumerate(ctx context.Context, ingester func(dgst digest.Digest) error) error {
-	specPath, err := pathFor(blobsPathSpec{})
+	specPath, err := bs.rootPath()
 	if err != nil {
 		return err
 	}
@@ -117,16 +117,41 @@ func (bs *blobStore) Enumerate(ctx context.Context, ingester func(dgst digest.Di
 
 // path returns the canonical path for the blob identified by digest. The blob
 // may or may not exist.
-func (bs *blobStore) path(dgst digest.Digest) (string, error) {
-	bp, err := pathFor(blobDataPathSpec{
-		digest: dgst,
-	})
-
-	if err != nil {
-		return "", err
+func (bs *blobStore) rootPath() (string, error) {
+	// get repository blob store path
+	if bs.options.repositoryBlobStoreEnabled && bs.repositoryScope != "" {
+		return pathFor(repositoryBlobsPathSpec{
+			name: bs.repositoryScope,
+		})
 	}
 
-	return bp, nil
+	// get global blob store path
+	if bs.options.globalBlobStoreEnabled {
+		return pathFor(blobsPathSpec{})
+	}
+
+	return "", errors.New("unknown blob store")
+}
+
+// path returns the canonical path for the blob identified by digest. The blob
+// may or may not exist.
+func (bs *blobStore) path(dgst digest.Digest) (string, error) {
+	// get repository blob store path
+	if bs.options.repositoryBlobStoreEnabled && bs.repositoryScope != "" {
+		return pathFor(repositoryBlobDataPathSpec{
+			name:   bs.repositoryScope,
+			digest: dgst,
+		})
+	}
+
+	// get global blob store path
+	if bs.options.globalBlobStoreEnabled {
+		return pathFor(blobDataPathSpec{
+			digest: dgst,
+		})
+	}
+
+	return "", errors.New("unknown blob store")
 }
 
 // link links the path to the provided digest by writing the digest into the
@@ -154,6 +179,9 @@ func (bs *blobStore) readlink(ctx context.Context, path string) (digest.Digest, 
 
 type blobStatter struct {
 	driver driver.StorageDriver
+
+	repositoryScope string
+	options         *registryOptions
 }
 
 var _ distribution.BlobDescriptorService = &blobStatter{}
@@ -161,15 +189,7 @@ var _ distribution.BlobDescriptorService = &blobStatter{}
 // Stat implements BlobStatter.Stat by returning the descriptor for the blob
 // in the main blob store. If this method returns successfully, there is
 // strong guarantee that the blob exists and is available.
-func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
-	path, err := pathFor(blobDataPathSpec{
-		digest: dgst,
-	})
-
-	if err != nil {
-		return distribution.Descriptor{}, err
-	}
-
+func (bs *blobStatter) stat(ctx context.Context, dgst digest.Digest, path string) (distribution.Descriptor, error) {
 	fi, err := bs.driver.Stat(ctx, path)
 	if err != nil {
 		switch err := err.(type) {
@@ -200,7 +220,47 @@ func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (distributi
 		// for the specific repository.
 		MediaType: "application/octet-stream",
 		Digest:    dgst,
+		Location:  path,
 	}, nil
+}
+
+func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+	// check repository blob path
+	if bs.options.repositoryBlobStoreEnabled && bs.repositoryScope != "" {
+		path, err := pathFor(repositoryBlobDataPathSpec{
+			digest: dgst,
+			name:   bs.repositoryScope,
+		})
+
+		if err != nil {
+			return distribution.Descriptor{}, err
+		}
+
+		descriptor, err := bs.stat(ctx, dgst, path)
+		if err == distribution.ErrBlobUnknown {
+			return descriptor, err
+		}
+	}
+
+	// check global blob path
+	if bs.options.globalBlobStoreEnabled {
+		path, err := pathFor(blobDataPathSpec{
+			digest: dgst,
+		})
+
+		if err != nil {
+			return distribution.Descriptor{}, err
+		}
+
+		descriptor, err := bs.stat(ctx, dgst, path)
+		if err == distribution.ErrBlobUnknown {
+			return descriptor, err
+		}
+
+		return bs.stat(ctx, dgst, path)
+	}
+
+	return distribution.Descriptor{}, distribution.ErrBlobUnknown
 }
 
 func (bs *blobStatter) Clear(ctx context.Context, dgst digest.Digest) error {

@@ -43,10 +43,10 @@ type Namespace interface {
 	Repositories(ctx context.Context, repos []string, last string) (n int, err error)
 
 	// Blobs returns a blob enumerator to access all blobs
-	Blobs() BlobEnumerator
+	GlobalBlobs() BlobEnumerator
 
 	// BlobStatter returns a BlobStatter to control
-	BlobStatter() BlobStatter
+	GlobalBlobStatter() BlobStatter
 }
 
 // RepositoryEnumerator describes an operation to enumerate repositories

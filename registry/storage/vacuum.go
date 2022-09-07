@@ -28,6 +28,28 @@ type Vacuum struct {
 	ctx    context.Context
 }
 
+// RemoveLocalBlob removes a blob from the filesystem
+func (v Vacuum) RemoveLocalBlob(name string, dgst string) error {
+	d, err := digest.Parse(dgst)
+	if err != nil {
+		return err
+	}
+
+	blobPath, err := pathFor(repositoryBlobPathSpec{name: name, digest: d})
+	if err != nil {
+		return err
+	}
+
+	dcontext.GetLogger(v.ctx).Infof("Deleting blob: %s", blobPath)
+
+	err = v.driver.Delete(v.ctx, blobPath)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // RemoveBlob removes a blob from the filesystem
 func (v Vacuum) RemoveBlob(dgst string) error {
 	d, err := digest.Parse(dgst)
