@@ -136,7 +136,7 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 		stats:     make(map[string]int),
 	}
 
-	s := scheduler.New(ctx, inmemory.New(), "/scheduler-state.json")
+	s := scheduler.New(ctx, inmemory.New(), "/scheduler-state.json", repositoryTTL)
 	return &manifestStoreTestEnv{
 		manifestDigest: manifestDigest,
 		manifests: proxyManifestStore{

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"time"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/configuration"
@@ -20,6 +21,8 @@ import (
 	"github.com/distribution/distribution/v3/registry/storage/driver"
 )
 
+const repositoryTTL = 24 * 7 * time.Hour
+
 // proxyingRegistry fetches content from a remote registry and caches it locally
 type proxyingRegistry struct {
 	embedded       distribution.Namespace // provides local registry functionality
@@ -30,13 +33,25 @@ type proxyingRegistry struct {
 
 // NewRegistryPullThroughCache creates a registry acting as a pull through cache
 func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Namespace, driver driver.StorageDriver, config configuration.Proxy) (distribution.Namespace, error) {
+	var (
+		cacheTTL time.Duration
+		err      error
+	)
+	if config.CacheTTL == "" {
+		cacheTTL = repositoryTTL
+	} else {
+		cacheTTL, err = time.ParseDuration(config.CacheTTL)
+		if err != nil {
+			return nil, err
+		}
+	}
 	remoteURL, err := url.Parse(config.RemoteURL)
 	if err != nil {
 		return nil, err
 	}
 
 	v := storage.NewVacuum(ctx, driver)
-	s := scheduler.New(ctx, driver, "/scheduler-state.json")
+	s := scheduler.New(ctx, driver, "/scheduler-state.json", cacheTTL)
 	s.OnBlobExpire(func(ref reference.Reference) error {
 		var r reference.Canonical
 		var ok bool

@@ -146,7 +146,7 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 			return
 		}
 
-		pbs.scheduler.AddBlob(blobRef, repositoryTTL)
+		pbs.scheduler.AddBlob(blobRef)
 	}(dgst)
 
 	_, err = pbs.copyContent(ctx, dgst, w)

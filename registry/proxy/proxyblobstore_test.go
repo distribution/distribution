@@ -174,7 +174,7 @@ func makeTestEnv(t *testing.T, name string) *testEnv {
 		blobs: localRepo.Blobs(ctx),
 	}
 
-	s := scheduler.New(ctx, inmemory.New(), "/scheduler-state.json")
+	s := scheduler.New(ctx, inmemory.New(), "/scheduler-state.json", repositoryTTL)
 
 	proxyBlobStore := proxyBlobStore{
 		repositoryName: nameRef,

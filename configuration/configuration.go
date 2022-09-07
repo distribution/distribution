@@ -644,6 +644,9 @@ type Proxy struct {
 
 	// Password of the hub user
 	Password string `yaml:"password"`
+
+	// CacheTTL of the proxy cache TTL, unit is "ns", "us" (or "µs"), "ms", "s", "m", "h", e.g. 1h, 0,5h, 0.5m. default is 24h*7
+	CacheTTL string `yaml:"cacheTTL"`
 }
 
 // Parse parses an input configuration yaml document into a Configuration struct

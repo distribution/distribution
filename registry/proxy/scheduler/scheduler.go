@@ -32,7 +32,10 @@ type schedulerEntry struct {
 }
 
 // New returns a new instance of the scheduler
-func New(ctx context.Context, driver driver.StorageDriver, path string) *TTLExpirationScheduler {
+func New(ctx context.Context, driver driver.StorageDriver, path string, cacheTTL time.Duration) *TTLExpirationScheduler {
+	if cacheTTL == 0 {
+		panic(fmt.Errorf("cacheTTL value muste gt 0"))
+	}
 	return &TTLExpirationScheduler{
 		entries:         make(map[string]*schedulerEntry),
 		driver:          driver,
@@ -41,6 +44,7 @@ func New(ctx context.Context, driver driver.StorageDriver, path string) *TTLExpi
 		stopped:         true,
 		doneChan:        make(chan struct{}),
 		saveTimer:       time.NewTicker(indexSaveFrequency),
+		cacheTTL:        cacheTTL,
 	}
 }
 
@@ -63,6 +67,8 @@ type TTLExpirationScheduler struct {
 	indexDirty bool
 	saveTimer  *time.Ticker
 	doneChan   chan struct{}
+
+	cacheTTL time.Duration
 }
 
 // OnBlobExpire is called when a scheduled blob's TTL expires
@@ -82,7 +88,7 @@ func (ttles *TTLExpirationScheduler) OnManifestExpire(f expiryFunc) {
 }
 
 // AddBlob schedules a blob cleanup after ttl expires
-func (ttles *TTLExpirationScheduler) AddBlob(blobRef reference.Canonical, ttl time.Duration) error {
+func (ttles *TTLExpirationScheduler) AddBlob(blobRef reference.Canonical) error {
 	ttles.Lock()
 	defer ttles.Unlock()
 
@@ -90,12 +96,12 @@ func (ttles *TTLExpirationScheduler) AddBlob(blobRef reference.Canonical, ttl ti
 		return fmt.Errorf("scheduler not started")
 	}
 
-	ttles.add(blobRef, ttl, entryTypeBlob)
+	ttles.add(blobRef, ttles.cacheTTL, entryTypeBlob)
 	return nil
 }
 
 // AddManifest schedules a manifest cleanup after ttl expires
-func (ttles *TTLExpirationScheduler) AddManifest(manifestRef reference.Canonical, ttl time.Duration) error {
+func (ttles *TTLExpirationScheduler) AddManifest(manifestRef reference.Canonical) error {
 	ttles.Lock()
 	defer ttles.Unlock()
 
@@ -103,7 +109,7 @@ func (ttles *TTLExpirationScheduler) AddManifest(manifestRef reference.Canonical
 		return fmt.Errorf("scheduler not started")
 	}
 
-	ttles.add(manifestRef, ttl, entryTypeManifest)
+	ttles.add(manifestRef, ttles.cacheTTL, entryTypeManifest)
 	return nil
 }
 
