@@ -105,6 +105,7 @@ type DriverParameters struct {
 	KeyID                       string
 	Secure                      bool
 	SkipVerify                  bool
+	CACert                      string
 	V4Auth                      bool
 	ChunkSize                   int64
 	MultipartCopyChunkSize      int64
@@ -436,6 +437,8 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		return nil, fmt.Errorf("the accelerate parameter should be a boolean")
 	}
 
+	caCert := parameters["cacert"].(string)
+
 	params := DriverParameters{
 		fmt.Sprint(accessKey),
 		fmt.Sprint(secretKey),
@@ -447,6 +450,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(keyID),
 		secureBool,
 		skipVerifyBool,
+		caCert,
 		v4Bool,
 		chunkSize,
 		multipartCopyChunkSize,
@@ -543,10 +547,26 @@ func New(params DriverParameters) (*Driver, error) {
 			})
 		}
 	}
-
-	sess, err := session.NewSession(awsConfig)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create new session with aws config: %v", err)
+	// If a CA cert is provided, use it to verify the server's certificate
+	var (
+		sess *session.Session
+		err  error
+	)
+	if params.CACert != "" {
+		sess, err = session.NewSessionWithOptions(
+			session.Options{
+				Config:         *awsConfig,
+				CustomCABundle: strings.NewReader(params.CACert),
+			},
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create new session with aws config: %v", err)
+		}
+	} else {
+		sess, err = session.NewSession(awsConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create new session with aws config: %v", err)
+		}
 	}
 	s3obj := s3.New(sess)
 

@@ -114,6 +114,8 @@ func init() {
 			}
 		}
 
+		caCert := ""
+
 		parameters := DriverParameters{
 			accessKey,
 			secretKey,
@@ -125,6 +127,7 @@ func init() {
 			keyID,
 			secureBool,
 			skipVerifyBool,
+			caCert,
 			v4Bool,
 			minChunkSize,
 			defaultMultipartCopyChunkSize,
