@@ -70,7 +70,7 @@ func getOutstandingUploads(ctx context.Context, driver storageDriver.StorageDriv
 	err = driver.Walk(ctx, root, func(fileInfo storageDriver.FileInfo) error {
 		filePath := fileInfo.Path()
 		_, file := path.Split(filePath)
-		if file[0] == '_' {
+		if strings.HasPrefix(file, "_") {
 			// Reserved directory
 			inUploadDir = (file == "_uploads")
 
