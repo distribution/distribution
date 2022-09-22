@@ -12,4 +12,6 @@ These versions are currently receiving security updates.
 
 ## Reporting a Vulnerability
 
-To report a security disclosure, emails the project maintainers on the maintainer mailing list: cncf-distribution-maintainers@lists.cncf.io
+The maintainers take security seriously. If you discover a security issue, please bring it to their attention right away!
+
+Please DO NOT file a public issue, instead send your report privately to cncf-distribution-security@lists.cncf.io.
