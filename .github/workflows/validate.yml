@@ -9,6 +9,9 @@ on:
       - 'v*'
   pull_request:
 
+permissions:
+  contents: read # to fetch code (actions/checkout)
+
 jobs:
   validate:
     runs-on: ubuntu-latest
