@@ -8,6 +8,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read # to fetch code (actions/checkout)
+
 jobs:
   run-e2e-test:
     runs-on: ubuntu-latest
