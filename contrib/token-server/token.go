@@ -180,7 +180,7 @@ func (issuer *TokenIssuer) CreateJWT(subject string, audience string, grantedAcc
 	claimSet := token.ClaimSet{
 		Issuer:     issuer.Issuer,
 		Subject:    subject,
-		Audience:   audience,
+		Audience:   []string{audience},
 		Expiration: now.Add(exp).Unix(),
 		NotBefore:  now.Unix(),
 		IssuedAt:   now.Unix(),

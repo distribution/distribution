@@ -117,7 +117,7 @@ func makeTestToken(issuer, audience string, access []*ResourceActions, rootKey l
 	claimSet := &ClaimSet{
 		Issuer:     issuer,
 		Subject:    "foo",
-		Audience:   audience,
+		Audience:   []string{audience},
 		Expiration: exp.Unix(),
 		NotBefore:  now.Unix(),
 		IssuedAt:   now.Unix(),
@@ -307,10 +307,10 @@ func writeTempRootCerts(rootKeys []libtrust.PrivateKey) (filename string, err er
 // TestAccessController tests complete integration of the token auth package.
 // It starts by mocking the options for a token auth accessController which
 // it creates. It then tries a few mock requests:
-// 		- don't supply a token; should error with challenge
-//		- supply an invalid token; should error with challenge
-// 		- supply a token with insufficient access; should error with challenge
-//		- supply a valid token; should not error
+//   - don't supply a token; should error with challenge
+//   - supply an invalid token; should error with challenge
+//   - supply a token with insufficient access; should error with challenge
+//   - supply a valid token; should not error
 func TestAccessController(t *testing.T) {
 	// Make 2 keys; only the first is to be a trusted root key.
 	rootKeys, err := makeRootKeys(2)

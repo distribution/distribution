@@ -42,13 +42,13 @@ type ResourceActions struct {
 // ClaimSet describes the main section of a JSON Web Token.
 type ClaimSet struct {
 	// Public claims
-	Issuer     string `json:"iss"`
-	Subject    string `json:"sub"`
-	Audience   string `json:"aud"`
-	Expiration int64  `json:"exp"`
-	NotBefore  int64  `json:"nbf"`
-	IssuedAt   int64  `json:"iat"`
-	JWTID      string `json:"jti"`
+	Issuer     string         `json:"iss"`
+	Subject    string         `json:"sub"`
+	Audience   WeakStringList `json:"aud"`
+	Expiration int64          `json:"exp"`
+	NotBefore  int64          `json:"nbf"`
+	IssuedAt   int64          `json:"iat"`
+	JWTID      string         `json:"jti"`
 
 	// Private claims
 	Access []*ResourceActions `json:"access"`
@@ -141,8 +141,8 @@ func (t *Token) Verify(verifyOpts VerifyOptions) error {
 	}
 
 	// Verify that the Audience claim is allowed.
-	if !contains(verifyOpts.AcceptedAudiences, t.Claims.Audience) {
-		log.Infof("token intended for another audience: %q", t.Claims.Audience)
+	if !containsAny(verifyOpts.AcceptedAudiences, t.Claims.Audience) {
+		log.Infof("token intended for another audience: %v", t.Claims.Audience)
 		return ErrInvalidToken
 	}
 
@@ -185,13 +185,15 @@ func (t *Token) Verify(verifyOpts VerifyOptions) error {
 
 // VerifySigningKey attempts to get the key which was used to sign this token.
 // The token header should contain either of these 3 fields:
-//      `x5c` - The x509 certificate chain for the signing key. Needs to be
-//              verified.
-//      `jwk` - The JSON Web Key representation of the signing key.
-//              May contain its own `x5c` field which needs to be verified.
-//      `kid` - The unique identifier for the key. This library interprets it
-//              as a libtrust fingerprint. The key itself can be looked up in
-//              the trustedKeys field of the given verify options.
+//
+//	`x5c` - The x509 certificate chain for the signing key. Needs to be
+//	        verified.
+//	`jwk` - The JSON Web Key representation of the signing key.
+//	        May contain its own `x5c` field which needs to be verified.
+//	`kid` - The unique identifier for the key. This library interprets it
+//	        as a libtrust fingerprint. The key itself can be looked up in
+//	        the trustedKeys field of the given verify options.
+//
 // Each of these methods are tried in that order of preference until the
 // signing key is found or an error is returned.
 func (t *Token) VerifySigningKey(verifyOpts VerifyOptions) (signingKey libtrust.PublicKey, err error) {
