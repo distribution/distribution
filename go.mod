@@ -31,6 +31,8 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
+require github.com/ufilesdk-dev/ufile-gosdk v1.0.2
+
 require (
 	cloud.google.com/go v0.65.0 // indirect
 	github.com/Azure/go-autorest v14.2.0+incompatible // indirect

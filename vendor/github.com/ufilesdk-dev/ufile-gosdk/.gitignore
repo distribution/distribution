@@ -1,0 +1,6 @@
+example/config.json
+example/*.txt
+*.exe
+*.png
+*.jpg
+
