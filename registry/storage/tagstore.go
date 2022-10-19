@@ -124,14 +124,13 @@ func (ts *tagStore) linkedBlobStore(ctx context.Context, tag string) *linkedBlob
 		blobStore:  ts.blobStore,
 		repository: ts.repository,
 		ctx:        ctx,
-		linkPathFns: []linkPathFunc{func(name string, dgst digest.Digest) (string, error) {
+		linkPath: func(name string, dgst digest.Digest) (string, error) {
 			return pathFor(manifestTagIndexEntryLinkPathSpec{
 				name:     name,
 				tag:      tag,
 				revision: dgst,
 			})
-
-		}},
+		},
 	}
 }
 
@@ -185,13 +184,13 @@ func (ts *tagStore) ManifestDigests(ctx context.Context, tag string) ([]digest.D
 	lbs := &linkedBlobStore{
 		blobStore: ts.blobStore,
 		blobAccessController: &linkedBlobStatter{
-			blobStore:   ts.blobStore,
-			repository:  ts.repository,
-			linkPathFns: []linkPathFunc{manifestRevisionLinkPath},
+			blobStore:  ts.blobStore,
+			repository: ts.repository,
+			linkPath:   manifestRevisionLinkPath,
 		},
-		repository:  ts.repository,
-		ctx:         ctx,
-		linkPathFns: []linkPathFunc{tagLinkPath},
+		repository: ts.repository,
+		ctx:        ctx,
+		linkPath:   tagLinkPath,
 		linkDirectoryPathSpec: manifestTagIndexPathSpec{
 			name: ts.repository.Named().Name(),
 			tag:  tag,
