@@ -5,10 +5,10 @@ import (
 	"reflect"
 )
 
-// WeakStringList is a slice of strings that can be deserialized from either a single string value or a list of strings.
-type WeakStringList []string
+// AudienceList is a slice of strings that can be deserialized from either a single string value or a list of strings.
+type AudienceList []string
 
-func (s *WeakStringList) UnmarshalJSON(data []byte) (err error) {
+func (s *AudienceList) UnmarshalJSON(data []byte) (err error) {
 	var value interface{}
 
 	if err = json.Unmarshal(data, &value); err != nil {
@@ -50,6 +50,6 @@ func (s *WeakStringList) UnmarshalJSON(data []byte) (err error) {
 	return
 }
 
-func (s WeakStringList) MarshalJSON() (b []byte, err error) {
+func (s AudienceList) MarshalJSON() (b []byte, err error) {
 	return json.Marshal([]string(s))
 }

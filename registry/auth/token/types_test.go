@@ -5,19 +5,19 @@ import (
 	"testing"
 )
 
-func TestWeakStringList_Unmarshal(t *testing.T) {
+func TestAudienceList_Unmarshal(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
 		testCases := []struct {
 			value    string
-			expected WeakStringList
+			expected AudienceList
 		}{
 			{
 				value:    `"audience"`,
-				expected: WeakStringList{"audience"},
+				expected: AudienceList{"audience"},
 			},
 			{
 				value:    `["audience1", "audience2"]`,
-				expected: WeakStringList{"audience1", "audience2"},
+				expected: AudienceList{"audience1", "audience2"},
 			},
 			{
 				value:    `null`,
@@ -29,7 +29,7 @@ func TestWeakStringList_Unmarshal(t *testing.T) {
 			testCase := testCase
 
 			t.Run("", func(t *testing.T) {
-				var actual WeakStringList
+				var actual AudienceList
 
 				err := json.Unmarshal([]byte(testCase.value), &actual)
 				if err != nil {
@@ -42,7 +42,7 @@ func TestWeakStringList_Unmarshal(t *testing.T) {
 	})
 
 	t.Run("Error", func(t *testing.T) {
-		var actual WeakStringList
+		var actual AudienceList
 
 		err := json.Unmarshal([]byte("1234"), &actual)
 		if err == nil {
@@ -51,8 +51,8 @@ func TestWeakStringList_Unmarshal(t *testing.T) {
 	})
 }
 
-func TestWeakStringList_Marshal(t *testing.T) {
-	value := WeakStringList{"audience"}
+func TestAudienceList_Marshal(t *testing.T) {
+	value := AudienceList{"audience"}
 
 	expected := `["audience"]`
 
