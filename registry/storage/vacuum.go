@@ -28,6 +28,25 @@ type Vacuum struct {
 	ctx    context.Context
 }
 
+// RemoveLayer removes a layer from the filesystem
+func (v Vacuum) RemoveLayer(repoName string, dgst digest.Digest) error {
+	layerLinkPath, err := pathFor(layerLinkPathSpec{name: repoName, digest: dgst})
+	if err != nil {
+		return err
+	}
+
+	layerDir := path.Dir(layerLinkPath)
+
+	dcontext.GetLogger(v.ctx).Infof("Deleting layer: %s", layerDir)
+
+	err = v.driver.Delete(v.ctx, layerDir)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // RemoveBlob removes a blob from the filesystem
 func (v Vacuum) RemoveBlob(dgst string) error {
 	d, err := digest.Parse(dgst)

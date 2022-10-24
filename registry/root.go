@@ -19,6 +19,8 @@ func init() {
 	RootCmd.AddCommand(GCCmd)
 	GCCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "do everything except remove the blobs")
 	GCCmd.Flags().BoolVarP(&removeUntagged, "delete-untagged", "m", false, "delete manifests that are not currently referenced via tag")
+	GCCmd.Flags().BoolVarP(&removeRepositories, "delete-repositories", "r", false, "delete repositories without manifests")
+	GCCmd.Flags().Float64VarP(&modificationTimeout, "modification-timeout", "t", 0, "don't remove objects modified less than this number of seconds ago")
 	RootCmd.Flags().BoolVarP(&showVersion, "version", "v", false, "show the version and exit")
 }
 
@@ -38,6 +40,8 @@ var RootCmd = &cobra.Command{
 
 var dryRun bool
 var removeUntagged bool
+var removeRepositories bool
+var modificationTimeout float64
 
 // GCCmd is the cobra command that corresponds to the garbage-collect subcommand
 var GCCmd = &cobra.Command{
@@ -78,8 +82,10 @@ var GCCmd = &cobra.Command{
 		}
 
 		err = storage.MarkAndSweep(ctx, driver, registry, storage.GCOpts{
-			DryRun:         dryRun,
-			RemoveUntagged: removeUntagged,
+			DryRun:              dryRun,
+			RemoveUntagged:      removeUntagged,
+			RemoveRepositories:  removeRepositories,
+			ModificationTimeout: modificationTimeout,
 		})
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "failed to garbage collect: %v", err)
