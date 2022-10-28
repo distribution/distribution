@@ -37,6 +37,9 @@ func blobUploadDispatcher(ctx *Context, r *http.Request) http.Handler {
 	}
 
 	if buh.UUID != "" {
+		if r.Method == http.MethodGet || r.Method == http.MethodHead {
+			return handler
+		}
 		if h := buh.ResumeBlobUpload(ctx, r); h != nil {
 			return h
 		}
@@ -92,7 +95,7 @@ func (buh *blobUploadHandler) StartBlobUpload(w http.ResponseWriter, r *http.Req
 
 	buh.Upload = upload
 
-	if err := buh.blobUploadResponse(w, r, true); err != nil {
+	if err := buh.blobUploadResponse(w, r); err != nil {
 		buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		return
 	}
@@ -104,19 +107,25 @@ func (buh *blobUploadHandler) StartBlobUpload(w http.ResponseWriter, r *http.Req
 // GetUploadStatus returns the status of a given upload, identified by id.
 func (buh *blobUploadHandler) GetUploadStatus(w http.ResponseWriter, r *http.Request) {
 	if buh.Upload == nil {
-		buh.Errors = append(buh.Errors, v2.ErrorCodeBlobUploadUnknown)
-		return
+		blobs := buh.Repository.Blobs(buh)
+		upload, err := blobs.Resume(buh, buh.UUID)
+		if err != nil {
+			if err == distribution.ErrBlobUploadUnknown {
+				buh.Errors = append(buh.Errors, v2.ErrorCodeBlobUploadUnknown.WithDetail(err))
+			} else {
+				buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+			}
+			return
+		}
+
+		buh.Upload = upload
 	}
 
-	// TODO(dmcgowan): Set last argument to false in blobUploadResponse when
-	// resumable upload is supported. This will enable returning a non-zero
-	// range for clients to begin uploading at an offset.
-	if err := buh.blobUploadResponse(w, r, true); err != nil {
+	if err := buh.blobUploadResponse(w, r); err != nil {
 		buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		return
 	}
 
-	w.Header().Set("Docker-Upload-UUID", buh.UUID)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -163,7 +172,7 @@ func (buh *blobUploadHandler) PatchBlobData(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	if err := buh.blobUploadResponse(w, r, false); err != nil {
+	if err := buh.blobUploadResponse(w, r); err != nil {
 		buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		return
 	}
@@ -181,6 +190,7 @@ func (buh *blobUploadHandler) PutBlobUploadComplete(w http.ResponseWriter, r *ht
 		buh.Errors = append(buh.Errors, v2.ErrorCodeBlobUploadUnknown)
 		return
 	}
+	defer buh.Upload.Close()
 
 	dgstStr := r.FormValue("digest") // TODO(stevvooe): Support multiple digest parameters!
 
@@ -251,6 +261,7 @@ func (buh *blobUploadHandler) CancelBlobUpload(w http.ResponseWriter, r *http.Re
 		buh.Errors = append(buh.Errors, v2.ErrorCodeBlobUploadUnknown)
 		return
 	}
+	defer buh.Upload.Close()
 
 	w.Header().Set("Docker-Upload-UUID", buh.UUID)
 	if err := buh.Upload.Cancel(buh); err != nil {
@@ -302,11 +313,9 @@ func (buh *blobUploadHandler) ResumeBlobUpload(ctx *Context, r *http.Request) ht
 	buh.Upload = upload
 
 	if size := upload.Size(); size != buh.State.Offset {
-		defer upload.Close()
 		dcontext.GetLogger(ctx).Errorf("upload resumed at wrong offset: %d != %d", size, buh.State.Offset)
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			buh.Errors = append(buh.Errors, v2.ErrorCodeBlobUploadInvalid.WithDetail(err))
-			upload.Cancel(buh)
+			buh.Errors = append(buh.Errors, v2.ErrorCodeRangeInvalid.WithDetail(err))
 		})
 	}
 	return nil
@@ -314,10 +323,8 @@ func (buh *blobUploadHandler) ResumeBlobUpload(ctx *Context, r *http.Request) ht
 
 // blobUploadResponse provides a standard request for uploading blobs and
 // chunk responses. This sets the correct headers but the response status is
-// left to the caller. The fresh argument is used to ensure that new blob
-// uploads always start at a 0 offset. This allows disabling resumable push by
-// always returning a 0 offset on check status.
-func (buh *blobUploadHandler) blobUploadResponse(w http.ResponseWriter, r *http.Request, fresh bool) error {
+// left to the caller.
+func (buh *blobUploadHandler) blobUploadResponse(w http.ResponseWriter, r *http.Request) error {
 	// TODO(stevvooe): Need a better way to manage the upload state automatically.
 	buh.State.Name = buh.Repository.Named().Name()
 	buh.State.UUID = buh.Upload.ID()

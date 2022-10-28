@@ -687,6 +687,17 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 	layerFile.Seek(0, 0)
 	uploadURLBase, _ = startPushLayer(t, env, imageName)
 	uploadURLBase, dgst := pushChunk(t, env.builder, imageName, uploadURLBase, layerFile, layerLength)
+
+	// -----------------------------------------
+	// Check the chunk upload status
+	_, end, err := getUploadStatus(uploadURLBase)
+	if err != nil {
+		t.Fatalf("unexpected error doing chunk upload check: %v", err)
+	}
+	if end+1 != layerLength {
+		t.Fatalf("getting wrong chunk upload status: %d", end)
+	}
+
 	finishUpload(t, env.builder, imageName, uploadURLBase, dgst)
 
 	// -----------------------------------------
@@ -2485,6 +2496,27 @@ func pushLayer(t *testing.T, ub *v2.URLBuilder, name reference.Named, dgst diges
 	})
 
 	return resp.Header.Get("Location")
+}
+
+func getUploadStatus(location string) (string, int64, error) {
+	req, err := http.NewRequest(http.MethodGet, location, nil)
+	if err != nil {
+		return location, -1, err
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return location, -1, err
+	}
+
+	defer resp.Body.Close()
+
+	_, end, err := parseContentRange(resp.Header.Get("Range"))
+	if err != nil {
+		return location, -1, err
+	}
+
+	return resp.Header.Get("Location"), end, nil
 }
 
 func finishUpload(t *testing.T, ub *v2.URLBuilder, name reference.Named, uploadURLBase string, dgst digest.Digest) string {
