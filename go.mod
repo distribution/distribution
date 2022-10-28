@@ -24,8 +24,8 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.0.0
 	github.com/yvasiyarov/gorelic v0.0.0-20141212073537-a9bba5b9ab50
-	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3
-	golang.org/x/oauth2 v0.0.0-20210514164344-f6687ab2804c
+	golang.org/x/crypto v0.1.0
+	golang.org/x/oauth2 v0.1.0
 	google.golang.org/api v0.30.0
 	google.golang.org/cloud v0.0.0-20151119220103-975617b05ea8
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15
@@ -66,11 +66,11 @@ require (
 	github.com/yvasiyarov/go-metrics v0.0.0-20140926110328-57bccd1ccd43 // indirect
 	github.com/yvasiyarov/newrelic_platform_go v0.0.0-20140908184405-b21fdbd4370f // indirect
 	go.opencensus.io v0.22.4 // indirect
-	golang.org/x/net v0.0.0-20220906165146-f3363e06e74c // indirect; updated for CVE-2022-27664
-	golang.org/x/sys v0.0.0-20220728004956-3c1f35247d10 // indirect
-	golang.org/x/text v0.3.7 // indirect
-	google.golang.org/appengine v1.6.6 // indirect
+	golang.org/x/net v0.1.0 // indirect; updated for CVE-2022-27664
+	golang.org/x/sys v0.1.0 // indirect
+	golang.org/x/text v0.4.0 // indirect
+	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/genproto v0.0.0-20200825200019-8632dd797987 // indirect
 	google.golang.org/grpc v1.31.0 // indirect
-	google.golang.org/protobuf v1.26.0 // indirect
+	google.golang.org/protobuf v1.28.0 // indirect
 )
