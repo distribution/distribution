@@ -1468,6 +1468,30 @@ func (w *writer) Commit() error {
 		})
 	}
 
+	// This is an edge case when we are trying to upload an empty chunk of data using
+	// a MultiPart upload. As a result we are trying to complete the MultipartUpload
+	// with an empty slice of `completedUploadedParts` which will always lead to 400
+	// being returned from S3 See: https://docs.aws.amazon.com/sdk-for-go/api/service/s3/#CompletedMultipartUpload
+	// Solution: we upload an empty i.e. 0 byte part as a single part and then append it
+	// to the completedUploadedParts slice used to complete the Multipart upload.
+	if len(w.parts) == 0 {
+		resp, err := w.driver.S3.UploadPart(&s3.UploadPartInput{
+			Bucket:     aws.String(w.driver.Bucket),
+			Key:        aws.String(w.key),
+			PartNumber: aws.Int64(1),
+			UploadId:   aws.String(w.uploadID),
+			Body:       bytes.NewReader(nil),
+		})
+		if err != nil {
+			return err
+		}
+
+		completedUploadedParts = append(completedUploadedParts, &s3.CompletedPart{
+			ETag:       resp.ETag,
+			PartNumber: aws.Int64(1),
+		})
+	}
+
 	sort.Sort(completedUploadedParts)
 
 	_, err = w.driver.S3.CompleteMultipartUpload(&s3.CompleteMultipartUploadInput{
