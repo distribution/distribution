@@ -49,23 +49,23 @@ func manifestDispatcher(ctx *Context, r *http.Request) http.Handler {
 	manifestHandler := &manifestHandler{
 		Context: ctx,
 	}
-	reference := getReference(ctx)
-	dgst, err := digest.Parse(reference)
+	ref := getReference(ctx)
+	dgst, err := digest.Parse(ref)
 	if err != nil {
 		// We just have a tag
-		manifestHandler.Tag = reference
+		manifestHandler.Tag = ref
 	} else {
 		manifestHandler.Digest = dgst
 	}
 
 	mhandler := handlers.MethodHandler{
-		"GET":  http.HandlerFunc(manifestHandler.GetManifest),
-		"HEAD": http.HandlerFunc(manifestHandler.GetManifest),
+		http.MethodGet:  http.HandlerFunc(manifestHandler.GetManifest),
+		http.MethodHead: http.HandlerFunc(manifestHandler.GetManifest),
 	}
 
 	if !ctx.readOnly {
-		mhandler["PUT"] = http.HandlerFunc(manifestHandler.PutManifest)
-		mhandler["DELETE"] = http.HandlerFunc(manifestHandler.DeleteManifest)
+		mhandler[http.MethodPut] = http.HandlerFunc(manifestHandler.PutManifest)
+		mhandler[http.MethodDelete] = http.HandlerFunc(manifestHandler.DeleteManifest)
 	}
 
 	return mhandler

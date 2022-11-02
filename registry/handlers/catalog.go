@@ -21,7 +21,7 @@ func catalogDispatcher(ctx *Context, r *http.Request) http.Handler {
 	}
 
 	return handlers.MethodHandler{
-		"GET": http.HandlerFunc(catalogHandler.GetCatalog),
+		http.MethodGet: http.HandlerFunc(catalogHandler.GetCatalog),
 	}
 }
 

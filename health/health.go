@@ -242,7 +242,7 @@ func RegisterPeriodicThresholdFunc(name string, period time.Duration, threshold 
 // and their corresponding status.
 // Returns 503 if any Error status exists, 200 otherwise
 func StatusHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" {
+	if r.Method == http.MethodGet {
 		checks := CheckStatus()
 		status := http.StatusOK
 

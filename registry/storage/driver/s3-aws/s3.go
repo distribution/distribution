@@ -1005,11 +1005,11 @@ ListLoop:
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 // May return an UnsupportedMethodErr in certain StorageDriver implementations.
 func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
-	methodString := "GET"
+	methodString := http.MethodGet
 	method, ok := options["method"]
 	if ok {
 		methodString, ok = method.(string)
-		if !ok || (methodString != "GET" && methodString != "HEAD") {
+		if !ok || (methodString != http.MethodGet && methodString != http.MethodHead) {
 			return "", storagedriver.ErrUnsupportedMethod{}
 		}
 	}
@@ -1026,12 +1026,12 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 	var req *request.Request
 
 	switch methodString {
-	case "GET":
+	case http.MethodGet:
 		req, _ = d.S3.GetObjectRequest(&s3.GetObjectInput{
 			Bucket: aws.String(d.Bucket),
 			Key:    aws.String(d.s3Path(path)),
 		})
-	case "HEAD":
+	case http.MethodHead:
 		req, _ = d.S3.HeadObjectRequest(&s3.HeadObjectInput{
 			Bucket: aws.String(d.Bucket),
 			Key:    aws.String(d.s3Path(path)),

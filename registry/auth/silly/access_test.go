@@ -52,7 +52,7 @@ func TestSillyAccessController(t *testing.T) {
 		t.Fatalf("unexpected response status: %v != %v", resp.StatusCode, http.StatusUnauthorized)
 	}
 
-	req, err := http.NewRequest("GET", server.URL, nil)
+	req, err := http.NewRequest(http.MethodGet, server.URL, nil)
 	if err != nil {
 		t.Fatalf("unexpected error creating new request: %v", err)
 	}

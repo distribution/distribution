@@ -235,42 +235,42 @@ func TestAppendAccessRecords(t *testing.T) {
 	}
 
 	records := []auth.Access{}
-	result := appendAccessRecords(records, "GET", repo)
+	result := appendAccessRecords(records, http.MethodGet, repo)
 	expectedResult := []auth.Access{expectedPullRecord}
 	if ok := reflect.DeepEqual(result, expectedResult); !ok {
 		t.Fatalf("Actual access record differs from expected")
 	}
 
 	records = []auth.Access{}
-	result = appendAccessRecords(records, "HEAD", repo)
+	result = appendAccessRecords(records, http.MethodHead, repo)
 	expectedResult = []auth.Access{expectedPullRecord}
 	if ok := reflect.DeepEqual(result, expectedResult); !ok {
 		t.Fatalf("Actual access record differs from expected")
 	}
 
 	records = []auth.Access{}
-	result = appendAccessRecords(records, "POST", repo)
+	result = appendAccessRecords(records, http.MethodPost, repo)
 	expectedResult = []auth.Access{expectedPullRecord, expectedPushRecord}
 	if ok := reflect.DeepEqual(result, expectedResult); !ok {
 		t.Fatalf("Actual access record differs from expected")
 	}
 
 	records = []auth.Access{}
-	result = appendAccessRecords(records, "PUT", repo)
+	result = appendAccessRecords(records, http.MethodPut, repo)
 	expectedResult = []auth.Access{expectedPullRecord, expectedPushRecord}
 	if ok := reflect.DeepEqual(result, expectedResult); !ok {
 		t.Fatalf("Actual access record differs from expected")
 	}
 
 	records = []auth.Access{}
-	result = appendAccessRecords(records, "PATCH", repo)
+	result = appendAccessRecords(records, http.MethodPatch, repo)
 	expectedResult = []auth.Access{expectedPullRecord, expectedPushRecord}
 	if ok := reflect.DeepEqual(result, expectedResult); !ok {
 		t.Fatalf("Actual access record differs from expected")
 	}
 
 	records = []auth.Access{}
-	result = appendAccessRecords(records, "DELETE", repo)
+	result = appendAccessRecords(records, http.MethodDelete, repo)
 	expectedResult = []auth.Access{expectedDeleteRecord}
 	if ok := reflect.DeepEqual(result, expectedResult); !ok {
 		t.Fatalf("Actual access record differs from expected")

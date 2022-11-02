@@ -337,7 +337,7 @@ func testProxyStoreServe(t *testing.T, te *testEnv, numClients int) {
 			defer wg.Done()
 			for _, remoteBlob := range te.inRemote {
 				w := httptest.NewRecorder()
-				r, err := http.NewRequest("GET", "", nil)
+				r, err := http.NewRequest(http.MethodGet, "", nil)
 				if err != nil {
 					t.Error(err)
 					return
@@ -383,7 +383,7 @@ func testProxyStoreServe(t *testing.T, te *testEnv, numClients int) {
 	// Serveblob - blobs come from local
 	for _, dr := range te.inRemote {
 		w := httptest.NewRecorder()
-		r, err := http.NewRequest("GET", "", nil)
+		r, err := http.NewRequest(http.MethodGet, "", nil)
 		if err != nil {
 			t.Fatal(err)
 		}

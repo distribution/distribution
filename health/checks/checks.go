@@ -40,7 +40,7 @@ func HTTPChecker(r string, statusCode int, timeout time.Duration, headers http.H
 		client := http.Client{
 			Timeout: timeout,
 		}
-		req, err := http.NewRequest("HEAD", r, nil)
+		req, err := http.NewRequest(http.MethodHead, r, nil)
 		if err != nil {
 			return errors.New("error creating request: " + r)
 		}

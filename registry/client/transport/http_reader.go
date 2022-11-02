@@ -171,7 +171,7 @@ func (hrs *httpReadSeeker) reader() (io.Reader, error) {
 		return hrs.rc, nil
 	}
 
-	req, err := http.NewRequestWithContext(hrs.ctx, "GET", hrs.url, nil)
+	req, err := http.NewRequestWithContext(hrs.ctx, http.MethodGet, hrs.url, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -96,8 +96,8 @@ func main() {
 	}
 
 	router := mux.NewRouter()
-	router.Path("/token/").Methods("GET").Handler(handlerWithContext(ctx, ts.getToken))
-	router.Path("/token/").Methods("POST").Handler(handlerWithContext(ctx, ts.postToken))
+	router.Path("/token/").Methods(http.MethodGet).Handler(handlerWithContext(ctx, ts.getToken))
+	router.Path("/token/").Methods(http.MethodPost).Handler(handlerWithContext(ctx, ts.postToken))
 
 	if cert == "" {
 		err = http.ListenAndServe(addr, router)
