@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -239,8 +240,8 @@ func (t *tags) All(ctx context.Context) ([]string, error) {
 			}
 			tags = append(tags, tagsResponse.Tags...)
 			if link := resp.Header.Get("Link"); link != "" {
-				linkURLStr := strings.Trim(strings.Split(link, ";")[0], "<>")
-				linkURL, err := url.Parse(linkURLStr)
+				firsLink, _, _ := strings.Cut(link, ";")
+				linkURL, err := url.Parse(strings.Trim(firsLink, "<>"))
 				if err != nil {
 					return tags, err
 				}
@@ -808,8 +809,8 @@ func (bs *blobs) Create(ctx context.Context, options ...distribution.BlobCreateO
 		// TODO(dmcgowan): Check for invalid UUID
 		uuid := resp.Header.Get("Docker-Upload-UUID")
 		if uuid == "" {
-			parts := strings.Split(resp.Header.Get("Location"), "/")
-			uuid = parts[len(parts)-1]
+			// uuid is expected to be the last path element
+			_, uuid = path.Split(resp.Header.Get("Location"))
 		}
 		if uuid == "" {
 			return nil, errors.New("cannot retrieve docker upload UUID")

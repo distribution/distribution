@@ -247,14 +247,11 @@ func (ac *accessController) Authorized(ctx context.Context, accessItems ...auth.
 		return nil, err
 	}
 
-	parts := strings.Split(req.Header.Get("Authorization"), " ")
-
-	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+	prefix, rawToken, ok := strings.Cut(req.Header.Get("Authorization"), " ")
+	if !ok || rawToken == "" || !strings.EqualFold(prefix, "bearer") {
 		challenge.err = ErrTokenRequired
 		return nil, challenge
 	}
-
-	rawToken := parts[1]
 
 	token, err := NewToken(rawToken)
 	if err != nil {
