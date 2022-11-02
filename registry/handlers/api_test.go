@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -69,7 +68,7 @@ func TestCheckAPI(t *testing.T) {
 		"Content-Length": []string{"2"},
 	})
 
-	p, err := ioutil.ReadAll(resp.Body)
+	p, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("unexpected error reading response body: %v", err)
 	}
@@ -1857,7 +1856,7 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 	}
 	defer resp.Body.Close()
 
-	manifestBytes, err := ioutil.ReadAll(resp.Body)
+	manifestBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("error reading response body: %v", err)
 	}
@@ -2091,7 +2090,7 @@ func testManifestAPIManifestList(t *testing.T, env *testEnv, args manifestArgs) 
 	}
 	defer resp.Body.Close()
 
-	manifestBytes, err := ioutil.ReadAll(resp.Body)
+	manifestBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("error reading response body: %v", err)
 	}
@@ -2614,7 +2613,7 @@ func checkResponse(t *testing.T, msg string, resp *http.Response, expectedStatus
 // expected error codes, returning the error structure, the json slice and a
 // count of the errors by code.
 func checkBodyHasErrorCodes(t *testing.T, msg string, resp *http.Response, errorCodes ...errcode.ErrorCode) (errcode.Errors, []byte, map[errcode.ErrorCode]int) {
-	p, err := ioutil.ReadAll(resp.Body)
+	p, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("unexpected error reading body %s: %v", msg, err)
 	}

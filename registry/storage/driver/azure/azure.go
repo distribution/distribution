@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
@@ -115,7 +114,7 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 	}
 
 	defer blob.Close()
-	return ioutil.ReadAll(blob)
+	return io.ReadAll(blob)
 }
 
 // PutContent stores the []byte content at a location designated by "path".
@@ -172,7 +171,7 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 	info := blobRef.Properties
 	size := info.ContentLength
 	if offset >= size {
-		return ioutil.NopCloser(bytes.NewReader(nil)), nil
+		return io.NopCloser(bytes.NewReader(nil)), nil
 	}
 
 	resp, err := blobRef.GetRange(&azure.GetBlobRangeOptions{

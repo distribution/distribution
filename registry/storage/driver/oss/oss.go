@@ -17,7 +17,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -273,7 +272,7 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 	// OSS sever will always return http.StatusPartialContent if range is acceptable.
 	if resp.StatusCode != http.StatusPartialContent {
 		resp.Body.Close()
-		return ioutil.NopCloser(bytes.NewReader(nil)), nil
+		return io.NopCloser(bytes.NewReader(nil)), nil
 	}
 
 	return resp.Body, nil

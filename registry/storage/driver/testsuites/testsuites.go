@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/sha256"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"os"
@@ -325,7 +324,7 @@ func (suite *DriverSuite) TestReaderWithOffset(c *check.C) {
 	c.Assert(err, check.IsNil)
 	defer reader.Close()
 
-	readContents, err := ioutil.ReadAll(reader)
+	readContents, err := io.ReadAll(reader)
 	c.Assert(err, check.IsNil)
 
 	c.Assert(readContents, check.DeepEquals, append(append(contentsChunk1, contentsChunk2...), contentsChunk3...))
@@ -334,7 +333,7 @@ func (suite *DriverSuite) TestReaderWithOffset(c *check.C) {
 	c.Assert(err, check.IsNil)
 	defer reader.Close()
 
-	readContents, err = ioutil.ReadAll(reader)
+	readContents, err = io.ReadAll(reader)
 	c.Assert(err, check.IsNil)
 
 	c.Assert(readContents, check.DeepEquals, append(contentsChunk2, contentsChunk3...))
@@ -343,7 +342,7 @@ func (suite *DriverSuite) TestReaderWithOffset(c *check.C) {
 	c.Assert(err, check.IsNil)
 	defer reader.Close()
 
-	readContents, err = ioutil.ReadAll(reader)
+	readContents, err = io.ReadAll(reader)
 	c.Assert(err, check.IsNil)
 	c.Assert(readContents, check.DeepEquals, contentsChunk3)
 
@@ -643,7 +642,7 @@ func (suite *DriverSuite) TestURLFor(c *check.C) {
 	c.Assert(err, check.IsNil)
 	defer response.Body.Close()
 
-	read, err := ioutil.ReadAll(response.Body)
+	read, err := io.ReadAll(response.Body)
 	c.Assert(err, check.IsNil)
 	c.Assert(read, check.DeepEquals, contents)
 
@@ -874,7 +873,7 @@ func (suite *DriverSuite) TestConcurrentStreamReads(c *check.C) {
 		reader, err := suite.StorageDriver.Reader(suite.ctx, filename, offset)
 		c.Assert(err, check.IsNil)
 
-		readContents, err := ioutil.ReadAll(reader)
+		readContents, err := io.ReadAll(reader)
 		c.Assert(err, check.IsNil)
 		c.Assert(readContents, check.DeepEquals, contents[offset:])
 	}
@@ -941,7 +940,7 @@ func (suite *DriverSuite) TestConcurrentFileStreams(c *check.C) {
 // 			reader, err := suite.StorageDriver.Reader(suite.ctx, filename, offset)
 // 			c.Assert(err, check.IsNil)
 //
-// 			readContents, err := ioutil.ReadAll(reader)
+// 			readContents, err := io.ReadAll(reader)
 // 			c.Assert(err, check.IsNil)
 //
 // 			c.Assert(readContents, check.DeepEquals, contents)
@@ -1104,7 +1103,7 @@ func (suite *DriverSuite) benchmarkDeleteFiles(c *check.C, numFiles int64) {
 }
 
 func (suite *DriverSuite) testFileStreams(c *check.C, size int64) {
-	tf, err := ioutil.TempFile("", "tf")
+	tf, err := os.CreateTemp("", "tf")
 	c.Assert(err, check.IsNil)
 	defer os.Remove(tf.Name())
 	defer tf.Close()
@@ -1135,7 +1134,7 @@ func (suite *DriverSuite) testFileStreams(c *check.C, size int64) {
 	c.Assert(err, check.IsNil)
 	defer reader.Close()
 
-	readContents, err := ioutil.ReadAll(reader)
+	readContents, err := io.ReadAll(reader)
 	c.Assert(err, check.IsNil)
 
 	c.Assert(readContents, check.DeepEquals, contents)
@@ -1171,7 +1170,7 @@ func (suite *DriverSuite) writeReadCompareStreams(c *check.C, filename string, c
 	c.Assert(err, check.IsNil)
 	defer reader.Close()
 
-	readContents, err := ioutil.ReadAll(reader)
+	readContents, err := io.ReadAll(reader)
 	c.Assert(err, check.IsNil)
 
 	c.Assert(readContents, check.DeepEquals, contents)

@@ -2,7 +2,7 @@ package htpasswd
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -21,7 +21,7 @@ func TestBasicAccessController(t *testing.T) {
 							MiShil:$2y$05$0oHgwMehvoe8iAWS8I.7l.KoECXrwVaC16RPfaSCU5eVTFrATuMI2
 							DeokMan:공주님`
 
-	tempFile, err := ioutil.TempFile("", "htpasswd-test")
+	tempFile, err := os.CreateTemp("", "htpasswd-test")
 	if err != nil {
 		t.Fatal("could not create temporary htpasswd file")
 	}
@@ -122,7 +122,7 @@ func TestBasicAccessController(t *testing.T) {
 }
 
 func TestCreateHtpasswdFile(t *testing.T) {
-	tempFile, err := ioutil.TempFile("", "htpasswd-test")
+	tempFile, err := os.CreateTemp("", "htpasswd-test")
 	if err != nil {
 		t.Fatalf("could not create temporary htpasswd file %v", err)
 	}
@@ -135,7 +135,7 @@ func TestCreateHtpasswdFile(t *testing.T) {
 	if _, err := newAccessController(options); err != nil {
 		t.Fatalf("error creating access controller %v", err)
 	}
-	content, err := ioutil.ReadAll(tempFile)
+	content, err := io.ReadAll(tempFile)
 	if err != nil {
 		t.Fatalf("failed to read file %v", err)
 	}
@@ -150,7 +150,7 @@ func TestCreateHtpasswdFile(t *testing.T) {
 	if _, err := newAccessController(options); err != nil {
 		t.Fatalf("error creating access controller %v", err)
 	}
-	content, err = ioutil.ReadFile(tempFile.Name())
+	content, err = os.ReadFile(tempFile.Name())
 	if err != nil {
 		t.Fatalf("failed to read file %v", err)
 	}

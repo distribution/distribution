@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"reflect"
 	"strings"
@@ -654,7 +653,7 @@ type Proxy struct {
 // Configuration.Abc may be replaced by the value of REGISTRY_ABC,
 // Configuration.Abc.Xyz may be replaced by the value of REGISTRY_ABC_XYZ, and so forth
 func Parse(rd io.Reader) (*Configuration, error) {
-	in, err := ioutil.ReadAll(rd)
+	in, err := io.ReadAll(rd)
 	if err != nil {
 		return nil, err
 	}

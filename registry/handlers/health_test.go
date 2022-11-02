@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -17,7 +16,7 @@ import (
 func TestFileHealthCheck(t *testing.T) {
 	interval := time.Second
 
-	tmpfile, err := ioutil.TempFile(os.TempDir(), "healthcheck")
+	tmpfile, err := os.CreateTemp(os.TempDir(), "healthcheck")
 	if err != nil {
 		t.Fatalf("could not create temporary file: %v", err)
 	}

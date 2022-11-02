@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -126,7 +125,7 @@ func TestBlobServeBlob(t *testing.T) {
 		t.Errorf("Error serving blob: %s", err.Error())
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Errorf("Error reading response body: %s", err.Error())
 	}
@@ -175,7 +174,7 @@ func TestBlobServeBlobHEAD(t *testing.T) {
 		t.Errorf("Error serving blob: %s", err.Error())
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Errorf("Error reading response body: %s", err.Error())
 	}

@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
@@ -285,7 +284,7 @@ func writeTempRootCerts(rootKeys []libtrust.PrivateKey) (filename string, err er
 		return "", err
 	}
 
-	tempFile, err := ioutil.TempFile("", "rootCertBundle")
+	tempFile, err := os.CreateTemp("", "rootCertBundle")
 	if err != nil {
 		return "", err
 	}
