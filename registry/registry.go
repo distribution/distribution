@@ -73,12 +73,14 @@ var defaultCipherSuites = []uint16{
 }
 
 // maps tls version strings to constants
-var defaultTLSVersionStr = "tls1.2"
-var tlsVersions = map[string]uint16{
-	// user specified values
-	"tls1.2": tls.VersionTLS12,
-	"tls1.3": tls.VersionTLS13,
-}
+var (
+	defaultTLSVersionStr = "tls1.2"
+	tlsVersions          = map[string]uint16{
+		// user specified values
+		"tls1.2": tls.VersionTLS12,
+		"tls1.3": tls.VersionTLS13,
+	}
+)
 
 // this channel gets notified when process receives signal. It is global to ease unit testing
 var quit = make(chan os.Signal, 1)
@@ -89,7 +91,6 @@ var ServeCmd = &cobra.Command{
 	Short: "`serve` stores and distributes Docker images",
 	Long:  "`serve` stores and distributes Docker images.",
 	Run: func(cmd *cobra.Command, args []string) {
-
 		// setup context
 		ctx := dcontext.WithVersion(dcontext.Background(), version.Version)
 

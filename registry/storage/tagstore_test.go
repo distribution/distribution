@@ -163,7 +163,6 @@ func TestTagStoreAll(t *testing.T) {
 			t.Errorf("unexpected tag in enumerate %s", removed)
 		}
 	}
-
 }
 
 func TestTagLookup(t *testing.T) {

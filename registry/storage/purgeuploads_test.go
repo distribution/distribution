@@ -38,7 +38,6 @@ func addUploads(ctx context.Context, t *testing.T, d driver.StorageDriver, uploa
 	if d.PutContent(ctx, startedAtPath, []byte(startedAt.Format(time.RFC3339))); err != nil {
 		t.Fatalf("Unable to write startedAt file")
 	}
-
 }
 
 func TestPurgeGather(t *testing.T) {

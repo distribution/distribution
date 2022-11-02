@@ -233,7 +233,6 @@ func checkCommon(t *testing.T, event events.Event) {
 	if event.(Event).Target.Repository != repo {
 		t.Fatalf("unexpected repository: %q != %q", event.(Event).Target.Repository, repo)
 	}
-
 }
 
 type testSinkFn func(event events.Event) error

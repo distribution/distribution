@@ -31,7 +31,7 @@ func closeResources(handler http.Handler, closers ...io.Closer) http.Handler {
 func copyFullPayload(ctx context.Context, responseWriter http.ResponseWriter, r *http.Request, destWriter io.Writer, limit int64, action string) error {
 	// Get a channel that tells us if the client disconnects
 	clientClosed := r.Context().Done()
-	var body = r.Body
+	body := r.Body
 	if limit > 0 {
 		body = http.MaxBytesReader(responseWriter, body, limit)
 	}

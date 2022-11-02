@@ -34,7 +34,7 @@ type catalogAPIResponse struct {
 }
 
 func (ch *catalogHandler) GetCatalog(w http.ResponseWriter, r *http.Request) {
-	var moreEntries = true
+	moreEntries := true
 
 	q := r.URL.Query()
 	lastEntry := q.Get("last")

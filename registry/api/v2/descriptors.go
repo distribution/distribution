@@ -262,7 +262,6 @@ type RouteDescriptor struct {
 // MethodDescriptor provides a description of the requests that may be
 // conducted with the target method.
 type MethodDescriptor struct {
-
 	// Method is an HTTP method, such as GET, PUT or POST.
 	Method string
 

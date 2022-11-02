@@ -525,7 +525,6 @@ func TestReferenceRegexp(t *testing.T) {
 	for i := range testcases {
 		checkRegexp(t, ReferenceRegexp, testcases[i])
 	}
-
 }
 
 func TestIdentifierRegexp(t *testing.T) {

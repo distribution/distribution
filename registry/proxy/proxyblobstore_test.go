@@ -221,6 +221,7 @@ func populate(t *testing.T, te *testEnv, blobCount, size, numUnique int) {
 	te.inRemote = inRemote
 	te.numUnique = numUnique
 }
+
 func TestProxyStoreGet(t *testing.T) {
 	te := makeTestEnv(t, "foo/bar")
 
@@ -253,7 +254,6 @@ func TestProxyStoreGet(t *testing.T) {
 	if (*remoteStats)["get"] != 1 {
 		t.Errorf("Unexpected remote get count")
 	}
-
 }
 
 func TestProxyStoreStat(t *testing.T) {
@@ -284,7 +284,6 @@ func TestProxyStoreStat(t *testing.T) {
 	if te.store.authChallenger.(*mockChallenger).count != len(te.inRemote) {
 		t.Fatalf("Unexpected auth challenge count, got %#v", te.store.authChallenger)
 	}
-
 }
 
 func TestProxyStoreServeHighConcurrency(t *testing.T) {

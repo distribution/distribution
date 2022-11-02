@@ -93,7 +93,7 @@ var validRegions = map[string]struct{}{}
 // validObjectACLs contains known s3 object Acls
 var validObjectACLs = map[string]struct{}{}
 
-//DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
+// DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
 type DriverParameters struct {
 	AccessKey                   string
 	SecretKey                   string
@@ -632,7 +632,6 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 		Key:    aws.String(d.s3Path(path)),
 		Range:  aws.String("bytes=" + strconv.FormatInt(offset, 10) + "-"),
 	})
-
 	if err != nil {
 		if s3Err, ok := err.(awserr.Error); ok && s3Err.Code() == "InvalidRange" {
 			return ioutil.NopCloser(bytes.NewReader(nil)), nil
@@ -1166,16 +1165,22 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 // directoryDiff finds all directories that are not in common between
 // the previous and current paths in sorted order.
 //
-// Eg 1 directoryDiff("/path/to/folder", "/path/to/folder/folder/file")
-//   => [ "/path/to/folder/folder" ],
-// Eg 2 directoryDiff("/path/to/folder/folder1", "/path/to/folder/folder2/file")
-//   => [ "/path/to/folder/folder2" ]
-// Eg 3 directoryDiff("/path/to/folder/folder1/file", "/path/to/folder/folder2/file")
-//  => [ "/path/to/folder/folder2" ]
-// Eg 4 directoryDiff("/path/to/folder/folder1/file", "/path/to/folder/folder2/folder1/file")
-//   => [ "/path/to/folder/folder2", "/path/to/folder/folder2/folder1" ]
-// Eg 5 directoryDiff("/", "/path/to/folder/folder/file")
-//   => [ "/path", "/path/to", "/path/to/folder", "/path/to/folder/folder" ],
+// # Examples
+//
+//	directoryDiff("/path/to/folder", "/path/to/folder/folder/file")
+//	// => [ "/path/to/folder/folder" ]
+//
+//	directoryDiff("/path/to/folder/folder1", "/path/to/folder/folder2/file")
+//	// => [ "/path/to/folder/folder2" ]
+//
+//	directoryDiff("/path/to/folder/folder1/file", "/path/to/folder/folder2/file")
+//	// => [ "/path/to/folder/folder2" ]
+//
+//	directoryDiff("/path/to/folder/folder1/file", "/path/to/folder/folder2/folder1/file")
+//	// => [ "/path/to/folder/folder2", "/path/to/folder/folder2/folder1" ]
+//
+//	directoryDiff("/", "/path/to/folder/folder/file")
+//	// => [ "/path", "/path/to", "/path/to/folder", "/path/to/folder/folder" ]
 func directoryDiff(prev, current string) []string {
 	var paths []string
 

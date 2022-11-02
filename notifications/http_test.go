@@ -197,7 +197,6 @@ func TestHTTPSink(t *testing.T) {
 	if err := sink.Close(); err == nil {
 		t.Fatalf("second close should have returned error: %v", err)
 	}
-
 }
 
 func createTestEvent(action, repo, typ string) Event {

@@ -93,7 +93,8 @@ func New(accountName, accountKey, container, realm string) (*Driver, error) {
 
 	d := &driver{
 		client:    blobClient,
-		container: container}
+		container: container,
+	}
 	return &Driver{baseEmbed: baseEmbed{Base: base.Base{StorageDriver: d}}}, nil
 }
 
@@ -412,7 +413,6 @@ func (d *driver) listBlobs(container, virtPath string) ([]string, error) {
 			Marker: marker,
 			Prefix: virtPath,
 		})
-
 		if err != nil {
 			return out, err
 		}

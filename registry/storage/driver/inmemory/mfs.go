@@ -163,7 +163,6 @@ func (d *dir) mkdirs(p string) (*dir, error) {
 	components := strings.Split(relative, "/")
 	for _, component := range components {
 		d, err := dd.mkdir(component)
-
 		if err != nil {
 			// This should actually never happen, since there are no children.
 			return nil, err

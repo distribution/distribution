@@ -113,7 +113,6 @@ func (s *awsIPs) tryUpdate() error {
 		if regionAllowed {
 			*output = append(*output, *network)
 		}
-
 	}
 
 	for _, prefix := range response.Prefixes {

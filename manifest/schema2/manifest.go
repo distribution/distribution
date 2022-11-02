@@ -33,14 +33,12 @@ const (
 	MediaTypeUncompressedLayer = "application/vnd.docker.image.rootfs.diff.tar"
 )
 
-var (
-	// SchemaVersion provides a pre-initialized version structure for this
-	// packages version of the manifest.
-	SchemaVersion = manifest.Versioned{
-		SchemaVersion: 2,
-		MediaType:     MediaTypeManifest,
-	}
-)
+// SchemaVersion provides a pre-initialized version structure for this
+// packages version of the manifest.
+var SchemaVersion = manifest.Versioned{
+	SchemaVersion: 2,
+	MediaType:     MediaTypeManifest,
+}
 
 func init() {
 	schema2Func := func(b []byte) (distribution.Manifest, distribution.Descriptor, error) {
@@ -119,7 +117,6 @@ func (m *DeserializedManifest) UnmarshalJSON(b []byte) error {
 	if manifest.MediaType != MediaTypeManifest {
 		return fmt.Errorf("mediaType in manifest should be '%s' not '%s'",
 			MediaTypeManifest, manifest.MediaType)
-
 	}
 
 	m.Manifest = manifest

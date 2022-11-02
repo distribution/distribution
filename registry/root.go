@@ -36,8 +36,10 @@ var RootCmd = &cobra.Command{
 	},
 }
 
-var dryRun bool
-var removeUntagged bool
+var (
+	dryRun         bool
+	removeUntagged bool
+)
 
 // GCCmd is the cobra command that corresponds to the garbage-collect subcommand
 var GCCmd = &cobra.Command{

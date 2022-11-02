@@ -120,13 +120,11 @@ func TestAppDispatcher(t *testing.T) {
 		app.register(testcase.endpoint, varCheckingDispatcher(unflatten(testcase.vars)))
 		route := router.GetRoute(testcase.endpoint).Host(serverURL.Host)
 		u, err := route.URL(testcase.vars...)
-
 		if err != nil {
 			t.Fatal(err)
 		}
 
 		resp, err := http.Get(u.String())
-
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -275,5 +273,4 @@ func TestAppendAccessRecords(t *testing.T) {
 	if ok := reflect.DeepEqual(result, expectedResult); !ok {
 		t.Fatalf("Actual access record differs from expected")
 	}
-
 }

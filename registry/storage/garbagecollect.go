@@ -109,7 +109,6 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 
 		return err
 	})
-
 	if err != nil {
 		return fmt.Errorf("failed to mark: %v", err)
 	}

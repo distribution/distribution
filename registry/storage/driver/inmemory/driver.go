@@ -190,7 +190,6 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 	}
 
 	entries, err := found.(*dir).list(normalized)
-
 	if err != nil {
 		switch err {
 		case errNotExists:

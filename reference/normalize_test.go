@@ -84,7 +84,7 @@ func TestValidateRemoteName(t *testing.T) {
 		// Allow multiple hyphens as well.
 		"docker---rules/docker",
 
-		//Username doc and image name docker being tested.
+		// Username doc and image name docker being tested.
 		"doc/docker",
 
 		// single character names are now allowed.
@@ -129,7 +129,7 @@ func TestValidateRemoteName(t *testing.T) {
 		// No repository.
 		"docker/",
 
-		//namespace too long
+		// namespace too long
 		"this_is_not_a_valid_namespace_because_its_lenth_is_greater_than_255_this_is_not_a_valid_namespace_because_its_lenth_is_greater_than_255_this_is_not_a_valid_namespace_because_its_lenth_is_greater_than_255_this_is_not_a_valid_namespace_because_its_lenth_is_greater_than_255/docker",
 	}
 	for _, repositoryName := range invalidRepositoryNames {

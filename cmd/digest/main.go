@@ -62,7 +62,6 @@ func main() {
 	if flag.NArg() > 0 {
 		for _, path := range flag.Args() {
 			fp, err := os.Open(path)
-
 			if err != nil {
 				log.Printf("%s: %v", path, err)
 				fail = true

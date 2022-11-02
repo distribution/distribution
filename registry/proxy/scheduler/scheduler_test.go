@@ -69,7 +69,6 @@ func TestSchedule(t *testing.T) {
 		s.Lock()
 		s.add(ref3, 1*timeUnit, entryTypeBlob)
 		s.Unlock()
-
 	}()
 
 	// Ensure all repos are deleted
@@ -195,7 +194,6 @@ func TestStopRestore(t *testing.T) {
 	if len(remainingRepos) != 0 {
 		t.Fatalf("Repositories remaining: %#v", remainingRepos)
 	}
-
 }
 
 func TestDoubleStart(t *testing.T) {

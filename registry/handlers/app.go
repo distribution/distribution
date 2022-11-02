@@ -703,7 +703,6 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 				return
 			}
 			repository, err := app.registry.Repository(context, nameRef)
-
 			if err != nil {
 				dcontext.GetLogger(context).Errorf("error resolving repository: %v", err)
 
@@ -983,7 +982,6 @@ func applyRegistryMiddleware(ctx context.Context, registry distribution.Namespac
 		registry = rmw
 	}
 	return registry, nil
-
 }
 
 // applyRepoMiddleware wraps a repository with the configured middlewares

@@ -187,7 +187,6 @@ func TestAll(t *testing.T) {
 			t.Fatalf("Missing element at position %d: %s", i, dgst)
 		}
 	}
-
 }
 
 func assertEqualShort(t *testing.T, actual, expected string) {
@@ -363,9 +362,11 @@ func BenchmarkLookup1000(b *testing.B) {
 func BenchmarkShortCode10(b *testing.B) {
 	benchShortCodeNTable(b, 10, 12)
 }
+
 func BenchmarkShortCode100(b *testing.B) {
 	benchShortCodeNTable(b, 100, 12)
 }
+
 func BenchmarkShortCode1000(b *testing.B) {
 	benchShortCodeNTable(b, 1000, 12)
 }

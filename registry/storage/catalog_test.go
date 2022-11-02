@@ -102,7 +102,6 @@ func makeRepo(ctx context.Context, t *testing.T, name string, reg distribution.N
 	if err != nil {
 		t.Fatalf("manifest upload failed: %v", err)
 	}
-
 }
 
 func TestCatalog(t *testing.T) {
@@ -289,8 +288,10 @@ func BenchmarkPathCompareNativeEqual(B *testing.B) {
 	}
 }
 
-var filenameChars = []byte("abcdefghijklmnopqrstuvwxyz0123456789")
-var separatorChars = []byte("._-")
+var (
+	filenameChars  = []byte("abcdefghijklmnopqrstuvwxyz0123456789")
+	separatorChars = []byte("._-")
+)
 
 func randomPath(length int64) string {
 	path := "/"

@@ -271,5 +271,4 @@ func TestProxyManifests(t *testing.T) {
 	if env.manifests.authChallenger.(*mockChallenger).count != 2 {
 		t.Fatalf("Expected 2 auth challenges, got %#v", env.manifests.authChallenger)
 	}
-
 }

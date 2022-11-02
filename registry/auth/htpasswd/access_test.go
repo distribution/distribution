@@ -42,7 +42,7 @@ func TestBasicAccessController(t *testing.T) {
 
 	tempFile.Close()
 
-	var userNumber = 0
+	userNumber := 0
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ctx := context.WithRequest(ctx, r)
@@ -76,7 +76,6 @@ func TestBasicAccessController(t *testing.T) {
 
 	req, _ := http.NewRequest("GET", server.URL, nil)
 	resp, err := client.Do(req)
-
 	if err != nil {
 		t.Fatalf("unexpected error during GET: %v", err)
 	}
@@ -120,7 +119,6 @@ func TestBasicAccessController(t *testing.T) {
 			}
 		}
 	}
-
 }
 
 func TestCreateHtpasswdFile(t *testing.T) {
