@@ -330,7 +330,7 @@ check before parsing the remainder of the configuration file.
 ## `log`
 
 The `log` subsection configures the behavior of the logging system. The logging
-system outputs everything to stdout. You can adjust the granularity and format
+system outputs everything to stderr. You can adjust the granularity and format
 with this configuration section.
 
 ```none
