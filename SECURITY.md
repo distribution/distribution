@@ -4,11 +4,11 @@
 
 These versions are currently receiving security updates.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 3.0.x   | :white_check_mark: |
-| 2.7.x   | :white_check_mark: |
-| < 2.7   | :x:                |
+| Version      | Supported          | Notes |
+| ------------ | ------------------ | ----- |
+| 3.0.x (main) | :white_check_mark: | This is the next major version and has not yet been released. |
+| 2.8.x        | :white_check_mark: | This is the latest released version. |
+| < 2.8        | :x:                | |
 
 ## Reporting a Vulnerability
 
