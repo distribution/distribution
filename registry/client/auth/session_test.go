@@ -109,7 +109,7 @@ func TestEndpointAuthorizeToken(t *testing.T) {
 	tokenMap := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
 		{
 			Request: testutil.Request{
-				Method: "GET",
+				Method: http.MethodGet,
 				Route:  fmt.Sprintf("/token?scope=%s&service=%s", url.QueryEscape(scope1), service),
 			},
 			Response: testutil.Response{
@@ -119,7 +119,7 @@ func TestEndpointAuthorizeToken(t *testing.T) {
 		},
 		{
 			Request: testutil.Request{
-				Method: "GET",
+				Method: http.MethodGet,
 				Route:  fmt.Sprintf("/token?scope=%s&service=%s", url.QueryEscape(scope2), service),
 			},
 			Response: testutil.Response{
@@ -134,7 +134,7 @@ func TestEndpointAuthorizeToken(t *testing.T) {
 	m := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
 		{
 			Request: testutil.Request{
-				Method: "GET",
+				Method: http.MethodGet,
 				Route:  "/v2/hello",
 			},
 			Response: testutil.Response{
@@ -164,7 +164,7 @@ func TestEndpointAuthorizeToken(t *testing.T) {
 	transport1 := transport.NewTransport(nil, NewAuthorizer(challengeManager1, NewTokenHandler(nil, nil, repo1, "pull", "push")))
 	client := &http.Client{Transport: transport1}
 
-	req, _ := http.NewRequest("GET", e+"/v2/hello", nil)
+	req, _ := http.NewRequest(http.MethodGet, e+"/v2/hello", nil)
 	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("Error sending get request: %s", err)
@@ -197,7 +197,7 @@ func TestEndpointAuthorizeToken(t *testing.T) {
 	transport2 := transport.NewTransport(nil, NewAuthorizer(challengeManager2, NewTokenHandler(nil, nil, repo2, "pull", "push")))
 	client2 := &http.Client{Transport: transport2}
 
-	req, _ = http.NewRequest("GET", e2+"/v2/hello", nil)
+	req, _ = http.NewRequest(http.MethodGet, e2+"/v2/hello", nil)
 	resp, err = client2.Do(req)
 	if err != nil {
 		t.Fatalf("Error sending get request: %s", err)
@@ -219,7 +219,7 @@ func TestEndpointAuthorizeRefreshToken(t *testing.T) {
 	tokenMap := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
 		{
 			Request: testutil.Request{
-				Method: "POST",
+				Method: http.MethodPost,
 				Route:  "/token",
 				Body:   []byte(fmt.Sprintf("client_id=registry-client&grant_type=refresh_token&refresh_token=%s&scope=%s&service=%s", refreshToken1, url.QueryEscape(scope1), service)),
 			},
@@ -231,7 +231,7 @@ func TestEndpointAuthorizeRefreshToken(t *testing.T) {
 		{
 			// In the future this test may fail and require using basic auth to get a different refresh token
 			Request: testutil.Request{
-				Method: "POST",
+				Method: http.MethodPost,
 				Route:  "/token",
 				Body:   []byte(fmt.Sprintf("client_id=registry-client&grant_type=refresh_token&refresh_token=%s&scope=%s&service=%s", refreshToken1, url.QueryEscape(scope2), service)),
 			},
@@ -242,7 +242,7 @@ func TestEndpointAuthorizeRefreshToken(t *testing.T) {
 		},
 		{
 			Request: testutil.Request{
-				Method: "POST",
+				Method: http.MethodPost,
 				Route:  "/token",
 				Body:   []byte(fmt.Sprintf("client_id=registry-client&grant_type=refresh_token&refresh_token=%s&scope=%s&service=%s", refreshToken2, url.QueryEscape(scope2), service)),
 			},
@@ -258,7 +258,7 @@ func TestEndpointAuthorizeRefreshToken(t *testing.T) {
 	m := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
 		{
 			Request: testutil.Request{
-				Method: "GET",
+				Method: http.MethodGet,
 				Route:  "/v2/hello",
 			},
 			Response: testutil.Response{
@@ -293,7 +293,7 @@ func TestEndpointAuthorizeRefreshToken(t *testing.T) {
 	transport1 := transport.NewTransport(nil, NewAuthorizer(challengeManager1, NewTokenHandler(nil, creds, repo1, "pull", "push")))
 	client := &http.Client{Transport: transport1}
 
-	req, _ := http.NewRequest("GET", e+"/v2/hello", nil)
+	req, _ := http.NewRequest(http.MethodGet, e+"/v2/hello", nil)
 	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("Error sending get request: %s", err)
@@ -322,7 +322,7 @@ func TestEndpointAuthorizeRefreshToken(t *testing.T) {
 	transport2 := transport.NewTransport(nil, NewAuthorizer(challengeManager2, NewTokenHandler(nil, creds, repo2, "pull", "push")))
 	client2 := &http.Client{Transport: transport2}
 
-	req, _ = http.NewRequest("GET", e2+"/v2/hello", nil)
+	req, _ = http.NewRequest(http.MethodGet, e2+"/v2/hello", nil)
 	resp, err = client2.Do(req)
 	if err != nil {
 		t.Fatalf("Error sending get request: %s", err)
@@ -352,7 +352,7 @@ func TestEndpointAuthorizeRefreshToken(t *testing.T) {
 	transport3 := transport.NewTransport(nil, NewAuthorizer(challengeManager3, NewTokenHandler(nil, creds, repo2, "pull", "push")))
 	client3 := &http.Client{Transport: transport3}
 
-	req, _ = http.NewRequest("GET", e3+"/v2/hello", nil)
+	req, _ = http.NewRequest(http.MethodGet, e3+"/v2/hello", nil)
 	resp, err = client3.Do(req)
 	if err != nil {
 		t.Fatalf("Error sending get request: %s", err)
@@ -370,7 +370,7 @@ func TestEndpointAuthorizeV2RefreshToken(t *testing.T) {
 	tokenMap := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
 		{
 			Request: testutil.Request{
-				Method: "POST",
+				Method: http.MethodPost,
 				Route:  "/token",
 				Body:   []byte(fmt.Sprintf("client_id=registry-client&grant_type=refresh_token&refresh_token=%s&scope=%s&service=%s", refreshToken1, url.QueryEscape(scope1), service)),
 			},
@@ -386,7 +386,7 @@ func TestEndpointAuthorizeV2RefreshToken(t *testing.T) {
 	m := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
 		{
 			Request: testutil.Request{
-				Method: "GET",
+				Method: http.MethodGet,
 				Route:  "/v1/search",
 			},
 			Response: testutil.Response{
@@ -430,7 +430,7 @@ func TestEndpointAuthorizeV2RefreshToken(t *testing.T) {
 	transport1 := transport.NewTransport(nil, NewAuthorizer(challengeManager1, NewTokenHandlerWithOptions(tho)))
 	client := &http.Client{Transport: transport1}
 
-	req, _ := http.NewRequest("GET", e+"/v1/search", nil)
+	req, _ := http.NewRequest(http.MethodGet, e+"/v1/search", nil)
 	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("Error sending get request: %s", err)
@@ -456,7 +456,7 @@ func TestEndpointAuthorizeTokenBasic(t *testing.T) {
 	tokenMap := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
 		{
 			Request: testutil.Request{
-				Method: "GET",
+				Method: http.MethodGet,
 				Route:  fmt.Sprintf("/token?account=%s&scope=%s&service=%s", username, url.QueryEscape(scope), service),
 			},
 			Response: testutil.Response{
@@ -476,7 +476,7 @@ func TestEndpointAuthorizeTokenBasic(t *testing.T) {
 	m := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
 		{
 			Request: testutil.Request{
-				Method: "GET",
+				Method: http.MethodGet,
 				Route:  "/v2/hello",
 			},
 			Response: testutil.Response{
@@ -505,7 +505,7 @@ func TestEndpointAuthorizeTokenBasic(t *testing.T) {
 	transport1 := transport.NewTransport(nil, NewAuthorizer(challengeManager, NewTokenHandler(nil, creds, repo, "pull", "push"), NewBasicHandler(creds)))
 	client := &http.Client{Transport: transport1}
 
-	req, _ := http.NewRequest("GET", e+"/v2/hello", nil)
+	req, _ := http.NewRequest(http.MethodGet, e+"/v2/hello", nil)
 	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("Error sending get request: %s", err)
@@ -526,7 +526,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresIn(t *testing.T) {
 	tokenMap := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
 		{
 			Request: testutil.Request{
-				Method: "GET",
+				Method: http.MethodGet,
 				Route:  fmt.Sprintf("/token?account=%s&scope=%s&service=%s", username, url.QueryEscape(scope), service),
 			},
 			Response: testutil.Response{
@@ -536,7 +536,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresIn(t *testing.T) {
 		},
 		{
 			Request: testutil.Request{
-				Method: "GET",
+				Method: http.MethodGet,
 				Route:  fmt.Sprintf("/token?account=%s&scope=%s&service=%s", username, url.QueryEscape(scope), service),
 			},
 			Response: testutil.Response{
@@ -558,7 +558,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresIn(t *testing.T) {
 	m := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
 		{
 			Request: testutil.Request{
-				Method: "GET",
+				Method: http.MethodGet,
 				Route:  "/v2/hello",
 			},
 			Response: testutil.Response{
@@ -567,7 +567,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresIn(t *testing.T) {
 		},
 		{
 			Request: testutil.Request{
-				Method: "GET",
+				Method: http.MethodGet,
 				Route:  "/v2/hello",
 			},
 			Response: testutil.Response{
@@ -576,7 +576,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresIn(t *testing.T) {
 		},
 		{
 			Request: testutil.Request{
-				Method: "GET",
+				Method: http.MethodGet,
 				Route:  "/v2/hello",
 			},
 			Response: testutil.Response{
@@ -585,7 +585,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresIn(t *testing.T) {
 		},
 		{
 			Request: testutil.Request{
-				Method: "GET",
+				Method: http.MethodGet,
 				Route:  "/v2/hello",
 			},
 			Response: testutil.Response{
@@ -594,7 +594,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresIn(t *testing.T) {
 		},
 		{
 			Request: testutil.Request{
-				Method: "GET",
+				Method: http.MethodGet,
 				Route:  "/v2/hello",
 			},
 			Response: testutil.Response{
@@ -640,7 +640,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresIn(t *testing.T) {
 	// Subsequent calls should recycle the token from the first request, until the expiration has lapsed.
 	timeIncrement := 1000 * time.Second
 	for i := 0; i < 4; i++ {
-		req, _ := http.NewRequest("GET", e+"/v2/hello", nil)
+		req, _ := http.NewRequest(http.MethodGet, e+"/v2/hello", nil)
 		resp, err := client.Do(req)
 		if err != nil {
 			t.Fatalf("Error sending get request: %s", err)
@@ -655,7 +655,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresIn(t *testing.T) {
 	}
 
 	// After we've exceeded the expiration, we should see a second token exchange.
-	req, _ := http.NewRequest("GET", e+"/v2/hello", nil)
+	req, _ := http.NewRequest(http.MethodGet, e+"/v2/hello", nil)
 	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("Error sending get request: %s", err)
@@ -686,7 +686,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresInAndIssuedAt(t *testing.T) {
 	tokenMap := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
 		{
 			Request: testutil.Request{
-				Method: "GET",
+				Method: http.MethodGet,
 				Route:  fmt.Sprintf("/token?account=%s&scope=%s&service=%s", username, url.QueryEscape(scope), service),
 			},
 			Response: testutil.Response{
@@ -696,7 +696,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresInAndIssuedAt(t *testing.T) {
 		},
 		{
 			Request: testutil.Request{
-				Method: "GET",
+				Method: http.MethodGet,
 				Route:  fmt.Sprintf("/token?account=%s&scope=%s&service=%s", username, url.QueryEscape(scope), service),
 			},
 			Response: testutil.Response{
@@ -718,7 +718,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresInAndIssuedAt(t *testing.T) {
 	m := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
 		{
 			Request: testutil.Request{
-				Method: "GET",
+				Method: http.MethodGet,
 				Route:  "/v2/hello",
 			},
 			Response: testutil.Response{
@@ -727,7 +727,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresInAndIssuedAt(t *testing.T) {
 		},
 		{
 			Request: testutil.Request{
-				Method: "GET",
+				Method: http.MethodGet,
 				Route:  "/v2/hello",
 			},
 			Response: testutil.Response{
@@ -736,7 +736,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresInAndIssuedAt(t *testing.T) {
 		},
 		{
 			Request: testutil.Request{
-				Method: "GET",
+				Method: http.MethodGet,
 				Route:  "/v2/hello",
 			},
 			Response: testutil.Response{
@@ -745,7 +745,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresInAndIssuedAt(t *testing.T) {
 		},
 		{
 			Request: testutil.Request{
-				Method: "GET",
+				Method: http.MethodGet,
 				Route:  "/v2/hello",
 			},
 			Response: testutil.Response{
@@ -792,7 +792,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresInAndIssuedAt(t *testing.T) {
 	// We shaved one increment off of the equivalent logic in TestEndpointAuthorizeTokenBasicWithExpiresIn
 	// so this loop should have one fewer iteration.
 	for i := 0; i < 3; i++ {
-		req, _ := http.NewRequest("GET", e+"/v2/hello", nil)
+		req, _ := http.NewRequest(http.MethodGet, e+"/v2/hello", nil)
 		resp, err := client.Do(req)
 		if err != nil {
 			t.Fatalf("Error sending get request: %s", err)
@@ -807,7 +807,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresInAndIssuedAt(t *testing.T) {
 	}
 
 	// After we've exceeded the expiration, we should see a second token exchange.
-	req, _ := http.NewRequest("GET", e+"/v2/hello", nil)
+	req, _ := http.NewRequest(http.MethodGet, e+"/v2/hello", nil)
 	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("Error sending get request: %s", err)
@@ -824,7 +824,7 @@ func TestEndpointAuthorizeBasic(t *testing.T) {
 	m := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
 		{
 			Request: testutil.Request{
-				Method: "GET",
+				Method: http.MethodGet,
 				Route:  "/v2/hello",
 			},
 			Response: testutil.Response{
@@ -854,7 +854,7 @@ func TestEndpointAuthorizeBasic(t *testing.T) {
 	transport1 := transport.NewTransport(nil, NewAuthorizer(challengeManager, NewBasicHandler(creds)))
 	client := &http.Client{Transport: transport1}
 
-	req, _ := http.NewRequest("GET", e+"/v2/hello", nil)
+	req, _ := http.NewRequest(http.MethodGet, e+"/v2/hello", nil)
 	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatalf("Error sending get request: %s", err)

@@ -22,7 +22,7 @@ import (
 func TestHTTPSink(t *testing.T) {
 	serverHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer r.Body.Close()
-		if r.Method != "POST" {
+		if r.Method != http.MethodPost {
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			t.Fatalf("unexpected request method: %v", r.Method)
 			return

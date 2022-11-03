@@ -321,7 +321,7 @@ func getObject(client *http.Client, bucket string, name string, offset int64) (*
 		Host:   "storage.googleapis.com",
 		Path:   fmt.Sprintf("/%s/%s", bucket, name),
 	}
-	req, err := http.NewRequest("GET", u.String(), nil)
+	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -808,11 +808,11 @@ func (d *driver) URLFor(context context.Context, path string, options map[string
 	}
 
 	name := d.pathToKey(path)
-	methodString := "GET"
+	methodString := http.MethodGet
 	method, ok := options["method"]
 	if ok {
 		methodString, ok = method.(string)
-		if !ok || (methodString != "GET" && methodString != "HEAD") {
+		if !ok || (methodString != http.MethodGet && methodString != http.MethodHead) {
 			return "", storagedriver.ErrUnsupportedMethod{}
 		}
 	}
@@ -849,7 +849,7 @@ func startSession(client *http.Client, bucket string, name string) (uri string, 
 		RawQuery: fmt.Sprintf("uploadType=resumable&name=%v", name),
 	}
 	err = retry(func() error {
-		req, err := http.NewRequest("POST", u.String(), nil)
+		req, err := http.NewRequest(http.MethodPost, u.String(), nil)
 		if err != nil {
 			return err
 		}
@@ -873,7 +873,7 @@ func startSession(client *http.Client, bucket string, name string) (uri string, 
 func putChunk(client *http.Client, sessionURI string, chunk []byte, from int64, totalSize int64) (int64, error) {
 	bytesPut := int64(0)
 	err := retry(func() error {
-		req, err := http.NewRequest("PUT", sessionURI, bytes.NewReader(chunk))
+		req, err := http.NewRequest(http.MethodPut, sessionURI, bytes.NewReader(chunk))
 		if err != nil {
 			return err
 		}

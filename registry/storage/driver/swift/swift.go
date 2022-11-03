@@ -608,7 +608,7 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 		return "", storagedriver.ErrUnsupportedMethod{}
 	}
 
-	methodString := "GET"
+	methodString := http.MethodGet
 	method, ok := options["method"]
 	if ok {
 		if methodString, ok = method.(string); !ok {
@@ -616,10 +616,10 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 		}
 	}
 
-	if methodString == "HEAD" {
+	if methodString == http.MethodHead {
 		// A "HEAD" request on a temporary URL is allowed if the
 		// signature was generated with "GET", "POST" or "PUT"
-		methodString = "GET"
+		methodString = http.MethodGet
 	}
 
 	supported := false

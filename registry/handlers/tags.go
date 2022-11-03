@@ -19,7 +19,7 @@ func tagsDispatcher(ctx *Context, r *http.Request) http.Handler {
 	}
 
 	return handlers.MethodHandler{
-		"GET": http.HandlerFunc(tagsHandler.GetTags),
+		http.MethodGet: http.HandlerFunc(tagsHandler.GetTags),
 	}
 }
 

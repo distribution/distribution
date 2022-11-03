@@ -137,7 +137,7 @@ func TestHTTPHealthCheck(t *testing.T) {
 	stopFailing := make(chan struct{})
 
 	checkedServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "HEAD" {
+		if r.Method != http.MethodHead {
 			t.Fatalf("expected HEAD request, got %s", r.Method)
 		}
 		select {

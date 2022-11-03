@@ -74,7 +74,7 @@ func TestBasicAccessController(t *testing.T) {
 		CheckRedirect: nil,
 	}
 
-	req, _ := http.NewRequest("GET", server.URL, nil)
+	req, _ := http.NewRequest(http.MethodGet, server.URL, nil)
 	resp, err := client.Do(req)
 
 	if err != nil {
@@ -94,7 +94,7 @@ func TestBasicAccessController(t *testing.T) {
 
 	for i := 0; i < len(testUsers); i++ {
 		userNumber = i
-		req, err := http.NewRequest("GET", server.URL, nil)
+		req, err := http.NewRequest(http.MethodGet, server.URL, nil)
 		if err != nil {
 			t.Fatalf("error allocating new request: %v", err)
 		}

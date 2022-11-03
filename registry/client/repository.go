@@ -98,7 +98,7 @@ func (r *registry) Repositories(ctx context.Context, entries []string, last stri
 		return 0, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", u, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -216,7 +216,7 @@ func (t *tags) All(ctx context.Context) ([]string, error) {
 	}
 
 	for {
-		req, err := http.NewRequestWithContext(ctx, "GET", listURL.String(), nil)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, listURL.String(), nil)
 		if err != nil {
 			return nil, err
 		}
@@ -268,11 +268,11 @@ func descriptorFromResponse(response *http.Response) (distribution.Descriptor, e
 
 	digestHeader := headers.Get("Docker-Content-Digest")
 	if digestHeader == "" {
-		bytes, err := ioutil.ReadAll(response.Body)
+		data, err := ioutil.ReadAll(response.Body)
 		if err != nil {
 			return distribution.Descriptor{}, err
 		}
-		_, desc, err := distribution.UnmarshalManifest(ctHeader, bytes)
+		_, desc, err := distribution.UnmarshalManifest(ctHeader, data)
 		if err != nil {
 			return distribution.Descriptor{}, err
 		}
@@ -325,7 +325,7 @@ func (t *tags) Get(ctx context.Context, tag string) (distribution.Descriptor, er
 		return resp, err
 	}
 
-	resp, err := newRequest("HEAD")
+	resp, err := newRequest(http.MethodHead)
 	if err != nil {
 		return distribution.Descriptor{}, err
 	}
@@ -340,7 +340,7 @@ func (t *tags) Get(ctx context.Context, tag string) (distribution.Descriptor, er
 		// Issue a GET request:
 		//   - for data from a server that does not handle HEAD
 		//   - to get error details in case of a failure
-		resp, err = newRequest("GET")
+		resp, err = newRequest(http.MethodGet)
 		if err != nil {
 			return distribution.Descriptor{}, err
 		}
@@ -371,7 +371,7 @@ func (t *tags) Untag(ctx context.Context, tag string) error {
 		return err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "DELETE", u, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, u, nil)
 	if err != nil {
 		return err
 	}
@@ -405,7 +405,7 @@ func (ms *manifests) Exists(ctx context.Context, dgst digest.Digest) (bool, erro
 		return false, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "HEAD", u, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, u, nil)
 	if err != nil {
 		return false, err
 	}
@@ -500,7 +500,7 @@ func (ms *manifests) Get(ctx context.Context, dgst digest.Digest, options ...dis
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "GET", u, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -585,7 +585,7 @@ func (ms *manifests) Put(ctx context.Context, m distribution.Manifest, options .
 		return "", err
 	}
 
-	putRequest, err := http.NewRequestWithContext(ctx, "PUT", manifestURL, bytes.NewReader(p))
+	putRequest, err := http.NewRequestWithContext(ctx, http.MethodPut, manifestURL, bytes.NewReader(p))
 	if err != nil {
 		return "", err
 	}
@@ -620,7 +620,7 @@ func (ms *manifests) Delete(ctx context.Context, dgst digest.Digest) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequestWithContext(ctx, "DELETE", u, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, u, nil)
 	if err != nil {
 		return err
 	}
@@ -790,7 +790,7 @@ func (bs *blobs) Create(ctx context.Context, options ...distribution.BlobCreateO
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "POST", u, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -873,7 +873,7 @@ func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (distributi
 		return distribution.Descriptor{}, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "HEAD", u, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, u, nil)
 	if err != nil {
 		return distribution.Descriptor{}, err
 	}
@@ -929,7 +929,7 @@ func (bs *blobStatter) Clear(ctx context.Context, dgst digest.Digest) error {
 		return err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, "DELETE", blobURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, blobURL, nil)
 	if err != nil {
 		return err
 	}

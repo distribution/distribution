@@ -24,7 +24,7 @@ func TestUploadReadFrom(t *testing.T) {
 	m := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
 		{
 			Request: testutil.Request{
-				Method: "GET",
+				Method: http.MethodGet,
 				Route:  "/v2/",
 			},
 			Response: testutil.Response{
@@ -37,7 +37,7 @@ func TestUploadReadFrom(t *testing.T) {
 		// Test Valid case
 		{
 			Request: testutil.Request{
-				Method: "PATCH",
+				Method: http.MethodPatch,
 				Route:  locationPath,
 				Body:   b,
 			},
@@ -53,7 +53,7 @@ func TestUploadReadFrom(t *testing.T) {
 		// Test invalid range
 		{
 			Request: testutil.Request{
-				Method: "PATCH",
+				Method: http.MethodPatch,
 				Route:  locationPath,
 				Body:   b,
 			},
@@ -69,7 +69,7 @@ func TestUploadReadFrom(t *testing.T) {
 		// Test 404
 		{
 			Request: testutil.Request{
-				Method: "PATCH",
+				Method: http.MethodPatch,
 				Route:  locationPath,
 				Body:   b,
 			},
@@ -80,7 +80,7 @@ func TestUploadReadFrom(t *testing.T) {
 		// Test 400 valid json
 		{
 			Request: testutil.Request{
-				Method: "PATCH",
+				Method: http.MethodPatch,
 				Route:  locationPath,
 				Body:   b,
 			},
@@ -101,7 +101,7 @@ func TestUploadReadFrom(t *testing.T) {
 		// Test 400 invalid json
 		{
 			Request: testutil.Request{
-				Method: "PATCH",
+				Method: http.MethodPatch,
 				Route:  locationPath,
 				Body:   b,
 			},
@@ -113,7 +113,7 @@ func TestUploadReadFrom(t *testing.T) {
 		// Test 500
 		{
 			Request: testutil.Request{
-				Method: "PATCH",
+				Method: http.MethodPatch,
 				Route:  locationPath,
 				Body:   b,
 			},
@@ -220,7 +220,7 @@ func TestUploadSize(t *testing.T) {
 	m := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
 		{
 			Request: testutil.Request{
-				Method: "GET",
+				Method: http.MethodGet,
 				Route:  "/v2/",
 			},
 			Response: testutil.Response{
@@ -232,7 +232,7 @@ func TestUploadSize(t *testing.T) {
 		},
 		{
 			Request: testutil.Request{
-				Method: "PATCH",
+				Method: http.MethodPatch,
 				Route:  readFromLocationPath,
 				Body:   b,
 			},
@@ -247,7 +247,7 @@ func TestUploadSize(t *testing.T) {
 		},
 		{
 			Request: testutil.Request{
-				Method: "PATCH",
+				Method: http.MethodPatch,
 				Route:  writeLocationPath,
 				Body:   b,
 			},
@@ -310,7 +310,7 @@ func TestUploadWrite(t *testing.T) {
 	m := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
 		{
 			Request: testutil.Request{
-				Method: "GET",
+				Method: http.MethodGet,
 				Route:  "/v2/",
 			},
 			Response: testutil.Response{
@@ -323,7 +323,7 @@ func TestUploadWrite(t *testing.T) {
 		// Test Valid case
 		{
 			Request: testutil.Request{
-				Method: "PATCH",
+				Method: http.MethodPatch,
 				Route:  locationPath,
 				Body:   b,
 			},
@@ -339,7 +339,7 @@ func TestUploadWrite(t *testing.T) {
 		// Test invalid range
 		{
 			Request: testutil.Request{
-				Method: "PATCH",
+				Method: http.MethodPatch,
 				Route:  locationPath,
 				Body:   b,
 			},
@@ -355,7 +355,7 @@ func TestUploadWrite(t *testing.T) {
 		// Test 404
 		{
 			Request: testutil.Request{
-				Method: "PATCH",
+				Method: http.MethodPatch,
 				Route:  locationPath,
 				Body:   b,
 			},
@@ -366,7 +366,7 @@ func TestUploadWrite(t *testing.T) {
 		// Test 400 valid json
 		{
 			Request: testutil.Request{
-				Method: "PATCH",
+				Method: http.MethodPatch,
 				Route:  locationPath,
 				Body:   b,
 			},
@@ -387,7 +387,7 @@ func TestUploadWrite(t *testing.T) {
 		// Test 400 invalid json
 		{
 			Request: testutil.Request{
-				Method: "PATCH",
+				Method: http.MethodPatch,
 				Route:  locationPath,
 				Body:   b,
 			},
@@ -399,7 +399,7 @@ func TestUploadWrite(t *testing.T) {
 		// Test 500
 		{
 			Request: testutil.Request{
-				Method: "PATCH",
+				Method: http.MethodPatch,
 				Route:  locationPath,
 				Body:   b,
 			},

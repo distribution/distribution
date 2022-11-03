@@ -342,7 +342,7 @@ func TestAccessController(t *testing.T) {
 	}
 
 	// 1. Make a mock http.Request with no token.
-	req, err := http.NewRequest("GET", "http://example.com/foo", nil)
+	req, err := http.NewRequest(http.MethodGet, "http://example.com/foo", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
