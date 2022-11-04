@@ -42,7 +42,6 @@ func TestManifestUnmarshaling(t *testing.T) {
 	if !reflect.DeepEqual(&signed, env.signed) {
 		t.Fatalf("manifests are different after unmarshaling: %v != %v", signed, env.signed)
 	}
-
 }
 
 func TestManifestVerification(t *testing.T) {

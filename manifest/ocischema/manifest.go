@@ -11,14 +11,12 @@ import (
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-var (
-	// SchemaVersion provides a pre-initialized version structure for this
-	// packages version of the manifest.
-	SchemaVersion = manifest.Versioned{
-		SchemaVersion: 2, // historical value here.. does not pertain to OCI or docker version
-		MediaType:     v1.MediaTypeImageManifest,
-	}
-)
+// SchemaVersion provides a pre-initialized version structure for this
+// packages version of the manifest.
+var SchemaVersion = manifest.Versioned{
+	SchemaVersion: 2, // historical value here.. does not pertain to OCI or docker version
+	MediaType:     v1.MediaTypeImageManifest,
+}
 
 func init() {
 	ocischemaFunc := func(b []byte) (distribution.Manifest, distribution.Descriptor, error) {

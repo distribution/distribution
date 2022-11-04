@@ -21,11 +21,10 @@ func (s *MiddlewareSuite) TestNoConfig(c *check.C) {
 }
 
 func TestCloudFrontStorageMiddlewareGenerateKey(t *testing.T) {
-
 	options := make(map[string]interface{})
 	options["baseurl"] = "example.com"
 
-	var privk = `-----BEGIN RSA PRIVATE KEY-----
+	privk := `-----BEGIN RSA PRIVATE KEY-----
 MIICXQIBAAKBgQCy0ZZsItDuYoX3y6hWqyU9YdH/0B+tlOhvjlaJqvkmAIBBatVV
 VAShnEAEircBwV3i08439WYgjXnrZ0FjXBTjTKWwCsbpuWJY1w8hqHW3VDivUo1n
 F9WTeclVJuEMhmiAhek3dhUdATaEDqBNskXMofSgKmQHqhPdXCgDmnzKoQIDAQAB

@@ -37,13 +37,15 @@ const driverName = "oss"
 // OSS API requires multipart upload chunks to be at least 5MB
 const minChunkSize = 5 << 20
 
-const defaultChunkSize = 2 * minChunkSize
-const defaultTimeout = 2 * time.Minute // 2 minute timeout per chunk
+const (
+	defaultChunkSize = 2 * minChunkSize
+	defaultTimeout   = 2 * time.Minute // 2 minute timeout per chunk
+)
 
 // listMax is the largest amount of objects you can request from OSS in a list call
 const listMax = 1000
 
-//DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
+// DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
 type DriverParameters struct {
 	AccessKeyID     string
 	AccessKeySecret string
@@ -202,7 +204,6 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 // New constructs a new Driver with the given Aliyun credentials, region, encryption flag, and
 // bucketName
 func New(params DriverParameters) (*Driver, error) {
-
 	client := oss.NewOSSClient(params.Region, params.Internal, params.AccessKeyID, params.AccessKeySecret, params.Secure)
 	client.SetEndpoint(params.Endpoint)
 	bucket := client.Bucket(params.Bucket)

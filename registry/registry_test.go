@@ -152,7 +152,7 @@ func TestGetCipherSuite(t *testing.T) {
 		t.Error("did not return expected error about unknown cipher suite")
 	}
 
-	var insecureCipherSuites = []string{
+	insecureCipherSuites := []string{
 		"TLS_RSA_WITH_RC4_128_SHA",
 		"TLS_RSA_WITH_AES_128_CBC_SHA256",
 		"TLS_ECDHE_ECDSA_WITH_RC4_128_SHA",
@@ -234,7 +234,7 @@ func buildRegistryTLSConfig(name, keyType string, cipherSuites []string) (*regis
 	}
 
 	keyPath := path.Join(os.TempDir(), name+".key")
-	keyOut, err := os.OpenFile(keyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	keyOut, err := os.OpenFile(keyPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open %s for writing: %v", keyPath, err)
 	}

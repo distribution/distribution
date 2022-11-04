@@ -34,7 +34,6 @@ func init() {
 }
 
 func TestFromParametersImpl(t *testing.T) {
-
 	tests := []struct {
 		params   map[string]interface{} // technically the yaml can contain anything
 		expected DriverParameters
@@ -109,5 +108,4 @@ func TestFromParametersImpl(t *testing.T) {
 			t.Fatalf("unexpected params from filesystem driver. expected %+v, got %+v", item.expected, params)
 		}
 	}
-
 }

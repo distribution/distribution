@@ -70,7 +70,6 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 	ctx = dcontext.WithLogger(ctx, dcontext.GetLogger(ctx, auth.UserNameKey, auth.UserKey))
 
 	return ctx, nil
-
 }
 
 type challenge struct {

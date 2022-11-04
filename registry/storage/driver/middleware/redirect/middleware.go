@@ -46,5 +46,5 @@ func (r *redirectStorageMiddleware) URLFor(ctx context.Context, path string, opt
 }
 
 func init() {
-	storagemiddleware.Register("redirect", storagemiddleware.InitFunc(newRedirectStorageMiddleware))
+	storagemiddleware.Register("redirect", newRedirectStorageMiddleware)
 }

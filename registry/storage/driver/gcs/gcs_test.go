@@ -22,8 +22,10 @@ import (
 // Hook up gocheck into the "go test" runner.
 func Test(t *testing.T) { check.TestingT(t) }
 
-var gcsDriverConstructor func(rootDirectory string) (storagedriver.StorageDriver, error)
-var skipGCS func() string
+var (
+	gcsDriverConstructor func(rootDirectory string) (storagedriver.StorageDriver, error)
+	skipGCS              func() string
+)
 
 func init() {
 	bucket := os.Getenv("REGISTRY_STORAGE_GCS_BUCKET")

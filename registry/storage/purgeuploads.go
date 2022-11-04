@@ -98,7 +98,6 @@ func getOutstandingUploads(ctx context.Context, driver storageDriver.StorageDriv
 			} else {
 				errors = pushError(errors, filePath, err)
 			}
-
 		}
 
 		uploads[uuid] = ud

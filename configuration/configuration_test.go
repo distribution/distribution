@@ -360,7 +360,6 @@ func (suite *ConfigSuite) TestParseInvalidLoglevel(c *C) {
 
 	_, err = Parse(bytes.NewReader([]byte(configYamlV0_1)))
 	c.Assert(err, NotNil)
-
 }
 
 // TestParseWithDifferentEnvReporting validates that environment variables

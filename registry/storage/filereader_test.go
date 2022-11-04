@@ -61,7 +61,6 @@ func TestFileReaderSeek(t *testing.T) {
 	}
 
 	fr, err := newFileReader(ctx, driver, path, int64(len(content)))
-
 	if err != nil {
 		t.Fatalf("unexpected error creating file reader: %v", err)
 	}

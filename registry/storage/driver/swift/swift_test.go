@@ -24,48 +24,29 @@ var swiftDriverConstructor func(prefix string) (*Driver, error)
 
 func init() {
 	var (
-		username           string
-		password           string
-		authURL            string
-		tenant             string
-		tenantID           string
-		domain             string
-		domainID           string
-		tenantDomain       string
-		tenantDomainID     string
-		trustID            string
-		container          string
-		region             string
-		AuthVersion        int
-		endpointType       string
-		insecureSkipVerify bool
-		secretKey          string
-		accessKey          string
-		containerKey       bool
-		tempURLMethods     []string
+		username              = os.Getenv("SWIFT_USERNAME")
+		password              = os.Getenv("SWIFT_PASSWORD")
+		authURL               = os.Getenv("SWIFT_AUTH_URL")
+		tenant                = os.Getenv("SWIFT_TENANT_NAME")
+		tenantID              = os.Getenv("SWIFT_TENANT_ID")
+		domain                = os.Getenv("SWIFT_DOMAIN_NAME")
+		domainID              = os.Getenv("SWIFT_DOMAIN_ID")
+		tenantDomain          = os.Getenv("SWIFT_DOMAIN_NAME")
+		tenantDomainID        = os.Getenv("SWIFT_DOMAIN_ID")
+		trustID               = os.Getenv("SWIFT_TRUST_ID")
+		container             = os.Getenv("SWIFT_CONTAINER_NAME")
+		region                = os.Getenv("SWIFT_REGION_NAME")
+		AuthVersion, _        = strconv.Atoi(os.Getenv("SWIFT_AUTH_VERSION"))
+		endpointType          = os.Getenv("SWIFT_ENDPOINT_TYPE")
+		insecureSkipVerify, _ = strconv.ParseBool(os.Getenv("SWIFT_INSECURESKIPVERIFY"))
+		secretKey             = os.Getenv("SWIFT_SECRET_KEY")
+		accessKey             = os.Getenv("SWIFT_ACCESS_KEY")
+		containerKey, _       = strconv.ParseBool(os.Getenv("SWIFT_TEMPURL_CONTAINERKEY"))
+		tempURLMethods        = strings.Split(os.Getenv("SWIFT_TEMPURL_METHODS"), ",")
 
 		swiftServer *swifttest.SwiftServer
 		err         error
 	)
-	username = os.Getenv("SWIFT_USERNAME")
-	password = os.Getenv("SWIFT_PASSWORD")
-	authURL = os.Getenv("SWIFT_AUTH_URL")
-	tenant = os.Getenv("SWIFT_TENANT_NAME")
-	tenantID = os.Getenv("SWIFT_TENANT_ID")
-	domain = os.Getenv("SWIFT_DOMAIN_NAME")
-	domainID = os.Getenv("SWIFT_DOMAIN_ID")
-	tenantDomain = os.Getenv("SWIFT_DOMAIN_NAME")
-	tenantDomainID = os.Getenv("SWIFT_DOMAIN_ID")
-	trustID = os.Getenv("SWIFT_TRUST_ID")
-	container = os.Getenv("SWIFT_CONTAINER_NAME")
-	region = os.Getenv("SWIFT_REGION_NAME")
-	AuthVersion, _ = strconv.Atoi(os.Getenv("SWIFT_AUTH_VERSION"))
-	endpointType = os.Getenv("SWIFT_ENDPOINT_TYPE")
-	insecureSkipVerify, _ = strconv.ParseBool(os.Getenv("SWIFT_INSECURESKIPVERIFY"))
-	secretKey = os.Getenv("SWIFT_SECRET_KEY")
-	accessKey = os.Getenv("SWIFT_ACCESS_KEY")
-	containerKey, _ = strconv.ParseBool(os.Getenv("SWIFT_TEMPURL_CONTAINERKEY"))
-	tempURLMethods = strings.Split(os.Getenv("SWIFT_TEMPURL_METHODS"), ",")
 
 	if username == "" || password == "" || authURL == "" || container == "" {
 		if swiftServer, err = swifttest.NewSwiftServer("localhost"); err != nil {

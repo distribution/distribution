@@ -12,8 +12,10 @@ import (
 // used to register the constructor for different RegistryMiddleware backends.
 type InitFunc func(ctx context.Context, registry distribution.Namespace, options map[string]interface{}) (distribution.Namespace, error)
 
-var middlewares map[string]InitFunc
-var registryoptions []storage.RegistryOption
+var (
+	middlewares     map[string]InitFunc
+	registryoptions []storage.RegistryOption
+)
 
 // Register is used to register an InitFunc for
 // a RegistryMiddleware backend with the given name.

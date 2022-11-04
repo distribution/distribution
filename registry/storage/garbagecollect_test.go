@@ -173,7 +173,8 @@ func TestNoDeletionNoEffect(t *testing.T) {
 	// construct manifestlist for fun.
 	blobstatter := registry.BlobStatter()
 	manifestList, err := testutil.MakeManifestList(blobstatter, []digest.Digest{
-		image1.manifestDigest, image2.manifestDigest})
+		image1.manifestDigest, image2.manifestDigest,
+	})
 	if err != nil {
 		t.Fatalf("Failed to make manifest list: %v", err)
 	}

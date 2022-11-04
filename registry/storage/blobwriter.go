@@ -15,9 +15,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var (
-	errResumableDigestNotAvailable = errors.New("resumable digest not available")
-)
+var errResumableDigestNotAvailable = errors.New("resumable digest not available")
 
 const (
 	// digestSha256Empty is the canonical sha256 digest of empty data
@@ -296,7 +294,6 @@ func (bw *blobWriter) moveBlob(ctx context.Context, desc distribution.Descriptor
 	blobPath, err := pathFor(blobDataPathSpec{
 		digest: desc.Digest,
 	})
-
 	if err != nil {
 		return err
 	}
@@ -355,7 +352,6 @@ func (bw *blobWriter) removeResources(ctx context.Context) error {
 		name: bw.blobStore.repository.Named().Name(),
 		id:   bw.id,
 	})
-
 	if err != nil {
 		return err
 	}

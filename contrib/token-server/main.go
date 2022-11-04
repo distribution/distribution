@@ -20,9 +20,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var (
-	enforceRepoClass bool
-)
+var enforceRepoClass bool
 
 func main() {
 	var (
@@ -110,7 +108,6 @@ func main() {
 	if err != nil {
 		logrus.Infof("Error serving: %v", err)
 	}
-
 }
 
 // handlerWithContext wraps the given context-aware handler by setting up the

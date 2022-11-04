@@ -20,13 +20,11 @@ const (
 	MediaTypeManifestLayer = "application/vnd.docker.container.image.rootfs.diff+x-gtar"
 )
 
-var (
-	// SchemaVersion provides a pre-initialized version structure for this
-	// packages version of the manifest.
-	SchemaVersion = manifest.Versioned{
-		SchemaVersion: 1,
-	}
-)
+// SchemaVersion provides a pre-initialized version structure for this
+// packages version of the manifest.
+var SchemaVersion = manifest.Versioned{
+	SchemaVersion: 1,
+}
 
 func init() {
 	schema1Func := func(b []byte) (distribution.Manifest, distribution.Descriptor, error) {
@@ -149,7 +147,6 @@ func (sm SignedManifest) References() []distribution.Descriptor {
 	}
 
 	return dependencies
-
 }
 
 // MarshalJSON returns the contents of raw. If Raw is nil, marshals the inner

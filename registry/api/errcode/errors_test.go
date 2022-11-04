@@ -86,7 +86,6 @@ func TestErrorCodes(t *testing.T) {
 			t.Fatalf("unexpected return from %v.Error(): %q != %q", ec, ec.Error(), expectedErrorString)
 		}
 	}
-
 }
 
 func TestErrorsManagement(t *testing.T) {
@@ -99,7 +98,6 @@ func TestErrorsManagement(t *testing.T) {
 	errs = append(errs, ErrorCodeTest3.WithArgs("BOOGIE").WithDetail("data"))
 
 	p, err := json.Marshal(errs)
-
 	if err != nil {
 		t.Fatalf("error marashaling errors: %v", err)
 	}
@@ -181,5 +179,4 @@ func TestErrorsManagement(t *testing.T) {
 	if e2.Detail != `stuff2` {
 		t.Fatalf("e2 had wrong detail: %q", e2.Detail)
 	}
-
 }

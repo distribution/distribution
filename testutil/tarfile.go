@@ -23,7 +23,7 @@ func CreateRandomTarFile() (rs io.ReadSeeker, dgst digest.Digest, err error) {
 
 	// Perturb this on each iteration of the loop below.
 	header := &tar.Header{
-		Mode:       0644,
+		Mode:       0o644,
 		ModTime:    time.Now(),
 		Typeflag:   tar.TypeReg,
 		Uname:      "randocalrissian",

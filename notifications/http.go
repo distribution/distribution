@@ -135,7 +135,7 @@ type headerRoundTripper struct {
 }
 
 func (hrt *headerRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
-	var nreq = *req
+	nreq := *req
 	nreq.Header = make(http.Header)
 
 	merge := func(headers http.Header) {
