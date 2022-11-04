@@ -169,3 +169,27 @@ type Error struct {
 func (err Error) Error() string {
 	return fmt.Sprintf("%s: %s", err.DriverName, err.Enclosed)
 }
+
+// Errors provides the envelope for multiple errors
+// for use within the storagedriver implementations.
+type Errors struct {
+	DriverName string
+	Errs       []error
+}
+
+var _ error = Errors{}
+
+func (e Errors) Error() string {
+	switch len(e.Errs) {
+	case 0:
+		return "<nil>"
+	case 1:
+		return e.Errs[0].Error()
+	default:
+		msg := "errors:\n"
+		for _, err := range e.Errs {
+			msg += err.Error() + "\n"
+		}
+		return msg
+	}
+}
