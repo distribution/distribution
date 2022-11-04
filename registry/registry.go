@@ -367,16 +367,10 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 			Formatter: &logrus.JSONFormatter{TimestampFormat: time.RFC3339Nano},
 		})
 	default:
-		// just let the library use default on empty string.
-		if config.Log.Formatter != "" {
-			return ctx, fmt.Errorf("unsupported logging formatter: %q", config.Log.Formatter)
-		}
+		return ctx, fmt.Errorf("unsupported logging formatter: %q", formatter)
 	}
 
-	if config.Log.Formatter != "" {
-		logrus.Debugf("using %q logging formatter", config.Log.Formatter)
-	}
-
+	logrus.Debugf("using %q logging formatter", formatter)
 	if len(config.Log.Fields) > 0 {
 		// build up the static fields, if present.
 		var fields []interface{}
