@@ -550,43 +550,7 @@ func TestIdentifierRegexp(t *testing.T) {
 			match: false,
 		},
 	}
-
-	shortCases := []regexpMatch{
-		{
-			input: "da304e823d8ca2b9d863a3c897baeb852ba21ea9a9f1414736394ae7fcaf9821",
-			match: true,
-		},
-		{
-			input: "7EC43B381E5AEFE6E04EFB0B3F0693FF2A4A50652D64AEC573905F2DB5889A1C",
-			match: false,
-		},
-		{
-			input: "da304e823d8ca2b9d863a3c897baeb852ba21ea9a9f1414736394ae7fcaf",
-			match: true,
-		},
-		{
-			input: "sha256:da304e823d8ca2b9d863a3c897baeb852ba21ea9a9f1414736394ae7fcaf9821",
-			match: false,
-		},
-		{
-			input: "da304e823d8ca2b9d863a3c897baeb852ba21ea9a9f1414736394ae7fcaf98218482",
-			match: false,
-		},
-		{
-			input: "da304",
-			match: false,
-		},
-		{
-			input: "da304e",
-			match: true,
-		},
-	}
-
 	for i := range fullCases {
 		checkRegexp(t, anchoredIdentifierRegexp, fullCases[i])
-	}
-
-	for i := range shortCases {
-		checkRegexp(t, anchoredShortIdentifierRegexp, shortCases[i])
 	}
 }

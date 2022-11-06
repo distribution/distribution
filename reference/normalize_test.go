@@ -4,7 +4,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/distribution/distribution/v3/digestset"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -360,7 +359,6 @@ func TestParseAnyReference(t *testing.T) {
 		Reference  string
 		Equivalent string
 		Expected   Reference
-		Digests    []digest.Digest
 	}{
 		{
 			Reference:  "redis",
@@ -417,61 +415,15 @@ func TestParseAnyReference(t *testing.T) {
 			Equivalent: "docker.io/library/dbcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9",
 		},
 		{
-			Reference:  "dbcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9",
-			Expected:   digestReference("sha256:dbcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9c"),
-			Equivalent: "sha256:dbcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9c",
-			Digests: []digest.Digest{
-				digest.Digest("sha256:dbcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9c"),
-				digest.Digest("sha256:abcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9c"),
-			},
-		},
-		{
-			Reference:  "dbcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9",
-			Equivalent: "docker.io/library/dbcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9",
-			Digests: []digest.Digest{
-				digest.Digest("sha256:abcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9c"),
-			},
-		},
-		{
-			Reference:  "dbcc1c",
-			Expected:   digestReference("sha256:dbcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9c"),
-			Equivalent: "sha256:dbcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9c",
-			Digests: []digest.Digest{
-				digest.Digest("sha256:dbcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9c"),
-				digest.Digest("sha256:abcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9c"),
-			},
-		},
-		{
 			Reference:  "dbcc1",
 			Equivalent: "docker.io/library/dbcc1",
-			Digests: []digest.Digest{
-				digest.Digest("sha256:dbcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9c"),
-				digest.Digest("sha256:abcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9c"),
-			},
-		},
-		{
-			Reference:  "dbcc1c",
-			Equivalent: "docker.io/library/dbcc1c",
-			Digests: []digest.Digest{
-				digest.Digest("sha256:abcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9c"),
-			},
 		},
 	}
 
 	for _, tcase := range tcases {
 		var ref Reference
 		var err error
-		if len(tcase.Digests) == 0 {
-			ref, err = ParseAnyReference(tcase.Reference)
-		} else {
-			ds := digestset.NewSet()
-			for _, dgst := range tcase.Digests {
-				if err := ds.Add(dgst); err != nil {
-					t.Fatalf("Error adding digest %s: %v", dgst.String(), err)
-				}
-			}
-			ref, err = ParseAnyReferenceWithSet(tcase.Reference, ds)
-		}
+		ref, err = ParseAnyReference(tcase.Reference)
 		if err != nil {
 			t.Fatalf("Error parsing reference %s: %v", tcase.Reference, err)
 		}
