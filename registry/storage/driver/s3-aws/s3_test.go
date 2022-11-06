@@ -166,11 +166,7 @@ func TestEmptyRootList(t *testing.T) {
 		t.Skip(skipS3())
 	}
 
-	validRoot, err := ioutil.TempDir("", "driver-")
-	if err != nil {
-		t.Fatalf("unexpected error creating temporary directory: %v", err)
-	}
-	defer os.Remove(validRoot)
+	validRoot := t.TempDir()
 
 	rootedDriver, err := s3DriverConstructor(validRoot, s3.StorageClassStandard)
 	if err != nil {
@@ -249,11 +245,7 @@ func TestStorageClass(t *testing.T) {
 		t.Skip(skipS3())
 	}
 
-	rootDir, err := ioutil.TempDir("", "driver-")
-	if err != nil {
-		t.Fatalf("unexpected error creating temporary directory: %v", err)
-	}
-	defer os.Remove(rootDir)
+	rootDir := t.TempDir()
 
 	contents := []byte("contents")
 	ctx := context.Background()
@@ -307,11 +299,7 @@ func TestDelete(t *testing.T) {
 		t.Skip(skipS3())
 	}
 
-	rootDir, err := ioutil.TempDir("", "driver-")
-	if err != nil {
-		t.Fatalf("unexpected error creating temporary directory: %v", err)
-	}
-	defer os.Remove(rootDir)
+	rootDir := t.TempDir()
 
 	driver, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
 	if err != nil {
@@ -530,11 +518,7 @@ func TestWalk(t *testing.T) {
 		t.Skip(skipS3())
 	}
 
-	rootDir, err := ioutil.TempDir("", "driver-")
-	if err != nil {
-		t.Fatalf("unexpected error creating temporary directory: %v", err)
-	}
-	defer os.Remove(rootDir)
+	rootDir := t.TempDir()
 
 	driver, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
 	if err != nil {
@@ -689,11 +673,7 @@ func TestOverThousandBlobs(t *testing.T) {
 		t.Skip(skipS3())
 	}
 
-	rootDir, err := ioutil.TempDir("", "driver-")
-	if err != nil {
-		t.Fatalf("unexpected error creating temporary directory: %v", err)
-	}
-	defer os.Remove(rootDir)
+	rootDir := t.TempDir()
 
 	standardDriver, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
 	if err != nil {
@@ -722,11 +702,7 @@ func TestMoveWithMultipartCopy(t *testing.T) {
 		t.Skip(skipS3())
 	}
 
-	rootDir, err := ioutil.TempDir("", "driver-")
-	if err != nil {
-		t.Fatalf("unexpected error creating temporary directory: %v", err)
-	}
-	defer os.Remove(rootDir)
+	rootDir := t.TempDir()
 
 	d, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
 	if err != nil {
@@ -776,11 +752,7 @@ func TestListObjectsV2(t *testing.T) {
 		t.Skip(skipS3())
 	}
 
-	rootDir, err := ioutil.TempDir("", "driver-")
-	if err != nil {
-		t.Fatalf("unexpected error creating temporary directory: %v", err)
-	}
-	defer os.Remove(rootDir)
+	rootDir := t.TempDir()
 
 	d, err := s3DriverConstructor(rootDir, s3.StorageClassStandard)
 	if err != nil {

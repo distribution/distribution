@@ -95,11 +95,7 @@ func TestCommitEmpty(t *testing.T) {
 		t.Skip(skipGCS())
 	}
 
-	validRoot, err := ioutil.TempDir("", "driver-")
-	if err != nil {
-		t.Fatalf("unexpected error creating temporary directory: %v", err)
-	}
-	defer os.Remove(validRoot)
+	validRoot := t.TempDir()
 
 	driver, err := gcsDriverConstructor(validRoot)
 	if err != nil {
@@ -141,11 +137,7 @@ func TestCommit(t *testing.T) {
 		t.Skip(skipGCS())
 	}
 
-	validRoot, err := ioutil.TempDir("", "driver-")
-	if err != nil {
-		t.Fatalf("unexpected error creating temporary directory: %v", err)
-	}
-	defer os.Remove(validRoot)
+	validRoot := t.TempDir()
 
 	driver, err := gcsDriverConstructor(validRoot)
 	if err != nil {
@@ -227,11 +219,7 @@ func TestEmptyRootList(t *testing.T) {
 		t.Skip(skipGCS())
 	}
 
-	validRoot, err := ioutil.TempDir("", "driver-")
-	if err != nil {
-		t.Fatalf("unexpected error creating temporary directory: %v", err)
-	}
-	defer os.Remove(validRoot)
+	validRoot := t.TempDir()
 
 	rootedDriver, err := gcsDriverConstructor(validRoot)
 	if err != nil {
@@ -282,11 +270,7 @@ func TestMoveDirectory(t *testing.T) {
 		t.Skip(skipGCS())
 	}
 
-	validRoot, err := ioutil.TempDir("", "driver-")
-	if err != nil {
-		t.Fatalf("unexpected error creating temporary directory: %v", err)
-	}
-	defer os.Remove(validRoot)
+	validRoot := t.TempDir()
 
 	driver, err := gcsDriverConstructor(validRoot)
 	if err != nil {

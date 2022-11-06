@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"context"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
@@ -121,15 +120,9 @@ func makeTestEnv(t *testing.T, name string) *testEnv {
 
 	ctx := context.Background()
 
-	truthDir, err := ioutil.TempDir("", "truth")
-	if err != nil {
-		t.Fatalf("unable to create tempdir: %s", err)
-	}
+	truthDir := t.TempDir()
 
-	cacheDir, err := ioutil.TempDir("", "cache")
-	if err != nil {
-		t.Fatalf("unable to create tempdir: %s", err)
-	}
+	cacheDir := t.TempDir()
 
 	localDriver, err := filesystem.FromParameters(map[string]interface{}{
 		"rootdirectory": truthDir,

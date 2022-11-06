@@ -102,11 +102,7 @@ func TestEmptyRootList(t *testing.T) {
 		t.Skip(skipCheck())
 	}
 
-	validRoot, err := ioutil.TempDir("", "driver-")
-	if err != nil {
-		t.Fatalf("unexpected error creating temporary directory: %v", err)
-	}
-	defer os.Remove(validRoot)
+	validRoot := t.TempDir()
 
 	rootedDriver, err := ossDriverConstructor(validRoot)
 	if err != nil {

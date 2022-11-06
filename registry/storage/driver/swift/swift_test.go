@@ -100,11 +100,7 @@ func init() {
 }
 
 func TestEmptyRootList(t *testing.T) {
-	validRoot, err := ioutil.TempDir("", "driver-")
-	if err != nil {
-		t.Fatalf("unexpected error creating temporary directory: %v", err)
-	}
-	defer os.Remove(validRoot)
+	validRoot := t.TempDir()
 
 	rootedDriver, err := swiftDriverConstructor(validRoot)
 	if err != nil {
