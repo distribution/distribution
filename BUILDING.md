@@ -28,7 +28,7 @@ environment.
 
 Next, fetch the code from the repository using git:
 
-    git clone git@github.com:distribution/distribution.git
+    git clone https://github.com/distribution/distribution
     cd distribution
 
 If you are planning to create a pull request with changes, you may want to clone directly from your [fork](https://help.github.com/en/articles/about-forks).
