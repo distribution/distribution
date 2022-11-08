@@ -451,7 +451,7 @@ func digestPathComponents(dgst digest.Digest, multilevel bool) ([]string, error)
 	}
 
 	algorithm := blobAlgorithmReplacer.Replace(string(dgst.Algorithm()))
-	hex := dgst.Hex()
+	hex := dgst.Encoded()
 	prefix := []string{algorithm}
 
 	var suffix []string
@@ -480,6 +480,6 @@ func digestFromPath(digestPath string) (digest.Digest, error) {
 		algo = next
 	}
 
-	dgst := digest.NewDigestFromHex(algo, hex)
+	dgst := digest.NewDigestFromEncoded(digest.Algorithm(algo), hex)
 	return dgst, dgst.Validate()
 }
