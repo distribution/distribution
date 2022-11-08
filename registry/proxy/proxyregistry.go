@@ -26,6 +26,7 @@ type proxyingRegistry struct {
 	scheduler      *scheduler.TTLExpirationScheduler
 	remoteURL      url.URL
 	authChallenger authChallenger
+	enableWrite    bool
 }
 
 // NewRegistryPullThroughCache creates a registry acting as a pull through cache
@@ -107,6 +108,7 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 			cm:        challenge.NewSimpleManager(),
 			cs:        cs,
 		},
+		enableWrite: config.Write,
 	}, nil
 }
 
@@ -163,6 +165,7 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 			scheduler:      pr.scheduler,
 			repositoryName: name,
 			authChallenger: pr.authChallenger,
+			enableWrite:    pr.enableWrite,
 		},
 		manifests: &proxyManifestStore{
 			repositoryName:  name,
@@ -171,12 +174,14 @@ func (pr *proxyingRegistry) Repository(ctx context.Context, name reference.Named
 			ctx:             ctx,
 			scheduler:       pr.scheduler,
 			authChallenger:  pr.authChallenger,
+			enableWrite:     pr.enableWrite,
 		},
 		name: name,
 		tags: &proxyTagService{
 			localTags:      localRepo.Tags(ctx),
 			remoteTags:     remoteRepo.Tags(ctx),
 			authChallenger: pr.authChallenger,
+			enableWrite:    pr.enableWrite,
 		},
 	}, nil
 }

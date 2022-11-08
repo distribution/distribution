@@ -20,6 +20,7 @@ type proxyBlobStore struct {
 	scheduler      *scheduler.TTLExpirationScheduler
 	repositoryName reference.Named
 	authChallenger authChallenger
+	enableWrite    bool
 }
 
 var _ distribution.BlobStore = &proxyBlobStore{}
@@ -198,14 +199,23 @@ func (pbs *proxyBlobStore) Get(ctx context.Context, dgst digest.Digest) ([]byte,
 
 // Unsupported functions
 func (pbs *proxyBlobStore) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
+	if pbs.enableWrite {
+		return pbs.localStore.Put(ctx, mediaType, p)
+	}
 	return distribution.Descriptor{}, distribution.ErrUnsupported
 }
 
 func (pbs *proxyBlobStore) Create(ctx context.Context, options ...distribution.BlobCreateOption) (distribution.BlobWriter, error) {
+	if pbs.enableWrite {
+		return pbs.localStore.Create(ctx, options...)
+	}
 	return nil, distribution.ErrUnsupported
 }
 
 func (pbs *proxyBlobStore) Resume(ctx context.Context, id string) (distribution.BlobWriter, error) {
+	if pbs.enableWrite {
+		return pbs.localStore.Resume(ctx, id)
+	}
 	return nil, distribution.ErrUnsupported
 }
 
@@ -214,9 +224,15 @@ func (pbs *proxyBlobStore) Mount(ctx context.Context, sourceRepo reference.Named
 }
 
 func (pbs *proxyBlobStore) Open(ctx context.Context, dgst digest.Digest) (distribution.ReadSeekCloser, error) {
+	if pbs.enableWrite {
+		return pbs.localStore.Open(ctx, dgst)
+	}
 	return nil, distribution.ErrUnsupported
 }
 
 func (pbs *proxyBlobStore) Delete(ctx context.Context, dgst digest.Digest) error {
+	if pbs.enableWrite {
+		return pbs.localStore.Delete(ctx, dgst)
+	}
 	return distribution.ErrUnsupported
 }

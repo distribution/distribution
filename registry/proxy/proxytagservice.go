@@ -11,6 +11,7 @@ type proxyTagService struct {
 	localTags      distribution.TagService
 	remoteTags     distribution.TagService
 	authChallenger authChallenger
+	enableWrite    bool
 }
 
 var _ distribution.TagService = proxyTagService{}
@@ -39,6 +40,9 @@ func (pt proxyTagService) Get(ctx context.Context, tag string) (distribution.Des
 }
 
 func (pt proxyTagService) Tag(ctx context.Context, tag string, desc distribution.Descriptor) error {
+	if pt.enableWrite {
+		return pt.localTags.Tag(ctx, tag, desc)
+	}
 	return distribution.ErrUnsupported
 }
 

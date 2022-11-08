@@ -21,6 +21,7 @@ type proxyManifestStore struct {
 	repositoryName  reference.Named
 	scheduler       *scheduler.TTLExpirationScheduler
 	authChallenger  authChallenger
+	enableWrite     bool
 }
 
 var _ distribution.ManifestService = &proxyManifestStore{}
@@ -87,10 +88,16 @@ func (pms proxyManifestStore) Get(ctx context.Context, dgst digest.Digest, optio
 }
 
 func (pms proxyManifestStore) Put(ctx context.Context, manifest distribution.Manifest, options ...distribution.ManifestServiceOption) (digest.Digest, error) {
+	if pms.enableWrite {
+		return pms.localManifests.Put(ctx, manifest, options...)
+	}
 	var d digest.Digest
 	return d, distribution.ErrUnsupported
 }
 
 func (pms proxyManifestStore) Delete(ctx context.Context, dgst digest.Digest) error {
+	if pms.enableWrite {
+		return pms.localManifests.Delete(ctx, dgst)
+	}
 	return distribution.ErrUnsupported
 }

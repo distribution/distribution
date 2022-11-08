@@ -643,6 +643,9 @@ type Proxy struct {
 
 	// Password of the hub user
 	Password string `yaml:"password"`
+
+	// Enable writing to local storage
+	Write bool `yaml:"write"`
 }
 
 // Parse parses an input configuration yaml document into a Configuration struct
