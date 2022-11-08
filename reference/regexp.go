@@ -112,22 +112,10 @@ var (
 	// are like digests without the algorithm, since sha256 is used.
 	IdentifierRegexp = regexp.MustCompile(identifier)
 
-	shortIdentifier = `([a-f0-9]{6,64})`
-	// ShortIdentifierRegexp is the format used to represent a prefix
-	// of an identifier. A prefix may be used to match a sha256 identifier
-	// within a list of trusted identifiers.
-	ShortIdentifierRegexp = regexp.MustCompile(shortIdentifier)
-
 	anchoredIdentifier = anchored(identifier)
 	// anchoredIdentifierRegexp is used to check or match an
 	// identifier value, anchored at start and end of string.
 	anchoredIdentifierRegexp = regexp.MustCompile(anchoredIdentifier)
-
-	anchoredShortIdentifier = anchored(shortIdentifier)
-	// anchoredShortIdentifierRegexp is used to check if a value
-	// is a possible identifier prefix, anchored at start and end
-	// of string.
-	anchoredShortIdentifierRegexp = regexp.MustCompile(anchoredShortIdentifier)
 )
 
 // literal compiles s into a literal regular expression, escaping any regexp
