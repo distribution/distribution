@@ -1,7 +1,6 @@
 package filesystem
 
 import (
-	"io/ioutil"
 	"os"
 	"reflect"
 	"testing"
@@ -15,13 +14,13 @@ import (
 func Test(t *testing.T) { TestingT(t) }
 
 func init() {
-	root, err := ioutil.TempDir("", "driver-")
+	root, err := os.MkdirTemp("", "driver-")
 	if err != nil {
 		panic(err)
 	}
 	defer os.Remove(root)
 
-	driver, err := FromParameters(map[string]interface{}{
+	drvr, err := FromParameters(map[string]interface{}{
 		"rootdirectory": root,
 	})
 	if err != nil {
@@ -29,7 +28,7 @@ func init() {
 	}
 
 	testsuites.RegisterSuite(func() (storagedriver.StorageDriver, error) {
-		return driver, nil
+		return drvr, nil
 	}, testsuites.NeverSkip)
 }
 

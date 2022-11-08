@@ -7,7 +7,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strings"
@@ -187,7 +187,7 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 	}
 	defer fp.Close()
 
-	rawCertBundle, err := ioutil.ReadAll(fp)
+	rawCertBundle, err := io.ReadAll(fp)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read token auth root certificate bundle file %q: %s", config.rootCertBundle, err)
 	}

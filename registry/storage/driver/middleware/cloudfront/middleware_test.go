@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -41,7 +40,7 @@ pZeMRablbPQdp8/1NyIwimq1VlG0ohQ4P6qhW7E09ZMC
 -----END RSA PRIVATE KEY-----
 `
 
-	file, err := ioutil.TempFile("", "pkey")
+	file, err := os.CreateTemp("", "pkey")
 	if err != nil {
 		t.Fatal("File cannot be created")
 	}

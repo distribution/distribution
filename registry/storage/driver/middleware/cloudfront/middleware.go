@@ -7,8 +7,8 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -89,7 +89,7 @@ func newCloudFrontStorageMiddleware(storageDriver storagedriver.StorageDriver, o
 	}
 
 	// get urlSigner from the file specified in pkPath
-	pkBytes, err := ioutil.ReadFile(pkPath)
+	pkBytes, err := os.ReadFile(pkPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read privatekey file: %s", err)
 	}

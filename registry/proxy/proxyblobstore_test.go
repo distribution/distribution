@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"context"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
@@ -114,6 +113,8 @@ func (te *testEnv) RemoteStats() *map[string]int {
 
 // Populate remote store and record the digests
 func makeTestEnv(t *testing.T, name string) *testEnv {
+	t.Helper()
+
 	nameRef, err := reference.WithName(name)
 	if err != nil {
 		t.Fatalf("unable to parse reference: %s", err)
@@ -121,15 +122,8 @@ func makeTestEnv(t *testing.T, name string) *testEnv {
 
 	ctx := context.Background()
 
-	truthDir, err := ioutil.TempDir("", "truth")
-	if err != nil {
-		t.Fatalf("unable to create tempdir: %s", err)
-	}
-
-	cacheDir, err := ioutil.TempDir("", "cache")
-	if err != nil {
-		t.Fatalf("unable to create tempdir: %s", err)
-	}
+	truthDir := t.TempDir()
+	cacheDir := t.TempDir()
 
 	localDriver, err := filesystem.FromParameters(map[string]interface{}{
 		"rootdirectory": truthDir,

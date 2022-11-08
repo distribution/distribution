@@ -25,7 +25,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -336,7 +335,7 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 				return nil, storagedriver.PathNotFoundError{Path: path}
 			}
 			if swiftErr, ok := err.(*swift.Error); ok && swiftErr.StatusCode == http.StatusRequestedRangeNotSatisfiable {
-				return ioutil.NopCloser(bytes.NewReader(nil)), nil
+				return io.NopCloser(bytes.NewReader(nil)), nil
 			}
 			return file, err
 		}
