@@ -177,7 +177,8 @@ func splitDomain(name string) (string, string) {
 // hostname and name string. If no valid hostname is
 // found, the hostname is empty and the full value
 // is returned as name
-// DEPRECATED: Use Domain or Path
+//
+// Deprecated: Use [Domain] or [Path].
 func SplitHostname(named Named) (string, string) {
 	if r, ok := named.(namedRepository); ok {
 		return r.Domain(), r.Path()
@@ -322,11 +323,13 @@ func WithDigest(name Named, digest digest.Digest) (Canonical, error) {
 
 // TrimNamed removes any tag or digest from the named reference.
 func TrimNamed(ref Named) Named {
-	domain, path := SplitHostname(ref)
-	return repository{
-		domain: domain,
-		path:   path,
+	repo := repository{}
+	if r, ok := ref.(namedRepository); ok {
+		repo.domain, repo.path = r.Domain(), r.Path()
+	} else {
+		repo.domain, repo.path = splitDomain(ref.Name())
 	}
+	return repo
 }
 
 func getBestReferenceType(ref reference) Reference {
