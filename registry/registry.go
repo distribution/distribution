@@ -71,15 +71,16 @@ var defaultCipherSuites = []uint16{
 	tls.TLS_AES_256_GCM_SHA384,
 }
 
-// maps tls version strings to constants
-var (
-	defaultTLSVersionStr = "tls1.2"
-	tlsVersions          = map[string]uint16{
-		// user specified values
-		"tls1.2": tls.VersionTLS12,
-		"tls1.3": tls.VersionTLS13,
-	}
-)
+const defaultTLSVersionStr = "tls1.2"
+
+// tlsVersions maps user-specified values to tls version constants.
+var tlsVersions = map[string]uint16{
+	"tls1.2": tls.VersionTLS12,
+	"tls1.3": tls.VersionTLS13,
+}
+
+// defaultLogFormatter is the default formatter to use for logs.
+const defaultLogFormatter = "text"
 
 // this channel gets notified when process receives signal. It is global to ease unit testing
 var quit = make(chan os.Signal, 1)
@@ -130,6 +131,7 @@ var ServeCmd = &cobra.Command{
 }
 
 // A Registry represents a complete instance of the registry.
+//
 // TODO(aaronl): It might make sense for Registry to become an interface.
 type Registry struct {
 	config *configuration.Configuration
@@ -346,7 +348,7 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 
 	formatter := config.Log.Formatter
 	if formatter == "" {
-		formatter = "text" // default formatter
+		formatter = defaultLogFormatter
 	}
 
 	switch formatter {
@@ -364,16 +366,10 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 			Formatter: &logrus.JSONFormatter{TimestampFormat: time.RFC3339Nano},
 		})
 	default:
-		// just let the library use default on empty string.
-		if config.Log.Formatter != "" {
-			return ctx, fmt.Errorf("unsupported logging formatter: %q", config.Log.Formatter)
-		}
+		return ctx, fmt.Errorf("unsupported logging formatter: %q", formatter)
 	}
 
-	if config.Log.Formatter != "" {
-		logrus.Debugf("using %q logging formatter", config.Log.Formatter)
-	}
-
+	logrus.Debugf("using %q logging formatter", formatter)
 	if len(config.Log.Fields) > 0 {
 		// build up the static fields, if present.
 		var fields []interface{}
