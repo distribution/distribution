@@ -55,7 +55,7 @@ var (
 	// that may be part of image names. This is purposely a subset of what is
 	// allowed by DNS to ensure backwards compatibility with Docker image
 	// names. This includes IPv4 addresses on decimal format.
-	domainName = expression(domainNameComponent, optional(repeated(literal(`.`), domainNameComponent)))
+	domainName = expression(domainNameComponent, optional(repeated(`\.`+domainNameComponent)))
 
 	// host defines the structure of potential domains based on the URI
 	// Host subcomponent on rfc3986. It may be a subset of DNS domain name,
@@ -66,7 +66,7 @@ var (
 
 	// allowed by the URI Host subcomponent on rfc3986 to ensure backwards
 	// compatibility with Docker image names.
-	domain = expression(host, optional(literal(`:`), `[0-9]+`))
+	domain = expression(host, optional(`:[0-9]+`))
 
 	// DomainRegexp matches hostname or IP-addresses, optionally including a port
 	// number. It defines the structure of potential domain components that may be
@@ -93,11 +93,11 @@ var (
 	// end of the matched string.
 	anchoredDigestRegexp = regexp.MustCompile(anchored(digestPat))
 
-	// pathComponent restricts registry path-components to start with at least
-	// one letter or number, with following parts able to be separated by one
-	// period, one or two underscore and multiple dashes.
+	// pathComponent restricts path-components to start with an alphanumeric
+	// character, with following parts able to be separated by a separator
+	// (one period, one or two underscore and multiple dashes).
 	pathComponent = expression(alphanumeric, optional(repeated(separator, alphanumeric)))
-	namePat       = expression(optional(domain, literal(`/`)), pathComponent, optional(repeated(literal(`/`), pathComponent)))
+	namePat       = expression(optional(domain+`/`), pathComponent, optional(repeated(`/`+pathComponent)))
 
 	// NameRegexp is the format for the name component of references, including
 	// an optional domain and port, but without tag or digest suffix.
@@ -105,9 +105,9 @@ var (
 
 	// anchoredNameRegexp is used to parse a name value, capturing the
 	// domain and trailing components.
-	anchoredNameRegexp = regexp.MustCompile(anchored(optional(capture(domain), literal(`/`)), capture(pathComponent, optional(repeated(literal(`/`), pathComponent)))))
+	anchoredNameRegexp = regexp.MustCompile(anchored(optional(capture(domain), `/`), capture(pathComponent, optional(repeated(`/`+pathComponent)))))
 
-	referencePat = anchored(capture(namePat), optional(literal(":"), capture(tag)), optional(literal("@"), capture(digestPat)))
+	referencePat = anchored(capture(namePat), optional(`:`, capture(tag)), optional(`@`, capture(digestPat)))
 
 	// ReferenceRegexp is the full supported format of a reference. The regexp
 	// is anchored and has capturing groups for name, tag, and digest
@@ -123,18 +123,6 @@ var (
 	// identifier value, anchored at start and end of string.
 	anchoredIdentifierRegexp = regexp.MustCompile(anchored(identifier))
 )
-
-// literal compiles s into a literal regular expression, escaping any regexp
-// reserved characters.
-func literal(s string) string {
-	re := regexp.MustCompile(regexp.QuoteMeta(s))
-
-	if _, complete := re.LiteralPrefix(); !complete {
-		panic("must be a literal")
-	}
-
-	return re.String()
-}
 
 // expression defines a full expression, where each regular expression must
 // follow the previous.
