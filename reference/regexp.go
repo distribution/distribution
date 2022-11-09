@@ -145,18 +145,13 @@ func expression(res ...string) string {
 // optional wraps the expression in a non-capturing group and makes the
 // production optional.
 func optional(res ...string) string {
-	return group(strings.Join(res, "")) + `?`
+	return `(?:` + strings.Join(res, "") + `)?`
 }
 
 // repeated wraps the regexp in a non-capturing group to get one or more
 // matches.
 func repeated(res ...string) string {
-	return group(strings.Join(res, "")) + `+`
-}
-
-// group wraps the regexp in a non-capturing group.
-func group(res ...string) string {
-	return `(?:` + strings.Join(res, "") + `)`
+	return `(?:` + strings.Join(res, "") + `)+`
 }
 
 // capture wraps the expression in a capturing group.
