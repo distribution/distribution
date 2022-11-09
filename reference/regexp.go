@@ -59,7 +59,7 @@ var (
 	// that may be part of image names. This is purposely a subset of what is
 	// allowed by DNS to ensure backwards compatibility with Docker image
 	// names. This includes IPv4 addresses on decimal format.
-	domainName = domainNameComponent + optional(repeated(`\.`+domainNameComponent))
+	domainName = domainNameComponent + anyTimes(`\.`+domainNameComponent)
 
 	// host defines the structure of potential domains based on the URI
 	// Host subcomponent on rfc3986. It may be a subset of DNS domain name,
@@ -100,8 +100,8 @@ var (
 	// pathComponent restricts path-components to start with an alphanumeric
 	// character, with following parts able to be separated by a separator
 	// (one period, one or two underscore and multiple dashes).
-	pathComponent = alphanumeric + optional(repeated(separator, alphanumeric))
-	namePat       = optional(domainAndPort+`/`) + pathComponent + optional(repeated(`/`+pathComponent))
+	pathComponent = alphanumeric + anyTimes(separator+alphanumeric)
+	namePat       = optional(domainAndPort+`/`) + pathComponent + anyTimes(`/`+pathComponent)
 
 	// NameRegexp is the format for the name component of references, including
 	// an optional domain and port, but without tag or digest suffix.
@@ -109,7 +109,7 @@ var (
 
 	// anchoredNameRegexp is used to parse a name value, capturing the
 	// domain and trailing components.
-	anchoredNameRegexp = regexp.MustCompile(anchored(optional(capture(domainAndPort), `/`), capture(pathComponent, optional(repeated(`/`+pathComponent)))))
+	anchoredNameRegexp = regexp.MustCompile(anchored(optional(capture(domainAndPort), `/`), capture(pathComponent, anyTimes(`/`+pathComponent))))
 
 	referencePat = anchored(capture(namePat), optional(`:`, capture(tag)), optional(`@`, capture(digestPat)))
 
@@ -134,10 +134,10 @@ func optional(res ...string) string {
 	return `(?:` + strings.Join(res, "") + `)?`
 }
 
-// repeated wraps the regexp in a non-capturing group to get one or more
-// matches.
-func repeated(res ...string) string {
-	return `(?:` + strings.Join(res, "") + `)+`
+// anyTimes wraps the expression in a non-capturing group that can occur
+// any number of times.
+func anyTimes(res ...string) string {
+	return `(?:` + strings.Join(res, "") + `)*`
 }
 
 // capture wraps the expression in a capturing group.
