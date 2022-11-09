@@ -7,7 +7,7 @@ import (
 	"github.com/opencontainers/go-digest"
 )
 
-var (
+const (
 	legacyDefaultDomain = "index.docker.io"
 	defaultDomain       = "docker.io"
 	officialRepoName    = "library"
