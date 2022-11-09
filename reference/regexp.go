@@ -1,6 +1,9 @@
 package reference
 
-import "regexp"
+import (
+	"regexp"
+	"strings"
+)
 
 const (
 	// alphanumeric defines the alphanumeric atom, typically a
@@ -136,37 +139,32 @@ func literal(s string) string {
 // expression defines a full expression, where each regular expression must
 // follow the previous.
 func expression(res ...string) string {
-	var s string
-	for _, re := range res {
-		s += re
-	}
-
-	return s
+	return strings.Join(res, "")
 }
 
 // optional wraps the expression in a non-capturing group and makes the
 // production optional.
 func optional(res ...string) string {
-	return group(expression(res...)) + `?`
+	return group(strings.Join(res, "")) + `?`
 }
 
 // repeated wraps the regexp in a non-capturing group to get one or more
 // matches.
 func repeated(res ...string) string {
-	return group(expression(res...)) + `+`
+	return group(strings.Join(res, "")) + `+`
 }
 
 // group wraps the regexp in a non-capturing group.
 func group(res ...string) string {
-	return `(?:` + expression(res...) + `)`
+	return `(?:` + strings.Join(res, "") + `)`
 }
 
 // capture wraps the expression in a capturing group.
 func capture(res ...string) string {
-	return `(` + expression(res...) + `)`
+	return `(` + strings.Join(res, "") + `)`
 }
 
 // anchored anchors the regular expression by adding start and end delimiters.
 func anchored(res ...string) string {
-	return `^` + expression(res...) + `$`
+	return `^` + strings.Join(res, "") + `$`
 }
