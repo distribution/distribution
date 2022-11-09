@@ -55,7 +55,7 @@ var (
 	// that may be part of image names. This is purposely a subset of what is
 	// allowed by DNS to ensure backwards compatibility with Docker image
 	// names. This includes IPv4 addresses on decimal format.
-	domainName = expression(domainNameComponent, optional(repeated(`\.`+domainNameComponent)))
+	domainName = domainNameComponent + optional(repeated(`\.`+domainNameComponent))
 
 	// host defines the structure of potential domains based on the URI
 	// Host subcomponent on rfc3986. It may be a subset of DNS domain name,
@@ -66,7 +66,7 @@ var (
 
 	// allowed by the URI Host subcomponent on rfc3986 to ensure backwards
 	// compatibility with Docker image names.
-	domain = expression(host, optional(`:[0-9]+`))
+	domain = host + optional(`:[0-9]+`)
 
 	// DomainRegexp matches hostname or IP-addresses, optionally including a port
 	// number. It defines the structure of potential domain components that may be
@@ -96,8 +96,8 @@ var (
 	// pathComponent restricts path-components to start with an alphanumeric
 	// character, with following parts able to be separated by a separator
 	// (one period, one or two underscore and multiple dashes).
-	pathComponent = expression(alphanumeric, optional(repeated(separator, alphanumeric)))
-	namePat       = expression(optional(domain+`/`), pathComponent, optional(repeated(`/`+pathComponent)))
+	pathComponent = alphanumeric + optional(repeated(separator, alphanumeric))
+	namePat       = optional(domain+`/`) + pathComponent + optional(repeated(`/`+pathComponent))
 
 	// NameRegexp is the format for the name component of references, including
 	// an optional domain and port, but without tag or digest suffix.
@@ -123,12 +123,6 @@ var (
 	// identifier value, anchored at start and end of string.
 	anchoredIdentifierRegexp = regexp.MustCompile(anchored(identifier))
 )
-
-// expression defines a full expression, where each regular expression must
-// follow the previous.
-func expression(res ...string) string {
-	return strings.Join(res, "")
-}
 
 // optional wraps the expression in a non-capturing group and makes the
 // production optional.
