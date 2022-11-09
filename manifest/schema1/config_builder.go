@@ -132,7 +132,7 @@ func (mb *configManifestBuilder) Build(ctx context.Context) (m distribution.Mani
 			layerCounter++
 		}
 
-		v1ID := digest.FromBytes([]byte(blobsum.Hex() + " " + parent)).Hex()
+		v1ID := digest.FromBytes([]byte(blobsum.Encoded() + " " + parent)).Encoded()
 
 		if i == 0 && img.RootFS.BaseLayer != "" {
 			// windows-only baselayer setup
@@ -140,18 +140,18 @@ func (mb *configManifestBuilder) Build(ctx context.Context) (m distribution.Mani
 			parent = fmt.Sprintf("%x", baseID[:32])
 		}
 
-		v1Compatibility := v1Compatibility{
+		v1Compat := v1Compatibility{
 			ID:      v1ID,
 			Parent:  parent,
 			Comment: h.Comment,
 			Created: h.Created,
 			Author:  h.Author,
 		}
-		v1Compatibility.ContainerConfig.Cmd = []string{img.History[i].CreatedBy}
+		v1Compat.ContainerConfig.Cmd = []string{img.History[i].CreatedBy}
 		if h.EmptyLayer {
-			v1Compatibility.ThrowAway = true
+			v1Compat.ThrowAway = true
 		}
-		jsonBytes, err := json.Marshal(&v1Compatibility)
+		jsonBytes, err := json.Marshal(&v1Compat)
 		if err != nil {
 			return nil, err
 		}
@@ -178,11 +178,11 @@ func (mb *configManifestBuilder) Build(ctx context.Context) (m distribution.Mani
 	}
 
 	fsLayerList[0] = FSLayer{BlobSum: blobsum}
-	dgst := digest.FromBytes([]byte(blobsum.Hex() + " " + parent + " " + string(mb.configJSON)))
+	dgst := digest.FromBytes([]byte(blobsum.Encoded() + " " + parent + " " + string(mb.configJSON)))
 
 	// Top-level v1compatibility string should be a modified version of the
 	// image config.
-	transformedConfig, err := MakeV1ConfigFromConfig(mb.configJSON, dgst.Hex(), parent, latestHistory.EmptyLayer)
+	transformedConfig, err := MakeV1ConfigFromConfig(mb.configJSON, dgst.Encoded(), parent, latestHistory.EmptyLayer)
 	if err != nil {
 		return nil, err
 	}
