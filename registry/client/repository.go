@@ -676,7 +676,7 @@ func (bs *blobs) Get(ctx context.Context, dgst digest.Digest) ([]byte, error) {
 	return io.ReadAll(reader)
 }
 
-func (bs *blobs) Open(ctx context.Context, dgst digest.Digest) (distribution.ReadSeekCloser, error) {
+func (bs *blobs) Open(ctx context.Context, dgst digest.Digest) (io.ReadSeekCloser, error) {
 	ref, err := reference.WithDigest(bs.name, dgst)
 	if err != nil {
 		return nil, err
@@ -686,13 +686,12 @@ func (bs *blobs) Open(ctx context.Context, dgst digest.Digest) (distribution.Rea
 		return nil, err
 	}
 
-	return transport.NewHTTPReadSeeker(ctx, bs.client, blobURL,
-		func(resp *http.Response) error {
-			if resp.StatusCode == http.StatusNotFound {
-				return distribution.ErrBlobUnknown
-			}
-			return HandleErrorResponse(resp)
-		}), nil
+	return transport.NewHTTPReadSeeker(ctx, bs.client, blobURL, func(resp *http.Response) error {
+		if resp.StatusCode == http.StatusNotFound {
+			return distribution.ErrBlobUnknown
+		}
+		return HandleErrorResponse(resp)
+	}), nil
 }
 
 func (bs *blobs) ServeBlob(ctx context.Context, w http.ResponseWriter, r *http.Request, dgst digest.Digest) error {
