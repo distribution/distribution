@@ -138,16 +138,14 @@ func NewRepository(name reference.Named, baseURL string, transport http.RoundTri
 		return nil, err
 	}
 
-	client := &http.Client{
-		Transport:     transport,
-		CheckRedirect: checkHTTPRedirect,
-		// TODO(dmcgowan): create cookie jar
-	}
-
 	return &repository{
-		client: client,
-		ub:     ub,
-		name:   name,
+		client: &http.Client{
+			Transport:     transport,
+			CheckRedirect: checkHTTPRedirect,
+			// TODO(dmcgowan): create cookie jar
+		},
+		ub:   ub,
+		name: name,
 	}, nil
 }
 
@@ -162,16 +160,15 @@ func (r *repository) Named() reference.Named {
 }
 
 func (r *repository) Blobs(ctx context.Context) distribution.BlobStore {
-	statter := &blobStatter{
+	return &blobs{
 		name:   r.name,
 		ub:     r.ub,
 		client: r.client,
-	}
-	return &blobs{
-		name:    r.name,
-		ub:      r.ub,
-		client:  r.client,
-		statter: cache.NewCachedBlobStatter(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize), statter),
+		statter: cache.NewCachedBlobStatter(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize), &blobStatter{
+			name:   r.name,
+			ub:     r.ub,
+			client: r.client,
+		}),
 	}
 }
 
