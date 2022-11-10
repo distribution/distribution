@@ -23,7 +23,6 @@
 //	digest-hex                      := /[0-9a-fA-F]{32,}/ ; At least 128 bit digest value
 //
 //	identifier                      := /[a-f0-9]{64}/
-//	short-identifier                := /[a-f0-9]{6,64}/
 package reference
 
 import (
@@ -188,7 +187,6 @@ func SplitHostname(named Named) (string, string) {
 
 // Parse parses s and returns a syntactically valid Reference.
 // If an error was encountered it is returned, along with a nil Reference.
-// NOTE: Parse will not handle short digests.
 func Parse(s string) (Reference, error) {
 	matches := ReferenceRegexp.FindStringSubmatch(s)
 	if matches == nil {
@@ -240,7 +238,6 @@ func Parse(s string) (Reference, error) {
 // the Named interface. The reference must have a name and be in the canonical
 // form, otherwise an error is returned.
 // If an error was encountered it is returned, along with a nil Reference.
-// NOTE: ParseNamed will not handle short digests.
 func ParseNamed(s string) (Named, error) {
 	named, err := ParseNormalizedNamed(s)
 	if err != nil {
