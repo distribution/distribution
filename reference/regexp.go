@@ -96,9 +96,8 @@ var (
 	nameComponent = expression(alphanumeric, optional(repeated(separator, alphanumeric)))
 	namePat       = expression(optional(domain, literal(`/`)), nameComponent, optional(repeated(literal(`/`), nameComponent)))
 
-	// NameRegexp is the format for the name component of references. The
-	// regexp has capturing groups for the domain and name part omitting
-	// the separating forward slash from either.
+	// NameRegexp is the format for the name component of references, including
+	// an optional domain and port, but without tag or digest suffix.
 	NameRegexp = regexp.MustCompile(namePat)
 
 	// anchoredNameRegexp is used to parse a name value, capturing the
