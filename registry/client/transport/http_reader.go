@@ -13,6 +13,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/andybalholm/brotli"
 	"github.com/klauspost/compress/zstd"
 )
 
@@ -189,7 +190,7 @@ func (hrs *httpReadSeeker) reader() (io.Reader, error) {
 		// context.GetLogger(hrs.context).Infof("Range: %s", req.Header.Get("Range"))
 	}
 
-	req.Header.Add("Accept-Encoding", "zstd, gzip, deflate")
+	req.Header.Add("Accept-Encoding", "br, zstd, gzip, deflate")
 	resp, err := hrs.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -254,12 +255,15 @@ func (hrs *httpReadSeeker) reader() (io.Reader, error) {
 		for i := len(encoding) - 1; i >= 0; i-- {
 			algorithm := strings.ToLower(encoding[i])
 			switch algorithm {
+			case "br":
+				r := brotli.NewReader(body)
+				body = closeWrapper{r: r, close: body.Close}
 			case "zstd":
 				r, err := zstd.NewReader(body)
 				if err != nil {
 					return nil, err
 				}
-				body = r.IOReadCloser()
+				body = closeWrapper{r: r, close: body.Close}
 			case "gzip":
 				body, err = gzip.NewReader(body)
 				if err != nil {
@@ -284,4 +288,19 @@ func (hrs *httpReadSeeker) reader() (io.Reader, error) {
 	}
 
 	return hrs.rc, nil
+}
+
+type closeWrapper struct {
+	r     io.Reader
+	close func() error
+}
+
+// Read forwards read calls to the decoder.
+func (c closeWrapper) Read(p []byte) (n int, err error) {
+	return c.r.Read(p)
+}
+
+// Close closes the decoder.
+func (c closeWrapper) Close() error {
+	return c.close()
 }

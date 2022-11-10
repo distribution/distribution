@@ -29,6 +29,9 @@ github.com/Azure/go-autorest/tracing
 # github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d
 ## explicit
 github.com/Shopify/logrus-bugsnag
+# github.com/andybalholm/brotli v1.0.4
+## explicit; go 1.12
+github.com/andybalholm/brotli
 # github.com/aws/aws-sdk-go v1.43.16
 ## explicit; go 1.11
 github.com/aws/aws-sdk-go/aws
