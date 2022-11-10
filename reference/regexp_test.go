@@ -13,6 +13,7 @@ type regexpMatch struct {
 }
 
 func checkRegexp(t *testing.T, r *regexp.Regexp, m regexpMatch) {
+	t.Helper()
 	matches := r.FindStringSubmatch(m.input)
 	if m.match && matches != nil {
 		if len(matches) != (r.NumSubexp()+1) || matches[0] != m.input {
@@ -34,7 +35,10 @@ func checkRegexp(t *testing.T, r *regexp.Regexp, m regexpMatch) {
 }
 
 func TestDomainRegexp(t *testing.T) {
-	hostcases := []regexpMatch{
+	hostcases := []struct {
+		input string
+		match bool
+	}{
 		{
 			input: "test.com",
 			match: true,
@@ -157,8 +161,14 @@ func TestDomainRegexp(t *testing.T) {
 		},
 	}
 	r := regexp.MustCompile(`^` + DomainRegexp.String() + `$`)
-	for i := range hostcases {
-		checkRegexp(t, r, hostcases[i])
+	for _, tc := range hostcases {
+		tc := tc
+		t.Run(tc.input, func(t *testing.T) {
+			match := r.MatchString(tc.input)
+			if match != tc.match {
+				t.Errorf("Expected match=%t, got %t", tc.match, match)
+			}
+		})
 	}
 }
 
@@ -452,8 +462,11 @@ func TestFullNameRegexp(t *testing.T) {
 			match: false,
 		},
 	}
-	for i := range testcases {
-		checkRegexp(t, anchoredNameRegexp, testcases[i])
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.input, func(t *testing.T) {
+			checkRegexp(t, anchoredNameRegexp, tc)
+		})
 	}
 }
 
@@ -522,13 +535,19 @@ func TestReferenceRegexp(t *testing.T) {
 		},
 	}
 
-	for i := range testcases {
-		checkRegexp(t, ReferenceRegexp, testcases[i])
+	for _, tc := range testcases {
+		tc := tc
+		t.Run(tc.input, func(t *testing.T) {
+			checkRegexp(t, ReferenceRegexp, tc)
+		})
 	}
 }
 
 func TestIdentifierRegexp(t *testing.T) {
-	fullCases := []regexpMatch{
+	fullCases := []struct {
+		input string
+		match bool
+	}{
 		{
 			input: "da304e823d8ca2b9d863a3c897baeb852ba21ea9a9f1414736394ae7fcaf9821",
 			match: true,
@@ -550,7 +569,13 @@ func TestIdentifierRegexp(t *testing.T) {
 			match: false,
 		},
 	}
-	for i := range fullCases {
-		checkRegexp(t, anchoredIdentifierRegexp, fullCases[i])
+	for _, tc := range fullCases {
+		tc := tc
+		t.Run(tc.input, func(t *testing.T) {
+			match := anchoredIdentifierRegexp.MatchString(tc.input)
+			if match != tc.match {
+				t.Errorf("Expected match=%t, got %t", tc.match, match)
+			}
+		})
 	}
 }
