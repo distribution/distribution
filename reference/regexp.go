@@ -23,6 +23,10 @@ const (
 	// repository name to start with a component as defined by DomainRegexp.
 	domainNameComponent = `(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])`
 
+	// optionalPort matches an optional port-number including the port separator
+	// (e.g. ":80").
+	optionalPort = `(?::[0-9]+)?`
+
 	// tag matches valid tag names. From docker/docker:graph/tags.go.
 	tag = `[\w][\w.-]{0,127}`
 
@@ -66,7 +70,7 @@ var (
 
 	// allowed by the URI Host subcomponent on rfc3986 to ensure backwards
 	// compatibility with Docker image names.
-	domain = host + optional(`:[0-9]+`)
+	domainAndPort = host + optionalPort
 
 	// DomainRegexp matches hostname or IP-addresses, optionally including a port
 	// number. It defines the structure of potential domain components that may be
@@ -77,7 +81,7 @@ var (
 	// addresses such as IPv4-Mapped).
 	//
 	// [rfc6874]: https://www.rfc-editor.org/rfc/rfc6874.
-	DomainRegexp = regexp.MustCompile(domain)
+	DomainRegexp = regexp.MustCompile(domainAndPort)
 
 	// TagRegexp matches valid tag names. From docker/docker:graph/tags.go.
 	TagRegexp = regexp.MustCompile(tag)
@@ -97,7 +101,7 @@ var (
 	// character, with following parts able to be separated by a separator
 	// (one period, one or two underscore and multiple dashes).
 	pathComponent = alphanumeric + optional(repeated(separator, alphanumeric))
-	namePat       = optional(domain+`/`) + pathComponent + optional(repeated(`/`+pathComponent))
+	namePat       = optional(domainAndPort+`/`) + pathComponent + optional(repeated(`/`+pathComponent))
 
 	// NameRegexp is the format for the name component of references, including
 	// an optional domain and port, but without tag or digest suffix.
@@ -105,7 +109,7 @@ var (
 
 	// anchoredNameRegexp is used to parse a name value, capturing the
 	// domain and trailing components.
-	anchoredNameRegexp = regexp.MustCompile(anchored(optional(capture(domain), `/`), capture(pathComponent, optional(repeated(`/`+pathComponent)))))
+	anchoredNameRegexp = regexp.MustCompile(anchored(optional(capture(domainAndPort), `/`), capture(pathComponent, optional(repeated(`/`+pathComponent)))))
 
 	referencePat = anchored(capture(namePat), optional(`:`, capture(tag)), optional(`@`, capture(digestPat)))
 
