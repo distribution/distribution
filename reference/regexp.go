@@ -101,7 +101,13 @@ var (
 	// character, with following parts able to be separated by a separator
 	// (one period, one or two underscore and multiple dashes).
 	pathComponent = alphanumeric + anyTimes(separator+alphanumeric)
-	namePat       = optional(domainAndPort+`/`) + pathComponent + anyTimes(`/`+pathComponent)
+
+	// remoteName matches the remote-name of a repository. It consists of one
+	// or more forward slash (/) delimited path-components:
+	//
+	//	pathComponent[[/pathComponent] ...] // e.g., "library/ubuntu"
+	remoteName = pathComponent + anyTimes(`/`+pathComponent)
+	namePat    = optional(domainAndPort+`/`) + remoteName
 
 	// NameRegexp is the format for the name component of references, including
 	// an optional domain and port, but without tag or digest suffix.
@@ -109,7 +115,7 @@ var (
 
 	// anchoredNameRegexp is used to parse a name value, capturing the
 	// domain and trailing components.
-	anchoredNameRegexp = regexp.MustCompile(anchored(optional(capture(domainAndPort), `/`), capture(pathComponent, anyTimes(`/`+pathComponent))))
+	anchoredNameRegexp = regexp.MustCompile(anchored(optional(capture(domainAndPort), `/`), capture(remoteName)))
 
 	referencePat = anchored(capture(namePat), optional(`:`, capture(tag)), optional(`@`, capture(digestPat)))
 

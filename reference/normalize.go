@@ -58,14 +58,14 @@ func ParseNormalizedNamed(s string) (Named, error) {
 		return nil, fmt.Errorf("invalid repository name (%s), cannot specify 64-byte hexadecimal strings", s)
 	}
 	domain, remainder := splitDockerDomain(s)
-	var remoteName string
+	var remote string
 	if tagSep := strings.IndexRune(remainder, ':'); tagSep > -1 {
-		remoteName = remainder[:tagSep]
+		remote = remainder[:tagSep]
 	} else {
-		remoteName = remainder
+		remote = remainder
 	}
-	if strings.ToLower(remoteName) != remoteName {
-		return nil, fmt.Errorf("invalid reference format: repository name (%s) must be lowercase", remoteName)
+	if strings.ToLower(remote) != remote {
+		return nil, fmt.Errorf("invalid reference format: repository name (%s) must be lowercase", remote)
 	}
 
 	ref, err := Parse(domain + "/" + remainder)
@@ -120,7 +120,7 @@ func ParseDockerRef(ref string) (Named, error) {
 	return TagNameOnly(named), nil
 }
 
-// splitDockerDomain splits a repository name to domain and remotename string.
+// splitDockerDomain splits a repository name to domain and remote-name.
 // If no valid domain is found, the default domain is used. Repository name
 // needs to be already validated before.
 func splitDockerDomain(name string) (domain, remainder string) {
