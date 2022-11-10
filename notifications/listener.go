@@ -2,6 +2,7 @@ package notifications
 
 import (
 	"context"
+	"io"
 	"net/http"
 
 	"github.com/docker/distribution"
@@ -147,7 +148,7 @@ func (bsl *blobServiceListener) Get(ctx context.Context, dgst digest.Digest) ([]
 	return p, err
 }
 
-func (bsl *blobServiceListener) Open(ctx context.Context, dgst digest.Digest) (distribution.ReadSeekCloser, error) {
+func (bsl *blobServiceListener) Open(ctx context.Context, dgst digest.Digest) (io.ReadSeekCloser, error) {
 	rc, err := bsl.BlobStore.Open(ctx, dgst)
 	if err == nil {
 		if desc, err := bsl.Stat(ctx, dgst); err != nil {
