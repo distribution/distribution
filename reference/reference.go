@@ -146,7 +146,7 @@ type namedRepository interface {
 	Path() string
 }
 
-// Domain returns the domain part of the Named reference
+// Domain returns the domain part of the [Named] reference.
 func Domain(named Named) string {
 	if r, ok := named.(namedRepository); ok {
 		return r.Domain()
@@ -155,7 +155,7 @@ func Domain(named Named) string {
 	return domain
 }
 
-// Path returns the name without the domain part of the Named reference
+// Path returns the name without the domain part of the [Named] reference.
 func Path(named Named) (name string) {
 	if r, ok := named.(namedRepository); ok {
 		return r.Path()

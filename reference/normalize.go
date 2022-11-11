@@ -54,31 +54,43 @@ func ParseNormalizedNamed(s string) (Named, error) {
 	return named, nil
 }
 
-// ParseDockerRef normalizes the image reference following the docker convention. This is added
-// mainly for backward compatibility.
-// The reference returned can only be either tagged or digested. For reference contains both tag
-// and digest, the function returns digested reference, e.g. docker.io/library/busybox:latest@
-// sha256:7cc4b5aefd1d0cadf8d97d4350462ba51c694ebca145b08d7d41b41acc8db5aa will be returned as
-// docker.io/library/busybox@sha256:7cc4b5aefd1d0cadf8d97d4350462ba51c694ebca145b08d7d41b41acc8db5aa.
+// namedTaggedDigested is a reference that has both a tag and a digest.
+type namedTaggedDigested interface {
+	NamedTagged
+	Digested
+}
+
+// ParseDockerRef normalizes the image reference following the docker convention,
+// which allows for references to contain both a tag and a digest. It returns a
+// reference that is either tagged or digested. For references containing both
+// a tag and a digest, it returns a digested reference. For example, the following
+// reference:
+//
+//	docker.io/library/busybox:latest@sha256:7cc4b5aefd1d0cadf8d97d4350462ba51c694ebca145b08d7d41b41acc8db5aa
+//
+// Is returned as a digested reference (with the ":latest" tag removed):
+//
+//	docker.io/library/busybox@sha256:7cc4b5aefd1d0cadf8d97d4350462ba51c694ebca145b08d7d41b41acc8db5aa
+//
+// References that are already "tagged" or "digested" are returned unmodified:
+//
+//	// Already a digested reference
+//	docker.io/library/busybox@sha256:7cc4b5aefd1d0cadf8d97d4350462ba51c694ebca145b08d7d41b41acc8db5aa
+//
+//	// Already a named reference
+//	docker.io/library/busybox:latest
 func ParseDockerRef(ref string) (Named, error) {
 	named, err := ParseNormalizedNamed(ref)
 	if err != nil {
 		return nil, err
 	}
-	if _, ok := named.(NamedTagged); ok {
-		if canonical, ok := named.(Canonical); ok {
-			// The reference is both tagged and digested, only
-			// return digested.
-			newNamed, err := WithName(canonical.Name())
-			if err != nil {
-				return nil, err
-			}
-			newCanonical, err := WithDigest(newNamed, canonical.Digest())
-			if err != nil {
-				return nil, err
-			}
-			return newCanonical, nil
+	if canonical, ok := named.(namedTaggedDigested); ok {
+		// The reference is both tagged and digested; only return digested.
+		newNamed, err := WithName(canonical.Name())
+		if err != nil {
+			return nil, err
 		}
+		return WithDigest(newNamed, canonical.Digest())
 	}
 	return TagNameOnly(named), nil
 }
