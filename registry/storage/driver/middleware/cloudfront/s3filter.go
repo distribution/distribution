@@ -94,7 +94,7 @@ func (s *awsIPs) tryUpdate() error {
 		regionAllowed := false
 		if len(s.awsRegion) > 0 {
 			for _, ar := range s.awsRegion {
-				if strings.ToLower(region) == ar {
+				if strings.EqualFold(region, ar) {
 					regionAllowed = true
 					break
 				}

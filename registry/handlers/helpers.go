@@ -68,19 +68,18 @@ func copyFullPayload(ctx context.Context, responseWriter http.ResponseWriter, r 
 	return nil
 }
 
-func parseContentRange(cr string) (int64, int64, error) {
-	ranges := strings.Split(cr, "-")
-	if len(ranges) != 2 {
+func parseContentRange(cr string) (start int64, end int64, err error) {
+	rStart, rEnd, ok := strings.Cut(cr, "-")
+	if !ok {
 		return -1, -1, fmt.Errorf("invalid content range format, %s", cr)
 	}
-	start, err := strconv.ParseInt(ranges[0], 10, 64)
+	start, err = strconv.ParseInt(rStart, 10, 64)
 	if err != nil {
 		return -1, -1, err
 	}
-	end, err := strconv.ParseInt(ranges[1], 10, 64)
+	end, err = strconv.ParseInt(rEnd, 10, 64)
 	if err != nil {
 		return -1, -1, err
 	}
-
 	return start, end, nil
 }

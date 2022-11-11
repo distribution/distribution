@@ -80,8 +80,8 @@ func NewURLBuilderFromRequest(r *http.Request, relative bool) *URLBuilder {
 			// comma-separated list of hosts, to which each proxy appends the
 			// requested host. We want to grab the first from this comma-separated
 			// list.
-			hosts := strings.SplitN(forwardedHost, ",", 2)
-			host = strings.TrimSpace(hosts[0])
+			host, _, _ = strings.Cut(forwardedHost, ",")
+			host = strings.TrimSpace(host)
 		}
 	}
 

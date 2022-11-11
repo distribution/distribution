@@ -7,10 +7,10 @@ import (
 	"github.com/opencontainers/go-digest"
 )
 
-var (
+const (
 	legacyDefaultDomain = "index.docker.io"
 	defaultDomain       = "docker.io"
-	officialRepoName    = "library"
+	officialRepoPrefix  = "library/"
 	defaultTag          = "latest"
 )
 
@@ -96,8 +96,13 @@ func splitDockerDomain(name string) (domain, remainder string) {
 	if domain == legacyDefaultDomain {
 		domain = defaultDomain
 	}
+	// TODO(thaJeztah): this check may be too strict, as it assumes the
+	//  "library/" namespace does not have nested namespaces. While this
+	//  is true (currently), technically it would be possible for Docker
+	//  Hub to use those (e.g. "library/distros/ubuntu:latest").
+	//  See https://github.com/distribution/distribution/pull/3769#issuecomment-1302031785.
 	if domain == defaultDomain && !strings.ContainsRune(remainder, '/') {
-		remainder = officialRepoName + "/" + remainder
+		remainder = officialRepoPrefix + remainder
 	}
 	return
 }
@@ -117,8 +122,15 @@ func familiarizeName(named namedRepository) repository {
 	if repo.domain == defaultDomain {
 		repo.domain = ""
 		// Handle official repositories which have the pattern "library/<official repo name>"
-		if split := strings.Split(repo.path, "/"); len(split) == 2 && split[0] == officialRepoName {
-			repo.path = split[1]
+		if strings.HasPrefix(repo.path, officialRepoPrefix) {
+			// TODO(thaJeztah): this check may be too strict, as it assumes the
+			//  "library/" namespace does not have nested namespaces. While this
+			//  is true (currently), technically it would be possible for Docker
+			//  Hub to use those (e.g. "library/distros/ubuntu:latest").
+			//  See https://github.com/distribution/distribution/pull/3769#issuecomment-1302031785.
+			if remainder := strings.TrimPrefix(repo.path, officialRepoPrefix); !strings.ContainsRune(remainder, '/') {
+				repo.path = remainder
+			}
 		}
 	}
 	return repo

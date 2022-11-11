@@ -83,7 +83,9 @@ type VerifyOptions struct {
 // NewToken parses the given raw token string
 // and constructs an unverified JSON Web Token.
 func NewToken(rawToken string) (*Token, error) {
-	parts := strings.Split(rawToken, TokenSeparator)
+	// We expect 3 parts, but limit the split to 4 to detect cases where
+	// the token contains too many (or too few) separators.
+	parts := strings.SplitN(rawToken, TokenSeparator, 4)
 	if len(parts) != 3 {
 		return nil, ErrMalformedToken
 	}

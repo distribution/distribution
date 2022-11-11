@@ -32,12 +32,10 @@ func parseIP(ipStr string) net.IP {
 // account proxy headers.
 func RemoteAddr(r *http.Request) string {
 	if prior := r.Header.Get("X-Forwarded-For"); prior != "" {
-		proxies := strings.Split(prior, ",")
-		if len(proxies) > 0 {
-			remoteAddr := strings.Trim(proxies[0], " ")
-			if parseIP(remoteAddr) != nil {
-				return remoteAddr
-			}
+		remoteAddr, _, _ := strings.Cut(prior, ",")
+		remoteAddr = strings.Trim(remoteAddr, " ")
+		if parseIP(remoteAddr) != nil {
+			return remoteAddr
 		}
 	}
 	// X-Real-Ip is less supported, but worth checking in the
@@ -189,49 +187,37 @@ type httpRequestContext struct {
 // "request.<component>". For example, r.RequestURI
 func (ctx *httpRequestContext) Value(key interface{}) interface{} {
 	if keyStr, ok := key.(string); ok {
-		if keyStr == "http.request" {
+		switch keyStr {
+		case "http.request":
 			return ctx.r
-		}
-
-		if !strings.HasPrefix(keyStr, "http.request.") {
-			goto fallback
-		}
-
-		parts := strings.Split(keyStr, ".")
-
-		if len(parts) != 3 {
-			goto fallback
-		}
-
-		switch parts[2] {
-		case "uri":
+		case "http.request.uri":
 			return ctx.r.RequestURI
-		case "remoteaddr":
+		case "http.request.remoteaddr":
 			return RemoteAddr(ctx.r)
-		case "method":
+		case "http.request.method":
 			return ctx.r.Method
-		case "host":
+		case "http.request.host":
 			return ctx.r.Host
-		case "referer":
+		case "http.request.referer":
 			referer := ctx.r.Referer()
 			if referer != "" {
 				return referer
 			}
-		case "useragent":
+		case "http.request.useragent":
 			return ctx.r.UserAgent()
-		case "id":
+		case "http.request.id":
 			return ctx.id
-		case "startedat":
+		case "http.request.startedat":
 			return ctx.startedAt
-		case "contenttype":
-			ct := ctx.r.Header.Get("Content-Type")
-			if ct != "" {
+		case "http.request.contenttype":
+			if ct := ctx.r.Header.Get("Content-Type"); ct != "" {
 				return ct
 			}
+		default:
+			// no match; fall back to standard behavior below
 		}
 	}
 
-fallback:
 	return ctx.Context.Value(key)
 }
 
@@ -245,10 +231,9 @@ func (ctx *muxVarsContext) Value(key interface{}) interface{} {
 		if keyStr == "vars" {
 			return ctx.vars
 		}
-
-		keyStr = strings.TrimPrefix(keyStr, "vars.")
-
-		if v, ok := ctx.vars[keyStr]; ok {
+		// TODO(thaJeztah): this considers "vars.FOO" and "FOO" to be equal.
+		// We need to check if that's intentional (could be a bug).
+		if v, ok := ctx.vars[strings.TrimPrefix(keyStr, "vars.")]; ok {
 			return v
 		}
 	}
@@ -300,36 +285,25 @@ func (irw *instrumentedResponseWriter) Flush() {
 
 func (irw *instrumentedResponseWriter) Value(key interface{}) interface{} {
 	if keyStr, ok := key.(string); ok {
-		if keyStr == "http.response" {
+		switch keyStr {
+		case "http.response":
 			return irw
-		}
-
-		if !strings.HasPrefix(keyStr, "http.response.") {
-			goto fallback
-		}
-
-		parts := strings.Split(keyStr, ".")
-
-		if len(parts) != 3 {
-			goto fallback
-		}
-
-		irw.mu.Lock()
-		defer irw.mu.Unlock()
-
-		switch parts[2] {
-		case "written":
+		case "http.response.written":
+			irw.mu.Lock()
+			defer irw.mu.Unlock()
 			return irw.written
-		case "status":
+		case "http.response.status":
+			irw.mu.Lock()
+			defer irw.mu.Unlock()
 			return irw.status
-		case "contenttype":
-			contentType := irw.Header().Get("Content-Type")
-			if contentType != "" {
-				return contentType
+		case "http.response.contenttype":
+			if ct := irw.Header().Get("Content-Type"); ct != "" {
+				return ct
 			}
+		default:
+			// no match; fall back to standard behavior below
 		}
 	}
 
-fallback:
 	return irw.Context.Value(key)
 }

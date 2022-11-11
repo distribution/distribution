@@ -763,11 +763,7 @@ func chunkFilenames(slice []string, maxSize int) (chunks [][]string, err error) 
 }
 
 func parseManifest(manifest string) (container string, prefix string) {
-	components := strings.SplitN(manifest, "/", 2)
-	container = components[0]
-	if len(components) > 1 {
-		prefix = components[1]
-	}
+	container, prefix, _ = strings.Cut(manifest, "/")
 	return container, prefix
 }
 
