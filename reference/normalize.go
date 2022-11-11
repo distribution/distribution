@@ -96,11 +96,6 @@ func splitDockerDomain(name string) (domain, remainder string) {
 	if domain == legacyDefaultDomain {
 		domain = defaultDomain
 	}
-	// TODO(thaJeztah): this check may be too strict, as it assumes the
-	//  "library/" namespace does not have nested namespaces. While this
-	//  is true (currently), technically it would be possible for Docker
-	//  Hub to use those (e.g. "library/distros/ubuntu:latest").
-	//  See https://github.com/distribution/distribution/pull/3769#issuecomment-1302031785.
 	if domain == defaultDomain && !strings.ContainsRune(remainder, '/') {
 		remainder = officialRepoPrefix + remainder
 	}
