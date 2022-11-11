@@ -90,11 +90,11 @@ var (
 	// end of the matched string.
 	anchoredDigestRegexp = regexp.MustCompile(anchored(digestPat))
 
-	// nameComponent restricts registry path component names to start
-	// with at least one letter or number, with following parts able to be
-	// separated by one period, one or two underscore and multiple dashes.
-	nameComponent = expression(alphanumeric, optional(repeated(separator, alphanumeric)))
-	namePat       = expression(optional(domain, literal(`/`)), nameComponent, optional(repeated(literal(`/`), nameComponent)))
+	// pathComponent restricts registry path-components to start with at least
+	// one letter or number, with following parts able to be separated by one
+	// period, one or two underscore and multiple dashes.
+	pathComponent = expression(alphanumeric, optional(repeated(separator, alphanumeric)))
+	namePat       = expression(optional(domain, literal(`/`)), pathComponent, optional(repeated(literal(`/`), pathComponent)))
 
 	// NameRegexp is the format for the name component of references, including
 	// an optional domain and port, but without tag or digest suffix.
@@ -102,7 +102,7 @@ var (
 
 	// anchoredNameRegexp is used to parse a name value, capturing the
 	// domain and trailing components.
-	anchoredNameRegexp = regexp.MustCompile(anchored(optional(capture(domain), literal(`/`)), capture(nameComponent, optional(repeated(literal(`/`), nameComponent)))))
+	anchoredNameRegexp = regexp.MustCompile(anchored(optional(capture(domain), literal(`/`)), capture(pathComponent, optional(repeated(literal(`/`), pathComponent)))))
 
 	referencePat = anchored(capture(namePat), optional(literal(":"), capture(tag)), optional(literal("@"), capture(digestPat)))
 
