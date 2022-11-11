@@ -19,6 +19,10 @@ const (
 	// supported names.
 	separator = `(?:[._]|__|[-]*)`
 
+	// localhost is treated as a special value for domain-name. Any other
+	// domain-name without a "." or a ":port" are considered a path component.
+	localhost = `localhost`
+
 	// domainNameComponent restricts the registry domain component of a
 	// repository name to start with a component as defined by DomainRegexp.
 	domainNameComponent = `(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])`
