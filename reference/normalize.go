@@ -8,10 +8,35 @@ import (
 )
 
 const (
+	// legacyDefaultDomain is the legacy domain for Docker Hub (which was
+	// originally named "the Docker Index"). This domain is still used for
+	// authentication and image search, which were part of the "v1" Docker
+	// registry specification.
+	//
+	// This domain will continue to be supported, but there are plans to consolidate
+	// legacy domains to new "canonical" domains. Once those domains are decided
+	// on, we must update the normalization functions, but preserve compatibility
+	// with existing installs, clients, and user configuration.
 	legacyDefaultDomain = "index.docker.io"
-	defaultDomain       = "docker.io"
-	officialRepoPrefix  = "library/"
-	defaultTag          = "latest"
+
+	// defaultDomain is the default domain used for images on Docker Hub.
+	// It is used to normalize "familiar" names to canonical names, for example,
+	// to convert "ubuntu" to "docker.io/library/ubuntu:latest".
+	//
+	// Note that actual domain of Docker Hub's registry is registry-1.docker.io.
+	// This domain will continue to be supported, but there are plans to consolidate
+	// legacy domains to new "canonical" domains. Once those domains are decided
+	// on, we must update the normalization functions, but preserve compatibility
+	// with existing installs, clients, and user configuration.
+	defaultDomain = "docker.io"
+
+	// officialRepoPrefix is the namespace used for official images on Docker Hub.
+	// It is used to normalize "familiar" names to canonical names, for example,
+	// to convert "ubuntu" to "docker.io/library/ubuntu:latest".
+	officialRepoPrefix = "library/"
+
+	// defaultTag is the default tag if no tag is provided.
+	defaultTag = "latest"
 )
 
 // normalizedNamed represents a name which has been
