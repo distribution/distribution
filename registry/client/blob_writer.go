@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"github.com/distribution/distribution/v3"
+	"github.com/klauspost/compress/zstd"
 )
 
 type httpBlobUpload struct {
@@ -20,9 +22,11 @@ type httpBlobUpload struct {
 	uuid      string
 	startedAt time.Time
 
-	location string // always the last value of the location header.
-	offset   int64
-	closed   bool
+	location  string // always the last value of the location header.
+	offset    int64
+	closed    bool
+	encoding  string
+	mediaType string
 }
 
 func (hbu *httpBlobUpload) Reader() (io.ReadCloser, error) {
@@ -70,13 +74,22 @@ func (hbu *httpBlobUpload) ReadFrom(r io.Reader) (n int64, err error) {
 }
 
 func (hbu *httpBlobUpload) Write(p []byte) (n int, err error) {
+	if hbu.encoding != "" {
+		p, err = hbu.encode(p)
+		if err != nil {
+			return 0, err
+		}
+	}
 	req, err := http.NewRequestWithContext(hbu.ctx, http.MethodPatch, hbu.location, bytes.NewReader(p))
 	if err != nil {
 		return 0, err
 	}
 	req.Header.Set("Content-Range", fmt.Sprintf("%d-%d", hbu.offset, hbu.offset+int64(len(p)-1)))
 	req.Header.Set("Content-Length", fmt.Sprintf("%d", len(p)))
-	req.Header.Set("Content-Type", "application/octet-stream")
+	req.Header.Set("Content-Type", hbu.MediaType())
+	if hbu.encoding != "" {
+		req.Header.Set("Content-Encoding", hbu.encoding)
+	}
 
 	resp, err := hbu.client.Do(req)
 	if err != nil {
@@ -102,6 +115,35 @@ func (hbu *httpBlobUpload) Write(p []byte) (n int, err error) {
 
 	hbu.offset += int64(end - start + 1)
 	return (end - start + 1), nil
+}
+
+// encode applies hbu.encoding to compress blob's bytes for transport
+func (hbu *httpBlobUpload) encode(p []byte) ([]byte, error) {
+	reader := bytes.NewReader(p)
+	switch hbu.encoding {
+	case "zstd":
+		var buf bytes.Buffer
+		w, err := zstd.NewWriter(&buf)
+		if err != nil {
+			return nil, err
+		}
+		defer w.Close()
+		_, err = io.Copy(w, reader)
+		if err != nil {
+			return nil, err
+		}
+		p = buf.Bytes()
+	case "gzip":
+		var buf bytes.Buffer
+		w := gzip.NewWriter(&buf)
+		defer w.Close()
+		_, err := io.Copy(w, reader)
+		if err != nil {
+			return nil, err
+		}
+		p = buf.Bytes()
+	}
+	return p, nil
 }
 
 func (hbu *httpBlobUpload) Size() int64 {
@@ -160,4 +202,11 @@ func (hbu *httpBlobUpload) Cancel(ctx context.Context) error {
 func (hbu *httpBlobUpload) Close() error {
 	hbu.closed = true
 	return nil
+}
+
+func (hbu *httpBlobUpload) MediaType() string {
+	if hbu.mediaType != "" {
+		return hbu.mediaType
+	}
+	return "application/octet-stream"
 }

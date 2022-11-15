@@ -13,14 +13,17 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/manifest/schema2"
 	"github.com/distribution/distribution/v3/reference"
 	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	"github.com/distribution/distribution/v3/registry/client/transport"
 	"github.com/distribution/distribution/v3/registry/storage/cache"
 	"github.com/distribution/distribution/v3/registry/storage/cache/memory"
 	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 // Registry provides an interface for calling Repositories, which returns a catalog of repositories.
@@ -821,17 +824,43 @@ func (bs *blobs) Create(ctx context.Context, options ...distribution.BlobCreateO
 			return nil, err
 		}
 
+		// select encoding to apply to uncompressed
+		var encoding string
+		switch opts.MediaType {
+		case schema2.MediaTypeUncompressedLayer, v1.MediaTypeImageLayer, v1.MediaTypeImageLayerNonDistributable:
+			accept := strings.FieldsFunc(resp.Header.Get("Content-Encoding"), func(r rune) bool {
+				return unicode.IsSpace(r) || r == ','
+			})
+			encoding = negotiateEncoding(accept)
+		}
+
 		return &httpBlobUpload{
 			ctx:       ctx,
 			statter:   bs.statter,
 			client:    bs.client,
 			uuid:      uuid,
+			encoding:  encoding,
 			startedAt: time.Now(),
 			location:  location,
+			mediaType: opts.MediaType,
 		}, nil
 	default:
 		return nil, HandleErrorResponse(resp)
 	}
+}
+
+func negotiateEncoding(accept []string) string {
+	offer := []string{"zstd", "gzip", ""}
+	bestOffer := len(offer) - 1
+	for _, enc := range accept {
+		for i, s := range offer {
+			if i < bestOffer && s == strings.ToLower(enc) {
+				i = bestOffer
+				break
+			}
+		}
+	}
+	return offer[bestOffer]
 }
 
 func (bs *blobs) Resume(ctx context.Context, id string) (distribution.BlobWriter, error) {
