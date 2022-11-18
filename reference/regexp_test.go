@@ -35,6 +35,7 @@ func checkRegexp(t *testing.T, r *regexp.Regexp, m regexpMatch) {
 }
 
 func TestDomainRegexp(t *testing.T) {
+	t.Parallel()
 	hostcases := []struct {
 		input string
 		match bool
@@ -164,6 +165,7 @@ func TestDomainRegexp(t *testing.T) {
 	for _, tc := range hostcases {
 		tc := tc
 		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
 			match := r.MatchString(tc.input)
 			if match != tc.match {
 				t.Errorf("Expected match=%t, got %t", tc.match, match)
@@ -173,6 +175,7 @@ func TestDomainRegexp(t *testing.T) {
 }
 
 func TestFullNameRegexp(t *testing.T) {
+	t.Parallel()
 	if anchoredNameRegexp.NumSubexp() != 2 {
 		t.Fatalf("anchored name regexp should have two submatches: %v, %v != 2",
 			anchoredNameRegexp, anchoredNameRegexp.NumSubexp())
@@ -465,12 +468,14 @@ func TestFullNameRegexp(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
 			checkRegexp(t, anchoredNameRegexp, tc)
 		})
 	}
 }
 
 func TestReferenceRegexp(t *testing.T) {
+	t.Parallel()
 	if ReferenceRegexp.NumSubexp() != 3 {
 		t.Fatalf("anchored name regexp should have three submatches: %v, %v != 3",
 			ReferenceRegexp, ReferenceRegexp.NumSubexp())
@@ -538,12 +543,14 @@ func TestReferenceRegexp(t *testing.T) {
 	for _, tc := range testcases {
 		tc := tc
 		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
 			checkRegexp(t, ReferenceRegexp, tc)
 		})
 	}
 }
 
 func TestIdentifierRegexp(t *testing.T) {
+	t.Parallel()
 	fullCases := []struct {
 		input string
 		match bool
@@ -572,6 +579,7 @@ func TestIdentifierRegexp(t *testing.T) {
 	for _, tc := range fullCases {
 		tc := tc
 		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
 			match := anchoredIdentifierRegexp.MatchString(tc.input)
 			if match != tc.match {
 				t.Errorf("Expected match=%t, got %t", tc.match, match)

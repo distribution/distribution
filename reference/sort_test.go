@@ -25,6 +25,7 @@ import (
 )
 
 func TestReferenceSorting(t *testing.T) {
+	t.Parallel()
 	digested := func(seed int64) string {
 		b, err := io.ReadAll(io.LimitReader(rand.New(rand.NewSource(seed)), 64))
 		if err != nil {

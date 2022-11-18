@@ -11,6 +11,7 @@ import (
 )
 
 func TestReferenceParse(t *testing.T) {
+	t.Parallel()
 	// referenceTestcases is a unified set of testcases for
 	// testing the parsing of references
 	referenceTestcases := []struct {
@@ -269,6 +270,7 @@ func TestReferenceParse(t *testing.T) {
 	for _, testcase := range referenceTestcases {
 		testcase := testcase
 		t.Run(testcase.input, func(t *testing.T) {
+			t.Parallel()
 			repo, err := Parse(testcase.input)
 			if testcase.err != nil {
 				if err == nil {
@@ -329,6 +331,7 @@ func TestReferenceParse(t *testing.T) {
 // TestWithNameFailure tests cases where WithName should fail. Cases where it
 // should succeed are covered by TestSplitHostname, below.
 func TestWithNameFailure(t *testing.T) {
+	t.Parallel()
 	testcases := []struct {
 		input string
 		err   error
@@ -361,6 +364,7 @@ func TestWithNameFailure(t *testing.T) {
 	for _, testcase := range testcases {
 		testcase := testcase
 		t.Run(testcase.input, func(t *testing.T) {
+			t.Parallel()
 			_, err := WithName(testcase.input)
 			if err == nil {
 				t.Errorf("no error parsing name. expected: %s", testcase.err)
@@ -370,6 +374,7 @@ func TestWithNameFailure(t *testing.T) {
 }
 
 func TestSplitHostname(t *testing.T) {
+	t.Parallel()
 	testcases := []struct {
 		input  string
 		domain string
@@ -409,6 +414,7 @@ func TestSplitHostname(t *testing.T) {
 	for _, testcase := range testcases {
 		testcase := testcase
 		t.Run(testcase.input, func(t *testing.T) {
+			t.Parallel()
 			named, err := WithName(testcase.input)
 			if err != nil {
 				t.Errorf("error parsing name: %s", err)
@@ -430,6 +436,7 @@ type serializationType struct {
 }
 
 func TestSerialization(t *testing.T) {
+	t.Parallel()
 	testcases := []struct {
 		description string
 		input       string
@@ -463,6 +470,7 @@ func TestSerialization(t *testing.T) {
 	for _, testcase := range testcases {
 		testcase := testcase
 		t.Run(testcase.description, func(t *testing.T) {
+			t.Parallel()
 			m := map[string]string{
 				"Description": testcase.description,
 				"Field":       testcase.input,
@@ -551,6 +559,7 @@ func TestSerialization(t *testing.T) {
 }
 
 func TestWithTag(t *testing.T) {
+	t.Parallel()
 	testcases := []struct {
 		name     string
 		digest   digest.Digest
@@ -587,6 +596,7 @@ func TestWithTag(t *testing.T) {
 	for _, testcase := range testcases {
 		testcase := testcase
 		t.Run(testcase.combined, func(t *testing.T) {
+			t.Parallel()
 			named, err := WithName(testcase.name)
 			if err != nil {
 				t.Errorf("error parsing name: %s", err)
@@ -611,6 +621,7 @@ func TestWithTag(t *testing.T) {
 }
 
 func TestWithDigest(t *testing.T) {
+	t.Parallel()
 	testcases := []struct {
 		name     string
 		digest   digest.Digest
@@ -642,6 +653,7 @@ func TestWithDigest(t *testing.T) {
 	for _, testcase := range testcases {
 		testcase := testcase
 		t.Run(testcase.combined, func(t *testing.T) {
+			t.Parallel()
 			named, err := WithName(testcase.name)
 			if err != nil {
 				t.Errorf("error parsing name: %s", err)
@@ -665,6 +677,7 @@ func TestWithDigest(t *testing.T) {
 }
 
 func TestParseNamed(t *testing.T) {
+	t.Parallel()
 	testcases := []struct {
 		input  string
 		domain string
@@ -711,6 +724,7 @@ func TestParseNamed(t *testing.T) {
 	for _, testcase := range testcases {
 		testcase := testcase
 		t.Run(testcase.input, func(t *testing.T) {
+			t.Parallel()
 			named, err := ParseNamed(testcase.input)
 			if err != nil && testcase.err == nil {
 				t.Errorf("error parsing name: %s", err)
