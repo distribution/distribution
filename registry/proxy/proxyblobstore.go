@@ -213,7 +213,7 @@ func (pbs *proxyBlobStore) Mount(ctx context.Context, sourceRepo reference.Named
 	return distribution.Descriptor{}, distribution.ErrUnsupported
 }
 
-func (pbs *proxyBlobStore) Open(ctx context.Context, dgst digest.Digest) (distribution.ReadSeekCloser, error) {
+func (pbs *proxyBlobStore) Open(ctx context.Context, dgst digest.Digest) (io.ReadSeekCloser, error) {
 	return nil, distribution.ErrUnsupported
 }
 
