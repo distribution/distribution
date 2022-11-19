@@ -8,6 +8,7 @@ import (
 )
 
 func TestValidateReferenceName(t *testing.T) {
+	t.Parallel()
 	validRepoNames := []string{
 		"docker/docker",
 		"library/debian",
@@ -70,6 +71,7 @@ func TestValidateReferenceName(t *testing.T) {
 }
 
 func TestValidateRemoteName(t *testing.T) {
+	t.Parallel()
 	validRepositoryNames := []string{
 		// Sanity check.
 		"docker/docker",
@@ -139,6 +141,7 @@ func TestValidateRemoteName(t *testing.T) {
 }
 
 func TestParseRepositoryInfo(t *testing.T) {
+	t.Parallel()
 	type tcase struct {
 		RemoteName, FamiliarName, FullName, AmbiguousName, Domain string
 	}
@@ -292,6 +295,7 @@ func TestParseRepositoryInfo(t *testing.T) {
 }
 
 func TestParseReferenceWithTagAndDigest(t *testing.T) {
+	t.Parallel()
 	shortRef := "busybox:latest@sha256:86e0e091d0da6bde2456dbb48306f3956bbeb2eae1b5b9a43045843f69fe4aaa"
 	ref, err := ParseNormalizedNamed(shortRef)
 	if err != nil {
@@ -313,6 +317,7 @@ func TestParseReferenceWithTagAndDigest(t *testing.T) {
 }
 
 func TestInvalidReferenceComponents(t *testing.T) {
+	t.Parallel()
 	if _, err := ParseNormalizedNamed("-foo"); err == nil {
 		t.Fatal("Expected WithName to detect invalid name")
 	}
@@ -355,6 +360,7 @@ func equalReference(r1, r2 Reference) bool {
 }
 
 func TestParseAnyReference(t *testing.T) {
+	t.Parallel()
 	tcases := []struct {
 		Reference  string
 		Equivalent string
@@ -445,6 +451,7 @@ func TestParseAnyReference(t *testing.T) {
 }
 
 func TestNormalizedSplitHostname(t *testing.T) {
+	t.Parallel()
 	testcases := []struct {
 		input  string
 		domain string
@@ -527,6 +534,7 @@ func TestNormalizedSplitHostname(t *testing.T) {
 }
 
 func TestMatchError(t *testing.T) {
+	t.Parallel()
 	named, err := ParseAnyReference("foo")
 	if err != nil {
 		t.Fatal(err)
@@ -538,6 +546,7 @@ func TestMatchError(t *testing.T) {
 }
 
 func TestMatch(t *testing.T) {
+	t.Parallel()
 	matchCases := []struct {
 		reference string
 		pattern   string
@@ -605,6 +614,7 @@ func TestMatch(t *testing.T) {
 }
 
 func TestParseDockerRef(t *testing.T) {
+	t.Parallel()
 	testcases := []struct {
 		name     string
 		input    string
@@ -668,6 +678,7 @@ func TestParseDockerRef(t *testing.T) {
 	}
 	for _, test := range testcases {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			normalized, err := ParseDockerRef(test.input)
 			if err != nil {
 				t.Fatal(err)
