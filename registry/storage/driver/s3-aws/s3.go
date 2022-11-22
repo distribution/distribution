@@ -25,6 +25,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -165,6 +166,7 @@ type driver struct {
 	RootDirectory               string
 	StorageClass                string
 	ObjectACL                   string
+	pool                        *sync.Pool
 }
 
 type baseEmbed struct {
@@ -583,6 +585,11 @@ func New(params DriverParameters) (*Driver, error) {
 		RootDirectory:               params.RootDirectory,
 		StorageClass:                params.StorageClass,
 		ObjectACL:                   params.ObjectACL,
+		pool: &sync.Pool{
+			New: func() interface{} {
+				return make([]byte, 0)
+			},
+		},
 	}
 
 	return &Driver{
@@ -1266,6 +1273,7 @@ type writer struct {
 	size        int64
 	readyPart   []byte
 	pendingPart []byte
+	pool        *sync.Pool
 	closed      bool
 	committed   bool
 	cancelled   bool
@@ -1277,11 +1285,14 @@ func (d *driver) newWriter(key, uploadID string, parts []*s3.Part) storagedriver
 		size += *part.Size
 	}
 	return &writer{
-		driver:   d,
-		key:      key,
-		uploadID: uploadID,
-		parts:    parts,
-		size:     size,
+		driver:      d,
+		key:         key,
+		uploadID:    uploadID,
+		parts:       parts,
+		size:        size,
+		readyPart:   d.pool.Get().([]byte),
+		pendingPart: d.pool.Get().([]byte),
+		pool:        d.pool,
 	}
 }
 
@@ -1427,6 +1438,10 @@ func (w *writer) Close() error {
 		return fmt.Errorf("already closed")
 	}
 	w.closed = true
+	defer func() {
+		w.pool.Put(w.readyPart[:0])
+		w.pool.Put(w.pendingPart[:0])
+	}()
 	return w.flushPart()
 }
 
