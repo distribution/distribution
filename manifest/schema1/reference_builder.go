@@ -21,6 +21,9 @@ type referenceManifestBuilder struct {
 
 // NewReferenceManifestBuilder is used to build new manifests for the current
 // schema version using schema1 dependencies.
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
+// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification.
 func NewReferenceManifestBuilder(pk libtrust.PrivateKey, ref reference.Named, architecture string) distribution.ManifestBuilder {
 	tag := ""
 	if tagged, isTagged := ref.(reference.Tagged); isTagged {
@@ -54,7 +57,10 @@ func (mb *referenceManifestBuilder) Build(ctx context.Context) (distribution.Man
 	return Sign(&m, mb.pk)
 }
 
-// AppendReference adds a reference to the current ManifestBuilder
+// AppendReference adds a reference to the current ManifestBuilder.
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
+// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification.
 func (mb *referenceManifestBuilder) AppendReference(d distribution.Describable) error {
 	r, ok := d.(Reference)
 	if !ok {
@@ -67,7 +73,10 @@ func (mb *referenceManifestBuilder) AppendReference(d distribution.Describable) 
 	return nil
 }
 
-// References returns the current references added to this builder
+// References returns the current references added to this builder.
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
+// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification.
 func (mb *referenceManifestBuilder) References() []distribution.Descriptor {
 	refs := make([]distribution.Descriptor, len(mb.Manifest.FSLayers))
 	for i := range mb.Manifest.FSLayers {
@@ -79,15 +88,21 @@ func (mb *referenceManifestBuilder) References() []distribution.Descriptor {
 	return refs
 }
 
-// Reference describes a manifest v2, schema version 1 dependency.
+// Reference describes a Manifest v2, schema version 1 dependency.
 // An FSLayer associated with a history entry.
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
+// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification.
 type Reference struct {
 	Digest  digest.Digest
 	Size    int64 // if we know it, set it for the descriptor.
 	History History
 }
 
-// Descriptor describes a reference
+// Descriptor describes a reference.
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
+// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification.
 func (r Reference) Descriptor() distribution.Descriptor {
 	return distribution.Descriptor{
 		MediaType: MediaTypeManifestLayer,

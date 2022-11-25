@@ -52,6 +52,10 @@ type configManifestBuilder struct {
 // schema version from an image configuration and a set of descriptors.
 // It takes a BlobService so that it can add an empty tar to the blob store
 // if the resulting manifest needs empty layers.
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015,
+// use Docker Image Manifest v2, Schema 2, or the OCI Image Specification v1.
+// This package should not be used for purposes other than backward compatibility.
 func NewConfigManifestBuilder(bs distribution.BlobService, pk libtrust.PrivateKey, ref reference.Named, configJSON []byte) distribution.ManifestBuilder {
 	return &configManifestBuilder{
 		bs:         bs,
@@ -61,7 +65,10 @@ func NewConfigManifestBuilder(bs distribution.BlobService, pk libtrust.PrivateKe
 	}
 }
 
-// Build produces a final manifest from the given references
+// Build produces a final manifest from the given references.
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
+// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification.
 func (mb *configManifestBuilder) Build(ctx context.Context) (m distribution.Manifest, err error) {
 	type imageRootFS struct {
 		Type      string   `json:"type"`
@@ -238,7 +245,10 @@ func (mb *configManifestBuilder) emptyTar(ctx context.Context) (digest.Digest, e
 	return descriptor.Digest, nil
 }
 
-// AppendReference adds a reference to the current ManifestBuilder
+// AppendReference adds a reference to the current ManifestBuilder.
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
+// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification.
 func (mb *configManifestBuilder) AppendReference(d distribution.Describable) error {
 	descriptor := d.Descriptor()
 
@@ -250,12 +260,18 @@ func (mb *configManifestBuilder) AppendReference(d distribution.Describable) err
 	return nil
 }
 
-// References returns the current references added to this builder
+// References returns the current references added to this builder.
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
+// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification.
 func (mb *configManifestBuilder) References() []distribution.Descriptor {
 	return mb.descriptors
 }
 
-// MakeV1ConfigFromConfig creates an legacy V1 image config from image config JSON
+// MakeV1ConfigFromConfig creates an legacy V1 image config from image config JSON.
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
+// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification.
 func MakeV1ConfigFromConfig(configJSON []byte, v1ID, parentV1ID string, throwaway bool) ([]byte, error) {
 	// Top-level v1compatibility string should be a modified version of the
 	// image config.

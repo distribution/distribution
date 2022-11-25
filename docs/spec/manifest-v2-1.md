@@ -6,6 +6,13 @@ keywords: registry, on-prem, images, tags, repository, distribution, api, advanc
 
 # Image Manifest Version 2, Schema 1
 
+> **Deprecated**
+>
+> Image Manifest v2, Schema 1 is deprecated. Use [Image Manifest v2, Schema 2](manifest-v2-2.md),
+> or the [OCI Image Specification](https://github.com/opencontainers/image-spec).
+> Image Manifest v2, Schema 1 should not be used for purposes other than backward
+> compatibility.
+
 This document outlines the format of the V2 image manifest. The image
 manifest described herein was introduced in the Docker daemon in the [v1.3.0
 release](https://github.com/docker/docker/commit/9f482a66ab37ec396ac61ed0c00d59122ac07453).

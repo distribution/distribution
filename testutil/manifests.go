@@ -40,7 +40,10 @@ func MakeManifestList(blobstatter distribution.BlobStatter, manifestDigests []di
 }
 
 // MakeSchema1Manifest constructs a schema 1 manifest from a given list of digests and returns
-// the digest of the manifest
+// the digest of the manifest.
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
+// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification.
 func MakeSchema1Manifest(digests []digest.Digest) (distribution.Manifest, error) {
 	manifest := schema1.Manifest{
 		Versioned: manifest.Versioned{

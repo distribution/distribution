@@ -1,3 +1,9 @@
+// Package schema1 provides definitions for the deprecated Docker Image
+// Manifest v2, Schema 1 specification.
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
+// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification. This package should not be used for purposes
+// other than backward compatibility.
 package schema1
 
 import (
@@ -10,18 +16,30 @@ import (
 	"github.com/opencontainers/go-digest"
 )
 
-const (
-	// MediaTypeManifest specifies the mediaType for the current version. Note
-	// that for schema version 1, the the media is optionally "application/json".
-	MediaTypeManifest = "application/vnd.docker.distribution.manifest.v1+json"
-	// MediaTypeSignedManifest specifies the mediatype for current SignedManifest version
-	MediaTypeSignedManifest = "application/vnd.docker.distribution.manifest.v1+prettyjws"
-	// MediaTypeManifestLayer specifies the media type for manifest layers
-	MediaTypeManifestLayer = "application/vnd.docker.container.image.rootfs.diff+x-gtar"
-)
+// MediaTypeManifest specifies the mediaType for the current version. Note
+// that for schema version 1, the the media is optionally "application/json".
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
+// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification.
+const MediaTypeManifest = "application/vnd.docker.distribution.manifest.v1+json"
+
+// MediaTypeSignedManifest specifies the mediatype for current SignedManifest version
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
+// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification.
+const MediaTypeSignedManifest = "application/vnd.docker.distribution.manifest.v1+prettyjws"
+
+// MediaTypeManifestLayer specifies the media type for manifest layers
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
+// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification.
+const MediaTypeManifestLayer = "application/vnd.docker.container.image.rootfs.diff+x-gtar"
 
 // SchemaVersion provides a pre-initialized version structure for this
 // packages version of the manifest.
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
+// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification.
 var SchemaVersion = manifest.Versioned{
 	SchemaVersion: 1,
 }
@@ -55,13 +73,19 @@ func init() {
 	}
 }
 
-// FSLayer is a container struct for BlobSums defined in an image manifest
+// FSLayer is a container struct for BlobSums defined in an image manifest.
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
+// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification.
 type FSLayer struct {
 	// BlobSum is the tarsum of the referenced filesystem image layer
 	BlobSum digest.Digest `json:"blobSum"`
 }
 
-// History stores unstructured v1 compatibility information
+// History stores unstructured v1 compatibility information.
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
+// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification.
 type History struct {
 	// V1Compatibility is the raw v1 compatibility information
 	V1Compatibility string `json:"v1Compatibility"`
@@ -69,6 +93,9 @@ type History struct {
 
 // Manifest provides the base accessible fields for working with V2 image
 // format in the registry.
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
+// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification.
 type Manifest struct {
 	manifest.Versioned
 
@@ -91,6 +118,9 @@ type Manifest struct {
 
 // SignedManifest provides an envelope for a signed image manifest, including
 // the format sensitive raw bytes.
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
+// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification.
 type SignedManifest struct {
 	Manifest
 
@@ -105,6 +135,9 @@ type SignedManifest struct {
 }
 
 // UnmarshalJSON populates a new SignedManifest struct from JSON data.
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
+// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification.
 func (sm *SignedManifest) UnmarshalJSON(b []byte) error {
 	sm.all = make([]byte, len(b))
 	// store manifest and signatures in all
@@ -136,7 +169,10 @@ func (sm *SignedManifest) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// References returns the descriptors of this manifests references
+// References returns the descriptors of this manifests references.
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
+// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification.
 func (sm SignedManifest) References() []distribution.Descriptor {
 	dependencies := make([]distribution.Descriptor, len(sm.FSLayers))
 	for i, fsLayer := range sm.FSLayers {
@@ -153,6 +189,9 @@ func (sm SignedManifest) References() []distribution.Descriptor {
 // contents. Applications requiring a marshaled signed manifest should simply
 // use Raw directly, since the the content produced by json.Marshal will be
 // compacted and will fail signature checks.
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
+// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification.
 func (sm *SignedManifest) MarshalJSON() ([]byte, error) {
 	if len(sm.all) > 0 {
 		return sm.all, nil
@@ -163,6 +202,9 @@ func (sm *SignedManifest) MarshalJSON() ([]byte, error) {
 }
 
 // Payload returns the signed content of the signed manifest.
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
+// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification.
 func (sm SignedManifest) Payload() (string, []byte, error) {
 	return MediaTypeSignedManifest, sm.all, nil
 }
@@ -170,6 +212,9 @@ func (sm SignedManifest) Payload() (string, []byte, error) {
 // Signatures returns the signatures as provided by
 // (*libtrust.JSONSignature).Signatures. The byte slices are opaque jws
 // signatures.
+//
+// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
+// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification.
 func (sm *SignedManifest) Signatures() ([][]byte, error) {
 	jsig, err := libtrust.ParsePrettySignature(sm.all, "signatures")
 	if err != nil {
