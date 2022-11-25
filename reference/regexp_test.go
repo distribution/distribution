@@ -1,6 +1,7 @@
 package reference
 
 import (
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -9,27 +10,24 @@ import (
 type regexpMatch struct {
 	input string
 	match bool
-	subs  []string
+	named map[string]string
 }
 
 func checkRegexp(t *testing.T, r *regexp.Regexp, m regexpMatch) {
 	t.Helper()
-	matches := r.FindStringSubmatch(m.input)
-	if m.match && matches != nil {
-		if len(matches) != (r.NumSubexp()+1) || matches[0] != m.input {
-			t.Fatalf("Bad match result %#v for %q", matches, m.input)
+	var matched bool
+	if len(m.named) > 0 {
+		var namedMatches map[string]string
+		namedMatches, matched = getNamedMatches(r, m.input)
+		if !reflect.DeepEqual(m.named, namedMatches) {
+			t.Errorf("Named matches differ:\nExpected: %+v\nGot:      %+v", m.named, namedMatches)
 		}
-		if len(matches) < (len(m.subs) + 1) {
-			t.Errorf("Expected %d sub matches, only have %d for %q", len(m.subs), len(matches)-1, m.input)
-		}
-		for i := range m.subs {
-			if m.subs[i] != matches[i+1] {
-				t.Errorf("Unexpected submatch %d: %q, expected %q for %q", i+1, matches[i+1], m.subs[i], m.input)
-			}
-		}
-	} else if m.match {
+	} else {
+		matched = len(r.FindStringSubmatch(m.input)) > 0
+	}
+	if m.match && !matched {
 		t.Errorf("Expected match for %q", m.input)
-	} else if matches != nil {
+	} else if !m.match && matched {
 		t.Errorf("Unexpected match for %q", m.input)
 	}
 }
@@ -62,7 +60,7 @@ func TestDomainRegexp(t *testing.T) {
 		},
 		{
 			input: "a",
-			match: true,
+			match: false,
 		},
 		{
 			input: "a.b",
@@ -189,37 +187,37 @@ func TestFullNameRegexp(t *testing.T) {
 		{
 			input: "short",
 			match: true,
-			subs:  []string{"", "short"},
+			named: map[string]string{"domain": "", "repository": "short"},
 		},
 		{
 			input: "simple/name",
 			match: true,
-			subs:  []string{"simple", "name"},
+			named: map[string]string{"domain": "", "repository": "simple/name"},
 		},
 		{
 			input: "library/ubuntu",
 			match: true,
-			subs:  []string{"library", "ubuntu"},
+			named: map[string]string{"domain": "", "repository": "library/ubuntu"},
 		},
 		{
 			input: "docker/stevvooe/app",
 			match: true,
-			subs:  []string{"docker", "stevvooe/app"},
+			named: map[string]string{"domain": "", "repository": "docker/stevvooe/app"},
 		},
 		{
 			input: "aa/aa/aa/aa/aa/aa/aa/aa/aa/bb/bb/bb/bb/bb/bb",
 			match: true,
-			subs:  []string{"aa", "aa/aa/aa/aa/aa/aa/aa/aa/bb/bb/bb/bb/bb/bb"},
+			named: map[string]string{"domain": "", "repository": "aa/aa/aa/aa/aa/aa/aa/aa/aa/bb/bb/bb/bb/bb/bb"},
 		},
 		{
 			input: "aa/aa/bb/bb/bb",
 			match: true,
-			subs:  []string{"aa", "aa/bb/bb/bb"},
+			named: map[string]string{"domain": "", "repository": "aa/aa/bb/bb/bb"},
 		},
 		{
 			input: "a/a/a/a",
 			match: true,
-			subs:  []string{"a", "a/a/a"},
+			named: map[string]string{"domain": "", "repository": "a/a/a/a"},
 		},
 		{
 			input: "a/a/a/a/",
@@ -232,22 +230,22 @@ func TestFullNameRegexp(t *testing.T) {
 		{
 			input: "a",
 			match: true,
-			subs:  []string{"", "a"},
+			named: map[string]string{"domain": "", "repository": "a"},
 		},
 		{
 			input: "a/aa",
 			match: true,
-			subs:  []string{"a", "aa"},
+			named: map[string]string{"domain": "", "repository": "a/aa"},
 		},
 		{
 			input: "a/aa/a",
 			match: true,
-			subs:  []string{"a", "aa/a"},
+			named: map[string]string{"domain": "", "repository": "a/aa/a"},
 		},
 		{
 			input: "foo.com",
 			match: true,
-			subs:  []string{"", "foo.com"},
+			named: map[string]string{"domain": "", "repository": "foo.com"},
 		},
 		{
 			input: "foo.com/",
@@ -256,7 +254,7 @@ func TestFullNameRegexp(t *testing.T) {
 		{
 			input: "foo.com:8080/bar",
 			match: true,
-			subs:  []string{"foo.com:8080", "bar"},
+			named: map[string]string{"domain": "foo.com:8080", "repository": "bar"},
 		},
 		{
 			input: "foo.com:http/bar",
@@ -265,27 +263,27 @@ func TestFullNameRegexp(t *testing.T) {
 		{
 			input: "foo.com/bar",
 			match: true,
-			subs:  []string{"foo.com", "bar"},
+			named: map[string]string{"domain": "foo.com", "repository": "bar"},
 		},
 		{
 			input: "foo.com/bar/baz",
 			match: true,
-			subs:  []string{"foo.com", "bar/baz"},
+			named: map[string]string{"domain": "foo.com", "repository": "bar/baz"},
 		},
 		{
 			input: "localhost:8080/bar",
 			match: true,
-			subs:  []string{"localhost:8080", "bar"},
+			named: map[string]string{"domain": "localhost:8080", "repository": "bar"},
 		},
 		{
 			input: "sub-dom1.foo.com/bar/baz/quux",
 			match: true,
-			subs:  []string{"sub-dom1.foo.com", "bar/baz/quux"},
+			named: map[string]string{"domain": "sub-dom1.foo.com", "repository": "bar/baz/quux"},
 		},
 		{
 			input: "blog.foo.com/bar/baz",
 			match: true,
-			subs:  []string{"blog.foo.com", "bar/baz"},
+			named: map[string]string{"domain": "blog.foo.com", "repository": "bar/baz"},
 		},
 		{
 			input: "a^a",
@@ -302,12 +300,12 @@ func TestFullNameRegexp(t *testing.T) {
 		{
 			input: "aa-a/a",
 			match: true,
-			subs:  []string{"aa-a", "a"},
+			named: map[string]string{"domain": "", "repository": "aa-a/a"},
 		},
 		{
 			input: strings.Repeat("a/", 128) + "a",
 			match: true,
-			subs:  []string{"a", strings.Repeat("a/", 127) + "a"},
+			named: map[string]string{"domain": "", "repository": strings.Repeat("a/", 128) + "a"},
 		},
 		{
 			input: "a-/a/a/a",
@@ -340,12 +338,12 @@ func TestFullNameRegexp(t *testing.T) {
 		{
 			input: "foo_bar",
 			match: true,
-			subs:  []string{"", "foo_bar"},
+			named: map[string]string{"domain": "", "repository": "foo_bar"},
 		},
 		{
 			input: "foo_bar.com",
 			match: true,
-			subs:  []string{"", "foo_bar.com"},
+			named: map[string]string{"domain": "", "repository": "foo_bar.com"},
 		},
 		{
 			input: "foo_bar.com:8080",
@@ -358,7 +356,7 @@ func TestFullNameRegexp(t *testing.T) {
 		{
 			input: "foo.com/foo_bar",
 			match: true,
-			subs:  []string{"foo.com", "foo_bar"},
+			named: map[string]string{"domain": "foo.com", "repository": "foo_bar"},
 		},
 		{
 			input: "____/____",
@@ -375,27 +373,27 @@ func TestFullNameRegexp(t *testing.T) {
 		{
 			input: "b.gcr.io/test.example.com/my-app",
 			match: true,
-			subs:  []string{"b.gcr.io", "test.example.com/my-app"},
+			named: map[string]string{"domain": "b.gcr.io", "repository": "test.example.com/my-app"},
 		},
 		{
 			input: "xn--n3h.com/myimage", // ☃.com in punycode
 			match: true,
-			subs:  []string{"xn--n3h.com", "myimage"},
+			named: map[string]string{"domain": "xn--n3h.com", "repository": "myimage"},
 		},
 		{
 			input: "xn--7o8h.com/myimage", // 🐳.com in punycode
 			match: true,
-			subs:  []string{"xn--7o8h.com", "myimage"},
+			named: map[string]string{"domain": "xn--7o8h.com", "repository": "myimage"},
 		},
 		{
 			input: "example.com/xn--7o8h.com/myimage", // 🐳.com in punycode
 			match: true,
-			subs:  []string{"example.com", "xn--7o8h.com/myimage"},
+			named: map[string]string{"domain": "example.com", "repository": "xn--7o8h.com/myimage"},
 		},
 		{
 			input: "example.com/some_separator__underscore/myimage",
 			match: true,
-			subs:  []string{"example.com", "some_separator__underscore/myimage"},
+			named: map[string]string{"domain": "example.com", "repository": "some_separator__underscore/myimage"},
 		},
 		{
 			input: "example.com/__underscore/myimage",
@@ -444,17 +442,17 @@ func TestFullNameRegexp(t *testing.T) {
 		{
 			input: "do__cker/docker",
 			match: true,
-			subs:  []string{"", "do__cker/docker"},
+			named: map[string]string{"domain": "", "repository": "do__cker/docker"},
 		},
 		{
 			input: "b.gcr.io/test.example.com/my-app",
 			match: true,
-			subs:  []string{"b.gcr.io", "test.example.com/my-app"},
+			named: map[string]string{"domain": "b.gcr.io", "repository": "test.example.com/my-app"},
 		},
 		{
 			input: "registry.io/foo/project--id.module--name.ver---sion--name",
 			match: true,
-			subs:  []string{"registry.io", "foo/project--id.module--name.ver---sion--name"},
+			named: map[string]string{"domain": "registry.io", "repository": "foo/project--id.module--name.ver---sion--name"},
 		},
 		{
 			input: "Asdf.com/foo/bar", // uppercase character in hostname
@@ -476,26 +474,25 @@ func TestFullNameRegexp(t *testing.T) {
 
 func TestReferenceRegexp(t *testing.T) {
 	t.Parallel()
-	if ReferenceRegexp.NumSubexp() != 3 {
-		t.Fatalf("anchored name regexp should have three submatches: %v, %v != 3",
-			ReferenceRegexp, ReferenceRegexp.NumSubexp())
+	if ReferenceRegexp.NumSubexp() != 5 {
+		t.Fatalf("anchored name regexp should have five submatches: %v, %v != 5", ReferenceRegexp, ReferenceRegexp.NumSubexp())
 	}
 
 	tests := []regexpMatch{
 		{
 			input: "registry.com:8080/myapp:tag",
 			match: true,
-			subs:  []string{"registry.com:8080/myapp", "tag", ""},
+			named: map[string]string{"domain": "registry.com:8080", "name": "registry.com:8080/myapp", "repository": "myapp", "tag": "tag", "digest": ""},
 		},
 		{
 			input: "registry.com:8080/myapp@sha256:be178c0543eb17f5f3043021c9e5fcf30285e557a4fc309cce97ff9ca6182912",
 			match: true,
-			subs:  []string{"registry.com:8080/myapp", "", "sha256:be178c0543eb17f5f3043021c9e5fcf30285e557a4fc309cce97ff9ca6182912"},
+			named: map[string]string{"domain": "registry.com:8080", "name": "registry.com:8080/myapp", "repository": "myapp", "tag": "", "digest": "sha256:be178c0543eb17f5f3043021c9e5fcf30285e557a4fc309cce97ff9ca6182912"},
 		},
 		{
 			input: "registry.com:8080/myapp:tag2@sha256:be178c0543eb17f5f3043021c9e5fcf30285e557a4fc309cce97ff9ca6182912",
 			match: true,
-			subs:  []string{"registry.com:8080/myapp", "tag2", "sha256:be178c0543eb17f5f3043021c9e5fcf30285e557a4fc309cce97ff9ca6182912"},
+			named: map[string]string{"domain": "registry.com:8080", "name": "registry.com:8080/myapp", "repository": "myapp", "tag": "tag2", "digest": "sha256:be178c0543eb17f5f3043021c9e5fcf30285e557a4fc309cce97ff9ca6182912"},
 		},
 		{
 			input: "registry.com:8080/myapp@sha256:badbadbadbad",
@@ -513,12 +510,12 @@ func TestReferenceRegexp(t *testing.T) {
 			input:// localhost treated as name, missing tag with 8080 as tag
 			"localhost:8080@sha256:be178c0543eb17f5f3043021c9e5fcf30285e557a4fc309cce97ff9ca6182912",
 			match: true,
-			subs:  []string{"localhost", "8080", "sha256:be178c0543eb17f5f3043021c9e5fcf30285e557a4fc309cce97ff9ca6182912"},
+			named: map[string]string{"domain": "", "name": "localhost", "repository": "localhost", "tag": "8080", "digest": "sha256:be178c0543eb17f5f3043021c9e5fcf30285e557a4fc309cce97ff9ca6182912"},
 		},
 		{
 			input: "localhost:8080/name@sha256:be178c0543eb17f5f3043021c9e5fcf30285e557a4fc309cce97ff9ca6182912",
 			match: true,
-			subs:  []string{"localhost:8080/name", "", "sha256:be178c0543eb17f5f3043021c9e5fcf30285e557a4fc309cce97ff9ca6182912"},
+			named: map[string]string{"domain": "localhost:8080", "name": "localhost:8080/name", "repository": "name", "tag": "", "digest": "sha256:be178c0543eb17f5f3043021c9e5fcf30285e557a4fc309cce97ff9ca6182912"},
 		},
 		{
 			input: "localhost:http/name@sha256:be178c0543eb17f5f3043021c9e5fcf30285e557a4fc309cce97ff9ca6182912",
@@ -528,7 +525,7 @@ func TestReferenceRegexp(t *testing.T) {
 			// localhost will be treated as an image name without a host
 			input: "localhost@sha256:be178c0543eb17f5f3043021c9e5fcf30285e557a4fc309cce97ff9ca6182912",
 			match: true,
-			subs:  []string{"localhost", "", "sha256:be178c0543eb17f5f3043021c9e5fcf30285e557a4fc309cce97ff9ca6182912"},
+			named: map[string]string{"domain": "", "name": "localhost", "repository": "localhost", "tag": "", "digest": "sha256:be178c0543eb17f5f3043021c9e5fcf30285e557a4fc309cce97ff9ca6182912"},
 		},
 		{
 			input: "registry.com:8080/myapp@bad",

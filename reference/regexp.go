@@ -29,8 +29,8 @@ var IdentifierRegexp = regexp.MustCompile(identifier)
 var NameRegexp = regexp.MustCompile(namePat)
 
 // ReferenceRegexp is the full supported format of a reference. The regexp
-// is anchored and has capturing groups for name, tag, and digest
-// components.
+// is anchored and has capturing groups for domain, name, repository, tag,
+// and digest components.
 var ReferenceRegexp = regexp.MustCompile(referencePat)
 
 // TagRegexp matches valid tag names. From [docker/docker:graph/tags.go].
@@ -60,9 +60,12 @@ const (
 	// repository name to start with a component as defined by DomainRegexp.
 	domainNameComponent = `(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])`
 
+	// port matches a port-number including the port separator (e.g. ":80").
+	port = `(?::[0-9]+)`
+
 	// optionalPort matches an optional port-number including the port separator
 	// (e.g. ":80").
-	optionalPort = `(?::[0-9]+)?`
+	optionalPort = port + `?`
 
 	// tag matches valid tag names. From docker/docker:graph/tags.go.
 	tag = `[\w][\w.-]{0,127}`
@@ -96,14 +99,23 @@ var (
 	// that may be part of image names. This is purposely a subset of what is
 	// allowed by DNS to ensure backwards compatibility with Docker image
 	// names. This includes IPv4 addresses on decimal format.
-	domainName = domainNameComponent + anyTimes(`\.`+domainNameComponent)
+	//
+	// TODO(thaJeztah): disambiguate: docker requires domain-name to be either;
+	// - localhost (special case)
+	// - at least one "."
+	// - or a ":port"
+	//
+	// Any other domain is considered a path-element.
+	domainName = domainNameComponent + oneOrMore(`\.`+domainNameComponent)
+
+	domainWithPort = domainNameComponent + anyTimes(`\.`+domainNameComponent) + port
 
 	// host defines the structure of potential domains based on the URI
 	// Host subcomponent on rfc3986. It may be a subset of DNS domain name,
 	// or an IPv4 address in decimal format, or an IPv6 address between square
 	// brackets (excluding zone identifiers as defined by rfc6874 or special
 	// addresses such as IPv4-Mapped).
-	host = `(?:` + domainName + `|` + ipv6address + `)`
+	host = `(?:` + localhost + `|` + domainName + `|` + domainWithPort + `|` + ipv6address + optionalPort + `)`
 
 	// allowed by the URI Host subcomponent on rfc3986 to ensure backwards
 	// compatibility with Docker image names.
@@ -127,13 +139,15 @@ var (
 	//
 	//	pathComponent[[/pathComponent] ...] // e.g., "library/ubuntu"
 	remoteName = pathComponent + anyTimes(`/`+pathComponent)
-	namePat    = optional(domainAndPort+`/`) + remoteName
+
+	domainAndRepo = optional(capture("domain", domainAndPort), `/`) + capture("repository", remoteName)
 
 	// anchoredNameRegexp is used to parse a name value, capturing the
 	// domain and trailing components.
-	anchoredNameRegexp = regexp.MustCompile(anchored(optional(capture(domainAndPort), `/`), capture(remoteName)))
+	anchoredNameRegexp = regexp.MustCompile(anchored(domainAndRepo))
 
-	referencePat = anchored(capture(namePat), optional(`:`, capture(tag)), optional(`@`, capture(digestPat)))
+	namePat      = optional(domainAndPort+`/`) + remoteName
+	referencePat = anchored(capture("name", domainAndRepo), optional(`:`, capture("tag", tag)), optional(`@`, capture("digest", digestPat)))
 
 	// anchoredIdentifierRegexp is used to check or match an
 	// identifier value, anchored at start and end of string.
@@ -152,12 +166,41 @@ func anyTimes(res ...string) string {
 	return `(?:` + strings.Join(res, "") + `)*`
 }
 
+// oneOrMore wraps the expression in a non-capturing group that can occur
+// one or more times.
+func oneOrMore(res ...string) string {
+	return `(?:` + strings.Join(res, "") + `)+`
+}
+
 // capture wraps the expression in a capturing group.
-func capture(res ...string) string {
-	return `(` + strings.Join(res, "") + `)`
+func capture(name string, res ...string) string {
+	return `(?P<` + name + `>` + strings.Join(res, "") + `)`
 }
 
 // anchored anchors the regular expression by adding start and end delimiters.
 func anchored(res ...string) string {
 	return `^` + strings.Join(res, "") + `$`
+}
+
+// getNamedMatches returns a map containing matches for each named subexpression.
+// It panics if the given regular expression does not contain named subexpressions.
+func getNamedMatches(r *regexp.Regexp, input string) (namedMatches map[string]string, ok bool) {
+	if len(r.SubexpNames()) == 0 {
+		panic("regex does not have named subexpressions: " + r.String())
+	}
+
+	matches := r.FindStringSubmatch(input)
+	if ok = len(matches) > 0; !ok {
+		return nil, false
+	}
+	namedMatches = make(map[string]string, len(matches))
+	// We loop through matches here, in case there's optional named match-groups.
+	for i, match := range matches {
+		if i == 0 {
+			// first entry is always the full string that was matched
+			continue
+		}
+		namedMatches[r.SubexpNames()[i]] = match
+	}
+	return namedMatches, true
 }

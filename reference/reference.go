@@ -166,11 +166,8 @@ func Path(named Named) (name string) {
 }
 
 func splitDomain(name string) (string, string) {
-	match := anchoredNameRegexp.FindStringSubmatch(name)
-	if len(match) != 3 {
-		return "", name
-	}
-	return match[1], match[2]
+	named, _ := getNamedMatches(anchoredNameRegexp, name)
+	return named["domain"], named["repository"]
 }
 
 // SplitHostname splits a named reference into a
@@ -189,8 +186,8 @@ func SplitHostname(named Named) (string, string) {
 // Parse parses s and returns a syntactically valid Reference.
 // If an error was encountered it is returned, along with a nil Reference.
 func Parse(s string) (Reference, error) {
-	matches := ReferenceRegexp.FindStringSubmatch(s)
-	if matches == nil {
+	namedMatches, ok := getNamedMatches(ReferenceRegexp, s)
+	if !ok {
 		if s == "" {
 			return nil, ErrNameEmpty
 		}
@@ -200,28 +197,20 @@ func Parse(s string) (Reference, error) {
 		return nil, ErrReferenceInvalidFormat
 	}
 
-	if len(matches[1]) > NameTotalLengthMax {
+	if len(namedMatches["name"]) > NameTotalLengthMax {
 		return nil, ErrNameTooLong
 	}
 
-	var repo repository
-
-	nameMatch := anchoredNameRegexp.FindStringSubmatch(matches[1])
-	if len(nameMatch) == 3 {
-		repo.domain = nameMatch[1]
-		repo.path = nameMatch[2]
-	} else {
-		repo.domain = ""
-		repo.path = matches[1]
-	}
-
 	ref := reference{
-		namedRepository: repo,
-		tag:             matches[2],
+		namedRepository: repository{
+			domain: namedMatches["domain"],
+			path:   namedMatches["repository"],
+		},
+		tag: namedMatches["tag"],
 	}
-	if matches[3] != "" {
+	if namedMatches["digest"] != "" {
 		var err error
-		ref.digest, err = digest.Parse(matches[3])
+		ref.digest, err = digest.Parse(namedMatches["digest"])
 		if err != nil {
 			return nil, err
 		}

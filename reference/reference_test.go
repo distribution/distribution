@@ -101,12 +101,10 @@ func TestReferenceParse(t *testing.T) {
 			input: "Uppercase:tag",
 			err:   ErrNameContainsUppercase,
 		},
-		// FIXME "Uppercase" is incorrectly handled as a domain-name here, therefore passes.
-		// See https://github.com/distribution/distribution/pull/1778, and https://github.com/docker/docker/pull/20175
-		// {
-		//	input: "Uppercase/lowercase:tag",
-		//	err:   ErrNameContainsUppercase,
-		// },
+		{
+			input: "Uppercase/lowercase:tag",
+			err:   ErrNameContainsUppercase,
+		},
 		{
 			input: "test:5000/Uppercase/lowercase:tag",
 			err:   ErrNameContainsUppercase,
@@ -122,7 +120,6 @@ func TestReferenceParse(t *testing.T) {
 		},
 		{
 			input:      strings.Repeat("a/", 127) + "a:tag-puts-this-over-max",
-			domain:     "a",
 			repository: strings.Repeat("a/", 127) + "a",
 			tag:        "tag-puts-this-over-max",
 		},
@@ -167,7 +164,6 @@ func TestReferenceParse(t *testing.T) {
 		},
 		{
 			input:      "foo/foo_bar.com:8080",
-			domain:     "foo",
 			repository: "foo/foo_bar.com",
 			tag:        "8080",
 		},
@@ -541,7 +537,7 @@ func TestSerialization(t *testing.T) {
 
 			b2, err := json.Marshal(st)
 			if err != nil {
-				t.Errorf("error marshing serialization type: %v", err)
+				t.Errorf("error marshaling serialization type: %v", err)
 			}
 
 			if string(b) != string(b2) {

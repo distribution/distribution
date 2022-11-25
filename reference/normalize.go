@@ -123,20 +123,23 @@ func ParseDockerRef(ref string) (Named, error) {
 // splitDockerDomain splits a repository name to domain and remote-name.
 // If no valid domain is found, the default domain is used. Repository name
 // needs to be already validated before.
-func splitDockerDomain(name string) (domain, remainder string) {
-	i := strings.IndexRune(name, '/')
-	if i == -1 || (!strings.ContainsAny(name[:i], ".:") && name[:i] != localhost && strings.ToLower(name[:i]) == name[:i]) {
-		domain, remainder = defaultDomain, name
-	} else {
-		domain, remainder = name[:i], name[i+1:]
+func splitDockerDomain(name string) (domainName, remoteName string) {
+	domainName, remoteName, ok := strings.Cut(name, "/")
+	switch domainName {
+	case legacyDefaultDomain:
+		domainName = defaultDomain
+	case defaultDomain, localhost:
+		// done
+	default:
+		if !ok || (!strings.ContainsAny(domainName, ".:") && strings.ToLower(domainName) == domainName) {
+			domainName = defaultDomain
+			remoteName = name
+		}
 	}
-	if domain == legacyDefaultDomain {
-		domain = defaultDomain
+	if domainName == defaultDomain && !strings.ContainsRune(remoteName, '/') {
+		remoteName = officialRepoPrefix + remoteName
 	}
-	if domain == defaultDomain && !strings.ContainsRune(remainder, '/') {
-		remainder = officialRepoPrefix + remainder
-	}
-	return
+	return domainName, remoteName
 }
 
 // familiarizeName returns a shortened version of the name familiar
