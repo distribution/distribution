@@ -49,9 +49,9 @@ func makeTestManifest(mediaType string) Manifest {
 }
 
 func TestManifest(t *testing.T) {
-	manifest := makeTestManifest(MediaTypeManifest)
+	mfst := makeTestManifest(MediaTypeManifest)
 
-	deserialized, err := FromStruct(manifest)
+	deserialized, err := FromStruct(mfst)
 	if err != nil {
 		t.Fatalf("error creating DeserializedManifest: %v", err)
 	}
@@ -64,7 +64,7 @@ func TestManifest(t *testing.T) {
 
 	// Check that the canonical field is the same as json.MarshalIndent
 	// with these parameters.
-	p, err := json.MarshalIndent(&manifest, "", "   ")
+	p, err := json.MarshalIndent(&mfst, "", "   ")
 	if err != nil {
 		t.Fatalf("error marshaling manifest: %v", err)
 	}
@@ -119,9 +119,9 @@ func TestManifest(t *testing.T) {
 }
 
 func mediaTypeTest(t *testing.T, mediaType string, shouldError bool) {
-	manifest := makeTestManifest(mediaType)
+	mfst := makeTestManifest(mediaType)
 
-	deserialized, err := FromStruct(manifest)
+	deserialized, err := FromStruct(mfst)
 	if err != nil {
 		t.Fatalf("error creating DeserializedManifest: %v", err)
 	}

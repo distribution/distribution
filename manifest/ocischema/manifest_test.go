@@ -64,9 +64,9 @@ func makeTestManifest(mediaType string) Manifest {
 }
 
 func TestManifest(t *testing.T) {
-	manifest := makeTestManifest(v1.MediaTypeImageManifest)
+	mfst := makeTestManifest(v1.MediaTypeImageManifest)
 
-	deserialized, err := FromStruct(manifest)
+	deserialized, err := FromStruct(mfst)
 	if err != nil {
 		t.Fatalf("error creating DeserializedManifest: %v", err)
 	}
@@ -79,7 +79,7 @@ func TestManifest(t *testing.T) {
 
 	// Check that the canonical field is the same as json.MarshalIndent
 	// with these parameters.
-	p, err := json.MarshalIndent(&manifest, "", "   ")
+	p, err := json.MarshalIndent(&mfst, "", "   ")
 	if err != nil {
 		t.Fatalf("error marshaling manifest: %v", err)
 	}
@@ -143,9 +143,9 @@ func TestManifest(t *testing.T) {
 }
 
 func mediaTypeTest(t *testing.T, mediaType string, shouldError bool) {
-	manifest := makeTestManifest(mediaType)
+	mfst := makeTestManifest(mediaType)
 
-	deserialized, err := FromStruct(manifest)
+	deserialized, err := FromStruct(mfst)
 	if err != nil {
 		t.Fatalf("error creating DeserializedManifest: %v", err)
 	}
@@ -186,7 +186,7 @@ func TestMediaTypes(t *testing.T) {
 }
 
 func TestValidateManifest(t *testing.T) {
-	manifest := Manifest{
+	mfst := Manifest{
 		Config: distribution.Descriptor{Size: 1},
 		Layers: []distribution.Descriptor{{Size: 2}},
 	}
@@ -196,7 +196,7 @@ func TestValidateManifest(t *testing.T) {
 		},
 	}
 	t.Run("valid", func(t *testing.T) {
-		b, err := json.Marshal(manifest)
+		b, err := json.Marshal(mfst)
 		if err != nil {
 			t.Fatal("unexpected error marshaling manifest", err)
 		}
