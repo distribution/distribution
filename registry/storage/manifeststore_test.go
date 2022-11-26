@@ -33,8 +33,8 @@ type manifestStoreTestEnv struct {
 
 func newManifestStoreTestEnv(t *testing.T, name reference.Named, tag string, options ...RegistryOption) *manifestStoreTestEnv {
 	ctx := context.Background()
-	driver := inmemory.New()
-	registry, err := NewRegistry(ctx, driver, options...)
+	drvr := inmemory.New()
+	registry, err := NewRegistry(ctx, drvr, options...)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -46,7 +46,7 @@ func newManifestStoreTestEnv(t *testing.T, name reference.Named, tag string, opt
 
 	return &manifestStoreTestEnv{
 		ctx:        ctx,
-		driver:     driver,
+		driver:     drvr,
 		registry:   registry,
 		repository: repo,
 		name:       name,
@@ -434,25 +434,25 @@ func testOCIManifestStorage(t *testing.T, testname string, includeMediaTypes boo
 		builder.AppendReference(distribution.Descriptor{Digest: dgst})
 	}
 
-	manifest, err := builder.Build(ctx)
+	mfst, err := builder.Build(ctx)
 	if err != nil {
 		t.Fatalf("%s: unexpected error generating manifest: %v", testname, err)
 	}
 
 	// before putting the manifest test for proper handling of SchemaVersion
 
-	if manifest.(*ocischema.DeserializedManifest).Manifest.SchemaVersion != 2 {
+	if mfst.(*ocischema.DeserializedManifest).Manifest.SchemaVersion != 2 {
 		t.Fatalf("%s: unexpected error generating default version for oci manifest", testname)
 	}
-	manifest.(*ocischema.DeserializedManifest).Manifest.SchemaVersion = 0
+	mfst.(*ocischema.DeserializedManifest).Manifest.SchemaVersion = 0
 
 	var manifestDigest digest.Digest
-	if manifestDigest, err = ms.Put(ctx, manifest); err != nil {
+	if manifestDigest, err = ms.Put(ctx, mfst); err != nil {
 		if err.Error() != "unrecognized manifest schema version 0" {
 			t.Fatalf("%s: unexpected error putting manifest: %v", testname, err)
 		}
-		manifest.(*ocischema.DeserializedManifest).Manifest.SchemaVersion = 2
-		if manifestDigest, err = ms.Put(ctx, manifest); err != nil {
+		mfst.(*ocischema.DeserializedManifest).Manifest.SchemaVersion = 2
+		if manifestDigest, err = ms.Put(ctx, mfst); err != nil {
 			t.Fatalf("%s: unexpected error putting manifest: %v", testname, err)
 		}
 	}
