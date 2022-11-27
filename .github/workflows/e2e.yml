@@ -1,12 +1,15 @@
 name: e2e
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
-      - main
+      - 'main'
+      - 'release/*'
   pull_request:
-    branches:
-      - main
 
 jobs:
   run-e2e-test:
@@ -14,12 +17,12 @@ jobs:
     steps:
       -
         name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       -
         name: Build image
-        uses: docker/bake-action@v1
+        uses: docker/bake-action@v2
         with:
           targets: image-local
       -

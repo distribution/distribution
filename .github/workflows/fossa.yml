@@ -1,5 +1,9 @@
 name: FOSSA License Scanning
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   - pull_request
   - push
@@ -10,7 +14,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Run FOSSA scan and upload build data
         uses: fossa-contrib/fossa-action@v1

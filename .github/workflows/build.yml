@@ -1,5 +1,9 @@
 name: build
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
@@ -8,8 +12,6 @@ on:
     tags:
       - 'v*'
   pull_request:
-    branches:
-      - '*'
 
 env:
   DOCKERHUB_SLUG: distribution/distribution
@@ -49,13 +51,13 @@ jobs:
     steps:
       -
         name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           fetch-depth: 0
       -
         name: Docker meta
         id: meta
-        uses: docker/metadata-action@v3
+        uses: docker/metadata-action@v4
         with:
           images: |
             ${{ env.DOCKERHUB_SLUG }}
@@ -80,17 +82,17 @@ jobs:
             org.opencontainers.image.description=The toolkit to pack, ship, store, and deliver container content
       -
         name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
       -
         name: Login to DockerHub
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       -
         name: Build artifacts
-        uses: docker/bake-action@v1
+        uses: docker/bake-action@v2
         with:
           targets: artifact-all
       -
@@ -99,14 +101,14 @@ jobs:
           mv ./bin/**/* ./bin/
       -
         name: Upload artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: registry
           path: ./bin/*
           if-no-files-found: error
       -
         name: Build image
-        uses: docker/bake-action@v1
+        uses: docker/bake-action@v2
         with:
           files: |
             ./docker-bake.hcl
