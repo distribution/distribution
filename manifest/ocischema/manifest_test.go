@@ -46,16 +46,16 @@ func makeTestManifest(mediaType string) Manifest {
 			MediaType:     mediaType,
 		},
 		Config: distribution.Descriptor{
+			MediaType:   v1.MediaTypeImageConfig,
 			Digest:      "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
 			Size:        985,
-			MediaType:   v1.MediaTypeImageConfig,
 			Annotations: map[string]string{"apple": "orange"},
 		},
 		Layers: []distribution.Descriptor{
 			{
+				MediaType:   v1.MediaTypeImageLayerGzip,
 				Digest:      "sha256:62d8908bee94c202b2d35224a221aaa2058318bfa9879fa541efaecba272331b",
 				Size:        153263,
-				MediaType:   v1.MediaTypeImageLayerGzip,
 				Annotations: map[string]string{"lettuce": "wrap"},
 			},
 		},

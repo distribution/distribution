@@ -150,9 +150,9 @@ func (b *bridge) createManifestEvent(action string, repo reference.Named, sm dis
 	}
 
 	event.Target.MediaType = mt
-	event.Target.Length = desc.Size
-	event.Target.Size = desc.Size
 	event.Target.Digest = desc.Digest
+	event.Target.Size = desc.Size
+	event.Target.Length = desc.Size
 	if b.includeReferences {
 		event.Target.References = append(event.Target.References, manifest.References()...)
 	}

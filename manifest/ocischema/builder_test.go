@@ -92,20 +92,20 @@ func TestBuilder(t *testing.T) {
 
 	descriptors := []distribution.Descriptor{
 		{
+			MediaType:   v1.MediaTypeImageLayerGzip,
 			Digest:      digest.Digest("sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"),
 			Size:        5312,
-			MediaType:   v1.MediaTypeImageLayerGzip,
 			Annotations: map[string]string{"apple": "orange", "lettuce": "wrap"},
 		},
 		{
+			MediaType: v1.MediaTypeImageLayerGzip,
 			Digest:    digest.Digest("sha256:86e0e091d0da6bde2456dbb48306f3956bbeb2eae1b5b9a43045843f69fe4aaa"),
 			Size:      235231,
-			MediaType: v1.MediaTypeImageLayerGzip,
 		},
 		{
+			MediaType: v1.MediaTypeImageLayerGzip,
 			Digest:    digest.Digest("sha256:b4ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"),
 			Size:      639152,
-			MediaType: v1.MediaTypeImageLayerGzip,
 		},
 	}
 	annotations := map[string]string{"hot": "potato"}
