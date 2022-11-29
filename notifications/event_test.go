@@ -22,8 +22,8 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
          "action": "push",
          "target": {
             "mediaType": "application/vnd.docker.distribution.manifest.v1+prettyjws",
-            "size": 1,
             "digest": "sha256:0123456789abcdef0",
+            "size": 1,
             "length": 1,
             "repository": "library/test",
             "url": "http://example.com/v2/library/test/manifests/latest"
@@ -48,8 +48,8 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
          "action": "push",
          "target": {
             "mediaType": "application/vnd.docker.container.image.rootfs.diff+x-gtar",
-            "size": 2,
             "digest": "sha256:3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5",
+            "size": 2,
             "length": 2,
             "repository": "library/test",
             "url": "http://example.com/v2/library/test/manifests/latest"
@@ -74,8 +74,8 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
          "action": "push",
          "target": {
             "mediaType": "application/vnd.docker.container.image.rootfs.diff+x-gtar",
-            "size": 3,
             "digest": "sha256:3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d6",
+            "size": 3,
             "length": 3,
             "repository": "library/test",
             "url": "http://example.com/v2/library/test/manifests/latest"

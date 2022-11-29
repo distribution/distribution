@@ -63,12 +63,12 @@ type Descriptor struct {
 	// encoded as utf-8.
 	MediaType string `json:"mediaType,omitempty"`
 
-	// Size in bytes of content.
-	Size int64 `json:"size,omitempty"`
-
 	// Digest uniquely identifies the content. A byte stream can be verified
 	// against this digest.
 	Digest digest.Digest `json:"digest,omitempty"`
+
+	// Size in bytes of content.
+	Size int64 `json:"size,omitempty"`
 
 	// URLs contains the source URLs of this content.
 	URLs []string `json:"urls,omitempty"`

@@ -93,8 +93,8 @@ manifest:
       "action": "pull",
       "target": {
         "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
-        "size": 708,
         "digest": "sha256:fea8895f450959fa676bcc1df0611ea93823a735a01205fd8622846041d0c7cf",
+        "size": 708,
         "length": 708,
         "repository": "hello-world",
         "url": "http://192.168.100.227:5000/v2/hello-world/manifests/sha256:fea8895f450959fa676bcc1df0611ea93823a735a01205fd8622846041d0c7cf",
@@ -171,8 +171,8 @@ Content-Type: application/vnd.docker.distribution.events.v1+json
       "action": "push",
       "target": {
         "mediaType": "application/vnd.docker.distribution.manifest.v1+json",
-        "length": 1,
         "digest": "sha256:fea8895f450959fa676bcc1df0611ea93823a735a01205fd8622846041d0c7cf",
+        "length": 1,
         "repository": "library/test",
         "url": "https://example.com/v2/library/test/manifests/sha256:c3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5"
       },
@@ -196,8 +196,8 @@ Content-Type: application/vnd.docker.distribution.events.v1+json
       "action": "push",
       "target": {
         "mediaType": "application/vnd.docker.container.image.rootfs.diff+x-gtar",
-        "length": 2,
         "digest": "sha256:c3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5",
+        "length": 2,
         "repository": "library/test",
         "url": "https://example.com/v2/library/test/blobs/sha256:c3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5"
       },
@@ -221,8 +221,8 @@ Content-Type: application/vnd.docker.distribution.events.v1+json
       "action": "push",
       "target": {
         "mediaType": "application/vnd.docker.container.image.rootfs.diff+x-gtar",
-        "length": 3,
         "digest": "sha256:c3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5",
+        "length": 3,
         "repository": "library/test",
         "url": "https://example.com/v2/library/test/blobs/sha256:c3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5"
       },

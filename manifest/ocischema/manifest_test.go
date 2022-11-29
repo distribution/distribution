@@ -18,8 +18,8 @@ const expectedManifestSerialization = `{
    "mediaType": "application/vnd.oci.image.manifest.v1+json",
    "config": {
       "mediaType": "application/vnd.oci.image.config.v1+json",
-      "size": 985,
       "digest": "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
+      "size": 985,
       "annotations": {
          "apple": "orange"
       }
@@ -27,8 +27,8 @@ const expectedManifestSerialization = `{
    "layers": [
       {
          "mediaType": "application/vnd.oci.image.layer.v1.tar+gzip",
-         "size": 153263,
          "digest": "sha256:62d8908bee94c202b2d35224a221aaa2058318bfa9879fa541efaecba272331b",
+         "size": 153263,
          "annotations": {
             "lettuce": "wrap"
          }
