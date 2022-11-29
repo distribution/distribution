@@ -21,13 +21,13 @@ func TestManifestMarshaling(t *testing.T) {
 
 	// Check that the all field is the same as json.MarshalIndent with these
 	// parameters.
-	p, err := json.MarshalIndent(env.signed, "", "   ")
+	expected, err := json.MarshalIndent(env.signed, "", "   ")
 	if err != nil {
 		t.Fatalf("error marshaling manifest: %v", err)
 	}
 
-	if !bytes.Equal(p, env.signed.all) {
-		t.Fatalf("manifest bytes not equal: %q != %q", string(env.signed.all), string(p))
+	if !bytes.Equal(expected, env.signed.all) {
+		t.Fatalf("manifest bytes not equal:\nexpected:\n%s\nactual:\n%s\n", string(expected), string(env.signed.all))
 	}
 }
 

@@ -126,12 +126,12 @@ func (sm *SignedManifest) UnmarshalJSON(b []byte) error {
 	copy(sm.Canonical, bytes)
 
 	// Unmarshal canonical JSON into Manifest object
-	var manifest Manifest
-	if err := json.Unmarshal(sm.Canonical, &manifest); err != nil {
+	var mfst Manifest
+	if err := json.Unmarshal(sm.Canonical, &mfst); err != nil {
 		return err
 	}
 
-	sm.Manifest = manifest
+	sm.Manifest = mfst
 
 	return nil
 }

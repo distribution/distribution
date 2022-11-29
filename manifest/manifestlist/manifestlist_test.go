@@ -12,7 +12,7 @@ import (
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-var expectedManifestListSerialization = []byte(`{
+const expectedManifestListSerialization = `{
    "schemaVersion": 2,
    "mediaType": "application/vnd.docker.distribution.manifest.list.v2+json",
    "manifests": [
@@ -38,7 +38,7 @@ var expectedManifestListSerialization = []byte(`{
          }
       }
    ]
-}`)
+}`
 
 func makeTestManifestList(t *testing.T, mediaType string) ([]ManifestDescriptor, *DeserializedManifestList) {
 	manifestDescriptors := []ManifestDescriptor{
@@ -85,17 +85,17 @@ func TestManifestList(t *testing.T) {
 
 	// Check that the canonical field is the same as json.MarshalIndent
 	// with these parameters.
-	p, err := json.MarshalIndent(&deserialized.ManifestList, "", "   ")
+	expected, err := json.MarshalIndent(&deserialized.ManifestList, "", "   ")
 	if err != nil {
 		t.Fatalf("error marshaling manifest list: %v", err)
 	}
-	if !bytes.Equal(p, canonical) {
-		t.Fatalf("manifest bytes not equal: %q != %q", string(canonical), string(p))
+	if !bytes.Equal(expected, canonical) {
+		t.Fatalf("manifest bytes not equal:\nexpected:\n%s\nactual:\n%s\n", string(expected), string(canonical))
 	}
 
 	// Check that the canonical field has the expected value.
-	if !bytes.Equal(expectedManifestListSerialization, canonical) {
-		t.Fatalf("manifest bytes not equal: %q != %q", string(canonical), string(expectedManifestListSerialization))
+	if !bytes.Equal([]byte(expectedManifestListSerialization), canonical) {
+		t.Fatalf("manifest bytes not equal:\nexpected:\n%s\nactual:\n%s\n", expectedManifestListSerialization, string(canonical))
 	}
 
 	var unmarshalled DeserializedManifestList
@@ -136,7 +136,7 @@ func TestManifestList(t *testing.T) {
 // Requires changes to distribution/distribution/manifest/manifestlist.ManifestList and .ManifestDescriptor
 // and associated serialization APIs in manifestlist.go. Or split the OCI index and
 // docker manifest list implementations, which would require a lot of refactoring.
-var expectedOCIImageIndexSerialization = []byte(`{
+const expectedOCIImageIndexSerialization = `{
    "schemaVersion": 2,
    "mediaType": "application/vnd.oci.image.index.v1+json",
    "manifests": [
@@ -177,7 +177,7 @@ var expectedOCIImageIndexSerialization = []byte(`{
          }
       }
    ]
-}`)
+}`
 
 func makeTestOCIImageIndex(t *testing.T, mediaType string) ([]ManifestDescriptor, *DeserializedManifestList) {
 	manifestDescriptors := []ManifestDescriptor{
@@ -234,17 +234,17 @@ func TestOCIImageIndex(t *testing.T) {
 
 	// Check that the canonical field is the same as json.MarshalIndent
 	// with these parameters.
-	p, err := json.MarshalIndent(&deserialized.ManifestList, "", "   ")
+	expected, err := json.MarshalIndent(&deserialized.ManifestList, "", "   ")
 	if err != nil {
 		t.Fatalf("error marshaling manifest list: %v", err)
 	}
-	if !bytes.Equal(p, canonical) {
-		t.Fatalf("manifest bytes not equal: %q != %q", string(canonical), string(p))
+	if !bytes.Equal(expected, canonical) {
+		t.Fatalf("manifest bytes not equal:\nexpected:\n%s\nactual:\n%s\n", string(expected), string(canonical))
 	}
 
 	// Check that the canonical field has the expected value.
-	if !bytes.Equal(expectedOCIImageIndexSerialization, canonical) {
-		t.Fatalf("manifest bytes not equal to expected: %q != %q", string(canonical), string(expectedOCIImageIndexSerialization))
+	if !bytes.Equal([]byte(expectedOCIImageIndexSerialization), canonical) {
+		t.Fatalf("manifest bytes not equal:\nexpected:\n%s\nactual:\n%s\n", expectedOCIImageIndexSerialization, string(canonical))
 	}
 
 	var unmarshalled DeserializedManifestList

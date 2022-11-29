@@ -109,17 +109,17 @@ func (m *DeserializedManifest) UnmarshalJSON(b []byte) error {
 	copy(m.canonical, b)
 
 	// Unmarshal canonical JSON into Manifest object
-	var manifest Manifest
-	if err := json.Unmarshal(m.canonical, &manifest); err != nil {
+	var mfst Manifest
+	if err := json.Unmarshal(m.canonical, &mfst); err != nil {
 		return err
 	}
 
-	if manifest.MediaType != MediaTypeManifest {
+	if mfst.MediaType != MediaTypeManifest {
 		return fmt.Errorf("mediaType in manifest should be '%s' not '%s'",
-			MediaTypeManifest, manifest.MediaType)
+			MediaTypeManifest, mfst.MediaType)
 	}
 
-	m.Manifest = manifest
+	m.Manifest = mfst
 
 	return nil
 }

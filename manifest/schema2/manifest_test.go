@@ -10,7 +10,7 @@ import (
 	"github.com/distribution/distribution/v3/manifest"
 )
 
-var expectedManifestSerialization = []byte(`{
+const expectedManifestSerialization = `{
    "schemaVersion": 2,
    "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
    "config": {
@@ -25,7 +25,7 @@ var expectedManifestSerialization = []byte(`{
          "digest": "sha256:62d8908bee94c202b2d35224a221aaa2058318bfa9879fa541efaecba272331b"
       }
    ]
-}`)
+}`
 
 func makeTestManifest(mediaType string) Manifest {
 	return Manifest{
@@ -49,9 +49,9 @@ func makeTestManifest(mediaType string) Manifest {
 }
 
 func TestManifest(t *testing.T) {
-	manifest := makeTestManifest(MediaTypeManifest)
+	mfst := makeTestManifest(MediaTypeManifest)
 
-	deserialized, err := FromStruct(manifest)
+	deserialized, err := FromStruct(mfst)
 	if err != nil {
 		t.Fatalf("error creating DeserializedManifest: %v", err)
 	}
@@ -64,17 +64,17 @@ func TestManifest(t *testing.T) {
 
 	// Check that the canonical field is the same as json.MarshalIndent
 	// with these parameters.
-	p, err := json.MarshalIndent(&manifest, "", "   ")
+	expected, err := json.MarshalIndent(&mfst, "", "   ")
 	if err != nil {
 		t.Fatalf("error marshaling manifest: %v", err)
 	}
-	if !bytes.Equal(p, canonical) {
-		t.Fatalf("manifest bytes not equal: %q != %q", string(canonical), string(p))
+	if !bytes.Equal(expected, canonical) {
+		t.Fatalf("manifest bytes not equal:\nexpected:\n%s\nactual:\n%s\n", string(expected), string(canonical))
 	}
 
 	// Check that canonical field matches expected value.
-	if !bytes.Equal(expectedManifestSerialization, canonical) {
-		t.Fatalf("manifest bytes not equal: %q != %q", string(canonical), string(expectedManifestSerialization))
+	if !bytes.Equal([]byte(expectedManifestSerialization), canonical) {
+		t.Fatalf("manifest bytes not equal:\nexpected:\n%s\nactual:\n%s\n", expectedManifestSerialization, string(canonical))
 	}
 
 	var unmarshalled DeserializedManifest
@@ -119,9 +119,9 @@ func TestManifest(t *testing.T) {
 }
 
 func mediaTypeTest(t *testing.T, mediaType string, shouldError bool) {
-	manifest := makeTestManifest(mediaType)
+	mfst := makeTestManifest(mediaType)
 
-	deserialized, err := FromStruct(manifest)
+	deserialized, err := FromStruct(mfst)
 	if err != nil {
 		t.Fatalf("error creating DeserializedManifest: %v", err)
 	}
