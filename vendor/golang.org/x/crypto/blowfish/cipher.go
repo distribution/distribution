@@ -3,10 +3,18 @@
 // license that can be found in the LICENSE file.
 
 // Package blowfish implements Bruce Schneier's Blowfish encryption algorithm.
+//
+// Blowfish is a legacy cipher and its short block size makes it vulnerable to
+// birthday bound attacks (see https://sweet32.info). It should only be used
+// where compatibility with legacy systems, not security, is the goal.
+//
+// Deprecated: any new system should use AES (from crypto/aes, if necessary in
+// an AEAD mode like crypto/cipher.NewGCM) or XChaCha20-Poly1305 (from
+// golang.org/x/crypto/chacha20poly1305).
 package blowfish // import "golang.org/x/crypto/blowfish"
 
 // The code is a port of Bruce Schneier's C implementation.
-// See http://www.schneier.com/blowfish.html.
+// See https://www.schneier.com/blowfish.html.
 
 import "strconv"
 
@@ -39,7 +47,7 @@ func NewCipher(key []byte) (*Cipher, error) {
 
 // NewSaltedCipher creates a returns a Cipher that folds a salt into its key
 // schedule. For most purposes, NewCipher, instead of NewSaltedCipher, is
-// sufficient and desirable. For bcrypt compatiblity, the key can be over 56
+// sufficient and desirable. For bcrypt compatibility, the key can be over 56
 // bytes.
 func NewSaltedCipher(key, salt []byte) (*Cipher, error) {
 	if len(salt) == 0 {

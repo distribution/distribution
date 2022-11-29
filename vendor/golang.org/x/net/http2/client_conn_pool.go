@@ -18,6 +18,18 @@ type ClientConnPool interface {
 	MarkDead(*ClientConn)
 }
 
+// clientConnPoolIdleCloser is the interface implemented by ClientConnPool
+// implementations which can close their idle connections.
+type clientConnPoolIdleCloser interface {
+	ClientConnPool
+	closeIdleConnections()
+}
+
+var (
+	_ clientConnPoolIdleCloser = (*clientConnPool)(nil)
+	_ clientConnPoolIdleCloser = noDialClientConnPool{}
+)
+
 // TODO: use singleflight for dialing and addConnCalls?
 type clientConnPool struct {
 	t *Transport
@@ -40,10 +52,44 @@ const (
 	noDialOnMiss = false
 )
 
-func (p *clientConnPool) getClientConn(_ *http.Request, addr string, dialOnMiss bool) (*ClientConn, error) {
+// shouldTraceGetConn reports whether getClientConn should call any
+// ClientTrace.GetConn hook associated with the http.Request.
+//
+// This complexity is needed to avoid double calls of the GetConn hook
+// during the back-and-forth between net/http and x/net/http2 (when the
+// net/http.Transport is upgraded to also speak http2), as well as support
+// the case where x/net/http2 is being used directly.
+func (p *clientConnPool) shouldTraceGetConn(st clientConnIdleState) bool {
+	// If our Transport wasn't made via ConfigureTransport, always
+	// trace the GetConn hook if provided, because that means the
+	// http2 package is being used directly and it's the one
+	// dialing, as opposed to net/http.
+	if _, ok := p.t.ConnPool.(noDialClientConnPool); !ok {
+		return true
+	}
+	// Otherwise, only use the GetConn hook if this connection has
+	// been used previously for other requests. For fresh
+	// connections, the net/http package does the dialing.
+	return !st.freshConn
+}
+
+func (p *clientConnPool) getClientConn(req *http.Request, addr string, dialOnMiss bool) (*ClientConn, error) {
+	if isConnectionCloseRequest(req) && dialOnMiss {
+		// It gets its own connection.
+		traceGetConn(req, addr)
+		const singleUse = true
+		cc, err := p.t.dialClientConn(addr, singleUse)
+		if err != nil {
+			return nil, err
+		}
+		return cc, nil
+	}
 	p.mu.Lock()
 	for _, cc := range p.conns[addr] {
-		if cc.CanTakeNewRequest() {
+		if st := cc.idleState(); st.canTakeNewRequest {
+			if p.shouldTraceGetConn(st) {
+				traceGetConn(req, addr)
+			}
 			p.mu.Unlock()
 			return cc, nil
 		}
@@ -52,6 +98,7 @@ func (p *clientConnPool) getClientConn(_ *http.Request, addr string, dialOnMiss 
 		p.mu.Unlock()
 		return nil, ErrNoCachedConn
 	}
+	traceGetConn(req, addr)
 	call := p.getStartDialLocked(addr)
 	p.mu.Unlock()
 	<-call.done
@@ -83,7 +130,8 @@ func (p *clientConnPool) getStartDialLocked(addr string) *dialCall {
 
 // run in its own goroutine.
 func (c *dialCall) dial(addr string) {
-	c.res, c.err = c.p.t.dialClientConn(addr)
+	const singleUse = false // shared conn
+	c.res, c.err = c.p.t.dialClientConn(addr, singleUse)
 	close(c.done)
 
 	c.p.mu.Lock()
@@ -222,4 +270,13 @@ func filterOutClientConn(in []*ClientConn, exclude *ClientConn) []*ClientConn {
 		in[len(in)-1] = nil
 	}
 	return out
+}
+
+// noDialClientConnPool is an implementation of http2.ClientConnPool
+// which never dials. We let the HTTP/1.1 client dial and use its TLS
+// connection instead.
+type noDialClientConnPool struct{ *clientConnPool }
+
+func (p noDialClientConnPool) GetClientConn(req *http.Request, addr string) (*ClientConn, error) {
+	return p.getClientConn(req, addr, noDialOnMiss)
 }

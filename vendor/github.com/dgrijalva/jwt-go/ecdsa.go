@@ -88,11 +88,11 @@ func (m *SigningMethodECDSA) Verify(signingString, signature string, key interfa
 	hasher.Write([]byte(signingString))
 
 	// Verify the signature
-	if verifystatus := ecdsa.Verify(ecdsaKey, hasher.Sum(nil), r, s); verifystatus {
+	if verifystatus := ecdsa.Verify(ecdsaKey, hasher.Sum(nil), r, s); verifystatus == true {
 		return nil
+	} else {
+		return ErrECDSAVerification
 	}
-
-	return ErrECDSAVerification
 }
 
 // Implements the Sign method from SigningMethod
@@ -128,12 +128,18 @@ func (m *SigningMethodECDSA) Sign(signingString string, key interface{}) (string
 			keyBytes += 1
 		}
 
-		// We serialize the outputs (r and s) into big-endian byte arrays
-		// padded with zeros on the left to make sure the sizes work out.
-		// Output must be 2*keyBytes long.
-		out := make([]byte, 2*keyBytes)
-		r.FillBytes(out[0:keyBytes]) // r is assigned to the first half of output.
-		s.FillBytes(out[keyBytes:])  // s is assigned to the second half of output.
+		// We serialize the outpus (r and s) into big-endian byte arrays and pad
+		// them with zeros on the left to make sure the sizes work out. Both arrays
+		// must be keyBytes long, and the output must be 2*keyBytes long.
+		rBytes := r.Bytes()
+		rBytesPadded := make([]byte, keyBytes)
+		copy(rBytesPadded[keyBytes-len(rBytes):], rBytes)
+
+		sBytes := s.Bytes()
+		sBytesPadded := make([]byte, keyBytes)
+		copy(sBytesPadded[keyBytes-len(sBytes):], sBytes)
+
+		out := append(rBytesPadded, sBytesPadded...)
 
 		return EncodeSegment(out), nil
 	} else {

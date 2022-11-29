@@ -25,9 +25,7 @@ func ParseECPrivateKeyFromPEM(key []byte) (*ecdsa.PrivateKey, error) {
 	// Parse the key
 	var parsedKey interface{}
 	if parsedKey, err = x509.ParseECPrivateKey(block.Bytes); err != nil {
-		if parsedKey, err = x509.ParsePKCS8PrivateKey(block.Bytes); err != nil {
-			return nil, err
-		}
+		return nil, err
 	}
 
 	var pkey *ecdsa.PrivateKey
