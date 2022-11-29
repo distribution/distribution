@@ -17,4 +17,4 @@ RUN wget https://golang.org/dl/go$GOLANG_VERSION.linux-amd64.tar.gz --quiet && \
   tar -C /usr/local -xzf go$GOLANG_VERSION.linux-amd64.tar.gz && \
   rm go${GOLANG_VERSION}.linux-amd64.tar.gz
 
-RUN go get github.com/axw/gocov/gocov github.com/mattn/goveralls github.com/golang/lint/golint
+RUN go install github.com/axw/gocov/gocov@latest github.com/mattn/goveralls@latest github.com/golang/lint/golint@latest
