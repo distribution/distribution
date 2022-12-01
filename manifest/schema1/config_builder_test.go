@@ -29,9 +29,9 @@ func (bs *mockBlobService) Stat(ctx context.Context, dgst digest.Digest) (distri
 
 func (bs *mockBlobService) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
 	d := distribution.Descriptor{
+		MediaType: mediaType,
 		Digest:    digest.FromBytes(p),
 		Size:      int64(len(p)),
-		MediaType: mediaType,
 	}
 	bs.descriptors[d.Digest] = d
 	return d, nil

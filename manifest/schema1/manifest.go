@@ -35,9 +35,9 @@ func init() {
 		}
 
 		desc := distribution.Descriptor{
+			MediaType: MediaTypeSignedManifest,
 			Digest:    digest.FromBytes(sm.Canonical),
 			Size:      int64(len(sm.Canonical)),
-			MediaType: MediaTypeSignedManifest,
 		}
 		return sm, desc, err
 	}

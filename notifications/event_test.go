@@ -22,8 +22,8 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
          "action": "push",
          "target": {
             "mediaType": "application/vnd.docker.distribution.manifest.v1+prettyjws",
-            "size": 1,
             "digest": "sha256:0123456789abcdef0",
+            "size": 1,
             "length": 1,
             "repository": "library/test",
             "url": "http://example.com/v2/library/test/manifests/latest"
@@ -48,8 +48,8 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
          "action": "push",
          "target": {
             "mediaType": "application/vnd.docker.container.image.rootfs.diff+x-gtar",
-            "size": 2,
             "digest": "sha256:3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5",
+            "size": 2,
             "length": 2,
             "repository": "library/test",
             "url": "http://example.com/v2/library/test/manifests/latest"
@@ -74,8 +74,8 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
          "action": "push",
          "target": {
             "mediaType": "application/vnd.docker.container.image.rootfs.diff+x-gtar",
-            "size": 3,
             "digest": "sha256:3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d6",
+            "size": 3,
             "length": 3,
             "repository": "library/test",
             "url": "http://example.com/v2/library/test/manifests/latest"
@@ -116,28 +116,28 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
 
 	manifestPush := prototype
 	manifestPush.ID = "asdf-asdf-asdf-asdf-0"
-	manifestPush.Target.Digest = "sha256:0123456789abcdef0"
-	manifestPush.Target.Length = 1
-	manifestPush.Target.Size = 1
 	manifestPush.Target.MediaType = schema1.MediaTypeSignedManifest
+	manifestPush.Target.Digest = "sha256:0123456789abcdef0"
+	manifestPush.Target.Size = 1
+	manifestPush.Target.Length = 1
 	manifestPush.Target.Repository = "library/test"
 	manifestPush.Target.URL = "http://example.com/v2/library/test/manifests/latest"
 
 	layerPush0 := prototype
 	layerPush0.ID = "asdf-asdf-asdf-asdf-1"
-	layerPush0.Target.Digest = "sha256:3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5"
-	layerPush0.Target.Length = 2
-	layerPush0.Target.Size = 2
 	layerPush0.Target.MediaType = layerMediaType
+	layerPush0.Target.Digest = "sha256:3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d5"
+	layerPush0.Target.Size = 2
+	layerPush0.Target.Length = 2
 	layerPush0.Target.Repository = "library/test"
 	layerPush0.Target.URL = "http://example.com/v2/library/test/manifests/latest"
 
 	layerPush1 := prototype
 	layerPush1.ID = "asdf-asdf-asdf-asdf-2"
-	layerPush1.Target.Digest = "sha256:3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d6"
-	layerPush1.Target.Length = 3
-	layerPush1.Target.Size = 3
 	layerPush1.Target.MediaType = layerMediaType
+	layerPush1.Target.Digest = "sha256:3b3692957d439ac1928219a83fac91e7bf96c153725526874673ae1f2023f8d6"
+	layerPush1.Target.Size = 3
+	layerPush1.Target.Length = 3
 	layerPush1.Target.Repository = "library/test"
 	layerPush1.Target.URL = "http://example.com/v2/library/test/manifests/latest"
 

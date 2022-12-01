@@ -18,8 +18,8 @@ const expectedManifestListSerialization = `{
    "manifests": [
       {
          "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
-         "size": 985,
          "digest": "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
+         "size": 985,
          "platform": {
             "architecture": "amd64",
             "os": "linux",
@@ -30,8 +30,8 @@ const expectedManifestListSerialization = `{
       },
       {
          "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
-         "size": 2392,
          "digest": "sha256:6346340964309634683409684360934680934608934608934608934068934608",
+         "size": 2392,
          "platform": {
             "architecture": "sun4m",
             "os": "sunos"
@@ -44,9 +44,9 @@ func makeTestManifestList(t *testing.T, mediaType string) ([]ManifestDescriptor,
 	manifestDescriptors := []ManifestDescriptor{
 		{
 			Descriptor: distribution.Descriptor{
+				MediaType: "application/vnd.docker.distribution.manifest.v2+json",
 				Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
 				Size:      985,
-				MediaType: "application/vnd.docker.distribution.manifest.v2+json",
 			},
 			Platform: PlatformSpec{
 				Architecture: "amd64",
@@ -56,9 +56,9 @@ func makeTestManifestList(t *testing.T, mediaType string) ([]ManifestDescriptor,
 		},
 		{
 			Descriptor: distribution.Descriptor{
+				MediaType: "application/vnd.docker.distribution.manifest.v2+json",
 				Digest:    "sha256:6346340964309634683409684360934680934608934608934608934068934608",
 				Size:      2392,
-				MediaType: "application/vnd.docker.distribution.manifest.v2+json",
 			},
 			Platform: PlatformSpec{
 				Architecture: "sun4m",
@@ -142,8 +142,8 @@ const expectedOCIImageIndexSerialization = `{
    "manifests": [
       {
          "mediaType": "application/vnd.oci.image.manifest.v1+json",
-         "size": 985,
          "digest": "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
+         "size": 985,
          "platform": {
             "architecture": "amd64",
             "os": "linux",
@@ -154,8 +154,8 @@ const expectedOCIImageIndexSerialization = `{
       },
       {
          "mediaType": "application/vnd.oci.image.manifest.v1+json",
-         "size": 985,
          "digest": "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
+         "size": 985,
          "annotations": {
             "platform": "none"
          },
@@ -166,8 +166,8 @@ const expectedOCIImageIndexSerialization = `{
       },
       {
          "mediaType": "application/vnd.oci.image.manifest.v1+json",
-         "size": 2392,
          "digest": "sha256:6346340964309634683409684360934680934608934608934608934068934608",
+         "size": 2392,
          "annotations": {
             "what": "for"
          },
@@ -183,9 +183,9 @@ func makeTestOCIImageIndex(t *testing.T, mediaType string) ([]ManifestDescriptor
 	manifestDescriptors := []ManifestDescriptor{
 		{
 			Descriptor: distribution.Descriptor{
+				MediaType: "application/vnd.oci.image.manifest.v1+json",
 				Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
 				Size:      985,
-				MediaType: "application/vnd.oci.image.manifest.v1+json",
 			},
 			Platform: PlatformSpec{
 				Architecture: "amd64",
@@ -195,17 +195,17 @@ func makeTestOCIImageIndex(t *testing.T, mediaType string) ([]ManifestDescriptor
 		},
 		{
 			Descriptor: distribution.Descriptor{
+				MediaType:   "application/vnd.oci.image.manifest.v1+json",
 				Digest:      "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
 				Size:        985,
-				MediaType:   "application/vnd.oci.image.manifest.v1+json",
 				Annotations: map[string]string{"platform": "none"},
 			},
 		},
 		{
 			Descriptor: distribution.Descriptor{
+				MediaType:   "application/vnd.oci.image.manifest.v1+json",
 				Digest:      "sha256:6346340964309634683409684360934680934608934608934608934068934608",
 				Size:        2392,
-				MediaType:   "application/vnd.oci.image.manifest.v1+json",
 				Annotations: map[string]string{"what": "for"},
 			},
 			Platform: PlatformSpec{
