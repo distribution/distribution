@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"time"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/configuration"
@@ -93,6 +94,9 @@ func NewRegistryPullThroughCache(ctx context.Context, registry distribution.Name
 		return nil, err
 	}
 
+	if config.RepositoryTTL > 0 {
+		repositoryTTL = 24 * time.Duration(config.RepositoryTTL) * time.Hour
+	}
 	cs, err := configureAuth(config.Username, config.Password, config.RemoteURL)
 	if err != nil {
 		return nil, err

@@ -11,8 +11,8 @@ import (
 	"github.com/opencontainers/go-digest"
 )
 
-// todo(richardscothern): from cache control header or config
-const repositoryTTL = 24 * 7 * time.Hour
+// Can be overridden with proxy config. May consider to read from cache control header as well in the future.
+var repositoryTTL = 24 * 7 * time.Hour
 
 type proxyManifestStore struct {
 	ctx             context.Context
