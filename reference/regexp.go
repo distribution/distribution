@@ -50,7 +50,7 @@ const (
 	// supporting repeated dash was added. Additionally double underscore is
 	// now allowed as a separator to loosen the restriction for previously
 	// supported names.
-	separator = `(?:[._]|__|[-]*)`
+	separator = `(?:[._]|__|[-]+)`
 
 	// localhost is treated as a special value for domain-name. Any other
 	// domain-name without a "." or a ":port" are considered a path component.
