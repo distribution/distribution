@@ -31,6 +31,7 @@ bin/*
 
 # Cover profiles
 *.out
+coverage.txt
 
 # Editor/IDE specific files.
 *.sublime-project

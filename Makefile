@@ -4,7 +4,7 @@ ROOTDIR=$(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 # Used to populate version variable in main package.
 VERSION ?= $(shell git describe --match 'v[0-9]*' --dirty='.m' --always)
 REVISION ?= $(shell git rev-parse HEAD)$(shell if ! git diff --no-ext-diff --quiet --exit-code; then echo .m; fi)
-
+COMMIT_RANGE ?= $(shell git reflog show --no-abbrev --format='%h..HEAD')
 
 PKG=github.com/distribution/distribution/v3
 
@@ -104,7 +104,7 @@ lint: ## run all linters
 	docker buildx bake $@
 
 validate-git: ## validate git
-	docker buildx bake $@
+	COMMIT_RANGE=$(COMMIT_RANGE) docker buildx bake $@
 
 validate-vendor: ## validate vendor
 	docker buildx bake $@
