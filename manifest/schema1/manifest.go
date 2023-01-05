@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/manifest"
+	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/manifest"
 	"github.com/docker/libtrust"
 	"github.com/opencontainers/go-digest"
 )
@@ -20,13 +20,11 @@ const (
 	MediaTypeManifestLayer = "application/vnd.docker.container.image.rootfs.diff+x-gtar"
 )
 
-var (
-	// SchemaVersion provides a pre-initialized version structure for this
-	// packages version of the manifest.
-	SchemaVersion = manifest.Versioned{
-		SchemaVersion: 1,
-	}
-)
+// SchemaVersion provides a pre-initialized version structure for this
+// packages version of the manifest.
+var SchemaVersion = manifest.Versioned{
+	SchemaVersion: 1,
+}
 
 func init() {
 	schema1Func := func(b []byte) (distribution.Manifest, distribution.Descriptor, error) {
@@ -37,9 +35,9 @@ func init() {
 		}
 
 		desc := distribution.Descriptor{
+			MediaType: MediaTypeSignedManifest,
 			Digest:    digest.FromBytes(sm.Canonical),
 			Size:      int64(len(sm.Canonical)),
-			MediaType: MediaTypeSignedManifest,
 		}
 		return sm, desc, err
 	}
@@ -128,12 +126,12 @@ func (sm *SignedManifest) UnmarshalJSON(b []byte) error {
 	copy(sm.Canonical, bytes)
 
 	// Unmarshal canonical JSON into Manifest object
-	var manifest Manifest
-	if err := json.Unmarshal(sm.Canonical, &manifest); err != nil {
+	var mfst Manifest
+	if err := json.Unmarshal(sm.Canonical, &mfst); err != nil {
 		return err
 	}
 
-	sm.Manifest = manifest
+	sm.Manifest = mfst
 
 	return nil
 }
@@ -149,7 +147,6 @@ func (sm SignedManifest) References() []distribution.Descriptor {
 	}
 
 	return dependencies
-
 }
 
 // MarshalJSON returns the contents of raw. If Raw is nil, marshals the inner

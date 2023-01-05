@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/private/protocol"
@@ -60,6 +61,14 @@ func (b *xmlBuilder) buildValue(value reflect.Value, current *XMLNode, tag refle
 		return nil
 	}
 
+	xml := tag.Get("xml")
+	if len(xml) != 0 {
+		name := strings.SplitAfterN(xml, ",", 2)[0]
+		if name == "-" {
+			return nil
+		}
+	}
+
 	t := tag.Get("type")
 	if t == "" {
 		switch value.Kind() {
@@ -87,7 +96,7 @@ func (b *xmlBuilder) buildValue(value reflect.Value, current *XMLNode, tag refle
 	}
 }
 
-// buildStruct adds a struct and its fields to the current XMLNode. All fields any any nested
+// buildStruct adds a struct and its fields to the current XMLNode. All fields and any nested
 // types are converted to XMLNodes also.
 func (b *xmlBuilder) buildStruct(value reflect.Value, current *XMLNode, tag reflect.StructTag) error {
 	if !value.IsValid() {
@@ -299,6 +308,8 @@ func (b *xmlBuilder) buildScalar(value reflect.Value, current *XMLNode, tag refl
 	if tag.Get("xmlAttribute") != "" { // put into current node's attribute list
 		attr := xml.Attr{Name: xname, Value: str}
 		current.Attr = append(current.Attr, attr)
+	} else if len(xname.Local) == 0 {
+		current.Text = str
 	} else { // regular text node
 		current.AddChild(&XMLNode{Name: xname, Text: str})
 	}

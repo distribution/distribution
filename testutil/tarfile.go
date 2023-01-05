@@ -8,8 +8,8 @@ import (
 	mrand "math/rand"
 	"time"
 
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/context"
+	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/context"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -23,7 +23,7 @@ func CreateRandomTarFile() (rs io.ReadSeeker, dgst digest.Digest, err error) {
 
 	// Perturb this on each iteration of the loop below.
 	header := &tar.Header{
-		Mode:       0644,
+		Mode:       0o644,
 		ModTime:    time.Now(),
 		Typeflag:   tar.TypeReg,
 		Uname:      "randocalrissian",
@@ -96,7 +96,7 @@ func CreateRandomLayers(n int) (map[digest.Digest]io.ReadSeeker, error) {
 // UploadBlobs lets you upload blobs to a repository
 func UploadBlobs(repository distribution.Repository, layers map[digest.Digest]io.ReadSeeker) error {
 	ctx := context.Background()
-	for digest, rs := range layers {
+	for dgst, rs := range layers {
 		wr, err := repository.Blobs(ctx).Create(ctx)
 		if err != nil {
 			return fmt.Errorf("unexpected error creating upload: %v", err)
@@ -106,7 +106,7 @@ func UploadBlobs(repository distribution.Repository, layers map[digest.Digest]io
 			return fmt.Errorf("unexpected error copying to upload: %v", err)
 		}
 
-		if _, err := wr.Commit(ctx, distribution.Descriptor{Digest: digest}); err != nil {
+		if _, err := wr.Commit(ctx, distribution.Descriptor{Digest: dgst}); err != nil {
 			return fmt.Errorf("unexpected error committinng upload: %v", err)
 		}
 	}

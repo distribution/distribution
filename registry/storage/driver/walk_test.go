@@ -16,6 +16,7 @@ type changingFileSystem struct {
 func (cfs *changingFileSystem) List(_ context.Context, _ string) ([]string, error) {
 	return cfs.fileset, nil
 }
+
 func (cfs *changingFileSystem) Stat(_ context.Context, path string) (FileInfo, error) {
 	kept, ok := cfs.keptFiles[path]
 	if ok && kept {
@@ -48,6 +49,7 @@ func (cfs *fileSystem) Stat(_ context.Context, path string) (FileInfo, error) {
 		},
 	}, nil
 }
+
 func (cfs *fileSystem) isDir(path string) bool {
 	_, isDir := cfs.fileset[path]
 	return isDir
@@ -167,7 +169,6 @@ func TestWalkFallback(t *testing.T) {
 			compareWalked(t, tc.expected, walked)
 		})
 	}
-
 }
 
 func compareWalked(t *testing.T, expected, walked []string) {

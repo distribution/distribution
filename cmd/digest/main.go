@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/docker/distribution/version"
+	"github.com/distribution/distribution/v3/version"
 	"github.com/opencontainers/go-digest"
 
 	_ "crypto/sha256"
@@ -62,7 +62,6 @@ func main() {
 	if flag.NArg() > 0 {
 		for _, path := range flag.Args() {
 			fp, err := os.Open(path)
-
 			if err != nil {
 				log.Printf("%s: %v", path, err)
 				fail = true

@@ -61,7 +61,7 @@ Content-Type: application/x-www-form-urlencoded
         to be registered with the authorization server but should be set to a
         meaningful value in order to allow auditing keys created by unregistered
         clients. Accepted syntax is defined in
-        [RFC6749 Appendix A.1](https://tools.ietf.org/html/rfc6749#appendix-A.1)
+        <a href="https://tools.ietf.org/html/rfc6749#appendix-A.1" rel="noopener noreferrer nofollow" target="_blank">RFC6749 Appendix A.1</a>.
     </dd>
     <dt>
         <code>access_type</code>
@@ -126,7 +126,7 @@ Content-Type: application/x-www-form-urlencoded
     <dd>
         (REQUIRED) The scope granted inside the access token. This may be the
         same scope as requested or a subset. This requirement is stronger than
-        specified in [RFC6749 Section 4.2.2](https://tools.ietf.org/html/rfc6749#section-4.2.2)
+        specified in <a href="https://tools.ietf.org/html/rfc6749#section-4.2.2" rel="noopener noreferrer nofollow" target="_blank">RFC6749 Section 4.2.2</a>
         by strictly requiring the scope in the return value.
     </dd>
     <dt>
@@ -142,7 +142,7 @@ Content-Type: application/x-www-form-urlencoded
         <code>issued_at</code>
     </dt>
     <dd>
-        (Optional) The <a href="https://www.ietf.org/rfc/rfc3339.txt">RFC3339</a>-serialized UTC
+        (Optional) The <a href="https://www.ietf.org/rfc/rfc3339.txt" rel="noopener noreferrer nofollow" target="_blank">RFC3339</a>-serialized UTC
         standard time at which a given token was issued. If <code>issued_at</code> is omitted, the
         expiration is from when the token exchange completed.
     </dd>

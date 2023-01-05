@@ -2,44 +2,46 @@ package handlers
 
 import (
 	"context"
-	cryptorand "crypto/rand"
+	"crypto/rand"
 	"expvar"
 	"fmt"
-	"math/rand"
+	"math"
+	"math/big"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/configuration"
-	dcontext "github.com/docker/distribution/context"
-	"github.com/docker/distribution/health"
-	"github.com/docker/distribution/health/checks"
-	prometheus "github.com/docker/distribution/metrics"
-	"github.com/docker/distribution/notifications"
-	"github.com/docker/distribution/reference"
-	"github.com/docker/distribution/registry/api/errcode"
-	v2 "github.com/docker/distribution/registry/api/v2"
-	"github.com/docker/distribution/registry/auth"
-	registrymiddleware "github.com/docker/distribution/registry/middleware/registry"
-	repositorymiddleware "github.com/docker/distribution/registry/middleware/repository"
-	"github.com/docker/distribution/registry/proxy"
-	"github.com/docker/distribution/registry/storage"
-	memorycache "github.com/docker/distribution/registry/storage/cache/memory"
-	rediscache "github.com/docker/distribution/registry/storage/cache/redis"
-	storagedriver "github.com/docker/distribution/registry/storage/driver"
-	"github.com/docker/distribution/registry/storage/driver/factory"
-	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
-	"github.com/docker/distribution/version"
+	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/configuration"
+	dcontext "github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/health"
+	"github.com/distribution/distribution/v3/health/checks"
+	prometheus "github.com/distribution/distribution/v3/metrics"
+	"github.com/distribution/distribution/v3/notifications"
+	"github.com/distribution/distribution/v3/reference"
+	"github.com/distribution/distribution/v3/registry/api/errcode"
+	v2 "github.com/distribution/distribution/v3/registry/api/v2"
+	"github.com/distribution/distribution/v3/registry/auth"
+	registrymiddleware "github.com/distribution/distribution/v3/registry/middleware/registry"
+	repositorymiddleware "github.com/distribution/distribution/v3/registry/middleware/repository"
+	"github.com/distribution/distribution/v3/registry/proxy"
+	"github.com/distribution/distribution/v3/registry/storage"
+	memorycache "github.com/distribution/distribution/v3/registry/storage/cache/memory"
+	rediscache "github.com/distribution/distribution/v3/registry/storage/cache/redis"
+	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
+	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
+	storagemiddleware "github.com/distribution/distribution/v3/registry/storage/driver/middleware"
+	"github.com/distribution/distribution/v3/version"
 	events "github.com/docker/go-events"
 	"github.com/docker/go-metrics"
 	"github.com/docker/libtrust"
-	"github.com/garyburd/redigo/redis"
+	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
 )
@@ -271,6 +273,9 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 			if app.redis == nil {
 				panic("redis configuration required to use for layerinfo cache")
 			}
+			if _, ok := cc["blobdescriptorsize"]; ok {
+				dcontext.GetLogger(app).Warnf("blobdescriptorsize parameter is not supported with redis cache")
+			}
 			cacheProvider := rediscache.NewRedisBlobDescriptorCacheProvider(app.redis)
 			localOptions := append(options, storage.BlobDescriptorCacheProvider(cacheProvider))
 			app.registry, err = storage.NewRegistry(app, app.driver, localOptions...)
@@ -279,7 +284,17 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 			}
 			dcontext.GetLogger(app).Infof("using redis blob descriptor cache")
 		case "inmemory":
-			cacheProvider := memorycache.NewInMemoryBlobDescriptorCacheProvider()
+			blobDescriptorSize := memorycache.DefaultSize
+			configuredSize, ok := cc["blobdescriptorsize"]
+			if ok {
+				// Since Parameters is not strongly typed, render to a string and convert back
+				blobDescriptorSize, err = strconv.Atoi(fmt.Sprint(configuredSize))
+				if err != nil {
+					panic(fmt.Sprintf("invalid blobdescriptorsize value %s: %s", configuredSize, err))
+				}
+			}
+
+			cacheProvider := memorycache.NewInMemoryBlobDescriptorCacheProvider(blobDescriptorSize)
 			localOptions := append(options, storage.BlobDescriptorCacheProvider(cacheProvider))
 			app.registry, err = storage.NewRegistry(app, app.driver, localOptions...)
 			if err != nil {
@@ -514,11 +529,12 @@ func (app *App) configureRedis(configuration *configuration.Configuration) {
 				}
 			}
 
-			conn, err := redis.DialTimeout("tcp",
+			conn, err := redis.Dial("tcp",
 				configuration.Redis.Addr,
-				configuration.Redis.DialTimeout,
-				configuration.Redis.ReadTimeout,
-				configuration.Redis.WriteTimeout)
+				redis.DialConnectTimeout(configuration.Redis.DialTimeout),
+				redis.DialReadTimeout(configuration.Redis.ReadTimeout),
+				redis.DialWriteTimeout(configuration.Redis.WriteTimeout),
+				redis.DialUseTLS(configuration.Redis.TLS.Enabled))
 			if err != nil {
 				dcontext.GetLogger(app).Errorf("error connecting to redis instance %s: %v",
 					configuration.Redis.Addr, err)
@@ -611,7 +627,7 @@ func (app *App) configureLogHook(configuration *configuration.Configuration) {
 func (app *App) configureSecret(configuration *configuration.Configuration) {
 	if configuration.HTTP.Secret == "" {
 		var secretBytes [randomSecretSize]byte
-		if _, err := cryptorand.Read(secretBytes[:]); err != nil {
+		if _, err := rand.Read(secretBytes[:]); err != nil {
 			panic(fmt.Sprintf("could not generate random bytes for HTTP secret: %v", err))
 		}
 		configuration.HTTP.Secret = string(secretBytes[:])
@@ -687,7 +703,6 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 				return
 			}
 			repository, err := app.registry.Repository(context, nameRef)
-
 			if err != nil {
 				dcontext.GetLogger(context).Errorf("error resolving repository: %v", err)
 
@@ -822,7 +837,7 @@ func (app *App) authorized(w http.ResponseWriter, r *http.Request, context *Cont
 		if fromRepo := r.FormValue("from"); fromRepo != "" {
 			// mounting a blob from one repository to another requires pull (GET)
 			// access to the source repository.
-			accessRecords = appendAccessRecords(accessRecords, "GET", fromRepo)
+			accessRecords = appendAccessRecords(accessRecords, http.MethodGet, fromRepo)
 		}
 	} else {
 		// Only allow the name not to be set on the base route.
@@ -911,13 +926,13 @@ func appendAccessRecords(records []auth.Access, method string, repo string) []au
 	}
 
 	switch method {
-	case "GET", "HEAD":
+	case http.MethodGet, http.MethodHead:
 		records = append(records,
 			auth.Access{
 				Resource: resource,
 				Action:   "pull",
 			})
-	case "POST", "PUT", "PATCH":
+	case http.MethodPost, http.MethodPut, http.MethodPatch:
 		records = append(records,
 			auth.Access{
 				Resource: resource,
@@ -927,7 +942,7 @@ func appendAccessRecords(records []auth.Access, method string, repo string) []au
 				Resource: resource,
 				Action:   "push",
 			})
-	case "DELETE":
+	case http.MethodDelete:
 		records = append(records,
 			auth.Access{
 				Resource: resource,
@@ -967,7 +982,6 @@ func applyRegistryMiddleware(ctx context.Context, registry distribution.Namespac
 		registry = rmw
 	}
 	return registry, nil
-
 }
 
 // applyRepoMiddleware wraps a repository with the configured middlewares
@@ -1061,8 +1075,13 @@ func startUploadPurger(ctx context.Context, storageDriver storagedriver.StorageD
 	}
 
 	go func() {
-		rand.Seed(time.Now().Unix())
-		jitter := time.Duration(rand.Int()%60) * time.Minute
+		randInt, err := rand.Int(rand.Reader, new(big.Int).SetInt64(math.MaxInt64))
+		if err != nil {
+			log.Infof("Failed to generate random jitter: %v", err)
+			// sleep 30min for failure case
+			randInt = big.NewInt(30)
+		}
+		jitter := time.Duration(randInt.Int64()%60) * time.Minute
 		log.Infof("Starting upload purge in %s", jitter)
 		time.Sleep(jitter)
 

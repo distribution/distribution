@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -21,11 +20,10 @@ func (s *MiddlewareSuite) TestNoConfig(c *check.C) {
 }
 
 func TestCloudFrontStorageMiddlewareGenerateKey(t *testing.T) {
-
 	options := make(map[string]interface{})
 	options["baseurl"] = "example.com"
 
-	var privk = `-----BEGIN RSA PRIVATE KEY-----
+	privk := `-----BEGIN RSA PRIVATE KEY-----
 MIICXQIBAAKBgQCy0ZZsItDuYoX3y6hWqyU9YdH/0B+tlOhvjlaJqvkmAIBBatVV
 VAShnEAEircBwV3i08439WYgjXnrZ0FjXBTjTKWwCsbpuWJY1w8hqHW3VDivUo1n
 F9WTeclVJuEMhmiAhek3dhUdATaEDqBNskXMofSgKmQHqhPdXCgDmnzKoQIDAQAB
@@ -42,7 +40,7 @@ pZeMRablbPQdp8/1NyIwimq1VlG0ohQ4P6qhW7E09ZMC
 -----END RSA PRIVATE KEY-----
 `
 
-	file, err := ioutil.TempFile("", "pkey")
+	file, err := os.CreateTemp("", "pkey")
 	if err != nil {
 		t.Fatal("File cannot be created")
 	}

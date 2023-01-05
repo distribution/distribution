@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/docker/distribution"
+	"github.com/distribution/distribution/v3"
 	events "github.com/docker/go-events"
 )
 
@@ -143,9 +143,7 @@ type SourceRecord struct {
 	InstanceID string `json:"instanceID,omitempty"`
 }
 
-var (
-	// ErrSinkClosed is returned if a write is issued to a sink that has been
-	// closed. If encountered, the error should be considered terminal and
-	// retries will not be successful.
-	ErrSinkClosed = fmt.Errorf("sink: closed")
-)
+// ErrSinkClosed is returned if a write is issued to a sink that has been
+// closed. If encountered, the error should be considered terminal and
+// retries will not be successful.
+var ErrSinkClosed = fmt.Errorf("sink: closed")

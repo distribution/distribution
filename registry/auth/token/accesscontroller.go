@@ -7,13 +7,13 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"os"
 	"strings"
 
-	dcontext "github.com/docker/distribution/context"
-	"github.com/docker/distribution/registry/auth"
+	dcontext "github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/registry/auth"
 	"github.com/docker/libtrust"
 )
 
@@ -187,7 +187,7 @@ func newAccessController(options map[string]interface{}) (auth.AccessController,
 	}
 	defer fp.Close()
 
-	rawCertBundle, err := ioutil.ReadAll(fp)
+	rawCertBundle, err := io.ReadAll(fp)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read token auth root certificate bundle file %q: %s", config.rootCertBundle, err)
 	}
@@ -247,14 +247,11 @@ func (ac *accessController) Authorized(ctx context.Context, accessItems ...auth.
 		return nil, err
 	}
 
-	parts := strings.Split(req.Header.Get("Authorization"), " ")
-
-	if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
+	prefix, rawToken, ok := strings.Cut(req.Header.Get("Authorization"), " ")
+	if !ok || rawToken == "" || !strings.EqualFold(prefix, "bearer") {
 		challenge.err = ErrTokenRequired
 		return nil, challenge
 	}
-
-	rawToken := parts[1]
 
 	token, err := NewToken(rawToken)
 	if err != nil {

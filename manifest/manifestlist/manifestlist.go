@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/manifest"
+	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/manifest"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -54,6 +54,9 @@ func init() {
 	}
 
 	imageIndexFunc := func(b []byte) (distribution.Manifest, distribution.Descriptor, error) {
+		if err := validateIndex(b); err != nil {
+			return nil, distribution.Descriptor{}, err
+		}
 		m := new(DeserializedManifestList)
 		err := m.UnmarshalJSON(b)
 		if err != nil {
@@ -116,7 +119,7 @@ type ManifestDescriptor struct {
 type ManifestList struct {
 	manifest.Versioned
 
-	// Config references the image configuration as a blob.
+	// Manifests references a list of manifests
 	Manifests []ManifestDescriptor `json:"manifests"`
 }
 
@@ -126,6 +129,13 @@ func (m ManifestList) References() []distribution.Descriptor {
 	dependencies := make([]distribution.Descriptor, len(m.Manifests))
 	for i := range m.Manifests {
 		dependencies[i] = m.Manifests[i].Descriptor
+		dependencies[i].Platform = &v1.Platform{
+			Architecture: m.Manifests[i].Platform.Architecture,
+			OS:           m.Manifests[i].Platform.OS,
+			OSVersion:    m.Manifests[i].Platform.OSVersion,
+			OSFeatures:   m.Manifests[i].Platform.OSFeatures,
+			Variant:      m.Manifests[i].Platform.Variant,
+		}
 	}
 
 	return dependencies
@@ -213,4 +223,24 @@ func (m DeserializedManifestList) Payload() (string, []byte, error) {
 	}
 
 	return mediaType, m.canonical, nil
+}
+
+// unknownDocument represents a manifest, manifest list, or index that has not
+// yet been validated
+type unknownDocument struct {
+	Config interface{} `json:"config,omitempty"`
+	Layers interface{} `json:"layers,omitempty"`
+}
+
+// validateIndex returns an error if the byte slice is invalid JSON or if it
+// contains fields that belong to a manifest
+func validateIndex(b []byte) error {
+	var doc unknownDocument
+	if err := json.Unmarshal(b, &doc); err != nil {
+		return err
+	}
+	if doc.Config != nil || doc.Layers != nil {
+		return errors.New("index: expected index but found manifest")
+	}
+	return nil
 }

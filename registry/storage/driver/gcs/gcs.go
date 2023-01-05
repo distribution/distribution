@@ -2,7 +2,7 @@
 // store blobs in Google cloud storage.
 //
 // This package leverages the google.golang.org/cloud/storage client library
-//for interfacing with gcs.
+// for interfacing with gcs.
 //
 // Because gcs is a key, value store the Stat call does not support last modification
 // time for directories (directories are an abstraction for key, value stores)
@@ -10,6 +10,7 @@
 // Note that the contents of incomplete uploads are not accessible even though
 // Stat returns their length
 //
+//go:build include_gcs
 // +build include_gcs
 
 package gcs
@@ -20,10 +21,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/url"
+	"os"
 	"reflect"
 	"regexp"
 	"sort"
@@ -31,9 +32,9 @@ import (
 	"strings"
 	"time"
 
-	storagedriver "github.com/docker/distribution/registry/storage/driver"
-	"github.com/docker/distribution/registry/storage/driver/base"
-	"github.com/docker/distribution/registry/storage/driver/factory"
+	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
+	"github.com/distribution/distribution/v3/registry/storage/driver/base"
+	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -150,7 +151,7 @@ func FromParameters(parameters map[string]interface{}) (storagedriver.StorageDri
 	var ts oauth2.TokenSource
 	jwtConf := new(jwt.Config)
 	if keyfile, ok := parameters["keyfile"]; ok {
-		jsonKey, err := ioutil.ReadFile(fmt.Sprint(keyfile))
+		jsonKey, err := os.ReadFile(fmt.Sprint(keyfile))
 		if err != nil {
 			return nil, err
 		}
@@ -262,7 +263,7 @@ func (d *driver) GetContent(context context.Context, path string) ([]byte, error
 	}
 	defer rc.Close()
 
-	p, err := ioutil.ReadAll(rc)
+	p, err := io.ReadAll(rc)
 	if err != nil {
 		return nil, err
 	}
@@ -298,7 +299,7 @@ func (d *driver) Reader(context context.Context, path string, offset int64) (io.
 					return nil, err
 				}
 				if offset == int64(obj.Size) {
-					return ioutil.NopCloser(bytes.NewReader([]byte{})), nil
+					return io.NopCloser(bytes.NewReader([]byte{})), nil
 				}
 				return nil, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
 			}
@@ -320,7 +321,7 @@ func getObject(client *http.Client, bucket string, name string, offset int64) (*
 		Host:   "storage.googleapis.com",
 		Path:   fmt.Sprintf("/%s/%s", bucket, name),
 	}
-	req, err := http.NewRequest("GET", u.String(), nil)
+	req, err := http.NewRequest(http.MethodGet, u.String(), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -444,7 +445,6 @@ func putContentsClose(wc *storage.Writer, contents []byte) error {
 // available for future calls to StorageDriver.GetContent and
 // StorageDriver.Reader.
 func (w *writer) Commit() error {
-
 	if err := w.checkClosed(); err != nil {
 		return err
 	}
@@ -557,7 +557,7 @@ func (w *writer) init(path string) error {
 	if err != nil {
 		return err
 	}
-	buffer, err := ioutil.ReadAll(res.Body)
+	buffer, err := io.ReadAll(res.Body)
 	if err != nil {
 		return err
 	}
@@ -596,7 +596,7 @@ func retry(req request) error {
 // size in bytes and the creation time.
 func (d *driver) Stat(context context.Context, path string) (storagedriver.FileInfo, error) {
 	var fi storagedriver.FileInfoFields
-	//try to get as file
+	// try to get as file
 	gcsContext := d.context(context)
 	obj, err := storageStatObject(gcsContext, d.bucket, d.pathToKey(path))
 	if err == nil {
@@ -611,7 +611,7 @@ func (d *driver) Stat(context context.Context, path string) (storagedriver.FileI
 		}
 		return storagedriver.FileInfoInternal{FileInfoFields: fi}, nil
 	}
-	//try to get as folder
+	// try to get as folder
 	dirpath := d.pathToDirKey(path)
 
 	var query *storage.Query
@@ -639,7 +639,7 @@ func (d *driver) Stat(context context.Context, path string) (storagedriver.FileI
 }
 
 // List returns a list of the objects that are direct descendants of the
-//given path.
+// given path.
 func (d *driver) List(context context.Context, path string) ([]string, error) {
 	var query *storage.Query
 	query = &storage.Query{}
@@ -807,11 +807,11 @@ func (d *driver) URLFor(context context.Context, path string, options map[string
 	}
 
 	name := d.pathToKey(path)
-	methodString := "GET"
+	methodString := http.MethodGet
 	method, ok := options["method"]
 	if ok {
 		methodString, ok = method.(string)
-		if !ok || (methodString != "GET" && methodString != "HEAD") {
+		if !ok || (methodString != http.MethodGet && methodString != http.MethodHead) {
 			return "", storagedriver.ErrUnsupportedMethod{}
 		}
 	}
@@ -848,7 +848,7 @@ func startSession(client *http.Client, bucket string, name string) (uri string, 
 		RawQuery: fmt.Sprintf("uploadType=resumable&name=%v", name),
 	}
 	err = retry(func() error {
-		req, err := http.NewRequest("POST", u.String(), nil)
+		req, err := http.NewRequest(http.MethodPost, u.String(), nil)
 		if err != nil {
 			return err
 		}
@@ -872,7 +872,7 @@ func startSession(client *http.Client, bucket string, name string) (uri string, 
 func putChunk(client *http.Client, sessionURI string, chunk []byte, from int64, totalSize int64) (int64, error) {
 	bytesPut := int64(0)
 	err := retry(func() error {
-		req, err := http.NewRequest("PUT", sessionURI, bytes.NewReader(chunk))
+		req, err := http.NewRequest(http.MethodPut, sessionURI, bytes.NewReader(chunk))
 		if err != nil {
 			return err
 		}

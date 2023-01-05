@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	dcontext "github.com/docker/distribution/context"
+	dcontext "github.com/distribution/distribution/v3/context"
 
 	"reflect" // used as a replacement for testify
 )
@@ -35,7 +35,6 @@ func (m mockIPRangeHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Write(bytes)
-
 }
 
 func newTestHandler(data awsIPResponse) *httptest.Server {
@@ -68,7 +67,6 @@ func TestS3TryUpdate(t *testing.T) {
 
 	assertEqual(t, 1, len(ips.ipv4))
 	assertEqual(t, 0, len(ips.ipv6))
-
 }
 
 func TestMatchIPV6(t *testing.T) {
@@ -215,7 +213,7 @@ func TestInvalidNetworkType(t *testing.T) {
 }
 
 func TestParsing(t *testing.T) {
-	var data = `{
+	data := `{
       "prefixes": [{
         "ip_prefix": "192.168.0.0",
         "region": "someregion",

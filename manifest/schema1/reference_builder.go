@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/manifest"
-	"github.com/docker/distribution/reference"
+	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/manifest"
+	"github.com/distribution/distribution/v3/reference"
 	"github.com/docker/libtrust"
 	"github.com/opencontainers/go-digest"
 )
@@ -65,7 +65,6 @@ func (mb *referenceManifestBuilder) AppendReference(d distribution.Describable) 
 	mb.Manifest.FSLayers = append([]FSLayer{{BlobSum: r.Digest}}, mb.Manifest.FSLayers...)
 	mb.Manifest.History = append([]History{r.History}, mb.Manifest.History...)
 	return nil
-
 }
 
 // References returns the current references added to this builder

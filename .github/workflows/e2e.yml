@@ -1,0 +1,39 @@
+name: e2e
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  push:
+    branches:
+      - 'main'
+      - 'release/*'
+  pull_request:
+
+jobs:
+  run-e2e-test:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      -
+        name: Build image
+        uses: docker/bake-action@v2
+        with:
+          targets: image-local
+      -
+        name: Start distribution server
+        run: |
+          IP=`hostname -I | awk '{print $1}'`
+          echo "IP=$IP" >> $GITHUB_ENV
+          echo '{"insecure-registries" : ["'$IP':5000"]}' | sudo tee /etc/docker/daemon.json
+          sudo service docker restart
+          docker run --rm -p 5000:5000 -p 5001:5001 -idt "registry:local"
+      -
+        name: Tests
+        run: |
+          bash ./tests/push.sh $IP

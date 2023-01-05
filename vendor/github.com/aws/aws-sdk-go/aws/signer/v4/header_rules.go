@@ -1,8 +1,7 @@
 package v4
 
 import (
-	"net/http"
-	"strings"
+	"github.com/aws/aws-sdk-go/internal/strings"
 )
 
 // validator houses a set of rule needed for validation of a
@@ -35,23 +34,23 @@ func (m mapRule) IsValid(value string) bool {
 	return ok
 }
 
-// whitelist is a generic rule for whitelisting
-type whitelist struct {
+// allowList is a generic rule for allow listing
+type allowList struct {
 	rule
 }
 
-// IsValid for whitelist checks if the value is within the whitelist
-func (w whitelist) IsValid(value string) bool {
+// IsValid for allow list checks if the value is within the allow list
+func (w allowList) IsValid(value string) bool {
 	return w.rule.IsValid(value)
 }
 
-// blacklist is a generic rule for blacklisting
-type blacklist struct {
+// excludeList is a generic rule for exclude listing
+type excludeList struct {
 	rule
 }
 
-// IsValid for whitelist checks if the value is within the whitelist
-func (b blacklist) IsValid(value string) bool {
+// IsValid for exclude list checks if the value is within the exclude list
+func (b excludeList) IsValid(value string) bool {
 	return !b.rule.IsValid(value)
 }
 
@@ -61,7 +60,7 @@ type patterns []string
 // been found
 func (p patterns) IsValid(value string) bool {
 	for _, pattern := range p {
-		if strings.HasPrefix(http.CanonicalHeaderKey(value), pattern) {
+		if strings.HasPrefixFold(value, pattern) {
 			return true
 		}
 	}

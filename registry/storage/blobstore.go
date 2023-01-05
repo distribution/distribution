@@ -2,11 +2,12 @@ package storage
 
 import (
 	"context"
+	"io"
 	"path"
 
-	"github.com/docker/distribution"
-	dcontext "github.com/docker/distribution/context"
-	"github.com/docker/distribution/registry/storage/driver"
+	"github.com/distribution/distribution/v3"
+	dcontext "github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -41,7 +42,7 @@ func (bs *blobStore) Get(ctx context.Context, dgst digest.Digest) ([]byte, error
 	return p, nil
 }
 
-func (bs *blobStore) Open(ctx context.Context, dgst digest.Digest) (distribution.ReadSeekCloser, error) {
+func (bs *blobStore) Open(ctx context.Context, dgst digest.Digest) (io.ReadSeekCloser, error) {
 	desc, err := bs.statter.Stat(ctx, dgst)
 	if err != nil {
 		return nil, err
@@ -121,7 +122,6 @@ func (bs *blobStore) path(dgst digest.Digest) (string, error) {
 	bp, err := pathFor(blobDataPathSpec{
 		digest: dgst,
 	})
-
 	if err != nil {
 		return "", err
 	}
@@ -165,7 +165,6 @@ func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (distributi
 	path, err := pathFor(blobDataPathSpec{
 		digest: dgst,
 	})
-
 	if err != nil {
 		return distribution.Descriptor{}, err
 	}

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
-	dcontext "github.com/docker/distribution/context"
-	storagedriver "github.com/docker/distribution/registry/storage/driver"
-	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
+	dcontext "github.com/distribution/distribution/v3/context"
+	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
+	storagemiddleware "github.com/distribution/distribution/v3/registry/storage/driver/middleware"
 
 	"github.com/denverdino/aliyungo/cdn/auth"
 )
@@ -98,7 +98,6 @@ func newAliCDNStorageMiddleware(storageDriver storagedriver.StorageDriver, optio
 
 // URLFor attempts to find a url which may be used to retrieve the file at the given path.
 func (ac *aliCDNStorageMiddleware) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
-
 	if ac.StorageDriver.Name() != "oss" {
 		dcontext.GetLogger(ctx).Warn("the AliCDN middleware does not support this backend storage driver")
 		return ac.StorageDriver.URLFor(ctx, path, options)
@@ -112,5 +111,5 @@ func (ac *aliCDNStorageMiddleware) URLFor(ctx context.Context, path string, opti
 
 // init registers the alicdn layerHandler backend.
 func init() {
-	storagemiddleware.Register("alicdn", storagemiddleware.InitFunc(newAliCDNStorageMiddleware))
+	storagemiddleware.Register("alicdn", newAliCDNStorageMiddleware)
 }

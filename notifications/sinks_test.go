@@ -3,13 +3,12 @@ package notifications
 import (
 	"reflect"
 	"sync"
+	"testing"
 	"time"
 
 	events "github.com/docker/go-events"
 
 	"github.com/sirupsen/logrus"
-
-	"testing"
 )
 
 func TestEventQueue(t *testing.T) {

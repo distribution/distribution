@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/reference"
-	"github.com/docker/distribution/registry/storage/driver/inmemory"
+	"github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/reference"
+	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 )
 
 func testRefs(t *testing.T) (reference.Reference, reference.Reference, reference.Reference) {
@@ -69,7 +69,6 @@ func TestSchedule(t *testing.T) {
 		s.Lock()
 		s.add(ref3, 1*timeUnit, entryTypeBlob)
 		s.Unlock()
-
 	}()
 
 	// Ensure all repos are deleted
@@ -195,7 +194,6 @@ func TestStopRestore(t *testing.T) {
 	if len(remainingRepos) != 0 {
 		t.Fatalf("Repositories remaining: %#v", remainingRepos)
 	}
-
 }
 
 func TestDoubleStart(t *testing.T) {
