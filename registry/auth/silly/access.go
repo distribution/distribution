@@ -13,8 +13,8 @@ import (
 	"net/http"
 	"strings"
 
-	dcontext "github.com/docker/distribution/context"
-	"github.com/docker/distribution/registry/auth"
+	dcontext "github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/registry/auth"
 )
 
 // accessController provides a simple implementation of auth.AccessController
@@ -70,7 +70,6 @@ func (ac *accessController) Authorized(ctx context.Context, accessRecords ...aut
 	ctx = dcontext.WithLogger(ctx, dcontext.GetLogger(ctx, auth.UserNameKey, auth.UserKey))
 
 	return ctx, nil
-
 }
 
 type challenge struct {

@@ -3,12 +3,12 @@ package testutil
 import (
 	"fmt"
 
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/manifest"
-	"github.com/docker/distribution/manifest/manifestlist"
-	"github.com/docker/distribution/manifest/schema1"
-	"github.com/docker/distribution/manifest/schema2"
+	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/manifest"
+	"github.com/distribution/distribution/v3/manifest/manifestlist"
+	"github.com/distribution/distribution/v3/manifest/schema1"
+	"github.com/distribution/distribution/v3/manifest/schema2"
 	"github.com/docker/libtrust"
 	"github.com/opencontainers/go-digest"
 )
@@ -42,7 +42,7 @@ func MakeManifestList(blobstatter distribution.BlobStatter, manifestDigests []di
 // MakeSchema1Manifest constructs a schema 1 manifest from a given list of digests and returns
 // the digest of the manifest
 func MakeSchema1Manifest(digests []digest.Digest) (distribution.Manifest, error) {
-	manifest := schema1.Manifest{
+	mfst := schema1.Manifest{
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
@@ -50,9 +50,9 @@ func MakeSchema1Manifest(digests []digest.Digest) (distribution.Manifest, error)
 		Tag:  "cares",
 	}
 
-	for _, digest := range digests {
-		manifest.FSLayers = append(manifest.FSLayers, schema1.FSLayer{BlobSum: digest})
-		manifest.History = append(manifest.History, schema1.History{V1Compatibility: ""})
+	for _, d := range digests {
+		mfst.FSLayers = append(mfst.FSLayers, schema1.FSLayer{BlobSum: d})
+		mfst.History = append(mfst.History, schema1.History{V1Compatibility: ""})
 	}
 
 	pk, err := libtrust.GenerateECP256PrivateKey()
@@ -60,7 +60,7 @@ func MakeSchema1Manifest(digests []digest.Digest) (distribution.Manifest, error)
 		return nil, fmt.Errorf("unexpected error generating private key: %v", err)
 	}
 
-	signedManifest, err := schema1.Sign(&manifest, pk)
+	signedManifest, err := schema1.Sign(&mfst, pk)
 	if err != nil {
 		return nil, fmt.Errorf("error signing manifest: %v", err)
 	}
@@ -74,14 +74,14 @@ func MakeSchema2Manifest(repository distribution.Repository, digests []digest.Di
 	ctx := context.Background()
 	blobStore := repository.Blobs(ctx)
 	builder := schema2.NewManifestBuilder(blobStore, schema2.MediaTypeImageConfig, []byte{})
-	for _, digest := range digests {
-		builder.AppendReference(distribution.Descriptor{Digest: digest})
+	for _, d := range digests {
+		builder.AppendReference(distribution.Descriptor{Digest: d})
 	}
 
-	manifest, err := builder.Build(ctx)
+	mfst, err := builder.Build(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("unexpected error generating manifest: %v", err)
 	}
 
-	return manifest, nil
+	return mfst, nil
 }

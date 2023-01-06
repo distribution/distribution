@@ -7,10 +7,10 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/docker/distribution"
-	dcontext "github.com/docker/distribution/context"
-	"github.com/docker/distribution/reference"
-	"github.com/docker/distribution/registry/proxy/scheduler"
+	"github.com/distribution/distribution/v3"
+	dcontext "github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/reference"
+	"github.com/distribution/distribution/v3/registry/proxy/scheduler"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -130,14 +130,19 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 	inflight[dgst] = struct{}{}
 	mu.Unlock()
 
+	// storeLocalCtx will be independent with ctx, because ctx it used to fetch remote image.
+	// There would be a situation, that is pulling remote bytes ends before pbs.storeLocal( 'Copy', 'Commit' ...)
+	// Then the registry fails to cache the layer, even though the layer had been served to client.
+	storeLocalCtx, cancel := context.WithCancel(context.Background())
 	go func(dgst digest.Digest) {
-		if err := pbs.storeLocal(ctx, dgst); err != nil {
-			dcontext.GetLogger(ctx).Errorf("Error committing to storage: %s", err.Error())
+		defer cancel()
+		if err := pbs.storeLocal(storeLocalCtx, dgst); err != nil {
+			dcontext.GetLogger(storeLocalCtx).Errorf("Error committing to storage: %s", err.Error())
 		}
 
 		blobRef, err := reference.WithDigest(pbs.repositoryName, dgst)
 		if err != nil {
-			dcontext.GetLogger(ctx).Errorf("Error creating reference: %s", err)
+			dcontext.GetLogger(storeLocalCtx).Errorf("Error creating reference: %s", err)
 			return
 		}
 
@@ -146,6 +151,7 @@ func (pbs *proxyBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter,
 
 	_, err = pbs.copyContent(ctx, dgst, w)
 	if err != nil {
+		cancel()
 		return err
 	}
 	return nil
@@ -207,7 +213,7 @@ func (pbs *proxyBlobStore) Mount(ctx context.Context, sourceRepo reference.Named
 	return distribution.Descriptor{}, distribution.ErrUnsupported
 }
 
-func (pbs *proxyBlobStore) Open(ctx context.Context, dgst digest.Digest) (distribution.ReadSeekCloser, error) {
+func (pbs *proxyBlobStore) Open(ctx context.Context, dgst digest.Digest) (io.ReadSeekCloser, error) {
 	return nil, distribution.ErrUnsupported
 }
 

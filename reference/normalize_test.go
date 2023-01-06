@@ -4,11 +4,11 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/docker/distribution/digestset"
 	"github.com/opencontainers/go-digest"
 )
 
 func TestValidateReferenceName(t *testing.T) {
+	t.Parallel()
 	validRepoNames := []string{
 		"docker/docker",
 		"library/debian",
@@ -22,12 +22,21 @@ func TestValidateReferenceName(t *testing.T) {
 		"127.0.0.1:5000/docker/docker",
 		"127.0.0.1:5000/library/debian",
 		"127.0.0.1:5000/debian",
+		"192.168.0.1",
+		"192.168.0.1:80",
+		"192.168.0.1:8/debian",
+		"192.168.0.2:25000/debian",
 		"thisisthesongthatneverendsitgoesonandonandonthisisthesongthatnev",
+		"[fc00::1]:5000/docker",
+		"[fc00::1]:5000/docker/docker",
+		"[fc00:1:2:3:4:5:6:7]:5000/library/debian",
 
 		// This test case was moved from invalid to valid since it is valid input
 		// when specified with a hostname, it removes the ambiguity from about
 		// whether the value is an identifier or repository name
 		"docker.io/1a3f5e7d9c1b3a5f7e9d1c3b5a7f9e1d3c5b7a9f1e3d5d7c9b1a3f5e7d9c1b3a",
+		"Docker/docker",
+		"DOCKER/docker",
 	}
 	invalidRepoNames := []string{
 		"https://github.com/docker/docker",
@@ -38,6 +47,11 @@ func TestValidateReferenceName(t *testing.T) {
 		"docker///docker",
 		"docker.io/docker/Docker",
 		"docker.io/docker///docker",
+		"[fc00::1]",
+		"[fc00::1]:5000",
+		"fc00::1:5000/debian",
+		"[fe80::1%eth0]:5000/debian",
+		"[2001:db8:3:4::192.0.2.33]:5000/debian",
 		"1a3f5e7d9c1b3a5f7e9d1c3b5a7f9e1d3c5b7a9f1e3d5d7c9b1a3f5e7d9c1b3a",
 	}
 
@@ -57,6 +71,7 @@ func TestValidateReferenceName(t *testing.T) {
 }
 
 func TestValidateRemoteName(t *testing.T) {
+	t.Parallel()
 	validRepositoryNames := []string{
 		// Sanity check.
 		"docker/docker",
@@ -70,7 +85,7 @@ func TestValidateRemoteName(t *testing.T) {
 		// Allow multiple hyphens as well.
 		"docker---rules/docker",
 
-		//Username doc and image name docker being tested.
+		// Username doc and image name docker being tested.
 		"doc/docker",
 
 		// single character names are now allowed.
@@ -115,7 +130,7 @@ func TestValidateRemoteName(t *testing.T) {
 		// No repository.
 		"docker/",
 
-		//namespace too long
+		// namespace too long
 		"this_is_not_a_valid_namespace_because_its_lenth_is_greater_than_255_this_is_not_a_valid_namespace_because_its_lenth_is_greater_than_255_this_is_not_a_valid_namespace_because_its_lenth_is_greater_than_255_this_is_not_a_valid_namespace_because_its_lenth_is_greater_than_255/docker",
 	}
 	for _, repositoryName := range invalidRepositoryNames {
@@ -126,6 +141,7 @@ func TestValidateRemoteName(t *testing.T) {
 }
 
 func TestParseRepositoryInfo(t *testing.T) {
+	t.Parallel()
 	type tcase struct {
 		RemoteName, FamiliarName, FullName, AmbiguousName, Domain string
 	}
@@ -229,6 +245,20 @@ func TestParseRepositoryInfo(t *testing.T) {
 			AmbiguousName: "",
 			Domain:        "docker.io",
 		},
+		{
+			RemoteName:    "bar",
+			FamiliarName:  "Foo/bar",
+			FullName:      "Foo/bar",
+			AmbiguousName: "",
+			Domain:        "Foo",
+		},
+		{
+			RemoteName:    "bar",
+			FamiliarName:  "FOO/bar",
+			FullName:      "FOO/bar",
+			AmbiguousName: "",
+			Domain:        "FOO",
+		},
 	}
 
 	for _, tcase := range tcases {
@@ -265,6 +295,7 @@ func TestParseRepositoryInfo(t *testing.T) {
 }
 
 func TestParseReferenceWithTagAndDigest(t *testing.T) {
+	t.Parallel()
 	shortRef := "busybox:latest@sha256:86e0e091d0da6bde2456dbb48306f3956bbeb2eae1b5b9a43045843f69fe4aaa"
 	ref, err := ParseNormalizedNamed(shortRef)
 	if err != nil {
@@ -286,6 +317,7 @@ func TestParseReferenceWithTagAndDigest(t *testing.T) {
 }
 
 func TestInvalidReferenceComponents(t *testing.T) {
+	t.Parallel()
 	if _, err := ParseNormalizedNamed("-foo"); err == nil {
 		t.Fatal("Expected WithName to detect invalid name")
 	}
@@ -328,11 +360,11 @@ func equalReference(r1, r2 Reference) bool {
 }
 
 func TestParseAnyReference(t *testing.T) {
+	t.Parallel()
 	tcases := []struct {
 		Reference  string
 		Equivalent string
 		Expected   Reference
-		Digests    []digest.Digest
 	}{
 		{
 			Reference:  "redis",
@@ -389,61 +421,15 @@ func TestParseAnyReference(t *testing.T) {
 			Equivalent: "docker.io/library/dbcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9",
 		},
 		{
-			Reference:  "dbcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9",
-			Expected:   digestReference("sha256:dbcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9c"),
-			Equivalent: "sha256:dbcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9c",
-			Digests: []digest.Digest{
-				digest.Digest("sha256:dbcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9c"),
-				digest.Digest("sha256:abcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9c"),
-			},
-		},
-		{
-			Reference:  "dbcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9",
-			Equivalent: "docker.io/library/dbcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9",
-			Digests: []digest.Digest{
-				digest.Digest("sha256:abcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9c"),
-			},
-		},
-		{
-			Reference:  "dbcc1c",
-			Expected:   digestReference("sha256:dbcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9c"),
-			Equivalent: "sha256:dbcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9c",
-			Digests: []digest.Digest{
-				digest.Digest("sha256:dbcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9c"),
-				digest.Digest("sha256:abcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9c"),
-			},
-		},
-		{
 			Reference:  "dbcc1",
 			Equivalent: "docker.io/library/dbcc1",
-			Digests: []digest.Digest{
-				digest.Digest("sha256:dbcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9c"),
-				digest.Digest("sha256:abcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9c"),
-			},
-		},
-		{
-			Reference:  "dbcc1c",
-			Equivalent: "docker.io/library/dbcc1c",
-			Digests: []digest.Digest{
-				digest.Digest("sha256:abcc1c35ac38df41fd2f5e4130b32ffdb93ebae8b3dbe638c23575912276fc9c"),
-			},
 		},
 	}
 
 	for _, tcase := range tcases {
 		var ref Reference
 		var err error
-		if len(tcase.Digests) == 0 {
-			ref, err = ParseAnyReference(tcase.Reference)
-		} else {
-			ds := digestset.NewSet()
-			for _, dgst := range tcase.Digests {
-				if err := ds.Add(dgst); err != nil {
-					t.Fatalf("Error adding digest %s: %v", dgst.String(), err)
-				}
-			}
-			ref, err = ParseAnyReferenceWithSet(tcase.Reference, ds)
-		}
+		ref, err = ParseAnyReference(tcase.Reference)
 		if err != nil {
 			t.Fatalf("Error parsing reference %s: %v", tcase.Reference, err)
 		}
@@ -465,6 +451,7 @@ func TestParseAnyReference(t *testing.T) {
 }
 
 func TestNormalizedSplitHostname(t *testing.T) {
+	t.Parallel()
 	testcases := []struct {
 		input  string
 		domain string
@@ -547,6 +534,7 @@ func TestNormalizedSplitHostname(t *testing.T) {
 }
 
 func TestMatchError(t *testing.T) {
+	t.Parallel()
 	named, err := ParseAnyReference("foo")
 	if err != nil {
 		t.Fatal(err)
@@ -558,6 +546,7 @@ func TestMatchError(t *testing.T) {
 }
 
 func TestMatch(t *testing.T) {
+	t.Parallel()
 	matchCases := []struct {
 		reference string
 		pattern   string
@@ -625,6 +614,7 @@ func TestMatch(t *testing.T) {
 }
 
 func TestParseDockerRef(t *testing.T) {
+	t.Parallel()
 	testcases := []struct {
 		name     string
 		input    string
@@ -688,6 +678,7 @@ func TestParseDockerRef(t *testing.T) {
 	}
 	for _, test := range testcases {
 		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
 			normalized, err := ParseDockerRef(test.input)
 			if err != nil {
 				t.Fatal(err)

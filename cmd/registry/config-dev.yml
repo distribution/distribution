@@ -22,7 +22,7 @@ storage:
     delete:
       enabled: true
     cache:
-        blobdescriptor: redis
+        blobdescriptor: inmemory
     filesystem:
         rootdirectory: /var/lib/registry
     maintenance:

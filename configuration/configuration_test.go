@@ -32,16 +32,15 @@ var configStruct = Configuration{
 		Fields: map[string]interface{}{"environment": "test"},
 	},
 	Storage: Storage{
-		"s3": Parameters{
-			"region":        "us-east-1",
-			"bucket":        "my-bucket",
-			"rootdirectory": "/registry",
-			"encrypt":       true,
-			"secure":        false,
-			"accesskey":     "SAMPLEACCESSKEY",
-			"secretkey":     "SUPERSECRET",
-			"host":          nil,
-			"port":          42,
+		"somedriver": Parameters{
+			"string1": "string-value1",
+			"string2": "string-value2",
+			"bool1":   true,
+			"bool2":   false,
+			"nil1":    nil,
+			"int1":    42,
+			"url1":    "https://foo.example.com",
+			"path1":   "/some-path",
 		},
 	},
 	Auth: Auth{
@@ -80,11 +79,12 @@ var configStruct = Configuration{
 		RelativeURLs bool          `yaml:"relativeurls,omitempty"`
 		DrainTimeout time.Duration `yaml:"draintimeout,omitempty"`
 		TLS          struct {
-			Certificate string   `yaml:"certificate,omitempty"`
-			Key         string   `yaml:"key,omitempty"`
-			ClientCAs   []string `yaml:"clientcas,omitempty"`
-			MinimumTLS  string   `yaml:"minimumtls,omitempty"`
-			LetsEncrypt struct {
+			Certificate  string   `yaml:"certificate,omitempty"`
+			Key          string   `yaml:"key,omitempty"`
+			ClientCAs    []string `yaml:"clientcas,omitempty"`
+			MinimumTLS   string   `yaml:"minimumtls,omitempty"`
+			CipherSuites []string `yaml:"ciphersuites,omitempty"`
+			LetsEncrypt  struct {
 				CacheFile string   `yaml:"cachefile,omitempty"`
 				Email     string   `yaml:"email,omitempty"`
 				Hosts     []string `yaml:"hosts,omitempty"`
@@ -103,11 +103,12 @@ var configStruct = Configuration{
 		} `yaml:"http2,omitempty"`
 	}{
 		TLS: struct {
-			Certificate string   `yaml:"certificate,omitempty"`
-			Key         string   `yaml:"key,omitempty"`
-			ClientCAs   []string `yaml:"clientcas,omitempty"`
-			MinimumTLS  string   `yaml:"minimumtls,omitempty"`
-			LetsEncrypt struct {
+			Certificate  string   `yaml:"certificate,omitempty"`
+			Key          string   `yaml:"key,omitempty"`
+			ClientCAs    []string `yaml:"clientcas,omitempty"`
+			MinimumTLS   string   `yaml:"minimumtls,omitempty"`
+			CipherSuites []string `yaml:"ciphersuites,omitempty"`
+			LetsEncrypt  struct {
 				CacheFile string   `yaml:"cachefile,omitempty"`
 				Email     string   `yaml:"email,omitempty"`
 				Hosts     []string `yaml:"hosts,omitempty"`
@@ -134,16 +135,15 @@ log:
   fields:
     environment: test
 storage:
-  s3:
-    region: us-east-1
-    bucket: my-bucket
-    rootdirectory: /registry
-    encrypt: true
-    secure: false
-    accesskey: SAMPLEACCESSKEY
-    secretkey: SUPERSECRET
-    host: ~
-    port: 42
+  somedriver:
+    string1: string-value1
+    string2: string-value2
+    bool1: true
+    bool2: false
+    nil1: ~
+    int1: 42
+    url1: "https://foo.example.com"
+    path1: "/some-path"
 auth:
   silly:
     realm: silly
@@ -273,10 +273,10 @@ func (suite *ConfigSuite) TestParseIncomplete(c *C) {
 // that match the given storage type will only include environment-defined
 // parameters and remove yaml-defined parameters
 func (suite *ConfigSuite) TestParseWithSameEnvStorage(c *C) {
-	suite.expectedConfig.Storage = Storage{"s3": Parameters{"region": "us-east-1"}}
+	suite.expectedConfig.Storage = Storage{"somedriver": Parameters{"region": "us-east-1"}}
 
-	os.Setenv("REGISTRY_STORAGE", "s3")
-	os.Setenv("REGISTRY_STORAGE_S3_REGION", "us-east-1")
+	os.Setenv("REGISTRY_STORAGE", "somedriver")
+	os.Setenv("REGISTRY_STORAGE_SOMEDRIVER_REGION", "us-east-1")
 
 	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
 	c.Assert(err, IsNil)
@@ -287,13 +287,13 @@ func (suite *ConfigSuite) TestParseWithSameEnvStorage(c *C) {
 // and add to the given storage parameters will change and add parameters to the parsed
 // Configuration struct
 func (suite *ConfigSuite) TestParseWithDifferentEnvStorageParams(c *C) {
-	suite.expectedConfig.Storage.setParameter("region", "us-west-1")
-	suite.expectedConfig.Storage.setParameter("secure", true)
+	suite.expectedConfig.Storage.setParameter("string1", "us-west-1")
+	suite.expectedConfig.Storage.setParameter("bool1", true)
 	suite.expectedConfig.Storage.setParameter("newparam", "some Value")
 
-	os.Setenv("REGISTRY_STORAGE_S3_REGION", "us-west-1")
-	os.Setenv("REGISTRY_STORAGE_S3_SECURE", "true")
-	os.Setenv("REGISTRY_STORAGE_S3_NEWPARAM", "some Value")
+	os.Setenv("REGISTRY_STORAGE_SOMEDRIVER_STRING1", "us-west-1")
+	os.Setenv("REGISTRY_STORAGE_SOMEDRIVER_BOOL1", "true")
+	os.Setenv("REGISTRY_STORAGE_SOMEDRIVER_NEWPARAM", "some Value")
 
 	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
 	c.Assert(err, IsNil)
@@ -360,7 +360,6 @@ func (suite *ConfigSuite) TestParseInvalidLoglevel(c *C) {
 
 	_, err = Parse(bytes.NewReader([]byte(configYamlV0_1)))
 	c.Assert(err, NotNil)
-
 }
 
 // TestParseWithDifferentEnvReporting validates that environment variables
@@ -431,7 +430,7 @@ func (suite *ConfigSuite) TestParseEnvVarImplicitMaps(c *C) {
 // TestParseEnvWrongTypeMap validates that incorrectly attempting to unmarshal a
 // string over existing map fails.
 func (suite *ConfigSuite) TestParseEnvWrongTypeMap(c *C) {
-	os.Setenv("REGISTRY_STORAGE_S3", "somestring")
+	os.Setenv("REGISTRY_STORAGE_SOMEDRIVER", "somestring")
 
 	_, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
 	c.Assert(err, NotNil)
@@ -466,7 +465,7 @@ func (suite *ConfigSuite) TestParseEnvMany(c *C) {
 	os.Setenv("REGISTRY_LOG_FIELDS", "abc: xyz")
 	os.Setenv("REGISTRY_LOG_HOOKS", "- type: asdf")
 	os.Setenv("REGISTRY_LOGLEVEL", "debug")
-	os.Setenv("REGISTRY_STORAGE", "s3")
+	os.Setenv("REGISTRY_STORAGE", "somedriver")
 	os.Setenv("REGISTRY_AUTH_PARAMS", "param1: value1")
 	os.Setenv("REGISTRY_AUTH_PARAMS_VALUE2", "value2")
 	os.Setenv("REGISTRY_AUTH_PARAMS_VALUE2", "value2")

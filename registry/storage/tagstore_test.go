@@ -5,11 +5,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/manifest"
-	"github.com/docker/distribution/manifest/schema2"
-	"github.com/docker/distribution/reference"
-	"github.com/docker/distribution/registry/storage/driver/inmemory"
+	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/manifest"
+	"github.com/distribution/distribution/v3/manifest/schema2"
+	"github.com/distribution/distribution/v3/reference"
+	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	digest "github.com/opencontainers/go-digest"
 )
 
@@ -98,8 +98,8 @@ func TestTagStoreUnTag(t *testing.T) {
 	desc := distribution.Descriptor{Digest: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}
 
 	err := tags.Untag(ctx, "latest")
-	if err != nil {
-		t.Error(err)
+	if err == nil {
+		t.Error("expected error removing unknown tag")
 	}
 
 	err = tags.Tag(ctx, "latest", desc)
@@ -163,7 +163,6 @@ func TestTagStoreAll(t *testing.T) {
 			t.Errorf("unexpected tag in enumerate %s", removed)
 		}
 	}
-
 }
 
 func TestTagLookup(t *testing.T) {

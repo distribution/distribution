@@ -8,14 +8,13 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"strings"
 	"time"
 
-	storagedriver "github.com/docker/distribution/registry/storage/driver"
-	"github.com/docker/distribution/registry/storage/driver/base"
-	"github.com/docker/distribution/registry/storage/driver/factory"
+	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
+	"github.com/distribution/distribution/v3/registry/storage/driver/base"
+	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
 
 	azure "github.com/Azure/azure-sdk-for-go/storage"
 )
@@ -93,7 +92,8 @@ func New(accountName, accountKey, container, realm string) (*Driver, error) {
 
 	d := &driver{
 		client:    blobClient,
-		container: container}
+		container: container,
+	}
 	return &Driver{baseEmbed: baseEmbed{Base: base.Base{StorageDriver: d}}}, nil
 }
 
@@ -114,7 +114,7 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 	}
 
 	defer blob.Close()
-	return ioutil.ReadAll(blob)
+	return io.ReadAll(blob)
 }
 
 // PutContent stores the []byte content at a location designated by "path".
@@ -127,7 +127,7 @@ func (d *driver) PutContent(ctx context.Context, path string, contents []byte) e
 	}
 
 	// Historically, blobs uploaded via PutContent used to be of type AppendBlob
-	// (https://github.com/docker/distribution/pull/1438). We can't replace
+	// (https://github.com/distribution/distribution/pull/1438). We can't replace
 	// these blobs atomically via a single "Put Blob" operation without
 	// deleting them first. Once we detect they are BlockBlob type, we can
 	// overwrite them with an atomically "Put Blob" operation.
@@ -171,7 +171,7 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 	info := blobRef.Properties
 	size := info.ContentLength
 	if offset >= size {
-		return ioutil.NopCloser(bytes.NewReader(nil)), nil
+		return io.NopCloser(bytes.NewReader(nil)), nil
 	}
 
 	resp, err := blobRef.GetRange(&azure.GetBlobRangeOptions{
@@ -360,7 +360,7 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 }
 
 // Walk traverses a filesystem defined within driver, starting
-// from the given path, calling f on each file
+// from the given path, calling f on each file and directory
 func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn) error {
 	return storagedriver.WalkFallback(ctx, d, path, f)
 }
@@ -412,7 +412,6 @@ func (d *driver) listBlobs(container, virtPath string) ([]string, error) {
 			Marker: marker,
 			Prefix: virtPath,
 		})
-
 		if err != nil {
 			return out, err
 		}

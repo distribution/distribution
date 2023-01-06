@@ -5,12 +5,11 @@ import (
 	"crypto/rsa"
 	"encoding/base64"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
-	"strings"
-
-	"github.com/docker/distribution/registry/auth"
+	"github.com/distribution/distribution/v3/registry/auth"
 	"github.com/docker/libtrust"
 )
 
@@ -49,7 +48,6 @@ func TestCreateJWTSuccessWithEmptyACL(t *testing.T) {
 	if !strings.Contains(json, "test") {
 		t.Fatal("Valid token was not generated.")
 	}
-
 }
 
 func decodeJWT(rawToken string) (string, error) {
@@ -74,7 +72,7 @@ func joseBase64Decode(s string) (string, error) {
 	}
 	data, err := base64.StdEncoding.DecodeString(s)
 	if err != nil {
-		return "", err //errors.New("Error in Decoding base64 String")
+		return "", err // errors.New("Error in Decoding base64 String")
 	}
 	return string(data), nil
 }

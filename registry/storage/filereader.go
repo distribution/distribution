@@ -6,9 +6,8 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 
-	storagedriver "github.com/docker/distribution/registry/storage/driver"
+	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 )
 
 // TODO(stevvooe): Set an optimal buffer size here. We'll have to
@@ -126,7 +125,7 @@ func (fr *fileReader) reader() (io.Reader, error) {
 			// reader that returns io.EOF. However, we do not set fr.rc,
 			// allowing future attempts at getting a reader to possibly
 			// succeed if the file turns up later.
-			return ioutil.NopCloser(bytes.NewReader([]byte{})), nil
+			return io.NopCloser(bytes.NewReader([]byte{})), nil
 		default:
 			return nil, err
 		}

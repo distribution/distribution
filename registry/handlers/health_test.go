@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -9,15 +8,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/distribution/configuration"
-	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/health"
+	"github.com/distribution/distribution/v3/configuration"
+	"github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/health"
 )
 
 func TestFileHealthCheck(t *testing.T) {
 	interval := time.Second
 
-	tmpfile, err := ioutil.TempFile(os.TempDir(), "healthcheck")
+	tmpfile, err := os.CreateTemp(os.TempDir(), "healthcheck")
 	if err != nil {
 		t.Fatalf("could not create temporary file: %v", err)
 	}
@@ -137,7 +136,7 @@ func TestHTTPHealthCheck(t *testing.T) {
 	stopFailing := make(chan struct{})
 
 	checkedServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "HEAD" {
+		if r.Method != http.MethodHead {
 			t.Fatalf("expected HEAD request, got %s", r.Method)
 		}
 		select {

@@ -6,14 +6,13 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"time"
 
-	storagedriver "github.com/docker/distribution/registry/storage/driver"
-	"github.com/docker/distribution/registry/storage/driver/base"
-	"github.com/docker/distribution/registry/storage/driver/factory"
+	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
+	"github.com/distribution/distribution/v3/registry/storage/driver/base"
+	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
 )
 
 const (
@@ -123,7 +122,7 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 	}
 	defer rc.Close()
 
-	p, err := ioutil.ReadAll(rc)
+	p, err := io.ReadAll(rc)
 	if err != nil {
 		return nil, err
 	}
@@ -149,7 +148,7 @@ func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte
 // Reader retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
 func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
-	file, err := os.OpenFile(d.fullPath(path), os.O_RDONLY, 0644)
+	file, err := os.OpenFile(d.fullPath(path), os.O_RDONLY, 0o644)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil, storagedriver.PathNotFoundError{Path: path}
@@ -173,11 +172,11 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 func (d *driver) Writer(ctx context.Context, subPath string, append bool) (storagedriver.FileWriter, error) {
 	fullPath := d.fullPath(subPath)
 	parentDir := path.Dir(fullPath)
-	if err := os.MkdirAll(parentDir, 0777); err != nil {
+	if err := os.MkdirAll(parentDir, 0o777); err != nil {
 		return nil, err
 	}
 
-	fp, err := os.OpenFile(fullPath, os.O_WRONLY|os.O_CREATE, 0666)
+	fp, err := os.OpenFile(fullPath, os.O_WRONLY|os.O_CREATE, 0o666)
 	if err != nil {
 		return nil, err
 	}
@@ -260,7 +259,7 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 		return storagedriver.PathNotFoundError{Path: sourcePath}
 	}
 
-	if err := os.MkdirAll(path.Dir(dest), 0755); err != nil {
+	if err := os.MkdirAll(path.Dir(dest), 0o777); err != nil {
 		return err
 	}
 
@@ -290,7 +289,7 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 }
 
 // Walk traverses a filesystem defined within driver, starting
-// from the given path, calling f on each file
+// from the given path, calling f on each file and directory
 func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn) error {
 	return storagedriver.WalkFallback(ctx, d, path, f)
 }

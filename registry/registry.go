@@ -5,10 +5,10 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -18,20 +18,69 @@ import (
 	"github.com/bugsnag/bugsnag-go"
 	"github.com/docker/go-metrics"
 	gorhandlers "github.com/gorilla/handlers"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/yvasiyarov/gorelic"
 	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
 
-	"github.com/docker/distribution/configuration"
-	dcontext "github.com/docker/distribution/context"
-	"github.com/docker/distribution/health"
-	"github.com/docker/distribution/registry/handlers"
-	"github.com/docker/distribution/registry/listener"
-	"github.com/docker/distribution/uuid"
-	"github.com/docker/distribution/version"
+	"github.com/distribution/distribution/v3/configuration"
+	dcontext "github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/health"
+	"github.com/distribution/distribution/v3/registry/handlers"
+	"github.com/distribution/distribution/v3/registry/listener"
+	"github.com/distribution/distribution/v3/uuid"
+	"github.com/distribution/distribution/v3/version"
 )
+
+// a map of TLS cipher suite names to constants in https://golang.org/pkg/crypto/tls/#pkg-constants
+var cipherSuites = map[string]uint16{
+	// TLS 1.0 - 1.2 cipher suites
+	"TLS_RSA_WITH_3DES_EDE_CBC_SHA":                 tls.TLS_RSA_WITH_3DES_EDE_CBC_SHA,
+	"TLS_RSA_WITH_AES_128_CBC_SHA":                  tls.TLS_RSA_WITH_AES_128_CBC_SHA,
+	"TLS_RSA_WITH_AES_256_CBC_SHA":                  tls.TLS_RSA_WITH_AES_256_CBC_SHA,
+	"TLS_RSA_WITH_AES_128_GCM_SHA256":               tls.TLS_RSA_WITH_AES_128_GCM_SHA256,
+	"TLS_RSA_WITH_AES_256_GCM_SHA384":               tls.TLS_RSA_WITH_AES_256_GCM_SHA384,
+	"TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA":          tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
+	"TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA":          tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
+	"TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA":           tls.TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA,
+	"TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA":            tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+	"TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA":            tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+	"TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256":         tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+	"TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256":       tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+	"TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384":         tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+	"TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384":       tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+	"TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256":   tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+	"TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256": tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+	// TLS 1.3 cipher suites
+	"TLS_AES_128_GCM_SHA256":       tls.TLS_AES_128_GCM_SHA256,
+	"TLS_AES_256_GCM_SHA384":       tls.TLS_AES_256_GCM_SHA384,
+	"TLS_CHACHA20_POLY1305_SHA256": tls.TLS_CHACHA20_POLY1305_SHA256,
+}
+
+// a list of default ciphersuites to utilize
+var defaultCipherSuites = []uint16{
+	tls.TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+	tls.TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+	tls.TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256,
+	tls.TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305_SHA256,
+	tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+	tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+	tls.TLS_AES_128_GCM_SHA256,
+	tls.TLS_CHACHA20_POLY1305_SHA256,
+	tls.TLS_AES_256_GCM_SHA384,
+}
+
+const defaultTLSVersionStr = "tls1.2"
+
+// tlsVersions maps user-specified values to tls version constants.
+var tlsVersions = map[string]uint16{
+	"tls1.2": tls.VersionTLS12,
+	"tls1.3": tls.VersionTLS13,
+}
+
+// defaultLogFormatter is the default formatter to use for logs.
+const defaultLogFormatter = "text"
 
 // this channel gets notified when process receives signal. It is global to ease unit testing
 var quit = make(chan os.Signal, 1)
@@ -42,7 +91,6 @@ var ServeCmd = &cobra.Command{
 	Short: "`serve` stores and distributes Docker images",
 	Long:  "`serve` stores and distributes Docker images.",
 	Run: func(cmd *cobra.Command, args []string) {
-
 		// setup context
 		ctx := dcontext.WithVersion(dcontext.Background(), version.Version)
 
@@ -55,16 +103,16 @@ var ServeCmd = &cobra.Command{
 
 		if config.HTTP.Debug.Addr != "" {
 			go func(addr string) {
-				log.Infof("debug server listening %v", addr)
+				logrus.Infof("debug server listening %v", addr)
 				if err := http.ListenAndServe(addr, nil); err != nil {
-					log.Fatalf("error listening on debug interface: %v", err)
+					logrus.Fatalf("error listening on debug interface: %v", err)
 				}
 			}(config.HTTP.Debug.Addr)
 		}
 
 		registry, err := NewRegistry(ctx, config)
 		if err != nil {
-			log.Fatalln(err)
+			logrus.Fatalln(err)
 		}
 
 		if config.HTTP.Debug.Prometheus.Enabled {
@@ -72,17 +120,18 @@ var ServeCmd = &cobra.Command{
 			if path == "" {
 				path = "/metrics"
 			}
-			log.Info("providing prometheus metrics on ", path)
+			logrus.Info("providing prometheus metrics on ", path)
 			http.Handle(path, metrics.Handler())
 		}
 
 		if err = registry.ListenAndServe(); err != nil {
-			log.Fatalln(err)
+			logrus.Fatalln(err)
 		}
 	},
 }
 
 // A Registry represents a complete instance of the registry.
+//
 // TODO(aaronl): It might make sense for Registry to become an interface.
 type Registry struct {
 	config *configuration.Configuration
@@ -127,6 +176,35 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 	}, nil
 }
 
+// takes a list of cipher suites and converts it to a list of respective tls constants
+// if an empty list is provided, then the defaults will be used
+func getCipherSuites(names []string) ([]uint16, error) {
+	if len(names) == 0 {
+		return defaultCipherSuites, nil
+	}
+	cipherSuiteConsts := make([]uint16, len(names))
+	for i, name := range names {
+		cipherSuiteConst, ok := cipherSuites[name]
+		if !ok {
+			return nil, fmt.Errorf("unknown TLS cipher suite '%s' specified for http.tls.cipherSuites", name)
+		}
+		cipherSuiteConsts[i] = cipherSuiteConst
+	}
+	return cipherSuiteConsts, nil
+}
+
+// takes a list of cipher suite ids and converts it to a list of respective names
+func getCipherSuiteNames(ids []uint16) []string {
+	if len(ids) == 0 {
+		return nil
+	}
+	names := make([]string, len(ids))
+	for i, id := range ids {
+		names[i] = tls.CipherSuiteName(id)
+	}
+	return names
+}
+
 // ListenAndServe runs the registry's HTTP server.
 func (registry *Registry) ListenAndServe() error {
 	config := registry.config
@@ -137,35 +215,34 @@ func (registry *Registry) ListenAndServe() error {
 	}
 
 	if config.HTTP.TLS.Certificate != "" || config.HTTP.TLS.LetsEncrypt.CacheFile != "" {
-		var tlsMinVersion uint16
 		if config.HTTP.TLS.MinimumTLS == "" {
-			tlsMinVersion = tls.VersionTLS10
-		} else {
-			switch config.HTTP.TLS.MinimumTLS {
-			case "tls1.0":
-				tlsMinVersion = tls.VersionTLS10
-			case "tls1.1":
-				tlsMinVersion = tls.VersionTLS11
-			case "tls1.2":
-				tlsMinVersion = tls.VersionTLS12
-			default:
-				return fmt.Errorf("unknown minimum TLS level '%s' specified for http.tls.minimumtls", config.HTTP.TLS.MinimumTLS)
-			}
-			dcontext.GetLogger(registry.app).Infof("restricting TLS to %s or higher", config.HTTP.TLS.MinimumTLS)
+			config.HTTP.TLS.MinimumTLS = defaultTLSVersionStr
 		}
+		tlsMinVersion, ok := tlsVersions[config.HTTP.TLS.MinimumTLS]
+		if !ok {
+			return fmt.Errorf("unknown minimum TLS level '%s' specified for http.tls.minimumtls", config.HTTP.TLS.MinimumTLS)
+		}
+		dcontext.GetLogger(registry.app).Infof("restricting TLS version to %s or higher", config.HTTP.TLS.MinimumTLS)
+
+		var tlsCipherSuites []uint16
+		// configuring cipher suites are no longer supported after the tls1.3.
+		// (https://go.dev/blog/tls-cipher-suites)
+		if tlsMinVersion > tls.VersionTLS12 {
+			dcontext.GetLogger(registry.app).Warnf("restricting TLS cipher suites to empty. Because configuring cipher suites is no longer supported in %s", config.HTTP.TLS.MinimumTLS)
+		} else {
+			tlsCipherSuites, err = getCipherSuites(config.HTTP.TLS.CipherSuites)
+			if err != nil {
+				return err
+			}
+			dcontext.GetLogger(registry.app).Infof("restricting TLS cipher suites to: %s", strings.Join(getCipherSuiteNames(tlsCipherSuites), ","))
+		}
+
 		tlsConf := &tls.Config{
 			ClientAuth:               tls.NoClientCert,
 			NextProtos:               nextProtos(config),
 			MinVersion:               tlsMinVersion,
 			PreferServerCipherSuites: true,
-			CipherSuites: []uint16{
-				tls.TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
-				tls.TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
-				tls.TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
-				tls.TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
-				tls.TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
-			},
+			CipherSuites:             tlsCipherSuites,
 		}
 
 		if config.HTTP.TLS.LetsEncrypt.CacheFile != "" {
@@ -192,7 +269,7 @@ func (registry *Registry) ListenAndServe() error {
 			pool := x509.NewCertPool()
 
 			for _, ca := range config.HTTP.TLS.ClientCAs {
-				caPem, err := ioutil.ReadFile(ca)
+				caPem, err := os.ReadFile(ca)
 				if err != nil {
 					return err
 				}
@@ -267,33 +344,32 @@ func configureReporting(app *handlers.App) http.Handler {
 // configureLogging prepares the context with a logger using the
 // configuration.
 func configureLogging(ctx context.Context, config *configuration.Configuration) (context.Context, error) {
-	log.SetLevel(logLevel(config.Log.Level))
+	logrus.SetLevel(logLevel(config.Log.Level))
 
 	formatter := config.Log.Formatter
+	if formatter == "" {
+		formatter = defaultLogFormatter
+	}
+
 	switch formatter {
 	case "json":
-		log.SetFormatter(&log.JSONFormatter{
-			TimestampFormat: time.RFC3339Nano,
+		logrus.SetFormatter(&logrus.JSONFormatter{
+			TimestampFormat:   time.RFC3339Nano,
+			DisableHTMLEscape: true,
 		})
 	case "text":
-		log.SetFormatter(&log.TextFormatter{
+		logrus.SetFormatter(&logrus.TextFormatter{
 			TimestampFormat: time.RFC3339Nano,
 		})
 	case "logstash":
-		log.SetFormatter(&logstash.LogstashFormatter{
-			TimestampFormat: time.RFC3339Nano,
+		logrus.SetFormatter(&logstash.LogstashFormatter{
+			Formatter: &logrus.JSONFormatter{TimestampFormat: time.RFC3339Nano},
 		})
 	default:
-		// just let the library use default on empty string.
-		if config.Log.Formatter != "" {
-			return ctx, fmt.Errorf("unsupported logging formatter: %q", config.Log.Formatter)
-		}
+		return ctx, fmt.Errorf("unsupported logging formatter: %q", formatter)
 	}
 
-	if config.Log.Formatter != "" {
-		log.Debugf("using %q logging formatter", config.Log.Formatter)
-	}
-
+	logrus.Debugf("using %q logging formatter", formatter)
 	if len(config.Log.Fields) > 0 {
 		// build up the static fields, if present.
 		var fields []interface{}
@@ -309,11 +385,11 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 	return ctx, nil
 }
 
-func logLevel(level configuration.Loglevel) log.Level {
-	l, err := log.ParseLevel(string(level))
+func logLevel(level configuration.Loglevel) logrus.Level {
+	l, err := logrus.ParseLevel(string(level))
 	if err != nil {
-		l = log.InfoLevel
-		log.Warnf("error parsing level %q: %v, using %q	", level, err, l)
+		l = logrus.InfoLevel
+		logrus.Warnf("error parsing level %q: %v, using %q	", level, err, l)
 	}
 
 	return l
@@ -339,10 +415,10 @@ func configureBugsnag(config *configuration.Configuration) {
 	// configure logrus bugsnag hook
 	hook, err := logrus_bugsnag.NewBugsnagHook()
 	if err != nil {
-		log.Fatalln(err)
+		logrus.Fatalln(err)
 	}
 
-	log.AddHook(hook)
+	logrus.AddHook(hook)
 }
 
 // panicHandler add an HTTP handler to web app. The handler recover the happening
@@ -352,7 +428,7 @@ func panicHandler(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if err := recover(); err != nil {
-				log.Panic(fmt.Sprintf("%v", err))
+				logrus.Panic(fmt.Sprintf("%v", err))
 			}
 		}()
 		handler.ServeHTTP(w, r)

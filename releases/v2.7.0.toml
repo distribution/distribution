@@ -2,7 +2,7 @@
 commit = "HEAD"
 
 project_name = "registry"
-github_repo = "docker/distribution"
+github_repo = "distribution/distribution"
 
 # previous release
 previous = "v2.6.0"

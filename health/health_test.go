@@ -13,7 +13,7 @@ import (
 func TestReturns200IfThereAreNoChecks(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	req, err := http.NewRequest("GET", "https://fakeurl.com/debug/health", nil)
+	req, err := http.NewRequest(http.MethodGet, "https://fakeurl.com/debug/health", nil)
 	if err != nil {
 		t.Errorf("Failed to create request.")
 	}
@@ -30,7 +30,7 @@ func TestReturns200IfThereAreNoChecks(t *testing.T) {
 func TestReturns503IfThereAreErrorChecks(t *testing.T) {
 	recorder := httptest.NewRecorder()
 
-	req, err := http.NewRequest("GET", "https://fakeurl.com/debug/health", nil)
+	req, err := http.NewRequest(http.MethodGet, "https://fakeurl.com/debug/health", nil)
 	if err != nil {
 		t.Errorf("Failed to create request.")
 	}

@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/docker/distribution"
-	dcontext "github.com/docker/distribution/context"
-	"github.com/docker/distribution/manifest/schema1"
-	"github.com/docker/distribution/manifest/schema2"
+	"github.com/distribution/distribution/v3"
+	dcontext "github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/manifest/schema1"
+	"github.com/distribution/distribution/v3/manifest/schema2"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -18,7 +18,7 @@ var (
 	errInvalidURL = errors.New("invalid URL on layer")
 )
 
-//schema2ManifestHandler is a ManifestHandler that covers schema2 manifests.
+// schema2ManifestHandler is a ManifestHandler that covers schema2 manifests.
 type schema2ManifestHandler struct {
 	repository   distribution.Repository
 	blobStore    distribution.BlobStore
@@ -87,7 +87,11 @@ func (ms *schema2ManifestHandler) verifyManifest(ctx context.Context, mnfst sche
 	blobsService := ms.repository.Blobs(ctx)
 
 	for _, descriptor := range mnfst.References() {
-		var err error
+		err := descriptor.Digest.Validate()
+		if err != nil {
+			errs = append(errs, err, distribution.ErrManifestBlobUnknown{Digest: descriptor.Digest})
+			continue
+		}
 
 		switch descriptor.MediaType {
 		case schema2.MediaTypeForeignLayer:
@@ -113,12 +117,13 @@ func (ms *schema2ManifestHandler) verifyManifest(ctx context.Context, mnfst sche
 				err = distribution.ErrBlobUnknown // just coerce to unknown.
 			}
 
+			if err != nil {
+				dcontext.GetLogger(ms.ctx).WithError(err).Debugf("failed to ensure exists of %v in manifest service", descriptor.Digest)
+			}
 			fallthrough // double check the blob store.
 		default:
-			// forward all else to blob storage
-			if len(descriptor.URLs) == 0 {
-				_, err = blobsService.Stat(ctx, descriptor.Digest)
-			}
+			// check its presence
+			_, err = blobsService.Stat(ctx, descriptor.Digest)
 		}
 
 		if err != nil {

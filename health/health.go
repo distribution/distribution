@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/registry/api/errcode"
+	"github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/registry/api/errcode"
 )
 
 // A Registry is a collection of checks. Most applications will use the global
@@ -135,6 +135,7 @@ func PeriodicChecker(check Checker, period time.Duration) Checker {
 	u := NewStatusUpdater()
 	go func() {
 		t := time.NewTicker(period)
+		defer t.Stop()
 		for {
 			<-t.C
 			u.Update(check.Check())
@@ -150,6 +151,7 @@ func PeriodicThresholdChecker(check Checker, period time.Duration, threshold int
 	tu := NewThresholdStatusUpdater(threshold)
 	go func() {
 		t := time.NewTicker(period)
+		defer t.Stop()
 		for {
 			<-t.C
 			tu.Update(check.Check())
@@ -240,7 +242,7 @@ func RegisterPeriodicThresholdFunc(name string, period time.Duration, threshold 
 // and their corresponding status.
 // Returns 503 if any Error status exists, 200 otherwise
 func StatusHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == "GET" {
+	if r.Method == http.MethodGet {
 		checks := CheckStatus()
 		status := http.StatusOK
 

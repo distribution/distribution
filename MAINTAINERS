@@ -1,16 +1,25 @@
-# Docker distribution project maintainers & reviewers
+# Distribution project maintainers & reviewers
 #
 # See GOVERNANCE.md for maintainer versus reviewer roles
 #
-# MAINTAINERS
+# MAINTAINERS (cncf-distribution-maintainers@lists.cncf.io)
 # GitHub ID, Name, Email address
-"dmcgowan","Derek McGowan","derek@mcgstyle.net"
-"manishtomar","Manish Tomar","manish.tomar@docker.com"
-"stevvooe","Stephen Day","stevvooe@gmail.com"
+"chrispat","Chris Patterson","chrispat@github.com"
+"clarkbw","Bryan Clark","clarkbw@github.com"
+"corhere","Cory Snider","csnider@mirantis.com"
+"deleteriousEffect","Hayley Swimelar","hswimelar@gitlab.com"
+"heww","He Weiwei","hweiwei@vmware.com"
+"joaodrp","João Pereira","jpereira@gitlab.com"
+"justincormack","Justin Cormack","justin.cormack@docker.com"
+"squizzi","Kyle Squizzato","ksquizzato@mirantis.com"
+"milosgajdos","Milos Gajdos","milos.gajdos@docker.com"
+"sargun","Sargun Dhillon","sargun@sargun.me"
+"waynr","Wayne Warren","wwarren@digitalocean.com"
+"wy65701436","Wang Yan","wangyan@vmware.com"
+"stevelasker","Steve Lasker","steve.lasker@microsoft.com"
 #
 # REVIEWERS
 # GitHub ID, Name, Email address
-"caervs","Ryan Abrams","rdabrams@gmail.com"
-"davidswu","David Wu","dwu7401@gmail.com"
-"RobbKistler","Robb Kistler","robb.kistler@docker.com"
+"dmcgowan","Derek McGowan","derek@mcgstyle.net"
+"stevvooe","Stephen Day","stevvooe@gmail.com"
 "thajeztah","Sebastiaan van Stijn","github@gone.nl"

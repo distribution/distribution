@@ -3,9 +3,9 @@ package schema1
 import (
 	"testing"
 
-	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/manifest"
-	"github.com/docker/distribution/reference"
+	"github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/manifest"
+	"github.com/distribution/distribution/v3/reference"
 	"github.com/docker/libtrust"
 	"github.com/opencontainers/go-digest"
 )

@@ -38,7 +38,7 @@ type Manager interface {
 }
 
 // NewSimpleManager returns an instance of
-// Manger which only maps endpoints to challenges
+// Manager which only maps endpoints to challenges
 // based on the responses which have been added the
 // manager. The simple manager will make no attempt to
 // perform requests on the endpoints or cache the responses

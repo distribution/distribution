@@ -108,7 +108,6 @@ func TestPathMapper(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected an error when mapping an invalid revision: %s", badpath)
 	}
-
 }
 
 func TestDigestFromPath(t *testing.T) {
@@ -132,7 +131,6 @@ func TestDigestFromPath(t *testing.T) {
 
 		if result != testcase.expected {
 			t.Fatalf("Unexpected result value %v when we wanted %v", result, testcase.expected)
-
 		}
 	}
 }

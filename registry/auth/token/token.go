@@ -13,7 +13,7 @@ import (
 	"github.com/docker/libtrust"
 	log "github.com/sirupsen/logrus"
 
-	"github.com/docker/distribution/registry/auth"
+	"github.com/distribution/distribution/v3/registry/auth"
 )
 
 const (
@@ -83,7 +83,9 @@ type VerifyOptions struct {
 // NewToken parses the given raw token string
 // and constructs an unverified JSON Web Token.
 func NewToken(rawToken string) (*Token, error) {
-	parts := strings.Split(rawToken, TokenSeparator)
+	// We expect 3 parts, but limit the split to 4 to detect cases where
+	// the token contains too many (or too few) separators.
+	parts := strings.SplitN(rawToken, TokenSeparator, 4)
 	if len(parts) != 3 {
 		return nil, ErrMalformedToken
 	}
@@ -185,13 +187,15 @@ func (t *Token) Verify(verifyOpts VerifyOptions) error {
 
 // VerifySigningKey attempts to get the key which was used to sign this token.
 // The token header should contain either of these 3 fields:
-//      `x5c` - The x509 certificate chain for the signing key. Needs to be
-//              verified.
-//      `jwk` - The JSON Web Key representation of the signing key.
-//              May contain its own `x5c` field which needs to be verified.
-//      `kid` - The unique identifier for the key. This library interprets it
-//              as a libtrust fingerprint. The key itself can be looked up in
-//              the trustedKeys field of the given verify options.
+//
+//	`x5c` - The x509 certificate chain for the signing key. Needs to be
+//	        verified.
+//	`jwk` - The JSON Web Key representation of the signing key.
+//	        May contain its own `x5c` field which needs to be verified.
+//	`kid` - The unique identifier for the key. This library interprets it
+//	        as a libtrust fingerprint. The key itself can be looked up in
+//	        the trustedKeys field of the given verify options.
+//
 // Each of these methods are tried in that order of preference until the
 // signing key is found or an error is returned.
 func (t *Token) VerifySigningKey(verifyOpts VerifyOptions) (signingKey libtrust.PublicKey, err error) {

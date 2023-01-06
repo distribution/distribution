@@ -5,15 +5,15 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/manifest"
-	"github.com/docker/distribution/manifest/schema1"
-	"github.com/docker/distribution/reference"
-	"github.com/docker/distribution/registry/storage"
-	"github.com/docker/distribution/registry/storage/cache/memory"
-	"github.com/docker/distribution/registry/storage/driver/inmemory"
-	"github.com/docker/distribution/testutil"
+	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/manifest"
+	"github.com/distribution/distribution/v3/manifest/schema1"
+	"github.com/distribution/distribution/v3/reference"
+	"github.com/distribution/distribution/v3/registry/storage"
+	"github.com/distribution/distribution/v3/registry/storage/cache/memory"
+	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
+	"github.com/distribution/distribution/v3/testutil"
 	"github.com/docker/libtrust"
 	"github.com/opencontainers/go-digest"
 )
@@ -25,7 +25,7 @@ func TestListener(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	registry, err := storage.NewRegistry(ctx, inmemory.New(), storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), storage.EnableDelete, storage.EnableRedirect, storage.Schema1SigningKey(k), storage.EnableSchema1)
+	registry, err := storage.NewRegistry(ctx, inmemory.New(), storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), storage.EnableDelete, storage.EnableRedirect, storage.Schema1SigningKey(k), storage.EnableSchema1)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -199,9 +199,18 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository, r
 		t.Fatalf("mismatching digest from payload and put")
 	}
 
+	if err := repository.Tags(ctx).Tag(ctx, tag, distribution.Descriptor{Digest: dgst}); err != nil {
+		t.Fatalf("unexpected error tagging manifest: %v", err)
+	}
+
 	_, err = manifests.Get(ctx, dgst)
 	if err != nil {
 		t.Fatalf("unexpected error fetching manifest: %v", err)
+	}
+
+	err = repository.Tags(ctx).Untag(ctx, m.Tag)
+	if err != nil {
+		t.Fatalf("unexpected error deleting tag: %v", err)
 	}
 
 	err = manifests.Delete(ctx, dgst)
@@ -214,11 +223,6 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository, r
 		if err != nil {
 			t.Fatalf("unexpected error deleting blob: %v", err)
 		}
-	}
-
-	err = repository.Tags(ctx).Untag(ctx, m.Tag)
-	if err != nil {
-		t.Fatalf("unexpected error deleting tag: %v", err)
 	}
 
 	err = remover.Remove(ctx, repository.Named())

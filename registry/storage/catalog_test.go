@@ -7,12 +7,12 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/docker/distribution"
-	"github.com/docker/distribution/reference"
-	"github.com/docker/distribution/registry/storage/cache/memory"
-	"github.com/docker/distribution/registry/storage/driver"
-	"github.com/docker/distribution/registry/storage/driver/inmemory"
-	"github.com/docker/distribution/testutil"
+	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/reference"
+	"github.com/distribution/distribution/v3/registry/storage/cache/memory"
+	"github.com/distribution/distribution/v3/registry/storage/driver"
+	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
+	"github.com/distribution/distribution/v3/testutil"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -26,7 +26,7 @@ type setupEnv struct {
 func setupFS(t *testing.T) *setupEnv {
 	d := inmemory.New()
 	ctx := context.Background()
-	registry, err := NewRegistry(ctx, d, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableRedirect, EnableSchema1)
+	registry, err := NewRegistry(ctx, d, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableRedirect, EnableSchema1)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -102,7 +102,6 @@ func makeRepo(ctx context.Context, t *testing.T, name string, reg distribution.N
 	if err != nil {
 		t.Fatalf("manifest upload failed: %v", err)
 	}
-
 }
 
 func TestCatalog(t *testing.T) {
@@ -207,7 +206,7 @@ func testEq(a, b []string, size int) bool {
 func setupBadWalkEnv(t *testing.T) *setupEnv {
 	d := newBadListDriver()
 	ctx := context.Background()
-	registry, err := NewRegistry(ctx, d, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableRedirect, EnableSchema1)
+	registry, err := NewRegistry(ctx, d, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableRedirect, EnableSchema1)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -289,8 +288,10 @@ func BenchmarkPathCompareNativeEqual(B *testing.B) {
 	}
 }
 
-var filenameChars = []byte("abcdefghijklmnopqrstuvwxyz0123456789")
-var separatorChars = []byte("._-")
+var (
+	filenameChars  = []byte("abcdefghijklmnopqrstuvwxyz0123456789")
+	separatorChars = []byte("._-")
+)
 
 func randomPath(length int64) string {
 	path := "/"

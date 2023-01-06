@@ -14,11 +14,11 @@ const (
 	// ErrCodeIDPCommunicationErrorException for service response error code
 	// "IDPCommunicationError".
 	//
-	// The request could not be fulfilled because the non-AWS identity provider
-	// (IDP) that was asked to verify the incoming identity token could not be reached.
-	// This is often a transient error caused by network conditions. Retry the request
+	// The request could not be fulfilled because the identity provider (IDP) that
+	// was asked to verify the incoming identity token could not be reached. This
+	// is often a transient error caused by network conditions. Retry the request
 	// a limited number of times so that you don't exceed the request rate. If the
-	// error persists, the non-AWS identity provider might be down or not responding.
+	// error persists, the identity provider might be down or not responding.
 	ErrCodeIDPCommunicationErrorException = "IDPCommunicationError"
 
 	// ErrCodeIDPRejectedClaimException for service response error code
@@ -42,8 +42,9 @@ const (
 	// ErrCodeInvalidIdentityTokenException for service response error code
 	// "InvalidIdentityToken".
 	//
-	// The web identity token that was passed could not be validated by AWS. Get
-	// a new identity token from the identity provider and then retry the request.
+	// The web identity token that was passed could not be validated by Amazon Web
+	// Services. Get a new identity token from the identity provider and then retry
+	// the request.
 	ErrCodeInvalidIdentityTokenException = "InvalidIdentityToken"
 
 	// ErrCodeMalformedPolicyDocumentException for service response error code
@@ -56,9 +57,18 @@ const (
 	// ErrCodePackedPolicyTooLargeException for service response error code
 	// "PackedPolicyTooLarge".
 	//
-	// The request was rejected because the policy document was too large. The error
-	// message describes how big the policy document is, in packed form, as a percentage
-	// of what the API allows.
+	// The request was rejected because the total packed size of the session policies
+	// and session tags combined was too large. An Amazon Web Services conversion
+	// compresses the session policy document, session policy ARNs, and session
+	// tags into a packed binary format that has a separate limit. The error message
+	// indicates by percentage how close the policies and tags are to the upper
+	// size limit. For more information, see Passing Session Tags in STS (https://docs.aws.amazon.com/IAM/latest/UserGuide/id_session-tags.html)
+	// in the IAM User Guide.
+	//
+	// You could receive this error even though you meet other defined session policy
+	// and session tag limits. For more information, see IAM and STS Entity Character
+	// Limits (https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_iam-quotas.html#reference_iam-limits-entity-length)
+	// in the IAM User Guide.
 	ErrCodePackedPolicyTooLargeException = "PackedPolicyTooLarge"
 
 	// ErrCodeRegionDisabledException for service response error code
@@ -67,7 +77,8 @@ const (
 	// STS is not activated in the requested region for the account that is being
 	// asked to generate credentials. The account administrator must use the IAM
 	// console to activate STS in that region. For more information, see Activating
-	// and Deactivating AWS STS in an AWS Region (http://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_enable-regions.html)
+	// and Deactivating Amazon Web Services STS in an Amazon Web Services Region
+	// (https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_enable-regions.html)
 	// in the IAM User Guide.
 	ErrCodeRegionDisabledException = "RegionDisabledException"
 )

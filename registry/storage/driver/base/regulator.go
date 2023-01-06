@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"sync"
 
-	storagedriver "github.com/docker/distribution/registry/storage/driver"
+	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 )
 
 type regulator struct {
@@ -145,7 +145,7 @@ func (r *regulator) Stat(ctx context.Context, path string) (storagedriver.FileIn
 }
 
 // List returns a list of the objects that are direct descendants of the
-//given path.
+// given path.
 func (r *regulator) List(ctx context.Context, path string) ([]string, error) {
 	r.enter()
 	defer r.exit()
