@@ -649,6 +649,8 @@ func (d *driver) logS3Operation(ctx context.Context) request.NamedHandler {
 			op := r.Operation
 			fields := map[interface{}]interface{}{
 				"s3_operation_name":                        op.Name,
+				"s3_bucket_name":                           d.Bucket,
+				"s3_object_name":                           d.s3Path(req.URL.Query().Get("Key")),
 				"s3_http_request_method":                   req.Method,
 				"s3_http_request_host":                     req.Host,
 				"s3_http_request_path":                     req.URL.Path,
@@ -875,6 +877,10 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 		Prefix:  aws.String(d.s3Path(path)),
 		MaxKeys: aws.Int64(1),
 	})
+<<<<<<< HEAD
+=======
+
+>>>>>>> 70cd24bd (DOCR-368 log bucket name & object key when non-upload S3 API duration exceeds threshold)
 	if err != nil {
 		return nil, err
 	}
