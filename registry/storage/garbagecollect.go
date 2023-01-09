@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/manifest/manifestlist"
 	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/opencontainers/go-digest"
@@ -60,33 +61,62 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 			return fmt.Errorf("unable to convert ManifestService into ManifestEnumerator")
 		}
 
+		manifests := make(map[digest.Digest]digest.Digest)
+		untaggedManifists := make(map[digest.Digest]struct{})
 		err = manifestEnumerator.Enumerate(ctx, func(dgst digest.Digest) error {
-			if opts.RemoveUntagged {
-				// fetch all tags where this manifest is the latest one
-				tags, err := repository.Tags(ctx).Lookup(ctx, distribution.Descriptor{Digest: dgst})
-				if err != nil {
-					return fmt.Errorf("failed to retrieve tags for digest %v: %v", dgst, err)
-				}
-				if len(tags) == 0 {
-					emit("manifest eligible for deletion: %s", dgst)
-					// fetch all tags from repository
-					// all of these tags could contain manifest in history
-					// which means that we need check (and delete) those references when deleting manifest
-					allTags, err := repository.Tags(ctx).All(ctx)
-					if err != nil {
-						return fmt.Errorf("failed to retrieve tags %v", err)
-					}
-					manifestArr = append(manifestArr, ManifestDel{Name: repoName, Digest: dgst, Tags: allTags})
-					return nil
+			// make manifestlist map
+			references := make([]digest.Digest, 0)
+			manifest, err := manifestService.Get(ctx, dgst)
+			if err != nil {
+				return fmt.Errorf("failed to retrieve manifest for digest %v: %v", dgst, err)
+			}
+			if mfl, ok := manifest.(*manifestlist.DeserializedManifestList); ok {
+				for _, mf := range mfl.ManifestList.Manifests {
+					manifests[mf.Digest] = dgst
+					references = append(references, mf.Digest)
 				}
 			}
+			if _, exist := manifests[dgst]; !exist {
+				manifests[dgst] = dgst
+			}
+			if _, exist := untaggedManifists[dgst]; !exist {
+				references = append(references, dgst)
+			}
+
+			if opts.RemoveUntagged {
+				for _, ref := range references {
+					// fetch all tags where this manifest is the latest one
+					tags, err := repository.Tags(ctx).Lookup(ctx, distribution.Descriptor{Digest: ref})
+					if err != nil {
+						return fmt.Errorf("failed to retrieve tags for digest %v: %v", ref, err)
+					}
+					if len(tags) == 0 {
+						untaggedManifists[ref] = struct{}{}
+					}
+				}
+			}
+			return nil
+		})
+
+		for dgst, mfl := range manifests {
+			_, manifestUntaged := untaggedManifists[dgst]
+			_, manifestListUntaged := untaggedManifists[mfl]
+			if manifestUntaged && manifestListUntaged {
+				emit("manifest eligible for deletion: %s", dgst)
+				manifestArr = append(manifestArr, ManifestDel{Name: repoName, Digest: dgst, Tags: nil})
+				continue
+			}
+
 			// Mark the manifest's blob
 			emit("%s: marking manifest %s ", repoName, dgst)
 			markSet[dgst] = struct{}{}
 
 			manifest, err := manifestService.Get(ctx, dgst)
 			if err != nil {
-				return fmt.Errorf("failed to retrieve manifest for digest %v: %v", dgst, err)
+				if _, ok := err.(distribution.ErrManifestUnknownRevision); ok {
+					continue
+				}
+				return fmt.Errorf("mark failed to retrieve manifest for digest %v: %v", dgst, err)
 			}
 
 			descriptors := manifest.References()
@@ -94,9 +124,23 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 				markSet[descriptor.Digest] = struct{}{}
 				emit("%s: marking blob %s", repoName, descriptor.Digest)
 			}
+		}
 
-			return nil
-		})
+		if !opts.DryRun && len(manifestArr) > 0 {
+			// fetch all tags from repository
+			// all of these tags could contain manifest in history
+			// which means that we need check (and delete) those references when deleting manifest
+			allTags, err := repository.Tags(ctx).All(ctx)
+			if err != nil {
+				if _, ok := err.(distribution.ErrRepositoryUnknown); !ok {
+					return fmt.Errorf("failed to retrieve tags %v", err)
+				}
+			}
+
+			for _, m := range manifestArr {
+				m.Tags = allTags
+			}
+		}
 
 		// In certain situations such as unfinished uploads, deleting all
 		// tags in S3 or removing the _manifests folder manually, this
