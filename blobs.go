@@ -71,9 +71,6 @@ type Descriptor struct {
 	// against this digest.
 	Digest digest.Digest `json:"digest,omitempty"`
 
-	// Size in bytes of content.
-	Size int64 `json:"size,omitempty"`
-
 	// URLs contains the source URLs of this content.
 	URLs []string `json:"urls,omitempty"`
 
