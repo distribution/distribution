@@ -1119,7 +1119,6 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		Prefix: aws.String(s3Path),
 	}
 
-	s := d.s3Client(ctx)
 ListLoop:
 	for {
 		// list all the objects
