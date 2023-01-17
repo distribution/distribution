@@ -1300,7 +1300,7 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 					}
 					// is file, stop gracefully
 					if walkInfo.IsDir() && walkDirectories {
-						if err := d.doWalk(ctx, objectCount, prefix, walkDirectories, f); err != nil {
+						if err := d.doWalk(ctx, objectCount, prefix, prefix, walkDirectories, f); err != nil {
 							retError = err
 							return false
 						}
