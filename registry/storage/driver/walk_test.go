@@ -169,6 +169,7 @@ func TestWalkFallback(t *testing.T) {
 			compareWalked(t, tc.expected, walked)
 		})
 	}
+
 }
 
 func compareWalked(t *testing.T, expected, walked []string) {

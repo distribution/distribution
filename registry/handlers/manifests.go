@@ -488,7 +488,7 @@ func (imh *manifestHandler) applyResourcePolicy(manifest distribution.Manifest) 
 func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Request) {
 	dcontext.GetLogger(imh).Debug("DeleteImageManifest")
 
-	if imh.App.isCache {
+	if imh.Tag != "" {
 		imh.Errors = append(imh.Errors, errcode.ErrorCodeUnsupported)
 		return
 	}
