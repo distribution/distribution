@@ -123,6 +123,8 @@ type DriverParameters struct {
 	UserAgent                   string
 	ObjectACL                   string
 	SessionToken                string
+	LogS3APIRequests            bool
+	LogS3APIResponseHeaders     map[string]string
 	UseDualStack                bool
 	Accelerate                  bool
 	LogS3APIRequests            bool
@@ -498,6 +500,8 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(userAgent),
 		objectACL,
 		fmt.Sprint(sessionToken),
+		logS3APIRequestsBool,
+		logS3APIResponseHeadersMap,
 		useDualStackBool,
 		accelerateBool,
 		logS3APIRequestsBool,
@@ -606,7 +610,6 @@ func New(params DriverParameters) (*Driver, error) {
 			setv2Handlers(s3obj)
 		}
 	}
-
 	// TODO Currently multipart uploads have no timestamps, so this would be unwise
 	// if you initiated a new s3driver while another one is running on the same bucket.
 	// multis, _, err := bucket.ListMulti("", "")
@@ -894,12 +897,12 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 		return storagedriver.FileInfoInternal{FileInfoFields: fi}, nil
 	}
 
-	resp, err := s.ListObjectsWithContext(ctx, &s3.ListObjectsInput{
-
+	resp, err := d.S3.ListObjectsV2(&s3.ListObjectsV2Input{
 		Bucket:  aws.String(d.Bucket),
 		Prefix:  aws.String(d.s3Path(path)),
 		MaxKeys: aws.Int64(1),
 	})
+
 	if err != nil {
 		return nil, err
 	}
@@ -935,7 +938,6 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 	if d.s3Path("") == "" {
 		prefix = "/"
 	}
-
 	resp, err := d.S3.ListObjectsV2(&s3.ListObjectsV2Input{
 		Bucket:    aws.String(d.Bucket),
 		Prefix:    aws.String(d.s3Path(path)),
@@ -1090,6 +1092,13 @@ func (d *driver) copy(ctx context.Context, sourcePath string, destPath string) e
 	return err
 }
 
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 // Delete recursively deletes all objects stored at "path" and its subpaths.
 // We must be careful since S3 does not guarantee read after delete consistency
 func (d *driver) Delete(ctx context.Context, path string) error {
@@ -1114,6 +1123,8 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		Prefix: aws.String(s3Path),
 	}
 
+	s := d.s3Client(ctx)
+ListLoop:
 	for {
 		// list all the objects
 		resp, err := d.S3.ListObjectsV2(listObjectsInput)
@@ -1121,7 +1132,7 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		// if there were no more results to return after the first call, resp.IsTruncated would have been false
 		// and the loop would exit without recalling ListObjects
 		if err != nil || len(resp.Contents) == 0 {
-			break
+			break ListLoop
 		}
 
 		for _, key := range resp.Contents {
