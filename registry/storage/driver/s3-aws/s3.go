@@ -122,8 +122,6 @@ type DriverParameters struct {
 	SessionToken                string
 	UseDualStack                bool
 	Accelerate                  bool
-	LogS3APIRequests            bool
-	LogS3APIResponseHeaders     map[string]string
 }
 
 func init() {
@@ -497,8 +495,6 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(sessionToken),
 		useDualStackBool,
 		accelerateBool,
-		logS3APIRequestsBool,
-		logS3APIResponseHeadersMap,
 	}
 
 	return New(params)
