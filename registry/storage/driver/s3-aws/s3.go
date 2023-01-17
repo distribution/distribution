@@ -127,8 +127,6 @@ type DriverParameters struct {
 	LogS3APIResponseHeaders     map[string]string
 	UseDualStack                bool
 	Accelerate                  bool
-	LogS3APIRequests            bool
-	LogS3APIResponseHeaders     map[string]string
 }
 
 func init() {
@@ -504,8 +502,6 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		logS3APIResponseHeadersMap,
 		useDualStackBool,
 		accelerateBool,
-		logS3APIRequestsBool,
-		logS3APIResponseHeadersMap,
 	}
 
 	return New(params)
