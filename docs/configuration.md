@@ -134,9 +134,6 @@ storage:
     logs3apiresponseheaders:
       s3_http_response_header_x-do-spaces-error: x-do-spaces-error
     usedualstack: false
-    logs3apirequests: true
-    logs3apiresponseheaders:
-      s3_http_response_header_x-do-spaces-error: x-do-spaces-error
   swift:
     username: username
     password: password

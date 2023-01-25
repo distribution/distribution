@@ -31,8 +31,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -548,29 +546,22 @@ func New(params DriverParameters) (*Driver, error) {
 		}
 
 		awsConfig := aws.NewConfig()
-		sess, err := session.NewSession()
-		if err != nil {
-			return nil, fmt.Errorf("failed to create new session: %v", err)
+
+		if params.AccessKey != "" && params.SecretKey != "" {
+			creds := credentials.NewStaticCredentials(
+				params.AccessKey,
+				params.SecretKey,
+				params.SessionToken,
+			)
+			awsConfig.WithCredentials(creds)
 		}
-		creds := credentials.NewChainCredentials([]credentials.Provider{
-			&credentials.StaticProvider{
-				Value: credentials.Value{
-					AccessKeyID:     params.AccessKey,
-					SecretAccessKey: params.SecretKey,
-					SessionToken:    params.SessionToken,
-				},
-			},
-			&credentials.EnvProvider{},
-			&credentials.SharedCredentialsProvider{},
-			&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(sess)},
-		})
 
 		if params.RegionEndpoint != "" {
-			awsConfig.WithS3ForcePathStyle(true)
 			awsConfig.WithEndpoint(params.RegionEndpoint)
+			awsConfig.WithS3ForcePathStyle(params.ForcePathStyle)
 		}
 
-		awsConfig.WithCredentials(creds)
+		awsConfig.WithS3UseAccelerate(params.Accelerate)
 		awsConfig.WithRegion(params.Region)
 		awsConfig.WithDisableSSL(!params.Secure)
 		if params.UseDualStack {
@@ -595,11 +586,17 @@ func New(params DriverParameters) (*Driver, error) {
 			}
 		}
 
-		sess, err = session.NewSession(awsConfig)
+		sess, err := session.NewSession(awsConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create new session with aws config: %v", err)
 		}
 		s3obj = s3.New(sess)
+
+		sess, err = session.NewSession(awsConfig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create new session with aws config: %v", err)
+		}
+		s3obj := s3.New(sess)
 
 		// enable S3 compatible signature v2 signing instead
 		if !params.V4Auth {
@@ -779,8 +776,6 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 // Writer returns a FileWriter which will store the content written to it
 // at the location designated by "path" after the call to Commit.
 func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (storagedriver.FileWriter, error) {
-	s := d.s3Client(ctx)
-
 	key := d.s3Path(path)
 	if !appendParam {
 		// TODO (brianbland): cancel other uploads at this path
@@ -803,19 +798,8 @@ func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (sto
 		Bucket: aws.String(d.Bucket),
 		Prefix: aws.String(key),
 	}
-	resp, err := d.S3.ListMultipartUploads(listMultipartUploadsInput)
-	if err != nil {
-		return nil, parseError(path, err)
-	}
-	for _, multi := range resp.Uploads {
-		if key != *multi.Key {
-			continue
-		}
-		_, err := s.ListParts(&s3.ListPartsInput{
-			Bucket:   aws.String(d.Bucket),
-			Key:      aws.String(key),
-			UploadId: multi.UploadId,
-		})
+	for {
+		resp, err := d.S3.ListMultipartUploads(listMultipartUploadsInput)
 		if err != nil {
 			return nil, parseError(path, err)
 		}
@@ -872,25 +856,8 @@ func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (sto
 // Stat retrieves the FileInfo for the given path, including the current size
 // in bytes and the creation time.
 func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
-	s := d.s3Client(ctx)
-
 	fi := storagedriver.FileInfoFields{
 		Path: path,
-	}
-
-	headResp, err := s.HeadObjectWithContext(ctx, &s3.HeadObjectInput{
-		Bucket: aws.String(d.Bucket),
-		Key:    aws.String(d.s3Path(path)),
-	})
-	if err == nil && headResp.ContentLength != nil {
-		if headResp.ContentLength != nil {
-			fi.Size = *headResp.ContentLength
-		}
-		if headResp.LastModified != nil {
-			fi.ModTime = *headResp.LastModified
-		}
-
-		return storagedriver.FileInfoInternal{FileInfoFields: fi}, nil
 	}
 
 	resp, err := d.S3.ListObjectsV2(&s3.ListObjectsV2Input{
@@ -898,7 +865,7 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 		Prefix:  aws.String(d.s3Path(path)),
 		MaxKeys: aws.Int64(1),
 	})
-
+	
 	if err != nil {
 		return nil, err
 	}
@@ -1098,31 +1065,19 @@ func min(a, b int) int {
 // Delete recursively deletes all objects stored at "path" and its subpaths.
 // We must be careful since S3 does not guarantee read after delete consistency
 func (d *driver) Delete(ctx context.Context, path string) error {
-	s := d.s3Client(ctx)
 	s3Objects := make([]*s3.ObjectIdentifier, 0, listMax)
-	// manually add the given path if it's a file
-	stat, err := d.Stat(ctx, path)
-	if err != nil {
-		return err
-	}
-	if stat != nil && !stat.IsDir() {
-		path := d.s3Path(path)
-		s3Objects = append(s3Objects, &s3.ObjectIdentifier{
-			Key: &path,
-		})
-	}
-
-	// list objects under the given path as a subpath (suffix with slash "/")
 	s3Path := d.s3Path(path)
 	listObjectsInput := &s3.ListObjectsV2Input{
 		Bucket: aws.String(d.Bucket),
 		Prefix: aws.String(s3Path),
 	}
 
+	s := d.s3Client(ctx)
 ListLoop:
 	for {
 		// list all the objects
 		resp, err := d.S3.ListObjectsV2(listObjectsInput)
+
 		// resp.Contents can only be empty on the first call
 		// if there were no more results to return after the first call, resp.IsTruncated would have been false
 		// and the loop would exit without recalling ListObjects
@@ -1131,6 +1086,10 @@ ListLoop:
 		}
 
 		for _, key := range resp.Contents {
+			// Skip if we encounter a key that is not a subpath (so that deleting "/a" does not delete "/ab").
+			if len(*key.Key) > len(s3Path) && (*key.Key)[len(s3Path)] != '/' {
+				continue
+			}
 			s3Objects = append(s3Objects, &s3.ObjectIdentifier{
 				Key: key.Key,
 			})
@@ -1187,11 +1146,10 @@ ListLoop:
 
 	// need to chunk objects into groups of 1000 per s3 restrictions
 	for i := 0; i < total; i += 1000 {
-		r := math.Min(float64(i+1000), float64(total))
 		output, err := s.DeleteObjects(&s3.DeleteObjectsInput{
 			Bucket: aws.String(d.Bucket),
 			Delete: &s3.Delete{
-				Objects: s3Objects[i:int(r)],
+				Objects: s3Objects[i:min(i+1000, total)],
 				Quiet:   aws.Bool(false),
 			},
 		})
@@ -1211,8 +1169,6 @@ ListLoop:
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 // May return an UnsupportedMethodErr in certain StorageDriver implementations.
 func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
-	s := d.s3Client(ctx)
-
 	methodString := http.MethodGet
 	method, ok := options["method"]
 	if ok {
@@ -1235,12 +1191,12 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 
 	switch methodString {
 	case http.MethodGet:
-		req, _ = s.GetObjectRequest(&s3.GetObjectInput{
+		req, _ = d.S3.GetObjectRequest(&s3.GetObjectInput{
 			Bucket: aws.String(d.Bucket),
 			Key:    aws.String(d.s3Path(path)),
 		})
 	case http.MethodHead:
-		req, _ = s.HeadObjectRequest(&s3.HeadObjectInput{
+		req, _ = d.S3.HeadObjectRequest(&s3.HeadObjectInput{
 			Bucket: aws.String(d.Bucket),
 			Key:    aws.String(d.s3Path(path)),
 		})
@@ -1265,7 +1221,7 @@ func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn) 
 	}
 
 	var objectCount int64
-	if err := d.doWalk(ctx, &objectCount, d.s3Path(path), prefix, true, f); err != nil {
+	if err := d.doWalk(ctx, &objectCount, d.s3Path(path), prefix, f); err != nil {
 		return err
 	}
 
@@ -1277,35 +1233,7 @@ func (d *driver) Walk(ctx context.Context, from string, f storagedriver.WalkFn) 
 	return nil
 }
 
-type walkInfoContainer struct {
-	storagedriver.FileInfoFields
-	prefix *string
-}
-
-// Path provides the full path of the target of this file info.
-func (wi walkInfoContainer) Path() string {
-	return wi.FileInfoFields.Path
-}
-
-// Size returns current length in bytes of the file. The return value can
-// be used to write to the end of the file at path. The value is
-// meaningless if IsDir returns true.
-func (wi walkInfoContainer) Size() int64 {
-	return wi.FileInfoFields.Size
-}
-
-// ModTime returns the modification time for the file. For backends that
-// don't have a modification time, the creation time should be returned.
-func (wi walkInfoContainer) ModTime() time.Time {
-	return wi.FileInfoFields.ModTime
-}
-
-// IsDir returns true if the path is a directory.
-func (wi walkInfoContainer) IsDir() bool {
-	return wi.FileInfoFields.IsDir
-}
-
-func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, prefix string, walkDirectories bool, f storagedriver.WalkFn) error {
+func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, prefix string, f storagedriver.WalkFn) error {
 	var (
 		retError error
 		// the most recent directory walked for de-duping
@@ -1315,19 +1243,15 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 	)
 	prevDir = prefix + path
 
-	delimiter := ""
-	if walkDirectories {
-		delimiter = "/"
-	}
 	listObjectsInput := &s3.ListObjectsV2Input{
-		Bucket:    aws.String(d.Bucket),
-		Prefix:    aws.String(path),
-		MaxKeys:   aws.Int64(listMax),
-		Delimiter: aws.String(delimiter),
+		Bucket:  aws.String(d.Bucket),
+		Prefix:  aws.String(path),
+		MaxKeys: aws.Int64(listMax),
 	}
 
 	ctx, done := dcontext.WithTrace(parentCtx)
 	defer done("s3aws.ListObjectsV2Pages(%s)", path)
+
 	// When the "delimiter" argument is omitted, the S3 list API will list all objects in the bucket
 	// recursively, omitting directory paths. Objects are listed in sorted, depth-first order so we
 	// can infer all the directories by comparing each object path to the last one we saw.
@@ -1339,8 +1263,10 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 	// faster than a more explicit recursive implementation.
 	listObjectErr := d.S3.ListObjectsV2PagesWithContext(ctx, listObjectsInput, func(objects *s3.ListObjectsV2Output, lastPage bool) bool {
 		walkInfos := make([]storagedriver.FileInfoInternal, 0, len(objects.Contents))
+
 		for _, file := range objects.Contents {
 			filePath := strings.Replace(*file.Key, d.s3Path(""), prefix, 1)
+
 			// get a list of all inferred directories between the previous directory and this file
 			dirs := directoryDiff(prevDir, filePath)
 			if len(dirs) > 0 {
@@ -1420,26 +1346,6 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 //
 //	directoryDiff("/", "/path/to/folder/folder/file")
 //	// => [ "/path", "/path/to", "/path/to/folder", "/path/to/folder/folder" ]
-//
-// Eg 1 directoryDiff("/path/to/folder", "/path/to/folder/folder/file")
-//
-//	=> [ "/path/to/folder/folder" ],
-//
-// Eg 2 directoryDiff("/path/to/folder/folder1", "/path/to/folder/folder2/file")
-//
-//	=> [ "/path/to/folder/folder2" ]
-//
-// Eg 3 directoryDiff("/path/to/folder/folder1/file", "/path/to/folder/folder2/file")
-//
-//	=> [ "/path/to/folder/folder2" ]
-//
-// Eg 4 directoryDiff("/path/to/folder/folder1/file", "/path/to/folder/folder2/folder1/file")
-//
-//	=> [ "/path/to/folder/folder2", "/path/to/folder/folder2/folder1" ]
-//
-// Eg 5 directoryDiff("/", "/path/to/folder/folder/file")
-//
-//	=> [ "/path", "/path/to", "/path/to/folder", "/path/to/folder/folder" ],
 func directoryDiff(prev, current string) []string {
 	var paths []string
 
