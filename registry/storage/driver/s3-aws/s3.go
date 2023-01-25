@@ -656,6 +656,7 @@ func (d *driver) logS3Operation(ctx context.Context) request.NamedHandler {
 		Fn: func(r *request.Request) {
 			req := r.HTTPRequest
 			resp := r.HTTPResponse
+			duration := time.Now().Sub(r.Time)
 			op := r.Operation
 			fields := map[interface{}]interface{}{
 				"s3_operation_name":                        op.Name,
@@ -669,6 +670,7 @@ func (d *driver) logS3Operation(ctx context.Context) request.NamedHandler {
 				"s3_http_response_header_x-amz-request-id": resp.Header.Values("x-amz-request-id"),
 				"s3_http_response_status":                  resp.StatusCode,
 				"s3_http_response_content-length":          resp.ContentLength,
+				"s3_http_request_duration":                 duration.Seconds(),
 			}
 
 			for logKey, headerKey := range d.LogS3APIResponseHeaders {
