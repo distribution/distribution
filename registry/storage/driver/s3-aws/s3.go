@@ -557,9 +557,12 @@ func (d *driver) logS3Operation(ctx context.Context) request.NamedHandler {
 		Fn: func(r *request.Request) {
 			req := r.HTTPRequest
 			resp := r.HTTPResponse
+			duration := time.Now().Sub(r.Time)
 			op := r.Operation
 			fields := map[interface{}]interface{}{
 				"s3_operation_name":                        op.Name,
+				"s3_bucket_name":                           d.Bucket,
+				"s3_object_name":                           d.s3Path(req.URL.Query().Get("Key")),
 				"s3_http_request_method":                   req.Method,
 				"s3_http_request_host":                     req.Host,
 				"s3_http_request_path":                     req.URL.Path,
@@ -568,6 +571,10 @@ func (d *driver) logS3Operation(ctx context.Context) request.NamedHandler {
 				"s3_http_response_header_x-amz-request-id": resp.Header.Values("x-amz-request-id"),
 				"s3_http_response_status":                  resp.StatusCode,
 				"s3_http_response_content-length":          resp.ContentLength,
+				"s3_http_request_duration":                 duration.Seconds(),
+				"s3_http_request_attempted_time":           r.AttemptTime,
+				"s3_http_request_retry_count":              r.RetryCount,
+				"s3_http_request_time":                     r.Time.Unix(),
 			}
 
 			for logKey, headerKey := range d.LogS3APIResponseHeaders {
@@ -751,11 +758,11 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 	}
 
 	resp, err := s.ListObjectsWithContext(ctx, &s3.ListObjectsInput{
-
 		Bucket:  aws.String(d.Bucket),
 		Prefix:  aws.String(d.s3Path(path)),
 		MaxKeys: aws.Int64(1),
 	})
+  
 	if err != nil {
 		return nil, err
 	}
