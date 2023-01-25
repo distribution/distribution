@@ -4,12 +4,11 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/docker/distribution"
+	"github.com/docker/distribution/manifest/schema2"
+	"github.com/docker/distribution/reference"
+	"github.com/docker/distribution/registry/storage/driver"
 	"github.com/opencontainers/go-digest"
-
-	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/manifest/schema2"
-	"github.com/distribution/distribution/v3/reference"
-	"github.com/distribution/distribution/v3/registry/storage/driver"
 )
 
 func emit(format string, a ...interface{}) {
@@ -128,6 +127,7 @@ func MarkAndSweep(ctx context.Context, storageDriver driver.StorageDriver, regis
 
 		return err
 	})
+
 	if err != nil {
 		return fmt.Errorf("failed to mark: %v", err)
 	}

@@ -32,8 +32,5 @@ Session.vim
 tags
 
 *.exe
-cobra.test
-bin
 
-.idea/
-*.iml
+cobra.test

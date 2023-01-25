@@ -17,7 +17,6 @@ import (
 	"fmt"
 	"sort"
 
-	//nolint:staticcheck // Ignore SA1019. Need to keep deprecated package for compatibility.
 	"github.com/golang/protobuf/proto"
 
 	dto "github.com/prometheus/client_model/go"
@@ -28,13 +27,10 @@ import (
 // registered with the wrapped Registerer in a modified way. The modified
 // Collector adds the provided Labels to all Metrics it collects (as
 // ConstLabels). The Metrics collected by the unmodified Collector must not
-// duplicate any of those labels. Wrapping a nil value is valid, resulting
-// in a no-op Registerer.
+// duplicate any of those labels.
 //
 // WrapRegistererWith provides a way to add fixed labels to a subset of
-// Collectors. It should not be used to add fixed labels to all metrics
-// exposed. See also
-// https://prometheus.io/docs/instrumenting/writing_exporters/#target-labels-not-static-scraped-labels
+// Collectors. It should not be used to add fixed labels to all metrics exposed.
 //
 // Conflicts between Collectors registered through the original Registerer with
 // Collectors registered through the wrapping Registerer will still be
@@ -54,7 +50,6 @@ func WrapRegistererWith(labels Labels, reg Registerer) Registerer {
 // Registerer. Collectors registered with the returned Registerer will be
 // registered with the wrapped Registerer in a modified way. The modified
 // Collector adds the provided prefix to the name of all Metrics it collects.
-// Wrapping a nil value is valid, resulting in a no-op Registerer.
 //
 // WrapRegistererWithPrefix is useful to have one place to prefix all metrics of
 // a sub-system. To make this work, register metrics of the sub-system with the
@@ -85,9 +80,6 @@ type wrappingRegisterer struct {
 }
 
 func (r *wrappingRegisterer) Register(c Collector) error {
-	if r.wrappedRegisterer == nil {
-		return nil
-	}
 	return r.wrappedRegisterer.Register(&wrappingCollector{
 		wrappedCollector: c,
 		prefix:           r.prefix,
@@ -96,9 +88,6 @@ func (r *wrappingRegisterer) Register(c Collector) error {
 }
 
 func (r *wrappingRegisterer) MustRegister(cs ...Collector) {
-	if r.wrappedRegisterer == nil {
-		return
-	}
 	for _, c := range cs {
 		if err := r.Register(c); err != nil {
 			panic(err)
@@ -107,9 +96,6 @@ func (r *wrappingRegisterer) MustRegister(cs ...Collector) {
 }
 
 func (r *wrappingRegisterer) Unregister(c Collector) bool {
-	if r.wrappedRegisterer == nil {
-		return false
-	}
 	return r.wrappedRegisterer.Unregister(&wrappingCollector{
 		wrappedCollector: c,
 		prefix:           r.prefix,

@@ -1,4 +1,3 @@
-//go:build codegen
 // +build codegen
 
 package endpoints
@@ -17,10 +16,6 @@ import (
 type CodeGenOptions struct {
 	// Options for how the model will be decoded.
 	DecodeModelOptions DecodeModelOptions
-
-	// Disables code generation of the service endpoint prefix IDs defined in
-	// the model.
-	DisableGenerateServiceIDs bool
 }
 
 // Set combines all of the option functions together
@@ -44,16 +39,8 @@ func CodeGenModel(modelFile io.Reader, outFile io.Writer, optFns ...func(*CodeGe
 		return err
 	}
 
-	v := struct {
-		Resolver
-		CodeGenOptions
-	}{
-		Resolver:       resolver,
-		CodeGenOptions: opts,
-	}
-
 	tmpl := template.Must(template.New("tmpl").Funcs(funcMap).Parse(v3Tmpl))
-	if err := tmpl.ExecuteTemplate(outFile, "defaults", v); err != nil {
+	if err := tmpl.ExecuteTemplate(outFile, "defaults", resolver); err != nil {
 		return fmt.Errorf("failed to execute template, %v", err)
 	}
 
@@ -155,71 +142,18 @@ func serviceSet(ps partitions) map[string]struct{} {
 	return set
 }
 
-func endpointVariantSetter(variant endpointVariant) (string, error) {
-	if variant == 0 {
-		return "0", nil
-	}
-
-	if variant > (fipsVariant | dualStackVariant) {
-		return "", fmt.Errorf("unknown endpoint variant")
-	}
-
-	var symbols []string
-	if variant&fipsVariant != 0 {
-		symbols = append(symbols, "fipsVariant")
-	}
-	if variant&dualStackVariant != 0 {
-		symbols = append(symbols, "dualStackVariant")
-	}
-	v := strings.Join(symbols, "|")
-
-	return v, nil
-}
-
-func endpointKeySetter(e endpointKey) (string, error) {
-	var sb strings.Builder
-	sb.WriteString("endpointKey{\n")
-	sb.WriteString(fmt.Sprintf("Region: %q,\n", e.Region))
-	if e.Variant != 0 {
-		variantSetter, err := endpointVariantSetter(e.Variant)
-		if err != nil {
-			return "", err
-		}
-		sb.WriteString(fmt.Sprintf("Variant: %s,\n", variantSetter))
-	}
-	sb.WriteString("}")
-	return sb.String(), nil
-}
-
-func defaultKeySetter(e defaultKey) (string, error) {
-	var sb strings.Builder
-	sb.WriteString("defaultKey{\n")
-	if e.Variant != 0 {
-		variantSetter, err := endpointVariantSetter(e.Variant)
-		if err != nil {
-			return "", err
-		}
-		sb.WriteString(fmt.Sprintf("Variant: %s,\n", variantSetter))
-	}
-	sb.WriteString("}")
-	return sb.String(), nil
-}
-
 var funcMap = template.FuncMap{
-	"ToSymbol":              toSymbol,
-	"QuoteString":           quoteString,
-	"RegionConst":           regionConstName,
-	"PartitionGetter":       partitionGetter,
-	"PartitionVarName":      partitionVarName,
-	"ListPartitionNames":    listPartitionNames,
-	"BoxedBoolIfSet":        boxedBoolIfSet,
-	"StringIfSet":           stringIfSet,
-	"StringSliceIfSet":      stringSliceIfSet,
-	"EndpointIsSet":         endpointIsSet,
-	"ServicesSet":           serviceSet,
-	"EndpointVariantSetter": endpointVariantSetter,
-	"EndpointKeySetter":     endpointKeySetter,
-	"DefaultKeySetter":      defaultKeySetter,
+	"ToSymbol":           toSymbol,
+	"QuoteString":        quoteString,
+	"RegionConst":        regionConstName,
+	"PartitionGetter":    partitionGetter,
+	"PartitionVarName":   partitionVarName,
+	"ListPartitionNames": listPartitionNames,
+	"BoxedBoolIfSet":     boxedBoolIfSet,
+	"StringIfSet":        stringIfSet,
+	"StringSliceIfSet":   stringSliceIfSet,
+	"EndpointIsSet":      endpointIsSet,
+	"ServicesSet":        serviceSet,
 }
 
 const v3Tmpl = `
@@ -232,17 +166,15 @@ import (
 	"regexp"
 )
 
-	{{ template "partition consts" $.Resolver }}
+	{{ template "partition consts" . }}
 
-	{{ range $_, $partition := $.Resolver }}
+	{{ range $_, $partition := . }}
 		{{ template "partition region consts" $partition }}
 	{{ end }}
 
-	{{ if not $.DisableGenerateServiceIDs -}}
-	{{ template "service consts" $.Resolver }}
-	{{- end }}
+	{{ template "service consts" . }}
 	
-	{{ template "endpoint resolvers" $.Resolver }}
+	{{ template "endpoint resolvers" . }}
 {{- end }}
 
 {{ define "partition consts" }}
@@ -325,9 +257,9 @@ partition{
 	{{ StringIfSet "Name: %q,\n" .Name -}}
 	{{ StringIfSet "DNSSuffix: %q,\n" .DNSSuffix -}}
 	RegionRegex: {{ template "gocode RegionRegex" .RegionRegex }},
-	{{ if (gt (len .Defaults) 0) -}}
-		Defaults: {{ template "gocode Defaults" .Defaults -}},
-	{{ end -}}
+	{{ if EndpointIsSet .Defaults -}}
+		Defaults: {{ template "gocode Endpoint" .Defaults }},
+	{{- end }}
 	Regions:  {{ template "gocode Regions" .Regions }},
 	Services: {{ template "gocode Services" .Services }},
 }
@@ -368,27 +300,19 @@ services{
 service{
 	{{ StringIfSet "PartitionEndpoint: %q,\n" .PartitionEndpoint -}}
 	{{ BoxedBoolIfSet "IsRegionalized: %s,\n" .IsRegionalized -}}
-	{{ if (gt (len .Defaults) 0) -}}
-		Defaults: {{ template "gocode Defaults" .Defaults -}},
-	{{ end -}}
+	{{ if EndpointIsSet .Defaults -}}
+		Defaults: {{ template "gocode Endpoint" .Defaults -}},
+	{{- end }}
 	{{ if .Endpoints -}}
 		Endpoints: {{ template "gocode Endpoints" .Endpoints }},
 	{{- end }}
 }
 {{- end }}
 
-{{ define "gocode Defaults" -}}
-endpointDefaults{
-	{{ range $id, $endpoint := . -}}
-	{{ DefaultKeySetter $id }}: {{ template "gocode Endpoint" $endpoint }},
-	{{ end }}
-}
-{{- end }}
-
 {{ define "gocode Endpoints" -}}
-serviceEndpoints{
+endpoints{
 	{{ range $id, $endpoint := . -}}
-	{{ EndpointKeySetter $id }}: {{ template "gocode Endpoint" $endpoint }},
+	"{{ $id }}": {{ template "gocode Endpoint" $endpoint }},
 	{{ end }}
 }
 {{- end }}
@@ -396,7 +320,6 @@ serviceEndpoints{
 {{ define "gocode Endpoint" -}}
 endpoint{
 	{{ StringIfSet "Hostname: %q,\n" .Hostname -}}
-	{{ StringIfSet "DNSSuffix: %q,\n" .DNSSuffix -}}
 	{{ StringIfSet "SSLCommonName: %q,\n" .SSLCommonName -}}
 	{{ StringSliceIfSet "Protocols: []string{%s},\n" .Protocols -}}
 	{{ StringSliceIfSet "SignatureVersions: []string{%s},\n" .SignatureVersions -}}
@@ -406,7 +329,9 @@ endpoint{
 		{{ StringIfSet "Service: %q,\n" .CredentialScope.Service -}}
 	},
 	{{- end }}
-	{{ BoxedBoolIfSet "Deprecated: %s,\n" .Deprecated -}}
+	{{ BoxedBoolIfSet "HasDualStack: %s,\n" .HasDualStack -}}
+	{{ StringIfSet "DualStackHostname: %q,\n" .DualStackHostname -}}
+
 }
 {{- end }}
 `

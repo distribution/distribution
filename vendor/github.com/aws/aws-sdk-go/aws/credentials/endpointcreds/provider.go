@@ -39,7 +39,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/client/metadata"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/private/protocol/json/jsonutil"
 )
 
 // ProviderName is the name of the credentials provider.
@@ -66,10 +65,6 @@ type Provider struct {
 	//
 	// If ExpiryWindow is 0 or less it will be ignored.
 	ExpiryWindow time.Duration
-
-	// Optional authorization token value if set will be used as the value of
-	// the Authorization header of the endpoint credential request.
-	AuthorizationToken string
 }
 
 // NewProviderClient returns a credentials Provider for retrieving AWS credentials
@@ -98,8 +93,8 @@ func NewProviderClient(cfg aws.Config, handlers request.Handlers, endpoint strin
 	return p
 }
 
-// NewCredentialsClient returns a pointer to a new Credentials object
-// wrapping the endpoint credentials Provider.
+// NewCredentialsClient returns a Credentials wrapper for retrieving credentials
+// from an arbitrary endpoint concurrently. The client will request the
 func NewCredentialsClient(cfg aws.Config, handlers request.Handlers, endpoint string, options ...func(*Provider)) *credentials.Credentials {
 	return credentials.NewCredentials(NewProviderClient(cfg, handlers, endpoint, options...))
 }
@@ -116,13 +111,7 @@ func (p *Provider) IsExpired() bool {
 // Retrieve will attempt to request the credentials from the endpoint the Provider
 // was configured for. And error will be returned if the retrieval fails.
 func (p *Provider) Retrieve() (credentials.Value, error) {
-	return p.RetrieveWithContext(aws.BackgroundContext())
-}
-
-// RetrieveWithContext will attempt to request the credentials from the endpoint the Provider
-// was configured for. And error will be returned if the retrieval fails.
-func (p *Provider) RetrieveWithContext(ctx credentials.Context) (credentials.Value, error) {
-	resp, err := p.getCredentials(ctx)
+	resp, err := p.getCredentials()
 	if err != nil {
 		return credentials.Value{ProviderName: ProviderName},
 			awserr.New("CredentialsEndpointError", "failed to load credentials", err)
@@ -154,7 +143,7 @@ type errorOutput struct {
 	Message string `json:"message"`
 }
 
-func (p *Provider) getCredentials(ctx aws.Context) (*getCredentialsOutput, error) {
+func (p *Provider) getCredentials() (*getCredentialsOutput, error) {
 	op := &request.Operation{
 		Name:       "GetCredentials",
 		HTTPMethod: "GET",
@@ -162,11 +151,7 @@ func (p *Provider) getCredentials(ctx aws.Context) (*getCredentialsOutput, error
 
 	out := &getCredentialsOutput{}
 	req := p.Client.NewRequest(op, nil, out)
-	req.SetContext(ctx)
 	req.HTTPRequest.Header.Set("Accept", "application/json")
-	if authToken := p.AuthorizationToken; len(authToken) != 0 {
-		req.HTTPRequest.Header.Set("Authorization", authToken)
-	}
 
 	return out, req.Send()
 }
@@ -182,7 +167,7 @@ func unmarshalHandler(r *request.Request) {
 
 	out := r.Data.(*getCredentialsOutput)
 	if err := json.NewDecoder(r.HTTPResponse.Body).Decode(&out); err != nil {
-		r.Error = awserr.New(request.ErrCodeSerialization,
+		r.Error = awserr.New("SerializationError",
 			"failed to decode endpoint credentials",
 			err,
 		)
@@ -193,15 +178,11 @@ func unmarshalError(r *request.Request) {
 	defer r.HTTPResponse.Body.Close()
 
 	var errOut errorOutput
-	err := jsonutil.UnmarshalJSONError(&errOut, r.HTTPResponse.Body)
-	if err != nil {
-		r.Error = awserr.NewRequestFailure(
-			awserr.New(request.ErrCodeSerialization,
-				"failed to decode error message", err),
-			r.HTTPResponse.StatusCode,
-			r.RequestID,
+	if err := json.NewDecoder(r.HTTPResponse.Body).Decode(&errOut); err != nil {
+		r.Error = awserr.New("SerializationError",
+			"failed to decode endpoint credentials",
+			err,
 		)
-		return
 	}
 
 	// Response body format is not consistent between metadata endpoints.

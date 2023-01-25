@@ -19,7 +19,7 @@ import (
 	"runtime"
 )
 
-const number = "v14.2.1"
+const number = "v13.3.2"
 
 var (
 	userAgent = fmt.Sprintf("Go/%s (%s-%s) go-autorest/%s",

@@ -57,32 +57,6 @@ var (
 	ErrNoAccount = errors.New("acme: account does not exist")
 )
 
-// A Subproblem describes an ACME subproblem as reported in an Error.
-type Subproblem struct {
-	// Type is a URI reference that identifies the problem type,
-	// typically in a "urn:acme:error:xxx" form.
-	Type string
-	// Detail is a human-readable explanation specific to this occurrence of the problem.
-	Detail string
-	// Instance indicates a URL that the client should direct a human user to visit
-	// in order for instructions on how to agree to the updated Terms of Service.
-	// In such an event CA sets StatusCode to 403, Type to
-	// "urn:ietf:params:acme:error:userActionRequired", and adds a Link header with relation
-	// "terms-of-service" containing the latest TOS URL.
-	Instance string
-	// Identifier may contain the ACME identifier that the error is for.
-	Identifier *AuthzID
-}
-
-func (sp Subproblem) String() string {
-	str := fmt.Sprintf("%s: ", sp.Type)
-	if sp.Identifier != nil {
-		str += fmt.Sprintf("[%s: %s] ", sp.Identifier.Type, sp.Identifier.Value)
-	}
-	str += sp.Detail
-	return str
-}
-
 // Error is an ACME error, defined in Problem Details for HTTP APIs doc
 // http://tools.ietf.org/html/draft-ietf-appsawg-http-problem.
 type Error struct {
@@ -102,21 +76,10 @@ type Error struct {
 	// Header is the original server error response headers.
 	// It may be nil.
 	Header http.Header
-	// Subproblems may contain more detailed information about the individual problems
-	// that caused the error. This field is only sent by RFC 8555 compatible ACME
-	// servers. Defined in RFC 8555 Section 6.7.1.
-	Subproblems []Subproblem
 }
 
 func (e *Error) Error() string {
-	str := fmt.Sprintf("%d %s: %s", e.StatusCode, e.ProblemType, e.Detail)
-	if len(e.Subproblems) > 0 {
-		str += fmt.Sprintf("; subproblems:")
-		for _, sp := range e.Subproblems {
-			str += fmt.Sprintf("\n\t%s", sp)
-		}
-	}
-	return str
+	return fmt.Sprintf("%d %s: %s", e.StatusCode, e.ProblemType, e.Detail)
 }
 
 // AuthorizationError indicates that an authorization for an identifier
@@ -139,12 +102,7 @@ func (a *AuthorizationError) Error() string {
 	for i, err := range a.Errors {
 		e[i] = err.Error()
 	}
-
-	if a.Identifier != "" {
-		return fmt.Sprintf("acme: authorization error for %s: %s", a.Identifier, strings.Join(e, "; "))
-	}
-
-	return fmt.Sprintf("acme: authorization error: %s", strings.Join(e, "; "))
+	return fmt.Sprintf("acme: authorization error for %s: %s", a.Identifier, strings.Join(e, "; "))
 }
 
 // OrderError is returned from Client's order related methods.
@@ -236,28 +194,6 @@ type Account struct {
 	//
 	// It is non-RFC 8555 compliant and is obsoleted by OrdersURL.
 	Certificates string
-
-	// ExternalAccountBinding represents an arbitrary binding to an account of
-	// the CA which the ACME server is tied to.
-	// See https://tools.ietf.org/html/rfc8555#section-7.3.4 for more details.
-	ExternalAccountBinding *ExternalAccountBinding
-}
-
-// ExternalAccountBinding contains the data needed to form a request with
-// an external account binding.
-// See https://tools.ietf.org/html/rfc8555#section-7.3.4 for more details.
-type ExternalAccountBinding struct {
-	// KID is the Key ID of the symmetric MAC key that the CA provides to
-	// identify an external account from ACME.
-	KID string
-
-	// Key is the bytes of the symmetric key that the CA provides to identify
-	// the account. Key must correspond to the KID.
-	Key []byte
-}
-
-func (e *ExternalAccountBinding) String() string {
-	return fmt.Sprintf("&{KID: %q, Key: redacted}", e.KID)
 }
 
 // Directory is ACME server discovery data.
@@ -471,7 +407,6 @@ type wireAuthz struct {
 	Wildcard     bool
 	Challenges   []wireChallenge
 	Combinations [][]int
-	Error        *wireError
 }
 
 func (z *wireAuthz) authorization(uri string) *Authorization {
@@ -495,17 +430,11 @@ func (z *wireAuthz) error(uri string) *AuthorizationError {
 		URI:        uri,
 		Identifier: z.Identifier.Value,
 	}
-
-	if z.Error != nil {
-		err.Errors = append(err.Errors, z.Error.error(nil))
-	}
-
 	for _, raw := range z.Challenges {
 		if raw.Error != nil {
 			err.Errors = append(err.Errors, raw.Error.error(nil))
 		}
 	}
-
 	return err
 }
 
@@ -570,23 +499,20 @@ func (c *wireChallenge) challenge() *Challenge {
 // wireError is a subset of fields of the Problem Details object
 // as described in https://tools.ietf.org/html/rfc7807#section-3.1.
 type wireError struct {
-	Status      int
-	Type        string
-	Detail      string
-	Instance    string
-	Subproblems []Subproblem
+	Status   int
+	Type     string
+	Detail   string
+	Instance string
 }
 
 func (e *wireError) error(h http.Header) *Error {
-	err := &Error{
+	return &Error{
 		StatusCode:  e.Status,
 		ProblemType: e.Type,
 		Detail:      e.Detail,
 		Instance:    e.Instance,
 		Header:      h,
-		Subproblems: e.Subproblems,
 	}
-	return err
 }
 
 // CertOption is an optional argument type for the TLS ChallengeCert methods for

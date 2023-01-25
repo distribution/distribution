@@ -7,16 +7,16 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/manifest"
-	"github.com/distribution/distribution/v3/manifest/manifestlist"
-	"github.com/distribution/distribution/v3/manifest/ocischema"
-	"github.com/distribution/distribution/v3/manifest/schema1"
-	"github.com/distribution/distribution/v3/reference"
-	"github.com/distribution/distribution/v3/registry/storage/cache/memory"
-	"github.com/distribution/distribution/v3/registry/storage/driver"
-	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
-	"github.com/distribution/distribution/v3/testutil"
+	"github.com/docker/distribution"
+	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/manifest/manifestlist"
+	"github.com/docker/distribution/manifest/ocischema"
+	"github.com/docker/distribution/manifest/schema1"
+	"github.com/docker/distribution/reference"
+	"github.com/docker/distribution/registry/storage/cache/memory"
+	"github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/registry/storage/driver/inmemory"
+	"github.com/docker/distribution/testutil"
 	"github.com/docker/libtrust"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -33,8 +33,8 @@ type manifestStoreTestEnv struct {
 
 func newManifestStoreTestEnv(t *testing.T, name reference.Named, tag string, options ...RegistryOption) *manifestStoreTestEnv {
 	ctx := context.Background()
-	drvr := inmemory.New()
-	registry, err := NewRegistry(ctx, drvr, options...)
+	driver := inmemory.New()
+	registry, err := NewRegistry(ctx, driver, options...)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -46,7 +46,7 @@ func newManifestStoreTestEnv(t *testing.T, name reference.Named, tag string, opt
 
 	return &manifestStoreTestEnv{
 		ctx:        ctx,
-		driver:     drvr,
+		driver:     driver,
 		registry:   registry,
 		repository: repo,
 		name:       name,
@@ -59,7 +59,7 @@ func TestManifestStorage(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	testManifestStorage(t, true, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect, Schema1SigningKey(k), EnableSchema1)
+	testManifestStorage(t, true, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect, Schema1SigningKey(k), EnableSchema1)
 }
 
 func TestManifestStorageV1Unsupported(t *testing.T) {
@@ -67,7 +67,7 @@ func TestManifestStorageV1Unsupported(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	testManifestStorage(t, false, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect, Schema1SigningKey(k))
+	testManifestStorage(t, false, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableDelete, EnableRedirect, Schema1SigningKey(k))
 }
 
 func testManifestStorage(t *testing.T, schema1Enabled bool, options ...RegistryOption) {
@@ -357,7 +357,7 @@ func testManifestStorage(t *testing.T, schema1Enabled bool, options ...RegistryO
 		t.Errorf("Deleted manifest get returned non-nil")
 	}
 
-	r, err := NewRegistry(ctx, env.driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableRedirect)
+	r, err := NewRegistry(ctx, env.driver, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -393,7 +393,7 @@ func testOCIManifestStorage(t *testing.T, testname string, includeMediaTypes boo
 
 	repoName, _ := reference.WithName("foo/bar")
 	env := newManifestStoreTestEnv(t, repoName, "thetag",
-		BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)),
+		BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()),
 		EnableDelete, EnableRedirect)
 
 	ctx := context.Background()
@@ -434,25 +434,25 @@ func testOCIManifestStorage(t *testing.T, testname string, includeMediaTypes boo
 		builder.AppendReference(distribution.Descriptor{Digest: dgst})
 	}
 
-	mfst, err := builder.Build(ctx)
+	manifest, err := builder.Build(ctx)
 	if err != nil {
 		t.Fatalf("%s: unexpected error generating manifest: %v", testname, err)
 	}
 
 	// before putting the manifest test for proper handling of SchemaVersion
 
-	if mfst.(*ocischema.DeserializedManifest).Manifest.SchemaVersion != 2 {
+	if manifest.(*ocischema.DeserializedManifest).Manifest.SchemaVersion != 2 {
 		t.Fatalf("%s: unexpected error generating default version for oci manifest", testname)
 	}
-	mfst.(*ocischema.DeserializedManifest).Manifest.SchemaVersion = 0
+	manifest.(*ocischema.DeserializedManifest).Manifest.SchemaVersion = 0
 
 	var manifestDigest digest.Digest
-	if manifestDigest, err = ms.Put(ctx, mfst); err != nil {
+	if manifestDigest, err = ms.Put(ctx, manifest); err != nil {
 		if err.Error() != "unrecognized manifest schema version 0" {
 			t.Fatalf("%s: unexpected error putting manifest: %v", testname, err)
 		}
-		mfst.(*ocischema.DeserializedManifest).Manifest.SchemaVersion = 2
-		if manifestDigest, err = ms.Put(ctx, mfst); err != nil {
+		manifest.(*ocischema.DeserializedManifest).Manifest.SchemaVersion = 2
+		if manifestDigest, err = ms.Put(ctx, manifest); err != nil {
 			t.Fatalf("%s: unexpected error putting manifest: %v", testname, err)
 		}
 	}
@@ -529,7 +529,7 @@ func testOCIManifestStorage(t *testing.T, testname string, includeMediaTypes boo
 	}
 
 	if fetchedIndex.MediaType != indexMediaType {
-		t.Fatalf("%s: unexpected MediaType for result, %s", testname, fetchedIndex.MediaType)
+		t.Fatalf("%s: unexpected MediaType for result, %s", testname, fetchedManifest.MediaType)
 	}
 
 	payloadMediaType, _, err = fromStore.Payload()
@@ -540,6 +540,7 @@ func testOCIManifestStorage(t *testing.T, testname string, includeMediaTypes boo
 	if payloadMediaType != v1.MediaTypeImageIndex {
 		t.Fatalf("%s: unexpected MediaType for index payload, %s", testname, payloadMediaType)
 	}
+
 }
 
 // TestLinkPathFuncs ensures that the link path functions behavior are locked

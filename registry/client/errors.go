@@ -5,10 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 
-	"github.com/distribution/distribution/v3/registry/api/errcode"
-	"github.com/distribution/distribution/v3/registry/client/auth/challenge"
+	"github.com/docker/distribution/registry/api/errcode"
+	"github.com/docker/distribution/registry/client/auth/challenge"
 )
 
 // ErrNoErrorsInBody is returned when an HTTP response body parses to an empty
@@ -39,7 +40,7 @@ func (e *UnexpectedHTTPResponseError) Error() string {
 
 func parseHTTPErrorResponse(statusCode int, r io.Reader) error {
 	var errors errcode.Errors
-	body, err := io.ReadAll(r)
+	body, err := ioutil.ReadAll(r)
 	if err != nil {
 		return err
 	}

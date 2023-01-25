@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	dcontext "github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/registry/storage"
-	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
-	"github.com/distribution/distribution/v3/version"
+	dcontext "github.com/docker/distribution/context"
+	"github.com/docker/distribution/registry/storage"
+	"github.com/docker/distribution/registry/storage/driver/factory"
+	"github.com/docker/distribution/version"
 	"github.com/docker/libtrust"
 	"github.com/spf13/cobra"
 )
@@ -36,10 +36,8 @@ var RootCmd = &cobra.Command{
 	},
 }
 
-var (
-	dryRun         bool
-	removeUntagged bool
-)
+var dryRun bool
+var removeUntagged bool
 
 // GCCmd is the cobra command that corresponds to the garbage-collect subcommand
 var GCCmd = &cobra.Command{

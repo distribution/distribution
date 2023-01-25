@@ -1,5 +1,6 @@
 // Package middleware - cloudfront wrapper for storage libs
 // N.B. currently only works with S3, not arbitrary sites
+//
 package middleware
 
 import (
@@ -7,15 +8,15 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"io/ioutil"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/service/cloudfront/sign"
-	dcontext "github.com/distribution/distribution/v3/context"
-	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
-	storagemiddleware "github.com/distribution/distribution/v3/registry/storage/driver/middleware"
+	dcontext "github.com/docker/distribution/context"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
+	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
 )
 
 // cloudFrontStorageMiddleware provides a simple implementation of layerHandler that
@@ -33,21 +34,12 @@ var _ storagedriver.StorageDriver = &cloudFrontStorageMiddleware{}
 
 // newCloudFrontLayerHandler constructs and returns a new CloudFront
 // LayerHandler implementation.
-//
-// Required options:
-//
-//   - baseurl
-//   - privatekey
-//   - keypairid
-//
-// Optional options:
-//
-//   - ipFilteredBy
-//   - awsregion
-//   - ipfilteredby: valid value "none|aws|awsregion". "none", do not filter any IP,
-//     default value. "aws", only aws IP goes to S3 directly. "awsregion", only
-//     regions listed in awsregion options goes to S3 directly
-//   - awsregion: a comma separated string of AWS regions.
+// Required options: baseurl, privatekey, keypairid
+
+// Optional options: ipFilteredBy, awsregion
+// ipfilteredby: valid value "none|aws|awsregion". "none", do not filter any IP, default value. "aws", only aws IP goes
+//               to S3 directly. "awsregion", only regions listed in awsregion options goes to S3 directly
+// awsregion: a comma separated string of AWS regions.
 func newCloudFrontStorageMiddleware(storageDriver storagedriver.StorageDriver, options map[string]interface{}) (storagedriver.StorageDriver, error) {
 	// parse baseurl
 	base, ok := options["baseurl"]
@@ -89,7 +81,7 @@ func newCloudFrontStorageMiddleware(storageDriver storagedriver.StorageDriver, o
 	}
 
 	// get urlSigner from the file specified in pkPath
-	pkBytes, err := os.ReadFile(pkPath)
+	pkBytes, err := ioutil.ReadFile(pkPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read privatekey file: %s", err)
 	}
@@ -135,7 +127,7 @@ func newCloudFrontStorageMiddleware(storageDriver storagedriver.StorageDriver, o
 			if err != nil {
 				return nil, fmt.Errorf("invalid updatefrequency: %s", err)
 			}
-			updateFrequency = updateFreq
+			duration = updateFreq
 		}
 	}
 
@@ -219,5 +211,5 @@ func (lh *cloudFrontStorageMiddleware) URLFor(ctx context.Context, path string, 
 
 // init registers the cloudfront layerHandler backend.
 func init() {
-	storagemiddleware.Register("cloudfront", newCloudFrontStorageMiddleware)
+	storagemiddleware.Register("cloudfront", storagemiddleware.InitFunc(newCloudFrontStorageMiddleware))
 }

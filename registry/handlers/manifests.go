@@ -7,21 +7,20 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/docker/distribution"
+	dcontext "github.com/docker/distribution/context"
+	"github.com/docker/distribution/manifest/manifestlist"
+	"github.com/docker/distribution/manifest/ocischema"
+	"github.com/docker/distribution/manifest/schema1"
+	"github.com/docker/distribution/manifest/schema2"
+	"github.com/docker/distribution/reference"
+	"github.com/docker/distribution/registry/api/errcode"
+	v2 "github.com/docker/distribution/registry/api/v2"
+	"github.com/docker/distribution/registry/auth"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/gorilla/handlers"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
-
-	"github.com/distribution/distribution/v3"
-	dcontext "github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/manifest/manifestlist"
-	"github.com/distribution/distribution/v3/manifest/ocischema"
-	"github.com/distribution/distribution/v3/manifest/schema1"
-	"github.com/distribution/distribution/v3/manifest/schema2"
-	"github.com/distribution/distribution/v3/reference"
-	"github.com/distribution/distribution/v3/registry/api/errcode"
-	v2 "github.com/distribution/distribution/v3/registry/api/v2"
-	"github.com/distribution/distribution/v3/registry/auth"
-	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 )
 
 // These constants determine which architecture and OS to choose from a
@@ -50,23 +49,23 @@ func manifestDispatcher(ctx *Context, r *http.Request) http.Handler {
 	manifestHandler := &manifestHandler{
 		Context: ctx,
 	}
-	ref := getReference(ctx)
-	dgst, err := digest.Parse(ref)
+	reference := getReference(ctx)
+	dgst, err := digest.Parse(reference)
 	if err != nil {
 		// We just have a tag
-		manifestHandler.Tag = ref
+		manifestHandler.Tag = reference
 	} else {
 		manifestHandler.Digest = dgst
 	}
 
 	mhandler := handlers.MethodHandler{
-		http.MethodGet:  http.HandlerFunc(manifestHandler.GetManifest),
-		http.MethodHead: http.HandlerFunc(manifestHandler.GetManifest),
+		"GET":  http.HandlerFunc(manifestHandler.GetManifest),
+		"HEAD": http.HandlerFunc(manifestHandler.GetManifest),
 	}
 
 	if !ctx.readOnly {
-		mhandler[http.MethodPut] = http.HandlerFunc(manifestHandler.PutManifest)
-		mhandler[http.MethodDelete] = http.HandlerFunc(manifestHandler.DeleteManifest)
+		mhandler["PUT"] = http.HandlerFunc(manifestHandler.PutManifest)
+		mhandler["DELETE"] = http.HandlerFunc(manifestHandler.DeleteManifest)
 	}
 
 	return mhandler
@@ -312,7 +311,7 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 
 	if imh.Digest != "" {
 		if desc.Digest != imh.Digest {
-			dcontext.GetLogger(imh).Errorf("payload digest does not match: %q != %q", desc.Digest, imh.Digest)
+			dcontext.GetLogger(imh).Errorf("payload digest does match: %q != %q", desc.Digest, imh.Digest)
 			imh.Errors = append(imh.Errors, v2.ErrorCodeDigestInvalid)
 			return
 		}
@@ -482,30 +481,15 @@ func (imh *manifestHandler) applyResourcePolicy(manifest distribution.Manifest) 
 	}
 
 	return nil
+
 }
 
-// DeleteManifest removes the manifest with the given digest or the tag with the given name from the registry.
+// DeleteManifest removes the manifest with the given digest from the registry.
 func (imh *manifestHandler) DeleteManifest(w http.ResponseWriter, r *http.Request) {
 	dcontext.GetLogger(imh).Debug("DeleteImageManifest")
 
-	if imh.App.isCache {
-		imh.Errors = append(imh.Errors, errcode.ErrorCodeUnsupported)
-		return
-	}
-
 	if imh.Tag != "" {
-		dcontext.GetLogger(imh).Debug("DeleteImageTag")
-		tagService := imh.Repository.Tags(imh.Context)
-		if err := tagService.Untag(imh.Context, imh.Tag); err != nil {
-			switch err.(type) {
-			case distribution.ErrTagUnknown, storagedriver.PathNotFoundError:
-				imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
-			default:
-				imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
-			}
-			return
-		}
-		w.WriteHeader(http.StatusAccepted)
+		imh.Errors = append(imh.Errors, errcode.ErrorCodeUnsupported)
 		return
 	}
 

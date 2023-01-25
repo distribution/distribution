@@ -2,13 +2,12 @@ package notifications
 
 import (
 	"context"
-	"io"
 	"net/http"
 
-	"github.com/distribution/distribution/v3"
+	"github.com/docker/distribution"
 
-	dcontext "github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/reference"
+	dcontext "github.com/docker/distribution/context"
+	"github.com/docker/distribution/reference"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -148,7 +147,7 @@ func (bsl *blobServiceListener) Get(ctx context.Context, dgst digest.Digest) ([]
 	return p, err
 }
 
-func (bsl *blobServiceListener) Open(ctx context.Context, dgst digest.Digest) (io.ReadSeekCloser, error) {
+func (bsl *blobServiceListener) Open(ctx context.Context, dgst digest.Digest) (distribution.ReadSeekCloser, error) {
 	rc, err := bsl.BlobStore.Open(ctx, dgst)
 	if err == nil {
 		if desc, err := bsl.Stat(ctx, dgst); err != nil {

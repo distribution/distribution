@@ -1,6 +1,6 @@
-# distribution/distribution Project Governance
+# docker/distribution Project Governance
 
-Distribution [Code of Conduct](./CODE-OF-CONDUCT.md) can be found here.
+Docker distribution abides by the [CNCF Code of Conduct](https://github.com/cncf/foundation/blob/master/code-of-conduct.md).
 
 For specific guidance on practical contribution steps please
 see our [CONTRIBUTING.md](./CONTRIBUTING.md) guide.

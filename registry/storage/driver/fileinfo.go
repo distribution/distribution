@@ -52,10 +52,8 @@ type FileInfoInternal struct {
 	FileInfoFields
 }
 
-var (
-	_ FileInfo = FileInfoInternal{}
-	_ FileInfo = &FileInfoInternal{}
-)
+var _ FileInfo = FileInfoInternal{}
+var _ FileInfo = &FileInfoInternal{}
 
 // Path provides the full path of the target of this file info.
 func (fi FileInfoInternal) Path() string {

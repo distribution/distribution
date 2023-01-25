@@ -5,13 +5,12 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/distribution/distribution/v3"
+	"github.com/docker/distribution"
 	"github.com/opencontainers/go-digest"
 )
 
 type mockBlobService struct {
 	descriptors map[digest.Digest]distribution.Descriptor
-	distribution.BlobService
 }
 
 func (bs *mockBlobService) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
@@ -21,14 +20,30 @@ func (bs *mockBlobService) Stat(ctx context.Context, dgst digest.Digest) (distri
 	return distribution.Descriptor{}, distribution.ErrBlobUnknown
 }
 
+func (bs *mockBlobService) Get(ctx context.Context, dgst digest.Digest) ([]byte, error) {
+	panic("not implemented")
+}
+
+func (bs *mockBlobService) Open(ctx context.Context, dgst digest.Digest) (distribution.ReadSeekCloser, error) {
+	panic("not implemented")
+}
+
 func (bs *mockBlobService) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
 	d := distribution.Descriptor{
-		MediaType: "application/octet-stream",
 		Digest:    digest.FromBytes(p),
 		Size:      int64(len(p)),
+		MediaType: "application/octet-stream",
 	}
 	bs.descriptors[d.Digest] = d
 	return d, nil
+}
+
+func (bs *mockBlobService) Create(ctx context.Context, options ...distribution.BlobCreateOption) (distribution.BlobWriter, error) {
+	panic("not implemented")
+}
+
+func (bs *mockBlobService) Resume(ctx context.Context, id string) (distribution.BlobWriter, error) {
+	panic("not implemented")
 }
 
 func TestBuilder(t *testing.T) {
@@ -134,19 +149,19 @@ func TestBuilder(t *testing.T) {
 
 	descriptors := []distribution.Descriptor{
 		{
-			MediaType: MediaTypeLayer,
 			Digest:    digest.Digest("sha256:a3ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"),
 			Size:      5312,
+			MediaType: MediaTypeLayer,
 		},
 		{
-			MediaType: MediaTypeLayer,
 			Digest:    digest.Digest("sha256:86e0e091d0da6bde2456dbb48306f3956bbeb2eae1b5b9a43045843f69fe4aaa"),
 			Size:      235231,
+			MediaType: MediaTypeLayer,
 		},
 		{
-			MediaType: MediaTypeLayer,
 			Digest:    digest.Digest("sha256:b4ed95caeb02ffe68cdd9fd84406680ae93d633cb16422d00e8a7c22955b46d4"),
 			Size:      639152,
+			MediaType: MediaTypeLayer,
 		},
 	}
 

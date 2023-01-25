@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/distribution/distribution/v3/health"
+	"github.com/docker/distribution/health"
 )
 
 // FileChecker checks the existence of a file and returns an error
@@ -40,7 +40,7 @@ func HTTPChecker(r string, statusCode int, timeout time.Duration, headers http.H
 		client := http.Client{
 			Timeout: timeout,
 		}
-		req, err := http.NewRequest(http.MethodHead, r, nil)
+		req, err := http.NewRequest("HEAD", r, nil)
 		if err != nil {
 			return errors.New("error creating request: " + r)
 		}

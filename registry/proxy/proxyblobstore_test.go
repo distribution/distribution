@@ -2,7 +2,7 @@ package proxy
 
 import (
 	"context"
-	"io"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
@@ -10,13 +10,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/reference"
-	"github.com/distribution/distribution/v3/registry/proxy/scheduler"
-	"github.com/distribution/distribution/v3/registry/storage"
-	"github.com/distribution/distribution/v3/registry/storage/cache/memory"
-	"github.com/distribution/distribution/v3/registry/storage/driver/filesystem"
-	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
+	"github.com/docker/distribution"
+	"github.com/docker/distribution/reference"
+	"github.com/docker/distribution/registry/proxy/scheduler"
+	"github.com/docker/distribution/registry/storage"
+	"github.com/docker/distribution/registry/storage/cache/memory"
+	"github.com/docker/distribution/registry/storage/driver/filesystem"
+	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -59,7 +59,7 @@ func (sbs statsBlobStore) Resume(ctx context.Context, id string) (distribution.B
 	return sbs.blobs.Resume(ctx, id)
 }
 
-func (sbs statsBlobStore) Open(ctx context.Context, dgst digest.Digest) (io.ReadSeekCloser, error) {
+func (sbs statsBlobStore) Open(ctx context.Context, dgst digest.Digest) (distribution.ReadSeekCloser, error) {
 	sbsMu.Lock()
 	sbs.stats["open"]++
 	sbsMu.Unlock()
@@ -76,6 +76,7 @@ func (sbs statsBlobStore) ServeBlob(ctx context.Context, w http.ResponseWriter, 
 }
 
 func (sbs statsBlobStore) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+
 	sbsMu.Lock()
 	sbs.stats["stat"]++
 	sbsMu.Unlock()
@@ -114,8 +115,6 @@ func (te *testEnv) RemoteStats() *map[string]int {
 
 // Populate remote store and record the digests
 func makeTestEnv(t *testing.T, name string) *testEnv {
-	t.Helper()
-
 	nameRef, err := reference.WithName(name)
 	if err != nil {
 		t.Fatalf("unable to parse reference: %s", err)
@@ -123,8 +122,15 @@ func makeTestEnv(t *testing.T, name string) *testEnv {
 
 	ctx := context.Background()
 
-	truthDir := t.TempDir()
-	cacheDir := t.TempDir()
+	truthDir, err := ioutil.TempDir("", "truth")
+	if err != nil {
+		t.Fatalf("unable to create tempdir: %s", err)
+	}
+
+	cacheDir, err := ioutil.TempDir("", "cache")
+	if err != nil {
+		t.Fatalf("unable to create tempdir: %s", err)
+	}
 
 	localDriver, err := filesystem.FromParameters(map[string]interface{}{
 		"rootdirectory": truthDir,
@@ -134,7 +140,7 @@ func makeTestEnv(t *testing.T, name string) *testEnv {
 	}
 
 	// todo: create a tempfile area here
-	localRegistry, err := storage.NewRegistry(ctx, localDriver, storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), storage.EnableRedirect, storage.DisableDigestResumption)
+	localRegistry, err := storage.NewRegistry(ctx, localDriver, storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()), storage.EnableRedirect, storage.DisableDigestResumption)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -150,7 +156,7 @@ func makeTestEnv(t *testing.T, name string) *testEnv {
 		t.Fatalf("unable to create filesystem driver: %s", err)
 	}
 
-	truthRegistry, err := storage.NewRegistry(ctx, cacheDriver, storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)))
+	truthRegistry, err := storage.NewRegistry(ctx, cacheDriver, storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider()))
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -216,7 +222,6 @@ func populate(t *testing.T, te *testEnv, blobCount, size, numUnique int) {
 	te.inRemote = inRemote
 	te.numUnique = numUnique
 }
-
 func TestProxyStoreGet(t *testing.T) {
 	te := makeTestEnv(t, "foo/bar")
 
@@ -249,6 +254,7 @@ func TestProxyStoreGet(t *testing.T) {
 	if (*remoteStats)["get"] != 1 {
 		t.Errorf("Unexpected remote get count")
 	}
+
 }
 
 func TestProxyStoreStat(t *testing.T) {
@@ -279,6 +285,7 @@ func TestProxyStoreStat(t *testing.T) {
 	if te.store.authChallenger.(*mockChallenger).count != len(te.inRemote) {
 		t.Fatalf("Unexpected auth challenge count, got %#v", te.store.authChallenger)
 	}
+
 }
 
 func TestProxyStoreServeHighConcurrency(t *testing.T) {
@@ -331,7 +338,7 @@ func testProxyStoreServe(t *testing.T, te *testEnv, numClients int) {
 			defer wg.Done()
 			for _, remoteBlob := range te.inRemote {
 				w := httptest.NewRecorder()
-				r, err := http.NewRequest(http.MethodGet, "", nil)
+				r, err := http.NewRequest("GET", "", nil)
 				if err != nil {
 					t.Error(err)
 					return
@@ -377,7 +384,7 @@ func testProxyStoreServe(t *testing.T, te *testEnv, numClients int) {
 	// Serveblob - blobs come from local
 	for _, dr := range te.inRemote {
 		w := httptest.NewRecorder()
-		r, err := http.NewRequest(http.MethodGet, "", nil)
+		r, err := http.NewRequest("GET", "", nil)
 		if err != nil {
 			t.Fatal(err)
 		}

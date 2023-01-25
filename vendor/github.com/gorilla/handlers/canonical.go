@@ -18,6 +18,7 @@ type canonical struct {
 //
 // Note: If the provided domain is considered invalid by url.Parse or otherwise
 // returns an empty scheme or host, clients are not re-directed.
+// not re-directed.
 //
 // Example:
 //
@@ -53,11 +54,7 @@ func (c canonical) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if !strings.EqualFold(cleanHost(r.Host), dest.Host) {
 		// Re-build the destination URL
 		dest := dest.Scheme + "://" + dest.Host + r.URL.Path
-		if r.URL.RawQuery != "" {
-			dest += "?" + r.URL.RawQuery
-		}
 		http.Redirect(w, r, dest, c.code)
-		return
 	}
 
 	c.h.ServeHTTP(w, r)

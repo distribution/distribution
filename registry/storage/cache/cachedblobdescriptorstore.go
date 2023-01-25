@@ -3,9 +3,9 @@ package cache
 import (
 	"context"
 
-	"github.com/distribution/distribution/v3"
-	dcontext "github.com/distribution/distribution/v3/context"
-	prometheus "github.com/distribution/distribution/v3/metrics"
+	"github.com/docker/distribution"
+	dcontext "github.com/docker/distribution/context"
+	prometheus "github.com/docker/distribution/metrics"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -14,8 +14,10 @@ type cachedBlobStatter struct {
 	backend distribution.BlobDescriptorService
 }
 
-// cacheCount is the number of total cache request received/hits/misses
-var cacheCount = prometheus.StorageNamespace.NewLabeledCounter("cache", "The number of cache request received", "type")
+var (
+	// cacheCount is the number of total cache request received/hits/misses
+	cacheCount = prometheus.StorageNamespace.NewLabeledCounter("cache", "The number of cache request received", "type")
+)
 
 // NewCachedBlobStatter creates a new statter which prefers a cache and
 // falls back to a backend.

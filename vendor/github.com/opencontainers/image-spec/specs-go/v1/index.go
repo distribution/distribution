@@ -21,9 +21,6 @@ import "github.com/opencontainers/image-spec/specs-go"
 type Index struct {
 	specs.Versioned
 
-	// MediaType specificies the type of this document data structure e.g. `application/vnd.oci.image.index.v1+json`
-	MediaType string `json:"mediaType,omitempty"`
-
 	// Manifests references platform specific manifests.
 	Manifests []Descriptor `json:"manifests"`
 

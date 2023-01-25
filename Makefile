@@ -6,7 +6,7 @@ VERSION ?= $(shell git describe --match 'v[0-9]*' --dirty='.m' --always)
 REVISION ?= $(shell git rev-parse HEAD)$(shell if ! git diff --no-ext-diff --quiet --exit-code; then echo .m; fi)
 
 
-PKG=github.com/distribution/distribution/v3
+PKG=github.com/docker/distribution
 
 # Project packages.
 PACKAGES=$(shell go list -tags "${BUILDTAGS}" ./... | grep -v /vendor/)
@@ -38,7 +38,7 @@ BINARIES=$(addprefix bin/,$(COMMANDS))
 TESTFLAGS ?= -v $(TESTFLAGS_RACE)
 TESTFLAGS_PARALLEL ?= 8
 
-.PHONY: all build binaries clean test test-race test-full integration coverage validate lint validate-git validate-vendor vendor mod-outdated
+.PHONY: all build binaries check clean test test-race test-full integration coverage
 .DEFAULT: all
 
 all: binaries
@@ -47,6 +47,10 @@ all: binaries
 version/version.go:
 	@echo "$(WHALE) $@"
 	./version/version.sh > $@
+
+check: ## run all linters (TODO: enable "unused", "varcheck", "ineffassign", "unconvert", "staticheck", "goimports", "structcheck")
+	@echo "$(WHALE) $@"
+	@GO111MODULE=off golangci-lint run
 
 test: ## run tests, except integration test with test.short
 	@echo "$(WHALE) $@"
@@ -96,25 +100,3 @@ build:
 clean: ## clean up binaries
 	@echo "$(WHALE) $@"
 	@rm -f $(BINARIES)
-
-validate: ## run all validators
-	docker buildx bake $@
-
-lint: ## run all linters
-	docker buildx bake $@
-
-validate-git: ## validate git
-	docker buildx bake $@
-
-validate-vendor: ## validate vendor
-	docker buildx bake $@
-
-vendor: ## update vendor
-	$(eval $@_TMP_OUT := $(shell mktemp -d -t buildx-output.XXXXXXXXXX))
-	docker buildx bake --set "*.output=$($@_TMP_OUT)" update-vendor
-	rm -rf ./vendor
-	cp -R "$($@_TMP_OUT)"/out/* .
-	rm -rf $($@_TMP_OUT)/*
-
-mod-outdated: ## check outdated dependencies
-	docker buildx bake $@

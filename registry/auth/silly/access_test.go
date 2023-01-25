@@ -5,8 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/registry/auth"
+	"github.com/docker/distribution/context"
+	"github.com/docker/distribution/registry/auth"
 )
 
 func TestSillyAccessController(t *testing.T) {
@@ -52,7 +52,7 @@ func TestSillyAccessController(t *testing.T) {
 		t.Fatalf("unexpected response status: %v != %v", resp.StatusCode, http.StatusUnauthorized)
 	}
 
-	req, err := http.NewRequest(http.MethodGet, server.URL, nil)
+	req, err := http.NewRequest("GET", server.URL, nil)
 	if err != nil {
 		t.Fatalf("unexpected error creating new request: %v", err)
 	}

@@ -4,12 +4,13 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"sync"
 	"time"
 
-	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
-	"github.com/distribution/distribution/v3/registry/storage/driver/base"
-	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/registry/storage/driver/base"
+	"github.com/docker/distribution/registry/storage/driver/factory"
 )
 
 const driverName = "inmemory"
@@ -78,7 +79,7 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 	}
 	defer rc.Close()
 
-	return io.ReadAll(rc)
+	return ioutil.ReadAll(rc)
 }
 
 // PutContent stores the []byte content at a location designated by "path".
@@ -126,7 +127,7 @@ func (d *driver) reader(ctx context.Context, path string, offset int64) (io.Read
 		return nil, fmt.Errorf("%q is a directory", path)
 	}
 
-	return io.NopCloser(found.(*file).sectionReader(offset)), nil
+	return ioutil.NopCloser(found.(*file).sectionReader(offset)), nil
 }
 
 // Writer returns a FileWriter which will store the content written to it
@@ -189,6 +190,7 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 	}
 
 	entries, err := found.(*dir).list(normalized)
+
 	if err != nil {
 		switch err {
 		case errNotExists:
@@ -243,7 +245,7 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 }
 
 // Walk traverses a filesystem defined within driver, starting
-// from the given path, calling f on each file and directory
+// from the given path, calling f on each file
 func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn) error {
 	return storagedriver.WalkFallback(ctx, d, path, f)
 }

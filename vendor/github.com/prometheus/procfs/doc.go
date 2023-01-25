@@ -31,7 +31,7 @@
 //    		log.Fatalf("could not get process: %s", err)
 //    	}
 //
-//    	stat, err := p.Stat()
+//    	stat, err := p.NewStat()
 //    	if err != nil {
 //    		log.Fatalf("could not get process stat: %s", err)
 //    	}
