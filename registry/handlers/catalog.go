@@ -8,8 +8,8 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/distribution/distribution/v3/registry/api/errcode"
-	"github.com/distribution/distribution/v3/registry/storage/driver"
+	"github.com/docker/distribution/registry/api/errcode"
+	"github.com/docker/distribution/registry/storage/driver"
 	"github.com/gorilla/handlers"
 )
 
@@ -21,7 +21,7 @@ func catalogDispatcher(ctx *Context, r *http.Request) http.Handler {
 	}
 
 	return handlers.MethodHandler{
-		http.MethodGet: http.HandlerFunc(catalogHandler.GetCatalog),
+		"GET": http.HandlerFunc(catalogHandler.GetCatalog),
 	}
 }
 
@@ -34,7 +34,7 @@ type catalogAPIResponse struct {
 }
 
 func (ch *catalogHandler) GetCatalog(w http.ResponseWriter, r *http.Request) {
-	moreEntries := true
+	var moreEntries = true
 
 	q := r.URL.Query()
 	lastEntry := q.Get("last")

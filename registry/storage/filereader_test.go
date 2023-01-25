@@ -6,8 +6,8 @@ import (
 	mrand "math/rand"
 	"testing"
 
-	"github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
+	"github.com/docker/distribution/context"
+	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -61,6 +61,7 @@ func TestFileReaderSeek(t *testing.T) {
 	}
 
 	fr, err := newFileReader(ctx, driver, path, int64(len(content)))
+
 	if err != nil {
 		t.Fatalf("unexpected error creating file reader: %v", err)
 	}

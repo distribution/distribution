@@ -3,12 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"net/http"
-	"sort"
-	"strconv"
 
-	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/registry/api/errcode"
-	v2 "github.com/distribution/distribution/v3/registry/api/v2"
+	"github.com/docker/distribution"
+	"github.com/docker/distribution/registry/api/errcode"
+	v2 "github.com/docker/distribution/registry/api/v2"
 	"github.com/gorilla/handlers"
 )
 
@@ -19,7 +17,7 @@ func tagsDispatcher(ctx *Context, r *http.Request) http.Handler {
 	}
 
 	return handlers.MethodHandler{
-		http.MethodGet: http.HandlerFunc(tagsHandler.GetTags),
+		"GET": http.HandlerFunc(tagsHandler.GetTags),
 	}
 }
 
@@ -49,51 +47,6 @@ func (th *tagsHandler) GetTags(w http.ResponseWriter, r *http.Request) {
 			th.Errors = append(th.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		}
 		return
-	}
-
-	// do pagination if requested
-	q := r.URL.Query()
-	// get entries after latest, if any specified
-	if lastEntry := q.Get("last"); lastEntry != "" {
-		lastEntryIndex := sort.SearchStrings(tags, lastEntry)
-
-		// as`sort.SearchStrings` can return len(tags), if the
-		// specified `lastEntry` is not found, we need to
-		// ensure it does not panic when slicing.
-		if lastEntryIndex == len(tags) {
-			tags = []string{}
-		} else {
-			tags = tags[lastEntryIndex+1:]
-		}
-	}
-
-	// if no error, means that the user requested `n` entries
-	if n := q.Get("n"); n != "" {
-		maxEntries, err := strconv.Atoi(n)
-		if err != nil || maxEntries < 0 {
-			th.Errors = append(th.Errors, v2.ErrorCodePaginationNumberInvalid.WithDetail(map[string]string{"n": n}))
-			return
-		}
-
-		// if there is requested more than or
-		// equal to the amount of tags we have,
-		// then set the request to equal `len(tags)`.
-		// the reason for the `=`, is so the else
-		// clause will only activate if there
-		// are tags left the user needs.
-		if maxEntries >= len(tags) {
-			maxEntries = len(tags)
-		} else if maxEntries > 0 {
-			// defined in `catalog.go`
-			urlStr, err := createLinkEntry(r.URL.String(), maxEntries, tags[maxEntries-1])
-			if err != nil {
-				th.Errors = append(th.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
-				return
-			}
-			w.Header().Set("Link", urlStr)
-		}
-
-		tags = tags[:maxEntries]
 	}
 
 	w.Header().Set("Content-Type", "application/json")

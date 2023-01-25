@@ -8,6 +8,7 @@ import (
 )
 
 func TestParseHTPasswd(t *testing.T) {
+
 	for _, tc := range []struct {
 		desc    string
 		input   string
@@ -80,4 +81,5 @@ asdf
 			t.Fatalf("%s: entries not parsed correctly: %v != %v", tc.desc, entries, tc.entries)
 		}
 	}
+
 }

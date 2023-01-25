@@ -4,14 +4,16 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/distribution/distribution/v3/health"
+	"github.com/docker/distribution/health"
 )
 
-var updater = health.NewStatusUpdater()
+var (
+	updater = health.NewStatusUpdater()
+)
 
 // DownHandler registers a manual_http_status that always returns an Error
 func DownHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
+	if r.Method == "POST" {
 		updater.Update(errors.New("manual Check"))
 	} else {
 		w.WriteHeader(http.StatusNotFound)
@@ -20,7 +22,7 @@ func DownHandler(w http.ResponseWriter, r *http.Request) {
 
 // UpHandler registers a manual_http_status that always returns nil
 func UpHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
+	if r.Method == "POST" {
 		updater.Update(nil)
 	} else {
 		w.WriteHeader(http.StatusNotFound)

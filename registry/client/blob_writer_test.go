@@ -2,15 +2,14 @@ package client
 
 import (
 	"bytes"
-	"context"
 	"fmt"
 	"net/http"
 	"testing"
 
-	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/registry/api/errcode"
-	v2 "github.com/distribution/distribution/v3/registry/api/v2"
-	"github.com/distribution/distribution/v3/testutil"
+	"github.com/docker/distribution"
+	"github.com/docker/distribution/registry/api/errcode"
+	v2 "github.com/docker/distribution/registry/api/v2"
+	"github.com/docker/distribution/testutil"
 )
 
 // Test implements distribution.BlobWriter
@@ -24,7 +23,7 @@ func TestUploadReadFrom(t *testing.T) {
 	m := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
 		{
 			Request: testutil.Request{
-				Method: http.MethodGet,
+				Method: "GET",
 				Route:  "/v2/",
 			},
 			Response: testutil.Response{
@@ -37,7 +36,7 @@ func TestUploadReadFrom(t *testing.T) {
 		// Test Valid case
 		{
 			Request: testutil.Request{
-				Method: http.MethodPatch,
+				Method: "PATCH",
 				Route:  locationPath,
 				Body:   b,
 			},
@@ -53,7 +52,7 @@ func TestUploadReadFrom(t *testing.T) {
 		// Test invalid range
 		{
 			Request: testutil.Request{
-				Method: http.MethodPatch,
+				Method: "PATCH",
 				Route:  locationPath,
 				Body:   b,
 			},
@@ -69,7 +68,7 @@ func TestUploadReadFrom(t *testing.T) {
 		// Test 404
 		{
 			Request: testutil.Request{
-				Method: http.MethodPatch,
+				Method: "PATCH",
 				Route:  locationPath,
 				Body:   b,
 			},
@@ -80,7 +79,7 @@ func TestUploadReadFrom(t *testing.T) {
 		// Test 400 valid json
 		{
 			Request: testutil.Request{
-				Method: http.MethodPatch,
+				Method: "PATCH",
 				Route:  locationPath,
 				Body:   b,
 			},
@@ -101,7 +100,7 @@ func TestUploadReadFrom(t *testing.T) {
 		// Test 400 invalid json
 		{
 			Request: testutil.Request{
-				Method: http.MethodPatch,
+				Method: "PATCH",
 				Route:  locationPath,
 				Body:   b,
 			},
@@ -113,7 +112,7 @@ func TestUploadReadFrom(t *testing.T) {
 		// Test 500
 		{
 			Request: testutil.Request{
-				Method: http.MethodPatch,
+				Method: "PATCH",
 				Route:  locationPath,
 				Body:   b,
 			},
@@ -127,7 +126,6 @@ func TestUploadReadFrom(t *testing.T) {
 	defer c()
 
 	blobUpload := &httpBlobUpload{
-		ctx:    context.Background(),
 		client: &http.Client{},
 	}
 
@@ -220,7 +218,7 @@ func TestUploadSize(t *testing.T) {
 	m := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
 		{
 			Request: testutil.Request{
-				Method: http.MethodGet,
+				Method: "GET",
 				Route:  "/v2/",
 			},
 			Response: testutil.Response{
@@ -232,7 +230,7 @@ func TestUploadSize(t *testing.T) {
 		},
 		{
 			Request: testutil.Request{
-				Method: http.MethodPatch,
+				Method: "PATCH",
 				Route:  readFromLocationPath,
 				Body:   b,
 			},
@@ -247,7 +245,7 @@ func TestUploadSize(t *testing.T) {
 		},
 		{
 			Request: testutil.Request{
-				Method: http.MethodPatch,
+				Method: "PATCH",
 				Route:  writeLocationPath,
 				Body:   b,
 			},
@@ -267,7 +265,6 @@ func TestUploadSize(t *testing.T) {
 
 	// Writing with ReadFrom
 	blobUpload := &httpBlobUpload{
-		ctx:      context.Background(),
 		client:   &http.Client{},
 		location: e + readFromLocationPath,
 	}
@@ -287,7 +284,6 @@ func TestUploadSize(t *testing.T) {
 
 	// Writing with Write
 	blobUpload = &httpBlobUpload{
-		ctx:      context.Background(),
 		client:   &http.Client{},
 		location: e + writeLocationPath,
 	}
@@ -310,7 +306,7 @@ func TestUploadWrite(t *testing.T) {
 	m := testutil.RequestResponseMap([]testutil.RequestResponseMapping{
 		{
 			Request: testutil.Request{
-				Method: http.MethodGet,
+				Method: "GET",
 				Route:  "/v2/",
 			},
 			Response: testutil.Response{
@@ -323,7 +319,7 @@ func TestUploadWrite(t *testing.T) {
 		// Test Valid case
 		{
 			Request: testutil.Request{
-				Method: http.MethodPatch,
+				Method: "PATCH",
 				Route:  locationPath,
 				Body:   b,
 			},
@@ -339,7 +335,7 @@ func TestUploadWrite(t *testing.T) {
 		// Test invalid range
 		{
 			Request: testutil.Request{
-				Method: http.MethodPatch,
+				Method: "PATCH",
 				Route:  locationPath,
 				Body:   b,
 			},
@@ -355,7 +351,7 @@ func TestUploadWrite(t *testing.T) {
 		// Test 404
 		{
 			Request: testutil.Request{
-				Method: http.MethodPatch,
+				Method: "PATCH",
 				Route:  locationPath,
 				Body:   b,
 			},
@@ -366,7 +362,7 @@ func TestUploadWrite(t *testing.T) {
 		// Test 400 valid json
 		{
 			Request: testutil.Request{
-				Method: http.MethodPatch,
+				Method: "PATCH",
 				Route:  locationPath,
 				Body:   b,
 			},
@@ -387,7 +383,7 @@ func TestUploadWrite(t *testing.T) {
 		// Test 400 invalid json
 		{
 			Request: testutil.Request{
-				Method: http.MethodPatch,
+				Method: "PATCH",
 				Route:  locationPath,
 				Body:   b,
 			},
@@ -399,7 +395,7 @@ func TestUploadWrite(t *testing.T) {
 		// Test 500
 		{
 			Request: testutil.Request{
-				Method: http.MethodPatch,
+				Method: "PATCH",
 				Route:  locationPath,
 				Body:   b,
 			},
@@ -413,7 +409,6 @@ func TestUploadWrite(t *testing.T) {
 	defer c()
 
 	blobUpload := &httpBlobUpload{
-		ctx:    context.Background(),
 		client: &http.Client{},
 	}
 

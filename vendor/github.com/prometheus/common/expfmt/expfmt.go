@@ -19,12 +19,10 @@ type Format string
 
 // Constants to assemble the Content-Type values for the different wire protocols.
 const (
-	TextVersion        = "0.0.4"
-	ProtoType          = `application/vnd.google.protobuf`
-	ProtoProtocol      = `io.prometheus.client.MetricFamily`
-	ProtoFmt           = ProtoType + "; proto=" + ProtoProtocol + ";"
-	OpenMetricsType    = `application/openmetrics-text`
-	OpenMetricsVersion = "0.0.1"
+	TextVersion   = "0.0.4"
+	ProtoType     = `application/vnd.google.protobuf`
+	ProtoProtocol = `io.prometheus.client.MetricFamily`
+	ProtoFmt      = ProtoType + "; proto=" + ProtoProtocol + ";"
 
 	// The Content-Type values for the different wire protocols.
 	FmtUnknown      Format = `<unknown>`
@@ -32,7 +30,6 @@ const (
 	FmtProtoDelim   Format = ProtoFmt + ` encoding=delimited`
 	FmtProtoText    Format = ProtoFmt + ` encoding=text`
 	FmtProtoCompact Format = ProtoFmt + ` encoding=compact-text`
-	FmtOpenMetrics  Format = OpenMetricsType + `; version=` + OpenMetricsVersion + `; charset=utf-8`
 )
 
 const (

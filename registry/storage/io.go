@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"io"
+	"io/ioutil"
 
-	"github.com/distribution/distribution/v3/registry/storage/driver"
+	"github.com/docker/distribution/registry/storage/driver"
 )
 
 const (
@@ -17,14 +18,13 @@ func getContent(ctx context.Context, driver driver.StorageDriver, p string) ([]b
 	if err != nil {
 		return nil, err
 	}
-	defer r.Close()
 
 	return readAllLimited(r, maxBlobGetSize)
 }
 
 func readAllLimited(r io.Reader, limit int64) ([]byte, error) {
 	r = limitReader(r, limit)
-	return io.ReadAll(r)
+	return ioutil.ReadAll(r)
 }
 
 // limitReader returns a new reader limited to n bytes. Unlike io.LimitReader,

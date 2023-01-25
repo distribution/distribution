@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/distribution/distribution/v3/reference"
-	"github.com/distribution/distribution/v3/registry/api/errcode"
+	"github.com/docker/distribution/reference"
+	"github.com/docker/distribution/registry/api/errcode"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -99,7 +99,7 @@ var (
 		{
 			Name:        "n",
 			Type:        "integer",
-			Description: "Limit the number of entries in each response. It not present, 100 entries will be returned.",
+			Description: "Limit the number of entries in each response. It not present, all entries will be returned.",
 			Format:      "<integer>",
 			Required:    false,
 		},
@@ -262,6 +262,7 @@ type RouteDescriptor struct {
 // MethodDescriptor provides a description of the requests that may be
 // conducted with the target method.
 type MethodDescriptor struct {
+
 	// Method is an HTTP method, such as GET, PUT or POST.
 	Method string
 
@@ -380,7 +381,7 @@ var routeDescriptors = []RouteDescriptor{
 		Description: `Base V2 API route. Typically, this can be used for lightweight version checks and to validate registry authentication.`,
 		Methods: []MethodDescriptor{
 			{
-				Method:      http.MethodGet,
+				Method:      "GET",
 				Description: "Check that the endpoint implements Docker Registry API V2.",
 				Requests: []RequestDescriptor{
 					{
@@ -414,7 +415,7 @@ var routeDescriptors = []RouteDescriptor{
 		Description: "Retrieve information about tags.",
 		Methods: []MethodDescriptor{
 			{
-				Method:      http.MethodGet,
+				Method:      "GET",
 				Description: "Fetch the tags under the repository identified by `name`.",
 				Requests: []RequestDescriptor{
 					{
@@ -489,18 +490,6 @@ var routeDescriptors = []RouteDescriptor{
 							},
 						},
 						Failures: []ResponseDescriptor{
-							{
-								Name:        "Invalid pagination number",
-								Description: "The received parameter n was invalid in some way, as described by the error code. The client should resolve the issue and retry the request.",
-								StatusCode:  http.StatusBadRequest,
-								Body: BodyDescriptor{
-									ContentType: "application/json",
-									Format:      errorsBody,
-								},
-								ErrorCodes: []errcode.ErrorCode{
-									ErrorCodePaginationNumberInvalid,
-								},
-							},
 							unauthorizedResponseDescriptor,
 							repositoryNotFoundResponseDescriptor,
 							deniedResponseDescriptor,
@@ -518,7 +507,7 @@ var routeDescriptors = []RouteDescriptor{
 		Description: "Create, update, delete and retrieve manifests.",
 		Methods: []MethodDescriptor{
 			{
-				Method:      http.MethodGet,
+				Method:      "GET",
 				Description: "Fetch the manifest identified by `name` and `reference` where `reference` can be a tag or digest. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data.",
 				Requests: []RequestDescriptor{
 					{
@@ -565,7 +554,7 @@ var routeDescriptors = []RouteDescriptor{
 				},
 			},
 			{
-				Method:      http.MethodPut,
+				Method:      "PUT",
 				Description: "Put the manifest identified by `name` and `reference` where `reference` can be a tag or digest.",
 				Requests: []RequestDescriptor{
 					{
@@ -653,8 +642,8 @@ var routeDescriptors = []RouteDescriptor{
 				},
 			},
 			{
-				Method:      http.MethodDelete,
-				Description: "Delete the manifest or tag identified by `name` and `reference` where `reference` can be a tag or digest. Note that a manifest can _only_ be deleted by digest.",
+				Method:      "DELETE",
+				Description: "Delete the manifest identified by `name` and `reference`. Note that a manifest can _only_ be deleted by `digest`.",
 				Requests: []RequestDescriptor{
 					{
 						Headers: []ParameterDescriptor{
@@ -690,7 +679,7 @@ var routeDescriptors = []RouteDescriptor{
 							tooManyRequestsDescriptor,
 							{
 								Name:        "Unknown Manifest",
-								Description: "The specified `name` or `reference` are unknown to the registry and the delete was unable to proceed. Clients can assume the manifest or tag was already deleted if this response is returned.",
+								Description: "The specified `name` or `reference` are unknown to the registry and the delete was unable to proceed. Clients can assume the manifest was already deleted if this response is returned.",
 								StatusCode:  http.StatusNotFound,
 								ErrorCodes: []errcode.ErrorCode{
 									ErrorCodeNameUnknown,
@@ -703,7 +692,7 @@ var routeDescriptors = []RouteDescriptor{
 							},
 							{
 								Name:        "Not allowed",
-								Description: "Manifest or tag delete is not allowed because the registry is configured as a pull-through cache or `delete` has been disabled.",
+								Description: "Manifest delete is not allowed because the registry is configured as a pull-through cache or `delete` has been disabled.",
 								StatusCode:  http.StatusMethodNotAllowed,
 								ErrorCodes: []errcode.ErrorCode{
 									errcode.ErrorCodeUnsupported,
@@ -723,7 +712,7 @@ var routeDescriptors = []RouteDescriptor{
 		Description: "Operations on blobs identified by `name` and `digest`. Used to fetch or delete layers by digest.",
 		Methods: []MethodDescriptor{
 			{
-				Method:      http.MethodGet,
+				Method:      "GET",
 				Description: "Retrieve the blob from the registry identified by `digest`. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data.",
 				Requests: []RequestDescriptor{
 					{
@@ -877,7 +866,7 @@ var routeDescriptors = []RouteDescriptor{
 				},
 			},
 			{
-				Method:      http.MethodDelete,
+				Method:      "DELETE",
 				Description: "Delete the blob identified by `name` and `digest`",
 				Requests: []RequestDescriptor{
 					{
@@ -957,7 +946,7 @@ var routeDescriptors = []RouteDescriptor{
 		Description: "Initiate a blob upload. This endpoint can be used to create resumable uploads or monolithic uploads.",
 		Methods: []MethodDescriptor{
 			{
-				Method:      http.MethodPost,
+				Method:      "POST",
 				Description: "Initiate a resumable blob upload. If successful, an upload location will be provided to complete the upload. Optionally, if the `digest` parameter is present, the request body will be used to complete the upload in a single request.",
 				Requests: []RequestDescriptor{
 					{
@@ -1042,6 +1031,7 @@ var routeDescriptors = []RouteDescriptor{
 								Description: "The upload has been created. The `Location` header must be used to complete the upload. The response should be identical to a `GET` request on the contents of the returned `Location` header.",
 								StatusCode:  http.StatusAccepted,
 								Headers: []ParameterDescriptor{
+									contentLengthZeroHeader,
 									{
 										Name:        "Location",
 										Type:        "url",
@@ -1050,10 +1040,9 @@ var routeDescriptors = []RouteDescriptor{
 									},
 									{
 										Name:        "Range",
-										Format:      "0-<offset>",
+										Format:      "0-0",
 										Description: "Range header indicating the progress of the upload. When starting an upload, it will return an empty range, since no content has been received.",
 									},
-									contentLengthZeroHeader,
 									dockerUploadUUIDHeader,
 								},
 							},
@@ -1150,7 +1139,7 @@ var routeDescriptors = []RouteDescriptor{
 		Description: "Interact with blob uploads. Clients should never assemble URLs for this endpoint and should only take it through the `Location` header on related API requests. The `Location` header and its parameters should be preserved by clients, using the latest value returned via upload related API calls.",
 		Methods: []MethodDescriptor{
 			{
-				Method:      http.MethodGet,
+				Method:      "GET",
 				Description: "Retrieve status of upload identified by `uuid`. The primary purpose of this endpoint is to resolve the current status of a resumable upload.",
 				Requests: []RequestDescriptor{
 					{
@@ -1214,7 +1203,7 @@ var routeDescriptors = []RouteDescriptor{
 				},
 			},
 			{
-				Method:      http.MethodPatch,
+				Method:      "PATCH",
 				Description: "Upload a chunk of data for the specified upload.",
 				Requests: []RequestDescriptor{
 					{
@@ -1236,7 +1225,7 @@ var routeDescriptors = []RouteDescriptor{
 							{
 								Name:        "Data Accepted",
 								Description: "The stream of data has been accepted and the current progress is available in the range header. The updated upload location is available in the `Location` header.",
-								StatusCode:  http.StatusAccepted,
+								StatusCode:  http.StatusNoContent,
 								Headers: []ParameterDescriptor{
 									{
 										Name:        "Location",
@@ -1318,7 +1307,7 @@ var routeDescriptors = []RouteDescriptor{
 							{
 								Name:        "Chunk Accepted",
 								Description: "The chunk of data has been accepted and the current progress is available in the range header. The updated upload location is available in the `Location` header.",
-								StatusCode:  http.StatusAccepted,
+								StatusCode:  http.StatusNoContent,
 								Headers: []ParameterDescriptor{
 									{
 										Name:        "Location",
@@ -1375,7 +1364,7 @@ var routeDescriptors = []RouteDescriptor{
 				},
 			},
 			{
-				Method:      http.MethodPut,
+				Method:      "PUT",
 				Description: "Complete the upload specified by `uuid`, optionally appending the body as the final chunk.",
 				Requests: []RequestDescriptor{
 					{
@@ -1412,7 +1401,7 @@ var routeDescriptors = []RouteDescriptor{
 							{
 								Name:        "Upload Complete",
 								Description: "The upload has been completed and accepted by the registry. The canonical location will be available in the `Location` header.",
-								StatusCode:  http.StatusCreated,
+								StatusCode:  http.StatusNoContent,
 								Headers: []ParameterDescriptor{
 									{
 										Name:        "Location",
@@ -1466,7 +1455,7 @@ var routeDescriptors = []RouteDescriptor{
 				},
 			},
 			{
-				Method:      http.MethodDelete,
+				Method:      "DELETE",
 				Description: "Cancel outstanding upload processes, releasing associated resources. If this is not called, the unfinished uploads will eventually timeout.",
 				Requests: []RequestDescriptor{
 					{
@@ -1531,7 +1520,7 @@ var routeDescriptors = []RouteDescriptor{
 		Description: "List a set of available repositories in the local registry cluster. Does not provide any indication of what may be available upstream. Applications can only determine if a repository is available but not if it is not available.",
 		Methods: []MethodDescriptor{
 			{
-				Method:      http.MethodGet,
+				Method:      "GET",
 				Description: "Retrieve a sorted, json list of repositories available in the registry.",
 				Requests: []RequestDescriptor{
 					{

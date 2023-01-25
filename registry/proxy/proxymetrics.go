@@ -70,4 +70,5 @@ func init() {
 	pm.(*expvar.Map).Set("manifests", expvar.Func(func() interface{} {
 		return proxyMetrics.manifestMetrics
 	}))
+
 }

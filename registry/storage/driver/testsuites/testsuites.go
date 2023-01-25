@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"io"
+	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"os"
@@ -15,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"gopkg.in/check.v1"
 )
 
@@ -115,8 +116,7 @@ func (suite *DriverSuite) TestValidPaths(c *check.C) {
 		"/a-.b",
 		"/_.abc",
 		"/Docker/docker-registry",
-		"/Abc/Cba",
-	}
+		"/Abc/Cba"}
 
 	for _, filename := range validFiles {
 		err := suite.StorageDriver.PutContent(suite.ctx, filename, contents)
@@ -154,8 +154,7 @@ func (suite *DriverSuite) TestInvalidPaths(c *check.C) {
 		"abc",
 		"123.abc",
 		"//bcd",
-		"/abc_123/",
-	}
+		"/abc_123/"}
 
 	for _, filename := range invalidFiles {
 		err := suite.StorageDriver.PutContent(suite.ctx, filename, contents)
@@ -324,7 +323,7 @@ func (suite *DriverSuite) TestReaderWithOffset(c *check.C) {
 	c.Assert(err, check.IsNil)
 	defer reader.Close()
 
-	readContents, err := io.ReadAll(reader)
+	readContents, err := ioutil.ReadAll(reader)
 	c.Assert(err, check.IsNil)
 
 	c.Assert(readContents, check.DeepEquals, append(append(contentsChunk1, contentsChunk2...), contentsChunk3...))
@@ -333,7 +332,7 @@ func (suite *DriverSuite) TestReaderWithOffset(c *check.C) {
 	c.Assert(err, check.IsNil)
 	defer reader.Close()
 
-	readContents, err = io.ReadAll(reader)
+	readContents, err = ioutil.ReadAll(reader)
 	c.Assert(err, check.IsNil)
 
 	c.Assert(readContents, check.DeepEquals, append(contentsChunk2, contentsChunk3...))
@@ -342,7 +341,7 @@ func (suite *DriverSuite) TestReaderWithOffset(c *check.C) {
 	c.Assert(err, check.IsNil)
 	defer reader.Close()
 
-	readContents, err = io.ReadAll(reader)
+	readContents, err = ioutil.ReadAll(reader)
 	c.Assert(err, check.IsNil)
 	c.Assert(readContents, check.DeepEquals, contentsChunk3)
 
@@ -642,11 +641,11 @@ func (suite *DriverSuite) TestURLFor(c *check.C) {
 	c.Assert(err, check.IsNil)
 	defer response.Body.Close()
 
-	read, err := io.ReadAll(response.Body)
+	read, err := ioutil.ReadAll(response.Body)
 	c.Assert(err, check.IsNil)
 	c.Assert(read, check.DeepEquals, contents)
 
-	url, err = suite.StorageDriver.URLFor(suite.ctx, filename, map[string]interface{}{"method": http.MethodHead})
+	url, err = suite.StorageDriver.URLFor(suite.ctx, filename, map[string]interface{}{"method": "HEAD"})
 	if _, ok := err.(storagedriver.ErrUnsupportedMethod); ok {
 		return
 	}
@@ -873,7 +872,7 @@ func (suite *DriverSuite) TestConcurrentStreamReads(c *check.C) {
 		reader, err := suite.StorageDriver.Reader(suite.ctx, filename, offset)
 		c.Assert(err, check.IsNil)
 
-		readContents, err := io.ReadAll(reader)
+		readContents, err := ioutil.ReadAll(reader)
 		c.Assert(err, check.IsNil)
 		c.Assert(readContents, check.DeepEquals, contents[offset:])
 	}
@@ -940,7 +939,7 @@ func (suite *DriverSuite) TestConcurrentFileStreams(c *check.C) {
 // 			reader, err := suite.StorageDriver.Reader(suite.ctx, filename, offset)
 // 			c.Assert(err, check.IsNil)
 //
-// 			readContents, err := io.ReadAll(reader)
+// 			readContents, err := ioutil.ReadAll(reader)
 // 			c.Assert(err, check.IsNil)
 //
 // 			c.Assert(readContents, check.DeepEquals, contents)
@@ -1103,7 +1102,7 @@ func (suite *DriverSuite) benchmarkDeleteFiles(c *check.C, numFiles int64) {
 }
 
 func (suite *DriverSuite) testFileStreams(c *check.C, size int64) {
-	tf, err := os.CreateTemp("", "tf")
+	tf, err := ioutil.TempFile("", "tf")
 	c.Assert(err, check.IsNil)
 	defer os.Remove(tf.Name())
 	defer tf.Close()
@@ -1134,7 +1133,7 @@ func (suite *DriverSuite) testFileStreams(c *check.C, size int64) {
 	c.Assert(err, check.IsNil)
 	defer reader.Close()
 
-	readContents, err := io.ReadAll(reader)
+	readContents, err := ioutil.ReadAll(reader)
 	c.Assert(err, check.IsNil)
 
 	c.Assert(readContents, check.DeepEquals, contents)
@@ -1170,16 +1169,14 @@ func (suite *DriverSuite) writeReadCompareStreams(c *check.C, filename string, c
 	c.Assert(err, check.IsNil)
 	defer reader.Close()
 
-	readContents, err := io.ReadAll(reader)
+	readContents, err := ioutil.ReadAll(reader)
 	c.Assert(err, check.IsNil)
 
 	c.Assert(readContents, check.DeepEquals, contents)
 }
 
-var (
-	filenameChars  = []byte("abcdefghijklmnopqrstuvwxyz0123456789")
-	separatorChars = []byte("._-")
-)
+var filenameChars = []byte("abcdefghijklmnopqrstuvwxyz0123456789")
+var separatorChars = []byte("._-")
 
 func randomPath(length int64) string {
 	path := "/"

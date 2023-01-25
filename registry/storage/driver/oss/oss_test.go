@@ -1,17 +1,17 @@
-//go:build include_oss
 // +build include_oss
 
 package oss
 
 import (
+	"io/ioutil"
 	"os"
 	"strconv"
 	"testing"
 
 	alioss "github.com/denverdino/aliyungo/oss"
-	"github.com/distribution/distribution/v3/context"
-	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
-	"github.com/distribution/distribution/v3/registry/storage/driver/testsuites"
+	"github.com/docker/distribution/context"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/registry/storage/driver/testsuites"
 	"gopkg.in/check.v1"
 )
 
@@ -23,19 +23,16 @@ var ossDriverConstructor func(rootDirectory string) (*Driver, error)
 var skipCheck func() string
 
 func init() {
-	var (
-		accessKey       = os.Getenv("ALIYUN_ACCESS_KEY_ID")
-		secretKey       = os.Getenv("ALIYUN_ACCESS_KEY_SECRET")
-		bucket          = os.Getenv("OSS_BUCKET")
-		region          = os.Getenv("OSS_REGION")
-		internal        = os.Getenv("OSS_INTERNAL")
-		encrypt         = os.Getenv("OSS_ENCRYPT")
-		secure          = os.Getenv("OSS_SECURE")
-		endpoint        = os.Getenv("OSS_ENDPOINT")
-		encryptionKeyID = os.Getenv("OSS_ENCRYPTIONKEYID")
-	)
-
-	root, err := os.MkdirTemp("", "driver-")
+	accessKey := os.Getenv("ALIYUN_ACCESS_KEY_ID")
+	secretKey := os.Getenv("ALIYUN_ACCESS_KEY_SECRET")
+	bucket := os.Getenv("OSS_BUCKET")
+	region := os.Getenv("OSS_REGION")
+	internal := os.Getenv("OSS_INTERNAL")
+	encrypt := os.Getenv("OSS_ENCRYPT")
+	secure := os.Getenv("OSS_SECURE")
+	endpoint := os.Getenv("OSS_ENDPOINT")
+	encryptionKeyID := os.Getenv("OSS_ENCRYPTIONKEYID")
+	root, err := ioutil.TempDir("", "driver-")
 	if err != nil {
 		panic(err)
 	}
@@ -101,7 +98,11 @@ func TestEmptyRootList(t *testing.T) {
 		t.Skip(skipCheck())
 	}
 
-	validRoot := t.TempDir()
+	validRoot, err := ioutil.TempDir("", "driver-")
+	if err != nil {
+		t.Fatalf("unexpected error creating temporary directory: %v", err)
+	}
+	defer os.Remove(validRoot)
 
 	rootedDriver, err := ossDriverConstructor(validRoot)
 	if err != nil {

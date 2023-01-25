@@ -8,14 +8,16 @@ import (
 	"path"
 	"time"
 
-	"github.com/distribution/distribution/v3"
-	dcontext "github.com/distribution/distribution/v3/context"
-	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
+	"github.com/docker/distribution"
+	dcontext "github.com/docker/distribution/context"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/opencontainers/go-digest"
 	"github.com/sirupsen/logrus"
 )
 
-var errResumableDigestNotAvailable = errors.New("resumable digest not available")
+var (
+	errResumableDigestNotAvailable = errors.New("resumable digest not available")
+)
 
 const (
 	// digestSha256Empty is the canonical sha256 digest of empty data
@@ -294,6 +296,7 @@ func (bw *blobWriter) moveBlob(ctx context.Context, desc distribution.Descriptor
 	blobPath, err := pathFor(blobDataPathSpec{
 		digest: desc.Digest,
 	})
+
 	if err != nil {
 		return err
 	}
@@ -352,6 +355,7 @@ func (bw *blobWriter) removeResources(ctx context.Context) error {
 		name: bw.blobStore.repository.Named().Name(),
 		id:   bw.id,
 	})
+
 	if err != nil {
 		return err
 	}

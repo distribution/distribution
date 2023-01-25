@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	storageDriver "github.com/distribution/distribution/v3/registry/storage/driver"
-	"github.com/distribution/distribution/v3/uuid"
+	storageDriver "github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -98,6 +98,7 @@ func getOutstandingUploads(ctx context.Context, driver storageDriver.StorageDriv
 			} else {
 				errors = pushError(errors, filePath, err)
 			}
+
 		}
 
 		uploads[uuid] = ud

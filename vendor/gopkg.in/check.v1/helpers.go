@@ -16,7 +16,7 @@ func (c *C) TestName() string {
 
 // Failed returns whether the currently running test has already failed.
 func (c *C) Failed() bool {
-	return c.status() == failedSt
+	return c.status == failedSt
 }
 
 // Fail marks the currently running test as failed.
@@ -25,7 +25,7 @@ func (c *C) Failed() bool {
 // what went wrong. The higher level helper functions will fail the test
 // and do the logging properly.
 func (c *C) Fail() {
-	c.setStatus(failedSt)
+	c.status = failedSt
 }
 
 // FailNow marks the currently running test as failed and stops running it.
@@ -40,7 +40,7 @@ func (c *C) FailNow() {
 // Succeed marks the currently running test as succeeded, undoing any
 // previous failures.
 func (c *C) Succeed() {
-	c.setStatus(succeededSt)
+	c.status = succeededSt
 }
 
 // SucceedNow marks the currently running test as succeeded, undoing any
@@ -72,7 +72,7 @@ func (c *C) Skip(reason string) {
 		panic("Missing reason why the test is being skipped")
 	}
 	c.reason = reason
-	c.setStatus(skippedSt)
+	c.status = skippedSt
 	c.stopNow()
 }
 

@@ -7,7 +7,6 @@
 // Because OSS is a key, value store the Stat call does not support last modification
 // time for directories (directories are an abstraction for key, value stores)
 //
-//go:build include_oss
 // +build include_oss
 
 package oss
@@ -17,6 +16,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -24,9 +24,9 @@ import (
 	"time"
 
 	"github.com/denverdino/aliyungo/oss"
-	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
-	"github.com/distribution/distribution/v3/registry/storage/driver/base"
-	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/registry/storage/driver/base"
+	"github.com/docker/distribution/registry/storage/driver/factory"
 	"github.com/sirupsen/logrus"
 )
 
@@ -36,15 +36,13 @@ const driverName = "oss"
 // OSS API requires multipart upload chunks to be at least 5MB
 const minChunkSize = 5 << 20
 
-const (
-	defaultChunkSize = 2 * minChunkSize
-	defaultTimeout   = 2 * time.Minute // 2 minute timeout per chunk
-)
+const defaultChunkSize = 2 * minChunkSize
+const defaultTimeout = 2 * time.Minute // 2 minute timeout per chunk
 
 // listMax is the largest amount of objects you can request from OSS in a list call
 const listMax = 1000
 
-// DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
+//DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
 type DriverParameters struct {
 	AccessKeyID     string
 	AccessKeySecret string
@@ -203,6 +201,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 // New constructs a new Driver with the given Aliyun credentials, region, encryption flag, and
 // bucketName
 func New(params DriverParameters) (*Driver, error) {
+
 	client := oss.NewOSSClient(params.Region, params.Internal, params.AccessKeyID, params.AccessKeySecret, params.Secure)
 	client.SetEndpoint(params.Endpoint)
 	bucket := client.Bucket(params.Bucket)
@@ -272,7 +271,7 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 	// OSS sever will always return http.StatusPartialContent if range is acceptable.
 	if resp.StatusCode != http.StatusPartialContent {
 		resp.Body.Close()
-		return io.NopCloser(bytes.NewReader(nil)), nil
+		return ioutil.NopCloser(bytes.NewReader(nil)), nil
 	}
 
 	return resp.Body, nil
@@ -465,11 +464,11 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 // May return an UnsupportedMethodErr in certain StorageDriver implementations.
 func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
-	methodString := http.MethodGet
+	methodString := "GET"
 	method, ok := options["method"]
 	if ok {
 		methodString, ok = method.(string)
-		if !ok || (methodString != http.MethodGet) {
+		if !ok || (methodString != "GET") {
 			return "", storagedriver.ErrUnsupportedMethod{}
 		}
 	}

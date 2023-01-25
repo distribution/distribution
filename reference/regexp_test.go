@@ -13,7 +13,6 @@ type regexpMatch struct {
 }
 
 func checkRegexp(t *testing.T, r *regexp.Regexp, m regexpMatch) {
-	t.Helper()
 	matches := r.FindStringSubmatch(m.input)
 	if m.match && matches != nil {
 		if len(matches) != (r.NumSubexp()+1) || matches[0] != m.input {
@@ -35,11 +34,7 @@ func checkRegexp(t *testing.T, r *regexp.Regexp, m regexpMatch) {
 }
 
 func TestDomainRegexp(t *testing.T) {
-	t.Parallel()
-	hostcases := []struct {
-		input string
-		match bool
-	}{
+	hostcases := []regexpMatch{
 		{
 			input: "test.com",
 			match: true,
@@ -120,62 +115,14 @@ func TestDomainRegexp(t *testing.T) {
 			input: "Asdf.com", // uppercase character
 			match: true,
 		},
-		{
-			input: "192.168.1.1:75050", // ipv4
-			match: true,
-		},
-		{
-			input: "192.168.1.1:750050", // port with more than 5 digits, it will fail on validation
-			match: true,
-		},
-		{
-			input: "[fd00:1:2::3]:75050", // ipv6 compressed
-			match: true,
-		},
-		{
-			input: "[fd00:1:2::3]75050", // ipv6 wrong port separator
-			match: false,
-		},
-		{
-			input: "[fd00:1:2::3]::75050", // ipv6 wrong port separator
-			match: false,
-		},
-		{
-			input: "[fd00:1:2::3%eth0]:75050", // ipv6 with zone
-			match: false,
-		},
-		{
-			input: "[fd00123123123]:75050", // ipv6 wrong format, will fail in validation
-			match: true,
-		},
-		{
-			input: "[2001:0db8:85a3:0000:0000:8a2e:0370:7334]:75050", // ipv6 long format
-			match: true,
-		},
-		{
-			input: "[2001:0db8:85a3:0000:0000:8a2e:0370:7334]:750505", // ipv6 long format and invalid port, it will fail in validation
-			match: true,
-		},
-		{
-			input: "fd00:1:2::3:75050", // bad ipv6 without square brackets
-			match: false,
-		},
 	}
 	r := regexp.MustCompile(`^` + DomainRegexp.String() + `$`)
-	for _, tc := range hostcases {
-		tc := tc
-		t.Run(tc.input, func(t *testing.T) {
-			t.Parallel()
-			match := r.MatchString(tc.input)
-			if match != tc.match {
-				t.Errorf("Expected match=%t, got %t", tc.match, match)
-			}
-		})
+	for i := range hostcases {
+		checkRegexp(t, r, hostcases[i])
 	}
 }
 
 func TestFullNameRegexp(t *testing.T) {
-	t.Parallel()
 	if anchoredNameRegexp.NumSubexp() != 2 {
 		t.Fatalf("anchored name regexp should have two submatches: %v, %v != 2",
 			anchoredNameRegexp, anchoredNameRegexp.NumSubexp())
@@ -465,17 +412,12 @@ func TestFullNameRegexp(t *testing.T) {
 			match: false,
 		},
 	}
-	for _, tc := range testcases {
-		tc := tc
-		t.Run(tc.input, func(t *testing.T) {
-			t.Parallel()
-			checkRegexp(t, anchoredNameRegexp, tc)
-		})
+	for i := range testcases {
+		checkRegexp(t, anchoredNameRegexp, testcases[i])
 	}
 }
 
 func TestReferenceRegexp(t *testing.T) {
-	t.Parallel()
 	if ReferenceRegexp.NumSubexp() != 3 {
 		t.Fatalf("anchored name regexp should have three submatches: %v, %v != 3",
 			ReferenceRegexp, ReferenceRegexp.NumSubexp())
@@ -540,21 +482,14 @@ func TestReferenceRegexp(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testcases {
-		tc := tc
-		t.Run(tc.input, func(t *testing.T) {
-			t.Parallel()
-			checkRegexp(t, ReferenceRegexp, tc)
-		})
+	for i := range testcases {
+		checkRegexp(t, ReferenceRegexp, testcases[i])
 	}
+
 }
 
 func TestIdentifierRegexp(t *testing.T) {
-	t.Parallel()
-	fullCases := []struct {
-		input string
-		match bool
-	}{
+	fullCases := []regexpMatch{
 		{
 			input: "da304e823d8ca2b9d863a3c897baeb852ba21ea9a9f1414736394ae7fcaf9821",
 			match: true,
@@ -576,14 +511,43 @@ func TestIdentifierRegexp(t *testing.T) {
 			match: false,
 		},
 	}
-	for _, tc := range fullCases {
-		tc := tc
-		t.Run(tc.input, func(t *testing.T) {
-			t.Parallel()
-			match := anchoredIdentifierRegexp.MatchString(tc.input)
-			if match != tc.match {
-				t.Errorf("Expected match=%t, got %t", tc.match, match)
-			}
-		})
+
+	shortCases := []regexpMatch{
+		{
+			input: "da304e823d8ca2b9d863a3c897baeb852ba21ea9a9f1414736394ae7fcaf9821",
+			match: true,
+		},
+		{
+			input: "7EC43B381E5AEFE6E04EFB0B3F0693FF2A4A50652D64AEC573905F2DB5889A1C",
+			match: false,
+		},
+		{
+			input: "da304e823d8ca2b9d863a3c897baeb852ba21ea9a9f1414736394ae7fcaf",
+			match: true,
+		},
+		{
+			input: "sha256:da304e823d8ca2b9d863a3c897baeb852ba21ea9a9f1414736394ae7fcaf9821",
+			match: false,
+		},
+		{
+			input: "da304e823d8ca2b9d863a3c897baeb852ba21ea9a9f1414736394ae7fcaf98218482",
+			match: false,
+		},
+		{
+			input: "da304",
+			match: false,
+		},
+		{
+			input: "da304e",
+			match: true,
+		},
+	}
+
+	for i := range fullCases {
+		checkRegexp(t, anchoredIdentifierRegexp, fullCases[i])
+	}
+
+	for i := range shortCases {
+		checkRegexp(t, anchoredShortIdentifierRegexp, shortCases[i])
 	}
 }

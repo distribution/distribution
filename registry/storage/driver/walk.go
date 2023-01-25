@@ -22,14 +22,14 @@ type WalkFn func(fileInfo FileInfo) error
 // to a directory, the directory will not be entered and Walk
 // will continue the traversal.  If fileInfo refers to a normal file, processing stops
 func WalkFallback(ctx context.Context, driver StorageDriver, from string, f WalkFn) error {
-	_, err := doWalkFallback(ctx, driver, from, f)
+	err, _ := doWalkFallback(ctx, driver, from, f)
 	return err
 }
 
-func doWalkFallback(ctx context.Context, driver StorageDriver, from string, f WalkFn) (bool, error) {
+func doWalkFallback(ctx context.Context, driver StorageDriver, from string, f WalkFn) (error, bool) {
 	children, err := driver.List(ctx, from)
 	if err != nil {
-		return false, err
+		return err, false
 	}
 	sort.Stable(sort.StringSlice(children))
 	for _, child := range children {
@@ -45,22 +45,22 @@ func doWalkFallback(ctx context.Context, driver StorageDriver, from string, f Wa
 				logrus.WithField("path", child).Infof("ignoring deleted path")
 				continue
 			default:
-				return false, err
+				return err, false
 			}
 		}
 		err = f(fileInfo)
 		if err == nil && fileInfo.IsDir() {
-			if ok, err := doWalkFallback(ctx, driver, child, f); err != nil || !ok {
-				return ok, err
+			if err, ok := doWalkFallback(ctx, driver, child, f); err != nil || !ok {
+				return err, ok
 			}
 		} else if err == ErrSkipDir {
 			// noop for folders, will just skip
 			if !fileInfo.IsDir() {
-				return false, nil // no error but stop iteration
+				return nil, false // no error but stop iteration
 			}
 		} else if err != nil {
-			return false, err
+			return err, false
 		}
 	}
-	return true, nil
+	return nil, true
 }

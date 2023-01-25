@@ -1,7 +1,6 @@
 package transport
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -20,27 +19,24 @@ var (
 )
 
 // ReadSeekCloser combines io.ReadSeeker with io.Closer.
-//
-// Deprecated: use [io.ReadSeekCloser].
-type ReadSeekCloser = io.ReadSeekCloser
+type ReadSeekCloser interface {
+	io.ReadSeeker
+	io.Closer
+}
 
 // NewHTTPReadSeeker handles reading from an HTTP endpoint using a GET
 // request. When seeking and starting a read from a non-zero offset
 // the a "Range" header will be added which sets the offset.
-//
 // TODO(dmcgowan): Move this into a separate utility package
-func NewHTTPReadSeeker(ctx context.Context, client *http.Client, url string, errorHandler func(*http.Response) error) *HTTPReadSeeker {
-	return &HTTPReadSeeker{
-		ctx:          ctx,
+func NewHTTPReadSeeker(client *http.Client, url string, errorHandler func(*http.Response) error) ReadSeekCloser {
+	return &httpReadSeeker{
 		client:       client,
 		url:          url,
 		errorHandler: errorHandler,
 	}
 }
 
-// HTTPReadSeeker implements an [io.ReadSeekCloser].
-type HTTPReadSeeker struct {
-	ctx    context.Context
+type httpReadSeeker struct {
 	client *http.Client
 	url    string
 
@@ -64,7 +60,7 @@ type HTTPReadSeeker struct {
 	err        error
 }
 
-func (hrs *HTTPReadSeeker) Read(p []byte) (n int, err error) {
+func (hrs *httpReadSeeker) Read(p []byte) (n int, err error) {
 	if hrs.err != nil {
 		return 0, hrs.err
 	}
@@ -93,7 +89,7 @@ func (hrs *HTTPReadSeeker) Read(p []byte) (n int, err error) {
 	return n, err
 }
 
-func (hrs *HTTPReadSeeker) Seek(offset int64, whence int) (int64, error) {
+func (hrs *httpReadSeeker) Seek(offset int64, whence int) (int64, error) {
 	if hrs.err != nil {
 		return 0, hrs.err
 	}
@@ -136,7 +132,7 @@ func (hrs *HTTPReadSeeker) Seek(offset int64, whence int) (int64, error) {
 	return hrs.seekOffset, err
 }
 
-func (hrs *HTTPReadSeeker) Close() error {
+func (hrs *httpReadSeeker) Close() error {
 	if hrs.err != nil {
 		return hrs.err
 	}
@@ -153,7 +149,7 @@ func (hrs *HTTPReadSeeker) Close() error {
 	return nil
 }
 
-func (hrs *HTTPReadSeeker) reset() {
+func (hrs *httpReadSeeker) reset() {
 	if hrs.err != nil {
 		return
 	}
@@ -163,7 +159,7 @@ func (hrs *HTTPReadSeeker) reset() {
 	}
 }
 
-func (hrs *HTTPReadSeeker) reader() (io.Reader, error) {
+func (hrs *httpReadSeeker) reader() (io.Reader, error) {
 	if hrs.err != nil {
 		return nil, hrs.err
 	}
@@ -172,7 +168,7 @@ func (hrs *HTTPReadSeeker) reader() (io.Reader, error) {
 		return hrs.rc, nil
 	}
 
-	req, err := http.NewRequestWithContext(hrs.ctx, http.MethodGet, hrs.url, nil)
+	req, err := http.NewRequest("GET", hrs.url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -184,6 +180,7 @@ func (hrs *HTTPReadSeeker) reader() (io.Reader, error) {
 		// context.GetLogger(hrs.context).Infof("Range: %s", req.Header.Get("Range"))
 	}
 
+	req.Header.Add("Accept-Encoding", "identity")
 	resp, err := hrs.client.Do(req)
 	if err != nil {
 		return nil, err

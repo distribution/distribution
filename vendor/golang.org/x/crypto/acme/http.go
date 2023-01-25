@@ -10,7 +10,6 @@ import (
 	"crypto"
 	"crypto/rand"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"math/big"
@@ -216,9 +215,6 @@ func (c *Client) post(ctx context.Context, key crypto.Signer, url string, body i
 func (c *Client) postNoRetry(ctx context.Context, key crypto.Signer, url string, body interface{}) (*http.Response, *http.Request, error) {
 	kid := noKeyID
 	if key == nil {
-		if c.Key == nil {
-			return nil, nil, errors.New("acme: Client.Key must be populated to make POST requests")
-		}
 		key = c.Key
 		kid = c.accountKID(ctx)
 	}

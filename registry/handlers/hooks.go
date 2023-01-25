@@ -18,10 +18,11 @@ type logHook struct {
 
 // Fire forwards an error to LogHook
 func (hook *logHook) Fire(entry *logrus.Entry) error {
-	host, _, ok := strings.Cut(hook.Mail.Addr, ":")
-	if !ok || host == "" {
+	addr := strings.Split(hook.Mail.Addr, ":")
+	if len(addr) != 2 {
 		return errors.New("invalid Mail Address")
 	}
+	host := addr[0]
 	subject := fmt.Sprintf("[%s] %s: %s", entry.Level, host, entry.Message)
 
 	html := `

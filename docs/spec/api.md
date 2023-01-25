@@ -266,7 +266,7 @@ are reported as part of 4xx responses, in a json response body. One or more
 errors will be returned in the following format:
 
     {
-        "errors": [{
+        "errors:" [{
                 "code": <error identifier>,
                 "message": <message describing condition>,
                 "detail": <unstructured>
@@ -334,7 +334,7 @@ digest. The _hex_ portion is the hex-encoded result of the hash.
 We define a _digest_ string to match the following grammar:
 ```
 digest      := algorithm ":" hex
-algorithm   := /[A-Za-z0-9_+.-]+/
+algorithm   := /[A-Fa-f0-9_+.-]+/
 hex         := /[A-Fa-f0-9]+/
 ```
 
@@ -855,7 +855,7 @@ identifying the missing blob. An error is returned for each unknown blob. The
 response format is as follows:
 
     {
-        "errors": [{
+        "errors:" [{
                 "code": "BLOB_UNKNOWN",
                 "message": "blob unknown to registry",
                 "detail": {
@@ -1113,7 +1113,7 @@ A list of methods and URIs are covered in the table below:
 | GET | `/v2/<name>/tags/list` | Tags | Fetch the tags under the repository identified by `name`. |
 | GET | `/v2/<name>/manifests/<reference>` | Manifest | Fetch the manifest identified by `name` and `reference` where `reference` can be a tag or digest. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data. |
 | PUT | `/v2/<name>/manifests/<reference>` | Manifest | Put the manifest identified by `name` and `reference` where `reference` can be a tag or digest. |
-| DELETE | `/v2/<name>/manifests/<reference>` | Manifest | Delete the manifest or tag identified by `name` and `reference` where `reference` can be a tag or digest. Note that a manifest can _only_ be deleted by digest. |
+| DELETE | `/v2/<name>/manifests/<reference>` | Manifest | Delete the manifest identified by `name` and `reference`. Note that a manifest can _only_ be deleted by `digest`. |
 | GET | `/v2/<name>/blobs/<digest>` | Blob | Retrieve the blob from the registry identified by `digest`. A `HEAD` request can also be issued to this endpoint to obtain resource information without receiving all data. |
 | DELETE | `/v2/<name>/blobs/<digest>` | Blob | Delete the blob identified by `name` and `digest` |
 | POST | `/v2/<name>/blobs/uploads/` | Initiate Blob Upload | Initiate a resumable blob upload. If successful, an upload location will be provided to complete the upload. Optionally, if the `digest` parameter is present, the request body will be used to complete the upload in a single request. |
@@ -1142,8 +1142,6 @@ The error codes encountered via the API are enumerated in the following table:
  `MANIFEST_UNVERIFIED` | manifest failed signature verification | During manifest upload, if the manifest fails signature verification, this error will be returned.
  `NAME_INVALID` | invalid repository name | Invalid repository name encountered either during manifest validation or any API operation.
  `NAME_UNKNOWN` | repository name not known to registry | This is returned if the name used during an operation is unknown to the registry.
- `PAGINATION_NUMBER_INVALID` | invalid number of results requested | Returned when the "n" parameter (number of results to return) is not an integer, or "n" is negative.
- `RANGE_INVALID` | invalid content range | When a layer is uploaded, the provided range is checked against the uploaded chunk. This error is returned if the range is out of order.
  `SIZE_INVALID` | provided length did not match content length | When a layer is uploaded, the provided size will be checked against the uploaded content. If they do not match, this error will be returned.
  `TAG_INVALID` | manifest tag did not match URI | During a manifest upload, if the tag in the manifest does not match the uri tag, this error will be returned.
  `UNAUTHORIZED` | authentication required | The access controller was unable to authenticate the client. Often this will be accompanied by a Www-Authenticate HTTP response header indicating how to authenticate.
@@ -1213,7 +1211,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1251,7 +1249,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1351,7 +1349,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1389,7 +1387,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1426,7 +1424,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1463,7 +1461,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1495,7 +1493,7 @@ The error codes that may be included in the response body are enumerated below:
 ##### Tags Paginated
 
 ```
-GET /v2/<name>/tags/list?n=<integer>&last=<last tag value from previous response>
+GET /v2/<name>/tags/list?n=<integer>&last=<integer>
 ```
 
 Return a portion of the tags for the specified repository.
@@ -1541,36 +1539,6 @@ The following headers will be returned with the response:
 
 
 
-###### On Failure: Invalid pagination number
-
-```
-400 Bad Request
-Content-Type: application/json
-
-{
-	"errors": [
-	    {
-            "code": <error code>,
-            "message": "<error message>",
-            "detail": ...
-        },
-        ...
-    ]
-}
-```
-
-The received parameter n was invalid in some way, as described by the error code. The client should resolve the issue and retry the request.
-
-
-
-The error codes that may be included in the response body are enumerated below:
-
-|Code|Message|Description|
-|----|-------|-----------|
-| `PAGINATION_NUMBER_INVALID` | invalid number of results requested | Returned when the "n" parameter (number of results to return) is not an integer, or "n" is negative. |
-
-
-
 ###### On Failure: Authentication Required
 
 ```
@@ -1580,7 +1548,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1618,7 +1586,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1655,7 +1623,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1692,7 +1660,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1796,7 +1764,7 @@ The following headers will be returned with the response:
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1829,7 +1797,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1867,7 +1835,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1904,7 +1872,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -1941,7 +1909,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2042,7 +2010,7 @@ The following headers will be returned with the response:
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2078,7 +2046,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2116,7 +2084,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2153,7 +2121,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2190,7 +2158,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2226,7 +2194,7 @@ The error codes that may be included in the response body are enumerated below:
 Content-Type: application/json
 
 {
-    "errors": [{
+    "errors:" [{
             "code": "BLOB_UNKNOWN",
             "message": "blob unknown to registry",
             "detail": {
@@ -2271,7 +2239,7 @@ The error codes that may be included in the response body are enumerated below:
 
 #### DELETE Manifest
 
-Delete the manifest or tag identified by `name` and `reference` where `reference` can be a tag or digest. Note that a manifest can _only_ be deleted by digest.
+Delete the manifest identified by `name` and `reference`. Note that a manifest can _only_ be deleted by `digest`.
 
 
 
@@ -2314,7 +2282,7 @@ The following parameters should be specified on the request:
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2347,7 +2315,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2385,7 +2353,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2422,7 +2390,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2459,7 +2427,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2495,7 +2463,7 @@ The error codes that may be included in the response body are enumerated below:
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2506,7 +2474,7 @@ Content-Type: application/json
 }
 ```
 
-The specified `name` or `reference` are unknown to the registry and the delete was unable to proceed. Clients can assume the manifest or tag was already deleted if this response is returned.
+The specified `name` or `reference` are unknown to the registry and the delete was unable to proceed. Clients can assume the manifest was already deleted if this response is returned.
 
 
 
@@ -2525,7 +2493,7 @@ The error codes that may be included in the response body are enumerated below:
 405 Method Not Allowed
 ```
 
-Manifest or tag delete is not allowed because the registry is configured as a pull-through cache or `delete` has been disabled.
+Manifest delete is not allowed because the registry is configured as a pull-through cache or `delete` has been disabled.
 
 
 
@@ -2620,7 +2588,7 @@ The following headers will be returned with the response:
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2651,7 +2619,7 @@ The error codes that may be included in the response body are enumerated below:
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2684,7 +2652,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2722,7 +2690,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2759,7 +2727,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2796,7 +2764,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2880,7 +2848,7 @@ The following headers will be returned with the response:
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2911,7 +2879,7 @@ The error codes that may be included in the response body are enumerated below:
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2954,7 +2922,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -2992,7 +2960,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3029,7 +2997,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3066,7 +3034,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3169,7 +3137,7 @@ The error codes that may be included in the response body are enumerated below:
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3200,7 +3168,7 @@ The error codes that may be included in the response body are enumerated below:
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3232,7 +3200,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3270,7 +3238,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3307,7 +3275,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3344,7 +3312,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3482,7 +3450,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3520,7 +3488,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3557,7 +3525,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3594,7 +3562,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3651,9 +3619,9 @@ The following parameters should be specified on the request:
 
 ```
 202 Accepted
-Location: /v2/<name>/blobs/uploads/<uuid>
-Range: 0-<offset>
 Content-Length: 0
+Location: /v2/<name>/blobs/uploads/<uuid>
+Range: 0-0
 Docker-Upload-UUID: <uuid>
 ```
 
@@ -3663,9 +3631,9 @@ The following headers will be returned with the response:
 
 |Name|Description|
 |----|-----------|
+|`Content-Length`|The `Content-Length` header must be zero and the body must be empty.|
 |`Location`|The location of the created upload. Clients should use the contents verbatim to complete the upload, adding parameters where required.|
 |`Range`|Range header indicating the progress of the upload. When starting an upload, it will return an empty range, since no content has been received.|
-|`Content-Length`|The `Content-Length` header must be zero and the body must be empty.|
 |`Docker-Upload-UUID`|Identifies the docker upload uuid for the current request.|
 
 
@@ -3699,7 +3667,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3737,7 +3705,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3774,7 +3742,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3811,7 +3779,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3934,7 +3902,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -3972,7 +3940,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4009,7 +3977,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4046,7 +4014,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4139,7 +4107,7 @@ The following headers will be returned with the response:
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4171,7 +4139,7 @@ The error codes that may be included in the response body are enumerated below:
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4203,7 +4171,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4241,7 +4209,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4278,7 +4246,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4315,7 +4283,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4379,7 +4347,7 @@ The following parameters should be specified on the request:
 ###### On Success: Data Accepted
 
 ```
-202 Accepted
+204 No Content
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: 0-<offset>
 Content-Length: 0
@@ -4407,7 +4375,7 @@ The following headers will be returned with the response:
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4439,7 +4407,7 @@ The error codes that may be included in the response body are enumerated below:
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4471,7 +4439,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4509,7 +4477,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4546,7 +4514,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4583,7 +4551,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4645,7 +4613,7 @@ The following parameters should be specified on the request:
 ###### On Success: Chunk Accepted
 
 ```
-202 Accepted
+204 No Content
 Location: /v2/<name>/blobs/uploads/<uuid>
 Range: 0-<offset>
 Content-Length: 0
@@ -4673,7 +4641,7 @@ The following headers will be returned with the response:
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4705,7 +4673,7 @@ The error codes that may be included in the response body are enumerated below:
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4747,7 +4715,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4785,7 +4753,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4822,7 +4790,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4859,7 +4827,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4925,7 +4893,7 @@ The following parameters should be specified on the request:
 ###### On Success: Upload Complete
 
 ```
-201 Created
+204 No Content
 Location: <blob location>
 Content-Range: <start of range>-<end of range, inclusive>
 Content-Length: 0
@@ -4953,7 +4921,7 @@ The following headers will be returned with the response:
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -4986,7 +4954,7 @@ The error codes that may be included in the response body are enumerated below:
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -5018,7 +4986,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -5056,7 +5024,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -5093,7 +5061,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -5130,7 +5098,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -5214,7 +5182,7 @@ The following headers will be returned with the response:
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -5245,7 +5213,7 @@ The error codes that may be included in the response body are enumerated below:
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -5277,7 +5245,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -5315,7 +5283,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -5352,7 +5320,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -5389,7 +5357,7 @@ Content-Length: <length>
 Content-Type: application/json
 
 {
-	"errors": [
+	"errors:" [
 	    {
             "code": <error code>,
             "message": "<error message>",
@@ -5471,7 +5439,7 @@ The following headers will be returned with the response:
 ##### Catalog Fetch Paginated
 
 ```
-GET /v2/_catalog?n=<integer>&last=<last repository value from previous response>
+GET /v2/_catalog?n=<integer>&last=<integer>
 ```
 
 Return the specified portion of repositories.
@@ -5481,7 +5449,7 @@ The following parameters should be specified on the request:
 
 |Name|Kind|Description|
 |----|----|-----------|
-|`n`|query|Limit the number of entries in each response. It not present, 100 entries will be returned.|
+|`n`|query|Limit the number of entries in each response. It not present, all entries will be returned.|
 |`last`|query|Result set will include values lexically after last.|
 
 

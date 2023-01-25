@@ -6,7 +6,7 @@ linters:
     - unconvert
     - gofmt
     - goimports
-    - revive
+    - golint
     - ineffassign
     - vet
     - unused

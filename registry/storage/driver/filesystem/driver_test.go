@@ -1,12 +1,13 @@
 package filesystem
 
 import (
+	"io/ioutil"
 	"os"
 	"reflect"
 	"testing"
 
-	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
-	"github.com/distribution/distribution/v3/registry/storage/driver/testsuites"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/registry/storage/driver/testsuites"
 	. "gopkg.in/check.v1"
 )
 
@@ -14,13 +15,13 @@ import (
 func Test(t *testing.T) { TestingT(t) }
 
 func init() {
-	root, err := os.MkdirTemp("", "driver-")
+	root, err := ioutil.TempDir("", "driver-")
 	if err != nil {
 		panic(err)
 	}
 	defer os.Remove(root)
 
-	drvr, err := FromParameters(map[string]interface{}{
+	driver, err := FromParameters(map[string]interface{}{
 		"rootdirectory": root,
 	})
 	if err != nil {
@@ -28,11 +29,12 @@ func init() {
 	}
 
 	testsuites.RegisterSuite(func() (storagedriver.StorageDriver, error) {
-		return drvr, nil
+		return driver, nil
 	}, testsuites.NeverSkip)
 }
 
 func TestFromParametersImpl(t *testing.T) {
+
 	tests := []struct {
 		params   map[string]interface{} // technically the yaml can contain anything
 		expected DriverParameters
@@ -107,4 +109,5 @@ func TestFromParametersImpl(t *testing.T) {
 			t.Fatalf("unexpected params from filesystem driver. expected %+v, got %+v", item.expected, params)
 		}
 	}
+
 }

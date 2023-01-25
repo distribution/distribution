@@ -1,4 +1,3 @@
-//go:build !go1.8
 // +build !go1.8
 
 // Copyright 2017 Microsoft Corporation
