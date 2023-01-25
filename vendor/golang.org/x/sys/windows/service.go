@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build windows
 // +build windows
 
 package windows
@@ -16,6 +15,8 @@ const (
 	SC_MANAGER_MODIFY_BOOT_CONFIG = 32
 	SC_MANAGER_ALL_ACCESS         = 0xf003f
 )
+
+//sys	OpenSCManager(machineName *uint16, databaseName *uint16, access uint32) (handle Handle, err error) [failretval==0] = advapi32.OpenSCManagerW
 
 const (
 	SERVICE_KERNEL_DRIVER       = 1
@@ -64,7 +65,6 @@ const (
 	SERVICE_ACCEPT_HARDWAREPROFILECHANGE = 32
 	SERVICE_ACCEPT_POWEREVENT            = 64
 	SERVICE_ACCEPT_SESSIONCHANGE         = 128
-	SERVICE_ACCEPT_PRESHUTDOWN           = 256
 
 	SERVICE_CONTROL_STOP                  = 1
 	SERVICE_CONTROL_PAUSE                 = 2
@@ -80,7 +80,6 @@ const (
 	SERVICE_CONTROL_HARDWAREPROFILECHANGE = 12
 	SERVICE_CONTROL_POWEREVENT            = 13
 	SERVICE_CONTROL_SESSIONCHANGE         = 14
-	SERVICE_CONTROL_PRESHUTDOWN           = 15
 
 	SERVICE_ACTIVE    = 1
 	SERVICE_INACTIVE  = 2
@@ -127,18 +126,6 @@ const (
 	SERVICE_NOTIFY_CREATED          = 0x00000080
 	SERVICE_NOTIFY_DELETED          = 0x00000100
 	SERVICE_NOTIFY_DELETE_PENDING   = 0x00000200
-
-	SC_EVENT_DATABASE_CHANGE = 0
-	SC_EVENT_PROPERTY_CHANGE = 1
-	SC_EVENT_STATUS_CHANGE   = 2
-
-	SERVICE_START_REASON_DEMAND             = 0x00000001
-	SERVICE_START_REASON_AUTO               = 0x00000002
-	SERVICE_START_REASON_TRIGGER            = 0x00000004
-	SERVICE_START_REASON_RESTART_ON_FAILURE = 0x00000008
-	SERVICE_START_REASON_DELAYEDAUTO        = 0x00000010
-
-	SERVICE_DYNAMIC_INFORMATION_LEVEL_START_REASON = 1
 )
 
 type SERVICE_STATUS struct {
@@ -170,10 +157,6 @@ type QUERY_SERVICE_CONFIG struct {
 
 type SERVICE_DESCRIPTION struct {
 	Description *uint16
-}
-
-type SERVICE_DELAYED_AUTO_START_INFO struct {
-	IsDelayedAutoStartUp uint32
 }
 
 type SERVICE_STATUS_PROCESS struct {
@@ -223,7 +206,6 @@ type QUERY_SERVICE_LOCK_STATUS struct {
 	LockDuration uint32
 }
 
-//sys	OpenSCManager(machineName *uint16, databaseName *uint16, access uint32) (handle Handle, err error) [failretval==0] = advapi32.OpenSCManagerW
 //sys	CloseServiceHandle(handle Handle) (err error) = advapi32.CloseServiceHandle
 //sys	CreateService(mgr Handle, serviceName *uint16, displayName *uint16, access uint32, srvType uint32, startType uint32, errCtl uint32, pathName *uint16, loadOrderGroup *uint16, tagId *uint32, dependencies *uint16, serviceStartName *uint16, password *uint16) (handle Handle, err error) [failretval==0] = advapi32.CreateServiceW
 //sys	OpenService(mgr Handle, serviceName *uint16, access uint32) (handle Handle, err error) [failretval==0] = advapi32.OpenServiceW
@@ -241,7 +223,3 @@ type QUERY_SERVICE_LOCK_STATUS struct {
 //sys	EnumServicesStatusEx(mgr Handle, infoLevel uint32, serviceType uint32, serviceState uint32, services *byte, bufSize uint32, bytesNeeded *uint32, servicesReturned *uint32, resumeHandle *uint32, groupName *uint16) (err error) = advapi32.EnumServicesStatusExW
 //sys	QueryServiceStatusEx(service Handle, infoLevel uint32, buff *byte, buffSize uint32, bytesNeeded *uint32) (err error) = advapi32.QueryServiceStatusEx
 //sys	NotifyServiceStatusChange(service Handle, notifyMask uint32, notifier *SERVICE_NOTIFY) (ret error) = advapi32.NotifyServiceStatusChangeW
-//sys	SubscribeServiceChangeNotifications(service Handle, eventType uint32, callback uintptr, callbackCtx uintptr, subscription *uintptr) (ret error) = sechost.SubscribeServiceChangeNotifications?
-//sys	UnsubscribeServiceChangeNotifications(subscription uintptr) = sechost.UnsubscribeServiceChangeNotifications?
-//sys	RegisterServiceCtrlHandlerEx(serviceName *uint16, handlerProc uintptr, context uintptr) (handle Handle, err error) = advapi32.RegisterServiceCtrlHandlerExW
-//sys	QueryServiceDynamicInformation(service Handle, infoLevel uint32, dynamicInfo unsafe.Pointer) (err error) = advapi32.QueryServiceDynamicInformation?

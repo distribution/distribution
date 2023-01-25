@@ -38,6 +38,7 @@ func TestAuthChallengeParse(t *testing.T) {
 	if expected := "he\"llo"; challenge.Parameters["slashed"] != expected {
 		t.Fatalf("Unexpected param: %s, expected: %s", challenge.Parameters["slashed"], expected)
 	}
+
 }
 
 func TestAuthChallengeNormalization(t *testing.T) {
@@ -48,6 +49,7 @@ func TestAuthChallengeNormalization(t *testing.T) {
 }
 
 func testAuthChallengeNormalization(t *testing.T, host string) {
+
 	scm := NewSimpleManager()
 
 	url, err := url.Parse(fmt.Sprintf("http://%s/v2/", host))
@@ -83,6 +85,7 @@ func testAuthChallengeNormalization(t *testing.T, host string) {
 }
 
 func testAuthChallengeConcurrent(t *testing.T, host string) {
+
 	scm := NewSimpleManager()
 
 	url, err := url.Parse(fmt.Sprintf("http://%s/v2/", host))

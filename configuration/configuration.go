@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"reflect"
 	"strings"
@@ -110,9 +111,6 @@ type Configuration struct {
 			// Specifies the lowest TLS version allowed
 			MinimumTLS string `yaml:"minimumtls,omitempty"`
 
-			// Specifies a list of cipher suites allowed
-			CipherSuites []string `yaml:"ciphersuites,omitempty"`
-
 			// LetsEncrypt is used to configuration setting up TLS through
 			// Let's Encrypt instead of manually specifying certificate and
 			// key. If a TLS certificate is specified, the Let's Encrypt
@@ -172,11 +170,6 @@ type Configuration struct {
 
 		// DB specifies the database to connect to on the redis instance.
 		DB int `yaml:"db,omitempty"`
-
-		// TLS configures settings for redis in-transit encryption
-		TLS struct {
-			Enabled bool `yaml:"enabled,omitempty"`
-		} `yaml:"tls,omitempty"`
 
 		DialTimeout  time.Duration `yaml:"dialtimeout,omitempty"`  // timeout for connect
 		ReadTimeout  time.Duration `yaml:"readtimeout,omitempty"`  // timeout for reads of data
@@ -588,7 +581,7 @@ type Events struct {
 	IncludeReferences bool `yaml:"includereferences"` // include reference data in manifest events
 }
 
-// Ignore configures mediaTypes and actions of the event, that it won't be propagated
+//Ignore configures mediaTypes and actions of the event, that it won't be propagated
 type Ignore struct {
 	MediaTypes []string `yaml:"mediatypes"` // target media types to ignore
 	Actions    []string `yaml:"actions"`    // ignore action types
@@ -653,7 +646,7 @@ type Proxy struct {
 // Configuration.Abc may be replaced by the value of REGISTRY_ABC,
 // Configuration.Abc.Xyz may be replaced by the value of REGISTRY_ABC_XYZ, and so forth
 func Parse(rd io.Reader) (*Configuration, error) {
-	in, err := io.ReadAll(rd)
+	in, err := ioutil.ReadAll(rd)
 	if err != nil {
 		return nil, err
 	}

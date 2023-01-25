@@ -25,6 +25,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -34,10 +35,10 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/ncw/swift"
 
-	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
-	"github.com/distribution/distribution/v3/registry/storage/driver/base"
-	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
-	"github.com/distribution/distribution/v3/version"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/registry/storage/driver/base"
+	"github.com/docker/distribution/registry/storage/driver/factory"
+	"github.com/docker/distribution/version"
 )
 
 const driverName = "swift"
@@ -335,13 +336,13 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 				return nil, storagedriver.PathNotFoundError{Path: path}
 			}
 			if swiftErr, ok := err.(*swift.Error); ok && swiftErr.StatusCode == http.StatusRequestedRangeNotSatisfiable {
-				return io.NopCloser(bytes.NewReader(nil)), nil
+				return ioutil.NopCloser(bytes.NewReader(nil)), nil
 			}
 			return file, err
 		}
 
-		// if this is a DLO and it is clear that segments are still missing,
-		// wait until they show up
+		//if this is a DLO and it is clear that segments are still missing,
+		//wait until they show up
 		_, isDLO := headers["X-Object-Manifest"]
 		size, err := file.Length()
 		if err != nil {
@@ -356,7 +357,7 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 			continue
 		}
 
-		// if not, then this reader will be fine
+		//if not, then this reader will be fine
 		return file, nil
 	}
 }
@@ -435,9 +436,9 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 		}
 	}
 
-	// Don't trust an empty `objects` slice. A container listing can be
-	// outdated. For files, we can make a HEAD request on the object which
-	// reports existence (at least) much more reliably.
+	//Don't trust an empty `objects` slice. A container listing can be
+	//outdated. For files, we can make a HEAD request on the object which
+	//reports existence (at least) much more reliably.
 	waitingTime := readAfterWriteWait
 	endTime := time.Now().Add(readAfterWriteTimeout)
 
@@ -450,8 +451,8 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 			return nil, err
 		}
 
-		// if this is a DLO and it is clear that segments are still missing,
-		// wait until they show up
+		//if this is a DLO and it is clear that segments are still missing,
+		//wait until they show up
 		_, isDLO := headers["X-Object-Manifest"]
 		if isDLO && info.Bytes == 0 {
 			if time.Now().Add(waitingTime).After(endTime) {
@@ -462,7 +463,7 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 			continue
 		}
 
-		// otherwise, accept the result
+		//otherwise, accept the result
 		fi.IsDir = false
 		fi.Size = info.Bytes
 		fi.ModTime = info.LastModified
@@ -607,7 +608,7 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 		return "", storagedriver.ErrUnsupportedMethod{}
 	}
 
-	methodString := http.MethodGet
+	methodString := "GET"
 	method, ok := options["method"]
 	if ok {
 		if methodString, ok = method.(string); !ok {
@@ -615,10 +616,10 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 		}
 	}
 
-	if methodString == http.MethodHead {
+	if methodString == "HEAD" {
 		// A "HEAD" request on a temporary URL is allowed if the
 		// signature was generated with "GET", "POST" or "PUT"
-		methodString = http.MethodGet
+		methodString = "GET"
 	}
 
 	supported := false
@@ -657,7 +658,7 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 }
 
 // Walk traverses a filesystem defined within driver, starting
-// from the given path, calling f on each file and directory
+// from the given path, calling f on each file
 func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn) error {
 	return storagedriver.WalkFallback(ctx, d, path, f)
 }
@@ -680,7 +681,7 @@ func (d *driver) swiftSegmentPath(path string) (string, error) {
 }
 
 func (d *driver) getAllSegments(path string) ([]swift.Object, error) {
-	// a simple container listing works 99.9% of the time
+	//a simple container listing works 99.9% of the time
 	segments, err := d.Conn.ObjectsAll(d.Container, &swift.ObjectsOpts{Prefix: path})
 	if err != nil {
 		if err == swift.ContainerNotFound {
@@ -689,15 +690,15 @@ func (d *driver) getAllSegments(path string) ([]swift.Object, error) {
 		return nil, err
 	}
 
-	// build a lookup table by object name
+	//build a lookup table by object name
 	hasObjectName := make(map[string]struct{})
 	for _, segment := range segments {
 		hasObjectName[segment.Name] = struct{}{}
 	}
 
-	// The container listing might be outdated (i.e. not contain all existing
-	// segment objects yet) because of temporary inconsistency (Swift is only
-	// eventually consistent!). Check its completeness.
+	//The container listing might be outdated (i.e. not contain all existing
+	//segment objects yet) because of temporary inconsistency (Swift is only
+	//eventually consistent!). Check its completeness.
 	segmentNumber := 0
 	for {
 		segmentNumber++
@@ -707,23 +708,23 @@ func (d *driver) getAllSegments(path string) ([]swift.Object, error) {
 			continue
 		}
 
-		// This segment is missing in the container listing. Use a more reliable
-		// request to check its existence. (HEAD requests on segments are
-		// guaranteed to return the correct metadata, except for the pathological
-		// case of an outage of large parts of the Swift cluster or its network,
-		// since every segment is only written once.)
+		//This segment is missing in the container listing. Use a more reliable
+		//request to check its existence. (HEAD requests on segments are
+		//guaranteed to return the correct metadata, except for the pathological
+		//case of an outage of large parts of the Swift cluster or its network,
+		//since every segment is only written once.)
 		segment, _, err := d.Conn.Object(d.Container, segmentPath)
 		switch err {
 		case nil:
-			// found new segment -> keep going, more might be missing
+			//found new segment -> keep going, more might be missing
 			segments = append(segments, segment)
 			continue
 		case swift.ObjectNotFound:
-			// This segment is missing. Since we upload segments sequentially,
-			// there won't be any more segments after it.
+			//This segment is missing. Since we upload segments sequentially,
+			//there won't be any more segments after it.
 			return segments, nil
 		default:
-			return nil, err // unexpected error
+			return nil, err //unexpected error
 		}
 	}
 }
@@ -763,7 +764,11 @@ func chunkFilenames(slice []string, maxSize int) (chunks [][]string, err error) 
 }
 
 func parseManifest(manifest string) (container string, prefix string) {
-	container, prefix, _ = strings.Cut(manifest, "/")
+	components := strings.SplitN(manifest, "/", 2)
+	container = components[0]
+	if len(components) > 1 {
+		prefix = components[1]
+	}
 	return container, prefix
 }
 

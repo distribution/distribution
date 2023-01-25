@@ -1,37 +1,30 @@
 # Distribution
 
-The toolset to pack, ship, store, and deliver content.
+The Docker toolset to pack, ship, store, and deliver content.
 
-This repository's main product is the Open Source Registry implementation
-for storing and distributing container images using the
+This repository's main product is the Open Source Docker Registry implementation
+for storing and distributing Docker and OCI images using the
 [OCI Distribution Specification](https://github.com/opencontainers/distribution-spec).
 The goal of this project is to provide a simple, secure, and scalable base
-for building a large scale registry solution or running a simple private registry.
-It is a core library for many registry operators including Docker Hub, GitHub Container Registry,
-GitLab Container Registry and DigitalOcean Container Registry, as well as the CNCF Harbor
-Project, and VMware Harbor Registry.
+for building a registry solution or running a simple private registry.
 
-<img src="/distribution-logo.svg" width="200px" />
+<img src="https://www.docker.com/sites/default/files/oyster-registry-3.png" width=200px/>
 
-[![Build Status](https://github.com/distribution/distribution/workflows/CI/badge.svg?branch=main&event=push)](https://github.com/distribution/distribution/actions?query=workflow%3ACI)
-[![GoDoc](https://img.shields.io/badge/go.dev-reference-007d9c?logo=go&logoColor=white&style=flat-square)](https://pkg.go.dev/github.com/distribution/distribution)
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache--2.0-blue.svg)](LICENSE)
-[![codecov](https://codecov.io/gh/distribution/distribution/branch/main/graph/badge.svg)](https://codecov.io/gh/distribution/distribution)
-[![FOSSA Status](https://app.fossa.com/api/projects/custom%2B162%2Fgithub.com%2Fdistribution%2Fdistribution.svg?type=shield)](https://app.fossa.com/projects/custom%2B162%2Fgithub.com%2Fdistribution%2Fdistribution?ref=badge_shield)
-[![OCI Conformance](https://github.com/distribution/distribution/workflows/conformance/badge.svg)](https://github.com/distribution/distribution/actions?query=workflow%3Aconformance)
+[![Build Status](https://travis-ci.org/docker/distribution.svg?branch=master)](https://travis-ci.org/docker/distribution)
+[![GoDoc](https://godoc.org/github.com/docker/distribution?status.svg)](https://godoc.org/github.com/docker/distribution)
 
 This repository contains the following components:
 
 |**Component**       |Description                                                                                                                                                                                         |
 |--------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **registry**       | An implementation of the [OCI Distribution Specification](https://github.com/opencontainers/distribution-spec).                                                                                                 |
-| **libraries**      | A rich set of libraries for interacting with distribution components. Please see [godoc](https://pkg.go.dev/github.com/distribution/distribution) for details. **Note**: The interfaces for these libraries are **unstable**. |
+| **libraries**      | A rich set of libraries for interacting with distribution components. Please see [godoc](https://godoc.org/github.com/docker/distribution) for details. **Note**: The interfaces for these libraries are **unstable**. |
 | **documentation**  | Docker's full documentation set is available at [docs.docker.com](https://docs.docker.com). This repository [contains the subset](docs/) related just to the registry.                                                                                                                                          |
 
 ### How does this integrate with Docker, containerd, and other OCI client?
 
 Clients implement against the OCI specification and communicate with the
-registry using HTTP. This project contains a client implementation which
+registry using HTTP. This project contains an client implementation which
 is currently in use by Docker, however, it is deprecated for the
 [implementation in containerd](https://github.com/containerd/containerd/tree/master/remotes/docker)
 and will not support new features.
@@ -51,6 +44,29 @@ system that allow users to:
 * Implement their own home made solution through good specs, and solid
   extensions mechanism.
 
+### Who needs to deploy a registry?
+
+By default, Docker users pull images from Docker's public registry instance.
+[Installing Docker](https://docs.docker.com/engine/installation/) gives users this
+ability. Users can also push images to a repository on Docker's public registry,
+if they have a [Docker Hub](https://hub.docker.com/) account.
+
+For some users and even companies, this default behavior is sufficient. For
+others, it is not.
+
+For example, users with their own software products may want to maintain a
+registry for private, company images. Also, you may wish to deploy your own
+image repository for images used to test or in continuous integration. For these
+use cases and others, [deploying your own registry instance](https://github.com/docker/docker.github.io/blob/master/registry/deploying.md)
+may be the better choice.
+
+### Migration to Registry 2.0
+
+For those who have previously deployed their own registry based on the Registry
+1.0 implementation and wish to deploy a Registry 2.0 while retaining images,
+data migration is required. A tool to assist with migration efforts has been
+created. For more information see [docker/migrator](https://github.com/docker/migrator).
+
 ## Contribution
 
 Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute
@@ -62,8 +78,10 @@ the instructions for [building a development environment](BUILDING.md).
 For async communication and long running discussions please use issues and pull requests on the github repo.
 This will be the best place to discuss design and implementation.
 
-For sync communication we have a #distribution channel in the [CNCF Slack](https://slack.cncf.io/)
-that everyone is welcome to join and chat about development.
+For sync communication we have a community slack with a #distribution channel that everyone is welcome to join and chat about development.
+
+**Slack:** Catch us in the #distribution channels on dockercommunity.slack.com.
+[Click here for an invite to Docker community slack.](https://dockr.ly/slack)
 
 ## Licenses
 

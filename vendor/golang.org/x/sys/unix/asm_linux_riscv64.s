@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-//go:build riscv64 && gc
-// +build riscv64
-// +build gc
+// +build riscv64,!gccgo
 
 #include "textflag.h"
 
@@ -25,6 +23,10 @@ TEXT ·SyscallNoError(SB),NOSPLIT,$0-48
 	MOV	a1+8(FP), A0
 	MOV	a2+16(FP), A1
 	MOV	a3+24(FP), A2
+	MOV	$0, A3
+	MOV	$0, A4
+	MOV	$0, A5
+	MOV	$0, A6
 	MOV	trap+0(FP), A7	// syscall entry
 	ECALL
 	MOV	A0, r1+32(FP)	// r1
@@ -42,6 +44,9 @@ TEXT ·RawSyscallNoError(SB),NOSPLIT,$0-48
 	MOV	a1+8(FP), A0
 	MOV	a2+16(FP), A1
 	MOV	a3+24(FP), A2
+	MOV	ZERO, A3
+	MOV	ZERO, A4
+	MOV	ZERO, A5
 	MOV	trap+0(FP), A7	// syscall entry
 	ECALL
 	MOV	A0, r1+32(FP)

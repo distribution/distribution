@@ -23,7 +23,7 @@ func MajorMinorVersion(major, minor uint) Version {
 }
 
 func (version Version) major() (uint, error) {
-	majorPart, _, _ := strings.Cut(string(version), ".")
+	majorPart := strings.Split(string(version), ".")[0]
 	major, err := strconv.ParseUint(majorPart, 10, 0)
 	return uint(major), err
 }
@@ -35,7 +35,7 @@ func (version Version) Major() uint {
 }
 
 func (version Version) minor() (uint, error) {
-	_, minorPart, _ := strings.Cut(string(version), ".")
+	minorPart := strings.Split(string(version), ".")[1]
 	minor, err := strconv.ParseUint(minorPart, 10, 0)
 	return uint(minor), err
 }
@@ -89,8 +89,8 @@ func NewParser(prefix string, parseInfos []VersionedParseInfo) *Parser {
 	}
 
 	for _, env := range os.Environ() {
-		k, v, _ := strings.Cut(env, "=")
-		p.env = append(p.env, envVar{k, v})
+		envParts := strings.SplitN(env, "=", 2)
+		p.env = append(p.env, envVar{envParts[0], envParts[1]})
 	}
 
 	// We must sort the environment variables lexically by name so that
@@ -138,7 +138,7 @@ func (p *Parser) Parse(in []byte, v interface{}) error {
 
 			err = p.overwriteFields(parseAs, pathStr, path[1:], envVar.value)
 			if err != nil {
-				return fmt.Errorf("parsing environment variable %s: %v", pathStr, err)
+				return err
 			}
 		}
 	}

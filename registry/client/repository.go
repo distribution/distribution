@@ -7,19 +7,19 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/url"
-	"path"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/reference"
-	v2 "github.com/distribution/distribution/v3/registry/api/v2"
-	"github.com/distribution/distribution/v3/registry/client/transport"
-	"github.com/distribution/distribution/v3/registry/storage/cache"
-	"github.com/distribution/distribution/v3/registry/storage/cache/memory"
+	"github.com/docker/distribution"
+	"github.com/docker/distribution/reference"
+	v2 "github.com/docker/distribution/registry/api/v2"
+	"github.com/docker/distribution/registry/client/transport"
+	"github.com/docker/distribution/registry/storage/cache"
+	"github.com/docker/distribution/registry/storage/cache/memory"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -98,11 +98,7 @@ func (r *registry) Repositories(ctx context.Context, entries []string, last stri
 		return 0, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
-	if err != nil {
-		return 0, err
-	}
-	resp, err := r.client.Do(req)
+	resp, err := r.client.Get(u)
 	if err != nil {
 		return 0, err
 	}
@@ -118,7 +114,9 @@ func (r *registry) Repositories(ctx context.Context, entries []string, last stri
 			return 0, err
 		}
 
-		copy(entries, ctlg.Repositories)
+		for cnt := range ctlg.Repositories {
+			entries[cnt] = ctlg.Repositories[cnt]
+		}
 		numFilled = len(ctlg.Repositories)
 
 		link := resp.Header.Get("Link")
@@ -139,14 +137,16 @@ func NewRepository(name reference.Named, baseURL string, transport http.RoundTri
 		return nil, err
 	}
 
+	client := &http.Client{
+		Transport:     transport,
+		CheckRedirect: checkHTTPRedirect,
+		// TODO(dmcgowan): create cookie jar
+	}
+
 	return &repository{
-		client: &http.Client{
-			Transport:     transport,
-			CheckRedirect: checkHTTPRedirect,
-			// TODO(dmcgowan): create cookie jar
-		},
-		ub:   ub,
-		name: name,
+		client: client,
+		ub:     ub,
+		name:   name,
 	}, nil
 }
 
@@ -161,15 +161,16 @@ func (r *repository) Named() reference.Named {
 }
 
 func (r *repository) Blobs(ctx context.Context) distribution.BlobStore {
-	return &blobs{
+	statter := &blobStatter{
 		name:   r.name,
 		ub:     r.ub,
 		client: r.client,
-		statter: cache.NewCachedBlobStatter(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize), &blobStatter{
-			name:   r.name,
-			ub:     r.ub,
-			client: r.client,
-		}),
+	}
+	return &blobs{
+		name:    r.name,
+		ub:      r.ub,
+		client:  r.client,
+		statter: cache.NewCachedBlobStatter(memory.NewInMemoryBlobDescriptorCacheProvider(), statter),
 	}
 }
 
@@ -213,18 +214,14 @@ func (t *tags) All(ctx context.Context) ([]string, error) {
 	}
 
 	for {
-		req, err := http.NewRequestWithContext(ctx, http.MethodGet, listURL.String(), nil)
-		if err != nil {
-			return nil, err
-		}
-		resp, err := t.client.Do(req)
+		resp, err := t.client.Get(listURL.String())
 		if err != nil {
 			return tags, err
 		}
 		defer resp.Body.Close()
 
 		if SuccessStatus(resp.StatusCode) {
-			b, err := io.ReadAll(resp.Body)
+			b, err := ioutil.ReadAll(resp.Body)
 			if err != nil {
 				return tags, err
 			}
@@ -237,8 +234,8 @@ func (t *tags) All(ctx context.Context) ([]string, error) {
 			}
 			tags = append(tags, tagsResponse.Tags...)
 			if link := resp.Header.Get("Link"); link != "" {
-				firsLink, _, _ := strings.Cut(link, ";")
-				linkURL, err := url.Parse(strings.Trim(firsLink, "<>"))
+				linkURLStr := strings.Trim(strings.Split(link, ";")[0], "<>")
+				linkURL, err := url.Parse(linkURLStr)
 				if err != nil {
 					return tags, err
 				}
@@ -265,11 +262,11 @@ func descriptorFromResponse(response *http.Response) (distribution.Descriptor, e
 
 	digestHeader := headers.Get("Docker-Content-Digest")
 	if digestHeader == "" {
-		data, err := io.ReadAll(response.Body)
+		bytes, err := ioutil.ReadAll(response.Body)
 		if err != nil {
 			return distribution.Descriptor{}, err
 		}
-		_, desc, err := distribution.UnmarshalManifest(ctHeader, data)
+		_, desc, err := distribution.UnmarshalManifest(ctHeader, bytes)
 		if err != nil {
 			return distribution.Descriptor{}, err
 		}
@@ -293,6 +290,7 @@ func descriptorFromResponse(response *http.Response) (distribution.Descriptor, e
 	desc.Size = length
 
 	return desc, nil
+
 }
 
 // Get issues a HEAD request for a Manifest against its named endpoint in order
@@ -309,7 +307,7 @@ func (t *tags) Get(ctx context.Context, tag string) (distribution.Descriptor, er
 	}
 
 	newRequest := func(method string) (*http.Response, error) {
-		req, err := http.NewRequestWithContext(ctx, method, u, nil)
+		req, err := http.NewRequest(method, u, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -321,7 +319,7 @@ func (t *tags) Get(ctx context.Context, tag string) (distribution.Descriptor, er
 		return resp, err
 	}
 
-	resp, err := newRequest(http.MethodHead)
+	resp, err := newRequest("HEAD")
 	if err != nil {
 		return distribution.Descriptor{}, err
 	}
@@ -336,7 +334,7 @@ func (t *tags) Get(ctx context.Context, tag string) (distribution.Descriptor, er
 		// Issue a GET request:
 		//   - for data from a server that does not handle HEAD
 		//   - to get error details in case of a failure
-		resp, err = newRequest(http.MethodGet)
+		resp, err = newRequest("GET")
 		if err != nil {
 			return distribution.Descriptor{}, err
 		}
@@ -358,30 +356,7 @@ func (t *tags) Tag(ctx context.Context, tag string, desc distribution.Descriptor
 }
 
 func (t *tags) Untag(ctx context.Context, tag string) error {
-	ref, err := reference.WithTag(t.name, tag)
-	if err != nil {
-		return err
-	}
-	u, err := t.ub.BuildManifestURL(ref)
-	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, u, nil)
-	if err != nil {
-		return err
-	}
-
-	resp, err := t.client.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if SuccessStatus(resp.StatusCode) {
-		return nil
-	}
-	return HandleErrorResponse(resp)
+	panic("not implemented")
 }
 
 type manifests struct {
@@ -401,11 +376,7 @@ func (ms *manifests) Exists(ctx context.Context, dgst digest.Digest) (bool, erro
 		return false, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodHead, u, nil)
-	if err != nil {
-		return false, err
-	}
-	resp, err := ms.client.Do(req)
+	resp, err := ms.client.Head(u)
 	if err != nil {
 		return false, err
 	}
@@ -496,7 +467,7 @@ func (ms *manifests) Get(ctx context.Context, dgst digest.Digest, options ...dis
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -524,7 +495,8 @@ func (ms *manifests) Get(ctx context.Context, dgst digest.Digest, options ...dis
 			}
 		}
 		mt := resp.Header.Get("Content-Type")
-		body, err := io.ReadAll(resp.Body)
+		body, err := ioutil.ReadAll(resp.Body)
+
 		if err != nil {
 			return nil, err
 		}
@@ -580,7 +552,7 @@ func (ms *manifests) Put(ctx context.Context, m distribution.Manifest, options .
 		return "", err
 	}
 
-	putRequest, err := http.NewRequestWithContext(ctx, http.MethodPut, manifestURL, bytes.NewReader(p))
+	putRequest, err := http.NewRequest("PUT", manifestURL, bytes.NewReader(p))
 	if err != nil {
 		return "", err
 	}
@@ -615,7 +587,7 @@ func (ms *manifests) Delete(ctx context.Context, dgst digest.Digest) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, u, nil)
+	req, err := http.NewRequest("DELETE", u, nil)
 	if err != nil {
 		return err
 	}
@@ -662,6 +634,7 @@ func sanitizeLocation(location, base string) (string, error) {
 
 func (bs *blobs) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
 	return bs.statter.Stat(ctx, dgst)
+
 }
 
 func (bs *blobs) Get(ctx context.Context, dgst digest.Digest) ([]byte, error) {
@@ -671,10 +644,10 @@ func (bs *blobs) Get(ctx context.Context, dgst digest.Digest) ([]byte, error) {
 	}
 	defer reader.Close()
 
-	return io.ReadAll(reader)
+	return ioutil.ReadAll(reader)
 }
 
-func (bs *blobs) Open(ctx context.Context, dgst digest.Digest) (io.ReadSeekCloser, error) {
+func (bs *blobs) Open(ctx context.Context, dgst digest.Digest) (distribution.ReadSeekCloser, error) {
 	ref, err := reference.WithDigest(bs.name, dgst)
 	if err != nil {
 		return nil, err
@@ -684,12 +657,13 @@ func (bs *blobs) Open(ctx context.Context, dgst digest.Digest) (io.ReadSeekClose
 		return nil, err
 	}
 
-	return transport.NewHTTPReadSeeker(ctx, bs.client, blobURL, func(resp *http.Response) error {
-		if resp.StatusCode == http.StatusNotFound {
-			return distribution.ErrBlobUnknown
-		}
-		return HandleErrorResponse(resp)
-	}), nil
+	return transport.NewHTTPReadSeeker(bs.client, blobURL,
+		func(resp *http.Response) error {
+			if resp.StatusCode == http.StatusNotFound {
+				return distribution.ErrBlobUnknown
+			}
+			return HandleErrorResponse(resp)
+		}), nil
 }
 
 func (bs *blobs) ServeBlob(ctx context.Context, w http.ResponseWriter, r *http.Request, dgst digest.Digest) error {
@@ -783,12 +757,7 @@ func (bs *blobs) Create(ctx context.Context, options ...distribution.BlobCreateO
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	resp, err := bs.client.Do(req)
+	resp, err := bs.client.Post(u, "", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -805,8 +774,8 @@ func (bs *blobs) Create(ctx context.Context, options ...distribution.BlobCreateO
 		// TODO(dmcgowan): Check for invalid UUID
 		uuid := resp.Header.Get("Docker-Upload-UUID")
 		if uuid == "" {
-			// uuid is expected to be the last path element
-			_, uuid = path.Split(resp.Header.Get("Location"))
+			parts := strings.Split(resp.Header.Get("Location"), "/")
+			uuid = parts[len(parts)-1]
 		}
 		if uuid == "" {
 			return nil, errors.New("cannot retrieve docker upload UUID")
@@ -818,7 +787,6 @@ func (bs *blobs) Create(ctx context.Context, options ...distribution.BlobCreateO
 		}
 
 		return &httpBlobUpload{
-			ctx:       ctx,
 			statter:   bs.statter,
 			client:    bs.client,
 			uuid:      uuid,
@@ -837,7 +805,6 @@ func (bs *blobs) Resume(ctx context.Context, id string) (distribution.BlobWriter
 	}
 
 	return &httpBlobUpload{
-		ctx:       ctx,
 		statter:   bs.statter,
 		client:    bs.client,
 		uuid:      id,
@@ -866,11 +833,7 @@ func (bs *blobStatter) Stat(ctx context.Context, dgst digest.Digest) (distributi
 		return distribution.Descriptor{}, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodHead, u, nil)
-	if err != nil {
-		return distribution.Descriptor{}, err
-	}
-	resp, err := bs.client.Do(req)
+	resp, err := bs.client.Head(u)
 	if err != nil {
 		return distribution.Descriptor{}, err
 	}
@@ -922,7 +885,7 @@ func (bs *blobStatter) Clear(ctx context.Context, dgst digest.Digest) error {
 		return err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, blobURL, nil)
+	req, err := http.NewRequest("DELETE", blobURL, nil)
 	if err != nil {
 		return err
 	}

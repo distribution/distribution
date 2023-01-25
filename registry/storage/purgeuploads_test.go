@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/distribution/distribution/v3/registry/storage/driver"
-	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
-	"github.com/distribution/distribution/v3/uuid"
+	"github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/registry/storage/driver/inmemory"
+	"github.com/docker/distribution/uuid"
 )
 
 func testUploadFS(t *testing.T, numUploads int, repoName string, startedAt time.Time) (driver.StorageDriver, context.Context) {
@@ -38,6 +38,7 @@ func addUploads(ctx context.Context, t *testing.T, d driver.StorageDriver, uploa
 	if d.PutContent(ctx, startedAtPath, []byte(startedAt.Format(time.RFC3339))); err != nil {
 		t.Fatalf("Unable to write startedAt file")
 	}
+
 }
 
 func TestPurgeGather(t *testing.T) {
@@ -45,7 +46,7 @@ func TestPurgeGather(t *testing.T) {
 	fs, ctx := testUploadFS(t, uploadCount, "test-repo", time.Now())
 	uploadData, errs := getOutstandingUploads(ctx, fs)
 	if len(errs) != 0 {
-		t.Errorf("Unexpected errors: %q", errs)
+		t.Errorf("Unexepected errors: %q", errs)
 	}
 	if len(uploadData) != uploadCount {
 		t.Errorf("Unexpected upload file count: %d != %d", uploadCount, len(uploadData))

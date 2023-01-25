@@ -3,10 +3,10 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/registry/api/errcode"
-	v2 "github.com/distribution/distribution/v3/registry/api/v2"
+	"github.com/docker/distribution"
+	"github.com/docker/distribution/context"
+	"github.com/docker/distribution/registry/api/errcode"
+	v2 "github.com/docker/distribution/registry/api/v2"
 	"github.com/gorilla/handlers"
 	"github.com/opencontainers/go-digest"
 )
@@ -33,12 +33,12 @@ func blobDispatcher(ctx *Context, r *http.Request) http.Handler {
 	}
 
 	mhandler := handlers.MethodHandler{
-		http.MethodGet:  http.HandlerFunc(blobHandler.GetBlob),
-		http.MethodHead: http.HandlerFunc(blobHandler.GetBlob),
+		"GET":  http.HandlerFunc(blobHandler.GetBlob),
+		"HEAD": http.HandlerFunc(blobHandler.GetBlob),
 	}
 
 	if !ctx.readOnly {
-		mhandler[http.MethodDelete] = http.HandlerFunc(blobHandler.DeleteBlob)
+		mhandler["DELETE"] = http.HandlerFunc(blobHandler.DeleteBlob)
 	}
 
 	return mhandler

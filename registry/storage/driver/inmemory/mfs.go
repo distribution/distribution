@@ -163,6 +163,7 @@ func (d *dir) mkdirs(p string) (*dir, error) {
 	components := strings.Split(relative, "/")
 	for _, component := range components {
 		d, err := dd.mkdir(component)
+
 		if err != nil {
 			// This should actually never happen, since there are no children.
 			return nil, err
@@ -243,16 +244,11 @@ func (d *dir) delete(p string) error {
 		return errNotExists
 	}
 
-	parentDir, ok := parent.(*dir)
-	if !ok {
-		return errIsNotDir
-	}
-
-	if _, ok := parentDir.children[filename]; !ok {
+	if _, ok := parent.(*dir).children[filename]; !ok {
 		return errNotExists
 	}
 
-	delete(parentDir.children, filename)
+	delete(parent.(*dir).children, filename)
 	return nil
 }
 
@@ -283,34 +279,21 @@ func (f *file) sectionReader(offset int64) io.Reader {
 }
 
 func (f *file) ReadAt(p []byte, offset int64) (n int, err error) {
-	if offset >= int64(len(f.data)) {
-		return 0, io.EOF
-	}
 	return copy(p, f.data[offset:]), nil
 }
 
-// reallocExponent is the exponent used to realloc a slice. The value roughly
-// follows the behavior of Go built-in append function.
-const reallocExponent = 1.25
-
 func (f *file) WriteAt(p []byte, offset int64) (n int, err error) {
-	newLen := offset + int64(len(p))
-	if int64(cap(f.data)) < newLen {
-		// Grow slice exponentially to ensure amortized linear time complexity
-		// of reallocation
-		newCap := int64(float64(cap(f.data)) * reallocExponent)
-		if newCap < newLen {
-			newCap = newLen
-		}
-		data := make([]byte, len(f.data), newCap)
+	off := int(offset)
+	if cap(f.data) < off+len(p) {
+		data := make([]byte, len(f.data), off+len(p))
 		copy(data, f.data)
 		f.data = data
 	}
 
 	f.mod = time.Now()
-	f.data = f.data[:newLen]
+	f.data = f.data[:off+len(p)]
 
-	return copy(f.data[offset:newLen], p), nil
+	return copy(f.data[off:off+len(p)], p), nil
 }
 
 func (f *file) String() string {

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httputil"
@@ -19,19 +20,19 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/configuration"
-	"github.com/distribution/distribution/v3/manifest"
-	"github.com/distribution/distribution/v3/manifest/manifestlist"
-	"github.com/distribution/distribution/v3/manifest/schema1"
-	"github.com/distribution/distribution/v3/manifest/schema2"
-	"github.com/distribution/distribution/v3/reference"
-	"github.com/distribution/distribution/v3/registry/api/errcode"
-	v2 "github.com/distribution/distribution/v3/registry/api/v2"
-	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
-	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
-	_ "github.com/distribution/distribution/v3/registry/storage/driver/testdriver"
-	"github.com/distribution/distribution/v3/testutil"
+	"github.com/docker/distribution"
+	"github.com/docker/distribution/configuration"
+	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/manifest/manifestlist"
+	"github.com/docker/distribution/manifest/schema1"
+	"github.com/docker/distribution/manifest/schema2"
+	"github.com/docker/distribution/reference"
+	"github.com/docker/distribution/registry/api/errcode"
+	v2 "github.com/docker/distribution/registry/api/v2"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/registry/storage/driver/factory"
+	_ "github.com/docker/distribution/registry/storage/driver/testdriver"
+	"github.com/docker/distribution/testutil"
 	"github.com/docker/libtrust"
 	"github.com/gorilla/handlers"
 	"github.com/opencontainers/go-digest"
@@ -68,7 +69,7 @@ func TestCheckAPI(t *testing.T) {
 		"Content-Length": []string{"2"},
 	})
 
-	p, err := io.ReadAll(resp.Body)
+	p, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("unexpected error reading response body: %v", err)
 	}
@@ -86,8 +87,7 @@ func TestCatalogAPI(t *testing.T) {
 
 	values := url.Values{
 		"last": []string{""},
-		"n":    []string{strconv.Itoa(chunkLen)},
-	}
+		"n":    []string{strconv.Itoa(chunkLen)}}
 
 	catalogURL, err := env.builder.BuildCatalogURL(values)
 	if err != nil {
@@ -196,162 +196,6 @@ func TestCatalogAPI(t *testing.T) {
 	}
 }
 
-// TestTagsAPI tests the /v2/<name>/tags/list endpoint
-func TestTagsAPI(t *testing.T) {
-	env := newTestEnv(t, false)
-	defer env.Shutdown()
-
-	imageName, err := reference.WithName("test")
-	if err != nil {
-		t.Fatalf("unable to parse reference: %v", err)
-	}
-
-	tags := []string{
-		"2j2ar",
-		"asj9e",
-		"jyi7b",
-		"kb0j5",
-		"sb71y",
-	}
-
-	for _, tag := range tags {
-		createRepository(env, t, imageName.Name(), tag)
-	}
-
-	tt := []struct {
-		name               string
-		queryParams        url.Values
-		expectedStatusCode int
-		expectedBody       tagsAPIResponse
-		expectedBodyErr    *errcode.ErrorCode
-		expectedLinkHeader string
-	}{
-		{
-			name:               "no query parameters",
-			expectedStatusCode: http.StatusOK,
-			expectedBody:       tagsAPIResponse{Name: imageName.Name(), Tags: tags},
-		},
-		{
-			name:               "empty last query parameter",
-			queryParams:        url.Values{"last": []string{""}},
-			expectedStatusCode: http.StatusOK,
-			expectedBody:       tagsAPIResponse{Name: imageName.Name(), Tags: tags},
-		},
-		{
-			name:               "empty n query parameter",
-			queryParams:        url.Values{"n": []string{""}},
-			expectedStatusCode: http.StatusOK,
-			expectedBody:       tagsAPIResponse{Name: imageName.Name(), Tags: tags},
-		},
-		{
-			name:               "empty last and n query parameters",
-			queryParams:        url.Values{"last": []string{""}, "n": []string{""}},
-			expectedStatusCode: http.StatusOK,
-			expectedBody:       tagsAPIResponse{Name: imageName.Name(), Tags: tags},
-		},
-		{
-			name:               "negative n query parameter",
-			queryParams:        url.Values{"n": []string{"-1"}},
-			expectedStatusCode: http.StatusBadRequest,
-			expectedBodyErr:    &v2.ErrorCodePaginationNumberInvalid,
-		},
-		{
-			name:               "non integer n query parameter",
-			queryParams:        url.Values{"n": []string{"foo"}},
-			expectedStatusCode: http.StatusBadRequest,
-			expectedBodyErr:    &v2.ErrorCodePaginationNumberInvalid,
-		},
-		{
-			name:               "1st page",
-			queryParams:        url.Values{"n": []string{"2"}},
-			expectedStatusCode: http.StatusOK,
-			expectedBody: tagsAPIResponse{Name: imageName.Name(), Tags: []string{
-				"2j2ar",
-				"asj9e",
-			}},
-			expectedLinkHeader: `</v2/test/tags/list?last=asj9e&n=2>; rel="next"`,
-		},
-		{
-			name:               "nth page",
-			queryParams:        url.Values{"last": []string{"asj9e"}, "n": []string{"1"}},
-			expectedStatusCode: http.StatusOK,
-			expectedBody: tagsAPIResponse{Name: imageName.Name(), Tags: []string{
-				"jyi7b",
-			}},
-			expectedLinkHeader: `</v2/test/tags/list?last=jyi7b&n=1>; rel="next"`,
-		},
-		{
-			name:               "last page",
-			queryParams:        url.Values{"last": []string{"jyi7b"}, "n": []string{"3"}},
-			expectedStatusCode: http.StatusOK,
-			expectedBody: tagsAPIResponse{Name: imageName.Name(), Tags: []string{
-				"kb0j5",
-				"sb71y",
-			}},
-		},
-		{
-			name:               "page size bigger than full list",
-			queryParams:        url.Values{"n": []string{"100"}},
-			expectedStatusCode: http.StatusOK,
-			expectedBody:       tagsAPIResponse{Name: imageName.Name(), Tags: tags},
-		},
-		{
-			name:               "after marker",
-			queryParams:        url.Values{"last": []string{"jyi7b"}},
-			expectedStatusCode: http.StatusOK,
-			expectedBody: tagsAPIResponse{Name: imageName.Name(), Tags: []string{
-				"kb0j5",
-				"sb71y",
-			}},
-		},
-		{
-			name:               "after non existent marker",
-			queryParams:        url.Values{"last": []string{"does-not-exist"}, "n": []string{"3"}},
-			expectedStatusCode: http.StatusOK,
-			expectedBody: tagsAPIResponse{Name: imageName.Name(), Tags: []string{
-				"kb0j5",
-				"sb71y",
-			}},
-		},
-	}
-
-	for _, test := range tt {
-		t.Run(test.name, func(t *testing.T) {
-			tagsURL, err := env.builder.BuildTagsURL(imageName, test.queryParams)
-			if err != nil {
-				t.Fatalf("unexpected error building tags URL: %v", err)
-			}
-
-			resp, err := http.Get(tagsURL)
-			if err != nil {
-				t.Fatalf("unexpected error issuing request: %v", err)
-			}
-			defer resp.Body.Close()
-
-			if resp.StatusCode != test.expectedStatusCode {
-				t.Fatalf("expected response status code to be %d, got %d", test.expectedStatusCode, resp.StatusCode)
-			}
-
-			if test.expectedBodyErr != nil {
-				checkBodyHasErrorCodes(t, "invalid number of results requested", resp, *test.expectedBodyErr)
-			} else {
-				var body tagsAPIResponse
-				dec := json.NewDecoder(resp.Body)
-				if err := dec.Decode(&body); err != nil {
-					t.Fatalf("unexpected error decoding response body: %v", err)
-				}
-				if !reflect.DeepEqual(body, test.expectedBody) {
-					t.Fatalf("expected response body to be:\n%+v\ngot:\n%+v", test.expectedBody, body)
-				}
-			}
-
-			if resp.Header.Get("Link") != test.expectedLinkHeader {
-				t.Fatalf("expected response Link header to be %q, got %q", test.expectedLinkHeader, resp.Header.Get("Link"))
-			}
-		})
-	}
-}
-
 func checkLink(t *testing.T, urlStr string, numEntries int, last string) url.Values {
 	re := regexp.MustCompile("<(/v2/_catalog.*)>; rel=\"next\"")
 	matches := re.FindStringSubmatch(urlStr)
@@ -453,6 +297,7 @@ func TestBlobAPI(t *testing.T) {
 	defer env2.Shutdown()
 	args = makeBlobArgs(t)
 	testBlobAPI(t, env2, args)
+
 }
 
 func TestBlobDelete(t *testing.T) {
@@ -612,7 +457,7 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 		"Docker-Upload-UUID": []string{uploadUUID},
 	})
 
-	req, err := http.NewRequest(http.MethodDelete, uploadURLBase, nil)
+	req, err := http.NewRequest("DELETE", uploadURLBase, nil)
 	if err != nil {
 		t.Fatalf("unexpected error creating delete request: %v", err)
 	}
@@ -686,44 +531,7 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 	layerFile.Seek(0, 0)
 	uploadURLBase, _ = startPushLayer(t, env, imageName)
 	uploadURLBase, dgst := pushChunk(t, env.builder, imageName, uploadURLBase, layerFile, layerLength)
-
-	// -----------------------------------------
-	// Check the chunk upload status
-	_, end, err := getUploadStatus(uploadURLBase)
-	if err != nil {
-		t.Fatalf("unexpected error doing chunk upload check: %v", err)
-	}
-	if end+1 != layerLength {
-		t.Fatalf("getting wrong chunk upload status: %d", end)
-	}
-
 	finishUpload(t, env.builder, imageName, uploadURLBase, dgst)
-
-	// -----------------------------------------
-	// Do layer push with invalid content range
-	layerFile.Seek(0, io.SeekStart)
-	uploadURLBase, _ = startPushLayer(t, env, imageName)
-	sizeInvalid := chunkOptions{
-		contentRange: "0-20",
-	}
-	resp, err = doPushChunk(t, uploadURLBase, layerFile, sizeInvalid)
-	if err != nil {
-		t.Fatalf("unexpected error doing push layer request: %v", err)
-	}
-	defer resp.Body.Close()
-	checkResponse(t, "putting size invalid chunk", resp, http.StatusBadRequest)
-
-	layerFile.Seek(0, io.SeekStart)
-	uploadURLBase, _ = startPushLayer(t, env, imageName)
-	outOfOrder := chunkOptions{
-		contentRange: "3-22",
-	}
-	resp, err = doPushChunk(t, uploadURLBase, layerFile, outOfOrder)
-	if err != nil {
-		t.Fatalf("unexpected error doing push layer request: %v", err)
-	}
-	defer resp.Body.Close()
-	checkResponse(t, "putting range out of order chunk", resp, http.StatusRequestedRangeNotSatisfiable)
 
 	// ------------------------
 	// Use a head request to see if the layer exists.
@@ -785,7 +593,7 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 
 	// Matching etag, gives 304
 	etag := resp.Header.Get("Etag")
-	req, err = http.NewRequest(http.MethodGet, layerURL, nil)
+	req, err = http.NewRequest("GET", layerURL, nil)
 	if err != nil {
 		t.Fatalf("Error constructing request: %s", err)
 	}
@@ -799,7 +607,7 @@ func testBlobAPI(t *testing.T, env *testEnv, args blobArgs) *testEnv {
 	checkResponse(t, "fetching layer with etag", resp, http.StatusNotModified)
 
 	// Non-matching etag, gives 200
-	req, err = http.NewRequest(http.MethodGet, layerURL, nil)
+	req, err = http.NewRequest("GET", layerURL, nil)
 	if err != nil {
 		t.Fatalf("Error constructing request: %s", err)
 	}
@@ -971,7 +779,7 @@ func TestStartPushReadOnly(t *testing.T) {
 }
 
 func httpDelete(url string) (*http.Response, error) {
-	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	req, err := http.NewRequest("DELETE", url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1010,93 +818,6 @@ func TestManifestAPI(t *testing.T) {
 	testManifestAPIManifestList(t, env2, schema2Args)
 }
 
-func TestManifestAPI_DeleteTag(t *testing.T) {
-	env := newTestEnv(t, false)
-	defer env.Shutdown()
-
-	imageName, err := reference.WithName("foo/bar")
-	checkErr(t, err, "building image name")
-
-	tag := "latest"
-	dgst := createRepository(env, t, imageName.Name(), tag)
-
-	ref, err := reference.WithTag(imageName, tag)
-	checkErr(t, err, "building tag reference")
-
-	u, err := env.builder.BuildManifestURL(ref)
-	checkErr(t, err, "building tag URL")
-
-	resp, err := httpDelete(u)
-	m := "deleting tag"
-	checkErr(t, err, m)
-	defer resp.Body.Close()
-
-	checkResponse(t, m, resp, http.StatusAccepted)
-	if resp.Body != http.NoBody {
-		t.Fatal("unexpected response body")
-	}
-
-	msg := "checking tag no longer exists"
-	resp, err = http.Get(u)
-	checkErr(t, err, msg)
-	checkResponse(t, msg, resp, http.StatusNotFound)
-
-	digestRef, err := reference.WithDigest(imageName, dgst)
-	checkErr(t, err, "building manifest digest reference")
-
-	u, err = env.builder.BuildManifestURL(digestRef)
-	checkErr(t, err, "building manifest URL")
-
-	msg = "checking manifest still exists"
-	resp, err = http.Head(u)
-	checkErr(t, err, msg)
-	checkResponse(t, msg, resp, http.StatusOK)
-}
-
-func TestManifestAPI_DeleteTag_Unknown(t *testing.T) {
-	env := newTestEnv(t, false)
-	defer env.Shutdown()
-
-	imageName, err := reference.WithName("foo/bar")
-	checkErr(t, err, "building named object")
-
-	ref, err := reference.WithTag(imageName, "latest")
-	checkErr(t, err, "building tag reference")
-
-	u, err := env.builder.BuildManifestURL(ref)
-	checkErr(t, err, "building tag URL")
-
-	resp, err := httpDelete(u)
-	msg := "deleting unknown tag"
-	checkErr(t, err, msg)
-	defer resp.Body.Close()
-
-	checkResponse(t, msg, resp, http.StatusNotFound)
-	checkBodyHasErrorCodes(t, msg, resp, v2.ErrorCodeManifestUnknown)
-}
-
-func TestManifestAPI_DeleteTag_ReadOnly(t *testing.T) {
-	env := newTestEnv(t, false)
-	defer env.Shutdown()
-	env.app.readOnly = true
-
-	imageName, err := reference.WithName("foo/bar")
-	checkErr(t, err, "building named object")
-
-	ref, err := reference.WithTag(imageName, "latest")
-	checkErr(t, err, "building tag reference")
-
-	u, err := env.builder.BuildManifestURL(ref)
-	checkErr(t, err, "building URL")
-
-	resp, err := httpDelete(u)
-	msg := "deleting tag"
-	checkErr(t, err, msg)
-	defer resp.Body.Close()
-
-	checkResponse(t, msg, resp, http.StatusMethodNotAllowed)
-}
-
 // storageManifestErrDriverFactory implements the factory.StorageDriverFactory interface.
 type storageManifestErrDriverFactory struct{}
 
@@ -1109,7 +830,7 @@ const (
 
 func (factory *storageManifestErrDriverFactory) Create(parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
 	// Initialize the mock driver
-	errGenericStorage := errors.New("generic storage error")
+	var errGenericStorage = errors.New("generic storage error")
 	return &mockErrorDriver{
 		returnErrs: []mockErrorMapping{
 			{
@@ -1345,6 +1066,7 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Name
 
 	for i := range unsignedManifest.FSLayers {
 		rs, dgst, err := testutil.CreateRandomTarFile()
+
 		if err != nil {
 			t.Fatalf("error creating random layer %d: %v", i, err)
 		}
@@ -1448,6 +1170,7 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Name
 	sm2, err := schema1.Sign(&fetchedManifestByDigest.Manifest, env.pk)
 	if err != nil {
 		t.Fatal(err)
+
 	}
 
 	// Re-push with a few different Content-Types. The official schema1
@@ -1487,7 +1210,7 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Name
 
 	// Get by name with etag, gives 304
 	etag := resp.Header.Get("Etag")
-	req, err := http.NewRequest(http.MethodGet, manifestURL, nil)
+	req, err := http.NewRequest("GET", manifestURL, nil)
 	if err != nil {
 		t.Fatalf("Error constructing request: %s", err)
 	}
@@ -1500,7 +1223,7 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Name
 	checkResponse(t, "fetching manifest by name with etag", resp, http.StatusNotModified)
 
 	// Get by digest with etag, gives 304
-	req, err = http.NewRequest(http.MethodGet, manifestDigestURL, nil)
+	req, err = http.NewRequest("GET", manifestDigestURL, nil)
 	if err != nil {
 		t.Fatalf("Error constructing request: %s", err)
 	}
@@ -1681,6 +1404,7 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 
 	for i := range manifest.Layers {
 		rs, dgst, err := testutil.CreateRandomTarFile()
+
 		if err != nil {
 			t.Fatalf("error creating random layer %d: %v", i, err)
 		}
@@ -1728,7 +1452,7 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 
 	// ------------------
 	// Fetch by tag name
-	req, err := http.NewRequest(http.MethodGet, manifestURL, nil)
+	req, err := http.NewRequest("GET", manifestURL, nil)
 	if err != nil {
 		t.Fatalf("Error constructing request: %s", err)
 	}
@@ -1763,7 +1487,7 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 
 	// ---------------
 	// Fetch by digest
-	req, err = http.NewRequest(http.MethodGet, manifestDigestURL, nil)
+	req, err = http.NewRequest("GET", manifestDigestURL, nil)
 	if err != nil {
 		t.Fatalf("Error constructing request: %s", err)
 	}
@@ -1795,7 +1519,7 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 
 	// Get by name with etag, gives 304
 	etag := resp.Header.Get("Etag")
-	req, err = http.NewRequest(http.MethodGet, manifestURL, nil)
+	req, err = http.NewRequest("GET", manifestURL, nil)
 	if err != nil {
 		t.Fatalf("Error constructing request: %s", err)
 	}
@@ -1808,7 +1532,7 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 	checkResponse(t, "fetching manifest by name with etag", resp, http.StatusNotModified)
 
 	// Get by digest with etag, gives 304
-	req, err = http.NewRequest(http.MethodGet, manifestDigestURL, nil)
+	req, err = http.NewRequest("GET", manifestDigestURL, nil)
 	if err != nil {
 		t.Fatalf("Error constructing request: %s", err)
 	}
@@ -1856,7 +1580,7 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 	}
 	defer resp.Body.Close()
 
-	manifestBytes, err := io.ReadAll(resp.Body)
+	manifestBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("error reading response body: %v", err)
 	}
@@ -1988,7 +1712,7 @@ func testManifestAPIManifestList(t *testing.T, env *testEnv, args manifestArgs) 
 
 	// ------------------
 	// Fetch by tag name
-	req, err := http.NewRequest(http.MethodGet, manifestURL, nil)
+	req, err := http.NewRequest("GET", manifestURL, nil)
 	if err != nil {
 		t.Fatalf("Error constructing request: %s", err)
 	}
@@ -2025,7 +1749,7 @@ func testManifestAPIManifestList(t *testing.T, env *testEnv, args manifestArgs) 
 
 	// ---------------
 	// Fetch by digest
-	req, err = http.NewRequest(http.MethodGet, manifestDigestURL, nil)
+	req, err = http.NewRequest("GET", manifestDigestURL, nil)
 	if err != nil {
 		t.Fatalf("Error constructing request: %s", err)
 	}
@@ -2057,7 +1781,7 @@ func testManifestAPIManifestList(t *testing.T, env *testEnv, args manifestArgs) 
 
 	// Get by name with etag, gives 304
 	etag := resp.Header.Get("Etag")
-	req, err = http.NewRequest(http.MethodGet, manifestURL, nil)
+	req, err = http.NewRequest("GET", manifestURL, nil)
 	if err != nil {
 		t.Fatalf("Error constructing request: %s", err)
 	}
@@ -2070,7 +1794,7 @@ func testManifestAPIManifestList(t *testing.T, env *testEnv, args manifestArgs) 
 	checkResponse(t, "fetching manifest by name with etag", resp, http.StatusNotModified)
 
 	// Get by digest with etag, gives 304
-	req, err = http.NewRequest(http.MethodGet, manifestDigestURL, nil)
+	req, err = http.NewRequest("GET", manifestDigestURL, nil)
 	if err != nil {
 		t.Fatalf("Error constructing request: %s", err)
 	}
@@ -2090,7 +1814,7 @@ func testManifestAPIManifestList(t *testing.T, env *testEnv, args manifestArgs) 
 	}
 	defer resp.Body.Close()
 
-	manifestBytes, err := io.ReadAll(resp.Body)
+	manifestBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("error reading response body: %v", err)
 	}
@@ -2275,6 +1999,7 @@ func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
 	if len(tagsResponse.Tags) != 0 {
 		t.Fatalf("expected 0 tags in response: %v", tagsResponse.Tags)
 	}
+
 }
 
 type testEnv struct {
@@ -2303,6 +2028,7 @@ func newTestEnvMirror(t *testing.T, deleteEnabled bool) *testEnv {
 	config.Compatibility.Schema1.Enabled = true
 
 	return newTestEnvWithConfig(t, &config)
+
 }
 
 func newTestEnv(t *testing.T, deleteEnabled bool) *testEnv {
@@ -2328,6 +2054,7 @@ func newTestEnvWithConfig(t *testing.T, config *configuration.Configuration) *te
 	app := NewApp(ctx, config)
 	server := httptest.NewServer(handlers.CombinedLoggingHandler(os.Stderr, app))
 	builder, err := v2.NewURLBuilderFromString(server.URL+config.HTTP.Prefix, false)
+
 	if err != nil {
 		t.Fatalf("error creating url builder: %v", err)
 	}
@@ -2376,7 +2103,7 @@ func putManifest(t *testing.T, msg, url, contentType string, v interface{}) *htt
 		}
 	}
 
-	req, err := http.NewRequest(http.MethodPut, url, bytes.NewReader(body))
+	req, err := http.NewRequest("PUT", url, bytes.NewReader(body))
 	if err != nil {
 		t.Fatalf("error creating request for %s: %v", msg, err)
 	}
@@ -2450,7 +2177,7 @@ func doPushLayer(t *testing.T, ub *v2.URLBuilder, name reference.Named, dgst dig
 	uploadURL := u.String()
 
 	// Just do a monolithic upload
-	req, err := http.NewRequest(http.MethodPut, uploadURL, body)
+	req, err := http.NewRequest("PUT", uploadURL, body)
 	if err != nil {
 		t.Fatalf("unexpected error creating new request: %v", err)
 	}
@@ -2491,27 +2218,6 @@ func pushLayer(t *testing.T, ub *v2.URLBuilder, name reference.Named, dgst diges
 	return resp.Header.Get("Location")
 }
 
-func getUploadStatus(location string) (string, int64, error) {
-	req, err := http.NewRequest(http.MethodGet, location, nil)
-	if err != nil {
-		return location, -1, err
-	}
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return location, -1, err
-	}
-
-	defer resp.Body.Close()
-
-	_, end, err := parseContentRange(resp.Header.Get("Range"))
-	if err != nil {
-		return location, -1, err
-	}
-
-	return resp.Header.Get("Location"), end, nil
-}
-
 func finishUpload(t *testing.T, ub *v2.URLBuilder, name reference.Named, uploadURLBase string, dgst digest.Digest) string {
 	resp, err := doPushLayer(t, ub, name, dgst, uploadURLBase, nil)
 	if err != nil {
@@ -2536,12 +2242,7 @@ func finishUpload(t *testing.T, ub *v2.URLBuilder, name reference.Named, uploadU
 	return resp.Header.Get("Location")
 }
 
-type chunkOptions struct {
-	// Content-Range header to set when pushing chunks
-	contentRange string
-}
-
-func doPushChunk(t *testing.T, uploadURLBase string, body io.Reader, options chunkOptions) (*http.Response, error) {
+func doPushChunk(t *testing.T, uploadURLBase string, body io.Reader) (*http.Response, digest.Digest, error) {
 	u, err := url.Parse(uploadURLBase)
 	if err != nil {
 		t.Fatalf("unexpected error parsing pushLayer url: %v", err)
@@ -2553,24 +2254,21 @@ func doPushChunk(t *testing.T, uploadURLBase string, body io.Reader, options chu
 
 	uploadURL := u.String()
 
-	req, err := http.NewRequest(http.MethodPatch, uploadURL, body)
+	digester := digest.Canonical.Digester()
+
+	req, err := http.NewRequest("PATCH", uploadURL, io.TeeReader(body, digester.Hash()))
 	if err != nil {
 		t.Fatalf("unexpected error creating new request: %v", err)
 	}
 	req.Header.Set("Content-Type", "application/octet-stream")
-	if options.contentRange != "" {
-		req.Header.Set("Content-Range", options.contentRange)
-	}
 
 	resp, err := http.DefaultClient.Do(req)
 
-	return resp, err
+	return resp, digester.Digest(), err
 }
 
 func pushChunk(t *testing.T, ub *v2.URLBuilder, name reference.Named, uploadURLBase string, body io.Reader, length int64) (string, digest.Digest) {
-	digester := digest.Canonical.Digester()
-
-	resp, err := doPushChunk(t, uploadURLBase, io.TeeReader(body, digester.Hash()), chunkOptions{})
+	resp, dgst, err := doPushChunk(t, uploadURLBase, body)
 	if err != nil {
 		t.Fatalf("unexpected error doing push layer request: %v", err)
 	}
@@ -2587,7 +2285,7 @@ func pushChunk(t *testing.T, ub *v2.URLBuilder, name reference.Named, uploadURLB
 		"Content-Length": []string{"0"},
 	})
 
-	return resp.Header.Get("Location"), digester.Digest()
+	return resp.Header.Get("Location"), dgst
 }
 
 func checkResponse(t *testing.T, msg string, resp *http.Response, expectedStatus int) {
@@ -2613,7 +2311,7 @@ func checkResponse(t *testing.T, msg string, resp *http.Response, expectedStatus
 // expected error codes, returning the error structure, the json slice and a
 // count of the errors by code.
 func checkBodyHasErrorCodes(t *testing.T, msg string, resp *http.Response, errorCodes ...errcode.ErrorCode) (errcode.Errors, []byte, map[errcode.ErrorCode]int) {
-	p, err := io.ReadAll(resp.Body)
+	p, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("unexpected error reading body %s: %v", msg, err)
 	}
@@ -2825,6 +2523,7 @@ func TestRegistryAsCacheMutationAPIs(t *testing.T) {
 	blobURL, _ := env.builder.BuildBlobURL(ref)
 	resp, _ = httpDelete(blobURL)
 	checkResponse(t, "deleting blob from cache", resp, errcode.ErrorCodeUnsupported.Descriptor().HTTPStatusCode)
+
 }
 
 func TestProxyManifestGetByTag(t *testing.T) {

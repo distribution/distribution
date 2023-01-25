@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+set -eu -o pipefail
+
+echo "- Checking for any unused/missing packages in go.mod..."
+GO111MODULE=on go mod tidy
+echo "- Checking for unused packages in vendor..."
+GO111MODULE=on go mod vendor
+git diff --exit-code -- go.sum go.mod vendor/
+
+untracked=$(git ls-files --others vendor | wc -l | awk '{ print $1 }')
+[[ "${untracked}" == "0" ]]

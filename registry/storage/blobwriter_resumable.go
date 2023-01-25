@@ -1,4 +1,3 @@
-//go:build !noresumabledigest
 // +build !noresumabledigest
 
 package storage
@@ -11,7 +10,7 @@ import (
 	"path"
 	"strconv"
 
-	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/sirupsen/logrus"
 )
 
@@ -85,6 +84,7 @@ func (bw *blobWriter) getStoredHashStates(ctx context.Context) ([]hashStateEntry
 		alg:  bw.digester.Digest().Algorithm(),
 		list: true,
 	})
+
 	if err != nil {
 		return nil, err
 	}
@@ -135,6 +135,7 @@ func (bw *blobWriter) storeHashState(ctx context.Context) error {
 		alg:    bw.digester.Digest().Algorithm(),
 		offset: bw.written,
 	})
+
 	if err != nil {
 		return err
 	}

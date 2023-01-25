@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/distribution/distribution/v3/reference"
+	"github.com/docker/distribution/reference"
 	"github.com/gorilla/mux"
 )
 
@@ -32,7 +32,7 @@ func NewURLBuilder(root *url.URL, relative bool) *URLBuilder {
 	}
 }
 
-// NewURLBuilderFromString works identically to NewURLBuilder except it takes
+// NewURLBuilderFromString workes identically to NewURLBuilder except it takes
 // a string argument for the root, returning an error if it is not a valid
 // url.
 func NewURLBuilderFromString(root string, relative bool) (*URLBuilder, error) {
@@ -58,7 +58,7 @@ func NewURLBuilderFromRequest(r *http.Request, relative bool) *URLBuilder {
 		scheme = r.URL.Scheme
 	}
 
-	// Handle forwarded headers
+	// Handle fowarded headers
 	// Prefer "Forwarded" header as defined by rfc7239 if given
 	// see https://tools.ietf.org/html/rfc7239
 	if forwarded := r.Header.Get("Forwarded"); len(forwarded) > 0 {
@@ -80,8 +80,8 @@ func NewURLBuilderFromRequest(r *http.Request, relative bool) *URLBuilder {
 			// comma-separated list of hosts, to which each proxy appends the
 			// requested host. We want to grab the first from this comma-separated
 			// list.
-			host, _, _ = strings.Cut(forwardedHost, ",")
-			host = strings.TrimSpace(host)
+			hosts := strings.SplitN(forwardedHost, ",", 2)
+			host = strings.TrimSpace(hosts[0])
 		}
 	}
 
@@ -128,7 +128,7 @@ func (ub *URLBuilder) BuildCatalogURL(values ...url.Values) (string, error) {
 }
 
 // BuildTagsURL constructs a url to list the tags in the named repository.
-func (ub *URLBuilder) BuildTagsURL(name reference.Named, values ...url.Values) (string, error) {
+func (ub *URLBuilder) BuildTagsURL(name reference.Named) (string, error) {
 	route := ub.cloneRoute(RouteNameTags)
 
 	tagsURL, err := route.URL("name", name.Name())
@@ -136,7 +136,7 @@ func (ub *URLBuilder) BuildTagsURL(name reference.Named, values ...url.Values) (
 		return "", err
 	}
 
-	return appendValuesURL(tagsURL, values...).String(), nil
+	return tagsURL.String(), nil
 }
 
 // BuildManifestURL constructs a url for the manifest identified by name and

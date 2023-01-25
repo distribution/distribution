@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"math"
 	"net/http"
 	"path/filepath"
@@ -31,16 +32,18 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 
-	dcontext "github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/registry/client/transport"
-	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
-	"github.com/distribution/distribution/v3/registry/storage/driver/base"
-	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
+	dcontext "github.com/docker/distribution/context"
+	"github.com/docker/distribution/registry/client/transport"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/registry/storage/driver/base"
+	"github.com/docker/distribution/registry/storage/driver/factory"
 )
 
 const driverName = "s3aws"
@@ -76,25 +79,13 @@ const listMax = 1000
 // noStorageClass defines the value to be used if storage class is not supported by the S3 endpoint
 const noStorageClass = "NONE"
 
-// s3StorageClasses lists all compatible (instant retrieval) S3 storage classes
-var s3StorageClasses = []string{
-	noStorageClass,
-	s3.StorageClassStandard,
-	s3.StorageClassReducedRedundancy,
-	s3.StorageClassStandardIa,
-	s3.StorageClassOnezoneIa,
-	s3.StorageClassIntelligentTiering,
-	s3.StorageClassOutposts,
-	s3.StorageClassGlacierIr,
-}
-
 // validRegions maps known s3 region identifiers to region descriptors
 var validRegions = map[string]struct{}{}
 
 // validObjectACLs contains known s3 object Acls
 var validObjectACLs = map[string]struct{}{}
 
-// DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
+//DriverParameters A struct that encapsulates all of the driver parameters after all values have been set
 type DriverParameters struct {
 	// S3 is an optional parameter. If specified, it will use the existing session
 	// to construct the Driver.
@@ -105,7 +96,6 @@ type DriverParameters struct {
 	Bucket                      string
 	Region                      string
 	RegionEndpoint              string
-	ForcePathStyle              bool
 	Encrypt                     bool
 	KeyID                       string
 	Secure                      bool
@@ -115,7 +105,6 @@ type DriverParameters struct {
 	MultipartCopyChunkSize      int64
 	MultipartCopyMaxConcurrency int64
 	MultipartCopyThresholdSize  int64
-	MultipartCombineSmallPart   bool
 	RootDirectory               string
 	StorageClass                string
 	UserAgent                   string
@@ -123,8 +112,6 @@ type DriverParameters struct {
 	SessionToken                string
 	LogS3APIRequests            bool
 	LogS3APIResponseHeaders     map[string]string
-	UseDualStack                bool
-	Accelerate                  bool
 }
 
 func init() {
@@ -168,7 +155,6 @@ type driver struct {
 	MultipartCopyChunkSize      int64
 	MultipartCopyMaxConcurrency int64
 	MultipartCopyThresholdSize  int64
-	MultipartCombineSmallPart   bool
 	RootDirectory               string
 	StorageClass                string
 	ObjectACL                   string
@@ -209,23 +195,6 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	regionEndpoint := parameters["regionendpoint"]
 	if regionEndpoint == nil {
 		regionEndpoint = ""
-	}
-
-	forcePathStyleBool := true
-	forcePathStyle := parameters["forcepathstyle"]
-	switch forcePathStyle := forcePathStyle.(type) {
-	case string:
-		b, err := strconv.ParseBool(forcePathStyle)
-		if err != nil {
-			return nil, fmt.Errorf("the forcePathStyle parameter should be a boolean")
-		}
-		forcePathStyleBool = b
-	case bool:
-		forcePathStyleBool = forcePathStyle
-	case nil:
-		// do nothing
-	default:
-		return nil, fmt.Errorf("the forcePathStyle parameter should be a boolean")
 	}
 
 	regionName := parameters["region"]
@@ -348,27 +317,16 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	if storageClassParam != nil {
 		storageClassString, ok := storageClassParam.(string)
 		if !ok {
-			return nil, fmt.Errorf(
-				"the storageclass parameter must be one of %v, %v invalid",
-				s3StorageClasses,
-				storageClassParam,
-			)
+			return nil, fmt.Errorf("the storageclass parameter must be one of %v, %v invalid",
+				[]string{s3.StorageClassStandard, s3.StorageClassReducedRedundancy}, storageClassParam)
 		}
 		// All valid storage class parameters are UPPERCASE, so be a bit more flexible here
 		storageClassString = strings.ToUpper(storageClassString)
 		if storageClassString != noStorageClass &&
 			storageClassString != s3.StorageClassStandard &&
-			storageClassString != s3.StorageClassReducedRedundancy &&
-			storageClassString != s3.StorageClassStandardIa &&
-			storageClassString != s3.StorageClassOnezoneIa &&
-			storageClassString != s3.StorageClassIntelligentTiering &&
-			storageClassString != s3.StorageClassOutposts &&
-			storageClassString != s3.StorageClassGlacierIr {
-			return nil, fmt.Errorf(
-				"the storageclass parameter must be one of %v, %v invalid",
-				s3StorageClasses,
-				storageClassParam,
-			)
+			storageClassString != s3.StorageClassReducedRedundancy {
+			return nil, fmt.Errorf("the storageclass parameter must be one of %v, %v invalid",
+				[]string{noStorageClass, s3.StorageClassStandard, s3.StorageClassReducedRedundancy}, storageClassParam)
 		}
 		storageClass = storageClassString
 	}
@@ -420,58 +378,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		objectACL = objectACLString
 	}
 
-	useDualStackBool := false
-	useDualStack := parameters["usedualstack"]
-	switch useDualStack := useDualStack.(type) {
-	case string:
-		b, err := strconv.ParseBool(useDualStack)
-		if err != nil {
-			return nil, fmt.Errorf("the useDualStack parameter should be a boolean")
-		}
-		useDualStackBool = b
-	case bool:
-		useDualStackBool = useDualStack
-	case nil:
-		// do nothing
-	default:
-		return nil, fmt.Errorf("the useDualStack parameter should be a boolean")
-	}
-
-	mutlipartCombineSmallPart := true
-	combine := parameters["multipartcombinesmallpart"]
-	switch combine := combine.(type) {
-	case string:
-		b, err := strconv.ParseBool(combine)
-		if err != nil {
-			return nil, fmt.Errorf("the multipartcombinesmallpart parameter should be a boolean")
-		}
-		mutlipartCombineSmallPart = b
-	case bool:
-		mutlipartCombineSmallPart = combine
-	case nil:
-		// do nothing
-	default:
-		return nil, fmt.Errorf("the multipartcombinesmallpart parameter should be a boolean")
-	}
-
 	sessionToken := ""
-
-	accelerateBool := false
-	accelerate := parameters["accelerate"]
-	switch accelerate := accelerate.(type) {
-	case string:
-		b, err := strconv.ParseBool(accelerate)
-		if err != nil {
-			return nil, fmt.Errorf("the accelerate parameter should be a boolean")
-		}
-		accelerateBool = b
-	case bool:
-		accelerateBool = accelerate
-	case nil:
-		// do nothing
-	default:
-		return nil, fmt.Errorf("the accelerate parameter should be a boolean")
-	}
 
 	params := DriverParameters{
 		nil,
@@ -480,7 +387,6 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(bucket),
 		region,
 		fmt.Sprint(regionEndpoint),
-		forcePathStyleBool,
 		encryptBool,
 		fmt.Sprint(keyID),
 		secureBool,
@@ -490,7 +396,6 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		multipartCopyChunkSize,
 		multipartCopyMaxConcurrency,
 		multipartCopyThresholdSize,
-		mutlipartCombineSmallPart,
 		fmt.Sprint(rootDirectory),
 		storageClass,
 		fmt.Sprint(userAgent),
@@ -498,8 +403,6 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(sessionToken),
 		logS3APIRequestsBool,
 		logS3APIResponseHeadersMap,
-		useDualStackBool,
-		accelerateBool,
 	}
 
 	return New(params)
@@ -546,27 +449,31 @@ func New(params DriverParameters) (*Driver, error) {
 		}
 
 		awsConfig := aws.NewConfig()
-
-		if params.AccessKey != "" && params.SecretKey != "" {
-			creds := credentials.NewStaticCredentials(
-				params.AccessKey,
-				params.SecretKey,
-				params.SessionToken,
-			)
-			awsConfig.WithCredentials(creds)
+		sess, err := session.NewSession()
+		if err != nil {
+			return nil, fmt.Errorf("failed to create new session: %v", err)
 		}
+		creds := credentials.NewChainCredentials([]credentials.Provider{
+			&credentials.StaticProvider{
+				Value: credentials.Value{
+					AccessKeyID:     params.AccessKey,
+					SecretAccessKey: params.SecretKey,
+					SessionToken:    params.SessionToken,
+				},
+			},
+			&credentials.EnvProvider{},
+			&credentials.SharedCredentialsProvider{},
+			&ec2rolecreds.EC2RoleProvider{Client: ec2metadata.New(sess)},
+		})
 
 		if params.RegionEndpoint != "" {
+			awsConfig.WithS3ForcePathStyle(true)
 			awsConfig.WithEndpoint(params.RegionEndpoint)
-			awsConfig.WithS3ForcePathStyle(params.ForcePathStyle)
 		}
 
-		awsConfig.WithS3UseAccelerate(params.Accelerate)
+		awsConfig.WithCredentials(creds)
 		awsConfig.WithRegion(params.Region)
 		awsConfig.WithDisableSSL(!params.Secure)
-		if params.UseDualStack {
-			awsConfig.UseDualStackEndpoint = endpoints.DualStackEndpointStateEnabled
-		}
 
 		if params.UserAgent != "" || params.SkipVerify {
 			httpTransport := http.DefaultTransport
@@ -586,23 +493,18 @@ func New(params DriverParameters) (*Driver, error) {
 			}
 		}
 
-		sess, err := session.NewSession(awsConfig)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create new session with aws config: %v", err)
-		}
-		s3obj = s3.New(sess)
-
 		sess, err = session.NewSession(awsConfig)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create new session with aws config: %v", err)
 		}
-		s3obj := s3.New(sess)
+		s3obj = s3.New(sess)
 
 		// enable S3 compatible signature v2 signing instead
 		if !params.V4Auth {
 			setv2Handlers(s3obj)
 		}
 	}
+
 	// TODO Currently multipart uploads have no timestamps, so this would be unwise
 	// if you initiated a new s3driver while another one is running on the same bucket.
 	// multis, _, err := bucket.ListMulti("", "")
@@ -627,7 +529,6 @@ func New(params DriverParameters) (*Driver, error) {
 		MultipartCopyChunkSize:      params.MultipartCopyChunkSize,
 		MultipartCopyMaxConcurrency: params.MultipartCopyMaxConcurrency,
 		MultipartCopyThresholdSize:  params.MultipartCopyThresholdSize,
-		MultipartCombineSmallPart:   params.MultipartCombineSmallPart,
 		RootDirectory:               params.RootDirectory,
 		StorageClass:                params.StorageClass,
 		ObjectACL:                   params.ObjectACL,
@@ -733,7 +634,7 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return io.ReadAll(reader)
+	return ioutil.ReadAll(reader)
 }
 
 // PutContent stores the []byte content at a location designated by "path".
@@ -763,9 +664,10 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 		Key:    aws.String(d.s3Path(path)),
 		Range:  aws.String("bytes=" + strconv.FormatInt(offset, 10) + "-"),
 	})
+
 	if err != nil {
 		if s3Err, ok := err.(awserr.Error); ok && s3Err.Code() == "InvalidRange" {
-			return io.NopCloser(bytes.NewReader(nil)), nil
+			return ioutil.NopCloser(bytes.NewReader(nil)), nil
 		}
 
 		return nil, parseError(path, err)
@@ -775,11 +677,13 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 
 // Writer returns a FileWriter which will store the content written to it
 // at the location designated by "path" after the call to Commit.
-func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (storagedriver.FileWriter, error) {
+func (d *driver) Writer(ctx context.Context, path string, append bool) (storagedriver.FileWriter, error) {
+	s := d.s3Client(ctx)
+
 	key := d.s3Path(path)
-	if !appendParam {
+	if !append {
 		// TODO (brianbland): cancel other uploads at this path
-		resp, err := d.S3.CreateMultipartUpload(&s3.CreateMultipartUploadInput{
+		resp, err := s.CreateMultipartUpload(&s3.CreateMultipartUploadInput{
 			Bucket:               aws.String(d.Bucket),
 			Key:                  aws.String(key),
 			ContentType:          d.getContentType(),
@@ -793,62 +697,31 @@ func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (sto
 		}
 		return d.newWriter(key, *resp.UploadId, nil), nil
 	}
-
-	listMultipartUploadsInput := &s3.ListMultipartUploadsInput{
+	resp, err := s.ListMultipartUploads(&s3.ListMultipartUploadsInput{
 		Bucket: aws.String(d.Bucket),
 		Prefix: aws.String(key),
+	})
+	if err != nil {
+		return nil, parseError(path, err)
 	}
-	for {
-		resp, err := d.S3.ListMultipartUploads(listMultipartUploadsInput)
+
+	for _, multi := range resp.Uploads {
+		if key != *multi.Key {
+			continue
+		}
+		resp, err := s.ListParts(&s3.ListPartsInput{
+			Bucket:   aws.String(d.Bucket),
+			Key:      aws.String(key),
+			UploadId: multi.UploadId,
+		})
 		if err != nil {
 			return nil, parseError(path, err)
 		}
-
-		// resp.Uploads can only be empty on the first call
-		// if there were no more results to return after the first call, resp.IsTruncated would have been false
-		// and the loop would be exited without recalling ListMultipartUploads
-		if len(resp.Uploads) == 0 {
-			break
+		var multiSize int64
+		for _, part := range resp.Parts {
+			multiSize += *part.Size
 		}
-
-		var allParts []*s3.Part
-		for _, multi := range resp.Uploads {
-			if key != *multi.Key {
-				continue
-			}
-
-			partsList, err := d.S3.ListParts(&s3.ListPartsInput{
-				Bucket:   aws.String(d.Bucket),
-				Key:      aws.String(key),
-				UploadId: multi.UploadId,
-			})
-			if err != nil {
-				return nil, parseError(path, err)
-			}
-			allParts = append(allParts, partsList.Parts...)
-			for *resp.IsTruncated {
-				partsList, err = d.S3.ListParts(&s3.ListPartsInput{
-					Bucket:           aws.String(d.Bucket),
-					Key:              aws.String(key),
-					UploadId:         multi.UploadId,
-					PartNumberMarker: partsList.NextPartNumberMarker,
-				})
-				if err != nil {
-					return nil, parseError(path, err)
-				}
-				allParts = append(allParts, partsList.Parts...)
-			}
-			return d.newWriter(key, *multi.UploadId, allParts), nil
-		}
-
-		// resp.NextUploadIdMarker must have at least one element or we would have returned not found
-		listMultipartUploadsInput.UploadIdMarker = resp.NextUploadIdMarker
-
-		// from the s3 api docs, IsTruncated "specifies whether (true) or not (false) all of the results were returned"
-		// if everything has been returned, break
-		if resp.IsTruncated == nil || !*resp.IsTruncated {
-			break
-		}
+		return d.newWriter(key, *multi.UploadId, resp.Parts), nil
 	}
 	return nil, storagedriver.PathNotFoundError{Path: path}
 }
@@ -856,16 +729,33 @@ func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (sto
 // Stat retrieves the FileInfo for the given path, including the current size
 // in bytes and the creation time.
 func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
+	s := d.s3Client(ctx)
+
 	fi := storagedriver.FileInfoFields{
 		Path: path,
 	}
 
-	resp, err := d.S3.ListObjectsV2(&s3.ListObjectsV2Input{
+	headResp, err := s.HeadObjectWithContext(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(d.Bucket),
+		Key:    aws.String(d.s3Path(path)),
+	})
+	if err == nil && headResp.ContentLength != nil {
+		if headResp.ContentLength != nil {
+			fi.Size = *headResp.ContentLength
+		}
+		if headResp.LastModified != nil {
+			fi.ModTime = *headResp.LastModified
+		}
+
+		return storagedriver.FileInfoInternal{FileInfoFields: fi}, nil
+	}
+
+	resp, err := s.ListObjectsWithContext(ctx, &s3.ListObjectsInput{
+
 		Bucket:  aws.String(d.Bucket),
 		Prefix:  aws.String(d.s3Path(path)),
 		MaxKeys: aws.Int64(1),
 	})
-	
 	if err != nil {
 		return nil, err
 	}
@@ -889,6 +779,8 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 
 // List returns a list of the objects that are direct descendants of the given path.
 func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
+	s := d.s3Client(ctx)
+
 	path := opath
 	if path != "/" && path[len(path)-1] != '/' {
 		path = path + "/"
@@ -901,7 +793,8 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 	if d.s3Path("") == "" {
 		prefix = "/"
 	}
-	resp, err := d.S3.ListObjectsV2(&s3.ListObjectsV2Input{
+
+	resp, err := s.ListObjects(&s3.ListObjectsInput{
 		Bucket:    aws.String(d.Bucket),
 		Prefix:    aws.String(d.s3Path(path)),
 		Delimiter: aws.String("/"),
@@ -925,12 +818,12 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 		}
 
 		if *resp.IsTruncated {
-			resp, err = d.S3.ListObjectsV2(&s3.ListObjectsV2Input{
-				Bucket:            aws.String(d.Bucket),
-				Prefix:            aws.String(d.s3Path(path)),
-				Delimiter:         aws.String("/"),
-				MaxKeys:           aws.Int64(listMax),
-				ContinuationToken: resp.NextContinuationToken,
+			resp, err = s.ListObjects(&s3.ListObjectsInput{
+				Bucket:    aws.String(d.Bucket),
+				Prefix:    aws.String(d.s3Path(path)),
+				Delimiter: aws.String("/"),
+				MaxKeys:   aws.Int64(listMax),
+				Marker:    resp.NextMarker,
 			})
 			if err != nil {
 				return nil, err
@@ -1066,8 +959,22 @@ func min(a, b int) int {
 // We must be careful since S3 does not guarantee read after delete consistency
 func (d *driver) Delete(ctx context.Context, path string) error {
 	s3Objects := make([]*s3.ObjectIdentifier, 0, listMax)
-	s3Path := d.s3Path(path)
-	listObjectsInput := &s3.ListObjectsV2Input{
+
+	// manually add the given path if it's a file
+	stat, err := d.Stat(ctx, path)
+	if err != nil {
+		return err
+	}
+	if stat != nil && !stat.IsDir() {
+		path := d.s3Path(path)
+		s3Objects = append(s3Objects, &s3.ObjectIdentifier{
+			Key: &path,
+		})
+	}
+
+	// list objects under the given path as a subpath (suffix with slash "/")
+	s3Path := d.s3Path(path) + "/"
+	listObjectsInput := &s3.ListObjectsInput{
 		Bucket: aws.String(d.Bucket),
 		Prefix: aws.String(s3Path),
 	}
@@ -1076,61 +983,23 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 ListLoop:
 	for {
 		// list all the objects
-		resp, err := d.S3.ListObjectsV2(listObjectsInput)
+		resp, err := s.ListObjects(listObjectsInput)
 
 		// resp.Contents can only be empty on the first call
 		// if there were no more results to return after the first call, resp.IsTruncated would have been false
-		// and the loop would exit without recalling ListObjects
+		// and the loop would be exited without recalling ListObjects
 		if err != nil || len(resp.Contents) == 0 {
 			break ListLoop
 		}
 
 		for _, key := range resp.Contents {
-			// Skip if we encounter a key that is not a subpath (so that deleting "/a" does not delete "/ab").
-			if len(*key.Key) > len(s3Path) && (*key.Key)[len(s3Path)] != '/' {
-				continue
-			}
 			s3Objects = append(s3Objects, &s3.ObjectIdentifier{
 				Key: key.Key,
 			})
 		}
 
-		// Delete objects only if the list is not empty, otherwise S3 API returns a cryptic error
-		if len(s3Objects) > 0 {
-			// NOTE: according to AWS docs https://docs.aws.amazon.com/AmazonS3/latest/API/API_ListObjectsV2.html
-			// by default the response returns up to 1,000 key names. The response _might_ contain fewer keys but it will never contain more.
-			// 10000 keys is coincidentally (?) also the max number of keys that can be deleted in a single Delete operation, so we'll just smack
-			// Delete here straight away and reset the object slice when successful.
-			resp, err := d.S3.DeleteObjects(&s3.DeleteObjectsInput{
-				Bucket: aws.String(d.Bucket),
-				Delete: &s3.Delete{
-					Objects: s3Objects,
-					Quiet:   aws.Bool(false),
-				},
-			})
-			if err != nil {
-				return err
-			}
-
-			if len(resp.Errors) > 0 {
-				// NOTE: AWS SDK s3.Error does not implement error interface which
-				// is pretty intensely sad, so we have to do away with this for now.
-				errs := make([]error, 0, len(resp.Errors))
-				for _, err := range resp.Errors {
-					errs = append(errs, errors.New(err.String()))
-				}
-				return storagedriver.Errors{
-					DriverName: driverName,
-					Errs:       errs,
-				}
-			}
-		}
-		// NOTE: we don't want to reallocate
-		// the slice so we simply "reset" it
-		s3Objects = s3Objects[:0]
-
 		// resp.Contents must have at least one element or we would have returned not found
-		listObjectsInput.StartAfter = resp.Contents[len(resp.Contents)-1].Key
+		listObjectsInput.Marker = resp.Contents[len(resp.Contents)-1].Key
 
 		// from the s3 api docs, IsTruncated "specifies whether (true) or not (false) all of the results were returned"
 		// if everything has been returned, break
@@ -1169,11 +1038,13 @@ ListLoop:
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 // May return an UnsupportedMethodErr in certain StorageDriver implementations.
 func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
-	methodString := http.MethodGet
+	s := d.s3Client(ctx)
+
+	methodString := "GET"
 	method, ok := options["method"]
 	if ok {
 		methodString, ok = method.(string)
-		if !ok || (methodString != http.MethodGet && methodString != http.MethodHead) {
+		if !ok || (methodString != "GET" && methodString != "HEAD") {
 			return "", storagedriver.ErrUnsupportedMethod{}
 		}
 	}
@@ -1190,13 +1061,13 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 	var req *request.Request
 
 	switch methodString {
-	case http.MethodGet:
-		req, _ = d.S3.GetObjectRequest(&s3.GetObjectInput{
+	case "GET":
+		req, _ = s.GetObjectRequest(&s3.GetObjectInput{
 			Bucket: aws.String(d.Bucket),
 			Key:    aws.String(d.s3Path(path)),
 		})
-	case http.MethodHead:
-		req, _ = d.S3.HeadObjectRequest(&s3.HeadObjectInput{
+	case "HEAD":
+		req, _ = s.HeadObjectRequest(&s3.HeadObjectInput{
 			Bucket: aws.String(d.Bucket),
 			Key:    aws.String(d.s3Path(path)),
 		})
@@ -1249,6 +1120,8 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 		MaxKeys: aws.Int64(listMax),
 	}
 
+	s := d.s3Client(parentCtx)
+
 	ctx, done := dcontext.WithTrace(parentCtx)
 	defer done("s3aws.ListObjectsV2Pages(%s)", path)
 
@@ -1261,7 +1134,7 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 	// ErrSkipDir is handled by explicitly skipping over any files under the skipped directory. This may be sub-optimal
 	// for extreme edge cases but for the general use case in a registry, this is orders of magnitude
 	// faster than a more explicit recursive implementation.
-	listObjectErr := d.S3.ListObjectsV2PagesWithContext(ctx, listObjectsInput, func(objects *s3.ListObjectsV2Output, lastPage bool) bool {
+	listObjectErr := s.ListObjectsV2PagesWithContext(ctx, listObjectsInput, func(objects *s3.ListObjectsV2Output, lastPage bool) bool {
 		walkInfos := make([]storagedriver.FileInfoInternal, 0, len(objects.Contents))
 
 		for _, file := range objects.Contents {
@@ -1330,22 +1203,16 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 // directoryDiff finds all directories that are not in common between
 // the previous and current paths in sorted order.
 //
-// # Examples
-//
-//	directoryDiff("/path/to/folder", "/path/to/folder/folder/file")
-//	// => [ "/path/to/folder/folder" ]
-//
-//	directoryDiff("/path/to/folder/folder1", "/path/to/folder/folder2/file")
-//	// => [ "/path/to/folder/folder2" ]
-//
-//	directoryDiff("/path/to/folder/folder1/file", "/path/to/folder/folder2/file")
-//	// => [ "/path/to/folder/folder2" ]
-//
-//	directoryDiff("/path/to/folder/folder1/file", "/path/to/folder/folder2/folder1/file")
-//	// => [ "/path/to/folder/folder2", "/path/to/folder/folder2/folder1" ]
-//
-//	directoryDiff("/", "/path/to/folder/folder/file")
-//	// => [ "/path", "/path/to", "/path/to/folder", "/path/to/folder/folder" ]
+// Eg 1 directoryDiff("/path/to/folder", "/path/to/folder/folder/file")
+//   => [ "/path/to/folder/folder" ],
+// Eg 2 directoryDiff("/path/to/folder/folder1", "/path/to/folder/folder2/file")
+//   => [ "/path/to/folder/folder2" ]
+// Eg 3 directoryDiff("/path/to/folder/folder1/file", "/path/to/folder/folder2/file")
+//  => [ "/path/to/folder/folder2" ]
+// Eg 4 directoryDiff("/path/to/folder/folder1/file", "/path/to/folder/folder2/folder1/file")
+//   => [ "/path/to/folder/folder2", "/path/to/folder/folder2/folder1" ]
+// Eg 5 directoryDiff("/", "/path/to/folder/folder/file")
+//   => [ "/path", "/path/to", "/path/to/folder", "/path/to/folder/folder" ],
 func directoryDiff(prev, current string) []string {
 	var paths []string
 
@@ -1526,7 +1393,7 @@ func (w *writer) Write(p []byte) (int, error) {
 			}
 			defer resp.Body.Close()
 			w.parts = nil
-			w.readyPart, err = io.ReadAll(resp.Body)
+			w.readyPart, err = ioutil.ReadAll(resp.Body)
 			if err != nil {
 				return 0, err
 			}
@@ -1666,7 +1533,7 @@ func (w *writer) flushPart() error {
 		// nothing to write
 		return nil
 	}
-	if w.driver.MultipartCombineSmallPart && len(w.pendingPart) < int(w.driver.ChunkSize) {
+	if len(w.pendingPart) < int(w.driver.ChunkSize) {
 		// closing with a small pending part
 		// combine ready and pending to avoid writing a small part
 		w.readyPart = append(w.readyPart, w.pendingPart...)

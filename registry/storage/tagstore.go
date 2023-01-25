@@ -3,10 +3,9 @@ package storage
 import (
 	"context"
 	"path"
-	"sort"
 
-	"github.com/distribution/distribution/v3"
-	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
+	"github.com/docker/distribution"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -48,10 +47,6 @@ func (ts *tagStore) All(ctx context.Context) ([]string, error) {
 		tags = append(tags, filename)
 	}
 
-	// there is no guarantee for the order,
-	// therefore sort before return.
-	sort.Strings(tags)
-
 	return tags, nil
 }
 
@@ -62,6 +57,7 @@ func (ts *tagStore) Tag(ctx context.Context, tag string, desc distribution.Descr
 		name: ts.repository.Named().Name(),
 		tag:  tag,
 	})
+
 	if err != nil {
 		return err
 	}
@@ -83,6 +79,7 @@ func (ts *tagStore) Get(ctx context.Context, tag string) (distribution.Descripto
 		name: ts.repository.Named().Name(),
 		tag:  tag,
 	})
+
 	if err != nil {
 		return distribution.Descriptor{}, err
 	}
@@ -110,7 +107,16 @@ func (ts *tagStore) Untag(ctx context.Context, tag string) error {
 		return err
 	}
 
-	return ts.blobStore.driver.Delete(ctx, tagPath)
+	if err := ts.blobStore.driver.Delete(ctx, tagPath); err != nil {
+		switch err.(type) {
+		case storagedriver.PathNotFoundError:
+			return nil // Untag is idempotent, we don't care if it didn't exist
+		default:
+			return err
+		}
+	}
+
+	return nil
 }
 
 // linkedBlobStore returns the linkedBlobStore for the named tag, allowing one
@@ -122,13 +128,14 @@ func (ts *tagStore) linkedBlobStore(ctx context.Context, tag string) *linkedBlob
 		blobStore:  ts.blobStore,
 		repository: ts.repository,
 		ctx:        ctx,
-		linkPath: func(name string, dgst digest.Digest) (string, error) {
+		linkPathFns: []linkPathFunc{func(name string, dgst digest.Digest) (string, error) {
 			return pathFor(manifestTagIndexEntryLinkPathSpec{
 				name:     name,
 				tag:      tag,
 				revision: dgst,
 			})
-		},
+
+		}},
 	}
 }
 
@@ -172,7 +179,7 @@ func (ts *tagStore) Lookup(ctx context.Context, desc distribution.Descriptor) ([
 }
 
 func (ts *tagStore) ManifestDigests(ctx context.Context, tag string) ([]digest.Digest, error) {
-	tagLinkPath := func(name string, dgst digest.Digest) (string, error) {
+	var tagLinkPath = func(name string, dgst digest.Digest) (string, error) {
 		return pathFor(manifestTagIndexEntryLinkPathSpec{
 			name:     name,
 			tag:      tag,
@@ -182,13 +189,13 @@ func (ts *tagStore) ManifestDigests(ctx context.Context, tag string) ([]digest.D
 	lbs := &linkedBlobStore{
 		blobStore: ts.blobStore,
 		blobAccessController: &linkedBlobStatter{
-			blobStore:  ts.blobStore,
-			repository: ts.repository,
-			linkPath:   manifestRevisionLinkPath,
+			blobStore:   ts.blobStore,
+			repository:  ts.repository,
+			linkPathFns: []linkPathFunc{manifestRevisionLinkPath},
 		},
-		repository: ts.repository,
-		ctx:        ctx,
-		linkPath:   tagLinkPath,
+		repository:  ts.repository,
+		ctx:         ctx,
+		linkPathFns: []linkPathFunc{tagLinkPath},
 		linkDirectoryPathSpec: manifestTagIndexPathSpec{
 			name: ts.repository.Named().Name(),
 			tag:  tag,

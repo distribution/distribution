@@ -75,10 +75,8 @@ var (
 	})
 )
 
-var (
-	nextCode     = 1000
-	registerLock sync.Mutex
-)
+var nextCode = 1000
+var registerLock sync.Mutex
 
 // Register will make the passed-in error known to the environment and
 // return a new ErrorCode

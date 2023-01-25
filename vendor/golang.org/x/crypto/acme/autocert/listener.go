@@ -72,6 +72,7 @@ func NewListener(domains ...string) net.Listener {
 // the Manager m's Prompt, Cache, HostPolicy, and other desired options.
 func (m *Manager) Listener() net.Listener {
 	ln := &listener{
+		m:    m,
 		conf: m.TLSConfig(),
 	}
 	ln.tcpListener, ln.tcpListenErr = net.Listen("tcp", ":443")
@@ -79,6 +80,7 @@ func (m *Manager) Listener() net.Listener {
 }
 
 type listener struct {
+	m    *Manager
 	conf *tls.Config
 
 	tcpListener  net.Listener

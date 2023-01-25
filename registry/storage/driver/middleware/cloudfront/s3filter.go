@@ -4,14 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
 
-	dcontext "github.com/distribution/distribution/v3/context"
+	dcontext "github.com/docker/distribution/context"
 )
 
 const (
@@ -68,7 +68,7 @@ func fetchAWSIPs(url string) (awsIPResponse, error) {
 		return response, err
 	}
 	if resp.StatusCode != 200 {
-		body, _ := io.ReadAll(resp.Body)
+		body, _ := ioutil.ReadAll(resp.Body)
 		return response, fmt.Errorf("failed to fetch network data. response = %s", body)
 	}
 	decoder := json.NewDecoder(resp.Body)
@@ -94,7 +94,7 @@ func (s *awsIPs) tryUpdate() error {
 		regionAllowed := false
 		if len(s.awsRegion) > 0 {
 			for _, ar := range s.awsRegion {
-				if strings.EqualFold(region, ar) {
+				if strings.ToLower(region) == ar {
 					regionAllowed = true
 					break
 				}
@@ -113,6 +113,7 @@ func (s *awsIPs) tryUpdate() error {
 		if regionAllowed {
 			*output = append(*output, *network)
 		}
+
 	}
 
 	for _, prefix := range response.Prefixes {
