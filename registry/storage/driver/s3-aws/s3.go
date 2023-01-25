@@ -671,6 +671,9 @@ func (d *driver) logS3Operation(ctx context.Context) request.NamedHandler {
 				"s3_http_response_status":                  resp.StatusCode,
 				"s3_http_response_content-length":          resp.ContentLength,
 				"s3_http_request_duration":                 duration.Seconds(),
+				"s3_http_request_attempted_time":           r.AttemptTime,
+				"s3_http_request_retry_count":              r.RetryCount,
+				"s3_http_request_time":                     r.Time.Unix(),
 			}
 
 			for logKey, headerKey := range d.LogS3APIResponseHeaders {
