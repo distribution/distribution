@@ -3,12 +3,13 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/registry/api/errcode"
-	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	"github.com/gorilla/handlers"
 	"github.com/opencontainers/go-digest"
+
+	"github.com/docker/distribution"
+	"github.com/docker/distribution/context"
+	"github.com/docker/distribution/registry/api/errcode"
+	v2 "github.com/docker/distribution/registry/api/v2"
 )
 
 // blobDispatcher uses the request context to build a blobHandler.
@@ -65,7 +66,11 @@ func (bh *blobHandler) GetBlob(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-
+	var handled bool
+	bh.Errors, handled = handleDisconnectionEvent(bh.Context, w, r)
+	if handled {
+		return
+	}
 	if err := blobs.ServeBlob(bh, w, r, desc.Digest); err != nil {
 		context.GetLogger(bh).Debugf("unexpected error getting blob HTTP handler: %v", err)
 		bh.Errors = append(bh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))

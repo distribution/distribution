@@ -169,6 +169,16 @@ func (err QuotaExceededError) Error() string {
 	return fmt.Sprintf("%s: quota exceeded", err.DriverName)
 }
 
+// ClientDisconnectedError is returned when a client disconnects or a request context is cancelled during
+// a write
+type ClientDisconnectedError struct {
+	DriverName string
+}
+
+func (err ClientDisconnectedError) Error() string {
+	return fmt.Sprintf("%s: client disconnected", err.DriverName)
+}
+
 // Error is a catch-all error type which captures an error string and
 // the driver type on which it occurred.
 type Error struct {
