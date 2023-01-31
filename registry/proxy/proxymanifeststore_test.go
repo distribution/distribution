@@ -51,6 +51,11 @@ func (sm statsManifest) Exists(ctx context.Context, dgst digest.Digest) (bool, e
 	return sm.manifests.Exists(ctx, dgst)
 }
 
+func (sm statsManifest) Head(ctx context.Context, tag string) (digest.Digest, error) {
+	sm.stats["head"]++
+	return sm.manifests.Head(ctx, tag)
+}
+
 func (sm statsManifest) Get(ctx context.Context, dgst digest.Digest, options ...distribution.ManifestServiceOption) (distribution.Manifest, error) {
 	sm.stats["get"]++
 	return sm.manifests.Get(ctx, dgst)
@@ -197,6 +202,11 @@ func populateRepo(ctx context.Context, t *testing.T, repository distribution.Rep
 		t.Fatalf("unexpected errors putting manifest: %v", err)
 	}
 
+	err = repository.Tags(ctx).Tag(ctx, tag, distribution.Descriptor{Digest: dgst})
+	if err != nil {
+		t.Fatalf(err.Error())
+	}
+
 	return dgst, nil
 }
 
@@ -227,6 +237,19 @@ func TestProxyManifests(t *testing.T) {
 		t.Fatalf("Expected 1 auth challenge, got %#v", env.manifests.authChallenger)
 	}
 
+	// Head - should succeed and does not pull manifest into local
+	dgst, err := env.manifests.Head(ctx, "latest")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dgst != env.manifestDigest {
+		t.Fatalf("Unexpected returned content digest %v, expected %v", dgst, env.manifestDigest)
+	}
+
+	if (*localStats)["head"] != 1 && (*remoteStats)["head"] != 1 {
+		t.Errorf("Expected head count")
+	}
+
 	// Get - should succeed and pull manifest into local
 	_, err = env.manifests.Get(ctx, env.manifestDigest)
 	if err != nil {
@@ -241,8 +264,8 @@ func TestProxyManifests(t *testing.T) {
 		t.Errorf("Expected local put")
 	}
 
-	if env.manifests.authChallenger.(*mockChallenger).count != 2 {
-		t.Fatalf("Expected 2 auth challenges, got %#v", env.manifests.authChallenger)
+	if env.manifests.authChallenger.(*mockChallenger).count != 3 {
+		t.Fatalf("Expected 3 auth challenges, got %#v", env.manifests.authChallenger)
 	}
 
 	// Stat - should only go to local
@@ -258,8 +281,8 @@ func TestProxyManifests(t *testing.T) {
 		t.Errorf("Unexpected exists count")
 	}
 
-	if env.manifests.authChallenger.(*mockChallenger).count != 2 {
-		t.Fatalf("Expected 2 auth challenges, got %#v", env.manifests.authChallenger)
+	if env.manifests.authChallenger.(*mockChallenger).count != 3 {
+		t.Fatalf("Expected 3 auth challenges, got %#v", env.manifests.authChallenger)
 	}
 
 	// Get proxied - won't require another authchallenge
@@ -268,7 +291,7 @@ func TestProxyManifests(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if env.manifests.authChallenger.(*mockChallenger).count != 2 {
-		t.Fatalf("Expected 2 auth challenges, got %#v", env.manifests.authChallenger)
+	if env.manifests.authChallenger.(*mockChallenger).count != 3 {
+		t.Fatalf("Expected 3 auth challenges, got %#v", env.manifests.authChallenger)
 	}
 }

@@ -39,6 +39,18 @@ func (pms proxyManifestStore) Exists(ctx context.Context, dgst digest.Digest) (b
 	return pms.remoteManifests.Exists(ctx, dgst)
 }
 
+func (pms proxyManifestStore) Head(ctx context.Context, tag string) (digest.Digest, error) {
+	dgst, err := pms.localManifests.Head(ctx, tag)
+	if err == nil {
+		return dgst, nil
+	}
+	if err := pms.authChallenger.tryEstablishChallenges(ctx); err != nil {
+		return "", err
+	}
+
+	return pms.remoteManifests.Head(ctx, tag)
+}
+
 func (pms proxyManifestStore) Get(ctx context.Context, dgst digest.Digest, options ...distribution.ManifestServiceOption) (distribution.Manifest, error) {
 	// At this point `dgst` was either specified explicitly, or returned by the
 	// tagstore with the most recent association.

@@ -71,6 +71,17 @@ func (ms *manifestStore) Exists(ctx context.Context, dgst digest.Digest) (bool, 
 	return true, nil
 }
 
+func (ms *manifestStore) Head(ctx context.Context, tag string) (digest.Digest, error) {
+	dcontext.GetLogger(ms.ctx).Debug("(*manifestStore).Head")
+
+	desc, err := ms.repository.Tags(ctx).Get(ctx, tag)
+	if err != nil {
+		return "", err
+	}
+
+	return desc.Digest, nil
+}
+
 func (ms *manifestStore) Get(ctx context.Context, dgst digest.Digest, options ...distribution.ManifestServiceOption) (distribution.Manifest, error) {
 	dcontext.GetLogger(ms.ctx).Debug("(*manifestStore).Get")
 

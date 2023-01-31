@@ -52,6 +52,9 @@ type ManifestService interface {
 	// Exists returns true if the manifest exists.
 	Exists(ctx context.Context, dgst digest.Digest) (bool, error)
 
+	// Head retrieves the manifest digest by the given tag
+	Head(ctx context.Context, tag string) (digest.Digest, error)
+
 	// Get retrieves the manifest specified by the given digest
 	Get(ctx context.Context, dgst digest.Digest, options ...ManifestServiceOption) (Manifest, error)
 

@@ -450,6 +450,40 @@ func (o contentDigestOption) Apply(ms distribution.ManifestService) error {
 	return nil
 }
 
+func (ms *manifests) Head(ctx context.Context, tag string) (digest.Digest, error) {
+	ref, err := reference.WithTag(ms.name, tag)
+	if err != nil {
+		return "", err
+	}
+
+	u, err := ms.ub.BuildManifestURL(ref)
+	if err != nil {
+		return "", err
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, u, nil)
+	if err != nil {
+		return "", err
+	}
+
+	resp, err := ms.client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if !SuccessStatus(resp.StatusCode) {
+		return "", HandleErrorResponse(resp)
+	}
+
+	dgst, err := digest.Parse(resp.Header.Get("Docker-Content-Digest"))
+	if err != nil {
+		return "", err
+	}
+
+	return dgst, nil
+}
+
 func (ms *manifests) Get(ctx context.Context, dgst digest.Digest, options ...distribution.ManifestServiceOption) (distribution.Manifest, error) {
 	var (
 		digestOrTag string

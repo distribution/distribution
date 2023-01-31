@@ -1023,7 +1023,7 @@ func addTestManifest(repo reference.Named, reference string, mediatype string, c
 				"Content-Length":        {fmt.Sprint(len(content))},
 				"Last-Modified":         {time.Now().Add(-1 * time.Second).Format(time.ANSIC)},
 				"Content-Type":          {mediatype},
-				"Docker-Content-Digest": {digest.Canonical.FromBytes(content).String()},
+				"Docker-Content-Digest": {contentDigestString(mediatype, content)},
 			}),
 		},
 	})
@@ -1120,6 +1120,14 @@ func TestV1ManifestFetch(t *testing.T) {
 		t.Fatal("Manifest does not exist")
 	}
 
+	contentDigest, err := ms.Head(ctx, "latest")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if contentDigest != dgst {
+		t.Fatalf("Unexpected returned content digest %v, expected %v", contentDigest, dgst)
+	}
+
 	manifest, err := ms.Get(ctx, dgst)
 	if err != nil {
 		t.Fatal(err)
@@ -1133,7 +1141,6 @@ func TestV1ManifestFetch(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var contentDigest digest.Digest
 	manifest, err = ms.Get(ctx, dgst, distribution.WithTag("latest"), ReturnContentDigest(&contentDigest))
 	if err != nil {
 		t.Fatal(err)
@@ -1189,6 +1196,7 @@ func TestManifestFetchWithEtag(t *testing.T) {
 	if !ok {
 		panic("wrong type for client manifest service")
 	}
+
 	_, err = clientManifestService.Get(ctx, d1, distribution.WithTag("latest"), AddEtagToTag("latest", d1.String()))
 	if err != distribution.ErrManifestNotModified {
 		t.Fatal(err)
