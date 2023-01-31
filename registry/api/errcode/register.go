@@ -55,6 +55,15 @@ var (
 		HTTPStatusCode: http.StatusForbidden,
 	})
 
+	// ErrorCodeClientDisconnected is returned if a client disconnects or cancels a request
+	// early
+	ErrorCodeClientDisconnected = Register("errcode", ErrorDescriptor{
+		Value:          "CLIENTDISCONNECTED",
+		Message:        "client disconnected",
+		Description:    `The client has disconnected or the HTTP request has been cancelled`,
+		HTTPStatusCode: 499,
+	})
+
 	// ErrorCodeUnavailable provides a common error to report unavailability
 	// of a service or endpoint.
 	ErrorCodeUnavailable = Register("errcode", ErrorDescriptor{

@@ -7,21 +7,22 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/distribution/distribution/v3"
-	dcontext "github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/manifest/manifestlist"
-	"github.com/distribution/distribution/v3/manifest/ocischema"
-	"github.com/distribution/distribution/v3/manifest/schema1" //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-	"github.com/distribution/distribution/v3/manifest/schema2"
-	"github.com/distribution/distribution/v3/reference"
-	"github.com/distribution/distribution/v3/registry/api/errcode"
-	v2 "github.com/distribution/distribution/v3/registry/api/v2"
-	"github.com/distribution/distribution/v3/registry/auth"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
-	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/gorilla/handlers"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
+
+	"github.com/docker/distribution"
+	dcontext "github.com/docker/distribution/context"
+	"github.com/docker/distribution/manifest/manifestlist"
+	"github.com/docker/distribution/manifest/ocischema"
+	"github.com/docker/distribution/manifest/schema1"
+	"github.com/docker/distribution/manifest/schema2"
+	"github.com/docker/distribution/reference"
+	"github.com/docker/distribution/registry/api/errcode"
+	v2 "github.com/docker/distribution/registry/api/v2"
+	"github.com/docker/distribution/registry/auth"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
 )
 
 // These constants determine which architecture and OS to choose from a
@@ -83,12 +84,14 @@ type manifestHandler struct {
 
 // GetManifest fetches the image manifest from the storage backend, if it exists.
 func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) {
+
 	dcontext.GetLogger(imh).Debug("GetImageManifest")
 	manifests, err := imh.Repository.Manifests(imh)
 	if err != nil {
 		imh.Errors = append(imh.Errors, err)
 		return
 	}
+
 	var supports [numStorageTypes]bool
 
 	// this parsing of Accept headers is not quite as full-featured as godoc.org's parser, but we don't care about "q=" values
@@ -126,6 +129,11 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 			if _, ok := err.(distribution.ErrTagUnknown); ok {
 				imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
 			} else {
+				var handled bool
+				imh.Errors, handled = handleDisconnectionEvent(imh.Context, w, r)
+				if handled {
+					return
+				}
 				imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 			}
 			return
@@ -147,6 +155,11 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 		if _, ok := err.(distribution.ErrManifestUnknownRevision); ok {
 			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
 		} else {
+			var handled bool
+			imh.Errors, handled = handleDisconnectionEvent(imh.Context, w, r)
+			if handled {
+				return
+			}
 			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		}
 		return
@@ -210,6 +223,11 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 			if _, ok := err.(distribution.ErrManifestUnknownRevision); ok {
 				imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
 			} else {
+				var handled bool
+				imh.Errors, handled = handleDisconnectionEvent(imh.Context, w, r)
+				if handled {
+					return
+				}
 				imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 			}
 			return

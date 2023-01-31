@@ -6,6 +6,9 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/gorilla/handlers"
+	"github.com/opencontainers/go-digest"
+
 	"github.com/docker/distribution"
 	dcontext "github.com/docker/distribution/context"
 	"github.com/docker/distribution/reference"
@@ -13,8 +16,6 @@ import (
 	v2 "github.com/docker/distribution/registry/api/v2"
 	"github.com/docker/distribution/registry/storage"
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
-	"github.com/gorilla/handlers"
-	"github.com/opencontainers/go-digest"
 )
 
 // blobUploadDispatcher constructs and returns the blob upload handler for the
@@ -173,6 +174,8 @@ func (buh *blobUploadHandler) PatchBlobData(w http.ResponseWriter, r *http.Reque
 		switch err := err.(type) {
 		case storagedriver.QuotaExceededError:
 			buh.Errors = append(buh.Errors, errcode.ErrorCodeDenied.WithMessage("quota exceeded"))
+		case storagedriver.ClientDisconnectedError:
+			buh.Errors = append(buh.Errors, errcode.ErrorCodeClientDisconnected.WithMessage("client disconnected"))
 		default:
 			buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err.Error()))
 		}
@@ -218,6 +221,8 @@ func (buh *blobUploadHandler) PutBlobUploadComplete(w http.ResponseWriter, r *ht
 		switch err := err.(type) {
 		case storagedriver.QuotaExceededError:
 			buh.Errors = append(buh.Errors, errcode.ErrorCodeDenied.WithMessage("quota exceeded"))
+		case storagedriver.ClientDisconnectedError:
+			buh.Errors = append(buh.Errors, errcode.ErrorCodeClientDisconnected.WithMessage("client disconnected"))
 		default:
 			buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err.Error()))
 		}
