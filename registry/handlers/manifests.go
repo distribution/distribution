@@ -9,6 +9,7 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	dcontext "github.com/distribution/distribution/v3/context"
+	_ "github.com/distribution/distribution/v3/manifest/artifact"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/manifest/schema1" //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
@@ -322,7 +323,8 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	isAnOCIManifest := mediaType == v1.MediaTypeImageManifest || mediaType == v1.MediaTypeImageIndex
+	isAnOCIManifest := mediaType == v1.MediaTypeImageManifest || mediaType == v1.MediaTypeImageIndex ||
+		mediaType == v1.MediaTypeArtifactManifest
 
 	if isAnOCIManifest {
 		dcontext.GetLogger(imh).Debug("Putting an OCI Manifest!")
@@ -339,6 +341,8 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 		imh.Errors = append(imh.Errors, err)
 		return
 	}
+
+	// TODO create subject link here
 
 	_, err = manifests.Put(imh, manifest, options...)
 	if err != nil {

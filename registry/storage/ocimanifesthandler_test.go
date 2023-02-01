@@ -8,6 +8,7 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/manifest"
+	"github.com/distribution/distribution/v3/manifest/artifact"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/opencontainers/go-digest"
@@ -330,5 +331,44 @@ func TestVerifyOCIManifestBlobLayerAndConfig(t *testing.T) {
 		m.Config.URLs = c.URLs
 
 		checkFn(m, c.Err)
+	}
+}
+
+func TestPutArtifact(t *testing.T) {
+	t.Parallel()
+
+	driver := inmemory.New()
+	registry := createRegistry(t, driver)
+	repo := makeRepository(t, registry, "test")
+	manifestService := makeManifestService(t, repo)
+
+	ctx := context.Background()
+	blob, err := repo.Blobs(ctx).Put(ctx, v1.MediaTypeImageLayerGzip, []byte("I am an artifact"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	template := artifact.Manifest{
+		MediaType:    v1.MediaTypeArtifactManifest,
+		ArtifactType: "application/vnd.example.sbom.v1",
+		Blobs: []distribution.Descriptor{
+			blob,
+		},
+		Subject: distribution.Descriptor{
+			MediaType: v1.MediaTypeImageManifest,
+			Digest:    "sha256:195ce2d6ff471aa95e91f3ea1e95a27d474a452f040d4c18f6eb29f3ca42a821",
+			Size:      21,
+		},
+	}
+
+	manifest, err := artifact.FromStruct(template)
+	if err != nil {
+		t.Fatalf("Failed to construct artifact manifest: %s", err)
+	}
+
+	_, err = manifestService.Put(ctx, manifest)
+
+	if err != nil {
+		t.Fatalf("Unexpected error: %s", err)
 	}
 }

@@ -7,12 +7,14 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	dcontext "github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/manifest/artifact"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-// ocischemaManifestHandler is a ManifestHandler that covers ocischema manifests.
+// ocischemaManifestHandler is a ManifestHandler that covers ocischema manifests
+// and OCI Artifact Manifests.
 type ocischemaManifestHandler struct {
 	repository   distribution.Repository
 	blobStore    distribution.BlobStore
@@ -36,16 +38,11 @@ func (ms *ocischemaManifestHandler) Unmarshal(ctx context.Context, dgst digest.D
 func (ms *ocischemaManifestHandler) Put(ctx context.Context, manifest distribution.Manifest, skipDependencyVerification bool) (digest.Digest, error) {
 	dcontext.GetLogger(ms.ctx).Debug("(*ocischemaManifestHandler).Put")
 
-	m, ok := manifest.(*ocischema.DeserializedManifest)
-	if !ok {
-		return "", fmt.Errorf("non-ocischema manifest put to ocischemaManifestHandler: %T", manifest)
-	}
-
-	if err := ms.verifyManifest(ms.ctx, *m, skipDependencyVerification); err != nil {
+	if err := ms.verifyManifest(ms.ctx, manifest, skipDependencyVerification); err != nil {
 		return "", err
 	}
 
-	mt, payload, err := m.Payload()
+	mt, payload, err := manifest.Payload()
 	if err != nil {
 		return "", err
 	}
@@ -62,11 +59,17 @@ func (ms *ocischemaManifestHandler) Put(ctx context.Context, manifest distributi
 // verifyManifest ensures that the manifest content is valid from the
 // perspective of the registry. As a policy, the registry only tries to store
 // valid content, leaving trust policies of that content up to consumers.
-func (ms *ocischemaManifestHandler) verifyManifest(ctx context.Context, mnfst ocischema.DeserializedManifest, skipDependencyVerification bool) error {
+func (ms *ocischemaManifestHandler) verifyManifest(ctx context.Context, mnfst distribution.Manifest, skipDependencyVerification bool) error {
 	var errs distribution.ErrManifestVerification
 
-	if mnfst.Manifest.SchemaVersion != 2 {
-		return fmt.Errorf("unrecognized manifest schema version %d", mnfst.Manifest.SchemaVersion)
+	switch m := mnfst.(type) {
+	case *ocischema.DeserializedManifest:
+		if m.Manifest.SchemaVersion != 2 {
+			return fmt.Errorf("unrecognized manifest schema version %d", m.Manifest.SchemaVersion)
+		}
+	case *artifact.DeserializedManifest:
+	default:
+		return fmt.Errorf("non-ocischema manifest put to ocischemaManifestHandler: %T", mnfst)
 	}
 
 	if skipDependencyVerification {
