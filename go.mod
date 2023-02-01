@@ -19,7 +19,7 @@ require (
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/ncw/swift v1.0.47
 	github.com/opencontainers/go-digest v1.0.0
-	github.com/opencontainers/image-spec v1.0.2
+	github.com/opencontainers/image-spec v1.1.0-rc2
 	github.com/prometheus/client_golang v1.12.1 // indirect; updated to latest
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.6.1

@@ -8,6 +8,7 @@ import (
 	"github.com/distribution/distribution/v3"
 	dcontext "github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/manifest"
+	"github.com/distribution/distribution/v3/manifest/artifact"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/manifest/schema1"
@@ -134,7 +135,7 @@ func (ms *manifestStore) Put(ctx context.Context, manifest distribution.Manifest
 		return ms.schema1Handler.Put(ctx, manifest, ms.skipDependencyVerification)
 	case *schema2.DeserializedManifest:
 		return ms.schema2Handler.Put(ctx, manifest, ms.skipDependencyVerification)
-	case *ocischema.DeserializedManifest:
+	case *ocischema.DeserializedManifest, *artifact.DeserializedManifest:
 		return ms.ocischemaHandler.Put(ctx, manifest, ms.skipDependencyVerification)
 	case *manifestlist.DeserializedManifestList:
 		return ms.manifestListHandler.Put(ctx, manifest, ms.skipDependencyVerification)
