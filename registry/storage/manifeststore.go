@@ -90,6 +90,11 @@ func (ms *manifestStore) Get(ctx context.Context, dgst digest.Digest, options ..
 		return nil, err
 	}
 
+	// The content is unmarshalled into Unversioned first because it's possible
+	// for a spec compliant OCI artifact manifest to fail to unmarshal into
+	// Versioned due to the schemaVersion property being unknown. We MUST ignore
+	// this unknown property, and unmarshalling into Versioned would implicitly
+	// constrain that property to a number type.
 	var unversioned manifest.Unversioned
 	if err = json.Unmarshal(content, &unversioned); err != nil {
 		return nil, err
