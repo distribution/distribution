@@ -2,6 +2,7 @@ package storage
 
 import (
 	"fmt"
+	"net/url"
 	"path"
 	"strings"
 
@@ -109,6 +110,10 @@ const (
 //	blobPathSpec:                   <root>/v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>
 //	blobDataPathSpec:               <root>/v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>/data
 //	blobMediaTypePathSpec:               <root>/v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>/data
+//
+//	Artifacts:
+//
+//	subjectReferrerPathSpec         <root>/v2/repositories/<name>/_manifests/revisions/algorithm/<subject hex digest>/_referrers/_<artifactType>/<algorithm>/<referrer hex digest>/link
 //
 // For more information on the semantic meaning of each path and their
 // contents, please see the path spec documentation.
@@ -243,6 +248,20 @@ func pathFor(spec pathSpec) (string, error) {
 		return path.Join(append(repoPrefix, v.name, "_uploads", v.id, "hashstates", string(v.alg), offset)...), nil
 	case repositoriesRootPathSpec:
 		return path.Join(repoPrefix...), nil
+	case subjectReferrerLinkPathSpec:
+		manifestPath, err := pathFor(manifestRevisionPathSpec{name: v.name, revision: v.subject})
+		if err != nil {
+			return "", err
+		}
+
+		artifactType := "_" + url.QueryEscape(v.mediaType)
+
+		components, err := digestPathComponents(v.referrer, false)
+		if err != nil {
+			return "", err
+		}
+
+		return path.Join(manifestPath, "_referrers", artifactType, path.Join(components...), "link"), nil
 	default:
 		// TODO(sday): This is an internal error. Ensure it doesn't escape (panic?).
 		return "", fmt.Errorf("unknown path spec: %#v", v)
@@ -435,6 +454,17 @@ func (uploadHashStatePathSpec) pathSpec() {}
 type repositoriesRootPathSpec struct{}
 
 func (repositoriesRootPathSpec) pathSpec() {}
+
+// subjectReferrerLinkPathSpec returns the describes the link of a subject to
+// its referrers
+type subjectReferrerLinkPathSpec struct {
+	name      string
+	referrer  digest.Digest
+	subject   digest.Digest
+	mediaType string
+}
+
+func (subjectReferrerLinkPathSpec) pathSpec() {}
 
 // digestPathComponents provides a consistent path breakdown for a given
 // digest. For a generic digest, it will be as follows:

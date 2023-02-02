@@ -20,6 +20,7 @@ type ocischemaManifestHandler struct {
 	blobStore    distribution.BlobStore
 	ctx          context.Context
 	manifestURLs manifestURLs
+	references   ReferenceService
 }
 
 var _ ManifestHandler = &ocischemaManifestHandler{}
@@ -45,6 +46,14 @@ func (ms *ocischemaManifestHandler) Put(ctx context.Context, manifest distributi
 	mt, payload, err := manifest.Payload()
 	if err != nil {
 		return "", err
+	}
+
+	if referrer, ok := manifest.(distribution.Referrer); ok {
+		if subject := referrer.Subject(); subject != nil {
+			if err := ms.references.Link(ctx, referrer.Type(), digest.FromBytes(payload), subject.Digest); err != nil {
+				return "", err
+			}
+		}
 	}
 
 	revision, err := ms.blobStore.Put(ctx, mt, payload)
