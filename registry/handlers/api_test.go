@@ -3198,3 +3198,94 @@ func TestDockerManifestWithSubject(t *testing.T) {
 		t.Fatalf("Should have got invalid path error for referrer directory: %s", err)
 	}
 }
+
+func TestArtifactManifestValidation(t *testing.T) {
+	for name, test := range map[string]struct {
+		blobs    func(*testing.T, *testEnv, reference.Named) []distribution.Descriptor
+		wantCode int
+	}{
+		"blobs_must_exist": {
+			blobs: func(t *testing.T, te *testEnv, n reference.Named) []distribution.Descriptor {
+				// a blob which has not been uploaded
+				return []distribution.Descriptor{
+					{
+						MediaType: v1.MediaTypeImageLayer,
+						Digest:    "sha256:7688b6ef52555962d008fff894223582c484517cea7da49ee67800adc7fc8866",
+						Size:      56,
+					},
+				}
+			},
+			wantCode: 400,
+		},
+		"valid_blobs": {
+			blobs: func(t *testing.T, testEnv *testEnv, repo reference.Named) []distribution.Descriptor {
+				layers := int64(10)
+				digests := make([]distribution.Descriptor, layers)
+				for i := int64(0); i < layers; i++ {
+					rs, digest, err := testutil.CreateRandomTarFile()
+					if err != nil {
+						t.Fatalf("Failed to create test blob: %s", err)
+					}
+					url, _ := startPushLayer(t, testEnv, repo)
+					pushLayer(t, testEnv.builder, repo, digest, url, rs)
+					digests[i] = distribution.Descriptor{
+						MediaType: v1.MediaTypeImageLayer,
+						Digest:    digest,
+						Size:      testutil.MustSeekerLen(rs),
+					}
+				}
+				return digests
+			},
+			wantCode: 201,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			testEnv := newTestEnv(t, true)
+			defer testEnv.Shutdown()
+
+			repo, err := reference.WithName("myrepo/myimage")
+			if err != nil {
+				t.Fatalf("failed to make repo: %s", err)
+			}
+
+			manifest, err := ociartifact.FromStruct(ociartifact.Manifest{
+				Unversioned: manifest.Unversioned{
+					MediaType: v1.MediaTypeArtifactManifest,
+				},
+				ArtifactType: "application/vnd.example.sbom.v1",
+				Blobs:        test.blobs(t, testEnv, repo),
+			})
+			if err != nil {
+				t.Fatalf("Failed to make manifest: %s", err)
+			}
+
+			contentType, payload, err := manifest.Payload()
+			if err != nil {
+				t.Fatalf("Failed to get raw manifest: %s", err)
+			}
+			ref, err := reference.WithDigest(repo, digest.FromBytes(payload))
+			if err != nil {
+				t.Fatalf("failed to make reference: %s", err)
+			}
+
+			manifestURL, err := testEnv.builder.BuildManifestURL(ref)
+			if err != nil {
+				t.Fatalf("Failed to build manifest URL: %s", err)
+			}
+
+			req, err := http.NewRequest(http.MethodPut, manifestURL, bytes.NewReader(payload))
+			if err != nil {
+				t.Fatalf("Failed to create artifact PUT request: %s", err)
+			}
+			req.Header.Set("Content-Type", contentType)
+
+			res, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatalf("Failed to PUT manifest: %s", err)
+			}
+			if res.StatusCode != test.wantCode {
+				t.Fatalf("Incorrect status code for manifest PUT: %d, expected: %d", res.StatusCode, test.wantCode)
+			}
+		})
+	}
+}
