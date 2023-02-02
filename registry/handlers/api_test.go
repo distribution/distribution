@@ -2900,137 +2900,215 @@ func TestProxyManifestGetByTag(t *testing.T) {
 }
 
 func TestArtifactManifest(t *testing.T) {
-	// When an OCI artifact is PUT before its subject, the subject's referrers
-	// link will be made in advance.
-	testEnv := newTestEnv(t, true)
-	defer testEnv.Shutdown()
-
-	manifest, err := ociartifact.FromStruct(ociartifact.Manifest{
-		MediaType:    v1.MediaTypeArtifactManifest,
-		ArtifactType: "application/vnd.example.sbom.v1",
-		Subject: &distribution.Descriptor{
-			MediaType: v1.MediaTypeImageManifest,
-			Digest:    "sha256:ebe054f08821294feee7bc442014fdd38b4836d83781d8ba99d38eb50d0c9d85",
-			Size:      99,
+	for name, test := range map[string]struct {
+		artifactType  string
+		subject       func(*testing.T, *testEnv, reference.Named) *distribution.Descriptor
+		deleteSubject bool
+	}{
+		// When an OCI artifact is PUT before its subject, the subject's referrers
+		// link will be made in advance.
+		"valid": {
+			artifactType: "application/vnd.example.sbom.v1",
+			subject: func(t *testing.T, testEnv *testEnv, repo reference.Named) *distribution.Descriptor {
+				return &distribution.Descriptor{
+					MediaType: v1.MediaTypeImageManifest,
+					Digest:    "sha256:ebe054f08821294feee7bc442014fdd38b4836d83781d8ba99d38eb50d0c9d85",
+					Size:      99,
+				}
+			},
 		},
-	})
-	if err != nil {
-		t.Fatalf("Failed to make manifest: %s", err)
-	}
+		// An artifact can have no artifactType
+		"no_type": {
+			artifactType: "",
+			subject: func(t *testing.T, testEnv *testEnv, repo reference.Named) *distribution.Descriptor {
+				return &distribution.Descriptor{
+					MediaType: v1.MediaTypeImageManifest,
+					Digest:    "sha256:ebe054f08821294feee7bc442014fdd38b4836d83781d8ba99d38eb50d0c9d85",
+					Size:      99,
+				}
+			},
+		},
 
-	contentType, payload, err := manifest.Payload()
-	if err != nil {
-		t.Fatalf("Failed to get raw manifest: %s", err)
-	}
+		// The link is also made when the subject already exists and is kept if
+		// the subject is deleted
+		"subject_exists": {
+			artifactType: "application/vnd.example.sbom.v1",
+			subject: func(t *testing.T, testEnv *testEnv, repo reference.Named) *distribution.Descriptor {
+				args := testManifestAPISchema2(t, testEnv, repo)
+				_, payload, err := args.manifest.Payload()
+				if err != nil {
+					t.Fatalf("Failed to get subject payload: %s", err)
+				}
+				return &distribution.Descriptor{
+					MediaType: args.mediaType,
+					Digest:    args.dgst,
+					Size:      int64(len(payload)),
+				}
+			},
+			deleteSubject: true,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			testEnv := newTestEnv(t, true)
+			defer testEnv.Shutdown()
 
-	repo, err := reference.WithName("myrepo/myimage")
-	if err != nil {
-		t.Fatalf("failed to make repo: %s", err)
-	}
-	ref, err := reference.WithDigest(repo, digest.FromBytes(payload))
-	if err != nil {
-		t.Fatalf("failed to make reference: %s", err)
-	}
+			repo, err := reference.WithName("myrepo/myimage")
+			if err != nil {
+				t.Fatalf("failed to make repo: %s", err)
+			}
 
-	manifestURL, err := testEnv.builder.BuildManifestURL(ref)
-	if err != nil {
-		t.Fatalf("Failed to build manifest URL: %s", err)
-	}
+			subject := test.subject(t, testEnv, repo)
+			manifest, err := ociartifact.FromStruct(ociartifact.Manifest{
+				MediaType:    v1.MediaTypeArtifactManifest,
+				ArtifactType: test.artifactType,
+				Subject:      subject,
+			})
+			if err != nil {
+				t.Fatalf("Failed to make manifest: %s", err)
+			}
 
-	req, err := http.NewRequest(http.MethodPut, manifestURL, bytes.NewReader(payload))
-	if err != nil {
-		t.Fatalf("Failed to create artifact PUT request: %s", err)
-	}
-	req.Header.Set("Content-Type", contentType)
+			contentType, payload, err := manifest.Payload()
+			if err != nil {
+				t.Fatalf("Failed to get raw manifest: %s", err)
+			}
+			ref, err := reference.WithDigest(repo, digest.FromBytes(payload))
+			if err != nil {
+				t.Fatalf("failed to make reference: %s", err)
+			}
 
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatalf("Failed to PUT manifest: %s", err)
-	}
-	if res.StatusCode != http.StatusCreated {
-		t.Fatalf("Incorrect status code for manifest PUT: %d, expected: %d", res.StatusCode, http.StatusCreated)
-	}
-	if res.Header.Get("Docker-Content-Digest") != ref.Digest().String() {
-		t.Errorf("Incorrect Docker-Content-Digest header: %q, expected %q", res.Header.Get("Docker-Content-Digest"), ref.Digest().String())
-	}
+			manifestURL, err := testEnv.builder.BuildManifestURL(ref)
+			if err != nil {
+				t.Fatalf("Failed to build manifest URL: %s", err)
+			}
 
-	// TODO(brackendawson): We should now try to get referrers for the subject
-	// (which should also eventually exist for that to work), but those APIs
-	// don't exist yet so for now just check the link was made.
-	link, err := testEnv.app.driver.GetContent(context.Background(), fmt.Sprintf("/docker/registry/v2/repositories/%s/_manifests/revisions/sha256/%s/_referrers/_%s/sha256/%s/link",
-		repo.Name(), manifest.Subject().Digest.Hex(), url.QueryEscape(manifest.ArtifactType), ref.Digest().Hex()))
-	if err != nil {
-		t.Fatalf("Failed to get expected referrers link from subject with error: %s", err)
-	}
-	if string(link) != ref.Digest().String() {
-		t.Errorf("Subject's referrers link has incorrect content:\n%s\nexpected:\n%s", string(link), ref.Digest().String())
-	}
+			req, err := http.NewRequest(http.MethodPut, manifestURL, bytes.NewReader(payload))
+			if err != nil {
+				t.Fatalf("Failed to create artifact PUT request: %s", err)
+			}
+			req.Header.Set("Content-Type", contentType)
 
-	// When an artifact manifest has been PUT it can be retrieved with GET.
-	location := res.Header.Get("Location")
-	req, err = http.NewRequest(http.MethodGet, location, nil)
-	if err != nil {
-		t.Fatalf("Failed to create artifact GET request: %s", err)
-	}
+			res, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatalf("Failed to PUT manifest: %s", err)
+			}
+			if res.StatusCode != http.StatusCreated {
+				t.Fatalf("Incorrect status code for manifest PUT: %d, expected: %d", res.StatusCode, http.StatusCreated)
+			}
+			if res.Header.Get("Docker-Content-Digest") != ref.Digest().String() {
+				t.Errorf("Incorrect Docker-Content-Digest header: %q, expected %q", res.Header.Get("Docker-Content-Digest"), ref.Digest().String())
+			}
 
-	res, err = http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatalf("Failed to GET manifest: %s", err)
-	}
-	if res.StatusCode != http.StatusNotAcceptable {
-		t.Fatalf("Incorrect status code for manifest GET: %d, expected: %d", res.StatusCode, http.StatusNotAcceptable)
-	}
+			// TODO(brackendawson): We should now try to get referrers for the subject
+			// (which should also eventually exist for that to work), but those APIs
+			// don't exist yet so for now just check the link was made.
+			link, err := testEnv.app.driver.GetContent(context.Background(), fmt.Sprintf("/docker/registry/v2/repositories/%s/_manifests/revisions/sha256/%s/_referrers/_%s/sha256/%s/link",
+				repo.Name(), manifest.Subject().Digest.Hex(), url.QueryEscape(test.artifactType), ref.Digest().Hex()))
+			if err != nil {
+				t.Fatalf("Failed to get expected referrers link from subject with error: %s", err)
+			}
+			if string(link) != ref.Digest().String() {
+				t.Errorf("Subject's referrers link has incorrect content:\n%s\nexpected:\n%s", string(link), ref.Digest().String())
+			}
 
-	req.Header.Set("Accept", v1.MediaTypeArtifactManifest)
-	res, err = http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatalf("Failed to GET manifest: %s", err)
-	}
-	if res.StatusCode != http.StatusOK {
-		t.Fatalf("Incorrect status code for manifest GET: %d, expected: %d", res.StatusCode, http.StatusOK)
-	}
-	if res.Header.Get("Content-Type") != v1.MediaTypeArtifactManifest {
-		t.Errorf("Incorrect mediaType for manifest GET: %q, expected: %q", res.Header.Get("Content-Type"), v1.MediaTypeArtifactManifest)
-	}
-	gotManifest, err := io.ReadAll(res.Body)
-	if err != nil {
-		t.Fatalf("Failed to read manifest GET body: %s", err)
-	}
-	if !reflect.DeepEqual(gotManifest, payload) {
-		t.Errorf("Pulled manifest does not match pushed manifest, got:\n%s\nexpected:\n%s", string(gotManifest), string(payload))
-	}
+			// When an artifact manifest has been PUT it can be retrieved with GET.
+			location := res.Header.Get("Location")
+			req, err = http.NewRequest(http.MethodGet, location, nil)
+			if err != nil {
+				t.Fatalf("Failed to create artifact GET request: %s", err)
+			}
 
-	// When an artifact manifest is DELETEd then it will not be found if you GET
-	// it. Its subject's referrer link will be left dangling.
-	req, err = http.NewRequest(http.MethodDelete, location, nil)
-	if err != nil {
-		t.Fatalf("Failed to create artifact DELETE request: %s", err)
-	}
+			res, err = http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatalf("Failed to GET manifest: %s", err)
+			}
+			if res.StatusCode != http.StatusNotAcceptable {
+				t.Fatalf("Incorrect status code for manifest GET: %d, expected: %d", res.StatusCode, http.StatusNotAcceptable)
+			}
 
-	res, err = http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatalf("Failed to DELETE manifest: %s", err)
-	}
-	if res.StatusCode != http.StatusAccepted {
-		t.Fatalf("Incorrect status code for manifest DELETE: %d, expected: %d", res.StatusCode, http.StatusAccepted)
-	}
+			req.Header.Set("Accept", v1.MediaTypeArtifactManifest)
+			res, err = http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatalf("Failed to GET manifest: %s", err)
+			}
+			if res.StatusCode != http.StatusOK {
+				t.Fatalf("Incorrect status code for manifest GET: %d, expected: %d", res.StatusCode, http.StatusOK)
+			}
+			if res.Header.Get("Content-Type") != v1.MediaTypeArtifactManifest {
+				t.Errorf("Incorrect mediaType for manifest GET: %q, expected: %q", res.Header.Get("Content-Type"), v1.MediaTypeArtifactManifest)
+			}
+			gotManifest, err := io.ReadAll(res.Body)
+			if err != nil {
+				t.Fatalf("Failed to read manifest GET body: %s", err)
+			}
+			if !reflect.DeepEqual(gotManifest, payload) {
+				t.Errorf("Pulled manifest does not match pushed manifest, got:\n%s\nexpected:\n%s", string(gotManifest), string(payload))
+			}
 
-	req, err = http.NewRequest(http.MethodGet, location, nil)
-	if err != nil {
-		t.Fatalf("Failed to create artifact GET request: %s", err)
-	}
-	req.Header.Set("Accept", v1.MediaTypeArtifactManifest)
-	res, err = http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatalf("Failed to GET manifest: %s", err)
-	}
-	if res.StatusCode != http.StatusNotFound {
-		t.Fatalf("Incorrect status code for manifest GET: %d, expected: %d", res.StatusCode, http.StatusNotFound)
-	}
+			if test.deleteSubject {
+				// When a subject is deleted, it's referrers link remains
+				subjectRef, err := reference.WithDigest(repo, subject.Digest)
+				if err != nil {
+					t.Fatalf("Failed to build subject reference: %s", err)
+				}
+				subjectURL, err := testEnv.builder.BuildManifestURL(subjectRef)
+				if err != nil {
+					t.Errorf("Failed to build subject URL: %s", err)
+				}
 
-	// TODO links made for existing and non-existing subjects
+				req, err := http.NewRequest(http.MethodDelete, subjectURL, nil)
+				if err != nil {
+					t.Fatalf("Failed to create subject DELETE request: %s", err)
+				}
+				res, err := http.DefaultClient.Do(req)
+				if err != nil {
+					t.Fatalf("Failed to DELETE subject: %s", err)
+				}
+				if res.StatusCode != http.StatusAccepted {
+					t.Fatalf("Incorrect status code for subject DELETE: %s", err)
+				}
 
-	// TODO links made for artifacts with no artifactType
+				// TODO(brackendawson): We should now try to get referrers for the subject
+				// (which should also eventually exist for that to work), but those APIs
+				// don't exist yet so for now just check the link still exists.
+				link, err := testEnv.app.driver.GetContent(context.Background(), fmt.Sprintf("/docker/registry/v2/repositories/%s/_manifests/revisions/sha256/%s/_referrers/_%s/sha256/%s/link",
+					repo.Name(), manifest.Subject().Digest.Hex(), url.QueryEscape(test.artifactType), ref.Digest().Hex()))
+				if err != nil {
+					t.Fatalf("Failed to get expected referrers link from subject with error: %s", err)
+				}
+				if string(link) != ref.Digest().String() {
+					t.Errorf("Subject's referrers link has incorrect content:\n%s\nexpected:\n%s", string(link), ref.Digest().String())
+				}
+			}
+
+			// When an artifact manifest is DELETEd then it will not be found if you GET
+			// it. Its subject's referrer link will be left dangling.
+			req, err = http.NewRequest(http.MethodDelete, location, nil)
+			if err != nil {
+				t.Fatalf("Failed to create artifact DELETE request: %s", err)
+			}
+
+			res, err = http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatalf("Failed to DELETE manifest: %s", err)
+			}
+			if res.StatusCode != http.StatusAccepted {
+				t.Fatalf("Incorrect status code for manifest DELETE: %d, expected: %d", res.StatusCode, http.StatusAccepted)
+			}
+
+			req, err = http.NewRequest(http.MethodGet, location, nil)
+			if err != nil {
+				t.Fatalf("Failed to create artifact GET request: %s", err)
+			}
+			req.Header.Set("Accept", v1.MediaTypeArtifactManifest)
+			res, err = http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatalf("Failed to GET manifest: %s", err)
+			}
+			if res.StatusCode != http.StatusNotFound {
+				t.Fatalf("Incorrect status code for manifest GET: %d, expected: %d", res.StatusCode, http.StatusNotFound)
+			}
+		})
+	}
 }
 
 func TestDockerManifestWithSubject(t *testing.T) {
