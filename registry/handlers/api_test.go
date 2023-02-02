@@ -2899,7 +2899,9 @@ func TestProxyManifestGetByTag(t *testing.T) {
 	})
 }
 
-func TestArtifactManifestPut(t *testing.T) {
+func TestArtifactManifest(t *testing.T) {
+	// When an OCI artifact is PUT before its subject, the subject's referrers
+	// link will be made in advance.
 	testEnv := newTestEnv(t, true)
 	defer testEnv.Shutdown()
 
@@ -2916,7 +2918,7 @@ func TestArtifactManifestPut(t *testing.T) {
 		t.Fatalf("Failed to make manifest: %s", err)
 	}
 
-	contentType, body, err := manifest.Payload()
+	contentType, payload, err := manifest.Payload()
 	if err != nil {
 		t.Fatalf("Failed to get raw manifest: %s", err)
 	}
@@ -2925,7 +2927,7 @@ func TestArtifactManifestPut(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to make repo: %s", err)
 	}
-	ref, err := reference.WithDigest(repo, digest.FromBytes(body))
+	ref, err := reference.WithDigest(repo, digest.FromBytes(payload))
 	if err != nil {
 		t.Fatalf("failed to make reference: %s", err)
 	}
@@ -2935,7 +2937,7 @@ func TestArtifactManifestPut(t *testing.T) {
 		t.Fatalf("Failed to build manifest URL: %s", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPut, manifestURL, bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPut, manifestURL, bytes.NewReader(payload))
 	if err != nil {
 		t.Fatalf("Failed to create artifact PUT request: %s", err)
 	}
@@ -2948,6 +2950,9 @@ func TestArtifactManifestPut(t *testing.T) {
 	if res.StatusCode != http.StatusCreated {
 		t.Fatalf("Incorrect status code for manifest PUT: %d, expected: %d", res.StatusCode, http.StatusCreated)
 	}
+	if res.Header.Get("Docker-Content-Digest") != ref.Digest().String() {
+		t.Errorf("Incorrect Docker-Content-Digest header: %q, expected %q", res.Header.Get("Docker-Content-Digest"), ref.Digest().String())
+	}
 
 	// TODO(brackendawson): We should now try to get referrers for the subject
 	// (which should also eventually exist for that to work), but those APIs
@@ -2959,6 +2964,39 @@ func TestArtifactManifestPut(t *testing.T) {
 	}
 	if string(link) != ref.Digest().String() {
 		t.Errorf("Subject's referrers link has incorrect content:\n%s\nexpected:\n%s", string(link), ref.Digest().String())
+	}
+
+	// When an artifact manifest has been PUT it can be retrieved with GET.
+	req, err = http.NewRequest(http.MethodGet, res.Header.Get("Location"), nil)
+	if err != nil {
+		t.Fatalf("Failed to create artifact GET request: %s", err)
+	}
+
+	res, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to GET manifest: %s", err)
+	}
+	if res.StatusCode != http.StatusNotAcceptable {
+		t.Fatalf("Incorrect status code for manifest GET: %d, expected: %d", res.StatusCode, http.StatusNotAcceptable)
+	}
+
+	req.Header.Set("Accept", v1.MediaTypeArtifactManifest)
+	res, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to GET manifest: %s", err)
+	}
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("Incorrect status code for manifest GET: %d, expected: %d", res.StatusCode, http.StatusOK)
+	}
+	if res.Header.Get("Content-Type") != v1.MediaTypeArtifactManifest {
+		t.Errorf("Incorrect mediaType for manifest GET: %q, expected: %q", res.Header.Get("Content-Type"), v1.MediaTypeArtifactManifest)
+	}
+	gotManifest, err := io.ReadAll(res.Body)
+	if err != nil {
+		t.Fatalf("Failed to read manifest GET body: %s", err)
+	}
+	if !reflect.DeepEqual(gotManifest, payload) {
+		t.Errorf("Pulled manifest does not match pushed manifest, got:\n%s\nexpected:\n%s", string(gotManifest), string(payload))
 	}
 
 	// TODO check links aren't made for the other cases

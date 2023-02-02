@@ -2,6 +2,8 @@ package storage
 
 import (
 	"context"
+	_ "embed"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -14,6 +16,9 @@ import (
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
+
+//go:embed fixtures/naughtiest-artifact.json
+var naughtiestArtifact []byte
 
 func TestVerifyOCIManifestNonDistributableLayer(t *testing.T) {
 	ctx := context.Background()
@@ -370,5 +375,42 @@ func TestPutArtifact(t *testing.T) {
 
 	if err != nil {
 		t.Fatalf("Unexpected error: %s", err)
+	}
+}
+
+func TestGetArtifact(t *testing.T) {
+	t.Parallel()
+
+	driver := inmemory.New()
+	registry := createRegistry(t, driver)
+	repo := makeRepository(t, registry, "test")
+	manifestService := makeManifestService(t, repo)
+
+	manifest := &ociartifact.DeserializedManifest{}
+	err := manifest.UnmarshalJSON(naughtiestArtifact)
+	if err != nil {
+		t.Fatalf("Failed to parse valid artifact manifest: %s", err)
+	}
+
+	ctx := context.Background()
+	dgst, err := manifestService.Put(ctx, manifest)
+	if err != nil {
+		t.Fatalf("Failed to Put valid artifact manifest: %s", err)
+	}
+
+	gotManifest, err := manifestService.Get(ctx, dgst)
+	if err != nil {
+		t.Fatalf("Failed to get valid artifact manifest: %s", err)
+	}
+	_, gotPayload, err := gotManifest.Payload()
+	if err != nil {
+		t.Fatalf("Failed ot get returned manifest payload: %s", err)
+	}
+	_, expectedPayload, err := manifest.Payload()
+	if err != nil {
+		t.Fatalf("Failed ot get valid manifest payload: %s", err)
+	}
+	if !reflect.DeepEqual(gotPayload, expectedPayload) {
+		t.Errorf("Pulled manifest does not match put manifest, got:\n%s\nexpected:\n%s", gotPayload, expectedPayload)
 	}
 }

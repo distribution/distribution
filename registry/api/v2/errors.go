@@ -154,4 +154,14 @@ var (
 		to return) is not an integer, or "n" is negative.`,
 		HTTPStatusCode: http.StatusBadRequest,
 	})
+
+	// ErrorCodeManifestNotAcceptable is returned when the manifest found is not
+	// acceptable according to the client's Accept header
+	ErrorCodeManifestNotAcceptable = errcode.Register(errGroup, errcode.ErrorDescriptor{
+		Value:   "MANIFEST_NOT_ACCEPTABLE",
+		Message: "manifest does not match Accept header",
+		Description: `This is returned if the manifest known to the registry
+		has a different mediaType then the client's Accept header.`,
+		HTTPStatusCode: http.StatusNotAcceptable,
+	})
 )
