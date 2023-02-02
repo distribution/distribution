@@ -2,7 +2,6 @@ package storage
 
 import (
 	"context"
-	"errors"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/opencontainers/go-digest"
@@ -13,9 +12,6 @@ import (
 type ReferenceService interface {
 	// Link creates a link from a subject back to a referrer
 	Link(ctx context.Context, mediaType string, referrer, subject digest.Digest) error
-
-	// UnLink deletes a link from a subject back to a referrer
-	UnLink(ctx context.Context, referrer, subject digest.Digest) error
 }
 
 type referenceHandler struct {
@@ -31,10 +27,6 @@ func (r *referenceHandler) Link(ctx context.Context, artifactType string, referr
 	}
 
 	return r.blobStore.link(ctx, path, referrer)
-}
-
-func (r *referenceHandler) UnLink(ctx context.Context, referrer, subject digest.Digest) error {
-	return errors.New("TODO make an unlinker")
 }
 
 // subjectReferrerLinkPath provides the path to the subject's referrer link
