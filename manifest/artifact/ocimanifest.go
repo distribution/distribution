@@ -115,3 +115,15 @@ func (m *DeserializedManifest) Payload() (string, []byte, error) {
 func (m *DeserializedManifest) References() []distribution.Descriptor {
 	return m.Blobs
 }
+
+// Subject returns a pointer to the subject of this manifest or nil if there is
+// none
+func (m *DeserializedManifest) Subject() *distribution.Descriptor {
+	return m.Manifest.Subject
+}
+
+// Type returns the artifactType of this manifest if there is one, otherwise it
+// returns empty string.
+func (m *DeserializedManifest) Type() string {
+	return m.Manifest.ArtifactType
+}

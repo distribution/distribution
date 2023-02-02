@@ -32,6 +32,10 @@ type Referrer interface {
 	// this manifest refers to or nil if this manifest does not refer to a
 	// subject.
 	Subject() *Descriptor
+
+	// Type returns the type of the referrer if there is one, otherwise it
+	// returns empty string
+	Type() string
 }
 
 // ManifestBuilder creates a manifest allowing one to include dependencies.
