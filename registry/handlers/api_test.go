@@ -3225,7 +3225,8 @@ func TestArtifactManifest(t *testing.T) {
 	}
 
 	// When an artifact manifest has been PUT it can be retrieved with GET.
-	req, err = http.NewRequest(http.MethodGet, res.Header.Get("Location"), nil)
+	location := res.Header.Get("Location")
+	req, err = http.NewRequest(http.MethodGet, location, nil)
 	if err != nil {
 		t.Fatalf("Failed to create artifact GET request: %s", err)
 	}
@@ -3255,6 +3256,34 @@ func TestArtifactManifest(t *testing.T) {
 	}
 	if !reflect.DeepEqual(gotManifest, payload) {
 		t.Errorf("Pulled manifest does not match pushed manifest, got:\n%s\nexpected:\n%s", string(gotManifest), string(payload))
+	}
+
+	// When an artifact manifest is DELETEd then it will not be found if you GET
+	// it. Its subject's referrer link will be left dangling.
+	req, err = http.NewRequest(http.MethodDelete, location, nil)
+	if err != nil {
+		t.Fatalf("Failed to create artifact DELETE request: %s", err)
+	}
+
+	res, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to DELETE manifest: %s", err)
+	}
+	if res.StatusCode != http.StatusAccepted {
+		t.Fatalf("Incorrect status code for manifest DELETE: %d, expected: %d", res.StatusCode, http.StatusAccepted)
+	}
+
+	req, err = http.NewRequest(http.MethodGet, location, nil)
+	if err != nil {
+		t.Fatalf("Failed to create artifact GET request: %s", err)
+	}
+	req.Header.Set("Accept", v1.MediaTypeArtifactManifest)
+	res, err = http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to GET manifest: %s", err)
+	}
+	if res.StatusCode != http.StatusNotFound {
+		t.Fatalf("Incorrect status code for manifest GET: %d, expected: %d", res.StatusCode, http.StatusNotFound)
 	}
 
 	// TODO check links aren't made for the other cases
