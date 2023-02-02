@@ -22,6 +22,7 @@ import (
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/manifest"
+	"github.com/distribution/distribution/v3/manifest/artifact"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
 	"github.com/distribution/distribution/v3/manifest/schema1" //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	"github.com/distribution/distribution/v3/manifest/schema2"
@@ -35,6 +36,7 @@ import (
 	"github.com/docker/libtrust"
 	"github.com/gorilla/handlers"
 	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 var headerConfig = http.Header{
@@ -3153,4 +3155,73 @@ func TestProxyManifestGetByTag(t *testing.T) {
 	checkHeaders(t, resp, http.Header{
 		"Docker-Content-Digest": []string{newDigest.String()},
 	})
+}
+
+func TestArtifactManifestPut(t *testing.T) {
+	testEnv := newTestEnv(t, true)
+	defer testEnv.Shutdown()
+
+	manifest, err := artifact.FromStruct(artifact.Manifest{
+		MediaType:    v1.MediaTypeArtifactManifest,
+		ArtifactType: "application/vnd.example.sbom.v1",
+		Subject: distribution.Descriptor{
+			MediaType: v1.MediaTypeImageManifest,
+			Digest:    "sha256:ebe054f08821294feee7bc442014fdd38b4836d83781d8ba99d38eb50d0c9d85",
+			Size:      99,
+		},
+	})
+	if err != nil {
+		t.Fatalf("Failed to make manifest: %s", err)
+	}
+
+	contentType, body, err := manifest.Payload()
+	if err != nil {
+		t.Fatalf("Failed to get raw manifest: %s", err)
+	}
+
+	repo, err := reference.WithName("myrepo/myimage")
+	if err != nil {
+		t.Fatalf("failed to make repo: %s", err)
+	}
+	ref, err := reference.WithDigest(repo, digest.FromBytes(body))
+	if err != nil {
+		t.Fatalf("failed to make reference: %s", err)
+	}
+
+	manifestURL, err := testEnv.builder.BuildManifestURL(ref)
+	if err != nil {
+		t.Fatalf("Failed to build manifest URL: %s", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPut, manifestURL, bytes.NewReader(body))
+	if err != nil {
+		t.Fatalf("Failed to create artifact PUT request: %s", err)
+	}
+	req.Header.Set("Content-Type", contentType)
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to PUT manifest: %s", err)
+	}
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("Incorrect status code for manifest PUT: %d, expected: %d", res.StatusCode, http.StatusCreated)
+	}
+
+	// TODO(brackendawson): We should now try to get referrers for the subject
+	// (which should also eventually exist for that to work), but those APIs
+	// don't exist yet so for now just check the link was made.
+	link, err := testEnv.app.driver.GetContent(context.Background(), fmt.Sprintf("/docker/registry/v2/repositories/%s/_manifests/revisions/sha256/%s/_referrers/_%s/sha256/%s/link",
+		repo.Name(), manifest.Subject.Digest.Hex(), url.QueryEscape(manifest.ArtifactType), ref.Digest().Hex()))
+	if err != nil {
+		t.Fatalf("Failed to get expected referrers link from subject with error: %s", err)
+	}
+	if string(link) != ref.Digest().String() {
+		t.Errorf("Subject's referrers link has incorrect content:\n%s\nexpected:\n%s", string(link), ref.Digest().String())
+	}
+
+	// TODO check links aren't made for the other cases
+
+	// TODO links made for existing and non-existing subjects
+
+	// TODO links made for artifacts with no artifactType
 }
