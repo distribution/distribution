@@ -113,7 +113,7 @@ const (
 //
 //	Artifacts:
 //
-//	subjectReferrerPathSpec         <root>/v2/repositories/<name>/_manifests/revisions/algorithm/<subject hex digest>/_referrers/_<artifactType>/<algorithm>/<referrer hex digest>/link
+//	subjectReferrerPathSpec         <root>/v2/repositories/<name>/_manifests/revisions/<algorithm>/<subject hex digest>/_referrers/_<artifactType>/<algorithm>/<referrer hex digest>/link
 //
 // For more information on the semantic meaning of each path and their
 // contents, please see the path spec documentation.
