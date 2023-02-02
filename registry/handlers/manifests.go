@@ -342,8 +342,6 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	// TODO create subject link here
-
 	_, err = manifests.Put(imh, manifest, options...)
 	if err != nil {
 		// TODO(stevvooe): These error handling switches really need to be
