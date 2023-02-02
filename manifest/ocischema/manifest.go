@@ -49,6 +49,9 @@ type Manifest struct {
 	// configuration.
 	Layers []distribution.Descriptor `json:"layers"`
 
+	// Subject is the descriptor of a manifest referred to by this manifest.
+	Subject *distribution.Descriptor `json:"subject,omitempty"`
+
 	// Annotations contains arbitrary metadata for the image manifest.
 	Annotations map[string]string `json:"annotations,omitempty"`
 }
@@ -122,6 +125,18 @@ func (m *DeserializedManifest) MarshalJSON() ([]byte, error) {
 // calculate the content identifier.
 func (m DeserializedManifest) Payload() (string, []byte, error) {
 	return v1.MediaTypeImageManifest, m.canonical, nil
+}
+
+// Subject returns a pointer to the subject of this manifest or nil if there is
+// none
+func (m *DeserializedManifest) Subject() *distribution.Descriptor {
+	return m.Manifest.Subject
+}
+
+// Type returns empty string because image manifests with subjects cannot have
+// an artifact type.
+func (m *DeserializedManifest) Type() string {
+	return ""
 }
 
 // unknownDocument represents a manifest, manifest list, or index that has not

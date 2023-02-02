@@ -24,6 +24,7 @@ import (
 	"github.com/distribution/distribution/v3/manifest"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
 	"github.com/distribution/distribution/v3/manifest/ociartifact"
+	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/manifest/schema1" //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	"github.com/distribution/distribution/v3/manifest/schema2"
 	"github.com/distribution/distribution/v3/reference"
@@ -3159,51 +3160,109 @@ func TestProxyManifestGetByTag(t *testing.T) {
 
 func TestArtifactManifest(t *testing.T) {
 	for name, test := range map[string]struct {
-		artifactType  string
-		subject       func(*testing.T, *testEnv, reference.Named) *distribution.Descriptor
+		manifest      func(*testing.T, *testEnv, reference.Named) distribution.Manifest
 		deleteSubject bool
 	}{
 		// When an OCI artifact is PUT before its subject, the subject's referrers
 		// link will be made in advance.
 		"valid": {
-			artifactType: "application/vnd.example.sbom.v1",
-			subject: func(t *testing.T, testEnv *testEnv, repo reference.Named) *distribution.Descriptor {
-				return &distribution.Descriptor{
-					MediaType: v1.MediaTypeImageManifest,
-					Digest:    "sha256:ebe054f08821294feee7bc442014fdd38b4836d83781d8ba99d38eb50d0c9d85",
-					Size:      99,
+			manifest: func(t *testing.T, testEnv *testEnv, repo reference.Named) distribution.Manifest {
+				manifest, err := ociartifact.FromStruct(ociartifact.Manifest{
+					Unversioned: manifest.Unversioned{
+						MediaType: v1.MediaTypeArtifactManifest,
+					},
+					ArtifactType: "application/vnd.example.sbom.v1",
+					Subject: &distribution.Descriptor{
+						MediaType: v1.MediaTypeImageManifest,
+						Digest:    "sha256:ebe054f08821294feee7bc442014fdd38b4836d83781d8ba99d38eb50d0c9d85",
+						Size:      99,
+					},
+				})
+				if err != nil {
+					t.Fatalf("Failed to create manifest: %s", err)
 				}
+				return manifest
 			},
 		},
 		// An artifact can have no artifactType
 		"no_type": {
-			artifactType: "",
-			subject: func(t *testing.T, testEnv *testEnv, repo reference.Named) *distribution.Descriptor {
-				return &distribution.Descriptor{
-					MediaType: v1.MediaTypeImageManifest,
-					Digest:    "sha256:ebe054f08821294feee7bc442014fdd38b4836d83781d8ba99d38eb50d0c9d85",
-					Size:      99,
+			manifest: func(t *testing.T, testEnv *testEnv, repo reference.Named) distribution.Manifest {
+				manifest, err := ociartifact.FromStruct(ociartifact.Manifest{
+					Unversioned: manifest.Unversioned{
+						MediaType: v1.MediaTypeArtifactManifest,
+					},
+					ArtifactType: "",
+					Subject: &distribution.Descriptor{
+						MediaType: v1.MediaTypeImageManifest,
+						Digest:    "sha256:ebe054f08821294feee7bc442014fdd38b4836d83781d8ba99d38eb50d0c9d85",
+						Size:      99,
+					},
+				})
+				if err != nil {
+					t.Fatalf("Failed to create manifest: %s", err)
 				}
+				return manifest
 			},
 		},
 
 		// The link is also made when the subject already exists and is kept if
 		// the subject is deleted
 		"subject_exists": {
-			artifactType: "application/vnd.example.sbom.v1",
-			subject: func(t *testing.T, testEnv *testEnv, repo reference.Named) *distribution.Descriptor {
+			manifest: func(t *testing.T, testEnv *testEnv, repo reference.Named) distribution.Manifest {
 				args := testManifestAPISchema2(t, testEnv, repo)
 				_, payload, err := args.manifest.Payload()
 				if err != nil {
 					t.Fatalf("Failed to get subject payload: %s", err)
 				}
-				return &distribution.Descriptor{
-					MediaType: args.mediaType,
-					Digest:    args.dgst,
-					Size:      int64(len(payload)),
+
+				manifest, err := ociartifact.FromStruct(ociartifact.Manifest{
+					Unversioned: manifest.Unversioned{
+						MediaType: v1.MediaTypeArtifactManifest,
+					},
+					ArtifactType: "application/vnd.example.sbom.v1",
+					Subject: &distribution.Descriptor{
+						MediaType: args.mediaType,
+						Digest:    args.dgst,
+						Size:      int64(len(payload)),
+					},
+				})
+				if err != nil {
+					t.Fatalf("Failed to create manifest: %s", err)
 				}
+				return manifest
 			},
 			deleteSubject: true,
+		},
+		// When an OCI Image Manifest with a subject field is PUT before its
+		// subject, the subject's referrers link will be made in advance.
+		"image_manifest_with_subject": {
+			manifest: func(t *testing.T, testEnv *testEnv, repo reference.Named) distribution.Manifest {
+				config, configDigest, err := testutil.CreateRandomTarFile()
+				if err != nil {
+					t.Fatalf("Failed to create test blob: %s", err)
+				}
+				url, _ := startPushLayer(t, testEnv, repo)
+				pushLayer(t, testEnv.builder, repo, configDigest, url, config)
+				manifest, err := ocischema.FromStruct(ocischema.Manifest{
+					Versioned: manifest.Versioned{
+						SchemaVersion: 2,
+						MediaType:     v1.MediaTypeImageManifest,
+					},
+					Config: distribution.Descriptor{
+						MediaType: v1.MediaTypeImageConfig,
+						Digest:    configDigest,
+					},
+					Subject: &distribution.Descriptor{
+						MediaType: v1.MediaTypeImageManifest,
+						Digest:    "sha256:ebe054f08821294feee7bc442014fdd38b4836d83781d8ba99d38eb50d0c9d85",
+						Size:      99,
+					},
+				})
+				if err != nil {
+					t.Fatalf("Failed to create manifest: %s", err)
+				}
+				return manifest
+			},
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -3215,17 +3274,7 @@ func TestArtifactManifest(t *testing.T) {
 				t.Fatalf("failed to make repo: %s", err)
 			}
 
-			subject := test.subject(t, testEnv, repo)
-			manifest, err := ociartifact.FromStruct(ociartifact.Manifest{
-				Unversioned: manifest.Unversioned{
-					MediaType: v1.MediaTypeArtifactManifest,
-				},
-				ArtifactType: test.artifactType,
-				Subject:      subject,
-			})
-			if err != nil {
-				t.Fatalf("Failed to make manifest: %s", err)
-			}
+			manifest := test.manifest(t, testEnv, repo)
 
 			contentType, payload, err := manifest.Payload()
 			if err != nil {
@@ -3261,8 +3310,12 @@ func TestArtifactManifest(t *testing.T) {
 			// TODO(brackendawson): We should now try to get referrers for the subject
 			// (which should also eventually exist for that to work), but those APIs
 			// don't exist yet so for now just check the link was made.
+			referrer, ok := manifest.(distribution.Referrer)
+			if !ok {
+				t.Fatalf("Manifest should implement distribution.Referrer: %T", manifest)
+			}
 			link, err := testEnv.app.driver.GetContent(context.Background(), fmt.Sprintf("/docker/registry/v2/repositories/%s/_manifests/revisions/sha256/%s/_referrers/_%s/sha256/%s/link",
-				repo.Name(), manifest.Subject().Digest.Hex(), url.QueryEscape(test.artifactType), ref.Digest().Hex()))
+				repo.Name(), referrer.Subject().Digest.Hex(), url.QueryEscape(referrer.Type()), ref.Digest().Hex()))
 			if err != nil {
 				t.Fatalf("Failed to get expected referrers link from subject with error: %s", err)
 			}
@@ -3285,7 +3338,7 @@ func TestArtifactManifest(t *testing.T) {
 				t.Fatalf("Incorrect status code for manifest GET: %d, expected: %d", res.StatusCode, http.StatusNotAcceptable)
 			}
 
-			req.Header.Set("Accept", v1.MediaTypeArtifactManifest)
+			req.Header.Set("Accept", contentType)
 			res, err = http.DefaultClient.Do(req)
 			if err != nil {
 				t.Fatalf("Failed to GET manifest: %s", err)
@@ -3293,8 +3346,8 @@ func TestArtifactManifest(t *testing.T) {
 			if res.StatusCode != http.StatusOK {
 				t.Fatalf("Incorrect status code for manifest GET: %d, expected: %d", res.StatusCode, http.StatusOK)
 			}
-			if res.Header.Get("Content-Type") != v1.MediaTypeArtifactManifest {
-				t.Errorf("Incorrect mediaType for manifest GET: %q, expected: %q", res.Header.Get("Content-Type"), v1.MediaTypeArtifactManifest)
+			if res.Header.Get("Content-Type") != contentType {
+				t.Errorf("Incorrect mediaType for manifest GET: %q, expected: %q", res.Header.Get("Content-Type"), contentType)
 			}
 			gotManifest, err := io.ReadAll(res.Body)
 			if err != nil {
@@ -3306,7 +3359,7 @@ func TestArtifactManifest(t *testing.T) {
 
 			if test.deleteSubject {
 				// When a subject is deleted, it's referrers link remains
-				subjectRef, err := reference.WithDigest(repo, subject.Digest)
+				subjectRef, err := reference.WithDigest(repo, referrer.Subject().Digest)
 				if err != nil {
 					t.Fatalf("Failed to build subject reference: %s", err)
 				}
@@ -3331,7 +3384,7 @@ func TestArtifactManifest(t *testing.T) {
 				// (which should also eventually exist for that to work), but those APIs
 				// don't exist yet so for now just check the link still exists.
 				link, err := testEnv.app.driver.GetContent(context.Background(), fmt.Sprintf("/docker/registry/v2/repositories/%s/_manifests/revisions/sha256/%s/_referrers/_%s/sha256/%s/link",
-					repo.Name(), manifest.Subject().Digest.Hex(), url.QueryEscape(test.artifactType), ref.Digest().Hex()))
+					repo.Name(), referrer.Subject().Digest.Hex(), url.QueryEscape(referrer.Type()), ref.Digest().Hex()))
 				if err != nil {
 					t.Fatalf("Failed to get expected referrers link from subject with error: %s", err)
 				}
