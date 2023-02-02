@@ -4,6 +4,7 @@ import (
 	_ "embed"
 
 	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/manifest"
 	_ "github.com/distribution/distribution/v3/manifest/ocischema"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -19,7 +20,9 @@ var (
 	}
 	ManifestDeserialized = &DeserializedManifest{
 		Manifest: Manifest{
-			MediaType:    v1.MediaTypeArtifactManifest,
+			Unversioned: manifest.Unversioned{
+				MediaType: v1.MediaTypeArtifactManifest,
+			},
 			ArtifactType: "application/vnd.example.sbom.v1",
 			Blobs: []distribution.Descriptor{
 				{
@@ -61,7 +64,9 @@ var (
 	}
 	ManifestNoSubjectDeserialized = &DeserializedManifest{
 		Manifest: Manifest{
-			MediaType:    v1.MediaTypeArtifactManifest,
+			Unversioned: manifest.Unversioned{
+				MediaType: v1.MediaTypeArtifactManifest,
+			},
 			ArtifactType: "application/vnd.example.sbom.v1",
 			Blobs: []distribution.Descriptor{
 				{

@@ -354,7 +354,9 @@ func TestPutArtifact(t *testing.T) {
 	}
 
 	template := ociartifact.Manifest{
-		MediaType:    v1.MediaTypeArtifactManifest,
+		Unversioned: manifest.Unversioned{
+			MediaType: v1.MediaTypeArtifactManifest,
+		},
 		ArtifactType: "application/vnd.example.sbom.v1",
 		Blobs: []distribution.Descriptor{
 			blob,
