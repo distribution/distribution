@@ -2959,7 +2959,9 @@ func TestArtifactManifest(t *testing.T) {
 
 			subject := test.subject(t, testEnv, repo)
 			manifest, err := ociartifact.FromStruct(ociartifact.Manifest{
-				MediaType:    v1.MediaTypeArtifactManifest,
+				Unversioned: manifest.Unversioned{
+					MediaType: v1.MediaTypeArtifactManifest,
+				},
 				ArtifactType: test.artifactType,
 				Subject:      subject,
 			})

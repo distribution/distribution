@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/distribution/distribution/v3"
+	"github.com/distribution/distribution/v3/manifest"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -28,8 +29,7 @@ func init() {
 
 // Manifest defines an oci artifact manifest.
 type Manifest struct {
-	// MediaType is the media type of this artifact manifest.
-	MediaType string `json:"mediaType,omitEmpty"`
+	manifest.Unversioned
 
 	// ArtifactType is the media type of the artifact referenced by this
 	// artifact manifest.
