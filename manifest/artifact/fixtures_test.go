@@ -28,7 +28,7 @@ var (
 					Size:      29876998,
 				},
 			},
-			Subject: distribution.Descriptor{
+			Subject: &distribution.Descriptor{
 				MediaType: v1.MediaTypeImageManifest,
 				Digest:    "sha256:f756842dc7541130d3a327a870a38aa9521233fc076d0ee2cea895c8c0a1e388",
 				Size:      549,

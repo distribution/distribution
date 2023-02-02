@@ -354,7 +354,7 @@ func TestPutArtifact(t *testing.T) {
 		Blobs: []distribution.Descriptor{
 			blob,
 		},
-		Subject: distribution.Descriptor{
+		Subject: &distribution.Descriptor{
 			MediaType: v1.MediaTypeImageManifest,
 			Digest:    "sha256:195ce2d6ff471aa95e91f3ea1e95a27d474a452f040d4c18f6eb29f3ca42a821",
 			Size:      21,

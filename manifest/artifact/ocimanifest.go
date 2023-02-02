@@ -40,7 +40,7 @@ type Manifest struct {
 	Blobs []distribution.Descriptor `json:"blobs,omitempty"`
 
 	// Subject is the descriptor of a manifest referred to by this artifact.
-	Subject distribution.Descriptor
+	Subject *distribution.Descriptor `json:"subject,omitempty"`
 
 	// Annotations contain arbitrary metadata for the image manifest
 	Annotations map[string]string `json:"annotations,omitempty"`
@@ -85,7 +85,7 @@ func (m *DeserializedManifest) UnmarshalJSON(b []byte) error {
 	// does not have to exist, so there is nothing to validate in the manifest
 	// store. If a non-compliant client provided the digest of a blob then the
 	// registry would still indicate that the referred manifest does not exist.
-	if manifest.Subject.Digest != "" {
+	if manifest.Subject != nil {
 		if !distribution.ManifestMediaTypeSupported(manifest.Subject.MediaType) {
 			return fmt.Errorf("subject.mediaType must be a manifest, not '%s'", manifest.Subject.MediaType)
 		}
