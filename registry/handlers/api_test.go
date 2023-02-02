@@ -3286,9 +3286,93 @@ func TestArtifactManifest(t *testing.T) {
 		t.Fatalf("Incorrect status code for manifest GET: %d, expected: %d", res.StatusCode, http.StatusNotFound)
 	}
 
-	// TODO check links aren't made for the other cases
-
 	// TODO links made for existing and non-existing subjects
 
 	// TODO links made for artifacts with no artifactType
+}
+
+func TestDockerManifestWithSubject(t *testing.T) {
+	// When a docker image manifest containing a "subject" field is uploaded
+	// then no referrer links are made for that invalid subject.
+	testEnv := newTestEnv(t, true)
+	defer testEnv.Shutdown()
+
+	repo, err := reference.WithName("test/repo")
+	if err != nil {
+		t.Fatalf("Failed to build repo: %s", err)
+	}
+
+	config, configDigest, err := testutil.CreateRandomTarFile()
+	if err != nil {
+		t.Fatalf("Failed to make config blob: %s", err)
+	}
+	url, _ := startPushLayer(t, testEnv, repo)
+	pushLayer(t, testEnv.builder, repo, configDigest, url, config)
+	layer, layerDigest, err := testutil.CreateRandomTarFile()
+	if err != nil {
+		t.Fatalf("Failed to make layer blob: %s", err)
+	}
+	url, _ = startPushLayer(t, testEnv, repo)
+	pushLayer(t, testEnv.builder, repo, layerDigest, url, layer)
+
+	manifest, err := schema2.FromStruct(schema2.Manifest{
+		Versioned: manifest.Versioned{
+			SchemaVersion: 2,
+			MediaType:     schema2.MediaTypeManifest,
+		},
+		Config: distribution.Descriptor{
+			MediaType: schema2.MediaTypeImageConfig,
+			Digest:    configDigest,
+			Size:      testutil.MustSeekerLen(config),
+		},
+		Layers: []distribution.Descriptor{
+			{
+				MediaType: schema2.MediaTypeLayer,
+				Digest:    layerDigest,
+				Size:      testutil.MustSeekerLen(layer),
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("Failed to make base manifest: %s", err)
+	}
+	var manifestFields map[string]interface{}
+	_, payload, err := manifest.Payload()
+	if err != nil {
+		t.Fatalf("Failed to get base manifest payload: %s", err)
+	}
+	if err = json.Unmarshal(payload, &manifestFields); err != nil {
+		t.Fatalf("Failed to unmarshal base manifest: %s", err)
+	}
+	manifestFields["subject"] = distribution.Descriptor{
+		MediaType: schema2.MediaTypeManifest,
+		Digest:    "sha256:118011bef6c697f7107cc0d788664a0f8c7d0316ce8d17673634155f5ecdba39",
+		Size:      56,
+	}
+	rawManifest, _ := json.Marshal(manifestFields)
+	if err = manifest.UnmarshalJSON(rawManifest); err != nil {
+		t.Fatalf("Failed to re-build manifest: %s", err)
+	}
+
+	ref, err := reference.WithTag(repo, "latest")
+	if err != nil {
+		t.Fatalf("Failed to build reference: %s", err)
+	}
+	if url, err = testEnv.builder.BuildManifestURL(ref); err != nil {
+		t.Fatalf("Failed to build manifest url: %s", err)
+	}
+	res := putManifest(t, "putting manifest", url, schema2.MediaTypeManifest, manifest)
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("Incorrect status code from manifest PUT: %d, expected: %d", res.StatusCode, http.StatusCreated)
+	}
+
+	// TODO(brackendawson): We should now try to get referrers for the subject
+	// (which should also eventually exist for that to work), but those APIs
+	// don't exist yet so for now just check the link was not made.
+	_, err = testEnv.app.driver.Stat(context.Background(), fmt.Sprintf("/docker/registry/v2/repositories/%s/_manifests/revisions/sha256/%s/_referrers",
+		repo.Name(), res.Header.Get("Docker-Content-Digest")))
+	var expectedErr storagedriver.InvalidPathError
+	if !errors.As(err, &expectedErr) {
+		t.Fatalf("Should have got invalid path error for referrer directory: %s", err)
+	}
 }
