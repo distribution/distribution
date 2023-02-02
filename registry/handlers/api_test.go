@@ -2906,7 +2906,7 @@ func TestArtifactManifestPut(t *testing.T) {
 	manifest, err := artifact.FromStruct(artifact.Manifest{
 		MediaType:    v1.MediaTypeArtifactManifest,
 		ArtifactType: "application/vnd.example.sbom.v1",
-		Subject: distribution.Descriptor{
+		Subject: &distribution.Descriptor{
 			MediaType: v1.MediaTypeImageManifest,
 			Digest:    "sha256:ebe054f08821294feee7bc442014fdd38b4836d83781d8ba99d38eb50d0c9d85",
 			Size:      99,
@@ -2953,7 +2953,7 @@ func TestArtifactManifestPut(t *testing.T) {
 	// (which should also eventually exist for that to work), but those APIs
 	// don't exist yet so for now just check the link was made.
 	link, err := testEnv.app.driver.GetContent(context.Background(), fmt.Sprintf("/docker/registry/v2/repositories/%s/_manifests/revisions/sha256/%s/_referrers/_%s/sha256/%s/link",
-		repo.Name(), manifest.Subject.Digest.Hex(), url.QueryEscape(manifest.ArtifactType), ref.Digest().Hex()))
+		repo.Name(), manifest.Subject().Digest.Hex(), url.QueryEscape(manifest.ArtifactType), ref.Digest().Hex()))
 	if err != nil {
 		t.Fatalf("Failed to get expected referrers link from subject with error: %s", err)
 	}
