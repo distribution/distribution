@@ -97,7 +97,7 @@ func (ms *ocischemaManifestHandler) verifyManifest(ctx context.Context, mnfst di
 		}
 	case *ociartifact.DeserializedManifest:
 	default:
-		return fmt.Errorf("non-ocischema manifest put to ocischemaManifestHandler: %T", mnfst)
+		return fmt.Errorf("unrecognized manifest type: %T", mnfst)
 	}
 
 	if skipDependencyVerification {
