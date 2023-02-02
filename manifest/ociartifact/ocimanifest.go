@@ -1,4 +1,4 @@
-package artifact
+package ociartifact
 
 import (
 	"encoding/json"

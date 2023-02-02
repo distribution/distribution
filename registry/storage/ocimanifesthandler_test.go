@@ -8,7 +8,7 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/manifest"
-	"github.com/distribution/distribution/v3/manifest/artifact"
+	"github.com/distribution/distribution/v3/manifest/ociartifact"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/opencontainers/go-digest"
@@ -348,7 +348,7 @@ func TestPutArtifact(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	template := artifact.Manifest{
+	template := ociartifact.Manifest{
 		MediaType:    v1.MediaTypeArtifactManifest,
 		ArtifactType: "application/vnd.example.sbom.v1",
 		Blobs: []distribution.Descriptor{
@@ -361,7 +361,7 @@ func TestPutArtifact(t *testing.T) {
 		},
 	}
 
-	manifest, err := artifact.FromStruct(template)
+	manifest, err := ociartifact.FromStruct(template)
 	if err != nil {
 		t.Fatalf("Failed to construct artifact manifest: %s", err)
 	}
