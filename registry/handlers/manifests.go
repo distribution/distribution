@@ -9,8 +9,8 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	dcontext "github.com/distribution/distribution/v3/context"
-	_ "github.com/distribution/distribution/v3/manifest/artifact"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
+	_ "github.com/distribution/distribution/v3/manifest/ociartifact"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/manifest/schema1"
 	"github.com/distribution/distribution/v3/manifest/schema2"

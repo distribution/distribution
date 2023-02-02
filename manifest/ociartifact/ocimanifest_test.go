@@ -1,11 +1,11 @@
-package artifact_test
+package ociartifact_test
 
 import (
 	"reflect"
 	"testing"
 
 	"github.com/distribution/distribution/v3"
-	artifact "github.com/distribution/distribution/v3/manifest/artifact"
+	"github.com/distribution/distribution/v3/manifest/ociartifact"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -17,21 +17,21 @@ func TestArtifactFunc(t *testing.T) {
 		expectedManifest   distribution.Manifest
 	}{
 		"valid_artifact": {
-			rawManifest:        artifact.ManifestBytes,
-			expectedDescriptor: artifact.ManifestDescriptor,
-			expectedManifest:   artifact.ManifestDeserialized,
+			rawManifest:        ociartifact.ManifestBytes,
+			expectedDescriptor: ociartifact.ManifestDescriptor,
+			expectedManifest:   ociartifact.ManifestDeserialized,
 		},
 		"artifact_must_have_mediaType": {
-			rawManifest: artifact.ManifestNoMediaType,
+			rawManifest: ociartifact.ManifestNoMediaType,
 			expectError: true,
 		},
 		"artifact_can_have_no_subject": {
-			rawManifest:        artifact.ManifestNoSubjectBytes,
-			expectedDescriptor: artifact.ManifestNoSubjectDescriptor,
-			expectedManifest:   artifact.ManifestNoSubjectDeserialized,
+			rawManifest:        ociartifact.ManifestNoSubjectBytes,
+			expectedDescriptor: ociartifact.ManifestNoSubjectDescriptor,
+			expectedManifest:   ociartifact.ManifestNoSubjectDeserialized,
 		},
 		"artifact_subject_must_be_manifest": {
-			rawManifest: artifact.ManifestBlobSubjectBytes,
+			rawManifest: ociartifact.ManifestBlobSubjectBytes,
 			expectError: true,
 		},
 	} {
@@ -57,7 +57,7 @@ func TestArtifactFunc(t *testing.T) {
 func TestPayload(t *testing.T) {
 	t.Parallel()
 
-	manifest, _, err := distribution.UnmarshalManifest(v1.MediaTypeArtifactManifest, artifact.ManifestBytes)
+	manifest, _, err := distribution.UnmarshalManifest(v1.MediaTypeArtifactManifest, ociartifact.ManifestBytes)
 	if err != nil {
 		t.Fatalf("Failed to unmarshal manifest: %s", err)
 	}
@@ -70,7 +70,7 @@ func TestPayload(t *testing.T) {
 	if mediaType != v1.MediaTypeArtifactManifest {
 		t.Errorf("Unexpected mediaType %q, should be %q", mediaType, v1.MediaTypeArtifactManifest)
 	}
-	if !reflect.DeepEqual(payload, artifact.ManifestBytes) {
+	if !reflect.DeepEqual(payload, ociartifact.ManifestBytes) {
 		t.Errorf("Unexpected payload, should exactly match inputted manifest.")
 	}
 }
@@ -82,14 +82,14 @@ func TestReferences(t *testing.T) {
 	// because those do have to exist before the image index is pushed.
 	t.Parallel()
 
-	manifest, _, err := distribution.UnmarshalManifest(v1.MediaTypeArtifactManifest, artifact.ManifestBytes)
+	manifest, _, err := distribution.UnmarshalManifest(v1.MediaTypeArtifactManifest, ociartifact.ManifestBytes)
 	if err != nil {
 		t.Fatalf("Failed to unmarshal manifest: %s", err)
 	}
 
 	references := manifest.References()
 
-	if !reflect.DeepEqual(references, artifact.ManifestDeserialized.Blobs) {
-		t.Errorf("Unexpected references:\n%v\nexpected:\n%v", references, artifact.ManifestDeserialized.Blobs)
+	if !reflect.DeepEqual(references, ociartifact.ManifestDeserialized.Blobs) {
+		t.Errorf("Unexpected references:\n%v\nexpected:\n%v", references, ociartifact.ManifestDeserialized.Blobs)
 	}
 }

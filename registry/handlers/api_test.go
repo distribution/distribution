@@ -22,8 +22,8 @@ import (
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/manifest"
-	"github.com/distribution/distribution/v3/manifest/artifact"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
+	"github.com/distribution/distribution/v3/manifest/ociartifact"
 	"github.com/distribution/distribution/v3/manifest/schema1"
 	"github.com/distribution/distribution/v3/manifest/schema2"
 	"github.com/distribution/distribution/v3/reference"
@@ -2903,7 +2903,7 @@ func TestArtifactManifestPut(t *testing.T) {
 	testEnv := newTestEnv(t, true)
 	defer testEnv.Shutdown()
 
-	manifest, err := artifact.FromStruct(artifact.Manifest{
+	manifest, err := ociartifact.FromStruct(ociartifact.Manifest{
 		MediaType:    v1.MediaTypeArtifactManifest,
 		ArtifactType: "application/vnd.example.sbom.v1",
 		Subject: &distribution.Descriptor{

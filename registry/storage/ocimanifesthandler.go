@@ -7,7 +7,7 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	dcontext "github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/manifest/artifact"
+	"github.com/distribution/distribution/v3/manifest/ociartifact"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -76,7 +76,7 @@ func (ms *ocischemaManifestHandler) verifyManifest(ctx context.Context, mnfst di
 		if m.Manifest.SchemaVersion != 2 {
 			return fmt.Errorf("unrecognized manifest schema version %d", m.Manifest.SchemaVersion)
 		}
-	case *artifact.DeserializedManifest:
+	case *ociartifact.DeserializedManifest:
 	default:
 		return fmt.Errorf("non-ocischema manifest put to ocischemaManifestHandler: %T", mnfst)
 	}
