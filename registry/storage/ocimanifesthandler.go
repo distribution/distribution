@@ -2,11 +2,13 @@ package storage
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 
 	"github.com/distribution/distribution/v3"
 	dcontext "github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/manifest"
 	"github.com/distribution/distribution/v3/manifest/ociartifact"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/opencontainers/go-digest"
@@ -28,8 +30,25 @@ var _ ManifestHandler = &ocischemaManifestHandler{}
 func (ms *ocischemaManifestHandler) Unmarshal(ctx context.Context, dgst digest.Digest, content []byte) (distribution.Manifest, error) {
 	dcontext.GetLogger(ms.ctx).Debug("(*ocischemaManifestHandler).Unmarshal")
 
-	m := &ocischema.DeserializedManifest{}
-	if err := m.UnmarshalJSON(content); err != nil {
+	var unversioned manifest.Unversioned
+	if err := json.Unmarshal(content, &unversioned); err != nil {
+		return nil, err
+	}
+	var m distribution.Manifest
+	switch unversioned.MediaType {
+	case "", v1.MediaTypeImageManifest:
+		m = &ocischema.DeserializedManifest{}
+	case v1.MediaTypeArtifactManifest:
+		m = &ociartifact.DeserializedManifest{}
+	default:
+		return nil, fmt.Errorf("if present, mediaType should be '%s' or '%s', not '%s'",
+			v1.MediaTypeImageManifest,
+			v1.MediaTypeArtifactManifest,
+			unversioned.MediaType,
+		)
+	}
+
+	if err := m.(json.Unmarshaler).UnmarshalJSON(content); err != nil {
 		return nil, err
 	}
 

@@ -90,6 +90,16 @@ func (ms *manifestStore) Get(ctx context.Context, dgst digest.Digest, options ..
 		return nil, err
 	}
 
+	var unversioned manifest.Unversioned
+	if err = json.Unmarshal(content, &unversioned); err != nil {
+		return nil, err
+	}
+
+	switch unversioned.MediaType {
+	case v1.MediaTypeArtifactManifest:
+		return ms.ocischemaHandler.Unmarshal(ctx, dgst, content)
+	}
+
 	var versioned manifest.Versioned
 	if err = json.Unmarshal(content, &versioned); err != nil {
 		return nil, err

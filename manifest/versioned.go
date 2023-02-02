@@ -10,3 +10,10 @@ type Versioned struct {
 	// MediaType is the media type of this schema.
 	MediaType string `json:"mediaType,omitempty"`
 }
+
+// Unversioned provides a struct with the mediaType only. Incoming content with
+// unknown mediaType can be decoded against this struct to check the type.
+type Unversioned struct {
+	// MediaType is the media type of this schema.
+	MediaType string `json:"mediaType,omitempty"`
+}
