@@ -129,7 +129,8 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 				imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
 			} else {
 				var handled bool
-				imh.Errors, handled = handleDisconnectionEvent(imh.Context, w, r)
+				errs, handled := handleDisconnectionEvent(imh.Context, w, r)
+				imh.Errors = append(errs)
 				if handled {
 					return
 				}
@@ -155,7 +156,8 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
 		} else {
 			var handled bool
-			imh.Errors, handled = handleDisconnectionEvent(imh.Context, w, r)
+			errs, handled := handleDisconnectionEvent(imh.Context, w, r)
+			imh.Errors = append(errs)
 			if handled {
 				return
 			}
@@ -223,7 +225,8 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 				imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
 			} else {
 				var handled bool
-				imh.Errors, handled = handleDisconnectionEvent(imh.Context, w, r)
+				errs, handled := handleDisconnectionEvent(imh.Context, w, r)
+				imh.Errors = append(errs)
 				if handled {
 					return
 				}
