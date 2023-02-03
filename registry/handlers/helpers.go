@@ -117,8 +117,8 @@ func checkForClientDisconnection(w http.ResponseWriter, r *http.Request) error {
 func handleDisconnectionEvent(ctx *Context, w http.ResponseWriter, r *http.Request) ([]error, bool) {
 	handled := false
 	disconnected := checkForClientDisconnection(w, r)
-	err := disconnected.(ErrorClientDisconnected)
 	if disconnected != nil {
+		err := disconnected.(ErrorClientDisconnected)
 		ctx.Errors = append(ctx.Errors, err.CodeWithMessage())
 		handled = true
 	}
