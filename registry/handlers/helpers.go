@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,7 +11,6 @@ import (
 
 	dcontext "github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/api/errcode"
-	storagedriver "github.com/docker/distribution/registry/storage/driver"
 )
 
 // closeResources closes all the provided resources after running the target
@@ -56,7 +56,7 @@ func copyFullPayload(ctx context.Context, responseWriter http.ResponseWriter, r 
 				"copied":        copied,
 				"contentLength": r.ContentLength,
 			}, "error", "copied", "contentLength").Error("client disconnected during " + action)
-			return storagedriver.ClientDisconnectedError{}
+			return errors.New("client disconnected")
 		default:
 		}
 	}
@@ -87,7 +87,7 @@ func parseContentRange(cr string) (start int64, end int64, err error) {
 
 // checkForClientDisconnection is a generic function which checks if a HTTP request for a given client has been closed
 // and if it has returns a typed client disconnection event
-func checkForClientDisconnection(w http.ResponseWriter, r *http.Request) *storagedriver.ClientDisconnectedError {
+func checkForClientDisconnection(w http.ResponseWriter, r *http.Request) error {
 	var body = r.Body
 	clientClosed := r.Context().Done()
 	bodyLen, err := body.Read([]byte{})
@@ -95,7 +95,7 @@ func checkForClientDisconnection(w http.ResponseWriter, r *http.Request) *storag
 		select {
 		case <-clientClosed:
 			w.WriteHeader(499)
-			return &storagedriver.ClientDisconnectedError{}
+			return errors.New("client disconnected")
 		default:
 		}
 	}
@@ -109,7 +109,7 @@ func handleDisconnectionEvent(ctx *Context, w http.ResponseWriter, r *http.Reque
 	handled := false
 	disconnected := checkForClientDisconnection(w, r)
 	if disconnected != nil {
-		ctx.Errors = append(ctx.Errors, errcode.ErrorCodeClientDisconnected.WithDetail(disconnected))
+		ctx.Errors = append(ctx.Errors, errcode.ErrorCodeClientDisconnected.WithMessage("client disconnected"))
 		handled = true
 	}
 	return ctx.Errors, handled
