@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,6 +11,16 @@ import (
 	dcontext "github.com/docker/distribution/context"
 	"github.com/docker/distribution/registry/api/errcode"
 )
+
+type ErrorClientDisconnected struct{}
+
+func (e ErrorClientDisconnected) Error() string {
+	return errcode.ErrorCodeClientDisconnected.Error()
+}
+
+func (e ErrorClientDisconnected) CodeWithMessage() errcode.Error {
+	return errcode.ErrorCodeClientDisconnected.WithMessage("client disconnected")
+}
 
 // closeResources closes all the provided resources after running the target
 // handler.
@@ -56,7 +65,7 @@ func copyFullPayload(ctx context.Context, responseWriter http.ResponseWriter, r 
 				"copied":        copied,
 				"contentLength": r.ContentLength,
 			}, "error", "copied", "contentLength").Error("client disconnected during " + action)
-			return errors.New("client disconnected")
+			return ErrorClientDisconnected{}
 		default:
 		}
 	}
@@ -95,7 +104,7 @@ func checkForClientDisconnection(w http.ResponseWriter, r *http.Request) error {
 		select {
 		case <-clientClosed:
 			w.WriteHeader(499)
-			return errors.New("client disconnected")
+			return ErrorClientDisconnected{}
 		default:
 		}
 	}
@@ -108,8 +117,9 @@ func checkForClientDisconnection(w http.ResponseWriter, r *http.Request) error {
 func handleDisconnectionEvent(ctx *Context, w http.ResponseWriter, r *http.Request) ([]error, bool) {
 	handled := false
 	disconnected := checkForClientDisconnection(w, r)
+	err := disconnected.(ErrorClientDisconnected)
 	if disconnected != nil {
-		ctx.Errors = append(ctx.Errors, errcode.ErrorCodeClientDisconnected.WithMessage("client disconnected"))
+		ctx.Errors = append(ctx.Errors, err.CodeWithMessage())
 		handled = true
 	}
 	return ctx.Errors, handled

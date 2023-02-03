@@ -174,8 +174,8 @@ func (buh *blobUploadHandler) PatchBlobData(w http.ResponseWriter, r *http.Reque
 		switch err := err.(type) {
 		case storagedriver.QuotaExceededError:
 			buh.Errors = append(buh.Errors, errcode.ErrorCodeDenied.WithMessage("quota exceeded"))
-		case storagedriver.ClientDisconnectedError:
-			buh.Errors = append(buh.Errors, errcode.ErrorCodeClientDisconnected.WithMessage("client disconnected"))
+		case ErrorClientDisconnected:
+			buh.Errors = append(buh.Errors, err.CodeWithMessage())
 		default:
 			buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err.Error()))
 		}
@@ -221,8 +221,8 @@ func (buh *blobUploadHandler) PutBlobUploadComplete(w http.ResponseWriter, r *ht
 		switch err := err.(type) {
 		case storagedriver.QuotaExceededError:
 			buh.Errors = append(buh.Errors, errcode.ErrorCodeDenied.WithMessage("quota exceeded"))
-		case storagedriver.ClientDisconnectedError:
-			buh.Errors = append(buh.Errors, errcode.ErrorCodeClientDisconnected.WithMessage("client disconnected"))
+		case ErrorClientDisconnected:
+			buh.Errors = append(buh.Errors, err.CodeWithMessage())
 		default:
 			buh.Errors = append(buh.Errors, errcode.ErrorCodeUnknown.WithDetail(err.Error()))
 		}
