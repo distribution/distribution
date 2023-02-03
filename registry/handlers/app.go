@@ -17,33 +17,34 @@ import (
 	"strings"
 	"time"
 
-	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/configuration"
-	dcontext "github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/health"
-	"github.com/distribution/distribution/v3/health/checks"
-	prometheus "github.com/distribution/distribution/v3/metrics"
-	"github.com/distribution/distribution/v3/notifications"
-	"github.com/distribution/distribution/v3/reference"
-	"github.com/distribution/distribution/v3/registry/api/errcode"
-	v2 "github.com/distribution/distribution/v3/registry/api/v2"
-	"github.com/distribution/distribution/v3/registry/auth"
-	registrymiddleware "github.com/distribution/distribution/v3/registry/middleware/registry"
-	repositorymiddleware "github.com/distribution/distribution/v3/registry/middleware/repository"
-	"github.com/distribution/distribution/v3/registry/proxy"
-	"github.com/distribution/distribution/v3/registry/storage"
-	memorycache "github.com/distribution/distribution/v3/registry/storage/cache/memory"
-	rediscache "github.com/distribution/distribution/v3/registry/storage/cache/redis"
-	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
-	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
-	storagemiddleware "github.com/distribution/distribution/v3/registry/storage/driver/middleware"
-	"github.com/distribution/distribution/v3/version"
 	events "github.com/docker/go-events"
 	"github.com/docker/go-metrics"
 	"github.com/docker/libtrust"
-	"github.com/gomodule/redigo/redis"
+	"github.com/garyburd/redigo/redis"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
+
+	"github.com/docker/distribution"
+	"github.com/docker/distribution/configuration"
+	dcontext "github.com/docker/distribution/context"
+	"github.com/docker/distribution/health"
+	"github.com/docker/distribution/health/checks"
+	prometheus "github.com/docker/distribution/metrics"
+	"github.com/docker/distribution/notifications"
+	"github.com/docker/distribution/reference"
+	"github.com/docker/distribution/registry/api/errcode"
+	v2 "github.com/docker/distribution/registry/api/v2"
+	"github.com/docker/distribution/registry/auth"
+	registrymiddleware "github.com/docker/distribution/registry/middleware/registry"
+	repositorymiddleware "github.com/docker/distribution/registry/middleware/repository"
+	"github.com/docker/distribution/registry/proxy"
+	"github.com/docker/distribution/registry/storage"
+	memorycache "github.com/docker/distribution/registry/storage/cache/memory"
+	rediscache "github.com/docker/distribution/registry/storage/cache/redis"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/registry/storage/driver/factory"
+	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
+	"github.com/docker/distribution/version"
 )
 
 // randomSecretSize is the number of random bytes to generate if no secret
@@ -52,6 +53,9 @@ const randomSecretSize = 32
 
 // defaultCheckInterval is the default time in between health checks
 const defaultCheckInterval = 10 * time.Second
+
+// context key for storing the Cloudflare True-Client-IP header
+const cfRealIPKey string = "cf-true-client-ip"
 
 // App is a global registry application object. Shared resources can be placed
 // on this object that will be accessible from all requests. Any writable
@@ -679,7 +683,6 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 				w.Header().Add(headerName, value)
 			}
 		}
-
 		context := app.context(w, r)
 
 		defer func() {
@@ -698,7 +701,6 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 			dcontext.GetLogger(context).Warnf("error authorizing context: %v", err)
 			return
 		}
-
 		// Add username to request logging
 		context.Context = dcontext.WithLogger(context.Context, dcontext.GetLogger(context.Context, auth.UserNameKey))
 
@@ -801,12 +803,18 @@ func (app *App) logError(ctx context.Context, errors errcode.Errors) {
 // called once per request.
 func (app *App) context(w http.ResponseWriter, r *http.Request) *Context {
 	ctx := r.Context()
+	trueClientIP := r.Header.Get("true-client-ip")
+	ctx = dcontext.WithValues(ctx, map[string]interface{}{
+		cfRealIPKey: trueClientIP,
+	})
 	ctx = dcontext.WithVars(ctx, r)
 	ctx = dcontext.WithLogger(ctx, dcontext.GetLogger(ctx,
 		"vars.name",
 		"vars.reference",
 		"vars.digest",
-		"vars.uuid"))
+		"vars.uuid",
+		cfRealIPKey,
+	))
 
 	context := &Context{
 		App:     app,
