@@ -67,7 +67,8 @@ func (bh *blobHandler) GetBlob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var handled bool
-	bh.Errors, handled = handleDisconnectionEvent(bh.Context, w, r)
+	errs, handled := handleDisconnectionEvent(bh.Context, w, r)
+	bh.Errors = append(errs)
 	if handled {
 		return
 	}
