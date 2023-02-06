@@ -53,7 +53,7 @@ const randomSecretSize = 32
 const defaultCheckInterval = 10 * time.Second
 
 // context key for storing the Cloudflare True-Client-IP header
-const cfRealIPKey string = "cf-true-client-ip"
+const cfRealIPKey string = "http_request_cf-true-client-ip"
 
 // App is a global registry application object. Shared resources can be placed
 // on this object that will be accessible from all requests. Any writable
