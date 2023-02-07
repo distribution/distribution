@@ -15,6 +15,13 @@ import (
 	"strings"
 	"time"
 
+	events "github.com/docker/go-events"
+	"github.com/docker/go-metrics"
+	"github.com/docker/libtrust"
+	"github.com/garyburd/redigo/redis"
+	"github.com/gorilla/mux"
+	"github.com/sirupsen/logrus"
+
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/configuration"
 	dcontext "github.com/docker/distribution/context"
@@ -36,12 +43,6 @@ import (
 	"github.com/docker/distribution/registry/storage/driver/factory"
 	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
 	"github.com/docker/distribution/version"
-	events "github.com/docker/go-events"
-	"github.com/docker/go-metrics"
-	"github.com/docker/libtrust"
-	"github.com/garyburd/redigo/redis"
-	"github.com/gorilla/mux"
-	"github.com/sirupsen/logrus"
 )
 
 // randomSecretSize is the number of random bytes to generate if no secret
@@ -50,6 +51,9 @@ const randomSecretSize = 32
 
 // defaultCheckInterval is the default time in between health checks
 const defaultCheckInterval = 10 * time.Second
+
+// context key for storing the Cloudflare True-Client-IP header
+const cfRealIPKey string = "http_request_cf-true-client-ip"
 
 // App is a global registry application object. Shared resources can be placed
 // on this object that will be accessible from all requests. Any writable
@@ -659,14 +663,11 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 				w.Header().Add(headerName, value)
 			}
 		}
-
 		context := app.context(w, r)
-
 		if err := app.authorized(w, r, context); err != nil {
 			dcontext.GetLogger(context).Warnf("error authorizing context: %v", err)
 			return
 		}
-
 		// Add username to request logging
 		context.Context = dcontext.WithLogger(context.Context, dcontext.GetLogger(context.Context, auth.UserNameKey))
 
@@ -780,12 +781,18 @@ func (app *App) logError(ctx context.Context, errors errcode.Errors) {
 // called once per request.
 func (app *App) context(w http.ResponseWriter, r *http.Request) *Context {
 	ctx := r.Context()
+	trueClientIP := r.Header.Get("true-client-ip")
+	ctx = dcontext.WithValues(ctx, map[string]interface{}{
+		cfRealIPKey: trueClientIP,
+	})
 	ctx = dcontext.WithVars(ctx, r)
 	ctx = dcontext.WithLogger(ctx, dcontext.GetLogger(ctx,
 		"vars.name",
 		"vars.reference",
 		"vars.digest",
-		"vars.uuid"))
+		"vars.uuid",
+		cfRealIPKey,
+	))
 
 	context := &Context{
 		App:     app,
