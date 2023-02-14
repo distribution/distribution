@@ -11,6 +11,7 @@ import (
 	"github.com/distribution/distribution/v3"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/opencontainers/go-digest"
+	"github.com/sirupsen/logrus"
 )
 
 var _ distribution.TagService = &TagStore{}
@@ -30,6 +31,7 @@ func NewStore(repository *repository, blobStore *blobStore) *TagStore {
 	lookupConcurrencyFactor, err := strconv.Atoi(os.Getenv("STORAGE_TAGSTORE_LOOKUP_CONCURRENCY"))
 	if err != nil {
 		lookupConcurrencyFactor = 64
+		logrus.Infof("TagStore: STORAGE_TAGSTORE_LOOKUP_CONCURRENCY is not set. Using default %d as lookup concurrency factor", lookupConcurrencyFactor)
 	}
 	return &TagStore{
 		repository:              repository,
@@ -146,23 +148,6 @@ func (ts *TagStore) linkedBlobStore(ctx context.Context, tag string) *linkedBlob
 			})
 		},
 	}
-}
-
-type atomicError struct {
-	mu  sync.Mutex
-	err error
-}
-
-func (e *atomicError) Store(err error) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	e.err = err
-}
-
-func (e *atomicError) Load() error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	return e.err
 }
 
 // Lookup recovers a list of tags which refer to this digest.  When a manifest is deleted by
@@ -290,4 +275,21 @@ func (ts *TagStore) ManifestDigests(ctx context.Context, tag string) ([]digest.D
 		return nil, err
 	}
 	return dgsts, nil
+}
+
+type atomicError struct {
+	mu  sync.Mutex
+	err error
+}
+
+func (e *atomicError) Store(err error) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.err = err
+}
+
+func (e *atomicError) Load() error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	return e.err
 }
