@@ -166,16 +166,38 @@ func (ts *TagStore) Lookup(ctx context.Context, desc distribution.Descriptor) ([
 
 	lookupErr := &atomicError{}
 
+	allTagsCount := len(allTags)
 	inputChan := make(chan string)
-	outputChan := make(chan string, len(allTags))
+	outputChan := make(chan string, allTagsCount)
 
-	workersWaitGroup := sync.WaitGroup{}
-	workersWaitGroup.Add(ts.lookupConcurrencyFactor)
+	waitGroup := sync.WaitGroup{}
+	waitGroup.Add(allTagsCount)
 
-	for i := 0; i < ts.lookupConcurrencyFactor; i++ {
-		go func() {
-			defer workersWaitGroup.Done()
-			for tag := range inputChan {
+	limiter := make(chan struct{}, ts.lookupConcurrencyFactor)
+	acquire := func() {
+		limiter <- struct{}{}
+	}
+	release := func() {
+		<-limiter
+		waitGroup.Done()
+	}
+
+	go func() {
+		defer func() {
+			waitGroup.Wait()
+			close(outputChan)
+			close(limiter)
+		}()
+		for tag := range inputChan {
+			acquire()
+			go func(tag string) {
+				defer release()
+
+				// No need to lookup further on lookupErr
+				if lookupErr.Load() != nil {
+					return
+				}
+
 				tagLinkPathSpec := manifestTagCurrentPathSpec{
 					name: ts.repository.Named().Name(),
 					tag:  tag,
@@ -186,18 +208,20 @@ func (ts *TagStore) Lookup(ctx context.Context, desc distribution.Descriptor) ([
 
 				if err != nil {
 					switch err.(type) {
+					// PathNotFoundError shouldn't count as an error
 					case storagedriver.PathNotFoundError:
-						continue
+					default:
+						lookupErr.Store(err)
 					}
-					lookupErr.Store(err)
+					return
 				}
 
 				if tagDigest == desc.Digest {
 					outputChan <- tag
 				}
-			}
-		}()
-	}
+			}(tag)
+		}
+	}()
 
 	for _, tag := range allTags {
 		if lookupErr.Load() != nil {
@@ -210,10 +234,6 @@ func (ts *TagStore) Lookup(ctx context.Context, desc distribution.Descriptor) ([
 		}
 	}
 	close(inputChan)
-
-	workersWaitGroup.Wait()
-
-	close(outputChan)
 
 	if err := lookupErr.Load(); err != nil {
 		return nil, err
