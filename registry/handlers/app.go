@@ -645,13 +645,6 @@ func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx = dcontext.WithLogger(ctx, dcontext.GetRequestLogger(ctx))
 	r = r.WithContext(ctx)
 
-	defer func() {
-		status, ok := ctx.Value("http.response.status").(int)
-		if ok && status >= 200 && status <= 399 {
-			dcontext.GetResponseLogger(r.Context()).Infof("response completed")
-		}
-	}()
-
 	// Set a header with the Docker Distribution API Version for all responses.
 	w.Header().Add("Docker-Distribution-API-Version", "registry/2.0")
 	app.router.ServeHTTP(w, r)
@@ -677,6 +670,18 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 		}
 
 		context := app.context(w, r)
+
+		defer func() {
+			// Automated error response handling here. Handlers may return their
+			// own errors if they need different behavior (such as range errors
+			// for layer upload).
+			if context.Errors.Len() > 0 {
+				_ = errcode.ServeJSON(w, context.Errors)
+				app.logError(context, context.Errors)
+			} else if status, ok := context.Value("http.response.status").(int); ok && status >= 200 && status <= 399 {
+				dcontext.GetResponseLogger(context).Infof("response completed")
+			}
+		}()
 
 		if err := app.authorized(w, r, context); err != nil {
 			dcontext.GetLogger(context).Warnf("error authorizing context: %v", err)
@@ -740,16 +745,7 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 		}
 
 		dispatch(context, r).ServeHTTP(w, r)
-		// Automated error response handling here. Handlers may return their
-		// own errors if they need different behavior (such as range errors
-		// for layer upload).
-		if context.Errors.Len() > 0 {
-			if err := errcode.ServeJSON(w, context.Errors); err != nil {
-				dcontext.GetLogger(context).Errorf("error serving error json: %v (from %v)", err, context.Errors)
-			}
 
-			app.logError(context, context.Errors)
-		}
 	})
 }
 
