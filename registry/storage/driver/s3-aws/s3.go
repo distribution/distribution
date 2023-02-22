@@ -690,7 +690,7 @@ func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (sto
 				return nil, parseError(path, err)
 			}
 			allParts = append(allParts, partsList.Parts...)
-			for *resp.IsTruncated {
+			for *partsList.IsTruncated {
 				partsList, err = d.S3.ListParts(&s3.ListPartsInput{
 					Bucket:           aws.String(d.Bucket),
 					Key:              aws.String(key),
