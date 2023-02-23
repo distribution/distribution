@@ -635,7 +635,7 @@ func (ms *manifests) Delete(ctx context.Context, dgst digest.Digest) error {
 	return HandleErrorResponse(resp)
 }
 
-func (ms *manifests) digestFromResponse(ctx context.Context, resp *http.Response, manifestUrl string) (string, error) {
+func (ms *manifests) digestFromResponse(ctx context.Context, resp *http.Response, manifestURL string) (string, error) {
 	// The specs are ambivalent on Docker-Content-Digest header: on the one hand, the docs at https://docs.docker.com/registry/spec/api/#digest-header
 	// mention that "any response may include a Docker-Content-Digest header"  and on the other hand, the docs at
 	// https://docs.docker.com/registry/spec/api/#put-manifest say that a PUT request should return a Docker-Content-Digest header.
@@ -667,7 +667,7 @@ func (ms *manifests) digestFromResponse(ctx context.Context, resp *http.Response
 	// if we don't get a digest (do we really need one?) use a HEAD request since
 	// the spec mandates this should return a Docker-Content-Digest
 	if dgstHeader == "" {
-		req, _ := http.NewRequestWithContext(ctx, http.MethodHead, manifestUrl, nil)
+		req, _ := http.NewRequestWithContext(ctx, http.MethodHead, manifestURL, nil)
 		r, err := ms.client.Do(req)
 		if err != nil {
 			return "", err
