@@ -647,8 +647,6 @@ func (ms *manifests) digestFromResponse(ctx context.Context, resp *http.Response
 	// the digest from the response body. As a last fallback, a HEAD request is made.
 	// The function may return an empty digest - it is up to the caller to determine if not receiving the digest is an error.
 	dgstHeader := resp.Header.Get("Docker-Content-Digest")
-	fmt.Printf("%s has mediatype: '%s' and 'Docker-Content-Digest': '%s' \n", manifestUrl,
-		resp.Header.Get("Content-Type"), dgstHeader)
 	if dgstHeader != "" {
 		return dgstHeader, nil
 	}
