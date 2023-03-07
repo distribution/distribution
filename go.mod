@@ -24,7 +24,7 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.6.1
 	github.com/yvasiyarov/gorelic v0.0.0-20141212073537-a9bba5b9ab50
-	golang.org/x/crypto v0.0.0-20211215153901-e495a2d5b3d3
+	golang.org/x/crypto v0.1.0
 	golang.org/x/oauth2 v0.0.0-20210514164344-f6687ab2804c
 	google.golang.org/api v0.30.0
 	google.golang.org/cloud v0.0.0-20151119220103-975617b05ea8
