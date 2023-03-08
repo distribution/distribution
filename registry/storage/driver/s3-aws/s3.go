@@ -766,10 +766,12 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 // Writer returns a FileWriter which will store the content written to it
 // at the location designated by "path" after the call to Commit.
 func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (storagedriver.FileWriter, error) {
+	s := d.s3Client(ctx)
+
 	key := d.s3Path(path)
 	if !appendParam {
 		// TODO (brianbland): cancel other uploads at this path
-		resp, err := d.S3.CreateMultipartUpload(&s3.CreateMultipartUploadInput{
+		resp, err := s.CreateMultipartUpload(&s3.CreateMultipartUploadInput{
 			Bucket:               aws.String(d.Bucket),
 			Key:                  aws.String(key),
 			ContentType:          d.getContentType(),
@@ -789,7 +791,7 @@ func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (sto
 		Prefix: aws.String(key),
 	}
 	for {
-		resp, err := d.S3.ListMultipartUploads(listMultipartUploadsInput)
+		resp, err := s.ListMultipartUploads(listMultipartUploadsInput)
 		if err != nil {
 			return nil, parseError(path, err)
 		}
@@ -807,7 +809,7 @@ func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (sto
 				continue
 			}
 
-			partsList, err := d.S3.ListParts(&s3.ListPartsInput{
+			partsList, err := s.ListParts(&s3.ListPartsInput{
 				Bucket:   aws.String(d.Bucket),
 				Key:      aws.String(key),
 				UploadId: multi.UploadId,
@@ -817,7 +819,7 @@ func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (sto
 			}
 			allParts = append(allParts, partsList.Parts...)
 			for *partsList.IsTruncated {
-				partsList, err = d.S3.ListParts(&s3.ListPartsInput{
+				partsList, err = s.ListParts(&s3.ListPartsInput{
 					Bucket:           aws.String(d.Bucket),
 					Key:              aws.String(key),
 					UploadId:         multi.UploadId,
@@ -867,8 +869,7 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 		return storagedriver.FileInfoInternal{FileInfoFields: fi}, nil
 	}
 
-	resp, err := s.ListObjectsWithContext(ctx, &s3.ListObjectsInput{
-
+	resp, err := s.ListObjectsV2WithContext(ctx, &s3.ListObjectsV2Input{
 		Bucket:  aws.String(d.Bucket),
 		Prefix:  aws.String(d.s3Path(path)),
 		MaxKeys: aws.Int64(1),
@@ -896,6 +897,8 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 
 // List returns a list of the objects that are direct descendants of the given path.
 func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
+	s := d.s3Client(ctx)
+
 	path := opath
 	if path != "/" && path[len(path)-1] != '/' {
 		path = path + "/"
@@ -909,7 +912,7 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 		prefix = "/"
 	}
 
-	resp, err := d.S3.ListObjectsV2(&s3.ListObjectsV2Input{
+	resp, err := s.ListObjectsV2(&s3.ListObjectsV2Input{
 		Bucket:    aws.String(d.Bucket),
 		Prefix:    aws.String(d.s3Path(path)),
 		Delimiter: aws.String("/"),
@@ -933,7 +936,7 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 		}
 
 		if *resp.IsTruncated {
-			resp, err = d.S3.ListObjectsV2(&s3.ListObjectsV2Input{
+			resp, err = s.ListObjectsV2(&s3.ListObjectsV2Input{
 				Bucket:            aws.String(d.Bucket),
 				Prefix:            aws.String(d.s3Path(path)),
 				Delimiter:         aws.String("/"),
@@ -1073,15 +1076,17 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		Prefix: aws.String(s3Path),
 	}
 
+	s := d.s3Client(ctx)
+
 	for {
 		// list all the objects
-		resp, err := d.S3.ListObjectsV2(listObjectsInput)
+		resp, err := s.ListObjectsV2(listObjectsInput)
 
 		// resp.Contents can only be empty on the first call
 		// if there were no more results to return after the first call, resp.IsTruncated would have been false
 		// and the loop would exit without recalling ListObjects
 		if err != nil || len(resp.Contents) == 0 {
-			break ListLoop
+			return storagedriver.PathNotFoundError{Path: path}
 		}
 
 		for _, key := range resp.Contents {
@@ -1100,7 +1105,7 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 			// by default the response returns up to 1,000 key names. The response _might_ contain fewer keys but it will never contain more.
 			// 10000 keys is coincidentally (?) also the max number of keys that can be deleted in a single Delete operation, so we'll just smack
 			// Delete here straight away and reset the object slice when successful.
-			resp, err := d.S3.DeleteObjects(&s3.DeleteObjectsInput{
+			resp, err := s.DeleteObjects(&s3.DeleteObjectsInput{
 				Bucket: aws.String(d.Bucket),
 				Delete: &s3.Delete{
 					Objects: s3Objects,
@@ -1144,6 +1149,8 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 // May return an UnsupportedMethodErr in certain StorageDriver implementations.
 func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
+	s := d.s3Client(ctx)
+
 	methodString := http.MethodGet
 	method, ok := options["method"]
 	if ok {
@@ -1166,12 +1173,12 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 
 	switch methodString {
 	case http.MethodGet:
-		req, _ = d.S3.GetObjectRequest(&s3.GetObjectInput{
+		req, _ = s.GetObjectRequest(&s3.GetObjectInput{
 			Bucket: aws.String(d.Bucket),
 			Key:    aws.String(d.s3Path(path)),
 		})
 	case http.MethodHead:
-		req, _ = d.S3.HeadObjectRequest(&s3.HeadObjectInput{
+		req, _ = s.HeadObjectRequest(&s3.HeadObjectInput{
 			Bucket: aws.String(d.Bucket),
 			Key:    aws.String(d.s3Path(path)),
 		})
@@ -1224,6 +1231,8 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 		MaxKeys: aws.Int64(listMax),
 	}
 
+	s := d.s3Client(parentCtx)
+
 	ctx, done := dcontext.WithTrace(parentCtx)
 	defer done("s3aws.ListObjectsV2Pages(%s)", path)
 
@@ -1236,7 +1245,7 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 	// ErrSkipDir is handled by explicitly skipping over any files under the skipped directory. This may be sub-optimal
 	// for extreme edge cases but for the general use case in a registry, this is orders of magnitude
 	// faster than a more explicit recursive implementation.
-	listObjectErr := d.S3.ListObjectsV2PagesWithContext(ctx, listObjectsInput, func(objects *s3.ListObjectsV2Output, lastPage bool) bool {
+	listObjectErr := s.ListObjectsV2PagesWithContext(ctx, listObjectsInput, func(objects *s3.ListObjectsV2Output, lastPage bool) bool {
 		walkInfos := make([]storagedriver.FileInfoInternal, 0, len(objects.Contents))
 
 		for _, file := range objects.Contents {
