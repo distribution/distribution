@@ -36,10 +36,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 
-	dcontext "github.com/distribution/distribution/v3/context"
-	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
-	"github.com/distribution/distribution/v3/registry/storage/driver/base"
-	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
+	dcontext "github.com/docker/distribution/context"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/registry/storage/driver/base"
+	"github.com/docker/distribution/registry/storage/driver/factory"
 )
 
 const driverName = "s3aws"
@@ -122,6 +122,8 @@ type DriverParameters struct {
 	SessionToken                string
 	UseDualStack                bool
 	Accelerate                  bool
+	LogS3APIRequests            bool
+	LogS3APIResponseHeaders     map[string]string
 }
 
 func init() {
@@ -375,34 +377,6 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		userAgent = ""
 	}
 
-	logS3APIRequestsBool := false
-	logS3APIRequests := parameters["logs3apirequests"]
-	switch logS3APIRequests := logS3APIRequests.(type) {
-	case string:
-		b, err := strconv.ParseBool(logS3APIRequests)
-		if err != nil {
-			return nil, fmt.Errorf("the logS3APIRequests parameter should be a boolean")
-		}
-		logS3APIRequestsBool = b
-	case bool:
-		logS3APIRequestsBool = logS3APIRequests
-	case nil:
-		// do nothing
-	default:
-		return nil, fmt.Errorf("the logS3APIRequests parameter should be a boolean")
-	}
-
-	logS3APIResponseHeadersMap := map[string]string{}
-	logS3APIResponseHeaders := parameters["logs3apiresponseheaders"]
-	switch logS3APIResponseHeaders := logS3APIResponseHeaders.(type) {
-	case map[string]string:
-		logS3APIResponseHeadersMap = logS3APIResponseHeaders
-	case nil:
-		// do nothing
-	default:
-		return nil, fmt.Errorf("the logS3APIResponseHeaders parameter should be a map[string]string")
-	}
-
 	objectACL := s3.ObjectCannedACLPrivate
 	objectACLParam := parameters["objectacl"]
 	if objectACLParam != nil {
@@ -470,6 +444,34 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		return nil, fmt.Errorf("the accelerate parameter should be a boolean")
 	}
 
+	logS3APIRequestsBool := false
+	logS3APIRequests := parameters["logs3apirequests"]
+	switch logS3APIRequests := logS3APIRequests.(type) {
+	case string:
+		b, err := strconv.ParseBool(logS3APIRequests)
+		if err != nil {
+			return nil, fmt.Errorf("the logS3APIRequests parameter should be a boolean")
+		}
+		logS3APIRequestsBool = b
+	case bool:
+		logS3APIRequestsBool = logS3APIRequests
+	case nil:
+		// do nothing
+	default:
+		return nil, fmt.Errorf("the logS3APIRequests parameter should be a boolean")
+	}
+
+	logS3APIResponseHeadersMap := map[string]string{}
+	logS3APIResponseHeaders := parameters["logs3apiresponseheaders"]
+	switch logS3APIResponseHeaders := logS3APIResponseHeaders.(type) {
+	case map[string]string:
+		logS3APIResponseHeadersMap = logS3APIResponseHeaders
+	case nil:
+		// do nothing
+	default:
+		return nil, fmt.Errorf("the logS3APIResponseHeaders parameter should be a map[string]string")
+	}
+
 	params := DriverParameters{
 		nil,
 		fmt.Sprint(accessKey),
@@ -495,6 +497,8 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(sessionToken),
 		useDualStackBool,
 		accelerateBool,
+		logS3APIRequestsBool,
+		logS3APIResponseHeadersMap,
 	}
 
 	return New(params)
@@ -756,6 +760,7 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 		Key:    aws.String(d.s3Path(path)),
 		Range:  aws.String("bytes=" + strconv.FormatInt(offset, 10) + "-"),
 	})
+
 	if err != nil {
 		if s3Err, ok := err.(awserr.Error); ok && s3Err.Code() == "InvalidRange" {
 			return io.NopCloser(bytes.NewReader(nil)), nil
@@ -812,7 +817,7 @@ func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (sto
 				continue
 			}
 
-			partsList, err := d.S3.ListParts(&s3.ListPartsInput{
+			partsList, err := s.ListParts(&s3.ListPartsInput{
 				Bucket:   aws.String(d.Bucket),
 				Key:      aws.String(key),
 				UploadId: multi.UploadId,
@@ -822,7 +827,7 @@ func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (sto
 			}
 			allParts = append(allParts, partsList.Parts...)
 			for *partsList.IsTruncated {
-				partsList, err = d.S3.ListParts(&s3.ListPartsInput{
+				partsList, err = s.ListParts(&s3.ListPartsInput{
 					Bucket:           aws.String(d.Bucket),
 					Key:              aws.String(key),
 					UploadId:         multi.UploadId,
@@ -872,16 +877,12 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 		return storagedriver.FileInfoInternal{FileInfoFields: fi}, nil
 	}
 
-	resp, err := s.ListObjectsWithContext(ctx, &s3.ListObjectsInput{
-
+	resp, err := s.ListObjectsV2WithContext(ctx, &s3.ListObjectsV2Input{
 		Bucket:  aws.String(d.Bucket),
 		Prefix:  aws.String(d.s3Path(path)),
 		MaxKeys: aws.Int64(1),
 	})
-<<<<<<< HEAD
-=======
 
->>>>>>> 70cd24bd (DOCR-368 log bucket name & object key when non-upload S3 API duration exceeds threshold)
 	if err != nil {
 		return nil, err
 	}
@@ -1084,15 +1085,17 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 		Prefix: aws.String(s3Path),
 	}
 
+	s := d.s3Client(ctx)
+
 	for {
 		// list all the objects
-		resp, err := d.S3.ListObjectsV2(listObjectsInput)
+		resp, err := s.ListObjectsV2(listObjectsInput)
 
 		// resp.Contents can only be empty on the first call
 		// if there were no more results to return after the first call, resp.IsTruncated would have been false
 		// and the loop would exit without recalling ListObjects
 		if err != nil || len(resp.Contents) == 0 {
-			break ListLoop
+			return storagedriver.PathNotFoundError{Path: path}
 		}
 
 		for _, key := range resp.Contents {
@@ -1155,6 +1158,8 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 // URLFor returns a URL which may be used to retrieve the content stored at the given path.
 // May return an UnsupportedMethodErr in certain StorageDriver implementations.
 func (d *driver) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
+	s := d.s3Client(ctx)
+
 	methodString := http.MethodGet
 	method, ok := options["method"]
 	if ok {
@@ -1177,12 +1182,12 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 
 	switch methodString {
 	case http.MethodGet:
-		req, _ = d.S3.GetObjectRequest(&s3.GetObjectInput{
+		req, _ = s.GetObjectRequest(&s3.GetObjectInput{
 			Bucket: aws.String(d.Bucket),
 			Key:    aws.String(d.s3Path(path)),
 		})
 	case http.MethodHead:
-		req, _ = d.S3.HeadObjectRequest(&s3.HeadObjectInput{
+		req, _ = s.HeadObjectRequest(&s3.HeadObjectInput{
 			Bucket: aws.String(d.Bucket),
 			Key:    aws.String(d.s3Path(path)),
 		})
@@ -1254,12 +1259,8 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 
 		for _, file := range objects.Contents {
 			filePath := strings.Replace(*file.Key, d.s3Path(""), prefix, 1)
-<<<<<<< HEAD
 
 			// get a list of all inferred directories between the previous directory and this file
-=======
-			// get a list of all inferred directories skipped between the previous directory and this file
->>>>>>> d6e1686e (storagedriver/s3: Major change to the S3 Walk impl to infer directories to walk between files. This is needed for manifest enumeration among others)
 			dirs := directoryDiff(prevDir, filePath)
 			if len(dirs) > 0 {
 				for _, dir := range dirs {
@@ -1301,8 +1302,9 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 					// is file, stop gracefully
 					return false
 				}
+				retError = err
+				return false
 			}
-
 		}
 		return true
 	})
@@ -1320,23 +1322,6 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 
 // directoryDiff finds all directories that are not in common between
 // the previous and current paths in sorted order.
-//
-// # Examples
-//
-//	directoryDiff("/path/to/folder", "/path/to/folder/folder/file")
-//	// => [ "/path/to/folder/folder" ]
-//
-//	directoryDiff("/path/to/folder/folder1", "/path/to/folder/folder2/file")
-//	// => [ "/path/to/folder/folder2" ]
-//
-//	directoryDiff("/path/to/folder/folder1/file", "/path/to/folder/folder2/file")
-//	// => [ "/path/to/folder/folder2" ]
-//
-//	directoryDiff("/path/to/folder/folder1/file", "/path/to/folder/folder2/folder1/file")
-//	// => [ "/path/to/folder/folder2", "/path/to/folder/folder2/folder1" ]
-//
-//	directoryDiff("/", "/path/to/folder/folder/file")
-//	// => [ "/path", "/path/to", "/path/to/folder", "/path/to/folder/folder" ]
 //
 // Eg 1 directoryDiff("/path/to/folder", "/path/to/folder/folder/file")
 //
