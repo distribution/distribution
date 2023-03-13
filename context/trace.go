@@ -5,7 +5,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/distribution/distribution/v3/uuid"
+	"github.com/docker/distribution/uuid"
 )
 
 // WithTrace allocates a traced timing span in a new context. This allows a

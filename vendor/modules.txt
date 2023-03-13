@@ -104,6 +104,10 @@ github.com/docker/libtrust
 # github.com/felixge/httpsnoop v1.0.1
 ## explicit; go 1.13
 github.com/felixge/httpsnoop
+# github.com/garyburd/redigo v1.6.4
+## explicit; go 1.17
+github.com/garyburd/redigo/internal
+github.com/garyburd/redigo/redis
 # github.com/gofrs/uuid v4.0.0+incompatible
 ## explicit
 github.com/gofrs/uuid

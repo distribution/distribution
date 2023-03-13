@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	dcontext "github.com/distribution/distribution/v3/context"
+	dcontext "github.com/docker/distribution/context"
 
 	"reflect" // used as a replacement for testify
 )

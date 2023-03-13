@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/registry/storage"
+	"github.com/docker/distribution"
+	"github.com/docker/distribution/registry/storage"
 )
 
 // InitFunc is the type of a RegistryMiddleware factory function and is

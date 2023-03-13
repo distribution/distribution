@@ -1,4 +1,4 @@
-module github.com/distribution/distribution/v3
+module github.com/docker/distribution
 
 go 1.18
 
@@ -64,3 +64,5 @@ require (
 	google.golang.org/grpc v1.31.0 // indirect
 	google.golang.org/protobuf v1.26.0 // indirect
 )
+
+require github.com/garyburd/redigo v1.6.4

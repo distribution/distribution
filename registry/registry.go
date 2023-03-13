@@ -27,13 +27,13 @@ import (
 	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
 
-	"github.com/distribution/distribution/v3/configuration"
-	dcontext "github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/health"
-	"github.com/distribution/distribution/v3/registry/handlers"
-	"github.com/distribution/distribution/v3/registry/listener"
-	"github.com/distribution/distribution/v3/uuid"
-	"github.com/distribution/distribution/v3/version"
+	"github.com/docker/distribution/configuration"
+	dcontext "github.com/docker/distribution/context"
+	"github.com/docker/distribution/health"
+	"github.com/docker/distribution/registry/handlers"
+	"github.com/docker/distribution/registry/listener"
+	"github.com/docker/distribution/uuid"
+	"github.com/docker/distribution/version"
 )
 
 // a map of TLS cipher suite names to constants in https://golang.org/pkg/crypto/tls/#pkg-constants
