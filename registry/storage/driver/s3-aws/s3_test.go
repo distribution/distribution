@@ -49,6 +49,7 @@ func init() {
 		useDualStack     = os.Getenv("S3_USE_DUALSTACK")
 		combineSmallPart = os.Getenv("MULTIPART_COMBINE_SMALL_PART")
 		accelerate       = os.Getenv("S3_ACCELERATE")
+		objectOwnership  = os.Getenv("S3_OBJECT_OWNERSHIP")
 	)
 
 	root, err := os.MkdirTemp("", "driver-")
@@ -118,6 +119,14 @@ func init() {
 			}
 		}
 
+		objectOwnershipBool := false
+		if objectOwnership != "" {
+			objectOwnershipBool, err = strconv.ParseBool(objectOwnership)
+			if err != nil {
+				return nil, err
+			}
+		}
+
 		parameters := DriverParameters{
 			accessKey,
 			secretKey,
@@ -142,6 +151,7 @@ func init() {
 			sessionToken,
 			useDualStackBool,
 			accelerateBool,
+			objectOwnershipBool,
 		}
 
 		return New(parameters)
