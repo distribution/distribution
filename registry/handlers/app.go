@@ -96,7 +96,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		Config:  config,
 		Context: ctx,
 		router:  v2.RouterWithPrefix(config.HTTP.Prefix),
-		isCache: config.Proxy.RemoteURL != "",
+		isCache: config.Proxy.RemoteURL != "" || config.Proxy.EnableNamespaces,
 	}
 
 	// Register the handler dispatchers.
@@ -347,13 +347,17 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	}
 
 	// configure as a pull through cache
-	if config.Proxy.RemoteURL != "" {
+	if app.isCache {
 		app.registry, err = proxy.NewRegistryPullThroughCache(ctx, app.registry, app.driver, config.Proxy)
 		if err != nil {
 			panic(err.Error())
 		}
-		app.isCache = true
-		dcontext.GetLogger(app).Info("Registry configured as a proxy cache to ", config.Proxy.RemoteURL)
+
+		logMsg := fmt.Sprintf("Registry is configured as a proxy cache to %s", config.Proxy.RemoteURL)
+		if config.Proxy.EnableNamespaces {
+			logMsg = "Registry is configured as a proxy cache with namespace support"
+		}
+		dcontext.GetLogger(app).Info(logMsg)
 	}
 	var ok bool
 	app.repoRemover, ok = app.registry.(distribution.RepositoryRemover)
