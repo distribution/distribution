@@ -9,9 +9,9 @@ import (
 	"sync"
 
 	"github.com/distribution/distribution/v3"
+	dcontext "github.com/distribution/distribution/v3/context"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/opencontainers/go-digest"
-	"github.com/sirupsen/logrus"
 )
 
 var _ distribution.TagService = &TagStore{}
@@ -27,11 +27,12 @@ type TagStore struct {
 	lookupConcurrencyFactor int
 }
 
-func NewStore(repository *repository, blobStore *blobStore) *TagStore {
+func NewStore(ctx context.Context, repository *repository, blobStore *blobStore) *TagStore {
+	logger := dcontext.GetLogger(ctx)
 	lookupConcurrencyFactor, err := strconv.Atoi(os.Getenv("STORAGE_TAGSTORE_LOOKUP_CONCURRENCY"))
 	if err != nil {
 		lookupConcurrencyFactor = 64
-		logrus.Infof("TagStore: STORAGE_TAGSTORE_LOOKUP_CONCURRENCY is not set. Using default %d as lookup concurrency factor", lookupConcurrencyFactor)
+		logger.Infof("TagStore: STORAGE_TAGSTORE_LOOKUP_CONCURRENCY is not set. Using default %d as lookup concurrency factor", lookupConcurrencyFactor)
 	}
 	return &TagStore{
 		repository:              repository,
@@ -171,11 +172,11 @@ func (ts *TagStore) Lookup(ctx context.Context, desc distribution.Descriptor) ([
 	outputChan := make(chan string, allTagsCount)
 
 	waitGroup := sync.WaitGroup{}
-	waitGroup.Add(allTagsCount)
 
 	limiter := make(chan struct{}, ts.lookupConcurrencyFactor)
 	acquire := func() {
 		limiter <- struct{}{}
+		waitGroup.Add(1)
 	}
 	release := func() {
 		<-limiter
