@@ -203,7 +203,7 @@ func (repo *repository) Named() reference.Named {
 }
 
 func (repo *repository) Tags(ctx context.Context) distribution.TagService {
-	tags := NewStore(repo, repo.registry.blobStore)
+	tags := NewStore(ctx, repo, repo.registry.blobStore)
 
 	return tags
 }
