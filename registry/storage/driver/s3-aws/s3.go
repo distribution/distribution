@@ -1397,7 +1397,7 @@ func (w *writer) Write(p []byte) (int, error) {
 				w.pendingPart = append(w.pendingPart, p[:neededBytes]...)
 				n += neededBytes
 				p = p[neededBytes:]
-				err := w.flushPart()
+				err := w.flushPart(false)
 				if err != nil {
 					w.size += int64(n)
 					return n, err
@@ -1422,7 +1422,7 @@ func (w *writer) Close() error {
 		return fmt.Errorf("already closed")
 	}
 	w.closed = true
-	return w.flushPart()
+	return w.flushPart(false)
 }
 
 func (w *writer) Cancel() error {
@@ -1448,8 +1448,11 @@ func (w *writer) Commit() error {
 	} else if w.cancelled {
 		return fmt.Errorf("already cancelled")
 	}
-	err := w.flushPart()
-	if err != nil {
+
+	// The multipart upload must contain at least one part, so include a
+	// zero-length part if necessary.
+	allowEmpty := len(w.parts) == 0
+	if err := w.flushPart(allowEmpty); err != nil {
 		return err
 	}
 	w.committed = true
@@ -1464,7 +1467,7 @@ func (w *writer) Commit() error {
 
 	sort.Sort(completedUploadedParts)
 
-	_, err = w.driver.S3.CompleteMultipartUpload(&s3.CompleteMultipartUploadInput{
+	_, err := w.driver.S3.CompleteMultipartUpload(&s3.CompleteMultipartUploadInput{
 		Bucket:   aws.String(w.driver.Bucket),
 		Key:      aws.String(w.key),
 		UploadId: aws.String(w.uploadID),
@@ -1485,8 +1488,8 @@ func (w *writer) Commit() error {
 
 // flushPart flushes buffers to write a part to S3.
 // Only called by Write (with both buffers full) and Close/Commit (always)
-func (w *writer) flushPart() error {
-	if len(w.readyPart) == 0 && len(w.pendingPart) == 0 {
+func (w *writer) flushPart(allowEmpty bool) error {
+	if !allowEmpty && len(w.readyPart) == 0 && len(w.pendingPart) == 0 {
 		// nothing to write
 		return nil
 	}
