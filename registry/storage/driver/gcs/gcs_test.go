@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	dcontext "github.com/distribution/distribution/v3/context"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
@@ -278,6 +279,13 @@ func TestMoveDirectory(t *testing.T) {
 
 	ctx := dcontext.Background()
 	contents := []byte("contents")
+	sourcePath := "/parent/dir"
+	sourceFileInfo := storagedriver.FileInfoInternal{FileInfoFields: storagedriver.FileInfoFields{
+		Path:    sourcePath,
+		Size:    int64(len(contents)),
+		ModTime: time.Now(),
+		IsDir:   false,
+	}}
 	// Create a regular file.
 	err = driver.PutContent(ctx, "/parent/dir/foo", contents)
 	if err != nil {
@@ -290,7 +298,7 @@ func TestMoveDirectory(t *testing.T) {
 		}
 	}()
 
-	err = driver.Move(ctx, "/parent/dir", "/parent/other")
+	err = driver.Move(ctx, sourcePath, "/parent/other", sourceFileInfo)
 	if err == nil {
 		t.Fatalf("Moving directory /parent/dir /parent/other should have return a non-nil error\n")
 	}

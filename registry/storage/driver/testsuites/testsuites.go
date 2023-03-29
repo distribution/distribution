@@ -515,6 +515,12 @@ func (suite *DriverSuite) TestMove(c *check.C) {
 	contents := randomContents(32)
 	sourcePath := randomPath(32)
 	destPath := randomPath(32)
+	sourceFileInfo := storagedriver.FileInfoInternal{FileInfoFields: storagedriver.FileInfoFields{
+		Path:    sourcePath,
+		Size:    int64(len(contents)),
+		ModTime: time.Now(),
+		IsDir:   false,
+	}}
 
 	defer suite.deletePath(c, firstPart(sourcePath))
 	defer suite.deletePath(c, firstPart(destPath))
@@ -522,7 +528,7 @@ func (suite *DriverSuite) TestMove(c *check.C) {
 	err := suite.StorageDriver.PutContent(suite.ctx, sourcePath, contents)
 	c.Assert(err, check.IsNil)
 
-	err = suite.StorageDriver.Move(suite.ctx, sourcePath, destPath)
+	err = suite.StorageDriver.Move(suite.ctx, sourcePath, destPath, sourceFileInfo)
 	c.Assert(err, check.IsNil)
 
 	received, err := suite.StorageDriver.GetContent(suite.ctx, destPath)
@@ -542,6 +548,12 @@ func (suite *DriverSuite) TestMoveOverwrite(c *check.C) {
 	destPath := randomPath(32)
 	sourceContents := randomContents(32)
 	destContents := randomContents(64)
+	sourceFileInfo := storagedriver.FileInfoInternal{FileInfoFields: storagedriver.FileInfoFields{
+		Path:    sourcePath,
+		Size:    int64(len(sourceContents)),
+		ModTime: time.Now(),
+		IsDir:   false,
+	}}
 
 	defer suite.deletePath(c, firstPart(sourcePath))
 	defer suite.deletePath(c, firstPart(destPath))
@@ -552,7 +564,7 @@ func (suite *DriverSuite) TestMoveOverwrite(c *check.C) {
 	err = suite.StorageDriver.PutContent(suite.ctx, destPath, destContents)
 	c.Assert(err, check.IsNil)
 
-	err = suite.StorageDriver.Move(suite.ctx, sourcePath, destPath)
+	err = suite.StorageDriver.Move(suite.ctx, sourcePath, destPath, sourceFileInfo)
 	c.Assert(err, check.IsNil)
 
 	received, err := suite.StorageDriver.GetContent(suite.ctx, destPath)
@@ -577,7 +589,7 @@ func (suite *DriverSuite) TestMoveNonexistent(c *check.C) {
 	err := suite.StorageDriver.PutContent(suite.ctx, destPath, contents)
 	c.Assert(err, check.IsNil)
 
-	err = suite.StorageDriver.Move(suite.ctx, sourcePath, destPath)
+	err = suite.StorageDriver.Move(suite.ctx, sourcePath, destPath, nil)
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
 	c.Assert(strings.Contains(err.Error(), suite.Name()), check.Equals, true)
@@ -597,7 +609,7 @@ func (suite *DriverSuite) TestMoveInvalid(c *check.C) {
 	defer suite.deletePath(c, "/notadir")
 
 	// Now try to move a non-existent file under it.
-	err = suite.StorageDriver.Move(suite.ctx, "/notadir/foo", "/notadir/bar")
+	err = suite.StorageDriver.Move(suite.ctx, "/notadir/foo", "/notadir/bar", nil)
 	c.Assert(err, check.NotNil) // non-nil error
 }
 

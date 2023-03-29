@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"gopkg.in/check.v1"
 
@@ -721,7 +722,14 @@ func TestMoveWithMultipartCopy(t *testing.T) {
 		t.Fatalf("unexpected error creating content: %v", err)
 	}
 
-	err = d.Move(ctx, sourcePath, destPath)
+	sourceFileInfo := storagedriver.FileInfoInternal{FileInfoFields: storagedriver.FileInfoFields{
+		Path:    sourcePath,
+		Size:    int64(len(contents)),
+		ModTime: time.Now(),
+		IsDir:   false,
+	}}
+
+	err = d.Move(ctx, sourcePath, destPath, sourceFileInfo)
 	if err != nil {
 		t.Fatalf("unexpected error moving file: %v", err)
 	}

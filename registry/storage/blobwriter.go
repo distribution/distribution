@@ -318,7 +318,8 @@ func (bw *blobWriter) moveBlob(ctx context.Context, desc distribution.Descriptor
 	// the size here and write a zero-length file to blobPath if this is the
 	// case. For the most part, this should only ever happen with zero-length
 	// blobs.
-	if _, err := bw.blobStore.driver.Stat(ctx, bw.path); err != nil {
+	sourceFileInfo, err := bw.blobStore.driver.Stat(ctx, bw.path)
+	if err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
 			// HACK(stevvooe): This is slightly dangerous: if we verify above,
@@ -337,11 +338,16 @@ func (bw *blobWriter) moveBlob(ctx context.Context, desc distribution.Descriptor
 		default:
 			return err // unrelated error
 		}
+	} else {
+		// We will make sure that the size on the blob store matches with the local commited file.
+		if sourceFileInfo.Size() != desc.Size {
+			return distribution.ErrBlobInvalidLength
+		}
 	}
 
 	// TODO(stevvooe): We should also write the mediatype when executing this move.
 
-	return bw.blobStore.driver.Move(ctx, bw.path, blobPath)
+	return bw.blobStore.driver.Move(ctx, bw.path, blobPath, sourceFileInfo)
 }
 
 // removeResources should clean up all resources associated with the upload

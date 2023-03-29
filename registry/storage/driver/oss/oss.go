@@ -408,7 +408,7 @@ const maxConcurrency = 10
 
 // Move moves an object stored at sourcePath to destPath, removing the original
 // object.
-func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
+func (d *driver) Move(ctx context.Context, sourcePath string, destPath string, sourceFileInfo storagedriver.FileInfo) error {
 	logrus.Infof("Move from %s to %s", d.ossPath(sourcePath), d.ossPath(destPath))
 	err := d.Bucket.CopyLargeFileInParallel(d.ossPath(sourcePath), d.ossPath(destPath),
 		d.getContentType(),
