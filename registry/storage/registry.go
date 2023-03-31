@@ -259,6 +259,12 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 		}
 	}
 
+	manifestListHandler := &manifestListHandler{
+		ctx:        ctx,
+		repository: repo,
+		blobStore:  blobStore,
+	}
+
 	ms := &manifestStore{
 		ctx:            ctx,
 		repository:     repo,
@@ -270,16 +276,15 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 			blobStore:    blobStore,
 			manifestURLs: repo.registry.manifestURLs,
 		},
-		manifestListHandler: &manifestListHandler{
-			ctx:        ctx,
-			repository: repo,
-			blobStore:  blobStore,
-		},
+		manifestListHandler: manifestListHandler,
 		ocischemaHandler: &ocischemaManifestHandler{
 			ctx:          ctx,
 			repository:   repo,
 			blobStore:    blobStore,
 			manifestURLs: repo.registry.manifestURLs,
+		},
+		ocischemaIndexHandler: &ocischemaIndexHandler{
+			manifestListHandler: manifestListHandler,
 		},
 	}
 

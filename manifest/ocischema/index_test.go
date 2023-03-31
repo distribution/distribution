@@ -1,4 +1,4 @@
-package manifestlist
+package ocischema
 
 import (
 	"bytes"
@@ -8,30 +8,43 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/manifest/schema2"
-
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-const expectedManifestListSerialization = `{
+// TODO (mikebrow): add annotations on the manifest list (index) and support for
+// empty platform structs (move to Platform *Platform `json:"platform,omitempty"`
+// from current Platform PlatformSpec `json:"platform"`) in the manifest descriptor.
+// Requires changes to distribution/distribution/manifest/manifestlist.ManifestList and .ManifestDescriptor
+// and associated serialization APIs in manifestlist.go. Or split the OCI index and
+// docker manifest list implementations, which would require a lot of refactoring.
+const expectedOCIImageIndexSerialization = `{
    "schemaVersion": 2,
-   "mediaType": "application/vnd.docker.distribution.manifest.list.v2+json",
+   "mediaType": "application/vnd.oci.image.index.v1+json",
    "manifests": [
       {
-         "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+         "mediaType": "application/vnd.oci.image.manifest.v1+json",
          "digest": "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
          "size": 985,
          "platform": {
             "architecture": "amd64",
-            "os": "linux",
-            "features": [
-               "sse4"
-            ]
+            "os": "linux"
          }
       },
       {
-         "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
+         "mediaType": "application/vnd.oci.image.manifest.v1+json",
+         "digest": "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
+         "size": 985,
+         "annotations": {
+            "platform": "none"
+         }
+      },
+      {
+         "mediaType": "application/vnd.oci.image.manifest.v1+json",
          "digest": "sha256:6346340964309634683409684360934680934608934608934608934068934608",
          "size": 2392,
+         "annotations": {
+            "what": "for"
+         },
          "platform": {
             "architecture": "sun4m",
             "os": "sunos"
@@ -40,27 +53,35 @@ const expectedManifestListSerialization = `{
    ]
 }`
 
-func makeTestManifestList(t *testing.T, mediaType string) ([]ManifestDescriptor, *DeserializedManifestList) {
+func makeTestOCIImageIndex(t *testing.T, mediaType string) ([]ManifestDescriptor, *DeserializedImageIndex) {
 	manifestDescriptors := []ManifestDescriptor{
 		{
 			Descriptor: distribution.Descriptor{
-				MediaType: "application/vnd.docker.distribution.manifest.v2+json",
+				MediaType: "application/vnd.oci.image.manifest.v1+json",
 				Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
 				Size:      985,
 			},
-			Platform: PlatformSpec{
+			Platform: &v1.Platform{
 				Architecture: "amd64",
 				OS:           "linux",
-				Features:     []string{"sse4"},
 			},
 		},
 		{
 			Descriptor: distribution.Descriptor{
-				MediaType: "application/vnd.docker.distribution.manifest.v2+json",
-				Digest:    "sha256:6346340964309634683409684360934680934608934608934608934068934608",
-				Size:      2392,
+				MediaType:   "application/vnd.oci.image.manifest.v1+json",
+				Digest:      "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
+				Size:        985,
+				Annotations: map[string]string{"platform": "none"},
 			},
-			Platform: PlatformSpec{
+		},
+		{
+			Descriptor: distribution.Descriptor{
+				MediaType:   "application/vnd.oci.image.manifest.v1+json",
+				Digest:      "sha256:6346340964309634683409684360934680934608934608934608934068934608",
+				Size:        2392,
+				Annotations: map[string]string{"what": "for"},
+			},
+			Platform: &v1.Platform{
 				Architecture: "sun4m",
 				OS:           "sunos",
 			},
@@ -75,17 +96,18 @@ func makeTestManifestList(t *testing.T, mediaType string) ([]ManifestDescriptor,
 	return manifestDescriptors, deserialized
 }
 
-func TestManifestList(t *testing.T) {
-	manifestDescriptors, deserialized := makeTestManifestList(t, MediaTypeManifestList)
+func TestOCIImageIndex(t *testing.T) {
+	manifestDescriptors, deserialized := makeTestOCIImageIndex(t, v1.MediaTypeImageIndex)
+
 	mediaType, canonical, _ := deserialized.Payload()
 
-	if mediaType != MediaTypeManifestList {
+	if mediaType != v1.MediaTypeImageIndex {
 		t.Fatalf("unexpected media type: %s", mediaType)
 	}
 
 	// Check that the canonical field is the same as json.MarshalIndent
 	// with these parameters.
-	expected, err := json.MarshalIndent(&deserialized.ManifestList, "", "   ")
+	expected, err := json.MarshalIndent(&deserialized.ImageIndex, "", "   ")
 	if err != nil {
 		t.Fatalf("error marshaling manifest list: %v", err)
 	}
@@ -94,11 +116,11 @@ func TestManifestList(t *testing.T) {
 	}
 
 	// Check that the canonical field has the expected value.
-	if !bytes.Equal([]byte(expectedManifestListSerialization), canonical) {
-		t.Fatalf("manifest bytes not equal:\nexpected:\n%s\nactual:\n%s\n", expectedManifestListSerialization, string(canonical))
+	if !bytes.Equal([]byte(expectedOCIImageIndexSerialization), canonical) {
+		t.Fatalf("manifest bytes not equal:\nexpected:\n%s\nactual:\n%s\n", expectedOCIImageIndexSerialization, string(canonical))
 	}
 
-	var unmarshalled DeserializedManifestList
+	var unmarshalled DeserializedImageIndex
 	if err := json.Unmarshal(deserialized.canonical, &unmarshalled); err != nil {
 		t.Fatalf("error unmarshaling manifest: %v", err)
 	}
@@ -108,18 +130,11 @@ func TestManifestList(t *testing.T) {
 	}
 
 	references := deserialized.References()
-	if len(references) != 2 {
+	if len(references) != 3 {
 		t.Fatalf("unexpected number of references: %d", len(references))
 	}
 	for i := range references {
-		platform := manifestDescriptors[i].Platform
-		expectedPlatform := &v1.Platform{
-			Architecture: platform.Architecture,
-			OS:           platform.OS,
-			OSFeatures:   platform.OSFeatures,
-			OSVersion:    platform.OSVersion,
-			Variant:      platform.Variant,
-		}
+		expectedPlatform := manifestDescriptors[i].Platform
 		if !reflect.DeepEqual(references[i].Platform, expectedPlatform) {
 			t.Fatalf("unexpected value %d returned by References: %v", i, references[i])
 		}
@@ -130,10 +145,10 @@ func TestManifestList(t *testing.T) {
 	}
 }
 
-func mediaTypeTest(contentType string, mediaType string, shouldError bool) func(*testing.T) {
+func indexMediaTypeTest(contentType string, mediaType string, shouldError bool) func(*testing.T) {
 	return func(t *testing.T) {
-		var m *DeserializedManifestList
-		_, m = makeTestManifestList(t, mediaType)
+		var m *DeserializedImageIndex
+		_, m = makeTestOCIImageIndex(t, mediaType)
 
 		_, canonical, err := m.Payload()
 		if err != nil {
@@ -153,7 +168,7 @@ func mediaTypeTest(contentType string, mediaType string, shouldError bool) func(
 				t.Fatalf("error unmarshaling manifest, %v", err)
 			}
 
-			asManifest := unmarshalled.(*DeserializedManifestList)
+			asManifest := unmarshalled.(*DeserializedImageIndex)
 			if asManifest.MediaType != mediaType {
 				t.Fatalf("Bad media type '%v' as unmarshalled", asManifest.MediaType)
 			}
@@ -170,29 +185,29 @@ func mediaTypeTest(contentType string, mediaType string, shouldError bool) func(
 	}
 }
 
-func TestMediaTypes(t *testing.T) {
-	t.Run("ManifestList_No_MediaType", mediaTypeTest(MediaTypeManifestList, "", true))
-	t.Run("ManifestList", mediaTypeTest(MediaTypeManifestList, MediaTypeManifestList, false))
-	t.Run("ManifestList_Bad_MediaType", mediaTypeTest(MediaTypeManifestList, MediaTypeManifestList+"XXX", true))
+func TestIndexMediaTypes(t *testing.T) {
+	t.Run("No_MediaType", indexMediaTypeTest(v1.MediaTypeImageIndex, "", false))
+	t.Run("ImageIndex", indexMediaTypeTest(v1.MediaTypeImageIndex, v1.MediaTypeImageIndex, false))
+	t.Run("Bad_MediaType", indexMediaTypeTest(v1.MediaTypeImageIndex, v1.MediaTypeImageIndex+"XXX", true))
 }
 
-func TestValidateManifestList(t *testing.T) {
+func TestValidateIndex(t *testing.T) {
 	manifest := schema2.Manifest{
 		Config: distribution.Descriptor{Size: 1},
 		Layers: []distribution.Descriptor{{Size: 2}},
 	}
-	manifestList := ManifestList{
+	index := ImageIndex{
 		Manifests: []ManifestDescriptor{
 			{Descriptor: distribution.Descriptor{Size: 3}},
 		},
 	}
 	t.Run("valid", func(t *testing.T) {
-		b, err := json.Marshal(manifestList)
+		b, err := json.Marshal(index)
 		if err != nil {
-			t.Fatal("unexpected error marshaling manifest list", err)
+			t.Fatal("unexpected error marshaling index", err)
 		}
-		if err := validateManifestList(b); err != nil {
-			t.Error("list should be valid", err)
+		if err := validateIndex(b); err != nil {
+			t.Error("index should be valid", err)
 		}
 	})
 	t.Run("invalid", func(t *testing.T) {
@@ -200,7 +215,7 @@ func TestValidateManifestList(t *testing.T) {
 		if err != nil {
 			t.Fatal("unexpected error marshaling manifest", err)
 		}
-		if err := validateManifestList(b); err == nil {
+		if err := validateIndex(b); err == nil {
 			t.Error("manifest should not be valid")
 		}
 	})
