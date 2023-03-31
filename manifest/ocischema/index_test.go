@@ -11,12 +11,6 @@ import (
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-// TODO (mikebrow): add annotations on the manifest list (index) and support for
-// empty platform structs (move to Platform *Platform `json:"platform,omitempty"`
-// from current Platform PlatformSpec `json:"platform"`) in the manifest descriptor.
-// Requires changes to distribution/distribution/manifest/manifestlist.ManifestList and .ManifestDescriptor
-// and associated serialization APIs in manifestlist.go. Or split the OCI index and
-// docker manifest list implementations, which would require a lot of refactoring.
 const expectedOCIImageIndexSerialization = `{
    "schemaVersion": 2,
    "mediaType": "application/vnd.oci.image.index.v1+json",
@@ -50,7 +44,11 @@ const expectedOCIImageIndexSerialization = `{
             "os": "sunos"
          }
       }
-   ]
+   ],
+   "annotations": {
+      "com.example.favourite-colour": "blue",
+      "com.example.locale": "en_GB"
+   }
 }`
 
 func makeTestOCIImageIndex(t *testing.T, mediaType string) ([]ManifestDescriptor, *DeserializedImageIndex) {
@@ -87,8 +85,12 @@ func makeTestOCIImageIndex(t *testing.T, mediaType string) ([]ManifestDescriptor
 			},
 		},
 	}
+	annotations := map[string]string{
+		"com.example.favourite-colour": "blue",
+		"com.example.locale":           "en_GB",
+	}
 
-	deserialized, err := fromDescriptorsWithMediaType(manifestDescriptors, mediaType)
+	deserialized, err := fromDescriptorsWithMediaType(manifestDescriptors, annotations, mediaType)
 	if err != nil {
 		t.Fatalf("error creating DeserializedManifestList: %v", err)
 	}

@@ -576,7 +576,7 @@ func TestLinkPathFuncs(t *testing.T) {
 }
 
 func ociIndexFromDesriptorsWithMediaType(descriptors []ocischema.ManifestDescriptor, mediaType string) (*ocischema.DeserializedImageIndex, error) {
-	manifest, err := ocischema.FromDescriptors(descriptors)
+	manifest, err := ocischema.FromDescriptors(descriptors, nil)
 	if err != nil {
 		return nil, err
 	}

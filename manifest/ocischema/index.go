@@ -60,6 +60,10 @@ type ImageIndex struct {
 
 	// Manifests references a list of manifests
 	Manifests []ManifestDescriptor `json:"manifests"`
+
+	// Annotations is an optional field that contains arbitrary metadata for the
+	// image index
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // References returns the distribution descriptors for the referenced image
@@ -83,20 +87,22 @@ type DeserializedImageIndex struct {
 	canonical []byte
 }
 
-// FromDescriptors takes a slice of descriptors, and returns a
-// DeserializedManifestList which contains the resulting manifest list
-// and its JSON representation.
-func FromDescriptors(descriptors []ManifestDescriptor) (*DeserializedImageIndex, error) {
-	return fromDescriptorsWithMediaType(descriptors, v1.MediaTypeImageIndex)
+// FromDescriptors takes a slice of descriptors and a map of annotations, and
+// returns a DeserializedManifestList which contains the resulting manifest list
+// and its JSON representation. If annotations is nil or empty then the
+// annotations property will be omitted from the JSON representation.
+func FromDescriptors(descriptors []ManifestDescriptor, annotations map[string]string) (*DeserializedImageIndex, error) {
+	return fromDescriptorsWithMediaType(descriptors, annotations, v1.MediaTypeImageIndex)
 }
 
 // fromDescriptorsWithMediaType is for testing purposes, it's useful to be able to specify the media type explicitly
-func fromDescriptorsWithMediaType(descriptors []ManifestDescriptor, mediaType string) (*DeserializedImageIndex, error) {
+func fromDescriptorsWithMediaType(descriptors []ManifestDescriptor, annotations map[string]string, mediaType string) (*DeserializedImageIndex, error) {
 	m := ImageIndex{
 		Versioned: manifest.Versioned{
 			SchemaVersion: 2,
 			MediaType:     mediaType,
 		},
+		Annotations: annotations,
 	}
 
 	m.Manifests = make([]ManifestDescriptor, len(descriptors))
