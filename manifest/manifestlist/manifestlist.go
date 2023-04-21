@@ -129,7 +129,7 @@ func FromDescriptors(descriptors []ManifestDescriptor) (*DeserializedManifestLis
 func fromDescriptorsWithMediaType(descriptors []ManifestDescriptor, mediaType string) (*DeserializedManifestList, error) {
 	m := ManifestList{
 		Versioned: manifest.Versioned{
-			SchemaVersion: 2,
+			SchemaVersion: SchemaVersion.SchemaVersion,
 			MediaType:     mediaType,
 		},
 	}

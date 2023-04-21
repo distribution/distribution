@@ -11,9 +11,9 @@ import (
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-// OCISchemaVersion provides a pre-initialized version structure for this
-// packages OCIschema version of the manifest.
-var OCISchemaVersion = manifest.Versioned{
+// IndexSchemaVersion provides a pre-initialized version structure for OCI Image
+// Indices.
+var IndexSchemaVersion = manifest.Versioned{
 	SchemaVersion: 2,
 	MediaType:     v1.MediaTypeImageIndex,
 }
@@ -69,13 +69,13 @@ type ImageIndex struct {
 // References returns the distribution descriptors for the referenced image
 // manifests.
 func (ii ImageIndex) References() []distribution.Descriptor {
-	dependencies := make([]distribution.Descriptor, len(ii.Manifests))
+	references := make([]distribution.Descriptor, len(ii.Manifests))
 	for i := range ii.Manifests {
-		dependencies[i] = ii.Manifests[i].Descriptor
-		dependencies[i].Platform = ii.Manifests[i].Platform
+		references[i] = ii.Manifests[i].Descriptor
+		references[i].Platform = ii.Manifests[i].Platform
 	}
 
-	return dependencies
+	return references
 }
 
 // DeserializedImageIndex wraps ManifestList with a copy of the original
@@ -96,10 +96,10 @@ func FromDescriptors(descriptors []ManifestDescriptor, annotations map[string]st
 }
 
 // fromDescriptorsWithMediaType is for testing purposes, it's useful to be able to specify the media type explicitly
-func fromDescriptorsWithMediaType(descriptors []ManifestDescriptor, annotations map[string]string, mediaType string) (*DeserializedImageIndex, error) {
+func fromDescriptorsWithMediaType(descriptors []ManifestDescriptor, annotations map[string]string, mediaType string) (_ *DeserializedImageIndex, err error) {
 	m := ImageIndex{
 		Versioned: manifest.Versioned{
-			SchemaVersion: 2,
+			SchemaVersion: IndexSchemaVersion.SchemaVersion,
 			MediaType:     mediaType,
 		},
 		Annotations: annotations,
@@ -112,7 +112,6 @@ func fromDescriptorsWithMediaType(descriptors []ManifestDescriptor, annotations 
 		ImageIndex: m,
 	}
 
-	var err error
 	deserialized.canonical, err = json.MarshalIndent(&m, "", "   ")
 	return &deserialized, err
 }
@@ -147,11 +146,9 @@ func (m *DeserializedImageIndex) MarshalJSON() ([]byte, error) {
 // Payload returns the raw content of the manifest list. The contents can be
 // used to calculate the content identifier.
 func (m DeserializedImageIndex) Payload() (string, []byte, error) {
-	var mediaType string
+	mediaType := m.MediaType
 	if m.MediaType == "" {
 		mediaType = v1.MediaTypeImageIndex
-	} else {
-		mediaType = m.MediaType
 	}
 
 	return mediaType, m.canonical, nil

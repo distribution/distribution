@@ -34,17 +34,19 @@ func (ms *manifestListHandler) Unmarshal(ctx context.Context, dgst digest.Digest
 func (ms *manifestListHandler) Put(ctx context.Context, manifestList distribution.Manifest, skipDependencyVerification bool) (digest.Digest, error) {
 	dcontext.GetLogger(ms.ctx).Debug("(*manifestListHandler).Put")
 
-	var schemaVersion int
+	var schemaVersion, expectedSchemaVersion int
 	switch m := manifestList.(type) {
 	case *manifestlist.DeserializedManifestList:
+		expectedSchemaVersion = manifestlist.SchemaVersion.SchemaVersion
 		schemaVersion = m.SchemaVersion
 	case *ocischema.DeserializedImageIndex:
+		expectedSchemaVersion = ocischema.IndexSchemaVersion.SchemaVersion
 		schemaVersion = m.SchemaVersion
 	default:
 		return "", fmt.Errorf("wrong type put to manifestListHandler: %T", manifestList)
 	}
-	if schemaVersion != 2 {
-		return "", fmt.Errorf("unrecognized manifest list schema version %d", schemaVersion)
+	if schemaVersion != expectedSchemaVersion {
+		return "", fmt.Errorf("unrecognized manifest list schema version %d, expected %d", schemaVersion, expectedSchemaVersion)
 	}
 
 	if err := ms.verifyManifest(ms.ctx, manifestList, skipDependencyVerification); err != nil {

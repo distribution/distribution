@@ -11,10 +11,10 @@ import (
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-// SchemaVersion provides a pre-initialized version structure for this
-// packages version of the manifest.
+// SchemaVersion provides a pre-initialized version structure for OCI Image
+// Manifests
 var SchemaVersion = manifest.Versioned{
-	SchemaVersion: 2, // historical value here.. does not pertain to OCI or docker version
+	SchemaVersion: 2,
 	MediaType:     v1.MediaTypeImageManifest,
 }
 
