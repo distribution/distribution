@@ -81,21 +81,23 @@ func TestCheckAPI(t *testing.T) {
 
 // TestCatalogAPI tests the /v2/_catalog endpoint
 func TestCatalogAPI(t *testing.T) {
-	chunkLen := 2
 	env := newTestEnv(t, false)
 	defer env.Shutdown()
 
-	values := url.Values{
-		"last": []string{""},
-		"n":    []string{strconv.Itoa(chunkLen)}}
+	maxEntries := env.config.Catalog.MaxEntries
+	allCatalog := []string{
+		"foo/aaaa", "foo/bbbb", "foo/cccc", "foo/dddd", "foo/eeee", "foo/ffff",
+	}
 
-	catalogURL, err := env.builder.BuildCatalogURL(values)
+	chunkLen := maxEntries - 1
+
+	catalogURL, err := env.builder.BuildCatalogURL()
 	if err != nil {
 		t.Fatalf("unexpected error building catalog url: %v", err)
 	}
 
 	// -----------------------------------
-	// try to get an empty catalog
+	// Case No. 1: Empty catalog
 	resp, err := http.Get(catalogURL)
 	if err != nil {
 		t.Fatalf("unexpected error issuing request: %v", err)
@@ -113,23 +115,22 @@ func TestCatalogAPI(t *testing.T) {
 		t.Fatalf("error decoding fetched manifest: %v", err)
 	}
 
-	// we haven't pushed anything to the registry yet
+	// No images pushed = no image returned
 	if len(ctlg.Repositories) != 0 {
-		t.Fatalf("repositories has unexpected values")
+		t.Fatalf("repositories returned unexpected entries (expected: %d, returned: %d)", 0, len(ctlg.Repositories))
 	}
 
+	// No pagination should be returned
 	if resp.Header.Get("Link") != "" {
 		t.Fatalf("repositories has more data when none expected")
 	}
 
-	// -----------------------------------
-	// push something to the registry and try again
-	images := []string{"foo/aaaa", "foo/bbbb", "foo/cccc"}
-
-	for _, image := range images {
+	for _, image := range allCatalog {
 		createRepository(env, t, image, "sometag")
 	}
 
+	// -----------------------------------
+	// Case No. 2: Catalog populated & n is not provided nil (n internally will be min(100, maxEntries))
 	resp, err = http.Get(catalogURL)
 	if err != nil {
 		t.Fatalf("unexpected error issuing request: %v", err)
@@ -143,27 +144,30 @@ func TestCatalogAPI(t *testing.T) {
 		t.Fatalf("error decoding fetched manifest: %v", err)
 	}
 
-	if len(ctlg.Repositories) != chunkLen {
-		t.Fatalf("repositories has unexpected values")
+	// it must match max entries
+	if len(ctlg.Repositories) != maxEntries {
+		t.Fatalf("repositories returned unexpected entries (expected: %d, returned: %d)", maxEntries, len(ctlg.Repositories))
 	}
 
-	for _, image := range images[:chunkLen] {
+	// it must return the first maxEntries entries from the catalog
+	for _, image := range allCatalog[:maxEntries] {
 		if !contains(ctlg.Repositories, image) {
 			t.Fatalf("didn't find our repository '%s' in the catalog", image)
 		}
 	}
 
+	// fail if there's no pagination
 	link := resp.Header.Get("Link")
 	if link == "" {
 		t.Fatalf("repositories has less data than expected")
 	}
-
-	newValues := checkLink(t, link, chunkLen, ctlg.Repositories[len(ctlg.Repositories)-1])
-
 	// -----------------------------------
-	// get the last chunk of data
+	// Case No. 2.1: Second page (n internally will be min(100, maxEntries))
 
-	catalogURL, err = env.builder.BuildCatalogURL(newValues)
+	// build pagination link
+	values := checkLink(t, link, maxEntries, ctlg.Repositories[len(ctlg.Repositories)-1])
+
+	catalogURL, err = env.builder.BuildCatalogURL(values)
 	if err != nil {
 		t.Fatalf("unexpected error building catalog url: %v", err)
 	}
@@ -181,18 +185,269 @@ func TestCatalogAPI(t *testing.T) {
 		t.Fatalf("error decoding fetched manifest: %v", err)
 	}
 
-	if len(ctlg.Repositories) != 1 {
-		t.Fatalf("repositories has unexpected values")
+	expectedRemainder := len(allCatalog) - maxEntries
+	if len(ctlg.Repositories) != expectedRemainder {
+		t.Fatalf("repositories returned unexpected entries (expected: %d, returned: %d)", expectedRemainder, len(ctlg.Repositories))
 	}
 
-	lastImage := images[len(images)-1]
-	if !contains(ctlg.Repositories, lastImage) {
-		t.Fatalf("didn't find our repository '%s' in the catalog", lastImage)
+	// -----------------------------------
+	// Case No. 3: request n = maxentries
+	values = url.Values{
+		"last": []string{""},
+		"n":    []string{strconv.Itoa(maxEntries)},
 	}
 
+	catalogURL, err = env.builder.BuildCatalogURL(values)
+	if err != nil {
+		t.Fatalf("unexpected error building catalog url: %v", err)
+	}
+
+	resp, err = http.Get(catalogURL)
+	if err != nil {
+		t.Fatalf("unexpected error issuing request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	checkResponse(t, "issuing catalog api check", resp, http.StatusOK)
+
+	dec = json.NewDecoder(resp.Body)
+	if err = dec.Decode(&ctlg); err != nil {
+		t.Fatalf("error decoding fetched manifest: %v", err)
+	}
+
+	if len(ctlg.Repositories) != maxEntries {
+		t.Fatalf("repositories returned unexpected entries (expected: %d, returned: %d)", maxEntries, len(ctlg.Repositories))
+	}
+
+	// fail if there's no pagination
 	link = resp.Header.Get("Link")
-	if link != "" {
-		t.Fatalf("catalog has unexpected data")
+	if link == "" {
+		t.Fatalf("repositories has less data than expected")
+	}
+
+	// -----------------------------------
+	// Case No. 3.1: Second (last) page
+
+	// build pagination link
+	values = checkLink(t, link, maxEntries, ctlg.Repositories[len(ctlg.Repositories)-1])
+
+	catalogURL, err = env.builder.BuildCatalogURL(values)
+	if err != nil {
+		t.Fatalf("unexpected error building catalog url: %v", err)
+	}
+
+	resp, err = http.Get(catalogURL)
+	if err != nil {
+		t.Fatalf("unexpected error issuing request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	checkResponse(t, "issuing catalog api check", resp, http.StatusOK)
+
+	dec = json.NewDecoder(resp.Body)
+	if err = dec.Decode(&ctlg); err != nil {
+		t.Fatalf("error decoding fetched manifest: %v", err)
+	}
+
+	expectedRemainder = len(allCatalog) - maxEntries
+	if len(ctlg.Repositories) != expectedRemainder {
+		t.Fatalf("repositories returned unexpected entries (expected: %d, returned: %d)", expectedRemainder, len(ctlg.Repositories))
+	}
+
+	// -----------------------------------
+	// Case No. 4: request n < maxentries
+	values = url.Values{
+		"n": []string{strconv.Itoa(chunkLen)},
+	}
+
+	catalogURL, err = env.builder.BuildCatalogURL(values)
+	if err != nil {
+		t.Fatalf("unexpected error building catalog url: %v", err)
+	}
+
+	resp, err = http.Get(catalogURL)
+	if err != nil {
+		t.Fatalf("unexpected error issuing request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	checkResponse(t, "issuing catalog api check", resp, http.StatusOK)
+
+	dec = json.NewDecoder(resp.Body)
+	if err = dec.Decode(&ctlg); err != nil {
+		t.Fatalf("error decoding fetched manifest: %v", err)
+	}
+
+	// returns the requested amount
+	if len(ctlg.Repositories) != chunkLen {
+		t.Fatalf("repositories returned unexpected entries (expected: %d, returned: %d)", expectedRemainder, len(ctlg.Repositories))
+	}
+
+	// fail if there's no pagination
+	link = resp.Header.Get("Link")
+	if link == "" {
+		t.Fatalf("repositories has less data than expected")
+	}
+
+	// -----------------------------------
+	// Case No. 4.1: request n < maxentries (second page)
+
+	// build pagination link
+	values = checkLink(t, link, chunkLen, ctlg.Repositories[len(ctlg.Repositories)-1])
+
+	catalogURL, err = env.builder.BuildCatalogURL(values)
+	if err != nil {
+		t.Fatalf("unexpected error building catalog url: %v", err)
+	}
+
+	resp, err = http.Get(catalogURL)
+	if err != nil {
+		t.Fatalf("unexpected error issuing request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	checkResponse(t, "issuing catalog api check", resp, http.StatusOK)
+
+	dec = json.NewDecoder(resp.Body)
+	if err = dec.Decode(&ctlg); err != nil {
+		t.Fatalf("error decoding fetched manifest: %v", err)
+	}
+
+	expectedRemainder = len(allCatalog) - chunkLen
+	if len(ctlg.Repositories) != expectedRemainder {
+		t.Fatalf("repositories returned unexpected entries (expected: %d, returned: %d)", expectedRemainder, len(ctlg.Repositories))
+	}
+
+	// -----------------------------------
+	// Case No. 5: request n > maxentries | return err: ErrorCodePaginationNumberInvalid
+	values = url.Values{
+		"n": []string{strconv.Itoa(maxEntries + 10)},
+	}
+
+	catalogURL, err = env.builder.BuildCatalogURL(values)
+	if err != nil {
+		t.Fatalf("unexpected error building catalog url: %v", err)
+	}
+
+	resp, err = http.Get(catalogURL)
+	if err != nil {
+		t.Fatalf("unexpected error issuing request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	checkResponse(t, "issuing catalog api check", resp, http.StatusBadRequest)
+	checkBodyHasErrorCodes(t, "invalid number of results requested", resp, v2.ErrorCodePaginationNumberInvalid)
+
+	// -----------------------------------
+	// Case No. 6: request n > maxentries but <= total catalog | return err: ErrorCodePaginationNumberInvalid
+	values = url.Values{
+		"n": []string{strconv.Itoa(len(allCatalog))},
+	}
+
+	catalogURL, err = env.builder.BuildCatalogURL(values)
+	if err != nil {
+		t.Fatalf("unexpected error building catalog url: %v", err)
+	}
+
+	resp, err = http.Get(catalogURL)
+	if err != nil {
+		t.Fatalf("unexpected error issuing request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	checkResponse(t, "issuing catalog api check", resp, http.StatusBadRequest)
+	checkBodyHasErrorCodes(t, "invalid number of results requested", resp, v2.ErrorCodePaginationNumberInvalid)
+
+	// -----------------------------------
+	// Case No. 7: n = 0 | n is set to max(0, min(defaultEntries, maxEntries))
+	values = url.Values{
+		"n": []string{"0"},
+	}
+
+	catalogURL, err = env.builder.BuildCatalogURL(values)
+	if err != nil {
+		t.Fatalf("unexpected error building catalog url: %v", err)
+	}
+
+	resp, err = http.Get(catalogURL)
+	if err != nil {
+		t.Fatalf("unexpected error issuing request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	checkResponse(t, "issuing catalog api check", resp, http.StatusOK)
+
+	dec = json.NewDecoder(resp.Body)
+	if err = dec.Decode(&ctlg); err != nil {
+		t.Fatalf("error decoding fetched manifest: %v", err)
+	}
+
+	// it must be empty
+	if len(ctlg.Repositories) != 0 {
+		t.Fatalf("repositories returned unexpected entries (expected: %d, returned: %d)", 0, len(ctlg.Repositories))
+	}
+
+	// -----------------------------------
+	// Case No. 8: n = -1 | n is set to max(0, min(defaultEntries, maxEntries))
+	values = url.Values{
+		"n": []string{"-1"},
+	}
+
+	catalogURL, err = env.builder.BuildCatalogURL(values)
+	if err != nil {
+		t.Fatalf("unexpected error building catalog url: %v", err)
+	}
+
+	resp, err = http.Get(catalogURL)
+	if err != nil {
+		t.Fatalf("unexpected error issuing request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	checkResponse(t, "issuing catalog api check", resp, http.StatusOK)
+
+	dec = json.NewDecoder(resp.Body)
+	if err = dec.Decode(&ctlg); err != nil {
+		t.Fatalf("error decoding fetched manifest: %v", err)
+	}
+
+	// it must match max entries
+	if len(ctlg.Repositories) != maxEntries {
+		t.Fatalf("repositories returned unexpected entries (expected: %d, returned: %d)", expectedRemainder, len(ctlg.Repositories))
+	}
+
+	// -----------------------------------
+	// Case No. 9: n = 5, max = 5, total catalog = 4
+	values = url.Values{
+		"n": []string{strconv.Itoa(maxEntries)},
+	}
+
+	envWithLessImages := newTestEnv(t, false)
+	for _, image := range allCatalog[0:(maxEntries - 1)] {
+		createRepository(envWithLessImages, t, image, "sometag")
+	}
+
+	catalogURL, err = envWithLessImages.builder.BuildCatalogURL(values)
+	if err != nil {
+		t.Fatalf("unexpected error building catalog url: %v", err)
+	}
+
+	resp, err = http.Get(catalogURL)
+	if err != nil {
+		t.Fatalf("unexpected error issuing request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	checkResponse(t, "issuing catalog api check", resp, http.StatusOK)
+
+	dec = json.NewDecoder(resp.Body)
+	if err = dec.Decode(&ctlg); err != nil {
+		t.Fatalf("error decoding fetched manifest: %v", err)
+	}
+
+	// it must match max entries
+	if len(ctlg.Repositories) != maxEntries-1 {
+		t.Fatalf("repositories returned unexpected entries (expected: %d, returned: %d)", maxEntries-1, len(ctlg.Repositories))
 	}
 }
 
@@ -207,7 +462,7 @@ func checkLink(t *testing.T, urlStr string, numEntries int, last string) url.Val
 	urlValues := linkURL.Query()
 
 	if urlValues.Get("n") != strconv.Itoa(numEntries) {
-		t.Fatalf("Catalog link entry size is incorrect")
+		t.Fatalf("Catalog link entry size is incorrect (expected: %v, returned: %v)", urlValues.Get("n"), strconv.Itoa(numEntries))
 	}
 
 	if urlValues.Get("last") != last {
@@ -2023,6 +2278,9 @@ func newTestEnvMirror(t *testing.T, deleteEnabled bool) *testEnv {
 		Proxy: configuration.Proxy{
 			RemoteURL: "http://example.com",
 		},
+		Catalog: configuration.Catalog{
+			MaxEntries: 5,
+		},
 	}
 	config.Compatibility.Schema1.Enabled = true
 
@@ -2038,6 +2296,9 @@ func newTestEnv(t *testing.T, deleteEnabled bool) *testEnv {
 			"maintenance": configuration.Parameters{"uploadpurging": map[interface{}]interface{}{
 				"enabled": false,
 			}},
+		},
+		Catalog: configuration.Catalog{
+			MaxEntries: 5,
 		},
 	}
 
@@ -2291,7 +2552,6 @@ func checkResponse(t *testing.T, msg string, resp *http.Response, expectedStatus
 	if resp.StatusCode != expectedStatus {
 		t.Logf("unexpected status %s: %v != %v", msg, resp.StatusCode, expectedStatus)
 		maybeDumpResponse(t, resp)
-
 		t.FailNow()
 	}
 
