@@ -97,6 +97,12 @@ storage:
     accountname: accountname
     accountkey: base64encodedaccountkey
     container: containername
+    rootdirectory: /az/object/name/prefix
+    credentials:
+      type: client_secret
+      clientid: client_id_string
+      tenantid: tenant_id_string
+      secret: secret_string
   gcs:
     bucket: bucketname
     keyfile: /path/to/keyfile

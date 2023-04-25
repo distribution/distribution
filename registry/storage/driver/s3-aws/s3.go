@@ -1425,7 +1425,7 @@ func (w *writer) Close() error {
 	return w.flushPart()
 }
 
-func (w *writer) Cancel() error {
+func (w *writer) Cancel(ctx context.Context) error {
 	if w.closed {
 		return fmt.Errorf("already closed")
 	} else if w.committed {

@@ -94,7 +94,7 @@ func (bw *blobWriter) Commit(ctx context.Context, desc distribution.Descriptor) 
 // the writer and canceling the operation.
 func (bw *blobWriter) Cancel(ctx context.Context) error {
 	dcontext.GetLogger(ctx).Debug("(*blobWriter).Cancel")
-	if err := bw.fileWriter.Cancel(); err != nil {
+	if err := bw.fileWriter.Cancel(ctx); err != nil {
 		return err
 	}
 
