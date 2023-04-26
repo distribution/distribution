@@ -116,7 +116,7 @@ func makeTestToken(issuer, audience string, access []*ResourceActions, rootKey l
 	claimSet := &ClaimSet{
 		Issuer:     issuer,
 		Subject:    "foo",
-		Audience:   audience,
+		Audience:   []string{audience},
 		Expiration: exp.Unix(),
 		NotBefore:  now.Unix(),
 		IssuedAt:   now.Unix(),
