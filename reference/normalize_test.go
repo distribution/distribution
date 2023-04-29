@@ -677,6 +677,7 @@ func TestParseDockerRef(t *testing.T) {
 		},
 	}
 	for _, test := range testcases {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			normalized, err := ParseDockerRef(test.input)
