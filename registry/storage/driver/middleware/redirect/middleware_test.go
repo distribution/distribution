@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	check "gopkg.in/check.v1"
+	"gopkg.in/check.v1"
 )
 
 func Test(t *testing.T) { check.TestingT(t) }

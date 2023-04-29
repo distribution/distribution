@@ -4,7 +4,7 @@ import (
 	"os"
 	"reflect"
 
-	. "gopkg.in/check.v1"
+	"gopkg.in/check.v1"
 )
 
 type localConfiguration struct {
@@ -25,9 +25,9 @@ var expectedConfig = localConfiguration{
 
 type ParserSuite struct{}
 
-var _ = Suite(new(ParserSuite))
+var _ = check.Suite(new(ParserSuite))
 
-func (suite *ParserSuite) TestParserOverwriteIninitializedPoiner(c *C) {
+func (suite *ParserSuite) TestParserOverwriteIninitializedPoiner(c *check.C) {
 	config := localConfiguration{}
 
 	os.Setenv("REGISTRY_LOG_FORMATTER", "json")
@@ -44,11 +44,11 @@ func (suite *ParserSuite) TestParserOverwriteIninitializedPoiner(c *C) {
 	})
 
 	err := p.Parse([]byte(`{version: "0.1", log: {formatter: "text"}}`), &config)
-	c.Assert(err, IsNil)
-	c.Assert(config, DeepEquals, expectedConfig)
+	c.Assert(err, check.IsNil)
+	c.Assert(config, check.DeepEquals, expectedConfig)
 }
 
-func (suite *ParserSuite) TestParseOverwriteUnininitializedPoiner(c *C) {
+func (suite *ParserSuite) TestParseOverwriteUnininitializedPoiner(c *check.C) {
 	config := localConfiguration{}
 
 	os.Setenv("REGISTRY_LOG_FORMATTER", "json")
@@ -65,6 +65,6 @@ func (suite *ParserSuite) TestParseOverwriteUnininitializedPoiner(c *C) {
 	})
 
 	err := p.Parse([]byte(`{version: "0.1"}`), &config)
-	c.Assert(err, IsNil)
-	c.Assert(config, DeepEquals, expectedConfig)
+	c.Assert(err, check.IsNil)
+	c.Assert(config, check.DeepEquals, expectedConfig)
 }
