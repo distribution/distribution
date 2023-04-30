@@ -7,7 +7,7 @@ import (
 
 func TestAudienceList_Unmarshal(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
-		testCases := []struct {
+		tests := []struct {
 			value    string
 			expected AudienceList
 		}{
@@ -25,18 +25,17 @@ func TestAudienceList_Unmarshal(t *testing.T) {
 			},
 		}
 
-		for _, testCase := range testCases {
-			testCase := testCase
-
+		for _, tc := range tests {
+			tc := tc
 			t.Run("", func(t *testing.T) {
 				var actual AudienceList
 
-				err := json.Unmarshal([]byte(testCase.value), &actual)
+				err := json.Unmarshal([]byte(tc.value), &actual)
 				if err != nil {
 					t.Fatal(err)
 				}
 
-				assertStringListEqual(t, testCase.expected, actual)
+				assertStringListEqual(t, tc.expected, actual)
 			})
 		}
 	})
