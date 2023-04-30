@@ -608,17 +608,21 @@ func TestMatch(t *testing.T) {
 		},
 	}
 	for _, tc := range tests {
-		named, err := ParseAnyReference(tc.reference)
-		if err != nil {
-			t.Fatal(err)
-		}
-		actual, err := FamiliarMatch(tc.pattern, named)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if actual != tc.expected {
-			t.Fatalf("expected %s match %s to be %v, was %v", tc.reference, tc.pattern, tc.expected, actual)
-		}
+		tc := tc
+		t.Run(tc.reference, func(t *testing.T) {
+			t.Parallel()
+			named, err := ParseAnyReference(tc.reference)
+			if err != nil {
+				t.Fatal(err)
+			}
+			actual, err := FamiliarMatch(tc.pattern, named)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if actual != tc.expected {
+				t.Fatalf("expected %s match %s to be %v, was %v", tc.reference, tc.pattern, tc.expected, actual)
+			}
+		})
 	}
 }
 
