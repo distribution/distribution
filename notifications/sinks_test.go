@@ -73,7 +73,7 @@ func TestIgnoredSink(t *testing.T) {
 		expected         events.Event
 	}
 
-	cases := []testcase{
+	tests := []testcase{
 		{nil, nil, blob},
 		{[]string{"other"}, []string{"other"}, blob},
 		{[]string{"blob", "manifest"}, []string{"other"}, nil},
@@ -81,22 +81,22 @@ func TestIgnoredSink(t *testing.T) {
 		{[]string{"other"}, []string{"pull", "push"}, nil},
 	}
 
-	for _, c := range cases {
+	for _, tc := range tests {
 		ts := &testSink{}
-		s := newIgnoredSink(ts, c.ignoreMediaTypes, c.ignoreActions)
+		s := newIgnoredSink(ts, tc.ignoreMediaTypes, tc.ignoreActions)
 
 		if err := s.Write(blob); err != nil {
 			t.Fatalf("error writing event: %v", err)
 		}
 
 		ts.mu.Lock()
-		if !reflect.DeepEqual(ts.event, c.expected) {
-			t.Fatalf("unexpected event: %#v != %#v", ts.event, c.expected)
+		if !reflect.DeepEqual(ts.event, tc.expected) {
+			t.Fatalf("unexpected event: %#v != %#v", ts.event, tc.expected)
 		}
 		ts.mu.Unlock()
 	}
 
-	cases = []testcase{
+	tests = []testcase{
 		{nil, nil, manifest},
 		{[]string{"other"}, []string{"other"}, manifest},
 		{[]string{"blob"}, []string{"other"}, manifest},
@@ -105,17 +105,17 @@ func TestIgnoredSink(t *testing.T) {
 		{[]string{"other"}, []string{"pull", "push"}, nil},
 	}
 
-	for _, c := range cases {
+	for _, tc := range tests {
 		ts := &testSink{}
-		s := newIgnoredSink(ts, c.ignoreMediaTypes, c.ignoreActions)
+		s := newIgnoredSink(ts, tc.ignoreMediaTypes, tc.ignoreActions)
 
 		if err := s.Write(manifest); err != nil {
 			t.Fatalf("error writing event: %v", err)
 		}
 
 		ts.mu.Lock()
-		if !reflect.DeepEqual(ts.event, c.expected) {
-			t.Fatalf("unexpected event: %#v != %#v", ts.event, c.expected)
+		if !reflect.DeepEqual(ts.event, tc.expected) {
+			t.Fatalf("unexpected event: %#v != %#v", ts.event, tc.expected)
 		}
 		ts.mu.Unlock()
 	}
