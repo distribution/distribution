@@ -1,7 +1,6 @@
 package context
 
 import (
-	"context"
 	"runtime"
 	"testing"
 	"time"
@@ -9,6 +8,7 @@ import (
 
 // TestWithTrace ensures that tracing has the expected values in the context.
 func TestWithTrace(t *testing.T) {
+	t.Parallel()
 	pc, file, _, _ := runtime.Caller(0) // get current caller.
 	f := runtime.FuncForPC(pc)
 
@@ -36,10 +36,27 @@ func TestWithTrace(t *testing.T) {
 	ctx, done := WithTrace(Background())
 	defer done("this will be emitted at end of test")
 
-	checkContextForValues(ctx, t, append(base, valueTestCase{
+	tests := append(base, valueTestCase{
 		key:      "trace.func",
 		expected: f.Name(),
-	}))
+	})
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.key, func(t *testing.T) {
+			t.Parallel()
+			v := ctx.Value(tc.key)
+			if tc.notnilorempty {
+				if v == nil || v == "" {
+					t.Fatalf("value was nil or empty: %#v", v)
+				}
+				return
+			}
+
+			if v != tc.expected {
+				t.Fatalf("unexpected value: %v != %v", v, tc.expected)
+			}
+		})
+	}
 
 	tracedFn := func() {
 		parentID := ctx.Value("trace.id") // ensure the parent trace id is correct.
@@ -49,13 +66,30 @@ func TestWithTrace(t *testing.T) {
 		ctx, done := WithTrace(ctx)
 		defer done("this should be subordinate to the other trace")
 		time.Sleep(time.Second)
-		checkContextForValues(ctx, t, append(base, valueTestCase{
+		tests := append(base, valueTestCase{
 			key:      "trace.func",
 			expected: f.Name(),
 		}, valueTestCase{
 			key:      "trace.parent.id",
 			expected: parentID,
-		}))
+		})
+		for _, tc := range tests {
+			tc := tc
+			t.Run(tc.key, func(t *testing.T) {
+				t.Parallel()
+				v := ctx.Value(tc.key)
+				if tc.notnilorempty {
+					if v == nil || v == "" {
+						t.Fatalf("value was nil or empty: %#v", v)
+					}
+					return
+				}
+
+				if v != tc.expected {
+					t.Fatalf("unexpected value: %v != %v", v, tc.expected)
+				}
+			})
+		}
 	}
 	tracedFn()
 
@@ -66,21 +100,4 @@ type valueTestCase struct {
 	key           string
 	expected      interface{}
 	notnilorempty bool // just check not empty/not nil
-}
-
-func checkContextForValues(ctx context.Context, t *testing.T, tests []valueTestCase) {
-	t.Helper()
-	for _, tc := range tests {
-		v := ctx.Value(tc.key)
-		if tc.notnilorempty {
-			if v == nil || v == "" {
-				t.Fatalf("value was nil or empty for %q: %#v", tc.key, v)
-			}
-			continue
-		}
-
-		if v != tc.expected {
-			t.Fatalf("unexpected value for key %q: %v != %v", tc.key, v, tc.expected)
-		}
-	}
 }
