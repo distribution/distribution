@@ -88,7 +88,7 @@ func (ms *ocischemaManifestHandler) verifyManifest(ctx context.Context, mnfst oc
 		}
 
 		switch descriptor.MediaType {
-		case v1.MediaTypeImageLayer, v1.MediaTypeImageLayerGzip, v1.MediaTypeImageLayerNonDistributable, v1.MediaTypeImageLayerNonDistributableGzip:
+		case v1.MediaTypeImageLayer, v1.MediaTypeImageLayerGzip, v1.MediaTypeImageLayerNonDistributable, v1.MediaTypeImageLayerNonDistributableGzip: //nolint:staticcheck // ignore A1019: v1.MediaTypeImageLayerNonDistributable is deprecated: Non-distributable layers are deprecated, and not recommended for future use.
 			allow := ms.manifestURLs.allow
 			deny := ms.manifestURLs.deny
 			for _, u := range descriptor.URLs {

@@ -22,7 +22,7 @@ require (
 	github.com/klauspost/compress v1.17.4
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/opencontainers/go-digest v1.0.0
-	github.com/opencontainers/image-spec v1.0.2
+	github.com/opencontainers/image-spec v1.1.0
 	github.com/redis/go-redis/extra/redisotel/v9 v9.0.5
 	github.com/redis/go-redis/v9 v9.1.0
 	github.com/sirupsen/logrus v1.9.3
