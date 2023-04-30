@@ -74,11 +74,11 @@ func TestIgnoredSink(t *testing.T) {
 	}
 
 	tests := []testcase{
-		{nil, nil, blob},
-		{[]string{"other"}, []string{"other"}, blob},
-		{[]string{"blob", "manifest"}, []string{"other"}, nil},
-		{[]string{"other"}, []string{"pull"}, blob},
-		{[]string{"other"}, []string{"pull", "push"}, nil},
+		{expected: blob},
+		{ignoreMediaTypes: []string{"other"}, ignoreActions: []string{"other"}, expected: blob},
+		{ignoreMediaTypes: []string{"blob", "manifest"}, ignoreActions: []string{"other"}},
+		{ignoreMediaTypes: []string{"other"}, ignoreActions: []string{"pull"}, expected: blob},
+		{ignoreMediaTypes: []string{"other"}, ignoreActions: []string{"pull", "push"}},
 	}
 
 	for _, tc := range tests {
@@ -97,12 +97,12 @@ func TestIgnoredSink(t *testing.T) {
 	}
 
 	tests = []testcase{
-		{nil, nil, manifest},
-		{[]string{"other"}, []string{"other"}, manifest},
-		{[]string{"blob"}, []string{"other"}, manifest},
-		{[]string{"blob", "manifest"}, []string{"other"}, nil},
-		{[]string{"other"}, []string{"push"}, manifest},
-		{[]string{"other"}, []string{"pull", "push"}, nil},
+		{expected: manifest},
+		{ignoreMediaTypes: []string{"other"}, ignoreActions: []string{"other"}, expected: manifest},
+		{ignoreMediaTypes: []string{"blob"}, ignoreActions: []string{"other"}, expected: manifest},
+		{ignoreMediaTypes: []string{"blob", "manifest"}, ignoreActions: []string{"other"}},
+		{ignoreMediaTypes: []string{"other"}, ignoreActions: []string{"push"}, expected: manifest},
+		{ignoreMediaTypes: []string{"other"}, ignoreActions: []string{"pull", "push"}},
 	}
 
 	for _, tc := range tests {
