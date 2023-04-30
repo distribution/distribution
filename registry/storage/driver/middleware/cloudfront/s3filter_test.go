@@ -8,12 +8,11 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"reflect" // used as a replacement for testify
 	"testing"
 	"time"
 
 	dcontext "github.com/distribution/distribution/v3/context"
-
-	"reflect" // used as a replacement for testify
 )
 
 // Rather than pull in all of testify
@@ -262,7 +261,7 @@ func TestUpdateCalledRegularly(t *testing.T) {
 }
 
 func TestEligibleForS3(t *testing.T) {
-	awsIPs := &awsIPs{
+	ips := &awsIPs{
 		ipv4: []net.IPNet{{
 			IP:   net.ParseIP("192.168.1.1"),
 			Mask: net.IPv4Mask(255, 255, 255, 0),
@@ -291,13 +290,13 @@ func TestEligibleForS3(t *testing.T) {
 		name := fmt.Sprintf("Client IP = %v",
 			testCase.Context.Value("http.request.ip"))
 		t.Run(name, func(t *testing.T) {
-			assertEqual(t, testCase.Expected, eligibleForS3(testCase.Context, awsIPs))
+			assertEqual(t, testCase.Expected, eligibleForS3(testCase.Context, ips))
 		})
 	}
 }
 
 func TestEligibleForS3WithAWSIPNotInitialized(t *testing.T) {
-	awsIPs := &awsIPs{
+	ips := &awsIPs{
 		ipv4: []net.IPNet{{
 			IP:   net.ParseIP("192.168.1.1"),
 			Mask: net.IPv4Mask(255, 255, 255, 0),
@@ -326,7 +325,7 @@ func TestEligibleForS3WithAWSIPNotInitialized(t *testing.T) {
 		name := fmt.Sprintf("Client IP = %v",
 			testCase.Context.Value("http.request.ip"))
 		t.Run(name, func(t *testing.T) {
-			assertEqual(t, testCase.Expected, eligibleForS3(testCase.Context, awsIPs))
+			assertEqual(t, testCase.Expected, eligibleForS3(testCase.Context, ips))
 		})
 	}
 }
@@ -364,8 +363,8 @@ func BenchmarkContainsRandom(b *testing.B) {
 	numNetworksPerType := 1000 // keep in sync with the above
 	// intentionally skip constructor when creating awsIPs, to avoid updater routine.
 	// This benchmark is only concerned with contains() performance.
-	awsIPs := awsIPs{}
-	populateRandomNetworks(b, &awsIPs, numNetworksPerType, numNetworksPerType)
+	ips := awsIPs{}
+	populateRandomNetworks(b, &ips, numNetworksPerType, numNetworksPerType)
 
 	ipv4 := make([][]byte, b.N)
 	ipv6 := make([][]byte, b.N)
@@ -377,13 +376,13 @@ func BenchmarkContainsRandom(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		awsIPs.contains(ipv4[i])
-		awsIPs.contains(ipv6[i])
+		ips.contains(ipv4[i])
+		ips.contains(ipv6[i])
 	}
 }
 
 func BenchmarkContainsProd(b *testing.B) {
-	awsIPs := newAWSIPs(defaultIPRangesURL, defaultUpdateFrequency, nil)
+	ips := newAWSIPs(defaultIPRangesURL, defaultUpdateFrequency, nil)
 	ipv4 := make([][]byte, b.N)
 	ipv6 := make([][]byte, b.N)
 	for i := 0; i < b.N; i++ {
@@ -394,7 +393,7 @@ func BenchmarkContainsProd(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		awsIPs.contains(ipv4[i])
-		awsIPs.contains(ipv6[i])
+		ips.contains(ipv4[i])
+		ips.contains(ipv6[i])
 	}
 }
