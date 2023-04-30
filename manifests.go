@@ -48,8 +48,12 @@ type ManifestEnumerator interface {
 	Enumerate(ctx context.Context, ingester func(digest.Digest) error) error
 }
 
-// Describable is an interface for descriptors
+// Describable is an interface for descriptors.
+//
+// Implementations of Describable are generally objects which can be
+// described, not simply descriptors.
 type Describable interface {
+	// Descriptor returns the descriptor.
 	Descriptor() Descriptor
 }
 

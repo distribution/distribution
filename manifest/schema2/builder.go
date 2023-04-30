@@ -46,8 +46,8 @@ func (mb *Builder) Build(ctx context.Context) (distribution.Manifest, error) {
 }
 
 // AppendReference adds a reference to the current ManifestBuilder.
-func (mb *Builder) AppendReference(d distribution.Describable) error {
-	mb.dependencies = append(mb.dependencies, d.Descriptor())
+func (mb *Builder) AppendReference(ref distribution.Descriptor) error {
+	mb.dependencies = append(mb.dependencies, ref)
 	return nil
 }
 
