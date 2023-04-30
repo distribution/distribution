@@ -29,6 +29,7 @@ type routeTestCase struct {
 //
 // This may go away as the application structure comes together.
 func TestRouter(t *testing.T) {
+	t.Parallel()
 	tests := []routeTestCase{
 		{
 			RouteName:  RouteNameBase,
@@ -177,6 +178,7 @@ func TestRouter(t *testing.T) {
 }
 
 func TestRouterWithPathTraversals(t *testing.T) {
+	t.Parallel()
 	tests := []routeTestCase{
 		{
 			RouteName:   RouteNameBlobUploadChunk,
@@ -198,6 +200,7 @@ func TestRouterWithPathTraversals(t *testing.T) {
 }
 
 func TestRouterWithBadCharacters(t *testing.T) {
+	t.Parallel()
 	if testing.Short() {
 		tests := []routeTestCase{
 			{
@@ -253,67 +256,72 @@ func checkTestRouter(t *testing.T, tests []routeTestCase, prefix string, deeplyE
 	server := httptest.NewServer(router)
 
 	for _, tc := range tests {
-		tc.RequestURI = strings.TrimSuffix(prefix, "/") + tc.RequestURI
-		// Register the endpoint
-		route := router.GetRoute(tc.RouteName)
-		if route == nil {
-			t.Fatalf("route for name %q not found", tc.RouteName)
-		}
+		tc := tc
+		requestURI := strings.TrimSuffix(prefix, "/") + tc.RequestURI
+		t.Run("("+tc.RouteName+")"+requestURI, func(t *testing.T) {
+			t.Parallel()
+			tc.RequestURI = requestURI
+			// Register the endpoint
+			route := router.GetRoute(tc.RouteName)
+			if route == nil {
+				t.Fatalf("route for name %q not found", tc.RouteName)
+			}
 
-		route.Handler(testHandler)
+			route.Handler(testHandler)
 
-		u := server.URL + tc.RequestURI
+			u := server.URL + tc.RequestURI
 
-		resp, err := http.Get(u)
-		if err != nil {
-			t.Fatalf("error issuing get request: %v", err)
-		}
+			resp, err := http.Get(u)
+			if err != nil {
+				t.Fatalf("error issuing get request: %v", err)
+			}
 
-		if tc.StatusCode == 0 {
-			// Override default, zero-value
-			tc.StatusCode = http.StatusOK
-		}
-		if tc.ExpectedURI == "" {
-			// Override default, zero-value
-			tc.ExpectedURI = tc.RequestURI
-		}
+			if tc.StatusCode == 0 {
+				// Override default, zero-value
+				tc.StatusCode = http.StatusOK
+			}
+			if tc.ExpectedURI == "" {
+				// Override default, zero-value
+				tc.ExpectedURI = tc.RequestURI
+			}
 
-		if resp.StatusCode != tc.StatusCode {
-			t.Fatalf("unexpected status for %s: %v %v", u, resp.Status, resp.StatusCode)
-		}
+			if resp.StatusCode != tc.StatusCode {
+				t.Fatalf("unexpected status for %s: %v %v", u, resp.Status, resp.StatusCode)
+			}
 
-		if tc.StatusCode != http.StatusOK {
+			if tc.StatusCode != http.StatusOK {
+				resp.Body.Close()
+				// We don't care about json response.
+				return
+			}
+
+			dec := json.NewDecoder(resp.Body)
+
+			var actualRouteInfo routeTestCase
+			if err := dec.Decode(&actualRouteInfo); err != nil {
+				t.Fatalf("error reading json response: %v", err)
+			}
+			// Needs to be set out of band
+			actualRouteInfo.StatusCode = resp.StatusCode
+
+			if actualRouteInfo.RequestURI != tc.ExpectedURI {
+				t.Fatalf("URI %v incorrectly parsed, expected %v", actualRouteInfo.RequestURI, tc.ExpectedURI)
+			}
+
+			if actualRouteInfo.RouteName != tc.RouteName {
+				t.Fatalf("incorrect route %q matched, expected %q", actualRouteInfo.RouteName, tc.RouteName)
+			}
+
+			// when testing deep equality, the actualRouteInfo has an empty ExpectedURI, we don't want
+			// that to make the comparison fail. We're otherwise done with the testcase so empty the
+			// testcase.ExpectedURI
+			tc.ExpectedURI = ""
+			if deeplyEqual && !reflect.DeepEqual(actualRouteInfo, tc) {
+				t.Fatalf("actual does not equal expected: %#v != %#v", actualRouteInfo, tc)
+			}
+
 			resp.Body.Close()
-			// We don't care about json response.
-			continue
-		}
-
-		dec := json.NewDecoder(resp.Body)
-
-		var actualRouteInfo routeTestCase
-		if err := dec.Decode(&actualRouteInfo); err != nil {
-			t.Fatalf("error reading json response: %v", err)
-		}
-		// Needs to be set out of band
-		actualRouteInfo.StatusCode = resp.StatusCode
-
-		if actualRouteInfo.RequestURI != tc.ExpectedURI {
-			t.Fatalf("URI %v incorrectly parsed, expected %v", actualRouteInfo.RequestURI, tc.ExpectedURI)
-		}
-
-		if actualRouteInfo.RouteName != tc.RouteName {
-			t.Fatalf("incorrect route %q matched, expected %q", actualRouteInfo.RouteName, tc.RouteName)
-		}
-
-		// when testing deep equality, the actualRouteInfo has an empty ExpectedURI, we don't want
-		// that to make the comparison fail. We're otherwise done with the testcase so empty the
-		// testcase.ExpectedURI
-		tc.ExpectedURI = ""
-		if deeplyEqual && !reflect.DeepEqual(actualRouteInfo, tc) {
-			t.Fatalf("actual does not equal expected: %#v != %#v", actualRouteInfo, tc)
-		}
-
-		resp.Body.Close()
+		})
 	}
 }
 
