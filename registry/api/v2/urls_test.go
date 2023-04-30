@@ -138,23 +138,23 @@ func TestURLBuilder(t *testing.T) {
 				t.Fatalf("unexpected error creating urlbuilder: %v", err)
 			}
 
-			for _, testCase := range makeURLBuilderTestCases(urlBuilder) {
-				url, err := testCase.build()
-				expectedErr := testCase.expectedErr
+			for _, tc := range makeURLBuilderTestCases(urlBuilder) {
+				buildURL, err := tc.build()
+				expectedErr := tc.expectedErr
 				if !reflect.DeepEqual(expectedErr, err) {
-					t.Fatalf("%s: Expecting %v but got error %v", testCase.description, expectedErr, err)
+					t.Fatalf("%s: Expecting %v but got error %v", tc.description, expectedErr, err)
 				}
 				if expectedErr != nil {
 					continue
 				}
 
-				expectedURL := testCase.expectedPath
+				expectedURL := tc.expectedPath
 				if !relative {
 					expectedURL = root + expectedURL
 				}
 
-				if url != expectedURL {
-					t.Fatalf("%s: %q != %q", testCase.description, url, expectedURL)
+				if buildURL != expectedURL {
+					t.Fatalf("%s: %q != %q", tc.description, buildURL, expectedURL)
 				}
 			}
 		}
@@ -178,22 +178,22 @@ func TestURLBuilderWithPrefix(t *testing.T) {
 				t.Fatalf("unexpected error creating urlbuilder: %v", err)
 			}
 
-			for _, testCase := range makeURLBuilderTestCases(urlBuilder) {
-				url, err := testCase.build()
-				expectedErr := testCase.expectedErr
+			for _, tc := range makeURLBuilderTestCases(urlBuilder) {
+				buildURL, err := tc.build()
+				expectedErr := tc.expectedErr
 				if !reflect.DeepEqual(expectedErr, err) {
-					t.Fatalf("%s: Expecting %v but got error %v", testCase.description, expectedErr, err)
+					t.Fatalf("%s: Expecting %v but got error %v", tc.description, expectedErr, err)
 				}
 				if expectedErr != nil {
 					continue
 				}
 
-				expectedURL := testCase.expectedPath
+				expectedURL := tc.expectedPath
 				if !relative {
 					expectedURL = root[0:len(root)-1] + expectedURL
 				}
-				if url != expectedURL {
-					t.Fatalf("%s: %q != %q", testCase.description, url, expectedURL)
+				if buildURL != expectedURL {
+					t.Fatalf("%s: %q != %q", tc.description, buildURL, expectedURL)
 				}
 			}
 		}
@@ -424,23 +424,23 @@ func TestBuilderFromRequest(t *testing.T) {
 				builder = NewURLBuilderFromRequest(tr.request, relative)
 			}
 
-			for _, testCase := range makeURLBuilderTestCases(builder) {
-				buildURL, err := testCase.build()
-				expectedErr := testCase.expectedErr
+			for _, tc := range makeURLBuilderTestCases(builder) {
+				buildURL, err := tc.build()
+				expectedErr := tc.expectedErr
 				if !reflect.DeepEqual(expectedErr, err) {
-					t.Fatalf("%s: Expecting %v but got error %v", testCase.description, expectedErr, err)
+					t.Fatalf("%s: Expecting %v but got error %v", tc.description, expectedErr, err)
 				}
 				if expectedErr != nil {
 					continue
 				}
 
-				expectedURL := testCase.expectedPath
+				expectedURL := tc.expectedPath
 				if !relative {
 					expectedURL = tr.base + expectedURL
 				}
 
 				if buildURL != expectedURL {
-					t.Errorf("[relative=%t, request=%q, case=%q]: %q != %q", relative, tr.name, testCase.description, buildURL, expectedURL)
+					t.Errorf("[relative=%t, request=%q, case=%q]: %q != %q", relative, tr.name, tc.description, buildURL, expectedURL)
 				}
 			}
 		}
@@ -497,11 +497,11 @@ func TestBuilderFromRequestWithPrefix(t *testing.T) {
 			builder = NewURLBuilderFromRequest(tr.request, false)
 		}
 
-		for _, testCase := range makeURLBuilderTestCases(builder) {
-			buildURL, err := testCase.build()
-			expectedErr := testCase.expectedErr
+		for _, tc := range makeURLBuilderTestCases(builder) {
+			buildURL, err := tc.build()
+			expectedErr := tc.expectedErr
 			if !reflect.DeepEqual(expectedErr, err) {
-				t.Fatalf("%s: Expecting %v but got error %v", testCase.description, expectedErr, err)
+				t.Fatalf("%s: Expecting %v but got error %v", tc.description, expectedErr, err)
 			}
 			if expectedErr != nil {
 				continue
@@ -510,7 +510,7 @@ func TestBuilderFromRequestWithPrefix(t *testing.T) {
 			var expectedURL string
 			proto, ok := tr.request.Header["X-Forwarded-Proto"]
 			if !ok {
-				expectedURL = testCase.expectedPath
+				expectedURL = tc.expectedPath
 				if !relative {
 					expectedURL = tr.base[0:len(tr.base)-1] + expectedURL
 				}
@@ -520,7 +520,7 @@ func TestBuilderFromRequestWithPrefix(t *testing.T) {
 					t.Fatal(err)
 				}
 				urlBase.Scheme = proto[0]
-				expectedURL = testCase.expectedPath
+				expectedURL = tc.expectedPath
 				if !relative {
 					expectedURL = urlBase.String()[0:len(urlBase.String())-1] + expectedURL
 				}
@@ -528,7 +528,7 @@ func TestBuilderFromRequestWithPrefix(t *testing.T) {
 			}
 
 			if buildURL != expectedURL {
-				t.Fatalf("%s: %q != %q", testCase.description, buildURL, expectedURL)
+				t.Fatalf("%s: %q != %q", tc.description, buildURL, expectedURL)
 			}
 		}
 	}

@@ -29,7 +29,7 @@ type routeTestCase struct {
 //
 // This may go away as the application structure comes together.
 func TestRouter(t *testing.T) {
-	testCases := []routeTestCase{
+	tests := []routeTestCase{
 		{
 			RouteName:  RouteNameBase,
 			RequestURI: "/v2/",
@@ -172,12 +172,12 @@ func TestRouter(t *testing.T) {
 		},
 	}
 
-	checkTestRouter(t, testCases, "", true)
-	checkTestRouter(t, testCases, "/prefix/", true)
+	checkTestRouter(t, tests, "", true)
+	checkTestRouter(t, tests, "/prefix/", true)
 }
 
 func TestRouterWithPathTraversals(t *testing.T) {
-	testCases := []routeTestCase{
+	tests := []routeTestCase{
 		{
 			RouteName:   RouteNameBlobUploadChunk,
 			RequestURI:  "/v2/foo/../../blobs/uploads/D95306FA-FAD3-4E36-8D41-CF1C93EF8286",
@@ -194,12 +194,12 @@ func TestRouterWithPathTraversals(t *testing.T) {
 			},
 		},
 	}
-	checkTestRouter(t, testCases, "", false)
+	checkTestRouter(t, tests, "", false)
 }
 
 func TestRouterWithBadCharacters(t *testing.T) {
 	if testing.Short() {
-		testCases := []routeTestCase{
+		tests := []routeTestCase{
 			{
 				RouteName:  RouteNameBlobUploadChunk,
 				RequestURI: "/v2/foo/blobs/uploads/不95306FA-FAD3-4E36-8D41-CF1C93EF8286",
@@ -212,26 +212,26 @@ func TestRouterWithBadCharacters(t *testing.T) {
 				StatusCode: http.StatusNotFound,
 			},
 		}
-		checkTestRouter(t, testCases, "", true)
+		checkTestRouter(t, tests, "", true)
 	} else {
 		// in the long version we're going to fuzz the router
 		// with random UTF8 characters not in the 128 bit ASCII range.
 		// These are not valid characters for the router and we expect
 		// 404s on every test.
 		rand.Seed(time.Now().UTC().UnixNano())
-		testCases := make([]routeTestCase, 1000)
-		for idx := range testCases {
-			testCases[idx] = routeTestCase{
+		tests := make([]routeTestCase, 1000)
+		for idx := range tests {
+			tests[idx] = routeTestCase{
 				RouteName:  RouteNameTags,
 				RequestURI: fmt.Sprintf("/v2/%v/%v/tags/list", randomString(10), randomString(10)),
 				StatusCode: http.StatusNotFound,
 			}
 		}
-		checkTestRouter(t, testCases, "", true)
+		checkTestRouter(t, tests, "", true)
 	}
 }
 
-func checkTestRouter(t *testing.T, testCases []routeTestCase, prefix string, deeplyEqual bool) {
+func checkTestRouter(t *testing.T, tests []routeTestCase, prefix string, deeplyEqual bool) {
 	router := RouterWithPrefix(prefix)
 
 	testHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -252,37 +252,37 @@ func checkTestRouter(t *testing.T, testCases []routeTestCase, prefix string, dee
 	// Startup test server
 	server := httptest.NewServer(router)
 
-	for _, testcase := range testCases {
-		testcase.RequestURI = strings.TrimSuffix(prefix, "/") + testcase.RequestURI
+	for _, tc := range tests {
+		tc.RequestURI = strings.TrimSuffix(prefix, "/") + tc.RequestURI
 		// Register the endpoint
-		route := router.GetRoute(testcase.RouteName)
+		route := router.GetRoute(tc.RouteName)
 		if route == nil {
-			t.Fatalf("route for name %q not found", testcase.RouteName)
+			t.Fatalf("route for name %q not found", tc.RouteName)
 		}
 
 		route.Handler(testHandler)
 
-		u := server.URL + testcase.RequestURI
+		u := server.URL + tc.RequestURI
 
 		resp, err := http.Get(u)
 		if err != nil {
 			t.Fatalf("error issuing get request: %v", err)
 		}
 
-		if testcase.StatusCode == 0 {
+		if tc.StatusCode == 0 {
 			// Override default, zero-value
-			testcase.StatusCode = http.StatusOK
+			tc.StatusCode = http.StatusOK
 		}
-		if testcase.ExpectedURI == "" {
+		if tc.ExpectedURI == "" {
 			// Override default, zero-value
-			testcase.ExpectedURI = testcase.RequestURI
+			tc.ExpectedURI = tc.RequestURI
 		}
 
-		if resp.StatusCode != testcase.StatusCode {
+		if resp.StatusCode != tc.StatusCode {
 			t.Fatalf("unexpected status for %s: %v %v", u, resp.Status, resp.StatusCode)
 		}
 
-		if testcase.StatusCode != http.StatusOK {
+		if tc.StatusCode != http.StatusOK {
 			resp.Body.Close()
 			// We don't care about json response.
 			continue
@@ -297,20 +297,20 @@ func checkTestRouter(t *testing.T, testCases []routeTestCase, prefix string, dee
 		// Needs to be set out of band
 		actualRouteInfo.StatusCode = resp.StatusCode
 
-		if actualRouteInfo.RequestURI != testcase.ExpectedURI {
-			t.Fatalf("URI %v incorrectly parsed, expected %v", actualRouteInfo.RequestURI, testcase.ExpectedURI)
+		if actualRouteInfo.RequestURI != tc.ExpectedURI {
+			t.Fatalf("URI %v incorrectly parsed, expected %v", actualRouteInfo.RequestURI, tc.ExpectedURI)
 		}
 
-		if actualRouteInfo.RouteName != testcase.RouteName {
-			t.Fatalf("incorrect route %q matched, expected %q", actualRouteInfo.RouteName, testcase.RouteName)
+		if actualRouteInfo.RouteName != tc.RouteName {
+			t.Fatalf("incorrect route %q matched, expected %q", actualRouteInfo.RouteName, tc.RouteName)
 		}
 
 		// when testing deep equality, the actualRouteInfo has an empty ExpectedURI, we don't want
 		// that to make the comparison fail. We're otherwise done with the testcase so empty the
 		// testcase.ExpectedURI
-		testcase.ExpectedURI = ""
-		if deeplyEqual && !reflect.DeepEqual(actualRouteInfo, testcase) {
-			t.Fatalf("actual does not equal expected: %#v != %#v", actualRouteInfo, testcase)
+		tc.ExpectedURI = ""
+		if deeplyEqual && !reflect.DeepEqual(actualRouteInfo, tc) {
+			t.Fatalf("actual does not equal expected: %#v != %#v", actualRouteInfo, tc)
 		}
 
 		resp.Body.Close()
