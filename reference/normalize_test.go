@@ -524,22 +524,21 @@ func TestNormalizedSplitHostname(t *testing.T) {
 		},
 	}
 	for _, tc := range tests {
-		failf := func(format string, v ...interface{}) {
-			t.Logf(strconv.Quote(tc.input)+": "+format, v...)
-			t.Fail()
-		}
-
-		named, err := ParseNormalizedNamed(tc.input)
-		if err != nil {
-			failf("error parsing name: %s", err)
-		}
-		domain, name := SplitHostname(named)
-		if domain != tc.domain {
-			failf("unexpected domain: got %q, expected %q", domain, tc.domain)
-		}
-		if name != tc.name {
-			failf("unexpected name: got %q, expected %q", name, tc.name)
-		}
+		tc := tc
+		t.Run(tc.input, func(t *testing.T) {
+			t.Parallel()
+			named, err := ParseNormalizedNamed(tc.input)
+			if err != nil {
+				t.Errorf("error parsing name: %s", err)
+			}
+			domain, name := SplitHostname(named)
+			if domain != tc.domain {
+				t.Errorf("unexpected domain: got %q, expected %q", domain, tc.domain)
+			}
+			if name != tc.name {
+				t.Errorf("unexpected name: got %q, expected %q", name, tc.name)
+			}
+		})
 	}
 }
 
