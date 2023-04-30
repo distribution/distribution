@@ -6,6 +6,7 @@ import (
 )
 
 func TestAudienceList_Unmarshal(t *testing.T) {
+	t.Parallel()
 	t.Run("OK", func(t *testing.T) {
 		tests := []struct {
 			value    string
@@ -28,6 +29,7 @@ func TestAudienceList_Unmarshal(t *testing.T) {
 		for _, tc := range tests {
 			tc := tc
 			t.Run("", func(t *testing.T) {
+				t.Parallel()
 				var actual AudienceList
 
 				err := json.Unmarshal([]byte(tc.value), &actual)
@@ -41,6 +43,7 @@ func TestAudienceList_Unmarshal(t *testing.T) {
 	})
 
 	t.Run("Error", func(t *testing.T) {
+		t.Parallel()
 		var actual AudienceList
 
 		err := json.Unmarshal([]byte("1234"), &actual)
