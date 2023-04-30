@@ -4,13 +4,13 @@ import (
 	"testing"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/manifest"
 	"github.com/distribution/distribution/v3/manifest/schema2"
 	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	"github.com/distribution/reference"
 	events "github.com/docker/go-events"
 	"github.com/google/uuid"
 	"github.com/opencontainers/go-digest"
+	"github.com/opencontainers/image-spec/specs-go"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -29,7 +29,6 @@ var (
 	}
 	request      = RequestRecord{}
 	tag          = "latest"
-	ociMediaType = v1.MediaTypeImageManifest
 	artifactType = "application/vnd.example.sbom.v1"
 	cfg          = distribution.Descriptor{
 		MediaType: artifactType,
@@ -143,14 +142,13 @@ func TestEventBridgeRepoDeleted(t *testing.T) {
 }
 
 func createTestEnv(t *testing.T, fn testSinkFn) Listener {
-	manifest := schema2.Manifest{
-		Versioned: manifest.Versioned{
-			MediaType: ociMediaType,
-		},
-		Config: cfg,
+	mfst := schema2.Manifest{
+		Versioned: specs.Versioned{SchemaVersion: 2},
+		MediaType: v1.MediaTypeImageManifest,
+		Config:    cfg,
 	}
 
-	deserializedManifest, err := schema2.FromStruct(manifest)
+	deserializedManifest, err := schema2.FromStruct(mfst)
 	if err != nil {
 		t.Fatalf("creating OCI manifest: %v", err)
 	}

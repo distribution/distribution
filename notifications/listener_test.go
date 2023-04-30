@@ -14,6 +14,7 @@ import (
 	"github.com/distribution/distribution/v3/testutil"
 	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
+	"github.com/opencontainers/image-spec/specs-go"
 )
 
 func TestListener(t *testing.T) {
@@ -143,7 +144,8 @@ func checkTestRepository(t *testing.T, repository distribution.Repository, remov
 	}
 
 	m := schema2.Manifest{
-		Versioned: schema2.SchemaVersion,
+		Versioned: specs.Versioned{SchemaVersion: 2},
+		MediaType: schema2.MediaTypeManifest,
 		Config: distribution.Descriptor{
 			MediaType: "foo/bar",
 			Digest:    configDgst,

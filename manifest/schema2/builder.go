@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/distribution/distribution/v3"
+	"github.com/opencontainers/image-spec/specs-go"
 )
 
 // Builder is a type for constructing manifests.
@@ -35,7 +36,8 @@ func NewManifestBuilder(configDescriptor distribution.Descriptor, configJSON []b
 // Build produces a final manifest from the given references.
 func (mb *Builder) Build(ctx context.Context) (distribution.Manifest, error) {
 	m := Manifest{
-		Versioned: SchemaVersion,
+		Versioned: specs.Versioned{SchemaVersion: defaultSchemaVersion},
+		MediaType: defaultMediaType,
 		Layers:    make([]distribution.Descriptor, len(mb.dependencies)),
 	}
 	copy(m.Layers, mb.dependencies)
