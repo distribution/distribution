@@ -261,6 +261,7 @@ func TestUpdateCalledRegularly(t *testing.T) {
 }
 
 func TestEligibleForS3(t *testing.T) {
+	t.Parallel()
 	ips := &awsIPs{
 		ipv4: []net.IPNet{{
 			IP:   net.ParseIP("192.168.1.1"),
@@ -277,7 +278,7 @@ func TestEligibleForS3(t *testing.T) {
 		return dcontext.WithRequest(empty, req)
 	}
 
-	cases := []struct {
+	tests := []struct {
 		Context  context.Context
 		Expected bool
 	}{
@@ -286,16 +287,17 @@ func TestEligibleForS3(t *testing.T) {
 		{Context: makeContext("192.168.0.2"), Expected: false},
 	}
 
-	for _, testCase := range cases {
-		name := fmt.Sprintf("Client IP = %v",
-			testCase.Context.Value("http.request.ip"))
-		t.Run(name, func(t *testing.T) {
-			assertEqual(t, testCase.Expected, eligibleForS3(testCase.Context, ips))
+	for _, tc := range tests {
+		tc := tc
+		t.Run(fmt.Sprintf("Client IP = %v", tc.Context.Value("http.request.ip")), func(t *testing.T) {
+			t.Parallel()
+			assertEqual(t, tc.Expected, eligibleForS3(tc.Context, ips))
 		})
 	}
 }
 
 func TestEligibleForS3WithAWSIPNotInitialized(t *testing.T) {
+	t.Parallel()
 	ips := &awsIPs{
 		ipv4: []net.IPNet{{
 			IP:   net.ParseIP("192.168.1.1"),
@@ -312,7 +314,7 @@ func TestEligibleForS3WithAWSIPNotInitialized(t *testing.T) {
 		return dcontext.WithRequest(empty, req)
 	}
 
-	cases := []struct {
+	tests := []struct {
 		Context  context.Context
 		Expected bool
 	}{
@@ -321,11 +323,11 @@ func TestEligibleForS3WithAWSIPNotInitialized(t *testing.T) {
 		{Context: makeContext("192.168.0.2"), Expected: false},
 	}
 
-	for _, testCase := range cases {
-		name := fmt.Sprintf("Client IP = %v",
-			testCase.Context.Value("http.request.ip"))
-		t.Run(name, func(t *testing.T) {
-			assertEqual(t, testCase.Expected, eligibleForS3(testCase.Context, ips))
+	for _, tc := range tests {
+		tc := tc
+		t.Run(fmt.Sprintf("Client IP = %v", tc.Context.Value("http.request.ip")), func(t *testing.T) {
+			t.Parallel()
+			assertEqual(t, tc.Expected, eligibleForS3(tc.Context, ips))
 		})
 	}
 }
