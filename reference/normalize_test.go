@@ -433,26 +433,30 @@ func TestParseAnyReference(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		var ref Reference
-		var err error
-		ref, err = ParseAnyReference(tc.Reference)
-		if err != nil {
-			t.Fatalf("Error parsing reference %s: %v", tc.Reference, err)
-		}
-		if ref.String() != tc.Equivalent {
-			t.Fatalf("Unexpected string: %s, expected %s", ref.String(), tc.Equivalent)
-		}
-
-		expected := tc.Expected
-		if expected == nil {
-			expected, err = Parse(tc.Equivalent)
+		tc := tc
+		t.Run(tc.Reference, func(t *testing.T) {
+			t.Parallel()
+			var ref Reference
+			var err error
+			ref, err = ParseAnyReference(tc.Reference)
 			if err != nil {
-				t.Fatalf("Error parsing reference %s: %v", tc.Equivalent, err)
+				t.Fatalf("Error parsing reference %s: %v", tc.Reference, err)
 			}
-		}
-		if !equalReference(ref, expected) {
-			t.Errorf("Unexpected reference %#v, expected %#v", ref, expected)
-		}
+			if ref.String() != tc.Equivalent {
+				t.Fatalf("Unexpected string: %s, expected %s", ref.String(), tc.Equivalent)
+			}
+
+			expected := tc.Expected
+			if expected == nil {
+				expected, err = Parse(tc.Equivalent)
+				if err != nil {
+					t.Fatalf("Error parsing reference %s: %v", tc.Equivalent, err)
+				}
+			}
+			if !equalReference(ref, expected) {
+				t.Errorf("Unexpected reference %#v, expected %#v", ref, expected)
+			}
+		})
 	}
 }
 
