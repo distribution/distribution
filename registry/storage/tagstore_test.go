@@ -3,7 +3,6 @@ package storage
 import (
 	"context"
 	"errors"
-	"io"
 	"reflect"
 	"strconv"
 	"testing"
@@ -13,7 +12,6 @@ import (
 	"github.com/distribution/distribution/v3/manifest/schema2"
 	"github.com/distribution/distribution/v3/reference"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
-	"github.com/distribution/distribution/v3/registry/storage/driver/base"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	digest "github.com/opencontainers/go-digest"
 )
@@ -28,51 +26,20 @@ type tagsTestEnv struct {
 }
 
 type mockInMemory struct {
-	base.Base
-	driver          *inmemory.Driver
+	*inmemory.Driver
 	GetContentError error
 }
 
-var _ storagedriver.StorageDriver = &mockInMemory{}
-
-func (m *mockInMemory) Name() string {
-	return m.driver.Name()
-}
 func (m *mockInMemory) GetContent(ctx context.Context, path string) ([]byte, error) {
 	if m.GetContentError != nil {
 		return nil, m.GetContentError
 	}
-	return m.driver.GetContent(ctx, path)
-}
-func (m *mockInMemory) PutContent(ctx context.Context, path string, content []byte) error {
-	return m.driver.PutContent(ctx, path, content)
-}
-func (m *mockInMemory) Reader(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
-	return m.driver.Reader(ctx, path, offset)
-}
-func (m *mockInMemory) Writer(ctx context.Context, path string, append bool) (storagedriver.FileWriter, error) {
-	return m.driver.Writer(ctx, path, append)
-}
-func (m *mockInMemory) List(ctx context.Context, path string) ([]string, error) {
-	return m.driver.List(ctx, path)
-}
-func (m *mockInMemory) Move(ctx context.Context, sourcePath string, destPath string) error {
-	return m.driver.Move(ctx, sourcePath, destPath)
-}
-func (m *mockInMemory) Delete(ctx context.Context, path string) error {
-	return m.driver.Delete(ctx, path)
-}
-func (m *mockInMemory) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
-	return m.driver.URLFor(ctx, path, options)
-}
-func (m *mockInMemory) Walk(ctx context.Context, path string, f storagedriver.WalkFn) error {
-	return m.driver.Walk(ctx, path, f)
+	return m.Driver.GetContent(ctx, path)
 }
 
 func testTagStore(t *testing.T) *tagsTestEnv {
 	ctx := context.Background()
-	d := inmemory.New()
-	mockDriver := mockInMemory{driver: d, Base: d.Base}
+	mockDriver := mockInMemory{inmemory.New(), nil}
 	reg, err := NewRegistry(ctx, &mockDriver)
 	if err != nil {
 		t.Fatal(err)
@@ -171,20 +138,20 @@ func TestTagStoreUnTag(t *testing.T) {
 
 func TestTagStoreAll(t *testing.T) {
 	env := testTagStore(t)
-	TagStore := env.ts
+	tagStore := env.ts
 	ctx := env.ctx
 
 	alpha := "abcdefghijklmnopqrstuvwxyz"
 	for i := 0; i < len(alpha); i++ {
 		tag := alpha[i]
 		desc := distribution.Descriptor{Digest: "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"}
-		err := TagStore.Tag(ctx, string(tag), desc)
+		err := tagStore.Tag(ctx, string(tag), desc)
 		if err != nil {
 			t.Error(err)
 		}
 	}
 
-	all, err := TagStore.All(ctx)
+	all, err := tagStore.All(ctx)
 	if err != nil {
 		t.Error(err)
 	}
@@ -199,12 +166,12 @@ func TestTagStoreAll(t *testing.T) {
 	}
 
 	removed := "a"
-	err = TagStore.Untag(ctx, removed)
+	err = tagStore.Untag(ctx, removed)
 	if err != nil {
 		t.Error(err)
 	}
 
-	all, err = TagStore.All(ctx)
+	all, err = tagStore.All(ctx)
 	if err != nil {
 		t.Error(err)
 	}

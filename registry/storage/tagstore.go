@@ -6,12 +6,12 @@ import (
 	"path"
 	"sort"
 	"strconv"
-	"sync"
 
 	"github.com/distribution/distribution/v3"
 	dcontext "github.com/distribution/distribution/v3/context"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/opencontainers/go-digest"
+	"golang.org/x/sync/errgroup"
 )
 
 var _ distribution.TagService = &TagStore{}
@@ -165,40 +165,15 @@ func (ts *TagStore) Lookup(ctx context.Context, desc distribution.Descriptor) ([
 		return nil, err
 	}
 
-	lookupErr := &atomicError{}
+	outputChan := make(chan string)
 
-	allTagsCount := len(allTags)
-	inputChan := make(chan string)
-	outputChan := make(chan string, allTagsCount)
-
-	waitGroup := sync.WaitGroup{}
-
-	limiter := make(chan struct{}, ts.lookupConcurrencyFactor)
-	acquire := func() {
-		limiter <- struct{}{}
-		waitGroup.Add(1)
-	}
-	release := func() {
-		<-limiter
-		waitGroup.Done()
-	}
+	group, ctx := errgroup.WithContext(ctx)
+	group.SetLimit(ts.lookupConcurrencyFactor)
 
 	go func() {
-		defer func() {
-			waitGroup.Wait()
-			close(outputChan)
-			close(limiter)
-		}()
-		for tag := range inputChan {
-			acquire()
-			go func(tag string) {
-				defer release()
-
-				// No need to lookup further on lookupErr
-				if lookupErr.Load() != nil {
-					return
-				}
-
+		for _, tag := range allTags {
+			tag := tag // https://go.dev/doc/faq#closures_and_goroutines
+			group.Go(func() error {
 				tagLinkPathSpec := manifestTagCurrentPathSpec{
 					name: ts.repository.Named().Name(),
 					tag:  tag,
@@ -211,57 +186,31 @@ func (ts *TagStore) Lookup(ctx context.Context, desc distribution.Descriptor) ([
 					switch err.(type) {
 					// PathNotFoundError shouldn't count as an error
 					case storagedriver.PathNotFoundError:
-					default:
-						lookupErr.Store(err)
+						return nil
 					}
-					return
+					return err
 				}
 
 				if tagDigest == desc.Digest {
 					outputChan <- tag
 				}
-			}(tag)
+				return nil
+			})
 		}
+		group.Wait()
+		close(outputChan)
 	}()
 
-	for _, tag := range allTags {
-		if lookupErr.Load() != nil {
-			break
-		}
-
-		if err := pushTag(ctx, inputChan, tag); err != nil {
-			lookupErr.Store(err)
-			break
-		}
-	}
-	close(inputChan)
-
-	if err := lookupErr.Load(); err != nil {
-		return nil, err
-	}
-
-	tags := make([]string, 0, len(outputChan))
+	var tags []string
 	for tag := range outputChan {
 		tags = append(tags, tag)
 	}
 
+	if err := group.Wait(); err != nil {
+		return nil, err
+	}
+
 	return tags, nil
-}
-
-func pushTag(ctx context.Context, ch chan string, tag string) error {
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	default:
-	}
-
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case ch <- tag:
-	}
-
-	return nil
 }
 
 func (ts *TagStore) ManifestDigests(ctx context.Context, tag string) ([]digest.Digest, error) {
@@ -296,21 +245,4 @@ func (ts *TagStore) ManifestDigests(ctx context.Context, tag string) ([]digest.D
 		return nil, err
 	}
 	return dgsts, nil
-}
-
-type atomicError struct {
-	mu  sync.Mutex
-	err error
-}
-
-func (e *atomicError) Store(err error) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	e.err = err
-}
-
-func (e *atomicError) Load() error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	return e.err
 }
