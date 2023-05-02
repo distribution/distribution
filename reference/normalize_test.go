@@ -261,35 +261,41 @@ func TestParseRepositoryInfo(t *testing.T) {
 		},
 	}
 
-	for _, tcase := range tcases {
-		refStrings := []string{tcase.FamiliarName, tcase.FullName}
-		if tcase.AmbiguousName != "" {
-			refStrings = append(refStrings, tcase.AmbiguousName)
+	for i, tc := range tcases {
+		tc := tc
+		refStrings := []string{tc.FamiliarName, tc.FullName}
+		if tc.AmbiguousName != "" {
+			refStrings = append(refStrings, tc.AmbiguousName)
 		}
 
-		var refs []Named
 		for _, r := range refStrings {
-			named, err := ParseNormalizedNamed(r)
-			if err != nil {
-				t.Fatal(err)
-			}
-			refs = append(refs, named)
-		}
-
-		for _, r := range refs {
-			if expected, actual := tcase.FamiliarName, FamiliarName(r); expected != actual {
-				t.Fatalf("Invalid normalized reference for %q. Expected %q, got %q", r, expected, actual)
-			}
-			if expected, actual := tcase.FullName, r.String(); expected != actual {
-				t.Fatalf("Invalid canonical reference for %q. Expected %q, got %q", r, expected, actual)
-			}
-			if expected, actual := tcase.Domain, Domain(r); expected != actual {
-				t.Fatalf("Invalid domain for %q. Expected %q, got %q", r, expected, actual)
-			}
-			if expected, actual := tcase.RemoteName, Path(r); expected != actual {
-				t.Fatalf("Invalid remoteName for %q. Expected %q, got %q", r, expected, actual)
-			}
-
+			t.Run(strconv.Itoa(i)+"/"+r, func(t *testing.T) {
+				t.Parallel()
+				named, err := ParseNormalizedNamed(r)
+				if err != nil {
+					t.Fatalf("ref=%s: %v", r, err)
+				}
+				t.Run("FamiliarName", func(t *testing.T) {
+					if expected, actual := tc.FamiliarName, FamiliarName(named); expected != actual {
+						t.Errorf("Invalid familiar name for %q. Expected %q, got %q", named, expected, actual)
+					}
+				})
+				t.Run("FullName", func(t *testing.T) {
+					if expected, actual := tc.FullName, named.String(); expected != actual {
+						t.Errorf("Invalid canonical reference for %q. Expected %q, got %q", named, expected, actual)
+					}
+				})
+				t.Run("Domain", func(t *testing.T) {
+					if expected, actual := tc.Domain, Domain(named); expected != actual {
+						t.Errorf("Invalid domain for %q. Expected %q, got %q", named, expected, actual)
+					}
+				})
+				t.Run("RemoteName", func(t *testing.T) {
+					if expected, actual := tc.RemoteName, Path(named); expected != actual {
+						t.Errorf("Invalid remoteName for %q. Expected %q, got %q", named, expected, actual)
+					}
+				})
+			})
 		}
 	}
 }
@@ -677,6 +683,7 @@ func TestParseDockerRef(t *testing.T) {
 		},
 	}
 	for _, test := range testcases {
+		test := test
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
 			normalized, err := ParseDockerRef(test.input)
