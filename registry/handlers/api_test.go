@@ -23,7 +23,6 @@ import (
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/manifest"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
-	"github.com/distribution/distribution/v3/manifest/ociartifact"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/manifest/schema1" //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	"github.com/distribution/distribution/v3/manifest/schema2"
@@ -40,9 +39,16 @@ import (
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-var headerConfig = http.Header{
-	"X-Content-Type-Options": []string{"nosniff"},
-}
+var (
+	headerConfig = http.Header{
+		"X-Content-Type-Options": []string{"nosniff"},
+	}
+	scratchDescriptor = distribution.Descriptor{
+		MediaType: v1.ScratchDescriptor.MediaType,
+		Size:      v1.ScratchDescriptor.Size,
+		Digest:    v1.ScratchDescriptor.Digest,
+	}
+)
 
 const (
 	// digestSha256EmptyTar is the canonical sha256 digest of empty data
@@ -3163,50 +3169,8 @@ func TestArtifactManifest(t *testing.T) {
 		manifest      func(*testing.T, *testEnv, reference.Named) distribution.Manifest
 		deleteSubject bool
 	}{
-		// When an OCI artifact is PUT before its subject, the subject's referrers
-		// link will be made in advance.
-		"valid": {
-			manifest: func(t *testing.T, testEnv *testEnv, repo reference.Named) distribution.Manifest {
-				manifest, err := ociartifact.FromStruct(ociartifact.Manifest{
-					Unversioned: manifest.Unversioned{
-						MediaType: v1.MediaTypeArtifactManifest,
-					},
-					ArtifactType: "application/vnd.example.sbom.v1",
-					Subject: &distribution.Descriptor{
-						MediaType: v1.MediaTypeImageManifest,
-						Digest:    "sha256:ebe054f08821294feee7bc442014fdd38b4836d83781d8ba99d38eb50d0c9d85",
-						Size:      99,
-					},
-				})
-				if err != nil {
-					t.Fatalf("Failed to create manifest: %s", err)
-				}
-				return manifest
-			},
-		},
-		// An artifact can have no artifactType
-		"no_type": {
-			manifest: func(t *testing.T, testEnv *testEnv, repo reference.Named) distribution.Manifest {
-				manifest, err := ociartifact.FromStruct(ociartifact.Manifest{
-					Unversioned: manifest.Unversioned{
-						MediaType: v1.MediaTypeArtifactManifest,
-					},
-					ArtifactType: "",
-					Subject: &distribution.Descriptor{
-						MediaType: v1.MediaTypeImageManifest,
-						Digest:    "sha256:ebe054f08821294feee7bc442014fdd38b4836d83781d8ba99d38eb50d0c9d85",
-						Size:      99,
-					},
-				})
-				if err != nil {
-					t.Fatalf("Failed to create manifest: %s", err)
-				}
-				return manifest
-			},
-		},
-
-		// The link is also made when the subject already exists and is kept if
-		// the subject is deleted
+		// The link is made when the subject already exists and is kept if the
+		// subject is deleted
 		"subject_exists": {
 			manifest: func(t *testing.T, testEnv *testEnv, repo reference.Named) distribution.Manifest {
 				args := testManifestAPISchema2(t, testEnv, repo)
@@ -3215,11 +3179,12 @@ func TestArtifactManifest(t *testing.T) {
 					t.Fatalf("Failed to get subject payload: %s", err)
 				}
 
-				manifest, err := ociartifact.FromStruct(ociartifact.Manifest{
-					Unversioned: manifest.Unversioned{
-						MediaType: v1.MediaTypeArtifactManifest,
-					},
+				pushScratch(t, testEnv, repo)
+
+				manifest, err := ocischema.FromStruct(ocischema.Manifest{
+					Versioned:    ocischema.SchemaVersion,
 					ArtifactType: "application/vnd.example.sbom.v1",
+					Config:       scratchDescriptor,
 					Subject: &distribution.Descriptor{
 						MediaType: args.mediaType,
 						Digest:    args.dgst,
@@ -3244,10 +3209,7 @@ func TestArtifactManifest(t *testing.T) {
 				url, _ := startPushLayer(t, testEnv, repo)
 				pushLayer(t, testEnv.builder, repo, configDigest, url, config)
 				manifest, err := ocischema.FromStruct(ocischema.Manifest{
-					Versioned: manifest.Versioned{
-						SchemaVersion: 2,
-						MediaType:     v1.MediaTypeImageManifest,
-					},
+					Versioned: ocischema.SchemaVersion,
 					Config: distribution.Descriptor{
 						MediaType: v1.MediaTypeImageConfig,
 						Digest:    configDigest,
@@ -3412,7 +3374,7 @@ func TestArtifactManifest(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to create artifact GET request: %s", err)
 			}
-			req.Header.Set("Accept", v1.MediaTypeArtifactManifest)
+			req.Header.Set("Accept", v1.MediaTypeImageManifest)
 			res, err = http.DefaultClient.Do(req)
 			if err != nil {
 				t.Fatalf("Failed to GET manifest: %s", err)
@@ -3512,12 +3474,17 @@ func TestDockerManifestWithSubject(t *testing.T) {
 
 func TestArtifactManifestValidation(t *testing.T) {
 	for name, test := range map[string]struct {
-		blobs    func(*testing.T, *testEnv, reference.Named) []distribution.Descriptor
+		config   func(*testing.T, *testEnv, reference.Named) distribution.Descriptor
+		layers   func(*testing.T, *testEnv, reference.Named) []distribution.Descriptor
 		wantCode int
 	}{
-		"blobs_must_exist": {
-			blobs: func(t *testing.T, te *testEnv, n reference.Named) []distribution.Descriptor {
-				// a blob which has not been uploaded
+		"layers_must_exist": {
+			config: func(t *testing.T, testEnv *testEnv, repo reference.Named) distribution.Descriptor {
+				pushScratch(t, testEnv, repo)
+				return scratchDescriptor
+			},
+			layers: func(t *testing.T, te *testEnv, n reference.Named) []distribution.Descriptor {
+				// a layer which has not been uploaded
 				return []distribution.Descriptor{
 					{
 						MediaType: v1.MediaTypeImageLayer,
@@ -3528,8 +3495,60 @@ func TestArtifactManifestValidation(t *testing.T) {
 			},
 			wantCode: 400,
 		},
+		"config_must_be_set": {
+			config: func(t *testing.T, testEnv *testEnv, repo reference.Named) distribution.Descriptor {
+				return distribution.Descriptor{} // zero value
+			},
+			layers: func(t *testing.T, testEnv *testEnv, repo reference.Named) []distribution.Descriptor {
+				layers := int64(10)
+				digests := make([]distribution.Descriptor, layers)
+				for i := int64(0); i < layers; i++ {
+					rs, digest, err := testutil.CreateRandomTarFile()
+					if err != nil {
+						t.Fatalf("Failed to create test blob: %s", err)
+					}
+					url, _ := startPushLayer(t, testEnv, repo)
+					pushLayer(t, testEnv.builder, repo, digest, url, rs)
+					digests[i] = distribution.Descriptor{
+						MediaType: v1.MediaTypeImageLayer,
+						Digest:    digest,
+						Size:      testutil.MustSeekerLen(rs),
+					}
+				}
+				return digests
+			},
+			wantCode: 400,
+		},
+		"config_must_exist": {
+			config: func(t *testing.T, testEnv *testEnv, repo reference.Named) distribution.Descriptor {
+				return scratchDescriptor // not uploaded
+			},
+			layers: func(t *testing.T, testEnv *testEnv, repo reference.Named) []distribution.Descriptor {
+				layers := int64(10)
+				digests := make([]distribution.Descriptor, layers)
+				for i := int64(0); i < layers; i++ {
+					rs, digest, err := testutil.CreateRandomTarFile()
+					if err != nil {
+						t.Fatalf("Failed to create test blob: %s", err)
+					}
+					url, _ := startPushLayer(t, testEnv, repo)
+					pushLayer(t, testEnv.builder, repo, digest, url, rs)
+					digests[i] = distribution.Descriptor{
+						MediaType: v1.MediaTypeImageLayer,
+						Digest:    digest,
+						Size:      testutil.MustSeekerLen(rs),
+					}
+				}
+				return digests
+			},
+			wantCode: 400,
+		},
 		"valid_blobs": {
-			blobs: func(t *testing.T, testEnv *testEnv, repo reference.Named) []distribution.Descriptor {
+			config: func(t *testing.T, testEnv *testEnv, repo reference.Named) distribution.Descriptor {
+				pushScratch(t, testEnv, repo)
+				return scratchDescriptor
+			},
+			layers: func(t *testing.T, testEnv *testEnv, repo reference.Named) []distribution.Descriptor {
 				layers := int64(10)
 				digests := make([]distribution.Descriptor, layers)
 				for i := int64(0); i < layers; i++ {
@@ -3559,12 +3578,11 @@ func TestArtifactManifestValidation(t *testing.T) {
 				t.Fatalf("failed to make repo: %s", err)
 			}
 
-			manifest, err := ociartifact.FromStruct(ociartifact.Manifest{
-				Unversioned: manifest.Unversioned{
-					MediaType: v1.MediaTypeArtifactManifest,
-				},
+			manifest, err := ocischema.FromStruct(ocischema.Manifest{
+				Versioned:    ocischema.SchemaVersion,
+				Config:       test.config(t, testEnv, repo),
 				ArtifactType: "application/vnd.example.sbom.v1",
-				Blobs:        test.blobs(t, testEnv, repo),
+				Layers:       test.layers(t, testEnv, repo),
 			})
 			if err != nil {
 				t.Fatalf("Failed to make manifest: %s", err)
@@ -3599,4 +3617,9 @@ func TestArtifactManifestValidation(t *testing.T) {
 			}
 		})
 	}
+}
+
+func pushScratch(t *testing.T, testEnv *testEnv, repo reference.Named) {
+	url, _ := startPushLayer(t, testEnv, repo)
+	pushLayer(t, testEnv.builder, repo, v1.ScratchDescriptor.Digest, url, bytes.NewBuffer(v1.ScratchDescriptor.Data))
 }

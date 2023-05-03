@@ -10,7 +10,6 @@ import (
 	"github.com/distribution/distribution/v3"
 	dcontext "github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
-	"github.com/distribution/distribution/v3/manifest/ociartifact"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/manifest/schema1" //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	"github.com/distribution/distribution/v3/manifest/schema2"
@@ -41,8 +40,7 @@ const (
 	manifestlistSchema                     // 2
 	ociSchema                              // 3
 	ociImageIndexSchema                    // 4
-	ociArtifact                            // 5
-	numStorageTypes                        // 6
+	numStorageTypes                        // 5
 )
 
 // manifestDispatcher takes the request context and builds the
@@ -117,9 +115,6 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 			if mediaType == v1.MediaTypeImageIndex {
 				supports[ociImageIndexSchema] = true
 			}
-			if mediaType == v1.MediaTypeArtifactManifest {
-				supports[ociArtifact] = true
-			}
 		}
 	}
 
@@ -163,8 +158,6 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 		manifestType = manifestSchema2
 	} else if _, isOCImanifest := manifest.(*ocischema.DeserializedManifest); isOCImanifest {
 		manifestType = ociSchema
-	} else if _, isOCIArtifact := manifest.(*ociartifact.DeserializedManifest); isOCIArtifact {
-		manifestType = ociArtifact
 	} else if isManifestList {
 		if manifestList.MediaType == manifestlist.MediaTypeManifestList {
 			manifestType = manifestlistSchema
@@ -179,10 +172,6 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 	}
 	if manifestType == ociImageIndexSchema && !supports[ociImageIndexSchema] {
 		imh.Errors = append(imh.Errors, v2.ErrorCodeManifestNotAcceptable.WithMessage("OCI index found, but accept header does not support OCI indexes"))
-		return
-	}
-	if manifestType == ociArtifact && !supports[ociArtifact] {
-		imh.Errors = append(imh.Errors, v2.ErrorCodeManifestNotAcceptable.WithMessage("OCI artifact found, but accept header does not support OCI artifacts"))
 		return
 	}
 	// Only rewrite schema2 manifests when they are being fetched by tag.
@@ -333,8 +322,7 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	isAnOCIManifest := mediaType == v1.MediaTypeImageManifest || mediaType == v1.MediaTypeImageIndex ||
-		mediaType == v1.MediaTypeArtifactManifest
+	isAnOCIManifest := mediaType == v1.MediaTypeImageManifest || mediaType == v1.MediaTypeImageIndex
 
 	if isAnOCIManifest {
 		dcontext.GetLogger(imh).Debug("Putting an OCI Manifest!")

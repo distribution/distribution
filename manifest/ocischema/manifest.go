@@ -45,6 +45,10 @@ type Manifest struct {
 	// Config references the image configuration as a blob.
 	Config distribution.Descriptor `json:"config"`
 
+	// ArtifactType is the type of an artifact when the manifest is used for an
+	// artifact.
+	ArtifactType string `json:"artifactType,omitempty"`
+
 	// Layers lists descriptors for the layers referenced by the
 	// configuration.
 	Layers []distribution.Descriptor `json:"layers"`
@@ -106,6 +110,21 @@ func (m *DeserializedManifest) UnmarshalJSON(b []byte) error {
 			v1.MediaTypeImageManifest, mfst.MediaType)
 	}
 
+	if mfst.Config.MediaType == v1.MediaTypeScratch && mfst.ArtifactType == "" {
+		return fmt.Errorf("if config.mediaType is '%s' then artifactType must be set", v1.MediaTypeScratch)
+	}
+
+	// The subject if specified must be a must be a manifest. This is validated
+	// here rather than in the storage manifest Put handler because the subject
+	// does not have to exist, so there is nothing to validate in the manifest
+	// store. If a non-compliant client provided the digest of a blob then this
+	// registry would still indicate that the referred manifest does not exist.
+	if mfst.Subject != nil {
+		if !distribution.ManifestMediaTypeSupported(mfst.Subject.MediaType) {
+			return fmt.Errorf("subject.mediaType must be a manifest, not '%s'", mfst.Subject.MediaType)
+		}
+	}
+
 	m.Manifest = mfst
 
 	return nil
@@ -133,10 +152,12 @@ func (m *DeserializedManifest) Subject() *distribution.Descriptor {
 	return m.Manifest.Subject
 }
 
-// Type returns empty string because image manifests with subjects cannot have
-// an artifact type.
+// Type returns the artifactType of the manifest
 func (m *DeserializedManifest) Type() string {
-	return ""
+	if m.ArtifactType == "" {
+		return m.Config.MediaType
+	}
+	return m.ArtifactType
 }
 
 // unknownDocument represents a manifest, manifest list, or index that has not

@@ -2,14 +2,11 @@ package storage
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/url"
 
 	"github.com/distribution/distribution/v3"
 	dcontext "github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/manifest"
-	"github.com/distribution/distribution/v3/manifest/ociartifact"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -30,25 +27,8 @@ var _ ManifestHandler = &ocischemaManifestHandler{}
 func (ms *ocischemaManifestHandler) Unmarshal(ctx context.Context, dgst digest.Digest, content []byte) (distribution.Manifest, error) {
 	dcontext.GetLogger(ms.ctx).Debug("(*ocischemaManifestHandler).Unmarshal")
 
-	var unversioned manifest.Unversioned
-	if err := json.Unmarshal(content, &unversioned); err != nil {
-		return nil, err
-	}
-	var m distribution.Manifest
-	switch unversioned.MediaType {
-	case "", v1.MediaTypeImageManifest:
-		m = &ocischema.DeserializedManifest{}
-	case v1.MediaTypeArtifactManifest:
-		m = &ociartifact.DeserializedManifest{}
-	default:
-		return nil, fmt.Errorf("if present, mediaType should be '%s' or '%s', not '%s'",
-			v1.MediaTypeImageManifest,
-			v1.MediaTypeArtifactManifest,
-			unversioned.MediaType,
-		)
-	}
-
-	if err := m.(json.Unmarshaler).UnmarshalJSON(content); err != nil {
+	m := &ocischema.DeserializedManifest{}
+	if err := m.UnmarshalJSON(content); err != nil {
 		return nil, err
 	}
 
@@ -58,7 +38,12 @@ func (ms *ocischemaManifestHandler) Unmarshal(ctx context.Context, dgst digest.D
 func (ms *ocischemaManifestHandler) Put(ctx context.Context, manifest distribution.Manifest, skipDependencyVerification bool) (digest.Digest, error) {
 	dcontext.GetLogger(ms.ctx).Debug("(*ocischemaManifestHandler).Put")
 
-	if err := ms.verifyManifest(ms.ctx, manifest, skipDependencyVerification); err != nil {
+	m, ok := manifest.(*ocischema.DeserializedManifest)
+	if !ok {
+		return "", fmt.Errorf("non-ocischema manifest put to ocischemaManifestHandler: %T", manifest)
+	}
+
+	if err := ms.verifyManifest(ms.ctx, *m, skipDependencyVerification); err != nil {
 		return "", err
 	}
 
@@ -87,17 +72,11 @@ func (ms *ocischemaManifestHandler) Put(ctx context.Context, manifest distributi
 // verifyManifest ensures that the manifest content is valid from the
 // perspective of the registry. As a policy, the registry only tries to store
 // valid content, leaving trust policies of that content up to consumers.
-func (ms *ocischemaManifestHandler) verifyManifest(ctx context.Context, mnfst distribution.Manifest, skipDependencyVerification bool) error {
+func (ms *ocischemaManifestHandler) verifyManifest(ctx context.Context, mnfst ocischema.DeserializedManifest, skipDependencyVerification bool) error {
 	var errs distribution.ErrManifestVerification
 
-	switch m := mnfst.(type) {
-	case *ocischema.DeserializedManifest:
-		if m.Manifest.SchemaVersion != 2 {
-			return fmt.Errorf("unrecognized manifest schema version %d", m.Manifest.SchemaVersion)
-		}
-	case *ociartifact.DeserializedManifest:
-	default:
-		return fmt.Errorf("unrecognized manifest type: %T", mnfst)
+	if mnfst.Manifest.SchemaVersion != 2 {
+		return fmt.Errorf("unrecognized manifest schema version %d", mnfst.Manifest.SchemaVersion)
 	}
 
 	if skipDependencyVerification {

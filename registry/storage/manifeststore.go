@@ -9,7 +9,6 @@ import (
 	dcontext "github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/manifest"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
-	"github.com/distribution/distribution/v3/manifest/ociartifact"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/manifest/schema1" //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	"github.com/distribution/distribution/v3/manifest/schema2"
@@ -90,21 +89,6 @@ func (ms *manifestStore) Get(ctx context.Context, dgst digest.Digest, options ..
 		return nil, err
 	}
 
-	// The content is unmarshalled into Unversioned first because it's possible
-	// for a spec compliant OCI artifact manifest to fail to unmarshal into
-	// Versioned due to the schemaVersion property being unknown. We MUST ignore
-	// this unknown property, and unmarshalling into Versioned would implicitly
-	// constrain that property to a number type.
-	var unversioned manifest.Unversioned
-	if err = json.Unmarshal(content, &unversioned); err != nil {
-		return nil, err
-	}
-
-	switch unversioned.MediaType {
-	case v1.MediaTypeArtifactManifest:
-		return ms.ocischemaHandler.Unmarshal(ctx, dgst, content)
-	}
-
 	var versioned manifest.Versioned
 	if err = json.Unmarshal(content, &versioned); err != nil {
 		return nil, err
@@ -150,7 +134,7 @@ func (ms *manifestStore) Put(ctx context.Context, manifest distribution.Manifest
 		return ms.schema1Handler.Put(ctx, manifest, ms.skipDependencyVerification)
 	case *schema2.DeserializedManifest:
 		return ms.schema2Handler.Put(ctx, manifest, ms.skipDependencyVerification)
-	case *ocischema.DeserializedManifest, *ociartifact.DeserializedManifest:
+	case *ocischema.DeserializedManifest:
 		return ms.ocischemaHandler.Put(ctx, manifest, ms.skipDependencyVerification)
 	case *manifestlist.DeserializedManifestList:
 		return ms.manifestListHandler.Put(ctx, manifest, ms.skipDependencyVerification)
