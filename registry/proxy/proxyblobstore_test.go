@@ -116,7 +116,7 @@ func (te *testEnv) RemoteStats() *map[string]int {
 func makeTestEnv(t *testing.T, name string) *testEnv {
 	t.Helper()
 
-	nameRef, err := reference.WithName(name)
+	nameRef, err := reference.CreateNamed("", name)
 	if err != nil {
 		t.Fatalf("unable to parse reference: %s", err)
 	}

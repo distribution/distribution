@@ -55,7 +55,7 @@ func TestReferenceBuilder(t *testing.T) {
 
 	handCrafted := makeSignedManifest(t, pk, []Reference{r1, r2})
 
-	ref, err := reference.WithName(handCrafted.Manifest.Name)
+	ref, err := reference.CreateNamed("", handCrafted.Manifest.Name)
 	if err != nil {
 		t.Fatalf("could not parse reference: %v", err)
 	}

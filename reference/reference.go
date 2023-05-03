@@ -250,21 +250,29 @@ func ParseNamed(s string) (Named, error) {
 	return named, nil
 }
 
-// WithName returns a named object representing the given string. If the input
-// is invalid ErrReferenceInvalidFormat will be returned.
-func WithName(name string) (Named, error) {
-	if len(name) > NameTotalLengthMax {
+// CreateNamed returns a named object using the given domain and path. If the
+// input is invalid ErrReferenceInvalidFormat will be returned.
+func CreateNamed(domain, path string) (Named, error) {
+	repo := repository{
+		domain: domain,
+		path:   path,
+	}
+
+	if repo.domain != "" {
+		if !anchoredDomainRegexp.MatchString(repo.domain) {
+			return nil, ErrReferenceInvalidFormat
+		}
+	}
+
+	if !anchoredPathRegexp.MatchString(repo.path) {
+		return nil, ErrReferenceInvalidFormat
+	}
+
+	if len(repo.String()) > NameTotalLengthMax {
 		return nil, ErrNameTooLong
 	}
 
-	match := anchoredNameRegexp.FindStringSubmatch(name)
-	if match == nil || len(match) != 3 {
-		return nil, ErrReferenceInvalidFormat
-	}
-	return repository{
-		domain: match[1],
-		path:   match[2],
-	}, nil
+	return repo, nil
 }
 
 // WithTag combines the name from "name" and the tag from "tag" to form a

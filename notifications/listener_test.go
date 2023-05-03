@@ -33,7 +33,7 @@ func TestListener(t *testing.T) {
 		ops: make(map[string]int),
 	}
 
-	repoRef, _ := reference.WithName("foo/bar")
+	repoRef, _ := reference.CreateNamed("", "foo/bar")
 	repository, err := registry.Repository(ctx, repoRef)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)

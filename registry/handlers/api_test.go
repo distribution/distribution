@@ -436,7 +436,7 @@ func makeBlobArgs(t *testing.T) blobArgs {
 		layerFile:   layerFile,
 		layerDigest: layerDigest,
 	}
-	args.imageName, _ = reference.WithName("foo/bar")
+	args.imageName, _ = reference.CreateNamed("", "foo/bar")
 	return args
 }
 
@@ -478,7 +478,7 @@ func TestRelativeURL(t *testing.T) {
 	config.HTTP.RelativeURLs = false
 	env := newTestEnvWithConfig(t, &config)
 	defer env.Shutdown()
-	ref, _ := reference.WithName("foo/bar")
+	ref, _ := reference.CreateNamed("", "foo/bar")
 	uploadURLBaseAbs, _ := startPushLayer(t, env, ref)
 
 	u, err := url.Parse(uploadURLBaseAbs)
@@ -897,7 +897,7 @@ func TestDeleteDisabled(t *testing.T) {
 	env := newTestEnv(t, false)
 	defer env.Shutdown()
 
-	imageName, _ := reference.WithName("foo/bar")
+	imageName, _ := reference.CreateNamed("", "foo/bar")
 	// "build" our layer file
 	layerFile, layerDigest, err := testutil.CreateRandomTarFile()
 	if err != nil {
@@ -924,7 +924,7 @@ func TestDeleteReadOnly(t *testing.T) {
 	env := newTestEnv(t, true)
 	defer env.Shutdown()
 
-	imageName, _ := reference.WithName("foo/bar")
+	imageName, _ := reference.CreateNamed("", "foo/bar")
 	// "build" our layer file
 	layerFile, layerDigest, err := testutil.CreateRandomTarFile()
 	if err != nil {
@@ -954,7 +954,7 @@ func TestStartPushReadOnly(t *testing.T) {
 	defer env.Shutdown()
 	env.app.readOnly = true
 
-	imageName, _ := reference.WithName("foo/bar")
+	imageName, _ := reference.CreateNamed("", "foo/bar")
 
 	layerUploadURL, err := env.builder.BuildBlobUploadURL(imageName)
 	if err != nil {
@@ -992,8 +992,8 @@ type manifestArgs struct {
 }
 
 func TestManifestAPI(t *testing.T) {
-	schema1Repo, _ := reference.WithName("foo/schema1")
-	schema2Repo, _ := reference.WithName("foo/schema2")
+	schema1Repo, _ := reference.CreateNamed("", "foo/schema1")
+	schema2Repo, _ := reference.CreateNamed("", "foo/schema2")
 
 	deleteEnabled := false
 	env1 := newTestEnv(t, deleteEnabled)
@@ -1171,22 +1171,22 @@ func TestGetManifestWithStorageError(t *testing.T) {
 	env1 := newTestEnvWithConfig(t, &config)
 	defer env1.Shutdown()
 
-	repo, _ := reference.WithName(repositoryWithManifestNotFound)
+	repo, _ := reference.CreateNamed("", repositoryWithManifestNotFound)
 	testManifestWithStorageError(t, env1, repo, http.StatusNotFound, v2.ErrorCodeManifestUnknown)
 
-	repo, _ = reference.WithName(repositoryWithGenericStorageError)
+	repo, _ = reference.CreateNamed("", repositoryWithGenericStorageError)
 	testManifestWithStorageError(t, env1, repo, http.StatusInternalServerError, errcode.ErrorCodeUnknown)
 
-	repo, _ = reference.WithName(repositoryWithManifestInvalidPath)
+	repo, _ = reference.CreateNamed("", repositoryWithManifestInvalidPath)
 	testManifestWithStorageError(t, env1, repo, http.StatusInternalServerError, errcode.ErrorCodeUnknown)
 
-	repo, _ = reference.WithName(repositoryWithManifestBadLink)
+	repo, _ = reference.CreateNamed("", repositoryWithManifestBadLink)
 	testManifestWithStorageError(t, env1, repo, http.StatusInternalServerError, errcode.ErrorCodeUnknown)
 }
 
 func TestManifestDelete(t *testing.T) {
-	schema1Repo, _ := reference.WithName("foo/schema1")
-	schema2Repo, _ := reference.WithName("foo/schema2")
+	schema1Repo, _ := reference.CreateNamed("", "foo/schema1")
+	schema2Repo, _ := reference.CreateNamed("", "foo/schema2")
 
 	deleteEnabled := true
 	env := newTestEnv(t, deleteEnabled)
@@ -1198,7 +1198,7 @@ func TestManifestDelete(t *testing.T) {
 }
 
 func TestManifestDeleteDisabled(t *testing.T) {
-	schema1Repo, _ := reference.WithName("foo/schema1")
+	schema1Repo, _ := reference.CreateNamed("", "foo/schema1")
 	deleteEnabled := false
 	env := newTestEnv(t, deleteEnabled)
 	defer env.Shutdown()
@@ -2705,7 +2705,7 @@ func checkErr(t *testing.T, err error, msg string) {
 }
 
 func createRepository(env *testEnv, t *testing.T, imageName string, tag string) digest.Digest {
-	imageNameRef, err := reference.WithName(imageName)
+	imageNameRef, err := reference.CreateNamed("", imageName)
 	if err != nil {
 		t.Fatalf("unable to parse reference: %v", err)
 	}
@@ -2775,7 +2775,7 @@ func TestRegistryAsCacheMutationAPIs(t *testing.T) {
 	env := newTestEnvMirror(t, deleteEnabled)
 	defer env.Shutdown()
 
-	imageName, _ := reference.WithName("foo/bar")
+	imageName, _ := reference.CreateNamed("", "foo/bar")
 	tag := "latest"
 	tagRef, _ := reference.WithTag(imageName, tag)
 	manifestURL, err := env.builder.BuildManifestURL(tagRef)
@@ -2839,7 +2839,7 @@ func TestProxyManifestGetByTag(t *testing.T) {
 	truthConfig.Compatibility.Schema1.Enabled = true
 	truthConfig.HTTP.Headers = headerConfig
 
-	imageName, _ := reference.WithName("foo/bar")
+	imageName, _ := reference.CreateNamed("", "foo/bar")
 	tag := "latest"
 
 	truthEnv := newTestEnvWithConfig(t, &truthConfig)

@@ -68,7 +68,7 @@ func setupFS(t *testing.T) *setupEnv {
 }
 
 func makeRepo(ctx context.Context, t *testing.T, name string, reg distribution.Namespace) {
-	named, err := reference.WithName(name)
+	named, err := reference.CreateNamed("", name)
 	if err != nil {
 		t.Fatal(err)
 	}

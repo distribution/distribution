@@ -39,7 +39,7 @@ func makeRepository(t *testing.T, registry distribution.Namespace, name string) 
 	ctx := context.Background()
 
 	// Initialize a dummy repository
-	named, err := reference.WithName(name)
+	named, err := reference.CreateNamed("", name)
 	if err != nil {
 		t.Fatalf("Failed to parse name %s:  %v", name, err)
 	}

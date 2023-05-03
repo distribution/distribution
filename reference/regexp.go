@@ -56,6 +56,13 @@ const (
 	// domain-name without a "." or a ":port" are considered a path component.
 	localhost = `localhost`
 
+	// pathComponentRegexp restricts registry path component names to start
+	// with at least one letter or number, with following parts able to be
+	// separated by one period, one or two underscore and multiple dashes.
+	pathComponentRegexp = expression(
+		alphaNumericRegexp,
+		optional(repeated(separatorRegexp, alphaNumericRegexp)))
+
 	// domainNameComponent restricts the registry domain component of a
 	// repository name to start with a component as defined by DomainRegexp.
 	domainNameComponent = `(?:[a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9])`
@@ -109,6 +116,15 @@ var (
 	// compatibility with Docker image names.
 	domainAndPort = host + optionalPort
 
+	// pathRegexp defines the structure of path components that must
+	// be part of image names.
+	pathRegexp = expression(
+		pathComponentRegexp,
+		optional(repeated(literal(`/`), pathComponentRegexp)))
+
+	// TagRegexp matches valid tag names. From docker/docker:graph/tags.go.
+	TagRegexp = match(`[\w][\w.-]{0,127}`)
+
 	// anchoredTagRegexp matches valid tag names, anchored at the start and
 	// end of the matched string.
 	anchoredTagRegexp = regexp.MustCompile(anchored(tag))
@@ -129,9 +145,24 @@ var (
 	remoteName = pathComponent + anyTimes(`/`+pathComponent)
 	namePat    = optional(domainAndPort+`/`) + remoteName
 
+	// NameRegexp is the format for the name component of references. The
+	// regexp has capturing groups for the domain and name part omitting
+	// the separating forward slash from either.
+	NameRegexp = expression(
+		optional(DomainRegexp, literal(`/`)),
+		pathRegexp)
+
 	// anchoredNameRegexp is used to parse a name value, capturing the
 	// domain and trailing components.
-	anchoredNameRegexp = regexp.MustCompile(anchored(optional(capture(domainAndPort), `/`), capture(remoteName)))
+	anchoredNameRegexp = anchored(
+		optional(capture(DomainRegexp), literal(`/`)),
+		capture(pathRegexp))
+
+	// anchoredDomainRegexp is used to validate a domain value of reference.
+	anchoredDomainRegexp = anchored(DomainRegexp)
+
+	// anchoredPathRegexp is used to validate a path value of reference.
+	anchoredPathRegexp = anchored(pathRegexp)
 
 	referencePat = anchored(capture(namePat), optional(`:`, capture(tag)), optional(`@`, capture(digestPat)))
 

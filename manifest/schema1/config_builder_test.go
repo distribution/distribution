@@ -183,7 +183,7 @@ func TestConfigBuilder(t *testing.T) {
 
 	bs := &mockBlobService{descriptors: make(map[digest.Digest]distribution.Descriptor)}
 
-	ref, err := reference.WithName("testrepo")
+	ref, err := reference.CreateNamed("", "testrepo")
 	if err != nil {
 		t.Fatalf("could not parse reference: %v", err)
 	}

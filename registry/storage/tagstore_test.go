@@ -29,7 +29,7 @@ func testTagStore(t *testing.T) *tagsTestEnv {
 		t.Fatal(err)
 	}
 
-	repoRef, _ := reference.WithName("a/b")
+	repoRef, _ := reference.CreateNamed("", "a/b")
 	repo, err := reg.Repository(ctx, repoRef)
 	if err != nil {
 		t.Fatal(err)

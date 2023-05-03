@@ -325,14 +325,14 @@ func TestParseReferenceWithTagAndDigest(t *testing.T) {
 func TestInvalidReferenceComponents(t *testing.T) {
 	t.Parallel()
 	if _, err := ParseNormalizedNamed("-foo"); err == nil {
-		t.Fatal("Expected WithName to detect invalid name")
+		t.Fatal("Expected ParseNormalizedNamed to detect invalid name")
 	}
 	ref, err := ParseNormalizedNamed("busybox")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if _, err := WithTag(ref, "-foo"); err == nil {
-		t.Fatal("Expected WithName to detect invalid tag")
+		t.Fatal("Expected ParseNormalizedNamed to detect invalid tag")
 	}
 	if _, err := WithDigest(ref, digest.Digest("foo")); err == nil {
 		t.Fatal("Expected WithDigest to detect invalid digest")

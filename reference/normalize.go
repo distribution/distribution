@@ -109,11 +109,19 @@ func ParseDockerRef(ref string) (Named, error) {
 	if err != nil {
 		return nil, err
 	}
-	if canonical, ok := named.(namedTaggedDigested); ok {
-		// The reference is both tagged and digested; only return digested.
-		newNamed, err := WithName(canonical.Name())
-		if err != nil {
-			return nil, err
+	if _, ok := named.(NamedTagged); ok {
+		if canonical, ok := named.(Canonical); ok {
+			// The reference is both tagged and digested, only
+			// return digested.
+			newNamed, err := CreateNamed(Domain(canonical), Path(canonical))
+			if err != nil {
+				return nil, err
+			}
+			newCanonical, err := WithDigest(newNamed, canonical.Digest())
+			if err != nil {
+				return nil, err
+			}
+			return newCanonical, nil
 		}
 		return WithDigest(newNamed, canonical.Digest())
 	}

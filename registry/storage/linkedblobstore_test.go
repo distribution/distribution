@@ -64,7 +64,7 @@ func TestLinkedBlobStoreEnumerator(t *testing.T) {
 }
 
 func TestLinkedBlobStoreCreateWithMountFrom(t *testing.T) {
-	fooRepoName, _ := reference.WithName("nm/foo")
+	fooRepoName, _ := reference.CreateNamed("", "nm/foo")
 	fooEnv := newManifestStoreTestEnv(t, fooRepoName, "thetag")
 	ctx := context.Background()
 	stats, err := mockRegistry(t, fooEnv.registry)
@@ -101,7 +101,7 @@ func TestLinkedBlobStoreCreateWithMountFrom(t *testing.T) {
 	}
 
 	// create another repository nm/bar
-	barRepoName, _ := reference.WithName("nm/bar")
+	barRepoName, _ := reference.CreateNamed("", "nm/bar")
 	barRepo, err := fooEnv.registry.Repository(ctx, barRepoName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
@@ -141,7 +141,7 @@ func TestLinkedBlobStoreCreateWithMountFrom(t *testing.T) {
 	clearStats(stats)
 
 	// create yet another repository nm/baz
-	bazRepoName, _ := reference.WithName("nm/baz")
+	bazRepoName, _ := reference.CreateNamed("", "nm/baz")
 	bazRepo, err := fooEnv.registry.Repository(ctx, bazRepoName)
 	if err != nil {
 		t.Fatalf("unexpected error getting repo: %v", err)
