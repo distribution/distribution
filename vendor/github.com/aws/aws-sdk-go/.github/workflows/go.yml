@@ -1,0 +1,119 @@
+name: Go Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+
+  full-test:
+    name: Full SDK and tools test
+    # Tests for actively maintained Go versions.
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        go-version:
+          - 1.16.x
+          - 1.17.x
+    steps:
+    - name: Setup Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go-version }}
+
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+
+    - name: Test
+      shell: bash
+      run: |
+        if [ "${{ matrix.os }}" == "windows-latest" ]; then
+          make unit-no-verify
+        else
+          make get-deps-verify ci-test
+        fi
+
+  deprecated-go-module-tests:
+    needs: full-test
+    name: Deprecated Go versions with module support
+    # Tests for deprecated Go versions with module support
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        go-version:
+          - 1.12.x
+          - 1.13.x
+          - 1.14.x
+          - 1.15.x
+    steps:
+    - name: Setup Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go-version }}
+
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+
+    - name: Test
+      shell: bash
+      run: make unit-old-go-race-cover
+
+  deprecated-pre-go-module-tests:
+    needs: full-test
+    name: Deprecated Go versions without module support
+    # Tests for deprecated Go versions without module support
+    #
+    # setup-go doesn't play well with old Go versions that need GOPATH
+    # * https://github.com/actions/setup-go/issues/14
+    # * https://github.com/actions/setup-go/issues/12
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        go-version:
+          - 1.5.x
+          - 1.6.x
+          - 1.7.x
+          - 1.8.x
+          - 1.9.x
+          - 1.10.x
+          - 1.11.x
+          - 1.12.x
+        exclude:
+          - os: macos-latest
+            go-version: 1.5.x
+          - os: macos-latest
+            go-version: 1.6.x
+        include:
+          - os: windows-latest
+            go-version: 1.12.x
+    steps:
+    - name: Setup Go env
+      shell: bash
+      run: |
+        echo "GOPATH=${{ github.workspace }}/go" >> $GITHUB_ENV
+        echo "${{ github.workspace }}/go/bin" >> $GITHUB_PATH
+
+    - name: Setup Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go-version }}
+
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 1
+        path: go/src/github.com/aws/aws-sdk-go
+
+    - name: Test
+      shell: bash
+      working-directory: go/src/github.com/aws/aws-sdk-go
+      run: make get-deps unit-old-go-race-cover

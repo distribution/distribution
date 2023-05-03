@@ -1,0 +1,1045 @@
+{
+  "version": "2.0",
+  "service": "<p>All Amazon Connect Wisdom functionality is accessible using the API. For example, you can create an assistant and a knowledge base.</p> <pre><code> &lt;p&gt;Some more advanced features are only accessible using the Wisdom API. For example, you can manually manage content by uploading custom files and control their lifecycle. &lt;/p&gt; </code></pre>",
+  "operations": {
+    "CreateAssistant": "<p>Creates an Amazon Connect Wisdom assistant.</p>",
+    "CreateAssistantAssociation": "<p>Creates an association between an Amazon Connect Wisdom assistant and another resource. Currently, the only supported association is with a knowledge base. An assistant can have only a single association.</p>",
+    "CreateContent": "<p>Creates Wisdom content. Before to calling this API, use <a href=\"https://docs.aws.amazon.com/wisdom/latest/APIReference/API_StartContentUpload.html\">StartContentUpload</a> to upload an asset.</p>",
+    "CreateKnowledgeBase": "<p>Creates a knowledge base.</p> <note> <p>When using this API, you cannot reuse <a href=\"https://docs.aws.amazon.com/appintegrations/latest/APIReference/Welcome.html\">Amazon AppIntegrations</a> DataIntegrations with external knowledge bases such as Salesforce and ServiceNow. If you do, you'll get an <code>InvalidRequestException</code> error. </p> <pre><code> &lt;p&gt;For example, you're programmatically managing your external knowledge base, and you want to add or remove one of the fields that is being ingested from Salesforce. Do the following:&lt;/p&gt; &lt;ol&gt; &lt;li&gt; &lt;p&gt;Call &lt;a href=&quot;https://docs.aws.amazon.com/wisdom/latest/APIReference/API_DeleteKnowledgeBase.html&quot;&gt;DeleteKnowledgeBase&lt;/a&gt;.&lt;/p&gt; &lt;/li&gt; &lt;li&gt; &lt;p&gt;Call &lt;a href=&quot;https://docs.aws.amazon.com/appintegrations/latest/APIReference/API_DeleteDataIntegration.html&quot;&gt;DeleteDataIntegration&lt;/a&gt;.&lt;/p&gt; &lt;/li&gt; &lt;li&gt; &lt;p&gt;Call &lt;a href=&quot;https://docs.aws.amazon.com/appintegrations/latest/APIReference/API_CreateDataIntegration.html&quot;&gt;CreateDataIntegration&lt;/a&gt; to recreate the DataIntegration or a create different one.&lt;/p&gt; &lt;/li&gt; &lt;li&gt; &lt;p&gt;Call CreateKnowledgeBase.&lt;/p&gt; &lt;/li&gt; &lt;/ol&gt; &lt;/note&gt; </code></pre>",
+    "CreateSession": "<p>Creates a session. A session is a contextual container used for generating recommendations. Amazon Connect creates a new Wisdom session for each contact on which Wisdom is enabled.</p>",
+    "DeleteAssistant": "<p>Deletes an assistant.</p>",
+    "DeleteAssistantAssociation": "<p>Deletes an assistant association.</p>",
+    "DeleteContent": "<p>Deletes the content.</p>",
+    "DeleteKnowledgeBase": "<p>Deletes the knowledge base.</p> <note> <p>When you use this API to delete an external knowledge base such as Salesforce or ServiceNow, you must also delete the <a href=\"https://docs.aws.amazon.com/appintegrations/latest/APIReference/Welcome.html\">Amazon AppIntegrations</a> DataIntegration. This is because you can't reuse the DataIntegration after it's been associated with an external knowledge base. However, you can delete and recreate it. See <a href=\"https://docs.aws.amazon.com/appintegrations/latest/APIReference/API_DeleteDataIntegration.html\">DeleteDataIntegration</a> and <a href=\"https://docs.aws.amazon.com/appintegrations/latest/APIReference/API_CreateDataIntegration.html\">CreateDataIntegration</a> in the <i>Amazon AppIntegrations API Reference</i>.</p> </note>",
+    "GetAssistant": "<p>Retrieves information about an assistant.</p>",
+    "GetAssistantAssociation": "<p>Retrieves information about an assistant association.</p>",
+    "GetContent": "<p>Retrieves content, including a pre-signed URL to download the content.</p>",
+    "GetContentSummary": "<p>Retrieves summary information about the content.</p>",
+    "GetKnowledgeBase": "<p>Retrieves information about the knowledge base.</p>",
+    "GetRecommendations": "<p>Retrieves recommendations for the specified session. To avoid retrieving the same recommendations in subsequent calls, use <a href=\"https://docs.aws.amazon.com/wisdom/latest/APIReference/API_NotifyRecommendationsReceived.html\">NotifyRecommendationsReceived</a>. This API supports long-polling behavior with the <code>waitTimeSeconds</code> parameter. Short poll is the default behavior and only returns recommendations already available. To perform a manual query against an assistant, use <a href=\"https://docs.aws.amazon.com/wisdom/latest/APIReference/API_QueryAssistant.html\">QueryAssistant</a>.</p>",
+    "GetSession": "<p>Retrieves information for a specified session.</p>",
+    "ListAssistantAssociations": "<p>Lists information about assistant associations.</p>",
+    "ListAssistants": "<p>Lists information about assistants.</p>",
+    "ListContents": "<p>Lists the content.</p>",
+    "ListKnowledgeBases": "<p>Lists the knowledge bases.</p>",
+    "ListTagsForResource": "<p>Lists the tags for the specified resource.</p>",
+    "NotifyRecommendationsReceived": "<p>Removes the specified recommendations from the specified assistant's queue of newly available recommendations. You can use this API in conjunction with <a href=\"https://docs.aws.amazon.com/wisdom/latest/APIReference/API_GetRecommendations.html\">GetRecommendations</a> and a <code>waitTimeSeconds</code> input for long-polling behavior and avoiding duplicate recommendations.</p>",
+    "QueryAssistant": "<p>Performs a manual search against the specified assistant. To retrieve recommendations for an assistant, use <a href=\"https://docs.aws.amazon.com/wisdom/latest/APIReference/API_GetRecommendations.html\">GetRecommendations</a>. </p>",
+    "RemoveKnowledgeBaseTemplateUri": "<p>Removes a URI template from a knowledge base.</p>",
+    "SearchContent": "<p>Searches for content in a specified knowledge base. Can be used to get a specific content resource by its name.</p>",
+    "SearchSessions": "<p>Searches for sessions.</p>",
+    "StartContentUpload": "<p>Get a URL to upload content to a knowledge base. To upload content, first make a PUT request to the returned URL with your file, making sure to include the required headers. Then use <a href=\"https://docs.aws.amazon.com/wisdom/latest/APIReference/API_CreateContent.html\">CreateContent</a> to finalize the content creation process or <a href=\"https://docs.aws.amazon.com/wisdom/latest/APIReference/API_UpdateContent.html\">UpdateContent</a> to modify an existing resource. You can only upload content to a knowledge base of type CUSTOM.</p>",
+    "TagResource": "<p>Adds the specified tags to the specified resource.</p>",
+    "UntagResource": "<p>Removes the specified tags from the specified resource.</p>",
+    "UpdateContent": "<p>Updates information about the content.</p>",
+    "UpdateKnowledgeBaseTemplateUri": "<p>Updates the template URI of a knowledge base. This is only supported for knowledge bases of type EXTERNAL. Include a single variable in <code>${variable}</code> format; this interpolated by Wisdom using ingested content. For example, if you ingest a Salesforce article, it has an <code>Id</code> value, and you can set the template URI to <code>https://myInstanceName.lightning.force.com/lightning/r/Knowledge__kav/*${Id}*/view</code>. </p>"
+  },
+  "shapes": {
+    "AccessDeniedException": {
+      "base": "<p>You do not have sufficient access to perform this action.</p>",
+      "refs": {
+      }
+    },
+    "AppIntegrationsConfiguration": {
+      "base": "<p>Configuration information for Amazon AppIntegrations to automatically ingest content.</p>",
+      "refs": {
+        "SourceConfiguration$appIntegrations": "<p>Configuration information for Amazon AppIntegrations to automatically ingest content.</p>"
+      }
+    },
+    "Arn": {
+      "base": null,
+      "refs": {
+        "AssistantAssociationData$assistantArn": "<p>The Amazon Resource Name (ARN) of the Wisdom assistant</p>",
+        "AssistantAssociationData$assistantAssociationArn": "<p>The Amazon Resource Name (ARN) of the assistant association.</p>",
+        "AssistantAssociationSummary$assistantArn": "<p>The Amazon Resource Name (ARN) of the Wisdom assistant</p>",
+        "AssistantAssociationSummary$assistantAssociationArn": "<p>The Amazon Resource Name (ARN) of the assistant association.</p>",
+        "AssistantData$assistantArn": "<p>The Amazon Resource Name (ARN) of the Wisdom assistant</p>",
+        "AssistantSummary$assistantArn": "<p>The Amazon Resource Name (ARN) of the Wisdom assistant</p>",
+        "ContentData$contentArn": "<p>The Amazon Resource Name (ARN) of the content.</p>",
+        "ContentData$knowledgeBaseArn": "<p>The Amazon Resource Name (ARN) of the knowledge base.</p>",
+        "ContentReference$contentArn": "<p>The Amazon Resource Name (ARN) of the content.</p>",
+        "ContentReference$knowledgeBaseArn": "<p>The Amazon Resource Name (ARN) of the knowledge base.</p>",
+        "ContentSummary$contentArn": "<p>The Amazon Resource Name (ARN) of the content.</p>",
+        "ContentSummary$knowledgeBaseArn": "<p>The Amazon Resource Name (ARN) of the knowledge base.</p>",
+        "KnowledgeBaseAssociationData$knowledgeBaseArn": "<p>The Amazon Resource Name (ARN) of the knowledge base.</p>",
+        "KnowledgeBaseData$knowledgeBaseArn": "<p>The Amazon Resource Name (ARN) of the knowledge base.</p>",
+        "KnowledgeBaseSummary$knowledgeBaseArn": "<p>The Amazon Resource Name (ARN) of the knowledge base.</p>",
+        "ListTagsForResourceRequest$resourceArn": "<p>The Amazon Resource Name (ARN) of the resource.</p>",
+        "SessionData$sessionArn": "<p>The Amazon Resource Name (ARN) of the session.</p>",
+        "SessionSummary$assistantArn": "<p>The Amazon Resource Name (ARN) of the Wisdom assistant</p>",
+        "SessionSummary$sessionArn": "<p>The Amazon Resource Name (ARN) of the session.</p>",
+        "TagResourceRequest$resourceArn": "<p>The Amazon Resource Name (ARN) of the resource.</p>",
+        "UntagResourceRequest$resourceArn": "<p>The Amazon Resource Name (ARN) of the resource.</p>"
+      }
+    },
+    "AssistantAssociationData": {
+      "base": "<p>Information about the assistant association.</p>",
+      "refs": {
+        "CreateAssistantAssociationResponse$assistantAssociation": "<p>The assistant association.</p>",
+        "GetAssistantAssociationResponse$assistantAssociation": "<p>The assistant association.</p>"
+      }
+    },
+    "AssistantAssociationInputData": {
+      "base": "<p>The data that is input into Wisdom as a result of the assistant association.</p>",
+      "refs": {
+        "CreateAssistantAssociationRequest$association": "<p>The identifier of the associated resource.</p>"
+      }
+    },
+    "AssistantAssociationOutputData": {
+      "base": "<p>The data that is output as a result of the assistant association.</p>",
+      "refs": {
+        "AssistantAssociationData$associationData": "<p>A union type that currently has a single argument, the knowledge base ID.</p>",
+        "AssistantAssociationSummary$associationData": "<p>The association data.</p>"
+      }
+    },
+    "AssistantAssociationSummary": {
+      "base": "<p>Summary information about the assistant association.</p>",
+      "refs": {
+        "AssistantAssociationSummaryList$member": null
+      }
+    },
+    "AssistantAssociationSummaryList": {
+      "base": null,
+      "refs": {
+        "ListAssistantAssociationsResponse$assistantAssociationSummaries": "<p>Summary information about assistant associations.</p>"
+      }
+    },
+    "AssistantData": {
+      "base": "<p>The assistant data.</p>",
+      "refs": {
+        "CreateAssistantResponse$assistant": "<p>Information about the assistant.</p>",
+        "GetAssistantResponse$assistant": "<p>Information about the assistant.</p>"
+      }
+    },
+    "AssistantList": {
+      "base": null,
+      "refs": {
+        "ListAssistantsResponse$assistantSummaries": "<p>Information about the assistants.</p>"
+      }
+    },
+    "AssistantStatus": {
+      "base": null,
+      "refs": {
+        "AssistantData$status": "<p>The status of the assistant.</p>",
+        "AssistantSummary$status": "<p>The status of the assistant.</p>"
+      }
+    },
+    "AssistantSummary": {
+      "base": "<p>Summary information about the assistant.</p>",
+      "refs": {
+        "AssistantList$member": null
+      }
+    },
+    "AssistantType": {
+      "base": null,
+      "refs": {
+        "AssistantData$type": "<p>The type of assistant.</p>",
+        "AssistantSummary$type": "<p>The type of the assistant.</p>",
+        "CreateAssistantRequest$type": "<p>The type of assistant.</p>"
+      }
+    },
+    "AssociationType": {
+      "base": null,
+      "refs": {
+        "AssistantAssociationData$associationType": "<p>The type of association.</p>",
+        "AssistantAssociationSummary$associationType": "<p>The type of association.</p>",
+        "CreateAssistantAssociationRequest$associationType": "<p>The type of association.</p>"
+      }
+    },
+    "Boolean": {
+      "base": null,
+      "refs": {
+        "UpdateContentRequest$removeOverrideLinkOutUri": "<p>Unset the existing <code>overrideLinkOutUri</code> if it exists.</p>"
+      }
+    },
+    "ClientToken": {
+      "base": null,
+      "refs": {
+        "CreateAssistantAssociationRequest$clientToken": "<p>A unique, case-sensitive identifier that you provide to ensure the idempotency of the request.</p>",
+        "CreateAssistantRequest$clientToken": "<p>A unique, case-sensitive identifier that you provide to ensure the idempotency of the request.</p>",
+        "CreateSessionRequest$clientToken": "<p>A unique, case-sensitive identifier that you provide to ensure the idempotency of the request.</p>"
+      }
+    },
+    "ConflictException": {
+      "base": "<p>The request could not be processed because of conflict in the current state of the resource. For example, if you're using a <code>Create</code> API (such as <code>CreateAssistant</code>) that accepts name, a conflicting resource (usually with the same name) is being created or mutated.</p>",
+      "refs": {
+      }
+    },
+    "ContentData": {
+      "base": "<p>Information about the content.</p>",
+      "refs": {
+        "CreateContentResponse$content": "<p>The content.</p>",
+        "GetContentResponse$content": "<p>The content.</p>",
+        "UpdateContentResponse$content": "<p>The content.</p>"
+      }
+    },
+    "ContentMetadata": {
+      "base": null,
+      "refs": {
+        "ContentData$metadata": "<p>A key/value map to store attributes without affecting tagging or recommendations. For example, when synchronizing data between an external system and Wisdom, you can store an external version identifier as metadata to utilize for determining drift.</p>",
+        "ContentSummary$metadata": "<p>A key/value map to store attributes without affecting tagging or recommendations. For example, when synchronizing data between an external system and Wisdom, you can store an external version identifier as metadata to utilize for determining drift.</p>",
+        "CreateContentRequest$metadata": "<p>A key/value map to store attributes without affecting tagging or recommendations. For example, when synchronizing data between an external system and Wisdom, you can store an external version identifier as metadata to utilize for determining drift.</p>",
+        "UpdateContentRequest$metadata": "<p>A key/value map to store attributes without affecting tagging or recommendations. For example, when synchronizing data between an external system and Wisdom, you can store an external version identifier as metadata to utilize for determining drift.</p>"
+      }
+    },
+    "ContentReference": {
+      "base": "<p>Reference information about the content.</p>",
+      "refs": {
+        "Document$contentReference": "<p>A reference to the content resource.</p>"
+      }
+    },
+    "ContentStatus": {
+      "base": null,
+      "refs": {
+        "ContentData$status": "<p>The status of the content.</p>",
+        "ContentSummary$status": "<p>The status of the content.</p>"
+      }
+    },
+    "ContentSummary": {
+      "base": "<p>Summary information about the content.</p>",
+      "refs": {
+        "ContentSummaryList$member": null,
+        "GetContentSummaryResponse$contentSummary": "<p>The content summary.</p>"
+      }
+    },
+    "ContentSummaryList": {
+      "base": null,
+      "refs": {
+        "ListContentsResponse$contentSummaries": "<p>Information about the content.</p>",
+        "SearchContentResponse$contentSummaries": "<p>Summary information about the content.</p>"
+      }
+    },
+    "ContentTitle": {
+      "base": null,
+      "refs": {
+        "ContentData$title": "<p>The title of the content.</p>",
+        "ContentSummary$title": "<p>The title of the content.</p>",
+        "CreateContentRequest$title": "<p>The title of the content. If not set, the title is equal to the name.</p>",
+        "UpdateContentRequest$title": "<p>The title of the content.</p>"
+      }
+    },
+    "ContentType": {
+      "base": null,
+      "refs": {
+        "ContentData$contentType": "<p>The media type of the content.</p>",
+        "ContentSummary$contentType": "<p>The media type of the content.</p>",
+        "StartContentUploadRequest$contentType": "<p>The type of content to upload.</p>"
+      }
+    },
+    "CreateAssistantAssociationRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateAssistantAssociationResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateAssistantRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateAssistantResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateContentRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateContentResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateKnowledgeBaseRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateKnowledgeBaseResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateSessionRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateSessionResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteAssistantAssociationRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteAssistantAssociationResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteAssistantRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteAssistantResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteContentRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteContentResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteKnowledgeBaseRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteKnowledgeBaseResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "Description": {
+      "base": null,
+      "refs": {
+        "AssistantData$description": "<p>The description.</p>",
+        "AssistantSummary$description": "<p>The description of the assistant.</p>",
+        "CreateAssistantRequest$description": "<p>The description of the assistant.</p>",
+        "CreateKnowledgeBaseRequest$description": "<p>The description.</p>",
+        "CreateSessionRequest$description": "<p>The description.</p>",
+        "KnowledgeBaseData$description": "<p>The description.</p>",
+        "KnowledgeBaseSummary$description": "<p>The description of the knowledge base.</p>",
+        "SessionData$description": "<p>The description of the session.</p>"
+      }
+    },
+    "Document": {
+      "base": "<p>The document.</p>",
+      "refs": {
+        "RecommendationData$document": "<p>The recommended document.</p>",
+        "ResultData$document": "<p>The document.</p>"
+      }
+    },
+    "DocumentText": {
+      "base": "<p>The text of the document.</p>",
+      "refs": {
+        "Document$excerpt": "<p>The excerpt from the document.</p>",
+        "Document$title": "<p>The title of the document.</p>"
+      }
+    },
+    "Filter": {
+      "base": "<p>A search filter.</p>",
+      "refs": {
+        "FilterList$member": null
+      }
+    },
+    "FilterField": {
+      "base": null,
+      "refs": {
+        "Filter$field": "<p>The field on which to filter.</p>"
+      }
+    },
+    "FilterList": {
+      "base": null,
+      "refs": {
+        "SearchExpression$filters": "<p>The search expression filters.</p>"
+      }
+    },
+    "FilterOperator": {
+      "base": null,
+      "refs": {
+        "Filter$operator": "<p>The operator to use for comparing the field’s value with the provided value.</p>"
+      }
+    },
+    "GenericArn": {
+      "base": null,
+      "refs": {
+        "AppIntegrationsConfiguration$appIntegrationArn": "<p>The Amazon Resource Name (ARN) of the AppIntegrations DataIntegration to use for ingesting content.</p>"
+      }
+    },
+    "GetAssistantAssociationRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetAssistantAssociationResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetAssistantRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetAssistantResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetContentRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetContentResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetContentSummaryRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetContentSummaryResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetKnowledgeBaseRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetKnowledgeBaseResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetRecommendationsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetRecommendationsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetSessionRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetSessionResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "Headers": {
+      "base": null,
+      "refs": {
+        "StartContentUploadResponse$headersToInclude": "<p>The headers to include in the upload.</p>"
+      }
+    },
+    "Highlight": {
+      "base": "<p>Offset specification to describe highlighting of document excerpts for rendering search results and recommendations.</p>",
+      "refs": {
+        "Highlights$member": null
+      }
+    },
+    "HighlightOffset": {
+      "base": null,
+      "refs": {
+        "Highlight$beginOffsetInclusive": "<p>The offset for the start of the highlight.</p>",
+        "Highlight$endOffsetExclusive": "<p>The offset for the end of the highlight.</p>"
+      }
+    },
+    "Highlights": {
+      "base": null,
+      "refs": {
+        "DocumentText$highlights": "<p>Highlights in the document text.</p>"
+      }
+    },
+    "KnowledgeBaseAssociationData": {
+      "base": "<p>Association information about the knowledge base.</p>",
+      "refs": {
+        "AssistantAssociationOutputData$knowledgeBaseAssociation": "<p>The knowledge base where output data is sent.</p>"
+      }
+    },
+    "KnowledgeBaseData": {
+      "base": "<p>Information about the knowledge base.</p>",
+      "refs": {
+        "CreateKnowledgeBaseResponse$knowledgeBase": "<p>The knowledge base.</p>",
+        "GetKnowledgeBaseResponse$knowledgeBase": "<p>The knowledge base.</p>",
+        "UpdateKnowledgeBaseTemplateUriResponse$knowledgeBase": "<p>The knowledge base to update.</p>"
+      }
+    },
+    "KnowledgeBaseList": {
+      "base": null,
+      "refs": {
+        "ListKnowledgeBasesResponse$knowledgeBaseSummaries": "<p>Information about the knowledge bases.</p>"
+      }
+    },
+    "KnowledgeBaseStatus": {
+      "base": null,
+      "refs": {
+        "KnowledgeBaseData$status": "<p>The status of the knowledge base.</p>",
+        "KnowledgeBaseSummary$status": "<p>The status of the knowledge base summary.</p>"
+      }
+    },
+    "KnowledgeBaseSummary": {
+      "base": "<p>Summary information about the knowledge base.</p>",
+      "refs": {
+        "KnowledgeBaseList$member": null
+      }
+    },
+    "KnowledgeBaseType": {
+      "base": null,
+      "refs": {
+        "CreateKnowledgeBaseRequest$knowledgeBaseType": "<p>The type of knowledge base. Only CUSTOM knowledge bases allow you to upload your own content. EXTERNAL knowledge bases support integrations with third-party systems whose content is synchronized automatically. </p>",
+        "KnowledgeBaseData$knowledgeBaseType": "<p>The type of knowledge base.</p>",
+        "KnowledgeBaseSummary$knowledgeBaseType": "<p>The type of knowledge base.</p>"
+      }
+    },
+    "ListAssistantAssociationsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListAssistantAssociationsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListAssistantsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListAssistantsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListContentsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListContentsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListKnowledgeBasesRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListKnowledgeBasesResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListTagsForResourceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListTagsForResourceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "MaxResults": {
+      "base": null,
+      "refs": {
+        "GetRecommendationsRequest$maxResults": "<p>The maximum number of results to return per page.</p>",
+        "ListAssistantAssociationsRequest$maxResults": "<p>The maximum number of results to return per page.</p>",
+        "ListAssistantsRequest$maxResults": "<p>The maximum number of results to return per page.</p>",
+        "ListContentsRequest$maxResults": "<p>The maximum number of results to return per page.</p>",
+        "ListKnowledgeBasesRequest$maxResults": "<p>The maximum number of results to return per page.</p>",
+        "QueryAssistantRequest$maxResults": "<p>The maximum number of results to return per page.</p>",
+        "SearchContentRequest$maxResults": "<p>The maximum number of results to return per page.</p>",
+        "SearchSessionsRequest$maxResults": "<p>The maximum number of results to return per page.</p>"
+      }
+    },
+    "Name": {
+      "base": null,
+      "refs": {
+        "AssistantData$name": "<p>The name.</p>",
+        "AssistantSummary$name": "<p>The name of the assistant.</p>",
+        "ContentData$name": "<p>The name of the content.</p>",
+        "ContentSummary$name": "<p>The name of the content.</p>",
+        "CreateAssistantRequest$name": "<p>The name of the assistant.</p>",
+        "CreateContentRequest$name": "<p>The name of the content. Each piece of content in a knowledge base must have a unique name. You can retrieve a piece of content using only its knowledge base and its name with the <a href=\"https://docs.aws.amazon.com/wisdom/latest/APIReference/API_SearchContent.html\">SearchContent</a> API.</p>",
+        "CreateKnowledgeBaseRequest$name": "<p>The name of the knowledge base.</p>",
+        "CreateSessionRequest$name": "<p>The name of the session.</p>",
+        "KnowledgeBaseData$name": "<p>The name of the knowledge base.</p>",
+        "KnowledgeBaseSummary$name": "<p>The name of the knowledge base.</p>",
+        "SessionData$name": "<p>The name of the session.</p>"
+      }
+    },
+    "NextToken": {
+      "base": null,
+      "refs": {
+        "ListAssistantAssociationsRequest$nextToken": "<p>The token for the next set of results. Use the value returned in the previous response in the next request to retrieve the next set of results.</p>",
+        "ListAssistantAssociationsResponse$nextToken": "<p>If there are additional results, this is the token for the next set of results.</p>",
+        "ListAssistantsRequest$nextToken": "<p>The token for the next set of results. Use the value returned in the previous response in the next request to retrieve the next set of results.</p>",
+        "ListAssistantsResponse$nextToken": "<p>If there are additional results, this is the token for the next set of results.</p>",
+        "ListContentsRequest$nextToken": "<p>The token for the next set of results. Use the value returned in the previous response in the next request to retrieve the next set of results.</p>",
+        "ListContentsResponse$nextToken": "<p>If there are additional results, this is the token for the next set of results.</p>",
+        "QueryAssistantRequest$nextToken": "<p>The token for the next set of results. Use the value returned in the previous response in the next request to retrieve the next set of results.</p>",
+        "QueryAssistantResponse$nextToken": "<p>If there are additional results, this is the token for the next set of results.</p>",
+        "SearchContentRequest$nextToken": "<p>The token for the next set of results. Use the value returned in the previous response in the next request to retrieve the next set of results.</p>",
+        "SearchContentResponse$nextToken": "<p>If there are additional results, this is the token for the next set of results.</p>",
+        "SearchSessionsRequest$nextToken": "<p>The token for the next set of results. Use the value returned in the previous response in the next request to retrieve the next set of results.</p>",
+        "SearchSessionsResponse$nextToken": "<p>If there are additional results, this is the token for the next set of results.</p>"
+      }
+    },
+    "NonEmptyString": {
+      "base": null,
+      "refs": {
+        "ContentData$revisionId": "<p>The identifier of the content revision.</p>",
+        "ContentMetadata$key": null,
+        "ContentMetadata$value": null,
+        "ContentSummary$revisionId": "<p>The identifier of the revision of the content.</p>",
+        "CreateContentRequest$clientToken": "<p>A unique, case-sensitive identifier that you provide to ensure the idempotency of the request.</p>",
+        "CreateContentRequest$uploadId": "<p>A pointer to the uploaded asset. This value is returned by <a href=\"https://docs.aws.amazon.com/wisdom/latest/APIReference/API_StartContentUpload.html\">StartContentUpload</a>.</p>",
+        "CreateKnowledgeBaseRequest$clientToken": "<p>A unique, case-sensitive identifier that you provide to ensure the idempotency of the request.</p>",
+        "Filter$value": "<p>The desired field value on which to filter.</p>",
+        "Headers$key": null,
+        "Headers$value": null,
+        "ListKnowledgeBasesRequest$nextToken": "<p>The token for the next set of results. Use the value returned in the previous response in the next request to retrieve the next set of results.</p>",
+        "ListKnowledgeBasesResponse$nextToken": "<p>If there are additional results, this is the token for the next set of results.</p>",
+        "ObjectFieldsList$member": null,
+        "ServerSideEncryptionConfiguration$kmsKeyId": "<p>The KMS key. For information about valid ID values, see <a href=\"https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html#key-id\">Key identifiers (KeyId)</a> in the <i>AWS Key Management Service Developer Guide</i>. </p>",
+        "StartContentUploadResponse$uploadId": "<p>The identifier of the upload.</p>",
+        "UpdateContentRequest$revisionId": "<p>The <code>revisionId</code> of the content resource to update, taken from an earlier call to <code>GetContent</code>, <code>GetContentSummary</code>, <code>SearchContent</code>, or <code>ListContents</code>. If included, this argument acts as an optimistic lock to ensure content was not modified since it was last read. If it has been modified, this API throws a <code>PreconditionFailedException</code>.</p>",
+        "UpdateContentRequest$uploadId": "<p>A pointer to the uploaded asset. This value is returned by <a href=\"https://docs.aws.amazon.com/wisdom/latest/APIReference/API_StartContentUpload.html\">StartContentUpload</a>. </p>"
+      }
+    },
+    "NotifyRecommendationsReceivedError": {
+      "base": "<p>An error occurred when creating a recommendation.</p>",
+      "refs": {
+        "NotifyRecommendationsReceivedErrorList$member": null
+      }
+    },
+    "NotifyRecommendationsReceivedErrorList": {
+      "base": null,
+      "refs": {
+        "NotifyRecommendationsReceivedResponse$errors": "<p>The identifiers of recommendations that are causing errors.</p>"
+      }
+    },
+    "NotifyRecommendationsReceivedErrorMessage": {
+      "base": null,
+      "refs": {
+        "NotifyRecommendationsReceivedError$message": "<p>A recommendation is causing an error.</p>"
+      }
+    },
+    "NotifyRecommendationsReceivedRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "NotifyRecommendationsReceivedResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ObjectFieldsList": {
+      "base": null,
+      "refs": {
+        "AppIntegrationsConfiguration$objectFields": "<p>The fields from the source that are made available to your agents in Wisdom. </p> <ul> <li> <p> For <a href=\"https://developer.salesforce.com/docs/atlas.en-us.knowledge_dev.meta/knowledge_dev/sforce_api_objects_knowledge__kav.htm\"> Salesforce</a>, you must include at least <code>Id</code>, <code>ArticleNumber</code>, <code>VersionNumber</code>, <code>Title</code>, <code>PublishStatus</code>, and <code>IsDeleted</code>. </p> </li> <li> <p>For <a href=\"https://developer.servicenow.com/dev.do#!/reference/api/rome/rest/knowledge-management-api\"> ServiceNow</a>, you must include at least <code>number</code>, <code>short_description</code>, <code>sys_mod_count</code>, <code>workflow_state</code>, and <code>active</code>. </p> </li> </ul> <p>Make sure to include additional field(s); these are indexed and used to source recommendations. </p>"
+      }
+    },
+    "PreconditionFailedException": {
+      "base": "<p>The provided <code>revisionId</code> does not match, indicating the content has been modified since it was last read.</p>",
+      "refs": {
+      }
+    },
+    "QueryAssistantRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "QueryAssistantResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "QueryResultsList": {
+      "base": null,
+      "refs": {
+        "QueryAssistantResponse$results": "<p>The results of the query.</p>"
+      }
+    },
+    "QueryText": {
+      "base": null,
+      "refs": {
+        "QueryAssistantRequest$queryText": "<p>The text to search for.</p>"
+      }
+    },
+    "RecommendationData": {
+      "base": "<p>Information about the recommendation.</p>",
+      "refs": {
+        "RecommendationList$member": null
+      }
+    },
+    "RecommendationIdList": {
+      "base": null,
+      "refs": {
+        "NotifyRecommendationsReceivedRequest$recommendationIds": "<p>The identifiers of the recommendations.</p>",
+        "NotifyRecommendationsReceivedResponse$recommendationIds": "<p>The identifiers of the recommendations.</p>"
+      }
+    },
+    "RecommendationList": {
+      "base": null,
+      "refs": {
+        "GetRecommendationsResponse$recommendations": "<p>The recommendations.</p>"
+      }
+    },
+    "RelevanceLevel": {
+      "base": null,
+      "refs": {
+        "RecommendationData$relevanceLevel": "<p>The relevance level of the recommendation.</p>"
+      }
+    },
+    "RelevanceScore": {
+      "base": null,
+      "refs": {
+        "RecommendationData$relevanceScore": "<p>The relevance score of the recommendation.</p>",
+        "ResultData$relevanceScore": "<p>The relevance score of the results.</p>"
+      }
+    },
+    "RemoveKnowledgeBaseTemplateUriRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "RemoveKnowledgeBaseTemplateUriResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "RenderingConfiguration": {
+      "base": "<p>Information about how to render the content.</p>",
+      "refs": {
+        "CreateKnowledgeBaseRequest$renderingConfiguration": "<p>Information about how to render the content.</p>",
+        "KnowledgeBaseData$renderingConfiguration": "<p>Information about how to render the content.</p>",
+        "KnowledgeBaseSummary$renderingConfiguration": "<p>Information about how to render the content.</p>"
+      }
+    },
+    "ResourceNotFoundException": {
+      "base": "<p>The specified resource does not exist.</p>",
+      "refs": {
+      }
+    },
+    "ResultData": {
+      "base": "<p>Information about the result.</p>",
+      "refs": {
+        "QueryResultsList$member": null
+      }
+    },
+    "SearchContentRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "SearchContentResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "SearchExpression": {
+      "base": "<p>The search expression.</p>",
+      "refs": {
+        "SearchContentRequest$searchExpression": "<p>The search expression to filter results.</p>",
+        "SearchSessionsRequest$searchExpression": "<p>The search expression to filter results.</p>"
+      }
+    },
+    "SearchSessionsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "SearchSessionsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ServerSideEncryptionConfiguration": {
+      "base": "<p>The KMS key used for encryption.</p>",
+      "refs": {
+        "AssistantData$serverSideEncryptionConfiguration": "<p>The KMS key used for encryption.</p>",
+        "AssistantSummary$serverSideEncryptionConfiguration": "<p>The KMS key used for encryption.</p>",
+        "CreateAssistantRequest$serverSideEncryptionConfiguration": "<p>The KMS key used for encryption.</p>",
+        "CreateKnowledgeBaseRequest$serverSideEncryptionConfiguration": "<p>The KMS key used for encryption.</p>",
+        "KnowledgeBaseData$serverSideEncryptionConfiguration": "<p>The KMS key used for encryption.</p>",
+        "KnowledgeBaseSummary$serverSideEncryptionConfiguration": "<p>The KMS key used for encryption.</p>"
+      }
+    },
+    "ServiceQuotaExceededException": {
+      "base": "<p>You've exceeded your service quota. To perform the requested action, remove some of the relevant resources, or use service quotas to request a service quota increase.</p>",
+      "refs": {
+      }
+    },
+    "SessionData": {
+      "base": "<p>Information about the session.</p>",
+      "refs": {
+        "CreateSessionResponse$session": "<p>The session.</p>",
+        "GetSessionResponse$session": "<p>The session.</p>"
+      }
+    },
+    "SessionSummaries": {
+      "base": null,
+      "refs": {
+        "SearchSessionsResponse$sessionSummaries": "<p>Summary information about the sessions.</p>"
+      }
+    },
+    "SessionSummary": {
+      "base": "<p>Summary information about the session.</p>",
+      "refs": {
+        "SessionSummaries$member": null
+      }
+    },
+    "SourceConfiguration": {
+      "base": "<p>Configuration information about the external data source.</p>",
+      "refs": {
+        "CreateKnowledgeBaseRequest$sourceConfiguration": "<p>The source of the knowledge base content. Only set this argument for EXTERNAL knowledge bases.</p>",
+        "KnowledgeBaseData$sourceConfiguration": "<p>Source configuration information about the knowledge base.</p>",
+        "KnowledgeBaseSummary$sourceConfiguration": "<p>[KEVIN]</p>"
+      }
+    },
+    "StartContentUploadRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "StartContentUploadResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "String": {
+      "base": null,
+      "refs": {
+        "AccessDeniedException$message": null,
+        "ConflictException$message": null,
+        "NotifyRecommendationsReceivedError$recommendationId": "<p>The identifier of the recommendation that is in error.</p>",
+        "PreconditionFailedException$message": null,
+        "RecommendationData$recommendationId": "<p>The identifier of the recommendation.</p>",
+        "RecommendationIdList$member": null,
+        "ResourceNotFoundException$message": null,
+        "ResourceNotFoundException$resourceName": "<p>The specified resource name.</p>",
+        "ServiceQuotaExceededException$message": null,
+        "TooManyTagsException$message": null,
+        "TooManyTagsException$resourceName": "<p>The specified resource name.</p>",
+        "ValidationException$message": null
+      }
+    },
+    "SyntheticContentDataUrl": {
+      "base": null,
+      "refs": {
+        "ContentData$url": "<p>The URL of the content.</p>"
+      }
+    },
+    "SyntheticDocumentTextString": {
+      "base": null,
+      "refs": {
+        "DocumentText$text": "<p>Text in the document.</p>"
+      }
+    },
+    "SyntheticStartContentUploadResponseUrl": {
+      "base": null,
+      "refs": {
+        "StartContentUploadResponse$url": "<p>The URL of the upload.</p>"
+      }
+    },
+    "SyntheticTimestamp_epoch_seconds": {
+      "base": null,
+      "refs": {
+        "ContentData$urlExpiry": "<p>The expiration time of the URL as an epoch timestamp.</p>",
+        "KnowledgeBaseData$lastContentModificationTime": "<p>An epoch timestamp indicating the most recent content modification inside the knowledge base. If no content exists in a knowledge base, this value is unset.</p>",
+        "StartContentUploadResponse$urlExpiry": "<p>The expiration time of the URL as an epoch timestamp.</p>"
+      }
+    },
+    "TagKey": {
+      "base": null,
+      "refs": {
+        "TagKeyList$member": null,
+        "Tags$key": null
+      }
+    },
+    "TagKeyList": {
+      "base": null,
+      "refs": {
+        "UntagResourceRequest$tagKeys": "<p>The tag keys.</p>"
+      }
+    },
+    "TagResourceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "TagResourceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "TagValue": {
+      "base": null,
+      "refs": {
+        "Tags$value": null
+      }
+    },
+    "Tags": {
+      "base": null,
+      "refs": {
+        "AssistantAssociationData$tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "AssistantAssociationSummary$tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "AssistantData$tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "AssistantSummary$tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "ContentData$tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "ContentSummary$tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "CreateAssistantAssociationRequest$tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "CreateAssistantRequest$tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "CreateContentRequest$tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "CreateKnowledgeBaseRequest$tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "CreateSessionRequest$tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "KnowledgeBaseData$tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "KnowledgeBaseSummary$tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "ListTagsForResourceResponse$tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "SessionData$tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "TagResourceRequest$tags": "<p>The tags used to organize, track, or control access for this resource.</p>"
+      }
+    },
+    "TooManyTagsException": {
+      "base": "<p>Amazon Connect Wisdom throws this exception if you have too many tags in your tag set.</p>",
+      "refs": {
+      }
+    },
+    "UntagResourceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UntagResourceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateContentRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateContentResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateKnowledgeBaseTemplateUriRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateKnowledgeBaseTemplateUriResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "Uri": {
+      "base": null,
+      "refs": {
+        "ContentData$linkOutUri": "<p>The URI of the content.</p>",
+        "CreateContentRequest$overrideLinkOutUri": "<p>The URI you want to use for the article. If the knowledge base has a templateUri, setting this argument overrides it for this piece of content.</p>",
+        "RenderingConfiguration$templateUri": "<p>A URI template containing exactly one variable in <code>${variableName} </code>format. This can only be set for <code>EXTERNAL</code> knowledge bases. For Salesforce and ServiceNow, the variable must be one of the following:</p> <ul> <li> <p>Salesforce: <code>Id</code>, <code>ArticleNumber</code>, <code>VersionNumber</code>, <code>Title</code>, <code>PublishStatus</code>, or <code>IsDeleted</code> </p> </li> <li> <p>ServiceNow: <code>number</code>, <code>short_description</code>, <code>sys_mod_count</code>, <code>workflow_state</code>, or <code>active</code> </p> </li> </ul> <pre><code> &lt;p&gt;The variable is replaced with the actual value for a piece of content when calling &lt;a href=&quot;https://docs.aws.amazon.com/wisdom/latest/APIReference/API_GetContent.html&quot;&gt;GetContent&lt;/a&gt;. &lt;/p&gt; </code></pre>",
+        "UpdateContentRequest$overrideLinkOutUri": "<p>The URI for the article. If the knowledge base has a templateUri, setting this argument overrides it for this piece of content. To remove an existing <code>overrideLinkOurUri</code>, exclude this argument and set <code>removeOverrideLinkOutUri</code> to true.</p>",
+        "UpdateKnowledgeBaseTemplateUriRequest$templateUri": "<p>The template URI to update.</p>"
+      }
+    },
+    "Uuid": {
+      "base": null,
+      "refs": {
+        "AssistantAssociationData$assistantAssociationId": "<p>The identifier of the assistant association.</p>",
+        "AssistantAssociationData$assistantId": "<p>The identifier of the Wisdom assistant.</p>",
+        "AssistantAssociationInputData$knowledgeBaseId": "<p>The the identifier of the knowledge base.</p>",
+        "AssistantAssociationSummary$assistantAssociationId": "<p>The identifier of the assistant association.</p>",
+        "AssistantAssociationSummary$assistantId": "<p>The identifier of the Wisdom assistant.</p>",
+        "AssistantData$assistantId": "<p>The identifier of the Wisdom assistant.</p>",
+        "AssistantSummary$assistantId": "<p>The identifier of the Wisdom assistant.</p>",
+        "ContentData$contentId": "<p>The identifier of the content.</p>",
+        "ContentData$knowledgeBaseId": "<p>The the identifier of the knowledge base.</p>",
+        "ContentReference$contentId": "<p>The identifier of the content.</p>",
+        "ContentReference$knowledgeBaseId": "<p>The the identifier of the knowledge base.</p>",
+        "ContentSummary$contentId": "<p>The identifier of the content.</p>",
+        "ContentSummary$knowledgeBaseId": "<p>The the identifier of the knowledge base.</p>",
+        "KnowledgeBaseAssociationData$knowledgeBaseId": "<p>The the identifier of the knowledge base.</p>",
+        "KnowledgeBaseData$knowledgeBaseId": "<p>The the identifier of the knowledge base.</p>",
+        "KnowledgeBaseSummary$knowledgeBaseId": "<p>The the identifier of the knowledge base.</p>",
+        "ResultData$resultId": "<p>The identifier of the result data.</p>",
+        "SessionData$sessionId": "<p>The identifier of the session.</p>",
+        "SessionSummary$assistantId": "<p>The identifier of the Wisdom assistant.</p>",
+        "SessionSummary$sessionId": "<p>The identifier of the session.</p>"
+      }
+    },
+    "UuidOrArn": {
+      "base": null,
+      "refs": {
+        "CreateAssistantAssociationRequest$assistantId": "<p>The identifier of the Wisdom assistant. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "CreateContentRequest$knowledgeBaseId": "<p>The the identifier of the knowledge base. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "CreateSessionRequest$assistantId": "<p>The identifier of the Wisdom assistant. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "DeleteAssistantAssociationRequest$assistantAssociationId": "<p>The identifier of the assistant association. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "DeleteAssistantAssociationRequest$assistantId": "<p>The identifier of the Wisdom assistant. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "DeleteAssistantRequest$assistantId": "<p>The identifier of the Wisdom assistant. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "DeleteContentRequest$contentId": "<p>The identifier of the content. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "DeleteContentRequest$knowledgeBaseId": "<p>The the identifier of the knowledge base. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "DeleteKnowledgeBaseRequest$knowledgeBaseId": "<p>The knowledge base to delete content from. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "GetAssistantAssociationRequest$assistantAssociationId": "<p>The identifier of the assistant association. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "GetAssistantAssociationRequest$assistantId": "<p>The identifier of the Wisdom assistant. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "GetAssistantRequest$assistantId": "<p>The identifier of the Wisdom assistant. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "GetContentRequest$contentId": "<p>The identifier of the content. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "GetContentRequest$knowledgeBaseId": "<p>The the identifier of the knowledge base. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "GetContentSummaryRequest$contentId": "<p>The identifier of the content. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "GetContentSummaryRequest$knowledgeBaseId": "<p>The the identifier of the knowledge base. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "GetKnowledgeBaseRequest$knowledgeBaseId": "<p>The the identifier of the knowledge base. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "GetRecommendationsRequest$assistantId": "<p>The identifier of the Wisdom assistant. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "GetRecommendationsRequest$sessionId": "<p>The identifier of the session. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "GetSessionRequest$assistantId": "<p>The identifier of the Wisdom assistant. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "GetSessionRequest$sessionId": "<p>The identifier of the session. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "ListAssistantAssociationsRequest$assistantId": "<p>The identifier of the Wisdom assistant. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "ListContentsRequest$knowledgeBaseId": "<p>The the identifier of the knowledge base. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "NotifyRecommendationsReceivedRequest$assistantId": "<p>The identifier of the Wisdom assistant. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "NotifyRecommendationsReceivedRequest$sessionId": "<p>The identifier of the session. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "QueryAssistantRequest$assistantId": "<p>The identifier of the Wisdom assistant. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "RemoveKnowledgeBaseTemplateUriRequest$knowledgeBaseId": "<p>The the identifier of the knowledge base. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "SearchContentRequest$knowledgeBaseId": "<p>The the identifier of the knowledge base. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "SearchSessionsRequest$assistantId": "<p>The identifier of the Wisdom assistant. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "StartContentUploadRequest$knowledgeBaseId": "<p>The the identifier of the knowledge base. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "UpdateContentRequest$contentId": "<p>The identifier of the content. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>",
+        "UpdateContentRequest$knowledgeBaseId": "<p>The the identifier of the knowledge base. Can be either the ID or the ARN</p>",
+        "UpdateKnowledgeBaseTemplateUriRequest$knowledgeBaseId": "<p>The the identifier of the knowledge base. Can be either the ID or the ARN. URLs cannot contain the ARN.</p>"
+      }
+    },
+    "ValidationException": {
+      "base": "<p>The input fails to satisfy the constraints specified by an AWS service.</p>",
+      "refs": {
+      }
+    },
+    "WaitTimeSeconds": {
+      "base": null,
+      "refs": {
+        "GetRecommendationsRequest$waitTimeSeconds": "<p>The duration (in seconds) for which the call waits for a recommendation to be made available before returning. If a recommendation is available, the call returns sooner than <code>WaitTimeSeconds</code>. If no messages are available and the wait time expires, the call returns successfully with an empty list.</p>"
+      }
+    }
+  }
+}

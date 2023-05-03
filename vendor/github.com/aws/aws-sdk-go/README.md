@@ -1,58 +1,159 @@
-[![API Reference](http://img.shields.io/badge/api-reference-blue.svg)](http://docs.aws.amazon.com/sdk-for-go/api) [![Join the chat at https://gitter.im/aws/aws-sdk-go](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/aws/aws-sdk-go?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![Build Status](https://img.shields.io/travis/aws/aws-sdk-go.svg)](https://travis-ci.org/aws/aws-sdk-go) [![Apache V2 License](http://img.shields.io/badge/license-Apache%20V2-blue.svg)](https://github.com/aws/aws-sdk-go/blob/master/LICENSE.txt)
-
 # AWS SDK for Go
+
+[![API Reference](https://img.shields.io/badge/api-reference-blue.svg)](https://docs.aws.amazon.com/sdk-for-go/api) [![Join the chat at https://gitter.im/aws/aws-sdk-go](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/aws/aws-sdk-go?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) [![Build status](https://github.com/aws/aws-sdk-go/actions/workflows/go.yml/badge.svg?branch=main)](https://github.com/aws/aws-sdk-go/actions/workflows/go.yml) [![Apache V2 License](https://img.shields.io/badge/license-Apache%20V2-blue.svg)](https://github.com/aws/aws-sdk-go/blob/main/LICENSE.txt)
 
 aws-sdk-go is the official AWS SDK for the Go programming language.
 
-Checkout our [release notes](https://github.com/aws/aws-sdk-go/releases) for information about the latest bug fixes, updates, and features added to the SDK.
+Checkout our [release notes](https://github.com/aws/aws-sdk-go/releases) for
+information about the latest bug fixes, updates, and features added to the SDK.
 
-We [announced](https://aws.amazon.com/blogs/developer/aws-sdk-for-go-2-0-developer-preview/) the Developer Preview for the [v2 AWS SDK for Go](https://github.com/aws/aws-sdk-go-v2). The v2 SDK is available at https://github.com/aws/aws-sdk-go-v2, and `go get github.com/aws/aws-sdk-go-v2` via `go get`. Check out the v2 SDK's [changes and updates](https://github.com/aws/aws-sdk-go-v2/blob/master/CHANGELOG.md), and let us know what you think. We want your feedback. 
+We [announced](https://aws.amazon.com/blogs/developer/aws-sdk-for-go-version-2-general-availability/) the General Availability for the [AWS SDK for Go V2 (v2)](https://github.com/aws/aws-sdk-go-v2). The v2 SDK source is available at https://github.com/aws/aws-sdk-go-v2. Review the v2 SDK's [Developer Guide](https://aws.github.io/aws-sdk-go-v2/docs/) to get started with AWS SDK for Go V2 or review the [migration guide](https://aws.github.io/aws-sdk-go-v2/docs/migrating/) if you already use version 1.
 
-## Installing
+Jump To:
+* [Getting Started](#Getting-Started)
+* [Quick Examples](#Quick-Examples)
+* [Getting Help](#Getting-Help)
+* [Contributing](#Contributing)
+* [More Resources](#Resources)
 
-If you are using Go 1.5 with the `GO15VENDOREXPERIMENT=1` vendoring flag, or 1.6 and higher you can use the following command to retrieve the SDK. The SDK's non-testing dependencies will be included and are vendored in the `vendor` folder.
+## Getting Started
 
-    go get -u github.com/aws/aws-sdk-go
+### Installing
+Use `go get` to retrieve the SDK to add it to your `GOPATH` workspace, or
+project's Go module dependencies.
 
-Otherwise if your Go environment does not have vendoring support enabled, or you do not want to include the vendored SDK's dependencies you can use the following command to retrieve the SDK and its non-testing dependencies using `go get`.
+	go get github.com/aws/aws-sdk-go
 
-    go get -u github.com/aws/aws-sdk-go/aws/...
-    go get -u github.com/aws/aws-sdk-go/service/...
+To update the SDK use `go get -u` to retrieve the latest version of the SDK.
 
-If you're looking to retrieve just the SDK without any dependencies use the following command.
+	go get -u github.com/aws/aws-sdk-go
 
-    go get -d github.com/aws/aws-sdk-go/
+### Dependencies
 
-These two processes will still include the `vendor` folder and it should be deleted if its not going to be used by your environment.
+The SDK includes a `vendor` folder containing the runtime dependencies of the
+SDK. The metadata of the SDK's dependencies can be found in the Go module file
+`go.mod` or Dep file `Gopkg.toml`.
+
+### Go Modules
+
+If you are using Go modules, your `go get` will default to the latest tagged
+release version of the SDK. To get a specific release version of the SDK use
+`@<tag>` in your `go get` command.
+
+	go get github.com/aws/aws-sdk-go@v1.15.77
+
+To get the latest SDK repository change use `@latest`.
+
+	go get github.com/aws/aws-sdk-go@latest
+
+### Go 1.5
+
+If you are using Go 1.5 without vendoring enabled, (`GO15VENDOREXPERIMENT=1`),
+you will need to use `...` when retrieving the SDK to get its dependencies.
+
+	go get github.com/aws/aws-sdk-go/...
+
+This will still include the `vendor` folder. The `vendor` folder can be deleted
+if not used by your environment.
 
     rm -rf $GOPATH/src/github.com/aws/aws-sdk-go/vendor
 
-## Getting Help
 
-Please use these community resources for getting help. We use the GitHub issues for tracking bugs and feature requests.
+## Quick Examples 
 
-* Ask a question on [StackOverflow](http://stackoverflow.com/) and tag it with the [`aws-sdk-go`](http://stackoverflow.com/questions/tagged/aws-sdk-go) tag.
-* Come join the AWS SDK for Go community chat on [gitter](https://gitter.im/aws/aws-sdk-go).
-* Open a support ticket with [AWS Support](http://docs.aws.amazon.com/awssupport/latest/user/getting-started.html).
-* If you think you may have found a bug, please open an [issue](https://github.com/aws/aws-sdk-go/issues/new).
+### Complete SDK Example
 
-## Opening Issues
+This example shows a complete working Go file which will upload a file to S3
+and use the Context pattern to implement timeout logic that will cancel the
+request if it takes too long. This example highlights how to use sessions,
+create a service client, make a request, handle the error, and process the
+response.
 
-If you encounter a bug with the AWS SDK for Go we would like to hear about it. Search the [existing issues](https://github.com/aws/aws-sdk-go/issues) and see if others are also experiencing the issue before opening a new issue. Please include the version of AWS SDK for Go, Go language, and OS you’re using. Please also include repro case when appropriate.
+```go
+  package main
 
-The GitHub issues are intended for bug reports and feature requests. For help and questions with using AWS SDK for GO please make use of the resources listed in the [Getting Help](https://github.com/aws/aws-sdk-go#getting-help) section. Keeping the list of open issues lean will help us respond in a timely manner.
+  import (
+  	"context"
+  	"flag"
+  	"fmt"
+  	"os"
+  	"time"
 
-## Reference Documentation
+  	"github.com/aws/aws-sdk-go/aws"
+  	"github.com/aws/aws-sdk-go/aws/awserr"
+  	"github.com/aws/aws-sdk-go/aws/request"
+  	"github.com/aws/aws-sdk-go/aws/session"
+  	"github.com/aws/aws-sdk-go/service/s3"
+  )
 
-[`Getting Started Guide`](https://aws.amazon.com/sdk-for-go/) - This document is a general introduction how to configure and make requests with the SDK. If this is your first time using the SDK, this documentation and the API documentation will help you get started. This document focuses on the syntax and behavior of the SDK. The [Service Developer Guide](https://aws.amazon.com/documentation/) will help you get started using specific AWS services.
+  // Uploads a file to S3 given a bucket and object key. Also takes a duration
+  // value to terminate the update if it doesn't complete within that time.
+  //
+  // The AWS Region needs to be provided in the AWS shared config or on the
+  // environment variable as `AWS_REGION`. Credentials also must be provided
+  // Will default to shared config file, but can load from environment if provided.
+  //
+  // Usage:
+  //   # Upload myfile.txt to myBucket/myKey. Must complete within 10 minutes or will fail
+  //   go run withContext.go -b mybucket -k myKey -d 10m < myfile.txt
+  func main() {
+  	var bucket, key string
+  	var timeout time.Duration
 
-[`SDK API Reference Documentation`](https://docs.aws.amazon.com/sdk-for-go/api/) - Use this document to look up all API operation input and output parameters for AWS services supported by the SDK. The API reference also includes documentation of the SDK, and examples how to using the SDK, service client API operations, and API operation require parameters.
+  	flag.StringVar(&bucket, "b", "", "Bucket name.")
+  	flag.StringVar(&key, "k", "", "Object key name.")
+  	flag.DurationVar(&timeout, "d", 0, "Upload timeout.")
+  	flag.Parse()
 
-[`Service Developer Guide`](https://aws.amazon.com/documentation/) - Use this documentation to learn how to interface with an AWS service. These are great guides both, if you're getting started with a service, or looking for more information on a service. You should not need this document for coding, though in some cases, services may supply helpful samples that you might want to look out for.
+  	// All clients require a Session. The Session provides the client with
+ 	// shared configuration such as region, endpoint, and credentials. A
+ 	// Session should be shared where possible to take advantage of
+ 	// configuration and credential caching. See the session package for
+ 	// more information.
+  	sess := session.Must(session.NewSession())
 
-[`SDK Examples`](https://github.com/aws/aws-sdk-go/tree/master/example) - Included in the SDK's repo are a several hand crafted examples using the SDK features and AWS services.
+ 	// Create a new instance of the service's client with a Session.
+ 	// Optional aws.Config values can also be provided as variadic arguments
+ 	// to the New function. This option allows you to provide service
+ 	// specific configuration.
+  	svc := s3.New(sess)
 
-## Overview of SDK's Packages
+  	// Create a context with a timeout that will abort the upload if it takes
+  	// more than the passed in timeout.
+  	ctx := context.Background()
+  	var cancelFn func()
+  	if timeout > 0 {
+  		ctx, cancelFn = context.WithTimeout(ctx, timeout)
+  	}
+  	// Ensure the context is canceled to prevent leaking.
+  	// See context package for more information, https://golang.org/pkg/context/
+	if cancelFn != nil {
+  		defer cancelFn()
+	}
+
+  	// Uploads the object to S3. The Context will interrupt the request if the
+  	// timeout expires.
+  	_, err := svc.PutObjectWithContext(ctx, &s3.PutObjectInput{
+  		Bucket: aws.String(bucket),
+  		Key:    aws.String(key),
+  		Body:   os.Stdin,
+  	})
+  	if err != nil {
+  		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == request.CanceledErrorCode {
+  			// If the SDK can determine the request or retry delay was canceled
+  			// by a context the CanceledErrorCode error code will be returned.
+  			fmt.Fprintf(os.Stderr, "upload canceled due to timeout, %v\n", err)
+  		} else {
+  			fmt.Fprintf(os.Stderr, "failed to upload object, %v\n", err)
+  		}
+  		os.Exit(1)
+  	}
+
+  	fmt.Printf("successfully uploaded file to %s/%s\n", bucket, key)
+  }
+```
+
+### Overview of SDK's Packages
 
 The SDK is composed of two main components, SDK core, and service clients.
 The SDK core packages are all available under the aws package at the root of
@@ -90,12 +191,11 @@ package under the service folder at the root of the SDK.
   * service - Clients for AWS services. All services supported by the SDK are
     available under this folder.
 
-## How to Use the SDK's AWS Service Clients
+### How to Use the SDK's AWS Service Clients
 
 The SDK includes the Go types and utilities you can use to make requests to
 AWS service APIs. Within the service folder at the root of the SDK you'll find
-a package for each AWS service the SDK supports. All service clients follows
-a common pattern of creation and usage.
+a package for each AWS service the SDK supports. All service clients follow common pattern of creation and usage.
 
 When creating a client for an AWS service you'll first need to have a Session
 value constructed. The Session provides shared configuration that can be shared
@@ -107,7 +207,7 @@ configuration.
 Once the service's client is created you can use it to make API requests the
 AWS service. These clients are safe to use concurrently.
 
-## Configuring the SDK
+### Configuring the SDK
 
 In the AWS SDK for Go, you can configure settings for service clients, such
 as the log level and maximum number of retries. Most settings are optional;
@@ -237,7 +337,7 @@ options such as setting the Endpoint, and other service client configuration opt
 
 [endpoints_pkg]: https://docs.aws.amazon.com/sdk-for-go/api/aws/endpoints/
 
-## Making API Requests
+### Making API Requests
 
 Once the client is created you can make an API request to the service.
 Each API method takes a input parameter, and returns the service response
@@ -352,100 +452,75 @@ be request.WaiterResourceNotReadyErrorCode.
       panic(fmt.Errorf("failed to wait for bucket to exist, %v", err))
   }
   fmt.Println("Bucket", myBucket, "exists")
-```
+```    
 
-## Complete SDK Example
+## Getting Help
 
-This example shows a complete working Go file which will upload a file to S3
-and use the Context pattern to implement timeout logic that will cancel the
-request if it takes too long. This example highlights how to use sessions,
-create a service client, make a request, handle the error, and process the
-response.
+Please use these community resources for getting help. We use the GitHub issues
+for tracking bugs and feature requests.
 
-```go
-  package main
+* Ask a question on [StackOverflow](http://stackoverflow.com/) and tag it with the [`aws-sdk-go`](http://stackoverflow.com/questions/tagged/aws-sdk-go) tag.
+* Come join the AWS SDK for Go community chat on [gitter](https://gitter.im/aws/aws-sdk-go).
+* Open a support ticket with [AWS Support](http://docs.aws.amazon.com/awssupport/latest/user/getting-started.html).
+* If you think you may have found a bug, please open an [issue](https://github.com/aws/aws-sdk-go/issues/new/choose).
 
-  import (
-  	"context"
-  	"flag"
-  	"fmt"
-  	"os"
-  	"time"
+This SDK implements AWS service APIs. For general issues regarding the AWS services and their limitations, you may also take a look at the [Amazon Web Services Discussion Forums](https://forums.aws.amazon.com/).
 
-  	"github.com/aws/aws-sdk-go/aws"
-  	"github.com/aws/aws-sdk-go/aws/awserr"
-  	"github.com/aws/aws-sdk-go/aws/request"
-  	"github.com/aws/aws-sdk-go/aws/session"
-  	"github.com/aws/aws-sdk-go/service/s3"
-  )
+### Opening Issues
 
-  // Uploads a file to S3 given a bucket and object key. Also takes a duration
-  // value to terminate the update if it doesn't complete within that time.
-  //
-  // The AWS Region needs to be provided in the AWS shared config or on the
-  // environment variable as `AWS_REGION`. Credentials also must be provided
-  // Will default to shared config file, but can load from environment if provided.
-  //
-  // Usage:
-  //   # Upload myfile.txt to myBucket/myKey. Must complete within 10 minutes or will fail
-  //   go run withContext.go -b mybucket -k myKey -d 10m < myfile.txt
-  func main() {
-  	var bucket, key string
-  	var timeout time.Duration
+If you encounter a bug with the AWS SDK for Go we would like to hear about it.
+Search the [existing issues](https://github.com/aws/aws-sdk-go/issues) and see
+if others are also experiencing the issue before opening a new issue. Please
+include the version of AWS SDK for Go, Go language, and OS you’re using. Please
+also include reproduction case when appropriate.
 
-  	flag.StringVar(&bucket, "b", "", "Bucket name.")
-  	flag.StringVar(&key, "k", "", "Object key name.")
-  	flag.DurationVar(&timeout, "d", 0, "Upload timeout.")
-  	flag.Parse()
+The GitHub issues are intended for bug reports and feature requests. For help
+and questions with using AWS SDK for Go please make use of the resources listed
+in the [Getting Help](https://github.com/aws/aws-sdk-go#getting-help) section.
+Keeping the list of open issues lean will help us respond in a timely manner.
 
-  	// All clients require a Session. The Session provides the client with
- 	// shared configuration such as region, endpoint, and credentials. A
- 	// Session should be shared where possible to take advantage of
- 	// configuration and credential caching. See the session package for
- 	// more information.
-  	sess := session.Must(session.NewSession())
+## Contributing
 
- 	// Create a new instance of the service's client with a Session.
- 	// Optional aws.Config values can also be provided as variadic arguments
- 	// to the New function. This option allows you to provide service
- 	// specific configuration.
-  	svc := s3.New(sess)
+We work hard to provide a high-quality and useful SDK for our AWS services, and we greatly value feedback and contributions from our community. Please review our [contributing guidelines](./CONTRIBUTING.md) before submitting any [issues] or [pull requests][pr] to ensure we have all the necessary information to effectively respond to your bug report or contribution.
 
-  	// Create a context with a timeout that will abort the upload if it takes
-  	// more than the passed in timeout.
-  	ctx := context.Background()
-  	var cancelFn func()
-  	if timeout > 0 {
-  		ctx, cancelFn = context.WithTimeout(ctx, timeout)
-  	}
-  	// Ensure the context is canceled to prevent leaking.
-  	// See context package for more information, https://golang.org/pkg/context/
-  	defer cancelFn()
+## Maintenance and support for SDK major versions
 
-  	// Uploads the object to S3. The Context will interrupt the request if the
-  	// timeout expires.
-  	_, err := svc.PutObjectWithContext(ctx, &s3.PutObjectInput{
-  		Bucket: aws.String(bucket),
-  		Key:    aws.String(key),
-  		Body:   os.Stdin,
-  	})
-  	if err != nil {
-  		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == request.CanceledErrorCode {
-  			// If the SDK can determine the request or retry delay was canceled
-  			// by a context the CanceledErrorCode error code will be returned.
-  			fmt.Fprintf(os.Stderr, "upload canceled due to timeout, %v\n", err)
-  		} else {
-  			fmt.Fprintf(os.Stderr, "failed to upload object, %v\n", err)
-  		}
-  		os.Exit(1)
-  	}
+For information about maintenance and support for SDK major versions and our underlying dependencies, see the following in the AWS SDKs and Tools Shared Configuration and Credentials Reference Guide:
 
-  	fmt.Printf("successfully uploaded file to %s/%s\n", bucket, key)
-  }
-```
+* [AWS SDKs and Tools Maintenance Policy](https://docs.aws.amazon.com/credref/latest/refdocs/maint-policy.html)
+* [AWS SDKs and Tools Version Support Matrix](https://docs.aws.amazon.com/credref/latest/refdocs/version-support-matrix.html)
 
-## License
+## Resources
 
-This SDK is distributed under the
-[Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0),
-see LICENSE.txt and NOTICE.txt for more information.
+[Developer guide](https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/welcome.html) - This document
+is a general introduction on how to configure and make requests with the SDK.
+If this is your first time using the SDK, this documentation and the API
+documentation will help you get started. This document focuses on the syntax
+and behavior of the SDK. The [Service Developer Guide](https://aws.amazon.com/documentation/) 
+will help you get started using specific AWS services.
+
+[SDK API Reference Documentation](https://docs.aws.amazon.com/sdk-for-go/api/) - Use this
+document to look up all API operation input and output parameters for AWS
+services supported by the SDK. The API reference also includes documentation of
+the SDK, and examples how to using the SDK, service client API operations, and
+API operation require parameters.
+
+[Service Documentation](https://aws.amazon.com/documentation/) - Use this
+documentation to learn how to interface with AWS services. These guides are
+great for getting started with a service, or when looking for more 
+information about a service. While this document is not required for coding, 
+services may supply helpful samples to look out for.
+
+[SDK Examples](https://github.com/aws/aws-sdk-go/tree/main/example) -
+Included in the SDK's repo are several hand crafted examples using the SDK
+features and AWS services.
+
+[Forum](https://forums.aws.amazon.com/forum.jspa?forumID=293) - Ask questions, get help, and give feedback
+
+[Issues][issues] - Report issues, submit pull requests, and get involved
+  (see [Apache 2.0 License][license])
+
+
+[issues]: https://github.com/aws/aws-sdk-go/issues
+[pr]: https://github.com/aws/aws-sdk-go/pulls
+[license]: http://aws.amazon.com/apache2.0/

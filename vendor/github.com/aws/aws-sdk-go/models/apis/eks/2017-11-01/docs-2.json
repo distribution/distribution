@@ -1,0 +1,1384 @@
+{
+  "version": "2.0",
+  "service": "<p>Amazon Elastic Kubernetes Service (Amazon EKS) is a managed service that makes it easy for you to run Kubernetes on Amazon Web Services without needing to stand up or maintain your own Kubernetes control plane. Kubernetes is an open-source system for automating the deployment, scaling, and management of containerized applications. </p> <p>Amazon EKS runs up-to-date versions of the open-source Kubernetes software, so you can use all the existing plugins and tooling from the Kubernetes community. Applications running on Amazon EKS are fully compatible with applications running on any standard Kubernetes environment, whether running in on-premises data centers or public clouds. This means that you can easily migrate any standard Kubernetes application to Amazon EKS without any code modification required.</p>",
+  "operations": {
+    "AssociateEncryptionConfig": "<p>Associate encryption configuration to an existing cluster.</p> <p>You can use this API to enable encryption on existing clusters which do not have encryption already enabled. This allows you to implement a defense-in-depth security strategy without migrating applications to new Amazon EKS clusters.</p>",
+    "AssociateIdentityProviderConfig": "<p>Associate an identity provider configuration to a cluster.</p> <p>If you want to authenticate identities using an identity provider, you can create an identity provider configuration and associate it to your cluster. After configuring authentication to your cluster you can create Kubernetes <code>roles</code> and <code>clusterroles</code> to assign permissions to the roles, and then bind the roles to the identities using Kubernetes <code>rolebindings</code> and <code>clusterrolebindings</code>. For more information see <a href=\"https://kubernetes.io/docs/reference/access-authn-authz/rbac/\">Using RBAC Authorization</a> in the Kubernetes documentation.</p>",
+    "CreateAddon": "<p>Creates an Amazon EKS add-on.</p> <p>Amazon EKS add-ons help to automate the provisioning and lifecycle management of common operational software for Amazon EKS clusters. Amazon EKS add-ons require clusters running version 1.18 or later because Amazon EKS add-ons rely on the Server-side Apply Kubernetes feature, which is only available in Kubernetes 1.18 and later. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/eks-add-ons.html\">Amazon EKS add-ons</a> in the <i>Amazon EKS User Guide</i>.</p>",
+    "CreateCluster": "<p>Creates an Amazon EKS control plane. </p> <p>The Amazon EKS control plane consists of control plane instances that run the Kubernetes software, such as <code>etcd</code> and the API server. The control plane runs in an account managed by Amazon Web Services, and the Kubernetes API is exposed by the Amazon EKS API server endpoint. Each Amazon EKS cluster control plane is single tenant and unique. It runs on its own set of Amazon EC2 instances.</p> <p>The cluster control plane is provisioned across multiple Availability Zones and fronted by an Elastic Load Balancing Network Load Balancer. Amazon EKS also provisions elastic network interfaces in your VPC subnets to provide connectivity from the control plane instances to the nodes (for example, to support <code>kubectl exec</code>, <code>logs</code>, and <code>proxy</code> data flows).</p> <p>Amazon EKS nodes run in your Amazon Web Services account and connect to your cluster's control plane over the Kubernetes API server endpoint and a certificate file that is created for your cluster.</p> <p>In most cases, it takes several minutes to create a cluster. After you create an Amazon EKS cluster, you must configure your Kubernetes tooling to communicate with the API server and launch nodes into your cluster. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/managing-auth.html\">Managing Cluster Authentication</a> and <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/launch-workers.html\">Launching Amazon EKS nodes</a> in the <i>Amazon EKS User Guide</i>.</p>",
+    "CreateFargateProfile": "<p>Creates an Fargate profile for your Amazon EKS cluster. You must have at least one Fargate profile in a cluster to be able to run pods on Fargate.</p> <p>The Fargate profile allows an administrator to declare which pods run on Fargate and specify which pods run on which Fargate profile. This declaration is done through the profile’s selectors. Each profile can have up to five selectors that contain a namespace and labels. A namespace is required for every selector. The label field consists of multiple optional key-value pairs. Pods that match the selectors are scheduled on Fargate. If a to-be-scheduled pod matches any of the selectors in the Fargate profile, then that pod is run on Fargate.</p> <p>When you create a Fargate profile, you must specify a pod execution role to use with the pods that are scheduled with the profile. This role is added to the cluster's Kubernetes <a href=\"https://kubernetes.io/docs/admin/authorization/rbac/\">Role Based Access Control</a> (RBAC) for authorization so that the <code>kubelet</code> that is running on the Fargate infrastructure can register with your Amazon EKS cluster so that it can appear in your cluster as a node. The pod execution role also provides IAM permissions to the Fargate infrastructure to allow read access to Amazon ECR image repositories. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/pod-execution-role.html\">Pod Execution Role</a> in the <i>Amazon EKS User Guide</i>.</p> <p>Fargate profiles are immutable. However, you can create a new updated profile to replace an existing profile and then delete the original after the updated profile has finished creating.</p> <p>If any Fargate profiles in a cluster are in the <code>DELETING</code> status, you must wait for that Fargate profile to finish deleting before you can create any other profiles in that cluster.</p> <p>For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/fargate-profile.html\">Fargate Profile</a> in the <i>Amazon EKS User Guide</i>.</p>",
+    "CreateNodegroup": "<p>Creates a managed node group for an Amazon EKS cluster. You can only create a node group for your cluster that is equal to the current Kubernetes version for the cluster. All node groups are created with the latest AMI release version for the respective minor Kubernetes version of the cluster, unless you deploy a custom AMI using a launch template. For more information about using launch templates, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/launch-templates.html\">Launch template support</a>.</p> <p>An Amazon EKS managed node group is an Amazon EC2 Auto Scaling group and associated Amazon EC2 instances that are managed by Amazon Web Services for an Amazon EKS cluster. Each node group uses a version of the Amazon EKS optimized Amazon Linux 2 AMI. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/managed-node-groups.html\">Managed Node Groups</a> in the <i>Amazon EKS User Guide</i>. </p>",
+    "DeleteAddon": "<p>Delete an Amazon EKS add-on.</p> <p>When you remove the add-on, it will also be deleted from the cluster. You can always manually start an add-on on the cluster using the Kubernetes API.</p>",
+    "DeleteCluster": "<p>Deletes the Amazon EKS cluster control plane.</p> <p>If you have active services in your cluster that are associated with a load balancer, you must delete those services before deleting the cluster so that the load balancers are deleted properly. Otherwise, you can have orphaned resources in your VPC that prevent you from being able to delete the VPC. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/delete-cluster.html\">Deleting a Cluster</a> in the <i>Amazon EKS User Guide</i>.</p> <p>If you have managed node groups or Fargate profiles attached to the cluster, you must delete them first. For more information, see <a>DeleteNodegroup</a> and <a>DeleteFargateProfile</a>.</p>",
+    "DeleteFargateProfile": "<p>Deletes an Fargate profile.</p> <p>When you delete a Fargate profile, any pods running on Fargate that were created with the profile are deleted. If those pods match another Fargate profile, then they are scheduled on Fargate with that profile. If they no longer match any Fargate profiles, then they are not scheduled on Fargate and they may remain in a pending state.</p> <p>Only one Fargate profile in a cluster can be in the <code>DELETING</code> status at a time. You must wait for a Fargate profile to finish deleting before you can delete any other profiles in that cluster.</p>",
+    "DeleteNodegroup": "<p>Deletes an Amazon EKS node group for a cluster.</p>",
+    "DeregisterCluster": "<p>Deregisters a connected cluster to remove it from the Amazon EKS control plane.</p>",
+    "DescribeAddon": "<p>Describes an Amazon EKS add-on.</p>",
+    "DescribeAddonVersions": "<p>Describes the Kubernetes versions that the add-on can be used with.</p>",
+    "DescribeCluster": "<p>Returns descriptive information about an Amazon EKS cluster.</p> <p>The API server endpoint and certificate authority data returned by this operation are required for <code>kubelet</code> and <code>kubectl</code> to communicate with your Kubernetes API server. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/create-kubeconfig.html\">Create a kubeconfig for Amazon EKS</a>.</p> <note> <p>The API server endpoint and certificate authority data aren't available until the cluster reaches the <code>ACTIVE</code> state.</p> </note>",
+    "DescribeFargateProfile": "<p>Returns descriptive information about an Fargate profile.</p>",
+    "DescribeIdentityProviderConfig": "<p>Returns descriptive information about an identity provider configuration.</p>",
+    "DescribeNodegroup": "<p>Returns descriptive information about an Amazon EKS node group.</p>",
+    "DescribeUpdate": "<p>Returns descriptive information about an update against your Amazon EKS cluster or associated managed node group.</p> <p>When the status of the update is <code>Succeeded</code>, the update is complete. If an update fails, the status is <code>Failed</code>, and an error detail explains the reason for the failure.</p>",
+    "DisassociateIdentityProviderConfig": "<p>Disassociates an identity provider configuration from a cluster. If you disassociate an identity provider from your cluster, users included in the provider can no longer access the cluster. However, you can still access the cluster with Amazon Web Services IAM users.</p>",
+    "ListAddons": "<p>Lists the available add-ons.</p>",
+    "ListClusters": "<p>Lists the Amazon EKS clusters in your Amazon Web Services account in the specified Region.</p>",
+    "ListFargateProfiles": "<p>Lists the Fargate profiles associated with the specified cluster in your Amazon Web Services account in the specified Region.</p>",
+    "ListIdentityProviderConfigs": "<p>A list of identity provider configurations.</p>",
+    "ListNodegroups": "<p>Lists the Amazon EKS managed node groups associated with the specified cluster in your Amazon Web Services account in the specified Region. Self-managed node groups are not listed.</p>",
+    "ListTagsForResource": "<p>List the tags for an Amazon EKS resource.</p>",
+    "ListUpdates": "<p>Lists the updates associated with an Amazon EKS cluster or managed node group in your Amazon Web Services account, in the specified Region.</p>",
+    "RegisterCluster": "<p>Connects a Kubernetes cluster to the Amazon EKS control plane. </p> <p>Any Kubernetes cluster can be connected to the Amazon EKS control plane to view current information about the cluster and its nodes. </p> <p>Cluster connection requires two steps. First, send a <code> <a>RegisterClusterRequest</a> </code> to add it to the Amazon EKS control plane.</p> <p>Second, a <a href=\"https://amazon-eks.s3.us-west-2.amazonaws.com/eks-connector/manifests/eks-connector/latest/eks-connector.yaml\">Manifest</a> containing the <code>activationID</code> and <code>activationCode</code> must be applied to the Kubernetes cluster through it's native provider to provide visibility.</p> <p>After the Manifest is updated and applied, then the connected cluster is visible to the Amazon EKS control plane. If the Manifest is not applied within three days, then the connected cluster will no longer be visible and must be deregistered. See <a>DeregisterCluster</a>.</p>",
+    "TagResource": "<p>Associates the specified tags to a resource with the specified <code>resourceArn</code>. If existing tags on a resource are not specified in the request parameters, they are not changed. When a resource is deleted, the tags associated with that resource are deleted as well. Tags that you create for Amazon EKS resources do not propagate to any other resources associated with the cluster. For example, if you tag a cluster with this operation, that tag does not automatically propagate to the subnets and nodes associated with the cluster.</p>",
+    "UntagResource": "<p>Deletes specified tags from a resource.</p>",
+    "UpdateAddon": "<p>Updates an Amazon EKS add-on.</p>",
+    "UpdateClusterConfig": "<p>Updates an Amazon EKS cluster configuration. Your cluster continues to function during the update. The response output includes an update ID that you can use to track the status of your cluster update with the <a>DescribeUpdate</a> API operation.</p> <p>You can use this API operation to enable or disable exporting the Kubernetes control plane logs for your cluster to CloudWatch Logs. By default, cluster control plane logs aren't exported to CloudWatch Logs. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/control-plane-logs.html\">Amazon EKS Cluster Control Plane Logs</a> in the <i> <i>Amazon EKS User Guide</i> </i>.</p> <note> <p>CloudWatch Logs ingestion, archive storage, and data scanning rates apply to exported control plane logs. For more information, see <a href=\"http://aws.amazon.com/cloudwatch/pricing/\">CloudWatch Pricing</a>.</p> </note> <p>You can also use this API operation to enable or disable public and private access to your cluster's Kubernetes API server endpoint. By default, public access is enabled, and private access is disabled. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/cluster-endpoint.html\">Amazon EKS cluster endpoint access control</a> in the <i> <i>Amazon EKS User Guide</i> </i>. </p> <important> <p>You can't update the subnets or security group IDs for an existing cluster.</p> </important> <p>Cluster updates are asynchronous, and they should finish within a few minutes. During an update, the cluster status moves to <code>UPDATING</code> (this status transition is eventually consistent). When the update is complete (either <code>Failed</code> or <code>Successful</code>), the cluster status moves to <code>Active</code>.</p>",
+    "UpdateClusterVersion": "<p>Updates an Amazon EKS cluster to the specified Kubernetes version. Your cluster continues to function during the update. The response output includes an update ID that you can use to track the status of your cluster update with the <a>DescribeUpdate</a> API operation.</p> <p>Cluster updates are asynchronous, and they should finish within a few minutes. During an update, the cluster status moves to <code>UPDATING</code> (this status transition is eventually consistent). When the update is complete (either <code>Failed</code> or <code>Successful</code>), the cluster status moves to <code>Active</code>.</p> <p>If your cluster has managed node groups attached to it, all of your node groups’ Kubernetes versions must match the cluster’s Kubernetes version in order to update the cluster to a new Kubernetes version.</p>",
+    "UpdateNodegroupConfig": "<p>Updates an Amazon EKS managed node group configuration. Your node group continues to function during the update. The response output includes an update ID that you can use to track the status of your node group update with the <a>DescribeUpdate</a> API operation. Currently you can update the Kubernetes labels for a node group or the scaling configuration.</p>",
+    "UpdateNodegroupVersion": "<p>Updates the Kubernetes version or AMI version of an Amazon EKS managed node group.</p> <p>You can update a node group using a launch template only if the node group was originally deployed with a launch template. If you need to update a custom AMI in a node group that was deployed with a launch template, then update your custom AMI, specify the new ID in a new version of the launch template, and then update the node group to the new version of the launch template.</p> <p>If you update without a launch template, then you can update to the latest available AMI version of a node group's current Kubernetes version by not specifying a Kubernetes version in the request. You can update to the latest AMI version of your cluster's current Kubernetes version by specifying your cluster's Kubernetes version in the request. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/eks-linux-ami-versions.html\">Amazon EKS optimized Amazon Linux 2 AMI versions</a> in the <i>Amazon EKS User Guide</i>.</p> <p>You cannot roll back a node group to an earlier Kubernetes version or AMI version.</p> <p>When a node in a managed node group is terminated due to a scaling action or update, the pods in that node are drained first. Amazon EKS attempts to drain the nodes gracefully and will fail if it is unable to do so. You can <code>force</code> the update if Amazon EKS is unable to drain the nodes as a result of a pod disruption budget issue.</p>"
+  },
+  "shapes": {
+    "AMITypes": {
+      "base": null,
+      "refs": {
+        "CreateNodegroupRequest$amiType": "<p>The AMI type for your node group. GPU instance types should use the <code>AL2_x86_64_GPU</code> AMI type. Non-GPU instances should use the <code>AL2_x86_64</code> AMI type. Arm instances should use the <code>AL2_ARM_64</code> AMI type. All types use the Amazon EKS optimized Amazon Linux 2 AMI. If you specify <code>launchTemplate</code>, and your launch template uses a custom AMI, then don't specify <code>amiType</code>, or the node group deployment will fail. For more information about using launch templates with Amazon EKS, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/launch-templates.html\">Launch template support</a> in the Amazon EKS User Guide.</p>",
+        "Nodegroup$amiType": "<p>If the node group was deployed using a launch template with a custom AMI, then this is <code>CUSTOM</code>. For node groups that weren't deployed using a launch template, this is the AMI type that was specified in the node group configuration.</p>"
+      }
+    },
+    "AccessDeniedException": {
+      "base": "<p>You don't have permissions to perform the requested operation. The user or role that is making the request must have at least one IAM permissions policy attached that grants the required permissions. For more information, see <a href=\"https://docs.aws.amazon.com/IAM/latest/UserGuide/access.html\">Access Management</a> in the <i>IAM User Guide</i>. </p>",
+      "refs": {
+      }
+    },
+    "Addon": {
+      "base": "<p>An Amazon EKS add-on. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/eks-add-ons.html\">Amazon EKS add-ons</a> in the <i>Amazon EKS User Guide</i>.</p>",
+      "refs": {
+        "CreateAddonResponse$addon": null,
+        "DeleteAddonResponse$addon": null,
+        "DescribeAddonResponse$addon": null
+      }
+    },
+    "AddonHealth": {
+      "base": "<p>The health of the add-on.</p>",
+      "refs": {
+        "Addon$health": "<p>An object that represents the health of the add-on.</p>"
+      }
+    },
+    "AddonInfo": {
+      "base": "<p>Information about an add-on.</p>",
+      "refs": {
+        "Addons$member": null
+      }
+    },
+    "AddonIssue": {
+      "base": "<p>An issue related to an add-on.</p>",
+      "refs": {
+        "AddonIssueList$member": null
+      }
+    },
+    "AddonIssueCode": {
+      "base": null,
+      "refs": {
+        "AddonIssue$code": "<p>A code that describes the type of issue.</p>"
+      }
+    },
+    "AddonIssueList": {
+      "base": null,
+      "refs": {
+        "AddonHealth$issues": "<p>An object that represents the add-on's health issues.</p>"
+      }
+    },
+    "AddonStatus": {
+      "base": null,
+      "refs": {
+        "Addon$status": "<p>The status of the add-on.</p>"
+      }
+    },
+    "AddonVersionInfo": {
+      "base": "<p>Information about an add-on version.</p>",
+      "refs": {
+        "AddonVersionInfoList$member": null
+      }
+    },
+    "AddonVersionInfoList": {
+      "base": null,
+      "refs": {
+        "AddonInfo$addonVersions": "<p>An object that represents information about available add-on versions and compatible Kubernetes versions.</p>"
+      }
+    },
+    "Addons": {
+      "base": null,
+      "refs": {
+        "DescribeAddonVersionsResponse$addons": "<p>The list of available versions with Kubernetes version compatibility.</p>"
+      }
+    },
+    "AssociateEncryptionConfigRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "AssociateEncryptionConfigResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "AssociateIdentityProviderConfigRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "AssociateIdentityProviderConfigResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "AutoScalingGroup": {
+      "base": "<p>An Auto Scaling group that is associated with an Amazon EKS managed node group.</p>",
+      "refs": {
+        "AutoScalingGroupList$member": null
+      }
+    },
+    "AutoScalingGroupList": {
+      "base": null,
+      "refs": {
+        "NodegroupResources$autoScalingGroups": "<p>The Auto Scaling groups associated with the node group.</p>"
+      }
+    },
+    "BadRequestException": {
+      "base": "<p>This exception is thrown if the request contains a semantic error. The precise meaning will depend on the API, and will be documented in the error message.</p>",
+      "refs": {
+      }
+    },
+    "Boolean": {
+      "base": null,
+      "refs": {
+        "Compatibility$defaultVersion": "<p>The supported default version.</p>",
+        "DeleteAddonRequest$preserve": "<p>Specifying this option preserves the add-on software on your cluster but Amazon EKS stops managing any settings for the add-on. If an IAM account is associated with the add-on, it is not removed.</p>",
+        "UpdateNodegroupVersionRequest$force": "<p>Force the update if the existing node group's pods are unable to be drained due to a pod disruption budget issue. If an update fails because pods could not be drained, you can force the update after it fails to terminate the old node whether or not any pods are running on the node.</p>",
+        "VpcConfigResponse$endpointPublicAccess": "<p>This parameter indicates whether the Amazon EKS public API server endpoint is enabled. If the Amazon EKS public API server endpoint is disabled, your cluster's Kubernetes API server can only receive requests that originate from within the cluster VPC.</p>",
+        "VpcConfigResponse$endpointPrivateAccess": "<p>This parameter indicates whether the Amazon EKS private API server endpoint is enabled. If the Amazon EKS private API server endpoint is enabled, Kubernetes API requests that originate from within your cluster's VPC use the private VPC endpoint instead of traversing the internet. If this value is disabled and you have nodes or Fargate pods in the cluster, then ensure that <code>publicAccessCidrs</code> includes the necessary CIDR blocks for communication with the nodes or Fargate pods. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/cluster-endpoint.html\">Amazon EKS cluster endpoint access control</a> in the <i> <i>Amazon EKS User Guide</i> </i>.</p>"
+      }
+    },
+    "BoxedBoolean": {
+      "base": null,
+      "refs": {
+        "LogSetup$enabled": "<p>If a log type is enabled, that log type exports its control plane logs to CloudWatch Logs. If a log type isn't enabled, that log type doesn't export its control plane logs. Each individual log type can be enabled or disabled independently.</p>",
+        "VpcConfigRequest$endpointPublicAccess": "<p>Set this value to <code>false</code> to disable public access to your cluster's Kubernetes API server endpoint. If you disable public access, your cluster's Kubernetes API server can only receive requests from within the cluster VPC. The default value for this parameter is <code>true</code>, which enables public access for your Kubernetes API server. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/cluster-endpoint.html\">Amazon EKS cluster endpoint access control</a> in the <i> <i>Amazon EKS User Guide</i> </i>.</p>",
+        "VpcConfigRequest$endpointPrivateAccess": "<p>Set this value to <code>true</code> to enable private access for your cluster's Kubernetes API server endpoint. If you enable private access, Kubernetes API requests from within your cluster's VPC use the private VPC endpoint. The default value for this parameter is <code>false</code>, which disables private access for your Kubernetes API server. If you disable private access and you have nodes or Fargate pods in the cluster, then ensure that <code>publicAccessCidrs</code> includes the necessary CIDR blocks for communication with the nodes or Fargate pods. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/cluster-endpoint.html\">Amazon EKS cluster endpoint access control</a> in the <i> <i>Amazon EKS User Guide</i> </i>.</p>"
+      }
+    },
+    "BoxedInteger": {
+      "base": null,
+      "refs": {
+        "CreateNodegroupRequest$diskSize": "<p>The root device disk size (in GiB) for your node group instances. The default disk size is 20 GiB. If you specify <code>launchTemplate</code>, then don't specify <code>diskSize</code>, or the node group deployment will fail. For more information about using launch templates with Amazon EKS, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/launch-templates.html\">Launch template support</a> in the Amazon EKS User Guide.</p>",
+        "Nodegroup$diskSize": "<p>If the node group wasn't deployed with a launch template, then this is the disk size in the node group configuration. If the node group was deployed with a launch template, then this is <code>null</code>.</p>"
+      }
+    },
+    "Capacity": {
+      "base": null,
+      "refs": {
+        "NodegroupScalingConfig$maxSize": "<p>The maximum number of nodes that the managed node group can scale out to. For information about the maximum number that you can specify, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/service-quotas.html\">Amazon EKS service quotas</a> in the <i>Amazon EKS User Guide</i>.</p>"
+      }
+    },
+    "CapacityTypes": {
+      "base": null,
+      "refs": {
+        "CreateNodegroupRequest$capacityType": "<p>The capacity type for your node group.</p>",
+        "Nodegroup$capacityType": "<p>The capacity type of your managed node group.</p>"
+      }
+    },
+    "Certificate": {
+      "base": "<p>An object representing the <code>certificate-authority-data</code> for your cluster.</p>",
+      "refs": {
+        "Cluster$certificateAuthority": "<p>The <code>certificate-authority-data</code> for your cluster.</p>"
+      }
+    },
+    "ClientException": {
+      "base": "<p>These errors are usually caused by a client action. Actions can include using an action or resource on behalf of a user that doesn't have permissions to use the action or resource or specifying an identifier that is not valid.</p>",
+      "refs": {
+      }
+    },
+    "Cluster": {
+      "base": "<p>An object representing an Amazon EKS cluster.</p>",
+      "refs": {
+        "CreateClusterResponse$cluster": "<p>The full description of your new cluster.</p>",
+        "DeleteClusterResponse$cluster": "<p>The full description of the cluster to delete.</p>",
+        "DeregisterClusterResponse$cluster": null,
+        "DescribeClusterResponse$cluster": "<p>The full description of your specified cluster.</p>",
+        "RegisterClusterResponse$cluster": null
+      }
+    },
+    "ClusterName": {
+      "base": null,
+      "refs": {
+        "Addon$clusterName": "<p>The name of the cluster.</p>",
+        "CreateAddonRequest$clusterName": "<p>The name of the cluster to create the add-on for.</p>",
+        "CreateClusterRequest$name": "<p>The unique name to give to your cluster.</p>",
+        "DeleteAddonRequest$clusterName": "<p>The name of the cluster to delete the add-on from.</p>",
+        "DescribeAddonRequest$clusterName": "<p>The name of the cluster.</p>",
+        "ListAddonsRequest$clusterName": "<p>The name of the cluster.</p>",
+        "RegisterClusterRequest$name": "<p>Define a unique name for this cluster for your Region.</p>",
+        "UpdateAddonRequest$clusterName": "<p>The name of the cluster.</p>"
+      }
+    },
+    "ClusterStatus": {
+      "base": null,
+      "refs": {
+        "Cluster$status": "<p>The current status of the cluster.</p>"
+      }
+    },
+    "Compatibilities": {
+      "base": null,
+      "refs": {
+        "AddonVersionInfo$compatibilities": "<p>An object that represents the compatibilities of a version.</p>"
+      }
+    },
+    "Compatibility": {
+      "base": "<p>Compatibility information.</p>",
+      "refs": {
+        "Compatibilities$member": null
+      }
+    },
+    "ConnectorConfigProvider": {
+      "base": null,
+      "refs": {
+        "ConnectorConfigRequest$provider": "<p>The cloud provider for the target cluster to connect.</p>"
+      }
+    },
+    "ConnectorConfigRequest": {
+      "base": "<p>The configuration sent to a cluster for configuration.</p>",
+      "refs": {
+        "RegisterClusterRequest$connectorConfig": "<p>The configuration settings required to connect the Kubernetes cluster to the Amazon EKS control plane.</p>"
+      }
+    },
+    "ConnectorConfigResponse": {
+      "base": "<p>The full description of your connected cluster.</p>",
+      "refs": {
+        "Cluster$connectorConfig": "<p>The configuration used to connect to a cluster for registration.</p>"
+      }
+    },
+    "CreateAddonRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateAddonResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateClusterRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateClusterResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateFargateProfileRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateFargateProfileResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateNodegroupRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateNodegroupResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteAddonRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteAddonResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteClusterRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteClusterResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteFargateProfileRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteFargateProfileResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteNodegroupRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteNodegroupResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeregisterClusterRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeregisterClusterResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DescribeAddonRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DescribeAddonResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DescribeAddonVersionsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DescribeAddonVersionsRequestMaxResults": {
+      "base": null,
+      "refs": {
+        "DescribeAddonVersionsRequest$maxResults": "<p>The maximum number of results to return.</p>"
+      }
+    },
+    "DescribeAddonVersionsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DescribeClusterRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DescribeClusterResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DescribeFargateProfileRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DescribeFargateProfileResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DescribeIdentityProviderConfigRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DescribeIdentityProviderConfigResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DescribeNodegroupRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DescribeNodegroupResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DescribeUpdateRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DescribeUpdateResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DisassociateIdentityProviderConfigRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DisassociateIdentityProviderConfigResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "EncryptionConfig": {
+      "base": "<p>The encryption configuration for the cluster.</p>",
+      "refs": {
+        "EncryptionConfigList$member": null
+      }
+    },
+    "EncryptionConfigList": {
+      "base": null,
+      "refs": {
+        "AssociateEncryptionConfigRequest$encryptionConfig": "<p>The configuration you are using for encryption.</p>",
+        "Cluster$encryptionConfig": "<p>The encryption configuration for the cluster.</p>",
+        "CreateClusterRequest$encryptionConfig": "<p>The encryption configuration for the cluster.</p>"
+      }
+    },
+    "ErrorCode": {
+      "base": null,
+      "refs": {
+        "ErrorDetail$errorCode": "<p>A brief description of the error. </p> <ul> <li> <p> <b>SubnetNotFound</b>: We couldn't find one of the subnets associated with the cluster.</p> </li> <li> <p> <b>SecurityGroupNotFound</b>: We couldn't find one of the security groups associated with the cluster.</p> </li> <li> <p> <b>EniLimitReached</b>: You have reached the elastic network interface limit for your account.</p> </li> <li> <p> <b>IpNotAvailable</b>: A subnet associated with the cluster doesn't have any free IP addresses.</p> </li> <li> <p> <b>AccessDenied</b>: You don't have permissions to perform the specified operation.</p> </li> <li> <p> <b>OperationNotPermitted</b>: The service role associated with the cluster doesn't have the required access permissions for Amazon EKS.</p> </li> <li> <p> <b>VpcIdNotFound</b>: We couldn't find the VPC associated with the cluster.</p> </li> </ul>"
+      }
+    },
+    "ErrorDetail": {
+      "base": "<p>An object representing an error when an asynchronous operation fails.</p>",
+      "refs": {
+        "ErrorDetails$member": null
+      }
+    },
+    "ErrorDetails": {
+      "base": null,
+      "refs": {
+        "Update$errors": "<p>Any errors associated with a <code>Failed</code> update.</p>"
+      }
+    },
+    "FargateProfile": {
+      "base": "<p>An object representing an Fargate profile.</p>",
+      "refs": {
+        "CreateFargateProfileResponse$fargateProfile": "<p>The full description of your new Fargate profile.</p>",
+        "DeleteFargateProfileResponse$fargateProfile": "<p>The deleted Fargate profile.</p>",
+        "DescribeFargateProfileResponse$fargateProfile": "<p>The full description of your Fargate profile.</p>"
+      }
+    },
+    "FargateProfileLabel": {
+      "base": null,
+      "refs": {
+        "FargateProfileSelector$labels": "<p>The Kubernetes labels that the selector should match. A pod must contain all of the labels that are specified in the selector for it to be considered a match.</p>"
+      }
+    },
+    "FargateProfileSelector": {
+      "base": "<p>An object representing an Fargate profile selector.</p>",
+      "refs": {
+        "FargateProfileSelectors$member": null
+      }
+    },
+    "FargateProfileSelectors": {
+      "base": null,
+      "refs": {
+        "CreateFargateProfileRequest$selectors": "<p>The selectors to match for pods to use this Fargate profile. Each selector must have an associated namespace. Optionally, you can also specify labels for a namespace. You may specify up to five selectors in a Fargate profile.</p>",
+        "FargateProfile$selectors": "<p>The selectors to match for pods to use this Fargate profile.</p>"
+      }
+    },
+    "FargateProfileStatus": {
+      "base": null,
+      "refs": {
+        "FargateProfile$status": "<p>The current status of the Fargate profile.</p>"
+      }
+    },
+    "FargateProfilesRequestMaxResults": {
+      "base": null,
+      "refs": {
+        "ListFargateProfilesRequest$maxResults": "<p>The maximum number of Fargate profile results returned by <code>ListFargateProfiles</code> in paginated output. When you use this parameter, <code>ListFargateProfiles</code> returns only <code>maxResults</code> results in a single page along with a <code>nextToken</code> response element. You can see the remaining results of the initial request by sending another <code>ListFargateProfiles</code> request with the returned <code>nextToken</code> value. This value can be between 1 and 100. If you don't use this parameter, <code>ListFargateProfiles</code> returns up to 100 results and a <code>nextToken</code> value if applicable.</p>"
+      }
+    },
+    "Identity": {
+      "base": "<p>An object representing an identity provider.</p>",
+      "refs": {
+        "Cluster$identity": "<p>The identity provider information for the cluster.</p>"
+      }
+    },
+    "IdentityProviderConfig": {
+      "base": "<p>An object representing an identity provider configuration.</p>",
+      "refs": {
+        "DescribeIdentityProviderConfigRequest$identityProviderConfig": "<p>An object that represents an identity provider configuration.</p>",
+        "DisassociateIdentityProviderConfigRequest$identityProviderConfig": "<p>An object that represents an identity provider configuration.</p>",
+        "IdentityProviderConfigs$member": null
+      }
+    },
+    "IdentityProviderConfigResponse": {
+      "base": "<p>The full description of your identity configuration.</p>",
+      "refs": {
+        "DescribeIdentityProviderConfigResponse$identityProviderConfig": "<p>The object that represents an OpenID Connect (OIDC) identity provider configuration.</p>"
+      }
+    },
+    "IdentityProviderConfigs": {
+      "base": null,
+      "refs": {
+        "ListIdentityProviderConfigsResponse$identityProviderConfigs": "<p>The identity provider configurations for the cluster.</p>"
+      }
+    },
+    "IncludeClustersList": {
+      "base": null,
+      "refs": {
+        "ListClustersRequest$include": "<p>Indicates whether external clusters are included in the returned list. Use '<code>all</code>' to return connected clusters, or blank to return only Amazon EKS clusters. '<code>all</code>' must be in lowercase otherwise an error occurs.</p>"
+      }
+    },
+    "InvalidParameterException": {
+      "base": "<p>The specified parameter is invalid. Review the available parameters for the API request.</p>",
+      "refs": {
+      }
+    },
+    "InvalidRequestException": {
+      "base": "<p>The request is invalid given the state of the cluster. Check the state of the cluster and the associated operations.</p>",
+      "refs": {
+      }
+    },
+    "IpFamily": {
+      "base": null,
+      "refs": {
+        "KubernetesNetworkConfigRequest$ipFamily": "<p>Specify which IP version is used to assign Kubernetes Pod and Service IP addresses. If you don't specify a value, <code>ipv4</code> is used by default. You can only specify an IP family when you create a cluster and can't change this value once the cluster is created. If you specify <code>ipv6</code>, the VPC and subnets that you specify for cluster creation must have both IPv4 and IPv6 CIDR blocks assigned to them. </p> <p>You can only specify <code>ipv6</code> for 1.21 and later clusters that use version 1.10.0 or later of the Amazon VPC CNI add-on. If you specify <code>ipv6</code>, then ensure that your VPC meets the requirements and that you're familiar with the considerations listed in <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/cni-ipv6.html\">Assigning IPv6 addresses to Pods and Services</a> in the Amazon EKS User Guide. If you specify <code>ipv6</code>, Kubernetes assigns Service and Pod addresses from the unique local address range (fc00::/7). You can't specify a custom IPv6 CIDR block.</p>",
+        "KubernetesNetworkConfigResponse$ipFamily": "<p>The IP family used to assign Kubernetes Pod and Service IP addresses. The IP family is always <code>ipv4</code>, unless you have a <code>1.21</code> or later cluster running version 1.10.0 or later of the Amazon VPC CNI add-on and specified <code>ipv6</code> when you created the cluster. </p>"
+      }
+    },
+    "Issue": {
+      "base": "<p>An object representing an issue with an Amazon EKS resource.</p>",
+      "refs": {
+        "IssueList$member": null
+      }
+    },
+    "IssueList": {
+      "base": null,
+      "refs": {
+        "NodegroupHealth$issues": "<p>Any issues that are associated with the node group. </p>"
+      }
+    },
+    "KubernetesNetworkConfigRequest": {
+      "base": "<p>The Kubernetes network configuration for the cluster.</p>",
+      "refs": {
+        "CreateClusterRequest$kubernetesNetworkConfig": "<p>The Kubernetes network configuration for the cluster.</p>"
+      }
+    },
+    "KubernetesNetworkConfigResponse": {
+      "base": "<p>The Kubernetes network configuration for the cluster. The response contains a value for <b>serviceIpv6Cidr</b> or <b>serviceIpv4Cidr</b>, but not both. </p>",
+      "refs": {
+        "Cluster$kubernetesNetworkConfig": "<p>The Kubernetes network configuration for the cluster.</p>"
+      }
+    },
+    "LaunchTemplateSpecification": {
+      "base": "<p>An object representing a node group launch template specification. The launch template cannot include <a href=\"https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateNetworkInterface.html\"> <code>SubnetId</code> </a>, <a href=\"https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_IamInstanceProfile.html\"> <code>IamInstanceProfile</code> </a>, <a href=\"https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_RequestSpotInstances.html\"> <code>RequestSpotInstances</code> </a>, <a href=\"https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_HibernationOptionsRequest.html\"> <code>HibernationOptions</code> </a>, or <a href=\"https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_TerminateInstances.html\"> <code>TerminateInstances</code> </a>, or the node group deployment or update will fail. For more information about launch templates, see <a href=\"https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateLaunchTemplate.html\"> <code>CreateLaunchTemplate</code> </a> in the Amazon EC2 API Reference. For more information about using launch templates with Amazon EKS, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/launch-templates.html\">Launch template support</a> in the Amazon EKS User Guide.</p> <p>Specify either <code>name</code> or <code>id</code>, but not both.</p>",
+      "refs": {
+        "CreateNodegroupRequest$launchTemplate": "<p>An object representing a node group's launch template specification. If specified, then do not specify <code>instanceTypes</code>, <code>diskSize</code>, or <code>remoteAccess</code> and make sure that the launch template meets the requirements in <code>launchTemplateSpecification</code>.</p>",
+        "Nodegroup$launchTemplate": "<p>If a launch template was used to create the node group, then this is the launch template that was used.</p>",
+        "UpdateNodegroupVersionRequest$launchTemplate": "<p>An object representing a node group's launch template specification. You can only update a node group using a launch template if the node group was originally deployed with a launch template.</p>"
+      }
+    },
+    "ListAddonsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListAddonsRequestMaxResults": {
+      "base": null,
+      "refs": {
+        "ListAddonsRequest$maxResults": "<p>The maximum number of add-on results returned by <code>ListAddonsRequest</code> in paginated output. When you use this parameter, <code>ListAddonsRequest</code> returns only <code>maxResults</code> results in a single page along with a <code>nextToken</code> response element. You can see the remaining results of the initial request by sending another <code>ListAddonsRequest</code> request with the returned <code>nextToken</code> value. This value can be between 1 and 100. If you don't use this parameter, <code>ListAddonsRequest</code> returns up to 100 results and a <code>nextToken</code> value, if applicable.</p>"
+      }
+    },
+    "ListAddonsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListClustersRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListClustersRequestMaxResults": {
+      "base": null,
+      "refs": {
+        "ListClustersRequest$maxResults": "<p>The maximum number of cluster results returned by <code>ListClusters</code> in paginated output. When you use this parameter, <code>ListClusters</code> returns only <code>maxResults</code> results in a single page along with a <code>nextToken</code> response element. You can see the remaining results of the initial request by sending another <code>ListClusters</code> request with the returned <code>nextToken</code> value. This value can be between 1 and 100. If you don't use this parameter, <code>ListClusters</code> returns up to 100 results and a <code>nextToken</code> value if applicable.</p>"
+      }
+    },
+    "ListClustersResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListFargateProfilesRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListFargateProfilesResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListIdentityProviderConfigsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListIdentityProviderConfigsRequestMaxResults": {
+      "base": null,
+      "refs": {
+        "ListIdentityProviderConfigsRequest$maxResults": "<p>The maximum number of identity provider configurations returned by <code>ListIdentityProviderConfigs</code> in paginated output. When you use this parameter, <code>ListIdentityProviderConfigs</code> returns only <code>maxResults</code> results in a single page along with a <code>nextToken</code> response element. You can see the remaining results of the initial request by sending another <code>ListIdentityProviderConfigs</code> request with the returned <code>nextToken</code> value. This value can be between 1 and 100. If you don't use this parameter, <code>ListIdentityProviderConfigs</code> returns up to 100 results and a <code>nextToken</code> value, if applicable.</p>"
+      }
+    },
+    "ListIdentityProviderConfigsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListNodegroupsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListNodegroupsRequestMaxResults": {
+      "base": null,
+      "refs": {
+        "ListNodegroupsRequest$maxResults": "<p>The maximum number of node group results returned by <code>ListNodegroups</code> in paginated output. When you use this parameter, <code>ListNodegroups</code> returns only <code>maxResults</code> results in a single page along with a <code>nextToken</code> response element. You can see the remaining results of the initial request by sending another <code>ListNodegroups</code> request with the returned <code>nextToken</code> value. This value can be between 1 and 100. If you don't use this parameter, <code>ListNodegroups</code> returns up to 100 results and a <code>nextToken</code> value if applicable.</p>"
+      }
+    },
+    "ListNodegroupsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListTagsForResourceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListTagsForResourceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListUpdatesRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListUpdatesRequestMaxResults": {
+      "base": null,
+      "refs": {
+        "ListUpdatesRequest$maxResults": "<p>The maximum number of update results returned by <code>ListUpdates</code> in paginated output. When you use this parameter, <code>ListUpdates</code> returns only <code>maxResults</code> results in a single page along with a <code>nextToken</code> response element. You can see the remaining results of the initial request by sending another <code>ListUpdates</code> request with the returned <code>nextToken</code> value. This value can be between 1 and 100. If you don't use this parameter, <code>ListUpdates</code> returns up to 100 results and a <code>nextToken</code> value if applicable.</p>"
+      }
+    },
+    "ListUpdatesResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "LogSetup": {
+      "base": "<p>An object representing the enabled or disabled Kubernetes control plane logs for your cluster.</p>",
+      "refs": {
+        "LogSetups$member": null
+      }
+    },
+    "LogSetups": {
+      "base": null,
+      "refs": {
+        "Logging$clusterLogging": "<p>The cluster control plane logging configuration for your cluster.</p>"
+      }
+    },
+    "LogType": {
+      "base": null,
+      "refs": {
+        "LogTypes$member": null
+      }
+    },
+    "LogTypes": {
+      "base": null,
+      "refs": {
+        "LogSetup$types": "<p>The available cluster control plane log types.</p>"
+      }
+    },
+    "Logging": {
+      "base": "<p>An object representing the logging configuration for resources in your cluster.</p>",
+      "refs": {
+        "Cluster$logging": "<p>The logging configuration for your cluster.</p>",
+        "CreateClusterRequest$logging": "<p>Enable or disable exporting the Kubernetes control plane logs for your cluster to CloudWatch Logs. By default, cluster control plane logs aren't exported to CloudWatch Logs. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/control-plane-logs.html\">Amazon EKS Cluster control plane logs</a> in the <i> <i>Amazon EKS User Guide</i> </i>.</p> <note> <p>CloudWatch Logs ingestion, archive storage, and data scanning rates apply to exported control plane logs. For more information, see <a href=\"http://aws.amazon.com/cloudwatch/pricing/\">CloudWatch Pricing</a>.</p> </note>",
+        "UpdateClusterConfigRequest$logging": "<p>Enable or disable exporting the Kubernetes control plane logs for your cluster to CloudWatch Logs. By default, cluster control plane logs aren't exported to CloudWatch Logs. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/control-plane-logs.html\">Amazon EKS cluster control plane logs</a> in the <i> <i>Amazon EKS User Guide</i> </i>.</p> <note> <p>CloudWatch Logs ingestion, archive storage, and data scanning rates apply to exported control plane logs. For more information, see <a href=\"http://aws.amazon.com/cloudwatch/pricing/\">CloudWatch Pricing</a>.</p> </note>"
+      }
+    },
+    "Nodegroup": {
+      "base": "<p>An object representing an Amazon EKS managed node group.</p>",
+      "refs": {
+        "CreateNodegroupResponse$nodegroup": "<p>The full description of your new node group.</p>",
+        "DeleteNodegroupResponse$nodegroup": "<p>The full description of your deleted node group.</p>",
+        "DescribeNodegroupResponse$nodegroup": "<p>The full description of your node group.</p>"
+      }
+    },
+    "NodegroupHealth": {
+      "base": "<p>An object representing the health status of the node group.</p>",
+      "refs": {
+        "Nodegroup$health": "<p>The health status of the node group. If there are issues with your node group's health, they are listed here.</p>"
+      }
+    },
+    "NodegroupIssueCode": {
+      "base": null,
+      "refs": {
+        "Issue$code": "<p>A brief description of the error.</p> <ul> <li> <p> <b>AccessDenied</b>: Amazon EKS or one or more of your managed nodes is failing to authenticate or authorize with your Kubernetes cluster API server.</p> </li> <li> <p> <b>AsgInstanceLaunchFailures</b>: Your Auto Scaling group is experiencing failures while attempting to launch instances.</p> </li> <li> <p> <b>AutoScalingGroupNotFound</b>: We couldn't find the Auto Scaling group associated with the managed node group. You may be able to recreate an Auto Scaling group with the same settings to recover.</p> </li> <li> <p> <b>ClusterUnreachable</b>: Amazon EKS or one or more of your managed nodes is unable to to communicate with your Kubernetes cluster API server. This can happen if there are network disruptions or if API servers are timing out processing requests. </p> </li> <li> <p> <b>Ec2LaunchTemplateNotFound</b>: We couldn't find the Amazon EC2 launch template for your managed node group. You may be able to recreate a launch template with the same settings to recover.</p> </li> <li> <p> <b>Ec2LaunchTemplateVersionMismatch</b>: The Amazon EC2 launch template version for your managed node group does not match the version that Amazon EKS created. You may be able to revert to the version that Amazon EKS created to recover.</p> </li> <li> <p> <b>Ec2SecurityGroupDeletionFailure</b>: We could not delete the remote access security group for your managed node group. Remove any dependencies from the security group.</p> </li> <li> <p> <b>Ec2SecurityGroupNotFound</b>: We couldn't find the cluster security group for the cluster. You must recreate your cluster.</p> </li> <li> <p> <b>Ec2SubnetInvalidConfiguration</b>: One or more Amazon EC2 subnets specified for a node group do not automatically assign public IP addresses to instances launched into it. If you want your instances to be assigned a public IP address, then you need to enable the <code>auto-assign public IP address</code> setting for the subnet. See <a href=\"https://docs.aws.amazon.com/vpc/latest/userguide/vpc-ip-addressing.html#subnet-public-ip\">Modifying the public IPv4 addressing attribute for your subnet</a> in the Amazon VPC User Guide.</p> </li> <li> <p> <b>IamInstanceProfileNotFound</b>: We couldn't find the IAM instance profile for your managed node group. You may be able to recreate an instance profile with the same settings to recover.</p> </li> <li> <p> <b>IamNodeRoleNotFound</b>: We couldn't find the IAM role for your managed node group. You may be able to recreate an IAM role with the same settings to recover.</p> </li> <li> <p> <b>InstanceLimitExceeded</b>: Your Amazon Web Services account is unable to launch any more instances of the specified instance type. You may be able to request an Amazon EC2 instance limit increase to recover.</p> </li> <li> <p> <b>InsufficientFreeAddresses</b>: One or more of the subnets associated with your managed node group does not have enough available IP addresses for new nodes.</p> </li> <li> <p> <b>InternalFailure</b>: These errors are usually caused by an Amazon EKS server-side issue.</p> </li> <li> <p> <b>NodeCreationFailure</b>: Your launched instances are unable to register with your Amazon EKS cluster. Common causes of this failure are insufficient <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/create-node-role.html\">node IAM role</a> permissions or lack of outbound internet access for the nodes. </p> </li> </ul>"
+      }
+    },
+    "NodegroupResources": {
+      "base": "<p>An object representing the resources associated with the node group, such as Auto Scaling groups and security groups for remote access.</p>",
+      "refs": {
+        "Nodegroup$resources": "<p>The resources associated with the node group, such as Auto Scaling groups and security groups for remote access.</p>"
+      }
+    },
+    "NodegroupScalingConfig": {
+      "base": "<p>An object representing the scaling configuration details for the Auto Scaling group that is associated with your node group. When creating a node group, you must specify all or none of the properties. When updating a node group, you can specify any or none of the properties.</p>",
+      "refs": {
+        "CreateNodegroupRequest$scalingConfig": "<p>The scaling configuration details for the Auto Scaling group that is created for your node group.</p>",
+        "Nodegroup$scalingConfig": "<p>The scaling configuration details for the Auto Scaling group that is associated with your node group.</p>",
+        "UpdateNodegroupConfigRequest$scalingConfig": "<p>The scaling configuration details for the Auto Scaling group after the update.</p>"
+      }
+    },
+    "NodegroupStatus": {
+      "base": null,
+      "refs": {
+        "Nodegroup$status": "<p>The current status of the managed node group.</p>"
+      }
+    },
+    "NodegroupUpdateConfig": {
+      "base": "<p>The node group update configuration.</p>",
+      "refs": {
+        "CreateNodegroupRequest$updateConfig": "<p>The node group update configuration.</p>",
+        "Nodegroup$updateConfig": "<p>The node group update configuration.</p>",
+        "UpdateNodegroupConfigRequest$updateConfig": "<p>The node group update configuration.</p>"
+      }
+    },
+    "NonZeroInteger": {
+      "base": null,
+      "refs": {
+        "NodegroupUpdateConfig$maxUnavailable": "<p>The maximum number of nodes unavailable at once during a version update. Nodes will be updated in parallel. This value or <code>maxUnavailablePercentage</code> is required to have a value.The maximum number is 100.</p>"
+      }
+    },
+    "NotFoundException": {
+      "base": "<p>A service resource associated with the request could not be found. Clients should not retry such requests.</p>",
+      "refs": {
+      }
+    },
+    "OIDC": {
+      "base": "<p>An object representing the <a href=\"https://openid.net/connect/\">OpenID Connect</a> (OIDC) identity provider information for the cluster.</p>",
+      "refs": {
+        "Identity$oidc": "<p>An object representing the <a href=\"https://openid.net/connect/\">OpenID Connect</a> identity provider information.</p>"
+      }
+    },
+    "OidcIdentityProviderConfig": {
+      "base": "<p>An object that represents the configuration for an OpenID Connect (OIDC) identity provider. </p>",
+      "refs": {
+        "IdentityProviderConfigResponse$oidc": "<p>An object that represents an OpenID Connect (OIDC) identity provider configuration.</p>"
+      }
+    },
+    "OidcIdentityProviderConfigRequest": {
+      "base": "<p>An object representing an OpenID Connect (OIDC) configuration. Before associating an OIDC identity provider to your cluster, review the considerations in <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/authenticate-oidc-identity-provider.html\">Authenticating users for your cluster from an OpenID Connect identity provider</a> in the <i>Amazon EKS User Guide</i>.</p>",
+      "refs": {
+        "AssociateIdentityProviderConfigRequest$oidc": "<p>An object that represents an OpenID Connect (OIDC) identity provider configuration.</p>"
+      }
+    },
+    "PercentCapacity": {
+      "base": null,
+      "refs": {
+        "NodegroupUpdateConfig$maxUnavailablePercentage": "<p>The maximum percentage of nodes unavailable during a version update. This percentage of nodes will be updated in parallel, up to 100 nodes at once. This value or <code>maxUnavailable</code> is required to have a value.</p>"
+      }
+    },
+    "Provider": {
+      "base": "<p>Identifies the Key Management Service (KMS) key used to encrypt the secrets.</p>",
+      "refs": {
+        "EncryptionConfig$provider": "<p>Key Management Service (KMS) key. Either the ARN or the alias can be used.</p>"
+      }
+    },
+    "RegisterClusterRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "RegisterClusterResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "RemoteAccessConfig": {
+      "base": "<p>An object representing the remote access configuration for the managed node group.</p>",
+      "refs": {
+        "CreateNodegroupRequest$remoteAccess": "<p>The remote access (SSH) configuration to use with your node group. If you specify <code>launchTemplate</code>, then don't specify <code>remoteAccess</code>, or the node group deployment will fail. For more information about using launch templates with Amazon EKS, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/launch-templates.html\">Launch template support</a> in the Amazon EKS User Guide.</p>",
+        "Nodegroup$remoteAccess": "<p>If the node group wasn't deployed with a launch template, then this is the remote access configuration that is associated with the node group. If the node group was deployed with a launch template, then this is <code>null</code>.</p>"
+      }
+    },
+    "ResolveConflicts": {
+      "base": null,
+      "refs": {
+        "CreateAddonRequest$resolveConflicts": "<p>How to resolve parameter value conflicts when migrating an existing add-on to an Amazon EKS add-on.</p>",
+        "UpdateAddonRequest$resolveConflicts": "<p>How to resolve parameter value conflicts when applying the new version of the add-on to the cluster.</p>"
+      }
+    },
+    "ResourceInUseException": {
+      "base": "<p>The specified resource is in use.</p>",
+      "refs": {
+      }
+    },
+    "ResourceLimitExceededException": {
+      "base": "<p>You have encountered a service limit on the specified resource.</p>",
+      "refs": {
+      }
+    },
+    "ResourceNotFoundException": {
+      "base": "<p>The specified resource could not be found. You can view your available clusters with <a>ListClusters</a>. You can view your available managed node groups with <a>ListNodegroups</a>. Amazon EKS clusters and node groups are Region-specific.</p>",
+      "refs": {
+      }
+    },
+    "ResourcePropagationDelayException": {
+      "base": "<p>Required resources (such as Service Linked Roles) were created and are still propagating. Retry later.</p>",
+      "refs": {
+      }
+    },
+    "RoleArn": {
+      "base": null,
+      "refs": {
+        "CreateAddonRequest$serviceAccountRoleArn": "<p>The Amazon Resource Name (ARN) of an existing IAM role to bind to the add-on's service account. The role must be assigned the IAM permissions required by the add-on. If you don't specify an existing IAM role, then the add-on uses the permissions assigned to the node IAM role. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/create-node-role.html\">Amazon EKS node IAM role</a> in the <i>Amazon EKS User Guide</i>.</p> <note> <p>To specify an existing IAM role, you must have an IAM OpenID Connect (OIDC) provider created for your cluster. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html\">Enabling IAM roles for service accounts on your cluster</a> in the <i>Amazon EKS User Guide</i>.</p> </note>",
+        "UpdateAddonRequest$serviceAccountRoleArn": "<p>The Amazon Resource Name (ARN) of an existing IAM role to bind to the add-on's service account. The role must be assigned the IAM permissions required by the add-on. If you don't specify an existing IAM role, then the add-on uses the permissions assigned to the node IAM role. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/create-node-role.html\">Amazon EKS node IAM role</a> in the <i>Amazon EKS User Guide</i>.</p> <note> <p>To specify an existing IAM role, you must have an IAM OpenID Connect (OIDC) provider created for your cluster. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/enable-iam-roles-for-service-accounts.html\">Enabling IAM roles for service accounts on your cluster</a> in the <i>Amazon EKS User Guide</i>.</p> </note>"
+      }
+    },
+    "ServerException": {
+      "base": "<p>These errors are usually caused by a server-side issue.</p>",
+      "refs": {
+      }
+    },
+    "ServiceUnavailableException": {
+      "base": "<p>The service is unavailable. Back off and retry the operation.</p>",
+      "refs": {
+      }
+    },
+    "String": {
+      "base": null,
+      "refs": {
+        "AccessDeniedException$message": null,
+        "Addon$addonName": "<p>The name of the add-on.</p>",
+        "Addon$addonVersion": "<p>The version of the add-on.</p>",
+        "Addon$addonArn": "<p>The Amazon Resource Name (ARN) of the add-on.</p>",
+        "Addon$serviceAccountRoleArn": "<p>The Amazon Resource Name (ARN) of the IAM role that is bound to the Kubernetes service account used by the add-on.</p>",
+        "AddonInfo$addonName": "<p>The name of the add-on.</p>",
+        "AddonInfo$type": "<p>The type of the add-on.</p>",
+        "AddonIssue$message": "<p>A message that provides details about the issue and what might cause it.</p>",
+        "AddonVersionInfo$addonVersion": "<p>The version of the add-on.</p>",
+        "AssociateEncryptionConfigRequest$clusterName": "<p>The name of the cluster that you are associating with encryption configuration.</p>",
+        "AssociateEncryptionConfigRequest$clientRequestToken": "<p>The client request token you are using with the encryption configuration.</p>",
+        "AssociateIdentityProviderConfigRequest$clusterName": "<p>The name of the cluster to associate the configuration to.</p>",
+        "AssociateIdentityProviderConfigRequest$clientRequestToken": "<p>Unique, case-sensitive identifier that you provide to ensure the idempotency of the request.</p>",
+        "AutoScalingGroup$name": "<p>The name of the Auto Scaling group associated with an Amazon EKS managed node group.</p>",
+        "BadRequestException$message": null,
+        "Certificate$data": "<p>The Base64-encoded certificate data required to communicate with your cluster. Add this to the <code>certificate-authority-data</code> section of the <code>kubeconfig</code> file for your cluster.</p>",
+        "ClientException$clusterName": "<p>The Amazon EKS cluster associated with the exception.</p>",
+        "ClientException$nodegroupName": "<p>The Amazon EKS managed node group associated with the exception.</p>",
+        "ClientException$addonName": null,
+        "ClientException$message": null,
+        "Cluster$name": "<p>The name of the cluster.</p>",
+        "Cluster$arn": "<p>The Amazon Resource Name (ARN) of the cluster.</p>",
+        "Cluster$version": "<p>The Kubernetes server version for the cluster.</p>",
+        "Cluster$endpoint": "<p>The endpoint for your Kubernetes API server.</p>",
+        "Cluster$roleArn": "<p>The Amazon Resource Name (ARN) of the IAM role that provides permissions for the Kubernetes control plane to make calls to Amazon Web Services API operations on your behalf.</p>",
+        "Cluster$clientRequestToken": "<p>Unique, case-sensitive identifier that you provide to ensure the idempotency of the request.</p>",
+        "Cluster$platformVersion": "<p>The platform version of your Amazon EKS cluster. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/platform-versions.html\">Platform Versions</a> in the <i> <i>Amazon EKS User Guide</i> </i>.</p>",
+        "Compatibility$clusterVersion": "<p>The supported Kubernetes version of the cluster.</p>",
+        "ConnectorConfigRequest$roleArn": "<p>The Amazon Resource Name (ARN) of the role that is authorized to request the connector configuration.</p>",
+        "ConnectorConfigResponse$activationId": "<p>A unique ID associated with the cluster for registration purposes.</p>",
+        "ConnectorConfigResponse$activationCode": "<p>A unique code associated with the cluster for registration purposes.</p>",
+        "ConnectorConfigResponse$provider": "<p>The cluster's cloud service provider.</p>",
+        "ConnectorConfigResponse$roleArn": "<p>The Amazon Resource Name (ARN) of the role to communicate with services from the connected Kubernetes cluster.</p>",
+        "CreateAddonRequest$addonName": "<p>The name of the add-on. The name must match one of the names returned by <a href=\"https://docs.aws.amazon.com/eks/latest/APIReference/API_DescribeAddonVersions.html\"> <code>DescribeAddonVersions</code> </a>.</p>",
+        "CreateAddonRequest$addonVersion": "<p>The version of the add-on. The version must match one of the versions returned by <a href=\"https://docs.aws.amazon.com/eks/latest/APIReference/API_DescribeAddonVersions.html\"> <code>DescribeAddonVersions</code> </a>.</p>",
+        "CreateAddonRequest$clientRequestToken": "<p>A unique, case-sensitive identifier that you provide to ensure the idempotency of the request.</p>",
+        "CreateClusterRequest$version": "<p>The desired Kubernetes version for your cluster. If you don't specify a value here, the latest version available in Amazon EKS is used.</p>",
+        "CreateClusterRequest$roleArn": "<p>The Amazon Resource Name (ARN) of the IAM role that provides permissions for the Kubernetes control plane to make calls to Amazon Web Services API operations on your behalf. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/service_IAM_role.html\">Amazon EKS Service IAM Role</a> in the <i> <i>Amazon EKS User Guide</i> </i>.</p>",
+        "CreateClusterRequest$clientRequestToken": "<p>Unique, case-sensitive identifier that you provide to ensure the idempotency of the request.</p>",
+        "CreateFargateProfileRequest$fargateProfileName": "<p>The name of the Fargate profile.</p>",
+        "CreateFargateProfileRequest$clusterName": "<p>The name of the Amazon EKS cluster to apply the Fargate profile to.</p>",
+        "CreateFargateProfileRequest$podExecutionRoleArn": "<p>The Amazon Resource Name (ARN) of the pod execution role to use for pods that match the selectors in the Fargate profile. The pod execution role allows Fargate infrastructure to register with your cluster as a node, and it provides read access to Amazon ECR image repositories. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/pod-execution-role.html\">Pod Execution Role</a> in the <i>Amazon EKS User Guide</i>.</p>",
+        "CreateFargateProfileRequest$clientRequestToken": "<p>Unique, case-sensitive identifier that you provide to ensure the idempotency of the request.</p>",
+        "CreateNodegroupRequest$clusterName": "<p>The name of the cluster to create the node group in.</p>",
+        "CreateNodegroupRequest$nodegroupName": "<p>The unique name to give your node group.</p>",
+        "CreateNodegroupRequest$nodeRole": "<p>The Amazon Resource Name (ARN) of the IAM role to associate with your node group. The Amazon EKS worker node <code>kubelet</code> daemon makes calls to Amazon Web Services APIs on your behalf. Nodes receive permissions for these API calls through an IAM instance profile and associated policies. Before you can launch nodes and register them into a cluster, you must create an IAM role for those nodes to use when they are launched. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/worker_node_IAM_role.html\">Amazon EKS node IAM role</a> in the <i> <i>Amazon EKS User Guide</i> </i>. If you specify <code>launchTemplate</code>, then don't specify <a href=\"https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_IamInstanceProfile.html\"> <code>IamInstanceProfile</code> </a> in your launch template, or the node group deployment will fail. For more information about using launch templates with Amazon EKS, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/launch-templates.html\">Launch template support</a> in the Amazon EKS User Guide.</p>",
+        "CreateNodegroupRequest$clientRequestToken": "<p>Unique, case-sensitive identifier that you provide to ensure the idempotency of the request.</p>",
+        "CreateNodegroupRequest$version": "<p>The Kubernetes version to use for your managed nodes. By default, the Kubernetes version of the cluster is used, and this is the only accepted specified value. If you specify <code>launchTemplate</code>, and your launch template uses a custom AMI, then don't specify <code>version</code>, or the node group deployment will fail. For more information about using launch templates with Amazon EKS, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/launch-templates.html\">Launch template support</a> in the Amazon EKS User Guide.</p>",
+        "CreateNodegroupRequest$releaseVersion": "<p>The AMI version of the Amazon EKS optimized AMI to use with your node group. By default, the latest available AMI version for the node group's current Kubernetes version is used. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/eks-linux-ami-versions.html\">Amazon EKS optimized Amazon Linux 2 AMI versions</a> in the <i>Amazon EKS User Guide</i>. If you specify <code>launchTemplate</code>, and your launch template uses a custom AMI, then don't specify <code>releaseVersion</code>, or the node group deployment will fail. For more information about using launch templates with Amazon EKS, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/launch-templates.html\">Launch template support</a> in the Amazon EKS User Guide.</p>",
+        "DeleteAddonRequest$addonName": "<p>The name of the add-on. The name must match one of the names returned by <a href=\"https://docs.aws.amazon.com/eks/latest/APIReference/API_ListAddons.html\"> <code>ListAddons</code> </a>.</p>",
+        "DeleteClusterRequest$name": "<p>The name of the cluster to delete.</p>",
+        "DeleteFargateProfileRequest$clusterName": "<p>The name of the Amazon EKS cluster associated with the Fargate profile to delete.</p>",
+        "DeleteFargateProfileRequest$fargateProfileName": "<p>The name of the Fargate profile to delete.</p>",
+        "DeleteNodegroupRequest$clusterName": "<p>The name of the Amazon EKS cluster that is associated with your node group.</p>",
+        "DeleteNodegroupRequest$nodegroupName": "<p>The name of the node group to delete.</p>",
+        "DeregisterClusterRequest$name": "<p>The name of the connected cluster to deregister.</p>",
+        "DescribeAddonRequest$addonName": "<p>The name of the add-on. The name must match one of the names returned by <a href=\"https://docs.aws.amazon.com/eks/latest/APIReference/API_ListAddons.html\"> <code>ListAddons</code> </a>.</p>",
+        "DescribeAddonVersionsRequest$kubernetesVersion": "<p>The Kubernetes versions that the add-on can be used with.</p>",
+        "DescribeAddonVersionsRequest$nextToken": "<p>The <code>nextToken</code> value returned from a previous paginated <code>DescribeAddonVersionsRequest</code> where <code>maxResults</code> was used and the results exceeded the value of that parameter. Pagination continues from the end of the previous results that returned the <code>nextToken</code> value.</p> <note> <p>This token should be treated as an opaque identifier that is used only to retrieve the next items in a list and not for other programmatic purposes.</p> </note>",
+        "DescribeAddonVersionsRequest$addonName": "<p>The name of the add-on. The name must match one of the names returned by <a href=\"https://docs.aws.amazon.com/eks/latest/APIReference/API_ListAddons.html\"> <code>ListAddons</code> </a>.</p>",
+        "DescribeAddonVersionsResponse$nextToken": "<p>The <code>nextToken</code> value returned from a previous paginated <code>DescribeAddonVersionsResponse</code> where <code>maxResults</code> was used and the results exceeded the value of that parameter. Pagination continues from the end of the previous results that returned the <code>nextToken</code> value.</p> <note> <p>This token should be treated as an opaque identifier that is used only to retrieve the next items in a list and not for other programmatic purposes.</p> </note>",
+        "DescribeClusterRequest$name": "<p>The name of the cluster to describe.</p>",
+        "DescribeFargateProfileRequest$clusterName": "<p>The name of the Amazon EKS cluster associated with the Fargate profile.</p>",
+        "DescribeFargateProfileRequest$fargateProfileName": "<p>The name of the Fargate profile to describe.</p>",
+        "DescribeIdentityProviderConfigRequest$clusterName": "<p>The cluster name that the identity provider configuration is associated to.</p>",
+        "DescribeNodegroupRequest$clusterName": "<p>The name of the Amazon EKS cluster associated with the node group.</p>",
+        "DescribeNodegroupRequest$nodegroupName": "<p>The name of the node group to describe.</p>",
+        "DescribeUpdateRequest$name": "<p>The name of the Amazon EKS cluster associated with the update.</p>",
+        "DescribeUpdateRequest$updateId": "<p>The ID of the update to describe.</p>",
+        "DescribeUpdateRequest$nodegroupName": "<p>The name of the Amazon EKS node group associated with the update.</p>",
+        "DescribeUpdateRequest$addonName": "<p>The name of the add-on. The name must match one of the names returned by <a href=\"https://docs.aws.amazon.com/eks/latest/APIReference/API_ListAddons.html\"> <code>ListAddons</code> </a>.</p>",
+        "DisassociateIdentityProviderConfigRequest$clusterName": "<p>The name of the cluster to disassociate an identity provider from.</p>",
+        "DisassociateIdentityProviderConfigRequest$clientRequestToken": "<p>A unique, case-sensitive identifier that you provide to ensure the idempotency of the request.</p>",
+        "ErrorDetail$errorMessage": "<p>A more complete description of the error.</p>",
+        "FargateProfile$fargateProfileName": "<p>The name of the Fargate profile.</p>",
+        "FargateProfile$fargateProfileArn": "<p>The full Amazon Resource Name (ARN) of the Fargate profile.</p>",
+        "FargateProfile$clusterName": "<p>The name of the Amazon EKS cluster that the Fargate profile belongs to.</p>",
+        "FargateProfile$podExecutionRoleArn": "<p>The Amazon Resource Name (ARN) of the pod execution role to use for pods that match the selectors in the Fargate profile. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/pod-execution-role.html\">Pod Execution Role</a> in the <i>Amazon EKS User Guide</i>.</p>",
+        "FargateProfileLabel$key": null,
+        "FargateProfileLabel$value": null,
+        "FargateProfileSelector$namespace": "<p>The Kubernetes namespace that the selector should match.</p>",
+        "IdentityProviderConfig$type": "<p>The type of the identity provider configuration.</p>",
+        "IdentityProviderConfig$name": "<p>The name of the identity provider configuration.</p>",
+        "IncludeClustersList$member": null,
+        "InvalidParameterException$clusterName": "<p>The Amazon EKS cluster associated with the exception.</p>",
+        "InvalidParameterException$nodegroupName": "<p>The Amazon EKS managed node group associated with the exception.</p>",
+        "InvalidParameterException$fargateProfileName": "<p>The Fargate profile associated with the exception.</p>",
+        "InvalidParameterException$addonName": null,
+        "InvalidParameterException$message": null,
+        "InvalidRequestException$clusterName": "<p>The Amazon EKS cluster associated with the exception.</p>",
+        "InvalidRequestException$nodegroupName": "<p>The Amazon EKS managed node group associated with the exception.</p>",
+        "InvalidRequestException$addonName": null,
+        "InvalidRequestException$message": null,
+        "Issue$message": "<p>The error message associated with the issue.</p>",
+        "KubernetesNetworkConfigRequest$serviceIpv4Cidr": "<p>Don't specify a value if you select <code>ipv6</code> for <b>ipFamily</b>. The CIDR block to assign Kubernetes service IP addresses from. If you don't specify a block, Kubernetes assigns addresses from either the 10.100.0.0/16 or 172.20.0.0/16 CIDR blocks. We recommend that you specify a block that does not overlap with resources in other networks that are peered or connected to your VPC. The block must meet the following requirements:</p> <ul> <li> <p>Within one of the following private IP address blocks: 10.0.0.0/8, 172.16.0.0/12, or 192.168.0.0/16.</p> </li> <li> <p>Doesn't overlap with any CIDR block assigned to the VPC that you selected for VPC.</p> </li> <li> <p>Between /24 and /12.</p> </li> </ul> <important> <p>You can only specify a custom CIDR block when you create a cluster and can't change this value once the cluster is created.</p> </important>",
+        "KubernetesNetworkConfigResponse$serviceIpv4Cidr": "<p>The CIDR block that Kubernetes Pod and Service IP addresses are assigned from. Kubernetes assigns addresses from an IPv4 CIDR block assigned to a subnet that the node is in. If you didn't specify a CIDR block when you created the cluster, then Kubernetes assigns addresses from either the 10.100.0.0/16 or 172.20.0.0/16 CIDR blocks. If this was specified, then it was specified when the cluster was created and it can't be changed.</p>",
+        "KubernetesNetworkConfigResponse$serviceIpv6Cidr": "<p>The CIDR block that Kubernetes Pod and Service IP addresses are assigned from if you created a 1.21 or later cluster with version 1.10.0 or later of the Amazon VPC CNI add-on and specified <code>ipv6</code> for <b>ipFamily</b> when you created the cluster. Kubernetes assigns addresses from the unique local address range (fc00::/7).</p>",
+        "LaunchTemplateSpecification$name": "<p>The name of the launch template.</p>",
+        "LaunchTemplateSpecification$version": "<p>The version of the launch template to use. If no version is specified, then the template's default version is used.</p>",
+        "LaunchTemplateSpecification$id": "<p>The ID of the launch template.</p>",
+        "ListAddonsRequest$nextToken": "<p>The <code>nextToken</code> value returned from a previous paginated <code>ListAddonsRequest</code> where <code>maxResults</code> was used and the results exceeded the value of that parameter. Pagination continues from the end of the previous results that returned the <code>nextToken</code> value.</p> <note> <p>This token should be treated as an opaque identifier that is used only to retrieve the next items in a list and not for other programmatic purposes.</p> </note>",
+        "ListAddonsResponse$nextToken": "<p>The <code>nextToken</code> value returned from a previous paginated <code>ListAddonsResponse</code> where <code>maxResults</code> was used and the results exceeded the value of that parameter. Pagination continues from the end of the previous results that returned the <code>nextToken</code> value.</p> <note> <p>This token should be treated as an opaque identifier that is used only to retrieve the next items in a list and not for other programmatic purposes.</p> </note>",
+        "ListClustersRequest$nextToken": "<p>The <code>nextToken</code> value returned from a previous paginated <code>ListClusters</code> request where <code>maxResults</code> was used and the results exceeded the value of that parameter. Pagination continues from the end of the previous results that returned the <code>nextToken</code> value.</p> <note> <p>This token should be treated as an opaque identifier that is used only to retrieve the next items in a list and not for other programmatic purposes.</p> </note>",
+        "ListClustersResponse$nextToken": "<p>The <code>nextToken</code> value to include in a future <code>ListClusters</code> request. When the results of a <code>ListClusters</code> request exceed <code>maxResults</code>, you can use this value to retrieve the next page of results. This value is <code>null</code> when there are no more results to return.</p>",
+        "ListFargateProfilesRequest$clusterName": "<p>The name of the Amazon EKS cluster that you would like to list Fargate profiles in.</p>",
+        "ListFargateProfilesRequest$nextToken": "<p>The <code>nextToken</code> value returned from a previous paginated <code>ListFargateProfiles</code> request where <code>maxResults</code> was used and the results exceeded the value of that parameter. Pagination continues from the end of the previous results that returned the <code>nextToken</code> value.</p>",
+        "ListFargateProfilesResponse$nextToken": "<p>The <code>nextToken</code> value to include in a future <code>ListFargateProfiles</code> request. When the results of a <code>ListFargateProfiles</code> request exceed <code>maxResults</code>, you can use this value to retrieve the next page of results. This value is <code>null</code> when there are no more results to return.</p>",
+        "ListIdentityProviderConfigsRequest$clusterName": "<p>The cluster name that you want to list identity provider configurations for.</p>",
+        "ListIdentityProviderConfigsRequest$nextToken": "<p>The <code>nextToken</code> value returned from a previous paginated <code>IdentityProviderConfigsRequest</code> where <code>maxResults</code> was used and the results exceeded the value of that parameter. Pagination continues from the end of the previous results that returned the <code>nextToken</code> value.</p>",
+        "ListIdentityProviderConfigsResponse$nextToken": "<p>The <code>nextToken</code> value returned from a previous paginated <code>ListIdentityProviderConfigsResponse</code> where <code>maxResults</code> was used and the results exceeded the value of that parameter. Pagination continues from the end of the previous results that returned the <code>nextToken</code> value.</p>",
+        "ListNodegroupsRequest$clusterName": "<p>The name of the Amazon EKS cluster that you would like to list node groups in.</p>",
+        "ListNodegroupsRequest$nextToken": "<p>The <code>nextToken</code> value returned from a previous paginated <code>ListNodegroups</code> request where <code>maxResults</code> was used and the results exceeded the value of that parameter. Pagination continues from the end of the previous results that returned the <code>nextToken</code> value.</p>",
+        "ListNodegroupsResponse$nextToken": "<p>The <code>nextToken</code> value to include in a future <code>ListNodegroups</code> request. When the results of a <code>ListNodegroups</code> request exceed <code>maxResults</code>, you can use this value to retrieve the next page of results. This value is <code>null</code> when there are no more results to return.</p>",
+        "ListTagsForResourceRequest$resourceArn": "<p>The Amazon Resource Name (ARN) that identifies the resource for which to list the tags. Currently, the supported resources are Amazon EKS clusters and managed node groups.</p>",
+        "ListUpdatesRequest$name": "<p>The name of the Amazon EKS cluster to list updates for.</p>",
+        "ListUpdatesRequest$nodegroupName": "<p>The name of the Amazon EKS managed node group to list updates for.</p>",
+        "ListUpdatesRequest$addonName": "<p>The names of the installed add-ons that have available updates.</p>",
+        "ListUpdatesRequest$nextToken": "<p>The <code>nextToken</code> value returned from a previous paginated <code>ListUpdates</code> request where <code>maxResults</code> was used and the results exceeded the value of that parameter. Pagination continues from the end of the previous results that returned the <code>nextToken</code> value.</p>",
+        "ListUpdatesResponse$nextToken": "<p>The <code>nextToken</code> value to include in a future <code>ListUpdates</code> request. When the results of a <code>ListUpdates</code> request exceed <code>maxResults</code>, you can use this value to retrieve the next page of results. This value is <code>null</code> when there are no more results to return.</p>",
+        "Nodegroup$nodegroupName": "<p>The name associated with an Amazon EKS managed node group.</p>",
+        "Nodegroup$nodegroupArn": "<p>The Amazon Resource Name (ARN) associated with the managed node group.</p>",
+        "Nodegroup$clusterName": "<p>The name of the cluster that the managed node group resides in.</p>",
+        "Nodegroup$version": "<p>The Kubernetes version of the managed node group.</p>",
+        "Nodegroup$releaseVersion": "<p>If the node group was deployed using a launch template with a custom AMI, then this is the AMI ID that was specified in the launch template. For node groups that weren't deployed using a launch template, this is the version of the Amazon EKS optimized AMI that the node group was deployed with.</p>",
+        "Nodegroup$nodeRole": "<p>The IAM role associated with your node group. The Amazon EKS node <code>kubelet</code> daemon makes calls to Amazon Web Services APIs on your behalf. Nodes receive permissions for these API calls through an IAM instance profile and associated policies.</p>",
+        "NodegroupResources$remoteAccessSecurityGroup": "<p>The remote access security group associated with the node group. This security group controls SSH access to the nodes.</p>",
+        "NotFoundException$message": null,
+        "OIDC$issuer": "<p>The issuer URL for the OIDC identity provider.</p>",
+        "OidcIdentityProviderConfig$identityProviderConfigName": "<p>The name of the configuration.</p>",
+        "OidcIdentityProviderConfig$identityProviderConfigArn": "<p>The ARN of the configuration.</p>",
+        "OidcIdentityProviderConfig$clusterName": "<p>The cluster that the configuration is associated to.</p>",
+        "OidcIdentityProviderConfig$issuerUrl": "<p>The URL of the OIDC identity provider that allows the API server to discover public signing keys for verifying tokens.</p>",
+        "OidcIdentityProviderConfig$clientId": "<p>This is also known as <i>audience</i>. The ID of the client application that makes authentication requests to the OIDC identity provider.</p>",
+        "OidcIdentityProviderConfig$usernameClaim": "<p>The JSON Web token (JWT) claim that is used as the username.</p>",
+        "OidcIdentityProviderConfig$usernamePrefix": "<p>The prefix that is prepended to username claims to prevent clashes with existing names. The prefix can't contain <code>system:</code> </p>",
+        "OidcIdentityProviderConfig$groupsClaim": "<p>The JSON web token (JWT) claim that the provider uses to return your groups.</p>",
+        "OidcIdentityProviderConfig$groupsPrefix": "<p>The prefix that is prepended to group claims to prevent clashes with existing names (such as <code>system:</code> groups). For example, the value<code> oidc:</code> creates group names like <code>oidc:engineering</code> and <code>oidc:infra</code>. The prefix can't contain <code>system:</code> </p>",
+        "OidcIdentityProviderConfigRequest$identityProviderConfigName": "<p>The name of the OIDC provider configuration.</p>",
+        "OidcIdentityProviderConfigRequest$issuerUrl": "<p>The URL of the OpenID identity provider that allows the API server to discover public signing keys for verifying tokens. The URL must begin with <code>https://</code> and should correspond to the <code>iss</code> claim in the provider's OIDC ID tokens. Per the OIDC standard, path components are allowed but query parameters are not. Typically the URL consists of only a hostname, like <code>https://server.example.org</code> or <code>https://example.com</code>. This URL should point to the level below <code>.well-known/openid-configuration</code> and must be publicly accessible over the internet.</p>",
+        "OidcIdentityProviderConfigRequest$clientId": "<p>This is also known as <i>audience</i>. The ID for the client application that makes authentication requests to the OpenID identity provider.</p>",
+        "OidcIdentityProviderConfigRequest$usernameClaim": "<p>The JSON Web Token (JWT) claim to use as the username. The default is <code>sub</code>, which is expected to be a unique identifier of the end user. You can choose other claims, such as <code>email</code> or <code>name</code>, depending on the OpenID identity provider. Claims other than <code>email</code> are prefixed with the issuer URL to prevent naming clashes with other plug-ins.</p>",
+        "OidcIdentityProviderConfigRequest$usernamePrefix": "<p>The prefix that is prepended to username claims to prevent clashes with existing names. If you do not provide this field, and <code>username</code> is a value other than <code>email</code>, the prefix defaults to <code>issuerurl#</code>. You can use the value <code>-</code> to disable all prefixing.</p>",
+        "OidcIdentityProviderConfigRequest$groupsClaim": "<p>The JWT claim that the provider uses to return your groups.</p>",
+        "OidcIdentityProviderConfigRequest$groupsPrefix": "<p>The prefix that is prepended to group claims to prevent clashes with existing names (such as <code>system:</code> groups). For example, the value<code> oidc:</code> will create group names like <code>oidc:engineering</code> and <code>oidc:infra</code>.</p>",
+        "Provider$keyArn": "<p>Amazon Resource Name (ARN) or alias of the KMS key. The KMS key must be symmetric, created in the same region as the cluster, and if the KMS key was created in a different account, the user must have access to the KMS key. For more information, see <a href=\"https://docs.aws.amazon.com/kms/latest/developerguide/key-policy-modifying-external-accounts.html\">Allowing Users in Other Accounts to Use a KMS key</a> in the <i>Key Management Service Developer Guide</i>.</p>",
+        "RegisterClusterRequest$clientRequestToken": "<p>Unique, case-sensitive identifier that you provide to ensure the idempotency of the request.</p>",
+        "RemoteAccessConfig$ec2SshKey": "<p>The Amazon EC2 SSH key that provides access for SSH communication with the nodes in the managed node group. For more information, see <a href=\"https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-key-pairs.html\">Amazon EC2 key pairs and Linux instances</a> in the <i>Amazon Elastic Compute Cloud User Guide for Linux Instances</i>.</p>",
+        "ResourceInUseException$clusterName": "<p>The Amazon EKS cluster associated with the exception.</p>",
+        "ResourceInUseException$nodegroupName": "<p>The Amazon EKS managed node group associated with the exception.</p>",
+        "ResourceInUseException$addonName": null,
+        "ResourceInUseException$message": null,
+        "ResourceLimitExceededException$clusterName": "<p>The Amazon EKS cluster associated with the exception.</p>",
+        "ResourceLimitExceededException$nodegroupName": "<p>The Amazon EKS managed node group associated with the exception.</p>",
+        "ResourceLimitExceededException$message": null,
+        "ResourceNotFoundException$clusterName": "<p>The Amazon EKS cluster associated with the exception.</p>",
+        "ResourceNotFoundException$nodegroupName": "<p>The Amazon EKS managed node group associated with the exception.</p>",
+        "ResourceNotFoundException$fargateProfileName": "<p>The Fargate profile associated with the exception.</p>",
+        "ResourceNotFoundException$addonName": null,
+        "ResourceNotFoundException$message": null,
+        "ResourcePropagationDelayException$message": null,
+        "ServerException$clusterName": "<p>The Amazon EKS cluster associated with the exception.</p>",
+        "ServerException$nodegroupName": "<p>The Amazon EKS managed node group associated with the exception.</p>",
+        "ServerException$addonName": null,
+        "ServerException$message": null,
+        "ServiceUnavailableException$message": null,
+        "StringList$member": null,
+        "TagResourceRequest$resourceArn": "<p>The Amazon Resource Name (ARN) of the resource to which to add tags. Currently, the supported resources are Amazon EKS clusters and managed node groups.</p>",
+        "UnsupportedAvailabilityZoneException$message": null,
+        "UnsupportedAvailabilityZoneException$clusterName": "<p>The Amazon EKS cluster associated with the exception.</p>",
+        "UnsupportedAvailabilityZoneException$nodegroupName": "<p>The Amazon EKS managed node group associated with the exception.</p>",
+        "UntagResourceRequest$resourceArn": "<p>The Amazon Resource Name (ARN) of the resource from which to delete tags. Currently, the supported resources are Amazon EKS clusters and managed node groups.</p>",
+        "Update$id": "<p>A UUID that is used to track the update.</p>",
+        "UpdateAddonRequest$addonName": "<p>The name of the add-on. The name must match one of the names returned by <a href=\"https://docs.aws.amazon.com/eks/latest/APIReference/API_ListAddons.html\"> <code>ListAddons</code> </a>.</p>",
+        "UpdateAddonRequest$addonVersion": "<p>The version of the add-on. The version must match one of the versions returned by <a href=\"https://docs.aws.amazon.com/eks/latest/APIReference/API_DescribeAddonVersions.html\"> <code>DescribeAddonVersions</code> </a>.</p>",
+        "UpdateAddonRequest$clientRequestToken": "<p>Unique, case-sensitive identifier that you provide to ensure the idempotency of the request.</p>",
+        "UpdateClusterConfigRequest$name": "<p>The name of the Amazon EKS cluster to update.</p>",
+        "UpdateClusterConfigRequest$clientRequestToken": "<p>Unique, case-sensitive identifier that you provide to ensure the idempotency of the request.</p>",
+        "UpdateClusterVersionRequest$name": "<p>The name of the Amazon EKS cluster to update.</p>",
+        "UpdateClusterVersionRequest$version": "<p>The desired Kubernetes version following a successful update.</p>",
+        "UpdateClusterVersionRequest$clientRequestToken": "<p>Unique, case-sensitive identifier that you provide to ensure the idempotency of the request.</p>",
+        "UpdateNodegroupConfigRequest$clusterName": "<p>The name of the Amazon EKS cluster that the managed node group resides in.</p>",
+        "UpdateNodegroupConfigRequest$nodegroupName": "<p>The name of the managed node group to update.</p>",
+        "UpdateNodegroupConfigRequest$clientRequestToken": "<p>Unique, case-sensitive identifier that you provide to ensure the idempotency of the request.</p>",
+        "UpdateNodegroupVersionRequest$clusterName": "<p>The name of the Amazon EKS cluster that is associated with the managed node group to update.</p>",
+        "UpdateNodegroupVersionRequest$nodegroupName": "<p>The name of the managed node group to update.</p>",
+        "UpdateNodegroupVersionRequest$version": "<p>The Kubernetes version to update to. If no version is specified, then the Kubernetes version of the node group does not change. You can specify the Kubernetes version of the cluster to update the node group to the latest AMI version of the cluster's Kubernetes version. If you specify <code>launchTemplate</code>, and your launch template uses a custom AMI, then don't specify <code>version</code>, or the node group update will fail. For more information about using launch templates with Amazon EKS, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/launch-templates.html\">Launch template support</a> in the Amazon EKS User Guide.</p>",
+        "UpdateNodegroupVersionRequest$releaseVersion": "<p>The AMI version of the Amazon EKS optimized AMI to use for the update. By default, the latest available AMI version for the node group's Kubernetes version is used. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/eks-linux-ami-versions.html\">Amazon EKS optimized Amazon Linux 2 AMI versions </a> in the <i>Amazon EKS User Guide</i>. If you specify <code>launchTemplate</code>, and your launch template uses a custom AMI, then don't specify <code>releaseVersion</code>, or the node group update will fail. For more information about using launch templates with Amazon EKS, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/launch-templates.html\">Launch template support</a> in the Amazon EKS User Guide.</p>",
+        "UpdateNodegroupVersionRequest$clientRequestToken": "<p>Unique, case-sensitive identifier that you provide to ensure the idempotency of the request.</p>",
+        "UpdateParam$value": "<p>The value of the keys submitted as part of an update request.</p>",
+        "VpcConfigResponse$clusterSecurityGroupId": "<p>The cluster security group that was created by Amazon EKS for the cluster. Managed node groups use this security group for control-plane-to-data-plane communication.</p>",
+        "VpcConfigResponse$vpcId": "<p>The VPC associated with your cluster.</p>",
+        "labelsKeyList$member": null
+      }
+    },
+    "StringList": {
+      "base": null,
+      "refs": {
+        "AddonIssue$resourceIds": "<p>The resource IDs of the issue.</p>",
+        "AddonVersionInfo$architecture": "<p>The architectures that the version supports.</p>",
+        "Compatibility$platformVersions": "<p>The supported compute platform.</p>",
+        "CreateFargateProfileRequest$subnets": "<p>The IDs of subnets to launch your pods into. At this time, pods running on Fargate are not assigned public IP addresses, so only private subnets (with no direct route to an Internet Gateway) are accepted for this parameter.</p>",
+        "CreateNodegroupRequest$subnets": "<p>The subnets to use for the Auto Scaling group that is created for your node group. If you specify <code>launchTemplate</code>, then don't specify <a href=\"https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_CreateNetworkInterface.html\"> <code>SubnetId</code> </a> in your launch template, or the node group deployment will fail. For more information about using launch templates with Amazon EKS, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/launch-templates.html\">Launch template support</a> in the Amazon EKS User Guide.</p>",
+        "CreateNodegroupRequest$instanceTypes": "<p>Specify the instance types for a node group. If you specify a GPU instance type, be sure to specify <code>AL2_x86_64_GPU</code> with the <code>amiType</code> parameter. If you specify <code>launchTemplate</code>, then you can specify zero or one instance type in your launch template <i>or</i> you can specify 0-20 instance types for <code>instanceTypes</code>. If however, you specify an instance type in your launch template <i>and</i> specify any <code>instanceTypes</code>, the node group deployment will fail. If you don't specify an instance type in a launch template or for <code>instanceTypes</code>, then <code>t3.medium</code> is used, by default. If you specify <code>Spot</code> for <code>capacityType</code>, then we recommend specifying multiple values for <code>instanceTypes</code>. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/managed-node-groups.html#managed-node-group-capacity-types\">Managed node group capacity types</a> and <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/launch-templates.html\">Launch template support</a> in the <i>Amazon EKS User Guide</i>.</p>",
+        "EncryptionConfig$resources": "<p>Specifies the resources to be encrypted. The only supported value is \"secrets\".</p>",
+        "ErrorDetail$resourceIds": "<p>An optional field that contains the resource IDs associated with the error.</p>",
+        "FargateProfile$subnets": "<p>The IDs of subnets to launch pods into.</p>",
+        "Issue$resourceIds": "<p>The Amazon Web Services resources that are afflicted by this issue.</p>",
+        "ListAddonsResponse$addons": "<p>A list of available add-ons.</p>",
+        "ListClustersResponse$clusters": "<p>A list of all of the clusters for your account in the specified Region.</p>",
+        "ListFargateProfilesResponse$fargateProfileNames": "<p>A list of all of the Fargate profiles associated with the specified cluster.</p>",
+        "ListNodegroupsResponse$nodegroups": "<p>A list of all of the node groups associated with the specified cluster.</p>",
+        "ListUpdatesResponse$updateIds": "<p>A list of all the updates for the specified cluster and Region.</p>",
+        "Nodegroup$instanceTypes": "<p>If the node group wasn't deployed with a launch template, then this is the instance type that is associated with the node group. If the node group was deployed with a launch template, then this is <code>null</code>.</p>",
+        "Nodegroup$subnets": "<p>The subnets that were specified for the Auto Scaling group that is associated with your node group.</p>",
+        "RemoteAccessConfig$sourceSecurityGroups": "<p>The security groups that are allowed SSH access (port 22) to the nodes. If you specify an Amazon EC2 SSH key but do not specify a source security group when you create a managed node group, then port 22 on the nodes is opened to the internet (0.0.0.0/0). For more information, see <a href=\"https://docs.aws.amazon.com/vpc/latest/userguide/VPC_SecurityGroups.html\">Security Groups for Your VPC</a> in the <i>Amazon Virtual Private Cloud User Guide</i>.</p>",
+        "UnsupportedAvailabilityZoneException$validZones": "<p>The supported Availability Zones for your account. Choose subnets in these Availability Zones for your cluster.</p>",
+        "VpcConfigRequest$subnetIds": "<p>Specify subnets for your Amazon EKS nodes. Amazon EKS creates cross-account elastic network interfaces in these subnets to allow communication between your nodes and the Kubernetes control plane.</p>",
+        "VpcConfigRequest$securityGroupIds": "<p>Specify one or more security groups for the cross-account elastic network interfaces that Amazon EKS creates to use that allow communication between your nodes and the Kubernetes control plane. If you don't specify any security groups, then familiarize yourself with the difference between Amazon EKS defaults for clusters deployed with Kubernetes:</p> <ul> <li> <p>1.14 Amazon EKS platform version <code>eks.2</code> and earlier</p> </li> <li> <p>1.14 Amazon EKS platform version <code>eks.3</code> and later </p> </li> </ul> <p>For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/sec-group-reqs.html\">Amazon EKS security group considerations</a> in the <i> <i>Amazon EKS User Guide</i> </i>.</p>",
+        "VpcConfigRequest$publicAccessCidrs": "<p>The CIDR blocks that are allowed access to your cluster's public Kubernetes API server endpoint. Communication to the endpoint from addresses outside of the CIDR blocks that you specify is denied. The default value is <code>0.0.0.0/0</code>. If you've disabled private endpoint access and you have nodes or Fargate pods in the cluster, then ensure that you specify the necessary CIDR blocks. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/cluster-endpoint.html\">Amazon EKS cluster endpoint access control</a> in the <i> <i>Amazon EKS User Guide</i> </i>.</p>",
+        "VpcConfigResponse$subnetIds": "<p>The subnets associated with your cluster.</p>",
+        "VpcConfigResponse$securityGroupIds": "<p>The security groups associated with the cross-account elastic network interfaces that are used to allow communication between your nodes and the Kubernetes control plane.</p>",
+        "VpcConfigResponse$publicAccessCidrs": "<p>The CIDR blocks that are allowed access to your cluster's public Kubernetes API server endpoint. Communication to the endpoint from addresses outside of the listed CIDR blocks is denied. The default value is <code>0.0.0.0/0</code>. If you've disabled private endpoint access and you have nodes or Fargate pods in the cluster, then ensure that the necessary CIDR blocks are listed. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/cluster-endpoint.html\">Amazon EKS cluster endpoint access control</a> in the <i> <i>Amazon EKS User Guide</i> </i>.</p>"
+      }
+    },
+    "TagKey": {
+      "base": null,
+      "refs": {
+        "TagKeyList$member": null,
+        "TagMap$key": null
+      }
+    },
+    "TagKeyList": {
+      "base": null,
+      "refs": {
+        "UntagResourceRequest$tagKeys": "<p>The keys of the tags to be removed.</p>"
+      }
+    },
+    "TagMap": {
+      "base": null,
+      "refs": {
+        "Addon$tags": "<p>The metadata that you apply to the add-on to assist with categorization and organization. Each tag consists of a key and an optional value. You define both. Add-on tags do not propagate to any other resources associated with the cluster. </p>",
+        "AssociateIdentityProviderConfigRequest$tags": "<p>The metadata to apply to the configuration to assist with categorization and organization. Each tag consists of a key and an optional value. You define both.</p>",
+        "AssociateIdentityProviderConfigResponse$tags": "<p>The tags for the resource.</p>",
+        "Cluster$tags": "<p>The metadata that you apply to the cluster to assist with categorization and organization. Each tag consists of a key and an optional value. You define both. Cluster tags do not propagate to any other resources associated with the cluster.</p>",
+        "CreateAddonRequest$tags": "<p>The metadata to apply to the cluster to assist with categorization and organization. Each tag consists of a key and an optional value. You define both.</p>",
+        "CreateClusterRequest$tags": "<p>The metadata to apply to the cluster to assist with categorization and organization. Each tag consists of a key and an optional value. You define both.</p>",
+        "CreateFargateProfileRequest$tags": "<p>The metadata to apply to the Fargate profile to assist with categorization and organization. Each tag consists of a key and an optional value. You define both. Fargate profile tags do not propagate to any other resources associated with the Fargate profile, such as the pods that are scheduled with it.</p>",
+        "CreateNodegroupRequest$tags": "<p>The metadata to apply to the node group to assist with categorization and organization. Each tag consists of a key and an optional value. You define both. Node group tags do not propagate to any other resources associated with the node group, such as the Amazon EC2 instances or subnets.</p>",
+        "FargateProfile$tags": "<p>The metadata applied to the Fargate profile to assist with categorization and organization. Each tag consists of a key and an optional value. You define both. Fargate profile tags do not propagate to any other resources associated with the Fargate profile, such as the pods that are scheduled with it.</p>",
+        "ListTagsForResourceResponse$tags": "<p>The tags for the resource.</p>",
+        "Nodegroup$tags": "<p>The metadata applied to the node group to assist with categorization and organization. Each tag consists of a key and an optional value. You define both. Node group tags do not propagate to any other resources associated with the node group, such as the Amazon EC2 instances or subnets. </p>",
+        "OidcIdentityProviderConfig$tags": "<p>The metadata to apply to the provider configuration to assist with categorization and organization. Each tag consists of a key and an optional value. You define both.</p>",
+        "RegisterClusterRequest$tags": "<p>The metadata that you apply to the cluster to assist with categorization and organization. Each tag consists of a key and an optional value, both of which you define. Cluster tags do not propagate to any other resources associated with the cluster.</p>",
+        "TagResourceRequest$tags": "<p>The tags to add to the resource. A tag is an array of key-value pairs.</p>"
+      }
+    },
+    "TagResourceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "TagResourceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "TagValue": {
+      "base": null,
+      "refs": {
+        "TagMap$value": null
+      }
+    },
+    "Taint": {
+      "base": "<p>A property that allows a node to repel a set of pods.</p>",
+      "refs": {
+        "taintsList$member": null
+      }
+    },
+    "TaintEffect": {
+      "base": null,
+      "refs": {
+        "Taint$effect": "<p>The effect of the taint.</p>"
+      }
+    },
+    "Timestamp": {
+      "base": null,
+      "refs": {
+        "Addon$createdAt": "<p>The date and time that the add-on was created.</p>",
+        "Addon$modifiedAt": "<p>The date and time that the add-on was last modified.</p>",
+        "Cluster$createdAt": "<p>The Unix epoch timestamp in seconds for when the cluster was created.</p>",
+        "ConnectorConfigResponse$activationExpiry": "<p>The expiration time of the connected cluster. The cluster's YAML file must be applied through the native provider.</p>",
+        "FargateProfile$createdAt": "<p>The Unix epoch timestamp in seconds for when the Fargate profile was created.</p>",
+        "Nodegroup$createdAt": "<p>The Unix epoch timestamp in seconds for when the managed node group was created.</p>",
+        "Nodegroup$modifiedAt": "<p>The Unix epoch timestamp in seconds for when the managed node group was last modified.</p>",
+        "Update$createdAt": "<p>The Unix epoch timestamp in seconds for when the update was created.</p>"
+      }
+    },
+    "UnsupportedAvailabilityZoneException": {
+      "base": "<p>At least one of your specified cluster subnets is in an Availability Zone that does not support Amazon EKS. The exception output specifies the supported Availability Zones for your account, from which you can choose subnets for your cluster.</p>",
+      "refs": {
+      }
+    },
+    "UntagResourceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UntagResourceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "Update": {
+      "base": "<p>An object representing an asynchronous update.</p>",
+      "refs": {
+        "AssociateEncryptionConfigResponse$update": null,
+        "AssociateIdentityProviderConfigResponse$update": null,
+        "DescribeUpdateResponse$update": "<p>The full description of the specified update.</p>",
+        "DisassociateIdentityProviderConfigResponse$update": null,
+        "UpdateAddonResponse$update": null,
+        "UpdateClusterConfigResponse$update": null,
+        "UpdateClusterVersionResponse$update": "<p>The full description of the specified update</p>",
+        "UpdateNodegroupConfigResponse$update": null,
+        "UpdateNodegroupVersionResponse$update": null
+      }
+    },
+    "UpdateAddonRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateAddonResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateClusterConfigRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateClusterConfigResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateClusterVersionRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateClusterVersionResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateLabelsPayload": {
+      "base": "<p>An object representing a Kubernetes label change for a managed node group.</p>",
+      "refs": {
+        "UpdateNodegroupConfigRequest$labels": "<p>The Kubernetes labels to be applied to the nodes in the node group after the update.</p>"
+      }
+    },
+    "UpdateNodegroupConfigRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateNodegroupConfigResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateNodegroupVersionRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateNodegroupVersionResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateParam": {
+      "base": "<p>An object representing the details of an update request.</p>",
+      "refs": {
+        "UpdateParams$member": null
+      }
+    },
+    "UpdateParamType": {
+      "base": null,
+      "refs": {
+        "UpdateParam$type": "<p>The keys associated with an update request.</p>"
+      }
+    },
+    "UpdateParams": {
+      "base": null,
+      "refs": {
+        "Update$params": "<p>A key-value map that contains the parameters associated with the update.</p>"
+      }
+    },
+    "UpdateStatus": {
+      "base": null,
+      "refs": {
+        "Update$status": "<p>The current status of the update.</p>"
+      }
+    },
+    "UpdateTaintsPayload": {
+      "base": "<p>An object representing the details of an update to a taints payload.</p>",
+      "refs": {
+        "UpdateNodegroupConfigRequest$taints": "<p>The Kubernetes taints to be applied to the nodes in the node group after the update.</p>"
+      }
+    },
+    "UpdateType": {
+      "base": null,
+      "refs": {
+        "Update$type": "<p>The type of the update.</p>"
+      }
+    },
+    "VpcConfigRequest": {
+      "base": "<p>An object representing the VPC configuration to use for an Amazon EKS cluster.</p>",
+      "refs": {
+        "CreateClusterRequest$resourcesVpcConfig": "<p>The VPC configuration that's used by the cluster control plane. Amazon EKS VPC resources have specific requirements to work properly with Kubernetes. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/network_reqs.html\">Cluster VPC Considerations</a> and <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/sec-group-reqs.html\">Cluster Security Group Considerations</a> in the <i>Amazon EKS User Guide</i>. You must specify at least two subnets. You can specify up to five security groups. However, we recommend that you use a dedicated security group for your cluster control plane.</p>",
+        "UpdateClusterConfigRequest$resourcesVpcConfig": null
+      }
+    },
+    "VpcConfigResponse": {
+      "base": "<p>An object representing an Amazon EKS cluster VPC configuration response.</p>",
+      "refs": {
+        "Cluster$resourcesVpcConfig": "<p>The VPC configuration used by the cluster control plane. Amazon EKS VPC resources have specific requirements to work properly with Kubernetes. For more information, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/network_reqs.html\">Cluster VPC Considerations</a> and <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/sec-group-reqs.html\">Cluster Security Group Considerations</a> in the <i>Amazon EKS User Guide</i>.</p>"
+      }
+    },
+    "ZeroCapacity": {
+      "base": null,
+      "refs": {
+        "NodegroupScalingConfig$minSize": "<p>The minimum number of nodes that the managed node group can scale in to.</p>",
+        "NodegroupScalingConfig$desiredSize": "<p>The current number of nodes that the managed node group should maintain.</p> <important> <p>If you use Cluster Autoscaler, you shouldn't change the desiredSize value directly, as this can cause the Cluster Autoscaler to suddenly scale up or scale down.</p> </important> <p>Whenever this parameter changes, the number of worker nodes in the node group is updated to the specified size. If this parameter is given a value that is smaller than the current number of running worker nodes, the necessary number of worker nodes are terminated to match the given value. When using CloudFormation, no action occurs if you remove this parameter from your CFN template.</p> <p>This parameter can be different from minSize in some cases, such as when starting with extra hosts for testing. This parameter can also be different when you want to start with an estimated number of needed hosts, but let Cluster Autoscaler reduce the number if there are too many. When Cluster Autoscaler is used, the desiredSize parameter is altered by Cluster Autoscaler (but can be out-of-date for short periods of time). Cluster Autoscaler doesn't scale a managed node group lower than minSize or higher than maxSize.</p>"
+      }
+    },
+    "configStatus": {
+      "base": null,
+      "refs": {
+        "OidcIdentityProviderConfig$status": "<p>The status of the OIDC identity provider.</p>"
+      }
+    },
+    "labelKey": {
+      "base": null,
+      "refs": {
+        "labelsMap$key": null
+      }
+    },
+    "labelValue": {
+      "base": null,
+      "refs": {
+        "labelsMap$value": null
+      }
+    },
+    "labelsKeyList": {
+      "base": null,
+      "refs": {
+        "UpdateLabelsPayload$removeLabels": "<p>Kubernetes labels to be removed.</p>"
+      }
+    },
+    "labelsMap": {
+      "base": null,
+      "refs": {
+        "CreateNodegroupRequest$labels": "<p>The Kubernetes labels to be applied to the nodes in the node group when they are created.</p>",
+        "Nodegroup$labels": "<p>The Kubernetes labels applied to the nodes in the node group.</p> <note> <p>Only labels that are applied with the Amazon EKS API are shown here. There may be other Kubernetes labels applied to the nodes in this group.</p> </note>",
+        "UpdateLabelsPayload$addOrUpdateLabels": "<p>Kubernetes labels to be added or updated.</p>"
+      }
+    },
+    "requiredClaimsKey": {
+      "base": null,
+      "refs": {
+        "requiredClaimsMap$key": null
+      }
+    },
+    "requiredClaimsMap": {
+      "base": null,
+      "refs": {
+        "OidcIdentityProviderConfig$requiredClaims": "<p>The key-value pairs that describe required claims in the identity token. If set, each claim is verified to be present in the token with a matching value.</p>",
+        "OidcIdentityProviderConfigRequest$requiredClaims": "<p>The key value pairs that describe required claims in the identity token. If set, each claim is verified to be present in the token with a matching value. For the maximum number of claims that you can require, see <a href=\"https://docs.aws.amazon.com/eks/latest/userguide/service-quotas.html\">Amazon EKS service quotas</a> in the <i>Amazon EKS User Guide</i>.</p>"
+      }
+    },
+    "requiredClaimsValue": {
+      "base": null,
+      "refs": {
+        "requiredClaimsMap$value": null
+      }
+    },
+    "taintKey": {
+      "base": null,
+      "refs": {
+        "Taint$key": "<p>The key of the taint.</p>"
+      }
+    },
+    "taintValue": {
+      "base": null,
+      "refs": {
+        "Taint$value": "<p>The value of the taint.</p>"
+      }
+    },
+    "taintsList": {
+      "base": null,
+      "refs": {
+        "CreateNodegroupRequest$taints": "<p>The Kubernetes taints to be applied to the nodes in the node group.</p>",
+        "Nodegroup$taints": "<p>The Kubernetes taints to be applied to the nodes in the node group when they are created. Effect is one of <code>No_Schedule</code>, <code>Prefer_No_Schedule</code>, or <code>No_Execute</code>. Kubernetes taints can be used together with tolerations to control how workloads are scheduled to your nodes.</p>",
+        "UpdateTaintsPayload$addOrUpdateTaints": "<p>Kubernetes taints to be added or updated.</p>",
+        "UpdateTaintsPayload$removeTaints": "<p>Kubernetes taints to be removed.</p>"
+      }
+    }
+  }
+}

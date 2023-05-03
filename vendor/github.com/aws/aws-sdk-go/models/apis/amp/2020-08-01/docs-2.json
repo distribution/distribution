@@ -1,0 +1,515 @@
+{
+  "version": "2.0",
+  "service": "<p>Amazon Managed Service for Prometheus</p>",
+  "operations": {
+    "CreateAlertManagerDefinition": "<p>Create an alert manager definition.</p>",
+    "CreateRuleGroupsNamespace": "<p>Create a rule group namespace.</p>",
+    "CreateWorkspace": "<p>Creates a new AMP workspace.</p>",
+    "DeleteAlertManagerDefinition": "<p>Deletes an alert manager definition.</p>",
+    "DeleteRuleGroupsNamespace": "<p>Delete a rule groups namespace.</p>",
+    "DeleteWorkspace": "<p>Deletes an AMP workspace.</p>",
+    "DescribeAlertManagerDefinition": "<p>Describes an alert manager definition.</p>",
+    "DescribeRuleGroupsNamespace": "<p>Describe a rule groups namespace.</p>",
+    "DescribeWorkspace": "<p>Describes an existing AMP workspace.</p>",
+    "ListRuleGroupsNamespaces": "<p>Lists rule groups namespaces.</p>",
+    "ListTagsForResource": "<p>Lists the tags you have assigned to the resource.</p>",
+    "ListWorkspaces": "<p>Lists all AMP workspaces, including workspaces being created or deleted.</p>",
+    "PutAlertManagerDefinition": "<p>Update an alert manager definition.</p>",
+    "PutRuleGroupsNamespace": "<p>Update a rule groups namespace.</p>",
+    "TagResource": "<p>Creates tags for the specified resource.</p>",
+    "UntagResource": "<p>Deletes tags from the specified resource.</p>",
+    "UpdateWorkspaceAlias": "<p>Updates an AMP workspace alias.</p>"
+  },
+  "shapes": {
+    "AccessDeniedException": {
+      "base": "<p>User does not have sufficient access to perform this action.</p>",
+      "refs": {
+      }
+    },
+    "AlertManagerDefinitionData": {
+      "base": "<p>The alert manager definition data.</p>",
+      "refs": {
+        "AlertManagerDefinitionDescription$data": "<p>The alert manager definition.</p>",
+        "CreateAlertManagerDefinitionRequest$data": "<p>The alert manager definition data.</p>",
+        "PutAlertManagerDefinitionRequest$data": "<p>The alert manager definition data.</p>"
+      }
+    },
+    "AlertManagerDefinitionDescription": {
+      "base": "<p>Represents the properties of an alert manager definition.</p>",
+      "refs": {
+        "DescribeAlertManagerDefinitionResponse$alertManagerDefinition": "<p>The properties of the selected workspace's alert manager definition.</p>"
+      }
+    },
+    "AlertManagerDefinitionStatus": {
+      "base": "<p>Represents the status of a definition.</p>",
+      "refs": {
+        "AlertManagerDefinitionDescription$status": "<p>The status of alert manager definition.</p>",
+        "CreateAlertManagerDefinitionResponse$status": "<p>The status of alert manager definition.</p>",
+        "PutAlertManagerDefinitionResponse$status": "<p>The status of alert manager definition.</p>"
+      }
+    },
+    "AlertManagerDefinitionStatusCode": {
+      "base": "<p>State of an alert manager definition.</p>",
+      "refs": {
+        "AlertManagerDefinitionStatus$statusCode": "<p>Status code of this definition.</p>"
+      }
+    },
+    "ConflictException": {
+      "base": "<p>Updating or deleting a resource can cause an inconsistent state.</p>",
+      "refs": {
+      }
+    },
+    "CreateAlertManagerDefinitionRequest": {
+      "base": "<p>Represents the input of a CreateAlertManagerDefinition operation.</p>",
+      "refs": {
+      }
+    },
+    "CreateAlertManagerDefinitionResponse": {
+      "base": "<p>Represents the output of a CreateAlertManagerDefinition operation.</p>",
+      "refs": {
+      }
+    },
+    "CreateRuleGroupsNamespaceRequest": {
+      "base": "<p>Represents the input of a CreateRuleGroupsNamespace operation.</p>",
+      "refs": {
+      }
+    },
+    "CreateRuleGroupsNamespaceResponse": {
+      "base": "<p>Represents the output of a CreateRuleGroupsNamespace operation.</p>",
+      "refs": {
+      }
+    },
+    "CreateWorkspaceRequest": {
+      "base": "<p>Represents the input of a CreateWorkspace operation.</p>",
+      "refs": {
+      }
+    },
+    "CreateWorkspaceResponse": {
+      "base": "<p>Represents the output of a CreateWorkspace operation.</p>",
+      "refs": {
+      }
+    },
+    "DeleteAlertManagerDefinitionRequest": {
+      "base": "<p>Represents the input of a DeleteAlertManagerDefinition operation.</p>",
+      "refs": {
+      }
+    },
+    "DeleteRuleGroupsNamespaceRequest": {
+      "base": "<p>Represents the input of a DeleteRuleGroupsNamespace operation.</p>",
+      "refs": {
+      }
+    },
+    "DeleteWorkspaceRequest": {
+      "base": "<p>Represents the input of a DeleteWorkspace operation.</p>",
+      "refs": {
+      }
+    },
+    "DescribeAlertManagerDefinitionRequest": {
+      "base": "<p>Represents the input of a DescribeAlertManagerDefinition operation.</p>",
+      "refs": {
+      }
+    },
+    "DescribeAlertManagerDefinitionResponse": {
+      "base": "<p>Represents the output of a DescribeAlertManagerDefinition operation.</p>",
+      "refs": {
+      }
+    },
+    "DescribeRuleGroupsNamespaceRequest": {
+      "base": "<p>Represents the input of a DescribeRuleGroupsNamespace operation.</p>",
+      "refs": {
+      }
+    },
+    "DescribeRuleGroupsNamespaceResponse": {
+      "base": "<p>Represents the output of a DescribeRuleGroupsNamespace operation.</p>",
+      "refs": {
+      }
+    },
+    "DescribeWorkspaceRequest": {
+      "base": "<p>Represents the input of a DescribeWorkspace operation.</p>",
+      "refs": {
+      }
+    },
+    "DescribeWorkspaceResponse": {
+      "base": "<p>Represents the output of a DescribeWorkspace operation.</p>",
+      "refs": {
+      }
+    },
+    "IdempotencyToken": {
+      "base": "<p>An identifier used to ensure the idempotency of a write request.</p>",
+      "refs": {
+        "CreateAlertManagerDefinitionRequest$clientToken": "<p>Optional, unique, case-sensitive, user-provided identifier to ensure the idempotency of the request.</p>",
+        "CreateRuleGroupsNamespaceRequest$clientToken": "<p>Optional, unique, case-sensitive, user-provided identifier to ensure the idempotency of the request.</p>",
+        "CreateWorkspaceRequest$clientToken": "<p>Optional, unique, case-sensitive, user-provided identifier to ensure the idempotency of the request.</p>",
+        "DeleteAlertManagerDefinitionRequest$clientToken": "<p>Optional, unique, case-sensitive, user-provided identifier to ensure the idempotency of the request.</p>",
+        "DeleteRuleGroupsNamespaceRequest$clientToken": "<p>Optional, unique, case-sensitive, user-provided identifier to ensure the idempotency of the request.</p>",
+        "DeleteWorkspaceRequest$clientToken": "<p>Optional, unique, case-sensitive, user-provided identifier to ensure the idempotency of the request.</p>",
+        "PutAlertManagerDefinitionRequest$clientToken": "<p>Optional, unique, case-sensitive, user-provided identifier to ensure the idempotency of the request.</p>",
+        "PutRuleGroupsNamespaceRequest$clientToken": "<p>Optional, unique, case-sensitive, user-provided identifier to ensure the idempotency of the request.</p>",
+        "UpdateWorkspaceAliasRequest$clientToken": "<p>Optional, unique, case-sensitive, user-provided identifier to ensure the idempotency of the request.</p>"
+      }
+    },
+    "Integer": {
+      "base": null,
+      "refs": {
+        "InternalServerException$retryAfterSeconds": "<p>Advice to clients on when the call can be safely retried.</p>",
+        "ThrottlingException$retryAfterSeconds": "<p>Advice to clients on when the call can be safely retried.</p>"
+      }
+    },
+    "InternalServerException": {
+      "base": "<p>Unexpected error during processing of request.</p>",
+      "refs": {
+      }
+    },
+    "ListRuleGroupsNamespacesRequest": {
+      "base": "<p>Represents the input of a ListRuleGroupsNamespaces operation.</p>",
+      "refs": {
+      }
+    },
+    "ListRuleGroupsNamespacesRequestMaxResultsInteger": {
+      "base": null,
+      "refs": {
+        "ListRuleGroupsNamespacesRequest$maxResults": "<p>Maximum results to return in response (default=100, maximum=1000).</p>"
+      }
+    },
+    "ListRuleGroupsNamespacesResponse": {
+      "base": "<p>Represents the output of a ListRuleGroupsNamespaces operation.</p>",
+      "refs": {
+      }
+    },
+    "ListTagsForResourceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListTagsForResourceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListWorkspacesRequest": {
+      "base": "<p>Represents the input of a ListWorkspaces operation.</p>",
+      "refs": {
+      }
+    },
+    "ListWorkspacesRequestMaxResultsInteger": {
+      "base": null,
+      "refs": {
+        "ListWorkspacesRequest$maxResults": "<p>Maximum results to return in response (default=100, maximum=1000).</p>"
+      }
+    },
+    "ListWorkspacesResponse": {
+      "base": "<p>Represents the output of a ListWorkspaces operation.</p>",
+      "refs": {
+      }
+    },
+    "PaginationToken": {
+      "base": "<p>A token used to access the next page in a paginated result set.</p>",
+      "refs": {
+        "ListRuleGroupsNamespacesRequest$nextToken": "<p>Pagination token to request the next page in a paginated list. This token is obtained from the output of the previous ListRuleGroupsNamespaces request.</p>",
+        "ListRuleGroupsNamespacesResponse$nextToken": "<p>Pagination token to use when requesting the next page in this list.</p>",
+        "ListWorkspacesRequest$nextToken": "<p>Pagination token to request the next page in a paginated list. This token is obtained from the output of the previous ListWorkspaces request.</p>",
+        "ListWorkspacesResponse$nextToken": "<p>Pagination token to use when requesting the next page in this list.</p>"
+      }
+    },
+    "PutAlertManagerDefinitionRequest": {
+      "base": "<p>Represents the input of a PutAlertManagerDefinition operation.</p>",
+      "refs": {
+      }
+    },
+    "PutAlertManagerDefinitionResponse": {
+      "base": "<p>Represents the output of a PutAlertManagerDefinition operation.</p>",
+      "refs": {
+      }
+    },
+    "PutRuleGroupsNamespaceRequest": {
+      "base": "<p>Represents the input of a PutRuleGroupsNamespace operation.</p>",
+      "refs": {
+      }
+    },
+    "PutRuleGroupsNamespaceResponse": {
+      "base": "<p>Represents the output of a PutRuleGroupsNamespace operation.</p>",
+      "refs": {
+      }
+    },
+    "ResourceNotFoundException": {
+      "base": "<p>Request references a resource which does not exist.</p>",
+      "refs": {
+      }
+    },
+    "RuleGroupsNamespaceArn": {
+      "base": "<p>An ARN identifying a rule groups namespace.</p>",
+      "refs": {
+        "CreateRuleGroupsNamespaceResponse$arn": "<p>The Amazon Resource Name (ARN) of this rule groups namespace.</p>",
+        "PutRuleGroupsNamespaceResponse$arn": "<p>The Amazon Resource Name (ARN) of this rule groups namespace.</p>",
+        "RuleGroupsNamespaceDescription$arn": "<p>The Amazon Resource Name (ARN) of this rule groups namespace.</p>",
+        "RuleGroupsNamespaceSummary$arn": "<p>The Amazon Resource Name (ARN) of this rule groups namespace.</p>"
+      }
+    },
+    "RuleGroupsNamespaceData": {
+      "base": "<p>The rule groups namespace data.</p>",
+      "refs": {
+        "CreateRuleGroupsNamespaceRequest$data": "<p>The namespace data that define the rule groups.</p>",
+        "PutRuleGroupsNamespaceRequest$data": "<p>The namespace data that define the rule groups.</p>",
+        "RuleGroupsNamespaceDescription$data": "<p>The rule groups namespace data.</p>"
+      }
+    },
+    "RuleGroupsNamespaceDescription": {
+      "base": "<p>Represents a description of the rule groups namespace.</p>",
+      "refs": {
+        "DescribeRuleGroupsNamespaceResponse$ruleGroupsNamespace": "<p>The selected rule groups namespace.</p>"
+      }
+    },
+    "RuleGroupsNamespaceName": {
+      "base": "<p>The namespace name that the rule group belong to.</p>",
+      "refs": {
+        "CreateRuleGroupsNamespaceRequest$name": "<p>The rule groups namespace name.</p>",
+        "CreateRuleGroupsNamespaceResponse$name": "<p>The rule groups namespace name.</p>",
+        "DeleteRuleGroupsNamespaceRequest$name": "<p>The rule groups namespace name.</p>",
+        "DescribeRuleGroupsNamespaceRequest$name": "<p>The rule groups namespace.</p>",
+        "ListRuleGroupsNamespacesRequest$name": "<p>Optional filter for rule groups namespace name. Only the rule groups namespace that begin with this value will be returned.</p>",
+        "PutRuleGroupsNamespaceRequest$name": "<p>The rule groups namespace name.</p>",
+        "PutRuleGroupsNamespaceResponse$name": "<p>The rule groups namespace name.</p>",
+        "RuleGroupsNamespaceDescription$name": "<p>The rule groups namespace name.</p>",
+        "RuleGroupsNamespaceSummary$name": "<p>The rule groups namespace name.</p>"
+      }
+    },
+    "RuleGroupsNamespaceStatus": {
+      "base": "<p>Represents the status of a namespace.</p>",
+      "refs": {
+        "CreateRuleGroupsNamespaceResponse$status": "<p>The status of rule groups namespace.</p>",
+        "PutRuleGroupsNamespaceResponse$status": "<p>The status of rule groups namespace.</p>",
+        "RuleGroupsNamespaceDescription$status": "<p>The status of rule groups namespace.</p>",
+        "RuleGroupsNamespaceSummary$status": "<p>The status of rule groups namespace.</p>"
+      }
+    },
+    "RuleGroupsNamespaceStatusCode": {
+      "base": "<p>State of a namespace.</p>",
+      "refs": {
+        "RuleGroupsNamespaceStatus$statusCode": "<p>Status code of this namespace.</p>"
+      }
+    },
+    "RuleGroupsNamespaceSummary": {
+      "base": "<p>Represents a summary of the rule groups namespace.</p>",
+      "refs": {
+        "RuleGroupsNamespaceSummaryList$member": null
+      }
+    },
+    "RuleGroupsNamespaceSummaryList": {
+      "base": "<p>A list of rule groups namespace summary.</p>",
+      "refs": {
+        "ListRuleGroupsNamespacesResponse$ruleGroupsNamespaces": "<p>The list of the selected rule groups namespaces.</p>"
+      }
+    },
+    "ServiceQuotaExceededException": {
+      "base": "<p>Request would cause a service quota to be exceeded.</p>",
+      "refs": {
+      }
+    },
+    "String": {
+      "base": null,
+      "refs": {
+        "AccessDeniedException$message": "<p>Description of the error.</p>",
+        "AlertManagerDefinitionStatus$statusReason": "<p>The reason for failure if any.</p>",
+        "ConflictException$message": "<p>Description of the error.</p>",
+        "ConflictException$resourceId": "<p>Identifier of the resource affected.</p>",
+        "ConflictException$resourceType": "<p>Type of the resource affected.</p>",
+        "InternalServerException$message": "<p>Description of the error.</p>",
+        "ListTagsForResourceRequest$resourceArn": "<p>The ARN of the resource.</p>",
+        "ResourceNotFoundException$message": "<p>Description of the error.</p>",
+        "ResourceNotFoundException$resourceId": "<p>Identifier of the resource affected.</p>",
+        "ResourceNotFoundException$resourceType": "<p>Type of the resource affected.</p>",
+        "RuleGroupsNamespaceStatus$statusReason": "<p>The reason for failure if any.</p>",
+        "ServiceQuotaExceededException$message": "<p>Description of the error.</p>",
+        "ServiceQuotaExceededException$quotaCode": "<p>Service Quotas requirement to identify originating quota.</p>",
+        "ServiceQuotaExceededException$resourceId": "<p>Identifier of the resource affected.</p>",
+        "ServiceQuotaExceededException$resourceType": "<p>Type of the resource affected.</p>",
+        "ServiceQuotaExceededException$serviceCode": "<p>Service Quotas requirement to identify originating service.</p>",
+        "TagResourceRequest$resourceArn": "<p>The ARN of the resource.</p>",
+        "ThrottlingException$message": "<p>Description of the error.</p>",
+        "ThrottlingException$quotaCode": "<p>Service Quotas requirement to identify originating quota.</p>",
+        "ThrottlingException$serviceCode": "<p>Service Quotas requirement to identify originating service.</p>",
+        "UntagResourceRequest$resourceArn": "<p>The ARN of the resource.</p>",
+        "ValidationException$message": "<p>Description of the error.</p>",
+        "ValidationExceptionField$message": "<p>Message describing why the field failed validation.</p>",
+        "ValidationExceptionField$name": "<p>The field name.</p>"
+      }
+    },
+    "TagKey": {
+      "base": null,
+      "refs": {
+        "TagKeys$member": null,
+        "TagMap$key": "<p>The key of the tag.</p> <p>Constraints: Tag keys are case-sensitive and accept a maximum of 128 Unicode characters. Valid characters are Unicode letters, digits, white space, and any of the following symbols: _ . : / = + - @ May not begin with <code>aws:</code>.</p>"
+      }
+    },
+    "TagKeys": {
+      "base": null,
+      "refs": {
+        "UntagResourceRequest$tagKeys": "<p>One or more tag keys</p>"
+      }
+    },
+    "TagMap": {
+      "base": "<p>The list of tags assigned to the resource.</p>",
+      "refs": {
+        "CreateRuleGroupsNamespaceRequest$tags": "<p>Optional, user-provided tags for this rule groups namespace.</p>",
+        "CreateRuleGroupsNamespaceResponse$tags": "<p>The tags of this rule groups namespace.</p>",
+        "CreateWorkspaceRequest$tags": "<p>Optional, user-provided tags for this workspace.</p>",
+        "CreateWorkspaceResponse$tags": "<p>The tags of this workspace.</p>",
+        "ListTagsForResourceResponse$tags": null,
+        "PutRuleGroupsNamespaceResponse$tags": "<p>The tags of this rule groups namespace.</p>",
+        "RuleGroupsNamespaceDescription$tags": "<p>The tags of this rule groups namespace.</p>",
+        "RuleGroupsNamespaceSummary$tags": "<p>The tags of this rule groups namespace.</p>",
+        "TagResourceRequest$tags": null,
+        "WorkspaceDescription$tags": "<p>The tags of this workspace.</p>",
+        "WorkspaceSummary$tags": "<p>The tags of this workspace.</p>"
+      }
+    },
+    "TagResourceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "TagResourceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "TagValue": {
+      "base": null,
+      "refs": {
+        "TagMap$value": "<p>The value of the tag.</p> <p>Constraints: Tag values are case-sensitive and accept a maximum of 256 Unicode characters. Valid characters are Unicode letters, digits, white space, and any of the following symbols: _ . : / = + - @</p>"
+      }
+    },
+    "ThrottlingException": {
+      "base": "<p>Request was denied due to request throttling.</p>",
+      "refs": {
+      }
+    },
+    "Timestamp": {
+      "base": null,
+      "refs": {
+        "AlertManagerDefinitionDescription$createdAt": "<p>The time when the alert manager definition was created.</p>",
+        "AlertManagerDefinitionDescription$modifiedAt": "<p>The time when the alert manager definition was modified.</p>",
+        "RuleGroupsNamespaceDescription$createdAt": "<p>The time when the rule groups namespace was created.</p>",
+        "RuleGroupsNamespaceDescription$modifiedAt": "<p>The time when the rule groups namespace was modified.</p>",
+        "RuleGroupsNamespaceSummary$createdAt": "<p>The time when the rule groups namespace was created.</p>",
+        "RuleGroupsNamespaceSummary$modifiedAt": "<p>The time when the rule groups namespace was modified.</p>",
+        "WorkspaceDescription$createdAt": "<p>The time when the workspace was created.</p>",
+        "WorkspaceSummary$createdAt": "<p>The time when the workspace was created.</p>"
+      }
+    },
+    "UntagResourceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UntagResourceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateWorkspaceAliasRequest": {
+      "base": "<p>Represents the input of an UpdateWorkspaceAlias operation.</p>",
+      "refs": {
+      }
+    },
+    "Uri": {
+      "base": null,
+      "refs": {
+        "WorkspaceDescription$prometheusEndpoint": "<p>Prometheus endpoint URI.</p>"
+      }
+    },
+    "ValidationException": {
+      "base": "<p>The input fails to satisfy the constraints specified by an AWS service.</p>",
+      "refs": {
+      }
+    },
+    "ValidationExceptionField": {
+      "base": "<p>Stores information about a field passed inside a request that resulted in an exception.</p>",
+      "refs": {
+        "ValidationExceptionFieldList$member": null
+      }
+    },
+    "ValidationExceptionFieldList": {
+      "base": "<p>A list of fields.</p>",
+      "refs": {
+        "ValidationException$fieldList": "<p>The field that caused the error, if applicable. If more than one field caused the error, pick one and elaborate in the message.</p>"
+      }
+    },
+    "ValidationExceptionReason": {
+      "base": "<p>Possible reasons a request failed validation.</p>",
+      "refs": {
+        "ValidationException$reason": "<p>Reason the request failed validation.</p>"
+      }
+    },
+    "WorkspaceAlias": {
+      "base": "<p>A user-assigned workspace alias.</p>",
+      "refs": {
+        "CreateWorkspaceRequest$alias": "<p>An optional user-assigned alias for this workspace. This alias is for user reference and does not need to be unique.</p>",
+        "ListWorkspacesRequest$alias": "<p>Optional filter for workspace alias. Only the workspaces with aliases that begin with this value will be returned.</p>",
+        "UpdateWorkspaceAliasRequest$alias": "<p>The new alias of the workspace.</p>",
+        "WorkspaceDescription$alias": "<p>Alias of this workspace.</p>",
+        "WorkspaceSummary$alias": "<p>Alias of this workspace.</p>"
+      }
+    },
+    "WorkspaceArn": {
+      "base": "<p>An ARN identifying a Workspace.</p>",
+      "refs": {
+        "CreateWorkspaceResponse$arn": "<p>The ARN of the workspace that was just created.</p>",
+        "WorkspaceDescription$arn": "<p>The Amazon Resource Name (ARN) of this workspace.</p>",
+        "WorkspaceSummary$arn": "<p>The AmazonResourceName of this workspace.</p>"
+      }
+    },
+    "WorkspaceDescription": {
+      "base": "<p>Represents the properties of a workspace.</p>",
+      "refs": {
+        "DescribeWorkspaceResponse$workspace": "<p>The properties of the selected workspace.</p>"
+      }
+    },
+    "WorkspaceId": {
+      "base": "<p>A workspace ID.</p>",
+      "refs": {
+        "CreateAlertManagerDefinitionRequest$workspaceId": "<p>The ID of the workspace in which to create the alert manager definition.</p>",
+        "CreateRuleGroupsNamespaceRequest$workspaceId": "<p>The ID of the workspace in which to create the rule group namespace.</p>",
+        "CreateWorkspaceResponse$workspaceId": "<p>The generated ID of the workspace that was just created.</p>",
+        "DeleteAlertManagerDefinitionRequest$workspaceId": "<p>The ID of the workspace in which to delete the alert manager definition.</p>",
+        "DeleteRuleGroupsNamespaceRequest$workspaceId": "<p>The ID of the workspace to delete rule group definition.</p>",
+        "DeleteWorkspaceRequest$workspaceId": "<p>The ID of the workspace to delete.</p>",
+        "DescribeAlertManagerDefinitionRequest$workspaceId": "<p>The ID of the workspace to describe.</p>",
+        "DescribeRuleGroupsNamespaceRequest$workspaceId": "<p>The ID of the workspace to describe.</p>",
+        "DescribeWorkspaceRequest$workspaceId": "<p>The ID of the workspace to describe.</p>",
+        "ListRuleGroupsNamespacesRequest$workspaceId": "<p>The ID of the workspace.</p>",
+        "PutAlertManagerDefinitionRequest$workspaceId": "<p>The ID of the workspace in which to update the alert manager definition.</p>",
+        "PutRuleGroupsNamespaceRequest$workspaceId": "<p>The ID of the workspace in which to update the rule group namespace.</p>",
+        "UpdateWorkspaceAliasRequest$workspaceId": "<p>The ID of the workspace being updated.</p>",
+        "WorkspaceDescription$workspaceId": "<p>Unique string identifying this workspace.</p>",
+        "WorkspaceSummary$workspaceId": "<p>Unique string identifying this workspace.</p>"
+      }
+    },
+    "WorkspaceStatus": {
+      "base": "<p>Represents the status of a workspace.</p>",
+      "refs": {
+        "CreateWorkspaceResponse$status": "<p>The status of the workspace that was just created (usually CREATING).</p>",
+        "WorkspaceDescription$status": "<p>The status of this workspace.</p>",
+        "WorkspaceSummary$status": "<p>The status of this workspace.</p>"
+      }
+    },
+    "WorkspaceStatusCode": {
+      "base": "<p>State of a workspace.</p>",
+      "refs": {
+        "WorkspaceStatus$statusCode": "<p>Status code of this workspace.</p>"
+      }
+    },
+    "WorkspaceSummary": {
+      "base": "<p>Represents a summary of the properties of a workspace.</p>",
+      "refs": {
+        "WorkspaceSummaryList$member": null
+      }
+    },
+    "WorkspaceSummaryList": {
+      "base": "<p>A list of workspace summaries.</p>",
+      "refs": {
+        "ListWorkspacesResponse$workspaces": "<p>The list of existing workspaces, including those undergoing creation or deletion.</p>"
+      }
+    }
+  }
+}

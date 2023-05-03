@@ -1,0 +1,740 @@
+{
+  "version": "2.0",
+  "service": "<p>The Amplify UI Builder API provides a programmatic interface for creating and configuring user interface (UI) component libraries and themes for use in your Amplify applications. You can then connect these UI components to an application's backend Amazon Web Services resources.</p> <p>You can also use the Amplify Studio visual designer to create UI components and model data for an app. For more information, see <a href=\"https://docs.amplify.aws/console/adminui/intro\">Introduction</a> in the <i>Amplify Docs</i>.</p> <p>The Amplify Framework is a comprehensive set of SDKs, libraries, tools, and documentation for client app development. For more information, see the <a href=\"https://docs.amplify.aws/\">Amplify Framework</a>. For more information about deploying an Amplify application to Amazon Web Services, see the <a href=\"https://docs.aws.amazon.com/amplify/latest/userguide/welcome.html\">Amplify User Guide</a>.</p>",
+  "operations": {
+    "CreateComponent": "<p>Creates a new component for an Amplify app.</p>",
+    "CreateTheme": "<p>Creates a theme to apply to the components in an Amplify app.</p>",
+    "DeleteComponent": "<p>Deletes a component from an Amplify app.</p>",
+    "DeleteTheme": "<p>Deletes a theme from an Amplify app.</p>",
+    "ExchangeCodeForToken": "<p>Exchanges an access code for a token.</p>",
+    "ExportComponents": "<p>Exports component configurations to code that is ready to integrate into an Amplify app.</p>",
+    "ExportThemes": "<p>Exports theme configurations to code that is ready to integrate into an Amplify app.</p>",
+    "GetComponent": "<p>Returns an existing component for an Amplify app.</p>",
+    "GetTheme": "<p>Returns an existing theme for an Amplify app.</p>",
+    "ListComponents": "<p>Retrieves a list of components for a specified Amplify app and backend environment.</p>",
+    "ListThemes": "<p>Retrieves a list of themes for a specified Amplify app and backend environment.</p>",
+    "RefreshToken": "<p>Refreshes a previously issued access token that might have expired.</p>",
+    "UpdateComponent": "<p>Updates an existing component.</p>",
+    "UpdateTheme": "<p>Updates an existing theme.</p>"
+  },
+  "shapes": {
+    "ActionParameters": {
+      "base": "<p>Represents the event action configuration for an element of a <code>Component</code> or <code>ComponentChild</code>. Use for the workflow feature in Amplify Studio that allows you to bind events and actions to components. <code>ActionParameters</code> defines the action that is performed when an event occurs on the component.</p>",
+      "refs": {
+        "ComponentEvent$parameters": "<p>Describes information about the action.</p>"
+      }
+    },
+    "Boolean": {
+      "base": null,
+      "refs": {
+        "ComponentProperty$configured": "<p>Specifies whether the user configured the property in Amplify Studio after importing it.</p>"
+      }
+    },
+    "Component": {
+      "base": "<p>Contains the configuration settings for a user interface (UI) element for an Amplify app. A component is configured as a primary, stand-alone UI element. Use <code>ComponentChild</code> to configure an instance of a <code>Component</code>. A <code>ComponentChild</code> instance inherits the configuration of the main <code>Component</code>.</p>",
+      "refs": {
+        "ComponentList$member": null,
+        "CreateComponentResponse$entity": "<p>Describes the configuration of the new component.</p>",
+        "GetComponentResponse$component": "<p>Represents the configuration settings for the component.</p>",
+        "UpdateComponentResponse$entity": "<p>Describes the configuration of the updated component.</p>"
+      }
+    },
+    "ComponentBindingProperties": {
+      "base": null,
+      "refs": {
+        "Component$bindingProperties": "<p>The information to connect a component's properties to data at runtime. You can't specify <code>tags</code> as a valid property for <code>bindingProperties</code>.</p> <p/>",
+        "CreateComponentData$bindingProperties": "<p>The data binding information for the component's properties.</p>",
+        "UpdateComponentData$bindingProperties": "<p>The data binding information for the component's properties.</p>"
+      }
+    },
+    "ComponentBindingPropertiesValue": {
+      "base": "<p>Represents the data binding configuration for a component at runtime. You can use <code>ComponentBindingPropertiesValue</code> to add exposed properties to a component to allow different values to be entered when a component is reused in different places in an app.</p>",
+      "refs": {
+        "ComponentBindingProperties$value": null
+      }
+    },
+    "ComponentBindingPropertiesValueProperties": {
+      "base": "<p>Represents the data binding configuration for a specific property using data stored in Amazon Web Services. For Amazon Web Services connected properties, you can bind a property to data stored in an Amazon S3 bucket, an Amplify DataStore model or an authenticated user attribute.</p>",
+      "refs": {
+        "ComponentBindingPropertiesValue$bindingProperties": "<p>Describes the properties to customize with data at runtime.</p>"
+      }
+    },
+    "ComponentChild": {
+      "base": "<p>A nested UI configuration within a parent <code>Component</code>.</p>",
+      "refs": {
+        "ComponentChildList$member": null
+      }
+    },
+    "ComponentChildList": {
+      "base": null,
+      "refs": {
+        "Component$children": "<p>A list of the component's <code>ComponentChild</code> instances.</p>",
+        "ComponentChild$children": "<p>The list of <code>ComponentChild</code> instances for this component.</p>",
+        "CreateComponentData$children": "<p>A list of child components that are instances of the main component.</p>",
+        "UpdateComponentData$children": "<p>The components that are instances of the main component.</p>"
+      }
+    },
+    "ComponentCollectionProperties": {
+      "base": null,
+      "refs": {
+        "Component$collectionProperties": "<p>The data binding configuration for the component's properties. Use this for a collection component. You can't specify <code>tags</code> as a valid property for <code>collectionProperties</code>.</p>",
+        "CreateComponentData$collectionProperties": "<p>The data binding configuration for customizing a component's properties. Use this for a collection component.</p>",
+        "UpdateComponentData$collectionProperties": "<p>The configuration for binding a component's properties to a data model. Use this for a collection component.</p>"
+      }
+    },
+    "ComponentConditionProperty": {
+      "base": "<p>Represents a conditional expression to set a component property. Use <code>ComponentConditionProperty</code> to set a property to different values conditionally, based on the value of another property.</p>",
+      "refs": {
+        "ComponentProperty$condition": "<p>The conditional expression to use to assign a value to the component property.</p>"
+      }
+    },
+    "ComponentDataConfiguration": {
+      "base": "<p>Describes the configuration for binding a component's properties to data.</p>",
+      "refs": {
+        "ComponentCollectionProperties$value": null
+      }
+    },
+    "ComponentEvent": {
+      "base": "<p>Describes the configuration of an event. You can bind an event and a corresponding action to a <code>Component</code> or a <code>ComponentChild</code>. A button click is an example of an event. </p>",
+      "refs": {
+        "ComponentEvents$value": null
+      }
+    },
+    "ComponentEvents": {
+      "base": null,
+      "refs": {
+        "Component$events": "<p>Describes the events that can be raised on the component. Use for the workflow feature in Amplify Studio that allows you to bind events and actions to components.</p>",
+        "ComponentChild$events": "<p>Describes the events that can be raised on the child component. Use for the workflow feature in Amplify Studio that allows you to bind events and actions to components.</p>",
+        "CreateComponentData$events": "<p>The event configuration for the component. Use for the workflow feature in Amplify Studio that allows you to bind events and actions to components.</p>",
+        "UpdateComponentData$events": "<p>The event configuration for the component. Use for the workflow feature in Amplify Studio that allows you to bind events and actions to components.</p>"
+      }
+    },
+    "ComponentList": {
+      "base": null,
+      "refs": {
+        "ExportComponentsResponse$entities": "<p>Represents the configuration of the exported components.</p>"
+      }
+    },
+    "ComponentName": {
+      "base": null,
+      "refs": {
+        "Component$name": "<p>The name of the component.</p>",
+        "ComponentSummary$name": "<p>The name of the component.</p>",
+        "CreateComponentData$name": "<p>The name of the component</p>",
+        "UpdateComponentData$name": "<p>The name of the component to update.</p>"
+      }
+    },
+    "ComponentOverrides": {
+      "base": null,
+      "refs": {
+        "Component$overrides": "<p>Describes the component's properties that can be overriden in a customized instance of the component. You can't specify <code>tags</code> as a valid property for <code>overrides</code>.</p>",
+        "ComponentVariant$overrides": "<p>The properties of the component variant that can be overriden when customizing an instance of the component. You can't specify <code>tags</code> as a valid property for <code>overrides</code>.</p>",
+        "CreateComponentData$overrides": "<p>Describes the component properties that can be overriden to customize an instance of the component.</p>",
+        "UpdateComponentData$overrides": "<p>Describes the properties that can be overriden to customize the component.</p>"
+      }
+    },
+    "ComponentOverridesValue": {
+      "base": null,
+      "refs": {
+        "ComponentOverrides$value": null
+      }
+    },
+    "ComponentProperties": {
+      "base": null,
+      "refs": {
+        "ActionParameters$fields": "<p>A dictionary of key-value pairs mapping Amplify Studio properties to fields in a data model. Use when the action performs an operation on an Amplify DataStore model.</p>",
+        "Component$properties": "<p>Describes the component's properties. You can't specify <code>tags</code> as a valid property for <code>properties</code>.</p>",
+        "ComponentChild$properties": "<p>Describes the properties of the child component. You can't specify <code>tags</code> as a valid property for <code>properties</code>.</p>",
+        "CreateComponentData$properties": "<p>Describes the component's properties.</p>",
+        "UpdateComponentData$properties": "<p>Describes the component's properties.</p>"
+      }
+    },
+    "ComponentProperty": {
+      "base": "<p>Describes the configuration for all of a component's properties. Use <code>ComponentProperty</code> to specify the values to render or bind by default.</p>",
+      "refs": {
+        "ActionParameters$anchor": "<p>The HTML anchor link to the location to open. Specify this value for a navigation action.</p>",
+        "ActionParameters$global": "<p>Specifies whether the user should be signed out globally. Specify this value for an auth sign out action.</p>",
+        "ActionParameters$id": "<p>The unique ID of the component that the <code>ActionParameters</code> apply to.</p>",
+        "ActionParameters$target": "<p>The element within the same component to modify when the action occurs.</p>",
+        "ActionParameters$type": "<p>The type of navigation action. Valid values are <code>url</code> and <code>anchor</code>. This value is required for a navigation action.</p>",
+        "ActionParameters$url": "<p>The URL to the location to open. Specify this value for a navigation action.</p>",
+        "ComponentConditionProperty$else": "<p>The value to assign to the property if the condition is not met.</p>",
+        "ComponentConditionProperty$then": "<p>The value to assign to the property if the condition is met.</p>",
+        "ComponentProperties$value": null,
+        "ComponentPropertyList$member": null,
+        "MutationActionSetStateParameter$set": "<p>The state configuration to assign to the property.</p>"
+      }
+    },
+    "ComponentPropertyBindingProperties": {
+      "base": "<p>Associates a component property to a binding property. This enables exposed properties on the top level component to propagate data to the component's property values.</p>",
+      "refs": {
+        "ComponentProperty$bindingProperties": "<p>The information to bind the component property to data at runtime.</p>",
+        "ComponentProperty$collectionBindingProperties": "<p>The information to bind the component property to data at runtime. Use this for collection components.</p>"
+      }
+    },
+    "ComponentPropertyList": {
+      "base": null,
+      "refs": {
+        "ComponentProperty$concat": "<p>A list of component properties to concatenate to create the value to assign to this component property.</p>"
+      }
+    },
+    "ComponentSummary": {
+      "base": "<p>Contains a summary of a component. This is a read-only data type that is returned by <code>ListComponents</code>.</p>",
+      "refs": {
+        "ComponentSummaryList$member": null
+      }
+    },
+    "ComponentSummaryList": {
+      "base": null,
+      "refs": {
+        "ListComponentsResponse$entities": "<p>The list of components for the Amplify app.</p>"
+      }
+    },
+    "ComponentType": {
+      "base": null,
+      "refs": {
+        "Component$componentType": "<p>The type of the component. This can be an Amplify custom UI component or another custom component.</p>",
+        "ComponentSummary$componentType": "<p>The component type.</p>",
+        "CreateComponentData$componentType": "<p>The component type. This can be an Amplify custom UI component or another custom component.</p>",
+        "UpdateComponentData$componentType": "<p>The type of the component. This can be an Amplify custom UI component or another custom component.</p>"
+      }
+    },
+    "ComponentVariant": {
+      "base": "<p>Describes the style configuration of a unique variation of a main component.</p>",
+      "refs": {
+        "ComponentVariants$member": null
+      }
+    },
+    "ComponentVariantValues": {
+      "base": null,
+      "refs": {
+        "ComponentVariant$variantValues": "<p>The combination of variants that comprise this variant. You can't specify <code>tags</code> as a valid property for <code>variantValues</code>.</p>"
+      }
+    },
+    "ComponentVariants": {
+      "base": null,
+      "refs": {
+        "Component$variants": "<p>A list of the component's variants. A variant is a unique style configuration of a main component.</p>",
+        "CreateComponentData$variants": "<p>A list of the unique variants of this component.</p>",
+        "UpdateComponentData$variants": "<p>A list of the unique variants of the main component being updated.</p>"
+      }
+    },
+    "CreateComponentData": {
+      "base": "<p>Represents all of the information that is required to create a component.</p>",
+      "refs": {
+        "CreateComponentRequest$componentToCreate": "<p>Represents the configuration of the component to create.</p>"
+      }
+    },
+    "CreateComponentRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateComponentResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateThemeData": {
+      "base": "<p>Represents all of the information that is required to create a theme.</p>",
+      "refs": {
+        "CreateThemeRequest$themeToCreate": "<p>Represents the configuration of the theme to create.</p>"
+      }
+    },
+    "CreateThemeRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateThemeResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteComponentRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteThemeRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ExchangeCodeForTokenRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ExchangeCodeForTokenRequestBody": {
+      "base": "<p>Describes the configuration of a request to exchange an access code for a token.</p>",
+      "refs": {
+        "ExchangeCodeForTokenRequest$request": "<p>Describes the configuration of the request.</p>"
+      }
+    },
+    "ExchangeCodeForTokenResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ExportComponentsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ExportComponentsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ExportThemesRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ExportThemesResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "FormBindingElement": {
+      "base": "<p>Describes how to bind a component property to form data.</p>",
+      "refs": {
+        "FormBindings$value": null
+      }
+    },
+    "FormBindings": {
+      "base": null,
+      "refs": {
+        "ComponentProperty$bindings": "<p>The information to bind the component property to form data.</p>"
+      }
+    },
+    "GetComponentRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetComponentResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetThemeRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetThemeResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "IdentifierList": {
+      "base": null,
+      "refs": {
+        "ComponentDataConfiguration$identifiers": "<p>A list of IDs to use to bind data to a component. Use this property to bind specifically chosen data, rather than data retrieved from a query.</p>"
+      }
+    },
+    "Integer": {
+      "base": null,
+      "refs": {
+        "ExchangeCodeForTokenResponse$expiresIn": "<p>The date and time when the new access token expires.</p>",
+        "RefreshTokenResponse$expiresIn": "<p>The date and time when the new access token expires.</p>"
+      }
+    },
+    "InternalServerException": {
+      "base": "<p>An internal error has occurred. Please retry your request.</p>",
+      "refs": {
+      }
+    },
+    "InvalidParameterException": {
+      "base": "<p>An invalid or out-of-range value was supplied for the input parameter.</p>",
+      "refs": {
+      }
+    },
+    "ListComponentsLimit": {
+      "base": null,
+      "refs": {
+        "ListComponentsRequest$maxResults": "<p>The maximum number of components to retrieve.</p>"
+      }
+    },
+    "ListComponentsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListComponentsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListThemesLimit": {
+      "base": null,
+      "refs": {
+        "ListThemesRequest$maxResults": "<p>The maximum number of theme results to return in the response.</p>"
+      }
+    },
+    "ListThemesRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListThemesResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "MutationActionSetStateParameter": {
+      "base": "<p>Represents the state configuration when an action modifies a property of another element within the same component.</p>",
+      "refs": {
+        "ActionParameters$state": "<p>A key-value pair that specifies the state property name and its initial value.</p>"
+      }
+    },
+    "Predicate": {
+      "base": "<p>Stores information for generating Amplify DataStore queries. Use a <code>Predicate</code> to retrieve a subset of the data in a collection.</p>",
+      "refs": {
+        "ComponentDataConfiguration$predicate": "<p>Represents the conditional logic to use when binding data to a component. Use this property to retrieve only a subset of the data in a collection.</p>",
+        "PredicateList$member": null
+      }
+    },
+    "PredicateList": {
+      "base": null,
+      "refs": {
+        "ComponentBindingPropertiesValueProperties$predicates": "<p>A list of predicates for binding a component's properties to data.</p>",
+        "Predicate$and": "<p>A list of predicates to combine logically.</p>",
+        "Predicate$or": "<p>A list of predicates to combine logically.</p>"
+      }
+    },
+    "RefreshTokenRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "RefreshTokenRequestBody": {
+      "base": "<p>Describes a refresh token.</p>",
+      "refs": {
+        "RefreshTokenRequest$refreshTokenBody": "<p>Information about the refresh token request.</p>"
+      }
+    },
+    "RefreshTokenResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ResourceConflictException": {
+      "base": "<p>The resource specified in the request conflicts with an existing resource.</p>",
+      "refs": {
+      }
+    },
+    "ResourceNotFoundException": {
+      "base": "<p>The requested resource does not exist, or access was denied.</p>",
+      "refs": {
+      }
+    },
+    "ServiceQuotaExceededException": {
+      "base": "<p>You exceeded your service quota. Service quotas, also referred to as limits, are the maximum number of service resources or operations for your Amazon Web Services account. </p>",
+      "refs": {
+      }
+    },
+    "SortDirection": {
+      "base": null,
+      "refs": {
+        "SortProperty$direction": "<p>The direction of the sort, either ascending or descending.</p>"
+      }
+    },
+    "SortProperty": {
+      "base": "<p>Describes how to sort the data that you bind to a component.</p>",
+      "refs": {
+        "SortPropertyList$member": null
+      }
+    },
+    "SortPropertyList": {
+      "base": null,
+      "refs": {
+        "ComponentDataConfiguration$sort": "<p>Describes how to sort the component's properties.</p>"
+      }
+    },
+    "String": {
+      "base": null,
+      "refs": {
+        "ActionParameters$model": "<p>The name of the data model. Use when the action performs an operation on an Amplify DataStore model.</p>",
+        "Component$appId": "<p>The unique ID of the Amplify app associated with the component.</p>",
+        "Component$environmentName": "<p>The name of the backend environment that is a part of the Amplify app.</p>",
+        "Component$schemaVersion": "<p>The schema version of the component when it was imported.</p>",
+        "Component$sourceId": "<p>The unique ID of the component in its original source system, such as Figma.</p>",
+        "ComponentBindingProperties$key": null,
+        "ComponentBindingPropertiesValue$defaultValue": "<p>The default value of the property.</p>",
+        "ComponentBindingPropertiesValue$type": "<p>The property type.</p>",
+        "ComponentBindingPropertiesValueProperties$bucket": "<p>An Amazon S3 bucket.</p>",
+        "ComponentBindingPropertiesValueProperties$defaultValue": "<p>The default value to assign to the property.</p>",
+        "ComponentBindingPropertiesValueProperties$field": "<p>The field to bind the data to.</p>",
+        "ComponentBindingPropertiesValueProperties$key": "<p>The storage key for an Amazon S3 bucket.</p>",
+        "ComponentBindingPropertiesValueProperties$model": "<p>An Amplify DataStore model.</p>",
+        "ComponentBindingPropertiesValueProperties$userAttribute": "<p>An authenticated user attribute.</p>",
+        "ComponentChild$componentType": "<p>The type of the child component. </p>",
+        "ComponentChild$name": "<p>The name of the child component.</p>",
+        "ComponentCollectionProperties$key": null,
+        "ComponentConditionProperty$field": "<p>The name of a field. Specify this when the property is a data model.</p>",
+        "ComponentConditionProperty$operand": "<p>The value of the property to evaluate.</p>",
+        "ComponentConditionProperty$operandType": "<p>The type of the property to evaluate.</p>",
+        "ComponentConditionProperty$operator": "<p>The operator to use to perform the evaluation, such as <code>eq</code> to represent equals.</p>",
+        "ComponentConditionProperty$property": "<p>The name of the conditional property.</p>",
+        "ComponentDataConfiguration$model": "<p>The name of the data model to use to bind data to a component.</p>",
+        "ComponentEvent$action": "<p>The action to perform when a specific event is raised.</p>",
+        "ComponentEvents$key": null,
+        "ComponentOverrides$key": null,
+        "ComponentOverridesValue$key": null,
+        "ComponentOverridesValue$value": null,
+        "ComponentProperties$key": null,
+        "ComponentProperty$componentName": "<p>The name of the component that is affected by an event.</p>",
+        "ComponentProperty$defaultValue": "<p>The default value to assign to the component property.</p>",
+        "ComponentProperty$event": "<p>An event that occurs in your app. Use this for workflow data binding.</p>",
+        "ComponentProperty$importedValue": "<p>The default value assigned to the property when the component is imported into an app.</p>",
+        "ComponentProperty$model": "<p>The data model to use to assign a value to the component property.</p>",
+        "ComponentProperty$property": "<p>The name of the component's property that is affected by an event.</p>",
+        "ComponentProperty$type": "<p>The component type.</p>",
+        "ComponentProperty$userAttribute": "<p>An authenticated user attribute to use to assign a value to the component property.</p>",
+        "ComponentProperty$value": "<p>The value to assign to the component property.</p>",
+        "ComponentPropertyBindingProperties$field": "<p>The data field to bind the property to.</p>",
+        "ComponentPropertyBindingProperties$property": "<p>The component property to bind to the data field.</p>",
+        "ComponentSummary$appId": "<p>The unique ID of the Amplify app associated with the component.</p>",
+        "ComponentSummary$environmentName": "<p>The name of the backend environment that is a part of the Amplify app.</p>",
+        "ComponentVariantValues$key": null,
+        "ComponentVariantValues$value": null,
+        "CreateComponentData$schemaVersion": "<p>The schema version of the component when it was imported.</p>",
+        "CreateComponentData$sourceId": "<p>The unique ID of the component in its original source system, such as Figma.</p>",
+        "CreateComponentRequest$appId": "<p>The unique ID of the Amplify app to associate with the component.</p>",
+        "CreateComponentRequest$clientToken": "<p>The unique client token.</p>",
+        "CreateComponentRequest$environmentName": "<p>The name of the backend environment that is a part of the Amplify app.</p>",
+        "CreateThemeRequest$appId": "<p>The unique ID of the Amplify app associated with the theme.</p>",
+        "CreateThemeRequest$clientToken": "<p>The unique client token.</p>",
+        "CreateThemeRequest$environmentName": "<p>The name of the backend environment that is a part of the Amplify app.</p>",
+        "DeleteComponentRequest$appId": "<p>The unique ID of the Amplify app associated with the component to delete.</p>",
+        "DeleteComponentRequest$environmentName": "<p>The name of the backend environment that is a part of the Amplify app.</p>",
+        "DeleteThemeRequest$appId": "<p>The unique ID of the Amplify app associated with the theme to delete.</p>",
+        "DeleteThemeRequest$environmentName": "<p>The name of the backend environment that is a part of the Amplify app.</p>",
+        "ExchangeCodeForTokenRequestBody$redirectUri": "<p>The location of the application that will receive the access code.</p>",
+        "ExportComponentsRequest$appId": "<p>The unique ID of the Amplify app to export components to.</p>",
+        "ExportComponentsRequest$environmentName": "<p>The name of the backend environment that is a part of the Amplify app.</p>",
+        "ExportComponentsRequest$nextToken": "<p>The token to request the next page of results.</p>",
+        "ExportComponentsResponse$nextToken": "<p>The pagination token that's included if more results are available.</p>",
+        "ExportThemesRequest$appId": "<p>The unique ID of the Amplify app to export the themes to.</p>",
+        "ExportThemesRequest$environmentName": "<p>The name of the backend environment that is part of the Amplify app.</p>",
+        "ExportThemesRequest$nextToken": "<p>The token to request the next page of results.</p>",
+        "ExportThemesResponse$nextToken": "<p>The pagination token that's included if more results are available.</p>",
+        "FormBindingElement$element": "<p>The name of the component to retrieve a value from.</p>",
+        "FormBindingElement$property": "<p>The property to retrieve a value from.</p>",
+        "FormBindings$key": null,
+        "GetComponentRequest$appId": "<p>The unique ID of the Amplify app.</p>",
+        "GetComponentRequest$environmentName": "<p>The name of the backend environment that is part of the Amplify app.</p>",
+        "GetThemeRequest$appId": "<p>The unique ID of the Amplify app.</p>",
+        "GetThemeRequest$environmentName": "<p>The name of the backend environment that is part of the Amplify app.</p>",
+        "IdentifierList$member": null,
+        "InternalServerException$message": null,
+        "InvalidParameterException$message": null,
+        "ListComponentsRequest$appId": "<p>The unique ID for the Amplify app.</p>",
+        "ListComponentsRequest$environmentName": "<p>The name of the backend environment that is a part of the Amplify app.</p>",
+        "ListComponentsRequest$nextToken": "<p>The token to request the next page of results.</p>",
+        "ListComponentsResponse$nextToken": "<p>The pagination token that's included if more results are available.</p>",
+        "ListThemesRequest$appId": "<p>The unique ID for the Amplify app.</p>",
+        "ListThemesRequest$environmentName": "<p>The name of the backend environment that is a part of the Amplify app.</p>",
+        "ListThemesRequest$nextToken": "<p>The token to request the next page of results.</p>",
+        "ListThemesResponse$nextToken": "<p>The pagination token that's returned if more results are available.</p>",
+        "MutationActionSetStateParameter$componentName": "<p>The name of the component that is being modified.</p>",
+        "MutationActionSetStateParameter$property": "<p>The name of the component property to apply the state configuration to.</p>",
+        "Predicate$field": "<p>The field to query.</p>",
+        "Predicate$operand": "<p>The value to use when performing the evaluation.</p>",
+        "Predicate$operator": "<p>The operator to use to perform the evaluation.</p>",
+        "ResourceConflictException$message": null,
+        "ResourceNotFoundException$message": null,
+        "ServiceQuotaExceededException$message": null,
+        "SortProperty$field": "<p>The field to perform the sort on.</p>",
+        "Theme$appId": "<p>The unique ID for the Amplify app associated with the theme.</p>",
+        "Theme$environmentName": "<p>The name of the backend environment that is a part of the Amplify app.</p>",
+        "ThemeSummary$appId": "<p>The unique ID for the app associated with the theme summary.</p>",
+        "ThemeSummary$environmentName": "<p>The name of the backend environment that is part of the Amplify app.</p>",
+        "ThemeValue$value": "<p>The value of a theme property.</p>",
+        "ThemeValues$key": "<p>The name of the property.</p>",
+        "UpdateComponentData$schemaVersion": "<p>The schema version of the component when it was imported.</p>",
+        "UpdateComponentData$sourceId": "<p>The unique ID of the component in its original source system, such as Figma.</p>",
+        "UpdateComponentRequest$appId": "<p>The unique ID for the Amplify app.</p>",
+        "UpdateComponentRequest$clientToken": "<p>The unique client token.</p>",
+        "UpdateComponentRequest$environmentName": "<p>The name of the backend environment that is part of the Amplify app.</p>",
+        "UpdateThemeRequest$appId": "<p>The unique ID for the Amplify app.</p>",
+        "UpdateThemeRequest$clientToken": "<p>The unique client token.</p>",
+        "UpdateThemeRequest$environmentName": "<p>The name of the backend environment that is part of the Amplify app.</p>"
+      }
+    },
+    "SyntheticExchangeCodeForTokenRequestBodyString": {
+      "base": null,
+      "refs": {
+        "ExchangeCodeForTokenRequestBody$code": "<p>The access code to send in the request.</p>"
+      }
+    },
+    "SyntheticExchangeCodeForTokenResponseString": {
+      "base": null,
+      "refs": {
+        "ExchangeCodeForTokenResponse$accessToken": "<p>The access token.</p>",
+        "ExchangeCodeForTokenResponse$refreshToken": "<p>The token to use to refresh a previously issued access token that might have expired.</p>"
+      }
+    },
+    "SyntheticRefreshTokenRequestBodyString": {
+      "base": null,
+      "refs": {
+        "RefreshTokenRequestBody$token": "<p>The token to use to refresh a previously issued access token that might have expired.</p>"
+      }
+    },
+    "SyntheticRefreshTokenResponseString": {
+      "base": null,
+      "refs": {
+        "RefreshTokenResponse$accessToken": "<p>The access token.</p>"
+      }
+    },
+    "SyntheticTimestamp_date_time": {
+      "base": null,
+      "refs": {
+        "Component$createdAt": "<p>The time that the component was created.</p>",
+        "Component$modifiedAt": "<p>The time that the component was modified.</p>",
+        "Theme$createdAt": "<p>The time that the theme was created.</p>",
+        "Theme$modifiedAt": "<p>The time that the theme was modified.</p>"
+      }
+    },
+    "TagKey": {
+      "base": null,
+      "refs": {
+        "Tags$key": null
+      }
+    },
+    "TagValue": {
+      "base": null,
+      "refs": {
+        "Tags$value": null
+      }
+    },
+    "Tags": {
+      "base": null,
+      "refs": {
+        "Component$tags": "<p>One or more key-value pairs to use when tagging the component.</p>",
+        "CreateComponentData$tags": "<p>One or more key-value pairs to use when tagging the component data.</p>",
+        "CreateThemeData$tags": "<p>One or more key-value pairs to use when tagging the theme data.</p>",
+        "Theme$tags": "<p>One or more key-value pairs to use when tagging the theme.</p>"
+      }
+    },
+    "Theme": {
+      "base": "<p>A theme is a collection of style settings that apply globally to the components associated with an Amplify application.</p>",
+      "refs": {
+        "CreateThemeResponse$entity": "<p>Describes the configuration of the new theme.</p>",
+        "GetThemeResponse$theme": "<p>Represents the configuration settings for the theme.</p>",
+        "ThemeList$member": null,
+        "UpdateThemeResponse$entity": "<p>Describes the configuration of the updated theme.</p>"
+      }
+    },
+    "ThemeList": {
+      "base": null,
+      "refs": {
+        "ExportThemesResponse$entities": "<p>Represents the configuration of the exported themes.</p>"
+      }
+    },
+    "ThemeName": {
+      "base": null,
+      "refs": {
+        "CreateThemeData$name": "<p>The name of the theme.</p>",
+        "Theme$name": "<p>The name of the theme.</p>",
+        "ThemeSummary$name": "<p>The name of the theme.</p>",
+        "UpdateThemeData$name": "<p>The name of the theme to update.</p>"
+      }
+    },
+    "ThemeSummary": {
+      "base": "<p>Describes the basic information about a theme.</p>",
+      "refs": {
+        "ThemeSummaryList$member": null
+      }
+    },
+    "ThemeSummaryList": {
+      "base": null,
+      "refs": {
+        "ListThemesResponse$entities": "<p>The list of themes for the Amplify app.</p>"
+      }
+    },
+    "ThemeValue": {
+      "base": "<p>Describes the configuration of a theme's properties.</p>",
+      "refs": {
+        "ThemeValues$value": "<p>The value of the property.</p>"
+      }
+    },
+    "ThemeValues": {
+      "base": "<p>A key-value pair that defines a property of a theme.</p>",
+      "refs": {
+        "ThemeValuesList$member": null
+      }
+    },
+    "ThemeValuesList": {
+      "base": null,
+      "refs": {
+        "CreateThemeData$overrides": "<p>Describes the properties that can be overriden to customize an instance of the theme.</p>",
+        "CreateThemeData$values": "<p>A list of key-value pairs that deﬁnes the properties of the theme.</p>",
+        "Theme$overrides": "<p>Describes the properties that can be overriden to customize a theme.</p>",
+        "Theme$values": "<p>A list of key-value pairs that defines the properties of the theme.</p>",
+        "ThemeValue$children": "<p>A list of key-value pairs that define the theme's properties.</p>",
+        "UpdateThemeData$overrides": "<p>Describes the properties that can be overriden to customize the theme.</p>",
+        "UpdateThemeData$values": "<p>A list of key-value pairs that define the theme's properties.</p>"
+      }
+    },
+    "TokenProviders": {
+      "base": null,
+      "refs": {
+        "ExchangeCodeForTokenRequest$provider": "<p>The third-party provider for the token. The only valid value is <code>figma</code>.</p>",
+        "RefreshTokenRequest$provider": "<p>The third-party provider for the token. The only valid value is <code>figma</code>.</p>"
+      }
+    },
+    "UpdateComponentData": {
+      "base": "<p>Updates and saves all of the information about a component, based on component ID.</p>",
+      "refs": {
+        "UpdateComponentRequest$updatedComponent": "<p>The configuration of the updated component.</p>"
+      }
+    },
+    "UpdateComponentRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateComponentResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateThemeData": {
+      "base": "<p>Saves the data binding information for a theme.</p>",
+      "refs": {
+        "UpdateThemeRequest$updatedTheme": "<p>The configuration of the updated theme.</p>"
+      }
+    },
+    "UpdateThemeRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateThemeResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "Uuid": {
+      "base": null,
+      "refs": {
+        "Component$id": "<p>The unique ID of the component.</p>",
+        "ComponentSummary$id": "<p>The unique ID of the component.</p>",
+        "DeleteComponentRequest$id": "<p>The unique ID of the component to delete.</p>",
+        "DeleteThemeRequest$id": "<p>The unique ID of the theme to delete.</p>",
+        "GetComponentRequest$id": "<p>The unique ID of the component.</p>",
+        "GetThemeRequest$id": "<p>The unique ID for the theme.</p>",
+        "Theme$id": "<p>The ID for the theme.</p>",
+        "ThemeSummary$id": "<p>The ID of the theme.</p>",
+        "UpdateComponentData$id": "<p>The unique ID of the component to update.</p>",
+        "UpdateComponentRequest$id": "<p>The unique ID for the component.</p>",
+        "UpdateThemeData$id": "<p>The unique ID of the theme to update.</p>",
+        "UpdateThemeRequest$id": "<p>The unique ID for the theme.</p>"
+      }
+    }
+  }
+}

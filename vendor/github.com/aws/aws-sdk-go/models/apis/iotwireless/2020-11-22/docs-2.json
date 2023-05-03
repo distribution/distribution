@@ -1,0 +1,2805 @@
+{
+  "version": "2.0",
+  "service": "<p>AWS IoT Wireless provides bi-directional communication between internet-connected wireless devices and the AWS Cloud. To onboard both LoRaWAN and Sidewalk devices to AWS IoT, use the IoT Wireless API. These wireless devices use the Low Power Wide Area Networking (LPWAN) communication protocol to communicate with AWS IoT.</p> <p>Using the API, you can perform create, read, update, and delete operations for your wireless devices, gateways, destinations, and profiles. After onboarding your devices, you can use the API operations to set log levels and monitor your devices with CloudWatch.</p> <p>You can also use the API operations to create multicast groups and schedule a multicast session for sending a downlink message to devices in the group. By using Firmware Updates Over-The-Air (FUOTA) API operations, you can create a FUOTA task and schedule a session to update the firmware of individual devices or an entire group of devices in a multicast group.</p>",
+  "operations": {
+    "AssociateAwsAccountWithPartnerAccount": "<p>Associates a partner account with your AWS account.</p>",
+    "AssociateMulticastGroupWithFuotaTask": "<p>Associate a multicast group with a FUOTA task.</p>",
+    "AssociateWirelessDeviceWithFuotaTask": "<p>Associate a wireless device with a FUOTA task.</p>",
+    "AssociateWirelessDeviceWithMulticastGroup": "<p>Associates a wireless device with a multicast group.</p>",
+    "AssociateWirelessDeviceWithThing": "<p>Associates a wireless device with a thing.</p>",
+    "AssociateWirelessGatewayWithCertificate": "<p>Associates a wireless gateway with a certificate.</p>",
+    "AssociateWirelessGatewayWithThing": "<p>Associates a wireless gateway with a thing.</p>",
+    "CancelMulticastGroupSession": "<p>Cancels an existing multicast group session.</p>",
+    "CreateDestination": "<p>Creates a new destination that maps a device message to an AWS IoT rule.</p>",
+    "CreateDeviceProfile": "<p>Creates a new device profile.</p>",
+    "CreateFuotaTask": "<p>Creates a FUOTA task.</p>",
+    "CreateMulticastGroup": "<p>Creates a multicast group.</p>",
+    "CreateServiceProfile": "<p>Creates a new service profile.</p>",
+    "CreateWirelessDevice": "<p>Provisions a wireless device.</p>",
+    "CreateWirelessGateway": "<p>Provisions a wireless gateway.</p>",
+    "CreateWirelessGatewayTask": "<p>Creates a task for a wireless gateway.</p>",
+    "CreateWirelessGatewayTaskDefinition": "<p>Creates a gateway task definition.</p>",
+    "DeleteDestination": "<p>Deletes a destination.</p>",
+    "DeleteDeviceProfile": "<p>Deletes a device profile.</p>",
+    "DeleteFuotaTask": "<p>Deletes a FUOTA task.</p>",
+    "DeleteMulticastGroup": "<p>Deletes a multicast group if it is not in use by a fuota task.</p>",
+    "DeleteQueuedMessages": "<p> The operation to delete queued messages. </p>",
+    "DeleteServiceProfile": "<p>Deletes a service profile.</p>",
+    "DeleteWirelessDevice": "<p>Deletes a wireless device.</p>",
+    "DeleteWirelessGateway": "<p>Deletes a wireless gateway.</p>",
+    "DeleteWirelessGatewayTask": "<p>Deletes a wireless gateway task.</p>",
+    "DeleteWirelessGatewayTaskDefinition": "<p>Deletes a wireless gateway task definition. Deleting this task definition does not affect tasks that are currently in progress.</p>",
+    "DisassociateAwsAccountFromPartnerAccount": "<p>Disassociates your AWS account from a partner account. If <code>PartnerAccountId</code> and <code>PartnerType</code> are <code>null</code>, disassociates your AWS account from all partner accounts.</p>",
+    "DisassociateMulticastGroupFromFuotaTask": "<p>Disassociates a multicast group from a fuota task.</p>",
+    "DisassociateWirelessDeviceFromFuotaTask": "<p>Disassociates a wireless device from a FUOTA task.</p>",
+    "DisassociateWirelessDeviceFromMulticastGroup": "<p>Disassociates a wireless device from a multicast group.</p>",
+    "DisassociateWirelessDeviceFromThing": "<p>Disassociates a wireless device from its currently associated thing.</p>",
+    "DisassociateWirelessGatewayFromCertificate": "<p>Disassociates a wireless gateway from its currently associated certificate.</p>",
+    "DisassociateWirelessGatewayFromThing": "<p>Disassociates a wireless gateway from its currently associated thing.</p>",
+    "GetDestination": "<p>Gets information about a destination.</p>",
+    "GetDeviceProfile": "<p>Gets information about a device profile.</p>",
+    "GetFuotaTask": "<p>Gets information about a FUOTA task.</p>",
+    "GetLogLevelsByResourceTypes": "<p>Returns current default log levels or log levels by resource types. Based on resource types, log levels can be for wireless device log options or wireless gateway log options.</p>",
+    "GetMulticastGroup": "<p>Gets information about a multicast group.</p>",
+    "GetMulticastGroupSession": "<p>Gets information about a multicast group session.</p>",
+    "GetNetworkAnalyzerConfiguration": "<p>Get NetworkAnalyzer configuration.</p>",
+    "GetPartnerAccount": "<p>Gets information about a partner account. If <code>PartnerAccountId</code> and <code>PartnerType</code> are <code>null</code>, returns all partner accounts.</p>",
+    "GetResourceEventConfiguration": "<p>Get the event configuration for a particular resource identifier.</p>",
+    "GetResourceLogLevel": "<p>Fetches the log-level override, if any, for a given resource-ID and resource-type. It can be used for a wireless device or a wireless gateway.</p>",
+    "GetServiceEndpoint": "<p>Gets the account-specific endpoint for Configuration and Update Server (CUPS) protocol or LoRaWAN Network Server (LNS) connections.</p>",
+    "GetServiceProfile": "<p>Gets information about a service profile.</p>",
+    "GetWirelessDevice": "<p>Gets information about a wireless device.</p>",
+    "GetWirelessDeviceStatistics": "<p>Gets operating information about a wireless device.</p>",
+    "GetWirelessGateway": "<p>Gets information about a wireless gateway.</p>",
+    "GetWirelessGatewayCertificate": "<p>Gets the ID of the certificate that is currently associated with a wireless gateway.</p>",
+    "GetWirelessGatewayFirmwareInformation": "<p>Gets the firmware version and other information about a wireless gateway.</p>",
+    "GetWirelessGatewayStatistics": "<p>Gets operating information about a wireless gateway.</p>",
+    "GetWirelessGatewayTask": "<p>Gets information about a wireless gateway task.</p>",
+    "GetWirelessGatewayTaskDefinition": "<p>Gets information about a wireless gateway task definition.</p>",
+    "ListDestinations": "<p>Lists the destinations registered to your AWS account.</p>",
+    "ListDeviceProfiles": "<p>Lists the device profiles registered to your AWS account.</p>",
+    "ListFuotaTasks": "<p>Lists the FUOTA tasks registered to your AWS account.</p>",
+    "ListMulticastGroups": "<p>Lists the multicast groups registered to your AWS account.</p>",
+    "ListMulticastGroupsByFuotaTask": "<p>List all multicast groups associated with a fuota task.</p>",
+    "ListPartnerAccounts": "<p>Lists the partner accounts associated with your AWS account.</p>",
+    "ListQueuedMessages": "<p>The operation to list queued messages. </p>",
+    "ListServiceProfiles": "<p>Lists the service profiles registered to your AWS account.</p>",
+    "ListTagsForResource": "<p>Lists the tags (metadata) you have assigned to the resource.</p>",
+    "ListWirelessDevices": "<p>Lists the wireless devices registered to your AWS account.</p>",
+    "ListWirelessGatewayTaskDefinitions": "<p>List the wireless gateway tasks definitions registered to your AWS account.</p>",
+    "ListWirelessGateways": "<p>Lists the wireless gateways registered to your AWS account.</p>",
+    "PutResourceLogLevel": "<p>Sets the log-level override for a resource-ID and resource-type. This option can be specified for a wireless gateway or a wireless device. A limit of 200 log level override can be set per account.</p>",
+    "ResetAllResourceLogLevels": "<p>Removes the log-level overrides for all resources; both wireless devices and wireless gateways.</p>",
+    "ResetResourceLogLevel": "<p>Removes the log-level override, if any, for a specific resource-ID and resource-type. It can be used for a wireless device or a wireless gateway.</p>",
+    "SendDataToMulticastGroup": "<p>Sends the specified data to a multicast group.</p>",
+    "SendDataToWirelessDevice": "<p>Sends a decrypted application data frame to a device.</p>",
+    "StartBulkAssociateWirelessDeviceWithMulticastGroup": "<p>Starts a bulk association of all qualifying wireless devices with a multicast group.</p>",
+    "StartBulkDisassociateWirelessDeviceFromMulticastGroup": "<p>Starts a bulk disassociatin of all qualifying wireless devices from a multicast group.</p>",
+    "StartFuotaTask": "<p>Starts a FUOTA task.</p>",
+    "StartMulticastGroupSession": "<p>Starts a multicast group session.</p>",
+    "TagResource": "<p>Adds a tag to a resource.</p>",
+    "TestWirelessDevice": "<p>Simulates a provisioned device by sending an uplink data payload of <code>Hello</code>.</p>",
+    "UntagResource": "<p>Removes one or more tags from a resource.</p>",
+    "UpdateDestination": "<p>Updates properties of a destination.</p>",
+    "UpdateFuotaTask": "<p>Updates properties of a FUOTA task.</p>",
+    "UpdateLogLevelsByResourceTypes": "<p>Set default log level, or log levels by resource types. This can be for wireless device log options or wireless gateways log options and is used to control the log messages that'll be displayed in CloudWatch.</p>",
+    "UpdateMulticastGroup": "<p>Updates properties of a multicast group session.</p>",
+    "UpdateNetworkAnalyzerConfiguration": "<p>Update NetworkAnalyzer configuration.</p>",
+    "UpdatePartnerAccount": "<p>Updates properties of a partner account.</p>",
+    "UpdateResourceEventConfiguration": "<p>Update the event configuration for a particular resource identifier.</p>",
+    "UpdateWirelessDevice": "<p>Updates properties of a wireless device.</p>",
+    "UpdateWirelessGateway": "<p>Updates properties of a wireless gateway.</p>"
+  },
+  "shapes": {
+    "AbpV1_0_x": {
+      "base": "<p>ABP device object for LoRaWAN specification v1.0.x</p>",
+      "refs": {
+        "LoRaWANDevice$AbpV1_0_x": "<p>LoRaWAN object for create APIs</p>"
+      }
+    },
+    "AbpV1_1": {
+      "base": "<p>ABP device object for LoRaWAN specification v1.1</p>",
+      "refs": {
+        "LoRaWANDevice$AbpV1_1": "<p>ABP device object for create APIs for v1.1</p>"
+      }
+    },
+    "AccessDeniedException": {
+      "base": "<p>User does not have permission to perform this action.</p>",
+      "refs": {
+      }
+    },
+    "AccountLinked": {
+      "base": null,
+      "refs": {
+        "GetPartnerAccountResponse$AccountLinked": "<p>Whether the partner account is linked to the AWS account.</p>"
+      }
+    },
+    "AddGwMetadata": {
+      "base": null,
+      "refs": {
+        "LoRaWANGetServiceProfileInfo$AddGwMetadata": "<p>The AddGWMetaData value.</p>",
+        "LoRaWANServiceProfile$AddGwMetadata": "<p>The AddGWMetaData value.</p>"
+      }
+    },
+    "AmazonId": {
+      "base": "<p>The Sidewalk Amazon ID.</p>",
+      "refs": {
+        "SidewalkAccountInfo$AmazonId": "<p>The Sidewalk Amazon ID.</p>",
+        "SidewalkAccountInfoWithFingerprint$AmazonId": "<p>The Sidewalk Amazon ID.</p>",
+        "SidewalkDevice$AmazonId": null,
+        "SidewalkListDevice$AmazonId": "<p>The Sidewalk Amazon ID.</p>"
+      }
+    },
+    "AmazonResourceName": {
+      "base": null,
+      "refs": {
+        "ListTagsForResourceRequest$ResourceArn": "<p>The ARN of the resource for which you want to list tags.</p>",
+        "TagResourceRequest$ResourceArn": "<p>The ARN of the resource to add tags to.</p>",
+        "TooManyTagsException$ResourceName": "<p>Name of the resource that exceeds maximum number of tags allowed.</p>",
+        "UntagResourceRequest$ResourceArn": "<p>The ARN of the resource to remove tags from.</p>"
+      }
+    },
+    "AppEui": {
+      "base": null,
+      "refs": {
+        "OtaaV1_0_x$AppEui": "<p>The AppEUI value.</p>"
+      }
+    },
+    "AppKey": {
+      "base": null,
+      "refs": {
+        "OtaaV1_0_x$AppKey": "<p>The AppKey value.</p>",
+        "OtaaV1_1$AppKey": "<p>The AppKey value.</p>"
+      }
+    },
+    "AppSKey": {
+      "base": null,
+      "refs": {
+        "SessionKeysAbpV1_0_x$AppSKey": "<p>The AppSKey value.</p>",
+        "SessionKeysAbpV1_1$AppSKey": "<p>The AppSKey value.</p>"
+      }
+    },
+    "AppServerPrivateKey": {
+      "base": null,
+      "refs": {
+        "SidewalkAccountInfo$AppServerPrivateKey": "<p>The Sidewalk application server private key.</p>",
+        "SidewalkUpdateAccount$AppServerPrivateKey": "<p>The new Sidewalk application server private key.</p>"
+      }
+    },
+    "AssociateAwsAccountWithPartnerAccountRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "AssociateAwsAccountWithPartnerAccountResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "AssociateMulticastGroupWithFuotaTaskRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "AssociateMulticastGroupWithFuotaTaskResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "AssociateWirelessDeviceWithFuotaTaskRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "AssociateWirelessDeviceWithFuotaTaskResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "AssociateWirelessDeviceWithMulticastGroupRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "AssociateWirelessDeviceWithMulticastGroupResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "AssociateWirelessDeviceWithThingRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "AssociateWirelessDeviceWithThingResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "AssociateWirelessGatewayWithCertificateRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "AssociateWirelessGatewayWithCertificateResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "AssociateWirelessGatewayWithThingRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "AssociateWirelessGatewayWithThingResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "AutoCreateTasks": {
+      "base": null,
+      "refs": {
+        "CreateWirelessGatewayTaskDefinitionRequest$AutoCreateTasks": "<p>Whether to automatically create tasks using this task definition for all gateways with the specified current version. If <code>false</code>, the task must me created by calling <code>CreateWirelessGatewayTask</code>.</p>",
+        "GetWirelessGatewayTaskDefinitionResponse$AutoCreateTasks": "<p>Whether to automatically create tasks using this task definition for all gateways with the specified current version. If <code>false</code>, the task must me created by calling <code>CreateWirelessGatewayTask</code>.</p>"
+      }
+    },
+    "BatteryLevel": {
+      "base": "<p>Sidewalk device battery level.</p>",
+      "refs": {
+        "SidewalkDeviceMetadata$BatteryLevel": "<p>Sidewalk device battery level.</p>"
+      }
+    },
+    "CancelMulticastGroupSessionRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CancelMulticastGroupSessionResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CertificateList": {
+      "base": "<p>List of sidewalk certificates.</p>",
+      "refs": {
+        "DeviceCertificateList$member": null
+      }
+    },
+    "CertificatePEM": {
+      "base": null,
+      "refs": {
+        "GetServiceEndpointResponse$ServerTrust": "<p>The Root CA of the server trust certificate.</p>"
+      }
+    },
+    "CertificateValue": {
+      "base": "<p>Certificate value.</p>",
+      "refs": {
+        "CertificateList$Value": "<p>The value of the chosen sidewalk certificate.</p>"
+      }
+    },
+    "ChannelMask": {
+      "base": null,
+      "refs": {
+        "LoRaWANGetServiceProfileInfo$ChannelMask": "<p>The ChannelMask value.</p>"
+      }
+    },
+    "ClassBTimeout": {
+      "base": null,
+      "refs": {
+        "LoRaWANDeviceProfile$ClassBTimeout": "<p>The ClassBTimeout value.</p>"
+      }
+    },
+    "ClassCTimeout": {
+      "base": null,
+      "refs": {
+        "LoRaWANDeviceProfile$ClassCTimeout": "<p>The ClassCTimeout value.</p>"
+      }
+    },
+    "ClientRequestToken": {
+      "base": "<p>Each resource must have a unique client request token. If you try to create a new resource with the same token as a resource that already exists, an exception occurs. If you omit this value, AWS SDKs will automatically generate a unique client request.</p>",
+      "refs": {
+        "AssociateAwsAccountWithPartnerAccountRequest$ClientRequestToken": "<p>Each resource must have a unique client request token. If you try to create a new resource with the same token as a resource that already exists, an exception occurs. If you omit this value, AWS SDKs will automatically generate a unique client request. </p>",
+        "CreateDestinationRequest$ClientRequestToken": "<p>Each resource must have a unique client request token. If you try to create a new resource with the same token as a resource that already exists, an exception occurs. If you omit this value, AWS SDKs will automatically generate a unique client request. </p>",
+        "CreateDeviceProfileRequest$ClientRequestToken": "<p>Each resource must have a unique client request token. If you try to create a new resource with the same token as a resource that already exists, an exception occurs. If you omit this value, AWS SDKs will automatically generate a unique client request. </p>",
+        "CreateFuotaTaskRequest$ClientRequestToken": null,
+        "CreateMulticastGroupRequest$ClientRequestToken": "<p>Each resource must have a unique client request token. If you try to create a new resource with the same token as a resource that already exists, an exception occurs. If you omit this value, AWS SDKs will automatically generate a unique client request. </p>",
+        "CreateServiceProfileRequest$ClientRequestToken": "<p>Each resource must have a unique client request token. If you try to create a new resource with the same token as a resource that already exists, an exception occurs. If you omit this value, AWS SDKs will automatically generate a unique client request. </p>",
+        "CreateWirelessDeviceRequest$ClientRequestToken": "<p>Each resource must have a unique client request token. If you try to create a new resource with the same token as a resource that already exists, an exception occurs. If you omit this value, AWS SDKs will automatically generate a unique client request. </p>",
+        "CreateWirelessGatewayRequest$ClientRequestToken": "<p>Each resource must have a unique client request token. If you try to create a new resource with the same token as a resource that already exists, an exception occurs. If you omit this value, AWS SDKs will automatically generate a unique client request. </p>",
+        "CreateWirelessGatewayTaskDefinitionRequest$ClientRequestToken": "<p>Each resource must have a unique client request token. If you try to create a new resource with the same token as a resource that already exists, an exception occurs. If you omit this value, AWS SDKs will automatically generate a unique client request. </p>"
+      }
+    },
+    "ConflictException": {
+      "base": "<p>Adding, updating, or deleting the resource can cause an inconsistent state.</p>",
+      "refs": {
+      }
+    },
+    "ConnectionStatus": {
+      "base": null,
+      "refs": {
+        "GetWirelessGatewayStatisticsResponse$ConnectionStatus": "<p>The connection status of the wireless gateway.</p>"
+      }
+    },
+    "Crc": {
+      "base": null,
+      "refs": {
+        "LoRaWANUpdateGatewayTaskCreate$SigKeyCrc": "<p>The CRC of the signature private key to check.</p>"
+      }
+    },
+    "CreateDestinationRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateDestinationResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateDeviceProfileRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateDeviceProfileResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateFuotaTaskRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateFuotaTaskResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateMulticastGroupRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateMulticastGroupResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateServiceProfileRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateServiceProfileResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateWirelessDeviceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateWirelessDeviceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateWirelessGatewayRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateWirelessGatewayResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateWirelessGatewayTaskDefinitionRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateWirelessGatewayTaskDefinitionResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateWirelessGatewayTaskRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateWirelessGatewayTaskResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreatedAt": {
+      "base": "<p>Created at timestamp for the resource.</p>",
+      "refs": {
+        "GetFuotaTaskResponse$CreatedAt": null,
+        "GetMulticastGroupResponse$CreatedAt": null
+      }
+    },
+    "DeleteDestinationRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteDestinationResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteDeviceProfileRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteDeviceProfileResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteFuotaTaskRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteFuotaTaskResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteMulticastGroupRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteMulticastGroupResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteQueuedMessagesRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteQueuedMessagesResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteServiceProfileRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteServiceProfileResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteWirelessDeviceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteWirelessDeviceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteWirelessGatewayRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteWirelessGatewayResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteWirelessGatewayTaskDefinitionRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteWirelessGatewayTaskDefinitionResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteWirelessGatewayTaskRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteWirelessGatewayTaskResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "Description": {
+      "base": "<p>The description of the new resource.</p>",
+      "refs": {
+        "CreateDestinationRequest$Description": "<p>The description of the new resource.</p>",
+        "CreateFuotaTaskRequest$Description": null,
+        "CreateMulticastGroupRequest$Description": "<p>The description of the multicast group.</p>",
+        "CreateWirelessDeviceRequest$Description": "<p>The description of the new resource.</p>",
+        "CreateWirelessGatewayRequest$Description": "<p>The description of the new resource.</p>",
+        "Destinations$Description": "<p>The description of the resource.</p>",
+        "GetDestinationResponse$Description": "<p>The description of the resource.</p>",
+        "GetFuotaTaskResponse$Description": null,
+        "GetMulticastGroupResponse$Description": null,
+        "GetWirelessDeviceResponse$Description": "<p>The description of the resource.</p>",
+        "GetWirelessGatewayResponse$Description": "<p>The description of the resource.</p>",
+        "UpdateDestinationRequest$Description": "<p>A new description of the resource.</p>",
+        "UpdateFuotaTaskRequest$Description": null,
+        "UpdateMulticastGroupRequest$Description": null,
+        "UpdateWirelessDeviceRequest$Description": "<p>A new description of the resource.</p>",
+        "UpdateWirelessGatewayRequest$Description": "<p>A new description of the resource.</p>",
+        "WirelessGatewayStatistics$Description": "<p>The description of the resource.</p>"
+      }
+    },
+    "DestinationArn": {
+      "base": null,
+      "refs": {
+        "CreateDestinationResponse$Arn": "<p>The Amazon Resource Name of the new resource.</p>",
+        "Destinations$Arn": "<p>The Amazon Resource Name of the resource.</p>",
+        "GetDestinationResponse$Arn": "<p>The Amazon Resource Name of the resource.</p>"
+      }
+    },
+    "DestinationList": {
+      "base": null,
+      "refs": {
+        "ListDestinationsResponse$DestinationList": "<p>The list of destinations.</p>"
+      }
+    },
+    "DestinationName": {
+      "base": null,
+      "refs": {
+        "CreateDestinationRequest$Name": "<p>The name of the new resource.</p>",
+        "CreateDestinationResponse$Name": "<p>The name of the new resource.</p>",
+        "CreateWirelessDeviceRequest$DestinationName": "<p>The name of the destination to assign to the new wireless device.</p>",
+        "DeleteDestinationRequest$Name": "<p>The name of the resource to delete.</p>",
+        "Destinations$Name": "<p>The name of the resource.</p>",
+        "GetDestinationRequest$Name": "<p>The name of the resource to get.</p>",
+        "GetDestinationResponse$Name": "<p>The name of the resource.</p>",
+        "GetWirelessDeviceResponse$DestinationName": "<p>The name of the destination to which the device is assigned.</p>",
+        "ListWirelessDevicesRequest$DestinationName": "<p>A filter to list only the wireless devices that use this destination.</p>",
+        "UpdateDestinationRequest$Name": "<p>The new name of the resource.</p>",
+        "UpdateWirelessDeviceRequest$DestinationName": "<p>The name of the new destination for the device.</p>",
+        "WirelessDeviceStatistics$DestinationName": "<p>The name of the destination to which the device is assigned.</p>"
+      }
+    },
+    "Destinations": {
+      "base": "<p>Describes a destination.</p>",
+      "refs": {
+        "DestinationList$member": null
+      }
+    },
+    "DevAddr": {
+      "base": null,
+      "refs": {
+        "AbpV1_0_x$DevAddr": "<p>The DevAddr value.</p>",
+        "AbpV1_1$DevAddr": "<p>The DevAddr value.</p>"
+      }
+    },
+    "DevEui": {
+      "base": null,
+      "refs": {
+        "LoRaWANDevice$DevEui": "<p>The DevEUI value.</p>",
+        "LoRaWANDeviceMetadata$DevEui": "<p>The DevEUI value.</p>",
+        "LoRaWANListDevice$DevEui": "<p>The DevEUI value.</p>"
+      }
+    },
+    "DevStatusReqFreq": {
+      "base": null,
+      "refs": {
+        "LoRaWANGetServiceProfileInfo$DevStatusReqFreq": "<p>The DevStatusReqFreq value.</p>"
+      }
+    },
+    "DeviceCertificateList": {
+      "base": "<p>List of device certificate chain.</p>",
+      "refs": {
+        "SidewalkDevice$DeviceCertificates": "<p>The sidewalk device certificates for Ed25519 and P256r1.</p>",
+        "SidewalkListDevice$DeviceCertificates": "<p>The sidewalk device certificates for Ed25519 and P256r1.</p>"
+      }
+    },
+    "DeviceProfile": {
+      "base": "<p>Describes a device profile.</p>",
+      "refs": {
+        "DeviceProfileList$member": null
+      }
+    },
+    "DeviceProfileArn": {
+      "base": null,
+      "refs": {
+        "CreateDeviceProfileResponse$Arn": "<p>The Amazon Resource Name of the new resource.</p>",
+        "DeviceProfile$Arn": "<p>The Amazon Resource Name of the resource.</p>",
+        "GetDeviceProfileResponse$Arn": "<p>The Amazon Resource Name of the resource.</p>"
+      }
+    },
+    "DeviceProfileId": {
+      "base": null,
+      "refs": {
+        "CreateDeviceProfileResponse$Id": "<p>The ID of the new device profile.</p>",
+        "DeleteDeviceProfileRequest$Id": "<p>The ID of the resource to delete.</p>",
+        "DeviceProfile$Id": "<p>The ID of the device profile.</p>",
+        "GetDeviceProfileRequest$Id": "<p>The ID of the resource to get.</p>",
+        "GetDeviceProfileResponse$Id": "<p>The ID of the device profile.</p>",
+        "ListWirelessDevicesRequest$DeviceProfileId": "<p>A filter to list only the wireless devices that use this device profile.</p>",
+        "LoRaWANDevice$DeviceProfileId": "<p>The ID of the device profile for the new wireless device.</p>",
+        "LoRaWANUpdateDevice$DeviceProfileId": "<p>The ID of the device profile for the wireless device.</p>"
+      }
+    },
+    "DeviceProfileList": {
+      "base": null,
+      "refs": {
+        "ListDeviceProfilesResponse$DeviceProfileList": "<p>The list of device profiles.</p>"
+      }
+    },
+    "DeviceProfileName": {
+      "base": null,
+      "refs": {
+        "CreateDeviceProfileRequest$Name": "<p>The name of the new resource.</p>",
+        "DeviceProfile$Name": "<p>The name of the resource.</p>",
+        "GetDeviceProfileResponse$Name": "<p>The name of the resource.</p>"
+      }
+    },
+    "DeviceRegistrationStateEventConfiguration": {
+      "base": "<p>Device registration state event configuration object for enabling and disabling relevant topics.</p>",
+      "refs": {
+        "GetResourceEventConfigurationResponse$DeviceRegistrationState": "<p>Event configuration for the device registration state event</p>",
+        "UpdateResourceEventConfigurationRequest$DeviceRegistrationState": "<p>Event configuration for the device registration state event</p>"
+      }
+    },
+    "DeviceState": {
+      "base": "<p>Device state defines the device status of sidewalk device.</p>",
+      "refs": {
+        "SidewalkDeviceMetadata$DeviceState": "<p>Device state defines the device status of sidewalk device.</p>"
+      }
+    },
+    "DisassociateAwsAccountFromPartnerAccountRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DisassociateAwsAccountFromPartnerAccountResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DisassociateMulticastGroupFromFuotaTaskRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DisassociateMulticastGroupFromFuotaTaskResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DisassociateWirelessDeviceFromFuotaTaskRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DisassociateWirelessDeviceFromFuotaTaskResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DisassociateWirelessDeviceFromMulticastGroupRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DisassociateWirelessDeviceFromMulticastGroupResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DisassociateWirelessDeviceFromThingRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DisassociateWirelessDeviceFromThingResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DisassociateWirelessGatewayFromCertificateRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DisassociateWirelessGatewayFromCertificateResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DisassociateWirelessGatewayFromThingRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DisassociateWirelessGatewayFromThingResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DlBucketSize": {
+      "base": null,
+      "refs": {
+        "LoRaWANGetServiceProfileInfo$DlBucketSize": "<p>The DLBucketSize value.</p>"
+      }
+    },
+    "DlClass": {
+      "base": "<p>DlClass for LoRaWAM, valid values are ClassB and ClassC.</p>",
+      "refs": {
+        "LoRaWANMulticast$DlClass": null,
+        "LoRaWANMulticastGet$DlClass": null
+      }
+    },
+    "DlDr": {
+      "base": "<p>Downlink data rate.</p>",
+      "refs": {
+        "LoRaWANMulticastSession$DlDr": null
+      }
+    },
+    "DlFreq": {
+      "base": "<p>Downlink frequency.</p>",
+      "refs": {
+        "LoRaWANMulticastSession$DlFreq": null
+      }
+    },
+    "DlRate": {
+      "base": null,
+      "refs": {
+        "LoRaWANGetServiceProfileInfo$DlRate": "<p>The DLRate value.</p>"
+      }
+    },
+    "DlRatePolicy": {
+      "base": null,
+      "refs": {
+        "LoRaWANGetServiceProfileInfo$DlRatePolicy": "<p>The DLRatePolicy value.</p>"
+      }
+    },
+    "Double": {
+      "base": null,
+      "refs": {
+        "LoRaWANGatewayMetadata$Snr": "<p>The SNR value.</p>",
+        "LoRaWANGatewayMetadata$Rssi": "<p>The RSSI value.</p>"
+      }
+    },
+    "DownlinkQueueMessage": {
+      "base": "<p>The message in downlink queue.</p>",
+      "refs": {
+        "DownlinkQueueMessagesList$member": null
+      }
+    },
+    "DownlinkQueueMessagesList": {
+      "base": null,
+      "refs": {
+        "ListQueuedMessagesResponse$DownlinkQueueMessagesList": "<p>The messages in downlink queue.</p>"
+      }
+    },
+    "DrMax": {
+      "base": null,
+      "refs": {
+        "LoRaWANGetServiceProfileInfo$DrMax": "<p>The DRMax value.</p>"
+      }
+    },
+    "DrMin": {
+      "base": null,
+      "refs": {
+        "LoRaWANGetServiceProfileInfo$DrMin": "<p>The DRMin value.</p>"
+      }
+    },
+    "EndPoint": {
+      "base": null,
+      "refs": {
+        "GetServiceEndpointResponse$ServiceEndpoint": "<p>The service endpoint value.</p>"
+      }
+    },
+    "Event": {
+      "base": "<p>Sidewalk device status notification.</p>",
+      "refs": {
+        "SidewalkDeviceMetadata$Event": "<p>Sidewalk device status notification.</p>"
+      }
+    },
+    "EventNotificationPartnerType": {
+      "base": null,
+      "refs": {
+        "GetResourceEventConfigurationRequest$PartnerType": "<p>Partner type of the resource if the identifier type is PartnerAccountId.</p>",
+        "UpdateResourceEventConfigurationRequest$PartnerType": "<p>Partner type of the resource if the identifier type is PartnerAccountId</p>"
+      }
+    },
+    "EventNotificationTopicStatus": {
+      "base": null,
+      "refs": {
+        "SidewalkEventNotificationConfigurations$AmazonIdEventTopic": "<p>Enum to denote whether amazon id event topic is enabled or disabled.</p>"
+      }
+    },
+    "Expression": {
+      "base": null,
+      "refs": {
+        "CreateDestinationRequest$Expression": "<p>The rule name or topic rule to send messages to.</p>",
+        "Destinations$Expression": "<p>The rule name or topic rule to send messages to.</p>",
+        "GetDestinationResponse$Expression": "<p>The rule name or topic rule to send messages to.</p>",
+        "UpdateDestinationRequest$Expression": "<p>The new rule name or topic rule to send messages to.</p>"
+      }
+    },
+    "ExpressionType": {
+      "base": null,
+      "refs": {
+        "CreateDestinationRequest$ExpressionType": "<p>The type of value in <code>Expression</code>.</p>",
+        "Destinations$ExpressionType": "<p>The type of value in <code>Expression</code>.</p>",
+        "GetDestinationResponse$ExpressionType": "<p>The type of value in <code>Expression</code>.</p>",
+        "UpdateDestinationRequest$ExpressionType": "<p>The type of value in <code>Expression</code>.</p>"
+      }
+    },
+    "FNwkSIntKey": {
+      "base": null,
+      "refs": {
+        "SessionKeysAbpV1_1$FNwkSIntKey": "<p>The FNwkSIntKey value.</p>"
+      }
+    },
+    "FPort": {
+      "base": "<p>The Fport value.</p>",
+      "refs": {
+        "FPorts$Fuota": null,
+        "FPorts$Multicast": null,
+        "FPorts$ClockSync": null,
+        "LoRaWANMulticastMetadata$FPort": null,
+        "LoRaWANSendDataToDevice$FPort": null
+      }
+    },
+    "FPorts": {
+      "base": "<p>List of FPort assigned for different LoRaWAN application packages to use</p>",
+      "refs": {
+        "LoRaWANDevice$FPorts": null
+      }
+    },
+    "FactoryPresetFreqsList": {
+      "base": null,
+      "refs": {
+        "LoRaWANDeviceProfile$FactoryPresetFreqsList": "<p>The list of values that make up the FactoryPresetFreqs value.</p>"
+      }
+    },
+    "Fingerprint": {
+      "base": null,
+      "refs": {
+        "SidewalkAccountInfoWithFingerprint$Fingerprint": "<p>The fingerprint of the Sidewalk application server private key.</p>"
+      }
+    },
+    "FirmwareUpdateImage": {
+      "base": "<p>The S3 URI points to a firmware update image that is to be used with a FUOTA task.</p>",
+      "refs": {
+        "CreateFuotaTaskRequest$FirmwareUpdateImage": null,
+        "GetFuotaTaskResponse$FirmwareUpdateImage": null,
+        "UpdateFuotaTaskRequest$FirmwareUpdateImage": null
+      }
+    },
+    "FirmwareUpdateRole": {
+      "base": "<p>The firmware update role that is to be used with a FUOTA task.</p>",
+      "refs": {
+        "CreateFuotaTaskRequest$FirmwareUpdateRole": null,
+        "GetFuotaTaskResponse$FirmwareUpdateRole": null,
+        "UpdateFuotaTaskRequest$FirmwareUpdateRole": null
+      }
+    },
+    "FuotaDeviceStatus": {
+      "base": "<p>The status of a wireless device in a FUOTA task.</p>",
+      "refs": {
+        "WirelessDeviceStatistics$FuotaDeviceStatus": null
+      }
+    },
+    "FuotaTask": {
+      "base": "<p>A FUOTA task.</p>",
+      "refs": {
+        "FuotaTaskList$member": null
+      }
+    },
+    "FuotaTaskArn": {
+      "base": "<p>The arn of a FUOTA task.</p>",
+      "refs": {
+        "CreateFuotaTaskResponse$Arn": null,
+        "FuotaTask$Arn": null,
+        "GetFuotaTaskResponse$Arn": null
+      }
+    },
+    "FuotaTaskId": {
+      "base": "<p>The ID of a FUOTA task.</p>",
+      "refs": {
+        "AssociateMulticastGroupWithFuotaTaskRequest$Id": null,
+        "AssociateWirelessDeviceWithFuotaTaskRequest$Id": null,
+        "CreateFuotaTaskResponse$Id": null,
+        "DeleteFuotaTaskRequest$Id": null,
+        "DisassociateMulticastGroupFromFuotaTaskRequest$Id": null,
+        "DisassociateWirelessDeviceFromFuotaTaskRequest$Id": null,
+        "FuotaTask$Id": null,
+        "GetFuotaTaskRequest$Id": null,
+        "GetFuotaTaskResponse$Id": null,
+        "ListMulticastGroupsByFuotaTaskRequest$Id": null,
+        "ListWirelessDevicesRequest$FuotaTaskId": null,
+        "StartFuotaTaskRequest$Id": null,
+        "UpdateFuotaTaskRequest$Id": null
+      }
+    },
+    "FuotaTaskList": {
+      "base": "<p>Lists the FUOTA tasks registered to your AWS account.</p>",
+      "refs": {
+        "ListFuotaTasksResponse$FuotaTaskList": null
+      }
+    },
+    "FuotaTaskName": {
+      "base": "<p>The name of a FUOTA task.</p>",
+      "refs": {
+        "CreateFuotaTaskRequest$Name": null,
+        "FuotaTask$Name": null,
+        "GetFuotaTaskResponse$Name": null,
+        "UpdateFuotaTaskRequest$Name": null
+      }
+    },
+    "FuotaTaskStatus": {
+      "base": "<p>The status of a FUOTA task.</p>",
+      "refs": {
+        "GetFuotaTaskResponse$Status": null
+      }
+    },
+    "GatewayEui": {
+      "base": null,
+      "refs": {
+        "LoRaWANGateway$GatewayEui": "<p>The gateway's EUI value.</p>",
+        "LoRaWANGatewayMetadata$GatewayEui": "<p>The gateway's EUI value.</p>"
+      }
+    },
+    "GenAppKey": {
+      "base": null,
+      "refs": {
+        "OtaaV1_0_x$GenAppKey": "<p>The GenAppKey value.</p>"
+      }
+    },
+    "GetDestinationRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetDestinationResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetDeviceProfileRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetDeviceProfileResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetFuotaTaskRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetFuotaTaskResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetLogLevelsByResourceTypesRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetLogLevelsByResourceTypesResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetMulticastGroupRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetMulticastGroupResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetMulticastGroupSessionRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetMulticastGroupSessionResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetNetworkAnalyzerConfigurationRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetNetworkAnalyzerConfigurationResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetPartnerAccountRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetPartnerAccountResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetResourceEventConfigurationRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetResourceEventConfigurationResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetResourceLogLevelRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetResourceLogLevelResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetServiceEndpointRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetServiceEndpointResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetServiceProfileRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetServiceProfileResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetWirelessDeviceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetWirelessDeviceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetWirelessDeviceStatisticsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetWirelessDeviceStatisticsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetWirelessGatewayCertificateRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetWirelessGatewayCertificateResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetWirelessGatewayFirmwareInformationRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetWirelessGatewayFirmwareInformationResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetWirelessGatewayRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetWirelessGatewayResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetWirelessGatewayStatisticsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetWirelessGatewayStatisticsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetWirelessGatewayTaskDefinitionRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetWirelessGatewayTaskDefinitionResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetWirelessGatewayTaskRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetWirelessGatewayTaskResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "HrAllowed": {
+      "base": null,
+      "refs": {
+        "LoRaWANGetServiceProfileInfo$HrAllowed": "<p>The HRAllowed value that describes whether handover roaming is allowed.</p>"
+      }
+    },
+    "ISODateTimeString": {
+      "base": null,
+      "refs": {
+        "DownlinkQueueMessage$ReceivedAt": "<p>The timestamp that Iot Wireless received the message.</p>",
+        "GetWirelessDeviceStatisticsResponse$LastUplinkReceivedAt": "<p>The date and time when the most recent uplink was received.</p>",
+        "GetWirelessGatewayStatisticsResponse$LastUplinkReceivedAt": "<p>The date and time when the most recent uplink was received.</p>",
+        "GetWirelessGatewayTaskResponse$LastUplinkReceivedAt": "<p>The date and time when the most recent uplink was received.</p>",
+        "GetWirelessGatewayTaskResponse$TaskCreatedAt": "<p>The date and time when the task was created.</p>",
+        "LoRaWANDeviceMetadata$Timestamp": "<p>The date and time of the metadata.</p>",
+        "WirelessDeviceStatistics$LastUplinkReceivedAt": "<p>The date and time when the most recent uplink was received.</p>",
+        "WirelessGatewayStatistics$LastUplinkReceivedAt": "<p>The date and time when the most recent uplink was received.</p>"
+      }
+    },
+    "Identifier": {
+      "base": null,
+      "refs": {
+        "GetResourceEventConfigurationRequest$Identifier": "<p>Resource identifier to opt in for event messaging.</p>",
+        "GetWirelessDeviceRequest$Identifier": "<p>The identifier of the wireless device to get.</p>",
+        "GetWirelessGatewayRequest$Identifier": "<p>The identifier of the wireless gateway to get.</p>",
+        "UpdateResourceEventConfigurationRequest$Identifier": "<p>Resource identifier to opt in for event messaging.</p>"
+      }
+    },
+    "IdentifierType": {
+      "base": null,
+      "refs": {
+        "GetResourceEventConfigurationRequest$IdentifierType": "<p>Identifier type of the particular resource identifier for event configuration.</p>",
+        "UpdateResourceEventConfigurationRequest$IdentifierType": "<p>Identifier type of the particular resource identifier for event configuration.</p>"
+      }
+    },
+    "Integer": {
+      "base": null,
+      "refs": {
+        "LoRaWANDeviceMetadata$FPort": "<p>The FPort value.</p>",
+        "LoRaWANDeviceMetadata$DataRate": "<p>The DataRate value.</p>",
+        "LoRaWANDeviceMetadata$Frequency": "<p>The device's channel frequency in Hz.</p>",
+        "SidewalkDeviceMetadata$Rssi": "<p>The RSSI value.</p>"
+      }
+    },
+    "InternalServerException": {
+      "base": "<p>An unexpected error occurred while processing a request.</p>",
+      "refs": {
+      }
+    },
+    "IotCertificateId": {
+      "base": null,
+      "refs": {
+        "AssociateWirelessGatewayWithCertificateRequest$IotCertificateId": "<p>The ID of the certificate to associate with the wireless gateway.</p>",
+        "AssociateWirelessGatewayWithCertificateResponse$IotCertificateId": "<p>The ID of the certificate associated with the wireless gateway.</p>",
+        "GetWirelessGatewayCertificateResponse$IotCertificateId": "<p>The ID of the certificate associated with the wireless gateway.</p>",
+        "GetWirelessGatewayCertificateResponse$LoRaWANNetworkServerCertificateId": "<p>The ID of the certificate that is associated with the wireless gateway and used for the LoRaWANNetworkServer endpoint.</p>"
+      }
+    },
+    "JoinEui": {
+      "base": null,
+      "refs": {
+        "JoinEuiRange$member": null,
+        "OtaaV1_1$JoinEui": "<p>The JoinEUI value.</p>"
+      }
+    },
+    "JoinEuiFilters": {
+      "base": "<p>A list of JoinEuiRange used by LoRa gateways to filter LoRa frames.</p>",
+      "refs": {
+        "LoRaWANGateway$JoinEuiFilters": null,
+        "UpdateWirelessGatewayRequest$JoinEuiFilters": null
+      }
+    },
+    "JoinEuiRange": {
+      "base": "<p>A pair of join EUI describing a range [BegEui, EndEui], both ends are inclusive.</p>",
+      "refs": {
+        "JoinEuiFilters$member": null
+      }
+    },
+    "ListDestinationsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListDestinationsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListDeviceProfilesRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListDeviceProfilesResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListFuotaTasksRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListFuotaTasksResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListMulticastGroupsByFuotaTaskRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListMulticastGroupsByFuotaTaskResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListMulticastGroupsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListMulticastGroupsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListPartnerAccountsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListPartnerAccountsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListQueuedMessagesRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListQueuedMessagesResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListServiceProfilesRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListServiceProfilesResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListTagsForResourceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListTagsForResourceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListWirelessDevicesRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListWirelessDevicesResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListWirelessGatewayTaskDefinitionsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListWirelessGatewayTaskDefinitionsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListWirelessGatewaysRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListWirelessGatewaysResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "LoRaWANDevice": {
+      "base": "<p>LoRaWAN object for create functions.</p>",
+      "refs": {
+        "CreateWirelessDeviceRequest$LoRaWAN": "<p>The device configuration information to use to create the wireless device.</p>",
+        "GetWirelessDeviceResponse$LoRaWAN": "<p>Information about the wireless device.</p>"
+      }
+    },
+    "LoRaWANDeviceMetadata": {
+      "base": "<p>LoRaWAN device metatdata.</p>",
+      "refs": {
+        "GetWirelessDeviceStatisticsResponse$LoRaWAN": "<p>Information about the wireless device's operations.</p>"
+      }
+    },
+    "LoRaWANDeviceProfile": {
+      "base": "<p>LoRaWANDeviceProfile object.</p>",
+      "refs": {
+        "CreateDeviceProfileRequest$LoRaWAN": "<p>The device profile information to use to create the device profile.</p>",
+        "GetDeviceProfileResponse$LoRaWAN": "<p>Information about the device profile.</p>"
+      }
+    },
+    "LoRaWANFuotaTask": {
+      "base": "<p>The LoRaWAN information used with a FUOTA task.</p>",
+      "refs": {
+        "CreateFuotaTaskRequest$LoRaWAN": null,
+        "UpdateFuotaTaskRequest$LoRaWAN": null
+      }
+    },
+    "LoRaWANFuotaTaskGetInfo": {
+      "base": "<p>The LoRaWAN information returned from getting a FUOTA task.</p>",
+      "refs": {
+        "GetFuotaTaskResponse$LoRaWAN": null
+      }
+    },
+    "LoRaWANGateway": {
+      "base": "<p>LoRaWANGateway object.</p>",
+      "refs": {
+        "CreateWirelessGatewayRequest$LoRaWAN": "<p>The gateway configuration information to use to create the wireless gateway.</p>",
+        "GetWirelessGatewayResponse$LoRaWAN": "<p>Information about the wireless gateway.</p>",
+        "WirelessGatewayStatistics$LoRaWAN": "<p>LoRaWAN gateway info.</p>"
+      }
+    },
+    "LoRaWANGatewayCurrentVersion": {
+      "base": "<p>LoRaWANGatewayCurrentVersion object.</p>",
+      "refs": {
+        "GetWirelessGatewayFirmwareInformationResponse$LoRaWAN": "<p>Information about the wireless gateway's firmware.</p>"
+      }
+    },
+    "LoRaWANGatewayMetadata": {
+      "base": "<p>LoRaWAN gateway metatdata.</p>",
+      "refs": {
+        "LoRaWANGatewayMetadataList$member": null
+      }
+    },
+    "LoRaWANGatewayMetadataList": {
+      "base": null,
+      "refs": {
+        "LoRaWANDeviceMetadata$Gateways": "<p>Information about the gateways accessed by the device.</p>"
+      }
+    },
+    "LoRaWANGatewayVersion": {
+      "base": "<p>LoRaWANGatewayVersion object.</p>",
+      "refs": {
+        "LoRaWANGatewayCurrentVersion$CurrentVersion": "<p>The version of the gateways that should receive the update.</p>",
+        "LoRaWANUpdateGatewayTaskCreate$CurrentVersion": "<p>The version of the gateways that should receive the update.</p>",
+        "LoRaWANUpdateGatewayTaskCreate$UpdateVersion": "<p>The firmware version to update the gateway to.</p>",
+        "LoRaWANUpdateGatewayTaskEntry$CurrentVersion": "<p>The version of the gateways that should receive the update.</p>",
+        "LoRaWANUpdateGatewayTaskEntry$UpdateVersion": "<p>The firmware version to update the gateway to.</p>"
+      }
+    },
+    "LoRaWANGetServiceProfileInfo": {
+      "base": "<p>LoRaWANGetServiceProfileInfo object.</p>",
+      "refs": {
+        "GetServiceProfileResponse$LoRaWAN": "<p>Information about the service profile.</p>"
+      }
+    },
+    "LoRaWANListDevice": {
+      "base": "<p>LoRaWAN object for list functions.</p>",
+      "refs": {
+        "WirelessDeviceStatistics$LoRaWAN": "<p>LoRaWAN device info.</p>"
+      }
+    },
+    "LoRaWANMulticast": {
+      "base": "<p>The LoRaWAN information that is to be used with the multicast group.</p>",
+      "refs": {
+        "CreateMulticastGroupRequest$LoRaWAN": null,
+        "UpdateMulticastGroupRequest$LoRaWAN": null
+      }
+    },
+    "LoRaWANMulticastGet": {
+      "base": "<p>The LoRaWAN information that is to be returned from getting multicast group information.</p>",
+      "refs": {
+        "GetMulticastGroupResponse$LoRaWAN": null
+      }
+    },
+    "LoRaWANMulticastMetadata": {
+      "base": "<p>The metadata information of the LoRaWAN multicast group.</p>",
+      "refs": {
+        "MulticastWirelessMetadata$LoRaWAN": null
+      }
+    },
+    "LoRaWANMulticastSession": {
+      "base": "<p>The LoRaWAN information used with the multicast session.</p>",
+      "refs": {
+        "GetMulticastGroupSessionResponse$LoRaWAN": null,
+        "StartMulticastGroupSessionRequest$LoRaWAN": null
+      }
+    },
+    "LoRaWANSendDataToDevice": {
+      "base": "<p>LoRaWAN router info.</p>",
+      "refs": {
+        "DownlinkQueueMessage$LoRaWAN": null,
+        "WirelessMetadata$LoRaWAN": "<p>LoRaWAN device info.</p>"
+      }
+    },
+    "LoRaWANServiceProfile": {
+      "base": "<p>LoRaWANServiceProfile object.</p>",
+      "refs": {
+        "CreateServiceProfileRequest$LoRaWAN": "<p>The service profile information to use to create the service profile.</p>"
+      }
+    },
+    "LoRaWANStartFuotaTask": {
+      "base": "<p>The LoRaWAN information used to start a FUOTA task.</p>",
+      "refs": {
+        "StartFuotaTaskRequest$LoRaWAN": null
+      }
+    },
+    "LoRaWANUpdateDevice": {
+      "base": "<p>LoRaWAN object for update functions.</p>",
+      "refs": {
+        "UpdateWirelessDeviceRequest$LoRaWAN": "<p>The updated wireless device's configuration.</p>"
+      }
+    },
+    "LoRaWANUpdateGatewayTaskCreate": {
+      "base": "<p>LoRaWANUpdateGatewayTaskCreate object.</p>",
+      "refs": {
+        "UpdateWirelessGatewayTaskCreate$LoRaWAN": "<p>The properties that relate to the LoRaWAN wireless gateway.</p>"
+      }
+    },
+    "LoRaWANUpdateGatewayTaskEntry": {
+      "base": "<p>LoRaWANUpdateGatewayTaskEntry object.</p>",
+      "refs": {
+        "UpdateWirelessGatewayTaskEntry$LoRaWAN": "<p>The properties that relate to the LoRaWAN wireless gateway.</p>"
+      }
+    },
+    "LogLevel": {
+      "base": "<p>The log level for a log message.</p>",
+      "refs": {
+        "GetLogLevelsByResourceTypesResponse$DefaultLogLevel": null,
+        "GetResourceLogLevelResponse$LogLevel": null,
+        "PutResourceLogLevelRequest$LogLevel": null,
+        "TraceContent$LogLevel": null,
+        "UpdateLogLevelsByResourceTypesRequest$DefaultLogLevel": null,
+        "WirelessDeviceEventLogOption$LogLevel": null,
+        "WirelessDeviceLogOption$LogLevel": null,
+        "WirelessGatewayEventLogOption$LogLevel": null,
+        "WirelessGatewayLogOption$LogLevel": null
+      }
+    },
+    "MacVersion": {
+      "base": null,
+      "refs": {
+        "LoRaWANDeviceProfile$MacVersion": "<p>The MAC version (such as OTAA 1.1 or OTAA 1.0.3) to use with this device profile.</p>"
+      }
+    },
+    "MaxDutyCycle": {
+      "base": null,
+      "refs": {
+        "LoRaWANDeviceProfile$MaxDutyCycle": "<p>The MaxDutyCycle value.</p>"
+      }
+    },
+    "MaxEirp": {
+      "base": null,
+      "refs": {
+        "LoRaWANDeviceProfile$MaxEirp": "<p>The MaxEIRP value.</p>"
+      }
+    },
+    "MaxResults": {
+      "base": "<p>The maximum number of results to return in this operation.</p>",
+      "refs": {
+        "ListDestinationsRequest$MaxResults": "<p>The maximum number of results to return in this operation.</p>",
+        "ListDeviceProfilesRequest$MaxResults": "<p>The maximum number of results to return in this operation.</p>",
+        "ListFuotaTasksRequest$MaxResults": null,
+        "ListMulticastGroupsByFuotaTaskRequest$MaxResults": null,
+        "ListMulticastGroupsRequest$MaxResults": null,
+        "ListPartnerAccountsRequest$MaxResults": "<p>The maximum number of results to return in this operation.</p>",
+        "ListQueuedMessagesRequest$MaxResults": "<p>The maximum number of results to return in this operation.</p>",
+        "ListServiceProfilesRequest$MaxResults": "<p>The maximum number of results to return in this operation.</p>",
+        "ListWirelessDevicesRequest$MaxResults": "<p>The maximum number of results to return in this operation.</p>",
+        "ListWirelessGatewayTaskDefinitionsRequest$MaxResults": "<p>The maximum number of results to return in this operation.</p>",
+        "ListWirelessGatewaysRequest$MaxResults": "<p>The maximum number of results to return in this operation.</p>"
+      }
+    },
+    "McGroupId": {
+      "base": "<p>Id of the multicast group.</p>",
+      "refs": {
+        "WirelessDeviceStatistics$McGroupId": null
+      }
+    },
+    "Message": {
+      "base": null,
+      "refs": {
+        "AccessDeniedException$Message": null,
+        "ConflictException$Message": null,
+        "InternalServerException$Message": null,
+        "ResourceNotFoundException$Message": null,
+        "ThrottlingException$Message": null,
+        "TooManyTagsException$Message": null,
+        "ValidationException$Message": null
+      }
+    },
+    "MessageId": {
+      "base": null,
+      "refs": {
+        "DeleteQueuedMessagesRequest$MessageId": "<p>if messageID==\"*\", the queue for a particular wireless deviceId will be purged, otherwise, the specific message with messageId will be deleted </p>",
+        "DownlinkQueueMessage$MessageId": "<p> The messageId allocated by IoT Wireless for tracing purpose</p>",
+        "SendDataToWirelessDeviceResponse$MessageId": "<p>The ID of the message sent to the wireless device.</p>"
+      }
+    },
+    "MessageType": {
+      "base": "<p>Sidewalk device message type. Default value is <code>CUSTOM_COMMAND_ID_NOTIFY</code>.</p>",
+      "refs": {
+        "SidewalkSendDataToDevice$MessageType": null
+      }
+    },
+    "MinGwDiversity": {
+      "base": null,
+      "refs": {
+        "LoRaWANGetServiceProfileInfo$MinGwDiversity": "<p>The MinGwDiversity value.</p>"
+      }
+    },
+    "Model": {
+      "base": null,
+      "refs": {
+        "LoRaWANGatewayVersion$Model": "<p>The model number of the wireless gateway.</p>"
+      }
+    },
+    "MulticastDeviceStatus": {
+      "base": null,
+      "refs": {
+        "WirelessDeviceStatistics$MulticastDeviceStatus": "<p>The status of the wireless device in the multicast group.</p>"
+      }
+    },
+    "MulticastGroup": {
+      "base": "<p>A multicast group.</p>",
+      "refs": {
+        "MulticastGroupList$member": null
+      }
+    },
+    "MulticastGroupArn": {
+      "base": "<p>The arn of the multicast group.</p>",
+      "refs": {
+        "CreateMulticastGroupResponse$Arn": null,
+        "GetMulticastGroupResponse$Arn": null,
+        "MulticastGroup$Arn": null
+      }
+    },
+    "MulticastGroupByFuotaTask": {
+      "base": "<p>A multicast group that is associated with a FUOTA task.</p>",
+      "refs": {
+        "MulticastGroupListByFuotaTask$member": null
+      }
+    },
+    "MulticastGroupId": {
+      "base": "<p>The ID of the multicast group.</p>",
+      "refs": {
+        "AssociateMulticastGroupWithFuotaTaskRequest$MulticastGroupId": null,
+        "AssociateWirelessDeviceWithMulticastGroupRequest$Id": null,
+        "CancelMulticastGroupSessionRequest$Id": null,
+        "CreateMulticastGroupResponse$Id": null,
+        "DeleteMulticastGroupRequest$Id": null,
+        "DisassociateMulticastGroupFromFuotaTaskRequest$MulticastGroupId": null,
+        "DisassociateWirelessDeviceFromMulticastGroupRequest$Id": null,
+        "GetMulticastGroupRequest$Id": null,
+        "GetMulticastGroupResponse$Id": null,
+        "GetMulticastGroupSessionRequest$Id": null,
+        "ListWirelessDevicesRequest$MulticastGroupId": null,
+        "MulticastGroup$Id": null,
+        "MulticastGroupByFuotaTask$Id": null,
+        "SendDataToMulticastGroupRequest$Id": null,
+        "StartBulkAssociateWirelessDeviceWithMulticastGroupRequest$Id": null,
+        "StartBulkDisassociateWirelessDeviceFromMulticastGroupRequest$Id": null,
+        "StartMulticastGroupSessionRequest$Id": null,
+        "UpdateMulticastGroupRequest$Id": null
+      }
+    },
+    "MulticastGroupList": {
+      "base": "<p>List of multicast groups.</p>",
+      "refs": {
+        "ListMulticastGroupsResponse$MulticastGroupList": null
+      }
+    },
+    "MulticastGroupListByFuotaTask": {
+      "base": "<p>List of multicast groups associated with a FUOTA task.</p>",
+      "refs": {
+        "ListMulticastGroupsByFuotaTaskResponse$MulticastGroupList": null
+      }
+    },
+    "MulticastGroupMessageId": {
+      "base": "<p>ID of a multicast group message.</p>",
+      "refs": {
+        "SendDataToMulticastGroupResponse$MessageId": null
+      }
+    },
+    "MulticastGroupName": {
+      "base": "<p>The name of the multicast group.</p>",
+      "refs": {
+        "CreateMulticastGroupRequest$Name": null,
+        "GetMulticastGroupResponse$Name": null,
+        "MulticastGroup$Name": null,
+        "UpdateMulticastGroupRequest$Name": null
+      }
+    },
+    "MulticastGroupStatus": {
+      "base": "<p>The status of the multicast group.</p>",
+      "refs": {
+        "GetMulticastGroupResponse$Status": null
+      }
+    },
+    "MulticastWirelessMetadata": {
+      "base": "<p>Wireless metadata that is to be sent to multicast group.</p>",
+      "refs": {
+        "SendDataToMulticastGroupRequest$WirelessMetadata": null
+      }
+    },
+    "NetId": {
+      "base": "<p>LoRaWAN network ID.</p>",
+      "refs": {
+        "NetIdFilters$member": null
+      }
+    },
+    "NetIdFilters": {
+      "base": "<p>A list of NetId values that are used by LoRa gateways to filter the uplink frames.</p>",
+      "refs": {
+        "LoRaWANGateway$NetIdFilters": null,
+        "UpdateWirelessGatewayRequest$NetIdFilters": null
+      }
+    },
+    "NetworkAnalyzerConfigurationName": {
+      "base": "<p>NetworkAnalyzer configuration name.</p>",
+      "refs": {
+        "GetNetworkAnalyzerConfigurationRequest$ConfigurationName": null,
+        "UpdateNetworkAnalyzerConfigurationRequest$ConfigurationName": null
+      }
+    },
+    "NextToken": {
+      "base": null,
+      "refs": {
+        "ListDestinationsRequest$NextToken": "<p>To retrieve the next set of results, the <code>nextToken</code> value from a previous response; otherwise <b>null</b> to receive the first set of results.</p>",
+        "ListDestinationsResponse$NextToken": "<p>The token to use to get the next set of results, or <b>null</b> if there are no additional results.</p>",
+        "ListDeviceProfilesRequest$NextToken": "<p>To retrieve the next set of results, the <code>nextToken</code> value from a previous response; otherwise <b>null</b> to receive the first set of results.</p>",
+        "ListDeviceProfilesResponse$NextToken": "<p>The token to use to get the next set of results, or <b>null</b> if there are no additional results.</p>",
+        "ListFuotaTasksRequest$NextToken": "<p>To retrieve the next set of results, the <code>nextToken</code> value from a previous response; otherwise <b>null</b> to receive the first set of results.</p>",
+        "ListFuotaTasksResponse$NextToken": "<p>To retrieve the next set of results, the <code>nextToken</code> value from a previous response; otherwise <b>null</b> to receive the first set of results.</p>",
+        "ListMulticastGroupsByFuotaTaskRequest$NextToken": "<p>To retrieve the next set of results, the <code>nextToken</code> value from a previous response; otherwise <b>null</b> to receive the first set of results.</p>",
+        "ListMulticastGroupsByFuotaTaskResponse$NextToken": "<p>To retrieve the next set of results, the <code>nextToken</code> value from a previous response; otherwise <b>null</b> to receive the first set of results.</p>",
+        "ListMulticastGroupsRequest$NextToken": "<p>To retrieve the next set of results, the <code>nextToken</code> value from a previous response; otherwise <b>null</b> to receive the first set of results.</p>",
+        "ListMulticastGroupsResponse$NextToken": "<p>To retrieve the next set of results, the <code>nextToken</code> value from a previous response; otherwise <b>null</b> to receive the first set of results.</p>",
+        "ListPartnerAccountsRequest$NextToken": "<p>To retrieve the next set of results, the <code>nextToken</code> value from a previous response; otherwise <b>null</b> to receive the first set of results.</p>",
+        "ListPartnerAccountsResponse$NextToken": "<p>The token to use to get the next set of results, or <b>null</b> if there are no additional results.</p>",
+        "ListQueuedMessagesRequest$NextToken": "<p>To retrieve the next set of results, the <code>nextToken</code> value from a previous response; otherwise <b>null</b> to receive the first set of results.</p>",
+        "ListQueuedMessagesResponse$NextToken": "<p>To retrieve the next set of results, the <code>nextToken</code> value from a previous response; otherwise <b>null</b> to receive the first set of results.</p>",
+        "ListServiceProfilesRequest$NextToken": "<p>To retrieve the next set of results, the <code>nextToken</code> value from a previous response; otherwise <b>null</b> to receive the first set of results.</p>",
+        "ListServiceProfilesResponse$NextToken": "<p>The token to use to get the next set of results, or <b>null</b> if there are no additional results.</p>",
+        "ListWirelessDevicesRequest$NextToken": "<p>To retrieve the next set of results, the <code>nextToken</code> value from a previous response; otherwise <b>null</b> to receive the first set of results.</p>",
+        "ListWirelessDevicesResponse$NextToken": "<p>The token to use to get the next set of results, or <b>null</b> if there are no additional results.</p>",
+        "ListWirelessGatewayTaskDefinitionsRequest$NextToken": "<p>To retrieve the next set of results, the <code>nextToken</code> value from a previous response; otherwise <b>null</b> to receive the first set of results.</p>",
+        "ListWirelessGatewayTaskDefinitionsResponse$NextToken": "<p>The token to use to get the next set of results, or <b>null</b> if there are no additional results.</p>",
+        "ListWirelessGatewaysRequest$NextToken": "<p>To retrieve the next set of results, the <code>nextToken</code> value from a previous response; otherwise <b>null</b> to receive the first set of results.</p>",
+        "ListWirelessGatewaysResponse$NextToken": "<p>The token to use to get the next set of results, or <b>null</b> if there are no additional results.</p>"
+      }
+    },
+    "NumberOfDevicesInGroup": {
+      "base": "<p>Number of devices that are associated to the multicast group.</p>",
+      "refs": {
+        "LoRaWANMulticastGet$NumberOfDevicesInGroup": null
+      }
+    },
+    "NumberOfDevicesRequested": {
+      "base": "<p>Number of devices that are requested to be associated with the multicast group.</p>",
+      "refs": {
+        "LoRaWANMulticastGet$NumberOfDevicesRequested": null
+      }
+    },
+    "NwkGeoLoc": {
+      "base": null,
+      "refs": {
+        "LoRaWANGetServiceProfileInfo$NwkGeoLoc": "<p>The NwkGeoLoc value.</p>"
+      }
+    },
+    "NwkKey": {
+      "base": null,
+      "refs": {
+        "OtaaV1_1$NwkKey": "<p>The NwkKey value.</p>"
+      }
+    },
+    "NwkSEncKey": {
+      "base": null,
+      "refs": {
+        "SessionKeysAbpV1_1$NwkSEncKey": "<p>The NwkSEncKey value.</p>"
+      }
+    },
+    "NwkSKey": {
+      "base": null,
+      "refs": {
+        "SessionKeysAbpV1_0_x$NwkSKey": "<p>The NwkSKey value.</p>"
+      }
+    },
+    "OtaaV1_0_x": {
+      "base": "<p>OTAA device object for v1.0.x</p>",
+      "refs": {
+        "LoRaWANDevice$OtaaV1_0_x": "<p>OTAA device object for create APIs for v1.0.x</p>"
+      }
+    },
+    "OtaaV1_1": {
+      "base": "<p>OTAA device object for v1.1</p>",
+      "refs": {
+        "LoRaWANDevice$OtaaV1_1": "<p>OTAA device object for v1.1 for create APIs</p>"
+      }
+    },
+    "PackageVersion": {
+      "base": null,
+      "refs": {
+        "LoRaWANGatewayVersion$PackageVersion": "<p>The version of the wireless gateway firmware.</p>"
+      }
+    },
+    "PartnerAccountArn": {
+      "base": null,
+      "refs": {
+        "AssociateAwsAccountWithPartnerAccountResponse$Arn": "<p>The Amazon Resource Name of the resource.</p>",
+        "SidewalkAccountInfoWithFingerprint$Arn": "<p>The Amazon Resource Name of the resource.</p>"
+      }
+    },
+    "PartnerAccountId": {
+      "base": null,
+      "refs": {
+        "DisassociateAwsAccountFromPartnerAccountRequest$PartnerAccountId": "<p>The partner account ID to disassociate from the AWS account.</p>",
+        "GetPartnerAccountRequest$PartnerAccountId": "<p>The partner account ID to disassociate from the AWS account.</p>",
+        "UpdatePartnerAccountRequest$PartnerAccountId": "<p>The ID of the partner account to update.</p>"
+      }
+    },
+    "PartnerType": {
+      "base": null,
+      "refs": {
+        "DisassociateAwsAccountFromPartnerAccountRequest$PartnerType": "<p>The partner type.</p>",
+        "GetPartnerAccountRequest$PartnerType": "<p>The partner type.</p>",
+        "UpdatePartnerAccountRequest$PartnerType": "<p>The partner type.</p>"
+      }
+    },
+    "PayloadData": {
+      "base": "<p>The binary to be sent to the end device, encoded in base64.</p>",
+      "refs": {
+        "SendDataToMulticastGroupRequest$PayloadData": null,
+        "SendDataToWirelessDeviceRequest$PayloadData": null
+      }
+    },
+    "PingSlotDr": {
+      "base": null,
+      "refs": {
+        "LoRaWANDeviceProfile$PingSlotDr": "<p>The PingSlotDR value.</p>"
+      }
+    },
+    "PingSlotFreq": {
+      "base": null,
+      "refs": {
+        "LoRaWANDeviceProfile$PingSlotFreq": "<p>The PingSlotFreq value.</p>"
+      }
+    },
+    "PingSlotPeriod": {
+      "base": null,
+      "refs": {
+        "LoRaWANDeviceProfile$PingSlotPeriod": "<p>The PingSlotPeriod value.</p>"
+      }
+    },
+    "PrAllowed": {
+      "base": null,
+      "refs": {
+        "LoRaWANGetServiceProfileInfo$PrAllowed": "<p>The PRAllowed value that describes whether passive roaming is allowed.</p>"
+      }
+    },
+    "PresetFreq": {
+      "base": null,
+      "refs": {
+        "FactoryPresetFreqsList$member": null
+      }
+    },
+    "ProximityEventConfiguration": {
+      "base": "<p>Proximity event configuration object for enabling and disabling relevant topics.</p>",
+      "refs": {
+        "GetResourceEventConfigurationResponse$Proximity": "<p>Event configuration for the Proximity event</p>",
+        "UpdateResourceEventConfigurationRequest$Proximity": "<p>Event configuration for the Proximity event</p>"
+      }
+    },
+    "PutResourceLogLevelRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "PutResourceLogLevelResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "QueryString": {
+      "base": "<p>Query string used to search for wireless devices as part of the bulk associate and disassociate process.</p>",
+      "refs": {
+        "StartBulkAssociateWirelessDeviceWithMulticastGroupRequest$QueryString": null,
+        "StartBulkDisassociateWirelessDeviceFromMulticastGroupRequest$QueryString": null
+      }
+    },
+    "RaAllowed": {
+      "base": null,
+      "refs": {
+        "LoRaWANGetServiceProfileInfo$RaAllowed": "<p>The RAAllowed value that describes whether roaming activation is allowed.</p>"
+      }
+    },
+    "RegParamsRevision": {
+      "base": null,
+      "refs": {
+        "LoRaWANDeviceProfile$RegParamsRevision": "<p>The version of regional parameters.</p>"
+      }
+    },
+    "ReportDevStatusBattery": {
+      "base": null,
+      "refs": {
+        "LoRaWANGetServiceProfileInfo$ReportDevStatusBattery": "<p>The ReportDevStatusBattery value.</p>"
+      }
+    },
+    "ReportDevStatusMargin": {
+      "base": null,
+      "refs": {
+        "LoRaWANGetServiceProfileInfo$ReportDevStatusMargin": "<p>The ReportDevStatusMargin value.</p>"
+      }
+    },
+    "ResetAllResourceLogLevelsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ResetAllResourceLogLevelsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ResetResourceLogLevelRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ResetResourceLogLevelResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ResourceId": {
+      "base": null,
+      "refs": {
+        "ConflictException$ResourceId": "<p>Id of the resource in the conflicting operation.</p>",
+        "ResourceNotFoundException$ResourceId": "<p>Id of the not found resource.</p>"
+      }
+    },
+    "ResourceIdentifier": {
+      "base": "<p>The identifier of the resource. For a Wireless Device, it is the wireless device ID. For a wireless gateway, it is the wireless gateway ID.</p>",
+      "refs": {
+        "GetResourceLogLevelRequest$ResourceIdentifier": null,
+        "PutResourceLogLevelRequest$ResourceIdentifier": null,
+        "ResetResourceLogLevelRequest$ResourceIdentifier": null
+      }
+    },
+    "ResourceNotFoundException": {
+      "base": "<p>Resource does not exist.</p>",
+      "refs": {
+      }
+    },
+    "ResourceType": {
+      "base": null,
+      "refs": {
+        "ConflictException$ResourceType": "<p>Type of the resource in the conflicting operation.</p>",
+        "GetResourceLogLevelRequest$ResourceType": "<p>The type of the resource, which can be <code>WirelessDevice</code> or <code>WirelessGateway</code>.</p>",
+        "PutResourceLogLevelRequest$ResourceType": "<p>The type of the resource, which can be <code>WirelessDevice</code> or <code>WirelessGateway</code>.</p>",
+        "ResetResourceLogLevelRequest$ResourceType": "<p>The type of the resource, which can be <code>WirelessDevice</code> or <code>WirelessGateway</code>.</p>",
+        "ResourceNotFoundException$ResourceType": "<p>Type of the font found resource.</p>"
+      }
+    },
+    "Result": {
+      "base": null,
+      "refs": {
+        "TestWirelessDeviceResponse$Result": "<p>The result returned by the test.</p>"
+      }
+    },
+    "RfRegion": {
+      "base": "<p>The frequency band (RFRegion) value.</p>",
+      "refs": {
+        "LoRaWANDeviceProfile$RfRegion": "<p>The frequency band (RFRegion) value.</p>",
+        "LoRaWANFuotaTaskGetInfo$RfRegion": null,
+        "LoRaWANGateway$RfRegion": "<p>The frequency band (RFRegion) value.</p>"
+      }
+    },
+    "RoleArn": {
+      "base": null,
+      "refs": {
+        "CreateDestinationRequest$RoleArn": "<p>The ARN of the IAM Role that authorizes the destination.</p>",
+        "Destinations$RoleArn": "<p>The ARN of the IAM Role that authorizes the destination.</p>",
+        "GetDestinationResponse$RoleArn": "<p>The ARN of the IAM Role that authorizes the destination.</p>",
+        "UpdateDestinationRequest$RoleArn": "<p>The ARN of the IAM Role that authorizes the destination.</p>"
+      }
+    },
+    "RxDataRate2": {
+      "base": null,
+      "refs": {
+        "LoRaWANDeviceProfile$RxDataRate2": "<p>The RXDataRate2 value.</p>"
+      }
+    },
+    "RxDelay1": {
+      "base": null,
+      "refs": {
+        "LoRaWANDeviceProfile$RxDelay1": "<p>The RXDelay1 value.</p>"
+      }
+    },
+    "RxDrOffset1": {
+      "base": null,
+      "refs": {
+        "LoRaWANDeviceProfile$RxDrOffset1": "<p>The RXDROffset1 value.</p>"
+      }
+    },
+    "RxFreq2": {
+      "base": null,
+      "refs": {
+        "LoRaWANDeviceProfile$RxFreq2": "<p>The RXFreq2 value.</p>"
+      }
+    },
+    "SNwkSIntKey": {
+      "base": null,
+      "refs": {
+        "SessionKeysAbpV1_1$SNwkSIntKey": "<p>The SNwkSIntKey value.</p>"
+      }
+    },
+    "SendDataToMulticastGroupRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "SendDataToMulticastGroupResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "SendDataToWirelessDeviceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "SendDataToWirelessDeviceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "Seq": {
+      "base": null,
+      "refs": {
+        "SidewalkSendDataToDevice$Seq": "<p>The sequence number.</p>"
+      }
+    },
+    "ServiceProfile": {
+      "base": "<p>Information about a service profile.</p>",
+      "refs": {
+        "ServiceProfileList$member": null
+      }
+    },
+    "ServiceProfileArn": {
+      "base": null,
+      "refs": {
+        "CreateServiceProfileResponse$Arn": "<p>The Amazon Resource Name of the new resource.</p>",
+        "GetServiceProfileResponse$Arn": "<p>The Amazon Resource Name of the resource.</p>",
+        "ServiceProfile$Arn": "<p>The Amazon Resource Name of the resource.</p>"
+      }
+    },
+    "ServiceProfileId": {
+      "base": null,
+      "refs": {
+        "CreateServiceProfileResponse$Id": "<p>The ID of the new service profile.</p>",
+        "DeleteServiceProfileRequest$Id": "<p>The ID of the resource to delete.</p>",
+        "GetServiceProfileRequest$Id": "<p>The ID of the resource to get.</p>",
+        "GetServiceProfileResponse$Id": "<p>The ID of the service profile.</p>",
+        "ListWirelessDevicesRequest$ServiceProfileId": "<p>A filter to list only the wireless devices that use this service profile.</p>",
+        "LoRaWANDevice$ServiceProfileId": "<p>The ID of the service profile.</p>",
+        "LoRaWANUpdateDevice$ServiceProfileId": "<p>The ID of the service profile.</p>",
+        "ServiceProfile$Id": "<p>The ID of the service profile.</p>"
+      }
+    },
+    "ServiceProfileList": {
+      "base": null,
+      "refs": {
+        "ListServiceProfilesResponse$ServiceProfileList": "<p>The list of service profiles.</p>"
+      }
+    },
+    "ServiceProfileName": {
+      "base": null,
+      "refs": {
+        "CreateServiceProfileRequest$Name": "<p>The name of the new resource.</p>",
+        "GetServiceProfileResponse$Name": "<p>The name of the resource.</p>",
+        "ServiceProfile$Name": "<p>The name of the resource.</p>"
+      }
+    },
+    "SessionKeysAbpV1_0_x": {
+      "base": "<p>Session keys for ABP v1.1</p>",
+      "refs": {
+        "AbpV1_0_x$SessionKeys": "<p>Session keys for ABP v1.0.x</p>"
+      }
+    },
+    "SessionKeysAbpV1_1": {
+      "base": "<p>Session keys for ABP v1.1</p>",
+      "refs": {
+        "AbpV1_1$SessionKeys": "<p>Session keys for ABP v1.1</p>"
+      }
+    },
+    "SessionStartTimeTimestamp": {
+      "base": "<p>Timestamp of when the multicast group session is to start.</p>",
+      "refs": {
+        "LoRaWANMulticastSession$SessionStartTime": null
+      }
+    },
+    "SessionTimeout": {
+      "base": "<p>How long before a multicast group session is to timeout.</p>",
+      "refs": {
+        "LoRaWANMulticastSession$SessionTimeout": null
+      }
+    },
+    "SidewalkAccountInfo": {
+      "base": "<p>Information about a Sidewalk account.</p>",
+      "refs": {
+        "AssociateAwsAccountWithPartnerAccountRequest$Sidewalk": "<p>The Sidewalk account credentials.</p>",
+        "AssociateAwsAccountWithPartnerAccountResponse$Sidewalk": "<p>The Sidewalk account credentials.</p>"
+      }
+    },
+    "SidewalkAccountInfoWithFingerprint": {
+      "base": "<p>Information about a Sidewalk account.</p>",
+      "refs": {
+        "GetPartnerAccountResponse$Sidewalk": "<p>The Sidewalk account credentials.</p>",
+        "SidewalkAccountList$member": null
+      }
+    },
+    "SidewalkAccountList": {
+      "base": null,
+      "refs": {
+        "ListPartnerAccountsResponse$Sidewalk": "<p>The Sidewalk account credentials.</p>"
+      }
+    },
+    "SidewalkDevice": {
+      "base": "<p>Sidewalk device object.</p>",
+      "refs": {
+        "GetWirelessDeviceResponse$Sidewalk": "<p>Sidewalk device object.</p>"
+      }
+    },
+    "SidewalkDeviceMetadata": {
+      "base": "<p>MetaData for Sidewalk device.</p>",
+      "refs": {
+        "GetWirelessDeviceStatisticsResponse$Sidewalk": "<p>MetaData for Sidewalk device.</p>"
+      }
+    },
+    "SidewalkEventNotificationConfigurations": {
+      "base": "<p> SidewalkEventNotificationConfigurations object Event configuration object for Sidewalk related event topics.</p>",
+      "refs": {
+        "DeviceRegistrationStateEventConfiguration$Sidewalk": "<p>Device registration state event configuration object for enabling or disabling Sidewalk related event topics.</p>",
+        "ProximityEventConfiguration$Sidewalk": "<p>Proximity event configuration object for enabling or disabling Sidewalk related event topics.</p>"
+      }
+    },
+    "SidewalkId": {
+      "base": "<p>The sidewalk device identification.</p>",
+      "refs": {
+        "SidewalkDevice$SidewalkId": "<p>The sidewalk device identification.</p>",
+        "SidewalkListDevice$SidewalkId": "<p>The sidewalk device identification.</p>"
+      }
+    },
+    "SidewalkListDevice": {
+      "base": "<p>Sidewalk object used by list functions.</p>",
+      "refs": {
+        "WirelessDeviceStatistics$Sidewalk": "<p>The Sidewalk account credentials.</p>"
+      }
+    },
+    "SidewalkManufacturingSn": {
+      "base": null,
+      "refs": {
+        "SidewalkDevice$SidewalkManufacturingSn": "<p>The Sidewalk manufacturing series number.</p>",
+        "SidewalkListDevice$SidewalkManufacturingSn": "<p>The Sidewalk manufacturing series number.</p>"
+      }
+    },
+    "SidewalkSendDataToDevice": {
+      "base": "<p>Information about a Sidewalk router.</p>",
+      "refs": {
+        "WirelessMetadata$Sidewalk": "<p>The Sidewalk account credentials.</p>"
+      }
+    },
+    "SidewalkUpdateAccount": {
+      "base": "<p>Sidewalk update.</p>",
+      "refs": {
+        "UpdatePartnerAccountRequest$Sidewalk": "<p>The Sidewalk account credentials.</p>"
+      }
+    },
+    "SigningAlg": {
+      "base": "<p>The certificate chain algorithm provided by sidewalk.</p>",
+      "refs": {
+        "CertificateList$SigningAlg": "<p>The certificate chain algorithm provided by sidewalk.</p>"
+      }
+    },
+    "StartBulkAssociateWirelessDeviceWithMulticastGroupRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "StartBulkAssociateWirelessDeviceWithMulticastGroupResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "StartBulkDisassociateWirelessDeviceFromMulticastGroupRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "StartBulkDisassociateWirelessDeviceFromMulticastGroupResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "StartFuotaTaskRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "StartFuotaTaskResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "StartMulticastGroupSessionRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "StartMulticastGroupSessionResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "StartTime": {
+      "base": "<p>Start time of a FUOTA task.</p>",
+      "refs": {
+        "LoRaWANFuotaTaskGetInfo$StartTime": null,
+        "LoRaWANStartFuotaTask$StartTime": null
+      }
+    },
+    "Station": {
+      "base": null,
+      "refs": {
+        "LoRaWANGatewayVersion$Station": "<p>The basic station version of the wireless gateway.</p>"
+      }
+    },
+    "SubBand": {
+      "base": "<p>A subset of supported frequency channels in a certain RFRegion.</p>",
+      "refs": {
+        "SubBands$member": null
+      }
+    },
+    "SubBands": {
+      "base": "<p>A list of integer indicating which sub bands are supported by LoRa gateway.</p>",
+      "refs": {
+        "LoRaWANGateway$SubBands": null
+      }
+    },
+    "SupportedRfRegion": {
+      "base": "<p>Supported RfRegions</p>",
+      "refs": {
+        "LoRaWANFuotaTask$RfRegion": null,
+        "LoRaWANMulticast$RfRegion": null,
+        "LoRaWANMulticastGet$RfRegion": null
+      }
+    },
+    "Supports32BitFCnt": {
+      "base": null,
+      "refs": {
+        "LoRaWANDeviceProfile$Supports32BitFCnt": "<p>The Supports32BitFCnt value.</p>"
+      }
+    },
+    "SupportsClassB": {
+      "base": null,
+      "refs": {
+        "LoRaWANDeviceProfile$SupportsClassB": "<p>The SupportsClassB value.</p>"
+      }
+    },
+    "SupportsClassC": {
+      "base": null,
+      "refs": {
+        "LoRaWANDeviceProfile$SupportsClassC": "<p>The SupportsClassC value.</p>"
+      }
+    },
+    "SupportsJoin": {
+      "base": null,
+      "refs": {
+        "LoRaWANDeviceProfile$SupportsJoin": "<p>The SupportsJoin value.</p>"
+      }
+    },
+    "Tag": {
+      "base": "<p>A simple label consisting of a customer-defined key-value pair</p>",
+      "refs": {
+        "TagList$member": null
+      }
+    },
+    "TagKey": {
+      "base": null,
+      "refs": {
+        "Tag$Key": "<p>The tag's key value.</p>",
+        "TagKeyList$member": null
+      }
+    },
+    "TagKeyList": {
+      "base": null,
+      "refs": {
+        "UntagResourceRequest$TagKeys": "<p>A list of the keys of the tags to remove from the resource.</p>"
+      }
+    },
+    "TagList": {
+      "base": "<p>The tag to attach to the specified resource. Tags are metadata that you can use to manage a resource.</p>",
+      "refs": {
+        "AssociateAwsAccountWithPartnerAccountRequest$Tags": "<p>The tags to attach to the specified resource. Tags are metadata that you can use to manage a resource.</p>",
+        "CreateDestinationRequest$Tags": "<p>The tags to attach to the new destination. Tags are metadata that you can use to manage a resource.</p>",
+        "CreateDeviceProfileRequest$Tags": "<p>The tags to attach to the new device profile. Tags are metadata that you can use to manage a resource.</p>",
+        "CreateFuotaTaskRequest$Tags": null,
+        "CreateMulticastGroupRequest$Tags": null,
+        "CreateServiceProfileRequest$Tags": "<p>The tags to attach to the new service profile. Tags are metadata that you can use to manage a resource.</p>",
+        "CreateWirelessDeviceRequest$Tags": "<p>The tags to attach to the new wireless device. Tags are metadata that you can use to manage a resource.</p>",
+        "CreateWirelessGatewayRequest$Tags": "<p>The tags to attach to the new wireless gateway. Tags are metadata that you can use to manage a resource.</p>",
+        "CreateWirelessGatewayTaskDefinitionRequest$Tags": "<p>The tags to attach to the specified resource. Tags are metadata that you can use to manage a resource.</p>",
+        "ListTagsForResourceResponse$Tags": "<p>The tags to attach to the specified resource. Tags are metadata that you can use to manage a resource.</p>",
+        "StartBulkAssociateWirelessDeviceWithMulticastGroupRequest$Tags": null,
+        "StartBulkDisassociateWirelessDeviceFromMulticastGroupRequest$Tags": null,
+        "TagResourceRequest$Tags": "<p>Adds to or modifies the tags of the given resource. Tags are metadata that you can use to manage a resource.</p>"
+      }
+    },
+    "TagResourceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "TagResourceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "TagValue": {
+      "base": null,
+      "refs": {
+        "Tag$Value": "<p>The tag's value.</p>"
+      }
+    },
+    "TargetPer": {
+      "base": null,
+      "refs": {
+        "LoRaWANGetServiceProfileInfo$TargetPer": "<p>The TargetPER value.</p>"
+      }
+    },
+    "TestWirelessDeviceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "TestWirelessDeviceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ThingArn": {
+      "base": null,
+      "refs": {
+        "AssociateWirelessDeviceWithThingRequest$ThingArn": "<p>The ARN of the thing to associate with the wireless device.</p>",
+        "AssociateWirelessGatewayWithThingRequest$ThingArn": "<p>The ARN of the thing to associate with the wireless gateway.</p>",
+        "GetWirelessDeviceResponse$ThingArn": "<p>The ARN of the thing associated with the wireless device.</p>",
+        "GetWirelessGatewayResponse$ThingArn": "<p>The ARN of the thing associated with the wireless gateway.</p>"
+      }
+    },
+    "ThingName": {
+      "base": null,
+      "refs": {
+        "GetWirelessDeviceResponse$ThingName": "<p>The name of the thing associated with the wireless device. The value is empty if a thing isn't associated with the device.</p>",
+        "GetWirelessGatewayResponse$ThingName": "<p>The name of the thing associated with the wireless gateway. The value is empty if a thing isn't associated with the gateway.</p>"
+      }
+    },
+    "ThrottlingException": {
+      "base": "<p>The request was denied because it exceeded the allowed API request rate.</p>",
+      "refs": {
+      }
+    },
+    "TooManyTagsException": {
+      "base": "<p>The request was denied because the resource can't have any more tags.</p>",
+      "refs": {
+      }
+    },
+    "TraceContent": {
+      "base": "<p>Trace Content for resources.</p>",
+      "refs": {
+        "GetNetworkAnalyzerConfigurationResponse$TraceContent": null,
+        "UpdateNetworkAnalyzerConfigurationRequest$TraceContent": null
+      }
+    },
+    "TransmitMode": {
+      "base": null,
+      "refs": {
+        "DownlinkQueueMessage$TransmitMode": "<p>The transmit mode to use to send data to the wireless device. Can be: <code>0</code> for UM (unacknowledge mode) or <code>1</code> for AM (acknowledge mode).</p>",
+        "SendDataToWirelessDeviceRequest$TransmitMode": "<p>The transmit mode to use to send data to the wireless device. Can be: <code>0</code> for UM (unacknowledge mode) or <code>1</code> for AM (acknowledge mode).</p>"
+      }
+    },
+    "UlBucketSize": {
+      "base": null,
+      "refs": {
+        "LoRaWANGetServiceProfileInfo$UlBucketSize": "<p>The ULBucketSize value.</p>"
+      }
+    },
+    "UlRate": {
+      "base": null,
+      "refs": {
+        "LoRaWANGetServiceProfileInfo$UlRate": "<p>The ULRate value.</p>"
+      }
+    },
+    "UlRatePolicy": {
+      "base": null,
+      "refs": {
+        "LoRaWANGetServiceProfileInfo$UlRatePolicy": "<p>The ULRatePolicy value.</p>"
+      }
+    },
+    "UntagResourceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UntagResourceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateDataSource": {
+      "base": null,
+      "refs": {
+        "UpdateWirelessGatewayTaskCreate$UpdateDataSource": "<p>The link to the S3 bucket.</p>",
+        "UpdateWirelessGatewayTaskCreate$UpdateDataRole": "<p>The IAM role used to read data from the S3 bucket.</p>"
+      }
+    },
+    "UpdateDestinationRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateDestinationResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateFuotaTaskRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateFuotaTaskResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateLogLevelsByResourceTypesRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateLogLevelsByResourceTypesResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateMulticastGroupRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateMulticastGroupResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateNetworkAnalyzerConfigurationRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateNetworkAnalyzerConfigurationResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdatePartnerAccountRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdatePartnerAccountResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateResourceEventConfigurationRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateResourceEventConfigurationResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateSignature": {
+      "base": null,
+      "refs": {
+        "LoRaWANUpdateGatewayTaskCreate$UpdateSignature": "<p>The signature used to verify the update firmware.</p>"
+      }
+    },
+    "UpdateWirelessDeviceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateWirelessDeviceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateWirelessGatewayRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateWirelessGatewayResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateWirelessGatewayTaskCreate": {
+      "base": "<p>UpdateWirelessGatewayTaskCreate object.</p>",
+      "refs": {
+        "CreateWirelessGatewayTaskDefinitionRequest$Update": "<p>Information about the gateways to update.</p>",
+        "GetWirelessGatewayTaskDefinitionResponse$Update": "<p>Information about the gateways to update.</p>"
+      }
+    },
+    "UpdateWirelessGatewayTaskEntry": {
+      "base": "<p>UpdateWirelessGatewayTaskEntry object.</p>",
+      "refs": {
+        "WirelessGatewayTaskDefinitionList$member": null
+      }
+    },
+    "ValidationException": {
+      "base": "<p>The input did not meet the specified constraints.</p>",
+      "refs": {
+      }
+    },
+    "WirelessDeviceArn": {
+      "base": null,
+      "refs": {
+        "CreateWirelessDeviceResponse$Arn": "<p>The Amazon Resource Name of the new resource.</p>",
+        "GetWirelessDeviceResponse$Arn": "<p>The Amazon Resource Name of the resource.</p>",
+        "WirelessDeviceStatistics$Arn": "<p>The Amazon Resource Name of the resource.</p>"
+      }
+    },
+    "WirelessDeviceEvent": {
+      "base": "<p>The event for a log message, if the log message is tied to a wireless device.</p>",
+      "refs": {
+        "WirelessDeviceEventLogOption$Event": null
+      }
+    },
+    "WirelessDeviceEventLogOption": {
+      "base": "<p>The log options for a wireless device event and can be used to set log levels for a specific wireless device event.</p> <p>For a LoRaWAN device, possible events for a log messsage are: <code>Join</code>, <code>Rejoin</code>, <code>Downlink_Data</code>, and <code>Uplink_Data</code>. For a Sidewalk device, possible events for a log message are <code>Registration</code>, <code>Downlink_Data</code>, and <code>Uplink_Data</code>.</p>",
+      "refs": {
+        "WirelessDeviceEventLogOptionList$member": null
+      }
+    },
+    "WirelessDeviceEventLogOptionList": {
+      "base": "<p>The list of wireless device event log options.</p>",
+      "refs": {
+        "WirelessDeviceLogOption$Events": null
+      }
+    },
+    "WirelessDeviceFrameInfo": {
+      "base": "<p>WirelessDevice FrameInfo for trace content.</p>",
+      "refs": {
+        "TraceContent$WirelessDeviceFrameInfo": null
+      }
+    },
+    "WirelessDeviceId": {
+      "base": "<p>The ID of the wireless device.</p>",
+      "refs": {
+        "AssociateWirelessDeviceWithFuotaTaskRequest$WirelessDeviceId": null,
+        "AssociateWirelessDeviceWithMulticastGroupRequest$WirelessDeviceId": null,
+        "AssociateWirelessDeviceWithThingRequest$Id": "<p>The ID of the resource to update.</p>",
+        "CreateWirelessDeviceResponse$Id": "<p>The ID of the new wireless device.</p>",
+        "CreateWirelessGatewayResponse$Id": "<p>The ID of the new wireless gateway.</p>",
+        "DeleteQueuedMessagesRequest$Id": "<p>Id of a given wireless device which messages will be deleted </p>",
+        "DeleteWirelessDeviceRequest$Id": "<p>The ID of the resource to delete.</p>",
+        "DisassociateWirelessDeviceFromFuotaTaskRequest$WirelessDeviceId": null,
+        "DisassociateWirelessDeviceFromMulticastGroupRequest$WirelessDeviceId": null,
+        "DisassociateWirelessDeviceFromThingRequest$Id": "<p>The ID of the resource to update.</p>",
+        "GetWirelessDeviceResponse$Id": "<p>The ID of the wireless device.</p>",
+        "GetWirelessDeviceStatisticsRequest$WirelessDeviceId": "<p>The ID of the wireless device for which to get the data.</p>",
+        "GetWirelessDeviceStatisticsResponse$WirelessDeviceId": "<p>The ID of the wireless device.</p>",
+        "ListQueuedMessagesRequest$Id": "<p>Id of a given wireless device which the downlink packets are targeted </p>",
+        "SendDataToWirelessDeviceRequest$Id": "<p>The ID of the wireless device to receive the data.</p>",
+        "TestWirelessDeviceRequest$Id": "<p>The ID of the wireless device to test.</p>",
+        "UpdateWirelessDeviceRequest$Id": "<p>The ID of the resource to update.</p>",
+        "WirelessDeviceList$member": null,
+        "WirelessDeviceStatistics$Id": "<p>The ID of the wireless device reporting the data.</p>"
+      }
+    },
+    "WirelessDeviceIdType": {
+      "base": null,
+      "refs": {
+        "GetWirelessDeviceRequest$IdentifierType": "<p>The type of identifier used in <code>identifier</code>.</p>"
+      }
+    },
+    "WirelessDeviceList": {
+      "base": null,
+      "refs": {
+        "GetNetworkAnalyzerConfigurationResponse$WirelessDevices": "<p>List of WirelessDevices in the NetworkAnalyzerConfiguration.</p>",
+        "UpdateNetworkAnalyzerConfigurationRequest$WirelessDevicesToAdd": "<p>WirelessDevices to add into NetworkAnalyzerConfiguration.</p>",
+        "UpdateNetworkAnalyzerConfigurationRequest$WirelessDevicesToRemove": "<p>WirelessDevices to remove from NetworkAnalyzerConfiguration.</p>"
+      }
+    },
+    "WirelessDeviceLogOption": {
+      "base": "<p>The log options for wireless devices and can be used to set log levels for a specific type of wireless device.</p>",
+      "refs": {
+        "WirelessDeviceLogOptionList$member": null
+      }
+    },
+    "WirelessDeviceLogOptionList": {
+      "base": "<p>The list of wireless device log options.</p>",
+      "refs": {
+        "GetLogLevelsByResourceTypesResponse$WirelessDeviceLogOptions": null,
+        "UpdateLogLevelsByResourceTypesRequest$WirelessDeviceLogOptions": null
+      }
+    },
+    "WirelessDeviceName": {
+      "base": null,
+      "refs": {
+        "CreateWirelessDeviceRequest$Name": "<p>The name of the new resource.</p>",
+        "GetWirelessDeviceResponse$Name": "<p>The name of the resource.</p>",
+        "UpdateWirelessDeviceRequest$Name": "<p>The new name of the resource.</p>",
+        "WirelessDeviceStatistics$Name": "<p>The name of the resource.</p>"
+      }
+    },
+    "WirelessDeviceStatistics": {
+      "base": "<p>Information about a wireless device's operation.</p>",
+      "refs": {
+        "WirelessDeviceStatisticsList$member": null
+      }
+    },
+    "WirelessDeviceStatisticsList": {
+      "base": null,
+      "refs": {
+        "ListWirelessDevicesResponse$WirelessDeviceList": "<p>The ID of the wireless device.</p>"
+      }
+    },
+    "WirelessDeviceType": {
+      "base": null,
+      "refs": {
+        "CreateWirelessDeviceRequest$Type": "<p>The wireless device type.</p>",
+        "DeleteQueuedMessagesRequest$WirelessDeviceType": "<p>The wireless device type, it is either Sidewalk or LoRaWAN. </p>",
+        "GetWirelessDeviceResponse$Type": "<p>The wireless device type.</p>",
+        "ListQueuedMessagesRequest$WirelessDeviceType": "<p>The wireless device type, it is either Sidewalk or LoRaWAN.</p>",
+        "ListWirelessDevicesRequest$WirelessDeviceType": "<p>A filter to list only the wireless devices that use this wireless device type.</p>",
+        "WirelessDeviceLogOption$Type": "<p>The wireless device type.</p>",
+        "WirelessDeviceStatistics$Type": "<p>The wireless device type.</p>"
+      }
+    },
+    "WirelessGatewayArn": {
+      "base": null,
+      "refs": {
+        "CreateWirelessGatewayResponse$Arn": "<p>The Amazon Resource Name of the new resource.</p>",
+        "GetWirelessGatewayResponse$Arn": "<p>The Amazon Resource Name of the resource.</p>",
+        "WirelessGatewayStatistics$Arn": "<p>The Amazon Resource Name of the resource.</p>"
+      }
+    },
+    "WirelessGatewayEvent": {
+      "base": "<p>The event for a log message, if the log message is tied to a wireless gateway.</p>",
+      "refs": {
+        "WirelessGatewayEventLogOption$Event": null
+      }
+    },
+    "WirelessGatewayEventLogOption": {
+      "base": "<p>The log options for a wireless gateway event and can be used to set log levels for a specific wireless gateway event.</p> <p>For a LoRaWAN gateway, possible events for a log message are <code>CUPS_Request</code> and <code>Certificate</code>.</p>",
+      "refs": {
+        "WirelessGatewayEventLogOptionList$member": null
+      }
+    },
+    "WirelessGatewayEventLogOptionList": {
+      "base": "<p>The list of wireless gateway event log options.</p>",
+      "refs": {
+        "WirelessGatewayLogOption$Events": null
+      }
+    },
+    "WirelessGatewayId": {
+      "base": null,
+      "refs": {
+        "AssociateWirelessGatewayWithCertificateRequest$Id": "<p>The ID of the resource to update.</p>",
+        "AssociateWirelessGatewayWithThingRequest$Id": "<p>The ID of the resource to update.</p>",
+        "CreateWirelessGatewayTaskRequest$Id": "<p>The ID of the resource to update.</p>",
+        "DeleteWirelessGatewayRequest$Id": "<p>The ID of the resource to delete.</p>",
+        "DeleteWirelessGatewayTaskRequest$Id": "<p>The ID of the resource to delete.</p>",
+        "DisassociateWirelessGatewayFromCertificateRequest$Id": "<p>The ID of the resource to update.</p>",
+        "DisassociateWirelessGatewayFromThingRequest$Id": "<p>The ID of the resource to update.</p>",
+        "GetWirelessGatewayCertificateRequest$Id": "<p>The ID of the resource to get.</p>",
+        "GetWirelessGatewayFirmwareInformationRequest$Id": "<p>The ID of the resource to get.</p>",
+        "GetWirelessGatewayResponse$Id": "<p>The ID of the wireless gateway.</p>",
+        "GetWirelessGatewayStatisticsRequest$WirelessGatewayId": "<p>The ID of the wireless gateway for which to get the data.</p>",
+        "GetWirelessGatewayStatisticsResponse$WirelessGatewayId": "<p>The ID of the wireless gateway.</p>",
+        "GetWirelessGatewayTaskRequest$Id": "<p>The ID of the resource to get.</p>",
+        "GetWirelessGatewayTaskResponse$WirelessGatewayId": "<p>The ID of the wireless gateway.</p>",
+        "UpdateWirelessGatewayRequest$Id": "<p>The ID of the resource to update.</p>",
+        "WirelessGatewayList$member": null,
+        "WirelessGatewayStatistics$Id": "<p>The ID of the wireless gateway reporting the data.</p>"
+      }
+    },
+    "WirelessGatewayIdType": {
+      "base": null,
+      "refs": {
+        "GetWirelessGatewayRequest$IdentifierType": "<p>The type of identifier used in <code>identifier</code>.</p>"
+      }
+    },
+    "WirelessGatewayList": {
+      "base": null,
+      "refs": {
+        "GetNetworkAnalyzerConfigurationResponse$WirelessGateways": "<p>List of WirelessGateways in the NetworkAnalyzerConfiguration.</p>",
+        "UpdateNetworkAnalyzerConfigurationRequest$WirelessGatewaysToAdd": "<p>WirelessGateways to add into NetworkAnalyzerConfiguration.</p>",
+        "UpdateNetworkAnalyzerConfigurationRequest$WirelessGatewaysToRemove": "<p>WirelessGateways to remove from NetworkAnalyzerConfiguration.</p>"
+      }
+    },
+    "WirelessGatewayLogOption": {
+      "base": "<p>The log options for wireless gateways and can be used to set log levels for a specific type of wireless gateway.</p>",
+      "refs": {
+        "WirelessGatewayLogOptionList$member": null
+      }
+    },
+    "WirelessGatewayLogOptionList": {
+      "base": "<p>The list of wireless gateway log options.</p>",
+      "refs": {
+        "GetLogLevelsByResourceTypesResponse$WirelessGatewayLogOptions": null,
+        "UpdateLogLevelsByResourceTypesRequest$WirelessGatewayLogOptions": null
+      }
+    },
+    "WirelessGatewayName": {
+      "base": null,
+      "refs": {
+        "CreateWirelessGatewayRequest$Name": "<p>The name of the new resource.</p>",
+        "GetWirelessGatewayResponse$Name": "<p>The name of the resource.</p>",
+        "UpdateWirelessGatewayRequest$Name": "<p>The new name of the resource.</p>",
+        "WirelessGatewayStatistics$Name": "<p>The name of the resource.</p>"
+      }
+    },
+    "WirelessGatewayServiceType": {
+      "base": null,
+      "refs": {
+        "GetServiceEndpointRequest$ServiceType": "<p>The service type for which to get endpoint information about. Can be <code>CUPS</code> for the Configuration and Update Server endpoint, or <code>LNS</code> for the LoRaWAN Network Server endpoint.</p>",
+        "GetServiceEndpointResponse$ServiceType": "<p>The endpoint's service type.</p>"
+      }
+    },
+    "WirelessGatewayStatistics": {
+      "base": "<p>Information about a wireless gateway's operation.</p>",
+      "refs": {
+        "WirelessGatewayStatisticsList$member": null
+      }
+    },
+    "WirelessGatewayStatisticsList": {
+      "base": null,
+      "refs": {
+        "ListWirelessGatewaysResponse$WirelessGatewayList": "<p>The ID of the wireless gateway.</p>"
+      }
+    },
+    "WirelessGatewayTaskDefinitionArn": {
+      "base": null,
+      "refs": {
+        "CreateWirelessGatewayTaskDefinitionResponse$Arn": "<p>The Amazon Resource Name of the resource.</p>",
+        "GetWirelessGatewayTaskDefinitionResponse$Arn": "<p>The Amazon Resource Name of the resource.</p>",
+        "UpdateWirelessGatewayTaskEntry$Arn": "<p>The Amazon Resource Name of the resource.</p>"
+      }
+    },
+    "WirelessGatewayTaskDefinitionId": {
+      "base": null,
+      "refs": {
+        "CreateWirelessGatewayTaskDefinitionResponse$Id": "<p>The ID of the new wireless gateway task definition.</p>",
+        "CreateWirelessGatewayTaskRequest$WirelessGatewayTaskDefinitionId": "<p>The ID of the WirelessGatewayTaskDefinition.</p>",
+        "CreateWirelessGatewayTaskResponse$WirelessGatewayTaskDefinitionId": "<p>The ID of the WirelessGatewayTaskDefinition.</p>",
+        "DeleteWirelessGatewayTaskDefinitionRequest$Id": "<p>The ID of the resource to delete.</p>",
+        "GetWirelessGatewayTaskDefinitionRequest$Id": "<p>The ID of the resource to get.</p>",
+        "GetWirelessGatewayTaskResponse$WirelessGatewayTaskDefinitionId": "<p>The ID of the WirelessGatewayTask.</p>",
+        "UpdateWirelessGatewayTaskEntry$Id": "<p>The ID of the new wireless gateway task entry.</p>"
+      }
+    },
+    "WirelessGatewayTaskDefinitionList": {
+      "base": null,
+      "refs": {
+        "ListWirelessGatewayTaskDefinitionsResponse$TaskDefinitions": "<p>The list of task definitions.</p>"
+      }
+    },
+    "WirelessGatewayTaskDefinitionType": {
+      "base": null,
+      "refs": {
+        "ListWirelessGatewayTaskDefinitionsRequest$TaskDefinitionType": "<p>A filter to list only the wireless gateway task definitions that use this task definition type.</p>"
+      }
+    },
+    "WirelessGatewayTaskName": {
+      "base": null,
+      "refs": {
+        "CreateWirelessGatewayTaskDefinitionRequest$Name": "<p>The name of the new resource.</p>",
+        "GetWirelessGatewayTaskDefinitionResponse$Name": "<p>The name of the resource.</p>"
+      }
+    },
+    "WirelessGatewayTaskStatus": {
+      "base": null,
+      "refs": {
+        "CreateWirelessGatewayTaskResponse$Status": "<p>The status of the request.</p>",
+        "GetWirelessGatewayTaskResponse$Status": "<p>The status of the request.</p>"
+      }
+    },
+    "WirelessGatewayType": {
+      "base": "<p>The wireless gateway type.</p>",
+      "refs": {
+        "WirelessGatewayLogOption$Type": null
+      }
+    },
+    "WirelessMetadata": {
+      "base": "<p>WirelessMetadata object.</p>",
+      "refs": {
+        "SendDataToWirelessDeviceRequest$WirelessMetadata": "<p>Metadata about the message request.</p>"
+      }
+    }
+  }
+}

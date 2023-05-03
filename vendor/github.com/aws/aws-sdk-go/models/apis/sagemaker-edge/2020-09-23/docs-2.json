@@ -1,0 +1,126 @@
+{
+  "version": "2.0",
+  "service": "<p>SageMaker Edge Manager dataplane service for communicating with active agents.</p>",
+  "operations": {
+    "GetDeviceRegistration": "<p>Use to check if a device is registered with SageMaker Edge Manager.</p>",
+    "SendHeartbeat": "<p>Use to get the current status of devices registered on SageMaker Edge Manager.</p>"
+  },
+  "shapes": {
+    "CacheTTLSeconds": {
+      "base": null,
+      "refs": {
+        "GetDeviceRegistrationResult$CacheTTL": "<p>The amount of time, in seconds, that the registration status is stored on the device’s cache before it is refreshed.</p>"
+      }
+    },
+    "DeviceFleetName": {
+      "base": null,
+      "refs": {
+        "GetDeviceRegistrationRequest$DeviceFleetName": "<p>The name of the fleet that the device belongs to.</p>",
+        "SendHeartbeatRequest$DeviceFleetName": "<p>The name of the fleet that the device belongs to.</p>"
+      }
+    },
+    "DeviceName": {
+      "base": null,
+      "refs": {
+        "GetDeviceRegistrationRequest$DeviceName": "<p>The unique name of the device you want to get the registration status from.</p>",
+        "SendHeartbeatRequest$DeviceName": "<p>The unique name of the device.</p>"
+      }
+    },
+    "DeviceRegistration": {
+      "base": null,
+      "refs": {
+        "GetDeviceRegistrationResult$DeviceRegistration": "<p>Describes if the device is currently registered with SageMaker Edge Manager.</p>"
+      }
+    },
+    "Dimension": {
+      "base": null,
+      "refs": {
+        "EdgeMetric$Dimension": "<p>The dimension of metrics published.</p>"
+      }
+    },
+    "EdgeMetric": {
+      "base": "<p>Information required for edge device metrics.</p>",
+      "refs": {
+        "EdgeMetrics$member": null
+      }
+    },
+    "EdgeMetrics": {
+      "base": null,
+      "refs": {
+        "Model$ModelMetrics": "<p>Information required for model metrics.</p>",
+        "SendHeartbeatRequest$AgentMetrics": "<p>For internal use. Returns a list of SageMaker Edge Manager agent operating metrics.</p>"
+      }
+    },
+    "ErrorMessage": {
+      "base": null,
+      "refs": {
+        "InternalServiceException$Message": null
+      }
+    },
+    "GetDeviceRegistrationRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetDeviceRegistrationResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "InternalServiceException": {
+      "base": "<p>An internal failure occurred. Try your request again. If the problem persists, contact AWS customer support.</p>",
+      "refs": {
+      }
+    },
+    "Metric": {
+      "base": null,
+      "refs": {
+        "EdgeMetric$MetricName": "<p>Returns the name of the metric.</p>"
+      }
+    },
+    "Model": {
+      "base": "<p>Information about a model deployed on an edge device that is registered with SageMaker Edge Manager.</p>",
+      "refs": {
+        "Models$member": null
+      }
+    },
+    "ModelName": {
+      "base": null,
+      "refs": {
+        "Model$ModelName": "<p>The name of the model.</p>"
+      }
+    },
+    "Models": {
+      "base": null,
+      "refs": {
+        "SendHeartbeatRequest$Models": "<p>Returns a list of models deployed on the the device.</p>"
+      }
+    },
+    "SendHeartbeatRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "Timestamp": {
+      "base": null,
+      "refs": {
+        "EdgeMetric$Timestamp": "<p>Timestamp of when the metric was requested.</p>",
+        "Model$LatestSampleTime": "<p>The timestamp of the last data sample taken.</p>",
+        "Model$LatestInference": "<p>The timestamp of the last inference that was made.</p>"
+      }
+    },
+    "Value": {
+      "base": null,
+      "refs": {
+        "EdgeMetric$Value": "<p>Returns the value of the metric.</p>"
+      }
+    },
+    "Version": {
+      "base": null,
+      "refs": {
+        "Model$ModelVersion": "<p>The version of the model.</p>",
+        "SendHeartbeatRequest$AgentVersion": "<p>Returns the version of the agent.</p>"
+      }
+    }
+  }
+}

@@ -1,0 +1,652 @@
+{
+  "version": "2.0",
+  "service": "<p>Amazon EMR on EKS provides a deployment option for Amazon EMR that allows you to run open-source big data frameworks on Amazon Elastic Kubernetes Service (Amazon EKS). With this deployment option, you can focus on running analytics workloads while Amazon EMR on EKS builds, configures, and manages containers for open-source applications. For more information about Amazon EMR on EKS concepts and tasks, see <a href=\"https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/emr-eks.html\">What is Amazon EMR on EKS</a>.</p> <p> <i>Amazon EMR containers</i> is the API name for Amazon EMR on EKS. The <code>emr-containers</code> prefix is used in the following scenarios: </p> <ul> <li> <p>It is the prefix in the CLI commands for Amazon EMR on EKS. For example, <code>aws emr-containers start-job-run</code>.</p> </li> <li> <p>It is the prefix before IAM policy actions for Amazon EMR on EKS. For example, <code>\"Action\": [ \"emr-containers:StartJobRun\"]</code>. For more information, see <a href=\"https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/security_iam_service-with-iam.html#security_iam_service-with-iam-id-based-policies-actions\">Policy actions for Amazon EMR on EKS</a>.</p> </li> <li> <p>It is the prefix used in Amazon EMR on EKS service endpoints. For example, <code>emr-containers.us-east-2.amazonaws.com</code>. For more information, see <a href=\"https://docs.aws.amazon.com/emr/latest/EMR-on-EKS-DevelopmentGuide/service-quotas.html#service-endpoints\">Amazon EMR on EKS Service Endpoints</a>.</p> </li> </ul>",
+  "operations": {
+    "CancelJobRun": "<p>Cancels a job run. A job run is a unit of work, such as a Spark jar, PySpark script, or SparkSQL query, that you submit to Amazon EMR on EKS.</p>",
+    "CreateManagedEndpoint": "<p>Creates a managed endpoint. A managed endpoint is a gateway that connects EMR Studio to Amazon EMR on EKS so that EMR Studio can communicate with your virtual cluster.</p>",
+    "CreateVirtualCluster": "<p>Creates a virtual cluster. Virtual cluster is a managed entity on Amazon EMR on EKS. You can create, describe, list and delete virtual clusters. They do not consume any additional resource in your system. A single virtual cluster maps to a single Kubernetes namespace. Given this relationship, you can model virtual clusters the same way you model Kubernetes namespaces to meet your requirements.</p>",
+    "DeleteManagedEndpoint": "<p>Deletes a managed endpoint. A managed endpoint is a gateway that connects EMR Studio to Amazon EMR on EKS so that EMR Studio can communicate with your virtual cluster.</p>",
+    "DeleteVirtualCluster": "<p>Deletes a virtual cluster. Virtual cluster is a managed entity on Amazon EMR on EKS. You can create, describe, list and delete virtual clusters. They do not consume any additional resource in your system. A single virtual cluster maps to a single Kubernetes namespace. Given this relationship, you can model virtual clusters the same way you model Kubernetes namespaces to meet your requirements.</p>",
+    "DescribeJobRun": "<p>Displays detailed information about a job run. A job run is a unit of work, such as a Spark jar, PySpark script, or SparkSQL query, that you submit to Amazon EMR on EKS.</p>",
+    "DescribeManagedEndpoint": "<p>Displays detailed information about a managed endpoint. A managed endpoint is a gateway that connects EMR Studio to Amazon EMR on EKS so that EMR Studio can communicate with your virtual cluster.</p>",
+    "DescribeVirtualCluster": "<p>Displays detailed information about a specified virtual cluster. Virtual cluster is a managed entity on Amazon EMR on EKS. You can create, describe, list and delete virtual clusters. They do not consume any additional resource in your system. A single virtual cluster maps to a single Kubernetes namespace. Given this relationship, you can model virtual clusters the same way you model Kubernetes namespaces to meet your requirements.</p>",
+    "ListJobRuns": "<p>Lists job runs based on a set of parameters. A job run is a unit of work, such as a Spark jar, PySpark script, or SparkSQL query, that you submit to Amazon EMR on EKS.</p>",
+    "ListManagedEndpoints": "<p>Lists managed endpoints based on a set of parameters. A managed endpoint is a gateway that connects EMR Studio to Amazon EMR on EKS so that EMR Studio can communicate with your virtual cluster.</p>",
+    "ListTagsForResource": "<p>Lists the tags assigned to the resources.</p>",
+    "ListVirtualClusters": "<p>Lists information about the specified virtual cluster. Virtual cluster is a managed entity on Amazon EMR on EKS. You can create, describe, list and delete virtual clusters. They do not consume any additional resource in your system. A single virtual cluster maps to a single Kubernetes namespace. Given this relationship, you can model virtual clusters the same way you model Kubernetes namespaces to meet your requirements.</p>",
+    "StartJobRun": "<p>Starts a job run. A job run is a unit of work, such as a Spark jar, PySpark script, or SparkSQL query, that you submit to Amazon EMR on EKS.</p>",
+    "TagResource": "<p>Assigns tags to resources. A tag is a label that you assign to an AWS resource. Each tag consists of a key and an optional value, both of which you define. Tags enable you to categorize your AWS resources by attributes such as purpose, owner, or environment. When you have many resources of the same type, you can quickly identify a specific resource based on the tags you've assigned to it. For example, you can define a set of tags for your Amazon EMR on EKS clusters to help you track each cluster's owner and stack level. We recommend that you devise a consistent set of tag keys for each resource type. You can then search and filter the resources based on the tags that you add.</p>",
+    "UntagResource": "<p>Removes tags from resources.</p>"
+  },
+  "shapes": {
+    "ACMCertArn": {
+      "base": null,
+      "refs": {
+        "Certificate$certificateArn": "<p>The ARN of the certificate generated for managed endpoint.</p>",
+        "CreateManagedEndpointRequest$certificateArn": "<p>The certificate ARN provided by users for the managed endpoint. This fiedd is under deprecation and will be removed in future releases.</p>",
+        "Endpoint$certificateArn": "<p>The certificate ARN of the endpoint. This field is under deprecation and will be removed in future.</p>"
+      }
+    },
+    "Base64Encoded": {
+      "base": null,
+      "refs": {
+        "Certificate$certificateData": "<p>The base64 encoded PEM certificate data generated for managed endpoint.</p>"
+      }
+    },
+    "CancelJobRunRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CancelJobRunResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "Certificate": {
+      "base": "<p>The entity representing certificate data generated for managed endpoint.</p>",
+      "refs": {
+        "Endpoint$certificateAuthority": "<p>The certificate generated by emr control plane on customer behalf to secure the managed endpoint.</p>"
+      }
+    },
+    "ClientToken": {
+      "base": null,
+      "refs": {
+        "CreateManagedEndpointRequest$clientToken": "<p>The client idempotency token for this create call.</p>",
+        "CreateVirtualClusterRequest$clientToken": "<p>The client token of the virtual cluster.</p>",
+        "JobRun$clientToken": "<p>The client token used to start a job run.</p>",
+        "StartJobRunRequest$clientToken": "<p>The client idempotency token of the job run request. </p>"
+      }
+    },
+    "CloudWatchMonitoringConfiguration": {
+      "base": "<p>A configuration for CloudWatch monitoring. You can configure your jobs to send log information to CloudWatch Logs.</p>",
+      "refs": {
+        "MonitoringConfiguration$cloudWatchMonitoringConfiguration": "<p>Monitoring configurations for CloudWatch.</p>"
+      }
+    },
+    "ClusterId": {
+      "base": null,
+      "refs": {
+        "ContainerProvider$id": "<p>The ID of the container cluster.</p>"
+      }
+    },
+    "Configuration": {
+      "base": "<p>A configuration specification to be used when provisioning virtual clusters, which can include configurations for applications and software bundled with Amazon EMR on EKS. A configuration consists of a classification, properties, and optional nested configurations. A classification refers to an application-specific configuration file. Properties are the settings you want to change in that file.</p>",
+      "refs": {
+        "ConfigurationList$member": null
+      }
+    },
+    "ConfigurationList": {
+      "base": null,
+      "refs": {
+        "Configuration$configurations": "<p>A list of additional configurations to apply within a configuration object.</p>",
+        "ConfigurationOverrides$applicationConfiguration": "<p>The configurations for the application running by the job run. </p>"
+      }
+    },
+    "ConfigurationOverrides": {
+      "base": "<p>A configuration specification to be used to override existing configurations.</p>",
+      "refs": {
+        "CreateManagedEndpointRequest$configurationOverrides": "<p>The configuration settings that will be used to override existing configurations.</p>",
+        "Endpoint$configurationOverrides": "<p>The configuration settings that are used to override existing configurations for endpoints.</p>",
+        "JobRun$configurationOverrides": "<p>The configuration settings that are used to override default configuration.</p>",
+        "StartJobRunRequest$configurationOverrides": "<p>The configuration overrides for the job run.</p>"
+      }
+    },
+    "ContainerInfo": {
+      "base": "<p>The information about the container used for a job run or a managed endpoint.</p>",
+      "refs": {
+        "ContainerProvider$info": "<p>The information about the container cluster.</p>"
+      }
+    },
+    "ContainerProvider": {
+      "base": "<p>The information about the container provider.</p>",
+      "refs": {
+        "CreateVirtualClusterRequest$containerProvider": "<p>The container provider of the virtual cluster.</p>",
+        "VirtualCluster$containerProvider": "<p>The container provider of the virtual cluster.</p>"
+      }
+    },
+    "ContainerProviderType": {
+      "base": null,
+      "refs": {
+        "ContainerProvider$type": "<p>The type of the container provider. EKS is the only supported type as of now.</p>",
+        "ListVirtualClustersRequest$containerProviderType": "<p>The container provider type of the virtual cluster. EKS is the only supported type as of now.</p>"
+      }
+    },
+    "CreateManagedEndpointRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateManagedEndpointResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateVirtualClusterRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateVirtualClusterResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "Date": {
+      "base": null,
+      "refs": {
+        "Endpoint$createdAt": "<p>The date and time when the endpoint was created.</p>",
+        "JobRun$createdAt": "<p>The date and time when the job run was created.</p>",
+        "JobRun$finishedAt": "<p>The date and time when the job run has finished.</p>",
+        "ListJobRunsRequest$createdBefore": "<p>The date and time before which the job runs were submitted.</p>",
+        "ListJobRunsRequest$createdAfter": "<p>The date and time after which the job runs were submitted.</p>",
+        "ListManagedEndpointsRequest$createdBefore": "<p>The date and time before which the endpoints are created.</p>",
+        "ListManagedEndpointsRequest$createdAfter": "<p> The date and time after which the endpoints are created.</p>",
+        "ListVirtualClustersRequest$createdAfter": "<p>The date and time after which the virtual clusters are created.</p>",
+        "ListVirtualClustersRequest$createdBefore": "<p>The date and time before which the virtual clusters are created.</p>",
+        "VirtualCluster$createdAt": "<p>The date and time when the virtual cluster is created.</p>"
+      }
+    },
+    "DeleteManagedEndpointRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteManagedEndpointResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteVirtualClusterRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteVirtualClusterResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DescribeJobRunRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DescribeJobRunResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DescribeManagedEndpointRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DescribeManagedEndpointResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DescribeVirtualClusterRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DescribeVirtualClusterResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "EksInfo": {
+      "base": "<p>The information about the EKS cluster.</p>",
+      "refs": {
+        "ContainerInfo$eksInfo": "<p>The information about the EKS cluster.</p>"
+      }
+    },
+    "Endpoint": {
+      "base": "<p>This entity represents the endpoint that is managed by Amazon EMR on EKS.</p>",
+      "refs": {
+        "DescribeManagedEndpointResponse$endpoint": "<p>This output displays information about a managed endpoint.</p>",
+        "Endpoints$member": null
+      }
+    },
+    "EndpointArn": {
+      "base": null,
+      "refs": {
+        "CreateManagedEndpointResponse$arn": "<p>The output contains the ARN of the managed endpoint.</p>",
+        "Endpoint$arn": "<p>The ARN of the endpoint.</p>"
+      }
+    },
+    "EndpointState": {
+      "base": null,
+      "refs": {
+        "Endpoint$state": "<p>The state of the endpoint.</p>",
+        "EndpointStates$member": null
+      }
+    },
+    "EndpointStates": {
+      "base": null,
+      "refs": {
+        "ListManagedEndpointsRequest$states": "<p>The states of the managed endpoints.</p>"
+      }
+    },
+    "EndpointType": {
+      "base": null,
+      "refs": {
+        "CreateManagedEndpointRequest$type": "<p>The type of the managed endpoint.</p>",
+        "Endpoint$type": "<p>The type of the endpoint.</p>",
+        "EndpointTypes$member": null
+      }
+    },
+    "EndpointTypes": {
+      "base": null,
+      "refs": {
+        "ListManagedEndpointsRequest$types": "<p>The types of the managed endpoints.</p>"
+      }
+    },
+    "Endpoints": {
+      "base": null,
+      "refs": {
+        "ListManagedEndpointsResponse$endpoints": "<p>The managed endpoints to be listed.</p>"
+      }
+    },
+    "EntryPointArgument": {
+      "base": null,
+      "refs": {
+        "EntryPointArguments$member": null
+      }
+    },
+    "EntryPointArguments": {
+      "base": null,
+      "refs": {
+        "SparkSubmitJobDriver$entryPointArguments": "<p>The arguments for job application.</p>"
+      }
+    },
+    "EntryPointPath": {
+      "base": null,
+      "refs": {
+        "SparkSubmitJobDriver$entryPoint": "<p>The entry point of job application.</p>"
+      }
+    },
+    "FailureReason": {
+      "base": null,
+      "refs": {
+        "Endpoint$failureReason": "<p> The reasons why the endpoint has failed. </p>",
+        "JobRun$failureReason": "<p>The reasons why the job run has failed.</p>"
+      }
+    },
+    "IAMRoleArn": {
+      "base": null,
+      "refs": {
+        "CreateManagedEndpointRequest$executionRoleArn": "<p>The ARN of the execution role.</p>",
+        "Endpoint$executionRoleArn": "<p>The execution role ARN of the endpoint.</p>",
+        "JobRun$executionRoleArn": "<p>The execution role ARN of the job run.</p>",
+        "StartJobRunRequest$executionRoleArn": "<p>The execution role ARN for the job run.</p>"
+      }
+    },
+    "InternalServerException": {
+      "base": "<p>This is an internal server exception.</p>",
+      "refs": {
+      }
+    },
+    "JavaInteger": {
+      "base": null,
+      "refs": {
+        "ListJobRunsRequest$maxResults": "<p>The maximum number of job runs that can be listed.</p>",
+        "ListManagedEndpointsRequest$maxResults": "<p>The maximum number of managed endpoints that can be listed.</p>",
+        "ListVirtualClustersRequest$maxResults": "<p>The maximum number of virtual clusters that can be listed.</p>"
+      }
+    },
+    "JobArn": {
+      "base": null,
+      "refs": {
+        "JobRun$arn": "<p>The ARN of job run.</p>",
+        "StartJobRunResponse$arn": "<p>This output lists the ARN of job run.</p>"
+      }
+    },
+    "JobDriver": {
+      "base": "<p>Specify the driver that the job runs on.</p>",
+      "refs": {
+        "JobRun$jobDriver": "<p>Parameters of job driver for the job run.</p>",
+        "StartJobRunRequest$jobDriver": "<p>The job driver for the job run.</p>"
+      }
+    },
+    "JobRun": {
+      "base": "<p>This entity describes a job run. A job run is a unit of work, such as a Spark jar, PySpark script, or SparkSQL query, that you submit to Amazon EMR on EKS. </p>",
+      "refs": {
+        "DescribeJobRunResponse$jobRun": "<p>The output displays information about a job run.</p>",
+        "JobRuns$member": null
+      }
+    },
+    "JobRunState": {
+      "base": null,
+      "refs": {
+        "JobRun$state": "<p>The state of the job run. </p>",
+        "JobRunStates$member": null
+      }
+    },
+    "JobRunStates": {
+      "base": null,
+      "refs": {
+        "ListJobRunsRequest$states": "<p>The states of the job run.</p>"
+      }
+    },
+    "JobRuns": {
+      "base": null,
+      "refs": {
+        "ListJobRunsResponse$jobRuns": "<p>This output lists information about the specified job runs.</p>"
+      }
+    },
+    "KubernetesNamespace": {
+      "base": null,
+      "refs": {
+        "EksInfo$namespace": "<p>The namespaces of the EKS cluster.</p>"
+      }
+    },
+    "ListJobRunsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListJobRunsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListManagedEndpointsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListManagedEndpointsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListTagsForResourceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListTagsForResourceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListVirtualClustersRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListVirtualClustersResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "LogGroupName": {
+      "base": null,
+      "refs": {
+        "CloudWatchMonitoringConfiguration$logGroupName": "<p>The name of the log group for log publishing.</p>"
+      }
+    },
+    "MonitoringConfiguration": {
+      "base": "<p>Configuration setting for monitoring.</p>",
+      "refs": {
+        "ConfigurationOverrides$monitoringConfiguration": "<p>The configurations for monitoring.</p>"
+      }
+    },
+    "NextToken": {
+      "base": null,
+      "refs": {
+        "ListJobRunsRequest$nextToken": "<p>The token for the next set of job runs to return.</p>",
+        "ListJobRunsResponse$nextToken": "<p>This output displays the token for the next set of job runs.</p>",
+        "ListManagedEndpointsRequest$nextToken": "<p> The token for the next set of managed endpoints to return. </p>",
+        "ListManagedEndpointsResponse$nextToken": "<p> The token for the next set of endpoints to return. </p>",
+        "ListVirtualClustersRequest$nextToken": "<p>The token for the next set of virtual clusters to return. </p>",
+        "ListVirtualClustersResponse$nextToken": "<p>This output displays the token for the next set of virtual clusters.</p>"
+      }
+    },
+    "PersistentAppUI": {
+      "base": null,
+      "refs": {
+        "MonitoringConfiguration$persistentAppUI": "<p>Monitoring configurations for the persistent application UI. </p>"
+      }
+    },
+    "ReleaseLabel": {
+      "base": null,
+      "refs": {
+        "CreateManagedEndpointRequest$releaseLabel": "<p>The Amazon EMR release version.</p>",
+        "Endpoint$releaseLabel": "<p>The EMR release version to be used for the endpoint.</p>",
+        "JobRun$releaseLabel": "<p>The release version of Amazon EMR.</p>",
+        "StartJobRunRequest$releaseLabel": "<p>The Amazon EMR release version to use for the job run.</p>"
+      }
+    },
+    "RequestIdentityUserArn": {
+      "base": null,
+      "refs": {
+        "JobRun$createdBy": "<p>The user who created the job run.</p>"
+      }
+    },
+    "ResourceIdString": {
+      "base": null,
+      "refs": {
+        "CancelJobRunRequest$id": "<p>The ID of the job run to cancel.</p>",
+        "CancelJobRunRequest$virtualClusterId": "<p>The ID of the virtual cluster for which the job run will be canceled.</p>",
+        "CancelJobRunResponse$id": "<p>The output contains the ID of the cancelled job run.</p>",
+        "CancelJobRunResponse$virtualClusterId": "<p>The output contains the virtual cluster ID for which the job run is cancelled.</p>",
+        "CreateManagedEndpointRequest$virtualClusterId": "<p>The ID of the virtual cluster for which a managed endpoint is created.</p>",
+        "CreateManagedEndpointResponse$id": "<p>The output contains the ID of the managed endpoint.</p>",
+        "CreateManagedEndpointResponse$virtualClusterId": "<p>The output contains the ID of the virtual cluster.</p>",
+        "CreateVirtualClusterResponse$id": "<p>This output contains the virtual cluster ID.</p>",
+        "DeleteManagedEndpointRequest$id": "<p>The ID of the managed endpoint.</p>",
+        "DeleteManagedEndpointRequest$virtualClusterId": "<p>The ID of the endpoint's virtual cluster.</p>",
+        "DeleteManagedEndpointResponse$id": "<p>The output displays the ID of the managed endpoint.</p>",
+        "DeleteManagedEndpointResponse$virtualClusterId": "<p>The output displays the ID of the endpoint's virtual cluster.</p>",
+        "DeleteVirtualClusterRequest$id": "<p>The ID of the virtual cluster that will be deleted.</p>",
+        "DeleteVirtualClusterResponse$id": "<p>This output contains the ID of the virtual cluster that will be deleted. </p>",
+        "DescribeJobRunRequest$id": "<p>The ID of the job run request. </p>",
+        "DescribeJobRunRequest$virtualClusterId": "<p>The ID of the virtual cluster for which the job run is submitted.</p>",
+        "DescribeManagedEndpointRequest$id": "<p>This output displays ID of the managed endpoint.</p>",
+        "DescribeManagedEndpointRequest$virtualClusterId": "<p>The ID of the endpoint's virtual cluster.</p>",
+        "DescribeVirtualClusterRequest$id": "<p>The ID of the virtual cluster that will be described.</p>",
+        "Endpoint$id": "<p>The ID of the endpoint.</p>",
+        "Endpoint$virtualClusterId": "<p>The ID of the endpoint's virtual cluster.</p>",
+        "JobRun$id": "<p>The ID of the job run.</p>",
+        "JobRun$virtualClusterId": "<p>The ID of the job run's virtual cluster.</p>",
+        "ListJobRunsRequest$virtualClusterId": "<p>The ID of the virtual cluster for which to list the job run. </p>",
+        "ListManagedEndpointsRequest$virtualClusterId": "<p>The ID of the virtual cluster.</p>",
+        "StartJobRunRequest$virtualClusterId": "<p>The virtual cluster ID for which the job run request is submitted.</p>",
+        "StartJobRunResponse$id": "<p>This output displays the started job run ID.</p>",
+        "StartJobRunResponse$virtualClusterId": "<p>This output displays the virtual cluster ID for which the job run was submitted.</p>",
+        "VirtualCluster$id": "<p>The ID of the virtual cluster.</p>"
+      }
+    },
+    "ResourceNameString": {
+      "base": null,
+      "refs": {
+        "CreateManagedEndpointRequest$name": "<p>The name of the managed endpoint.</p>",
+        "CreateManagedEndpointResponse$name": "<p>The output contains the name of the managed endpoint.</p>",
+        "CreateVirtualClusterRequest$name": "<p>The specified name of the virtual cluster.</p>",
+        "CreateVirtualClusterResponse$name": "<p>This output contains the name of the virtual cluster.</p>",
+        "Endpoint$name": "<p>The name of the endpoint.</p>",
+        "JobRun$name": "<p>The name of the job run.</p>",
+        "ListJobRunsRequest$name": "<p>The name of the job run.</p>",
+        "StartJobRunRequest$name": "<p>The name of the job run.</p>",
+        "StartJobRunResponse$name": "<p>This output displays the name of the started job run.</p>",
+        "VirtualCluster$name": "<p>The name of the virtual cluster.</p>"
+      }
+    },
+    "ResourceNotFoundException": {
+      "base": "<p>The specified resource was not found.</p>",
+      "refs": {
+      }
+    },
+    "RsiArn": {
+      "base": null,
+      "refs": {
+        "ListTagsForResourceRequest$resourceArn": "<p>The ARN of tagged resources.</p>",
+        "TagResourceRequest$resourceArn": "<p>The ARN of resources.</p>",
+        "UntagResourceRequest$resourceArn": "<p>The ARN of resources.</p>"
+      }
+    },
+    "S3MonitoringConfiguration": {
+      "base": "<p> Amazon S3 configuration for monitoring log publishing. You can configure your jobs to send log information to Amazon S3.</p>",
+      "refs": {
+        "MonitoringConfiguration$s3MonitoringConfiguration": "<p>Amazon S3 configuration for monitoring log publishing.</p>"
+      }
+    },
+    "SensitivePropertiesMap": {
+      "base": null,
+      "refs": {
+        "Configuration$properties": "<p>A set of properties specified within a configuration classification.</p>"
+      }
+    },
+    "SparkSubmitJobDriver": {
+      "base": "<p>The information about job driver for Spark submit.</p>",
+      "refs": {
+        "JobDriver$sparkSubmitJobDriver": "<p>The job driver parameters specified for spark submit.</p>"
+      }
+    },
+    "SparkSubmitParameters": {
+      "base": null,
+      "refs": {
+        "SparkSubmitJobDriver$sparkSubmitParameters": "<p>The Spark submit parameters that are used for job runs.</p>"
+      }
+    },
+    "StartJobRunRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "StartJobRunResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "String1024": {
+      "base": null,
+      "refs": {
+        "Configuration$classification": "<p>The classification within a configuration.</p>",
+        "InternalServerException$message": null,
+        "ListVirtualClustersRequest$containerProviderId": "<p>The container provider ID of the virtual cluster.</p>",
+        "ResourceNotFoundException$message": null,
+        "SensitivePropertiesMap$key": null,
+        "SensitivePropertiesMap$value": null,
+        "ValidationException$message": null
+      }
+    },
+    "String128": {
+      "base": null,
+      "refs": {
+        "TagKeyList$member": null,
+        "TagMap$key": null
+      }
+    },
+    "String256": {
+      "base": null,
+      "refs": {
+        "CloudWatchMonitoringConfiguration$logStreamNamePrefix": "<p>The specified name prefix for log streams.</p>",
+        "Endpoint$securityGroup": "<p>The security group configuration of the endpoint. </p>",
+        "Endpoint$stateDetails": "<p> Additional details of the endpoint state. </p>",
+        "JobRun$stateDetails": "<p>Additional details of the job run state.</p>",
+        "SubnetIds$member": null
+      }
+    },
+    "StringEmpty256": {
+      "base": null,
+      "refs": {
+        "TagMap$value": null
+      }
+    },
+    "SubnetIds": {
+      "base": null,
+      "refs": {
+        "Endpoint$subnetIds": "<p>The subnet IDs of the endpoint. </p>"
+      }
+    },
+    "TagKeyList": {
+      "base": null,
+      "refs": {
+        "UntagResourceRequest$tagKeys": "<p>The tag keys of the resources.</p>"
+      }
+    },
+    "TagMap": {
+      "base": null,
+      "refs": {
+        "CreateManagedEndpointRequest$tags": "<p>The tags of the managed endpoint. </p>",
+        "CreateVirtualClusterRequest$tags": "<p>The tags assigned to the virtual cluster.</p>",
+        "Endpoint$tags": "<p>The tags of the endpoint. </p>",
+        "JobRun$tags": "<p>The assigned tags of the job run.</p>",
+        "ListTagsForResourceResponse$tags": "<p>The tags assigned to resources.</p>",
+        "StartJobRunRequest$tags": "<p>The tags assigned to job runs.</p>",
+        "TagResourceRequest$tags": "<p>The tags assigned to resources.</p>",
+        "VirtualCluster$tags": "<p>The assigned tags of the virtual cluster.</p>"
+      }
+    },
+    "TagResourceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "TagResourceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UntagResourceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UntagResourceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UriString": {
+      "base": null,
+      "refs": {
+        "Endpoint$serverUrl": "<p>The server URL of the endpoint.</p>",
+        "S3MonitoringConfiguration$logUri": "<p>Amazon S3 destination URI for log publishing.</p>"
+      }
+    },
+    "ValidationException": {
+      "base": "<p>There are invalid parameters in the client request.</p>",
+      "refs": {
+      }
+    },
+    "VirtualCluster": {
+      "base": "<p>This entity describes a virtual cluster. A virtual cluster is a Kubernetes namespace that Amazon EMR is registered with. Amazon EMR uses virtual clusters to run jobs and host endpoints. Multiple virtual clusters can be backed by the same physical cluster. However, each virtual cluster maps to one namespace on an EKS cluster. Virtual clusters do not create any active resources that contribute to your bill or that require lifecycle management outside the service.</p>",
+      "refs": {
+        "DescribeVirtualClusterResponse$virtualCluster": "<p>This output displays information about the specified virtual cluster.</p>",
+        "VirtualClusters$member": null
+      }
+    },
+    "VirtualClusterArn": {
+      "base": null,
+      "refs": {
+        "CreateVirtualClusterResponse$arn": "<p>This output contains the ARN of virtual cluster.</p>",
+        "VirtualCluster$arn": "<p>The ARN of the virtual cluster.</p>"
+      }
+    },
+    "VirtualClusterState": {
+      "base": null,
+      "refs": {
+        "VirtualCluster$state": "<p>The state of the virtual cluster.</p>",
+        "VirtualClusterStates$member": null
+      }
+    },
+    "VirtualClusterStates": {
+      "base": null,
+      "refs": {
+        "ListVirtualClustersRequest$states": "<p>The states of the requested virtual clusters.</p>"
+      }
+    },
+    "VirtualClusters": {
+      "base": null,
+      "refs": {
+        "ListVirtualClustersResponse$virtualClusters": "<p>This output lists the specified virtual clusters.</p>"
+      }
+    }
+  }
+}

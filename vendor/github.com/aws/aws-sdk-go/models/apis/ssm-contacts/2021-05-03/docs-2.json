@@ -1,0 +1,844 @@
+{
+  "version": "2.0",
+  "service": "<p>Systems Manager Incident Manager is an incident management console designed to help users mitigate and recover from incidents affecting their Amazon Web Services-hosted applications. An incident is any unplanned interruption or reduction in quality of services. </p> <p>Incident Manager increases incident resolution by notifying responders of impact, highlighting relevant troubleshooting data, and providing collaboration tools to get services back up and running. To achieve the primary goal of reducing the time-to-resolution of critical incidents, Incident Manager automates response plans and enables responder team escalation. </p>",
+  "operations": {
+    "AcceptPage": "<p>Used to acknowledge an engagement to a contact channel during an incident.</p>",
+    "ActivateContactChannel": "<p>Activates a contact's contact channel. Incident Manager can't engage a contact until the contact channel has been activated.</p>",
+    "CreateContact": "<p>Contacts are either the contacts that Incident Manager engages during an incident or the escalation plans that Incident Manager uses to engage contacts in phases during an incident. </p>",
+    "CreateContactChannel": "<p>A contact channel is the method that Incident Manager uses to engage your contact.</p>",
+    "DeactivateContactChannel": "<p>To no longer receive Incident Manager engagements to a contact channel, you can deactivate the channel.</p>",
+    "DeleteContact": "<p>To remove a contact from Incident Manager, you can delete the contact. Deleting a contact removes them from all escalation plans and related response plans. Deleting an escalation plan removes it from all related response plans. You will have to recreate the contact and its contact channels before you can use it again.</p>",
+    "DeleteContactChannel": "<p>To no longer receive engagements on a contact channel, you can delete the channel from a contact. Deleting the contact channel removes it from the contact's engagement plan. If you delete the only contact channel for a contact, you won't be able to engage that contact during an incident.</p>",
+    "DescribeEngagement": "<p>Incident Manager uses engagements to engage contacts and escalation plans during an incident. Use this command to describe the engagement that occurred during an incident.</p>",
+    "DescribePage": "<p>Lists details of the engagement to a contact channel.</p>",
+    "GetContact": "<p>Retrieves information about the specified contact or escalation plan.</p>",
+    "GetContactChannel": "<p>List details about a specific contact channel.</p>",
+    "GetContactPolicy": "<p>Retrieves the resource policies attached to the specified contact or escalation plan.</p>",
+    "ListContactChannels": "<p>Lists all contact channels for the specified contact.</p>",
+    "ListContacts": "<p>Lists all contacts and escalation plans in Incident Manager.</p>",
+    "ListEngagements": "<p>Lists all engagements that have happened in an incident.</p>",
+    "ListPageReceipts": "<p>Lists all of the engagements to contact channels that have been acknowledged. </p>",
+    "ListPagesByContact": "<p>Lists the engagements to a contact's contact channels.</p>",
+    "ListPagesByEngagement": "<p>Lists the engagements to contact channels that occurred by engaging a contact.</p>",
+    "ListTagsForResource": "<p>Lists the tags of an escalation plan or contact.</p>",
+    "PutContactPolicy": "<p>Adds a resource to the specified contact or escalation plan.</p>",
+    "SendActivationCode": "<p>Sends an activation code to a contact channel. The contact can use this code to activate the contact channel in the console or with the <code>ActivateChannel</code> operation. Incident Manager can't engage a contact channel until it has been activated.</p>",
+    "StartEngagement": "<p>Starts an engagement to a contact or escalation plan. The engagement engages each contact specified in the incident.</p>",
+    "StopEngagement": "<p>Stops an engagement before it finishes the final stage of the escalation plan or engagement plan. Further contacts aren't engaged.</p>",
+    "TagResource": "<p>Tags a contact or escalation plan. You can tag only contacts and escalation plans in the first region of your replication set. </p>",
+    "UntagResource": "<p>Removes tags from the specified resource. </p>",
+    "UpdateContact": "<p>Updates the contact or escalation plan specified. </p>",
+    "UpdateContactChannel": "<p>Updates a contact's contact channel.</p>"
+  },
+  "shapes": {
+    "AcceptCode": {
+      "base": null,
+      "refs": {
+        "AcceptPageRequest$AcceptCode": "<p>The accept code is a 6-digit code used to acknowledge the page.</p>"
+      }
+    },
+    "AcceptCodeValidation": {
+      "base": null,
+      "refs": {
+        "AcceptPageRequest$AcceptCodeValidation": "<p>An optional field that Incident Manager uses to <code>ENFORCE</code> <code>AcceptCode</code> validation when acknowledging an page. Acknowledgement can occur by replying to a page, or when entering the AcceptCode in the console. Enforcing AcceptCode validation causes Incident Manager to verify that the code entered by the user matches the code sent by Incident Manager with the page.</p> <p>Incident Manager can also <code>IGNORE</code> <code>AcceptCode</code> validation. Ignoring <code>AcceptCode</code> validation causes Incident Manager to accept any value entered for the <code>AcceptCode</code>.</p>"
+      }
+    },
+    "AcceptPageRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "AcceptPageResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "AcceptType": {
+      "base": null,
+      "refs": {
+        "AcceptPageRequest$AcceptType": "<p>The type indicates if the page was <code>DELIVERED</code> or <code>READ</code>.</p>"
+      }
+    },
+    "AccessDeniedException": {
+      "base": "<p>You don't have sufficient access to perform this operation.</p>",
+      "refs": {
+      }
+    },
+    "ActivateContactChannelRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ActivateContactChannelResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ActivationCode": {
+      "base": null,
+      "refs": {
+        "ActivateContactChannelRequest$ActivationCode": "<p>The code sent to the contact channel when it was created in the contact. </p>"
+      }
+    },
+    "ActivationStatus": {
+      "base": null,
+      "refs": {
+        "ContactChannel$ActivationStatus": "<p>A Boolean value describing if the contact channel has been activated or not. If the contact channel isn't activated, Incident Manager can't engage the contact through it. </p>",
+        "GetContactChannelResult$ActivationStatus": "<p>A Boolean value indicating if the contact channel has been activated or not.</p>"
+      }
+    },
+    "AmazonResourceName": {
+      "base": null,
+      "refs": {
+        "ListTagsForResourceRequest$ResourceARN": "<p>The Amazon Resource Name (ARN) of the contact or escalation plan.</p>",
+        "TagResourceRequest$ResourceARN": "<p>The Amazon Resource Name (ARN) of the contact or escalation plan.</p>",
+        "UntagResourceRequest$ResourceARN": "<p>The Amazon Resource Name (ARN) of the contact or escalation plan.</p>"
+      }
+    },
+    "ChannelName": {
+      "base": null,
+      "refs": {
+        "ContactChannel$Name": "<p>The name of the contact channel.</p>",
+        "CreateContactChannelRequest$Name": "<p>The name of the contact channel.</p>",
+        "GetContactChannelResult$Name": "<p>The name of the contact channel</p>",
+        "UpdateContactChannelRequest$Name": "<p>The name of the contact channel.</p>"
+      }
+    },
+    "ChannelTargetInfo": {
+      "base": "<p>Information about the contact channel that Incident Manager uses to engage the contact.</p>",
+      "refs": {
+        "Target$ChannelTargetInfo": "<p>Information about the contact channel Incident Manager is engaging.</p>"
+      }
+    },
+    "ChannelType": {
+      "base": null,
+      "refs": {
+        "ContactChannel$Type": "<p>The type of the contact channel. Incident Manager supports three contact methods:</p> <ul> <li> <p>SMS</p> </li> <li> <p>VOICE</p> </li> <li> <p>EMAIL</p> </li> </ul>",
+        "CreateContactChannelRequest$Type": "<p>Incident Manager supports three types of contact channels:</p> <ul> <li> <p> <code>SMS</code> </p> </li> <li> <p> <code>VOICE</code> </p> </li> <li> <p> <code>EMAIL</code> </p> </li> </ul>",
+        "GetContactChannelResult$Type": "<p>The type of contact channel. The type is <code>SMS</code>, <code>VOICE</code>, or <code>EMAIL</code>.</p>"
+      }
+    },
+    "ConflictException": {
+      "base": "<p>Updating or deleting a resource causes an inconsistent state.</p>",
+      "refs": {
+      }
+    },
+    "Contact": {
+      "base": "<p>A personal contact or escalation plan that Incident Manager engages during an incident.</p>",
+      "refs": {
+        "ContactsList$member": null
+      }
+    },
+    "ContactAlias": {
+      "base": null,
+      "refs": {
+        "Contact$Alias": "<p>The unique and identifiable alias of the contact or escalation plan.</p>",
+        "CreateContactRequest$Alias": "<p>The short name to quickly identify a contact or escalation plan. The contact alias must be unique and identifiable. </p>",
+        "GetContactResult$Alias": "<p>The alias of the contact or escalation plan. The alias is unique and identifiable.</p>",
+        "ListContactsRequest$AliasPrefix": "<p>Used to list only contacts who's aliases start with the specified prefix.</p>"
+      }
+    },
+    "ContactChannel": {
+      "base": "<p>The method that Incident Manager uses to engage a contact.</p>",
+      "refs": {
+        "ContactChannelList$member": null
+      }
+    },
+    "ContactChannelAddress": {
+      "base": "<p>The details that Incident Manager uses when trying to engage the contact channel. </p>",
+      "refs": {
+        "ContactChannel$DeliveryAddress": "<p>The details that Incident Manager uses when trying to engage the contact channel.</p>",
+        "CreateContactChannelRequest$DeliveryAddress": "<p>The details that Incident Manager uses when trying to engage the contact channel. The format is dependent on the type of the contact channel. The following are the expected formats:</p> <ul> <li> <p>SMS - '+' followed by the country code and phone number</p> </li> <li> <p>VOICE - '+' followed by the country code and phone number</p> </li> <li> <p>EMAIL - any standard email format</p> </li> </ul>",
+        "GetContactChannelResult$DeliveryAddress": "<p>The details that Incident Manager uses when trying to engage the contact channel. </p>",
+        "UpdateContactChannelRequest$DeliveryAddress": "<p>The details that Incident Manager uses when trying to engage the contact channel. </p>"
+      }
+    },
+    "ContactChannelList": {
+      "base": null,
+      "refs": {
+        "ListContactChannelsResult$ContactChannels": "<p>A list of contact channels related to the specified contact.</p>"
+      }
+    },
+    "ContactName": {
+      "base": null,
+      "refs": {
+        "Contact$DisplayName": "<p>The full name of the contact or escalation plan.</p>",
+        "CreateContactRequest$DisplayName": "<p>The full name of the contact or escalation plan. </p>",
+        "GetContactResult$DisplayName": "<p>The full name of the contact or escalation plan.</p>",
+        "UpdateContactRequest$DisplayName": "<p>The full name of the contact or escalation plan.</p>"
+      }
+    },
+    "ContactTargetInfo": {
+      "base": "<p>The contact that Incident Manager is engaging during an incident.</p>",
+      "refs": {
+        "Target$ContactTargetInfo": "<p>Information about the contact that Incident Manager is engaging.</p>"
+      }
+    },
+    "ContactType": {
+      "base": null,
+      "refs": {
+        "Contact$Type": "<p>Refers to the type of contact. A single contact is type <code>PERSONAL</code> and an escalation plan is type <code>ESCALATION</code>.</p>",
+        "CreateContactRequest$Type": "<p>To create an escalation plan use <code>ESCALATION</code>. To create a contact use <code>PERSONAL</code>.</p>",
+        "GetContactResult$Type": "<p>The type of contact, either <code>PERSONAL</code> or <code>ESCALATION</code>. </p>",
+        "ListContactsRequest$Type": "<p>The type of contact. A contact is type <code>PERSONAL</code> and an escalation plan is type <code>ESCALATION</code>.</p>"
+      }
+    },
+    "ContactsList": {
+      "base": null,
+      "refs": {
+        "ListContactsResult$Contacts": "<p>A list of the contacts and escalation plans in your Incident Manager account.</p>"
+      }
+    },
+    "Content": {
+      "base": null,
+      "refs": {
+        "DescribeEngagementResult$Content": "<p>The secure content of the message that was sent to the contact. Use this field for engagements to <code>VOICE</code> and <code>EMAIL</code>.</p>",
+        "DescribePageResult$Content": "<p>The secure content of the message that was sent to the contact. Use this field for engagements to <code>VOICE</code> and <code>EMAIL</code>.</p>",
+        "StartEngagementRequest$Content": "<p>The secure content of the message that was sent to the contact. Use this field for engagements to <code>VOICE</code> or <code>EMAIL</code>.</p>"
+      }
+    },
+    "CreateContactChannelRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateContactChannelResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateContactRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateContactResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DataEncryptionException": {
+      "base": "<p>The operation failed to due an encryption key error.</p>",
+      "refs": {
+      }
+    },
+    "DateTime": {
+      "base": null,
+      "refs": {
+        "DescribeEngagementResult$StartTime": "<p>The time that the engagement started.</p>",
+        "DescribeEngagementResult$StopTime": "<p>The time that the engagement ended.</p>",
+        "DescribePageResult$SentTime": "<p>The time the engagement was sent to the contact channel.</p>",
+        "DescribePageResult$ReadTime": "<p>The time that the contact channel acknowledged the engagement.</p>",
+        "DescribePageResult$DeliveryTime": "<p>The time that the contact channel received the engagement.</p>",
+        "Engagement$StartTime": "<p>The time that the engagement began.</p>",
+        "Engagement$StopTime": "<p>The time that the engagement ended.</p>",
+        "Page$SentTime": "<p>The time that Incident Manager engaged the contact channel.</p>",
+        "Page$DeliveryTime": "<p>The time the message was delivered to the contact channel.</p>",
+        "Page$ReadTime": "<p>The time that the contact channel acknowledged engagement.</p>",
+        "Receipt$ReceiptTime": "<p>The time receipt was <code>SENT</code>, <code>DELIVERED</code>, or <code>READ</code>.</p>",
+        "TimeRange$StartTime": "<p>The start of the time range.</p>",
+        "TimeRange$EndTime": "<p>The end of the time range.</p>"
+      }
+    },
+    "DeactivateContactChannelRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeactivateContactChannelResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeferActivation": {
+      "base": null,
+      "refs": {
+        "CreateContactChannelRequest$DeferActivation": "<p>If you want to activate the channel at a later time, you can choose to defer activation. Incident Manager can't engage your contact channel until it has been activated.</p>"
+      }
+    },
+    "DeleteContactChannelRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteContactChannelResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteContactRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteContactResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DescribeEngagementRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DescribeEngagementResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DescribePageRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DescribePageResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "Engagement": {
+      "base": "<p>Incident Manager reaching out to a contact or escalation plan to engage contact during an incident.</p>",
+      "refs": {
+        "EngagementsList$member": null
+      }
+    },
+    "EngagementsList": {
+      "base": null,
+      "refs": {
+        "ListEngagementsResult$Engagements": "<p>A list of each engagement that occurred during the specified time range of an incident.</p>"
+      }
+    },
+    "GetContactChannelRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetContactChannelResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetContactPolicyRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetContactPolicyResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetContactRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetContactResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "IdempotencyToken": {
+      "base": null,
+      "refs": {
+        "CreateContactChannelRequest$IdempotencyToken": "<p>A token ensuring that the operation is called only once with the specified details.</p>",
+        "CreateContactRequest$IdempotencyToken": "<p>A token ensuring that the operation is called only once with the specified details.</p>",
+        "StartEngagementRequest$IdempotencyToken": "<p>A token ensuring that the operation is called only once with the specified details.</p>"
+      }
+    },
+    "IncidentId": {
+      "base": null,
+      "refs": {
+        "DescribeEngagementResult$IncidentId": "<p>The ARN of the incident in which the engagement occurred.</p>",
+        "DescribePageResult$IncidentId": "<p>The ARN of the incident that engaged the contact channel.</p>",
+        "Engagement$IncidentId": "<p>The ARN of the incident that's engaging the contact.</p>",
+        "ListEngagementsRequest$IncidentId": "<p>The Amazon Resource Name (ARN) of the incident you're listing engagements for.</p>",
+        "Page$IncidentId": "<p>The ARN of the incident that's engaging the contact channel.</p>",
+        "StartEngagementRequest$IncidentId": "<p>The ARN of the incident that the engagement is part of.</p>"
+      }
+    },
+    "InternalServerException": {
+      "base": "<p>Unexpected error occurred while processing the request.</p>",
+      "refs": {
+      }
+    },
+    "IsEssential": {
+      "base": null,
+      "refs": {
+        "ContactTargetInfo$IsEssential": "<p>A Boolean value determining if the contact's acknowledgement stops the progress of stages in the plan.</p>"
+      }
+    },
+    "ListContactChannelsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListContactChannelsResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListContactsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListContactsResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListEngagementsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListEngagementsResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListPageReceiptsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListPageReceiptsResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListPagesByContactRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListPagesByContactResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListPagesByEngagementRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListPagesByEngagementResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListTagsForResourceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListTagsForResourceResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "MaxResults": {
+      "base": null,
+      "refs": {
+        "ListContactChannelsRequest$MaxResults": "<p>The maximum number of contact channels per page.</p>",
+        "ListContactsRequest$MaxResults": "<p>The maximum number of contacts and escalation plans per page of results.</p>",
+        "ListEngagementsRequest$MaxResults": "<p>The maximum number of engagements per page of results.</p>",
+        "ListPageReceiptsRequest$MaxResults": "<p>The maximum number of acknowledgements per page of results.</p>",
+        "ListPagesByContactRequest$MaxResults": "<p>The maximum number of engagements to contact channels to list per page of results. </p>",
+        "ListPagesByEngagementRequest$MaxResults": "<p>The maximum number of engagements to contact channels to list per page of results.</p>"
+      }
+    },
+    "Page": {
+      "base": "<p>Incident Manager engaging a contact's contact channel.</p>",
+      "refs": {
+        "PagesList$member": null
+      }
+    },
+    "PagesList": {
+      "base": null,
+      "refs": {
+        "ListPagesByContactResult$Pages": "<p>The list of engagements to a contact's contact channel.</p>",
+        "ListPagesByEngagementResult$Pages": "<p>The list of engagements to contact channels.</p>"
+      }
+    },
+    "PaginationToken": {
+      "base": null,
+      "refs": {
+        "ListContactChannelsRequest$NextToken": "<p>The pagination token to continue to the next page of results.</p>",
+        "ListContactChannelsResult$NextToken": "<p>The pagination token to continue to the next page of results.</p>",
+        "ListContactsRequest$NextToken": "<p>The pagination token to continue to the next page of results.</p>",
+        "ListContactsResult$NextToken": "<p>The pagination token to continue to the next page of results.</p>",
+        "ListEngagementsRequest$NextToken": "<p>The pagination token to continue to the next page of results.</p>",
+        "ListEngagementsResult$NextToken": "<p>The pagination token to continue to the next page of results.</p>",
+        "ListPageReceiptsRequest$NextToken": "<p>The pagination token to continue to the next page of results.</p>",
+        "ListPageReceiptsResult$NextToken": "<p>The pagination token to continue to the next page of results.</p>",
+        "ListPagesByContactRequest$NextToken": "<p>The pagination token to continue to the next page of results.</p>",
+        "ListPagesByContactResult$NextToken": "<p>The pagination token to continue to the next page of results.</p>",
+        "ListPagesByEngagementRequest$NextToken": "<p>The pagination token to continue to the next page of results.</p>",
+        "ListPagesByEngagementResult$NextToken": "<p>The pagination token to continue to the next page of results.</p>"
+      }
+    },
+    "Plan": {
+      "base": "<p>The stages that an escalation plan or engagement plan engages contacts and contact methods in.</p>",
+      "refs": {
+        "CreateContactRequest$Plan": "<p>A list of stages. A contact has an engagement plan with stages that contact specified contact channels. An escalation plan uses stages that contact specified contacts. </p>",
+        "GetContactResult$Plan": "<p>Details about the specific timing or stages and targets of the escalation plan or engagement plan.</p>",
+        "UpdateContactRequest$Plan": "<p>A list of stages. A contact has an engagement plan with stages for specified contact channels. An escalation plan uses these stages to contact specified contacts. </p>"
+      }
+    },
+    "Policy": {
+      "base": null,
+      "refs": {
+        "GetContactPolicyResult$Policy": "<p>Details about the resource policy attached to the contact or escalation plan.</p>",
+        "PutContactPolicyRequest$Policy": "<p>Details of the resource policy.</p>"
+      }
+    },
+    "PublicContent": {
+      "base": null,
+      "refs": {
+        "DescribeEngagementResult$PublicContent": "<p>The insecure content of the message that was sent to the contact. Use this field for engagements to <code>SMS</code>.</p>",
+        "DescribePageResult$PublicContent": "<p>The insecure content of the message that was sent to the contact. Use this field for engagements to <code>SMS</code>.</p>",
+        "StartEngagementRequest$PublicContent": "<p>The insecure content of the message that was sent to the contact. Use this field for engagements to <code>SMS</code>.</p>"
+      }
+    },
+    "PublicSubject": {
+      "base": null,
+      "refs": {
+        "DescribeEngagementResult$PublicSubject": "<p>The insecure subject of the message that was sent to the contact. Use this field for engagements to <code>SMS</code>.</p>",
+        "DescribePageResult$PublicSubject": "<p>The insecure subject of the message that was sent to the contact. Use this field for engagements to <code>SMS</code>.</p>",
+        "StartEngagementRequest$PublicSubject": "<p>The insecure subject of the message that was sent to the contact. Use this field for engagements to <code>SMS</code>.</p>"
+      }
+    },
+    "PutContactPolicyRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "PutContactPolicyResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "Receipt": {
+      "base": "<p>Records events during an engagement.</p>",
+      "refs": {
+        "ReceiptsList$member": null
+      }
+    },
+    "ReceiptInfo": {
+      "base": null,
+      "refs": {
+        "AcceptPageRequest$Note": "<p>Information provided by the user when the user acknowledges the page.</p>",
+        "Receipt$ReceiptInfo": "<p>Information provided during the page acknowledgement.</p>"
+      }
+    },
+    "ReceiptType": {
+      "base": null,
+      "refs": {
+        "Receipt$ReceiptType": "<p>The type follows the engagement cycle, <code>SENT</code>, <code>DELIVERED</code>, and <code>READ</code>.</p>"
+      }
+    },
+    "ReceiptsList": {
+      "base": null,
+      "refs": {
+        "ListPageReceiptsResult$Receipts": "<p>A list of each acknowledgement.</p>"
+      }
+    },
+    "ResourceNotFoundException": {
+      "base": "<p>Request references a resource that doesn't exist.</p>",
+      "refs": {
+      }
+    },
+    "RetryAfterSeconds": {
+      "base": null,
+      "refs": {
+        "InternalServerException$RetryAfterSeconds": "Advice to clients on when the call can be safely retried",
+        "ThrottlingException$RetryAfterSeconds": "Advice to clients on when the call can be safely retried"
+      }
+    },
+    "RetryIntervalInMinutes": {
+      "base": null,
+      "refs": {
+        "ChannelTargetInfo$RetryIntervalInMinutes": "<p>The number of minutes to wait to retry sending engagement in the case the engagement initially fails.</p>"
+      }
+    },
+    "SendActivationCodeRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "SendActivationCodeResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "Sender": {
+      "base": null,
+      "refs": {
+        "DescribeEngagementResult$Sender": "<p>The user that started the engagement.</p>",
+        "DescribePageResult$Sender": "<p>The user that started the engagement.</p>",
+        "Engagement$Sender": "<p>The user that started the engagement.</p>",
+        "Page$Sender": "<p>The user that started the engagement.</p>",
+        "StartEngagementRequest$Sender": "<p>The user that started the engagement.</p>"
+      }
+    },
+    "ServiceQuotaExceededException": {
+      "base": "<p>Request would cause a service quota to be exceeded.</p>",
+      "refs": {
+      }
+    },
+    "SimpleAddress": {
+      "base": null,
+      "refs": {
+        "ContactChannelAddress$SimpleAddress": "<p>The format is dependent on the type of the contact channel. The following are the expected formats:</p> <ul> <li> <p>SMS - '+' followed by the country code and phone number</p> </li> <li> <p>VOICE - '+' followed by the country code and phone number</p> </li> <li> <p>EMAIL - any standard email format</p> </li> </ul>"
+      }
+    },
+    "SsmContactsArn": {
+      "base": null,
+      "refs": {
+        "AcceptPageRequest$PageId": "<p>The Amazon Resource Name (ARN) of the engagement to a contact channel.</p>",
+        "AcceptPageRequest$ContactChannelId": "<p>The ARN of the contact channel.</p>",
+        "ActivateContactChannelRequest$ContactChannelId": "<p>The Amazon Resource Name (ARN) of the contact channel.</p>",
+        "ChannelTargetInfo$ContactChannelId": "<p>The Amazon Resource Name (ARN) of the contact channel.</p>",
+        "Contact$ContactArn": "<p>The Amazon Resource Name (ARN) of the contact or escalation plan.</p>",
+        "ContactChannel$ContactChannelArn": "<p>The Amazon Resource Name (ARN) of the contact channel.</p>",
+        "ContactChannel$ContactArn": "<p>The ARN of the contact that contains the contact channel.</p>",
+        "ContactTargetInfo$ContactId": "<p>The Amazon Resource Name (ARN) of the contact.</p>",
+        "CreateContactChannelRequest$ContactId": "<p>The Amazon Resource Name (ARN) of the contact you are adding the contact channel to.</p>",
+        "CreateContactChannelResult$ContactChannelArn": "<p>The Amazon Resource Name (ARN) of the contact channel.</p>",
+        "CreateContactResult$ContactArn": "<p>The Amazon Resource Name (ARN) of the created contact or escalation plan.</p>",
+        "DeactivateContactChannelRequest$ContactChannelId": "<p>The Amazon Resource Name (ARN) of the contact channel you're deactivating.</p>",
+        "DeleteContactChannelRequest$ContactChannelId": "<p>The Amazon Resource Name (ARN) of the contact channel.</p>",
+        "DeleteContactRequest$ContactId": "<p>The Amazon Resource Name (ARN) of the contact that you're deleting.</p>",
+        "DescribeEngagementRequest$EngagementId": "<p>The Amazon Resource Name (ARN) of the engagement you want the details of.</p>",
+        "DescribeEngagementResult$ContactArn": "<p>The ARN of the escalation plan or contacts involved in the engagement.</p>",
+        "DescribeEngagementResult$EngagementArn": "<p>The ARN of the engagement.</p>",
+        "DescribePageRequest$PageId": "<p>The ID of the engagement to a contact channel.</p>",
+        "DescribePageResult$PageArn": "<p>The Amazon Resource Name (ARN) of the engagement to a contact channel.</p>",
+        "DescribePageResult$EngagementArn": "<p>The ARN of the engagement that engaged the contact channel.</p>",
+        "DescribePageResult$ContactArn": "<p>The ARN of the contact that was engaged.</p>",
+        "Engagement$EngagementArn": "<p>The Amazon Resource Name (ARN) of the engagement.</p>",
+        "Engagement$ContactArn": "<p>The ARN of the escalation plan or contact that Incident Manager is engaging.</p>",
+        "GetContactChannelRequest$ContactChannelId": "<p>The Amazon Resource Name (ARN) of the contact channel you want information about.</p>",
+        "GetContactChannelResult$ContactArn": "<p>The ARN of the contact that the channel belongs to.</p>",
+        "GetContactChannelResult$ContactChannelArn": "<p>The ARN of the contact channel.</p>",
+        "GetContactPolicyRequest$ContactArn": "<p>The Amazon Resource Name (ARN) of the contact or escalation plan.</p>",
+        "GetContactPolicyResult$ContactArn": "<p>The ARN of the contact or escalation plan.</p>",
+        "GetContactRequest$ContactId": "<p>The Amazon Resource Name (ARN) of the contact or escalation plan.</p>",
+        "GetContactResult$ContactArn": "<p>The ARN of the contact or escalation plan.</p>",
+        "ListContactChannelsRequest$ContactId": "<p>The Amazon Resource Name (ARN) of the contact. </p>",
+        "ListPageReceiptsRequest$PageId": "<p>The Amazon Resource Name (ARN) of the engagement to a specific contact channel.</p>",
+        "ListPagesByContactRequest$ContactId": "<p>The Amazon Resource Name (ARN) of the contact you are retrieving engagements for.</p>",
+        "ListPagesByEngagementRequest$EngagementId": "<p>The Amazon Resource Name (ARN) of the engagement.</p>",
+        "Page$PageArn": "<p>The Amazon Resource Name (ARN) of the page to the contact channel.</p>",
+        "Page$EngagementArn": "<p>The ARN of the engagement that this page is part of.</p>",
+        "Page$ContactArn": "<p>The ARN of the contact that Incident Manager is engaging.</p>",
+        "PutContactPolicyRequest$ContactArn": "<p>The Amazon Resource Name (ARN) of the contact or escalation plan.</p>",
+        "Receipt$ContactChannelArn": "<p>The Amazon Resource Name (ARN) of the contact channel Incident Manager engaged.</p>",
+        "SendActivationCodeRequest$ContactChannelId": "<p>The Amazon Resource Name (ARN) of the contact channel.</p>",
+        "StartEngagementRequest$ContactId": "<p>The Amazon Resource Name (ARN) of the contact being engaged.</p>",
+        "StartEngagementResult$EngagementArn": "<p>The ARN of the engagement.</p>",
+        "StopEngagementRequest$EngagementId": "<p>The Amazon Resource Name (ARN) of the engagement.</p>",
+        "UpdateContactChannelRequest$ContactChannelId": "<p>The Amazon Resource Name (ARN) of the contact channel you want to update.</p>",
+        "UpdateContactRequest$ContactId": "<p>The Amazon Resource Name (ARN) of the contact or escalation plan you're updating.</p>"
+      }
+    },
+    "Stage": {
+      "base": "<p>A set amount of time that an escalation plan or engagement plan engages the specified contacts or contact methods.</p>",
+      "refs": {
+        "StagesList$member": null
+      }
+    },
+    "StageDurationInMins": {
+      "base": null,
+      "refs": {
+        "Stage$DurationInMinutes": "<p>The time to wait until beginning the next stage. The duration can only be set to 0 if a target is specified.</p>"
+      }
+    },
+    "StagesList": {
+      "base": null,
+      "refs": {
+        "Plan$Stages": "<p>A list of stages that the escalation plan or engagement plan uses to engage contacts and contact methods.</p>"
+      }
+    },
+    "StartEngagementRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "StartEngagementResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "StopEngagementRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "StopEngagementResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "StopReason": {
+      "base": null,
+      "refs": {
+        "StopEngagementRequest$Reason": "<p>The reason that you're stopping the engagement. </p>"
+      }
+    },
+    "String": {
+      "base": null,
+      "refs": {
+        "AccessDeniedException$Message": null,
+        "ConflictException$Message": null,
+        "ConflictException$ResourceId": "Identifier of the resource in use",
+        "ConflictException$ResourceType": "ype of the resource in use",
+        "DataEncryptionException$Message": null,
+        "InternalServerException$Message": null,
+        "ResourceNotFoundException$Message": null,
+        "ResourceNotFoundException$ResourceId": "Hypothetical resource identifier that was not found",
+        "ResourceNotFoundException$ResourceType": "Hypothetical resource type that was not found",
+        "ServiceQuotaExceededException$Message": null,
+        "ServiceQuotaExceededException$ResourceId": "Identifier of the resource affected",
+        "ServiceQuotaExceededException$ResourceType": "Type of the resource affected",
+        "ServiceQuotaExceededException$QuotaCode": "Service Quotas requirement to identify originating service",
+        "ServiceQuotaExceededException$ServiceCode": "Service Quotas requirement to identify originating quota",
+        "ThrottlingException$Message": null,
+        "ThrottlingException$QuotaCode": "Service Quotas requirement to identify originating service",
+        "ThrottlingException$ServiceCode": "Service Quotas requirement to identify originating quota",
+        "ValidationException$Message": null,
+        "ValidationExceptionField$Name": "<p>The name of the field that caused the exception.</p>",
+        "ValidationExceptionField$Message": "<p>Information about what caused the field to cause an exception.</p>"
+      }
+    },
+    "Subject": {
+      "base": null,
+      "refs": {
+        "DescribeEngagementResult$Subject": "<p>The secure subject of the message that was sent to the contact. Use this field for engagements to <code>VOICE</code> and <code>EMAIL</code>.</p>",
+        "DescribePageResult$Subject": "<p>The secure subject of the message that was sent to the contact. Use this field for engagements to <code>VOICE</code> and <code>EMAIL</code>.</p>",
+        "StartEngagementRequest$Subject": "<p>The secure subject of the message that was sent to the contact. Use this field for engagements to <code>VOICE</code> or <code>EMAIL</code>.</p>"
+      }
+    },
+    "Tag": {
+      "base": "<p>A container of a key-value name pair.</p>",
+      "refs": {
+        "TagsList$member": null
+      }
+    },
+    "TagKey": {
+      "base": null,
+      "refs": {
+        "Tag$Key": "<p>Name of the object key.</p>",
+        "TagKeyList$member": null
+      }
+    },
+    "TagKeyList": {
+      "base": null,
+      "refs": {
+        "UntagResourceRequest$TagKeys": "<p>The key of the tag that you want to remove.</p>"
+      }
+    },
+    "TagResourceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "TagResourceResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "TagValue": {
+      "base": null,
+      "refs": {
+        "Tag$Value": "<p>Value of the tag.</p>"
+      }
+    },
+    "TagsList": {
+      "base": null,
+      "refs": {
+        "CreateContactRequest$Tags": "<p>Adds a tag to the target. You can only tag resources created in the first Region of your replication set. </p>",
+        "ListTagsForResourceResult$Tags": "<p>The tags related to the contact or escalation plan.</p>",
+        "TagResourceRequest$Tags": "<p>A list of tags that you are adding to the contact or escalation plan.</p>"
+      }
+    },
+    "Target": {
+      "base": "<p>The contact or contact channel that's being engaged.</p>",
+      "refs": {
+        "TargetsList$member": null
+      }
+    },
+    "TargetsList": {
+      "base": null,
+      "refs": {
+        "Stage$Targets": "<p>The contacts or contact methods that the escalation plan or engagement plan is engaging.</p>"
+      }
+    },
+    "ThrottlingException": {
+      "base": "<p>The request was denied due to request throttling.</p>",
+      "refs": {
+      }
+    },
+    "TimeRange": {
+      "base": "<p>A range of between two set times</p>",
+      "refs": {
+        "ListEngagementsRequest$TimeRangeValue": "<p>The time range to lists engagements for an incident.</p>"
+      }
+    },
+    "UntagResourceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UntagResourceResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateContactChannelRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateContactChannelResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateContactRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateContactResult": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ValidationException": {
+      "base": "<p>The input fails to satisfy the constraints specified by an Amazon Web Services service.</p>",
+      "refs": {
+      }
+    },
+    "ValidationExceptionField": {
+      "base": "<p>Provides information about which field caused the exception.</p>",
+      "refs": {
+        "ValidationExceptionFieldList$member": null
+      }
+    },
+    "ValidationExceptionFieldList": {
+      "base": null,
+      "refs": {
+        "ValidationException$Fields": "The fields that caused the error"
+      }
+    },
+    "ValidationExceptionReason": {
+      "base": null,
+      "refs": {
+        "ValidationException$Reason": "Reason the request failed validation"
+      }
+    }
+  }
+}

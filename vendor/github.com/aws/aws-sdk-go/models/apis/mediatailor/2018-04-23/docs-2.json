@@ -1,0 +1,816 @@
+{
+  "operations": {
+    "ConfigureLogsForPlaybackConfiguration": "<p>Configures Amazon CloudWatch log settings for a playback configuration.</p>",
+    "CreateChannel": "<p>Creates a channel.</p>",
+    "CreatePrefetchSchedule": "<p>Creates a new prefetch schedule for the specified playback configuration.</p>",
+    "CreateProgram": "<p>Creates a program.</p>",
+    "CreateSourceLocation": "<p>Creates a source location on a specific channel.</p>",
+    "CreateVodSource": "<p>Creates name for a specific VOD source in a source location.</p>",
+    "DeleteChannel": "<p>Deletes a channel. You must stop the channel before it can be deleted.</p>",
+    "DeleteChannelPolicy": "<p>Deletes a channel's IAM policy.</p>",
+    "DeletePlaybackConfiguration": "<p>Deletes the playback configuration for the specified name.</p>  ",
+    "DeletePrefetchSchedule": "<p>Deletes a prefetch schedule for a specific playback configuration. If you call DeletePrefetchSchedule on an expired prefetch schedule, MediaTailor returns an HTTP 404 status code.</p>",
+    "DeleteProgram": "<p>Deletes a specific program on a specific channel.</p>",
+    "DeleteSourceLocation": "<p>Deletes a source location on a specific channel.</p>",
+    "DeleteVodSource": "<p>Deletes a specific VOD source in a specific source location.</p>",
+    "DescribeChannel": "<p>Describes the properties of a specific channel.</p>",
+    "DescribeProgram": "<p>Retrieves the properties of the requested program.</p>",
+    "DescribeSourceLocation": "<p>Retrieves the properties of the requested source location.</p>",
+    "DescribeVodSource": "<p>Provides details about a specific VOD source in a specific source location.</p>",
+    "GetChannelPolicy": "<p>Retrieves information about a channel's IAM policy.</p>",
+    "GetChannelSchedule": "<p>Retrieves information about your channel's schedule.</p>",
+    "GetPlaybackConfiguration": "<p>Returns the playback configuration for the specified name.</p>  ",
+    "GetPrefetchSchedule": "<p>Returns information about the prefetch schedule for a specific playback configuration. If you call GetPrefetchSchedule on an expired prefetch schedule, MediaTailor returns an HTTP 404 status code.</p>",
+    "ListAlerts": "<p>Returns a list of alerts for the given resource.</p>",
+    "ListChannels": "<p>Retrieves a list of channels that are associated with this account.</p>",
+    "ListPlaybackConfigurations": "<p>Returns a list of the playback configurations defined in AWS Elemental MediaTailor. You can specify a maximum number of configurations to return at a time. The default maximum is 50. Results are returned in pagefuls. If MediaTailor has more configurations than the specified maximum, it provides parameters in the response that you can use to retrieve the next pageful.</p>  ",
+    "ListPrefetchSchedules": "<p>Creates a new prefetch schedule.</p>",
+    "ListSourceLocations": "<p>Retrieves a list of source locations.</p>",
+    "ListTagsForResource": "<p>Returns a list of the tags assigned to the specified playback configuration resource.</p>  ",
+    "ListVodSources": "<p>Lists all the VOD sources in a source location.</p>",
+    "PutChannelPolicy": "<p>Creates an IAM policy for the channel.</p>",
+    "PutPlaybackConfiguration": "<p>Adds a new playback configuration to AWS Elemental MediaTailor.</p>  ",
+    "StartChannel": "<p>Starts a specific channel.</p>",
+    "StopChannel": "<p>Stops a specific channel.</p>",
+    "TagResource": "<p>Adds tags to the specified playback configuration resource. You can specify one or more tags to add.</p>  ",
+    "UntagResource": "<p>Removes tags from the specified playback configuration resource. You can specify one or more tags to remove.</p>  ",
+    "UpdateChannel": "<p>Updates an existing channel.</p>",
+    "UpdateSourceLocation": "<p>Updates a source location on a specific channel.</p>",
+    "UpdateVodSource": "<p>Updates a specific VOD source in a specific source location.</p>"
+  },
+  "service": "<p>Use the AWS Elemental MediaTailor SDKs and CLI to configure scalable ad insertion and linear channels. With MediaTailor, you can assemble existing content into a linear stream and serve targeted ads to viewers while maintaining broadcast quality in over-the-top (OTT) video applications. For information about using the service, including detailed information about the settings covered in this guide, see the <a href=\"https://docs.aws.amazon.com/mediatailor/latest/ug/\">AWS Elemental MediaTailor User Guide</a>.</p> <p>Through the SDKs and the CLI you manage AWS Elemental MediaTailor configurations and channels the same as you do through the console. For example, you specify ad insertion behavior and mapping information for the origin server and the ad decision server (ADS).</p>",
+  "shapes": {
+    "AccessConfiguration": {
+      "base": "<p>Access configuration parameters.</p>",
+      "refs": {
+        "CreateSourceLocationRequest$AccessConfiguration": "<p>Access configuration parameters. Configures the type of authentication used to access content from your source location.</p>",
+        "DescribeSourceLocationResponse$AccessConfiguration": "<p>The access configuration for the source location.</p>",
+        "SourceLocation$AccessConfiguration": "<p>The access configuration for the source location.</p>",
+        "UpdateSourceLocationRequest$AccessConfiguration": "<p>Access configuration parameters. Configures the type of authentication used to access content from your source location.</p>"
+      }
+    },
+    "AccessType": {
+      "base": null,
+      "refs": {
+        "AccessConfiguration$AccessType": "<p>The type of authentication used to access content from HttpConfiguration::BaseUrl on your source location. Accepted value: S3_SIGV4.</p> <p>S3_SIGV4 - AWS Signature Version 4 authentication for Amazon S3 hosted virtual-style access. If your source location base URL is an Amazon S3 bucket, MediaTailor can use AWS Signature Version 4 (SigV4) authentication to access the bucket where your source content is stored. Your MediaTailor source location baseURL must follow the S3 virtual hosted-style request URL format. For example, https://bucket-name.s3.Region.amazonaws.com/key-name.</p> <p>Before you can use S3_SIGV4, you must meet these requirements:</p> <p>• You must allow MediaTailor to access your S3 bucket by granting mediatailor.amazonaws.com principal access in IAM. For information about configuring access in IAM, see Access management in the IAM User Guide.</p> <p>• The mediatailor.amazonaws.com service principal must have permissions to read all top level manifests referenced by the VodSource packaging configurations.</p> <p>• The caller of the API must have s3:GetObject IAM permissions to read all top level manifests referenced by your MediaTailor VodSource packaging configurations.</p>"
+      }
+    },
+    "AdBreak": {
+      "base": "<p>Ad break configuration parameters.</p>",
+      "refs": {
+        "__listOfAdBreak$member": null
+      }
+    },
+    "AdMarkerPassthrough": {
+      "base": "<p>For HLS, when set to true, MediaTailor passes through EXT-X-CUE-IN, EXT-X-CUE-OUT, and EXT-X-SPLICEPOINT-SCTE35 ad markers from the origin manifest to the MediaTailor personalized manifest.</p> <p>No logic is applied to these ad markers. For example, if EXT-X-CUE-OUT has a value of 60, but no ads are filled for that ad break, MediaTailor will not set the value to 0.</p>",
+      "refs": {
+        "ManifestProcessingRules$AdMarkerPassthrough": "<p>For HLS, when set to true, MediaTailor passes through EXT-X-CUE-IN, EXT-X-CUE-OUT, and EXT-X-SPLICEPOINT-SCTE35 ad markers from the origin manifest to the MediaTailor personalized manifest.</p> <p>No logic is applied to these ad markers. For example, if EXT-X-CUE-OUT has a value of 60, but no ads are filled for that ad break, MediaTailor will not set the value to 0.</p>"
+      }
+    },
+    "Alert": {
+      "base": "<p>Alert configuration parameters.</p>",
+      "refs": {
+        "__listOfAlert$member": null
+      }
+    },
+    "AvailMatchingCriteria": {
+      "base": "<p>MediaTailor only places (consumes) prefetched ads if the ad break meets the criteria defined by the dynamic variables. This gives you granular control over which ad break to place the prefetched ads into.</p> <p>As an example, let's say that you set DynamicVariable to scte.event_id and Operator to EQUALS, and your playback configuration has an ADS URL of https://my.ads.server.com/path?&amp;podId=[scte.avail_num]&amp;event=[scte.event_id]&amp;duration=[session.avail_duration_secs]. And the prefetch request to the ADS contains these values https://my.ads.server.com/path?&amp;podId=3&amp;event=my-awesome-event&amp;duration=30. MediaTailor will only insert the prefetched ads into the ad break if has a SCTE marker with an event id of my-awesome-event, since it must match the event id that MediaTailor uses to query the ADS.</p> <p>You can specify up to five AvailMatchingCriteria. If you specify multiple AvailMatchingCriteria, MediaTailor combines them to match using a logical AND. You can model logical OR combinations by creating multiple prefetch schedules.</p>",
+      "refs": {
+        "__listOfAvailMatchingCriteria$member": null
+      }
+    },
+    "AvailSuppression": {
+      "base": "<p>The configuration for avail suppression, also known as ad suppression. For more information about ad suppression, see <a href=\"https://docs.aws.amazon.com/mediatailor/latest/ug/ad-behavior.html\">Ad Suppression</a>.</p>",
+      "refs": {
+        "GetPlaybackConfigurationResponse$AvailSuppression": "<p>The configuration for avail suppression, also known as ad suppression. For more information about ad suppression, see <a href=\"https://docs.aws.amazon.com/mediatailor/latest/ug/ad-behavior.html\">Ad Suppression</a>.</p>",
+        "PlaybackConfiguration$AvailSuppression": "<p>The configuration for avail suppression, also known as ad suppression. For more information about ad suppression, see <a href=\"https://docs.aws.amazon.com/mediatailor/latest/ug/ad-behavior.html\">Ad Suppression</a>.</p>",
+        "PutPlaybackConfigurationRequest$AvailSuppression": "<p>The configuration for avail suppression, also known as ad suppression. For more information about ad suppression, see <a href=\"https://docs.aws.amazon.com/mediatailor/latest/ug/ad-behavior.html\">Ad Suppression</a>.</p>"
+      }
+    },
+    "BadRequestException": {
+      "base": "<p>A request contains unexpected data.</p>",
+      "refs": {}
+    },
+    "Bumper": {
+      "base": "<p>The configuration for bumpers. Bumpers are short audio or video clips that play at the start or before the end of an ad break. To learn more about bumpers, see <a href=\"https://docs.aws.amazon.com/mediatailor/latest/ug/bumpers.html\">Bumpers</a>.</p>",
+      "refs": {
+        "GetPlaybackConfigurationResponse$Bumper": "<p>The configuration for bumpers. Bumpers are short audio or video clips that play at the start or before the end of an ad break. To learn more about bumpers, see <a href=\"https://docs.aws.amazon.com/mediatailor/latest/ug/bumpers.html\">Bumpers</a>.</p>",
+        "PlaybackConfiguration$Bumper": "<p>The configuration for bumpers. Bumpers are short audio or video clips that play at the start or before the end of an ad break. To learn more about bumpers, see <a href=\"https://docs.aws.amazon.com/mediatailor/latest/ug/bumpers.html\">Bumpers</a>.</p>",
+        "PutPlaybackConfigurationRequest$Bumper": "<p>The configuration for bumpers. Bumpers are short audio or video clips that play at the start or before the end of an ad break. To learn more about bumpers, see <a href=\"https://docs.aws.amazon.com/mediatailor/latest/ug/bumpers.html\">Bumpers</a>.</p>"
+      }
+    },
+    "CdnConfiguration": {
+      "base": "<p>The configuration for using a content delivery network (CDN), like Amazon CloudFront, for content and ad segment management.</p>",
+      "refs": {
+        "GetPlaybackConfigurationResponse$CdnConfiguration": "<p>The configuration for using a content delivery network (CDN), like Amazon CloudFront, for content and ad segment management.</p>",
+        "PlaybackConfiguration$CdnConfiguration": "<p>The configuration for using a content delivery network (CDN), like Amazon CloudFront, for content and ad segment management.</p>",
+        "PutPlaybackConfigurationRequest$CdnConfiguration": "<p>The configuration for using a content delivery network (CDN), like Amazon CloudFront, for content and ad segment management.</p>"
+      }
+    },
+    "Channel": {
+      "base": "<p>The configuration parameters for a channel.</p>",
+      "refs": {
+        "__listOfChannel$member": null
+      }
+    },
+    "ChannelState": {
+      "base": null,
+      "refs": {
+        "DescribeChannelResponse$ChannelState": "<p>Indicates whether the channel is in a running state or not.</p>"
+      }
+    },
+    "ConfigurationAliasesRequest": {
+      "base": "<p>The predefined aliases for dynamic variables.</p>",
+      "refs": {
+        "PutPlaybackConfigurationRequest$ConfigurationAliases": "<p>The player parameters and aliases used as dynamic variables during session initialization. For more information, see <a href=\"https://docs.aws.amazon.com/mediatailor/latest/ug/variables-domain.html\">Domain Variables</a>.</p> "
+      }
+    },
+    "ConfigurationAliasesResponse": {
+      "base": "<p>The predefined aliases for dynamic variables.</p>",
+      "refs": {
+        "GetPlaybackConfigurationResponse$ConfigurationAliases": "<p>The player parameters and aliases used as dynamic variables during session initialization. For more information, see <a href=\"https://docs.aws.amazon.com/mediatailor/latest/ug/variables-domain.html\">Domain Variables</a>.</p>",
+        "PlaybackConfiguration$ConfigurationAliases": "<p>The player parameters and aliases used as dynamic variables during session initialization. For more information, see <a href=\"https://docs.aws.amazon.com/mediatailor/latest/ug/variables-domain.html\">Domain Variables</a>.</p>"
+      }
+    },
+    "ConfigureLogsForPlaybackConfigurationRequest": {
+      "base": "<p>Configures Amazon CloudWatch log settings for an existing MediaTailor playback configuration.</p>",
+      "refs": {}
+    },
+    "ConfigureLogsForPlaybackConfigurationResponse": {
+      "base": "<p>Amazon CloudWatch log settings for a playback configuration.</p>",
+      "refs": {}
+    },
+    "CreateChannelRequest": {
+      "base": "<p>The configuration for this channel.</p>",
+      "refs": {}
+    },
+    "CreatePrefetchScheduleRequest": {
+      "base": "<p>A complex type that contains configuration settings for retrieval, consumption, and an optional stream ID.</p>",
+      "refs": {}
+    },
+    "CreateProgramRequest": {
+      "base": "<p>Program configuration parameters.</p>",
+      "refs": {}
+    },
+    "CreateSourceLocationRequest": {
+      "base": "<p>Source location configuration parameters.</p>",
+      "refs": {}
+    },
+    "CreateVodSourceRequest": {
+      "base": "<p>The VOD source configuration parameters.</p>",
+      "refs": {}
+    },
+    "DashConfiguration": {
+      "base": "<p>The configuration for DASH content.</p>",
+      "refs": {
+        "GetPlaybackConfigurationResponse$DashConfiguration": "<p>The configuration for DASH content.</p>",
+        "PlaybackConfiguration$DashConfiguration": "<p>The configuration for a DASH source.</p>"
+      }
+    },
+    "DashConfigurationForPut": {
+      "base": "<p>The configuration for DASH PUT operations.</p>",
+      "refs": {
+        "PutPlaybackConfigurationRequest$DashConfiguration": "<p>The configuration for DASH content.</p>"
+      }
+    },
+    "DashPlaylistSettings": {
+      "base": "<p>Dash manifest configuration parameters.</p>",
+      "refs": {
+        "RequestOutputItem$DashPlaylistSettings": "<p>DASH manifest configuration parameters.</p>",
+        "ResponseOutputItem$DashPlaylistSettings": "<p>DASH manifest configuration settings.</p>"
+      }
+    },
+    "DefaultSegmentDeliveryConfiguration": {
+      "base": "<p>The optional configuration for a server that serves segments. Use this if you want the segment delivery server to be different from the source location server. For example, you can configure your source location server to be an origination server, such as MediaPackage, and the segment delivery server to be a content delivery network (CDN), such as CloudFront. If you don't specify a segment delivery server, then the source location server is used.</p>",
+      "refs": {
+        "CreateSourceLocationRequest$DefaultSegmentDeliveryConfiguration": "<p>The optional configuration for the server that serves segments.</p>",
+        "DescribeSourceLocationResponse$DefaultSegmentDeliveryConfiguration": "<p>The default segment delivery configuration settings.</p>",
+        "SourceLocation$DefaultSegmentDeliveryConfiguration": "<p>The default segment delivery configuration.</p>",
+        "UpdateSourceLocationRequest$DefaultSegmentDeliveryConfiguration": "<p>The optional configuration for the host server that serves segments.</p>"
+      }
+    },
+    "DeleteChannelPolicyRequest": {
+      "base": "<p>This response includes only the \"type\" : \"object\" property.</p>",
+      "refs": {}
+    },
+    "DeleteChannelPolicyResponse": {
+      "base": "<p>This response includes only the \"type\" : \"object\" property.</p>",
+      "refs": {}
+    },
+    "DeleteChannelResponse": {
+      "base": "<p>This response includes only the \"type\" : \"object\" property.</p>",
+      "refs": {}
+    },
+    "DeletePlaybackConfigurationResponse": {
+      "base": null,
+      "refs": {}
+    },
+    "DeletePrefetchScheduleResponse": {
+      "base": "<p>If the action is successful, the service sends back an HTTP 204 response with an empty HTTP body.</p>",
+      "refs": {}
+    },
+    "DeleteProgramResponse": {
+      "base": "<p>This response includes only the \"type\" : \"object\" property.</p>",
+      "refs": {}
+    },
+    "DeleteSourceLocationResponse": {
+      "base": "<p>This response includes only the \"type\" : \"object\" property.</p>",
+      "refs": {}
+    },
+    "DeleteVodSourceResponse": {
+      "base": "<p>This response includes only the \"type\" : \"object\" property.</p>",
+      "refs": {}
+    },
+    "DescribeChannelResponse": {
+      "base": "<p>Returns a channel's properties.</p>",
+      "refs": {}
+    },
+    "DescribeProgramResponse": {
+      "base": "<p>This program's configuration parameters.</p>",
+      "refs": {}
+    },
+    "DescribeSourceLocationResponse": {
+      "base": "<p>This response includes only the \"type\" : \"object\" property.</p>",
+      "refs": {}
+    },
+    "DescribeVodSourceResponse": {
+      "base": "<p>This response includes only the \"type\" : \"object\" property.</p>",
+      "refs": {}
+    },
+    "GetChannelPolicyResponse": {
+      "base": "<p>Returns the channel's IAM policy.</p>",
+      "refs": {}
+    },
+    "GetChannelScheduleResponse": {
+      "base": "<p>Returns the schedule entries for the channel.</p>",
+      "refs": {}
+    },
+    "GetPlaybackConfigurationResponse": {
+      "base": "<p>Returns the playback configuration for the specified name.</p>",
+      "refs": {}
+    },
+    "HlsConfiguration": {
+      "base": "<p>The configuration for HLS content.</p>",
+      "refs": {
+        "GetPlaybackConfigurationResponse$HlsConfiguration": "<p>The configuration for HLS content.</p>",
+        "PlaybackConfiguration$HlsConfiguration": "<p>The configuration for HLS content.</p>"
+      }
+    },
+    "HlsPlaylistSettings": {
+      "base": "<p>HLS playlist configuration parameters.</p>",
+      "refs": {
+        "RequestOutputItem$HlsPlaylistSettings": "<p>HLS playlist configuration parameters.</p>",
+        "ResponseOutputItem$HlsPlaylistSettings": "<p>HLS manifest configuration settings.</p>"
+      }
+    },
+    "HttpConfiguration": {
+      "base": "<p>The HTTP configuration for the source location.</p>",
+      "refs": {
+        "CreateSourceLocationRequest$HttpConfiguration": "<p>The source's HTTP package configurations.</p>",
+        "DescribeSourceLocationResponse$HttpConfiguration": "<p>The HTTP package configuration settings for the source location.</p>",
+        "SourceLocation$HttpConfiguration": "<p>The HTTP configuration for the source location.</p>",
+        "UpdateSourceLocationRequest$HttpConfiguration": "<p>The HTTP configuration for the source location.</p>"
+      }
+    },
+    "HttpPackageConfiguration": {
+      "base": "<p>The HTTP package configuration properties for the requested VOD source.</p>",
+      "refs": {
+        "HttpPackageConfigurations$member": null
+      }
+    },
+    "HttpPackageConfigurations": {
+      "base": "<p>The VOD source's HTTP package configuration settings.</p>",
+      "refs": {
+        "CreateVodSourceRequest$HttpPackageConfigurations": "<p>An array of HTTP package configuration parameters for this VOD source.</p>",
+        "DescribeVodSourceResponse$HttpPackageConfigurations": "<p>The HTTP package configurations.</p>",
+        "UpdateVodSourceRequest$HttpPackageConfigurations": "<p>An array of HTTP package configurations for the VOD source on this account.</p>",
+        "VodSource$HttpPackageConfigurations": "<p>The HTTP package configurations for the VOD source.</p>"
+      }
+    },
+    "ListAlertsResponse": {
+      "base": "<p>Lists the alerts for a given resource.</p>",
+      "refs": {}
+    },
+    "ListChannelsResponse": {
+      "base": "<p>Returns a list of channels.</p>",
+      "refs": {}
+    },
+    "ListPlaybackConfigurationsResponse": {
+      "base": "<p>Returns a list of playback configurations.</p>",
+      "refs": {}
+    },
+    "ListPrefetchSchedulesRequest": {
+      "base": "<p>Retrieves the prefetch schedule(s) for a specific playback configuration.</p>",
+      "refs": {}
+    },
+    "ListPrefetchSchedulesResponse": {
+      "base": "<p>The list of prefetch schedules.</p>",
+      "refs": {}
+    },
+    "ListSourceLocationsResponse": {
+      "base": "<p>Lists the source locations.</p>",
+      "refs": {}
+    },
+    "ListVodSourcesResponse": {
+      "base": "<p>An array of VOD sources.</p>",
+      "refs": {}
+    },
+    "LivePreRollConfiguration": {
+      "base": "<p>The configuration for pre-roll ad insertion.</p>",
+      "refs": {
+        "GetPlaybackConfigurationResponse$LivePreRollConfiguration": "<p>The configuration for pre-roll ad insertion.</p>",
+        "PlaybackConfiguration$LivePreRollConfiguration": "<p>The configuration for pre-roll ad insertion.</p>",
+        "PutPlaybackConfigurationRequest$LivePreRollConfiguration": "<p>The configuration for pre-roll ad insertion.</p>"
+      }
+    },
+    "LogConfiguration": {
+      "base": "<p>Returns Amazon CloudWatch log settings for a playback configuration.</p>",
+      "refs": {
+        "GetPlaybackConfigurationResponse$LogConfiguration": "<p>The Amazon CloudWatch log settings for a playback configuration.</p>",
+        "PlaybackConfiguration$LogConfiguration": "<p>The Amazon CloudWatch log settings for a playback configuration.</p>"
+      }
+    },
+    "ManifestProcessingRules": {
+      "base": "<p>The configuration for manifest processing rules. Manifest processing rules enable customization of the personalized manifests created by MediaTailor.</p>",
+      "refs": {
+        "GetPlaybackConfigurationResponse$ManifestProcessingRules": "<p>The configuration for manifest processing rules. Manifest processing rules enable customization of the personalized manifests created by MediaTailor.</p>",
+        "PlaybackConfiguration$ManifestProcessingRules": "<p>The configuration for manifest processing rules. Manifest processing rules enable customization of the personalized manifests created by MediaTailor.</p>",
+        "PutPlaybackConfigurationRequest$ManifestProcessingRules": "<p>The configuration for manifest processing rules. Manifest processing rules enable customization of the personalized manifests created by MediaTailor.</p>"
+      }
+    },
+    "MessageType": {
+      "base": null,
+      "refs": {
+        "AdBreak$MessageType": "<p>The SCTE-35 ad insertion type. Accepted value: SPLICE_INSERT.</p>"
+      }
+    },
+    "Mode": {
+      "base": null,
+      "refs": {
+        "AvailSuppression$Mode": "<p>Sets the ad suppression mode. By default, ad suppression is off and all ad breaks are filled with ads or slate. When Mode is set to BEHIND_LIVE_EDGE, ad suppression is active and MediaTailor won't fill ad breaks on or behind the ad suppression Value time in the manifest lookback window.</p>"
+      }
+    },
+    "Operator": {
+      "base": null,
+      "refs": {
+        "AvailMatchingCriteria$Operator": "<p>For the DynamicVariable specified in AvailMatchingCriteria, the Operator that is used for the comparison.</p>"
+      }
+    },
+    "OriginManifestType": {
+      "base": null,
+      "refs": {
+        "DashConfiguration$OriginManifestType": "<p>The setting that controls whether MediaTailor handles manifests from the origin server as multi-period manifests or single-period manifests. If your origin server produces single-period manifests, set this to SINGLE_PERIOD. The default setting is MULTI_PERIOD. For multi-period manifests, omit this setting or set it to MULTI_PERIOD.</p>",
+        "DashConfigurationForPut$OriginManifestType": "<p>The setting that controls whether MediaTailor handles manifests from the origin server as multi-period manifests or single-period manifests. If your origin server produces single-period manifests, set this to SINGLE_PERIOD. The default setting is MULTI_PERIOD. For multi-period manifests, omit this setting or set it to MULTI_PERIOD.</p>"
+      }
+    },
+    "PlaybackConfiguration": {
+      "base": "<p>Creates a playback configuration. For information about MediaTailor configurations, see <a href=\"https://docs.aws.amazon.com/mediatailor/latest/ug/configurations.html\">Working with configurations in AWS Elemental MediaTailor</a>.</p>",
+      "refs": {
+        "__listOfPlaybackConfiguration$member": "<p>The AWSMediaTailor configuration. </p>"
+      }
+    },
+    "PlaybackMode": {
+      "base": null,
+      "refs": {
+        "CreateChannelRequest$PlaybackMode": "<p>The type of playback mode to use for this channel.</p> <p>LINEAR - The programs in the schedule play once back-to-back in the schedule.</p> <p>LOOP - The programs in the schedule play back-to-back in an endless loop. When the last program in the schedule stops playing, playback loops back to the first program in the schedule.</p>"
+      }
+    },
+    "PrefetchConsumption": {
+      "base": "<p>A complex type that contains settings that determine how and when that MediaTailor places prefetched ads into upcoming ad breaks.</p>",
+      "refs": {
+        "CreatePrefetchScheduleRequest$Consumption": "<p>The configuration settings for MediaTailor's <i>consumption</i> of the prefetched ads from the ad decision server. Each consumption configuration contains an end time and an optional start time that define the <i>consumption window</i>. Prefetch schedules automatically expire no earlier than seven days after the end time.</p>",
+        "PrefetchSchedule$Consumption": "<p>Consumption settings determine how, and when, MediaTailor places the prefetched ads into ad breaks. Ad consumption occurs within a span of time that you define, called a <i>consumption window</i>. You can designate which ad breaks that MediaTailor fills with prefetch ads by setting avail matching criteria.</p>"
+      }
+    },
+    "PrefetchRetrieval": {
+      "base": "<p>A complex type that contains settings governing when MediaTailor prefetches ads, and which dynamic variables that MediaTailor includes in the request to the ad decision server.</p>",
+      "refs": {
+        "CreatePrefetchScheduleRequest$Retrieval": "<p>The configuration settings for retrieval of prefetched ads from the ad decision server. Only one set of prefetched ads will be retrieved and subsequently consumed for each ad break.</p>",
+        "PrefetchSchedule$Retrieval": "<p>A complex type that contains settings for prefetch retrieval from the ad decision server (ADS).</p>"
+      }
+    },
+    "PrefetchSchedule": {
+      "base": "<p>A complex type that contains prefetch schedule information.</p>",
+      "refs": {
+        "__listOfPrefetchSchedule$member": null
+      }
+    },
+    "PutChannelPolicyRequest": {
+      "base": "<p>Adds an IAM policy for the channel.</p>",
+      "refs": {}
+    },
+    "PutChannelPolicyResponse": {
+      "base": "<p>This response includes only the \"type\" : \"object\" property.</p>",
+      "refs": {}
+    },
+    "PutPlaybackConfigurationRequest": {
+      "base": "<p>The configuration for creating a playback configuration.</p>",
+      "refs": {}
+    },
+    "RelativePosition": {
+      "base": null,
+      "refs": {
+        "Transition$RelativePosition": "<p>The position where this program will be inserted relative to the RelativePosition.</p>"
+      }
+    },
+    "RequestOutputItem": {
+      "base": "<p>The output configuration for this channel.</p>",
+      "refs": {
+        "RequestOutputs$member": null
+      }
+    },
+    "RequestOutputs": {
+      "base": "<p>An object that represents an object in the CreateChannel request.</p>",
+      "refs": {
+        "CreateChannelRequest$Outputs": "<p>The channel's output properties.</p>",
+        "UpdateChannelRequest$Outputs": "<p>The channel's output properties.</p>"
+      }
+    },
+    "ResponseOutputItem": {
+      "base": "<p>This response includes only the \"property\" : \"type\" property.</p>",
+      "refs": {
+        "ResponseOutputs$member": null
+      }
+    },
+    "ResponseOutputs": {
+      "base": null,
+      "refs": {
+        "Channel$Outputs": "<p>The channel's output properties.</p>",
+        "DescribeChannelResponse$Outputs": "<p>The channel's output properties.</p>"
+      }
+    },
+    "ScheduleAdBreak": {
+      "base": "<p>The schedule's ad break properties.</p>",
+      "refs": {
+        "__listOfScheduleAdBreak$member": null
+      }
+    },
+    "ScheduleConfiguration": {
+      "base": "<p>Schedule configuration parameters. A channel must be stopped before changes can be made to the schedule.</p>",
+      "refs": {
+        "CreateProgramRequest$ScheduleConfiguration": "<p>The schedule configuration settings.</p>"
+      }
+    },
+    "ScheduleEntry": {
+      "base": "<p>The properties for a schedule.</p>",
+      "refs": {
+        "__listOfScheduleEntry$member": null
+      }
+    },
+    "ScheduleEntryType": {
+      "base": null,
+      "refs": {
+        "ScheduleEntry$ScheduleEntryType": "<p>The type of schedule entry.</p> <p>Valid values: PROGRAM or FILLER_SLATE.</p>"
+      }
+    },
+    "SecretsManagerAccessTokenConfiguration": {
+      "base": "<p>AWS Secrets Manager access token configuration parameters. For information about Secrets Manager access token authentication, see <a href=\"https://docs.aws.amazon.com/mediatailor/latest/ug/channel-assembly-access-configuration-access-token.html\">Working with AWS Secrets Manager access token authentication</a>.</p>",
+      "refs": {
+        "AccessConfiguration$SecretsManagerAccessTokenConfiguration": "<p>AWS Secrets Manager access token configuration parameters.</p>"
+      }
+    },
+    "SegmentDeliveryConfiguration": {
+      "base": null,
+      "refs": {
+        "__listOfSegmentDeliveryConfiguration$member": null
+      }
+    },
+    "SlateSource": {
+      "base": "<p>Slate VOD source configuration.</p>",
+      "refs": {
+        "AdBreak$Slate": "<p>Ad break slate configuration.</p>",
+        "Channel$FillerSlate": "<p>The slate used to fill gaps between programs in the schedule. You must configure filler slate if your channel uses the LINEAR PlaybackMode. MediaTailor doesn't support filler slate for channels using the LOOP PlaybackMode.</p>",
+        "CreateChannelRequest$FillerSlate": "<p>The slate used to fill gaps between programs in the schedule. You must configure filler slate if your channel uses the LINEAR PlaybackMode. MediaTailor doesn't support filler slate for channels using the LOOP PlaybackMode.</p>",
+        "DescribeChannelResponse$FillerSlate": "<p>Contains information about the slate used to fill gaps between programs in the schedule.</p>",
+        "UpdateChannelRequest$FillerSlate": "<p>The slate used to fill gaps between programs in the schedule. You must configure filler slate if your channel uses the LINEAR PlaybackMode. MediaTailor doesn't support filler slate for channels using the LOOP PlaybackMode.</p>"
+      }
+    },
+    "SourceLocation": {
+      "base": "<p>This response includes only the \"type\" : \"object\" property.</p>",
+      "refs": {
+        "__listOfSourceLocation$member": null
+      }
+    },
+    "SpliceInsertMessage": {
+      "base": "<p>Splice insert message configuration.</p>",
+      "refs": {
+        "AdBreak$SpliceInsertMessage": "<p>This defines the SCTE-35 splice_insert() message inserted around the ad. For information about using splice_insert(), see the SCTE-35 specficiaiton, section 9.7.3.1.</p>"
+      }
+    },
+    "TagsModel": {
+      "base": "<p>A set of tags assigned to a resource.</p>",
+      "refs": {}
+    },
+    "Transition": {
+      "base": "<p>Program transition configuration.</p>",
+      "refs": {
+        "ScheduleConfiguration$Transition": "<p>Program transition configurations.</p>"
+      }
+    },
+    "Type": {
+      "base": null,
+      "refs": {
+        "HttpPackageConfiguration$Type": "<p>The streaming protocol for this package configuration. Supported values are HLS and DASH.</p>"
+      }
+    },
+    "UpdateChannelRequest": {
+      "base": "<p>Updates a channel's Outputs.</p>",
+      "refs": {}
+    },
+    "UpdateSourceLocationRequest": {
+      "base": "<p>Source location configuration parameters.</p>",
+      "refs": {}
+    },
+    "UpdateVodSourceRequest": {
+      "base": "<p>Updates a VOD source's configuration.</p>",
+      "refs": {}
+    },
+    "VodSource": {
+      "base": "<p>VOD source configuration parameters.</p>",
+      "refs": {
+        "__listOfVodSource$member": null
+      }
+    },
+    "__boolean": {
+      "base": null,
+      "refs": {
+        "AdMarkerPassthrough$Enabled": "<p>Enables ad marker passthrough for your configuration.</p>"
+      }
+    },
+    "__integer": {
+      "base": null,
+      "refs": {
+        "ConfigureLogsForPlaybackConfigurationRequest$PercentEnabled": "<p>The percentage of session logs that MediaTailor sends to your Cloudwatch Logs account. For example, if your playback configuration has 1000 sessions and percentEnabled is set to 60, MediaTailor sends logs for 600 of the sessions to CloudWatch Logs. MediaTailor decides at random which of the playback configuration sessions to send logs for. If you want to view logs for a specific session, you can use the <a href=\"https://docs.aws.amazon.com/mediatailor/latest/ug/debug-log-mode.html\">debug log mode</a>.</p> <p>Valid values: 0 - 100</p>",
+        "ConfigureLogsForPlaybackConfigurationResponse$PercentEnabled": "<p>The percentage of session logs that MediaTailor sends to your Cloudwatch Logs account.</p>",
+        "DashPlaylistSettings$ManifestWindowSeconds": "<p>The total duration (in seconds) of each manifest. Minimum value: 30 seconds. Maximum value: 3600 seconds.</p>",
+        "DashPlaylistSettings$MinBufferTimeSeconds": "<p>Minimum amount of content (measured in seconds) that a player must keep available in the buffer. Minimum value: 2 seconds. Maximum value: 60 seconds.</p>",
+        "DashPlaylistSettings$MinUpdatePeriodSeconds": "<p>Minimum amount of time (in seconds) that the player should wait before requesting updates to the manifest. Minimum value: 2 seconds. Maximum value: 60 seconds.</p>",
+        "DashPlaylistSettings$SuggestedPresentationDelaySeconds": "<p>Amount of time (in seconds) that the player should be from the live point at the end of the manifest. Minimum value: 2 seconds. Maximum value: 60 seconds.</p>",
+        "HlsPlaylistSettings$ManifestWindowSeconds": "<p>The total duration (in seconds) of each manifest. Minimum value: 30 seconds. Maximum value: 3600 seconds.</p>",
+        "LivePreRollConfiguration$MaxDurationSeconds": "The maximum allowed duration for the pre-roll ad avail. AWS Elemental MediaTailor won't play pre-roll ads to exceed this duration, regardless of the total duration of ads that the ADS returns.",
+        "LogConfiguration$PercentEnabled": "<p>The percentage of session logs that MediaTailor sends to your Cloudwatch Logs account. For example, if your playback configuration has 1000 sessions and percentEnabled is set to 60, MediaTailor sends logs for 600 of the sessions to CloudWatch Logs. MediaTailor decides at random which of the playback configuration sessions to send logs for. If you want to view logs for a specific session, you can use the <a href=\"https://docs.aws.amazon.com/mediatailor/latest/ug/debug-log-mode.html\">debug log mode</a>.</p> <p>Valid values: 0 - 100</p>",
+        "SpliceInsertMessage$AvailNum": "<p>This is written to splice_insert.avail_num, as defined in section 9.7.3.1 of the SCTE-35 specification. The default value is 0. Values must be between 0 and 256, inclusive.</p>",
+        "SpliceInsertMessage$AvailsExpected": "<p>This is written to splice_insert.avails_expected, as defined in section 9.7.3.1 of the SCTE-35 specification. The default value is 0. Values must be between 0 and 256, inclusive.</p>",
+        "SpliceInsertMessage$SpliceEventId": "<p>This is written to splice_insert.splice_event_id, as defined in section 9.7.3.1 of the SCTE-35 specification. The default value is 1.</p>",
+        "SpliceInsertMessage$UniqueProgramId": "<p>This is written to splice_insert.unique_program_id, as defined in section 9.7.3.1 of the SCTE-35 specification. The default value is 0. Values must be between 0 and 256, inclusive.</p>"
+      }
+    },
+    "__integerMin1": {
+      "base": null,
+      "refs": {
+        "GetPlaybackConfigurationResponse$PersonalizationThresholdSeconds": "<p>Defines the maximum duration of underfilled ad time (in seconds) allowed in an ad break. If the duration of underfilled ad time exceeds the personalization threshold, then the personalization of the ad break is abandoned and the underlying content is shown. This feature applies to <i>ad replacement</i> in live and VOD streams, rather than ad insertion, because it relies on an underlying content stream. For more information about ad break behavior, including ad replacement and insertion, see <a href=\"https://docs.aws.amazon.com/mediatailor/latest/ug/ad-behavior.html\">Ad Behavior in AWS Elemental MediaTailor</a>.</p>",
+        "PlaybackConfiguration$PersonalizationThresholdSeconds": "<p>Defines the maximum duration of underfilled ad time (in seconds) allowed in an ad break. If the duration of underfilled ad time exceeds the personalization threshold, then the personalization of the ad break is abandoned and the underlying content is shown. This feature applies to <i>ad replacement</i> in live and VOD streams, rather than ad insertion, because it relies on an underlying content stream. For more information about ad break behavior, including ad replacement and insertion, see <a href=\"https://docs.aws.amazon.com/mediatailor/latest/ug/ad-behavior.html\">Ad Behavior in AWS Elemental MediaTailor</a>.</p>",
+        "PutPlaybackConfigurationRequest$PersonalizationThresholdSeconds": "<p>Defines the maximum duration of underfilled ad time (in seconds) allowed in an ad break. If the duration of underfilled ad time exceeds the personalization threshold, then the personalization of the ad break is abandoned and the underlying content is shown. This feature applies to <i>ad replacement</i> in live and VOD streams, rather than ad insertion, because it relies on an underlying content stream. For more information about ad break behavior, including ad replacement and insertion, see <a href=\"https://docs.aws.amazon.com/mediatailor/latest/ug/ad-behavior.html\">Ad Behavior in AWS Elemental MediaTailor</a>.</p>"
+      }
+    },
+    "__integerMin1Max100": {
+      "base": null,
+      "refs": {
+        "ListPrefetchSchedulesRequest$MaxResults": "<p>The maximum number of prefetch schedules that you want MediaTailor to return in response to the current request. If the playback configuration has more than MaxResults prefetch schedules, use the value of NextToken in the response to get the next page of results.</p>"
+      }
+    },
+    "__listOfAdBreak": {
+      "base": null,
+      "refs": {
+        "CreateProgramRequest$AdBreaks": "<p>The ad break configuration settings.</p>",
+        "DescribeProgramResponse$AdBreaks": "<p>The ad break configuration settings.</p>"
+      }
+    },
+    "__listOfAlert": {
+      "base": null,
+      "refs": {
+        "ListAlertsResponse$Items": "<p>An array of alerts that are associated with this resource.</p>"
+      }
+    },
+    "__listOfAvailMatchingCriteria": {
+      "base": null,
+      "refs": {
+        "PrefetchConsumption$AvailMatchingCriteria": "<p>If you only want MediaTailor to insert prefetched ads into avails (ad breaks) that match specific dynamic variables, such as scte.event_id, set the avail matching criteria.</p>"
+      }
+    },
+    "__listOfChannel": {
+      "base": null,
+      "refs": {
+        "ListChannelsResponse$Items": "<p>An array of channels that are associated with this account.</p>"
+      }
+    },
+    "__listOfPlaybackConfiguration": {
+      "base": null,
+      "refs": {
+        "ListPlaybackConfigurationsResponse$Items": "<p>Array of playback configurations. This might be all the available configurations or a subset, depending on the settings that you provide and the total number of configurations stored.</p>"
+      }
+    },
+    "__listOfPrefetchSchedule": {
+      "base": null,
+      "refs": {
+        "ListPrefetchSchedulesResponse$Items": "<p>Lists the prefetch schedules. An empty Items list doesn't mean there aren't more items to fetch, just that that page was empty.</p>"
+      }
+    },
+    "__listOfScheduleAdBreak": {
+      "base": null,
+      "refs": {
+        "ScheduleEntry$ScheduleAdBreaks": "<p>The schedule's ad break properties.</p>"
+      }
+    },
+    "__listOfScheduleEntry": {
+      "base": null,
+      "refs": {
+        "GetChannelScheduleResponse$Items": "<p>An array of schedule entries for the channel.</p>"
+      }
+    },
+    "__listOfSegmentDeliveryConfiguration": {
+      "base": null,
+      "refs": {
+        "CreateSourceLocationRequest$SegmentDeliveryConfigurations": "<p>An array of segment delivery configurations for this source location.</p>",
+        "DescribeSourceLocationResponse$SegmentDeliveryConfigurations": "<p>An array of segment delivery configurations for this source location.</p>",
+        "SourceLocation$SegmentDeliveryConfigurations": "<p>An array of segment delivery configurations for this source location.</p>",
+        "UpdateSourceLocationRequest$SegmentDeliveryConfigurations": "<p>An array of segment delivery configurations for this source location.</p>"
+      }
+    },
+    "__listOfSourceLocation": {
+      "base": null,
+      "refs": {
+        "ListSourceLocationsResponse$Items": "<p>An array of source locations.</p>"
+      }
+    },
+    "__listOfVodSource": {
+      "base": null,
+      "refs": {
+        "ListVodSourcesResponse$Items": "<p>Lists the VOD sources.</p>"
+      }
+    },
+    "__listOf__string": {
+      "base": null,
+      "refs": {
+        "Alert$RelatedResourceArns": "<p>The Amazon Resource Names (ARNs) related to this alert.</p>"
+      }
+    },
+    "__long": {
+      "base": null,
+      "refs": {
+        "AdBreak$OffsetMillis": "<p>How long (in milliseconds) after the beginning of the program that an ad starts. This value must fall within 100ms of a segment boundary, otherwise the ad break will be skipped.</p>",
+        "ScheduleAdBreak$ApproximateDurationSeconds": "<p>The approximate duration of the ad break, in seconds.</p>",
+        "ScheduleEntry$ApproximateDurationSeconds": "<p>The approximate duration of this program, in seconds.</p>",
+        "Transition$ScheduledStartTimeMillis": "<p>The date and time that the program is scheduled to start, in epoch milliseconds.</p>"
+      }
+    },
+    "__mapOf__string": {
+      "base": null,
+      "refs": {
+        "Channel$Tags": "<p>The tags to assign to the channel.</p>",
+        "ConfigurationAliasesRequest$member": "<p>Map of aliases to the value to be used at request time.</p>",
+        "ConfigurationAliasesResponse$member": "<p>Map of aliases to the value to be used at request time.</p>",
+        "CreateChannelRequest$Tags": "<p>The tags to assign to the channel.</p>",
+        "CreateSourceLocationRequest$Tags": "<p>The tags to assign to the source location.</p>",
+        "CreateVodSourceRequest$Tags": "<p>The tags to assign to the VOD source.</p>",
+        "DescribeChannelResponse$Tags": "<p>The tags assigned to the channel.</p>",
+        "DescribeSourceLocationResponse$Tags": "<p>The tags assigned to the source location.</p>",
+        "DescribeVodSourceResponse$Tags": "<p>The tags assigned to the VOD source.</p>",
+        "GetPlaybackConfigurationResponse$Tags": "<p>The tags assigned to the playback configuration.</p>",
+        "PlaybackConfiguration$Tags": "<p>The tags to assign to the playback configuration.</p>",
+        "PrefetchRetrieval$DynamicVariables": "<p>The dynamic variables to use for substitution during prefetch requests to the ad decision server (ADS).</p> <p>You intially configure <a href=\"https://docs.aws.amazon.com/mediatailor/latest/ug/variables.html\">dynamic variables</a> for the ADS URL when you set up your playback configuration. When you specify DynamicVariables for prefetch retrieval, MediaTailor includes the dynamic variables in the request to the ADS.</p>",
+        "PutPlaybackConfigurationRequest$Tags": "<p>The tags to assign to the playback configuration.</p>",
+        "SourceLocation$Tags": "<p>The tags assigned to the source location.</p>",
+        "TagsModel$Tags": "<p>A comma-separated list of tag key:value pairs.</p>",
+        "VodSource$Tags": "<p>The tags assigned to the VOD source.</p>"
+      }
+    },
+    "__string": {
+      "base": null,
+      "refs": {
+        "Alert$AlertCode": "<p>The code for the alert. For example, NOT_PROCESSED.</p>",
+        "Alert$AlertMessage": "<p>If an alert is generated for a resource, an explanation of the reason for the alert.</p>",
+        "Alert$ResourceArn": "<p>The Amazon Resource Name (ARN) of the resource.</p>",
+        "AvailMatchingCriteria$DynamicVariable": "<p>The dynamic variable(s) that MediaTailor should use as avail matching criteria. MediaTailor only places the prefetched ads into the avail if the avail matches the criteria defined by the dynamic variable. For information about dynamic variables, see <a href=\"https://docs.aws.amazon.com/mediatailor/latest/ug/variables.html\">Using dynamic ad variables</a> in the <i>MediaTailor User Guide</i>.</p> <p>You can include up to 100 dynamic variables.</p>",
+        "AvailSuppression$Value": "<p>A live edge offset time in HH:MM:SS. MediaTailor won't fill ad breaks on or behind this time in the manifest lookback window. If Value is set to 00:00:00, it is in sync with the live edge, and MediaTailor won't fill any ad breaks on or behind the live edge. If you set a Value time, MediaTailor won't fill any ad breaks on or behind this time in the manifest lookback window. For example, if you set 00:45:00, then MediaTailor will fill ad breaks that occur within 45 minutes behind the live edge, but won't fill ad breaks on or behind 45 minutes behind the live edge.</p>",
+        "BadRequestException$Message": "<p>Constructs a new BadRequestException with the specified error message.</p>",
+        "Bumper$EndUrl": "<p>The URL for the end bumper asset.</p>",
+        "Bumper$StartUrl": "<p>The URL for the start bumper asset.</p>",
+        "CdnConfiguration$AdSegmentUrlPrefix": "<p>A non-default content delivery network (CDN) to serve ad segments. By default, AWS Elemental MediaTailor uses Amazon CloudFront with default cache settings as its CDN for ad segments. To set up an alternate CDN, create a rule in your CDN for the origin ads.mediatailor.&amp;lt;region&gt;.amazonaws.com. Then specify the rule's name in this AdSegmentUrlPrefix. When AWS Elemental MediaTailor serves a manifest, it reports your CDN as the source for ad segments.</p>",
+        "CdnConfiguration$ContentSegmentUrlPrefix": "<p>A content delivery network (CDN) to cache content segments, so that content requests don’t always have to go to the origin server. First, create a rule in your CDN for the content segment origin server. Then specify the rule's name in this ContentSegmentUrlPrefix. When AWS Elemental MediaTailor serves a manifest, it reports your CDN as the source for content segments.</p>",
+        "Channel$Arn": "<p>The ARN of the channel.</p>",
+        "Channel$ChannelName": "<p>The name of the channel.</p>",
+        "Channel$ChannelState": "<p>Returns the state whether the channel is running or not.</p>",
+        "Channel$PlaybackMode": "<p>The type of playback mode for this channel.</p> <p>LINEAR - Programs play back-to-back only once.</p> <p>LOOP - Programs play back-to-back in an endless loop. When the last program in the schedule plays, playback loops back to the first program in the schedule.</p>",
+        "ConfigureLogsForPlaybackConfigurationRequest$PlaybackConfigurationName": "<p>The name of the playback configuration.</p>",
+        "ConfigureLogsForPlaybackConfigurationResponse$PlaybackConfigurationName": "<p>The name of the playback configuration.</p>",
+        "CreatePrefetchScheduleRequest$StreamId": "<p>An optional stream identifier that MediaTailor uses to prefetch ads for multiple streams that use the same playback configuration. If StreamId is specified, MediaTailor returns all of the prefetch schedules with an exact match on StreamId. If not specified, MediaTailor returns all of the prefetch schedules for the playback configuration, regardless of StreamId.</p>",
+        "CreateProgramRequest$SourceLocationName": "<p>The name of the source location.</p>",
+        "CreateProgramRequest$VodSourceName": "<p>The name that's used to refer to a VOD source.</p>",
+        "DashConfiguration$ManifestEndpointPrefix": "<p>The URL generated by MediaTailor to initiate a playback session. The session uses server-side reporting. This setting is ignored in PUT operations.</p>",
+        "DashConfiguration$MpdLocation": "<p>The setting that controls whether MediaTailor includes the Location tag in DASH manifests. MediaTailor populates the Location tag with the URL for manifest update requests, to be used by players that don't support sticky redirects. Disable this if you have CDN routing rules set up for accessing MediaTailor manifests, and you are either using client-side reporting or your players support sticky HTTP redirects. Valid values are DISABLED and EMT_DEFAULT. The EMT_DEFAULT setting enables the inclusion of the tag and is the default value.</p>",
+        "DashConfigurationForPut$MpdLocation": "<p>The setting that controls whether MediaTailor includes the Location tag in DASH manifests. MediaTailor populates the Location tag with the URL for manifest update requests, to be used by players that don't support sticky redirects. Disable this if you have CDN routing rules set up for accessing MediaTailor manifests, and you are either using client-side reporting or your players support sticky HTTP redirects. Valid values are DISABLED and EMT_DEFAULT. The EMT_DEFAULT setting enables the inclusion of the tag and is the default value.</p>",
+        "DefaultSegmentDeliveryConfiguration$BaseUrl": "<p>The hostname of the server that will be used to serve segments. This string must include the protocol, such as <b>https://</b>.</p>",
+        "DescribeChannelResponse$Arn": "<p>The ARN of the channel.</p>",
+        "DescribeChannelResponse$ChannelName": "<p>The name of the channel.</p>",
+        "DescribeChannelResponse$PlaybackMode": "<p>The channel's playback mode.</p>",
+        "DescribeProgramResponse$Arn": "<p>The ARN of the program.</p>",
+        "DescribeProgramResponse$ChannelName": "<p>The name of the channel that the program belongs to.</p>",
+        "DescribeProgramResponse$ProgramName": "<p>The name of the program.</p>",
+        "DescribeProgramResponse$SourceLocationName": "<p>The source location name.</p>",
+        "DescribeProgramResponse$VodSourceName": "<p>The name that's used to refer to a VOD source.</p>",
+        "DescribeSourceLocationResponse$Arn": "<p>The ARN of the source location.</p>",
+        "DescribeSourceLocationResponse$SourceLocationName": "<p>The name of the source location.</p>",
+        "DescribeVodSourceResponse$Arn": "<p>The ARN of the VOD source.</p>",
+        "DescribeVodSourceResponse$SourceLocationName": "<p>The name of the source location associated with the VOD source.</p>",
+        "DescribeVodSourceResponse$VodSourceName": "<p>The name of the VOD source.</p>",
+        "GetChannelPolicyResponse$Policy": "<p>The IAM policy for the channel.</p>",
+        "GetChannelScheduleResponse$NextToken": "<p>Pagination token from the GET list request. Use the token to fetch the next page of results.</p>",
+        "GetPlaybackConfigurationResponse$AdDecisionServerUrl": "<p>The URL for the ad decision server (ADS). This includes the specification of static parameters and placeholders for dynamic parameters. AWS Elemental MediaTailor substitutes player-specific and session-specific parameters as needed when calling the ADS. Alternately, for testing, you can provide a static VAST URL. The maximum length is 25,000 characters.</p>",
+        "GetPlaybackConfigurationResponse$Name": "<p>The identifier for the playback configuration.</p>",
+        "GetPlaybackConfigurationResponse$PlaybackConfigurationArn": "<p>The Amazon Resource Name (ARN) for the playback configuration.</p>",
+        "GetPlaybackConfigurationResponse$PlaybackEndpointPrefix": "<p>The URL that the player accesses to get a manifest from AWS Elemental MediaTailor. This session will use server-side reporting.</p>",
+        "GetPlaybackConfigurationResponse$SessionInitializationEndpointPrefix": "<p>The URL that the player uses to initialize a session that uses client-side reporting.</p>",
+        "GetPlaybackConfigurationResponse$SlateAdUrl": "<p>The URL for a high-quality video asset to transcode and use to fill in time that's not used by ads. AWS Elemental MediaTailor shows the slate to fill in gaps in media content. Configuring the slate is optional for non-VPAID playback configurations. For VPAID, the slate is required because MediaTailor provides it in the slots designated for dynamic ad content. The slate must be a high-quality asset that contains both audio and video.</p>",
+        "GetPlaybackConfigurationResponse$TranscodeProfileName": "<p>The name that is used to associate this playback configuration with a custom transcode profile. This overrides the dynamic transcoding defaults of MediaTailor. Use this only if you have already set up custom profiles with the help of AWS Support.</p>",
+        "GetPlaybackConfigurationResponse$VideoContentSourceUrl": "<p>The URL prefix for the parent manifest for the stream, minus the asset ID. The maximum length is 512 characters.</p>",
+        "HlsConfiguration$ManifestEndpointPrefix": "<p>The URL that is used to initiate a playback session for devices that support Apple HLS. The session uses server-side reporting.</p>",
+        "HttpConfiguration$BaseUrl": "<p>The base URL for the source location host server. This string must include the protocol, such as <b>https://</b>.</p>",
+        "HttpPackageConfiguration$Path": "<p>The relative path to the URL for this VOD source. This is combined with SourceLocation::HttpConfiguration::BaseUrl to form a valid URL.</p>",
+        "HttpPackageConfiguration$SourceGroup": "<p>The name of the source group. This has to match one of the Channel::Outputs::SourceGroup.</p>",
+        "ListAlertsResponse$NextToken": "<p>Pagination token from the list request. Use the token to fetch the next page of results.</p>",
+        "ListChannelsResponse$NextToken": "<p>Pagination token returned by the list request when results exceed the maximum allowed. Use the token to fetch the next page of results.</p>",
+        "ListPlaybackConfigurationsResponse$NextToken": "<p>Pagination token returned by the GET list request when results exceed the maximum allowed. Use the token to fetch the next page of results.</p>",
+        "ListPrefetchSchedulesRequest$NextToken": "<p>(Optional) If the playback configuration has more than MaxResults prefetch schedules, use NextToken to get the second and subsequent pages of results.</p> <p>For the first ListPrefetchSchedulesRequest request, omit this value.</p> <p>For the second and subsequent requests, get the value of NextToken from the previous response and specify that value for NextToken in the request.</p> <p>If the previous response didn't include a NextToken element, there are no more prefetch schedules to get.</p>",
+        "ListPrefetchSchedulesRequest$StreamId": "<p>An optional filtering parameter whereby MediaTailor filters the prefetch schedules to include only specific streams.</p>",
+        "ListPrefetchSchedulesResponse$NextToken": "<p>The value that you will use forNextToken in the next ListPrefetchSchedulesRequest request.</p>",
+        "ListSourceLocationsResponse$NextToken": "<p>Pagination token from the list request. Use the token to fetch the next page of results.</p>",
+        "ListVodSourcesResponse$NextToken": "<p>Pagination token from the list request. Use the token to fetch the next page of results.</p>",
+        "LivePreRollConfiguration$AdDecisionServerUrl": "<p>The URL for the ad decision server (ADS) for pre-roll ads. This includes the specification of static parameters and placeholders for dynamic parameters. AWS Elemental MediaTailor substitutes player-specific and session-specific parameters as needed when calling the ADS. Alternately, for testing, you can provide a static VAST URL. The maximum length is 25,000 characters.</p>",
+        "PlaybackConfiguration$AdDecisionServerUrl": "<p>The URL for the ad decision server (ADS). This includes the specification of static parameters and placeholders for dynamic parameters. AWS Elemental MediaTailor substitutes player-specific and session-specific parameters as needed when calling the ADS. Alternately, for testing you can provide a static VAST URL. The maximum length is 25,000 characters.</p>",
+        "PlaybackConfiguration$Name": "<p>The identifier for the playback configuration.</p>",
+        "PlaybackConfiguration$PlaybackConfigurationArn": "<p>The Amazon Resource Name (ARN) for the playback configuration.</p>",
+        "PlaybackConfiguration$PlaybackEndpointPrefix": "<p>The URL that the player accesses to get a manifest from AWS Elemental MediaTailor.</p>",
+        "PlaybackConfiguration$SessionInitializationEndpointPrefix": "<p>The URL that the player uses to initialize a session that uses client-side reporting.</p>",
+        "PlaybackConfiguration$SlateAdUrl": "<p>The URL for a video asset to transcode and use to fill in time that's not used by ads. AWS Elemental MediaTailor shows the slate to fill in gaps in media content. Configuring the slate is optional for non-VPAID playback configurations. For VPAID, the slate is required because MediaTailor provides it in the slots designated for dynamic ad content. The slate must be a high-quality asset that contains both audio and video.</p>",
+        "PlaybackConfiguration$TranscodeProfileName": "<p>The name that is used to associate this playback configuration with a custom transcode profile. This overrides the dynamic transcoding defaults of MediaTailor. Use this only if you have already set up custom profiles with the help of AWS Support.</p>",
+        "PlaybackConfiguration$VideoContentSourceUrl": "<p>The URL prefix for the parent manifest for the stream, minus the asset ID. The maximum length is 512 characters.</p>",
+        "PrefetchSchedule$Arn": "<p>The Amazon Resource Name (ARN) of the prefetch schedule.</p>",
+        "PrefetchSchedule$Name": "<p>The name of the prefetch schedule. The name must be unique among all prefetch schedules that are associated with the specified playback configuration.</p>",
+        "PrefetchSchedule$PlaybackConfigurationName": "<p>The name of the playback configuration to create the prefetch schedule for.</p>",
+        "PrefetchSchedule$StreamId": "<p>An optional stream identifier that you can specify in order to prefetch for multiple streams that use the same playback configuration.</p>",
+        "PutChannelPolicyRequest$Policy": "<p>Adds an IAM role that determines the permissions of your channel.</p>",
+        "PutPlaybackConfigurationRequest$AdDecisionServerUrl": "<p>The URL for the ad decision server (ADS). This includes the specification of static parameters and placeholders for dynamic parameters. AWS Elemental MediaTailor substitutes player-specific and session-specific parameters as needed when calling the ADS. Alternately, for testing you can provide a static VAST URL. The maximum length is 25,000 characters.</p>",
+        "PutPlaybackConfigurationRequest$Name": "<p>The identifier for the playback configuration.</p>",
+        "PutPlaybackConfigurationRequest$SlateAdUrl": "<p>The URL for a high-quality video asset to transcode and use to fill in time that's not used by ads. AWS Elemental MediaTailor shows the slate to fill in gaps in media content. Configuring the slate is optional for non-VPAID configurations. For VPAID, the slate is required because MediaTailor provides it in the slots that are designated for dynamic ad content. The slate must be a high-quality asset that contains both audio and video.</p>",
+        "PutPlaybackConfigurationRequest$TranscodeProfileName": "<p>The name that is used to associate this playback configuration with a custom transcode profile. This overrides the dynamic transcoding defaults of MediaTailor. Use this only if you have already set up custom profiles with the help of AWS Support.</p>",
+        "PutPlaybackConfigurationRequest$VideoContentSourceUrl": "<p>The URL prefix for the parent manifest for the stream, minus the asset ID. The maximum length is 512 characters.</p>",
+        "RequestOutputItem$ManifestName": "<p>The name of the manifest for the channel. The name appears in the PlaybackUrl.</p>",
+        "RequestOutputItem$SourceGroup": "<p>A string used to match which HttpPackageConfiguration is used for each VodSource.</p>",
+        "ResponseOutputItem$ManifestName": "<p>The name of the manifest for the channel that will appear in the channel output's playback URL.</p>",
+        "ResponseOutputItem$PlaybackUrl": "<p>The URL used for playback by content players.</p>",
+        "ResponseOutputItem$SourceGroup": "<p>A string used to associate a package configuration source group with a channel output.</p>",
+        "ScheduleAdBreak$SourceLocationName": "<p>The name of the source location containing the VOD source used for the ad break.</p>",
+        "ScheduleAdBreak$VodSourceName": "<p>The name of the VOD source used for the ad break.</p>",
+        "ScheduleEntry$Arn": "<p>The ARN of the program.</p>",
+        "ScheduleEntry$ChannelName": "<p>The name of the channel that uses this schedule.</p>",
+        "ScheduleEntry$ProgramName": "<p>The name of the program.</p>",
+        "ScheduleEntry$SourceLocationName": "<p>The name of the source location.</p>",
+        "ScheduleEntry$VodSourceName": "<p>The name of the VOD source.</p>",
+        "SecretsManagerAccessTokenConfiguration$HeaderName": "<p>The name of the HTTP header used to supply the access token in requests to the source location.</p>",
+        "SecretsManagerAccessTokenConfiguration$SecretArn": "<p>The Amazon Resource Name (ARN) of the AWS Secrets Manager secret that contains the access token.</p>",
+        "SecretsManagerAccessTokenConfiguration$SecretStringKey": "<p>The AWS Secrets Manager <a href=\"https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_CreateSecret.html#SecretsManager-CreateSecret-request-SecretString.html\">SecretString</a> key associated with the access token. MediaTailor uses the key to look up SecretString key and value pair containing the access token.</p>",
+        "SegmentDeliveryConfiguration$BaseUrl": "<p>The base URL of the host or path of the segment delivery server that you're using to serve segments. This is typically a content delivery network (CDN). The URL can be absolute or relative. To use an absolute URL include the protocol, such as https://example.com/some/path. To use a relative URL specify the relative path, such as /some/path.</p>",
+        "SegmentDeliveryConfiguration$Name": "<p>A unique identifier used to distinguish between multiple segment delivery configurations in a source location.</p>",
+        "SlateSource$SourceLocationName": "<p>The name of the source location where the slate VOD source is stored.</p>",
+        "SlateSource$VodSourceName": "<p>The slate VOD source name. The VOD source must already exist in a source location before it can be used for slate.</p>",
+        "SourceLocation$Arn": "<p>The ARN of the SourceLocation.</p>",
+        "SourceLocation$SourceLocationName": "<p>The name of the source location.</p>",
+        "Transition$RelativeProgram": "<p>The name of the program that this program will be inserted next to, as defined by RelativePosition.</p>",
+        "Transition$Type": "<p>Defines when the program plays in the schedule. You can set the value to ABSOLUTE or RELATIVE.</p> <p>ABSOLUTE - The program plays at a specific wall clock time. This setting can only be used for channels using the LINEAR PlaybackMode.</p> <p>Note the following considerations when using ABSOLUTE transitions:</p> <p>If the preceding program in the schedule has a duration that extends past the wall clock time, MediaTailor truncates the preceding program on a common segment boundary.</p> <p>If there are gaps in playback, MediaTailor plays the FillerSlate you configured for your linear channel.</p> <p>RELATIVE - The program is inserted into the schedule either before or after a program that you specify via RelativePosition.</p>",
+        "VodSource$Arn": "<p>The ARN for the VOD source.</p>",
+        "VodSource$SourceLocationName": "<p>The name of the source location that the VOD source is associated with.</p>",
+        "VodSource$VodSourceName": "<p>The name of the VOD source.</p>",
+        "__listOf__string$member": null,
+        "__mapOf__string$member": null
+      }
+    },
+    "__timestampUnix": {
+      "base": null,
+      "refs": {
+        "Alert$LastModifiedTime": "<p>The timestamp when the alert was last modified.</p>",
+        "Channel$CreationTime": "<p>The timestamp of when the channel was created.</p>",
+        "Channel$LastModifiedTime": "<p>The timestamp of when the channel was last modified.</p>",
+        "DescribeChannelResponse$CreationTime": "<p>The timestamp of when the channel was created.</p>",
+        "DescribeChannelResponse$LastModifiedTime": "<p>The timestamp of when the channel was last modified.</p>",
+        "DescribeProgramResponse$CreationTime": "<p>The timestamp of when the program was created.</p>",
+        "DescribeProgramResponse$ScheduledStartTime": "<p>The date and time that the program is scheduled to start in ISO 8601 format and Coordinated Universal Time (UTC). For example, the value 2021-03-27T17:48:16.751Z represents March 27, 2021 at 17:48:16.751 UTC.</p>",
+        "DescribeSourceLocationResponse$CreationTime": "<p>The timestamp that indicates when the source location was created.</p>",
+        "DescribeSourceLocationResponse$LastModifiedTime": "<p>The timestamp that indicates when the source location was last modified.</p>",
+        "DescribeVodSourceResponse$CreationTime": "<p>The timestamp that indicates when the VOD source was created.</p>",
+        "DescribeVodSourceResponse$LastModifiedTime": "<p>The ARN for the VOD source.</p>",
+        "PrefetchConsumption$EndTime": "<p>The time when MediaTailor no longer considers the prefetched ads for use in an ad break. MediaTailor automatically deletes prefetch schedules no less than seven days after the end time. If you'd like to manually delete the prefetch schedule, you can call DeletePrefetchSchedule.</p>",
+        "PrefetchConsumption$StartTime": "<p>The time when prefetched ads are considered for use in an ad break. If you don't specify StartTime, the prefetched ads are available after MediaTailor retrives them from the ad decision server.</p>",
+        "PrefetchRetrieval$EndTime": "<p>The time when prefetch retrieval ends for the ad break. Prefetching will be attempted for manifest requests that occur at or before this time.</p>",
+        "PrefetchRetrieval$StartTime": "<p>The time when prefetch retrievals can start for this break. Ad prefetching will be attempted for manifest requests that occur at or after this time. Defaults to the current time. If not specified, the prefetch retrieval starts as soon as possible.</p>",
+        "ScheduleAdBreak$ApproximateStartTime": "<p>The approximate time that the ad will start playing.</p>",
+        "ScheduleEntry$ApproximateStartTime": "<p>The approximate time that the program will start playing.</p>",
+        "SourceLocation$CreationTime": "<p>The timestamp that indicates when the source location was created.</p>",
+        "SourceLocation$LastModifiedTime": "<p>The timestamp that indicates when the source location was last modified.</p>",
+        "VodSource$CreationTime": "<p>The timestamp that indicates when the VOD source was created.</p>",
+        "VodSource$LastModifiedTime": "<p>The timestamp that indicates when the VOD source was last modified.</p>"
+      }
+    }
+  },
+  "version": "2.0"
+}

@@ -1,0 +1,1719 @@
+{
+  "version": "2.0",
+  "service": "<fullname>Amazon Connect Customer Profiles</fullname> <p>Welcome to the Amazon Connect Customer Profiles API Reference. This guide provides information about the Amazon Connect Customer Profiles API, including supported operations, data types, parameters, and schemas.</p> <p>Amazon Connect Customer Profiles is a unified customer profile for your contact center that has pre-built connectors powered by AppFlow that make it easy to combine customer information from third party applications, such as Salesforce (CRM), ServiceNow (ITSM), and your enterprise resource planning (ERP), with contact history from your Amazon Connect contact center.</p> <p>If you're new to Amazon Connect , you might find it helpful to also review the <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/what-is-amazon-connect.html\">Amazon Connect Administrator Guide</a>.</p>",
+  "operations": {
+    "AddProfileKey": "<p>Associates a new key value with a specific profile, such as a Contact Trace Record (CTR) ContactId.</p> <p>A profile object can have a single unique key and any number of additional keys that can be used to identify the profile that it belongs to.</p>",
+    "CreateDomain": "<p>Creates a domain, which is a container for all customer data, such as customer profile attributes, object types, profile keys, and encryption keys. You can create multiple domains, and each domain can have multiple third-party integrations.</p> <p>Each Amazon Connect instance can be associated with only one domain. Multiple Amazon Connect instances can be associated with one domain.</p> <p>Use this API or <a href=\"https://docs.aws.amazon.com/customerprofiles/latest/APIReference/API_UpdateDomain.html\">UpdateDomain</a> to enable <a href=\"https://docs.aws.amazon.com/customerprofiles/latest/APIReference/API_GetMatches.html\">identity resolution</a>: set <code>Matching</code> to true. </p> <p>To prevent cross-service impersonation when you call this API, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/cross-service-confused-deputy-prevention.html\">Cross-service confused deputy prevention</a> for sample policies that you should apply. </p>",
+    "CreateIntegrationWorkflow": "<p> Creates an integration workflow. An integration workflow is an async process which ingests historic data and sets up an integration for ongoing updates. The supported Amazon AppFlow sources are Salesforce, ServiceNow, and Marketo. </p>",
+    "CreateProfile": "<p>Creates a standard profile.</p> <p>A standard profile represents the following attributes for a customer profile in a domain.</p>",
+    "DeleteDomain": "<p>Deletes a specific domain and all of its customer data, such as customer profile attributes and their related objects.</p>",
+    "DeleteIntegration": "<p>Removes an integration from a specific domain.</p>",
+    "DeleteProfile": "<p>Deletes the standard customer profile and all data pertaining to the profile.</p>",
+    "DeleteProfileKey": "<p>Removes a searchable key from a customer profile.</p>",
+    "DeleteProfileObject": "<p>Removes an object associated with a profile of a given ProfileObjectType.</p>",
+    "DeleteProfileObjectType": "<p>Removes a ProfileObjectType from a specific domain as well as removes all the ProfileObjects of that type. It also disables integrations from this specific ProfileObjectType. In addition, it scrubs all of the fields of the standard profile that were populated from this ProfileObjectType.</p>",
+    "DeleteWorkflow": "<p>Deletes the specified workflow and all its corresponding resources. This is an async process.</p>",
+    "GetAutoMergingPreview": "<p>Tests the auto-merging settings of your Identity Resolution Job without merging your data. It randomly selects a sample of matching groups from the existing matching results, and applies the automerging settings that you provided. You can then view the number of profiles in the sample, the number of matches, and the number of profiles identified to be merged. This enables you to evaluate the accuracy of the attributes in your matching list. </p> <p>You can't view which profiles are matched and would be merged.</p> <important> <p>We strongly recommend you use this API to do a dry run of the automerging process before running the Identity Resolution Job. Include <b>at least</b> two matching attributes. If your matching list includes too few attributes (such as only <code>FirstName</code> or only <code>LastName</code>), there may be a large number of matches. This increases the chances of erroneous merges.</p> </important>",
+    "GetDomain": "<p>Returns information about a specific domain.</p>",
+    "GetIdentityResolutionJob": "<p>Returns information about an Identity Resolution Job in a specific domain. </p> <p>Identity Resolution Jobs are set up using the Amazon Connect admin console. For more information, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/use-identity-resolution.html\">Use Identity Resolution to consolidate similar profiles</a>.</p>",
+    "GetIntegration": "<p>Returns an integration for a domain.</p>",
+    "GetMatches": "<p>Before calling this API, use <a href=\"https://docs.aws.amazon.com/customerprofiles/latest/APIReference/API_CreateDomain.html\">CreateDomain</a> or <a href=\"https://docs.aws.amazon.com/customerprofiles/latest/APIReference/API_UpdateDomain.html\">UpdateDomain</a> to enable identity resolution: set <code>Matching</code> to true.</p> <p>GetMatches returns potentially matching profiles, based on the results of the latest run of a machine learning process. </p> <important> <p>The process of matching duplicate profiles. If <code>Matching</code> = <code>true</code>, Amazon Connect Customer Profiles starts a weekly batch process called Identity Resolution Job. If you do not specify a date and time for Identity Resolution Job to run, by default it runs every Saturday at 12AM UTC to detect duplicate profiles in your domains. </p> <p>After the Identity Resolution Job completes, use the <a href=\"https://docs.aws.amazon.com/customerprofiles/latest/APIReference/API_GetMatches.html\">GetMatches</a> API to return and review the results. Or, if you have configured <code>ExportingConfig</code> in the <code>MatchingRequest</code>, you can download the results from S3.</p> </important> <p>Amazon Connect uses the following profile attributes to identify matches:</p> <ul> <li> <p>PhoneNumber</p> </li> <li> <p>HomePhoneNumber</p> </li> <li> <p>BusinessPhoneNumber</p> </li> <li> <p>MobilePhoneNumber</p> </li> <li> <p>EmailAddress</p> </li> <li> <p>PersonalEmailAddress</p> </li> <li> <p>BusinessEmailAddress</p> </li> <li> <p>FullName</p> </li> </ul> <p>For example, two or more profiles—with spelling mistakes such as <b>John Doe</b> and <b>Jhn Doe</b>, or different casing email addresses such as <b>JOHN_DOE@ANYCOMPANY.COM</b> and <b>johndoe@anycompany.com</b>, or different phone number formats such as <b>555-010-0000</b> and <b>+1-555-010-0000</b>—can be detected as belonging to the same customer <b>John Doe</b> and merged into a unified profile.</p>",
+    "GetProfileObjectType": "<p>Returns the object types for a specific domain.</p>",
+    "GetProfileObjectTypeTemplate": "<p>Returns the template information for a specific object type.</p> <p>A template is a predefined ProfileObjectType, such as “Salesforce-Account” or “Salesforce-Contact.” When a user sends a ProfileObject, using the PutProfileObject API, with an ObjectTypeName that matches one of the TemplateIds, it uses the mappings from the template.</p>",
+    "GetWorkflow": "<p>Get details of specified workflow.</p>",
+    "GetWorkflowSteps": "<p>Get granular list of steps in workflow.</p>",
+    "ListAccountIntegrations": "<p>Lists all of the integrations associated to a specific URI in the AWS account.</p>",
+    "ListDomains": "<p>Returns a list of all the domains for an AWS account that have been created.</p>",
+    "ListIdentityResolutionJobs": "<p>Lists all of the Identity Resolution Jobs in your domain. The response sorts the list by <code>JobStartTime</code>.</p>",
+    "ListIntegrations": "<p>Lists all of the integrations in your domain.</p>",
+    "ListProfileObjectTypeTemplates": "<p>Lists all of the template information for object types.</p>",
+    "ListProfileObjectTypes": "<p>Lists all of the templates available within the service.</p>",
+    "ListProfileObjects": "<p>Returns a list of objects associated with a profile of a given ProfileObjectType.</p>",
+    "ListTagsForResource": "<p>Displays the tags associated with an Amazon Connect Customer Profiles resource. In Connect Customer Profiles, domains, profile object types, and integrations can be tagged.</p>",
+    "ListWorkflows": "<p>Query to list all workflows.</p>",
+    "MergeProfiles": "<p>Runs an AWS Lambda job that does the following:</p> <ol> <li> <p>All the profileKeys in the <code>ProfileToBeMerged</code> will be moved to the main profile.</p> </li> <li> <p>All the objects in the <code>ProfileToBeMerged</code> will be moved to the main profile.</p> </li> <li> <p>All the <code>ProfileToBeMerged</code> will be deleted at the end.</p> </li> <li> <p>All the profileKeys in the <code>ProfileIdsToBeMerged</code> will be moved to the main profile.</p> </li> <li> <p>Standard fields are merged as follows:</p> <ol> <li> <p>Fields are always \"union\"-ed if there are no conflicts in standard fields or attributeKeys.</p> </li> <li> <p>When there are conflicting fields:</p> <ol> <li> <p>If no <code>SourceProfileIds</code> entry is specified, the main Profile value is always taken. </p> </li> <li> <p>If a <code>SourceProfileIds</code> entry is specified, the specified profileId is always taken, even if it is a NULL value.</p> </li> </ol> </li> </ol> </li> </ol> <p>You can use MergeProfiles together with <a href=\"https://docs.aws.amazon.com/customerprofiles/latest/APIReference/API_GetMatches.html\">GetMatches</a>, which returns potentially matching profiles, or use it with the results of another matching system. After profiles have been merged, they cannot be separated (unmerged).</p>",
+    "PutIntegration": "<p>Adds an integration between the service and a third-party service, which includes Amazon AppFlow and Amazon Connect.</p> <p>An integration can belong to only one domain.</p>",
+    "PutProfileObject": "<p>Adds additional objects to customer profiles of a given ObjectType.</p> <p>When adding a specific profile object, like a Contact Trace Record (CTR), an inferred profile can get created if it is not mapped to an existing profile. The resulting profile will only have a phone number populated in the standard ProfileObject. Any additional CTRs with the same phone number will be mapped to the same inferred profile.</p> <p>When a ProfileObject is created and if a ProfileObjectType already exists for the ProfileObject, it will provide data to a standard profile depending on the ProfileObjectType definition.</p> <p>PutProfileObject needs an ObjectType, which can be created using PutProfileObjectType.</p>",
+    "PutProfileObjectType": "<p>Defines a ProfileObjectType.</p>",
+    "SearchProfiles": "<p>Searches for profiles within a specific domain name using name, phone number, email address, account number, or a custom defined index.</p>",
+    "TagResource": "<p>Assigns one or more tags (key-value pairs) to the specified Amazon Connect Customer Profiles resource. Tags can help you organize and categorize your resources. You can also use them to scope user permissions by granting a user permission to access or change only resources with certain tag values. In Connect Customer Profiles, domains, profile object types, and integrations can be tagged.</p> <p>Tags don't have any semantic meaning to AWS and are interpreted strictly as strings of characters.</p> <p>You can use the TagResource action with a resource that already has tags. If you specify a new tag key, this tag is appended to the list of tags associated with the resource. If you specify a tag key that is already associated with the resource, the new tag value that you specify replaces the previous value for that tag.</p> <p>You can associate as many as 50 tags with a resource.</p>",
+    "UntagResource": "<p>Removes one or more tags from the specified Amazon Connect Customer Profiles resource. In Connect Customer Profiles, domains, profile object types, and integrations can be tagged.</p>",
+    "UpdateDomain": "<p>Updates the properties of a domain, including creating or selecting a dead letter queue or an encryption key.</p> <p>After a domain is created, the name can’t be changed.</p> <p>Use this API or <a href=\"https://docs.aws.amazon.com/customerprofiles/latest/APIReference/API_CreateDomain.html\">CreateDomain</a> to enable <a href=\"https://docs.aws.amazon.com/customerprofiles/latest/APIReference/API_GetMatches.html\">identity resolution</a>: set <code>Matching</code> to true. </p> <p>To prevent cross-service impersonation when you call this API, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/cross-service-confused-deputy-prevention.html\">Cross-service confused deputy prevention</a> for sample policies that you should apply. </p>",
+    "UpdateProfile": "<p>Updates the properties of a profile. The ProfileId is required for updating a customer profile.</p> <p>When calling the UpdateProfile API, specifying an empty string value means that any existing value will be removed. Not specifying a string value means that any value already there will be kept.</p>"
+  },
+  "shapes": {
+    "name": {
+      "base": null,
+      "refs": {
+        "AddProfileKeyRequest$KeyName": "<p>A searchable identifier of a customer profile.</p>",
+        "AddProfileKeyRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "AddProfileKeyResponse$KeyName": "<p>A searchable identifier of a customer profile.</p>",
+        "CreateDomainRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "CreateDomainResponse$DomainName": "<p>The unique name of the domain.</p>",
+        "CreateIntegrationWorkflowRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "CreateProfileRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "DeleteDomainRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "DeleteIntegrationRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "DeleteProfileKeyRequest$KeyName": "<p>A searchable identifier of a customer profile.</p>",
+        "DeleteProfileKeyRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "DeleteProfileObjectRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "DeleteProfileObjectTypeRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "DeleteProfileRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "DeleteWorkflowRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "FieldMap$key": null,
+        "FieldNameList$member": null,
+        "GetAutoMergingPreviewRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "GetAutoMergingPreviewResponse$DomainName": "<p>The unique name of the domain.</p>",
+        "GetDomainRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "GetDomainResponse$DomainName": "<p>The unique name of the domain.</p>",
+        "GetIdentityResolutionJobRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "GetIdentityResolutionJobResponse$DomainName": "<p>The unique name of the domain.</p>",
+        "GetIntegrationRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "GetIntegrationResponse$DomainName": "<p>The unique name of the domain.</p>",
+        "GetMatchesRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "GetProfileObjectTypeRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "GetProfileObjectTypeResponse$TemplateId": "<p>A unique identifier for the object template.</p>",
+        "GetProfileObjectTypeTemplateRequest$TemplateId": "<p>A unique identifier for the object template.</p>",
+        "GetProfileObjectTypeTemplateResponse$TemplateId": "<p>A unique identifier for the object template.</p>",
+        "GetProfileObjectTypeTemplateResponse$SourceName": "<p>The name of the source of the object template.</p>",
+        "GetProfileObjectTypeTemplateResponse$SourceObject": "<p>The source of the object template.</p>",
+        "GetWorkflowRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "GetWorkflowStepsRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "IdentityResolutionJob$DomainName": "<p>The unique name of the domain.</p>",
+        "KeyMap$key": null,
+        "ListDomainItem$DomainName": "<p>The unique name of the domain.</p>",
+        "ListIdentityResolutionJobsRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "ListIntegrationItem$DomainName": "<p>The unique name of the domain.</p>",
+        "ListIntegrationsRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "ListProfileObjectTypeTemplateItem$TemplateId": "<p>A unique identifier for the object template.</p>",
+        "ListProfileObjectTypeTemplateItem$SourceName": "<p>The name of the source of the object template.</p>",
+        "ListProfileObjectTypeTemplateItem$SourceObject": "<p>The source of the object template.</p>",
+        "ListProfileObjectTypesRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "ListProfileObjectsRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "ListWorkflowsRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "MergeProfilesRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "ObjectFilter$KeyName": "<p>A searchable identifier of a standard profile object. The predefined keys you can use to search for _asset include: _assetId, _assetName, _serialNumber. The predefined keys you can use to search for _case include: _caseId. The predefined keys you can use to search for _order include: _orderId.</p>",
+        "PutIntegrationRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "PutIntegrationResponse$DomainName": "<p>The unique name of the domain.</p>",
+        "PutProfileObjectRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "PutProfileObjectTypeRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "PutProfileObjectTypeRequest$TemplateId": "<p>A unique identifier for the object template.</p>",
+        "PutProfileObjectTypeResponse$TemplateId": "<p>A unique identifier for the object template.</p>",
+        "SearchProfilesRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "SearchProfilesRequest$KeyName": "<p>A searchable identifier of a customer profile. The predefined keys you can use to search include: _account, _profileId, _assetId, _caseId, _orderId, _fullName, _phone, _email, _ctrContactId, _marketoLeadId, _salesforceAccountId, _salesforceContactId, _salesforceAssetId, _zendeskUserId, _zendeskExternalId, _zendeskTicketId, _serviceNowSystemId, _serviceNowIncidentId, _segmentUserId, _shopifyCustomerId, _shopifyOrderId.</p>",
+        "UpdateDomainRequest$DomainName": "<p>The unique name of the domain.</p>",
+        "UpdateDomainResponse$DomainName": "<p>The unique name of the domain.</p>",
+        "UpdateProfileRequest$DomainName": "<p>The unique name of the domain.</p>"
+      }
+    },
+    "AccessDeniedException": {
+      "base": "<p>You do not have sufficient access to perform this action.</p>",
+      "refs": {
+      }
+    },
+    "AddProfileKeyRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "AddProfileKeyResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "Address": {
+      "base": "<p>A generic address associated with the customer that is not mailing, shipping, or billing.</p>",
+      "refs": {
+        "CreateProfileRequest$Address": "<p>A generic address associated with the customer that is not mailing, shipping, or billing.</p>",
+        "CreateProfileRequest$ShippingAddress": "<p>The customer’s shipping address.</p>",
+        "CreateProfileRequest$MailingAddress": "<p>The customer’s mailing address.</p>",
+        "CreateProfileRequest$BillingAddress": "<p>The customer’s billing address.</p>",
+        "Profile$Address": "<p>A generic address associated with the customer that is not mailing, shipping, or billing.</p>",
+        "Profile$ShippingAddress": "<p>The customer’s shipping address.</p>",
+        "Profile$MailingAddress": "<p>The customer’s mailing address.</p>",
+        "Profile$BillingAddress": "<p>The customer’s billing address.</p>"
+      }
+    },
+    "AppflowIntegration": {
+      "base": "<p>Details for workflow of type <code>APPFLOW_INTEGRATION</code>.</p>",
+      "refs": {
+        "IntegrationConfig$AppflowIntegration": "<p>Configuration data for <code>APPFLOW_INTEGRATION</code> workflow type.</p>"
+      }
+    },
+    "AppflowIntegrationWorkflowAttributes": {
+      "base": "<p>Structure holding all <code>APPFLOW_INTEGRATION</code> specific workflow attributes.</p>",
+      "refs": {
+        "WorkflowAttributes$AppflowIntegration": "<p>Workflow attributes specific to <code>APPFLOW_INTEGRATION</code> workflow.</p>"
+      }
+    },
+    "AppflowIntegrationWorkflowMetrics": {
+      "base": "<p>Workflow specific execution metrics for <code>APPFLOW_INTEGRATION</code> workflow.</p>",
+      "refs": {
+        "WorkflowMetrics$AppflowIntegration": "<p>Workflow execution metrics for <code>APPFLOW_INTEGRATION</code> workflow.</p>"
+      }
+    },
+    "AppflowIntegrationWorkflowStep": {
+      "base": "<p>Workflow step details for <code>APPFLOW_INTEGRATION</code> workflow.</p>",
+      "refs": {
+        "WorkflowStepItem$AppflowIntegration": "<p>Workflow step information specific to <code>APPFLOW_INTEGRATION</code> workflow.</p>"
+      }
+    },
+    "AttributeSourceIdMap": {
+      "base": null,
+      "refs": {
+        "FieldSourceProfileIds$Attributes": "<p>A unique identifier for the attributes field to be merged.</p>"
+      }
+    },
+    "Attributes": {
+      "base": null,
+      "refs": {
+        "CreateProfileRequest$Attributes": "<p>A key value pair of attributes of a customer profile.</p>",
+        "Profile$Attributes": "<p>A key value pair of attributes of a customer profile.</p>"
+      }
+    },
+    "AutoMerging": {
+      "base": "<p>Configuration settings for how to perform the auto-merging of profiles.</p>",
+      "refs": {
+        "GetIdentityResolutionJobResponse$AutoMerging": "<p>Configuration settings for how to perform the auto-merging of profiles.</p>",
+        "MatchingRequest$AutoMerging": "<p>Configuration information about the auto-merging process.</p>",
+        "MatchingResponse$AutoMerging": "<p>Configuration information about the auto-merging process.</p>"
+      }
+    },
+    "BadRequestException": {
+      "base": "<p>The input you provided is invalid.</p>",
+      "refs": {
+      }
+    },
+    "Batch": {
+      "base": "<p>Batch defines the boundaries for ingestion for each step in <code>APPFLOW_INTEGRATION</code> workflow. <code>APPFLOW_INTEGRATION</code> workflow splits ingestion based on these boundaries.</p>",
+      "refs": {
+        "Batches$member": null
+      }
+    },
+    "Batches": {
+      "base": null,
+      "refs": {
+        "AppflowIntegration$Batches": "<p>Batches in workflow of type <code>APPFLOW_INTEGRATION</code>.</p>"
+      }
+    },
+    "BucketName": {
+      "base": null,
+      "refs": {
+        "S3SourceProperties$BucketName": "<p>The Amazon S3 bucket name where the source files are stored.</p>"
+      }
+    },
+    "BucketPrefix": {
+      "base": null,
+      "refs": {
+        "S3SourceProperties$BucketPrefix": "<p>The object key for the Amazon S3 bucket in which the source files are stored.</p>"
+      }
+    },
+    "ConflictResolution": {
+      "base": "<p>How the auto-merging process should resolve conflicts between different profiles.</p>",
+      "refs": {
+        "AutoMerging$ConflictResolution": "<p>How the auto-merging process should resolve conflicts between different profiles. For example, if Profile A and Profile B have the same <code>FirstName</code> and <code>LastName</code> (and that is the matching criteria), which <code>EmailAddress</code> should be used? </p>",
+        "GetAutoMergingPreviewRequest$ConflictResolution": "<p>How the auto-merging process should resolve conflicts between different profiles.</p>"
+      }
+    },
+    "ConflictResolvingModel": {
+      "base": null,
+      "refs": {
+        "ConflictResolution$ConflictResolvingModel": "<p>How the auto-merging process should resolve conflicts between different profiles.</p> <ul> <li> <p> <code>RECENCY</code>: Uses the data that was most recently updated.</p> </li> <li> <p> <code>SOURCE</code>: Uses the data from a specific source. For example, if a company has been aquired or two departments have merged, data from the specified source is used. If two duplicate profiles are from the same source, then <code>RECENCY</code> is used again.</p> </li> </ul>"
+      }
+    },
+    "ConnectorOperator": {
+      "base": "<p>The operation to be performed on the provided source fields.</p>",
+      "refs": {
+        "Task$ConnectorOperator": "<p>The operation to be performed on the provided source fields.</p>"
+      }
+    },
+    "ConnectorProfileName": {
+      "base": null,
+      "refs": {
+        "AppflowIntegrationWorkflowAttributes$ConnectorProfileName": "<p>The name of the AppFlow connector profile used for ingestion.</p>",
+        "SourceFlowConfig$ConnectorProfileName": "<p>The name of the AppFlow connector profile. This name must be unique for each connector profile in the AWS account.</p>"
+      }
+    },
+    "Consolidation": {
+      "base": "<p>The matching criteria to be used during the auto-merging process. </p>",
+      "refs": {
+        "AutoMerging$Consolidation": "<p>A list of matching attributes that represent matching criteria. If two profiles meet at least one of the requirements in the matching attributes list, they will be merged.</p>",
+        "GetAutoMergingPreviewRequest$Consolidation": "<p>A list of matching attributes that represent matching criteria.</p>"
+      }
+    },
+    "CreateDomainRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateDomainResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateIntegrationWorkflowRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateIntegrationWorkflowResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateProfileRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateProfileResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DataPullMode": {
+      "base": null,
+      "refs": {
+        "ScheduledTriggerProperties$DataPullMode": "<p>Specifies whether a scheduled flow has an incremental data transfer or a complete data transfer for each flow run.</p>"
+      }
+    },
+    "Date": {
+      "base": null,
+      "refs": {
+        "ScheduledTriggerProperties$ScheduleStartTime": "<p>Specifies the scheduled start time for a scheduled-trigger flow.</p>",
+        "ScheduledTriggerProperties$ScheduleEndTime": "<p>Specifies the scheduled end time for a scheduled-trigger flow.</p>",
+        "ScheduledTriggerProperties$FirstExecutionFrom": "<p>Specifies the date range for the records to import from the connector in the first flow run.</p>"
+      }
+    },
+    "DatetimeTypeFieldName": {
+      "base": null,
+      "refs": {
+        "IncrementalPullConfig$DatetimeTypeFieldName": "<p>A field that specifies the date time or timestamp field as the criteria to use when importing incremental records from the source.</p>"
+      }
+    },
+    "DeleteDomainRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteDomainResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteIntegrationRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteIntegrationResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteProfileKeyRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteProfileKeyResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteProfileObjectRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteProfileObjectResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteProfileObjectTypeRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteProfileObjectTypeResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteProfileRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteProfileResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteWorkflowRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteWorkflowResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DestinationField": {
+      "base": null,
+      "refs": {
+        "Task$DestinationField": "<p>A field in a destination connector, or a field value against which Amazon AppFlow validates a source field.</p>"
+      }
+    },
+    "DomainList": {
+      "base": null,
+      "refs": {
+        "ListDomainsResponse$Items": "<p>The list of ListDomains instances.</p>"
+      }
+    },
+    "DomainStats": {
+      "base": "<p>Usage-specific statistics about the domain.</p>",
+      "refs": {
+        "GetDomainResponse$Stats": "<p>Usage-specific statistics about the domain.</p>"
+      }
+    },
+    "Double": {
+      "base": null,
+      "refs": {
+        "MatchItem$ConfidenceScore": "<p>A number between 0 and 1 that represents the confidence level of assigning profiles to a matching group. A score of 1 likely indicates an exact match.</p>"
+      }
+    },
+    "ExportingConfig": {
+      "base": "<p>Configuration information about the S3 bucket where Identity Resolution Jobs writes result files. </p> <note> <p>You need to give Customer Profiles service principal write permission to your S3 bucket. Otherwise, you'll get an exception in the API response. For an example policy, see <a href=\"https://docs.aws.amazon.com/connect/latest/adminguide/cross-service-confused-deputy-prevention.html#customer-profiles-cross-service\">Amazon Connect Customer Profiles cross-service confused deputy prevention</a>. </p> </note>",
+      "refs": {
+        "MatchingRequest$ExportingConfig": "<p>Configuration information for exporting Identity Resolution results, for example, to an S3 bucket.</p>",
+        "MatchingResponse$ExportingConfig": "<p>Configuration information for exporting Identity Resolution results, for example, to an S3 bucket.</p>"
+      }
+    },
+    "ExportingLocation": {
+      "base": "<p>The S3 location where Identity Resolution Jobs write result files.</p>",
+      "refs": {
+        "GetIdentityResolutionJobResponse$ExportingLocation": "<p>The S3 location where the Identity Resolution Job writes result files.</p>",
+        "IdentityResolutionJob$ExportingLocation": "<p>The S3 location where the Identity Resolution Job writes result files.</p>"
+      }
+    },
+    "FieldContentType": {
+      "base": null,
+      "refs": {
+        "ObjectTypeField$ContentType": "<p>The content type of the field. Used for determining equality when searching.</p>"
+      }
+    },
+    "FieldMap": {
+      "base": null,
+      "refs": {
+        "GetProfileObjectTypeResponse$Fields": "<p>A map of the name and ObjectType field.</p>",
+        "GetProfileObjectTypeTemplateResponse$Fields": "<p>A map of the name and ObjectType field.</p>",
+        "PutProfileObjectTypeRequest$Fields": "<p>A map of the name and ObjectType field.</p>",
+        "PutProfileObjectTypeResponse$Fields": "<p>A map of the name and ObjectType field.</p>"
+      }
+    },
+    "FieldNameList": {
+      "base": null,
+      "refs": {
+        "ObjectTypeKey$FieldNames": "<p>The reference for the key name of the fields map.</p>"
+      }
+    },
+    "FieldSourceProfileIds": {
+      "base": "<p>A duplicate customer profile that is to be merged into a main profile. </p>",
+      "refs": {
+        "MergeProfilesRequest$FieldSourceProfileIds": "<p>The identifiers of the fields in the profile that has the information you want to apply to the merge. For example, say you want to merge EmailAddress from Profile1 into MainProfile. This would be the identifier of the EmailAddress field in Profile1. </p>"
+      }
+    },
+    "FlowDefinition": {
+      "base": "<p>The configurations that control how Customer Profiles retrieves data from the source, Amazon AppFlow. Customer Profiles uses this information to create an AppFlow flow on behalf of customers.</p>",
+      "refs": {
+        "AppflowIntegration$FlowDefinition": null,
+        "PutIntegrationRequest$FlowDefinition": "<p>The configuration that controls how Customer Profiles retrieves data from the source.</p>"
+      }
+    },
+    "FlowDescription": {
+      "base": null,
+      "refs": {
+        "FlowDefinition$Description": "<p>A description of the flow you want to create.</p>"
+      }
+    },
+    "FlowName": {
+      "base": null,
+      "refs": {
+        "AppflowIntegrationWorkflowStep$FlowName": "<p>Name of the flow created during execution of workflow step. <code>APPFLOW_INTEGRATION</code> workflow type creates an appflow flow during workflow step execution on the customers behalf.</p>",
+        "FlowDefinition$FlowName": "<p>The specified name of the flow. Use underscores (_) or hyphens (-) only. Spaces are not allowed.</p>"
+      }
+    },
+    "Gender": {
+      "base": null,
+      "refs": {
+        "CreateProfileRequest$Gender": "<p>The gender with which the customer identifies. </p>",
+        "Profile$Gender": "<p>The gender with which the customer identifies. </p>",
+        "UpdateProfileRequest$Gender": "<p>The gender with which the customer identifies. </p>"
+      }
+    },
+    "GetAutoMergingPreviewRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetAutoMergingPreviewResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetDomainRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetDomainResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetIdentityResolutionJobRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetIdentityResolutionJobResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetIntegrationRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetIntegrationResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetMatchesRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetMatchesResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetProfileObjectTypeRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetProfileObjectTypeResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetProfileObjectTypeTemplateRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetProfileObjectTypeTemplateResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetWorkflowRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetWorkflowResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetWorkflowStepsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetWorkflowStepsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "IdentityResolutionJob": {
+      "base": "<p>Information about the Identity Resolution Job.</p>",
+      "refs": {
+        "IdentityResolutionJobsList$member": null
+      }
+    },
+    "IdentityResolutionJobStatus": {
+      "base": null,
+      "refs": {
+        "GetIdentityResolutionJobResponse$Status": "<p>The status of the Identity Resolution Job.</p> <ul> <li> <p> <code>PENDING</code>: The Identity Resolution Job is scheduled but has not started yet. If you turn off the Identity Resolution feature in your domain, jobs in the <code>PENDING</code> state are deleted.</p> </li> <li> <p> <code>PREPROCESSING</code>: The Identity Resolution Job is loading your data.</p> </li> <li> <p> <code>FIND_MATCHING</code>: The Identity Resolution Job is using the machine learning model to identify profiles that belong to the same matching group.</p> </li> <li> <p> <code>MERGING</code>: The Identity Resolution Job is merging duplicate profiles.</p> </li> <li> <p> <code>COMPLETED</code>: The Identity Resolution Job completed successfully.</p> </li> <li> <p> <code>PARTIAL_SUCCESS</code>: There's a system error and not all of the data is merged. The Identity Resolution Job writes a message indicating the source of the problem.</p> </li> <li> <p> <code>FAILED</code>: The Identity Resolution Job did not merge any data. It writes a message indicating the source of the problem.</p> </li> </ul>",
+        "IdentityResolutionJob$Status": "<p>The status of the Identity Resolution Job.</p> <ul> <li> <p> <code>PENDING</code>: The Identity Resolution Job is scheduled but has not started yet. If you turn off the Identity Resolution feature in your domain, jobs in the <code>PENDING</code> state are deleted.</p> </li> <li> <p> <code>PREPROCESSING</code>: The Identity Resolution Job is loading your data.</p> </li> <li> <p> <code>FIND_MATCHING</code>: The Identity Resolution Job is using the machine learning model to identify profiles that belong to the same matching group.</p> </li> <li> <p> <code>MERGING</code>: The Identity Resolution Job is merging duplicate profiles.</p> </li> <li> <p> <code>COMPLETED</code>: The Identity Resolution Job completed successfully.</p> </li> <li> <p> <code>PARTIAL_SUCCESS</code>: There's a system error and not all of the data is merged. The Identity Resolution Job writes a message indicating the source of the problem.</p> </li> <li> <p> <code>FAILED</code>: The Identity Resolution Job did not merge any data. It writes a message indicating the source of the problem.</p> </li> </ul>"
+      }
+    },
+    "IdentityResolutionJobsList": {
+      "base": null,
+      "refs": {
+        "ListIdentityResolutionJobsResponse$IdentityResolutionJobsList": "<p>A list of Identity Resolution Jobs.</p>"
+      }
+    },
+    "IncrementalPullConfig": {
+      "base": "<p>Specifies the configuration used when importing incremental records from the source.</p>",
+      "refs": {
+        "SourceFlowConfig$IncrementalPullConfig": "<p>Defines the configuration for a scheduled incremental data pull. If a valid configuration is provided, the fields specified in the configuration are used when querying for the incremental data pull.</p>"
+      }
+    },
+    "IntegrationConfig": {
+      "base": "<p>Configuration data for integration workflow.</p>",
+      "refs": {
+        "CreateIntegrationWorkflowRequest$IntegrationConfig": "<p>Configuration data for integration workflow.</p>"
+      }
+    },
+    "IntegrationList": {
+      "base": null,
+      "refs": {
+        "ListAccountIntegrationsResponse$Items": "<p>The list of ListAccountIntegration instances.</p>",
+        "ListIntegrationsResponse$Items": "<p>The list of ListIntegrations instances.</p>"
+      }
+    },
+    "InternalServerException": {
+      "base": "<p>An internal service error occurred.</p>",
+      "refs": {
+      }
+    },
+    "JobSchedule": {
+      "base": "<p>The day and time when do you want to start the Identity Resolution Job every week.</p>",
+      "refs": {
+        "MatchingRequest$JobSchedule": "<p>The day and time when do you want to start the Identity Resolution Job every week.</p>",
+        "MatchingResponse$JobSchedule": "<p>The day and time when do you want to start the Identity Resolution Job every week.</p>"
+      }
+    },
+    "JobScheduleDayOfTheWeek": {
+      "base": null,
+      "refs": {
+        "JobSchedule$DayOfTheWeek": "<p>The day when the Identity Resolution Job should run every week.</p>"
+      }
+    },
+    "JobScheduleTime": {
+      "base": null,
+      "refs": {
+        "JobSchedule$Time": "<p>The time when the Identity Resolution Job should run every week.</p>"
+      }
+    },
+    "JobStats": {
+      "base": "<p>Statistics about the Identity Resolution Job.</p>",
+      "refs": {
+        "GetIdentityResolutionJobResponse$JobStats": "<p>Statistics about the Identity Resolution Job.</p>",
+        "IdentityResolutionJob$JobStats": "<p>Statistics about an Identity Resolution Job.</p>"
+      }
+    },
+    "KeyMap": {
+      "base": null,
+      "refs": {
+        "GetProfileObjectTypeResponse$Keys": "<p>A list of unique keys that can be used to map data to the profile.</p>",
+        "GetProfileObjectTypeTemplateResponse$Keys": "<p>A list of unique keys that can be used to map data to the profile.</p>",
+        "PutProfileObjectTypeRequest$Keys": "<p>A list of unique keys that can be used to map data to the profile.</p>",
+        "PutProfileObjectTypeResponse$Keys": "<p>A list of unique keys that can be used to map data to the profile.</p>"
+      }
+    },
+    "KmsArn": {
+      "base": null,
+      "refs": {
+        "FlowDefinition$KmsArn": "<p>The Amazon Resource Name of the AWS Key Management Service (KMS) key you provide for encryption.</p>"
+      }
+    },
+    "ListAccountIntegrationsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListAccountIntegrationsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListDomainItem": {
+      "base": "<p>An object in a list that represents a domain.</p>",
+      "refs": {
+        "DomainList$member": null
+      }
+    },
+    "ListDomainsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListDomainsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListIdentityResolutionJobsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListIdentityResolutionJobsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListIntegrationItem": {
+      "base": "<p>An integration in list of integrations.</p>",
+      "refs": {
+        "IntegrationList$member": null
+      }
+    },
+    "ListIntegrationsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListIntegrationsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListProfileObjectTypeItem": {
+      "base": "<p>A ProfileObjectType instance.</p>",
+      "refs": {
+        "ProfileObjectTypeList$member": null
+      }
+    },
+    "ListProfileObjectTypeTemplateItem": {
+      "base": "<p>A ProfileObjectTypeTemplate in a list of ProfileObjectTypeTemplates.</p>",
+      "refs": {
+        "ProfileObjectTypeTemplateList$member": null
+      }
+    },
+    "ListProfileObjectTypeTemplatesRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListProfileObjectTypeTemplatesResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListProfileObjectTypesRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListProfileObjectTypesResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListProfileObjectsItem": {
+      "base": "<p>A ProfileObject in a list of ProfileObjects.</p>",
+      "refs": {
+        "ProfileObjectList$member": null
+      }
+    },
+    "ListProfileObjectsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListProfileObjectsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListTagsForResourceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListTagsForResourceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListWorkflowsItem": {
+      "base": "<p>A workflow in list of workflows.</p>",
+      "refs": {
+        "WorkflowList$member": null
+      }
+    },
+    "ListWorkflowsRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListWorkflowsResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "MarketoConnectorOperator": {
+      "base": null,
+      "refs": {
+        "ConnectorOperator$Marketo": "<p>The operation to be performed on the provided Marketo source fields.</p>"
+      }
+    },
+    "MarketoSourceProperties": {
+      "base": "<p>The properties that are applied when Marketo is being used as a source.</p>",
+      "refs": {
+        "SourceConnectorProperties$Marketo": "<p>The properties that are applied when Marketo is being used as a source.</p>"
+      }
+    },
+    "MatchItem": {
+      "base": "<p>The Match group object.</p>",
+      "refs": {
+        "MatchesList$member": null
+      }
+    },
+    "MatchesList": {
+      "base": null,
+      "refs": {
+        "GetMatchesResponse$Matches": "<p>The list of matched profiles for this instance.</p>"
+      }
+    },
+    "MatchingAttributes": {
+      "base": null,
+      "refs": {
+        "MatchingAttributesList$member": null
+      }
+    },
+    "MatchingAttributesList": {
+      "base": null,
+      "refs": {
+        "Consolidation$MatchingAttributesList": "<p>A list of matching criteria.</p>"
+      }
+    },
+    "MatchingRequest": {
+      "base": "<p>The flag that enables the matching process of duplicate profiles.</p>",
+      "refs": {
+        "CreateDomainRequest$Matching": "<p>The process of matching duplicate profiles. If <code>Matching</code> = <code>true</code>, Amazon Connect Customer Profiles starts a weekly batch process called Identity Resolution Job. If you do not specify a date and time for Identity Resolution Job to run, by default it runs every Saturday at 12AM UTC to detect duplicate profiles in your domains. </p> <p>After the Identity Resolution Job completes, use the <a href=\"https://docs.aws.amazon.com/customerprofiles/latest/APIReference/API_GetMatches.html\">GetMatches</a> API to return and review the results. Or, if you have configured <code>ExportingConfig</code> in the <code>MatchingRequest</code>, you can download the results from S3.</p>",
+        "UpdateDomainRequest$Matching": "<p>The process of matching duplicate profiles. If <code>Matching</code> = <code>true</code>, Amazon Connect Customer Profiles starts a weekly batch process called Identity Resolution Job. If you do not specify a date and time for Identity Resolution Job to run, by default it runs every Saturday at 12AM UTC to detect duplicate profiles in your domains. </p> <p>After the Identity Resolution Job completes, use the <a href=\"https://docs.aws.amazon.com/customerprofiles/latest/APIReference/API_GetMatches.html\">GetMatches</a> API to return and review the results. Or, if you have configured <code>ExportingConfig</code> in the <code>MatchingRequest</code>, you can download the results from S3.</p>"
+      }
+    },
+    "MatchingResponse": {
+      "base": "<p>The flag that enables the matching process of duplicate profiles.</p>",
+      "refs": {
+        "CreateDomainResponse$Matching": "<p>The process of matching duplicate profiles. If <code>Matching</code> = <code>true</code>, Amazon Connect Customer Profiles starts a weekly batch process called Identity Resolution Job. If you do not specify a date and time for Identity Resolution Job to run, by default it runs every Saturday at 12AM UTC to detect duplicate profiles in your domains. </p> <p>After the Identity Resolution Job completes, use the <a href=\"https://docs.aws.amazon.com/customerprofiles/latest/APIReference/API_GetMatches.html\">GetMatches</a> API to return and review the results. Or, if you have configured <code>ExportingConfig</code> in the <code>MatchingRequest</code>, you can download the results from S3.</p>",
+        "GetDomainResponse$Matching": "<p>The process of matching duplicate profiles. If <code>Matching</code> = <code>true</code>, Amazon Connect Customer Profiles starts a weekly batch process called Identity Resolution Job. If you do not specify a date and time for Identity Resolution Job to run, by default it runs every Saturday at 12AM UTC to detect duplicate profiles in your domains. </p> <p>After the Identity Resolution Job completes, use the <a href=\"https://docs.aws.amazon.com/customerprofiles/latest/APIReference/API_GetMatches.html\">GetMatches</a> API to return and review the results. Or, if you have configured <code>ExportingConfig</code> in the <code>MatchingRequest</code>, you can download the results from S3.</p>",
+        "UpdateDomainResponse$Matching": "<p>The process of matching duplicate profiles. If <code>Matching</code> = <code>true</code>, Amazon Connect Customer Profiles starts a weekly batch process called Identity Resolution Job. If you do not specify a date and time for Identity Resolution Job to run, by default it runs every Saturday at 12AM UTC to detect duplicate profiles in your domains. </p> <p>After the Identity Resolution Job completes, use the <a href=\"https://docs.aws.amazon.com/customerprofiles/latest/APIReference/API_GetMatches.html\">GetMatches</a> API to return and review the results. Or, if you have configured <code>ExportingConfig</code> in the <code>MatchingRequest</code>, you can download the results from S3.</p>"
+      }
+    },
+    "MergeProfilesRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "MergeProfilesResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "Object": {
+      "base": null,
+      "refs": {
+        "MarketoSourceProperties$Object": "<p>The object specified in the Marketo flow source.</p>",
+        "SalesforceSourceProperties$Object": "<p>The object specified in the Salesforce flow source.</p>",
+        "ServiceNowSourceProperties$Object": "<p>The object specified in the ServiceNow flow source.</p>",
+        "ZendeskSourceProperties$Object": "<p>The object specified in the Zendesk flow source.</p>"
+      }
+    },
+    "ObjectFilter": {
+      "base": "<p>The filter applied to ListProfileObjects response to include profile objects with the specified index values. This filter is only supported for ObjectTypeName _asset, _case and _order.</p>",
+      "refs": {
+        "ListProfileObjectsRequest$ObjectFilter": "<p>Applies a filter to the response to include profile objects with the specified index values. This filter is only supported for ObjectTypeName _asset, _case and _order.</p>"
+      }
+    },
+    "ObjectTypeField": {
+      "base": "<p>Represents a field in a ProfileObjectType.</p>",
+      "refs": {
+        "FieldMap$value": null
+      }
+    },
+    "ObjectTypeKey": {
+      "base": "<p>An object that defines the Key element of a ProfileObject. A Key is a special element that can be used to search for a customer profile.</p>",
+      "refs": {
+        "ObjectTypeKeyList$member": null
+      }
+    },
+    "ObjectTypeKeyList": {
+      "base": null,
+      "refs": {
+        "KeyMap$value": null
+      }
+    },
+    "ObjectTypeNames": {
+      "base": null,
+      "refs": {
+        "GetIntegrationResponse$ObjectTypeNames": "<p>A map in which each key is an event type from an external application such as Segment or Shopify, and each value is an <code>ObjectTypeName</code> (template) used to ingest the event. It supports the following event types: <code>SegmentIdentify</code>, <code>ShopifyCreateCustomers</code>, <code>ShopifyUpdateCustomers</code>, <code>ShopifyCreateDraftOrders</code>, <code>ShopifyUpdateDraftOrders</code>, <code>ShopifyCreateOrders</code>, and <code>ShopifyUpdatedOrders</code>.</p>",
+        "ListIntegrationItem$ObjectTypeNames": "<p>A map in which each key is an event type from an external application such as Segment or Shopify, and each value is an <code>ObjectTypeName</code> (template) used to ingest the event. It supports the following event types: <code>SegmentIdentify</code>, <code>ShopifyCreateCustomers</code>, <code>ShopifyUpdateCustomers</code>, <code>ShopifyCreateDraftOrders</code>, <code>ShopifyUpdateDraftOrders</code>, <code>ShopifyCreateOrders</code>, and <code>ShopifyUpdatedOrders</code>.</p>",
+        "PutIntegrationRequest$ObjectTypeNames": "<p>A map in which each key is an event type from an external application such as Segment or Shopify, and each value is an <code>ObjectTypeName</code> (template) used to ingest the event. It supports the following event types: <code>SegmentIdentify</code>, <code>ShopifyCreateCustomers</code>, <code>ShopifyUpdateCustomers</code>, <code>ShopifyCreateDraftOrders</code>, <code>ShopifyUpdateDraftOrders</code>, <code>ShopifyCreateOrders</code>, and <code>ShopifyUpdatedOrders</code>.</p>",
+        "PutIntegrationResponse$ObjectTypeNames": "<p>A map in which each key is an event type from an external application such as Segment or Shopify, and each value is an <code>ObjectTypeName</code> (template) used to ingest the event. It supports the following event types: <code>SegmentIdentify</code>, <code>ShopifyCreateCustomers</code>, <code>ShopifyUpdateCustomers</code>, <code>ShopifyCreateDraftOrders</code>, <code>ShopifyUpdateDraftOrders</code>, <code>ShopifyCreateOrders</code>, and <code>ShopifyUpdatedOrders</code>.</p>"
+      }
+    },
+    "OperatorPropertiesKeys": {
+      "base": null,
+      "refs": {
+        "TaskPropertiesMap$key": null
+      }
+    },
+    "PartyType": {
+      "base": null,
+      "refs": {
+        "CreateProfileRequest$PartyType": "<p>The type of profile used to describe the customer.</p>",
+        "Profile$PartyType": "<p>The type of profile used to describe the customer.</p>",
+        "UpdateProfileRequest$PartyType": "<p>The type of profile used to describe the customer.</p>"
+      }
+    },
+    "Profile": {
+      "base": "<p>The standard profile of a customer.</p>",
+      "refs": {
+        "ProfileList$member": null
+      }
+    },
+    "ProfileIdList": {
+      "base": null,
+      "refs": {
+        "MatchItem$ProfileIds": "<p>A list of identifiers for profiles that match.</p>"
+      }
+    },
+    "ProfileIdToBeMergedList": {
+      "base": null,
+      "refs": {
+        "MergeProfilesRequest$ProfileIdsToBeMerged": "<p>The identifier of the profile to be merged into MainProfileId.</p>"
+      }
+    },
+    "ProfileList": {
+      "base": null,
+      "refs": {
+        "SearchProfilesResponse$Items": "<p>The list of SearchProfiles instances.</p>"
+      }
+    },
+    "ProfileObjectList": {
+      "base": null,
+      "refs": {
+        "ListProfileObjectsResponse$Items": "<p>The list of ListProfileObject instances.</p>"
+      }
+    },
+    "ProfileObjectTypeList": {
+      "base": null,
+      "refs": {
+        "ListProfileObjectTypesResponse$Items": "<p>The list of ListProfileObjectTypes instances.</p>"
+      }
+    },
+    "ProfileObjectTypeTemplateList": {
+      "base": null,
+      "refs": {
+        "ListProfileObjectTypeTemplatesResponse$Items": "<p>The list of ListProfileObjectType template instances.</p>"
+      }
+    },
+    "Property": {
+      "base": null,
+      "refs": {
+        "TaskPropertiesMap$value": null
+      }
+    },
+    "PutIntegrationRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "PutIntegrationResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "PutProfileObjectRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "PutProfileObjectResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "PutProfileObjectTypeRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "PutProfileObjectTypeResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ResourceNotFoundException": {
+      "base": "<p>The requested resource does not exist, or access was denied.</p>",
+      "refs": {
+      }
+    },
+    "RoleArn": {
+      "base": null,
+      "refs": {
+        "CreateIntegrationWorkflowRequest$RoleArn": "<p>The Amazon Resource Name (ARN) of the IAM role. Customer Profiles assumes this role to create resources on your behalf as part of workflow execution.</p>"
+      }
+    },
+    "S3ConnectorOperator": {
+      "base": null,
+      "refs": {
+        "ConnectorOperator$S3": "<p>The operation to be performed on the provided Amazon S3 source fields.</p>"
+      }
+    },
+    "S3ExportingConfig": {
+      "base": "<p>Configuration information about the S3 bucket where Identity Resolution Jobs write result files.</p>",
+      "refs": {
+        "ExportingConfig$S3Exporting": "<p>The S3 location where Identity Resolution Jobs write result files.</p>"
+      }
+    },
+    "S3ExportingLocation": {
+      "base": "<p>The S3 location where Identity Resolution Jobs write result files.</p>",
+      "refs": {
+        "ExportingLocation$S3Exporting": "<p>Information about the S3 location where Identity Resolution Jobs write result files.</p>"
+      }
+    },
+    "S3SourceProperties": {
+      "base": "<p>The properties that are applied when Amazon S3 is being used as the flow source.</p>",
+      "refs": {
+        "SourceConnectorProperties$S3": "<p>The properties that are applied when Amazon S3 is being used as the flow source.</p>"
+      }
+    },
+    "SalesforceConnectorOperator": {
+      "base": null,
+      "refs": {
+        "ConnectorOperator$Salesforce": "<p>The operation to be performed on the provided Salesforce source fields.</p>"
+      }
+    },
+    "SalesforceSourceProperties": {
+      "base": "<p>The properties that are applied when Salesforce is being used as a source.</p>",
+      "refs": {
+        "SourceConnectorProperties$Salesforce": "<p>The properties that are applied when Salesforce is being used as a source.</p>"
+      }
+    },
+    "ScheduleExpression": {
+      "base": null,
+      "refs": {
+        "ScheduledTriggerProperties$ScheduleExpression": "<p>The scheduling expression that determines the rate at which the schedule will run, for example rate (5 minutes).</p>"
+      }
+    },
+    "ScheduleOffset": {
+      "base": null,
+      "refs": {
+        "ScheduledTriggerProperties$ScheduleOffset": "<p>Specifies the optional offset that is added to the time interval for a schedule-triggered flow.</p>"
+      }
+    },
+    "ScheduledTriggerProperties": {
+      "base": "<p>Specifies the configuration details of a scheduled-trigger flow that you define. Currently, these settings only apply to the scheduled-trigger type.</p>",
+      "refs": {
+        "TriggerProperties$Scheduled": "<p>Specifies the configuration details of a schedule-triggered flow that you define.</p>"
+      }
+    },
+    "SearchProfilesRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "SearchProfilesResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ServiceNowConnectorOperator": {
+      "base": null,
+      "refs": {
+        "ConnectorOperator$ServiceNow": "<p>The operation to be performed on the provided ServiceNow source fields.</p>"
+      }
+    },
+    "ServiceNowSourceProperties": {
+      "base": "<p>The properties that are applied when ServiceNow is being used as a source.</p>",
+      "refs": {
+        "SourceConnectorProperties$ServiceNow": "<p>The properties that are applied when ServiceNow is being used as a source.</p>"
+      }
+    },
+    "SourceConnectorProperties": {
+      "base": "<p>Specifies the information that is required to query a particular Amazon AppFlow connector. Customer Profiles supports Salesforce, Zendesk, Marketo, ServiceNow and Amazon S3.</p>",
+      "refs": {
+        "SourceFlowConfig$SourceConnectorProperties": "<p>Specifies the information that is required to query a particular source connector.</p>"
+      }
+    },
+    "SourceConnectorType": {
+      "base": null,
+      "refs": {
+        "AppflowIntegrationWorkflowAttributes$SourceConnectorType": "<p>Specifies the source connector type, such as Salesforce, ServiceNow, and Marketo. Indicates source of ingestion.</p>",
+        "SourceFlowConfig$ConnectorType": "<p>The type of connector, such as Salesforce, Marketo, and so on.</p>"
+      }
+    },
+    "SourceFields": {
+      "base": null,
+      "refs": {
+        "Task$SourceFields": "<p>The source fields to which a particular task is applied.</p>"
+      }
+    },
+    "SourceFlowConfig": {
+      "base": "<p>Contains information about the configuration of the source connector used in the flow.</p>",
+      "refs": {
+        "FlowDefinition$SourceFlowConfig": "<p>The configuration that controls how Customer Profiles retrieves data from the source.</p>"
+      }
+    },
+    "StandardIdentifier": {
+      "base": null,
+      "refs": {
+        "StandardIdentifierList$member": null
+      }
+    },
+    "StandardIdentifierList": {
+      "base": null,
+      "refs": {
+        "ObjectTypeKey$StandardIdentifiers": "<p>The types of keys that a ProfileObject can have. Each ProfileObject can have only 1 UNIQUE key but multiple PROFILE keys. PROFILE, ASSET, CASE, or ORDER means that this key can be used to tie an object to a PROFILE, ASSET, CASE, or ORDER respectively. UNIQUE means that it can be used to uniquely identify an object. If a key a is marked as SECONDARY, it will be used to search for profiles after all other PROFILE keys have been searched. A LOOKUP_ONLY key is only used to match a profile but is not persisted to be used for searching of the profile. A NEW_ONLY key is only used if the profile does not already exist before the object is ingested, otherwise it is only used for matching objects to profiles.</p>"
+      }
+    },
+    "Status": {
+      "base": null,
+      "refs": {
+        "AppflowIntegrationWorkflowStep$Status": "<p>Workflow step status for <code>APPFLOW_INTEGRATION</code> workflow.</p>",
+        "GetWorkflowResponse$Status": "<p>Status of workflow execution.</p>",
+        "ListWorkflowsItem$Status": "<p>Status of workflow execution.</p>",
+        "ListWorkflowsRequest$Status": "<p>Status of workflow execution.</p>"
+      }
+    },
+    "TagArn": {
+      "base": null,
+      "refs": {
+        "ListTagsForResourceRequest$resourceArn": "<p>The ARN of the resource for which you want to view tags.</p>",
+        "TagResourceRequest$resourceArn": "<p>The ARN of the resource that you're adding tags to.</p>",
+        "UntagResourceRequest$resourceArn": "<p>The ARN of the resource from which you are removing tags.</p>"
+      }
+    },
+    "TagKey": {
+      "base": null,
+      "refs": {
+        "TagKeyList$member": null,
+        "TagMap$key": null
+      }
+    },
+    "TagKeyList": {
+      "base": null,
+      "refs": {
+        "UntagResourceRequest$tagKeys": "<p>The list of tag keys to remove from the resource.</p>"
+      }
+    },
+    "TagMap": {
+      "base": null,
+      "refs": {
+        "CreateDomainRequest$Tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "CreateDomainResponse$Tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "CreateIntegrationWorkflowRequest$Tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "GetDomainResponse$Tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "GetIntegrationResponse$Tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "GetProfileObjectTypeResponse$Tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "ListDomainItem$Tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "ListIntegrationItem$Tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "ListProfileObjectTypeItem$Tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "ListTagsForResourceResponse$tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "PutIntegrationRequest$Tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "PutIntegrationResponse$Tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "PutProfileObjectTypeRequest$Tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "PutProfileObjectTypeResponse$Tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "TagResourceRequest$tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "UpdateDomainRequest$Tags": "<p>The tags used to organize, track, or control access for this resource.</p>",
+        "UpdateDomainResponse$Tags": "<p>The tags used to organize, track, or control access for this resource.</p>"
+      }
+    },
+    "TagResourceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "TagResourceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "TagValue": {
+      "base": null,
+      "refs": {
+        "TagMap$value": null
+      }
+    },
+    "Task": {
+      "base": "<p>A class for modeling different type of tasks. Task implementation varies based on the TaskType.</p>",
+      "refs": {
+        "Tasks$member": null
+      }
+    },
+    "TaskPropertiesMap": {
+      "base": null,
+      "refs": {
+        "Task$TaskProperties": "<p>A map used to store task-related information. The service looks for particular information based on the TaskType.</p>"
+      }
+    },
+    "TaskType": {
+      "base": null,
+      "refs": {
+        "Task$TaskType": "<p>Specifies the particular task implementation that Amazon AppFlow performs.</p>"
+      }
+    },
+    "Tasks": {
+      "base": null,
+      "refs": {
+        "FlowDefinition$Tasks": "<p>A list of tasks that Customer Profiles performs while transferring the data in the flow run.</p>"
+      }
+    },
+    "ThrottlingException": {
+      "base": "<p>You exceeded the maximum number of requests.</p>",
+      "refs": {
+      }
+    },
+    "Timezone": {
+      "base": null,
+      "refs": {
+        "ScheduledTriggerProperties$Timezone": "<p>Specifies the time zone used when referring to the date and time of a scheduled-triggered flow, such as America/New_York.</p>"
+      }
+    },
+    "TriggerConfig": {
+      "base": "<p>The trigger settings that determine how and when Amazon AppFlow runs the specified flow.</p>",
+      "refs": {
+        "FlowDefinition$TriggerConfig": "<p>The trigger settings that determine how and when the flow runs.</p>"
+      }
+    },
+    "TriggerProperties": {
+      "base": "<p>Specifies the configuration details that control the trigger for a flow. Currently, these settings only apply to the Scheduled trigger type.</p>",
+      "refs": {
+        "TriggerConfig$TriggerProperties": "<p>Specifies the configuration details of a schedule-triggered flow that you define. Currently, these settings only apply to the Scheduled trigger type.</p>"
+      }
+    },
+    "TriggerType": {
+      "base": null,
+      "refs": {
+        "TriggerConfig$TriggerType": "<p>Specifies the type of flow trigger. It can be OnDemand, Scheduled, or Event.</p>"
+      }
+    },
+    "UntagResourceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UntagResourceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateAddress": {
+      "base": "<p>Updates associated with the address properties of a customer profile.</p>",
+      "refs": {
+        "UpdateProfileRequest$Address": "<p>A generic address associated with the customer that is not mailing, shipping, or billing.</p>",
+        "UpdateProfileRequest$ShippingAddress": "<p>The customer’s shipping address.</p>",
+        "UpdateProfileRequest$MailingAddress": "<p>The customer’s mailing address.</p>",
+        "UpdateProfileRequest$BillingAddress": "<p>The customer’s billing address.</p>"
+      }
+    },
+    "UpdateAttributes": {
+      "base": null,
+      "refs": {
+        "UpdateProfileRequest$Attributes": "<p>A key value pair of attributes of a customer profile.</p>"
+      }
+    },
+    "UpdateDomainRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateDomainResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateProfileRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateProfileResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "WorkflowAttributes": {
+      "base": "<p>Structure to hold workflow attributes.</p>",
+      "refs": {
+        "GetWorkflowResponse$Attributes": "<p>Attributes provided for workflow execution.</p>"
+      }
+    },
+    "WorkflowList": {
+      "base": null,
+      "refs": {
+        "ListWorkflowsResponse$Items": "<p>List containing workflow details.</p>"
+      }
+    },
+    "WorkflowMetrics": {
+      "base": "<p>Generic object containing workflow execution metrics.</p>",
+      "refs": {
+        "GetWorkflowResponse$Metrics": "<p>Workflow specific execution metrics.</p>"
+      }
+    },
+    "WorkflowStepItem": {
+      "base": "<p>List containing steps in workflow.</p>",
+      "refs": {
+        "WorkflowStepsList$member": null
+      }
+    },
+    "WorkflowStepsList": {
+      "base": null,
+      "refs": {
+        "GetWorkflowStepsResponse$Items": "<p>List containing workflow step details.</p>"
+      }
+    },
+    "WorkflowType": {
+      "base": null,
+      "refs": {
+        "CreateIntegrationWorkflowRequest$WorkflowType": "<p>The type of workflow. The only supported value is APPFLOW_INTEGRATION.</p>",
+        "GetWorkflowResponse$WorkflowType": "<p>The type of workflow. The only supported value is APPFLOW_INTEGRATION.</p>",
+        "GetWorkflowStepsResponse$WorkflowType": "<p>The type of workflow. The only supported value is APPFLOW_INTEGRATION.</p>",
+        "ListWorkflowsItem$WorkflowType": "<p>The type of workflow. The only supported value is APPFLOW_INTEGRATION.</p>",
+        "ListWorkflowsRequest$WorkflowType": "<p>The type of workflow. The only supported value is APPFLOW_INTEGRATION.</p>"
+      }
+    },
+    "ZendeskConnectorOperator": {
+      "base": null,
+      "refs": {
+        "ConnectorOperator$Zendesk": "<p>The operation to be performed on the provided Zendesk source fields.</p>"
+      }
+    },
+    "ZendeskSourceProperties": {
+      "base": "<p>The properties that are applied when using Zendesk as a flow source.</p>",
+      "refs": {
+        "SourceConnectorProperties$Zendesk": "<p>The properties that are applied when using Zendesk as a flow source.</p>"
+      }
+    },
+    "boolean": {
+      "base": null,
+      "refs": {
+        "GetProfileObjectTypeResponse$AllowProfileCreation": "<p>Indicates whether a profile should be created when data is received if one doesn’t exist for an object of this type. The default is <code>FALSE</code>. If the AllowProfileCreation flag is set to <code>FALSE</code>, then the service tries to fetch a standard profile and associate this object with the profile. If it is set to <code>TRUE</code>, and if no match is found, then the service creates a new standard profile.</p>",
+        "GetProfileObjectTypeTemplateResponse$AllowProfileCreation": "<p>Indicates whether a profile should be created when data is received if one doesn’t exist for an object of this type. The default is <code>FALSE</code>. If the AllowProfileCreation flag is set to <code>FALSE</code>, then the service tries to fetch a standard profile and associate this object with the profile. If it is set to <code>TRUE</code>, and if no match is found, then the service creates a new standard profile.</p>",
+        "PutProfileObjectTypeRequest$AllowProfileCreation": "<p>Indicates whether a profile should be created when data is received if one doesn’t exist for an object of this type. The default is <code>FALSE</code>. If the AllowProfileCreation flag is set to <code>FALSE</code>, then the service tries to fetch a standard profile and associate this object with the profile. If it is set to <code>TRUE</code>, and if no match is found, then the service creates a new standard profile.</p>",
+        "PutProfileObjectTypeResponse$AllowProfileCreation": "<p>Indicates whether a profile should be created when data is received if one doesn’t exist for an object of this type. The default is <code>FALSE</code>. If the AllowProfileCreation flag is set to <code>FALSE</code>, then the service tries to fetch a standard profile and associate this object with the profile. If it is set to <code>TRUE</code>, and if no match is found, then the service creates a new standard profile.</p>",
+        "SalesforceSourceProperties$EnableDynamicFieldUpdate": "<p>The flag that enables dynamic fetching of new (recently added) fields in the Salesforce objects while running a flow.</p>",
+        "SalesforceSourceProperties$IncludeDeletedRecords": "<p>Indicates whether Amazon AppFlow includes deleted files in the flow run.</p>"
+      }
+    },
+    "encryptionKey": {
+      "base": null,
+      "refs": {
+        "CreateDomainRequest$DefaultEncryptionKey": "<p>The default encryption key, which is an AWS managed key, is used when no specific type of encryption key is specified. It is used to encrypt all data before it is placed in permanent or semi-permanent storage.</p>",
+        "CreateDomainResponse$DefaultEncryptionKey": "<p>The default encryption key, which is an AWS managed key, is used when no specific type of encryption key is specified. It is used to encrypt all data before it is placed in permanent or semi-permanent storage.</p>",
+        "GetDomainResponse$DefaultEncryptionKey": "<p>The default encryption key, which is an AWS managed key, is used when no specific type of encryption key is specified. It is used to encrypt all data before it is placed in permanent or semi-permanent storage.</p>",
+        "GetProfileObjectTypeResponse$EncryptionKey": "<p>The customer-provided key to encrypt the profile object that will be created in this profile object type.</p>",
+        "PutProfileObjectTypeRequest$EncryptionKey": "<p>The customer-provided key to encrypt the profile object that will be created in this profile object type.</p>",
+        "PutProfileObjectTypeResponse$EncryptionKey": "<p>The customer-provided key to encrypt the profile object that will be created in this profile object type.</p>",
+        "UpdateDomainRequest$DefaultEncryptionKey": "<p>The default encryption key, which is an AWS managed key, is used when no specific type of encryption key is specified. It is used to encrypt all data before it is placed in permanent or semi-permanent storage. If specified as an empty string, it will clear any existing value.</p>",
+        "UpdateDomainResponse$DefaultEncryptionKey": "<p>The default encryption key, which is an AWS managed key, is used when no specific type of encryption key is specified. It is used to encrypt all data before it is placed in permanent or semi-permanent storage.</p>"
+      }
+    },
+    "expirationDaysInteger": {
+      "base": null,
+      "refs": {
+        "CreateDomainRequest$DefaultExpirationDays": "<p>The default number of days until the data within the domain expires.</p>",
+        "CreateDomainResponse$DefaultExpirationDays": "<p>The default number of days until the data within the domain expires.</p>",
+        "GetDomainResponse$DefaultExpirationDays": "<p>The default number of days until the data within the domain expires.</p>",
+        "GetProfileObjectTypeResponse$ExpirationDays": "<p>The number of days until the data in the object expires.</p>",
+        "PutProfileObjectTypeRequest$ExpirationDays": "<p>The number of days until the data in the object expires.</p>",
+        "PutProfileObjectTypeResponse$ExpirationDays": "<p>The number of days until the data in the object expires.</p>",
+        "UpdateDomainRequest$DefaultExpirationDays": "<p>The default number of days until the data within the domain expires.</p>",
+        "UpdateDomainResponse$DefaultExpirationDays": "<p>The default number of days until the data within the domain expires.</p>"
+      }
+    },
+    "long": {
+      "base": null,
+      "refs": {
+        "AppflowIntegrationWorkflowMetrics$RecordsProcessed": "<p>Number of records processed in <code>APPFLOW_INTEGRATION</code> workflow.</p>",
+        "AppflowIntegrationWorkflowMetrics$StepsCompleted": "<p>Total steps completed in <code>APPFLOW_INTEGRATION</code> workflow.</p>",
+        "AppflowIntegrationWorkflowMetrics$TotalSteps": "<p>Total steps in <code>APPFLOW_INTEGRATION</code> workflow.</p>",
+        "AppflowIntegrationWorkflowStep$RecordsProcessed": "<p>Total number of records processed during execution of workflow step for <code>APPFLOW_INTEGRATION</code> workflow.</p>",
+        "DomainStats$ProfileCount": "<p>The total number of profiles currently in the domain.</p>",
+        "DomainStats$MeteringProfileCount": "<p>The number of profiles that you are currently paying for in the domain. If you have more than 100 objects associated with a single profile, that profile counts as two profiles. If you have more than 200 objects, that profile counts as three, and so on.</p>",
+        "DomainStats$ObjectCount": "<p>The total number of objects in domain.</p>",
+        "DomainStats$TotalSize": "<p>The total size, in bytes, of all objects in the domain.</p>",
+        "GetAutoMergingPreviewResponse$NumberOfMatchesInSample": "<p>The number of match groups in the domain that have been reviewed in this preview dry run.</p>",
+        "GetAutoMergingPreviewResponse$NumberOfProfilesInSample": "<p>The number of profiles found in this preview dry run.</p>",
+        "GetAutoMergingPreviewResponse$NumberOfProfilesWillBeMerged": "<p>The number of profiles that would be merged if this wasn't a preview dry run.</p>",
+        "JobStats$NumberOfProfilesReviewed": "<p>The number of profiles reviewed.</p>",
+        "JobStats$NumberOfMatchesFound": "<p>The number of matches found.</p>",
+        "JobStats$NumberOfMergesDone": "<p>The number of merges completed.</p>"
+      }
+    },
+    "matchesNumber": {
+      "base": null,
+      "refs": {
+        "GetMatchesResponse$PotentialMatches": "<p>The number of potential matches found.</p>"
+      }
+    },
+    "maxSize100": {
+      "base": null,
+      "refs": {
+        "GetMatchesRequest$MaxResults": "<p>The maximum number of results to return per page.</p>",
+        "GetWorkflowStepsRequest$MaxResults": "<p>The maximum number of results to return per page.</p>",
+        "ListAccountIntegrationsRequest$MaxResults": "<p>The maximum number of objects returned per page.</p>",
+        "ListDomainsRequest$MaxResults": "<p>The maximum number of objects returned per page.</p>",
+        "ListIdentityResolutionJobsRequest$MaxResults": "<p>The maximum number of results to return per page.</p>",
+        "ListIntegrationsRequest$MaxResults": "<p>The maximum number of objects returned per page.</p>",
+        "ListProfileObjectTypeTemplatesRequest$MaxResults": "<p>The maximum number of objects returned per page.</p>",
+        "ListProfileObjectTypesRequest$MaxResults": "<p>The maximum number of objects returned per page.</p>",
+        "ListProfileObjectsRequest$MaxResults": "<p>The maximum number of objects returned per page.</p>",
+        "ListWorkflowsRequest$MaxResults": "<p>The maximum number of results to return per page.</p>",
+        "SearchProfilesRequest$MaxResults": "<p>The maximum number of objects returned per page.</p>"
+      }
+    },
+    "message": {
+      "base": null,
+      "refs": {
+        "AccessDeniedException$Message": null,
+        "BadRequestException$Message": null,
+        "DeleteDomainResponse$Message": "<p>A message that indicates the delete request is done.</p>",
+        "DeleteIntegrationResponse$Message": "<p>A message that indicates the delete request is done.</p>",
+        "DeleteProfileKeyResponse$Message": "<p>A message that indicates the delete request is done.</p>",
+        "DeleteProfileObjectResponse$Message": "<p>A message that indicates the delete request is done.</p>",
+        "DeleteProfileObjectTypeResponse$Message": "<p>A message that indicates the delete request is done.</p>",
+        "DeleteProfileResponse$Message": "<p>A message that indicates the delete request is done.</p>",
+        "InternalServerException$Message": null,
+        "MergeProfilesResponse$Message": "<p>A message that indicates the merge request is complete.</p>",
+        "ResourceNotFoundException$Message": null,
+        "ThrottlingException$Message": null
+      }
+    },
+    "optionalBoolean": {
+      "base": null,
+      "refs": {
+        "AutoMerging$Enabled": "<p>The flag that enables the auto-merging of duplicate profiles.</p>",
+        "ListAccountIntegrationsRequest$IncludeHidden": "<p>Boolean to indicate if hidden integration should be returned. Defaults to <code>False</code>.</p>",
+        "ListIntegrationsRequest$IncludeHidden": "<p>Boolean to indicate if hidden integration should be returned. Defaults to <code>False</code>.</p>",
+        "MatchingRequest$Enabled": "<p>The flag that enables the matching process of duplicate profiles.</p>",
+        "MatchingResponse$Enabled": "<p>The flag that enables the matching process of duplicate profiles.</p>"
+      }
+    },
+    "requestValueList": {
+      "base": null,
+      "refs": {
+        "AddProfileKeyRequest$Values": "<p>A list of key values.</p>",
+        "AddProfileKeyResponse$Values": "<p>A list of key values.</p>",
+        "DeleteProfileKeyRequest$Values": "<p>A list of key values.</p>",
+        "ObjectFilter$Values": "<p>A list of key values.</p>",
+        "SearchProfilesRequest$Values": "<p>A list of key values.</p>"
+      }
+    },
+    "s3BucketName": {
+      "base": null,
+      "refs": {
+        "S3ExportingConfig$S3BucketName": "<p>The name of the S3 bucket where Identity Resolution Jobs write result files.</p>",
+        "S3ExportingLocation$S3BucketName": "<p>The name of the S3 bucket name where Identity Resolution Jobs write result files.</p>"
+      }
+    },
+    "s3KeyName": {
+      "base": null,
+      "refs": {
+        "S3ExportingLocation$S3KeyName": "<p>The S3 key name of the location where Identity Resolution Jobs write result files.</p>"
+      }
+    },
+    "s3KeyNameCustomerOutputConfig": {
+      "base": null,
+      "refs": {
+        "S3ExportingConfig$S3KeyName": "<p>The S3 key name of the location where Identity Resolution Jobs write result files.</p>"
+      }
+    },
+    "sqsQueueUrl": {
+      "base": null,
+      "refs": {
+        "CreateDomainRequest$DeadLetterQueueUrl": "<p>The URL of the SQS dead letter queue, which is used for reporting errors associated with ingesting data from third party applications. You must set up a policy on the DeadLetterQueue for the SendMessage operation to enable Amazon Connect Customer Profiles to send messages to the DeadLetterQueue.</p>",
+        "CreateDomainResponse$DeadLetterQueueUrl": "<p>The URL of the SQS dead letter queue, which is used for reporting errors associated with ingesting data from third party applications.</p>",
+        "GetDomainResponse$DeadLetterQueueUrl": "<p>The URL of the SQS dead letter queue, which is used for reporting errors associated with ingesting data from third party applications.</p>",
+        "UpdateDomainRequest$DeadLetterQueueUrl": "<p>The URL of the SQS dead letter queue, which is used for reporting errors associated with ingesting data from third party applications. If specified as an empty string, it will clear any existing value. You must set up a policy on the DeadLetterQueue for the SendMessage operation to enable Amazon Connect Customer Profiles to send messages to the DeadLetterQueue.</p>",
+        "UpdateDomainResponse$DeadLetterQueueUrl": "<p>The URL of the SQS dead letter queue, which is used for reporting errors associated with ingesting data from third party applications.</p>"
+      }
+    },
+    "string0To1000": {
+      "base": null,
+      "refs": {
+        "UpdateProfileRequest$AdditionalInformation": "<p>Any additional information relevant to the customer’s profile.</p>"
+      }
+    },
+    "string0To255": {
+      "base": null,
+      "refs": {
+        "UpdateAddress$Address1": "<p>The first line of a customer address.</p>",
+        "UpdateAddress$Address2": "<p>The second line of a customer address.</p>",
+        "UpdateAddress$Address3": "<p>The third line of a customer address.</p>",
+        "UpdateAddress$Address4": "<p>The fourth line of a customer address.</p>",
+        "UpdateAddress$City": "<p>The city in which a customer lives.</p>",
+        "UpdateAddress$County": "<p>The county in which a customer lives.</p>",
+        "UpdateAddress$State": "<p>The state in which a customer lives.</p>",
+        "UpdateAddress$Province": "<p>The province in which a customer lives.</p>",
+        "UpdateAddress$Country": "<p>The country in which a customer lives.</p>",
+        "UpdateAddress$PostalCode": "<p>The postal code of a customer address.</p>",
+        "UpdateAttributes$value": null,
+        "UpdateProfileRequest$AccountNumber": "<p>A unique account number that you have given to the customer.</p>",
+        "UpdateProfileRequest$BusinessName": "<p>The name of the customer’s business.</p>",
+        "UpdateProfileRequest$FirstName": "<p>The customer’s first name.</p>",
+        "UpdateProfileRequest$MiddleName": "<p>The customer’s middle name.</p>",
+        "UpdateProfileRequest$LastName": "<p>The customer’s last name.</p>",
+        "UpdateProfileRequest$BirthDate": "<p>The customer’s birth date. </p>",
+        "UpdateProfileRequest$PhoneNumber": "<p>The customer’s phone number, which has not been specified as a mobile, home, or business number. </p>",
+        "UpdateProfileRequest$MobilePhoneNumber": "<p>The customer’s mobile phone number.</p>",
+        "UpdateProfileRequest$HomePhoneNumber": "<p>The customer’s home phone number.</p>",
+        "UpdateProfileRequest$BusinessPhoneNumber": "<p>The customer’s business phone number.</p>",
+        "UpdateProfileRequest$EmailAddress": "<p>The customer’s email address, which has not been specified as a personal or business address. </p>",
+        "UpdateProfileRequest$PersonalEmailAddress": "<p>The customer’s personal email address.</p>",
+        "UpdateProfileRequest$BusinessEmailAddress": "<p>The customer’s business email address.</p>"
+      }
+    },
+    "string1To1000": {
+      "base": null,
+      "refs": {
+        "CreateProfileRequest$AdditionalInformation": "<p>Any additional information relevant to the customer’s profile.</p>",
+        "Profile$AdditionalInformation": "<p>Any additional information relevant to the customer’s profile.</p>"
+      }
+    },
+    "string1To255": {
+      "base": null,
+      "refs": {
+        "Address$Address1": "<p>The first line of a customer address.</p>",
+        "Address$Address2": "<p>The second line of a customer address.</p>",
+        "Address$Address3": "<p>The third line of a customer address.</p>",
+        "Address$Address4": "<p>The fourth line of a customer address.</p>",
+        "Address$City": "<p>The city in which a customer lives.</p>",
+        "Address$County": "<p>The county in which a customer lives.</p>",
+        "Address$State": "<p>The state in which a customer lives.</p>",
+        "Address$Province": "<p>The province in which a customer lives.</p>",
+        "Address$Country": "<p>The country in which a customer lives.</p>",
+        "Address$PostalCode": "<p>The postal code of a customer address.</p>",
+        "AppflowIntegrationWorkflowAttributes$RoleArn": "<p>The Amazon Resource Name (ARN) of the IAM role. Customer Profiles assumes this role to create resources on your behalf as part of workflow execution.</p>",
+        "AppflowIntegrationWorkflowStep$ExecutionMessage": "<p>Message indicating execution of workflow step for <code>APPFLOW_INTEGRATION</code> workflow.</p>",
+        "AppflowIntegrationWorkflowStep$BatchRecordsStartTime": "<p>Start datetime of records pulled in batch during execution of workflow step for <code>APPFLOW_INTEGRATION</code> workflow.</p>",
+        "AppflowIntegrationWorkflowStep$BatchRecordsEndTime": "<p>End datetime of records pulled in batch during execution of workflow step for <code>APPFLOW_INTEGRATION</code> workflow.</p>",
+        "AttributeSourceIdMap$key": null,
+        "Attributes$key": null,
+        "Attributes$value": null,
+        "ConflictResolution$SourceName": "<p>The <code>ObjectType</code> name that is used to resolve profile merging conflicts when choosing <code>SOURCE</code> as the <code>ConflictResolvingModel</code>.</p>",
+        "CreateIntegrationWorkflowResponse$Message": "<p>A message indicating create request was received.</p>",
+        "CreateProfileRequest$AccountNumber": "<p>A unique account number that you have given to the customer.</p>",
+        "CreateProfileRequest$BusinessName": "<p>The name of the customer’s business.</p>",
+        "CreateProfileRequest$FirstName": "<p>The customer’s first name.</p>",
+        "CreateProfileRequest$MiddleName": "<p>The customer’s middle name.</p>",
+        "CreateProfileRequest$LastName": "<p>The customer’s last name.</p>",
+        "CreateProfileRequest$BirthDate": "<p>The customer’s birth date. </p>",
+        "CreateProfileRequest$PhoneNumber": "<p>The customer’s phone number, which has not been specified as a mobile, home, or business number. </p>",
+        "CreateProfileRequest$MobilePhoneNumber": "<p>The customer’s mobile phone number.</p>",
+        "CreateProfileRequest$HomePhoneNumber": "<p>The customer’s home phone number.</p>",
+        "CreateProfileRequest$BusinessPhoneNumber": "<p>The customer’s business phone number.</p>",
+        "CreateProfileRequest$EmailAddress": "<p>The customer’s email address, which has not been specified as a personal or business address. </p>",
+        "CreateProfileRequest$PersonalEmailAddress": "<p>The customer’s personal email address.</p>",
+        "CreateProfileRequest$BusinessEmailAddress": "<p>The customer’s business email address.</p>",
+        "DeleteIntegrationRequest$Uri": "<p>The URI of the S3 bucket or any other type of data source.</p>",
+        "DeleteProfileObjectRequest$ProfileObjectUniqueKey": "<p>The unique identifier of the profile object generated by the service.</p>",
+        "DeleteWorkflowRequest$WorkflowId": "<p>Unique identifier for the workflow.</p>",
+        "GetIntegrationRequest$Uri": "<p>The URI of the S3 bucket or any other type of data source.</p>",
+        "GetIntegrationResponse$Uri": "<p>The URI of the S3 bucket or any other type of data source.</p>",
+        "GetIntegrationResponse$WorkflowId": "<p>Unique identifier for the workflow.</p>",
+        "GetProfileObjectTypeResponse$SourceLastUpdatedTimestampFormat": "<p>The format of your <code>sourceLastUpdatedTimestamp</code> that was previously set up.</p>",
+        "GetProfileObjectTypeTemplateResponse$SourceLastUpdatedTimestampFormat": "<p>The format of your <code>sourceLastUpdatedTimestamp</code> that was previously set up.</p>",
+        "GetWorkflowResponse$ErrorDescription": "<p>Workflow error messages during execution (if any).</p>",
+        "ListAccountIntegrationsRequest$Uri": "<p>The URI of the S3 bucket or any other type of data source.</p>",
+        "ListIntegrationItem$Uri": "<p>The URI of the S3 bucket or any other type of data source.</p>",
+        "ListIntegrationItem$WorkflowId": "<p>Unique identifier for the workflow.</p>",
+        "ListProfileObjectsItem$ProfileObjectUniqueKey": "<p>The unique identifier of the ProfileObject generated by the service.</p>",
+        "ListWorkflowsItem$WorkflowId": "<p>Unique identifier for the workflow.</p>",
+        "ListWorkflowsItem$StatusDescription": "<p>Description for workflow execution status.</p>",
+        "MatchItem$MatchId": "<p>The unique identifiers for this group of profiles that match.</p>",
+        "MatchingAttributes$member": null,
+        "ObjectTypeNames$key": null,
+        "Profile$AccountNumber": "<p>A unique account number that you have given to the customer.</p>",
+        "Profile$BusinessName": "<p>The name of the customer’s business.</p>",
+        "Profile$FirstName": "<p>The customer’s first name.</p>",
+        "Profile$MiddleName": "<p>The customer’s middle name.</p>",
+        "Profile$LastName": "<p>The customer’s last name.</p>",
+        "Profile$BirthDate": "<p>The customer’s birth date. </p>",
+        "Profile$PhoneNumber": "<p>The customer's phone number, which has not been specified as a mobile, home, or business number.</p>",
+        "Profile$MobilePhoneNumber": "<p>The customer’s mobile phone number.</p>",
+        "Profile$HomePhoneNumber": "<p>The customer’s home phone number.</p>",
+        "Profile$BusinessPhoneNumber": "<p>The customer’s home phone number.</p>",
+        "Profile$EmailAddress": "<p>The customer’s email address, which has not been specified as a personal or business address. </p>",
+        "Profile$PersonalEmailAddress": "<p>The customer’s personal email address.</p>",
+        "Profile$BusinessEmailAddress": "<p>The customer’s business email address.</p>",
+        "PutIntegrationRequest$Uri": "<p>The URI of the S3 bucket or any other type of data source.</p>",
+        "PutIntegrationResponse$Uri": "<p>The URI of the S3 bucket or any other type of data source.</p>",
+        "PutIntegrationResponse$WorkflowId": "<p>Unique identifier for the workflow.</p>",
+        "PutProfileObjectResponse$ProfileObjectUniqueKey": "<p>The unique identifier of the profile object generated by the service.</p>",
+        "PutProfileObjectTypeRequest$SourceLastUpdatedTimestampFormat": "<p>The format of your <code>sourceLastUpdatedTimestamp</code> that was previously set up. </p>",
+        "PutProfileObjectTypeResponse$SourceLastUpdatedTimestampFormat": "<p>The format of your <code>sourceLastUpdatedTimestamp</code> that was previously set up in fields that were parsed using <a href=\"https://docs.oracle.com/javase/10/docs/api/java/text/SimpleDateFormat.html\">SimpleDateFormat</a>. If you have <code>sourceLastUpdatedTimestamp</code> in your field, you must set up <code>sourceLastUpdatedTimestampFormat</code>.</p>",
+        "UpdateAttributes$key": null,
+        "requestValueList$member": null
+      }
+    },
+    "stringTo2048": {
+      "base": null,
+      "refs": {
+        "GetIdentityResolutionJobResponse$Message": "<p>The error messages that are generated when the Identity Resolution Job runs.</p>",
+        "IdentityResolutionJob$Message": "<p>The error messages that are generated when the Identity Resolution Job runs.</p>",
+        "SourceFields$member": null
+      }
+    },
+    "stringifiedJson": {
+      "base": null,
+      "refs": {
+        "ListProfileObjectsItem$Object": "<p>A JSON representation of a ProfileObject that belongs to a profile.</p>",
+        "PutProfileObjectRequest$Object": "<p>A string that is serialized from a JSON object.</p>"
+      }
+    },
+    "text": {
+      "base": null,
+      "refs": {
+        "GetProfileObjectTypeResponse$Description": "<p>The description of the profile object type.</p>",
+        "ListProfileObjectTypeItem$Description": "<p>Description of the profile object type.</p>",
+        "ObjectTypeField$Source": "<p>A field of a ProfileObject. For example: _source.FirstName, where “_source” is a ProfileObjectType of a Zendesk user and “FirstName” is a field in that ObjectType.</p>",
+        "ObjectTypeField$Target": "<p>The location of the data in the standard ProfileObject model. For example: _profile.Address.PostalCode.</p>",
+        "PutProfileObjectTypeRequest$Description": "<p>Description of the profile object type.</p>",
+        "PutProfileObjectTypeResponse$Description": "<p>Description of the profile object type.</p>"
+      }
+    },
+    "timestamp": {
+      "base": null,
+      "refs": {
+        "AppflowIntegrationWorkflowStep$CreatedAt": "<p>Creation timestamp of workflow step for <code>APPFLOW_INTEGRATION</code> workflow.</p>",
+        "AppflowIntegrationWorkflowStep$LastUpdatedAt": "<p>Last updated timestamp for workflow step for <code>APPFLOW_INTEGRATION</code> workflow.</p>",
+        "Batch$StartTime": "<p>Start time of batch to split ingestion.</p>",
+        "Batch$EndTime": "<p>End time of batch to split ingestion.</p>",
+        "CreateDomainResponse$CreatedAt": "<p>The timestamp of when the domain was created.</p>",
+        "CreateDomainResponse$LastUpdatedAt": "<p>The timestamp of when the domain was most recently edited.</p>",
+        "GetDomainResponse$CreatedAt": "<p>The timestamp of when the domain was created.</p>",
+        "GetDomainResponse$LastUpdatedAt": "<p>The timestamp of when the domain was most recently edited.</p>",
+        "GetIdentityResolutionJobResponse$JobStartTime": "<p>The timestamp of when the Identity Resolution Job was started or will be started.</p>",
+        "GetIdentityResolutionJobResponse$JobEndTime": "<p>The timestamp of when the Identity Resolution Job was completed.</p>",
+        "GetIdentityResolutionJobResponse$LastUpdatedAt": "<p>The timestamp of when the Identity Resolution Job was most recently edited.</p>",
+        "GetIdentityResolutionJobResponse$JobExpirationTime": "<p>The timestamp of when the Identity Resolution Job will expire.</p>",
+        "GetIntegrationResponse$CreatedAt": "<p>The timestamp of when the domain was created.</p>",
+        "GetIntegrationResponse$LastUpdatedAt": "<p>The timestamp of when the domain was most recently edited.</p>",
+        "GetMatchesResponse$MatchGenerationDate": "<p>The timestamp this version of Match Result generated.</p>",
+        "GetProfileObjectTypeResponse$CreatedAt": "<p>The timestamp of when the domain was created.</p>",
+        "GetProfileObjectTypeResponse$LastUpdatedAt": "<p>The timestamp of when the domain was most recently edited.</p>",
+        "GetWorkflowResponse$StartDate": "<p>The timestamp that represents when workflow execution started.</p>",
+        "GetWorkflowResponse$LastUpdatedAt": "<p>The timestamp that represents when workflow execution last updated.</p>",
+        "IdentityResolutionJob$JobStartTime": "<p>The timestamp of when the job was started or will be started.</p>",
+        "IdentityResolutionJob$JobEndTime": "<p>The timestamp of when the job was completed.</p>",
+        "ListDomainItem$CreatedAt": "<p>The timestamp of when the domain was created.</p>",
+        "ListDomainItem$LastUpdatedAt": "<p>The timestamp of when the domain was most recently edited.</p>",
+        "ListIntegrationItem$CreatedAt": "<p>The timestamp of when the domain was created.</p>",
+        "ListIntegrationItem$LastUpdatedAt": "<p>The timestamp of when the domain was most recently edited.</p>",
+        "ListProfileObjectTypeItem$CreatedAt": "<p>The timestamp of when the domain was created.</p>",
+        "ListProfileObjectTypeItem$LastUpdatedAt": "<p>The timestamp of when the domain was most recently edited.</p>",
+        "ListWorkflowsItem$CreatedAt": "<p>Creation timestamp for workflow.</p>",
+        "ListWorkflowsItem$LastUpdatedAt": "<p>Last updated timestamp for workflow.</p>",
+        "ListWorkflowsRequest$QueryStartDate": "<p>Retrieve workflows started after timestamp.</p>",
+        "ListWorkflowsRequest$QueryEndDate": "<p>Retrieve workflows ended after timestamp.</p>",
+        "PutIntegrationResponse$CreatedAt": "<p>The timestamp of when the domain was created.</p>",
+        "PutIntegrationResponse$LastUpdatedAt": "<p>The timestamp of when the domain was most recently edited.</p>",
+        "PutProfileObjectTypeResponse$CreatedAt": "<p>The timestamp of when the domain was created.</p>",
+        "PutProfileObjectTypeResponse$LastUpdatedAt": "<p>The timestamp of when the domain was most recently edited.</p>",
+        "UpdateDomainResponse$CreatedAt": "<p>The timestamp of when the domain was created.</p>",
+        "UpdateDomainResponse$LastUpdatedAt": "<p>The timestamp of when the domain was most recently edited.</p>"
+      }
+    },
+    "token": {
+      "base": null,
+      "refs": {
+        "GetMatchesRequest$NextToken": "<p>The token for the next set of results. Use the value returned in the previous response in the next request to retrieve the next set of results.</p>",
+        "GetMatchesResponse$NextToken": "<p>If there are additional results, this is the token for the next set of results.</p>",
+        "GetWorkflowStepsRequest$NextToken": "<p>The token for the next set of results. Use the value returned in the previous response in the next request to retrieve the next set of results.</p>",
+        "GetWorkflowStepsResponse$NextToken": "<p>If there are additional results, this is the token for the next set of results.</p>",
+        "ListAccountIntegrationsRequest$NextToken": "<p>The pagination token from the previous ListAccountIntegrations API call.</p>",
+        "ListAccountIntegrationsResponse$NextToken": "<p>The pagination token from the previous ListAccountIntegrations API call.</p>",
+        "ListDomainsRequest$NextToken": "<p>The pagination token from the previous ListDomain API call.</p>",
+        "ListDomainsResponse$NextToken": "<p>The pagination token from the previous ListDomains API call.</p>",
+        "ListIdentityResolutionJobsRequest$NextToken": "<p>The token for the next set of results. Use the value returned in the previous response in the next request to retrieve the next set of results.</p>",
+        "ListIdentityResolutionJobsResponse$NextToken": "<p>If there are additional results, this is the token for the next set of results.</p>",
+        "ListIntegrationsRequest$NextToken": "<p>The pagination token from the previous ListIntegrations API call.</p>",
+        "ListIntegrationsResponse$NextToken": "<p>The pagination token from the previous ListIntegrations API call.</p>",
+        "ListProfileObjectTypeTemplatesRequest$NextToken": "<p>The pagination token from the previous ListObjectTypeTemplates API call.</p>",
+        "ListProfileObjectTypeTemplatesResponse$NextToken": "<p>The pagination token from the previous ListObjectTypeTemplates API call. </p>",
+        "ListProfileObjectTypesRequest$NextToken": "<p>Identifies the next page of results to return.</p>",
+        "ListProfileObjectTypesResponse$NextToken": "<p>Identifies the next page of results to return.</p>",
+        "ListProfileObjectsRequest$NextToken": "<p>The pagination token from the previous call to ListProfileObjects.</p>",
+        "ListProfileObjectsResponse$NextToken": "<p>The pagination token from the previous call to ListProfileObjects.</p>",
+        "ListWorkflowsRequest$NextToken": "<p>The token for the next set of results. Use the value returned in the previous response in the next request to retrieve the next set of results.</p>",
+        "ListWorkflowsResponse$NextToken": "<p>If there are additional results, this is the token for the next set of results.</p>",
+        "SearchProfilesRequest$NextToken": "<p>The pagination token from the previous SearchProfiles API call.</p>",
+        "SearchProfilesResponse$NextToken": "<p>The pagination token from the previous SearchProfiles API call.</p>"
+      }
+    },
+    "typeName": {
+      "base": null,
+      "refs": {
+        "CreateIntegrationWorkflowRequest$ObjectTypeName": "<p>The name of the profile object type.</p>",
+        "DeleteProfileObjectRequest$ObjectTypeName": "<p>The name of the profile object type.</p>",
+        "DeleteProfileObjectTypeRequest$ObjectTypeName": "<p>The name of the profile object type.</p>",
+        "GetIntegrationResponse$ObjectTypeName": "<p>The name of the profile object type.</p>",
+        "GetProfileObjectTypeRequest$ObjectTypeName": "<p>The name of the profile object type.</p>",
+        "GetProfileObjectTypeResponse$ObjectTypeName": "<p>The name of the profile object type.</p>",
+        "ListIntegrationItem$ObjectTypeName": "<p>The name of the profile object type.</p>",
+        "ListProfileObjectTypeItem$ObjectTypeName": "<p>The name of the profile object type.</p>",
+        "ListProfileObjectsItem$ObjectTypeName": "<p>Specifies the kind of object being added to a profile, such as \"Salesforce-Account.\"</p>",
+        "ListProfileObjectsRequest$ObjectTypeName": "<p>The name of the profile object type.</p>",
+        "ObjectTypeNames$value": null,
+        "PutIntegrationRequest$ObjectTypeName": "<p>The name of the profile object type.</p>",
+        "PutIntegrationResponse$ObjectTypeName": "<p>The name of the profile object type.</p>",
+        "PutProfileObjectRequest$ObjectTypeName": "<p>The name of the profile object type.</p>",
+        "PutProfileObjectTypeRequest$ObjectTypeName": "<p>The name of the profile object type.</p>",
+        "PutProfileObjectTypeResponse$ObjectTypeName": "<p>The name of the profile object type.</p>"
+      }
+    },
+    "uuid": {
+      "base": null,
+      "refs": {
+        "AddProfileKeyRequest$ProfileId": "<p>The unique identifier of a customer profile.</p>",
+        "AttributeSourceIdMap$value": null,
+        "CreateIntegrationWorkflowResponse$WorkflowId": "<p>Unique identifier for the workflow.</p>",
+        "CreateProfileResponse$ProfileId": "<p>The unique identifier of a customer profile.</p>",
+        "DeleteProfileKeyRequest$ProfileId": "<p>The unique identifier of a customer profile.</p>",
+        "DeleteProfileObjectRequest$ProfileId": "<p>The unique identifier of a customer profile.</p>",
+        "DeleteProfileRequest$ProfileId": "<p>The unique identifier of a customer profile.</p>",
+        "FieldSourceProfileIds$AccountNumber": "<p>A unique identifier for the account number field to be merged. </p>",
+        "FieldSourceProfileIds$AdditionalInformation": "<p>A unique identifier for the additional information field to be merged.</p>",
+        "FieldSourceProfileIds$PartyType": "<p>A unique identifier for the party type field to be merged.</p>",
+        "FieldSourceProfileIds$BusinessName": "<p>A unique identifier for the business name field to be merged.</p>",
+        "FieldSourceProfileIds$FirstName": "<p>A unique identifier for the first name field to be merged.</p>",
+        "FieldSourceProfileIds$MiddleName": "<p>A unique identifier for the middle name field to be merged.</p>",
+        "FieldSourceProfileIds$LastName": "<p>A unique identifier for the last name field to be merged.</p>",
+        "FieldSourceProfileIds$BirthDate": "<p>A unique identifier for the birthdate field to be merged.</p>",
+        "FieldSourceProfileIds$Gender": "<p>A unique identifier for the gender field to be merged.</p>",
+        "FieldSourceProfileIds$PhoneNumber": "<p>A unique identifier for the phone number field to be merged.</p>",
+        "FieldSourceProfileIds$MobilePhoneNumber": "<p>A unique identifier for the mobile phone number field to be merged.</p>",
+        "FieldSourceProfileIds$HomePhoneNumber": "<p>A unique identifier for the home phone number field to be merged.</p>",
+        "FieldSourceProfileIds$BusinessPhoneNumber": "<p>A unique identifier for the business phone number field to be merged.</p>",
+        "FieldSourceProfileIds$EmailAddress": "<p>A unique identifier for the email address field to be merged.</p>",
+        "FieldSourceProfileIds$PersonalEmailAddress": "<p>A unique identifier for the personal email address field to be merged.</p>",
+        "FieldSourceProfileIds$BusinessEmailAddress": "<p>A unique identifier for the party type field to be merged.</p>",
+        "FieldSourceProfileIds$Address": "<p>A unique identifier for the party type field to be merged.</p>",
+        "FieldSourceProfileIds$ShippingAddress": "<p>A unique identifier for the shipping address field to be merged.</p>",
+        "FieldSourceProfileIds$MailingAddress": "<p>A unique identifier for the mailing address field to be merged.</p>",
+        "FieldSourceProfileIds$BillingAddress": "<p>A unique identifier for the billing type field to be merged.</p>",
+        "GetIdentityResolutionJobRequest$JobId": "<p>The unique identifier of the Identity Resolution Job.</p>",
+        "GetIdentityResolutionJobResponse$JobId": "<p>The unique identifier of the Identity Resolution Job.</p>",
+        "GetWorkflowRequest$WorkflowId": "<p>Unique identifier for the workflow.</p>",
+        "GetWorkflowResponse$WorkflowId": "<p>Unique identifier for the workflow.</p>",
+        "GetWorkflowStepsRequest$WorkflowId": "<p>Unique identifier for the workflow.</p>",
+        "GetWorkflowStepsResponse$WorkflowId": "<p>Unique identifier for the workflow.</p>",
+        "IdentityResolutionJob$JobId": "<p>The unique identifier of the Identity Resolution Job.</p>",
+        "ListProfileObjectsRequest$ProfileId": "<p>The unique identifier of a customer profile.</p>",
+        "MergeProfilesRequest$MainProfileId": "<p>The identifier of the profile to be taken.</p>",
+        "Profile$ProfileId": "<p>The unique identifier of a customer profile.</p>",
+        "ProfileIdList$member": null,
+        "ProfileIdToBeMergedList$member": null,
+        "UpdateProfileRequest$ProfileId": "<p>The unique identifier of a customer profile.</p>",
+        "UpdateProfileResponse$ProfileId": "<p>The unique identifier of a customer profile.</p>"
+      }
+    }
+  }
+}

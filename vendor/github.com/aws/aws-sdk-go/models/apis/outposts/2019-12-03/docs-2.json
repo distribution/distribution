@@ -1,0 +1,967 @@
+{
+  "version": "2.0",
+  "service": "<p>Amazon Web Services Outposts is a fully managed service that extends Amazon Web Services infrastructure, APIs, and tools to customer premises. By providing local access to Amazon Web Services managed infrastructure, Amazon Web Services Outposts enables customers to build and run applications on premises using the same programming interfaces as in Amazon Web Services Regions, while using local compute and storage resources for lower latency and local data processing needs.</p>",
+  "operations": {
+    "CancelOrder": "<p> Cancels an order for an Outpost. </p>",
+    "CreateOrder": "<p>Creates an order for an Outpost.</p>",
+    "CreateOutpost": "<p>Creates an Outpost.</p> <p>You can specify <code>AvailabilityZone</code> or <code>AvailabilityZoneId</code>.</p>",
+    "CreateSite": "<p> Creates a site for an Outpost. </p>",
+    "DeleteOutpost": "<p>Deletes the Outpost.</p>",
+    "DeleteSite": "<p>Deletes the site.</p>",
+    "GetCatalogItem": "<p>Gets information about a catalog item.</p>",
+    "GetOrder": "<p>Gets an order.</p>",
+    "GetOutpost": "<p>Gets information about the specified Outpost.</p>",
+    "GetOutpostInstanceTypes": "<p>Lists the instance types for the specified Outpost.</p>",
+    "GetSite": "<p> Gets information about the specified Outpost site. </p>",
+    "GetSiteAddress": "<p> Gets the site address. </p>",
+    "ListCatalogItems": "<p>Use to create a list of every item in the catalog. Add filters to your request to return a more specific list of results. Use filters to match an item class, storage option, or EC2 family. </p> <p>If you specify multiple filters, the filters are joined with an <code>AND</code>, and the request returns only results that match all of the specified filters.</p>",
+    "ListOrders": "<p>Create a list of the Outpost orders for your Amazon Web Services account. You can filter your request by Outpost to return a more specific list of results. </p>",
+    "ListOutposts": "<p>Create a list of the Outposts for your Amazon Web Services account. Add filters to your request to return a more specific list of results. Use filters to match an Outpost lifecycle status, Availability Zone (<code>us-east-1a</code>), and AZ ID (<code>use1-az1</code>). </p> <p>If you specify multiple filters, the filters are joined with an <code>AND</code>, and the request returns only results that match all of the specified filters.</p>",
+    "ListSites": "<p>Lists the sites for your Amazon Web Services account.</p>",
+    "ListTagsForResource": "<p>Lists the tags for the specified resource.</p>",
+    "TagResource": "<p>Adds tags to the specified resource.</p>",
+    "UntagResource": "<p>Removes tags from the specified resource.</p>",
+    "UpdateOutpost": "<p> Updates an Outpost. </p>",
+    "UpdateSite": "<p> Updates the site. </p>",
+    "UpdateSiteAddress": "<p> Updates the site address. </p> <p> To update a site address with an order <code>IN_PROGRESS</code>, you must wait for the order to complete or cancel the order. </p> <p>You can update the operating address before you place an order at the site, or after all Outposts that belong to the site have been deactivated. </p>",
+    "UpdateSiteRackPhysicalProperties": "<p>Update the physical and logistical details for a rack at a site. For more information about hardware requirements for racks, see <a href=\"https://docs.aws.amazon.com/outposts/latest/userguide/outposts-requirements.html#checklist\">Network readiness checklist</a> in the Amazon Web Services Outposts User Guide. </p> <p>To update a rack at a site with an order of <code>IN_PROGRESS</code>, you must wait for the order to complete or cancel the order.</p>"
+  },
+  "shapes": {
+    "AccessDeniedException": {
+      "base": "<p>You do not have permission to perform this operation.</p>",
+      "refs": {
+      }
+    },
+    "AccountId": {
+      "base": "<p>The ID of the Amazon Web Services account.</p>",
+      "refs": {
+        "Site$AccountId": null
+      }
+    },
+    "Address": {
+      "base": "<p> Information about an address. </p>",
+      "refs": {
+        "CreateSiteInput$OperatingAddress": "<p> The location to install and power on the hardware. This address might be different from the shipping address. </p>",
+        "CreateSiteInput$ShippingAddress": "<p> The location to ship the hardware. This address might be different from the operating address. </p>",
+        "GetSiteAddressOutput$Address": "<p> Information about the address. </p>",
+        "UpdateSiteAddressInput$Address": "<p> The address for the site. </p>",
+        "UpdateSiteAddressOutput$Address": "<p> Information about an address. </p>"
+      }
+    },
+    "AddressLine1": {
+      "base": null,
+      "refs": {
+        "Address$AddressLine1": "<p>The first line of the address.</p>"
+      }
+    },
+    "AddressLine2": {
+      "base": null,
+      "refs": {
+        "Address$AddressLine2": "<p>The second line of the address.</p>"
+      }
+    },
+    "AddressLine3": {
+      "base": null,
+      "refs": {
+        "Address$AddressLine3": "<p>The third line of the address.</p>"
+      }
+    },
+    "AddressType": {
+      "base": null,
+      "refs": {
+        "GetSiteAddressInput$AddressType": "<p> The type of the address you request. </p>",
+        "GetSiteAddressOutput$AddressType": "<p> The type of the address you receive. </p>",
+        "UpdateSiteAddressInput$AddressType": "<p> The type of the address. </p>",
+        "UpdateSiteAddressOutput$AddressType": "<p> The type of the address. </p>"
+      }
+    },
+    "Arn": {
+      "base": null,
+      "refs": {
+        "ListTagsForResourceRequest$ResourceArn": "<p>The Amazon Resource Name (ARN) of the resource.</p>",
+        "TagResourceRequest$ResourceArn": "<p>The Amazon Resource Name (ARN) of the resource.</p>",
+        "UntagResourceRequest$ResourceArn": "<p>The Amazon Resource Name (ARN) of the resource.</p>"
+      }
+    },
+    "AvailabilityZone": {
+      "base": "<p>The Availability Zone.</p>",
+      "refs": {
+        "AvailabilityZoneList$member": null,
+        "CreateOutpostInput$AvailabilityZone": null,
+        "Outpost$AvailabilityZone": null
+      }
+    },
+    "AvailabilityZoneId": {
+      "base": "<p>The ID of the Availability Zone.</p>",
+      "refs": {
+        "AvailabilityZoneIdList$member": null,
+        "CreateOutpostInput$AvailabilityZoneId": null,
+        "Outpost$AvailabilityZoneId": null
+      }
+    },
+    "AvailabilityZoneIdList": {
+      "base": null,
+      "refs": {
+        "ListOutpostsInput$AvailabilityZoneIdFilter": "<p> A filter for the AZ IDs (<code>use1-az1</code>) of the Outpost. </p> <p>Filter values are case sensitive. If you specify multiple values for a filter, the values are joined with an <code>OR</code>, and the request returns all results that match any of the specified values.</p>"
+      }
+    },
+    "AvailabilityZoneList": {
+      "base": null,
+      "refs": {
+        "ListOutpostsInput$AvailabilityZoneFilter": "<p> A filter for the Availability Zone (<code>us-east-1a</code>) of the Outpost. </p> <p>Filter values are case sensitive. If you specify multiple values for a filter, the values are joined with an <code>OR</code>, and the request returns all results that match any of the specified values.</p>"
+      }
+    },
+    "CancelOrderInput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CancelOrderOutput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CatalogItem": {
+      "base": "<p> Information about a catalog item. </p>",
+      "refs": {
+        "CatalogItemListDefinition$member": null,
+        "GetCatalogItemOutput$CatalogItem": "<p>Information about this catalog item.</p>"
+      }
+    },
+    "CatalogItemClass": {
+      "base": null,
+      "refs": {
+        "CatalogItemClassList$member": null
+      }
+    },
+    "CatalogItemClassList": {
+      "base": null,
+      "refs": {
+        "ListCatalogItemsInput$ItemClassFilter": "<p> A filter for the class of items in the catalog. </p> <p>Filter values are case sensitive. If you specify multiple values for a filter, the values are joined with an <code>OR</code>, and the request returns all results that match any of the specified values.</p>"
+      }
+    },
+    "CatalogItemListDefinition": {
+      "base": null,
+      "refs": {
+        "ListCatalogItemsOutput$CatalogItems": "<p>Information about the catalog items.</p>"
+      }
+    },
+    "CatalogItemPowerKva": {
+      "base": null,
+      "refs": {
+        "CatalogItem$PowerKva": "<p> Information about the power draw of an item. </p>"
+      }
+    },
+    "CatalogItemStatus": {
+      "base": null,
+      "refs": {
+        "CatalogItem$ItemStatus": "<p> The status of a catalog item. </p>"
+      }
+    },
+    "CatalogItemWeightLbs": {
+      "base": null,
+      "refs": {
+        "CatalogItem$WeightLbs": "<p> The weight of the item in pounds. </p>"
+      }
+    },
+    "City": {
+      "base": null,
+      "refs": {
+        "Address$City": "<p>The city for the address.</p>",
+        "Site$OperatingAddressCity": "<p> City where the hardware is installed and powered on. </p>"
+      }
+    },
+    "ConflictException": {
+      "base": "<p>Updating or deleting this resource can cause an inconsistent state.</p>",
+      "refs": {
+      }
+    },
+    "ContactName": {
+      "base": null,
+      "refs": {
+        "Address$ContactName": "<p>The name of the contact.</p>"
+      }
+    },
+    "ContactPhoneNumber": {
+      "base": null,
+      "refs": {
+        "Address$ContactPhoneNumber": "<p>The phone number of the contact.</p>"
+      }
+    },
+    "CountryCode": {
+      "base": null,
+      "refs": {
+        "Address$CountryCode": "<p>The ISO-3166 two-letter country code for the address.</p>",
+        "Site$OperatingAddressCountryCode": "<p> The ISO-3166 two-letter country code where the hardware is installed and powered on. </p>"
+      }
+    },
+    "CreateOrderInput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateOrderOutput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateOutpostInput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateOutpostOutput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateSiteInput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "CreateSiteOutput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteOutpostInput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteOutpostOutput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteSiteInput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DeleteSiteOutput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "DistrictOrCounty": {
+      "base": null,
+      "refs": {
+        "Address$DistrictOrCounty": "<p>The district or county for the address.</p>"
+      }
+    },
+    "EC2Capacity": {
+      "base": "<p> Information about EC2 capacity. </p>",
+      "refs": {
+        "EC2CapacityListDefinition$member": null
+      }
+    },
+    "EC2CapacityListDefinition": {
+      "base": null,
+      "refs": {
+        "CatalogItem$EC2Capacities": "<p> Information about the EC2 capacity of an item. </p>"
+      }
+    },
+    "EC2FamilyList": {
+      "base": null,
+      "refs": {
+        "ListCatalogItemsInput$EC2FamilyFilter": "<p> A filter for EC2 family options for items in the catalog. </p> <p>Filter values are case sensitive. If you specify multiple values for a filter, the values are joined with an <code>OR</code>, and the request returns all results that match any of the specified values.</p>"
+      }
+    },
+    "ErrorMessage": {
+      "base": null,
+      "refs": {
+        "AccessDeniedException$Message": null,
+        "ConflictException$Message": null,
+        "InternalServerException$Message": null,
+        "NotFoundException$Message": null,
+        "ServiceQuotaExceededException$Message": null,
+        "ValidationException$Message": null
+      }
+    },
+    "Family": {
+      "base": null,
+      "refs": {
+        "EC2Capacity$Family": "<p> The family of the EC2 capacity. </p>",
+        "EC2FamilyList$member": null
+      }
+    },
+    "FiberOpticCableType": {
+      "base": null,
+      "refs": {
+        "RackPhysicalProperties$FiberOpticCableType": "<p>The type of fiber used to attach the Outpost to the network. </p>",
+        "UpdateSiteRackPhysicalPropertiesInput$FiberOpticCableType": "<p> Specify the type of fiber that you will use to attach the Outpost to your network. </p>"
+      }
+    },
+    "GetCatalogItemInput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetCatalogItemOutput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetOrderInput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetOrderOutput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetOutpostInput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetOutpostInstanceTypesInput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetOutpostInstanceTypesOutput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetOutpostOutput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetSiteAddressInput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetSiteAddressOutput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetSiteInput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "GetSiteOutput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ISO8601Timestamp": {
+      "base": null,
+      "refs": {
+        "Order$OrderSubmissionDate": "<p>The submission date for the order.</p>",
+        "Order$OrderFulfilledDate": "<p>The fulfillment date of the order.</p>",
+        "OrderSummary$OrderSubmissionDate": "<p> Submission date for the order. </p>",
+        "OrderSummary$OrderFulfilledDate": "<p> Fulfilment date for the order. </p>"
+      }
+    },
+    "InstanceType": {
+      "base": "<p>The instance type.</p>",
+      "refs": {
+        "InstanceTypeItem$InstanceType": null
+      }
+    },
+    "InstanceTypeItem": {
+      "base": "<p>Information about an instance type.</p>",
+      "refs": {
+        "InstanceTypeListDefinition$member": null
+      }
+    },
+    "InstanceTypeListDefinition": {
+      "base": "<p>Information about the instance types.</p>",
+      "refs": {
+        "GetOutpostInstanceTypesOutput$InstanceTypes": null
+      }
+    },
+    "InternalServerException": {
+      "base": "<p>An internal error has occurred.</p>",
+      "refs": {
+      }
+    },
+    "LifeCycleStatus": {
+      "base": "<p>The life cycle status.</p>",
+      "refs": {
+        "LifeCycleStatusList$member": null,
+        "Outpost$LifeCycleStatus": null
+      }
+    },
+    "LifeCycleStatusList": {
+      "base": null,
+      "refs": {
+        "ListOutpostsInput$LifeCycleStatusFilter": "<p> A filter for the lifecycle status of the Outpost. </p> <p>Filter values are case sensitive. If you specify multiple values for a filter, the values are joined with an <code>OR</code>, and the request returns all results that match any of the specified values.</p>"
+      }
+    },
+    "LineItem": {
+      "base": "<p>Information about a line item.</p>",
+      "refs": {
+        "LineItemListDefinition$member": null
+      }
+    },
+    "LineItemId": {
+      "base": null,
+      "refs": {
+        "LineItem$LineItemId": "<p>The ID of the line item.</p>"
+      }
+    },
+    "LineItemListDefinition": {
+      "base": null,
+      "refs": {
+        "Order$LineItems": "<p>The line items for the order</p>"
+      }
+    },
+    "LineItemQuantity": {
+      "base": null,
+      "refs": {
+        "LineItem$Quantity": "<p>The quantity of the line item.</p>",
+        "LineItemRequest$Quantity": "<p>The quantity of a line item request.</p>",
+        "LineItemStatusCounts$value": null
+      }
+    },
+    "LineItemRequest": {
+      "base": "<p>Information about a line item request.</p>",
+      "refs": {
+        "LineItemRequestListDefinition$member": null
+      }
+    },
+    "LineItemRequestListDefinition": {
+      "base": null,
+      "refs": {
+        "CreateOrderInput$LineItems": "<p>The line items that make up the order.</p>"
+      }
+    },
+    "LineItemStatus": {
+      "base": null,
+      "refs": {
+        "LineItem$Status": "<p>The status of the line item.</p>",
+        "LineItemStatusCounts$key": null
+      }
+    },
+    "LineItemStatusCounts": {
+      "base": null,
+      "refs": {
+        "OrderSummary$LineItemCountsByStatus": "<p> The status of all line items in the order. </p>"
+      }
+    },
+    "ListCatalogItemsInput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListCatalogItemsOutput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListOrdersInput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListOrdersOutput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListOutpostsInput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListOutpostsOutput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListSitesInput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListSitesOutput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListTagsForResourceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "ListTagsForResourceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "MaxResults1000": {
+      "base": "<p>The maximum page size.</p>",
+      "refs": {
+        "GetOutpostInstanceTypesInput$MaxResults": null,
+        "ListCatalogItemsInput$MaxResults": null,
+        "ListOrdersInput$MaxResults": null,
+        "ListOutpostsInput$MaxResults": null,
+        "ListSitesInput$MaxResults": null
+      }
+    },
+    "MaxSize": {
+      "base": null,
+      "refs": {
+        "EC2Capacity$MaxSize": "<p> The maximum size of the EC2 capacity. </p>"
+      }
+    },
+    "MaximumSupportedWeightLbs": {
+      "base": null,
+      "refs": {
+        "RackPhysicalProperties$MaximumSupportedWeightLbs": "<p>The maximum rack weight that this site can support. <code>NO_LIMIT</code> is over 2000 lbs (907 kg). </p>",
+        "UpdateSiteRackPhysicalPropertiesInput$MaximumSupportedWeightLbs": "<p> Specify the maximum rack weight that this site can support. <code>NO_LIMIT</code> is over 2000lbs. </p>"
+      }
+    },
+    "Municipality": {
+      "base": null,
+      "refs": {
+        "Address$Municipality": "<p>The municipality for the address.</p>"
+      }
+    },
+    "NotFoundException": {
+      "base": "<p>The specified request is not valid.</p>",
+      "refs": {
+      }
+    },
+    "OpticalStandard": {
+      "base": null,
+      "refs": {
+        "RackPhysicalProperties$OpticalStandard": "<p>The type of optical standard used to attach the Outpost to the network. This field is dependent on uplink speed, fiber type, and distance to the upstream device. For more information about networking requirements for racks, see <a href=\"https://docs.aws.amazon.com/outposts/latest/userguide/outposts-requirements.html#facility-networking\">Network</a> in the Amazon Web Services Outposts User Guide. </p>",
+        "UpdateSiteRackPhysicalPropertiesInput$OpticalStandard": "<p>Specify the type of optical standard that you will use to attach the Outpost to your network. This field is dependent on uplink speed, fiber type, and distance to the upstream device. For more information about networking requirements for racks, see <a href=\"https://docs.aws.amazon.com/outposts/latest/userguide/outposts-requirements.html#facility-networking\">Network</a> in the Amazon Web Services Outposts User Guide. </p> <ul> <li> <p> <code>OPTIC_10GBASE_SR</code>: 10GBASE-SR</p> </li> <li> <p> <code>OPTIC_10GBASE_IR</code>: 10GBASE-IR</p> </li> <li> <p> <code>OPTIC_10GBASE_LR</code>: 10GBASE-LR</p> </li> <li> <p> <code>OPTIC_40GBASE_SR</code>: 40GBASE-SR</p> </li> <li> <p> <code>OPTIC_40GBASE_ESR</code>: 40GBASE-ESR</p> </li> <li> <p> <code>OPTIC_40GBASE_IR4_LR4L</code>: 40GBASE-IR (LR4L)</p> </li> <li> <p> <code>OPTIC_40GBASE_LR4</code>: 40GBASE-LR4</p> </li> <li> <p> <code>OPTIC_100GBASE_SR4</code>: 100GBASE-SR4</p> </li> <li> <p> <code>OPTIC_100GBASE_CWDM4</code>: 100GBASE-CWDM4</p> </li> <li> <p> <code>OPTIC_100GBASE_LR4</code>: 100GBASE-LR4</p> </li> <li> <p> <code>OPTIC_100G_PSM4_MSA</code>: 100G PSM4 MSA</p> </li> <li> <p> <code>OPTIC_1000BASE_LX</code>: 1000Base-LX</p> </li> <li> <p> <code>OPTIC_1000BASE_SX</code> : 1000Base-SX</p> </li> </ul>"
+      }
+    },
+    "Order": {
+      "base": "<p>Information about an order.</p>",
+      "refs": {
+        "CreateOrderOutput$Order": "<p>Information about this order.</p>",
+        "GetOrderOutput$Order": null
+      }
+    },
+    "OrderId": {
+      "base": null,
+      "refs": {
+        "CancelOrderInput$OrderId": "<p> The ID of the order to cancel. </p>",
+        "GetOrderInput$OrderId": "<p>The ID of the order.</p>",
+        "Order$OrderId": "<p>The ID of the order.</p>",
+        "OrderSummary$OrderId": "<p> The ID of the order. </p>"
+      }
+    },
+    "OrderStatus": {
+      "base": null,
+      "refs": {
+        "Order$Status": "<p>The status of the order.</p> <ul> <li> <p> <code>PREPARING</code> - Order is received and being prepared.</p> </li> <li> <p> <code>IN_PROGRESS</code> - Order is either being built, shipped, or installed. To get more details, see the <code>LineItem</code> status.</p> </li> <li> <p> <code>COMPLETED</code> - Order is complete.</p> </li> <li> <p> <code>CANCELLED</code> - Order is cancelled.</p> </li> <li> <p> <code>ERROR</code> - Customer should contact support.</p> </li> </ul> <note> <p>The following status are deprecated: <code>RECEIVED</code>, <code>PENDING</code>, <code>PROCESSING</code>, <code>INSTALLING</code>, and <code>FULFILLED</code>. </p> </note>",
+        "OrderSummary$Status": "<p>The status of the order.</p> <ul> <li> <p> <code>PREPARING</code> - Order is received and is being prepared.</p> </li> <li> <p> <code>IN_PROGRESS</code> - Order is either being built, shipped, or installed. For more information, see the <code>LineItem</code> status.</p> </li> <li> <p> <code>COMPLETED</code> - Order is complete.</p> </li> <li> <p> <code>CANCELLED</code> - Order is cancelled.</p> </li> <li> <p> <code>ERROR</code> - Customer should contact support.</p> </li> </ul> <note> <p>The following statuses are deprecated: <code>RECEIVED</code>, <code>PENDING</code>, <code>PROCESSING</code>, <code>INSTALLING</code>, and <code>FULFILLED</code>. </p> </note>"
+      }
+    },
+    "OrderSummary": {
+      "base": "<p> A summary of line items in your order. </p>",
+      "refs": {
+        "OrderSummaryListDefinition$member": null
+      }
+    },
+    "OrderSummaryListDefinition": {
+      "base": null,
+      "refs": {
+        "ListOrdersOutput$Orders": "<p> Information about the orders. </p>"
+      }
+    },
+    "OrderType": {
+      "base": null,
+      "refs": {
+        "OrderSummary$OrderType": "<p> The type of order. </p>"
+      }
+    },
+    "Outpost": {
+      "base": "<p>Information about an Outpost.</p>",
+      "refs": {
+        "CreateOutpostOutput$Outpost": null,
+        "GetOutpostOutput$Outpost": null,
+        "UpdateOutpostOutput$Outpost": null,
+        "outpostListDefinition$member": null
+      }
+    },
+    "OutpostArn": {
+      "base": "<p>The Amazon Resource Name (ARN) of the Outpost.</p>",
+      "refs": {
+        "GetOutpostInstanceTypesOutput$OutpostArn": null,
+        "Outpost$OutpostArn": null
+      }
+    },
+    "OutpostDescription": {
+      "base": "<p>The description of the Outpost.</p>",
+      "refs": {
+        "CreateOutpostInput$Description": null,
+        "Outpost$Description": null,
+        "UpdateOutpostInput$Description": null
+      }
+    },
+    "OutpostId": {
+      "base": null,
+      "refs": {
+        "DeleteOutpostInput$OutpostId": "<p> The ID or the Amazon Resource Name (ARN) of the Outpost. </p>",
+        "GetOutpostInput$OutpostId": "<p> The ID or the Amazon Resource Name (ARN) of the Outpost. </p>",
+        "GetOutpostInstanceTypesInput$OutpostId": "<p> The ID or the Amazon Resource Name (ARN) of the Outpost. </p>",
+        "GetOutpostInstanceTypesOutput$OutpostId": "<p> The ID of the Outpost. </p>",
+        "Outpost$OutpostId": "<p> The ID of the Outpost. </p>",
+        "UpdateOutpostInput$OutpostId": "<p> The ID or the Amazon Resource Name (ARN) of the Outpost. </p>"
+      }
+    },
+    "OutpostIdOnly": {
+      "base": null,
+      "refs": {
+        "Order$OutpostId": "<p> The ID of the Outpost in the order. </p>",
+        "OrderSummary$OutpostId": "<p> The ID of the Outpost. </p>"
+      }
+    },
+    "OutpostIdentifier": {
+      "base": null,
+      "refs": {
+        "CreateOrderInput$OutpostIdentifier": "<p> The ID or the Amazon Resource Name (ARN) of the Outpost. </p>",
+        "ListOrdersInput$OutpostIdentifierFilter": "<p> The ID or the Amazon Resource Name (ARN) of the Outpost. </p>"
+      }
+    },
+    "OutpostName": {
+      "base": "<p>The name of the Outpost.</p>",
+      "refs": {
+        "CreateOutpostInput$Name": null,
+        "Outpost$Name": null,
+        "UpdateOutpostInput$Name": null
+      }
+    },
+    "OwnerId": {
+      "base": "<p>The Amazon Web Services account ID of the Outpost owner.</p>",
+      "refs": {
+        "Outpost$OwnerId": null
+      }
+    },
+    "PaymentOption": {
+      "base": null,
+      "refs": {
+        "CreateOrderInput$PaymentOption": "<p>The payment option for the order.</p>",
+        "Order$PaymentOption": "<p>The payment option for the order.</p>"
+      }
+    },
+    "PaymentTerm": {
+      "base": null,
+      "refs": {
+        "CreateOrderInput$PaymentTerm": "<p>The payment terms for the order.</p>"
+      }
+    },
+    "PostalCode": {
+      "base": null,
+      "refs": {
+        "Address$PostalCode": "<p>The postal code for the address.</p>"
+      }
+    },
+    "PowerConnector": {
+      "base": null,
+      "refs": {
+        "RackPhysicalProperties$PowerConnector": "<p>The power connector for the hardware. </p>",
+        "UpdateSiteRackPhysicalPropertiesInput$PowerConnector": "<p> Specify the power connector that Amazon Web Services should plan to provide for connections to the hardware. Note the correlation between <code>PowerPhase</code> and <code>PowerConnector</code>. </p> <ul> <li> <p>Single-phase AC feed</p> <ul> <li> <p> <b>L6-30P</b> – (common in US); 30A; single phase</p> </li> <li> <p> <b>IEC309 (blue)</b> – P+N+E, 6hr; 32 A; single phase</p> </li> </ul> </li> <li> <p>Three-phase AC feed</p> <ul> <li> <p> <b>AH530P7W (red)</b> – 3P+N+E, 7hr; 30A; three phase</p> </li> <li> <p> <b>AH532P6W (red)</b> – 3P+N+E, 6hr; 32A; three phase</p> </li> </ul> </li> </ul>"
+      }
+    },
+    "PowerDrawKva": {
+      "base": null,
+      "refs": {
+        "RackPhysicalProperties$PowerDrawKva": "<p>The power draw available at the hardware placement position for the rack. </p>",
+        "UpdateSiteRackPhysicalPropertiesInput$PowerDrawKva": "<p>Specify in kVA the power draw available at the hardware placement position for the rack.</p>"
+      }
+    },
+    "PowerFeedDrop": {
+      "base": null,
+      "refs": {
+        "RackPhysicalProperties$PowerFeedDrop": "<p>The position of the power feed.</p>",
+        "UpdateSiteRackPhysicalPropertiesInput$PowerFeedDrop": "<p> Specify whether the power feed comes above or below the rack. </p>"
+      }
+    },
+    "PowerPhase": {
+      "base": null,
+      "refs": {
+        "RackPhysicalProperties$PowerPhase": "<p>The power option that you can provide for hardware.</p>",
+        "UpdateSiteRackPhysicalPropertiesInput$PowerPhase": "<p> Specify the power option that you can provide for hardware. </p> <ul> <li> <p>Single-phase AC feed: 200 V to 277 V, 50 Hz or 60 Hz</p> </li> <li> <p>Three-phase AC feed: 346 V to 480 V, 50 Hz or 60 Hz</p> </li> </ul>"
+      }
+    },
+    "Quantity": {
+      "base": null,
+      "refs": {
+        "EC2Capacity$Quantity": "<p> The quantity of the EC2 capacity. </p>"
+      }
+    },
+    "RackPhysicalProperties": {
+      "base": "<p> Information about the physical and logistical details for racks at sites. For more information about hardware requirements for racks, see <a href=\"https://docs.aws.amazon.com/outposts/latest/userguide/outposts-requirements.html#checklist\">Network readiness checklist</a> in the Amazon Web Services Outposts User Guide. </p>",
+      "refs": {
+        "CreateSiteInput$RackPhysicalProperties": "<p> Information about the physical and logistical details for the rack at this site. For more information about hardware requirements for racks, see <a href=\"https://docs.aws.amazon.com/outposts/latest/userguide/outposts-requirements.html#checklist\">Network readiness checklist</a> in the Amazon Web Services Outposts User Guide. </p>",
+        "Site$RackPhysicalProperties": "<p> Information about the physical and logistical details for a rack at the site. </p>"
+      }
+    },
+    "ResourceType": {
+      "base": null,
+      "refs": {
+        "ConflictException$ResourceType": "<p>The type of the resource causing the conflict.</p>"
+      }
+    },
+    "ServiceQuotaExceededException": {
+      "base": "<p>You have exceeded a service quota.</p>",
+      "refs": {
+      }
+    },
+    "Site": {
+      "base": "<p>Information about a site.</p>",
+      "refs": {
+        "CreateSiteOutput$Site": null,
+        "GetSiteOutput$Site": null,
+        "UpdateSiteOutput$Site": null,
+        "UpdateSiteRackPhysicalPropertiesOutput$Site": null,
+        "siteListDefinition$member": null
+      }
+    },
+    "SiteArn": {
+      "base": "<p>The Amazon Resource Name (ARN) of the site.</p>",
+      "refs": {
+        "Outpost$SiteArn": null,
+        "Site$SiteArn": null
+      }
+    },
+    "SiteDescription": {
+      "base": "<p>The description of the site.</p>",
+      "refs": {
+        "CreateSiteInput$Description": null,
+        "Site$Description": null,
+        "UpdateSiteInput$Description": null
+      }
+    },
+    "SiteId": {
+      "base": "<p> The ID of the site. </p>",
+      "refs": {
+        "CreateOutpostInput$SiteId": "<p> The ID or the Amazon Resource Name (ARN) of the site. </p>",
+        "DeleteSiteInput$SiteId": "<p> The ID or the Amazon Resource Name (ARN) of the site. </p>",
+        "GetSiteAddressInput$SiteId": "<p> The ID or the Amazon Resource Name (ARN) of the site. </p>",
+        "GetSiteAddressOutput$SiteId": null,
+        "GetSiteInput$SiteId": "<p> The ID or the Amazon Resource Name (ARN) of the site. </p>",
+        "Outpost$SiteId": null,
+        "Site$SiteId": null,
+        "UpdateSiteAddressInput$SiteId": "<p> The ID or the Amazon Resource Name (ARN) of the site. </p>",
+        "UpdateSiteInput$SiteId": "<p> The ID or the Amazon Resource Name (ARN) of the site. </p>",
+        "UpdateSiteRackPhysicalPropertiesInput$SiteId": "<p> The ID or the Amazon Resource Name (ARN) of the site. </p>"
+      }
+    },
+    "SiteName": {
+      "base": "<p>The name of the site.</p>",
+      "refs": {
+        "CreateSiteInput$Name": null,
+        "Site$Name": null,
+        "UpdateSiteInput$Name": null
+      }
+    },
+    "SiteNotes": {
+      "base": null,
+      "refs": {
+        "CreateSiteInput$Notes": "<p>Additional information that you provide about site access requirements, electrician scheduling, personal protective equipment, or regulation of equipment materials that could affect your installation process. </p>",
+        "Site$Notes": "<p> Notes about a site. </p>",
+        "UpdateSiteInput$Notes": "<p> Notes about a site. </p>"
+      }
+    },
+    "SkuCode": {
+      "base": null,
+      "refs": {
+        "CatalogItem$CatalogItemId": "<p> The ID of the catalog item. </p>",
+        "GetCatalogItemInput$CatalogItemId": "<p>The ID of the catalog item.</p>",
+        "LineItem$CatalogItemId": "<p> The ID of the catalog item. </p>",
+        "LineItemRequest$CatalogItemId": "<p>The ID of the catalog item.</p>"
+      }
+    },
+    "StateOrRegion": {
+      "base": null,
+      "refs": {
+        "Address$StateOrRegion": "<p>The state for the address.</p>",
+        "Site$OperatingAddressStateOrRegion": "<p> State or region where the hardware is installed and powered on. </p>"
+      }
+    },
+    "String": {
+      "base": null,
+      "refs": {
+        "ConflictException$ResourceId": "<p>The ID of the resource causing the conflict.</p>"
+      }
+    },
+    "SupportedHardwareType": {
+      "base": null,
+      "refs": {
+        "CreateOutpostInput$SupportedHardwareType": "<p> The type of hardware for this Outpost. </p>",
+        "Outpost$SupportedHardwareType": "<p> The hardware type. </p>",
+        "UpdateOutpostInput$SupportedHardwareType": "<p> The type of hardware for this Outpost. </p>"
+      }
+    },
+    "SupportedStorageEnum": {
+      "base": null,
+      "refs": {
+        "SupportedStorageList$member": null
+      }
+    },
+    "SupportedStorageList": {
+      "base": null,
+      "refs": {
+        "CatalogItem$SupportedStorage": "<p> The supported storage options for the catalog item. </p>",
+        "ListCatalogItemsInput$SupportedStorageFilter": "<p> A filter for the storage options of items in the catalog. </p> <p>Filter values are case sensitive. If you specify multiple values for a filter, the values are joined with an <code>OR</code>, and the request returns all results that match any of the specified values.</p>"
+      }
+    },
+    "SupportedUplinkGbps": {
+      "base": null,
+      "refs": {
+        "SupportedUplinkGbpsListDefinition$member": null
+      }
+    },
+    "SupportedUplinkGbpsListDefinition": {
+      "base": null,
+      "refs": {
+        "CatalogItem$SupportedUplinkGbps": "<p> The uplink speed this catalog item requires for the connection to the Region. </p>"
+      }
+    },
+    "TagKey": {
+      "base": null,
+      "refs": {
+        "TagKeyList$member": null,
+        "TagMap$key": null
+      }
+    },
+    "TagKeyList": {
+      "base": null,
+      "refs": {
+        "UntagResourceRequest$TagKeys": "<p>The tag keys.</p>"
+      }
+    },
+    "TagMap": {
+      "base": null,
+      "refs": {
+        "CreateOutpostInput$Tags": "<p>The tags to apply to the Outpost.</p>",
+        "CreateSiteInput$Tags": "<p> The tags to apply to a site. </p>",
+        "ListTagsForResourceResponse$Tags": "<p>The resource tags.</p>",
+        "Outpost$Tags": "<p>The Outpost tags.</p>",
+        "Site$Tags": "<p>The site tags.</p>",
+        "TagResourceRequest$Tags": "<p>The tags to add to the resource.</p>"
+      }
+    },
+    "TagResourceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "TagResourceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "TagValue": {
+      "base": null,
+      "refs": {
+        "TagMap$value": null
+      }
+    },
+    "Token": {
+      "base": "<p>The pagination token.</p>",
+      "refs": {
+        "GetOutpostInstanceTypesInput$NextToken": null,
+        "GetOutpostInstanceTypesOutput$NextToken": null,
+        "ListCatalogItemsInput$NextToken": null,
+        "ListCatalogItemsOutput$NextToken": null,
+        "ListOrdersInput$NextToken": null,
+        "ListOrdersOutput$NextToken": null,
+        "ListOutpostsInput$NextToken": null,
+        "ListOutpostsOutput$NextToken": null,
+        "ListSitesInput$NextToken": null,
+        "ListSitesOutput$NextToken": null
+      }
+    },
+    "UntagResourceRequest": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UntagResourceResponse": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateOutpostInput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateOutpostOutput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateSiteAddressInput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateSiteAddressOutput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateSiteInput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateSiteOutput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateSiteRackPhysicalPropertiesInput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UpdateSiteRackPhysicalPropertiesOutput": {
+      "base": null,
+      "refs": {
+      }
+    },
+    "UplinkCount": {
+      "base": null,
+      "refs": {
+        "RackPhysicalProperties$UplinkCount": "<p>The number of uplinks each Outpost network device.</p>",
+        "UpdateSiteRackPhysicalPropertiesInput$UplinkCount": "<p>Racks come with two Outpost network devices. Depending on the supported uplink speed at the site, the Outpost network devices provide a variable number of uplinks. Specify the number of uplinks for each Outpost network device that you intend to use to connect the rack to your network. Note the correlation between <code>UplinkGbps</code> and <code>UplinkCount</code>. </p> <ul> <li> <p>1Gbps - Uplinks available: 1, 2, 4, 6, 8</p> </li> <li> <p>10Gbps - Uplinks available: 1, 2, 4, 8, 12, 16</p> </li> <li> <p>40 and 100 Gbps- Uplinks available: 1, 2, 4</p> </li> </ul>"
+      }
+    },
+    "UplinkGbps": {
+      "base": null,
+      "refs": {
+        "RackPhysicalProperties$UplinkGbps": "<p>The uplink speed the rack supports for the connection to the Region. </p>",
+        "UpdateSiteRackPhysicalPropertiesInput$UplinkGbps": "<p> Specify the uplink speed the rack should support for the connection to the Region. </p>"
+      }
+    },
+    "ValidationException": {
+      "base": "<p>A parameter is not valid.</p>",
+      "refs": {
+      }
+    },
+    "outpostListDefinition": {
+      "base": "<p>Information about the Outposts.</p>",
+      "refs": {
+        "ListOutpostsOutput$Outposts": null
+      }
+    },
+    "siteListDefinition": {
+      "base": "<p>Information about the sites.</p>",
+      "refs": {
+        "ListSitesOutput$Sites": null
+      }
+    }
+  }
+}

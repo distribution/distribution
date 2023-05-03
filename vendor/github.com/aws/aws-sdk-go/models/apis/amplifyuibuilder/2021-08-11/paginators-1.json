@@ -1,0 +1,26 @@
+{
+  "pagination": {
+    "ExportComponents": {
+      "input_token": "nextToken",
+      "output_token": "nextToken",
+      "result_key": "entities"
+    },
+    "ExportThemes": {
+      "input_token": "nextToken",
+      "output_token": "nextToken",
+      "result_key": "entities"
+    },
+    "ListComponents": {
+      "input_token": "nextToken",
+      "output_token": "nextToken",
+      "limit_key": "maxResults",
+      "result_key": "entities"
+    },
+    "ListThemes": {
+      "input_token": "nextToken",
+      "output_token": "nextToken",
+      "limit_key": "maxResults",
+      "result_key": "entities"
+    }
+  }
+}
