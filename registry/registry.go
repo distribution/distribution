@@ -110,7 +110,6 @@ var ServeCmd = &cobra.Command{
 		if err = registry.ListenAndServe(); err != nil {
 			logrus.Fatalln(err)
 		}
-
 	},
 }
 
@@ -305,9 +304,9 @@ func (registry *Registry) ListenAndServe() error {
 func configureDebugServer(config *configuration.Configuration) {
 	if config.HTTP.Debug.Addr != "" {
 		go func(addr string) {
-			log.Infof("debug server listening %v", addr)
+			logrus.Infof("debug server listening %v", addr)
 			if err := http.ListenAndServe(addr, nil); err != nil {
-				log.Fatalf("error listening on debug interface: %v", err)
+				logrus.Fatalf("error listening on debug interface: %v", err)
 			}
 		}(config.HTTP.Debug.Addr)
 		configurePrometheus(config)
@@ -320,7 +319,7 @@ func configurePrometheus(config *configuration.Configuration) {
 		if path == "" {
 			path = "/metrics"
 		}
-		log.Info("providing prometheus metrics on ", path)
+		logrus.Info("providing prometheus metrics on ", path)
 		http.Handle(path, metrics.Handler())
 	}
 }
