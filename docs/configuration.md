@@ -159,7 +159,7 @@ storage:
     encrypt: optional enable server-side encryption
     encryptionkeyid: optional KMS key id for encryption
     secure: optional ssl setting
-    chunksize: optional size valye
+    chunksize: optional size value
     rootdirectory: optional root directory
   inmemory:  # This driver takes no parameters
   delete:
