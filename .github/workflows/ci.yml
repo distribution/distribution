@@ -31,7 +31,7 @@ jobs:
       run: |
           sudo apt-get -q update
           sudo -E apt-get -yq --no-install-suggests --no-install-recommends install python2-minimal
-          cd /tmp && go get -u github.com/vbatts/git-validation
+          cd /tmp && go install github.com/vbatts/git-validation@latest
 
     - name: Build
       working-directory: ./src/github.com/docker/distribution
