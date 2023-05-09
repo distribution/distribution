@@ -4,7 +4,7 @@
 // For example, to generate a new API specification, one would execute the
 // following command from the repo root:
 //
-// 	$ registry-api-descriptor-template docs/spec/api.md.tmpl > docs/spec/api.md
+//	$ registry-api-descriptor-template docs/spec/api.md.tmpl > docs/spec/api.md
 //
 // The templates are passed in the api/v2.APIDescriptor object. Please see the
 // package documentation for fields available on that object. The template
