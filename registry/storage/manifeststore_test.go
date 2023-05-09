@@ -11,7 +11,7 @@ import (
 	"github.com/distribution/distribution/v3/manifest"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
-	"github.com/distribution/distribution/v3/manifest/schema1"
+	"github.com/distribution/distribution/v3/manifest/schema1" //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/storage/cache/memory"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
@@ -79,7 +79,7 @@ func testManifestStorage(t *testing.T, schema1Enabled bool, options ...RegistryO
 		t.Fatal(err)
 	}
 
-	m := schema1.Manifest{
+	m := schema1.Manifest{ //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
@@ -97,10 +97,10 @@ func testManifestStorage(t *testing.T, schema1Enabled bool, options ...RegistryO
 		}
 
 		testLayers[dgst] = rs
-		m.FSLayers = append(m.FSLayers, schema1.FSLayer{
+		m.FSLayers = append(m.FSLayers, schema1.FSLayer{ //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 			BlobSum: dgst,
 		})
-		m.History = append(m.History, schema1.History{
+		m.History = append(m.History, schema1.History{ //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 			V1Compatibility: "",
 		})
 
@@ -111,7 +111,7 @@ func testManifestStorage(t *testing.T, schema1Enabled bool, options ...RegistryO
 		t.Fatalf("unexpected error generating private key: %v", err)
 	}
 
-	sm, merr := schema1.Sign(&m, pk)
+	sm, merr := schema1.Sign(&m, pk) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if merr != nil {
 		t.Fatalf("error signing manifest: %v", err)
 	}
@@ -180,7 +180,7 @@ func testManifestStorage(t *testing.T, schema1Enabled bool, options ...RegistryO
 		t.Fatalf("unexpected error fetching manifest: %v", err)
 	}
 
-	fetchedManifest, ok := fromStore.(*schema1.SignedManifest)
+	fetchedManifest, ok := fromStore.(*schema1.SignedManifest) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if !ok {
 		t.Fatalf("unexpected manifest type from signedstore")
 	}
@@ -189,7 +189,7 @@ func testManifestStorage(t *testing.T, schema1Enabled bool, options ...RegistryO
 		t.Fatalf("fetched payload does not match original payload: %q != %q", fetchedManifest.Canonical, sm.Canonical)
 	}
 
-	_, pl, err := fetchedManifest.Payload()
+	_, pl, err := fetchedManifest.Payload() //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatalf("error getting payload %#v", err)
 	}
@@ -222,7 +222,7 @@ func testManifestStorage(t *testing.T, schema1Enabled bool, options ...RegistryO
 		t.Fatalf("unexpected error fetching manifest by digest: %v", err)
 	}
 
-	byDigestManifest, ok := fetchedByDigest.(*schema1.SignedManifest)
+	byDigestManifest, ok := fetchedByDigest.(*schema1.SignedManifest) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if !ok {
 		t.Fatalf("unexpected manifest type from signedstore")
 	}
@@ -246,11 +246,11 @@ func testManifestStorage(t *testing.T, schema1Enabled bool, options ...RegistryO
 		t.Fatalf("unexpected error generating private key: %v", err)
 	}
 
-	sm2, err := schema1.Sign(&m, pk2)
+	sm2, err := schema1.Sign(&m, pk2) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatalf("unexpected error signing manifest: %v", err)
 	}
-	_, pl, err = sm2.Payload()
+	_, pl, err = sm2.Payload() //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatalf("error getting payload %#v", err)
 	}
@@ -278,16 +278,16 @@ func testManifestStorage(t *testing.T, schema1Enabled bool, options ...RegistryO
 		t.Fatalf("unexpected error fetching manifest: %v", err)
 	}
 
-	fetched, ok := fromStore.(*schema1.SignedManifest)
+	fetched, ok := fromStore.(*schema1.SignedManifest) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if !ok {
 		t.Fatalf("unexpected type from signed manifeststore : %T", fetched)
 	}
 
-	if _, err := schema1.Verify(fetched); err != nil {
+	if _, err := schema1.Verify(fetched); err != nil { //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 		t.Fatalf("unexpected error verifying manifest: %v", err)
 	}
 
-	_, pl, err = fetched.Payload()
+	_, pl, err = fetched.Payload() //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatalf("error getting payload %#v", err)
 	}

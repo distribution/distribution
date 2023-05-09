@@ -19,7 +19,7 @@ import (
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/manifest"
-	"github.com/distribution/distribution/v3/manifest/schema1"
+	"github.com/distribution/distribution/v3/manifest/schema1" //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
 	v2 "github.com/distribution/distribution/v3/registry/api/v2"
@@ -917,18 +917,18 @@ func TestBlobMount(t *testing.T) {
 	}
 }
 
-func newRandomSchemaV1Manifest(name reference.Named, tag string, blobCount int) (*schema1.SignedManifest, digest.Digest, []byte) {
-	blobs := make([]schema1.FSLayer, blobCount)
-	history := make([]schema1.History, blobCount)
+func newRandomSchemaV1Manifest(name reference.Named, tag string, blobCount int) (*schema1.SignedManifest, digest.Digest, []byte) { //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+	blobs := make([]schema1.FSLayer, blobCount)   //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+	history := make([]schema1.History, blobCount) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 
 	for i := 0; i < blobCount; i++ {
 		dgst, blob := newRandomBlob((i % 5) * 16)
 
-		blobs[i] = schema1.FSLayer{BlobSum: dgst}
-		history[i] = schema1.History{V1Compatibility: fmt.Sprintf("{\"Hex\": \"%x\"}", blob)}
+		blobs[i] = schema1.FSLayer{BlobSum: dgst}                                             //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+		history[i] = schema1.History{V1Compatibility: fmt.Sprintf("{\"Hex\": \"%x\"}", blob)} //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	}
 
-	m := schema1.Manifest{
+	m := schema1.Manifest{ //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 		Name:         name.String(),
 		Tag:          tag,
 		Architecture: "x86",
@@ -944,7 +944,7 @@ func newRandomSchemaV1Manifest(name reference.Named, tag string, blobCount int) 
 		panic(err)
 	}
 
-	sm, err := schema1.Sign(&m, pk)
+	sm, err := schema1.Sign(&m, pk) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		panic(err)
 	}
@@ -970,7 +970,7 @@ func addTestManifestWithEtag(repo reference.Named, reference string, content []b
 			Headers: http.Header(map[string][]string{
 				"Content-Length": {"0"},
 				"Last-Modified":  {time.Now().Add(-1 * time.Second).Format(time.ANSIC)},
-				"Content-Type":   {schema1.MediaTypeSignedManifest},
+				"Content-Type":   {schema1.MediaTypeSignedManifest}, //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 			}),
 		}
 	} else {
@@ -980,7 +980,7 @@ func addTestManifestWithEtag(repo reference.Named, reference string, content []b
 			Headers: http.Header(map[string][]string{
 				"Content-Length": {fmt.Sprint(len(content))},
 				"Last-Modified":  {time.Now().Add(-1 * time.Second).Format(time.ANSIC)},
-				"Content-Type":   {schema1.MediaTypeSignedManifest},
+				"Content-Type":   {schema1.MediaTypeSignedManifest}, //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 			}),
 		}
 	}
@@ -988,9 +988,9 @@ func addTestManifestWithEtag(repo reference.Named, reference string, content []b
 }
 
 func contentDigestString(mediatype string, content []byte) string {
-	if mediatype == schema1.MediaTypeSignedManifest {
+	if mediatype == schema1.MediaTypeSignedManifest { //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 		m, _, _ := distribution.UnmarshalManifest(mediatype, content)
-		content = m.(*schema1.SignedManifest).Canonical
+		content = m.(*schema1.SignedManifest).Canonical //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	}
 	return digest.Canonical.FromBytes(content).String()
 }
@@ -1061,7 +1061,7 @@ func addTestManifestWithoutDigestHeader(repo reference.Named, reference string, 
 	})
 }
 
-func checkEqualManifest(m1, m2 *schema1.SignedManifest) error {
+func checkEqualManifest(m1, m2 *schema1.SignedManifest) error { //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if m1.Name != m2.Name {
 		return fmt.Errorf("name does not match %q != %q", m1.Name, m2.Name)
 	}
@@ -1092,12 +1092,12 @@ func TestV1ManifestFetch(t *testing.T) {
 	repo, _ := reference.WithName("test.example.com/repo")
 	m1, dgst, _ := newRandomSchemaV1Manifest(repo, "latest", 6)
 	var m testutil.RequestResponseMap
-	_, pl, err := m1.Payload()
+	_, pl, err := m1.Payload() //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatal(err)
 	}
-	addTestManifest(repo, dgst.String(), schema1.MediaTypeSignedManifest, pl, &m)
-	addTestManifest(repo, "latest", schema1.MediaTypeSignedManifest, pl, &m)
+	addTestManifest(repo, dgst.String(), schema1.MediaTypeSignedManifest, pl, &m) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+	addTestManifest(repo, "latest", schema1.MediaTypeSignedManifest, pl, &m)      //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	addTestManifest(repo, "badcontenttype", "text/html", pl, &m)
 
 	e, c := testServer(m)
@@ -1124,7 +1124,7 @@ func TestV1ManifestFetch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	v1manifest, ok := manifest.(*schema1.SignedManifest)
+	v1manifest, ok := manifest.(*schema1.SignedManifest) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if !ok {
 		t.Fatalf("Unexpected manifest type from Get: %T", manifest)
 	}
@@ -1138,7 +1138,7 @@ func TestV1ManifestFetch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	v1manifest, ok = manifest.(*schema1.SignedManifest)
+	v1manifest, ok = manifest.(*schema1.SignedManifest) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if !ok {
 		t.Fatalf("Unexpected manifest type from Get: %T", manifest)
 	}
@@ -1155,7 +1155,7 @@ func TestV1ManifestFetch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	v1manifest, ok = manifest.(*schema1.SignedManifest)
+	v1manifest, ok = manifest.(*schema1.SignedManifest) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if !ok {
 		t.Fatalf("Unexpected manifest type from Get: %T", manifest)
 	}
@@ -1298,7 +1298,7 @@ func TestManifestPut(t *testing.T) {
 	repo, _ := reference.WithName("test.example.com/repo/delete")
 	m1, dgst, _ := newRandomSchemaV1Manifest(repo, "other", 6)
 
-	_, payload, err := m1.Payload()
+	_, payload, err := m1.Payload() //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1506,11 +1506,11 @@ func TestObtainsManifestForTagWithoutHeaders(t *testing.T) {
 
 	var m testutil.RequestResponseMap
 	m1, dgst, _ := newRandomSchemaV1Manifest(repo, "latest", 6)
-	_, pl, err := m1.Payload()
+	_, pl, err := m1.Payload() //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatal(err)
 	}
-	addTestManifestWithoutDigestHeader(repo, "1.0.0", schema1.MediaTypeSignedManifest, pl, &m)
+	addTestManifestWithoutDigestHeader(repo, "1.0.0", schema1.MediaTypeSignedManifest, pl, &m) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 
 	e, c := testServer(m)
 	defer c()

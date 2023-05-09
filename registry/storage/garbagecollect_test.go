@@ -121,7 +121,7 @@ func uploadRandomSchema1Image(t *testing.T, repository distribution.Repository) 
 		digests = append(digests, digest)
 	}
 
-	manifest, err := testutil.MakeSchema1Manifest(digests)
+	manifest, err := testutil.MakeSchema1Manifest(digests) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatalf("%v", err)
 	}
@@ -232,12 +232,12 @@ func TestDeleteManifestIfTagNotFound(t *testing.T) {
 	}
 
 	// Construct manifests
-	manifest1, err := testutil.MakeSchema1Manifest(getKeys(randomLayers1))
+	manifest1, err := testutil.MakeSchema1Manifest(getKeys(randomLayers1)) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatalf("failed to make manifest: %v", err)
 	}
 
-	manifest2, err := testutil.MakeSchema1Manifest(getKeys(randomLayers2))
+	manifest2, err := testutil.MakeSchema1Manifest(getKeys(randomLayers2)) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatalf("failed to make manifest: %v", err)
 	}
@@ -426,7 +426,7 @@ func TestDeletionWithSharedLayer(t *testing.T) {
 	}
 
 	// Construct manifests
-	manifest1, err := testutil.MakeSchema1Manifest(getKeys(randomLayers1))
+	manifest1, err := testutil.MakeSchema1Manifest(getKeys(randomLayers1)) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatalf("failed to make manifest: %v", err)
 	}
