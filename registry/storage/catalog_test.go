@@ -93,7 +93,7 @@ func makeRepo(ctx context.Context, t *testing.T, name string, reg distribution.N
 		return
 	}
 
-	manifest, err := testutil.MakeSchema1Manifest(getKeys(layers))
+	manifest, err := testutil.MakeSchema1Manifest(getKeys(layers)) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatal(err)
 	}

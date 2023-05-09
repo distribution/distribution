@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/distribution/distribution/v3/manifest/schema1"
+	"github.com/distribution/distribution/v3/manifest/schema1" //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	events "github.com/docker/go-events"
 )
 
@@ -121,11 +121,11 @@ func TestHTTPSink(t *testing.T) {
 	}{
 		{
 			statusCode: http.StatusOK,
-			event:      createTestEvent("push", "library/test", schema1.MediaTypeSignedManifest),
+			event:      createTestEvent("push", "library/test", schema1.MediaTypeSignedManifest), //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 		},
 		{
 			statusCode: http.StatusOK,
-			event:      createTestEvent("push", "library/test", schema1.MediaTypeSignedManifest),
+			event:      createTestEvent("push", "library/test", schema1.MediaTypeSignedManifest), //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 		},
 		{
 			statusCode: http.StatusOK,

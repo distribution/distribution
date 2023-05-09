@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/distribution/distribution/v3/manifest/schema1"
+	"github.com/distribution/distribution/v3/manifest/schema1" //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 )
 
 // TestEventJSONFormat provides silly test to detect if the event format or
@@ -116,7 +116,7 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
 
 	manifestPush := prototype
 	manifestPush.ID = "asdf-asdf-asdf-asdf-0"
-	manifestPush.Target.MediaType = schema1.MediaTypeSignedManifest
+	manifestPush.Target.MediaType = schema1.MediaTypeSignedManifest //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	manifestPush.Target.Digest = "sha256:0123456789abcdef0"
 	manifestPush.Target.Size = 1
 	manifestPush.Target.Length = 1

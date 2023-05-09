@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/manifest/schema1"
+	"github.com/distribution/distribution/v3/manifest/schema1" //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	"github.com/distribution/distribution/v3/reference"
 	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	"github.com/distribution/distribution/v3/uuid"
@@ -27,7 +27,7 @@ var (
 		Name: "test",
 	}
 	request = RequestRecord{}
-	layers  = []schema1.FSLayer{
+	layers  = []schema1.FSLayer{ //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 		{
 			BlobSum: "asdf",
 		},
@@ -35,13 +35,13 @@ var (
 			BlobSum: "qwer",
 		},
 	}
-	m = schema1.Manifest{
+	m = schema1.Manifest{ //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 		Name:     repo,
 		Tag:      "latest",
 		FSLayers: layers,
 	}
 
-	sm      *schema1.SignedManifest
+	sm      *schema1.SignedManifest //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	payload []byte
 	dgst    digest.Digest
 )
@@ -152,7 +152,7 @@ func createTestEnv(t *testing.T, fn testSinkFn) Listener {
 		t.Fatalf("error generating private key: %v", err)
 	}
 
-	sm, err = schema1.Sign(&m, pk)
+	sm, err = schema1.Sign(&m, pk) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatalf("error signing manifest: %v", err)
 	}

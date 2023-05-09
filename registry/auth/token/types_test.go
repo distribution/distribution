@@ -81,7 +81,5 @@ func assertStringListEqual(t *testing.T, expected []string, actual []string) {
 		if v != actual[i] {
 			t.Errorf("expected %d. item to be %q, got %q", i, v, actual[i])
 		}
-
-		return
 	}
 }

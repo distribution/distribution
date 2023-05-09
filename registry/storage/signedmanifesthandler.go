@@ -7,7 +7,7 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	dcontext "github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/manifest/schema1"
+	"github.com/distribution/distribution/v3/manifest/schema1" //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	"github.com/distribution/distribution/v3/reference"
 	"github.com/docker/libtrust"
 	"github.com/opencontainers/go-digest"
@@ -49,7 +49,7 @@ func (ms *signedManifestHandler) Unmarshal(ctx context.Context, dgst digest.Dige
 		return nil, err
 	}
 
-	var sm schema1.SignedManifest
+	var sm schema1.SignedManifest //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err := json.Unmarshal(raw, &sm); err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func (ms *signedManifestHandler) Unmarshal(ctx context.Context, dgst digest.Dige
 func (ms *signedManifestHandler) Put(ctx context.Context, manifest distribution.Manifest, skipDependencyVerification bool) (digest.Digest, error) {
 	dcontext.GetLogger(ms.ctx).Debug("(*signedManifestHandler).Put")
 
-	sm, ok := manifest.(*schema1.SignedManifest)
+	sm, ok := manifest.(*schema1.SignedManifest) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if !ok {
 		return "", fmt.Errorf("non-schema1 manifest put to signedManifestHandler: %T", manifest)
 	}
@@ -68,7 +68,7 @@ func (ms *signedManifestHandler) Put(ctx context.Context, manifest distribution.
 		return "", err
 	}
 
-	mt := schema1.MediaTypeManifest
+	mt := schema1.MediaTypeManifest //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	payload := sm.Canonical
 
 	revision, err := ms.blobStore.Put(ctx, mt, payload)
@@ -84,7 +84,7 @@ func (ms *signedManifestHandler) Put(ctx context.Context, manifest distribution.
 // perspective of the registry. It ensures that the signature is valid for the
 // enclosed payload. As a policy, the registry only tries to store valid
 // content, leaving trust policies of that content up to consumers.
-func (ms *signedManifestHandler) verifyManifest(ctx context.Context, mnfst schema1.SignedManifest, skipDependencyVerification bool) error {
+func (ms *signedManifestHandler) verifyManifest(ctx context.Context, mnfst schema1.SignedManifest, skipDependencyVerification bool) error { //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	var errs distribution.ErrManifestVerification
 
 	if len(mnfst.Name) > reference.NameTotalLengthMax {
@@ -108,7 +108,7 @@ func (ms *signedManifestHandler) verifyManifest(ctx context.Context, mnfst schem
 			len(mnfst.History), len(mnfst.FSLayers)))
 	}
 
-	if _, err := schema1.Verify(&mnfst); err != nil {
+	if _, err := schema1.Verify(&mnfst); err != nil { //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 		switch err {
 		case libtrust.ErrMissingSignatureKey, libtrust.ErrInvalidJSONContent, libtrust.ErrMissingSignatureKey:
 			errs = append(errs, distribution.ErrManifestUnverified{})
@@ -122,7 +122,7 @@ func (ms *signedManifestHandler) verifyManifest(ctx context.Context, mnfst schem
 	}
 
 	if !skipDependencyVerification {
-		for _, fsLayer := range mnfst.References() {
+		for _, fsLayer := range mnfst.References() { //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 			_, err := ms.repository.Blobs(ctx).Stat(ctx, fsLayer.Digest)
 			if err != nil {
 				if err != distribution.ErrBlobUnknown {

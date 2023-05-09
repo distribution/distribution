@@ -269,6 +269,7 @@ func TestParseRepositoryInfo(t *testing.T) {
 		}
 
 		for _, r := range refStrings {
+			r := r
 			t.Run(strconv.Itoa(i)+"/"+r, func(t *testing.T) {
 				t.Parallel()
 				named, err := ParseNormalizedNamed(r)
@@ -531,7 +532,7 @@ func TestNormalizedSplitHostname(t *testing.T) {
 			if err != nil {
 				t.Errorf("error parsing name: %s", err)
 			}
-			domain, name := SplitHostname(named)
+			domain, name := SplitHostname(named) //nolint:staticcheck // Ignore SA1019: SplitHostname is deprecated.
 			if domain != tc.domain {
 				t.Errorf("unexpected domain: got %q, expected %q", domain, tc.domain)
 			}

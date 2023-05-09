@@ -8,7 +8,7 @@ import (
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/manifest"
-	"github.com/distribution/distribution/v3/manifest/schema1"
+	"github.com/distribution/distribution/v3/manifest/schema1" //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/storage"
 	"github.com/distribution/distribution/v3/registry/storage/cache/memory"
@@ -125,7 +125,7 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository, r
 	tag := "thetag"
 	// todo: change this to use Builder
 
-	m := schema1.Manifest{
+	m := schema1.Manifest{ //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
@@ -159,10 +159,10 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository, r
 			t.Fatalf("unexpected error finishing upload: %v", err)
 		}
 
-		m.FSLayers = append(m.FSLayers, schema1.FSLayer{
+		m.FSLayers = append(m.FSLayers, schema1.FSLayer{ //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 			BlobSum: dgst,
 		})
-		m.History = append(m.History, schema1.History{
+		m.History = append(m.History, schema1.History{ //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 			V1Compatibility: "",
 		})
 
@@ -179,7 +179,7 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository, r
 		t.Fatalf("unexpected error generating key: %v", err)
 	}
 
-	sm, err := schema1.Sign(&m, pk)
+	sm, err := schema1.Sign(&m, pk) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatalf("unexpected error signing manifest: %v", err)
 	}

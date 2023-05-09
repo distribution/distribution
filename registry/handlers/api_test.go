@@ -23,7 +23,7 @@ import (
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/manifest"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
-	"github.com/distribution/distribution/v3/manifest/schema1"
+	"github.com/distribution/distribution/v3/manifest/schema1" //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	"github.com/distribution/distribution/v3/manifest/schema2"
 	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
@@ -1278,13 +1278,13 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Name
 
 	// --------------------------------
 	// Attempt to push unsigned manifest with missing layers
-	unsignedManifest := &schema1.Manifest{
+	unsignedManifest := &schema1.Manifest{ //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
 		Name: imageName.Name(),
 		Tag:  tag,
-		FSLayers: []schema1.FSLayer{
+		FSLayers: []schema1.FSLayer{ //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 			{
 				BlobSum: "asdf",
 			},
@@ -1292,7 +1292,7 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Name
 				BlobSum: "qwer",
 			},
 		},
-		History: []schema1.History{
+		History: []schema1.History{ //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 			{
 				V1Compatibility: "",
 			},
@@ -1316,7 +1316,7 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Name
 	}
 
 	// sign the manifest and still get some interesting errors.
-	sm, err := schema1.Sign(unsignedManifest, env.pk)
+	sm, err := schema1.Sign(unsignedManifest, env.pk) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatalf("error signing manifest: %v", err)
 	}
@@ -1358,7 +1358,7 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Name
 
 	// -------------------
 	// Push the signed manifest with all layers pushed.
-	signedManifest, err := schema1.Sign(unsignedManifest, env.pk)
+	signedManifest, err := schema1.Sign(unsignedManifest, env.pk) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatalf("unexpected error signing manifest: %v", err)
 	}
@@ -1401,7 +1401,7 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Name
 		"ETag":                  []string{fmt.Sprintf(`"%s"`, dgst)},
 	})
 
-	var fetchedManifest schema1.SignedManifest
+	var fetchedManifest schema1.SignedManifest //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	dec := json.NewDecoder(resp.Body)
 
 	if err := dec.Decode(&fetchedManifest); err != nil {
@@ -1424,7 +1424,7 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Name
 		"ETag":                  []string{fmt.Sprintf(`"%s"`, dgst)},
 	})
 
-	var fetchedManifestByDigest schema1.SignedManifest
+	var fetchedManifestByDigest schema1.SignedManifest //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	dec = json.NewDecoder(resp.Body)
 	if err := dec.Decode(&fetchedManifestByDigest); err != nil {
 		t.Fatalf("error decoding fetched manifest: %v", err)
@@ -1435,7 +1435,7 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Name
 	}
 
 	// check signature was roundtripped
-	signatures, err := fetchedManifestByDigest.Signatures()
+	signatures, err := fetchedManifestByDigest.Signatures() //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1445,7 +1445,7 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Name
 	}
 
 	// Re-sign, push and pull the same digest
-	sm2, err := schema1.Sign(&fetchedManifestByDigest.Manifest, env.pk)
+	sm2, err := schema1.Sign(&fetchedManifestByDigest.Manifest, env.pk) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1453,7 +1453,7 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Name
 	// Re-push with a few different Content-Types. The official schema1
 	// content type should work, as should application/json with/without a
 	// charset.
-	resp = putManifest(t, "re-putting signed manifest", manifestDigestURL, schema1.MediaTypeSignedManifest, sm2)
+	resp = putManifest(t, "re-putting signed manifest", manifestDigestURL, schema1.MediaTypeSignedManifest, sm2) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	checkResponse(t, "re-putting signed manifest", resp, http.StatusCreated)
 	resp = putManifest(t, "re-putting signed manifest", manifestDigestURL, "application/json", sm2)
 	checkResponse(t, "re-putting signed manifest", resp, http.StatusCreated)
@@ -1476,7 +1476,7 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Name
 	}
 
 	// check only 1 signature is returned
-	signatures, err = fetchedManifestByDigest.Signatures()
+	signatures, err = fetchedManifestByDigest.Signatures() //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1542,10 +1542,10 @@ func testManifestAPISchema1(t *testing.T, env *testEnv, imageName reference.Name
 
 	// Attempt to put a manifest with mismatching FSLayer and History array cardinalities
 
-	unsignedManifest.History = append(unsignedManifest.History, schema1.History{
+	unsignedManifest.History = append(unsignedManifest.History, schema1.History{ //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 		V1Compatibility: "",
 	})
-	invalidSigned, err := schema1.Sign(unsignedManifest, env.pk)
+	invalidSigned, err := schema1.Sign(unsignedManifest, env.pk) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatalf("error signing manifest")
 	}
@@ -1863,12 +1863,12 @@ func testManifestAPISchema2(t *testing.T, env *testEnv, imageName reference.Name
 
 	checkResponse(t, "fetching uploaded manifest as schema1", resp, http.StatusOK)
 
-	m, desc, err := distribution.UnmarshalManifest(schema1.MediaTypeManifest, manifestBytes)
+	m, desc, err := distribution.UnmarshalManifest(schema1.MediaTypeManifest, manifestBytes) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatalf("unexpected error unmarshalling manifest: %v", err)
 	}
 
-	fetchedSchema1Manifest, ok := m.(*schema1.SignedManifest)
+	fetchedSchema1Manifest, ok := m.(*schema1.SignedManifest) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if !ok {
 		t.Fatalf("expecting schema1 manifest")
 	}
@@ -1993,7 +1993,7 @@ func testManifestAPIManifestList(t *testing.T, env *testEnv, args manifestArgs) 
 		t.Fatalf("Error constructing request: %s", err)
 	}
 	// multiple headers in mixed list format to ensure we parse correctly server-side
-	req.Header.Set("Accept", fmt.Sprintf(` %s ; q=0.8 , %s ; q=0.5 `, manifestlist.MediaTypeManifestList, schema1.MediaTypeSignedManifest))
+	req.Header.Set("Accept", fmt.Sprintf(` %s ; q=0.8 , %s ; q=0.5 `, manifestlist.MediaTypeManifestList, schema1.MediaTypeSignedManifest)) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	req.Header.Add("Accept", schema2.MediaTypeManifest)
 	resp, err = http.DefaultClient.Do(req)
 	if err != nil {
@@ -2097,12 +2097,12 @@ func testManifestAPIManifestList(t *testing.T, env *testEnv, args manifestArgs) 
 
 	checkResponse(t, "fetching uploaded manifest list as schema1", resp, http.StatusOK)
 
-	m, desc, err := distribution.UnmarshalManifest(schema1.MediaTypeManifest, manifestBytes)
+	m, desc, err := distribution.UnmarshalManifest(schema1.MediaTypeManifest, manifestBytes) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatalf("unexpected error unmarshalling manifest: %v", err)
 	}
 
-	fetchedSchema1Manifest, ok := m.(*schema1.SignedManifest)
+	fetchedSchema1Manifest, ok := m.(*schema1.SignedManifest) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if !ok {
 		t.Fatalf("expecting schema1 manifest")
 	}
@@ -2300,7 +2300,7 @@ func newTestEnvMirror(t *testing.T, deleteEnabled bool) *testEnv {
 			RemoteURL: upstreamEnv.server.URL,
 		},
 	}
-	config.Compatibility.Schema1.Enabled = true
+	config.Compatibility.Schema1.Enabled = true //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 
 	return newTestEnvWithConfig(t, &config)
 }
@@ -2316,7 +2316,7 @@ func newTestEnv(t *testing.T, deleteEnabled bool) *testEnv {
 		},
 	}
 
-	config.Compatibility.Schema1.Enabled = true
+	config.Compatibility.Schema1.Enabled = true //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	config.HTTP.Headers = headerConfig
 
 	return newTestEnvWithConfig(t, &config)
@@ -2356,8 +2356,8 @@ func putManifest(t *testing.T, msg, url, contentType string, v interface{}) *htt
 	var body []byte
 
 	switch m := v.(type) {
-	case *schema1.SignedManifest:
-		_, pl, err := m.Payload()
+	case *schema1.SignedManifest: //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+		_, pl, err := m.Payload() //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 		if err != nil {
 			t.Fatalf("error getting payload: %v", err)
 		}
@@ -2710,18 +2710,18 @@ func createRepository(env *testEnv, t *testing.T, imageName string, tag string) 
 		t.Fatalf("unable to parse reference: %v", err)
 	}
 
-	unsignedManifest := &schema1.Manifest{
+	unsignedManifest := &schema1.Manifest{ //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
 		Name: imageName,
 		Tag:  tag,
-		FSLayers: []schema1.FSLayer{
+		FSLayers: []schema1.FSLayer{ //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 			{
 				BlobSum: "asdf",
 			},
 		},
-		History: []schema1.History{
+		History: []schema1.History{ //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 			{
 				V1Compatibility: "",
 			},
@@ -2743,7 +2743,7 @@ func createRepository(env *testEnv, t *testing.T, imageName string, tag string) 
 		pushLayer(t, env.builder, imageNameRef, dgst, uploadURLBase, rs)
 	}
 
-	signedManifest, err := schema1.Sign(unsignedManifest, env.pk)
+	signedManifest, err := schema1.Sign(unsignedManifest, env.pk) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatalf("unexpected error signing manifest: %v", err)
 	}
@@ -2784,17 +2784,17 @@ func TestRegistryAsCacheMutationAPIs(t *testing.T) {
 	}
 
 	// Manifest upload
-	m := &schema1.Manifest{
+	m := &schema1.Manifest{ //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
 		Name:     imageName.Name(),
 		Tag:      tag,
-		FSLayers: []schema1.FSLayer{},
-		History:  []schema1.History{},
+		FSLayers: []schema1.FSLayer{}, //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+		History:  []schema1.History{}, //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	}
 
-	sm, err := schema1.Sign(m, env.pk)
+	sm, err := schema1.Sign(m, env.pk) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatalf("error signing manifest: %v", err)
 	}
@@ -2836,7 +2836,7 @@ func TestProxyManifestGetByTag(t *testing.T) {
 			}},
 		},
 	}
-	truthConfig.Compatibility.Schema1.Enabled = true
+	truthConfig.Compatibility.Schema1.Enabled = true //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	truthConfig.HTTP.Headers = headerConfig
 
 	imageName, _ := reference.WithName("foo/bar")
@@ -2855,7 +2855,7 @@ func TestProxyManifestGetByTag(t *testing.T) {
 			RemoteURL: truthEnv.server.URL,
 		},
 	}
-	proxyConfig.Compatibility.Schema1.Enabled = true
+	proxyConfig.Compatibility.Schema1.Enabled = true //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	proxyConfig.HTTP.Headers = headerConfig
 
 	proxyEnv := newTestEnvWithConfig(t, &proxyConfig)

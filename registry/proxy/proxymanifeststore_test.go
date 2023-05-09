@@ -8,7 +8,7 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/manifest"
-	"github.com/distribution/distribution/v3/manifest/schema1"
+	"github.com/distribution/distribution/v3/manifest/schema1" //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/client/auth"
 	"github.com/distribution/distribution/v3/registry/client/auth/challenge"
@@ -151,7 +151,7 @@ func newManifestStoreTestEnv(t *testing.T, name, tag string) *manifestStoreTestE
 }
 
 func populateRepo(ctx context.Context, t *testing.T, repository distribution.Repository, name, tag string) (digest.Digest, error) {
-	m := schema1.Manifest{
+	m := schema1.Manifest{ //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 		Versioned: manifest.Versioned{
 			SchemaVersion: 1,
 		},
@@ -183,7 +183,7 @@ func populateRepo(ctx context.Context, t *testing.T, repository distribution.Rep
 		t.Fatalf("unexpected error generating private key: %v", err)
 	}
 
-	sm, err := schema1.Sign(&m, pk)
+	sm, err := schema1.Sign(&m, pk) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatalf("error signing manifest: %v", err)
 	}
