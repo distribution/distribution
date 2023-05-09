@@ -8,12 +8,11 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"reflect" // used as a replacement for testify
 	"testing"
 	"time"
 
 	dcontext "github.com/distribution/distribution/v3/context"
-
-	"reflect" // used as a replacement for testify
 )
 
 // Rather than pull in all of testify
@@ -262,7 +261,8 @@ func TestUpdateCalledRegularly(t *testing.T) {
 }
 
 func TestEligibleForS3(t *testing.T) {
-	awsIPs := &awsIPs{
+	t.Parallel()
+	ips := &awsIPs{
 		ipv4: []net.IPNet{{
 			IP:   net.ParseIP("192.168.1.1"),
 			Mask: net.IPv4Mask(255, 255, 255, 0),
@@ -278,7 +278,7 @@ func TestEligibleForS3(t *testing.T) {
 		return dcontext.WithRequest(empty, req)
 	}
 
-	cases := []struct {
+	tests := []struct {
 		Context  context.Context
 		Expected bool
 	}{
@@ -287,17 +287,18 @@ func TestEligibleForS3(t *testing.T) {
 		{Context: makeContext("192.168.0.2"), Expected: false},
 	}
 
-	for _, testCase := range cases {
-		name := fmt.Sprintf("Client IP = %v",
-			testCase.Context.Value("http.request.ip"))
-		t.Run(name, func(t *testing.T) {
-			assertEqual(t, testCase.Expected, eligibleForS3(testCase.Context, awsIPs))
+	for _, tc := range tests {
+		tc := tc
+		t.Run(fmt.Sprintf("Client IP = %v", tc.Context.Value("http.request.ip")), func(t *testing.T) {
+			t.Parallel()
+			assertEqual(t, tc.Expected, eligibleForS3(tc.Context, ips))
 		})
 	}
 }
 
 func TestEligibleForS3WithAWSIPNotInitialized(t *testing.T) {
-	awsIPs := &awsIPs{
+	t.Parallel()
+	ips := &awsIPs{
 		ipv4: []net.IPNet{{
 			IP:   net.ParseIP("192.168.1.1"),
 			Mask: net.IPv4Mask(255, 255, 255, 0),
@@ -313,7 +314,7 @@ func TestEligibleForS3WithAWSIPNotInitialized(t *testing.T) {
 		return dcontext.WithRequest(empty, req)
 	}
 
-	cases := []struct {
+	tests := []struct {
 		Context  context.Context
 		Expected bool
 	}{
@@ -322,11 +323,11 @@ func TestEligibleForS3WithAWSIPNotInitialized(t *testing.T) {
 		{Context: makeContext("192.168.0.2"), Expected: false},
 	}
 
-	for _, testCase := range cases {
-		name := fmt.Sprintf("Client IP = %v",
-			testCase.Context.Value("http.request.ip"))
-		t.Run(name, func(t *testing.T) {
-			assertEqual(t, testCase.Expected, eligibleForS3(testCase.Context, awsIPs))
+	for _, tc := range tests {
+		tc := tc
+		t.Run(fmt.Sprintf("Client IP = %v", tc.Context.Value("http.request.ip")), func(t *testing.T) {
+			t.Parallel()
+			assertEqual(t, tc.Expected, eligibleForS3(tc.Context, ips))
 		})
 	}
 }
@@ -364,8 +365,8 @@ func BenchmarkContainsRandom(b *testing.B) {
 	numNetworksPerType := 1000 // keep in sync with the above
 	// intentionally skip constructor when creating awsIPs, to avoid updater routine.
 	// This benchmark is only concerned with contains() performance.
-	awsIPs := awsIPs{}
-	populateRandomNetworks(b, &awsIPs, numNetworksPerType, numNetworksPerType)
+	ips := awsIPs{}
+	populateRandomNetworks(b, &ips, numNetworksPerType, numNetworksPerType)
 
 	ipv4 := make([][]byte, b.N)
 	ipv6 := make([][]byte, b.N)
@@ -377,13 +378,13 @@ func BenchmarkContainsRandom(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		awsIPs.contains(ipv4[i])
-		awsIPs.contains(ipv6[i])
+		ips.contains(ipv4[i])
+		ips.contains(ipv6[i])
 	}
 }
 
 func BenchmarkContainsProd(b *testing.B) {
-	awsIPs := newAWSIPs(defaultIPRangesURL, defaultUpdateFrequency, nil)
+	ips := newAWSIPs(defaultIPRangesURL, defaultUpdateFrequency, nil)
 	ipv4 := make([][]byte, b.N)
 	ipv6 := make([][]byte, b.N)
 	for i := 0; i < b.N; i++ {
@@ -394,7 +395,7 @@ func BenchmarkContainsProd(b *testing.B) {
 	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		awsIPs.contains(ipv4[i])
-		awsIPs.contains(ipv6[i])
+		ips.contains(ipv4[i])
+		ips.contains(ipv6[i])
 	}
 }

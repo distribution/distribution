@@ -12,9 +12,9 @@ import (
 
 func TestReferenceParse(t *testing.T) {
 	t.Parallel()
-	// referenceTestcases is a unified set of testcases for
+	// tests is a unified set of testcases for
 	// testing the parsing of references
-	referenceTestcases := []struct {
+	tests := []struct {
 		// input is the repository name or name component testcase
 		input string
 		// err is the error expected from Parse, or nil
@@ -267,43 +267,43 @@ func TestReferenceParse(t *testing.T) {
 			err:   ErrReferenceInvalidFormat,
 		},
 	}
-	for _, testcase := range referenceTestcases {
-		testcase := testcase
-		t.Run(testcase.input, func(t *testing.T) {
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.input, func(t *testing.T) {
 			t.Parallel()
-			repo, err := Parse(testcase.input)
-			if testcase.err != nil {
+			repo, err := Parse(tc.input)
+			if tc.err != nil {
 				if err == nil {
-					t.Errorf("missing expected error: %v", testcase.err)
-				} else if testcase.err != err {
-					t.Errorf("mismatched error: got %v, expected %v", err, testcase.err)
+					t.Errorf("missing expected error: %v", tc.err)
+				} else if tc.err != err {
+					t.Errorf("mismatched error: got %v, expected %v", err, tc.err)
 				}
 				return
 			} else if err != nil {
 				t.Errorf("unexpected parse error: %v", err)
 				return
 			}
-			if repo.String() != testcase.input {
-				t.Errorf("mismatched repo: got %q, expected %q", repo.String(), testcase.input)
+			if repo.String() != tc.input {
+				t.Errorf("mismatched repo: got %q, expected %q", repo.String(), tc.input)
 			}
 
 			if named, ok := repo.(Named); ok {
-				if named.Name() != testcase.repository {
-					t.Errorf("unexpected repository: got %q, expected %q", named.Name(), testcase.repository)
+				if named.Name() != tc.repository {
+					t.Errorf("unexpected repository: got %q, expected %q", named.Name(), tc.repository)
 				}
 				domain, _ := SplitHostname(named)
-				if domain != testcase.domain {
-					t.Errorf("unexpected domain: got %q, expected %q", domain, testcase.domain)
+				if domain != tc.domain {
+					t.Errorf("unexpected domain: got %q, expected %q", domain, tc.domain)
 				}
-			} else if testcase.repository != "" || testcase.domain != "" {
+			} else if tc.repository != "" || tc.domain != "" {
 				t.Errorf("expected named type, got %T", repo)
 			}
 
 			tagged, ok := repo.(Tagged)
-			if testcase.tag != "" {
+			if tc.tag != "" {
 				if ok {
-					if tagged.Tag() != testcase.tag {
-						t.Errorf("unexpected tag: got %q, expected %q", tagged.Tag(), testcase.tag)
+					if tagged.Tag() != tc.tag {
+						t.Errorf("unexpected tag: got %q, expected %q", tagged.Tag(), tc.tag)
 					}
 				} else {
 					t.Errorf("expected tagged type, got %T", repo)
@@ -313,10 +313,10 @@ func TestReferenceParse(t *testing.T) {
 			}
 
 			digested, ok := repo.(Digested)
-			if testcase.digest != "" {
+			if tc.digest != "" {
 				if ok {
-					if digested.Digest().String() != testcase.digest {
-						t.Errorf("unexpected digest: got %q, expected %q", digested.Digest().String(), testcase.digest)
+					if digested.Digest().String() != tc.digest {
+						t.Errorf("unexpected digest: got %q, expected %q", digested.Digest().String(), tc.digest)
 					}
 				} else {
 					t.Errorf("expected digested type, got %T", repo)
@@ -332,7 +332,7 @@ func TestReferenceParse(t *testing.T) {
 // should succeed are covered by TestSplitHostname, below.
 func TestWithNameFailure(t *testing.T) {
 	t.Parallel()
-	testcases := []struct {
+	tests := []struct {
 		input string
 		err   error
 	}{
@@ -361,13 +361,13 @@ func TestWithNameFailure(t *testing.T) {
 			err:   ErrReferenceInvalidFormat,
 		},
 	}
-	for _, testcase := range testcases {
-		testcase := testcase
-		t.Run(testcase.input, func(t *testing.T) {
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.input, func(t *testing.T) {
 			t.Parallel()
-			_, err := WithName(testcase.input)
+			_, err := WithName(tc.input)
 			if err == nil {
-				t.Errorf("no error parsing name. expected: %s", testcase.err)
+				t.Errorf("no error parsing name. expected: %s", tc.err)
 			}
 		})
 	}
@@ -375,7 +375,7 @@ func TestWithNameFailure(t *testing.T) {
 
 func TestSplitHostname(t *testing.T) {
 	t.Parallel()
-	testcases := []struct {
+	tests := []struct {
 		input  string
 		domain string
 		name   string
@@ -411,20 +411,20 @@ func TestSplitHostname(t *testing.T) {
 			name:   "foo",
 		},
 	}
-	for _, testcase := range testcases {
-		testcase := testcase
-		t.Run(testcase.input, func(t *testing.T) {
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.input, func(t *testing.T) {
 			t.Parallel()
-			named, err := WithName(testcase.input)
+			named, err := WithName(tc.input)
 			if err != nil {
 				t.Errorf("error parsing name: %s", err)
 			}
 			domain, name := SplitHostname(named)
-			if domain != testcase.domain {
-				t.Errorf("unexpected domain: got %q, expected %q", domain, testcase.domain)
+			if domain != tc.domain {
+				t.Errorf("unexpected domain: got %q, expected %q", domain, tc.domain)
 			}
-			if name != testcase.name {
-				t.Errorf("unexpected name: got %q, expected %q", name, testcase.name)
+			if name != tc.name {
+				t.Errorf("unexpected name: got %q, expected %q", name, tc.name)
 			}
 		})
 	}
@@ -437,7 +437,7 @@ type serializationType struct {
 
 func TestSerialization(t *testing.T) {
 	t.Parallel()
-	testcases := []struct {
+	tests := []struct {
 		description string
 		input       string
 		name        string
@@ -467,13 +467,13 @@ func TestSerialization(t *testing.T) {
 			digest:      "sha256:1234567890098765432112345667890098765432112345667890098765432112",
 		},
 	}
-	for _, testcase := range testcases {
-		testcase := testcase
-		t.Run(testcase.description, func(t *testing.T) {
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.description, func(t *testing.T) {
 			t.Parallel()
 			m := map[string]string{
-				"Description": testcase.description,
-				"Field":       testcase.input,
+				"Description": tc.description,
+				"Field":       tc.input,
 			}
 			b, err := json.Marshal(m)
 			if err != nil {
@@ -482,37 +482,37 @@ func TestSerialization(t *testing.T) {
 			st := serializationType{}
 
 			if err := json.Unmarshal(b, &st); err != nil {
-				if testcase.err == nil {
+				if tc.err == nil {
 					t.Errorf("error unmarshalling: %v", err)
 				}
-				if err != testcase.err {
-					t.Errorf("wrong error, expected %v, got %v", testcase.err, err)
+				if err != tc.err {
+					t.Errorf("wrong error, expected %v, got %v", tc.err, err)
 				}
 
 				return
-			} else if testcase.err != nil {
-				t.Errorf("expected error unmarshalling: %v", testcase.err)
+			} else if tc.err != nil {
+				t.Errorf("expected error unmarshalling: %v", tc.err)
 			}
 
-			if st.Description != testcase.description {
-				t.Errorf("wrong description, expected %q, got %q", testcase.description, st.Description)
+			if st.Description != tc.description {
+				t.Errorf("wrong description, expected %q, got %q", tc.description, st.Description)
 			}
 
 			ref := st.Field.Reference()
 
 			if named, ok := ref.(Named); ok {
-				if named.Name() != testcase.name {
-					t.Errorf("unexpected repository: got %q, expected %q", named.Name(), testcase.name)
+				if named.Name() != tc.name {
+					t.Errorf("unexpected repository: got %q, expected %q", named.Name(), tc.name)
 				}
-			} else if testcase.name != "" {
+			} else if tc.name != "" {
 				t.Errorf("expected named type, got %T", ref)
 			}
 
 			tagged, ok := ref.(Tagged)
-			if testcase.tag != "" {
+			if tc.tag != "" {
 				if ok {
-					if tagged.Tag() != testcase.tag {
-						t.Errorf("unexpected tag: got %q, expected %q", tagged.Tag(), testcase.tag)
+					if tagged.Tag() != tc.tag {
+						t.Errorf("unexpected tag: got %q, expected %q", tagged.Tag(), tc.tag)
 					}
 				} else {
 					t.Errorf("expected tagged type, got %T", ref)
@@ -522,10 +522,10 @@ func TestSerialization(t *testing.T) {
 			}
 
 			digested, ok := ref.(Digested)
-			if testcase.digest != "" {
+			if tc.digest != "" {
 				if ok {
-					if digested.Digest().String() != testcase.digest {
-						t.Errorf("unexpected digest: got %q, expected %q", digested.Digest().String(), testcase.digest)
+					if digested.Digest().String() != tc.digest {
+						t.Errorf("unexpected digest: got %q, expected %q", digested.Digest().String(), tc.digest)
 					}
 				} else {
 					t.Errorf("expected digested type, got %T", ref)
@@ -535,7 +535,7 @@ func TestSerialization(t *testing.T) {
 			}
 
 			st = serializationType{
-				Description: testcase.description,
+				Description: tc.description,
 				Field:       AsField(ref),
 			}
 
@@ -560,7 +560,7 @@ func TestSerialization(t *testing.T) {
 
 func TestWithTag(t *testing.T) {
 	t.Parallel()
-	testcases := []struct {
+	tests := []struct {
 		name     string
 		digest   digest.Digest
 		tag      string
@@ -593,28 +593,28 @@ func TestWithTag(t *testing.T) {
 			combined: "test.com:8000/foo:TAG5@sha256:1234567890098765432112345667890098765",
 		},
 	}
-	for _, testcase := range testcases {
-		testcase := testcase
-		t.Run(testcase.combined, func(t *testing.T) {
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.combined, func(t *testing.T) {
 			t.Parallel()
-			named, err := WithName(testcase.name)
+			named, err := WithName(tc.name)
 			if err != nil {
 				t.Errorf("error parsing name: %s", err)
 			}
-			if testcase.digest != "" {
-				canonical, err := WithDigest(named, testcase.digest)
+			if tc.digest != "" {
+				canonical, err := WithDigest(named, tc.digest)
 				if err != nil {
 					t.Errorf("error adding digest")
 				}
 				named = canonical
 			}
 
-			tagged, err := WithTag(named, testcase.tag)
+			tagged, err := WithTag(named, tc.tag)
 			if err != nil {
 				t.Errorf("WithTag failed: %s", err)
 			}
-			if tagged.String() != testcase.combined {
-				t.Errorf("unexpected: got %q, expected %q", tagged.String(), testcase.combined)
+			if tagged.String() != tc.combined {
+				t.Errorf("unexpected: got %q, expected %q", tagged.String(), tc.combined)
 			}
 		})
 	}
@@ -622,7 +622,7 @@ func TestWithTag(t *testing.T) {
 
 func TestWithDigest(t *testing.T) {
 	t.Parallel()
-	testcases := []struct {
+	tests := []struct {
 		name     string
 		digest   digest.Digest
 		tag      string
@@ -650,27 +650,27 @@ func TestWithDigest(t *testing.T) {
 			combined: "test.com:8000/foo:latest@sha256:1234567890098765432112345667890098765",
 		},
 	}
-	for _, testcase := range testcases {
-		testcase := testcase
-		t.Run(testcase.combined, func(t *testing.T) {
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.combined, func(t *testing.T) {
 			t.Parallel()
-			named, err := WithName(testcase.name)
+			named, err := WithName(tc.name)
 			if err != nil {
 				t.Errorf("error parsing name: %s", err)
 			}
-			if testcase.tag != "" {
-				tagged, err := WithTag(named, testcase.tag)
+			if tc.tag != "" {
+				tagged, err := WithTag(named, tc.tag)
 				if err != nil {
 					t.Errorf("error adding tag")
 				}
 				named = tagged
 			}
-			digested, err := WithDigest(named, testcase.digest)
+			digested, err := WithDigest(named, tc.digest)
 			if err != nil {
 				t.Errorf("WithDigest failed: %s", err)
 			}
-			if digested.String() != testcase.combined {
-				t.Errorf("unexpected: got %q, expected %q", digested.String(), testcase.combined)
+			if digested.String() != tc.combined {
+				t.Errorf("unexpected: got %q, expected %q", digested.String(), tc.combined)
 			}
 		})
 	}
@@ -678,7 +678,7 @@ func TestWithDigest(t *testing.T) {
 
 func TestParseNamed(t *testing.T) {
 	t.Parallel()
-	testcases := []struct {
+	tests := []struct {
 		input  string
 		domain string
 		name   string
@@ -721,30 +721,30 @@ func TestParseNamed(t *testing.T) {
 			err:   ErrNameNotCanonical,
 		},
 	}
-	for _, testcase := range testcases {
-		testcase := testcase
-		t.Run(testcase.input, func(t *testing.T) {
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.input, func(t *testing.T) {
 			t.Parallel()
-			named, err := ParseNamed(testcase.input)
-			if err != nil && testcase.err == nil {
+			named, err := ParseNamed(tc.input)
+			if err != nil && tc.err == nil {
 				t.Errorf("error parsing name: %s", err)
 				return
-			} else if err == nil && testcase.err != nil {
-				t.Errorf("parsing succeeded: expected error %v", testcase.err)
+			} else if err == nil && tc.err != nil {
+				t.Errorf("parsing succeeded: expected error %v", tc.err)
 				return
-			} else if err != testcase.err {
-				t.Errorf("unexpected error %v, expected %v", err, testcase.err)
+			} else if err != tc.err {
+				t.Errorf("unexpected error %v, expected %v", err, tc.err)
 				return
 			} else if err != nil {
 				return
 			}
 
 			domain, name := SplitHostname(named)
-			if domain != testcase.domain {
-				t.Errorf("unexpected domain: got %q, expected %q", domain, testcase.domain)
+			if domain != tc.domain {
+				t.Errorf("unexpected domain: got %q, expected %q", domain, tc.domain)
 			}
-			if name != testcase.name {
-				t.Errorf("unexpected name: got %q, expected %q", name, testcase.name)
+			if name != tc.name {
+				t.Errorf("unexpected name: got %q, expected %q", name, tc.name)
 			}
 		})
 	}

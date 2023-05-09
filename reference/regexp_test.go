@@ -36,7 +36,7 @@ func checkRegexp(t *testing.T, r *regexp.Regexp, m regexpMatch) {
 
 func TestDomainRegexp(t *testing.T) {
 	t.Parallel()
-	hostcases := []struct {
+	tests := []struct {
 		input string
 		match bool
 	}{
@@ -162,7 +162,7 @@ func TestDomainRegexp(t *testing.T) {
 		},
 	}
 	r := regexp.MustCompile(`^` + DomainRegexp.String() + `$`)
-	for _, tc := range hostcases {
+	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.input, func(t *testing.T) {
 			t.Parallel()
@@ -181,7 +181,7 @@ func TestFullNameRegexp(t *testing.T) {
 			anchoredNameRegexp, anchoredNameRegexp.NumSubexp())
 	}
 
-	testcases := []regexpMatch{
+	tests := []regexpMatch{
 		{
 			input: "",
 			match: false,
@@ -465,7 +465,7 @@ func TestFullNameRegexp(t *testing.T) {
 			match: false,
 		},
 	}
-	for _, tc := range testcases {
+	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.input, func(t *testing.T) {
 			t.Parallel()
@@ -481,7 +481,7 @@ func TestReferenceRegexp(t *testing.T) {
 			ReferenceRegexp, ReferenceRegexp.NumSubexp())
 	}
 
-	testcases := []regexpMatch{
+	tests := []regexpMatch{
 		{
 			input: "registry.com:8080/myapp:tag",
 			match: true,
@@ -540,7 +540,7 @@ func TestReferenceRegexp(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testcases {
+	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.input, func(t *testing.T) {
 			t.Parallel()
@@ -551,7 +551,7 @@ func TestReferenceRegexp(t *testing.T) {
 
 func TestIdentifierRegexp(t *testing.T) {
 	t.Parallel()
-	fullCases := []struct {
+	tests := []struct {
 		input string
 		match bool
 	}{
@@ -576,7 +576,7 @@ func TestIdentifierRegexp(t *testing.T) {
 			match: false,
 		},
 	}
-	for _, tc := range fullCases {
+	for _, tc := range tests {
 		tc := tc
 		t.Run(tc.input, func(t *testing.T) {
 			t.Parallel()

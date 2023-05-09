@@ -34,57 +34,61 @@ var ErrorCodeTest3 = Register("test.errors", ErrorDescriptor{
 // TestErrorCodes ensures that error code format, mappings and
 // marshaling/unmarshaling. round trips are stable.
 func TestErrorCodes(t *testing.T) {
+	t.Parallel()
 	if len(errorCodeToDescriptors) == 0 {
 		t.Fatal("errors aren't loaded!")
 	}
 
 	for ec, desc := range errorCodeToDescriptors {
-		if ec != desc.Code {
-			t.Fatalf("error code in descriptor isn't correct, %q != %q", ec, desc.Code)
-		}
+		t.Run(ec.String(), func(t *testing.T) {
+			t.Parallel()
+			if ec != desc.Code {
+				t.Fatalf("error code in descriptor isn't correct, %q != %q", ec, desc.Code)
+			}
 
-		if idToDescriptors[desc.Value].Code != ec {
-			t.Fatalf("error code in idToDesc isn't correct, %q != %q", idToDescriptors[desc.Value].Code, ec)
-		}
+			if idToDescriptors[desc.Value].Code != ec {
+				t.Fatalf("error code in idToDesc isn't correct, %q != %q", idToDescriptors[desc.Value].Code, ec)
+			}
 
-		if ec.Message() != desc.Message {
-			t.Fatalf("ec.Message doesn't mtach desc.Message: %q != %q", ec.Message(), desc.Message)
-		}
+			if ec.Message() != desc.Message {
+				t.Fatalf("ec.Message doesn't match desc.Message: %q != %q", ec.Message(), desc.Message)
+			}
 
-		// Test (de)serializing the ErrorCode
-		p, err := json.Marshal(ec)
-		if err != nil {
-			t.Fatalf("couldn't marshal ec %v: %v", ec, err)
-		}
+			// Test (de)serializing the ErrorCode
+			p, err := json.Marshal(ec)
+			if err != nil {
+				t.Fatalf("couldn't marshal ec %v: %v", ec, err)
+			}
 
-		if len(p) <= 0 {
-			t.Fatalf("expected content in marshaled before for error code %v", ec)
-		}
+			if len(p) <= 0 {
+				t.Fatalf("expected content in marshaled before for error code %v", ec)
+			}
 
-		// First, unmarshal to interface and ensure we have a string.
-		var ecUnspecified interface{}
-		if err := json.Unmarshal(p, &ecUnspecified); err != nil {
-			t.Fatalf("error unmarshaling error code %v: %v", ec, err)
-		}
+			// First, unmarshal to interface and ensure we have a string.
+			var ecUnspecified interface{}
+			if err := json.Unmarshal(p, &ecUnspecified); err != nil {
+				t.Fatalf("error unmarshaling error code %v: %v", ec, err)
+			}
 
-		if _, ok := ecUnspecified.(string); !ok {
-			t.Fatalf("expected a string for error code %v on unmarshal got a %T", ec, ecUnspecified)
-		}
+			if _, ok := ecUnspecified.(string); !ok {
+				t.Fatalf("expected a string for error code %v on unmarshal got a %T", ec, ecUnspecified)
+			}
 
-		// Now, unmarshal with the error code type and ensure they are equal
-		var ecUnmarshaled ErrorCode
-		if err := json.Unmarshal(p, &ecUnmarshaled); err != nil {
-			t.Fatalf("error unmarshaling error code %v: %v", ec, err)
-		}
+			// Now, unmarshal with the error code type and ensure they are equal
+			var ecUnmarshaled ErrorCode
+			if err := json.Unmarshal(p, &ecUnmarshaled); err != nil {
+				t.Fatalf("error unmarshaling error code %v: %v", ec, err)
+			}
 
-		if ecUnmarshaled != ec {
-			t.Fatalf("unexpected error code during error code marshal/unmarshal: %v != %v", ecUnmarshaled, ec)
-		}
+			if ecUnmarshaled != ec {
+				t.Fatalf("unexpected error code during error code marshal/unmarshal: %v != %v", ecUnmarshaled, ec)
+			}
 
-		expectedErrorString := strings.ToLower(strings.Replace(ec.Descriptor().Value, "_", " ", -1))
-		if ec.Error() != expectedErrorString {
-			t.Fatalf("unexpected return from %v.Error(): %q != %q", ec, ec.Error(), expectedErrorString)
-		}
+			expectedErrorString := strings.ToLower(strings.Replace(ec.Descriptor().Value, "_", " ", -1))
+			if ec.Error() != expectedErrorString {
+				t.Fatalf("unexpected return from %v.Error(): %q != %q", ec, ec.Error(), expectedErrorString)
+			}
+		})
 	}
 }
 
