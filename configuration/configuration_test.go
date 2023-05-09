@@ -71,6 +71,9 @@ var configStruct = Configuration{
 			},
 		},
 	},
+	Catalog: Catalog{
+		MaxEntries: 1000,
+	},
 	HTTP: struct {
 		Addr         string        `yaml:"addr,omitempty"`
 		Net          string        `yaml:"net,omitempty"`
@@ -524,6 +527,7 @@ func copyConfig(config Configuration) *Configuration {
 	configCopy.Version = MajorMinorVersion(config.Version.Major(), config.Version.Minor())
 	configCopy.Loglevel = config.Loglevel
 	configCopy.Log = config.Log
+	configCopy.Catalog = config.Catalog
 	configCopy.Log.Fields = make(map[string]interface{}, len(config.Log.Fields))
 	for k, v := range config.Log.Fields {
 		configCopy.Log.Fields[k] = v
