@@ -25,13 +25,13 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
-        go-version: 1.16.*
+        go-version: 1.18.8
 
     - name: Dependencies
       run: |
           sudo apt-get -q update
           sudo -E apt-get -yq --no-install-suggests --no-install-recommends install python2-minimal
-          cd /tmp && go get -u github.com/vbatts/git-validation
+          cd /tmp && go install github.com/vbatts/git-validation@latest
 
     - name: Build
       working-directory: ./src/github.com/docker/distribution
@@ -39,7 +39,7 @@ jobs:
         DCO_VERBOSITY=-q script/validate/dco
         GO111MODULE=on script/setup/install-dev-tools
         script/validate/vendor
-        go build -i .
+        go build .
         make check
         make build
         make binaries
