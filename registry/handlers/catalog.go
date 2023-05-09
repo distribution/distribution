@@ -9,11 +9,12 @@ import (
 	"strconv"
 
 	"github.com/distribution/distribution/v3/registry/api/errcode"
+	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/gorilla/handlers"
 )
 
-const maximumReturnedEntries = 100
+const defaultReturnedEntries = 100
 
 func catalogDispatcher(ctx *Context, r *http.Request) http.Handler {
 	catalogHandler := &catalogHandler{
@@ -38,29 +39,58 @@ func (ch *catalogHandler) GetCatalog(w http.ResponseWriter, r *http.Request) {
 
 	q := r.URL.Query()
 	lastEntry := q.Get("last")
-	maxEntries, err := strconv.Atoi(q.Get("n"))
-	if err != nil || maxEntries < 0 {
-		maxEntries = maximumReturnedEntries
+
+	entries := defaultReturnedEntries
+	maximumConfiguredEntries := ch.App.Config.Catalog.MaxEntries
+
+	// parse n, if n is negative abort with an error
+	if n := q.Get("n"); n != "" {
+		parsedMax, err := strconv.Atoi(n)
+		if err != nil || parsedMax < 0 {
+			ch.Errors = append(ch.Errors, v2.ErrorCodePaginationNumberInvalid.WithDetail(map[string]string{"n": n}))
+			return
+		}
+
+		// if a client requests more than it's allowed to receive
+		if parsedMax > maximumConfiguredEntries {
+			ch.Errors = append(ch.Errors, v2.ErrorCodePaginationNumberInvalid.WithDetail(map[string]int{"n": parsedMax}))
+			return
+		}
+		entries = parsedMax
 	}
 
-	repos := make([]string, maxEntries)
+	// then enforce entries to be between 0 & maximumConfiguredEntries
+	// max(0, min(entries, maximumConfiguredEntries))
+	if entries < 0 || entries > maximumConfiguredEntries {
+		entries = maximumConfiguredEntries
+	}
 
-	filled, err := ch.App.registry.Repositories(ch.Context, repos, lastEntry)
-	_, pathNotFound := err.(driver.PathNotFoundError)
+	repos := make([]string, entries)
+	filled := 0
 
-	if err == io.EOF || pathNotFound {
+	// entries is guaranteed to be >= 0 and < maximumConfiguredEntries
+	if entries == 0 {
 		moreEntries = false
-	} else if err != nil {
-		ch.Errors = append(ch.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
-		return
+	} else {
+		returnedRepositories, err := ch.App.registry.Repositories(ch.Context, repos, lastEntry)
+		if err != nil {
+			_, pathNotFound := err.(driver.PathNotFoundError)
+			if err != io.EOF && !pathNotFound {
+				ch.Errors = append(ch.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+				return
+			}
+			// err is either io.EOF or not PathNotFoundError
+			moreEntries = false
+		}
+		filled = returnedRepositories
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 
 	// Add a link header if there are more entries to retrieve
 	if moreEntries {
-		lastEntry = repos[len(repos)-1]
-		urlStr, err := createLinkEntry(r.URL.String(), maxEntries, lastEntry)
+		lastEntry = repos[filled-1]
+		urlStr, err := createLinkEntry(r.URL.String(), entries, lastEntry)
 		if err != nil {
 			ch.Errors = append(ch.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 			return

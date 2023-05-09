@@ -151,7 +151,8 @@ var (
 		Value:   "PAGINATION_NUMBER_INVALID",
 		Message: "invalid number of results requested",
 		Description: `Returned when the "n" parameter (number of results
-		to return) is not an integer, or "n" is negative.`,
+		to return) is not an integer, "n" is negative or "n" is bigger than
+		the maximum allowed.`,
 		HTTPStatusCode: http.StatusBadRequest,
 	})
 )

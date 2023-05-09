@@ -134,6 +134,19 @@ var (
 		},
 	}
 
+	invalidPaginationResponseDescriptor = ResponseDescriptor{
+		Name:        "Invalid pagination number",
+		Description: "The received parameter n was invalid in some way, as described by the error code. The client should resolve the issue and retry the request.",
+		StatusCode:  http.StatusBadRequest,
+		Body: BodyDescriptor{
+			ContentType: "application/json",
+			Format:      errorsBody,
+		},
+		ErrorCodes: []errcode.ErrorCode{
+			ErrorCodePaginationNumberInvalid,
+		},
+	}
+
 	repositoryNotFoundResponseDescriptor = ResponseDescriptor{
 		Name:        "No Such Repository Error",
 		StatusCode:  http.StatusNotFound,
@@ -489,18 +502,7 @@ var routeDescriptors = []RouteDescriptor{
 							},
 						},
 						Failures: []ResponseDescriptor{
-							{
-								Name:        "Invalid pagination number",
-								Description: "The received parameter n was invalid in some way, as described by the error code. The client should resolve the issue and retry the request.",
-								StatusCode:  http.StatusBadRequest,
-								Body: BodyDescriptor{
-									ContentType: "application/json",
-									Format:      errorsBody,
-								},
-								ErrorCodes: []errcode.ErrorCode{
-									ErrorCodePaginationNumberInvalid,
-								},
-							},
+							invalidPaginationResponseDescriptor,
 							unauthorizedResponseDescriptor,
 							repositoryNotFoundResponseDescriptor,
 							deniedResponseDescriptor,
@@ -1588,6 +1590,9 @@ var routeDescriptors = []RouteDescriptor{
 									linkHeader,
 								},
 							},
+						},
+						Failures: []ResponseDescriptor{
+							invalidPaginationResponseDescriptor,
 						},
 					},
 				},
