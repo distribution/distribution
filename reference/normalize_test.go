@@ -269,6 +269,7 @@ func TestParseRepositoryInfo(t *testing.T) {
 		}
 
 		for _, r := range refStrings {
+			r := r
 			t.Run(strconv.Itoa(i)+"/"+r, func(t *testing.T) {
 				t.Parallel()
 				named, err := ParseNormalizedNamed(r)

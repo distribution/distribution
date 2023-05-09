@@ -39,9 +39,11 @@ func TestErrorCodes(t *testing.T) {
 		t.Fatal("errors aren't loaded!")
 	}
 
-	for ec, desc := range errorCodeToDescriptors {
+	for ec := range errorCodeToDescriptors {
+		ec := ec
 		t.Run(ec.String(), func(t *testing.T) {
 			t.Parallel()
+			desc := errorCodeToDescriptors[ec]
 			if ec != desc.Code {
 				t.Fatalf("error code in descriptor isn't correct, %q != %q", ec, desc.Code)
 			}
