@@ -17,9 +17,9 @@ ENV CGO_ENABLED=0
 # or "git describe" to define the version info.
 ARG GIT_REF
 ARG TARGETPLATFORM
-ARG PKG="github.com/distribution/distribution"
+ARG PKG="github.com/docker/distribution"
 ARG BUILDTAGS="include_oss include_gcs"
-RUN --mount=type=bind,rw \
+RUN --mount=type=bind,target=/go/src/github.com/docker/distribution,rw \
   --mount=type=cache,target=/root/.cache/go-build \
   --mount=target=/go/pkg/mod,type=cache \
   goreleaser-xx --debug \
