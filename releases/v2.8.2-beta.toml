@@ -1,0 +1,40 @@
+# commit to be tagged for new release
+commit = "HEAD"
+
+project_name = "registry"
+github_repo = "distribution/distribution"
+
+# previous release
+previous = "v2.8.1"
+
+pre_release = false
+
+preface = """\
+Welcome to the 2.8.2-beta.1 release of registry!
+
+The 2.8.2-beta.1 registry release fixes several security vulnerabilities.
+The Go runtime has been bumped to 1.19.
+
+See the changelog below for full list of changes.
+
+### Bugfixes
+
+* Fix panic in inmemory driver ([#3815](https://github.com/distribution/distribution/pull/3815))
+* Add code to handle pagination of parts. Fixes max layer size of 10GB bug ([#3893](https://github.com/distribution/distribution/pull/3893))
+
+### Runtime
+
+* Update to go1.19.9 ([#3908](https://github.com/distribution/distribution/pull/3908))
+* Dockerfile: update xx to v1.2.1 ([#3907](https://github.com/distribution/distribution/pull/3907))
+
+### Security
+
+* Fix CVE-2022-28391 by bumping alpine from 3.14 to 3.16 ([#3650](https://github.com/distribution/distribution/pull/3650))
+* Fix runaway allocation on /v2/_catalog [`521ea3d9`](https://github.com/distribution/distribution/commit/521ea3d973cb0c7089ebbcdd4ccadc34be941f54)
+
+### Dependency Changes
+
+This release has no dependency changes
+
+Previous release can be found at [v2.8.1](https://github.com/distribution/distribution/releases/tag/v2.8.1)
+"""
