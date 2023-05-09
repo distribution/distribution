@@ -236,11 +236,10 @@ func (registry *Registry) ListenAndServe() error {
 		dcontext.GetLogger(registry.app).Infof("restricting TLS cipher suites to: %s", strings.Join(getCipherSuiteNames(tlsCipherSuites), ","))
 
 		tlsConf := &tls.Config{
-			ClientAuth:               tls.NoClientCert,
-			NextProtos:               nextProtos(config),
-			MinVersion:               tlsMinVersion,
-			PreferServerCipherSuites: true,
-			CipherSuites:             tlsCipherSuites,
+			ClientAuth:   tls.NoClientCert,
+			NextProtos:   nextProtos(config),
+			MinVersion:   tlsMinVersion,
+			CipherSuites: tlsCipherSuites,
 		}
 
 		if config.HTTP.TLS.LetsEncrypt.CacheFile != "" {
@@ -282,7 +281,7 @@ func (registry *Registry) ListenAndServe() error {
 				}
 			}
 
-			for _, subj := range pool.Subjects() {
+			for _, subj := range pool.Subjects() { //nolint:staticcheck // FIXME(thaJeztah): ignore SA1019: ac.(*accessController).rootCerts.Subjects has been deprecated since Go 1.18: if s was returned by SystemCertPool, Subjects will not include the system roots. (staticcheck)
 				dcontext.GetLogger(registry.app).Debugf("CA Subject: %s", string(subj))
 			}
 
