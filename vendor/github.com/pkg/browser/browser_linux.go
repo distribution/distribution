@@ -19,5 +19,3 @@ func openBrowser(url string) error {
 
 	return &exec.Error{Name: strings.Join(providers, ","), Err: exec.ErrNotFound}
 }
-
-func setFlags(cmd *exec.Cmd) {}

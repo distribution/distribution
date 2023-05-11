@@ -12,5 +12,3 @@ func openBrowser(url string) error {
 	}
 	return err
 }
-
-func setFlags(cmd *exec.Cmd) {}
