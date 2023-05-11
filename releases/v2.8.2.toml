@@ -10,9 +10,9 @@ previous = "v2.8.1"
 pre_release = false
 
 preface = """\
-Welcome to the 2.8.2-beta.2 release of registry!
+Welcome to the 2.8.2 release of registry!
 
-The 2.8.2-beta.2 registry release fixes several security vulnerabilities.
+The 2.8.2 registry release fixes several security vulnerabilities.
 The Go runtime has been bumped to 1.19.
 
 See the changelog below for full list of changes.
@@ -25,6 +25,8 @@ See the changelog below for full list of changes.
 
 * Fix panic in inmemory driver ([#3815](https://github.com/distribution/distribution/pull/3815))
 * Add code to handle pagination of parts. Fixes max layer size of 10GB bug ([#3893](https://github.com/distribution/distribution/pull/3893))
+* Parse http forbidden as denied ([#3914](https://github.com/distribution/distribution/pull/3914))
+* Revert "registry/client: set Accept: identity header when getting layers ([#3783](https://github.com/distribution/distribution/pull/3783))
 
 ### Runtime
 
