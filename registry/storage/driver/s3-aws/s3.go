@@ -403,10 +403,6 @@ func New(params DriverParameters) (*Driver, error) {
 	}
 
 	awsConfig := aws.NewConfig()
-	sess, err := session.NewSession()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create new session: %v", err)
-	}
 	if params.AccessKey != "" && params.SecretKey != "" {
 		creds := credentials.NewStaticCredentials(
 			params.AccessKey,
@@ -442,7 +438,7 @@ func New(params DriverParameters) (*Driver, error) {
 		}
 	}
 
-	sess, err = session.NewSession(awsConfig)
+	sess, err := session.NewSession(awsConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create new session with aws config: %v", err)
 	}
