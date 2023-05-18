@@ -20,6 +20,16 @@ var ErrManifestNotModified = errors.New("manifest not modified")
 // performed
 var ErrUnsupported = errors.New("operation unsupported")
 
+// ErrTagConflict is returned if a tag cannot be overwritten
+type ErrTagConflict struct {
+	Tag  string
+	Name string
+}
+
+func (err ErrTagConflict) Error() string {
+	return fmt.Sprintf("tag=%s cannot be overwritten because %s is an immutable repository", err.Tag, err.Name)
+}
+
 // ErrSchemaV1Unsupported is returned when a client tries to upload a schema v1
 // manifest but the registry is configured to reject it
 var ErrSchemaV1Unsupported = errors.New("manifest schema v1 unsupported")

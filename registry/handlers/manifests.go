@@ -370,6 +370,9 @@ func (imh *manifestHandler) PutManifest(w http.ResponseWriter, r *http.Request) 
 					}
 				}
 			}
+		case distribution.ErrTagConflict:
+			imh.Errors = append(imh.Errors, v2.ErrorCodeNameInvalid.WithMessage(fmt.Sprintf("%s:%s exists and is immutable",err.Name, err.Tag)))
+			return
 		case errcode.Error:
 			imh.Errors = append(imh.Errors, err)
 		default:
