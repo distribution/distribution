@@ -81,7 +81,7 @@ func MakeSchema2Manifest(repository distribution.Repository, digests []digest.Di
 
 	d, err := blobStore.Put(ctx, schema2.MediaTypeImageConfig, configJSON)
 	if err != nil {
-		return nil, fmt.Errorf("unexpected error storing content in blobstore %v", err)
+		return nil, fmt.Errorf("unexpected error storing content in blobstore: %v", err)
 	}
 	builder := schema2.NewManifestBuilder(d, configJSON)
 	for _, digest := range digests {
