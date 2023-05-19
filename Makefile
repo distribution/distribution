@@ -5,7 +5,6 @@ ROOTDIR=$(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 VERSION=$(shell git describe --match 'v[0-9]*' --dirty='.m' --always)
 REVISION=$(shell git rev-parse HEAD)$(shell if ! git diff --no-ext-diff --quiet --exit-code; then echo .m; fi)
 
-
 PKG=github.com/docker/distribution
 
 # Project packages.
@@ -50,7 +49,7 @@ version/version.go:
 
 check: ## run all linters (TODO: enable "unused", "varcheck", "ineffassign", "unconvert", "staticheck", "goimports", "structcheck")
 	@echo "$(WHALE) $@"
-	@GO111MODULE=off golangci-lint run
+	@GO111MODULE=off golangci-lint --build-tags "${BUILDTAGS}" run
 
 test: ## run tests, except integration test with test.short
 	@echo "$(WHALE) $@"
