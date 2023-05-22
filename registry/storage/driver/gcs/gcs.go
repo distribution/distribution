@@ -372,7 +372,7 @@ type writer struct {
 }
 
 // Cancel removes any written content from this FileWriter.
-func (w *writer) Cancel() error {
+func (w *writer) Cancel(ctx context.Context) error {
 	w.closed = true
 	err := storageDeleteObject(cloud.NewContext(dummyProjectID, w.client), w.bucket, w.name)
 	if err != nil {
