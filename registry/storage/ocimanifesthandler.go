@@ -98,7 +98,7 @@ func (ms *ocischemaManifestHandler) verifyManifest(ctx context.Context, mnfst oc
 		}
 
 		switch descriptor.MediaType {
-		case v1.MediaTypeImageLayer, v1.MediaTypeImageLayerGzip, v1.MediaTypeImageLayerNonDistributable, v1.MediaTypeImageLayerNonDistributableGzip:
+		case v1.MediaTypeImageLayer, v1.MediaTypeImageLayerGzip, v1.MediaTypeImageLayerNonDistributable, v1.MediaTypeImageLayerNonDistributableGzip: //nolint:staticcheck // Ignore SA1019 v1.MediaTypeImageLayerNonDistributable is deprecated, it is used for backwards compatibility
 			allow := ms.manifestURLs.allow
 			deny := ms.manifestURLs.deny
 			for _, u := range descriptor.URLs {
