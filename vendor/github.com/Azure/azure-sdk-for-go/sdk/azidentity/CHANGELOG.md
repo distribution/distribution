@@ -1,9 +1,63 @@
 # Release History
 
-## 1.2.1 (2023-01-26)
+## 1.3.0 (2023-05-09)
+
+### Breaking Changes
+> These changes affect only code written against a beta version such as v1.3.0-beta.5
+* Renamed `NewOnBehalfOfCredentialFromCertificate` to `NewOnBehalfOfCredentialWithCertificate`
+* Renamed `NewOnBehalfOfCredentialFromSecret` to `NewOnBehalfOfCredentialWithSecret`
 
 ### Other Changes
-* Upgrade MSAL to v0.8.1
+* Upgraded to MSAL v1.0.0
+
+## 1.3.0-beta.5 (2023-04-11)
+
+### Breaking Changes
+> These changes affect only code written against a beta version such as v1.3.0-beta.4
+* Moved `NewWorkloadIdentityCredential()` parameters into `WorkloadIdentityCredentialOptions`.
+  The constructor now reads default configuration from environment variables set by the Azure
+  workload identity webhook by default.
+  ([#20478](https://github.com/Azure/azure-sdk-for-go/pull/20478))
+* Removed CAE support. It will return in v1.4.0-beta.1
+  ([#20479](https://github.com/Azure/azure-sdk-for-go/pull/20479))
+
+### Bugs Fixed
+* Fixed an issue in `DefaultAzureCredential` that could cause the managed identity endpoint check to fail in rare circumstances.
+
+## 1.3.0-beta.4 (2023-03-08)
+
+### Features Added
+* Added `WorkloadIdentityCredentialOptions.AdditionallyAllowedTenants` and `.DisableInstanceDiscovery`
+
+### Bugs Fixed
+* Credentials now synchronize within `GetToken()` so a single instance can be shared among goroutines
+  ([#20044](https://github.com/Azure/azure-sdk-for-go/issues/20044))
+
+### Other Changes
+* Upgraded dependencies
+
+## 1.2.2 (2023-03-07)
+
+### Other Changes
+* Upgraded dependencies
+
+## 1.3.0-beta.3 (2023-02-07)
+
+### Features Added
+* By default, credentials set client capability "CP1" to enable support for
+  [Continuous Access Evaluation (CAE)](https://docs.microsoft.com/azure/active-directory/develop/app-resilience-continuous-access-evaluation).
+  This indicates to Azure Active Directory that your application can handle CAE claims challenges.
+  You can disable this behavior by setting the environment variable "AZURE_IDENTITY_DISABLE_CP1" to "true".
+* `InteractiveBrowserCredentialOptions.LoginHint` enables pre-populating the login
+  prompt with a username ([#15599](https://github.com/Azure/azure-sdk-for-go/pull/15599))
+* Service principal and user credentials support ADFS authentication on Azure Stack.
+  Specify "adfs" as the credential's tenant.
+* Applications running in private or disconnected clouds can prevent credentials from
+  requesting Azure AD instance metadata by setting the `DisableInstanceDiscovery`
+  field on credential options.
+* Many credentials can now be configured to authenticate in multiple tenants. The
+  options types for these credentials have an `AdditionallyAllowedTenants` field
+  that specifies additional tenants in which the credential may authenticate.
 
 ## 1.3.0-beta.2 (2023-01-10)
 
