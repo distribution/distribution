@@ -63,7 +63,8 @@ func New(params *Parameters) (*Driver, error) {
 	d := &driver{
 		azClient:      azClient,
 		client:        client,
-		rootDirectory: params.RootDirectory}
+		rootDirectory: params.RootDirectory,
+	}
 	return &Driver{baseEmbed: baseEmbed{Base: base.Base{StorageDriver: d}}}, nil
 }
 
@@ -420,6 +421,13 @@ func (d *driver) listBlobs(ctx context.Context, virtPath string) ([]string, erro
 }
 
 func (d *driver) blobName(path string) string {
+	// avoid returning an empty blob name.
+	// this will happen when rootDirectory is unset, and path == "/",
+	// which is what we get from the storage driver health check Stat call.
+	if d.rootDirectory == "" && path == "/" {
+		return path
+	}
+
 	return strings.TrimLeft(strings.TrimRight(d.rootDirectory, "/")+path, "/")
 }
 

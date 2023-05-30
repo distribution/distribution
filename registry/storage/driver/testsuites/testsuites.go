@@ -824,6 +824,15 @@ func (suite *DriverSuite) TestStatCall(c *check.C) {
 	c.Assert(fi.Path(), check.Equals, dirPath)
 	c.Assert(fi.Size(), check.Equals, int64(0))
 	c.Assert(fi.IsDir(), check.Equals, true)
+
+	// The storage healthcheck performs this exact call to Stat.
+	// PathNotFoundErrors are not considered health check failures.
+	_, err = suite.StorageDriver.Stat(suite.ctx, "/")
+	// Some drivers will return a not found here, while others will not
+	// return an error at all. If we get an error, ensure it's a not found.
+	if err != nil {
+		c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+	}
 }
 
 // TestPutContentMultipleTimes checks that if storage driver can overwrite the content
