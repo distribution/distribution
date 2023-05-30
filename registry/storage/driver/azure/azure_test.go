@@ -52,14 +52,18 @@ func init() {
 	}
 
 	azureDriverConstructor := func() (storagedriver.StorageDriver, error) {
-		params := Parameters{
-			Container:     container,
-			AccountName:   accountName,
-			AccountKey:    accountKey,
-			Realm:         realm,
-			RootDirectory: rootDirectory,
+		parameters := map[string]interface{}{
+			"container":     container,
+			"accountname":   accountName,
+			"accountkey":    accountKey,
+			"realm":         realm,
+			"rootdirectory": rootDirectory,
 		}
-		return New(&params)
+		params, err := NewParameters(parameters)
+		if err != nil {
+			return nil, err
+		}
+		return New(params)
 	}
 
 	// Skip Azure storage driver tests if environment variable parameters are not provided
