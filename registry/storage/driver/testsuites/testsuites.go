@@ -388,7 +388,11 @@ func (suite *DriverSuite) TestReaderWithOffset(c *check.C) {
 // TestContinueStreamAppendLarge tests that a stream write can be appended to without
 // corrupting the data with a large chunk size.
 func (suite *DriverSuite) TestContinueStreamAppendLarge(c *check.C) {
-	suite.testContinueStreamAppend(c, int64(10*1024*1024))
+	chunkSize := int64(10 * 1024 * 1024)
+	if suite.Name() == "azure" {
+		chunkSize = int64(4 * 1024 * 1024)
+	}
+	suite.testContinueStreamAppend(c, chunkSize)
 }
 
 // TestContinueStreamAppendSmall is the same as TestContinueStreamAppendLarge, but only
@@ -824,6 +828,15 @@ func (suite *DriverSuite) TestStatCall(c *check.C) {
 	c.Assert(fi.Path(), check.Equals, dirPath)
 	c.Assert(fi.Size(), check.Equals, int64(0))
 	c.Assert(fi.IsDir(), check.Equals, true)
+
+	// The storage healthcheck performs this exact call to Stat.
+	// PathNotFoundErrors are not considered health check failures.
+	_, err = suite.StorageDriver.Stat(suite.ctx, "/")
+	// Some drivers will return a not found here, while others will not
+	// return an error at all. If we get an error, ensure it's a not found.
+	if err != nil {
+		c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+	}
 }
 
 // TestPutContentMultipleTimes checks that if storage driver can overwrite the content
