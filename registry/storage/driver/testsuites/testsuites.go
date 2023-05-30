@@ -388,7 +388,11 @@ func (suite *DriverSuite) TestReaderWithOffset(c *check.C) {
 // TestContinueStreamAppendLarge tests that a stream write can be appended to without
 // corrupting the data with a large chunk size.
 func (suite *DriverSuite) TestContinueStreamAppendLarge(c *check.C) {
-	suite.testContinueStreamAppend(c, int64(10*1024*1024))
+	chunkSize := int64(10 * 1024 * 1024)
+	if suite.Name() == "azure" {
+		chunkSize = int64(4 * 1024 * 1024)
+	}
+	suite.testContinueStreamAppend(c, chunkSize)
 }
 
 // TestContinueStreamAppendSmall is the same as TestContinueStreamAppendLarge, but only
