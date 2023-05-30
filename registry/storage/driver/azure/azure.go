@@ -432,7 +432,13 @@ func (d *driver) blobName(path string) string {
 }
 
 func is404(err error) bool {
-	return bloberror.HasCode(err, bloberror.BlobNotFound, bloberror.ContainerNotFound, bloberror.ResourceNotFound)
+	return bloberror.HasCode(
+		err,
+		bloberror.BlobNotFound,
+		bloberror.ContainerNotFound,
+		bloberror.ResourceNotFound,
+		bloberror.CannotVerifyCopySource,
+	)
 }
 
 type writer struct {
