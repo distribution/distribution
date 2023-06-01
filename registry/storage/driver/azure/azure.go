@@ -21,16 +21,17 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
 )
 
-const driverName = "azure"
-
 const (
+	driverName   = "azure"
 	maxChunkSize = 4 * 1024 * 1024
 )
 
 type driver struct {
-	azClient      *azureClient
-	client        *container.Client
-	rootDirectory string
+	azClient               *azureClient
+	client                 *container.Client
+	rootDirectory          string
+	copyStatusPollMaxRetry int
+	copyStatusPollDelay    time.Duration
 }
 
 type baseEmbed struct{ base.Base }
@@ -59,11 +60,19 @@ func New(params *Parameters) (*Driver, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	copyStatusPollDelay, err := time.ParseDuration(params.CopyStatusPollDelay)
+	if err != nil {
+		return nil, err
+	}
+
 	client := azClient.ContainerClient()
 	d := &driver{
-		azClient:      azClient,
-		client:        client,
-		rootDirectory: params.RootDirectory,
+		azClient:               azClient,
+		client:                 client,
+		rootDirectory:          params.RootDirectory,
+		copyStatusPollMaxRetry: params.CopyStatusPollMaxRetry,
+		copyStatusPollDelay:    copyStatusPollDelay,
 	}
 	return &Driver{baseEmbed: baseEmbed{Base: base.Base{StorageDriver: d}}}, nil
 }
@@ -282,12 +291,45 @@ func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) e
 		return err
 	}
 	destBlobRef := d.client.NewBlockBlobClient(d.blobName(destPath))
-	_, err = destBlobRef.CopyFromURL(ctx, sourceBlobURL, nil)
+	resp, err := destBlobRef.StartCopyFromURL(ctx, sourceBlobURL, nil)
 	if err != nil {
 		if is404(err) {
 			return storagedriver.PathNotFoundError{Path: sourcePath}
 		}
 		return err
+	}
+
+	copyStatus := *resp.CopyStatus
+
+	if d.copyStatusPollMaxRetry == -1 && copyStatus == blob.CopyStatusTypePending {
+		destBlobRef.AbortCopyFromURL(ctx, *resp.CopyID, nil)
+		return nil
+	}
+
+	retryCount := 1
+	for copyStatus == blob.CopyStatusTypePending {
+		props, err := destBlobRef.GetProperties(ctx, nil)
+		if err != nil {
+			return err
+		}
+
+		if retryCount >= d.copyStatusPollMaxRetry {
+			destBlobRef.AbortCopyFromURL(ctx, *props.CopyID, nil)
+			return fmt.Errorf("max retries for copy polling reached, aborting copy")
+		}
+
+		copyStatus = *props.CopyStatus
+		if copyStatus == blob.CopyStatusTypeAborted || copyStatus == blob.CopyStatusTypeFailed {
+			if props.CopyStatusDescription != nil {
+				return fmt.Errorf("failed to move blob: %s", *props.CopyStatusDescription)
+			}
+			return fmt.Errorf("failed to move blob with copy id %s", *props.CopyID)
+		}
+
+		if copyStatus == blob.CopyStatusTypePending {
+			time.Sleep(d.copyStatusPollDelay * time.Duration(retryCount))
+		}
+		retryCount++
 	}
 
 	_, err = d.client.NewBlobClient(d.blobName(sourcePath)).Delete(ctx, nil)
