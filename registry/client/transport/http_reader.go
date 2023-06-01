@@ -1,6 +1,8 @@
 package transport
 
 import (
+	"compress/flate"
+	"compress/gzip"
 	"context"
 	"errors"
 	"fmt"
@@ -8,6 +10,10 @@ import (
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
+	"unicode"
+
+	"github.com/klauspost/compress/zstd"
 )
 
 var (
@@ -184,6 +190,7 @@ func (hrs *HTTPReadSeeker) reader() (io.Reader, error) {
 		// context.GetLogger(hrs.context).Infof("Range: %s", req.Header.Get("Range"))
 	}
 
+	req.Header.Add("Accept-Encoding", "zstd, gzip, deflate")
 	resp, err := hrs.client.Do(req)
 	if err != nil {
 		return nil, err
@@ -240,7 +247,35 @@ func (hrs *HTTPReadSeeker) reader() (io.Reader, error) {
 		} else {
 			hrs.size = -1
 		}
-		hrs.rc = resp.Body
+
+		body := resp.Body
+		encoding := strings.FieldsFunc(resp.Header.Get("Content-Encoding"), func(r rune) bool {
+			return unicode.IsSpace(r) || r == ','
+		})
+		for i := len(encoding) - 1; i >= 0; i-- {
+			algorithm := strings.ToLower(encoding[i])
+			switch algorithm {
+			case "zstd":
+				r, err := zstd.NewReader(body)
+				if err != nil {
+					return nil, err
+				}
+				body = r.IOReadCloser()
+			case "gzip":
+				body, err = gzip.NewReader(body)
+				if err != nil {
+					return nil, err
+				}
+			case "deflate":
+				body = flate.NewReader(body)
+			case "":
+				// no content-encoding applied, use raw body
+			default:
+				return nil, errors.New("unsupported Content-Encoding algorithm: " + algorithm)
+			}
+		}
+
+		hrs.rc = body
 	} else {
 		defer resp.Body.Close()
 		if hrs.errorHandler != nil {
