@@ -464,20 +464,12 @@ func testOCIManifestStorage(t *testing.T, testname string, includeMediaTypes boo
 		t.Fatalf("%s: unexpected error getting manifest descriptor", testname)
 	}
 	descriptor.MediaType = v1.MediaTypeImageManifest
-
-	platformSpec := v1.Platform{
+	descriptor.Platform = &v1.Platform{
 		Architecture: "atari2600",
 		OS:           "CP/M",
 	}
 
-	manifestDescriptors := []ocischema.ManifestDescriptor{
-		{
-			Descriptor: descriptor,
-			Platform:   &platformSpec,
-		},
-	}
-
-	imageIndex, err := ociIndexFromDesriptorsWithMediaType(manifestDescriptors, indexMediaType)
+	imageIndex, err := ociIndexFromDesriptorsWithMediaType([]distribution.Descriptor{descriptor}, indexMediaType)
 	if err != nil {
 		t.Fatalf("%s: unexpected error creating image index: %v", testname, err)
 	}
@@ -575,7 +567,7 @@ func TestLinkPathFuncs(t *testing.T) {
 	}
 }
 
-func ociIndexFromDesriptorsWithMediaType(descriptors []ocischema.ManifestDescriptor, mediaType string) (*ocischema.DeserializedImageIndex, error) {
+func ociIndexFromDesriptorsWithMediaType(descriptors []distribution.Descriptor, mediaType string) (*ocischema.DeserializedImageIndex, error) {
 	manifest, err := ocischema.FromDescriptors(descriptors, nil)
 	if err != nil {
 		return nil, err

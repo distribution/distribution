@@ -51,34 +51,28 @@ const expectedOCIImageIndexSerialization = `{
    }
 }`
 
-func makeTestOCIImageIndex(t *testing.T, mediaType string) ([]ManifestDescriptor, *DeserializedImageIndex) {
-	manifestDescriptors := []ManifestDescriptor{
+func makeTestOCIImageIndex(t *testing.T, mediaType string) ([]distribution.Descriptor, *DeserializedImageIndex) {
+	manifestDescriptors := []distribution.Descriptor{
 		{
-			Descriptor: distribution.Descriptor{
-				MediaType: "application/vnd.oci.image.manifest.v1+json",
-				Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
-				Size:      985,
-			},
+			MediaType: "application/vnd.oci.image.manifest.v1+json",
+			Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
+			Size:      985,
 			Platform: &v1.Platform{
 				Architecture: "amd64",
 				OS:           "linux",
 			},
 		},
 		{
-			Descriptor: distribution.Descriptor{
-				MediaType:   "application/vnd.oci.image.manifest.v1+json",
-				Digest:      "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
-				Size:        985,
-				Annotations: map[string]string{"platform": "none"},
-			},
+			MediaType:   "application/vnd.oci.image.manifest.v1+json",
+			Digest:      "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
+			Size:        985,
+			Annotations: map[string]string{"platform": "none"},
 		},
 		{
-			Descriptor: distribution.Descriptor{
-				MediaType:   "application/vnd.oci.image.manifest.v1+json",
-				Digest:      "sha256:6346340964309634683409684360934680934608934608934608934068934608",
-				Size:        2392,
-				Annotations: map[string]string{"what": "for"},
-			},
+			MediaType:   "application/vnd.oci.image.manifest.v1+json",
+			Digest:      "sha256:6346340964309634683409684360934680934608934608934608934068934608",
+			Size:        2392,
+			Annotations: map[string]string{"what": "for"},
 			Platform: &v1.Platform{
 				Architecture: "sun4m",
 				OS:           "sunos",
@@ -135,15 +129,8 @@ func TestOCIImageIndex(t *testing.T) {
 	if len(references) != 3 {
 		t.Fatalf("unexpected number of references: %d", len(references))
 	}
-	for i := range references {
-		expectedPlatform := manifestDescriptors[i].Platform
-		if !reflect.DeepEqual(references[i].Platform, expectedPlatform) {
-			t.Fatalf("unexpected value %d returned by References: %v", i, references[i])
-		}
-		references[i].Platform = nil
-		if !reflect.DeepEqual(references[i], manifestDescriptors[i].Descriptor) {
-			t.Fatalf("unexpected value %d returned by References: %v", i, references[i])
-		}
+	if !reflect.DeepEqual(references, manifestDescriptors) {
+		t.Errorf("expected references:\n%v\nbut got:\n%v", references, manifestDescriptors)
 	}
 }
 
@@ -199,9 +186,7 @@ func TestValidateIndex(t *testing.T) {
 		Layers: []distribution.Descriptor{{Size: 2}},
 	}
 	index := ImageIndex{
-		Manifests: []ManifestDescriptor{
-			{Descriptor: distribution.Descriptor{Size: 3}},
-		},
+		Manifests: []distribution.Descriptor{{Size: 3}},
 	}
 	t.Run("valid", func(t *testing.T) {
 		b, err := json.Marshal(index)
