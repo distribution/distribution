@@ -42,6 +42,9 @@ type Configuration struct {
 		// Hooks allows users to configure the log hooks, to enabling the
 		// sequent handling behavior, when defined levels of log message emit.
 		Hooks []LogHook `yaml:"hooks,omitempty"`
+
+		// ReportCaller allows user to configure the log to report the caller
+		ReportCaller bool `yaml:"reportcaller,omitempty"`
 	}
 
 	// Loglevel is the level at which registry operations are logged.

@@ -345,6 +345,7 @@ func configureReporting(app *handlers.App) http.Handler {
 // configuration.
 func configureLogging(ctx context.Context, config *configuration.Configuration) (context.Context, error) {
 	logrus.SetLevel(logLevel(config.Log.Level))
+	logrus.SetReportCaller(config.Log.ReportCaller)
 
 	formatter := config.Log.Formatter
 	if formatter == "" {
