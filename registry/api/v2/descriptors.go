@@ -987,7 +987,7 @@ var routeDescriptors = []RouteDescriptor{
 							},
 						},
 						Body: BodyDescriptor{
-							ContentType: "application/octect-stream",
+							ContentType: "application/octet-stream",
 							Format:      "<binary data>",
 						},
 						Successes: []ResponseDescriptor{

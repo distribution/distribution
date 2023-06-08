@@ -3393,7 +3393,7 @@ POST /v2/<name>/blobs/uploads/?digest=<digest>
 Host: <registry host>
 Authorization: <scheme> <token>
 Content-Length: <length of blob>
-Content-Type: application/octect-stream
+Content-Type: application/octet-stream
 
 <binary data>
 ```
