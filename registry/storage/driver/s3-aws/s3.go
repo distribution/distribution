@@ -1539,5 +1539,5 @@ func (w *writer) flushPart() error {
 	})
 	w.readyPart = w.pendingPart
 	w.pendingPart = nil
-	return nil
+	return w.flushPart()
 }
