@@ -13,7 +13,8 @@ import (
 	"syscall"
 	"time"
 
-	"rsc.io/letsencrypt"
+	"golang.org/x/crypto/acme"
+	"golang.org/x/crypto/acme/autocert"
 
 	logrus_bugsnag "github.com/Shopify/logrus-bugsnag"
 
@@ -210,6 +211,14 @@ func getCipherSuiteNames(ids []uint16) []string {
 	return names
 }
 
+// set ACME-server/DirectoryURL, if provided
+func setDirectoryURL(directoryurl string) *acme.Client {
+	if len(directoryurl) > 0 {
+		return &acme.Client{DirectoryURL: directoryurl}
+	}
+	return nil
+}
+
 // ListenAndServe runs the registry's HTTP server.
 func (registry *Registry) ListenAndServe() error {
 	config := registry.config
@@ -247,19 +256,15 @@ func (registry *Registry) ListenAndServe() error {
 			if config.HTTP.TLS.Certificate != "" {
 				return fmt.Errorf("cannot specify both certificate and Let's Encrypt")
 			}
-			var m letsencrypt.Manager
-			if err := m.CacheFile(config.HTTP.TLS.LetsEncrypt.CacheFile); err != nil {
-				return err
-			}
-			if !m.Registered() {
-				if err := m.Register(config.HTTP.TLS.LetsEncrypt.Email, nil); err != nil {
-					return err
-				}
-			}
-			if len(config.HTTP.TLS.LetsEncrypt.Hosts) > 0 {
-				m.SetHosts(config.HTTP.TLS.LetsEncrypt.Hosts)
+			m := &autocert.Manager{
+				HostPolicy: autocert.HostWhitelist(config.HTTP.TLS.LetsEncrypt.Hosts...),
+				Cache:      autocert.DirCache(config.HTTP.TLS.LetsEncrypt.CacheFile),
+				Email:      config.HTTP.TLS.LetsEncrypt.Email,
+				Prompt:     autocert.AcceptTOS,
+				Client:     setDirectoryURL(config.HTTP.TLS.LetsEncrypt.DirectoryURL),
 			}
 			tlsConf.GetCertificate = m.GetCertificate
+			tlsConf.NextProtos = append(tlsConf.NextProtos, acme.ALPNProto)
 		} else {
 			tlsConf.Certificates = make([]tls.Certificate, 1)
 			tlsConf.Certificates[0], err = tls.LoadX509KeyPair(config.HTTP.TLS.Certificate, config.HTTP.TLS.Key)

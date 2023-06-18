@@ -12,9 +12,10 @@ import (
 	"crypto/subtle"
 	"errors"
 	"fmt"
-	"golang.org/x/crypto/blowfish"
 	"io"
 	"strconv"
+
+	"golang.org/x/crypto/blowfish"
 )
 
 const (
@@ -49,7 +50,7 @@ func (ih InvalidHashPrefixError) Error() string {
 type InvalidCostError int
 
 func (ic InvalidCostError) Error() string {
-	return fmt.Sprintf("crypto/bcrypt: cost %d is outside allowed range (%d,%d)", int(ic), int(MinCost), int(MaxCost))
+	return fmt.Sprintf("crypto/bcrypt: cost %d is outside allowed range (%d,%d)", int(ic), MinCost, MaxCost)
 }
 
 const (
@@ -81,11 +82,20 @@ type hashed struct {
 	minor byte
 }
 
+// ErrPasswordTooLong is returned when the password passed to
+// GenerateFromPassword is too long (i.e. > 72 bytes).
+var ErrPasswordTooLong = errors.New("bcrypt: password length exceeds 72 bytes")
+
 // GenerateFromPassword returns the bcrypt hash of the password at the given
 // cost. If the cost given is less than MinCost, the cost will be set to
 // DefaultCost, instead. Use CompareHashAndPassword, as defined in this package,
 // to compare the returned hashed password with its cleartext version.
+// GenerateFromPassword does not accept passwords longer than 72 bytes, which
+// is the longest password bcrypt will operate on.
 func GenerateFromPassword(password []byte, cost int) ([]byte, error) {
+	if len(password) > 72 {
+		return nil, ErrPasswordTooLong
+	}
 	p, err := newFromPassword(password, cost)
 	if err != nil {
 		return nil, err
@@ -205,7 +215,6 @@ func bcrypt(password []byte, cost int, salt []byte) ([]byte, error) {
 }
 
 func expensiveBlowfishSetup(key []byte, cost uint32, salt []byte) (*blowfish.Cipher, error) {
-
 	csalt, err := base64Decode(salt)
 	if err != nil {
 		return nil, err
@@ -213,7 +222,8 @@ func expensiveBlowfishSetup(key []byte, cost uint32, salt []byte) (*blowfish.Cip
 
 	// Bug compatibility with C bcrypt implementations. They use the trailing
 	// NULL in the key string during expansion.
-	ckey := append(key, 0)
+	// We copy the key to prevent changing the underlying array.
+	ckey := append(key[:len(key):len(key)], 0)
 
 	c, err := blowfish.NewSaltedCipher(ckey, csalt)
 	if err != nil {
@@ -240,11 +250,11 @@ func (p *hashed) Hash() []byte {
 		n = 3
 	}
 	arr[n] = '$'
-	n += 1
+	n++
 	copy(arr[n:], []byte(fmt.Sprintf("%02d", p.cost)))
 	n += 2
 	arr[n] = '$'
-	n += 1
+	n++
 	copy(arr[n:], p.salt)
 	n += encodedSaltSize
 	copy(arr[n:], p.hash)

@@ -229,6 +229,7 @@ http:
       cachefile: /path/to/cache-file
       email: emailused@letsencrypt.com
       hosts: [myregistryaddress.org]
+      directoryurl: https://acme-v02.api.letsencrypt.org/directory
   debug:
     addr: localhost:5001
     prometheus:
@@ -879,11 +880,12 @@ TLS certificates provided by
 > that are valid for this registry to avoid trying to get certificates for random
 > hostnames due to malicious clients connecting with bogus SNI hostnames.
 
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `cachefile` | yes    | Absolute path to a file where the Let's Encrypt agent can cache data. |
-| `email`   | yes      | The email address used to register with Let's Encrypt. |
-| `hosts`   | no       | The hostnames allowed for Let's Encrypt certificates. |
+| Parameter      | Required | Description                                                           |
+|----------------|----------|-----------------------------------------------------------------------|
+| `cachefile`    | yes      | Absolute path to a file where the Let's Encrypt agent can cache data. |
+| `email`        | yes      | The email address used to register with Let's Encrypt.                |
+| `hosts`        | no       | The hostnames allowed for Let's Encrypt certificates.                 |
+| `directoryurl` | no       | The url to use for the ACME server.                                   |
 
 ### `debug`
 
