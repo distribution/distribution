@@ -39,14 +39,13 @@ func NewEncoder(w io.Writer) *Encoder {
 		tableSizeUpdate: false,
 		w:               w,
 	}
-	e.dynTab.table.init()
 	e.dynTab.setMaxSize(initialHeaderTableSize)
 	return e
 }
 
 // WriteField encodes f into a single Write to e's underlying Writer.
 // This function may also produce bytes for "Header Table Size Update"
-// if necessary. If produced, it is done before encoding f.
+// if necessary.  If produced, it is done before encoding f.
 func (e *Encoder) WriteField(f HeaderField) error {
 	e.buf = e.buf[:0]
 
@@ -89,17 +88,29 @@ func (e *Encoder) WriteField(f HeaderField) error {
 // only name matches, i points to that index and nameValueMatch
 // becomes false.
 func (e *Encoder) searchTable(f HeaderField) (i uint64, nameValueMatch bool) {
-	i, nameValueMatch = staticTable.search(f)
-	if nameValueMatch {
-		return i, true
+	for idx, hf := range staticTable {
+		if !constantTimeStringCompare(hf.Name, f.Name) {
+			continue
+		}
+		if i == 0 {
+			i = uint64(idx + 1)
+		}
+		if f.Sensitive {
+			continue
+		}
+		if !constantTimeStringCompare(hf.Value, f.Value) {
+			continue
+		}
+		i = uint64(idx + 1)
+		nameValueMatch = true
+		return
 	}
 
-	j, nameValueMatch := e.dynTab.table.search(f)
+	j, nameValueMatch := e.dynTab.search(f)
 	if nameValueMatch || (i == 0 && j != 0) {
-		return j + uint64(staticTable.len()), nameValueMatch
+		i = j + uint64(len(staticTable))
 	}
-
-	return i, false
+	return
 }
 
 // SetMaxDynamicTableSize changes the dynamic header table size to v.
@@ -114,11 +125,6 @@ func (e *Encoder) SetMaxDynamicTableSize(v uint32) {
 	}
 	e.tableSizeUpdate = true
 	e.dynTab.setMaxSize(v)
-}
-
-// MaxDynamicTableSize returns the current dynamic header table size.
-func (e *Encoder) MaxDynamicTableSize() (v uint32) {
-	return e.dynTab.maxSize
 }
 
 // SetMaxDynamicTableSizeLimit changes the maximum value that can be
@@ -155,7 +161,7 @@ func appendIndexed(dst []byte, i uint64) []byte {
 // extended buffer.
 //
 // If f.Sensitive is true, "Never Indexed" representation is used. If
-// f.Sensitive is false and indexing is true, "Incremental Indexing"
+// f.Sensitive is false and indexing is true, "Inremental Indexing"
 // representation is used.
 func appendNewName(dst []byte, f HeaderField, indexing bool) []byte {
 	dst = append(dst, encodeTypeByte(indexing, f.Sensitive))
@@ -196,7 +202,7 @@ func appendTableSize(dst []byte, v uint32) []byte {
 // bit prefix, to dst and returns the extended buffer.
 //
 // See
-// https://httpwg.org/specs/rfc7541.html#integer.representation
+// http://http2.github.io/http2-spec/compression.html#integer.representation
 func appendVarInt(dst []byte, n byte, i uint64) []byte {
 	k := uint64((1 << n) - 1)
 	if i < k {
@@ -211,7 +217,7 @@ func appendVarInt(dst []byte, n byte, i uint64) []byte {
 }
 
 // appendHpackString appends s, as encoded in "String Literal"
-// representation, to dst and returns the extended buffer.
+// representation, to dst and returns the the extended buffer.
 //
 // s will be encoded in Huffman codes only when it produces strictly
 // shorter byte string.

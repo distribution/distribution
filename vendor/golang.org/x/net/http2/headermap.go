@@ -6,35 +6,23 @@ package http2
 
 import (
 	"net/http"
-	"sync"
+	"strings"
 )
 
 var (
-	commonBuildOnce   sync.Once
-	commonLowerHeader map[string]string // Go-Canonical-Case -> lower-case
-	commonCanonHeader map[string]string // lower-case -> Go-Canonical-Case
+	commonLowerHeader = map[string]string{} // Go-Canonical-Case -> lower-case
+	commonCanonHeader = map[string]string{} // lower-case -> Go-Canonical-Case
 )
 
-func buildCommonHeaderMapsOnce() {
-	commonBuildOnce.Do(buildCommonHeaderMaps)
-}
-
-func buildCommonHeaderMaps() {
-	common := []string{
+func init() {
+	for _, v := range []string{
 		"accept",
 		"accept-charset",
 		"accept-encoding",
 		"accept-language",
 		"accept-ranges",
 		"age",
-		"access-control-allow-credentials",
-		"access-control-allow-headers",
-		"access-control-allow-methods",
 		"access-control-allow-origin",
-		"access-control-expose-headers",
-		"access-control-max-age",
-		"access-control-request-headers",
-		"access-control-request-method",
 		"allow",
 		"authorization",
 		"cache-control",
@@ -60,7 +48,6 @@ func buildCommonHeaderMaps() {
 		"link",
 		"location",
 		"max-forwards",
-		"origin",
 		"proxy-authenticate",
 		"proxy-authorization",
 		"range",
@@ -76,30 +63,16 @@ func buildCommonHeaderMaps() {
 		"vary",
 		"via",
 		"www-authenticate",
-		"x-forwarded-for",
-		"x-forwarded-proto",
-	}
-	commonLowerHeader = make(map[string]string, len(common))
-	commonCanonHeader = make(map[string]string, len(common))
-	for _, v := range common {
+	} {
 		chk := http.CanonicalHeaderKey(v)
 		commonLowerHeader[chk] = v
 		commonCanonHeader[v] = chk
 	}
 }
 
-func lowerHeader(v string) (lower string, ascii bool) {
-	buildCommonHeaderMapsOnce()
+func lowerHeader(v string) string {
 	if s, ok := commonLowerHeader[v]; ok {
-		return s, true
-	}
-	return asciiToLower(v)
-}
-
-func canonicalHeader(v string) string {
-	buildCommonHeaderMapsOnce()
-	if s, ok := commonCanonHeader[v]; ok {
 		return s
 	}
-	return http.CanonicalHeaderKey(v)
+	return strings.ToLower(v)
 }

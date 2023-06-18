@@ -53,13 +53,6 @@ func (e ErrCode) String() string {
 	return fmt.Sprintf("unknown error code 0x%x", uint32(e))
 }
 
-func (e ErrCode) stringToken() string {
-	if s, ok := errCodeName[e]; ok {
-		return s
-	}
-	return fmt.Sprintf("ERR_UNKNOWN_%d", uint32(e))
-}
-
 // ConnectionError is an error that results in the termination of the
 // entire connection.
 type ConnectionError ErrCode
@@ -71,22 +64,9 @@ func (e ConnectionError) Error() string { return fmt.Sprintf("connection error: 
 type StreamError struct {
 	StreamID uint32
 	Code     ErrCode
-	Cause    error // optional additional detail
-}
-
-// errFromPeer is a sentinel error value for StreamError.Cause to
-// indicate that the StreamError was sent from the peer over the wire
-// and wasn't locally generated in the Transport.
-var errFromPeer = errors.New("received from peer")
-
-func streamError(id uint32, code ErrCode) StreamError {
-	return StreamError{StreamID: id, Code: code}
 }
 
 func (e StreamError) Error() string {
-	if e.Cause != nil {
-		return fmt.Sprintf("stream error: stream ID %d; %v; %v", e.StreamID, e.Code, e.Cause)
-	}
 	return fmt.Sprintf("stream error: stream ID %d; %v", e.StreamID, e.Code)
 }
 
@@ -99,16 +79,13 @@ type goAwayFlowError struct{}
 
 func (goAwayFlowError) Error() string { return "connection exceeded flow control window size" }
 
-// connError represents an HTTP/2 ConnectionError error code, along
-// with a string (for debugging) explaining why.
-//
+// connErrorReason wraps a ConnectionError with an informative error about why it occurs.
+
 // Errors of this type are only returned by the frame parser functions
-// and converted into ConnectionError(Code), after stashing away
-// the Reason into the Framer's errDetail field, accessible via
-// the (*Framer).ErrorDetail method.
+// and converted into ConnectionError(ErrCodeProtocol).
 type connError struct {
-	Code   ErrCode // the ConnectionError error code
-	Reason string  // additional reason
+	Code   ErrCode
+	Reason string
 }
 
 func (e connError) Error() string {
@@ -136,7 +113,7 @@ func (e headerFieldNameError) Error() string {
 type headerFieldValueError string
 
 func (e headerFieldValueError) Error() string {
-	return fmt.Sprintf("invalid header field value for %q", string(e))
+	return fmt.Sprintf("invalid header field value %q", string(e))
 }
 
 var (
