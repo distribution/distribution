@@ -20,7 +20,7 @@ import (
 //
 // It enables one-line HTTPS servers:
 //
-//     log.Fatal(http.Serve(autocert.NewListener("example.com"), handler))
+//	log.Fatal(http.Serve(autocert.NewListener("example.com"), handler))
 //
 // NewListener is a convenience function for a common configuration.
 // More complex or custom configurations can use the autocert.Manager
@@ -72,7 +72,6 @@ func NewListener(domains ...string) net.Listener {
 // the Manager m's Prompt, Cache, HostPolicy, and other desired options.
 func (m *Manager) Listener() net.Listener {
 	ln := &listener{
-		m:    m,
 		conf: m.TLSConfig(),
 	}
 	ln.tcpListener, ln.tcpListenErr = net.Listen("tcp", ":443")
@@ -80,7 +79,6 @@ func (m *Manager) Listener() net.Listener {
 }
 
 type listener struct {
-	m    *Manager
 	conf *tls.Config
 
 	tcpListener  net.Listener

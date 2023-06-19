@@ -10,8 +10,9 @@ import (
 	"crypto"
 	"crypto/rand"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"math/big"
 	"net/http"
 	"strconv"
@@ -155,8 +156,16 @@ func (c *Client) get(ctx context.Context, url string, ok resOkay) (*http.Respons
 	}
 }
 
+// postAsGet is POST-as-GET, a replacement for GET in RFC 8555
+// as described in https://tools.ietf.org/html/rfc8555#section-6.3.
+// It makes a POST request in KID form with zero JWS payload.
+// See nopayload doc comments in jws.go.
+func (c *Client) postAsGet(ctx context.Context, url string, ok resOkay) (*http.Response, error) {
+	return c.post(ctx, nil, url, noPayload, ok)
+}
+
 // post issues a signed POST request in JWS format using the provided key
-// to the specified URL.
+// to the specified URL. If key is nil, c.Key is used instead.
 // It returns a non-error value only when ok reports true.
 //
 // post retries unsuccessful attempts according to c.RetryBackoff
@@ -193,14 +202,31 @@ func (c *Client) post(ctx context.Context, key crypto.Signer, url string, body i
 }
 
 // postNoRetry signs the body with the given key and POSTs it to the provided url.
-// The body argument must be JSON-serializable.
 // It is used by c.post to retry unsuccessful attempts.
+// The body argument must be JSON-serializable.
+//
+// If key argument is nil, c.Key is used to sign the request.
+// If key argument is nil and c.accountKID returns a non-zero keyID,
+// the request is sent in KID form. Otherwise, JWK form is used.
+//
+// In practice, when interfacing with RFC-compliant CAs most requests are sent in KID form
+// and JWK is used only when KID is unavailable: new account endpoint and certificate
+// revocation requests authenticated by a cert key.
+// See jwsEncodeJSON for other details.
 func (c *Client) postNoRetry(ctx context.Context, key crypto.Signer, url string, body interface{}) (*http.Response, *http.Request, error) {
+	kid := noKeyID
+	if key == nil {
+		if c.Key == nil {
+			return nil, nil, errors.New("acme: Client.Key must be populated to make POST requests")
+		}
+		key = c.Key
+		kid = c.accountKID(ctx)
+	}
 	nonce, err := c.popNonce(ctx, url)
 	if err != nil {
 		return nil, nil, err
 	}
-	b, err := jwsEncodeJSON(body, key, nonce)
+	b, err := jwsEncodeJSON(body, key, kid, nonce, url)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -219,6 +245,7 @@ func (c *Client) postNoRetry(ctx context.Context, key crypto.Signer, url string,
 
 // doNoRetry issues a request req, replacing its context (if any) with ctx.
 func (c *Client) doNoRetry(ctx context.Context, req *http.Request) (*http.Response, error) {
+	req.Header.Set("User-Agent", c.userAgent())
 	res, err := c.httpClient().Do(req.WithContext(ctx))
 	if err != nil {
 		select {
@@ -241,6 +268,23 @@ func (c *Client) httpClient() *http.Client {
 		return c.HTTPClient
 	}
 	return http.DefaultClient
+}
+
+// packageVersion is the version of the module that contains this package, for
+// sending as part of the User-Agent header. It's set in version_go112.go.
+var packageVersion string
+
+// userAgent returns the User-Agent header value. It includes the package name,
+// the module version (if available), and the c.UserAgent value (if set).
+func (c *Client) userAgent() string {
+	ua := "golang.org/x/crypto/acme"
+	if packageVersion != "" {
+		ua += "@" + packageVersion
+	}
+	if c.UserAgent != "" {
+		ua = c.UserAgent + " " + ua
+	}
+	return ua
 }
 
 // isBadNonce reports whether err is an ACME "badnonce" error.
@@ -266,7 +310,7 @@ func isRetriable(code int) bool {
 func responseError(resp *http.Response) error {
 	// don't care if ReadAll returns an error:
 	// json.Unmarshal will fail in that case anyway
-	b, _ := ioutil.ReadAll(resp.Body)
+	b, _ := io.ReadAll(resp.Body)
 	e := &wireError{Status: resp.StatusCode}
 	if err := json.Unmarshal(b, e); err != nil {
 		// this is not a regular error response:
