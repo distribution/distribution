@@ -377,6 +377,9 @@ func (app *App) RegisterHealthChecks(healthRegistries ...*health.Registry) {
 			if _, ok := err.(storagedriver.PathNotFoundError); ok {
 				err = nil // pass this through, backend is responding, but this path doesn't exist.
 			}
+			if err != nil {
+				dcontext.GetLogger(app).Errorf("storage driver health check: %v", err)
+			}
 			return err
 		}
 
@@ -745,7 +748,6 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 		}
 
 		dispatch(context, r).ServeHTTP(w, r)
-
 	})
 }
 
