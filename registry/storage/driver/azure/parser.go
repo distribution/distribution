@@ -8,7 +8,9 @@ import (
 )
 
 const (
-	defaultRealm = "core.windows.net"
+	defaultRealm                  = "core.windows.net"
+	defaultCopyStatusPollMaxRetry = 5
+	defaultCopyStatusPollDelay    = "100ms"
 )
 
 type Credentials struct {
@@ -19,14 +21,16 @@ type Credentials struct {
 }
 
 type Parameters struct {
-	Container        string      `mapstructure:"container"`
-	AccountName      string      `mapstructure:"accountname"`
-	AccountKey       string      `mapstructure:"accountkey"`
-	Credentials      Credentials `mapstructure:"credentials"`
-	ConnectionString string      `mapstructure:"connectionstring"`
-	Realm            string      `mapstructure:"realm"`
-	RootDirectory    string      `mapstructure:"rootdirectory"`
-	ServiceURL       string      `mapstructure:"serviceurl"`
+	Container              string      `mapstructure:"container"`
+	AccountName            string      `mapstructure:"accountname"`
+	AccountKey             string      `mapstructure:"accountkey"`
+	Credentials            Credentials `mapstructure:"credentials"`
+	ConnectionString       string      `mapstructure:"connectionstring"`
+	Realm                  string      `mapstructure:"realm"`
+	RootDirectory          string      `mapstructure:"rootdirectory"`
+	ServiceURL             string      `mapstructure:"serviceurl"`
+	CopyStatusPollMaxRetry int         `mapstructure:"copy_status_poll_max_retry"`
+	CopyStatusPollDelay    string      `mapstructure:"copy_status_poll_delay"`
 }
 
 func NewParameters(parameters map[string]interface{}) (*Parameters, error) {
@@ -44,6 +48,12 @@ func NewParameters(parameters map[string]interface{}) (*Parameters, error) {
 	}
 	if params.ServiceURL == "" {
 		params.ServiceURL = fmt.Sprintf("https://%s.blob.%s", params.AccountName, params.Realm)
+	}
+	if params.CopyStatusPollMaxRetry == 0 {
+		params.CopyStatusPollMaxRetry = defaultCopyStatusPollMaxRetry
+	}
+	if params.CopyStatusPollDelay == "" {
+		params.CopyStatusPollDelay = defaultCopyStatusPollDelay
 	}
 	return &params, nil
 }
