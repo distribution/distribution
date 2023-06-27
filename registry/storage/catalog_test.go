@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"math/rand"
 	"testing"
 
 	"github.com/distribution/distribution/v3"
@@ -241,6 +240,7 @@ func TestCatalogWalkError(t *testing.T) {
 		t.Errorf("Expected catalog driver list error")
 	}
 }
+<<<<<<< HEAD
 
 func BenchmarkPathCompareEqual(B *testing.B) {
 	B.StopTimer()
@@ -323,3 +323,5 @@ func randomFilename(length int64) string {
 	}
 	return string(b)
 }
+=======
+>>>>>>> 27bd92bd (fix bug in catalog last param and optimized it)
