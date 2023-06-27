@@ -14,20 +14,21 @@ import (
 )
 
 var (
-	// ErrStopReposWalk is used as a return value to indicate that the repository path walk
-	// should be stopped. It's not returned as an error by any function.
+	// ErrStopReposWalk is a sentinel error to indicate that the repository path walk was stopped.
 	ErrStopReposWalk = errors.New("stop repos walk")
 )
 
-// Returns a list or a partial list of repositories in the registry.
+// Repositories populates the passed passed repos slice with repositories in the
+// registry up to the capacity of the slice. Returns the number of repos returned and
+// `io.EOF` if no more repositories are available.
 // Because it's a quite expensive operation, it should only be used when building up
 // an initial set of repositories.
 func (reg *registry) Repositories(ctx context.Context, repos []string, last string) (n int, err error) {
 	var finishedWalk bool
 	var foundRepos []string
 
-	if len(repos) == 0 {
-		return -1, errors.New("no repos requested")
+	if len(repos) == 0 && cap(repos) == 0 {
+		return 0, errors.New("no repos requested")
 	}
 
 	root, err := pathFor(repositoriesRootPathSpec{})
