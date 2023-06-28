@@ -1,3 +1,6 @@
+//go:build include_gcs
+// +build include_gcs
+
 // Package gcs provides a storagedriver.StorageDriver implementation to
 // store blobs in Google cloud storage.
 //
@@ -9,10 +12,6 @@
 //
 // Note that the contents of incomplete uploads are not accessible even though
 // Stat returns their length
-//
-//go:build include_gcs
-// +build include_gcs
-
 package gcs
 
 import (
@@ -66,7 +65,6 @@ var _ storagedriver.FileWriter = &writer{}
 // driverParameters is a struct that encapsulates all of the driver parameters after all values have been set
 type driverParameters struct {
 	bucket        string
-	config        *jwt.Config
 	email         string
 	privateKey    []byte
 	client        *http.Client
@@ -92,6 +90,8 @@ type gcsDriverFactory struct{}
 func (factory *gcsDriverFactory) Create(parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
 	return FromParameters(parameters)
 }
+
+var _ storagedriver.StorageDriver = &driver{}
 
 // driver is a storagedriver.StorageDriver implementation backed by GCS
 // Objects are stored at absolute keys in the provided bucket.
@@ -289,6 +289,8 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 // PutContent stores the []byte content at a location designated by "path".
 // This should primarily be used for small objects.
 func (d *driver) PutContent(ctx context.Context, path string, contents []byte) error {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 	wc := d.gcs.Bucket(d.bucket).Object(d.pathToKey(path)).NewWriter(ctx)
 	wc.ContentType = "application/octet-stream"
 	return putContentsClose(wc, contents)
@@ -312,7 +314,7 @@ func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.Read
 				if err != nil {
 					return nil, err
 				}
-				if offset == int64(obj.Size) {
+				if offset == obj.Size {
 					return io.NopCloser(bytes.NewReader([]byte{})), nil
 				}
 				return nil, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
@@ -450,7 +452,6 @@ func putContentsClose(wc *storage.Writer, contents []byte) error {
 		}
 	}
 	if err != nil {
-		wc.CloseWithError(err)
 		return err
 	}
 	return wc.Close()
@@ -630,9 +631,9 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 	// try to get as folder
 	dirpath := d.pathToDirKey(path)
 
-	var query *storage.Query
-	query = &storage.Query{}
-	query.Prefix = dirpath
+	query := &storage.Query{
+		Prefix: dirpath,
+	}
 
 	objects, err := storageListObjects(ctx, d.bucket, query, d.gcs)
 	if err != nil {
@@ -656,10 +657,10 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 // List returns a list of the objects that are direct descendants of the
 // given path.
 func (d *driver) List(ctx context.Context, path string) ([]string, error) {
-	var query *storage.Query
-	query = &storage.Query{}
-	query.Delimiter = "/"
-	query.Prefix = d.pathToDirKey(path)
+	query := &storage.Query{
+		Delimiter: "/",
+		Prefix:    d.pathToDirKey(path),
+	}
 	list := make([]string, 0, 64)
 	objects, err := storageListObjects(ctx, d.bucket, query, d.gcs)
 	if err != nil {
@@ -690,7 +691,7 @@ func (d *driver) List(ctx context.Context, path string) ([]string, error) {
 // Move moves an object stored at sourcePath to destPath, removing the
 // original object.
 func (d *driver) Move(ctx context.Context, sourcePath string, destPath string) error {
-	_, err := storageCopyObject(ctx, d.bucket, d.pathToKey(sourcePath), d.bucket, d.pathToKey(destPath), nil, d.gcs)
+	_, err := storageCopyObject(ctx, d.bucket, d.pathToKey(sourcePath), d.bucket, d.pathToKey(destPath), d.gcs)
 	if err != nil {
 		if status, ok := err.(*googleapi.Error); ok {
 			if status.Code == http.StatusNotFound {
@@ -794,7 +795,7 @@ func storageListObjects(ctx context.Context, bucket string, q *storage.Query, gc
 	return objs, nil
 }
 
-func storageCopyObject(ctx context.Context, srcBucket, srcName string, destBucket, destName string, attrs *storage.ObjectAttrs, gcs *storage.Client) (*storage.ObjectAttrs, error) {
+func storageCopyObject(ctx context.Context, srcBucket, srcName string, destBucket, destName string, gcs *storage.Client) (*storage.ObjectAttrs, error) {
 	src := gcs.Bucket(srcBucket).Object(srcName)
 	dst := gcs.Bucket(destBucket).Object(destName)
 	attrs, err := dst.CopierFrom(src).Run(ctx)
