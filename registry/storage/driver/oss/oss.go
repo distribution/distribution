@@ -1,3 +1,6 @@
+//go:build include_oss
+// +build include_oss
+
 // Package oss provides a storagedriver.StorageDriver implementation to
 // store blobs in Aliyun OSS cloud storage.
 //
@@ -6,10 +9,6 @@
 //
 // Because OSS is a key, value store the Stat call does not support last modification
 // time for directories (directories are an abstraction for key, value stores)
-//
-//go:build include_oss
-// +build include_oss
-
 package oss
 
 import (
@@ -67,6 +66,8 @@ type ossDriverFactory struct{}
 func (factory *ossDriverFactory) Create(parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
 	return FromParameters(parameters)
 }
+
+var _ storagedriver.StorageDriver = &driver{}
 
 type driver struct {
 	Client        *oss.Client
@@ -496,11 +497,6 @@ func parseError(path string, err error) error {
 	}
 
 	return err
-}
-
-func hasCode(err error, code string) bool {
-	ossErr, ok := err.(*oss.Error)
-	return ok && ossErr.Code == code
 }
 
 func (d *driver) getOptions() oss.Options {

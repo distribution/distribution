@@ -1,18 +1,17 @@
+//go:build include_gcs
+// +build include_gcs
+
 // Package gcs provides a storagedriver.StorageDriver implementation to
 // store blobs in Google cloud storage.
 //
 // This package leverages the google.golang.org/cloud/storage client library
-//for interfacing with gcs.
+// for interfacing with gcs.
 //
 // Because gcs is a key, value store the Stat call does not support last modification
 // time for directories (directories are an abstraction for key, value stores)
 //
 // Note that the contents of incomplete uploads are not accessible even though
 // Stat returns their length
-//
-//go:build include_gcs
-// +build include_gcs
-
 package gcs
 
 import (
@@ -62,7 +61,6 @@ var rangeHeader = regexp.MustCompile(`^bytes=([0-9])+-([0-9]+)$`)
 // driverParameters is a struct that encapsulates all of the driver parameters after all values have been set
 type driverParameters struct {
 	bucket        string
-	config        *jwt.Config
 	email         string
 	privateKey    []byte
 	client        *http.Client
@@ -87,6 +85,8 @@ type gcsDriverFactory struct{}
 func (factory *gcsDriverFactory) Create(parameters map[string]interface{}) (storagedriver.StorageDriver, error) {
 	return FromParameters(parameters)
 }
+
+var _ storagedriver.StorageDriver = &driver{}
 
 // driver is a storagedriver.StorageDriver implementation backed by GCS
 // Objects are stored at absolute keys in the provided bucket.
@@ -298,7 +298,7 @@ func (d *driver) Reader(context context.Context, path string, offset int64) (io.
 				if err != nil {
 					return nil, err
 				}
-				if offset == int64(obj.Size) {
+				if offset == obj.Size {
 					return ioutil.NopCloser(bytes.NewReader([]byte{})), nil
 				}
 				return nil, storagedriver.InvalidOffsetError{Path: path, Offset: offset}
@@ -434,7 +434,6 @@ func putContentsClose(wc *storage.Writer, contents []byte) error {
 		}
 	}
 	if err != nil {
-		wc.CloseWithError(err)
 		return err
 	}
 	return wc.Close()
@@ -614,10 +613,10 @@ func (d *driver) Stat(context context.Context, path string) (storagedriver.FileI
 	//try to get as folder
 	dirpath := d.pathToDirKey(path)
 
-	var query *storage.Query
-	query = &storage.Query{}
-	query.Prefix = dirpath
-	query.MaxResults = 1
+	query := &storage.Query{
+		Prefix:     dirpath,
+		MaxResults: 1,
+	}
 
 	objects, err := storageListObjects(gcsContext, d.bucket, query)
 	if err != nil {
@@ -639,12 +638,12 @@ func (d *driver) Stat(context context.Context, path string) (storagedriver.FileI
 }
 
 // List returns a list of the objects that are direct descendants of the
-//given path.
+// given path.
 func (d *driver) List(context context.Context, path string) ([]string, error) {
-	var query *storage.Query
-	query = &storage.Query{}
-	query.Delimiter = "/"
-	query.Prefix = d.pathToDirKey(path)
+	query := &storage.Query{
+		Delimiter: "/",
+		Prefix:    d.pathToDirKey(path),
+	}
 	list := make([]string, 0, 64)
 	for {
 		objects, err := storageListObjects(d.context(context), d.bucket, query)
