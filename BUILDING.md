@@ -97,7 +97,7 @@ Run `make validate` to run the validators, including the linter and vendor valid
 ### Optional build tags
 
 Optional [build tags](http://golang.org/pkg/go/build/) can be provided using
-the environment variable `DOCKER_BUILDTAGS`.
+the environment variable `BUILDTAGS`.
 
 <dl>
 <dt>noresumabledigest</dt>
