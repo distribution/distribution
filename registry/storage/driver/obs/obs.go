@@ -89,7 +89,7 @@ type DriverParameters struct {
 	Encrypt                     bool
 	ChunkSize                   int64
 	RootDirectory               string
-	EncryptionKeyID             string
+	KeyID                       string
 	MultipartCopyChunkSize      int64
 	MultipartCopyMaxConcurrency int64
 	MultipartCopyThresholdSize  int64
@@ -121,7 +121,7 @@ type driver struct {
 	ChunkSize                   int64
 	Encrypt                     bool
 	RootDirectory               string
-	EncryptionKeyID             string
+	KeyID                       string
 	MultipartCopyChunkSize      int64
 	MultipartCopyMaxConcurrency int64
 	MultipartCopyThresholdSize  int64
@@ -219,9 +219,9 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		}
 	}
 
-	encryptionKeyID, ok := parameters["encryptionkeyid"]
+	keyID, ok := parameters["keyid"]
 	if !ok {
-		encryptionKeyID = ""
+		keyID = ""
 	}
 
 	chunkSize, err := getParameterAsInt64(parameters, "chunksize", defaultChunkSize, minChunkSize, maxChunkSize)
@@ -257,7 +257,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		ChunkSize:                   chunkSize,
 		RootDirectory:               fmt.Sprint(rootDirectory),
 		Encrypt:                     encryptBool,
-		EncryptionKeyID:             fmt.Sprint(encryptionKeyID),
+		KeyID:                       fmt.Sprint(keyID),
 		MultipartCopyChunkSize:      multipartCopyChunkSize,
 		MultipartCopyMaxConcurrency: multipartCopyMaxConcurrency,
 		MultipartCopyThresholdSize:  multipartCopyThresholdSize,
@@ -313,7 +313,7 @@ func New(params DriverParameters) (*Driver, error) {
 		ChunkSize:                   params.ChunkSize,
 		Encrypt:                     params.Encrypt,
 		RootDirectory:               params.RootDirectory,
-		EncryptionKeyID:             params.EncryptionKeyID,
+		KeyID:                       params.KeyID,
 		MultipartCopyChunkSize:      params.MultipartCopyChunkSize,
 		MultipartCopyMaxConcurrency: params.MultipartCopyMaxConcurrency,
 		MultipartCopyThresholdSize:  params.MultipartCopyThresholdSize,
@@ -349,6 +349,8 @@ func (d *driver) PutContent(ctx context.Context, path string, contents []byte) e
 	input.Bucket = d.Bucket
 	input.Key = d.OBSPath(path)
 	input.Body = bytes.NewReader(contents)
+	input.ACL = d.getACL()
+	input.StorageClass = d.getStorageClass()
 	input.SseHeader = d.getEncryptionMode()
 	_, err := d.Client.PutObject(input)
 	return d.parseError(path, err)
@@ -580,6 +582,7 @@ func (d *driver) copy(ctx context.Context, sourcePath string, destPath string) e
 		input.ContentType = d.getContentType()
 		input.ACL = d.getACL()
 		input.SseHeader = d.getEncryptionMode()
+		input.SourceSseHeader = d.getEncryptionMode()
 		input.StorageClass = d.getStorageClass()
 		input.CopySourceBucket = d.Bucket
 		input.CopySourceKey = d.OBSPath(sourcePath)
@@ -624,6 +627,8 @@ func (d *driver) copy(ctx context.Context, sourcePath string, destPath string) e
 				UploadId:             initOutput.UploadId,
 				CopySourceRangeStart: firstByte,
 				CopySourceRangeEnd:   lastByte,
+				SseHeader:            d.getEncryptionMode(),
+				SourceSseHeader:      d.getEncryptionMode(),
 			})
 			if err == nil {
 				completedParts[i] = obs.Part{
@@ -788,17 +793,11 @@ func (d *driver) getEncryptionMode() obs.ISseHeader {
 	if !d.Encrypt {
 		return nil
 	}
-	if d.EncryptionKeyID == "" {
-		return obs.SseKmsHeader{}
-	}
-	return obs.SseCHeader{Key: d.EncryptionKeyID}
+	return obs.SseKmsHeader{Key: d.KeyID}
 }
 
 func (d *driver) getSSEKMSKeyID() string {
-	if d.EncryptionKeyID != "" {
-		return d.EncryptionKeyID
-	}
-	return ""
+	return d.KeyID
 }
 
 // writer attempts to upload parts to OBS in a buffered fashion where the last
@@ -912,6 +911,8 @@ func (w *writer) Write(p []byte) (n int, err error) {
 				CopySourceKey:    w.key,
 				PartNumber:       1,
 				UploadId:         w.uploadID,
+				SseHeader:        w.driver.getEncryptionMode(),
+				SourceSseHeader:  w.driver.getEncryptionMode(),
 			})
 			if err != nil {
 				return 0, err
@@ -979,6 +980,7 @@ func (w *writer) flushPart() error {
 		PartNumber: len(w.parts) + 1,
 		UploadId:   w.uploadID,
 		Body:       bytes.NewReader(w.readyPart),
+		SseHeader:  w.driver.getEncryptionMode(),
 	})
 	if err != nil {
 		return err

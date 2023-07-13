@@ -61,7 +61,7 @@ func init() {
 			Bucket:                      bucket,
 			Endpoint:                    endpoint,
 			Encrypt:                     encryptBool,
-			EncryptionKeyID:             keyID,
+			KeyID:                       keyID,
 			ChunkSize:                   minChunkSize,
 			MultipartCopyThresholdSize:  defaultMultipartCopyThresholdSize,
 			MultipartCopyMaxConcurrency: defaultMultipartCopyMaxConcurrency,
