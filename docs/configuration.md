@@ -307,6 +307,7 @@ proxy:
   remoteurl: https://registry-1.docker.io
   username: [username]
   password: [password]
+  ttl: 168h
 compatibility:
   schema1:
     signingkeyfile: /etc/registry/key.json
@@ -1193,6 +1194,7 @@ proxy:
   remoteurl: https://registry-1.docker.io
   username: [username]
   password: [password]
+  ttl: 168h
 ```
 
 The `proxy` structure allows a registry to be configured as a pull-through cache
@@ -1206,6 +1208,7 @@ is unsupported.
 | `remoteurl`| yes     | The URL for the repository on Docker Hub.             |
 | `username` | no      | The username registered with Docker Hub which has access to the repository. |
 | `password` | no      | The password used to authenticate to Docker Hub using the username specified in `username`. |
+| `ttl`      | no      | Expire proxy cache configured in "storage" after this time. Cache 168h(7 days) by default, set to 0 to disable cache expiration, The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
 
 
 To enable pulling private repositories (e.g. `batman/robin`) specify the

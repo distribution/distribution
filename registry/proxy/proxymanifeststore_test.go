@@ -272,3 +272,24 @@ func TestProxyManifests(t *testing.T) {
 		t.Fatalf("Expected 2 auth challenges, got %#v", env.manifests.authChallenger)
 	}
 }
+
+func TestProxyManifestsWithoutScheduler(t *testing.T) {
+	name := "foo/bar"
+	env := newManifestStoreTestEnv(t, name, "latest")
+	env.manifests.scheduler = nil
+
+	ctx := context.Background()
+	exists, err := env.manifests.Exists(ctx, env.manifestDigest)
+	if err != nil {
+		t.Fatalf("Error checking existence")
+	}
+	if !exists {
+		t.Errorf("Unexpected non-existent manifest")
+	}
+
+	// Get - should succeed without scheduler
+	_, err = env.manifests.Get(ctx, env.manifestDigest)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
