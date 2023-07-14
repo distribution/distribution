@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
-	pathutil "path"
+	"path"
 
 	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	storagemiddleware "github.com/docker/distribution/registry/storage/driver/middleware"
@@ -42,11 +42,11 @@ func newRedirectStorageMiddleware(sd storagedriver.StorageDriver, options map[st
 	return &redirectStorageMiddleware{StorageDriver: sd, scheme: u.Scheme, host: u.Host, basePath: u.Path}, nil
 }
 
-func (r *redirectStorageMiddleware) URLFor(ctx context.Context, path string, options map[string]interface{}) (string, error) {
+func (r *redirectStorageMiddleware) URLFor(ctx context.Context, urlPath string, options map[string]interface{}) (string, error) {
 	if r.basePath != "" {
-		path = pathutil.Join(r.basePath, path)
+		urlPath = path.Join(r.basePath, urlPath)
 	}
-	u := &url.URL{Scheme: r.scheme, Host: r.host, Path: path}
+	u := &url.URL{Scheme: r.scheme, Host: r.host, Path: urlPath}
 	return u.String(), nil
 }
 
