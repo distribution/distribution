@@ -166,6 +166,17 @@ func (p *Parser) overwriteFields(v reflect.Value, fullpath string, path []string
 		return p.overwriteStruct(v, fullpath, path, payload)
 	case reflect.Map:
 		return p.overwriteMap(v, fullpath, path, payload)
+	case reflect.Slice:
+		idx, err := strconv.Atoi(path[0])
+		if err != nil {
+			panic("non-numeric index: " + path[0])
+		}
+
+		if idx >= v.Len() {
+			panic("Undefined index: " + path[0])
+		}
+
+		return p.overwriteFields(v.Index(idx), fullpath, path[1:], payload)
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
 			if !v.IsNil() {
