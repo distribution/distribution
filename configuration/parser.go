@@ -172,10 +172,18 @@ func (p *Parser) overwriteFields(v reflect.Value, fullpath string, path []string
 			panic("non-numeric index: " + path[0])
 		}
 
-		if idx >= v.Len() {
-			panic("Undefined index: " + path[0])
+		if idx > v.Len() {
+			panic("undefined index: " + path[0])
 		}
 
+		// if there is no element or the current slice length
+		// is the same as the indexed variable create a new element,
+		// append it and then set it to the passed in env var value.
+		if v.Len() == 0 || idx == v.Len() {
+			typ := v.Type().Elem()
+			elem := reflect.New(typ).Elem()
+			v.Set(reflect.Append(v, elem))
+		}
 		return p.overwriteFields(v.Index(idx), fullpath, path[1:], payload)
 	case reflect.Interface:
 		if v.NumMethod() == 0 {
