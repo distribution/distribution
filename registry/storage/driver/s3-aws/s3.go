@@ -417,6 +417,9 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 	}
 
 	sessionToken := ""
+	if sk, ok := parameters["sessiontoken"].(string); ok {
+		sessionToken = sk
+	}
 
 	accelerateBool := false
 	accelerate := parameters["accelerate"]
