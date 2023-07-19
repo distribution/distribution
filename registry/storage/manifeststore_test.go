@@ -3,13 +3,13 @@ package storage
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"reflect"
 	"testing"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/manifest"
-	"github.com/distribution/distribution/v3/manifest/manifestlist"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/manifest/schema1" //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	"github.com/distribution/distribution/v3/reference"
@@ -464,20 +464,12 @@ func testOCIManifestStorage(t *testing.T, testname string, includeMediaTypes boo
 		t.Fatalf("%s: unexpected error getting manifest descriptor", testname)
 	}
 	descriptor.MediaType = v1.MediaTypeImageManifest
-
-	platformSpec := manifestlist.PlatformSpec{
+	descriptor.Platform = &v1.Platform{
 		Architecture: "atari2600",
 		OS:           "CP/M",
 	}
 
-	manifestDescriptors := []manifestlist.ManifestDescriptor{
-		{
-			Descriptor: descriptor,
-			Platform:   platformSpec,
-		},
-	}
-
-	imageIndex, err := manifestlist.FromDescriptorsWithMediaType(manifestDescriptors, indexMediaType)
+	imageIndex, err := ociIndexFromDesriptorsWithMediaType([]distribution.Descriptor{descriptor}, indexMediaType)
 	if err != nil {
 		t.Fatalf("%s: unexpected error creating image index: %v", testname, err)
 	}
@@ -523,7 +515,7 @@ func testOCIManifestStorage(t *testing.T, testname string, includeMediaTypes boo
 		t.Fatalf("%s: unexpected error fetching image index: %v", testname, err)
 	}
 
-	fetchedIndex, ok := fromStore.(*manifestlist.DeserializedManifestList)
+	fetchedIndex, ok := fromStore.(*ocischema.DeserializedImageIndex)
 	if !ok {
 		t.Fatalf("%s: unexpected type for fetched manifest", testname)
 	}
@@ -573,4 +565,24 @@ func TestLinkPathFuncs(t *testing.T) {
 			t.Fatalf("incorrect path returned: %q != %q", p, testcase.expected)
 		}
 	}
+}
+
+func ociIndexFromDesriptorsWithMediaType(descriptors []distribution.Descriptor, mediaType string) (*ocischema.DeserializedImageIndex, error) {
+	manifest, err := ocischema.FromDescriptors(descriptors, nil)
+	if err != nil {
+		return nil, err
+	}
+	manifest.ImageIndex.MediaType = mediaType
+
+	rawManifest, err := json.Marshal(manifest.ImageIndex)
+	if err != nil {
+		return nil, err
+	}
+
+	var d ocischema.DeserializedImageIndex
+	if err := d.UnmarshalJSON(rawManifest); err != nil {
+		return nil, err
+	}
+
+	return &d, nil
 }
