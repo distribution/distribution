@@ -1,0 +1,43 @@
+// Copyright 2020 New Relic Corporation. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
+syntax = "proto3";
+
+package com.newrelic.trace.v1;
+
+option go_package = "github.com/newrelic/go-agent/v3/internal/com_newrelic_trace_v1";
+
+service IngestService {
+  // Accepts a stream of Span messages, and returns an irregular stream of
+  // RecordStatus messages.
+  rpc RecordSpan(stream Span) returns (stream RecordStatus) {}
+
+  // Accepts a stream of SpanBatch messages, and returns an irregular
+  // stream of RecordStatus messages. This endpoint can be used to improve
+  // throughput when Span messages are small
+  rpc RecordSpanBatch(stream SpanBatch) returns (stream RecordStatus) {}
+}
+
+message SpanBatch {
+  repeated Span spans = 1;
+}
+
+message Span {
+  string trace_id = 1;
+  map<string, AttributeValue> intrinsics = 2;
+  map<string, AttributeValue> user_attributes = 3;
+  map<string, AttributeValue> agent_attributes = 4;
+}
+
+message AttributeValue {
+  oneof value {
+    string string_value = 1;
+    bool bool_value = 2;
+    int64 int_value = 3;
+    double double_value = 4;
+  }
+}
+
+message RecordStatus {
+  uint64 messages_seen = 1;
+}

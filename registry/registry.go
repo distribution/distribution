@@ -20,7 +20,6 @@ import (
 	gorhandlers "github.com/gorilla/handlers"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/yvasiyarov/gorelic"
 	"golang.org/x/crypto/acme"
 	"golang.org/x/crypto/acme/autocert"
 
@@ -351,19 +350,6 @@ func configureReporting(app *handlers.App) http.Handler {
 
 	if app.Config.Reporting.Bugsnag.APIKey != "" {
 		handler = bugsnag.Handler(handler)
-	}
-
-	if app.Config.Reporting.NewRelic.LicenseKey != "" {
-		agent := gorelic.NewAgent()
-		agent.NewrelicLicense = app.Config.Reporting.NewRelic.LicenseKey
-		if app.Config.Reporting.NewRelic.Name != "" {
-			agent.NewrelicName = app.Config.Reporting.NewRelic.Name
-		}
-		agent.CollectHTTPStat = true
-		agent.Verbose = app.Config.Reporting.NewRelic.Verbose
-		agent.Run()
-
-		handler = agent.WrapHTTPHandler(handler)
 	}
 
 	return handler

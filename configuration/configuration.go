@@ -652,8 +652,6 @@ type NewRelicReporting struct {
 	LicenseKey string `yaml:"licensekey,omitempty"`
 	// Name is the component name of the registry in NewRelic
 	Name string `yaml:"name,omitempty"`
-	// Verbose configures debug output to STDOUT
-	Verbose bool `yaml:"verbose,omitempty"`
 }
 
 // Middleware configures named middlewares to be applied at injection points.

@@ -200,7 +200,6 @@ reporting:
   newrelic:
     licensekey: newreliclicensekey
     name: newrelicname
-    verbose: true
 http:
   addr: localhost:5000
   prefix: /my/nested/registry/
@@ -714,7 +713,6 @@ reporting:
   newrelic:
     licensekey: newreliclicensekey
     name: newrelicname
-    verbose: true
 ```
 
 The `reporting` option is **optional** and configures error and metrics
@@ -739,7 +737,6 @@ A valid configuration may contain both.
 |-----------|----------|-------------------------------------------------------|
 | `licensekey` | yes   | License key provided by New Relic.                    |
 | `name`    | no       | New Relic application name.                           |
-|  `verbose`| no       | Set to `true` to enable New Relic debugging output on `stdout`. |
 
 ## `http`
 

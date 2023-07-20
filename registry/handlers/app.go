@@ -43,6 +43,9 @@ import (
 	"github.com/docker/libtrust"
 	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/mux"
+	"github.com/newrelic/go-agent/v3/integrations/nrgorilla"
+	"github.com/newrelic/go-agent/v3/integrations/nrlogrus"
+	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/sirupsen/logrus"
 )
 
@@ -100,6 +103,22 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		Context: ctx,
 		router:  v2.RouterWithPrefix(config.HTTP.Prefix),
 		isCache: config.Proxy.RemoteURL != "",
+	}
+
+	if app.Config.Reporting.NewRelic.LicenseKey != "" {
+		dcontext.GetLogger(app).Debug("Setting up New Relic reporting")
+		newrelicApp, err := newrelic.NewApplication(
+			newrelic.ConfigAppName(app.Config.Reporting.NewRelic.Name),
+			newrelic.ConfigLicense(app.Config.Reporting.NewRelic.LicenseKey),
+			nrlogrus.ConfigStandardLogger(),
+		)
+		if err != nil {
+			dcontext.GetLogger(app).Error("Error setting up New Relic reporting")
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		app.router.Use(nrgorilla.Middleware(newrelicApp))
+		dcontext.GetLogger(app).Info("New Relic reporting enabled")
 	}
 
 	// Register the handler dispatchers.
