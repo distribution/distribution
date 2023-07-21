@@ -509,7 +509,7 @@ Uploads are started with a POST request which returns a url that can be used
 to push data and check upload status.
 
 The `Location` header will be used to communicate the upload location after
-each request. While it won't change in the this specification, clients should
+each request. While it won't change in this specification, clients should
 use the most recent value returned by the API.
 
 ##### Starting An Upload
