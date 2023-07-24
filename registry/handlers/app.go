@@ -28,6 +28,7 @@ import (
 	"github.com/distribution/distribution/v3/registry/api/errcode"
 	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	"github.com/distribution/distribution/v3/registry/auth"
+	httpmiddleware "github.com/distribution/distribution/v3/registry/middleware/http"
 	registrymiddleware "github.com/distribution/distribution/v3/registry/middleware/registry"
 	repositorymiddleware "github.com/distribution/distribution/v3/registry/middleware/repository"
 	"github.com/distribution/distribution/v3/registry/proxy"
@@ -43,9 +44,6 @@ import (
 	"github.com/docker/libtrust"
 	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/mux"
-	"github.com/newrelic/go-agent/v3/integrations/nrgorilla"
-	"github.com/newrelic/go-agent/v3/integrations/nrlogrus"
-	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/sirupsen/logrus"
 )
 
@@ -105,20 +103,11 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		isCache: config.Proxy.RemoteURL != "",
 	}
 
-	if app.Config.Reporting.NewRelic.LicenseKey != "" {
-		dcontext.GetLogger(app).Debug("Setting up New Relic reporting")
-		newrelicApp, err := newrelic.NewApplication(
-			newrelic.ConfigAppName(app.Config.Reporting.NewRelic.Name),
-			newrelic.ConfigLicense(app.Config.Reporting.NewRelic.LicenseKey),
-			nrlogrus.ConfigStandardLogger(),
-		)
-		if err != nil {
-			dcontext.GetLogger(app).Error("Error setting up New Relic reporting")
-			fmt.Println(err)
-			os.Exit(1)
-		}
-		app.router.Use(nrgorilla.Middleware(newrelicApp))
-		dcontext.GetLogger(app).Info("New Relic reporting enabled")
+	httpMiddlewares := config.Middleware["http"]
+	httpMiddlewares = append(getMonitoringMiddlewares(*config), httpMiddlewares...)
+	_, err := applyHttpMiddleware(*app.router, httpMiddlewares)
+	if err != nil {
+		panic(err)
 	}
 
 	// Register the handler dispatchers.
@@ -139,7 +128,6 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	}
 	storageParams["useragent"] = fmt.Sprintf("distribution/%s %s", version.Version, runtime.Version())
 
-	var err error
 	app.driver, err = factory.Create(config.Storage.Type(), storageParams)
 	if err != nil {
 		// TODO(stevvooe): Move the creation of a service into a protected
@@ -999,6 +987,7 @@ func appendCatalogAccessRecord(accessRecords []auth.Access, r *http.Request) []a
 
 // applyRegistryMiddleware wraps a registry instance with the configured middlewares
 func applyRegistryMiddleware(ctx context.Context, registry distribution.Namespace, driver storagedriver.StorageDriver, middlewares []configuration.Middleware) (distribution.Namespace, error) {
+	dcontext.GetLogger(ctx).Debug(middlewares)
 	for _, mw := range middlewares {
 		rmw, err := registrymiddleware.Get(ctx, mw.Name, mw.Options, registry, driver)
 		if err != nil {
@@ -1031,6 +1020,32 @@ func applyStorageMiddleware(driver storagedriver.StorageDriver, middlewares []co
 		driver = smw
 	}
 	return driver, nil
+}
+
+func getMonitoringMiddlewares(config configuration.Configuration) []configuration.Middleware {
+	var reportingMiddlewares []configuration.Middleware
+	if config.Reporting.NewRelic.LicenseKey != "" {
+		newRelicMiddlewareConfig := &configuration.Middleware{
+			Name: "newrelic",
+			Options: configuration.Parameters{
+				"name":       config.Reporting.NewRelic.Name,
+				"licenseKey": config.Reporting.NewRelic.LicenseKey,
+			},
+		}
+		reportingMiddlewares = append(reportingMiddlewares, *newRelicMiddlewareConfig)
+	}
+	return reportingMiddlewares
+}
+
+func applyHttpMiddleware(router mux.Router, middlewares []configuration.Middleware) (mux.Router, error) {
+	for _, mw := range middlewares {
+		hmw, err := httpmiddleware.Get(mw.Name, mw.Options)
+		if err != nil {
+			return router, fmt.Errorf("unable to configure http middleware (%s): %v", mw.Name, err)
+		}
+		router.Use(hmw)
+	}
+	return router, nil
 }
 
 // uploadPurgeDefaultConfig provides a default configuration for upload
