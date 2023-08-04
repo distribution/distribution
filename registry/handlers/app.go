@@ -546,8 +546,16 @@ func (app *App) configureRedis(configuration *configuration.Configuration) {
 			}
 
 			// authorize the connection
+			authArgs := make([]interface{}, 0, 2)
+			if configuration.Redis.Username != "" {
+				authArgs = append(authArgs, configuration.Redis.Username)
+			}
 			if configuration.Redis.Password != "" {
-				if _, err = conn.Do("AUTH", configuration.Redis.Password); err != nil {
+				authArgs = append(authArgs, configuration.Redis.Password)
+			}
+
+			if len(authArgs) > 0 {
+				if _, err = conn.Do("AUTH", authArgs...); err != nil {
 					defer conn.Close()
 					done(err)
 					return nil, err
