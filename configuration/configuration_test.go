@@ -131,6 +131,40 @@ var configStruct = Configuration{
 			Disabled: false,
 		},
 	},
+	Redis: struct {
+		Addr     string `yaml:"addr,omitempty"`
+		Username string `yaml:"username,omitempty"`
+		Password string `yaml:"password,omitempty"`
+		DB       int    `yaml:"db,omitempty"`
+		TLS      struct {
+			Enabled bool `yaml:"enabled,omitempty"`
+		} `yaml:"tls,omitempty"`
+		DialTimeout  time.Duration `yaml:"dialtimeout,omitempty"`
+		ReadTimeout  time.Duration `yaml:"readtimeout,omitempty"`
+		WriteTimeout time.Duration `yaml:"writetimeout,omitempty"`
+		Pool         struct {
+			MaxIdle     int           `yaml:"maxidle,omitempty"`
+			MaxActive   int           `yaml:"maxactive,omitempty"`
+			IdleTimeout time.Duration `yaml:"idletimeout,omitempty"`
+		} `yaml:"pool,omitempty"`
+	}{
+		Addr:     "localhost:6379",
+		Username: "alice",
+		Password: "123456",
+		DB:       1,
+		Pool: struct {
+			MaxIdle     int           `yaml:"maxidle,omitempty"`
+			MaxActive   int           `yaml:"maxactive,omitempty"`
+			IdleTimeout time.Duration `yaml:"idletimeout,omitempty"`
+		}{
+			MaxIdle:     16,
+			MaxActive:   64,
+			IdleTimeout: time.Second * 300,
+		},
+		DialTimeout:  time.Millisecond * 10,
+		ReadTimeout:  time.Millisecond * 10,
+		WriteTimeout: time.Millisecond * 10,
+	},
 }
 
 // configYamlV0_1 is a Version 0.1 yaml document representing configStruct
@@ -175,6 +209,18 @@ http:
     - /path/to/ca.pem
   headers:
     X-Content-Type-Options: [nosniff]
+redis:
+  addr: localhost:6379
+  username: alice
+  password: 123456
+  db: 1
+  pool:
+    maxidle: 16
+    maxactive: 64
+    idletimeout: 300s
+  dialtimeout: 10ms
+  readtimeout: 10ms
+  writetimeout: 10ms
 `
 
 // inmemoryConfigYamlV0_1 is a Version 0.1 yaml document specifying an inmemory
@@ -242,6 +288,23 @@ func (suite *ConfigSuite) TestParseInmemory(c *check.C) {
 	suite.expectedConfig.Storage = Storage{"inmemory": Parameters{}}
 	suite.expectedConfig.Reporting = Reporting{}
 	suite.expectedConfig.Log.Fields = nil
+	suite.expectedConfig.Redis = struct {
+		Addr     string `yaml:"addr,omitempty"`
+		Username string `yaml:"username,omitempty"`
+		Password string `yaml:"password,omitempty"`
+		DB       int    `yaml:"db,omitempty"`
+		TLS      struct {
+			Enabled bool `yaml:"enabled,omitempty"`
+		} `yaml:"tls,omitempty"`
+		DialTimeout  time.Duration `yaml:"dialtimeout,omitempty"`
+		ReadTimeout  time.Duration `yaml:"readtimeout,omitempty"`
+		WriteTimeout time.Duration `yaml:"writetimeout,omitempty"`
+		Pool         struct {
+			MaxIdle     int           `yaml:"maxidle,omitempty"`
+			MaxActive   int           `yaml:"maxactive,omitempty"`
+			IdleTimeout time.Duration `yaml:"idletimeout,omitempty"`
+		} `yaml:"pool,omitempty"`
+	}{}
 
 	config, err := Parse(bytes.NewReader([]byte(inmemoryConfigYamlV0_1)))
 	c.Assert(err, check.IsNil)
@@ -262,6 +325,23 @@ func (suite *ConfigSuite) TestParseIncomplete(c *check.C) {
 	suite.expectedConfig.Reporting = Reporting{}
 	suite.expectedConfig.Notifications = Notifications{}
 	suite.expectedConfig.HTTP.Headers = nil
+	suite.expectedConfig.Redis = struct {
+		Addr     string `yaml:"addr,omitempty"`
+		Username string `yaml:"username,omitempty"`
+		Password string `yaml:"password,omitempty"`
+		DB       int    `yaml:"db,omitempty"`
+		TLS      struct {
+			Enabled bool `yaml:"enabled,omitempty"`
+		} `yaml:"tls,omitempty"`
+		DialTimeout  time.Duration `yaml:"dialtimeout,omitempty"`
+		ReadTimeout  time.Duration `yaml:"readtimeout,omitempty"`
+		WriteTimeout time.Duration `yaml:"writetimeout,omitempty"`
+		Pool         struct {
+			MaxIdle     int           `yaml:"maxidle,omitempty"`
+			MaxActive   int           `yaml:"maxactive,omitempty"`
+			IdleTimeout time.Duration `yaml:"idletimeout,omitempty"`
+		} `yaml:"pool,omitempty"`
+	}{}
 
 	// Note: this also tests that REGISTRY_STORAGE and
 	// REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY can be used together
@@ -554,6 +634,8 @@ func copyConfig(config Configuration) *Configuration {
 	for k, v := range config.HTTP.Headers {
 		configCopy.HTTP.Headers[k] = v
 	}
+
+	configCopy.Redis = config.Redis
 
 	return configCopy
 }

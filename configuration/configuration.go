@@ -174,6 +174,9 @@ type Configuration struct {
 		// Addr specifies the the redis instance available to the application.
 		Addr string `yaml:"addr,omitempty"`
 
+		// Usernames can be used as a finer-grained permission control since the introduction of the redis 6.0.
+		Username string `yaml:"username,omitempty"`
+
 		// Password string to use when making a connection.
 		Password string `yaml:"password,omitempty"`
 
