@@ -118,7 +118,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	if storageParams == nil {
 		storageParams = make(configuration.Parameters)
 	}
-	storageParams["useragent"] = fmt.Sprintf("docker-distribution/%s %s", version.Version, runtime.Version())
+	storageParams["useragent"] = fmt.Sprintf("distribution/%s %s", version.Version, runtime.Version())
 
 	var err error
 	app.driver, err = factory.Create(config.Storage.Type(), storageParams)
