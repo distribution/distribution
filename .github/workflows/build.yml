@@ -16,6 +16,9 @@ on:
 env:
   DOCKERHUB_SLUG: distribution/distribution
 
+permissions:
+  contents: read # to fetch code (actions/checkout)
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -45,6 +48,9 @@ jobs:
           directory: ./
 
   build:
+    permissions:
+      contents: write # to create GitHub release (softprops/action-gh-release)
+
     runs-on: ubuntu-latest
     needs:
       - test
