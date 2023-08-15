@@ -16,9 +16,9 @@ This storage driver package comes bundled with several drivers:
 - [filesystem](filesystem.md): A local storage driver configured to use a directory tree in the local filesystem.
 - [s3](s3.md): A driver storing objects in an Amazon Simple Storage Service (S3) bucket.
 - [azure](azure.md): A driver storing objects in [Microsoft Azure Blob Storage](https://azure.microsoft.com/en-us/services/storage/).
-- [swift](swift.md): A driver storing objects in [Openstack Swift](https://docs.openstack.org/swift/latest/).
-- [oss](oss.md): A driver storing objects in [Aliyun OSS](https://www.aliyun.com/product/oss).
 - [gcs](gcs.md): A driver storing objects in a [Google Cloud Storage](https://cloud.google.com/storage/) bucket.
+- [oss](oss.md): A driver storing objects in [Aliyun OSS](https://www.aliyun.com/product/oss).
+- swift: *NO LONGER SUPPORTED*
 
 ## Storage driver API
 

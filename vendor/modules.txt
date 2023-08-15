@@ -268,10 +268,6 @@ github.com/matttproud/golang_protobuf_extensions/pbutil
 github.com/mitchellh/mapstructure
 # github.com/mitchellh/osext v0.0.0-20151018003038-5e2d6d41470f
 ## explicit
-# github.com/ncw/swift v1.0.47
-## explicit
-github.com/ncw/swift
-github.com/ncw/swift/swifttest
 # github.com/opencontainers/go-digest v1.0.0
 ## explicit; go 1.13
 github.com/opencontainers/go-digest

@@ -22,7 +22,6 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4
 	github.com/klauspost/compress v1.16.5
 	github.com/mitchellh/mapstructure v1.1.2
-	github.com/ncw/swift v1.0.47
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/opencontainers/image-spec v1.0.2
 	github.com/prometheus/client_golang v1.12.1 // indirect; updated to latest
