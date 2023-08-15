@@ -22,6 +22,7 @@ const (
 )
 
 var azureDriverConstructor func() (storagedriver.StorageDriver, error)
+var skipCheck func() string
 
 // Hook up gocheck into the "go test" runner.
 func Test(t *testing.T) { check.TestingT(t) }
@@ -40,7 +41,7 @@ func init() {
 		value     *string
 		missingOk bool
 	}{
-		{envAccountName, &accountName, true},
+		{envAccountName, &accountName, false},
 		{envAccountKey, &accountKey, true},
 		{envContainer, &container, true},
 		{envRealm, &realm, true},
@@ -71,7 +72,7 @@ func init() {
 	}
 
 	// Skip Azure storage driver tests if environment variable parameters are not provided
-	skipCheck := func() string {
+	skipCheck = func() string {
 		if len(missing) > 0 {
 			return fmt.Sprintf("Must set %s environment variables to run Azure tests", strings.Join(missing, ", "))
 		}
@@ -92,6 +93,10 @@ func randStringRunes(n int) string {
 }
 
 func TestCommitAfterMove(t *testing.T) {
+	if skipCheck() != "" {
+		t.Skip(skipCheck())
+	}
+
 	driver, err := azureDriverConstructor()
 	if err != nil {
 		t.Fatalf("unexpected error creating azure driver: %v", err)
@@ -152,7 +157,7 @@ func TestParamParsing(t *testing.T) {
 		}
 	}
 	input := []map[string]interface{}{
-		{"accountname": "acc1", "accountkey": "k1", "container": "c1"},
+		{"accountname": "acc1", "accountkey": "k1", "container": "c1", "copy_status_poll_max_retry": 1, "copy_status_poll_delay": "10ms"},
 		{"accountname": "acc1", "container": "c1", "credentials": map[string]interface{}{"type": "default"}},
 		{"accountname": "acc1", "container": "c1", "credentials": map[string]interface{}{"type": "client_secret", "clientid": "c1", "tenantid": "t1", "secret": "s1"}},
 	}
@@ -160,15 +165,18 @@ func TestParamParsing(t *testing.T) {
 		{
 			Container: "c1", AccountName: "acc1", AccountKey: "k1",
 			Realm: "core.windows.net", ServiceURL: "https://acc1.blob.core.windows.net",
+			CopyStatusPollMaxRetry: 1, CopyStatusPollDelay: "10ms",
 		},
 		{
 			Container: "c1", AccountName: "acc1", Credentials: Credentials{Type: "default"},
 			Realm: "core.windows.net", ServiceURL: "https://acc1.blob.core.windows.net",
+			CopyStatusPollMaxRetry: 5, CopyStatusPollDelay: "100ms",
 		},
 		{
 			Container: "c1", AccountName: "acc1",
 			Credentials: Credentials{Type: "client_secret", ClientID: "c1", TenantID: "t1", Secret: "s1"},
 			Realm:       "core.windows.net", ServiceURL: "https://acc1.blob.core.windows.net",
+			CopyStatusPollMaxRetry: 5, CopyStatusPollDelay: "100ms",
 		},
 	}
 	for i, expected := range expecteds {
