@@ -23,7 +23,6 @@ import (
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/manifest"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
-	"github.com/distribution/distribution/v3/manifest/schema1" //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	"github.com/distribution/distribution/v3/manifest/schema2"
 	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
@@ -2535,27 +2534,45 @@ func TestRegistryAsCacheMutationAPIs(t *testing.T) {
 	}
 
 	// Manifest upload
-	m := &schema1.Manifest{ //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+	m := &schema2.Manifest{
 		Versioned: manifest.Versioned{
-			SchemaVersion: 1,
+			SchemaVersion: 2,
+			MediaType:     schema2.MediaTypeManifest,
 		},
-		Name:     imageName.Name(),
-		Tag:      tag,
-		FSLayers: []schema1.FSLayer{}, //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-		History:  []schema1.History{}, //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+		Config: distribution.Descriptor{
+			Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
+			Size:      3253,
+			MediaType: schema2.MediaTypeImageConfig,
+		},
+		Layers: []distribution.Descriptor{
+			{
+				Digest:    "sha256:463434349086340864309863409683460843608348608934092322395278926a",
+				Size:      6323,
+				MediaType: schema2.MediaTypeLayer,
+			},
+			{
+				Digest:    "sha256:630923423623623423352523525237238023652897356239852383652aaaaaaa",
+				Size:      6863,
+				MediaType: schema2.MediaTypeLayer,
+			},
+		},
 	}
 
-	sm, err := schema1.Sign(m, env.pk) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-	if err != nil {
-		t.Fatalf("error signing manifest: %v", err)
+	resp := putManifest(t, "putting missing config manifest", manifestURL, schema2.MediaTypeManifest, m)
+	checkResponse(t, "putting missing config manifest", resp, http.StatusBadRequest)
+	_, p, counts := checkBodyHasErrorCodes(t, "putting missing config manifest", resp, v2.ErrorCodeManifestBlobUnknown)
+
+	expectedCounts := map[errcode.ErrorCode]int{
+		v2.ErrorCodeManifestBlobUnknown: 3,
 	}
 
-	resp := putManifest(t, "putting unsigned manifest", manifestURL, "", sm)
-	checkResponse(t, "putting signed manifest to cache", resp, errcode.ErrorCodeUnsupported.Descriptor().HTTPStatusCode)
+	if !reflect.DeepEqual(counts, expectedCounts) {
+		t.Fatalf("unexpected number of error codes encountered: %v\n!=\n%v\n---\n%s", counts, expectedCounts, string(p))
+	}
 
 	// Manifest Delete
 	resp, _ = httpDelete(manifestURL)
-	checkResponse(t, "deleting signed manifest from cache", resp, errcode.ErrorCodeUnsupported.Descriptor().HTTPStatusCode)
+	checkResponse(t, "deleting config manifest from cache", resp, errcode.ErrorCodeUnsupported.Descriptor().HTTPStatusCode)
 
 	// Blob upload initialization
 	layerUploadURL, err := env.builder.BuildBlobUploadURL(imageName)
