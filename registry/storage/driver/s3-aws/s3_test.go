@@ -142,6 +142,8 @@ func init() {
 			sessionToken,
 			useDualStackBool,
 			accelerateBool,
+			false,
+			map[string]string{},
 		}
 
 		return New(parameters)

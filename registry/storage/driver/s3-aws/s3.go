@@ -29,6 +29,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/request"
@@ -117,6 +118,8 @@ type DriverParameters struct {
 	SessionToken                string
 	UseDualStack                bool
 	Accelerate                  bool
+	LogS3APIRequests            bool
+	LogS3APIResponseHeaders     map[string]string
 }
 
 func init() {
@@ -164,6 +167,8 @@ type driver struct {
 	RootDirectory               string
 	StorageClass                string
 	ObjectACL                   string
+	LogS3APIRequests            bool
+	LogS3APIResponseHeaders     map[string]string
 }
 
 type baseEmbed struct {
@@ -368,6 +373,34 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		userAgent = ""
 	}
 
+	logS3APIRequestsBool := false
+	logS3APIRequests := parameters["logs3apirequests"]
+	switch logS3APIRequests := logS3APIRequests.(type) {
+	case string:
+		b, err := strconv.ParseBool(logS3APIRequests)
+		if err != nil {
+			return nil, fmt.Errorf("the logS3APIRequests parameter should be a boolean")
+		}
+		logS3APIRequestsBool = b
+	case bool:
+		logS3APIRequestsBool = logS3APIRequests
+	case nil:
+		// do nothing
+	default:
+		return nil, fmt.Errorf("the logS3APIRequests parameter should be a boolean")
+	}
+
+	logS3APIResponseHeadersMap := map[string]string{}
+	logS3APIResponseHeaders := parameters["logs3apiresponseheaders"]
+	switch logS3APIResponseHeaders := logS3APIResponseHeaders.(type) {
+	case map[string]string:
+		logS3APIResponseHeadersMap = logS3APIResponseHeaders
+	case nil:
+		// do nothing
+	default:
+		return nil, fmt.Errorf("the logS3APIResponseHeaders parameter should be a map[string]string")
+	}
+
 	objectACL := s3.ObjectCannedACLPrivate
 	objectACLParam := parameters["objectacl"]
 	if objectACLParam != nil {
@@ -459,6 +492,8 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(sessionToken),
 		useDualStackBool,
 		accelerateBool,
+		logS3APIRequestsBool,
+		logS3APIResponseHeadersMap,
 	}
 
 	return New(params)
@@ -578,6 +613,8 @@ func New(params DriverParameters) (*Driver, error) {
 		RootDirectory:               params.RootDirectory,
 		StorageClass:                params.StorageClass,
 		ObjectACL:                   params.ObjectACL,
+		LogS3APIRequests:            params.LogS3APIRequests,
+		LogS3APIResponseHeaders:     params.LogS3APIResponseHeaders,
 	}
 
 	return &Driver{
@@ -587,6 +624,60 @@ func New(params DriverParameters) (*Driver, error) {
 			},
 		},
 	}, nil
+}
+
+// logS3OperationHandlerName is used to identify the handler used to log S3 API
+// requests
+const logS3OperationHandlerName = "docker.storage-driver.s3.operation-logger"
+
+// logS3Operation logs each S3 operation, including request and response info,
+// as it completes
+func (d *driver) logS3Operation(ctx context.Context) request.NamedHandler {
+	return request.NamedHandler{
+		Name: logS3OperationHandlerName,
+		Fn: func(r *request.Request) {
+			req := r.HTTPRequest
+			resp := r.HTTPResponse
+			op := r.Operation
+			fields := map[interface{}]interface{}{
+				"s3_operation_name":                        op.Name,
+				"s3_http_request_method":                   req.Method,
+				"s3_http_request_host":                     req.Host,
+				"s3_http_request_path":                     req.URL.Path,
+				"s3_http_request_content-length":           req.ContentLength,
+				"s3_http_request_remote-addr":              req.RemoteAddr,
+				"s3_http_response_header_x-amz-request-id": resp.Header.Values("x-amz-request-id"),
+				"s3_http_response_status":                  resp.StatusCode,
+				"s3_http_response_content-length":          resp.ContentLength,
+			}
+
+			for logKey, headerKey := range d.LogS3APIResponseHeaders {
+				values := resp.Header.Values(headerKey)
+				if len(values) == 1 {
+					fields[logKey] = values[0]
+					continue
+				}
+				if len(values) > 0 {
+					fields[logKey] = values
+				}
+			}
+
+			ll := dcontext.GetLoggerWithFields(ctx, fields)
+			ll.Info("S3 operation completed")
+		},
+	}
+}
+
+func (d *driver) s3Client(ctx context.Context) *s3.S3 {
+	s := d.S3
+
+	if d.LogS3APIRequests {
+		s = &s3.S3{Client: client.New(d.S3.Client.Config, d.S3.Client.ClientInfo, d.S3.Client.Handlers.Copy())}
+		r := d.logS3Operation(ctx)
+		s.Client.Handlers.Complete.PushBackNamed(r)
+	}
+
+	return s
 }
 
 // Implement the storagedriver.StorageDriver interface
@@ -606,7 +697,9 @@ func (d *driver) GetContent(ctx context.Context, path string) ([]byte, error) {
 
 // PutContent stores the []byte content at a location designated by "path".
 func (d *driver) PutContent(ctx context.Context, path string, contents []byte) error {
-	_, err := d.S3.PutObject(&s3.PutObjectInput{
+	s := d.s3Client(ctx)
+
+	_, err := s.PutObject(&s3.PutObjectInput{
 		Bucket:               aws.String(d.Bucket),
 		Key:                  aws.String(d.s3Path(path)),
 		ContentType:          d.getContentType(),
@@ -622,7 +715,9 @@ func (d *driver) PutContent(ctx context.Context, path string, contents []byte) e
 // Reader retrieves an io.ReadCloser for the content stored at "path" with a
 // given byte offset.
 func (d *driver) Reader(ctx context.Context, path string, offset int64) (io.ReadCloser, error) {
-	resp, err := d.S3.GetObject(&s3.GetObjectInput{
+	s := d.s3Client(ctx)
+
+	resp, err := s.GetObject(&s3.GetObjectInput{
 		Bucket: aws.String(d.Bucket),
 		Key:    aws.String(d.s3Path(path)),
 		Range:  aws.String("bytes=" + strconv.FormatInt(offset, 10) + "-"),
@@ -643,7 +738,7 @@ func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (sto
 	key := d.s3Path(path)
 	if !appendParam {
 		// TODO (brianbland): cancel other uploads at this path
-		resp, err := d.S3.CreateMultipartUpload(&s3.CreateMultipartUploadInput{
+		resp, err := s.CreateMultipartUpload(&s3.CreateMultipartUploadInput{
 			Bucket:               aws.String(d.Bucket),
 			Key:                  aws.String(key),
 			ContentType:          d.getContentType(),
@@ -752,6 +847,8 @@ func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo,
 
 // List returns a list of the objects that are direct descendants of the given path.
 func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
+	s := d.s3Client(ctx)
+
 	path := opath
 	if path != "/" && path[len(path)-1] != '/' {
 		path = path + "/"
@@ -838,8 +935,10 @@ func (d *driver) copy(ctx context.Context, sourcePath string, destPath string) e
 		return parseError(sourcePath, err)
 	}
 
+	s := d.s3Client(ctx)
+
 	if fileInfo.Size() <= d.MultipartCopyThresholdSize {
-		_, err := d.S3.CopyObject(&s3.CopyObjectInput{
+		_, err := s.CopyObject(&s3.CopyObjectInput{
 			Bucket:               aws.String(d.Bucket),
 			Key:                  aws.String(d.s3Path(destPath)),
 			ContentType:          d.getContentType(),
@@ -855,7 +954,7 @@ func (d *driver) copy(ctx context.Context, sourcePath string, destPath string) e
 		return nil
 	}
 
-	createResp, err := d.S3.CreateMultipartUpload(&s3.CreateMultipartUploadInput{
+	createResp, err := s.CreateMultipartUpload(&s3.CreateMultipartUploadInput{
 		Bucket:               aws.String(d.Bucket),
 		Key:                  aws.String(d.s3Path(destPath)),
 		ContentType:          d.getContentType(),
@@ -882,7 +981,7 @@ func (d *driver) copy(ctx context.Context, sourcePath string, destPath string) e
 			if lastByte >= fileInfo.Size() {
 				lastByte = fileInfo.Size() - 1
 			}
-			uploadResp, err := d.S3.UploadPartCopy(&s3.UploadPartCopyInput{
+			uploadResp, err := s.UploadPartCopy(&s3.UploadPartCopyInput{
 				Bucket:          aws.String(d.Bucket),
 				CopySource:      aws.String(d.Bucket + "/" + d.s3Path(sourcePath)),
 				Key:             aws.String(d.s3Path(destPath)),
@@ -908,7 +1007,7 @@ func (d *driver) copy(ctx context.Context, sourcePath string, destPath string) e
 		}
 	}
 
-	_, err = d.S3.CompleteMultipartUpload(&s3.CompleteMultipartUploadInput{
+	_, err = s.CompleteMultipartUpload(&s3.CompleteMultipartUploadInput{
 		Bucket:          aws.String(d.Bucket),
 		Key:             aws.String(d.s3Path(destPath)),
 		UploadId:        createResp.UploadId,
@@ -1077,6 +1176,8 @@ func (d *driver) doWalk(parentCtx context.Context, objectCount *int64, path, pre
 		Prefix:  aws.String(path),
 		MaxKeys: aws.Int64(listMax),
 	}
+
+	s := d.s3Client(parentCtx)
 
 	ctx, done := dcontext.WithTrace(parentCtx)
 	defer done("s3aws.ListObjectsV2Pages(%s)", path)
