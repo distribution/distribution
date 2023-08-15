@@ -18,7 +18,9 @@ func TestVerifyManifestForeignLayer(t *testing.T) {
 	inmemoryDriver := inmemory.New()
 	registry := createRegistry(t, inmemoryDriver,
 		ManifestURLsAllowRegexp(regexp.MustCompile("^https?://foo")),
-		ManifestURLsDenyRegexp(regexp.MustCompile("^https?://foo/nope")))
+		ManifestURLsDenyRegexp(regexp.MustCompile("^https?://foo/nope")),
+		EnableValidateImageIndexImagesExist,
+	)
 	repo := makeRepository(t, registry, "test")
 	manifestService := makeManifestService(t, repo)
 
@@ -156,7 +158,9 @@ func TestVerifyManifestBlobLayerAndConfig(t *testing.T) {
 	inmemoryDriver := inmemory.New()
 	registry := createRegistry(t, inmemoryDriver,
 		ManifestURLsAllowRegexp(regexp.MustCompile("^https?://foo")),
-		ManifestURLsDenyRegexp(regexp.MustCompile("^https?://foo/nope")))
+		ManifestURLsDenyRegexp(regexp.MustCompile("^https?://foo/nope")),
+		EnableValidateImageIndexImagesExist,
+	)
 
 	repo := makeRepository(t, registry, strings.ToLower(t.Name()))
 	manifestService := makeManifestService(t, repo)

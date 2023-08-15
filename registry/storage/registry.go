@@ -26,14 +26,31 @@ type registry struct {
 	tagLookupConcurrencyLimit    int
 	resumableDigestEnabled       bool
 	blobDescriptorServiceFactory distribution.BlobDescriptorServiceFactory
-	manifestURLs                 manifestURLs
 	driver                       storagedriver.StorageDriver
+
+	// Validation
+	manifestURLs         manifestURLs
+	validateImageIndexes validateImageIndexes
 }
 
 // manifestURLs holds regular expressions for controlling manifest URL whitelisting
 type manifestURLs struct {
 	allow *regexp.Regexp
 	deny  *regexp.Regexp
+}
+
+// validateImageIndexImages holds configuration for validation of image indexes
+type validateImageIndexes struct {
+	// exist can be used to disable checking that platform images exist entirely. Default true.
+	imagesExist bool
+	// platforms can be used to only validate the existence of images for a set of platforms. The empty array means validate all platforms.
+	imagePlatforms []platform
+}
+
+// platform represents a platform to validate exists in the
+type platform struct {
+	architecture string
+	os           string
 }
 
 // RegistryOption is the type used for functional options for NewRegistry.
@@ -79,6 +96,28 @@ func ManifestURLsAllowRegexp(r *regexp.Regexp) RegistryOption {
 func ManifestURLsDenyRegexp(r *regexp.Regexp) RegistryOption {
 	return func(registry *registry) error {
 		registry.manifestURLs.deny = r
+		return nil
+	}
+}
+
+// EnableValidateImageIndexImagesExist is a functional option for NewRegistry. It enables
+// validation that references exist before an image index is accepted.
+func EnableValidateImageIndexImagesExist(registry *registry) error {
+	registry.validateImageIndexes.imagesExist = true
+	return nil
+}
+
+// AddValidateImageIndexImagesExistPlatform returns a functional option for NewRegistry.
+// It adds a platform to check for existence before an image index is accepted.
+func AddValidateImageIndexImagesExistPlatform(architecture string, os string) RegistryOption {
+	return func(registry *registry) error {
+		registry.validateImageIndexes.imagePlatforms = append(
+			registry.validateImageIndexes.imagePlatforms,
+			platform{
+				architecture: architecture,
+				os:           os,
+			},
+		)
 		return nil
 	}
 }
@@ -240,9 +279,10 @@ func (repo *repository) Manifests(ctx context.Context, options ...distribution.M
 	}
 
 	manifestListHandler := &manifestListHandler{
-		ctx:        ctx,
-		repository: repo,
-		blobStore:  blobStore,
+		ctx:                  ctx,
+		repository:           repo,
+		blobStore:            blobStore,
+		validateImageIndexes: repo.validateImageIndexes,
 	}
 
 	ms := &manifestStore{
