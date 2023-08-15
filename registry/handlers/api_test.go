@@ -1447,13 +1447,13 @@ func TestManifestDelete(t *testing.T) {
 	testManifestDelete(t, env, schema2Args)
 }
 
-// func TestManifestDeleteDisabled(t *testing.T) { // TODO: why is this only running for schema1?
-// 	schema1Repo, _ := reference.WithName("foo/schema1")
-// 	deleteEnabled := false
-// 	env := newTestEnv(t, deleteEnabled)
-// 	defer env.Shutdown()
-// 	testManifestDeleteDisabled(t, env, schema1Repo)
-// }
+func TestManifestDeleteDisabled(t *testing.T) {
+	schema2Repo, _ := reference.WithName("foo/schema2")
+	deleteEnabled := false
+	env := newTestEnv(t, deleteEnabled)
+	defer env.Shutdown()
+	testManifestDeleteDisabled(t, env, schema2Repo)
+}
 
 func testManifestDeleteDisabled(t *testing.T, env *testEnv, imageName reference.Named) {
 	ref, _ := reference.WithDigest(imageName, digestSha256EmptyTar)
