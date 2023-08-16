@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/distribution/distribution/v3/health"
+	"github.com/docker/distribution/health"
 )
 
 // FileChecker checks the existence of a file and returns an error

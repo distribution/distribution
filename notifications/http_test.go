@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/distribution/distribution/v3/manifest/schema2"
+	"github.com/docker/distribution/manifest/schema2"
 	events "github.com/docker/go-events"
 )
 

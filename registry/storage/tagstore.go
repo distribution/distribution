@@ -5,8 +5,8 @@ import (
 	"path"
 	"sort"
 
-	"github.com/distribution/distribution/v3"
-	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
+	"github.com/docker/distribution"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
 	"github.com/opencontainers/go-digest"
 )
 

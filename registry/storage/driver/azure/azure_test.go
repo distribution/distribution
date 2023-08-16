@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
-	"github.com/distribution/distribution/v3/registry/storage/driver/testsuites"
+	storagedriver "github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/registry/storage/driver/testsuites"
 	"gopkg.in/check.v1"
 )
 

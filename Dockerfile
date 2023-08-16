@@ -13,7 +13,7 @@ ENV CGO_ENABLED=0
 WORKDIR /src
 
 FROM base AS version
-ARG PKG=github.com/distribution/distribution/v3
+ARG PKG=github.com/docker/distribution
 RUN --mount=target=. \
   VERSION=$(git describe --match 'v[0-9]*' --dirty='.m' --always --tags) REVISION=$(git rev-parse HEAD)$(if ! git diff --no-ext-diff --quiet --exit-code; then echo .m; fi); \
   echo "-X ${PKG}/version.Version=${VERSION#v} -X ${PKG}/version.Revision=${REVISION} -X ${PKG}/version.Package=${PKG}" | tee /tmp/.ldflags; \

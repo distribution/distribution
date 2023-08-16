@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/distribution/distribution/v3"
+	"github.com/docker/distribution"
 	events "github.com/docker/go-events"
 )
 

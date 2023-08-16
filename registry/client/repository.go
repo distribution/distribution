@@ -14,12 +14,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/reference"
-	v2 "github.com/distribution/distribution/v3/registry/api/v2"
-	"github.com/distribution/distribution/v3/registry/client/transport"
-	"github.com/distribution/distribution/v3/registry/storage/cache"
-	"github.com/distribution/distribution/v3/registry/storage/cache/memory"
+	"github.com/docker/distribution"
+	"github.com/docker/distribution/reference"
+	v2 "github.com/docker/distribution/registry/api/v2"
+	"github.com/docker/distribution/registry/client/transport"
+	"github.com/docker/distribution/registry/storage/cache"
+	"github.com/docker/distribution/registry/storage/cache/memory"
 	"github.com/opencontainers/go-digest"
 )
 

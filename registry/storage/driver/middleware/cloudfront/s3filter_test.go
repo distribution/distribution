@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	dcontext "github.com/distribution/distribution/v3/context"
+	dcontext "github.com/docker/distribution/context"
 )
 
 // Rather than pull in all of testify

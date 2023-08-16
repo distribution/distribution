@@ -5,14 +5,14 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/distribution/distribution/v3"
-	dcontext "github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/manifest/schema2"
-	"github.com/distribution/distribution/v3/reference"
-	"github.com/distribution/distribution/v3/registry/storage"
-	"github.com/distribution/distribution/v3/registry/storage/cache/memory"
-	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
-	"github.com/distribution/distribution/v3/testutil"
+	"github.com/docker/distribution"
+	dcontext "github.com/docker/distribution/context"
+	"github.com/docker/distribution/manifest/schema2"
+	"github.com/docker/distribution/reference"
+	"github.com/docker/distribution/registry/storage"
+	"github.com/docker/distribution/registry/storage/cache/memory"
+	"github.com/docker/distribution/registry/storage/driver/inmemory"
+	"github.com/docker/distribution/testutil"
 	"github.com/opencontainers/go-digest"
 )
 

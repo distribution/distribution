@@ -5,11 +5,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/manifest"
-	"github.com/distribution/distribution/v3/manifest/schema2"
-	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
+	"github.com/docker/distribution"
+	"github.com/docker/distribution/context"
+	"github.com/docker/distribution/manifest"
+	"github.com/docker/distribution/manifest/schema2"
+	"github.com/docker/distribution/registry/storage/driver/inmemory"
 	"github.com/opencontainers/go-digest"
 )
 

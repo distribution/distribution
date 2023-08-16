@@ -53,7 +53,7 @@ The `registry`
 binary can then be run with the following:
 
     $ ./bin/registry --version
-    ./bin/registry github.com/distribution/distribution/v3 v2.7.0-1993-g8857a194
+    ./bin/registry github.com/docker/distribution v2.7.0-1993-g8857a194
 
 The registry can be run with a development config using the following
 incantation:

@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/distribution/distribution/v3"
-	dcontext "github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/manifest/schema1" //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-	"github.com/distribution/distribution/v3/manifest/schema2"
+	"github.com/docker/distribution"
+	dcontext "github.com/docker/distribution/context"
+	"github.com/docker/distribution/manifest/schema1" //nolint:staticcheck // Ignore SA1019: "github.com/docker/distribution/manifest/schema1" is deprecated, as it's used for backward compatibility.
+	"github.com/docker/distribution/manifest/schema2"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -110,7 +110,7 @@ func (ms *schema2ManifestHandler) verifyManifest(ctx context.Context, mnfst sche
 					break
 				}
 			}
-		case schema2.MediaTypeManifest, schema1.MediaTypeManifest: //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+		case schema2.MediaTypeManifest, schema1.MediaTypeManifest: //nolint:staticcheck // Ignore SA1019: "github.com/docker/distribution/manifest/schema1" is deprecated, as it's used for backward compatibility.
 			var exists bool
 			exists, err = manifestService.Exists(ctx, descriptor.Digest)
 			if err != nil || !exists {

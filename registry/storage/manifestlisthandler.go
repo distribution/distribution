@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/distribution/distribution/v3"
-	dcontext "github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/manifest/manifestlist"
-	"github.com/distribution/distribution/v3/manifest/ocischema"
+	"github.com/docker/distribution"
+	dcontext "github.com/docker/distribution/context"
+	"github.com/docker/distribution/manifest/manifestlist"
+	"github.com/docker/distribution/manifest/ocischema"
 	"github.com/opencontainers/go-digest"
 )
 

@@ -7,12 +7,12 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/reference"
-	"github.com/distribution/distribution/v3/registry/storage/cache/memory"
-	"github.com/distribution/distribution/v3/registry/storage/driver"
-	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
-	"github.com/distribution/distribution/v3/testutil"
+	"github.com/docker/distribution"
+	"github.com/docker/distribution/reference"
+	"github.com/docker/distribution/registry/storage/cache/memory"
+	"github.com/docker/distribution/registry/storage/driver"
+	"github.com/docker/distribution/registry/storage/driver/inmemory"
+	"github.com/docker/distribution/testutil"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -93,7 +93,7 @@ func makeRepo(ctx context.Context, t *testing.T, name string, reg distribution.N
 		return
 	}
 
-	manifest, err := testutil.MakeSchema1Manifest(getKeys(layers)) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+	manifest, err := testutil.MakeSchema1Manifest(getKeys(layers)) //nolint:staticcheck // Ignore SA1019: "github.com/docker/distribution/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	if err != nil {
 		t.Fatal(err)
 	}

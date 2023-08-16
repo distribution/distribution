@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/distribution/distribution/v3/registry/storage/driver"
+	"github.com/docker/distribution/registry/storage/driver"
 	"github.com/gorilla/handlers"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
@@ -282,7 +282,7 @@ func (imh *manifestHandler) convertSchema2Manifest(schema2Manifest *schema2.Dese
 		}
 	}
 
-	builder := schema1.NewConfigManifestBuilder(imh.Repository.Blobs(imh), imh.Context.App.trustKey, ref, configJSON) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+	builder := schema1.NewConfigManifestBuilder(imh.Repository.Blobs(imh), imh.Context.App.trustKey, ref, configJSON) //nolint:staticcheck // Ignore SA1019: "github.com/docker/distribution/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	for _, d := range schema2Manifest.Layers {
 		if err := builder.AppendReference(d); err != nil {
 			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestInvalid.WithDetail(err))
@@ -294,7 +294,7 @@ func (imh *manifestHandler) convertSchema2Manifest(schema2Manifest *schema2.Dese
 		imh.Errors = append(imh.Errors, v2.ErrorCodeManifestInvalid.WithDetail(err))
 		return nil, err
 	}
-	imh.Digest = digest.FromBytes(manifest.(*schema1.SignedManifest).Canonical) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+	imh.Digest = digest.FromBytes(manifest.(*schema1.SignedManifest).Canonical) //nolint:staticcheck // Ignore SA1019: "github.com/docker/distribution/manifest/schema1" is deprecated, as it's used for backward compatibility.
 
 	return manifest, nil
 }
@@ -445,7 +445,7 @@ func (imh *manifestHandler) applyResourcePolicy(manifest distribution.Manifest) 
 
 	var class string
 	switch m := manifest.(type) {
-	case *schema1.SignedManifest: //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+	case *schema1.SignedManifest: //nolint:staticcheck // Ignore SA1019: "github.com/docker/distribution/manifest/schema1" is deprecated, as it's used for backward compatibility.
 		class = imageClass
 	case *schema2.DeserializedManifest:
 		switch m.Config.MediaType {
