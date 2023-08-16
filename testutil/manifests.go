@@ -5,11 +5,8 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/manifest"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
-	"github.com/distribution/distribution/v3/manifest/schema1" //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	"github.com/distribution/distribution/v3/manifest/schema2"
-	"github.com/docker/libtrust"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -37,38 +34,6 @@ func MakeManifestList(blobstatter distribution.BlobStatter, manifestDigests []di
 	}
 
 	return manifestlist.FromDescriptors(manifestDescriptors)
-}
-
-// MakeSchema1Manifest constructs a schema 1 manifest from a given list of digests and returns
-// the digest of the manifest.
-//
-// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since 2015.
-// Use Docker Image Manifest v2, Schema 2, or the OCI Image Specification.
-func MakeSchema1Manifest(digests []digest.Digest) (*schema1.SignedManifest, error) {
-	mfst := schema1.Manifest{
-		Versioned: manifest.Versioned{
-			SchemaVersion: 1,
-		},
-		Name: "who",
-		Tag:  "cares",
-	}
-
-	for _, d := range digests {
-		mfst.FSLayers = append(mfst.FSLayers, schema1.FSLayer{BlobSum: d})
-		mfst.History = append(mfst.History, schema1.History{V1Compatibility: ""})
-	}
-
-	pk, err := libtrust.GenerateECP256PrivateKey()
-	if err != nil {
-		return nil, fmt.Errorf("unexpected error generating private key: %v", err)
-	}
-
-	signedManifest, err := schema1.Sign(&mfst, pk)
-	if err != nil {
-		return nil, fmt.Errorf("error signing manifest: %v", err)
-	}
-
-	return signedManifest, nil
 }
 
 // MakeSchema2Manifest constructs a schema 2 manifest from a given list of digests and returns
