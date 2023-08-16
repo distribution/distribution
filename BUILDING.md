@@ -104,6 +104,4 @@ the environment variable `BUILDTAGS`.
 <dd>Compiles without resumable digest support</dd>
 <dt>include_gcs</dt>
 <dd>Adds support for <a href="https://cloud.google.com/storage">Google Cloud Storage</a></dd>
-<dt>include_oss</dt>
-<dd>Adds support for <a href="https://www.alibabacloud.com/product/object-storage-service">Alibaba Cloud Object Storage Service (OSS)</a></dd>
 </dl>

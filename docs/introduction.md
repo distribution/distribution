@@ -15,10 +15,10 @@ Users interact with a registry by using docker push and pull commands.
 
 Storage itself is delegated to drivers. The default storage driver is the local
 posix filesystem, which is suitable for development or small deployments.
-Additional cloud-based storage drivers like S3, Microsoft Azure, Google Cloud Storage
-and Aliyun OSS are also supported. People looking into using other storage
-backends may do so by writing their own driver implementing the
-[Storage API](storage-drivers/index.md).
+Additional cloud-based storage drivers like S3, Microsoft Azure and Google Cloud Storage
+are supported.  People looking into using other storage drivers should consider if
+the driver they'd like to be supported is S3 compatible like many cloud storage systems
+as adding new storage driver support has been put on hold for the time being.
 
 Since securing access to your hosted images is paramount, the Registry natively
 supports TLS and basic authentication.
