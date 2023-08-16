@@ -139,18 +139,6 @@ storage:
     multipartcopythresholdsize: 33554432
     rootdirectory: /s3/object/name/prefix
     usedualstack: false
-  oss:
-    accesskeyid: accesskeyid
-    accesskeysecret: accesskeysecret
-    region: OSS region name
-    endpoint: optional endpoints
-    internal: optional internal endpoint
-    bucket: OSS bucket
-    encrypt: optional enable server-side encryption
-    encryptionkeyid: optional KMS key id for encryption
-    secure: optional ssl setting
-    chunksize: optional size value
-    rootdirectory: optional root directory
   inmemory:  # This driver takes no parameters
   delete:
     enabled: false
@@ -435,18 +423,6 @@ storage:
     multipartcopymaxconcurrency: 100
     multipartcopythresholdsize: 33554432
     rootdirectory: /s3/object/name/prefix
-  oss:
-    accesskeyid: accesskeyid
-    accesskeysecret: accesskeysecret
-    region: OSS region name
-    endpoint: optional endpoints
-    internal: optional internal endpoint
-    bucket: OSS bucket
-    encrypt: optional enable server-side encryption
-    encryptionkeyid: optional KMS key id for encryption
-    secure: optional ssl setting
-    chunksize: optional size valye
-    rootdirectory: optional root directory
   inmemory:
   delete:
     enabled: false
@@ -475,7 +451,6 @@ returns an error. You can choose any of these backend storage drivers:
 | `azure`             | Uses Microsoft Azure Blob Storage. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/azure.md).                                                                                                               |
 | `gcs`               | Uses Google Cloud Storage. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/gcs.md).                                                                                                                           |
 | `s3`                | Uses Amazon Simple Storage Service (S3) and compatible Storage Services. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/s3.md).                                                                            |
-| `oss`               | Uses Aliyun OSS for object storage. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/oss.md).                                                                                                                  |
 
 For testing only, you can use the [`inmemory` storage
 driver](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/inmemory.md).
@@ -718,17 +693,6 @@ Value of `ipfilteredby` can be:
 | `none`      | default, do not filter by IP       |
 | `aws`       | IP from AWS goes to S3 directly    |
 | `awsregion` | IP from certain AWS regions goes to S3 directly, use together with `awsregion`. |
-
-### `alicdn`
-
-`alicdn` storage middleware allows the registry to serve layers via a content delivery network provided by Alibaba Cloud. Alicdn requires the OSS storage driver.
-
-| Parameter    | Required | Description                                                             |
-|--------------|----------|-------------------------------------------------------------------------|
-| `baseurl`    | yes      | The `SCHEME://HOST` at which Alicdn is served.                          |
-| `authtype`   | yes      | The URL authentication type for Alicdn, which should be `a`, `b` or `c`. See the [Authentication configuration](https://www.alibabacloud.com/help/doc-detail/85117.htm).|
-| `privatekey` | yes      | The URL authentication key for Alicdn.                                  |
-| `duration`   | no       | An integer and unit for the duration of the Alicdn session. Valid time units are `ns`, `us` (or `µs`), `ms`, `s`, `m`, or `h`.|
 
 ### `redirect`
 

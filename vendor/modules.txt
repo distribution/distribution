@@ -170,12 +170,6 @@ github.com/cespare/xxhash/v2
 # github.com/cyphar/filepath-securejoin v0.2.3
 ## explicit; go 1.13
 github.com/cyphar/filepath-securejoin
-# github.com/denverdino/aliyungo v0.0.0-20190125010748-a747050bb1ba
-## explicit
-github.com/denverdino/aliyungo/cdn/auth
-github.com/denverdino/aliyungo/common
-github.com/denverdino/aliyungo/oss
-github.com/denverdino/aliyungo/util
 # github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c
 ## explicit
 github.com/docker/go-events

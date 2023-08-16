@@ -17,7 +17,7 @@ This storage driver package comes bundled with several drivers:
 - [s3](s3.md): A driver storing objects in an Amazon Simple Storage Service (S3) bucket.
 - [azure](azure.md): A driver storing objects in [Microsoft Azure Blob Storage](https://azure.microsoft.com/en-us/services/storage/).
 - [gcs](gcs.md): A driver storing objects in a [Google Cloud Storage](https://cloud.google.com/storage/) bucket.
-- [oss](oss.md): A driver storing objects in [Aliyun OSS](https://www.aliyun.com/product/oss).
+- oss: *NO LONGER SUPPORTED*
 - swift: *NO LONGER SUPPORTED*
 
 ## Storage driver API

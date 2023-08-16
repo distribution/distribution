@@ -12,7 +12,6 @@ require (
 	github.com/aws/aws-sdk-go v1.43.16
 	github.com/bshuster-repo/logrus-logstash-hook v1.0.0
 	github.com/bugsnag/bugsnag-go v0.0.0-20141110184014-b1d153021fcd
-	github.com/denverdino/aliyungo v0.0.0-20190125010748-a747050bb1ba
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c
 	github.com/docker/go-metrics v0.0.1
 	github.com/docker/libtrust v0.0.0-20150114040149-fa567046d9b1
