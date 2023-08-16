@@ -139,18 +139,6 @@ storage:
     multipartcopythresholdsize: 33554432
     rootdirectory: /s3/object/name/prefix
     usedualstack: false
-  swift:
-    username: username
-    password: password
-    authurl: https://storage.myprovider.com/auth/v1.0 or https://storage.myprovider.com/v2.0 or https://storage.myprovider.com/v3/auth
-    tenant: tenantname
-    tenantid: tenantid
-    domain: domain name for Openstack Identity v3 API
-    domainid: domain id for Openstack Identity v3 API
-    insecureskipverify: true
-    region: fr
-    container: containername
-    rootdirectory: /swift/object/name/prefix
   oss:
     accesskeyid: accesskeyid
     accesskeysecret: accesskeysecret
@@ -447,18 +435,6 @@ storage:
     multipartcopymaxconcurrency: 100
     multipartcopythresholdsize: 33554432
     rootdirectory: /s3/object/name/prefix
-  swift:
-    username: username
-    password: password
-    authurl: https://storage.myprovider.com/auth/v1.0 or https://storage.myprovider.com/v2.0 or https://storage.myprovider.com/v3/auth
-    tenant: tenantname
-    tenantid: tenantid
-    domain: domain name for Openstack Identity v3 API
-    domainid: domain id for Openstack Identity v3 API
-    insecureskipverify: true
-    region: fr
-    container: containername
-    rootdirectory: /swift/object/name/prefix
   oss:
     accesskeyid: accesskeyid
     accesskeysecret: accesskeysecret
@@ -499,7 +475,6 @@ returns an error. You can choose any of these backend storage drivers:
 | `azure`             | Uses Microsoft Azure Blob Storage. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/azure.md).                                                                                                               |
 | `gcs`               | Uses Google Cloud Storage. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/gcs.md).                                                                                                                           |
 | `s3`                | Uses Amazon Simple Storage Service (S3) and compatible Storage Services. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/s3.md).                                                                            |
-| `swift`             | Uses Openstack Swift object storage. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/swift.md).                                                                                                               |
 | `oss`               | Uses Aliyun OSS for object storage. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/oss.md).                                                                                                                  |
 
 For testing only, you can use the [`inmemory` storage
