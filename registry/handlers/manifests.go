@@ -11,7 +11,6 @@ import (
 	dcontext "github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
-	"github.com/distribution/distribution/v3/manifest/schema1" //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
 	"github.com/distribution/distribution/v3/manifest/schema2"
 	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
@@ -23,8 +22,6 @@ import (
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
-// These constants determine which architecture and OS to choose from a
-// manifest list when downconverting it to a schema1 manifest.
 const (
 	defaultArch         = "amd64"
 	defaultOS           = "linux"
@@ -35,12 +32,11 @@ const (
 type storageType int
 
 const (
-	manifestSchema1     storageType = iota // 0
-	manifestSchema2                        // 1
-	manifestlistSchema                     // 2
-	ociSchema                              // 3
-	ociImageIndexSchema                    // 4
-	numStorageTypes                        // 5
+	manifestSchema2     storageType = iota // 0
+	manifestlistSchema                     // 1
+	ociSchema                              // 2
+	ociImageIndexSchema                    // 3
+	numStorageTypes                        // 4
 )
 
 // manifestDispatcher takes the request context and builds the
@@ -151,12 +147,9 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	// determine the type of the returned manifest
-	manifestType := manifestSchema1
-	schema2Manifest, isSchema2 := manifest.(*schema2.DeserializedManifest)
+	manifestType := manifestSchema2
 	manifestList, isManifestList := manifest.(*manifestlist.DeserializedManifestList)
-	if isSchema2 {
-		manifestType = manifestSchema2
-	} else if _, isOCImanifest := manifest.(*ocischema.DeserializedManifest); isOCImanifest {
+	if _, isOCImanifest := manifest.(*ocischema.DeserializedManifest); isOCImanifest {
 		manifestType = ociSchema
 	} else if isManifestList {
 		if manifestList.MediaType == manifestlist.MediaTypeManifestList {
@@ -174,18 +167,8 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 		imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithMessage("OCI index found, but accept header does not support OCI indexes"))
 		return
 	}
-	// Only rewrite schema2 manifests when they are being fetched by tag.
-	// If they are being fetched by digest, we can't return something not
-	// matching the digest.
-	if imh.Tag != "" && manifestType == manifestSchema2 && !supports[manifestSchema2] {
-		// Rewrite manifest in schema1 format
-		dcontext.GetLogger(imh).Infof("rewriting manifest %s in schema1 format to support old client", imh.Digest.String())
 
-		manifest, err = imh.convertSchema2Manifest(schema2Manifest)
-		if err != nil {
-			return
-		}
-	} else if imh.Tag != "" && manifestType == manifestlistSchema && !supports[manifestlistSchema] {
+	if imh.Tag != "" && manifestType == manifestlistSchema && !supports[manifestlistSchema] {
 		// Rewrite manifest in schema1 format
 		dcontext.GetLogger(imh).Infof("rewriting manifest list %s in schema1 format to support old client", imh.Digest.String())
 
@@ -214,12 +197,9 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 
-		// If necessary, convert the image manifest
-		if schema2Manifest, isSchema2 := manifest.(*schema2.DeserializedManifest); isSchema2 && !supports[manifestSchema2] {
-			manifest, err = imh.convertSchema2Manifest(schema2Manifest)
-			if err != nil {
-				return
-			}
+		if _, isSchema2 := manifest.(*schema2.DeserializedManifest); isSchema2 && !supports[manifestSchema2] {
+			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestInvalid.WithMessage("Schema 2 manifest not supported by client"))
+			return
 		} else {
 			imh.Digest = manifestDigest
 		}
@@ -235,46 +215,6 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Docker-Content-Digest", imh.Digest.String())
 	w.Header().Set("Etag", fmt.Sprintf(`"%s"`, imh.Digest))
 	w.Write(p)
-}
-
-func (imh *manifestHandler) convertSchema2Manifest(schema2Manifest *schema2.DeserializedManifest) (distribution.Manifest, error) {
-	targetDescriptor := schema2Manifest.Target()
-	blobs := imh.Repository.Blobs(imh)
-	configJSON, err := blobs.Get(imh, targetDescriptor.Digest)
-	if err != nil {
-		if err == distribution.ErrBlobUnknown {
-			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestInvalid.WithDetail(err))
-		} else {
-			imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
-		}
-		return nil, err
-	}
-
-	ref := imh.Repository.Named()
-
-	if imh.Tag != "" {
-		ref, err = reference.WithTag(ref, imh.Tag)
-		if err != nil {
-			imh.Errors = append(imh.Errors, v2.ErrorCodeTagInvalid.WithDetail(err))
-			return nil, err
-		}
-	}
-
-	builder := schema1.NewConfigManifestBuilder(imh.Repository.Blobs(imh), imh.Context.App.trustKey, ref, configJSON) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-	for _, d := range schema2Manifest.Layers {
-		if err := builder.AppendReference(d); err != nil {
-			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestInvalid.WithDetail(err))
-			return nil, err
-		}
-	}
-	manifest, err := builder.Build(imh)
-	if err != nil {
-		imh.Errors = append(imh.Errors, v2.ErrorCodeManifestInvalid.WithDetail(err))
-		return nil, err
-	}
-	imh.Digest = digest.FromBytes(manifest.(*schema1.SignedManifest).Canonical) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-
-	return manifest, nil
 }
 
 func etagMatch(r *http.Request, etag string) bool {
@@ -421,8 +361,6 @@ func (imh *manifestHandler) applyResourcePolicy(manifest distribution.Manifest) 
 
 	var class string
 	switch m := manifest.(type) {
-	case *schema1.SignedManifest: //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-		class = imageClass
 	case *schema2.DeserializedManifest:
 		switch m.Config.MediaType {
 		case schema2.MediaTypeImageConfig:
