@@ -23,6 +23,8 @@ import (
 )
 
 const (
+	defaultArch         = "amd64"
+	defaultOS           = "linux"
 	maxManifestBodySize = 4 << 20
 	imageClass          = "image"
 )
@@ -164,6 +166,43 @@ func (imh *manifestHandler) GetManifest(w http.ResponseWriter, r *http.Request) 
 	if manifestType == ociImageIndexSchema && !supports[ociImageIndexSchema] {
 		imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithMessage("OCI index found, but accept header does not support OCI indexes"))
 		return
+	}
+
+	if imh.Tag != "" && manifestType == manifestlistSchema && !supports[manifestlistSchema] {
+		// Rewrite manifest in schema1 format
+		dcontext.GetLogger(imh).Infof("rewriting manifest list %s in schema1 format to support old client", imh.Digest.String())
+
+		// Find the image manifest corresponding to the default
+		// platform
+		var manifestDigest digest.Digest
+		for _, manifestDescriptor := range manifestList.Manifests {
+			if manifestDescriptor.Platform.Architecture == defaultArch && manifestDescriptor.Platform.OS == defaultOS {
+				manifestDigest = manifestDescriptor.Digest
+				break
+			}
+		}
+
+		if manifestDigest == "" {
+			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown)
+			return
+		}
+
+		manifest, err = manifests.Get(imh, manifestDigest)
+		if err != nil {
+			if _, ok := err.(distribution.ErrManifestUnknownRevision); ok {
+				imh.Errors = append(imh.Errors, v2.ErrorCodeManifestUnknown.WithDetail(err))
+			} else {
+				imh.Errors = append(imh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
+			}
+			return
+		}
+
+		if _, isSchema2 := manifest.(*schema2.DeserializedManifest); isSchema2 && !supports[manifestSchema2] {
+			imh.Errors = append(imh.Errors, v2.ErrorCodeManifestInvalid.WithMessage("Schema 2 manifest not supported by client"))
+			return
+		} else {
+			imh.Digest = manifestDigest
+		}
 	}
 
 	ct, p, err := manifest.Payload()
