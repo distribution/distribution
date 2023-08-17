@@ -1,0 +1,151 @@
+type: '*otlpexporter.Config'
+fields:
+- name: timeout
+  type: time.Duration
+  kind: int64
+  default: 5s
+  doc: |
+    Timeout is the timeout for every attempt to send data to the backend.
+- name: sending_queue
+  type: exporterhelper.QueueSettings
+  kind: struct
+  fields:
+  - name: enabled
+    kind: bool
+    default: true
+    doc: |
+      Enabled indicates whether to not enqueue batches before sending to the consumerSender.
+  - name: num_consumers
+    kind: int
+    default: 10
+    doc: |
+      NumConsumers is the number of consumers from the queue.
+  - name: queue_size
+    kind: int
+    default: 5000
+    doc: |
+      QueueSize is the maximum number of batches allowed in queue at a given time.
+- name: retry_on_failure
+  type: exporterhelper.RetrySettings
+  kind: struct
+  fields:
+  - name: enabled
+    kind: bool
+    default: true
+    doc: |
+      Enabled indicates whether to not retry sending batches in case of export failure.
+  - name: initial_interval
+    type: time.Duration
+    kind: int64
+    default: 5s
+    doc: |
+      InitialInterval the time to wait after the first failure before retrying.
+  - name: max_interval
+    type: time.Duration
+    kind: int64
+    default: 30s
+    doc: |
+      MaxInterval is the upper bound on backoff interval. Once this value is reached the delay between
+      consecutive retries will always be `MaxInterval`.
+  - name: max_elapsed_time
+    type: time.Duration
+    kind: int64
+    default: 5m0s
+    doc: |
+      MaxElapsedTime is the maximum amount of time (including retries) spent trying to send a request/batch.
+      Once this value is reached, the data is discarded.
+- name: endpoint
+  kind: string
+  doc: |
+    The target to which the exporter is going to send traces or metrics,
+    using the gRPC protocol. The valid syntax is described at
+    https://github.com/grpc/grpc/blob/master/doc/naming.md.
+- name: compression
+  kind: string
+  doc: |
+    The compression key for supported compression types within
+    collector. Supports `gzip`, `snappy` and `zstd`.
+- name: ca_file
+  kind: string
+  doc: |
+    Path to the CA cert. For a client this verifies the server certificate.
+    For a server this verifies client certificates. If empty uses system root CA.
+    (optional)
+- name: cert_file
+  kind: string
+  doc: |
+    Path to the TLS cert to use for TLS required connections. (optional)
+- name: key_file
+  kind: string
+  doc: |
+    Path to the TLS key to use for TLS required connections. (optional)
+- name: insecure
+  kind: bool
+  doc: |
+    In gRPC when set to true, this is used to disable the client transport security.
+    See https://godoc.org/google.golang.org/grpc#WithInsecure.
+    In HTTP, this disables verifying the server's certificate chain and host name
+    (InsecureSkipVerify in the tls Config). Please refer to
+    https://godoc.org/crypto/tls#Config for more information.
+    (optional, default false)
+- name: server_name_override
+  kind: string
+  doc: |
+    ServerName requested by client for virtual hosting.
+    This sets the ServerName in the TLSConfig. Please refer to
+    https://godoc.org/crypto/tls#Config for more information. (optional)
+- name: keepalive
+  type: '*configgrpc.KeepaliveClientConfig'
+  kind: ptr
+  doc: |
+    The keepalive parameters for gRPC client. See grpc.WithKeepaliveParams
+    (https://godoc.org/google.golang.org/grpc#WithKeepaliveParams).
+  fields:
+  - name: time
+    type: time.Duration
+    kind: int64
+  - name: timeout
+    type: time.Duration
+    kind: int64
+  - name: permit_without_stream
+    kind: bool
+- name: read_buffer_size
+  kind: int
+  doc: |
+    ReadBufferSize for gRPC client. See grpc.WithReadBufferSize
+    (https://godoc.org/google.golang.org/grpc#WithReadBufferSize).
+- name: write_buffer_size
+  kind: int
+  default: 524288
+  doc: |
+    WriteBufferSize for gRPC gRPC. See grpc.WithWriteBufferSize
+    (https://godoc.org/google.golang.org/grpc#WithWriteBufferSize).
+- name: wait_for_ready
+  kind: bool
+  doc: |
+    WaitForReady parameter configures client to wait for ready state before sending data.
+    (https://github.com/grpc/grpc/blob/master/doc/wait-for-ready.md)
+- name: headers
+  type: map[string]string
+  kind: map
+  doc: |
+    The headers associated with gRPC requests.
+- name: per_rpc_auth
+  type: '*configgrpc.PerRPCAuthConfig'
+  kind: ptr
+  doc: |
+    PerRPCAuth parameter configures the client to send authentication data on a per-RPC basis.
+  fields:
+  - name: type
+    kind: string
+    doc: |
+      AuthType represents the authentication type to use. Currently, only 'bearer' is supported.
+  - name: bearer_token
+    kind: string
+    doc: |
+      BearerToken specifies the bearer token to use for every RPC.
+- name: balancer_name
+  kind: string
+  doc: |
+    Sets the balancer in grpclb_policy to discover the servers. Default is pick_first
+    https://github.com/grpc/grpc-go/blob/master/examples/features/load_balancing/README.md

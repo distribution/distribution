@@ -1,0 +1,10 @@
+<table style="border-spacing: 0">
+    {{range $rowindex, $row := .Rows}}
+        {{- if even $rowindex}}
+            <tr style="background: #eee">
+        {{else}}
+            <tr>{{end -}}
+        <td style="text-align: center"><a href="?zextensionname={{.FullName}}">{{.FullName}}</a></td>
+        </tr>
+    {{end}}
+</table>

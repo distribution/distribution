@@ -1,0 +1,14 @@
+<b>{{.Name}}:</b>
+<table style="border-spacing: 0">
+    {{ $index := 0 }}
+    {{range $index, $element := .Properties}}
+        {{- if even $index}}
+            <tr style="background: #eee">
+        {{else}}
+            <tr>{{end -}}
+        <td style="text-align: center"><b>{{$element|getKey}}</b></td>
+        <td>&nbsp;&nbsp;|&nbsp;&nbsp;</td>
+        <td style="text-align: center">{{$element|getValue}}</td>
+        </tr>
+    {{end}}
+</table>

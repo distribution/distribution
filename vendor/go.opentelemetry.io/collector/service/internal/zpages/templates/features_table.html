@@ -1,0 +1,19 @@
+<table style="border-spacing: 0">
+    <tr>
+        <td colspan=1 style="text-align: left"><b>ID</b></td>
+        <td>&nbsp;&nbsp;|&nbsp;&nbsp;</td>
+        <td colspan=1 style="text-align: center"><b>Enabled</b></td>
+        <td>&nbsp;&nbsp;|&nbsp;&nbsp;</td>
+        <td colspan=1 style="text-align: center"><b>Description</b></td>
+    </tr>
+    {{range $rowindex, $row := .Rows}}
+        {{- if even $rowindex}}
+            <tr style="background: #eee">
+        {{else}}
+            <tr>{{end -}}
+        <td>{{$row.ID}}</td><td>&nbsp;&nbsp;|&nbsp;&nbsp;</td>
+        <td>{{$row.Enabled}}</td><td>&nbsp;&nbsp;|&nbsp;&nbsp;</td>
+        <td>{{$row.Description}}</td><td>&nbsp;&nbsp;|&nbsp;&nbsp;</td>
+        </tr>
+    {{end}}
+</table>

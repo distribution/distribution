@@ -3,8 +3,6 @@ package zstd
 import (
 	"errors"
 	"fmt"
-	"math"
-	"math/bits"
 	"runtime"
 	"strings"
 )
@@ -39,7 +37,7 @@ func (o *encoderOptions) setDefault() {
 		blockSize:     maxCompressedBlockSize,
 		windowSize:    8 << 20,
 		level:         SpeedDefault,
-		allLitEntropy: false,
+		allLitEntropy: true,
 		lowMem:        false,
 	}
 }
@@ -49,22 +47,22 @@ func (o encoderOptions) encoder() encoder {
 	switch o.level {
 	case SpeedFastest:
 		if o.dict != nil {
-			return &fastEncoderDict{fastEncoder: fastEncoder{fastBase: fastBase{maxMatchOff: int32(o.windowSize), bufferReset: math.MaxInt32 - int32(o.windowSize*2), lowMem: o.lowMem}}}
+			return &fastEncoderDict{fastEncoder: fastEncoder{fastBase: fastBase{maxMatchOff: int32(o.windowSize), lowMem: o.lowMem}}}
 		}
-		return &fastEncoder{fastBase: fastBase{maxMatchOff: int32(o.windowSize), bufferReset: math.MaxInt32 - int32(o.windowSize*2), lowMem: o.lowMem}}
+		return &fastEncoder{fastBase: fastBase{maxMatchOff: int32(o.windowSize), lowMem: o.lowMem}}
 
 	case SpeedDefault:
 		if o.dict != nil {
-			return &doubleFastEncoderDict{fastEncoderDict: fastEncoderDict{fastEncoder: fastEncoder{fastBase: fastBase{maxMatchOff: int32(o.windowSize), bufferReset: math.MaxInt32 - int32(o.windowSize*2), lowMem: o.lowMem}}}}
+			return &doubleFastEncoderDict{fastEncoderDict: fastEncoderDict{fastEncoder: fastEncoder{fastBase: fastBase{maxMatchOff: int32(o.windowSize), lowMem: o.lowMem}}}}
 		}
-		return &doubleFastEncoder{fastEncoder: fastEncoder{fastBase: fastBase{maxMatchOff: int32(o.windowSize), bufferReset: math.MaxInt32 - int32(o.windowSize*2), lowMem: o.lowMem}}}
+		return &doubleFastEncoder{fastEncoder: fastEncoder{fastBase: fastBase{maxMatchOff: int32(o.windowSize), lowMem: o.lowMem}}}
 	case SpeedBetterCompression:
 		if o.dict != nil {
-			return &betterFastEncoderDict{betterFastEncoder: betterFastEncoder{fastBase: fastBase{maxMatchOff: int32(o.windowSize), bufferReset: math.MaxInt32 - int32(o.windowSize*2), lowMem: o.lowMem}}}
+			return &betterFastEncoderDict{betterFastEncoder: betterFastEncoder{fastBase: fastBase{maxMatchOff: int32(o.windowSize), lowMem: o.lowMem}}}
 		}
-		return &betterFastEncoder{fastBase: fastBase{maxMatchOff: int32(o.windowSize), bufferReset: math.MaxInt32 - int32(o.windowSize*2), lowMem: o.lowMem}}
+		return &betterFastEncoder{fastBase: fastBase{maxMatchOff: int32(o.windowSize), lowMem: o.lowMem}}
 	case SpeedBestCompression:
-		return &bestFastEncoder{fastBase: fastBase{maxMatchOff: int32(o.windowSize), bufferReset: math.MaxInt32 - int32(o.windowSize*2), lowMem: o.lowMem}}
+		return &bestFastEncoder{fastBase: fastBase{maxMatchOff: int32(o.windowSize), lowMem: o.lowMem}}
 	}
 	panic("unknown compression level")
 }
@@ -238,7 +236,7 @@ func WithEncoderLevel(l EncoderLevel) EOption {
 			}
 		}
 		if !o.customALEntropy {
-			o.allLitEntropy = l > SpeedDefault
+			o.allLitEntropy = l > SpeedFastest
 		}
 
 		return nil
@@ -306,13 +304,7 @@ func WithLowerEncoderMem(b bool) EOption {
 }
 
 // WithEncoderDict allows to register a dictionary that will be used for the encode.
-//
-// The slice dict must be in the [dictionary format] produced by
-// "zstd --train" from the Zstandard reference implementation.
-//
 // The encoder *may* choose to use no dictionary instead for certain payloads.
-//
-// [dictionary format]: https://github.com/facebook/zstd/blob/dev/doc/zstd_compression_format.md#dictionary-format
 func WithEncoderDict(dict []byte) EOption {
 	return func(o *encoderOptions) error {
 		d, err := loadDict(dict)
@@ -320,20 +312,6 @@ func WithEncoderDict(dict []byte) EOption {
 			return err
 		}
 		o.dict = d
-		return nil
-	}
-}
-
-// WithEncoderDictRaw registers a dictionary that may be used by the encoder.
-//
-// The slice content may contain arbitrary data. It will be used as an initial
-// history.
-func WithEncoderDictRaw(id uint32, content []byte) EOption {
-	return func(o *encoderOptions) error {
-		if bits.UintSize > 32 && uint(len(content)) > dictMaxLength {
-			return fmt.Errorf("dictionary of size %d > 2GiB too large", len(content))
-		}
-		o.dict = &dict{id: id, content: content, offsets: [3]int{1, 4, 8}}
 		return nil
 	}
 }

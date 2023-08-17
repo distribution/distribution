@@ -9,8 +9,8 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"hash/crc32"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
@@ -83,9 +83,8 @@ type blockDec struct {
 
 	err error
 
-	// Check against this crc, if hasCRC is true.
-	checkCRC uint32
-	hasCRC   bool
+	// Check against this crc
+	checkCRC []byte
 
 	// Frame to use for singlethreaded decoding.
 	// Should not be used by the decoder itself since parent may be another frame.
@@ -193,13 +192,15 @@ func (b *blockDec) reset(br byteBuffer, windowSize uint64) error {
 	}
 
 	// Read block data.
-	if _, ok := br.(*byteBuf); !ok && cap(b.dataStorage) < cSize {
-		// byteBuf doesn't need a destination buffer.
+	if cap(b.dataStorage) < cSize {
 		if b.lowMem || cSize > maxCompressedBlockSize {
 			b.dataStorage = make([]byte, 0, cSize+compressedBlockOverAlloc)
 		} else {
 			b.dataStorage = make([]byte, 0, maxCompressedBlockSizeAlloc)
 		}
+	}
+	if cap(b.dst) <= maxSize {
+		b.dst = make([]byte, 0, maxSize+1)
 	}
 	b.data, err = br.readBig(cSize, b.dataStorage)
 	if err != nil {
@@ -208,9 +209,6 @@ func (b *blockDec) reset(br byteBuffer, windowSize uint64) error {
 			printf("%T", br)
 		}
 		return err
-	}
-	if cap(b.dst) <= maxSize {
-		b.dst = make([]byte, 0, maxSize+1)
 	}
 	return nil
 }
@@ -235,7 +233,7 @@ func (b *blockDec) decodeBuf(hist *history) error {
 			if b.lowMem {
 				b.dst = make([]byte, b.RLESize)
 			} else {
-				b.dst = make([]byte, maxCompressedBlockSize)
+				b.dst = make([]byte, maxBlockSize)
 			}
 		}
 		b.dst = b.dst[:b.RLESize]
@@ -443,9 +441,6 @@ func (b *blockDec) decodeLiterals(in []byte, hist *history) (remain []byte, err 
 			}
 		}
 		var err error
-		if debugDecoder {
-			println("huff table input:", len(literals), "CRC:", crc32.ChecksumIEEE(literals))
-		}
 		huff, literals, err = huff0.ReadTable(literals, huff)
 		if err != nil {
 			println("reading huffman table:", err)
@@ -656,7 +651,7 @@ func (b *blockDec) prepareSequences(in []byte, hist *history) (err error) {
 		fatalErr(binary.Write(&buf, binary.LittleEndian, hist.decoders.matchLengths.fse))
 		fatalErr(binary.Write(&buf, binary.LittleEndian, hist.decoders.offsets.fse))
 		buf.Write(in)
-		os.WriteFile(filepath.Join("testdata", "seqs", fn), buf.Bytes(), os.ModePerm)
+		ioutil.WriteFile(filepath.Join("testdata", "seqs", fn), buf.Bytes(), os.ModePerm)
 	}
 
 	return nil

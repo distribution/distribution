@@ -4,6 +4,7 @@
 package zstd
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"io"
@@ -101,8 +102,8 @@ func (h *Header) Decode(in []byte) error {
 	}
 	h.HeaderSize += 4
 	b, in := in[:4], in[4:]
-	if string(b) != frameMagic {
-		if string(b[1:4]) != skippableFrameMagic || b[0]&0xf0 != 0x50 {
+	if !bytes.Equal(b, frameMagic) {
+		if !bytes.Equal(b[1:4], skippableFrameMagic) || b[0]&0xf0 != 0x50 {
 			return ErrMagicMismatch
 		}
 		if len(in) < 4 {
@@ -152,7 +153,7 @@ func (h *Header) Decode(in []byte) error {
 		}
 		b, in = in[:size], in[size:]
 		h.HeaderSize += int(size)
-		switch len(b) {
+		switch size {
 		case 1:
 			h.DictionaryID = uint32(b[0])
 		case 2:
@@ -182,7 +183,7 @@ func (h *Header) Decode(in []byte) error {
 		}
 		b, in = in[:fcsSize], in[fcsSize:]
 		h.HeaderSize += int(fcsSize)
-		switch len(b) {
+		switch fcsSize {
 		case 1:
 			h.FrameContentSize = uint64(b[0])
 		case 2:

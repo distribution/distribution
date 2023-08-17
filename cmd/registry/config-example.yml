@@ -10,7 +10,7 @@ storage:
 http:
   addr: :5000
   headers:
-    X-Content-Type-Options: [nosniff]
+    X-Content-Type-Options: [ nosniff ]
 auth:
   htpasswd:
     realm: basic-realm
@@ -20,3 +20,7 @@ health:
     enabled: true
     interval: 10s
     threshold: 3
+otel:
+  exporter:
+    name: otlp
+    endpoint: 127.0.0.1:4317

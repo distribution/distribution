@@ -269,6 +269,32 @@ type Configuration struct {
 			Classes []string `yaml:"classes"`
 		} `yaml:"repository,omitempty"`
 	} `yaml:"policy,omitempty"`
+
+	// OpenTelemetry configuration
+	OpenTelemetry *OpenTelemetryConfig `yaml:"otel,omitempty"`
+}
+
+// OpenTelemetryConfig provides open telemetry configuration
+type OpenTelemetryConfig struct {
+	// ServiceName is telemetry define one server name
+	ServiceName string `yaml:"serviceName,omitempty"`
+	// Exporter is config exporter
+	Exporter ExporterConfig `yaml:"exporter"`
+	// TraceSamplingRatio is trace sampling ratio,default is 1
+	TraceSamplingRatio float64 `yaml:"traceSamplingRatio,omitempty"`
+}
+
+// ExporterConfig provides open telemetry exporter configuration
+type ExporterConfig struct {
+	// Name must be otlp
+	Name string `yaml:"name"`
+	// Endpoint is otlp server addr
+	Endpoint string `yaml:"endpoint"`
+}
+
+func (otel OpenTelemetryConfig) String() string {
+	return fmt.Sprintf("ServiceName=[%s],ExporterName=[%s],ExporterEndpoint=[%s],TraceSamplingRatio=[%+v]",
+		otel.ServiceName, otel.Exporter.Name, otel.Exporter.Endpoint, otel.TraceSamplingRatio)
 }
 
 // Catalog is composed of MaxEntries.
@@ -734,4 +760,32 @@ func Parse(rd io.Reader) (*Configuration, error) {
 	}
 
 	return config, nil
+}
+
+const (
+	// ExporterTypeOTLP represents the open telemetry exporter OTLP
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/otlp.md
+	ExporterTypeOTLP = "otlp"
+
+	// ServiceName is trace service name
+	ServiceName = "distribution"
+
+	// DefaultSamplingRatio default sample ratio
+	DefaultSamplingRatio = 1
+)
+
+// Validate OpenTelemetry config
+func (otel *OpenTelemetryConfig) Validate() error {
+	switch otel.Exporter.Name {
+	case ExporterTypeOTLP:
+		if otel.ServiceName == "" {
+			otel.ServiceName = ServiceName
+		}
+		if otel.TraceSamplingRatio == 0 {
+			otel.TraceSamplingRatio = DefaultSamplingRatio
+		}
+		return nil
+	default:
+		return fmt.Errorf("invalid argument,unsupported exporter : %s", otel.Exporter.Name)
+	}
 }

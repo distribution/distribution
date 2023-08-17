@@ -62,10 +62,14 @@ func (e *betterFastEncoder) Encode(blk *blockEnc, src []byte) {
 	)
 
 	// Protect against e.cur wraparound.
-	for e.cur >= e.bufferReset-int32(len(e.hist)) {
+	for e.cur >= bufferReset {
 		if len(e.hist) == 0 {
-			e.table = [betterShortTableSize]tableEntry{}
-			e.longTable = [betterLongTableSize]prevEntry{}
+			for i := range e.table[:] {
+				e.table[i] = tableEntry{}
+			}
+			for i := range e.longTable[:] {
+				e.longTable[i] = prevEntry{}
+			}
 			e.cur = e.maxMatchOff
 			break
 		}
@@ -412,23 +416,15 @@ encodeLoop:
 
 		// Try to find a better match by searching for a long match at the end of the current best match
 		if s+matched < sLimit {
-			// Allow some bytes at the beginning to mismatch.
-			// Sweet spot is around 3 bytes, but depends on input.
-			// The skipped bytes are tested in Extend backwards,
-			// and still picked up as part of the match if they do.
-			const skipBeginning = 3
-
 			nextHashL := hashLen(load6432(src, s+matched), betterLongTableBits, betterLongLen)
-			s2 := s + skipBeginning
-			cv := load3232(src, s2)
+			cv := load3232(src, s)
 			candidateL := e.longTable[nextHashL]
-			coffsetL := candidateL.offset - e.cur - matched + skipBeginning
-			if coffsetL >= 0 && coffsetL < s2 && s2-coffsetL < e.maxMatchOff && cv == load3232(src, coffsetL) {
+			coffsetL := candidateL.offset - e.cur - matched
+			if coffsetL >= 0 && coffsetL < s && s-coffsetL < e.maxMatchOff && cv == load3232(src, coffsetL) {
 				// Found a long match, at least 4 bytes.
-				matchedNext := e.matchlen(s2+4, coffsetL+4, src) + 4
+				matchedNext := e.matchlen(s+4, coffsetL+4, src) + 4
 				if matchedNext > matched {
 					t = coffsetL
-					s = s2
 					matched = matchedNext
 					if debugMatches {
 						println("long match at end-of-match")
@@ -438,13 +434,12 @@ encodeLoop:
 
 			// Check prev long...
 			if true {
-				coffsetL = candidateL.prev - e.cur - matched + skipBeginning
-				if coffsetL >= 0 && coffsetL < s2 && s2-coffsetL < e.maxMatchOff && cv == load3232(src, coffsetL) {
+				coffsetL = candidateL.prev - e.cur - matched
+				if coffsetL >= 0 && coffsetL < s && s-coffsetL < e.maxMatchOff && cv == load3232(src, coffsetL) {
 					// Found a long match, at least 4 bytes.
-					matchedNext := e.matchlen(s2+4, coffsetL+4, src) + 4
+					matchedNext := e.matchlen(s+4, coffsetL+4, src) + 4
 					if matchedNext > matched {
 						t = coffsetL
-						s = s2
 						matched = matchedNext
 						if debugMatches {
 							println("prev long match at end-of-match")
@@ -583,7 +578,7 @@ func (e *betterFastEncoderDict) Encode(blk *blockEnc, src []byte) {
 	)
 
 	// Protect against e.cur wraparound.
-	for e.cur >= e.bufferReset-int32(len(e.hist)) {
+	for e.cur >= bufferReset {
 		if len(e.hist) == 0 {
 			for i := range e.table[:] {
 				e.table[i] = tableEntry{}

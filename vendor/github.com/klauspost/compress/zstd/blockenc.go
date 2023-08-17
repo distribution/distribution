@@ -473,7 +473,7 @@ func (b *blockEnc) encode(org []byte, raw, rawAllLits bool) error {
 		return b.encodeLits(b.literals, rawAllLits)
 	}
 	// We want some difference to at least account for the headers.
-	saved := b.size - len(b.literals) - (b.size >> 6)
+	saved := b.size - len(b.literals) - (b.size >> 5)
 	if saved < 16 {
 		if org == nil {
 			return errIncompressible
@@ -779,13 +779,10 @@ func (b *blockEnc) encode(org []byte, raw, rawAllLits bool) error {
 	}
 	b.output = wr.out
 
-	// Maybe even add a bigger margin.
 	if len(b.output)-3-bhOffset >= b.size {
-		// Discard and encode as raw block.
-		b.output = b.encodeRawTo(b.output[:bhOffset], org)
-		b.popOffsets()
+		// Maybe even add a bigger margin.
 		b.litEnc.Reuse = huff0.ReusePolicyNone
-		return nil
+		return errIncompressible
 	}
 
 	// Size is output minus block header.
