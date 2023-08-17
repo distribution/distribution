@@ -1,8 +1,10 @@
 name: logrus-bugsnag
 
 up:
-  - go: 1.6.2
+  - go: 1.19
 
 commands:
   test:
-    run: go get -t ./... && go test ./...
+    run: go test -v -race ./...
+  style:
+    run: scripts/golangci-lint run

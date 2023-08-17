@@ -2,13 +2,15 @@ package logrus_bugsnag
 
 import (
 	"errors"
+	"runtime"
+	"strings"
 
+	"github.com/bugsnag/bugsnag-go/v2"
+	bugsnag_errors "github.com/bugsnag/bugsnag-go/v2/errors"
 	"github.com/sirupsen/logrus"
-	"github.com/bugsnag/bugsnag-go"
-	bugsnag_errors "github.com/bugsnag/bugsnag-go/errors"
 )
 
-type bugsnagHook struct{}
+type Hook struct{}
 
 // ErrBugsnagUnconfigured is returned if NewBugsnagHook is called before
 // bugsnag.Configure. Bugsnag must be configured before the hook.
@@ -32,19 +34,16 @@ func (e ErrBugsnagSendFailed) Error() string {
 //
 // Entries that trigger an Error, Fatal or Panic should now include an "error"
 // field to send to Bugsnag.
-func NewBugsnagHook() (*bugsnagHook, error) {
+func NewBugsnagHook() (*Hook, error) {
 	if bugsnag.Config.APIKey == "" {
 		return nil, ErrBugsnagUnconfigured
 	}
-	return &bugsnagHook{}, nil
+	return &Hook{}, nil
 }
-
-// skipStackFrames skips logrus stack frames before logging to Bugsnag.
-const skipStackFrames = 4
 
 // Fire forwards an error to Bugsnag. Given a logrus.Entry, it extracts the
 // "error" field (or the Message if the error isn't present) and sends it off.
-func (hook *bugsnagHook) Fire(entry *logrus.Entry) error {
+func (hook *Hook) Fire(entry *logrus.Entry) error {
 	var notifyErr error
 	err, ok := entry.Data["error"].(error)
 	if ok {
@@ -61,7 +60,18 @@ func (hook *bugsnagHook) Fire(entry *logrus.Entry) error {
 		}
 	}
 
-	errWithStack := bugsnag_errors.New(notifyErr, skipStackFrames)
+	// if there's a panic on the stack (runtime.gopanic), assume we wanted
+	// everything right before that.  Otherwise, assume we wanted everything 5+
+	// frames up (before we got into logrus)
+	depthOfPanic := findPanic()
+	skipFrames := 0
+	if depthOfPanic != 0 {
+		skipFrames = depthOfPanic + 1
+	} else {
+		skipFrames = findLogrusExit() + 1
+	}
+
+	errWithStack := bugsnag_errors.New(notifyErr, skipFrames)
 	bugsnagErr := bugsnag.Notify(errWithStack, metadata)
 	if bugsnagErr != nil {
 		return ErrBugsnagSendFailed{bugsnagErr}
@@ -70,9 +80,50 @@ func (hook *bugsnagHook) Fire(entry *logrus.Entry) error {
 	return nil
 }
 
+const goPanic = "runtime.gopanic"
+const logrusPackage = "github.com/sirupsen/logrus."
+
+func findLogrusExit() int {
+	stack := make([]uintptr, 12)
+	// skip three frames: runtime.Callers, findLogrusExit, Hook.Fire
+	nCallers := runtime.Callers(3, stack)
+	frames := runtime.CallersFrames(stack[:nCallers])
+	foundLogrus := false
+	for i := 0; ; i++ {
+		frame, more := frames.Next()
+		switch {
+		case strings.Contains(frame.Function, logrusPackage):
+			if !foundLogrus {
+				foundLogrus = true
+			}
+		case foundLogrus:
+			return i
+		case !more:
+			// Exhausted the stack, take deepest.
+			return i
+		}
+	}
+}
+
+func findPanic() int {
+	stack := make([]uintptr, 50)
+	// skip two frames: runtime.Callers + findPanic
+	nCallers := runtime.Callers(2, stack)
+	frames := runtime.CallersFrames(stack[:nCallers])
+	for i := 0; ; i++ {
+		frame, more := frames.Next()
+		if frame.Function == goPanic {
+			return i
+		}
+		if !more {
+			return 0
+		}
+	}
+}
+
 // Levels enumerates the log levels on which the error should be forwarded to
 // bugsnag: everything at or above the "Error" level.
-func (hook *bugsnagHook) Levels() []logrus.Level {
+func (hook *Hook) Levels() []logrus.Level {
 	return []logrus.Level{
 		logrus.ErrorLevel,
 		logrus.FatalLevel,

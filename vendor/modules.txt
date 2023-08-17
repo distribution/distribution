@@ -91,8 +91,8 @@ github.com/AzureAD/microsoft-authentication-library-for-go/apps/internal/options
 github.com/AzureAD/microsoft-authentication-library-for-go/apps/internal/shared
 github.com/AzureAD/microsoft-authentication-library-for-go/apps/internal/version
 github.com/AzureAD/microsoft-authentication-library-for-go/apps/public
-# github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d
-## explicit
+# github.com/Shopify/logrus-bugsnag v0.0.0-20230814024721-81546a0197a8
+## explicit; go 1.17
 github.com/Shopify/logrus-bugsnag
 # github.com/aws/aws-sdk-go v1.43.16
 ## explicit; go 1.11
@@ -149,19 +149,17 @@ github.com/aws/aws-sdk-go/service/sts/stsiface
 # github.com/beorn7/perks v1.0.1
 ## explicit; go 1.11
 github.com/beorn7/perks/quantile
-# github.com/bitly/go-simplejson v0.5.0
-## explicit
 # github.com/bshuster-repo/logrus-logstash-hook v1.0.0
 ## explicit
 github.com/bshuster-repo/logrus-logstash-hook
-# github.com/bugsnag/bugsnag-go v0.0.0-20141110184014-b1d153021fcd
-## explicit
-github.com/bugsnag/bugsnag-go
-github.com/bugsnag/bugsnag-go/errors
-# github.com/bugsnag/osext v0.0.0-20130617224835-0dd3f918b21b
-## explicit
-github.com/bugsnag/osext
-# github.com/bugsnag/panicwrap v0.0.0-20151223152923-e2c28503fcd0
+# github.com/bugsnag/bugsnag-go/v2 v2.2.0
+## explicit; go 1.15
+github.com/bugsnag/bugsnag-go/v2
+github.com/bugsnag/bugsnag-go/v2/device
+github.com/bugsnag/bugsnag-go/v2/errors
+github.com/bugsnag/bugsnag-go/v2/headers
+github.com/bugsnag/bugsnag-go/v2/sessions
+# github.com/bugsnag/panicwrap v1.3.4
 ## explicit
 github.com/bugsnag/panicwrap
 # github.com/cespare/xxhash/v2 v2.2.0
@@ -235,6 +233,9 @@ github.com/inconshreveable/mousetrap
 # github.com/jmespath/go-jmespath v0.4.0
 ## explicit; go 1.14
 github.com/jmespath/go-jmespath
+# github.com/kardianos/osext v0.0.0-20190222173326-2bc1f35cddc0
+## explicit
+github.com/kardianos/osext
 # github.com/klauspost/compress v1.16.5
 ## explicit; go 1.18
 github.com/klauspost/compress
@@ -260,8 +261,6 @@ github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/mitchellh/mapstructure v1.1.2
 ## explicit
 github.com/mitchellh/mapstructure
-# github.com/mitchellh/osext v0.0.0-20151018003038-5e2d6d41470f
-## explicit
 # github.com/opencontainers/go-digest v1.0.0
 ## explicit; go 1.13
 github.com/opencontainers/go-digest
@@ -273,6 +272,9 @@ github.com/opencontainers/image-spec/specs-go/v1
 # github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8
 ## explicit; go 1.14
 github.com/pkg/browser
+# github.com/pkg/errors v0.9.1
+## explicit
+github.com/pkg/errors
 # github.com/prometheus/client_golang v1.12.1
 ## explicit; go 1.13
 github.com/prometheus/client_golang/prometheus
@@ -291,7 +293,7 @@ github.com/prometheus/common/model
 github.com/prometheus/procfs
 github.com/prometheus/procfs/internal/fs
 github.com/prometheus/procfs/internal/util
-# github.com/sirupsen/logrus v1.8.1
+# github.com/sirupsen/logrus v1.9.0
 ## explicit; go 1.13
 github.com/sirupsen/logrus
 # github.com/spf13/cobra v1.6.1

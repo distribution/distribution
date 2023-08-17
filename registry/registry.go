@@ -15,7 +15,7 @@ import (
 	logrus_bugsnag "github.com/Shopify/logrus-bugsnag"
 
 	logstash "github.com/bshuster-repo/logrus-logstash-hook"
-	"github.com/bugsnag/bugsnag-go"
+	"github.com/bugsnag/bugsnag-go/v2"
 	"github.com/docker/go-metrics"
 	gorhandlers "github.com/gorilla/handlers"
 	"github.com/sirupsen/logrus"
@@ -436,8 +436,13 @@ func configureBugsnag(config *configuration.Configuration) {
 	if config.Reporting.Bugsnag.ReleaseStage != "" {
 		bugsnagConfig.ReleaseStage = config.Reporting.Bugsnag.ReleaseStage
 	}
-	if config.Reporting.Bugsnag.Endpoint != "" {
-		bugsnagConfig.Endpoint = config.Reporting.Bugsnag.Endpoint
+	if config.Reporting.Bugsnag.Endpoints.Notify != "" || config.Reporting.Bugsnag.Endpoints.Sessions != "" {
+		if config.Reporting.Bugsnag.Endpoints.Notify != "" {
+			bugsnagConfig.Endpoints.Notify = config.Reporting.Bugsnag.Endpoints.Notify
+		}
+		if config.Reporting.Bugsnag.Endpoints.Sessions != "" {
+			bugsnagConfig.Endpoints.Sessions = config.Reporting.Bugsnag.Endpoints.Sessions
+		}
 	}
 	bugsnag.Configure(bugsnagConfig)
 

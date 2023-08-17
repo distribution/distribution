@@ -1,0 +1,39 @@
+# See https://raw.githubusercontent.com/golangci/golangci-lint/master/.golangci.example.yml
+
+run:
+  timeout: 5m
+
+linters:
+  enable:
+  - depguard
+  - dupl
+  - goconst
+  - gocritic
+  - gofmt
+  - goimports
+  - revive
+  - gosec
+  - govet
+  - lll
+  - megacheck
+  - misspell
+  - nakedret
+  - prealloc
+  - stylecheck
+  - unconvert
+  - unparam
+
+linters-settings:
+  goimports:
+    # put imports beginning with prefix after 3rd-party packages;
+    # it's a comma-separated list of prefixes
+    local-prefixes: github.com/Shopify/logrus-bugsnag
+
+issues:
+  exclude-rules:
+  - linters:
+    - revive
+    text: "var-naming: don't use an underscore in package name"
+  - linters:
+    - stylecheck
+    text: "ST1003: should not use underscores in package names"

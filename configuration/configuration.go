@@ -643,7 +643,14 @@ type BugsnagReporting struct {
 	// Examples: production, staging, development
 	ReleaseStage string `yaml:"releasestage,omitempty"`
 	// Endpoint is used for specifying an enterprise Bugsnag endpoint.
-	Endpoint string `yaml:"endpoint,omitempty"`
+	Endpoints BugsnagEndpoints `yaml:"endpoints,omitempty"`
+}
+
+type BugsnagEndpoints struct {
+	// Endpoint for session delivery.
+	Sessions string `yaml:"sessions,omitempty"`
+	// Endpoint for event delivery.
+	Notify string `yaml:"notify,omitempty"`
 }
 
 // NewRelicReporting configures error reporting for NewRelic (newrelic.com)

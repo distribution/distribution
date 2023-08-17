@@ -17,6 +17,11 @@ problems with your application and _should_ crash the runtime. panicwrap
 is just meant as a way to monitor for panics. If you still think this is
 the worst idea ever, read the section below on why.
 
+_This is a fork of [mitchellh/panicwrap](https://github.com/mitchellh/panicwrap)
+which adds support for monitoring for panics without interrupting signal
+handling on supported platforms. More information is available in the
+[documentation](https://godoc.org/github.com/bugsnag/panicwrap#BasicMonitor)._
+
 ## Features
 
 * **SIMPLE!**
