@@ -2,13 +2,21 @@ package memory
 
 import (
 	"context"
+	"fmt"
 	"math"
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/storage/cache"
+	"github.com/distribution/distribution/v3/tracing"
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/opencontainers/go-digest"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
+)
+
+const (
+	TraceSpanCacheType = "MemoryCache"
 )
 
 const (
@@ -57,6 +65,10 @@ func (imbdcp *inMemoryBlobDescriptorCacheProvider) RepositoryScoped(repo string)
 }
 
 func (imbdcp *inMemoryBlobDescriptorCacheProvider) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
+	span, _ := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", TraceSpanCacheType, "Stat"),
+		trace.WithAttributes(attribute.String("dgst", dgst.String())))
+	defer tracing.StopSpan(span)
+
 	if err := dgst.Validate(); err != nil {
 		return distribution.Descriptor{}, err
 	}
@@ -76,6 +88,10 @@ func (imbdcp *inMemoryBlobDescriptorCacheProvider) Stat(ctx context.Context, dgs
 }
 
 func (imbdcp *inMemoryBlobDescriptorCacheProvider) Clear(ctx context.Context, dgst digest.Digest) error {
+	span, _ := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", TraceSpanCacheType, "Clear"),
+		trace.WithAttributes(attribute.String("dgst", dgst.String())))
+	defer tracing.StopSpan(span)
+
 	key := descriptorCacheKey{
 		digest: dgst,
 	}
@@ -84,7 +100,13 @@ func (imbdcp *inMemoryBlobDescriptorCacheProvider) Clear(ctx context.Context, dg
 }
 
 func (imbdcp *inMemoryBlobDescriptorCacheProvider) SetDescriptor(ctx context.Context, dgst digest.Digest, desc distribution.Descriptor) error {
-	_, err := imbdcp.Stat(ctx, dgst)
+	span, spanCtx := tracing.StartSpan(ctx, fmt.Sprintf("%s:%s", TraceSpanCacheType, "SetDescriptor"),
+		trace.WithAttributes(attribute.String("dgst", dgst.String()),
+			attribute.String("MediaType", desc.MediaType)))
+	defer tracing.StopSpan(span)
+
+	_, err := imbdcp.Stat(spanCtx, dgst)
+
 	if err == distribution.ErrBlobUnknown {
 		if dgst.Algorithm() != desc.Digest.Algorithm() && dgst != desc.Digest {
 			// if the digests differ, set the other canonical mapping

@@ -37,6 +37,7 @@ import (
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
 	storagemiddleware "github.com/distribution/distribution/v3/registry/storage/driver/middleware"
+	"github.com/distribution/distribution/v3/tracing"
 	"github.com/distribution/distribution/v3/version"
 	events "github.com/docker/go-events"
 	"github.com/docker/go-metrics"
@@ -44,6 +45,8 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // randomSecretSize is the number of random bytes to generate if no secret
@@ -89,6 +92,9 @@ type App struct {
 
 	// readOnly is true if the registry is in a read-only maintenance mode
 	readOnly bool
+
+	// TraceShutdown trace close
+	TraceShutdown func()
 }
 
 // NewApp takes a configuration and returns a configured app, ready to serve
@@ -100,6 +106,10 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		Context: ctx,
 		router:  v2.RouterWithPrefix(config.HTTP.Prefix),
 		isCache: config.Proxy.RemoteURL != "",
+	}
+
+	if err := app.traceHTTPMiddleware(); err != nil {
+		panic(err)
 	}
 
 	// Register the handler dispatchers.
@@ -460,6 +470,34 @@ func (app *App) register(routeName string, dispatch dispatchFunc) {
 	// control over the request execution.
 
 	app.router.GetRoute(routeName).Handler(handler)
+}
+
+// traceHTTPMiddleware ware http request
+func (app *App) traceHTTPMiddleware() error {
+	shutdown, err := tracing.InitOpenTelemetry(app.Context, app.Config.OpenTelemetry)
+	if err != nil {
+		return err
+	}
+	if shutdown == nil {
+		return nil
+	}
+	app.TraceShutdown = shutdown
+
+	dcontext.GetLogger(app).Infof("traceMiddleware init success, OpenTelemetry config is: %s", app.Config.OpenTelemetry.String())
+	fn := func(handler http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			span, traceContext := tracing.StartSpan(r.Context(), r.URL.Path, trace.WithAttributes(
+				attribute.String("Method", r.Method),
+				attribute.String("Host", r.Host)))
+
+			defer tracing.StopSpan(span)
+			dcontext.GetLogger(app).Debugf("tracer.StartSpan url %s", r.RequestURI)
+			r = r.WithContext(traceContext)
+			handler.ServeHTTP(w, r)
+		})
+	}
+	app.router.Use(fn)
+	return nil
 }
 
 // configureEvents prepares the event sink for action.
