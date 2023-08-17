@@ -576,21 +576,21 @@ func (suite *ConfigSuite) TestParseEnvMany(c *check.C) {
 	c.Assert(err, check.IsNil)
 }
 
-func (suite *ConfigSuite) TestOpenTelemetry(c *C) {
+func (suite *ConfigSuite) TestOpenTelemetry(c *check.C) {
 	config, err := Parse(bytes.NewReader([]byte(configYamlV0_1)))
-	c.Assert(err, IsNil)
-	c.Assert(config.OpenTelemetry, NotNil)
-	c.Assert(config, DeepEquals, suite.expectedConfig)
+	c.Assert(err, check.IsNil)
+	c.Assert(config.OpenTelemetry, check.NotNil)
+	c.Assert(config, check.DeepEquals, suite.expectedConfig)
 
 	err = config.OpenTelemetry.Validate()
-	c.Assert(err, IsNil)
+	c.Assert(err, check.IsNil)
 
 	config.OpenTelemetry.Exporter.Name = "test"
 	err = config.OpenTelemetry.Validate()
-	c.Assert(err, NotNil)
+	c.Assert(err, check.NotNil)
 }
 
-func checkStructs(c *C, t reflect.Type, structsChecked map[string]struct{}) {
+func checkStructs(c *check.C, t reflect.Type, structsChecked map[string]struct{}) {
 	for t.Kind() == reflect.Ptr || t.Kind() == reflect.Map || t.Kind() == reflect.Slice {
 		t = t.Elem()
 	}
