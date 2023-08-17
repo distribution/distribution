@@ -420,8 +420,7 @@ func TestCatalogAPI(t *testing.T) {
 
 	envWithLessImages := newTestEnv(t, false)
 	for _, image := range allCatalog[0:(maxEntries - 1)] {
-		imageName, _ := reference.WithName(image)
-		testManifestAPISchema2(t, envWithLessImages, imageName, "sometag")
+		createRepository(envWithLessImages, t, image, "sometag")
 	}
 
 	catalogURL, err = envWithLessImages.builder.BuildCatalogURL(values)
