@@ -34,7 +34,7 @@ require (
 	golang.org/x/crypto v0.12.0
 	golang.org/x/oauth2 v0.8.0
 	google.golang.org/api v0.125.0
-	google.golang.org/grpc v1.57.0
+	google.golang.org/grpc v1.57.0 // indirect
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
 	gopkg.in/yaml.v2 v2.4.0
 )

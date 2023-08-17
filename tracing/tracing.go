@@ -15,7 +15,6 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	semconv "go.opentelemetry.io/otel/semconv/v1.4.0"
 	"go.opentelemetry.io/otel/trace"
-	"google.golang.org/grpc"
 )
 
 // InitOpenTelemetry reads config and initializes otel middleware, sets the exporter
@@ -47,7 +46,7 @@ func InitOpenTelemetry(ctx context.Context, config *configuration.OpenTelemetryC
 	ctrdTraceExporter, err := otlptracegrpc.New(ctx,
 		otlptracegrpc.WithInsecure(),
 		otlptracegrpc.WithEndpoint(config.Exporter.Endpoint),
-		otlptracegrpc.WithDialOption(grpc.WithBlock(), grpc.WithTimeout(time.Second*10)),
+		otlptracegrpc.WithTimeout(time.Second*10),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create trace exporter: %w", err)
