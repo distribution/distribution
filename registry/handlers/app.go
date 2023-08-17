@@ -40,7 +40,6 @@ import (
 	"github.com/distribution/distribution/v3/version"
 	events "github.com/docker/go-events"
 	"github.com/docker/go-metrics"
-	"github.com/docker/libtrust"
 	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/mux"
 	"github.com/sirupsen/logrus"
@@ -78,11 +77,6 @@ type App struct {
 	}
 
 	redis *redis.Pool
-
-	// trustKey is a deprecated key used to sign manifests converted to
-	// schema1 for backward compatibility. It should not be used for any
-	// other purposes.
-	trustKey libtrust.PrivateKey
 
 	// isCache is true if this registry is configured as a pull through cache
 	isCache bool
@@ -164,25 +158,6 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 	app.configureLogHook(config)
 
 	options := registrymiddleware.GetRegistryOptions()
-	if config.Compatibility.Schema1.TrustKey != "" {
-		app.trustKey, err = libtrust.LoadKeyFile(config.Compatibility.Schema1.TrustKey)
-		if err != nil {
-			panic(fmt.Sprintf(`could not load schema1 "signingkey" parameter: %v`, err))
-		}
-	} else {
-		// Generate an ephemeral key to be used for signing converted manifests
-		// for clients that don't support schema2.
-		app.trustKey, err = libtrust.GenerateECP256PrivateKey()
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	options = append(options, storage.Schema1SigningKey(app.trustKey))
-
-	if config.Compatibility.Schema1.Enabled {
-		options = append(options, storage.EnableSchema1)
-	}
 
 	if config.HTTP.Host != "" {
 		u, err := url.Parse(config.HTTP.Host)
