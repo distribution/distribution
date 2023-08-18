@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"math/rand"
 	"testing"
 
 	"github.com/distribution/distribution/v3"
@@ -239,4 +240,86 @@ func TestCatalogWalkError(t *testing.T) {
 	if err == io.EOF {
 		t.Errorf("Expected catalog driver list error")
 	}
+}
+
+func BenchmarkPathCompareEqual(B *testing.B) {
+	B.StopTimer()
+	pp := randomPath(100)
+	// make a real copy
+	ppb := append([]byte{}, []byte(pp)...)
+	a, b := pp, string(ppb)
+
+	B.StartTimer()
+	for i := 0; i < B.N; i++ {
+		lessPath(a, b)
+	}
+}
+
+func BenchmarkPathCompareNotEqual(B *testing.B) {
+	B.StopTimer()
+	a, b := randomPath(100), randomPath(100)
+	B.StartTimer()
+
+	for i := 0; i < B.N; i++ {
+		lessPath(a, b)
+	}
+}
+
+func BenchmarkPathCompareNative(B *testing.B) {
+	B.StopTimer()
+	a, b := randomPath(100), randomPath(100)
+	B.StartTimer()
+
+	for i := 0; i < B.N; i++ {
+		c := a < b
+		_ = c && false
+	}
+}
+
+func BenchmarkPathCompareNativeEqual(B *testing.B) {
+	B.StopTimer()
+	pp := randomPath(100)
+	a, b := pp, pp
+	B.StartTimer()
+
+	for i := 0; i < B.N; i++ {
+		c := a < b
+		_ = c && false
+	}
+}
+
+var (
+	filenameChars  = []byte("abcdefghijklmnopqrstuvwxyz0123456789")
+	separatorChars = []byte("._-")
+)
+
+func randomPath(length int64) string {
+	path := "/"
+	for int64(len(path)) < length {
+		chunkLength := rand.Int63n(length-int64(len(path))) + 1
+		chunk := randomFilename(chunkLength)
+		path += chunk
+		remaining := length - int64(len(path))
+		if remaining == 1 {
+			path += randomFilename(1)
+		} else if remaining > 1 {
+			path += "/"
+		}
+	}
+	return path
+}
+
+func randomFilename(length int64) string {
+	b := make([]byte, length)
+	wasSeparator := true
+	for i := range b {
+		if !wasSeparator && i < len(b)-1 && rand.Intn(4) == 0 {
+			b[i] = separatorChars[rand.Intn(len(separatorChars))]
+			wasSeparator = true
+		} else {
+			b[i] = filenameChars[rand.Intn(len(filenameChars))]
+			wasSeparator = false
+		}
+	}
+	return string(b)
 }
