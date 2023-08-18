@@ -112,6 +112,14 @@ func (reg *registry) walkRepos(ctx context.Context, root, last string, fn func(r
 // walkReposPath walks through all folders in `lookPath`,
 // looking for repositories. See walkRepos for more detailed description.
 func (reg *registry) walkReposPath(ctx context.Context, root, lookPath, last string, fn func(repoPath string) error) error {
+	// ensure that the current path is a dir, otherwise we just return
+	if f, err := reg.blobStore.driver.Stat(ctx, lookPath); err != nil || !f.IsDir() {
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+
 	// get children in the current path
 	children, err := reg.blobStore.driver.List(ctx, lookPath)
 	if err != nil {
