@@ -14,12 +14,12 @@ import (
 // Returns a list, or partial list, of repositories in the registry.
 // Because it's a quite expensive operation, it should only be used when building up
 // an initial set of repositories.
-func (reg *registry) Repositories(ctx context.Context, repos []string, last string) (n int, err error) {
-	var finishedWalk bool
-	var foundRepos []string
+func (reg *registry) Repositories(ctx context.Context, repos []string, last string) (int, error) {
+	filledBuffer := false
+	foundRepos := 0
 
 	if len(repos) == 0 {
-		return 0, errors.New("no space in slice")
+		return 0, errors.New("Attempted to list 0 repositories")
 	}
 
 	root, err := pathFor(repositoriesRootPathSpec{})
@@ -29,32 +29,34 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 
 	err = reg.blobStore.driver.Walk(ctx, root, func(fileInfo driver.FileInfo) error {
 		err := handleRepository(fileInfo, root, last, func(repoPath string) error {
-			foundRepos = append(foundRepos, repoPath)
+			repos[foundRepos] = repoPath
+			foundRepos += 1
 			return nil
 		})
 		if err != nil {
 			return err
 		}
 
-		// if we've filled our array, no need to walk any further
-		if len(foundRepos) == len(repos) {
-			finishedWalk = true
+		// if we've filled our slice, no need to walk any further
+		if foundRepos == len(repos) {
+			filledBuffer = true
 			return driver.ErrSkipDir
 		}
 
 		return nil
 	})
 
-	n = copy(repos, foundRepos)
-
 	if err != nil {
-		return n, err
-	} else if !finishedWalk {
-		// We didn't fill buffer. No more records are available.
-		return n, io.EOF
+		return foundRepos, err
 	}
 
-	return n, err
+	if filledBuffer {
+		// There are potentially more repositories to list
+		return foundRepos, nil
+	}
+
+	// We didn't fill the buffer, so that's the end of the list of repos
+	return foundRepos, io.EOF
 }
 
 // Enumerate applies ingester to each repository
