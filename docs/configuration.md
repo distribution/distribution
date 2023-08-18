@@ -197,10 +197,6 @@ reporting:
     apikey: bugsnagapikey
     releasestage: bugsnagreleasestage
     endpoint: bugsnagendpoint
-  newrelic:
-    licensekey: newreliclicensekey
-    name: newrelicname
-    verbose: true
 http:
   addr: localhost:5000
   prefix: /my/nested/registry/
@@ -711,17 +707,12 @@ reporting:
     apikey: bugsnagapikey
     releasestage: bugsnagreleasestage
     endpoint: bugsnagendpoint
-  newrelic:
-    licensekey: newreliclicensekey
-    name: newrelicname
-    verbose: true
 ```
 
 The `reporting` option is **optional** and configures error and metrics
 reporting tools. At the moment only two services are supported:
 
 - [Bugsnag](#bugsnag)
-- [New Relic](#new-relic)
 
 A valid configuration may contain both.
 
@@ -732,14 +723,6 @@ A valid configuration may contain both.
 | `apikey`  | yes      | The API Key provided by Bugsnag.                      |
 | `releasestage` | no  | Tracks where the registry is deployed, using a string like `production`, `staging`, or `development`.|
 | `endpoint`| no       | The enterprise Bugsnag endpoint.                      |
-
-### `newrelic`
-
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `licensekey` | yes   | License key provided by New Relic.                    |
-| `name`    | no       | New Relic application name.                           |
-|  `verbose`| no       | Set to `true` to enable New Relic debugging output on `stdout`. |
 
 ## `http`
 
