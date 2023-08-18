@@ -509,7 +509,7 @@ Uploads are started with a POST request which returns a url that can be used
 to push data and check upload status.
 
 The `Location` header will be used to communicate the upload location after
-each request. While it won't change in the this specification, clients should
+each request. While it won't change in this specification, clients should
 use the most recent value returned by the API.
 
 ##### Starting An Upload
@@ -1506,7 +1506,7 @@ The following parameters should be specified on the request:
 |Name|Kind|Description|
 |----|----|-----------|
 |`name`|path|Name of the target repository.|
-|`n`|query|Limit the number of entries in each response. It not present, all entries will be returned.|
+|`n`|query|Limit the number of entries in each response. If not present, all entries will be returned.|
 |`last`|query|Result set will include values lexically after last.|
 
 
