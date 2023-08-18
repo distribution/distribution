@@ -18,7 +18,7 @@ require (
 	github.com/gomodule/redigo v1.8.2
 	github.com/gorilla/handlers v1.5.1
 	github.com/gorilla/mux v1.8.0
-	github.com/hashicorp/golang-lru v0.5.4
+	github.com/hashicorp/golang-lru/arc/v2 v2.0.5
 	github.com/klauspost/compress v1.16.5
 	github.com/mitchellh/mapstructure v1.1.2
 	github.com/opencontainers/go-digest v1.0.0
@@ -80,5 +80,6 @@ require (
 	cloud.google.com/go/iam v0.12.0 // indirect
 	github.com/google/go-cmp v0.5.9 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.2.3 // indirect
+	github.com/hashicorp/golang-lru/v2 v2.0.5 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 )
