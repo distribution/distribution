@@ -5,15 +5,10 @@ import (
 	"errors"
 	"io"
 	"path"
-	"sort"
 	"strings"
 
 	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
-)
-
-var (
-	ErrStopRec = errors.New("Stopped the recursion for getting repositories")
 )
 
 // Returns a list, or partial list, of repositories in the registry.
@@ -32,17 +27,20 @@ func (reg *registry) Repositories(ctx context.Context, repos []string, last stri
 		return 0, err
 	}
 
-	err = reg.getRepositories(ctx, root, last, func(repoPath string) error {
-		// this is placed before the append,
-		// so that we will get a extra repo if
-		// any. This assures that we do not return
-		// io.EOF without it being the last record.
-		if len(foundRepos) == len(repos) {
-			finishedWalk = true
-			return ErrStopRec
+	err = reg.blobStore.driver.Walk(ctx, root, func(fileInfo driver.FileInfo) error {
+		err := handleRepository(fileInfo, root, last, func(repoPath string) error {
+			foundRepos = append(foundRepos, repoPath)
+			return nil
+		})
+		if err != nil {
+			return err
 		}
 
-		foundRepos = append(foundRepos, repoPath)
+		// if we've filled our array, no need to walk any further
+		if len(foundRepos) == len(repos) {
+			finishedWalk = true
+			return driver.ErrSkipDir
+		}
 
 		return nil
 	})
@@ -66,7 +64,11 @@ func (reg *registry) Enumerate(ctx context.Context, ingester func(string) error)
 		return err
 	}
 
-	return reg.getRepositories(ctx, root, "", ingester)
+	err = reg.blobStore.driver.Walk(ctx, root, func(fileInfo driver.FileInfo) error {
+		return handleRepository(fileInfo, root, "", ingester)
+	})
+
+	return err
 }
 
 // Remove removes a repository from storage
@@ -79,95 +81,78 @@ func (reg *registry) Remove(ctx context.Context, name reference.Named) error {
 	return reg.driver.Delete(ctx, repoDir)
 }
 
-// getRepositories is a helper function for getRepositoriesRec calls
-// the function fn with a repository path, if the current path looked
-// at is a repository and is lexicographically after last. It is possible
-// to return driver.ErrSkipDir, if there is no interest in any repositories
-// under the given `repoPath`, or call ErrStopRec if the recursion should stop.
-func (reg *registry) getRepositories(ctx context.Context, root, last string, fn func(repoPath string) error) error {
-	midFn := fn
-
-	// middleware func to exclude the `last` repo
-	// only use it, if there is set a last.
-	if last != "" {
-		midFn = func(repoPath string) error {
-			if repoPath != last {
-				return fn(repoPath)
-			}
-			return nil
-		}
-	}
-
-	// call our recursive func, with the midFn and the start path
-	// of where we want to find repositories.
-	err := reg.getRepositoriesRec(ctx, root, root, last, midFn)
-	if err == ErrStopRec {
-		return nil
-	}
-	return err
+// lessPath returns true if one path a is less than path b.
+//
+// A component-wise comparison is done, rather than the lexical comparison of
+// strings.
+func lessPath(a, b string) bool {
+	// we provide this behavior by making separator always sort first.
+	return compareReplaceInline(a, b, '/', '\x00') < 0
 }
 
-// getRepositoriesRec recurse through all folders it the `lookPath`,
-// there it will try to find repositories. See getRepositories for more.
-func (reg *registry) getRepositoriesRec(ctx context.Context, root, lookPath, last string, fn func(repoPath string) error) error {
-	// ensure that the current path is a dir, otherwise we just return
-	if f, err := reg.blobStore.driver.Stat(ctx, lookPath); err != nil || !f.IsDir() {
-		if err != nil {
-			return err
-		}
-		return nil
+// compareReplaceInline modifies runtime.cmpstring to replace old with new
+// during a byte-wise comparison.
+func compareReplaceInline(s1, s2 string, old, new byte) int {
+	// TODO(stevvooe): We are missing an optimization when the s1 and s2 have
+	// the exact same slice header. It will make the code unsafe but can
+	// provide some extra performance.
+
+	l := len(s1)
+	if len(s2) < l {
+		l = len(s2)
 	}
 
-	// get children in the current path
-	children, err := reg.blobStore.driver.List(ctx, lookPath)
-	if err != nil {
-		return err
-	}
-
-	// sort this, so that it will be added in the correct order
-	sort.Strings(children)
-
-	if last != "" {
-		splitLasts := strings.Split(last, "/")
-
-		// call the next iteration of getRepositoriesRec if any, but
-		// exclude the current one.
-		if len(splitLasts) > 1 {
-			if err := reg.getRepositoriesRec(ctx, root, lookPath+"/"+splitLasts[0], strings.Join(splitLasts[1:], "/"), fn); err != nil {
-				return err
-			}
+	for i := 0; i < l; i++ {
+		c1, c2 := s1[i], s2[i]
+		if c1 == old {
+			c1 = new
 		}
 
-		// find current last path in our children
-		n := sort.SearchStrings(children, lookPath+"/"+splitLasts[0])
-		if n == len(children) || children[n] != lookPath+"/"+splitLasts[0] {
-			return errors.New("the provided 'last' repositories does not exists")
+		if c2 == old {
+			c2 = new
 		}
 
-		// if this is not a final `last` (there are more `/` left)
-		// then exclude the current index, else include it
-		if len(splitLasts) > 1 {
-			children = children[n+1:]
-		} else {
-			children = children[n:]
+		if c1 < c2 {
+			return -1
+		}
+
+		if c1 > c2 {
+			return +1
 		}
 	}
 
-	for _, child := range children {
-		_, file := path.Split(child)
+	if len(s1) < len(s2) {
+		return -1
+	}
 
-		if file == "_manifest" {
-			if err := fn(strings.TrimPrefix(lookPath, root+"/")); err != nil {
-				if err == driver.ErrSkipDir {
-					break
-				}
-				return err
-			}
-		} else if file[0] != '_' {
-			if err := reg.getRepositoriesRec(ctx, root, child, "", fn); err != nil {
+	if len(s1) > len(s2) {
+		return +1
+	}
+
+	return 0
+}
+
+// handleRepository calls function fn with a repository path if fileInfo
+// has a path of a repository under root and that it is lexographically
+// after last. Otherwise, it will return ErrSkipDir. This should be used
+// with Walk to do handling with repositories in a storage.
+func handleRepository(fileInfo driver.FileInfo, root, last string, fn func(repoPath string) error) error {
+	filePath := fileInfo.Path()
+
+	// lop the base path off
+	repo := filePath[len(root)+1:]
+
+	_, file := path.Split(repo)
+	if file == "_manifests" {
+		repo = strings.TrimSuffix(repo, "/_manifests")
+		if lessPath(last, repo) {
+			if err := fn(repo); err != nil {
 				return err
 			}
 		}
+		return driver.ErrSkipDir
+	} else if strings.HasPrefix(file, "_") {
+		return driver.ErrSkipDir
 	}
 
 	return nil
