@@ -631,8 +631,6 @@ type Ignore struct {
 type Reporting struct {
 	// Bugsnag configures error reporting for Bugsnag (bugsnag.com).
 	Bugsnag BugsnagReporting `yaml:"bugsnag,omitempty"`
-	// NewRelic configures error reporting for NewRelic (newrelic.com)
-	NewRelic NewRelicReporting `yaml:"newrelic,omitempty"`
 }
 
 // BugsnagReporting configures error reporting for Bugsnag (bugsnag.com).
@@ -644,16 +642,6 @@ type BugsnagReporting struct {
 	ReleaseStage string `yaml:"releasestage,omitempty"`
 	// Endpoint is used for specifying an enterprise Bugsnag endpoint.
 	Endpoint string `yaml:"endpoint,omitempty"`
-}
-
-// NewRelicReporting configures error reporting for NewRelic (newrelic.com)
-type NewRelicReporting struct {
-	// LicenseKey is the NewRelic user license key
-	LicenseKey string `yaml:"licensekey,omitempty"`
-	// Name is the component name of the registry in NewRelic
-	Name string `yaml:"name,omitempty"`
-	// Verbose configures debug output to STDOUT
-	Verbose bool `yaml:"verbose,omitempty"`
 }
 
 // Middleware configures named middlewares to be applied at injection points.

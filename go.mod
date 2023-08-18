@@ -25,7 +25,6 @@ require (
 	github.com/opencontainers/image-spec v1.0.2
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.6.1
-	github.com/yvasiyarov/gorelic v0.0.0-20141212073537-a9bba5b9ab50
 	golang.org/x/crypto v0.7.0
 	golang.org/x/oauth2 v0.6.0
 	google.golang.org/api v0.114.0
@@ -68,8 +67,6 @@ require (
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/yvasiyarov/go-metrics v0.0.0-20140926110328-57bccd1ccd43 // indirect
-	github.com/yvasiyarov/newrelic_platform_go v0.0.0-20140908184405-b21fdbd4370f // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/net v0.8.0 // indirect; updated for CVE-2022-27664, CVE-2022-41717
 	golang.org/x/sys v0.6.0 // indirect

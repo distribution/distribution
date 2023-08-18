@@ -305,15 +305,6 @@ github.com/spf13/cobra
 # github.com/spf13/pflag v1.0.5
 ## explicit; go 1.12
 github.com/spf13/pflag
-# github.com/yvasiyarov/go-metrics v0.0.0-20140926110328-57bccd1ccd43
-## explicit
-github.com/yvasiyarov/go-metrics
-# github.com/yvasiyarov/gorelic v0.0.0-20141212073537-a9bba5b9ab50
-## explicit
-github.com/yvasiyarov/gorelic
-# github.com/yvasiyarov/newrelic_platform_go v0.0.0-20140908184405-b21fdbd4370f
-## explicit
-github.com/yvasiyarov/newrelic_platform_go
 # go.opencensus.io v0.24.0
 ## explicit; go 1.13
 go.opencensus.io
