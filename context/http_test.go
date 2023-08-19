@@ -258,10 +258,11 @@ func TestRemoteAddr(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = http.DefaultClient.Do(proxyReq)
+	resp, err := http.DefaultClient.Do(proxyReq)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 
 	// RemoteAddr in X-Real-Ip
 	getReq, err := http.NewRequest(http.MethodGet, backend.URL, nil)
@@ -271,15 +272,17 @@ func TestRemoteAddr(t *testing.T) {
 
 	expectedRemote = "1.2.3.4"
 	getReq.Header["X-Real-ip"] = []string{expectedRemote}
-	_, err = http.DefaultClient.Do(getReq)
+	resp, err = http.DefaultClient.Do(getReq)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 
 	// Valid X-Real-Ip and invalid X-Forwarded-For
 	getReq.Header["X-forwarded-for"] = []string{"1.2.3"}
-	_, err = http.DefaultClient.Do(getReq)
+	resp, err = http.DefaultClient.Do(getReq)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 }

@@ -67,6 +67,8 @@ func fetchAWSIPs(url string) (awsIPResponse, error) {
 	if err != nil {
 		return response, err
 	}
+	defer resp.Body.Close()
+
 	if resp.StatusCode != 200 {
 		body, _ := io.ReadAll(resp.Body)
 		return response, fmt.Errorf("failed to fetch network data. response = %s", body)

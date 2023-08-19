@@ -49,6 +49,7 @@ func (hbu *httpBlobUpload) ReadFrom(r io.Reader) (n int64, err error) {
 	if err != nil {
 		return 0, err
 	}
+	defer resp.Body.Close()
 
 	if !SuccessStatus(resp.StatusCode) {
 		return 0, hbu.handleErrorResponse(resp)
@@ -84,6 +85,7 @@ func (hbu *httpBlobUpload) Write(p []byte) (n int, err error) {
 	if err != nil {
 		return 0, err
 	}
+	defer resp.Body.Close()
 
 	if !SuccessStatus(resp.StatusCode) {
 		return 0, hbu.handleErrorResponse(resp)
