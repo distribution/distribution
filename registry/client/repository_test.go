@@ -1053,10 +1053,15 @@ func addTestManifestWithoutDigestHeader(repo reference.Named, reference string, 
 }
 
 func checkEqualManifest(m1, m2 *ocischema.DeserializedManifest) error {
-	if !reflect.DeepEqual(m1.Config, m2.Config) {
-		return fmt.Errorf("config do not match %v != %v", m1.Config, m2.Config)
+	if !reflect.DeepEqual(m1.Versioned, m2.Versioned) {
+		return fmt.Errorf("versions do not match: %v != %v", m1.Versioned, m2.Versioned)
 	}
-	// TODO(rest of the fields)
+	if !reflect.DeepEqual(m1.Config, m2.Config) {
+		return fmt.Errorf("config do not match: %v != %v", m1.Config, m2.Config)
+	}
+	if !reflect.DeepEqual(m1.Layers, m2.Layers) {
+		return fmt.Errorf("layers do not match: %v != %v", m1.Layers, m2.Layers)
+	}
 
 	return nil
 }
