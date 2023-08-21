@@ -151,6 +151,8 @@ func (factory *s3DriverFactory) Create(parameters map[string]interface{}) (stora
 	return FromParameters(parameters)
 }
 
+var _ storagedriver.StorageDriver = &driver{}
+
 type driver struct {
 	S3                          *s3.S3
 	Bucket                      string
