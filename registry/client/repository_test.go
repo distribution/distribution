@@ -19,14 +19,14 @@ import (
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/manifest"
-	"github.com/distribution/distribution/v3/manifest/schema1" //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
 	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	"github.com/distribution/distribution/v3/testutil"
 	"github.com/distribution/distribution/v3/uuid"
-	"github.com/docker/libtrust"
 	"github.com/opencontainers/go-digest"
+	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 func testServer(rrm testutil.RequestResponseMap) (string, func()) {
@@ -917,39 +917,38 @@ func TestBlobMount(t *testing.T) {
 	}
 }
 
-func newRandomSchemaV1Manifest(name reference.Named, tag string, blobCount int) (*schema1.SignedManifest, digest.Digest, []byte) { //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-	blobs := make([]schema1.FSLayer, blobCount)   //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-	history := make([]schema1.History, blobCount) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-
+func newRandomOCIManifest(t *testing.T, blobCount int) (*ocischema.Manifest, digest.Digest, []byte) {
+	layers := make([]distribution.Descriptor, blobCount)
 	for i := 0; i < blobCount; i++ {
 		dgst, blob := newRandomBlob((i % 5) * 16)
-
-		blobs[i] = schema1.FSLayer{BlobSum: dgst}                                             //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-		history[i] = schema1.History{V1Compatibility: fmt.Sprintf("{\"Hex\": \"%x\"}", blob)} //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+		layers[i] = distribution.Descriptor{
+			MediaType: v1.MediaTypeImageLayer,
+			Digest:    dgst,
+			Size:      int64(len(blob)),
+		}
 	}
 
-	m := schema1.Manifest{ //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-		Name:         name.String(),
-		Tag:          tag,
-		Architecture: "x86",
-		FSLayers:     blobs,
-		History:      history,
+	m := ocischema.Manifest{
 		Versioned: manifest.Versioned{
-			SchemaVersion: 1,
+			SchemaVersion: 2,
+			MediaType:     v1.MediaTypeImageManifest,
 		},
+		Config: distribution.Descriptor{
+			Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
+			Size:      123,
+			MediaType: v1.MediaTypeImageConfig,
+		},
+		Layers: layers,
 	}
 
-	pk, err := libtrust.GenerateECP256PrivateKey()
+	sm, err := ocischema.FromStruct(m)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 
-	sm, err := schema1.Sign(&m, pk) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-	if err != nil {
-		panic(err)
-	}
+	_, payload, _ := sm.Payload()
 
-	return sm, digest.FromBytes(sm.Canonical), sm.Canonical
+	return &m, digest.FromBytes(payload), payload
 }
 
 func addTestManifestWithEtag(repo reference.Named, reference string, content []byte, m *testutil.RequestResponseMap, dgst string) {
@@ -970,7 +969,7 @@ func addTestManifestWithEtag(repo reference.Named, reference string, content []b
 			Headers: http.Header(map[string][]string{
 				"Content-Length": {"0"},
 				"Last-Modified":  {time.Now().Add(-1 * time.Second).Format(time.ANSIC)},
-				"Content-Type":   {schema1.MediaTypeSignedManifest}, //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+				"Content-Type":   {v1.MediaTypeImageManifest},
 			}),
 		}
 	} else {
@@ -980,19 +979,11 @@ func addTestManifestWithEtag(repo reference.Named, reference string, content []b
 			Headers: http.Header(map[string][]string{
 				"Content-Length": {fmt.Sprint(len(content))},
 				"Last-Modified":  {time.Now().Add(-1 * time.Second).Format(time.ANSIC)},
-				"Content-Type":   {schema1.MediaTypeSignedManifest}, //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+				"Content-Type":   {v1.MediaTypeImageManifest},
 			}),
 		}
 	}
 	*m = append(*m, testutil.RequestResponseMapping{Request: getReqWithEtag, Response: getRespWithEtag})
-}
-
-func contentDigestString(mediatype string, content []byte) string {
-	if mediatype == schema1.MediaTypeSignedManifest { //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-		m, _, _ := distribution.UnmarshalManifest(mediatype, content)
-		content = m.(*schema1.SignedManifest).Canonical //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-	}
-	return digest.Canonical.FromBytes(content).String()
 }
 
 func addTestManifest(repo reference.Named, reference string, mediatype string, content []byte, m *testutil.RequestResponseMap) {
@@ -1008,7 +999,7 @@ func addTestManifest(repo reference.Named, reference string, mediatype string, c
 				"Content-Length":        {fmt.Sprint(len(content))},
 				"Last-Modified":         {time.Now().Add(-1 * time.Second).Format(time.ANSIC)},
 				"Content-Type":          {mediatype},
-				"Docker-Content-Digest": {contentDigestString(mediatype, content)},
+				"Docker-Content-Digest": {digest.FromBytes(content).String()},
 			}),
 		},
 	})
@@ -1061,43 +1052,27 @@ func addTestManifestWithoutDigestHeader(repo reference.Named, reference string, 
 	})
 }
 
-func checkEqualManifest(m1, m2 *schema1.SignedManifest) error { //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-	if m1.Name != m2.Name {
-		return fmt.Errorf("name does not match %q != %q", m1.Name, m2.Name)
+func checkEqualManifest(m1, m2 *ocischema.DeserializedManifest) error {
+	if !reflect.DeepEqual(m1.Versioned, m2.Versioned) {
+		return fmt.Errorf("versions do not match: %v != %v", m1.Versioned, m2.Versioned)
 	}
-	if m1.Tag != m2.Tag {
-		return fmt.Errorf("tag does not match %q != %q", m1.Tag, m2.Tag)
+	if !reflect.DeepEqual(m1.Config, m2.Config) {
+		return fmt.Errorf("config do not match: %v != %v", m1.Config, m2.Config)
 	}
-	if len(m1.FSLayers) != len(m2.FSLayers) {
-		return fmt.Errorf("fs blob length does not match %d != %d", len(m1.FSLayers), len(m2.FSLayers))
+	if !reflect.DeepEqual(m1.Layers, m2.Layers) {
+		return fmt.Errorf("layers do not match: %v != %v", m1.Layers, m2.Layers)
 	}
-	for i := range m1.FSLayers {
-		if m1.FSLayers[i].BlobSum != m2.FSLayers[i].BlobSum {
-			return fmt.Errorf("blobsum does not match %q != %q", m1.FSLayers[i].BlobSum, m2.FSLayers[i].BlobSum)
-		}
-	}
-	if len(m1.History) != len(m2.History) {
-		return fmt.Errorf("history length does not match %d != %d", len(m1.History), len(m2.History))
-	}
-	for i := range m1.History {
-		if m1.History[i].V1Compatibility != m2.History[i].V1Compatibility {
-			return fmt.Errorf("blobsum does not match %q != %q", m1.History[i].V1Compatibility, m2.History[i].V1Compatibility)
-		}
-	}
+
 	return nil
 }
 
-func TestV1ManifestFetch(t *testing.T) {
+func TestOCIManifestFetch(t *testing.T) {
 	ctx := context.Background()
 	repo, _ := reference.WithName("test.example.com/repo")
-	m1, dgst, _ := newRandomSchemaV1Manifest(repo, "latest", 6)
+	m1, dgst, pl := newRandomOCIManifest(t, 6)
 	var m testutil.RequestResponseMap
-	_, pl, err := m1.Payload() //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-	if err != nil {
-		t.Fatal(err)
-	}
-	addTestManifest(repo, dgst.String(), schema1.MediaTypeSignedManifest, pl, &m) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-	addTestManifest(repo, "latest", schema1.MediaTypeSignedManifest, pl, &m)      //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+	addTestManifest(repo, dgst.String(), v1.MediaTypeImageManifest, pl, &m)
+	addTestManifest(repo, "latest", v1.MediaTypeImageManifest, pl, &m)
 	addTestManifest(repo, "badcontenttype", "text/html", pl, &m)
 
 	e, c := testServer(m)
@@ -1124,12 +1099,17 @@ func TestV1ManifestFetch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	v1manifest, ok := manifest.(*schema1.SignedManifest) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+	ociManifest, ok := manifest.(*ocischema.DeserializedManifest)
 	if !ok {
 		t.Fatalf("Unexpected manifest type from Get: %T", manifest)
 	}
 
-	if err := checkEqualManifest(v1manifest, m1); err != nil {
+	dm1, err := ocischema.FromStruct(*m1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := checkEqualManifest(ociManifest, dm1); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1138,12 +1118,12 @@ func TestV1ManifestFetch(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	v1manifest, ok = manifest.(*schema1.SignedManifest) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+	ociManifest, ok = manifest.(*ocischema.DeserializedManifest)
 	if !ok {
 		t.Fatalf("Unexpected manifest type from Get: %T", manifest)
 	}
 
-	if err = checkEqualManifest(v1manifest, m1); err != nil {
+	if err = checkEqualManifest(ociManifest, dm1); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1151,23 +1131,19 @@ func TestV1ManifestFetch(t *testing.T) {
 		t.Fatalf("Unexpected returned content digest %v, expected %v", contentDigest, dgst)
 	}
 
-	manifest, err = ms.Get(ctx, dgst, distribution.WithTag("badcontenttype"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	v1manifest, ok = manifest.(*schema1.SignedManifest) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-	if !ok {
-		t.Fatalf("Unexpected manifest type from Get: %T", manifest)
-	}
-
-	if err = checkEqualManifest(v1manifest, m1); err != nil {
-		t.Fatal(err)
+	// TODO(milosgajdos): once the schema1 manifest package is removed we need to
+	// return some predefined error from distribution.UnmarshalManifest() for the cases
+	// where empty mediaType/ctHeader is provided; currently this is handled by schema1 unmarshaler.
+	// Ideally we'd like to returns something like UnsupportedManifest error and assert it in this test.
+	_, err = ms.Get(ctx, dgst, distribution.WithTag("badcontenttype"))
+	if err == nil {
+		t.Fatal("expected to fail")
 	}
 }
 
 func TestManifestFetchWithEtag(t *testing.T) {
 	repo, _ := reference.WithName("test.example.com/repo/by/tag")
-	_, d1, p1 := newRandomSchemaV1Manifest(repo, "latest", 6)
+	_, d1, p1 := newRandomOCIManifest(t, 6)
 	var m testutil.RequestResponseMap
 	addTestManifestWithEtag(repo, "latest", p1, &m, d1.String())
 
@@ -1198,7 +1174,7 @@ func TestManifestFetchWithEtag(t *testing.T) {
 func TestManifestFetchWithAccept(t *testing.T) {
 	ctx := context.Background()
 	repo, _ := reference.WithName("test.example.com/repo")
-	_, dgst, _ := newRandomSchemaV1Manifest(repo, "latest", 6)
+	_, dgst, _ := newRandomOCIManifest(t, 6)
 	headers := make(chan []string, 1)
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		headers <- req.Header["Accept"]
@@ -1242,6 +1218,10 @@ func TestManifestFetchWithAccept(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
+		// NOTE(milosgajdos): we are not checking error values here because this test
+		// is not storing any manifests, so this will inevitably error out.
+		// This test is about checking if the Accept headers are returned as expected.
+		// nolint:errcheck
 		ms.Get(ctx, dgst, distribution.WithManifestMediaTypes(testCase.mediaTypes))
 		actual := <-headers
 		if testCase.sort {
@@ -1256,8 +1236,8 @@ func TestManifestFetchWithAccept(t *testing.T) {
 
 func TestManifestDelete(t *testing.T) {
 	repo, _ := reference.WithName("test.example.com/repo/delete")
-	_, dgst1, _ := newRandomSchemaV1Manifest(repo, "latest", 6)
-	_, dgst2, _ := newRandomSchemaV1Manifest(repo, "latest", 6)
+	_, dgst1, _ := newRandomOCIManifest(t, 6)
+	_, dgst2, _ := newRandomOCIManifest(t, 6)
 	var m testutil.RequestResponseMap
 	m = append(m, testutil.RequestResponseMapping{
 		Request: testutil.Request{
@@ -1291,23 +1271,17 @@ func TestManifestDelete(t *testing.T) {
 	if err := ms.Delete(ctx, dgst2); err == nil {
 		t.Fatal("Expected error deleting unknown manifest")
 	}
-	// TODO(dmcgowan): Check for specific unknown error
 }
 
 func TestManifestPut(t *testing.T) {
 	repo, _ := reference.WithName("test.example.com/repo/delete")
-	m1, dgst, _ := newRandomSchemaV1Manifest(repo, "other", 6)
-
-	_, payload, err := m1.Payload() //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-	if err != nil {
-		t.Fatal(err)
-	}
+	m1, dgst, payload := newRandomOCIManifest(t, 6)
 
 	var m testutil.RequestResponseMap
 	m = append(m, testutil.RequestResponseMapping{
 		Request: testutil.Request{
 			Method: http.MethodPut,
-			Route:  "/v2/" + repo.Name() + "/manifests/other",
+			Route:  "/v2/" + repo.Name() + "/manifests/sometag",
 			Body:   payload,
 		},
 		Response: testutil.Response{
@@ -1319,7 +1293,7 @@ func TestManifestPut(t *testing.T) {
 		},
 	})
 
-	putDgst := digest.FromBytes(m1.Canonical)
+	putDgst := digest.FromBytes(payload)
 	m = append(m, testutil.RequestResponseMapping{
 		Request: testutil.Request{
 			Method: http.MethodPut,
@@ -1348,15 +1322,18 @@ func TestManifestPut(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := ms.Put(ctx, m1, distribution.WithTag(m1.Tag)); err != nil {
+	dm, err := ocischema.FromStruct(*m1)
+	if err != nil {
 		t.Fatal(err)
 	}
 
-	if _, err := ms.Put(ctx, m1); err != nil {
+	if _, err := ms.Put(ctx, dm, distribution.WithTag("sometag")); err != nil {
 		t.Fatal(err)
 	}
 
-	// TODO(dmcgowan): Check for invalid input error
+	if _, err := ms.Put(ctx, dm); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestManifestTags(t *testing.T) {
@@ -1424,7 +1401,7 @@ func TestManifestTags(t *testing.T) {
 func TestTagDelete(t *testing.T) {
 	tag := "latest"
 	repo, _ := reference.WithName("test.example.com/repo/delete")
-	newRandomSchemaV1Manifest(repo, tag, 1)
+	newRandomOCIManifest(t, 1)
 
 	var m testutil.RequestResponseMap
 	m = append(m, testutil.RequestResponseMapping{
@@ -1505,12 +1482,8 @@ func TestObtainsManifestForTagWithoutHeaders(t *testing.T) {
 	repo, _ := reference.WithName("test.example.com/repo")
 
 	var m testutil.RequestResponseMap
-	m1, dgst, _ := newRandomSchemaV1Manifest(repo, "latest", 6)
-	_, pl, err := m1.Payload() //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-	if err != nil {
-		t.Fatal(err)
-	}
-	addTestManifestWithoutDigestHeader(repo, "1.0.0", schema1.MediaTypeSignedManifest, pl, &m) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+	_, dgst, pl := newRandomOCIManifest(t, 6)
+	addTestManifestWithoutDigestHeader(repo, "1.0.0", v1.MediaTypeImageManifest, pl, &m)
 
 	e, c := testServer(m)
 	defer c()
@@ -1620,7 +1593,7 @@ func TestManifestTagsPaginated(t *testing.T) {
 
 func TestManifestUnauthorized(t *testing.T) {
 	repo, _ := reference.WithName("test.example.com/repo")
-	_, dgst, _ := newRandomSchemaV1Manifest(repo, "latest", 6)
+	_, dgst, _ := newRandomOCIManifest(t, 6)
 	var m testutil.RequestResponseMap
 
 	m = append(m, testutil.RequestResponseMapping{
