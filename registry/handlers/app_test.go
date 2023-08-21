@@ -128,6 +128,7 @@ func TestAppDispatcher(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("unexpected status code: %v != %v", resp.StatusCode, http.StatusOK)
