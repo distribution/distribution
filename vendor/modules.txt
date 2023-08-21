@@ -91,9 +91,6 @@ github.com/AzureAD/microsoft-authentication-library-for-go/apps/internal/options
 github.com/AzureAD/microsoft-authentication-library-for-go/apps/internal/shared
 github.com/AzureAD/microsoft-authentication-library-for-go/apps/internal/version
 github.com/AzureAD/microsoft-authentication-library-for-go/apps/public
-# github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d
-## explicit
-github.com/Shopify/logrus-bugsnag
 # github.com/aws/aws-sdk-go v1.44.325
 ## explicit; go 1.11
 github.com/aws/aws-sdk-go/aws
@@ -151,21 +148,9 @@ github.com/aws/aws-sdk-go/service/sts/stsiface
 # github.com/beorn7/perks v1.0.1
 ## explicit; go 1.11
 github.com/beorn7/perks/quantile
-# github.com/bitly/go-simplejson v0.5.0
-## explicit
 # github.com/bshuster-repo/logrus-logstash-hook v1.0.0
 ## explicit
 github.com/bshuster-repo/logrus-logstash-hook
-# github.com/bugsnag/bugsnag-go v0.0.0-20141110184014-b1d153021fcd
-## explicit
-github.com/bugsnag/bugsnag-go
-github.com/bugsnag/bugsnag-go/errors
-# github.com/bugsnag/osext v0.0.0-20130617224835-0dd3f918b21b
-## explicit
-github.com/bugsnag/osext
-# github.com/bugsnag/panicwrap v0.0.0-20151223152923-e2c28503fcd0
-## explicit
-github.com/bugsnag/panicwrap
 # github.com/cespare/xxhash/v2 v2.2.0
 ## explicit; go 1.11
 github.com/cespare/xxhash/v2
@@ -265,8 +250,6 @@ github.com/matttproud/golang_protobuf_extensions/pbutil
 # github.com/mitchellh/mapstructure v1.1.2
 ## explicit
 github.com/mitchellh/mapstructure
-# github.com/mitchellh/osext v0.0.0-20151018003038-5e2d6d41470f
-## explicit
 # github.com/opencontainers/go-digest v1.0.0
 ## explicit; go 1.13
 github.com/opencontainers/go-digest

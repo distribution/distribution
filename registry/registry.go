@@ -12,10 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	logrus_bugsnag "github.com/Shopify/logrus-bugsnag"
-
 	logstash "github.com/bshuster-repo/logrus-logstash-hook"
-	"github.com/bugsnag/bugsnag-go"
 	"github.com/docker/go-metrics"
 	gorhandlers "github.com/gorilla/handlers"
 	"github.com/sirupsen/logrus"
@@ -139,8 +136,6 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 		return nil, fmt.Errorf("error configuring logger: %v", err)
 	}
 
-	configureBugsnag(config)
-
 	// inject a logger into the uuid library. warns us if there is a problem
 	// with uuid generation under low entropy.
 	uuid.Loggerf = dcontext.GetLogger(ctx).Warnf
@@ -149,7 +144,7 @@ func NewRegistry(ctx context.Context, config *configuration.Configuration) (*Reg
 	// TODO(aaronl): The global scope of the health checks means NewRegistry
 	// can only be called once per process.
 	app.RegisterHealthChecks()
-	handler := configureReporting(app)
+	var handler http.Handler = app
 	handler = alive("/", handler)
 	handler = health.Handler(handler)
 	handler = panicHandler(handler)
@@ -345,16 +340,6 @@ func configurePrometheus(config *configuration.Configuration) {
 	}
 }
 
-func configureReporting(app *handlers.App) http.Handler {
-	var handler http.Handler = app
-
-	if app.Config.Reporting.Bugsnag.APIKey != "" {
-		handler = bugsnag.Handler(handler)
-	}
-
-	return handler
-}
-
 // configureLogging prepares the context with a logger using the
 // configuration.
 func configureLogging(ctx context.Context, config *configuration.Configuration) (context.Context, error) {
@@ -408,32 +393,6 @@ func logLevel(level configuration.Loglevel) logrus.Level {
 	}
 
 	return l
-}
-
-// configureBugsnag configures bugsnag reporting, if enabled
-func configureBugsnag(config *configuration.Configuration) {
-	if config.Reporting.Bugsnag.APIKey == "" {
-		return
-	}
-
-	bugsnagConfig := bugsnag.Configuration{
-		APIKey: config.Reporting.Bugsnag.APIKey,
-	}
-	if config.Reporting.Bugsnag.ReleaseStage != "" {
-		bugsnagConfig.ReleaseStage = config.Reporting.Bugsnag.ReleaseStage
-	}
-	if config.Reporting.Bugsnag.Endpoint != "" {
-		bugsnagConfig.Endpoint = config.Reporting.Bugsnag.Endpoint
-	}
-	bugsnag.Configure(bugsnagConfig)
-
-	// configure logrus bugsnag hook
-	hook, err := logrus_bugsnag.NewBugsnagHook()
-	if err != nil {
-		logrus.Fatalln(err)
-	}
-
-	logrus.AddHook(hook)
 }
 
 // panicHandler add an HTTP handler to web app. The handler recover the happening

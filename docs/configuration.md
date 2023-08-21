@@ -192,11 +192,6 @@ middleware:
     - name: redirect
       options:
         baseurl: https://example.com/
-reporting:
-  bugsnag:
-    apikey: bugsnagapikey
-    releasestage: bugsnagreleasestage
-    endpoint: bugsnagendpoint
 http:
   addr: localhost:5000
   prefix: /my/nested/registry/
@@ -698,31 +693,6 @@ location of a proxy for the layer stored by the S3 storage driver.
 | Parameter | Required | Description                                                                                                 |
 |-----------|----------|-------------------------------------------------------------------------------------------------------------|
 | `baseurl` | yes      | `SCHEME://HOST` at which layers are served. Can also contain port. For example, `https://example.com:5443`. |
-
-## `reporting`
-
-```
-reporting:
-  bugsnag:
-    apikey: bugsnagapikey
-    releasestage: bugsnagreleasestage
-    endpoint: bugsnagendpoint
-```
-
-The `reporting` option is **optional** and configures error and metrics
-reporting tools. At the moment only two services are supported:
-
-- [Bugsnag](#bugsnag)
-
-A valid configuration may contain both.
-
-### `bugsnag`
-
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `apikey`  | yes      | The API Key provided by Bugsnag.                      |
-| `releasestage` | no  | Tracks where the registry is deployed, using a string like `production`, `staging`, or `development`.|
-| `endpoint`| no       | The enterprise Bugsnag endpoint.                      |
 
 ## `http`
 
