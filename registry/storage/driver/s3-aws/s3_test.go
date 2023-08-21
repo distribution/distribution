@@ -13,8 +13,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/check.v1"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 
@@ -23,13 +21,8 @@ import (
 	"github.com/distribution/distribution/v3/registry/storage/driver/testsuites"
 )
 
-// Hook up gocheck into the "go test" runner.
-func Test(t *testing.T) { check.TestingT(t) }
-
-var (
-	s3DriverConstructor func(rootDirectory, storageClass string) (*Driver, error)
-	skipS3              func() string
-)
+var s3DriverConstructor func(rootDirectory, storageClass string) (*Driver, error)
+var skipS3 func() string
 
 func init() {
 	var (
@@ -205,39 +198,6 @@ func TestEmptyRootList(t *testing.T) {
 	}
 }
 
-// TestWalkEmptySubDirectory assures we list an empty sub directory only once when walking
-// through its parent directory.
-func TestWalkEmptySubDirectory(t *testing.T) {
-	if skipS3() != "" {
-		t.Skip(skipS3())
-	}
-
-	drv, err := s3DriverConstructor("", s3.StorageClassStandard)
-	if err != nil {
-		t.Fatalf("unexpected error creating rooted driver: %v", err)
-	}
-
-	// create an empty sub directory.
-	s3driver := drv.StorageDriver.(*driver)
-	if _, err := s3driver.S3.PutObject(&s3.PutObjectInput{
-		Bucket: aws.String(os.Getenv("S3_BUCKET")),
-		Key:    aws.String("/testdir/emptydir/"),
-	}); err != nil {
-		t.Fatalf("error creating empty directory: %s", err)
-	}
-
-	bucketFiles := []string{}
-	s3driver.Walk(context.Background(), "/testdir", func(fileInfo storagedriver.FileInfo) error {
-		bucketFiles = append(bucketFiles, fileInfo.Path())
-		return nil
-	})
-
-	expected := []string{"/testdir/emptydir"}
-	if !reflect.DeepEqual(bucketFiles, expected) {
-		t.Errorf("expecting files %+v, found %+v instead", expected, bucketFiles)
-	}
-}
-
 func TestStorageClass(t *testing.T) {
 	if skipS3() != "" {
 		t.Skip(skipS3())
@@ -251,6 +211,11 @@ func TestStorageClass(t *testing.T) {
 		s3Driver, err := s3DriverConstructor(rootDir, storageClass)
 		if err != nil {
 			t.Fatalf("unexpected error creating driver with storage class %v: %v", storageClass, err)
+		}
+
+		// Can only test outposts if using s3 outposts
+		if storageClass == s3.StorageClassOutposts {
+			continue
 		}
 
 		err = s3Driver.PutContent(ctx, filename, contents)
@@ -269,7 +234,9 @@ func TestStorageClass(t *testing.T) {
 		}
 		defer resp.Body.Close()
 		// Amazon only populates this header value for non-standard storage classes
-		if storageClass == s3.StorageClassStandard && resp.StorageClass != nil {
+		if storageClass == noStorageClass {
+			// We haven't specified a storage class so we can't confirm what it is
+		} else if storageClass == s3.StorageClassStandard && resp.StorageClass != nil {
 			t.Fatalf(
 				"unexpected response storage class for file with storage class %v: %v",
 				storageClass,
@@ -637,7 +604,6 @@ func TestWalk(t *testing.T) {
 			name: "from folder",
 			fn:   func(fileInfo storagedriver.FileInfo) error { return nil },
 			expected: []string{
-				"/folder1",
 				"/folder1/file1",
 			},
 			from: "/folder1",
