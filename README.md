@@ -8,6 +8,7 @@
 [![codecov](https://codecov.io/gh/distribution/distribution/branch/main/graph/badge.svg)](https://codecov.io/gh/distribution/distribution)
 [![FOSSA Status](https://app.fossa.com/api/projects/custom%2B162%2Fgithub.com%2Fdistribution%2Fdistribution.svg?type=shield)](https://app.fossa.com/projects/custom%2B162%2Fgithub.com%2Fdistribution%2Fdistribution?ref=badge_shield)
 [![OCI Conformance](https://github.com/distribution/distribution/workflows/conformance/badge.svg)](https://github.com/distribution/distribution/actions?query=workflow%3Aconformance)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/distribution/distribution/badge)](https://api.securityscorecards.dev/projects/github.com/distribution/distribution)
 
 The toolset to pack, ship, store, and deliver content.
 
