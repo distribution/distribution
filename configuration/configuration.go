@@ -62,9 +62,6 @@ type Configuration struct {
 	// Middleware lists all middlewares to be used by the registry.
 	Middleware map[string][]Middleware `yaml:"middleware,omitempty"`
 
-	// Reporting is the configuration for error reporting
-	Reporting Reporting `yaml:"reporting,omitempty"`
-
 	// HTTP contains configuration parameters for the registry's http
 	// interface.
 	HTTP struct {
@@ -625,23 +622,6 @@ type Events struct {
 type Ignore struct {
 	MediaTypes []string `yaml:"mediatypes"` // target media types to ignore
 	Actions    []string `yaml:"actions"`    // ignore action types
-}
-
-// Reporting defines error reporting methods.
-type Reporting struct {
-	// Bugsnag configures error reporting for Bugsnag (bugsnag.com).
-	Bugsnag BugsnagReporting `yaml:"bugsnag,omitempty"`
-}
-
-// BugsnagReporting configures error reporting for Bugsnag (bugsnag.com).
-type BugsnagReporting struct {
-	// APIKey is the Bugsnag api key.
-	APIKey string `yaml:"apikey,omitempty"`
-	// ReleaseStage tracks where the registry is deployed.
-	// Examples: production, staging, development
-	ReleaseStage string `yaml:"releasestage,omitempty"`
-	// Endpoint is used for specifying an enterprise Bugsnag endpoint.
-	Endpoint string `yaml:"endpoint,omitempty"`
 }
 
 // Middleware configures named middlewares to be applied at injection points.
