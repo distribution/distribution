@@ -40,8 +40,9 @@ import (
 	"github.com/distribution/distribution/v3/version"
 	events "github.com/docker/go-events"
 	"github.com/docker/go-metrics"
-	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/mux"
+	"github.com/redis/go-redis/extra/redisotel/v9"
+	"github.com/redis/go-redis/v9"
 	"github.com/sirupsen/logrus"
 )
 
@@ -76,7 +77,7 @@ type App struct {
 		source notifications.SourceRecord
 	}
 
-	redis *redis.Pool
+	redis *redis.Client
 
 	// isCache is true if this registry is configured as a pull through cache
 	isCache bool
@@ -484,84 +485,23 @@ func (app *App) configureEvents(configuration *configuration.Configuration) {
 	}
 }
 
-type redisStartAtKey struct{}
-
-func (app *App) configureRedis(configuration *configuration.Configuration) {
-	if configuration.Redis.Addr == "" {
+func (app *App) configureRedis(cfg *configuration.Configuration) {
+	if cfg.Redis.Addr == "" {
 		dcontext.GetLogger(app).Infof("redis not configured")
 		return
 	}
 
-	pool := &redis.Pool{
-		Dial: func() (redis.Conn, error) {
-			// TODO(stevvooe): Yet another use case for contextual timing.
-			ctx := context.WithValue(app, redisStartAtKey{}, time.Now())
+	app.redis = app.createPool(cfg.Redis)
 
-			done := func(err error) {
-				logger := dcontext.GetLoggerWithField(ctx, "redis.connect.duration",
-					dcontext.Since(ctx, redisStartAtKey{}))
-				if err != nil {
-					logger.Errorf("redis: error connecting: %v", err)
-				} else {
-					logger.Infof("redis: connect %v", configuration.Redis.Addr)
-				}
-			}
-
-			conn, err := redis.Dial("tcp",
-				configuration.Redis.Addr,
-				redis.DialConnectTimeout(configuration.Redis.DialTimeout),
-				redis.DialReadTimeout(configuration.Redis.ReadTimeout),
-				redis.DialWriteTimeout(configuration.Redis.WriteTimeout),
-				redis.DialUseTLS(configuration.Redis.TLS.Enabled))
-			if err != nil {
-				dcontext.GetLogger(app).Errorf("error connecting to redis instance %s: %v",
-					configuration.Redis.Addr, err)
-				done(err)
-				return nil, err
-			}
-
-			// authorize the connection
-			authArgs := make([]interface{}, 0, 2)
-			if configuration.Redis.Username != "" {
-				authArgs = append(authArgs, configuration.Redis.Username)
-			}
-			if configuration.Redis.Password != "" {
-				authArgs = append(authArgs, configuration.Redis.Password)
-			}
-
-			if len(authArgs) > 0 {
-				if _, err = conn.Do("AUTH", authArgs...); err != nil {
-					defer conn.Close()
-					done(err)
-					return nil, err
-				}
-			}
-
-			// select the database to use
-			if configuration.Redis.DB != 0 {
-				if _, err = conn.Do("SELECT", configuration.Redis.DB); err != nil {
-					defer conn.Close()
-					done(err)
-					return nil, err
-				}
-			}
-
-			done(nil)
-			return conn, nil
-		},
-		MaxIdle:     configuration.Redis.Pool.MaxIdle,
-		MaxActive:   configuration.Redis.Pool.MaxActive,
-		IdleTimeout: configuration.Redis.Pool.IdleTimeout,
-		TestOnBorrow: func(c redis.Conn, t time.Time) error {
-			// TODO(stevvooe): We can probably do something more interesting
-			// here with the health package.
-			_, err := c.Do("PING")
-			return err
-		},
-		Wait: false, // if a connection is not available, proceed without cache.
+	// Enable tracing instrumentation.
+	if err := redisotel.InstrumentTracing(app.redis); err != nil {
+		dcontext.GetLogger(app).Errorf("failed to instrument tracing on redis: %v", err)
 	}
 
-	app.redis = pool
+	// Enable metrics instrumentation.
+	if err := redisotel.InstrumentMetrics(app.redis); err != nil {
+		dcontext.GetLogger(app).Errorf("failed to instrument metrics on redis: %v", err)
+	}
 
 	// setup expvar
 	registry := expvar.Get("registry")
@@ -570,11 +510,32 @@ func (app *App) configureRedis(configuration *configuration.Configuration) {
 	}
 
 	registry.(*expvar.Map).Set("redis", expvar.Func(func() interface{} {
+		stats := app.redis.PoolStats()
 		return map[string]interface{}{
-			"Config": configuration.Redis,
-			"Active": app.redis.ActiveCount(),
+			"Config": cfg,
+			"Active": stats.TotalConns - stats.IdleConns,
 		}
 	}))
+}
+
+func (app *App) createPool(cfg configuration.Redis) *redis.Client {
+	return redis.NewClient(&redis.Options{
+		Addr: cfg.Addr,
+		OnConnect: func(ctx context.Context, cn *redis.Conn) error {
+			res := cn.Ping(ctx)
+			return res.Err()
+		},
+		Password:        cfg.Password,
+		DB:              cfg.DB,
+		MaxRetries:      3,
+		DialTimeout:     cfg.DialTimeout,
+		ReadTimeout:     cfg.ReadTimeout,
+		WriteTimeout:    cfg.WriteTimeout,
+		PoolFIFO:        false,
+		MaxIdleConns:    cfg.Pool.MaxIdle,
+		PoolSize:        cfg.Pool.MaxActive,
+		ConnMaxIdleTime: cfg.Pool.IdleTimeout,
+	})
 }
 
 // configureLogHook prepares logging hook parameters.
