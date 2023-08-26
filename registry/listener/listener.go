@@ -5,6 +5,8 @@ import (
 	"net"
 	"os"
 	"time"
+
+	"github.com/coreos/go-systemd/v22/activation"
 )
 
 // tcpKeepAliveListener sets TCP keep-alive timeouts on accepted
@@ -29,13 +31,25 @@ func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
 // NewListener announces on laddr and net. Accepted values of the net are
 // 'unix' and 'tcp'
 func NewListener(net, laddr string) (net.Listener, error) {
-	switch net {
-	case "unix":
-		return newUnixListener(laddr)
-	case "tcp", "": // an empty net means tcp
-		return newTCPListener(laddr)
+	listeners, err := activation.Listeners()
+	if err != nil {
+		return nil, fmt.Errorf("Socket activation failed: %v", err)
+	}
+	switch len(listeners) {
+	case 0:
+		// No socket-activation found
+		switch net {
+		case "unix":
+			return newUnixListener(laddr)
+		case "tcp", "": // an empty net means tcp
+			return newTCPListener(laddr)
+		default:
+			return nil, fmt.Errorf("unknown address type %s", net)
+		}
+	case 1:
+		return listeners[0], nil
 	default:
-		return nil, fmt.Errorf("unknown address type %s", net)
+		return nil, fmt.Errorf("Found %d socket-activation listeners, only expected 1", len(listeners))
 	}
 }
 
