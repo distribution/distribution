@@ -3,6 +3,7 @@ package testsuites
 import (
 	"bytes"
 	"context"
+	crand "crypto/rand"
 	"crypto/sha256"
 	"io"
 	"math/rand"
@@ -1232,7 +1233,7 @@ func randomFilename(length int64) string {
 var randomBytes = make([]byte, 128<<20)
 
 func init() {
-	_, _ = rand.Read(randomBytes) // always returns len(randomBytes) and nil error
+	_, _ = crand.Read(randomBytes) // always returns len(randomBytes) and nil error
 }
 
 func randomContents(length int64) []byte {

@@ -27,7 +27,7 @@ jobs:
       matrix:
         go:
           - 1.20.7
-          - 1.21
+          - 1.21.0
     steps:
       -
         name: Checkout
