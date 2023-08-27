@@ -729,7 +729,7 @@ registry.
 
 | Parameter | Required | Description                                           |
 |-----------|----------|-------------------------------------------------------|
-| `addr`    | yes      | The address for which the server should accept connections. The form depends on a network type (see the `net` option). Use `HOST:PORT` for TCP and `FILE` for a UNIX socket. |
+| `addr`    | no       | The address for which the server should accept connections. The form depends on a network type (see the `net` option). Use `HOST:PORT` for TCP and `FILE` for a UNIX socket. The `addr` field is only optional if socket-activation is used (in which case `addr` and `net` are ignored regardless of if they are specified). |
 | `net`     | no       | The network used to create a listening socket. Known networks are `unix` and `tcp`. |
 | `prefix`  | no       | If the server does not run at the root path, set this to the value of the prefix. The root path is the section before `v2`. It requires both preceding and trailing slashes, such as in the example `/path/`. |
 | `host`    | no       | A fully-qualified URL for an externally-reachable address for the registry. If present, it is used when creating generated URLs. Otherwise, these URLs are derived from client requests. |
