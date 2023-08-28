@@ -98,27 +98,12 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 			MediaType:     schema2.MediaTypeManifest,
 		},
 		Config: distribution.Descriptor{
-			Digest:    "sha256:1a9ec845ee94c202b2d5da74a24f0ed2058318bfa9879fa541efaecba272e86b",
-			Size:      3253,
+			Digest:    digest.FromBytes(sampleConfig),
+			Size:      int64(len(sampleConfig)),
 			MediaType: schema2.MediaTypeImageConfig,
 		},
-		Layers: []distribution.Descriptor{
-			{
-				Digest:    "sha256:463434349086340864309863409683460843608348608934092322395278926a",
-				Size:      6323,
-				MediaType: schema2.MediaTypeLayer,
-			},
-			{
-				Digest:    "sha256:630923423623623423352523525237238023652897356239852383652aaaaaaa",
-				Size:      6863,
-				MediaType: schema2.MediaTypeLayer,
-			},
-		},
+		Layers: []distribution.Descriptor{},
 	}
-	sampleConfigDigest := digest.FromBytes(sampleConfig)
-	sampleConfigSize := int64(len(sampleConfig))
-	m.Config.Digest = sampleConfigDigest
-	m.Config.Size = sampleConfigSize
 
 	// Build up some test layers and add them to the manifest, saving the
 	// readseekers for upload later.
@@ -130,7 +115,12 @@ func testManifestStorage(t *testing.T, options ...RegistryOption) {
 		}
 
 		testLayers[dgst] = rs
-		m.Layers[i].Digest = dgst
+		layer := distribution.Descriptor{
+			Digest:    dgst,
+			Size:      6323,
+			MediaType: schema2.MediaTypeLayer,
+		}
+		m.Layers = append(m.Layers, layer)
 	}
 
 	// Now, upload the layers that were missing!

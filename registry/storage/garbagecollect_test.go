@@ -186,19 +186,9 @@ func TestDeleteManifestIfTagNotFound(t *testing.T) {
 		t.Fatalf("failed to make layers: %v", err)
 	}
 
-	digests1 := []digest.Digest{}
-	for digest := range randomLayers1 {
-		digests1 = append(digests1, digest)
-	}
-
 	randomLayers2, err := testutil.CreateRandomLayers(3)
 	if err != nil {
 		t.Fatalf("failed to make layers: %v", err)
-	}
-
-	digests2 := []digest.Digest{}
-	for digest := range randomLayers2 {
-		digests2 = append(digests2, digest)
 	}
 
 	// Upload all layers
@@ -213,12 +203,12 @@ func TestDeleteManifestIfTagNotFound(t *testing.T) {
 	}
 
 	// Construct manifests
-	manifest1, err := testutil.MakeSchema2Manifest(repo, digests1)
+	manifest1, err := testutil.MakeSchema2Manifest(repo, getKeys(randomLayers1))
 	if err != nil {
 		t.Fatalf("failed to make manifest: %v", err)
 	}
 
-	manifest2, err := testutil.MakeSchema2Manifest(repo, digests2)
+	manifest2, err := testutil.MakeSchema2Manifest(repo, getKeys(randomLayers2))
 	if err != nil {
 		t.Fatalf("failed to make manifest: %v", err)
 	}
@@ -370,6 +360,13 @@ func getAnyKey(digests map[digest.Digest]io.ReadSeeker) (d digest.Digest) {
 	return
 }
 
+func getKeys(digests map[digest.Digest]io.ReadSeeker) (ds []digest.Digest) {
+	for d := range digests {
+		ds = append(ds, d)
+	}
+	return
+}
+
 func TestDeletionWithSharedLayer(t *testing.T) {
 	ctx := context.Background()
 	inmemoryDriver := inmemory.New()
@@ -383,19 +380,9 @@ func TestDeletionWithSharedLayer(t *testing.T) {
 		t.Fatalf("failed to make layers: %v", err)
 	}
 
-	digests1 := []digest.Digest{}
-	for digest := range randomLayers1 {
-		digests1 = append(digests1, digest)
-	}
-
 	randomLayers2, err := testutil.CreateRandomLayers(3)
 	if err != nil {
 		t.Fatalf("failed to make layers: %v", err)
-	}
-
-	digests2 := []digest.Digest{}
-	for digest := range randomLayers2 {
-		digests2 = append(digests2, digest)
 	}
 
 	// Upload all layers
@@ -410,13 +397,13 @@ func TestDeletionWithSharedLayer(t *testing.T) {
 	}
 
 	// Construct manifests
-	manifest1, err := testutil.MakeSchema2Manifest(repo, digests1)
+	manifest1, err := testutil.MakeSchema2Manifest(repo, getKeys(randomLayers1))
 	if err != nil {
 		t.Fatalf("failed to make manifest: %v", err)
 	}
 
 	sharedKey := getAnyKey(randomLayers1)
-	manifest2, err := testutil.MakeSchema2Manifest(repo, append(digests2, sharedKey))
+	manifest2, err := testutil.MakeSchema2Manifest(repo, append(getKeys(randomLayers2), sharedKey))
 	if err != nil {
 		t.Fatalf("failed to make manifest: %v", err)
 	}
