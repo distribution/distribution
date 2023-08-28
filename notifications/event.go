@@ -20,7 +20,7 @@ const (
 	// EventsMediaType is the mediatype for the json event envelope. If the
 	// Event, ActorRecord, SourceRecord or Envelope structs change, the version
 	// number should be incremented.
-	EventsMediaType = "application/vnd.docker.distribution.events.v1+json"
+	EventsMediaType = "application/vnd.docker.distribution.events.v2+json"
 	// LayerMediaType is the media type for image rootfs diffs (aka "layers")
 	// used by Docker. We don't expect this to change for quite a while.
 	layerMediaType = "application/vnd.docker.container.image.rootfs.diff+x-gtar"

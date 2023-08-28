@@ -152,16 +152,16 @@ group unrelated events and send them in the same envelope to reduce the total
 number of requests.
 
 The full package has the mediatype
-"application/vnd.docker.distribution.events.v1+json", which is set on the
+"application/vnd.docker.distribution.events.v2+json", which is set on the
 request coming to an endpoint.
 
 An example of a full event may look as follows:
 
 ```http request
 POST /callback HTTP/1.1
-Host: application/vnd.docker.distribution.events.v1+json
+Host: application/vnd.docker.distribution.events.v2+json
 Authorization: Bearer <your token, if needed>
-Content-Type: application/vnd.docker.distribution.events.v1+json
+Content-Type: application/vnd.docker.distribution.events.v2+json
 
 {
   "events": [
@@ -170,7 +170,7 @@ Content-Type: application/vnd.docker.distribution.events.v1+json
       "timestamp": "2006-01-02T15:04:05Z",
       "action": "push",
       "target": {
-        "mediaType": "application/vnd.docker.distribution.manifest.v1+json",
+        "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
         "digest": "sha256:fea8895f450959fa676bcc1df0611ea93823a735a01205fd8622846041d0c7cf",
         "length": 1,
         "repository": "library/test",

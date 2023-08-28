@@ -24,7 +24,6 @@ an ID for the image.
 The following media types are used by the manifest formats described here, and
 the resources they reference:
 
-- `application/vnd.docker.distribution.manifest.v1+json`: schema1 (existing manifest format)
 - `application/vnd.docker.distribution.manifest.v2+json`: New image manifest format (schemaVersion = 2)
 - `application/vnd.docker.distribution.manifest.list.v2+json`: Manifest list, aka "fat manifest"
 - `application/vnd.docker.container.image.v1+json`: Container config JSON
@@ -60,9 +59,7 @@ image manifest based on the Content-Type returned in the HTTP response.
     - **`mediaType`** *string*
 
         The MIME type of the referenced object. This will generally be
-        `application/vnd.docker.distribution.manifest.v2+json`, but it could also
-        be `application/vnd.docker.distribution.manifest.v1+json` if the manifest
-        list references a legacy schema-1 manifest.
+        `application/vnd.docker.distribution.manifest.v2+json`.
 
     - **`size`** *int*
 

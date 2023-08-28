@@ -209,30 +209,6 @@ type Configuration struct {
 
 	Proxy Proxy `yaml:"proxy,omitempty"`
 
-	// Compatibility is used for configurations of working with older or deprecated features.
-	Compatibility struct {
-		// Schema1 configures how schema1 manifests will be handled.
-		//
-		// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since
-		// 2015. These options should only be used if you need to provide
-		// backward compatibility.
-		Schema1 struct {
-			// TrustKey is the signing key to use for adding the signature to
-			// schema1 manifests.
-			//
-			// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since
-			// 2015. These options should only be used if you need to provide
-			// backward compatibility.
-			TrustKey string `yaml:"signingkeyfile,omitempty"`
-			// Enabled determines if schema1 manifests should be pullable.
-			//
-			// Deprecated: Docker Image Manifest v2, Schema 1 is deprecated since
-			// 2015. These options should only be used if you need to provide
-			// backward compatibility.
-			Enabled bool `yaml:"enabled,omitempty"`
-		} `yaml:"schema1,omitempty"`
-	} `yaml:"compatibility,omitempty"`
-
 	// Validation configures validation options for the registry.
 	Validation struct {
 		// Enabled enables the other options in this section. This field is
