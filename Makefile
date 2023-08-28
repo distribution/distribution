@@ -135,5 +135,5 @@ validate-vendor: ## validate vendor
 help:
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m\033[0m\n"} /^[a-zA-Z_\/%-]+:.*?##/ { printf "  \033[36m%-27s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 	@echo ""
-	@echo "Go binares:   $(BINARIES)"
+	@echo "Go binaries:   $(BINARIES)"
 	@echo "Docker image: $(IMAGE_NAME)"
