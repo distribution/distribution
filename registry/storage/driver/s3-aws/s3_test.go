@@ -2,9 +2,9 @@ package s3
 
 import (
 	"bytes"
+	"crypto/rand"
 	"errors"
 	"fmt"
-	"math/rand"
 	"os"
 	"path"
 	"reflect"
