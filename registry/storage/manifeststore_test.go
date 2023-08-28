@@ -11,13 +11,12 @@ import (
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/manifest"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
-	"github.com/distribution/distribution/v3/manifest/schema1" //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+	"github.com/distribution/distribution/v3/manifest/schema2"
 	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/storage/cache/memory"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/distribution/distribution/v3/testutil"
-	"github.com/docker/libtrust"
 	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
@@ -55,22 +54,10 @@ func newManifestStoreTestEnv(t *testing.T, name reference.Named, tag string, opt
 }
 
 func TestManifestStorage(t *testing.T) {
-	k, err := libtrust.GenerateECP256PrivateKey()
-	if err != nil {
-		t.Fatal(err)
-	}
-	testManifestStorage(t, true, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect, Schema1SigningKey(k), EnableSchema1)
+	testManifestStorage(t, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect)
 }
 
-func TestManifestStorageV1Unsupported(t *testing.T) {
-	k, err := libtrust.GenerateECP256PrivateKey()
-	if err != nil {
-		t.Fatal(err)
-	}
-	testManifestStorage(t, false, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableDelete, EnableRedirect, Schema1SigningKey(k))
-}
-
-func testManifestStorage(t *testing.T, schema1Enabled bool, options ...RegistryOption) {
+func testManifestStorage(t *testing.T, options ...RegistryOption) {
 	repoName, _ := reference.WithName("foo/bar")
 	env := newManifestStoreTestEnv(t, repoName, "thetag", options...)
 	ctx := context.Background()
@@ -79,12 +66,43 @@ func testManifestStorage(t *testing.T, schema1Enabled bool, options ...RegistryO
 		t.Fatal(err)
 	}
 
-	m := schema1.Manifest{ //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+	// Push a config, and reference it in the manifest
+	sampleConfig := []byte(`{
+		"architecture": "amd64",
+		"history": [
+		  {
+		    "created": "2015-10-31T22:22:54.690851953Z",
+		    "created_by": "/bin/sh -c #(nop) ADD file:a3bc1e842b69636f9df5256c49c5374fb4eef1e281fe3f282c65fb853ee171c5 in /"
+		  },
+		],
+		"rootfs": {
+		  "diff_ids": [
+		    "sha256:c6f988f4874bb0add23a778f753c65efe992244e148a1d2ec2a8b664fb66bbd1",
+		  ],
+		  "type": "layers"
+		}
+	}`)
+
+	// Build a manifest and store it and its layers in the registry
+
+	blobStore := env.repository.Blobs(ctx)
+	d, err := blobStore.Put(ctx, schema2.MediaTypeImageConfig, sampleConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	builder := schema2.NewManifestBuilder(d, sampleConfig)
+
+	m := &schema2.Manifest{
 		Versioned: manifest.Versioned{
-			SchemaVersion: 1,
+			SchemaVersion: 2,
+			MediaType:     schema2.MediaTypeManifest,
 		},
-		Name: env.name.Name(),
-		Tag:  env.tag,
+		Config: distribution.Descriptor{
+			Digest:    digest.FromBytes(sampleConfig),
+			Size:      int64(len(sampleConfig)),
+			MediaType: schema2.MediaTypeImageConfig,
+		},
+		Layers: []distribution.Descriptor{},
 	}
 
 	// Build up some test layers and add them to the manifest, saving the
@@ -97,52 +115,12 @@ func testManifestStorage(t *testing.T, schema1Enabled bool, options ...RegistryO
 		}
 
 		testLayers[dgst] = rs
-		m.FSLayers = append(m.FSLayers, schema1.FSLayer{ //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-			BlobSum: dgst,
-		})
-		m.History = append(m.History, schema1.History{ //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-			V1Compatibility: "",
-		})
-
-	}
-
-	pk, err := libtrust.GenerateECP256PrivateKey()
-	if err != nil {
-		t.Fatalf("unexpected error generating private key: %v", err)
-	}
-
-	sm, merr := schema1.Sign(&m, pk) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-	if merr != nil {
-		t.Fatalf("error signing manifest: %v", err)
-	}
-
-	_, err = ms.Put(ctx, sm)
-	if err == nil {
-		t.Fatalf("expected errors putting manifest with full verification")
-	}
-
-	// If schema1 is not enabled, do a short version of this test, just checking
-	// if we get the right error when we Put
-	if !schema1Enabled {
-		if err != distribution.ErrSchemaV1Unsupported {
-			t.Fatalf("got the wrong error when schema1 is disabled: %s", err)
+		layer := distribution.Descriptor{
+			Digest:    dgst,
+			Size:      6323,
+			MediaType: schema2.MediaTypeLayer,
 		}
-		return
-	}
-
-	switch err := err.(type) {
-	case distribution.ErrManifestVerification:
-		if len(err) != 2 {
-			t.Fatalf("expected 2 verification errors: %#v", err)
-		}
-
-		for _, err := range err {
-			if _, ok := err.(distribution.ErrManifestBlobUnknown); !ok {
-				t.Fatalf("unexpected error type: %v", err)
-			}
-		}
-	default:
-		t.Fatalf("unexpected error verifying manifest: %v", err)
+		m.Layers = append(m.Layers, layer)
 	}
 
 	// Now, upload the layers that were missing!
@@ -159,6 +137,12 @@ func testManifestStorage(t *testing.T, schema1Enabled bool, options ...RegistryO
 		if _, err := wr.Commit(env.ctx, distribution.Descriptor{Digest: dgst}); err != nil {
 			t.Fatalf("unexpected error finishing upload: %v", err)
 		}
+		builder.AppendReference(distribution.Descriptor{Digest: dgst})
+	}
+
+	sm, err := builder.Build(ctx)
+	if err != nil {
+		t.Fatalf("%s: unexpected error generating manifest: %v", repoName, err)
 	}
 
 	var manifestDigest digest.Digest
@@ -180,34 +164,19 @@ func testManifestStorage(t *testing.T, schema1Enabled bool, options ...RegistryO
 		t.Fatalf("unexpected error fetching manifest: %v", err)
 	}
 
-	fetchedManifest, ok := fromStore.(*schema1.SignedManifest) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+	fetchedManifest, ok := fromStore.(*schema2.DeserializedManifest)
 	if !ok {
 		t.Fatalf("unexpected manifest type from signedstore")
 	}
-
-	if !bytes.Equal(fetchedManifest.Canonical, sm.Canonical) {
-		t.Fatalf("fetched payload does not match original payload: %q != %q", fetchedManifest.Canonical, sm.Canonical)
-	}
-
-	_, pl, err := fetchedManifest.Payload() //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+	_, pl, err := fetchedManifest.Payload()
 	if err != nil {
-		t.Fatalf("error getting payload %#v", err)
-	}
-
-	fetchedJWS, err := libtrust.ParsePrettySignature(pl, "signatures")
-	if err != nil {
-		t.Fatalf("unexpected error parsing jws: %v", err)
-	}
-
-	payload, err := fetchedJWS.Payload()
-	if err != nil {
-		t.Fatalf("unexpected error extracting payload: %v", err)
+		t.Fatalf("could not get manifest payload: %v", err)
 	}
 
 	// Now that we have a payload, take a moment to check that the manifest is
 	// return by the payload digest.
 
-	dgst := digest.FromBytes(payload)
+	dgst := digest.FromBytes(pl)
 	exists, err = ms.Exists(ctx, dgst)
 	if err != nil {
 		t.Fatalf("error checking manifest existence by digest: %v", err)
@@ -222,55 +191,18 @@ func testManifestStorage(t *testing.T, schema1Enabled bool, options ...RegistryO
 		t.Fatalf("unexpected error fetching manifest by digest: %v", err)
 	}
 
-	byDigestManifest, ok := fetchedByDigest.(*schema1.SignedManifest) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+	byDigestManifest, ok := fetchedByDigest.(*schema2.DeserializedManifest)
 	if !ok {
 		t.Fatalf("unexpected manifest type from signedstore")
 	}
 
-	if !bytes.Equal(byDigestManifest.Canonical, fetchedManifest.Canonical) {
-		t.Fatalf("fetched manifest not equal: %q != %q", byDigestManifest.Canonical, fetchedManifest.Canonical)
-	}
-
-	sigs, err := fetchedJWS.Signatures()
+	_, byDigestCanonical, err := byDigestManifest.Payload()
 	if err != nil {
-		t.Fatalf("unable to extract signatures: %v", err)
+		t.Fatalf("could not get manifest payload: %v", err)
 	}
 
-	if len(sigs) != 1 {
-		t.Fatalf("unexpected number of signatures: %d != %d", len(sigs), 1)
-	}
-
-	// Now, push the same manifest with a different key
-	pk2, err := libtrust.GenerateECP256PrivateKey()
-	if err != nil {
-		t.Fatalf("unexpected error generating private key: %v", err)
-	}
-
-	sm2, err := schema1.Sign(&m, pk2) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-	if err != nil {
-		t.Fatalf("unexpected error signing manifest: %v", err)
-	}
-	_, pl, err = sm2.Payload() //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-	if err != nil {
-		t.Fatalf("error getting payload %#v", err)
-	}
-
-	jws2, err := libtrust.ParsePrettySignature(pl, "signatures")
-	if err != nil {
-		t.Fatalf("error parsing signature: %v", err)
-	}
-
-	sigs2, err := jws2.Signatures()
-	if err != nil {
-		t.Fatalf("unable to extract signatures: %v", err)
-	}
-
-	if len(sigs2) != 1 {
-		t.Fatalf("unexpected number of signatures: %d != %d", len(sigs2), 1)
-	}
-
-	if manifestDigest, err = ms.Put(ctx, sm2); err != nil {
-		t.Fatalf("unexpected error putting manifest: %v", err)
+	if !bytes.Equal(byDigestCanonical, pl) {
+		t.Fatalf("fetched manifest not equal: %q != %q", byDigestCanonical, pl)
 	}
 
 	fromStore, err = ms.Get(ctx, manifestDigest)
@@ -278,31 +210,17 @@ func testManifestStorage(t *testing.T, schema1Enabled bool, options ...RegistryO
 		t.Fatalf("unexpected error fetching manifest: %v", err)
 	}
 
-	fetched, ok := fromStore.(*schema1.SignedManifest) //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+	fetched, ok := fromStore.(*schema2.DeserializedManifest)
 	if !ok {
 		t.Fatalf("unexpected type from signed manifeststore : %T", fetched)
 	}
 
-	if _, err := schema1.Verify(fetched); err != nil { //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
-		t.Fatalf("unexpected error verifying manifest: %v", err)
-	}
-
-	_, pl, err = fetched.Payload() //nolint:staticcheck // Ignore SA1019: "github.com/distribution/distribution/v3/manifest/schema1" is deprecated, as it's used for backward compatibility.
+	_, receivedPL, err := fetched.Payload()
 	if err != nil {
 		t.Fatalf("error getting payload %#v", err)
 	}
 
-	receivedJWS, err := libtrust.ParsePrettySignature(pl, "signatures")
-	if err != nil {
-		t.Fatalf("unexpected error parsing jws: %v", err)
-	}
-
-	receivedPayload, err := receivedJWS.Payload()
-	if err != nil {
-		t.Fatalf("unexpected error extracting received payload: %v", err)
-	}
-
-	if !bytes.Equal(receivedPayload, payload) {
+	if !bytes.Equal(receivedPL, pl) {
 		t.Fatalf("payloads are not equal")
 	}
 
