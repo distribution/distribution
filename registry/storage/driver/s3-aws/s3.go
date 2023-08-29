@@ -855,18 +855,33 @@ func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (sto
 // in bytes and the creation time.
 func (d *driver) Stat(ctx context.Context, path string) (storagedriver.FileInfo, error) {
 	s := d.s3Client(ctx)
-	resp, err := s.ListObjectsV2(&s3.ListObjectsV2Input{
+
+	fi := storagedriver.FileInfoFields{
+		Path: path,
+	}
+
+	headResp, err := s.HeadObjectWithContext(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(d.Bucket),
+		Key:    aws.String(d.s3Path(path)),
+	})
+	if err == nil && headResp.ContentLength != nil {
+		if headResp.ContentLength != nil {
+			fi.Size = *headResp.ContentLength
+		}
+		if headResp.LastModified != nil {
+			fi.ModTime = *headResp.LastModified
+		}
+
+		return storagedriver.FileInfoInternal{FileInfoFields: fi}, nil
+	}
+
+	resp, err := s.ListObjectsV2WithContext(ctx, &s3.ListObjectsV2Input{
 		Bucket:  aws.String(d.Bucket),
 		Prefix:  aws.String(d.s3Path(path)),
 		MaxKeys: aws.Int64(1),
 	})
-
 	if err != nil {
 		return nil, err
-	}
-
-	fi := storagedriver.FileInfoFields{
-		Path: path,
 	}
 
 	if len(resp.Contents) == 1 {
