@@ -135,10 +135,6 @@ func (rbds *redisBlobDescriptorService) SetDescriptor(ctx context.Context, dgst 
 		return err
 	}
 
-	if err := cache.ValidateDescriptor(desc); err != nil {
-		return err
-	}
-
 	return rbds.setDescriptor(ctx, rbds.pool, dgst, desc)
 }
 
