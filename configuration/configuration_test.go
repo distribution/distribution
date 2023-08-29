@@ -126,23 +126,7 @@ var configStruct = Configuration{
 			Disabled: false,
 		},
 	},
-	Redis: struct {
-		Addr     string `yaml:"addr,omitempty"`
-		Username string `yaml:"username,omitempty"`
-		Password string `yaml:"password,omitempty"`
-		DB       int    `yaml:"db,omitempty"`
-		TLS      struct {
-			Enabled bool `yaml:"enabled,omitempty"`
-		} `yaml:"tls,omitempty"`
-		DialTimeout  time.Duration `yaml:"dialtimeout,omitempty"`
-		ReadTimeout  time.Duration `yaml:"readtimeout,omitempty"`
-		WriteTimeout time.Duration `yaml:"writetimeout,omitempty"`
-		Pool         struct {
-			MaxIdle     int           `yaml:"maxidle,omitempty"`
-			MaxActive   int           `yaml:"maxactive,omitempty"`
-			IdleTimeout time.Duration `yaml:"idletimeout,omitempty"`
-		} `yaml:"pool,omitempty"`
-	}{
+	Redis: Redis{
 		Addr:     "localhost:6379",
 		Username: "alice",
 		Password: "123456",
@@ -279,23 +263,7 @@ func (suite *ConfigSuite) TestParseSimple(c *check.C) {
 func (suite *ConfigSuite) TestParseInmemory(c *check.C) {
 	suite.expectedConfig.Storage = Storage{"inmemory": Parameters{}}
 	suite.expectedConfig.Log.Fields = nil
-	suite.expectedConfig.Redis = struct {
-		Addr     string `yaml:"addr,omitempty"`
-		Username string `yaml:"username,omitempty"`
-		Password string `yaml:"password,omitempty"`
-		DB       int    `yaml:"db,omitempty"`
-		TLS      struct {
-			Enabled bool `yaml:"enabled,omitempty"`
-		} `yaml:"tls,omitempty"`
-		DialTimeout  time.Duration `yaml:"dialtimeout,omitempty"`
-		ReadTimeout  time.Duration `yaml:"readtimeout,omitempty"`
-		WriteTimeout time.Duration `yaml:"writetimeout,omitempty"`
-		Pool         struct {
-			MaxIdle     int           `yaml:"maxidle,omitempty"`
-			MaxActive   int           `yaml:"maxactive,omitempty"`
-			IdleTimeout time.Duration `yaml:"idletimeout,omitempty"`
-		} `yaml:"pool,omitempty"`
-	}{}
+	suite.expectedConfig.Redis = Redis{}
 
 	config, err := Parse(bytes.NewReader([]byte(inmemoryConfigYamlV0_1)))
 	c.Assert(err, check.IsNil)
@@ -315,23 +283,7 @@ func (suite *ConfigSuite) TestParseIncomplete(c *check.C) {
 	suite.expectedConfig.Auth = Auth{"silly": Parameters{"realm": "silly"}}
 	suite.expectedConfig.Notifications = Notifications{}
 	suite.expectedConfig.HTTP.Headers = nil
-	suite.expectedConfig.Redis = struct {
-		Addr     string `yaml:"addr,omitempty"`
-		Username string `yaml:"username,omitempty"`
-		Password string `yaml:"password,omitempty"`
-		DB       int    `yaml:"db,omitempty"`
-		TLS      struct {
-			Enabled bool `yaml:"enabled,omitempty"`
-		} `yaml:"tls,omitempty"`
-		DialTimeout  time.Duration `yaml:"dialtimeout,omitempty"`
-		ReadTimeout  time.Duration `yaml:"readtimeout,omitempty"`
-		WriteTimeout time.Duration `yaml:"writetimeout,omitempty"`
-		Pool         struct {
-			MaxIdle     int           `yaml:"maxidle,omitempty"`
-			MaxActive   int           `yaml:"maxactive,omitempty"`
-			IdleTimeout time.Duration `yaml:"idletimeout,omitempty"`
-		} `yaml:"pool,omitempty"`
-	}{}
+	suite.expectedConfig.Redis = Redis{}
 
 	// Note: this also tests that REGISTRY_STORAGE and
 	// REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY can be used together

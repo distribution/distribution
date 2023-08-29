@@ -167,42 +167,7 @@ type Configuration struct {
 	Notifications Notifications `yaml:"notifications,omitempty"`
 
 	// Redis configures the redis pool available to the registry webapp.
-	Redis struct {
-		// Addr specifies the the redis instance available to the application.
-		Addr string `yaml:"addr,omitempty"`
-
-		// Usernames can be used as a finer-grained permission control since the introduction of the redis 6.0.
-		Username string `yaml:"username,omitempty"`
-
-		// Password string to use when making a connection.
-		Password string `yaml:"password,omitempty"`
-
-		// DB specifies the database to connect to on the redis instance.
-		DB int `yaml:"db,omitempty"`
-
-		// TLS configures settings for redis in-transit encryption
-		TLS struct {
-			Enabled bool `yaml:"enabled,omitempty"`
-		} `yaml:"tls,omitempty"`
-
-		DialTimeout  time.Duration `yaml:"dialtimeout,omitempty"`  // timeout for connect
-		ReadTimeout  time.Duration `yaml:"readtimeout,omitempty"`  // timeout for reads of data
-		WriteTimeout time.Duration `yaml:"writetimeout,omitempty"` // timeout for writes of data
-
-		// Pool configures the behavior of the redis connection pool.
-		Pool struct {
-			// MaxIdle sets the maximum number of idle connections.
-			MaxIdle int `yaml:"maxidle,omitempty"`
-
-			// MaxActive sets the maximum number of connections that should be
-			// opened before blocking a connection request.
-			MaxActive int `yaml:"maxactive,omitempty"`
-
-			// IdleTimeout sets the amount time to wait before closing
-			// inactive connections.
-			IdleTimeout time.Duration `yaml:"idletimeout,omitempty"`
-		} `yaml:"pool,omitempty"`
-	} `yaml:"redis,omitempty"`
+	Redis Redis `yaml:"redis,omitempty"`
 
 	Health  Health  `yaml:"health,omitempty"`
 	Catalog Catalog `yaml:"catalog,omitempty"`
@@ -328,6 +293,44 @@ type FileChecker struct {
 	// Threshold is the number of times a check must fail to trigger an
 	// unhealthy state
 	Threshold int `yaml:"threshold,omitempty"`
+}
+
+// Redis configures the redis pool available to the registry webapp.
+type Redis struct {
+	// Addr specifies the the redis instance available to the application.
+	Addr string `yaml:"addr,omitempty"`
+
+	// Usernames can be used as a finer-grained permission control since the introduction of the redis 6.0.
+	Username string `yaml:"username,omitempty"`
+
+	// Password string to use when making a connection.
+	Password string `yaml:"password,omitempty"`
+
+	// DB specifies the database to connect to on the redis instance.
+	DB int `yaml:"db,omitempty"`
+
+	// TLS configures settings for redis in-transit encryption
+	TLS struct {
+		Enabled bool `yaml:"enabled,omitempty"`
+	} `yaml:"tls,omitempty"`
+
+	DialTimeout  time.Duration `yaml:"dialtimeout,omitempty"`  // timeout for connect
+	ReadTimeout  time.Duration `yaml:"readtimeout,omitempty"`  // timeout for reads of data
+	WriteTimeout time.Duration `yaml:"writetimeout,omitempty"` // timeout for writes of data
+
+	// Pool configures the behavior of the redis connection pool.
+	Pool struct {
+		// MaxIdle sets the maximum number of idle connections.
+		MaxIdle int `yaml:"maxidle,omitempty"`
+
+		// MaxActive sets the maximum number of connections that should be
+		// opened before blocking a connection request.
+		MaxActive int `yaml:"maxactive,omitempty"`
+
+		// IdleTimeout sets the amount time to wait before closing
+		// inactive connections.
+		IdleTimeout time.Duration `yaml:"idletimeout,omitempty"`
+	} `yaml:"pool,omitempty"`
 }
 
 // HTTPChecker is a type of entry in the health section for checking HTTP URIs.
