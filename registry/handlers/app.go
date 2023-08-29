@@ -525,6 +525,7 @@ func (app *App) createPool(cfg configuration.Redis) *redis.Client {
 			res := cn.Ping(ctx)
 			return res.Err()
 		},
+		Username:        cfg.Username,
 		Password:        cfg.Password,
 		DB:              cfg.DB,
 		MaxRetries:      3,
