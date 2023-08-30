@@ -6,8 +6,8 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/uuid"
+	"github.com/distribution/reference"
 	events "github.com/docker/go-events"
 	"github.com/opencontainers/go-digest"
 )
