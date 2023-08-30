@@ -24,7 +24,7 @@ const (
 // The path layout in the storage backend is roughly as follows:
 //
 //	<root>/v2
-//	├── blob
+//	├── blobs
 //	│   └── <algorithm>
 //	│       └── <split directory content addressable storage>
 //	└── repositories
@@ -108,7 +108,7 @@ const (
 //	blobsPathSpec:                  <root>/v2/blobs/
 //	blobPathSpec:                   <root>/v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>
 //	blobDataPathSpec:               <root>/v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>/data
-//	blobMediaTypePathSpec:               <root>/v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>/data
+//	blobMediaTypePathSpec:          <root>/v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>/data
 //
 // For more information on the semantic meaning of each path and their
 // contents, please see the path spec documentation.
@@ -346,7 +346,7 @@ type layersPathSpec struct {
 
 func (layersPathSpec) pathSpec() {}
 
-// blobLinkPathSpec specifies a path for a blob link, which is a file with a
+// layerLinkPathSpec specifies a path for a blob link, which is a file with a
 // blob id. The blob link will contain a content addressable blob id reference
 // into the blob store. The format of the contents is as follows:
 //
@@ -403,7 +403,7 @@ type uploadDataPathSpec struct {
 
 func (uploadDataPathSpec) pathSpec() {}
 
-// uploadDataPathSpec defines the path parameters for the file that stores the
+// uploadStartedAtPathSpec defines the path parameters for the file that stores the
 // start time of an uploads. If it is missing, the upload is considered
 // unknown. Admittedly, the presence of this file is an ugly hack to make sure
 // we have a way to cleanup old or stalled uploads that doesn't rely on driver
