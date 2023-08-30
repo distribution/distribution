@@ -6,8 +6,8 @@ import (
 
 	"github.com/docker/distribution"
 
+	"github.com/distribution/reference"
 	dcontext "github.com/docker/distribution/context"
-	"github.com/docker/distribution/reference"
 	"github.com/opencontainers/go-digest"
 )
 

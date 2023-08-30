@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/distribution/reference"
 	"github.com/docker/distribution"
-	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"
 )
 

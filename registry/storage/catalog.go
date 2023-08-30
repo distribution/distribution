@@ -7,7 +7,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/docker/distribution/reference"
+	"github.com/distribution/reference"
 	"github.com/docker/distribution/registry/storage/driver"
 )
 

@@ -7,8 +7,8 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/distribution/reference"
 	"github.com/docker/distribution"
-	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/cache/memory"
 	"github.com/docker/distribution/registry/storage/driver"
 	"github.com/docker/distribution/registry/storage/driver/inmemory"

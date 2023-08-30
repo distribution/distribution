@@ -7,10 +7,10 @@ import (
 	"net/url"
 	"sync"
 
+	"github.com/distribution/reference"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/configuration"
 	dcontext "github.com/docker/distribution/context"
-	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/client"
 	"github.com/docker/distribution/registry/client/auth"
 	"github.com/docker/distribution/registry/client/auth/challenge"

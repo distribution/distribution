@@ -11,8 +11,8 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/distribution/reference"
 	"github.com/docker/distribution"
-	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/cache/memory"
 	"github.com/docker/distribution/registry/storage/driver/testdriver"
 	"github.com/docker/distribution/testutil"
