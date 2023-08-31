@@ -40,6 +40,18 @@ with a driver name and parameters map. If no such storage driver can be found,
 
 ## Driver contribution
 
+New storage drivers are not currently being accepted.
+See https://github.com/distribution/distribution/issues/3988 for discussion.
+
+There are forks of this repo that implement custom storage drivers.
+These are not supported by the OCI distribution project.
+The known forks are:
+- Storj DCS: https://github.com/storj/docker-registry
+- HuaweiCloud OBS: https://github.com/setoru/distribution/tree/obs
+- us3: https://github.com/lambertxiao/distribution/tree/main
+- Baidu BOS: https://github.com/dolfly/distribution/tree/bos
+- HDFS: https://github.com/haosdent/distribution/tree/master
+
 ### Writing new storage drivers
 
 To create a valid storage driver, one must implement the
