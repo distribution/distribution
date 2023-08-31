@@ -815,7 +815,7 @@ func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (sto
 				continue
 			}
 
-			partsList, err := d.S3.ListParts(&s3.ListPartsInput{
+			partsList, err := s.ListParts(&s3.ListPartsInput{
 				Bucket:   aws.String(d.Bucket),
 				Key:      aws.String(key),
 				UploadId: multi.UploadId,
@@ -825,7 +825,7 @@ func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (sto
 			}
 			allParts = append(allParts, partsList.Parts...)
 			for *partsList.IsTruncated {
-				partsList, err = d.S3.ListParts(&s3.ListPartsInput{
+				partsList, err = s.ListParts(&s3.ListPartsInput{
 					Bucket:           aws.String(d.Bucket),
 					Key:              aws.String(key),
 					UploadId:         multi.UploadId,
@@ -918,7 +918,7 @@ func (d *driver) List(ctx context.Context, opath string) ([]string, error) {
 		prefix = "/"
 	}
 
-	resp, err := d.S3.ListObjectsV2(&s3.ListObjectsV2Input{
+	resp, err := s.ListObjectsV2(&s3.ListObjectsV2Input{
 		Bucket:    aws.String(d.Bucket),
 		Prefix:    aws.String(d.s3Path(path)),
 		Delimiter: aws.String("/"),
@@ -1110,7 +1110,7 @@ func (d *driver) Delete(ctx context.Context, path string) error {
 			// by default the response returns up to 1,000 key names. The response _might_ contain fewer keys but it will never contain more.
 			// 10000 keys is coincidentally (?) also the max number of keys that can be deleted in a single Delete operation, so we'll just smack
 			// Delete here straight away and reset the object slice when successful.
-			resp, err := d.S3.DeleteObjects(&s3.DeleteObjectsInput{
+			resp, err := s.DeleteObjects(&s3.DeleteObjectsInput{
 				Bucket: aws.String(d.Bucket),
 				Delete: &s3.Delete{
 					Objects: s3Objects,
