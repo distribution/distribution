@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"regexp"
 
-	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
+	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
 )
 

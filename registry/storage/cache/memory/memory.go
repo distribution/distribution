@@ -5,8 +5,8 @@ import (
 	"math"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/storage/cache"
+	"github.com/distribution/reference"
 	"github.com/hashicorp/golang-lru/arc/v2"
 	"github.com/opencontainers/go-digest"
 )

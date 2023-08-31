@@ -12,8 +12,8 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	dcontext "github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/proxy/scheduler"
+	"github.com/distribution/reference"
 )
 
 type proxyBlobStore struct {

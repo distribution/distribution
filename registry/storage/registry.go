@@ -5,9 +5,9 @@ import (
 	"regexp"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/storage/cache"
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
+	"github.com/distribution/reference"
 )
 
 // registry is the top-level implementation of Registry for use in the storage
