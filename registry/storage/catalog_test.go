@@ -151,7 +151,11 @@ func TestCatalogInParts(t *testing.T) {
 	lastRepo = p[len(p)-1]
 	numFilled, err = env.registry.Repositories(env.ctx, p, lastRepo)
 
-	if err != io.EOF || numFilled != len(p) {
+	if numFilled != len(p) {
+		t.Errorf("Expected more values in catalog")
+	}
+
+	if err != io.EOF {
 		t.Errorf("Expected end of catalog")
 	}
 

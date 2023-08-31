@@ -2,8 +2,8 @@ package driver
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"strings"
 	"testing"
 )
 
@@ -36,7 +36,12 @@ type fileSystem struct {
 }
 
 func (cfs *fileSystem) List(_ context.Context, path string) ([]string, error) {
-	return cfs.fileset[path], nil
+	children := cfs.fileset[path]
+	if children == nil {
+		return nil, PathNotFoundError{Path: path}
+	} else {
+		return children, nil
+	}
 }
 
 func (cfs *fileSystem) Stat(_ context.Context, path string) (FileInfo, error) {
@@ -78,9 +83,16 @@ func TestWalkFileRemoved(t *testing.T) {
 func TestWalkFallback(t *testing.T) {
 	d := &fileSystem{
 		fileset: map[string][]string{
-			"/":        {"/file1", "/folder1", "/folder2"},
-			"/folder1": {"/folder1/file1"},
-			"/folder2": {"/folder2/file1"},
+			"/":                              {"/file1", "/folder1", "/folder1-suffix", "/folder2", "/folder3", "/folder4"},
+			"/folder1":                       {"/folder1/file1"},
+			"/folder1-suffix":                {"/folder1-suffix/file1"}, // importantly, - is before / in the ascii table
+			"/folder2":                       {"/folder2/file1"},
+			"/folder3":                       {"/folder3/subfolder1", "/folder3/subfolder2"},
+			"/folder3/subfolder1":            {"/folder3/subfolder1/subfolder1"},
+			"/folder3/subfolder1/subfolder1": {"/folder3/subfolder1/subfolder1/file1"},
+			"/folder3/subfolder2":            {"/folder3/subfolder2/subfolder1"},
+			"/folder3/subfolder2/subfolder1": {"/folder3/subfolder2/subfolder1/file1"},
+			"/folder4":                       {"/folder4/file1"},
 		},
 	}
 	noopFn := func(fileInfo FileInfo) error { return nil }
@@ -89,6 +101,7 @@ func TestWalkFallback(t *testing.T) {
 		name     string
 		fn       WalkFn
 		from     string
+		options  []func(*WalkOptions)
 		expected []string
 		err      bool
 	}{
@@ -99,8 +112,19 @@ func TestWalkFallback(t *testing.T) {
 				"/file1",
 				"/folder1",
 				"/folder1/file1",
+				"/folder1-suffix",
+				"/folder1-suffix/file1",
 				"/folder2",
 				"/folder2/file1",
+				"/folder3",
+				"/folder3/subfolder1",
+				"/folder3/subfolder1/subfolder1",
+				"/folder3/subfolder1/subfolder1/file1",
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+				"/folder4",
+				"/folder4/file1",
 			},
 		},
 		{
@@ -109,7 +133,7 @@ func TestWalkFallback(t *testing.T) {
 				if fileInfo.Path() == "/folder1" {
 					return ErrSkipDir
 				}
-				if strings.Contains(fileInfo.Path(), "/folder1") {
+				if fileInfo.Path() == "/folder1" {
 					t.Fatalf("skipped dir %s and should not walk %s", "/folder1", fileInfo.Path())
 				}
 				return nil
@@ -118,15 +142,124 @@ func TestWalkFallback(t *testing.T) {
 				"/file1",
 				"/folder1", // return ErrSkipDir, skip anything under /folder1
 				// skip /folder1/file1
+				"/folder1-suffix",
+				"/folder1-suffix/file1",
 				"/folder2",
 				"/folder2/file1",
+				"/folder3",
+				"/folder3/subfolder1",
+				"/folder3/subfolder1/subfolder1",
+				"/folder3/subfolder1/subfolder1/file1",
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+				"/folder4",
+				"/folder4/file1",
 			},
+		},
+		{
+			name: "start late expecting -suffix",
+			fn:   noopFn,
+			options: []func(*WalkOptions){
+				WithStartAfterHint("/folder1/file1"),
+			},
+			expected: []string{
+				"/folder1-suffix",
+				"/folder1-suffix/file1",
+				"/folder2",
+				"/folder2/file1",
+				"/folder3",
+				"/folder3/subfolder1",
+				"/folder3/subfolder1/subfolder1",
+				"/folder3/subfolder1/subfolder1/file1",
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+				"/folder4",
+				"/folder4/file1",
+			},
+			err: false,
+		},
+		{
+			name: "start late without from",
+			fn:   noopFn,
+			options: []func(*WalkOptions){
+				WithStartAfterHint("/folder3/subfolder1/subfolder1/file1"),
+			},
+			expected: []string{
+				// start late
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+				"/folder4",
+				"/folder4/file1",
+			},
+			err: false,
+		},
+		{
+			name: "start late with from",
+			fn:   noopFn,
+			from: "/folder3",
+			options: []func(*WalkOptions){
+				WithStartAfterHint("/folder3/subfolder1/subfolder1/file1"),
+			},
+			expected: []string{
+				// start late
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+			},
+			err: false,
+		},
+		{
+			name: "start after from",
+			fn:   noopFn,
+			from: "/folder1",
+			options: []func(*WalkOptions){
+				WithStartAfterHint("/folder1-suffix"),
+			},
+			expected: []string{},
+			err:      false,
+		},
+		{
+			name: "start matches from",
+			fn:   noopFn,
+			from: "/folder3",
+			options: []func(*WalkOptions){
+				WithStartAfterHint("/folder3"),
+			},
+			expected: []string{
+				"/folder3/subfolder1",
+				"/folder3/subfolder1/subfolder1",
+				"/folder3/subfolder1/subfolder1/file1",
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+			},
+			err: false,
+		},
+		{
+			name: "start doesn't exist",
+			fn:   noopFn,
+			from: "/folder3",
+			options: []func(*WalkOptions){
+				WithStartAfterHint("/folder3/notafolder/notafile"),
+			},
+			expected: []string{
+				"/folder3/subfolder1",
+				"/folder3/subfolder1/subfolder1",
+				"/folder3/subfolder1/subfolder1/file1",
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+			},
+			err: false,
 		},
 		{
 			name: "stop early",
 			fn: func(fileInfo FileInfo) error {
 				if fileInfo.Path() == "/folder1/file1" {
-					return ErrSkipDir
+					return ErrFilledBuffer
 				}
 				return nil
 			},
@@ -136,6 +269,16 @@ func TestWalkFallback(t *testing.T) {
 				"/folder1/file1",
 				// stop early
 			},
+		},
+		{
+			name: "error",
+			fn: func(fileInfo FileInfo) error {
+				return errors.New("foo")
+			},
+			expected: []string{
+				"/file1",
+			},
+			err: true,
 		},
 		{
 			name: "from folder",
@@ -159,7 +302,7 @@ func TestWalkFallback(t *testing.T) {
 					t.Fatalf("fileInfo isDir not matching file system: expected %t actual %t", d.isDir(fileInfo.Path()), fileInfo.IsDir())
 				}
 				return tc.fn(fileInfo)
-			})
+			}, tc.options...)
 			if tc.err && err == nil {
 				t.Fatalf("expected err")
 			}
@@ -177,7 +320,7 @@ func compareWalked(t *testing.T, expected, walked []string) {
 	}
 	for i := range walked {
 		if walked[i] != expected[i] {
-			t.Fatalf("expected walked to come in order expected: walked %s", walked)
+			t.Fatalf("expected walked to come in order expected: walked %s; expected %s;", walked, expected)
 		}
 	}
 }
