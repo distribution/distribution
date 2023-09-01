@@ -52,19 +52,6 @@ specification, details of the protocol will be left to a future specification.
 Relevant header definitions and error codes are present to provide an
 indication of what a client may encounter.
 
-#### Future
-
-There are features that have been discussed during the process of cutting this
-specification. The following is an incomplete list:
-
-- Immutable image references
-- Multiple architecture support
-- Migration from v2compatibility representation
-
-These may represent features that are either out of the scope of this
-specification, the purview of another specification or have been deferred to a
-future version.
-
 ### Use Cases
 
 For the most part, the use cases of the former registry API apply to the new
