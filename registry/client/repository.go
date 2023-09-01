@@ -595,7 +595,10 @@ func (ms *manifests) Put(ctx context.Context, m distribution.Manifest, options .
 	defer resp.Body.Close()
 
 	if SuccessStatus(resp.StatusCode) {
-		dgstHeader := resp.Header.Get("Docker-Content-Digest")
+		dgstHeader, err := ms.digestFromResponse(ctx, resp, manifestURL)
+		if err != nil {
+			return "", err
+		}
 		dgst, err := digest.Parse(dgstHeader)
 		if err != nil {
 			return "", err
@@ -631,6 +634,50 @@ func (ms *manifests) Delete(ctx context.Context, dgst digest.Digest) error {
 		return nil
 	}
 	return HandleErrorResponse(resp)
+}
+
+func (ms *manifests) digestFromResponse(ctx context.Context, resp *http.Response, manifestURL string) (string, error) {
+	// The specs are ambivalent on Docker-Content-Digest header: on the one hand, the docs at https://docs.docker.com/registry/spec/api/#digest-header
+	// mention that "any response may include a Docker-Content-Digest header"  and on the other hand, the docs at
+	// https://docs.docker.com/registry/spec/api/#put-manifest say that a PUT request should return a Docker-Content-Digest header.
+	//
+	// Because a registry may be accessed over proxies and/or load-balancers (often happens in large corporate environments), there's no guarantee
+	// that the proxies won't prune the Docker-Content-Digest away which would result in a digest mismatch error.
+	//
+	// This function first tries to get the digest from the response headers - if that fails it falls back on getting
+	// the digest from the response body. As a last fallback, a HEAD request is made.
+	// The function may return an empty digest - it is up to the caller to determine if not receiving the digest is an error.
+	dgstHeader := resp.Header.Get("Docker-Content-Digest")
+	if dgstHeader != "" {
+		return dgstHeader, nil
+	}
+
+	// check for digest in response body if no Docker-Content-Digest header is set
+	mt := resp.Header.Get("Content-Type")
+	if mt != "" {
+		body, err := io.ReadAll(resp.Body)
+		if err == nil {
+			_, desc, err := distribution.UnmarshalManifest(mt, body)
+			if err != nil {
+				return "", err
+			}
+			dgstHeader = desc.Digest.String()
+		}
+	}
+
+	// if we don't get a digest (do we really need one?) use a HEAD request since
+	// the spec mandates this should return a Docker-Content-Digest
+	if dgstHeader == "" {
+		req, _ := http.NewRequestWithContext(ctx, http.MethodHead, manifestURL, nil)
+		r, err := ms.client.Do(req)
+		if err != nil {
+			return "", err
+		}
+
+		dgstHeader = r.Header.Get("Docker-Content-Digest")
+	}
+
+	return dgstHeader, nil
 }
 
 // todo(richardscothern): Restore interface and implementation with merge of #1050
