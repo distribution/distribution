@@ -1,7 +1,6 @@
 package inmemory
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"path"
@@ -98,13 +97,12 @@ func (d *dir) list(p string) ([]string, error) {
 		return nil, errIsNotDir
 	}
 
-	dir, ok := n.(*dir)
-	if !ok {
-		return nil, errors.New("not a directory")
-	}
+	// NOTE(milosgajdos): this is safe to do because
+	// n can only be *dir due to the compile time check
+	dirChildren := n.(*dir).children
 
-	children := make([]string, 0, len(dir.children))
-	for _, child := range dir.children {
+	children := make([]string, 0, len(dirChildren))
+	for _, child := range dirChildren {
 		children = append(children, child.path())
 	}
 
