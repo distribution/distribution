@@ -14,7 +14,7 @@ import (
 func MakeManifestList(blobstatter distribution.BlobStatter, manifestDigests []digest.Digest) (*manifestlist.DeserializedManifestList, error) {
 	ctx := context.Background()
 
-	var manifestDescriptors []manifestlist.ManifestDescriptor
+	manifestDescriptors := make([]manifestlist.ManifestDescriptor, 0, len(manifestDigests))
 	for _, manifestDigest := range manifestDigests {
 		descriptor, err := blobstatter.Stat(ctx, manifestDigest)
 		if err != nil {

@@ -416,7 +416,7 @@ func directDescendants(blobs []string, prefix string) []string {
 		}
 	}
 
-	var keys []string
+	keys := make([]string, 0, len(out))
 	for k := range out {
 		keys = append(keys, k)
 	}

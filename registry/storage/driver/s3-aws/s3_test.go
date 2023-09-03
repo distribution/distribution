@@ -500,6 +500,7 @@ func TestWalk(t *testing.T) {
 	}
 
 	// create file structure matching fileset above
+	// nolint:prealloc
 	var created []string
 	for _, p := range fileset {
 		err := drvr.PutContent(context.Background(), p, []byte("content "+p))

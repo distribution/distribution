@@ -441,6 +441,7 @@ func (app *App) register(routeName string, dispatch dispatchFunc) {
 // configureEvents prepares the event sink for action.
 func (app *App) configureEvents(configuration *configuration.Configuration) {
 	// Configure all of the endpoint sinks.
+	// nolint:prealloc
 	var sinks []events.Sink
 	for _, endpoint := range configuration.Notifications.Endpoints {
 		if endpoint.Disabled {
