@@ -498,11 +498,6 @@ func (app *App) configureRedis(cfg *configuration.Configuration) {
 
 	app.redis = app.createPool(cfg.Redis)
 
-	// Enable tracing instrumentation.
-	if err := redisotel.InstrumentTracing(app.redis); err != nil {
-		dcontext.GetLogger(app).Errorf("failed to instrument tracing on redis: %v", err)
-	}
-
 	// Enable metrics instrumentation.
 	if err := redisotel.InstrumentMetrics(app.redis); err != nil {
 		dcontext.GetLogger(app).Errorf("failed to instrument metrics on redis: %v", err)
