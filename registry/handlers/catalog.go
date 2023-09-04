@@ -9,7 +9,6 @@ import (
 	"strconv"
 
 	"github.com/distribution/distribution/v3/registry/api/errcode"
-	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/gorilla/handlers"
 )
@@ -47,13 +46,13 @@ func (ch *catalogHandler) GetCatalog(w http.ResponseWriter, r *http.Request) {
 	if n := q.Get("n"); n != "" {
 		parsedMax, err := strconv.Atoi(n)
 		if err != nil || parsedMax < 0 {
-			ch.Errors = append(ch.Errors, v2.ErrorCodePaginationNumberInvalid.WithDetail(map[string]string{"n": n}))
+			ch.Errors = append(ch.Errors, errcode.ErrorCodePaginationNumberInvalid.WithDetail(map[string]string{"n": n}))
 			return
 		}
 
 		// if a client requests more than it's allowed to receive
 		if parsedMax > maximumConfiguredEntries {
-			ch.Errors = append(ch.Errors, v2.ErrorCodePaginationNumberInvalid.WithDetail(map[string]int{"n": parsedMax}))
+			ch.Errors = append(ch.Errors, errcode.ErrorCodePaginationNumberInvalid.WithDetail(map[string]int{"n": parsedMax}))
 			return
 		}
 		entries = parsedMax

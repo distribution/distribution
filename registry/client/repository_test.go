@@ -21,7 +21,6 @@ import (
 	"github.com/distribution/distribution/v3/manifest"
 	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
-	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	"github.com/distribution/distribution/v3/testutil"
 	"github.com/distribution/distribution/v3/uuid"
 	"github.com/distribution/reference"
@@ -1440,7 +1439,7 @@ func TestObtainsErrorForMissingTag(t *testing.T) {
 
 	var m testutil.RequestResponseMap
 	var errors errcode.Errors
-	errors = append(errors, v2.ErrorCodeManifestUnknown.WithDetail("unknown manifest"))
+	errors = append(errors, errcode.ErrorCodeManifestUnknown.WithDetail("unknown manifest"))
 	errBytes, err := json.Marshal(errors)
 	if err != nil {
 		t.Fatal(err)
