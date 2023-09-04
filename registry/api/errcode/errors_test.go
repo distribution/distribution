@@ -10,21 +10,21 @@ import (
 
 // TestErrorsManagement does a quick check of the Errors type to ensure that
 // members are properly pushed and marshaled.
-var ErrorCodeTest1 = Register("test.errors", ErrorDescriptor{
+var ErrorCodeTest1 = register("test.errors", ErrorDescriptor{
 	Value:          "TEST1",
 	Message:        "test error 1",
 	Description:    `Just a test message #1.`,
 	HTTPStatusCode: http.StatusInternalServerError,
 })
 
-var ErrorCodeTest2 = Register("test.errors", ErrorDescriptor{
+var ErrorCodeTest2 = register("test.errors", ErrorDescriptor{
 	Value:          "TEST2",
 	Message:        "test error 2",
 	Description:    `Just a test message #2.`,
 	HTTPStatusCode: http.StatusNotFound,
 })
 
-var ErrorCodeTest3 = Register("test.errors", ErrorDescriptor{
+var ErrorCodeTest3 = register("test.errors", ErrorDescriptor{
 	Value:          "TEST3",
 	Message:        "Sorry %q isn't valid",
 	Description:    `Just a test message #3.`,

@@ -16,7 +16,7 @@ var (
 var (
 	// ErrorCodeUnknown is a generic error that can be used as a last
 	// resort if there is no situation-specific error message that can be used
-	ErrorCodeUnknown = Register("errcode", ErrorDescriptor{
+	ErrorCodeUnknown = register("errcode", ErrorDescriptor{
 		Value:   "UNKNOWN",
 		Message: "unknown error",
 		Description: `Generic error returned when the error does not have an
@@ -25,7 +25,7 @@ var (
 	})
 
 	// ErrorCodeUnsupported is returned when an operation is not supported.
-	ErrorCodeUnsupported = Register("errcode", ErrorDescriptor{
+	ErrorCodeUnsupported = register("errcode", ErrorDescriptor{
 		Value:   "UNSUPPORTED",
 		Message: "The operation is unsupported.",
 		Description: `The operation was unsupported due to a missing
@@ -35,7 +35,7 @@ var (
 
 	// ErrorCodeUnauthorized is returned if a request requires
 	// authentication.
-	ErrorCodeUnauthorized = Register("errcode", ErrorDescriptor{
+	ErrorCodeUnauthorized = register("errcode", ErrorDescriptor{
 		Value:   "UNAUTHORIZED",
 		Message: "authentication required",
 		Description: `The access controller was unable to authenticate
@@ -47,7 +47,7 @@ var (
 
 	// ErrorCodeDenied is returned if a client does not have sufficient
 	// permission to perform an action.
-	ErrorCodeDenied = Register("errcode", ErrorDescriptor{
+	ErrorCodeDenied = register("errcode", ErrorDescriptor{
 		Value:   "DENIED",
 		Message: "requested access to the resource is denied",
 		Description: `The access controller denied access for the
@@ -57,7 +57,7 @@ var (
 
 	// ErrorCodeUnavailable provides a common error to report unavailability
 	// of a service or endpoint.
-	ErrorCodeUnavailable = Register("errcode", ErrorDescriptor{
+	ErrorCodeUnavailable = register("errcode", ErrorDescriptor{
 		Value:          "UNAVAILABLE",
 		Message:        "service unavailable",
 		Description:    "Returned when a service is not available",
@@ -66,7 +66,7 @@ var (
 
 	// ErrorCodeTooManyRequests is returned if a client attempts too many
 	// times to contact a service endpoint.
-	ErrorCodeTooManyRequests = Register("errcode", ErrorDescriptor{
+	ErrorCodeTooManyRequests = register("errcode", ErrorDescriptor{
 		Value:   "TOOMANYREQUESTS",
 		Message: "too many requests",
 		Description: `Returned when a client attempts to contact a
@@ -80,7 +80,7 @@ const errGroup = "registry.api.v2"
 var (
 	// ErrorCodeDigestInvalid is returned when uploading a blob if the
 	// provided digest does not match the blob contents.
-	ErrorCodeDigestInvalid = Register(errGroup, ErrorDescriptor{
+	ErrorCodeDigestInvalid = register(errGroup, ErrorDescriptor{
 		Value:   "DIGEST_INVALID",
 		Message: "provided digest did not match uploaded content",
 		Description: `When a blob is uploaded, the registry will check that
@@ -92,7 +92,7 @@ var (
 	})
 
 	// ErrorCodeSizeInvalid is returned when uploading a blob if the provided
-	ErrorCodeSizeInvalid = Register(errGroup, ErrorDescriptor{
+	ErrorCodeSizeInvalid = register(errGroup, ErrorDescriptor{
 		Value:   "SIZE_INVALID",
 		Message: "provided length did not match content length",
 		Description: `When a layer is uploaded, the provided size will be
@@ -103,7 +103,7 @@ var (
 
 	// ErrorCodeRangeInvalid is returned when uploading a blob if the provided
 	// content range is invalid.
-	ErrorCodeRangeInvalid = Register(errGroup, ErrorDescriptor{
+	ErrorCodeRangeInvalid = register(errGroup, ErrorDescriptor{
 		Value:   "RANGE_INVALID",
 		Message: "invalid content range",
 		Description: `When a layer is uploaded, the provided range is checked
@@ -114,7 +114,7 @@ var (
 
 	// ErrorCodeNameInvalid is returned when the name in the manifest does not
 	// match the provided name.
-	ErrorCodeNameInvalid = Register(errGroup, ErrorDescriptor{
+	ErrorCodeNameInvalid = register(errGroup, ErrorDescriptor{
 		Value:   "NAME_INVALID",
 		Message: "invalid repository name",
 		Description: `Invalid repository name encountered either during
@@ -124,7 +124,7 @@ var (
 
 	// ErrorCodeTagInvalid is returned when the tag in the manifest does not
 	// match the provided tag.
-	ErrorCodeTagInvalid = Register(errGroup, ErrorDescriptor{
+	ErrorCodeTagInvalid = register(errGroup, ErrorDescriptor{
 		Value:   "TAG_INVALID",
 		Message: "manifest tag did not match URI",
 		Description: `During a manifest upload, if the tag in the manifest
@@ -133,7 +133,7 @@ var (
 	})
 
 	// ErrorCodeNameUnknown when the repository name is not known.
-	ErrorCodeNameUnknown = Register(errGroup, ErrorDescriptor{
+	ErrorCodeNameUnknown = register(errGroup, ErrorDescriptor{
 		Value:   "NAME_UNKNOWN",
 		Message: "repository name not known to registry",
 		Description: `This is returned if the name used during an operation is
@@ -142,7 +142,7 @@ var (
 	})
 
 	// ErrorCodeManifestUnknown returned when image manifest is unknown.
-	ErrorCodeManifestUnknown = Register(errGroup, ErrorDescriptor{
+	ErrorCodeManifestUnknown = register(errGroup, ErrorDescriptor{
 		Value:   "MANIFEST_UNKNOWN",
 		Message: "manifest unknown",
 		Description: `This error is returned when the manifest, identified by
@@ -153,7 +153,7 @@ var (
 	// ErrorCodeManifestInvalid returned when an image manifest is invalid,
 	// typically during a PUT operation. This error encompasses all errors
 	// encountered during manifest validation that aren't signature errors.
-	ErrorCodeManifestInvalid = Register(errGroup, ErrorDescriptor{
+	ErrorCodeManifestInvalid = register(errGroup, ErrorDescriptor{
 		Value:   "MANIFEST_INVALID",
 		Message: "manifest invalid",
 		Description: `During upload, manifests undergo several checks ensuring
@@ -165,7 +165,7 @@ var (
 
 	// ErrorCodeManifestUnverified is returned when the manifest fails
 	// signature verification.
-	ErrorCodeManifestUnverified = Register(errGroup, ErrorDescriptor{
+	ErrorCodeManifestUnverified = register(errGroup, ErrorDescriptor{
 		Value:   "MANIFEST_UNVERIFIED",
 		Message: "manifest failed signature verification",
 		Description: `During manifest upload, if the manifest fails signature
@@ -175,7 +175,7 @@ var (
 
 	// ErrorCodeManifestBlobUnknown is returned when a manifest blob is
 	// unknown to the registry.
-	ErrorCodeManifestBlobUnknown = Register(errGroup, ErrorDescriptor{
+	ErrorCodeManifestBlobUnknown = register(errGroup, ErrorDescriptor{
 		Value:   "MANIFEST_BLOB_UNKNOWN",
 		Message: "blob unknown to registry",
 		Description: `This error may be returned when a manifest blob is 
@@ -186,7 +186,7 @@ var (
 	// ErrorCodeBlobUnknown is returned when a blob is unknown to the
 	// registry. This can happen when the manifest references a nonexistent
 	// layer or the result is not found by a blob fetch.
-	ErrorCodeBlobUnknown = Register(errGroup, ErrorDescriptor{
+	ErrorCodeBlobUnknown = register(errGroup, ErrorDescriptor{
 		Value:   "BLOB_UNKNOWN",
 		Message: "blob unknown to registry",
 		Description: `This error may be returned when a blob is unknown to the
@@ -197,7 +197,7 @@ var (
 	})
 
 	// ErrorCodeBlobUploadUnknown is returned when an upload is unknown.
-	ErrorCodeBlobUploadUnknown = Register(errGroup, ErrorDescriptor{
+	ErrorCodeBlobUploadUnknown = register(errGroup, ErrorDescriptor{
 		Value:   "BLOB_UPLOAD_UNKNOWN",
 		Message: "blob upload unknown to registry",
 		Description: `If a blob upload has been cancelled or was never
@@ -206,7 +206,7 @@ var (
 	})
 
 	// ErrorCodeBlobUploadInvalid is returned when an upload is invalid.
-	ErrorCodeBlobUploadInvalid = Register(errGroup, ErrorDescriptor{
+	ErrorCodeBlobUploadInvalid = register(errGroup, ErrorDescriptor{
 		Value:   "BLOB_UPLOAD_INVALID",
 		Message: "blob upload invalid",
 		Description: `The blob upload encountered an error and can no
@@ -216,7 +216,7 @@ var (
 
 	// ErrorCodePaginationNumberInvalid is returned when the `n` parameter is
 	// not an integer, or `n` is negative.
-	ErrorCodePaginationNumberInvalid = Register(errGroup, ErrorDescriptor{
+	ErrorCodePaginationNumberInvalid = register(errGroup, ErrorDescriptor{
 		Value:   "PAGINATION_NUMBER_INVALID",
 		Message: "invalid number of results requested",
 		Description: `Returned when the "n" parameter (number of results
@@ -234,6 +234,12 @@ var (
 // Register will make the passed-in error known to the environment and
 // return a new ErrorCode
 func Register(group string, descriptor ErrorDescriptor) ErrorCode {
+	return register(group, descriptor)
+}
+
+// register will make the passed-in error known to the environment and
+// return a new ErrorCode
+func register(group string, descriptor ErrorDescriptor) ErrorCode {
 	registerLock.Lock()
 	defer registerLock.Unlock()
 
