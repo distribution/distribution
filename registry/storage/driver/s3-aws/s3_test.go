@@ -500,7 +500,7 @@ func TestWalk(t *testing.T) {
 	}
 
 	// create file structure matching fileset above
-	var created []string
+	created := make([]string, 0, len(fileset))
 	for _, p := range fileset {
 		err := drvr.PutContent(context.Background(), p, []byte("content "+p))
 		if err != nil {

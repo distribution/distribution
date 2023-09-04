@@ -97,8 +97,12 @@ func (d *dir) list(p string) ([]string, error) {
 		return nil, errIsNotDir
 	}
 
-	var children []string
-	for _, child := range n.(*dir).children {
+	// NOTE(milosgajdos): this is safe to do because
+	// n can only be *dir due to the compile time check
+	dirChildren := n.(*dir).children
+
+	children := make([]string, 0, len(dirChildren))
+	for _, child := range dirChildren {
 		children = append(children, child.path())
 	}
 

@@ -441,6 +441,11 @@ func (app *App) register(routeName string, dispatch dispatchFunc) {
 // configureEvents prepares the event sink for action.
 func (app *App) configureEvents(configuration *configuration.Configuration) {
 	// Configure all of the endpoint sinks.
+	// NOTE(milosgajdos): we are disabling the linter here as
+	// if an endpoint is disabled we continue with the evaluation
+	// of the next one so we do not know the exact size the slice
+	// should have at the time the iteration starts
+	// nolint:prealloc
 	var sinks []events.Sink
 	for _, endpoint := range configuration.Notifications.Endpoints {
 		if endpoint.Disabled {

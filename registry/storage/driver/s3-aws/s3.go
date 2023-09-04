@@ -1456,7 +1456,7 @@ func (w *writer) Commit() error {
 	}
 	w.committed = true
 
-	var completedUploadedParts completedParts
+	completedUploadedParts := make(completedParts, 0, len(w.parts))
 	for _, part := range w.parts {
 		completedUploadedParts = append(completedUploadedParts, &s3.CompletedPart{
 			ETag:       part.ETag,
