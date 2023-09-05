@@ -13,4 +13,7 @@ var (
 
 	// NotificationsNamespace is the prometheus namespace of notification related metrics
 	NotificationsNamespace = metrics.NewNamespace(NamespacePrefix, "notifications", nil)
+
+	// ProxyNamespace is the prometheus namespace of proxy related metrics
+	ProxyNamespace = metrics.NewNamespace(NamespacePrefix, "proxy", nil)
 )
