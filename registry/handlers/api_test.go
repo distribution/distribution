@@ -31,7 +31,6 @@ import (
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/distribution/distribution/v3/testutil"
 	"github.com/distribution/reference"
-	"github.com/docker/libtrust"
 	"github.com/gorilla/handlers"
 	"github.com/opencontainers/go-digest"
 )
@@ -2128,7 +2127,6 @@ func testManifestDelete(t *testing.T, env *testEnv, args manifestArgs) {
 }
 
 type testEnv struct {
-	pk      libtrust.PrivateKey
 	ctx     context.Context
 	config  configuration.Configuration
 	app     *App
@@ -2186,13 +2184,7 @@ func newTestEnvWithConfig(t *testing.T, config *configuration.Configuration) *te
 		t.Fatalf("error creating url builder: %v", err)
 	}
 
-	pk, err := libtrust.GenerateECP256PrivateKey()
-	if err != nil {
-		t.Fatalf("unexpected error generating private key: %v", err)
-	}
-
 	return &testEnv{
-		pk:      pk,
 		ctx:     ctx,
 		config:  *config,
 		app:     app,
