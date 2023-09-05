@@ -280,3 +280,54 @@ func TestProxyManifestsWithoutScheduler(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestProxyManifestsMetrics(t *testing.T) {
+	proxyMetrics = &proxyMetricsCollector{}
+	name := "foo/bar"
+	env := newManifestStoreTestEnv(t, name, "latest")
+
+	ctx := context.Background()
+	// Get - should succeed and pull manifest into local
+	_, err := env.manifests.Get(ctx, env.manifestDigest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if proxyMetrics.manifestMetrics.Requests != 1 {
+		t.Errorf("Expected manifestMetrics.Requests %d but got %d", 1, proxyMetrics.manifestMetrics.Requests)
+	}
+	if proxyMetrics.manifestMetrics.Hits != 0 {
+		t.Errorf("Expected manifestMetrics.Hits %d but got %d", 0, proxyMetrics.manifestMetrics.Hits)
+	}
+	if proxyMetrics.manifestMetrics.Misses != 1 {
+		t.Errorf("Expected manifestMetrics.Misses %d but got %d", 1, proxyMetrics.manifestMetrics.Misses)
+	}
+	if proxyMetrics.manifestMetrics.BytesPulled != 257 {
+		t.Errorf("Expected manifestMetrics.BytesPulled %d but got %d", 257, proxyMetrics.manifestMetrics.BytesPulled)
+	}
+	if proxyMetrics.manifestMetrics.BytesPushed != 257 {
+		t.Errorf("Expected manifestMetrics.BytesPushed %d but got %d", 257, proxyMetrics.manifestMetrics.BytesPushed)
+	}
+
+	// Get proxied - manifest comes from local
+	_, err = env.manifests.Get(ctx, env.manifestDigest)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if proxyMetrics.manifestMetrics.Requests != 2 {
+		t.Errorf("Expected manifestMetrics.Requests %d but got %d", 2, proxyMetrics.manifestMetrics.Requests)
+	}
+	if proxyMetrics.manifestMetrics.Hits != 1 {
+		t.Errorf("Expected manifestMetrics.Hits %d but got %d", 1, proxyMetrics.manifestMetrics.Hits)
+	}
+	if proxyMetrics.manifestMetrics.Misses != 1 {
+		t.Errorf("Expected manifestMetrics.Misses %d but got %d", 1, proxyMetrics.manifestMetrics.Misses)
+	}
+	if proxyMetrics.manifestMetrics.BytesPulled != 257 {
+		t.Errorf("Expected manifestMetrics.BytesPulled %d but got %d", 257, proxyMetrics.manifestMetrics.BytesPulled)
+	}
+	if proxyMetrics.manifestMetrics.BytesPushed != 514 {
+		t.Errorf("Expected manifestMetrics.BytesPushed %d but got %d", 514, proxyMetrics.manifestMetrics.BytesPushed)
+	}
+}
