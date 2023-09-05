@@ -438,8 +438,6 @@ storage:
     multipartcopymaxconcurrency: 100
     multipartcopythresholdsize: 33554432
     rootdirectory: /s3/object/name/prefix
-<<<<<<< HEAD
-=======
     logs3apirequests: true
     logs3apiresponseheaders:
       s3_http_response_header_x-do-spaces-error: x-do-spaces-error
@@ -455,7 +453,6 @@ storage:
     region: fr
     container: containername
     rootdirectory: /swift/object/name/prefix
->>>>>>> f3d61f10 (s3: log S3 api requests)
   oss:
     accesskeyid: accesskeyid
     accesskeysecret: accesskeysecret
