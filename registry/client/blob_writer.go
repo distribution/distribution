@@ -33,7 +33,7 @@ func (hbu *httpBlobUpload) handleErrorResponse(resp *http.Response) error {
 	if resp.StatusCode == http.StatusNotFound {
 		return distribution.ErrBlobUploadUnknown
 	}
-	return HandleErrorResponse(resp)
+	return HandleHTTPResponseError(resp)
 }
 
 func (hbu *httpBlobUpload) ReadFrom(r io.Reader) (n int64, err error) {
@@ -51,8 +51,8 @@ func (hbu *httpBlobUpload) ReadFrom(r io.Reader) (n int64, err error) {
 	}
 	defer resp.Body.Close()
 
-	if !SuccessStatus(resp.StatusCode) {
-		return 0, hbu.handleErrorResponse(resp)
+	if err := hbu.handleErrorResponse(resp); err != nil {
+		return 0, err
 	}
 
 	hbu.uuid = resp.Header.Get("Docker-Upload-UUID")
@@ -87,8 +87,8 @@ func (hbu *httpBlobUpload) Write(p []byte) (n int, err error) {
 	}
 	defer resp.Body.Close()
 
-	if !SuccessStatus(resp.StatusCode) {
-		return 0, hbu.handleErrorResponse(resp)
+	if err := hbu.handleErrorResponse(resp); err != nil {
+		return 0, err
 	}
 
 	hbu.uuid = resp.Header.Get("Docker-Upload-UUID")
@@ -137,8 +137,8 @@ func (hbu *httpBlobUpload) Commit(ctx context.Context, desc distribution.Descrip
 	}
 	defer resp.Body.Close()
 
-	if !SuccessStatus(resp.StatusCode) {
-		return distribution.Descriptor{}, hbu.handleErrorResponse(resp)
+	if err := hbu.handleErrorResponse(resp); err != nil {
+		return distribution.Descriptor{}, err
 	}
 
 	return hbu.statter.Stat(ctx, desc.Digest)
@@ -155,7 +155,7 @@ func (hbu *httpBlobUpload) Cancel(ctx context.Context) error {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == http.StatusNotFound || SuccessStatus(resp.StatusCode) {
+	if resp.StatusCode == http.StatusNotFound {
 		return nil
 	}
 	return hbu.handleErrorResponse(resp)
