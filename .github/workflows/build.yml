@@ -26,8 +26,8 @@ jobs:
       fail-fast: false
       matrix:
         go:
-          - 1.20.7
-          - 1.21.0
+          - 1.20.8
+          - 1.21.1
     steps:
       -
         name: Checkout
