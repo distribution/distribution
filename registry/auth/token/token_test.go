@@ -527,7 +527,7 @@ func TestNewAccessControllerPemBlock(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(ac.(*accessController).rootCerts.Subjects()) != 2 {
+	if len(ac.(*accessController).rootCerts.Subjects()) != 2 { //nolint:staticcheck // FIXME(thaJeztah): ignore SA1019: ac.(*accessController).rootCerts.Subjects has been deprecated since Go 1.18: if s was returned by SystemCertPool, Subjects will not include the system roots. (staticcheck)
 		t.Fatal("accessController has the wrong number of certificates")
 	}
 }

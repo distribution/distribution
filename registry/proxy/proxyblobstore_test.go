@@ -21,6 +21,7 @@ import (
 )
 
 var sbsMu sync.Mutex
+var randSource rand.Rand
 
 type statsBlobStore struct {
 	stats map[string]int
@@ -195,13 +196,13 @@ func makeTestEnv(t *testing.T, name string) *testEnv {
 func makeBlob(size int) []byte {
 	blob := make([]byte, size)
 	for i := 0; i < size; i++ {
-		blob[i] = byte('A' + rand.Int()%48)
+		blob[i] = byte('A' + randSource.Int()%48)
 	}
 	return blob
 }
 
 func init() {
-	rand.Seed(42)
+	randSource = *rand.New(rand.NewSource(42))
 }
 
 func populate(t *testing.T, te *testEnv, blobCount, size, numUnique int) {

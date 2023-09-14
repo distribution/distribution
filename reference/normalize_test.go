@@ -532,7 +532,7 @@ func TestNormalizedSplitHostname(t *testing.T) {
 			t.Fail()
 		}
 
-		named, err := ParseNormalizedNamed(testcase.input)
+		named, err := ParseNormalizedNamed(testcase.input) //nolint:staticcheck // Ignore SA1019: SplitHostname is deprecated.
 		if err != nil {
 			failf("error parsing name: %s", err)
 		}

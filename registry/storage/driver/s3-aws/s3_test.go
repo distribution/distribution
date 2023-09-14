@@ -2,8 +2,8 @@ package s3
 
 import (
 	"bytes"
+	"crypto/rand"
 	"io/ioutil"
-	"math/rand"
 	"os"
 	"strconv"
 	"testing"
