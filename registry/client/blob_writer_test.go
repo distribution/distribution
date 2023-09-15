@@ -9,7 +9,6 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
-	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	"github.com/distribution/distribution/v3/testutil"
 )
 
@@ -175,8 +174,8 @@ func TestUploadReadFrom(t *testing.T) {
 		if !ok {
 			t.Fatalf("Not an 'Error' type: %#v", uploadErr[0])
 		}
-		if v2Err.Code != v2.ErrorCodeBlobUploadInvalid {
-			t.Fatalf("Unexpected error code: %s, expected %d", v2Err.Code.String(), v2.ErrorCodeBlobUploadInvalid)
+		if v2Err.Code != errcode.ErrorCodeBlobUploadInvalid {
+			t.Fatalf("Unexpected error code: %s, expected %d", v2Err.Code.String(), errcode.ErrorCodeBlobUploadInvalid)
 		}
 		if expected := "blob upload invalid"; v2Err.Message != expected {
 			t.Fatalf("Unexpected error message: %q, expected %q", v2Err.Message, expected)
@@ -463,8 +462,8 @@ func TestUploadWrite(t *testing.T) {
 		if !ok {
 			t.Fatalf("Not an 'Error' type: %#v", uploadErr[0])
 		}
-		if v2Err.Code != v2.ErrorCodeBlobUploadInvalid {
-			t.Fatalf("Unexpected error code: %s, expected %d", v2Err.Code.String(), v2.ErrorCodeBlobUploadInvalid)
+		if v2Err.Code != errcode.ErrorCodeBlobUploadInvalid {
+			t.Fatalf("Unexpected error code: %s, expected %d", v2Err.Code.String(), errcode.ErrorCodeBlobUploadInvalid)
 		}
 		if expected := "blob upload invalid"; v2Err.Message != expected {
 			t.Fatalf("Unexpected error message: %q, expected %q", v2Err.Message, expected)

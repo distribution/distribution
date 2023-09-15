@@ -6,7 +6,6 @@ import (
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
-	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	"github.com/gorilla/handlers"
 	"github.com/opencontainers/go-digest"
 )
@@ -18,12 +17,12 @@ func blobDispatcher(ctx *Context, r *http.Request) http.Handler {
 
 		if err == errDigestNotAvailable {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				ctx.Errors = append(ctx.Errors, v2.ErrorCodeDigestInvalid.WithDetail(err))
+				ctx.Errors = append(ctx.Errors, errcode.ErrorCodeDigestInvalid.WithDetail(err))
 			})
 		}
 
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			ctx.Errors = append(ctx.Errors, v2.ErrorCodeDigestInvalid.WithDetail(err))
+			ctx.Errors = append(ctx.Errors, errcode.ErrorCodeDigestInvalid.WithDetail(err))
 		})
 	}
 
@@ -59,7 +58,7 @@ func (bh *blobHandler) GetBlob(w http.ResponseWriter, r *http.Request) {
 	desc, err := blobs.Stat(bh, bh.Digest)
 	if err != nil {
 		if err == distribution.ErrBlobUnknown {
-			bh.Errors = append(bh.Errors, v2.ErrorCodeBlobUnknown.WithDetail(bh.Digest))
+			bh.Errors = append(bh.Errors, errcode.ErrorCodeBlobUnknown.WithDetail(bh.Digest))
 		} else {
 			bh.Errors = append(bh.Errors, errcode.ErrorCodeUnknown.WithDetail(err))
 		}
@@ -85,7 +84,7 @@ func (bh *blobHandler) DeleteBlob(w http.ResponseWriter, r *http.Request) {
 			bh.Errors = append(bh.Errors, errcode.ErrorCodeUnsupported)
 			return
 		case distribution.ErrBlobUnknown:
-			bh.Errors = append(bh.Errors, v2.ErrorCodeBlobUnknown)
+			bh.Errors = append(bh.Errors, errcode.ErrorCodeBlobUnknown)
 			return
 		default:
 			bh.Errors = append(bh.Errors, err)

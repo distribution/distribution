@@ -661,9 +661,9 @@ func (app *App) dispatcher(dispatch dispatchFunc) http.Handler {
 
 				switch err := err.(type) {
 				case distribution.ErrRepositoryUnknown:
-					context.Errors = append(context.Errors, v2.ErrorCodeNameUnknown.WithDetail(err))
+					context.Errors = append(context.Errors, errcode.ErrorCodeNameUnknown.WithDetail(err))
 				case distribution.ErrRepositoryNameInvalid:
-					context.Errors = append(context.Errors, v2.ErrorCodeNameInvalid.WithDetail(err))
+					context.Errors = append(context.Errors, errcode.ErrorCodeNameInvalid.WithDetail(err))
 				case errcode.Error:
 					context.Errors = append(context.Errors, err)
 				}

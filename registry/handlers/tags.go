@@ -8,7 +8,6 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/registry/api/errcode"
-	v2 "github.com/distribution/distribution/v3/registry/api/v2"
 	"github.com/gorilla/handlers"
 )
 
@@ -42,7 +41,7 @@ func (th *tagsHandler) GetTags(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch err := err.(type) {
 		case distribution.ErrRepositoryUnknown:
-			th.Errors = append(th.Errors, v2.ErrorCodeNameUnknown.WithDetail(map[string]string{"name": th.Repository.Named().Name()}))
+			th.Errors = append(th.Errors, errcode.ErrorCodeNameUnknown.WithDetail(map[string]string{"name": th.Repository.Named().Name()}))
 		case errcode.Error:
 			th.Errors = append(th.Errors, err)
 		default:
@@ -71,7 +70,7 @@ func (th *tagsHandler) GetTags(w http.ResponseWriter, r *http.Request) {
 	if n := q.Get("n"); n != "" {
 		maxEntries, err := strconv.Atoi(n)
 		if err != nil || maxEntries < 0 {
-			th.Errors = append(th.Errors, v2.ErrorCodePaginationNumberInvalid.WithDetail(map[string]string{"n": n}))
+			th.Errors = append(th.Errors, errcode.ErrorCodePaginationNumberInvalid.WithDetail(map[string]string{"n": n}))
 			return
 		}
 
