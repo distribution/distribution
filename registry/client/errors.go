@@ -116,11 +116,16 @@ func mergeErrors(err1, err2 error) error {
 	return errcode.Errors(append(makeErrorList(err1), makeErrorList(err2)...))
 }
 
-// HandleErrorResponse returns error parsed from HTTP response for an
-// unsuccessful HTTP response code (in the range 400 - 499 inclusive). An
-// UnexpectedHTTPStatusError returned for response code outside of expected
-// range.
-func HandleErrorResponse(resp *http.Response) error {
+// HandleHTTPResponseError returns error parsed from HTTP response, if any.
+// It returns nil if no error occurred (HTTP status 200-399), or an error
+// for unsuccessful HTTP response codes (in the range 400 - 499 inclusive).
+// If possible, it returns a typed error, but an UnexpectedHTTPStatusError
+// is returned for response code outside the expected range (HTTP status < 200
+// and > 500).
+func HandleHTTPResponseError(resp *http.Response) error {
+	if resp.StatusCode >= 200 && resp.StatusCode <= 399 {
+		return nil
+	}
 	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
 		// Check for OAuth errors within the `WWW-Authenticate` header first
 		// See https://tools.ietf.org/html/rfc6750#section-3
@@ -153,8 +158,23 @@ func HandleErrorResponse(resp *http.Response) error {
 	return &UnexpectedHTTPStatusError{Status: resp.Status}
 }
 
+// HandleErrorResponse returns error parsed from HTTP response for an
+// unsuccessful HTTP response code (in the range 400 - 499 inclusive). An
+// UnexpectedHTTPStatusError returned for response code outside of expected
+// range.
+//
+// Deprecated: use [HandleHTTPResponseError] and check the error.
+func HandleErrorResponse(resp *http.Response) error {
+	if resp.StatusCode >= 200 && resp.StatusCode <= 399 {
+		return &UnexpectedHTTPStatusError{Status: resp.Status}
+	}
+	return HandleHTTPResponseError(resp)
+}
+
 // SuccessStatus returns true if the argument is a successful HTTP response
 // code (in the range 200 - 399 inclusive).
+//
+// Deprecated: use [HandleHTTPResponseError] and check the error.
 func SuccessStatus(status int) bool {
 	return status >= 200 && status <= 399
 }
