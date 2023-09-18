@@ -336,6 +336,12 @@ func testProxyStoreServe(t *testing.T, te *testEnv, numClients int) {
 	remoteStats := te.RemoteStats()
 
 	var wg sync.WaitGroup
+	var descHitMap = map[digest.Digest]bool{}
+	var hitLock sync.Mutex
+
+	for _, remoteBlob := range te.inRemote {
+		descHitMap[remoteBlob.Digest] = true
+	}
 
 	for i := 0; i < numClients; i++ {
 		// Serveblob - pulls through blobs
@@ -362,6 +368,15 @@ func testProxyStoreServe(t *testing.T, te *testEnv, numClients int) {
 					t.Errorf("Mismatching blob fetch from proxy")
 					return
 				}
+
+				desc, err := te.store.localStore.Stat(te.ctx, remoteBlob.Digest)
+				if err != nil {
+					continue
+				}
+
+				hitLock.Lock()
+				delete(descHitMap, desc.Digest)
+				hitLock.Unlock()
 			}
 		}()
 	}
@@ -371,11 +386,16 @@ func testProxyStoreServe(t *testing.T, te *testEnv, numClients int) {
 		t.FailNow()
 	}
 
+	if len(descHitMap) > 0 {
+		t.Errorf("Expected hit cache at least once, but it turns out that no caches was hit")
+		t.FailNow()
+	}
+
 	remoteBlobCount := len(te.inRemote)
 	sbsMu.Lock()
-	if (*localStats)["stat"] != remoteBlobCount*numClients && (*localStats)["create"] != te.numUnique {
+	if (*localStats)["stat"] != remoteBlobCount*numClients*2 && (*localStats)["create"] != te.numUnique {
 		sbsMu.Unlock()
-		t.Fatal("Expected: stat:", remoteBlobCount*numClients, "create:", remoteBlobCount)
+		t.Fatal("Expected: stat:", remoteBlobCount*numClients, "create:", remoteBlobCount, "Got: stat:", (*localStats)["stat"], "create:", (*localStats)["create"])
 	}
 	sbsMu.Unlock()
 
