@@ -48,7 +48,7 @@ func NewListener(net, laddr string) (net.Listener, error) {
 			return nil, fmt.Errorf("unknown address type %s", net)
 		}
 	case 1:
-		log.Info("Socet-activation is being used.  Overriding requested address")
+		log.Info("Using systemd socket activation instead of any configured network listeners")
 		return listeners[0], nil
 	default:
 		return nil, fmt.Errorf("Found %d socket-activation listeners, only expected 1", len(listeners))
