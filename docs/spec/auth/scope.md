@@ -41,6 +41,11 @@ is authorized for a specific resource.
 
 #### Resource Class
 
+> [!WARNING]
+> Resource Class is deprecated and ignored.
+> `repository` and `repository(plugin)` are considered equal when authorizing a token.
+> Authorization services should no longer return scopes with a resource class.
+
 The resource type might have a resource class which further classifies the
 the resource name within the resource type. A class is not required and
 is specific to the resource type.
