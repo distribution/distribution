@@ -10,6 +10,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/storage/azblob v1.0.0
 	github.com/aws/aws-sdk-go v1.44.325
 	github.com/bshuster-repo/logrus-logstash-hook v1.0.0
+	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/distribution/reference v0.5.0
 	github.com/docker/go-events v0.0.0-20190806004212-e31b211e4f1c
 	github.com/docker/go-metrics v0.0.1
