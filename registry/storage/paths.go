@@ -109,7 +109,6 @@ const (
 //	blobsPathSpec:                  <root>/v2/blobs/
 //	blobPathSpec:                   <root>/v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>
 //	blobDataPathSpec:               <root>/v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>/data
-//	blobMediaTypePathSpec:          <root>/v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>/data
 //
 // For more information on the semantic meaning of each path and their
 // contents, please see the path spec documentation.
