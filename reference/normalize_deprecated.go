@@ -4,8 +4,8 @@ import (
 	"regexp"
 
 	"github.com/distribution/reference"
-	"github.com/docker/distribution/digestset"
 	"github.com/opencontainers/go-digest"
+	"github.com/opencontainers/go-digest/digestset"
 )
 
 // ParseNormalizedNamed parses a string into a named reference
