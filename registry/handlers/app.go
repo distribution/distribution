@@ -584,8 +584,6 @@ func (app *App) configureSecret(configuration *configuration.Configuration) {
 }
 
 func (app *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close() // ensure that request body is always closed.
-
 	// Prepare the context with our own little decorations.
 	ctx := r.Context()
 	ctx = dcontext.WithRequest(ctx, r)
