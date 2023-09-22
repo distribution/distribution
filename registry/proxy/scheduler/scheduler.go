@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/distribution/reference"
 	dcontext "github.com/docker/distribution/context"
-	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/driver"
 )
 

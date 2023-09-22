@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/distribution/reference"
 	"github.com/docker/distribution"
-	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/registry/storage/cache"
 	"github.com/garyburd/redigo/redis"
 	"github.com/opencontainers/go-digest"

@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/distribution/reference"
 	"github.com/docker/distribution"
 	"github.com/docker/distribution/context"
-	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/uuid"
 	"github.com/opencontainers/go-digest"
 )

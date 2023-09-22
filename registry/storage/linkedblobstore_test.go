@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/distribution/reference"
 	"github.com/docker/distribution"
-	"github.com/docker/distribution/reference"
 	"github.com/docker/distribution/testutil"
 	"github.com/opencontainers/go-digest"
 )
