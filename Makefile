@@ -117,6 +117,35 @@ coverage: ## generate coverprofiles from the unit tests
 		fi; \
 	done )
 
+.PHONY: test-cloud-storage
+test-cloud-storage: start-cloud-storage run-s3-tests stop-cloud-storage ## run cloud storage driver tests
+
+.PHONY: start-cloud-storage
+start-cloud-storage: ## start local cloud storage (minio)
+	docker compose -f tests/docker-compose-storage.yml up minio minio-init -d
+
+.PHONY: stop-cloud-storage
+stop-cloud-storage: ## stop local cloud storage (minio)
+	docker compose -f tests/docker-compose-storage.yml down
+
+.PHONY: reset-cloud-storage
+reset-cloud-storage: ## reset (stop, delete, start) local cloud storage (minio)
+	docker compose -f tests/docker-compose-storage.yml down
+	@mkdir -p tests/miniodata/distribution
+	@rm -rf tests/miniodata/distribution/* tests/miniodata/.minio.sys
+	docker compose -f tests/docker-compose-storage.yml up minio minio-init -d
+
+.PHONY: run-s3-tests
+run-s3-tests: ## run S3 storage driver integration tests
+	AWS_ACCESS_KEY=distribution \
+	AWS_SECRET_KEY=password \
+	AWS_REGION=us-east-1 \
+	S3_BUCKET=images-local \
+	S3_ENCRYPT=false \
+	REGION_ENDPOINT=http://127.0.0.1:9000 \
+	S3_SECURE=false \
+	go test -v -count=1 ./registry/storage/driver/s3-aws/...
+
 ##@ Validate
 
 lint: ## run all linters
@@ -133,7 +162,7 @@ validate-vendor: ## validate vendor
 
 .PHONY: help
 help:
-	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m\033[0m\n"} /^[a-zA-Z_\/%-]+:.*?##/ { printf "  \033[36m%-27s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m\033[0m\n"} /^[a-zA-Z0-9_\/%-]+:.*?##/ { printf "  \033[36m%-27s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 	@echo ""
 	@echo "Go binaries:   $(BINARIES)"
 	@echo "Docker image: $(IMAGE_NAME)"

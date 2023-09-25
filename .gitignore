@@ -36,3 +36,5 @@ bin/*
 *.sublime-project
 *.sublime-workspace
 .idea/*
+
+tests/miniodata
