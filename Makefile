@@ -122,7 +122,7 @@ test-cloud-storage: start-cloud-storage run-s3-tests stop-cloud-storage ## run c
 
 .PHONY: start-cloud-storage
 start-cloud-storage: ## start local cloud storage (minio)
-	docker compose -f tests/docker-compose-storage.yml up minio minio-init -d
+	$(COMPOSE) -f tests/docker-compose-storage.yml up minio minio-init -d
 
 .PHONY: stop-cloud-storage
 stop-cloud-storage: ## stop local cloud storage (minio)
