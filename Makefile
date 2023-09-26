@@ -8,7 +8,7 @@ VERSION ?= $(shell git describe --match 'v[0-9]*' --dirty='.m' --always)
 REVISION ?= $(shell git rev-parse HEAD)$(shell if ! git diff --no-ext-diff --quiet --exit-code; then echo .m; fi)
 
 # default compose command
-COMPOSE=docker compose
+COMPOSE ?= docker compose
 
 PKG=github.com/distribution/distribution/v3
 
