@@ -14,7 +14,7 @@ services:
       MINIO_ROOT_USER: distribution
       MINIO_ROOT_PASSWORD: password
     volumes:
-      - ./miniodata/distribution:/data
+      - ./miniodata/distribution:/data:Z
 
   minio-init:
     image: docker.io/minio/mc:RELEASE.2023-02-16T19-20-11Z
