@@ -138,7 +138,7 @@ reset-cloud-storage: ## reset (stop, delete, start) local cloud storage (minio)
 	$(COMPOSE) -f tests/docker-compose-storage.yml up minio minio-init -d
 
 .PHONY: run-s3-tests
-run-s3-tests: ## run S3 storage driver integration tests
+run-s3-tests: start-cloud-storage ## run S3 storage driver integration tests
 	AWS_ACCESS_KEY=distribution \
 	AWS_SECRET_KEY=password \
 	AWS_REGION=us-east-1 \
