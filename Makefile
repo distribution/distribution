@@ -144,6 +144,8 @@ run-s3-tests: ## run S3 storage driver integration tests
 	S3_ENCRYPT=false \
 	REGION_ENDPOINT=http://127.0.0.1:9000 \
 	S3_SECURE=false \
+	S3_ACCELERATE=false \
+	AWS_S3_FORCE_PATH_STYLE=true \
 	go test ${TESTFLAGS} -count=1 ./registry/storage/driver/s3-aws/...
 
 ##@ Validate
