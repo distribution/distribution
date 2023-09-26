@@ -7,6 +7,8 @@ ROOTDIR=$(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 VERSION ?= $(shell git describe --match 'v[0-9]*' --dirty='.m' --always)
 REVISION ?= $(shell git rev-parse HEAD)$(shell if ! git diff --no-ext-diff --quiet --exit-code; then echo .m; fi)
 
+# default compose command
+COMPOSE=docker compose
 
 PKG=github.com/distribution/distribution/v3
 
@@ -126,14 +128,14 @@ start-cloud-storage: ## start local cloud storage (minio)
 
 .PHONY: stop-cloud-storage
 stop-cloud-storage: ## stop local cloud storage (minio)
-	docker compose -f tests/docker-compose-storage.yml down
+	$(COMPOSE) -f tests/docker-compose-storage.yml down
 
 .PHONY: reset-cloud-storage
 reset-cloud-storage: ## reset (stop, delete, start) local cloud storage (minio)
-	docker compose -f tests/docker-compose-storage.yml down
+	$(COMPOSE) -f tests/docker-compose-storage.yml down
 	@mkdir -p tests/miniodata/distribution
 	@rm -rf tests/miniodata/distribution/* tests/miniodata/.minio.sys
-	docker compose -f tests/docker-compose-storage.yml up minio minio-init -d
+	$(COMPOSE) -f tests/docker-compose-storage.yml up minio minio-init -d
 
 .PHONY: run-s3-tests
 run-s3-tests: ## run S3 storage driver integration tests

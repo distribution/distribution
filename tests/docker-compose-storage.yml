@@ -25,7 +25,7 @@ services:
       /bin/bash -c "
         /usr/bin/mc config host add minio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD} && (
           /usr/bin/mc stat minio/images-local || /usr/bin/mc mb minio/images-local
-        ) && /usr/bin/mc anonymous set public minio/images-local && /usr/bin/mc admin trace --path "
+        ) && /usr/bin/mc anonymous set public minio/images-local"
     environment:
       MINIO_ROOT_USER: distribution
       MINIO_ROOT_PASSWORD: password
