@@ -11,20 +11,18 @@ Most people should use the [official Registry docker image](https://hub.docker.c
 
 People looking for advanced operational use cases might consider rolling their own image with a custom Dockerfile inheriting `FROM registry:2`.
 
-The latest updates to `main` branch are automatically pushed to [distribution Docker Hub repository](https://hub.docker.com/r/distribution/distribution) with `edge` tag.
+The latest updates to `main` branch are automatically pushed to [distribution Docker Hub repository](https://hub.docker.com/r/distribution/distribution) and tagged with `edge` tag.
 
 ### Gotchas
 
-You are expected to know your way around with `Go` & `git`.
+You are expected to know your way around with `go` & `git`.
 
-If you are a casual user with no development experience, and no preliminary knowledge of `Go`, building from source is probably not a good solution for you.
+If you are a casual user with no development experience, and no preliminary knowledge of Go, building from source is probably not a good solution for you.
 
 ## Configure the development environment
 
 The first prerequisite of properly building distribution targets is to have a Go
-development environment setup. Please follow [How to Write Go Code](https://golang.org/doc/code.html)
-for proper setup. If done correctly, you should have a GOROOT and GOPATH set in the
-environment.
+development environment setup. Please follow [How to Write Go Code](https://go.dev/doc/code) for proper setup.
 
 Next, fetch the code from the repository using git:
 
@@ -110,7 +108,7 @@ the environment variable `BUILDTAGS`.
 
 You can run an S3 API compatible storage locally with [minio](https://min.io/).
 
-You must have [docker compose](https://docs.docker.com/compose/) installed on your workstation.
+You must have [docker compose](https://docs.docker.com/compose/) compatible tool installed on your workstation.
 
 Start the local cloud environment:
 ```
