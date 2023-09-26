@@ -77,6 +77,10 @@ const (
 //
 // We cover the path formats implemented by this path mapper below.
 //
+//	Repositories:
+//
+//	repositoriesRootPathSpec:     <root>/v2/repositories
+//
 //	Manifests:
 //
 //	manifestsPathSpec:             <root>/v2/repositories/<name>/_manifests
