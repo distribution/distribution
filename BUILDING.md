@@ -108,7 +108,7 @@ the environment variable `BUILDTAGS`.
 
 You can run an S3 API compatible storage locally with [minio](https://min.io/).
 
-You must have [docker compose](https://docs.docker.com/compose/) compatible tool installed on your workstation.
+You must have a [docker compose](https://docs.docker.com/compose/) compatible tool installed on your workstation.
 
 Start the local cloud environment:
 ```
