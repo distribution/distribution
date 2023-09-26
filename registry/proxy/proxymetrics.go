@@ -15,10 +15,10 @@ var (
 	hits = prometheus.ProxyNamespace.NewLabeledCounter("hits", "The number of total proxy request hits", "type")
 	// hits is the number of total proxy request misses for blob/manifest
 	misses = prometheus.ProxyNamespace.NewLabeledCounter("misses", "The number of total proxy request misses", "type")
-	// bytesPulled is the size of total bytes pulled from the upstream for blob/manifest
-	bytesPulled = prometheus.ProxyNamespace.NewLabeledCounter("bytes_pulled", "The size of total bytes pulled from the upstream", "type")
-	// bytesPushed is the size of total bytes pushed to the client for blob/manifest
-	bytesPushed = prometheus.ProxyNamespace.NewLabeledCounter("bytes_pushed", "The size of total bytes pushed to the client", "type")
+	// pulledBytes is the size of total bytes pulled from the upstream for blob/manifest
+	pulledBytes = prometheus.ProxyNamespace.NewLabeledCounter("pulled_bytes", "The size of total bytes pulled from the upstream", "type")
+	// pushedBytes is the size of total bytes pushed to the client for blob/manifest
+	pushedBytes = prometheus.ProxyNamespace.NewLabeledCounter("pushed_bytes", "The size of total bytes pushed to the client", "type")
 )
 
 // Metrics is used to hold metric counters
@@ -37,43 +37,43 @@ type proxyMetricsCollector struct {
 }
 
 // BlobPull tracks metrics about blobs pulled into the cache
-func (pmc *proxyMetricsCollector) BlobPull(bytes uint64) {
+func (pmc *proxyMetricsCollector) BlobPull(bytesPulled uint64) {
 	atomic.AddUint64(&pmc.blobMetrics.Misses, 1)
-	atomic.AddUint64(&pmc.blobMetrics.BytesPulled, bytes)
+	atomic.AddUint64(&pmc.blobMetrics.BytesPulled, bytesPulled)
 
 	misses.WithValues("blob").Inc(1)
-	bytesPulled.WithValues("blob").Inc(float64(bytes))
+	pulledBytes.WithValues("blob").Inc(float64(bytesPulled))
 }
 
 // BlobPush tracks metrics about blobs pushed to clients
-func (pmc *proxyMetricsCollector) BlobPush(bytes uint64) {
+func (pmc *proxyMetricsCollector) BlobPush(bytesPushed uint64) {
 	atomic.AddUint64(&pmc.blobMetrics.Requests, 1)
 	atomic.AddUint64(&pmc.blobMetrics.Hits, 1)
-	atomic.AddUint64(&pmc.blobMetrics.BytesPushed, bytes)
+	atomic.AddUint64(&pmc.blobMetrics.BytesPushed, bytesPushed)
 
 	requests.WithValues("blob").Inc(1)
 	hits.WithValues("blob").Inc(1)
-	bytesPushed.WithValues("blob").Inc(float64(bytes))
+	pushedBytes.WithValues("blob").Inc(float64(bytesPushed))
 }
 
 // ManifestPull tracks metrics related to Manifests pulled into the cache
-func (pmc *proxyMetricsCollector) ManifestPull(bytes uint64) {
+func (pmc *proxyMetricsCollector) ManifestPull(bytesPulled uint64) {
 	atomic.AddUint64(&pmc.manifestMetrics.Misses, 1)
-	atomic.AddUint64(&pmc.manifestMetrics.BytesPulled, bytes)
+	atomic.AddUint64(&pmc.manifestMetrics.BytesPulled, bytesPulled)
 
 	misses.WithValues("manifest").Inc(1)
-	bytesPulled.WithValues("manifest").Inc(float64(bytes))
+	pulledBytes.WithValues("manifest").Inc(float64(bytesPulled))
 }
 
 // ManifestPush tracks metrics about manifests pushed to clients
-func (pmc *proxyMetricsCollector) ManifestPush(bytes uint64) {
+func (pmc *proxyMetricsCollector) ManifestPush(bytesPushed uint64) {
 	atomic.AddUint64(&pmc.manifestMetrics.Requests, 1)
 	atomic.AddUint64(&pmc.manifestMetrics.Hits, 1)
-	atomic.AddUint64(&pmc.manifestMetrics.BytesPushed, bytes)
+	atomic.AddUint64(&pmc.manifestMetrics.BytesPushed, bytesPushed)
 
 	requests.WithValues("manifest").Inc(1)
 	hits.WithValues("manifest").Inc(1)
-	bytesPushed.WithValues("manifest").Inc(float64(bytes))
+	pushedBytes.WithValues("manifest").Inc(float64(bytesPushed))
 }
 
 // proxyMetrics tracks metrics about the proxy cache.  This is
