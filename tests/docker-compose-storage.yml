@@ -17,7 +17,7 @@ services:
       - ./miniodata/distribution:/data
 
   minio-init:
-    image: minio/mc:RELEASE.2023-02-16T19-20-11Z
+    image: docker.io/minio/mc:RELEASE.2023-02-16T19-20-11Z
     depends_on:
       minio:
         condition: service_healthy
