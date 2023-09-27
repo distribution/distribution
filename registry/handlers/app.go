@@ -30,6 +30,7 @@ import (
 	registrymiddleware "github.com/distribution/distribution/v3/registry/middleware/registry"
 	repositorymiddleware "github.com/distribution/distribution/v3/registry/middleware/repository"
 	"github.com/distribution/distribution/v3/registry/proxy"
+	"github.com/distribution/distribution/v3/registry/purge"
 	"github.com/distribution/distribution/v3/registry/storage"
 	memorycache "github.com/distribution/distribution/v3/registry/storage/cache/memory"
 	rediscache "github.com/distribution/distribution/v3/registry/storage/cache/redis"
@@ -124,7 +125,7 @@ func NewApp(ctx context.Context, config *configuration.Configuration) *App {
 		panic(err)
 	}
 
-	purgeConfig := uploadPurgeDefaultConfig()
+	purgeConfig := purge.UploadPurgeDefaultConfig()
 	if mc, ok := config.Storage["maintenance"]; ok {
 		if v, ok := mc["uploadpurging"]; ok {
 			purgeConfig, ok = v.(map[interface{}]interface{})
@@ -949,70 +950,17 @@ func applyStorageMiddleware(driver storagedriver.StorageDriver, middlewares []co
 	return driver, nil
 }
 
-// uploadPurgeDefaultConfig provides a default configuration for upload
-// purging to be used in the absence of configuration in the
-// configuration file
-func uploadPurgeDefaultConfig() map[interface{}]interface{} {
-	config := map[interface{}]interface{}{}
-	config["enabled"] = true
-	config["age"] = "168h"
-	config["interval"] = "24h"
-	config["dryrun"] = false
-	return config
-}
-
-func badPurgeUploadConfig(reason string) {
-	panic(fmt.Sprintf("Unable to parse upload purge configuration: %s", reason))
-}
-
 // startUploadPurger schedules a goroutine which will periodically
 // check upload directories for old files and delete them
 func startUploadPurger(ctx context.Context, storageDriver storagedriver.StorageDriver, log dcontext.Logger, config map[interface{}]interface{}) {
-	if config["enabled"] == false {
+	purgeOption, err := purge.ParseConfig(config)
+	if err != nil {
+		// log an error and skip purging
+		log.Errorf("Unable to parse upload purge configuration: %s", err.Error())
+	}
+
+	if !purgeOption.Enabled {
 		return
-	}
-
-	var purgeAgeDuration time.Duration
-	var err error
-	purgeAge, ok := config["age"]
-	if ok {
-		ageStr, ok := purgeAge.(string)
-		if !ok {
-			badPurgeUploadConfig("age is not a string")
-		}
-		purgeAgeDuration, err = time.ParseDuration(ageStr)
-		if err != nil {
-			badPurgeUploadConfig(fmt.Sprintf("Cannot parse duration: %s", err.Error()))
-		}
-	} else {
-		badPurgeUploadConfig("age missing")
-	}
-
-	var intervalDuration time.Duration
-	interval, ok := config["interval"]
-	if ok {
-		intervalStr, ok := interval.(string)
-		if !ok {
-			badPurgeUploadConfig("interval is not a string")
-		}
-
-		intervalDuration, err = time.ParseDuration(intervalStr)
-		if err != nil {
-			badPurgeUploadConfig(fmt.Sprintf("Cannot parse interval: %s", err.Error()))
-		}
-	} else {
-		badPurgeUploadConfig("interval missing")
-	}
-
-	var dryRunBool bool
-	dryRun, ok := config["dryrun"]
-	if ok {
-		dryRunBool, ok = dryRun.(bool)
-		if !ok {
-			badPurgeUploadConfig("cannot parse dryrun")
-		}
-	} else {
-		badPurgeUploadConfig("dryrun missing")
 	}
 
 	go func() {
@@ -1027,9 +975,9 @@ func startUploadPurger(ctx context.Context, storageDriver storagedriver.StorageD
 		time.Sleep(jitter)
 
 		for {
-			storage.PurgeUploads(ctx, storageDriver, time.Now().Add(-purgeAgeDuration), !dryRunBool)
-			log.Infof("Starting upload purge in %s", intervalDuration)
-			time.Sleep(intervalDuration)
+			storage.PurgeUploads(ctx, storageDriver, time.Now().Add(-purgeOption.Age), !purgeOption.DryRun)
+			log.Infof("Starting upload purge in %s", purgeOption.Interval)
+			time.Sleep(purgeOption.Interval)
 		}
 	}()
 }
