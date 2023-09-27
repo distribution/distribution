@@ -117,6 +117,7 @@ type DriverParameters struct {
 	SessionToken                string
 	UseDualStack                bool
 	Accelerate                  bool
+	ObjectOwnership             bool
 }
 
 func init() {
@@ -166,6 +167,7 @@ type driver struct {
 	RootDirectory               string
 	StorageClass                string
 	ObjectACL                   string
+	ObjectOwnership             bool
 }
 
 type baseEmbed struct {
@@ -370,9 +372,22 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		userAgent = ""
 	}
 
+	objectOwnership := false
+	objectOwnershipParam := parameters["objectownership"]
+	if objectOwnershipParam != nil {
+		objectOwnershipBool, ok := objectOwnershipParam.(bool)
+		if !ok {
+			return nil, fmt.Errorf("invalid value for objectownership parameter must be either %v or %v", true, false)
+		}
+		objectOwnership = objectOwnershipBool
+	}
+
 	objectACL := s3.ObjectCannedACLPrivate
 	objectACLParam := parameters["objectacl"]
 	if objectACLParam != nil {
+		if objectOwnership {
+			return nil, fmt.Errorf("objectacl parameter can not be set when objectownership parameter is set to %v", objectOwnership)
+		}
 		objectACLString, ok := objectACLParam.(string)
 		if !ok {
 			return nil, fmt.Errorf("invalid value for objectacl parameter: %v", objectACLParam)
@@ -461,6 +476,7 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(sessionToken),
 		useDualStackBool,
 		accelerateBool,
+		objectOwnership,
 	}
 
 	return New(params)
@@ -580,6 +596,7 @@ func New(params DriverParameters) (*Driver, error) {
 		RootDirectory:               params.RootDirectory,
 		StorageClass:                params.StorageClass,
 		ObjectACL:                   params.ObjectACL,
+		ObjectOwnership:             params.ObjectOwnership,
 	}
 
 	return &Driver{
@@ -1241,6 +1258,10 @@ func (d *driver) getContentType() *string {
 }
 
 func (d *driver) getACL() *string {
+
+	if d.ObjectOwnership {
+		return nil
+	}
 	return aws.String(d.ObjectACL)
 }
 
