@@ -1,0 +1,38 @@
+version: 0.1
+http:
+  addr: :5000
+  debug:
+    addr: :5001
+    prometheus:
+      enabled: true
+      path: /metrics
+  draintimeout: 5s
+  secret: hmacsecret
+log:
+  accesslog:
+    disabled: false
+  fields:
+    environment: local
+    service: registry
+  formatter: text
+  level: debug
+storage:
+  delete:
+    enabled: true
+  cache:
+    blobdescriptor: inmemory
+  maintenance:
+    uploadpurging:
+      enabled: false
+  s3:
+    region: us-east-1
+    accesskey: distribution
+    secretkey: password
+    bucket: images-local
+    rootdirectory: /registry-v2
+    regionendpoint: http://127.0.0.1:9000
+    encrypt: false
+    secure: false
+    chunksize: 33554432
+    secure: true
+    v4auth: true

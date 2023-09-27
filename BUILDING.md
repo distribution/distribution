@@ -11,27 +11,25 @@ Most people should use the [official Registry docker image](https://hub.docker.c
 
 People looking for advanced operational use cases might consider rolling their own image with a custom Dockerfile inheriting `FROM registry:2`.
 
-OS X users who want to run natively can do so following [the instructions here](https://github.com/docker/docker.github.io/blob/master/registry/recipes/osx-setup-guide.md).
+The latest updates to `main` branch are automatically pushed to [distribution Docker Hub repository](https://hub.docker.com/r/distribution/distribution) and tagged with `edge` tag.
 
 ### Gotchas
 
-You are expected to know your way around with go & git.
+You are expected to know your way around with `go` & `git`.
 
-If you are a casual user with no development experience, and no preliminary knowledge of go, building from source is probably not a good solution for you.
+If you are a casual user with no development experience, and no preliminary knowledge of Go, building from source is probably not a good solution for you.
 
 ## Configure the development environment
 
 The first prerequisite of properly building distribution targets is to have a Go
-development environment setup. Please follow [How to Write Go Code](https://golang.org/doc/code.html)
-for proper setup. If done correctly, you should have a GOROOT and GOPATH set in the
-environment.
+development environment setup. Please follow [How to Write Go Code](https://go.dev/doc/code) for proper setup.
 
 Next, fetch the code from the repository using git:
 
     git clone https://github.com/distribution/distribution
     cd distribution
 
-If you are planning to create a pull request with changes, you may want to clone directly from your [fork](https://help.github.com/en/articles/about-forks).
+If you are planning to create a pull request with changes, you may want to clone directly from your [fork](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/about-forks).
 
 ## Build and run from source
 
@@ -105,3 +103,29 @@ the environment variable `BUILDTAGS`.
 <dt>include_gcs</dt>
 <dd>Adds support for <a href="https://cloud.google.com/storage">Google Cloud Storage</a></dd>
 </dl>
+
+### Local cloud storage environment
+
+You can run an S3 API compatible storage locally with [minio](https://min.io/).
+
+You must have a [docker compose](https://docs.docker.com/compose/) compatible tool installed on your workstation.
+
+Start the local cloud environment:
+```
+make start-cloud-storage
+```
+There is a sample registry configuration file that lets you point the registry to the started storage:
+```
+AWS_ACCESS_KEY=distribution \
+        AWS_SECRET_KEY=password \
+        AWS_REGION=us-east-1 \
+        S3_BUCKET=images-local \
+        S3_ENCRYPT=false \
+        REGION_ENDPOINT=http://127.0.0.1:9000 \
+        S3_SECURE=false \
+./bin/registry serve tests/conf-local-cloud.yml
+```
+Stop the local storage when done:
+```
+make stop-cloud-storage
+```

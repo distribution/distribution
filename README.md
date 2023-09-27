@@ -10,8 +10,6 @@
 [![OCI Conformance](https://github.com/distribution/distribution/workflows/conformance/badge.svg)](https://github.com/distribution/distribution/actions?query=workflow%3Aconformance)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/distribution/distribution/badge)](https://securityscorecards.dev/viewer/?uri=github.com/distribution/distribution)
 
-
-
 The toolset to pack, ship, store, and deliver content.
 
 This repository's main product is the Open Source Registry implementation

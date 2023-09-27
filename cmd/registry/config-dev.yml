@@ -63,7 +63,7 @@ notifications:
           timeout: 1s
           threshold: 10
           backoff: 1s
-          disabled: true 
+          disabled: true
 health:
   storagedriver:
     enabled: true
