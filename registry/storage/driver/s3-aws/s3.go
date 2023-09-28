@@ -1261,12 +1261,6 @@ func (d *driver) getStorageClass() *string {
 	return aws.String(d.StorageClass)
 }
 
-type completedParts []*s3.CompletedPart
-
-func (a completedParts) Len() int           { return len(a) }
-func (a completedParts) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a completedParts) Less(i, j int) bool { return *a[i].PartNumber < *a[j].PartNumber }
-
 // buffer is a static size bytes buffer.
 type buffer struct {
 	data []byte
@@ -1342,6 +1336,12 @@ func (d *driver) newWriter(key, uploadID string, parts []*s3.Part) storagedriver
 		pending:  d.NewBuffer(),
 	}
 }
+
+type completedParts []*s3.CompletedPart
+
+func (a completedParts) Len() int           { return len(a) }
+func (a completedParts) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a completedParts) Less(i, j int) bool { return *a[i].PartNumber < *a[j].PartNumber }
 
 func (w *writer) Write(p []byte) (int, error) {
 	if w.closed {
