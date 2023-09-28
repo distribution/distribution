@@ -74,6 +74,30 @@ You should follow the basic GitHub workflow:
 Refer to [containerd's contribution guide](https://github.com/containerd/project/blob/master/CONTRIBUTING.md#successful-changes)
 for tips on creating a successful contribution.
 
+## Commit Formatting
+
+This project adheres to [Conventional Commit](https://www.conventionalcommits.org/en/v1.0.0/#specification) for commit formatting. To make adhering to Conventional Commit easier [pre-commit](https://pre-commit.com/) can be used to validate commit messages before they are created. To install the [pre-commit](https://pre-commit.com/) and the git hook please run the following commands:
+
+### Install pre-commit
+
+```bash
+pip install pre-commit
+```
+
+Or on Mac:
+
+```bash
+brew install pre-commit
+```
+
+For more options please see the pre-commit [installation instructions](https://pre-commit.com/#install)
+
+### Install the git hook
+
+```bash
+pre-commit install
+```
+
 ## Sign your work
 
 The sign-off is a simple line at the end of the explanation for the patch. Your
