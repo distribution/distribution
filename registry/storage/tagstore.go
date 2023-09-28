@@ -24,7 +24,7 @@ type tagStore struct {
 
 // All returns all tags
 func (ts *tagStore) All(ctx context.Context) ([]string, error) {
-	pathSpec, err := pathFor(manifestTagPathSpec{
+	pathSpec, err := pathFor(manifestTagsPathSpec{
 		name: ts.repository.Named().Name(),
 	})
 	if err != nil {
