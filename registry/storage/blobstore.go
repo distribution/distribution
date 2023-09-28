@@ -22,7 +22,7 @@ type blobStore struct {
 
 var _ distribution.BlobProvider = &blobStore{}
 
-// Get implements the BlobReadService.Get call.
+// Get implements the BlobProvider.Get call.
 func (bs *blobStore) Get(ctx context.Context, dgst digest.Digest) ([]byte, error) {
 	bp, err := bs.path(dgst)
 	if err != nil {

@@ -36,7 +36,7 @@ type linkedBlobStore struct {
 	// linkPath allows one to control the repository blob link set to which
 	// the blob store dispatches. This is required because manifest and layer
 	// blobs have not yet been fully merged. At some point, this functionality
-	// should be removed an the blob links folder should be merged.
+	// should be removed and the blob links folder should be merged.
 	linkPath linkPathFunc
 
 	// linkDirectoryPathSpec locates the root directories in which one might find links
