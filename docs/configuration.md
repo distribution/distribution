@@ -830,7 +830,13 @@ the `HOST:PORT` on which the debug server should accept connections.
 If the registry is configured as a pull-through cache, the `debug` server can be used
 to access proxy statistics. These statistics are exposed at `/debug/vars` in JSON format.
 
-## `prometheus`
+#### `prometheus`
+
+```none
+prometheus:
+  enabled: true
+  path: /metrics
+```
 
 The `prometheus` option defines whether the prometheus metrics are enabled, as well
 as the path to access the metrics.
