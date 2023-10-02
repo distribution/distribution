@@ -1,0 +1,41 @@
+# commit to be tagged for new release
+commit = "HEAD"
+
+project_name = "registry"
+github_repo = "distribution/distribution"
+
+# previous release
+previous = "v2.8.2"
+
+pre_release = false
+
+preface = """\
+Welcome to the 2.8.3 release of registry!
+
+The 2.8.3 registry release fixes a few bugs and makes a few dependency updates.
+The Go runtime has been bumped to 1.20.8.
+
+See the changelog below for full list of changes.
+
+### Bugfixes
+
+* Do not close HTTP request body in HTTP handler ([#4068](https://github.com/distribution/distribution/pull/4068))
+* Set Content-Type header in registry client ReadFrom ([#4053](https://github.com/distribution/distribution/pull/4053))
+* Do not parse errors as JSON unless Content-Type is set to JSON ([#4054](https://github.com/distribution/distribution/pull/4054))
+* Enable Go build tags ([#4009](https://github.com/distribution/distribution/pull/4009))
+
+### General updates
+
+* replace deprecated function SplitHostname ([#4032](https://github.com/distribution/distribution/pull/4032))
+
+### Runtime
+
+* update to go1.20.8 ([#4056](https://github.com/distribution/distribution/pull/4056))
+
+### Dependency Changes
+
+* deprecate digestset package in favor of go-digest/digestset  ([#4064](https://github.com/distribution/distribution/pull/4064))
+* deprecate reference package, migrate to github.com/distribution/reference ([#4063](https://github.com/distribution/distribution/pull/4063))
+
+Previous release can be found at [v2.8.2](https://github.com/distribution/distribution/releases/tag/v2.8.2)
+"""
