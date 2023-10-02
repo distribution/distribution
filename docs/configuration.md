@@ -821,6 +821,8 @@ can be helpful in diagnosing problems. The debug endpoint can be used for
 monitoring registry metrics and health, as well as profiling. Sensitive
 information may be available via the debug endpoint. Please be certain that
 access to the debug endpoint is locked down in a production environment.
+The debug endpoint should not be exposed publicly to the internet.
+Instead, keep the debug endpoint private or enforce authentication for it.
 
 The `debug` section takes a single required `addr` parameter, which specifies
 the `HOST:PORT` on which the debug server should accept connections.
