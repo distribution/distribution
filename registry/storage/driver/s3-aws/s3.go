@@ -119,6 +119,7 @@ type DriverParameters struct {
 	SessionToken                string
 	UseDualStack                bool
 	Accelerate                  bool
+	LogLevel                    aws.LogLevelType
 }
 
 func init() {
@@ -464,9 +465,37 @@ func FromParameters(parameters map[string]interface{}) (*Driver, error) {
 		fmt.Sprint(sessionToken),
 		useDualStackBool,
 		accelerateBool,
+		getS3LogLevelFromParam(parameters["loglevel"]),
 	}
 
 	return New(params)
+}
+
+func getS3LogLevelFromParam(param interface{}) aws.LogLevelType {
+	if param == nil {
+		return aws.LogOff
+	}
+	logLevelParam := param.(string)
+	var logLevel aws.LogLevelType
+	switch strings.ToLower(logLevelParam) {
+	case "off":
+		logLevel = aws.LogOff
+	case "debug":
+		logLevel = aws.LogDebug
+	case "debugwithsigning":
+		logLevel = aws.LogDebugWithSigning
+	case "debugwithhttpbody":
+		logLevel = aws.LogDebugWithHTTPBody
+	case "debugwithrequestretries":
+		logLevel = aws.LogDebugWithRequestRetries
+	case "debugwithrequesterrors":
+		logLevel = aws.LogDebugWithRequestErrors
+	case "debugwitheventstreambody":
+		logLevel = aws.LogDebugWithEventStreamBody
+	default:
+		logLevel = aws.LogOff
+	}
+	return logLevel
 }
 
 // getParameterAsInt64 converts parameters[name] to an int64 value (using
@@ -507,7 +536,7 @@ func New(params DriverParameters) (*Driver, error) {
 		return nil, fmt.Errorf("on Amazon S3 this storage driver can only be used with v4 authentication")
 	}
 
-	awsConfig := aws.NewConfig()
+	awsConfig := aws.NewConfig().WithLogLevel(params.LogLevel)
 
 	if params.AccessKey != "" && params.SecretKey != "" {
 		creds := credentials.NewStaticCredentials(

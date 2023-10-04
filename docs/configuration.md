@@ -139,6 +139,7 @@ storage:
     multipartcopythresholdsize: 33554432
     rootdirectory: /s3/object/name/prefix
     usedualstack: false
+    loglevel: debug
   inmemory:  # This driver takes no parameters
   delete:
     enabled: false
@@ -410,6 +411,7 @@ storage:
     multipartcopymaxconcurrency: 100
     multipartcopythresholdsize: 33554432
     rootdirectory: /s3/object/name/prefix
+    loglevel: debug
   inmemory:
   delete:
     enabled: false

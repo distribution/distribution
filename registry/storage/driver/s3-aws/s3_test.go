@@ -21,8 +21,10 @@ import (
 	"github.com/distribution/distribution/v3/registry/storage/driver/testsuites"
 )
 
-var s3DriverConstructor func(rootDirectory, storageClass string) (*Driver, error)
-var skipS3 func() string
+var (
+	s3DriverConstructor func(rootDirectory, storageClass string) (*Driver, error)
+	skipS3              func() string
+)
 
 func init() {
 	var (
@@ -42,6 +44,7 @@ func init() {
 		useDualStack     = os.Getenv("S3_USE_DUALSTACK")
 		combineSmallPart = os.Getenv("MULTIPART_COMBINE_SMALL_PART")
 		accelerate       = os.Getenv("S3_ACCELERATE")
+		logLevel         = os.Getenv("S3_LOGLEVEL")
 	)
 
 	root, err := os.MkdirTemp("", "driver-")
@@ -135,6 +138,7 @@ func init() {
 			sessionToken,
 			useDualStackBool,
 			accelerateBool,
+			getS3LogLevelFromParam(logLevel),
 		}
 
 		return New(parameters)
