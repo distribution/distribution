@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
 
-ARG GO_VERSION=1.18
-ARG ALPINE_VERSION=3.16
-ARG XX_VERSION=1.1.1
+ARG GO_VERSION=1.20.8
+ARG ALPINE_VERSION=3.18
+ARG XX_VERSION=1.2.1
 
 FROM --platform=$BUILDPLATFORM tonistiigi/xx:${XX_VERSION} AS xx
 FROM --platform=$BUILDPLATFORM golang:${GO_VERSION}-alpine${ALPINE_VERSION} AS base
@@ -22,12 +22,12 @@ RUN --mount=target=. \
 FROM base AS build
 ARG TARGETPLATFORM
 ARG LDFLAGS="-s -w"
-ARG BUILDTAGS="include_oss include_gcs"
+ARG BUILDTAGS="include_gcs"
 RUN --mount=type=bind,target=/src,rw \
     --mount=type=cache,target=/root/.cache/go-build \
     --mount=target=/go/pkg/mod,type=cache \
     --mount=type=bind,source=/tmp/.ldflags,target=/tmp/.ldflags,from=version \
-      set -x ; xx-go build -trimpath -ldflags "$(cat /tmp/.ldflags) ${LDFLAGS}" -o /usr/bin/registry ./cmd/registry \
+      set -x ; xx-go build -tags "${BUILDTAGS}" -trimpath -ldflags "$(cat /tmp/.ldflags) ${LDFLAGS}" -o /usr/bin/registry ./cmd/registry \
       && xx-verify --static /usr/bin/registry
 
 FROM scratch AS binary
@@ -44,8 +44,8 @@ RUN --mount=from=binary,target=/build \
       VERSION=$(cat /tmp/.version) \
       && mkdir -p /out \
       && cp /build/registry /src/README.md /src/LICENSE . \
-      && tar -czvf "/out/registry_${VERSION#v}_${TARGETOS}_${TARGETARCH}${TARGETVARIANT}.tar.tgz" * \
-      && sha256sum -z "/out/registry_${VERSION#v}_${TARGETOS}_${TARGETARCH}${TARGETVARIANT}.tar.tgz" | awk '{ print $1 }' > "/out/registry_${VERSION#v}_${TARGETOS}_${TARGETARCH}${TARGETVARIANT}.tar.tgz.sha256"
+      && tar -czvf "/out/registry_${VERSION#v}_${TARGETOS}_${TARGETARCH}${TARGETVARIANT}.tar.gz" * \
+      && sha256sum -z "/out/registry_${VERSION#v}_${TARGETOS}_${TARGETARCH}${TARGETVARIANT}.tar.gz" | awk '{ print $1 }' > "/out/registry_${VERSION#v}_${TARGETOS}_${TARGETARCH}${TARGETVARIANT}.tar.gz.sha256"
 
 FROM scratch AS artifact
 COPY --from=releaser /out /

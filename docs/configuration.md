@@ -97,6 +97,14 @@ storage:
     accountname: accountname
     accountkey: base64encodedaccountkey
     container: containername
+    rootdirectory: /az/object/name/prefix
+    credentials:
+      type: client_secret
+      clientid: client_id_string
+      tenantid: tenant_id_string
+      secret: secret_string
+    copy_status_poll_max_retry: 10
+    copy_status_poll_delay: 100ms
   gcs:
     bucket: bucketname
     keyfile: /path/to/keyfile
@@ -131,30 +139,7 @@ storage:
     multipartcopythresholdsize: 33554432
     rootdirectory: /s3/object/name/prefix
     usedualstack: false
-  swift:
-    username: username
-    password: password
-    authurl: https://storage.myprovider.com/auth/v1.0 or https://storage.myprovider.com/v2.0 or https://storage.myprovider.com/v3/auth
-    tenant: tenantname
-    tenantid: tenantid
-    domain: domain name for Openstack Identity v3 API
-    domainid: domain id for Openstack Identity v3 API
-    insecureskipverify: true
-    region: fr
-    container: containername
-    rootdirectory: /swift/object/name/prefix
-  oss:
-    accesskeyid: accesskeyid
-    accesskeysecret: accesskeysecret
-    region: OSS region name
-    endpoint: optional endpoints
-    internal: optional internal endpoint
-    bucket: OSS bucket
-    encrypt: optional enable server-side encryption
-    encryptionkeyid: optional KMS key id for encryption
-    secure: optional ssl setting
-    chunksize: optional size valye
-    rootdirectory: optional root directory
+    loglevel: debug
   inmemory:  # This driver takes no parameters
   delete:
     enabled: false
@@ -208,15 +193,6 @@ middleware:
     - name: redirect
       options:
         baseurl: https://example.com/
-reporting:
-  bugsnag:
-    apikey: bugsnagapikey
-    releasestage: bugsnagreleasestage
-    endpoint: bugsnagendpoint
-  newrelic:
-    licensekey: newreliclicensekey
-    name: newrelicname
-    verbose: true
 http:
   addr: localhost:5000
   prefix: /my/nested/registry/
@@ -234,6 +210,7 @@ http:
       cachefile: /path/to/cache-file
       email: emailused@letsencrypt.com
       hosts: [myregistryaddress.org]
+      directoryurl: https://acme-v02.api.letsencrypt.org/directory
   debug:
     addr: localhost:5001
     prometheus:
@@ -299,10 +276,7 @@ proxy:
   remoteurl: https://registry-1.docker.io
   username: [username]
   password: [password]
-compatibility:
-  schema1:
-    signingkeyfile: /etc/registry/key.json
-    enabled: true
+  ttl: 168h
 validation:
   manifests:
     urls:
@@ -437,30 +411,7 @@ storage:
     multipartcopymaxconcurrency: 100
     multipartcopythresholdsize: 33554432
     rootdirectory: /s3/object/name/prefix
-  swift:
-    username: username
-    password: password
-    authurl: https://storage.myprovider.com/auth/v1.0 or https://storage.myprovider.com/v2.0 or https://storage.myprovider.com/v3/auth
-    tenant: tenantname
-    tenantid: tenantid
-    domain: domain name for Openstack Identity v3 API
-    domainid: domain id for Openstack Identity v3 API
-    insecureskipverify: true
-    region: fr
-    container: containername
-    rootdirectory: /swift/object/name/prefix
-  oss:
-    accesskeyid: accesskeyid
-    accesskeysecret: accesskeysecret
-    region: OSS region name
-    endpoint: optional endpoints
-    internal: optional internal endpoint
-    bucket: OSS bucket
-    encrypt: optional enable server-side encryption
-    encryptionkeyid: optional KMS key id for encryption
-    secure: optional ssl setting
-    chunksize: optional size valye
-    rootdirectory: optional root directory
+    loglevel: debug
   inmemory:
   delete:
     enabled: false
@@ -489,8 +440,6 @@ returns an error. You can choose any of these backend storage drivers:
 | `azure`             | Uses Microsoft Azure Blob Storage. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/azure.md).                                                                                                               |
 | `gcs`               | Uses Google Cloud Storage. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/gcs.md).                                                                                                                           |
 | `s3`                | Uses Amazon Simple Storage Service (S3) and compatible Storage Services. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/s3.md).                                                                            |
-| `swift`             | Uses Openstack Swift object storage. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/swift.md).                                                                                                               |
-| `oss`               | Uses Aliyun OSS for object storage. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/oss.md).                                                                                                                  |
 
 For testing only, you can use the [`inmemory` storage
 driver](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/inmemory.md).
@@ -734,17 +683,6 @@ Value of `ipfilteredby` can be:
 | `aws`       | IP from AWS goes to S3 directly    |
 | `awsregion` | IP from certain AWS regions goes to S3 directly, use together with `awsregion`. |
 
-### `alicdn`
-
-`alicdn` storage middleware allows the registry to serve layers via a content delivery network provided by Alibaba Cloud. Alicdn requires the OSS storage driver.
-
-| Parameter    | Required | Description                                                             |
-|--------------|----------|-------------------------------------------------------------------------|
-| `baseurl`    | yes      | The `SCHEME://HOST` at which Alicdn is served.                          |
-| `authtype`   | yes      | The URL authentication type for Alicdn, which should be `a`, `b` or `c`. See the [Authentication configuration](https://www.alibabacloud.com/help/doc-detail/85117.htm).|
-| `privatekey` | yes      | The URL authentication key for Alicdn.                                  |
-| `duration`   | no       | An integer and unit for the duration of the Alicdn session. Valid time units are `ns`, `us` (or `µs`), `ms`, `s`, `m`, or `h`.|
-
 ### `redirect`
 
 You can use the `redirect` storage middleware to specify a custom URL to a
@@ -753,44 +691,6 @@ location of a proxy for the layer stored by the S3 storage driver.
 | Parameter | Required | Description                                                                                                 |
 |-----------|----------|-------------------------------------------------------------------------------------------------------------|
 | `baseurl` | yes      | `SCHEME://HOST` at which layers are served. Can also contain port. For example, `https://example.com:5443`. |
-
-## `reporting`
-
-```
-reporting:
-  bugsnag:
-    apikey: bugsnagapikey
-    releasestage: bugsnagreleasestage
-    endpoint: bugsnagendpoint
-  newrelic:
-    licensekey: newreliclicensekey
-    name: newrelicname
-    verbose: true
-```
-
-The `reporting` option is **optional** and configures error and metrics
-reporting tools. At the moment only two services are supported:
-
-- [Bugsnag](#bugsnag)
-- [New Relic](#new-relic)
-
-A valid configuration may contain both.
-
-### `bugsnag`
-
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `apikey`  | yes      | The API Key provided by Bugsnag.                      |
-| `releasestage` | no  | Tracks where the registry is deployed, using a string like `production`, `staging`, or `development`.|
-| `endpoint`| no       | The enterprise Bugsnag endpoint.                      |
-
-### `newrelic`
-
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `licensekey` | yes   | License key provided by New Relic.                    |
-| `name`    | no       | New Relic application name.                           |
-|  `verbose`| no       | Set to `true` to enable New Relic debugging output on `stdout`. |
 
 ## `http`
 
@@ -817,6 +717,7 @@ http:
       cachefile: /path/to/cache-file
       email: emailused@letsencrypt.com
       hosts: [myregistryaddress.org]
+      directoryurl: https://acme-v02.api.letsencrypt.org/directory
   debug:
     addr: localhost:5001
   headers:
@@ -830,7 +731,7 @@ registry.
 
 | Parameter | Required | Description                                           |
 |-----------|----------|-------------------------------------------------------|
-| `addr`    | yes      | The address for which the server should accept connections. The form depends on a network type (see the `net` option). Use `HOST:PORT` for TCP and `FILE` for a UNIX socket. |
+| `addr`    | no       | The address for which the server should accept connections. The form depends on a network type (see the `net` option). Use `HOST:PORT` for TCP and `FILE` for a UNIX socket. The `addr` field is only optional if socket-activation is used (in which case `addr` and `net` are ignored regardless of if they are specified). |
 | `net`     | no       | The network used to create a listening socket. Known networks are `unix` and `tcp`. |
 | `prefix`  | no       | If the server does not run at the root path, set this to the value of the prefix. The root path is the section before `v2`. It requires both preceding and trailing slashes, such as in the example `/path/`. |
 | `host`    | no       | A fully-qualified URL for an externally-reachable address for the registry. If present, it is used when creating generated URLs. Otherwise, these URLs are derived from client requests. |
@@ -908,11 +809,12 @@ TLS certificates provided by
 > ensure that you have the `ca-certificates` package installed in order to verify
 > letsencrypt certificates.
 
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `cachefile` | yes    | Absolute path to a file where the Let's Encrypt agent can cache data. |
-| `email`   | yes      | The email address used to register with Let's Encrypt. |
-| `hosts`   | no       | The hostnames allowed for Let's Encrypt certificates. |
+| Parameter      | Required | Description                                                           |
+|----------------|----------|-----------------------------------------------------------------------|
+| `cachefile`    | yes      | Absolute path to a file where the Let's Encrypt agent can cache data. |
+| `email`        | yes      | The email address used to register with Let's Encrypt.                |
+| `hosts`        | no       | The hostnames allowed for Let's Encrypt certificates.                 |
+| `directoryurl` | no       | The url to use for the ACME server.                                   |
 
 ### `debug`
 
@@ -921,6 +823,8 @@ can be helpful in diagnosing problems. The debug endpoint can be used for
 monitoring registry metrics and health, as well as profiling. Sensitive
 information may be available via the debug endpoint. Please be certain that
 access to the debug endpoint is locked down in a production environment.
+The debug endpoint should not be exposed publicly to the internet.
+Instead, keep the debug endpoint private or enforce authentication for it.
 
 The `debug` section takes a single required `addr` parameter, which specifies
 the `HOST:PORT` on which the debug server should accept connections.
@@ -928,7 +832,13 @@ the `HOST:PORT` on which the debug server should accept connections.
 If the registry is configured as a pull-through cache, the `debug` server can be used
 to access proxy statistics. These statistics are exposed at `/debug/vars` in JSON format.
 
-## `prometheus`
+#### `prometheus`
+
+```none
+prometheus:
+  enabled: true
+  path: /metrics
+```
 
 The `prometheus` option defines whether the prometheus metrics are enabled, as well
 as the path to access the metrics.
@@ -1011,6 +921,7 @@ accept event notifications.
 | `ignore`  |no| Events with these mediatypes or actions are not published to the endpoint. |
 
 #### `ignore`
+
 | Parameter | Required | Description                                           |
 |-----------|----------|-------------------------------------------------------|
 | `mediatypes`|no| A list of target media types to ignore. Events with these target media types are not published to the endpoint. |
@@ -1184,6 +1095,7 @@ proxy:
   remoteurl: https://registry-1.docker.io
   username: [username]
   password: [password]
+  ttl: 168h
 ```
 
 The `proxy` structure allows a registry to be configured as a pull-through cache
@@ -1197,6 +1109,7 @@ is unsupported.
 | `remoteurl`| yes     | The URL for the repository on Docker Hub.             |
 | `username` | no      | The username registered with Docker Hub which has access to the repository. |
 | `password` | no      | The password used to authenticate to Docker Hub using the username specified in `username`. |
+| `ttl`      | no      | Expire proxy cache configured in "storage" after this time. Cache 168h(7 days) by default, set to 0 to disable cache expiration, The suffix is one of `ns`, `us`, `ms`, `s`, `m`, or `h`. If you specify a value but omit the suffix, the value is interpreted as a number of nanoseconds. |
 
 
 To enable pulling private repositories (e.g. `batman/robin`) specify the
@@ -1204,25 +1117,6 @@ username (such as `batman`) and the password for that username.
 
 > **Note**: These private repositories are stored in the proxy cache's storage.
 > Take appropriate measures to protect access to the proxy cache.
-
-## `compatibility`
-
-```none
-compatibility:
-  schema1:
-    signingkeyfile: /etc/registry/key.json
-    enabled: true
-```
-
-Use the `compatibility` structure to configure handling of older and deprecated
-features. Each subsection defines such a feature with configurable behavior.
-
-### `schema1`
-
-| Parameter | Required | Description                                           |
-|-----------|----------|-------------------------------------------------------|
-| `signingkeyfile` | no | The signing private key used to add signatures to `schema1` manifests. If no signing key is provided, a new ECDSA key is generated when the registry starts. |
-| `enabled` | no | If this is not set to true, `schema1` manifests cannot be pushed. |
 
 ## `validation`
 

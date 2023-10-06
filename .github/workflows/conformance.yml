@@ -8,6 +8,9 @@ on:
   pull_request:
   push:
 
+permissions:
+  contents: read # to fetch code (actions/checkout)
+
 jobs:
   run-conformance-test:
     runs-on: ubuntu-latest
@@ -32,7 +35,7 @@ jobs:
           docker run --rm -p 5000:5000 -e REGISTRY_STORAGE_DELETE_ENABLED=true -idt "registry:local"
       -
         name: Run OCI Distribution Spec conformance tests
-        uses: opencontainers/distribution-spec@main
+        uses: opencontainers/distribution-spec@v1.0.1
         env:
           OCI_ROOT_URL: ${{ env.OCI_ROOT_URL }}
           OCI_NAMESPACE: oci-conformance/distribution-test

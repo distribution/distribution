@@ -2,9 +2,9 @@ package s3
 
 import (
 	"bytes"
+	"crypto/rand"
 	"errors"
 	"fmt"
-	"math/rand"
 	"os"
 	"path"
 	"reflect"
@@ -13,8 +13,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/check.v1"
-
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 
@@ -22,9 +20,6 @@ import (
 	storagedriver "github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/testsuites"
 )
-
-// Hook up gocheck into the "go test" runner.
-func Test(t *testing.T) { check.TestingT(t) }
 
 var (
 	s3DriverConstructor func(rootDirectory, storageClass string) (*Driver, error)
@@ -49,6 +44,7 @@ func init() {
 		useDualStack     = os.Getenv("S3_USE_DUALSTACK")
 		combineSmallPart = os.Getenv("MULTIPART_COMBINE_SMALL_PART")
 		accelerate       = os.Getenv("S3_ACCELERATE")
+		logLevel         = os.Getenv("S3_LOGLEVEL")
 	)
 
 	root, err := os.MkdirTemp("", "driver-")
@@ -142,6 +138,7 @@ func init() {
 			sessionToken,
 			useDualStackBool,
 			accelerateBool,
+			getS3LogLevelFromParam(logLevel),
 		}
 
 		return New(parameters)
@@ -205,39 +202,6 @@ func TestEmptyRootList(t *testing.T) {
 	}
 }
 
-// TestWalkEmptySubDirectory assures we list an empty sub directory only once when walking
-// through its parent directory.
-func TestWalkEmptySubDirectory(t *testing.T) {
-	if skipS3() != "" {
-		t.Skip(skipS3())
-	}
-
-	drv, err := s3DriverConstructor("", s3.StorageClassStandard)
-	if err != nil {
-		t.Fatalf("unexpected error creating rooted driver: %v", err)
-	}
-
-	// create an empty sub directory.
-	s3driver := drv.StorageDriver.(*driver)
-	if _, err := s3driver.S3.PutObject(&s3.PutObjectInput{
-		Bucket: aws.String(os.Getenv("S3_BUCKET")),
-		Key:    aws.String("/testdir/emptydir/"),
-	}); err != nil {
-		t.Fatalf("error creating empty directory: %s", err)
-	}
-
-	bucketFiles := []string{}
-	s3driver.Walk(context.Background(), "/testdir", func(fileInfo storagedriver.FileInfo) error {
-		bucketFiles = append(bucketFiles, fileInfo.Path())
-		return nil
-	})
-
-	expected := []string{"/testdir/emptydir"}
-	if !reflect.DeepEqual(bucketFiles, expected) {
-		t.Errorf("expecting files %+v, found %+v instead", expected, bucketFiles)
-	}
-}
-
 func TestStorageClass(t *testing.T) {
 	if skipS3() != "" {
 		t.Skip(skipS3())
@@ -251,6 +215,11 @@ func TestStorageClass(t *testing.T) {
 		s3Driver, err := s3DriverConstructor(rootDir, storageClass)
 		if err != nil {
 			t.Fatalf("unexpected error creating driver with storage class %v: %v", storageClass, err)
+		}
+
+		// Can only test outposts if using s3 outposts
+		if storageClass == s3.StorageClassOutposts {
+			continue
 		}
 
 		err = s3Driver.PutContent(ctx, filename, contents)
@@ -269,7 +238,9 @@ func TestStorageClass(t *testing.T) {
 		}
 		defer resp.Body.Close()
 		// Amazon only populates this header value for non-standard storage classes
-		if storageClass == s3.StorageClassStandard && resp.StorageClass != nil {
+		if storageClass == noStorageClass {
+			// We haven't specified a storage class so we can't confirm what it is
+		} else if storageClass == s3.StorageClassStandard && resp.StorageClass != nil {
 			t.Fatalf(
 				"unexpected response storage class for file with storage class %v: %v",
 				storageClass,
@@ -524,6 +495,7 @@ func TestWalk(t *testing.T) {
 
 	fileset := []string{
 		"/file1",
+		"/folder1-suffix/file1",
 		"/folder1/file1",
 		"/folder2/file1",
 		"/folder3/subfolder1/subfolder1/file1",
@@ -532,7 +504,7 @@ func TestWalk(t *testing.T) {
 	}
 
 	// create file structure matching fileset above
-	var created []string
+	created := make([]string, 0, len(fileset))
 	for _, p := range fileset {
 		err := drvr.PutContent(context.Background(), p, []byte("content "+p))
 		if err != nil {
@@ -557,18 +529,23 @@ func TestWalk(t *testing.T) {
 		}
 	}()
 
+	noopFn := func(fileInfo storagedriver.FileInfo) error { return nil }
+
 	tcs := []struct {
 		name     string
 		fn       storagedriver.WalkFn
 		from     string
+		options  []func(*storagedriver.WalkOptions)
 		expected []string
 		err      bool
 	}{
 		{
 			name: "walk all",
-			fn:   func(fileInfo storagedriver.FileInfo) error { return nil },
+			fn:   noopFn,
 			expected: []string{
 				"/file1",
+				"/folder1-suffix",
+				"/folder1-suffix/file1",
 				"/folder1",
 				"/folder1/file1",
 				"/folder2",
@@ -597,6 +574,8 @@ func TestWalk(t *testing.T) {
 			},
 			expected: []string{
 				"/file1",
+				"/folder1-suffix",
+				"/folder1-suffix/file1",
 				"/folder1",
 				"/folder1/file1",
 				"/folder2",
@@ -608,21 +587,100 @@ func TestWalk(t *testing.T) {
 			},
 		},
 		{
+			name: "start late without from",
+			fn:   noopFn,
+			options: []func(*storagedriver.WalkOptions){
+				storagedriver.WithStartAfterHint("/folder3/subfolder1/subfolder1/file1"),
+			},
+			expected: []string{
+				// start late
+				"/folder3",
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+				"/folder4",
+				"/folder4/file1",
+			},
+			err: false,
+		},
+		{
+			name: "start late with from",
+			fn:   noopFn,
+			from: "/folder3",
+			options: []func(*storagedriver.WalkOptions){
+				storagedriver.WithStartAfterHint("/folder3/subfolder1/subfolder1/file1"),
+			},
+			expected: []string{
+				// start late
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+			},
+			err: false,
+		},
+		{
+			name: "start after from",
+			fn:   noopFn,
+			from: "/folder1",
+			options: []func(*storagedriver.WalkOptions){
+				storagedriver.WithStartAfterHint("/folder2"),
+			},
+			expected: []string{},
+			err:      false,
+		},
+		{
+			name: "start matches from",
+			fn:   noopFn,
+			from: "/folder3",
+			options: []func(*storagedriver.WalkOptions){
+				storagedriver.WithStartAfterHint("/folder3"),
+			},
+			expected: []string{
+				"/folder3/subfolder1",
+				"/folder3/subfolder1/subfolder1",
+				"/folder3/subfolder1/subfolder1/file1",
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+			},
+			err: false,
+		},
+		{
+			name: "start doesn't exist",
+			fn:   noopFn,
+			from: "/folder3",
+			options: []func(*storagedriver.WalkOptions){
+				storagedriver.WithStartAfterHint("/folder3/notafolder/notafile"),
+			},
+			expected: []string{
+				"/folder3/subfolder1",
+				"/folder3/subfolder1/subfolder1",
+				"/folder3/subfolder1/subfolder1/file1",
+				"/folder3/subfolder2",
+				"/folder3/subfolder2/subfolder1",
+				"/folder3/subfolder2/subfolder1/file1",
+			},
+			err: false,
+		},
+		{
 			name: "stop early",
 			fn: func(fileInfo storagedriver.FileInfo) error {
 				if fileInfo.Path() == "/folder1/file1" {
-					return storagedriver.ErrSkipDir
+					return storagedriver.ErrFilledBuffer
 				}
 				return nil
 			},
 			expected: []string{
 				"/file1",
+				"/folder1-suffix",
+				"/folder1-suffix/file1",
 				"/folder1",
 				"/folder1/file1",
 				// stop early
 			},
 			err: false,
 		},
+
 		{
 			name: "error",
 			fn: func(fileInfo storagedriver.FileInfo) error {
@@ -635,9 +693,8 @@ func TestWalk(t *testing.T) {
 		},
 		{
 			name: "from folder",
-			fn:   func(fileInfo storagedriver.FileInfo) error { return nil },
+			fn:   noopFn,
 			expected: []string{
-				"/folder1",
 				"/folder1/file1",
 			},
 			from: "/folder1",
@@ -653,7 +710,7 @@ func TestWalk(t *testing.T) {
 			err := drvr.Walk(context.Background(), tc.from, func(fileInfo storagedriver.FileInfo) error {
 				walked = append(walked, fileInfo.Path())
 				return tc.fn(fileInfo)
-			})
+			}, tc.options...)
 			if tc.err && err == nil {
 				t.Fatalf("expected err")
 			}

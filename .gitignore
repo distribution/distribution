@@ -37,3 +37,5 @@ coverage.txt
 *.sublime-project
 *.sublime-workspace
 .idea/*
+
+tests/miniodata

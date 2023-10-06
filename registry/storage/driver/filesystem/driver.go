@@ -139,7 +139,7 @@ func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte
 	defer writer.Close()
 	_, err = io.Copy(writer, bytes.NewReader(contents))
 	if err != nil {
-		writer.Cancel()
+		writer.Cancel(ctx)
 		return err
 	}
 	return writer.Commit()
@@ -290,8 +290,8 @@ func (d *driver) URLFor(ctx context.Context, path string, options map[string]int
 
 // Walk traverses a filesystem defined within driver, starting
 // from the given path, calling f on each file and directory
-func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn) error {
-	return storagedriver.WalkFallback(ctx, d, path, f)
+func (d *driver) Walk(ctx context.Context, path string, f storagedriver.WalkFn, options ...func(*storagedriver.WalkOptions)) error {
+	return storagedriver.WalkFallback(ctx, d, path, f, options...)
 }
 
 // fullPath returns the absolute path of a key within the Driver's storage.
@@ -387,7 +387,7 @@ func (fw *fileWriter) Close() error {
 	return nil
 }
 
-func (fw *fileWriter) Cancel() error {
+func (fw *fileWriter) Cancel(ctx context.Context) error {
 	if fw.closed {
 		return fmt.Errorf("already closed")
 	}

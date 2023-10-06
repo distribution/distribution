@@ -24,25 +24,24 @@ type tagStore struct {
 
 // All returns all tags
 func (ts *tagStore) All(ctx context.Context) ([]string, error) {
-	var tags []string
-
-	pathSpec, err := pathFor(manifestTagPathSpec{
+	pathSpec, err := pathFor(manifestTagsPathSpec{
 		name: ts.repository.Named().Name(),
 	})
 	if err != nil {
-		return tags, err
+		return nil, err
 	}
 
 	entries, err := ts.blobStore.driver.List(ctx, pathSpec)
 	if err != nil {
 		switch err := err.(type) {
 		case storagedriver.PathNotFoundError:
-			return tags, distribution.ErrRepositoryUnknown{Name: ts.repository.Named().Name()}
+			return nil, distribution.ErrRepositoryUnknown{Name: ts.repository.Named().Name()}
 		default:
-			return tags, err
+			return nil, err
 		}
 	}
 
+	tags := make([]string, 0, len(entries))
 	for _, entry := range entries {
 		_, filename := path.Split(entry)
 		tags = append(tags, filename)

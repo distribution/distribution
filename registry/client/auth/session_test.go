@@ -168,6 +168,7 @@ func TestEndpointAuthorizeToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error sending get request: %s", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusAccepted {
 		t.Fatalf("Unexpected status code: %d, expected %d", resp.StatusCode, http.StatusAccepted)
@@ -201,6 +202,7 @@ func TestEndpointAuthorizeToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error sending get request: %s", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("Unexpected status code: %d, expected %d", resp.StatusCode, http.StatusUnauthorized)
@@ -297,6 +299,7 @@ func TestEndpointAuthorizeRefreshToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error sending get request: %s", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusAccepted {
 		t.Fatalf("Unexpected status code: %d, expected %d", resp.StatusCode, http.StatusAccepted)
@@ -326,6 +329,7 @@ func TestEndpointAuthorizeRefreshToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error sending get request: %s", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusAccepted {
 		t.Fatalf("Unexpected status code: %d, expected %d", resp.StatusCode, http.StatusUnauthorized)
@@ -356,6 +360,7 @@ func TestEndpointAuthorizeRefreshToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error sending get request: %s", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("Unexpected status code: %d, expected %d", resp.StatusCode, http.StatusUnauthorized)
@@ -434,6 +439,7 @@ func TestEndpointAuthorizeV2RefreshToken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error sending get request: %s", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusAccepted {
 		t.Fatalf("Unexpected status code: %d, expected %d", resp.StatusCode, http.StatusAccepted)
@@ -509,6 +515,7 @@ func TestEndpointAuthorizeTokenBasic(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error sending get request: %s", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusAccepted {
 		t.Fatalf("Unexpected status code: %d, expected %d", resp.StatusCode, http.StatusAccepted)
@@ -644,6 +651,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresIn(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error sending get request: %s", err)
 		}
+		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusAccepted {
 			t.Fatalf("Unexpected status code: %d, expected %d", resp.StatusCode, http.StatusAccepted)
 		}
@@ -659,6 +667,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresIn(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error sending get request: %s", err)
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusAccepted {
 		t.Fatalf("Unexpected status code: %d, expected %d", resp.StatusCode, http.StatusAccepted)
 	}
@@ -796,6 +805,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresInAndIssuedAt(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Error sending get request: %s", err)
 		}
+		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusAccepted {
 			t.Fatalf("Unexpected status code: %d, expected %d", resp.StatusCode, http.StatusAccepted)
 		}
@@ -811,6 +821,7 @@ func TestEndpointAuthorizeTokenBasicWithExpiresInAndIssuedAt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error sending get request: %s", err)
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusAccepted {
 		t.Fatalf("Unexpected status code: %d, expected %d", resp.StatusCode, http.StatusAccepted)
 	}
@@ -858,6 +869,7 @@ func TestEndpointAuthorizeBasic(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error sending get request: %s", err)
 	}
+	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusAccepted {
 		t.Fatalf("Unexpected status code: %d, expected %d", resp.StatusCode, http.StatusAccepted)

@@ -11,16 +11,17 @@ import (
 	"time"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/proxy/scheduler"
 	"github.com/distribution/distribution/v3/registry/storage"
 	"github.com/distribution/distribution/v3/registry/storage/cache/memory"
 	"github.com/distribution/distribution/v3/registry/storage/driver/filesystem"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
+	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
 )
 
 var sbsMu sync.Mutex
+var randSource rand.Rand
 
 type statsBlobStore struct {
 	stats map[string]int
@@ -189,13 +190,13 @@ func makeTestEnv(t *testing.T, name string) *testEnv {
 func makeBlob(size int) []byte {
 	blob := make([]byte, size)
 	for i := 0; i < size; i++ {
-		blob[i] = byte('A' + rand.Int()%48)
+		blob[i] = byte('A' + randSource.Int()%48)
 	}
 	return blob
 }
 
 func init() {
-	rand.Seed(42)
+	randSource = *rand.New(rand.NewSource(42))
 }
 
 func populate(t *testing.T, te *testEnv, blobCount, size, numUnique int) {
@@ -248,6 +249,18 @@ func TestProxyStoreGet(t *testing.T) {
 
 	if (*remoteStats)["get"] != 1 {
 		t.Errorf("Unexpected remote get count")
+	}
+}
+
+func TestProxyStoreGetWithoutScheduler(t *testing.T) {
+	te := makeTestEnv(t, "foo/bar")
+	te.store.scheduler = nil
+
+	populate(t, te, 1, 10, 1)
+
+	_, err := te.store.Get(te.ctx, te.inRemote[0].Digest)
+	if err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -323,6 +336,12 @@ func testProxyStoreServe(t *testing.T, te *testEnv, numClients int) {
 	remoteStats := te.RemoteStats()
 
 	var wg sync.WaitGroup
+	var descHitMap = map[digest.Digest]bool{}
+	var hitLock sync.Mutex
+
+	for _, remoteBlob := range te.inRemote {
+		descHitMap[remoteBlob.Digest] = true
+	}
 
 	for i := 0; i < numClients; i++ {
 		// Serveblob - pulls through blobs
@@ -349,6 +368,15 @@ func testProxyStoreServe(t *testing.T, te *testEnv, numClients int) {
 					t.Errorf("Mismatching blob fetch from proxy")
 					return
 				}
+
+				desc, err := te.store.localStore.Stat(te.ctx, remoteBlob.Digest)
+				if err != nil {
+					continue
+				}
+
+				hitLock.Lock()
+				delete(descHitMap, desc.Digest)
+				hitLock.Unlock()
 			}
 		}()
 	}
@@ -358,11 +386,16 @@ func testProxyStoreServe(t *testing.T, te *testEnv, numClients int) {
 		t.FailNow()
 	}
 
+	if len(descHitMap) > 0 {
+		t.Errorf("Expected hit cache at least once, but it turns out that no caches was hit")
+		t.FailNow()
+	}
+
 	remoteBlobCount := len(te.inRemote)
 	sbsMu.Lock()
-	if (*localStats)["stat"] != remoteBlobCount*numClients && (*localStats)["create"] != te.numUnique {
+	if (*localStats)["stat"] != remoteBlobCount*numClients*2 && (*localStats)["create"] != te.numUnique {
 		sbsMu.Unlock()
-		t.Fatal("Expected: stat:", remoteBlobCount*numClients, "create:", remoteBlobCount)
+		t.Fatal("Expected: stat:", remoteBlobCount*numClients, "create:", remoteBlobCount, "Got: stat:", (*localStats)["stat"], "create:", (*localStats)["create"])
 	}
 	sbsMu.Unlock()
 

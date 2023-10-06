@@ -8,11 +8,11 @@ import (
 	"testing"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/storage/cache/memory"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/distribution/distribution/v3/testutil"
+	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -26,7 +26,7 @@ type setupEnv struct {
 func setupFS(t *testing.T) *setupEnv {
 	d := inmemory.New()
 	ctx := context.Background()
-	registry, err := NewRegistry(ctx, d, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableRedirect, EnableSchema1)
+	registry, err := NewRegistry(ctx, d, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -81,19 +81,18 @@ func makeRepo(ctx context.Context, t *testing.T, name string, reg distribution.N
 		t.Fatal(err)
 	}
 
+	// upload the layers
 	err = testutil.UploadBlobs(repo, layers)
 	if err != nil {
 		t.Fatalf("failed to upload layers: %v", err)
 	}
 
-	getKeys := func(digests map[digest.Digest]io.ReadSeeker) (ds []digest.Digest) {
-		for d := range digests {
-			ds = append(ds, d)
-		}
-		return
+	digests := []digest.Digest{}
+	for digest := range layers {
+		digests = append(digests, digest)
 	}
 
-	manifest, err := testutil.MakeSchema1Manifest(getKeys(layers))
+	manifest, err := testutil.MakeSchema2Manifest(repo, digests)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -152,7 +151,11 @@ func TestCatalogInParts(t *testing.T) {
 	lastRepo = p[len(p)-1]
 	numFilled, err = env.registry.Repositories(env.ctx, p, lastRepo)
 
-	if err != io.EOF || numFilled != len(p) {
+	if numFilled != len(p) {
+		t.Errorf("Expected more values in catalog")
+	}
+
+	if err != io.EOF {
 		t.Errorf("Expected end of catalog")
 	}
 
@@ -206,7 +209,7 @@ func testEq(a, b []string, size int) bool {
 func setupBadWalkEnv(t *testing.T) *setupEnv {
 	d := newBadListDriver()
 	ctx := context.Background()
-	registry, err := NewRegistry(ctx, d, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableRedirect, EnableSchema1)
+	registry, err := NewRegistry(ctx, d, BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}

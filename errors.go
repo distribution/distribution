@@ -90,7 +90,7 @@ func (ErrManifestUnverified) Error() string {
 type ErrManifestVerification []error
 
 func (errs ErrManifestVerification) Error() string {
-	var parts []string
+	parts := make([]string, 0, len(errs))
 	for _, err := range errs {
 		parts = append(parts, err.Error())
 	}

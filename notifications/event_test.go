@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/distribution/distribution/v3/manifest/schema1"
+	"github.com/distribution/distribution/v3/manifest/schema2"
 )
 
 // TestEventJSONFormat provides silly test to detect if the event format or
@@ -21,7 +21,7 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
          "timestamp": "2006-01-02T15:04:05Z",
          "action": "push",
          "target": {
-            "mediaType": "application/vnd.docker.distribution.manifest.v1+prettyjws",
+            "mediaType": "application/vnd.docker.distribution.manifest.v2+json",
             "digest": "sha256:0123456789abcdef0",
             "size": 1,
             "length": 1,
@@ -116,7 +116,7 @@ func TestEventEnvelopeJSONFormat(t *testing.T) {
 
 	manifestPush := prototype
 	manifestPush.ID = "asdf-asdf-asdf-asdf-0"
-	manifestPush.Target.MediaType = schema1.MediaTypeSignedManifest
+	manifestPush.Target.MediaType = schema2.MediaTypeManifest
 	manifestPush.Target.Digest = "sha256:0123456789abcdef0"
 	manifestPush.Target.Size = 1
 	manifestPush.Target.Length = 1

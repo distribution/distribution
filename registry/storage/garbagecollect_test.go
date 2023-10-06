@@ -7,11 +7,10 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/reference"
 	"github.com/distribution/distribution/v3/registry/storage/driver"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/distribution/distribution/v3/testutil"
-	"github.com/docker/libtrust"
+	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -23,11 +22,7 @@ type image struct {
 
 func createRegistry(t *testing.T, driver driver.StorageDriver, options ...RegistryOption) distribution.Namespace {
 	ctx := context.Background()
-	k, err := libtrust.GenerateECP256PrivateKey()
-	if err != nil {
-		t.Fatal(err)
-	}
-	options = append([]RegistryOption{EnableDelete, Schema1SigningKey(k), EnableSchema1}, options...)
+	options = append(options, EnableDelete)
 	registry, err := NewRegistry(ctx, driver, options...)
 	if err != nil {
 		t.Fatalf("Failed to construct namespace")
@@ -110,30 +105,6 @@ func uploadImage(t *testing.T, repository distribution.Repository, im image) dig
 	return manifestDigest
 }
 
-func uploadRandomSchema1Image(t *testing.T, repository distribution.Repository) image {
-	randomLayers, err := testutil.CreateRandomLayers(2)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	digests := []digest.Digest{}
-	for digest := range randomLayers {
-		digests = append(digests, digest)
-	}
-
-	manifest, err := testutil.MakeSchema1Manifest(digests)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-
-	manifestDigest := uploadImage(t, repository, image{manifest: manifest, layers: randomLayers})
-	return image{
-		manifest:       manifest,
-		manifestDigest: manifestDigest,
-		layers:         randomLayers,
-	}
-}
-
 func uploadRandomSchema2Image(t *testing.T, repository distribution.Repository) image {
 	randomLayers, err := testutil.CreateRandomLayers(2)
 	if err != nil {
@@ -166,8 +137,8 @@ func TestNoDeletionNoEffect(t *testing.T) {
 	repo := makeRepository(t, registry, "palailogos")
 	manifestService, _ := repo.Manifests(ctx)
 
-	image1 := uploadRandomSchema1Image(t, repo)
-	image2 := uploadRandomSchema1Image(t, repo)
+	image1 := uploadRandomSchema2Image(t, repo)
+	image2 := uploadRandomSchema2Image(t, repo)
 	uploadRandomSchema2Image(t, repo)
 
 	// construct manifestlist for fun.
@@ -232,12 +203,12 @@ func TestDeleteManifestIfTagNotFound(t *testing.T) {
 	}
 
 	// Construct manifests
-	manifest1, err := testutil.MakeSchema1Manifest(getKeys(randomLayers1))
+	manifest1, err := testutil.MakeSchema2Manifest(repo, getKeys(randomLayers1))
 	if err != nil {
 		t.Fatalf("failed to make manifest: %v", err)
 	}
 
-	manifest2, err := testutil.MakeSchema1Manifest(getKeys(randomLayers2))
+	manifest2, err := testutil.MakeSchema2Manifest(repo, getKeys(randomLayers2))
 	if err != nil {
 		t.Fatalf("failed to make manifest: %v", err)
 	}
@@ -303,7 +274,7 @@ func TestGCWithMissingManifests(t *testing.T) {
 
 	registry := createRegistry(t, d)
 	repo := makeRepository(t, registry, "testrepo")
-	uploadRandomSchema1Image(t, repo)
+	uploadRandomSchema2Image(t, repo)
 
 	// Simulate a missing _manifests directory
 	revPath, err := pathFor(manifestRevisionsPathSpec{"testrepo"})
@@ -339,8 +310,8 @@ func TestDeletionHasEffect(t *testing.T) {
 	repo := makeRepository(t, registry, "komnenos")
 	manifests, _ := repo.Manifests(ctx)
 
-	image1 := uploadRandomSchema1Image(t, repo)
-	image2 := uploadRandomSchema1Image(t, repo)
+	image1 := uploadRandomSchema2Image(t, repo)
+	image2 := uploadRandomSchema2Image(t, repo)
 	image3 := uploadRandomSchema2Image(t, repo)
 
 	manifests.Delete(ctx, image2.manifestDigest)
@@ -426,7 +397,7 @@ func TestDeletionWithSharedLayer(t *testing.T) {
 	}
 
 	// Construct manifests
-	manifest1, err := testutil.MakeSchema1Manifest(getKeys(randomLayers1))
+	manifest1, err := testutil.MakeSchema2Manifest(repo, getKeys(randomLayers1))
 	if err != nil {
 		t.Fatalf("failed to make manifest: %v", err)
 	}

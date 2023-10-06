@@ -360,8 +360,7 @@ func (th *tokenHandler) fetchTokenWithOAuth(ctx context.Context, realm *url.URL,
 	}
 	defer resp.Body.Close()
 
-	if !client.SuccessStatus(resp.StatusCode) {
-		err := client.HandleErrorResponse(resp)
+	if err := client.HandleHTTPResponseError(resp); err != nil {
 		return "", time.Time{}, err
 	}
 
@@ -443,8 +442,7 @@ func (th *tokenHandler) fetchTokenWithBasicAuth(ctx context.Context, realm *url.
 	}
 	defer resp.Body.Close()
 
-	if !client.SuccessStatus(resp.StatusCode) {
-		err := client.HandleErrorResponse(resp)
+	if err := client.HandleHTTPResponseError(resp); err != nil {
 		return "", time.Time{}, err
 	}
 

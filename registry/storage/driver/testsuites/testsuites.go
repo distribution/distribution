@@ -3,6 +3,7 @@ package testsuites
 import (
 	"bytes"
 	"context"
+	crand "crypto/rand"
 	"crypto/sha256"
 	"io"
 	"math/rand"
@@ -388,7 +389,11 @@ func (suite *DriverSuite) TestReaderWithOffset(c *check.C) {
 // TestContinueStreamAppendLarge tests that a stream write can be appended to without
 // corrupting the data with a large chunk size.
 func (suite *DriverSuite) TestContinueStreamAppendLarge(c *check.C) {
-	suite.testContinueStreamAppend(c, int64(10*1024*1024))
+	chunkSize := int64(10 * 1024 * 1024)
+	if suite.Name() == "azure" {
+		chunkSize = int64(4 * 1024 * 1024)
+	}
+	suite.testContinueStreamAppend(c, chunkSize)
 }
 
 // TestContinueStreamAppendSmall is the same as TestContinueStreamAppendLarge, but only
@@ -465,6 +470,113 @@ func (suite *DriverSuite) TestReadNonexistentStream(c *check.C) {
 	c.Assert(err, check.NotNil)
 	c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
 	c.Assert(strings.Contains(err.Error(), suite.Name()), check.Equals, true)
+}
+
+// TestWriteZeroByteStreamThenAppend tests if zero byte file handling works for append to a Stream
+func (suite *DriverSuite) TestWriteZeroByteStreamThenAppend(c *check.C) {
+	filename := randomPath(32)
+	defer suite.deletePath(c, firstPart(filename))
+	chunkSize := int64(32)
+	contentsChunk1 := randomContents(chunkSize)
+
+	// Open a Writer
+	writer, err := suite.StorageDriver.Writer(suite.ctx, filename, false)
+	c.Assert(err, check.IsNil)
+
+	// Close the Writer
+	err = writer.Commit()
+	c.Assert(err, check.IsNil)
+	err = writer.Close()
+	c.Assert(err, check.IsNil)
+	curSize := writer.Size()
+	c.Assert(curSize, check.Equals, int64(0))
+
+	// Open a Reader
+	reader, err := suite.StorageDriver.Reader(suite.ctx, filename, 0)
+	c.Assert(err, check.IsNil)
+	defer reader.Close()
+
+	// Check the file is empty
+	buf := make([]byte, chunkSize)
+	n, err := reader.Read(buf)
+	c.Assert(err, check.Equals, io.EOF)
+	c.Assert(n, check.Equals, 0)
+
+	// Open a Writer for Append
+	awriter, err := suite.StorageDriver.Writer(suite.ctx, filename, true)
+	c.Assert(err, check.IsNil)
+
+	// Write small bytes to AppendWriter
+	nn, err := io.Copy(awriter, bytes.NewReader(contentsChunk1))
+	c.Assert(err, check.IsNil)
+	c.Assert(nn, check.Equals, int64(len(contentsChunk1)))
+
+	// Close the AppendWriter
+	err = awriter.Commit()
+	c.Assert(err, check.IsNil)
+	err = awriter.Close()
+	c.Assert(err, check.IsNil)
+	appendSize := awriter.Size()
+	c.Assert(appendSize, check.Equals, int64(len(contentsChunk1)))
+
+	// Open a Reader
+	reader, err = suite.StorageDriver.Reader(suite.ctx, filename, 0)
+	c.Assert(err, check.IsNil)
+	defer reader.Close()
+
+	// Read small bytes from Reader
+	readContents, err := io.ReadAll(reader)
+	c.Assert(err, check.IsNil)
+	c.Assert(readContents, check.DeepEquals, contentsChunk1)
+}
+
+// TestWriteZeroByteContentThenAppend tests if zero byte file handling works for append to PutContent
+func (suite *DriverSuite) TestWriteZeroByteContentThenAppend(c *check.C) {
+	filename := randomPath(32)
+	defer suite.deletePath(c, firstPart(filename))
+	chunkSize := int64(32)
+	contentsChunk1 := randomContents(chunkSize)
+
+	err := suite.StorageDriver.PutContent(suite.ctx, filename, nil)
+	c.Assert(err, check.IsNil)
+
+	// Open a Reader
+	reader, err := suite.StorageDriver.Reader(suite.ctx, filename, 0)
+	c.Assert(err, check.IsNil)
+	defer reader.Close()
+
+	// Check the file is empty
+	buf := make([]byte, chunkSize)
+	n, err := reader.Read(buf)
+	c.Assert(err, check.Equals, io.EOF)
+	c.Assert(n, check.Equals, 0)
+
+	// Open a Writer for Append
+	awriter, err := suite.StorageDriver.Writer(suite.ctx, filename, true)
+	c.Assert(err, check.IsNil)
+
+	// Write small bytes to AppendWriter
+	nn, err := io.Copy(awriter, bytes.NewReader(contentsChunk1))
+	c.Assert(err, check.IsNil)
+	c.Assert(nn, check.Equals, int64(len(contentsChunk1)))
+
+	// Close the AppendWriter
+	err = awriter.Commit()
+	c.Assert(err, check.IsNil)
+	err = awriter.Close()
+	c.Assert(err, check.IsNil)
+	appendSize := awriter.Size()
+	c.Assert(appendSize, check.Equals, int64(len(contentsChunk1)))
+
+	// Open a Reader
+	reader, err = suite.StorageDriver.Reader(suite.ctx, filename, 0)
+	c.Assert(err, check.IsNil)
+	defer reader.Close()
+
+	// Read small bytes from Reader
+	readContents, err := io.ReadAll(reader)
+	c.Assert(err, check.IsNil)
+	c.Assert(readContents, check.DeepEquals, contentsChunk1)
 }
 
 // TestList checks the returned list of keys after populating a directory tree.
@@ -652,7 +764,9 @@ func (suite *DriverSuite) TestURLFor(c *check.C) {
 	}
 	c.Assert(err, check.IsNil)
 
-	response, _ = http.Head(url)
+	response, err = http.Head(url)
+	c.Assert(err, check.IsNil)
+	defer response.Body.Close()
 	c.Assert(response.StatusCode, check.Equals, 200)
 	c.Assert(response.ContentLength, check.Equals, int64(32))
 }
@@ -824,6 +938,15 @@ func (suite *DriverSuite) TestStatCall(c *check.C) {
 	c.Assert(fi.Path(), check.Equals, dirPath)
 	c.Assert(fi.Size(), check.Equals, int64(0))
 	c.Assert(fi.IsDir(), check.Equals, true)
+
+	// The storage healthcheck performs this exact call to Stat.
+	// PathNotFoundErrors are not considered health check failures.
+	_, err = suite.StorageDriver.Stat(suite.ctx, "/")
+	// Some drivers will return a not found here, while others will not
+	// return an error at all. If we get an error, ensure it's a not found.
+	if err != nil {
+		c.Assert(err, check.FitsTypeOf, storagedriver.PathNotFoundError{})
+	}
 }
 
 // TestPutContentMultipleTimes checks that if storage driver can overwrite the content
@@ -1217,7 +1340,7 @@ func randomFilename(length int64) string {
 var randomBytes = make([]byte, 128<<20)
 
 func init() {
-	_, _ = rand.Read(randomBytes) // always returns len(randomBytes) and nil error
+	_, _ = crand.Read(randomBytes) // always returns len(randomBytes) and nil error
 }
 
 func randomContents(length int64) []byte {

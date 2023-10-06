@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/distribution/distribution/v3/manifest/schema1"
+	"github.com/distribution/distribution/v3/manifest/schema2"
 	events "github.com/docker/go-events"
 )
 
@@ -121,11 +121,11 @@ func TestHTTPSink(t *testing.T) {
 	}{
 		{
 			statusCode: http.StatusOK,
-			event:      createTestEvent("push", "library/test", schema1.MediaTypeSignedManifest),
+			event:      createTestEvent("push", "library/test", schema2.MediaTypeManifest),
 		},
 		{
 			statusCode: http.StatusOK,
-			event:      createTestEvent("push", "library/test", schema1.MediaTypeSignedManifest),
+			event:      createTestEvent("push", "library/test", schema2.MediaTypeManifest),
 		},
 		{
 			statusCode: http.StatusOK,

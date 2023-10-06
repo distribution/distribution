@@ -73,49 +73,49 @@ func TestIgnoredSink(t *testing.T) {
 		expected         events.Event
 	}
 
-	cases := []testcase{
-		{nil, nil, blob},
-		{[]string{"other"}, []string{"other"}, blob},
-		{[]string{"blob", "manifest"}, []string{"other"}, nil},
-		{[]string{"other"}, []string{"pull"}, blob},
-		{[]string{"other"}, []string{"pull", "push"}, nil},
+	tests := []testcase{
+		{expected: blob},
+		{ignoreMediaTypes: []string{"other"}, ignoreActions: []string{"other"}, expected: blob},
+		{ignoreMediaTypes: []string{"blob", "manifest"}, ignoreActions: []string{"other"}},
+		{ignoreMediaTypes: []string{"other"}, ignoreActions: []string{"pull"}, expected: blob},
+		{ignoreMediaTypes: []string{"other"}, ignoreActions: []string{"pull", "push"}},
 	}
 
-	for _, c := range cases {
+	for _, tc := range tests {
 		ts := &testSink{}
-		s := newIgnoredSink(ts, c.ignoreMediaTypes, c.ignoreActions)
+		s := newIgnoredSink(ts, tc.ignoreMediaTypes, tc.ignoreActions)
 
 		if err := s.Write(blob); err != nil {
 			t.Fatalf("error writing event: %v", err)
 		}
 
 		ts.mu.Lock()
-		if !reflect.DeepEqual(ts.event, c.expected) {
-			t.Fatalf("unexpected event: %#v != %#v", ts.event, c.expected)
+		if !reflect.DeepEqual(ts.event, tc.expected) {
+			t.Fatalf("unexpected event: %#v != %#v", ts.event, tc.expected)
 		}
 		ts.mu.Unlock()
 	}
 
-	cases = []testcase{
-		{nil, nil, manifest},
-		{[]string{"other"}, []string{"other"}, manifest},
-		{[]string{"blob"}, []string{"other"}, manifest},
-		{[]string{"blob", "manifest"}, []string{"other"}, nil},
-		{[]string{"other"}, []string{"push"}, manifest},
-		{[]string{"other"}, []string{"pull", "push"}, nil},
+	tests = []testcase{
+		{expected: manifest},
+		{ignoreMediaTypes: []string{"other"}, ignoreActions: []string{"other"}, expected: manifest},
+		{ignoreMediaTypes: []string{"blob"}, ignoreActions: []string{"other"}, expected: manifest},
+		{ignoreMediaTypes: []string{"blob", "manifest"}, ignoreActions: []string{"other"}},
+		{ignoreMediaTypes: []string{"other"}, ignoreActions: []string{"push"}, expected: manifest},
+		{ignoreMediaTypes: []string{"other"}, ignoreActions: []string{"pull", "push"}},
 	}
 
-	for _, c := range cases {
+	for _, tc := range tests {
 		ts := &testSink{}
-		s := newIgnoredSink(ts, c.ignoreMediaTypes, c.ignoreActions)
+		s := newIgnoredSink(ts, tc.ignoreMediaTypes, tc.ignoreActions)
 
 		if err := s.Write(manifest); err != nil {
 			t.Fatalf("error writing event: %v", err)
 		}
 
 		ts.mu.Lock()
-		if !reflect.DeepEqual(ts.event, c.expected) {
-			t.Fatalf("unexpected event: %#v != %#v", ts.event, c.expected)
+		if !reflect.DeepEqual(ts.event, tc.expected) {
+			t.Fatalf("unexpected event: %#v != %#v", ts.event, tc.expected)
 		}
 		ts.mu.Unlock()
 	}

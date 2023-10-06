@@ -52,19 +52,6 @@ specification, details of the protocol will be left to a future specification.
 Relevant header definitions and error codes are present to provide an
 indication of what a client may encounter.
 
-#### Future
-
-There are features that have been discussed during the process of cutting this
-specification. The following is an incomplete list:
-
-- Immutable image references
-- Multiple architecture support
-- Migration from v2compatibility representation
-
-These may represent features that are either out of the scope of this
-specification, the purview of another specification or have been deferred to a
-future version.
-
 ### Use Cases
 
 For the most part, the use cases of the former registry API apply to the new
@@ -266,7 +253,8 @@ are reported as part of 4xx responses, in a json response body. One or more
 errors will be returned in the following format:
 
     {
-        "errors": [{
+        "errors": [
+            {
                 "code": <error identifier>,
                 "message": <message describing condition>,
                 "detail": <unstructured>
@@ -434,17 +422,16 @@ manifest will be returned, with the following format (see
 [docker/docker#8093](https://github.com/docker/docker/issues/8093) for details):
 
     {
-       "name": <name>,
-       "tag": <tag>,
-       "fsLayers": [
-          {
-             "blobSum": <digest>
-          },
-          ...
-        ]
-       ],
-       "history": <v1 images>,
-       "signature": <JWS>
+        "name": <name>,
+        "tag": <tag>,
+        "fsLayers": [
+            {
+                "blobSum": <digest>
+            },
+            ...
+        ],
+        "history": <v1 images>,
+        "signature": <JWS>
     }
 
 The client should verify the returned manifest signature for authenticity
@@ -509,7 +496,7 @@ Uploads are started with a POST request which returns a url that can be used
 to push data and check upload status.
 
 The `Location` header will be used to communicate the upload location after
-each request. While it won't change in the this specification, clients should
+each request. While it won't change in this specification, clients should
 use the most recent value returned by the API.
 
 ##### Starting An Upload
@@ -825,18 +812,17 @@ image manifest. An image can be pushed using the following request format:
     Content-Type: <manifest media type>
 
     {
-       "name": <name>,
-       "tag": <tag>,
-       "fsLayers": [
-          {
-             "blobSum": <digest>
-          },
-          ...
-        ]
-       ],
-       "history": <v1 images>,
-       "signature": <JWS>,
-       ...
+        "name": <name>,
+        "tag": <tag>,
+        "fsLayers": [
+            {
+                "blobSum": <digest>
+            },
+            ...
+        ],
+        "history": <v1 images>,
+        "signature": <JWS>,
+        ...
     }
 
 The `name` and `reference` fields of the response body must match those
@@ -855,7 +841,8 @@ identifying the missing blob. An error is returned for each unknown blob. The
 response format is as follows:
 
     {
-        "errors": [{
+        "errors": [
+            {
                 "code": "BLOB_UNKNOWN",
                 "message": "blob unknown to registry",
                 "detail": {
@@ -886,10 +873,10 @@ The response will be in the following format:
 Content-Type: application/json
 
 {
-  "repositories": [
-    <name>,
-    ...
-  ]
+    "repositories": [
+        <name>,
+        ...
+    ]
 }
 ```
 
@@ -933,10 +920,10 @@ Content-Type: application/json
 Link: <<url>?n=<n from the request>&last=<last repository in response>>; rel="next"
 
 {
-  "repositories": [
-    <name>,
-    ...
-  ]
+    "repositories": [
+        <name>,
+        ...
+    ]
 }
 ```
 
@@ -1043,11 +1030,11 @@ Content-Type: application/json
 Link: <<url>?n=<n from the request>&last=<last tag value from previous response>>; rel="next"
 
 {
-  "name": <name>,
-  "tags": [
-    <tag>,
-    ...
-  ]
+    "name": <name>,
+    "tags": [
+        <tag>,
+        ...
+    ]
 }
 ```
 
@@ -1506,7 +1493,7 @@ The following parameters should be specified on the request:
 |Name|Kind|Description|
 |----|----|-----------|
 |`name`|path|Name of the target repository.|
-|`n`|query|Limit the number of entries in each response. It not present, all entries will be returned.|
+|`n`|query|Limit the number of entries in each response. If not present, all entries will be returned.|
 |`last`|query|Result set will include values lexically after last.|
 
 
@@ -1764,17 +1751,16 @@ Docker-Content-Digest: <digest>
 Content-Type: <media type of manifest>
 
 {
-   "name": <name>,
-   "tag": <tag>,
-   "fsLayers": [
-      {
-         "blobSum": "<digest>"
-      },
-      ...
-    ]
-   ],
-   "history": <v1 images>,
-   "signature": <JWS>
+    "name": <name>,
+    "tag": <tag>,
+    "fsLayers": [
+        {
+            "blobSum": "<digest>"
+        },
+        ...
+    ],
+    "history": <v1 images>,
+    "signature": <JWS>
 }
 ```
 
@@ -1984,17 +1970,16 @@ Authorization: <scheme> <token>
 Content-Type: <media type of manifest>
 
 {
-   "name": <name>,
-   "tag": <tag>,
-   "fsLayers": [
-      {
-         "blobSum": "<digest>"
-      },
-      ...
-    ]
-   ],
-   "history": <v1 images>,
-   "signature": <JWS>
+    "name": <name>,
+    "tag": <tag>,
+    "fsLayers": [
+        {
+            "blobSum": "<digest>"
+        },
+        ...
+    ],
+    "history": <v1 images>,
+    "signature": <JWS>
 }
 ```
 
@@ -2226,7 +2211,8 @@ The error codes that may be included in the response body are enumerated below:
 Content-Type: application/json
 
 {
-    "errors": [{
+    "errors": [
+        {
             "code": "BLOB_UNKNOWN",
             "message": "blob unknown to registry",
             "detail": {
@@ -3393,7 +3379,7 @@ POST /v2/<name>/blobs/uploads/?digest=<digest>
 Host: <registry host>
 Authorization: <scheme> <token>
 Content-Length: <length of blob>
-Content-Type: application/octect-stream
+Content-Type: application/octet-stream
 
 <binary data>
 ```
@@ -5499,7 +5485,7 @@ Content-Type: application/json
 	"repositories": [
 		<name>,
 		...
-	]
+	],
 	"next": "<url>?last=<name>&n=<last value of n>"
 }
 ```

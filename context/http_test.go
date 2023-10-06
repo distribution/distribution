@@ -22,7 +22,7 @@ func TestWithRequest(t *testing.T) {
 	req.Header.Set("User-Agent", "test/0.1")
 
 	ctx := WithRequest(Background(), &req)
-	for _, testcase := range []struct {
+	for _, tc := range []struct {
 		key      string
 		expected interface{}
 	}{
@@ -61,18 +61,18 @@ func TestWithRequest(t *testing.T) {
 			key: "http.request.startedat",
 		},
 	} {
-		v := ctx.Value(testcase.key)
+		v := ctx.Value(tc.key)
 
 		if v == nil {
-			t.Fatalf("value not found for %q", testcase.key)
+			t.Fatalf("value not found for %q", tc.key)
 		}
 
-		if testcase.expected != nil && v != testcase.expected {
-			t.Fatalf("%s: %v != %v", testcase.key, v, testcase.expected)
+		if tc.expected != nil && v != tc.expected {
+			t.Fatalf("%s: %v != %v", tc.key, v, tc.expected)
 		}
 
 		// Key specific checks!
-		switch testcase.key {
+		switch tc.key {
 		case "http.request.id":
 			if _, ok := v.(string); !ok {
 				t.Fatalf("request id not a string: %v", v)
@@ -195,7 +195,7 @@ func TestWithVars(t *testing.T) {
 	}
 
 	ctx := WithVars(Background(), &req)
-	for _, testcase := range []struct {
+	for _, tc := range []struct {
 		key      string
 		expected interface{}
 	}{
@@ -212,10 +212,10 @@ func TestWithVars(t *testing.T) {
 			expected: "qwer",
 		},
 	} {
-		v := ctx.Value(testcase.key)
+		v := ctx.Value(tc.key)
 
-		if !reflect.DeepEqual(v, testcase.expected) {
-			t.Fatalf("%q: %v != %v", testcase.key, v, testcase.expected)
+		if !reflect.DeepEqual(v, tc.expected) {
+			t.Fatalf("%q: %v != %v", tc.key, v, tc.expected)
 		}
 	}
 }
@@ -258,10 +258,11 @@ func TestRemoteAddr(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = http.DefaultClient.Do(proxyReq)
+	resp, err := http.DefaultClient.Do(proxyReq)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 
 	// RemoteAddr in X-Real-Ip
 	getReq, err := http.NewRequest(http.MethodGet, backend.URL, nil)
@@ -271,15 +272,17 @@ func TestRemoteAddr(t *testing.T) {
 
 	expectedRemote = "1.2.3.4"
 	getReq.Header["X-Real-ip"] = []string{expectedRemote}
-	_, err = http.DefaultClient.Do(getReq)
+	resp, err = http.DefaultClient.Do(getReq)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 
 	// Valid X-Real-Ip and invalid X-Forwarded-For
 	getReq.Header["X-forwarded-for"] = []string{"1.2.3"}
-	_, err = http.DefaultClient.Do(getReq)
+	resp, err = http.DefaultClient.Do(getReq)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 }

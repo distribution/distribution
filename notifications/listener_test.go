@@ -1,31 +1,27 @@
 package notifications
 
 import (
-	"io"
+	"bytes"
 	"reflect"
 	"testing"
 
 	"github.com/distribution/distribution/v3"
-	"github.com/distribution/distribution/v3/context"
-	"github.com/distribution/distribution/v3/manifest"
-	"github.com/distribution/distribution/v3/manifest/schema1"
-	"github.com/distribution/distribution/v3/reference"
+	dcontext "github.com/distribution/distribution/v3/context"
+	"github.com/distribution/distribution/v3/manifest/schema2"
 	"github.com/distribution/distribution/v3/registry/storage"
 	"github.com/distribution/distribution/v3/registry/storage/cache/memory"
 	"github.com/distribution/distribution/v3/registry/storage/driver/inmemory"
 	"github.com/distribution/distribution/v3/testutil"
-	"github.com/docker/libtrust"
+	"github.com/distribution/reference"
 	"github.com/opencontainers/go-digest"
 )
 
 func TestListener(t *testing.T) {
-	ctx := context.Background()
-	k, err := libtrust.GenerateECP256PrivateKey()
-	if err != nil {
-		t.Fatal(err)
-	}
+	ctx := dcontext.Background()
 
-	registry, err := storage.NewRegistry(ctx, inmemory.New(), storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)), storage.EnableDelete, storage.EnableRedirect, storage.Schema1SigningKey(k), storage.EnableSchema1)
+	registry, err := storage.NewRegistry(ctx, inmemory.New(),
+		storage.BlobDescriptorCacheProvider(memory.NewInMemoryBlobDescriptorCacheProvider(memory.UnlimitedSize)),
+		storage.EnableDelete, storage.EnableRedirect)
 	if err != nil {
 		t.Fatalf("error creating registry: %v", err)
 	}
@@ -46,15 +42,15 @@ func TestListener(t *testing.T) {
 	repository, remover = Listen(repository, remover, tl)
 
 	// Now take the registry through a number of operations
-	checkExerciseRepository(t, repository, remover)
+	checkTestRepository(t, repository, remover)
 
 	expectedOps := map[string]int{
 		"manifest:push":   1,
 		"manifest:pull":   1,
 		"manifest:delete": 1,
-		"layer:push":      2,
-		"layer:pull":      2,
-		"layer:delete":    2,
+		"layer:push":      3,
+		"layer:pull":      3,
+		"layer:delete":    3,
 		"tag:delete":      1,
 		"repo:delete":     1,
 	}
@@ -113,28 +109,47 @@ func (tl *testListener) RepoDeleted(repo reference.Named) error {
 	return nil
 }
 
-// checkExerciseRegistry takes the registry through all of its operations,
+// checkTestRepository takes the registry through all of its operations,
 // carrying out generic checks.
-func checkExerciseRepository(t *testing.T, repository distribution.Repository, remover distribution.RepositoryRemover) {
+func checkTestRepository(t *testing.T, repository distribution.Repository, remover distribution.RepositoryRemover) {
 	// TODO(stevvooe): This would be a nice testutil function. Basically, it
 	// takes the registry through a common set of operations. This could be
 	// used to make cross-cutting updates by changing internals that affect
 	// update counts. Basically, it would make writing tests a lot easier.
+	// TODO: change this to use Builder
 
-	ctx := context.Background()
+	ctx := dcontext.Background()
 	tag := "thetag"
-	// todo: change this to use Builder
 
-	m := schema1.Manifest{
-		Versioned: manifest.Versioned{
-			SchemaVersion: 1,
-		},
-		Name: repository.Named().Name(),
-		Tag:  tag,
-	}
+	config := []byte(`{"name": "foo"}`)
+	configDgst := digest.FromBytes(config)
+	configReader := bytes.NewReader(config)
 
 	var blobDigests []digest.Digest
+	blobDigests = append(blobDigests, configDgst)
+
 	blobs := repository.Blobs(ctx)
+
+	// push config blob
+	if err := testutil.PushBlob(ctx, repository, configReader, configDgst); err != nil {
+		t.Fatal(err)
+	}
+
+	// Then fetch the config blob
+	if rc, err := blobs.Open(ctx, configDgst); err != nil {
+		t.Fatalf("error fetching config: %v", err)
+	} else {
+		defer rc.Close()
+	}
+
+	m := schema2.Manifest{
+		Versioned: schema2.SchemaVersion,
+		Config: distribution.Descriptor{
+			MediaType: "foo/bar",
+			Digest:    configDgst,
+		},
+	}
+
 	for i := 0; i < 2; i++ {
 		rs, dgst, err := testutil.CreateRandomTarFile()
 		if err != nil {
@@ -142,28 +157,13 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository, r
 		}
 		blobDigests = append(blobDigests, dgst)
 
-		wr, err := blobs.Create(ctx)
-		if err != nil {
-			t.Fatalf("error creating layer upload: %v", err)
+		if err := testutil.PushBlob(ctx, repository, rs, dgst); err != nil {
+			t.Fatal(err)
 		}
 
-		// Use the resumes, as well!
-		wr, err = blobs.Resume(ctx, wr.ID())
-		if err != nil {
-			t.Fatalf("error resuming layer upload: %v", err)
-		}
-
-		io.Copy(wr, rs)
-
-		if _, err := wr.Commit(ctx, distribution.Descriptor{Digest: dgst}); err != nil {
-			t.Fatalf("unexpected error finishing upload: %v", err)
-		}
-
-		m.FSLayers = append(m.FSLayers, schema1.FSLayer{
-			BlobSum: dgst,
-		})
-		m.History = append(m.History, schema1.History{
-			V1Compatibility: "",
+		m.Layers = append(m.Layers, distribution.Descriptor{
+			MediaType: "application/octet-stream",
+			Digest:    dgst,
 		})
 
 		// Then fetch the blobs
@@ -174,14 +174,9 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository, r
 		}
 	}
 
-	pk, err := libtrust.GenerateECP256PrivateKey()
+	sm, err := schema2.FromStruct(m)
 	if err != nil {
-		t.Fatalf("unexpected error generating key: %v", err)
-	}
-
-	sm, err := schema1.Sign(&m, pk)
-	if err != nil {
-		t.Fatalf("unexpected error signing manifest: %v", err)
+		t.Fatal(err.Error())
 	}
 
 	manifests, err := repository.Manifests(ctx)
@@ -194,7 +189,12 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository, r
 		t.Fatalf("unexpected error putting the manifest: %v", err)
 	}
 
-	dgst := digest.FromBytes(sm.Canonical)
+	_, canonical, err := sm.Payload()
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	dgst := digest.FromBytes(canonical)
 	if dgst != digestPut {
 		t.Fatalf("mismatching digest from payload and put")
 	}
@@ -208,7 +208,7 @@ func checkExerciseRepository(t *testing.T, repository distribution.Repository, r
 		t.Fatalf("unexpected error fetching manifest: %v", err)
 	}
 
-	err = repository.Tags(ctx).Untag(ctx, m.Tag)
+	err = repository.Tags(ctx).Untag(ctx, tag)
 	if err != nil {
 		t.Fatalf("unexpected error deleting tag: %v", err)
 	}

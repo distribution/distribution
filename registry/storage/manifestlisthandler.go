@@ -7,6 +7,7 @@ import (
 	"github.com/distribution/distribution/v3"
 	dcontext "github.com/distribution/distribution/v3/context"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
+	"github.com/distribution/distribution/v3/manifest/ocischema"
 	"github.com/opencontainers/go-digest"
 )
 
@@ -33,16 +34,26 @@ func (ms *manifestListHandler) Unmarshal(ctx context.Context, dgst digest.Digest
 func (ms *manifestListHandler) Put(ctx context.Context, manifestList distribution.Manifest, skipDependencyVerification bool) (digest.Digest, error) {
 	dcontext.GetLogger(ms.ctx).Debug("(*manifestListHandler).Put")
 
-	m, ok := manifestList.(*manifestlist.DeserializedManifestList)
-	if !ok {
+	var schemaVersion, expectedSchemaVersion int
+	switch m := manifestList.(type) {
+	case *manifestlist.DeserializedManifestList:
+		expectedSchemaVersion = manifestlist.SchemaVersion.SchemaVersion
+		schemaVersion = m.SchemaVersion
+	case *ocischema.DeserializedImageIndex:
+		expectedSchemaVersion = ocischema.IndexSchemaVersion.SchemaVersion
+		schemaVersion = m.SchemaVersion
+	default:
 		return "", fmt.Errorf("wrong type put to manifestListHandler: %T", manifestList)
 	}
+	if schemaVersion != expectedSchemaVersion {
+		return "", fmt.Errorf("unrecognized manifest list schema version %d, expected %d", schemaVersion, expectedSchemaVersion)
+	}
 
-	if err := ms.verifyManifest(ms.ctx, *m, skipDependencyVerification); err != nil {
+	if err := ms.verifyManifest(ms.ctx, manifestList, skipDependencyVerification); err != nil {
 		return "", err
 	}
 
-	mt, payload, err := m.Payload()
+	mt, payload, err := manifestList.Payload()
 	if err != nil {
 		return "", err
 	}
@@ -60,12 +71,8 @@ func (ms *manifestListHandler) Put(ctx context.Context, manifestList distributio
 // perspective of the registry. As a policy, the registry only tries to
 // store valid content, leaving trust policies of that content up to
 // consumers.
-func (ms *manifestListHandler) verifyManifest(ctx context.Context, mnfst manifestlist.DeserializedManifestList, skipDependencyVerification bool) error {
+func (ms *manifestListHandler) verifyManifest(ctx context.Context, mnfst distribution.Manifest, skipDependencyVerification bool) error {
 	var errs distribution.ErrManifestVerification
-
-	if mnfst.SchemaVersion != 2 {
-		return fmt.Errorf("unrecognized manifest list schema version %d", mnfst.SchemaVersion)
-	}
 
 	if !skipDependencyVerification {
 		// This manifest service is different from the blob service

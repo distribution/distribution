@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/distribution/distribution/v3/reference"
+	"github.com/distribution/reference"
 	"github.com/gorilla/mux"
 )
 

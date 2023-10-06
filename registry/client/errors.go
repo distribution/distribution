@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 
 	"github.com/distribution/distribution/v3/registry/api/errcode"
@@ -37,11 +38,27 @@ func (e *UnexpectedHTTPResponseError) Error() string {
 	return fmt.Sprintf("error parsing HTTP %d response body: %s: %q", e.StatusCode, e.ParseErr.Error(), string(e.Response))
 }
 
-func parseHTTPErrorResponse(statusCode int, r io.Reader) error {
+func parseHTTPErrorResponse(resp *http.Response) error {
 	var errors errcode.Errors
-	body, err := io.ReadAll(r)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
+	}
+
+	statusCode := resp.StatusCode
+	ctHeader := resp.Header.Get("Content-Type")
+
+	if ctHeader == "" {
+		return makeError(statusCode, string(body))
+	}
+
+	contentType, _, err := mime.ParseMediaType(ctHeader)
+	if err != nil {
+		return fmt.Errorf("failed parsing content-type: %w", err)
+	}
+
+	if contentType != "application/json" && contentType != "application/vnd.api+json" {
+		return makeError(statusCode, string(body))
 	}
 
 	// For backward compatibility, handle irregularly formatted
@@ -51,14 +68,7 @@ func parseHTTPErrorResponse(statusCode int, r io.Reader) error {
 	}
 	err = json.Unmarshal(body, &detailsErr)
 	if err == nil && detailsErr.Details != "" {
-		switch statusCode {
-		case http.StatusUnauthorized:
-			return errcode.ErrorCodeUnauthorized.WithMessage(detailsErr.Details)
-		case http.StatusTooManyRequests:
-			return errcode.ErrorCodeTooManyRequests.WithMessage(detailsErr.Details)
-		default:
-			return errcode.ErrorCodeUnknown.WithMessage(detailsErr.Details)
-		}
+		return makeError(statusCode, detailsErr.Details)
 	}
 
 	if err := json.Unmarshal(body, &errors); err != nil {
@@ -82,6 +92,19 @@ func parseHTTPErrorResponse(statusCode int, r io.Reader) error {
 	return errors
 }
 
+func makeError(statusCode int, details string) error {
+	switch statusCode {
+	case http.StatusUnauthorized:
+		return errcode.ErrorCodeUnauthorized.WithMessage(details)
+	case http.StatusForbidden:
+		return errcode.ErrorCodeDenied.WithMessage(details)
+	case http.StatusTooManyRequests:
+		return errcode.ErrorCodeTooManyRequests.WithMessage(details)
+	default:
+		return errcode.ErrorCodeUnknown.WithMessage(details)
+	}
+}
+
 func makeErrorList(err error) []error {
 	if errL, ok := err.(errcode.Errors); ok {
 		return []error(errL)
@@ -93,11 +116,16 @@ func mergeErrors(err1, err2 error) error {
 	return errcode.Errors(append(makeErrorList(err1), makeErrorList(err2)...))
 }
 
-// HandleErrorResponse returns error parsed from HTTP response for an
-// unsuccessful HTTP response code (in the range 400 - 499 inclusive). An
-// UnexpectedHTTPStatusError returned for response code outside of expected
-// range.
-func HandleErrorResponse(resp *http.Response) error {
+// HandleHTTPResponseError returns error parsed from HTTP response, if any.
+// It returns nil if no error occurred (HTTP status 200-399), or an error
+// for unsuccessful HTTP response codes (in the range 400 - 499 inclusive).
+// If possible, it returns a typed error, but an UnexpectedHTTPStatusError
+// is returned for response code outside the expected range (HTTP status < 200
+// and > 500).
+func HandleHTTPResponseError(resp *http.Response) error {
+	if resp.StatusCode >= 200 && resp.StatusCode <= 399 {
+		return nil
+	}
 	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
 		// Check for OAuth errors within the `WWW-Authenticate` header first
 		// See https://tools.ietf.org/html/rfc6750#section-3
@@ -118,11 +146,10 @@ func HandleErrorResponse(resp *http.Response) error {
 				} else {
 					err.Message = err.Code.Message()
 				}
-
-				return mergeErrors(err, parseHTTPErrorResponse(resp.StatusCode, resp.Body))
+				return mergeErrors(err, parseHTTPErrorResponse(resp))
 			}
 		}
-		err := parseHTTPErrorResponse(resp.StatusCode, resp.Body)
+		err := parseHTTPErrorResponse(resp)
 		if uErr, ok := err.(*UnexpectedHTTPResponseError); ok && resp.StatusCode == 401 {
 			return errcode.ErrorCodeUnauthorized.WithDetail(uErr.Response)
 		}
@@ -131,8 +158,23 @@ func HandleErrorResponse(resp *http.Response) error {
 	return &UnexpectedHTTPStatusError{Status: resp.Status}
 }
 
+// HandleErrorResponse returns error parsed from HTTP response for an
+// unsuccessful HTTP response code (in the range 400 - 499 inclusive). An
+// UnexpectedHTTPStatusError returned for response code outside of expected
+// range.
+//
+// Deprecated: use [HandleHTTPResponseError] and check the error.
+func HandleErrorResponse(resp *http.Response) error {
+	if resp.StatusCode >= 200 && resp.StatusCode <= 399 {
+		return &UnexpectedHTTPStatusError{Status: resp.Status}
+	}
+	return HandleHTTPResponseError(resp)
+}
+
 // SuccessStatus returns true if the argument is a successful HTTP response
 // code (in the range 200 - 399 inclusive).
+//
+// Deprecated: use [HandleHTTPResponseError] and check the error.
 func SuccessStatus(status int) bool {
 	return status >= 200 && status <= 399
 }

@@ -42,6 +42,9 @@ type Configuration struct {
 		// Hooks allows users to configure the log hooks, to enabling the
 		// sequent handling behavior, when defined levels of log message emit.
 		Hooks []LogHook `yaml:"hooks,omitempty"`
+
+		// ReportCaller allows user to configure the log to report the caller
+		ReportCaller bool `yaml:"reportcaller,omitempty"`
 	}
 
 	// Loglevel is the level at which registry operations are logged.
@@ -58,9 +61,6 @@ type Configuration struct {
 
 	// Middleware lists all middlewares to be used by the registry.
 	Middleware map[string][]Middleware `yaml:"middleware,omitempty"`
-
-	// Reporting is the configuration for error reporting
-	Reporting Reporting `yaml:"reporting,omitempty"`
 
 	// HTTP contains configuration parameters for the registry's http
 	// interface.
@@ -128,6 +128,10 @@ type Configuration struct {
 				// Hosts specifies the hosts which are allowed to obtain Let's
 				// Encrypt certificates.
 				Hosts []string `yaml:"hosts,omitempty"`
+
+				// DirectoryURL points to the CA directory endpoint.
+				// If empty, LetsEncrypt is used.
+				DirectoryURL string `yaml:"directoryurl,omitempty"`
 			} `yaml:"letsencrypt,omitempty"`
 		} `yaml:"tls,omitempty"`
 
@@ -163,55 +167,12 @@ type Configuration struct {
 	Notifications Notifications `yaml:"notifications,omitempty"`
 
 	// Redis configures the redis pool available to the registry webapp.
-	Redis struct {
-		// Addr specifies the the redis instance available to the application.
-		Addr string `yaml:"addr,omitempty"`
+	Redis Redis `yaml:"redis,omitempty"`
 
-		// Password string to use when making a connection.
-		Password string `yaml:"password,omitempty"`
-
-		// DB specifies the database to connect to on the redis instance.
-		DB int `yaml:"db,omitempty"`
-
-		// TLS configures settings for redis in-transit encryption
-		TLS struct {
-			Enabled bool `yaml:"enabled,omitempty"`
-		} `yaml:"tls,omitempty"`
-
-		DialTimeout  time.Duration `yaml:"dialtimeout,omitempty"`  // timeout for connect
-		ReadTimeout  time.Duration `yaml:"readtimeout,omitempty"`  // timeout for reads of data
-		WriteTimeout time.Duration `yaml:"writetimeout,omitempty"` // timeout for writes of data
-
-		// Pool configures the behavior of the redis connection pool.
-		Pool struct {
-			// MaxIdle sets the maximum number of idle connections.
-			MaxIdle int `yaml:"maxidle,omitempty"`
-
-			// MaxActive sets the maximum number of connections that should be
-			// opened before blocking a connection request.
-			MaxActive int `yaml:"maxactive,omitempty"`
-
-			// IdleTimeout sets the amount time to wait before closing
-			// inactive connections.
-			IdleTimeout time.Duration `yaml:"idletimeout,omitempty"`
-		} `yaml:"pool,omitempty"`
-	} `yaml:"redis,omitempty"`
-
-	Health Health `yaml:"health,omitempty"`
+	Health  Health  `yaml:"health,omitempty"`
+	Catalog Catalog `yaml:"catalog,omitempty"`
 
 	Proxy Proxy `yaml:"proxy,omitempty"`
-
-	// Compatibility is used for configurations of working with older or deprecated features.
-	Compatibility struct {
-		// Schema1 configures how schema1 manifests will be handled
-		Schema1 struct {
-			// TrustKey is the signing key to use for adding the signature to
-			// schema1 manifests.
-			TrustKey string `yaml:"signingkeyfile,omitempty"`
-			// Enabled determines if schema1 manifests should be pullable
-			Enabled bool `yaml:"enabled,omitempty"`
-		} `yaml:"schema1,omitempty"`
-	} `yaml:"compatibility,omitempty"`
 
 	// Validation configures validation options for the registry.
 	Validation struct {
@@ -246,6 +207,16 @@ type Configuration struct {
 			Classes []string `yaml:"classes"`
 		} `yaml:"repository,omitempty"`
 	} `yaml:"policy,omitempty"`
+}
+
+// Catalog is composed of MaxEntries.
+// Catalog endpoint (/v2/_catalog) configuration, it provides the configuration
+// options to control the maximum number of entries returned by the catalog endpoint.
+type Catalog struct {
+	// Max number of entries returned by the catalog endpoint. Requesting n entries
+	// to the catalog endpoint will return at most MaxEntries entries.
+	// An empty or a negative value will set a default of 1000 maximum entries by default.
+	MaxEntries int `yaml:"maxentries,omitempty"`
 }
 
 // LogHook is composed of hook Level and Type.
@@ -298,6 +269,44 @@ type FileChecker struct {
 	// Threshold is the number of times a check must fail to trigger an
 	// unhealthy state
 	Threshold int `yaml:"threshold,omitempty"`
+}
+
+// Redis configures the redis pool available to the registry webapp.
+type Redis struct {
+	// Addr specifies the the redis instance available to the application.
+	Addr string `yaml:"addr,omitempty"`
+
+	// Usernames can be used as a finer-grained permission control since the introduction of the redis 6.0.
+	Username string `yaml:"username,omitempty"`
+
+	// Password string to use when making a connection.
+	Password string `yaml:"password,omitempty"`
+
+	// DB specifies the database to connect to on the redis instance.
+	DB int `yaml:"db,omitempty"`
+
+	// TLS configures settings for redis in-transit encryption
+	TLS struct {
+		Enabled bool `yaml:"enabled,omitempty"`
+	} `yaml:"tls,omitempty"`
+
+	DialTimeout  time.Duration `yaml:"dialtimeout,omitempty"`  // timeout for connect
+	ReadTimeout  time.Duration `yaml:"readtimeout,omitempty"`  // timeout for reads of data
+	WriteTimeout time.Duration `yaml:"writetimeout,omitempty"` // timeout for writes of data
+
+	// Pool configures the behavior of the redis connection pool.
+	Pool struct {
+		// MaxIdle sets the maximum number of idle connections.
+		MaxIdle int `yaml:"maxidle,omitempty"`
+
+		// MaxActive sets the maximum number of connections that should be
+		// opened before blocking a connection request.
+		MaxActive int `yaml:"maxactive,omitempty"`
+
+		// IdleTimeout sets the amount time to wait before closing
+		// inactive connections.
+		IdleTimeout time.Duration `yaml:"idletimeout,omitempty"`
+	} `yaml:"pool,omitempty"`
 }
 
 // HTTPChecker is a type of entry in the health section for checking HTTP URIs.
@@ -594,35 +603,6 @@ type Ignore struct {
 	Actions    []string `yaml:"actions"`    // ignore action types
 }
 
-// Reporting defines error reporting methods.
-type Reporting struct {
-	// Bugsnag configures error reporting for Bugsnag (bugsnag.com).
-	Bugsnag BugsnagReporting `yaml:"bugsnag,omitempty"`
-	// NewRelic configures error reporting for NewRelic (newrelic.com)
-	NewRelic NewRelicReporting `yaml:"newrelic,omitempty"`
-}
-
-// BugsnagReporting configures error reporting for Bugsnag (bugsnag.com).
-type BugsnagReporting struct {
-	// APIKey is the Bugsnag api key.
-	APIKey string `yaml:"apikey,omitempty"`
-	// ReleaseStage tracks where the registry is deployed.
-	// Examples: production, staging, development
-	ReleaseStage string `yaml:"releasestage,omitempty"`
-	// Endpoint is used for specifying an enterprise Bugsnag endpoint.
-	Endpoint string `yaml:"endpoint,omitempty"`
-}
-
-// NewRelicReporting configures error reporting for NewRelic (newrelic.com)
-type NewRelicReporting struct {
-	// LicenseKey is the NewRelic user license key
-	LicenseKey string `yaml:"licensekey,omitempty"`
-	// Name is the component name of the registry in NewRelic
-	Name string `yaml:"name,omitempty"`
-	// Verbose configures debug output to STDOUT
-	Verbose bool `yaml:"verbose,omitempty"`
-}
-
 // Middleware configures named middlewares to be applied at injection points.
 type Middleware struct {
 	// Name the middleware registers itself as
@@ -643,6 +623,11 @@ type Proxy struct {
 
 	// Password of the hub user
 	Password string `yaml:"password"`
+
+	// TTL is the expiry time of the content and will be cleaned up when it expires
+	// if not set, defaults to 7 * 24 hours
+	// If set to zero, will never expire cache
+	TTL *time.Duration `yaml:"ttl,omitempty"`
 }
 
 // Parse parses an input configuration yaml document into a Configuration struct
@@ -674,6 +659,11 @@ func Parse(rd io.Reader) (*Configuration, error) {
 					if v0_1.Loglevel != Loglevel("") {
 						v0_1.Loglevel = Loglevel("")
 					}
+
+					if v0_1.Catalog.MaxEntries <= 0 {
+						v0_1.Catalog.MaxEntries = 1000
+					}
+
 					if v0_1.Storage.Type() == "" {
 						return nil, errors.New("no storage configuration provided")
 					}

@@ -16,9 +16,9 @@ This storage driver package comes bundled with several drivers:
 - [filesystem](filesystem.md): A local storage driver configured to use a directory tree in the local filesystem.
 - [s3](s3.md): A driver storing objects in an Amazon Simple Storage Service (S3) bucket.
 - [azure](azure.md): A driver storing objects in [Microsoft Azure Blob Storage](https://azure.microsoft.com/en-us/services/storage/).
-- [swift](swift.md): A driver storing objects in [Openstack Swift](https://docs.openstack.org/swift/latest/).
-- [oss](oss.md): A driver storing objects in [Aliyun OSS](https://www.aliyun.com/product/oss).
 - [gcs](gcs.md): A driver storing objects in a [Google Cloud Storage](https://cloud.google.com/storage/) bucket.
+- oss: *NO LONGER SUPPORTED*
+- swift: *NO LONGER SUPPORTED*
 
 ## Storage driver API
 
@@ -39,6 +39,18 @@ with a driver name and parameters map. If no such storage driver can be found,
 `factory.Create` returns an `InvalidStorageDriverError`.
 
 ## Driver contribution
+
+New storage drivers are not currently being accepted.
+See https://github.com/distribution/distribution/issues/3988 for discussion.
+
+There are forks of this repo that implement custom storage drivers.
+These are not supported by the OCI distribution project.
+The known forks are:
+- Storj DCS: https://github.com/storj/docker-registry
+- HuaweiCloud OBS: https://github.com/setoru/distribution/tree/obs
+- us3: https://github.com/lambertxiao/distribution/tree/main
+- Baidu BOS: https://github.com/dolfly/distribution/tree/bos
+- HDFS: https://github.com/haosdent/distribution/tree/master
 
 ### Writing new storage drivers
 

@@ -9,28 +9,6 @@ import (
 	"github.com/opencontainers/go-digest"
 )
 
-type mockBlobService struct {
-	descriptors map[digest.Digest]distribution.Descriptor
-	distribution.BlobService
-}
-
-func (bs *mockBlobService) Stat(ctx context.Context, dgst digest.Digest) (distribution.Descriptor, error) {
-	if descriptor, ok := bs.descriptors[dgst]; ok {
-		return descriptor, nil
-	}
-	return distribution.Descriptor{}, distribution.ErrBlobUnknown
-}
-
-func (bs *mockBlobService) Put(ctx context.Context, mediaType string, p []byte) (distribution.Descriptor, error) {
-	d := distribution.Descriptor{
-		MediaType: "application/octet-stream",
-		Digest:    digest.FromBytes(p),
-		Size:      int64(len(p)),
-	}
-	bs.descriptors[d.Digest] = d
-	return d, nil
-}
-
 func TestBuilder(t *testing.T) {
 	imgJSON := []byte(`{
     "architecture": "amd64",
@@ -150,8 +128,13 @@ func TestBuilder(t *testing.T) {
 		},
 	}
 
-	bs := &mockBlobService{descriptors: make(map[digest.Digest]distribution.Descriptor)}
-	builder := NewManifestBuilder(bs, MediaTypeImageConfig, imgJSON)
+	d := distribution.Descriptor{
+		Digest:    digest.FromBytes(imgJSON),
+		Size:      int64(len(imgJSON)),
+		MediaType: MediaTypeImageConfig,
+	}
+
+	builder := NewManifestBuilder(d, imgJSON)
 
 	for _, d := range descriptors {
 		if err := builder.AppendReference(d); err != nil {
@@ -162,12 +145,6 @@ func TestBuilder(t *testing.T) {
 	built, err := builder.Build(context.Background())
 	if err != nil {
 		t.Fatalf("Build returned error: %v", err)
-	}
-
-	// Check that the config was put in the blob store
-	_, err = bs.Stat(context.Background(), configDigest)
-	if err != nil {
-		t.Fatal("config was not put in the blob store")
 	}
 
 	manifest := built.(*DeserializedManifest).Manifest

@@ -56,3 +56,14 @@ func contains(ss []string, q string) bool {
 
 	return false
 }
+
+// containsAny returns true if any of q is found in ss.
+func containsAny(ss []string, q []string) bool {
+	for _, s := range ss {
+		if contains(q, s) {
+			return true
+		}
+	}
+
+	return false
+}

@@ -1,7 +1,5 @@
 linters:
   enable:
-    - structcheck
-    - varcheck
     - staticcheck
     - unconvert
     - gofmt
@@ -11,8 +9,18 @@ linters:
     - vet
     - unused
     - misspell
+    - bodyclose
+    - prealloc
   disable:
     - errcheck
+
+linters-settings:
+  revive:
+    rules:
+      # TODO(thaJeztah): temporarily disabled the "unused-parameter" check.
+      # It produces many warnings, and some of those may need to be looked at.
+      - name: unused-parameter
+        disabled: true
 
 run:
   deadline: 2m

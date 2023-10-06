@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	check "gopkg.in/check.v1"
+	"gopkg.in/check.v1"
 )
 
 func Test(t *testing.T) { check.TestingT(t) }
@@ -56,4 +56,47 @@ func (s *MiddlewareSuite) TestHTTP(c *check.C) {
 	url, err := middleware.URLFor(context.TODO(), "morty/data", nil)
 	c.Assert(err, check.Equals, nil)
 	c.Assert(url, check.Equals, "http://example.com/morty/data")
+}
+
+func (s *MiddlewareSuite) TestPath(c *check.C) {
+	// basePath: end with no slash
+	options := make(map[string]interface{})
+	options["baseurl"] = "https://example.com/path"
+	middleware, err := newRedirectStorageMiddleware(nil, options)
+	c.Assert(err, check.Equals, nil)
+
+	m, ok := middleware.(*redirectStorageMiddleware)
+	c.Assert(ok, check.Equals, true)
+	c.Assert(m.scheme, check.Equals, "https")
+	c.Assert(m.host, check.Equals, "example.com")
+	c.Assert(m.basePath, check.Equals, "/path")
+
+	// call URLFor() with no leading slash
+	url, err := middleware.URLFor(context.TODO(), "morty/data", nil)
+	c.Assert(err, check.Equals, nil)
+	c.Assert(url, check.Equals, "https://example.com/path/morty/data")
+	// call URLFor() with leading slash
+	url, err = middleware.URLFor(context.TODO(), "/morty/data", nil)
+	c.Assert(err, check.Equals, nil)
+	c.Assert(url, check.Equals, "https://example.com/path/morty/data")
+
+	// basePath: end with slash
+	options["baseurl"] = "https://example.com/path/"
+	middleware, err = newRedirectStorageMiddleware(nil, options)
+	c.Assert(err, check.Equals, nil)
+
+	m, ok = middleware.(*redirectStorageMiddleware)
+	c.Assert(ok, check.Equals, true)
+	c.Assert(m.scheme, check.Equals, "https")
+	c.Assert(m.host, check.Equals, "example.com")
+	c.Assert(m.basePath, check.Equals, "/path/")
+
+	// call URLFor() with no leading slash
+	url, err = middleware.URLFor(context.TODO(), "morty/data", nil)
+	c.Assert(err, check.Equals, nil)
+	c.Assert(url, check.Equals, "https://example.com/path/morty/data")
+	// call URLFor() with leading slash
+	url, err = middleware.URLFor(context.TODO(), "/morty/data", nil)
+	c.Assert(err, check.Equals, nil)
+	c.Assert(url, check.Equals, "https://example.com/path/morty/data")
 }

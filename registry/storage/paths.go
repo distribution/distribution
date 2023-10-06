@@ -24,7 +24,7 @@ const (
 // The path layout in the storage backend is roughly as follows:
 //
 //	<root>/v2
-//	├── blob
+//	├── blobs
 //	│   └── <algorithm>
 //	│       └── <split directory content addressable storage>
 //	└── repositories
@@ -77,9 +77,14 @@ const (
 //
 // We cover the path formats implemented by this path mapper below.
 //
+//	Repositories:
+//
+//	repositoriesRootPathSpec:     <root>/v2/repositories
+//
 //	Manifests:
 //
-//	manifestRevisionsPathSpec:      <root>/v2/repositories/<name>/_manifests/revisions/
+//	manifestsPathSpec:             <root>/v2/repositories/<name>/_manifests
+//	manifestRevisionsPathSpec:     <root>/v2/repositories/<name>/_manifests/revisions/
 //	manifestRevisionPathSpec:      <root>/v2/repositories/<name>/_manifests/revisions/<algorithm>/<hex digest>/
 //	manifestRevisionLinkPathSpec:  <root>/v2/repositories/<name>/_manifests/revisions/<algorithm>/<hex digest>/link
 //
@@ -108,7 +113,6 @@ const (
 //	blobsPathSpec:                  <root>/v2/blobs/
 //	blobPathSpec:                   <root>/v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>
 //	blobDataPathSpec:               <root>/v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>/data
-//	blobMediaTypePathSpec:               <root>/v2/blobs/<algorithm>/<first two hex bytes of digest>/<hex digest>/data
 //
 // For more information on the semantic meaning of each path and their
 // contents, please see the path spec documentation.
@@ -129,6 +133,9 @@ func pathFor(spec pathSpec) (string, error) {
 	repoPrefix := append(rootPrefix, "repositories")
 
 	switch v := spec.(type) {
+
+	case manifestsPathSpec:
+		return path.Join(append(repoPrefix, v.name, "_manifests")...), nil
 
 	case manifestRevisionsPathSpec:
 		return path.Join(append(repoPrefix, v.name, "_manifests", "revisions")...), nil
@@ -256,6 +263,13 @@ type pathSpec interface {
 	pathSpec()
 }
 
+// manifestPathSpec describes the directory path for a manifest.
+type manifestsPathSpec struct {
+	name string
+}
+
+func (manifestsPathSpec) pathSpec() {}
+
 // manifestRevisionsPathSpec describes the directory path for
 // a manifest revision.
 type manifestRevisionsPathSpec struct {
@@ -346,7 +360,7 @@ type layersPathSpec struct {
 
 func (layersPathSpec) pathSpec() {}
 
-// blobLinkPathSpec specifies a path for a blob link, which is a file with a
+// layerLinkPathSpec specifies a path for a blob link, which is a file with a
 // blob id. The blob link will contain a content addressable blob id reference
 // into the blob store. The format of the contents is as follows:
 //
@@ -403,7 +417,7 @@ type uploadDataPathSpec struct {
 
 func (uploadDataPathSpec) pathSpec() {}
 
-// uploadDataPathSpec defines the path parameters for the file that stores the
+// uploadStartedAtPathSpec defines the path parameters for the file that stores the
 // start time of an uploads. If it is missing, the upload is considered
 // unknown. Admittedly, the presence of this file is an ugly hack to make sure
 // we have a way to cleanup old or stalled uploads that doesn't rely on driver
