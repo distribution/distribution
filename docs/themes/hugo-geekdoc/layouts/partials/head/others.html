@@ -1,0 +1,73 @@
+{{- if default true .Site.Params.geekdocDarkModeToggle }}
+  <script src="{{ index (index .Site.Data.assets "colortheme.js") "src" | relURL }}"></script>
+{{- end }}
+<script src="{{ index (index .Site.Data.assets "main.js") "src" | relURL }}"></script>
+
+<link
+  rel="preload"
+  as="font"
+  href="{{ "fonts/Metropolis.woff2" | relURL }}"
+  type="font/woff2"
+  crossorigin="anonymous"
+/>
+<link
+  rel="preload"
+  as="font"
+  href="{{ "fonts/LiberationSans.woff2" | relURL }}"
+  type="font/woff2"
+  crossorigin="anonymous"
+/>
+
+<link
+  rel="preload"
+  href="{{ index (index .Site.Data.assets "main.scss") "src" | relURL }}"
+  as="style"
+/>
+<link
+  rel="stylesheet"
+  href="{{ index (index .Site.Data.assets "main.scss") "src" | relURL }}"
+  media="all"
+/>
+
+<link
+  rel="preload"
+  href="{{ index (index .Site.Data.assets "mobile.scss") "src" | relURL }}"
+  as="style"
+/>
+<link
+  rel="stylesheet"
+  href="{{ index (index .Site.Data.assets "mobile.scss") "src" | relURL }}"
+  media="screen and (max-width: 45rem)"
+/>
+
+<link
+  rel="preload"
+  href="{{ index (index .Site.Data.assets "print.scss") "src" | relURL }}"
+  as="style"
+/>
+<link
+  rel="stylesheet"
+  href="{{ index (index .Site.Data.assets "print.scss") "src" | relURL }}"
+  media="print"
+/>
+
+<link
+  rel="preload"
+  href="{{ index (index .Site.Data.assets "custom.css") "src" | relURL }}"
+  as="style"
+/>
+<link
+  rel="stylesheet"
+  href="{{ index (index .Site.Data.assets "custom.css") "src" | relURL }}"
+  media="all"
+/>
+
+{{- with .OutputFormats.Get "html" }}
+  {{ printf `<link href=%q rel=%q type=%q />` .Permalink .Rel .MediaType.Type | safeHTML }}
+{{- end }}
+
+{{- if (default false $.Site.Params.geekdocOverwriteHTMLBase) }}
+  <base href="{{ .Site.BaseURL }}" />
+{{- end }}
+
+{{ printf "<!-- %s -->" "Made with Geekdoc theme https://github.com/thegeeklab/hugo-geekdoc" | safeHTML }}

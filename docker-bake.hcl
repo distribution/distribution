@@ -94,3 +94,20 @@ target "image-all" {
     "linux/s390x"
   ]
 }
+
+target "_common_docs" {
+  dockerfile = "./dockerfiles/docs.Dockerfile"
+}
+
+target "docs-export" {
+  inherits = ["_common_docs"]
+  target = "out"
+  output = ["type=local,dest=build/docs"]
+}
+
+target "docs-image" {
+  inherits = ["_common_docs"]
+  target = "server"
+  output = ["type=docker"]
+  tags = ["registry-docs:local"]
+}

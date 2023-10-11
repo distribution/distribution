@@ -1,0 +1,13 @@
+[
+  {{ range $index, $page := (where .Site.Pages "Params.geekdocProtected" "ne" true) }}
+    {{ if ne $index 0 }},{{ end }}
+    {
+      "id": {{ $index }},
+      "href": "{{ $page.RelPermalink }}",
+      "title": {{ (partial "utils/title" $page) | jsonify }},
+      "parent": {{ with $page.Parent }}{{ (partial "utils/title" .) | jsonify }}{{ else }}""{{ end }},
+      "content": {{ $page.Plain | jsonify }},
+      "description": {{ $page.Summary | plainify | jsonify }}
+    }
+  {{ end }}
+]

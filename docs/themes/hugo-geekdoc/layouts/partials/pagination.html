@@ -1,0 +1,22 @@
+{{ $pag := $.Paginator }}
+
+
+<nav class="gdoc-paging flex flex-even align-center" role="navigation">
+  <div class="gdoc-paging__item gdoc-paging__item--prev">
+    {{ if $pag.HasPrev }}
+      <a class="flex-inline align-center fake-link no-wrap" href="{{ $pag.Prev.URL }}">
+        <i class="gdoc-icon">gdoc_keyboard_arrow_left</i>
+        {{ i18n "pagination_page_prev" | upper }}
+      </a>
+    {{ end }}
+  </div>
+  <div class="gdoc-paging__state">{{ i18n "pagination_page_state" $pag }}</div>
+  <div class="gdoc-paging__item gdoc-paging__item--next">
+    {{ if $pag.HasNext }}
+      <a class="flex-inline align-center fake-link no-wrap" href="{{ $pag.Next.URL }}">
+        {{ i18n "pagination_page_next" | upper }}
+        <i class="gdoc-icon">gdoc_keyboard_arrow_right</i>
+      </a>
+    {{ end }}
+  </div>
+</nav>

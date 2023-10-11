@@ -1,0 +1,53 @@
+---
+edit_page: Upravit stránku
+
+nav_navigation: Navigace
+nav_tags: Tagy
+nav_more: Více
+nav_top: Zpět nahoru
+
+form_placeholder_search: Vyhledat
+
+error_page_title: Ztracen? Nic se neděje
+error_message_title: Ztracen?
+error_message_code: Error 404
+error_message_text: >
+  Vypadá to že stránka, kterou hledáte, neexistuje. Nemějte obavy, můžete
+  se vrátit zpět na <a class="gdoc-error__link" href="{{ . }}">domovskou stránku</a>.
+
+button_toggle_dark: Přepnout tmavý/světlý/automatický režim
+button_nav_open: Otevřít navigaci
+button_nav_close: Zavřít navigaci
+button_menu_open: Otevřít lištu nabídky
+button_menu_close: Zavřít lištu nabídky
+button_homepage: Zpět na domovskou stránku
+
+title_anchor_prefix: "Odkaz na:"
+
+posts_read_more: Přečíst celý příspěvek
+posts_read_time:
+  one: "Doba čtení: 1 minuta"
+  other: "Doba čtení: {{ . }} minut(y)"
+posts_update_prefix: Naposledy upraveno
+posts_count:
+  one: "Jeden příspěvek"
+  other: "Příspěvků: {{ . }}"
+posts_tagged_with: Všechny příspěvky označeny '{{ . }}'
+
+footer_build_with: >
+  Vytvořeno za pomocí <a href="https://gohugo.io/" class="gdoc-footer__link">Hugo</a> a
+  <svg class="gdoc-icon gdoc_heart"><use xlink:href="#gdoc_heart"></use></svg>
+footer_legal_notice: Právní upozornění
+footer_privacy_policy: Zásady ochrany soukromí
+footer_content_license_prefix: >
+  Obsah licencovaný pod
+
+language_switch_no_tranlation_prefix: "Stránka není přeložena:"
+
+propertylist_required: povinné
+propertylist_optional: volitené
+propertylist_default: výchozí
+
+pagination_page_prev: předchozí
+pagination_page_next: další
+pagination_page_state: "{{ .PageNumber }}/{{ .TotalPages }}"
