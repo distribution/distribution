@@ -2,6 +2,7 @@ package driver
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"regexp"
@@ -182,6 +183,16 @@ type Error struct {
 
 func (err Error) Error() string {
 	return fmt.Sprintf("%s: %s", err.DriverName, err.Enclosed)
+}
+
+func (err Error) MarshalJSON() ([]byte, error) {
+	return json.Marshal(struct {
+		DriverName string `json:"driver"`
+		Enclosed   string `json:"enclosed"`
+	}{
+		DriverName: err.DriverName,
+		Enclosed:   err.Enclosed.Error(),
+	})
 }
 
 // Errors provides the envelope for multiple errors
