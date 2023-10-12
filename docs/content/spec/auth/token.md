@@ -1,12 +1,12 @@
 ---
 title: "Token Authentication Specification"
-description: "Specifies the Docker Registry v2 authentication"
+description: "Specifies the Distribution Registry v2 authentication"
 keywords: registry, on-prem, images, tags, repository, distribution, Bearer authentication, advanced
 ---
 
-# Docker Registry v2 authentication via central service
+# Distribution Registry v2 authentication via central service
 
-This document outlines the v2 Docker registry authentication scheme:
+This document outlines the v2 Distribution registry authentication scheme:
 
 ![v2 registry auth](/images/v2-registry-auth.png)
 
@@ -27,9 +27,9 @@ This document outlines the v2 Docker registry authentication scheme:
 - Registry clients which can understand and respond to token auth challenges
   returned by the resource server.
 - An authorization server capable of managing access controls to their
-  resources hosted by any given service (such as repositories in a Docker
+  resources hosted by any given service (such as repositories in a Distribution
   Registry).
-- A Docker Registry capable of trusting the authorization server to sign tokens
+- A Distribution Registry capable of trusting the authorization server to sign tokens
   which clients can use for authorization and the ability to verify these
   tokens for single use or for use during a sufficiently short period of time.
 
@@ -39,11 +39,8 @@ The described server is meant to serve as a standalone access control manager
 for resources hosted by other services which wish to authenticate and manage
 authorizations using a separate access control manager.
 
-A service like this is used by the official Docker Registry to authenticate
-clients and verify their authorization to Docker image repositories.
-
-As of Docker 1.6, the registry client within the Docker Engine has been updated
-to handle such an authorization workflow.
+A service like this is used by public and private registries to authenticate
+clients and verify their authorization to image repositories.
 
 ## How to authenticate
 

@@ -9,7 +9,7 @@ This document describes what this command does and how and why it should be used
 
 ## About garbage collection
 
-In the context of the Docker registry, garbage collection is the process of
+In the context of the registry, garbage collection is the process of
 removing blobs from the filesystem when they are no longer referenced by a
 manifest. Blobs can include both layers and manifests.
 

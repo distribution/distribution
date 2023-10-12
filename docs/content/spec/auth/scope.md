@@ -4,7 +4,7 @@ description: "Describes the scope and access fields used for registry authorizat
 keywords: registry, on-prem, images, tags, repository, distribution, advanced, access, scope
 ---
 
-# Docker Registry Token Scope and Access
+# Distribution Registry Token Scope and Access
 
 Tokens used by the registry are always restricted what resources they may
 be used to access, where those resources may be accessed, and what actions

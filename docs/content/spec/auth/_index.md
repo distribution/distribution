@@ -1,10 +1,10 @@
 ---
-title: "Docker Registry Token Authentication"
-description: "Docker Registry v2 authentication schema"
+title: "Distribution Registry Token Authentication"
+description: "Distribution Registry v2 authentication schema"
 keywords: registry, on-prem, images, tags, repository, distribution, authentication, advanced
 ---
 
-# Docker Registry v2 authentication
+# Distribution Registry v2 authentication
 
 See the [Token Authentication Specification](token),
 [Token Authentication Implementation](jwt),

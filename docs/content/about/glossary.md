@@ -17,7 +17,7 @@ This page contains definitions for distribution related terms.
 
 	<dt id="image"><h4>Image</h4></dt>
 	<dd>
-      <blockquote>An image is a named set of immutable data from which a Docker container can be created.</blockquote>
+      <blockquote>An image is a named set of immutable data from which a container can be created.</blockquote>
       <p>
       An image is represented by a json file called a <a href="#manifest">manifest</a>, and is conceptually a set of <a href="#layer">layers</a>.
 

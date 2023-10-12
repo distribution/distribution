@@ -10,7 +10,7 @@ before moving your systems to production.
 
 ## Override specific configuration options
 
-In a typical setup where you run your Registry from the official image, you can
+In a typical setup where you run your registry as a container, you can
 specify a configuration variable from the environment by passing `-e` arguments
 to your `docker run` stanza or from within a Dockerfile using the `ENV`
 instruction.

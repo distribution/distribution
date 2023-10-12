@@ -4,12 +4,12 @@ keywords: registry, on-prem, images, tags, repository, distribution, use cases, 
 title: About Registry
 ---
 
-A registry is a storage and content delivery system, holding named Docker
+A registry is a storage and content delivery system, holding named container
 images, available in different tagged versions.
 
   > Example: the image `distribution/registry`, with tags `2.0` and `2.1`.
 
-Users interact with a registry by using docker push and pull commands.
+Users interact with a registry by pushing and pulling images.
 
   > Example: `docker pull registry-1.docker.io/distribution/registry:2.1`.
 
@@ -35,11 +35,11 @@ mostly useful for large installations that want to collect metrics.
 
 Image names as used in typical docker commands reflect their origin:
 
- * `docker pull ubuntu` instructs docker to pull an image named `ubuntu` from the official Docker Hub. This is simply a shortcut for the longer `docker pull docker.io/library/ubuntu` command
+ * `docker pull ubuntu` instructs docker to pull an image named `ubuntu` from Docker Hub. This is simply a shortcut for the longer `docker pull docker.io/library/ubuntu` command
  * `docker pull myregistrydomain:port/foo/bar` instructs docker to contact the registry located at `myregistrydomain:port` to find the image `foo/bar`
 
 You can find out more about the various Docker commands dealing with images in
-the [official Docker engine documentation](https://docs.docker.com/engine/reference/commandline/cli/).
+the [Docker engine documentation](https://docs.docker.com/engine/reference/commandline/cli/).
 
 ## Use cases
 

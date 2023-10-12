@@ -7,7 +7,7 @@ This is useful if you intend to actively work on the registry.
 
 ### Alternatives
 
-Most people should use the [official Registry docker image](https://hub.docker.com/r/library/registry/).
+Most people should use prebuilt images, for example, the [Registry docker image](https://hub.docker.com/r/library/registry/) provided by Docker.
 
 People looking for advanced operational use cases might consider rolling their own image with a custom Dockerfile inheriting `FROM registry:2`.
 

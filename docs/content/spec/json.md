@@ -1,15 +1,15 @@
 ---
 draft: true
-title: "Docker Distribution JSON Canonicalization"
+title: "CNCF Distribution JSON Canonicalization"
 description: "Explains registry JSON objects"
 keywords: ["registry, service, images, repository,  json"]
 ---
 
 
 
-# Docker Distribution JSON Canonicalization
+# CNCF Distribution JSON Canonicalization
 
-To provide consistent content hashing of JSON objects throughout Docker
+To provide consistent content hashing of JSON objects throughout CNCF
 Distribution APIs, the specification defines a canonical JSON format. Adopting
 such a canonicalization also aids in caching JSON responses.
 

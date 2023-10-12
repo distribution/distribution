@@ -401,7 +401,7 @@ authentication to work.
 {{< /hint >}}
 
 {{< hint type=warning >}}
-The official registry image **only** supports htpasswd credentials in
+The distribution registry **only** supports htpasswd credentials in
 bcrypt format, so if you omit the `-B` option when generating the credential
 using htpasswd, all authentication attempts will fail.
 {{< /hint >}}

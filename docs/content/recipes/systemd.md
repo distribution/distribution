@@ -22,7 +22,7 @@ registry.service
 
 ```ini
 [Unit]
-Description=Docker registry
+Description=Distribution registry
 After=docker.service
 Requires=docker.service
 
@@ -63,7 +63,7 @@ registry.socket
 
 ```ini
 [Unit]
-Description=container registry
+Description=Distribution registry
 
 [Socket]
 ListenStream=5000

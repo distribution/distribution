@@ -1,13 +1,13 @@
 ---
 description: High-level overview of the Registry
 keywords: registry, on-prem, images, tags, repository, distribution
-title: Docker Registry
+title: Distribution Registry
 ---
 
 ## What it is
 
 The Registry is a stateless, highly scalable server side application that stores
-and lets you distribute Docker images. The Registry is open-source, under the
+and lets you distribute container images. The Registry is open-source, under the
 permissive [Apache license](https://en.wikipedia.org/wiki/Apache_License).
 
 ## Why use it
@@ -21,13 +21,17 @@ You should use the Registry if you want to:
 ## Alternatives
 
 Users looking for a zero maintenance, ready-to-go solution are encouraged to
-head-over to the [Docker Hub](https://hub.docker.com), which provides a
-free-to-use, hosted Registry, plus additional features (organization accounts,
-automated builds, and more).
+use one of the existing registry services. Many of these provide support and security
+scanning, and are free for public repositories. For example:
+- [Docker Hub](https://hub.docker.com)
+- [Quay.io](https://quay.io/)
+- [GitHub Packages](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry)
 
-## Requirements
+Cloud infrastructure providers such as [AWS](https://aws.amazon.com/ecr/), [Azure](https://azure.microsoft.com/products/container-registry/), [Google Cloud](https://cloud.google.com/artifact-registry) and [IBM Cloud](https://www.ibm.com/products/container-registry) also have container registry services available at a cost.
 
-The Registry is compatible with Docker engine **version 1.6.0 or higher**.
+## Compatibility
+
+The distribution registry implements the [OCI Distribution Spec](https://github.com/opencontainers/distribution-spec) version 1.0.1.
 
 ## Basic commands
 

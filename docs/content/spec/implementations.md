@@ -6,9 +6,9 @@ draft: true
 
 This is a list of known implementations of the Distribution API spec.
 
-## [Docker Distribution Registry](https://github.com/distribution/distribution)
+## [CNCF Distribution Registry](https://github.com/distribution/distribution)
 
-Docker distribution is the reference implementation of the distribution API
+CNCF distribution is the reference implementation of the distribution API
 specification. It aims to fully implement the entire specification.
 
 ### Releases
