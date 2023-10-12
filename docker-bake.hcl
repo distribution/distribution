@@ -111,3 +111,9 @@ target "docs-image" {
   output = ["type=docker"]
   tags = ["registry-docs:local"]
 }
+
+target "docs-test" {
+  inherits = ["_common_docs"]
+  target = "test"
+  output = ["type=cacheonly"]
+}

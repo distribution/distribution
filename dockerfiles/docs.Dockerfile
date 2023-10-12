@@ -26,3 +26,10 @@ EXPOSE 1313
 
 FROM scratch AS out
 COPY --from=build /out /
+
+FROM wjdp/htmltest:v0.17.0 AS test
+WORKDIR /test
+COPY --from=build /out ./public
+ADD docs/.htmltest.yml .htmltest.yml
+RUN --mount=type=cache,target=tmp/.htmltest \
+    htmltest
