@@ -20,7 +20,7 @@ To override a configuration option, create an environment variable named
 and the `_` (underscore) represents indention levels. For example, you can
 configure the `rootdirectory` of the `filesystem` storage backend:
 
-```none
+```yaml
 storage:
   filesystem:
     rootdirectory: /var/lib/registry
@@ -28,7 +28,7 @@ storage:
 
 To override this value, set an environment variable like this:
 
-```none
+```sh
 REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY=/somewhere
 ```
 
@@ -64,7 +64,7 @@ These are all configuration options for the registry. Some options in the list
 are mutually exclusive. Read the detailed reference information about each
 option before finalizing your configuration.
 
-```none
+```yaml
 version: 0.1
 log:
   accesslog:
@@ -293,7 +293,7 @@ the children marked **required**.
 
 ## `version`
 
-```none
+```yaml
 version: 0.1
 ```
 
@@ -307,7 +307,7 @@ The `log` subsection configures the behavior of the logging system. The logging
 system outputs everything to stderr. You can adjust the granularity and format
 with this configuration section.
 
-```none
+```yaml
 log:
   accesslog:
     disabled: true
@@ -326,7 +326,7 @@ log:
 
 ### `accesslog`
 
-```none
+```yaml
 accesslog:
   disabled: true
 ```
@@ -338,7 +338,7 @@ Access logging can be disabled by setting the boolean flag `disabled` to `true`.
 
 ## `hooks`
 
-```none
+```yaml
 hooks:
   - type: mail
     levels:
@@ -362,7 +362,7 @@ Refer to `loglevel` to configure the level of messages printed.
 
 > **DEPRECATED:** Please use [log](#log) instead.
 
-```none
+```yaml
 loglevel: debug
 ```
 
@@ -371,7 +371,7 @@ Permitted values are `error`, `warn`, `info` and `debug`. The default is
 
 ## `storage`
 
-```none
+```yaml
 storage:
   filesystem:
     rootdirectory: /var/lib/registry
@@ -436,15 +436,15 @@ returns an error. You can choose any of these backend storage drivers:
 
 | Storage driver      | Description                                                                                                                                                                                                                                                                              |
 |---------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `filesystem`        | Uses the local disk to store registry files. It is ideal for development and may be appropriate for some small-scale production applications. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/filesystem.md). |
-| `azure`             | Uses Microsoft Azure Blob Storage. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/azure.md).                                                                                                               |
-| `gcs`               | Uses Google Cloud Storage. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/gcs.md).                                                                                                                           |
-| `s3`                | Uses Amazon Simple Storage Service (S3) and compatible Storage Services. See the [driver's reference documentation](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/s3.md).                                                                            |
+| `filesystem`        | Uses the local disk to store registry files. It is ideal for development and may be appropriate for some small-scale production applications. See the [driver's reference documentation](/storage-drivers/filesystem). |
+| `azure`             | Uses Microsoft Azure Blob Storage. See the [driver's reference documentation](/storage-drivers/azure).                                                                                                               |
+| `gcs`               | Uses Google Cloud Storage. See the [driver's reference documentation](/storage-drivers/gcs).                                                                                                                           |
+| `s3`                | Uses Amazon Simple Storage Service (S3) and compatible Storage Services. See the [driver's reference documentation](/storage-drivers/s3).                                                                            |
 
 For testing only, you can use the [`inmemory` storage
-driver](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/inmemory.md).
+driver](/storage-drivers/inmemory).
 If you would like to run a registry from volatile memory, use the
-[`filesystem` driver](https://github.com/docker/docker.github.io/tree/master/registry/storage-drivers/filesystem.md)
+[`filesystem` driver](/storage-drivers/filesystem)
 on a ramdisk.
 
 If you are deploying a registry on Windows, a Windows volume mounted from the
@@ -453,7 +453,7 @@ data-store. If you do use a Windows volume, the length of the `PATH` to
 the mount point must be within the `MAX_PATH` limits (typically 255 characters),
 or this error will occur:
 
-```none
+```text
 mkdir /XXX protocol error and your registry will not function properly.
 ```
 
@@ -496,7 +496,7 @@ Use the `delete` structure to enable the deletion of image blobs and manifests
 by digest. It defaults to false, but it can be enabled by writing the following
 on the configuration file:
 
-```none
+```yaml
 delete:
   enabled: true
 ```
@@ -531,14 +531,14 @@ instance is aggressively caching.
 To disable redirects, add a single flag `disable`, set to `true`
 under the `redirect` section:
 
-```none
+```yaml
 redirect:
   disable: true
 ```
 
 ## `auth`
 
-```none
+```yaml
 auth:
   silly:
     realm: silly-realm
@@ -593,7 +593,7 @@ security.
 
 
 For more information about Token based authentication configuration, see the
-[specification](spec/auth/token.md).
+[specification](/spec/auth/token).
 
 ### `htpasswd`
 
@@ -601,7 +601,7 @@ The _htpasswd_ authentication backed allows you to configure basic
 authentication using an
 [Apache htpasswd file](https://httpd.apache.org/docs/2.4/programs/htpasswd.html).
 The only supported password format is
-[`bcrypt`](http://en.wikipedia.org/wiki/Bcrypt). Entries with other hash types
+[`bcrypt`](https://en.wikipedia.org/wiki/Bcrypt). Entries with other hash types
 are ignored. The `htpasswd` file is loaded once, at startup. If the file is
 invalid, the registry will display an error and will not start.
 
@@ -629,7 +629,7 @@ object it is wrapping. For instance, a registry middleware must implement the
 This is an example configuration of the `cloudfront`  middleware, a storage
 middleware:
 
-```none
+```yaml
 middleware:
   registry:
     - name: ARegistryMiddleware
@@ -694,7 +694,7 @@ location of a proxy for the layer stored by the S3 storage driver.
 
 ## `http`
 
-```none
+```yaml
 http:
   addr: localhost:5000
   net: tcp
@@ -834,7 +834,7 @@ to access proxy statistics. These statistics are exposed at `/debug/vars` in JSO
 
 #### `prometheus`
 
-```none
+```yaml
 prometheus:
   enabled: true
   path: /metrics
@@ -879,7 +879,7 @@ settings for the registry.
 
 ## `notifications`
 
-```none
+```yaml
 notifications:
   events:
     includereferences: true
@@ -937,7 +937,7 @@ The `events` structure configures the information provided in event notification
 
 ## `redis`
 
-```none
+```yaml
 redis:
   addr: localhost:6379
   password: asecret
@@ -974,7 +974,7 @@ registry does not set an expiration value on keys.
 
 ### `pool`
 
-```none
+```yaml
 pool:
   maxidle: 16
   maxactive: 64
@@ -991,7 +991,7 @@ Use these settings to configure the behavior of the Redis connection pool.
 
 ### `tls`
 
-```none
+```yaml
 tls:
   enabled: false
 ```
@@ -1005,7 +1005,7 @@ Use these settings to configure Redis TLS.
 
 ## `health`
 
-```none
+```yaml
 health:
   storagedriver:
     enabled: true
@@ -1090,7 +1090,7 @@ attempt fails, the health check will fail.
 
 ## `proxy`
 
-```
+```yaml
 proxy:
   remoteurl: https://registry-1.docker.io
   username: [username]
@@ -1099,8 +1099,8 @@ proxy:
 ```
 
 The `proxy` structure allows a registry to be configured as a pull-through cache
-to Docker Hub.  See
-[mirror](https://github.com/docker/docker.github.io/tree/master/registry/recipes/mirror.md)
+to Docker Hub. See
+[mirror](/recipes/mirror)
 for more information. Pushing to a registry configured as a pull-through cache
 is unsupported.
 
@@ -1120,7 +1120,7 @@ username (such as `batman`) and the password for that username.
 
 ## `validation`
 
-```none
+```yaml
 validation:
   manifests:
     urls:
@@ -1151,15 +1151,15 @@ If `allow` is unset, pushing a manifest containing URLs fails.
 If `allow` is set, pushing a manifest succeeds only if all URLs match
 one of the `allow` regular expressions **and** one of the following holds:
 
-1.  `deny` is unset.
-2.  `deny` is set but no URLs within the manifest match any of the `deny` regular
-    expressions.
+1. `deny` is unset.
+2. `deny` is set but no URLs within the manifest match any of the `deny` regular
+   expressions.
 
 ## Example: Development configuration
 
 You can use this simple example for local development:
 
-```none
+```yaml
 version: 0.1
 log:
   level: debug
@@ -1183,10 +1183,9 @@ See
 for another simple configuration. Both examples are generally useful for local
 development.
 
-
 ## Example: Middleware configuration
 
-This example configures [Amazon Cloudfront](http://aws.amazon.com/cloudfront/)
+This example configures [Amazon Cloudfront](https://aws.amazon.com/cloudfront/)
 as the storage middleware in a registry. Middleware allows the registry to serve
 layers via a content delivery network (CDN). This reduces requests to the
 storage layer.
@@ -1195,7 +1194,7 @@ Cloudfront requires the S3 storage driver.
 
 This is the configuration expressed in YAML:
 
-```none
+```yaml
 middleware:
   storage:
   - name: cloudfront
@@ -1210,6 +1209,8 @@ middleware:
 See the configuration reference for [Cloudfront](#cloudfront) for more
 information about configuration options.
 
-> **Note**: Cloudfront keys exist separately from other AWS keys.  See
-> [the documentation on AWS credentials](http://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html)
-> for more information.
+{{< hint type=note >}}
+Cloudfront keys exist separately from other AWS keys. See
+[the documentation on AWS credentials](https://docs.aws.amazon.com/general/latest/gr/aws-security-credentials.html)
+for more information.
+{{< /hint >}}

@@ -41,10 +41,11 @@ is authorized for a specific resource.
 
 #### Resource Class
 
-> [!WARNING]
-> Resource Class is deprecated and ignored.
-> `repository` and `repository(plugin)` are considered equal when authorizing a token.
-> Authorization services should no longer return scopes with a resource class.
+{{< hint type=warning >}}
+Resource Class is deprecated and ignored.
+`repository` and `repository(plugin)` are considered equal when authorizing a token.
+Authorization services should no longer return scopes with a resource class.
+{{< /hint >}}
 
 The resource type might have a resource class which further classifies the
 the resource name within the resource type. A class is not required and
@@ -108,11 +109,13 @@ Full reference grammar is defined
 [here](https://pkg.go.dev/github.com/distribution/distribution/reference). Currently
 the scope name grammar is a subset of the reference grammar.
 
-> **NOTE:** that the `resourcename` may contain one `:` due to a possible port
-> number in the hostname component of the `resourcename`, so a naive
-> implementation that interprets the first three `:`-delimited tokens of a
-> `scope` to be the `resourcetype`, `resourcename`, and a list of `action`
-> would be insufficient.
+{{< hint type=note >}}
+Note that the `resourcename` may contain one `:` due to a possible port
+number in the hostname component of the `resourcename`, so a naive
+implementation that interprets the first three `:`-delimited tokens of a
+`scope` to be the `resourcetype`, `resourcename`, and a list of `action`
+would be insufficient.
+{{< /hint >}}
 
 ## Resource Provider Use
 
@@ -141,7 +144,7 @@ Each JWT access token may only have a single subject and audience but multiple
 resource scopes. The subject and audience are put into standard JWT fields
 `sub` and `aud`. The resource scope is put into the `access` field. The
 structure of the access field can be seen in the
-[jwt documentation](jwt.md).
+[jwt documentation](../jwt).
 
 ## Refresh Tokens
 

@@ -1,10 +1,9 @@
 ---
-title: Update deprecated schema image manifest version 2, v1 images
-description: Update deprecated schema v1 iamges
+title: Image manifest version 2, schema 1
+description: Update deprecated schema v1 images
 keywords: registry, on-prem, images, tags, repository, distribution, api, advanced, manifest
 ---
 
-## Image manifest version 2, schema 1
 With the release of image manifest version 2, schema 2, image manifest version
 2, schema 1 has been deprecated. This could lead to compatibility and
 vulnerability issues in images that haven't been updated to image manifest
@@ -17,7 +16,7 @@ associated with  the deprecated image manifest that will block your image from
 running successfully. A list of possible methods to help update your image is
 also included below.
 
-### Update to image manifest version 2, schema 2
+## Update to image manifest version 2, schema 2
 
 One way to upgrade an image from image manifest version 2, schema 1 to
 schema 2 is to `docker pull` the image and then `docker push` the image with a
@@ -29,8 +28,7 @@ manifest format, but does not update the contents within the image. Images
 using manifest version 2, schema 1 may contain unpatched vulnerabilities. We
 recommend looking for an alternative image or rebuilding it.
 
-
-### Update FROM statement
+## Update FROM statement
 
 You can rebuild the image by updating the `FROM` statement in your
 `Dockerfile`. If your image manifest is out-of-date, there is a chance the

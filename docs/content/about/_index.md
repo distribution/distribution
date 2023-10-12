@@ -27,7 +27,7 @@ The Registry GitHub repository includes additional information about advanced
 authentication and authorization methods. Only very large or public deployments
 are expected to extend the Registry in this way.
 
-Finally, the Registry ships with a robust [notification system](notifications.md),
+Finally, the Registry ships with a robust [notification system](notifications),
 calling webhooks in response to activity, and both extensive logging and reporting,
 mostly useful for large installations that want to collect metrics.
 
@@ -39,7 +39,7 @@ Image names as used in typical docker commands reflect their origin:
  * `docker pull myregistrydomain:port/foo/bar` instructs docker to contact the registry located at `myregistrydomain:port` to find the image `foo/bar`
 
 You can find out more about the various Docker commands dealing with images in
-the [official Docker engine documentation](../engine/reference/commandline/cli.md).
+the [official Docker engine documentation](https://docs.docker.com/engine/reference/commandline/cli/).
 
 ## Use cases
 
@@ -70,4 +70,4 @@ golang are certainly useful as well for advanced operations or hacking.
 
 ## Next
 
-Dive into [deploying your registry](deploying.md)
+Dive into [deploying your registry](deploying)

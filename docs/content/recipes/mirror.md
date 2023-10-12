@@ -2,8 +2,6 @@
 description: Setting-up a local mirror for Docker Hub images
 keywords: registry, on-prem, images, tags, repository, distribution, mirror, Hub, recipe, advanced
 title: Registry as a pull through cache
-redirect_from:
-- /engine/admin/registry_mirror/
 ---
 
 ## Use-case
@@ -88,7 +86,8 @@ but this property does not hold true for a registry cache cluster.
 
 > **Note**
 >
-> Service accounts included in the Team plan are limited to 5,000 pulls per day. See [Service Accounts](/docker-hub/service-accounts/) for more details.
+> Service accounts included in the Team plan are limited to 5,000 pulls per day.
+> See [Service Accounts](https://docs.docker.com/docker-hub/service-accounts/) for more details.
 
 ### Configure the cache
 
@@ -113,12 +112,12 @@ proxy:
 
 > **Warning**: For the scheduler to clean up old entries, `delete` must
 > be enabled in the registry configuration. See
-> [Registry Configuration](../configuration.md) for more details.
+> [Registry Configuration](/about/configuration) for more details.
 
 ### Configure the Docker daemon
 
 Either pass the `--registry-mirror` option when starting `dockerd` manually,
-or edit [`/etc/docker/daemon.json`](../../engine/reference/commandline/dockerd.md#daemon-configuration-file)
+or edit [`/etc/docker/daemon.json`](https://docs.docker.com/engine/reference/commandline/dockerd/#daemon-configuration-file)
 and add the `registry-mirrors` key and value, to make the change persistent.
 
 ```json

@@ -1,8 +1,6 @@
 ---
 description: Explains how to use storage drivers
 keywords: registry, on-prem, images, tags, repository, distribution, storage drivers, advanced
-redirect_from:
-- /registry/storagedrivers/
 title: Registry storage driver
 ---
 
@@ -12,11 +10,11 @@ This document describes the registry storage driver model, implementation, and e
 
 This storage driver package comes bundled with several drivers:
 
-- [inmemory](inmemory.md): A temporary storage driver using a local inmemory map. This exists solely for reference and testing.
-- [filesystem](filesystem.md): A local storage driver configured to use a directory tree in the local filesystem.
-- [s3](s3.md): A driver storing objects in an Amazon Simple Storage Service (S3) bucket.
-- [azure](azure.md): A driver storing objects in [Microsoft Azure Blob Storage](https://azure.microsoft.com/en-us/services/storage/).
-- [gcs](gcs.md): A driver storing objects in a [Google Cloud Storage](https://cloud.google.com/storage/) bucket.
+- [inmemory](inmemory): A temporary storage driver using a local inmemory map. This exists solely for reference and testing.
+- [filesystem](filesystem): A local storage driver configured to use a directory tree in the local filesystem.
+- [s3](s3): A driver storing objects in an Amazon Simple Storage Service (S3) bucket.
+- [azure](azure): A driver storing objects in [Microsoft Azure Blob Storage](https://azure.microsoft.com/en-us/services/storage/).
+- [gcs](gcs): A driver storing objects in a [Google Cloud Storage](https://cloud.google.com/storage/) bucket.
 - oss: *NO LONGER SUPPORTED*
 - swift: *NO LONGER SUPPORTED*
 
@@ -41,16 +39,17 @@ with a driver name and parameters map. If no such storage driver can be found,
 ## Driver contribution
 
 New storage drivers are not currently being accepted.
-See https://github.com/distribution/distribution/issues/3988 for discussion.
+See <https://github.com/distribution/distribution/issues/3988> for discussion.
 
 There are forks of this repo that implement custom storage drivers.
 These are not supported by the OCI distribution project.
 The known forks are:
-- Storj DCS: https://github.com/storj/docker-registry
-- HuaweiCloud OBS: https://github.com/setoru/distribution/tree/obs
-- us3: https://github.com/lambertxiao/distribution/tree/main
-- Baidu BOS: https://github.com/dolfly/distribution/tree/bos
-- HDFS: https://github.com/haosdent/distribution/tree/master
+
+- Storj DCS: <https://github.com/storj/docker-registry>
+- HuaweiCloud OBS: <https://github.com/setoru/distribution/tree/obs>
+- us3: <https://github.com/lambertxiao/distribution/tree/main>
+- Baidu BOS: <https://github.com/dolfly/distribution/tree/bos>
+- HDFS: <https://github.com/haosdent/distribution/tree/master>
 
 ### Writing new storage drivers
 

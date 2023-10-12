@@ -2,8 +2,6 @@
 description: Restricting access to your registry using a nginx proxy
 keywords: registry, on-prem, images, tags, repository, distribution, nginx, proxy, authentication, TLS, recipe, advanced
 title: Authenticate proxy with nginx
-redirect_from:
-- /registry/nginx/
 ---
 
 ## Use-case
@@ -19,7 +17,7 @@ mechanism fronting their internal http portal.
 
 If you just want authentication for your registry, and are happy maintaining
 users access separately, you should really consider sticking with the native
-[basic auth registry feature](../deploying.md#native-basic-auth).
+[basic auth registry feature](/about/deploying#native-basic-auth).
 
 ### Solution
 
@@ -52,7 +50,7 @@ complexity is required.
 For instance, Amazon's Elastic Load Balancer (ELB) in HTTPS mode already sets
 the following client header:
 
-```
+```none
 X-Real-IP
 X-Forwarded-For
 X-Forwarded-Proto
@@ -74,132 +72,136 @@ properly. For more information, see
 
 ## Setting things up
 
-Review the [requirements](index.md#requirements), then follow these steps.
+Review the [requirements](../#requirements), then follow these steps.
 
-1.  Create the required directories
+1. Create the required directories
 
-    ```console
-    $ mkdir -p auth data
-    ```
+   ```console
+   $ mkdir -p auth data
+   ```
 
-2.  Create the main nginx configuration. Paste this code block into a new file called `auth/nginx.conf`:
+2. Create the main nginx configuration. Paste this code block into a new file called `auth/nginx.conf`:
 
-    ```conf
-    events {
-        worker_connections  1024;
-    }
+   ```conf
+   events {
+       worker_connections  1024;
+   }
 
-    http {
+   http {
 
-      upstream docker-registry {
-        server registry:5000;
-      }
+     upstream docker-registry {
+       server registry:5000;
+     }
 
-      ## Set a variable to help us decide if we need to add the
-      ## 'Docker-Distribution-Api-Version' header.
-      ## The registry always sets this header.
-      ## In the case of nginx performing auth, the header is unset
-      ## since nginx is auth-ing before proxying.
-      map $upstream_http_docker_distribution_api_version $docker_distribution_api_version {
-        '' 'registry/2.0';
-      }
+     ## Set a variable to help us decide if we need to add the
+     ## 'Docker-Distribution-Api-Version' header.
+     ## The registry always sets this header.
+     ## In the case of nginx performing auth, the header is unset
+     ## since nginx is auth-ing before proxying.
+     map $upstream_http_docker_distribution_api_version $docker_distribution_api_version {
+       '' 'registry/2.0';
+     }
 
-      server {
-        listen 443 ssl;
-        server_name myregistrydomain.com;
+     server {
+       listen 443 ssl;
+       server_name myregistrydomain.com;
 
-        # SSL
-        ssl_certificate /etc/nginx/conf.d/domain.crt;
-        ssl_certificate_key /etc/nginx/conf.d/domain.key;
+       # SSL
+       ssl_certificate /etc/nginx/conf.d/domain.crt;
+       ssl_certificate_key /etc/nginx/conf.d/domain.key;
 
-        # Recommendations from https://raymii.org/s/tutorials/Strong_SSL_Security_On_nginx.html
-        ssl_protocols TLSv1.1 TLSv1.2;
-        ssl_ciphers 'EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH';
-        ssl_prefer_server_ciphers on;
-        ssl_session_cache shared:SSL:10m;
+       # Recommendations from https://raymii.org/s/tutorials/Strong_SSL_Security_On_nginx.html
+       ssl_protocols TLSv1.1 TLSv1.2;
+       ssl_ciphers 'EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH';
+       ssl_prefer_server_ciphers on;
+       ssl_session_cache shared:SSL:10m;
 
-        # disable any limits to avoid HTTP 413 for large image uploads
-        client_max_body_size 0;
+       # disable any limits to avoid HTTP 413 for large image uploads
+       client_max_body_size 0;
 
-        # required to avoid HTTP 411: see Issue #1486 (https://github.com/moby/moby/issues/1486)
-        chunked_transfer_encoding on;
+       # required to avoid HTTP 411: see Issue #1486 (https://github.com/moby/moby/issues/1486)
+       chunked_transfer_encoding on;
 
-        location /v2/ {
-          # Do not allow connections from docker 1.5 and earlier
-          # docker pre-1.6.0 did not properly set the user agent on ping, catch "Go *" user agents
-          if ($http_user_agent ~ "^(docker\/1\.(3|4|5(?!\.[0-9]-dev))|Go ).*$" ) {
-            return 404;
-          }
+       location /v2/ {
+         # Do not allow connections from docker 1.5 and earlier
+         # docker pre-1.6.0 did not properly set the user agent on ping, catch "Go *" user agents
+         if ($http_user_agent ~ "^(docker\/1\.(3|4|5(?!\.[0-9]-dev))|Go ).*$" ) {
+           return 404;
+         }
 
-          # To add basic authentication to v2 use auth_basic setting.
-          auth_basic "Registry realm";
-          auth_basic_user_file /etc/nginx/conf.d/nginx.htpasswd;
+         # To add basic authentication to v2 use auth_basic setting.
+         auth_basic "Registry realm";
+         auth_basic_user_file /etc/nginx/conf.d/nginx.htpasswd;
 
-          ## If $docker_distribution_api_version is empty, the header is not added.
-          ## See the map directive above where this variable is defined.
-          add_header 'Docker-Distribution-Api-Version' $docker_distribution_api_version always;
+         ## If $docker_distribution_api_version is empty, the header is not added.
+         ## See the map directive above where this variable is defined.
+         add_header 'Docker-Distribution-Api-Version' $docker_distribution_api_version always;
 
-          proxy_pass                          http://docker-registry;
-          proxy_set_header  Host              $http_host;   # required for docker client's sake
-          proxy_set_header  X-Real-IP         $remote_addr; # pass on real client's IP
-          proxy_set_header  X-Forwarded-For   $proxy_add_x_forwarded_for;
-          proxy_set_header  X-Forwarded-Proto $scheme;
-          proxy_read_timeout                  900;
-        }
-      }
-    }
-    ```
+         proxy_pass                          http://docker-registry;
+         proxy_set_header  Host              $http_host;   # required for docker client's sake
+         proxy_set_header  X-Real-IP         $remote_addr; # pass on real client's IP
+         proxy_set_header  X-Forwarded-For   $proxy_add_x_forwarded_for;
+         proxy_set_header  X-Forwarded-Proto $scheme;
+         proxy_read_timeout                  900;
+       }
+     }
+   }
+   ```
 
-3.  Create a password file `auth/nginx.htpasswd` for "testuser" and "testpassword".
+3. Create a password file `auth/nginx.htpasswd` for "testuser" and "testpassword".
 
-    ```console
-    $ docker run --rm --entrypoint htpasswd registry:2 -Bbn testuser testpassword > auth/nginx.htpasswd
-    ```
+   ```console
+   $ docker run --rm --entrypoint htpasswd registry:2 -Bbn testuser testpassword > auth/nginx.htpasswd
+   ```
 
-    > **Note**: If you do not want to use `bcrypt`, you can omit the `-B` parameter.
+   > **Note**: If you do not want to use `bcrypt`, you can omit the `-B` parameter.
 
-4.  Copy your certificate files to the `auth/` directory.
+4. Copy your certificate files to the `auth/` directory.
 
-    ```console
-    $ cp domain.crt auth
-    $ cp domain.key auth
-    ```
+   ```console
+   $ cp domain.crt auth
+   $ cp domain.key auth
+   ```
 
-5.  Create the compose file. Paste the following YAML into a new file called `docker-compose.yml`.
+5. Create the compose file. Paste the following YAML into a new file called `docker-compose.yml`.
 
-    ```yaml
-    version: "3"
+   ```yaml
+   version: "3"
 
-    services:
-        nginx:
-          # Note : Only nginx:alpine supports bcrypt.
-          # If you don't need to use bcrypt, you can use a different tag.
-          # Ref. https://github.com/nginxinc/docker-nginx/issues/29
-          image: "nginx:alpine"
-          ports:
-            - 5043:443
-          depends_on:
-            - registry
-          volumes:
-            - ./auth:/etc/nginx/conf.d
-            - ./auth/nginx.conf:/etc/nginx/nginx.conf:ro
+   services:
+       nginx:
+         # Note : Only nginx:alpine supports bcrypt.
+         # If you don't need to use bcrypt, you can use a different tag.
+         # Ref. https://github.com/nginxinc/docker-nginx/issues/29
+         image: "nginx:alpine"
+         ports:
+           - 5043:443
+         depends_on:
+           - registry
+         volumes:
+           - ./auth:/etc/nginx/conf.d
+           - ./auth/nginx.conf:/etc/nginx/nginx.conf:ro
 
-        registry:
-          image: registry:2
-          volumes:
-            - ./data:/var/lib/registry
-    ```
+       registry:
+         image: registry:2
+         volumes:
+           - ./data:/var/lib/registry
+   ```
 
 ## Starting and stopping
 
 Now, start your stack:
 
-    docker-compose up -d
+```consonle
+$ docker-compose up -d
+```
 
 Login with a "push" authorized user (using `testuser` and `testpassword`), then
 tag and push your first image:
 
-    docker login -u=testuser -p=testpassword -e=root@example.ch myregistrydomain.com:5043
-    docker tag ubuntu myregistrydomain.com:5043/test
-    docker push myregistrydomain.com:5043/test
-    docker pull myregistrydomain.com:5043/test
+```console
+$ docker login -u=testuser -p=testpassword -e=root@example.ch myregistrydomain.com:5043
+$ docker tag ubuntu myregistrydomain.com:5043/test
+$ docker push myregistrydomain.com:5043/test
+$ docker pull myregistrydomain.com:5043/test
+```

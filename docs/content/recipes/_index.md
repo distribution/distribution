@@ -9,7 +9,7 @@ These recipes are not useful for most standard set-ups.
 
 ## Requirements
 
-Before following these steps, work through the [deployment guide](../deploying.md).
+Before following these steps, work through the [deployment guide](../about/deploying).
 
 At this point, it's assumed that:
 
@@ -21,8 +21,8 @@ At this point, it's assumed that:
 
 ## The List
 
- * [using Apache as an authenticating proxy](apache.md)
- * [using Nginx as an authenticating proxy](nginx.md)
- * [running a Registry on macOS](osx-setup-guide.md)
- * [mirror the Docker Hub](mirror.md)
- * [start registry via systemd](systemd.md)
+ * [using Apache as an authenticating proxy](apache)
+ * [using Nginx as an authenticating proxy](nginx)
+ * [running a Registry on macOS](osx-setup-guide)
+ * [mirror the Docker Hub](mirror)
+ * [start registry via systemd](systemd)

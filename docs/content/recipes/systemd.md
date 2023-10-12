@@ -7,8 +7,9 @@ title: Start registry via systemd
 ## Use-case
 
 Using systemd to manage containers can make service discovery and maintenance easier
-by managining all services in the same way.  Additionally, when using Podman, systemd
+by managing all services in the same way. Additionally, when using Podman, systemd
 can start the registry with socket-activation, providing additional security options:
+
 * Run as non-root and expose on a low-numbered socket (< 1024)
 * Run with `--network=none`
 
@@ -18,7 +19,8 @@ When deploying the registry via Docker, a simple service file can be used to man
 the registry:
 
 registry.service
-```
+
+```ini
 [Unit]
 Description=Docker registry
 After=docker.service
@@ -40,7 +42,7 @@ WantedBy=multi-user.target
 
 In this case, the registry will store images in the named-volume `registry`.
 Note that the container is destroyed on restart instead of using `--rm` or
-destroy on stop.  This is done to make accessing `docker logs ...` easier in
+destroy on stop. This is done to make accessing `docker logs ...` easier in
 the case of issues.
 
 ### Podman
@@ -50,7 +52,7 @@ socket-activation of containers.
 
 #### Create service file
 
-```
+```sh
 podman create --name registry --network=none -v registry:/var/lib/registry registry:2
 podman generate systemd --name --new registry > registry.service
 ```
@@ -58,7 +60,8 @@ podman generate systemd --name --new registry > registry.service
 #### Create socket file
 
 registry.socket
-```
+
+```ini
 [Unit]
 Description=container registry
 
@@ -71,7 +74,7 @@ WantedBy=sockets.target
 
 ### Installation
 
-Installation can be either rootful or rootless.  For Docker, rootless configurations
+Installation can be either rootful or rootless. For Docker, rootless configurations
 often include additional setup steps that are beyond the scope of this recipe, whereas
 for Podman, rootless containers generally work out of the box.
 

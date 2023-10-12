@@ -12,7 +12,7 @@ Usually, that includes enterprise setups using LDAP/AD on the backend and a SSO 
 
 ### Alternatives
 
-If you just want authentication for your registry, and are happy maintaining users access separately, you should really consider sticking with the native [basic auth registry feature](../deploying.md#native-basic-auth).
+If you just want authentication for your registry, and are happy maintaining users access separately, you should really consider sticking with the native [basic auth registry feature](/about/deploying#native-basic-auth).
 
 ### Solution
 
@@ -30,13 +30,13 @@ Furthermore, introducing an extra http layer in your communication pipeline adds
 
 ## Setting things up
 
-Read again [the requirements](index.md#requirements).
+Read again [the requirements](../#requirements).
 
 Ready?
 
 Run the following script:
 
-```
+```sh
 mkdir -p auth
 mkdir -p data
 
@@ -191,19 +191,27 @@ EOF
 
 Now, start your stack:
 
-    docker-compose up -d
+```console
+$ docker-compose up -d
+```
 
 Log in with a "push" authorized user (using `testuserpush` and `testpasswordpush`), then tag and push your first image:
 
-    docker login myregistrydomain.com:5043
-    docker tag ubuntu myregistrydomain.com:5043/test
-    docker push myregistrydomain.com:5043/test
+```console
+$ docker login myregistrydomain.com:5043
+$ docker tag ubuntu myregistrydomain.com:5043/test
+$ docker push myregistrydomain.com:5043/test
+```
 
 Now, log in with a "pull-only" user (using `testuser` and `testpassword`), then pull back the image:
 
-    docker login myregistrydomain.com:5043
-    docker pull myregistrydomain.com:5043/test
+```console
+$ docker login myregistrydomain.com:5043
+$ docker pull myregistrydomain.com:5043/test
+```
 
 Verify that the "pull-only" can NOT push:
 
-    docker push myregistrydomain.com:5043/test
+```console
+$ docker push myregistrydomain.com:5043/test
+```

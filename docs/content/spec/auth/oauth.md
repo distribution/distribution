@@ -12,7 +12,7 @@ reference for the protocol and HTTP endpoints described here.
 
 **Note**: Not all token servers implement oauth2. If the request to the endpoint
 returns `404` using the HTTP `POST` method, refer to
-[Token Documentation](token.md) for using the HTTP `GET` method supported by all
+[Token Documentation](../token) for using the HTTP `GET` method supported by all
 token servers.
 
 ## Refresh token format
@@ -161,7 +161,7 @@ Content-Type: application/x-www-form-urlencoded
 
 #### Example getting refresh token
 
-```
+```none
 POST /token HTTP/1.1
 Host: auth.docker.io
 Content-Type: application/x-www-form-urlencoded
@@ -176,7 +176,7 @@ Content-Type: application/json
 
 #### Example refreshing an Access Token
 
-```
+```none
 POST /token HTTP/1.1
 Host: auth.docker.io
 Content-Type: application/x-www-form-urlencoded

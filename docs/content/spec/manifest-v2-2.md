@@ -1,5 +1,5 @@
 ---
-title: "Image Manifest V 2, Schema 2 "
+title: "Image Manifest V 2, Schema 2"
 description: "image manifest for the Registry."
 keywords: registry, on-prem, images, tags, repository, distribution, api, advanced, manifest
 ---
@@ -10,7 +10,7 @@ This document outlines the format of the V2 image manifest, schema version 2.
 The original (and provisional) image manifest for V2 (schema 1), was introduced
 in the Docker daemon in the [v1.3.0
 release](https://github.com/docker/docker/commit/9f482a66ab37ec396ac61ed0c00d59122ac07453)
-and is specified in the [schema 1 manifest definition](manifest-v2-1.md)
+and is now deprecated.
 
 This second schema version has two primary goals. The first is to allow
 multi-architecture images, through a "fat manifest" which references image
@@ -71,7 +71,7 @@ image manifest based on the Content-Type returned in the HTTP response.
     - **`digest`** *string*
 
         The digest of the content, as defined by the
-        [Registry V2 HTTP API Specificiation](api.md#digest-parameter).
+        [Registry V2 HTTP API Specificiation](../api#digest-parameter).
 
     - **`platform`** *object*
 
@@ -113,7 +113,8 @@ image manifest based on the Content-Type returned in the HTTP response.
 
 ## Example Manifest List
 
-*Example showing a simple manifest list pointing to image manifests for two platforms:*
+Example showing a simple manifest list pointing to image manifests for two platforms:
+
 ```json
 {
   "schemaVersion": 2,
@@ -186,7 +187,7 @@ image. It's the direct replacement for the schema-1 manifest.
     - **`digest`** *string*
 
         The digest of the content, as defined by the
-        [Registry V2 HTTP API Specificiation](api.md#digest-parameter).
+        [Registry V2 HTTP API Specificiation](../api#digest-parameter).
 
 - **`layers`** *array*
 
@@ -212,7 +213,7 @@ image. It's the direct replacement for the schema-1 manifest.
     - **`digest`** *string*
 
         The digest of the content, as defined by the
-        [Registry V2 HTTP API Specificiation](api.md#digest-parameter).
+        [Registry V2 HTTP API Specificiation](../api#digest-parameter).
 
     - **`urls`** *array*
 
@@ -222,7 +223,8 @@ image. It's the direct replacement for the schema-1 manifest.
 
 ## Example Image Manifest
 
-*Example showing an image manifest:*
+Example showing an image manifest:
+
 ```json
 {
     "schemaVersion": 2,

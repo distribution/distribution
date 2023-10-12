@@ -6,7 +6,7 @@ keywords: registry, on-prem, images, tags, repository, distribution, authenticat
 
 # Docker Registry v2 authentication
 
-See the [Token Authentication Specification](token.md),
-[Token Authentication Implementation](jwt.md),
-[Token Scope Documentation](scope.md),
-[OAuth2 Token Authentication](oauth.md) for more information.
+See the [Token Authentication Specification](token),
+[Token Authentication Implementation](jwt),
+[Token Scope Documentation](scope),
+[OAuth2 Token Authentication](oauth) for more information.

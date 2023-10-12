@@ -1,4 +1,4 @@
-baseURL: https://example.com/
+baseURL: /
 languageCode: en-us
 title: CNCF Distribution
 theme: hugo-geekdoc

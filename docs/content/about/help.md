@@ -10,5 +10,3 @@ If you want to report a bug:
 
 - be sure to first read about [how to contribute](https://github.com/distribution/distribution/blob/master/CONTRIBUTING.md).
 - you can then do so on the [GitHub project bugtracker](https://github.com/distribution/distribution/issues).
-
-You can also find out more about the Docker's project [Getting Help resources](../opensource/ways.md).

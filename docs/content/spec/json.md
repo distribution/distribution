@@ -1,5 +1,5 @@
 ---
-published: false
+draft: true
 title: "Docker Distribution JSON Canonicalization"
 description: "Explains registry JSON objects"
 keywords: ["registry, service, images, repository,  json"]
