@@ -1,0 +1,53 @@
+---
+edit_page: 编辑页面
+
+nav_navigation: 导航
+nav_tags: 标签
+nav_more: 更多
+nav_top: 回到顶部
+
+form_placeholder_search: 搜索
+
+error_page_title: 迷路了？ 不用担心
+error_message_title: 迷路了？
+error_message_code: 错误 404
+error_message_text: >
+  好像找不到你要找的东西。 别担心，我们可以
+  带您回到<a class="gdoc-error__link" href="{{ . }}">主页</a>。
+
+button_toggle_dark: 切换暗/亮/自动模式
+button_nav_open: 打开导航
+button_nav_close: 关闭导航
+button_menu_open: 打开菜单栏
+button_menu_close: 关闭菜单栏
+button_homepage: 返回首页
+
+title_anchor_prefix: "锚定到："
+
+posts_read_more: 阅读全文
+posts_read_time:
+  one: "一分钟阅读时间"
+  other: "{{ . }} 分钟阅读时间"
+posts_update_prefix: 更新时间
+posts_count:
+  one: 一篇文章
+  other: "{{ . }} 个帖子"
+posts_tagged_with: 所有带有“{{ . }}”标签的帖子。
+
+footer_build_with: >
+  基于 <a href="https://gohugo.io/" class="gdoc-footer__link">Hugo</a>
+  <svg class="gdoc-icon gdoc_heart"><use xlink:href="#gdoc_heart"></use></svg> 制作
+footer_legal_notice: "法律声明"
+footer_privacy_policy: "隐私政策"
+footer_content_license_prefix: >
+  内容许可证
+
+language_switch_no_tranlation_prefix: "页面未翻译："
+
+propertylist_required: 需要
+propertylist_optional: 可选
+propertylist_default: 默认值
+
+pagination_page_prev: 以前
+pagination_page_next: 下一个
+pagination_page_state: "{{ .PageNumber }}/{{ .TotalPages }}"

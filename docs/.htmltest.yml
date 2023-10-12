@@ -1,0 +1,9 @@
+DirectoryPath: "public"
+EnforceHTTPS: true
+CheckDoctype: true
+CheckExternal: true
+IgnoreAltMissing: true
+IgnoreAltEmpty: true
+IgnoreEmptyHref: true
+IgnoreInternalEmptyHash: true
+IgnoreDirectoryMissingTrailingSlash: true

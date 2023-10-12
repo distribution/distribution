@@ -1,0 +1,19 @@
+baseURL: /
+languageCode: en-us
+title: CNCF Distribution
+theme: hugo-geekdoc
+
+pluralizeListTitles: false
+enableRobotsTXT: true
+taxonomies: [tags]
+minify:
+  disableHTML: true
+
+# Geekdoc required configuration
+pygmentsUseClasses: true
+pygmentsCodeFences: true
+disablePathToLower: true
+
+params:
+  geekdocRepo: "https://github.com/distribution/distribution"
+  geekdocEditPath: edit/main/docs

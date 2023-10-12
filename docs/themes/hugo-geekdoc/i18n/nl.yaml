@@ -1,0 +1,53 @@
+---
+edit_page: Wijzig pagina
+
+nav_navigation: Navigatie
+nav_tags: Markering
+nav_more: Meer
+nav_top: Terug naar boven
+
+form_placeholder_search: Zoek
+
+error_page_title: Verdwaald? Geen probleem
+error_message_title: Verdwaald?
+error_message_code: Error 404
+error_message_text: >
+  Het lijkt er op dat wat je zoekt niet gevonden kan worden. Geen probleem,
+  we kunnen je terug naar de <a class="gdoc-error__link" href="{{ . }}">startpagina</a> brengen.
+
+button_toggle_dark: Wijzig Donker/Licht/Auto weergave
+button_nav_open: Open navigatie
+button_nav_close: Sluit navigatie
+button_menu_open: Open menubalk
+button_menu_close: Sluit menubalk
+button_homepage: Terug naar startpagina
+
+title_anchor_prefix: "Link naar:"
+
+posts_read_more: Lees volledige bericht
+posts_read_time:
+  one: "Een minuut leestijd"
+  other: "{{ . }} minuten leestijd"
+posts_update_prefix: Bijgewerkt op
+posts_count:
+  one: "Een bericht"
+  other: "{{ . }} berichten"
+posts_tagged_with: Alle berichten gemarkeerd met '{{ . }}'
+
+footer_build_with: >
+  Gebouwd met <a href="https://gohugo.io/" class="gdoc-footer__link">Hugo</a> en
+  <svg class="gdoc-icon gdoc_heart"><use xlink:href="#gdoc_heart"></use></svg> 
+footer_legal_notice: Juridische mededeling
+footer_privacy_policy: Privacybeleid
+footer_content_license_prefix: >
+  Inhoud gelicenseerd onder
+
+language_switch_no_tranlation_prefix: "Pagina niet vertaald:"
+
+propertylist_required: verplicht
+propertylist_optional: optioneel
+propertylist_default: standaard
+
+pagination_page_prev: vorige
+pagination_page_next: volgende
+pagination_page_state: "{{ .PageNumber }}/{{ .TotalPages }}"

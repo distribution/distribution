@@ -1,0 +1,57 @@
+{{ $geekdocRepo := default (default false .Site.Params.geekdocRepo) .Page.Params.geekdocRepo }}
+{{ $geekdocEditPath := default (default false .Site.Params.geekdocEditPath) .Page.Params.geekdocEditPath }}
+{{ if .File }}
+  {{ $.Scratch.Set "geekdocFilePath" (default (strings.TrimPrefix hugo.WorkingDir .File.Filename) .Page.Params.geekdocFilePath) }}
+{{ else }}
+  {{ $.Scratch.Set "geekdocFilePath" false }}
+{{ end }}
+
+{{ define "breadcrumb" }}
+  {{ $parent := .page.Parent }}
+  {{ if $parent }}
+    {{ $name := (partial "utils/title" $parent) }}
+    {{ $position := (sub .position 1) }}
+    {{ $value := (printf "<li itemprop='itemListElement' itemscope itemtype='https://schema.org/ListItem'><a itemscope itemtype='https://schema.org/WebPage' itemprop='item' itemid='%s' href='%s'><span itemprop='name'>%s</span></a><meta itemprop='position' content='%d' /></li><li> / </li>%s" $parent.RelPermalink $parent.RelPermalink $name $position .value) }}
+    {{ template "breadcrumb" dict "page" $parent "value" $value "position" $position }}
+  {{ else }}
+    {{ .value | safeHTML }}
+  {{ end }}
+{{ end }}
+
+{{ $showBreadcrumb := (and (default true .Page.Params.geekdocBreadcrumb) (default true .Site.Params.geekdocBreadcrumb)) }}
+{{ $showEdit := (and ($.Scratch.Get "geekdocFilePath") $geekdocRepo $geekdocEditPath) }}
+<div
+  class="gdoc-page__header flex flex-wrap
+  {{ if $showBreadcrumb }}
+    justify-between
+  {{ else }}
+    justify-end
+  {{ end }}
+  {{ if not $showEdit }}hidden-mobile{{ end }}
+  {{ if (and (not $showBreadcrumb) (not $showEdit)) }}hidden{{ end }}"
+  itemprop="breadcrumb"
+>
+  {{ if $showBreadcrumb }}
+    <div>
+      <svg class="gdoc-icon gdoc_path hidden-mobile"><use xlink:href="#gdoc_path"></use></svg>
+      <ol class="breadcrumb" itemscope itemtype="https://schema.org/BreadcrumbList">
+        {{ $position := sub (len (split .RelPermalink "/")) 1 }}
+        {{ $name := (partial "utils/title" .) }}
+        {{ $value := (printf "<li itemprop='itemListElement' itemscope itemtype='https://schema.org/ListItem'><span itemprop='name'>%s</span><meta itemprop='position' content='%d' /></li>" $name $position ) }}
+        {{ template "breadcrumb" dict "page" . "value" $value "position" $position }}
+      </ol>
+    </div>
+  {{ end }}
+  {{ if $showEdit }}
+    <div>
+      <span class="editpage">
+        <svg class="gdoc-icon gdoc_code"><use xlink:href="#gdoc_code"></use></svg>
+        <a
+          href="{{ $geekdocRepo }}/{{ path.Join $geekdocEditPath ($.Scratch.Get "geekdocFilePath") }}"
+        >
+          {{ i18n "edit_page" }}
+        </a>
+      </span>
+    </div>
+  {{ end }}
+</div>

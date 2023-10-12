@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Uploaded to: SVG Repo, www.svgrepo.com, Generator: SVG Repo Mixer Tools -->
+
+<svg
+   fill="#000000"
+   width="640"
+   height="640"
+   viewBox="0 0 19.2 19.2"
+   id="agenda-pencil"
+   data-name="Line Color"
+   class="icon line-color"
+   version="1.1"
+   sodipodi:docname="favicon.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1499" />
+  <sodipodi:namedview
+     id="namedview1497"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="0.31457183"
+     inkscape:cx="208.21953"
+     inkscape:cy="580.15366"
+     inkscape:window-width="2560"
+     inkscape:window-height="1371"
+     inkscape:window-x="0"
+     inkscape:window-y="32"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g1345" />
+  <g
+     id="g157"
+     transform="translate(-1.1826015,-0.83436748)">
+    <g
+       id="g724"
+       transform="translate(0.51504447)">
+      <g
+         id="g729">
+        <g
+           id="g734"
+           transform="translate(0.02223447,0.00163038)">
+          <g
+             id="g739"
+             transform="translate(0.074562)">
+            <g
+               id="g783"
+               transform="translate(0.31786391,0.00163038)">
+              <g
+                 id="g1345"
+                 transform="translate(-0.03687642,0.00611342)">
+                <g
+                   id="g1488">
+                  <path
+                     id="secondary"
+                     d="M 18.244015,6.33001 16.574991,4.6609857 a 1.1921603,1.1921603 0 0 0 -1.669024,0 L 9.05246,10.514493 v 3.338048 h 3.338049 l 5.853506,-5.8535067 a 1.1921603,1.1921603 0 0 0 0,-1.6690243 z"
+                     style="fill:none;stroke:#f66b0e;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1" />
+                  <path
+                     id="primary"
+                     d="m 14.897123,16.029614 v 1.868208 a 0.88539335,0.93410346 0 0 1 -0.885392,0.934103 H 3.3870098 A 0.88539335,0.93410346 0 0 1 2.5016166,17.897822 V 2.952165 A 0.88539335,0.93410346 0 0 1 3.3870098,2.0180616 h 8.8539322"
+                     style="fill:none;stroke:#112b3c;stroke-width:2.37391;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1" />
+                  <path
+                     id="primary-2"
+                     data-name="primary"
+                     d="m 1.5,6.4249937 h 2 m -2,3.9999993 h 2 m -2,4 h 2"
+                     style="fill:none;stroke:#112b3c;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:none;stroke-opacity:1" />
+                </g>
+              </g>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>

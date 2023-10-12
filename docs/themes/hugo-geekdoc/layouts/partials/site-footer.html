@@ -1,0 +1,45 @@
+<footer class="gdoc-footer">
+  <nav class="container flex">
+    <div>
+      <section class="flex flex-wrap align-center">
+        <span class="gdoc-footer__item gdoc-footer__item--row">
+          {{ i18n "footer_build_with" | safeHTML }}
+        </span>
+        {{ with .Site.Params.geekdocLegalNotice }}
+          <span class="gdoc-footer__item gdoc-footer__item--row">
+            <a href="{{ . | relURL }}" class="gdoc-footer__link">
+              {{ i18n "footer_legal_notice" }}
+            </a>
+          </span>
+        {{ end }}
+        {{ with .Site.Params.geekdocPrivacyPolicy }}
+          <span class="gdoc-footer__item gdoc-footer__item--row">
+            <a href="{{ . | relURL }}" class="gdoc-footer__link">
+              {{ i18n "footer_privacy_policy" }}
+            </a>
+          </span>
+        {{ end }}
+      </section>
+      {{ with .Site.Params.geekdocContentLicense }}
+        <section class="flex flex-wrap align-center">
+          <span class="gdoc-footer__item">
+            {{ i18n "footer_content_license_prefix" }}
+            <a href="{{ .link }}" class="gdoc-footer__link no-wrap">{{ .name }}</a>
+          </span>
+        </section>
+      {{ end }}
+    </div>
+    {{ if (default true .Site.Params.geekdocBackToTop) }}
+      <div class="flex flex-25 justify-end">
+        <span class="gdoc-footer__item text-right">
+          <a class="gdoc-footer__link fake-link" href="#" aria-label="{{ i18n "nav_top" }}">
+            <svg class="gdoc-icon gdoc_keyboard_arrow_up">
+              <use xlink:href="#gdoc_keyboard_arrow_up"></use>
+            </svg>
+            <span class="hidden-mobile">{{ i18n "nav_top" }}</span>
+          </a>
+        </span>
+      </div>
+    {{ end }}
+  </nav>
+</footer>

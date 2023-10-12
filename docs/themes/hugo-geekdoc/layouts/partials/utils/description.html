@@ -1,0 +1,14 @@
+{{ $isPage := or (and (ne .Type "posts") (in "section page" .Kind )) (and (eq .Type "posts") (eq .Kind "page")) }}
+{{ $description := "" }}
+
+{{ if .Description }}
+  {{ $description = .Description }}
+{{ else }}
+  {{ if $isPage }}
+    {{ $description = .Summary }}
+  {{ else if .Site.Params.description }}
+    {{ $description = .Site.Params.description }}
+  {{ end }}
+{{ end }}
+
+{{ return $description }}

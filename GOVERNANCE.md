@@ -94,7 +94,7 @@ performance must not be discussed on the pull request.
 
 ## How are decisions made?
 
-Docker distribution is an open-source project with an open design philosophy.
+CNCF distribution is an open-source project with an open design philosophy.
 This means that the repository is the source of truth for EVERY aspect of the
 project, including its philosophy, design, road map, and APIs. *If it's part of
 the project, it's in the repo. If it's in the repo, it's part of the project.*

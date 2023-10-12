@@ -1,0 +1,98 @@
+{{ $current := . }}
+{{ template "tree-nav" dict "sect" .Site.Home.Sections "current" $current }}
+
+
+<!-- templates -->
+{{ define "tree-nav" }}
+  {{ $current := .current }}
+
+
+  <ul class="gdoc-nav__list">
+    {{ $sortBy := (default "title" .current.Site.Params.geekdocFileTreeSortBy | lower) }}
+    {{ range .sect.GroupBy "Weight" }}
+      {{ $rangeBy := .ByTitle }}
+
+      {{ if eq $sortBy "title" }}
+        {{ $rangeBy = .ByTitle }}
+      {{ else if eq $sortBy "linktitle" }}
+        {{ $rangeBy = .ByLinkTitle }}
+      {{ else if eq $sortBy "date" }}
+        {{ $rangeBy = .ByDate }}
+      {{ else if eq $sortBy "publishdate" }}
+        {{ $rangeBy = .ByPublishDate }}
+      {{ else if eq $sortBy "expirydate" }}
+        {{ $rangeBy = .ByExpiryDate }}
+      {{ else if eq $sortBy "lastmod" }}
+        {{ $rangeBy = .ByLastmod }}
+      {{ else if eq $sortBy "title_reverse" }}
+        {{ $rangeBy = .ByTitle.Reverse }}
+      {{ else if eq $sortBy "linktitle_reverse" }}
+        {{ $rangeBy = .ByLinkTitle.Reverse }}
+      {{ else if eq $sortBy "date_reverse" }}
+        {{ $rangeBy = .ByDate.Reverse }}
+      {{ else if eq $sortBy "publishdate_reverse" }}
+        {{ $rangeBy = .ByPublishDate.Reverse }}
+      {{ else if eq $sortBy "expirydate_reverse" }}
+        {{ $rangeBy = .ByExpiryDate.Reverse }}
+      {{ else if eq $sortBy "lastmod_reverse" }}
+        {{ $rangeBy = .ByLastmod.Reverse }}
+      {{ end }}
+
+      {{ range $rangeBy }}
+        {{ if not .Params.geekdocHidden }}
+          {{ $numberOfPages := (add (len .Pages) (len .Sections)) }}
+          {{ $isParent := and (ne $numberOfPages 0) (not .Params.geekdocFlatSection) }}
+          {{ $isCurrent := eq $current . }}
+          {{ $isAncestor := .IsAncestor $current }}
+          {{ $id := substr (sha1 .Permalink) 0 8 }}
+          {{ $doCollapse := and $isParent (or .Params.geekdocCollapseSection (default false .Site.Params.geekdocCollapseAllSections)) }}
+
+
+          <li>
+            <input
+              type="checkbox"
+              {{ if $doCollapse }}
+                class="gdoc-nav__toggle" id="{{ printf "navtree-%s" $id }}"
+                {{ if or $isCurrent $isAncestor }}checked{{ end }}
+              {{ else }}
+                class="hidden"
+              {{ end }}
+            />
+            <label
+              {{ if $doCollapse }}
+                for="{{ printf "navtree-%s" $id }}" class="flex justify-between align-center"
+              {{ end }}
+            >
+              {{ if or .Content .Params.geekdocFlatSection }}
+                <span class="flex">
+                  <a
+                    href="{{ .RelPermalink }}"
+                    class="gdoc-nav__entry{{- if eq $current . }}
+                      {{- printf " is-active" }}
+                    {{- end }}"
+                  >
+                    {{ partial "utils/title" . }}
+                  </a>
+                </span>
+              {{ else }}
+                <span class="flex">{{ partial "utils/title" . }}</span>
+              {{ end }}
+              {{ if $doCollapse }}
+                <svg class="gdoc-icon toggle gdoc_keyboard_arrow_left">
+                  <use xlink:href="#gdoc_keyboard_arrow_left"></use>
+                </svg>
+                <svg class="gdoc-icon toggle gdoc_keyboard_arrow_down">
+                  <use xlink:href="#gdoc_keyboard_arrow_down"></use>
+                </svg>
+              {{ end }}
+            </label>
+
+            {{ if $isParent }}
+              {{ template "tree-nav" dict "sect" .Pages "current" $current }}
+            {{ end }}
+          </li>
+        {{ end }}
+      {{ end }}
+    {{ end }}
+  </ul>
+{{ end }}

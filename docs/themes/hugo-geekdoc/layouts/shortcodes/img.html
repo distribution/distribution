@@ -1,0 +1,71 @@
+{{- $source := ($.Page.Resources.ByType "image").GetMatch (printf "%s" (.Get "name")) }}
+{{- $customAlt := .Get "alt" }}
+{{- $customSize := .Get "size" | lower }}
+{{- $lazyLoad := default (default true $.Site.Params.geekdocImageLazyLoading) (.Get "lazy") }}
+{{- $data := newScratch }}
+
+{{- with $source }}
+  {{- $caption := default .Title $customAlt }}
+  {{- $isSVG := (eq .MediaType.SubType "svg") }}
+
+  {{- $origin := .Permalink }}
+  {{- if $isSVG }}
+    {{- $data.SetInMap "size" "profile" "180" }}
+    {{- $data.SetInMap "size" "tiny" "320" }}
+    {{- $data.SetInMap "size" "small" "600" }}
+    {{- $data.SetInMap "size" "medium" "1200" }}
+    {{- $data.SetInMap "size" "large" "1800" }}
+  {{- else }}
+    {{- $data.SetInMap "size" "profile" (.Fill "180x180 Center").Permalink }}
+    {{- $data.SetInMap "size" "tiny" (.Resize "320x").Permalink }}
+    {{- $data.SetInMap "size" "small" (.Resize "600x").Permalink }}
+    {{- $data.SetInMap "size" "medium" (.Resize "1200x").Permalink }}
+    {{- $data.SetInMap "size" "large" (.Resize "1800x").Permalink }}
+  {{- end }}
+
+
+  <div class="flex justify-center">
+    <figure
+      class="gdoc-markdown__figure
+      {{- if eq $customSize "profile" }}{{ print " gdoc-post__figure--round" }}{{ end }}"
+    >
+      <a class="gdoc-markdown__link--raw" href="{{ .Permalink }}">
+        <picture>
+          {{- $size := $data.Get "size" }}
+          {{- if not $isSVG }}
+            <source
+              {{- with $customSize }}
+                srcset="{{ index $size $customSize }}"
+              {{- else }}
+                srcset="{{ $size.small }} 600w, {{ $size.medium }} 1200w" sizes="100vw"
+              {{- end }}
+            />
+          {{- end }}
+          <img
+            {{- if $isSVG }}
+              src="{{ $origin }}" width="{{ index $size (default "medium" $customSize) }}"
+            {{- else }}
+              {{- if $lazyLoad }}{{ print " loading=\"lazy\"" | safeHTMLAttr }}{{- end }}
+              {{- if eq $customSize "origin" }}
+                src="{{ $origin }}"
+              {{- else }}
+                src="{{ $size.large }}"
+              {{- end }}
+              alt="{{ $caption }}"
+            {{- end }}
+          />
+        </picture>
+      </a>
+      {{- if not (eq $customSize "profile") }}
+        {{- with $caption }}
+          <figcaption>
+            {{ . }}
+            {{- with $source.Params.credits }}
+              {{ printf " (%s)" . | $.Page.RenderString }}
+            {{- end }}
+          </figcaption>
+        {{- end }}
+      {{- end }}
+    </figure>
+  </div>
+{{- end }}

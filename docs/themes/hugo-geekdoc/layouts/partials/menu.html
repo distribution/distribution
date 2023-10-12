@@ -1,0 +1,44 @@
+<nav>
+  {{ partial "search" . }}
+
+
+  <section class="gdoc-nav--main">
+    <h2>{{ i18n "nav_navigation" }}</h2>
+    {{ if .Site.Params.geekdocMenuBundle }}
+      {{ partial "menu-bundle" (dict "current" . "source" .Site.Data.menu.main.main) }}
+    {{ else }}
+      {{ partial "menu-filetree" . }}
+    {{ end }}
+  </section>
+
+  {{ if and (in (slice "posts" "tags") .Section) (default false .Site.Params.geekdocTagsToMenu) }}
+    <section class="gdoc-nav--tags">
+      <h2>{{ i18n "nav_tags" }}</h2>
+      <ul class="gdoc-nav__list">
+        {{ $currentPage := .RelPermalink }}
+        {{ range $name, $taxonomy := .Site.Taxonomies.tags }}
+          {{ with $.Site.GetPage (printf "/tags/%s" $name) }}
+            <li>
+              <a
+                class="gdoc-nav__entry{{- if eq $currentPage .RelPermalink }}
+                  {{- printf " is-active" }}
+                {{- end }}"
+                href="{{ .RelPermalink }}"
+              >
+                {{ partial "utils/title" . }}
+              </a>
+            </li>
+          {{ end }}
+        {{ end }}
+      </ul>
+    </section>
+  {{ end }}
+
+
+  <section class="gdoc-nav--more">
+    {{ if .Site.Data.menu.more.more }}
+      <h2>{{ i18n "nav_more" }}</h2>
+      {{ partial "menu-bundle" (dict "current" . "source" .Site.Data.menu.more.more) }}
+    {{ end }}
+  </section>
+</nav>

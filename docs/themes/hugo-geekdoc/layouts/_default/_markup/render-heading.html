@@ -1,0 +1,27 @@
+{{- $showAnchor := (and (default true .Page.Params.geekdocAnchor) (default true .Page.Site.Params.geekdocAnchor)) -}}
+
+
+<!-- prettier-ignore-start -->
+{{- if $showAnchor -}}
+<div class="flex align-center gdoc-page__anchorwrap">
+    <h{{ .Level }} id="{{ .Anchor | safeURL }}" {{- with .Attributes.class }}
+        class="{{ . }}"
+    {{- end }}
+    >
+        {{ .Text | safeHTML }}
+    </h{{ .Level }}>
+    <a data-clipboard-text="{{ .Page.Permalink }}#{{ .Anchor | safeURL }}" class="gdoc-page__anchor clip flex align-center" title="{{ i18n "title_anchor_prefix" }} {{ .Text | safeHTML }}" aria-label="{{ i18n "title_anchor_prefix" }} {{ .Text | safeHTML }}" href="#{{ .Anchor | safeURL }}">
+        <svg class="gdoc-icon gdoc_link"><use xlink:href="#gdoc_link"></use></svg>
+    </a>
+</div>
+{{- else -}}
+<div class="gdoc-page__anchorwrap">
+    <h{{ .Level }} id="{{ .Anchor | safeURL }}" {{- with .Attributes.class }}
+        class="{{ . }}"
+    {{- end }}
+    >
+        {{ .Text | safeHTML }}
+    </h{{ .Level }}>
+</div>
+{{- end -}}
+<!-- prettier-ignore-end -->

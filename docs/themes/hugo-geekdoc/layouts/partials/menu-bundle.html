@@ -1,0 +1,87 @@
+{{ $current := .current }}
+{{ template "menu-file" dict "sect" .source "current" $current "site" $current.Site }}
+
+
+<!-- template -->
+{{ define "menu-file" }}
+  {{ $current := .current }}
+  {{ $site := .site }}
+
+
+  <ul class="gdoc-nav__list">
+    {{ range sort (default (seq 0) .sect) "weight" }}
+      {{ $name := .name }}
+      {{ if reflect.IsMap .name }}
+        {{ $name = (index .name $site.Language.Lang) }}
+      {{ end }}
+
+
+      <li>
+        {{ $ref := default false .ref }}
+        {{ if $ref }}
+          {{ $this := $site.GetPage .ref }}
+          {{ $icon := default false .icon }}
+          {{ $numberOfPages := (add (len $this.Pages) (len $this.Sections)) }}
+          {{ $isCurrent := eq $current $this }}
+          {{ $isAncestor := $this.IsAncestor $current }}
+          {{ $id := substr (sha1 $this.Permalink) 0 8 }}
+          {{ $doCollapse := and (isset . "sub") (or $this.Params.geekdocCollapseSection (default false .Site.Params.geekdocCollapseAllSections)) }}
+
+          {{ $anchor := default "" .anchor }}
+          {{ if $anchor }}
+            {{ $anchor = printf "#%s" $anchor }}
+          {{ end }}
+
+          {{ if or .external ($this.RelPermalink) }}
+            <input
+              type="checkbox"
+              {{ if $doCollapse }}
+                class="gdoc-nav__toggle" id="{{ printf "navtree-%s" $id }}"
+                {{ if or $isCurrent $isAncestor }}checked{{ end }}
+              {{ else }}
+                class="hidden"
+              {{ end }}
+            />
+            <label
+              {{ if $doCollapse }}
+                for="{{ printf "navtree-%s" $id }}" class="flex justify-between align-center"
+              {{ end }}
+            >
+              <span class="flex">
+                {{ if $icon }}
+                  <svg class="gdoc-icon {{ .icon }}"><use xlink:href="#{{ .icon }}"></use></svg>
+                {{ end }}
+                <a
+                  href="{{ if .external }}
+                    {{ .ref }}
+                  {{- else -}}
+                    {{ path.Join $this.RelPermalink $anchor }}
+                  {{- end }}"
+                  class="gdoc-nav__entry{{- if not .external }}
+                    {{- if $isCurrent }}{{ printf " is-active" }}{{ end }}
+                  {{- end }}"
+                >
+                  {{ $name }}
+                </a>
+              </span>
+              {{ if $doCollapse }}
+                <svg class="gdoc-icon toggle gdoc_keyboard_arrow_left">
+                  <use xlink:href="#gdoc_keyboard_arrow_left"></use>
+                </svg>
+                <svg class="gdoc-icon toggle gdoc_keyboard_arrow_down hidden">
+                  <use xlink:href="#gdoc_keyboard_arrow_down"></use>
+                </svg>
+              {{ end }}
+            </label>
+          {{ end }}
+        {{ else }}
+          <span class="flex">{{ $name }}</span>
+        {{ end }}
+
+        {{ with .sub }}
+          {{ template "menu-file" dict "sect" . "current" $current "site" $site }}
+        {{ end }}
+      </li>
+    {{ end }}
+  </ul>
+{{ end }}

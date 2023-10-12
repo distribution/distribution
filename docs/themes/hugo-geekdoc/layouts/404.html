@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="{{ .Site.Language.Lang }}">
+  <head>
+    {{ partial "head/meta" . }}
+    <title>{{ i18n "error_page_title" }}</title>
+
+    {{ partial "head/favicons" . }}
+    {{ partial "head/others" . }}
+  </head>
+
+  <body>
+    {{ partial "svg-icon-symbols" . }}
+
+
+    <div class="wrapper">
+      <input type="checkbox" class="hidden" id="menu-header-control" />
+
+      {{ partial "site-header" (dict "Root" . "MenuEnabled" false) }}
+
+
+      <main class="gdoc-error flex-even">
+        <div class="flex align-center justify-center">
+          <div class="gdoc-error__icon">
+            <svg class="gdoc-icon gdoc_cloud_off"><use xlink:href="#gdoc_cloud_off"></use></svg>
+          </div>
+          <div class="gdoc-error__message">
+            <div class="gdoc-error__line gdoc-error__title">{{ i18n "error_message_title" }}</div>
+            <div class="gdoc-error__line gdoc-error__code">{{ i18n "error_message_code" }}</div>
+            <div class="gdoc-error__line gdoc-error__help">
+              {{ i18n "error_message_text" .Site.BaseURL | safeHTML }}
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {{ partial "site-footer" . }}
+
+    </div>
+  </body>
+</html>

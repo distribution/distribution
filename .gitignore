@@ -38,3 +38,8 @@ bin/*
 .idea/*
 
 tests/miniodata
+
+# Docs
+**/.hugo_build.lock
+docs/resources
+docs/public
