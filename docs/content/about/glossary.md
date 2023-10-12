@@ -45,7 +45,7 @@ This page contains definitions for distribution related terms.
 	</dd>
 
 	<dt id="registry"><h4>Registry</h4></dt>
-	<dd><blockquote>A registry is a service that let you store and deliver <a href="#images">images</a>.</blockquote>
+	<dd><blockquote>A registry is a service that let you store and deliver <a href="#images">images</a> and other content.</blockquote>
 	</dd>
 
 	<dt id="registry"><h4>Repository</h4></dt>

@@ -5,7 +5,7 @@ title: About Registry
 ---
 
 A registry is a storage and content delivery system, holding named container
-images, available in different tagged versions.
+images and other content, available in different tagged versions.
 
   > Example: the image `distribution/registry`, with tags `2.0` and `2.1`.
 

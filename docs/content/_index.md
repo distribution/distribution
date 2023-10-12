@@ -7,7 +7,7 @@ title: Distribution Registry
 ## What it is
 
 The Registry is a stateless, highly scalable server side application that stores
-and lets you distribute container images. The Registry is open-source, under the
+and lets you distribute container images and other content. The Registry is open-source, under the
 permissive [Apache license](https://en.wikipedia.org/wiki/Apache_License).
 
 ## Why use it
