@@ -9,7 +9,7 @@ on:
     branches:
       - 'main'
     paths:
-      - '.github/dockerhub-readme.yml'
+      - '.github/workflows/dockerhub-readme.yml'
       - 'docs/dockerhub.md'
 
 env:
