@@ -16,8 +16,9 @@ COPY --from=hugo $GOPATH/bin/hugo /bin/hugo
 WORKDIR /src
 
 FROM build-base AS build
+ARG DOCS_BASEURL
 RUN --mount=type=bind,rw,source=docs,target=. \
-    hugo --gc --minify --destination /out
+    hugo --gc --minify --destination /out -b $DOCS_BASEURL
 
 FROM build-base AS server
 COPY docs .
