@@ -1,3 +1,5 @@
+name: docs
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -7,6 +9,8 @@ on:
     branches:
       - main
     paths:
+      - .github/workflows/docs.yml
+      - dockerfiles/docs.Dockerfile
       - docs/**
   workflow_dispatch:
 
@@ -20,6 +24,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v3
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       - name: Build docs
@@ -31,6 +38,13 @@ jobs:
           set: |
             *.cache-from=type=gha,scope=docs
             *.cache-to=type=gha,scope=docs,mode=max
+        env:
+          DOCS_BASEURL: ${{ steps.pages.outputs.base_path }}
+      - name: Fix permissions
+        run: |
+          chmod -c -R +rX "./build/docs" | while read line; do
+            echo "::warning title=Invalid file permissions automatically fixed::$line"
+          done
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v2
         with:
