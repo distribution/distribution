@@ -30,7 +30,12 @@ func init() {
 		}
 
 		dgst := digest.FromBytes(b)
-		return m, distribution.Descriptor{Digest: dgst, Size: int64(len(b)), MediaType: v1.MediaTypeImageManifest}, err
+		return m, distribution.Descriptor{
+			MediaType:   v1.MediaTypeImageManifest,
+			Digest:      dgst,
+			Size:        int64(len(b)),
+			Annotations: m.Annotations,
+		}, err
 	}
 	err := distribution.RegisterManifestSchema(v1.MediaTypeImageManifest, ocischemaFunc)
 	if err != nil {
