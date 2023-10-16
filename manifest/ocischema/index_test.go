@@ -8,6 +8,7 @@ import (
 
 	"github.com/distribution/distribution/v3"
 	"github.com/distribution/distribution/v3/manifest/schema2"
+	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -131,6 +132,30 @@ func TestOCIImageIndex(t *testing.T) {
 	}
 	if !reflect.DeepEqual(references, manifestDescriptors) {
 		t.Errorf("expected references:\n%v\nbut got:\n%v", references, manifestDescriptors)
+	}
+}
+
+func TestOCIManifestIndexUnmarshal(t *testing.T) {
+	_, descriptor, err := distribution.UnmarshalManifest(v1.MediaTypeImageIndex, []byte(expectedOCIImageIndexSerialization))
+	if err != nil {
+		t.Fatalf("unmarshal manifest index failed: %v", err)
+	}
+	_, deserialized := makeTestOCIImageIndex(t, v1.MediaTypeImageIndex)
+
+	if !reflect.DeepEqual(descriptor.Annotations, deserialized.Annotations) {
+		t.Fatalf("manifest index annotation not equal:\nexpected:\n%v\nactual:\n%v\n", deserialized.Annotations, descriptor.Annotations)
+	}
+	if len(descriptor.Annotations) != 2 {
+		t.Fatalf("manifest index annotation length should be 2")
+	}
+	if descriptor.Size != int64(len([]byte(expectedOCIImageIndexSerialization))) {
+		t.Fatalf("manifest index size is not correct:\nexpected:\n%d\nactual:\n%v\n", int64(len([]byte(expectedOCIImageIndexSerialization))), descriptor.Size)
+	}
+	if descriptor.Digest.String() != digest.FromBytes([]byte(expectedOCIImageIndexSerialization)).String() {
+		t.Fatalf("manifest index digest is not correct:\nexpected:\n%s\nactual:\n%s\n", digest.FromBytes([]byte(expectedOCIImageIndexSerialization)), descriptor.Digest)
+	}
+	if descriptor.MediaType != v1.MediaTypeImageIndex {
+		t.Fatalf("manifest index media type is not correct:\nexpected:\n%s\nactual:\n%s\n", v1.MediaTypeImageManifest, descriptor.MediaType)
 	}
 }
 

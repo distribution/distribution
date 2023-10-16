@@ -10,6 +10,7 @@ import (
 	"github.com/distribution/distribution/v3/manifest"
 	"github.com/distribution/distribution/v3/manifest/manifestlist"
 
+	"github.com/opencontainers/go-digest"
 	v1 "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
@@ -139,6 +140,35 @@ func TestManifest(t *testing.T) {
 	}
 	if references[1].Annotations["lettuce"] != "wrap" {
 		t.Fatalf("unexpected annotation in reference: %s", references[1].Annotations["lettuce"])
+	}
+}
+
+func TestManifestUnmarshal(t *testing.T) {
+	_, descriptor, err := distribution.UnmarshalManifest(v1.MediaTypeImageManifest, []byte(expectedManifestSerialization))
+	if err != nil {
+		t.Fatalf("unmarshal manifest failed: %v", err)
+	}
+	mfst := makeTestManifest(v1.MediaTypeImageManifest)
+
+	deserialized, err := FromStruct(mfst)
+	if err != nil {
+		t.Fatalf("error creating DeserializedManifest: %v", err)
+	}
+
+	if !reflect.DeepEqual(descriptor.Annotations, deserialized.Annotations) {
+		t.Fatalf("manifest annotation not equal:\nexpected:\n%v\nactual:\n%v\n", deserialized.Annotations, descriptor.Annotations)
+	}
+	if len(descriptor.Annotations) != 1 {
+		t.Fatalf("manifest index annotation length should be 1")
+	}
+	if descriptor.Size != int64(len([]byte(expectedManifestSerialization))) {
+		t.Fatalf("manifest size is not correct:\nexpected:\n%d\nactual:\n%v\n", int64(len([]byte(expectedManifestSerialization))), descriptor.Size)
+	}
+	if descriptor.Digest.String() != digest.FromBytes([]byte(expectedManifestSerialization)).String() {
+		t.Fatalf("manifest digest is not correct:\nexpected:\n%s\nactual:\n%s\n", digest.FromBytes([]byte(expectedManifestSerialization)), descriptor.Digest)
+	}
+	if descriptor.MediaType != v1.MediaTypeImageManifest {
+		t.Fatalf("manifest media type is not correct:\nexpected:\n%s\nactual:\n%s\n", v1.MediaTypeImageManifest, descriptor.MediaType)
 	}
 }
 
