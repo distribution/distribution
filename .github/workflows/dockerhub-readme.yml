@@ -23,6 +23,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       -
+        name: Checkout
+        uses: actions/checkout@v4
+      -
         name: Update Docker Hub README
         uses: peter-evans/dockerhub-description@v3
         with:
