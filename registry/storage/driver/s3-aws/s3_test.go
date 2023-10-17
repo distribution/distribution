@@ -210,7 +210,10 @@ func TestStorageClass(t *testing.T) {
 	rootDir := t.TempDir()
 	contents := []byte("contents")
 	ctx := context.Background()
-	for _, storageClass := range s3StorageClasses {
+
+	// We don't need to test all the storage classes, just that its selectable.
+	// The first 3 are common to AWS and MinIO, so use those.
+	for _, storageClass := range s3StorageClasses[:3] {
 		filename := "/test-" + storageClass
 		s3Driver, err := s3DriverConstructor(rootDir, storageClass)
 		if err != nil {
