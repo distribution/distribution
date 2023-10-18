@@ -78,9 +78,6 @@ var tlsVersions = map[string]uint16{
 	"tls1.3": tls.VersionTLS13,
 }
 
-// defaultLogFormatter is the default formatter to use for logs.
-const defaultLogFormatter = "text"
-
 // this channel gets notified when process receives signal. It is global to ease unit testing
 var quit = make(chan os.Signal, 1)
 
@@ -390,7 +387,9 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 			Formatter: &logrus.JSONFormatter{TimestampFormat: time.RFC3339Nano},
 		})
 	default:
-		return ctx, fmt.Errorf("unsupported logging formatter: %q", formatter)
+		if config.Log.Formatter != "" {
+			return ctx, fmt.Errorf("unsupported logging formatter: %q", formatter)
+		}
 	}
 
 	logrus.Debugf("using %q logging formatter", formatter)
