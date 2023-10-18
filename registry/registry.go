@@ -375,10 +375,6 @@ func configureLogging(ctx context.Context, config *configuration.Configuration) 
 	logrus.SetReportCaller(config.Log.ReportCaller)
 
 	formatter := config.Log.Formatter
-	if formatter == "" {
-		formatter = defaultLogFormatter
-	}
-
 	switch formatter {
 	case "json":
 		logrus.SetFormatter(&logrus.JSONFormatter{
