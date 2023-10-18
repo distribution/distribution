@@ -142,7 +142,7 @@ func (d *driver) PutContent(ctx context.Context, subPath string, contents []byte
 		writer.Cancel(ctx)
 		return err
 	}
-	return writer.Commit()
+	return writer.Commit(ctx)
 }
 
 // Reader retrieves an io.ReadCloser for the content stored at "path" with a
@@ -397,7 +397,7 @@ func (fw *fileWriter) Cancel(ctx context.Context) error {
 	return os.Remove(fw.file.Name())
 }
 
-func (fw *fileWriter) Commit() error {
+func (fw *fileWriter) Commit(ctx context.Context) error {
 	if fw.closed {
 		return fmt.Errorf("already closed")
 	} else if fw.committed {

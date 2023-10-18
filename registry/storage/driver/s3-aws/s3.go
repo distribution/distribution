@@ -696,7 +696,7 @@ func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (sto
 		if err != nil {
 			return nil, err
 		}
-		return d.newWriter(key, *resp.UploadId, nil), nil
+		return d.newWriter(ctx, key, *resp.UploadId, nil), nil
 	}
 
 	listMultipartUploadsInput := &s3.ListMultipartUploadsInput{
@@ -743,7 +743,7 @@ func (d *driver) Writer(ctx context.Context, path string, appendParam bool) (sto
 				}
 				allParts = append(allParts, partsList.Parts...)
 			}
-			return d.newWriter(key, *multi.UploadId, allParts), nil
+			return d.newWriter(ctx, key, *multi.UploadId, allParts), nil
 		}
 
 		// resp.NextUploadIdMarker must have at least one element or we would have returned not found
@@ -1338,6 +1338,7 @@ func (b *buffer) Clear() {
 // cleanly resumed in the future. This is violated if Close is called after less
 // than a full chunk is written.
 type writer struct {
+	ctx       context.Context
 	driver    *driver
 	key       string
 	uploadID  string
@@ -1350,12 +1351,13 @@ type writer struct {
 	cancelled bool
 }
 
-func (d *driver) newWriter(key, uploadID string, parts []*s3.Part) storagedriver.FileWriter {
+func (d *driver) newWriter(ctx context.Context, key, uploadID string, parts []*s3.Part) storagedriver.FileWriter {
 	var size int64
 	for _, part := range parts {
 		size += *part.Size
 	}
 	return &writer{
+		ctx:      ctx,
 		driver:   d,
 		key:      key,
 		uploadID: uploadID,
@@ -1394,7 +1396,7 @@ func (w *writer) Write(p []byte) (int, error) {
 
 		sort.Sort(completedUploadedParts)
 
-		_, err := w.driver.S3.CompleteMultipartUpload(&s3.CompleteMultipartUploadInput{
+		_, err := w.driver.S3.CompleteMultipartUploadWithContext(w.ctx, &s3.CompleteMultipartUploadInput{
 			Bucket:   aws.String(w.driver.Bucket),
 			Key:      aws.String(w.key),
 			UploadId: aws.String(w.uploadID),
@@ -1403,7 +1405,7 @@ func (w *writer) Write(p []byte) (int, error) {
 			},
 		})
 		if err != nil {
-			if _, aErr := w.driver.S3.AbortMultipartUpload(&s3.AbortMultipartUploadInput{
+			if _, aErr := w.driver.S3.AbortMultipartUploadWithContext(w.ctx, &s3.AbortMultipartUploadInput{
 				Bucket:   aws.String(w.driver.Bucket),
 				Key:      aws.String(w.key),
 				UploadId: aws.String(w.uploadID),
@@ -1413,7 +1415,7 @@ func (w *writer) Write(p []byte) (int, error) {
 			return 0, err
 		}
 
-		resp, err := w.driver.S3.CreateMultipartUpload(&s3.CreateMultipartUploadInput{
+		resp, err := w.driver.S3.CreateMultipartUploadWithContext(w.ctx, &s3.CreateMultipartUploadInput{
 			Bucket:               aws.String(w.driver.Bucket),
 			Key:                  aws.String(w.key),
 			ContentType:          w.driver.getContentType(),
@@ -1429,7 +1431,7 @@ func (w *writer) Write(p []byte) (int, error) {
 		// If the entire written file is smaller than minChunkSize, we need to make
 		// a new part from scratch :double sad face:
 		if w.size < minChunkSize {
-			resp, err := w.driver.S3.GetObject(&s3.GetObjectInput{
+			resp, err := w.driver.S3.GetObjectWithContext(w.ctx, &s3.GetObjectInput{
 				Bucket: aws.String(w.driver.Bucket),
 				Key:    aws.String(w.key),
 			})
@@ -1451,7 +1453,7 @@ func (w *writer) Write(p []byte) (int, error) {
 			}
 		} else {
 			// Otherwise we can use the old file as the new first part
-			copyPartResp, err := w.driver.S3.UploadPartCopy(&s3.UploadPartCopyInput{
+			copyPartResp, err := w.driver.S3.UploadPartCopyWithContext(w.ctx, &s3.UploadPartCopyInput{
 				Bucket:     aws.String(w.driver.Bucket),
 				CopySource: aws.String(w.driver.Bucket + "/" + w.key),
 				Key:        aws.String(w.key),
@@ -1536,7 +1538,7 @@ func (w *writer) Cancel(ctx context.Context) error {
 		return fmt.Errorf("already committed")
 	}
 	w.cancelled = true
-	_, err := w.driver.S3.AbortMultipartUpload(&s3.AbortMultipartUploadInput{
+	_, err := w.driver.S3.AbortMultipartUploadWithContext(ctx, &s3.AbortMultipartUploadInput{
 		Bucket:   aws.String(w.driver.Bucket),
 		Key:      aws.String(w.key),
 		UploadId: aws.String(w.uploadID),
@@ -1544,7 +1546,7 @@ func (w *writer) Cancel(ctx context.Context) error {
 	return err
 }
 
-func (w *writer) Commit() error {
+func (w *writer) Commit(ctx context.Context) error {
 	if w.closed {
 		return fmt.Errorf("already closed")
 	} else if w.committed {
@@ -1576,7 +1578,7 @@ func (w *writer) Commit() error {
 	// Solution: we upload the empty i.e. 0 byte part as a single part and then append it
 	// to the completedUploadedParts slice used to complete the Multipart upload.
 	if len(w.parts) == 0 {
-		resp, err := w.driver.S3.UploadPart(&s3.UploadPartInput{
+		resp, err := w.driver.S3.UploadPartWithContext(w.ctx, &s3.UploadPartInput{
 			Bucket:     aws.String(w.driver.Bucket),
 			Key:        aws.String(w.key),
 			PartNumber: aws.Int64(1),
@@ -1595,7 +1597,7 @@ func (w *writer) Commit() error {
 
 	sort.Sort(completedUploadedParts)
 
-	_, err = w.driver.S3.CompleteMultipartUpload(&s3.CompleteMultipartUploadInput{
+	_, err = w.driver.S3.CompleteMultipartUploadWithContext(w.ctx, &s3.CompleteMultipartUploadInput{
 		Bucket:   aws.String(w.driver.Bucket),
 		Key:      aws.String(w.key),
 		UploadId: aws.String(w.uploadID),
@@ -1604,7 +1606,7 @@ func (w *writer) Commit() error {
 		},
 	})
 	if err != nil {
-		if _, aErr := w.driver.S3.AbortMultipartUpload(&s3.AbortMultipartUploadInput{
+		if _, aErr := w.driver.S3.AbortMultipartUploadWithContext(w.ctx, &s3.AbortMultipartUploadInput{
 			Bucket:   aws.String(w.driver.Bucket),
 			Key:      aws.String(w.key),
 			UploadId: aws.String(w.uploadID),
@@ -1634,7 +1636,7 @@ func (w *writer) flush() error {
 	partSize := buf.Len()
 	partNumber := aws.Int64(int64(len(w.parts) + 1))
 
-	resp, err := w.driver.S3.UploadPart(&s3.UploadPartInput{
+	resp, err := w.driver.S3.UploadPartWithContext(w.ctx, &s3.UploadPartInput{
 		Bucket:     aws.String(w.driver.Bucket),
 		Key:        aws.String(w.key),
 		PartNumber: partNumber,

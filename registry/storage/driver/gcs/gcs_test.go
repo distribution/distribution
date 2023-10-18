@@ -4,6 +4,7 @@
 package gcs
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -122,7 +123,7 @@ func TestCommitEmpty(t *testing.T) {
 	if err != nil {
 		t.Fatalf("driver.Writer: unexpected error: %v", err)
 	}
-	err = writer.Commit()
+	err = writer.Commit(context.Background())
 	if err != nil {
 		t.Fatalf("writer.Commit: unexpected error: %v", err)
 	}
@@ -169,7 +170,7 @@ func TestCommit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("writer.Write: unexpected error: %v", err)
 	}
-	err = writer.Commit()
+	err = writer.Commit(context.Background())
 	if err != nil {
 		t.Fatalf("writer.Commit: unexpected error: %v", err)
 	}
