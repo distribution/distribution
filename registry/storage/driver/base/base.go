@@ -79,12 +79,10 @@ func (base *Base) setDriverName(e error) error {
 		actual.DriverName = base.StorageDriver.Name()
 		return actual
 	default:
-		storageError := storagedriver.Error{
+		return storagedriver.Error{
 			DriverName: base.StorageDriver.Name(),
-			Enclosed:   e,
+			Detail:     e,
 		}
-
-		return storageError
 	}
 }
 

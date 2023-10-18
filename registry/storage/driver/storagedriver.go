@@ -178,20 +178,20 @@ func (err InvalidOffsetError) Error() string {
 // the driver type on which it occurred.
 type Error struct {
 	DriverName string
-	Enclosed   error
+	Detail     error
 }
 
 func (err Error) Error() string {
-	return fmt.Sprintf("%s: %s", err.DriverName, err.Enclosed)
+	return fmt.Sprintf("%s: %s", err.DriverName, err.Detail)
 }
 
 func (err Error) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		DriverName string `json:"driver"`
-		Enclosed   string `json:"enclosed"`
+		Detail     string `json:"detail"`
 	}{
 		DriverName: err.DriverName,
-		Enclosed:   err.Enclosed.Error(),
+		Detail:     err.Detail.Error(),
 	})
 }
 
@@ -207,14 +207,36 @@ var _ error = Errors{}
 func (e Errors) Error() string {
 	switch len(e.Errs) {
 	case 0:
-		return "<nil>"
+		return fmt.Sprintf("%s: <nil>", e.DriverName)
 	case 1:
-		return e.Errs[0].Error()
+		return fmt.Sprintf("%s: %s", e.DriverName, e.Errs[0].Error())
 	default:
 		msg := "errors:\n"
 		for _, err := range e.Errs {
 			msg += err.Error() + "\n"
 		}
-		return msg
+		return fmt.Sprintf("%s: %s", e.DriverName, msg)
 	}
+}
+
+// MarshalJSON converts slice of errors into the format
+// that is serializable by JSON.
+func (e Errors) MarshalJSON() ([]byte, error) {
+	tmpErrs := struct {
+		DriverName string   `json:"driver"`
+		Details    []string `json:"details"`
+	}{
+		DriverName: e.DriverName,
+	}
+
+	if len(e.Errs) == 0 {
+		tmpErrs.Details = make([]string, 0)
+		return json.Marshal(tmpErrs)
+	}
+
+	for _, err := range e.Errs {
+		tmpErrs.Details = append(tmpErrs.Details, err.Error())
+	}
+
+	return json.Marshal(tmpErrs)
 }
