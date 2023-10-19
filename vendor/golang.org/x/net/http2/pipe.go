@@ -10,13 +10,14 @@ import (
 	"sync"
 )
 
-// pipe is a goroutine-safe io.Reader/io.Writer pair.  It's like
+// pipe is a goroutine-safe io.Reader/io.Writer pair. It's like
 // io.Pipe except there are no PipeReader/PipeWriter halves, and the
 // underlying buffer is an interface. (io.Pipe is always unbuffered)
 type pipe struct {
 	mu       sync.Mutex
-	c        sync.Cond // c.L lazily initialized to &p.mu
-	b        pipeBuffer
+	c        sync.Cond     // c.L lazily initialized to &p.mu
+	b        pipeBuffer    // nil when done reading
+	unread   int           // bytes unread when done
 	err      error         // read error once empty. non-nil means closed.
 	breakErr error         // immediate read error (caller doesn't see rest of b)
 	donec    chan struct{} // closed on error
@@ -27,6 +28,26 @@ type pipeBuffer interface {
 	Len() int
 	io.Writer
 	io.Reader
+}
+
+// setBuffer initializes the pipe buffer.
+// It has no effect if the pipe is already closed.
+func (p *pipe) setBuffer(b pipeBuffer) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.err != nil || p.breakErr != nil {
+		return
+	}
+	p.b = b
+}
+
+func (p *pipe) Len() int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.b == nil {
+		return p.unread
+	}
+	return p.b.Len()
 }
 
 // Read waits until data is available and copies bytes
@@ -41,7 +62,7 @@ func (p *pipe) Read(d []byte) (n int, err error) {
 		if p.breakErr != nil {
 			return 0, p.breakErr
 		}
-		if p.b.Len() > 0 {
+		if p.b != nil && p.b.Len() > 0 {
 			return p.b.Read(d)
 		}
 		if p.err != nil {
@@ -49,6 +70,7 @@ func (p *pipe) Read(d []byte) (n int, err error) {
 				p.readFn()     // e.g. copy trailers
 				p.readFn = nil // not sticky like p.err
 			}
+			p.b = nil
 			return 0, p.err
 		}
 		p.c.Wait()
@@ -66,7 +88,7 @@ func (p *pipe) Write(d []byte) (n int, err error) {
 		p.c.L = &p.mu
 	}
 	defer p.c.Signal()
-	if p.err != nil {
+	if p.err != nil || p.breakErr != nil {
 		return 0, errClosedPipeWrite
 	}
 	return p.b.Write(d)
@@ -103,6 +125,12 @@ func (p *pipe) closeWithError(dst *error, err error, fn func()) {
 		return
 	}
 	p.readFn = fn
+	if dst == &p.breakErr {
+		if p.b != nil {
+			p.unread += p.b.Len()
+		}
+		p.b = nil
+	}
 	*dst = err
 	p.closeDoneLocked()
 }
