@@ -320,7 +320,7 @@ func (w *writer) Cancel(ctx context.Context) error {
 	return w.d.root.delete(w.f.path())
 }
 
-func (w *writer) Commit() error {
+func (w *writer) Commit(ctx context.Context) error {
 	if w.closed {
 		return fmt.Errorf("already closed")
 	} else if w.committed {

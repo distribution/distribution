@@ -57,7 +57,7 @@ func (bw *blobWriter) StartedAt() time.Time {
 func (bw *blobWriter) Commit(ctx context.Context, desc distribution.Descriptor) (distribution.Descriptor, error) {
 	dcontext.GetLogger(ctx).Debug("(*blobWriter).Commit")
 
-	if err := bw.fileWriter.Commit(); err != nil {
+	if err := bw.fileWriter.Commit(ctx); err != nil {
 		return distribution.Descriptor{}, err
 	}
 

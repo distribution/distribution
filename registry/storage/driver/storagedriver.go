@@ -123,7 +123,7 @@ type FileWriter interface {
 	// Commit flushes all content written to this FileWriter and makes it
 	// available for future calls to StorageDriver.GetContent and
 	// StorageDriver.Reader.
-	Commit() error
+	Commit(context.Context) error
 }
 
 // PathRegexp is the regular expression which each file path must match. A

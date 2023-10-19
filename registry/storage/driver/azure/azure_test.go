@@ -120,7 +120,7 @@ func TestCommitAfterMove(t *testing.T) {
 		t.Fatalf("writer.Write: unexpected error: %v", err)
 	}
 
-	err = writer.Commit()
+	err = writer.Commit(ctx)
 	if err != nil {
 		t.Fatalf("writer.Commit: unexpected error: %v", err)
 	}

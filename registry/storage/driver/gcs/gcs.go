@@ -460,12 +460,11 @@ func putContentsClose(wc *storage.Writer, contents []byte) error {
 // Commit flushes all content written to this FileWriter and makes it
 // available for future calls to StorageDriver.GetContent and
 // StorageDriver.Reader.
-func (w *writer) Commit() error {
+func (w *writer) Commit(ctx context.Context) error {
 	if err := w.checkClosed(); err != nil {
 		return err
 	}
 	w.closed = true
-	ctx := context.TODO()
 
 	// no session started yet just perform a simple upload
 	if w.sessionURI == "" {

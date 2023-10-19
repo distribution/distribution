@@ -291,7 +291,7 @@ func (suite *DriverSuite) TestWriteReadLargeStreams(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(written, check.Equals, fileSize)
 
-	err = writer.Commit()
+	err = writer.Commit(context.Background())
 	c.Assert(err, check.IsNil)
 	err = writer.Close()
 	c.Assert(err, check.IsNil)
@@ -446,7 +446,7 @@ func (suite *DriverSuite) testContinueStreamAppend(c *check.C, chunkSize int64) 
 	c.Assert(err, check.IsNil)
 	c.Assert(nn, check.Equals, int64(len(fullContents[curSize:])))
 
-	err = writer.Commit()
+	err = writer.Commit(context.Background())
 	c.Assert(err, check.IsNil)
 	err = writer.Close()
 	c.Assert(err, check.IsNil)
@@ -484,7 +484,7 @@ func (suite *DriverSuite) TestWriteZeroByteStreamThenAppend(c *check.C) {
 	c.Assert(err, check.IsNil)
 
 	// Close the Writer
-	err = writer.Commit()
+	err = writer.Commit(context.Background())
 	c.Assert(err, check.IsNil)
 	err = writer.Close()
 	c.Assert(err, check.IsNil)
@@ -512,7 +512,7 @@ func (suite *DriverSuite) TestWriteZeroByteStreamThenAppend(c *check.C) {
 	c.Assert(nn, check.Equals, int64(len(contentsChunk1)))
 
 	// Close the AppendWriter
-	err = awriter.Commit()
+	err = awriter.Commit(context.Background())
 	c.Assert(err, check.IsNil)
 	err = awriter.Close()
 	c.Assert(err, check.IsNil)
@@ -561,7 +561,7 @@ func (suite *DriverSuite) TestWriteZeroByteContentThenAppend(c *check.C) {
 	c.Assert(nn, check.Equals, int64(len(contentsChunk1)))
 
 	// Close the AppendWriter
-	err = awriter.Commit()
+	err = awriter.Commit(context.Background())
 	c.Assert(err, check.IsNil)
 	err = awriter.Close()
 	c.Assert(err, check.IsNil)
@@ -1156,7 +1156,7 @@ func (suite *DriverSuite) benchmarkStreamFiles(c *check.C, size int64) {
 		c.Assert(err, check.IsNil)
 		c.Assert(written, check.Equals, size)
 
-		err = writer.Commit()
+		err = writer.Commit(context.Background())
 		c.Assert(err, check.IsNil)
 		err = writer.Close()
 		c.Assert(err, check.IsNil)
@@ -1248,7 +1248,7 @@ func (suite *DriverSuite) testFileStreams(c *check.C, size int64) {
 	c.Assert(err, check.IsNil)
 	c.Assert(nn, check.Equals, size)
 
-	err = writer.Commit()
+	err = writer.Commit(context.Background())
 	c.Assert(err, check.IsNil)
 	err = writer.Close()
 	c.Assert(err, check.IsNil)
@@ -1284,7 +1284,7 @@ func (suite *DriverSuite) writeReadCompareStreams(c *check.C, filename string, c
 	c.Assert(err, check.IsNil)
 	c.Assert(nn, check.Equals, int64(len(contents)))
 
-	err = writer.Commit()
+	err = writer.Commit(context.Background())
 	c.Assert(err, check.IsNil)
 	err = writer.Close()
 	c.Assert(err, check.IsNil)
