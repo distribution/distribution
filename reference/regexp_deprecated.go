@@ -20,7 +20,7 @@ var DigestRegexp = reference.DigestRegexp
 // Deprecated: use [reference.DomainRegexp].
 //
 // [RFC 6874]: https://www.rfc-editor.org/rfc/rfc6874.
-var DomainRegexp = reference.DigestRegexp
+var DomainRegexp = reference.DomainRegexp
 
 // IdentifierRegexp is the format for string identifier used as a
 // content addressable identifier using sha256. These identifiers
