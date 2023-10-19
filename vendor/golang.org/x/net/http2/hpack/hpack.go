@@ -43,7 +43,7 @@ type HeaderField struct {
 
 // IsPseudo reports whether the header field is an http2 pseudo header.
 // That is, it reports whether it starts with a colon.
-// It is not otherwise guaranteed to be a valid psuedo header field,
+// It is not otherwise guaranteed to be a valid pseudo header field,
 // though.
 func (hf HeaderField) IsPseudo() bool {
 	return len(hf.Name) != 0 && hf.Name[0] == ':'
@@ -57,11 +57,11 @@ func (hf HeaderField) String() string {
 	return fmt.Sprintf("header field %q = %q%s", hf.Name, hf.Value, suffix)
 }
 
-// Size returns the size of an entry per RFC 7540 section 5.2.
+// Size returns the size of an entry per RFC 7541 section 4.1.
 func (hf HeaderField) Size() uint32 {
-	// http://http2.github.io/http2-spec/compression.html#rfc.section.4.1
+	// https://httpwg.org/specs/rfc7541.html#rfc.section.4.1
 	// "The size of the dynamic table is the sum of the size of
-	// its entries.  The size of an entry is the sum of its name's
+	// its entries. The size of an entry is the sum of its name's
 	// length in octets (as defined in Section 5.2), its value's
 	// length in octets (see Section 5.2), plus 32.  The size of
 	// an entry is calculated using the length of the name and
@@ -92,6 +92,8 @@ type Decoder struct {
 	// saveBuf is previous data passed to Write which we weren't able
 	// to fully parse before. Unlike buf, we own this data.
 	saveBuf bytes.Buffer
+
+	firstField bool // processing the first field of the header block
 }
 
 // NewDecoder returns a new decoder with the provided maximum dynamic
@@ -101,7 +103,9 @@ func NewDecoder(maxDynamicTableSize uint32, emitFunc func(f HeaderField)) *Decod
 	d := &Decoder{
 		emit:        emitFunc,
 		emitEnabled: true,
+		firstField:  true,
 	}
+	d.dynTab.table.init()
 	d.dynTab.allowedMaxSize = maxDynamicTableSize
 	d.dynTab.setMaxSize(maxDynamicTableSize)
 	return d
@@ -154,12 +158,9 @@ func (d *Decoder) SetAllowedMaxDynamicTableSize(v uint32) {
 }
 
 type dynamicTable struct {
-	// ents is the FIFO described at
-	// http://http2.github.io/http2-spec/compression.html#rfc.section.2.3.2
-	// The newest (low index) is append at the end, and items are
-	// evicted from the front.
-	ents           []HeaderField
-	size           uint32
+	// https://httpwg.org/specs/rfc7541.html#rfc.section.2.3.2
+	table          headerFieldTable
+	size           uint32 // in bytes
 	maxSize        uint32 // current maxSize
 	allowedMaxSize uint32 // maxSize may go up to this, inclusive
 }
@@ -169,98 +170,48 @@ func (dt *dynamicTable) setMaxSize(v uint32) {
 	dt.evict()
 }
 
-// TODO: change dynamicTable to be a struct with a slice and a size int field,
-// per http://http2.github.io/http2-spec/compression.html#rfc.section.4.1:
-//
-//
-// Then make add increment the size. maybe the max size should move from Decoder to
-// dynamicTable and add should return an ok bool if there was enough space.
-//
-// Later we'll need a remove operation on dynamicTable.
-
 func (dt *dynamicTable) add(f HeaderField) {
-	dt.ents = append(dt.ents, f)
+	dt.table.addEntry(f)
 	dt.size += f.Size()
 	dt.evict()
 }
 
-// If we're too big, evict old stuff (front of the slice)
+// If we're too big, evict old stuff.
 func (dt *dynamicTable) evict() {
-	base := dt.ents // keep base pointer of slice
-	for dt.size > dt.maxSize {
-		dt.size -= dt.ents[0].Size()
-		dt.ents = dt.ents[1:]
+	var n int
+	for dt.size > dt.maxSize && n < dt.table.len() {
+		dt.size -= dt.table.ents[n].Size()
+		n++
 	}
-
-	// Shift slice contents down if we evicted things.
-	if len(dt.ents) != len(base) {
-		copy(base, dt.ents)
-		dt.ents = base[:len(dt.ents)]
-	}
-}
-
-// constantTimeStringCompare compares string a and b in a constant
-// time manner.
-func constantTimeStringCompare(a, b string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-
-	c := byte(0)
-
-	for i := 0; i < len(a); i++ {
-		c |= a[i] ^ b[i]
-	}
-
-	return c == 0
-}
-
-// Search searches f in the table. The return value i is 0 if there is
-// no name match. If there is name match or name/value match, i is the
-// index of that entry (1-based). If both name and value match,
-// nameValueMatch becomes true.
-func (dt *dynamicTable) search(f HeaderField) (i uint64, nameValueMatch bool) {
-	l := len(dt.ents)
-	for j := l - 1; j >= 0; j-- {
-		ent := dt.ents[j]
-		if !constantTimeStringCompare(ent.Name, f.Name) {
-			continue
-		}
-		if i == 0 {
-			i = uint64(l - j)
-		}
-		if f.Sensitive {
-			continue
-		}
-		if !constantTimeStringCompare(ent.Value, f.Value) {
-			continue
-		}
-		i = uint64(l - j)
-		nameValueMatch = true
-		return
-	}
-	return
+	dt.table.evictOldest(n)
 }
 
 func (d *Decoder) maxTableIndex() int {
-	return len(d.dynTab.ents) + len(staticTable)
+	// This should never overflow. RFC 7540 Section 6.5.2 limits the size of
+	// the dynamic table to 2^32 bytes, where each entry will occupy more than
+	// one byte. Further, the staticTable has a fixed, small length.
+	return d.dynTab.table.len() + staticTable.len()
 }
 
 func (d *Decoder) at(i uint64) (hf HeaderField, ok bool) {
-	if i < 1 {
+	// See Section 2.3.3.
+	if i == 0 {
 		return
+	}
+	if i <= uint64(staticTable.len()) {
+		return staticTable.ents[i-1], true
 	}
 	if i > uint64(d.maxTableIndex()) {
 		return
 	}
-	if i <= uint64(len(staticTable)) {
-		return staticTable[i-1], true
-	}
-	dents := d.dynTab.ents
-	return dents[len(dents)-(int(i)-len(staticTable))], true
+	// In the dynamic table, newer entries have lower indices.
+	// However, dt.ents[0] is the oldest entry. Hence, dt.ents is
+	// the reversed dynamic table.
+	dt := d.dynTab.table
+	return dt.ents[dt.len()-(int(i)-staticTable.len())], true
 }
 
-// Decode decodes an entire block.
+// DecodeFull decodes an entire block.
 //
 // TODO: remove this method and make it incremental later? This is
 // easier for debugging now.
@@ -278,11 +229,15 @@ func (d *Decoder) DecodeFull(p []byte) ([]HeaderField, error) {
 	return hf, nil
 }
 
+// Close declares that the decoding is complete and resets the Decoder
+// to be reused again for a new header block. If there is any remaining
+// data in the decoder's buffer, Close returns an error.
 func (d *Decoder) Close() error {
 	if d.saveBuf.Len() > 0 {
 		d.saveBuf.Reset()
 		return DecodingError{errors.New("truncated headers")}
 	}
+	d.firstField = true
 	return nil
 }
 
@@ -307,7 +262,7 @@ func (d *Decoder) Write(p []byte) (n int, err error) {
 		err = d.parseHeaderFieldRepr()
 		if err == errNeedMore {
 			// Extra paranoia, making sure saveBuf won't
-			// get too large.  All the varint and string
+			// get too large. All the varint and string
 			// reading code earlier should already catch
 			// overlong things and return ErrStringLength,
 			// but keep this as a last resort.
@@ -318,6 +273,7 @@ func (d *Decoder) Write(p []byte) (n int, err error) {
 			d.saveBuf.Write(d.buf)
 			return len(p), nil
 		}
+		d.firstField = false
 		if err != nil {
 			break
 		}
@@ -351,27 +307,27 @@ func (d *Decoder) parseHeaderFieldRepr() error {
 	case b&128 != 0:
 		// Indexed representation.
 		// High bit set?
-		// http://http2.github.io/http2-spec/compression.html#rfc.section.6.1
+		// https://httpwg.org/specs/rfc7541.html#rfc.section.6.1
 		return d.parseFieldIndexed()
 	case b&192 == 64:
 		// 6.2.1 Literal Header Field with Incremental Indexing
 		// 0b10xxxxxx: top two bits are 10
-		// http://http2.github.io/http2-spec/compression.html#rfc.section.6.2.1
+		// https://httpwg.org/specs/rfc7541.html#rfc.section.6.2.1
 		return d.parseFieldLiteral(6, indexedTrue)
 	case b&240 == 0:
 		// 6.2.2 Literal Header Field without Indexing
 		// 0b0000xxxx: top four bits are 0000
-		// http://http2.github.io/http2-spec/compression.html#rfc.section.6.2.2
+		// https://httpwg.org/specs/rfc7541.html#rfc.section.6.2.2
 		return d.parseFieldLiteral(4, indexedFalse)
 	case b&240 == 16:
 		// 6.2.3 Literal Header Field never Indexed
 		// 0b0001xxxx: top four bits are 0001
-		// http://http2.github.io/http2-spec/compression.html#rfc.section.6.2.3
+		// https://httpwg.org/specs/rfc7541.html#rfc.section.6.2.3
 		return d.parseFieldLiteral(4, indexedNever)
 	case b&224 == 32:
 		// 6.3 Dynamic Table Size Update
 		// Top three bits are '001'.
-		// http://http2.github.io/http2-spec/compression.html#rfc.section.6.3
+		// https://httpwg.org/specs/rfc7541.html#rfc.section.6.3
 		return d.parseDynamicTableSizeUpdate()
 	}
 
@@ -403,6 +359,7 @@ func (d *Decoder) parseFieldLiteral(n uint8, it indexType) error {
 
 	var hf HeaderField
 	wantStr := d.emitEnabled || it.indexed()
+	var undecodedName undecodedString
 	if nameIdx > 0 {
 		ihf, ok := d.at(nameIdx)
 		if !ok {
@@ -410,14 +367,26 @@ func (d *Decoder) parseFieldLiteral(n uint8, it indexType) error {
 		}
 		hf.Name = ihf.Name
 	} else {
-		hf.Name, buf, err = d.readString(buf, wantStr)
+		undecodedName, buf, err = d.readString(buf)
 		if err != nil {
 			return err
 		}
 	}
-	hf.Value, buf, err = d.readString(buf, wantStr)
+	undecodedValue, buf, err := d.readString(buf)
 	if err != nil {
 		return err
+	}
+	if wantStr {
+		if nameIdx <= 0 {
+			hf.Name, err = d.decodeString(undecodedName)
+			if err != nil {
+				return err
+			}
+		}
+		hf.Value, err = d.decodeString(undecodedValue)
+		if err != nil {
+			return err
+		}
 	}
 	d.buf = buf
 	if it.indexed() {
@@ -441,6 +410,12 @@ func (d *Decoder) callEmit(hf HeaderField) error {
 
 // (same invariants and behavior as parseHeaderFieldRepr)
 func (d *Decoder) parseDynamicTableSizeUpdate() error {
+	// RFC 7541, sec 4.2: This dynamic table size update MUST occur at the
+	// beginning of the first header block following the change to the dynamic table size.
+	if !d.firstField && d.dynTab.size > 0 {
+		return DecodingError{errors.New("dynamic table size update MUST occur at the beginning of a header block")}
+	}
+
 	buf := d.buf
 	size, buf, err := readVarInt(5, buf)
 	if err != nil {
@@ -458,7 +433,7 @@ var errVarintOverflow = DecodingError{errors.New("varint integer overflow")}
 
 // readVarInt reads an unsigned variable length integer off the
 // beginning of p. n is the parameter as described in
-// http://http2.github.io/http2-spec/compression.html#rfc.section.5.1.
+// https://httpwg.org/specs/rfc7541.html#rfc.section.5.1.
 //
 // n must always be between 1 and 8.
 //
@@ -497,46 +472,52 @@ func readVarInt(n byte, p []byte) (i uint64, remain []byte, err error) {
 	return 0, origP, errNeedMore
 }
 
-// readString decodes an hpack string from p.
+// readString reads an hpack string from p.
 //
-// wantStr is whether s will be used. If false, decompression and
-// []byte->string garbage are skipped if s will be ignored
-// anyway. This does mean that huffman decoding errors for non-indexed
-// strings past the MAX_HEADER_LIST_SIZE are ignored, but the server
-// is returning an error anyway, and because they're not indexed, the error
-// won't affect the decoding state.
-func (d *Decoder) readString(p []byte, wantStr bool) (s string, remain []byte, err error) {
+// It returns a reference to the encoded string data to permit deferring decode costs
+// until after the caller verifies all data is present.
+func (d *Decoder) readString(p []byte) (u undecodedString, remain []byte, err error) {
 	if len(p) == 0 {
-		return "", p, errNeedMore
+		return u, p, errNeedMore
 	}
 	isHuff := p[0]&128 != 0
 	strLen, p, err := readVarInt(7, p)
 	if err != nil {
-		return "", p, err
+		return u, p, err
 	}
 	if d.maxStrLen != 0 && strLen > uint64(d.maxStrLen) {
-		return "", nil, ErrStringLength
+		// Returning an error here means Huffman decoding errors
+		// for non-indexed strings past the maximum string length
+		// are ignored, but the server is returning an error anyway
+		// and because the string is not indexed the error will not
+		// affect the decoding state.
+		return u, nil, ErrStringLength
 	}
 	if uint64(len(p)) < strLen {
-		return "", p, errNeedMore
+		return u, p, errNeedMore
 	}
-	if !isHuff {
-		if wantStr {
-			s = string(p[:strLen])
-		}
-		return s, p[strLen:], nil
-	}
+	u.isHuff = isHuff
+	u.b = p[:strLen]
+	return u, p[strLen:], nil
+}
 
-	if wantStr {
-		buf := bufPool.Get().(*bytes.Buffer)
-		buf.Reset() // don't trust others
-		defer bufPool.Put(buf)
-		if err := huffmanDecode(buf, d.maxStrLen, p[:strLen]); err != nil {
-			buf.Reset()
-			return "", nil, err
-		}
-		s = buf.String()
-		buf.Reset() // be nice to GC
+type undecodedString struct {
+	isHuff bool
+	b      []byte
+}
+
+func (d *Decoder) decodeString(u undecodedString) (string, error) {
+	if !u.isHuff {
+		return string(u.b), nil
 	}
-	return s, p[strLen:], nil
+	buf := bufPool.Get().(*bytes.Buffer)
+	buf.Reset() // don't trust others
+	var s string
+	err := huffmanDecode(buf, d.maxStrLen, u.b)
+	if err == nil {
+		s = buf.String()
+	}
+	buf.Reset() // be nice to GC
+	bufPool.Put(buf)
+	return s, err
 }

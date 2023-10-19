@@ -3,7 +3,10 @@
 set -eu -o pipefail
 
 rm -rf vendor/
-vndr |& grep -v -i clone
+# Prevent the data directory from being pruned; this directory does not contain
+# go source files (causing vndr to prune it), however these files are used by
+# golang.org/x/net/publicsuffix through go:embed.
+vndr -whitelist golang.org/x/net/publicsuffix/data |& grep -v -i clone
 
 DIFF_PATH="vendor/"
 DIFF=$(git status --porcelain -- "$DIFF_PATH")
