@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 
-ARG GO_VERSION=1.20.8
+ARG GO_VERSION=1.20.9
 ARG ALPINE_VERSION=3.18
 
 FROM golang:${GO_VERSION}-alpine${ALPINE_VERSION} AS base
